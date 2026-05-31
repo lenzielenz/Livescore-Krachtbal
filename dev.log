@@ -3,214 +3,837 @@ $ cross-env NODE_OPTIONS=--no-deprecation next dev
 - Local:         http://localhost:3000
 - Network:       http://192.168.0.65:3000
 - Environments: .env
-✓ Ready in 410ms
+✓ Ready in 373ms
 - Experiments (use with caution):
   ⨯ turbopackServerFastRefresh
 
 [⣷] Pulling schema from database...
 [2K[1G[✓] Pulling schema from database...
-[00:35:10] [33mWARN[39m: [36mNo email adapter provided. Email will be written to console. More info at https://payloadcms.com/docs/email/overview.[39m
- GET /scorekeeper/2 200 in 6.4s (next.js: 3.6s, application-code: 2.7s)
- GET /scorekeeper/2 200 in 411ms (next.js: 12ms, application-code: 399ms)
- GET /scorekeeper/2 200 in 627ms (next.js: 16ms, application-code: 611ms)
- POST /api/match/2/action 200 in 2.9s (next.js: 2.8s, application-code: 128ms)
- POST /api/match/2/action 200 in 1623ms (next.js: 1495ms, application-code: 128ms)
- POST /api/match/2/action 200 in 89ms (next.js: 9ms, application-code: 80ms)
- POST /api/match/2/action 200 in 121ms (next.js: 10ms, application-code: 111ms)
- POST /api/match/2/action 200 in 82ms (next.js: 2ms, application-code: 80ms)
- POST /api/match/2/action 200 in 91ms (next.js: 10ms, application-code: 81ms)
- POST /api/match/2/action 200 in 99ms (next.js: 2ms, application-code: 96ms)
- POST /api/match/2/action 200 in 131ms (next.js: 9ms, application-code: 122ms)
- POST /api/match/2/action 200 in 167ms (next.js: 11ms, application-code: 156ms)
- POST /api/match/2/action 200 in 126ms (next.js: 9ms, application-code: 118ms)
- POST /api/match/2/action 200 in 94ms (next.js: 2ms, application-code: 92ms)
- POST /api/match/2/action 200 in 95ms (next.js: 9ms, application-code: 85ms)
- POST /api/match/2/action 200 in 73ms (next.js: 3ms, application-code: 70ms)
- POST /api/match/2/action 200 in 112ms (next.js: 8ms, application-code: 103ms)
- GET /scorekeeper/2 200 in 465ms (next.js: 12ms, application-code: 454ms)
- POST /api/match/2/action 200 in 75ms (next.js: 9ms, application-code: 65ms)
- POST /api/match/2/action 200 in 89ms (next.js: 9ms, application-code: 80ms)
- POST /api/match/2/action 200 in 66ms (next.js: 9ms, application-code: 57ms)
- POST /api/match/2/action 200 in 64ms (next.js: 9ms, application-code: 55ms)
- POST /api/match/2/action 200 in 80ms (next.js: 9ms, application-code: 71ms)
- GET /scorekeeper/2 200 in 596ms (next.js: 10ms, application-code: 586ms)
- POST /api/match/2/action 200 in 101ms (next.js: 10ms, application-code: 92ms)
- POST /api/match/2/action 200 in 157ms (next.js: 9ms, application-code: 148ms)
- POST /api/match/2/action 200 in 166ms (next.js: 9ms, application-code: 157ms)
- POST /api/match/2/action 200 in 196ms (next.js: 12ms, application-code: 185ms)
- POST /api/match/2/action 200 in 54ms (next.js: 2ms, application-code: 51ms)
- POST /api/match/2/action 200 in 161ms (next.js: 9ms, application-code: 152ms)
- POST /api/match/2/action 200 in 175ms (next.js: 9ms, application-code: 166ms)
- POST /api/match/2/action 200 in 119ms (next.js: 9ms, application-code: 110ms)
- POST /api/match/2/action 200 in 142ms (next.js: 12ms, application-code: 130ms)
- POST /api/match/2/action 200 in 176ms (next.js: 12ms, application-code: 164ms)
- POST /api/match/2/action 200 in 199ms (next.js: 9ms, application-code: 190ms)
- POST /api/match/2/action 200 in 174ms (next.js: 9ms, application-code: 165ms)
- POST /api/match/2/action 200 in 106ms (next.js: 9ms, application-code: 97ms)
- POST /api/match/2/action 200 in 212ms (next.js: 9ms, application-code: 203ms)
- POST /api/match/2/action 200 in 98ms (next.js: 9ms, application-code: 90ms)
- POST /api/match/2/action 200 in 89ms (next.js: 10ms, application-code: 79ms)
-✓ Compiled in 17ms
- POST /api/match/2/action 200 in 74ms (next.js: 8ms, application-code: 65ms)
- POST /api/match/2/action 200 in 106ms (next.js: 9ms, application-code: 97ms)
- POST /api/match/2/action 200 in 75ms (next.js: 1984µs, application-code: 73ms)
- POST /api/match/2/action 200 in 159ms (next.js: 15ms, application-code: 145ms)
- POST /api/match/2/action 200 in 103ms (next.js: 8ms, application-code: 95ms)
- POST /api/match/2/action 200 in 95ms (next.js: 9ms, application-code: 85ms)
- POST /api/match/2/action 200 in 108ms (next.js: 9ms, application-code: 100ms)
- POST /api/match/2/action 200 in 136ms (next.js: 10ms, application-code: 126ms)
-✓ Compiled in 25ms
- POST /api/match/2/action 200 in 90ms (next.js: 10ms, application-code: 80ms)
- POST /api/match/2/action 200 in 70ms (next.js: 8ms, application-code: 62ms)
- POST /api/match/2/action 200 in 96ms (next.js: 8ms, application-code: 88ms)
- POST /api/match/2/action 200 in 119ms (next.js: 8ms, application-code: 110ms)
- POST /api/match/2/action 200 in 93ms (next.js: 9ms, application-code: 84ms)
-✓ Compiled in 39ms
-✓ Compiled in 38ms
-✓ Compiled in 37ms
-✓ Compiled in 8ms
-Generating import map
-No new imports found, skipping writing import map
- GET /scorekeeper/2 200 in 1543ms (next.js: 88ms, application-code: 1455ms)
- GET /scorekeeper/2 200 in 1285ms (next.js: 661ms, application-code: 624ms)
-Generating import map
-No new imports found, skipping writing import map
- GET /scorekeeper/2 200 in 800ms (next.js: 101ms, application-code: 700ms)
-Generating import map
-No new imports found, skipping writing import map
- GET /scorekeeper/2 200 in 813ms (next.js: 83ms, application-code: 730ms)
-✓ Compiled in 84ms
-Generating import map
-No new imports found, skipping writing import map
- GET /scorekeeper/2 200 in 890ms (next.js: 179ms, application-code: 711ms)
-✓ Compiled in 12ms
-Generating import map
-No new imports found, skipping writing import map
- GET /scorekeeper/2 200 in 811ms (next.js: 103ms, application-code: 708ms)
-✓ Compiled in 114ms
-✓ Compiled in 50ms
-✓ Compiled in 5ms
-⨯ Error: ENOENT: no such file or directory, open 'C:\Users\Robin\Desktop\Projects\Livescore-krachtbal\.next\dev\server\app\api\match\[id]\action\[__metadata_id__]\route\app-paths-manifest.json'
-    at ignore-listed frames {
-  errno: -4058,
-  code: 'ENOENT',
-  syscall: 'open',
-  path: 'C:\\Users\\Robin\\Desktop\\Projects\\Livescore-krachtbal\\.next\\dev\\server\\app\\api\\match\\[id]\\action\\[__metadata_id__]\\route\\app-paths-manifest.json'
-}
-⨯ Error: ENOENT: no such file or directory, open 'C:\Users\Robin\Desktop\Projects\Livescore-krachtbal\.next\dev\static\development\_buildManifest.js.tmp.foplwlt499f'
-    at ignore-listed frames {
-  errno: -4058,
-  code: 'ENOENT',
-  syscall: 'open',
-  path: 'C:\\Users\\Robin\\Desktop\\Projects\\Livescore-krachtbal\\.next\\dev\\static\\development\\_buildManifest.js.tmp.foplwlt499f'
-}
-Error: ENOENT: no such file or directory, open 'C:\Users\Robin\Desktop\Projects\Livescore-krachtbal\.next\dev\server\app\api\match\[id]\action\[__metadata_id__]\route\app-paths-manifest.json'
-    at ignore-listed frames {
-  errno: -4058,
-  code: 'ENOENT',
-  syscall: 'open',
-  path: 'C:\\Users\\Robin\\Desktop\\Projects\\Livescore-krachtbal\\.next\\dev\\server\\app\\api\\match\\[id]\\action\\[__metadata_id__]\\route\\app-paths-manifest.json'
-}
-⨯ Error: Cannot find module '../chunks/ssr/[turbopack]_runtime.js'
-Require stack:
-- C:\Users\Robin\Desktop\Projects\Livescore-krachtbal\.next\dev\server\pages\_document.js
-- C:\Users\Robin\Desktop\Projects\Livescore-krachtbal\node_modules\.pnpm\next@16.2.6_@babel+core@7.2_1f1e13705e4349586ad329f2cd4952ba\node_modules\next\dist\server\require.js
-- C:\Users\Robin\Desktop\Projects\Livescore-krachtbal\node_modules\.pnpm\next@16.2.6_@babel+core@7.2_1f1e13705e4349586ad329f2cd4952ba\node_modules\next\dist\server\load-components.js
-- C:\Users\Robin\Desktop\Projects\Livescore-krachtbal\node_modules\.pnpm\next@16.2.6_@babel+core@7.2_1f1e13705e4349586ad329f2cd4952ba\node_modules\next\dist\build\utils.js
-- C:\Users\Robin\Desktop\Projects\Livescore-krachtbal\node_modules\.pnpm\next@16.2.6_@babel+core@7.2_1f1e13705e4349586ad329f2cd4952ba\node_modules\next\dist\server\lib\router-utils\setup-dev-bundler.js
-- C:\Users\Robin\Desktop\Projects\Livescore-krachtbal\node_modules\.pnpm\next@16.2.6_@babel+core@7.2_1f1e13705e4349586ad329f2cd4952ba\node_modules\next\dist\server\lib\router-server.js
-- C:\Users\Robin\Desktop\Projects\Livescore-krachtbal\node_modules\.pnpm\next@16.2.6_@babel+core@7.2_1f1e13705e4349586ad329f2cd4952ba\node_modules\next\dist\server\lib\start-server.js
-    at Object.<anonymous> (C:\Users\Robin\Desktop\Projects\Livescore-krachtbal\.next\dev\server\pages\_document.js:1:7) {
-  code: 'MODULE_NOT_FOUND',
-  requireStack: [
-    'C:\\Users\\Robin\\Desktop\\Projects\\Livescore-krachtbal\\.next\\dev\\server\\pages\\_document.js',
-    'C:\\Users\\Robin\\Desktop\\Projects\\Livescore-krachtbal\\node_modules\\.pnpm\\next@16.2.6_@babel+core@7.2_1f1e13705e4349586ad329f2cd4952ba\\node_modules\\next\\dist\\server\\require.js',
-    'C:\\Users\\Robin\\Desktop\\Projects\\Livescore-krachtbal\\node_modules\\.pnpm\\next@16.2.6_@babel+core@7.2_1f1e13705e4349586ad329f2cd4952ba\\node_modules\\next\\dist\\server\\load-components.js',
-    'C:\\Users\\Robin\\Desktop\\Projects\\Livescore-krachtbal\\node_modules\\.pnpm\\next@16.2.6_@babel+core@7.2_1f1e13705e4349586ad329f2cd4952ba\\node_modules\\next\\dist\\build\\utils.js',
-    'C:\\Users\\Robin\\Desktop\\Projects\\Livescore-krachtbal\\node_modules\\.pnpm\\next@16.2.6_@babel+core@7.2_1f1e13705e4349586ad329f2cd4952ba\\node_modules\\next\\dist\\server\\lib\\router-utils\\setup-dev-bundler.js',
-    'C:\\Users\\Robin\\Desktop\\Projects\\Livescore-krachtbal\\node_modules\\.pnpm\\next@16.2.6_@babel+core@7.2_1f1e13705e4349586ad329f2cd4952ba\\node_modules\\next\\dist\\server\\lib\\router-server.js',
-    'C:\\Users\\Robin\\Desktop\\Projects\\Livescore-krachtbal\\node_modules\\.pnpm\\next@16.2.6_@babel+core@7.2_1f1e13705e4349586ad329f2cd4952ba\\node_modules\\next\\dist\\server\\lib\\start-server.js'
-  ]
-}
-Error: ENOENT: no such file or directory, open 'C:\Users\Robin\Desktop\Projects\Livescore-krachtbal\.next\dev\routes-manifest.json'
-    at ignore-listed frames {
-  errno: -4058,
-  code: 'ENOENT',
-  syscall: 'open',
-  path: 'C:\\Users\\Robin\\Desktop\\Projects\\Livescore-krachtbal\\.next\\dev\\routes-manifest.json'
-}
- POST /api/match/2/action 500 in 1004ms (next.js: 989ms, application-code: 15ms)
- POST /api/match/2/action 500 in 1004ms (next.js: 989ms, application-code: 15ms)
-Persisting failed: Unable to write SST file 00000400.sst
+[00:51:54] [33mWARN[39m: [36mNo email adapter provided. Email will be written to console. More info at https://payloadcms.com/docs/email/overview.[39m
+ GET /scorekeeper/2 200 in 4.2s (next.js: 231ms, application-code: 4.0s)
+ GET /scorekeeper/2 200 in 7.4s (next.js: 3.3s, application-code: 4.1s)
+ GET /scorekeeper/2 200 in 6.6s (next.js: 2.6s, application-code: 4.1s)
+ GET /scorekeeper/2 200 in 703ms (next.js: 11ms, application-code: 692ms)
+✓ Compiled in 42ms
+✓ Compiled in 31ms
+ GET /scorekeeper/2 200 in 749ms (next.js: 97ms, application-code: 652ms)
+ POST /api/match/2/action 200 in 2.9s (next.js: 2.7s, application-code: 122ms)
+ GET /scorekeeper 200 in 1100ms (next.js: 491ms, application-code: 609ms)
+✓ Compiled in 6ms
+○ Compiling /admin/[[...segments]] ...
+✓ Compiled in 11ms
+ GET / 200 in 1043ms (next.js: 362ms, application-code: 682ms)
+ GET /match/2 200 in 4.8s (next.js: 2.5s, application-code: 2.2s)
+⨯ ./src/payload.config.ts:1:1
+Module not found: Can't resolve '@payloadcms/db-sqlite'
+[31m[1m>[0m [90m1 |[0m [36mimport[0m { sqliteAdapter } [36mfrom[0m [32m'@payloadcms/db-sqlite'[0m
+  [90m  |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m2 |[0m [36mimport[0m { lexicalEditor } [36mfrom[0m [32m'@payloadcms/richtext-lexical'[0m
+  [90m3 |[0m [36mimport[0m path [36mfrom[0m [32m'path'[0m
+  [90m4 |[0m [36mimport[0m { buildConfig } [36mfrom[0m [32m'payload'[0m
 
-Caused by:
-    Het systeem kan het opgegeven pad niet vinden. (os error 3)
-⨯ Error: ENOENT: no such file or directory, open 'C:\Users\Robin\Desktop\Projects\Livescore-krachtbal\.next\dev\server\app\api\match\[id]\action\[__metadata_id__]\route\app-paths-manifest.json'
-    at ignore-listed frames {
-  errno: -4058,
-  code: 'ENOENT',
-  syscall: 'open',
-  path: 'C:\\Users\\Robin\\Desktop\\Projects\\Livescore-krachtbal\\.next\\dev\\server\\app\\api\\match\\[id]\\action\\[__metadata_id__]\\route\\app-paths-manifest.json'
-}
-⨯ Error: Cannot find module '../chunks/ssr/[turbopack]_runtime.js'
-Require stack:
-- C:\Users\Robin\Desktop\Projects\Livescore-krachtbal\.next\dev\server\pages\_document.js
-- C:\Users\Robin\Desktop\Projects\Livescore-krachtbal\node_modules\.pnpm\next@16.2.6_@babel+core@7.2_1f1e13705e4349586ad329f2cd4952ba\node_modules\next\dist\server\require.js
-- C:\Users\Robin\Desktop\Projects\Livescore-krachtbal\node_modules\.pnpm\next@16.2.6_@babel+core@7.2_1f1e13705e4349586ad329f2cd4952ba\node_modules\next\dist\server\load-components.js
-- C:\Users\Robin\Desktop\Projects\Livescore-krachtbal\node_modules\.pnpm\next@16.2.6_@babel+core@7.2_1f1e13705e4349586ad329f2cd4952ba\node_modules\next\dist\build\utils.js
-- C:\Users\Robin\Desktop\Projects\Livescore-krachtbal\node_modules\.pnpm\next@16.2.6_@babel+core@7.2_1f1e13705e4349586ad329f2cd4952ba\node_modules\next\dist\server\lib\router-utils\setup-dev-bundler.js
-- C:\Users\Robin\Desktop\Projects\Livescore-krachtbal\node_modules\.pnpm\next@16.2.6_@babel+core@7.2_1f1e13705e4349586ad329f2cd4952ba\node_modules\next\dist\server\lib\router-server.js
-- C:\Users\Robin\Desktop\Projects\Livescore-krachtbal\node_modules\.pnpm\next@16.2.6_@babel+core@7.2_1f1e13705e4349586ad329f2cd4952ba\node_modules\next\dist\server\lib\start-server.js
-    at Object.<anonymous> (C:\Users\Robin\Desktop\Projects\Livescore-krachtbal\.next\dev\server\pages\_document.js:1:7) {
-  code: 'MODULE_NOT_FOUND',
-  requireStack: [
-    'C:\\Users\\Robin\\Desktop\\Projects\\Livescore-krachtbal\\.next\\dev\\server\\pages\\_document.js',
-    'C:\\Users\\Robin\\Desktop\\Projects\\Livescore-krachtbal\\node_modules\\.pnpm\\next@16.2.6_@babel+core@7.2_1f1e13705e4349586ad329f2cd4952ba\\node_modules\\next\\dist\\server\\require.js',
-    'C:\\Users\\Robin\\Desktop\\Projects\\Livescore-krachtbal\\node_modules\\.pnpm\\next@16.2.6_@babel+core@7.2_1f1e13705e4349586ad329f2cd4952ba\\node_modules\\next\\dist\\server\\load-components.js',
-    'C:\\Users\\Robin\\Desktop\\Projects\\Livescore-krachtbal\\node_modules\\.pnpm\\next@16.2.6_@babel+core@7.2_1f1e13705e4349586ad329f2cd4952ba\\node_modules\\next\\dist\\build\\utils.js',
-    'C:\\Users\\Robin\\Desktop\\Projects\\Livescore-krachtbal\\node_modules\\.pnpm\\next@16.2.6_@babel+core@7.2_1f1e13705e4349586ad329f2cd4952ba\\node_modules\\next\\dist\\server\\lib\\router-utils\\setup-dev-bundler.js',
-    'C:\\Users\\Robin\\Desktop\\Projects\\Livescore-krachtbal\\node_modules\\.pnpm\\next@16.2.6_@babel+core@7.2_1f1e13705e4349586ad329f2cd4952ba\\node_modules\\next\\dist\\server\\lib\\router-server.js',
-    'C:\\Users\\Robin\\Desktop\\Projects\\Livescore-krachtbal\\node_modules\\.pnpm\\next@16.2.6_@babel+core@7.2_1f1e13705e4349586ad329f2cd4952ba\\node_modules\\next\\dist\\server\\lib\\start-server.js'
-  ]
-}
-Error: ENOENT: no such file or directory, open 'C:\Users\Robin\Desktop\Projects\Livescore-krachtbal\.next\dev\server\app\api\match\[id]\action\[__metadata_id__]\route\app-paths-manifest.json'
-    at ignore-listed frames {
-  errno: -4058,
-  code: 'ENOENT',
-  syscall: 'open',
-  path: 'C:\\Users\\Robin\\Desktop\\Projects\\Livescore-krachtbal\\.next\\dev\\server\\app\\api\\match\\[id]\\action\\[__metadata_id__]\\route\\app-paths-manifest.json'
-}
-⨯ Error: Cannot find module '../chunks/ssr/[turbopack]_runtime.js'
-Require stack:
-- C:\Users\Robin\Desktop\Projects\Livescore-krachtbal\.next\dev\server\pages\_document.js
-- C:\Users\Robin\Desktop\Projects\Livescore-krachtbal\node_modules\.pnpm\next@16.2.6_@babel+core@7.2_1f1e13705e4349586ad329f2cd4952ba\node_modules\next\dist\server\require.js
-- C:\Users\Robin\Desktop\Projects\Livescore-krachtbal\node_modules\.pnpm\next@16.2.6_@babel+core@7.2_1f1e13705e4349586ad329f2cd4952ba\node_modules\next\dist\server\load-components.js
-- C:\Users\Robin\Desktop\Projects\Livescore-krachtbal\node_modules\.pnpm\next@16.2.6_@babel+core@7.2_1f1e13705e4349586ad329f2cd4952ba\node_modules\next\dist\build\utils.js
-- C:\Users\Robin\Desktop\Projects\Livescore-krachtbal\node_modules\.pnpm\next@16.2.6_@babel+core@7.2_1f1e13705e4349586ad329f2cd4952ba\node_modules\next\dist\server\lib\router-utils\setup-dev-bundler.js
-- C:\Users\Robin\Desktop\Projects\Livescore-krachtbal\node_modules\.pnpm\next@16.2.6_@babel+core@7.2_1f1e13705e4349586ad329f2cd4952ba\node_modules\next\dist\server\lib\router-server.js
-- C:\Users\Robin\Desktop\Projects\Livescore-krachtbal\node_modules\.pnpm\next@16.2.6_@babel+core@7.2_1f1e13705e4349586ad329f2cd4952ba\node_modules\next\dist\server\lib\start-server.js
-    at Object.<anonymous> (C:\Users\Robin\Desktop\Projects\Livescore-krachtbal\.next\dev\server\pages\_document.js:1:7) {
-  code: 'MODULE_NOT_FOUND',
-  requireStack: [
-    'C:\\Users\\Robin\\Desktop\\Projects\\Livescore-krachtbal\\.next\\dev\\server\\pages\\_document.js',
-    'C:\\Users\\Robin\\Desktop\\Projects\\Livescore-krachtbal\\node_modules\\.pnpm\\next@16.2.6_@babel+core@7.2_1f1e13705e4349586ad329f2cd4952ba\\node_modules\\next\\dist\\server\\require.js',
-    'C:\\Users\\Robin\\Desktop\\Projects\\Livescore-krachtbal\\node_modules\\.pnpm\\next@16.2.6_@babel+core@7.2_1f1e13705e4349586ad329f2cd4952ba\\node_modules\\next\\dist\\server\\load-components.js',
-    'C:\\Users\\Robin\\Desktop\\Projects\\Livescore-krachtbal\\node_modules\\.pnpm\\next@16.2.6_@babel+core@7.2_1f1e13705e4349586ad329f2cd4952ba\\node_modules\\next\\dist\\build\\utils.js',
-    'C:\\Users\\Robin\\Desktop\\Projects\\Livescore-krachtbal\\node_modules\\.pnpm\\next@16.2.6_@babel+core@7.2_1f1e13705e4349586ad329f2cd4952ba\\node_modules\\next\\dist\\server\\lib\\router-utils\\setup-dev-bundler.js',
-    'C:\\Users\\Robin\\Desktop\\Projects\\Livescore-krachtbal\\node_modules\\.pnpm\\next@16.2.6_@babel+core@7.2_1f1e13705e4349586ad329f2cd4952ba\\node_modules\\next\\dist\\server\\lib\\router-server.js',
-    'C:\\Users\\Robin\\Desktop\\Projects\\Livescore-krachtbal\\node_modules\\.pnpm\\next@16.2.6_@babel+core@7.2_1f1e13705e4349586ad329f2cd4952ba\\node_modules\\next\\dist\\server\\lib\\start-server.js'
-  ]
-}
-Error: ENOENT: no such file or directory, open 'C:\Users\Robin\Desktop\Projects\Livescore-krachtbal\.next\dev\routes-manifest.json'
-    at ignore-listed frames {
-  errno: -4058,
-  code: 'ENOENT',
-  syscall: 'open',
-  path: 'C:\\Users\\Robin\\Desktop\\Projects\\Livescore-krachtbal\\.next\\dev\\routes-manifest.json'
-}
- POST /api/match/2/action 500 in 583ms (next.js: 529ms, application-code: 54ms)
- POST /api/match/2/action 500 in 584ms (next.js: 529ms, application-code: 55ms)
-Compaction failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)
-Persisting failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)
-Persisting failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)
-Compaction failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)
+
+
+Import trace:
+  Server Component:
+    ./src/payload.config.ts
+    ./src/lib/payload-client.ts
+    ./src/app/(frontend)/scorekeeper/page.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./src/payload.config.ts:1:1
+Module not found: Can't resolve '@payloadcms/db-sqlite'
+[31m[1m>[0m [90m1 |[0m [36mimport[0m { sqliteAdapter } [36mfrom[0m [32m'@payloadcms/db-sqlite'[0m
+  [90m  |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m2 |[0m [36mimport[0m { lexicalEditor } [36mfrom[0m [32m'@payloadcms/richtext-lexical'[0m
+  [90m3 |[0m [36mimport[0m path [36mfrom[0m [32m'path'[0m
+  [90m4 |[0m [36mimport[0m { buildConfig } [36mfrom[0m [32m'payload'[0m
+
+
+
+Import trace:
+  Server Component:
+    ./src/payload.config.ts
+    ./src/lib/payload-client.ts
+    ./src/app/(frontend)/scorekeeper/page.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./src/payload.config.ts:1:1
+Module not found: Can't resolve '@payloadcms/db-sqlite'
+[31m[1m>[0m [90m1 |[0m [36mimport[0m { sqliteAdapter } [36mfrom[0m [32m'@payloadcms/db-sqlite'[0m
+  [90m  |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m2 |[0m [36mimport[0m { lexicalEditor } [36mfrom[0m [32m'@payloadcms/richtext-lexical'[0m
+  [90m3 |[0m [36mimport[0m path [36mfrom[0m [32m'path'[0m
+  [90m4 |[0m [36mimport[0m { buildConfig } [36mfrom[0m [32m'payload'[0m
+
+
+
+Import trace:
+  Server Component:
+    ./src/payload.config.ts
+    ./src/lib/payload-client.ts
+    ./src/app/(frontend)/page.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./src/payload.config.ts:1:1
+Module not found: Can't resolve '@payloadcms/db-sqlite'
+[31m[1m>[0m [90m1 |[0m [36mimport[0m { sqliteAdapter } [36mfrom[0m [32m'@payloadcms/db-sqlite'[0m
+  [90m  |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m2 |[0m [36mimport[0m { lexicalEditor } [36mfrom[0m [32m'@payloadcms/richtext-lexical'[0m
+  [90m3 |[0m [36mimport[0m path [36mfrom[0m [32m'path'[0m
+  [90m4 |[0m [36mimport[0m { buildConfig } [36mfrom[0m [32m'payload'[0m
+
+
+
+Import trace:
+  Server Component:
+    ./src/payload.config.ts
+    ./src/lib/payload-client.ts
+    ./src/app/(frontend)/page.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./src/payload.config.ts:1:1
+Module not found: Can't resolve '@payloadcms/db-sqlite'
+[31m[1m>[0m [90m1 |[0m [36mimport[0m { sqliteAdapter } [36mfrom[0m [32m'@payloadcms/db-sqlite'[0m
+  [90m  |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m2 |[0m [36mimport[0m { lexicalEditor } [36mfrom[0m [32m'@payloadcms/richtext-lexical'[0m
+  [90m3 |[0m [36mimport[0m path [36mfrom[0m [32m'path'[0m
+  [90m4 |[0m [36mimport[0m { buildConfig } [36mfrom[0m [32m'payload'[0m
+
+
+
+Import trace:
+  Server Component:
+    ./src/payload.config.ts
+    ./src/lib/payload-client.ts
+    ./src/app/(frontend)/scorekeeper/[id]/page.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./src/payload.config.ts:1:1
+Module not found: Can't resolve '@payloadcms/db-sqlite'
+[31m[1m>[0m [90m1 |[0m [36mimport[0m { sqliteAdapter } [36mfrom[0m [32m'@payloadcms/db-sqlite'[0m
+  [90m  |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m2 |[0m [36mimport[0m { lexicalEditor } [36mfrom[0m [32m'@payloadcms/richtext-lexical'[0m
+  [90m3 |[0m [36mimport[0m path [36mfrom[0m [32m'path'[0m
+  [90m4 |[0m [36mimport[0m { buildConfig } [36mfrom[0m [32m'payload'[0m
+
+
+
+Import trace:
+  Server Component:
+    ./src/payload.config.ts
+    ./src/lib/payload-client.ts
+    ./src/app/(frontend)/scorekeeper/[id]/page.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./src/payload.config.ts:1:1
+Module not found: Can't resolve '@payloadcms/db-sqlite'
+[31m[1m>[0m [90m1 |[0m [36mimport[0m { sqliteAdapter } [36mfrom[0m [32m'@payloadcms/db-sqlite'[0m
+  [90m  |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m2 |[0m [36mimport[0m { lexicalEditor } [36mfrom[0m [32m'@payloadcms/richtext-lexical'[0m
+  [90m3 |[0m [36mimport[0m path [36mfrom[0m [32m'path'[0m
+  [90m4 |[0m [36mimport[0m { buildConfig } [36mfrom[0m [32m'payload'[0m
+
+
+
+Import trace:
+  Server Component:
+    ./src/payload.config.ts
+    ./src/lib/payload-client.ts
+    ./src/app/(frontend)/scorekeeper/[id]/page.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./src/payload.config.ts:1:1
+Module not found: Can't resolve '@payloadcms/db-sqlite'
+[31m[1m>[0m [90m1 |[0m [36mimport[0m { sqliteAdapter } [36mfrom[0m [32m'@payloadcms/db-sqlite'[0m
+  [90m  |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m2 |[0m [36mimport[0m { lexicalEditor } [36mfrom[0m [32m'@payloadcms/richtext-lexical'[0m
+  [90m3 |[0m [36mimport[0m path [36mfrom[0m [32m'path'[0m
+  [90m4 |[0m [36mimport[0m { buildConfig } [36mfrom[0m [32m'payload'[0m
+
+
+
+Import trace:
+  Server Component:
+    ./src/payload.config.ts
+    ./src/lib/payload-client.ts
+    ./src/app/(frontend)/scorekeeper/[id]/page.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./src/payload.config.ts:1:1
+Module not found: Can't resolve '@payloadcms/db-sqlite'
+[31m[1m>[0m [90m1 |[0m [36mimport[0m { sqliteAdapter } [36mfrom[0m [32m'@payloadcms/db-sqlite'[0m
+  [90m  |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m2 |[0m [36mimport[0m { lexicalEditor } [36mfrom[0m [32m'@payloadcms/richtext-lexical'[0m
+  [90m3 |[0m [36mimport[0m path [36mfrom[0m [32m'path'[0m
+  [90m4 |[0m [36mimport[0m { buildConfig } [36mfrom[0m [32m'payload'[0m
+
+
+
+Import trace:
+  Server Component:
+    ./src/payload.config.ts
+    ./src/lib/payload-client.ts
+    ./src/app/(frontend)/scorekeeper/[id]/page.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./src/payload.config.ts:1:1
+Module not found: Can't resolve '@payloadcms/db-sqlite'
+[31m[1m>[0m [90m1 |[0m [36mimport[0m { sqliteAdapter } [36mfrom[0m [32m'@payloadcms/db-sqlite'[0m
+  [90m  |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m2 |[0m [36mimport[0m { lexicalEditor } [36mfrom[0m [32m'@payloadcms/richtext-lexical'[0m
+  [90m3 |[0m [36mimport[0m path [36mfrom[0m [32m'path'[0m
+  [90m4 |[0m [36mimport[0m { buildConfig } [36mfrom[0m [32m'payload'[0m
+
+
+
+Import trace:
+  Server Component:
+    ./src/payload.config.ts
+    ./src/lib/payload-client.ts
+    ./src/app/(frontend)/scorekeeper/[id]/page.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./src/payload.config.ts:1:1
+Module not found: Can't resolve '@payloadcms/db-sqlite'
+[31m[1m>[0m [90m1 |[0m [36mimport[0m { sqliteAdapter } [36mfrom[0m [32m'@payloadcms/db-sqlite'[0m
+  [90m  |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m2 |[0m [36mimport[0m { lexicalEditor } [36mfrom[0m [32m'@payloadcms/richtext-lexical'[0m
+  [90m3 |[0m [36mimport[0m path [36mfrom[0m [32m'path'[0m
+  [90m4 |[0m [36mimport[0m { buildConfig } [36mfrom[0m [32m'payload'[0m
+
+
+
+Import trace:
+  Server Component:
+    ./src/payload.config.ts
+    ./src/lib/payload-client.ts
+    ./src/app/(frontend)/scorekeeper/[id]/page.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./src/payload.config.ts:1:1
+Module not found: Can't resolve '@payloadcms/db-sqlite'
+[31m[1m>[0m [90m1 |[0m [36mimport[0m { sqliteAdapter } [36mfrom[0m [32m'@payloadcms/db-sqlite'[0m
+  [90m  |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m2 |[0m [36mimport[0m { lexicalEditor } [36mfrom[0m [32m'@payloadcms/richtext-lexical'[0m
+  [90m3 |[0m [36mimport[0m path [36mfrom[0m [32m'path'[0m
+  [90m4 |[0m [36mimport[0m { buildConfig } [36mfrom[0m [32m'payload'[0m
+
+
+
+Import trace:
+  Server Component:
+    ./src/payload.config.ts
+    ./src/lib/payload-client.ts
+    ./src/app/(frontend)/scorekeeper/[id]/page.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./src/payload.config.ts:1:1
+Module not found: Can't resolve '@payloadcms/db-sqlite'
+[31m[1m>[0m [90m1 |[0m [36mimport[0m { sqliteAdapter } [36mfrom[0m [32m'@payloadcms/db-sqlite'[0m
+  [90m  |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m2 |[0m [36mimport[0m { lexicalEditor } [36mfrom[0m [32m'@payloadcms/richtext-lexical'[0m
+  [90m3 |[0m [36mimport[0m path [36mfrom[0m [32m'path'[0m
+  [90m4 |[0m [36mimport[0m { buildConfig } [36mfrom[0m [32m'payload'[0m
+
+
+
+Import trace:
+  Server Component:
+    ./src/payload.config.ts
+    ./src/lib/payload-client.ts
+    ./src/app/(frontend)/scorekeeper/[id]/page.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./src/payload.config.ts:1:1
+Module not found: Can't resolve '@payloadcms/db-sqlite'
+[31m[1m>[0m [90m1 |[0m [36mimport[0m { sqliteAdapter } [36mfrom[0m [32m'@payloadcms/db-sqlite'[0m
+  [90m  |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m2 |[0m [36mimport[0m { lexicalEditor } [36mfrom[0m [32m'@payloadcms/richtext-lexical'[0m
+  [90m3 |[0m [36mimport[0m path [36mfrom[0m [32m'path'[0m
+  [90m4 |[0m [36mimport[0m { buildConfig } [36mfrom[0m [32m'payload'[0m
+
+
+
+Import trace:
+  Server Component:
+    ./src/payload.config.ts
+    ./src/lib/payload-client.ts
+    ./src/app/(frontend)/scorekeeper/[id]/page.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./src/payload.config.ts:1:1
+Module not found: Can't resolve '@payloadcms/db-sqlite'
+[31m[1m>[0m [90m1 |[0m [36mimport[0m { sqliteAdapter } [36mfrom[0m [32m'@payloadcms/db-sqlite'[0m
+  [90m  |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m2 |[0m [36mimport[0m { lexicalEditor } [36mfrom[0m [32m'@payloadcms/richtext-lexical'[0m
+  [90m3 |[0m [36mimport[0m path [36mfrom[0m [32m'path'[0m
+  [90m4 |[0m [36mimport[0m { buildConfig } [36mfrom[0m [32m'payload'[0m
+
+
+
+Import trace:
+  Server Component:
+    ./src/payload.config.ts
+    ./src/lib/payload-client.ts
+    ./src/app/(frontend)/scorekeeper/[id]/page.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./src/payload.config.ts:1:1
+Module not found: Can't resolve '@payloadcms/db-sqlite'
+[31m[1m>[0m [90m1 |[0m [36mimport[0m { sqliteAdapter } [36mfrom[0m [32m'@payloadcms/db-sqlite'[0m
+  [90m  |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m2 |[0m [36mimport[0m { lexicalEditor } [36mfrom[0m [32m'@payloadcms/richtext-lexical'[0m
+  [90m3 |[0m [36mimport[0m path [36mfrom[0m [32m'path'[0m
+  [90m4 |[0m [36mimport[0m { buildConfig } [36mfrom[0m [32m'payload'[0m
+
+
+
+Import trace:
+  Server Component:
+    ./src/payload.config.ts
+    ./src/lib/payload-client.ts
+    ./src/app/(frontend)/scorekeeper/[id]/page.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./src/payload.config.ts:1:1
+Module not found: Can't resolve '@payloadcms/db-sqlite'
+[31m[1m>[0m [90m1 |[0m [36mimport[0m { sqliteAdapter } [36mfrom[0m [32m'@payloadcms/db-sqlite'[0m
+  [90m  |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m2 |[0m [36mimport[0m { lexicalEditor } [36mfrom[0m [32m'@payloadcms/richtext-lexical'[0m
+  [90m3 |[0m [36mimport[0m path [36mfrom[0m [32m'path'[0m
+  [90m4 |[0m [36mimport[0m { buildConfig } [36mfrom[0m [32m'payload'[0m
+
+
+
+Import trace:
+  Server Component:
+    ./src/payload.config.ts
+    ./src/lib/payload-client.ts
+    ./src/app/(frontend)/scorekeeper/[id]/page.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./src/payload.config.ts:1:1
+Module not found: Can't resolve '@payloadcms/db-sqlite'
+[31m[1m>[0m [90m1 |[0m [36mimport[0m { sqliteAdapter } [36mfrom[0m [32m'@payloadcms/db-sqlite'[0m
+  [90m  |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m2 |[0m [36mimport[0m { lexicalEditor } [36mfrom[0m [32m'@payloadcms/richtext-lexical'[0m
+  [90m3 |[0m [36mimport[0m path [36mfrom[0m [32m'path'[0m
+  [90m4 |[0m [36mimport[0m { buildConfig } [36mfrom[0m [32m'payload'[0m
+
+
+
+Import trace:
+  Server Component:
+    ./src/payload.config.ts
+    ./src/lib/payload-client.ts
+    ./src/app/(frontend)/scorekeeper/[id]/page.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./src/payload.config.ts:1:1
+Module not found: Can't resolve '@payloadcms/db-sqlite'
+[31m[1m>[0m [90m1 |[0m [36mimport[0m { sqliteAdapter } [36mfrom[0m [32m'@payloadcms/db-sqlite'[0m
+  [90m  |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m2 |[0m [36mimport[0m { lexicalEditor } [36mfrom[0m [32m'@payloadcms/richtext-lexical'[0m
+  [90m3 |[0m [36mimport[0m path [36mfrom[0m [32m'path'[0m
+  [90m4 |[0m [36mimport[0m { buildConfig } [36mfrom[0m [32m'payload'[0m
+
+
+
+Import trace:
+  Server Component:
+    ./src/payload.config.ts
+    ./src/lib/payload-client.ts
+    ./src/app/(frontend)/scorekeeper/[id]/page.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./src/payload.config.ts:1:1
+Module not found: Can't resolve '@payloadcms/db-sqlite'
+[31m[1m>[0m [90m1 |[0m [36mimport[0m { sqliteAdapter } [36mfrom[0m [32m'@payloadcms/db-sqlite'[0m
+  [90m  |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m2 |[0m [36mimport[0m { lexicalEditor } [36mfrom[0m [32m'@payloadcms/richtext-lexical'[0m
+  [90m3 |[0m [36mimport[0m path [36mfrom[0m [32m'path'[0m
+  [90m4 |[0m [36mimport[0m { buildConfig } [36mfrom[0m [32m'payload'[0m
+
+
+
+Import trace:
+  Server Component:
+    ./src/payload.config.ts
+    ./src/lib/payload-client.ts
+    ./src/app/(frontend)/scorekeeper/[id]/page.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./src/payload.config.ts:1:1
+Module not found: Can't resolve '@payloadcms/db-sqlite'
+[31m[1m>[0m [90m1 |[0m [36mimport[0m { sqliteAdapter } [36mfrom[0m [32m'@payloadcms/db-sqlite'[0m
+  [90m  |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m2 |[0m [36mimport[0m { lexicalEditor } [36mfrom[0m [32m'@payloadcms/richtext-lexical'[0m
+  [90m3 |[0m [36mimport[0m path [36mfrom[0m [32m'path'[0m
+  [90m4 |[0m [36mimport[0m { buildConfig } [36mfrom[0m [32m'payload'[0m
+
+
+
+Import trace:
+  Server Component:
+    ./src/payload.config.ts
+    ./src/lib/payload-client.ts
+    ./src/app/(frontend)/scorekeeper/[id]/page.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./src/payload.config.ts:1:1
+Module not found: Can't resolve '@payloadcms/db-sqlite'
+[31m[1m>[0m [90m1 |[0m [36mimport[0m { sqliteAdapter } [36mfrom[0m [32m'@payloadcms/db-sqlite'[0m
+  [90m  |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m2 |[0m [36mimport[0m { lexicalEditor } [36mfrom[0m [32m'@payloadcms/richtext-lexical'[0m
+  [90m3 |[0m [36mimport[0m path [36mfrom[0m [32m'path'[0m
+  [90m4 |[0m [36mimport[0m { buildConfig } [36mfrom[0m [32m'payload'[0m
+
+
+
+Import trace:
+  Server Component:
+    ./src/payload.config.ts
+    ./src/lib/payload-client.ts
+    ./src/app/(frontend)/scorekeeper/[id]/page.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./src/payload.config.ts:1:1
+Module not found: Can't resolve '@payloadcms/db-sqlite'
+[31m[1m>[0m [90m1 |[0m [36mimport[0m { sqliteAdapter } [36mfrom[0m [32m'@payloadcms/db-sqlite'[0m
+  [90m  |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m2 |[0m [36mimport[0m { lexicalEditor } [36mfrom[0m [32m'@payloadcms/richtext-lexical'[0m
+  [90m3 |[0m [36mimport[0m path [36mfrom[0m [32m'path'[0m
+  [90m4 |[0m [36mimport[0m { buildConfig } [36mfrom[0m [32m'payload'[0m
+
+
+
+Import trace:
+  Server Component:
+    ./src/payload.config.ts
+    ./src/lib/payload-client.ts
+    ./src/app/(frontend)/scorekeeper/[id]/page.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./src/payload.config.ts:1:1
+Module not found: Can't resolve '@payloadcms/db-sqlite'
+[31m[1m>[0m [90m1 |[0m [36mimport[0m { sqliteAdapter } [36mfrom[0m [32m'@payloadcms/db-sqlite'[0m
+  [90m  |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m2 |[0m [36mimport[0m { lexicalEditor } [36mfrom[0m [32m'@payloadcms/richtext-lexical'[0m
+  [90m3 |[0m [36mimport[0m path [36mfrom[0m [32m'path'[0m
+  [90m4 |[0m [36mimport[0m { buildConfig } [36mfrom[0m [32m'payload'[0m
+
+
+
+Import trace:
+  Server Component:
+    ./src/payload.config.ts
+    ./src/lib/payload-client.ts
+    ./src/app/(frontend)/scorekeeper/[id]/page.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./src/payload.config.ts:1:1
+Module not found: Can't resolve '@payloadcms/db-sqlite'
+[31m[1m>[0m [90m1 |[0m [36mimport[0m { sqliteAdapter } [36mfrom[0m [32m'@payloadcms/db-sqlite'[0m
+  [90m  |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m2 |[0m [36mimport[0m { lexicalEditor } [36mfrom[0m [32m'@payloadcms/richtext-lexical'[0m
+  [90m3 |[0m [36mimport[0m path [36mfrom[0m [32m'path'[0m
+  [90m4 |[0m [36mimport[0m { buildConfig } [36mfrom[0m [32m'payload'[0m
+
+
+
+Import trace:
+  Server Component:
+    ./src/payload.config.ts
+    ./src/lib/payload-client.ts
+    ./src/app/(frontend)/scorekeeper/[id]/page.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./src/payload.config.ts:1:1
+Module not found: Can't resolve '@payloadcms/db-sqlite'
+[31m[1m>[0m [90m1 |[0m [36mimport[0m { sqliteAdapter } [36mfrom[0m [32m'@payloadcms/db-sqlite'[0m
+  [90m  |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m2 |[0m [36mimport[0m { lexicalEditor } [36mfrom[0m [32m'@payloadcms/richtext-lexical'[0m
+  [90m3 |[0m [36mimport[0m path [36mfrom[0m [32m'path'[0m
+  [90m4 |[0m [36mimport[0m { buildConfig } [36mfrom[0m [32m'payload'[0m
+
+
+
+Import trace:
+  Server Component:
+    ./src/payload.config.ts
+    ./src/lib/payload-client.ts
+    ./src/app/(frontend)/scorekeeper/[id]/page.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./src/payload.config.ts:1:1
+Module not found: Can't resolve '@payloadcms/db-sqlite'
+[31m[1m>[0m [90m1 |[0m [36mimport[0m { sqliteAdapter } [36mfrom[0m [32m'@payloadcms/db-sqlite'[0m
+  [90m  |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m2 |[0m [36mimport[0m { lexicalEditor } [36mfrom[0m [32m'@payloadcms/richtext-lexical'[0m
+  [90m3 |[0m [36mimport[0m path [36mfrom[0m [32m'path'[0m
+  [90m4 |[0m [36mimport[0m { buildConfig } [36mfrom[0m [32m'payload'[0m
+
+
+
+Import trace:
+  Server Component:
+    ./src/payload.config.ts
+    ./src/lib/payload-client.ts
+    ./src/app/(frontend)/scorekeeper/[id]/page.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./src/payload.config.ts:1:1
+Module not found: Can't resolve '@payloadcms/db-sqlite'
+[31m[1m>[0m [90m1 |[0m [36mimport[0m { sqliteAdapter } [36mfrom[0m [32m'@payloadcms/db-sqlite'[0m
+  [90m  |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m2 |[0m [36mimport[0m { lexicalEditor } [36mfrom[0m [32m'@payloadcms/richtext-lexical'[0m
+  [90m3 |[0m [36mimport[0m path [36mfrom[0m [32m'path'[0m
+  [90m4 |[0m [36mimport[0m { buildConfig } [36mfrom[0m [32m'payload'[0m
+
+
+
+Import trace:
+  Server Component:
+    ./src/payload.config.ts
+    ./src/lib/payload-client.ts
+    ./src/app/(frontend)/scorekeeper/[id]/page.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./src/payload.config.ts:1:1
+Module not found: Can't resolve '@payloadcms/db-sqlite'
+[31m[1m>[0m [90m1 |[0m [36mimport[0m { sqliteAdapter } [36mfrom[0m [32m'@payloadcms/db-sqlite'[0m
+  [90m  |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m2 |[0m [36mimport[0m { lexicalEditor } [36mfrom[0m [32m'@payloadcms/richtext-lexical'[0m
+  [90m3 |[0m [36mimport[0m path [36mfrom[0m [32m'path'[0m
+  [90m4 |[0m [36mimport[0m { buildConfig } [36mfrom[0m [32m'payload'[0m
+
+
+
+Import trace:
+  Server Component:
+    ./src/payload.config.ts
+    ./src/lib/payload-client.ts
+    ./src/app/(frontend)/match/[id]/page.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./src/payload.config.ts:1:1
+Module not found: Can't resolve '@payloadcms/db-sqlite'
+[31m[1m>[0m [90m1 |[0m [36mimport[0m { sqliteAdapter } [36mfrom[0m [32m'@payloadcms/db-sqlite'[0m
+  [90m  |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m2 |[0m [36mimport[0m { lexicalEditor } [36mfrom[0m [32m'@payloadcms/richtext-lexical'[0m
+  [90m3 |[0m [36mimport[0m path [36mfrom[0m [32m'path'[0m
+  [90m4 |[0m [36mimport[0m { buildConfig } [36mfrom[0m [32m'payload'[0m
+
+
+
+Import trace:
+  Server Component:
+    ./src/payload.config.ts
+    ./src/lib/payload-client.ts
+    ./src/app/(frontend)/match/[id]/page.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./src/payload.config.ts:1:1
+Module not found: Can't resolve '@payloadcms/db-sqlite'
+[31m[1m>[0m [90m1 |[0m [36mimport[0m { sqliteAdapter } [36mfrom[0m [32m'@payloadcms/db-sqlite'[0m
+  [90m  |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m2 |[0m [36mimport[0m { lexicalEditor } [36mfrom[0m [32m'@payloadcms/richtext-lexical'[0m
+  [90m3 |[0m [36mimport[0m path [36mfrom[0m [32m'path'[0m
+  [90m4 |[0m [36mimport[0m { buildConfig } [36mfrom[0m [32m'payload'[0m
+
+
+
+Import trace:
+  Server Component:
+    ./src/payload.config.ts
+    ./src/lib/payload-client.ts
+    ./src/app/(frontend)/match/[id]/page.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./src/payload.config.ts:1:1
+Module not found: Can't resolve '@payloadcms/db-sqlite'
+[31m[1m>[0m [90m1 |[0m [36mimport[0m { sqliteAdapter } [36mfrom[0m [32m'@payloadcms/db-sqlite'[0m
+  [90m  |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m2 |[0m [36mimport[0m { lexicalEditor } [36mfrom[0m [32m'@payloadcms/richtext-lexical'[0m
+  [90m3 |[0m [36mimport[0m path [36mfrom[0m [32m'path'[0m
+  [90m4 |[0m [36mimport[0m { buildConfig } [36mfrom[0m [32m'payload'[0m
+
+
+
+Import trace:
+  Server Component:
+    ./src/payload.config.ts
+    ./src/lib/payload-client.ts
+    ./src/app/(frontend)/match/[id]/page.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./src/payload.config.ts:1:1
+Module not found: Can't resolve '@payloadcms/db-sqlite'
+[31m[1m>[0m [90m1 |[0m [36mimport[0m { sqliteAdapter } [36mfrom[0m [32m'@payloadcms/db-sqlite'[0m
+  [90m  |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m2 |[0m [36mimport[0m { lexicalEditor } [36mfrom[0m [32m'@payloadcms/richtext-lexical'[0m
+  [90m3 |[0m [36mimport[0m path [36mfrom[0m [32m'path'[0m
+  [90m4 |[0m [36mimport[0m { buildConfig } [36mfrom[0m [32m'payload'[0m
+
+
+
+Import trace:
+  Server Component:
+    ./src/payload.config.ts
+    ./src/lib/payload-client.ts
+    ./src/app/(frontend)/page.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./src/payload.config.ts:1:1
+Module not found: Can't resolve '@payloadcms/db-sqlite'
+[31m[1m>[0m [90m1 |[0m [36mimport[0m { sqliteAdapter } [36mfrom[0m [32m'@payloadcms/db-sqlite'[0m
+  [90m  |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m2 |[0m [36mimport[0m { lexicalEditor } [36mfrom[0m [32m'@payloadcms/richtext-lexical'[0m
+  [90m3 |[0m [36mimport[0m path [36mfrom[0m [32m'path'[0m
+  [90m4 |[0m [36mimport[0m { buildConfig } [36mfrom[0m [32m'payload'[0m
+
+
+
+Import trace:
+  Server Component:
+    ./src/payload.config.ts
+    ./src/lib/payload-client.ts
+    ./src/app/(frontend)/page.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./src/payload.config.ts:1:1
+Module not found: Can't resolve '@payloadcms/db-sqlite'
+[31m[1m>[0m [90m1 |[0m [36mimport[0m { sqliteAdapter } [36mfrom[0m [32m'@payloadcms/db-sqlite'[0m
+  [90m  |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m2 |[0m [36mimport[0m { lexicalEditor } [36mfrom[0m [32m'@payloadcms/richtext-lexical'[0m
+  [90m3 |[0m [36mimport[0m path [36mfrom[0m [32m'path'[0m
+  [90m4 |[0m [36mimport[0m { buildConfig } [36mfrom[0m [32m'payload'[0m
+
+
+
+Import traces:
+  #1 [Server Component]:
+    ./src/payload.config.ts
+    ./src/app/(payload)/admin/[[...segments]]/not-found.tsx
+
+  #2 [Server Component]:
+    ./src/payload.config.ts
+    ./src/app/(payload)/admin/[[...segments]]/page.tsx
+
+  #3 [Server Component]:
+    ./src/payload.config.ts
+    ./src/app/(payload)/layout.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+⨯ ./src/payload.config.ts:1:1
+Module not found: Can't resolve '@payloadcms/db-sqlite'
+[31m[1m>[0m [90m1 |[0m [36mimport[0m { sqliteAdapter } [36mfrom[0m [32m'@payloadcms/db-sqlite'[0m
+  [90m  |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m2 |[0m [36mimport[0m { lexicalEditor } [36mfrom[0m [32m'@payloadcms/richtext-lexical'[0m
+  [90m3 |[0m [36mimport[0m path [36mfrom[0m [32m'path'[0m
+  [90m4 |[0m [36mimport[0m { buildConfig } [36mfrom[0m [32m'payload'[0m
+
+
+
+Import traces:
+  #1 [Server Component]:
+    ./src/payload.config.ts
+    ./src/app/(payload)/admin/[[...segments]]/not-found.tsx
+
+  #2 [Server Component]:
+    ./src/payload.config.ts
+    ./src/app/(payload)/admin/[[...segments]]/page.tsx
+
+  #3 [Server Component]:
+    ./src/payload.config.ts
+    ./src/app/(payload)/layout.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[browser] ./src/payload.config.ts:1:1
+Module not found: Can't resolve '@payloadcms/db-sqlite'
+> 1 | import { sqliteAdapter } from '@payloadcms/db-sqlite'
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  2 | import { lexicalEditor } from '@payloadcms/richtext-lexical'
+  3 | import path from 'path'
+  4 | import { buildConfig } from 'payload'
+
+Import trace:
+  Server Component:
+    ./src/payload.config.ts
+    ./src/lib/payload-client.ts
+    ./src/app/(frontend)/scorekeeper/[id]/page.tsx
+
+https://nextjs.org/docs/messages/module-not-found 
+[browser] ./src/payload.config.ts:1:1
+Module not found: Can't resolve '@payloadcms/db-sqlite'
+> 1 | import { sqliteAdapter } from '@payloadcms/db-sqlite'
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  2 | import { lexicalEditor } from '@payloadcms/richtext-lexical'
+  3 | import path from 'path'
+  4 | import { buildConfig } from 'payload'
+
+Import trace:
+  Server Component:
+    ./src/payload.config.ts
+    ./src/lib/payload-client.ts
+    ./src/app/(frontend)/scorekeeper/[id]/page.tsx
+
+https://nextjs.org/docs/messages/module-not-found 
+[browser] ./src/payload.config.ts:1:1
+Module not found: Can't resolve '@payloadcms/db-sqlite'
+> 1 | import { sqliteAdapter } from '@payloadcms/db-sqlite'
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  2 | import { lexicalEditor } from '@payloadcms/richtext-lexical'
+  3 | import path from 'path'
+  4 | import { buildConfig } from 'payload'
+
+Import trace:
+  Server Component:
+    ./src/payload.config.ts
+    ./src/lib/payload-client.ts
+    ./src/app/(frontend)/scorekeeper/[id]/page.tsx
+
+https://nextjs.org/docs/messages/module-not-found 
+[browser] ./src/payload.config.ts:1:1
+Module not found: Can't resolve '@payloadcms/db-sqlite'
+> 1 | import { sqliteAdapter } from '@payloadcms/db-sqlite'
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  2 | import { lexicalEditor } from '@payloadcms/richtext-lexical'
+  3 | import path from 'path'
+  4 | import { buildConfig } from 'payload'
+
+Import trace:
+  Server Component:
+    ./src/payload.config.ts
+    ./src/lib/payload-client.ts
+    ./src/app/(frontend)/scorekeeper/[id]/page.tsx
+
+https://nextjs.org/docs/messages/module-not-found 
+[browser] ./src/payload.config.ts:1:1
+Module not found: Can't resolve '@payloadcms/db-sqlite'
+> 1 | import { sqliteAdapter } from '@payloadcms/db-sqlite'
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  2 | import { lexicalEditor } from '@payloadcms/richtext-lexical'
+  3 | import path from 'path'
+  4 | import { buildConfig } from 'payload'
+
+Import trace:
+  Server Component:
+    ./src/payload.config.ts
+    ./src/lib/payload-client.ts
+    ./src/app/(frontend)/scorekeeper/[id]/page.tsx
+
+https://nextjs.org/docs/messages/module-not-found 
+[browser] ./src/payload.config.ts:1:1
+Module not found: Can't resolve '@payloadcms/db-sqlite'
+> 1 | import { sqliteAdapter } from '@payloadcms/db-sqlite'
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  2 | import { lexicalEditor } from '@payloadcms/richtext-lexical'
+  3 | import path from 'path'
+  4 | import { buildConfig } from 'payload'
+
+Import trace:
+  Server Component:
+    ./src/payload.config.ts
+    ./src/lib/payload-client.ts
+    ./src/app/(frontend)/scorekeeper/[id]/page.tsx
+
+https://nextjs.org/docs/messages/module-not-found 
+Generating import map
+No new imports found, skipping writing import map
+ GET /scorekeeper/2 200 in 5.9s (next.js: 133ms, application-code: 5.8s)
+ GET /scorekeeper/2 200 in 8.3s (next.js: 5ms, application-code: 8.2s)
+ GET /match/2 200 in 8.3s (next.js: 737ms, application-code: 7.5s)
+ GET /scorekeeper/2 200 in 6.7s (next.js: 14ms, application-code: 6.7s)
+ GET /scorekeeper/2 200 in 6.7s (next.js: 581ms, application-code: 6.1s)
+ GET /scorekeeper/2 200 in 6.7s (next.js: 1156ms, application-code: 5.6s)
+ GET /match/2 200 in 4.9s (next.js: 27ms, application-code: 4.9s)
+ GET /match/2 200 in 5.0s (next.js: 17ms, application-code: 5.0s)
+ GET /match/2 200 in 5.1s (next.js: 12ms, application-code: 5.1s)
+ GET /match/2 200 in 2.5s (next.js: 14ms, application-code: 2.5s)
+Generating import map
+No new imports found, skipping writing import map
+ GET /scorekeeper/2 200 in 4.8s (next.js: 125ms, application-code: 4.7s)
+ GET /scorekeeper/2 200 in 8.1s (next.js: 2.7s, application-code: 5.4s)
+ GET /match/2 200 in 8.1s (next.js: 102ms, application-code: 8.0s)
+Generating import map
+ GET /scorekeeper/2 200 in 4.8s (next.js: 12ms, application-code: 4.8s)
+ GET /scorekeeper/2 200 in 4.8s (next.js: 654ms, application-code: 4.1s)
+ GET /scorekeeper/2 200 in 4.8s (next.js: 1302ms, application-code: 3.5s)
+ GET /match/2 200 in 5.0s (next.js: 2.1s, application-code: 2.9s)
+No new imports found, skipping writing import map
+ GET /scorekeeper/2 200 in 7.7s (next.js: 117ms, application-code: 7.6s)
+ GET /match/2 200 in 7.9s (next.js: 80ms, application-code: 7.8s)

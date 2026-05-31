@@ -1,3 +1,4 @@
+import { postgresAdapter } from '@payloadcms/db-postgres'
 import { sqliteAdapter } from '@payloadcms/db-sqlite'
 import { lexicalEditor } from '@payloadcms/richtext-lexical'
 import path from 'path'
@@ -17,6 +18,13 @@ import { MatchEvents } from './collections/MatchEvents'
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
 
+// Postgres in productie (Railway-service), SQLite-bestand lokaal — afgeleid uit DATABASE_URL.
+const databaseUrl = process.env.DATABASE_URL || 'file:./krachtbal.db'
+const isPostgres = /^postgres(ql)?:\/\//.test(databaseUrl)
+const db = isPostgres
+  ? postgresAdapter({ pool: { connectionString: databaseUrl } })
+  : sqliteAdapter({ client: { url: databaseUrl } })
+
 export default buildConfig({
   admin: {
     user: Users.slug,
@@ -30,11 +38,7 @@ export default buildConfig({
   typescript: {
     outputFile: path.resolve(dirname, 'payload-types.ts'),
   },
-  db: sqliteAdapter({
-    client: {
-      url: process.env.DATABASE_URL || 'file:./krachtbal.db',
-    },
-  }),
+  db,
   sharp,
   plugins: [],
 })

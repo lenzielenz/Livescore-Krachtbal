@@ -265,37 +265,44 @@ export function Scorekeeper({
           </div>
         </div>
       )}
-      <header className="sk-top">
-        <button className="sk-to home" disabled={busy || !isLive} onClick={() => act({ action: 'timeout', teamId: state.teams.home.id })}>
-          <span className="sk-to-lbl">time-out</span>
-          <span className="sk-to-dots">{'●'.repeat(state.timeouts.home)}{'○'.repeat(Math.max(0, 2 - state.timeouts.home))}</span>
-        </button>
-
-        <div className="sk-center">
-          <div className="sk-scores">
-            <span className="sk-tn home">{state.teams.home.name}</span>
-            <span className="sk-sc">{state.score.home}</span>
-            <button className={`sk-clock ${state.match.clockRunning ? 'running' : ''}`} disabled={busy || !isLive} onClick={toggleClock} title="Tik om te starten/pauzeren">
-              {fmtClock(clock)}
-              <span className="sk-clock-ico">{state.match.clockRunning ? '⏸' : '▶'}</span>
-            </button>
-            <span className="sk-sc">{state.score.away}</span>
-            <span className="sk-tn away">{state.teams.away.name}</span>
-          </div>
-          <div className="sk-sub">Helft {state.match.currentHalf} · {state.match.status} · Kruisjes {state.crosses.home}–{state.crosses.away}</div>
+      <header className="sk-head">
+        <div className="sk-scorebar">
+          <button type="button" className="sk-to home" disabled={busy || !isLive} onClick={() => act({ action: 'timeout', teamId: state.teams.home.id })} title="Time-out thuis">
+            {'●'.repeat(state.timeouts.home)}{'○'.repeat(Math.max(0, 2 - state.timeouts.home))}
+          </button>
+          <span className="sk-sc home">{state.score.home}</span>
+          <button type="button" className={`sk-clock ${state.match.clockRunning ? 'running' : ''}`} disabled={busy || !isLive} onClick={toggleClock} title="Tik om te starten/pauzeren">
+            <span className="sk-half-chip">H{state.match.currentHalf}</span>
+            {fmtClock(clock)}
+            <span className="sk-clock-ico">{state.match.clockRunning ? '⏸' : '▶'}</span>
+          </button>
+          <span className="sk-sc away">{state.score.away}</span>
+          <button type="button" className="sk-to away" disabled={busy || !isLive} onClick={() => act({ action: 'timeout', teamId: state.teams.away.id })} title="Time-out uit">
+            {'●'.repeat(state.timeouts.away)}{'○'.repeat(Math.max(0, 2 - state.timeouts.away))}
+          </button>
         </div>
-
-        <button className="sk-to away" disabled={busy || !isLive} onClick={() => act({ action: 'timeout', teamId: state.teams.away.id })}>
-          <span className="sk-to-lbl">time-out</span>
-          <span className="sk-to-dots">{'●'.repeat(state.timeouts.away)}{'○'.repeat(Math.max(0, 2 - state.timeouts.away))}</span>
-        </button>
+        <div className="sk-names">
+          <span className="sk-tn home">{state.teams.home.name}</span>
+          <span className="sk-kr" title="Kruisjes">✚ {state.crosses.home}–{state.crosses.away}</span>
+          <span className="sk-tn away">{state.teams.away.name}</span>
+        </div>
       </header>
 
       {poss && (
-        <div className="sk-poss">
-          {poss.freeThrow && <b className="sk-vw">VRIJWORP</b>}
-          Balbezit: <b style={{ color: possSide === 'home' ? HOME_COLOR : AWAY_COLOR }}>{possSide === 'home' ? state.teams.home.name : state.teams.away.name}</b>
-          {poss.freeThrow ? ' · tik waar gescoord/gevangen' : ` · worp ${poss.nextThrowNumber}/${poss.throwsAllowed} · opzet ${poss.setupSide === 'own' ? 'eigen helft' : 'tegenhelft'}`}
+        <div className={`sk-statusbar side-${possSide}`}>
+          {poss.freeThrow ? (
+            <>
+              <span className="sk-vw">VRIJWORP</span>
+              <b className="sk-turn-team">{possSide === 'home' ? state.teams.home.name : state.teams.away.name}</b>
+              <span className="sk-worp">tik waar gescoord/gevangen</span>
+            </>
+          ) : (
+            <>
+              <span className="sk-turn-lbl">aan zet</span>
+              <b className="sk-turn-team">{possSide === 'home' ? state.teams.home.name : state.teams.away.name}</b>
+              <span className="sk-worp">worp {poss.nextThrowNumber}/{poss.throwsAllowed}</span>
+            </>
+          )}
         </div>
       )}
 

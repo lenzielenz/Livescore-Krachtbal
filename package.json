@@ -22,6 +22,7 @@
     "test:e2e": "cross-env NODE_OPTIONS=\"--no-deprecation --import=tsx/esm\" playwright test --config=playwright.config.ts"
   },
   "dependencies": {
+    "@payloadcms/db-postgres": "3.85.0",
     "@payloadcms/db-sqlite": "3.85.0",
     "@payloadcms/next": "3.85.0",
     "@payloadcms/richtext-lexical": "3.85.0",

@@ -2,16 +2,27 @@
 
 GitHub → Railway auto-deploy via **Railpack** (geen Dockerfile). Elke push naar `main` triggert een nieuwe build.
 
+## Database: Postgres (productie) of SQLite (lokaal)
+
+De app kiest de adapter automatisch op basis van `DATABASE_URL`:
+- begint met `postgres://` of `postgresql://` → **Postgres** (`@payloadcms/db-postgres`)
+- anders (`file:...`) → **SQLite** (`@payloadcms/db-sqlite`)
+
+**Productie (huidige Railway-opzet) = Postgres:**
+1. Voeg een **Postgres**-service toe in het Railway-project.
+2. Op de app-service: `DATABASE_URL` = referentie naar de Postgres (`${{Postgres.DATABASE_URL}}`).
+3. Geen Volume nodig (Postgres heeft zijn eigen opslag).
+
+**Alternatief = SQLite + Volume:** Volume mounten op `/data` en `DATABASE_URL=file:/data/krachtbal.db`.
+
 ## Eenmalige setup
 
-1. **Service** maken in Railway, gekoppeld aan de GitHub-repo `lenzielenz/Livescore-Krachtbal`.
-2. **Volume** koppelen (persistente SQLite-opslag), mount path: `/data`.
-   - Zonder Volume gaat de database verloren bij elke redeploy.
-3. **Environment variables** zetten:
-   - `DATABASE_URL=file:/data/krachtbal.db` — verwijst naar het Volume.
+1. **Service** gekoppeld aan de GitHub-repo `lenzielenz/Livescore-Krachtbal`.
+2. **Database** zoals hierboven (Postgres-service óf Volume).
+3. **Environment variables**:
+   - `DATABASE_URL` — zie hierboven.
    - `PAYLOAD_SECRET=<32-byte hex>` — genereer met
      `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`.
-   - `NODE_ENV=production` (zet Railway meestal zelf).
    - `PORT` wordt door Railway geïnjecteerd; `next start` pikt die automatisch op.
 
 ## Build & start (door Railpack afgeleid)
