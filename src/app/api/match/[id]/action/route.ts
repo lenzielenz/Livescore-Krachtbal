@@ -4,6 +4,7 @@ import {
   recordThrow,
   recordTimeout,
   setClock,
+  startFreeThrow,
   startMatch,
   undoLastThrow,
 } from '@/lib/match-engine'
@@ -57,6 +58,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         return Response.json(await finishMatch(payload, matchId))
       case 'timeout':
         return Response.json(await recordTimeout(payload, matchId, Number(body.teamId)))
+      case 'freethrow':
+        return Response.json(await startFreeThrow(payload, matchId, Number(body.teamId)))
       default:
         return Response.json({ error: `Onbekende actie: ${action}` }, { status: 400 })
     }

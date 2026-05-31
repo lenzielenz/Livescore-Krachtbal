@@ -112,6 +112,13 @@ export const Possessions: CollectionConfig = {
       ],
     },
     {
+      name: 'freeThrow',
+      label: 'Vrije worp',
+      type: 'checkbox',
+      defaultValue: false,
+      admin: { description: 'Eén worp; daarna gaat het spel verder.' },
+    },
+    {
       name: 'endOutcome',
       label: 'Einduitkomst',
       type: 'select',

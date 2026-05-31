@@ -38,7 +38,7 @@ export function Scorekeeper({
   const [recentTaps, setRecentTaps] = useState<FieldMarker[]>([])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [goalFlash, setGoalFlash] = useState<{ points: number; color: string; team: string } | null>(null)
+  const [flash, setFlash] = useState<{ title: string; big: string; color: string; team: string } | null>(null)
 
   const [clock, setClock] = useState(initialState.match.clockSeconds)
   const baseRef = useRef({ seconds: initialState.match.clockSeconds, running: initialState.match.clockRunning, at: Date.now() })
@@ -107,9 +107,11 @@ export function Scorekeeper({
       const dir = poss.dir as AttackDir
       const tapCount = tapMode === 'caught' ? 2 : 1
       const outcome = deriveOutcome({ tapCount, point: p, dir })
+      const isDoelworp = poss.nextThrowNumber >= poss.throwsAllowed
 
+      // Enkel op de doelworp bepaalt aanraking of een buiten-bal een kruisje wordt.
       let touchedBeforeOut = false
-      if (outcome === 'out_back') {
+      if ((outcome === 'out_back' || outcome === 'out_side') && isDoelworp) {
         touchedBeforeOut = window.confirm('Werd de bal aangeraakt vóór hij buiten ging?\n\nOK = ja (geen kruisje) · Annuleren = nee (kruisje)')
       }
 
@@ -126,7 +128,7 @@ export function Scorekeeper({
       ])
 
       const scoringSide = poss.side
-      const result = await act({
+      const result = (await act({
         action: 'throw',
         playerId: selectedPlayer,
         type: throwType,
@@ -135,14 +137,19 @@ export function Scorekeeper({
         tapCount,
         touchedBeforeOut,
         gameClock: Math.floor(clock),
-      })
+      })) as { outcome?: string; type?: string; points?: number; isCross?: boolean } | null
+
+      const color = scoringSide === 'home' ? HOME_COLOR : AWAY_COLOR
+      const teamName = scoringSide === 'home' ? state.teams.home.name : state.teams.away.name
+      let f: { title: string; big: string; color: string; team: string } | null = null
       if (result?.outcome === 'goal') {
-        setGoalFlash({
-          points: throwType === 'rug' ? 2 : 1,
-          color: scoringSide === 'home' ? HOME_COLOR : AWAY_COLOR,
-          team: scoringSide === 'home' ? state.teams.home.name : state.teams.away.name,
-        })
-        window.setTimeout(() => setGoalFlash(null), 1800)
+        f = { title: result.type === 'rug' ? 'RUGWORP' : 'DOELPUNT', big: `+${result.points ?? 1}`, color, team: teamName }
+      } else if (result?.isCross) {
+        f = { title: 'KRUISJE', big: '✕', color, team: teamName }
+      }
+      if (f) {
+        setFlash(f)
+        window.setTimeout(() => setFlash(null), 1800)
       }
       setTapMode('ground')
       setThrowType('nek')
@@ -169,10 +176,15 @@ export function Scorekeeper({
       : { text: state.teams.away.name, color: AWAY_COLOR },
   }
 
-  const PlayerColumn = ({ side, players }: { side: 'home' | 'away'; players: RosterPlayer[] }) => {
+  // Pijl die de speelrichting op het scherm toont: dir 'up' = naar onder (▼), 'down' = naar boven (▲).
+  const homeArrow = homeDirUp ? '▼' : '▲'
+  const awayArrow = homeDirUp ? '▲' : '▼'
+
+  const PlayerColumn = ({ side, players, arrow }: { side: 'home' | 'away'; players: RosterPlayer[]; arrow: string }) => {
     const active = possSide === side
     return (
       <div className={`sk-col sk-col-${side} ${active ? 'active' : 'dim'}`}>
+        <div className="sk-col-dir" aria-label="speelrichting">{arrow}</div>
         {players.map((p) => {
           const justThrew = active && poss?.lastPlayerId === p.id
           return (
@@ -194,11 +206,11 @@ export function Scorekeeper({
 
   return (
     <div className="sk">
-      {goalFlash && (
-        <div className="sk-goal-flash" style={{ ['--flash' as string]: goalFlash.color }}>
-          <div className="sk-goal-big">DOELPUNT</div>
-          <div className="sk-goal-pts">+{goalFlash.points}</div>
-          <div className="sk-goal-team">{goalFlash.team}</div>
+      {flash && (
+        <div className="sk-goal-flash" style={{ ['--flash' as string]: flash.color }}>
+          <div className="sk-goal-big">{flash.title}</div>
+          <div className="sk-goal-pts">{flash.big}</div>
+          <div className="sk-goal-team">{flash.team}</div>
         </div>
       )}
       <header className="sk-top">
@@ -229,8 +241,9 @@ export function Scorekeeper({
 
       {poss && (
         <div className="sk-poss">
+          {poss.freeThrow && <b className="sk-vw">VRIJWORP</b>}
           Balbezit: <b style={{ color: possSide === 'home' ? HOME_COLOR : AWAY_COLOR }}>{possSide === 'home' ? state.teams.home.name : state.teams.away.name}</b>
-          {' · '}worp {poss.nextThrowNumber}/{poss.throwsAllowed} · opzet {poss.setupSide === 'own' ? 'eigen helft' : 'tegenhelft'}
+          {poss.freeThrow ? ' · tik waar gescoord/gevangen' : ` · worp ${poss.nextThrowNumber}/${poss.throwsAllowed} · opzet ${poss.setupSide === 'own' ? 'eigen helft' : 'tegenhelft'}`}
         </div>
       )}
 
@@ -247,11 +260,21 @@ export function Scorekeeper({
       ) : (
         <>
           <div className="sk-arena">
-            <PlayerColumn side="home" players={homePlayers} />
+            <PlayerColumn side="home" players={homePlayers} arrow={homeArrow} />
             <div className="sk-field-wrap">
-              <FieldSchema className="sk-field" onTap={onTap} markers={recentTaps} ends={fieldEnds} />
+              <FieldSchema
+                className="sk-field"
+                onTap={onTap}
+                markers={recentTaps}
+                ends={fieldEnds}
+                glowGoal={
+                  poss?.freeThrow
+                    ? { end: poss.dir === 'up' ? 'bottom' : 'top', color: possSide === 'home' ? HOME_COLOR : AWAY_COLOR }
+                    : undefined
+                }
+              />
             </div>
-            <PlayerColumn side="away" players={awayPlayers} />
+            <PlayerColumn side="away" players={awayPlayers} arrow={awayArrow} />
           </div>
 
           <div className="sk-controls">
@@ -261,6 +284,10 @@ export function Scorekeeper({
               <span className="pill-sep" />
               <button type="button" className={`pill ${tapMode === 'ground' ? 'on' : ''}`} onClick={() => setTapMode('ground')}>Grond</button>
               <button type="button" className={`pill ${tapMode === 'caught' ? 'on' : ''}`} onClick={() => setTapMode('caught')}>Gevangen</button>
+            </div>
+            <div className="sk-actions">
+              <button type="button" className="act home" disabled={busy || !isLive} onClick={() => act({ action: 'freethrow', teamId: state.teams.home.id })}>Vrijworp {state.teams.home.name}</button>
+              <button type="button" className="act away" disabled={busy || !isLive} onClick={() => act({ action: 'freethrow', teamId: state.teams.away.id })}>Vrijworp {state.teams.away.name}</button>
             </div>
             <div className="sk-actions">
               <button type="button" className="act warn" disabled={busy} onClick={() => act({ action: 'undo' })}>↶ Undo</button>

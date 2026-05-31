@@ -71,11 +71,14 @@ export function reachedMidline(p: Point, dir: AttackDir): boolean {
   return dir === 'up' ? yM >= FIELD.midlineM : yM <= FIELD.midlineM
 }
 
-/** Ligt het punt in het doelgebied dat de aanvallende ploeg bespeelt? */
+/**
+ * Ligt het punt áchter de doellijn van de aangevallen zijde? Een doelpunt telt enkel
+ * achter de lijn — een tik exact op de lijn is géén doelpunt.
+ */
 export function isInTargetGoalArea(p: Point, dir: AttackDir): boolean {
   if (p.x < 0 || p.x > 1) return false
   const yM = p.y * FIELD.totalLengthM
-  return dir === 'up' ? yM >= FIELD.awayGoalLineM : yM <= FIELD.homeGoalLineM
+  return dir === 'up' ? yM > FIELD.awayGoalLineM : yM < FIELD.homeGoalLineM
 }
 
 /** Voorbij de zijlijn? */

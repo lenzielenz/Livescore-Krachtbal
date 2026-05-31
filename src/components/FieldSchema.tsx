@@ -100,6 +100,7 @@ export function FieldSchema({
   markers = [],
   heatPoints,
   ends,
+  glowGoal,
   className,
 }: {
   onTap?: (p: Point) => void
@@ -108,6 +109,8 @@ export function FieldSchema({
   heatPoints?: Point[]
   /** Richtingslabels per ploeg: bovenaan valt aan naar boven (↑), onderaan naar onder (↓). */
   ends?: { top?: EndLabel; bottom?: EndLabel }
+  /** Laat een doelgebied oplichten (vrije worp). */
+  glowGoal?: { end: 'top' | 'bottom'; color: string }
   className?: string
 }) {
   const ref = useRef<SVGSVGElement>(null)
@@ -158,6 +161,19 @@ export function FieldSchema({
       <line x1={THIRD_1} y1={0} x2={THIRD_1} y2={H} stroke="#9fd9ba" strokeWidth={0.5} strokeDasharray="2 4" opacity={0.5} />
       <line x1={THIRD_2} y1={0} x2={THIRD_2} y2={H} stroke="#9fd9ba" strokeWidth={0.5} strokeDasharray="2 4" opacity={0.5} />
 
+      {/* Oplichtend doelgebied bij vrije worp */}
+      {glowGoal && (
+        <rect
+          x={0}
+          y={glowGoal.end === 'top' ? 0 : AWAY_GOAL_Y}
+          width={W}
+          height={glowGoal.end === 'top' ? HOME_GOAL_Y : H - AWAY_GOAL_Y}
+          fill={glowGoal.color}
+          opacity={0.55}
+          className="field-goal-glow"
+        />
+      )}
+
       {/* Heatmap-laag (optioneel) */}
       {heatPoints && heatPoints.length > 0 && <HeatLayer points={heatPoints} />}
 
@@ -174,20 +190,14 @@ export function FieldSchema({
       ))}
 
       {ends?.top && (
-        <g>
-          <text x={W / 2} y={11} fontSize={13} textAnchor="middle" fill={ends.top.color} fontWeight={900}>⬆</text>
-          <text x={W / 2} y={20} fontSize={8} textAnchor="middle" fill={ends.top.color} fontWeight={800}>
-            {ends.top.text}
-          </text>
-        </g>
+        <text x={W / 2} y={15} fontSize={9} textAnchor="middle" fill={ends.top.color} fontWeight={800}>
+          {ends.top.text}
+        </text>
       )}
       {ends?.bottom && (
-        <g>
-          <text x={W / 2} y={H - 12} fontSize={8} textAnchor="middle" fill={ends.bottom.color} fontWeight={800}>
-            {ends.bottom.text}
-          </text>
-          <text x={W / 2} y={H - 2} fontSize={13} textAnchor="middle" fill={ends.bottom.color} fontWeight={900}>⬇</text>
-        </g>
+        <text x={W / 2} y={H - 6} fontSize={9} textAnchor="middle" fill={ends.bottom.color} fontWeight={800}>
+          {ends.bottom.text}
+        </text>
       )}
     </svg>
   )

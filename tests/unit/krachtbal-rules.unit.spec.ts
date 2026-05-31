@@ -4,6 +4,7 @@ import {
   type ReducibleThrow,
   deriveGeometry,
   deriveOutcome,
+  isCrossThrow,
   isMidlineFault,
   isTerminalOutcome,
   nextSetup,
@@ -127,35 +128,53 @@ describe('nextSetup', () => {
   })
 })
 
+describe('isCrossThrow', () => {
+  it('doelworp die buiten gaat (zij- of achterlijn), niet aangeraakt = kruisje', () => {
+    expect(isCrossThrow({ outcome: 'out_back', isDoelworp: true })).toBe(true)
+    expect(isCrossThrow({ outcome: 'out_side', isDoelworp: true })).toBe(true)
+  })
+  it('geen kruisje als niet de doelworp', () => {
+    expect(isCrossThrow({ outcome: 'out_back', isDoelworp: false })).toBe(false)
+  })
+  it('geen kruisje als aangeraakt', () => {
+    expect(isCrossThrow({ outcome: 'out_side', isDoelworp: true, touchedBeforeOut: true })).toBe(false)
+  })
+  it('geen kruisje bij in_field/goal/caught', () => {
+    expect(isCrossThrow({ outcome: 'in_field', isDoelworp: true })).toBe(false)
+    expect(isCrossThrow({ outcome: 'goal', isDoelworp: true })).toBe(false)
+    expect(isCrossThrow({ outcome: 'caught', isDoelworp: true })).toBe(false)
+  })
+})
+
 describe('reduceTotals — score & kruisjes', () => {
   const t = (over: Partial<ReducibleThrow>): ReducibleThrow => ({
     team: 'home',
     type: 'nek',
     outcome: 'in_field',
-    isLastThrow: false,
+    isDoelworp: false,
     ...over,
   })
 
   it('telt punten per ploeg', () => {
     const { score } = reduceTotals([
-      t({ team: 'home', type: 'rug', outcome: 'goal', isLastThrow: true }),
-      t({ team: 'away', type: 'nek', outcome: 'goal', isLastThrow: true }),
-      t({ team: 'home', type: 'nek', outcome: 'goal', isLastThrow: true }),
+      t({ team: 'home', type: 'rug', outcome: 'goal', isDoelworp: true }),
+      t({ team: 'away', type: 'nek', outcome: 'goal', isDoelworp: true }),
+      t({ team: 'home', type: 'nek', outcome: 'goal', isDoelworp: true }),
     ])
     expect(score).toEqual({ home: 3, away: 1 })
   })
 
-  it('kruisje enkel op laatste worp, rechtstreeks buiten, niet aangeraakt', () => {
+  it('kruisje op de doelworp (zij- of achterlijn), niet aangeraakt', () => {
     const { crosses } = reduceTotals([
-      t({ team: 'home', outcome: 'out_back', isLastThrow: true }), // kruisje
-      t({ team: 'home', outcome: 'out_back', isLastThrow: false }), // geen (niet laatste worp)
-      t({ team: 'home', outcome: 'out_back', isLastThrow: true, touchedBeforeOut: true }), // geen (aangeraakt)
+      t({ team: 'home', outcome: 'out_back', isDoelworp: true }), // kruisje
+      t({ team: 'home', outcome: 'out_side', isDoelworp: false }), // geen (niet doelworp)
+      t({ team: 'home', outcome: 'out_back', isDoelworp: true, touchedBeforeOut: true }), // geen (aangeraakt)
     ])
     expect(crosses.home).toBe(1)
   })
 
   it('reset naar 0 bij het 3e kruisje', () => {
-    const cross = (): ReducibleThrow => t({ team: 'away', outcome: 'out_back', isLastThrow: true })
+    const cross = (): ReducibleThrow => t({ team: 'away', outcome: 'out_side', isDoelworp: true })
     expect(reduceTotals([cross(), cross()]).crosses.away).toBe(2)
     expect(reduceTotals([cross(), cross(), cross()]).crosses.away).toBe(0)
     expect(reduceTotals([cross(), cross(), cross(), cross()]).crosses.away).toBe(1)

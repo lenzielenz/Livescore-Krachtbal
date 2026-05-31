@@ -3,65 +3,285 @@ $ cross-env NODE_OPTIONS=--no-deprecation next dev
 - Local:         http://localhost:3000
 - Network:       http://192.168.0.65:3000
 - Environments: .env
-✓ Ready in 507ms
+✓ Ready in 391ms
 - Experiments (use with caution):
   ⨯ turbopackServerFastRefresh
 
 [⣷] Pulling schema from database...
 [2K[1G[✓] Pulling schema from database...
-[00:05:39] [33mWARN[39m: [36mNo email adapter provided. Email will be written to console. More info at https://payloadcms.com/docs/email/overview.[39m
- GET /scorekeeper/2 200 in 5.9s (next.js: 3.4s, application-code: 2.5s)
- GET /match/2 200 in 3.5s (next.js: 2.5s, application-code: 951ms)
- GET /scorekeeper/2 200 in 326ms (next.js: 17ms, application-code: 309ms)
- GET /scorekeeper/2 200 in 352ms (next.js: 10ms, application-code: 341ms)
- POST /api/match/2/action 200 in 3.1s (next.js: 3.0s, application-code: 92ms)
- POST /api/match/2/action 200 in 73ms (next.js: 10ms, application-code: 63ms)
- POST /api/match/2/action 200 in 82ms (next.js: 8ms, application-code: 74ms)
- POST /api/match/2/action 200 in 59ms (next.js: 9ms, application-code: 50ms)
+[00:18:44] [33mWARN[39m: [36mNo email adapter provided. Email will be written to console. More info at https://payloadcms.com/docs/email/overview.[39m
+ GET /scorekeeper 200 in 3.9s (next.js: 1258ms, application-code: 2.6s)
+ GET /scorekeeper/2 200 in 2.9s (next.js: 2.5s, application-code: 364ms)
+ GET /scorekeeper/2 200 in 392ms (next.js: 11ms, application-code: 381ms)
+ POST /api/match/2/action 200 in 2.9s (next.js: 2.9s, application-code: 67ms)
+ POST /api/match/2/action 200 in 72ms (next.js: 8ms, application-code: 64ms)
+ POST /api/match/2/action 200 in 98ms (next.js: 11ms, application-code: 87ms)
+ POST /api/match/2/action 200 in 100ms (next.js: 9ms, application-code: 91ms)
+ POST /api/match/2/action 200 in 78ms (next.js: 9ms, application-code: 69ms)
+ POST /api/match/2/action 200 in 87ms (next.js: 3ms, application-code: 85ms)
+ POST /api/match/2/action 200 in 80ms (next.js: 9ms, application-code: 71ms)
+ POST /api/match/2/action 200 in 62ms (next.js: 1784µs, application-code: 61ms)
+ POST /api/match/2/action 200 in 100ms (next.js: 11ms, application-code: 89ms)
+ POST /api/match/2/action 200 in 86ms (next.js: 9ms, application-code: 77ms)
+ POST /api/match/2/action 200 in 54ms (next.js: 1798µs, application-code: 52ms)
  POST /api/match/2/action 200 in 96ms (next.js: 9ms, application-code: 87ms)
- POST /api/match/2/action 200 in 90ms (next.js: 10ms, application-code: 80ms)
- POST /api/match/2/action 200 in 83ms (next.js: 9ms, application-code: 75ms)
- POST /api/match/2/action 200 in 66ms (next.js: 10ms, application-code: 57ms)
- POST /api/match/2/action 200 in 64ms (next.js: 9ms, application-code: 55ms)
- GET /scorekeeper/2 200 in 419ms (next.js: 9ms, application-code: 411ms)
- POST /api/match/2/action 200 in 93ms (next.js: 13ms, application-code: 80ms)
- POST /api/match/2/action 200 in 75ms (next.js: 10ms, application-code: 65ms)
- POST /api/match/2/action 200 in 91ms (next.js: 9ms, application-code: 83ms)
- POST /api/match/2/action 200 in 74ms (next.js: 9ms, application-code: 66ms)
- POST /api/match/2/action 200 in 72ms (next.js: 8ms, application-code: 63ms)
- POST /api/match/2/action 200 in 74ms (next.js: 8ms, application-code: 66ms)
- POST /api/match/2/action 200 in 95ms (next.js: 12ms, application-code: 83ms)
- POST /api/match/2/action 200 in 93ms (next.js: 12ms, application-code: 81ms)
- POST /api/match/2/action 200 in 77ms (next.js: 8ms, application-code: 69ms)
- GET / 200 in 742ms (next.js: 342ms, application-code: 400ms)
- GET /live 200 in 1128ms (next.js: 352ms, application-code: 776ms)
- GET /api/match/2/stream 200 in 3.5s (next.js: 2.5s, application-code: 972ms)
-○ Compiling /admin/[[...segments]] ...
- GET /admin 200 in 6.3s (next.js: 6.1s, application-code: 286ms)
- GET /admin 200 in 747ms (next.js: 11ms, application-code: 737ms)
- GET /api/users/me 200 in 2.7s (next.js: 2.7s, application-code: 7ms)
- GET /admin/login 200 in 132ms (next.js: 10ms, application-code: 123ms)
- GET /admin/login 200 in 54ms (next.js: 3ms, application-code: 51ms)
- GET /match/2 200 in 1234ms (next.js: 10ms, application-code: 1224ms)
- GET /api/match/2/stream 200 in 57s (next.js: 8ms, application-code: 57s)
-✓ Compiled in 0ms
+ POST /api/match/2/action 200 in 97ms (next.js: 10ms, application-code: 87ms)
+ GET /scorekeeper/2 200 in 505ms (next.js: 14ms, application-code: 492ms)
+✓ Compiled in 12ms
 Generating import map
 No new imports found, skipping writing import map
- GET /scorekeeper/2 200 in 977ms (next.js: 197ms, application-code: 780ms)
- GET /scorekeeper/2 200 in 1015ms (next.js: 4ms, application-code: 1010ms)
- GET /scorekeeper/2 200 in 677ms (next.js: 4ms, application-code: 673ms)
- GET /scorekeeper/2 200 in 677ms (next.js: 349ms, application-code: 328ms)
-✓ Compiled in 61ms
- POST /api/match/2/action 200 in 136ms (next.js: 83ms, application-code: 53ms)
+ GET /scorekeeper/2 200 in 950ms (next.js: 91ms, application-code: 860ms)
+ GET /scorekeeper/2 200 in 391ms (next.js: 3ms, application-code: 388ms)
+ POST /api/match/2/action 200 in 152ms (next.js: 87ms, application-code: 65ms)
+ POST /api/match/2/action 200 in 66ms (next.js: 10ms, application-code: 56ms)
+ POST /api/match/2/action 200 in 73ms (next.js: 9ms, application-code: 64ms)
+ POST /api/match/2/action 200 in 80ms (next.js: 9ms, application-code: 71ms)
+ POST /api/match/2/action 200 in 58ms (next.js: 9ms, application-code: 49ms)
+ POST /api/match/2/action 200 in 76ms (next.js: 10ms, application-code: 67ms)
+ POST /api/match/2/action 200 in 72ms (next.js: 10ms, application-code: 62ms)
+✓ Compiled in 27ms
 Generating import map
 No new imports found, skipping writing import map
- GET /scorekeeper/2 200 in 981ms (next.js: 89ms, application-code: 892ms)
- GET /scorekeeper/2 200 in 389ms (next.js: 3ms, application-code: 387ms)
- GET /scorekeeper/2 200 in 724ms (next.js: 10ms, application-code: 713ms)
- GET /scorekeeper/2 200 in 723ms (next.js: 413ms, application-code: 310ms)
- POST /api/match/2/action 200 in 152ms (next.js: 83ms, application-code: 68ms)
- POST /api/match/2/action 200 in 56ms (next.js: 9ms, application-code: 47ms)
- POST /api/match/2/action 200 in 67ms (next.js: 9ms, application-code: 59ms)
- GET /scorekeeper/2 200 in 353ms (next.js: 9ms, application-code: 344ms)
-✓ Compiled in 13ms
+ GET /scorekeeper/2 200 in 1029ms (next.js: 82ms, application-code: 947ms)
+ GET /scorekeeper/2 200 in 429ms (next.js: 7ms, application-code: 422ms)
+Generating import map
+No new imports found, skipping writing import map
+ GET /scorekeeper/2 200 in 1173ms (next.js: 93ms, application-code: 1080ms)
+ GET /scorekeeper/2 200 in 482ms (next.js: 5ms, application-code: 477ms)
+Generating import map
+No new imports found, skipping writing import map
+ GET /scorekeeper/2 200 in 1165ms (next.js: 118ms, application-code: 1047ms)
+ GET /scorekeeper/2 200 in 479ms (next.js: 4ms, application-code: 475ms)
+Generating import map
+No new imports found, skipping writing import map
+ GET /scorekeeper/2 200 in 1789ms (next.js: 108ms, application-code: 1680ms)
+ GET /scorekeeper/2 200 in 2.1s (next.js: 525ms, application-code: 1580ms)
+ GET /scorekeeper/2 200 in 1584ms (next.js: 552ms, application-code: 1032ms)
+ GET /scorekeeper/2 200 in 567ms (next.js: 2ms, application-code: 565ms)
+Generating import map
+No new imports found, skipping writing import map
+ GET /scorekeeper/2 200 in 1694ms (next.js: 97ms, application-code: 1597ms)
+ GET /scorekeeper/2 200 in 954ms (next.js: 9ms, application-code: 945ms)
+ GET /scorekeeper/2 200 in 953ms (next.js: 502ms, application-code: 451ms)
+ GET /scorekeeper/2 200 in 485ms (next.js: 7ms, application-code: 478ms)
+Generating import map
+No new imports found, skipping writing import map
+ GET /scorekeeper/2 200 in 1531ms (next.js: 85ms, application-code: 1446ms)
+ GET /scorekeeper/2 200 in 1317ms (next.js: 4ms, application-code: 1312ms)
+ GET /scorekeeper/2 200 in 1317ms (next.js: 483ms, application-code: 834ms)
+ GET /scorekeeper/2 200 in 440ms (next.js: 3ms, application-code: 437ms)
+ POST /api/match/2/action 200 in 201ms (next.js: 113ms, application-code: 88ms)
+ POST /api/match/2/action 200 in 80ms (next.js: 9ms, application-code: 71ms)
+ POST /api/match/2/action 200 in 81ms (next.js: 2ms, application-code: 79ms)
+Generating import map
+No new imports found, skipping writing import map
+ GET /scorekeeper/2 200 in 1490ms (next.js: 108ms, application-code: 1382ms)
+ GET /scorekeeper/2 200 in 1235ms (next.js: 5ms, application-code: 1231ms)
+ GET /scorekeeper/2 200 in 1235ms (next.js: 417ms, application-code: 818ms)
+ GET /scorekeeper/2 200 in 415ms (next.js: 4ms, application-code: 411ms)
+✓ Compiled in 3ms
+Generating import map
+No new imports found, skipping writing import map
+ GET /scorekeeper/2 200 in 1613ms (next.js: 81ms, application-code: 1532ms)
+ GET /scorekeeper/2 200 in 912ms (next.js: 4ms, application-code: 907ms)
+ GET /scorekeeper/2 200 in 911ms (next.js: 476ms, application-code: 436ms)
+ GET /scorekeeper/2 200 in 417ms (next.js: 2ms, application-code: 415ms)
+✓ Compiled in 3ms
+Generating import map
+No new imports found, skipping writing import map
+ GET /scorekeeper/2 200 in 1629ms (next.js: 190ms, application-code: 1439ms)
+ GET /scorekeeper/2 200 in 1713ms (next.js: 440ms, application-code: 1273ms)
+ GET /scorekeeper/2 200 in 1277ms (next.js: 430ms, application-code: 846ms)
+ GET /scorekeeper/2 200 in 400ms (next.js: 3ms, application-code: 397ms)
+✓ Compiled in 25ms
+[browser] Uncaught ReferenceError: goalFlash is not defined
+    at Scorekeeper (src/app/(frontend)/scorekeeper/[id]/Scorekeeper.tsx:197:8)
+    at Set.forEach (<anonymous>)
+    at ScorekeeperPage (about://React/Server/C:%5CUsers%5CRobin%5CDesktop%5CProjects%5CLivescore-krachtbal%5C.next%5Cdev%5Cserver%5Cchunks%5Cssr%5C%5Broot-of-the-server%5D__03edu19._.js?25:2215:374)
+  195 |   return (
+  196 |     <div className="sk">
+> 197 |       {goalFlash && (
+      |        ^
+  198 |         <div className="sk-goal-flash" style={{ ['--flash' as string]: goalFlash.color }}>
+  199 |           <div className="sk-goal-big">DOELPUNT</div>
+  200 |           <div className="sk-goal-pts">+{goalFlash.points}</div>
+✓ Compiled in 64ms
+⚠ Fast Refresh had to perform a full reload due to a runtime error.
+⚠ Fast Refresh had to perform a full reload due to a runtime error.
+⨯ ReferenceError: goalFlash is not defined
+    at Scorekeeper (src\app\(frontend)\scorekeeper\[id]\Scorekeeper.tsx:199:8)
+  197 |   return (
+  198 |     <div className="sk">
+> 199 |       {goalFlash && (
+      |        ^
+  200 |         <div className="sk-goal-flash" style={{ ['--flash' as string]: goalFlash.color }}>
+  201 |           <div className="sk-goal-big">DOELPUNT</div>
+  202 |           <div className="sk-goal-pts">+{goalFlash.points}</div> {
+  digest: '645253713'
+}
+[browser] Uncaught ReferenceError: goalFlash is not defined
+    at Scorekeeper (src/app/(frontend)/scorekeeper/[id]/Scorekeeper.tsx:199:8)
+    at Set.forEach (<anonymous>)
+    at ScorekeeperPage (src\app\(frontend)\scorekeeper\[id]\page.tsx:39:10)
+  197 |   return (
+  198 |     <div className="sk">
+> 199 |       {goalFlash && (
+      |        ^
+  200 |         <div className="sk-goal-flash" style={{ ['--flash' as string]: goalFlash.color }}>
+  201 |           <div className="sk-goal-big">DOELPUNT</div>
+  202 |           <div className="sk-goal-pts">+{goalFlash.points}</div>
+⨯ ReferenceError: goalFlash is not defined
+    at Scorekeeper (src\app\(frontend)\scorekeeper\[id]\Scorekeeper.tsx:199:8)
+  197 |   return (
+  198 |     <div className="sk">
+> 199 |       {goalFlash && (
+      |        ^
+  200 |         <div className="sk-goal-flash" style={{ ['--flash' as string]: goalFlash.color }}>
+  201 |           <div className="sk-goal-big">DOELPUNT</div>
+  202 |           <div className="sk-goal-pts">+{goalFlash.points}</div> {
+  digest: '645253713'
+}
+ GET /scorekeeper/2 500 in 1264ms (next.js: 103ms, application-code: 1161ms)
+ GET /scorekeeper/2 500 in 526ms (next.js: 3ms, application-code: 522ms)
+[browser] Uncaught ReferenceError: goalFlash is not defined
+    at Scorekeeper (src/app/(frontend)/scorekeeper/[id]/Scorekeeper.tsx:199:8)
+    at ScorekeeperPage (src\app\(frontend)\scorekeeper\[id]\page.tsx:39:10)
+  197 |   return (
+  198 |     <div className="sk">
+> 199 |       {goalFlash && (
+      |        ^
+  200 |         <div className="sk-goal-flash" style={{ ['--flash' as string]: goalFlash.color }}>
+  201 |           <div className="sk-goal-big">DOELPUNT</div>
+  202 |           <div className="sk-goal-pts">+{goalFlash.points}</div>
+⚠ Fast Refresh had to perform a full reload due to a runtime error.
+✓ Compiled in 17ms
+⨯ ReferenceError: goalFlash is not defined
+    at Scorekeeper (src\app\(frontend)\scorekeeper\[id]\Scorekeeper.tsx:204:8)
+  202 |   return (
+  203 |     <div className="sk">
+> 204 |       {goalFlash && (
+      |        ^
+  205 |         <div className="sk-goal-flash" style={{ ['--flash' as string]: goalFlash.color }}>
+  206 |           <div className="sk-goal-big">DOELPUNT</div>
+  207 |           <div className="sk-goal-pts">+{goalFlash.points}</div> {
+  digest: '645253713'
+}
+⚠ Fast Refresh had to perform a full reload due to a runtime error.
+ GET /scorekeeper/2 500 in 676ms (next.js: 91ms, application-code: 585ms)
+⨯ ReferenceError: goalFlash is not defined
+    at Scorekeeper (src\app\(frontend)\scorekeeper\[id]\Scorekeeper.tsx:204:8)
+  202 |   return (
+  203 |     <div className="sk">
+> 204 |       {goalFlash && (
+      |        ^
+  205 |         <div className="sk-goal-flash" style={{ ['--flash' as string]: goalFlash.color }}>
+  206 |           <div className="sk-goal-big">DOELPUNT</div>
+  207 |           <div className="sk-goal-pts">+{goalFlash.points}</div> {
+  digest: '645253713'
+}
+ GET /scorekeeper/2 500 in 484ms (next.js: 11ms, application-code: 473ms)
+[browser] Uncaught ReferenceError: goalFlash is not defined
+    at Scorekeeper (src/app/(frontend)/scorekeeper/[id]/Scorekeeper.tsx:204:8)
+    at ScorekeeperPage (src\app\(frontend)\scorekeeper\[id]\page.tsx:39:10)
+  202 |   return (
+  203 |     <div className="sk">
+> 204 |       {goalFlash && (
+      |        ^
+  205 |         <div className="sk-goal-flash" style={{ ['--flash' as string]: goalFlash.color }}>
+  206 |           <div className="sk-goal-big">DOELPUNT</div>
+  207 |           <div className="sk-goal-pts">+{goalFlash.points}</div>
+⚠ Fast Refresh had to perform a full reload due to a runtime error.
+✓ Compiled in 21ms
+⚠ Fast Refresh had to perform a full reload due to a runtime error.
+ GET /scorekeeper/2 200 in 1202ms (next.js: 170ms, application-code: 1031ms)
+ GET /scorekeeper/2 200 in 512ms (next.js: 3ms, application-code: 510ms)
+✓ Compiled in 18ms
+✓ Compiled in 16ms
+✓ Compiled in 15ms
 ✓ Compiled in 14ms
+Persisting failed: Unable to write SST file 00000295.sst
+
+Caused by:
+    Het systeem kan het opgegeven pad niet vinden. (os error 3)
+Compaction failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)
+⨯ Error: ENOENT: no such file or directory, open 'C:\Users\Robin\Desktop\Projects\Livescore-krachtbal\.next\dev\server\app\(frontend)\scorekeeper\[id]\page\build-manifest.json'
+    at ignore-listed frames {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\Robin\\Desktop\\Projects\\Livescore-krachtbal\\.next\\dev\\server\\app\\(frontend)\\scorekeeper\\[id]\\page\\build-manifest.json'
+}
+⨯ Error: ENOENT: no such file or directory, open 'C:\Users\Robin\Desktop\Projects\Livescore-krachtbal\.next\dev\static\development\_buildManifest.js.tmp.a47yarizsa'
+    at ignore-listed frames {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\Robin\\Desktop\\Projects\\Livescore-krachtbal\\.next\\dev\\static\\development\\_buildManifest.js.tmp.a47yarizsa'
+}
+Error: ENOENT: no such file or directory, open 'C:\Users\Robin\Desktop\Projects\Livescore-krachtbal\.next\dev\server\app\(frontend)\scorekeeper\[id]\page\build-manifest.json'
+    at ignore-listed frames {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\Robin\\Desktop\\Projects\\Livescore-krachtbal\\.next\\dev\\server\\app\\(frontend)\\scorekeeper\\[id]\\page\\build-manifest.json'
+}
+⨯ Error: Cannot find module '../chunks/ssr/[turbopack]_runtime.js'
+Require stack:
+- C:\Users\Robin\Desktop\Projects\Livescore-krachtbal\.next\dev\server\pages\_document.js
+- C:\Users\Robin\Desktop\Projects\Livescore-krachtbal\node_modules\.pnpm\next@16.2.6_@babel+core@7.2_1f1e13705e4349586ad329f2cd4952ba\node_modules\next\dist\server\require.js
+- C:\Users\Robin\Desktop\Projects\Livescore-krachtbal\node_modules\.pnpm\next@16.2.6_@babel+core@7.2_1f1e13705e4349586ad329f2cd4952ba\node_modules\next\dist\server\load-components.js
+- C:\Users\Robin\Desktop\Projects\Livescore-krachtbal\node_modules\.pnpm\next@16.2.6_@babel+core@7.2_1f1e13705e4349586ad329f2cd4952ba\node_modules\next\dist\build\utils.js
+- C:\Users\Robin\Desktop\Projects\Livescore-krachtbal\node_modules\.pnpm\next@16.2.6_@babel+core@7.2_1f1e13705e4349586ad329f2cd4952ba\node_modules\next\dist\server\lib\router-utils\setup-dev-bundler.js
+- C:\Users\Robin\Desktop\Projects\Livescore-krachtbal\node_modules\.pnpm\next@16.2.6_@babel+core@7.2_1f1e13705e4349586ad329f2cd4952ba\node_modules\next\dist\server\lib\router-server.js
+- C:\Users\Robin\Desktop\Projects\Livescore-krachtbal\node_modules\.pnpm\next@16.2.6_@babel+core@7.2_1f1e13705e4349586ad329f2cd4952ba\node_modules\next\dist\server\lib\start-server.js
+    at Object.<anonymous> (C:\Users\Robin\Desktop\Projects\Livescore-krachtbal\.next\dev\server\pages\_document.js:1:7) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [
+    'C:\\Users\\Robin\\Desktop\\Projects\\Livescore-krachtbal\\.next\\dev\\server\\pages\\_document.js',
+    'C:\\Users\\Robin\\Desktop\\Projects\\Livescore-krachtbal\\node_modules\\.pnpm\\next@16.2.6_@babel+core@7.2_1f1e13705e4349586ad329f2cd4952ba\\node_modules\\next\\dist\\server\\require.js',
+    'C:\\Users\\Robin\\Desktop\\Projects\\Livescore-krachtbal\\node_modules\\.pnpm\\next@16.2.6_@babel+core@7.2_1f1e13705e4349586ad329f2cd4952ba\\node_modules\\next\\dist\\server\\load-components.js',
+    'C:\\Users\\Robin\\Desktop\\Projects\\Livescore-krachtbal\\node_modules\\.pnpm\\next@16.2.6_@babel+core@7.2_1f1e13705e4349586ad329f2cd4952ba\\node_modules\\next\\dist\\build\\utils.js',
+    'C:\\Users\\Robin\\Desktop\\Projects\\Livescore-krachtbal\\node_modules\\.pnpm\\next@16.2.6_@babel+core@7.2_1f1e13705e4349586ad329f2cd4952ba\\node_modules\\next\\dist\\server\\lib\\router-utils\\setup-dev-bundler.js',
+    'C:\\Users\\Robin\\Desktop\\Projects\\Livescore-krachtbal\\node_modules\\.pnpm\\next@16.2.6_@babel+core@7.2_1f1e13705e4349586ad329f2cd4952ba\\node_modules\\next\\dist\\server\\lib\\router-server.js',
+    'C:\\Users\\Robin\\Desktop\\Projects\\Livescore-krachtbal\\node_modules\\.pnpm\\next@16.2.6_@babel+core@7.2_1f1e13705e4349586ad329f2cd4952ba\\node_modules\\next\\dist\\server\\lib\\start-server.js'
+  ]
+}
+Error: ENOENT: no such file or directory, open 'C:\Users\Robin\Desktop\Projects\Livescore-krachtbal\.next\dev\routes-manifest.json'
+    at ignore-listed frames {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\Robin\\Desktop\\Projects\\Livescore-krachtbal\\.next\\dev\\routes-manifest.json'
+}
+ GET /scorekeeper/2 500 in 946ms (next.js: 925ms, application-code: 21ms)
+ GET /scorekeeper/2 500 in 946ms (next.js: 925ms, application-code: 22ms)
+Persisting failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)
+Persisting failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)
+Compaction failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)
+✓ Compiled in 9ms
+Persisting failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)
+Compaction failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)
+✓ Compiled in 28ms
+Persisting failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)
+Compaction failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)
+Persisting failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)
+Compaction failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)
+✓ Compiled in 106ms
+Persisting failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)
+Compaction failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)
+Persisting failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)
+Compaction failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)
+Persisting failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)
+Compaction failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)
+Persisting failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)
+Compaction failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)
+Persisting failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)
+Compaction failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)
+Persisting failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)
+Compaction failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)
+Persisting failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)
+Compaction failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)
+Persisting failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)
+Compaction failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)
+Persisting failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)
+Compaction failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)

@@ -238,6 +238,10 @@ export interface Possession {
   startHalf?: number | null;
   startClock?: number | null;
   /**
+   * Eén worp; daarna gaat het spel verder.
+   */
+  freeThrow?: boolean | null;
+  /**
    * Leeg = balbezit nog lopend.
    */
   endOutcome?: ('goal' | 'caught' | 'out_side' | 'out_back' | 'midline_fault' | 'throws_exhausted') | null;
@@ -480,6 +484,7 @@ export interface PossessionsSelect<T extends boolean = true> {
   dir?: T;
   startHalf?: T;
   startClock?: T;
+  freeThrow?: T;
   endOutcome?: T;
   updatedAt?: T;
   createdAt?: T;

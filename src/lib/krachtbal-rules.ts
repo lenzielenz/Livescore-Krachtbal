@@ -163,10 +163,22 @@ export interface ReducibleThrow {
   team: TeamSide
   type: ThrowType
   outcome: ThrowOutcome
-  /** True als dit de laatste toegestane worp (doelworp) van het balbezit was. */
-  isLastThrow: boolean
-  /** Enkel relevant bij out_back. */
+  /** True als dit de doelworp was (laatste toegestane worp van het balbezit). */
+  isDoelworp: boolean
+  /** Enkel relevant bij een out (zij-/achterlijn). */
   touchedBeforeOut?: boolean
+}
+
+/**
+ * Een kruisje: de doelworp gaat rechtstreeks buiten (zij- of achterlijn = rode zone)
+ * zonder aanraking. Intermediaire worpen die buiten gaan tellen niet mee.
+ */
+export function isCrossThrow(t: {
+  outcome: ThrowOutcome
+  isDoelworp: boolean
+  touchedBeforeOut?: boolean
+}): boolean {
+  return t.isDoelworp && (t.outcome === 'out_side' || t.outcome === 'out_back') && !t.touchedBeforeOut
 }
 
 export interface MatchTotals {
@@ -175,9 +187,8 @@ export interface MatchTotals {
 }
 
 /**
- * Score + kruisjes uit een geordende reeks worpen. Een kruisje telt enkel wanneer de
- * laatste worp (doelworp) rechtstreeks over de achterlijn gaat zonder aanraking. Bij het
- * 3e kruisje reset de teller naar 0 (en krijgt de tegenstander een vrije worp).
+ * Score + kruisjes uit een geordende reeks worpen. Bij het 3e kruisje reset de teller
+ * naar 0 (en krijgt de tegenstander een vrije worp).
  */
 export function reduceTotals(throws: ReducibleThrow[]): MatchTotals {
   const score = { home: 0, away: 0 }
@@ -185,9 +196,7 @@ export function reduceTotals(throws: ReducibleThrow[]): MatchTotals {
 
   for (const t of throws) {
     score[t.team] += pointsForThrow(t)
-
-    const isCross = t.outcome === 'out_back' && t.isLastThrow && !t.touchedBeforeOut
-    if (isCross) {
+    if (isCrossThrow(t)) {
       crosses[t.team] += 1
       if (crosses[t.team] >= CROSS_LIMIT) crosses[t.team] = 0
     }

@@ -15,9 +15,11 @@ import {
   attackDirForSide,
   deriveGeometry,
   deriveOutcome,
+  isCrossThrow,
   isMidlineFault,
   isTerminalOutcome,
   nextSetup,
+  pointsForThrow,
   reduceTotals,
   throwsAllowed,
 } from './krachtbal-rules'
@@ -171,7 +173,7 @@ export async function recordThrow(payload: Payload, input: RecordThrowInput) {
       landingY: clamp01(input.point.y),
       distance: geom.distance,
       zone: geom.zone,
-      touchedBeforeOut: outcome === 'out_back' ? !!input.touchedBeforeOut : false,
+      touchedBeforeOut: outcome === 'out_back' || outcome === 'out_side' ? !!input.touchedBeforeOut : false,
       period: half,
       gameClock: clock,
     },
@@ -225,7 +227,17 @@ export async function recordThrow(payload: Payload, input: RecordThrowInput) {
     }
   }
 
-  return { throwId: created.id, outcome, state: await buildMatchState(payload, input.matchId) }
+  const isDoelworp = throwNumber >= (open.throwsAllowed ?? 1)
+  const isCross = isCrossThrow({ outcome, isDoelworp, touchedBeforeOut: input.touchedBeforeOut })
+
+  return {
+    throwId: created.id,
+    outcome,
+    type: input.type,
+    points: pointsForThrow({ type: input.type, outcome }),
+    isCross,
+    state: await buildMatchState(payload, input.matchId),
+  }
 }
 
 /** Undo: verwijder de laatste worp en herstel het balbezit. */
@@ -381,6 +393,47 @@ export async function finishMatch(payload: Payload, matchId: number) {
   return buildMatchState(payload, matchId)
 }
 
+/**
+ * Vrije worp voor een ploeg: sluit het lopende balbezit af en maakt een balbezit met
+ * exact één worp (vanaf de vrijeworplijn richting het tegendoel). Daarna gaat het spel verder.
+ */
+export async function startFreeThrow(payload: Payload, matchId: number, teamId: number) {
+  const { match, homeId } = await loadMatch(payload, matchId)
+  const half = match.currentHalf ?? 1
+  const side = sideOfTeam(teamId, homeId)
+  const dir = attackDirForSide(side, half)
+
+  const open = await getOpenPossession(payload, matchId)
+  if (open) {
+    await payload.update({
+      collection: 'possessions',
+      id: open.id,
+      data: { endOutcome: 'throws_exhausted' },
+      overrideAccess: true,
+    })
+  }
+
+  // Vrijeworplijn ligt 4 m vóór de aangevallen doellijn.
+  const setupY = dir === 'up' ? 32 / 46 : 14 / 46
+  await payload.create({
+    collection: 'possessions',
+    data: {
+      match: matchId,
+      team: teamId,
+      setupSide: 'opponent',
+      throwsAllowed: 1,
+      freeThrow: true,
+      setupX: 0.5,
+      setupY,
+      dir,
+      startHalf: half,
+      startClock: match.clockSeconds ?? 0,
+    },
+    overrideAccess: true,
+  })
+  return buildMatchState(payload, matchId)
+}
+
 /** Time-out registreren (telt mee in het quotum 2 per ploeg per helft). */
 export async function recordTimeout(payload: Payload, matchId: number, teamId: number) {
   const { match } = await loadMatch(payload, matchId)
@@ -425,6 +478,8 @@ export interface MatchState {
     dir: AttackDir
     /** Speler van de vorige worp in dit balbezit — mag niet 2× na elkaar werpen. */
     lastPlayerId: number | null
+    /** Vrije worp: één worp richting het tegendoel. */
+    freeThrow: boolean
   } | null
 }
 
@@ -477,6 +532,8 @@ export async function buildMatchSheet(payload: Payload, matchId: number): Promis
     depth: 1,
     limit: 2000,
   })
+  const sheetPoss = await payload.find({ collection: 'possessions', where: { match: { equals: matchId } }, depth: 0, limit: 1000 })
+  const sheetPossById = new Map(sheetPoss.docs.map((p) => [p.id, p]))
 
   const goals: SheetGoal[] = []
   const halfScores = { home: [0, 0] as [number, number], away: [0, 0] as [number, number] }
@@ -499,8 +556,12 @@ export async function buildMatchSheet(payload: Payload, matchId: number): Promis
         points,
       })
       halfScores[side][halfIdx] += points
-    } else if (t.outcome === 'out_back' && !t.touchedBeforeOut) {
-      crosses[side] += 1
+    } else {
+      const possId = typeof t.possession === 'object' ? t.possession.id : t.possession
+      const allowed = sheetPossById.get(possId)?.throwsAllowed ?? 1
+      if (isCrossThrow({ outcome: t.outcome, isDoelworp: t.throwNumber >= allowed, touchedBeforeOut: t.touchedBeforeOut ?? false })) {
+        crosses[side] += 1
+      }
     }
   }
 
@@ -584,7 +645,7 @@ export async function buildMatchStats(payload: Payload, matchId: number) {
       shirtNumber: player?.shirtNumber ?? 0,
       teamSide: side,
       throwNumber: t.throwNumber,
-      isLastThrow: isTerminalOutcome(t.outcome) || t.throwNumber >= allowed,
+      isLastThrow: t.throwNumber >= allowed,
       type: t.type,
       outcome: t.outcome,
       distance: t.distance ?? null,
@@ -599,7 +660,7 @@ export async function buildMatchStats(payload: Payload, matchId: number) {
       shirtNumber: player?.shirtNumber ?? 0,
       teamSide: side,
       throwNumber: t.throwNumber,
-      isLastThrow: isTerminalOutcome(t.outcome) || t.throwNumber >= allowed,
+      isLastThrow: t.throwNumber >= allowed,
     })
   }
 
@@ -634,12 +695,16 @@ export async function buildTimeline(payload: Payload, matchId: number): Promise<
     depth: 0,
     limit: 1000,
   })
+  const tlPoss = await payload.find({ collection: 'possessions', where: { match: { equals: matchId } }, depth: 0, limit: 1000 })
+  const tlPossById = new Map(tlPoss.docs.map((p) => [p.id, p]))
 
   const items: (TimelineItem & { _t: string })[] = []
 
   for (const t of throwsRes.docs) {
     const teamId = typeof t.team === 'object' ? t.team.id : t.team
     const side = sideOfTeam(teamId, homeId)
+    const tlPossId = typeof t.possession === 'object' ? t.possession.id : t.possession
+    const tlAllowed = tlPossById.get(tlPossId)?.throwsAllowed ?? 1
     if (t.outcome === 'goal') {
       const pts = t.type === 'rug' ? 2 : 1
       const player = typeof t.player === 'object' && t.player ? t.player : null
@@ -653,7 +718,7 @@ export async function buildTimeline(payload: Payload, matchId: number): Promise<
         label: `Doelpunt +${pts} ${who}`.trim(),
         _t: t.createdAt,
       })
-    } else if (t.outcome === 'out_back' && !t.touchedBeforeOut) {
+    } else if (isCrossThrow({ outcome: t.outcome, isDoelworp: t.throwNumber >= tlAllowed, touchedBeforeOut: t.touchedBeforeOut ?? false })) {
       items.push({
         id: `c${t.id}`,
         kind: 'cross',
@@ -715,7 +780,7 @@ export async function buildMatchState(payload: Payload, matchId: number): Promis
       team: sideOfTeam(teamId, homeId),
       type: t.type,
       outcome: t.outcome,
-      isLastThrow: isTerminalOutcome(t.outcome) || t.throwNumber >= allowed,
+      isDoelworp: t.throwNumber >= allowed,
       touchedBeforeOut: t.touchedBeforeOut ?? false,
     }
   })
@@ -765,6 +830,7 @@ export async function buildMatchState(payload: Payload, matchId: number): Promis
       nextThrowNumber: used + 1,
       dir: (open.dir as AttackDir) ?? attackDirForSide(side, half),
       lastPlayerId,
+      freeThrow: Boolean(open.freeThrow),
     }
   }
 
