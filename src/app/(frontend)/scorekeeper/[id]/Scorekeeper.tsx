@@ -205,9 +205,14 @@ export function Scorekeeper({
 
   const PlayerColumn = ({ side, players, arrow }: { side: 'home' | 'away'; players: RosterPlayer[]; arrow: string }) => {
     const active = possSide === side
+    const teamId = side === 'home' ? state.teams.home.id : state.teams.away.id
     return (
       <div className={`sk-col sk-col-${side} ${active ? 'active' : 'dim'}`}>
         <div className="sk-col-head">
+          <div className="sk-col-actions">
+            <button type="button" className="sk-col-mini" disabled={busy || !isLive} title="Vrijworp" onClick={() => act({ action: 'freethrow', teamId })}>VW</button>
+            <button type="button" className="sk-col-mini" disabled={busy} title="Wissel" onClick={() => { setSubOut(null); setSubOpen(true) }}>⇄</button>
+          </div>
           <span className="sk-col-dir" aria-label="speelrichting">{arrow}</span>
           {active && poss && (
             <span className="sk-col-worp">{poss.freeThrow ? 'VW' : `${poss.nextThrowNumber}/${poss.throwsAllowed}`}</span>
@@ -361,9 +366,6 @@ export function Scorekeeper({
       {!isScheduled && (
         <div className="sk-toolbar">
           <button type="button" className="tb warn" disabled={busy} onClick={() => act({ action: 'undo' })}>↶ Undo</button>
-          <button type="button" className="tb home" disabled={busy || !isLive} onClick={() => act({ action: 'freethrow', teamId: state.teams.home.id })} title={`Vrijworp ${state.teams.home.name}`}>VW thuis</button>
-          <button type="button" className="tb away" disabled={busy || !isLive} onClick={() => act({ action: 'freethrow', teamId: state.teams.away.id })} title={`Vrijworp ${state.teams.away.name}`}>VW uit</button>
-          <button type="button" className="tb" disabled={busy} onClick={() => { setSubOut(null); setSubOpen(true) }}>⇄ Wissel</button>
           {isLive && state.match.currentHalf < 2 && (
             <button type="button" className="tb" disabled={busy} onClick={() => act({ action: 'half' })}>⏭ 2e helft</button>
           )}

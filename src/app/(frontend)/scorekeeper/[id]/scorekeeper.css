@@ -73,7 +73,14 @@
 .sk-col { display: flex; flex-direction: column; justify-content: center; gap: 4px; flex: 0 0 auto; overflow-y: auto; }
 .sk-col.dim { opacity: 0.38; }
 .sk-col-away { align-items: flex-end; }
-.sk-col-head { display: flex; flex-direction: column; align-items: center; gap: 2px; width: 44px; margin-bottom: 2px; }
+.sk-col-head { display: flex; flex-direction: column; align-items: center; gap: 3px; width: 44px; margin-bottom: 2px; }
+.sk-col-actions { display: flex; gap: 3px; }
+.sk-col-mini {
+  width: 20px; height: 20px; padding: 0; border-radius: 6px; font-size: 0.6rem; font-weight: 700;
+  border: 1px solid var(--line); background: #0a1f14; color: var(--dim); line-height: 1;
+}
+.sk-col-home .sk-col-mini { border-color: var(--home); color: var(--home); }
+.sk-col-away .sk-col-mini { border-color: var(--away); color: var(--away); }
 .sk-col-dir { font-size: 1.4rem; font-weight: 900; line-height: 1; }
 .sk-col-home .sk-col-dir { color: var(--home); }
 .sk-col-away .sk-col-dir { color: var(--away); }
