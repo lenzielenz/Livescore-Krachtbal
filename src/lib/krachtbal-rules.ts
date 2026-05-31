@@ -118,7 +118,7 @@ export interface NextSetup {
  * - midline_fault wordt door de aanroeper als out behandeld → eigen-helft-opzet vanuit midden.
  */
 export function nextSetup(input: {
-  outcome: ThrowOutcome | 'midline_fault'
+  outcome: ThrowOutcome | 'midline_fault' | 'throws_exhausted'
   landing: Point
   throwerTeam: TeamSide
   throwerDir: AttackDir
@@ -127,8 +127,8 @@ export function nextSetup(input: {
   const team: TeamSide = throwerTeam === 'home' ? 'away' : 'home'
   const dir: AttackDir = throwerDir === 'up' ? 'down' : 'up'
 
-  if (outcome === 'caught') {
-    // Vangpunt = vertrek voor de tegenploeg richting het andere doel.
+  if (outcome === 'caught' || outcome === 'throws_exhausted') {
+    // Bal ligt/wordt gevangen op het landingspunt = vertrek voor de tegenploeg.
     return { team, dir, setupSide: isOnOwnHalf(landing, dir) ? 'own' : 'opponent', point: landing }
   }
 

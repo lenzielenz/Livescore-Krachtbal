@@ -232,6 +232,9 @@ export interface Possession {
    * Afgeleid uit categorie + opzetpunt.
    */
   throwsAllowed?: number | null;
+  setupX?: number | null;
+  setupY?: number | null;
+  dir?: ('up' | 'down') | null;
   startHalf?: number | null;
   startClock?: number | null;
   /**
@@ -472,6 +475,9 @@ export interface PossessionsSelect<T extends boolean = true> {
   team?: T;
   setupSide?: T;
   throwsAllowed?: T;
+  setupX?: T;
+  setupY?: T;
+  dir?: T;
   startHalf?: T;
   startClock?: T;
   endOutcome?: T;

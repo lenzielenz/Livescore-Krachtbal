@@ -64,6 +64,36 @@ export const Possessions: CollectionConfig = {
       },
     },
     {
+      // Vertrekpunt van het balbezit (genormaliseerd) — origin voor de afstand van de 1e worp.
+      type: 'row',
+      fields: [
+        {
+          name: 'setupX',
+          label: 'Vertrekpunt X (0..1)',
+          type: 'number',
+          min: 0,
+          max: 1,
+        },
+        {
+          name: 'setupY',
+          label: 'Vertrekpunt Y (0..1)',
+          type: 'number',
+          min: 0,
+          max: 1,
+        },
+      ],
+    },
+    {
+      // Speelrichting van deze ploeg in dit balbezit: 'up' = naar y=1, 'down' = naar y=0.
+      name: 'dir',
+      label: 'Speelrichting',
+      type: 'select',
+      options: [
+        { label: 'Omhoog (naar uitdoel)', value: 'up' },
+        { label: 'Omlaag (naar thuisdoel)', value: 'down' },
+      ],
+    },
+    {
       type: 'row',
       fields: [
         {
