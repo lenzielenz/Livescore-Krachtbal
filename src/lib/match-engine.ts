@@ -7,7 +7,7 @@
 import type { Payload } from 'payload'
 
 import type { Category } from './categories'
-import type { AttackDir, Point } from './field'
+import { type AttackDir, type Point, FIELD, freeThrowNorm } from './field'
 import {
   type SetupSide,
   type TeamSide,
@@ -132,8 +132,9 @@ export async function startMatch(payload: Payload, matchId: number, startingTeam
     data: { match: matchId, type: 'half_start', half: 1, gameClock: 0 },
     overrideAccess: true,
   })
-  // Opzet bij aftrap: vanaf eigen helft, vertrekpunt midden eigen helft.
-  const ownHalfY = dir === 'up' ? 12 / 46 : 34 / 46
+  // Opzet bij aftrap: vanaf de eigen vrijeworplijn (diepte-afhankelijk).
+  const ftNorm = freeThrowNorm(match.goalAreaDepth ?? FIELD.defaultGoalAreaDepthM)
+  const ownHalfY = dir === 'up' ? ftNorm : 1 - ftNorm
   await createPossession(payload, {
     matchId,
     teamId: startingTeamId,
@@ -191,8 +192,9 @@ export async function recordThrow(payload: Payload, input: RecordThrowInput) {
     ? { x: last.landingX, y: last.landingY }
     : { x: open.setupX ?? 0.5, y: open.setupY ?? 0.5 }
 
-  const outcome = deriveOutcome({ tapCount: input.tapCount, point: input.point, dir })
-  const geom = deriveGeometry(origin, input.point, dir)
+  const depth = match.goalAreaDepth ?? FIELD.defaultGoalAreaDepthM
+  const outcome = deriveOutcome({ tapCount: input.tapCount, point: input.point, dir, goalAreaDepthM: depth })
+  const geom = deriveGeometry(origin, input.point, dir, depth)
 
   const created = await payload.create({
     collection: 'throws',
@@ -253,11 +255,12 @@ export async function recordThrow(payload: Payload, input: RecordThrowInput) {
         landing: input.point,
         throwerTeam: side,
         throwerDir: dir,
+        goalAreaDepthM: depth,
       })
       const nextTeamId = ns.team === 'home' ? homeId : awayId
       if (awardFreeThrow) {
         // 3e kruisje: de inworp wordt vervangen door een vrije worp voor de tegenstander.
-        const ftY = ns.dir === 'up' ? 32 / 46 : 14 / 46
+        const ftY = ns.dir === 'up' ? 1 - freeThrowNorm(depth) : freeThrowNorm(depth)
         await payload.create({
           collection: 'possessions',
           data: {
@@ -441,7 +444,8 @@ export async function advanceHalf(payload: Payload, matchId: number) {
   const startTeamId = firstTeamId === homeId ? awayId : homeId
   const startSide = sideOfTeam(startTeamId, homeId)
   const dir = attackDirForSide(startSide, nextHalf)
-  const ownHalfY = dir === 'up' ? 12 / 46 : 34 / 46
+  const ftNorm = freeThrowNorm(match.goalAreaDepth ?? FIELD.defaultGoalAreaDepthM)
+  const ownHalfY = dir === 'up' ? ftNorm : 1 - ftNorm
   await createPossession(payload, {
     matchId,
     teamId: startTeamId,
@@ -497,8 +501,9 @@ export async function startFreeThrow(payload: Payload, matchId: number, teamId: 
     })
   }
 
-  // Vrijeworplijn ligt 4 m vóór de aangevallen doellijn.
-  const setupY = dir === 'up' ? 32 / 46 : 14 / 46
+  // Vrijeworplijn ligt 4 m vóór de aangevallen doellijn (diepte-afhankelijk).
+  const ftNorm = freeThrowNorm(match.goalAreaDepth ?? FIELD.defaultGoalAreaDepthM)
+  const setupY = dir === 'up' ? 1 - ftNorm : ftNorm
   await payload.create({
     collection: 'possessions',
     data: {
@@ -587,6 +592,8 @@ export interface MatchState {
     clockSeconds: number
     clockRunning: boolean
     clockUpdatedAt: string | null
+    /** Diepte van het doelgebied (m) — bepaalt veldlengte + afstandsschaal. */
+    goalAreaDepth: number
   }
   teams: { home: { id: number; name: string }; away: { id: number; name: string } }
   /** Spelers die momenteel op het veld staan (selecteerbaar om te werpen). */
@@ -970,6 +977,7 @@ export async function buildMatchState(payload: Payload, matchId: number): Promis
       clockSeconds: match.clockSeconds ?? 0,
       clockRunning: match.clockRunning ?? false,
       clockUpdatedAt: match.clockUpdatedAt ?? null,
+      goalAreaDepth: match.goalAreaDepth ?? FIELD.defaultGoalAreaDepthM,
     },
     teams: { home: { id: home.id, name: home.name }, away: { id: away.id, name: away.name } },
     lineup: {

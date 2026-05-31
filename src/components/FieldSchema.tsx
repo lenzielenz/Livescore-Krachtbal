@@ -4,17 +4,34 @@ import React, { useRef } from 'react'
 
 import type { Point } from '@/lib/field'
 
-// Veld op schaal: 14 m breed × 46 m lang. 10 px/m → 140 × 460. Met out-marge eromheen.
+// Veld op schaal: 14 m breed, 10 px/m. Breedte vast (140 px); de LENGTE hangt af van de
+// doelgebied-diepte (speelveld 26 m + 2×diepte), dus die wordt per render berekend.
 const M = 22 // marge in px (out-zone)
 const W = 140
-const H = 460
-const HOME_GOAL_Y = 100 // 10 m
-const AWAY_GOAL_Y = 360 // 36 m
-const MID_Y = 230 // 23 m
-const FT_TOP_Y = 140 // vrijeworplijn thuiszijde (14 m)
-const FT_BOT_Y = 320 // vrijeworplijn uitzijde (32 m)
+const SCALE = 10 // px per meter
+const PLAYING_LENGTH_M = 26
 const THIRD_1 = W / 3
 const THIRD_2 = (2 * W) / 3
+
+interface FieldPx {
+  H: number
+  homeGoalY: number
+  awayGoalY: number
+  midY: number
+  ftTopY: number
+  ftBotY: number
+}
+function fieldPx(goalAreaDepthM: number): FieldPx {
+  const d = goalAreaDepthM
+  return {
+    H: (PLAYING_LENGTH_M + 2 * d) * SCALE,
+    homeGoalY: d * SCALE,
+    awayGoalY: (d + PLAYING_LENGTH_M) * SCALE,
+    midY: (d + PLAYING_LENGTH_M / 2) * SCALE,
+    ftTopY: (d + 4) * SCALE,
+    ftBotY: (d + PLAYING_LENGTH_M - 4) * SCALE,
+  }
+}
 
 export interface FieldMarker {
   x: number
@@ -55,9 +72,8 @@ function heatColor(t: number): string {
   return `rgb(${c[0]}, ${c[1]}, ${c[2]})`
 }
 
-function HeatLayer({ points }: { points: Point[] }) {
-  const W = 140
-  const H = 460
+function HeatLayer({ points, h }: { points: Point[]; h: number }) {
+  const H = h
   const grid = Array.from({ length: GY }, () => new Array(GX).fill(0))
   let max = 0
   for (const p of points) {
@@ -101,6 +117,7 @@ export function FieldSchema({
   heatPoints,
   ends,
   glowGoal,
+  goalAreaDepthM = 10,
   className,
 }: {
   onTap?: (p: Point) => void
@@ -111,9 +128,12 @@ export function FieldSchema({
   ends?: { top?: EndLabel; bottom?: EndLabel }
   /** Laat een doelgebied oplichten (vrije worp). */
   glowGoal?: { end: 'top' | 'bottom'; color: string }
+  /** Diepte van het doelgebied (m) — bepaalt de veldlengte/verhoudingen. */
+  goalAreaDepthM?: number
   className?: string
 }) {
   const ref = useRef<SVGSVGElement>(null)
+  const { H, homeGoalY, awayGoalY, midY, ftTopY, ftBotY } = fieldPx(goalAreaDepthM)
 
   function handleClick(e: React.MouseEvent<SVGSVGElement>) {
     if (!onTap || !ref.current) return
@@ -149,14 +169,14 @@ export function FieldSchema({
       {/* Speelveld */}
       <rect x={0} y={0} width={W} height={H} fill="#0f3d27" stroke="#e8f5ee" strokeWidth={1.5} />
       {/* Doelgebieden — gekleurd in de kleur van de ploeg die ER NAARTOE aanvalt */}
-      <rect x={0} y={0} width={W} height={HOME_GOAL_Y} fill={ends?.top?.color ?? '#ffffff'} opacity={ends?.top ? 0.22 : 0.06} />
-      <rect x={0} y={AWAY_GOAL_Y} width={W} height={H - AWAY_GOAL_Y} fill={ends?.bottom?.color ?? '#ffffff'} opacity={ends?.bottom ? 0.22 : 0.06} />
+      <rect x={0} y={0} width={W} height={homeGoalY} fill={ends?.top?.color ?? '#ffffff'} opacity={ends?.top ? 0.22 : 0.06} />
+      <rect x={0} y={awayGoalY} width={W} height={H - awayGoalY} fill={ends?.bottom?.color ?? '#ffffff'} opacity={ends?.bottom ? 0.22 : 0.06} />
       {/* Lijnen */}
-      <line x1={0} y1={HOME_GOAL_Y} x2={W} y2={HOME_GOAL_Y} stroke="#e8f5ee" strokeWidth={1.5} />
-      <line x1={0} y1={AWAY_GOAL_Y} x2={W} y2={AWAY_GOAL_Y} stroke="#e8f5ee" strokeWidth={1.5} />
-      <line x1={0} y1={MID_Y} x2={W} y2={MID_Y} stroke="#e8f5ee" strokeWidth={1} strokeDasharray="4 4" />
-      <line x1={0} y1={FT_TOP_Y} x2={W} y2={FT_TOP_Y} stroke="#9fd9ba" strokeWidth={0.8} strokeDasharray="2 3" />
-      <line x1={0} y1={FT_BOT_Y} x2={W} y2={FT_BOT_Y} stroke="#9fd9ba" strokeWidth={0.8} strokeDasharray="2 3" />
+      <line x1={0} y1={homeGoalY} x2={W} y2={homeGoalY} stroke="#e8f5ee" strokeWidth={1.5} />
+      <line x1={0} y1={awayGoalY} x2={W} y2={awayGoalY} stroke="#e8f5ee" strokeWidth={1.5} />
+      <line x1={0} y1={midY} x2={W} y2={midY} stroke="#e8f5ee" strokeWidth={1} strokeDasharray="4 4" />
+      <line x1={0} y1={ftTopY} x2={W} y2={ftTopY} stroke="#9fd9ba" strokeWidth={0.8} strokeDasharray="2 3" />
+      <line x1={0} y1={ftBotY} x2={W} y2={ftBotY} stroke="#9fd9ba" strokeWidth={0.8} strokeDasharray="2 3" />
       {/* Zone-derden */}
       <line x1={THIRD_1} y1={0} x2={THIRD_1} y2={H} stroke="#9fd9ba" strokeWidth={0.5} strokeDasharray="2 4" opacity={0.5} />
       <line x1={THIRD_2} y1={0} x2={THIRD_2} y2={H} stroke="#9fd9ba" strokeWidth={0.5} strokeDasharray="2 4" opacity={0.5} />
@@ -165,9 +185,9 @@ export function FieldSchema({
       {glowGoal && (
         <rect
           x={0}
-          y={glowGoal.end === 'top' ? 0 : AWAY_GOAL_Y}
+          y={glowGoal.end === 'top' ? 0 : awayGoalY}
           width={W}
-          height={glowGoal.end === 'top' ? HOME_GOAL_Y : H - AWAY_GOAL_Y}
+          height={glowGoal.end === 'top' ? homeGoalY : H - awayGoalY}
           fill={glowGoal.color}
           opacity={0.55}
           className="field-goal-glow"
@@ -175,7 +195,7 @@ export function FieldSchema({
       )}
 
       {/* Heatmap-laag (optioneel) */}
-      {heatPoints && heatPoints.length > 0 && <HeatLayer points={heatPoints} />}
+      {heatPoints && heatPoints.length > 0 && <HeatLayer points={heatPoints} h={H} />}
 
       {/* Markers */}
       {markers.map((m, i) => (

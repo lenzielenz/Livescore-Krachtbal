@@ -9,6 +9,8 @@ import {
   type Point,
   type Zone,
   distanceM,
+  freeThrowNorm,
+  goalLineNorm,
   isInTargetGoalArea,
   isOnOwnHalf,
   isOutBack,
@@ -65,12 +67,13 @@ export function deriveOutcome(input: {
   tapCount: 1 | 2
   point: Point
   dir: AttackDir
+  goalAreaDepthM?: number
 }): ThrowOutcome {
-  const { tapCount, point, dir } = input
+  const { tapCount, point, dir, goalAreaDepthM } = input
   if (tapCount === 2) return 'caught'
   if (isOutBack(point, dir)) return 'out_back'
   if (isOutSide(point)) return 'out_side'
-  if (isInTargetGoalArea(point, dir)) return 'goal'
+  if (isInTargetGoalArea(point, dir, goalAreaDepthM)) return 'goal'
   return 'in_field'
 }
 
@@ -87,9 +90,14 @@ export interface DerivedThrowGeometry {
 }
 
 /** Afstand (hemelsbreed, vanaf vertrekpunt) en zone — berekend bij het registreren. */
-export function deriveGeometry(origin: Point, landing: Point, dir: AttackDir): DerivedThrowGeometry {
+export function deriveGeometry(
+  origin: Point,
+  landing: Point,
+  dir: AttackDir,
+  goalAreaDepthM?: number,
+): DerivedThrowGeometry {
   return {
-    distance: Math.round(distanceM(origin, landing) * 100) / 100,
+    distance: Math.round(distanceM(origin, landing, goalAreaDepthM) * 100) / 100,
     zone: zoneOf(landing, dir),
   }
 }
@@ -136,10 +144,13 @@ export function nextSetup(input: {
   landing: Point
   throwerTeam: TeamSide
   throwerDir: AttackDir
+  goalAreaDepthM?: number
 }): NextSetup {
-  const { outcome, landing, throwerTeam, throwerDir } = input
+  const { outcome, landing, throwerTeam, throwerDir, goalAreaDepthM } = input
   const team: TeamSide = throwerTeam === 'home' ? 'away' : 'home'
   const dir: AttackDir = throwerDir === 'up' ? 'down' : 'up'
+  const gLine = goalLineNorm(goalAreaDepthM)
+  const ftLine = freeThrowNorm(goalAreaDepthM)
 
   // Opzetpunt = waar de bal lag/gevangen werd; het worpaantal volgt uit de helft
   // (eigen helft = 3/4, tegenhelft of middellijn = 2/3). Geldt voor vangst, opgebruikte
@@ -155,12 +166,12 @@ export function nextSetup(input: {
 
   // out_back: inworp → de eigen doellijn van de tegenploeg wordt de werpplaats (eigen helft).
   if (outcome === 'out_back') {
-    const y = dir === 'up' ? 10 / 46 : 36 / 46
+    const y = dir === 'up' ? gLine : 1 - gLine
     return { team, dir, setupSide: 'own', point: { x: 0.5, y } }
   }
 
   // goal: tegenploeg zet op vanaf de eigen vrijeworplijn (eigen helft, volle breedte).
-  const ftY = dir === 'up' ? 14 / 46 : 32 / 46
+  const ftY = dir === 'up' ? ftLine : 1 - ftLine
   return { team, dir, setupSide: 'own', point: { x: 0.5, y: ftY } }
 }
 

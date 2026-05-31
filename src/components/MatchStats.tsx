@@ -36,10 +36,12 @@ export function MatchStats({
   stats,
   shots,
   teams,
+  goalAreaDepth = 10,
 }: {
   stats: Stats
   shots: ShotPoint[]
   teams: { home: string; away: string }
+  goalAreaDepth?: number
 }) {
   const [playerFilter, setPlayerFilter] = useState<number | 'all'>('all')
   const [goalsOnly, setGoalsOnly] = useState(false)
@@ -103,6 +105,7 @@ export function MatchStats({
             className="shotmap-field"
             markers={view === 'dots' ? markers : []}
             heatPoints={view === 'heat' ? heatPoints : undefined}
+            goalAreaDepthM={goalAreaDepth}
           />
           {view === 'dots' ? (
             <div className="shotmap-legend">

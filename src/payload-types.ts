@@ -212,6 +212,10 @@ export interface Match {
   date: string;
   category: 'U12' | 'U14' | 'U16' | 'U18' | 'U20' | 'senioren';
   status: 'scheduled' | 'live' | 'finished';
+  /**
+   * Min. 10 m (15 m voor nieuwe terreinen). Bepaalt de veldlengte en de afstandsberekening.
+   */
+  goalAreaDepth: number;
   homeLineup?: (number | Player)[] | null;
   awayLineup?: (number | Player)[] | null;
   currentHalf?: number | null;
@@ -469,6 +473,7 @@ export interface MatchesSelect<T extends boolean = true> {
   date?: T;
   category?: T;
   status?: T;
+  goalAreaDepth?: T;
   homeLineup?: T;
   awayLineup?: T;
   currentHalf?: T;

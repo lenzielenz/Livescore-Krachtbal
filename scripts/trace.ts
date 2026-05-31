@@ -14,7 +14,7 @@ async function main() {
   const ph2 = await payload.create({ collection: 'players', data: { name: 'H8', team: home.id, shirtNumber: 8 }, overrideAccess: true })
   const pa = await payload.create({ collection: 'players', data: { name: 'A9', team: away.id, shirtNumber: 9 }, overrideAccess: true })
   const pa2 = await payload.create({ collection: 'players', data: { name: 'A10', team: away.id, shirtNumber: 10 }, overrideAccess: true })
-  const match = await payload.create({ collection: 'matches', data: { homeTeam: home.id, awayTeam: away.id, date: new Date().toISOString(), category: 'senioren', status: 'scheduled' }, overrideAccess: true })
+  const match = await payload.create({ collection: 'matches', data: { homeTeam: home.id, awayTeam: away.id, date: new Date().toISOString(), category: 'senioren', status: 'scheduled', goalAreaDepth: 10 }, overrideAccess: true })
 
   // Wissel telkens van speler (mag niet 2× na elkaar).
   let flip = 0

@@ -168,7 +168,7 @@ export function Scorekeeper({
       }
       const dir = poss.dir as AttackDir
       const tapCount = tapMode === 'caught' ? 2 : 1
-      const outcome = deriveOutcome({ tapCount, point: p, dir })
+      const outcome = deriveOutcome({ tapCount, point: p, dir, goalAreaDepthM: state.match.goalAreaDepth })
       const isDoelworp = poss.nextThrowNumber >= poss.throwsAllowed || poss.freeThrow
 
       // Bij buiten op de doelworp/vrijworp bepaalt aanraking of het een kruisje is → nette modal.
@@ -331,6 +331,8 @@ export function Scorekeeper({
         </div>
       )}
 
+      <a className="sk-back" href="/scorekeeper" title="Terug naar overzicht — de wedstrijd blijft gewoon live">← Overzicht</a>
+
       <header className="sk-head">
         <div className="sk-scorebar">
           <button type="button" className="sk-to home" disabled={busy || !isLive || state.timeouts.home >= 2} onClick={() => act({ action: 'timeout', teamId: state.teams.home.id })} title="Time-out thuis">
@@ -358,7 +360,6 @@ export function Scorekeeper({
 
       {!isScheduled && (
         <div className="sk-toolbar">
-          <a className="tb" href="/scorekeeper" title="Terug naar overzicht (wedstrijd blijft live)">← Overzicht</a>
           <button type="button" className="tb warn" disabled={busy} onClick={() => act({ action: 'undo' })}>↶ Undo</button>
           <button type="button" className="tb home" disabled={busy || !isLive} onClick={() => act({ action: 'freethrow', teamId: state.teams.home.id })} title={`Vrijworp ${state.teams.home.name}`}>VW thuis</button>
           <button type="button" className="tb away" disabled={busy || !isLive} onClick={() => act({ action: 'freethrow', teamId: state.teams.away.id })} title={`Vrijworp ${state.teams.away.name}`}>VW uit</button>
@@ -390,6 +391,7 @@ export function Scorekeeper({
                 onTap={onTap}
                 markers={recentTaps}
                 ends={fieldEnds}
+                goalAreaDepthM={state.match.goalAreaDepth}
                 glowGoal={
                   poss?.freeThrow
                     ? { end: poss.dir === 'up' ? 'bottom' : 'top', color: possSide === 'home' ? HOME_COLOR : AWAY_COLOR }

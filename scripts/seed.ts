@@ -39,6 +39,7 @@ async function main() {
       date: new Date().toISOString(),
       category: 'senioren',
       status: 'scheduled',
+      goalAreaDepth: 10,
     },
     overrideAccess: true,
   })

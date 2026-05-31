@@ -106,6 +106,18 @@ export const Matches: CollectionConfig = {
           defaultValue: 'scheduled',
           required: true,
         },
+        {
+          name: 'goalAreaDepth',
+          label: 'Diepte doelgebied (m)',
+          type: 'number',
+          defaultValue: 10,
+          min: 5,
+          max: 25,
+          required: true,
+          admin: {
+            description: 'Min. 10 m (15 m voor nieuwe terreinen). Bepaalt de veldlengte en de afstandsberekening.',
+          },
+        },
       ],
     },
     {

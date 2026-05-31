@@ -36,7 +36,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
           📋 Wedstrijdblad (print / PDF / JSON)
         </Link>
       </p>
-      <MatchStats stats={stats.stats} shots={stats.shots} teams={{ home: state.teams.home.name, away: state.teams.away.name }} />
+      <MatchStats stats={stats.stats} shots={stats.shots} teams={{ home: state.teams.home.name, away: state.teams.away.name }} goalAreaDepth={state.match.goalAreaDepth} />
     </div>
   )
 }

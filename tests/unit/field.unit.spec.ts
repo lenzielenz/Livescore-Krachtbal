@@ -9,14 +9,21 @@ import {
   isOutSide,
   reachedMidline,
   toMeters,
+  totalLengthM,
   zoneOf,
 } from '@/lib/field'
 
 describe('field — meters & afstand', () => {
   it('zet genormaliseerde coördinaten om naar meters', () => {
     expect(toMeters({ x: 0, y: 0 })).toEqual({ x: 0, y: 0 })
-    expect(toMeters({ x: 1, y: 1 })).toEqual({ x: FIELD.widthM, y: FIELD.totalLengthM })
+    expect(toMeters({ x: 1, y: 1 })).toEqual({ x: FIELD.widthM, y: totalLengthM() })
     expect(toMeters({ x: 0.5, y: 0.5 })).toEqual({ x: 7, y: 23 })
+  })
+
+  it('diepere doelgebieden → langere veldlengte → grotere afstand', () => {
+    // 15 m doelgebieden → totaal 56 m i.p.v. 46 m
+    expect(totalLengthM(15)).toBe(56)
+    expect(distanceM({ x: 0.5, y: 0 }, { x: 0.5, y: 1 }, 15)).toBeCloseTo(56)
   })
 
   it('berekent hemelsbrede afstand', () => {

@@ -33,6 +33,9 @@ export default buildConfig({
     importMap: {
       baseDir: path.resolve(dirname),
     },
+    components: {
+      beforeNavLinks: ['/components/admin/BackToSite#BackToSite'],
+    },
   },
   collections: [Users, Media, Teams, Players, Matches, Possessions, Throws, MatchEvents],
   editor: lexicalEditor(),
