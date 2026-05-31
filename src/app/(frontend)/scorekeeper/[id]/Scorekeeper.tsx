@@ -311,8 +311,8 @@ export function Scorekeeper({
       {!isScheduled && (
         <div className="sk-toolbar">
           <button type="button" className="tb warn" disabled={busy} onClick={() => act({ action: 'undo' })}>↶ Undo</button>
-          <button type="button" className="tb home" disabled={busy || !isLive} onClick={() => act({ action: 'freethrow', teamId: state.teams.home.id })}>VW {state.teams.home.name}</button>
-          <button type="button" className="tb away" disabled={busy || !isLive} onClick={() => act({ action: 'freethrow', teamId: state.teams.away.id })}>VW {state.teams.away.name}</button>
+          <button type="button" className="tb home" disabled={busy || !isLive} onClick={() => act({ action: 'freethrow', teamId: state.teams.home.id })} title={`Vrijworp ${state.teams.home.name}`}>VW thuis</button>
+          <button type="button" className="tb away" disabled={busy || !isLive} onClick={() => act({ action: 'freethrow', teamId: state.teams.away.id })} title={`Vrijworp ${state.teams.away.name}`}>VW uit</button>
           {isLive && state.match.currentHalf < 2 && (
             <button type="button" className="tb" disabled={busy} onClick={() => act({ action: 'half' })}>⏭ 2e helft</button>
           )}
