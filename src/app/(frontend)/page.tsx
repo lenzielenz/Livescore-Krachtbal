@@ -18,19 +18,25 @@ export default async function HomePage() {
   const payload = await getPayloadClient()
   const matches = await payload.find({ collection: 'matches', sort: '-date', depth: 0, limit: 50 })
 
-  const summaries: Summary[] = await Promise.all(
-    matches.docs.map(async (m) => {
-      const s = await buildMatchState(payload, m.id)
-      return {
-        id: m.id,
-        status: s.match.status,
-        date: m.date,
-        home: s.teams.home.name,
-        away: s.teams.away.name,
-        score: s.score,
+  const settled = await Promise.all(
+    matches.docs.map(async (m): Promise<Summary | null> => {
+      try {
+        const s = await buildMatchState(payload, m.id)
+        return {
+          id: m.id,
+          status: s.match.status,
+          date: m.date,
+          home: s.teams.home.name,
+          away: s.teams.away.name,
+          score: s.score,
+        }
+      } catch {
+        // Wedstrijd met ontbrekende ploeg-referentie: overslaan i.p.v. de pagina laten crashen.
+        return null
       }
     }),
   )
+  const summaries: Summary[] = settled.filter((s): s is Summary => s !== null)
 
   const live = summaries.filter((s) => s.status === 'live')
   const scheduled = summaries.filter((s) => s.status === 'scheduled')
@@ -44,6 +50,7 @@ export default async function HomePage() {
         </h1>
         <nav className="site-nav">
           <Link href="/live">Live</Link>
+          <Link href="/scorekeeper">Aantekenen</Link>
           <Link href="/admin">Beheer</Link>
         </nav>
       </header>

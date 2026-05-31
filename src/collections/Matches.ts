@@ -24,6 +24,16 @@ export const Matches: CollectionConfig = {
   },
   fields: [
     {
+      // Snelkoppeling naar het tablet-aantekenscherm vanuit de admin.
+      name: 'scorekeeperLink',
+      type: 'ui',
+      admin: {
+        components: {
+          Field: '/components/admin/ScorekeeperLink#ScorekeeperLink',
+        },
+      },
+    },
+    {
       // Leesbare titel, samengesteld uit de ploegen. Niet handmatig in te vullen.
       name: 'title',
       label: 'Titel',
