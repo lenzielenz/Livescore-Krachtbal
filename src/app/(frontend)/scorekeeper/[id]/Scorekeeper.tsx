@@ -207,7 +207,12 @@ export function Scorekeeper({
     const active = possSide === side
     return (
       <div className={`sk-col sk-col-${side} ${active ? 'active' : 'dim'}`}>
-        <div className="sk-col-dir" aria-label="speelrichting">{arrow}</div>
+        <div className="sk-col-head">
+          <span className="sk-col-dir" aria-label="speelrichting">{arrow}</span>
+          {active && poss && (
+            <span className="sk-col-worp">{poss.freeThrow ? 'VW' : `${poss.nextThrowNumber}/${poss.throwsAllowed}`}</span>
+          )}
+        </div>
         {players.map((p) => {
           const justThrew = active && poss?.lastPlayerId === p.id
           return (
@@ -328,7 +333,7 @@ export function Scorekeeper({
 
       <header className="sk-head">
         <div className="sk-scorebar">
-          <button type="button" className="sk-to home" disabled={busy || !isLive} onClick={() => act({ action: 'timeout', teamId: state.teams.home.id })} title="Time-out thuis">
+          <button type="button" className="sk-to home" disabled={busy || !isLive || state.timeouts.home >= 2} onClick={() => act({ action: 'timeout', teamId: state.teams.home.id })} title="Time-out thuis">
             {'●'.repeat(state.timeouts.home)}{'○'.repeat(Math.max(0, 2 - state.timeouts.home))}
           </button>
           <span className="sk-sc home">{state.score.home}</span>
@@ -338,7 +343,7 @@ export function Scorekeeper({
             <span className="sk-clock-ico">{state.match.clockRunning ? '⏸' : '▶'}</span>
           </button>
           <span className="sk-sc away">{state.score.away}</span>
-          <button type="button" className="sk-to away" disabled={busy || !isLive} onClick={() => act({ action: 'timeout', teamId: state.teams.away.id })} title="Time-out uit">
+          <button type="button" className="sk-to away" disabled={busy || !isLive || state.timeouts.away >= 2} onClick={() => act({ action: 'timeout', teamId: state.teams.away.id })} title="Time-out uit">
             {'●'.repeat(state.timeouts.away)}{'○'.repeat(Math.max(0, 2 - state.timeouts.away))}
           </button>
         </div>
@@ -349,28 +354,11 @@ export function Scorekeeper({
         </div>
       </header>
 
-      {poss && (
-        <div className={`sk-statusbar side-${possSide}`}>
-          {poss.freeThrow ? (
-            <>
-              <span className="sk-vw">VRIJWORP</span>
-              <b className="sk-turn-team">{possSide === 'home' ? state.teams.home.name : state.teams.away.name}</b>
-              <span className="sk-worp">tik waar gescoord/gevangen</span>
-            </>
-          ) : (
-            <>
-              <span className="sk-turn-lbl">aan zet</span>
-              <b className="sk-turn-team">{possSide === 'home' ? state.teams.home.name : state.teams.away.name}</b>
-              <span className="sk-worp">worp {poss.nextThrowNumber}/{poss.throwsAllowed}</span>
-            </>
-          )}
-        </div>
-      )}
-
       {error && <div className="sk-error" onClick={() => setError(null)}>{error}</div>}
 
       {!isScheduled && (
         <div className="sk-toolbar">
+          <a className="tb" href="/scorekeeper" title="Terug naar overzicht (wedstrijd blijft live)">← Overzicht</a>
           <button type="button" className="tb warn" disabled={busy} onClick={() => act({ action: 'undo' })}>↶ Undo</button>
           <button type="button" className="tb home" disabled={busy || !isLive} onClick={() => act({ action: 'freethrow', teamId: state.teams.home.id })} title={`Vrijworp ${state.teams.home.name}`}>VW thuis</button>
           <button type="button" className="tb away" disabled={busy || !isLive} onClick={() => act({ action: 'freethrow', teamId: state.teams.away.id })} title={`Vrijworp ${state.teams.away.name}`}>VW uit</button>

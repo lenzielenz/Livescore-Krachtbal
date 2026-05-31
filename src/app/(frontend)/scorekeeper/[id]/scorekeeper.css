@@ -56,25 +56,11 @@
   color: var(--txt); border-radius: 8px; font-size: 0.8rem;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+.sk-toolbar a.tb { text-decoration: none; color: var(--txt); }
 .sk-toolbar .tb.home { border-color: var(--home); color: var(--home); }
 .sk-toolbar .tb.away { border-color: var(--away); color: var(--away); }
 .sk-toolbar .tb.warn { background: #2a1016; color: #ffd5e0; border-color: #5a1828; }
 .sk-toolbar .tb.danger { background: #3a1018; color: #ffd5e0; border-color: #5a1828; }
-
-/* ── Statusbalk: aan zet · worp (gekleurd in ploegkleur) ── */
-.sk-statusbar {
-  flex: 0 0 auto; display: flex; align-items: center; gap: 8px; justify-content: center;
-  margin-top: 5px; padding: 7px 10px; border-radius: 9px;
-  background: #0a1f14; border: 1px solid var(--line); font-size: 0.85rem;
-}
-/* Accent volgt de ploegzijde: thuis = groen links, uit = blauw rechts. */
-.sk-statusbar.side-home { border-left-width: 4px; border-left-color: var(--home); }
-.sk-statusbar.side-away { border-right-width: 4px; border-right-color: var(--away); }
-.sk-turn-lbl { color: var(--dim); text-transform: uppercase; font-size: 0.62rem; letter-spacing: 0.05em; }
-.sk-turn-team { font-weight: 800; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%; }
-.sk-statusbar.side-home .sk-turn-team { color: var(--home); }
-.sk-statusbar.side-away .sk-turn-team { color: var(--away); }
-.sk-worp { color: var(--accent); font-weight: 700; white-space: nowrap; }
 
 .sk-error { flex: 0 0 auto; padding: 7px 10px; border-radius: 8px; background: #4a1020; color: #ffd5e0; cursor: pointer; font-size: 0.82rem; text-align: center; }
 
@@ -83,9 +69,15 @@
 .sk-col { display: flex; flex-direction: column; justify-content: center; gap: 4px; flex: 0 0 auto; overflow-y: auto; }
 .sk-col.dim { opacity: 0.38; }
 .sk-col-away { align-items: flex-end; }
-.sk-col-dir { font-size: 1.4rem; font-weight: 900; line-height: 1; text-align: center; width: 44px; }
+.sk-col-head { display: flex; flex-direction: column; align-items: center; gap: 2px; width: 44px; margin-bottom: 2px; }
+.sk-col-dir { font-size: 1.4rem; font-weight: 900; line-height: 1; }
 .sk-col-home .sk-col-dir { color: var(--home); }
 .sk-col-away .sk-col-dir { color: var(--away); }
+/* "aan zet"-badge: worp-teller boven de nummers van de ploeg die werpt */
+.sk-col-worp {
+  font-size: 0.72rem; font-weight: 800; font-variant-numeric: tabular-nums;
+  background: var(--accent); color: #06140d; padding: 1px 6px; border-radius: 999px;
+}
 
 .sk-num {
   width: 44px; height: 44px; flex: 0 0 auto; border-radius: 10px;

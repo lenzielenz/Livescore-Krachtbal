@@ -12,6 +12,7 @@ import {
   type SetupSide,
   type TeamSide,
   type ThrowType,
+  CROSS_LIMIT,
   attackDirForSide,
   deriveGeometry,
   deriveOutcome,
@@ -214,6 +215,11 @@ export async function recordThrow(payload: Payload, input: RecordThrowInput) {
     overrideAccess: true,
   })
 
+  // Is dit een kruisje? En zo ja: het hoeveelste van de ploeg (3e → vrijworp tegenstander)?
+  const isDoelworp = throwNumber >= (open.throwsAllowed ?? 1)
+  const isCross = isCrossThrow({ outcome, isDoelworp, touchedBeforeOut: input.touchedBeforeOut })
+  const awardFreeThrow = isCross && (await countCrossesForTeam(payload, input.matchId, teamId)) % CROSS_LIMIT === 0
+
   // Bepaal of het balbezit eindigt.
   const fault = isMidlineFault({
     setupSide: open.setupSide as SetupSide,
@@ -248,21 +254,40 @@ export async function recordThrow(payload: Payload, input: RecordThrowInput) {
         throwerTeam: side,
         throwerDir: dir,
       })
-      await createPossession(payload, {
-        matchId: input.matchId,
-        teamId: ns.team === 'home' ? homeId : awayId,
-        setupSide: ns.setupSide,
-        category: match.category as Category,
-        dir: ns.dir,
-        point: ns.point,
-        half,
-        clock,
-      })
+      const nextTeamId = ns.team === 'home' ? homeId : awayId
+      if (awardFreeThrow) {
+        // 3e kruisje: de inworp wordt vervangen door een vrije worp voor de tegenstander.
+        const ftY = ns.dir === 'up' ? 32 / 46 : 14 / 46
+        await payload.create({
+          collection: 'possessions',
+          data: {
+            match: input.matchId,
+            team: nextTeamId,
+            setupSide: 'opponent',
+            throwsAllowed: 1,
+            freeThrow: true,
+            setupX: 0.5,
+            setupY: ftY,
+            dir: ns.dir,
+            startHalf: half,
+            startClock: clock,
+          },
+          overrideAccess: true,
+        })
+      } else {
+        await createPossession(payload, {
+          matchId: input.matchId,
+          teamId: nextTeamId,
+          setupSide: ns.setupSide,
+          category: match.category as Category,
+          dir: ns.dir,
+          point: ns.point,
+          half,
+          clock,
+        })
+      }
     }
   }
-
-  const isDoelworp = throwNumber >= (open.throwsAllowed ?? 1)
-  const isCross = isCrossThrow({ outcome, isDoelworp, touchedBeforeOut: input.touchedBeforeOut })
 
   return {
     throwId: created.id,
@@ -270,8 +295,33 @@ export async function recordThrow(payload: Payload, input: RecordThrowInput) {
     type: input.type,
     points: pointsForThrow({ type: input.type, outcome }),
     isCross,
+    awardedFreeThrow: awardFreeThrow,
     state: await buildMatchState(payload, input.matchId),
   }
+}
+
+/** Ruw aantal kruisjes (zonder reset) voor een ploeg in een wedstrijd. */
+async function countCrossesForTeam(payload: Payload, matchId: number, teamId: number): Promise<number> {
+  const throwsRes = await payload.find({
+    collection: 'throws',
+    where: { and: [{ match: { equals: matchId } }, { team: { equals: teamId } }] },
+    depth: 0,
+    limit: 2000,
+  })
+  const possIds = [
+    ...new Set(throwsRes.docs.map((t) => (typeof t.possession === 'object' ? t.possession.id : t.possession))),
+  ]
+  const possRes = await payload.find({ collection: 'possessions', where: { id: { in: possIds } }, depth: 0, limit: 1000 })
+  const allowedById = new Map(possRes.docs.map((p) => [p.id, p.throwsAllowed ?? 1]))
+  let n = 0
+  for (const t of throwsRes.docs) {
+    const possId = typeof t.possession === 'object' ? t.possession.id : t.possession
+    const allowed = allowedById.get(possId) ?? 1
+    if (isCrossThrow({ outcome: t.outcome, isDoelworp: t.throwNumber >= allowed, touchedBeforeOut: t.touchedBeforeOut ?? false })) {
+      n += 1
+    }
+  }
+  return n
 }
 
 /** Undo: verwijder de laatste worp en herstel het balbezit. */
@@ -494,18 +544,32 @@ export async function substitute(
   return buildMatchState(payload, matchId)
 }
 
-/** Time-out registreren (telt mee in het quotum 2 per ploeg per helft). */
+/** Maximaal aantal time-outs per ploeg per helft. */
+export const TIMEOUTS_PER_HALF = 2
+
+/** Time-out registreren — max. 2 per ploeg per helft (reglement §8.1). */
 export async function recordTimeout(payload: Payload, matchId: number, teamId: number) {
   const { match } = await loadMatch(payload, matchId)
+  const half = match.currentHalf ?? 1
+
+  const used = await payload.count({
+    collection: 'match-events',
+    where: {
+      and: [
+        { match: { equals: matchId } },
+        { type: { equals: 'timeout' } },
+        { team: { equals: teamId } },
+        { half: { equals: half } },
+      ],
+    },
+  })
+  if (used.totalDocs >= TIMEOUTS_PER_HALF) {
+    throw new Error(`Maximaal ${TIMEOUTS_PER_HALF} time-outs per ploeg per helft.`)
+  }
+
   await payload.create({
     collection: 'match-events',
-    data: {
-      match: matchId,
-      type: 'timeout',
-      team: teamId,
-      half: match.currentHalf ?? 1,
-      gameClock: match.clockSeconds ?? 0,
-    },
+    data: { match: matchId, type: 'timeout', team: teamId, half, gameClock: match.clockSeconds ?? 0 },
     overrideAccess: true,
   })
   return buildMatchState(payload, matchId)
