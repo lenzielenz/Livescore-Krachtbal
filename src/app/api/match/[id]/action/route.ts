@@ -6,6 +6,7 @@ import {
   setClock,
   startFreeThrow,
   startMatch,
+  substitute,
   undoLastThrow,
 } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
@@ -60,6 +61,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         return Response.json(await recordTimeout(payload, matchId, Number(body.teamId)))
       case 'freethrow':
         return Response.json(await startFreeThrow(payload, matchId, Number(body.teamId)))
+      case 'substitute':
+        return Response.json(
+          await substitute(payload, matchId, body.side === 'away' ? 'away' : 'home', Number(body.outPlayerId), Number(body.inPlayerId)),
+        )
       default:
         return Response.json({ error: `Onbekende actie: ${action}` }, { status: 400 })
     }

@@ -210,6 +210,8 @@ export interface Match {
   date: string;
   category: 'U12' | 'U14' | 'U16' | 'U18' | 'U20' | 'senioren';
   status: 'scheduled' | 'live' | 'finished';
+  homeLineup?: (number | Player)[] | null;
+  awayLineup?: (number | Player)[] | null;
   currentHalf?: number | null;
   clockSeconds?: number | null;
   clockRunning?: boolean | null;
@@ -463,6 +465,8 @@ export interface MatchesSelect<T extends boolean = true> {
   date?: T;
   category?: T;
   status?: T;
+  homeLineup?: T;
+  awayLineup?: T;
   currentHalf?: T;
   clockSeconds?: T;
   clockRunning?: T;

@@ -109,6 +109,27 @@ export const Matches: CollectionConfig = {
       ],
     },
     {
+      // Actieve opstelling: de spelers die momenteel op het veld staan (max. 4 per ploeg).
+      // Alleen deze spelers kunnen werpen; wissels passen deze lijst aan.
+      type: 'row',
+      fields: [
+        {
+          name: 'homeLineup',
+          label: 'Opstelling thuis (op het veld)',
+          type: 'relationship',
+          relationTo: 'players',
+          hasMany: true,
+        },
+        {
+          name: 'awayLineup',
+          label: 'Opstelling uit (op het veld)',
+          type: 'relationship',
+          relationTo: 'players',
+          hasMany: true,
+        },
+      ],
+    },
+    {
       // Klokstaat — runtime live-state. De definitieve tijdlijn blijft afleidbaar uit MatchEvents.
       label: 'Klokstaat',
       type: 'collapsible',

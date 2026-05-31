@@ -28,6 +28,29 @@ export { attackDirForSide }
 
 const clamp01 = (n: number) => Math.max(0, Math.min(1, n))
 
+/** Aantal veldspelers per ploeg (de enige die mogen werpen). */
+export const FIELD_PLAYERS = 4
+
+/** Actieve opstelling: opgeslagen lijst, of (bij leeg) de eerste 4 spelers op rugnummer. */
+async function resolveLineup(
+  payload: Payload,
+  stored: unknown,
+  teamId: number,
+): Promise<number[]> {
+  const ids = Array.isArray(stored)
+    ? stored.map((s) => (typeof s === 'object' && s ? (s as { id: number }).id : (s as number))).filter(Boolean)
+    : []
+  if (ids.length > 0) return ids
+  const res = await payload.find({
+    collection: 'players',
+    where: { team: { equals: teamId } },
+    sort: 'shirtNumber',
+    depth: 0,
+    limit: FIELD_PLAYERS,
+  })
+  return res.docs.map((p) => p.id)
+}
+
 async function loadMatch(payload: Payload, matchId: number) {
   const match = await payload.findByID({ collection: 'matches', id: matchId, depth: 0 })
   const homeId = typeof match.homeTeam === 'object' ? match.homeTeam.id : match.homeTeam
@@ -82,14 +105,25 @@ async function createPossession(
 
 /** Start de wedstrijd: zet live, helft 1, klok op 0, en maak het eerste balbezit. */
 export async function startMatch(payload: Payload, matchId: number, startingTeamId: number) {
-  const { match, homeId } = await loadMatch(payload, matchId)
+  const { match, homeId, awayId } = await loadMatch(payload, matchId)
   const side = sideOfTeam(startingTeamId, homeId)
   const dir = attackDirForSide(side, 1)
+
+  // Leg de start-opstelling vast (eerste 4 op rugnummer) als ze nog niet gezet is.
+  const homeLineup = await resolveLineup(payload, match.homeLineup, homeId)
+  const awayLineup = await resolveLineup(payload, match.awayLineup, awayId)
 
   await payload.update({
     collection: 'matches',
     id: matchId,
-    data: { status: 'live', currentHalf: 1, clockSeconds: 0, clockRunning: false },
+    data: {
+      status: 'live',
+      currentHalf: 1,
+      clockSeconds: 0,
+      clockRunning: false,
+      homeLineup,
+      awayLineup,
+    },
     overrideAccess: true,
   })
   await payload.create({
@@ -434,6 +468,32 @@ export async function startFreeThrow(payload: Payload, matchId: number, teamId: 
   return buildMatchState(payload, matchId)
 }
 
+/** Wissel: vervang een veldspeler door een bankspeler in de opstelling van een ploeg. */
+export async function substitute(
+  payload: Payload,
+  matchId: number,
+  side: TeamSide,
+  outPlayerId: number,
+  inPlayerId: number,
+) {
+  const { match, homeId, awayId } = await loadMatch(payload, matchId)
+  const teamId = side === 'home' ? homeId : awayId
+  const stored = side === 'home' ? match.homeLineup : match.awayLineup
+  const current = await resolveLineup(payload, stored, teamId)
+
+  if (!current.includes(outPlayerId) || current.includes(inPlayerId)) {
+    return buildMatchState(payload, matchId)
+  }
+  const next = current.map((id) => (id === outPlayerId ? inPlayerId : id))
+  await payload.update({
+    collection: 'matches',
+    id: matchId,
+    data: side === 'home' ? { homeLineup: next } : { awayLineup: next },
+    overrideAccess: true,
+  })
+  return buildMatchState(payload, matchId)
+}
+
 /** Time-out registreren (telt mee in het quotum 2 per ploeg per helft). */
 export async function recordTimeout(payload: Payload, matchId: number, teamId: number) {
   const { match } = await loadMatch(payload, matchId)
@@ -465,6 +525,8 @@ export interface MatchState {
     clockUpdatedAt: string | null
   }
   teams: { home: { id: number; name: string }; away: { id: number; name: string } }
+  /** Spelers die momenteel op het veld staan (selecteerbaar om te werpen). */
+  lineup: { home: number[]; away: number[] }
   score: { home: number; away: number }
   crosses: { home: number; away: number }
   timeouts: { home: number; away: number }
@@ -846,6 +908,10 @@ export async function buildMatchState(payload: Payload, matchId: number): Promis
       clockUpdatedAt: match.clockUpdatedAt ?? null,
     },
     teams: { home: { id: home.id, name: home.name }, away: { id: away.id, name: away.name } },
+    lineup: {
+      home: await resolveLineup(payload, match.homeLineup, homeId),
+      away: await resolveLineup(payload, match.awayLineup, awayId),
+    },
     score: totals.score,
     crosses: totals.crosses,
     timeouts,

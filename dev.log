@@ -3,25 +3,15 @@ $ cross-env NODE_OPTIONS=--no-deprecation next dev
 - Local:         http://localhost:3000
 - Network:       http://192.168.0.65:3000
 - Environments: .env
-✓ Ready in 399ms
+✓ Ready in 366ms
 - Experiments (use with caution):
   ⨯ turbopackServerFastRefresh
 
 [⣷] Pulling schema from database...
 [2K[1G[✓] Pulling schema from database...
-[01:09:10] [33mWARN[39m: [36mNo email adapter provided. Email will be written to console. More info at https://payloadcms.com/docs/email/overview.[39m
- GET /scorekeeper/2 200 in 713ms (next.js: 12ms, application-code: 700ms)
- GET /scorekeeper/2 200 in 6.9s (next.js: 2.5s, application-code: 4.4s)
- GET /scorekeeper/2 200 in 6.5s (next.js: 2.1s, application-code: 4.4s)
-✓ Compiled in 12ms
-✓ Compiled in 41ms
-✓ Compiled in 11ms
-Persisting failed: Unable to write SST file 00000291.sst
-
-Caused by:
-    Het systeem kan het opgegeven pad niet vinden. (os error 3)
-Compaction failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)
-Persisting failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)
-Compaction failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)
-Persisting failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)
-Compaction failed: Another write batch or compaction is already active (Only a single write operations is allowed at a time)
+[01:17:47] [33mWARN[39m: [36mNo email adapter provided. Email will be written to console. More info at https://payloadcms.com/docs/email/overview.[39m
+ GET /scorekeeper/2 200 in 7.4s (next.js: 3.7s, application-code: 3.7s)
+ GET /scorekeeper/2 200 in 6.3s (next.js: 2.6s, application-code: 3.7s)
+ GET /api/match/2/state 200 in 3.2s (next.js: 3.1s, application-code: 66ms)
+ GET /api/match/2/state 200 in 67ms (next.js: 8ms, application-code: 59ms)
+ POST /api/match/2/action 200 in 2.7s (next.js: 2.6s, application-code: 87ms)

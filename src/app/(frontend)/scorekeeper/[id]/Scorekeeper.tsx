@@ -41,6 +41,8 @@ export function Scorekeeper({
   const [error, setError] = useState<string | null>(null)
   const [flash, setFlash] = useState<{ title: string; big: string; color: string; team: string } | null>(null)
   const [pendingOut, setPendingOut] = useState<{ p: Point; tapCount: 1 | 2 } | null>(null)
+  const [subOpen, setSubOpen] = useState(false)
+  const [subOut, setSubOut] = useState<{ side: 'home' | 'away'; playerId: number } | null>(null)
 
   const [clock, setClock] = useState(initialState.match.clockSeconds)
   const baseRef = useRef({ seconds: initialState.match.clockSeconds, running: initialState.match.clockRunning, at: Date.now() })
@@ -85,16 +87,18 @@ export function Scorekeeper({
 
   const poss = state.possession
   const possSide = poss?.side ?? null
-  const homePlayers = roster.filter((p) => p.teamId === state.teams.home.id)
-  const awayPlayers = roster.filter((p) => p.teamId === state.teams.away.id)
+  // Enkel de spelers op het veld (de actieve opstelling) zijn selecteerbaar.
+  const homePlayers = roster.filter((p) => p.teamId === state.teams.home.id && state.lineup.home.includes(p.id))
+  const awayPlayers = roster.filter((p) => p.teamId === state.teams.away.id && state.lineup.away.includes(p.id))
 
   // Geselecteerde speler wissen als die niet (meer) bij de ploeg-aan-zet hoort.
   useEffect(() => {
     if (!selectedPlayer) return
     const pl = roster.find((p) => p.id === selectedPlayer)
     const activeTeamId = possSide === 'home' ? state.teams.home.id : possSide === 'away' ? state.teams.away.id : null
-    if (!pl || pl.teamId !== activeTeamId) setSelectedPlayer(null)
-  }, [possSide, selectedPlayer, roster, state.teams.home.id, state.teams.away.id])
+    const activeLineup = possSide === 'home' ? state.lineup.home : possSide === 'away' ? state.lineup.away : []
+    if (!pl || pl.teamId !== activeTeamId || !activeLineup.includes(selectedPlayer)) setSelectedPlayer(null)
+  }, [possSide, selectedPlayer, roster, state.teams.home.id, state.teams.away.id, state.lineup])
 
   // Registreer de worp (na ev. aanraking-vraag) en geef visuele feedback.
   const submitThrow = useCallback(
@@ -265,6 +269,63 @@ export function Scorekeeper({
           </div>
         </div>
       )}
+
+      {subOpen && (
+        <div className="sk-modal-overlay">
+          <div className="sk-modal sk-sub">
+            <h3>Wissel</h3>
+            <p>Tik een speler op het veld, dan een speler op de bank om te wisselen.</p>
+            {(['home', 'away'] as const).map((sideKey) => {
+              const teamId = sideKey === 'home' ? state.teams.home.id : state.teams.away.id
+              const teamName = sideKey === 'home' ? state.teams.home.name : state.teams.away.name
+              const field = roster.filter((p) => p.teamId === teamId && state.lineup[sideKey].includes(p.id))
+              const bench = roster.filter((p) => p.teamId === teamId && !state.lineup[sideKey].includes(p.id))
+              return (
+                <div key={sideKey} className={`sk-sub-team side-${sideKey}`}>
+                  <div className="sk-sub-name">{teamName}</div>
+                  <div className="sk-sub-row">
+                    <span className="sk-sub-lbl">veld</span>
+                    {field.map((p) => (
+                      <button
+                        type="button"
+                        key={p.id}
+                        className={`sk-num ${subOut?.side === sideKey && subOut.playerId === p.id ? 'on' : ''}`}
+                        onClick={() => setSubOut({ side: sideKey, playerId: p.id })}
+                        title={p.name}
+                      >
+                        {p.shirtNumber}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="sk-sub-row">
+                    <span className="sk-sub-lbl">bank</span>
+                    {bench.length === 0 && <span className="sk-dim">geen wissels</span>}
+                    {bench.map((p) => (
+                      <button
+                        type="button"
+                        key={p.id}
+                        className="sk-num bench"
+                        disabled={subOut?.side !== sideKey}
+                        onClick={() => {
+                          act({ action: 'substitute', side: sideKey, outPlayerId: subOut!.playerId, inPlayerId: p.id })
+                          setSubOut(null)
+                        }}
+                        title={p.name}
+                      >
+                        {p.shirtNumber}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )
+            })}
+            <div className="sk-modal-btns">
+              <button type="button" className="sk-btn primary" onClick={() => { setSubOpen(false); setSubOut(null) }}>Sluiten</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <header className="sk-head">
         <div className="sk-scorebar">
           <button type="button" className="sk-to home" disabled={busy || !isLive} onClick={() => act({ action: 'timeout', teamId: state.teams.home.id })} title="Time-out thuis">
@@ -313,6 +374,7 @@ export function Scorekeeper({
           <button type="button" className="tb warn" disabled={busy} onClick={() => act({ action: 'undo' })}>↶ Undo</button>
           <button type="button" className="tb home" disabled={busy || !isLive} onClick={() => act({ action: 'freethrow', teamId: state.teams.home.id })} title={`Vrijworp ${state.teams.home.name}`}>VW thuis</button>
           <button type="button" className="tb away" disabled={busy || !isLive} onClick={() => act({ action: 'freethrow', teamId: state.teams.away.id })} title={`Vrijworp ${state.teams.away.name}`}>VW uit</button>
+          <button type="button" className="tb" disabled={busy} onClick={() => { setSubOut(null); setSubOpen(true) }}>⇄ Wissel</button>
           {isLive && state.match.currentHalf < 2 && (
             <button type="button" className="tb" disabled={busy} onClick={() => act({ action: 'half' })}>⏭ 2e helft</button>
           )}
