@@ -69,6 +69,12 @@ export interface Config {
   collections: {
     users: User;
     media: Media;
+    teams: Team;
+    players: Player;
+    matches: Match;
+    possessions: Possession;
+    throws: Throw;
+    'match-events': MatchEvent;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -78,6 +84,12 @@ export interface Config {
   collectionsSelect: {
     users: UsersSelect<false> | UsersSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
+    teams: TeamsSelect<false> | TeamsSelect<true>;
+    players: PlayersSelect<false> | PlayersSelect<true>;
+    matches: MatchesSelect<false> | MatchesSelect<true>;
+    possessions: PossessionsSelect<false> | PossessionsSelect<true>;
+    throws: ThrowsSelect<false> | ThrowsSelect<true>;
+    'match-events': MatchEventsSelect<false> | MatchEventsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -163,6 +175,117 @@ export interface Media {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "teams".
+ */
+export interface Team {
+  id: number;
+  name: string;
+  category: 'U12' | 'U14' | 'U16' | 'U18' | 'U20' | 'senioren';
+  logo?: (number | null) | Media;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "players".
+ */
+export interface Player {
+  id: number;
+  name: string;
+  team: number | Team;
+  shirtNumber: number;
+  position?: ('achter' | 'vleugel' | 'barage') | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "matches".
+ */
+export interface Match {
+  id: number;
+  title?: string | null;
+  homeTeam: number | Team;
+  awayTeam: number | Team;
+  date: string;
+  category: 'U12' | 'U14' | 'U16' | 'U18' | 'U20' | 'senioren';
+  status: 'scheduled' | 'live' | 'finished';
+  currentHalf?: number | null;
+  clockSeconds?: number | null;
+  clockRunning?: boolean | null;
+  clockUpdatedAt?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Afgeleid uit de worp-events; doorgaans niet handmatig bewerken.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "possessions".
+ */
+export interface Possession {
+  id: number;
+  match: number | Match;
+  team: number | Team;
+  setupSide: 'own' | 'opponent';
+  /**
+   * Afgeleid uit categorie + opzetpunt.
+   */
+  throwsAllowed?: number | null;
+  startHalf?: number | null;
+  startClock?: number | null;
+  /**
+   * Leeg = balbezit nog lopend.
+   */
+  endOutcome?: ('goal' | 'caught' | 'out_side' | 'out_back' | 'midline_fault' | 'throws_exhausted') | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Immutable worp-events. Niet bewerken — enkel aanmaken of verwijderen (undo).
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "throws".
+ */
+export interface Throw {
+  id: number;
+  match: number | Match;
+  possession: number | Possession;
+  team: number | Team;
+  player: number | Player;
+  throwNumber: number;
+  type: 'nek' | 'rug';
+  outcome: 'goal' | 'caught' | 'out_side' | 'out_back';
+  landingX: number;
+  landingY: number;
+  /**
+   * Afgeleid uit het landingspunt en het vertrekpunt.
+   */
+  distance?: number | null;
+  zone?: ('links' | 'midden' | 'rechts') | null;
+  touchedBeforeOut?: boolean | null;
+  period: number;
+  gameClock: number;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "match-events".
+ */
+export interface MatchEvent {
+  id: number;
+  match: number | Match;
+  type: 'timeout' | 'referee_stop' | 'half_start' | 'half_end';
+  team?: (number | null) | Team;
+  half: number;
+  gameClock: number;
+  note?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
 export interface PayloadKv {
@@ -192,6 +315,30 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'media';
         value: number | Media;
+      } | null)
+    | ({
+        relationTo: 'teams';
+        value: number | Team;
+      } | null)
+    | ({
+        relationTo: 'players';
+        value: number | Player;
+      } | null)
+    | ({
+        relationTo: 'matches';
+        value: number | Match;
+      } | null)
+    | ({
+        relationTo: 'possessions';
+        value: number | Possession;
+      } | null)
+    | ({
+        relationTo: 'throws';
+        value: number | Throw;
+      } | null)
+    | ({
+        relationTo: 'match-events';
+        value: number | MatchEvent;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -274,6 +421,98 @@ export interface MediaSelect<T extends boolean = true> {
   height?: T;
   focalX?: T;
   focalY?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "teams_select".
+ */
+export interface TeamsSelect<T extends boolean = true> {
+  name?: T;
+  category?: T;
+  logo?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "players_select".
+ */
+export interface PlayersSelect<T extends boolean = true> {
+  name?: T;
+  team?: T;
+  shirtNumber?: T;
+  position?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "matches_select".
+ */
+export interface MatchesSelect<T extends boolean = true> {
+  title?: T;
+  homeTeam?: T;
+  awayTeam?: T;
+  date?: T;
+  category?: T;
+  status?: T;
+  currentHalf?: T;
+  clockSeconds?: T;
+  clockRunning?: T;
+  clockUpdatedAt?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "possessions_select".
+ */
+export interface PossessionsSelect<T extends boolean = true> {
+  match?: T;
+  team?: T;
+  setupSide?: T;
+  throwsAllowed?: T;
+  startHalf?: T;
+  startClock?: T;
+  endOutcome?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "throws_select".
+ */
+export interface ThrowsSelect<T extends boolean = true> {
+  match?: T;
+  possession?: T;
+  team?: T;
+  player?: T;
+  throwNumber?: T;
+  type?: T;
+  outcome?: T;
+  landingX?: T;
+  landingY?: T;
+  distance?: T;
+  zone?: T;
+  touchedBeforeOut?: T;
+  period?: T;
+  gameClock?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "match-events_select".
+ */
+export interface MatchEventsSelect<T extends boolean = true> {
+  match?: T;
+  type?: T;
+  team?: T;
+  half?: T;
+  gameClock?: T;
+  note?: T;
+  updatedAt?: T;
+  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

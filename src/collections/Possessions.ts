@@ -1,0 +1,94 @@
+import type { CollectionConfig } from 'payload'
+
+// Vanaf welke helft het balbezit wordt opgezet — bepaalt het aantal toegestane worpen.
+export const SETUP_SIDE_OPTIONS = [
+  { label: 'Eigen helft', value: 'own' },
+  { label: 'Tegenhelft', value: 'opponent' },
+] as const
+
+// Hoe het balbezit eindigde. Wordt door de regellogica (fase 3) gezet; null = nog lopend.
+export const POSSESSION_OUTCOME_OPTIONS = [
+  { label: 'Doelpunt', value: 'goal' },
+  { label: 'Gevangen (balbezit draait om)', value: 'caught' },
+  { label: 'Buiten zijlijn', value: 'out_side' },
+  { label: 'Buiten achterlijn', value: 'out_back' },
+  { label: 'Middellijn-fout (2e worp)', value: 'midline_fault' },
+  { label: 'Worpen op (geen doelpunt)', value: 'throws_exhausted' },
+] as const
+
+export const Possessions: CollectionConfig = {
+  slug: 'possessions',
+  labels: {
+    singular: 'Balbezit',
+    plural: 'Balbezitten',
+  },
+  admin: {
+    useAsTitle: 'id',
+    defaultColumns: ['match', 'team', 'setupSide', 'endOutcome', 'startClock'],
+    group: 'Wedstrijden',
+    description: 'Afgeleid uit de worp-events; doorgaans niet handmatig bewerken.',
+  },
+  access: {
+    read: () => true,
+  },
+  fields: [
+    {
+      name: 'match',
+      label: 'Wedstrijd',
+      type: 'relationship',
+      relationTo: 'matches',
+      required: true,
+      index: true,
+    },
+    {
+      name: 'team',
+      label: 'Ploeg aan zet',
+      type: 'relationship',
+      relationTo: 'teams',
+      required: true,
+    },
+    {
+      name: 'setupSide',
+      label: 'Opzet vanaf',
+      type: 'select',
+      options: [...SETUP_SIDE_OPTIONS],
+      required: true,
+    },
+    {
+      name: 'throwsAllowed',
+      label: 'Toegestane worpen',
+      type: 'number',
+      min: 1,
+      admin: {
+        description: 'Afgeleid uit categorie + opzetpunt.',
+      },
+    },
+    {
+      type: 'row',
+      fields: [
+        {
+          name: 'startHalf',
+          label: 'Helft',
+          type: 'number',
+          min: 1,
+          max: 2,
+        },
+        {
+          name: 'startClock',
+          label: 'Starttijd (klok, sec)',
+          type: 'number',
+          min: 0,
+        },
+      ],
+    },
+    {
+      name: 'endOutcome',
+      label: 'Einduitkomst',
+      type: 'select',
+      options: [...POSSESSION_OUTCOME_OPTIONS],
+      admin: {
+        description: 'Leeg = balbezit nog lopend.',
+      },
+    },
+  ],
+}
