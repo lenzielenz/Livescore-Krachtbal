@@ -5,7 +5,7 @@ import { getPayload } from 'payload'
 
 import config from '../src/payload.config'
 
-const TEAMS = [
+const CLUBS = [
   { name: 'KV Roeselare', players: ['Jens', 'Wout', 'Lander', 'Senne', 'Robbe', 'Toon'] },
   { name: 'KV Izegem', players: ['Milan', 'Brent', 'Niels', 'Ferre', 'Stan', 'Vince'] },
 ]
@@ -13,20 +13,29 @@ const TEAMS = [
 async function main() {
   const payload = await getPayload({ config: await config })
 
-  // Bestaande demo opruimen (idempotent).
-  const existing = await payload.find({ collection: 'teams', where: { name: { in: TEAMS.map((t) => t.name) } }, limit: 10 })
-  for (const t of existing.docs) {
-    const ps = await payload.find({ collection: 'players', where: { team: { equals: t.id } }, limit: 100 })
-    for (const p of ps.docs) await payload.delete({ collection: 'players', id: p.id, overrideAccess: true })
-    await payload.delete({ collection: 'teams', id: t.id, overrideAccess: true })
+  // Bestaande demo opruimen (idempotent): clubs + hun ploegen + spelers.
+  const existingClubs = await payload.find({ collection: 'clubs', where: { name: { in: CLUBS.map((c) => c.name) } }, limit: 10 })
+  for (const c of existingClubs.docs) {
+    const teams = await payload.find({ collection: 'teams', where: { club: { equals: c.id } }, limit: 50 })
+    for (const t of teams.docs) {
+      const ps = await payload.find({ collection: 'players', where: { team: { equals: t.id } }, limit: 100 })
+      for (const p of ps.docs) await payload.delete({ collection: 'players', id: p.id, overrideAccess: true })
+      await payload.delete({ collection: 'teams', id: t.id, overrideAccess: true })
+    }
+    await payload.delete({ collection: 'clubs', id: c.id, overrideAccess: true })
   }
 
   const created: { id: number }[] = []
-  for (const team of TEAMS) {
-    const t = await payload.create({ collection: 'teams', data: { name: team.name, category: 'senioren' }, overrideAccess: true })
+  for (const club of CLUBS) {
+    const c = await payload.create({ collection: 'clubs', data: { name: club.name }, overrideAccess: true })
+    const t = await payload.create({
+      collection: 'teams',
+      data: { club: c.id, name: `${club.name} Senioren`, category: 'senioren' },
+      overrideAccess: true,
+    })
     created.push(t)
     let n = 4
-    for (const name of team.players) {
+    for (const name of club.players) {
       await payload.create({ collection: 'players', data: { name, team: t.id, shirtNumber: n++ }, overrideAccess: true })
     }
   }

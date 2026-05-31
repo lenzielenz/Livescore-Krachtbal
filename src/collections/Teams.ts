@@ -10,7 +10,7 @@ export const Teams: CollectionConfig = {
   },
   admin: {
     useAsTitle: 'name',
-    defaultColumns: ['name', 'category'],
+    defaultColumns: ['name', 'club', 'category'],
     group: 'Beheer',
   },
   access: {
@@ -18,9 +18,10 @@ export const Teams: CollectionConfig = {
   },
   fields: [
     {
-      name: 'name',
-      label: 'Naam',
-      type: 'text',
+      name: 'club',
+      label: 'Club',
+      type: 'relationship',
+      relationTo: 'clubs',
       required: true,
     },
     {
@@ -31,10 +32,21 @@ export const Teams: CollectionConfig = {
       required: true,
     },
     {
+      name: 'name',
+      label: 'Ploegnaam',
+      type: 'text',
+      required: true,
+      admin: {
+        description: 'Bv. "KV Roeselare U14". Het logo komt van de club.',
+      },
+    },
+    {
+      // Verouderd: het logo hoort nu bij de Club. Verborgen gehouden (niet verwijderd) zodat
+      // bestaande databases geen kolom-migratie/rename-prompt nodig hebben.
       name: 'logo',
-      label: 'Logo',
       type: 'upload',
       relationTo: 'media',
+      admin: { hidden: true },
     },
   ],
 }

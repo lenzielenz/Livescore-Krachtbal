@@ -9,8 +9,9 @@ import { recordThrow, startMatch, undoLastThrow } from '../src/lib/match-engine'
 async function main() {
   const payload = await getPayload({ config: await config })
 
-  const home = await payload.create({ collection: 'teams', data: { name: 'Smoke Thuis', category: 'senioren' }, overrideAccess: true })
-  const away = await payload.create({ collection: 'teams', data: { name: 'Smoke Uit', category: 'senioren' }, overrideAccess: true })
+  const club = await payload.create({ collection: 'clubs', data: { name: 'Smoke Club' }, overrideAccess: true })
+  const home = await payload.create({ collection: 'teams', data: { club: club.id, name: 'Smoke Thuis', category: 'senioren' }, overrideAccess: true })
+  const away = await payload.create({ collection: 'teams', data: { club: club.id, name: 'Smoke Uit', category: 'senioren' }, overrideAccess: true })
   const p1 = await payload.create({ collection: 'players', data: { name: 'Speler 7', team: home.id, shirtNumber: 7 }, overrideAccess: true })
   const p2 = await payload.create({ collection: 'players', data: { name: 'Speler 9', team: away.id, shirtNumber: 9 }, overrideAccess: true })
   const match = await payload.create({
@@ -47,6 +48,7 @@ async function main() {
   await payload.delete({ collection: 'players', id: p2.id, overrideAccess: true })
   await payload.delete({ collection: 'teams', id: home.id, overrideAccess: true })
   await payload.delete({ collection: 'teams', id: away.id, overrideAccess: true })
+  await payload.delete({ collection: 'clubs', id: club.id, overrideAccess: true })
   console.log('--- opgeruimd, klaar ---')
   process.exit(0)
 }

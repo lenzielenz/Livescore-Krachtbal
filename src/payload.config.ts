@@ -8,6 +8,7 @@ import sharp from 'sharp'
 
 import { Users } from './collections/Users'
 import { Media } from './collections/Media'
+import { Clubs } from './collections/Clubs'
 import { Teams } from './collections/Teams'
 import { Players } from './collections/Players'
 import { Matches } from './collections/Matches'
@@ -37,7 +38,7 @@ export default buildConfig({
       beforeNavLinks: ['/components/admin/BackToSite#BackToSite'],
     },
   },
-  collections: [Users, Media, Teams, Players, Matches, Possessions, Throws, MatchEvents],
+  collections: [Clubs, Teams, Players, Matches, Possessions, Throws, MatchEvents, Users, Media],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || '',
   typescript: {

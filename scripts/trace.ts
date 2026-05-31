@@ -8,8 +8,9 @@ import { advanceHalf, recordThrow, startMatch } from '../src/lib/match-engine'
 
 async function main() {
   const payload = await getPayload({ config: await config })
-  const home = await payload.create({ collection: 'teams', data: { name: 'T-Home', category: 'senioren' }, overrideAccess: true })
-  const away = await payload.create({ collection: 'teams', data: { name: 'T-Away', category: 'senioren' }, overrideAccess: true })
+  const club = await payload.create({ collection: 'clubs', data: { name: 'T-Club' }, overrideAccess: true })
+  const home = await payload.create({ collection: 'teams', data: { club: club.id, name: 'T-Home', category: 'senioren' }, overrideAccess: true })
+  const away = await payload.create({ collection: 'teams', data: { club: club.id, name: 'T-Away', category: 'senioren' }, overrideAccess: true })
   const ph = await payload.create({ collection: 'players', data: { name: 'H7', team: home.id, shirtNumber: 7 }, overrideAccess: true })
   const ph2 = await payload.create({ collection: 'players', data: { name: 'H8', team: home.id, shirtNumber: 8 }, overrideAccess: true })
   const pa = await payload.create({ collection: 'players', data: { name: 'A9', team: away.id, shirtNumber: 9 }, overrideAccess: true })
@@ -65,6 +66,7 @@ async function main() {
   await payload.delete({ collection: 'matches', id: match.id, overrideAccess: true })
   for (const id of [ph.id, ph2.id, pa.id, pa2.id]) await payload.delete({ collection: 'players', id, overrideAccess: true })
   for (const id of [home.id, away.id]) await payload.delete({ collection: 'teams', id, overrideAccess: true })
+  await payload.delete({ collection: 'clubs', id: club.id, overrideAccess: true })
   process.exit(0)
 }
 main().catch((e) => { console.error(e); process.exit(1) })
