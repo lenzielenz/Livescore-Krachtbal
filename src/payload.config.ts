@@ -21,10 +21,10 @@ const dirname = path.dirname(filename)
 // Postgres in productie (Railway-service), SQLite-bestand lokaal — afgeleid uit DATABASE_URL.
 const databaseUrl = process.env.DATABASE_URL || 'file:./krachtbal.db'
 const isPostgres = /^postgres(ql)?:\/\//.test(databaseUrl)
+// Productie (Postgres): schema via migraties (railway voert `payload migrate` uit bij deploy).
+// Lokaal (SQLite): dev-push maakt het schema automatisch aan.
 const db = isPostgres
-  ? // push:true maakt/bijwerkt het schema automatisch bij het opstarten — ook in productie
-    // (Payload zet push standaard uit in production). Volstaat voor dit project; migraties later.
-    postgresAdapter({ pool: { connectionString: databaseUrl }, push: true })
+  ? postgresAdapter({ pool: { connectionString: databaseUrl } })
   : sqliteAdapter({ client: { url: databaseUrl } })
 
 export default buildConfig({
