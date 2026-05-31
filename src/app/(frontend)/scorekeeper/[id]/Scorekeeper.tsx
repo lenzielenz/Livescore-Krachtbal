@@ -16,6 +16,7 @@ interface RosterPlayer {
 
 const HOME_COLOR = '#06d6a0'
 const AWAY_COLOR = '#4cc9f0'
+const OUT_COLOR = '#ef476f'
 
 function fmtClock(total: number): string {
   const s = Math.max(0, Math.floor(total))
@@ -39,6 +40,7 @@ export function Scorekeeper({
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [flash, setFlash] = useState<{ title: string; big: string; color: string; team: string } | null>(null)
+  const [pendingOut, setPendingOut] = useState<{ p: Point; tapCount: 1 | 2 } | null>(null)
 
   const [clock, setClock] = useState(initialState.match.clockSeconds)
   const baseRef = useRef({ seconds: initialState.match.clockSeconds, running: initialState.match.clockRunning, at: Date.now() })
@@ -94,6 +96,62 @@ export function Scorekeeper({
     if (!pl || pl.teamId !== activeTeamId) setSelectedPlayer(null)
   }, [possSide, selectedPlayer, roster, state.teams.home.id, state.teams.away.id])
 
+  // Registreer de worp (na ev. aanraking-vraag) en geef visuele feedback.
+  const submitThrow = useCallback(
+    async (p: Point, tapCount: 1 | 2, touchedBeforeOut: boolean) => {
+      if (!poss || !selectedPlayer) return
+      const scoringSide = poss.side
+      const color = scoringSide === 'home' ? HOME_COLOR : AWAY_COLOR
+      const teamName = scoringSide === 'home' ? state.teams.home.name : state.teams.away.name
+      const wasFreeThrow = poss.freeThrow
+
+      setRecentTaps((prev) => [
+        ...prev.slice(-6),
+        {
+          x: Math.max(0, Math.min(1, p.x)),
+          y: Math.max(0, Math.min(1, p.y)),
+          color,
+          r: 7,
+          label: wasFreeThrow ? 'V' : String(poss.nextThrowNumber),
+        },
+      ])
+
+      const result = (await act({
+        action: 'throw',
+        playerId: selectedPlayer,
+        type: throwType,
+        x: p.x,
+        y: p.y,
+        tapCount,
+        touchedBeforeOut,
+        gameClock: Math.floor(clock),
+      })) as { outcome?: string; type?: string; points?: number; isCross?: boolean; state?: MatchState } | null
+
+      let f: { title: string; big: string; color: string; team: string } | null = null
+      if (result?.outcome === 'goal') {
+        f = { title: result.type === 'rug' ? 'RUGWORP' : 'DOELPUNT', big: `+${result.points ?? 1}`, color, team: teamName }
+      } else if (result?.isCross) {
+        f = { title: 'KRUISJE', big: '✕', color: OUT_COLOR, team: teamName }
+      } else if (result?.outcome === 'out_side' || result?.outcome === 'out_back') {
+        f = { title: 'BAL BUITEN', big: '↗', color: OUT_COLOR, team: teamName }
+      }
+      if (f) {
+        setFlash(f)
+        window.setTimeout(() => setFlash(null), 1600)
+      }
+
+      // Aanval afgewerkt (balbezit gewisseld) → veld leegmaken voor de volgende ploeg.
+      if (result?.state?.possession && result.state.possession.nextThrowNumber === 1) {
+        setRecentTaps([])
+      }
+
+      setTapMode('ground')
+      setThrowType('nek')
+      setSelectedPlayer(null)
+    },
+    [poss, selectedPlayer, throwType, clock, act, state.teams],
+  )
+
   const onTap = useCallback(
     async (p: Point) => {
       if (state.match.status !== 'live' || !poss) {
@@ -107,55 +165,16 @@ export function Scorekeeper({
       const dir = poss.dir as AttackDir
       const tapCount = tapMode === 'caught' ? 2 : 1
       const outcome = deriveOutcome({ tapCount, point: p, dir })
-      const isDoelworp = poss.nextThrowNumber >= poss.throwsAllowed
+      const isDoelworp = poss.nextThrowNumber >= poss.throwsAllowed || poss.freeThrow
 
-      // Enkel op de doelworp bepaalt aanraking of een buiten-bal een kruisje wordt.
-      let touchedBeforeOut = false
+      // Bij buiten op de doelworp/vrijworp bepaalt aanraking of het een kruisje is → nette modal.
       if ((outcome === 'out_back' || outcome === 'out_side') && isDoelworp) {
-        touchedBeforeOut = window.confirm('Werd de bal aangeraakt vóór hij buiten ging?\n\nOK = ja (geen kruisje) · Annuleren = nee (kruisje)')
+        setPendingOut({ p, tapCount })
+        return
       }
-
-      const teamColor = poss.side === 'home' ? HOME_COLOR : AWAY_COLOR
-      setRecentTaps((prev) => [
-        ...prev.slice(-5),
-        {
-          x: Math.max(0, Math.min(1, p.x)),
-          y: Math.max(0, Math.min(1, p.y)),
-          color: teamColor,
-          r: outcome === 'goal' ? 8 : 6,
-          label: String(poss.nextThrowNumber),
-        },
-      ])
-
-      const scoringSide = poss.side
-      const result = (await act({
-        action: 'throw',
-        playerId: selectedPlayer,
-        type: throwType,
-        x: p.x,
-        y: p.y,
-        tapCount,
-        touchedBeforeOut,
-        gameClock: Math.floor(clock),
-      })) as { outcome?: string; type?: string; points?: number; isCross?: boolean } | null
-
-      const color = scoringSide === 'home' ? HOME_COLOR : AWAY_COLOR
-      const teamName = scoringSide === 'home' ? state.teams.home.name : state.teams.away.name
-      let f: { title: string; big: string; color: string; team: string } | null = null
-      if (result?.outcome === 'goal') {
-        f = { title: result.type === 'rug' ? 'RUGWORP' : 'DOELPUNT', big: `+${result.points ?? 1}`, color, team: teamName }
-      } else if (result?.isCross) {
-        f = { title: 'KRUISJE', big: '✕', color, team: teamName }
-      }
-      if (f) {
-        setFlash(f)
-        window.setTimeout(() => setFlash(null), 1800)
-      }
-      setTapMode('ground')
-      setThrowType('nek')
-      setSelectedPlayer(null)
+      await submitThrow(p, tapCount, false)
     },
-    [state.match.status, poss, selectedPlayer, tapMode, throwType, clock, act, state.teams],
+    [state.match.status, poss, selectedPlayer, tapMode, submitThrow],
   )
 
   const toggleClock = () =>
@@ -164,16 +183,16 @@ export function Scorekeeper({
   const isScheduled = state.match.status === 'scheduled'
   const isLive = state.match.status === 'live'
 
-  // Vaste richtingslabels: ploeg die 'up' (naar y=1) speelt staat onderaan met ↓,
-  // de andere bovenaan met ↑. Draait automatisch om in de 2e helft.
+  // De naam staat aan de EIGEN kant (het doel dat je verdedigt); je scoort aan de overkant.
+  // home valt in helft 1 'up' (naar y=1 = onder) aan → verdedigt dus bovenaan.
   const homeDirUp = attackDirForSide('home', state.match.currentHalf) === 'up'
   const fieldEnds = {
     top: homeDirUp
-      ? { text: state.teams.away.name, color: AWAY_COLOR }
-      : { text: state.teams.home.name, color: HOME_COLOR },
-    bottom: homeDirUp
       ? { text: state.teams.home.name, color: HOME_COLOR }
       : { text: state.teams.away.name, color: AWAY_COLOR },
+    bottom: homeDirUp
+      ? { text: state.teams.away.name, color: AWAY_COLOR }
+      : { text: state.teams.home.name, color: HOME_COLOR },
   }
 
   // Pijl die de speelrichting op het scherm toont: dir 'up' = naar onder (▼), 'down' = naar boven (▲).
@@ -213,6 +232,39 @@ export function Scorekeeper({
           <div className="sk-goal-team">{flash.team}</div>
         </div>
       )}
+
+      {pendingOut && (
+        <div className="sk-modal-overlay">
+          <div className="sk-modal">
+            <h3>Bal buiten</h3>
+            <p>Werd de bal aangeraakt vóór hij buiten ging?</p>
+            <div className="sk-modal-btns">
+              <button
+                type="button"
+                className="sk-btn"
+                onClick={() => {
+                  const { p, tapCount } = pendingOut
+                  setPendingOut(null)
+                  void submitThrow(p, tapCount, true)
+                }}
+              >
+                Ja — aangeraakt <span className="sk-modal-hint">(geen kruisje)</span>
+              </button>
+              <button
+                type="button"
+                className="sk-btn primary"
+                onClick={() => {
+                  const { p, tapCount } = pendingOut
+                  setPendingOut(null)
+                  void submitThrow(p, tapCount, false)
+                }}
+              >
+                Nee — rechtstreeks <span className="sk-modal-hint">(kruisje)</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <header className="sk-top">
         <button className="sk-to home" disabled={busy || !isLive} onClick={() => act({ action: 'timeout', teamId: state.teams.home.id })}>
           <span className="sk-to-lbl">time-out</span>
@@ -249,6 +301,20 @@ export function Scorekeeper({
 
       {error && <div className="sk-error" onClick={() => setError(null)}>{error}</div>}
 
+      {!isScheduled && (
+        <div className="sk-toolbar">
+          <button type="button" className="tb warn" disabled={busy} onClick={() => act({ action: 'undo' })}>↶ Undo</button>
+          <button type="button" className="tb home" disabled={busy || !isLive} onClick={() => act({ action: 'freethrow', teamId: state.teams.home.id })}>VW {state.teams.home.name}</button>
+          <button type="button" className="tb away" disabled={busy || !isLive} onClick={() => act({ action: 'freethrow', teamId: state.teams.away.id })}>VW {state.teams.away.name}</button>
+          {isLive && state.match.currentHalf < 2 && (
+            <button type="button" className="tb" disabled={busy} onClick={() => act({ action: 'half' })}>⏭ 2e helft</button>
+          )}
+          {isLive && (
+            <button type="button" className="tb danger" disabled={busy} onClick={() => { if (window.confirm('Wedstrijd beëindigen?')) act({ action: 'finish' }) }}>🏁 Einde</button>
+          )}
+        </div>
+      )}
+
       {isScheduled ? (
         <div className="sk-start">
           <h3>Start wedstrijd — welke ploeg zet op?</h3>
@@ -284,19 +350,6 @@ export function Scorekeeper({
               <span className="pill-sep" />
               <button type="button" className={`pill ${tapMode === 'ground' ? 'on' : ''}`} onClick={() => setTapMode('ground')}>Grond</button>
               <button type="button" className={`pill ${tapMode === 'caught' ? 'on' : ''}`} onClick={() => setTapMode('caught')}>Gevangen</button>
-            </div>
-            <div className="sk-actions">
-              <button type="button" className="act home" disabled={busy || !isLive} onClick={() => act({ action: 'freethrow', teamId: state.teams.home.id })}>Vrijworp {state.teams.home.name}</button>
-              <button type="button" className="act away" disabled={busy || !isLive} onClick={() => act({ action: 'freethrow', teamId: state.teams.away.id })}>Vrijworp {state.teams.away.name}</button>
-            </div>
-            <div className="sk-actions">
-              <button type="button" className="act warn" disabled={busy} onClick={() => act({ action: 'undo' })}>↶ Undo</button>
-              {isLive && state.match.currentHalf < 2 && (
-                <button type="button" className="act" disabled={busy} onClick={() => act({ action: 'half' })}>⏭ 2e helft</button>
-              )}
-              {isLive && (
-                <button type="button" className="act danger" disabled={busy} onClick={() => { if (window.confirm('Wedstrijd beëindigen?')) act({ action: 'finish' }) }}>🏁 Einde</button>
-              )}
             </div>
           </div>
         </>

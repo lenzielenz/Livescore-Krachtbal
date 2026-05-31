@@ -36,9 +36,13 @@ export function attackDirForSide(side: TeamSide, half: number): AttackDir {
 
 // ── Score ────────────────────────────────────────────────────────────────────
 
-/** Punten voor één worp: rugworp-doelpunt telt dubbel (+2), nekworp +1, anders 0. */
-export function pointsForThrow(t: { type: ThrowType; outcome: ThrowOutcome }): 0 | 1 | 2 {
+/**
+ * Punten voor één worp: rugworp-doelpunt telt dubbel (+2), nekworp +1, anders 0.
+ * Een vrije worp levert altijd 1 punt op, ongeacht werpwijze (reglement §48.1).
+ */
+export function pointsForThrow(t: { type: ThrowType; outcome: ThrowOutcome; freeThrow?: boolean }): 0 | 1 | 2 {
   if (t.outcome !== 'goal') return 0
+  if (t.freeThrow) return 1
   return t.type === 'rug' ? 2 : 1
 }
 
@@ -137,24 +141,27 @@ export function nextSetup(input: {
   const team: TeamSide = throwerTeam === 'home' ? 'away' : 'home'
   const dir: AttackDir = throwerDir === 'up' ? 'down' : 'up'
 
-  if (outcome === 'caught' || outcome === 'throws_exhausted') {
-    // Bal ligt/wordt gevangen op het landingspunt = vertrek voor de tegenploeg.
+  // Opzetpunt = waar de bal lag/gevangen werd; het worpaantal volgt uit de helft
+  // (eigen helft = 3/4, tegenhelft of middellijn = 2/3). Geldt voor vangst, opgebruikte
+  // worpen, zijlijn-inworp en de middellijn-fout (opzet vanaf het grondcontact).
+  if (
+    outcome === 'caught' ||
+    outcome === 'throws_exhausted' ||
+    outcome === 'out_side' ||
+    outcome === 'midline_fault'
+  ) {
     return { team, dir, setupSide: isOnOwnHalf(landing, dir) ? 'own' : 'opponent', point: landing }
   }
 
-  // out_side / midline_fault: herstart vanuit het midden.
-  if (outcome === 'out_side' || outcome === 'midline_fault') {
-    return { team, dir, setupSide: 'own', point: { x: 0.5, y: 0.5 } }
-  }
-
-  // out_back: herstart vanaf de eigen doellijn van de tegenploeg.
+  // out_back: inworp → de eigen doellijn van de tegenploeg wordt de werpplaats (eigen helft).
   if (outcome === 'out_back') {
-    const y = dir === 'up' ? 10 / 46 : 36 / 46 // eigen doellijn van de nieuwe ploeg
+    const y = dir === 'up' ? 10 / 46 : 36 / 46
     return { team, dir, setupSide: 'own', point: { x: 0.5, y } }
   }
 
-  // goal: tegenploeg herstart vanaf eigen helft (midden).
-  return { team, dir, setupSide: 'own', point: { x: 0.5, y: 0.5 } }
+  // goal: tegenploeg zet op vanaf de eigen vrijeworplijn (eigen helft, volle breedte).
+  const ftY = dir === 'up' ? 14 / 46 : 32 / 46
+  return { team, dir, setupSide: 'own', point: { x: 0.5, y: ftY } }
 }
 
 // ── Aggregatie van een reeks worpen ──────────────────────────────────────────
@@ -167,6 +174,8 @@ export interface ReducibleThrow {
   isDoelworp: boolean
   /** Enkel relevant bij een out (zij-/achterlijn). */
   touchedBeforeOut?: boolean
+  /** Vrije worp → doelpunt telt altijd 1 punt. */
+  freeThrow?: boolean
 }
 
 /**
@@ -195,7 +204,7 @@ export function reduceTotals(throws: ReducibleThrow[]): MatchTotals {
   const crosses = { home: 0, away: 0 }
 
   for (const t of throws) {
-    score[t.team] += pointsForThrow(t)
+    score[t.team] += pointsForThrow({ type: t.type, outcome: t.outcome, freeThrow: t.freeThrow })
     if (isCrossThrow(t)) {
       crosses[t.team] += 1
       if (crosses[t.team] >= CROSS_LIMIT) crosses[t.team] = 0

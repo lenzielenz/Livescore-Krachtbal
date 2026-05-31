@@ -51,6 +51,17 @@
 .sk-clock-ico { font-size: 0.75rem; }
 .sk-sub { font-size: 0.68rem; color: var(--dim); margin-top: 1px; }
 
+/* Compacte beheer-balk (undo/vrijworp/helft/einde) — houdt het veld groot */
+.sk-toolbar { flex: 0 0 auto; display: flex; gap: 5px; overflow-x: auto; padding-bottom: 2px; }
+.sk-toolbar .tb {
+  flex: 0 0 auto; padding: 6px 10px; border: 1px solid var(--line); background: #0a1f14;
+  color: var(--txt); border-radius: 8px; font-size: 0.78rem; white-space: nowrap;
+}
+.sk-toolbar .tb.home { border-color: var(--home); color: var(--home); }
+.sk-toolbar .tb.away { border-color: var(--away); color: var(--away); }
+.sk-toolbar .tb.warn { background: #2a1016; color: #ffd5e0; border-color: #5a1828; }
+.sk-toolbar .tb.danger { background: #3a1018; color: #ffd5e0; border-color: #5a1828; }
+
 .sk-poss { flex: 0 0 auto; text-align: center; font-size: 0.78rem; color: var(--dim); }
 .sk-poss b { font-weight: 700; }
 
@@ -114,6 +125,34 @@
 .sk-btn { width: 100%; padding: 18px; border: 1px solid var(--line); background: #0a1f14; color: var(--txt); border-radius: 10px; font-size: 1.05rem; font-weight: 700; }
 .sk-btn.home { border-color: var(--home); color: var(--home); }
 .sk-btn.away { border-color: var(--away); color: var(--away); }
+
+/* ── Modal (bal buiten / aanraking) ── */
+.sk-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(6, 20, 13, 0.78);
+  padding: 16px;
+}
+.sk-modal {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 22px;
+  max-width: 380px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+.sk-modal h3 { margin: 0 0 6px; font-size: 1.2rem; color: var(--accent); }
+.sk-modal p { margin: 0 0 16px; color: var(--txt); font-size: 0.95rem; }
+.sk-modal-btns { display: flex; flex-direction: column; gap: 10px; }
+.sk-modal-btns .sk-btn { font-size: 1rem; font-weight: 600; }
+.sk-btn.primary { border-color: var(--accent); color: var(--accent); }
+.sk-modal-hint { display: block; font-size: 0.72rem; color: var(--dim); font-weight: 400; }
 
 /* ── Goal-flash ── */
 .sk-goal-flash {

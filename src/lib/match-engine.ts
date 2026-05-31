@@ -234,7 +234,7 @@ export async function recordThrow(payload: Payload, input: RecordThrowInput) {
     throwId: created.id,
     outcome,
     type: input.type,
-    points: pointsForThrow({ type: input.type, outcome }),
+    points: pointsForThrow({ type: input.type, outcome, freeThrow: Boolean(open.freeThrow) }),
     isCross,
     state: await buildMatchState(payload, input.matchId),
   }
@@ -782,6 +782,7 @@ export async function buildMatchState(payload: Payload, matchId: number): Promis
       outcome: t.outcome,
       isDoelworp: t.throwNumber >= allowed,
       touchedBeforeOut: t.touchedBeforeOut ?? false,
+      freeThrow: Boolean(poss?.freeThrow),
     }
   })
   const totals = reduceTotals(reducible)

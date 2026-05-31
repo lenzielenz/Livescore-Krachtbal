@@ -23,6 +23,10 @@ describe('pointsForThrow', () => {
     expect(pointsForThrow({ type: 'nek', outcome: 'in_field' })).toBe(0)
     expect(pointsForThrow({ type: 'rug', outcome: 'out_back' })).toBe(0)
   })
+  it('vrije worp levert altijd 1 punt op (ook rugworp)', () => {
+    expect(pointsForThrow({ type: 'rug', outcome: 'goal', freeThrow: true })).toBe(1)
+    expect(pointsForThrow({ type: 'nek', outcome: 'goal', freeThrow: true })).toBe(1)
+  })
 })
 
 describe('throwsAllowed', () => {
@@ -114,11 +118,12 @@ describe('nextSetup', () => {
     // y=0.8 (36.8m); away speelt 'down', eigen helft = y>23m → own
     expect(ns.setupSide).toBe('own')
   })
-  it('buiten zijlijn: tegenploeg vanuit het midden', () => {
-    const ns = nextSetup({ outcome: 'out_side', landing: { x: 1.1, y: 0.5 }, throwerTeam: 'home', throwerDir: 'up' })
+  it('buiten zijlijn: opzet vanaf het grondcontact (helft bepaalt aantal)', () => {
+    // away speelt 'down'; landing op away-eigen helft (y=0.8 > middellijn) → own (3 worpen)
+    const ns = nextSetup({ outcome: 'out_side', landing: { x: 1.1, y: 0.8 }, throwerTeam: 'home', throwerDir: 'up' })
     expect(ns.team).toBe('away')
     expect(ns.setupSide).toBe('own')
-    expect(ns.point).toEqual({ x: 0.5, y: 0.5 })
+    expect(ns.point).toEqual({ x: 1.1, y: 0.8 })
   })
   it('doelpunt: tegenploeg herstart vanaf eigen helft', () => {
     const ns = nextSetup({ outcome: 'goal', landing: { x: 0.5, y: 0.95 }, throwerTeam: 'away', throwerDir: 'down' })
