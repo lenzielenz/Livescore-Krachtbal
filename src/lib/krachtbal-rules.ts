@@ -38,11 +38,11 @@ export function attackDirForSide(side: TeamSide, half: number): AttackDir {
 
 /**
  * Punten voor één worp: rugworp-doelpunt telt dubbel (+2), nekworp +1, anders 0.
- * Een vrije worp levert altijd 1 punt op, ongeacht werpwijze (reglement §48.1).
+ * DECISION: ook een rugworp uit een VRIJE WORP telt +2 (keuze Robin) — dit wijkt
+ * bewust af van reglement §48.1 dat vrije worpen altijd 1 punt toekent.
  */
-export function pointsForThrow(t: { type: ThrowType; outcome: ThrowOutcome; freeThrow?: boolean }): 0 | 1 | 2 {
+export function pointsForThrow(t: { type: ThrowType; outcome: ThrowOutcome }): 0 | 1 | 2 {
   if (t.outcome !== 'goal') return 0
-  if (t.freeThrow) return 1
   return t.type === 'rug' ? 2 : 1
 }
 
@@ -174,8 +174,6 @@ export interface ReducibleThrow {
   isDoelworp: boolean
   /** Enkel relevant bij een out (zij-/achterlijn). */
   touchedBeforeOut?: boolean
-  /** Vrije worp → doelpunt telt altijd 1 punt. */
-  freeThrow?: boolean
 }
 
 /**
@@ -204,7 +202,7 @@ export function reduceTotals(throws: ReducibleThrow[]): MatchTotals {
   const crosses = { home: 0, away: 0 }
 
   for (const t of throws) {
-    score[t.team] += pointsForThrow({ type: t.type, outcome: t.outcome, freeThrow: t.freeThrow })
+    score[t.team] += pointsForThrow({ type: t.type, outcome: t.outcome })
     if (isCrossThrow(t)) {
       crosses[t.team] += 1
       if (crosses[t.team] >= CROSS_LIMIT) crosses[t.team] = 0

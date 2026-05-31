@@ -23,9 +23,8 @@ describe('pointsForThrow', () => {
     expect(pointsForThrow({ type: 'nek', outcome: 'in_field' })).toBe(0)
     expect(pointsForThrow({ type: 'rug', outcome: 'out_back' })).toBe(0)
   })
-  it('vrije worp levert altijd 1 punt op (ook rugworp)', () => {
-    expect(pointsForThrow({ type: 'rug', outcome: 'goal', freeThrow: true })).toBe(1)
-    expect(pointsForThrow({ type: 'nek', outcome: 'goal', freeThrow: true })).toBe(1)
+  it('rugworp telt dubbel, ook uit een vrije worp (keuze Robin, afwijkend van reglement)', () => {
+    expect(pointsForThrow({ type: 'rug', outcome: 'goal' })).toBe(2)
   })
 })
 
