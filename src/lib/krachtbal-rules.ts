@@ -24,6 +24,16 @@ export type SetupSide = 'own' | 'opponent'
 
 export const CROSS_LIMIT = 3
 
+/**
+ * Speelrichting van een ploeg in een gegeven helft. Thuis valt in helft 1 aan richting
+ * 'up' (naar y=1); in helft 2 draait alles om. Puur, dus ook bruikbaar in de UI.
+ */
+export function attackDirForSide(side: TeamSide, half: number): AttackDir {
+  const homeUp = half === 1
+  if (side === 'home') return homeUp ? 'up' : 'down'
+  return homeUp ? 'down' : 'up'
+}
+
 // ── Score ────────────────────────────────────────────────────────────────────
 
 /** Punten voor één worp: rugworp-doelpunt telt dubbel (+2), nekworp +1, anders 0. */

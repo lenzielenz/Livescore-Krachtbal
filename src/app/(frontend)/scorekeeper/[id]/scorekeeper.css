@@ -5,78 +5,101 @@
   --txt: #e8f5ee;
   --dim: #8fb3a1;
   --accent: #ffd166;
-  min-height: 100vh;
+  --home: #06d6a0;
+  --away: #4cc9f0;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
   background: var(--bg);
   color: var(--txt);
   font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
-  padding: 12px;
+  padding: 6px;
   box-sizing: border-box;
+  overflow: hidden;
 }
-
 .sk * { box-sizing: border-box; }
+.sk button { cursor: pointer; font-family: inherit; }
+.sk button:disabled { opacity: 0.4; cursor: not-allowed; }
 
-.sk-top {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
-  gap: 12px;
-  padding: 8px 4px;
+/* ── Bovenbalk (compact) ── */
+.sk-top { flex: 0 0 auto; display: grid; grid-template-columns: auto 1fr auto; align-items: stretch; gap: 6px; }
+.sk-to {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+  min-width: 56px; padding: 4px 6px; border-radius: 9px;
+  border: 1px solid var(--line); background: #0a1f14; color: var(--txt); font-size: 0.65rem;
 }
-.sk-team { display: flex; align-items: center; gap: 12px; }
-.sk-top .sk-team:last-child { justify-content: flex-end; }
-.sk-team-name { font-weight: 600; font-size: 1.1rem; }
-.sk-score { font-size: 2.4rem; font-weight: 800; font-variant-numeric: tabular-nums; }
-.sk-center { text-align: center; }
-.sk-clock { font-size: 2rem; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--accent); }
-.sk-half { font-size: 0.8rem; color: var(--dim); text-transform: capitalize; }
+.sk-to.home { border-color: var(--home); }
+.sk-to.away { border-color: var(--away); }
+.sk-to-lbl { text-transform: uppercase; letter-spacing: 0.04em; font-size: 0.55rem; color: var(--dim); }
+.sk-to-dots { letter-spacing: 2px; font-size: 0.7rem; }
+.sk-to.home .sk-to-dots { color: var(--home); }
+.sk-to.away .sk-to-dots { color: var(--away); }
 
-.sk-meta {
-  display: flex; flex-wrap: wrap; gap: 8px 18px; justify-content: center;
-  font-size: 0.85rem; color: var(--dim); padding: 6px 0;
-  border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
+.sk-center { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.sk-scores { display: flex; align-items: center; gap: 8px; }
+.sk-tn { font-weight: 700; font-size: 0.85rem; max-width: 24vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sk-tn.home { color: var(--home); text-align: right; }
+.sk-tn.away { color: var(--away); }
+.sk-sc { font-size: 1.7rem; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1; }
+.sk-clock {
+  display: inline-flex; align-items: center; gap: 4px; padding: 4px 9px; border-radius: 999px;
+  border: 1px solid var(--accent); background: transparent; color: var(--accent);
+  font-size: 0.95rem; font-weight: 800; font-variant-numeric: tabular-nums;
 }
-.sk-poss b { color: var(--txt); }
+.sk-clock.running { background: var(--accent); color: #06140d; }
+.sk-clock-ico { font-size: 0.75rem; }
+.sk-sub { font-size: 0.68rem; color: var(--dim); margin-top: 1px; }
 
-.sk-error {
-  margin: 10px 0; padding: 10px 14px; border-radius: 8px;
-  background: #4a1020; color: #ffd5e0; cursor: pointer; font-size: 0.9rem;
-}
+.sk-poss { flex: 0 0 auto; text-align: center; font-size: 0.78rem; color: var(--dim); }
+.sk-poss b { font-weight: 700; }
 
-.sk-body { display: flex; gap: 16px; margin-top: 14px; align-items: flex-start; }
-.sk-field-wrap { flex: 0 0 auto; }
-.sk-field { height: min(72vh, 620px); width: auto; touch-action: manipulation; cursor: crosshair; border-radius: 10px; }
+.sk-error { flex: 0 0 auto; padding: 7px 10px; border-radius: 8px; background: #4a1020; color: #ffd5e0; cursor: pointer; font-size: 0.82rem; text-align: center; }
 
-.sk-side { flex: 1 1 auto; display: flex; flex-direction: column; gap: 12px; min-width: 260px; }
-.sk-panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
-.sk-panel h3 { margin: 0 0 8px; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--dim); }
-.sk-panel p { margin: 4px 0 8px; font-size: 0.9rem; }
-.sk-dim { color: var(--dim); font-size: 0.82rem; }
+/* ── Arena: vult alle resterende hoogte; veld zo groot mogelijk ── */
+.sk-arena { flex: 1 1 auto; min-height: 0; display: flex; align-items: stretch; gap: 5px; }
+.sk-col { display: flex; flex-direction: column; justify-content: center; gap: 4px; flex: 0 0 auto; overflow-y: auto; }
+.sk-col.dim { opacity: 0.38; }
+.sk-col-away { align-items: flex-end; }
 
-.sk-seg { display: flex; gap: 6px; margin-bottom: 8px; }
-.sk-seg button {
-  flex: 1; padding: 12px 8px; border: 1px solid var(--line); background: #0a1f14;
-  color: var(--txt); border-radius: 8px; font-size: 0.95rem; cursor: pointer;
-}
-.sk-seg button.on { background: var(--accent); color: #06140d; font-weight: 700; border-color: var(--accent); }
-
-.sk-btn {
-  display: block; width: 100%; padding: 14px; margin-bottom: 8px;
-  border: 1px solid var(--line); background: #0a1f14; color: var(--txt);
-  border-radius: 8px; font-size: 1rem; cursor: pointer;
-}
-.sk-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-.sk-btn.primary { background: var(--accent); color: #06140d; font-weight: 700; border-color: var(--accent); }
-.sk-btn.warn { background: #3a1018; color: #ffd5e0; border-color: #5a1828; }
-
-.sk-player-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(52px, 1fr)); gap: 6px; }
 .sk-num {
-  aspect-ratio: 1; border: 1px solid var(--line); background: #0a1f14; color: var(--txt);
-  border-radius: 8px; font-size: 1.3rem; font-weight: 700; cursor: pointer;
+  width: 44px; height: 44px; flex: 0 0 auto; border-radius: 10px;
+  border: 1px solid var(--line); background: #0a1f14; color: var(--txt);
+  font-size: 1.25rem; font-weight: 800; font-variant-numeric: tabular-nums;
 }
-.sk-num.on { background: var(--accent); color: #06140d; border-color: var(--accent); }
+.sk-col-home .sk-num { border-left: 3px solid var(--home); }
+.sk-col-away .sk-num { border-right: 3px solid var(--away); }
+.sk-col-home .sk-num.on { background: var(--home); color: #06140d; border-color: var(--home); }
+.sk-col-away .sk-num.on { background: var(--away); color: #06140d; border-color: var(--away); }
 
-@media (max-width: 820px) {
-  .sk-body { flex-direction: column; align-items: stretch; }
-  .sk-field-wrap { align-self: center; }
-  .sk-field { height: 56vh; }
+.sk-field-wrap { flex: 1 1 auto; display: flex; justify-content: center; align-items: stretch; min-width: 0; }
+.sk-field { height: 100%; width: auto; max-width: 100%; touch-action: manipulation; cursor: crosshair; border-radius: 8px; }
+
+/* ── Compacte bediening ── */
+.sk-controls { flex: 0 0 auto; display: flex; flex-direction: column; gap: 5px; }
+.sk-pills { display: flex; gap: 5px; align-items: center; }
+.pill {
+  flex: 1; padding: 9px 4px; border: 1px solid var(--line); background: #0a1f14; color: var(--txt);
+  border-radius: 8px; font-size: 0.82rem;
+}
+.pill.on { background: var(--accent); color: #06140d; font-weight: 700; border-color: var(--accent); }
+.pill-sep { width: 1px; align-self: stretch; background: var(--line); margin: 0 2px; }
+.sk-actions { display: flex; gap: 5px; }
+.act { flex: 1; padding: 9px 6px; border: 1px solid var(--line); background: #0a1f14; color: var(--txt); border-radius: 8px; font-size: 0.82rem; }
+.act.warn { background: #2a1016; color: #ffd5e0; border-color: #5a1828; }
+.act.danger { background: #3a1018; color: #ffd5e0; border-color: #5a1828; }
+
+/* ── Start-paneel ── */
+.sk-start { flex: 1 1 auto; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; }
+.sk-start h3 { font-size: 0.95rem; color: var(--dim); font-weight: 600; }
+.sk-start-btns { display: flex; flex-direction: column; gap: 12px; width: min(360px, 80vw); }
+.sk-btn { width: 100%; padding: 18px; border: 1px solid var(--line); background: #0a1f14; color: var(--txt); border-radius: 10px; font-size: 1.05rem; font-weight: 700; }
+.sk-btn.home { border-color: var(--home); color: var(--home); }
+.sk-btn.away { border-color: var(--away); color: var(--away); }
+
+@media (max-width: 480px) {
+  .sk-num { width: 40px; height: 40px; font-size: 1.1rem; }
+  .sk-to { min-width: 48px; }
+  .sk-tn { font-size: 0.72rem; max-width: 22vw; }
+  .sk-sc { font-size: 1.45rem; }
 }

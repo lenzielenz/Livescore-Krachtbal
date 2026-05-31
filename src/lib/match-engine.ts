@@ -12,6 +12,7 @@ import {
   type SetupSide,
   type TeamSide,
   type ThrowType,
+  attackDirForSide,
   deriveGeometry,
   deriveOutcome,
   isMidlineFault,
@@ -21,14 +22,9 @@ import {
   throwsAllowed,
 } from './krachtbal-rules'
 
-const clamp01 = (n: number) => Math.max(0, Math.min(1, n))
+export { attackDirForSide }
 
-/** Welke kant speelt deze ploeg op in deze helft? Thuis valt aan 'up' in helft 1. */
-export function attackDirForSide(side: TeamSide, half: number): AttackDir {
-  const homeUp = half === 1
-  if (side === 'home') return homeUp ? 'up' : 'down'
-  return homeUp ? 'down' : 'up'
-}
+const clamp01 = (n: number) => Math.max(0, Math.min(1, n))
 
 async function loadMatch(payload: Payload, matchId: number) {
   const match = await payload.findByID({ collection: 'matches', id: matchId, depth: 0 })
@@ -286,16 +282,32 @@ export async function setClock(
   return buildMatchState(payload, matchId)
 }
 
-/** Naar de tweede helft: klok terug op 0, helft-grens-events. */
+/**
+ * Naar de tweede helft: klok terug op 0, ploegen wisselen van veldhelft (richting draait om).
+ * Het lopende balbezit wordt afgesloten en de 2e helft start met een verse opzet door de ploeg
+ * die NIET aftrapte in de 1e helft — met de correcte speelrichting voor die helft.
+ */
 export async function advanceHalf(payload: Payload, matchId: number) {
-  const { match } = await loadMatch(payload, matchId)
+  const { match, homeId, awayId } = await loadMatch(payload, matchId)
   const half = match.currentHalf ?? 1
+  const nextHalf = half + 1
+
+  // Sluit een eventueel lopend balbezit af bij het rustsignaal.
+  const open = await getOpenPossession(payload, matchId)
+  if (open) {
+    await payload.update({
+      collection: 'possessions',
+      id: open.id,
+      data: { endOutcome: 'throws_exhausted' },
+      overrideAccess: true,
+    })
+  }
+
   await payload.create({
     collection: 'match-events',
     data: { match: matchId, type: 'half_end', half, gameClock: match.clockSeconds ?? 0 },
     overrideAccess: true,
   })
-  const nextHalf = half + 1
   await payload.update({
     collection: 'matches',
     id: matchId,
@@ -307,6 +319,35 @@ export async function advanceHalf(payload: Payload, matchId: number) {
     data: { match: matchId, type: 'half_start', half: nextHalf, gameClock: 0 },
     overrideAccess: true,
   })
+
+  // Wie tikte af in helft 1? De tegenploeg zet op in helft 2.
+  const first = await payload.find({
+    collection: 'possessions',
+    where: { match: { equals: matchId } },
+    sort: 'createdAt',
+    depth: 0,
+    limit: 1,
+  })
+  const firstTeamId = first.docs[0]
+    ? typeof first.docs[0].team === 'object'
+      ? first.docs[0].team.id
+      : first.docs[0].team
+    : homeId
+  const startTeamId = firstTeamId === homeId ? awayId : homeId
+  const startSide = sideOfTeam(startTeamId, homeId)
+  const dir = attackDirForSide(startSide, nextHalf)
+  const ownHalfY = dir === 'up' ? 12 / 46 : 34 / 46
+  await createPossession(payload, {
+    matchId,
+    teamId: startTeamId,
+    setupSide: 'own',
+    category: match.category as Category,
+    dir,
+    point: { x: 0.5, y: ownHalfY },
+    half: nextHalf,
+    clock: 0,
+  })
+
   return buildMatchState(payload, matchId)
 }
 
@@ -495,6 +536,8 @@ export interface ShotPoint {
   playerId: number
   shirtNumber: number
   teamSide: TeamSide
+  throwNumber: number
+  isLastThrow: boolean
 }
 
 /** Statistiek-aggregaten + shot map-punten voor de matchdetailpagina. */
@@ -544,6 +587,8 @@ export async function buildMatchStats(payload: Payload, matchId: number) {
       playerId: player?.id ?? 0,
       shirtNumber: player?.shirtNumber ?? 0,
       teamSide: side,
+      throwNumber: t.throwNumber,
+      isLastThrow: isTerminalOutcome(t.outcome) || t.throwNumber >= allowed,
     })
   }
 
@@ -594,7 +639,7 @@ export async function buildTimeline(payload: Payload, matchId: number): Promise<
         half: t.period,
         gameClock: t.gameClock,
         side,
-        label: `Doelpunt +${pts} (${t.type}) ${who}`.trim(),
+        label: `Doelpunt +${pts} ${who}`.trim(),
         _t: t.createdAt,
       })
     } else if (t.outcome === 'out_back' && !t.touchedBeforeOut) {

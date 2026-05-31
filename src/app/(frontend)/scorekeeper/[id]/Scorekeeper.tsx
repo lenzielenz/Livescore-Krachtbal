@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { FieldSchema, type FieldMarker } from '@/components/FieldSchema'
-import { deriveOutcome } from '@/lib/krachtbal-rules'
+import { attackDirForSide, deriveOutcome } from '@/lib/krachtbal-rules'
 import type { AttackDir, Point } from '@/lib/field'
 import type { MatchState } from '@/lib/match-engine'
 
@@ -14,8 +14,11 @@ interface RosterPlayer {
   teamId: number
 }
 
-function fmtClock(totalSeconds: number): string {
-  const s = Math.max(0, Math.floor(totalSeconds))
+const HOME_COLOR = '#06d6a0'
+const AWAY_COLOR = '#4cc9f0'
+
+function fmtClock(total: number): string {
+  const s = Math.max(0, Math.floor(total))
   return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
 }
 
@@ -36,16 +39,11 @@ export function Scorekeeper({
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Lokale klok die meeloopt wanneer hij draait.
   const [clock, setClock] = useState(initialState.match.clockSeconds)
   const baseRef = useRef({ seconds: initialState.match.clockSeconds, running: initialState.match.clockRunning, at: Date.now() })
 
   useEffect(() => {
-    baseRef.current = {
-      seconds: state.match.clockSeconds,
-      running: state.match.clockRunning,
-      at: Date.now(),
-    }
+    baseRef.current = { seconds: state.match.clockSeconds, running: state.match.clockRunning, at: Date.now() }
     setClock(state.match.clockSeconds)
   }, [state.match.clockSeconds, state.match.clockRunning])
 
@@ -81,8 +79,17 @@ export function Scorekeeper({
   )
 
   const poss = state.possession
-  const possTeamId = poss?.teamId ?? null
-  const possPlayers = roster.filter((p) => p.teamId === possTeamId)
+  const possSide = poss?.side ?? null
+  const homePlayers = roster.filter((p) => p.teamId === state.teams.home.id)
+  const awayPlayers = roster.filter((p) => p.teamId === state.teams.away.id)
+
+  // Geselecteerde speler wissen als die niet (meer) bij de ploeg-aan-zet hoort.
+  useEffect(() => {
+    if (!selectedPlayer) return
+    const pl = roster.find((p) => p.id === selectedPlayer)
+    const activeTeamId = possSide === 'home' ? state.teams.home.id : possSide === 'away' ? state.teams.away.id : null
+    if (!pl || pl.teamId !== activeTeamId) setSelectedPlayer(null)
+  }, [possSide, selectedPlayer, roster, state.teams.home.id, state.teams.away.id])
 
   const onTap = useCallback(
     async (p: Point) => {
@@ -91,7 +98,7 @@ export function Scorekeeper({
         return
       }
       if (!selectedPlayer) {
-        setError('Selecteer eerst een speler.')
+        setError('Selecteer eerst een speler (rugnummer).')
         return
       }
       const dir = poss.dir as AttackDir
@@ -103,9 +110,16 @@ export function Scorekeeper({
         touchedBeforeOut = window.confirm('Werd de bal aangeraakt vóór hij buiten ging?\n\nOK = ja (geen kruisje) · Annuleren = nee (kruisje)')
       }
 
+      const teamColor = poss.side === 'home' ? HOME_COLOR : AWAY_COLOR
       setRecentTaps((prev) => [
-        ...prev.slice(-4),
-        { x: Math.max(0, Math.min(1, p.x)), y: Math.max(0, Math.min(1, p.y)), color: outcome === 'goal' ? '#06d6a0' : '#ef476f', label: String(poss.nextThrowNumber) },
+        ...prev.slice(-5),
+        {
+          x: Math.max(0, Math.min(1, p.x)),
+          y: Math.max(0, Math.min(1, p.y)),
+          color: teamColor,
+          r: outcome === 'goal' ? 8 : 6,
+          label: String(poss.nextThrowNumber),
+        },
       ])
 
       await act({
@@ -120,130 +134,123 @@ export function Scorekeeper({
       })
       setTapMode('ground')
       setThrowType('nek')
+      setSelectedPlayer(null)
     },
     [state.match.status, poss, selectedPlayer, tapMode, throwType, clock, act],
   )
 
-  const toggleClock = () => {
-    if (state.match.clockRunning) {
-      act({ action: 'clock', running: false, seconds: Math.floor(clock) })
-    } else {
-      act({ action: 'clock', running: true, seconds: Math.floor(clock) })
-    }
-  }
+  const toggleClock = () =>
+    act({ action: 'clock', running: !state.match.clockRunning, seconds: Math.floor(clock) })
 
   const isScheduled = state.match.status === 'scheduled'
   const isLive = state.match.status === 'live'
 
+  // Vaste richtingslabels: ploeg die 'up' (naar y=1) speelt staat onderaan met ↓,
+  // de andere bovenaan met ↑. Draait automatisch om in de 2e helft.
+  const homeDirUp = attackDirForSide('home', state.match.currentHalf) === 'up'
+  const fieldEnds = {
+    top: homeDirUp
+      ? { text: state.teams.away.name, color: AWAY_COLOR }
+      : { text: state.teams.home.name, color: HOME_COLOR },
+    bottom: homeDirUp
+      ? { text: state.teams.home.name, color: HOME_COLOR }
+      : { text: state.teams.away.name, color: AWAY_COLOR },
+  }
+
+  const PlayerColumn = ({ side, players }: { side: 'home' | 'away'; players: RosterPlayer[] }) => {
+    const active = possSide === side
+    return (
+      <div className={`sk-col sk-col-${side} ${active ? 'active' : 'dim'}`}>
+        {players.map((p) => (
+          <button
+            key={p.id}
+            className={`sk-num ${selectedPlayer === p.id ? 'on' : ''}`}
+            disabled={!active || !isLive}
+            onClick={() => setSelectedPlayer(p.id)}
+            title={p.name}
+          >
+            {p.shirtNumber}
+          </button>
+        ))}
+      </div>
+    )
+  }
+
   return (
     <div className="sk">
       <header className="sk-top">
-        <div className="sk-team">
-          <span className="sk-team-name">{state.teams.home.name}</span>
-          <span className="sk-score">{state.score.home}</span>
-        </div>
+        <button className="sk-to home" disabled={busy || !isLive} onClick={() => act({ action: 'timeout', teamId: state.teams.home.id })}>
+          <span className="sk-to-lbl">time-out</span>
+          <span className="sk-to-dots">{'●'.repeat(state.timeouts.home)}{'○'.repeat(Math.max(0, 2 - state.timeouts.home))}</span>
+        </button>
+
         <div className="sk-center">
-          <div className="sk-clock">{fmtClock(clock)}</div>
-          <div className="sk-half">Helft {state.match.currentHalf} · {state.match.status}</div>
+          <div className="sk-scores">
+            <span className="sk-tn home">{state.teams.home.name}</span>
+            <span className="sk-sc">{state.score.home}</span>
+            <button className={`sk-clock ${state.match.clockRunning ? 'running' : ''}`} disabled={busy || !isLive} onClick={toggleClock} title="Tik om te starten/pauzeren">
+              {fmtClock(clock)}
+              <span className="sk-clock-ico">{state.match.clockRunning ? '⏸' : '▶'}</span>
+            </button>
+            <span className="sk-sc">{state.score.away}</span>
+            <span className="sk-tn away">{state.teams.away.name}</span>
+          </div>
+          <div className="sk-sub">Helft {state.match.currentHalf} · {state.match.status} · Kruisjes {state.crosses.home}–{state.crosses.away}</div>
         </div>
-        <div className="sk-team">
-          <span className="sk-score">{state.score.away}</span>
-          <span className="sk-team-name">{state.teams.away.name}</span>
-        </div>
+
+        <button className="sk-to away" disabled={busy || !isLive} onClick={() => act({ action: 'timeout', teamId: state.teams.away.id })}>
+          <span className="sk-to-lbl">time-out</span>
+          <span className="sk-to-dots">{'●'.repeat(state.timeouts.away)}{'○'.repeat(Math.max(0, 2 - state.timeouts.away))}</span>
+        </button>
       </header>
 
-      <div className="sk-meta">
-        <span>Kruisjes: {state.crosses.home} – {state.crosses.away}</span>
-        <span>Time-outs (helft): {state.timeouts.home} – {state.timeouts.away}</span>
-        {poss && (
-          <span className="sk-poss">
-            Balbezit: <b>{poss.side === 'home' ? state.teams.home.name : state.teams.away.name}</b> · worp {poss.nextThrowNumber}/{poss.throwsAllowed} · opzet {poss.setupSide === 'own' ? 'eigen helft' : 'tegenhelft'}
-          </span>
-        )}
-      </div>
+      {poss && (
+        <div className="sk-poss">
+          Balbezit: <b style={{ color: possSide === 'home' ? HOME_COLOR : AWAY_COLOR }}>{possSide === 'home' ? state.teams.home.name : state.teams.away.name}</b>
+          {' · '}worp {poss.nextThrowNumber}/{poss.throwsAllowed} · opzet {poss.setupSide === 'own' ? 'eigen helft' : 'tegenhelft'}
+        </div>
+      )}
 
       {error && <div className="sk-error" onClick={() => setError(null)}>{error}</div>}
 
-      <div className="sk-body">
-        <div className="sk-field-wrap">
-          <FieldSchema
-            className="sk-field"
-            onTap={onTap}
-            markers={recentTaps}
-            highlight={poss ? { dir: poss.dir, label: poss.side === 'home' ? state.teams.home.name : state.teams.away.name } : undefined}
-          />
-        </div>
-
-        <aside className="sk-side">
-          {isScheduled && (
-            <div className="sk-panel">
-              <h3>Start wedstrijd</h3>
-              <p>Welke ploeg zet op?</p>
-              <button className="sk-btn primary" disabled={busy} onClick={() => act({ action: 'start', startingTeamId: state.teams.home.id })}>
-                {state.teams.home.name}
-              </button>
-              <button className="sk-btn primary" disabled={busy} onClick={() => act({ action: 'start', startingTeamId: state.teams.away.id })}>
-                {state.teams.away.name}
-              </button>
-            </div>
-          )}
-
-          {isLive && (
-            <>
-              <div className="sk-panel">
-                <h3>Worp-type</h3>
-                <div className="sk-seg">
-                  <button className={throwType === 'nek' ? 'on' : ''} onClick={() => setThrowType('nek')}>Nek (+1)</button>
-                  <button className={throwType === 'rug' ? 'on' : ''} onClick={() => setThrowType('rug')}>Rug (+2)</button>
-                </div>
-                <h3>Tik</h3>
-                <div className="sk-seg">
-                  <button className={tapMode === 'ground' ? 'on' : ''} onClick={() => setTapMode('ground')}>Grond (1×)</button>
-                  <button className={tapMode === 'caught' ? 'on' : ''} onClick={() => setTapMode('caught')}>Gevangen (2×)</button>
-                </div>
-              </div>
-
-              <div className="sk-panel sk-players">
-                <h3>Speler {possTeamId === state.teams.home.id ? state.teams.home.name : state.teams.away.name}</h3>
-                <div className="sk-player-grid">
-                  {possPlayers.length === 0 && <span className="sk-dim">Geen spelers voor deze ploeg.</span>}
-                  {possPlayers.map((p) => (
-                    <button
-                      key={p.id}
-                      className={`sk-num ${selectedPlayer === p.id ? 'on' : ''}`}
-                      onClick={() => setSelectedPlayer(p.id)}
-                      title={p.name}
-                    >
-                      {p.shirtNumber}
-                    </button>
-                  ))}
-                </div>
-                {selectedPlayer && (
-                  <p className="sk-dim">Geselecteerd: {possPlayers.find((p) => p.id === selectedPlayer)?.name}. Tik nu het landingspunt op het veld.</p>
-                )}
-              </div>
-            </>
-          )}
-
-          <div className="sk-panel">
-            <h3>Wedstrijd</h3>
-            <button className="sk-btn" disabled={busy || !isLive} onClick={toggleClock}>
-              {state.match.clockRunning ? '⏸ Klok pauzeren' : '▶ Klok starten'}
-            </button>
-            <button className="sk-btn warn" disabled={busy} onClick={() => act({ action: 'undo' })}>↶ Undo laatste worp</button>
-            <div className="sk-seg">
-              <button disabled={busy || !isLive} onClick={() => act({ action: 'timeout', teamId: state.teams.home.id })}>TO {state.teams.home.name}</button>
-              <button disabled={busy || !isLive} onClick={() => act({ action: 'timeout', teamId: state.teams.away.id })}>TO {state.teams.away.name}</button>
-            </div>
-            {isLive && state.match.currentHalf < 2 && (
-              <button className="sk-btn" disabled={busy} onClick={() => act({ action: 'half' })}>⏭ Naar 2e helft</button>
-            )}
-            {isLive && (
-              <button className="sk-btn warn" disabled={busy} onClick={() => { if (window.confirm('Wedstrijd beëindigen?')) act({ action: 'finish' }) }}>🏁 Beëindigen</button>
-            )}
+      {isScheduled ? (
+        <div className="sk-start">
+          <h3>Start wedstrijd — welke ploeg zet op?</h3>
+          <div className="sk-start-btns">
+            <button className="sk-btn home" disabled={busy} onClick={() => act({ action: 'start', startingTeamId: state.teams.home.id })}>{state.teams.home.name}</button>
+            <button className="sk-btn away" disabled={busy} onClick={() => act({ action: 'start', startingTeamId: state.teams.away.id })}>{state.teams.away.name}</button>
           </div>
-        </aside>
-      </div>
+        </div>
+      ) : (
+        <>
+          <div className="sk-arena">
+            <PlayerColumn side="home" players={homePlayers} />
+            <div className="sk-field-wrap">
+              <FieldSchema className="sk-field" onTap={onTap} markers={recentTaps} ends={fieldEnds} />
+            </div>
+            <PlayerColumn side="away" players={awayPlayers} />
+          </div>
+
+          <div className="sk-controls">
+            <div className="sk-pills">
+              <button type="button" className={`pill ${throwType === 'nek' ? 'on' : ''}`} onClick={() => setThrowType('nek')}>Nek +1</button>
+              <button type="button" className={`pill ${throwType === 'rug' ? 'on' : ''}`} onClick={() => setThrowType('rug')}>Rug +2</button>
+              <span className="pill-sep" />
+              <button type="button" className={`pill ${tapMode === 'ground' ? 'on' : ''}`} onClick={() => setTapMode('ground')}>Grond</button>
+              <button type="button" className={`pill ${tapMode === 'caught' ? 'on' : ''}`} onClick={() => setTapMode('caught')}>Gevangen</button>
+            </div>
+            <div className="sk-actions">
+              <button type="button" className="act warn" disabled={busy} onClick={() => act({ action: 'undo' })}>↶ Undo</button>
+              {isLive && state.match.currentHalf < 2 && (
+                <button type="button" className="act" disabled={busy} onClick={() => act({ action: 'half' })}>⏭ 2e helft</button>
+              )}
+              {isLive && (
+                <button type="button" className="act danger" disabled={busy} onClick={() => { if (window.confirm('Wedstrijd beëindigen?')) act({ action: 'finish' }) }}>🏁 Einde</button>
+              )}
+            </div>
+          </div>
+        </>
+      )}
     </div>
   )
 }

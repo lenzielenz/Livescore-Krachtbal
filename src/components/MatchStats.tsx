@@ -43,16 +43,29 @@ export function MatchStats({
 }) {
   const [playerFilter, setPlayerFilter] = useState<number | 'all'>('all')
   const [goalsOnly, setGoalsOnly] = useState(false)
+  const [view, setView] = useState<'dots' | 'heat'>('dots')
+  const [orderFilter, setOrderFilter] = useState<'all' | 'first' | 'second' | 'last'>('all')
+
+  const matchesOrder = (s: ShotPoint) =>
+    orderFilter === 'all' ||
+    (orderFilter === 'first' && s.throwNumber === 1) ||
+    (orderFilter === 'second' && s.throwNumber === 2) ||
+    (orderFilter === 'last' && s.isLastThrow)
 
   const filteredShots = shots.filter(
-    (s) => (playerFilter === 'all' || s.playerId === playerFilter) && (!goalsOnly || s.outcome === 'goal'),
+    (s) =>
+      (playerFilter === 'all' || s.playerId === playerFilter) &&
+      (!goalsOnly || s.outcome === 'goal') &&
+      matchesOrder(s),
   )
   const markers: FieldMarker[] = filteredShots.map((s) => ({
     x: s.x,
     y: s.y,
     color: OUTCOME_COLOR[s.outcome] ?? '#ffd166',
-    r: s.outcome === 'goal' ? 7 : 5,
+    r: s.outcome === 'goal' ? 8 : 6,
+    label: String(s.throwNumber),
   }))
+  const heatPoints = filteredShots.map((s) => ({ x: s.x, y: s.y }))
 
   return (
     <div className="stats">
@@ -73,16 +86,38 @@ export function MatchStats({
       <div className="stats-grid">
         <div className="shotmap">
           <div className="shotmap-controls">
-            <button className={goalsOnly ? '' : 'on'} onClick={() => setGoalsOnly(false)}>Alle worpen</button>
-            <button className={goalsOnly ? 'on' : ''} onClick={() => setGoalsOnly(true)}>Enkel doelpunten</button>
+            <button type="button" className={view === 'dots' ? 'on' : ''} onClick={() => setView('dots')}>Punten</button>
+            <button type="button" className={view === 'heat' ? 'on' : ''} onClick={() => setView('heat')}>Heatmap</button>
           </div>
-          <FieldSchema className="shotmap-field" markers={markers} />
-          <div className="shotmap-legend">
-            <span><i style={{ background: OUTCOME_COLOR.goal }} /> doelpunt</span>
-            <span><i style={{ background: OUTCOME_COLOR.caught }} /> gevangen</span>
-            <span><i style={{ background: OUTCOME_COLOR.out_side }} /> buiten</span>
-            <span><i style={{ background: OUTCOME_COLOR.in_field }} /> in veld</span>
+          <div className="shotmap-controls">
+            <button type="button" className={!goalsOnly ? 'on' : ''} onClick={() => setGoalsOnly(false)}>Alle worpen</button>
+            <button type="button" className={goalsOnly ? 'on' : ''} onClick={() => setGoalsOnly(true)}>Enkel doelpunten</button>
           </div>
+          <div className="shotmap-controls">
+            <button type="button" className={orderFilter === 'all' ? 'on' : ''} onClick={() => setOrderFilter('all')}>Alle</button>
+            <button type="button" className={orderFilter === 'first' ? 'on' : ''} onClick={() => setOrderFilter('first')}>1e worp</button>
+            <button type="button" className={orderFilter === 'second' ? 'on' : ''} onClick={() => setOrderFilter('second')}>2e worp</button>
+            <button type="button" className={orderFilter === 'last' ? 'on' : ''} onClick={() => setOrderFilter('last')}>Laatste</button>
+          </div>
+          <FieldSchema
+            className="shotmap-field"
+            markers={view === 'dots' ? markers : []}
+            heatPoints={view === 'heat' ? heatPoints : undefined}
+          />
+          {view === 'dots' ? (
+            <div className="shotmap-legend">
+              <span><i style={{ background: OUTCOME_COLOR.goal }} /> doelpunt</span>
+              <span><i style={{ background: OUTCOME_COLOR.caught }} /> gevangen</span>
+              <span><i style={{ background: OUTCOME_COLOR.out_side }} /> buiten</span>
+              <span><i style={{ background: OUTCOME_COLOR.in_field }} /> in veld</span>
+              <span className="shotmap-note">cijfer = worpnummer</span>
+            </div>
+          ) : (
+            <div className="shotmap-legend">
+              <span className="heat-scale" /> <span>weinig → veel worpen</span>
+              <span className="shotmap-note">{filteredShots.length} worpen</span>
+            </div>
+          )}
         </div>
 
         <div className="player-table-wrap">

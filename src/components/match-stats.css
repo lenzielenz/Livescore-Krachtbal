@@ -76,6 +76,11 @@
 }
 .shotmap-legend span { display: inline-flex; align-items: center; gap: 4px; }
 .shotmap-legend i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.shotmap-note { color: var(--dim); font-style: italic; }
+.heat-scale {
+  width: 60px; height: 10px; border-radius: 4px; display: inline-block;
+  background: linear-gradient(to right, rgb(6, 214, 160), rgb(255, 209, 102), rgb(239, 71, 111));
+}
 
 .player-table-wrap { overflow-x: auto; }
 .player-table {
