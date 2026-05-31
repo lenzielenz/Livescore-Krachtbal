@@ -49,11 +49,12 @@
 .sk-tn.away { color: var(--away); text-align: right; }
 .sk-kr { font-size: 0.8rem; color: var(--dim); white-space: nowrap; font-variant-numeric: tabular-nums; }
 
-/* Compacte beheer-balk (undo/vrijworp/helft/einde) — houdt het veld groot */
-.sk-toolbar { flex: 0 0 auto; display: flex; gap: 5px; overflow-x: auto; padding-bottom: 2px; }
+/* Compacte beheer-balk (undo/vrijworp/helft/einde) — gelijkmatig uitgelijnd raster */
+.sk-toolbar { flex: 0 0 auto; display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
 .sk-toolbar .tb {
-  flex: 0 0 auto; padding: 6px 10px; border: 1px solid var(--line); background: #0a1f14;
-  color: var(--txt); border-radius: 8px; font-size: 0.78rem; white-space: nowrap;
+  padding: 9px 6px; border: 1px solid var(--line); background: #0a1f14; text-align: center;
+  color: var(--txt); border-radius: 8px; font-size: 0.8rem;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .sk-toolbar .tb.home { border-color: var(--home); color: var(--home); }
 .sk-toolbar .tb.away { border-color: var(--away); color: var(--away); }
@@ -101,13 +102,13 @@
 
 /* ── Compacte bediening ── */
 .sk-controls { flex: 0 0 auto; display: flex; flex-direction: column; gap: 5px; }
-.sk-pills { display: flex; gap: 5px; align-items: center; }
+.sk-pills { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
 .pill {
-  flex: 1; padding: 9px 4px; border: 1px solid var(--line); background: #0a1f14; color: var(--txt);
-  border-radius: 8px; font-size: 0.82rem;
+  padding: 10px 4px; border: 1px solid var(--line); background: #0a1f14; color: var(--txt);
+  border-radius: 8px; font-size: 0.82rem; text-align: center;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .pill.on { background: var(--accent); color: #06140d; font-weight: 700; border-color: var(--accent); }
-.pill-sep { width: 1px; align-self: stretch; background: var(--line); margin: 0 2px; }
 .sk-actions { display: flex; gap: 5px; }
 .act { flex: 1; padding: 9px 6px; border: 1px solid var(--line); background: #0a1f14; color: var(--txt); border-radius: 8px; font-size: 0.82rem; }
 .act.warn { background: #2a1016; color: #ffd5e0; border-color: #5a1828; }
