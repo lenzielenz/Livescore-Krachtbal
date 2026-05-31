@@ -3,53 +3,14 @@ $ cross-env NODE_OPTIONS=--no-deprecation next dev
 - Local:         http://localhost:3000
 - Network:       http://192.168.0.65:3000
 - Environments: .env
-✓ Ready in 383ms
+✓ Ready in 373ms
 - Experiments (use with caution):
   ⨯ turbopackServerFastRefresh
 
 [⣷] Pulling schema from database...
 [2K[1G[✓] Pulling schema from database...
-[01:00:06] [33mWARN[39m: [36mNo email adapter provided. Email will be written to console. More info at https://payloadcms.com/docs/email/overview.[39m
- GET /scorekeeper/2 200 in 6.2s (next.js: 3.4s, application-code: 2.8s)
- GET /scorekeeper/2 200 in 813ms (next.js: 12ms, application-code: 801ms)
- POST /api/match/2/action 200 in 3.3s (next.js: 3.1s, application-code: 175ms)
- POST /api/match/2/action 200 in 1280ms (next.js: 1106ms, application-code: 174ms)
- GET /scorekeeper/2 200 in 709ms (next.js: 14ms, application-code: 695ms)
- POST /api/match/2/action 200 in 110ms (next.js: 11ms, application-code: 100ms)
- POST /api/match/2/action 200 in 104ms (next.js: 9ms, application-code: 95ms)
- POST /api/match/2/action 200 in 148ms (next.js: 9ms, application-code: 139ms)
- POST /api/match/2/action 200 in 93ms (next.js: 9ms, application-code: 84ms)
- POST /api/match/2/action 200 in 111ms (next.js: 8ms, application-code: 103ms)
- POST /api/match/2/action 200 in 129ms (next.js: 8ms, application-code: 121ms)
- POST /api/match/2/action 200 in 106ms (next.js: 9ms, application-code: 97ms)
- POST /api/match/2/action 200 in 131ms (next.js: 9ms, application-code: 123ms)
- POST /api/match/2/action 200 in 141ms (next.js: 9ms, application-code: 132ms)
- POST /api/match/2/action 200 in 121ms (next.js: 10ms, application-code: 111ms)
- POST /api/match/2/action 200 in 145ms (next.js: 9ms, application-code: 136ms)
- POST /api/match/2/action 200 in 111ms (next.js: 9ms, application-code: 102ms)
- POST /api/match/2/action 200 in 130ms (next.js: 8ms, application-code: 122ms)
- POST /api/match/2/action 200 in 118ms (next.js: 9ms, application-code: 109ms)
- POST /api/match/2/action 200 in 125ms (next.js: 11ms, application-code: 114ms)
- POST /api/match/2/action 200 in 86ms (next.js: 8ms, application-code: 78ms)
- POST /api/match/2/action 200 in 85ms (next.js: 2ms, application-code: 83ms)
- POST /api/match/2/action 200 in 101ms (next.js: 10ms, application-code: 91ms)
- POST /api/match/2/action 200 in 114ms (next.js: 2ms, application-code: 112ms)
- POST /api/match/2/action 200 in 112ms (next.js: 8ms, application-code: 104ms)
- POST /api/match/2/action 200 in 70ms (next.js: 1765µs, application-code: 68ms)
- POST /api/match/2/action 200 in 121ms (next.js: 8ms, application-code: 113ms)
-✓ Compiled in 1ms
-Generating import map
-No new imports found, skipping writing import map
- GET /scorekeeper/2 200 in 1086ms (next.js: 87ms, application-code: 1000ms)
-Generating import map
-No new imports found, skipping writing import map
- GET /scorekeeper/2 200 in 968ms (next.js: 97ms, application-code: 871ms)
-Generating import map
-No new imports found, skipping writing import map
- GET /scorekeeper/2 200 in 1143ms (next.js: 102ms, application-code: 1041ms)
-Generating import map
-No new imports found, skipping writing import map
- GET /scorekeeper/2 200 in 965ms (next.js: 123ms, application-code: 842ms)
- POST /api/match/2/action 200 in 253ms (next.js: 98ms, application-code: 155ms)
- POST /api/match/2/action 200 in 71ms (next.js: 1902µs, application-code: 69ms)
- POST /api/match/2/action 200 in 96ms (next.js: 8ms, application-code: 87ms)
+[01:06:36] [33mWARN[39m: [36mNo email adapter provided. Email will be written to console. More info at https://payloadcms.com/docs/email/overview.[39m
+ GET /scorekeeper/2 200 in 757ms (next.js: 14ms, application-code: 743ms)
+ GET /scorekeeper/2 200 in 7.2s (next.js: 2.6s, application-code: 4.6s)
+ GET /scorekeeper/2 200 in 6.3s (next.js: 1764ms, application-code: 4.6s)
+✓ Compiled in 12ms
