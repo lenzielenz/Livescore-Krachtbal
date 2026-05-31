@@ -376,6 +376,70 @@ export interface MatchState {
   } | null
 }
 
+export interface ShotPoint {
+  x: number
+  y: number
+  outcome: string
+  type: ThrowType
+  playerId: number
+  shirtNumber: number
+  teamSide: TeamSide
+}
+
+/** Statistiek-aggregaten + shot map-punten voor de matchdetailpagina. */
+export async function buildMatchStats(payload: Payload, matchId: number) {
+  const { homeId } = await loadMatch(payload, matchId)
+  const throwsRes = await payload.find({
+    collection: 'throws',
+    where: { match: { equals: matchId } },
+    sort: 'createdAt',
+    depth: 1,
+    limit: 2000,
+  })
+  const possRes = await payload.find({
+    collection: 'possessions',
+    where: { match: { equals: matchId } },
+    depth: 0,
+    limit: 1000,
+  })
+  const possById = new Map(possRes.docs.map((p) => [p.id, p]))
+
+  const stat: import('./stats').StatThrow[] = []
+  const shots: ShotPoint[] = []
+
+  for (const t of throwsRes.docs) {
+    const possId = typeof t.possession === 'object' ? t.possession.id : t.possession
+    const allowed = possById.get(possId)?.throwsAllowed ?? 1
+    const player = typeof t.player === 'object' && t.player ? t.player : null
+    const teamId = typeof t.team === 'object' ? t.team.id : t.team
+    const side = sideOfTeam(teamId, homeId)
+    stat.push({
+      playerId: player?.id ?? 0,
+      playerName: player?.name ?? '—',
+      shirtNumber: player?.shirtNumber ?? 0,
+      teamSide: side,
+      throwNumber: t.throwNumber,
+      isLastThrow: isTerminalOutcome(t.outcome) || t.throwNumber >= allowed,
+      type: t.type,
+      outcome: t.outcome,
+      distance: t.distance ?? null,
+      zone: t.zone ?? null,
+    })
+    shots.push({
+      x: t.landingX,
+      y: t.landingY,
+      outcome: t.outcome,
+      type: t.type,
+      playerId: player?.id ?? 0,
+      shirtNumber: player?.shirtNumber ?? 0,
+      teamSide: side,
+    })
+  }
+
+  const { aggregateStats } = await import('./stats')
+  return { stats: aggregateStats(stat), shots }
+}
+
 export interface TimelineItem {
   id: string
   kind: 'goal' | 'cross' | 'timeout' | 'half_start' | 'half_end' | 'referee_stop'

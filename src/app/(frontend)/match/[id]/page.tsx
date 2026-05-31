@@ -1,8 +1,9 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
+import { MatchStats } from '@/components/MatchStats'
 import { Scoreboard } from '@/components/Scoreboard'
-import { buildMatchState, buildTimeline } from '@/lib/match-engine'
+import { buildMatchState, buildMatchStats, buildTimeline } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
 
 export const dynamic = 'force-dynamic'
@@ -13,9 +14,13 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   if (!Number.isFinite(matchId)) notFound()
 
   const payload = await getPayloadClient()
-  let state, timeline
+  let state, timeline, stats
   try {
-    ;[state, timeline] = await Promise.all([buildMatchState(payload, matchId), buildTimeline(payload, matchId)])
+    ;[state, timeline, stats] = await Promise.all([
+      buildMatchState(payload, matchId),
+      buildTimeline(payload, matchId),
+      buildMatchStats(payload, matchId),
+    ])
   } catch {
     notFound()
   }
@@ -26,6 +31,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
         ← Alle wedstrijden
       </Link>
       <Scoreboard matchId={matchId} initial={{ state, timeline }} />
+      <MatchStats stats={stats.stats} shots={stats.shots} teams={{ home: state.teams.home.name, away: state.teams.away.name }} />
     </div>
   )
 }
