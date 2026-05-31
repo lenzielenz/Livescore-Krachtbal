@@ -145,9 +145,9 @@ export function FieldSchema({
       </text>
       {/* Speelveld */}
       <rect x={0} y={0} width={W} height={H} fill="#0f3d27" stroke="#e8f5ee" strokeWidth={1.5} />
-      {/* Doelgebieden */}
-      <rect x={0} y={0} width={W} height={HOME_GOAL_Y} fill="#ffffff" opacity={0.06} />
-      <rect x={0} y={AWAY_GOAL_Y} width={W} height={H - AWAY_GOAL_Y} fill="#ffffff" opacity={0.06} />
+      {/* Doelgebieden — gekleurd in de kleur van de ploeg die ER NAARTOE aanvalt */}
+      <rect x={0} y={0} width={W} height={HOME_GOAL_Y} fill={ends?.top?.color ?? '#ffffff'} opacity={ends?.top ? 0.22 : 0.06} />
+      <rect x={0} y={AWAY_GOAL_Y} width={W} height={H - AWAY_GOAL_Y} fill={ends?.bottom?.color ?? '#ffffff'} opacity={ends?.bottom ? 0.22 : 0.06} />
       {/* Lijnen */}
       <line x1={0} y1={HOME_GOAL_Y} x2={W} y2={HOME_GOAL_Y} stroke="#e8f5ee" strokeWidth={1.5} />
       <line x1={0} y1={AWAY_GOAL_Y} x2={W} y2={AWAY_GOAL_Y} stroke="#e8f5ee" strokeWidth={1.5} />
@@ -174,14 +174,20 @@ export function FieldSchema({
       ))}
 
       {ends?.top && (
-        <text x={W / 2} y={13} fontSize={8.5} textAnchor="middle" fill={ends.top.color} fontWeight={700}>
-          ↑ {ends.top.text}
-        </text>
+        <g>
+          <text x={W / 2} y={11} fontSize={13} textAnchor="middle" fill={ends.top.color} fontWeight={900}>⬆</text>
+          <text x={W / 2} y={20} fontSize={8} textAnchor="middle" fill={ends.top.color} fontWeight={800}>
+            {ends.top.text}
+          </text>
+        </g>
       )}
       {ends?.bottom && (
-        <text x={W / 2} y={H - 6} fontSize={8.5} textAnchor="middle" fill={ends.bottom.color} fontWeight={700}>
-          {ends.bottom.text} ↓
-        </text>
+        <g>
+          <text x={W / 2} y={H - 12} fontSize={8} textAnchor="middle" fill={ends.bottom.color} fontWeight={800}>
+            {ends.bottom.text}
+          </text>
+          <text x={W / 2} y={H - 2} fontSize={13} textAnchor="middle" fill={ends.bottom.color} fontWeight={900}>⬇</text>
+        </g>
       )}
     </svg>
   )

@@ -97,6 +97,33 @@
 .sk-btn.home { border-color: var(--home); color: var(--home); }
 .sk-btn.away { border-color: var(--away); color: var(--away); }
 
+/* ── Goal-flash ── */
+.sk-goal-flash {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background: radial-gradient(circle at center, color-mix(in srgb, var(--flash) 35%, #06140d) 0%, rgba(6, 20, 13, 0.92) 70%);
+  color: var(--flash);
+  pointer-events: none;
+  animation: goalpop 1.8s ease-out forwards;
+}
+.sk-goal-big { font-size: 3rem; font-weight: 900; letter-spacing: 0.05em; text-shadow: 0 0 24px var(--flash); }
+.sk-goal-pts { font-size: 5rem; font-weight: 900; line-height: 1; }
+.sk-goal-team { font-size: 1.4rem; font-weight: 700; color: var(--txt); }
+
+@keyframes goalpop {
+  0% { opacity: 0; transform: scale(0.7); }
+  12% { opacity: 1; transform: scale(1.05); }
+  20% { transform: scale(1); }
+  80% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
 @media (max-width: 480px) {
   .sk-num { width: 40px; height: 40px; font-size: 1.1rem; }
   .sk-to { min-width: 48px; }

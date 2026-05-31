@@ -141,6 +141,15 @@ export async function recordThrow(payload: Payload, input: RecordThrowInput) {
   })
   const throwNumber = existing.docs.length + 1
   const last = existing.docs[existing.docs.length - 1]
+
+  // Een speler mag niet twee worpen na elkaar doen binnen hetzelfde balbezit.
+  if (last) {
+    const lastPlayerId = typeof last.player === 'object' ? last.player.id : last.player
+    if (lastPlayerId === input.playerId) {
+      throw new Error('Dezelfde speler mag niet 2 worpen na elkaar doen.')
+    }
+  }
+
   const origin: Point = last
     ? { x: last.landingX, y: last.landingY }
     : { x: open.setupX ?? 0.5, y: open.setupY ?? 0.5 }
@@ -414,6 +423,8 @@ export interface MatchState {
     throwsUsed: number
     nextThrowNumber: number
     dir: AttackDir
+    /** Speler van de vorige worp in dit balbezit — mag niet 2× na elkaar werpen. */
+    lastPlayerId: number | null
   } | null
 }
 
@@ -735,18 +746,25 @@ export async function buildMatchState(payload: Payload, matchId: number): Promis
   if (open) {
     const teamId = typeof open.team === 'object' ? open.team.id : open.team
     const side = sideOfTeam(teamId, homeId)
-    const used = await payload.count({
+    const inPoss = await payload.find({
       collection: 'throws',
       where: { possession: { equals: open.id } },
+      sort: '-throwNumber',
+      depth: 0,
+      limit: 1,
     })
+    const used = inPoss.totalDocs
+    const lastThrow = inPoss.docs[0]
+    const lastPlayerId = lastThrow ? (typeof lastThrow.player === 'object' ? lastThrow.player.id : lastThrow.player) : null
     possession = {
       side,
       teamId,
       setupSide: open.setupSide as SetupSide,
       throwsAllowed: open.throwsAllowed ?? 1,
-      throwsUsed: used.totalDocs,
-      nextThrowNumber: used.totalDocs + 1,
+      throwsUsed: used,
+      nextThrowNumber: used + 1,
       dir: (open.dir as AttackDir) ?? attackDirForSide(side, half),
+      lastPlayerId,
     }
   }
 

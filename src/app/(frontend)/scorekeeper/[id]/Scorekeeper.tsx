@@ -38,6 +38,7 @@ export function Scorekeeper({
   const [recentTaps, setRecentTaps] = useState<FieldMarker[]>([])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [goalFlash, setGoalFlash] = useState<{ points: number; color: string; team: string } | null>(null)
 
   const [clock, setClock] = useState(initialState.match.clockSeconds)
   const baseRef = useRef({ seconds: initialState.match.clockSeconds, running: initialState.match.clockRunning, at: Date.now() })
@@ -69,8 +70,10 @@ export function Scorekeeper({
         const data = await res.json()
         if (!res.ok) throw new Error(data.error ?? 'Actie mislukt')
         setState((data.state as MatchState) ?? (data as MatchState))
+        return data as { outcome?: string; state?: MatchState }
       } catch (e) {
         setError((e as Error).message)
+        return null
       } finally {
         setBusy(false)
       }
@@ -122,7 +125,8 @@ export function Scorekeeper({
         },
       ])
 
-      await act({
+      const scoringSide = poss.side
+      const result = await act({
         action: 'throw',
         playerId: selectedPlayer,
         type: throwType,
@@ -132,11 +136,19 @@ export function Scorekeeper({
         touchedBeforeOut,
         gameClock: Math.floor(clock),
       })
+      if (result?.outcome === 'goal') {
+        setGoalFlash({
+          points: throwType === 'rug' ? 2 : 1,
+          color: scoringSide === 'home' ? HOME_COLOR : AWAY_COLOR,
+          team: scoringSide === 'home' ? state.teams.home.name : state.teams.away.name,
+        })
+        window.setTimeout(() => setGoalFlash(null), 1800)
+      }
       setTapMode('ground')
       setThrowType('nek')
       setSelectedPlayer(null)
     },
-    [state.match.status, poss, selectedPlayer, tapMode, throwType, clock, act],
+    [state.match.status, poss, selectedPlayer, tapMode, throwType, clock, act, state.teams],
   )
 
   const toggleClock = () =>
@@ -161,23 +173,34 @@ export function Scorekeeper({
     const active = possSide === side
     return (
       <div className={`sk-col sk-col-${side} ${active ? 'active' : 'dim'}`}>
-        {players.map((p) => (
-          <button
-            key={p.id}
-            className={`sk-num ${selectedPlayer === p.id ? 'on' : ''}`}
-            disabled={!active || !isLive}
-            onClick={() => setSelectedPlayer(p.id)}
-            title={p.name}
-          >
-            {p.shirtNumber}
-          </button>
-        ))}
+        {players.map((p) => {
+          const justThrew = active && poss?.lastPlayerId === p.id
+          return (
+            <button
+              type="button"
+              key={p.id}
+              className={`sk-num ${selectedPlayer === p.id ? 'on' : ''}`}
+              disabled={!active || !isLive || justThrew}
+              onClick={() => setSelectedPlayer(p.id)}
+              title={justThrew ? `${p.name} — net geworpen, niet 2× na elkaar` : p.name}
+            >
+              {p.shirtNumber}
+            </button>
+          )
+        })}
       </div>
     )
   }
 
   return (
     <div className="sk">
+      {goalFlash && (
+        <div className="sk-goal-flash" style={{ ['--flash' as string]: goalFlash.color }}>
+          <div className="sk-goal-big">DOELPUNT</div>
+          <div className="sk-goal-pts">+{goalFlash.points}</div>
+          <div className="sk-goal-team">{goalFlash.team}</div>
+        </div>
+      )}
       <header className="sk-top">
         <button className="sk-to home" disabled={busy || !isLive} onClick={() => act({ action: 'timeout', teamId: state.teams.home.id })}>
           <span className="sk-to-lbl">time-out</span>
