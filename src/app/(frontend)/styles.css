@@ -126,3 +126,7 @@ a {
 .back-link:hover {
   color: var(--txt);
 }
+
+.sheet-cta {
+  margin-top: 16px;
+}

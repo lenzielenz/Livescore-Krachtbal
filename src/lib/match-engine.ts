@@ -376,6 +376,117 @@ export interface MatchState {
   } | null
 }
 
+export interface SheetGoal {
+  half: number
+  gameClock: number
+  side: TeamSide
+  shirtNumber: number
+  playerName: string
+  type: ThrowType
+  points: number
+}
+
+export interface MatchSheet {
+  match: { id: number; title: string | null; date: string; category: Category; status: string }
+  teams: { home: { id: number; name: string }; away: { id: number; name: string } }
+  rosters: { home: { shirtNumber: number; name: string }[]; away: { shirtNumber: number; name: string }[] }
+  goals: SheetGoal[]
+  halfScores: { home: [number, number]; away: [number, number] }
+  totals: { home: number; away: number }
+  crosses: { home: number; away: number }
+  timeouts: { home: [number, number]; away: [number, number] }
+}
+
+/** Geldig digitaal aantekenblad: opstellingen, doelpunten, helft-scores, time-outs, kruisjes. */
+export async function buildMatchSheet(payload: Payload, matchId: number): Promise<MatchSheet> {
+  const { match, homeId, awayId } = await loadMatch(payload, matchId)
+  const [home, away] = await Promise.all([
+    payload.findByID({ collection: 'teams', id: homeId, depth: 0 }),
+    payload.findByID({ collection: 'teams', id: awayId, depth: 0 }),
+  ])
+
+  const playersRes = await payload.find({
+    collection: 'players',
+    where: { team: { in: [homeId, awayId] } },
+    sort: 'shirtNumber',
+    depth: 0,
+    limit: 200,
+  })
+  const rosters = { home: [] as { shirtNumber: number; name: string }[], away: [] as { shirtNumber: number; name: string }[] }
+  for (const p of playersRes.docs) {
+    const tId = typeof p.team === 'object' ? p.team.id : p.team
+    ;(tId === homeId ? rosters.home : rosters.away).push({ shirtNumber: p.shirtNumber, name: p.name })
+  }
+
+  const throwsRes = await payload.find({
+    collection: 'throws',
+    where: { match: { equals: matchId } },
+    sort: 'createdAt',
+    depth: 1,
+    limit: 2000,
+  })
+
+  const goals: SheetGoal[] = []
+  const halfScores = { home: [0, 0] as [number, number], away: [0, 0] as [number, number] }
+  const crosses = { home: 0, away: 0 }
+
+  for (const t of throwsRes.docs) {
+    const teamId = typeof t.team === 'object' ? t.team.id : t.team
+    const side = sideOfTeam(teamId, homeId)
+    const halfIdx = (t.period ?? 1) === 2 ? 1 : 0
+    if (t.outcome === 'goal') {
+      const points = t.type === 'rug' ? 2 : 1
+      const player = typeof t.player === 'object' && t.player ? t.player : null
+      goals.push({
+        half: t.period,
+        gameClock: t.gameClock,
+        side,
+        shirtNumber: player?.shirtNumber ?? 0,
+        playerName: player?.name ?? '—',
+        type: t.type,
+        points,
+      })
+      halfScores[side][halfIdx] += points
+    } else if (t.outcome === 'out_back' && !t.touchedBeforeOut) {
+      crosses[side] += 1
+    }
+  }
+
+  const timeoutsRes = await payload.find({
+    collection: 'match-events',
+    where: { and: [{ match: { equals: matchId } }, { type: { equals: 'timeout' } }] },
+    depth: 0,
+    limit: 200,
+  })
+  const timeouts = { home: [0, 0] as [number, number], away: [0, 0] as [number, number] }
+  for (const e of timeoutsRes.docs) {
+    const tId = typeof e.team === 'object' && e.team ? e.team.id : e.team
+    if (!tId) continue
+    const side = sideOfTeam(tId, homeId)
+    timeouts[side][(e.half ?? 1) === 2 ? 1 : 0] += 1
+  }
+
+  return {
+    match: {
+      id: match.id,
+      title: match.title ?? null,
+      date: match.date,
+      category: match.category as Category,
+      status: match.status,
+    },
+    teams: { home: { id: home.id, name: home.name }, away: { id: away.id, name: away.name } },
+    rosters,
+    goals,
+    halfScores,
+    totals: {
+      home: halfScores.home[0] + halfScores.home[1],
+      away: halfScores.away[0] + halfScores.away[1],
+    },
+    crosses,
+    timeouts,
+  }
+}
+
 export interface ShotPoint {
   x: number
   y: number

@@ -31,6 +31,11 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
         ← Alle wedstrijden
       </Link>
       <Scoreboard matchId={matchId} initial={{ state, timeline }} />
+      <p className="sheet-cta">
+        <Link href={`/match/${matchId}/sheet`} className="back-link">
+          📋 Wedstrijdblad (print / PDF / JSON)
+        </Link>
+      </p>
       <MatchStats stats={stats.stats} shots={stats.shots} teams={{ home: state.teams.home.name, away: state.teams.away.name }} />
     </div>
   )
