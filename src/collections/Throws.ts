@@ -6,6 +6,7 @@ export const THROW_TYPE_OPTIONS = [
 ] as const
 
 export const THROW_OUTCOME_OPTIONS = [
+  { label: 'In het veld (doorspelen)', value: 'in_field' },
   { label: 'Doelpunt', value: 'goal' },
   { label: 'Gevangen', value: 'caught' },
   { label: 'Buiten zijlijn', value: 'out_side' },

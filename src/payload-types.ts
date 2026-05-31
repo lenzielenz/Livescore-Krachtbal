@@ -255,7 +255,7 @@ export interface Throw {
   player: number | Player;
   throwNumber: number;
   type: 'nek' | 'rug';
-  outcome: 'goal' | 'caught' | 'out_side' | 'out_back';
+  outcome: 'in_field' | 'goal' | 'caught' | 'out_side' | 'out_back';
   landingX: number;
   landingY: number;
   /**
