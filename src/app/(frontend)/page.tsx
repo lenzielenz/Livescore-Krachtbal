@@ -1,59 +1,86 @@
-import { headers as getHeaders } from 'next/headers.js'
-import Image from 'next/image'
-import { getPayload } from 'payload'
-import React from 'react'
-import { fileURLToPath } from 'url'
+import Link from 'next/link'
 
-import config from '@/payload.config'
-import './styles.css'
+import { buildMatchState } from '@/lib/match-engine'
+import { getPayloadClient } from '@/lib/payload-client'
+
+export const dynamic = 'force-dynamic'
+
+type Summary = {
+  id: number
+  status: string
+  date: string
+  home: string
+  away: string
+  score: { home: number; away: number }
+}
 
 export default async function HomePage() {
-  const headers = await getHeaders()
-  const payloadConfig = await config
-  const payload = await getPayload({ config: payloadConfig })
-  const { user } = await payload.auth({ headers })
+  const payload = await getPayloadClient()
+  const matches = await payload.find({ collection: 'matches', sort: '-date', depth: 0, limit: 50 })
 
-  const fileURL = `vscode://file/${fileURLToPath(import.meta.url)}`
+  const summaries: Summary[] = await Promise.all(
+    matches.docs.map(async (m) => {
+      const s = await buildMatchState(payload, m.id)
+      return {
+        id: m.id,
+        status: s.match.status,
+        date: m.date,
+        home: s.teams.home.name,
+        away: s.teams.away.name,
+        score: s.score,
+      }
+    }),
+  )
+
+  const live = summaries.filter((s) => s.status === 'live')
+  const scheduled = summaries.filter((s) => s.status === 'scheduled')
+  const finished = summaries.filter((s) => s.status === 'finished')
 
   return (
-    <div className="home">
-      <div className="content">
-        <picture>
-          <source srcSet="https://raw.githubusercontent.com/payloadcms/payload/main/packages/ui/src/assets/payload-favicon.svg" />
-          <Image
-            alt="Payload Logo"
-            height={65}
-            src="https://raw.githubusercontent.com/payloadcms/payload/main/packages/ui/src/assets/payload-favicon.svg"
-            width={65}
-          />
-        </picture>
-        {!user && <h1>Welcome to your new project.</h1>}
-        {user && <h1>Welcome back, {user.email}</h1>}
-        <div className="links">
-          <a
-            className="admin"
-            href={payloadConfig.routes.admin}
-            rel="noopener noreferrer"
-            target="_blank"
-          >
-            Go to admin panel
-          </a>
-          <a
-            className="docs"
-            href="https://payloadcms.com/docs"
-            rel="noopener noreferrer"
-            target="_blank"
-          >
-            Documentation
-          </a>
-        </div>
-      </div>
-      <div className="footer">
-        <p>Update this page by editing</p>
-        <a className="codeLink" href={fileURL}>
-          <code>app/(frontend)/page.tsx</code>
-        </a>
-      </div>
+    <div className="site">
+      <header className="site-header">
+        <h1>
+          <span className="brand">Krachtbal</span> Live
+        </h1>
+        <nav className="site-nav">
+          <Link href="/live">Live</Link>
+          <Link href="/admin">Beheer</Link>
+        </nav>
+      </header>
+
+      <Section title="Live" matches={live} emptyText="Geen wedstrijden live." />
+      <Section title="Gepland" matches={scheduled} emptyText="Geen geplande wedstrijden." />
+      <Section title="Afgelopen" matches={finished} emptyText="Geen afgelopen wedstrijden." />
     </div>
+  )
+}
+
+function Section({ title, matches, emptyText }: { title: string; matches: Summary[]; emptyText: string }) {
+  return (
+    <section>
+      <h2 className="section-title">{title}</h2>
+      {matches.length === 0 ? (
+        <p className="empty">{emptyText}</p>
+      ) : (
+        <div className="match-list">
+          {matches.map((m) => (
+            <Link href={`/match/${m.id}`} key={m.id} className="match-card">
+              <span className="home">{m.home}</span>
+              <span className="mid">
+                {m.status === 'scheduled' ? (
+                  <span className="mc-meta">{new Date(m.date).toLocaleDateString('nl-BE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+                ) : (
+                  <>
+                    <div className="mc-score">{m.score.home} – {m.score.away}</div>
+                    {m.status === 'live' && <span className="badge-live">LIVE</span>}
+                  </>
+                )}
+              </span>
+              <span className="away">{m.away}</span>
+            </Link>
+          ))}
+        </div>
+      )}
+    </section>
   )
 }

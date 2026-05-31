@@ -376,6 +376,83 @@ export interface MatchState {
   } | null
 }
 
+export interface TimelineItem {
+  id: string
+  kind: 'goal' | 'cross' | 'timeout' | 'half_start' | 'half_end' | 'referee_stop'
+  half: number
+  gameClock: number
+  side: TeamSide | null
+  label: string
+}
+
+/** Chronologische tijdlijn (doelpunten, kruisjes, time-outs, helft-grenzen). */
+export async function buildTimeline(payload: Payload, matchId: number): Promise<TimelineItem[]> {
+  const { homeId } = await loadMatch(payload, matchId)
+
+  const throwsRes = await payload.find({
+    collection: 'throws',
+    where: { match: { equals: matchId } },
+    sort: 'createdAt',
+    depth: 1,
+    limit: 1000,
+  })
+  const eventsRes = await payload.find({
+    collection: 'match-events',
+    where: { match: { equals: matchId } },
+    sort: 'createdAt',
+    depth: 0,
+    limit: 1000,
+  })
+
+  const items: (TimelineItem & { _t: string })[] = []
+
+  for (const t of throwsRes.docs) {
+    const teamId = typeof t.team === 'object' ? t.team.id : t.team
+    const side = sideOfTeam(teamId, homeId)
+    if (t.outcome === 'goal') {
+      const pts = t.type === 'rug' ? 2 : 1
+      const player = typeof t.player === 'object' && t.player ? t.player : null
+      const who = player ? `#${player.shirtNumber} ${player.name}` : ''
+      items.push({
+        id: `t${t.id}`,
+        kind: 'goal',
+        half: t.period,
+        gameClock: t.gameClock,
+        side,
+        label: `Doelpunt +${pts} (${t.type}) ${who}`.trim(),
+        _t: t.createdAt,
+      })
+    } else if (t.outcome === 'out_back' && !t.touchedBeforeOut) {
+      items.push({
+        id: `c${t.id}`,
+        kind: 'cross',
+        half: t.period,
+        gameClock: t.gameClock,
+        side,
+        label: 'Kruisje',
+        _t: t.createdAt,
+      })
+    }
+  }
+
+  for (const e of eventsRes.docs) {
+    const teamId = typeof e.team === 'object' && e.team ? e.team.id : e.team
+    const side = teamId ? sideOfTeam(teamId, homeId) : null
+    const label =
+      e.type === 'timeout'
+        ? 'Time-out'
+        : e.type === 'referee_stop'
+          ? 'Scheidsrechter-onderbreking'
+          : e.type === 'half_start'
+            ? `Start helft ${e.half}`
+            : `Einde helft ${e.half}`
+    items.push({ id: `e${e.id}`, kind: e.type, half: e.half, gameClock: e.gameClock, side, label, _t: e.createdAt })
+  }
+
+  items.sort((a, b) => (a._t < b._t ? -1 : a._t > b._t ? 1 : 0))
+  return items.map(({ _t, ...rest }) => rest)
+}
+
 export async function buildMatchState(payload: Payload, matchId: number): Promise<MatchState> {
   const { match, homeId, awayId } = await loadMatch(payload, matchId)
   const [home, away] = await Promise.all([
