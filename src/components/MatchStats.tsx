@@ -146,23 +146,25 @@ export function MatchStats({
                   <th>#</th>
                   <th>Speler</th>
                   <th title="Worpen">W</th>
+                  <th title="Worpen per soort: nek / rug">N/R</th>
                   <th title="Doelpunten (nek/rug)">D</th>
                   <th title="Richting links/midden/rechts">L/M/R</th>
                   <th title="Doelpogingen — raak / gegaan voor goal">Doel</th>
                   <th title="Conversie = doelpunten / doelpogingen">Conv</th>
                   <th title="Geforceerd / balverlies (gevangen + buiten)">Gefor.</th>
-                  <th title="Score = punten − gevangen (gevangen telt negatief)">Sco</th>
+                  <th title="Score = punten − geforceerd (gevangen én buiten tellen negatief)">Sco</th>
                 </tr>
               </thead>
               <tbody>
                 {stats.players.length === 0 && (
-                  <tr><td colSpan={9} className="empty">Nog geen worpen geregistreerd.</td></tr>
+                  <tr><td colSpan={10} className="empty">Nog geen worpen geregistreerd.</td></tr>
                 )}
                 {stats.players.map((p) => (
                   <tr key={p.playerId} className={`side-${p.teamSide}`}>
                     <td>{p.shirtNumber}</td>
                     <td>{p.playerName}</td>
                     <td>{p.throws}</td>
+                    <td>{p.byType.nek}/{p.byType.rug}</td>
                     <td>{p.goals.total} ({p.goals.nek}/{p.goals.rug})</td>
                     <td>{p.zones.links}/{p.zones.midden}/{p.zones.rechts}</td>
                     <td>{p.goals.total}/{p.goalAttempts}</td>
@@ -209,8 +211,8 @@ export function MatchStats({
                           <span className="pl-val">{p.zones.links}/{p.zones.midden}/{p.zones.rechts}</span>
                         </div>
                         <div className="pl-metric">
-                          <span className="pl-lbl">Nek / Rug</span>
-                          <span className="pl-val">{p.goals.nek} / {p.goals.rug}</span>
+                          <span className="pl-lbl">Nek / Rug (worpen)</span>
+                          <span className="pl-val">{p.byType.nek} / {p.byType.rug} <em>({p.goals.nek}/{p.goals.rug} goal)</em></span>
                         </div>
                         <div className="pl-metric">
                           <span className="pl-lbl">Geforceerd</span>

@@ -49,18 +49,28 @@ describe('aggregateStats', () => {
     expect(players[0].ground).toBe(2)
   })
 
-  it('score = punten − gevangen (gevangen telt negatief)', () => {
+  it('score = punten − geforceerd (gevangen én buiten tellen negatief)', () => {
     const { players } = aggregateStats([
       mk({ type: 'rug', outcome: 'goal' }), // +2
-      mk({ outcome: 'caught' }), // -1
-      mk({ outcome: 'caught' }), // -1
+      mk({ outcome: 'caught' }), // -1 (gevangen)
+      mk({ outcome: 'out_side' }), // -1 (buiten)
     ])
+    expect(players[0].lost).toBe(2)
     expect(players[0].score).toBe(0)
   })
 
-  it('negatieve score bij enkel gevangen worpen', () => {
-    const { players } = aggregateStats([mk({ outcome: 'caught' }), mk({ outcome: 'caught' })])
+  it('negatieve score bij balverlies', () => {
+    const { players } = aggregateStats([mk({ outcome: 'caught' }), mk({ outcome: 'out_back' })])
     expect(players[0].score).toBe(-2)
+  })
+
+  it('nek/rug worp-splitsing (alle worpen, niet enkel doelpunten)', () => {
+    const { players } = aggregateStats([
+      mk({ type: 'nek', outcome: 'in_field' }),
+      mk({ type: 'nek', outcome: 'goal' }),
+      mk({ type: 'rug', outcome: 'out_side' }),
+    ])
+    expect(players[0].byType).toEqual({ nek: 2, rug: 1 })
   })
 
   it('verdeling 1e / 2e / laatste', () => {

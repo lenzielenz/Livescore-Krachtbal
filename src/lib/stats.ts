@@ -34,9 +34,10 @@ export interface PlayerStats {
   goalAttempts: number
   /** Conversie = doelpunten / doelpogingen (0..1). */
   conversion: number
-  /** Netto bijdrage: doelpunt-punten − gevangen worpen. Een gevangen worp is een fout
-   * (bal in de handen van de tegenstander gegooid) en telt negatief. */
+  /** Netto bijdrage: doelpunt-punten − geforceerd (gevangen + buiten). Balverlies telt negatief. */
   score: number
+  /** Alle worpen opgesplitst per soort (niet enkel doelpunten). */
+  byType: { nek: number; rug: number }
   goals: { nek: number; rug: number; total: number; points: number }
   distance: { avg: number; max: number }
   zones: { links: number; midden: number; rechts: number }
@@ -71,6 +72,7 @@ function emptyPlayer(t: StatThrow): PlayerStats {
     goalAttempts: 0,
     conversion: 0,
     score: 0,
+    byType: { nek: 0, rug: 0 },
     goals: { nek: 0, rug: 0, total: 0, points: 0 },
     distance: { avg: 0, max: 0 },
     zones: { links: 0, midden: 0, rechts: 0 },
@@ -102,6 +104,7 @@ export function aggregateStats(throws: StatThrow[]): MatchStats {
     }
 
     ps.throws += 1
+    ps.byType[t.type] += 1
     if (t.throwNumber === 1) ps.order.first += 1
     if (t.throwNumber === 2) ps.order.second += 1
     if (t.isLastThrow) ps.order.last += 1
@@ -145,10 +148,10 @@ export function aggregateStats(throws: StatThrow[]): MatchStats {
   for (const [id, ps] of byPlayer) {
     const d = distSum.get(id)!
     ps.distance.avg = d.n ? Math.round((d.sum / d.n) * 10) / 10 : 0
-    // Gevangen worpen tellen negatief (fout: bal in de handen gegooid).
-    ps.score = ps.goals.points - ps.caught
-    // Geforceerd / balverlies = gevangen + buiten.
+    // Geforceerd / balverlies = gevangen + buiten (alle worpen die de bal kwijtspelen).
     ps.lost = ps.caught + ps.out
+    // Netto score: doelpunt-punten − geforceerd. Balverlies (gevangen én buiten) telt negatief.
+    ps.score = ps.goals.points - ps.lost
     ps.conversion = ps.goalAttempts ? Math.round((ps.goals.total / ps.goalAttempts) * 100) / 100 : 0
   }
   for (const side of ['home', 'away'] as const) {
