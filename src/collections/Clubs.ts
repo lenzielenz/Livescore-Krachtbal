@@ -1,5 +1,7 @@
 import type { CollectionConfig } from 'payload'
 
+import { isFederationLevel } from '../lib/access'
+
 // Bovenste niveau van de hiërarchie: Club → Ploegen (per categorie) → Spelers.
 export const Clubs: CollectionConfig = {
   slug: 'clubs',
@@ -14,6 +16,9 @@ export const Clubs: CollectionConfig = {
   },
   access: {
     read: () => true,
+    create: ({ req }) => isFederationLevel(req.user),
+    update: ({ req }) => isFederationLevel(req.user),
+    delete: ({ req }) => isFederationLevel(req.user),
   },
   fields: [
     {
@@ -21,6 +26,14 @@ export const Clubs: CollectionConfig = {
       label: 'Naam',
       type: 'text',
       required: true,
+    },
+    {
+      name: 'email',
+      label: 'Contact-e-mail',
+      type: 'email',
+      admin: {
+        description: 'Ontvangt het PDF-wedstrijdblad na indienen.',
+      },
     },
     {
       name: 'logo',

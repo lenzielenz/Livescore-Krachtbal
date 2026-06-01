@@ -71,6 +71,9 @@ export interface Config {
     teams: Team;
     players: Player;
     matches: Match;
+    matchsheets: Matchsheet;
+    officials: Official;
+    sanctions: Sanction;
     possessions: Possession;
     throws: Throw;
     'match-events': MatchEvent;
@@ -87,6 +90,9 @@ export interface Config {
     teams: TeamsSelect<false> | TeamsSelect<true>;
     players: PlayersSelect<false> | PlayersSelect<true>;
     matches: MatchesSelect<false> | MatchesSelect<true>;
+    matchsheets: MatchsheetsSelect<false> | MatchsheetsSelect<true>;
+    officials: OfficialsSelect<false> | OfficialsSelect<true>;
+    sanctions: SanctionsSelect<false> | SanctionsSelect<true>;
     possessions: PossessionsSelect<false> | PossessionsSelect<true>;
     throws: ThrowsSelect<false> | ThrowsSelect<true>;
     'match-events': MatchEventsSelect<false> | MatchEventsSelect<true>;
@@ -101,8 +107,14 @@ export interface Config {
     defaultIDType: number;
   };
   fallbackLocale: null;
-  globals: {};
-  globalsSelect: {};
+  globals: {
+    season: Season;
+    settings: Setting;
+  };
+  globalsSelect: {
+    season: SeasonSelect<false> | SeasonSelect<true>;
+    settings: SettingsSelect<false> | SettingsSelect<true>;
+  };
   locale: null;
   widgets: {
     collections: CollectionsWidget;
@@ -138,6 +150,10 @@ export interface UserAuthOperations {
 export interface Club {
   id: number;
   name: string;
+  /**
+   * Ontvangt het PDF-wedstrijdblad na indienen.
+   */
+  email?: string | null;
   /**
    * Clublogo — wordt professioneel weergegeven op de site.
    */
@@ -188,8 +204,25 @@ export interface Player {
   id: number;
   name: string;
   team: number | Team;
+  /**
+   * Voorkeur-rugnummer. Geen gelijke nummers binnen één ploeg op het blad.
+   */
   shirtNumber: number;
   position?: ('achter' | 'vleugel' | 'barage') | null;
+  /**
+   * Bepaalt de leeftijdscategorie (peildatum 1 januari).
+   */
+  birthDate?: string | null;
+  /**
+   * Enkel de federatie/admin zet dit. Groen = geldig.
+   */
+  vergunningsstatus?: ('geen' | 'aangevraagd' | 'geldig') | null;
+  medischAttest?: boolean | null;
+  /**
+   * Speler mag dan niet één categorie hoger spelen.
+   */
+  hogerSpelenVerbod?: boolean | null;
+  actief?: boolean | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -215,6 +248,176 @@ export interface Match {
   clockSeconds?: number | null;
   clockRunning?: boolean | null;
   clockUpdatedAt?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "matchsheets".
+ */
+export interface Matchsheet {
+  id: number;
+  titel?: string | null;
+  match: number | Match;
+  status: 'concept' | 'vrijgegeven' | 'wedstrijdklaar' | 'bezig' | 'af_te_tekenen' | 'ingediend';
+  assignedReferee?: (number | null) | Official;
+  assignedLinesman?: (number | null) | Official;
+  homeLineup?:
+    | {
+        player: number | Player;
+        rugnummer?: number | null;
+        /**
+         * O-markering: heeft effectief deelgenomen.
+         */
+        deelgenomen?: boolean | null;
+        ibGecontroleerd?: boolean | null;
+        id?: string | null;
+      }[]
+    | null;
+  awayLineup?:
+    | {
+        player: number | Player;
+        rugnummer?: number | null;
+        /**
+         * O-markering: heeft effectief deelgenomen.
+         */
+        deelgenomen?: boolean | null;
+        ibGecontroleerd?: boolean | null;
+        id?: string | null;
+      }[]
+    | null;
+  keuring?: {
+    terrein?: ('ok' | 'niet_ok' | 'nvt') | null;
+    kleedkamers?: ('ok' | 'niet_ok' | 'nvt') | null;
+    douches?: ('ok' | 'niet_ok' | 'nvt') | null;
+    aantekentafel?: ('ok' | 'niet_ok' | 'nvt') | null;
+    scorebord?: ('ok' | 'niet_ok' | 'nvt') | null;
+    grensrechtersvlag?: ('ok' | 'niet_ok' | 'nvt') | null;
+    ehbo?: ('ok' | 'niet_ok' | 'nvt') | null;
+    bal?: ('ok' | 'niet_ok' | 'nvt') | null;
+    kentekenGrensrechter?: ('ok' | 'niet_ok' | 'nvt') | null;
+    verlichting?: ('ok' | 'niet_ok' | 'nvt') | null;
+  };
+  uitsluitingen?:
+    | {
+        player?: (number | null) | Player;
+        naam?: string | null;
+        reden?: string | null;
+        score?: string | null;
+        speeltijd?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  voorbehoud?:
+    | {
+        naam?: string | null;
+        reden?: string | null;
+        score?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  opmerkingen?: string | null;
+  kapiteinThuis?: {
+    akkoord?: boolean | null;
+    naam?: string | null;
+    /**
+     * Data-URL van de getekende handtekening.
+     */
+    handtekening?: string | null;
+    tijdstip?: string | null;
+  };
+  kapiteinUit?: {
+    akkoord?: boolean | null;
+    naam?: string | null;
+    /**
+     * Data-URL van de getekende handtekening.
+     */
+    handtekening?: string | null;
+    tijdstip?: string | null;
+  };
+  scheidsrechter?: {
+    akkoord?: boolean | null;
+    naam?: string | null;
+    /**
+     * Data-URL van de getekende handtekening.
+     */
+    handtekening?: string | null;
+    tijdstip?: string | null;
+  };
+  /**
+   * Automatisch: elke manuele overschrijving (wie/wanneer/wat).
+   */
+  overrideLog?:
+    | {
+        wie?: (number | null) | User;
+        wanneer?: string | null;
+        wat?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "officials".
+ */
+export interface Official {
+  id: number;
+  name: string;
+  type: 'scheidsrechter' | 'grensrechter' | 'aantekenaar' | 'tijdopnemer';
+  federationNumber?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "users".
+ */
+export interface User {
+  id: number;
+  name?: string | null;
+  roles?:
+    | ('admin' | 'federatie' | 'scheidsrechter' | 'club-beheerder' | 'kapitein' | 'scorekeeper' | 'viewer')[]
+    | null;
+  /**
+   * Enkel relevant voor de rol "Club-beheerder".
+   */
+  club?: (number | null) | Club;
+  updatedAt: string;
+  createdAt: string;
+  email: string;
+  resetPasswordToken?: string | null;
+  resetPasswordExpiration?: string | null;
+  salt?: string | null;
+  hash?: string | null;
+  loginAttempts?: number | null;
+  lockUntil?: string | null;
+  sessions?:
+    | {
+        id: string;
+        createdAt?: string | null;
+        expiresAt: string;
+      }[]
+    | null;
+  password?: string | null;
+  collection: 'users';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "sanctions".
+ */
+export interface Sanction {
+  id: number;
+  player: number | Player;
+  aantal: number;
+  datum?: string | null;
+  /**
+   * Leeg = blijft open. Vanaf deze datum telt het knipje niet meer mee.
+   */
+  vervallenOp?: string | null;
+  reden?: string | null;
+  bron?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -294,33 +497,6 @@ export interface MatchEvent {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "users".
- */
-export interface User {
-  id: number;
-  name?: string | null;
-  roles?: ('admin' | 'scorekeeper' | 'viewer')[] | null;
-  updatedAt: string;
-  createdAt: string;
-  email: string;
-  resetPasswordToken?: string | null;
-  resetPasswordExpiration?: string | null;
-  salt?: string | null;
-  hash?: string | null;
-  loginAttempts?: number | null;
-  lockUntil?: string | null;
-  sessions?:
-    | {
-        id: string;
-        createdAt?: string | null;
-        expiresAt: string;
-      }[]
-    | null;
-  password?: string | null;
-  collection: 'users';
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
 export interface PayloadKv {
@@ -358,6 +534,18 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'matches';
         value: number | Match;
+      } | null)
+    | ({
+        relationTo: 'matchsheets';
+        value: number | Matchsheet;
+      } | null)
+    | ({
+        relationTo: 'officials';
+        value: number | Official;
+      } | null)
+    | ({
+        relationTo: 'sanctions';
+        value: number | Sanction;
       } | null)
     | ({
         relationTo: 'possessions';
@@ -427,6 +615,7 @@ export interface PayloadMigration {
  */
 export interface ClubsSelect<T extends boolean = true> {
   name?: T;
+  email?: T;
   logo?: T;
   updatedAt?: T;
   createdAt?: T;
@@ -452,6 +641,11 @@ export interface PlayersSelect<T extends boolean = true> {
   team?: T;
   shirtNumber?: T;
   position?: T;
+  birthDate?: T;
+  vergunningsstatus?: T;
+  medischAttest?: T;
+  hogerSpelenVerbod?: T;
+  actief?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -473,6 +667,127 @@ export interface MatchesSelect<T extends boolean = true> {
   clockSeconds?: T;
   clockRunning?: T;
   clockUpdatedAt?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "matchsheets_select".
+ */
+export interface MatchsheetsSelect<T extends boolean = true> {
+  titel?: T;
+  match?: T;
+  status?: T;
+  assignedReferee?: T;
+  assignedLinesman?: T;
+  homeLineup?:
+    | T
+    | {
+        player?: T;
+        rugnummer?: T;
+        deelgenomen?: T;
+        ibGecontroleerd?: T;
+        id?: T;
+      };
+  awayLineup?:
+    | T
+    | {
+        player?: T;
+        rugnummer?: T;
+        deelgenomen?: T;
+        ibGecontroleerd?: T;
+        id?: T;
+      };
+  keuring?:
+    | T
+    | {
+        terrein?: T;
+        kleedkamers?: T;
+        douches?: T;
+        aantekentafel?: T;
+        scorebord?: T;
+        grensrechtersvlag?: T;
+        ehbo?: T;
+        bal?: T;
+        kentekenGrensrechter?: T;
+        verlichting?: T;
+      };
+  uitsluitingen?:
+    | T
+    | {
+        player?: T;
+        naam?: T;
+        reden?: T;
+        score?: T;
+        speeltijd?: T;
+        id?: T;
+      };
+  voorbehoud?:
+    | T
+    | {
+        naam?: T;
+        reden?: T;
+        score?: T;
+        id?: T;
+      };
+  opmerkingen?: T;
+  kapiteinThuis?:
+    | T
+    | {
+        akkoord?: T;
+        naam?: T;
+        handtekening?: T;
+        tijdstip?: T;
+      };
+  kapiteinUit?:
+    | T
+    | {
+        akkoord?: T;
+        naam?: T;
+        handtekening?: T;
+        tijdstip?: T;
+      };
+  scheidsrechter?:
+    | T
+    | {
+        akkoord?: T;
+        naam?: T;
+        handtekening?: T;
+        tijdstip?: T;
+      };
+  overrideLog?:
+    | T
+    | {
+        wie?: T;
+        wanneer?: T;
+        wat?: T;
+        id?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "officials_select".
+ */
+export interface OfficialsSelect<T extends boolean = true> {
+  name?: T;
+  type?: T;
+  federationNumber?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "sanctions_select".
+ */
+export interface SanctionsSelect<T extends boolean = true> {
+  player?: T;
+  aantal?: T;
+  datum?: T;
+  vervallenOp?: T;
+  reden?: T;
+  bron?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -538,6 +853,7 @@ export interface MatchEventsSelect<T extends boolean = true> {
 export interface UsersSelect<T extends boolean = true> {
   name?: T;
   roles?: T;
+  club?: T;
   updatedAt?: T;
   createdAt?: T;
   email?: T;
@@ -612,6 +928,57 @@ export interface PayloadMigrationsSelect<T extends boolean = true> {
   batch?: T;
   updatedAt?: T;
   createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "season".
+ */
+export interface Season {
+  id: number;
+  /**
+   * Het jaar waarin september valt. Peiljaar P = startjaar + 1. Bv. seizoen 2025–2026 → startjaar 2025, peiljaar 2026.
+   */
+  startYear: number;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "settings".
+ */
+export interface Setting {
+  id: number;
+  /**
+   * Vanaf hoeveel minuten vóór het aanvangsuur mag de scheidsrechter beide opstellingen zien.
+   */
+  releaseMinutesBefore: number;
+  /**
+   * Bij dit aantal of meer openstaande knipjes kan een speler niet geselecteerd worden.
+   */
+  knipjesDrempel: number;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "season_select".
+ */
+export interface SeasonSelect<T extends boolean = true> {
+  startYear?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "settings_select".
+ */
+export interface SettingsSelect<T extends boolean = true> {
+  releaseMinutesBefore?: T;
+  knipjesDrempel?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

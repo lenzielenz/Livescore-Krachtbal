@@ -15,6 +15,11 @@ import { Matches } from './collections/Matches'
 import { Possessions } from './collections/Possessions'
 import { Throws } from './collections/Throws'
 import { MatchEvents } from './collections/MatchEvents'
+import { Officials } from './collections/Officials'
+import { MatchSheets } from './collections/MatchSheets'
+import { Sanctions } from './collections/Sanctions'
+import { Season } from './globals/Season'
+import { Settings } from './globals/Settings'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -38,7 +43,21 @@ export default buildConfig({
       beforeNavLinks: ['/components/admin/BackToSite#BackToSite'],
     },
   },
-  collections: [Clubs, Teams, Players, Matches, Possessions, Throws, MatchEvents, Users, Media],
+  collections: [
+    Clubs,
+    Teams,
+    Players,
+    Matches,
+    MatchSheets,
+    Officials,
+    Sanctions,
+    Possessions,
+    Throws,
+    MatchEvents,
+    Users,
+    Media,
+  ],
+  globals: [Season, Settings],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || '',
   typescript: {

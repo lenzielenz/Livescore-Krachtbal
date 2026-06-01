@@ -1,0 +1,21 @@
+import { hasRole, isFederationLevel } from '@/lib/access'
+import { submitMatchSheet } from '@/lib/submit'
+import { getPayloadClient } from '@/lib/payload-client'
+
+// Scheidsrechter dient het blad in: PDF + mail + federatie-upload + status 'ingediend'.
+export async function POST(req: Request, { params }: { params: Promise<{ matchId: string }> }) {
+  const { matchId } = await params
+  try {
+    const payload = await getPayloadClient()
+    const { user } = await payload.auth({ headers: req.headers })
+    if (!user) return Response.json({ error: 'Niet ingelogd.' }, { status: 401 })
+
+    const referee = isFederationLevel(user) || hasRole(user, 'scheidsrechter')
+    if (!referee) return Response.json({ error: 'Enkel scheidsrechter/federatie kan indienen.' }, { status: 403 })
+
+    const result = await submitMatchSheet(payload, matchId, user)
+    return Response.json(result, { status: result.ok ? 200 : 400 })
+  } catch (err) {
+    return Response.json({ error: (err as Error).message }, { status: 400 })
+  }
+}

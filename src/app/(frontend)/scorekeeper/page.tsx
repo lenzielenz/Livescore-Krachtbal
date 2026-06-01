@@ -38,6 +38,8 @@ export default async function ScorekeeperHub() {
         </h1>
         <nav className="site-nav">
           <Link href="/">Live-site</Link>
+          <Link href="/knipjes">Knipjes</Link>
+          <Link href="/reglement">Reglement</Link>
           <Link href="/admin">Beheer</Link>
         </nav>
       </header>
@@ -58,23 +60,39 @@ function Section({ title, rows, empty }: { title: string; rows: Row[]; empty: st
       ) : (
         <div className="match-list">
           {rows.map((m) => (
-            <Link href={`/scorekeeper/${m.id}`} key={m.id} className="match-card">
-              <span className="home">{m.home}</span>
-              <span className="mid">
-                {m.status === 'live' ? (
-                  <>
-                    <div className="mc-score">{m.score.home} – {m.score.away}</div>
-                    <span className="badge-live">LIVE · aantekenen</span>
-                  </>
-                ) : (
-                  <span className="mc-meta">
-                    {new Date(m.date).toLocaleDateString('nl-BE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                    <br />▶ starten
-                  </span>
-                )}
-              </span>
-              <span className="away">{m.away}</span>
-            </Link>
+            <div key={m.id}>
+              <Link href={`/scorekeeper/${m.id}`} className="match-card">
+                <span className="home">{m.home}</span>
+                <span className="mid">
+                  {m.status === 'live' ? (
+                    <>
+                      <div className="mc-score">{m.score.home} – {m.score.away}</div>
+                      <span className="badge-live">LIVE · aantekenen</span>
+                    </>
+                  ) : (
+                    <span className="mc-meta">
+                      {new Date(m.date).toLocaleDateString('nl-BE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                      <br />▶ starten
+                    </span>
+                  )}
+                </span>
+                <span className="away">{m.away}</span>
+              </Link>
+              <div
+                style={{
+                  display: 'flex',
+                  gap: 12,
+                  justifyContent: 'center',
+                  flexWrap: 'wrap',
+                  padding: '6px 0 2px',
+                  fontSize: 13,
+                }}
+              >
+                <Link href={`/opstelling/${m.id}`}>Opstelling</Link>
+                <Link href={`/scheidsrechter/${m.id}`}>Scheidsrechter</Link>
+                <Link href={`/aftekenen/${m.id}`}>Aftekenen</Link>
+              </div>
+            </div>
           ))}
         </div>
       )}

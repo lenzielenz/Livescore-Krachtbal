@@ -1,6 +1,7 @@
 import type { CollectionConfig } from 'payload'
 
 import { CATEGORY_OPTIONS } from '../lib/categories'
+import { isFederationLevel } from '../lib/access'
 
 export const Teams: CollectionConfig = {
   slug: 'teams',
@@ -15,6 +16,9 @@ export const Teams: CollectionConfig = {
   },
   access: {
     read: () => true,
+    create: ({ req }) => isFederationLevel(req.user),
+    update: ({ req }) => isFederationLevel(req.user),
+    delete: ({ req }) => isFederationLevel(req.user),
   },
   fields: [
     {

@@ -1,17 +1,6 @@
-import type { Access, CollectionConfig, FieldHook } from 'payload'
+import type { CollectionConfig, FieldHook } from 'payload'
 
-export const ROLE_OPTIONS = [
-  { label: 'Admin (volledige toegang)', value: 'admin' },
-  { label: 'Aantekenaar (scorekeeper)', value: 'scorekeeper' },
-  { label: 'Kijker (alleen lezen)', value: 'viewer' },
-] as const
-
-export type UserRole = 'admin' | 'scorekeeper' | 'viewer'
-
-const hasRole = (user: unknown, role: UserRole): boolean =>
-  Boolean(user && Array.isArray((user as { roles?: string[] }).roles) && (user as { roles: string[] }).roles.includes(role))
-
-const isAdmin: Access = ({ req }) => hasRole(req.user, 'admin')
+import { ROLE_OPTIONS, hasRole, isAdmin } from '../lib/access'
 
 // Eerste gebruiker (bij lege database) wordt automatisch admin; daarna erft de waarde
 // die de admin instelt.
@@ -27,7 +16,7 @@ export const Users: CollectionConfig = {
   labels: { singular: 'Gebruiker', plural: 'Gebruikers' },
   admin: {
     useAsTitle: 'email',
-    defaultColumns: ['email', 'name', 'roles'],
+    defaultColumns: ['email', 'name', 'roles', 'club'],
     group: 'Beheer',
   },
   auth: true,
@@ -57,6 +46,18 @@ export const Users: CollectionConfig = {
       },
       hooks: {
         beforeChange: [ensureFirstUserAdmin],
+      },
+    },
+    {
+      // Koppelt een club-beheerder aan zijn/haar club, zodat de toegang tot leden en
+      // opstellingen tot de eigen club beperkt blijft (WEDSTRIJDBLAD-PROMPT §Rollen).
+      name: 'club',
+      label: 'Club (voor club-beheerder)',
+      type: 'relationship',
+      relationTo: 'clubs',
+      admin: {
+        description: 'Enkel relevant voor de rol "Club-beheerder".',
+        condition: (data) => Array.isArray(data?.roles) && data.roles.includes('club-beheerder'),
       },
     },
   ],
