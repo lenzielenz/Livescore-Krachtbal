@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { getOrCreateMatchSheet } from '@/lib/matchsheet-data'
 import { isReleaseTime } from '@/lib/matchsheet-workflow'
 import { getPayloadClient } from '@/lib/payload-client'
+import { vereisteOfficialsTekst, type Reeks } from '@/lib/reeksen'
 import { RefereePanel } from './RefereePanel'
 import '../../wedstrijdblad.css'
 
@@ -74,6 +75,8 @@ export default async function ScheidsrechterPage({ params }: { params: Promise<{
         matchId={matchId}
         initialStatus={(sheet?.status as string) ?? 'concept'}
         initialKeuring={(sheet?.keuring as Record<string, string>) ?? {}}
+        initialOfficials={(sheet?.officials as Record<string, string>) ?? {}}
+        officialsHint={match.reeks ? vereisteOfficialsTekst(match.reeks as Reeks) : null}
       />
     </div>
   )

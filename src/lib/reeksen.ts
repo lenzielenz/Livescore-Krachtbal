@@ -86,6 +86,35 @@ export function reeksCategorie(reeks: Reeks): Category {
   return REEKS_CATEGORIE[reeks]
 }
 
+// Reekstype bepaalt de speelduur én welke officials vereist zijn (Wedstrijdblad_invullen.pdf).
+export type ReeksType = 'jeugd' | 'landelijk' | 'nationaal'
+
+const NATIONAAL: ReadonlySet<Reeks> = new Set<Reeks>(['1NAH', '1NAHB', '1NAD', '2NAH', '2NAHB'])
+const JEUGD_2X20: ReadonlySet<Reeks> = new Set<Reeks>(['U12', 'U14J', 'U14M', 'U16J', 'U16M'])
+
+export function reeksType(reeks: Reeks): ReeksType {
+  if (NATIONAAL.has(reeks)) return 'nationaal'
+  if (JEUGD_2X20.has(reeks)) return 'jeugd' // U12/U14/U16 → 2×20 min
+  return 'landelijk' // LH/LD/REG/RRL/U18 → 2×25 min
+}
+
+/** Helftduur (sec) strikt afgeleid uit de reeks: jeugd (U12/U14/U16) 2×20, rest 2×25. */
+export function reeksHalfDurationSeconds(reeks: Reeks): number {
+  return (reeksType(reeks) === 'jeugd' ? 20 : 25) * 60
+}
+
+/** Korte omschrijving van de vereiste officials per reekstype (voor de scheidsrechter). */
+export function vereisteOfficialsTekst(reeks: Reeks): string {
+  switch (reeksType(reeks)) {
+    case 'jeugd':
+      return 'Thuis levert: aantekenaar + tijdopnemer, grensrechter (mag 2× dezelfde persoon) en terreinafgevaardigde (geen andere functie). Bezoekers: minstens 4 spelers + 1 coach (U18+).'
+    case 'nationaal':
+      return 'Thuis: aantekenaar/scorer + terreinafgevaardigde + 1 grensrechter + coach. Bezoekers: tijdopnemer + grensrechter + coach (coach mag kapitein zijn).'
+    default:
+      return 'Best minstens 5 personen aanwezig; coach telt niet als noodzakelijke official. Een coach mag geen grensrechter zijn (Art. 25).'
+  }
+}
+
 /** Beker-voorgift: 3 ptn per reeksverschil, max 6 (WEDSTRIJDBLAD-PROMPT). */
 export function voorgiftPunten(reeksA: Reeks, reeksB: Reeks): number {
   const a = REEKS_RANG[reeksA]

@@ -5,6 +5,7 @@ import * as migration_20260601_172424_wedstrijdblad from './20260601_172424_weds
 import * as migration_20260601_194920_reeks_veld from './20260601_194920_reeks_veld';
 import * as migration_20260601_205849_club_gegevens from './20260601_205849_club_gegevens';
 import * as migration_20260601_210208_team_thuisuur from './20260601_210208_team_thuisuur';
+import * as migration_20260601_212043_officials_functies from './20260601_212043_officials_functies';
 
 export const migrations = [
   {
@@ -40,6 +41,11 @@ export const migrations = [
   {
     up: migration_20260601_210208_team_thuisuur.up,
     down: migration_20260601_210208_team_thuisuur.down,
-    name: '20260601_210208_team_thuisuur'
+    name: '20260601_210208_team_thuisuur',
+  },
+  {
+    up: migration_20260601_212043_officials_functies.up,
+    down: migration_20260601_212043_officials_functies.down,
+    name: '20260601_212043_officials_functies'
   },
 ];

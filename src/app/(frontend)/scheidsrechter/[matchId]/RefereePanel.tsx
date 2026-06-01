@@ -8,19 +8,39 @@ import { MATCHSHEET_STATUS_OPTIONS, nextStatus, type MatchSheetStatus } from '@/
 const statusLabel = (s: string) =>
   MATCHSHEET_STATUS_OPTIONS.find((o) => o.value === s)?.label ?? s
 
+const OFFICIAL_FUNCTIES: { name: string; label: string }[] = [
+  { name: 'aantekenaar', label: 'Aantekenaar / scorer' },
+  { name: 'tijdopnemer', label: 'Tijdopnemer' },
+  { name: 'grensrechterThuis', label: 'Grensrechter (thuis)' },
+  { name: 'grensrechterUit', label: 'Grensrechter (uit)' },
+  { name: 'terreinafgevaardigde', label: 'Terreinafgevaardigde' },
+  { name: 'coachThuis', label: 'Coach (thuis)' },
+  { name: 'coachUit', label: 'Coach (uit)' },
+]
+
 export function RefereePanel({
   matchId,
   initialStatus,
   initialKeuring,
+  initialOfficials,
+  officialsHint,
 }: {
   matchId: string
   initialStatus: string
   initialKeuring: Record<string, string>
+  initialOfficials: Record<string, string>
+  officialsHint: string | null
 }) {
   const [status, setStatus] = useState<MatchSheetStatus>(initialStatus as MatchSheetStatus)
   const [keuring, setKeuring] = useState<Record<string, string>>(initialKeuring)
+  const [officials, setOfficials] = useState<Record<string, string>>(initialOfficials)
   const [msg, setMsg] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+
+  const saveOfficials = async () => {
+    const { ok, json } = await post({ action: 'officials', officials })
+    setMsg(ok ? 'Officials bewaard.' : json.error || 'Mislukt.')
+  }
 
   const post = async (body: Record<string, unknown>) => {
     setBusy(true)
@@ -54,6 +74,27 @@ export function RefereePanel({
 
   return (
     <div className="wb-grid">
+      <section className="wb-card">
+        <h2>Officials</h2>
+        {officialsHint && <p className="wb-sub">{officialsHint}</p>}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {OFFICIAL_FUNCTIES.map((f) => (
+            <label key={f.name} style={{ display: 'flex', flexDirection: 'column', gap: 2, fontSize: '0.8rem', color: 'var(--dim)' }}>
+              {f.label}
+              <input
+                className="wb-input"
+                placeholder="Volledige naam + voornaam"
+                value={officials[f.name] ?? ''}
+                onChange={(e) => setOfficials((o) => ({ ...o, [f.name]: e.target.value }))}
+              />
+            </label>
+          ))}
+        </div>
+        <button onClick={saveOfficials} disabled={busy} className="wb-btn wb-btn-primary" style={{ marginTop: 14 }}>
+          Officials bewaren
+        </button>
+      </section>
+
       <section className="wb-card">
         <h2>Materiële keuring</h2>
         <div>

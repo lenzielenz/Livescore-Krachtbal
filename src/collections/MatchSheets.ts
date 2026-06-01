@@ -127,6 +127,29 @@ export const MatchSheets: CollectionConfig = {
       ],
     },
     {
+      // Officials-functies (volledige naam + voornaam). Welke verplicht zijn hangt af van het
+      // reekstype (Wedstrijdblad_invullen.pdf) — zie de hint op het scheidsrechterscherm.
+      label: 'Officials (functies)',
+      type: 'collapsible',
+      admin: { initCollapsed: true },
+      fields: [
+        {
+          name: 'officials',
+          type: 'group',
+          label: false,
+          fields: [
+            { name: 'aantekenaar', label: 'Aantekenaar / scorer', type: 'text' },
+            { name: 'tijdopnemer', label: 'Tijdopnemer', type: 'text' },
+            { name: 'grensrechterThuis', label: 'Grensrechter (thuis)', type: 'text' },
+            { name: 'grensrechterUit', label: 'Grensrechter (uit)', type: 'text' },
+            { name: 'terreinafgevaardigde', label: 'Terreinafgevaardigde', type: 'text' },
+            { name: 'coachThuis', label: 'Coach (thuis)', type: 'text' },
+            { name: 'coachUit', label: 'Coach (uit)', type: 'text' },
+          ],
+        },
+      ],
+    },
+    {
       label: 'Opstellingen',
       type: 'collapsible',
       admin: { initCollapsed: true },

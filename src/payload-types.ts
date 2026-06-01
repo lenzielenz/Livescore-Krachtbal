@@ -334,6 +334,15 @@ export interface Matchsheet {
   status: 'concept' | 'vrijgegeven' | 'wedstrijdklaar' | 'bezig' | 'af_te_tekenen' | 'ingediend';
   assignedReferee?: (number | null) | Official;
   assignedLinesman?: (number | null) | Official;
+  officials?: {
+    aantekenaar?: string | null;
+    tijdopnemer?: string | null;
+    grensrechterThuis?: string | null;
+    grensrechterUit?: string | null;
+    terreinafgevaardigde?: string | null;
+    coachThuis?: string | null;
+    coachUit?: string | null;
+  };
   homeLineup?:
     | {
         player: number | Player;
@@ -764,6 +773,17 @@ export interface MatchsheetsSelect<T extends boolean = true> {
   status?: T;
   assignedReferee?: T;
   assignedLinesman?: T;
+  officials?:
+    | T
+    | {
+        aantekenaar?: T;
+        tijdopnemer?: T;
+        grensrechterThuis?: T;
+        grensrechterUit?: T;
+        terreinafgevaardigde?: T;
+        coachThuis?: T;
+        coachUit?: T;
+      };
   homeLineup?:
     | T
     | {
