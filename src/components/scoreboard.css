@@ -51,9 +51,12 @@
 .sb-clock { font-size: 1.5rem; font-weight: 800; color: var(--accent); font-variant-numeric: tabular-nums; }
 .sb-half { font-size: 0.8rem; color: var(--dim); }
 
-.sb-dots { display: inline-flex; gap: 5px; margin-top: 6px; }
+.sb-dots { display: inline-flex; gap: 5px; }
 .sb-dot { width: 9px; height: 9px; border-radius: 50%; border: 1px solid var(--line); background: transparent; }
 .sb-dots.to .sb-dot.on { background: var(--accent); border-color: var(--accent); }
+.sb-min { display: inline-flex; align-items: center; gap: 6px; margin-top: 4px; }
+.sb-min-lbl { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--dim); }
+.sb-refmin { font-size: 0.85rem; font-weight: 700; color: var(--accent); margin-left: 6px; }
 
 .sb-crosses {
   display: flex; align-items: center; justify-content: center; gap: 12px;

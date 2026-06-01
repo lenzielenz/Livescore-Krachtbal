@@ -90,7 +90,10 @@ export function Scoreboard({
         <div className="sb-side-team">
           <TeamBadge name={state.teams.home.name} logoUrl={state.teams.home.logoUrl} side="home" />
           <div className="sb-name">{state.teams.home.name}</div>
-          <Dots filled={state.timeouts.home} total={2} className="to" />
+          <div className="sb-min" title="Aangevraagde minuten (time-outs)">
+            <span className="sb-min-lbl">min.</span>
+            <Dots filled={state.timeouts.home} total={2} className="to" />
+          </div>
         </div>
         <div className="sb-scorebox">
           <div className="sb-score">
@@ -104,7 +107,10 @@ export function Scoreboard({
         <div className="sb-side-team">
           <TeamBadge name={state.teams.away.name} logoUrl={state.teams.away.logoUrl} side="away" />
           <div className="sb-name">{state.teams.away.name}</div>
-          <Dots filled={state.timeouts.away} total={2} className="to" />
+          <div className="sb-min" title="Aangevraagde minuten (time-outs)">
+            <span className="sb-min-lbl">min.</span>
+            <Dots filled={state.timeouts.away} total={2} className="to" />
+          </div>
         </div>
       </div>
 
@@ -113,6 +119,11 @@ export function Scoreboard({
         <span className="sb-cross-val">{state.crosses.home}</span>
         <span className="sb-cross-sep">·</span>
         <span className="sb-cross-val">{state.crosses.away}</span>
+        {state.refereeStops > 0 && (
+          <span className="sb-refmin" title="Minuten gevraagd door de scheidsrechter">
+            ⏱ SR-minuut: {state.refereeStops}
+          </span>
+        )}
       </div>
 
       <div className="sb-timeline">

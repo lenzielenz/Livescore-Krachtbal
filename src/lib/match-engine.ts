@@ -617,6 +617,8 @@ export interface MatchState {
   score: { home: number; away: number }
   crosses: { home: number; away: number }
   timeouts: { home: number; away: number }
+  /** Scheidsrechter-minuten (onderbrekingen) in de huidige helft. */
+  refereeStops: number
   possession: {
     side: TeamSide
     teamId: number
@@ -964,6 +966,15 @@ export async function buildMatchState(payload: Payload, matchId: number): Promis
     else if (tId === awayId) timeouts.away += 1
   }
 
+  // Scheidsrechter-minuten (onderbrekingen) in deze helft — telt ook als een minuut.
+  const refStopRes = await payload.count({
+    collection: 'match-events',
+    where: {
+      and: [{ match: { equals: matchId } }, { type: { equals: 'referee_stop' } }, { half: { equals: half } }],
+    },
+  })
+  const refereeStops = refStopRes.totalDocs
+
   const open = await getOpenPossession(payload, matchId)
   let possession: MatchState['possession'] = null
   if (open) {
@@ -1015,6 +1026,7 @@ export async function buildMatchState(payload: Payload, matchId: number): Promis
     score: totals.score,
     crosses: totals.crosses,
     timeouts,
+    refereeStops,
     possession,
   }
 }
