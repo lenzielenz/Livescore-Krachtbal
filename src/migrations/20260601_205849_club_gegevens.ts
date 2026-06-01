@@ -3,6 +3,7 @@ import { MigrateUpArgs, MigrateDownArgs, sql } from '@payloadcms/db-postgres'
 export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
   await db.execute(sql`
    ALTER TABLE "matches" ALTER COLUMN "category" DROP NOT NULL;
+  UPDATE "matches" SET "reeks" = 'andere' WHERE "reeks" IS NULL;
   ALTER TABLE "matches" ALTER COLUMN "reeks" SET NOT NULL;
   ALTER TABLE "clubs" ADD COLUMN "accommodatie" varchar;
   ALTER TABLE "clubs" ADD COLUMN "telefoon" varchar;
@@ -18,6 +19,7 @@ export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
 export async function down({ db, payload, req }: MigrateDownArgs): Promise<void> {
   await db.execute(sql`
    ALTER TABLE "matches" ALTER COLUMN "reeks" DROP NOT NULL;
+  UPDATE "matches" SET "category" = 'senioren' WHERE "category" IS NULL;
   ALTER TABLE "matches" ALTER COLUMN "category" SET NOT NULL;
   ALTER TABLE "clubs" DROP COLUMN "accommodatie";
   ALTER TABLE "clubs" DROP COLUMN "telefoon";
