@@ -102,6 +102,20 @@ a {
   font-size: 0.72rem;
   color: var(--dim);
 }
+.match-card .mc-extra {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+  font-size: 0.7rem;
+  color: var(--dim);
+  font-variant-numeric: tabular-nums;
+}
+.match-card .mc-sep {
+  opacity: 0.5;
+}
 .badge-live {
   display: inline-block;
   font-size: 0.65rem;

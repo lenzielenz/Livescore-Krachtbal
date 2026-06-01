@@ -1,5 +1,6 @@
 import Link from 'next/link'
 
+import { LiveClock } from '@/components/LiveClock'
 import { buildMatchState } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
 
@@ -12,6 +13,10 @@ type Summary = {
   home: string
   away: string
   score: { home: number; away: number }
+  crosses: { home: number; away: number }
+  timeouts: { home: number; away: number }
+  refereeStops: number
+  clock: { half: number; seconds: number; running: boolean; updatedAt: string | null }
 }
 
 export default async function HomePage() {
@@ -29,6 +34,15 @@ export default async function HomePage() {
           home: s.teams.home.name,
           away: s.teams.away.name,
           score: s.score,
+          crosses: s.crosses,
+          timeouts: s.timeouts,
+          refereeStops: s.refereeStops,
+          clock: {
+            half: s.match.currentHalf,
+            seconds: s.match.clockSeconds,
+            running: s.match.clockRunning,
+            updatedAt: s.match.clockUpdatedAt,
+          },
         }
       } catch {
         // Wedstrijd met ontbrekende ploeg-referentie: overslaan i.p.v. de pagina laten crashen.
@@ -80,6 +94,17 @@ function Section({ title, matches, emptyText }: { title: string; matches: Summar
                   <>
                     <div className="mc-score">{m.score.home} – {m.score.away}</div>
                     {m.status === 'live' && <span className="badge-live">LIVE</span>}
+                    <span className="mc-extra">
+                      {m.status === 'live' ? (
+                        <LiveClock half={m.clock.half} seconds={m.clock.seconds} running={m.clock.running} updatedAt={m.clock.updatedAt} />
+                      ) : (
+                        <span>Einde</span>
+                      )}
+                      <span className="mc-sep">·</span>
+                      <span title="Kruisjes">✚ {m.crosses.home}–{m.crosses.away}</span>
+                      <span className="mc-sep">·</span>
+                      <span title="Minuten (time-outs)">⏱ {m.timeouts.home}–{m.timeouts.away}{m.refereeStops > 0 ? ` (+${m.refereeStops} SR)` : ''}</span>
+                    </span>
                   </>
                 )}
               </span>
