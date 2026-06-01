@@ -4,6 +4,7 @@ import { getOrCreateMatchSheet } from '@/lib/matchsheet-data'
 import { isReleaseTime } from '@/lib/matchsheet-workflow'
 import { getPayloadClient } from '@/lib/payload-client'
 import { RefereePanel } from './RefereePanel'
+import '../../wedstrijdblad.css'
 
 export const dynamic = 'force-dynamic'
 
@@ -57,13 +58,13 @@ export default async function ScheidsrechterPage({ params }: { params: Promise<{
       </header>
 
       {!released ? (
-        <p className="empty">
+        <p className="wb-intro">
           De opstellingen worden zichtbaar vanaf{' '}
           {releaseAt.toLocaleString('nl-BE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}{' '}
           ({releaseMinutes} min vóór aanvang).
         </p>
       ) : (
-        <div style={{ display: 'grid', gap: 24, gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', marginBottom: 24 }}>
+        <div className="wb-grid" style={{ marginBottom: 16 }}>
           <LineupView title="Thuis" rows={names(sheet?.homeLineup as LineupRow[])} />
           <LineupView title="Uit" rows={names(sheet?.awayLineup as LineupRow[])} />
         </div>
@@ -80,18 +81,19 @@ export default async function ScheidsrechterPage({ params }: { params: Promise<{
 
 function LineupView({ title, rows }: { title: string; rows: { rugnummer?: number; name: string }[] }) {
   return (
-    <section style={{ border: '1px solid #e5e7eb', borderRadius: 10, padding: 16, background: '#fff' }}>
-      <h2 style={{ marginTop: 0 }}>{title}</h2>
+    <section className="wb-card">
+      <h2>{title}</h2>
       {rows.length === 0 ? (
-        <p style={{ color: '#888' }}>Nog geen opstelling ingevuld.</p>
+        <p className="wb-sub">Nog geen opstelling ingevuld.</p>
       ) : (
-        <ol style={{ paddingLeft: 18, margin: 0 }}>
+        <ul className="wb-rows">
           {rows.map((r, i) => (
-            <li key={i}>
-              <strong>{r.rugnummer ?? '–'}</strong> {r.name}
+            <li key={i} className="wb-row" style={{ cursor: 'default' }}>
+              <strong className="num">{r.rugnummer ?? '–'}</strong>
+              <span className="nm">{r.name}</span>
             </li>
           ))}
-        </ol>
+        </ul>
       )}
     </section>
   )

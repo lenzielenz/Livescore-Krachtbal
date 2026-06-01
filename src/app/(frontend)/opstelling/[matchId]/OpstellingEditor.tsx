@@ -77,75 +77,47 @@ export function OpstellingEditor({
     setMsg(res.ok ? `Bewaard (${json.saved} spelers).` : json.error || 'Opslaan mislukt.')
   }
 
-  if (!data) return <section style={cardStyle}>Laden…</section>
-  if (data.error) return <section style={cardStyle}>{data.error}</section>
+  if (!data) return <section className="wb-card">Laden…</section>
+  if (data.error) return <section className="wb-card">{data.error}</section>
 
   const visible = data.players.filter((p) => showBlocked || p.selectability.level !== 'block')
   const blockedCount = data.players.filter((p) => p.selectability.level === 'block').length
 
   return (
-    <section style={cardStyle}>
-      <h2 style={{ margin: '0 0 4px' }}>{label}</h2>
-      <p style={{ margin: '0 0 12px', fontSize: 13, color: '#666' }}>
-        Categorie {data.category} · status blad: <strong>{data.status}</strong> · {selected.size} geselecteerd
+    <section className={`wb-card side-${side}`}>
+      <h2>{label}</h2>
+      <p className="wb-sub">
+        Categorie {data.category} · status: <span className="wb-status">{data.status}</span> · {selected.size} geselecteerd
       </p>
 
       {blockedCount > 0 && (
-        <label style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: 13, marginBottom: 8 }}>
+        <label style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: 13, marginBottom: 8, color: 'var(--dim)' }}>
           <input type="checkbox" checked={showBlocked} onChange={(e) => setShowBlocked(e.target.checked)} />
           Toon {blockedCount} geblokkeerde leden (override)
         </label>
       )}
 
-      <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
+      <ul className="wb-rows">
         {visible.map((p) => (
           <li
             key={p.id}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              padding: '6px 8px',
-              borderRadius: 6,
-              background: selected.has(p.id) ? '#eef6ff' : '#fafafa',
-              opacity: p.selectability.level === 'block' && !selected.has(p.id) ? 0.7 : 1,
-            }}
+            className={`wb-row ${selected.has(p.id) ? 'on' : ''}`}
+            onClick={() => toggle(p.id)}
             title={p.selectability.reasons.join(' ')}
           >
-            <input type="checkbox" checked={selected.has(p.id)} onChange={() => toggle(p.id)} />
-            <span
-              aria-hidden
-              style={{
-                width: 9,
-                height: 9,
-                borderRadius: '50%',
-                background: LEVEL_COLOR[p.selectability.level],
-                flexShrink: 0,
-              }}
-            />
-            <strong style={{ width: 28, textAlign: 'right' }}>{p.shirtNumber}</strong>
-            <span style={{ flex: 1 }}>{p.name}</span>
-            {p.suggested && <span style={{ fontSize: 11, color: '#3b82f6' }}>voorstel</span>}
+            <input type="checkbox" readOnly checked={selected.has(p.id)} aria-label={`Selecteer ${p.name}`} />
+            <span aria-hidden className="wb-dot" style={{ background: LEVEL_COLOR[p.selectability.level] }} />
+            <strong className="num">{p.shirtNumber}</strong>
+            <span className="nm">{p.name}</span>
+            {p.suggested && <span className="wb-tag">voorstel</span>}
           </li>
         ))}
       </ul>
 
-      <button
-        onClick={save}
-        disabled={saving}
-        className="btn btn--style-primary"
-        style={{ marginTop: 12, padding: '8px 16px', cursor: 'pointer' }}
-      >
+      <button onClick={save} disabled={saving} className="wb-btn wb-btn-primary" style={{ marginTop: 14 }}>
         {saving ? 'Bewaren…' : 'Opstelling bewaren'}
       </button>
-      {msg && <p style={{ marginTop: 8, fontSize: 13 }}>{msg}</p>}
+      {msg && <p className="wb-msg">{msg}</p>}
     </section>
   )
-}
-
-const cardStyle: React.CSSProperties = {
-  border: '1px solid #e5e7eb',
-  borderRadius: 10,
-  padding: 16,
-  background: '#fff',
 }

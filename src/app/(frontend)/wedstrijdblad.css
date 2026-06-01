@@ -1,0 +1,213 @@
+/* Gedeelde stijlen voor de wedstrijdblad-pagina's (opstelling, scheidsrechter, aftekenen,
+   knipjes) — donker thema, consistent met de rest van de site. */
+
+.wb-intro {
+  color: var(--dim);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  margin: 0 0 20px;
+  max-width: 70ch;
+}
+
+.wb-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  align-items: start;
+}
+
+.wb-card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 18px;
+}
+.wb-card > h2 {
+  margin: 0 0 4px;
+  font-size: 1.1rem;
+}
+.wb-card > h3 {
+  margin: 0 0 12px;
+  font-size: 1rem;
+}
+.wb-card.side-home {
+  border-top: 3px solid var(--home, #06d6a0);
+}
+.wb-card.side-away {
+  border-top: 3px solid var(--away, #4cc9f0);
+}
+.wb-sub {
+  color: var(--dim);
+  font-size: 0.82rem;
+  margin: 0 0 14px;
+}
+.wb-sub strong {
+  color: var(--txt);
+}
+
+/* Knoppen */
+.wb-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px 16px;
+  border-radius: 9px;
+  border: 1px solid var(--line);
+  background: #0a1f14;
+  color: var(--txt);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+.wb-btn:hover {
+  border-color: var(--accent);
+}
+.wb-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.wb-btn-primary {
+  background: var(--accent);
+  color: #06140d;
+  border-color: var(--accent);
+}
+.wb-btn-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+
+/* Lijst van (selecteerbare) spelers */
+.wb-rows {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.wb-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #0a1f14;
+  border: 1px solid transparent;
+  cursor: pointer;
+}
+.wb-row.on {
+  border-color: var(--accent);
+  background: #11301f;
+}
+.wb-row .num {
+  width: 28px;
+  text-align: right;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.wb-row .nm {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wb-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.wb-tag {
+  font-size: 0.7rem;
+  color: var(--accent);
+}
+
+/* Form-velden */
+.wb-input,
+.wb-select {
+  width: 100%;
+  padding: 9px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: #0a1f14;
+  color: var(--txt);
+  font-size: 0.9rem;
+  font-family: inherit;
+}
+.wb-input::placeholder {
+  color: var(--dim);
+}
+
+/* Checklist-rij (keuring) */
+.wb-check {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--line);
+}
+.wb-check:last-child {
+  border-bottom: none;
+}
+.wb-check select {
+  width: auto;
+  min-width: 92px;
+}
+
+/* Status-badge */
+.wb-status {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: #11301f;
+  color: var(--accent);
+  border: 1px solid var(--line);
+}
+
+/* Tabel */
+.wb-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.wb-table th,
+.wb-table td {
+  padding: 8px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+}
+.wb-table th {
+  color: var(--dim);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.wb-table tr.warn td {
+  background: #2a1016;
+}
+
+/* Melding onder een actie */
+.wb-msg {
+  margin-top: 10px;
+  font-size: 0.85rem;
+  color: var(--dim);
+}
+
+/* Handtekening-canvas */
+.wb-sign {
+  width: 100%;
+  height: 120px;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  background: #f8fafc;
+  touch-action: none;
+}

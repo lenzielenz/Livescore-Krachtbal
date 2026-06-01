@@ -53,14 +53,16 @@ export function RefereePanel({
   const next = nextStatus(status)
 
   return (
-    <div style={{ display: 'grid', gap: 24, gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
-      <section style={card}>
-        <h2 style={{ marginTop: 0 }}>Materiële keuring</h2>
-        <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+    <div className="wb-grid">
+      <section className="wb-card">
+        <h2>Materiële keuring</h2>
+        <div>
           {KEURING_ITEMS.map((item) => (
-            <li key={item.name} style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+            <div key={item.name} className="wb-check">
               <span>{item.label}</span>
               <select
+                className="wb-select"
+                aria-label={item.label}
                 value={keuring[item.name] ?? 'ok'}
                 onChange={(e) => setKeuring((k) => ({ ...k, [item.name]: e.target.value }))}
               >
@@ -70,50 +72,34 @@ export function RefereePanel({
                   </option>
                 ))}
               </select>
-            </li>
+            </div>
           ))}
-        </ul>
-        <button onClick={saveKeuring} disabled={busy} className="btn btn--style-primary" style={btn}>
+        </div>
+        <button onClick={saveKeuring} disabled={busy} className="wb-btn wb-btn-primary" style={{ marginTop: 14 }}>
           Keuring bewaren
         </button>
       </section>
 
-      <section style={card}>
-        <h2 style={{ marginTop: 0 }}>Status</h2>
-        <p>
-          Huidige status: <strong>{statusLabel(status)}</strong>
+      <section className="wb-card">
+        <h2>Status</h2>
+        <p className="wb-sub">
+          Huidige status: <span className="wb-status">{statusLabel(status)}</span>
         </p>
         {next && (
-          <button onClick={() => goTo(next)} disabled={busy} className="btn btn--style-primary" style={btn}>
+          <button onClick={() => goTo(next)} disabled={busy} className="wb-btn wb-btn-primary">
             → Naar &quot;{statusLabel(next)}&quot;
           </button>
         )}
-        <p style={{ fontSize: 13, color: '#666', marginTop: 12 }}>Manueel overschrijven (override, gelogd):</p>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+        <p className="wb-sub" style={{ marginTop: 16 }}>Manueel overschrijven (override, gelogd):</p>
+        <div className="wb-btn-row" style={{ marginTop: 0 }}>
           {MATCHSHEET_STATUS_OPTIONS.filter((o) => o.value !== status && o.value !== 'ingediend').map((o) => (
-            <button
-              key={o.value}
-              onClick={() => goTo(o.value)}
-              disabled={busy}
-              style={{ ...btnSmall, opacity: o.value === next ? 0.5 : 1 }}
-            >
+            <button key={o.value} onClick={() => goTo(o.value)} disabled={busy} className="wb-btn" style={{ padding: '6px 12px', fontSize: '0.82rem' }}>
               {o.label}
             </button>
           ))}
         </div>
-        {msg && <p style={{ marginTop: 12, fontSize: 13 }}>{msg}</p>}
+        {msg && <p className="wb-msg">{msg}</p>}
       </section>
     </div>
   )
-}
-
-const card: React.CSSProperties = { border: '1px solid #e5e7eb', borderRadius: 10, padding: 16, background: '#fff' }
-const btn: React.CSSProperties = { marginTop: 12, padding: '8px 16px', cursor: 'pointer' }
-const btnSmall: React.CSSProperties = {
-  padding: '4px 10px',
-  cursor: 'pointer',
-  border: '1px solid #ccc',
-  borderRadius: 6,
-  background: '#f5f5f5',
-  fontSize: 13,
 }

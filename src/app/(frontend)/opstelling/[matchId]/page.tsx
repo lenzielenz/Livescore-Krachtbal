@@ -2,6 +2,7 @@ import Link from 'next/link'
 
 import { getPayloadClient } from '@/lib/payload-client'
 import { OpstellingEditor } from './OpstellingEditor'
+import '../../wedstrijdblad.css'
 
 export const dynamic = 'force-dynamic'
 
@@ -37,13 +38,13 @@ export default async function OpstellingPage({ params }: { params: Promise<{ mat
           <Link href="/admin">Beheer</Link>
         </nav>
       </header>
-      <p className="empty">
+      <p className="wb-intro">
         Vink je spelers aan. Het voorstel toont de laatst-gekende opstelling. Alleen leden met een geldige
         vergunning en de juiste leeftijdscategorie zijn vrij selecteerbaar — geblokkeerde leden kun je als
         scheidsrechter/federatie tonen en toch toevoegen (gaat in de override-log).
       </p>
 
-      <div style={{ display: 'grid', gap: 24, gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))' }}>
+      <div className="wb-grid">
         <OpstellingEditor matchId={matchId} side="home" label={`Thuis — ${homeName}`} />
         <OpstellingEditor matchId={matchId} side="away" label={`Uit — ${awayName}`} />
       </div>
