@@ -50,6 +50,8 @@ export function Scorekeeper({
   const [pendingOut, setPendingOut] = useState<{ p: Point; tapCount: 1 | 2; playerId: number } | null>(null)
   const [subOpen, setSubOpen] = useState(false)
   const [subOut, setSubOut] = useState<{ side: 'home' | 'away'; playerId: number } | null>(null)
+  // Kickoff: gekozen ploeg die opzet (vóór de match start).
+  const [startTeam, setStartTeam] = useState<number | null>(null)
 
   // Basistijdstip voor de lopende klok: als de klok loopt, reken vanaf clockUpdatedAt (server),
   // zodat de verstreken tijd na een refresh behouden blijft — niet terug naar nul.
@@ -508,11 +510,36 @@ export function Scorekeeper({
       )}
 
       {isScheduled ? (
-        <div className="sk-start">
-          <h3>Start wedstrijd — welke ploeg zet op?</h3>
-          <div className="sk-start-btns">
-            <button className="sk-btn home" disabled={busy} onClick={() => act({ action: 'start', startingTeamId: state.teams.home.id })}>{state.teams.home.name}</button>
-            <button className="sk-btn away" disabled={busy} onClick={() => act({ action: 'start', startingTeamId: state.teams.away.id })}>{state.teams.away.name}</button>
+        <div className="sk-kickoff">
+          <div className="sk-kickoff-card">
+            <div className="sk-kickoff-title">Wie zet op?</div>
+            <div className="sk-kickoff-sub">Kies de ploeg die aftrapt en druk op start.</div>
+            <div className="sk-kickoff-teams">
+              <button
+                type="button"
+                className={`sk-kickoff-team home ${startTeam === state.teams.home.id ? 'on' : ''}`}
+                disabled={busy}
+                onClick={() => setStartTeam(state.teams.home.id)}
+              >
+                {state.teams.home.name}
+              </button>
+              <button
+                type="button"
+                className={`sk-kickoff-team away ${startTeam === state.teams.away.id ? 'on' : ''}`}
+                disabled={busy}
+                onClick={() => setStartTeam(state.teams.away.id)}
+              >
+                {state.teams.away.name}
+              </button>
+            </div>
+            <button
+              type="button"
+              className="sk-kickoff-start"
+              disabled={busy || startTeam === null}
+              onClick={() => startTeam !== null && act({ action: 'start', startingTeamId: startTeam })}
+            >
+              {startTeam === null ? 'Kies eerst een ploeg' : '▶ Start wedstrijd'}
+            </button>
           </div>
         </div>
       ) : (
