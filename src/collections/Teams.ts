@@ -46,6 +46,15 @@ export const Teams: CollectionConfig = {
       },
     },
     {
+      name: 'thuisUur',
+      label: 'Vast thuisuur (HH:MM)',
+      type: 'text',
+      admin: {
+        description: 'Vast aanvangsuur wanneer deze ploeg thuis speelt in deze reeks (bv. 11:30).',
+        placeholder: '11:30',
+      },
+    },
+    {
       name: 'name',
       label: 'Ploegnaam',
       type: 'text',

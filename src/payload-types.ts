@@ -229,6 +229,10 @@ export interface Team {
       )
     | null;
   /**
+   * Vast aanvangsuur wanneer deze ploeg thuis speelt in deze reeks (bv. 11:30).
+   */
+  thuisUur?: string | null;
+  /**
    * Bv. "KV Roeselare U14". Het logo komt van de club.
    */
   name: string;
@@ -705,6 +709,7 @@ export interface TeamsSelect<T extends boolean = true> {
   club?: T;
   category?: T;
   reeks?: T;
+  thuisUur?: T;
   name?: T;
   logo?: T;
   updatedAt?: T;
