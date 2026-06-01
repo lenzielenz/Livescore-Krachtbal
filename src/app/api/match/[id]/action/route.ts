@@ -1,6 +1,7 @@
 import {
   advanceHalf,
   finishMatch,
+  recordRefereeStop,
   recordThrow,
   recordTimeout,
   setClock,
@@ -59,6 +60,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         return Response.json(await finishMatch(payload, matchId))
       case 'timeout':
         return Response.json(await recordTimeout(payload, matchId, Number(body.teamId)))
+      case 'referee_stop':
+        return Response.json(await recordRefereeStop(payload, matchId))
       case 'freethrow':
         return Response.json(await startFreeThrow(payload, matchId, Number(body.teamId)))
       case 'substitute':

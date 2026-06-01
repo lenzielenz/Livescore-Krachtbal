@@ -580,6 +580,19 @@ export async function recordTimeout(payload: Payload, matchId: number, teamId: n
   return buildMatchState(payload, matchId)
 }
 
+/** Scheidsrechter-onderbreking (minuut) registreren — door de scheidsrechter aangevraagd.
+ * Onbeperkt (geen ploeg-limiet); verschijnt op de tijdlijn. */
+export async function recordRefereeStop(payload: Payload, matchId: number) {
+  const { match } = await loadMatch(payload, matchId)
+  const half = match.currentHalf ?? 1
+  await payload.create({
+    collection: 'match-events',
+    data: { match: matchId, type: 'referee_stop', half, gameClock: match.clockSeconds ?? 0 },
+    overrideAccess: true,
+  })
+  return buildMatchState(payload, matchId)
+}
+
 // ── Afgeleide match-state (voor scorekeeper, scorebord, SSE) ──────────────────
 
 export interface MatchState {

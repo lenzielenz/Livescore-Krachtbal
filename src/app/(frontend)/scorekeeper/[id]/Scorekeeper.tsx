@@ -44,17 +44,28 @@ export function Scorekeeper({
   const [recentTaps, setRecentTaps] = useState<FieldMarker[]>([])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [flash, setFlash] = useState<{ title: string; big: string; color: string; team: string } | null>(null)
+  const [flash, setFlash] = useState<{ title: string; big: string; color: string; team: string; player?: string } | null>(null)
   // Nieuwe flow: eerst de bal-valt-plek (pendingThrow), dan kiezen wie wierp.
   const [pendingThrow, setPendingThrow] = useState<{ p: Point } | null>(null)
   const [pendingOut, setPendingOut] = useState<{ p: Point; tapCount: 1 | 2; playerId: number } | null>(null)
   const [subOpen, setSubOpen] = useState(false)
   const [subOut, setSubOut] = useState<{ side: 'home' | 'away'; playerId: number } | null>(null)
 
-  const [clock, setClock] = useState(initialState.match.clockSeconds)
-  const baseRef = useRef({ seconds: initialState.match.clockSeconds, running: initialState.match.clockRunning, at: Date.now() })
+  // Basistijdstip voor de lopende klok: als de klok loopt, reken vanaf clockUpdatedAt (server),
+  // zodat de verstreken tijd na een refresh behouden blijft — niet terug naar nul.
+  const clockBaseAt = (m: MatchState['match']) =>
+    m.clockRunning && m.clockUpdatedAt ? new Date(m.clockUpdatedAt).getTime() : Date.now()
 
-  // Volledig scherm (handig op tablet/laptop bij het veld).
+  const [clock, setClock] = useState(initialState.match.clockSeconds)
+  const baseRef = useRef({
+    seconds: initialState.match.clockSeconds,
+    running: initialState.match.clockRunning,
+    at: clockBaseAt(initialState.match),
+  })
+
+  // Volledig scherm (handig op tablet/laptop bij het veld). We zetten de scorekeeper-container
+  // zelf op fullscreen (niet het hele document), zodat het veld netjes in beeld blijft passen.
+  const rootRef = useRef<HTMLDivElement>(null)
   const [isFullscreen, setIsFullscreen] = useState(false)
   useEffect(() => {
     const onChange = () => setIsFullscreen(Boolean(document.fullscreenElement))
@@ -65,14 +76,51 @@ export function Scorekeeper({
     if (document.fullscreenElement) {
       document.exitFullscreen().catch(() => {})
     } else {
-      document.documentElement.requestFullscreen().catch(() => {})
+      rootRef.current?.requestFullscreen().catch(() => {})
     }
   }
 
+  // Houd het scherm wakker zolang de wedstrijd live is (Wake Lock API), zodat de gsm niet
+  // in slaap valt tijdens het aantekenen. Wordt vrijgegeven als de match niet meer live is.
   useEffect(() => {
-    baseRef.current = { seconds: state.match.clockSeconds, running: state.match.clockRunning, at: Date.now() }
-    setClock(state.match.clockSeconds)
-  }, [state.match.clockSeconds, state.match.clockRunning])
+    if (state.match.status !== 'live') return
+    type SentinelLike = { release: () => Promise<void> }
+    const nav = navigator as Navigator & { wakeLock?: { request: (t: 'screen') => Promise<SentinelLike> } }
+    if (!nav.wakeLock) return
+    let sentinel: SentinelLike | null = null
+    let active = true
+    const request = () => {
+      nav.wakeLock
+        ?.request('screen')
+        .then((s) => {
+          if (active) sentinel = s
+          else s.release().catch(() => {})
+        })
+        .catch(() => {})
+    }
+    request()
+    // Na tab-wissel/lock wordt de wake lock vrijgegeven → opnieuw aanvragen bij terugkeer.
+    const onVis = () => {
+      if (document.visibilityState === 'visible') request()
+    }
+    document.addEventListener('visibilitychange', onVis)
+    return () => {
+      active = false
+      document.removeEventListener('visibilitychange', onVis)
+      sentinel?.release().catch(() => {})
+    }
+  }, [state.match.status])
+
+  useEffect(() => {
+    baseRef.current = {
+      seconds: state.match.clockSeconds,
+      running: state.match.clockRunning,
+      at: clockBaseAt(state.match),
+    }
+    const b = baseRef.current
+    setClock(b.running ? b.seconds + (Date.now() - b.at) / 1000 : b.seconds)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.match.clockSeconds, state.match.clockRunning, state.match.clockUpdatedAt])
 
   useEffect(() => {
     if (!state.match.clockRunning) return
@@ -146,9 +194,12 @@ export function Scorekeeper({
         gameClock: Math.floor(clock),
       })) as { outcome?: string; type?: string; points?: number; isCross?: boolean; state?: MatchState } | null
 
-      let f: { title: string; big: string; color: string; team: string } | null = null
+      const scorer = roster.find((r) => r.id === playerId)
+      const scorerLabel = scorer ? `${scorer.shirtNumber} ${scorer.name}` : undefined
+
+      let f: { title: string; big: string; color: string; team: string; player?: string } | null = null
       if (result?.outcome === 'goal') {
-        f = { title: result.type === 'rug' ? 'RUGWORP' : 'DOELPUNT', big: `+${result.points ?? 1}`, color, team: teamName }
+        f = { title: result.type === 'rug' ? 'RUGWORP' : 'DOELPUNT', big: `+${result.points ?? 1}`, color, team: teamName, player: scorerLabel }
       } else if (result?.isCross) {
         f = { title: 'KRUISJE', big: '✕', color: OUT_COLOR, team: teamName }
       } else if (result?.outcome === 'out_side' || result?.outcome === 'out_back') {
@@ -168,7 +219,7 @@ export function Scorekeeper({
       setTapMode('ground')
       setThrowType('nek')
     },
-    [poss, throwType, clock, act, state.teams],
+    [poss, throwType, clock, act, state.teams, roster],
   )
 
   // Stap 1: tik op het veld waar de bal valt → open het keuzescherm.
@@ -261,11 +312,12 @@ export function Scorekeeper({
   }
 
   return (
-    <div className="sk">
+    <div className="sk" ref={rootRef}>
       {flash && (
         <div className="sk-goal-flash" style={{ ['--flash' as string]: flash.color }}>
           <div className="sk-goal-big">{flash.title}</div>
           <div className="sk-goal-pts">{flash.big}</div>
+          {flash.player && <div className="sk-goal-scorer">{flash.player}</div>}
           <div className="sk-goal-team">{flash.team}</div>
         </div>
       )}
@@ -443,6 +495,9 @@ export function Scorekeeper({
       {!isScheduled && (
         <div className="sk-toolbar">
           <button type="button" className="tb warn" disabled={busy} onClick={() => act({ action: 'undo' })}>↶ Undo</button>
+          {isLive && (
+            <button type="button" className="tb" disabled={busy} onClick={() => act({ action: 'referee_stop' })} title="Scheidsrechter-minuut / onderbreking">⏱ SR-minuut</button>
+          )}
           {isLive && state.match.currentHalf < 2 && (
             <button type="button" className="tb" disabled={busy} onClick={() => act({ action: 'half' })}>⏭ 2e helft</button>
           )}

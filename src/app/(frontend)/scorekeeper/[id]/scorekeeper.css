@@ -18,6 +18,8 @@
   box-sizing: border-box;
   overflow: hidden;
 }
+/* In volledig scherm vult de container exact het scherm; het veld krimpt mee (geen scroll). */
+.sk:fullscreen { height: 100vh; width: 100vw; }
 .sk * { box-sizing: border-box; }
 .sk button { cursor: pointer; font-family: inherit; }
 .sk button:disabled { opacity: 0.4; cursor: not-allowed; }
@@ -136,7 +138,7 @@
 .sk-col-home .sk-num.on { background: var(--home); color: #06140d; border-color: var(--home); }
 .sk-col-away .sk-num.on { background: var(--away); color: #06140d; border-color: var(--away); }
 
-.sk-field-wrap { flex: 1 1 auto; display: flex; justify-content: center; align-items: stretch; min-width: 0; }
+.sk-field-wrap { flex: 1 1 auto; display: flex; justify-content: center; align-items: stretch; min-width: 0; min-height: 0; }
 .sk-field { height: 100%; width: auto; max-width: 100%; touch-action: manipulation; cursor: crosshair; border-radius: 8px; }
 
 /* ── Compacte bediening ── */
@@ -261,6 +263,7 @@
 }
 .sk-goal-big { font-size: 3rem; font-weight: 900; letter-spacing: 0.05em; text-shadow: 0 0 24px var(--flash); }
 .sk-goal-pts { font-size: 5rem; font-weight: 900; line-height: 1; }
+.sk-goal-scorer { font-size: 1.8rem; font-weight: 900; color: var(--flash); font-variant-numeric: tabular-nums; }
 .sk-goal-team { font-size: 1.4rem; font-weight: 700; color: var(--txt); }
 
 @keyframes goalpop {
