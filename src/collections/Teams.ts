@@ -1,6 +1,7 @@
 import type { CollectionConfig } from 'payload'
 
 import { CATEGORY_OPTIONS } from '../lib/categories'
+import { REEKS_OPTIONS } from '../lib/reeksen'
 import { isFederationLevel } from '../lib/access'
 
 export const Teams: CollectionConfig = {
@@ -34,6 +35,15 @@ export const Teams: CollectionConfig = {
       type: 'select',
       options: CATEGORY_OPTIONS,
       required: true,
+    },
+    {
+      name: 'reeks',
+      label: 'Reeks / niveau',
+      type: 'select',
+      options: [...REEKS_OPTIONS],
+      admin: {
+        description: 'Competitiereeks (KVKBF) waarin deze ploeg speelt.',
+      },
     },
     {
       name: 'name',

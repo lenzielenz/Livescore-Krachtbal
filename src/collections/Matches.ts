@@ -1,6 +1,7 @@
 import type { CollectionConfig } from 'payload'
 
 import { CATEGORY_OPTIONS } from '../lib/categories'
+import { REEKS_OPTIONS } from '../lib/reeksen'
 
 export const MATCH_STATUS_OPTIONS = [
   { label: 'Gepland', value: 'scheduled' },
@@ -97,6 +98,15 @@ export const Matches: CollectionConfig = {
           type: 'select',
           options: CATEGORY_OPTIONS,
           required: true,
+        },
+        {
+          name: 'reeks',
+          label: 'Reeks / niveau',
+          type: 'select',
+          options: [...REEKS_OPTIONS],
+          admin: {
+            description: 'Competitiereeks (KVKBF). Bepaalt mee de beker-voorgift.',
+          },
         },
         {
           name: 'status',

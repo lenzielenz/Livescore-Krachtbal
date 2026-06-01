@@ -189,6 +189,34 @@ export interface Team {
   club: number | Club;
   category: 'U12' | 'U14' | 'U16' | 'U18' | 'U20' | 'senioren';
   /**
+   * Competitiereeks (KVKBF) waarin deze ploeg speelt.
+   */
+  reeks?:
+    | (
+        | '1NAH'
+        | '1NAHB'
+        | '1NAD'
+        | '2NAH'
+        | '2NAHB'
+        | 'LH'
+        | 'LD'
+        | 'RHA'
+        | 'RHB'
+        | 'RDA'
+        | 'RDB'
+        | 'U18J'
+        | 'U18M'
+        | 'U16J'
+        | 'U16M'
+        | 'U14J'
+        | 'U14M'
+        | 'U12'
+        | 'recreatief'
+        | 'beker'
+        | 'andere'
+      )
+    | null;
+  /**
    * Bv. "KV Roeselare U14". Het logo komt van de club.
    */
   name: string;
@@ -237,6 +265,34 @@ export interface Match {
   awayTeam: number | Team;
   date: string;
   category: 'U12' | 'U14' | 'U16' | 'U18' | 'U20' | 'senioren';
+  /**
+   * Competitiereeks (KVKBF). Bepaalt mee de beker-voorgift.
+   */
+  reeks?:
+    | (
+        | '1NAH'
+        | '1NAHB'
+        | '1NAD'
+        | '2NAH'
+        | '2NAHB'
+        | 'LH'
+        | 'LD'
+        | 'RHA'
+        | 'RHB'
+        | 'RDA'
+        | 'RDB'
+        | 'U18J'
+        | 'U18M'
+        | 'U16J'
+        | 'U16M'
+        | 'U14J'
+        | 'U14M'
+        | 'U12'
+        | 'recreatief'
+        | 'beker'
+        | 'andere'
+      )
+    | null;
   status: 'scheduled' | 'live' | 'finished';
   /**
    * Min. 10 m (15 m voor nieuwe terreinen). Bepaalt de veldlengte en de afstandsberekening.
@@ -627,6 +683,7 @@ export interface ClubsSelect<T extends boolean = true> {
 export interface TeamsSelect<T extends boolean = true> {
   club?: T;
   category?: T;
+  reeks?: T;
   name?: T;
   logo?: T;
   updatedAt?: T;
@@ -659,6 +716,7 @@ export interface MatchesSelect<T extends boolean = true> {
   awayTeam?: T;
   date?: T;
   category?: T;
+  reeks?: T;
   status?: T;
   goalAreaDepth?: T;
   homeLineup?: T;
