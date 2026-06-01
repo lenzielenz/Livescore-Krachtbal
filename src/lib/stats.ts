@@ -26,6 +26,14 @@ export interface PlayerStats {
   order: { first: number; second: number; last: number }
   ground: number
   caught: number
+  /** Buiten (zijlijn + achterlijn). */
+  out: number
+  /** Geforceerd / balverlies = gevangen + buiten (alle worpen die de bal kwijtspelen). */
+  lost: number
+  /** Doelpogingen: worpen vanaf de doelworp-positie (gegaan voor goal). */
+  goalAttempts: number
+  /** Conversie = doelpunten / doelpogingen (0..1). */
+  conversion: number
   /** Netto bijdrage: doelpunt-punten − gevangen worpen. Een gevangen worp is een fout
    * (bal in de handen van de tegenstander gegooid) en telt negatief. */
   score: number
@@ -58,6 +66,10 @@ function emptyPlayer(t: StatThrow): PlayerStats {
     order: { first: 0, second: 0, last: 0 },
     ground: 0,
     caught: 0,
+    out: 0,
+    lost: 0,
+    goalAttempts: 0,
+    conversion: 0,
     score: 0,
     goals: { nek: 0, rug: 0, total: 0, points: 0 },
     distance: { avg: 0, max: 0 },
@@ -100,6 +112,9 @@ export function aggregateStats(throws: StatThrow[]): MatchStats {
     } else {
       ps.ground += 1
     }
+    if (t.outcome === 'out_side' || t.outcome === 'out_back') ps.out += 1
+    // Doelpoging = worp vanaf de doelworp-positie (gegaan voor goal).
+    if (t.isLastThrow) ps.goalAttempts += 1
 
     if (t.outcome === 'goal') {
       ps.goals.total += 1
@@ -132,6 +147,9 @@ export function aggregateStats(throws: StatThrow[]): MatchStats {
     ps.distance.avg = d.n ? Math.round((d.sum / d.n) * 10) / 10 : 0
     // Gevangen worpen tellen negatief (fout: bal in de handen gegooid).
     ps.score = ps.goals.points - ps.caught
+    // Geforceerd / balverlies = gevangen + buiten.
+    ps.lost = ps.caught + ps.out
+    ps.conversion = ps.goalAttempts ? Math.round((ps.goals.total / ps.goalAttempts) * 100) / 100 : 0
   }
   for (const side of ['home', 'away'] as const) {
     const td = teamDist[side]

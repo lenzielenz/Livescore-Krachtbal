@@ -100,6 +100,39 @@
 .player-table tr.side-away td:first-child { box-shadow: inset 3px 0 0 var(--away); }
 .player-table .empty { text-align: center; color: var(--dim); }
 .player-table td.neg { color: #ef476f; font-weight: 700; }
+.pt-sub { font-size: 0.72rem; color: var(--dim); }
+
+/* Tabel / kaarten toggle */
+.pt-viewtoggle { display: flex; gap: 6px; margin: 8px 0; }
+.pt-viewtoggle button {
+  padding: 5px 14px; border: 1px solid var(--line); background: #0a1f14; color: var(--txt);
+  border-radius: 8px; font-size: 0.82rem; cursor: pointer;
+}
+.pt-viewtoggle button.on { background: var(--accent); color: #06140d; border-color: var(--accent); font-weight: 700; }
+
+/* Per-speler kaarten */
+.pl-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+.pl-card { border: 1px solid var(--line); border-radius: 12px; padding: 12px; background: #0a1f14; }
+.pl-card.side-home { border-left: 3px solid var(--home); }
+.pl-card.side-away { border-left: 3px solid var(--away); }
+.pl-card-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.pl-num { font-weight: 900; font-size: 1.1rem; font-variant-numeric: tabular-nums; }
+.pl-name { flex: 1; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pl-score { font-weight: 900; font-variant-numeric: tabular-nums; color: var(--accent); }
+.pl-score.neg { color: #ef476f; }
+.pl-card-body { display: flex; gap: 12px; }
+.pl-map { width: 96px; height: auto; flex: 0 0 auto; border-radius: 6px; }
+.pl-metrics { flex: 1; display: flex; flex-direction: column; gap: 7px; min-width: 0; }
+.pl-metric { display: flex; flex-direction: column; gap: 2px; }
+.pl-lbl { font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.4px; color: var(--dim); }
+.pl-val { font-size: 0.9rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.pl-val em { font-style: normal; font-weight: 400; color: var(--dim); font-size: 0.8rem; }
+.pl-val.neg { color: #ef476f; }
+.pl-bar { display: flex; height: 7px; border-radius: 4px; overflow: hidden; background: #0a1f14; }
+.pl-bar .seg { display: block; height: 100%; }
+.pl-bar .seg.l { background: #06d6a0; }
+.pl-bar .seg.m { background: #ffd166; }
+.pl-bar .seg.r { background: #4cc9f0; }
 
 @media (max-width: 700px) {
   .stats-grid { grid-template-columns: 1fr; }

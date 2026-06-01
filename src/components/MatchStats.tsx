@@ -47,6 +47,7 @@ export function MatchStats({
   const [goalsOnly, setGoalsOnly] = useState(false)
   const [view, setView] = useState<'dots' | 'heat'>('dots')
   const [orderFilter, setOrderFilter] = useState<'all' | 'first' | 'second' | 'last'>('all')
+  const [playerView, setPlayerView] = useState<'table' | 'cards'>('table')
 
   const matchesOrder = (s: ShotPoint) =>
     orderFilter === 'all' ||
@@ -132,41 +133,100 @@ export function MatchStats({
               </button>
             ))}
           </div>
-          <table className="player-table">
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Speler</th>
-                <th title="Worpen">W</th>
-                <th title="Doelpunten (nek/rug)">D</th>
-                <th title="Punten">P</th>
-                <th title="Score = punten − gevangen (gevangen telt negatief)">Sco</th>
-                <th title="Grond/Gevangen">G/V</th>
-                <th title="Gem. / Max afstand">Afst.</th>
-                <th title="Zones L/M/R">L/M/R</th>
-                <th title="1e/2e/laatste worp">1/2/L</th>
-              </tr>
-            </thead>
-            <tbody>
-              {stats.players.length === 0 && (
-                <tr><td colSpan={10} className="empty">Nog geen worpen geregistreerd.</td></tr>
-              )}
-              {stats.players.map((p) => (
-                <tr key={p.playerId} className={`side-${p.teamSide}`}>
-                  <td>{p.shirtNumber}</td>
-                  <td>{p.playerName}</td>
-                  <td>{p.throws}</td>
-                  <td>{p.goals.total} ({p.goals.nek}/{p.goals.rug})</td>
-                  <td>{p.goals.points}</td>
-                  <td className={p.score < 0 ? 'neg' : undefined}>{p.score > 0 ? `+${p.score}` : p.score}</td>
-                  <td>{p.ground}/{p.caught}</td>
-                  <td>{p.distance.avg.toFixed(1)} / {p.distance.max.toFixed(1)}</td>
-                  <td>{p.zones.links}/{p.zones.midden}/{p.zones.rechts}</td>
-                  <td>{p.order.first}/{p.order.second}/{p.order.last}</td>
+
+          <div className="pt-viewtoggle">
+            <button type="button" className={playerView === 'table' ? 'on' : ''} onClick={() => setPlayerView('table')}>Tabel</button>
+            <button type="button" className={playerView === 'cards' ? 'on' : ''} onClick={() => setPlayerView('cards')}>Kaarten</button>
+          </div>
+
+          {playerView === 'table' ? (
+            <table className="player-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Speler</th>
+                  <th title="Worpen">W</th>
+                  <th title="Doelpunten (nek/rug)">D</th>
+                  <th title="Richting links/midden/rechts">L/M/R</th>
+                  <th title="Doelpogingen — raak / gegaan voor goal">Doel</th>
+                  <th title="Conversie = doelpunten / doelpogingen">Conv</th>
+                  <th title="Geforceerd / balverlies (gevangen + buiten)">Gefor.</th>
+                  <th title="Score = punten − gevangen (gevangen telt negatief)">Sco</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {stats.players.length === 0 && (
+                  <tr><td colSpan={9} className="empty">Nog geen worpen geregistreerd.</td></tr>
+                )}
+                {stats.players.map((p) => (
+                  <tr key={p.playerId} className={`side-${p.teamSide}`}>
+                    <td>{p.shirtNumber}</td>
+                    <td>{p.playerName}</td>
+                    <td>{p.throws}</td>
+                    <td>{p.goals.total} ({p.goals.nek}/{p.goals.rug})</td>
+                    <td>{p.zones.links}/{p.zones.midden}/{p.zones.rechts}</td>
+                    <td>{p.goals.total}/{p.goalAttempts}</td>
+                    <td>{Math.round(p.conversion * 100)}%</td>
+                    <td className={p.lost > 0 ? 'neg' : undefined}>{p.lost} <span className="pt-sub">({p.caught}g/{p.out}b)</span></td>
+                    <td className={p.score < 0 ? 'neg' : undefined}>{p.score > 0 ? `+${p.score}` : p.score}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <div className="pl-cards">
+              {stats.players.length === 0 && <p className="empty">Nog geen worpen geregistreerd.</p>}
+              {stats.players.map((p) => {
+                const pShots = shots.filter((s) => s.playerId === p.playerId)
+                const pMarkers: FieldMarker[] = pShots.map((s) => ({
+                  x: s.x,
+                  y: s.y,
+                  color: OUTCOME_COLOR[s.outcome] ?? '#ffd166',
+                  r: s.outcome === 'goal' ? 7 : 5,
+                }))
+                const zoneTot = p.zones.links + p.zones.midden + p.zones.rechts || 1
+                return (
+                  <div key={p.playerId} className={`pl-card side-${p.teamSide}`}>
+                    <div className="pl-card-head">
+                      <span className="pl-num">{p.shirtNumber}</span>
+                      <span className="pl-name">{p.playerName}</span>
+                      <span className={`pl-score ${p.score < 0 ? 'neg' : ''}`}>{p.score > 0 ? `+${p.score}` : p.score}</span>
+                    </div>
+                    <div className="pl-card-body">
+                      <FieldSchema className="pl-map" markers={pMarkers} goalAreaDepthM={goalAreaDepth} />
+                      <div className="pl-metrics">
+                        <div className="pl-metric">
+                          <span className="pl-lbl">Doelpogingen</span>
+                          <span className="pl-val">{p.goals.total}/{p.goalAttempts} <em>({Math.round(p.conversion * 100)}%)</em></span>
+                        </div>
+                        <div className="pl-metric">
+                          <span className="pl-lbl">Richting</span>
+                          <span className="pl-bar">
+                            <i className="seg l" style={{ width: `${(p.zones.links / zoneTot) * 100}%` }} />
+                            <i className="seg m" style={{ width: `${(p.zones.midden / zoneTot) * 100}%` }} />
+                            <i className="seg r" style={{ width: `${(p.zones.rechts / zoneTot) * 100}%` }} />
+                          </span>
+                          <span className="pl-val">{p.zones.links}/{p.zones.midden}/{p.zones.rechts}</span>
+                        </div>
+                        <div className="pl-metric">
+                          <span className="pl-lbl">Nek / Rug</span>
+                          <span className="pl-val">{p.goals.nek} / {p.goals.rug}</span>
+                        </div>
+                        <div className="pl-metric">
+                          <span className="pl-lbl">Geforceerd</span>
+                          <span className={`pl-val ${p.lost > 0 ? 'neg' : ''}`}>{p.lost} <em>({p.caught} gevangen, {p.out} buiten)</em></span>
+                        </div>
+                        <div className="pl-metric">
+                          <span className="pl-lbl">Worpen · afstand</span>
+                          <span className="pl-val">{p.throws} · {p.distance.avg.toFixed(1)}m</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </div>
       </div>
     </div>
