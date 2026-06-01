@@ -23,6 +23,11 @@ function fmtClock(total: number): string {
   return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
 }
 
+// Voornaam = eerste woord van de naam (compact tonen naast het rugnummer).
+function firstName(name: string): string {
+  return name.trim().split(/\s+/)[0] ?? ''
+}
+
 export function Scorekeeper({
   matchId,
   initialState,
@@ -238,38 +243,9 @@ export function Scorekeeper({
       ]
     : recentTaps
 
-  const PlayerColumn = ({ side, players, arrow }: { side: 'home' | 'away'; players: RosterPlayer[]; arrow: string }) => {
-    const active = possSide === side
-    const teamId = side === 'home' ? state.teams.home.id : state.teams.away.id
-    return (
-      <div className={`sk-col sk-col-${side} ${active ? 'active' : 'dim'}`}>
-        <div className="sk-col-head">
-          <div className="sk-col-actions">
-            <button type="button" className="sk-col-mini" disabled={busy || !isLive} title="Vrijworp" onClick={() => act({ action: 'freethrow', teamId })}>VW</button>
-            <button type="button" className="sk-col-mini" disabled={busy} title="Wissel" onClick={() => { setSubOut(null); setSubOpen(true) }}>⇄</button>
-          </div>
-          <span className="sk-col-dir" aria-label="speelrichting">{arrow}</span>
-          {active && poss && (
-            <span className="sk-col-worp">{poss.freeThrow ? 'VW' : `${poss.nextThrowNumber}/${poss.throwsAllowed}`}</span>
-          )}
-        </div>
-        {players.map((p) => {
-          const justThrew = active && poss?.lastPlayerId === p.id
-          // Numbers tonen de opstelling; de selectie gebeurt in het keuzescherm na het tikken.
-          return (
-            <div
-              key={p.id}
-              className="sk-num display"
-              style={{ opacity: justThrew ? 0.45 : 1 }}
-              title={p.name}
-            >
-              {p.shirtNumber}
-            </div>
-          )
-        })}
-      </div>
-    )
-  }
+  // Speelrichting + worp van de ploeg-aan-zet, groot getoond boven het veld.
+  const possArrow = possSide === 'home' ? homeArrow : possSide === 'away' ? awayArrow : ''
+  const possTeamName = possSide === 'home' ? state.teams.home.name : possSide === 'away' ? state.teams.away.name : ''
 
   return (
     <div className="sk">
@@ -304,12 +280,13 @@ export function Scorekeeper({
                   <button
                     type="button"
                     key={p.id}
-                    className="sk-num"
+                    className="sk-pick-player"
                     disabled={justThrew}
                     onClick={() => choosePlayer(p.id)}
                     title={justThrew ? `${p.name} — net geworpen, niet 2× na elkaar` : p.name}
                   >
-                    {p.shirtNumber}
+                    <span className="sk-pick-num">{p.shirtNumber}</span>
+                    <span className="sk-pick-naam">{firstName(p.name)}</span>
                   </button>
                 )
               })}
@@ -419,24 +396,30 @@ export function Scorekeeper({
 
       <header className="sk-head">
         <div className="sk-scorebar">
-          <button type="button" className="sk-to home" disabled={busy || !isLive || state.timeouts.home >= 2} onClick={() => act({ action: 'timeout', teamId: state.teams.home.id })} title="Time-out thuis">
-            {'●'.repeat(state.timeouts.home)}{'○'.repeat(Math.max(0, 2 - state.timeouts.home))}
-          </button>
-          <span className="sk-sc home">{state.score.home}</span>
+          <div className="sk-team home">
+            <span className="sk-tn">{state.teams.home.name}</span>
+            <span className="sk-sc">{state.score.home}</span>
+            <button type="button" className="sk-to" disabled={busy || !isLive || state.timeouts.home >= 2} onClick={() => act({ action: 'timeout', teamId: state.teams.home.id })} title="Time-out thuis (2 per helft)">
+              <span className="sk-to-lbl">T.O.</span>
+              <span className="sk-to-dots">{'●'.repeat(state.timeouts.home)}{'○'.repeat(Math.max(0, 2 - state.timeouts.home))}</span>
+            </button>
+          </div>
           <button type="button" className={`sk-clock ${state.match.clockRunning ? 'running' : ''}`} disabled={busy || !isLive} onClick={toggleClock} title="Tik om te starten/pauzeren">
             <span className="sk-half-chip">H{state.match.currentHalf}</span>
             {fmtClock(clock)}
             <span className="sk-clock-ico">{state.match.clockRunning ? '⏸' : '▶'}</span>
           </button>
-          <span className="sk-sc away">{state.score.away}</span>
-          <button type="button" className="sk-to away" disabled={busy || !isLive || state.timeouts.away >= 2} onClick={() => act({ action: 'timeout', teamId: state.teams.away.id })} title="Time-out uit">
-            {'●'.repeat(state.timeouts.away)}{'○'.repeat(Math.max(0, 2 - state.timeouts.away))}
-          </button>
+          <div className="sk-team away">
+            <span className="sk-tn">{state.teams.away.name}</span>
+            <span className="sk-sc">{state.score.away}</span>
+            <button type="button" className="sk-to" disabled={busy || !isLive || state.timeouts.away >= 2} onClick={() => act({ action: 'timeout', teamId: state.teams.away.id })} title="Time-out uit (2 per helft)">
+              <span className="sk-to-lbl">T.O.</span>
+              <span className="sk-to-dots">{'●'.repeat(state.timeouts.away)}{'○'.repeat(Math.max(0, 2 - state.timeouts.away))}</span>
+            </button>
+          </div>
         </div>
-        <div className="sk-names">
-          <span className="sk-tn home">{state.teams.home.name}</span>
-          <span className="sk-kr" title="Kruisjes">✚ {state.crosses.home}–{state.crosses.away}</span>
-          <span className="sk-tn away">{state.teams.away.name}</span>
+        <div className="sk-crossrow" title="Kruisjes (rechtstreeks buiten)">
+          Kruisjes ✚ <strong>{state.crosses.home}</strong>–<strong>{state.crosses.away}</strong>
         </div>
       </header>
 
@@ -445,6 +428,13 @@ export function Scorekeeper({
       {!isScheduled && (
         <div className="sk-toolbar">
           <button type="button" className="tb warn" disabled={busy} onClick={() => act({ action: 'undo' })}>↶ Undo</button>
+          {isLive && (
+            <button type="button" className="tb home" disabled={busy} onClick={() => act({ action: 'freethrow', teamId: state.teams.home.id })} title={`Vrijworp ${state.teams.home.name}`}>VW {state.teams.home.name}</button>
+          )}
+          {isLive && (
+            <button type="button" className="tb away" disabled={busy} onClick={() => act({ action: 'freethrow', teamId: state.teams.away.id })} title={`Vrijworp ${state.teams.away.name}`}>VW {state.teams.away.name}</button>
+          )}
+          <button type="button" className="tb" disabled={busy} onClick={() => { setSubOut(null); setSubOpen(true) }} title="Wissel">⇄ Wissel</button>
           {isLive && state.match.currentHalf < 2 && (
             <button type="button" className="tb" disabled={busy} onClick={() => act({ action: 'half' })}>⏭ 2e helft</button>
           )}
@@ -464,9 +454,16 @@ export function Scorekeeper({
         </div>
       ) : (
         <>
-          <div className="sk-hint">Tik op het veld waar de bal valt → kies wie wierp.</div>
+          {poss ? (
+            <div className={`sk-possbar side-${possSide}`}>
+              <span className="sk-possbar-team">{possTeamName} zet op</span>
+              <span className="sk-possbar-arrow" aria-label="speelrichting">{possArrow}</span>
+              <span className="sk-possbar-worp">{poss.freeThrow ? 'VRIJWORP' : `WORP ${poss.nextThrowNumber}/${poss.throwsAllowed}`}</span>
+            </div>
+          ) : (
+            <div className="sk-hint">Tik op het veld waar de bal valt → kies wie wierp.</div>
+          )}
           <div className="sk-arena">
-            <PlayerColumn side="home" players={homePlayers} arrow={homeArrow} />
             <div className="sk-field-wrap">
               <FieldSchema
                 className="sk-field"
@@ -481,7 +478,6 @@ export function Scorekeeper({
                 }
               />
             </div>
-            <PlayerColumn side="away" players={awayPlayers} arrow={awayArrow} />
           </div>
         </>
       )}

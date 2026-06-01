@@ -32,40 +32,48 @@
 }
 .sk-fs:hover { color: var(--txt); border-color: var(--accent); }
 
-/* ── Kop: scorebalk + namen ── */
+/* ── Kop: scorebalk (ploeg + score + time-outs), klok in het midden ── */
 .sk-head { flex: 0 0 auto; }
-.sk-scorebar { display: grid; grid-template-columns: auto 1fr auto 1fr auto; align-items: center; gap: 8px; }
+.sk-scorebar { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px; }
+.sk-team { display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 0; }
+.sk-tn { font-weight: 800; font-size: 0.85rem; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center; }
+.sk-team.home .sk-tn { color: var(--home); }
+.sk-team.away .sk-tn { color: var(--away); }
+.sk-sc { font-size: 2.4rem; font-weight: 900; font-variant-numeric: tabular-nums; line-height: 1; }
+.sk-team.home .sk-sc { color: var(--home); }
+.sk-team.away .sk-sc { color: var(--away); }
 .sk-to {
-  padding: 7px 9px; border-radius: 9px; border: 1px solid var(--line);
-  background: #0a1f14; letter-spacing: 2px; font-size: 0.78rem; line-height: 1; white-space: nowrap;
+  display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px;
+  border: 1px solid var(--line); background: #0a1f14; line-height: 1;
 }
-.sk-to.home { border-color: var(--home); color: var(--home); }
-.sk-to.away { border-color: var(--away); color: var(--away); }
-.sk-sc { font-size: 2rem; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1; text-align: center; }
-.sk-sc.home { color: var(--home); }
-.sk-sc.away { color: var(--away); }
+.sk-to:disabled { opacity: 0.55; }
+.sk-to-lbl { font-size: 0.6rem; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase; color: var(--dim); }
+.sk-to-dots { letter-spacing: 2px; font-size: 0.72rem; }
+.sk-team.home .sk-to { border-color: var(--home); }
+.sk-team.away .sk-to { border-color: var(--away); }
 .sk-clock {
-  display: inline-flex; align-items: center; gap: 5px; padding: 5px 10px; border-radius: 999px;
+  display: inline-flex; align-items: center; gap: 5px; padding: 8px 14px; border-radius: 999px;
   border: 1px solid var(--accent); background: transparent; color: var(--accent);
-  font-size: 1rem; font-weight: 800; font-variant-numeric: tabular-nums; justify-self: center;
+  font-size: 1.15rem; font-weight: 800; font-variant-numeric: tabular-nums; justify-self: center;
 }
 .sk-clock.running { background: var(--accent); color: #06140d; }
-.sk-clock-ico { font-size: 0.75rem; }
-.sk-half-chip { font-size: 0.6rem; background: rgba(255, 255, 255, 0.14); padding: 1px 5px; border-radius: 6px; }
+.sk-clock-ico { font-size: 0.8rem; }
+.sk-half-chip { font-size: 0.62rem; background: rgba(255, 255, 255, 0.14); padding: 1px 5px; border-radius: 6px; }
 
-.sk-names { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; margin-top: 4px; }
-.sk-tn { font-weight: 700; font-size: 0.8rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sk-tn.home { color: var(--home); text-align: left; }
-.sk-tn.away { color: var(--away); text-align: right; }
-.sk-kr { font-size: 0.8rem; color: var(--dim); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.sk-crossrow { text-align: center; margin-top: 5px; font-size: 0.72rem; color: var(--dim); font-variant-numeric: tabular-nums; }
+.sk-crossrow strong { color: var(--txt); }
 
-/* Compacte beheer-balk (undo/vrijworp/helft/einde) — gelijkmatig uitgelijnd raster */
-.sk-toolbar { flex: 0 0 auto; display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+/* Compacte beheer-balk (undo/vrijworp/wissel/helft/einde) — wrapt netjes op smal scherm */
+.sk-toolbar { flex: 0 0 auto; display: flex; flex-wrap: wrap; gap: 5px; }
 .sk-toolbar .tb {
-  padding: 9px 6px; border: 1px solid var(--line); background: #0a1f14; text-align: center;
+  flex: 1 1 auto; min-width: 78px;
+  padding: 9px 8px; border: 1px solid var(--line); background: #0a1f14; text-align: center;
   color: var(--txt); border-radius: 8px; font-size: 0.8rem;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+/* Undo links, Einde rechts — duidelijke uiteinden */
+.sk-toolbar .tb.warn { order: -1; }
+.sk-toolbar .tb.danger { order: 1; }
 .sk-toolbar a.tb { text-decoration: none; color: var(--txt); }
 .sk-toolbar .tb.home { border-color: var(--home); color: var(--home); }
 .sk-toolbar .tb.away { border-color: var(--away); color: var(--away); }
@@ -75,6 +83,21 @@
 .sk-error { flex: 0 0 auto; padding: 7px 10px; border-radius: 8px; background: #4a1020; color: #ffd5e0; cursor: pointer; font-size: 0.82rem; text-align: center; }
 
 /* ── Arena: vult alle resterende hoogte; veld zo groot mogelijk ── */
+/* Grote richting + worp-indicator (vervangt de zijkolommen met nummers) */
+.sk-possbar {
+  flex: 0 0 auto; display: flex; align-items: center; justify-content: center;
+  gap: 14px; padding: 8px 14px; border-radius: 12px; border: 1px solid var(--line); background: #0a1f14;
+}
+.sk-possbar.side-home { border-color: var(--home); }
+.sk-possbar.side-away { border-color: var(--away); }
+.sk-possbar-team { font-size: 1rem; font-weight: 800; }
+.sk-possbar.side-home .sk-possbar-team { color: var(--home); }
+.sk-possbar.side-away .sk-possbar-team { color: var(--away); }
+.sk-possbar-arrow { font-size: 2.6rem; line-height: 1; font-weight: 900; }
+.sk-possbar.side-home .sk-possbar-arrow { color: var(--home); }
+.sk-possbar.side-away .sk-possbar-arrow { color: var(--away); }
+.sk-possbar-worp { font-size: 1.5rem; font-weight: 900; font-variant-numeric: tabular-nums; letter-spacing: 1px; color: var(--accent); }
+
 .sk-arena { flex: 1 1 auto; min-height: 0; display: flex; align-items: stretch; gap: 5px; }
 .sk-col { display: flex; flex-direction: column; justify-content: center; gap: 4px; flex: 0 0 auto; overflow-y: auto; }
 .sk-col.dim { opacity: 0.38; }
@@ -186,6 +209,15 @@
 }
 .sk-pick-grid .sk-num { width: 56px; height: 56px; font-size: 1.5rem; }
 .sk-pick-grid .sk-num:disabled { opacity: 0.4; }
+/* Keuzeknop met rugnummer + voornaam (structureel: nummer groot, naam klein eronder) */
+.sk-pick-player {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  min-width: 72px; padding: 8px 10px; border-radius: 12px;
+  border: 1px solid var(--line); background: #0a1f14; color: var(--txt);
+}
+.sk-pick-player:disabled { opacity: 0.4; }
+.sk-pick-num { font-size: 1.5rem; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1; }
+.sk-pick-naam { font-size: 0.72rem; color: var(--dim); max-width: 84px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* Nummers in de zijkolommen zijn nu louter informatief (selectie gebeurt in het keuzescherm) */
 .sk-num.display { display: flex; align-items: center; justify-content: center; }
 /* Korte uitleg boven het veld */
