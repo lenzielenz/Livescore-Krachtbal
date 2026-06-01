@@ -5,8 +5,11 @@ import { MatchStats } from '@/components/MatchStats'
 import { Scoreboard } from '@/components/Scoreboard'
 import { buildMatchState, buildMatchStats, buildTimeline } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
+import { REEKS_OPTIONS } from '@/lib/reeksen'
 
 export const dynamic = 'force-dynamic'
+
+const reeksLabel = (v: unknown) => REEKS_OPTIONS.find((o) => o.value === v)?.label ?? (typeof v === 'string' ? v : null)
 
 export default async function MatchPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -25,12 +28,45 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
     notFound()
   }
 
+  // Extra context: reeks, datum/uur, locatie (terrein thuisclub) en toegewezen scheidsrechter.
+  const matchDoc = await payload.findByID({ collection: 'matches', id: matchId, depth: 2 }).catch(() => null)
+  const homeClub = (matchDoc?.homeTeam as { club?: { accommodatie?: string } } | null)?.club
+  const accommodatie = homeClub?.accommodatie?.trim() || null
+  const reeks = reeksLabel(matchDoc?.reeks)
+  const datum = matchDoc?.date
+    ? new Date(matchDoc.date as string).toLocaleString('nl-BE', { dateStyle: 'long', timeStyle: 'short' })
+    : null
+  const sheetRes = await payload
+    .find({ collection: 'matchsheets', where: { match: { equals: matchId } }, depth: 2, limit: 1 })
+    .catch(() => null)
+  const referee = (sheetRes?.docs[0]?.assignedReferee as { name?: string } | null)?.name || null
+
   return (
     <div className="site">
       <Link href="/" className="back-link">
         ← Alle wedstrijden
       </Link>
       <Scoreboard matchId={matchId} initial={{ state, timeline }} />
+      {(reeks || datum || accommodatie || referee) && (
+        <div className="match-info">
+          {(reeks || datum) && (
+            <div className="match-info-row">
+              {reeks && <span className="match-info-reeks">{reeks}</span>}
+              {datum && <span>{datum}</span>}
+            </div>
+          )}
+          {accommodatie && (
+            <div className="match-info-row">
+              <span aria-hidden>📍</span> <span>{accommodatie}</span>
+            </div>
+          )}
+          {referee && (
+            <div className="match-info-row">
+              <span aria-hidden>🟡</span> <span>Scheidsrechter: {referee}</span>
+            </div>
+          )}
+        </div>
+      )}
       <p className="sheet-cta">
         <Link href={`/match/${matchId}/sheet`} className="back-link">
           📋 Wedstrijdblad (print / PDF / JSON)
