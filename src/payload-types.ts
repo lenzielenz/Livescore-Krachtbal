@@ -158,6 +158,18 @@ export interface Club {
    * Clublogo — wordt professioneel weergegeven op de site.
    */
   logo?: (number | null) | Media;
+  /**
+   * Naam stadion, adres, type terrein (bv. kunstgras).
+   */
+  accommodatie?: string | null;
+  telefoon?: string | null;
+  website?: string | null;
+  secretarisNaam?: string | null;
+  secretarisEmail?: string | null;
+  secretarisTelefoon?: string | null;
+  jeugdNaam?: string | null;
+  jeugdEmail?: string | null;
+  jeugdTelefoon?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -673,6 +685,15 @@ export interface ClubsSelect<T extends boolean = true> {
   name?: T;
   email?: T;
   logo?: T;
+  accommodatie?: T;
+  telefoon?: T;
+  website?: T;
+  secretarisNaam?: T;
+  secretarisEmail?: T;
+  secretarisTelefoon?: T;
+  jeugdNaam?: T;
+  jeugdEmail?: T;
+  jeugdTelefoon?: T;
   updatedAt?: T;
   createdAt?: T;
 }

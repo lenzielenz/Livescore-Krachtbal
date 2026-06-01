@@ -61,11 +61,10 @@ export function MatchStats({
       (!goalsOnly || s.outcome === 'goal') &&
       matchesOrder(s),
   )
+  // Hoofd-shotmap (links): enkel punten — geen traject (dat hoort bij de speler-kaarten rechts).
   const markers: FieldMarker[] = filteredShots.map((s) => ({
     x: s.x,
     y: s.y,
-    fromX: s.fromX,
-    fromY: s.fromY,
     color: OUTCOME_COLOR[s.outcome] ?? '#ffd166',
     r: s.outcome === 'goal' ? 8 : 6,
     label: String(s.throwNumber),
@@ -131,7 +130,7 @@ export function MatchStats({
             <button className={playerFilter === 'all' ? 'on' : ''} onClick={() => setPlayerFilter('all')}>Alle spelers</button>
             {stats.players.map((p) => (
               <button key={p.playerId} className={playerFilter === p.playerId ? 'on' : ''} onClick={() => setPlayerFilter(p.playerId)}>
-                #{p.shirtNumber}
+                #{p.shirtNumber} {p.playerName.split(/\s+/)[0]}
               </button>
             ))}
           </div>
