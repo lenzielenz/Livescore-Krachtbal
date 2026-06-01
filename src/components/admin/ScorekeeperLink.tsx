@@ -16,17 +16,26 @@ export function ScorekeeperLink() {
     )
   }
 
+  const links: { href: string; label: string }[] = [
+    { href: `/scorekeeper/${id}`, label: '▶ Aantekenscherm' },
+    { href: `/opstelling/${id}`, label: '👥 Opstelling (clubs)' },
+    { href: `/scheidsrechter/${id}`, label: '🧑‍⚖️ Scheidsrechter' },
+    { href: `/aftekenen/${id}`, label: '✍️ Aftekenen' },
+  ]
   return (
-    <div style={{ marginBottom: 12 }}>
-      <a
-        href={`/scorekeeper/${id}`}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="btn btn--style-primary btn--size-medium"
-        style={{ textDecoration: 'none', display: 'inline-block' }}
-      >
-        ▶ Open aantekenscherm
-      </a>
+    <div style={{ marginBottom: 12, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+      {links.map((l) => (
+        <a
+          key={l.href}
+          href={l.href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="btn btn--style-secondary btn--size-medium"
+          style={{ textDecoration: 'none', display: 'inline-block' }}
+        >
+          {l.label}
+        </a>
+      ))}
     </div>
   )
 }

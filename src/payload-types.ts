@@ -261,43 +261,43 @@ export interface Player {
 export interface Match {
   id: number;
   title?: string | null;
+  /**
+   * Kies eerst de reeks. De categorie volgt automatisch en de ploegen worden hierop gefilterd.
+   */
+  reeks:
+    | '1NAH'
+    | '1NAHB'
+    | '1NAD'
+    | '2NAH'
+    | '2NAHB'
+    | 'LH'
+    | 'LD'
+    | 'RHA'
+    | 'RHB'
+    | 'RDA'
+    | 'RDB'
+    | 'U18J'
+    | 'U18M'
+    | 'U16J'
+    | 'U16M'
+    | 'U14J'
+    | 'U14M'
+    | 'U12'
+    | 'recreatief'
+    | 'beker'
+    | 'andere';
+  /**
+   * Kies eerst een reeks hierboven.
+   */
   homeTeam: number | Team;
   awayTeam: number | Team;
   date: string;
-  category: 'U12' | 'U14' | 'U16' | 'U18' | 'U20' | 'senioren';
-  /**
-   * Competitiereeks (KVKBF). Bepaalt mee de beker-voorgift.
-   */
-  reeks?:
-    | (
-        | '1NAH'
-        | '1NAHB'
-        | '1NAD'
-        | '2NAH'
-        | '2NAHB'
-        | 'LH'
-        | 'LD'
-        | 'RHA'
-        | 'RHB'
-        | 'RDA'
-        | 'RDB'
-        | 'U18J'
-        | 'U18M'
-        | 'U16J'
-        | 'U16M'
-        | 'U14J'
-        | 'U14M'
-        | 'U12'
-        | 'recreatief'
-        | 'beker'
-        | 'andere'
-      )
-    | null;
   status: 'scheduled' | 'live' | 'finished';
   /**
    * Min. 10 m (15 m voor nieuwe terreinen). Bepaalt de veldlengte en de afstandsberekening.
    */
   goalAreaDepth: number;
+  category?: ('U12' | 'U14' | 'U16' | 'U18' | 'U20' | 'senioren') | null;
   homeLineup?: (number | Player)[] | null;
   awayLineup?: (number | Player)[] | null;
   currentHalf?: number | null;
@@ -712,13 +712,13 @@ export interface PlayersSelect<T extends boolean = true> {
  */
 export interface MatchesSelect<T extends boolean = true> {
   title?: T;
+  reeks?: T;
   homeTeam?: T;
   awayTeam?: T;
   date?: T;
-  category?: T;
-  reeks?: T;
   status?: T;
   goalAreaDepth?: T;
+  category?: T;
   homeLineup?: T;
   awayLineup?: T;
   currentHalf?: T;

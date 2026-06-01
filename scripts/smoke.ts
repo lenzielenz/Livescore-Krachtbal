@@ -16,7 +16,7 @@ async function main() {
   const p2 = await payload.create({ collection: 'players', data: { name: 'Speler 9', team: away.id, shirtNumber: 9 }, overrideAccess: true })
   const match = await payload.create({
     collection: 'matches',
-    data: { homeTeam: home.id, awayTeam: away.id, date: new Date().toISOString(), category: 'senioren', status: 'scheduled', goalAreaDepth: 10 },
+    data: { homeTeam: home.id, awayTeam: away.id, date: new Date().toISOString(), reeks: '1NAH', status: 'scheduled', goalAreaDepth: 10 },
     overrideAccess: true,
   })
 

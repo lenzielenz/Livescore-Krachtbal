@@ -53,6 +53,39 @@ const REEKS_RANG: Partial<Record<Reeks, number>> = {
   RDB: 4,
 }
 
+// De reeks bepaalt de categorie (leeftijdsniveau) — die volgt automatisch, dus de admin
+// hoeft de categorie niet apart te kiezen.
+import type { Category } from './categories'
+
+const REEKS_CATEGORIE: Record<Reeks, Category> = {
+  '1NAH': 'senioren',
+  '1NAHB': 'senioren',
+  '1NAD': 'senioren',
+  '2NAH': 'senioren',
+  '2NAHB': 'senioren',
+  LH: 'senioren',
+  LD: 'senioren',
+  RHA: 'senioren',
+  RHB: 'senioren',
+  RDA: 'senioren',
+  RDB: 'senioren',
+  U18J: 'U18',
+  U18M: 'U18',
+  U16J: 'U16',
+  U16M: 'U16',
+  U14J: 'U14',
+  U14M: 'U14',
+  U12: 'U12',
+  recreatief: 'senioren',
+  beker: 'senioren',
+  andere: 'senioren',
+}
+
+/** Categorie (leeftijdsniveau) die hoort bij een reeks. */
+export function reeksCategorie(reeks: Reeks): Category {
+  return REEKS_CATEGORIE[reeks]
+}
+
 /** Beker-voorgift: 3 ptn per reeksverschil, max 6 (WEDSTRIJDBLAD-PROMPT). */
 export function voorgiftPunten(reeksA: Reeks, reeksB: Reeks): number {
   const a = REEKS_RANG[reeksA]

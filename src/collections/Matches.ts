@@ -1,7 +1,7 @@
 import type { CollectionConfig } from 'payload'
 
 import { CATEGORY_OPTIONS } from '../lib/categories'
-import { REEKS_OPTIONS } from '../lib/reeksen'
+import { REEKS_OPTIONS, reeksCategorie, type Reeks } from '../lib/reeksen'
 
 export const MATCH_STATUS_OPTIONS = [
   { label: 'Gepland', value: 'scheduled' },
@@ -17,7 +17,7 @@ export const Matches: CollectionConfig = {
   },
   admin: {
     useAsTitle: 'title',
-    defaultColumns: ['title', 'date', 'category', 'status'],
+    defaultColumns: ['title', 'date', 'reeks', 'status'],
     group: 'Wedstrijden',
   },
   access: {
@@ -62,6 +62,17 @@ export const Matches: CollectionConfig = {
       },
     },
     {
+      // Eerste keuze: de reeks. Die bepaalt de categorie én filtert de kiesbare ploegen.
+      name: 'reeks',
+      label: 'Reeks / niveau',
+      type: 'select',
+      options: [...REEKS_OPTIONS],
+      required: true,
+      admin: {
+        description: 'Kies eerst de reeks. De categorie volgt automatisch en de ploegen worden hierop gefilterd.',
+      },
+    },
+    {
       type: 'row',
       fields: [
         {
@@ -70,6 +81,12 @@ export const Matches: CollectionConfig = {
           type: 'relationship',
           relationTo: 'teams',
           required: true,
+          // Toon enkel ploegen uit de gekozen reeks (kies dus eerst de reeks).
+          filterOptions: ({ siblingData }) => {
+            const r = (siblingData as { reeks?: string })?.reeks
+            return r ? { reeks: { equals: r } } : false
+          },
+          admin: { description: 'Kies eerst een reeks hierboven.' },
         },
         {
           name: 'awayTeam',
@@ -77,6 +94,10 @@ export const Matches: CollectionConfig = {
           type: 'relationship',
           relationTo: 'teams',
           required: true,
+          filterOptions: ({ siblingData }) => {
+            const r = (siblingData as { reeks?: string })?.reeks
+            return r ? { reeks: { equals: r } } : false
+          },
         },
       ],
     },
@@ -90,22 +111,6 @@ export const Matches: CollectionConfig = {
           required: true,
           admin: {
             date: { pickerAppearance: 'dayAndTime' },
-          },
-        },
-        {
-          name: 'category',
-          label: 'Categorie',
-          type: 'select',
-          options: CATEGORY_OPTIONS,
-          required: true,
-        },
-        {
-          name: 'reeks',
-          label: 'Reeks / niveau',
-          type: 'select',
-          options: [...REEKS_OPTIONS],
-          admin: {
-            description: 'Competitiereeks (KVKBF). Bepaalt mee de beker-voorgift.',
           },
         },
         {
@@ -129,6 +134,23 @@ export const Matches: CollectionConfig = {
           },
         },
       ],
+    },
+    {
+      // Categorie volgt automatisch uit de reeks (leeftijdsniveau voor de spelregels) —
+      // niet meer handmatig te kiezen.
+      name: 'category',
+      label: 'Categorie (afgeleid uit reeks)',
+      type: 'select',
+      options: CATEGORY_OPTIONS,
+      admin: { readOnly: true },
+      hooks: {
+        beforeChange: [
+          ({ siblingData, value }) => {
+            const r = (siblingData as { reeks?: Reeks })?.reeks
+            return r ? reeksCategorie(r) : (value ?? 'senioren')
+          },
+        ],
+      },
     },
     {
       // Actieve opstelling: de spelers die momenteel op het veld staan (max. 4 per ploeg).

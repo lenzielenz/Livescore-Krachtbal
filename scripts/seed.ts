@@ -30,7 +30,7 @@ async function main() {
     const c = await payload.create({ collection: 'clubs', data: { name: club.name }, overrideAccess: true })
     const t = await payload.create({
       collection: 'teams',
-      data: { club: c.id, name: `${club.name} Senioren`, category: 'senioren' },
+      data: { club: c.id, name: `${club.name} Senioren`, category: 'senioren', reeks: '1NAH' },
       overrideAccess: true,
     })
     created.push(t)
@@ -46,7 +46,7 @@ async function main() {
       homeTeam: created[0].id,
       awayTeam: created[1].id,
       date: new Date().toISOString(),
-      category: 'senioren',
+      reeks: '1NAH',
       status: 'scheduled',
       goalAreaDepth: 10,
     },
