@@ -21,6 +21,14 @@ export const Teams: CollectionConfig = {
     update: ({ req }) => isFederationLevel(req.user),
     delete: ({ req }) => isFederationLevel(req.user),
   },
+  hooks: {
+    // Verwijder de spelers van deze ploeg eerst (anders blokkeert de NOT NULL-FK op players.team).
+    beforeDelete: [
+      async ({ req, id }) => {
+        await req.payload.delete({ collection: 'players', where: { team: { equals: id } }, overrideAccess: true })
+      },
+    ],
+  },
   fields: [
     {
       name: 'club',
