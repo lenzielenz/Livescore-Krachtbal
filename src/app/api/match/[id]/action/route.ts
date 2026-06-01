@@ -1,7 +1,9 @@
 import {
   advanceHalf,
+  endHalf,
   finishMatch,
   recordRefereeStop,
+  startNextHalf,
   recordThrow,
   recordTimeout,
   setClock,
@@ -56,6 +58,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         )
       case 'half':
         return Response.json(await advanceHalf(payload, matchId))
+      case 'endhalf':
+        return Response.json(await endHalf(payload, matchId))
+      case 'starthalf':
+        return Response.json(await startNextHalf(payload, matchId))
       case 'finish':
         return Response.json(await finishMatch(payload, matchId))
       case 'timeout':

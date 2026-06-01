@@ -392,16 +392,13 @@ export async function setClock(
 }
 
 /**
- * Naar de tweede helft: klok terug op 0, ploegen wisselen van veldhelft (richting draait om).
- * Het lopende balbezit wordt afgesloten en de 2e helft start met een verse opzet door de ploeg
- * die NIET aftrapte in de 1e helft — met de correcte speelrichting voor die helft.
+ * Beëindig de huidige helft (rustsignaal): sluit het lopende balbezit af, log het einde en
+ * stop de klok. De volgende helft wordt NIET automatisch gestart — dat gebeurt met startNextHalf.
  */
-export async function advanceHalf(payload: Payload, matchId: number) {
-  const { match, homeId, awayId } = await loadMatch(payload, matchId)
+export async function endHalf(payload: Payload, matchId: number) {
+  const { match } = await loadMatch(payload, matchId)
   const half = match.currentHalf ?? 1
-  const nextHalf = half + 1
 
-  // Sluit een eventueel lopend balbezit af bij het rustsignaal.
   const open = await getOpenPossession(payload, matchId)
   if (open) {
     await payload.update({
@@ -411,12 +408,28 @@ export async function advanceHalf(payload: Payload, matchId: number) {
       overrideAccess: true,
     })
   }
-
   await payload.create({
     collection: 'match-events',
     data: { match: matchId, type: 'half_end', half, gameClock: match.clockSeconds ?? 0 },
     overrideAccess: true,
   })
+  await payload.update({
+    collection: 'matches',
+    id: matchId,
+    data: { clockRunning: false },
+    overrideAccess: true,
+  })
+  return buildMatchState(payload, matchId)
+}
+
+/**
+ * Start de volgende helft: klok terug op 0, ploegen wisselen van veldhelft (richting draait om).
+ * De 2e helft start met een verse opzet door de ploeg die NIET aftrapte in de 1e helft.
+ */
+export async function startNextHalf(payload: Payload, matchId: number) {
+  const { match, homeId, awayId } = await loadMatch(payload, matchId)
+  const nextHalf = (match.currentHalf ?? 1) + 1
+
   await payload.update({
     collection: 'matches',
     id: matchId,
@@ -429,7 +442,7 @@ export async function advanceHalf(payload: Payload, matchId: number) {
     overrideAccess: true,
   })
 
-  // Wie tikte af in helft 1? De tegenploeg zet op in helft 2.
+  // Wie tikte af in helft 1? De tegenploeg zet op in de volgende helft.
   const first = await payload.find({
     collection: 'possessions',
     where: { match: { equals: matchId } },
@@ -459,6 +472,12 @@ export async function advanceHalf(payload: Payload, matchId: number) {
   })
 
   return buildMatchState(payload, matchId)
+}
+
+/** Beëindig de huidige helft én start meteen de volgende (combinatie). */
+export async function advanceHalf(payload: Payload, matchId: number) {
+  await endHalf(payload, matchId)
+  return startNextHalf(payload, matchId)
 }
 
 export async function finishMatch(payload: Payload, matchId: number) {
@@ -620,6 +639,8 @@ export interface MatchState {
   timeouts: { home: number; away: number }
   /** Scheidsrechter-minuten (onderbrekingen) in de huidige helft. */
   refereeStops: number
+  /** Rust: de huidige helft is beëindigd, de volgende nog niet gestart. */
+  atHalfTime: boolean
   possession: {
     side: TeamSide
     teamId: number
@@ -988,6 +1009,15 @@ export async function buildMatchState(payload: Payload, matchId: number): Promis
   })
   const refereeStops = refStopRes.totalDocs
 
+  // Rust: de huidige helft is beëindigd (half_end gelogd) maar de volgende nog niet gestart.
+  const halfEndRes = await payload.count({
+    collection: 'match-events',
+    where: {
+      and: [{ match: { equals: matchId } }, { type: { equals: 'half_end' } }, { half: { equals: half } }],
+    },
+  })
+  const atHalfTime = match.status === 'live' && half < 2 && halfEndRes.totalDocs > 0
+
   const open = await getOpenPossession(payload, matchId)
   let possession: MatchState['possession'] = null
   if (open) {
@@ -1040,6 +1070,7 @@ export async function buildMatchState(payload: Payload, matchId: number): Promis
     crosses: totals.crosses,
     timeouts,
     refereeStops,
+    atHalfTime,
     possession,
   }
 }

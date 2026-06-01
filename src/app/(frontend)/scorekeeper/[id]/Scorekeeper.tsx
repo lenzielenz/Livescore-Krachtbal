@@ -267,6 +267,7 @@ export function Scorekeeper({
 
   const isScheduled = state.match.status === 'scheduled'
   const isLive = state.match.status === 'live'
+  const atHalfTime = state.atHalfTime
 
   // De naam staat aan de EIGEN kant (het doel dat je verdedigt); je scoort aan de overkant.
   // home valt in helft 1 'up' (naar y=1 = onder) aan → verdedigt dus bovenaan.
@@ -501,8 +502,8 @@ export function Scorekeeper({
           {isLive && (
             <button type="button" className="tb" disabled={busy} onClick={() => act({ action: 'referee_stop' })} title="Scheidsrechter-minuut / onderbreking">⏱ SR-minuut</button>
           )}
-          {isLive && state.match.currentHalf < 2 && (
-            <button type="button" className="tb" disabled={busy} onClick={() => act({ action: 'half' })}>⏭ 2e helft</button>
+          {isLive && state.match.currentHalf < 2 && !atHalfTime && (
+            <button type="button" className="tb" disabled={busy} onClick={() => act({ action: 'endhalf' })}>⏹ Einde 1e helft</button>
           )}
           {isLive && (
             <button type="button" className="tb danger" disabled={busy} onClick={() => { if (window.confirm('Wedstrijd beëindigen?')) act({ action: 'finish' }) }}>🏁 Einde</button>
@@ -540,6 +541,16 @@ export function Scorekeeper({
               onClick={() => startTeam !== null && act({ action: 'start', startingTeamId: startTeam })}
             >
               {startTeam === null ? 'Kies eerst een ploeg' : '▶ Start wedstrijd'}
+            </button>
+          </div>
+        </div>
+      ) : atHalfTime ? (
+        <div className="sk-kickoff">
+          <div className="sk-kickoff-card">
+            <div className="sk-kickoff-title">Rust</div>
+            <div className="sk-kickoff-sub">Eerste helft beëindigd. In de 2e helft zet de andere ploeg op.</div>
+            <button type="button" className="sk-kickoff-start" disabled={busy} onClick={() => act({ action: 'starthalf' })}>
+              ▶ Start 2e helft
             </button>
           </div>
         </div>
