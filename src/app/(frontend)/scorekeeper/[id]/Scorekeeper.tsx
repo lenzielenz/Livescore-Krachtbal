@@ -243,9 +243,22 @@ export function Scorekeeper({
       ]
     : recentTaps
 
-  // Speelrichting + worp van de ploeg-aan-zet, groot getoond boven het veld.
-  const possArrow = possSide === 'home' ? homeArrow : possSide === 'away' ? awayArrow : ''
-  const possTeamName = possSide === 'home' ? state.teams.home.name : possSide === 'away' ? state.teams.away.name : ''
+  // Smalle zijbalk naast het veld: VW + wissel (makkelijk links/rechts), grote richtingspijl
+  // en de worpteller voor de ploeg-aan-zet. Houdt het speelveld zo groot mogelijk.
+  const SideRail = ({ side, arrow }: { side: 'home' | 'away'; arrow: string }) => {
+    const active = possSide === side
+    const teamId = side === 'home' ? state.teams.home.id : state.teams.away.id
+    return (
+      <div className={`sk-rail sk-rail-${side} ${active ? 'active' : 'dim'}`}>
+        <button type="button" className="sk-rail-btn" disabled={busy || !isLive} title="Vrijworp" onClick={() => act({ action: 'freethrow', teamId })}>VW</button>
+        <button type="button" className="sk-rail-btn" disabled={busy} title="Wissel" onClick={() => { setSubOut(null); setSubOpen(true) }}>⇄</button>
+        <div className="sk-rail-dir" aria-label="speelrichting">{arrow}</div>
+        {active && poss && (
+          <div className="sk-rail-worp">{poss.freeThrow ? 'VW' : `${poss.nextThrowNumber}/${poss.throwsAllowed}`}</div>
+        )}
+      </div>
+    )
+  }
 
   return (
     <div className="sk">
@@ -401,7 +414,8 @@ export function Scorekeeper({
             <span className="sk-sc">{state.score.home}</span>
             <button type="button" className="sk-to" disabled={busy || !isLive || state.timeouts.home >= 2} onClick={() => act({ action: 'timeout', teamId: state.teams.home.id })} title="Time-out thuis (2 per helft)">
               <span className="sk-to-lbl">T.O.</span>
-              <span className="sk-to-dots">{'●'.repeat(state.timeouts.home)}{'○'.repeat(Math.max(0, 2 - state.timeouts.home))}</span>
+              <span className={`sk-to-dot ${state.timeouts.home >= 1 ? 'used' : ''}`} />
+              <span className={`sk-to-dot ${state.timeouts.home >= 2 ? 'used' : ''}`} />
             </button>
           </div>
           <button type="button" className={`sk-clock ${state.match.clockRunning ? 'running' : ''}`} disabled={busy || !isLive} onClick={toggleClock} title="Tik om te starten/pauzeren">
@@ -414,7 +428,8 @@ export function Scorekeeper({
             <span className="sk-sc">{state.score.away}</span>
             <button type="button" className="sk-to" disabled={busy || !isLive || state.timeouts.away >= 2} onClick={() => act({ action: 'timeout', teamId: state.teams.away.id })} title="Time-out uit (2 per helft)">
               <span className="sk-to-lbl">T.O.</span>
-              <span className="sk-to-dots">{'●'.repeat(state.timeouts.away)}{'○'.repeat(Math.max(0, 2 - state.timeouts.away))}</span>
+              <span className={`sk-to-dot ${state.timeouts.away >= 1 ? 'used' : ''}`} />
+              <span className={`sk-to-dot ${state.timeouts.away >= 2 ? 'used' : ''}`} />
             </button>
           </div>
         </div>
@@ -428,13 +443,6 @@ export function Scorekeeper({
       {!isScheduled && (
         <div className="sk-toolbar">
           <button type="button" className="tb warn" disabled={busy} onClick={() => act({ action: 'undo' })}>↶ Undo</button>
-          {isLive && (
-            <button type="button" className="tb home" disabled={busy} onClick={() => act({ action: 'freethrow', teamId: state.teams.home.id })} title={`Vrijworp ${state.teams.home.name}`}>VW {state.teams.home.name}</button>
-          )}
-          {isLive && (
-            <button type="button" className="tb away" disabled={busy} onClick={() => act({ action: 'freethrow', teamId: state.teams.away.id })} title={`Vrijworp ${state.teams.away.name}`}>VW {state.teams.away.name}</button>
-          )}
-          <button type="button" className="tb" disabled={busy} onClick={() => { setSubOut(null); setSubOpen(true) }} title="Wissel">⇄ Wissel</button>
           {isLive && state.match.currentHalf < 2 && (
             <button type="button" className="tb" disabled={busy} onClick={() => act({ action: 'half' })}>⏭ 2e helft</button>
           )}
@@ -454,16 +462,8 @@ export function Scorekeeper({
         </div>
       ) : (
         <>
-          {poss ? (
-            <div className={`sk-possbar side-${possSide}`}>
-              <span className="sk-possbar-team">{possTeamName} zet op</span>
-              <span className="sk-possbar-arrow" aria-label="speelrichting">{possArrow}</span>
-              <span className="sk-possbar-worp">{poss.freeThrow ? 'VRIJWORP' : `WORP ${poss.nextThrowNumber}/${poss.throwsAllowed}`}</span>
-            </div>
-          ) : (
-            <div className="sk-hint">Tik op het veld waar de bal valt → kies wie wierp.</div>
-          )}
           <div className="sk-arena">
+            <SideRail side="home" arrow={homeArrow} />
             <div className="sk-field-wrap">
               <FieldSchema
                 className="sk-field"
@@ -478,6 +478,7 @@ export function Scorekeeper({
                 }
               />
             </div>
+            <SideRail side="away" arrow={awayArrow} />
           </div>
         </>
       )}

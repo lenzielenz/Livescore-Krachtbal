@@ -48,7 +48,9 @@
 }
 .sk-to:disabled { opacity: 0.55; }
 .sk-to-lbl { font-size: 0.6rem; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase; color: var(--dim); }
-.sk-to-dots { letter-spacing: 2px; font-size: 0.72rem; }
+.sk-to-dot { width: 11px; height: 11px; border-radius: 50%; border: 1.5px solid var(--dim); display: inline-block; }
+.sk-team.home .sk-to-dot.used { background: var(--home); border-color: var(--home); }
+.sk-team.away .sk-to-dot.used { background: var(--away); border-color: var(--away); }
 .sk-team.home .sk-to { border-color: var(--home); }
 .sk-team.away .sk-to { border-color: var(--away); }
 .sk-clock {
@@ -83,22 +85,27 @@
 .sk-error { flex: 0 0 auto; padding: 7px 10px; border-radius: 8px; background: #4a1020; color: #ffd5e0; cursor: pointer; font-size: 0.82rem; text-align: center; }
 
 /* ── Arena: vult alle resterende hoogte; veld zo groot mogelijk ── */
-/* Grote richting + worp-indicator (vervangt de zijkolommen met nummers) */
-.sk-possbar {
-  flex: 0 0 auto; display: flex; align-items: center; justify-content: center;
-  gap: 14px; padding: 8px 14px; border-radius: 12px; border: 1px solid var(--line); background: #0a1f14;
+/* Smalle zijbalken links/rechts van het veld: VW + wissel + grote richtingspijl + worp.
+   Vullen de horizontale ruimte naast het (smalle, hoge) veld op gsm. */
+.sk-arena { flex: 1 1 auto; min-height: 0; display: flex; align-items: stretch; gap: 6px; }
+.sk-rail {
+  flex: 0 0 auto; width: 60px; display: flex; flex-direction: column; align-items: center;
+  gap: 8px; padding-top: 4px;
 }
-.sk-possbar.side-home { border-color: var(--home); }
-.sk-possbar.side-away { border-color: var(--away); }
-.sk-possbar-team { font-size: 1rem; font-weight: 800; }
-.sk-possbar.side-home .sk-possbar-team { color: var(--home); }
-.sk-possbar.side-away .sk-possbar-team { color: var(--away); }
-.sk-possbar-arrow { font-size: 2.6rem; line-height: 1; font-weight: 900; }
-.sk-possbar.side-home .sk-possbar-arrow { color: var(--home); }
-.sk-possbar.side-away .sk-possbar-arrow { color: var(--away); }
-.sk-possbar-worp { font-size: 1.5rem; font-weight: 900; font-variant-numeric: tabular-nums; letter-spacing: 1px; color: var(--accent); }
-
-.sk-arena { flex: 1 1 auto; min-height: 0; display: flex; align-items: stretch; gap: 5px; }
+.sk-rail.dim { opacity: 0.4; }
+.sk-rail-btn {
+  width: 100%; padding: 12px 0; border-radius: 12px; font-size: 0.95rem; font-weight: 800;
+  border: 1px solid var(--line); background: #0a1f14; color: var(--txt); line-height: 1;
+}
+.sk-rail-home .sk-rail-btn { border-color: var(--home); color: var(--home); }
+.sk-rail-away .sk-rail-btn { border-color: var(--away); color: var(--away); }
+.sk-rail-dir { font-size: 2.8rem; font-weight: 900; line-height: 1; margin-top: 6px; }
+.sk-rail-home .sk-rail-dir { color: var(--home); }
+.sk-rail-away .sk-rail-dir { color: var(--away); }
+.sk-rail-worp {
+  font-size: 1.05rem; font-weight: 900; font-variant-numeric: tabular-nums;
+  background: var(--accent); color: #06140d; padding: 2px 9px; border-radius: 999px;
+}
 .sk-col { display: flex; flex-direction: column; justify-content: center; gap: 4px; flex: 0 0 auto; overflow-y: auto; }
 .sk-col.dim { opacity: 0.38; }
 .sk-col-away { align-items: flex-end; }
