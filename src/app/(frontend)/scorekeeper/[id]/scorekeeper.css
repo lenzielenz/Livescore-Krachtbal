@@ -23,8 +23,14 @@
 .sk button:disabled { opacity: 0.4; cursor: not-allowed; }
 
 /* Compacte terug-link (verlaat scherm, wedstrijd blijft live) */
-.sk-back { flex: 0 0 auto; align-self: flex-start; font-size: 0.75rem; color: var(--dim); text-decoration: none; padding: 2px 0; }
+.sk-topbar { flex: 0 0 auto; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.sk-back { font-size: 0.75rem; color: var(--dim); text-decoration: none; padding: 2px 0; }
 .sk-back:hover { color: var(--txt); }
+.sk-fs {
+  font-size: 0.75rem; color: var(--dim); background: #0a1f14;
+  border: 1px solid var(--line); border-radius: 8px; padding: 4px 10px; white-space: nowrap;
+}
+.sk-fs:hover { color: var(--txt); border-color: var(--accent); }
 
 /* ── Kop: scorebalk + namen ── */
 .sk-head { flex: 0 0 auto; }

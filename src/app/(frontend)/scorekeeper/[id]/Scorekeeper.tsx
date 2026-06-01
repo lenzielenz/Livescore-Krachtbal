@@ -49,6 +49,21 @@ export function Scorekeeper({
   const [clock, setClock] = useState(initialState.match.clockSeconds)
   const baseRef = useRef({ seconds: initialState.match.clockSeconds, running: initialState.match.clockRunning, at: Date.now() })
 
+  // Volledig scherm (handig op tablet/laptop bij het veld).
+  const [isFullscreen, setIsFullscreen] = useState(false)
+  useEffect(() => {
+    const onChange = () => setIsFullscreen(Boolean(document.fullscreenElement))
+    document.addEventListener('fullscreenchange', onChange)
+    return () => document.removeEventListener('fullscreenchange', onChange)
+  }, [])
+  const toggleFullscreen = () => {
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(() => {})
+    } else {
+      document.documentElement.requestFullscreen().catch(() => {})
+    }
+  }
+
   useEffect(() => {
     baseRef.current = { seconds: state.match.clockSeconds, running: state.match.clockRunning, at: Date.now() }
     setClock(state.match.clockSeconds)
@@ -395,7 +410,12 @@ export function Scorekeeper({
         </div>
       )}
 
-      <a className="sk-back" href="/scorekeeper" title="Terug naar overzicht — de wedstrijd blijft gewoon live">← Overzicht</a>
+      <div className="sk-topbar">
+        <a className="sk-back" href="/scorekeeper" title="Terug naar overzicht — de wedstrijd blijft gewoon live">← Overzicht</a>
+        <button type="button" className="sk-fs" onClick={toggleFullscreen} title="Volledig scherm aan/uit">
+          {isFullscreen ? '⤡ Sluiten' : '⛶ Volledig scherm'}
+        </button>
+      </div>
 
       <header className="sk-head">
         <div className="sk-scorebar">
