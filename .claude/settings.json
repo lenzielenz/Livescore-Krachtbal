@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "input=$(cat); f=$(printf '%s' \"$input\" | grep -oE 'file_path[^,]*' | head -1); f=${f//\\\\/}; case \"$f\" in *src*collections*|*src*globals*|*components*admin*) cd \"$CLAUDE_PROJECT_DIR\" && pnpm generate:importmap >/dev/null 2>&1 ;; esac",
+            "statusMessage": "importMap bijwerken…",
+            "timeout": 120
+          }
+        ]
+      }
+    ]
+  }
+}
