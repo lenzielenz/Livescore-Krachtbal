@@ -595,7 +595,10 @@ export interface MatchState {
     /** Diepte van het doelgebied (m) — bepaalt veldlengte + afstandsschaal. */
     goalAreaDepth: number
   }
-  teams: { home: { id: number; name: string }; away: { id: number; name: string } }
+  teams: {
+    home: { id: number; name: string; logoUrl: string | null }
+    away: { id: number; name: string; logoUrl: string | null }
+  }
   /** Spelers die momenteel op het veld staan (selecteerbaar om te werpen). */
   lineup: { home: number[]; away: number[] }
   score: { home: number; away: number }
@@ -882,11 +885,20 @@ export async function buildTimeline(payload: Payload, matchId: number): Promise<
   return items.map(({ _t, ...rest }) => rest)
 }
 
+function clubLogoUrl(team: unknown): string | null {
+  const club = (team as { club?: unknown })?.club
+  if (club && typeof club === 'object') {
+    const logo = (club as { logo?: unknown }).logo
+    if (logo && typeof logo === 'object' && 'url' in logo && typeof logo.url === 'string') return logo.url
+  }
+  return null
+}
+
 export async function buildMatchState(payload: Payload, matchId: number): Promise<MatchState> {
   const { match, homeId, awayId } = await loadMatch(payload, matchId)
   const [home, away] = await Promise.all([
-    payload.findByID({ collection: 'teams', id: homeId, depth: 0 }),
-    payload.findByID({ collection: 'teams', id: awayId, depth: 0 }),
+    payload.findByID({ collection: 'teams', id: homeId, depth: 2 }),
+    payload.findByID({ collection: 'teams', id: awayId, depth: 2 }),
   ])
 
   const throwsRes = await payload.find({
@@ -979,7 +991,10 @@ export async function buildMatchState(payload: Payload, matchId: number): Promis
       clockUpdatedAt: match.clockUpdatedAt ?? null,
       goalAreaDepth: match.goalAreaDepth ?? FIELD.defaultGoalAreaDepthM,
     },
-    teams: { home: { id: home.id, name: home.name }, away: { id: away.id, name: away.name } },
+    teams: {
+      home: { id: home.id, name: home.name, logoUrl: clubLogoUrl(home) },
+      away: { id: away.id, name: away.name, logoUrl: clubLogoUrl(away) },
+    },
     lineup: {
       home: await resolveLineup(payload, match.homeLineup, homeId),
       away: await resolveLineup(payload, match.awayLineup, awayId),

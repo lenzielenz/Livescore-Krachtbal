@@ -10,6 +10,21 @@ function fmtClock(total: number): string {
   return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
 }
 
+function TeamBadge({ name, logoUrl, side }: { name: string; logoUrl: string | null; side: 'home' | 'away' }) {
+  const initials = name
+    .split(/\s+/)
+    .map((w) => w[0])
+    .join('')
+    .slice(0, 3)
+    .toUpperCase()
+  return (
+    <span className={`sb-logo sb-logo-${side}`}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      {logoUrl ? <img src={logoUrl} alt={`${name} logo`} /> : <span className="sb-logo-initials">{initials}</span>}
+    </span>
+  )
+}
+
 function Dots({ filled, total, className }: { filled: number; total: number; className?: string }) {
   return (
     <span className={`sb-dots ${className ?? ''}`}>
@@ -73,6 +88,7 @@ export function Scoreboard({
 
       <div className="sb-main">
         <div className="sb-side-team">
+          <TeamBadge name={state.teams.home.name} logoUrl={state.teams.home.logoUrl} side="home" />
           <div className="sb-name">{state.teams.home.name}</div>
           <Dots filled={state.timeouts.home} total={2} className="to" />
         </div>
@@ -86,6 +102,7 @@ export function Scoreboard({
           <div className="sb-half">Helft {state.match.currentHalf}</div>
         </div>
         <div className="sb-side-team">
+          <TeamBadge name={state.teams.away.name} logoUrl={state.teams.away.logoUrl} side="away" />
           <div className="sb-name">{state.teams.away.name}</div>
           <Dots filled={state.timeouts.away} total={2} className="to" />
         </div>
