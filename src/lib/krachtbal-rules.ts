@@ -10,7 +10,6 @@ import {
   type Zone,
   distanceM,
   freeThrowNorm,
-  goalLineNorm,
   isInTargetGoalArea,
   isOnOwnHalf,
   isOutBack,
@@ -145,29 +144,32 @@ export function nextSetup(input: {
   throwerTeam: TeamSide
   throwerDir: AttackDir
   goalAreaDepthM?: number
+  /** Bij een out (zij/achter): aangeraakt door de tegenstander vóór buiten? */
+  touchedBeforeOut?: boolean
 }): NextSetup {
   const { outcome, landing, throwerTeam, throwerDir, goalAreaDepthM } = input
   const team: TeamSide = throwerTeam === 'home' ? 'away' : 'home'
   const dir: AttackDir = throwerDir === 'up' ? 'down' : 'up'
-  const gLine = goalLineNorm(goalAreaDepthM)
   const ftLine = freeThrowNorm(goalAreaDepthM)
 
-  // Opzetpunt = waar de bal lag/gevangen werd; het worpaantal volgt uit de helft
-  // (eigen helft = 3/4, tegenhelft of middellijn = 2/3). Geldt voor vangst, opgebruikte
-  // worpen, zijlijn-inworp en de middellijn-fout (opzet vanaf het grondcontact).
-  if (
-    outcome === 'caught' ||
-    outcome === 'throws_exhausted' ||
-    outcome === 'out_side' ||
-    outcome === 'midline_fault'
-  ) {
-    return { team, dir, setupSide: isOnOwnHalf(landing, dir) ? 'own' : 'opponent', point: landing }
+  // Buitenspel (zij-/achterlijn): de inworp is voor de ploeg die het buitenspel NIET
+  // veroorzaakte (reglement §6.11.1). Aangeraakt door de tegenstander vóór buiten →
+  // de werpende ploeg houdt de bal; anders gaat hij naar de tegenpartij.
+  // De volgende worp start telkens vanuit het midden van het veld.
+  if (outcome === 'out_side' || outcome === 'out_back') {
+    const keep = Boolean(input.touchedBeforeOut)
+    return {
+      team: keep ? throwerTeam : team,
+      dir: keep ? throwerDir : dir,
+      setupSide: 'own',
+      point: { x: 0.5, y: 0.5 },
+    }
   }
 
-  // out_back: inworp → de eigen doellijn van de tegenploeg wordt de werpplaats (eigen helft).
-  if (outcome === 'out_back') {
-    const y = dir === 'up' ? gLine : 1 - gLine
-    return { team, dir, setupSide: 'own', point: { x: 0.5, y } }
+  // Opzetpunt = waar de bal lag/gevangen werd; het worpaantal volgt uit de helft.
+  // Geldt voor vangst, opgebruikte worpen en de middellijn-fout (opzet vanaf grondcontact).
+  if (outcome === 'caught' || outcome === 'throws_exhausted' || outcome === 'midline_fault') {
+    return { team, dir, setupSide: isOnOwnHalf(landing, dir) ? 'own' : 'opponent', point: landing }
   }
 
   // goal: tegenploeg zet op vanaf de eigen vrijeworplijn (eigen helft, volle breedte).

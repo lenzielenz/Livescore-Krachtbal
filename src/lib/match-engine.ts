@@ -256,6 +256,7 @@ export async function recordThrow(payload: Payload, input: RecordThrowInput) {
         throwerTeam: side,
         throwerDir: dir,
         goalAreaDepthM: depth,
+        touchedBeforeOut: input.touchedBeforeOut,
       })
       const nextTeamId = ns.team === 'home' ? homeId : awayId
       if (awardFreeThrow) {

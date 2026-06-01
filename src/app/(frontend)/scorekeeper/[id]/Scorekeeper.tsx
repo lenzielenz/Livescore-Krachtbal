@@ -47,7 +47,7 @@ export function Scorekeeper({
   const [flash, setFlash] = useState<{ title: string; big: string; color: string; team: string; player?: string } | null>(null)
   // Nieuwe flow: eerst de bal-valt-plek (pendingThrow), dan kiezen wie wierp.
   const [pendingThrow, setPendingThrow] = useState<{ p: Point } | null>(null)
-  const [pendingOut, setPendingOut] = useState<{ p: Point; tapCount: 1 | 2; playerId: number } | null>(null)
+  const [pendingOut, setPendingOut] = useState<{ p: Point; tapCount: 1 | 2; playerId: number; isDoelworp: boolean } | null>(null)
   const [subOpen, setSubOpen] = useState(false)
   const [subSide, setSubSide] = useState<'home' | 'away'>('home')
   const [subOut, setSubOut] = useState<{ side: 'home' | 'away'; playerId: number } | null>(null)
@@ -249,9 +249,10 @@ export function Scorekeeper({
       const outcome = deriveOutcome({ tapCount, point: p, dir, goalAreaDepthM: state.match.goalAreaDepth })
       const isDoelworp = poss.nextThrowNumber >= poss.throwsAllowed || poss.freeThrow
 
-      // Bij buiten op de doelworp/vrijworp bepaalt aanraking of het een kruisje is → nette modal.
-      if ((outcome === 'out_back' || outcome === 'out_side') && isDoelworp) {
-        setPendingOut({ p, tapCount, playerId })
+      // Bij élke bal buiten vragen we of hij aangeraakt is: op de doelworp bepaalt dat het
+      // kruisje, op een eerdere worp bepaalt het wie de bal krijgt (inworp vanuit het midden).
+      if (outcome === 'out_back' || outcome === 'out_side') {
+        setPendingOut({ p, tapCount, playerId, isDoelworp })
         setPendingThrow(null)
         return
       }
@@ -370,7 +371,7 @@ export function Scorekeeper({
         <div className="sk-modal-overlay">
           <div className="sk-modal">
             <h3>Bal buiten</h3>
-            <p>Werd de bal aangeraakt vóór hij buiten ging?</p>
+            <p>Werd de bal door de tegenstander aangeraakt vóór hij buiten ging?</p>
             <div className="sk-modal-btns">
               <button
                 type="button"
@@ -381,7 +382,8 @@ export function Scorekeeper({
                   void submitThrow(p, tapCount, true, playerId)
                 }}
               >
-                Ja — aangeraakt <span className="sk-modal-hint">(geen kruisje)</span>
+                Ja — aangeraakt{' '}
+                <span className="sk-modal-hint">{pendingOut.isDoelworp ? '(geen kruisje)' : '(bal blijft bij ons, inworp vanuit midden)'}</span>
               </button>
               <button
                 type="button"
@@ -392,7 +394,8 @@ export function Scorekeeper({
                   void submitThrow(p, tapCount, false, playerId)
                 }}
               >
-                Nee — rechtstreeks <span className="sk-modal-hint">(kruisje)</span>
+                Nee — rechtstreeks{' '}
+                <span className="sk-modal-hint">{pendingOut.isDoelworp ? '(kruisje)' : '(bal naar tegenstander, vanuit midden)'}</span>
               </button>
             </div>
           </div>
