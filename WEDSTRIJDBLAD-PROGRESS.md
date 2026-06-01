@@ -34,18 +34,13 @@ Alle 8 fasen gebouwd. `pnpm typecheck` ✓, `pnpm test:unit` ✓ (68 tests), `pn
 - **Schermen:** `/opstelling/[matchId]`, `/scheidsrechter/[matchId]`, `/aftekenen/[matchId]`, `/knipjes`, `/reglement`.
 - **API:** `/api/matchsheet/[matchId]/{lineup,referee,sign,submit}`.
 
-## ⚠️ Vereiste deploy-stap (Railway/Postgres)
+## Deploy (Railway/Postgres) — migratie gedaan ✅
 
-Lokaal draait SQLite met auto-push; productie gebruikt Postgres-migraties. Het nieuwe schema
-(Season, Settings, Officials, MatchSheets, Sanctions, extra Player/Club-velden) heeft nog een
-Postgres-migratie nodig vóór deploy. Genereer die met een Postgres-verbinding:
-
-```powershell
-$env:DATABASE_URL = "postgres://…"   # Railway DB-url
-pnpm payload migrate:create wedstrijdblad
-```
-
-Commit het gegenereerde bestand in `src/migrations/`. Railway draait `payload migrate` bij deploy.
+Postgres-migratie `src/migrations/20260601_172424_wedstrijdblad.ts` gegenereerd, gecommit en
+gepusht (commit `cc32386`). Railway draait `payload migrate` bij deploy en past het schema toe.
+Lokaal blijft SQLite met auto-push. Bij toekomstige schemawijzigingen opnieuw
+`pnpm payload migrate:create <naam>` draaien (geen live DB-verbinding nodig — Payload genereert
+uit het schema-verschil).
 
 ## Open beslissingen / acties voor Robin
 
