@@ -33,14 +33,16 @@ export function Scorekeeper({
   roster: RosterPlayer[]
 }) {
   const [state, setState] = useState<MatchState>(initialState)
+  // Per-worp keuzes worden in het keuzescherm gezet (na het tikken op het veld).
   const [throwType, setThrowType] = useState<'nek' | 'rug'>('nek')
   const [tapMode, setTapMode] = useState<'ground' | 'caught'>('ground')
-  const [selectedPlayer, setSelectedPlayer] = useState<number | null>(null)
   const [recentTaps, setRecentTaps] = useState<FieldMarker[]>([])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [flash, setFlash] = useState<{ title: string; big: string; color: string; team: string } | null>(null)
-  const [pendingOut, setPendingOut] = useState<{ p: Point; tapCount: 1 | 2 } | null>(null)
+  // Nieuwe flow: eerst de bal-valt-plek (pendingThrow), dan kiezen wie wierp.
+  const [pendingThrow, setPendingThrow] = useState<{ p: Point } | null>(null)
+  const [pendingOut, setPendingOut] = useState<{ p: Point; tapCount: 1 | 2; playerId: number } | null>(null)
   const [subOpen, setSubOpen] = useState(false)
   const [subOut, setSubOut] = useState<{ side: 'home' | 'away'; playerId: number } | null>(null)
 
@@ -90,20 +92,13 @@ export function Scorekeeper({
   // Enkel de spelers op het veld (de actieve opstelling) zijn selecteerbaar.
   const homePlayers = roster.filter((p) => p.teamId === state.teams.home.id && state.lineup.home.includes(p.id))
   const awayPlayers = roster.filter((p) => p.teamId === state.teams.away.id && state.lineup.away.includes(p.id))
-
-  // Geselecteerde speler wissen als die niet (meer) bij de ploeg-aan-zet hoort.
-  useEffect(() => {
-    if (!selectedPlayer) return
-    const pl = roster.find((p) => p.id === selectedPlayer)
-    const activeTeamId = possSide === 'home' ? state.teams.home.id : possSide === 'away' ? state.teams.away.id : null
-    const activeLineup = possSide === 'home' ? state.lineup.home : possSide === 'away' ? state.lineup.away : []
-    if (!pl || pl.teamId !== activeTeamId || !activeLineup.includes(selectedPlayer)) setSelectedPlayer(null)
-  }, [possSide, selectedPlayer, roster, state.teams.home.id, state.teams.away.id, state.lineup])
+  // Spelers van de ploeg-aan-zet voor het keuzescherm.
+  const pickPlayers = possSide === 'home' ? homePlayers : possSide === 'away' ? awayPlayers : []
 
   // Registreer de worp (na ev. aanraking-vraag) en geef visuele feedback.
   const submitThrow = useCallback(
-    async (p: Point, tapCount: 1 | 2, touchedBeforeOut: boolean) => {
-      if (!poss || !selectedPlayer) return
+    async (p: Point, tapCount: 1 | 2, touchedBeforeOut: boolean, playerId: number) => {
+      if (!poss) return
       const scoringSide = poss.side
       const color = scoringSide === 'home' ? HOME_COLOR : AWAY_COLOR
       const teamName = scoringSide === 'home' ? state.teams.home.name : state.teams.away.name
@@ -122,7 +117,7 @@ export function Scorekeeper({
 
       const result = (await act({
         action: 'throw',
-        playerId: selectedPlayer,
+        playerId,
         type: throwType,
         x: p.x,
         y: p.y,
@@ -149,36 +144,47 @@ export function Scorekeeper({
         setRecentTaps([])
       }
 
+      // Klaar voor de volgende worp.
       setTapMode('ground')
       setThrowType('nek')
-      setSelectedPlayer(null)
     },
-    [poss, selectedPlayer, throwType, clock, act, state.teams],
+    [poss, throwType, clock, act, state.teams],
   )
 
+  // Stap 1: tik op het veld waar de bal valt → open het keuzescherm.
   const onTap = useCallback(
-    async (p: Point) => {
+    (p: Point) => {
       if (state.match.status !== 'live' || !poss) {
         setError('Wedstrijd is niet live of geen lopend balbezit.')
         return
       }
-      if (!selectedPlayer) {
-        setError('Selecteer eerst een speler (rugnummer).')
-        return
-      }
+      setThrowType('nek')
+      setTapMode('ground')
+      setPendingThrow({ p })
+    },
+    [state.match.status, poss],
+  )
+
+  // Stap 2: kies wie wierp → bereken de uitkomst en registreer (of vraag eerst naar aanraking).
+  const choosePlayer = useCallback(
+    (playerId: number) => {
+      if (!pendingThrow || !poss) return
+      const p = pendingThrow.p
       const dir = poss.dir as AttackDir
-      const tapCount = tapMode === 'caught' ? 2 : 1
+      const tapCount: 1 | 2 = tapMode === 'caught' ? 2 : 1
       const outcome = deriveOutcome({ tapCount, point: p, dir, goalAreaDepthM: state.match.goalAreaDepth })
       const isDoelworp = poss.nextThrowNumber >= poss.throwsAllowed || poss.freeThrow
 
       // Bij buiten op de doelworp/vrijworp bepaalt aanraking of het een kruisje is → nette modal.
       if ((outcome === 'out_back' || outcome === 'out_side') && isDoelworp) {
-        setPendingOut({ p, tapCount })
+        setPendingOut({ p, tapCount, playerId })
+        setPendingThrow(null)
         return
       }
-      await submitThrow(p, tapCount, false)
+      void submitThrow(p, tapCount, false, playerId)
+      setPendingThrow(null)
     },
-    [state.match.status, poss, selectedPlayer, tapMode, submitThrow],
+    [pendingThrow, poss, tapMode, state.match.goalAreaDepth, submitThrow],
   )
 
   const toggleClock = () =>
@@ -203,6 +209,20 @@ export function Scorekeeper({
   const homeArrow = homeDirUp ? '▼' : '▲'
   const awayArrow = homeDirUp ? '▲' : '▼'
 
+  // Tijdelijke '?'-markering op de gekozen plek terwijl het keuzescherm openstaat.
+  const fieldMarkers: FieldMarker[] = pendingThrow
+    ? [
+        ...recentTaps,
+        {
+          x: Math.max(0, Math.min(1, pendingThrow.p.x)),
+          y: Math.max(0, Math.min(1, pendingThrow.p.y)),
+          color: '#ffffff',
+          r: 8,
+          label: '?',
+        },
+      ]
+    : recentTaps
+
   const PlayerColumn = ({ side, players, arrow }: { side: 'home' | 'away'; players: RosterPlayer[]; arrow: string }) => {
     const active = possSide === side
     const teamId = side === 'home' ? state.teams.home.id : state.teams.away.id
@@ -220,17 +240,16 @@ export function Scorekeeper({
         </div>
         {players.map((p) => {
           const justThrew = active && poss?.lastPlayerId === p.id
+          // Numbers tonen de opstelling; de selectie gebeurt in het keuzescherm na het tikken.
           return (
-            <button
-              type="button"
+            <div
               key={p.id}
-              className={`sk-num ${selectedPlayer === p.id ? 'on' : ''}`}
-              disabled={!active || !isLive || justThrew}
-              onClick={() => setSelectedPlayer(p.id)}
-              title={justThrew ? `${p.name} — net geworpen, niet 2× na elkaar` : p.name}
+              className="sk-num display"
+              style={{ opacity: justThrew ? 0.45 : 1 }}
+              title={p.name}
             >
               {p.shirtNumber}
-            </button>
+            </div>
           )
         })}
       </div>
@@ -247,6 +266,46 @@ export function Scorekeeper({
         </div>
       )}
 
+      {/* Stap 2: keuzescherm — wie wierp + nek/rug + grond/gevangen, alles op één scherm. */}
+      {pendingThrow && (
+        <div className="sk-modal-overlay">
+          <div className="sk-modal sk-pick">
+            <h3>Wie wierp?</h3>
+            <p>
+              {possSide === 'home' ? state.teams.home.name : state.teams.away.name}
+              {poss && ` · ${poss.freeThrow ? 'vrijworp' : `worp ${poss.nextThrowNumber}/${poss.throwsAllowed}`}`}
+            </p>
+            <div className="sk-pills sk-pick-pills">
+              <button type="button" className={`pill ${throwType === 'nek' ? 'on' : ''}`} onClick={() => setThrowType('nek')}>Nek +1</button>
+              <button type="button" className={`pill ${throwType === 'rug' ? 'on' : ''}`} onClick={() => setThrowType('rug')}>Rug +2</button>
+              <button type="button" className={`pill ${tapMode === 'ground' ? 'on' : ''}`} onClick={() => setTapMode('ground')}>Grond</button>
+              <button type="button" className={`pill ${tapMode === 'caught' ? 'on' : ''}`} onClick={() => setTapMode('caught')}>Gevangen</button>
+            </div>
+            <div className="sk-pick-grid">
+              {pickPlayers.length === 0 && <span className="sk-dim">Geen spelers op het veld.</span>}
+              {pickPlayers.map((p) => {
+                const justThrew = poss?.lastPlayerId === p.id
+                return (
+                  <button
+                    type="button"
+                    key={p.id}
+                    className="sk-num"
+                    disabled={justThrew}
+                    onClick={() => choosePlayer(p.id)}
+                    title={justThrew ? `${p.name} — net geworpen, niet 2× na elkaar` : p.name}
+                  >
+                    {p.shirtNumber}
+                  </button>
+                )
+              })}
+            </div>
+            <div className="sk-modal-btns">
+              <button type="button" className="sk-btn" onClick={() => setPendingThrow(null)}>Annuleren</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {pendingOut && (
         <div className="sk-modal-overlay">
           <div className="sk-modal">
@@ -257,9 +316,9 @@ export function Scorekeeper({
                 type="button"
                 className="sk-btn"
                 onClick={() => {
-                  const { p, tapCount } = pendingOut
+                  const { p, tapCount, playerId } = pendingOut
                   setPendingOut(null)
-                  void submitThrow(p, tapCount, true)
+                  void submitThrow(p, tapCount, true, playerId)
                 }}
               >
                 Ja — aangeraakt <span className="sk-modal-hint">(geen kruisje)</span>
@@ -268,9 +327,9 @@ export function Scorekeeper({
                 type="button"
                 className="sk-btn primary"
                 onClick={() => {
-                  const { p, tapCount } = pendingOut
+                  const { p, tapCount, playerId } = pendingOut
                   setPendingOut(null)
-                  void submitThrow(p, tapCount, false)
+                  void submitThrow(p, tapCount, false, playerId)
                 }}
               >
                 Nee — rechtstreeks <span className="sk-modal-hint">(kruisje)</span>
@@ -385,13 +444,14 @@ export function Scorekeeper({
         </div>
       ) : (
         <>
+          <div className="sk-hint">Tik op het veld waar de bal valt → kies wie wierp.</div>
           <div className="sk-arena">
             <PlayerColumn side="home" players={homePlayers} arrow={homeArrow} />
             <div className="sk-field-wrap">
               <FieldSchema
                 className="sk-field"
                 onTap={onTap}
-                markers={recentTaps}
+                markers={fieldMarkers}
                 ends={fieldEnds}
                 goalAreaDepthM={state.match.goalAreaDepth}
                 glowGoal={
@@ -402,15 +462,6 @@ export function Scorekeeper({
               />
             </div>
             <PlayerColumn side="away" players={awayPlayers} arrow={awayArrow} />
-          </div>
-
-          <div className="sk-controls">
-            <div className="sk-pills">
-              <button type="button" className={`pill ${throwType === 'nek' ? 'on' : ''}`} onClick={() => setThrowType('nek')}>Nek +1</button>
-              <button type="button" className={`pill ${throwType === 'rug' ? 'on' : ''}`} onClick={() => setThrowType('rug')}>Rug +2</button>
-              <button type="button" className={`pill ${tapMode === 'ground' ? 'on' : ''}`} onClick={() => setTapMode('ground')}>Grond</button>
-              <button type="button" className={`pill ${tapMode === 'caught' ? 'on' : ''}`} onClick={() => setTapMode('caught')}>Gevangen</button>
-            </div>
           </div>
         </>
       )}

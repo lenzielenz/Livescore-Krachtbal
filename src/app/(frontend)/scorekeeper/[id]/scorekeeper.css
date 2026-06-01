@@ -168,6 +168,23 @@
 .sk-btn.primary { border-color: var(--accent); color: var(--accent); }
 .sk-modal-hint { display: block; font-size: 0.72rem; color: var(--dim); font-weight: 400; }
 
+/* Keuzescherm (wie wierp) — verschijnt na het tikken op het veld */
+.sk-pick { max-width: 420px; }
+.sk-pick-pills { margin-bottom: 16px; }
+.sk-pick-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+.sk-pick-grid .sk-num { width: 56px; height: 56px; font-size: 1.5rem; }
+.sk-pick-grid .sk-num:disabled { opacity: 0.4; }
+/* Nummers in de zijkolommen zijn nu louter informatief (selectie gebeurt in het keuzescherm) */
+.sk-num.display { display: flex; align-items: center; justify-content: center; }
+/* Korte uitleg boven het veld */
+.sk-hint { flex: 0 0 auto; text-align: center; font-size: 0.8rem; color: var(--dim); padding: 2px 0; }
+
 /* Wissel-modal */
 .sk-sub { max-width: 460px; text-align: left; }
 .sk-sub-team { margin-bottom: 14px; padding: 10px; border: 1px solid var(--line); border-radius: 10px; }
