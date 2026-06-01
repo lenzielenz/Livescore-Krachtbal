@@ -1,6 +1,7 @@
 import * as migration_20260531_233344_initial from './20260531_233344_initial';
 import * as migration_20260531_234903_goal_area_depth from './20260531_234903_goal_area_depth';
 import * as migration_20260531_235726_clubs_hierarchy from './20260531_235726_clubs_hierarchy';
+import * as migration_20260601_172424_wedstrijdblad from './20260601_172424_wedstrijdblad';
 
 export const migrations = [
   {
@@ -16,6 +17,11 @@ export const migrations = [
   {
     up: migration_20260531_235726_clubs_hierarchy.up,
     down: migration_20260531_235726_clubs_hierarchy.down,
-    name: '20260531_235726_clubs_hierarchy'
+    name: '20260531_235726_clubs_hierarchy',
+  },
+  {
+    up: migration_20260601_172424_wedstrijdblad.up,
+    down: migration_20260601_172424_wedstrijdblad.down,
+    name: '20260601_172424_wedstrijdblad'
   },
 ];
