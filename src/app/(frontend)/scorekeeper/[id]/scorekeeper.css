@@ -280,3 +280,26 @@
   .sk-tn { font-size: 0.72rem; max-width: 22vw; }
   .sk-sc { font-size: 1.45rem; }
 }
+
+/* Landschap op een laag scherm (gsm liggend): een hoog, smal veld kan niet breder worden,
+   dus zetten we score/klok/werkbalk in de zijkant en geeft het veld de VOLLE hoogte.
+   Layout wordt een rij: [score-kolom] [werkbalk-kolom] [veld vult de rest, volle hoogte]. */
+@media (orientation: landscape) and (max-height: 540px) {
+  .sk { flex-direction: row; align-items: stretch; gap: 6px; padding: 6px; }
+  .sk-topbar { position: absolute; top: 4px; left: 10px; z-index: 5; width: auto; gap: 12px; }
+  .sk-crossrow { display: none; }
+  .sk-error { position: absolute; bottom: 6px; left: 50%; transform: translateX(-50%); z-index: 6; }
+
+  .sk-head { flex: 0 0 auto; display: flex; align-items: center; margin-top: 22px; }
+  .sk-scorebar { grid-template-columns: 1fr; gap: 12px; }
+  .sk-tn { font-size: 0.66rem; }
+  .sk-sc { font-size: 1.6rem; }
+  .sk-clock { font-size: 0.95rem; padding: 6px 10px; }
+
+  .sk-toolbar { flex: 0 0 auto; flex-direction: column; flex-wrap: nowrap; width: 86px; margin-top: 22px; align-self: center; }
+  .sk-toolbar .tb { flex: 0 0 auto; padding: 8px 6px; font-size: 0.72rem; }
+
+  .sk-arena { flex: 1 1 auto; min-width: 0; }
+  .sk-rail { width: 52px; }
+  .sk-rail-dir { font-size: 2rem; }
+}
