@@ -49,6 +49,20 @@ describe('aggregateStats', () => {
     expect(players[0].ground).toBe(2)
   })
 
+  it('score = punten − gevangen (gevangen telt negatief)', () => {
+    const { players } = aggregateStats([
+      mk({ type: 'rug', outcome: 'goal' }), // +2
+      mk({ outcome: 'caught' }), // -1
+      mk({ outcome: 'caught' }), // -1
+    ])
+    expect(players[0].score).toBe(0)
+  })
+
+  it('negatieve score bij enkel gevangen worpen', () => {
+    const { players } = aggregateStats([mk({ outcome: 'caught' }), mk({ outcome: 'caught' })])
+    expect(players[0].score).toBe(-2)
+  })
+
   it('verdeling 1e / 2e / laatste', () => {
     const { players } = aggregateStats([
       mk({ throwNumber: 1 }),

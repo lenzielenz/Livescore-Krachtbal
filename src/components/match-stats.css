@@ -99,6 +99,7 @@
 .player-table tr.side-home td:first-child { box-shadow: inset 3px 0 0 var(--home); }
 .player-table tr.side-away td:first-child { box-shadow: inset 3px 0 0 var(--away); }
 .player-table .empty { text-align: center; color: var(--dim); }
+.player-table td.neg { color: #ef476f; font-weight: 700; }
 
 @media (max-width: 700px) {
   .stats-grid { grid-template-columns: 1fr; }

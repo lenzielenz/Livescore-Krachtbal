@@ -26,6 +26,9 @@ export interface PlayerStats {
   order: { first: number; second: number; last: number }
   ground: number
   caught: number
+  /** Netto bijdrage: doelpunt-punten − gevangen worpen. Een gevangen worp is een fout
+   * (bal in de handen van de tegenstander gegooid) en telt negatief. */
+  score: number
   goals: { nek: number; rug: number; total: number; points: number }
   distance: { avg: number; max: number }
   zones: { links: number; midden: number; rechts: number }
@@ -55,6 +58,7 @@ function emptyPlayer(t: StatThrow): PlayerStats {
     order: { first: 0, second: 0, last: 0 },
     ground: 0,
     caught: 0,
+    score: 0,
     goals: { nek: 0, rug: 0, total: 0, points: 0 },
     distance: { avg: 0, max: 0 },
     zones: { links: 0, midden: 0, rechts: 0 },
@@ -126,6 +130,8 @@ export function aggregateStats(throws: StatThrow[]): MatchStats {
   for (const [id, ps] of byPlayer) {
     const d = distSum.get(id)!
     ps.distance.avg = d.n ? Math.round((d.sum / d.n) * 10) / 10 : 0
+    // Gevangen worpen tellen negatief (fout: bal in de handen gegooid).
+    ps.score = ps.goals.points - ps.caught
   }
   for (const side of ['home', 'away'] as const) {
     const td = teamDist[side]

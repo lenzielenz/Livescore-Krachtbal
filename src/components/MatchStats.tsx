@@ -140,6 +140,7 @@ export function MatchStats({
                 <th title="Worpen">W</th>
                 <th title="Doelpunten (nek/rug)">D</th>
                 <th title="Punten">P</th>
+                <th title="Score = punten − gevangen (gevangen telt negatief)">Sco</th>
                 <th title="Grond/Gevangen">G/V</th>
                 <th title="Gem. / Max afstand">Afst.</th>
                 <th title="Zones L/M/R">L/M/R</th>
@@ -148,7 +149,7 @@ export function MatchStats({
             </thead>
             <tbody>
               {stats.players.length === 0 && (
-                <tr><td colSpan={9} className="empty">Nog geen worpen geregistreerd.</td></tr>
+                <tr><td colSpan={10} className="empty">Nog geen worpen geregistreerd.</td></tr>
               )}
               {stats.players.map((p) => (
                 <tr key={p.playerId} className={`side-${p.teamSide}`}>
@@ -157,6 +158,7 @@ export function MatchStats({
                   <td>{p.throws}</td>
                   <td>{p.goals.total} ({p.goals.nek}/{p.goals.rug})</td>
                   <td>{p.goals.points}</td>
+                  <td className={p.score < 0 ? 'neg' : undefined}>{p.score > 0 ? `+${p.score}` : p.score}</td>
                   <td>{p.ground}/{p.caught}</td>
                   <td>{p.distance.avg.toFixed(1)} / {p.distance.max.toFixed(1)}</td>
                   <td>{p.zones.links}/{p.zones.midden}/{p.zones.rechts}</td>
