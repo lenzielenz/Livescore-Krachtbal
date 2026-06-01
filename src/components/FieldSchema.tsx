@@ -39,6 +39,9 @@ export interface FieldMarker {
   color?: string
   label?: string
   r?: number
+  /** Optioneel vertrekpunt (0..1) — tekent het worp-traject naar (x,y). */
+  fromX?: number
+  fromY?: number
 }
 
 export interface EndLabel {
@@ -198,16 +201,35 @@ export function FieldSchema({
       {heatPoints && heatPoints.length > 0 && <HeatLayer points={heatPoints} h={H} />}
 
       {/* Markers */}
-      {markers.map((m, i) => (
-        <g key={i}>
-          <circle cx={m.x * W} cy={m.y * H} r={m.r ?? 6} fill={m.color ?? '#ffd166'} stroke="#06140d" strokeWidth={1} />
-          {m.label && (
-            <text x={m.x * W} y={m.y * H + 2.5} fontSize={7} textAnchor="middle" fill="#06140d" fontWeight={700}>
-              {m.label}
-            </text>
-          )}
-        </g>
-      ))}
+      {markers.map((m, i) => {
+        const color = m.color ?? '#ffd166'
+        const hasFrom = typeof m.fromX === 'number' && typeof m.fromY === 'number'
+        return (
+          <g key={i}>
+            {hasFrom && (
+              <>
+                <line
+                  x1={(m.fromX as number) * W}
+                  y1={(m.fromY as number) * H}
+                  x2={m.x * W}
+                  y2={m.y * H}
+                  stroke={color}
+                  strokeWidth={1.6}
+                  strokeOpacity={0.7}
+                  strokeLinecap="round"
+                />
+                <circle cx={(m.fromX as number) * W} cy={(m.fromY as number) * H} r={2} fill={color} opacity={0.6} />
+              </>
+            )}
+            <circle cx={m.x * W} cy={m.y * H} r={m.r ?? 6} fill={color} stroke="#06140d" strokeWidth={1} />
+            {m.label && (
+              <text x={m.x * W} y={m.y * H + 2.5} fontSize={7} textAnchor="middle" fill="#06140d" fontWeight={700}>
+                {m.label}
+              </text>
+            )}
+          </g>
+        )
+      })}
 
       {ends?.top && (
         <text x={W / 2} y={15} fontSize={9} textAnchor="middle" fill={ends.top.color} fontWeight={800}>

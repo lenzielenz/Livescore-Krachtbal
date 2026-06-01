@@ -754,6 +754,9 @@ export async function buildMatchSheet(payload: Payload, matchId: number): Promis
 export interface ShotPoint {
   x: number
   y: number
+  /** Vertrekpunt van de worp (vorige landing in het balbezit, of de opzet) — voor het traject. */
+  fromX: number
+  fromY: number
   outcome: string
   type: ThrowType
   playerId: number
@@ -783,10 +786,16 @@ export async function buildMatchStats(payload: Payload, matchId: number) {
 
   const stat: import('./stats').StatThrow[] = []
   const shots: ShotPoint[] = []
+  // Vertrekpunt per worp: de vorige landing in hetzelfde balbezit, anders de opzet-positie.
+  const lastLanding = new Map<number, { x: number; y: number }>()
 
   for (const t of throwsRes.docs) {
     const possId = typeof t.possession === 'object' ? t.possession.id : t.possession
-    const allowed = possById.get(possId)?.throwsAllowed ?? 1
+    const poss = possById.get(possId)
+    const allowed = poss?.throwsAllowed ?? 1
+    const prev = lastLanding.get(possId)
+    const fromX = prev ? prev.x : (poss?.setupX ?? 0.5)
+    const fromY = prev ? prev.y : (poss?.setupY ?? 0.5)
     const player = typeof t.player === 'object' && t.player ? t.player : null
     const teamId = typeof t.team === 'object' ? t.team.id : t.team
     const side = sideOfTeam(teamId, homeId)
@@ -805,6 +814,8 @@ export async function buildMatchStats(payload: Payload, matchId: number) {
     shots.push({
       x: t.landingX,
       y: t.landingY,
+      fromX,
+      fromY,
       outcome: t.outcome,
       type: t.type,
       playerId: player?.id ?? 0,
@@ -813,6 +824,7 @@ export async function buildMatchStats(payload: Payload, matchId: number) {
       throwNumber: t.throwNumber,
       isLastThrow: t.throwNumber >= allowed,
     })
+    lastLanding.set(possId, { x: t.landingX, y: t.landingY })
   }
 
   const { aggregateStats } = await import('./stats')

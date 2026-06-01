@@ -64,6 +64,8 @@ export function MatchStats({
   const markers: FieldMarker[] = filteredShots.map((s) => ({
     x: s.x,
     y: s.y,
+    fromX: s.fromX,
+    fromY: s.fromY,
     color: OUTCOME_COLOR[s.outcome] ?? '#ffd166',
     r: s.outcome === 'goal' ? 8 : 6,
     label: String(s.throwNumber),
@@ -178,11 +180,15 @@ export function MatchStats({
           ) : (
             <div className="pl-cards">
               {stats.players.length === 0 && <p className="empty">Nog geen worpen geregistreerd.</p>}
-              {stats.players.map((p) => {
+              {stats.players
+                .filter((p) => playerFilter === 'all' || p.playerId === playerFilter)
+                .map((p) => {
                 const pShots = shots.filter((s) => s.playerId === p.playerId)
                 const pMarkers: FieldMarker[] = pShots.map((s) => ({
                   x: s.x,
                   y: s.y,
+                  fromX: s.fromX,
+                  fromY: s.fromY,
                   color: OUTCOME_COLOR[s.outcome] ?? '#ffd166',
                   r: s.outcome === 'goal' ? 7 : 5,
                 }))
