@@ -17,16 +17,17 @@ export async function getSeasonStartYear(payload: Payload): Promise<number | nul
 
 /** Haalt het wedstrijdblad voor een match op, of maakt het aan (status concept). */
 export async function getOrCreateMatchSheet(payload: Payload, matchId: number | string) {
+  const id = Number(matchId)
   const existing = await payload.find({
     collection: 'matchsheets',
-    where: { match: { equals: matchId } },
+    where: { match: { equals: id } },
     limit: 1,
     depth: 0,
   })
   if (existing.docs[0]) return existing.docs[0]
   return payload.create({
     collection: 'matchsheets',
-    data: { match: matchId as number, status: 'concept' },
+    data: { match: id, status: 'concept' },
     overrideAccess: true,
   })
 }
