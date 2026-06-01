@@ -49,6 +49,7 @@ export function Scorekeeper({
   const [pendingThrow, setPendingThrow] = useState<{ p: Point } | null>(null)
   const [pendingOut, setPendingOut] = useState<{ p: Point; tapCount: 1 | 2; playerId: number } | null>(null)
   const [subOpen, setSubOpen] = useState(false)
+  const [subSide, setSubSide] = useState<'home' | 'away'>('home')
   const [subOut, setSubOut] = useState<{ side: 'home' | 'away'; playerId: number } | null>(null)
   // Kickoff: gekozen ploeg die opzet (vóór de match start).
   const [startTeam, setStartTeam] = useState<number | null>(null)
@@ -304,7 +305,7 @@ export function Scorekeeper({
     return (
       <div className={`sk-rail sk-rail-${side} ${active ? 'active' : 'dim'}`}>
         <button type="button" className="sk-rail-btn" disabled={busy || !isLive} title="Vrijworp" onClick={() => act({ action: 'freethrow', teamId })}>VW</button>
-        <button type="button" className="sk-rail-btn" disabled={busy} title="Wissel" onClick={() => { setSubOut(null); setSubOpen(true) }}>⇄</button>
+        <button type="button" className="sk-rail-btn" disabled={busy} title="Wissel" onClick={() => { setSubOut(null); setSubSide(side); setSubOpen(true) }}>⇄</button>
         <div className="sk-rail-dir" aria-label="speelrichting">{arrow}</div>
         {active && poss && (
           <div className="sk-rail-worp">{poss.freeThrow ? 'VW' : `${poss.nextThrowNumber}/${poss.throwsAllowed}`}</div>
@@ -398,61 +399,58 @@ export function Scorekeeper({
         </div>
       )}
 
-      {subOpen && (
-        <div className="sk-modal-overlay">
-          <div className="sk-modal sk-sub">
-            <h3>Wissel</h3>
-            <p>Tik een speler op het veld, dan een speler op de bank om te wisselen.</p>
-            {(['home', 'away'] as const).map((sideKey) => {
-              const teamId = sideKey === 'home' ? state.teams.home.id : state.teams.away.id
-              const teamName = sideKey === 'home' ? state.teams.home.name : state.teams.away.name
-              const field = roster.filter((p) => p.teamId === teamId && state.lineup[sideKey].includes(p.id))
-              const bench = roster.filter((p) => p.teamId === teamId && !state.lineup[sideKey].includes(p.id))
-              return (
-                <div key={sideKey} className={`sk-sub-team side-${sideKey}`}>
-                  <div className="sk-sub-name">{teamName}</div>
-                  <div className="sk-sub-row">
-                    <span className="sk-sub-lbl">veld</span>
-                    {field.map((p) => (
-                      <button
-                        type="button"
-                        key={p.id}
-                        className={`sk-num ${subOut?.side === sideKey && subOut.playerId === p.id ? 'on' : ''}`}
-                        onClick={() => setSubOut({ side: sideKey, playerId: p.id })}
-                        title={p.name}
-                      >
-                        {p.shirtNumber}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="sk-sub-row">
-                    <span className="sk-sub-lbl">bank</span>
-                    {bench.length === 0 && <span className="sk-dim">geen wissels</span>}
-                    {bench.map((p) => (
-                      <button
-                        type="button"
-                        key={p.id}
-                        className="sk-num bench"
-                        disabled={subOut?.side !== sideKey}
-                        onClick={() => {
-                          act({ action: 'substitute', side: sideKey, outPlayerId: subOut!.playerId, inPlayerId: p.id })
-                          setSubOut(null)
-                        }}
-                        title={p.name}
-                      >
-                        {p.shirtNumber}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )
-            })}
-            <div className="sk-modal-btns">
-              <button type="button" className="sk-btn primary" onClick={() => { setSubOpen(false); setSubOut(null) }}>Sluiten</button>
+      {subOpen && (() => {
+        const teamId = subSide === 'home' ? state.teams.home.id : state.teams.away.id
+        const teamName = subSide === 'home' ? state.teams.home.name : state.teams.away.name
+        const field = roster.filter((p) => p.teamId === teamId && state.lineup[subSide].includes(p.id))
+        const bench = roster.filter((p) => p.teamId === teamId && !state.lineup[subSide].includes(p.id))
+        const outName = subOut ? roster.find((p) => p.id === subOut.playerId)?.name : null
+        return (
+          <div className="sk-modal-overlay">
+            <div className={`sk-modal sk-sub side-${subSide}`}>
+              <h3>Wissel — {teamName}</h3>
+              <p>{subOut ? `${outName} eruit → kies wie erin komt` : 'Tik een speler op het veld die eruit gaat.'}</p>
+              <div className="sk-sub-row">
+                <span className="sk-sub-lbl">veld</span>
+                {field.map((p) => (
+                  <button
+                    type="button"
+                    key={p.id}
+                    className={`sk-sub-item ${subOut?.playerId === p.id ? 'on' : ''}`}
+                    onClick={() => setSubOut({ side: subSide, playerId: p.id })}
+                  >
+                    <span className="num">{p.shirtNumber}</span>
+                    <span className="nm">{p.name}</span>
+                  </button>
+                ))}
+              </div>
+              <div className="sk-sub-row">
+                <span className="sk-sub-lbl">bank</span>
+                {bench.length === 0 && <span className="sk-dim">geen wissels</span>}
+                {bench.map((p) => (
+                  <button
+                    type="button"
+                    key={p.id}
+                    className="sk-sub-item bench"
+                    disabled={!subOut}
+                    onClick={() => {
+                      act({ action: 'substitute', side: subSide, outPlayerId: subOut!.playerId, inPlayerId: p.id })
+                      setSubOut(null)
+                      setSubOpen(false)
+                    }}
+                  >
+                    <span className="num">{p.shirtNumber}</span>
+                    <span className="nm">{p.name}</span>
+                  </button>
+                ))}
+              </div>
+              <div className="sk-modal-btns">
+                <button type="button" className="sk-btn primary" onClick={() => { setSubOpen(false); setSubOut(null) }}>Sluiten</button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      })()}
 
       <div className="sk-topbar">
         <a className="sk-back" href="/scorekeeper" title="Terug naar overzicht — de wedstrijd blijft gewoon live">← Overzicht</a>

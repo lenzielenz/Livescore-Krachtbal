@@ -167,8 +167,10 @@
   font-size: 0.72rem;
   letter-spacing: 0.05em;
 }
-.field-goal-glow { animation: goalglow 1s ease-in-out infinite; }
-@keyframes goalglow { 0%, 100% { opacity: 0.35; } 50% { opacity: 0.7; } }
+.field-goal-glow { animation: goalglow 0.9s ease-in-out infinite; }
+@keyframes goalglow { 0%, 100% { opacity: 0.4; } 50% { opacity: 0.85; } }
+.field-goal-border { animation: goalborder 0.9s ease-in-out infinite; }
+@keyframes goalborder { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
 
 /* ── Start-paneel ── */
 .sk-start { flex: 1 1 auto; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; }
@@ -257,17 +259,20 @@
 
 /* Wissel-modal */
 .sk-sub { max-width: 460px; text-align: left; }
-.sk-sub-team { margin-bottom: 14px; padding: 10px; border: 1px solid var(--line); border-radius: 10px; }
-.sk-sub-team.side-home { border-left: 4px solid var(--home); }
-.sk-sub-team.side-away { border-left: 4px solid var(--away); }
-.sk-sub-name { font-weight: 700; margin-bottom: 8px; }
-.sk-sub-team.side-home .sk-sub-name { color: var(--home); }
-.sk-sub-team.side-away .sk-sub-name { color: var(--away); }
-.sk-sub-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 6px; }
-.sk-sub-lbl { width: 38px; font-size: 0.68rem; text-transform: uppercase; color: var(--dim); }
-.sk-sub .sk-num { width: 40px; height: 40px; font-size: 1.05rem; }
-.sk-sub .sk-num.on { background: var(--accent); color: #06140d; border-color: var(--accent); }
-.sk-sub .sk-num.bench { border-style: dashed; color: var(--dim); }
+.sk-sub.side-home { border-top: 3px solid var(--home); }
+.sk-sub.side-away { border-top: 3px solid var(--away); }
+.sk-sub-row { display: flex; align-items: stretch; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.sk-sub-lbl { width: 100%; font-size: 0.68rem; text-transform: uppercase; color: var(--dim); margin-bottom: 2px; }
+/* Wissel-item: rugnummer + naam, ruime tikdoelen */
+.sk-sub-item {
+  display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 10px;
+  border: 1px solid var(--line); background: #0a1f14; color: var(--txt); min-width: 120px;
+}
+.sk-sub-item .num { font-weight: 800; font-size: 1.15rem; font-variant-numeric: tabular-nums; min-width: 22px; text-align: center; }
+.sk-sub-item .nm { font-size: 0.92rem; }
+.sk-sub-item.on { border-color: var(--accent); background: #11301f; }
+.sk-sub-item.bench { border-style: dashed; }
+.sk-sub-item:disabled { opacity: 0.4; }
 
 /* ── Goal-flash ── */
 .sk-goal-flash {

@@ -184,17 +184,40 @@ export function FieldSchema({
       <line x1={THIRD_1} y1={0} x2={THIRD_1} y2={H} stroke="#9fd9ba" strokeWidth={0.5} strokeDasharray="2 4" opacity={0.5} />
       <line x1={THIRD_2} y1={0} x2={THIRD_2} y2={H} stroke="#9fd9ba" strokeWidth={0.5} strokeDasharray="2 4" opacity={0.5} />
 
-      {/* Oplichtend doelgebied bij vrije worp */}
+      {/* Oplichtend doelgebied bij vrije worp — duidelijk t.o.v. de rest: gevulde glow,
+          opvallende pulserende rand en een VW-label. */}
       {glowGoal && (
-        <rect
-          x={0}
-          y={glowGoal.end === 'top' ? 0 : awayGoalY}
-          width={W}
-          height={glowGoal.end === 'top' ? homeGoalY : H - awayGoalY}
-          fill={glowGoal.color}
-          opacity={0.55}
-          className="field-goal-glow"
-        />
+        <g>
+          <rect
+            x={0}
+            y={glowGoal.end === 'top' ? 0 : awayGoalY}
+            width={W}
+            height={glowGoal.end === 'top' ? homeGoalY : H - awayGoalY}
+            fill={glowGoal.color}
+            className="field-goal-glow"
+          />
+          <rect
+            x={1.5}
+            y={(glowGoal.end === 'top' ? 0 : awayGoalY) + 1.5}
+            width={W - 3}
+            height={(glowGoal.end === 'top' ? homeGoalY : H - awayGoalY) - 3}
+            fill="none"
+            stroke={glowGoal.color}
+            strokeWidth={3}
+            className="field-goal-border"
+          />
+          <text
+            x={W / 2}
+            y={glowGoal.end === 'top' ? homeGoalY / 2 + 4 : awayGoalY + (H - awayGoalY) / 2 + 4}
+            fontSize={13}
+            textAnchor="middle"
+            fontWeight={900}
+            fill="#06140d"
+            opacity={0.85}
+          >
+            VRIJE WORP
+          </text>
+        </g>
       )}
 
       {/* Heatmap-laag (optioneel) */}
