@@ -81,6 +81,24 @@ export const Clubs: CollectionConfig = {
       defaultValue: 0,
       admin: { hidden: true },
     },
+    // Clubkleuren (primair + secundair). De aangepaste Field-component leidt ze
+    // automatisch uit het logo af en laat ze handmatig bijstellen. Het secundaire
+    // veld wordt door diezelfde component beheerd en is daarom verborgen.
+    {
+      name: 'colorPrimary',
+      label: 'Clubkleuren',
+      type: 'text',
+      admin: {
+        components: {
+          Field: '/components/admin/LogoColorsEditor#LogoColorsEditor',
+        },
+      },
+    },
+    {
+      name: 'colorSecondary',
+      type: 'text',
+      admin: { hidden: true },
+    },
     {
       type: 'collapsible',
       label: 'Accommodatie & contact',

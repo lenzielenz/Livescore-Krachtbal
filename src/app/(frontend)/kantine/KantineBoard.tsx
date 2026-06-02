@@ -4,16 +4,18 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
+import { TeamLogo } from '@/components/TeamLogo'
+import { type ClubColors, DEFAULT_AWAY_COLOR, DEFAULT_HOME_COLOR } from '@/lib/club-colors'
 import type { MatchState, TimelineItem } from '@/lib/match-engine'
-import { type LogoFit, logoFitStyle } from '@/lib/logo-fit'
+import { type LogoFit } from '@/lib/logo-fit'
 
 export type KantineMatch = {
   id: number
   reeks: string
   time: string
   status: string
-  home: { name: string; logoUrl: string | null; logoFit?: LogoFit | null }
-  away: { name: string; logoUrl: string | null; logoFit?: LogoFit | null }
+  home: { name: string; logoUrl: string | null; logoFit?: LogoFit | null; colors?: ClubColors | null }
+  away: { name: string; logoUrl: string | null; logoFit?: LogoFit | null; colors?: ClubColors | null }
   score: { home: number; away: number }
 }
 
@@ -23,36 +25,6 @@ function shiftDate(dateStr: string, days: number): string {
   const d = new Date(`${dateStr}T12:00:00`)
   d.setDate(d.getDate() + days)
   return d.toISOString().slice(0, 10)
-}
-
-function Logo({
-  name,
-  url,
-  fit,
-  side,
-}: {
-  name: string
-  url: string | null
-  fit?: LogoFit | null
-  side: 'home' | 'away'
-}) {
-  const [failed, setFailed] = useState(false)
-  const initials = name
-    .split(/\s+/)
-    .map((w) => w[0])
-    .join('')
-    .slice(0, 3)
-    .toUpperCase()
-  return (
-    <span className={`kt-logo kt-logo-${side}`}>
-      {url && !failed ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={url} alt="" style={logoFitStyle(fit)} onError={() => setFailed(true)} />
-      ) : (
-        <span className="kt-logo-init">{initials}</span>
-      )}
-    </span>
-  )
 }
 
 function fmtClock(total: number): string {
@@ -132,12 +104,17 @@ function Tile({ match, onRemove }: { match: KantineMatch; onRemove: (id: number)
   const awayLogo = state?.teams.away.logoUrl ?? match.away.logoUrl
   const homeLogoFit = state?.teams.home.logoFit ?? match.home.logoFit
   const awayLogoFit = state?.teams.away.logoFit ?? match.away.logoFit
+  const homeColor = (state?.teams.home.colors ?? match.home.colors)?.primary
+  const awayColor = (state?.teams.away.colors ?? match.away.colors)?.primary
   const score = state?.score ?? match.score
   const status = state?.match.status ?? match.status
   const played = status !== 'scheduled'
 
+  // Clubkleuren als accenten op het vak (logo-ringen + doelpunt-gloed).
+  const tileStyle = { '--home': homeColor ?? DEFAULT_HOME_COLOR, '--away': awayColor ?? DEFAULT_AWAY_COLOR } as React.CSSProperties
+
   return (
-    <div className={`kt-tile ${status === 'live' ? 'live' : ''}`}>
+    <div className={`kt-tile ${status === 'live' ? 'live' : ''}`} style={tileStyle}>
       <div className="kt-tile-head">
         <span className="kt-tile-reeks">{match.reeks}</span>
         <span className={`kt-tile-status ${status}`}>
@@ -150,12 +127,12 @@ function Tile({ match, onRemove }: { match: KantineMatch; onRemove: (id: number)
 
       <Link href={`/match/${match.id}`} className="kt-tile-body">
         <div className="kt-tile-team">
-          <Logo name={home} url={homeLogo} fit={homeLogoFit} side="home" />
+          <TeamLogo name={home} logoUrl={homeLogo} logoFit={homeLogoFit} side="home" size="md" ringColor={homeColor} />
           <span className="kt-tile-name">{home}</span>
         </div>
         <div className="kt-tile-score">{played ? `${score.home} – ${score.away}` : 'vs'}</div>
         <div className="kt-tile-team">
-          <Logo name={away} url={awayLogo} fit={awayLogoFit} side="away" />
+          <TeamLogo name={away} logoUrl={awayLogo} logoFit={awayLogoFit} side="away" size="md" ringColor={awayColor} />
           <span className="kt-tile-name">{away}</span>
         </div>
       </Link>

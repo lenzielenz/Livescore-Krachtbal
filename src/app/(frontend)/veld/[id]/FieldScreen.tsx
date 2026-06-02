@@ -2,8 +2,9 @@
 
 import { useEffect, useRef, useState } from 'react'
 
+import { TeamLogo } from '@/components/TeamLogo'
+import { DEFAULT_AWAY_COLOR, DEFAULT_HOME_COLOR } from '@/lib/club-colors'
 import type { MatchState, TimelineItem } from '@/lib/match-engine'
-import { type LogoFit, logoFitStyle } from '@/lib/logo-fit'
 
 function fmtClock(total: number): string {
   const s = Math.max(0, Math.floor(total))
@@ -20,35 +21,8 @@ type Goal = {
   scorer: string | null
 }
 
-function Badge({
-  name,
-  logoUrl,
-  logoFit,
-  side,
-}: {
-  name: string
-  logoUrl: string | null
-  logoFit?: LogoFit | null
-  side: Side
-}) {
-  const [failed, setFailed] = useState(false)
-  const initials = name
-    .split(/\s+/)
-    .map((w) => w[0])
-    .join('')
-    .slice(0, 3)
-    .toUpperCase()
-  return (
-    <span className={`fs-logo fs-logo-${side}`}>
-      {logoUrl && !failed ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={logoUrl} alt="" style={logoFitStyle(logoFit)} onError={() => setFailed(true)} />
-      ) : (
-        <span className="fs-logo-init">{initials}</span>
-      )}
-    </span>
-  )
-}
+// Responsieve logomaat voor het grote veldscherm.
+const FS_LOGO_SIZE = 'clamp(84px, 14vw, 200px)'
 
 // Laatste doelpunt voor een ploeg uit de tijdlijn halen, voor de naam van de doelpuntenmaker.
 function lastGoalScorer(timeline: TimelineItem[], side: Side): string | null {
@@ -134,16 +108,30 @@ export function FieldScreen({
   const statusLabel =
     status === 'live' ? (state.atHalfTime ? 'RUST' : 'LIVE') : status === 'finished' ? 'AFGELOPEN' : 'GEPLAND'
 
+  // Dynamische stijl op basis van de clubkleuren. De thuisploeg geeft de toon aan;
+  // scoort de tegenpartij, dan komen tijdens de viering hún kleuren naar boven.
+  const home1 = state.teams.home.colors?.primary ?? DEFAULT_HOME_COLOR
+  const home2 = state.teams.home.colors?.secondary ?? home1
+  const away1 = state.teams.away.colors?.primary ?? DEFAULT_AWAY_COLOR
+  const away2 = state.teams.away.colors?.secondary ?? away1
+  const themeAway = goal?.side === 'away'
+  const fsStyle = {
+    '--home': home1,
+    '--away': away1,
+    '--theme-1': themeAway ? away1 : home1,
+    '--theme-2': themeAway ? away2 : home2,
+  } as React.CSSProperties
+
   return (
-    <div className="fs">
+    <div className="fs" style={fsStyle}>
       <div className="fs-top">
         <span className={`fs-status ${status}`}>{statusLabel}</span>
         {reeks && <span className="fs-reeks">{reeks}</span>}
       </div>
 
       <div className="fs-main">
-        <div className="fs-team">
-          <Badge name={state.teams.home.name} logoUrl={state.teams.home.logoUrl} logoFit={state.teams.home.logoFit} side="home" />
+        <div className={`fs-team ${goal?.side === 'home' ? 'scored' : ''}`}>
+          <TeamLogo name={state.teams.home.name} logoUrl={state.teams.home.logoUrl} logoFit={state.teams.home.logoFit} side="home" size={FS_LOGO_SIZE} float ringColor={state.teams.home.colors?.primary} />
           <div className="fs-name">{state.teams.home.name}</div>
         </div>
 
@@ -162,8 +150,8 @@ export function FieldScreen({
           </div>
         </div>
 
-        <div className="fs-team">
-          <Badge name={state.teams.away.name} logoUrl={state.teams.away.logoUrl} logoFit={state.teams.away.logoFit} side="away" />
+        <div className={`fs-team ${goal?.side === 'away' ? 'scored' : ''}`}>
+          <TeamLogo name={state.teams.away.name} logoUrl={state.teams.away.logoUrl} logoFit={state.teams.away.logoFit} side="away" size={FS_LOGO_SIZE} float ringColor={state.teams.away.colors?.primary} />
           <div className="fs-name">{state.teams.away.name}</div>
         </div>
       </div>

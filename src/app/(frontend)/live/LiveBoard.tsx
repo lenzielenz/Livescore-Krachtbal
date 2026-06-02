@@ -4,15 +4,17 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
 
-import { type LogoFit, logoFitStyle } from '@/lib/logo-fit'
+import { TeamLogo } from '@/components/TeamLogo'
+import { type ClubColors } from '@/lib/club-colors'
+import { type LogoFit } from '@/lib/logo-fit'
 
 export type DayMatch = {
   id: number
   reeks: string
   time: string
   status: string
-  home: { name: string; logoUrl: string | null; logoFit?: LogoFit | null }
-  away: { name: string; logoUrl: string | null; logoFit?: LogoFit | null }
+  home: { name: string; logoUrl: string | null; logoFit?: LogoFit | null; colors?: ClubColors | null }
+  away: { name: string; logoUrl: string | null; logoFit?: LogoFit | null; colors?: ClubColors | null }
   score: { home: number; away: number }
 }
 
@@ -22,26 +24,6 @@ function shiftDate(dateStr: string, days: number): string {
   const d = new Date(`${dateStr}T12:00:00`)
   d.setDate(d.getDate() + days)
   return d.toISOString().slice(0, 10)
-}
-
-function Logo({ name, url, fit }: { name: string; url: string | null; fit?: LogoFit | null }) {
-  const [failed, setFailed] = useState(false)
-  const initials = name
-    .split(/\s+/)
-    .map((w) => w[0])
-    .join('')
-    .slice(0, 3)
-    .toUpperCase()
-  return (
-    <span className="lb-logo">
-      {url && !failed ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={url} alt="" style={logoFitStyle(fit)} onError={() => setFailed(true)} />
-      ) : (
-        <span className="lb-logo-init">{initials}</span>
-      )}
-    </span>
-  )
 }
 
 export function LiveBoard({ date, today, matches }: { date: string; today: string; matches: DayMatch[] }) {
@@ -147,12 +129,12 @@ export function LiveBoard({ date, today, matches }: { date: string; today: strin
                     <Link href={`/match/${m.id}`} className="lb-match">
                       <span className="lb-status">{m.status === 'live' ? 'LIVE' : played ? m.time : m.time}</span>
                       <span className="lb-team">
-                        <Logo name={m.home.name} url={m.home.logoUrl} fit={m.home.logoFit} />
+                        <TeamLogo name={m.home.name} logoUrl={m.home.logoUrl} logoFit={m.home.logoFit} side="home" size="xs" ringColor={m.home.colors?.primary} />
                         <span className="lb-name">{m.home.name}</span>
                       </span>
                       <span className="lb-score">{played ? `${m.score.home} – ${m.score.away}` : 'vs'}</span>
                       <span className="lb-team">
-                        <Logo name={m.away.name} url={m.away.logoUrl} fit={m.away.logoFit} />
+                        <TeamLogo name={m.away.name} logoUrl={m.away.logoUrl} logoFit={m.away.logoFit} side="away" size="xs" ringColor={m.away.colors?.primary} />
                         <span className="lb-name">{m.away.name}</span>
                       </span>
                     </Link>

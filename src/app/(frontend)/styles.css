@@ -82,12 +82,27 @@ a {
   border-color: var(--accent);
 }
 .match-card .home {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
   text-align: right;
   font-weight: 600;
+  min-width: 0;
 }
 .match-card .away {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
   text-align: left;
   font-weight: 600;
+  min-width: 0;
+}
+.match-card .mc-team-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .match-card .mid {
   text-align: center;

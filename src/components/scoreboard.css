@@ -7,6 +7,8 @@
   --accent: #ffd166;
   --home: #06d6a0;
   --away: #4cc9f0;
+  position: relative;
+  overflow: hidden;
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 16px;
@@ -28,23 +30,63 @@
 .sb-side-team { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 6px; }
 .sb-name { font-size: 1.15rem; font-weight: 700; }
 
-/* Clublogo — professioneel: ronde badge, zachte glans + subtiele zweef-animatie */
-.sb-logo {
-  width: 54px; height: 54px; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center; overflow: hidden;
-  background: radial-gradient(circle at 35% 30%, #16352447, #0a1f14);
-  border: 1px solid var(--line);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4), inset 0 1px 2px rgba(255, 255, 255, 0.06);
-  animation: sb-logo-in 0.5s ease-out both, sb-logo-float 5s ease-in-out 0.5s infinite;
+/* Doelpunt-viering: het logo van de scorende ploeg juicht mee. */
+.sb-side-team.scored .tl { animation: sb-logo-celebrate 0.9s cubic-bezier(0.22, 1.2, 0.4, 1) 2; }
+@keyframes sb-logo-celebrate {
+  0% { transform: scale(1) rotate(0); }
+  30% { transform: scale(1.16) rotate(-7deg); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 75%, transparent), 0 0 26px color-mix(in srgb, var(--accent) 60%, transparent); }
+  65% { transform: scale(1.06) rotate(5deg); }
+  100% { transform: scale(1) rotate(0); }
 }
-.sb-logo img { width: 100%; height: 100%; object-fit: contain; padding: 6px; background: #fff; border-radius: 50%; }
-.sb-logo-initials { font-size: 1.1rem; font-weight: 800; letter-spacing: 0.03em; }
-.sb-logo-home { box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4), 0 0 0 2px color-mix(in srgb, var(--home) 55%, transparent); }
-.sb-logo-away { box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4), 0 0 0 2px color-mix(in srgb, var(--away) 55%, transparent); }
-.sb-logo-home .sb-logo-initials { color: var(--home); }
-.sb-logo-away .sb-logo-initials { color: var(--away); }
-@keyframes sb-logo-in { from { opacity: 0; transform: scale(0.6); } to { opacity: 1; transform: scale(1); } }
-@keyframes sb-logo-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+.sb-pulse { display: inline-block; color: var(--accent); animation: sb-score-pulse 0.7s ease-out; }
+@keyframes sb-score-pulse {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.4); }
+  100% { transform: scale(1); }
+}
+
+/* Doelpunt-melding bovenop het scorebord. */
+.sb-goal {
+  position: absolute; inset: 0; z-index: 5;
+  display: flex; align-items: center; justify-content: center;
+  pointer-events: none;
+  background: radial-gradient(circle at center, rgba(6, 20, 13, 0.86), rgba(6, 20, 13, 0.94));
+  animation: sb-goal-fade 5s ease forwards;
+}
+.sb-goal.side-home { box-shadow: inset 0 0 90px color-mix(in srgb, var(--home) 45%, transparent); }
+.sb-goal.side-away { box-shadow: inset 0 0 90px color-mix(in srgb, var(--away) 45%, transparent); }
+@keyframes sb-goal-fade {
+  0% { opacity: 0; }
+  8% { opacity: 1; }
+  82% { opacity: 1; }
+  100% { opacity: 0; visibility: hidden; }
+}
+.sb-goal-card { text-align: center; animation: sb-goal-card-in 0.5s cubic-bezier(0.18, 1.4, 0.4, 1) both; }
+@keyframes sb-goal-card-in {
+  0% { opacity: 0; transform: scale(0.5) translateY(14px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+.sb-goal-title {
+  font-size: 2.4rem; font-weight: 900; letter-spacing: 0.04em; color: var(--accent);
+  text-shadow: 0 2px 16px rgba(255, 209, 102, 0.5);
+  animation: sb-goal-shake 0.5s ease-in-out 2;
+}
+@keyframes sb-goal-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+.sb-goal-team { font-size: 1.5rem; font-weight: 800; margin-top: 4px; }
+.sb-goal.side-home .sb-goal-team { color: var(--home); }
+.sb-goal.side-away .sb-goal-team { color: var(--away); }
+.sb-goal-scorer { font-size: 1rem; color: var(--txt); margin-top: 2px; }
+.sb-goal-pts { font-size: 0.85rem; font-weight: 700; color: var(--dim); margin-top: 6px; text-transform: uppercase; letter-spacing: 0.05em; }
+
+@media (prefers-reduced-motion: reduce) {
+  .sb-side-team.scored .tl, .sb-pulse, .sb-goal, .sb-goal-card, .sb-goal-title { animation: none; }
+  .sb-goal { opacity: 1; }
+}
+
 .sb-scorebox { text-align: center; }
 .sb-score { font-size: 3.2rem; font-weight: 800; font-variant-numeric: tabular-nums; display: flex; gap: 12px; justify-content: center; }
 .sb-dash { color: var(--dim); font-weight: 400; }
