@@ -38,6 +38,9 @@ const db = isPostgres
 export default buildConfig({
   admin: {
     user: Users.slug,
+    // Gebruik het ingebouwde standaard-avatar i.p.v. Gravatar. Voorkomt de externe
+    // gravatar.com-call die door tracking-preventie van browsers geblokkeerd wordt.
+    avatar: 'default',
     importMap: {
       baseDir: path.resolve(dirname),
     },
