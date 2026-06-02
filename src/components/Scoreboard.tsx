@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 
 import type { MatchState, TimelineItem } from '@/lib/match-engine'
+import { type LogoFit, logoFitStyle } from '@/lib/logo-fit'
 import './scoreboard.css'
 
 function fmtClock(total: number): string {
@@ -10,7 +11,18 @@ function fmtClock(total: number): string {
   return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
 }
 
-function TeamBadge({ name, logoUrl, side }: { name: string; logoUrl: string | null; side: 'home' | 'away' }) {
+function TeamBadge({
+  name,
+  logoUrl,
+  logoFit,
+  side,
+}: {
+  name: string
+  logoUrl: string | null
+  logoFit?: LogoFit | null
+  side: 'home' | 'away'
+}) {
+  const [failed, setFailed] = useState(false)
   const initials = name
     .split(/\s+/)
     .map((w) => w[0])
@@ -19,8 +31,12 @@ function TeamBadge({ name, logoUrl, side }: { name: string; logoUrl: string | nu
     .toUpperCase()
   return (
     <span className={`sb-logo sb-logo-${side}`}>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      {logoUrl ? <img src={logoUrl} alt={`${name} logo`} /> : <span className="sb-logo-initials">{initials}</span>}
+      {logoUrl && !failed ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={logoUrl} alt={`${name} logo`} style={logoFitStyle(logoFit)} onError={() => setFailed(true)} />
+      ) : (
+        <span className="sb-logo-initials">{initials}</span>
+      )}
     </span>
   )
 }
@@ -88,7 +104,7 @@ export function Scoreboard({
 
       <div className="sb-main">
         <div className="sb-side-team">
-          <TeamBadge name={state.teams.home.name} logoUrl={state.teams.home.logoUrl} side="home" />
+          <TeamBadge name={state.teams.home.name} logoUrl={state.teams.home.logoUrl} logoFit={state.teams.home.logoFit} side="home" />
           <div className="sb-name">{state.teams.home.name}</div>
           <div className="sb-min" title="Aangevraagde minuten (time-outs)">
             <span className="sb-min-lbl">min.</span>
@@ -105,7 +121,7 @@ export function Scoreboard({
           <div className="sb-half">Helft {state.match.currentHalf}</div>
         </div>
         <div className="sb-side-team">
-          <TeamBadge name={state.teams.away.name} logoUrl={state.teams.away.logoUrl} side="away" />
+          <TeamBadge name={state.teams.away.name} logoUrl={state.teams.away.logoUrl} logoFit={state.teams.away.logoFit} side="away" />
           <div className="sb-name">{state.teams.away.name}</div>
           <div className="sb-min" title="Aangevraagde minuten (time-outs)">
             <span className="sb-min-lbl">min.</span>

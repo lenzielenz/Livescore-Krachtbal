@@ -162,6 +162,9 @@ export interface Club {
    * Clublogo — wordt professioneel weergegeven op de site.
    */
   logo?: (number | null) | Media;
+  logoZoom?: number | null;
+  logoOffsetX?: number | null;
+  logoOffsetY?: number | null;
   /**
    * Naam stadion, adres, type terrein (bv. kunstgras).
    */
@@ -790,6 +793,9 @@ export interface ClubsSelect<T extends boolean = true> {
   name?: T;
   email?: T;
   logo?: T;
+  logoZoom?: T;
+  logoOffsetX?: T;
+  logoOffsetY?: T;
   accommodatie?: T;
   telefoon?: T;
   website?: T;

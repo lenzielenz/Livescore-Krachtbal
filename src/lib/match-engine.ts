@@ -7,6 +7,7 @@
 import type { Payload } from 'payload'
 
 import type { Category } from './categories'
+import { type LogoFit, normalizeLogoFit } from './logo-fit'
 import { type AttackDir, type Point, FIELD, freeThrowNorm } from './field'
 import {
   type SetupSide,
@@ -629,8 +630,8 @@ export interface MatchState {
     goalAreaDepth: number
   }
   teams: {
-    home: { id: number; name: string; logoUrl: string | null }
-    away: { id: number; name: string; logoUrl: string | null }
+    home: { id: number; name: string; logoUrl: string | null; logoFit: LogoFit | null }
+    away: { id: number; name: string; logoUrl: string | null; logoFit: LogoFit | null }
   }
   /** Spelers die momenteel op het veld staan (selecteerbaar om te werpen). */
   lineup: { home: number[]; away: number[] }
@@ -943,6 +944,19 @@ function clubLogoUrl(team: unknown): string | null {
   return null
 }
 
+// Weergave-instelling (zoom + positie) van het clublogo binnen de ronde badge.
+function clubLogoFit(team: unknown): LogoFit | null {
+  const club = (team as { club?: unknown })?.club
+  if (!club || typeof club !== 'object') return null
+  const c = club as { logoZoom?: number | null; logoOffsetX?: number | null; logoOffsetY?: number | null }
+  const fit = normalizeLogoFit({
+    zoom: c.logoZoom ?? 1,
+    offsetX: c.logoOffsetX ?? 0,
+    offsetY: c.logoOffsetY ?? 0,
+  })
+  return fit.zoom === 1 && fit.offsetX === 0 && fit.offsetY === 0 ? null : fit
+}
+
 export async function buildMatchState(payload: Payload, matchId: number): Promise<MatchState> {
   const { match, homeId, awayId } = await loadMatch(payload, matchId)
   const [home, away] = await Promise.all([
@@ -1059,8 +1073,8 @@ export async function buildMatchState(payload: Payload, matchId: number): Promis
       goalAreaDepth: match.goalAreaDepth ?? FIELD.defaultGoalAreaDepthM,
     },
     teams: {
-      home: { id: home.id, name: home.name, logoUrl: clubLogoUrl(home) },
-      away: { id: away.id, name: away.name, logoUrl: clubLogoUrl(away) },
+      home: { id: home.id, name: home.name, logoUrl: clubLogoUrl(home), logoFit: clubLogoFit(home) },
+      away: { id: away.id, name: away.name, logoUrl: clubLogoUrl(away), logoFit: clubLogoFit(away) },
     },
     lineup: {
       home: await resolveLineup(payload, match.homeLineup, homeId),
