@@ -5,9 +5,32 @@ import type { Payload } from 'payload'
 
 import type { Category } from './categories'
 import { playerSelectability, type Selectability } from './lineup'
+import { computeReadiness, type Readiness } from './match-readiness'
 import { isKnipjesBlocked, openKnipjes } from './sanctions'
 
 export type Side = 'home' | 'away'
+
+/**
+ * Of de wedstrijd ontgrendeld is om te openen/starten: opstellingen (op het blad)
+ * ingevuld + scheidsrechtersakkoord, of demo. Leest het wedstrijdblad en de match.
+ */
+export async function getMatchReadiness(
+  payload: Payload,
+  matchId: number | string,
+): Promise<Readiness> {
+  const id = Number(matchId)
+  const [match, sheetRes] = await Promise.all([
+    payload.findByID({ collection: 'matches', id, depth: 0 }).catch(() => null),
+    payload.find({ collection: 'matchsheets', where: { match: { equals: id } }, depth: 0, limit: 1 }),
+  ])
+  const sheet = sheetRes.docs[0]
+  return computeReadiness({
+    homeLineup: sheet?.homeLineup,
+    awayLineup: sheet?.awayLineup,
+    refereeAkkoord: Boolean((sheet?.wedstrijdstart as { akkoord?: boolean } | undefined)?.akkoord),
+    isDemo: Boolean((match as { isDemo?: boolean } | null)?.isDemo),
+  })
+}
 
 export async function getSeasonStartYear(payload: Payload): Promise<number | null> {
   const season = await payload.findGlobal({ slug: 'season', depth: 0 }).catch(() => null)

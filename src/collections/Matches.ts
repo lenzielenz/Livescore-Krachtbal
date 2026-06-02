@@ -155,6 +155,19 @@ export const Matches: CollectionConfig = {
       ],
     },
     {
+      // Demo/oefenwedstrijd: bedoeld om de live-registratie uit te leggen. Een demo mag
+      // altijd geopend worden (geen opstelling-/scheidsrechtercontrole) en toont in het
+      // aantekenscherm een stap-voor-stap uitleg.
+      name: 'isDemo',
+      label: 'Demo / oefenwedstrijd',
+      type: 'checkbox',
+      defaultValue: false,
+      admin: {
+        description: 'Aanvinken voor een oefen-/uitlegwedstrijd. Mensen kunnen die starten om de live-registratie te leren; alle startcontroles worden overgeslagen.',
+        position: 'sidebar',
+      },
+    },
+    {
       // Categorie volgt automatisch uit de reeks (leeftijdsniveau voor de spelregels) —
       // niet meer handmatig te kiezen.
       name: 'category',

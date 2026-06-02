@@ -1,3 +1,4 @@
+import { isFederationLevel } from '@/lib/access'
 import {
   advanceHalf,
   endHalf,
@@ -12,6 +13,8 @@ import {
   substitute,
   undoLastThrow,
 } from '@/lib/match-engine'
+import { getMatchReadiness } from '@/lib/matchsheet-data'
+import { missingSteps } from '@/lib/match-readiness'
 import { getPayloadClient } from '@/lib/payload-client'
 
 // Eén POST-endpoint dat aantekenaar-acties dispatcht op het veld `action`.
@@ -33,8 +36,22 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   try {
     const payload = await getPayloadClient()
     switch (action) {
-      case 'start':
+      case 'start': {
+        // Startcontrole: opstellingen + scheidsrechtersakkoord (of demo). Een admin/federatie
+        // mag de controle bewust overslaan via een testknop (allowUnready).
+        const readiness = await getMatchReadiness(payload, matchId)
+        if (!readiness.ready) {
+          const { user } = await payload.auth({ headers: req.headers }).catch(() => ({ user: null }))
+          const mayBypass = isFederationLevel(user) && body.allowUnready === true
+          if (!mayBypass) {
+            return Response.json(
+              { error: `Nog niet klaar om te starten: ${missingSteps(readiness).join(', ')}.`, readiness },
+              { status: 409 },
+            )
+          }
+        }
         return Response.json(await startMatch(payload, matchId, Number(body.startingTeamId)))
+      }
       case 'throw': {
         const result = await recordThrow(payload, {
           matchId,

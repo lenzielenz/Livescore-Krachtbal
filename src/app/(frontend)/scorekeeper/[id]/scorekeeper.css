@@ -179,6 +179,7 @@
 .sk-start h3 { font-size: 0.95rem; color: var(--dim); font-weight: 600; }
 .sk-start-btns { display: flex; flex-direction: column; gap: 12px; width: min(360px, 80vw); }
 .sk-btn { width: 100%; padding: 18px; border: 1px solid var(--line); background: #0a1f14; color: var(--txt); border-radius: 10px; font-size: 1.05rem; font-weight: 700; }
+a.sk-btn { display: inline-block; box-sizing: border-box; text-align: center; text-decoration: none; }
 .sk-btn.home { border-color: var(--home); color: var(--home); }
 .sk-btn.away { border-color: var(--away); color: var(--away); }
 
@@ -275,6 +276,79 @@
 .sk-sub-item.on { border-color: var(--accent); background: #11301f; }
 .sk-sub-item.bench { border-style: dashed; }
 .sk-sub-item:disabled { opacity: 0.4; }
+
+/* ── Vergrendel-checklist (vóór de start) ── */
+.sk-lock-card { text-align: left; }
+.sk-lock-card .sk-kickoff-title,
+.sk-lock-card .sk-kickoff-sub { text-align: center; }
+.sk-checklist { list-style: none; margin: 0 0 18px; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.sk-checklist li {
+  display: flex; align-items: center; gap: 8px; padding: 11px 13px; border-radius: 10px;
+  border: 1px solid var(--line); background: #0a1f14; font-size: 0.9rem; font-weight: 600;
+}
+.sk-checklist li.ok { border-color: var(--home); color: var(--home); }
+.sk-checklist li.todo { color: var(--txt); }
+.sk-check-ico { font-weight: 900; font-size: 1.05rem; line-height: 1; }
+.sk-checklist li.ok .sk-check-ico { color: var(--home); }
+.sk-checklist li.todo .sk-check-ico { color: var(--dim); }
+.sk-check-link { margin-left: auto; font-size: 0.78rem; color: var(--accent); text-decoration: none; white-space: nowrap; }
+.sk-check-link:hover { text-decoration: underline; }
+.sk-lock-bypass {
+  width: 100%; padding: 13px; border-radius: 12px; border: 1px dashed var(--accent);
+  background: transparent; color: var(--accent); font-size: 0.95rem; font-weight: 800;
+}
+
+/* ── Demo: chip + help-knop + uitleg-overlay ── */
+.sk-demo-chip {
+  font-size: 0.62rem; font-weight: 900; letter-spacing: 0.08em; color: #06140d; background: var(--accent);
+  padding: 2px 8px; border-radius: 999px;
+}
+.sk-demo-help {
+  position: fixed; right: 12px; bottom: 12px; z-index: 55; padding: 9px 14px; border-radius: 999px;
+  border: 1px solid var(--accent); background: var(--panel); color: var(--accent); font-size: 0.82rem; font-weight: 800;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+.sk-demo-overlay {
+  position: fixed; inset: 0; z-index: 70; display: flex; align-items: center; justify-content: center;
+  background: rgba(6, 20, 13, 0.82); padding: 16px;
+}
+.sk-demo-card {
+  width: min(440px, 94%); background: var(--panel); border: 1px solid var(--accent); border-radius: 18px;
+  padding: 24px; text-align: center; box-shadow: 0 16px 50px rgba(0, 0, 0, 0.55);
+}
+.sk-demo-badge {
+  display: inline-block; font-size: 0.62rem; font-weight: 900; letter-spacing: 0.08em; color: #06140d;
+  background: var(--accent); padding: 3px 10px; border-radius: 999px; margin-bottom: 12px;
+}
+.sk-demo-card h3 { margin: 0 0 8px; font-size: 1.25rem; color: var(--accent); }
+.sk-demo-card p { margin: 0 0 16px; color: var(--txt); font-size: 0.95rem; line-height: 1.45; }
+.sk-demo-dots { display: flex; justify-content: center; gap: 6px; margin-bottom: 18px; }
+.sk-demo-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--line); }
+.sk-demo-dot.on { background: var(--accent); }
+.sk-demo-btns { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.sk-demo-btns .sk-btn { width: auto; flex: 1 1 auto; min-width: 110px; padding: 12px; font-size: 0.92rem; }
+
+/* ── Deelname na 'Einde' (wie heeft gespeeld) ── */
+.sk-deelname-card { text-align: left; max-height: 100%; overflow-y: auto; }
+.sk-deelname-card .sk-kickoff-title,
+.sk-deelname-card .sk-kickoff-sub { text-align: center; }
+.sk-deelname-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+.sk-deelname-col h4 { margin: 0 0 8px; font-size: 0.9rem; text-align: center; }
+.sk-deelname-col.home h4 { color: var(--home); }
+.sk-deelname-col.away h4 { color: var(--away); }
+.sk-deelname-item {
+  display: flex; align-items: center; gap: 8px; width: 100%; margin-bottom: 6px; padding: 9px 11px;
+  border-radius: 10px; border: 1px solid var(--line); background: #0a1f14; color: var(--txt); text-align: left;
+}
+.sk-deelname-item .num { font-weight: 800; font-variant-numeric: tabular-nums; min-width: 22px; text-align: center; }
+.sk-deelname-item .nm { font-size: 0.86rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sk-deelname-col.home .sk-deelname-item.on { border-color: var(--home); background: #11301f; }
+.sk-deelname-col.away .sk-deelname-item.on { border-color: var(--away); background: #102a33; }
+.sk-deelname-item.on .sk-check-ico { color: var(--accent); }
+.sk-deelname-msg { text-align: center; font-size: 0.84rem; color: var(--dim); margin: 4px 0 10px; }
+.sk-deelname-msg.ok { color: var(--home); }
+.sk-deelname-card .sk-modal-btns { flex-direction: row; flex-wrap: wrap; }
+.sk-deelname-card .sk-modal-btns .sk-btn { flex: 1 1 auto; }
 
 /* ── Goal-flash ── */
 .sk-goal-flash {

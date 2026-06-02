@@ -32,6 +32,9 @@ export function RefereePanel({
   initialKeuring,
   initialOfficials,
   initialVergoeding,
+  initialStartAkkoord,
+  initialStartNaam,
+  lineupReady,
   officialsHint,
 }: {
   matchId: string
@@ -41,14 +44,29 @@ export function RefereePanel({
   initialKeuring: Record<string, string>
   initialOfficials: Record<string, string>
   initialVergoeding: VergoedingState
+  initialStartAkkoord: boolean
+  initialStartNaam: string
+  lineupReady: { homeOk: boolean; awayOk: boolean }
   officialsHint: string | null
 }) {
   const [status, setStatus] = useState<MatchSheetStatus>(initialStatus as MatchSheetStatus)
   const [keuring, setKeuring] = useState<Record<string, string>>(initialKeuring)
   const [officials, setOfficials] = useState<Record<string, string>>(initialOfficials)
   const [verg, setVerg] = useState<VergoedingState>(initialVergoeding)
+  const [startAkkoord, setStartAkkoord] = useState<boolean>(initialStartAkkoord)
+  const [startNaam, setStartNaam] = useState<string>(initialStartNaam)
   const [msg, setMsg] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+
+  const saveStartAkkoord = async (akkoord: boolean) => {
+    const { ok, json } = await post({ action: 'wedstrijdstart', akkoord, naam: startNaam })
+    if (ok) {
+      setStartAkkoord(akkoord)
+      setMsg(akkoord ? 'Akkoord gegeven — de aantekenaar kan de wedstrijd openen.' : 'Akkoord ingetrokken.')
+    } else {
+      setMsg(json.error || 'Mislukt.')
+    }
+  }
 
   const saveVergoeding = async () => {
     const { ok, json } = await post({
@@ -111,8 +129,46 @@ export function RefereePanel({
 
   const next = nextStatus(status)
 
+  const startBlokkers: string[] = []
+  if (!lineupReady.homeOk) startBlokkers.push('opstelling thuis')
+  if (!lineupReady.awayOk) startBlokkers.push('opstelling uit')
+
   return (
     <div className="wb-grid">
+      <section className="wb-card" style={{ gridColumn: '1 / -1', borderColor: startAkkoord ? '#2a9d6a' : undefined }}>
+        <h2>Wedstrijdstart vrijgeven</h2>
+        <p className="wb-sub">
+          Controleer beide opstellingen en het terrein. Geef daarna akkoord — pas dan kan de
+          aantekenaar de wedstrijd openen en starten.
+        </p>
+        {startBlokkers.length > 0 && (
+          <p className="wb-sub" style={{ color: '#e0533d' }}>
+            Let op: {startBlokkers.join(' en ')} nog niet volledig (minstens 4 spelers per ploeg).
+          </p>
+        )}
+        <label style={{ display: 'flex', flexDirection: 'column', gap: 2, fontSize: '0.8rem', color: 'var(--dim)', marginBottom: 10 }}>
+          Naam scheidsrechter
+          <input
+            className="wb-input"
+            placeholder="Voor- en achternaam"
+            value={startNaam}
+            onChange={(e) => setStartNaam(e.target.value)}
+          />
+        </label>
+        {startAkkoord ? (
+          <div className="wb-btn-row" style={{ marginTop: 0 }}>
+            <span className="wb-status" style={{ color: '#2a9d6a' }}>✓ Akkoord gegeven</span>
+            <button type="button" onClick={() => saveStartAkkoord(false)} disabled={busy} className="wb-btn">
+              Akkoord intrekken
+            </button>
+          </div>
+        ) : (
+          <button type="button" onClick={() => saveStartAkkoord(true)} disabled={busy} className="wb-btn wb-btn-primary">
+            ✓ Akkoord — wedstrijd mag starten
+          </button>
+        )}
+      </section>
+
       <section className="wb-card">
         <h2>Officials</h2>
         {officialsHint && <p className="wb-sub">{officialsHint}</p>}

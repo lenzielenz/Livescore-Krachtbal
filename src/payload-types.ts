@@ -76,6 +76,8 @@ export interface Config {
     accidents: Accident;
     cupfinals: Cupfinal;
     sanctions: Sanction;
+    tournaments: Tournament;
+    'tournament-matches': TournamentMatch;
     possessions: Possession;
     throws: Throw;
     'match-events': MatchEvent;
@@ -97,6 +99,8 @@ export interface Config {
     accidents: AccidentsSelect<false> | AccidentsSelect<true>;
     cupfinals: CupfinalsSelect<false> | CupfinalsSelect<true>;
     sanctions: SanctionsSelect<false> | SanctionsSelect<true>;
+    tournaments: TournamentsSelect<false> | TournamentsSelect<true>;
+    'tournament-matches': TournamentMatchesSelect<false> | TournamentMatchesSelect<true>;
     possessions: PossessionsSelect<false> | PossessionsSelect<true>;
     throws: ThrowsSelect<false> | ThrowsSelect<true>;
     'match-events': MatchEventsSelect<false> | MatchEventsSelect<true>;
@@ -162,15 +166,15 @@ export interface Club {
    * Clublogo uploaden. Of gebruik hieronder een logo-URL.
    */
   logo?: (number | null) | Media;
+  /**
+   * Alternatief: directe URL naar een logo-afbeelding (gebruikt als er geen bestand is geüpload).
+   */
+  logoUrl?: string | null;
   logoZoom?: number | null;
   logoOffsetX?: number | null;
   logoOffsetY?: number | null;
   colorPrimary?: string | null;
   colorSecondary?: string | null;
-  /**
-   * Alternatief: directe URL naar een logo-afbeelding (gebruikt als er geen bestand is geüpload).
-   */
-  logoUrl?: string | null;
   /**
    * Naam stadion, adres, type terrein (bv. kunstgras).
    */
@@ -326,6 +330,10 @@ export interface Match {
    * Min. 10 m (15 m voor nieuwe terreinen). Bepaalt de veldlengte en de afstandsberekening.
    */
   goalAreaDepth: number;
+  /**
+   * Aanvinken voor een oefen-/uitlegwedstrijd. Mensen kunnen die starten om de live-registratie te leren; alle startcontroles worden overgeslagen.
+   */
+  isDemo?: boolean | null;
   category?: ('U12' | 'U14' | 'U16' | 'U18' | 'U20' | 'senioren') | null;
   homeLineup?: (number | Player)[] | null;
   awayLineup?: (number | Player)[] | null;
@@ -380,6 +388,14 @@ export interface Matchsheet {
         id?: string | null;
       }[]
     | null;
+  wedstrijdstart?: {
+    /**
+     * Opstellingen gecontroleerd, terrein in orde — de wedstrijd mag geopend worden.
+     */
+    akkoord?: boolean | null;
+    naam?: string | null;
+    tijdstip?: string | null;
+  };
   /**
    * Aantal km voor deze wedstrijd — telt mee op de kwitantie (€0,4327/km).
    */
@@ -596,6 +612,81 @@ export interface Sanction {
   createdAt: string;
 }
 /**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "tournaments".
+ */
+export interface Tournament {
+  id: number;
+  /**
+   * Bv. "Paastornooi U14 2026".
+   */
+  name: string;
+  /**
+   * Bepaalt de spelregels (helftduur). U12/U14/U16 = 2×20 min, rest 2×25 min.
+   */
+  category: 'U12' | 'U14' | 'U16' | 'U18' | 'U20' | 'senioren';
+  status: 'live' | 'finished';
+  method?: ('manual' | 'auto') | null;
+  /**
+   * Vastgelegd bij het aanmaken.
+   */
+  teamCount?: number | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "tournament-matches".
+ */
+export interface TournamentMatch {
+  id: number;
+  tournament: number | Tournament;
+  round: number;
+  position: number;
+  bracket: 'main' | 'third';
+  label?: string | null;
+  /**
+   * Leeg = nog te bepalen.
+   */
+  home?: string | null;
+  away?: string | null;
+  status: 'pending' | 'live' | 'finished';
+  winner?: ('home' | 'away') | null;
+  goals?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  winnerTo?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  loserTo?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  currentHalf?: number | null;
+  clockSeconds?: number | null;
+  clockRunning?: boolean | null;
+  clockUpdatedAt?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * Afgeleid uit de worp-events; doorgaans niet handmatig bewerken.
  *
  * This interface was referenced by `Config`'s JSON-Schema
@@ -730,6 +821,14 @@ export interface PayloadLockedDocument {
         value: number | Sanction;
       } | null)
     | ({
+        relationTo: 'tournaments';
+        value: number | Tournament;
+      } | null)
+    | ({
+        relationTo: 'tournament-matches';
+        value: number | TournamentMatch;
+      } | null)
+    | ({
         relationTo: 'possessions';
         value: number | Possession;
       } | null)
@@ -860,6 +959,7 @@ export interface MatchesSelect<T extends boolean = true> {
   date?: T;
   status?: T;
   goalAreaDepth?: T;
+  isDemo?: T;
   category?: T;
   homeLineup?: T;
   awayLineup?: T;
@@ -908,6 +1008,13 @@ export interface MatchsheetsSelect<T extends boolean = true> {
         deelgenomen?: T;
         ibGecontroleerd?: T;
         id?: T;
+      };
+  wedstrijdstart?:
+    | T
+    | {
+        akkoord?: T;
+        naam?: T;
+        tijdstip?: T;
       };
   refereeKm?: T;
   forfait?:
@@ -1055,6 +1162,43 @@ export interface SanctionsSelect<T extends boolean = true> {
   vervallenOp?: T;
   reden?: T;
   bron?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "tournaments_select".
+ */
+export interface TournamentsSelect<T extends boolean = true> {
+  name?: T;
+  category?: T;
+  status?: T;
+  method?: T;
+  teamCount?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "tournament-matches_select".
+ */
+export interface TournamentMatchesSelect<T extends boolean = true> {
+  tournament?: T;
+  round?: T;
+  position?: T;
+  bracket?: T;
+  label?: T;
+  home?: T;
+  away?: T;
+  status?: T;
+  winner?: T;
+  goals?: T;
+  winnerTo?: T;
+  loserTo?: T;
+  currentHalf?: T;
+  clockSeconds?: T;
+  clockRunning?: T;
+  clockUpdatedAt?: T;
   updatedAt?: T;
   createdAt?: T;
 }

@@ -1,5 +1,6 @@
 import Link from 'next/link'
 
+import { countLineup, LINEUP_MIN } from '@/lib/match-readiness'
 import { getOrCreateMatchSheet } from '@/lib/matchsheet-data'
 import { isReleaseTime } from '@/lib/matchsheet-workflow'
 import { getPayloadClient } from '@/lib/payload-client'
@@ -89,6 +90,12 @@ export default async function ScheidsrechterPage({ params }: { params: Promise<{
           gemeldUit: Boolean((sheet?.forfait as { gemeldUit?: boolean } | undefined)?.gemeldUit),
           aantalAutos: (sheet?.forfait as { aantalAutos?: number } | undefined)?.aantalAutos ?? '',
           km: (sheet?.forfait as { km?: number } | undefined)?.km ?? '',
+        }}
+        initialStartAkkoord={Boolean((sheet?.wedstrijdstart as { akkoord?: boolean } | undefined)?.akkoord)}
+        initialStartNaam={(sheet?.wedstrijdstart as { naam?: string } | undefined)?.naam ?? ''}
+        lineupReady={{
+          homeOk: countLineup(sheet?.homeLineup) >= LINEUP_MIN,
+          awayOk: countLineup(sheet?.awayLineup) >= LINEUP_MIN,
         }}
         officialsHint={match.reeks ? vereisteOfficialsTekst(match.reeks as Reeks) : null}
       />

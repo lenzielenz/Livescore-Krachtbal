@@ -159,6 +159,25 @@ export const MatchSheets: CollectionConfig = {
       ],
     },
     {
+      // Akkoord van de scheidsrechter dat de wedstrijd mag starten (controle vooraf):
+      // pas wanneer dit aanstaat — én beide opstellingen ingevuld zijn — wordt het
+      // aantekenscherm ontgrendeld. Zie src/lib/match-readiness.ts.
+      name: 'wedstrijdstart',
+      label: 'Wedstrijdstart — akkoord scheidsrechter',
+      type: 'group',
+      fields: [
+        {
+          name: 'akkoord',
+          label: 'Scheidsrechter geeft akkoord om te starten',
+          type: 'checkbox',
+          defaultValue: false,
+          admin: { description: 'Opstellingen gecontroleerd, terrein in orde — de wedstrijd mag geopend worden.' },
+        },
+        { name: 'naam', label: 'Naam scheidsrechter', type: 'text' },
+        { name: 'tijdstip', label: 'Tijdstip akkoord', type: 'date', admin: { date: { pickerAppearance: 'dayAndTime' } } },
+      ],
+    },
+    {
       // Scheidsrechtersvergoeding (kwitantie, formulier_2) + forfait-onkostenblad (formulier_3).
       label: 'Scheidsrechter — vergoeding & forfait',
       type: 'collapsible',

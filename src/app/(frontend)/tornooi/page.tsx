@@ -1,0 +1,67 @@
+import Link from 'next/link'
+
+import { CATEGORY_OPTIONS } from '@/lib/categories'
+import { getPayloadClient } from '@/lib/payload-client'
+import './tornooi.css'
+
+export const dynamic = 'force-dynamic'
+
+const catLabel = (v: unknown) => CATEGORY_OPTIONS.find((o) => o.value === v)?.label ?? String(v ?? '')
+
+// Tornooi-hub: het ene scherm waar alles onder zit. Lijst van tornooien + knop om er een te maken.
+export default async function TornooiHub() {
+  const payload = await getPayloadClient()
+  const res = await payload
+    .find({ collection: 'tournaments', sort: '-createdAt', depth: 0, limit: 100 })
+    .catch(() => ({ docs: [] as Array<{ id: number; name: string; category: string; status: string; teamCount?: number }> }))
+
+  const live = res.docs.filter((t) => t.status === 'live')
+  const done = res.docs.filter((t) => t.status === 'finished')
+
+  return (
+    <div className="trn-page">
+      <header className="trn-top">
+        <Link href="/live" className="trn-home">
+          <span className="brand">Krachtbal</span> Live · Tornooi
+        </Link>
+        <Link href="/tornooi/nieuw" className="trn-btn primary">+ Nieuw tornooi</Link>
+      </header>
+
+      <main className="trn-hub">
+        <Section title="Lopende tornooien" docs={live} empty="Geen lopend tornooi. Maak er een aan." />
+        {done.length > 0 && <Section title="Afgelopen tornooien" docs={done} empty="" />}
+      </main>
+    </div>
+  )
+}
+
+function Section({
+  title,
+  docs,
+  empty,
+}: {
+  title: string
+  docs: Array<{ id: number; name: string; category: string; status: string; teamCount?: number }>
+  empty: string
+}) {
+  return (
+    <section className="trn-hub-sec">
+      <h2>{title}</h2>
+      {docs.length === 0 ? (
+        <p className="trn-empty">{empty}</p>
+      ) : (
+        <div className="trn-hub-list">
+          {docs.map((t) => (
+            <Link key={t.id} href={`/tornooi/${t.id}`} className="trn-hub-card">
+              <span className="trn-hub-name">{t.name}</span>
+              <span className="trn-hub-meta">
+                {catLabel(t.category)} · {t.teamCount ?? '?'} ploegen
+              </span>
+              <span className={`trn-hub-status ${t.status}`}>{t.status === 'live' ? 'BEZIG' : 'AFGELOPEN'}</span>
+            </Link>
+          ))}
+        </div>
+      )}
+    </section>
+  )
+}

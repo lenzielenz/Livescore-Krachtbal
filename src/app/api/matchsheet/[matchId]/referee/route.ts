@@ -13,6 +13,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ matchId
     officials?: Record<string, string>
     refereeKm?: number
     forfait?: Record<string, unknown>
+    akkoord?: boolean
+    naam?: string
   }
   try {
     body = await req.json()
@@ -63,6 +65,25 @@ export async function POST(req: Request, { params }: { params: Promise<{ matchId
         overrideAccess: false,
       })
       return Response.json({ ok: true, officials: updated.officials })
+    }
+
+    if (body.action === 'wedstrijdstart') {
+      // Akkoord van de scheidsrechter dat de wedstrijd mag starten (controle vooraf).
+      const akkoord = Boolean(body.akkoord)
+      const updated = await payload.update({
+        collection: 'matchsheets',
+        id: sheet.id,
+        data: {
+          wedstrijdstart: {
+            akkoord,
+            naam: body.naam ?? null,
+            tijdstip: akkoord ? new Date().toISOString() : null,
+          },
+        },
+        user,
+        overrideAccess: false,
+      })
+      return Response.json({ ok: true, wedstrijdstart: updated.wedstrijdstart })
     }
 
     if (body.action === 'vergoeding') {

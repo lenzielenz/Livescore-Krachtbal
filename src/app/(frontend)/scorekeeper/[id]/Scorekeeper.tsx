@@ -6,6 +6,8 @@ import { FieldSchema, type FieldMarker } from '@/components/FieldSchema'
 import { attackDirForSide, deriveOutcome } from '@/lib/krachtbal-rules'
 import type { AttackDir, Point } from '@/lib/field'
 import type { MatchState } from '@/lib/match-engine'
+import { LINEUP_MIN, type Readiness } from '@/lib/match-readiness'
+import { DemoTutorial } from './DemoTutorial'
 
 interface RosterPlayer {
   id: number
@@ -32,12 +34,20 @@ export function Scorekeeper({
   matchId,
   initialState,
   roster,
+  readiness,
+  isAdmin,
 }: {
   matchId: number
   initialState: MatchState
   roster: RosterPlayer[]
+  readiness: Readiness
+  isAdmin: boolean
 }) {
   const [state, setState] = useState<MatchState>(initialState)
+  const isDemo = readiness.isDemo
+  // Admin/federatie kan de startcontrole bewust overslaan (testen).
+  const [bypass, setBypass] = useState(false)
+  const unlocked = readiness.ready || bypass
   // Per-worp keuzes worden in het keuzescherm gezet (na het tikken op het veld).
   const [throwType, setThrowType] = useState<'nek' | 'rug'>('nek')
   const [tapMode, setTapMode] = useState<'ground' | 'caught'>('ground')
@@ -265,13 +275,70 @@ export function Scorekeeper({
 
   const isScheduled = state.match.status === 'scheduled'
   const isLive = state.match.status === 'live'
+  const isFinished = state.match.status === 'finished'
   const atHalfTime = state.atHalfTime
+
+  // Na 'Einde': de scheidsrechter duidt aan wie effectief gespeeld heeft (O-markering op het blad).
+  const [played, setPlayed] = useState<{ home: Set<number>; away: Set<number> }>(() => ({
+    home: new Set(state.lineup.home),
+    away: new Set(state.lineup.away),
+  }))
+  const [deelnameMsg, setDeelnameMsg] = useState<string | null>(null)
+  const [deelnameSaved, setDeelnameSaved] = useState(false)
+
+  // Bij een afgelopen wedstrijd de eventueel al bewaarde deelname inladen (pre-fill).
+  useEffect(() => {
+    if (!isFinished) return
+    let active = true
+    fetch(`/api/matchsheet/${matchId}/deelname`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { home?: number[]; away?: number[] } | null) => {
+        if (!active || !d) return
+        if ((d.home?.length ?? 0) + (d.away?.length ?? 0) === 0) return
+        setPlayed({ home: new Set(d.home ?? []), away: new Set(d.away ?? []) })
+      })
+      .catch(() => {})
+    return () => {
+      active = false
+    }
+  }, [isFinished, matchId])
+
+  const togglePlayed = (side: 'home' | 'away', id: number) => {
+    setDeelnameSaved(false)
+    setPlayed((prev) => {
+      const next = new Set(prev[side])
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return { ...prev, [side]: next }
+    })
+  }
+
+  const saveDeelname = async () => {
+    setBusy(true)
+    setDeelnameMsg(null)
+    try {
+      const res = await fetch(`/api/matchsheet/${matchId}/deelname`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ home: [...played.home], away: [...played.away] }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Bewaren mislukt')
+      setDeelnameSaved(true)
+      setDeelnameMsg('Deelname bewaard op het wedstrijdblad.')
+    } catch (e) {
+      setDeelnameMsg((e as Error).message)
+    } finally {
+      setBusy(false)
+    }
+  }
 
   // Tik op de timer: zolang de wedstrijd nog niet gestart is, is hij geblokkeerd en
   // opent het keuzescherm "wie zet op?". Pas daarna kan de klok gestart/gepauzeerd worden.
   const onClockClick = () => {
     if (isScheduled) {
-      setKickoffOpen(true)
+      // Geblokkeerd zolang de wedstrijd niet ontgrendeld is (opstelling + SR-akkoord, of demo).
+      if (unlocked) setKickoffOpen(true)
       return
     }
     act({ action: 'clock', running: !state.match.clockRunning, seconds: Math.floor(clock) })
@@ -279,8 +346,9 @@ export function Scorekeeper({
 
   // Kies de ploeg die opzet → wedstrijd gaat live met een stilstaande klok,
   // zodat de timer vrij is en gestart kan worden wanneer ze willen.
+  // allowUnready: enkel een admin die bewust de controle overslaat (testknop).
   const chooseKickoff = async (teamId: number) => {
-    const res = await act({ action: 'start', startingTeamId: teamId })
+    const res = await act({ action: 'start', startingTeamId: teamId, allowUnready: bypass })
     if (res) setKickoffOpen(false)
   }
 
@@ -502,8 +570,11 @@ export function Scorekeeper({
         </div>
       )}
 
+      {isDemo && <DemoTutorial matchId={matchId} />}
+
       <div className="sk-topbar">
         <a className="sk-back" href="/scorekeeper" title="Terug naar overzicht — de wedstrijd blijft gewoon live">← Overzicht</a>
+        {isDemo && <span className="sk-demo-chip">DEMO</span>}
         <button type="button" className="sk-fs" onClick={toggleFullscreen} title="Volledig scherm aan/uit">
           {isFullscreen ? '⤡ Sluiten' : '⛶ Volledig scherm'}
         </button>
@@ -525,7 +596,7 @@ export function Scorekeeper({
             className={`sk-clock ${state.match.clockRunning ? 'running' : ''} ${isScheduled ? 'locked' : ''}`}
             disabled={busy || (!isLive && !isScheduled)}
             onClick={onClockClick}
-            title={isScheduled ? 'Geblokkeerd — tik om te kiezen wie opzet' : 'Tik om te starten/pauzeren'}
+            title={isScheduled ? (unlocked ? 'Tik om te kiezen wie opzet' : 'Vergrendeld — opstelling + akkoord scheidsrechter nodig') : 'Tik om te starten/pauzeren'}
           >
             <span className="sk-half-chip">H{state.match.currentHalf}</span>
             {fmtClock(clock)}
@@ -563,10 +634,51 @@ export function Scorekeeper({
         </div>
       )}
 
-      {isScheduled ? (
+      {isScheduled && !unlocked ? (
+        <div className="sk-kickoff">
+          <div className="sk-kickoff-card sk-lock-card">
+            <div className="sk-kickoff-title">Wedstrijd vergrendeld 🔒</div>
+            <div className="sk-kickoff-sub">
+              Voor je kan openen moeten beide opstellingen ingevuld zijn én moet de scheidsrechter
+              akkoord geven.
+            </div>
+            <ul className="sk-checklist">
+              <li className={readiness.homeOk ? 'ok' : 'todo'}>
+                <span className="sk-check-ico">{readiness.homeOk ? '✓' : '○'}</span>
+                Opstelling thuis ({readiness.homeCount}/{LINEUP_MIN})
+                {!readiness.homeOk && <a className="sk-check-link" href={`/opstelling/${matchId}`}>invullen →</a>}
+              </li>
+              <li className={readiness.awayOk ? 'ok' : 'todo'}>
+                <span className="sk-check-ico">{readiness.awayOk ? '✓' : '○'}</span>
+                Opstelling uit ({readiness.awayCount}/{LINEUP_MIN})
+                {!readiness.awayOk && <a className="sk-check-link" href={`/opstelling/${matchId}`}>invullen →</a>}
+              </li>
+              <li className={readiness.refereeOk ? 'ok' : 'todo'}>
+                <span className="sk-check-ico">{readiness.refereeOk ? '✓' : '○'}</span>
+                Akkoord scheidsrechter
+                {!readiness.refereeOk && <a className="sk-check-link" href={`/scheidsrechter/${matchId}`}>scheidsrechter →</a>}
+              </li>
+            </ul>
+            {isAdmin && (
+              <button
+                type="button"
+                className="sk-lock-bypass"
+                disabled={busy}
+                onClick={() => {
+                  setBypass(true)
+                  setKickoffOpen(true)
+                }}
+                title="Admin: startcontrole overslaan om te testen"
+              >
+                🔧 Test — toch openen
+              </button>
+            )}
+          </div>
+        </div>
+      ) : isScheduled ? (
         <div className="sk-kickoff">
           <div className="sk-kickoff-card">
-            <div className="sk-kickoff-title">Timer geblokkeerd 🔒</div>
+            <div className="sk-kickoff-title">{bypass ? 'Test-modus 🔧' : isDemo ? 'Demo — klaar 🎓' : 'Klaar om te starten ✓'}</div>
             <div className="sk-kickoff-sub">
               Tik op de timer bovenaan om te kiezen wie opzet. Daarna is de timer vrij en kan je
               starten wanneer je wil.
@@ -574,6 +686,50 @@ export function Scorekeeper({
             <button type="button" className="sk-kickoff-start" disabled={busy} onClick={() => setKickoffOpen(true)}>
               Kies wie opzet
             </button>
+          </div>
+        </div>
+      ) : isFinished ? (
+        <div className="sk-kickoff">
+          <div className="sk-kickoff-card sk-deelname-card">
+            <div className="sk-kickoff-title">Wie heeft gespeeld?</div>
+            <div className="sk-kickoff-sub">
+              Duid per ploeg aan wie effectief deelnam. Dit komt op het wedstrijdblad (O-markering).
+            </div>
+            <div className="sk-deelname-grid">
+              {(['home', 'away'] as const).map((side) => {
+                const teamId = side === 'home' ? state.teams.home.id : state.teams.away.id
+                const teamName = side === 'home' ? state.teams.home.name : state.teams.away.name
+                const teamPlayers = roster.filter((p) => p.teamId === teamId)
+                return (
+                  <div key={side} className={`sk-deelname-col ${side}`}>
+                    <h4>{teamName}</h4>
+                    {teamPlayers.length === 0 && <span className="sk-dim">Geen spelers.</span>}
+                    {teamPlayers.map((p) => {
+                      const on = played[side].has(p.id)
+                      return (
+                        <button
+                          type="button"
+                          key={p.id}
+                          className={`sk-deelname-item ${on ? 'on' : ''}`}
+                          onClick={() => togglePlayed(side, p.id)}
+                        >
+                          <span className="sk-check-ico">{on ? '✓' : '○'}</span>
+                          <span className="num">{p.shirtNumber}</span>
+                          <span className="nm">{p.name}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                )
+              })}
+            </div>
+            {deelnameMsg && <p className={`sk-deelname-msg ${deelnameSaved ? 'ok' : ''}`}>{deelnameMsg}</p>}
+            <div className="sk-modal-btns">
+              <button type="button" className="sk-btn primary" disabled={busy} onClick={saveDeelname}>
+                Deelname bewaren
+              </button>
+              <a className="sk-btn" href={`/aftekenen/${matchId}`}>Naar aftekenen →</a>
+            </div>
           </div>
         </div>
       ) : atHalfTime ? (

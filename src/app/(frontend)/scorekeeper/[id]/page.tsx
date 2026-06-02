@@ -1,6 +1,9 @@
+import { headers } from 'next/headers'
 import { notFound } from 'next/navigation'
 
+import { isFederationLevel } from '@/lib/access'
 import { buildMatchState } from '@/lib/match-engine'
+import { getMatchReadiness } from '@/lib/matchsheet-data'
 import { getPayloadClient } from '@/lib/payload-client'
 import { Scorekeeper } from './Scorekeeper'
 import './scorekeeper.css'
@@ -21,13 +24,17 @@ export default async function ScorekeeperPage({ params }: { params: Promise<{ id
     notFound()
   }
 
-  const players = await payload.find({
-    collection: 'players',
-    where: { team: { in: [state.teams.home.id, state.teams.away.id] } },
-    sort: 'shirtNumber',
-    depth: 0,
-    limit: 200,
-  })
+  const [players, readiness, auth] = await Promise.all([
+    payload.find({
+      collection: 'players',
+      where: { team: { in: [state.teams.home.id, state.teams.away.id] } },
+      sort: 'shirtNumber',
+      depth: 0,
+      limit: 200,
+    }),
+    getMatchReadiness(payload, matchId),
+    payload.auth({ headers: await headers() }).catch(() => ({ user: null })),
+  ])
 
   const roster = players.docs.map((p) => ({
     id: p.id,
@@ -36,5 +43,13 @@ export default async function ScorekeeperPage({ params }: { params: Promise<{ id
     teamId: typeof p.team === 'object' ? p.team.id : p.team,
   }))
 
-  return <Scorekeeper matchId={matchId} initialState={state} roster={roster} />
+  return (
+    <Scorekeeper
+      matchId={matchId}
+      initialState={state}
+      roster={roster}
+      readiness={readiness}
+      isAdmin={isFederationLevel(auth.user)}
+    />
+  )
 }
