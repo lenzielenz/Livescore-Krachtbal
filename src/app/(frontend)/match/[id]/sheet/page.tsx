@@ -31,6 +31,37 @@ export default async function SheetPage({ params }: { params: Promise<{ id: stri
     timeStyle: 'short',
   })
 
+  // Officiële blad-velden komen van het matchsheet-document (niet afgeleid uit de worpen).
+  const msRes = await payload
+    .find({ collection: 'matchsheets', where: { match: { equals: matchId } }, depth: 1, limit: 1 })
+    .catch(() => null)
+  const ms = msRes?.docs[0] as Record<string, unknown> | undefined
+
+  const OFFICIAL_LABELS: Record<string, string> = {
+    aantekenaar: 'Aantekenaar', tijdopnemer: 'Tijdopnemer', grensrechterThuis: 'Grensrechter (thuis)',
+    grensrechterUit: 'Grensrechter (uit)', terreinafgevaardigde: 'Terreinafgevaardigde',
+    coachThuis: 'Coach (thuis)', coachUit: 'Coach (uit)',
+  }
+  const officials = (ms?.officials ?? {}) as Record<string, string>
+  const officialRows = Object.entries(OFFICIAL_LABELS).filter(([k]) => (officials[k] ?? '').trim())
+  const forfaitUitslag = (ms?.forfait as { uitslag?: string } | undefined)?.uitslag ?? 'geen'
+  const forfaitLabel: Record<string, string> = { thuis: `Forfait — ${sheet.teams.home.name}`, uit: `Forfait — ${sheet.teams.away.name}`, dubbel: 'Dubbel forfait' }
+  type Uitsluiting = { player?: { name?: string } | number; naam?: string; reden?: string; score?: string; speeltijd?: string }
+  type Voorbehoud = { naam?: string; reden?: string; score?: string }
+  const uitsluitingen = (ms?.uitsluitingen ?? []) as Uitsluiting[]
+  const voorbehoud = (ms?.voorbehoud ?? []) as Voorbehoud[]
+  const opmerkingen = ((ms?.opmerkingen as string) ?? '').trim()
+  const deelnameNames = (rows: unknown): Set<string> =>
+    new Set(
+      (Array.isArray(rows) ? rows : [])
+        .filter((r) => (r as { deelgenomen?: boolean }).deelgenomen)
+        .map((r) => { const p = (r as { player?: { name?: string } | number }).player; return typeof p === 'object' ? (p?.name ?? '') : '' })
+        .filter(Boolean),
+    )
+  const deelHome = deelnameNames(ms?.homeLineup)
+  const deelAway = deelnameNames(ms?.awayLineup)
+  const uitsluitNaam = (u: Uitsluiting) => (typeof u.player === 'object' ? (u.player?.name ?? u.naam ?? '—') : (u.naam ?? '—'))
+
   return (
     <div className="sheet">
       <div className="sheet-topbar no-print">
@@ -112,7 +143,7 @@ export default async function SheetPage({ params }: { params: Promise<{ id: stri
                 <h3>{sheet.teams.home.name}</h3>
                 <ul>
                   {sheet.rosters.home.map((p) => (
-                    <li key={p.shirtNumber}><span className="rn">{p.shirtNumber}</span> {p.name}</li>
+                    <li key={p.shirtNumber}><span className="rn">{p.shirtNumber}</span> {p.name}{deelHome.has(p.name) && <span className="roster-o" title="Heeft deelgenomen"> ●O</span>}</li>
                   ))}
                 </ul>
               </div>
@@ -120,13 +151,67 @@ export default async function SheetPage({ params }: { params: Promise<{ id: stri
                 <h3>{sheet.teams.away.name}</h3>
                 <ul>
                   {sheet.rosters.away.map((p) => (
-                    <li key={p.shirtNumber}><span className="rn">{p.shirtNumber}</span> {p.name}</li>
+                    <li key={p.shirtNumber}><span className="rn">{p.shirtNumber}</span> {p.name}{deelAway.has(p.name) && <span className="roster-o" title="Heeft deelgenomen"> ●O</span>}</li>
                   ))}
                 </ul>
               </div>
             </div>
+            {(deelHome.size > 0 || deelAway.size > 0) && <p className="sheet-dim sheet-legend">●O = heeft effectief deelgenomen</p>}
           </div>
         </section>
+
+        {officialRows.length > 0 && (
+          <section className="sheet-block">
+            <h2>Officials</h2>
+            <div className="sheet-officials">
+              {officialRows.map(([k, label]) => (
+                <div key={k} className="off-row"><span className="off-lbl">{label}</span><span className="off-val">{officials[k]}</span></div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {forfaitUitslag !== 'geen' && (
+          <section className="sheet-block">
+            <h2>Forfait</h2>
+            <p className="sheet-forfait">{forfaitLabel[forfaitUitslag] ?? 'Forfait'}</p>
+          </section>
+        )}
+
+        {uitsluitingen.length > 0 && (
+          <section className="sheet-block">
+            <h2>Uitsluitingen</h2>
+            <table className="sheet-goals">
+              <thead><tr><th>Speler</th><th>Reden</th><th>Score</th><th>Speeltijd</th></tr></thead>
+              <tbody>
+                {uitsluitingen.map((u, i) => (
+                  <tr key={i}><td>{uitsluitNaam(u)}</td><td>{u.reden ?? '—'}</td><td>{u.score ?? '—'}</td><td>{u.speeltijd ?? '—'}</td></tr>
+                ))}
+              </tbody>
+            </table>
+          </section>
+        )}
+
+        {voorbehoud.length > 0 && (
+          <section className="sheet-block">
+            <h2>Voorbehoud</h2>
+            <table className="sheet-goals">
+              <thead><tr><th>Naam</th><th>Reden</th><th>Score</th></tr></thead>
+              <tbody>
+                {voorbehoud.map((v, i) => (
+                  <tr key={i}><td>{v.naam ?? '—'}</td><td>{v.reden ?? '—'}</td><td>{v.score ?? '—'}</td></tr>
+                ))}
+              </tbody>
+            </table>
+          </section>
+        )}
+
+        {opmerkingen && (
+          <section className="sheet-block">
+            <h2>Opmerkingen / kwetsuren</h2>
+            <p className="sheet-opmerkingen">{opmerkingen}</p>
+          </section>
+        )}
 
         <section className="sheet-signatures">
           <div className="sig"><span className="sig-line" />Scheidsrechter</div>
