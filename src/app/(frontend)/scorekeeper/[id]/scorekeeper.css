@@ -61,6 +61,8 @@
   font-size: 1.15rem; font-weight: 800; font-variant-numeric: tabular-nums; justify-self: center;
 }
 .sk-clock.running { background: var(--accent); color: #06140d; }
+/* Geblokkeerde timer (vóór de aftrap): gedempt en met slot-cursor, maar wel klikbaar. */
+.sk-clock.locked { border-color: var(--line); color: var(--dim); border-style: dashed; cursor: pointer; }
 .sk-clock-ico { font-size: 0.8rem; }
 .sk-half-chip { font-size: 0.62rem; background: rgba(255, 255, 255, 0.14); padding: 1px 5px; border-radius: 6px; }
 

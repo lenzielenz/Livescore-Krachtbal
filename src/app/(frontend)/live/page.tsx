@@ -53,8 +53,8 @@ export default async function LivePage({ searchParams }: { searchParams: Promise
         reeks: reeksLabel(m.reeks),
         time: new Date(m.date).toLocaleTimeString('nl-BE', { hour: '2-digit', minute: '2-digit' }),
         status: s.match.status,
-        home: { name: s.teams.home.name, logoUrl: s.teams.home.logoUrl },
-        away: { name: s.teams.away.name, logoUrl: s.teams.away.logoUrl },
+        home: { name: s.teams.home.name, logoUrl: s.teams.home.logoUrl, logoFit: s.teams.home.logoFit, colors: s.teams.home.colors },
+        away: { name: s.teams.away.name, logoUrl: s.teams.away.logoUrl, logoFit: s.teams.away.logoFit, colors: s.teams.away.colors },
         score: s.score,
       })
     } catch {
@@ -68,7 +68,10 @@ export default async function LivePage({ searchParams }: { searchParams: Promise
         <Link href="/" className="lb-home">
           <span className="brand">Krachtbal</span> Live
         </Link>
-        <Link href="/scorekeeper" className="lb-toplink">Aantekenen</Link>
+        <span className="lb-toplinks">
+          <Link href="/kantine" className="lb-toplink">Kantine</Link>
+          <Link href="/scorekeeper" className="lb-toplink">Aantekenen</Link>
+        </span>
       </header>
       <LiveBoard date={selected} today={today} matches={days} />
     </div>

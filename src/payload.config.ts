@@ -17,6 +17,8 @@ import { Throws } from './collections/Throws'
 import { MatchEvents } from './collections/MatchEvents'
 import { Officials } from './collections/Officials'
 import { MatchSheets } from './collections/MatchSheets'
+import { Accidents } from './collections/Accidents'
+import { CupFinals } from './collections/CupFinals'
 import { Sanctions } from './collections/Sanctions'
 import { Season } from './globals/Season'
 import { Settings } from './globals/Settings'
@@ -36,6 +38,9 @@ const db = isPostgres
 export default buildConfig({
   admin: {
     user: Users.slug,
+    // Gebruik het ingebouwde standaard-avatar i.p.v. Gravatar. Voorkomt de externe
+    // gravatar.com-call die door tracking-preventie van browsers geblokkeerd wordt.
+    avatar: 'default',
     importMap: {
       baseDir: path.resolve(dirname),
     },
@@ -50,6 +55,8 @@ export default buildConfig({
     Matches,
     MatchSheets,
     Officials,
+    Accidents,
+    CupFinals,
     Sanctions,
     Possessions,
     Throws,

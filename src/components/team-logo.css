@@ -1,0 +1,101 @@
+/* Gedeelde clublogo-badge — overal identiek weergegeven voor een verzorgde uitstraling:
+   een propere witte ronde plaat met het logo netjes ingepast, een zachte schaduw en een
+   zijde-gekleurde ring (thuis/uit). De font-size van de badge stuurt de initialen-fallback. */
+.tl {
+  --tl-ring: rgba(255, 255, 255, 0.16);
+  flex: 0 0 auto;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  font-size: 44px; /* basis voor .tl-init */
+  border-radius: 50%;
+  overflow: hidden;
+  background: #fff;
+  box-shadow:
+    0 0 0 2px var(--tl-ring),
+    0 4px 12px rgba(0, 0, 0, 0.35),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.06);
+  animation: tl-pop 0.45s cubic-bezier(0.22, 1.2, 0.4, 1) both;
+}
+.tl img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 9%;
+  background: #fff;
+  border-radius: 50%;
+}
+.tl-init {
+  font-size: 0.42em;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  color: #15352a;
+}
+
+/* Zijde-accent (thuis = groen, uit = blauw) */
+.tl-home {
+  --tl-ring: color-mix(in srgb, #06d6a0 65%, transparent);
+}
+.tl-away {
+  --tl-ring: color-mix(in srgb, #4cc9f0 65%, transparent);
+}
+
+/* Vaste maten — font-size schaalt de initialen-fallback mee. */
+.tl-xs {
+  width: 24px;
+  height: 24px;
+  font-size: 24px;
+}
+.tl-sm {
+  width: 32px;
+  height: 32px;
+  font-size: 32px;
+}
+.tl-md {
+  width: 44px;
+  height: 44px;
+  font-size: 44px;
+}
+.tl-lg {
+  width: 56px;
+  height: 56px;
+  font-size: 56px;
+}
+
+@keyframes tl-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Zachte zweef voor grote schermen (scorebord/veld). */
+.tl-float {
+  animation:
+    tl-pop 0.45s cubic-bezier(0.22, 1.2, 0.4, 1) both,
+    tl-floaty 5s ease-in-out 0.5s infinite;
+}
+@keyframes tl-floaty {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tl,
+  .tl-float {
+    animation: none;
+  }
+}

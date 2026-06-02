@@ -7,6 +7,8 @@ import type { Payload } from 'payload'
 import type { User } from '@/payload-types'
 import { buildMatchSheet } from '../match-engine'
 import { KEURING_ITEMS } from '../keuring'
+import { OFFICIAL_FUNCTIE_KEYS, OFFICIAL_LABELS, validateOfficials } from '../officials-rules'
+import type { Reeks } from '../reeksen'
 import { federationUpload } from './federation'
 import { mailMatchSheet } from './mail'
 import { generateMatchSheetPdf, type MatchSheetPdfData, type PdfLineupRow } from './pdf'
@@ -60,6 +62,17 @@ export async function submitMatchSheet(
 
   // Clubs (voor mail) ophalen via de match → teams → clubs.
   const match = await payload.findByID({ collection: 'matches', id: matchId, depth: 2 }).catch(() => null)
+
+  // Officials-functies valideren tegen de reeks-vereisten (Wedstrijdblad_invullen.pdf):
+  // verplichte functies aanwezig + volledige naam/voornaam + coach ≠ grensrechter.
+  const officials = (sheet.officials ?? {}) as Record<string, string>
+  const reeks = match?.reeks as Reeks | undefined
+  if (reeks) {
+    const check = validateOfficials(reeks, officials)
+    if (!check.ok) {
+      return { ok: false, error: `Officials onvolledig: ${check.errors.join(' ')}` }
+    }
+  }
   const clubEmail = (team: unknown): string | null => {
     const t = team as { club?: { email?: string } } | null
     return t?.club?.email ?? null
@@ -79,6 +92,10 @@ export async function submitMatchSheet(
     awayTeam: built?.teams.away.name ?? 'Uit',
     homeLineup: lineupRows(sheet.homeLineup),
     awayLineup: lineupRows(sheet.awayLineup),
+    officials: OFFICIAL_FUNCTIE_KEYS.map((key) => ({
+      label: OFFICIAL_LABELS[key],
+      naam: officials[key] ?? '',
+    })),
     keuring: KEURING_ITEMS.map((k) => ({ label: k.label, waarde: keuring[k.name] ?? 'ok' })),
     uitsluitingen: ((sheet.uitsluitingen ?? []) as { naam?: string; reden?: string }[]).map(
       (u) => `${u.naam ?? '—'} — ${u.reden ?? ''}`,

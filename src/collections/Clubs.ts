@@ -62,6 +62,52 @@ export const Clubs: CollectionConfig = {
         placeholder: 'https://…/logo.png',
       },
     },
+    // Weergave-instelling: zoom + positie binnen de ronde badge. De aangepaste
+    // Field-component toont een live ronde voorvertoning (exact zoals op de site)
+    // met een zoom-schuifregelaar en sleep-om-te-positioneren.
+    {
+      name: 'logoZoom',
+      label: 'Logo bijsnijden',
+      type: 'number',
+      defaultValue: 1,
+      min: 1,
+      max: 3,
+      admin: {
+        components: {
+          Field: '/components/admin/LogoFitEditor#LogoFitEditor',
+        },
+      },
+    },
+    {
+      name: 'logoOffsetX',
+      type: 'number',
+      defaultValue: 0,
+      admin: { hidden: true },
+    },
+    {
+      name: 'logoOffsetY',
+      type: 'number',
+      defaultValue: 0,
+      admin: { hidden: true },
+    },
+    // Clubkleuren (primair + secundair). De aangepaste Field-component leidt ze
+    // automatisch uit het logo af en laat ze handmatig bijstellen. Het secundaire
+    // veld wordt door diezelfde component beheerd en is daarom verborgen.
+    {
+      name: 'colorPrimary',
+      label: 'Clubkleuren',
+      type: 'text',
+      admin: {
+        components: {
+          Field: '/components/admin/LogoColorsEditor#LogoColorsEditor',
+        },
+      },
+    },
+    {
+      name: 'colorSecondary',
+      type: 'text',
+      admin: { hidden: true },
+    },
     {
       type: 'collapsible',
       label: 'Accommodatie & contact',
