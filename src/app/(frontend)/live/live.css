@@ -18,6 +18,10 @@
 .lb-home .brand {
   color: var(--accent);
 }
+.lb-toplinks {
+  display: inline-flex;
+  gap: 16px;
+}
 .lb-toplink {
   color: var(--dim);
   font-size: 0.9rem;

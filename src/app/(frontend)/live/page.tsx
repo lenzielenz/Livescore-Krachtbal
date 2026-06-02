@@ -55,7 +55,10 @@ export default async function LivePage({ searchParams }: { searchParams: Promise
         <Link href="/" className="lb-home">
           <span className="brand">Krachtbal</span> Live
         </Link>
-        <Link href="/scorekeeper" className="lb-toplink">Aantekenen</Link>
+        <span className="lb-toplinks">
+          <Link href="/kantine" className="lb-toplink">Kantine</Link>
+          <Link href="/scorekeeper" className="lb-toplink">Aantekenen</Link>
+        </span>
       </header>
       <LiveBoard date={selected} today={today} matches={days} />
     </div>
