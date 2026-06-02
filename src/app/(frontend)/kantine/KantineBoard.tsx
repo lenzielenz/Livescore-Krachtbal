@@ -35,7 +35,18 @@ function lastGoalScorer(timeline: TimelineItem[], side: 'home' | 'away'): string
 
 // Eén live vak in het raster: abonneert zich op de SSE-stream en toont een doelpunt-melding
 // over het vak wanneer er gescoord wordt. `onRemove` is optioneel (enkel op de kiezer).
-export function Tile({ match, onRemove }: { match: KantineMatch; onRemove?: (id: number) => void }) {
+// `fontSize`/`logoSize` schalen het vak mee met de dynamische schermlayout.
+export function Tile({
+  match,
+  onRemove,
+  fontSize,
+  logoSize = 'md',
+}: {
+  match: KantineMatch
+  onRemove?: (id: number) => void
+  fontSize?: number
+  logoSize?: string
+}) {
   const [state, setState] = useState<MatchState | null>(null)
   const [clock, setClock] = useState(0)
   const [flash, setFlash] = useState<{ key: number; side: 'home' | 'away'; team: string; points: number; scorer: string | null } | null>(null)
@@ -101,7 +112,11 @@ export function Tile({ match, onRemove }: { match: KantineMatch; onRemove?: (id:
   const status = state?.match.status ?? match.status
   const played = status !== 'scheduled'
 
-  const tileStyle = { '--home': homeColor ?? DEFAULT_HOME_COLOR, '--away': awayColor ?? DEFAULT_AWAY_COLOR } as React.CSSProperties
+  const tileStyle = {
+    '--home': homeColor ?? DEFAULT_HOME_COLOR,
+    '--away': awayColor ?? DEFAULT_AWAY_COLOR,
+    ...(fontSize ? { fontSize: `${fontSize}px` } : {}),
+  } as React.CSSProperties
 
   return (
     <div className={`kt-tile ${status === 'live' ? 'live' : ''}`} style={tileStyle}>
@@ -119,21 +134,35 @@ export function Tile({ match, onRemove }: { match: KantineMatch; onRemove?: (id:
 
       <Link href={`/match/${match.id}`} className="kt-tile-body">
         <div className="kt-tile-team">
-          <TeamLogo name={home} logoUrl={homeLogo} logoFit={homeLogoFit} side="home" size="md" ringColor={homeColor} />
+          <TeamLogo name={home} logoUrl={homeLogo} logoFit={homeLogoFit} side="home" size={logoSize} ringColor={homeColor} />
           <span className="kt-tile-name">{home}</span>
         </div>
         <div className="kt-tile-score">{played ? `${score.home} – ${score.away}` : 'vs'}</div>
         <div className="kt-tile-team">
-          <TeamLogo name={away} logoUrl={awayLogo} logoFit={awayLogoFit} side="away" size="md" ringColor={awayColor} />
+          <TeamLogo name={away} logoUrl={awayLogo} logoFit={awayLogoFit} side="away" size={logoSize} ringColor={awayColor} />
           <span className="kt-tile-name">{away}</span>
         </div>
       </Link>
 
       <div className="kt-tile-foot">
-        {status === 'live' && state ? (
-          <span className="kt-tile-clock">H{state.match.currentHalf} {fmtClock(clock)}</span>
-        ) : (
-          <span className="kt-tile-clock dim">{status === 'finished' ? 'Afgelopen' : match.time}</span>
+        <span className={`kt-tile-clock ${status === 'live' ? '' : 'dim'}`}>
+          {status === 'live' && state ? (
+            <>H{state.match.currentHalf} {fmtClock(clock)}</>
+          ) : status === 'finished' ? (
+            'Afgelopen'
+          ) : (
+            match.time
+          )}
+        </span>
+        {played && state && (
+          <span className="kt-tile-stats">
+            <span title="Kruisjes">✚ {state.crosses.home}–{state.crosses.away}</span>
+            <span className="kt-stat-sep">·</span>
+            <span title="Minuten (time-outs)">
+              ⏱ {state.timeouts.home}–{state.timeouts.away}
+              {state.refereeStops > 0 ? ` +${state.refereeStops} SR` : ''}
+            </span>
+          </span>
         )}
       </div>
 
