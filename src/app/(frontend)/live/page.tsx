@@ -69,6 +69,7 @@ export default async function LivePage({ searchParams }: { searchParams: Promise
           <span className="brand">Krachtbal</span> Live
         </Link>
         <span className="lb-toplinks">
+          <Link href="/tornooi" className="lb-toplink">Tornooi</Link>
           <Link href="/kantine" className="lb-toplink">Kantine</Link>
           <Link href="/scorekeeper" className="lb-toplink">Aantekenen</Link>
         </span>

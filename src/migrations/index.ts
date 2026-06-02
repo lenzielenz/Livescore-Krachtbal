@@ -11,6 +11,7 @@ import * as migration_20260602_090000_vergoeding_ongeval_bekerfinale from './202
 import * as migration_20260602_120000_club_logo_fit from './20260602_120000_club_logo_fit';
 import * as migration_20260602_130000_club_kleuren from './20260602_130000_club_kleuren';
 import * as migration_20260602_140000_unlock_demo from './20260602_140000_unlock_demo';
+import * as migration_20260602_194302_tornooi from './20260602_194302_tornooi';
 
 export const migrations = [
   {
@@ -56,7 +57,7 @@ export const migrations = [
   {
     up: migration_20260602_043213_club_logo_url.up,
     down: migration_20260602_043213_club_logo_url.down,
-    name: '20260602_043213_club_logo_url'
+    name: '20260602_043213_club_logo_url',
   },
   {
     up: migration_20260602_090000_vergoeding_ongeval_bekerfinale.up,
@@ -77,5 +78,10 @@ export const migrations = [
     up: migration_20260602_140000_unlock_demo.up,
     down: migration_20260602_140000_unlock_demo.down,
     name: '20260602_140000_unlock_demo',
+  },
+  {
+    up: migration_20260602_194302_tornooi.up,
+    down: migration_20260602_194302_tornooi.down,
+    name: '20260602_194302_tornooi'
   },
 ];

@@ -1,0 +1,763 @@
+/* Tornooi: hub, aanmaak, boomstructuur, aantekentafel, veldscherm en kantine.
+   Hergebruikt de globale palette-variabelen uit styles.css. */
+
+.trn-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 16px;
+}
+.trn-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+.trn-home {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--txt);
+}
+.trn-home .brand {
+  color: var(--accent);
+}
+.trn-topnav {
+  display: inline-flex;
+  gap: 10px;
+  align-items: center;
+}
+.trn-toplink {
+  color: var(--dim);
+  font-size: 0.9rem;
+}
+.trn-toplink:hover {
+  color: var(--txt);
+}
+
+/* Knoppen */
+.trn-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--txt);
+  font-weight: 600;
+  font-size: 0.92rem;
+  cursor: pointer;
+}
+.trn-btn:hover {
+  border-color: var(--accent);
+}
+.trn-btn.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #1a1205;
+}
+.trn-btn.danger {
+  border-color: #b9523f;
+  color: #ffb9a8;
+}
+.trn-btn.big {
+  font-size: 1.05rem;
+  padding: 14px 20px;
+  width: 100%;
+  justify-content: center;
+}
+.trn-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.trn-error {
+  color: #ffb9a8;
+  background: #2a1410;
+  border: 1px solid #b9523f;
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin: 12px 0;
+}
+.trn-empty,
+.trn-hint {
+  color: var(--dim);
+  font-size: 0.92rem;
+}
+
+/* Hub */
+.trn-hub-sec {
+  margin-bottom: 28px;
+}
+.trn-hub-sec h2 {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--dim);
+  margin: 0 0 10px;
+}
+.trn-hub-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+}
+.trn-hub-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--txt);
+}
+.trn-hub-card:hover {
+  border-color: var(--accent);
+}
+.trn-hub-name {
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+.trn-hub-meta {
+  color: var(--dim);
+  font-size: 0.85rem;
+}
+.trn-hub-status {
+  align-self: flex-start;
+  margin-top: 4px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+.trn-hub-status.live {
+  background: #14361f;
+  color: #6ee7a0;
+}
+.trn-hub-status.finished {
+  background: #2a2416;
+  color: var(--accent);
+}
+
+/* Aanmaak */
+.trn-new {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 720px;
+}
+.trn-card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 16px 18px;
+}
+.trn-card h2 {
+  font-size: 1rem;
+  margin: 0 0 12px;
+  color: var(--accent);
+}
+.trn-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.trn-field > span {
+  font-size: 0.82rem;
+  color: var(--dim);
+}
+.trn-field input,
+.trn-field select {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 10px 12px;
+  color: var(--txt);
+  font-size: 0.95rem;
+}
+.trn-row2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.trn-stepper {
+  display: inline-flex;
+  align-items: stretch;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  overflow: hidden;
+}
+.trn-stepper button {
+  width: 42px;
+  background: var(--bg);
+  color: var(--txt);
+  border: none;
+  font-size: 1.3rem;
+  cursor: pointer;
+}
+.trn-stepper button:hover {
+  background: var(--line);
+}
+.trn-stepper input {
+  width: 64px;
+  text-align: center;
+  background: var(--bg);
+  border: none;
+  border-left: 1px solid var(--line);
+  border-right: 1px solid var(--line);
+  color: var(--txt);
+  font-size: 1rem;
+}
+.trn-teamlist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.trn-teamlist li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.trn-teamnr {
+  width: 26px;
+  height: 26px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  color: var(--dim);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+.trn-teamlist input {
+  flex: 1;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 9px 12px;
+  color: var(--txt);
+}
+.trn-moves {
+  display: inline-flex;
+  gap: 4px;
+}
+.trn-moves button {
+  width: 32px;
+  height: 32px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--txt);
+  cursor: pointer;
+}
+.trn-moves button:disabled {
+  opacity: 0.35;
+}
+.trn-methods {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.trn-method {
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  border-radius: 11px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--txt);
+  cursor: pointer;
+}
+.trn-method.on {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent) inset;
+}
+.trn-method strong {
+  font-size: 1rem;
+}
+.trn-method span {
+  font-size: 0.82rem;
+  color: var(--dim);
+}
+.trn-preview {
+  margin-top: 14px;
+}
+.trn-preview h3 {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--dim);
+  margin: 0 0 8px;
+}
+.trn-preview ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.trn-preview li {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+.trn-preview li span:last-child {
+  text-align: right;
+}
+.trn-preview em {
+  color: var(--dim);
+  font-style: normal;
+  font-size: 0.8rem;
+}
+
+/* Champion-banner */
+.trn-champion {
+  background: linear-gradient(90deg, #2a2416, var(--panel));
+  border: 1px solid var(--accent);
+  border-radius: 12px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  font-size: 1.1rem;
+  color: var(--accent);
+}
+.trn-champion.small {
+  font-size: 1rem;
+  text-align: center;
+  margin-top: 16px;
+}
+.trn-champion strong {
+  color: var(--txt);
+}
+
+/* Boomstructuur */
+.trn-bracket {
+  display: flex;
+  gap: 18px;
+  overflow-x: auto;
+  padding-bottom: 12px;
+  align-items: flex-start;
+}
+.trn-col {
+  flex: none;
+  min-width: 230px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.trn-col.third {
+  border-left: 1px dashed var(--line);
+  padding-left: 18px;
+}
+.trn-col-title {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--dim);
+  margin: 0;
+}
+.trn-col-matches {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  justify-content: space-around;
+  height: 100%;
+}
+.trn-match {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+.trn-match.live {
+  border-color: #2c7a4b;
+  box-shadow: 0 0 0 1px #2c7a4b40;
+}
+.trn-match-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.trn-match-label {
+  font-size: 0.72rem;
+  color: var(--dim);
+}
+.trn-match-badge {
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--dim);
+}
+.trn-match-badge.live {
+  background: #14361f;
+  color: #6ee7a0;
+}
+.trn-match-badge.done {
+  background: #2a2416;
+  color: var(--accent);
+}
+.trn-match-team {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 5px 0;
+  font-size: 0.95rem;
+}
+.trn-match-team .nm {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.trn-match-team .sc {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.trn-match-team.won .nm {
+  color: var(--accent);
+  font-weight: 700;
+}
+.trn-match-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  border-top: 1px solid var(--line);
+  padding-top: 8px;
+}
+.trn-mini {
+  flex: 1;
+  text-align: center;
+  font-size: 0.8rem;
+  padding: 6px;
+  border-radius: 8px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  color: var(--txt);
+}
+.trn-mini:hover {
+  border-color: var(--accent);
+}
+
+/* Aantekentafel */
+.trn-page.sheet {
+  max-width: 760px;
+}
+.ts-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.ts-round {
+  color: var(--dim);
+}
+.ts-status {
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--dim);
+}
+.ts-status.live {
+  background: #14361f;
+  color: #6ee7a0;
+}
+.ts-clock {
+  text-align: center;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 12px;
+  margin-bottom: 14px;
+}
+.ts-clock.over {
+  border-color: var(--accent);
+}
+.ts-clock-time {
+  display: block;
+  font-size: 2.6rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.ts-clock-half {
+  color: var(--dim);
+  font-size: 0.82rem;
+}
+.ts-board {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.ts-team {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px;
+  text-align: center;
+}
+.ts-team.won {
+  border-color: var(--accent);
+}
+.ts-team-name {
+  font-weight: 700;
+  font-size: 1.05rem;
+  margin-bottom: 6px;
+  min-height: 1.3em;
+}
+.ts-score {
+  font-size: 3rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  margin-bottom: 10px;
+}
+.ts-goalbtns {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ts-goal {
+  padding: 14px;
+  border-radius: 11px;
+  border: none;
+  font-size: 1.2rem;
+  font-weight: 800;
+  cursor: pointer;
+  color: #06140d;
+}
+.ts-goal small {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 600;
+  opacity: 0.8;
+}
+.ts-goal.nek {
+  background: #6ee7a0;
+}
+.ts-goal.rug {
+  background: var(--accent);
+}
+.ts-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 16px;
+}
+.ts-tie {
+  margin-top: 16px;
+  text-align: center;
+  background: var(--panel);
+  border: 1px solid var(--accent);
+  border-radius: 12px;
+  padding: 14px;
+}
+.ts-tie-btns {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 8px;
+}
+.ts-after {
+  margin-top: 10px;
+}
+
+/* Veldscherm (fullscreen) */
+.tf-screen {
+  min-height: 100vh;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  padding: 24px;
+}
+.tf-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--dim);
+  font-size: clamp(0.9rem, 2.5vw, 1.4rem);
+}
+.tf-tname {
+  font-weight: 700;
+  color: var(--txt);
+}
+.tf-back {
+  color: var(--dim);
+  font-size: 1.6rem;
+}
+.tf-main {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 2vw;
+}
+.tf-side {
+  text-align: center;
+}
+.tf-team {
+  font-size: clamp(1.5rem, 5vw, 3.5rem);
+  font-weight: 700;
+  margin-bottom: 2vh;
+}
+.tf-side.won .tf-team {
+  color: var(--accent);
+}
+.tf-score {
+  font-size: clamp(4rem, 22vw, 16rem);
+  font-weight: 900;
+  line-height: 0.9;
+  font-variant-numeric: tabular-nums;
+}
+.tf-center {
+  text-align: center;
+}
+.tf-status {
+  font-size: clamp(0.9rem, 3vw, 1.8rem);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--dim);
+}
+.tf-status.live {
+  color: #6ee7a0;
+}
+.tf-clock {
+  font-size: clamp(2rem, 9vw, 6rem);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+}
+.tf-foot {
+  text-align: center;
+  font-size: clamp(1.1rem, 4vw, 2.4rem);
+  font-weight: 700;
+  color: var(--accent);
+  padding-top: 2vh;
+}
+
+/* Kantine */
+.kn-livebar {
+  margin-bottom: 24px;
+}
+.kn-livebar h2,
+.kn-bracket h2 {
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--dim);
+  margin: 0 0 12px;
+}
+.kn-livegrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 14px;
+}
+.kn-live {
+  background: var(--panel);
+  border: 1px solid #2c7a4b;
+  border-radius: 14px;
+  padding: 14px 16px;
+}
+.kn-live-head {
+  display: flex;
+  justify-content: space-between;
+  color: var(--dim);
+  font-size: 0.8rem;
+  margin-bottom: 8px;
+}
+.kn-live-clock {
+  color: #6ee7a0;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+.kn-live-body {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 10px;
+}
+.kn-live-team {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+.kn-live-body .kn-live-team:last-child {
+  text-align: right;
+}
+.kn-live-score {
+  font-size: 1.8rem;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+.kn-mini {
+  position: relative;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+.kn-mini.live {
+  border-color: #2c7a4b;
+}
+.kn-mini-team {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 2px 0;
+  font-size: 0.9rem;
+}
+.kn-mini-team span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.kn-mini-team b {
+  font-variant-numeric: tabular-nums;
+}
+.kn-mini-team.won span {
+  color: var(--accent);
+  font-weight: 700;
+}
+.kn-mini-tag {
+  position: absolute;
+  top: -7px;
+  right: 8px;
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--dim);
+  text-transform: uppercase;
+}
+.kn-mini-tag.live {
+  background: #14361f;
+  color: #6ee7a0;
+}
+
+@media (max-width: 560px) {
+  .trn-row2,
+  .trn-methods,
+  .ts-board {
+    grid-template-columns: 1fr;
+  }
+}

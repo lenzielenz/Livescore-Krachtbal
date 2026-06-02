@@ -62,6 +62,7 @@ export default async function ScorekeeperHub() {
         </h1>
         <nav className="site-nav">
           <Link href="/">Live-site</Link>
+          <Link href="/tornooi">Tornooi</Link>
           <Link href="/knipjes">Knipjes</Link>
           <Link href="/reglement">Reglement</Link>
           <Link href="/admin">Beheer</Link>

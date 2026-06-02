@@ -13,7 +13,7 @@ export default async function TornooiHub() {
   const payload = await getPayloadClient()
   const res = await payload
     .find({ collection: 'tournaments', sort: '-createdAt', depth: 0, limit: 100 })
-    .catch(() => ({ docs: [] as Array<{ id: number; name: string; category: string; status: string; teamCount?: number }> }))
+    .catch(() => ({ docs: [] as Array<{ id: number; name: string; category: string; status: string; teamCount?: number | null }> }))
 
   const live = res.docs.filter((t) => t.status === 'live')
   const done = res.docs.filter((t) => t.status === 'finished')
@@ -41,7 +41,7 @@ function Section({
   empty,
 }: {
   title: string
-  docs: Array<{ id: number; name: string; category: string; status: string; teamCount?: number }>
+  docs: Array<{ id: number; name: string; category: string; status: string; teamCount?: number | null }>
   empty: string
 }) {
   return (
