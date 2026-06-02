@@ -60,7 +60,10 @@ export function Scorekeeper({
   const [pendingOut, setPendingOut] = useState<{ p: Point; tapCount: 1 | 2; playerId: number; isDoelworp: boolean } | null>(null)
   const [subOpen, setSubOpen] = useState(false)
   const [subSide, setSubSide] = useState<'home' | 'away'>('home')
-  const [subOut, setSubOut] = useState<{ side: 'home' | 'away'; playerId: number } | null>(null)
+  // Vlotte wissel: kies (in willekeurige volgorde) één veldspeler (eruit) en één bankspeler
+  // (erin); zodra beide gekozen zijn, wisselt het meteen en blijft het paneel open.
+  const [subOut, setSubOut] = useState<number | null>(null)
+  const [subIn, setSubIn] = useState<number | null>(null)
   // Kickoff: de timer is geblokkeerd tot er een ploeg gekozen is die opzet.
   // Tik op de geblokkeerde timer → dit keuzescherm opent.
   const [kickoffOpen, setKickoffOpen] = useState(false)
@@ -390,7 +393,7 @@ export function Scorekeeper({
     return (
       <div className={`sk-rail sk-rail-${side} ${active ? 'active' : 'dim'}`}>
         <button type="button" className="sk-rail-btn" disabled={busy || !isLive} title="Vrijworp" onClick={() => act({ action: 'freethrow', teamId })}>VW</button>
-        <button type="button" className="sk-rail-btn" disabled={busy} title="Wissel" onClick={() => { setSubOut(null); setSubSide(side); setSubOpen(true) }}>⇄</button>
+        <button type="button" className="sk-rail-btn" disabled={busy} title="Wissel" onClick={() => { setSubOut(null); setSubIn(null); setSubSide(side); setSubOpen(true) }}>⇄</button>
         <div className="sk-rail-dir" aria-label="speelrichting">{arrow}</div>
         {active && poss && (
           <div className="sk-rail-worp">{poss.freeThrow ? 'VW' : `${poss.nextThrowNumber}/${poss.throwsAllowed}`}</div>
@@ -506,20 +509,35 @@ export function Scorekeeper({
         const teamName = subSide === 'home' ? state.teams.home.name : state.teams.away.name
         const field = roster.filter((p) => p.teamId === teamId && state.lineup[subSide].includes(p.id))
         const bench = roster.filter((p) => p.teamId === teamId && !state.lineup[subSide].includes(p.id))
-        const outName = subOut ? roster.find((p) => p.id === subOut.playerId)?.name : null
+
+        // Zodra één veldspeler én één bankspeler gekozen zijn → meteen wisselen, paneel blijft open.
+        const doSwap = (outId: number, inId: number) => {
+          void act({ action: 'substitute', side: subSide, outPlayerId: outId, inPlayerId: inId })
+          setSubOut(null)
+          setSubIn(null)
+        }
+        const pickField = (id: number) => (subIn != null ? doSwap(id, subIn) : setSubOut(subOut === id ? null : id))
+        const pickBench = (id: number) => (subOut != null ? doSwap(subOut, id) : setSubIn(subIn === id ? null : id))
+        const hint =
+          subOut != null
+            ? 'Kies wie van de bank erin komt.'
+            : subIn != null
+              ? 'Kies wie van het veld eruit gaat.'
+              : 'Tik een veldspeler én een bankspeler — in willekeurige volgorde, ze wisselen meteen.'
+
         return (
           <div className="sk-modal-overlay">
             <div className={`sk-modal sk-sub side-${subSide}`}>
               <h3>Wissel — {teamName}</h3>
-              <p>{subOut ? `${outName} eruit → kies wie erin komt` : 'Tik een speler op het veld die eruit gaat.'}</p>
+              <p>{hint}</p>
               <div className="sk-sub-row">
                 <span className="sk-sub-lbl">veld</span>
                 {field.map((p) => (
                   <button
                     type="button"
                     key={p.id}
-                    className={`sk-sub-item ${subOut?.playerId === p.id ? 'on' : ''}`}
-                    onClick={() => setSubOut({ side: subSide, playerId: p.id })}
+                    className={`sk-sub-item ${subOut === p.id ? 'on' : ''}`}
+                    onClick={() => pickField(p.id)}
                   >
                     <span className="num">{p.shirtNumber}</span>
                     <span className="nm">{p.name}</span>
@@ -533,13 +551,8 @@ export function Scorekeeper({
                   <button
                     type="button"
                     key={p.id}
-                    className="sk-sub-item bench"
-                    disabled={!subOut}
-                    onClick={() => {
-                      act({ action: 'substitute', side: subSide, outPlayerId: subOut!.playerId, inPlayerId: p.id })
-                      setSubOut(null)
-                      setSubOpen(false)
-                    }}
+                    className={`sk-sub-item bench ${subIn === p.id ? 'on' : ''}`}
+                    onClick={() => pickBench(p.id)}
                   >
                     <span className="num">{p.shirtNumber}</span>
                     <span className="nm">{p.name}</span>
@@ -547,7 +560,7 @@ export function Scorekeeper({
                 ))}
               </div>
               <div className="sk-modal-btns">
-                <button type="button" className="sk-btn primary" onClick={() => { setSubOpen(false); setSubOut(null) }}>Sluiten</button>
+                <button type="button" className="sk-btn primary" onClick={() => { setSubOpen(false); setSubOut(null); setSubIn(null) }}>Klaar</button>
               </div>
             </div>
           </div>
