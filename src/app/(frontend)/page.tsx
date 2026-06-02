@@ -64,6 +64,7 @@ export default async function HomePage() {
         </h1>
         <nav className="site-nav">
           <Link href="/live">Live</Link>
+          <Link href="/kantine">Kantine</Link>
           <Link href="/scorekeeper">Aantekenen</Link>
           <Link href="/admin">Beheer</Link>
         </nav>

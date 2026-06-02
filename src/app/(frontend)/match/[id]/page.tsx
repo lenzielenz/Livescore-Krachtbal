@@ -68,6 +68,10 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
         </div>
       )}
       <p className="sheet-cta">
+        <Link href={`/veld/${matchId}`} className="back-link">
+          📺 Veldscherm (groot scherm)
+        </Link>
+        {' · '}
         <Link href={`/match/${matchId}/sheet`} className="back-link">
           📋 Wedstrijdblad (print / PDF / JSON)
         </Link>
