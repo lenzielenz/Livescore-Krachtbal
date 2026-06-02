@@ -62,6 +62,10 @@ export default function HomePage() {
               <strong>Tornooien</strong>
               <span>Knock-out-schema’s met eigen aantekenbord, veld- en kantinescherm.</span>
             </Link>
+            <Link href="/demo" className="hub-card">
+              <strong>🎓 Demo spelen</strong>
+              <span>Oefen het aantekenbord met 8 fictieve spelers per kant — altijd speelbaar.</span>
+            </Link>
           </section>
 
           <section className="hub-group">
