@@ -30,7 +30,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ matchId:
 // POST: bewaart de opstelling van één kant op het blad.
 export async function POST(req: Request, { params }: { params: Promise<{ matchId: string }> }) {
   const { matchId } = await params
-  let body: { side?: string; players?: { player: number; rugnummer?: number }[] }
+  let body: { side?: string; players?: { player: number; rugnummer?: number }[]; saveFavorites?: boolean }
   try {
     body = await req.json()
   } catch {
@@ -78,7 +78,26 @@ export async function POST(req: Request, { params }: { params: Promise<{ matchId
       data: { [lineupKey]: rows },
       overrideAccess: true,
     })
-    return Response.json({ ok: true, saved: rows.length, status, roles })
+
+    // Optioneel: deze selectie onthouden als "vaste opstelling" van de ploeg, zodat ze bij
+    // de volgende wedstrijd automatisch wordt voorgesteld (de coach kan dan nog aanpassen).
+    let favoritesSaved = false
+    if (body.saveFavorites) {
+      const match = await payload.findByID({ collection: 'matches', id: matchId, depth: 0 }).catch(() => null)
+      const teamRel = match ? (side === 'home' ? match.homeTeam : match.awayTeam) : null
+      const teamId = typeof teamRel === 'object' && teamRel ? teamRel.id : teamRel
+      if (teamId != null) {
+        await payload.update({
+          collection: 'teams',
+          id: teamId,
+          data: { vasteOpstellingIds: rows.map((r) => r.player).join(',') },
+          overrideAccess: true,
+        })
+        favoritesSaved = true
+      }
+    }
+
+    return Response.json({ ok: true, saved: rows.length, status, roles, favoritesSaved })
   } catch (err) {
     return Response.json({ error: (err as Error).message }, { status: 400 })
   }

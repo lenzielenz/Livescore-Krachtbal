@@ -80,6 +80,46 @@
   margin-top: 14px;
 }
 
+/* Opstelling — snelacties (vaste opstelling invullen / wissen) + bewaar-knoppen */
+.ops-quick {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 4px 0 12px;
+}
+.ops-quick-btn {
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: #0a1f14;
+  color: var(--txt);
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.ops-quick-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.ops-quick-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.ops-blocked-toggle {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  font-size: 0.8rem;
+  margin-bottom: 8px;
+  color: var(--dim);
+}
+.ops-save {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+
 /* Lijst van (selecteerbare) spelers */
 .wb-rows {
   list-style: none;

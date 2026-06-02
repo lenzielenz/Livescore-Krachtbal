@@ -72,6 +72,15 @@ export const Teams: CollectionConfig = {
       },
     },
     {
+      // Onthouden "vaste opstelling": de favoriete spelers van deze ploeg (komma-gescheiden
+      // speler-ids). Wordt bij een volgende wedstrijd automatisch voorgesteld; de coach kan
+      // nog steeds aanpassen. Beheerd via de opstelling-pagina.
+      name: 'vasteOpstellingIds',
+      label: 'Vaste opstelling (favoriete spelers)',
+      type: 'text',
+      admin: { hidden: true, description: 'Komma-gescheiden speler-ids. Beheerd via /opstelling.' },
+    },
+    {
       // Verouderd: het logo hoort nu bij de Club. Verborgen gehouden (niet verwijderd) zodat
       // bestaande databases geen kolom-migratie/rename-prompt nodig hebben.
       name: 'logo',

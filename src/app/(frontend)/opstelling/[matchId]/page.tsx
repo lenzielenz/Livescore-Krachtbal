@@ -41,9 +41,10 @@ export default async function OpstellingPage({ params }: { params: Promise<{ mat
       </h1>
       <MatchDayNav matchId={matchId} current="opstelling" />
       <p className="wb-intro">
-        Vink je spelers aan. Het voorstel toont de laatst-gekende opstelling. Alleen leden met een geldige
-        vergunning en de juiste leeftijdscategorie zijn vrij selecteerbaar — geblokkeerde leden kun je als
-        scheidsrechter/federatie tonen en toch toevoegen (gaat in de override-log).
+        Vink je spelers aan, of vul met één klik de <strong>vaste opstelling</strong> in. Bewaar je vaste
+        opstelling en ze wordt bij elke volgende wedstrijd van deze ploeg automatisch voorgesteld — de coach
+        kan ze daarna nog aanpassen. Alleen leden met een geldige vergunning en de juiste leeftijdscategorie
+        zijn vrij selecteerbaar; geblokkeerde leden kun je als scheidsrechter/federatie tonen en toch toevoegen.
       </p>
 
       <div className="wb-grid">

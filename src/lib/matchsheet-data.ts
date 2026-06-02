@@ -103,14 +103,20 @@ export async function buildRoster(
   payload: Payload,
   matchId: number | string,
   side: Side,
-): Promise<{ teamId: number; teamName: string; category: Category; players: RosterEntry[] } | null> {
+): Promise<{ teamId: number; teamName: string; category: Category; players: RosterEntry[]; favorites: number[] } | null> {
   const match = await payload.findByID({ collection: 'matches', id: matchId, depth: 1 }).catch(() => null)
   if (!match) return null
   const team = (side === 'home' ? match.homeTeam : match.awayTeam) as
-    | { id: number; name: string; category: Category }
+    | { id: number; name: string; category: Category; vasteOpstellingIds?: string | null }
     | number
     | null
   if (!team || typeof team === 'number') return null
+
+  // Onthouden "vaste opstelling" van deze ploeg (komma-gescheiden speler-ids).
+  const favorites = String(team.vasteOpstellingIds ?? '')
+    .split(',')
+    .map((x) => Number(x.trim()))
+    .filter((n) => Number.isFinite(n) && n > 0)
 
   const seasonStartYear = (await getSeasonStartYear(payload)) ?? new Date().getFullYear()
   const [roster, suggestedIds, settings] = await Promise.all([
@@ -161,5 +167,5 @@ export async function buildRoster(
   }))
 
   players.sort((a, b) => a.shirtNumber - b.shirtNumber)
-  return { teamId: team.id, teamName: team.name, category: team.category, players }
+  return { teamId: team.id, teamName: team.name, category: team.category, players, favorites }
 }

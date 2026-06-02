@@ -253,6 +253,10 @@ export interface Team {
    * Bv. "KV Roeselare U14". Het logo komt van de club.
    */
   name: string;
+  /**
+   * Komma-gescheiden speler-ids. Beheerd via /opstelling.
+   */
+  vasteOpstellingIds?: string | null;
   logo?: (number | null) | Media;
   updatedAt: string;
   createdAt: string;
@@ -926,6 +930,7 @@ export interface TeamsSelect<T extends boolean = true> {
   reeks?: T;
   thuisUur?: T;
   name?: T;
+  vasteOpstellingIds?: T;
   logo?: T;
   updatedAt?: T;
   createdAt?: T;
@@ -1364,6 +1369,10 @@ export interface Setting {
    */
   releaseMinutesBefore: number;
   /**
+   * Beheerd via de kantine-pagina (/kantine).
+   */
+  kantineMatchIds?: string | null;
+  /**
    * Bij dit aantal of meer openstaande knipjes kan een speler niet geselecteerd worden.
    */
   knipjesDrempel: number;
@@ -1386,6 +1395,7 @@ export interface SeasonSelect<T extends boolean = true> {
  */
 export interface SettingsSelect<T extends boolean = true> {
   releaseMinutesBefore?: T;
+  kantineMatchIds?: T;
   knipjesDrempel?: T;
   updatedAt?: T;
   createdAt?: T;

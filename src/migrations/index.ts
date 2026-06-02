@@ -12,6 +12,8 @@ import * as migration_20260602_120000_club_logo_fit from './20260602_120000_club
 import * as migration_20260602_130000_club_kleuren from './20260602_130000_club_kleuren';
 import * as migration_20260602_140000_unlock_demo from './20260602_140000_unlock_demo';
 import * as migration_20260602_194302_tornooi from './20260602_194302_tornooi';
+import * as migration_20260602_220000_kantine_selectie from './20260602_220000_kantine_selectie';
+import * as migration_20260602_230000_vaste_opstelling from './20260602_230000_vaste_opstelling';
 
 export const migrations = [
   {
@@ -83,5 +85,15 @@ export const migrations = [
     up: migration_20260602_194302_tornooi.up,
     down: migration_20260602_194302_tornooi.down,
     name: '20260602_194302_tornooi'
+  },
+  {
+    up: migration_20260602_220000_kantine_selectie.up,
+    down: migration_20260602_220000_kantine_selectie.down,
+    name: '20260602_220000_kantine_selectie',
+  },
+  {
+    up: migration_20260602_230000_vaste_opstelling.up,
+    down: migration_20260602_230000_vaste_opstelling.down,
+    name: '20260602_230000_vaste_opstelling',
   },
 ];
