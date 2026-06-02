@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 
 import type { MatchState, TimelineItem } from '@/lib/match-engine'
 import { TeamLogo } from '@/components/TeamLogo'
+import { DEFAULT_AWAY_COLOR, DEFAULT_HOME_COLOR } from '@/lib/club-colors'
 import './scoreboard.css'
 
 function fmtClock(total: number): string {
@@ -110,8 +111,13 @@ export function Scoreboard({
   const statusLabel =
     state.match.status === 'live' ? 'LIVE' : state.match.status === 'finished' ? 'AFGELOPEN' : 'GEPLAND'
 
+  // Accenten in de clubkleuren (ringen, tijdlijn, doelpunt-gloed). Valt terug op groen/blauw.
+  const homeColor = state.teams.home.colors?.primary ?? DEFAULT_HOME_COLOR
+  const awayColor = state.teams.away.colors?.primary ?? DEFAULT_AWAY_COLOR
+  const sbStyle = { '--home': homeColor, '--away': awayColor } as React.CSSProperties
+
   return (
-    <div className="sb">
+    <div className="sb" style={sbStyle}>
       <div className="sb-status">
         <span className={`sb-badge ${state.match.status}`}>{statusLabel}</span>
         {state.match.status === 'live' && <span className={`sb-conn ${live ? 'on' : ''}`}>● live</span>}
@@ -119,7 +125,7 @@ export function Scoreboard({
 
       <div className="sb-main">
         <div className={`sb-side-team ${goal?.side === 'home' ? 'scored' : ''}`}>
-          <TeamLogo name={state.teams.home.name} logoUrl={state.teams.home.logoUrl} logoFit={state.teams.home.logoFit} side="home" size="lg" float />
+          <TeamLogo name={state.teams.home.name} logoUrl={state.teams.home.logoUrl} logoFit={state.teams.home.logoFit} side="home" size="lg" float ringColor={state.teams.home.colors?.primary} />
           <div className="sb-name">{state.teams.home.name}</div>
           <div className="sb-min" title="Aangevraagde minuten (time-outs)">
             <span className="sb-min-lbl">min.</span>
@@ -136,7 +142,7 @@ export function Scoreboard({
           <div className="sb-half">Helft {state.match.currentHalf}</div>
         </div>
         <div className={`sb-side-team ${goal?.side === 'away' ? 'scored' : ''}`}>
-          <TeamLogo name={state.teams.away.name} logoUrl={state.teams.away.logoUrl} logoFit={state.teams.away.logoFit} side="away" size="lg" float />
+          <TeamLogo name={state.teams.away.name} logoUrl={state.teams.away.logoUrl} logoFit={state.teams.away.logoFit} side="away" size="lg" float ringColor={state.teams.away.colors?.primary} />
           <div className="sb-name">{state.teams.away.name}</div>
           <div className="sb-min" title="Aangevraagde minuten (time-outs)">
             <span className="sb-min-lbl">min.</span>

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { TeamLogo } from '@/components/TeamLogo'
+import { type ClubColors, DEFAULT_AWAY_COLOR, DEFAULT_HOME_COLOR } from '@/lib/club-colors'
 import type { MatchState, TimelineItem } from '@/lib/match-engine'
 import { type LogoFit } from '@/lib/logo-fit'
 
@@ -13,8 +14,8 @@ export type KantineMatch = {
   reeks: string
   time: string
   status: string
-  home: { name: string; logoUrl: string | null; logoFit?: LogoFit | null }
-  away: { name: string; logoUrl: string | null; logoFit?: LogoFit | null }
+  home: { name: string; logoUrl: string | null; logoFit?: LogoFit | null; colors?: ClubColors | null }
+  away: { name: string; logoUrl: string | null; logoFit?: LogoFit | null; colors?: ClubColors | null }
   score: { home: number; away: number }
 }
 
@@ -103,12 +104,17 @@ function Tile({ match, onRemove }: { match: KantineMatch; onRemove: (id: number)
   const awayLogo = state?.teams.away.logoUrl ?? match.away.logoUrl
   const homeLogoFit = state?.teams.home.logoFit ?? match.home.logoFit
   const awayLogoFit = state?.teams.away.logoFit ?? match.away.logoFit
+  const homeColor = (state?.teams.home.colors ?? match.home.colors)?.primary
+  const awayColor = (state?.teams.away.colors ?? match.away.colors)?.primary
   const score = state?.score ?? match.score
   const status = state?.match.status ?? match.status
   const played = status !== 'scheduled'
 
+  // Clubkleuren als accenten op het vak (logo-ringen + doelpunt-gloed).
+  const tileStyle = { '--home': homeColor ?? DEFAULT_HOME_COLOR, '--away': awayColor ?? DEFAULT_AWAY_COLOR } as React.CSSProperties
+
   return (
-    <div className={`kt-tile ${status === 'live' ? 'live' : ''}`}>
+    <div className={`kt-tile ${status === 'live' ? 'live' : ''}`} style={tileStyle}>
       <div className="kt-tile-head">
         <span className="kt-tile-reeks">{match.reeks}</span>
         <span className={`kt-tile-status ${status}`}>
@@ -121,12 +127,12 @@ function Tile({ match, onRemove }: { match: KantineMatch; onRemove: (id: number)
 
       <Link href={`/match/${match.id}`} className="kt-tile-body">
         <div className="kt-tile-team">
-          <TeamLogo name={home} logoUrl={homeLogo} logoFit={homeLogoFit} side="home" size="md" />
+          <TeamLogo name={home} logoUrl={homeLogo} logoFit={homeLogoFit} side="home" size="md" ringColor={homeColor} />
           <span className="kt-tile-name">{home}</span>
         </div>
         <div className="kt-tile-score">{played ? `${score.home} – ${score.away}` : 'vs'}</div>
         <div className="kt-tile-team">
-          <TeamLogo name={away} logoUrl={awayLogo} logoFit={awayLogoFit} side="away" size="md" />
+          <TeamLogo name={away} logoUrl={awayLogo} logoFit={awayLogoFit} side="away" size="md" ringColor={awayColor} />
           <span className="kt-tile-name">{away}</span>
         </div>
       </Link>

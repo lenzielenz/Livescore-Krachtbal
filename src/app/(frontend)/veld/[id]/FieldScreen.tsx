@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 
 import { TeamLogo } from '@/components/TeamLogo'
+import { DEFAULT_AWAY_COLOR, DEFAULT_HOME_COLOR } from '@/lib/club-colors'
 import type { MatchState, TimelineItem } from '@/lib/match-engine'
 
 function fmtClock(total: number): string {
@@ -107,8 +108,22 @@ export function FieldScreen({
   const statusLabel =
     status === 'live' ? (state.atHalfTime ? 'RUST' : 'LIVE') : status === 'finished' ? 'AFGELOPEN' : 'GEPLAND'
 
+  // Dynamische stijl op basis van de clubkleuren. De thuisploeg geeft de toon aan;
+  // scoort de tegenpartij, dan komen tijdens de viering hún kleuren naar boven.
+  const home1 = state.teams.home.colors?.primary ?? DEFAULT_HOME_COLOR
+  const home2 = state.teams.home.colors?.secondary ?? home1
+  const away1 = state.teams.away.colors?.primary ?? DEFAULT_AWAY_COLOR
+  const away2 = state.teams.away.colors?.secondary ?? away1
+  const themeAway = goal?.side === 'away'
+  const fsStyle = {
+    '--home': home1,
+    '--away': away1,
+    '--theme-1': themeAway ? away1 : home1,
+    '--theme-2': themeAway ? away2 : home2,
+  } as React.CSSProperties
+
   return (
-    <div className="fs">
+    <div className="fs" style={fsStyle}>
       <div className="fs-top">
         <span className={`fs-status ${status}`}>{statusLabel}</span>
         {reeks && <span className="fs-reeks">{reeks}</span>}
@@ -116,7 +131,7 @@ export function FieldScreen({
 
       <div className="fs-main">
         <div className={`fs-team ${goal?.side === 'home' ? 'scored' : ''}`}>
-          <TeamLogo name={state.teams.home.name} logoUrl={state.teams.home.logoUrl} logoFit={state.teams.home.logoFit} side="home" size={FS_LOGO_SIZE} float />
+          <TeamLogo name={state.teams.home.name} logoUrl={state.teams.home.logoUrl} logoFit={state.teams.home.logoFit} side="home" size={FS_LOGO_SIZE} float ringColor={state.teams.home.colors?.primary} />
           <div className="fs-name">{state.teams.home.name}</div>
         </div>
 
@@ -136,7 +151,7 @@ export function FieldScreen({
         </div>
 
         <div className={`fs-team ${goal?.side === 'away' ? 'scored' : ''}`}>
-          <TeamLogo name={state.teams.away.name} logoUrl={state.teams.away.logoUrl} logoFit={state.teams.away.logoFit} side="away" size={FS_LOGO_SIZE} float />
+          <TeamLogo name={state.teams.away.name} logoUrl={state.teams.away.logoUrl} logoFit={state.teams.away.logoFit} side="away" size={FS_LOGO_SIZE} float ringColor={state.teams.away.colors?.primary} />
           <div className="fs-name">{state.teams.away.name}</div>
         </div>
       </div>

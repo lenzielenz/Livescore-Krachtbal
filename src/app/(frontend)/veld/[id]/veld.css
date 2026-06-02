@@ -3,13 +3,20 @@
 .fs {
   --home: #06d6a0;
   --away: #4cc9f0;
+  --theme-1: var(--home);
+  --theme-2: var(--away);
   position: fixed;
   inset: 0;
   display: flex;
   flex-direction: column;
-  background: radial-gradient(circle at 50% 0%, #0c2a1c, #06140d 70%);
+  /* Dynamische sfeer in de clubkleuren: bovenaan getint met de primaire kleur,
+     onderaan een vleugje van de secundaire. Wisselt mee bij een doelpunt. */
+  background:
+    radial-gradient(circle at 50% 0%, color-mix(in srgb, var(--theme-1) 34%, #06140d), #06140d 68%),
+    radial-gradient(circle at 50% 120%, color-mix(in srgb, var(--theme-2) 22%, transparent), transparent 55%);
   color: var(--txt);
   overflow: hidden;
+  transition: background 0.6s ease;
 }
 
 .fs-top {
@@ -48,7 +55,7 @@
 .fs-reeks {
   font-size: clamp(0.8rem, 2vw, 1.3rem);
   font-weight: 700;
-  color: var(--accent);
+  color: var(--theme-2);
   letter-spacing: 0.04em;
 }
 
@@ -121,7 +128,7 @@
 .fs-pulse {
   display: inline-block;
   animation: fs-pulse 0.7s ease-out;
-  color: var(--accent);
+  color: var(--theme-2);
 }
 @keyframes fs-pulse {
   0% {
@@ -137,7 +144,7 @@
 .fs-clock {
   font-size: clamp(1.8rem, 6vw, 5rem);
   font-weight: 800;
-  color: var(--accent);
+  color: var(--theme-2);
   font-variant-numeric: tabular-nums;
   margin-top: clamp(4px, 1.5vh, 18px);
 }

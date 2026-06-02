@@ -165,6 +165,8 @@ export interface Club {
   logoZoom?: number | null;
   logoOffsetX?: number | null;
   logoOffsetY?: number | null;
+  colorPrimary?: string | null;
+  colorSecondary?: string | null;
   /**
    * Naam stadion, adres, type terrein (bv. kunstgras).
    */
@@ -796,6 +798,8 @@ export interface ClubsSelect<T extends boolean = true> {
   logoZoom?: T;
   logoOffsetX?: T;
   logoOffsetY?: T;
+  colorPrimary?: T;
+  colorSecondary?: T;
   accommodatie?: T;
   telefoon?: T;
   website?: T;

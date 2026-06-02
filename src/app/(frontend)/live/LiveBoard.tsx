@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
 
 import { TeamLogo } from '@/components/TeamLogo'
+import { type ClubColors } from '@/lib/club-colors'
 import { type LogoFit } from '@/lib/logo-fit'
 
 export type DayMatch = {
@@ -12,8 +13,8 @@ export type DayMatch = {
   reeks: string
   time: string
   status: string
-  home: { name: string; logoUrl: string | null; logoFit?: LogoFit | null }
-  away: { name: string; logoUrl: string | null; logoFit?: LogoFit | null }
+  home: { name: string; logoUrl: string | null; logoFit?: LogoFit | null; colors?: ClubColors | null }
+  away: { name: string; logoUrl: string | null; logoFit?: LogoFit | null; colors?: ClubColors | null }
   score: { home: number; away: number }
 }
 
@@ -128,12 +129,12 @@ export function LiveBoard({ date, today, matches }: { date: string; today: strin
                     <Link href={`/match/${m.id}`} className="lb-match">
                       <span className="lb-status">{m.status === 'live' ? 'LIVE' : played ? m.time : m.time}</span>
                       <span className="lb-team">
-                        <TeamLogo name={m.home.name} logoUrl={m.home.logoUrl} logoFit={m.home.logoFit} side="home" size="xs" />
+                        <TeamLogo name={m.home.name} logoUrl={m.home.logoUrl} logoFit={m.home.logoFit} side="home" size="xs" ringColor={m.home.colors?.primary} />
                         <span className="lb-name">{m.home.name}</span>
                       </span>
                       <span className="lb-score">{played ? `${m.score.home} – ${m.score.away}` : 'vs'}</span>
                       <span className="lb-team">
-                        <TeamLogo name={m.away.name} logoUrl={m.away.logoUrl} logoFit={m.away.logoFit} side="away" size="xs" />
+                        <TeamLogo name={m.away.name} logoUrl={m.away.logoUrl} logoFit={m.away.logoFit} side="away" size="xs" ringColor={m.away.colors?.primary} />
                         <span className="lb-name">{m.away.name}</span>
                       </span>
                     </Link>

@@ -239,10 +239,10 @@
   z-index: 5;
 }
 .kt-flash.side-home {
-  --goal: #06d6a0;
+  --goal: var(--home, #06d6a0);
 }
 .kt-flash.side-away {
-  --goal: #4cc9f0;
+  --goal: var(--away, #4cc9f0);
 }
 @keyframes kt-flash-fade {
   0% {

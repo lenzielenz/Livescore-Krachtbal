@@ -3,12 +3,13 @@ import Link from 'next/link'
 import { LiveClock } from '@/components/LiveClock'
 import { TeamLogo } from '@/components/TeamLogo'
 import { buildMatchState } from '@/lib/match-engine'
+import { type ClubColors } from '@/lib/club-colors'
 import { type LogoFit } from '@/lib/logo-fit'
 import { getPayloadClient } from '@/lib/payload-client'
 
 export const dynamic = 'force-dynamic'
 
-type TeamInfo = { name: string; logoUrl: string | null; logoFit: LogoFit | null }
+type TeamInfo = { name: string; logoUrl: string | null; logoFit: LogoFit | null; colors: ClubColors | null }
 
 type Summary = {
   id: number
@@ -35,8 +36,8 @@ export default async function HomePage() {
           id: m.id,
           status: s.match.status,
           date: m.date,
-          home: { name: s.teams.home.name, logoUrl: s.teams.home.logoUrl, logoFit: s.teams.home.logoFit },
-          away: { name: s.teams.away.name, logoUrl: s.teams.away.logoUrl, logoFit: s.teams.away.logoFit },
+          home: { name: s.teams.home.name, logoUrl: s.teams.home.logoUrl, logoFit: s.teams.home.logoFit, colors: s.teams.home.colors },
+          away: { name: s.teams.away.name, logoUrl: s.teams.away.logoUrl, logoFit: s.teams.away.logoFit, colors: s.teams.away.colors },
           score: s.score,
           crosses: s.crosses,
           timeouts: s.timeouts,
@@ -95,7 +96,7 @@ function Section({ title, matches, emptyText }: { title: string; matches: Summar
             <Link href={`/match/${m.id}`} key={m.id} className="match-card">
               <span className="home">
                 <span className="mc-team-name">{m.home.name}</span>
-                <TeamLogo name={m.home.name} logoUrl={m.home.logoUrl} logoFit={m.home.logoFit} side="home" size="sm" />
+                <TeamLogo name={m.home.name} logoUrl={m.home.logoUrl} logoFit={m.home.logoFit} side="home" size="sm" ringColor={m.home.colors?.primary} />
               </span>
               <span className="mid">
                 {m.status === 'scheduled' ? (
@@ -119,7 +120,7 @@ function Section({ title, matches, emptyText }: { title: string; matches: Summar
                 )}
               </span>
               <span className="away">
-                <TeamLogo name={m.away.name} logoUrl={m.away.logoUrl} logoFit={m.away.logoFit} side="away" size="sm" />
+                <TeamLogo name={m.away.name} logoUrl={m.away.logoUrl} logoFit={m.away.logoFit} side="away" size="sm" ringColor={m.away.colors?.primary} />
                 <span className="mc-team-name">{m.away.name}</span>
               </span>
             </Link>
