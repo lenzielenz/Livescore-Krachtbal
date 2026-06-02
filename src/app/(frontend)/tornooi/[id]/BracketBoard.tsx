@@ -5,35 +5,42 @@ import Link from 'next/link'
 import type { TMatchState, TournamentState } from '@/lib/tournament-engine'
 import { fmtClock, useTicking, useTournamentStream } from '../useTournament'
 
-function statusBadge(m: TMatchState): { text: string; cls: string } {
-  if (m.status === 'live') return { text: 'LIVE', cls: 'live' }
-  if (m.status === 'finished') return { text: 'EINDE', cls: 'done' }
-  return { text: 'TE SPELEN', cls: 'pending' }
+// Twee opeenvolgende wedstrijden vormen een paar dat naar één wedstrijd in de volgende ronde
+// leidt — die paring tekent de verbindingslijnen (zie tornooi.css).
+function pairUp(matches: TMatchState[]): TMatchState[][] {
+  const out: TMatchState[][] = []
+  for (let i = 0; i < matches.length; i += 2) out.push(matches.slice(i, i + 2))
+  return out
 }
 
 function MatchCard({ id, m }: { id: number; m: TMatchState }) {
   const clock = useTicking(m.clockSeconds, m.clockRunning)
-  const badge = statusBadge(m)
   const bye = m.status === 'finished' && (!m.home || !m.away)
-  const homeWon = m.winner === 'home'
-  const awayWon = m.winner === 'away'
+  const live = m.status === 'live'
+  const done = m.status === 'finished'
+
+  const Row = ({ side }: { side: 'home' | 'away' }) => {
+    const name = side === 'home' ? m.home : m.away
+    const won = m.winner === side
+    const lost = done && m.winner && m.winner !== side
+    return (
+      <div className={`trn-row ${won ? 'won' : ''} ${lost ? 'lost' : ''} ${side}`}>
+        <span className="trn-row-name">{name ?? '— te bepalen —'}</span>
+        <span className="trn-row-score">{name && (live || done) ? m.score[side] : ''}</span>
+      </div>
+    )
+  }
 
   return (
     <div className={`trn-match ${m.status}`}>
       <div className="trn-match-head">
         <span className="trn-match-label">{m.label}</span>
-        <span className={`trn-match-badge ${badge.cls}`}>
-          {m.status === 'live' ? `LIVE · H${m.currentHalf} ${fmtClock(clock)}` : bye ? 'BYE' : badge.text}
+        <span className={`trn-match-badge ${m.status}`}>
+          {live ? `LIVE · H${m.currentHalf} ${fmtClock(clock)}` : bye ? 'BYE' : done ? 'EINDE' : 'TE SPELEN'}
         </span>
       </div>
-      <div className={`trn-match-team ${homeWon ? 'won' : ''}`}>
-        <span className="nm">{m.home ?? '— te bepalen —'}</span>
-        <span className="sc">{m.home ? m.score.home : ''}</span>
-      </div>
-      <div className={`trn-match-team ${awayWon ? 'won' : ''}`}>
-        <span className="nm">{m.away ?? '— te bepalen —'}</span>
-        <span className="sc">{m.away ? m.score.away : ''}</span>
-      </div>
+      <Row side="home" />
+      <Row side="away" />
       {!bye && (
         <div className="trn-match-actions">
           <Link href={`/tornooi/${id}/aantekenen/${m.id}`} className="trn-mini">Aantekenen</Link>
@@ -64,25 +71,33 @@ export function BracketBoard({ id, initial }: { id: number; initial: TournamentS
       )}
 
       <main className="trn-bracket">
-        {state.rounds.map((r) => (
-          <section key={r.round} className="trn-col">
-            <h2 className="trn-col-title">{r.label}</h2>
-            <div className="trn-col-matches">
-              {r.matches.map((m) => (
-                <MatchCard key={m.id} id={id} m={m} />
-              ))}
-            </div>
-          </section>
-        ))}
-        {state.thirdPlace && (
-          <section className="trn-col third">
-            <h2 className="trn-col-title">Kleine finale</h2>
-            <div className="trn-col-matches">
-              <MatchCard id={id} m={state.thirdPlace} />
-            </div>
-          </section>
-        )}
+        {state.rounds.map((r, ri) => {
+          const isLast = ri === state.rounds.length - 1
+          return (
+            <section key={r.round} className={`trn-col ${isLast ? 'trn-col-last' : ''}`}>
+              <h2 className="trn-col-title">{r.label}</h2>
+              <div className="trn-col-body">
+                {pairUp(r.matches).map((pair, pi) => (
+                  <div className="trn-pair" key={pi}>
+                    {pair.map((m) => (
+                      <MatchCard key={m.id} id={id} m={m} />
+                    ))}
+                  </div>
+                ))}
+              </div>
+            </section>
+          )
+        })}
       </main>
+
+      {state.thirdPlace && (
+        <section className="trn-third">
+          <h2 className="trn-col-title">Kleine finale (3e plaats)</h2>
+          <div className="trn-third-card">
+            <MatchCard id={id} m={state.thirdPlace} />
+          </div>
+        </section>
+      )}
     </div>
   )
 }

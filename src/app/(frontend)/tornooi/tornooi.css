@@ -344,108 +344,169 @@
   color: var(--txt);
 }
 
-/* Boomstructuur */
+/* ── Boomstructuur: verbonden bracket met elleboog-connectoren ──────────────── */
 .trn-bracket {
+  --g: 24px; /* halve tussenruimte tussen rondes = connector-breedte */
   display: flex;
-  gap: 18px;
+  gap: calc(var(--g) * 2);
   overflow-x: auto;
-  padding-bottom: 12px;
-  align-items: flex-start;
+  align-items: stretch;
+  padding: 4px 4px 18px;
+  min-height: 340px;
 }
 .trn-col {
-  flex: none;
-  min-width: 230px;
+  flex: 0 0 250px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-}
-.trn-col.third {
-  border-left: 1px dashed var(--line);
-  padding-left: 18px;
+  min-height: 0;
 }
 .trn-col-title {
-  font-size: 0.78rem;
+  flex: 0 0 auto;
+  text-align: center;
+  font-size: 0.74rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--dim);
-  margin: 0;
+  margin: 0 0 10px;
 }
-.trn-col-matches {
+.trn-col-body {
+  flex: 1 1 auto;
   display: flex;
   flex-direction: column;
-  gap: 14px;
   justify-content: space-around;
-  height: 100%;
+  gap: 14px;
 }
+.trn-pair {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  gap: 14px;
+  position: relative;
+}
+.trn-pair > .trn-match {
+  flex: 0 0 auto;
+}
+/* Connector: ⊃ rechts van een paar + horizontale nub naar de volgende ronde. */
+.trn-col:not(.trn-col-last) .trn-pair::after {
+  content: '';
+  position: absolute;
+  right: calc(-1 * var(--g));
+  top: 25%;
+  bottom: 25%;
+  width: var(--g);
+  border: 2px solid var(--line);
+  border-left: 0;
+  border-radius: 0 10px 10px 0;
+}
+.trn-col:not(.trn-col-last) .trn-pair::before {
+  content: '';
+  position: absolute;
+  right: calc(-2 * var(--g));
+  top: 50%;
+  width: var(--g);
+  height: 2px;
+  background: var(--line);
+  transform: translateY(-1px);
+}
+
+/* ── Wedstrijdkaart ───────────────────────────────────────────────────────── */
 .trn-match {
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 12px;
-  padding: 10px 12px;
+  padding: 9px 11px;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
 .trn-match.live {
   border-color: #2c7a4b;
-  box-shadow: 0 0 0 1px #2c7a4b40;
+  box-shadow: 0 0 0 1px #2c7a4b55, 0 8px 22px rgba(0, 0, 0, 0.35);
+}
+.trn-match.finished {
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--line));
 }
 .trn-match-head {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: 7px;
 }
 .trn-match-label {
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   color: var(--dim);
 }
 .trn-match-badge {
-  font-size: 0.64rem;
+  font-size: 0.62rem;
   font-weight: 800;
   letter-spacing: 0.04em;
   padding: 2px 7px;
   border-radius: 999px;
   background: var(--bg);
   color: var(--dim);
+  white-space: nowrap;
 }
 .trn-match-badge.live {
   background: #14361f;
   color: #6ee7a0;
 }
-.trn-match-badge.done {
+.trn-match-badge.finished {
   background: #2a2416;
   color: var(--accent);
 }
-.trn-match-team {
+
+/* Ploeg-rij: naam + score; zijde-accent links, winnaar opvallend, verliezer gedimd. */
+.trn-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 5px 0;
+  gap: 8px;
+  padding: 7px 9px;
+  border-radius: 8px;
   font-size: 0.95rem;
+  border-left: 3px solid transparent;
 }
-.trn-match-team .nm {
+.trn-row.home {
+  border-left-color: color-mix(in srgb, #06d6a0 70%, transparent);
+}
+.trn-row.away {
+  border-left-color: color-mix(in srgb, #4cc9f0 70%, transparent);
+}
+.trn-row + .trn-row {
+  margin-top: 4px;
+}
+.trn-row-name {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.trn-match-team .sc {
+.trn-row-score {
   font-weight: 800;
   font-variant-numeric: tabular-nums;
 }
-.trn-match-team.won .nm {
-  color: var(--accent);
-  font-weight: 700;
+.trn-row.won {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  border-left-color: var(--accent);
 }
+.trn-row.won .trn-row-name {
+  color: var(--accent);
+  font-weight: 800;
+}
+.trn-row.lost {
+  opacity: 0.5;
+}
+
 .trn-match-actions {
   display: flex;
   gap: 8px;
-  margin-top: 8px;
+  margin-top: 9px;
   border-top: 1px solid var(--line);
-  padding-top: 8px;
+  padding-top: 9px;
 }
 .trn-mini {
   flex: 1;
   text-align: center;
   font-size: 0.8rem;
-  padding: 6px;
+  padding: 7px;
   border-radius: 8px;
   background: var(--bg);
   border: 1px solid var(--line);
@@ -453,6 +514,17 @@
 }
 .trn-mini:hover {
   border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* Kleine finale los onder de boom. */
+.trn-third {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px dashed var(--line);
+}
+.trn-third-card {
+  max-width: 250px;
 }
 
 /* Aantekentafel */
