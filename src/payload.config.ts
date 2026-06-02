@@ -20,6 +20,8 @@ import { MatchSheets } from './collections/MatchSheets'
 import { Accidents } from './collections/Accidents'
 import { CupFinals } from './collections/CupFinals'
 import { Sanctions } from './collections/Sanctions'
+import { Tournaments } from './collections/Tournaments'
+import { TournamentMatches } from './collections/TournamentMatches'
 import { Season } from './globals/Season'
 import { Settings } from './globals/Settings'
 
@@ -58,6 +60,8 @@ export default buildConfig({
     Accidents,
     CupFinals,
     Sanctions,
+    Tournaments,
+    TournamentMatches,
     Possessions,
     Throws,
     MatchEvents,
