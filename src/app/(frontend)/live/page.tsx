@@ -55,6 +55,9 @@ export default async function LivePage({ searchParams }: { searchParams: Promise
         home: { name: s.teams.home.name, logoUrl: s.teams.home.logoUrl, logoFit: s.teams.home.logoFit, colors: s.teams.home.colors },
         away: { name: s.teams.away.name, logoUrl: s.teams.away.logoUrl, logoFit: s.teams.away.logoFit, colors: s.teams.away.colors },
         score: s.score,
+        crosses: s.crosses,
+        timeouts: s.timeouts,
+        refereeStops: s.refereeStops,
       })
     } catch {
       // Wedstrijd met ontbrekende ploeg overslaan.

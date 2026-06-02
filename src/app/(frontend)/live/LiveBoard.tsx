@@ -16,6 +16,9 @@ export type DayMatch = {
   home: { name: string; logoUrl: string | null; logoFit?: LogoFit | null; colors?: ClubColors | null }
   away: { name: string; logoUrl: string | null; logoFit?: LogoFit | null; colors?: ClubColors | null }
   score: { home: number; away: number }
+  crosses?: { home: number; away: number }
+  timeouts?: { home: number; away: number }
+  refereeStops?: number
 }
 
 const FAV_KEY = 'krachtbal-favorieten'
@@ -115,8 +118,10 @@ export function LiveBoard({ date, today, matches }: { date: string; today: strin
               <div className="lb-group-head">{reeks}</div>
               {list.map((m) => {
                 const played = m.status !== 'scheduled'
+                const live = m.status === 'live'
+                const hasStats = played && (m.crosses || m.timeouts)
                 return (
-                  <div key={m.id} className={`lb-row ${m.status === 'live' ? 'live' : ''}`}>
+                  <div key={m.id} className={`lb-row ${live ? 'live' : ''}`}>
                     <button
                       type="button"
                       className={`lb-star ${favs.has(m.id) ? 'on' : ''}`}
@@ -127,15 +132,29 @@ export function LiveBoard({ date, today, matches }: { date: string; today: strin
                       {favs.has(m.id) ? '★' : '☆'}
                     </button>
                     <Link href={`/match/${m.id}`} className="lb-match">
-                      <span className="lb-status">{m.status === 'live' ? 'LIVE' : played ? m.time : m.time}</span>
-                      <span className="lb-team">
-                        <TeamLogo name={m.home.name} logoUrl={m.home.logoUrl} logoFit={m.home.logoFit} side="home" size="xs" ringColor={m.home.colors?.primary} />
+                      <span className="lb-status">
+                        {live ? <span className="lb-livebadge">LIVE</span> : <span className="lb-time">{m.time}</span>}
+                      </span>
+                      <span className="lb-team home">
+                        <TeamLogo name={m.home.name} logoUrl={m.home.logoUrl} logoFit={m.home.logoFit} side="home" size="sm" ringColor={m.home.colors?.primary} />
                         <span className="lb-name">{m.home.name}</span>
                       </span>
-                      <span className="lb-score">{played ? `${m.score.home} – ${m.score.away}` : 'vs'}</span>
-                      <span className="lb-team">
-                        <TeamLogo name={m.away.name} logoUrl={m.away.logoUrl} logoFit={m.away.logoFit} side="away" size="xs" ringColor={m.away.colors?.primary} />
+                      <span className="lb-mid">
+                        <span className="lb-score">{played ? `${m.score.home} – ${m.score.away}` : 'vs'}</span>
+                        {hasStats && (
+                          <span className="lb-stats">
+                            <span title="Kruisjes">✚ {m.crosses?.home ?? 0}–{m.crosses?.away ?? 0}</span>
+                            <span className="lb-stat-sep">·</span>
+                            <span title="Minuten (time-outs)">
+                              ⏱ {m.timeouts?.home ?? 0}–{m.timeouts?.away ?? 0}
+                              {m.refereeStops ? ` +${m.refereeStops} SR` : ''}
+                            </span>
+                          </span>
+                        )}
+                      </span>
+                      <span className="lb-team away">
                         <span className="lb-name">{m.away.name}</span>
+                        <TeamLogo name={m.away.name} logoUrl={m.away.logoUrl} logoFit={m.away.logoFit} side="away" size="sm" ringColor={m.away.colors?.primary} />
                       </span>
                     </Link>
                   </div>
