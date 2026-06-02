@@ -11,9 +11,31 @@ De app kiest de adapter automatisch op basis van `DATABASE_URL`:
 **Productie (huidige Railway-opzet) = Postgres:**
 1. Voeg een **Postgres**-service toe in het Railway-project.
 2. Op de app-service: `DATABASE_URL` = referentie naar de Postgres (`${{Postgres.DATABASE_URL}}`).
-3. Geen Volume nodig (Postgres heeft zijn eigen opslag).
+3. Voor de **database** is geen Volume nodig (Postgres heeft zijn eigen opslag). Voor de
+   **geüploade bestanden** (clublogo's e.d.) is wél een Volume nodig — zie hieronder.
 
 **Alternatief = SQLite + Volume:** Volume mounten op `/data` en `DATABASE_URL=file:/data/krachtbal.db`.
+
+## Media / uploads: Volume verplicht op de app-service
+
+⚠️ **Clublogo's en andere uploads verdwijnen na elke deploy als er géén Volume aan de
+app-service hangt.** Railway's containerschijf is vluchtig: alles wat niet op een Volume
+staat, wordt bij elke build/herstart gewist. De clubgegevens overleven (die staan in
+Postgres), maar de bestanden zelf zijn weg → 404 → scoreboards vallen terug op initialen.
+
+Het Volume hoort op de **app-service** (Livescore-Krachtbal), níét op de Postgres-service.
+Het `postgres-volume` van de database is hiervoor irrelevant.
+
+**Setup:**
+1. Op de **app-service** → **Volume** toevoegen. Mount-pad maakt niet uit (bv. `/data`).
+2. Railway zet dan automatisch `RAILWAY_VOLUME_MOUNT_PATH`; de code schrijft media naar
+   `<volume>/media` ([src/collections/Media.ts](../src/collections/Media.ts)). Geen extra
+   variabele nodig. `MEDIA_DIR` blijft voorrang houden als je een eigen pad wil forceren.
+3. Controle: in de deploy-logs verschijnt de waarschuwing `[media] LET OP: geen persistente
+   opslag gevonden...` zolang er géén Volume is. Verdwijnt die regel → het zit goed.
+
+Let op: reeds verdwenen bestanden komen niet terug — die moeten één keer opnieuw geüpload
+worden nadat het Volume is gekoppeld.
 
 ## Eenmalige setup
 
