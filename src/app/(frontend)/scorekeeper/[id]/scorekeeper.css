@@ -42,13 +42,20 @@
 .sk-fs:hover { color: var(--txt); border-color: var(--accent); }
 
 /* ── Kop: scorebalk (ploeg + score + time-outs), klok in het midden ── */
-.sk-head { flex: 0 0 auto; }
-.sk-scorebar { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px; }
-.sk-team { display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 0; }
-.sk-tn { font-weight: 800; font-size: 0.85rem; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center; }
+.sk-head {
+  flex: 0 0 auto;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 74%, transparent), color-mix(in srgb, var(--panel) 26%, transparent));
+  border: 1px solid color-mix(in srgb, var(--accent) 10%, var(--line));
+  border-radius: 16px;
+  padding: 9px 14px 7px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+.sk-scorebar { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; }
+.sk-team { display: flex; flex-direction: column; align-items: center; gap: 5px; min-width: 0; }
+.sk-tn { font-weight: 800; font-size: 0.98rem; letter-spacing: 0.01em; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center; }
 .sk-team.home .sk-tn { color: var(--home); }
 .sk-team.away .sk-tn { color: var(--away); }
-.sk-sc { font-size: 2.4rem; font-weight: 900; font-variant-numeric: tabular-nums; line-height: 1; }
+.sk-sc { font-size: 3rem; font-weight: 900; font-variant-numeric: tabular-nums; line-height: 1; }
 .sk-team.home .sk-sc { color: var(--home); text-shadow: 0 0 24px color-mix(in srgb, var(--home) 45%, transparent); }
 .sk-team.away .sk-sc { color: var(--away); text-shadow: 0 0 24px color-mix(in srgb, var(--away) 45%, transparent); }
 .sk-to {
@@ -63,11 +70,16 @@
 .sk-team.home .sk-to { border-color: var(--home); }
 .sk-team.away .sk-to { border-color: var(--away); }
 .sk-clock {
-  display: inline-flex; align-items: center; gap: 5px; padding: 8px 14px; border-radius: 999px;
-  border: 1px solid var(--accent); background: transparent; color: var(--accent);
-  font-size: 1.15rem; font-weight: 800; font-variant-numeric: tabular-nums; justify-self: center;
+  display: inline-flex; align-items: center; gap: 6px; padding: 10px 18px; border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--accent) 55%, var(--line));
+  background: color-mix(in srgb, var(--accent) 7%, transparent); color: var(--accent);
+  font-size: 1.35rem; font-weight: 800; font-variant-numeric: tabular-nums; justify-self: center;
+  box-shadow: inset 0 0 16px color-mix(in srgb, var(--accent) 10%, transparent);
 }
-.sk-clock.running { background: var(--accent); color: #06140d; }
+.sk-clock.running {
+  background: linear-gradient(180deg, #ffe08a, var(--accent-2, #f7b733)); color: #06140d;
+  border-color: var(--accent); box-shadow: 0 0 26px color-mix(in srgb, var(--accent) 40%, transparent);
+}
 /* Geblokkeerde timer (vóór de aftrap): gedempt en met slot-cursor, maar wel klikbaar. */
 .sk-clock.locked { border-color: var(--line); color: var(--dim); border-style: dashed; cursor: pointer; }
 .sk-clock-ico { font-size: 0.8rem; }
@@ -80,10 +92,14 @@
 .sk-toolbar { flex: 0 0 auto; display: flex; flex-wrap: wrap; gap: 5px; }
 .sk-toolbar .tb {
   flex: 1 1 auto; min-width: 78px;
-  padding: 9px 8px; border: 1px solid var(--line); background: #0a1f14; text-align: center;
-  color: var(--txt); border-radius: 8px; font-size: 0.8rem;
+  padding: 11px 10px; border: 1px solid var(--line);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 82%, transparent), #0a1f14);
+  text-align: center; color: var(--txt); border-radius: 10px; font-size: 0.84rem; font-weight: 700;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  transition: border-color 0.14s ease, transform 0.14s ease;
 }
+.sk-toolbar .tb:hover { transform: translateY(-1px); }
 /* Undo links, Einde rechts — duidelijke uiteinden */
 .sk-toolbar .tb.warn { order: -1; }
 .sk-toolbar .tb.danger { order: 1; }
@@ -108,14 +124,19 @@
 }
 .sk-rail.dim { opacity: 0.4; }
 .sk-rail-btn {
-  width: 100%; padding: 12px 0; border-radius: 12px; font-size: 0.95rem; font-weight: 800;
-  border: 1px solid var(--line); background: #0a1f14; color: var(--txt); line-height: 1;
+  width: 100%; padding: 13px 0; border-radius: 14px; font-size: 0.95rem; font-weight: 800;
+  border: 1px solid var(--line);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 82%, transparent), #0a1f14);
+  color: var(--txt); line-height: 1;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+  transition: transform 0.14s ease, border-color 0.14s ease;
 }
-.sk-rail-home .sk-rail-btn { border-color: var(--home); color: var(--home); }
-.sk-rail-away .sk-rail-btn { border-color: var(--away); color: var(--away); }
-.sk-rail-dir { font-size: 2.8rem; font-weight: 900; line-height: 1; margin-top: 6px; }
-.sk-rail-home .sk-rail-dir { color: var(--home); }
-.sk-rail-away .sk-rail-dir { color: var(--away); }
+.sk-rail-btn:hover { transform: translateY(-1px); }
+.sk-rail-home .sk-rail-btn { border-color: color-mix(in srgb, var(--home) 55%, var(--line)); color: var(--home); }
+.sk-rail-away .sk-rail-btn { border-color: color-mix(in srgb, var(--away) 55%, var(--line)); color: var(--away); }
+.sk-rail-dir { font-size: 3rem; font-weight: 900; line-height: 1; margin-top: 6px; }
+.sk-rail-home .sk-rail-dir { color: var(--home); filter: drop-shadow(0 0 12px color-mix(in srgb, var(--home) 50%, transparent)); }
+.sk-rail-away .sk-rail-dir { color: var(--away); filter: drop-shadow(0 0 12px color-mix(in srgb, var(--away) 50%, transparent)); }
 .sk-rail-worp {
   font-size: 1.05rem; font-weight: 900; font-variant-numeric: tabular-nums;
   background: var(--accent); color: #06140d; padding: 2px 9px; border-radius: 999px;
@@ -151,7 +172,7 @@
 .sk-col-away .sk-num.on { background: var(--away); color: #06140d; border-color: var(--away); }
 
 .sk-field-wrap { flex: 0 1 auto; display: flex; justify-content: center; align-items: stretch; min-width: 0; min-height: 0; }
-.sk-field { height: 100%; width: auto; max-width: 100%; touch-action: manipulation; cursor: crosshair; border-radius: 8px; }
+.sk-field { height: 100%; width: auto; max-width: 100%; touch-action: manipulation; cursor: crosshair; border-radius: 10px; filter: drop-shadow(0 16px 38px rgba(0, 0, 0, 0.55)); }
 
 /* ── Compacte bediening ── */
 .sk-controls { flex: 0 0 auto; display: flex; flex-direction: column; gap: 5px; }
