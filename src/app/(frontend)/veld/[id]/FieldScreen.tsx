@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react'
 
+import { TeamLogo } from '@/components/TeamLogo'
 import type { MatchState, TimelineItem } from '@/lib/match-engine'
-import { type LogoFit, logoFitStyle } from '@/lib/logo-fit'
 
 function fmtClock(total: number): string {
   const s = Math.max(0, Math.floor(total))
@@ -20,35 +20,8 @@ type Goal = {
   scorer: string | null
 }
 
-function Badge({
-  name,
-  logoUrl,
-  logoFit,
-  side,
-}: {
-  name: string
-  logoUrl: string | null
-  logoFit?: LogoFit | null
-  side: Side
-}) {
-  const [failed, setFailed] = useState(false)
-  const initials = name
-    .split(/\s+/)
-    .map((w) => w[0])
-    .join('')
-    .slice(0, 3)
-    .toUpperCase()
-  return (
-    <span className={`fs-logo fs-logo-${side}`}>
-      {logoUrl && !failed ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={logoUrl} alt="" style={logoFitStyle(logoFit)} onError={() => setFailed(true)} />
-      ) : (
-        <span className="fs-logo-init">{initials}</span>
-      )}
-    </span>
-  )
-}
+// Responsieve logomaat voor het grote veldscherm.
+const FS_LOGO_SIZE = 'clamp(84px, 14vw, 200px)'
 
 // Laatste doelpunt voor een ploeg uit de tijdlijn halen, voor de naam van de doelpuntenmaker.
 function lastGoalScorer(timeline: TimelineItem[], side: Side): string | null {
@@ -142,8 +115,8 @@ export function FieldScreen({
       </div>
 
       <div className="fs-main">
-        <div className="fs-team">
-          <Badge name={state.teams.home.name} logoUrl={state.teams.home.logoUrl} logoFit={state.teams.home.logoFit} side="home" />
+        <div className={`fs-team ${goal?.side === 'home' ? 'scored' : ''}`}>
+          <TeamLogo name={state.teams.home.name} logoUrl={state.teams.home.logoUrl} logoFit={state.teams.home.logoFit} side="home" size={FS_LOGO_SIZE} float />
           <div className="fs-name">{state.teams.home.name}</div>
         </div>
 
@@ -162,8 +135,8 @@ export function FieldScreen({
           </div>
         </div>
 
-        <div className="fs-team">
-          <Badge name={state.teams.away.name} logoUrl={state.teams.away.logoUrl} logoFit={state.teams.away.logoFit} side="away" />
+        <div className={`fs-team ${goal?.side === 'away' ? 'scored' : ''}`}>
+          <TeamLogo name={state.teams.away.name} logoUrl={state.teams.away.logoUrl} logoFit={state.teams.away.logoFit} side="away" size={FS_LOGO_SIZE} float />
           <div className="fs-name">{state.teams.away.name}</div>
         </div>
       </div>

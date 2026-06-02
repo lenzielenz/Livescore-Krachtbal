@@ -4,8 +4,9 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
+import { TeamLogo } from '@/components/TeamLogo'
 import type { MatchState, TimelineItem } from '@/lib/match-engine'
-import { type LogoFit, logoFitStyle } from '@/lib/logo-fit'
+import { type LogoFit } from '@/lib/logo-fit'
 
 export type KantineMatch = {
   id: number
@@ -23,36 +24,6 @@ function shiftDate(dateStr: string, days: number): string {
   const d = new Date(`${dateStr}T12:00:00`)
   d.setDate(d.getDate() + days)
   return d.toISOString().slice(0, 10)
-}
-
-function Logo({
-  name,
-  url,
-  fit,
-  side,
-}: {
-  name: string
-  url: string | null
-  fit?: LogoFit | null
-  side: 'home' | 'away'
-}) {
-  const [failed, setFailed] = useState(false)
-  const initials = name
-    .split(/\s+/)
-    .map((w) => w[0])
-    .join('')
-    .slice(0, 3)
-    .toUpperCase()
-  return (
-    <span className={`kt-logo kt-logo-${side}`}>
-      {url && !failed ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={url} alt="" style={logoFitStyle(fit)} onError={() => setFailed(true)} />
-      ) : (
-        <span className="kt-logo-init">{initials}</span>
-      )}
-    </span>
-  )
 }
 
 function fmtClock(total: number): string {
@@ -150,12 +121,12 @@ function Tile({ match, onRemove }: { match: KantineMatch; onRemove: (id: number)
 
       <Link href={`/match/${match.id}`} className="kt-tile-body">
         <div className="kt-tile-team">
-          <Logo name={home} url={homeLogo} fit={homeLogoFit} side="home" />
+          <TeamLogo name={home} logoUrl={homeLogo} logoFit={homeLogoFit} side="home" size="md" />
           <span className="kt-tile-name">{home}</span>
         </div>
         <div className="kt-tile-score">{played ? `${score.home} – ${score.away}` : 'vs'}</div>
         <div className="kt-tile-team">
-          <Logo name={away} url={awayLogo} fit={awayLogoFit} side="away" />
+          <TeamLogo name={away} logoUrl={awayLogo} logoFit={awayLogoFit} side="away" size="md" />
           <span className="kt-tile-name">{away}</span>
         </div>
       </Link>

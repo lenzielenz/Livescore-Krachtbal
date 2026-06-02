@@ -1,17 +1,21 @@
 import Link from 'next/link'
 
 import { LiveClock } from '@/components/LiveClock'
+import { TeamLogo } from '@/components/TeamLogo'
 import { buildMatchState } from '@/lib/match-engine'
+import { type LogoFit } from '@/lib/logo-fit'
 import { getPayloadClient } from '@/lib/payload-client'
 
 export const dynamic = 'force-dynamic'
+
+type TeamInfo = { name: string; logoUrl: string | null; logoFit: LogoFit | null }
 
 type Summary = {
   id: number
   status: string
   date: string
-  home: string
-  away: string
+  home: TeamInfo
+  away: TeamInfo
   score: { home: number; away: number }
   crosses: { home: number; away: number }
   timeouts: { home: number; away: number }
@@ -31,8 +35,8 @@ export default async function HomePage() {
           id: m.id,
           status: s.match.status,
           date: m.date,
-          home: s.teams.home.name,
-          away: s.teams.away.name,
+          home: { name: s.teams.home.name, logoUrl: s.teams.home.logoUrl, logoFit: s.teams.home.logoFit },
+          away: { name: s.teams.away.name, logoUrl: s.teams.away.logoUrl, logoFit: s.teams.away.logoFit },
           score: s.score,
           crosses: s.crosses,
           timeouts: s.timeouts,
@@ -89,7 +93,10 @@ function Section({ title, matches, emptyText }: { title: string; matches: Summar
         <div className="match-list">
           {matches.map((m) => (
             <Link href={`/match/${m.id}`} key={m.id} className="match-card">
-              <span className="home">{m.home}</span>
+              <span className="home">
+                <span className="mc-team-name">{m.home.name}</span>
+                <TeamLogo name={m.home.name} logoUrl={m.home.logoUrl} logoFit={m.home.logoFit} side="home" size="sm" />
+              </span>
               <span className="mid">
                 {m.status === 'scheduled' ? (
                   <span className="mc-meta">{new Date(m.date).toLocaleDateString('nl-BE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
@@ -111,7 +118,10 @@ function Section({ title, matches, emptyText }: { title: string; matches: Summar
                   </>
                 )}
               </span>
-              <span className="away">{m.away}</span>
+              <span className="away">
+                <TeamLogo name={m.away.name} logoUrl={m.away.logoUrl} logoFit={m.away.logoFit} side="away" size="sm" />
+                <span className="mc-team-name">{m.away.name}</span>
+              </span>
             </Link>
           ))}
         </div>

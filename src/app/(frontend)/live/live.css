@@ -200,30 +200,6 @@
   white-space: nowrap;
   font-size: 0.9rem;
 }
-.lb-logo {
-  flex: 0 0 auto;
-  width: 26px;
-  height: 26px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background: #0a1f14;
-  overflow: hidden;
-}
-.lb-logo img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  padding: 3px;
-  background: #fff;
-  border-radius: 50%;
-}
-.lb-logo-init {
-  font-size: 0.6rem;
-  font-weight: 800;
-  color: var(--dim);
-}
 .lb-score {
   font-weight: 800;
   font-variant-numeric: tabular-nums;
