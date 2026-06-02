@@ -1,5 +1,6 @@
 import type { CollectionConfig } from 'payload'
 
+import { isFederationLevel } from '../lib/access'
 import { CATEGORY_OPTIONS } from '../lib/categories'
 import { REEKS_OPTIONS, reeksCategorie, type Reeks } from '../lib/reeksen'
 
@@ -21,7 +22,12 @@ export const Matches: CollectionConfig = {
     group: 'Wedstrijden',
   },
   access: {
+    // Iedereen mag wedstrijden lezen (publiek live-bord). Aanmaken/wijzigen/verwijderen
+    // is voorbehouden aan federatie/admin — zoals bij teams, clubs en officials.
     read: () => true,
+    create: ({ req }) => isFederationLevel(req.user),
+    update: ({ req }) => isFederationLevel(req.user),
+    delete: ({ req }) => isFederationLevel(req.user),
   },
   hooks: {
     // Een wedstrijd verwijderen moet ook de eraan vastgekoppelde live-data opruimen.
