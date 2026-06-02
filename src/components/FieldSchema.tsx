@@ -178,11 +178,13 @@ export function FieldSchema({
       <line x1={0} y1={homeGoalY} x2={W} y2={homeGoalY} stroke="#e8f5ee" strokeWidth={1.5} />
       <line x1={0} y1={awayGoalY} x2={W} y2={awayGoalY} stroke="#e8f5ee" strokeWidth={1.5} />
       <line x1={0} y1={midY} x2={W} y2={midY} stroke="#e8f5ee" strokeWidth={1} strokeDasharray="4 4" />
-      <line x1={0} y1={ftTopY} x2={W} y2={ftTopY} stroke="#9fd9ba" strokeWidth={0.8} strokeDasharray="2 3" />
-      <line x1={0} y1={ftBotY} x2={W} y2={ftBotY} stroke="#9fd9ba" strokeWidth={0.8} strokeDasharray="2 3" />
-      {/* Zone-derden */}
-      <line x1={THIRD_1} y1={0} x2={THIRD_1} y2={H} stroke="#9fd9ba" strokeWidth={0.5} strokeDasharray="2 4" opacity={0.5} />
-      <line x1={THIRD_2} y1={0} x2={THIRD_2} y2={H} stroke="#9fd9ba" strokeWidth={0.5} strokeDasharray="2 4" opacity={0.5} />
+      {/* Vrijworplijnen — volle lijn (zoals op het officiële terrein). */}
+      <line x1={0} y1={ftTopY} x2={W} y2={ftTopY} stroke="#e8f5ee" strokeWidth={1} />
+      <line x1={0} y1={ftBotY} x2={W} y2={ftBotY} stroke="#e8f5ee" strokeWidth={1} />
+      {/* Zone-derden — enkel binnen het speelvak (tussen de doellijnen), niet tot in de
+          doelgebieden, anders steken er kleine lijntjes voorbij de doellijn uit. */}
+      <line x1={THIRD_1} y1={homeGoalY} x2={THIRD_1} y2={awayGoalY} stroke="#9fd9ba" strokeWidth={0.5} strokeDasharray="2 4" opacity={0.5} />
+      <line x1={THIRD_2} y1={homeGoalY} x2={THIRD_2} y2={awayGoalY} stroke="#9fd9ba" strokeWidth={0.5} strokeDasharray="2 4" opacity={0.5} />
 
       {/* Oplichtend doelgebied bij vrije worp — duidelijk t.o.v. de rest: gevulde glow,
           opvallende pulserende rand en een VW-label. */}
