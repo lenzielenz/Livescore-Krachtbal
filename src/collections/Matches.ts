@@ -23,6 +23,25 @@ export const Matches: CollectionConfig = {
   access: {
     read: () => true,
   },
+  hooks: {
+    // Een wedstrijd verwijderen moet ook de eraan vastgekoppelde live-data opruimen.
+    // Noodzakelijk omdat het wedstrijdblad (matchsheets.match) verplicht is: de
+    // Postgres-FK staat op ON DELETE SET NULL, wat botst met de NOT NULL-kolom en
+    // anders een 500/400 geeft. We ruimen daarom expliciet op vóór het verwijderen.
+    // Ongevallen (verzekeringsdossiers) laten we bewust staan (match wordt losgekoppeld).
+    beforeDelete: [
+      async ({ req, id }) => {
+        const where = { match: { equals: id } }
+        await Promise.all(
+          (['matchsheets', 'match-events', 'throws', 'possessions'] as const).map((collection) =>
+            req.payload
+              .delete({ collection, where, req, overrideAccess: true })
+              .catch(() => undefined),
+          ),
+        )
+      },
+    ],
+  },
   fields: [
     {
       // Snelkoppeling naar het tablet-aantekenscherm vanuit de admin.
@@ -163,6 +182,14 @@ export const Matches: CollectionConfig = {
           type: 'relationship',
           relationTo: 'players',
           hasMany: true,
+          admin: {
+            components: {
+              Field: {
+                path: '/components/admin/LineupSelector#LineupSelector',
+                clientProps: { teamPath: 'homeTeam', label: 'Opstelling thuis (op het veld)' },
+              },
+            },
+          },
         },
         {
           name: 'awayLineup',
@@ -170,6 +197,14 @@ export const Matches: CollectionConfig = {
           type: 'relationship',
           relationTo: 'players',
           hasMany: true,
+          admin: {
+            components: {
+              Field: {
+                path: '/components/admin/LineupSelector#LineupSelector',
+                clientProps: { teamPath: 'awayTeam', label: 'Opstelling uit (op het veld)' },
+              },
+            },
+          },
         },
       ],
     },
