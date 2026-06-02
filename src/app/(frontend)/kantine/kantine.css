@@ -66,60 +66,146 @@
   cursor: pointer;
 }
 
-/* Kiezer */
-.kt-picker h3 {
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--dim);
-  margin: 0 0 10px;
-}
-.kt-chips {
+/* ── Kiezer (control-pagina) ── */
+.kt-control-bar {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 22px;
-}
-.kt-chip {
-  display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+.kt-control-help {
+  flex: 1 1 320px;
+  color: var(--dim);
+  font-size: 0.9rem;
+  margin: 0;
+  line-height: 1.4;
+}
+.kt-control-help strong {
+  color: var(--txt);
+}
+.kt-screen-btn {
+  flex: 0 0 auto;
+  padding: 12px 20px;
+  border-radius: 12px;
+  background: var(--accent);
+  color: #06140d;
+  font-weight: 800;
+  font-size: 0.95rem;
+  white-space: nowrap;
+}
+.kt-screen-btn:hover {
+  filter: brightness(1.05);
+}
+.kt-pick-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 10px;
+}
+.kt-pick {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
   border: 1px solid var(--line);
   background: var(--panel);
   color: var(--txt);
-  border-radius: 999px;
-  font-size: 0.85rem;
+  border-radius: 12px;
+  text-align: left;
   cursor: pointer;
 }
-.kt-chip:hover {
+.kt-pick:hover {
   border-color: var(--accent);
 }
-.kt-chip.on {
+.kt-pick.on {
   border-color: var(--accent);
   background: #11301f;
 }
-.kt-chip-check {
+.kt-pick-check {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1px solid var(--line);
   font-weight: 800;
   color: var(--dim);
 }
-.kt-chip.on .kt-chip-check {
-  color: var(--accent);
+.kt-pick.on .kt-pick-check {
+  background: var(--accent);
+  color: #06140d;
+  border-color: var(--accent);
 }
-.kt-chip-meta {
-  font-size: 0.72rem;
+.kt-pick-teams {
+  flex: 1 1 auto;
+  font-weight: 700;
+  font-size: 0.95rem;
+  min-width: 0;
+}
+.kt-pick-vs {
+  color: var(--dim);
+  font-weight: 400;
+}
+.kt-pick-meta {
+  flex: 0 0 auto;
+  font-size: 0.74rem;
   color: var(--dim);
   font-variant-numeric: tabular-nums;
+  text-align: right;
 }
-.kt-chip.live .kt-chip-meta {
+.kt-pick.live .kt-pick-meta {
   color: #ef476f;
   font-weight: 800;
 }
-.kt-empty,
-.kt-hint {
+.kt-control-status {
+  margin: 16px 0 0;
+  font-size: 0.82rem;
+  color: var(--dim);
+}
+.kt-empty {
   color: var(--dim);
   padding: 24px;
   text-align: center;
+}
+
+/* ── Kantinescherm (kantine-tv) ── */
+.kt-screen {
+  min-height: 100dvh;
+  background: var(--bg);
+  padding: 20px;
+}
+.kt-screen-edit {
+  position: fixed;
+  top: 10px;
+  left: 12px;
+  z-index: 20;
+  font-size: 0.8rem;
+  color: var(--dim);
+  background: color-mix(in srgb, var(--panel) 80%, transparent);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 5px 10px;
+}
+.kt-screen-edit:hover {
+  color: var(--txt);
+  border-color: var(--accent);
+}
+.kt-screen-empty {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  color: var(--dim);
+  text-align: center;
+}
+/* Op de tv grotere vakken. */
+.kt-grid-screen {
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
 }
 
 /* Raster van live borden */

@@ -1,8 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { TeamLogo } from '@/components/TeamLogo'
 import { type ClubColors, DEFAULT_AWAY_COLOR, DEFAULT_HOME_COLOR } from '@/lib/club-colors'
@@ -17,14 +16,6 @@ export type KantineMatch = {
   home: { name: string; logoUrl: string | null; logoFit?: LogoFit | null; colors?: ClubColors | null }
   away: { name: string; logoUrl: string | null; logoFit?: LogoFit | null; colors?: ClubColors | null }
   score: { home: number; away: number }
-}
-
-const SEL_KEY = 'krachtbal-kantine-selectie'
-
-function shiftDate(dateStr: string, days: number): string {
-  const d = new Date(`${dateStr}T12:00:00`)
-  d.setDate(d.getDate() + days)
-  return d.toISOString().slice(0, 10)
 }
 
 function fmtClock(total: number): string {
@@ -43,8 +34,8 @@ function lastGoalScorer(timeline: TimelineItem[], side: 'home' | 'away'): string
 }
 
 // Eén live vak in het raster: abonneert zich op de SSE-stream en toont een doelpunt-melding
-// over het vak wanneer er gescoord wordt.
-function Tile({ match, onRemove }: { match: KantineMatch; onRemove: (id: number) => void }) {
+// over het vak wanneer er gescoord wordt. `onRemove` is optioneel (enkel op de kiezer).
+export function Tile({ match, onRemove }: { match: KantineMatch; onRemove?: (id: number) => void }) {
   const [state, setState] = useState<MatchState | null>(null)
   const [clock, setClock] = useState(0)
   const [flash, setFlash] = useState<{ key: number; side: 'home' | 'away'; team: string; points: number; scorer: string | null } | null>(null)
@@ -110,7 +101,6 @@ function Tile({ match, onRemove }: { match: KantineMatch; onRemove: (id: number)
   const status = state?.match.status ?? match.status
   const played = status !== 'scheduled'
 
-  // Clubkleuren als accenten op het vak (logo-ringen + doelpunt-gloed).
   const tileStyle = { '--home': homeColor ?? DEFAULT_HOME_COLOR, '--away': awayColor ?? DEFAULT_AWAY_COLOR } as React.CSSProperties
 
   return (
@@ -120,9 +110,11 @@ function Tile({ match, onRemove }: { match: KantineMatch; onRemove: (id: number)
         <span className={`kt-tile-status ${status}`}>
           {status === 'live' ? (state?.atHalfTime ? 'RUST' : 'LIVE') : status === 'finished' ? 'EINDE' : match.time}
         </span>
-        <button type="button" className="kt-tile-x" onClick={() => onRemove(match.id)} aria-label="Verwijderen" title="Uit selectie">
-          ✕
-        </button>
+        {onRemove && (
+          <button type="button" className="kt-tile-x" onClick={() => onRemove(match.id)} aria-label="Verwijderen" title="Uit selectie">
+            ✕
+          </button>
+        )}
       </div>
 
       <Link href={`/match/${match.id}`} className="kt-tile-body">
@@ -151,104 +143,6 @@ function Tile({ match, onRemove }: { match: KantineMatch; onRemove: (id: number)
           <div className="kt-flash-team">{flash.team}</div>
           {flash.scorer && <div className="kt-flash-scorer">{flash.scorer}</div>}
           <div className="kt-flash-pts">{flash.points === 2 ? 'Rugworp +2' : 'Nekworp +1'}</div>
-        </div>
-      )}
-    </div>
-  )
-}
-
-export function KantineBoard({ date, today, matches }: { date: string; today: string; matches: KantineMatch[] }) {
-  const router = useRouter()
-  const [selected, setSelected] = useState<Set<number>>(new Set())
-  const [loaded, setLoaded] = useState(false)
-
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(SEL_KEY)
-      if (raw) setSelected(new Set(JSON.parse(raw) as number[]))
-    } catch {}
-    setLoaded(true)
-  }, [])
-
-  const persist = (next: Set<number>) => {
-    try {
-      localStorage.setItem(SEL_KEY, JSON.stringify([...next]))
-    } catch {}
-  }
-  const toggle = (id: number) => {
-    setSelected((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      persist(next)
-      return next
-    })
-  }
-  const remove = (id: number) => {
-    setSelected((prev) => {
-      const next = new Set(prev)
-      next.delete(id)
-      persist(next)
-      return next
-    })
-  }
-
-  const byId = useMemo(() => new Map(matches.map((m) => [m.id, m])), [matches])
-  // Alleen geselecteerde wedstrijden die ook op de gekozen dag bestaan, tonen we als vak.
-  const shown = useMemo(() => matches.filter((m) => selected.has(m.id)), [matches, selected])
-
-  const dateLabel = new Date(`${date}T12:00:00`).toLocaleDateString('nl-BE', {
-    weekday: 'long',
-    day: '2-digit',
-    month: 'long',
-  })
-
-  return (
-    <div className="kt">
-      <div className="kt-datenav">
-        <Link href={`/kantine?date=${shiftDate(date, -1)}`} className="kt-datebtn">‹</Link>
-        <div className="kt-date">
-          <span className="kt-datelabel">{date === today ? 'Vandaag' : dateLabel}</span>
-          <input
-            type="date"
-            className="kt-dateinput"
-            value={date}
-            onChange={(e) => e.target.value && router.push(`/kantine?date=${e.target.value}`)}
-            aria-label="Kies datum"
-          />
-        </div>
-        <Link href={`/kantine?date=${shiftDate(date, 1)}`} className="kt-datebtn">›</Link>
-      </div>
-
-      <section className="kt-picker">
-        <h3>Kies wedstrijden om te volgen</h3>
-        {matches.length === 0 ? (
-          <p className="kt-empty">Geen wedstrijden op deze dag.</p>
-        ) : (
-          <div className="kt-chips">
-            {matches.map((m) => (
-              <button
-                type="button"
-                key={m.id}
-                className={`kt-chip ${selected.has(m.id) ? 'on' : ''} ${m.status === 'live' ? 'live' : ''}`}
-                onClick={() => toggle(m.id)}
-              >
-                <span className="kt-chip-check">{selected.has(m.id) ? '✓' : '+'}</span>
-                <span className="kt-chip-teams">{m.home.name} – {m.away.name}</span>
-                <span className="kt-chip-meta">{m.status === 'live' ? 'LIVE' : m.time}</span>
-              </button>
-            ))}
-          </div>
-        )}
-      </section>
-
-      {loaded && shown.length === 0 ? (
-        <p className="kt-hint">Selecteer hierboven één of meer wedstrijden — ze verschijnen dan als live borden.</p>
-      ) : (
-        <div className="kt-grid">
-          {shown.map((m) => (
-            <Tile key={m.id} match={byId.get(m.id) ?? m} onRemove={remove} />
-          ))}
         </div>
       )}
     </div>

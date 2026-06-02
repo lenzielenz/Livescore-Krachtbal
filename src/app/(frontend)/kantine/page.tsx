@@ -1,39 +1,55 @@
+import type { Payload } from 'payload'
+
 import { SiteHeader } from '@/components/SiteHeader'
 import { buildMatchState } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
 import { REEKS_OPTIONS } from '@/lib/reeksen'
-import { KantineBoard, type KantineMatch } from './KantineBoard'
+import { KantineControl } from './KantineControl'
+import { type KantineMatch } from './KantineBoard'
 import './kantine.css'
 
 export const dynamic = 'force-dynamic'
 
 const reeksLabel = (v: unknown) => REEKS_OPTIONS.find((o) => o.value === v)?.label ?? (typeof v === 'string' ? v : 'Overig')
 
-function dayBounds(dateStr: string): { start: string; end: string } {
-  const start = new Date(`${dateStr}T00:00:00.000`)
+function todayBounds(): { start: string; end: string } {
+  const now = new Date()
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate())
   const end = new Date(start.getTime() + 24 * 60 * 60 * 1000)
   return { start: start.toISOString(), end: end.toISOString() }
 }
 
-// Kantinescherm: supporters kiezen zelf welke wedstrijden ze willen volgen; de gekozen
-// wedstrijden tonen als live mini-scoreborden in een raster met een doelpunt-melding per vak.
-export default async function KantinePage({ searchParams }: { searchParams: Promise<{ date?: string }> }) {
-  const { date } = await searchParams
-  const today = new Date().toISOString().slice(0, 10)
-  const selected = date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : today
+async function currentSelection(payload: Payload): Promise<number[]> {
+  const s = await payload.findGlobal({ slug: 'settings', depth: 0 }).catch(() => null)
+  const raw = (s as { kantineMatchIds?: string | null } | null)?.kantineMatchIds ?? ''
+  return String(raw)
+    .split(',')
+    .map((x) => Number(x.trim()))
+    .filter((n) => Number.isFinite(n) && n > 0)
+}
 
+// Kantine — kiespagina: bedien op je gsm/laptop welke wedstrijden op de kantine-tv verschijnen.
+// Het eigenlijke scherm staat op /kantine/scherm en toont de centraal gekozen selectie.
+export default async function KantinePage() {
   const payload = await getPayloadClient()
-  const { start, end } = dayBounds(selected)
-  const matches = await payload.find({
-    collection: 'matches',
-    where: { date: { greater_than_equal: start, less_than: end } },
-    sort: 'date',
-    depth: 0,
-    limit: 200,
+  const { start, end } = todayBounds()
+
+  // Wedstrijden van vandaag + alle live wedstrijden (ook als hun datum afwijkt).
+  const [dayRes, liveRes, selectedIds] = await Promise.all([
+    payload.find({ collection: 'matches', where: { date: { greater_than_equal: start, less_than: end } }, sort: 'date', depth: 0, limit: 200 }),
+    payload.find({ collection: 'matches', where: { status: { equals: 'live' } }, depth: 0, limit: 50 }),
+    currentSelection(payload),
+  ])
+
+  const seen = new Set<number>()
+  const docs = [...liveRes.docs, ...dayRes.docs].filter((m) => {
+    if (seen.has(m.id) || (m as { isDemo?: boolean }).isDemo) return false
+    seen.add(m.id)
+    return true
   })
 
   const list: KantineMatch[] = []
-  for (const m of matches.docs) {
+  for (const m of docs) {
     try {
       const s = await buildMatchState(payload, m.id)
       list.push({
@@ -54,8 +70,8 @@ export default async function KantinePage({ searchParams }: { searchParams: Prom
     <>
       <SiteHeader active="kantine" />
       <div className="kt-page">
-        <h1 className="page-title"><span className="brand">Kantine</span></h1>
-        <KantineBoard date={selected} today={today} matches={list} />
+        <h1 className="page-title"><span className="brand">Kantine</span> · kiezen</h1>
+        <KantineControl matches={list} initialSelected={selectedIds} />
       </div>
     </>
   )

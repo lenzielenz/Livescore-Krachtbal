@@ -26,6 +26,14 @@ export const Settings: GlobalConfig = {
       },
     },
     {
+      // Centrale selectie voor het kantinescherm (komma-gescheiden match-ids). Beheerd via
+      // /kantine zodat je op één toestel kiest en het op de kantine-tv verschijnt (cross-device).
+      name: 'kantineMatchIds',
+      label: 'Kantinescherm-selectie',
+      type: 'text',
+      admin: { hidden: true, description: 'Beheerd via de kantine-pagina (/kantine).' },
+    },
+    {
       // Drempel waarboven een speler door administratieve knipjes geblokkeerd wordt (fase 8).
       // Defaults; echte waarde komt van de federatie-boetelijst.
       name: 'knipjesDrempel',
