@@ -155,14 +155,18 @@ export function nextSetup(input: {
   // Buitenspel (zij-/achterlijn): de inworp is voor de ploeg die het buitenspel NIET
   // veroorzaakte (reglement §6.11.1). Aangeraakt door de tegenstander vóór buiten →
   // de werpende ploeg houdt de bal; anders gaat hij naar de tegenpartij.
-  // De volgende worp start telkens vanuit het midden van het veld.
+  // Reglement §6.8: het aantal worpen ná de inworp hangt af van de HELFT waar de bal
+  // buiten ging — eigen helft → meer worpen (3/4), tegenhelft → minder (2/3). Daarom
+  // bepaalt de plek (landing) de setupSide; de inworp herstart op die diepte.
   if (outcome === 'out_side' || outcome === 'out_back') {
     const keep = Boolean(input.touchedBeforeOut)
+    const newTeam = keep ? throwerTeam : team
+    const newDir = keep ? throwerDir : dir
     return {
-      team: keep ? throwerTeam : team,
-      dir: keep ? throwerDir : dir,
-      setupSide: 'own',
-      point: { x: 0.5, y: 0.5 },
+      team: newTeam,
+      dir: newDir,
+      setupSide: isOnOwnHalf(landing, newDir) ? 'own' : 'opponent',
+      point: { x: 0.5, y: Math.max(0, Math.min(1, landing.y)) },
     }
   }
 

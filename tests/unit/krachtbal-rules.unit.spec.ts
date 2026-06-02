@@ -117,16 +117,27 @@ describe('nextSetup', () => {
     // y=0.8 (36.8m); away speelt 'down', eigen helft = y>23m → own
     expect(ns.setupSide).toBe('own')
   })
-  it('buiten zijlijn, niet aangeraakt: tegenstander krijgt de bal, herstart vanuit het midden', () => {
+  it('buiten in EIGEN helft (achterin): tegenstander krijgt de bal met opzet eigen helft (meer worpen)', () => {
+    // home wierp 'up', bal ging buiten op y=0.8 (= away’s eigen helft). away zet op vanaf eigen helft.
     const ns = nextSetup({ outcome: 'out_side', landing: { x: 1.1, y: 0.8 }, throwerTeam: 'home', throwerDir: 'up' })
     expect(ns.team).toBe('away')
-    expect(ns.point).toEqual({ x: 0.5, y: 0.5 })
+    expect(ns.dir).toBe('down')
+    expect(ns.setupSide).toBe('own')
+    expect(ns.point).toEqual({ x: 0.5, y: 0.8 })
   })
-  it('buiten, aangeraakt door tegenstander: werpende ploeg houdt de bal, vanuit het midden', () => {
+  it('buiten in de TEGENHELFT (vóór de middenlijn): opzet tegenhelft → minder worpen', () => {
+    // bal ging buiten op y=0.3 (= away’s tegenhelft). away zet op vanaf de tegenhelft.
+    const ns = nextSetup({ outcome: 'out_side', landing: { x: -0.05, y: 0.3 }, throwerTeam: 'home', throwerDir: 'up' })
+    expect(ns.team).toBe('away')
+    expect(ns.setupSide).toBe('opponent')
+    expect(ns.point).toEqual({ x: 0.5, y: 0.3 })
+  })
+  it('buiten, aangeraakt door tegenstander: werpende ploeg houdt de bal, op die diepte', () => {
     const ns = nextSetup({ outcome: 'out_back', landing: { x: 0.5, y: 0.02 }, throwerTeam: 'home', throwerDir: 'up', touchedBeforeOut: true })
     expect(ns.team).toBe('home')
     expect(ns.dir).toBe('up')
-    expect(ns.point).toEqual({ x: 0.5, y: 0.5 })
+    expect(ns.setupSide).toBe('own')
+    expect(ns.point).toEqual({ x: 0.5, y: 0.02 })
   })
   it('doelpunt: tegenploeg herstart vanaf eigen helft', () => {
     const ns = nextSetup({ outcome: 'goal', landing: { x: 0.5, y: 0.95 }, throwerTeam: 'away', throwerDir: 'down' })
