@@ -410,6 +410,21 @@ export function Scorekeeper({
         </div>
       )}
 
+      {/* Grote herinnering: zodra de wedstrijd live is maar de klok nog op nul staat, vraagt
+          dit scherm uitdrukkelijk om de timer te starten — zo vergeet niemand hem aan te leggen. */}
+      {isLive && !state.match.clockRunning && clock < 1 && (
+        <div className="sk-starttimer">
+          <button
+            type="button"
+            className="sk-starttimer-btn"
+            disabled={busy}
+            onClick={() => act({ action: 'clock', running: true, seconds: 0 })}
+          >
+            ▶ Start de timer
+          </button>
+        </div>
+      )}
+
       {/* Stap 2: keuzescherm — wie wierp + nek/rug + grond/gevangen, alles op één scherm. */}
       {pendingThrow && (
         <div className="sk-modal-overlay">

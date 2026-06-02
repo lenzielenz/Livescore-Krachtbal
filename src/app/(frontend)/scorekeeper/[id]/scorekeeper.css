@@ -7,6 +7,7 @@
   --accent: #ffd166;
   --home: #06d6a0;
   --away: #4cc9f0;
+  position: relative;
   height: 100dvh;
   display: flex;
   flex-direction: column;
@@ -276,6 +277,38 @@ a.sk-btn { display: inline-block; box-sizing: border-box; text-align: center; te
 .sk-sub-item.on { border-color: var(--accent); background: #11301f; }
 .sk-sub-item.bench { border-style: dashed; }
 .sk-sub-item:disabled { opacity: 0.4; }
+
+/* ── Grote "Start de timer"-herinnering (live, klok nog op nul) ── */
+.sk-starttimer {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+.sk-starttimer-btn {
+  pointer-events: auto;
+  padding: 26px 44px;
+  border-radius: 18px;
+  border: none;
+  background: var(--accent);
+  color: #06140d;
+  font-size: 1.7rem;
+  font-weight: 900;
+  letter-spacing: 0.01em;
+  box-shadow: 0 14px 50px rgba(0, 0, 0, 0.55), 0 0 0 0 color-mix(in srgb, var(--accent) 70%, transparent);
+  animation: sk-starttimer-pulse 1.4s ease-in-out infinite;
+}
+.sk-starttimer-btn:disabled {
+  opacity: 0.6;
+  animation: none;
+}
+@keyframes sk-starttimer-pulse {
+  0%, 100% { box-shadow: 0 14px 50px rgba(0, 0, 0, 0.55), 0 0 0 0 color-mix(in srgb, var(--accent) 55%, transparent); }
+  50% { box-shadow: 0 14px 50px rgba(0, 0, 0, 0.55), 0 0 0 18px color-mix(in srgb, var(--accent) 0%, transparent); }
+}
 
 /* ── Vergrendel-checklist (vóór de start) ── */
 .sk-lock-card { text-align: left; }
