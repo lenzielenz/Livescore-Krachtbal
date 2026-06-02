@@ -73,6 +73,8 @@ export interface Config {
     matches: Match;
     matchsheets: Matchsheet;
     officials: Official;
+    accidents: Accident;
+    cupfinals: Cupfinal;
     sanctions: Sanction;
     possessions: Possession;
     throws: Throw;
@@ -92,6 +94,8 @@ export interface Config {
     matches: MatchesSelect<false> | MatchesSelect<true>;
     matchsheets: MatchsheetsSelect<false> | MatchsheetsSelect<true>;
     officials: OfficialsSelect<false> | OfficialsSelect<true>;
+    accidents: AccidentsSelect<false> | AccidentsSelect<true>;
+    cupfinals: CupfinalsSelect<false> | CupfinalsSelect<true>;
     sanctions: SanctionsSelect<false> | SanctionsSelect<true>;
     possessions: PossessionsSelect<false> | PossessionsSelect<true>;
     throws: ThrowsSelect<false> | ThrowsSelect<true>;
@@ -367,6 +371,26 @@ export interface Matchsheet {
         id?: string | null;
       }[]
     | null;
+  /**
+   * Aantal km voor deze wedstrijd — telt mee op de kwitantie (€0,4327/km).
+   */
+  refereeKm?: number | null;
+  forfait?: {
+    /**
+     * Enkel invullen bij FF wanneer de scheidsrechter betaald/verplaatst is.
+     */
+    vanToepassing?: boolean | null;
+    gemeldThuis?: boolean | null;
+    gemeldUit?: boolean | null;
+    /**
+     * Maximaal 2.
+     */
+    aantalAutos?: number | null;
+    /**
+     * Telt mee op het forfait-onkostenblad (€0,4259/km).
+     */
+    km?: number | null;
+  };
   keuring?: {
     terrein?: ('ok' | 'niet_ok' | 'nvt') | null;
     kleedkamers?: ('ok' | 'niet_ok' | 'nvt') | null;
@@ -483,6 +507,66 @@ export interface User {
     | null;
   password?: string | null;
   collection: 'users';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "accidents".
+ */
+export interface Accident {
+  id: number;
+  titel?: string | null;
+  /**
+   * De wedstrijd waarbij het ongeval gebeurde (optioneel).
+   */
+  match?: (number | null) | Match;
+  /**
+   * Indien het slachtoffer een geregistreerd lid is.
+   */
+  player?: (number | null) | Player;
+  slachtofferNaam: string;
+  slachtofferGeboortedatum?: string | null;
+  slachtofferAdres?: string | null;
+  slachtofferBeroep?: string | null;
+  ongevalPlaats?: string | null;
+  ongevalDatum?: string | null;
+  omstandigheden?: string | null;
+  getuigen?:
+    | {
+        naam?: string | null;
+        adres?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  opmerkingen?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "cupfinals".
+ */
+export interface Cupfinal {
+  id: number;
+  /**
+   * Bv. "Bekerfinales 2025-2026".
+   */
+  titel: string;
+  datum?: string | null;
+  locatie?: string | null;
+  /**
+   * Wordt bij aanmaken voorgevuld met de standaardtaken.
+   */
+  checklist?:
+    | {
+        taak: string;
+        verantwoordelijke?: ('OC' | 'federatie' | 'SRC') | null;
+        gedaan?: boolean | null;
+        opmerking?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  updatedAt: string;
+  createdAt: string;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -623,6 +707,14 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'officials';
         value: number | Official;
+      } | null)
+    | ({
+        relationTo: 'accidents';
+        value: number | Accident;
+      } | null)
+    | ({
+        relationTo: 'cupfinals';
+        value: number | Cupfinal;
       } | null)
     | ({
         relationTo: 'sanctions';
@@ -802,6 +894,16 @@ export interface MatchsheetsSelect<T extends boolean = true> {
         ibGecontroleerd?: T;
         id?: T;
       };
+  refereeKm?: T;
+  forfait?:
+    | T
+    | {
+        vanToepassing?: T;
+        gemeldThuis?: T;
+        gemeldUit?: T;
+        aantalAutos?: T;
+        km?: T;
+      };
   keuring?:
     | T
     | {
@@ -878,6 +980,52 @@ export interface OfficialsSelect<T extends boolean = true> {
   name?: T;
   type?: T;
   federationNumber?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "accidents_select".
+ */
+export interface AccidentsSelect<T extends boolean = true> {
+  titel?: T;
+  match?: T;
+  player?: T;
+  slachtofferNaam?: T;
+  slachtofferGeboortedatum?: T;
+  slachtofferAdres?: T;
+  slachtofferBeroep?: T;
+  ongevalPlaats?: T;
+  ongevalDatum?: T;
+  omstandigheden?: T;
+  getuigen?:
+    | T
+    | {
+        naam?: T;
+        adres?: T;
+        id?: T;
+      };
+  opmerkingen?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "cupfinals_select".
+ */
+export interface CupfinalsSelect<T extends boolean = true> {
+  titel?: T;
+  datum?: T;
+  locatie?: T;
+  checklist?:
+    | T
+    | {
+        taak?: T;
+        verantwoordelijke?: T;
+        gedaan?: T;
+        opmerking?: T;
+        id?: T;
+      };
   updatedAt?: T;
   createdAt?: T;
 }

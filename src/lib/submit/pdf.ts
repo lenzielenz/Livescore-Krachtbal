@@ -17,6 +17,7 @@ export type MatchSheetPdfData = {
   awayTeam: string
   homeLineup: PdfLineupRow[]
   awayLineup: PdfLineupRow[]
+  officials: { label: string; naam: string }[]
   keuring: { label: string; waarde: string }[]
   uitsluitingen: string[]
   voorbehoud: string[]
@@ -59,6 +60,13 @@ export async function generateMatchSheetPdf(data: MatchSheetPdfData): Promise<Ui
   }
   lineup(`Opstelling thuis — ${data.homeTeam}`, data.homeLineup)
   lineup(`Opstelling uit — ${data.awayTeam}`, data.awayLineup)
+
+  const ingevuldeOfficials = data.officials.filter((o) => o.naam.trim())
+  if (ingevuldeOfficials.length) {
+    line('Officials', { b: true, size: 11 })
+    for (const o of ingevuldeOfficials) line(`  ${o.label}: ${o.naam}`, { size: 9 })
+    y -= 6
+  }
 
   line('Materiële keuring', { b: true, size: 11 })
   line('  ' + data.keuring.map((k) => `${k.label}: ${k.waarde}`).join('  ·  '), { size: 9 })

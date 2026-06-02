@@ -73,9 +73,23 @@ export default async function ScheidsrechterPage({ params }: { params: Promise<{
 
       <RefereePanel
         matchId={matchId}
+        reeks={(match.reeks as Reeks) ?? null}
+        assignedRefereeId={
+          typeof sheet?.assignedReferee === 'object'
+            ? (sheet?.assignedReferee?.id ?? null)
+            : ((sheet?.assignedReferee as number | null) ?? null)
+        }
         initialStatus={(sheet?.status as string) ?? 'concept'}
         initialKeuring={(sheet?.keuring as Record<string, string>) ?? {}}
         initialOfficials={(sheet?.officials as Record<string, string>) ?? {}}
+        initialVergoeding={{
+          refereeKm: (sheet?.refereeKm as number) ?? '',
+          vanToepassing: Boolean((sheet?.forfait as { vanToepassing?: boolean } | undefined)?.vanToepassing),
+          gemeldThuis: Boolean((sheet?.forfait as { gemeldThuis?: boolean } | undefined)?.gemeldThuis),
+          gemeldUit: Boolean((sheet?.forfait as { gemeldUit?: boolean } | undefined)?.gemeldUit),
+          aantalAutos: (sheet?.forfait as { aantalAutos?: number } | undefined)?.aantalAutos ?? '',
+          km: (sheet?.forfait as { km?: number } | undefined)?.km ?? '',
+        }}
         officialsHint={match.reeks ? vereisteOfficialsTekst(match.reeks as Reeks) : null}
       />
     </div>

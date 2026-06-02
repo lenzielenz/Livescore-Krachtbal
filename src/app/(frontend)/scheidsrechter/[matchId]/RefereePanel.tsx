@@ -4,42 +4,81 @@ import { useState } from 'react'
 
 import { KEURING_ITEMS, KEURING_OPTIONS } from '@/lib/keuring'
 import { MATCHSHEET_STATUS_OPTIONS, nextStatus, type MatchSheetStatus } from '@/lib/matchsheet-workflow'
+import {
+  OFFICIAL_FUNCTIE_KEYS,
+  OFFICIAL_LABELS,
+  requiredOfficials,
+  validateOfficials,
+} from '@/lib/officials-rules'
+import type { Reeks } from '@/lib/reeksen'
 
 const statusLabel = (s: string) =>
   MATCHSHEET_STATUS_OPTIONS.find((o) => o.value === s)?.label ?? s
 
-const OFFICIAL_FUNCTIES: { name: string; label: string }[] = [
-  { name: 'aantekenaar', label: 'Aantekenaar / scorer' },
-  { name: 'tijdopnemer', label: 'Tijdopnemer' },
-  { name: 'grensrechterThuis', label: 'Grensrechter (thuis)' },
-  { name: 'grensrechterUit', label: 'Grensrechter (uit)' },
-  { name: 'terreinafgevaardigde', label: 'Terreinafgevaardigde' },
-  { name: 'coachThuis', label: 'Coach (thuis)' },
-  { name: 'coachUit', label: 'Coach (uit)' },
-]
+export type VergoedingState = {
+  refereeKm: number | ''
+  vanToepassing: boolean
+  gemeldThuis: boolean
+  gemeldUit: boolean
+  aantalAutos: number | ''
+  km: number | ''
+}
 
 export function RefereePanel({
   matchId,
+  reeks,
+  assignedRefereeId,
   initialStatus,
   initialKeuring,
   initialOfficials,
+  initialVergoeding,
   officialsHint,
 }: {
   matchId: string
+  reeks: Reeks | null
+  assignedRefereeId: number | null
   initialStatus: string
   initialKeuring: Record<string, string>
   initialOfficials: Record<string, string>
+  initialVergoeding: VergoedingState
   officialsHint: string | null
 }) {
   const [status, setStatus] = useState<MatchSheetStatus>(initialStatus as MatchSheetStatus)
   const [keuring, setKeuring] = useState<Record<string, string>>(initialKeuring)
   const [officials, setOfficials] = useState<Record<string, string>>(initialOfficials)
+  const [verg, setVerg] = useState<VergoedingState>(initialVergoeding)
   const [msg, setMsg] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
+  const saveVergoeding = async () => {
+    const { ok, json } = await post({
+      action: 'vergoeding',
+      refereeKm: verg.refereeKm === '' ? 0 : Number(verg.refereeKm),
+      forfait: {
+        vanToepassing: verg.vanToepassing,
+        gemeldThuis: verg.gemeldThuis,
+        gemeldUit: verg.gemeldUit,
+        aantalAutos: verg.aantalAutos === '' ? 0 : Number(verg.aantalAutos),
+        km: verg.km === '' ? 0 : Number(verg.km),
+      },
+    })
+    setMsg(ok ? 'Vergoeding & forfait bewaard.' : json.error || 'Mislukt.')
+  }
+
+  const required = new Set(reeks ? requiredOfficials(reeks) : [])
+  const validation = reeks ? validateOfficials(reeks, officials) : { ok: true, errors: [] as string[] }
+
   const saveOfficials = async () => {
     const { ok, json } = await post({ action: 'officials', officials })
-    setMsg(ok ? 'Officials bewaard.' : json.error || 'Mislukt.')
+    if (!ok) {
+      setMsg(json.error || 'Mislukt.')
+      return
+    }
+    setMsg(
+      validation.ok
+        ? 'Officials bewaard — volledig en geldig.'
+        : 'Officials bewaard. Let op: nog niet volledig (zie aandachtspunten).',
+    )
   }
 
   const post = async (body: Record<string, unknown>) => {
@@ -78,18 +117,26 @@ export function RefereePanel({
         <h2>Officials</h2>
         {officialsHint && <p className="wb-sub">{officialsHint}</p>}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {OFFICIAL_FUNCTIES.map((f) => (
-            <label key={f.name} style={{ display: 'flex', flexDirection: 'column', gap: 2, fontSize: '0.8rem', color: 'var(--dim)' }}>
-              {f.label}
+          {OFFICIAL_FUNCTIE_KEYS.map((key) => (
+            <label key={key} style={{ display: 'flex', flexDirection: 'column', gap: 2, fontSize: '0.8rem', color: 'var(--dim)' }}>
+              {OFFICIAL_LABELS[key]}
+              {required.has(key) && <span style={{ color: '#e0533d' }}> *verplicht</span>}
               <input
                 className="wb-input"
                 placeholder="Volledige naam + voornaam"
-                value={officials[f.name] ?? ''}
-                onChange={(e) => setOfficials((o) => ({ ...o, [f.name]: e.target.value }))}
+                value={officials[key] ?? ''}
+                onChange={(e) => setOfficials((o) => ({ ...o, [key]: e.target.value }))}
               />
             </label>
           ))}
         </div>
+        {!validation.ok && (
+          <ul className="wb-sub" style={{ marginTop: 10, color: '#e0533d', paddingLeft: 18 }}>
+            {validation.errors.map((e, i) => (
+              <li key={i}>{e}</li>
+            ))}
+          </ul>
+        )}
         <button onClick={saveOfficials} disabled={busy} className="wb-btn wb-btn-primary" style={{ marginTop: 14 }}>
           Officials bewaren
         </button>
@@ -119,6 +166,57 @@ export function RefereePanel({
         <button onClick={saveKeuring} disabled={busy} className="wb-btn wb-btn-primary" style={{ marginTop: 14 }}>
           Keuring bewaren
         </button>
+      </section>
+
+      <section className="wb-card">
+        <h2>Vergoeding &amp; forfait</h2>
+        <label style={{ display: 'flex', flexDirection: 'column', gap: 2, fontSize: '0.8rem', color: 'var(--dim)' }}>
+          Afgelegde km (kwitantie, €0,4327/km)
+          <input
+            className="wb-input"
+            type="number"
+            min={0}
+            value={verg.refereeKm}
+            onChange={(e) => setVerg((v) => ({ ...v, refereeKm: e.target.value === '' ? '' : Number(e.target.value) }))}
+          />
+        </label>
+
+        <p className="wb-sub" style={{ marginTop: 14, marginBottom: 4 }}>Forfait (enkel bij FF):</p>
+        <label className="wb-check"><span>Onkostenblad van toepassing</span>
+          <input type="checkbox" checked={verg.vanToepassing} onChange={(e) => setVerg((v) => ({ ...v, vanToepassing: e.target.checked }))} />
+        </label>
+        <label className="wb-check"><span>Forfait gemeld — thuis</span>
+          <input type="checkbox" checked={verg.gemeldThuis} onChange={(e) => setVerg((v) => ({ ...v, gemeldThuis: e.target.checked }))} />
+        </label>
+        <label className="wb-check"><span>Forfait gemeld — bezoekers</span>
+          <input type="checkbox" checked={verg.gemeldUit} onChange={(e) => setVerg((v) => ({ ...v, gemeldUit: e.target.checked }))} />
+        </label>
+        <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: 2, fontSize: '0.8rem', color: 'var(--dim)', flex: 1 }}>
+            Auto&apos;s (max 2)
+            <input className="wb-input" type="number" min={0} max={2} value={verg.aantalAutos}
+              onChange={(e) => setVerg((v) => ({ ...v, aantalAutos: e.target.value === '' ? '' : Number(e.target.value) }))} />
+          </label>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: 2, fontSize: '0.8rem', color: 'var(--dim)', flex: 1 }}>
+            Verpl. km (€0,4259/km)
+            <input className="wb-input" type="number" min={0} value={verg.km}
+              onChange={(e) => setVerg((v) => ({ ...v, km: e.target.value === '' ? '' : Number(e.target.value) }))} />
+          </label>
+        </div>
+
+        <button onClick={saveVergoeding} disabled={busy} className="wb-btn wb-btn-primary" style={{ marginTop: 14 }}>
+          Bewaren
+        </button>
+        <div className="wb-btn-row" style={{ marginTop: 10 }}>
+          <a className="wb-btn" href={`/api/match/${matchId}/forfait`} target="_blank" rel="noreferrer" style={{ padding: '6px 12px', fontSize: '0.82rem' }}>
+            ⬇ Forfait-onkostenblad (PDF)
+          </a>
+          {assignedRefereeId != null && (
+            <a className="wb-btn" href={`/api/scheidsrechter/${assignedRefereeId}/kwitantie`} target="_blank" rel="noreferrer" style={{ padding: '6px 12px', fontSize: '0.82rem' }}>
+              ⬇ Kwitantie scheidsrechter (PDF)
+            </a>
+          )}
+        </div>
       </section>
 
       <section className="wb-card">
