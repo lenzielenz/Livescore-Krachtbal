@@ -46,11 +46,20 @@ export const Clubs: CollectionConfig = {
     },
     {
       name: 'logo',
-      label: 'Logo',
+      label: 'Logo (bestand)',
       type: 'upload',
       relationTo: 'media',
       admin: {
-        description: 'Clublogo — wordt professioneel weergegeven op de site.',
+        description: 'Clublogo uploaden. Of gebruik hieronder een logo-URL.',
+      },
+    },
+    {
+      name: 'logoUrl',
+      label: 'Logo via URL',
+      type: 'text',
+      admin: {
+        description: 'Alternatief: directe URL naar een logo-afbeelding (gebruikt als er geen bestand is geüpload).',
+        placeholder: 'https://…/logo.png',
       },
     },
     {

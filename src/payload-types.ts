@@ -155,9 +155,13 @@ export interface Club {
    */
   email?: string | null;
   /**
-   * Clublogo — wordt professioneel weergegeven op de site.
+   * Clublogo uploaden. Of gebruik hieronder een logo-URL.
    */
   logo?: (number | null) | Media;
+  /**
+   * Alternatief: directe URL naar een logo-afbeelding (gebruikt als er geen bestand is geüpload).
+   */
+  logoUrl?: string | null;
   /**
    * Naam stadion, adres, type terrein (bv. kunstgras).
    */
@@ -698,6 +702,7 @@ export interface ClubsSelect<T extends boolean = true> {
   name?: T;
   email?: T;
   logo?: T;
+  logoUrl?: T;
   accommodatie?: T;
   telefoon?: T;
   website?: T;

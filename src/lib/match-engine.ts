@@ -937,8 +937,11 @@ export async function buildTimeline(payload: Payload, matchId: number): Promise<
 function clubLogoUrl(team: unknown): string | null {
   const club = (team as { club?: unknown })?.club
   if (club && typeof club === 'object') {
+    // Geüpload logo heeft voorrang; anders een logo-URL (extern).
     const logo = (club as { logo?: unknown }).logo
     if (logo && typeof logo === 'object' && 'url' in logo && typeof logo.url === 'string') return logo.url
+    const url = (club as { logoUrl?: unknown }).logoUrl
+    if (typeof url === 'string' && url.trim()) return url.trim()
   }
   return null
 }

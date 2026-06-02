@@ -23,7 +23,7 @@ export default async function LivePage({ searchParams }: { searchParams: Promise
 
   const payload = await getPayloadClient()
   const { start, end } = dayBounds(selected)
-  const matches = await payload.find({
+  const dayRes = await payload.find({
     collection: 'matches',
     where: { date: { greater_than_equal: start, less_than: end } },
     sort: 'date',
@@ -31,8 +31,21 @@ export default async function LivePage({ searchParams }: { searchParams: Promise
     limit: 200,
   })
 
+  // Live wedstrijden altijd tonen wanneer je naar vandaag kijkt — ook al staat hun datum anders.
+  const liveRes =
+    selected === today
+      ? await payload.find({ collection: 'matches', where: { status: { equals: 'live' } }, depth: 0, limit: 50 })
+      : { docs: [] as (typeof dayRes)['docs'] }
+
+  const seen = new Set<number>()
+  const docs = [...liveRes.docs, ...dayRes.docs].filter((m) => {
+    if (seen.has(m.id)) return false
+    seen.add(m.id)
+    return true
+  })
+
   const days: DayMatch[] = []
-  for (const m of matches.docs) {
+  for (const m of docs) {
     try {
       const s = await buildMatchState(payload, m.id)
       days.push({
