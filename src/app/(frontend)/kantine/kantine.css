@@ -221,6 +221,9 @@
   width: 100%;
   height: 100%;
   object-fit: contain;
+  padding: 5px;
+  background: #fff;
+  border-radius: 50%;
 }
 .kt-logo-init {
   font-size: 0.8rem;

@@ -51,8 +51,9 @@ export function Scorekeeper({
   const [subOpen, setSubOpen] = useState(false)
   const [subSide, setSubSide] = useState<'home' | 'away'>('home')
   const [subOut, setSubOut] = useState<{ side: 'home' | 'away'; playerId: number } | null>(null)
-  // Kickoff: gekozen ploeg die opzet (vóór de match start).
-  const [startTeam, setStartTeam] = useState<number | null>(null)
+  // Kickoff: de timer is geblokkeerd tot er een ploeg gekozen is die opzet.
+  // Tik op de geblokkeerde timer → dit keuzescherm opent.
+  const [kickoffOpen, setKickoffOpen] = useState(false)
 
   // Basistijdstip voor de lopende klok: als de klok loopt, reken vanaf clockUpdatedAt (server),
   // zodat de verstreken tijd na een refresh behouden blijft — niet terug naar nul.
@@ -262,12 +263,26 @@ export function Scorekeeper({
     [pendingThrow, poss, tapMode, state.match.goalAreaDepth, submitThrow],
   )
 
-  const toggleClock = () =>
-    act({ action: 'clock', running: !state.match.clockRunning, seconds: Math.floor(clock) })
-
   const isScheduled = state.match.status === 'scheduled'
   const isLive = state.match.status === 'live'
   const atHalfTime = state.atHalfTime
+
+  // Tik op de timer: zolang de wedstrijd nog niet gestart is, is hij geblokkeerd en
+  // opent het keuzescherm "wie zet op?". Pas daarna kan de klok gestart/gepauzeerd worden.
+  const onClockClick = () => {
+    if (isScheduled) {
+      setKickoffOpen(true)
+      return
+    }
+    act({ action: 'clock', running: !state.match.clockRunning, seconds: Math.floor(clock) })
+  }
+
+  // Kies de ploeg die opzet → wedstrijd gaat live met een stilstaande klok,
+  // zodat de timer vrij is en gestart kan worden wanneer ze willen.
+  const chooseKickoff = async (teamId: number) => {
+    const res = await act({ action: 'start', startingTeamId: teamId })
+    if (res) setKickoffOpen(false)
+  }
 
   // De naam staat aan de EIGEN kant (het doel dat je verdedigt); je scoort aan de overkant.
   // home valt in helft 1 'up' (naar y=1 = onder) aan → verdedigt dus bovenaan.
@@ -456,6 +471,37 @@ export function Scorekeeper({
         )
       })()}
 
+      {/* Keuzescherm bij de aftrap: opent via de geblokkeerde timer. */}
+      {kickoffOpen && (
+        <div className="sk-modal-overlay">
+          <div className="sk-modal sk-kickoff-modal">
+            <h3>Wie mag starten?</h3>
+            <p>Kies de ploeg die opzet. Daarna is de timer vrij en kan je starten wanneer je wil.</p>
+            <div className="sk-kickoff-teams">
+              <button
+                type="button"
+                className="sk-kickoff-team home"
+                disabled={busy}
+                onClick={() => chooseKickoff(state.teams.home.id)}
+              >
+                {state.teams.home.name}
+              </button>
+              <button
+                type="button"
+                className="sk-kickoff-team away"
+                disabled={busy}
+                onClick={() => chooseKickoff(state.teams.away.id)}
+              >
+                {state.teams.away.name}
+              </button>
+            </div>
+            <div className="sk-modal-btns">
+              <button type="button" className="sk-btn" disabled={busy} onClick={() => setKickoffOpen(false)}>Annuleren</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="sk-topbar">
         <a className="sk-back" href="/scorekeeper" title="Terug naar overzicht — de wedstrijd blijft gewoon live">← Overzicht</a>
         <button type="button" className="sk-fs" onClick={toggleFullscreen} title="Volledig scherm aan/uit">
@@ -474,10 +520,16 @@ export function Scorekeeper({
               <span className={`sk-to-dot ${state.timeouts.home >= 2 ? 'used' : ''}`} />
             </button>
           </div>
-          <button type="button" className={`sk-clock ${state.match.clockRunning ? 'running' : ''}`} disabled={busy || !isLive} onClick={toggleClock} title="Tik om te starten/pauzeren">
+          <button
+            type="button"
+            className={`sk-clock ${state.match.clockRunning ? 'running' : ''} ${isScheduled ? 'locked' : ''}`}
+            disabled={busy || (!isLive && !isScheduled)}
+            onClick={onClockClick}
+            title={isScheduled ? 'Geblokkeerd — tik om te kiezen wie opzet' : 'Tik om te starten/pauzeren'}
+          >
             <span className="sk-half-chip">H{state.match.currentHalf}</span>
             {fmtClock(clock)}
-            <span className="sk-clock-ico">{state.match.clockRunning ? '⏸' : '▶'}</span>
+            <span className="sk-clock-ico">{isScheduled ? '🔒' : state.match.clockRunning ? '⏸' : '▶'}</span>
           </button>
           <div className="sk-team away">
             <span className="sk-tn">{state.teams.away.name}</span>
@@ -514,33 +566,13 @@ export function Scorekeeper({
       {isScheduled ? (
         <div className="sk-kickoff">
           <div className="sk-kickoff-card">
-            <div className="sk-kickoff-title">Wie zet op?</div>
-            <div className="sk-kickoff-sub">Kies de ploeg die aftrapt en druk op start.</div>
-            <div className="sk-kickoff-teams">
-              <button
-                type="button"
-                className={`sk-kickoff-team home ${startTeam === state.teams.home.id ? 'on' : ''}`}
-                disabled={busy}
-                onClick={() => setStartTeam(state.teams.home.id)}
-              >
-                {state.teams.home.name}
-              </button>
-              <button
-                type="button"
-                className={`sk-kickoff-team away ${startTeam === state.teams.away.id ? 'on' : ''}`}
-                disabled={busy}
-                onClick={() => setStartTeam(state.teams.away.id)}
-              >
-                {state.teams.away.name}
-              </button>
+            <div className="sk-kickoff-title">Timer geblokkeerd 🔒</div>
+            <div className="sk-kickoff-sub">
+              Tik op de timer bovenaan om te kiezen wie opzet. Daarna is de timer vrij en kan je
+              starten wanneer je wil.
             </div>
-            <button
-              type="button"
-              className="sk-kickoff-start"
-              disabled={busy || startTeam === null}
-              onClick={() => startTeam !== null && act({ action: 'start', startingTeamId: startTeam })}
-            >
-              {startTeam === null ? 'Kies eerst een ploeg' : '▶ Start wedstrijd'}
+            <button type="button" className="sk-kickoff-start" disabled={busy} onClick={() => setKickoffOpen(true)}>
+              Kies wie opzet
             </button>
           </div>
         </div>
