@@ -92,7 +92,10 @@
 /* ── Arena: vult alle resterende hoogte; veld zo groot mogelijk ── */
 /* Smalle zijbalken links/rechts van het veld: VW + wissel + grote richtingspijl + worp.
    Vullen de horizontale ruimte naast het (smalle, hoge) veld op gsm. */
-.sk-arena { flex: 1 1 auto; min-height: 0; display: flex; align-items: stretch; gap: 6px; }
+/* De zijbalken (VW/wissel/richtingspijl) moeten het veld OMARMEN — niet naar de schermrand
+   geduwd worden op brede schermen. Daarom centreren we de arena en laat de veld-wrap niet
+   onbeperkt groeien; zo staan de pijl en knoppen altijd vlak naast het veld. */
+.sk-arena { flex: 1 1 auto; min-height: 0; display: flex; align-items: stretch; justify-content: center; gap: 10px; }
 .sk-rail {
   flex: 0 0 auto; width: 60px; display: flex; flex-direction: column; align-items: center;
   gap: 8px; padding-top: 4px;
@@ -141,7 +144,7 @@
 .sk-col-home .sk-num.on { background: var(--home); color: #06140d; border-color: var(--home); }
 .sk-col-away .sk-num.on { background: var(--away); color: #06140d; border-color: var(--away); }
 
-.sk-field-wrap { flex: 1 1 auto; display: flex; justify-content: center; align-items: stretch; min-width: 0; min-height: 0; }
+.sk-field-wrap { flex: 0 1 auto; display: flex; justify-content: center; align-items: stretch; min-width: 0; min-height: 0; }
 .sk-field { height: 100%; width: auto; max-width: 100%; touch-action: manipulation; cursor: crosshair; border-radius: 8px; }
 
 /* ── Compacte bediening ── */
