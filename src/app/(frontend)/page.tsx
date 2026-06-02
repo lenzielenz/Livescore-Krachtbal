@@ -66,6 +66,8 @@ export default async function HomePage() {
           <Link href="/live">Live</Link>
           <Link href="/kantine">Kantine</Link>
           <Link href="/scorekeeper">Aantekenen</Link>
+          <Link href="/vergoedingen">Vergoedingen</Link>
+          <Link href="/bekerfinale">Bekerfinale</Link>
           <Link href="/admin">Beheer</Link>
         </nav>
       </header>

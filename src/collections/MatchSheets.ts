@@ -159,6 +159,64 @@ export const MatchSheets: CollectionConfig = {
       ],
     },
     {
+      // Scheidsrechtersvergoeding (kwitantie, formulier_2) + forfait-onkostenblad (formulier_3).
+      label: 'Scheidsrechter — vergoeding & forfait',
+      type: 'collapsible',
+      admin: { initCollapsed: true },
+      fields: [
+        {
+          name: 'refereeKm',
+          label: 'Afgelegde km (scheidsrechter)',
+          type: 'number',
+          min: 0,
+          admin: {
+            description: 'Aantal km voor deze wedstrijd — telt mee op de kwitantie (€0,4327/km).',
+          },
+        },
+        {
+          name: 'forfait',
+          label: false,
+          type: 'group',
+          fields: [
+            {
+              name: 'vanToepassing',
+              label: 'Forfait-onkostenblad van toepassing',
+              type: 'checkbox',
+              defaultValue: false,
+              admin: { description: 'Enkel invullen bij FF wanneer de scheidsrechter betaald/verplaatst is.' },
+            },
+            {
+              type: 'row',
+              fields: [
+                { name: 'gemeldThuis', label: 'Forfait gemeld — thuis', type: 'checkbox', defaultValue: false },
+                { name: 'gemeldUit', label: 'Forfait gemeld — bezoekers', type: 'checkbox', defaultValue: false },
+              ],
+            },
+            {
+              type: 'row',
+              fields: [
+                {
+                  name: 'aantalAutos',
+                  label: "Aantal auto's",
+                  type: 'number',
+                  min: 0,
+                  max: 2,
+                  admin: { description: 'Maximaal 2.' },
+                },
+                {
+                  name: 'km',
+                  label: 'Verplaatsing (km)',
+                  type: 'number',
+                  min: 0,
+                  admin: { description: 'Telt mee op het forfait-onkostenblad (€0,4259/km).' },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+    {
       label: 'Materiële keuring',
       type: 'collapsible',
       admin: { initCollapsed: true },

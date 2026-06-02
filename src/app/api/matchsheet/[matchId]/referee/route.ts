@@ -6,7 +6,14 @@ import { getPayloadClient } from '@/lib/payload-client'
 // Scheidsrechter-/federatie-acties op het blad: statusovergang en materiële keuring.
 export async function POST(req: Request, { params }: { params: Promise<{ matchId: string }> }) {
   const { matchId } = await params
-  let body: { action?: string; to?: string; keuring?: Record<string, string>; officials?: Record<string, string> }
+  let body: {
+    action?: string
+    to?: string
+    keuring?: Record<string, string>
+    officials?: Record<string, string>
+    refereeKm?: number
+    forfait?: Record<string, unknown>
+  }
   try {
     body = await req.json()
   } catch {
@@ -56,6 +63,17 @@ export async function POST(req: Request, { params }: { params: Promise<{ matchId
         overrideAccess: false,
       })
       return Response.json({ ok: true, officials: updated.officials })
+    }
+
+    if (body.action === 'vergoeding') {
+      const updated = await payload.update({
+        collection: 'matchsheets',
+        id: sheet.id,
+        data: { refereeKm: body.refereeKm ?? null, forfait: body.forfait ?? {} },
+        user,
+        overrideAccess: false,
+      })
+      return Response.json({ ok: true, refereeKm: updated.refereeKm, forfait: updated.forfait })
     }
 
     return Response.json({ error: `Onbekende actie: ${body.action}` }, { status: 400 })
