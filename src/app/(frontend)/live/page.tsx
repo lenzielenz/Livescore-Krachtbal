@@ -1,5 +1,4 @@
-import Link from 'next/link'
-
+import { SiteHeader } from '@/components/SiteHeader'
 import { buildMatchState } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
 import { REEKS_OPTIONS } from '@/lib/reeksen'
@@ -63,18 +62,11 @@ export default async function LivePage({ searchParams }: { searchParams: Promise
   }
 
   return (
-    <div className="lb-page">
-      <header className="lb-top">
-        <Link href="/" className="lb-home">
-          <span className="brand">Krachtbal</span> Live
-        </Link>
-        <span className="lb-toplinks">
-          <Link href="/tornooi" className="lb-toplink">Tornooi</Link>
-          <Link href="/kantine" className="lb-toplink">Kantine</Link>
-          <Link href="/scorekeeper" className="lb-toplink">Aantekenen</Link>
-        </span>
-      </header>
-      <LiveBoard date={selected} today={today} matches={days} />
-    </div>
+    <>
+      <SiteHeader active="live" />
+      <div className="lb-page">
+        <LiveBoard date={selected} today={today} matches={days} />
+      </div>
+    </>
   )
 }

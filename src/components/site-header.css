@@ -1,0 +1,98 @@
+/* Gedeelde site-navigatie (SiteHeader). Plakt bovenaan; donker, in de huisstijl. */
+.sh {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--line);
+}
+.sh-inner {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.sh-brand {
+  font-size: 1.15rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.sh-brand .brand {
+  color: var(--accent);
+}
+.sh-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.sh-link {
+  display: inline-block;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  color: var(--dim);
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+}
+.sh-link:hover {
+  color: var(--txt);
+  background: var(--panel);
+}
+.sh-link.on {
+  color: var(--accent);
+  border-color: var(--line);
+  background: var(--panel);
+}
+
+/* "Meer"-menu */
+.sh-more {
+  position: relative;
+}
+.sh-more-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 41;
+}
+.sh-more-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 42;
+  min-width: 190px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 6px;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+}
+.sh-more-item {
+  padding: 9px 12px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  color: var(--txt);
+}
+.sh-more-item:hover {
+  background: var(--bg);
+  color: var(--accent);
+}
+
+@media (max-width: 560px) {
+  .sh-brand {
+    font-size: 1rem;
+  }
+  .sh-link {
+    padding: 6px 8px;
+    font-size: 0.84rem;
+  }
+}

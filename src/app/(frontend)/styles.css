@@ -31,6 +31,200 @@ a {
   padding: 24px 16px 64px;
 }
 
+/* ── Hub-dashboard (startpagina) ── */
+.hub-hero {
+  margin: 8px 0 28px;
+}
+.hub-hero h1 {
+  font-size: 2rem;
+  margin: 0 0 6px;
+}
+.hub-hero .brand {
+  color: var(--accent);
+}
+.hub-hero p {
+  color: var(--dim);
+  margin: 0;
+  max-width: 60ch;
+}
+.hub-h {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--dim);
+  margin: 28px 0 4px;
+}
+.hub-sub {
+  color: var(--dim);
+  font-size: 0.88rem;
+  margin: 0 0 14px;
+}
+.hub-sub strong {
+  color: var(--txt);
+}
+/* De vier schermen, in logische volgorde (invoer → weergaven). */
+.hub-flow {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  align-items: stretch;
+}
+.hub-screen {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px 14px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+.hub-screen:hover {
+  border-color: var(--accent);
+}
+.hub-screen.input {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+.hub-step {
+  font-size: 0.64rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+  font-weight: 800;
+}
+.hub-ico {
+  font-size: 1.7rem;
+  line-height: 1;
+}
+.hub-screen h3 {
+  margin: 2px 0 0;
+  font-size: 1rem;
+}
+.hub-screen p {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--dim);
+  line-height: 1.35;
+}
+.hub-arrow {
+  display: none;
+}
+/* Twee kolommen onder de schermen. */
+.hub-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-top: 8px;
+}
+.hub-group {
+  min-width: 0;
+}
+.hub-card {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 14px 16px;
+  margin-bottom: 8px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.hub-card:hover {
+  border-color: var(--accent);
+}
+.hub-card strong {
+  font-size: 0.98rem;
+}
+.hub-card span {
+  font-size: 0.82rem;
+  color: var(--dim);
+}
+.hub-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.hub-pill {
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--txt);
+  font-size: 0.88rem;
+}
+.hub-pill:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+@media (max-width: 720px) {
+  .hub-flow {
+    grid-template-columns: 1fr 1fr;
+  }
+  .hub-cols {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
+
+/* Contextuele paginatitel onder de gedeelde header (vervangt de oude .site-header h1). */
+.page-title {
+  font-size: 1.5rem;
+  margin: 18px 0 4px;
+}
+.page-title .brand {
+  color: var(--accent);
+}
+.page-sub {
+  color: var(--dim);
+  font-size: 0.9rem;
+  margin: 0 0 18px;
+}
+
+/* Wedstrijddag-stappenbalk (Opstelling → Scheidsrechter → Aantekenen → Aftekenen). */
+.mdn {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 22px;
+}
+.mdn-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--dim);
+  font-size: 0.85rem;
+}
+.mdn-step:hover {
+  color: var(--txt);
+  border-color: var(--accent);
+}
+.mdn-step.on {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.mdn-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+.mdn-step.on .mdn-num {
+  background: var(--accent);
+  color: var(--bg);
+  border-color: var(--accent);
+}
+
 .site-header {
   display: flex;
   align-items: baseline;

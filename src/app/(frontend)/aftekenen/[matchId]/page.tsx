@@ -1,5 +1,7 @@
 import Link from 'next/link'
 
+import { MatchDayNav } from '@/components/MatchDayNav'
+import { SiteHeader } from '@/components/SiteHeader'
 import { buildMatchSheet } from '@/lib/match-engine'
 import { getOrCreateMatchSheet } from '@/lib/matchsheet-data'
 import { getPayloadClient } from '@/lib/payload-client'
@@ -14,10 +16,13 @@ export default async function AftekenenPage({ params }: { params: Promise<{ matc
   const match = await payload.findByID({ collection: 'matches', id: matchId, depth: 0 }).catch(() => null)
   if (!match) {
     return (
-      <div className="site">
-        <p className="empty">Wedstrijd niet gevonden.</p>
-        <Link href="/">← Terug</Link>
-      </div>
+      <>
+        <SiteHeader active="aantekenen" />
+        <div className="site">
+          <p className="empty">Wedstrijd niet gevonden.</p>
+          <Link href="/">← Terug</Link>
+        </div>
+      </>
     )
   }
 
@@ -25,16 +30,13 @@ export default async function AftekenenPage({ params }: { params: Promise<{ matc
   const built = await buildMatchSheet(payload, Number(matchId)).catch(() => null)
 
   return (
-    <div className="site">
-      <header className="site-header">
-        <h1>
-          Aftekenen <span className="brand">·</span> {String(match.title ?? '')}
-        </h1>
-        <nav className="site-nav">
-          <Link href={`/match/${matchId}/sheet`}>Wedstrijdblad</Link>
-          <Link href={`/scheidsrechter/${matchId}`}>Scheidsrechter</Link>
-        </nav>
-      </header>
+    <>
+      <SiteHeader active="aantekenen" />
+      <div className="site">
+      <h1 className="page-title">
+        Aftekenen <span className="brand">·</span> {String(match.title ?? '')}
+      </h1>
+      <MatchDayNav matchId={matchId} current="aftekenen" />
 
       {built && (
         <p className="wb-intro">
@@ -44,6 +46,7 @@ export default async function AftekenenPage({ params }: { params: Promise<{ matc
       )}
 
       <AftekenenPanel matchId={matchId} initialStatus={(sheet.status as string) ?? 'concept'} />
-    </div>
+      </div>
+    </>
   )
 }

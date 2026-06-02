@@ -1,5 +1,4 @@
-import Link from 'next/link'
-
+import { SiteHeader } from '@/components/SiteHeader'
 import { buildMatchState } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
 import { REEKS_OPTIONS } from '@/lib/reeksen'
@@ -52,14 +51,12 @@ export default async function KantinePage({ searchParams }: { searchParams: Prom
   }
 
   return (
-    <div className="kt-page">
-      <header className="kt-top">
-        <Link href="/" className="kt-home">
-          <span className="brand">Krachtbal</span> Live · Kantine
-        </Link>
-        <Link href="/live" className="kt-toplink">Volledig overzicht</Link>
-      </header>
-      <KantineBoard date={selected} today={today} matches={list} />
-    </div>
+    <>
+      <SiteHeader active="kantine" />
+      <div className="kt-page">
+        <h1 className="page-title"><span className="brand">Kantine</span></h1>
+        <KantineBoard date={selected} today={today} matches={list} />
+      </div>
+    </>
   )
 }

@@ -1,5 +1,7 @@
 import Link from 'next/link'
 
+import { MatchDayNav } from '@/components/MatchDayNav'
+import { SiteHeader } from '@/components/SiteHeader'
 import { getPayloadClient } from '@/lib/payload-client'
 import { OpstellingEditor } from './OpstellingEditor'
 import '../../wedstrijdblad.css'
@@ -15,10 +17,13 @@ export default async function OpstellingPage({ params }: { params: Promise<{ mat
 
   if (!match) {
     return (
-      <div className="site">
-        <p className="empty">Wedstrijd niet gevonden.</p>
-        <Link href="/">← Terug</Link>
-      </div>
+      <>
+        <SiteHeader active="aantekenen" />
+        <div className="site">
+          <p className="empty">Wedstrijd niet gevonden.</p>
+          <Link href="/">← Terug</Link>
+        </div>
+      </>
     )
   }
 
@@ -28,16 +33,13 @@ export default async function OpstellingPage({ params }: { params: Promise<{ mat
   const awayName = typeof away === 'object' ? (away?.name ?? 'Uit') : 'Uit'
 
   return (
-    <div className="site">
-      <header className="site-header">
-        <h1>
-          Opstelling <span className="brand">·</span> {String(match.title ?? '')}
-        </h1>
-        <nav className="site-nav">
-          <Link href="/">Live-site</Link>
-          <Link href="/admin">Beheer</Link>
-        </nav>
-      </header>
+    <>
+      <SiteHeader active="aantekenen" />
+      <div className="site">
+      <h1 className="page-title">
+        Opstelling <span className="brand">·</span> {String(match.title ?? '')}
+      </h1>
+      <MatchDayNav matchId={matchId} current="opstelling" />
       <p className="wb-intro">
         Vink je spelers aan. Het voorstel toont de laatst-gekende opstelling. Alleen leden met een geldige
         vergunning en de juiste leeftijdscategorie zijn vrij selecteerbaar — geblokkeerde leden kun je als
@@ -48,6 +50,7 @@ export default async function OpstellingPage({ params }: { params: Promise<{ mat
         <OpstellingEditor matchId={matchId} side="home" label={`Thuis — ${homeName}`} />
         <OpstellingEditor matchId={matchId} side="away" label={`Uit — ${awayName}`} />
       </div>
-    </div>
+      </div>
+    </>
   )
 }

@@ -1,5 +1,4 @@
-import Link from 'next/link'
-
+import { SiteHeader } from '@/components/SiteHeader'
 import { getPayloadClient } from '@/lib/payload-client'
 import { BulkPlayers } from './BulkPlayers'
 
@@ -15,18 +14,16 @@ export default async function BulkPlayersPage() {
   })
 
   return (
-    <div className="site">
-      <Link href="/admin" className="back-link">
-        ← Beheer
-      </Link>
-      <header className="site-header">
-        <h1>Spelers snel toevoegen</h1>
-      </header>
+    <>
+      <SiteHeader active="meer" />
+      <div className="site">
+      <h1 className="page-title">Spelers snel toevoegen</h1>
       {teams.length === 0 ? (
         <p className="empty">Maak eerst een ploeg aan via Beheer.</p>
       ) : (
         <BulkPlayers teams={teams} />
       )}
-    </div>
+      </div>
+    </>
   )
 }

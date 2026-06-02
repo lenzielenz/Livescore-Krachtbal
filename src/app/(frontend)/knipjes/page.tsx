@@ -1,5 +1,6 @@
 import Link from 'next/link'
 
+import { SiteHeader } from '@/components/SiteHeader'
 import { getPayloadClient } from '@/lib/payload-client'
 import { openKnipjes } from '@/lib/sanctions'
 import '../wedstrijdblad.css'
@@ -49,16 +50,12 @@ export default async function KnipjesDashboard() {
   const perTeam = byKey('team')
 
   return (
-    <div className="site">
-      <header className="site-header">
-        <h1>
-          Knipjes <span className="brand">·</span> overzicht
-        </h1>
-        <nav className="site-nav">
-          <Link href="/">Live-site</Link>
-          <Link href="/admin">Beheer</Link>
-        </nav>
-      </header>
+    <>
+      <SiteHeader active="meer" />
+      <div className="site">
+      <h1 className="page-title">
+        Knipjes <span className="brand">·</span> overzicht
+      </h1>
       <p className="wb-intro">
         Selectieblokkade vanaf <strong>{drempel}</strong> openstaande knipjes (configureerbaar via Federatie-instellingen).
       </p>
@@ -98,7 +95,8 @@ export default async function KnipjesDashboard() {
           </table>
         </div>
       )}
-    </div>
+      </div>
+    </>
   )
 }
 

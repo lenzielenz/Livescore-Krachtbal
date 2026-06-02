@@ -1,5 +1,6 @@
 import Link from 'next/link'
 
+import { SiteHeader } from '@/components/SiteHeader'
 import { buildMatchState } from '@/lib/match-engine'
 import { getMatchReadiness } from '@/lib/matchsheet-data'
 import { getPayloadClient } from '@/lib/payload-client'
@@ -55,19 +56,12 @@ export default async function ScorekeeperHub() {
   const scheduled = rows.filter((r) => r.status === 'scheduled')
 
   return (
-    <div className="site">
-      <header className="site-header">
-        <h1>
-          Aantekenen <span className="brand">·</span> Scorekeeper
-        </h1>
-        <nav className="site-nav">
-          <Link href="/">Live-site</Link>
-          <Link href="/tornooi">Tornooi</Link>
-          <Link href="/knipjes">Knipjes</Link>
-          <Link href="/reglement">Reglement</Link>
-          <Link href="/admin">Beheer</Link>
-        </nav>
-      </header>
+    <>
+      <SiteHeader active="aantekenen" />
+      <div className="site">
+      <h1 className="page-title">
+        Aantekenen <span className="brand">·</span> Scorekeeper
+      </h1>
       <p className="empty">Kies een wedstrijd om te starten of bij te werken. Open dit scherm op een tablet bij het veld.</p>
 
       <section>
@@ -83,7 +77,8 @@ export default async function ScorekeeperHub() {
 
       <Section title="Live — nu aan het aantekenen" rows={live} empty="Geen lopende wedstrijden." />
       <Section title="Gepland — klaar om te starten" rows={scheduled} empty="Geen geplande wedstrijden. Maak er een aan via Beheer." />
-    </div>
+      </div>
+    </>
   )
 }
 

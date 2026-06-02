@@ -1,5 +1,6 @@
 import Link from 'next/link'
 
+import { SiteHeader } from '@/components/SiteHeader'
 import { getPayloadClient } from '@/lib/payload-client'
 import { VERANTWOORDELIJKE_OPTIONS, type Verantwoordelijke } from '@/lib/bekerfinale-checklist'
 import '../wedstrijdblad.css'
@@ -18,13 +19,10 @@ export default async function BekerfinalePage() {
     .catch(() => ({ docs: [] as Record<string, unknown>[] }))
 
   return (
-    <div className="site">
-      <header className="site-header">
-        <h1>Bekerfinales — organisatie</h1>
-        <nav className="site-nav">
-          <Link href="/">← Terug</Link>
-        </nav>
-      </header>
+    <>
+      <SiteHeader active="meer" />
+      <div className="site">
+      <h1 className="page-title">Bekerfinales — organisatie</h1>
 
       {finals.docs.length === 0 ? (
         <p className="wb-intro">
@@ -63,6 +61,7 @@ export default async function BekerfinalePage() {
           )
         })
       )}
-    </div>
+      </div>
+    </>
   )
 }

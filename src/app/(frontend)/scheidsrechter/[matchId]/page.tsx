@@ -1,5 +1,7 @@
 import Link from 'next/link'
 
+import { MatchDayNav } from '@/components/MatchDayNav'
+import { SiteHeader } from '@/components/SiteHeader'
 import { countLineup, LINEUP_MIN } from '@/lib/match-readiness'
 import { getOrCreateMatchSheet } from '@/lib/matchsheet-data'
 import { isReleaseTime } from '@/lib/matchsheet-workflow'
@@ -25,10 +27,13 @@ export default async function ScheidsrechterPage({ params }: { params: Promise<{
   const match = await payload.findByID({ collection: 'matches', id: matchId, depth: 0 }).catch(() => null)
   if (!match) {
     return (
-      <div className="site">
-        <p className="empty">Wedstrijd niet gevonden.</p>
-        <Link href="/">← Terug</Link>
-      </div>
+      <>
+        <SiteHeader active="aantekenen" />
+        <div className="site">
+          <p className="empty">Wedstrijd niet gevonden.</p>
+          <Link href="/">← Terug</Link>
+        </div>
+      </>
     )
   }
 
@@ -48,16 +53,13 @@ export default async function ScheidsrechterPage({ params }: { params: Promise<{
   const releaseAt = new Date(new Date(match.date as string).getTime() - releaseMinutes * 60_000)
 
   return (
-    <div className="site">
-      <header className="site-header">
-        <h1>
-          Scheidsrechter <span className="brand">·</span> {String(match.title ?? '')}
-        </h1>
-        <nav className="site-nav">
-          <Link href={`/opstelling/${matchId}`}>Opstellingen</Link>
-          <Link href={`/scorekeeper/${matchId}`}>Aantekenen</Link>
-        </nav>
-      </header>
+    <>
+      <SiteHeader active="aantekenen" />
+      <div className="site">
+      <h1 className="page-title">
+        Scheidsrechter <span className="brand">·</span> {String(match.title ?? '')}
+      </h1>
+      <MatchDayNav matchId={matchId} current="scheidsrechter" />
 
       {!released ? (
         <p className="wb-intro">
@@ -99,7 +101,8 @@ export default async function ScheidsrechterPage({ params }: { params: Promise<{
         }}
         officialsHint={match.reeks ? vereisteOfficialsTekst(match.reeks as Reeks) : null}
       />
-    </div>
+      </div>
+    </>
   )
 }
 

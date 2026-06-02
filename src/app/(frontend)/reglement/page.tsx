@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 
+import { SiteHeader } from '@/components/SiteHeader'
 import { loadReglement } from '@/lib/reglement'
 import { ReglementNav } from './ReglementNav'
 
@@ -19,10 +20,13 @@ export default async function ReglementPage() {
 
   if (!reglement) {
     return (
-      <div className="site">
-        <p className="empty">Reglement niet beschikbaar.</p>
-        <Link href="/">← Terug</Link>
-      </div>
+      <>
+        <SiteHeader active="meer" />
+        <div className="site">
+          <p className="empty">Reglement niet beschikbaar.</p>
+          <Link href="/">← Terug</Link>
+        </div>
+      </>
     )
   }
 
@@ -36,19 +40,19 @@ export default async function ReglementPage() {
   }
 
   return (
-    <div className="site">
+    <>
+      <SiteHeader active="meer" />
+      <div className="site">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-      <header className="site-header">
-        <h1>
-          Reglement <span className="brand">·</span> Krachtbal
-        </h1>
-        <nav className="site-nav">
-          <Link href="/">Live-site</Link>
-          <a href="https://www.krachtbal.be/1_RCVK.pdf" target="_blank" rel="noopener noreferrer">
-            Officiële PDF
-          </a>
-        </nav>
-      </header>
+      <h1 className="page-title">
+        Reglement <span className="brand">·</span> Krachtbal
+      </h1>
+      <p className="page-sub">
+        Officiële bron:{' '}
+        <a href="https://www.krachtbal.be/1_RCVK.pdf" target="_blank" rel="noopener noreferrer">
+          Officiële PDF (RCVK)
+        </a>
+      </p>
       <p className="empty">
         Bron: <strong>{reglement.bron}</strong>. Dit is dezelfde tekst die de regellogica van het platform voedt.
       </p>
@@ -63,6 +67,7 @@ export default async function ReglementPage() {
           dangerouslySetInnerHTML={{ __html: reglement.html }}
         />
       </div>
-    </div>
+      </div>
+    </>
   )
 }

@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 
 import { MatchStats } from '@/components/MatchStats'
 import { Scoreboard } from '@/components/Scoreboard'
+import { SiteHeader } from '@/components/SiteHeader'
 import { buildMatchState, buildMatchStats, buildTimeline } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
 import { REEKS_OPTIONS } from '@/lib/reeksen'
@@ -42,7 +43,9 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   const referee = (sheetRes?.docs[0]?.assignedReferee as { name?: string } | null)?.name || null
 
   return (
-    <div className="site">
+    <>
+      <SiteHeader active="live" />
+      <div className="site">
       <Link href="/" className="back-link">
         ← Alle wedstrijden
       </Link>
@@ -77,6 +80,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
         </Link>
       </p>
       <MatchStats stats={stats.stats} shots={stats.shots} teams={{ home: state.teams.home.name, away: state.teams.away.name }} goalAreaDepth={state.match.goalAreaDepth} />
-    </div>
+      </div>
+    </>
   )
 }

@@ -1,5 +1,4 @@
-import Link from 'next/link'
-
+import { SiteHeader } from '@/components/SiteHeader'
 import { getPayloadClient } from '@/lib/payload-client'
 import { KwitantieForm } from './KwitantieForm'
 import '../wedstrijdblad.css'
@@ -15,18 +14,16 @@ export default async function VergoedingenPage() {
   const list = officials.docs.map((o) => ({ id: o.id as number, name: o.name as string }))
 
   return (
-    <div className="site">
-      <header className="site-header">
-        <h1>Scheidsrechtersvergoedingen</h1>
-        <nav className="site-nav">
-          <Link href="/">← Terug</Link>
-        </nav>
-      </header>
+    <>
+      <SiteHeader active="meer" />
+      <div className="site">
+      <h1 className="page-title">Scheidsrechtersvergoedingen</h1>
       <p className="wb-intro">
         De kwitantie bundelt alle wedstrijden van een scheidsrechter in de gekozen periode. Het
         forfait-onkostenblad (per wedstrijd) genereer je vanaf het scheidsrechterscherm van die wedstrijd.
       </p>
       <KwitantieForm officials={list} />
-    </div>
+      </div>
+    </>
   )
 }
