@@ -20,7 +20,7 @@
     radial-gradient(120% 70% at 50% -12%, color-mix(in srgb, var(--accent) 7%, transparent), transparent 55%),
     linear-gradient(180deg, #07170e, #050f0a);
   color: var(--txt);
-  font-family: 'Segoe UI', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  font-family: var(--font-body), 'Segoe UI', ui-sans-serif, system-ui, -apple-system, sans-serif;
   padding: 6px;
   box-sizing: border-box;
   overflow: hidden;
