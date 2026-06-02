@@ -358,7 +358,15 @@ export interface Matchsheet {
   match: number | Match;
   status: 'concept' | 'vrijgegeven' | 'wedstrijdklaar' | 'bezig' | 'af_te_tekenen' | 'ingediend';
   assignedReferee?: (number | null) | Official;
+  /**
+   * Mag de wedstrijd óók vrijgeven (met dezelfde vrijgavecode) als de toegewezen SR afwezig is.
+   */
+  backupReferee?: (number | null) | Official;
   assignedLinesman?: (number | null) | Official;
+  /**
+   * Geheime per-wedstrijd code. De federatie bezorgt die aan de (backup-)scheidsrechter; enkel met deze code kan de SR groen licht geven.
+   */
+  vrijgaveCode?: string | null;
   officials?: {
     aantekenaar?: string | null;
     tijdopnemer?: string | null;
@@ -985,7 +993,9 @@ export interface MatchsheetsSelect<T extends boolean = true> {
   match?: T;
   status?: T;
   assignedReferee?: T;
+  backupReferee?: T;
   assignedLinesman?: T;
+  vrijgaveCode?: T;
   officials?:
     | T
     | {

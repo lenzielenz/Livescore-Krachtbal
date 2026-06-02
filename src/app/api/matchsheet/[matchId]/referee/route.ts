@@ -15,6 +15,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ matchId
     forfait?: Record<string, unknown>
     akkoord?: boolean
     naam?: string
+    code?: string
   }
   try {
     body = await req.json()
@@ -69,6 +70,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ matchId
 
     if (body.action === 'wedstrijdstart') {
       // Akkoord van de scheidsrechter dat de wedstrijd mag starten (controle vooraf).
+      // Beveiliging: een scheidsrechter moet de geheime per-wedstrijd vrijgavecode invoeren
+      // (die de federatie aan de toegewezen of backup-SR bezorgt). Federatie/admin kan altijd.
+      if (!isFederationLevel(user)) {
+        const code = String(body.code ?? '').trim()
+        if (!sheet.vrijgaveCode || code !== String(sheet.vrijgaveCode)) {
+          return Response.json({ error: 'Verkeerde of ontbrekende vrijgavecode.' }, { status: 403 })
+        }
+      }
       const akkoord = Boolean(body.akkoord)
       const updated = await payload.update({
         collection: 'matchsheets',

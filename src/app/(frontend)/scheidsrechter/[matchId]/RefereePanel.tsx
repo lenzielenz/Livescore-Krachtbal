@@ -44,6 +44,9 @@ export function RefereePanel({
   initialStartNaam,
   lineupReady,
   officialsHint,
+  isFederation,
+  vrijgaveCode,
+  backupRefereeName,
 }: {
   matchId: string
   reeks: Reeks | null
@@ -56,6 +59,9 @@ export function RefereePanel({
   initialStartNaam: string
   lineupReady: { homeOk: boolean; awayOk: boolean }
   officialsHint: string | null
+  isFederation: boolean
+  vrijgaveCode: string | null
+  backupRefereeName: string | null
 }) {
   const [status, setStatus] = useState<MatchSheetStatus>(initialStatus as MatchSheetStatus)
   const [keuring, setKeuring] = useState<Record<string, string>>(initialKeuring)
@@ -63,11 +69,12 @@ export function RefereePanel({
   const [verg, setVerg] = useState<VergoedingState>(initialVergoeding)
   const [startAkkoord, setStartAkkoord] = useState<boolean>(initialStartAkkoord)
   const [startNaam, setStartNaam] = useState<string>(initialStartNaam)
+  const [code, setCode] = useState<string>('')
   const [msg, setMsg] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
   const saveStartAkkoord = async (akkoord: boolean) => {
-    const { ok, json } = await post({ action: 'wedstrijdstart', akkoord, naam: startNaam })
+    const { ok, json } = await post({ action: 'wedstrijdstart', akkoord, naam: startNaam, code })
     if (ok) {
       setStartAkkoord(akkoord)
       setMsg(akkoord ? 'Akkoord gegeven — de aantekenaar kan de wedstrijd openen.' : 'Akkoord ingetrokken.')
@@ -155,6 +162,9 @@ export function RefereePanel({
             Let op: {startBlokkers.join(' en ')} nog niet volledig (minstens 4 spelers per ploeg).
           </p>
         )}
+        {backupRefereeName && (
+          <p className="wb-sub">Backup-scheidsrechter: <strong style={{ color: 'var(--txt)' }}>{backupRefereeName}</strong> (mag óók vrijgeven met dezelfde code).</p>
+        )}
         <label style={{ display: 'flex', flexDirection: 'column', gap: 2, fontSize: '0.8rem', color: 'var(--dim)', marginBottom: 10 }}>
           Naam scheidsrechter
           <input
@@ -164,6 +174,26 @@ export function RefereePanel({
             onChange={(e) => setStartNaam(e.target.value)}
           />
         </label>
+
+        {/* Federatie ziet de code (om door te geven); de scheidsrechter voert ze in. */}
+        {isFederation ? (
+          <p className="wb-sub" style={{ marginBottom: 10 }}>
+            Vrijgavecode (geef door aan de SR):{' '}
+            <strong style={{ color: 'var(--accent)', fontSize: '1.05rem', letterSpacing: '0.12em' }}>{vrijgaveCode ?? '—'}</strong>
+          </p>
+        ) : !startAkkoord ? (
+          <label style={{ display: 'flex', flexDirection: 'column', gap: 2, fontSize: '0.8rem', color: 'var(--dim)', marginBottom: 10 }}>
+            Vrijgavecode (van de federatie)
+            <input
+              className="wb-input"
+              placeholder="6 cijfers"
+              inputMode="numeric"
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+            />
+          </label>
+        ) : null}
+
         {startAkkoord ? (
           <div className="wb-btn-row" style={{ marginTop: 0 }}>
             <span className="wb-status" style={{ color: '#2a9d6a' }}>✓ Akkoord gegeven</span>

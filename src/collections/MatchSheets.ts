@@ -23,6 +23,16 @@ const lineupFields: Field[] = [
   { name: 'ibGecontroleerd', label: 'IB gecontroleerd', type: 'checkbox', defaultValue: false },
 ]
 
+// Genereer bij aanmaak een geheime per-wedstrijd vrijgavecode (6 cijfers). De federatie
+// bezorgt die aan de toegewezen (of backup-)scheidsrechter; enkel met die code kan de SR
+// groen licht geven om de wedstrijd te starten (federatie/admin kan altijd zonder code).
+const ensureVrijgaveCode: CollectionBeforeChangeHook = ({ data, operation }) => {
+  if (operation === 'create' && !data.vrijgaveCode) {
+    data.vrijgaveCode = String(Math.floor(100000 + Math.random() * 900000))
+  }
+  return data
+}
+
 // Status-machine afdwingen + override-log bijhouden (WEDSTRIJDBLAD-PROMPT §workflow, Item 37).
 const enforceWorkflow: CollectionBeforeChangeHook = async ({ data, originalDoc, req, operation }) => {
   if (operation === 'create') return data
@@ -73,7 +83,7 @@ export const MatchSheets: CollectionConfig = {
     delete: ({ req }) => isFederationLevel(req.user),
   },
   hooks: {
-    beforeChange: [enforceWorkflow],
+    beforeChange: [ensureVrijgaveCode, enforceWorkflow],
   },
   fields: [
     {
@@ -119,12 +129,28 @@ export const MatchSheets: CollectionConfig = {
           relationTo: 'officials',
         },
         {
+          name: 'backupReferee',
+          label: 'Backup-scheidsrechter',
+          type: 'relationship',
+          relationTo: 'officials',
+          admin: { description: 'Mag de wedstrijd óók vrijgeven (met dezelfde vrijgavecode) als de toegewezen SR afwezig is.' },
+        },
+        {
           name: 'assignedLinesman',
           label: 'Toegewezen grensrechter',
           type: 'relationship',
           relationTo: 'officials',
         },
       ],
+    },
+    {
+      name: 'vrijgaveCode',
+      label: 'Vrijgavecode (geef door aan de scheidsrechter)',
+      type: 'text',
+      admin: {
+        description: 'Geheime per-wedstrijd code. De federatie bezorgt die aan de (backup-)scheidsrechter; enkel met deze code kan de SR groen licht geven.',
+        readOnly: true,
+      },
     },
     {
       // Officials-functies (volledige naam + voornaam). Welke verplicht zijn hangt af van het

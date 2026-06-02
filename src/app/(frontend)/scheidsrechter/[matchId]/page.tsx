@@ -1,7 +1,9 @@
+import { headers } from 'next/headers'
 import Link from 'next/link'
 
 import { MatchDayNav } from '@/components/MatchDayNav'
 import { SiteHeader } from '@/components/SiteHeader'
+import { isFederationLevel } from '@/lib/access'
 import { countLineup, LINEUP_MIN } from '@/lib/match-readiness'
 import { getOrCreateMatchSheet } from '@/lib/matchsheet-data'
 import { isReleaseTime } from '@/lib/matchsheet-workflow'
@@ -49,6 +51,12 @@ export default async function ScheidsrechterPage({ params }: { params: Promise<{
     limit: 1,
   })
   const sheet = sheetFull.docs[0]
+
+  // Rol bepalen: enkel de federatie ziet de vrijgavecode (om ze door te geven aan de SR).
+  const { user } = await payload.auth({ headers: await headers() }).catch(() => ({ user: null }))
+  const isFederation = isFederationLevel(user)
+  const backupRef = sheet?.backupReferee as { name?: string } | number | null | undefined
+  const backupRefereeName = backupRef && typeof backupRef === 'object' ? (backupRef.name ?? null) : null
 
   const releaseAt = new Date(new Date(match.date as string).getTime() - releaseMinutes * 60_000)
 
@@ -101,6 +109,9 @@ export default async function ScheidsrechterPage({ params }: { params: Promise<{
           awayOk: countLineup(sheet?.awayLineup) >= LINEUP_MIN,
         }}
         officialsHint={match.reeks ? vereisteOfficialsTekst(match.reeks as Reeks) : null}
+        isFederation={isFederation}
+        vrijgaveCode={isFederation ? ((sheet?.vrijgaveCode as string | undefined) ?? null) : null}
+        backupRefereeName={backupRefereeName}
       />
       </div>
     </>
