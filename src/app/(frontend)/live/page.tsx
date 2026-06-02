@@ -40,8 +40,8 @@ export default async function LivePage({ searchParams }: { searchParams: Promise
         reeks: reeksLabel(m.reeks),
         time: new Date(m.date).toLocaleTimeString('nl-BE', { hour: '2-digit', minute: '2-digit' }),
         status: s.match.status,
-        home: { name: s.teams.home.name, logoUrl: s.teams.home.logoUrl },
-        away: { name: s.teams.away.name, logoUrl: s.teams.away.logoUrl },
+        home: { name: s.teams.home.name, logoUrl: s.teams.home.logoUrl, logoFit: s.teams.home.logoFit },
+        away: { name: s.teams.away.name, logoUrl: s.teams.away.logoUrl, logoFit: s.teams.away.logoFit },
         score: s.score,
       })
     } catch {

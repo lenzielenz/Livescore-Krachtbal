@@ -4,13 +4,15 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
 
+import { type LogoFit, logoFitStyle } from '@/lib/logo-fit'
+
 export type DayMatch = {
   id: number
   reeks: string
   time: string
   status: string
-  home: { name: string; logoUrl: string | null }
-  away: { name: string; logoUrl: string | null }
+  home: { name: string; logoUrl: string | null; logoFit?: LogoFit | null }
+  away: { name: string; logoUrl: string | null; logoFit?: LogoFit | null }
   score: { home: number; away: number }
 }
 
@@ -22,7 +24,8 @@ function shiftDate(dateStr: string, days: number): string {
   return d.toISOString().slice(0, 10)
 }
 
-function Logo({ name, url }: { name: string; url: string | null }) {
+function Logo({ name, url, fit }: { name: string; url: string | null; fit?: LogoFit | null }) {
+  const [failed, setFailed] = useState(false)
   const initials = name
     .split(/\s+/)
     .map((w) => w[0])
@@ -31,8 +34,12 @@ function Logo({ name, url }: { name: string; url: string | null }) {
     .toUpperCase()
   return (
     <span className="lb-logo">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      {url ? <img src={url} alt="" /> : <span className="lb-logo-init">{initials}</span>}
+      {url && !failed ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={url} alt="" style={logoFitStyle(fit)} onError={() => setFailed(true)} />
+      ) : (
+        <span className="lb-logo-init">{initials}</span>
+      )}
     </span>
   )
 }
@@ -140,12 +147,12 @@ export function LiveBoard({ date, today, matches }: { date: string; today: strin
                     <Link href={`/match/${m.id}`} className="lb-match">
                       <span className="lb-status">{m.status === 'live' ? 'LIVE' : played ? m.time : m.time}</span>
                       <span className="lb-team">
-                        <Logo name={m.home.name} url={m.home.logoUrl} />
+                        <Logo name={m.home.name} url={m.home.logoUrl} fit={m.home.logoFit} />
                         <span className="lb-name">{m.home.name}</span>
                       </span>
                       <span className="lb-score">{played ? `${m.score.home} – ${m.score.away}` : 'vs'}</span>
                       <span className="lb-team">
-                        <Logo name={m.away.name} url={m.away.logoUrl} />
+                        <Logo name={m.away.name} url={m.away.logoUrl} fit={m.away.logoFit} />
                         <span className="lb-name">{m.away.name}</span>
                       </span>
                     </Link>

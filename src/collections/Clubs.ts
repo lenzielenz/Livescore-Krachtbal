@@ -53,6 +53,34 @@ export const Clubs: CollectionConfig = {
         description: 'Clublogo — wordt professioneel weergegeven op de site.',
       },
     },
+    // Weergave-instelling: zoom + positie binnen de ronde badge. De aangepaste
+    // Field-component toont een live ronde voorvertoning (exact zoals op de site)
+    // met een zoom-schuifregelaar en sleep-om-te-positioneren.
+    {
+      name: 'logoZoom',
+      label: 'Logo bijsnijden',
+      type: 'number',
+      defaultValue: 1,
+      min: 1,
+      max: 3,
+      admin: {
+        components: {
+          Field: '/components/admin/LogoFitEditor#LogoFitEditor',
+        },
+      },
+    },
+    {
+      name: 'logoOffsetX',
+      type: 'number',
+      defaultValue: 0,
+      admin: { hidden: true },
+    },
+    {
+      name: 'logoOffsetY',
+      type: 'number',
+      defaultValue: 0,
+      admin: { hidden: true },
+    },
     {
       type: 'collapsible',
       label: 'Accommodatie & contact',

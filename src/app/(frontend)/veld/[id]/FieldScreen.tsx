@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 
 import type { MatchState, TimelineItem } from '@/lib/match-engine'
+import { type LogoFit, logoFitStyle } from '@/lib/logo-fit'
 
 function fmtClock(total: number): string {
   const s = Math.max(0, Math.floor(total))
@@ -19,7 +20,18 @@ type Goal = {
   scorer: string | null
 }
 
-function Badge({ name, logoUrl, side }: { name: string; logoUrl: string | null; side: Side }) {
+function Badge({
+  name,
+  logoUrl,
+  logoFit,
+  side,
+}: {
+  name: string
+  logoUrl: string | null
+  logoFit?: LogoFit | null
+  side: Side
+}) {
+  const [failed, setFailed] = useState(false)
   const initials = name
     .split(/\s+/)
     .map((w) => w[0])
@@ -28,8 +40,12 @@ function Badge({ name, logoUrl, side }: { name: string; logoUrl: string | null; 
     .toUpperCase()
   return (
     <span className={`fs-logo fs-logo-${side}`}>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      {logoUrl ? <img src={logoUrl} alt="" /> : <span className="fs-logo-init">{initials}</span>}
+      {logoUrl && !failed ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={logoUrl} alt="" style={logoFitStyle(logoFit)} onError={() => setFailed(true)} />
+      ) : (
+        <span className="fs-logo-init">{initials}</span>
+      )}
     </span>
   )
 }
@@ -127,7 +143,7 @@ export function FieldScreen({
 
       <div className="fs-main">
         <div className="fs-team">
-          <Badge name={state.teams.home.name} logoUrl={state.teams.home.logoUrl} side="home" />
+          <Badge name={state.teams.home.name} logoUrl={state.teams.home.logoUrl} logoFit={state.teams.home.logoFit} side="home" />
           <div className="fs-name">{state.teams.home.name}</div>
         </div>
 
@@ -147,7 +163,7 @@ export function FieldScreen({
         </div>
 
         <div className="fs-team">
-          <Badge name={state.teams.away.name} logoUrl={state.teams.away.logoUrl} side="away" />
+          <Badge name={state.teams.away.name} logoUrl={state.teams.away.logoUrl} logoFit={state.teams.away.logoFit} side="away" />
           <div className="fs-name">{state.teams.away.name}</div>
         </div>
       </div>
