@@ -198,6 +198,20 @@ export const MatchSheets: CollectionConfig = {
           type: 'group',
           fields: [
             {
+              // Welke ploeg gaf forfait (FF) — de eigenlijke forfait-aanduiding van de wedstrijd.
+              // De niet-forfaiterende ploeg wint; bij dubbel forfait verliezen beide.
+              name: 'uitslag',
+              label: 'Forfait (FF) — welke ploeg?',
+              type: 'select',
+              options: [
+                { label: 'Geen forfait', value: 'geen' },
+                { label: 'Thuis gaf forfait', value: 'thuis' },
+                { label: 'Bezoekers gaven forfait', value: 'uit' },
+                { label: 'Dubbel forfait', value: 'dubbel' },
+              ],
+              defaultValue: 'geen',
+            },
+            {
               name: 'vanToepassing',
               label: 'Forfait-onkostenblad van toepassing',
               type: 'checkbox',

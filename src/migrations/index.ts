@@ -14,6 +14,7 @@ import * as migration_20260602_140000_unlock_demo from './20260602_140000_unlock
 import * as migration_20260602_194302_tornooi from './20260602_194302_tornooi';
 import * as migration_20260602_220000_kantine_selectie from './20260602_220000_kantine_selectie';
 import * as migration_20260602_230000_vaste_opstelling from './20260602_230000_vaste_opstelling';
+import * as migration_20260603_090000_forfait_uitslag from './20260603_090000_forfait_uitslag';
 
 export const migrations = [
   {
@@ -95,5 +96,10 @@ export const migrations = [
     up: migration_20260602_230000_vaste_opstelling.up,
     down: migration_20260602_230000_vaste_opstelling.down,
     name: '20260602_230000_vaste_opstelling',
+  },
+  {
+    up: migration_20260603_090000_forfait_uitslag.up,
+    down: migration_20260603_090000_forfait_uitslag.down,
+    name: '20260603_090000_forfait_uitslag',
   },
 ];

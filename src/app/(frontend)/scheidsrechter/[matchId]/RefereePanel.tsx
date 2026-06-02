@@ -17,12 +17,20 @@ const statusLabel = (s: string) =>
 
 export type VergoedingState = {
   refereeKm: number | ''
+  uitslag: string
   vanToepassing: boolean
   gemeldThuis: boolean
   gemeldUit: boolean
   aantalAutos: number | ''
   km: number | ''
 }
+
+const FORFAIT_OPTIES: { value: string; label: string }[] = [
+  { value: 'geen', label: 'Geen' },
+  { value: 'thuis', label: 'Thuis FF' },
+  { value: 'uit', label: 'Bezoekers FF' },
+  { value: 'dubbel', label: 'Dubbel FF' },
+]
 
 export function RefereePanel({
   matchId,
@@ -73,6 +81,7 @@ export function RefereePanel({
       action: 'vergoeding',
       refereeKm: verg.refereeKm === '' ? 0 : Number(verg.refereeKm),
       forfait: {
+        uitslag: verg.uitslag || 'geen',
         vanToepassing: verg.vanToepassing,
         gemeldThuis: verg.gemeldThuis,
         gemeldUit: verg.gemeldUit,
@@ -237,7 +246,22 @@ export function RefereePanel({
           />
         </label>
 
-        <p className="wb-sub" style={{ marginTop: 14, marginBottom: 4 }}>Forfait (enkel bij FF):</p>
+        <p className="wb-sub" style={{ marginTop: 14, marginBottom: 4 }}>Forfait (FF) — welke ploeg gaf forfait?</p>
+        <div className="wb-btn-row" style={{ marginTop: 0, marginBottom: 6 }}>
+          {FORFAIT_OPTIES.map((o) => (
+            <button
+              key={o.value}
+              type="button"
+              className={`wb-btn ${(verg.uitslag || 'geen') === o.value ? 'wb-btn-primary' : ''}`}
+              style={{ padding: '6px 12px', fontSize: '0.82rem' }}
+              onClick={() => setVerg((v) => ({ ...v, uitslag: o.value }))}
+            >
+              {o.label}
+            </button>
+          ))}
+        </div>
+
+        <p className="wb-sub" style={{ marginTop: 12, marginBottom: 4 }}>Forfait-onkostenblad (enkel bij FF):</p>
         <label className="wb-check"><span>Onkostenblad van toepassing</span>
           <input type="checkbox" checked={verg.vanToepassing} onChange={(e) => setVerg((v) => ({ ...v, vanToepassing: e.target.checked }))} />
         </label>
@@ -272,6 +296,9 @@ export function RefereePanel({
               ⬇ Kwitantie scheidsrechter (PDF)
             </a>
           )}
+          <a className="wb-btn" href="/admin/collections/accidents/create" target="_blank" rel="noreferrer" style={{ padding: '6px 12px', fontSize: '0.82rem' }}>
+            🚑 Kwetsuur / ongeval registreren
+          </a>
         </div>
       </section>
 

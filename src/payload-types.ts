@@ -405,6 +405,7 @@ export interface Matchsheet {
    */
   refereeKm?: number | null;
   forfait?: {
+    uitslag?: ('geen' | 'thuis' | 'uit' | 'dubbel') | null;
     /**
      * Enkel invullen bij FF wanneer de scheidsrechter betaald/verplaatst is.
      */
@@ -1025,6 +1026,7 @@ export interface MatchsheetsSelect<T extends boolean = true> {
   forfait?:
     | T
     | {
+        uitslag?: T;
         vanToepassing?: T;
         gemeldThuis?: T;
         gemeldUit?: T;

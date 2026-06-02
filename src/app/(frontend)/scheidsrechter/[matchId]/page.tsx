@@ -87,6 +87,7 @@ export default async function ScheidsrechterPage({ params }: { params: Promise<{
         initialOfficials={(sheet?.officials as Record<string, string>) ?? {}}
         initialVergoeding={{
           refereeKm: (sheet?.refereeKm as number) ?? '',
+          uitslag: (sheet?.forfait as { uitslag?: string } | undefined)?.uitslag ?? 'geen',
           vanToepassing: Boolean((sheet?.forfait as { vanToepassing?: boolean } | undefined)?.vanToepassing),
           gemeldThuis: Boolean((sheet?.forfait as { gemeldThuis?: boolean } | undefined)?.gemeldThuis),
           gemeldUit: Boolean((sheet?.forfait as { gemeldUit?: boolean } | undefined)?.gemeldUit),
