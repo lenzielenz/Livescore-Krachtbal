@@ -1,7 +1,7 @@
 /* Veldscherm: fullscreen stadionbord voor het grote scherm aan het veld.
    Grote cijfers, leesbaar van ver, met een doelpunt-animatie over het hele scherm. */
 .fs {
-  --home: #06d6a0;
+  --home: #0fe0a6;
   --away: #4cc9f0;
   --theme-1: var(--home);
   --theme-2: var(--away);

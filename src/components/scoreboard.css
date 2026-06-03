@@ -1,11 +1,11 @@
 .sb {
   --bg: #06140d;
-  --panel: #0e261a;
-  --line: #1c3a2a;
-  --txt: #e8f5ee;
-  --dim: #8fb3a1;
-  --accent: #ffd166;
-  --home: #06d6a0;
+  --panel: #0f2d1e;
+  --line: #224a33;
+  --txt: #ecf7f0;
+  --dim: #93b9a6;
+  --accent: #ffd873;
+  --home: #0fe0a6;
   --away: #4cc9f0;
   position: relative;
   overflow: hidden;

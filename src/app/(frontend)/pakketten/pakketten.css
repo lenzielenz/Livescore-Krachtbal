@@ -38,15 +38,15 @@
   flex-direction: column;
 }
 .pk-card-hl {
-  border-color: var(--accent, #06d6a0);
-  box-shadow: 0 0 0 1px var(--accent, #06d6a0);
+  border-color: var(--accent, #0fe0a6);
+  box-shadow: 0 0 0 1px var(--accent, #0fe0a6);
 }
 .pk-badge {
   position: absolute;
   top: -11px;
   left: 50%;
   transform: translateX(-50%);
-  background: var(--accent, #06d6a0);
+  background: var(--accent, #0fe0a6);
   color: #04231b;
   font-size: 12px;
   font-weight: 700;
@@ -98,7 +98,7 @@
   content: '✓';
   position: absolute;
   left: 0;
-  color: var(--accent, #06d6a0);
+  color: var(--accent, #0fe0a6);
   font-weight: 700;
 }
 
@@ -125,5 +125,5 @@
 .pk-table thead th {
   font-weight: 700;
 }
-.pk-table td.yes { color: var(--accent, #06d6a0); font-weight: 700; }
+.pk-table td.yes { color: var(--accent, #0fe0a6); font-weight: 700; }
 .pk-table td.no { color: var(--muted, #9aa); }

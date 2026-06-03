@@ -78,7 +78,7 @@
   padding-top: 12px;
 }
 .lb-reeks.fav.on {
-  color: #ffd166;
+  color: #ffd873;
   border-color: transparent;
   border-top-color: var(--line);
 }
@@ -161,7 +161,7 @@
   cursor: pointer;
 }
 .lb-star.on {
-  color: #ffd166;
+  color: #ffd873;
 }
 .lb-match {
   flex: 1;
