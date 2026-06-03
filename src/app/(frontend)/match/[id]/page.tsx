@@ -4,8 +4,10 @@ import { notFound } from 'next/navigation'
 import { MatchStats } from '@/components/MatchStats'
 import { Scoreboard } from '@/components/Scoreboard'
 import { SiteHeader } from '@/components/SiteHeader'
+import { isFederationLevel } from '@/lib/access'
+import { getAuthUser } from '@/lib/auth-user'
 import { buildMatchState, buildMatchStats, buildTimeline } from '@/lib/match-engine'
-import { resolveMatchPackage } from '@/lib/packages'
+import { effectiveMatchPackage, readPackagePreview } from '@/lib/package-preview'
 import { getPayloadClient } from '@/lib/payload-client'
 import { REEKS_OPTIONS } from '@/lib/reeksen'
 
@@ -35,7 +37,9 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   const homeClub = (matchDoc?.homeTeam as { club?: { accommodatie?: string } } | null)?.club
   const accommodatie = homeClub?.accommodatie?.trim() || null
   // Pakket van de thuisclub bepaalt welke statistieken publiek zichtbaar zijn.
-  const pkg = resolveMatchPackage(matchDoc)
+  // Een ingelogde admin kan een ander pakketniveau previewen (eigen weergave).
+  const previewer = await getAuthUser()
+  const pkg = effectiveMatchPackage(matchDoc, await readPackagePreview(isFederationLevel(previewer)))
   const reeks = reeksLabel(matchDoc?.reeks)
   const datum = matchDoc?.date
     ? new Date(matchDoc.date as string).toLocaleString('nl-BE', { dateStyle: 'long', timeStyle: 'short' })

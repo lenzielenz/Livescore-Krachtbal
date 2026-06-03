@@ -104,7 +104,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         return Response.json(await startSimpleMatch(payload, matchId))
       case 'simplegoal':
         return Response.json(
-          await recordSimpleGoal(payload, matchId, body.side === 'away' ? 'away' : 'home', body.points === 2 ? 2 : 1),
+          await recordSimpleGoal(payload, matchId, body.side === 'away' ? 'away' : 'home', body.points === 2 ? 2 : 1, {
+            id: Number(body.playerId),
+            number: body.shirtNumber !== undefined ? Number(body.shirtNumber) : undefined,
+            name: typeof body.playerName === 'string' ? body.playerName : undefined,
+          }),
         )
       case 'simpleundo':
         return Response.json(await undoSimpleGoal(payload, matchId))

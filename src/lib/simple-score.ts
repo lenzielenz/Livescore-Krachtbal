@@ -19,6 +19,11 @@ export interface SimpleGoal {
   clock: number
   /** Unix-tijdstempel (ms) — voor undo/volgorde. */
   ts: number
+  /** Speler die scoorde — verplicht in de snel-scoren-modus (niet bij tornooien). */
+  scorerId?: number
+  /** Rugnummer + naam van de scorer, bewaard voor weergave op blad/tijdlijn. */
+  scorerNumber?: number
+  scorerName?: string
 }
 
 export interface SimpleScoreState {
@@ -45,6 +50,11 @@ export function readSimpleScore(match: { simpleScore?: unknown } | null | undefi
           half: Number(g.half) || 1,
           clock: Number(g.clock) || 0,
           ts: Number(g.ts) || 0,
+          ...(Number.isFinite(Number(g.scorerId)) && Number(g.scorerId) > 0
+            ? { scorerId: Number(g.scorerId) }
+            : {}),
+          ...(Number.isFinite(Number(g.scorerNumber)) ? { scorerNumber: Number(g.scorerNumber) } : {}),
+          ...(typeof g.scorerName === 'string' && g.scorerName ? { scorerName: g.scorerName } : {}),
         }))
     : []
   const crosses = {

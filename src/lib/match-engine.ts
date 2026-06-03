@@ -750,8 +750,8 @@ export async function buildMatchSheet(payload: Payload, matchId: number): Promis
       half: g.half,
       gameClock: g.clock,
       side: g.side,
-      shirtNumber: 0,
-      playerName: '—',
+      shirtNumber: g.scorerNumber ?? 0,
+      playerName: g.scorerName ?? '—',
       type: g.points === 2 ? 'rug' : 'nek',
       points: g.points,
     })
@@ -947,7 +947,9 @@ export async function buildTimeline(payload: Payload, matchId: number): Promise<
       half: g.half,
       gameClock: g.clock,
       side: g.side,
-      label: `Doelpunt +${g.points}`,
+      label: g.scorerName
+        ? `Doelpunt +${g.points} #${g.scorerNumber ?? '?'} ${g.scorerName}`.trim()
+        : `Doelpunt +${g.points}`,
       _t: new Date(g.ts).toISOString(),
     })
   }

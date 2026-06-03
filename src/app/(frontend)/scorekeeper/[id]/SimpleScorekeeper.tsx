@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
+import { TeamLogo } from '@/components/TeamLogo'
 import { categoryConfig } from '@/lib/categories'
 import type { MatchState } from '@/lib/match-engine'
 import type { SimpleSide } from '@/lib/simple-score'
@@ -13,17 +14,34 @@ function fmtClock(total: number): string {
   return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
 }
 
+// Voornaam = eerste woord van de naam (compact tonen naast het rugnummer).
+function firstName(name: string): string {
+  return name.trim().split(/\s+/)[0] ?? ''
+}
+
+interface RosterPlayer {
+  id: number
+  name: string
+  shirtNumber: number
+  teamId: number
+}
+
 // Simpele aantekenmodus (Starter-pakket): snel scoren met +1 (nekworp) / +2
 // (rugworp), zoals aan de tornooitafel. Geen veldschema, geen worp-per-worp data.
+// Anders dan bij tornooien moet hier wél de scorende speler gekozen worden.
 export function SimpleScorekeeper({
   matchId,
   initialState,
+  roster,
 }: {
   matchId: number
   initialState: MatchState
+  roster: RosterPlayer[]
 }) {
   const [state, setState] = useState<MatchState>(initialState)
   const [error, setError] = useState<string | null>(null)
+  // Openstaand doelpunt dat wacht op een spelerkeuze (snel-scoren vereist een scorer).
+  const [pending, setPending] = useState<{ side: SimpleSide; points: 1 | 2 } | null>(null)
   const busy = useRef(false)
 
   const half = state.match.currentHalf
@@ -117,10 +135,10 @@ export function SimpleScorekeeper({
               <div className="ssk-score">{state.score[side]}</div>
               {!finished && (
                 <div className="ssk-goalbtns">
-                  <button type="button" className="ssk-goal nek" onClick={() => act({ action: 'simplegoal', side, points: 1 })}>
+                  <button type="button" className="ssk-goal nek" onClick={() => setPending({ side, points: 1 })}>
                     +1 <small>nekworp</small>
                   </button>
-                  <button type="button" className="ssk-goal rug" onClick={() => act({ action: 'simplegoal', side, points: 2 })}>
+                  <button type="button" className="ssk-goal rug" onClick={() => setPending({ side, points: 2 })}>
                     +2 <small>rugworp</small>
                   </button>
                 </div>
@@ -175,6 +193,64 @@ export function SimpleScorekeeper({
       )}
 
       {error && <p className="ssk-error">{error}</p>}
+
+      {pending && (() => {
+        const team = state.teams[pending.side]
+        const teamPlayers = roster
+          .filter((p) => p.teamId === team.id)
+          .sort((a, b) => a.shirtNumber - b.shirtNumber)
+        return (
+          <div className="ssk-modal-overlay" onClick={() => setPending(null)}>
+            <div className="ssk-modal" onClick={(e) => e.stopPropagation()}>
+              <h3>
+                Wie scoorde? <span className="ssk-modal-pts">+{pending.points} {pending.points === 2 ? 'rugworp' : 'nekworp'}</span>
+              </h3>
+              <div className="ssk-modal-team">
+                <TeamLogo
+                  name={team.name}
+                  logoUrl={team.logoUrl}
+                  logoFit={team.logoFit}
+                  side={pending.side}
+                  size="sm"
+                  ringColor={team.colors?.primary ?? null}
+                />
+                <span>{team.name}</span>
+              </div>
+              {teamPlayers.length === 0 ? (
+                <p className="ssk-dim">Geen spelers bekend voor deze ploeg — voeg ze toe in de opstelling.</p>
+              ) : (
+                <div className="ssk-pick-grid">
+                  {teamPlayers.map((p) => (
+                    <button
+                      type="button"
+                      key={p.id}
+                      className="ssk-pick-player"
+                      onClick={() => {
+                        const { side, points } = pending
+                        setPending(null)
+                        void act({
+                          action: 'simplegoal',
+                          side,
+                          points,
+                          playerId: p.id,
+                          shirtNumber: p.shirtNumber,
+                          playerName: p.name,
+                        })
+                      }}
+                    >
+                      <span className="ssk-pick-num">{p.shirtNumber}</span>
+                      <span className="ssk-pick-naam">{firstName(p.name)}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div className="ssk-modal-btns">
+                <button type="button" className="ssk-btn" onClick={() => setPending(null)}>Annuleren</button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
     </div>
   )
 }

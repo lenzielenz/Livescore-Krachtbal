@@ -49,14 +49,47 @@ export async function startSimpleMatch(payload: Payload, matchId: number) {
   return buildMatchState(payload, matchId)
 }
 
-/** Registreer een doelpunt (+1 nekworp / +2 rugworp). */
-export async function recordSimpleGoal(payload: Payload, matchId: number, side: SimpleSide, points: 1 | 2) {
+/** De speler die scoorde — verplicht in de snel-scoren-modus. */
+export interface SimpleScorer {
+  id: number
+  number?: number
+  name?: string
+}
+
+/** Registreer een doelpunt (+1 nekworp / +2 rugworp), toegeschreven aan een speler. */
+export async function recordSimpleGoal(
+  payload: Payload,
+  matchId: number,
+  side: SimpleSide,
+  points: 1 | 2,
+  scorer: SimpleScorer,
+) {
+  if (!scorer || !Number.isFinite(scorer.id) || scorer.id <= 0) {
+    throw new Error('Selecteer eerst de speler die scoorde.')
+  }
   const { match, score, half, clock } = await loadSimpleMatch(payload, matchId)
+  // Bewaak dat de gekozen speler tot de scorende ploeg behoort.
+  const teamId = side === 'home' ? relId(match.homeTeam) : relId(match.awayTeam)
+  const player = await payload
+    .findByID({ collection: 'players', id: scorer.id, depth: 0 })
+    .catch(() => null)
+  if (!player || relId(player.team) !== teamId) {
+    throw new Error('Die speler hoort niet bij de scorende ploeg.')
+  }
   // Eerste doelpunt zet een nog niet gestarte wedstrijd meteen op 'live'.
   if (match.status !== 'live') {
     await payload.update({ collection: 'matches', id: matchId, data: { status: 'live' }, overrideAccess: true })
   }
-  score.goals.push({ side, points, half, clock, ts: Date.now() })
+  score.goals.push({
+    side,
+    points,
+    half,
+    clock,
+    ts: Date.now(),
+    scorerId: player.id,
+    scorerNumber: typeof player.shirtNumber === 'number' ? player.shirtNumber : scorer.number,
+    scorerName: typeof player.name === 'string' ? player.name : scorer.name,
+  })
   return writeSimpleScore(payload, matchId, score)
 }
 
