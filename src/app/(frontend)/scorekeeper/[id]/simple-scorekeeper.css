@@ -175,6 +175,67 @@
   font-size: 14px;
 }
 
+/* Spelerkeuze bij een doelpunt (snel-scoren vereist een scorer). */
+.ssk-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 50;
+}
+.ssk-modal {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 20px;
+  width: 100%;
+  max-width: 480px;
+}
+.ssk-modal h3 {
+  margin: 0 0 4px;
+  font-size: 18px;
+}
+.ssk-modal-pts {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--accent, #06d6a0);
+}
+.ssk-modal-team {
+  margin: 0 0 14px;
+  font-weight: 700;
+  opacity: 0.85;
+}
+.ssk-dim { opacity: 0.7; font-size: 14px; }
+.ssk-pick-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(82px, 1fr));
+  gap: 8px;
+}
+.ssk-pick-player {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: inherit;
+  border-radius: 12px;
+  padding: 10px 6px;
+  cursor: pointer;
+}
+.ssk-pick-player:active { transform: translateY(1px); }
+.ssk-pick-num { font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.ssk-pick-naam { font-size: 12px; opacity: 0.85; }
+.ssk-modal-btns {
+  margin-top: 16px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 @media (max-width: 480px) {
   .ssk-goal { font-size: 18px; padding: 12px 4px; }
   .ssk-score { font-size: 46px; }

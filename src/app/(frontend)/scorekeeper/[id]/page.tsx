@@ -26,26 +26,16 @@ export default async function ScorekeeperPage({ params }: { params: Promise<{ id
     notFound()
   }
 
-  // Pakket van de thuisclub bepaalt het aantekenmodel. Starter → snel scoren
-  // (+1/+2 zonder veldschema); Team/Elite → het volledige veldscherm.
-  // De demo toont altijd het volledige veldscherm (met tutorial), ongeacht pakket.
   const matchDoc = await payload.findByID({ collection: 'matches', id: matchId, depth: 2 }).catch(() => null)
   const pkg = resolveMatchPackage(matchDoc)
-  if (pkg.scoringMode === 'simple' && !matchDoc?.isDemo) {
-    return <SimpleScorekeeper matchId={matchId} initialState={state} />
-  }
 
-  const [players, readiness, auth] = await Promise.all([
-    payload.find({
-      collection: 'players',
-      where: { team: { in: [state.teams.home.id, state.teams.away.id] } },
-      sort: 'shirtNumber',
-      depth: 0,
-      limit: 200,
-    }),
-    getMatchReadiness(payload, matchId),
-    payload.auth({ headers: await headers() }).catch(() => ({ user: null })),
-  ])
+  const players = await payload.find({
+    collection: 'players',
+    where: { team: { in: [state.teams.home.id, state.teams.away.id] } },
+    sort: 'shirtNumber',
+    depth: 0,
+    limit: 200,
+  })
 
   const roster = players.docs.map((p) => ({
     id: p.id,
@@ -53,6 +43,18 @@ export default async function ScorekeeperPage({ params }: { params: Promise<{ id
     shirtNumber: p.shirtNumber,
     teamId: typeof p.team === 'object' ? p.team.id : p.team,
   }))
+
+  // Pakket van de thuisclub bepaalt het aantekenmodel. Starter → snel scoren
+  // (+1/+2 zonder veldschema); Team/Elite → het volledige veldscherm.
+  // De demo toont altijd het volledige veldscherm (met tutorial), ongeacht pakket.
+  if (pkg.scoringMode === 'simple' && !matchDoc?.isDemo) {
+    return <SimpleScorekeeper matchId={matchId} initialState={state} roster={roster} />
+  }
+
+  const [readiness, auth] = await Promise.all([
+    getMatchReadiness(payload, matchId),
+    payload.auth({ headers: await headers() }).catch(() => ({ user: null })),
+  ])
 
   return (
     <Scorekeeper
