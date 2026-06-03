@@ -15,6 +15,9 @@ type Row = {
   away: string
   score: { home: number; away: number }
   ready: boolean
+  // Status van de twee start-voorwaarden, zodat de hub toont wat er nog moet gebeuren.
+  opstellingOk: boolean
+  refereeOk: boolean
 }
 
 export default async function ScorekeeperHub() {
@@ -33,7 +36,8 @@ export default async function ScorekeeperHub() {
     if ((m as { isDemo?: boolean }).isDemo) continue
     try {
       const s = await buildMatchState(payload, m.id)
-      const ready = s.match.status === 'live' ? true : (await getMatchReadiness(payload, m.id)).ready
+      const isLive = s.match.status === 'live'
+      const r = isLive ? null : await getMatchReadiness(payload, m.id)
       rows.push({
         id: m.id,
         status: s.match.status,
@@ -41,7 +45,9 @@ export default async function ScorekeeperHub() {
         home: s.teams.home.name,
         away: s.teams.away.name,
         score: s.score,
-        ready,
+        ready: isLive ? true : (r?.ready ?? false),
+        opstellingOk: isLive ? true : Boolean(r?.homeOk && r?.awayOk),
+        refereeOk: isLive ? true : Boolean(r?.refereeOk),
       })
     } catch {
       // Wedstrijd met ontbrekende ploeg-referentie overslaan.
@@ -68,7 +74,7 @@ export default async function ScorekeeperHub() {
       </section>
 
       <Section title="Live — nu aan het aantekenen" rows={live} empty="Geen lopende wedstrijden." />
-      <Section title="Gepland — klaar om te starten" rows={scheduled} empty="Geen geplande wedstrijden. Maak er een aan via Beheer." />
+      <Section title="Gepland — eerst klaarzetten, dan starten" rows={scheduled} empty="Geen geplande wedstrijden. Maak er een aan via Beheer." />
       </div>
     </>
   )
@@ -83,7 +89,7 @@ function Section({ title, rows, empty }: { title: string; rows: Row[]; empty: st
       ) : (
         <div className="match-list">
           {rows.map((m) => (
-            <div key={m.id}>
+            <div key={m.id} className="mh-item">
               <Link href={`/scorekeeper/${m.id}`} className="match-card">
                 <span className="home">{m.home}</span>
                 <span className="mid">
@@ -96,30 +102,77 @@ function Section({ title, rows, empty }: { title: string; rows: Row[]; empty: st
                     <span className="mc-meta">
                       {new Date(m.date).toLocaleDateString('nl-BE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
                       <br />
-                      {m.ready ? '✓ klaar — ▶ starten' : '🔒 vergrendeld'}
+                      {m.ready ? (
+                        <strong className="mc-ready">✓ klaar — tik om te starten ▶</strong>
+                      ) : (
+                        <span className="mc-locked">🔒 nog niet startklaar</span>
+                      )}
                     </span>
                   )}
                 </span>
                 <span className="away">{m.away}</span>
               </Link>
-              <div
-                style={{
-                  display: 'flex',
-                  gap: 12,
-                  justifyContent: 'center',
-                  flexWrap: 'wrap',
-                  padding: '6px 0 2px',
-                  fontSize: 13,
-                }}
-              >
-                <Link href={`/opstelling/${m.id}`}>Opstelling</Link>
-                <Link href={`/scheidsrechter/${m.id}`}>Scheidsrechter</Link>
-                <Link href={`/aftekenen/${m.id}`}>Aftekenen</Link>
-              </div>
+              <MatchSteps m={m} />
             </div>
           ))}
         </div>
       )}
     </section>
+  )
+}
+
+// Genummerde, statusbewuste stappenstrook onder elke wedstrijd. Maakt zichtbaar wat er vóór
+// de start nog moet gebeuren (opstelling + akkoord scheidsrechter) en welke stap de start
+// vrijgeeft, zodat niemand nog hoeft te raden waar hij moet zijn.
+function MatchSteps({ m }: { m: Row }) {
+  const live = m.status === 'live'
+  return (
+    <div className="mh-steps">
+      <span className="mh-steps-lead">{live ? 'Stappen' : 'Vóór de start'}</span>
+      <Step n={1} href={`/opstelling/${m.id}`} label="Opstelling" done={m.opstellingOk} />
+      <Step n={2} href={`/scheidsrechter/${m.id}`} label="Scheidsrechter" done={m.refereeOk} />
+      <Step
+        n={3}
+        href={`/scorekeeper/${m.id}`}
+        label={live ? 'Aantekenen' : 'Starten'}
+        state={live ? 'active' : m.ready ? 'ready' : 'locked'}
+        isGate
+      />
+      <Step n={4} href={`/aftekenen/${m.id}`} label="Aftekenen" muted={!live} />
+    </div>
+  )
+}
+
+function Step({
+  n,
+  href,
+  label,
+  done,
+  state,
+  muted,
+  isGate,
+}: {
+  n: number
+  href: string
+  label: string
+  done?: boolean
+  state?: 'active' | 'ready' | 'locked'
+  muted?: boolean
+  isGate?: boolean
+}) {
+  const cls = [
+    'mh-step',
+    done ? 'done' : '',
+    muted ? 'muted' : '',
+    isGate ? 'gate' : '',
+    state ? `is-${state}` : '',
+  ]
+    .filter(Boolean)
+    .join(' ')
+  return (
+    <Link href={href} className={cls}>
+      <span className="mh-step-num">{done ? '✓' : isGate ? '▶' : n}</span>
+      <span className="mh-step-label">{label}</span>
+    </Link>
   )
 }

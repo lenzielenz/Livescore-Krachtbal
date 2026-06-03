@@ -8,13 +8,13 @@ import { Tile, type KantineMatch } from './KantineBoard'
 // Layout die meeschaalt met het aantal getoonde borden: weinig wedstrijden = grote vakken die
 // het scherm vullen, meer wedstrijden = meer kolommen en kleinere vakken.
 function layoutFor(n: number): { cols: number; fontSize: number; logoSize: string } {
-  if (n <= 1) return { cols: 1, fontSize: 34, logoSize: 'clamp(96px, 17vmin, 220px)' }
-  if (n <= 2) return { cols: 2, fontSize: 28, logoSize: 'clamp(76px, 13vmin, 170px)' }
-  if (n <= 4) return { cols: 2, fontSize: 23, logoSize: 'clamp(60px, 11vmin, 140px)' }
-  if (n <= 6) return { cols: 3, fontSize: 19, logoSize: 'clamp(48px, 8vmin, 108px)' }
-  if (n <= 9) return { cols: 3, fontSize: 17, logoSize: 'clamp(42px, 7vmin, 92px)' }
-  if (n <= 12) return { cols: 4, fontSize: 15, logoSize: 'clamp(34px, 5.5vmin, 76px)' }
-  return { cols: 5, fontSize: 13, logoSize: 'clamp(28px, 4.5vmin, 64px)' }
+  if (n <= 1) return { cols: 1, fontSize: 34, logoSize: 'clamp(130px, 22vmin, 300px)' }
+  if (n <= 2) return { cols: 2, fontSize: 28, logoSize: 'clamp(100px, 16vmin, 220px)' }
+  if (n <= 4) return { cols: 2, fontSize: 23, logoSize: 'clamp(80px, 13vmin, 180px)' }
+  if (n <= 6) return { cols: 3, fontSize: 19, logoSize: 'clamp(62px, 10vmin, 132px)' }
+  if (n <= 9) return { cols: 3, fontSize: 17, logoSize: 'clamp(54px, 8.5vmin, 112px)' }
+  if (n <= 12) return { cols: 4, fontSize: 15, logoSize: 'clamp(44px, 6.5vmin, 92px)' }
+  return { cols: 5, fontSize: 13, logoSize: 'clamp(36px, 5.5vmin, 76px)' }
 }
 
 // Het eigenlijke kantinescherm (kantine-tv): toont de centraal gekozen wedstrijden als live

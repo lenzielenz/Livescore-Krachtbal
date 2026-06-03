@@ -137,52 +137,61 @@ export function Tile({
           <TeamLogo name={home} logoUrl={homeLogo} logoFit={homeLogoFit} side="home" size={logoSize} ringColor={homeColor} />
           <span className="kt-tile-name">{home}</span>
         </div>
-        <div className="kt-tile-score">{played ? `${score.home} – ${score.away}` : 'vs'}</div>
+        <div className="kt-tile-mid">
+          <div className="kt-tile-score">{played ? `${score.home} – ${score.away}` : 'vs'}</div>
+          {status === 'live' && state ? (
+            <span className="kt-tile-clock live">
+              <span className="kt-clock-half">H{state.match.currentHalf}</span>
+              <span className="kt-clock-time">{state.atHalfTime ? 'RUST' : fmtClock(clock)}</span>
+            </span>
+          ) : status === 'finished' ? (
+            <span className="kt-tile-clock dim">Afgelopen</span>
+          ) : (
+            <span className="kt-tile-clock dim">{match.time}</span>
+          )}
+        </div>
         <div className="kt-tile-team">
           <TeamLogo name={away} logoUrl={awayLogo} logoFit={awayLogoFit} side="away" size={logoSize} ringColor={awayColor} />
           <span className="kt-tile-name">{away}</span>
         </div>
       </Link>
 
-      <div className="kt-tile-foot">
-        <span className={`kt-tile-clock ${status === 'live' ? 'live' : 'dim'}`}>
-          {status === 'live' && state ? (
-            <>
-              <span className="kt-clock-half">H{state.match.currentHalf}</span>
-              <span className="kt-clock-time">{state.atHalfTime ? 'RUST' : fmtClock(clock)}</span>
-            </>
-          ) : status === 'finished' ? (
-            'Afgelopen'
-          ) : (
-            match.time
-          )}
-        </span>
-        {played && state && (
-          <span className="kt-tile-stats">
-            <span className="kt-stat" title="Kruisjes">
-              <span className="kt-stat-lbl">Kruisjes</span>
-              <span className="kt-stat-val">
-                <b className="h">{state.crosses.home}</b>
-                <i>–</i>
-                <b className="a">{state.crosses.away}</b>
-              </span>
-            </span>
-            <span className="kt-stat-div" aria-hidden />
-            <span className="kt-stat" title="Minuten (time-outs)">
-              <span className="kt-stat-lbl">Minuten</span>
-              <span className="kt-stat-val">
-                <b className="h">{state.timeouts.home}</b>
-                <i>–</i>
-                <b className="a">{state.timeouts.away}</b>
-                {state.refereeStops > 0 && <em className="kt-stat-sr">+{state.refereeStops} SR</em>}
-              </span>
+      {played && state && (
+        <div className="kt-tile-foot">
+          <span className="kt-stat" title="Kruisjes">
+            <span className="kt-stat-lbl">Kruisjes</span>
+            <span className="kt-stat-val">
+              <b className="h">{state.crosses.home}</b>
+              <i>–</i>
+              <b className="a">{state.crosses.away}</b>
             </span>
           </span>
-        )}
-      </div>
+          <span className="kt-stat-div" aria-hidden />
+          <span className="kt-stat" title="Minuten (time-outs)">
+            <span className="kt-stat-lbl">Minuten</span>
+            <span className="kt-stat-val">
+              <b className="h">{state.timeouts.home}</b>
+              <i>–</i>
+              <b className="a">{state.timeouts.away}</b>
+              {state.refereeStops > 0 && <em className="kt-stat-sr">+{state.refereeStops} SR</em>}
+            </span>
+          </span>
+        </div>
+      )}
 
       {flash && (
         <div key={flash.key} className={`kt-flash side-${flash.side}`}>
+          <span className="kt-flash-burst" aria-hidden />
+          <div className="kt-flash-logo">
+            <TeamLogo
+              name={flash.team}
+              logoUrl={flash.side === 'home' ? homeLogo : awayLogo}
+              logoFit={flash.side === 'home' ? homeLogoFit : awayLogoFit}
+              side={flash.side}
+              size="clamp(54px, 15vmin, 120px)"
+              ringColor={flash.side === 'home' ? homeColor : awayColor}
+            />
+          </div>
           <div className="kt-flash-title">DOELPUNT!</div>
           <div className="kt-flash-team">{flash.team}</div>
           {flash.scorer && <div className="kt-flash-scorer">{flash.scorer}</div>}

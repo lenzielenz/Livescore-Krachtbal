@@ -59,13 +59,18 @@ export function KantineControl({ matches, initialSelected }: { matches: KantineM
                 className={`kt-pick ${on ? 'on' : ''} ${m.status === 'live' ? 'live' : ''}`}
                 onClick={() => toggle(m.id)}
               >
-                <span className="kt-pick-check">{on ? '✓' : '+'}</span>
-                <span className="kt-pick-teams">
-                  {m.home.name} <span className="kt-pick-vs">–</span> {m.away.name}
+                <span className="kt-pick-top">
+                  <span className={`kt-pick-badge ${m.status}`}>
+                    {m.status === 'live' ? '● LIVE' : m.status === 'finished' ? 'Einde' : m.time}
+                  </span>
+                  <span className="kt-pick-reeks">{m.reeks}</span>
                 </span>
-                <span className="kt-pick-meta">
-                  {m.status === 'live' ? 'LIVE' : m.status === 'finished' ? 'einde' : m.time} · {m.reeks}
+                <span className="kt-pick-match">
+                  <span className="kt-pick-team">{m.home.name}</span>
+                  <span className="kt-pick-vs">vs</span>
+                  <span className="kt-pick-team">{m.away.name}</span>
                 </span>
+                <span className="kt-pick-check" aria-hidden>{on ? '✓' : '+'}</span>
               </button>
             )
           })}
