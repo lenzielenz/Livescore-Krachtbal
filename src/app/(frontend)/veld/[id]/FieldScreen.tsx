@@ -24,6 +24,45 @@ type Goal = {
 // Responsieve logomaat voor het grote veldscherm.
 const FS_LOGO_SIZE = 'clamp(84px, 14vw, 200px)'
 
+// Telmarkeringen onder de ploegnaam: invul-vakjes gegroepeerd per set.
+// Kruisjes per 3 (3e kruisje → vrije worp, §6.7); time-outs per 2 (max. 2 per helft, §8.1).
+function Marks({ count, group, kind }: { count: number; group: number; kind: 'cross' | 'timeout' }) {
+  const total = Math.max(group, Math.ceil(count / group) * group)
+  const groups: boolean[][] = []
+  for (let i = 0; i < total; i += group) {
+    groups.push(Array.from({ length: group }, (_, j) => i + j < count))
+  }
+  return (
+    <span className={`fs-marks fs-marks-${kind}`}>
+      {groups.map((g, gi) => (
+        <span className="fs-mark-group" key={gi}>
+          {g.map((on, j) => (
+            <span key={j} className={`fs-mark ${on ? 'on' : ''}`} aria-hidden>
+              {kind === 'cross' ? '✚' : '⏱'}
+            </span>
+          ))}
+        </span>
+      ))}
+    </span>
+  )
+}
+
+// Statblok (kruisjes + time-outs) onder een ploegnaam.
+function TeamStats({ crosses, timeouts }: { crosses: number; timeouts: number }) {
+  return (
+    <div className="fs-stats">
+      <div className="fs-stat" title="Kruisjes (rechtstreeks buiten)">
+        <span className="fs-stat-cap">Kruisjes</span>
+        <Marks count={crosses} group={3} kind="cross" />
+      </div>
+      <div className="fs-stat" title="Time-outs (max. 2 per helft)">
+        <span className="fs-stat-cap">Time-outs</span>
+        <Marks count={timeouts} group={2} kind="timeout" />
+      </div>
+    </div>
+  )
+}
+
 // Laatste doelpunt voor een ploeg uit de tijdlijn halen, voor de naam van de doelpuntenmaker.
 function lastGoalScorer(timeline: TimelineItem[], side: Side): string | null {
   for (let i = timeline.length - 1; i >= 0; i--) {
@@ -133,6 +172,7 @@ export function FieldScreen({
         <div className={`fs-team ${goal?.side === 'home' ? 'scored' : ''}`}>
           <TeamLogo name={state.teams.home.name} logoUrl={state.teams.home.logoUrl} logoFit={state.teams.home.logoFit} side="home" size={FS_LOGO_SIZE} float ringColor={state.teams.home.colors?.primary} />
           <div className="fs-name">{state.teams.home.name}</div>
+          <TeamStats crosses={state.crosses.home} timeouts={state.timeouts.home} />
         </div>
 
         <div className="fs-center">
@@ -143,16 +183,12 @@ export function FieldScreen({
           </div>
           <div className="fs-clock">{fmtClock(clock)}</div>
           <div className="fs-half">{status === 'finished' ? 'Einde' : `Helft ${state.match.currentHalf}`}</div>
-          <div className="fs-sub">
-            <span title="Kruisjes">✚ {state.crosses.home}–{state.crosses.away}</span>
-            <span className="fs-sub-sep">·</span>
-            <span title="Minuten (time-outs)">⏱ {state.timeouts.home}–{state.timeouts.away}</span>
-          </div>
         </div>
 
         <div className={`fs-team ${goal?.side === 'away' ? 'scored' : ''}`}>
           <TeamLogo name={state.teams.away.name} logoUrl={state.teams.away.logoUrl} logoFit={state.teams.away.logoFit} side="away" size={FS_LOGO_SIZE} float ringColor={state.teams.away.colors?.primary} />
           <div className="fs-name">{state.teams.away.name}</div>
+          <TeamStats crosses={state.crosses.away} timeouts={state.timeouts.away} />
         </div>
       </div>
 
