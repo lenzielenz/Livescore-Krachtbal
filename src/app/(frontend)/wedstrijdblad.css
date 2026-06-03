@@ -17,10 +17,11 @@
 }
 
 .wb-card {
-  background: var(--panel);
+  background: var(--panel-grad, var(--panel));
   border: 1px solid var(--line);
-  border-radius: 14px;
-  padding: 18px;
+  border-radius: 16px;
+  padding: 18px 20px;
+  box-shadow: var(--card-shadow, 0 10px 30px rgba(0, 0, 0, 0.3));
 }
 .wb-card > h2 {
   margin: 0 0 4px;

@@ -9,14 +9,25 @@
   --away: #4cc9f0;
   position: relative;
   overflow: hidden;
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  padding: 20px;
+  background:
+    radial-gradient(62% 80% at 0% 0%, color-mix(in srgb, var(--home) 16%, transparent), transparent 60%),
+    radial-gradient(62% 80% at 100% 0%, color-mix(in srgb, var(--away) 16%, transparent), transparent 60%),
+    linear-gradient(180deg, color-mix(in srgb, var(--panel) 88%, #000), var(--panel));
+  border: 1px solid color-mix(in srgb, var(--accent) 12%, var(--line));
+  border-radius: 18px;
+  padding: 26px 24px;
   color: var(--txt);
-  font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+  font-family: var(--font-body), 'Segoe UI', ui-sans-serif, system-ui, sans-serif;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
 }
 .sb * { box-sizing: border-box; }
+/* Premium hero: grotere logo's, namen in ploegkleur. */
+.sb-side-team .tl { width: 92px; height: 92px; font-size: 92px; }
+@media (min-width: 700px) {
+  .sb-side-team .tl { width: 108px; height: 108px; font-size: 108px; }
+}
+.sb-main > .sb-side-team:first-child .sb-name { color: var(--home); }
+.sb-main > .sb-side-team:last-child .sb-name { color: var(--away); }
 
 .sb-status { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
 .sb-badge { font-size: 0.72rem; font-weight: 800; letter-spacing: 0.08em; padding: 3px 10px; border-radius: 999px; }
@@ -28,7 +39,7 @@
 
 .sb-main { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 14px; }
 .sb-side-team { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 6px; }
-.sb-name { font-size: 1.15rem; font-weight: 700; }
+.sb-name { font-size: 1.5rem; font-weight: 800; letter-spacing: 0.01em; }
 
 /* Doelpunt-viering: het logo van de scorende ploeg juicht mee. */
 .sb-side-team.scored .tl { animation: sb-logo-celebrate 0.9s cubic-bezier(0.22, 1.2, 0.4, 1) 2; }
@@ -87,11 +98,22 @@
   .sb-goal { opacity: 1; }
 }
 
-.sb-scorebox { text-align: center; }
-.sb-score { font-size: 3.2rem; font-weight: 800; font-variant-numeric: tabular-nums; display: flex; gap: 12px; justify-content: center; }
+.sb-scorebox { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.sb-score {
+  font-family: var(--font-display), 'Segoe UI', sans-serif;
+  font-size: 4.4rem; font-weight: 900; font-variant-numeric: tabular-nums; line-height: 1;
+  display: flex; gap: 14px; justify-content: center;
+  text-shadow: 0 6px 26px rgba(0, 0, 0, 0.5);
+}
 .sb-dash { color: var(--dim); font-weight: 400; }
-.sb-clock { font-size: 1.5rem; font-weight: 800; color: var(--accent); font-variant-numeric: tabular-nums; }
-.sb-half { font-size: 0.8rem; color: var(--dim); }
+.sb-clock {
+  display: inline-flex; align-items: center;
+  font-size: 1.4rem; font-weight: 800; color: var(--accent); font-variant-numeric: tabular-nums;
+  padding: 6px 18px; border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line));
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+.sb-half { font-size: 0.8rem; color: var(--dim); text-transform: uppercase; letter-spacing: 0.06em; }
 
 .sb-dots { display: inline-flex; gap: 5px; }
 .sb-dot { width: 9px; height: 9px; border-radius: 50%; border: 1px solid var(--line); background: transparent; }
