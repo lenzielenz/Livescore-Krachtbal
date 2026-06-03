@@ -91,6 +91,13 @@
   font-weight: 800;
   text-align: center;
   line-height: 1.05;
+  /* Reserveer altijd twee regels: zo zijn een ploegnaam van één en van twee regels
+     even hoog, en blijven logo's én statblokken (kruisjes/time-outs) links en rechts
+     netjes op dezelfde hoogte uitgelijnd. */
+  min-height: 2.1em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* Doelpunt-viering: het logo van de scorende ploeg springt op met een gloed. */
