@@ -123,7 +123,7 @@ export function TournamentScoresheet({
                 )}
                 <div className="ts-stats">
                   <div className="ts-stat">
-                    <span className="ts-stat-lbl">✚ Kruisjes</span>
+                    <span className="ts-stat-lbl">✖ Kruisjes</span>
                     <span className="ts-stat-ctrl">
                       {!finished && <button type="button" className="ts-stat-btn" onClick={() => act({ action: 'cross', side, delta: -1 })} aria-label="Kruisje min">−</button>}
                       <span className="ts-stat-n">{m.crosses[side]}</span>

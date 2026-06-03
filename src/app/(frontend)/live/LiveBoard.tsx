@@ -143,7 +143,7 @@ export function LiveBoard({ date, today, matches }: { date: string; today: strin
                         <span className="lb-score">{played ? `${m.score.home} – ${m.score.away}` : 'vs'}</span>
                         {hasStats && (
                           <span className="lb-stats">
-                            <span title="Kruisjes">✚ {m.crosses?.home ?? 0}–{m.crosses?.away ?? 0}</span>
+                            <span title="Kruisjes">✖ {m.crosses?.home ?? 0}–{m.crosses?.away ?? 0}</span>
                             <span className="lb-stat-sep">·</span>
                             <span title="Minuten (time-outs)">
                               ⏱ {m.timeouts?.home ?? 0}–{m.timeouts?.away ?? 0}

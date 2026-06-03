@@ -145,7 +145,7 @@ export function SimpleScorekeeper({
               )}
               <div className="ssk-stats">
                 <div className="ssk-stat">
-                  <span className="ssk-stat-lbl">✚ Kruisjes</span>
+                  <span className="ssk-stat-lbl">✖ Kruisjes</span>
                   <span className="ssk-stat-ctrl">
                     {!finished && <button type="button" className="ssk-stat-btn" onClick={() => act({ action: 'simplecross', side, delta: -1 })} aria-label="Kruisje min">−</button>}
                     <span className="ssk-stat-n">{state.crosses[side]}</span>

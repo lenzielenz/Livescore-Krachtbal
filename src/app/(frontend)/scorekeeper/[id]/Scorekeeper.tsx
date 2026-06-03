@@ -644,7 +644,7 @@ export function Scorekeeper({
           </div>
         </div>
         <div className="sk-crossrow" title="Kruisjes (rechtstreeks buiten)">
-          Kruisjes ✚ <strong>{state.crosses.home}</strong>–<strong>{state.crosses.away}</strong>
+          Kruisjes ✖ <strong>{state.crosses.home}</strong>–<strong>{state.crosses.away}</strong>
         </div>
       </header>
 
