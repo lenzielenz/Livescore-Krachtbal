@@ -559,6 +559,35 @@ h3,
   box-shadow: none;
 }
 
+/* Laadstaten (skeletons) */
+.skel {
+  position: relative;
+  overflow: hidden;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.skel::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--txt) 7%, transparent), transparent);
+  transform: translateX(-100%);
+  animation: skel-shine 1.3s infinite;
+}
+@keyframes skel-shine {
+  100% { transform: translateX(100%); }
+}
+.skel-title {
+  height: 30px;
+  width: min(260px, 60%);
+  margin: 20px 0 18px;
+}
+.skel-row {
+  height: 62px;
+  margin-bottom: 10px;
+}
+
 .back-link {
   font-size: 0.85rem;
   color: var(--dim);
