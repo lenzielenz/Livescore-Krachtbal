@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { FieldSchema, type FieldMarker } from '@/components/FieldSchema'
@@ -137,7 +138,6 @@ export function Scorekeeper({
     }
     const b = baseRef.current
     setClock(b.running ? b.seconds + (Date.now() - b.at) / 1000 : b.seconds)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.match.clockSeconds, state.match.clockRunning, state.match.clockUpdatedAt])
 
   useEffect(() => {
@@ -602,7 +602,7 @@ export function Scorekeeper({
       {isDemo && <DemoTutorial matchId={matchId} />}
 
       <div className="sk-topbar">
-        <a className="sk-back" href="/scorekeeper" title="Terug naar overzicht — de wedstrijd blijft gewoon live">← Overzicht</a>
+        <Link className="sk-back" href="/scorekeeper" title="Terug naar overzicht — de wedstrijd blijft gewoon live">← Overzicht</Link>
         {isDemo && <span className="sk-demo-chip">DEMO</span>}
         <button type="button" className="sk-fs" onClick={toggleFullscreen} title="Volledig scherm aan/uit">
           {isFullscreen ? '⤡ Sluiten' : '⛶ Volledig scherm'}

@@ -1,3 +1,5 @@
+import Link from 'next/link'
+
 // Extra nav-links in de Payload-admin: terug naar de site + snel spelers toevoegen.
 const linkStyle = {
   display: 'block',
@@ -10,12 +12,12 @@ const linkStyle = {
 export function BackToSite() {
   return (
     <div style={{ marginBottom: 8 }}>
-      <a href="/" style={linkStyle}>
+      <Link href="/" style={linkStyle}>
         ← Naar de site
-      </a>
-      <a href="/beheer/spelers" style={linkStyle}>
+      </Link>
+      <Link href="/beheer/spelers" style={linkStyle}>
         + Spelers snel toevoegen
-      </a>
+      </Link>
     </div>
   )
 }

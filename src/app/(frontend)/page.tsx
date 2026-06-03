@@ -125,6 +125,8 @@ export default async function HomePage() {
             <h2 className="hub-h">Info & beheer</h2>
             <p className="hub-sub">Naslag en administratie.</p>
             <div className="hub-links">
+              <Link href="/club" className="hub-pill">👥 Mijn club</Link>
+              <Link href="/beheer/planning" className="hub-pill">📅 Seizoensplanning</Link>
               <Link href="/reglement" className="hub-pill">Reglement</Link>
               <Link href="/knipjes" className="hub-pill">Knipjes</Link>
               <Link href="/vergoedingen" className="hub-pill">Vergoedingen</Link>
