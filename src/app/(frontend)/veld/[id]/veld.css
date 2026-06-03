@@ -40,23 +40,33 @@
   animation: fs-blink 1.6s ease-in-out infinite;
 }
 .fs-status.finished {
-  background: #2a3f33;
-  color: var(--dim);
+  background: #1a2c22;
+  color: #e8f5ee;
 }
 .fs-status.scheduled {
-  background: #1c3a2a;
-  color: var(--dim);
+  background: #14241a;
+  color: #e8f5ee;
 }
 @keyframes fs-blink {
   50% {
     opacity: 0.45;
   }
 }
+/* Reekstitel: leesbaar op elke (ingestelde) achtergrond én in fel zonlicht.
+   Donkere chip + witte vette tekst + accentrand in de clubkleur. */
 .fs-reeks {
-  font-size: clamp(0.8rem, 2vw, 1.3rem);
-  font-weight: 700;
-  color: var(--theme-2);
+  font-size: clamp(0.9rem, 2vw, 1.4rem);
+  font-weight: 800;
+  color: #fff;
   letter-spacing: 0.04em;
+  padding: 6px 18px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.62);
+  border: 2px solid color-mix(in srgb, var(--theme-2) 75%, #fff 12%);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
 }
 
 .fs-main {
@@ -155,18 +165,53 @@
   letter-spacing: 0.08em;
   margin-top: 4px;
 }
-.fs-sub {
+/* Statblok onder de ploegnaam: kruisjes (per 3) en time-outs (per 2) als invul-vakjes. */
+.fs-stats {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(5px, 1.4vh, 14px);
+  margin-top: clamp(4px, 1.2vh, 14px);
+}
+.fs-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(3px, 0.8vh, 8px);
+}
+.fs-stat-cap {
+  font-size: clamp(0.65rem, 1.4vw, 1.05rem);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+.fs-marks {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: clamp(8px, 2vw, 18px);
-  font-size: clamp(0.85rem, 2.2vw, 1.5rem);
-  color: var(--dim);
-  font-variant-numeric: tabular-nums;
-  margin-top: clamp(8px, 2vh, 22px);
+  gap: clamp(8px, 1.6vw, 18px); /* ruimte tussen de groepen */
 }
-.fs-sub-sep {
-  opacity: 0.4;
+.fs-mark-group {
+  display: flex;
+  gap: clamp(3px, 0.7vw, 8px); /* ruimte binnen een groep */
+}
+.fs-mark {
+  font-size: clamp(1.1rem, 2.8vw, 2.2rem);
+  line-height: 1;
+  color: var(--dim);
+  opacity: 0.25;
+  transition: opacity 0.25s ease, transform 0.25s ease, color 0.25s ease;
+}
+.fs-mark.on {
+  opacity: 1;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+}
+/* Ingevulde markeringen kleuren mee met de ploeg. */
+.fs-main > .fs-team:first-child .fs-mark.on {
+  color: var(--home);
+}
+.fs-main > .fs-team:last-child .fs-mark.on {
+  color: var(--away);
 }
 
 /* ── Doelpunt-animatie ─────────────────────────────────────────── */
