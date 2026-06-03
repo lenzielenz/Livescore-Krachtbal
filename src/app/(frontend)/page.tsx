@@ -4,11 +4,13 @@ import { SiteHeader } from '@/components/SiteHeader'
 import { TeamLogo } from '@/components/TeamLogo'
 import { buildMatchState } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
+import { reeksNaam } from '@/lib/reeksen'
 
 export const dynamic = 'force-dynamic'
 
 type LiveCard = {
   id: number
+  reeks: string
   home: { name: string; logoUrl: string | null; colors?: { primary?: string } | null }
   away: { name: string; logoUrl: string | null; colors?: { primary?: string } | null }
   score: { home: number; away: number }
@@ -27,6 +29,7 @@ export default async function HomePage() {
       const s = await buildMatchState(payload, m.id)
       live.push({
         id: m.id,
+        reeks: reeksNaam((m as { reeks?: unknown }).reeks),
         home: { name: s.teams.home.name, logoUrl: s.teams.home.logoUrl, colors: s.teams.home.colors },
         away: { name: s.teams.away.name, logoUrl: s.teams.away.logoUrl, colors: s.teams.away.colors },
         score: s.score,
@@ -54,14 +57,17 @@ export default async function HomePage() {
             <div className="hub-live">
               {live.map((m) => (
                 <Link key={m.id} href={`/match/${m.id}`} className="hub-livecard">
-                  <span className="hub-live-team">
-                    <TeamLogo name={m.home.name} logoUrl={m.home.logoUrl} side="home" size="sm" ringColor={m.home.colors?.primary} />
-                    <span className="hub-live-nm">{m.home.name}</span>
-                  </span>
-                  <span className="hub-live-score">{m.score.home}<span className="hub-live-dash">–</span>{m.score.away}</span>
-                  <span className="hub-live-team away">
-                    <span className="hub-live-nm">{m.away.name}</span>
-                    <TeamLogo name={m.away.name} logoUrl={m.away.logoUrl} side="away" size="sm" ringColor={m.away.colors?.primary} />
+                  <span className="hub-live-reeks">{m.reeks}</span>
+                  <span className="hub-live-row">
+                    <span className="hub-live-team">
+                      <TeamLogo name={m.home.name} logoUrl={m.home.logoUrl} side="home" size="md" ringColor={m.home.colors?.primary} />
+                      <span className="hub-live-nm">{m.home.name}</span>
+                    </span>
+                    <span className="hub-live-score">{m.score.home}<span className="hub-live-dash">–</span>{m.score.away}</span>
+                    <span className="hub-live-team away">
+                      <span className="hub-live-nm">{m.away.name}</span>
+                      <TeamLogo name={m.away.name} logoUrl={m.away.logoUrl} side="away" size="md" ringColor={m.away.colors?.primary} />
+                    </span>
                   </span>
                 </Link>
               ))}
