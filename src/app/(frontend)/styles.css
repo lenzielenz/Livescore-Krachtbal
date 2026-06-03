@@ -641,6 +641,71 @@ h3,
   font-size: 0.86rem;
 }
 
+/* Seizoensplanning — import */
+.plan-area {
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--txt);
+  font-family: ui-monospace, 'Cascadia Code', monospace;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  resize: vertical;
+}
+.plan-area:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--accent) 50%, var(--line));
+}
+.plan-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 14px;
+}
+.plan-summary {
+  color: var(--home);
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+.plan-errors {
+  margin-top: 20px;
+}
+.plan-errors h3 {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #e0533d;
+  margin: 0 0 8px;
+}
+.plan-errors ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.plan-errors li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 12px;
+  border-radius: 9px;
+  background: color-mix(in srgb, #e0533d 10%, var(--panel));
+  border: 1px solid color-mix(in srgb, #e0533d 30%, var(--line));
+}
+.plan-err-reason {
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+.plan-err-line {
+  font-size: 0.78rem;
+  color: var(--dim);
+  font-family: ui-monospace, monospace;
+}
+
 .back-link {
   font-size: 0.85rem;
   color: var(--dim);

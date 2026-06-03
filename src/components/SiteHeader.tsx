@@ -19,6 +19,7 @@ const PRIMARY: { href: string; label: string; key: NavSection }[] = [
 const MORE: { href: string; label: string; external?: boolean }[] = [
   { href: '/demo', label: '🎓 Demo spelen' },
   { href: '/club', label: '👥 Mijn club' },
+  { href: '/beheer/planning', label: '📅 Seizoensplanning' },
   { href: '/reglement', label: 'Reglement' },
   { href: '/knipjes', label: 'Knipjes' },
   { href: '/vergoedingen', label: 'Vergoedingen' },
@@ -48,7 +49,7 @@ export function SiteHeader({ active = null }: { active?: NavSection }) {
             <button
               type="button"
               className={`sh-link sh-more-btn ${active === 'meer' ? 'on' : ''}`}
-              aria-expanded={open}
+              aria-expanded={open ? 'true' : 'false'}
               onClick={() => setOpen((v) => !v)}
             >
               Meer ▾
