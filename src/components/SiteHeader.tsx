@@ -18,6 +18,7 @@ const PRIMARY: { href: string; label: string; key: NavSection }[] = [
 ]
 
 const MORE: { href: string; label: string; external?: boolean }[] = [
+  { href: '/cast', label: '📺 Casten naar tv' },
   { href: '/demo', label: '🎓 Demo spelen' },
   // Prijspakketten alleen tonen wanneer de pakket-feature actief is.
   ...(PACKAGES_ENABLED ? [{ href: '/pakketten', label: '💎 Pakketten' }] : []),
