@@ -3,7 +3,9 @@ import {
   advanceHalf,
   buildTournamentState,
   finishMatch,
+  recordCross,
   recordGoal,
+  recordTimeout,
   setClock,
   startMatch,
   undoGoal,
@@ -41,6 +43,12 @@ export async function POST(
         break
       case 'undo':
         await undoGoal(payload, matchId)
+        break
+      case 'cross':
+        await recordCross(payload, matchId, body.side === 'away' ? 'away' : 'home', Number(body.delta) < 0 ? -1 : 1)
+        break
+      case 'timeout':
+        await recordTimeout(payload, matchId, body.side === 'away' ? 'away' : 'home', Number(body.delta) < 0 ? -1 : 1)
         break
       case 'clock':
         await setClock(payload, matchId, {

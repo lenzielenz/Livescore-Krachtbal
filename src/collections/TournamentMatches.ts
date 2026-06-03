@@ -77,6 +77,9 @@ export const TournamentMatches: CollectionConfig = {
       type: 'json',
       defaultValue: [],
     },
+    // Tellers per ploeg: kruisjes (rechtstreeks buiten) en aangevraagde minuten (time-outs).
+    { name: 'crosses', label: 'Kruisjes', type: 'json', defaultValue: { home: 0, away: 0 } },
+    { name: 'timeouts', label: 'Time-outs', type: 'json', defaultValue: { home: 0, away: 0 } },
     // Doorschuif-coördinaten (berekend bij aanmaken).
     { name: 'winnerTo', type: 'json', admin: { hidden: true } },
     { name: 'loserTo', type: 'json', admin: { hidden: true } },

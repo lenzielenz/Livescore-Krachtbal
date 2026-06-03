@@ -690,6 +690,52 @@
 .ts-goal.rug {
   background: var(--accent);
 }
+/* Kruisjes + aangevraagde minuten (time-outs) per ploeg. */
+.ts-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+}
+.ts-stat {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 0.82rem;
+  color: var(--dim);
+}
+.ts-stat-lbl {
+  font-weight: 600;
+}
+.ts-stat-ctrl {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.ts-stat-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--txt);
+  font-size: 1.05rem;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+}
+.ts-stat-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.ts-stat-n {
+  min-width: 18px;
+  text-align: center;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--txt);
+}
 .ts-controls {
   display: flex;
   flex-wrap: wrap;

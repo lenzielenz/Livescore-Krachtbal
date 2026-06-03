@@ -35,6 +35,8 @@ export type TMatchState = {
   status: 'pending' | 'live' | 'finished'
   winner: Side | null
   score: { home: number; away: number }
+  crosses: { home: number; away: number }
+  timeouts: { home: number; away: number }
   currentHalf: number
   clockSeconds: number
   clockRunning: boolean
@@ -66,6 +68,8 @@ type MatchDoc = {
   status: 'pending' | 'live' | 'finished'
   winner?: Side | null
   goals?: Goal[] | null
+  crosses?: { home?: number; away?: number } | null
+  timeouts?: { home?: number; away?: number } | null
   winnerTo?: SlotRef | null
   loserTo?: SlotRef | null
   currentHalf?: number | null
@@ -78,6 +82,10 @@ const COLL = 'tournament-matches' as const
 
 function goalsOf(m: Pick<MatchDoc, 'goals'>): Goal[] {
   return Array.isArray(m.goals) ? (m.goals as Goal[]) : []
+}
+
+function countsOf(v: { home?: number; away?: number } | null | undefined): { home: number; away: number } {
+  return { home: Number(v?.home) || 0, away: Number(v?.away) || 0 }
 }
 
 /** Live klokstand: lopende klok telt verder vanaf clockUpdatedAt. */
@@ -100,6 +108,8 @@ function toState(m: MatchDoc): TMatchState {
     status: m.status,
     winner: m.winner ?? null,
     score: deriveScore(goalsOf(m)),
+    crosses: countsOf(m.crosses),
+    timeouts: countsOf(m.timeouts),
     currentHalf: m.currentHalf ?? 1,
     clockSeconds: Math.floor(liveClock(m)),
     clockRunning: Boolean(m.clockRunning),
@@ -264,6 +274,22 @@ export async function undoGoal(payload: Payload, matchId: number): Promise<void>
   const goals = goalsOf(m)
   goals.pop()
   await update(payload, matchId, { goals })
+}
+
+/** Pas de kruisjes-teller van een ploeg aan (+1 / −1). */
+export async function recordCross(payload: Payload, matchId: number, side: Side, delta: number): Promise<void> {
+  const m = await getMatch(payload, matchId)
+  const c = countsOf(m.crosses)
+  c[side] = Math.max(0, c[side] + (delta < 0 ? -1 : 1))
+  await update(payload, matchId, { crosses: c })
+}
+
+/** Pas de time-out-teller (aangevraagde minuten) van een ploeg aan (+1 / −1). */
+export async function recordTimeout(payload: Payload, matchId: number, side: Side, delta: number): Promise<void> {
+  const m = await getMatch(payload, matchId)
+  const t = countsOf(m.timeouts)
+  t[side] = Math.max(0, t[side] + (delta < 0 ? -1 : 1))
+  await update(payload, matchId, { timeouts: t })
 }
 
 /** Klok starten/pauzeren of de tijd zetten. Bij pauzeren wordt de verstreken tijd vastgeklikt. */

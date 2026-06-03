@@ -121,6 +121,24 @@ export function TournamentScoresheet({
                     </button>
                   </div>
                 )}
+                <div className="ts-stats">
+                  <div className="ts-stat">
+                    <span className="ts-stat-lbl">✚ Kruisjes</span>
+                    <span className="ts-stat-ctrl">
+                      {!finished && <button type="button" className="ts-stat-btn" onClick={() => act({ action: 'cross', side, delta: -1 })} aria-label="Kruisje min">−</button>}
+                      <span className="ts-stat-n">{m.crosses[side]}</span>
+                      {!finished && <button type="button" className="ts-stat-btn" onClick={() => act({ action: 'cross', side, delta: 1 })} aria-label="Kruisje plus">+</button>}
+                    </span>
+                  </div>
+                  <div className="ts-stat">
+                    <span className="ts-stat-lbl">⏱ Minuten</span>
+                    <span className="ts-stat-ctrl">
+                      {!finished && <button type="button" className="ts-stat-btn" onClick={() => act({ action: 'timeout', side, delta: -1 })} aria-label="Minuut min">−</button>}
+                      <span className="ts-stat-n">{m.timeouts[side]}</span>
+                      {!finished && <button type="button" className="ts-stat-btn" onClick={() => act({ action: 'timeout', side, delta: 1 })} aria-label="Minuut plus">+</button>}
+                    </span>
+                  </div>
+                </div>
               </div>
             ))}
           </div>

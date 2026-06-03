@@ -678,6 +678,24 @@ export interface TournamentMatch {
     | number
     | boolean
     | null;
+  crosses?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  timeouts?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
   winnerTo?:
     | {
         [k: string]: unknown;
@@ -1215,6 +1233,8 @@ export interface TournamentMatchesSelect<T extends boolean = true> {
   status?: T;
   winner?: T;
   goals?: T;
+  crosses?: T;
+  timeouts?: T;
   winnerTo?: T;
   loserTo?: T;
   currentHalf?: T;
