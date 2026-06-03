@@ -175,6 +175,87 @@ export function buildBracket(slots: (string | null)[]): BracketMatch[] {
   return matches
 }
 
+// ── Round-robin (iedereen tegen elkaar, één keer) ───────────────────────────
+
+/** Genereer alle paringen (elk paar één keer). round=1, geen doorschuiving. */
+export function buildRoundRobin(names: string[]): BracketMatch[] {
+  const matches: BracketMatch[] = []
+  let position = 0
+  for (let i = 0; i < names.length; i++) {
+    for (let j = i + 1; j < names.length; j++) {
+      matches.push({
+        round: 1,
+        position: position++,
+        bracket: 'main',
+        label: `${names[i]} – ${names[j]}`,
+        home: names[i],
+        away: names[j],
+        status: 'pending',
+        winner: null,
+        winnerTo: null,
+        loserTo: null,
+      })
+    }
+  }
+  return matches
+}
+
+export type Standing = {
+  team: string
+  played: number
+  won: number
+  drawn: number
+  lost: number
+  gf: number
+  ga: number
+  points: number
+}
+
+type StandingMatch = {
+  home: string | null
+  away: string | null
+  status: string
+  winner: Side | null
+  score: { home: number; away: number }
+}
+
+/**
+ * Rangschikking uit de afgewerkte wedstrijden. Punten: winst 4, gelijkspel 3, verlies 2.
+ * Sortering: punten, dan doelsaldo, dan doelpunten voor, dan naam.
+ */
+export function computeStandings(matches: StandingMatch[], teams: string[]): Standing[] {
+  const map = new Map<string, Standing>()
+  for (const t of teams) map.set(t, { team: t, played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, points: 0 })
+
+  for (const m of matches) {
+    if (m.status !== 'finished' || !m.home || !m.away) continue
+    const h = map.get(m.home)
+    const a = map.get(m.away)
+    if (!h || !a) continue
+    h.played++
+    a.played++
+    h.gf += m.score.home
+    h.ga += m.score.away
+    a.gf += m.score.away
+    a.ga += m.score.home
+    if (m.winner === 'home') {
+      h.won++; a.lost++; h.points += 4; a.points += 2
+    } else if (m.winner === 'away') {
+      a.won++; h.lost++; a.points += 4; h.points += 2
+    } else {
+      h.drawn++; a.drawn++; h.points += 3; a.points += 3
+    }
+  }
+
+  return [...map.values()].sort(
+    (x, y) =>
+      y.points - x.points ||
+      (y.gf - y.ga) - (x.gf - x.ga) ||
+      y.gf - x.gf ||
+      x.team.localeCompare(y.team),
+  )
+}
+
 /** Afgeleide stand uit de goal-events. */
 export function deriveScore(goals: Goal[]): { home: number; away: number } {
   return goals.reduce(

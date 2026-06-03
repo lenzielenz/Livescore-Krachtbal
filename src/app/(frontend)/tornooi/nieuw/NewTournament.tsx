@@ -24,6 +24,7 @@ export function NewTournament({ categories }: { categories: ReadonlyArray<{ labe
   const [count, setCount] = useState(4)
   const [names, setNames] = useState<string[]>(['', '', '', ''])
   const [method, setMethod] = useState<Method>('auto')
+  const [format, setFormat] = useState<'knockout' | 'roundrobin'>('knockout')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -62,16 +63,17 @@ export function NewTournament({ categories }: { categories: ReadonlyArray<{ labe
     if (new Set(filled.map((n) => n.toLowerCase())).size !== filled.length)
       return setError('Twee ploegen hebben dezelfde naam.')
 
-    // Toggle = automatische loting (schudden). Manueel = volgorde zoals ingevuld.
-    const ordered = method === 'auto' ? shuffle(filled, Math.random) : filled
-    const slots = seededSlots(ordered)
+    // Round-robin: alle ploegen één keer tegen elkaar — geen loting/bye's, namen volstaan.
+    // Knock-out: toggle = automatische loting (schudden), manueel = volgorde zoals ingevuld.
+    const slots =
+      format === 'roundrobin' ? filled : seededSlots(method === 'auto' ? shuffle(filled, Math.random) : filled)
 
     setBusy(true)
     try {
       const res = await fetch('/api/tournament', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: name.trim(), category, method, slots }),
+        body: JSON.stringify({ name: name.trim(), category, method, format, slots }),
       })
       const data = (await res.json()) as { id?: number; error?: string }
       if (!res.ok || !data.id) throw new Error(data.error ?? 'Aanmaken mislukt.')
@@ -116,14 +118,26 @@ export function NewTournament({ categories }: { categories: ReadonlyArray<{ labe
             </div>
           </label>
         </div>
+        <div className="trn-methods" style={{ marginTop: 14 }}>
+          <button type="button" className={`trn-method ${format === 'knockout' ? 'on' : ''}`} onClick={() => setFormat('knockout')}>
+            <strong>Knock-out</strong>
+            <span>Afvalrace met finale (en kleine finale).</span>
+          </button>
+          <button type="button" className={`trn-method ${format === 'roundrobin' ? 'on' : ''}`} onClick={() => setFormat('roundrobin')}>
+            <strong>Iedereen tegen elkaar</strong>
+            <span>Poule met rangschikking — winst 4, gelijk 3, verlies 2.</span>
+          </button>
+        </div>
       </section>
 
       <section className="trn-card">
         <h2>2 · Ploegen invullen</h2>
         <p className="trn-hint">
-          {bracketSize > 0
-            ? `Schema van ${bracketSize} · ${byes > 0 ? `${byes} bye(s) — die ploeg${byes > 1 ? 'en' : ''} is vrij in ronde 1` : 'geen bye’s'}`
-            : 'Vul de ploegnamen in.'}
+          {filledCount < 2
+            ? 'Vul de ploegnamen in.'
+            : format === 'roundrobin'
+              ? `${filledCount} ploegen · ${(filledCount * (filledCount - 1)) / 2} wedstrijden (iedereen één keer tegen elkaar)`
+              : `Schema van ${bracketSize} · ${byes > 0 ? `${byes} bye(s) — die ploeg${byes > 1 ? 'en' : ''} is vrij in ronde 1` : 'geen bye’s'}`}
         </p>
         <ol className="trn-teamlist">
           {names.map((n, i) => (
@@ -141,6 +155,7 @@ export function NewTournament({ categories }: { categories: ReadonlyArray<{ labe
         </ol>
       </section>
 
+      {format === 'knockout' && (
       <section className="trn-card">
         <h2>3 · Loting</h2>
         <div className="trn-methods">
@@ -169,6 +184,7 @@ export function NewTournament({ categories }: { categories: ReadonlyArray<{ labe
           </div>
         )}
       </section>
+      )}
 
       {error && <p className="trn-error">{error}</p>}
       <button type="button" className="trn-btn primary big" onClick={submit} disabled={busy}>

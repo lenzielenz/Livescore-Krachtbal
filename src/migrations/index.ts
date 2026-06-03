@@ -16,6 +16,7 @@ import * as migration_20260602_220000_kantine_selectie from './20260602_220000_k
 import * as migration_20260602_230000_vaste_opstelling from './20260602_230000_vaste_opstelling';
 import * as migration_20260603_090000_forfait_uitslag from './20260603_090000_forfait_uitslag';
 import * as migration_20260603_120000_sr_vrijgave from './20260603_120000_sr_vrijgave';
+import * as migration_20260603_140000_tornooi_format from './20260603_140000_tornooi_format';
 
 export const migrations = [
   {
@@ -107,5 +108,10 @@ export const migrations = [
     up: migration_20260603_120000_sr_vrijgave.up,
     down: migration_20260603_120000_sr_vrijgave.down,
     name: '20260603_120000_sr_vrijgave',
+  },
+  {
+    up: migration_20260603_140000_tornooi_format.up,
+    down: migration_20260603_140000_tornooi_format.down,
+    name: '20260603_140000_tornooi_format',
   },
 ];

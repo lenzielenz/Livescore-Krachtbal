@@ -16,6 +16,7 @@ export async function POST(req: Request) {
   const name = String(body.name ?? '').trim()
   const category = String(body.category ?? '') as Category
   const method = body.method === 'manual' ? 'manual' : 'auto'
+  const format = body.format === 'roundrobin' ? 'roundrobin' : 'knockout'
   const slots = Array.isArray(body.slots)
     ? body.slots.map((s) => (typeof s === 'string' && s.trim() ? s.trim() : null))
     : []
@@ -25,7 +26,7 @@ export async function POST(req: Request) {
 
   try {
     const payload = await getPayloadClient()
-    const id = await createTournament(payload, { name, category, method, slots })
+    const id = await createTournament(payload, { name, category, method, slots, format })
     return Response.json({ id })
   } catch (err) {
     return Response.json({ error: (err as Error).message }, { status: 400 })

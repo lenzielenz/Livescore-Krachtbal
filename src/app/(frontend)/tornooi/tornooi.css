@@ -527,6 +527,68 @@
   max-width: 250px;
 }
 
+/* ── Round-robin: rangschikking + wedstrijdenlijst ──────────────────────────── */
+.trn-rr {
+  display: grid;
+  grid-template-columns: minmax(280px, 380px) 1fr;
+  gap: 24px;
+  align-items: start;
+}
+.trn-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.86rem;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: var(--card-shadow, 0 10px 30px rgba(0, 0, 0, 0.35));
+}
+.trn-table th,
+.trn-table td {
+  padding: 9px 8px;
+  text-align: center;
+  border-bottom: 1px solid var(--line);
+  font-variant-numeric: tabular-nums;
+}
+.trn-table th {
+  color: var(--dim);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: #0a1f14;
+}
+.trn-table th.l,
+.trn-table td.l {
+  text-align: left;
+  font-weight: 700;
+}
+.trn-table td.pts {
+  font-weight: 900;
+  color: var(--accent);
+}
+.trn-table tr:last-child td {
+  border-bottom: none;
+}
+.trn-table tbody tr.leader td {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+.trn-rr-legend {
+  font-size: 0.74rem;
+  color: var(--dim);
+  margin: 8px 2px 0;
+}
+.trn-rr-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+@media (max-width: 760px) {
+  .trn-rr {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Aantekentafel */
 .trn-page.sheet {
   max-width: 760px;

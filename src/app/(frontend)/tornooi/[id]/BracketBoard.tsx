@@ -51,6 +51,47 @@ function MatchCard({ id, m }: { id: number; m: TMatchState }) {
   )
 }
 
+// Round-robin: live rangschikking (4/3/2 punten) + alle wedstrijden.
+function RoundRobin({ id, state }: { id: number; state: TournamentState }) {
+  const matches = state.rounds.flatMap((r) => r.matches)
+  const standings = state.standings ?? []
+  return (
+    <div className="trn-rr">
+      <section className="trn-rr-stand">
+        <h2 className="trn-col-title">Rangschikking</h2>
+        <table className="trn-table">
+          <thead>
+            <tr><th>#</th><th className="l">Ploeg</th><th>G</th><th>W</th><th>GL</th><th>V</th><th>Saldo</th><th>Ptn</th></tr>
+          </thead>
+          <tbody>
+            {standings.map((s, i) => (
+              <tr key={s.team} className={i === 0 && state.status === 'finished' ? 'leader' : ''}>
+                <td>{i + 1}</td>
+                <td className="l">{s.team}</td>
+                <td>{s.played}</td>
+                <td>{s.won}</td>
+                <td>{s.drawn}</td>
+                <td>{s.lost}</td>
+                <td>{s.gf}–{s.ga}</td>
+                <td className="pts">{s.points}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <p className="trn-rr-legend">Winst 4 · gelijkspel 3 · verlies 2 punten</p>
+      </section>
+      <section className="trn-rr-matches">
+        <h2 className="trn-col-title">Wedstrijden</h2>
+        <div className="trn-rr-grid">
+          {matches.map((m) => (
+            <MatchCard key={m.id} id={id} m={m} />
+          ))}
+        </div>
+      </section>
+    </div>
+  )
+}
+
 export function BracketBoard({ id, initial }: { id: number; initial: TournamentState }) {
   const state = useTournamentStream(id, initial) ?? initial
 
@@ -70,6 +111,9 @@ export function BracketBoard({ id, initial }: { id: number; initial: TournamentS
         <div className="trn-champion">🏆 Winnaar: <strong>{state.champion}</strong></div>
       )}
 
+      {state.format === 'roundrobin' ? (
+        <RoundRobin id={id} state={state} />
+      ) : (
       <main className="trn-bracket">
         {state.rounds.map((r, ri) => {
           const isLast = ri === state.rounds.length - 1
@@ -89,8 +133,9 @@ export function BracketBoard({ id, initial }: { id: number; initial: TournamentS
           )
         })}
       </main>
+      )}
 
-      {state.thirdPlace && (
+      {state.format !== 'roundrobin' && state.thirdPlace && (
         <section className="trn-third">
           <h2 className="trn-col-title">Kleine finale (3e plaats)</h2>
           <div className="trn-third-card">

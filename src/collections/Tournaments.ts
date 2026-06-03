@@ -12,6 +12,11 @@ export const TOURNAMENT_METHOD_OPTIONS = [
   { label: 'Toggle (automatische loting)', value: 'auto' },
 ] as const
 
+export const TOURNAMENT_FORMAT_OPTIONS = [
+  { label: 'Knock-out (afvalrace)', value: 'knockout' },
+  { label: 'Iedereen tegen elkaar (rangschikking)', value: 'roundrobin' },
+] as const
+
 // Een tornooi (enkele afvalrace met kleine finale). De ploegen zijn ad-hoc namen — geen
 // geregistreerde Teams/Players nodig. De categorie bepaalt de spelregels (helftduur). De
 // wedstrijden van het schema staan in de aparte collectie `tournament-matches`.
@@ -63,6 +68,14 @@ export const Tournaments: CollectionConfig = {
           type: 'select',
           options: [...TOURNAMENT_METHOD_OPTIONS],
           defaultValue: 'auto',
+        },
+        {
+          name: 'format',
+          label: 'Formaat',
+          type: 'select',
+          options: [...TOURNAMENT_FORMAT_OPTIONS],
+          defaultValue: 'knockout',
+          admin: { description: 'Knock-out = afvalrace met finale. Iedereen tegen elkaar = poule met punten (winst 4, gelijk 3, verlies 2).' },
         },
       ],
     },

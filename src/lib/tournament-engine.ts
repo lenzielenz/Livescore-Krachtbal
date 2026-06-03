@@ -12,12 +12,17 @@ import {
   type Goal,
   type Side,
   type SlotRef,
+  type Standing,
   buildBracket,
+  buildRoundRobin,
+  computeStandings,
   deriveScore,
   loserName,
   resolveWinner,
   winnerName,
 } from './tournament'
+
+export type TournamentFormat = 'knockout' | 'roundrobin'
 
 export type TMatchState = {
   id: number
@@ -41,10 +46,13 @@ export type TournamentState = {
   category: Category
   status: 'live' | 'finished'
   method: string
+  format: TournamentFormat
   halfDurationSeconds: number
   rounds: { round: number; label: string; matches: TMatchState[] }[]
   thirdPlace: TMatchState | null
   champion: string | null
+  /** Enkel bij round-robin: de live rangschikking. */
+  standings?: Standing[]
 }
 
 type MatchDoc = {
@@ -115,22 +123,25 @@ async function loadMatches(payload: Payload, tournamentId: number): Promise<Matc
  */
 export async function createTournament(
   payload: Payload,
-  args: { name: string; category: Category; method: 'manual' | 'auto'; slots: (string | null)[] },
+  args: { name: string; category: Category; method: 'manual' | 'auto'; slots: (string | null)[]; format?: TournamentFormat },
 ): Promise<number> {
-  const filled = args.slots.filter(Boolean)
+  const format: TournamentFormat = args.format === 'roundrobin' ? 'roundrobin' : 'knockout'
+  const filled = args.slots.filter((s): s is string => Boolean(s))
   if (filled.length < 2) throw new Error('Een tornooi heeft minstens 2 ploegen nodig.')
 
-  const bracket = buildBracket(args.slots)
-  // Verbied een wedstrijd zonder enige ploeg (twee bye's tegenover elkaar).
-  for (const m of bracket) {
-    if (m.round === 1 && m.bracket === 'main' && !m.home && !m.away) {
-      throw new Error('Ongeldige loting: een wedstrijd zonder ploegen. Verdeel de bye’s anders.')
+  const bracket = format === 'roundrobin' ? buildRoundRobin(filled) : buildBracket(args.slots)
+  // Knock-out: verbied een wedstrijd zonder enige ploeg (twee bye's tegenover elkaar).
+  if (format === 'knockout') {
+    for (const m of bracket) {
+      if (m.round === 1 && m.bracket === 'main' && !m.home && !m.away) {
+        throw new Error('Ongeldige loting: een wedstrijd zonder ploegen. Verdeel de bye’s anders.')
+      }
     }
   }
 
   const tournament = await payload.create({
     collection: 'tournaments',
-    data: { name: args.name, category: args.category, method: args.method, status: 'live', teamCount: filled.length },
+    data: { name: args.name, category: args.category, method: args.method, format, status: 'live', teamCount: filled.length },
     overrideAccess: true,
   })
 
@@ -188,9 +199,20 @@ export async function buildTournamentState(payload: Payload, tournamentId: numbe
       matches: matches.sort((a, b) => a.position - b.position),
     }))
 
-  const finalRound = rounds[rounds.length - 1]
-  const finalMatch = finalRound?.matches.find((m) => m.bracket === 'main')
-  const champion = finalMatch?.status === 'finished' && finalMatch.winner ? finalMatch[finalMatch.winner] : null
+  const format: TournamentFormat = (t as { format?: string }).format === 'roundrobin' ? 'roundrobin' : 'knockout'
+
+  // Round-robin: rangschikking uit alle wedstrijden; kampioen = leider als alles gespeeld is.
+  let standings: Standing[] | undefined
+  let champion: string | null
+  if (format === 'roundrobin') {
+    const teams = [...new Set(states.flatMap((s) => [s.home, s.away]).filter((n): n is string => Boolean(n)))]
+    standings = computeStandings(states, teams)
+    champion = t.status === 'finished' ? (standings[0]?.team ?? null) : null
+  } else {
+    const finalRound = rounds[rounds.length - 1]
+    const finalMatch = finalRound?.matches.find((m) => m.bracket === 'main')
+    champion = finalMatch?.status === 'finished' && finalMatch.winner ? finalMatch[finalMatch.winner] : null
+  }
 
   return {
     id: t.id,
@@ -198,10 +220,12 @@ export async function buildTournamentState(payload: Payload, tournamentId: numbe
     category: t.category as Category,
     status: t.status as 'live' | 'finished',
     method: (t.method as string) ?? 'auto',
+    format,
     halfDurationSeconds: categoryConfig(t.category as Category).halfDurationSeconds,
     rounds,
     thirdPlace,
     champion,
+    standings,
   }
 }
 
@@ -279,8 +303,16 @@ export async function advanceHalf(payload: Payload, matchId: number): Promise<vo
 export async function finishMatch(payload: Payload, matchId: number, explicitWinner?: Side | null): Promise<void> {
   const m = await getMatch(payload, matchId)
   const score = deriveScore(goalsOf(m))
+  const tournamentId = await tournamentIdOf(payload, m)
+  const t = await payload.findByID({ collection: 'tournaments', id: tournamentId, depth: 0 }).catch(() => null)
+  const format = (t as { format?: string } | null)?.format === 'roundrobin' ? 'roundrobin' : 'knockout'
+
   const winner = resolveWinner(score, explicitWinner)
-  if (!winner) throw new Error('Gelijkspel: kies wie doorgaat (extra worpen).')
+  // In een afvalrace moet er een winnaar zijn (extra worpen bij gelijkspel). Bij round-robin
+  // mag een wedstrijd op een gelijkspel eindigen (3 punten elk).
+  if (!winner && format === 'knockout') {
+    throw new Error('Gelijkspel: kies wie doorgaat (extra worpen).')
+  }
 
   await update(payload, matchId, { status: 'finished', winner, clockRunning: false, clockSeconds: Math.floor(liveClock(m)) })
 
@@ -290,7 +322,6 @@ export async function finishMatch(payload: Payload, matchId: number, explicitWin
   if (m.loserTo && loser) await applyToSlot(payload, m, m.loserTo, loser)
 
   // Tornooi afsluiten zodra alle wedstrijden gespeeld zijn.
-  const tournamentId = await tournamentIdOf(payload, m)
   const docs = await loadMatches(payload, tournamentId)
   if (docs.every((d) => d.status === 'finished')) {
     await payload.update({ collection: 'tournaments', id: tournamentId, data: { status: 'finished' }, overrideAccess: true })

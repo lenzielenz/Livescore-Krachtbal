@@ -641,6 +641,10 @@ export interface Tournament {
   status: 'live' | 'finished';
   method?: ('manual' | 'auto') | null;
   /**
+   * Knock-out = afvalrace met finale. Iedereen tegen elkaar = poule met punten (winst 4, gelijk 3, verlies 2).
+   */
+  format?: ('knockout' | 'roundrobin') | null;
+  /**
    * Vastgelegd bij het aanmaken.
    */
   teamCount?: number | null;
@@ -1191,6 +1195,7 @@ export interface TournamentsSelect<T extends boolean = true> {
   category?: T;
   status?: T;
   method?: T;
+  format?: T;
   teamCount?: T;
   updatedAt?: T;
   createdAt?: T;
