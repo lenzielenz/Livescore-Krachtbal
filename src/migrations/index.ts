@@ -18,6 +18,8 @@ import * as migration_20260603_090000_forfait_uitslag from './20260603_090000_fo
 import * as migration_20260603_120000_sr_vrijgave from './20260603_120000_sr_vrijgave';
 import * as migration_20260603_140000_tornooi_format from './20260603_140000_tornooi_format';
 import * as migration_20260603_160000_tornooi_kruisjes_timeouts from './20260603_160000_tornooi_kruisjes_timeouts';
+import * as migration_20260603_180000_club_pakket from './20260603_180000_club_pakket';
+import * as migration_20260603_190000_match_simple_score from './20260603_190000_match_simple_score';
 
 export const migrations = [
   {
@@ -119,5 +121,15 @@ export const migrations = [
     up: migration_20260603_160000_tornooi_kruisjes_timeouts.up,
     down: migration_20260603_160000_tornooi_kruisjes_timeouts.down,
     name: '20260603_160000_tornooi_kruisjes_timeouts',
+  },
+  {
+    up: migration_20260603_180000_club_pakket.up,
+    down: migration_20260603_180000_club_pakket.down,
+    name: '20260603_180000_club_pakket',
+  },
+  {
+    up: migration_20260603_190000_match_simple_score.up,
+    down: migration_20260603_190000_match_simple_score.down,
+    name: '20260603_190000_match_simple_score',
   },
 ];

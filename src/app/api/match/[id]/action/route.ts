@@ -16,6 +16,14 @@ import {
 import { getMatchReadiness } from '@/lib/matchsheet-data'
 import { missingSteps } from '@/lib/match-readiness'
 import { getPayloadClient } from '@/lib/payload-client'
+import {
+  adjustSimpleCross,
+  adjustSimpleTimeout,
+  advanceSimpleHalf,
+  recordSimpleGoal,
+  startSimpleMatch,
+  undoSimpleGoal,
+} from '@/lib/simple-match-engine'
 
 // Eén POST-endpoint dat aantekenaar-acties dispatcht op het veld `action`.
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -91,6 +99,25 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         return Response.json(
           await substitute(payload, matchId, body.side === 'away' ? 'away' : 'home', Number(body.outPlayerId), Number(body.inPlayerId)),
         )
+      // ── Simpele aantekenmodus (Starter-pakket): +1/+2 zonder veldschema ──
+      case 'simplestart':
+        return Response.json(await startSimpleMatch(payload, matchId))
+      case 'simplegoal':
+        return Response.json(
+          await recordSimpleGoal(payload, matchId, body.side === 'away' ? 'away' : 'home', body.points === 2 ? 2 : 1),
+        )
+      case 'simpleundo':
+        return Response.json(await undoSimpleGoal(payload, matchId))
+      case 'simplecross':
+        return Response.json(
+          await adjustSimpleCross(payload, matchId, body.side === 'away' ? 'away' : 'home', Number(body.delta) || 1),
+        )
+      case 'simpletimeout':
+        return Response.json(
+          await adjustSimpleTimeout(payload, matchId, body.side === 'away' ? 'away' : 'home', Number(body.delta) || 1),
+        )
+      case 'simplehalf':
+        return Response.json(await advanceSimpleHalf(payload, matchId))
       default:
         return Response.json({ error: `Onbekende actie: ${action}` }, { status: 400 })
     }

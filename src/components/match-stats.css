@@ -137,3 +137,21 @@
 @media (max-width: 700px) {
   .stats-grid { grid-template-columns: 1fr; }
 }
+
+/* Pakket-gating: meters-only weergave + upsell-melding */
+.meters-title {
+  font-size: 15px;
+  font-weight: 700;
+  margin: 0 0 10px;
+}
+.stats-upsell {
+  margin-top: 18px;
+  padding: 12px 16px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  font-size: 14px;
+  color: var(--muted, #9aa);
+}
+.stats-upsell strong { color: var(--text, inherit); }
+.stats-upsell a { font-weight: 600; white-space: nowrap; }
