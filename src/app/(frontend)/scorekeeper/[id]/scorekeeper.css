@@ -470,3 +470,38 @@ a.sk-btn { display: inline-block; box-sizing: border-box; text-align: center; te
   .sk-rail { width: 52px; }
   .sk-rail-dir { font-size: 2rem; }
 }
+
+/* ── Alleen op de computer (breed scherm): logo + naam, timer en kruisjes prominenter.
+   De gsm-weergave (smaller dan 900px) blijft exact ongewijzigd. ── */
+@media (min-width: 900px) {
+  .sk-scorebar { gap: 24px; }
+  .sk-team { gap: 9px; }
+  /* Groter clublogo naast de naam. */
+  .sk-team .tl { width: 78px; height: 78px; font-size: 78px; }
+  .sk-tn { font-size: 1.45rem; }
+  .sk-sc { font-size: 4.4rem; }
+  .sk-to { padding: 6px 14px; gap: 8px; }
+  .sk-to-lbl { font-size: 0.72rem; }
+  .sk-to-dot { width: 14px; height: 14px; }
+
+  /* Prominente timer. */
+  .sk-clock { font-size: 2.1rem; padding: 14px 30px; gap: 10px; border-width: 2px; }
+  .sk-half-chip { font-size: 0.8rem; padding: 2px 8px; }
+  .sk-clock-ico { font-size: 1.1rem; }
+
+  /* Prominente kruisjes-rij (als een nette pill, gecentreerd). */
+  .sk-crossrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: fit-content;
+    margin: 10px auto 0;
+    font-size: 1.05rem;
+    padding: 6px 16px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: color-mix(in srgb, var(--panel) 70%, transparent);
+  }
+  .sk-crossrow strong { color: var(--accent); }
+}
