@@ -32,7 +32,7 @@
   font-size: 1rem;
 }
 .wb-card.side-home {
-  border-top: 3px solid var(--home, #06d6a0);
+  border-top: 3px solid var(--home, #0fe0a6);
 }
 .wb-card.side-away {
   border-top: 3px solid var(--away, #4cc9f0);

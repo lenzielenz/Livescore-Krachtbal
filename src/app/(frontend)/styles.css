@@ -1,18 +1,31 @@
 :root {
   --bg: #06140d;
   --bg-2: #0a2014;
-  --panel: #0e261a;
-  --panel-2: #123a25;
-  --line: #1c3a2a;
-  --txt: #e8f5ee;
-  --dim: #8fb3a1;
-  --accent: #ffd166;
-  --accent-2: #f7b733;
-  --home: #06d6a0;
+  /* Iets opgetild t.o.v. vroeger (#0e261a/#123a25): meer contrast, minder "moerasdonker",
+     waardoor kaarten echt van de achtergrond loskomen. */
+  --panel: #0f2d1e;
+  --panel-2: #18482e;
+  --line: #224a33;
+  --txt: #ecf7f0;
+  --dim: #93b9a6;
+  /* Warmer en helderder goud → meer "pop" zonder de huisstijl te verlaten. */
+  --accent: #ffd873;
+  --accent-2: #f9b023;
+  --home: #0fe0a6;
   --away: #4cc9f0;
+  /* Nieuwe poppy-accenten: gebruikt voor gloed, randen en flair (spaarzaam). */
+  --pop: #ff5c8a;
+  --pop-2: #b07bff;
+  /* Gedeelde kleurverlopen — geven knoppen, merk en markers een premium glans. */
+  --grad-accent: linear-gradient(135deg, #ffe7a0 0%, var(--accent) 45%, var(--accent-2) 100%);
+  --grad-pop: linear-gradient(135deg, var(--pop) 0%, var(--pop-2) 100%);
+  --grad-cool: linear-gradient(135deg, var(--home) 0%, var(--away) 100%);
   /* Gedeelde premium-effecten */
-  --panel-grad: linear-gradient(160deg, color-mix(in srgb, var(--panel-2) 65%, var(--panel)), var(--panel));
-  --card-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  --panel-grad: linear-gradient(155deg, color-mix(in srgb, var(--panel-2) 72%, var(--panel)), var(--panel) 92%);
+  --card-shadow: 0 12px 34px rgba(0, 0, 0, 0.38);
+  /* Gekleurde gloed-schaduw voor hover-states: tilt kaarten op met sfeer i.p.v. enkel zwart. */
+  --glow-accent: 0 18px 44px -10px color-mix(in srgb, var(--accent) 30%, transparent);
+  --glow-pop: 0 18px 44px -10px color-mix(in srgb, var(--pop) 32%, transparent);
 }
 
 * {
@@ -29,12 +42,14 @@ body {
   /* Vaste donkere basiskleur: voorkomt een wit vlak in het overscroll-gebied
      (waar de 'fixed' gradient niet doorloopt) bij voorbij-scrollen op mobiel. */
   background-color: #050f0a;
-  /* Premium, diepe achtergrond met subtiele kleurgloed i.p.v. een vlak zwart vlak. */
+  /* Premium, diepe achtergrond met levendige kleurgloed (aurora-gevoel) i.p.v. een vlak zwart vlak.
+     Meer kleur en een vierde, poppy gloed onderaan geven de app energie zonder druk te worden. */
   background-image:
-    radial-gradient(1100px 620px at 50% -8%, color-mix(in srgb, var(--accent) 8%, transparent), transparent 60%),
-    radial-gradient(820px 520px at 6% 4%, color-mix(in srgb, var(--home) 9%, transparent), transparent 55%),
-    radial-gradient(820px 520px at 96% 2%, color-mix(in srgb, var(--away) 8%, transparent), transparent 55%),
-    linear-gradient(180deg, #07170e 0%, #050f0a 100%);
+    radial-gradient(1150px 660px at 50% -10%, color-mix(in srgb, var(--accent) 13%, transparent), transparent 60%),
+    radial-gradient(900px 560px at 4% 2%, color-mix(in srgb, var(--home) 15%, transparent), transparent 55%),
+    radial-gradient(900px 560px at 97% 1%, color-mix(in srgb, var(--away) 13%, transparent), transparent 55%),
+    radial-gradient(820px 620px at 88% 92%, color-mix(in srgb, var(--pop) 9%, transparent), transparent 60%),
+    linear-gradient(180deg, #08190f 0%, #050f0a 100%);
   background-attachment: fixed;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -104,10 +119,11 @@ h3,
 
 /* Gedeeld merk-accent: warme gouden tekst met lichte glans. */
 .brand {
-  background: linear-gradient(180deg, #ffe08a, var(--accent-2));
+  background: var(--grad-accent);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+  filter: drop-shadow(0 1px 10px color-mix(in srgb, var(--accent) 30%, transparent));
 }
 
 .site {
@@ -121,13 +137,13 @@ h3,
   margin: 14px 0 30px;
 }
 .hub-hero h1 {
-  font-size: 2.6rem;
+  font-size: 2.75rem;
   font-weight: 900;
-  letter-spacing: -0.015em;
+  letter-spacing: -0.02em;
   margin: 0 0 8px;
 }
 .hub-hero .brand {
-  filter: drop-shadow(0 2px 14px color-mix(in srgb, var(--accent) 35%, transparent));
+  filter: drop-shadow(0 2px 18px color-mix(in srgb, var(--accent) 42%, transparent));
 }
 .hub-hero p {
   color: var(--dim);
@@ -135,11 +151,23 @@ h3,
   max-width: 60ch;
 }
 .hub-h {
+  display: flex;
+  align-items: center;
+  gap: 9px;
   font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--dim);
   margin: 28px 0 4px;
+}
+/* Chic gradient-marker vóór elke sectiekop. */
+.hub-h::before {
+  content: '';
+  width: 22px;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--grad-accent);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 55%, transparent);
 }
 
 /* Nu live — strook bovenaan de hub. */
@@ -151,14 +179,14 @@ h3,
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #ef476f;
+  background: var(--pop);
   margin-right: 8px;
   vertical-align: middle;
   animation: hub-livepulse 1.6s ease-in-out infinite;
 }
 @keyframes hub-livepulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 71, 111, 0.5); }
-  50% { box-shadow: 0 0 0 6px rgba(239, 71, 111, 0); }
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--pop) 55%, transparent); }
+  50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--pop) 0%, transparent); }
 }
 .hub-live {
   display: grid;
@@ -172,15 +200,15 @@ h3,
   gap: 9px;
   padding: 13px 15px;
   background: var(--panel-grad);
-  border: 1px solid color-mix(in srgb, #ef476f 30%, var(--line));
+  border: 1px solid color-mix(in srgb, var(--pop) 32%, var(--line));
   border-radius: 14px;
   box-shadow: var(--card-shadow);
   transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
 }
 .hub-livecard:hover {
   transform: translateY(-2px);
-  border-color: color-mix(in srgb, #ef476f 55%, var(--line));
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.45);
+  border-color: color-mix(in srgb, var(--pop) 58%, var(--line));
+  box-shadow: var(--glow-pop), 0 12px 28px rgba(0, 0, 0, 0.4);
 }
 .hub-live-reeks {
   font-size: 0.72rem;
@@ -245,36 +273,56 @@ h3,
   align-items: stretch;
 }
 .hub-screen {
+  --c: var(--accent);
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 4px;
   padding: 18px 16px;
-  background: var(--panel-grad);
+  background:
+    radial-gradient(120% 80% at 50% -20%, color-mix(in srgb, var(--c) 14%, transparent), transparent 70%),
+    var(--panel-grad);
   border: 1px solid var(--line);
   border-radius: 16px;
   box-shadow: var(--card-shadow);
-  transition: border-color 0.16s ease, transform 0.16s ease, box-shadow 0.16s ease;
+  overflow: hidden;
+  transition: border-color 0.18s ease, transform 0.18s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.18s ease;
+}
+/* Kleurgecodeerde stappen — elk scherm zijn eigen poppy accent (goud → teal → cyaan → roze). */
+.hub-screen:nth-child(1) { --c: var(--accent); }
+.hub-screen:nth-child(2) { --c: var(--home); }
+.hub-screen:nth-child(3) { --c: var(--away); }
+.hub-screen:nth-child(4) { --c: var(--pop); }
+/* Dunne gekleurde accentlijn bovenaan elke kaart. */
+.hub-screen::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, var(--c), transparent);
+  opacity: 0.7;
 }
 .hub-screen:hover {
-  border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
-  transform: translateY(-3px);
-  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.5);
+  border-color: color-mix(in srgb, var(--c) 60%, var(--line));
+  transform: translateY(-4px);
+  box-shadow: 0 20px 46px -12px color-mix(in srgb, var(--c) 34%, transparent), 0 14px 30px rgba(0, 0, 0, 0.4);
 }
 .hub-screen.input {
   border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
   box-shadow: var(--card-shadow), inset 0 0 0 1px color-mix(in srgb, var(--accent) 26%, transparent),
-    0 0 36px color-mix(in srgb, var(--accent) 14%, transparent);
+    0 0 40px color-mix(in srgb, var(--accent) 16%, transparent);
 }
 .hub-step {
   font-size: 0.64rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--accent);
+  color: var(--c);
   font-weight: 800;
 }
 .hub-ico {
   font-size: 1.7rem;
   line-height: 1;
+  filter: drop-shadow(0 3px 10px color-mix(in srgb, var(--c) 45%, transparent));
 }
 .hub-screen h3 {
   margin: 2px 0 0;
@@ -314,6 +362,7 @@ h3,
 .hub-card:hover {
   border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
   transform: translateY(-2px);
+  box-shadow: var(--glow-accent), 0 10px 24px rgba(0, 0, 0, 0.38);
 }
 .hub-card strong {
   font-size: 0.98rem;
@@ -335,9 +384,14 @@ h3,
   color: var(--txt);
   font-size: 0.88rem;
 }
+.hub-pill {
+  transition: border-color 0.14s ease, color 0.14s ease, transform 0.14s ease, box-shadow 0.14s ease;
+}
 .hub-pill:hover {
   border-color: var(--accent);
   color: var(--accent);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px -8px color-mix(in srgb, var(--accent) 45%, transparent);
 }
 
 @media (max-width: 720px) {
@@ -432,11 +486,22 @@ h3,
 }
 
 .section-title {
+  display: flex;
+  align-items: center;
+  gap: 9px;
   font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--dim);
   margin: 24px 0 10px;
+}
+.section-title::before {
+  content: '';
+  width: 22px;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--grad-accent);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 55%, transparent);
 }
 
 .match-list {
@@ -448,13 +513,13 @@ h3,
   display: inline-block;
   padding: 12px 20px;
   border-radius: 12px;
-  border: 1px solid var(--accent, #ffd166);
-  color: var(--accent, #ffd166);
+  border: 1px solid var(--accent, #ffd873);
+  color: var(--accent, #ffd873);
   font-weight: 800;
   text-decoration: none;
 }
 .sk-demo-cta:hover {
-  background: var(--accent, #ffd166);
+  background: var(--accent, #ffd873);
   color: #06140d;
 }
 .match-card {
@@ -472,7 +537,7 @@ h3,
 .match-card:hover {
   border-color: color-mix(in srgb, var(--accent) 60%, var(--line));
   transform: translateY(-2px);
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.45);
+  box-shadow: var(--glow-accent), 0 12px 28px rgba(0, 0, 0, 0.4);
 }
 .match-card .home {
   display: flex;
@@ -529,10 +594,11 @@ h3,
   font-size: 0.65rem;
   font-weight: 800;
   letter-spacing: 0.06em;
-  background: #ef476f;
+  background: var(--grad-pop);
   color: #fff;
   padding: 2px 7px;
   border-radius: 999px;
+  box-shadow: 0 4px 14px -2px color-mix(in srgb, var(--pop) 60%, transparent);
 }
 .empty {
   color: var(--dim);
@@ -569,12 +635,15 @@ h3,
   transform: none;
 }
 .btn-primary {
-  background: linear-gradient(180deg, #ffe08a, var(--accent-2));
+  background: var(--grad-accent);
   color: #06140d;
-  border-color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 80%, #fff);
+  box-shadow: var(--card-shadow), 0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent),
+    0 10px 26px -8px color-mix(in srgb, var(--accent) 50%, transparent);
 }
 .btn-primary:hover {
-  filter: brightness(1.04);
+  filter: brightness(1.06) saturate(1.05);
+  box-shadow: var(--glow-accent), 0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent);
 }
 .btn-ghost {
   background: transparent;

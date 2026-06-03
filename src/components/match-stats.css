@@ -1,5 +1,5 @@
 .stats {
-  --home: #06d6a0;
+  --home: #0fe0a6;
   --away: #4cc9f0;
   margin-top: 28px;
 }
@@ -130,8 +130,8 @@
 .pl-val.neg { color: #ef476f; }
 .pl-bar { display: flex; height: 7px; border-radius: 4px; overflow: hidden; background: #0a1f14; }
 .pl-bar .seg { display: block; height: 100%; }
-.pl-bar .seg.l { background: #06d6a0; }
-.pl-bar .seg.m { background: #ffd166; }
+.pl-bar .seg.l { background: #0fe0a6; }
+.pl-bar .seg.m { background: #ffd873; }
 .pl-bar .seg.r { background: #4cc9f0; }
 
 @media (max-width: 700px) {

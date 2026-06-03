@@ -38,7 +38,7 @@
 
 /* Zijde-accent (thuis = groen, uit = blauw) */
 .tl-home {
-  --tl-ring: color-mix(in srgb, #06d6a0 65%, transparent);
+  --tl-ring: color-mix(in srgb, #0fe0a6 65%, transparent);
 }
 .tl-away {
   --tl-ring: color-mix(in srgb, #4cc9f0 65%, transparent);

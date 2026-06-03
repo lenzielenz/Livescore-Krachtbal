@@ -13,7 +13,7 @@
   font-size: 14px;
 }
 .ssk-home { font-weight: 700; text-decoration: none; }
-.ssk-home .brand { color: var(--accent, #06d6a0); }
+.ssk-home .brand { color: var(--accent, #0fe0a6); }
 .ssk-toplink { text-decoration: none; opacity: 0.8; }
 
 .ssk-meta {
@@ -24,7 +24,7 @@
 .ssk-mode {
   font-size: 13px;
   font-weight: 700;
-  color: var(--accent, #06d6a0);
+  color: var(--accent, #0fe0a6);
 }
 .ssk-status {
   font-size: 12px;
@@ -75,7 +75,7 @@
   flex-direction: column;
   gap: 12px;
 }
-.ssk-team.side-home { border-top: 4px solid #06d6a0; }
+.ssk-team.side-home { border-top: 4px solid #0fe0a6; }
 .ssk-team.side-away { border-top: 4px solid #4cc9f0; }
 .ssk-team-name {
   font-weight: 700;
@@ -110,8 +110,8 @@
   gap: 2px;
 }
 .ssk-goal small { font-size: 11px; font-weight: 600; opacity: 0.8; }
-.ssk-goal.nek { background: #ffd166; }
-.ssk-goal.rug { background: #06d6a0; }
+.ssk-goal.nek { background: #ffd873; }
+.ssk-goal.rug { background: #0fe0a6; }
 .ssk-goal:active { transform: translateY(1px); }
 
 .ssk-stats {
@@ -157,7 +157,7 @@
   cursor: pointer;
   text-decoration: none;
 }
-.ssk-btn.primary { background: var(--accent, #06d6a0); color: #04231b; border-color: transparent; }
+.ssk-btn.primary { background: var(--accent, #0fe0a6); color: #04231b; border-color: transparent; }
 .ssk-btn.danger { border-color: #ef476f; color: #ef476f; }
 .ssk-btn:active { transform: translateY(1px); }
 
@@ -201,7 +201,7 @@
 .ssk-modal-pts {
   font-size: 14px;
   font-weight: 700;
-  color: var(--accent, #06d6a0);
+  color: var(--accent, #0fe0a6);
 }
 .ssk-modal-team {
   margin: 0 0 14px;
