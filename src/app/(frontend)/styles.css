@@ -26,8 +26,11 @@ body {
   min-height: 100%;
   color: var(--txt);
   font-family: var(--font-body), 'Segoe UI', ui-sans-serif, system-ui, -apple-system, 'Helvetica Neue', sans-serif;
+  /* Vaste donkere basiskleur: voorkomt een wit vlak in het overscroll-gebied
+     (waar de 'fixed' gradient niet doorloopt) bij voorbij-scrollen op mobiel. */
+  background-color: #050f0a;
   /* Premium, diepe achtergrond met subtiele kleurgloed i.p.v. een vlak zwart vlak. */
-  background:
+  background-image:
     radial-gradient(1100px 620px at 50% -8%, color-mix(in srgb, var(--accent) 8%, transparent), transparent 60%),
     radial-gradient(820px 520px at 6% 4%, color-mix(in srgb, var(--home) 9%, transparent), transparent 55%),
     radial-gradient(820px 520px at 96% 2%, color-mix(in srgb, var(--away) 8%, transparent), transparent 55%),
