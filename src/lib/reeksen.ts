@@ -37,6 +37,13 @@ export const REEKS_OPTIONS = [
 
 export type Reeks = (typeof REEKS_OPTIONS)[number]['value']
 
+/** Leesbare reeksnaam zonder de code-prefix, bv. "2de Nationale Heren" i.p.v. "2NAH — 2de Nationale Heren". */
+export function reeksNaam(value: unknown): string {
+  const opt = REEKS_OPTIONS.find((o) => o.value === value)
+  if (opt) return opt.label.split('—').pop()!.trim()
+  return typeof value === 'string' && value ? value : 'Overig'
+}
+
 /** Rangorde voor beker-voorgift (lager getal = hogere reeks). Enkel de geordende
  * competitiereeksen; 'beker'/'recreatief'/'andere' krijgen geen rang (null). */
 const REEKS_RANG: Partial<Record<Reeks, number>> = {
