@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useState } from 'react'
 
+import { PACKAGES_ENABLED } from '@/lib/packages'
 import './site-header.css'
 
 // Eén gedeelde navigatie voor alle inhoud-pagina's. Hoofdsecties altijd zichtbaar,
@@ -18,7 +19,8 @@ const PRIMARY: { href: string; label: string; key: NavSection }[] = [
 
 const MORE: { href: string; label: string; external?: boolean }[] = [
   { href: '/demo', label: '🎓 Demo spelen' },
-  { href: '/pakketten', label: '💎 Pakketten' },
+  // Prijspakketten alleen tonen wanneer de pakket-feature actief is.
+  ...(PACKAGES_ENABLED ? [{ href: '/pakketten', label: '💎 Pakketten' }] : []),
   { href: '/club', label: '👥 Mijn club' },
   { href: '/beheer/planning', label: '📅 Seizoensplanning' },
   { href: '/reglement', label: 'Reglement' },

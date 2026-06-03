@@ -1,7 +1,8 @@
 import type { Metadata } from 'next'
+import { notFound } from 'next/navigation'
 
 import { SiteHeader } from '@/components/SiteHeader'
-import { PACKAGE_LIST } from '@/lib/packages'
+import { PACKAGES_ENABLED, PACKAGE_LIST } from '@/lib/packages'
 import './pakketten.css'
 
 export const metadata: Metadata = {
@@ -22,6 +23,9 @@ const STAT_ROWS: { label: string; key: keyof (typeof PACKAGE_LIST)[number]['stat
 ]
 
 export default function PakkettenPage() {
+  // Pakket-feature gedeactiveerd: de prijzenpagina is niet beschikbaar.
+  if (!PACKAGES_ENABLED) notFound()
+
   return (
     <>
       <SiteHeader active="meer" />

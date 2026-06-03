@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 
 import { readSimpleScore, simpleHalfScores, type SimpleScoreState } from '@/lib/simple-score'
-import { PACKAGES, resolveMatchPackage } from '@/lib/packages'
+import { PACKAGES, PACKAGES_ENABLED, clubPackageOf, resolveMatchPackage } from '@/lib/packages'
 
 describe('readSimpleScore', () => {
   it('geeft een lege staat voor ontbrekende/ongeldige data', () => {
@@ -59,15 +59,25 @@ describe('simpleHalfScores', () => {
   })
 })
 
-describe('resolveMatchPackage', () => {
+describe('clubPackageOf (onderliggende afleiding)', () => {
   it('valt terug op Starter zonder club-pakket', () => {
-    expect(resolveMatchPackage(null).tier).toBe('starter')
-    expect(resolveMatchPackage({ homeTeam: 42 }).tier).toBe('starter')
+    expect(clubPackageOf(null).tier).toBe('starter')
+    expect(clubPackageOf({ homeTeam: 42 }).tier).toBe('starter')
   })
 
   it('leidt het pakket af uit de thuisclub', () => {
-    expect(resolveMatchPackage({ homeTeam: { club: { package: 'elite' } } }).tier).toBe('elite')
-    expect(resolveMatchPackage({ homeTeam: { club: { package: 'team' } } }).tier).toBe('team')
+    expect(clubPackageOf({ homeTeam: { club: { package: 'elite' } } }).tier).toBe('elite')
+    expect(clubPackageOf({ homeTeam: { club: { package: 'team' } } }).tier).toBe('team')
+  })
+})
+
+describe('resolveMatchPackage', () => {
+  it('valt overal terug op Elite zolang de pakket-feature gedeactiveerd is', () => {
+    // PACKAGES_ENABLED=false → volledige werking (Elite) ongeacht het clubpakket.
+    expect(PACKAGES_ENABLED).toBe(false)
+    expect(resolveMatchPackage(null).tier).toBe('elite')
+    expect(resolveMatchPackage({ homeTeam: { club: { package: 'starter' } } }).tier).toBe('elite')
+    expect(resolveMatchPackage({ homeTeam: { club: { package: 'team' } } }).tier).toBe('elite')
   })
 
   it('Starter scoort simpel, Team/Elite gebruiken het volledige veldscherm', () => {
