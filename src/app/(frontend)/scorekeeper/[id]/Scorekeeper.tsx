@@ -69,6 +69,10 @@ export function Scorekeeper({
   // Kickoff: de timer is geblokkeerd tot er een ploeg gekozen is die opzet.
   // Tik op de geblokkeerde timer → dit keuzescherm opent.
   const [kickoffOpen, setKickoffOpen] = useState(false)
+  // Veldspelers kiezen vóór de aftrap: welke 4 van de selectie op het veld staan.
+  // De rest zijn wissels; enkel veldspelers verschijnen in het worp-keuzescherm.
+  const [lineupSide, setLineupSide] = useState<'home' | 'away' | null>(null)
+  const [lineupSel, setLineupSel] = useState<number[]>([])
 
   // Basistijdstip voor de lopende klok: als de klok loopt, reken vanaf clockUpdatedAt (server),
   // zodat de verstreken tijd na een refresh behouden blijft — niet terug naar nul.
@@ -356,6 +360,25 @@ export function Scorekeeper({
     if (res) setKickoffOpen(false)
   }
 
+  // Veldspelers kiezen: open het keuzescherm voorgevuld met de huidige opstelling.
+  const openLineup = (side: 'home' | 'away') => {
+    setLineupSel([...state.lineup[side]])
+    setLineupSide(side)
+  }
+  // Tik een speler aan/uit; nooit meer dan LINEUP_MIN (4) tegelijk geselecteerd.
+  const toggleLineupPick = (id: number) => {
+    setLineupSel((prev) => {
+      if (prev.includes(id)) return prev.filter((x) => x !== id)
+      if (prev.length >= LINEUP_MIN) return prev
+      return [...prev, id]
+    })
+  }
+  const saveLineup = async () => {
+    if (lineupSide === null || lineupSel.length !== LINEUP_MIN) return
+    const res = await act({ action: 'setlineup', side: lineupSide, playerIds: lineupSel })
+    if (res) setLineupSide(null)
+  }
+
   // De naam staat aan de EIGEN kant (het doel dat je verdedigt); je scoort aan de overkant.
   // home valt in helft 1 'up' (naar y=1 = onder) aan → verdedigt dus bovenaan.
   const homeDirUp = attackDirForSide('home', state.match.currentHalf) === 'up'
@@ -599,6 +622,53 @@ export function Scorekeeper({
         </div>
       )}
 
+      {/* Veldspelers kiezen vóór de aftrap: tik precies LINEUP_MIN spelers aan. */}
+      {lineupSide !== null && (() => {
+        const teamId = lineupSide === 'home' ? state.teams.home.id : state.teams.away.id
+        const teamName = lineupSide === 'home' ? state.teams.home.name : state.teams.away.name
+        const teamRoster = roster.filter((p) => p.teamId === teamId)
+        return (
+          <div className="sk-modal-overlay">
+            <div className={`sk-modal sk-lineup-modal side-${lineupSide}`}>
+              <h3>Veldspelers — {teamName}</h3>
+              <p>Tik {LINEUP_MIN} spelers aan die op het veld starten. De rest zijn wissels.</p>
+              <div className="sk-lineup-pick-grid">
+                {teamRoster.map((p) => {
+                  const on = lineupSel.includes(p.id)
+                  const full = lineupSel.length >= LINEUP_MIN
+                  return (
+                    <button
+                      type="button"
+                      key={p.id}
+                      className={`sk-pick-player ${on ? 'on' : ''}`}
+                      disabled={!on && full}
+                      onClick={() => toggleLineupPick(p.id)}
+                    >
+                      <span className="sk-pick-num">{p.shirtNumber}</span>
+                      <span className="sk-pick-naam">{firstName(p.name)}</span>
+                    </button>
+                  )
+                })}
+              </div>
+              <div className="sk-modal-btns">
+                <span className={`sk-lineup-count ${lineupSel.length === LINEUP_MIN ? 'ok' : ''}`}>
+                  {lineupSel.length}/{LINEUP_MIN} gekozen
+                </span>
+                <button type="button" className="sk-btn" disabled={busy} onClick={() => setLineupSide(null)}>Annuleren</button>
+                <button
+                  type="button"
+                  className="sk-btn primary"
+                  disabled={busy || lineupSel.length !== LINEUP_MIN}
+                  onClick={() => void saveLineup()}
+                >
+                  Bewaren
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+
       {isDemo && <DemoTutorial matchId={matchId} />}
 
       <div className="sk-topbar">
@@ -708,6 +778,57 @@ export function Scorekeeper({
         </div>
       ) : isScheduled ? (
         <div className="sk-kickoff">
+          {/* Veldspelers: kies per ploeg de 4 die op het veld staan; de rest zijn wissels.
+              Enkel veldspelers kunnen werpen, dus enkel zij verschijnen in het keuzescherm. */}
+          <div className="sk-kickoff-card sk-lineup-card">
+            <div className="sk-kickoff-title">Veldspelers ({LINEUP_MIN} per ploeg)</div>
+            <div className="sk-kickoff-sub">
+              Kies wie op het veld staat. De overige spelers zijn wissels en kunnen niet
+              geselecteerd worden bij een worp — breng ze tijdens het spel in via ⇄ Wissel.
+            </div>
+            <div className="sk-lineup-grid">
+              {(['home', 'away'] as const).map((side) => {
+                const teamId = side === 'home' ? state.teams.home.id : state.teams.away.id
+                const teamName = side === 'home' ? state.teams.home.name : state.teams.away.name
+                const teamRoster = roster.filter((p) => p.teamId === teamId)
+                const field = teamRoster.filter((p) => state.lineup[side].includes(p.id))
+                const bench = teamRoster.filter((p) => !state.lineup[side].includes(p.id))
+                const canPick = teamRoster.length > LINEUP_MIN
+                return (
+                  <div key={side} className={`sk-lineup-col ${side}`}>
+                    <h4>{teamName}</h4>
+                    <div className="sk-lineup-list">
+                      <span className="sk-lineup-lbl">veld</span>
+                      {field.map((p) => (
+                        <span key={p.id} className="sk-lineup-chip on">
+                          <span className="num">{p.shirtNumber}</span>
+                          <span className="nm">{firstName(p.name)}</span>
+                        </span>
+                      ))}
+                      {field.length === 0 && <span className="sk-dim">nog niemand</span>}
+                    </div>
+                    {bench.length > 0 && (
+                      <div className="sk-lineup-list">
+                        <span className="sk-lineup-lbl">wissel</span>
+                        {bench.map((p) => (
+                          <span key={p.id} className="sk-lineup-chip">
+                            <span className="num">{p.shirtNumber}</span>
+                            <span className="nm">{firstName(p.name)}</span>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    {canPick && (
+                      <button type="button" className="sk-btn" disabled={busy} onClick={() => openLineup(side)}>
+                        Veldspelers kiezen
+                      </button>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
           <div className="sk-kickoff-card">
             <div className="sk-kickoff-title">{bypass ? 'Test-modus 🔧' : isDemo ? 'Demo — klaar 🎓' : 'Klaar om te starten ✓'}</div>
             <div className="sk-kickoff-sub">

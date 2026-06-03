@@ -308,6 +308,36 @@ a.sk-btn { display: inline-block; box-sizing: border-box; text-align: center; te
 .sk-sub-item.bench { border-style: dashed; }
 .sk-sub-item:disabled { opacity: 0.4; }
 
+/* ── Veldspelers kiezen (vóór de aftrap) ── */
+/* Overzichtskaart op het start-scherm: per ploeg de veldspelers + wissels */
+.sk-lineup-card { text-align: left; }
+.sk-lineup-card .sk-kickoff-title,
+.sk-lineup-card .sk-kickoff-sub { text-align: center; }
+.sk-lineup-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 12px; }
+.sk-lineup-col h4 { margin: 0 0 8px; font-size: 0.9rem; text-align: center; }
+.sk-lineup-col.home h4 { color: var(--home); }
+.sk-lineup-col.away h4 { color: var(--away); }
+.sk-lineup-list { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 8px; }
+.sk-lineup-lbl { width: 100%; font-size: 0.66rem; text-transform: uppercase; color: var(--dim); }
+.sk-lineup-chip {
+  display: inline-flex; align-items: center; gap: 5px; padding: 5px 9px; border-radius: 999px;
+  border: 1px solid var(--line); background: #0a1f14; color: var(--txt); font-size: 0.84rem;
+}
+.sk-lineup-chip .num { font-weight: 800; font-variant-numeric: tabular-nums; }
+.sk-lineup-chip.on { border-color: var(--accent); background: #11301f; }
+.sk-lineup-card .sk-btn { width: 100%; padding: 10px; font-size: 0.92rem; }
+
+/* Keuzescherm: tik precies 4 veldspelers aan (hergebruikt .sk-pick-player) */
+.sk-lineup-modal { max-width: 460px; }
+.sk-lineup-modal.side-home { border-top: 3px solid var(--home); }
+.sk-lineup-modal.side-away { border-top: 3px solid var(--away); }
+.sk-lineup-pick-grid { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 14px; }
+.sk-pick-player.on { border-color: var(--accent); background: #11301f; }
+.sk-lineup-modal .sk-modal-btns { flex-direction: row; flex-wrap: wrap; align-items: center; }
+.sk-lineup-modal .sk-modal-btns .sk-btn { flex: 1 1 auto; }
+.sk-lineup-count { flex: 1 1 100%; text-align: center; font-size: 0.84rem; color: var(--dim); margin-bottom: 4px; }
+.sk-lineup-count.ok { color: var(--home); }
+
 /* ── Grote "Start de timer"-herinnering (live, klok nog op nul) ── */
 .sk-starttimer {
   position: absolute;

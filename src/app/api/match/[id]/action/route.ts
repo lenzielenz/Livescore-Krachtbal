@@ -8,6 +8,7 @@ import {
   recordThrow,
   recordTimeout,
   setClock,
+  setLineup,
   startFreeThrow,
   startMatch,
   substitute,
@@ -98,6 +99,15 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       case 'substitute':
         return Response.json(
           await substitute(payload, matchId, body.side === 'away' ? 'away' : 'home', Number(body.outPlayerId), Number(body.inPlayerId)),
+        )
+      case 'setlineup':
+        return Response.json(
+          await setLineup(
+            payload,
+            matchId,
+            body.side === 'away' ? 'away' : 'home',
+            Array.isArray(body.playerIds) ? body.playerIds.map(Number) : [],
+          ),
         )
       // ── Simpele aantekenmodus (Starter-pakket): +1/+2 zonder veldschema ──
       case 'simplestart':
