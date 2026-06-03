@@ -22,7 +22,11 @@ export const ROLE_OPTIONS: { label: string; value: UserRole }[] = [
   { label: 'Kijker (alleen lezen)', value: 'viewer' },
 ]
 
-type WithRoles = { roles?: UserRole[] | null; club?: number | string | { id: number | string } | null }
+type WithRoles = {
+  roles?: UserRole[] | null
+  club?: number | string | { id: number | string } | null
+  official?: number | string | { id: number | string } | null
+}
 
 export function userRoles(user: unknown): UserRole[] {
   const roles = (user as WithRoles | null)?.roles
@@ -45,6 +49,14 @@ export function userClubId(user: unknown): number | string | null {
   if (club == null) return null
   if (typeof club === 'object') return club.id
   return club
+}
+
+/** Het official-dossier (scheidsrechter/grensrechter) gekoppeld aan deze gebruiker, indien aanwezig. */
+export function userOfficialId(user: unknown): number | string | null {
+  const off = (user as WithRoles | null)?.official
+  if (off == null) return null
+  if (typeof off === 'object') return off.id
+  return off
 }
 
 // ---- Collection-level Access helpers ----

@@ -3,21 +3,12 @@
 import { useEffect, useRef, useState } from 'react'
 
 import type { TournamentState } from '@/lib/tournament-engine'
+import { useLiveStream } from '@/lib/use-live-stream'
 
-/** Abonneer op de SSE-stream van een tornooi; start met de server-snapshot. */
+/** Abonneer op de SSE-stream van een tornooi; start met de server-snapshot (met reconnect-backoff). */
 export function useTournamentStream(id: number, initial: TournamentState | null): TournamentState | null {
   const [state, setState] = useState<TournamentState | null>(initial)
-  useEffect(() => {
-    const es = new EventSource(`/api/tournament/${id}/stream`)
-    es.addEventListener('update', (e) => {
-      try {
-        setState(JSON.parse((e as MessageEvent).data) as TournamentState)
-      } catch {
-        /* negeer kapotte payload */
-      }
-    })
-    return () => es.close()
-  }, [id])
+  useLiveStream<TournamentState>(`/api/tournament/${id}/stream`, (data) => setState(data))
   return state
 }
 

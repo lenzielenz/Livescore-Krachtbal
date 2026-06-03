@@ -1,4 +1,5 @@
 import { hasRole, isFederationLevel } from '@/lib/access'
+import { authUser, isAssignedReferee } from '@/lib/api-auth'
 import { getPayloadClient } from '@/lib/payload-client'
 import { generateForfaitPdf } from '@/lib/submit/pdf-vergoeding'
 import { buildForfaitData } from '@/lib/vergoeding-data'
@@ -8,10 +9,14 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const { id } = await params
   try {
     const payload = await getPayloadClient()
-    const { user } = await payload.auth({ headers: req.headers })
+    const user = await authUser(payload, req)
     if (!user) return Response.json({ error: 'Niet ingelogd.' }, { status: 401 })
     if (!isFederationLevel(user) && !hasRole(user, 'scheidsrechter')) {
       return Response.json({ error: 'Enkel scheidsrechter/federatie.' }, { status: 403 })
+    }
+    // Een scheidsrechter mag enkel het forfaitblad van een EIGEN toegewezen wedstrijd genereren.
+    if (!isFederationLevel(user) && !(await isAssignedReferee(payload, user, id))) {
+      return Response.json({ error: 'Je bent niet de toegewezen scheidsrechter van deze wedstrijd.' }, { status: 403 })
     }
 
     const data = await buildForfaitData(payload, id)

@@ -1,3 +1,5 @@
+import { authUser, requireRole } from '@/lib/api-auth'
+import { withLock } from '@/lib/async-mutex'
 import { getPayloadClient } from '@/lib/payload-client'
 import {
   advanceHalf,
@@ -34,6 +36,13 @@ export async function POST(
   const action = String(body.action ?? '')
   try {
     const payload = await getPayloadClient()
+
+    const user = await authUser(payload, req)
+    const denied = requireRole(user, 'scorekeeper', 'scheidsrechter')
+    if (denied) return denied
+
+    // Serialiseer mutaties op dezelfde tornooiwedstrijd (voorkomt verloren doelpunten, AUDIT §2).
+    return await withLock(`tmatch:${matchId}`, async () => {
     switch (action) {
       case 'start':
         await startMatch(payload, matchId)
@@ -67,6 +76,7 @@ export async function POST(
     }
     const state = await buildTournamentState(payload, tournamentId)
     return Response.json({ state })
+    })
   } catch (err) {
     return Response.json({ error: (err as Error).message }, { status: 400 })
   }

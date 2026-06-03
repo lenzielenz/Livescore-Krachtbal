@@ -93,6 +93,14 @@ export function reeksCategorie(reeks: Reeks): Category {
   return REEKS_CATEGORIE[reeks]
 }
 
+// Reglement §6.8/§8.1: U16-MEISJES spelen met het SENIOR-worpaantal (3 vanaf eigen helft, 2 op
+// tegenhelft) i.p.v. het jeugd-aantal (4/3) — al houden ze wél de jeugd-speelduur (2×20).
+// Omdat de categorie ('U16') geen geslacht kent, leiden we dit af uit de reeks (die het wél kent).
+const SENIOR_THROW_YOUTH: ReadonlySet<string> = new Set(['U16M'])
+export function reeksUsesSeniorThrows(reeks: unknown): boolean {
+  return typeof reeks === 'string' && SENIOR_THROW_YOUTH.has(reeks)
+}
+
 // Reekstype bepaalt de speelduur én welke officials vereist zijn (Wedstrijdblad_invullen.pdf).
 export type ReeksType = 'jeugd' | 'landelijk' | 'nationaal'
 

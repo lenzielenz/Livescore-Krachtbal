@@ -1,9 +1,10 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 
 import type { TMatchState, TournamentState } from '@/lib/tournament-engine'
+import { useLiveStream } from '@/lib/use-live-stream'
 import { fmtClock, useTicking } from '../../../useTournament'
 
 function findMatch(state: TournamentState, matchId: number): TMatchState | null {
@@ -24,16 +25,7 @@ export function TournamentFieldScreen({
   initial: TournamentState
 }) {
   const [state, setState] = useState<TournamentState>(initial)
-
-  useEffect(() => {
-    const es = new EventSource(`/api/tournament/${id}/stream`)
-    es.addEventListener('update', (e) => {
-      try {
-        setState(JSON.parse((e as MessageEvent).data) as TournamentState)
-      } catch {}
-    })
-    return () => es.close()
-  }, [id])
+  useLiveStream<TournamentState>(`/api/tournament/${id}/stream`, (data) => setState(data))
 
   const m = findMatch(state, matchId)
   const clock = useTicking(m?.clockSeconds ?? 0, m?.clockRunning ?? false)

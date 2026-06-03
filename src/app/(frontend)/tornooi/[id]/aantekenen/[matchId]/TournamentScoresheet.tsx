@@ -1,10 +1,11 @@
 'use client'
 
 import Link from 'next/link'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 
 import type { Side } from '@/lib/tournament'
 import type { TMatchState, TournamentState } from '@/lib/tournament-engine'
+import { useLiveStream } from '@/lib/use-live-stream'
 import { fmtClock, useTicking } from '../../../useTournament'
 
 function findMatch(state: TournamentState, matchId: number): TMatchState | null {
@@ -31,16 +32,11 @@ export function TournamentScoresheet({
   const [askWinner, setAskWinner] = useState(false)
   const busy = useRef(false)
 
-  // SSE: vang wijzigingen op die elders gemaakt worden.
-  useEffect(() => {
-    const es = new EventSource(`/api/tournament/${id}/stream`)
-    es.addEventListener('update', (e) => {
-      try {
-        setState(JSON.parse((e as MessageEvent).data) as TournamentState)
-      } catch {}
-    })
-    return () => es.close()
-  }, [id])
+  // SSE: vang wijzigingen op die elders gemaakt worden (negeer terwijl een eigen actie loopt).
+  useLiveStream<TournamentState>(`/api/tournament/${id}/stream`, (data) => {
+    if (busy.current) return
+    setState(data)
+  })
 
   const m = findMatch(state, matchId)
   const clock = useTicking(m?.clockSeconds ?? 0, m?.clockRunning ?? false)

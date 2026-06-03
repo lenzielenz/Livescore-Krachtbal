@@ -22,8 +22,8 @@ export type SubmitResult = {
 }
 
 const sigOf = (group: unknown) => {
-  const g = (group ?? {}) as { naam?: string; akkoord?: boolean; tijdstip?: string }
-  return { naam: g.naam, akkoord: Boolean(g.akkoord), tijdstip: g.tijdstip }
+  const g = (group ?? {}) as { naam?: string; akkoord?: boolean; tijdstip?: string; handtekening?: string }
+  return { naam: g.naam, akkoord: Boolean(g.akkoord), tijdstip: g.tijdstip, handtekening: g.handtekening }
 }
 
 const lineupRows = (rows: unknown): PdfLineupRow[] =>
@@ -34,6 +34,57 @@ const lineupRows = (rows: unknown): PdfLineupRow[] =>
       deelgenomen: r.deelgenomen,
     }),
   )
+
+/**
+ * Bouwt de PDF-data voor een wedstrijdblad uit de huidige (bij 'ingediend': bevroren) gegevens.
+ * Gedeeld door submitMatchSheet én de her-export-route, zodat een afgewerkt blad altijd opnieuw
+ * gegenereerd kan worden voor het archief (AUDIT §5).
+ */
+export async function buildMatchSheetPdfData(
+  payload: Payload,
+  matchId: number | string,
+): Promise<MatchSheetPdfData | null> {
+  const found = await payload.find({ collection: 'matchsheets', where: { match: { equals: matchId } }, depth: 2, limit: 1 })
+  const sheet = found.docs[0]
+  const built = await buildMatchSheet(payload, Number(matchId)).catch(() => null)
+  if (!built) return null
+  const match = await payload.findByID({ collection: 'matches', id: matchId, depth: 2 }).catch(() => null)
+  const reeks = match?.reeks as Reeks | undefined
+  const officials = ((sheet?.officials ?? {}) as Record<string, string>) || {}
+  const keuring = (sheet?.keuring ?? {}) as Record<string, string>
+  const refSig = sigOf(sheet?.scheidsrechter)
+  return {
+    titel: String(sheet?.titel ?? built.match.title ?? `Wedstrijd ${matchId}`),
+    datum: new Date(built.match.date).toLocaleString('nl-BE'),
+    categorie: built.match.category ?? '',
+    reeks: reeks ?? undefined,
+    scheidsrechter: refSig.naam || undefined,
+    score: built.totals,
+    halfScores: built.halfScores,
+    goals: built.goals.map((g) => ({ half: g.half, gameClock: g.gameClock, side: g.side, shirtNumber: g.shirtNumber, playerName: g.playerName, points: g.points })),
+    homeTeam: built.teams.home.name,
+    awayTeam: built.teams.away.name,
+    homeLineup: lineupRows(sheet?.homeLineup),
+    awayLineup: lineupRows(sheet?.awayLineup),
+    officials: OFFICIAL_FUNCTIE_KEYS.map((key) => ({ label: OFFICIAL_LABELS[key], naam: officials[key] ?? '' })),
+    keuring: KEURING_ITEMS.map((k) => ({ label: k.label, waarde: keuring[k.name] ?? 'ok' })),
+    uitsluitingen: ((sheet?.uitsluitingen ?? []) as { naam?: string; reden?: string }[]).map((u) => `${u.naam ?? '—'} — ${u.reden ?? ''}`),
+    voorbehoud: ((sheet?.voorbehoud ?? []) as { naam?: string; reden?: string }[]).map((v) => `${v.naam ?? '—'} — ${v.reden ?? ''}`),
+    opmerkingen: (sheet?.opmerkingen as string) ?? undefined,
+    handtekeningen: [
+      { label: 'Kapitein thuis', sig: sigOf(sheet?.kapiteinThuis) },
+      { label: 'Kapitein uit', sig: sigOf(sheet?.kapiteinUit) },
+      { label: 'Scheidsrechter', sig: refSig },
+    ],
+  }
+}
+
+/** Genereert (regenereert) de wedstrijdblad-PDF op aanvraag — voor archief/her-export. */
+export async function renderMatchSheetPdf(payload: Payload, matchId: number | string): Promise<Uint8Array | null> {
+  const data = await buildMatchSheetPdfData(payload, matchId)
+  if (!data) return null
+  return generateMatchSheetPdf(data)
+}
 
 export async function submitMatchSheet(
   payload: Payload,
@@ -57,8 +108,12 @@ export async function submitMatchSheet(
     return { ok: false, error: 'Beide kapiteins moeten eerst aftekenen.' }
   }
 
-  // Score uit de live-scoring.
+  // Score uit de live-scoring. NIET stil doorgaan bij een fout: een ingediend (onwijzigbaar)
+  // blad met een blanco score is erger dan een geblokkeerde inzending.
   const built = await buildMatchSheet(payload, Number(matchId)).catch(() => null)
+  if (!built) {
+    return { ok: false, error: 'Kon de score niet opbouwen — inzenden geblokkeerd om een blanco blad te vermijden.' }
+  }
 
   // Clubs (voor mail) ophalen via de match → teams → clubs.
   const match = await payload.findByID({ collection: 'matches', id: matchId, depth: 2 }).catch(() => null)
@@ -82,14 +137,25 @@ export async function submitMatchSheet(
   )
 
   const keuring = (sheet.keuring ?? {}) as Record<string, string>
+  const refSig = sigOf(sheet.scheidsrechter)
   const pdfData: MatchSheetPdfData = {
-    titel: String(sheet.titel ?? built?.match.title ?? `Wedstrijd ${matchId}`),
-    datum: built ? new Date(built.match.date).toLocaleString('nl-BE') : '',
-    categorie: built?.match.category ?? '',
-    scheidsrechter: undefined,
-    score: built ? built.totals : undefined,
-    homeTeam: built?.teams.home.name ?? 'Thuis',
-    awayTeam: built?.teams.away.name ?? 'Uit',
+    titel: String(sheet.titel ?? built.match.title ?? `Wedstrijd ${matchId}`),
+    datum: new Date(built.match.date).toLocaleString('nl-BE'),
+    categorie: built.match.category ?? '',
+    reeks: reeks ?? undefined,
+    scheidsrechter: refSig.naam || undefined,
+    score: built.totals,
+    halfScores: built.halfScores,
+    goals: built.goals.map((g) => ({
+      half: g.half,
+      gameClock: g.gameClock,
+      side: g.side,
+      shirtNumber: g.shirtNumber,
+      playerName: g.playerName,
+      points: g.points,
+    })),
+    homeTeam: built.teams.home.name,
+    awayTeam: built.teams.away.name,
     homeLineup: lineupRows(sheet.homeLineup),
     awayLineup: lineupRows(sheet.awayLineup),
     officials: OFFICIAL_FUNCTIE_KEYS.map((key) => ({
@@ -107,7 +173,7 @@ export async function submitMatchSheet(
     handtekeningen: [
       { label: 'Kapitein thuis', sig: kapThuis },
       { label: 'Kapitein uit', sig: kapUit },
-      { label: 'Scheidsrechter', sig: sigOf(sheet.scheidsrechter) },
+      { label: 'Scheidsrechter', sig: refSig },
     ],
   }
 

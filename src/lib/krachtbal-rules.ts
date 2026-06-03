@@ -39,11 +39,12 @@ export function attackDirForSide(side: TeamSide, half: number): AttackDir {
 
 /**
  * Punten voor één worp: rugworp-doelpunt telt dubbel (+2), nekworp +1, anders 0.
- * DECISION: ook een rugworp uit een VRIJE WORP telt +2 (keuze Robin) — dit wijkt
- * bewust af van reglement §48.1 dat vrije worpen altijd 1 punt toekent.
+ * Reglement §48.1: een vrije worp (en bekerstrafworp) levert ALTIJD 1 punt op, ongeacht
+ * de werpwijze. Voor een nationale uitrol volgen we het reglement (uitslag-bepalend).
  */
-export function pointsForThrow(t: { type: ThrowType; outcome: ThrowOutcome }): 0 | 1 | 2 {
+export function pointsForThrow(t: { type: ThrowType; outcome: ThrowOutcome; freeThrow?: boolean }): 0 | 1 | 2 {
   if (t.outcome !== 'goal') return 0
+  if (t.freeThrow) return 1
   return t.type === 'rug' ? 2 : 1
 }
 
@@ -162,11 +163,13 @@ export function nextSetup(input: {
     const keep = Boolean(input.touchedBeforeOut)
     const newTeam = keep ? throwerTeam : team
     const newDir = keep ? throwerDir : dir
+    // §6.11.1: er wordt ingeworpen "van rechtover die plaats" — behoud dus de breedte-positie
+    // (links/midden/rechts) i.p.v. altijd centraal te herstarten, zodat afstand/zone kloppen.
     return {
       team: newTeam,
       dir: newDir,
       setupSide: isOnOwnHalf(landing, newDir) ? 'own' : 'opponent',
-      point: { x: 0.5, y: Math.max(0, Math.min(1, landing.y)) },
+      point: { x: Math.max(0, Math.min(1, landing.x)), y: Math.max(0, Math.min(1, landing.y)) },
     }
   }
 
@@ -191,17 +194,22 @@ export interface ReducibleThrow {
   isDoelworp: boolean
   /** Enkel relevant bij een out (zij-/achterlijn). */
   touchedBeforeOut?: boolean
+  /** True als de worp uit een vrije worp kwam (telt niet als kruisje, §6.7/§10.2). */
+  freeThrow?: boolean
 }
 
 /**
  * Een kruisje: de doelworp gaat rechtstreeks buiten (zij- of achterlijn = rode zone)
- * zonder aanraking. Intermediaire worpen die buiten gaan tellen niet mee.
+ * zonder aanraking. Intermediaire worpen die buiten gaan tellen niet mee. Een VRIJE WORP
+ * is geen doelworp in open spel en mag de kruisjes-teller nooit raken (§6.7/§10.2-18).
  */
 export function isCrossThrow(t: {
   outcome: ThrowOutcome
   isDoelworp: boolean
   touchedBeforeOut?: boolean
+  freeThrow?: boolean
 }): boolean {
+  if (t.freeThrow) return false
   return t.isDoelworp && (t.outcome === 'out_side' || t.outcome === 'out_back') && !t.touchedBeforeOut
 }
 
@@ -219,7 +227,7 @@ export function reduceTotals(throws: ReducibleThrow[]): MatchTotals {
   const crosses = { home: 0, away: 0 }
 
   for (const t of throws) {
-    score[t.team] += pointsForThrow({ type: t.type, outcome: t.outcome })
+    score[t.team] += pointsForThrow({ type: t.type, outcome: t.outcome, freeThrow: t.freeThrow })
     if (isCrossThrow(t)) {
       crosses[t.team] += 1
       if (crosses[t.team] >= CROSS_LIMIT) crosses[t.team] = 0

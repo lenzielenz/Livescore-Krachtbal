@@ -232,7 +232,7 @@
   align-items: center;
   gap: 6px;
   font-size: 0.7rem;
-  color: var(--dim);
+  color: var(--dim-strong);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }

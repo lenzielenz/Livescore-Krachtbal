@@ -1,3 +1,4 @@
+import { authUser, hasRole, isFederationLevel, userClubId } from '@/lib/api-auth'
 import { getPayloadClient } from '@/lib/payload-client'
 
 // Meerdere spelers in één keer toevoegen aan een ploeg.
@@ -23,6 +24,20 @@ export async function POST(req: Request) {
 
   try {
     const payload = await getPayloadClient()
+    const user = await authUser(payload, req)
+    if (!user) return Response.json({ error: 'Niet ingelogd.' }, { status: 401 })
+    if (!isFederationLevel(user) && !hasRole(user, 'club-beheerder')) {
+      return Response.json({ error: 'Enkel club-beheerder/federatie.' }, { status: 403 })
+    }
+    // Een club-beheerder mag enkel spelers toevoegen aan een ploeg van de eigen club.
+    if (!isFederationLevel(user)) {
+      const clubId = userClubId(user)
+      const team = await payload.findByID({ collection: 'teams', id: teamId, depth: 0 }).catch(() => null)
+      const teamClub = team ? (typeof team.club === 'object' && team.club ? team.club.id : team.club) : null
+      if (clubId == null || teamClub == null || String(teamClub) !== String(clubId)) {
+        return Response.json({ error: 'Deze ploeg hoort niet bij jouw club.' }, { status: 403 })
+      }
+    }
     let created = 0
     for (const row of rows) {
       await payload.create({

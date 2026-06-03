@@ -20,9 +20,27 @@ function layoutFor(n: number): { cols: number; fontSize: number; logoSize: strin
 // Het eigenlijke kantinescherm (kantine-tv): toont de centraal gekozen wedstrijden als live
 // borden. Pollt de selectie elke 12s zodat wijzigingen op een ander toestel vanzelf doorkomen;
 // de scores binnen elk bord lopen live via SSE. De layout past zich aan aan het aantal borden.
+// Maximaal aantal kolommen dat een schermbreedte comfortabel aankan (tablet/telefoon meegerekend).
+function maxColsForWidth(w: number): number {
+  if (w < 560) return 1
+  if (w < 900) return 2
+  if (w < 1300) return 3
+  if (w < 1700) return 4
+  return 5
+}
+
 export function KantineScreen() {
   const [matches, setMatches] = useState<KantineMatch[]>([])
   const [loaded, setLoaded] = useState(false)
+  // Viewport-breedte volgen zodat het raster niet 5 kolommen op een tablet propt (AUDIT §1).
+  const [vw, setVw] = useState(1920)
+
+  useEffect(() => {
+    const onResize = () => setVw(window.innerWidth)
+    onResize()
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
 
   useEffect(() => {
     let active = true
@@ -52,7 +70,11 @@ export function KantineScreen() {
   // tonen we de geplande wedstrijden (anders zou het scherm leeg zijn vóór de aftrap).
   const played = matches.filter((m) => m.status !== 'scheduled')
   const visible = played.length > 0 ? played : matches
-  const { cols, fontSize, logoSize } = layoutFor(visible.length)
+  const layout = layoutFor(visible.length)
+  // Begrens de kolommen op wat de schermbreedte aankan; bij minder kolommen iets groter lettertype.
+  const cols = Math.min(layout.cols, maxColsForWidth(vw))
+  const fontSize = cols < layout.cols ? Math.round(layout.fontSize * 1.12) : layout.fontSize
+  const logoSize = layout.logoSize
 
   return (
     <div className="kt-screen">

@@ -1,5 +1,6 @@
 import type { Payload } from 'payload'
 
+import { authUser } from '@/lib/api-auth'
 import { buildMatchState } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
 import { REEKS_OPTIONS } from '@/lib/reeksen'
@@ -60,6 +61,10 @@ export async function POST(req: Request) {
     : []
   try {
     const payload = await getPayloadClient()
+    // Schermselectie wijzigen vereist een ingelogde operator (blokkeert anonieme defacement);
+    // bewust soepel zodat casten "vanaf elk toestel" voor clubmedewerkers blijft werken.
+    const user = await authUser(payload, req)
+    if (!user) return Response.json({ error: 'Niet ingelogd.' }, { status: 401 })
     await payload.updateGlobal({ slug: 'settings', data: { kantineMatchIds: ids.join(',') }, overrideAccess: true })
     return Response.json({ ok: true, ids })
   } catch (err) {

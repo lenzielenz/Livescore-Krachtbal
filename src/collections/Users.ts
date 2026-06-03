@@ -60,5 +60,18 @@ export const Users: CollectionConfig = {
         condition: (data) => Array.isArray(data?.roles) && data.roles.includes('club-beheerder'),
       },
     },
+    {
+      // Koppelt een scheidsrechter-account aan zijn/haar official-dossier, zodat hij enkel z'n
+      // EIGEN kwitantie/forfaitblad kan ophalen en enkel toegewezen wedstrijden kan tekenen
+      // (voorkomt IDOR op financiële PII — zie AUDIT-2026-06.md §4/§5).
+      name: 'official',
+      label: 'Officialdossier (voor scheidsrechter/grensrechter)',
+      type: 'relationship',
+      relationTo: 'officials',
+      admin: {
+        description: 'Enkel relevant voor de rol "Scheidsrechter". Beperkt de toegang tot de eigen kwitantie.',
+        condition: (data) => Array.isArray(data?.roles) && data.roles.includes('scheidsrechter'),
+      },
+    },
   ],
 }

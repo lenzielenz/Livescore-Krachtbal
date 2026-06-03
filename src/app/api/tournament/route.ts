@@ -1,3 +1,4 @@
+import { authUser, requireRole } from '@/lib/api-auth'
 import { CATEGORIES, type Category } from '@/lib/categories'
 import { getPayloadClient } from '@/lib/payload-client'
 import { createTournament } from '@/lib/tournament-engine'
@@ -26,6 +27,9 @@ export async function POST(req: Request) {
 
   try {
     const payload = await getPayloadClient()
+    const user = await authUser(payload, req)
+    const denied = requireRole(user, 'scorekeeper', 'scheidsrechter')
+    if (denied) return denied
     const id = await createTournament(payload, { name, category, method, slots, format })
     return Response.json({ id })
   } catch (err) {

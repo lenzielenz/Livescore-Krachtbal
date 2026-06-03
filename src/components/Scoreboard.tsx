@@ -4,7 +4,8 @@ import { useEffect, useRef, useState } from 'react'
 
 import type { MatchState, TimelineItem } from '@/lib/match-engine'
 import { TeamLogo } from '@/components/TeamLogo'
-import { DEFAULT_AWAY_COLOR, DEFAULT_HOME_COLOR } from '@/lib/club-colors'
+import { DEFAULT_AWAY_COLOR, DEFAULT_HOME_COLOR, inkOn, readableOnDark } from '@/lib/club-colors'
+import { goalPointsFromLabel, goalScorerFromLabel, useLiveStream } from '@/lib/use-live-stream'
 import './scoreboard.css'
 
 function fmtClock(total: number): string {
@@ -15,17 +16,6 @@ function fmtClock(total: number): string {
 type Side = 'home' | 'away'
 
 type Goal = { key: number; side: Side; team: string; points: number; scorer: string | null }
-
-// Naam van de doelpuntenmaker uit de laatste doelpunt-gebeurtenis van een ploeg halen.
-function lastGoalScorer(timeline: TimelineItem[], side: Side): string | null {
-  for (let i = timeline.length - 1; i >= 0; i--) {
-    const item = timeline[i]
-    if (item.kind === 'goal' && item.side === side) {
-      return item.label.replace(/^Doelpunt\s*\+\d+\s*/, '').trim() || null
-    }
-  }
-  return null
-}
 
 function Dots({ filled, total, className }: { filled: number; total: number; className?: string }) {
   return (
@@ -46,52 +36,46 @@ export function Scoreboard({
 }) {
   const [state, setState] = useState<MatchState>(initial.state)
   const [timeline, setTimeline] = useState<TimelineItem[]>(initial.timeline)
-  const [live, setLive] = useState(false)
   const [clock, setClock] = useState(initial.state.match.clockSeconds)
   const [goal, setGoal] = useState<Goal | null>(null)
   const base = useRef({ seconds: initial.state.match.clockSeconds, running: initial.state.match.clockRunning, at: Date.now() })
-  const prevScore = useRef(initial.state.score)
+  // Reeds geziene doelpunt-events (op stabiel timeline-id), zodat de viering NIET op een numerieke
+  // score-diff steunt (die mist gelijktijdige doelpunten en mis-attribueert na een catch-up tick).
+  const seenGoals = useRef<Set<string>>(new Set(initial.timeline.filter((i) => i.kind === 'goal').map((i) => i.id)))
   const goalSeq = useRef(0)
   const goalTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // SSE-abonnement.
-  useEffect(() => {
-    const es = new EventSource(`/api/match/${matchId}/stream`)
-    es.addEventListener('update', (e) => {
-      const data = JSON.parse((e as MessageEvent).data) as { state: MatchState; timeline: TimelineItem[] }
-
-      // Doelpunt-detectie: stand omhoog → viering afspelen voor de scorende ploeg.
-      const prev = prevScore.current
-      const next = data.state.score
-      const dHome = next.home - prev.home
-      const dAway = next.away - prev.away
-      const scored: { side: Side; points: number } | null =
-        dHome > 0 ? { side: 'home', points: dHome } : dAway > 0 ? { side: 'away', points: dAway } : null
-      prevScore.current = next
+  const { connected } = useLiveStream<{ state: MatchState; timeline: TimelineItem[] }>(
+    `/api/match/${matchId}/stream`,
+    (data) => {
+      // Nieuwe doelpunten = timeline-items 'goal' met een id dat we nog niet zagen.
+      const fresh = data.timeline.filter((i) => i.kind === 'goal' && !seenGoals.current.has(i.id))
+      fresh.forEach((i) => seenGoals.current.add(i.id))
 
       setState(data.state)
       setTimeline(data.timeline)
-      setLive(true)
 
-      if (scored) {
+      const last = fresh[fresh.length - 1]
+      if (last && last.side) {
         goalSeq.current += 1
         setGoal({
           key: goalSeq.current,
-          side: scored.side,
-          team: data.state.teams[scored.side].name,
-          points: scored.points,
-          scorer: lastGoalScorer(data.timeline, scored.side),
+          side: last.side,
+          team: data.state.teams[last.side].name,
+          points: goalPointsFromLabel(last.label),
+          scorer: goalScorerFromLabel(last.label),
         })
         if (goalTimer.current) clearTimeout(goalTimer.current)
         goalTimer.current = setTimeout(() => setGoal(null), 5000)
       }
-    })
-    es.onerror = () => setLive(false)
+    },
+  )
+
+  useEffect(() => {
     return () => {
-      es.close()
       if (goalTimer.current) clearTimeout(goalTimer.current)
     }
-  }, [matchId])
+  }, [])
 
   // Klok-basis bijwerken bij elke state-update.
   useEffect(() => {
@@ -112,15 +96,29 @@ export function Scoreboard({
     state.match.status === 'live' ? 'LIVE' : state.match.status === 'finished' ? 'AFGELOPEN' : 'GEPLAND'
 
   // Accenten in de clubkleuren (ringen, tijdlijn, doelpunt-gloed). Valt terug op groen/blauw.
+  // De rauwe kleur dient voor de ring/logo; voor TEKST/cijfers op het donkere paneel klemmen we
+  // naar een leesbare variant zodat donkere crests de naam/score niet onzichtbaar maken (AUDIT §1).
   const homeColor = state.teams.home.colors?.primary ?? DEFAULT_HOME_COLOR
   const awayColor = state.teams.away.colors?.primary ?? DEFAULT_AWAY_COLOR
-  const sbStyle = { '--home': homeColor, '--away': awayColor } as React.CSSProperties
+  const homeInk = readableOnDark(homeColor)
+  const awayInk = readableOnDark(awayColor)
+  const sbStyle = {
+    '--home': homeInk,
+    '--away': awayInk,
+    '--home-ink': inkOn(homeColor),
+    '--away-ink': inkOn(awayColor),
+  } as React.CSSProperties
 
   return (
     <div className="sb" style={sbStyle}>
       <div className="sb-status">
         <span className={`sb-badge ${state.match.status}`}>{statusLabel}</span>
-        {state.match.status === 'live' && <span className={`sb-conn ${live ? 'on' : ''}`}>● live</span>}
+        {state.match.status === 'live' &&
+          (connected ? (
+            <span className="sb-conn on">● live</span>
+          ) : (
+            <span className="sb-conn off" title="Verbinding verbroken — opnieuw verbinden…">● verbinden…</span>
+          ))}
       </div>
 
       <div className="sb-main">

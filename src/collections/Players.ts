@@ -1,6 +1,6 @@
-import type { Access, CollectionConfig } from 'payload'
+import type { Access, CollectionConfig, FieldAccess } from 'payload'
 
-import { fieldIsFederation, hasRole, isFederationLevel } from '../lib/access'
+import { fieldIsFederation, hasRole, isFederationLevel, userClubId } from '../lib/access'
 
 export const POSITION_OPTIONS = [
   { label: 'Achter', value: 'achter' },
@@ -16,9 +16,18 @@ export const VERGUNNING_OPTIONS = [
 
 export type VergunningStatus = 'geen' | 'aangevraagd' | 'geldig'
 
-// Federatie/admin én club-beheerder mogen leden invoeren/bewerken; verwijderen enkel federatie.
-const canWritePlayers: Access = ({ req }) =>
-  isFederationLevel(req.user) || hasRole(req.user, 'club-beheerder')
+// Federatie/admin mogen alle leden bewerken; een club-beheerder enkel die van de eigen club
+// (multi-tenant isolatie — AUDIT §4). Verwijderen enkel federatie.
+const canWritePlayers: Access = ({ req }) => {
+  if (isFederationLevel(req.user)) return true
+  if (!hasRole(req.user, 'club-beheerder')) return false
+  const clubId = userClubId(req.user)
+  return clubId != null ? { 'team.club': { equals: clubId } } : false
+}
+
+// Gevoelige ledenvelden (geboortedatum, medisch) niet wereld-leesbaar: enkel interne rollen.
+const sensitiveFieldRead: FieldAccess = ({ req }) =>
+  isFederationLevel(req.user) || hasRole(req.user, 'club-beheerder', 'scheidsrechter')
 
 export const Players: CollectionConfig = {
   slug: 'players',
@@ -79,6 +88,8 @@ export const Players: CollectionConfig = {
       name: 'birthDate',
       label: 'Geboortedatum',
       type: 'date',
+      // Persoonsgegeven (vaak minderjarigen): niet publiek leesbaar.
+      access: { read: sensitiveFieldRead },
       admin: {
         date: { pickerAppearance: 'dayOnly', displayFormat: 'dd/MM/yyyy' },
         description: 'Bepaalt de leeftijdscategorie (peildatum 1 januari).',
@@ -120,6 +131,7 @@ export const Players: CollectionConfig = {
           label: 'Medisch attest aanwezig',
           type: 'checkbox',
           defaultValue: false,
+          access: { read: sensitiveFieldRead },
         },
       ],
     },
@@ -133,6 +145,7 @@ export const Players: CollectionConfig = {
           label: 'Doktersverbod hoger spelen',
           type: 'checkbox',
           defaultValue: false,
+          access: { read: sensitiveFieldRead },
           admin: {
             description: 'Speler mag dan niet één categorie hoger spelen.',
           },

@@ -45,11 +45,14 @@ const STEPS: Step[] = [
 ]
 
 export function DemoTutorial({ matchId }: { matchId: number }) {
-  const key = `demo-tutorial-done-${matchId}`
+  // Per OPERATOR (niet per wedstrijd): zo krijgt een eerste-keer-jurylid de uitleg ook op een
+  // ECHTE wedstrijd, en daarna blijft enkel de "? Uitleg"-knop staan (AUDIT §3 onboarding).
+  void matchId
+  const key = `kb-tutorial-seen`
   const [open, setOpen] = useState(false)
   const [step, setStep] = useState(0)
 
-  // Bij eerste bezoek aan deze demo automatisch openen.
+  // Bij het allereerste gebruik automatisch openen.
   useEffect(() => {
     try {
       if (!localStorage.getItem(key)) setOpen(true)

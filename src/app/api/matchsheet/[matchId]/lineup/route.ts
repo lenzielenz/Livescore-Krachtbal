@@ -1,4 +1,5 @@
-import { hasRole, isFederationLevel, userRoles } from '@/lib/access'
+import { hasRole, isFederationLevel, userClubId, userRoles } from '@/lib/access'
+import { authUser, matchSideClubs } from '@/lib/api-auth'
 import { clubsMayEditLineup, type MatchSheetStatus } from '@/lib/matchsheet-workflow'
 import { buildRoster, getOrCreateMatchSheet, type Side } from '@/lib/matchsheet-data'
 import { getPayloadClient } from '@/lib/payload-client'
@@ -40,13 +41,23 @@ export async function POST(req: Request, { params }: { params: Promise<{ matchId
 
   try {
     const payload = await getPayloadClient()
-    const { user } = await payload.auth({ headers: req.headers })
+    const user = await authUser(payload, req)
     if (!user) return Response.json({ error: 'Niet ingelogd.' }, { status: 401 })
 
     const roles = userRoles(user)
     const mayEdit =
       isFederationLevel(user) || hasRole(user, 'scheidsrechter', 'club-beheerder')
     if (!mayEdit) return Response.json({ error: 'Geen rechten voor de opstelling.' }, { status: 403 })
+
+    // Een club-beheerder mag enkel de opstelling van de EIGEN club bewerken (multi-tenant isolatie).
+    if (!isFederationLevel(user) && hasRole(user, 'club-beheerder') && !hasRole(user, 'scheidsrechter')) {
+      const clubs = await matchSideClubs(payload, matchId)
+      const need = side === 'home' ? clubs.home : clubs.away
+      const own = userClubId(user)
+      if (need == null || own == null || String(need) !== String(own)) {
+        return Response.json({ error: 'Je kan enkel de opstelling van je eigen ploeg bewerken.' }, { status: 403 })
+      }
+    }
 
     const sheet = await getOrCreateMatchSheet(payload, matchId)
     const status = sheet.status as MatchSheetStatus
