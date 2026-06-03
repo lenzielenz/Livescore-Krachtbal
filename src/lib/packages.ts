@@ -153,13 +153,35 @@ export const PACKAGE_OPTIONS = PACKAGE_LIST.map((p) => ({
 }))
 
 /**
- * Leid het pakketniveau van een wedstrijd af uit de thuisclub.
- * Vereist dat de match met voldoende depth geladen is zodat homeTeam.club
- * een object is (anders valt het terug op het standaardpakket).
+ * Master-schakelaar voor de pakket-feature (prijspakketten / feature-gating).
+ *
+ * Op `false` is de feature GEDEACTIVEERD: de hele app valt overal terug op
+ * 'Elite' — het volledige veldscherm + alle statistieken, precies zoals vóór de
+ * pakketten. De prijzenpagina en de admin pakket-preview verdwijnen.
+ *
+ * Alle pakketdefinities hierboven blijven bewaard, zodat de feature later weer
+ * aangezet kan worden door dit op `true` te zetten.
  */
-export function resolveMatchPackage(match: { homeTeam?: unknown } | null | undefined): PackageDef {
+export const PACKAGES_ENABLED = false
+
+/**
+ * Onderliggende afleiding van het clubpakket uit de thuisclub (los van de
+ * master-schakelaar). Vereist dat de match met voldoende depth geladen is zodat
+ * homeTeam.club een object is (anders valt het terug op het standaardpakket).
+ */
+export function clubPackageOf(match: { homeTeam?: unknown } | null | undefined): PackageDef {
   const team = match?.homeTeam
   const club = team && typeof team === 'object' ? (team as { club?: unknown }).club : undefined
   const tier = club && typeof club === 'object' ? (club as { package?: unknown }).package : undefined
   return getPackage(tier)
+}
+
+/**
+ * Effectief pakket van een wedstrijd. Met de pakket-feature uitgeschakeld valt
+ * de app terug op 'Elite' (volledige werking); anders erft de wedstrijd het
+ * pakket van de thuisclub.
+ */
+export function resolveMatchPackage(match: { homeTeam?: unknown } | null | undefined): PackageDef {
+  if (!PACKAGES_ENABLED) return PACKAGES.elite
+  return clubPackageOf(match)
 }
