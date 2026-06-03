@@ -1,10 +1,41 @@
 import Link from 'next/link'
 
 import { SiteHeader } from '@/components/SiteHeader'
+import { TeamLogo } from '@/components/TeamLogo'
+import { buildMatchState } from '@/lib/match-engine'
+import { getPayloadClient } from '@/lib/payload-client'
 
-// De startpagina is een overzicht ("hub"): alles wat we gebouwd hebben, logisch gegroepeerd.
-// Het pure live-bord leeft op /live.
-export default function HomePage() {
+export const dynamic = 'force-dynamic'
+
+type LiveCard = {
+  id: number
+  home: { name: string; logoUrl: string | null; colors?: { primary?: string } | null }
+  away: { name: string; logoUrl: string | null; colors?: { primary?: string } | null }
+  score: { home: number; away: number }
+}
+
+// De startpagina is een overzicht ("hub"): alles wat we gebouwd hebben, logisch gegroepeerd,
+// met bovenaan een "Nu live"-strook voor directe waarde. Het pure live-bord leeft op /live.
+export default async function HomePage() {
+  const payload = await getPayloadClient()
+  const liveRes = await payload
+    .find({ collection: 'matches', where: { status: { equals: 'live' } }, depth: 0, limit: 8 })
+    .catch(() => ({ docs: [] as { id: number }[] }))
+  const live: LiveCard[] = []
+  for (const m of liveRes.docs) {
+    try {
+      const s = await buildMatchState(payload, m.id)
+      live.push({
+        id: m.id,
+        home: { name: s.teams.home.name, logoUrl: s.teams.home.logoUrl, colors: s.teams.home.colors },
+        away: { name: s.teams.away.name, logoUrl: s.teams.away.logoUrl, colors: s.teams.away.colors },
+        score: s.score,
+      })
+    } catch {
+      // Wedstrijd met ontbrekende ploeg overslaan.
+    }
+  }
+
   return (
     <>
       <SiteHeader active={null} />
@@ -15,6 +46,28 @@ export default function HomePage() {
           </h1>
           <p>Volg wedstrijden, bedien de schermen aan het veld en regel het wedstrijdblad — alles op één plek.</p>
         </section>
+
+        {/* Nu live — directe waarde bovenaan. */}
+        {live.length > 0 && (
+          <section className="hub-livewrap">
+            <h2 className="hub-h"><span className="hub-livedot" />Nu live</h2>
+            <div className="hub-live">
+              {live.map((m) => (
+                <Link key={m.id} href={`/match/${m.id}`} className="hub-livecard">
+                  <span className="hub-live-team">
+                    <TeamLogo name={m.home.name} logoUrl={m.home.logoUrl} side="home" size="sm" ringColor={m.home.colors?.primary} />
+                    <span className="hub-live-nm">{m.home.name}</span>
+                  </span>
+                  <span className="hub-live-score">{m.score.home}<span className="hub-live-dash">–</span>{m.score.away}</span>
+                  <span className="hub-live-team away">
+                    <span className="hub-live-nm">{m.away.name}</span>
+                    <TeamLogo name={m.away.name} logoUrl={m.away.logoUrl} side="away" size="sm" ringColor={m.away.colors?.primary} />
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* De vier schermen van één wedstrijd, in logische volgorde: invoer → weergaven. */}
         <h2 className="hub-h">Eén wedstrijd, vier schermen</h2>
