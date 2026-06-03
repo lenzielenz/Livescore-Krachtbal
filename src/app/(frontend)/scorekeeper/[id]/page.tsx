@@ -1,10 +1,10 @@
-import { headers } from 'next/headers'
 import { notFound } from 'next/navigation'
 
 import { isFederationLevel } from '@/lib/access'
+import { getAuthUser } from '@/lib/auth-user'
 import { buildMatchState } from '@/lib/match-engine'
 import { getMatchReadiness } from '@/lib/matchsheet-data'
-import { resolveMatchPackage } from '@/lib/packages'
+import { effectiveMatchPackage, readPackagePreview } from '@/lib/package-preview'
 import { getPayloadClient } from '@/lib/payload-client'
 import { Scorekeeper } from './Scorekeeper'
 import { SimpleScorekeeper } from './SimpleScorekeeper'
@@ -27,7 +27,12 @@ export default async function ScorekeeperPage({ params }: { params: Promise<{ id
   }
 
   const matchDoc = await payload.findByID({ collection: 'matches', id: matchId, depth: 2 }).catch(() => null)
-  const pkg = resolveMatchPackage(matchDoc)
+
+  // Admin/federatie mag een ander pakketniveau previewen (cookie); dat bepaalt
+  // dan het aantekenmodel in de eigen weergave i.p.v. het clubpakket.
+  const user = await getAuthUser()
+  const isAdmin = isFederationLevel(user)
+  const pkg = effectiveMatchPackage(matchDoc, await readPackagePreview(isAdmin))
 
   const players = await payload.find({
     collection: 'players',
@@ -51,10 +56,7 @@ export default async function ScorekeeperPage({ params }: { params: Promise<{ id
     return <SimpleScorekeeper matchId={matchId} initialState={state} roster={roster} />
   }
 
-  const [readiness, auth] = await Promise.all([
-    getMatchReadiness(payload, matchId),
-    payload.auth({ headers: await headers() }).catch(() => ({ user: null })),
-  ])
+  const readiness = await getMatchReadiness(payload, matchId)
 
   return (
     <Scorekeeper
@@ -62,7 +64,7 @@ export default async function ScorekeeperPage({ params }: { params: Promise<{ id
       initialState={state}
       roster={roster}
       readiness={readiness}
-      isAdmin={isFederationLevel(auth.user)}
+      isAdmin={isAdmin}
     />
   )
 }

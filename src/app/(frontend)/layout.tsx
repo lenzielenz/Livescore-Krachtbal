@@ -2,7 +2,11 @@ import type { Metadata, Viewport } from 'next'
 import { Inter, Sora } from 'next/font/google'
 import React from 'react'
 
+import { AdminBar } from '@/components/AdminBar'
 import { Toaster } from '@/components/Toaster'
+import { hasRole, isFederationLevel } from '@/lib/access'
+import { getAuthUser } from '@/lib/auth-user'
+import { readPackagePreview } from '@/lib/package-preview'
 import './styles.css'
 
 // Premium typografie: Sora als display-lettertype (titels, merk, scores), Inter voor tekst.
@@ -25,9 +29,16 @@ export const viewport: Viewport = {
 export default async function RootLayout(props: { children: React.ReactNode }) {
   const { children } = props
 
+  // Admin/federatie krijgt bovenaan elke pagina een balk: badge + pakket-preview.
+  const user = await getAuthUser()
+  const privileged = isFederationLevel(user)
+  const preview = await readPackagePreview(privileged)
+  const role = hasRole(user, 'admin') ? 'Admin' : 'Federatie'
+
   return (
     <html lang="nl" className={`${display.variable} ${body.variable}`}>
       <body>
+        {privileged && <AdminBar role={role} preview={preview} />}
         <main>{children}</main>
         <Toaster />
       </body>

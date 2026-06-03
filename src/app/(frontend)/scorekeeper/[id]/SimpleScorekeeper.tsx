@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
+import { TeamLogo } from '@/components/TeamLogo'
 import { categoryConfig } from '@/lib/categories'
 import type { MatchState } from '@/lib/match-engine'
 import type { SimpleSide } from '@/lib/simple-score'
@@ -204,7 +205,17 @@ export function SimpleScorekeeper({
               <h3>
                 Wie scoorde? <span className="ssk-modal-pts">+{pending.points} {pending.points === 2 ? 'rugworp' : 'nekworp'}</span>
               </h3>
-              <p className="ssk-modal-team">{team.name}</p>
+              <div className="ssk-modal-team">
+                <TeamLogo
+                  name={team.name}
+                  logoUrl={team.logoUrl}
+                  logoFit={team.logoFit}
+                  side={pending.side}
+                  size="sm"
+                  ringColor={team.colors?.primary ?? null}
+                />
+                <span>{team.name}</span>
+              </div>
               {teamPlayers.length === 0 ? (
                 <p className="ssk-dim">Geen spelers bekend voor deze ploeg — voeg ze toe in de opstelling.</p>
               ) : (

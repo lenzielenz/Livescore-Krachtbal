@@ -948,7 +948,7 @@ export async function buildTimeline(payload: Payload, matchId: number): Promise<
       gameClock: g.clock,
       side: g.side,
       label: g.scorerName
-        ? `Doelpunt +${g.points} · ${g.scorerNumber ?? '?'} ${g.scorerName}`
+        ? `Doelpunt +${g.points} #${g.scorerNumber ?? '?'} ${g.scorerName}`.trim()
         : `Doelpunt +${g.points}`,
       _t: new Date(g.ts).toISOString(),
     })

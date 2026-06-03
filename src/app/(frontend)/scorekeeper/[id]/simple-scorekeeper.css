@@ -206,7 +206,9 @@
 .ssk-modal-team {
   margin: 0 0 14px;
   font-weight: 700;
-  opacity: 0.85;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 .ssk-dim { opacity: 0.7; font-size: 14px; }
 .ssk-pick-grid {
