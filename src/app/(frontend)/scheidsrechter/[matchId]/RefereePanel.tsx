@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 
+import { toast } from '@/components/Toaster'
 import { KEURING_ITEMS, KEURING_OPTIONS } from '@/lib/keuring'
 import { MATCHSHEET_STATUS_OPTIONS, nextStatus, type MatchSheetStatus } from '@/lib/matchsheet-workflow'
 import {
@@ -73,13 +74,19 @@ export function RefereePanel({
   const [msg, setMsg] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
+  // Zet de melding én toon een toast (succes/fout).
+  const notify = (ok: boolean, m: string) => {
+    setMsg(m)
+    toast(ok ? 'success' : 'error', m)
+  }
+
   const saveStartAkkoord = async (akkoord: boolean) => {
     const { ok, json } = await post({ action: 'wedstrijdstart', akkoord, naam: startNaam, code })
     if (ok) {
       setStartAkkoord(akkoord)
-      setMsg(akkoord ? 'Akkoord gegeven — de aantekenaar kan de wedstrijd openen.' : 'Akkoord ingetrokken.')
+      notify(true, akkoord ? 'Akkoord gegeven — de aantekenaar kan de wedstrijd openen.' : 'Akkoord ingetrokken.')
     } else {
-      setMsg(json.error || 'Mislukt.')
+      notify(false, json.error || 'Mislukt.')
     }
   }
 
@@ -96,7 +103,7 @@ export function RefereePanel({
         km: verg.km === '' ? 0 : Number(verg.km),
       },
     })
-    setMsg(ok ? 'Vergoeding & forfait bewaard.' : json.error || 'Mislukt.')
+    notify(ok, ok ? 'Vergoeding & forfait bewaard.' : json.error || 'Mislukt.')
   }
 
   const required = new Set(reeks ? requiredOfficials(reeks) : [])
@@ -105,10 +112,11 @@ export function RefereePanel({
   const saveOfficials = async () => {
     const { ok, json } = await post({ action: 'officials', officials })
     if (!ok) {
-      setMsg(json.error || 'Mislukt.')
+      notify(false, json.error || 'Mislukt.')
       return
     }
-    setMsg(
+    notify(
+      true,
       validation.ok
         ? 'Officials bewaard — volledig en geldig.'
         : 'Officials bewaard. Let op: nog niet volledig (zie aandachtspunten).',
@@ -130,16 +138,16 @@ export function RefereePanel({
 
   const saveKeuring = async () => {
     const { ok, json } = await post({ action: 'keuring', keuring })
-    setMsg(ok ? 'Keuring bewaard.' : json.error || 'Mislukt.')
+    notify(ok, ok ? 'Keuring bewaard.' : json.error || 'Mislukt.')
   }
 
   const goTo = async (to: MatchSheetStatus) => {
     const { ok, json } = await post({ action: 'status', to })
     if (ok) {
       setStatus(json.status)
-      setMsg(`Status → ${statusLabel(json.status)}.`)
+      notify(true, `Status → ${statusLabel(json.status)}.`)
     } else {
-      setMsg(json.error || 'Statuswijziging mislukt.')
+      notify(false, json.error || 'Statuswijziging mislukt.')
     }
   }
 

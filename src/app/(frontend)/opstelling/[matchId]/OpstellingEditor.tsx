@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from 'react'
 
+import { toast } from '@/components/Toaster'
+
 type RosterEntry = {
   id: number
   name: string
@@ -81,9 +83,13 @@ export function OpstellingEditor({
     setSaving(false)
     if (res.ok) {
       if (asFavorite) setFavorites(players.map((p) => p.player))
-      setMsg(asFavorite ? `Bewaard én onthouden als vaste opstelling (${json.saved}).` : `Bewaard (${json.saved} spelers).`)
+      const ok = asFavorite ? `Bewaard én onthouden als vaste opstelling (${json.saved}).` : `Bewaard (${json.saved} spelers).`
+      setMsg(ok)
+      toast('success', ok)
     } else {
-      setMsg(json.error || 'Opslaan mislukt.')
+      const err = json.error || 'Opslaan mislukt.'
+      setMsg(err)
+      toast('error', err)
     }
   }
 

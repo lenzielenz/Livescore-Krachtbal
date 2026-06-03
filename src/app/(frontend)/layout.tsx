@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from 'next'
 import { Inter, Sora } from 'next/font/google'
 import React from 'react'
+
+import { Toaster } from '@/components/Toaster'
 import './styles.css'
 
 // Premium typografie: Sora als display-lettertype (titels, merk, scores), Inter voor tekst.
@@ -27,6 +29,7 @@ export default async function RootLayout(props: { children: React.ReactNode }) {
     <html lang="nl" className={`${display.variable} ${body.variable}`}>
       <body>
         <main>{children}</main>
+        <Toaster />
       </body>
     </html>
   )
