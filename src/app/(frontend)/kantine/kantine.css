@@ -403,3 +403,31 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Telefoon (smal óf liggend met weinig hoogte): het tv-raster propt niet in één
+   klein scherm, waardoor score, logo's en tekst over elkaar vallen. Laat de
+   pagina dan scrollen, geef elk bord een leesbare minimumhoogte en kleinere
+   binnenmaten. De grote tv-weergave (breed én hoog) blijft ongemoeid. */
+@media (max-width: 760px), (max-height: 560px) {
+  .kt-screen {
+    padding: 12px;
+  }
+  .kt-grid-screen {
+    height: auto;
+    min-height: calc(100dvh - 24px);
+    grid-auto-rows: minmax(168px, auto);
+  }
+  .kt-tile {
+    font-size: 15px !important;
+  }
+  .kt-tile-score {
+    font-size: 1.9em;
+  }
+}
+
+/* Staande telefoon: alle borden onder elkaar. */
+@media (max-width: 560px) {
+  .kt-grid-screen {
+    grid-template-columns: 1fr !important;
+  }
+}
