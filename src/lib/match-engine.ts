@@ -10,6 +10,7 @@ import type { Category } from './categories'
 import { type ClubColors, clubColorsFrom } from './club-colors'
 import { type LogoFit, normalizeLogoFit } from './logo-fit'
 import { type AttackDir, type Point, FIELD, freeThrowNorm } from './field'
+import { readSimpleScore } from './simple-score'
 import {
   type SetupSide,
   type TeamSide,
@@ -740,6 +741,25 @@ export async function buildMatchSheet(payload: Payload, matchId: number): Promis
     }
   }
 
+  // Starter-pakket: simpele doelpunten (+1/+2, zonder speler) en kruisjes meenemen
+  // zodat het blad dezelfde stand toont als het scorebord.
+  const simpleSheet = readSimpleScore(match)
+  for (const g of simpleSheet.goals) {
+    const halfIdx = g.half === 2 ? 1 : 0
+    goals.push({
+      half: g.half,
+      gameClock: g.clock,
+      side: g.side,
+      shirtNumber: 0,
+      playerName: '—',
+      type: g.points === 2 ? 'rug' : 'nek',
+      points: g.points,
+    })
+    halfScores[g.side][halfIdx] += g.points
+  }
+  crosses.home += simpleSheet.crosses.home
+  crosses.away += simpleSheet.crosses.away
+
   const timeoutsRes = await payload.find({
     collection: 'match-events',
     where: { and: [{ match: { equals: matchId } }, { type: { equals: 'timeout' } }] },
@@ -866,7 +886,7 @@ export interface TimelineItem {
 
 /** Chronologische tijdlijn (doelpunten, kruisjes, time-outs, helft-grenzen). */
 export async function buildTimeline(payload: Payload, matchId: number): Promise<TimelineItem[]> {
-  const { homeId } = await loadMatch(payload, matchId)
+  const { match, homeId } = await loadMatch(payload, matchId)
 
   const throwsRes = await payload.find({
     collection: 'throws',
@@ -916,6 +936,20 @@ export async function buildTimeline(payload: Payload, matchId: number): Promise<
         _t: t.createdAt,
       })
     }
+  }
+
+  // Starter-pakket: simpele doelpunten (+1/+2) als tijdlijn-items toevoegen.
+  const tlSimple = readSimpleScore(match)
+  for (const g of tlSimple.goals) {
+    items.push({
+      id: `s${g.ts}`,
+      kind: 'goal',
+      half: g.half,
+      gameClock: g.clock,
+      side: g.side,
+      label: `Doelpunt +${g.points}`,
+      _t: new Date(g.ts).toISOString(),
+    })
   }
 
   for (const e of eventsRes.docs) {
@@ -1005,6 +1039,13 @@ export async function buildMatchState(payload: Payload, matchId: number): Promis
     }
   })
   const totals = reduceTotals(reducible)
+
+  // Starter-pakket: snelle doelpunten (+1/+2) en kruisjes staan los van de
+  // worp-events op de match. Tel ze hier mee zodat het scorebord ze toont.
+  const simple = readSimpleScore(match)
+  for (const g of simple.goals) totals.score[g.side] += g.points
+  totals.crosses.home += simple.crosses.home
+  totals.crosses.away += simple.crosses.away
 
   const half = match.currentHalf ?? 1
   const timeoutRes = await payload.find({

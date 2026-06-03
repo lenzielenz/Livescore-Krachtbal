@@ -349,6 +349,18 @@ export interface Match {
   clockSeconds?: number | null;
   clockRunning?: boolean | null;
   clockUpdatedAt?: string | null;
+  /**
+   * Beheerd via het simpele aantekenscherm. Niet handmatig bewerken.
+   */
+  simpleScore?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -1008,6 +1020,7 @@ export interface MatchesSelect<T extends boolean = true> {
   clockSeconds?: T;
   clockRunning?: T;
   clockUpdatedAt?: T;
+  simpleScore?: T;
   updatedAt?: T;
   createdAt?: T;
 }
