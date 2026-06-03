@@ -156,7 +156,7 @@ export function Tile({
         </span>
         {played && state && (
           <span className="kt-tile-stats">
-            <span title="Kruisjes">✚ {state.crosses.home}–{state.crosses.away}</span>
+            <span title="Kruisjes">✖ {state.crosses.home}–{state.crosses.away}</span>
             <span className="kt-stat-sep">·</span>
             <span title="Minuten (time-outs)">
               ⏱ {state.timeouts.home}–{state.timeouts.away}

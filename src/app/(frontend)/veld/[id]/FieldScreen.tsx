@@ -38,7 +38,7 @@ function Marks({ count, group, kind }: { count: number; group: number; kind: 'cr
         <span className="fs-mark-group" key={gi}>
           {g.map((on, j) => (
             <span key={j} className={`fs-mark ${on ? 'on' : ''}`} aria-hidden>
-              {kind === 'cross' ? '✚' : '⏱'}
+              {kind === 'cross' ? '✖' : '⏱'}
             </span>
           ))}
         </span>
