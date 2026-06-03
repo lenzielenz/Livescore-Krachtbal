@@ -1,26 +1,17 @@
 import { cookies } from 'next/headers'
 
-import {
-  PACKAGE_TIERS,
-  getPackage,
-  resolveMatchPackage,
-  type PackageDef,
-  type PackageTier,
-} from './packages'
+import { getPackage, resolveMatchPackage, type PackageDef, type PackageTier } from './packages'
+import { PKG_PREVIEW_COOKIE, asPreviewTier } from './package-preview-shared'
 
-// Admin-only pakket-preview. Een admin kan tijdelijk een ander pakketniveau
-// "bekijken" (Starter/Team/Elite) om te zien hoe de functies per pakket
-// verschillen, ZONDER het pakket van de club echt te wijzigen. De keuze leeft in
-// een cookie en geldt enkel in de eigen weergave (server leest de cookie alleen
-// voor admins terug).
-export const PKG_PREVIEW_COOKIE = 'kb_pkg_preview'
-
-/** Normaliseer een cookie-waarde naar een geldig pakketniveau (of null). */
-export function asPreviewTier(value: unknown): PackageTier | null {
-  return typeof value === 'string' && (PACKAGE_TIERS as string[]).includes(value)
-    ? (value as PackageTier)
-    : null
-}
+// Admin-only pakket-preview (server-kant). Een admin kan tijdelijk een ander
+// pakketniveau "bekijken" (Starter/Team/Elite) om te zien hoe de functies per
+// pakket verschillen, ZONDER het pakket van de club echt te wijzigen. De keuze
+// leeft in een cookie en geldt enkel in de eigen weergave (server leest de
+// cookie alleen voor admins terug).
+//
+// De cookienaam + normalisatie staan in package-preview-shared.ts zodat
+// client-componenten ze kunnen importeren zonder `next/headers` mee te bundelen.
+export { PKG_PREVIEW_COOKIE, asPreviewTier }
 
 /** Lees de actieve pakket-preview (alleen geldig voor admins). */
 export async function readPackagePreview(isAdmin: boolean): Promise<PackageTier | null> {
