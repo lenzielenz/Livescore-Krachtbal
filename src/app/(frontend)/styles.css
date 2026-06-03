@@ -509,6 +509,115 @@ h3,
   flex-direction: column;
   gap: 8px;
 }
+
+/* Startklaar-/vergrendeld-status op de wedstrijdkaart in de Aantekenen-hub. */
+.mc-ready {
+  color: var(--home);
+  font-weight: 800;
+}
+.mc-locked {
+  color: var(--dim);
+  font-weight: 600;
+}
+
+/* ── Wedstrijddag-stappenstrook onder elke wedstrijd (Aantekenen-hub) ── */
+.mh-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.mh-item + .mh-item {
+  margin-top: 6px;
+}
+.mh-steps {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+  padding: 2px 0 2px;
+}
+.mh-steps-lead {
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 800;
+  color: var(--dim);
+}
+.mh-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 13px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--txt);
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: border-color 0.14s ease, transform 0.14s ease, background-color 0.14s ease;
+}
+.mh-step:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
+}
+.mh-step-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 19px;
+  height: 19px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  font-size: 0.72rem;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+/* Voltooide voorwaarde: groen vinkje. */
+.mh-step.done {
+  border-color: color-mix(in srgb, var(--home) 55%, var(--line));
+  color: var(--home);
+}
+.mh-step.done .mh-step-num {
+  background: var(--home);
+  color: #06140d;
+  border-color: var(--home);
+}
+/* Gedempte stap (aftekenen vóór de match — komt later). */
+.mh-step.muted {
+  opacity: 0.55;
+}
+/* De start-stap (de "poort"): springt eruit zodra alles klaar is. */
+.mh-step.gate {
+  font-weight: 800;
+}
+.mh-step.gate.is-ready {
+  background: var(--grad-accent);
+  color: #06140d;
+  border-color: color-mix(in srgb, var(--accent) 80%, #fff);
+  box-shadow: 0 8px 22px -8px color-mix(in srgb, var(--accent) 60%, transparent);
+}
+.mh-step.gate.is-ready .mh-step-num {
+  background: #06140d;
+  color: var(--accent);
+  border-color: transparent;
+}
+.mh-step.gate.is-active {
+  background: var(--grad-pop);
+  color: #fff;
+  border-color: color-mix(in srgb, var(--pop) 60%, var(--line));
+}
+.mh-step.gate.is-active .mh-step-num {
+  background: rgba(255, 255, 255, 0.25);
+  border-color: transparent;
+  color: #fff;
+}
+/* Start nog vergrendeld: gedempt slot tot opstelling + scheidsrechter klaar zijn. */
+.mh-step.gate.is-locked {
+  opacity: 0.6;
+  border-style: dashed;
+}
 .sk-demo-cta {
   display: inline-block;
   padding: 12px 20px;

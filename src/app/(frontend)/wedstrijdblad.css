@@ -121,6 +121,75 @@
   margin-top: 14px;
 }
 
+/* Handmatig een speler toevoegen aan de ploeg, direct vanuit de opstelling. */
+.ops-add {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px dashed color-mix(in srgb, var(--accent) 35%, var(--line));
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--accent) 5%, transparent);
+}
+.ops-add-title {
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: var(--accent);
+}
+.ops-add-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.ops-add-num,
+.ops-add-name {
+  background: #0a1f14;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  color: var(--txt);
+  padding: 9px 11px;
+  font-size: 0.9rem;
+  font-family: inherit;
+}
+.ops-add-num {
+  width: 56px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.ops-add-name {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.ops-add-num:focus,
+.ops-add-name:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
+}
+.ops-add-btn {
+  flex: 0 0 auto;
+  padding: 9px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: #06140d;
+  font-weight: 800;
+  font-size: 0.86rem;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.ops-add-btn:hover:not(:disabled) {
+  filter: brightness(1.05);
+}
+.ops-add-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.ops-add-hint {
+  font-size: 0.74rem;
+  color: var(--dim);
+}
+
 /* Lijst van (selecteerbare) spelers */
 .wb-rows {
   list-style: none;

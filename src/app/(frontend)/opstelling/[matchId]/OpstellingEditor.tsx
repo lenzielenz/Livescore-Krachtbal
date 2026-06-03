@@ -14,6 +14,7 @@ type RosterEntry = {
 }
 
 type RosterResponse = {
+  teamId: number
   teamName: string
   category: string
   status: string
@@ -40,6 +41,10 @@ export function OpstellingEditor({
   const [showBlocked, setShowBlocked] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  // Handmatig een speler toevoegen (bv. een nieuwe of niet-geregistreerde speler).
+  const [addName, setAddName] = useState('')
+  const [addNum, setAddNum] = useState('')
+  const [adding, setAdding] = useState(false)
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/matchsheet/${matchId}/lineup?side=${side}`)
@@ -65,6 +70,50 @@ export function OpstellingEditor({
       else next.add(id)
       return next
     })
+  }
+
+  // Eerstvolgende vrije rugnummer (op basis van de huidige roster).
+  const nextFreeNumber = (): number => {
+    const used = new Set((data?.players ?? []).map((p) => p.shirtNumber))
+    let n = 1
+    while (used.has(n)) n += 1
+    return n
+  }
+
+  // Maakt een nieuwe speler aan voor deze ploeg, herlaadt de roster en selecteert hem meteen —
+  // zonder de bestaande selectie te wissen.
+  const addPlayer = async () => {
+    const name = addName.trim()
+    if (!name || !data) return
+    setAdding(true)
+    setMsg(null)
+    const shirtNumber = addNum.trim() ? Number(addNum) : nextFreeNumber()
+    const prevIds = new Set(data.players.map((p) => p.id))
+    try {
+      const res = await fetch('/api/players/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ teamId: data.teamId, players: [{ name, shirtNumber }] }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error ?? 'Toevoegen mislukt.')
+      // Roster opnieuw ophalen en de nieuwe speler(s) bij de selectie voegen.
+      const r2 = await fetch(`/api/matchsheet/${matchId}/lineup?side=${side}`)
+      const fresh: RosterResponse = await r2.json()
+      setData(fresh)
+      setFavorites(fresh.favorites ?? [])
+      const newIds = (fresh.players ?? []).map((p) => p.id).filter((id) => !prevIds.has(id))
+      if (newIds.length) setSelected((prev) => new Set([...prev, ...newIds]))
+      setAddName('')
+      setAddNum('')
+      toast('success', `${name} toegevoegd en geselecteerd.`)
+    } catch (e) {
+      const err = (e as Error).message
+      setMsg(err)
+      toast('error', err)
+    } finally {
+      setAdding(false)
+    }
   }
 
   const save = async (asFavorite: boolean) => {
@@ -148,6 +197,40 @@ export function OpstellingEditor({
           </li>
         ))}
       </ul>
+
+      {/* Handmatig een speler toevoegen aan deze ploeg (naam + optioneel rugnummer). */}
+      <div className="ops-add">
+        <span className="ops-add-title">Speler niet in de lijst? Voeg toe</span>
+        <div className="ops-add-row">
+          <input
+            type="number"
+            className="ops-add-num"
+            inputMode="numeric"
+            placeholder="#"
+            value={addNum}
+            onChange={(e) => setAddNum(e.target.value)}
+            aria-label="Rugnummer (optioneel)"
+          />
+          <input
+            type="text"
+            className="ops-add-name"
+            placeholder="Naam speler"
+            value={addName}
+            onChange={(e) => setAddName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                void addPlayer()
+              }
+            }}
+            aria-label="Naam speler"
+          />
+          <button type="button" className="ops-add-btn" onClick={() => void addPlayer()} disabled={adding || !addName.trim()}>
+            {adding ? '…' : '+ Toevoegen'}
+          </button>
+        </div>
+        <span className="ops-add-hint">Laat het nummer leeg voor het eerstvolgende vrije rugnummer.</span>
+      </div>
 
       <div className="ops-save">
         <button type="button" onClick={() => save(false)} disabled={saving} className="wb-btn wb-btn-primary">
