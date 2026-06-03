@@ -20,6 +20,7 @@ import * as migration_20260603_140000_tornooi_format from './20260603_140000_tor
 import * as migration_20260603_160000_tornooi_kruisjes_timeouts from './20260603_160000_tornooi_kruisjes_timeouts';
 import * as migration_20260603_180000_club_pakket from './20260603_180000_club_pakket';
 import * as migration_20260603_190000_match_simple_score from './20260603_190000_match_simple_score';
+import * as migration_20260603_200000_veld_scherm_selectie from './20260603_200000_veld_scherm_selectie';
 
 export const migrations = [
   {
@@ -131,5 +132,10 @@ export const migrations = [
     up: migration_20260603_190000_match_simple_score.up,
     down: migration_20260603_190000_match_simple_score.down,
     name: '20260603_190000_match_simple_score',
+  },
+  {
+    up: migration_20260603_200000_veld_scherm_selectie.up,
+    down: migration_20260603_200000_veld_scherm_selectie.down,
+    name: '20260603_200000_veld_scherm_selectie',
   },
 ];

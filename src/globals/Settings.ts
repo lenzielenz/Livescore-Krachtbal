@@ -34,6 +34,14 @@ export const Settings: GlobalConfig = {
       admin: { hidden: true, description: 'Beheerd via de kantine-pagina (/kantine).' },
     },
     {
+      // Centrale selectie voor het veldscherm (één match-id). Beheerd via /cast, zodat je
+      // de wedstrijd op de veld-tv vanaf je gsm wisselt zonder de tv aan te raken.
+      name: 'veldMatchId',
+      label: 'Veldscherm-selectie',
+      type: 'text',
+      admin: { hidden: true, description: 'Beheerd via de cast-pagina (/cast).' },
+    },
+    {
       // Drempel waarboven een speler door administratieve knipjes geblokkeerd wordt (fase 8).
       // Defaults; echte waarde komt van de federatie-boetelijst.
       name: 'knipjesDrempel',

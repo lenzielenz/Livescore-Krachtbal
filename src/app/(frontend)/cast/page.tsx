@@ -2,6 +2,7 @@ import { SiteHeader } from '@/components/SiteHeader'
 import { buildMatchState } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
 import { REEKS_OPTIONS } from '@/lib/reeksen'
+import { readVeldMatchId } from '@/lib/screen-selection'
 import { CastHub, type CastMatch } from './CastHub'
 import './cast.css'
 
@@ -53,12 +54,14 @@ export default async function CastPage() {
     }
   }
 
+  const veldId = await readVeldMatchId(payload)
+
   return (
     <>
       <SiteHeader active="kantine" />
       <div className="cast-page">
-        <h1 className="page-title"><span className="brand">Casten</span> · naar tv</h1>
-        <CastHub matches={matches} />
+        <h1 className="page-title"><span className="brand">Naar tv</span> · schermen</h1>
+        <CastHub matches={matches} initialVeldId={veldId} />
       </div>
     </>
   )

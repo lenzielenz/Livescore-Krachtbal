@@ -1428,6 +1428,10 @@ export interface Setting {
    */
   kantineMatchIds?: string | null;
   /**
+   * Beheerd via de cast-pagina (/cast).
+   */
+  veldMatchId?: string | null;
+  /**
    * Bij dit aantal of meer openstaande knipjes kan een speler niet geselecteerd worden.
    */
   knipjesDrempel: number;
@@ -1451,6 +1455,7 @@ export interface SeasonSelect<T extends boolean = true> {
 export interface SettingsSelect<T extends boolean = true> {
   releaseMinutesBefore?: T;
   kantineMatchIds?: T;
+  veldMatchId?: T;
   knipjesDrempel?: T;
   updatedAt?: T;
   createdAt?: T;
