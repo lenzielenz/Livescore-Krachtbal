@@ -18,6 +18,7 @@ const PRIMARY: { href: string; label: string; key: NavSection }[] = [
 
 const MORE: { href: string; label: string; external?: boolean }[] = [
   { href: '/demo', label: '🎓 Demo spelen' },
+  { href: '/pakketten', label: '💎 Pakketten' },
   { href: '/club', label: '👥 Mijn club' },
   { href: '/beheer/planning', label: '📅 Seizoensplanning' },
   { href: '/reglement', label: 'Reglement' },

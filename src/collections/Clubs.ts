@@ -1,6 +1,7 @@
 import type { CollectionConfig } from 'payload'
 
 import { isFederationLevel } from '../lib/access'
+import { DEFAULT_TIER, PACKAGE_OPTIONS } from '../lib/packages'
 
 // Bovenste niveau van de hiërarchie: Club → Ploegen (per categorie) → Spelers.
 export const Clubs: CollectionConfig = {
@@ -35,6 +36,19 @@ export const Clubs: CollectionConfig = {
       label: 'Naam',
       type: 'text',
       required: true,
+    },
+    {
+      // Abonnementsniveau van de club. Bepaalt het aantekenmodel (snel scoren vs.
+      // volledig veldscherm) en welke statistieken publiek zichtbaar zijn. Zie
+      // src/lib/packages.ts. Een wedstrijd erft het pakket van de thuisclub.
+      name: 'package',
+      label: 'Pakket',
+      type: 'select',
+      options: [...PACKAGE_OPTIONS],
+      defaultValue: DEFAULT_TIER,
+      admin: {
+        description: 'Bepaalt het aantekenmodel en de zichtbare statistieken voor wedstrijden van deze club.',
+      },
     },
     {
       name: 'email',
