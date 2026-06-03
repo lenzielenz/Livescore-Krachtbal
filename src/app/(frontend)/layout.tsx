@@ -26,6 +26,11 @@ export const viewport: Viewport = {
   themeColor: '#06140d',
 }
 
+// De layout leest per request de sessie (admin-balk) via cookies/headers; daarom
+// rendert de hele frontend dynamisch i.p.v. statisch te prerenderen tijdens de
+// build (waar geen sessie/secret beschikbaar is).
+export const dynamic = 'force-dynamic'
+
 export default async function RootLayout(props: { children: React.ReactNode }) {
   const { children } = props
 

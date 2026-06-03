@@ -3,9 +3,15 @@ import { headers } from 'next/headers'
 import { getPayloadClient } from './payload-client'
 
 // Haalt de ingelogde gebruiker op in een server-context (layout/page/route).
-// Valt stil terug op null als er geen geldige sessie is.
+// Volledig defensief: een ontbrekende sessie, een niet-geïnitialiseerde Payload
+// (bv. tijdens de build zonder secret) of een DB-storing mag NOOIT de
+// paginarender breken — in al die gevallen geldt simpelweg "geen gebruiker".
 export async function getAuthUser() {
-  const payload = await getPayloadClient()
-  const { user } = await payload.auth({ headers: await headers() }).catch(() => ({ user: null }))
-  return user
+  try {
+    const payload = await getPayloadClient()
+    const { user } = await payload.auth({ headers: await headers() })
+    return user
+  } catch {
+    return null
+  }
 }

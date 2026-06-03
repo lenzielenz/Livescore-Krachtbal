@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useTransition } from 'react'
 
 import { PACKAGE_LIST, type PackageTier } from '@/lib/packages'
-import { PKG_PREVIEW_COOKIE } from '@/lib/package-preview'
+import { PKG_PREVIEW_COOKIE } from '@/lib/package-preview-shared'
 import './admin-bar.css'
 
 // Globale admin-balk: toont dat je als admin/federatie ingelogd bent en laat je
