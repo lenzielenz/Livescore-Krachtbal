@@ -44,7 +44,9 @@ async function resolveLineup(
   const ids = Array.isArray(stored)
     ? stored.map((s) => (typeof s === 'object' && s ? (s as { id: number }).id : (s as number))).filter(Boolean)
     : []
-  if (ids.length > 0) return ids
+  // Maximaal FIELD_PLAYERS staan op het veld; eventuele extra namen in een (oudere)
+  // opstelling zijn wissels en worden niet als veldspeler getoond.
+  if (ids.length > 0) return ids.slice(0, FIELD_PLAYERS)
   const res = await payload.find({
     collection: 'players',
     where: { team: { equals: teamId } },
@@ -567,6 +569,43 @@ export async function substitute(
     collection: 'matches',
     id: matchId,
     data: side === 'home' ? { homeLineup: next } : { awayLineup: next },
+    overrideAccess: true,
+  })
+  return buildMatchState(payload, matchId)
+}
+
+/**
+ * Zet de veldspelers (de actieve opstelling) van één ploeg op precies FIELD_PLAYERS spelers.
+ * Gebruikt vóór de aftrap om uit de volledige selectie de vier veldspelers te kiezen; de rest
+ * zijn wissels. Alleen veldspelers kunnen werpen, dus enkel deze namen verschijnen in het
+ * worp-keuzescherm. Valideert dat alle gekozen spelers bij de ploeg horen.
+ */
+export async function setLineup(
+  payload: Payload,
+  matchId: number,
+  side: TeamSide,
+  playerIds: number[],
+) {
+  const { homeId, awayId } = await loadMatch(payload, matchId)
+  const teamId = side === 'home' ? homeId : awayId
+
+  const res = await payload.find({
+    collection: 'players',
+    where: { team: { equals: teamId } },
+    depth: 0,
+    limit: 200,
+  })
+  const teamPlayerIds = new Set(res.docs.map((p) => p.id))
+  // Ontdubbel en behoud enkel spelers van deze ploeg.
+  const chosen = Array.from(new Set(playerIds)).filter((id) => teamPlayerIds.has(id))
+  if (chosen.length !== FIELD_PLAYERS) {
+    throw new Error(`Kies precies ${FIELD_PLAYERS} veldspelers.`)
+  }
+
+  await payload.update({
+    collection: 'matches',
+    id: matchId,
+    data: side === 'home' ? { homeLineup: chosen } : { awayLineup: chosen },
     overrideAccess: true,
   })
   return buildMatchState(payload, matchId)
