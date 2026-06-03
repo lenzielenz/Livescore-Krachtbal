@@ -145,9 +145,12 @@ export function Tile({
       </Link>
 
       <div className="kt-tile-foot">
-        <span className={`kt-tile-clock ${status === 'live' ? '' : 'dim'}`}>
+        <span className={`kt-tile-clock ${status === 'live' ? 'live' : 'dim'}`}>
           {status === 'live' && state ? (
-            <>H{state.match.currentHalf} {fmtClock(clock)}</>
+            <>
+              <span className="kt-clock-half">H{state.match.currentHalf}</span>
+              <span className="kt-clock-time">{state.atHalfTime ? 'RUST' : fmtClock(clock)}</span>
+            </>
           ) : status === 'finished' ? (
             'Afgelopen'
           ) : (
@@ -156,11 +159,23 @@ export function Tile({
         </span>
         {played && state && (
           <span className="kt-tile-stats">
-            <span title="Kruisjes">✖ {state.crosses.home}–{state.crosses.away}</span>
-            <span className="kt-stat-sep">·</span>
-            <span title="Minuten (time-outs)">
-              ⏱ {state.timeouts.home}–{state.timeouts.away}
-              {state.refereeStops > 0 ? ` +${state.refereeStops} SR` : ''}
+            <span className="kt-stat" title="Kruisjes">
+              <span className="kt-stat-lbl">Kruisjes</span>
+              <span className="kt-stat-val">
+                <b className="h">{state.crosses.home}</b>
+                <i>–</i>
+                <b className="a">{state.crosses.away}</b>
+              </span>
+            </span>
+            <span className="kt-stat-div" aria-hidden />
+            <span className="kt-stat" title="Minuten (time-outs)">
+              <span className="kt-stat-lbl">Minuten</span>
+              <span className="kt-stat-val">
+                <b className="h">{state.timeouts.home}</b>
+                <i>–</i>
+                <b className="a">{state.timeouts.away}</b>
+                {state.refereeStops > 0 && <em className="kt-stat-sr">+{state.refereeStops} SR</em>}
+              </span>
             </span>
           </span>
         )}

@@ -67,7 +67,7 @@ export function CastReceiver() {
         >
           <div style={{ textAlign: 'center' }}>
             <div style={{ fontSize: '7vmin', fontWeight: 800 }}>
-              Krachtbal <span style={{ color: '#ffd166' }}>Live</span>
+              Krachtbal <span style={{ color: '#ffd873' }}>Live</span>
             </div>
             <p style={{ fontSize: '3vmin', opacity: 0.75, marginTop: '1.5vmin' }}>Verbonden — wacht op scherm…</p>
           </div>
