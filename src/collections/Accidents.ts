@@ -14,7 +14,9 @@ export const Accidents: CollectionConfig = {
     group: 'Federatie',
   },
   access: {
-    read: ({ req }) => Boolean(req.user),
+    // Bijzondere-categorie (medische) data: enkel federatie/admin + scheidsrechter, NIET elke
+    // ingelogde gebruiker (GDPR Art. 9). Zie AUDIT-2026-06.md §4.
+    read: ({ req }) => isFederationLevel(req.user) || hasRole(req.user, 'scheidsrechter'),
     create: ({ req }) => isFederationLevel(req.user) || hasRole(req.user, 'scheidsrechter', 'club-beheerder'),
     update: ({ req }) => isFederationLevel(req.user) || hasRole(req.user, 'scheidsrechter', 'club-beheerder'),
     delete: ({ req }) => isFederationLevel(req.user),

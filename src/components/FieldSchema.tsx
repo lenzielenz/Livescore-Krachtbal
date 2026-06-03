@@ -34,6 +34,8 @@ function fieldPx(goalAreaDepthM: number): FieldPx {
 }
 
 export interface FieldMarker {
+  /** Optioneel stabiel id (om een optimistische markering terug te kunnen draaien). */
+  id?: string
   x: number
   y: number
   color?: string

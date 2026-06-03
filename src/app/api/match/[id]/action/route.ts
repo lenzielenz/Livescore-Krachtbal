@@ -1,4 +1,6 @@
 import { isFederationLevel } from '@/lib/access'
+import { authUser, mayScoreMatch } from '@/lib/api-auth'
+import { withLock } from '@/lib/async-mutex'
 import {
   advanceHalf,
   endHalf,
@@ -7,6 +9,7 @@ import {
   startNextHalf,
   recordThrow,
   recordTimeout,
+  reopenMatch,
   setClock,
   setLineup,
   startFreeThrow,
@@ -44,13 +47,25 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const action = String(body.action ?? '')
   try {
     const payload = await getPayloadClient()
+
+    // Auth: enkel een gemachtigde aantekenaar mag muteren. De engine draait overrideAccess,
+    // dus dit is de enige beschermlaag (zie AUDIT-2026-06.md §4).
+    const user = await authUser(payload, req)
+    if (!(await mayScoreMatch(payload, user, matchId))) {
+      return Response.json(
+        { error: user ? 'Geen rechten om deze wedstrijd aan te tekenen.' : 'Niet ingelogd.' },
+        { status: user ? 403 : 401 },
+      )
+    }
+
+    // Serialiseer alle mutaties op dezelfde wedstrijd (voorkomt throw/undo-races, AUDIT §2).
+    return await withLock(`match:${matchId}`, async () => {
     switch (action) {
       case 'start': {
         // Startcontrole: opstellingen + scheidsrechtersakkoord (of demo). Een admin/federatie
         // mag de controle bewust overslaan via een testknop (allowUnready).
         const readiness = await getMatchReadiness(payload, matchId)
         if (!readiness.ready) {
-          const { user } = await payload.auth({ headers: req.headers }).catch(() => ({ user: null }))
           const mayBypass = isFederationLevel(user) && body.allowUnready === true
           if (!mayBypass) {
             return Response.json(
@@ -90,6 +105,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         return Response.json(await startNextHalf(payload, matchId))
       case 'finish':
         return Response.json(await finishMatch(payload, matchId))
+      case 'reopen':
+        // Een afgesloten wedstrijd heropenen voor correcties — enkel federatie/admin.
+        if (!isFederationLevel(user)) {
+          return Response.json({ error: 'Enkel de federatie kan een wedstrijd heropenen.' }, { status: 403 })
+        }
+        return Response.json(await reopenMatch(payload, matchId))
       case 'timeout':
         return Response.json(await recordTimeout(payload, matchId, Number(body.teamId)))
       case 'referee_stop':
@@ -135,6 +156,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       default:
         return Response.json({ error: `Onbekende actie: ${action}` }, { status: 400 })
     }
+    })
   } catch (err) {
     return Response.json({ error: (err as Error).message }, { status: 400 })
   }

@@ -9,32 +9,61 @@ import { formatEuro, type VergoedingBerekening } from '../vergoeding'
 const dark = rgb(0.1, 0.1, 0.12)
 const grey = rgb(0.4, 0.4, 0.45)
 
+// WinAnsi-veilige tekst (zie pdf.ts) — voorkomt crashes op niet-encodeerbare glyphs.
+const safe = (t: string) =>
+  String(t)
+    .replace(/[–—]/g, '-')
+    .replace(/[‘’′]/g, "'")
+    .replace(/[“”]/g, '"')
+    .replace(/✓/g, 'OK')
+    .replace(/[•·]/g, '-')
+    .replace(/ /g, ' ')
+    .replace(/[^\x20-\x7E\xA1-\xFF]/g, '')
+
 type Writer = {
   line: (text: string, opts?: { size?: number; b?: boolean; color?: typeof dark; gap?: number; x?: number }) => void
   setY: (v: number) => void
   getY: () => number
+  /** Voeg een pagina toe als er minder dan `need` ruimte rest; geeft true terug als dat gebeurde. */
+  ensure: (need: number) => boolean
 }
 
-async function startDoc(): Promise<{ doc: PDFDocument; page: ReturnType<PDFDocument['addPage']>; w: Writer; left: number; width: number }> {
+async function startDoc(): Promise<{ doc: PDFDocument; w: Writer; left: number; width: number; top: number }> {
   const doc = await PDFDocument.create()
-  const page = doc.addPage([595, 842]) // A4
+  let page = doc.addPage([595, 842]) // A4
   const font = await doc.embedFont(StandardFonts.Helvetica)
   const bold = await doc.embedFont(StandardFonts.HelveticaBold)
   const { height, width } = page.getSize()
   const left = 40
-  let y = height - 40
+  const top = height - 40
+  const bottom = 60
+  let y = top
+  const addPage = () => {
+    page = doc.addPage([595, 842])
+    y = top
+  }
   const w: Writer = {
     line: (text, opts = {}) => {
       const size = opts.size ?? 10
-      page.drawText(text, { x: opts.x ?? left, y, size, font: opts.b ? bold : font, color: opts.color ?? dark })
-      if (opts.x === undefined) y -= opts.gap ?? size + 6
+      const gap = opts.gap ?? size + 6
+      // Pagina-overgang enkel voor de y-verlagende (niet-kolom) schrijfacties.
+      if (opts.x === undefined && y - gap < bottom) addPage()
+      page.drawText(safe(text), { x: opts.x ?? left, y, size, font: opts.b ? bold : font, color: opts.color ?? dark })
+      if (opts.x === undefined) y -= gap
     },
     setY: (v) => {
       y = v
     },
     getY: () => y,
+    ensure: (need) => {
+      if (y - need < bottom) {
+        addPage()
+        return true
+      }
+      return false
+    },
   }
-  return { doc, page, w, left, width }
+  return { doc, w, left, width, top }
 }
 
 export type KwitantieRegel = {
@@ -62,13 +91,18 @@ export async function generateRefereeReceiptPdf(data: KwitantieData): Promise<Ui
   w.line(`${data.scheidsrechter}${data.federationNumber ? `  ·  lidnr. ${data.federationNumber}` : ''}`, { size: 11, b: true })
   w.line(`Periode: ${data.periode}`, { color: grey, gap: 20 })
 
-  // Tabelkop.
+  // Tabelkop (herhaald op elke nieuwe pagina).
   const cols = [40, 95, 150, 230, 280, 400, 520] // x-posities
   const headers = ['Wedstrijd', 'Datum', 'Uur', 'Reeks', 'Thuis — Bezoekers', '', 'km']
-  headers.forEach((h, i) => w.line(h, { x: cols[i], b: true, size: 8, color: grey }))
-  w.setY(w.getY() - 14)
+  const drawHeader = () => {
+    headers.forEach((h, i) => w.line(h, { x: cols[i], b: true, size: 8, color: grey }))
+    w.setY(w.getY() - 14)
+  }
+  drawHeader()
 
   for (const r of data.regels) {
+    // Pagineer wanneer de rij niet meer past — anders verdwijnen rijen (en het totaal) van de pagina.
+    if (w.ensure(13)) drawHeader()
     const yRow = w.getY()
     w.line(r.wedstrijdnr, { x: cols[0], size: 8 })
     w.line(r.datum, { x: cols[1], size: 8 })
@@ -101,6 +135,7 @@ export type ForfaitData = {
   reeks: string
   thuis: string
   uit: string
+  uitslag: 'geen' | 'thuis' | 'uit' | 'dubbel'
   gemeldThuis: boolean
   gemeldUit: boolean
   aantalAutos: number
@@ -119,7 +154,16 @@ export async function generateForfaitPdf(data: ForfaitData): Promise<Uint8Array>
   w.line(`Wedstrijdnr: ${data.wedstrijdnr}`, { size: 10 })
   w.line(`Datum / uur: ${data.datum}  ${data.uur}`, { size: 10 })
   w.line(`Reeks: ${data.reeks}`, { size: 10 })
-  w.line(`Ploegen: ${data.thuis} — ${data.uit}`, { size: 10, gap: 18 })
+  w.line(`Ploegen: ${data.thuis} — ${data.uit}`, { size: 10 })
+  const ffLabel =
+    data.uitslag === 'thuis'
+      ? `${data.thuis} gaf forfait`
+      : data.uitslag === 'uit'
+        ? `${data.uit} gaf forfait`
+        : data.uitslag === 'dubbel'
+          ? 'Dubbel forfait'
+          : 'Geen forfait'
+  w.line(`Forfait (FF): ${ffLabel}`, { size: 10, b: true, gap: 18 })
 
   w.line(`Forfait gemeld thuis: ${ja(data.gemeldThuis)}`, { size: 10 })
   w.line(`Forfait gemeld bezoekers: ${ja(data.gemeldUit)}`, { size: 10 })

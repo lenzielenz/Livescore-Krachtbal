@@ -4,9 +4,10 @@ import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
 
 import { TeamLogo } from '@/components/TeamLogo'
-import { type ClubColors, DEFAULT_AWAY_COLOR, DEFAULT_HOME_COLOR } from '@/lib/club-colors'
+import { type ClubColors, DEFAULT_AWAY_COLOR, DEFAULT_HOME_COLOR, inkOn, readableOnDark } from '@/lib/club-colors'
 import type { MatchState, TimelineItem } from '@/lib/match-engine'
 import { type LogoFit } from '@/lib/logo-fit'
+import { goalPointsFromLabel, goalScorerFromLabel, useLiveStream } from '@/lib/use-live-stream'
 
 export type KantineMatch = {
   id: number
@@ -21,16 +22,6 @@ export type KantineMatch = {
 function fmtClock(total: number): string {
   const s = Math.max(0, Math.floor(total))
   return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
-}
-
-function lastGoalScorer(timeline: TimelineItem[], side: 'home' | 'away'): string | null {
-  for (let i = timeline.length - 1; i >= 0; i--) {
-    const item = timeline[i]
-    if (item.kind === 'goal' && item.side === side) {
-      return item.label.replace(/^Doelpunt\s*\+\d+\s*/, '').trim() || null
-    }
-  }
-  return null
 }
 
 // Eén live vak in het raster: abonneert zich op de SSE-stream en toont een doelpunt-melding
@@ -51,40 +42,39 @@ export function Tile({
   const [clock, setClock] = useState(0)
   const [flash, setFlash] = useState<{ key: number; side: 'home' | 'away'; team: string; points: number; scorer: string | null } | null>(null)
   const base = useRef({ seconds: 0, at: Date.now() })
-  const prevScore = useRef(match.score)
+  const seenGoals = useRef<Set<string>>(new Set())
   const seq = useRef(0)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  useEffect(() => {
-    const es = new EventSource(`/api/match/${match.id}/stream`)
-    es.addEventListener('update', (e) => {
-      const data = JSON.parse((e as MessageEvent).data) as { state: MatchState; timeline: TimelineItem[] }
-      const prev = prevScore.current
-      const next = data.state.score
-      const dHome = next.home - prev.home
-      const dAway = next.away - prev.away
-      const scored: { side: 'home' | 'away'; points: number } | null =
-        dHome > 0 ? { side: 'home', points: dHome } : dAway > 0 ? { side: 'away', points: dAway } : null
-      prevScore.current = next
+  useLiveStream<{ state: MatchState; timeline: TimelineItem[] }>(
+    `/api/match/${match.id}/stream`,
+    (data) => {
+      // Eerste frame "leert" de bestaande doelpunten zonder te vieren; daarna enkel nieuwe id's.
+      const first = seenGoals.current.size === 0 && !state
+      const fresh = data.timeline.filter((i) => i.kind === 'goal' && !seenGoals.current.has(i.id))
+      fresh.forEach((i) => seenGoals.current.add(i.id))
       setState(data.state)
-      if (scored) {
+      const last = fresh[fresh.length - 1]
+      if (!first && last && last.side) {
         seq.current += 1
         setFlash({
           key: seq.current,
-          side: scored.side,
-          team: data.state.teams[scored.side].name,
-          points: scored.points,
-          scorer: lastGoalScorer(data.timeline, scored.side),
+          side: last.side,
+          team: data.state.teams[last.side].name,
+          points: goalPointsFromLabel(last.label),
+          scorer: goalScorerFromLabel(last.label),
         })
         if (timer.current) clearTimeout(timer.current)
         timer.current = setTimeout(() => setFlash(null), 5000)
       }
-    })
+    },
+  )
+
+  useEffect(() => {
     return () => {
-      es.close()
       if (timer.current) clearTimeout(timer.current)
     }
-  }, [match.id])
+  }, [])
 
   // Ticking klok.
   useEffect(() => {
@@ -112,9 +102,13 @@ export function Tile({
   const status = state?.match.status ?? match.status
   const played = status !== 'scheduled'
 
+  // Leesbare varianten voor tekst/stat-cijfers op het donkere vak; rauwe kleur blijft voor de ring.
+  const homeInk = readableOnDark(homeColor ?? DEFAULT_HOME_COLOR)
+  const awayInk = readableOnDark(awayColor ?? DEFAULT_AWAY_COLOR)
   const tileStyle = {
-    '--home': homeColor ?? DEFAULT_HOME_COLOR,
-    '--away': awayColor ?? DEFAULT_AWAY_COLOR,
+    '--home': homeInk,
+    '--away': awayInk,
+    '--goal-ink': inkOn(flash?.side === 'away' ? awayInk : homeInk),
     ...(fontSize ? { fontSize: `${fontSize}px` } : {}),
   } as React.CSSProperties
 

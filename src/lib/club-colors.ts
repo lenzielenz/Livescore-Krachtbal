@@ -36,6 +36,41 @@ export function rgbToHex(r: number, g: number, b: number): string {
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`
 }
 
+// Relatieve luminantie (WCAG) van een hexkleur, 0 (zwart) … 1 (wit).
+export function relativeLuminance(hex: string): number {
+  const h = normalizeHex(hex)
+  if (!h) return 0
+  const ch = (i: number) => {
+    let c = parseInt(h.slice(i, i + 2), 16) / 255
+    c = c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4
+    return c
+  }
+  return 0.2126 * ch(1) + 0.7152 * ch(3) + 0.0722 * ch(5)
+}
+
+// Dwingt een (mogelijk donkere) clubkleur tot iets dat LEESBAAR is als tekst/cijfer op het
+// donkere paneel: lichter maken tot ~3:1 contrast t.o.v. het paneel (AUDIT §1). Voorkomt dat een
+// navy/zwart/donkerrood crest de score, klok of ploegnaam onzichtbaar maakt op de zaal-tv.
+// `panelLum` ≈ luminantie van het donkere paneel (#0f2d1e ≈ 0.02).
+export function readableOnDark(hex: string | null | undefined, panelLum = 0.02): string {
+  const h = normalizeHex(hex ?? '')
+  if (!h) return DEFAULT_HOME_COLOR
+  let [r, g, b] = [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16))
+  let guard = 0
+  while ((relativeLuminance(rgbToHex(r, g, b)) + 0.05) / (panelLum + 0.05) < 3 && guard++ < 16) {
+    r = Math.min(255, r + 20)
+    g = Math.min(255, g + 20)
+    b = Math.min(255, b + 20)
+  }
+  return rgbToHex(r, g, b)
+}
+
+// Kies leesbare INKT (tekstkleur) op een gevulde clubkleur-achtergrond (bv. doelpunt-pil):
+// donkere inkt op een lichte achtergrond, witte inkt op een donkere.
+export function inkOn(hex: string | null | undefined): string {
+  return relativeLuminance(hex ?? '') > 0.4 ? '#06140d' : '#ffffff'
+}
+
 // Verzadiging (0–255) van een RGB-kleur — onderscheidt levendige kleuren van grijstinten.
 function saturation(r: number, g: number, b: number): number {
   return Math.max(r, g, b) - Math.min(r, g, b)

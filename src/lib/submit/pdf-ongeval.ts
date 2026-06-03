@@ -12,21 +12,38 @@ export type AccidentPdfData = {
   opmerkingen?: string
 }
 
+const safe = (t: string) =>
+  String(t)
+    .replace(/[–—]/g, '-')
+    .replace(/[‘’′]/g, "'")
+    .replace(/[“”]/g, '"')
+    .replace(/✓/g, 'OK')
+    .replace(/[•·]/g, '-')
+    .replace(/ /g, ' ')
+    .replace(/[^\x20-\x7E\xA1-\xFF]/g, '')
+
 export async function generateAccidentPdf(data: AccidentPdfData): Promise<Uint8Array> {
   const doc = await PDFDocument.create()
-  const page = doc.addPage([595, 842]) // A4
+  let page = doc.addPage([595, 842]) // A4
   const font = await doc.embedFont(StandardFonts.Helvetica)
   const bold = await doc.embedFont(StandardFonts.HelveticaBold)
   const { height } = page.getSize()
   const dark = rgb(0.1, 0.1, 0.12)
   const grey = rgb(0.4, 0.4, 0.45)
   const left = 40
-  let y = height - 40
+  const top = height - 40
+  const bottom = 50
+  let y = top
 
   const line = (text: string, opts: { size?: number; b?: boolean; color?: typeof dark; gap?: number } = {}) => {
     const size = opts.size ?? 10
-    page.drawText(text, { x: left, y, size, font: opts.b ? bold : font, color: opts.color ?? dark })
-    y -= opts.gap ?? size + 6
+    const gap = opts.gap ?? size + 6
+    if (y - gap < bottom) {
+      page = doc.addPage([595, 842])
+      y = top
+    }
+    page.drawText(safe(text), { x: left, y, size, font: opts.b ? bold : font, color: opts.color ?? dark })
+    y -= gap
   }
 
   line('AANGIFTE LICHAMELIJK ONGEVAL', { size: 14, b: true })

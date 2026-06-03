@@ -1,10 +1,11 @@
 import { getPayloadClient } from '@/lib/payload-client'
+import { SSE_HEADERS, acquireConnection, clientIp, releaseConnection, subscribe } from '@/lib/sse-hub'
 import { buildTournamentState } from '@/lib/tournament-engine'
 
 export const dynamic = 'force-dynamic'
 
-// SSE-livestream van de volledige tornooi-state (schema + standen). Eén stream voedt het
-// boomstructuur-, veld- en kantinescherm. Server-side polling, geen extra infra.
+// SSE-livestream van de volledige tornooi-state (schema + standen). Eén GEDEELDE poller voedt
+// het boomstructuur-, veld- en kantinescherm (zie sse-hub.ts) — geen poll-per-verbinding.
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const tournamentId = Number(id)
@@ -12,59 +13,56 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     return new Response('Ongeldig tornooi-id', { status: 400 })
   }
 
+  const ip = clientIp(req)
+  if (!acquireConnection(ip)) {
+    return new Response('Te veel gelijktijdige verbindingen.', { status: 429 })
+  }
+
   const encoder = new TextEncoder()
   const payload = await getPayloadClient()
 
+  let cleanedUp = false
+  let unsubscribe: (() => void) | null = null
+  let heartbeat: ReturnType<typeof setInterval> | null = null
+  let cleanup: () => void = () => {}
+
   const stream = new ReadableStream({
-    async start(controller) {
-      let closed = false
-      let lastPayload = ''
-
-      const send = (event: string, data: unknown) => {
-        if (closed) return
-        controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`))
-      }
-
-      const tick = async () => {
+    start(controller) {
+      const safeEnqueue = (chunk: string) => {
+        if (cleanedUp) return
         try {
-          const state = await buildTournamentState(payload, tournamentId)
-          const serialized = JSON.stringify(state)
-          if (serialized !== lastPayload) {
-            lastPayload = serialized
-            send('update', state)
-          }
+          controller.enqueue(encoder.encode(chunk))
         } catch {
-          send('error', { message: 'Tornooi niet gevonden' })
+          cleanup()
         }
       }
 
-      await tick()
-      const interval = setInterval(tick, 1500)
-      const heartbeat = setInterval(() => {
-        if (!closed) controller.enqueue(encoder.encode(`: ping\n\n`))
-      }, 15000)
-
-      const cleanup = () => {
-        if (closed) return
-        closed = true
-        clearInterval(interval)
-        clearInterval(heartbeat)
+      cleanup = () => {
+        if (cleanedUp) return
+        cleanedUp = true
+        unsubscribe?.()
+        if (heartbeat) clearInterval(heartbeat)
         try {
           controller.close()
         } catch {
           /* al gesloten */
         }
+        releaseConnection(ip)
       }
 
+      unsubscribe = subscribe(
+        `tournament:${tournamentId}`,
+        () => buildTournamentState(payload, tournamentId),
+        (frame) => safeEnqueue(`id: ${frame.id}\nevent: update\ndata: ${JSON.stringify(frame.data)}\n\n`),
+      )
+
+      heartbeat = setInterval(() => safeEnqueue(`: ping\n\n`), 15000)
       req.signal.addEventListener('abort', cleanup)
+    },
+    cancel() {
+      cleanup()
     },
   })
 
-  return new Response(stream, {
-    headers: {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache, no-transform',
-      Connection: 'keep-alive',
-    },
-  })
+  return new Response(stream, { headers: SSE_HEADERS })
 }

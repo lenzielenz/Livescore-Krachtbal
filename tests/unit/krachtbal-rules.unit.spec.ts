@@ -23,8 +23,18 @@ describe('pointsForThrow', () => {
     expect(pointsForThrow({ type: 'nek', outcome: 'in_field' })).toBe(0)
     expect(pointsForThrow({ type: 'rug', outcome: 'out_back' })).toBe(0)
   })
-  it('rugworp telt dubbel, ook uit een vrije worp (keuze Robin, afwijkend van reglement)', () => {
-    expect(pointsForThrow({ type: 'rug', outcome: 'goal' })).toBe(2)
+  it('§48.1: een vrije worp levert ALTIJD 1 punt op, ook een rugworp', () => {
+    expect(pointsForThrow({ type: 'rug', outcome: 'goal', freeThrow: true })).toBe(1)
+    expect(pointsForThrow({ type: 'nek', outcome: 'goal', freeThrow: true })).toBe(1)
+  })
+})
+
+describe('isCrossThrow (kruisje)', () => {
+  it('doelworp rechtstreeks buiten zonder aanraking = kruisje', () => {
+    expect(isCrossThrow({ outcome: 'out_side', isDoelworp: true, touchedBeforeOut: false })).toBe(true)
+  })
+  it('een vrije worp telt nooit als kruisje (§6.7)', () => {
+    expect(isCrossThrow({ outcome: 'out_side', isDoelworp: true, touchedBeforeOut: false, freeThrow: true })).toBe(false)
   })
 })
 
@@ -123,14 +133,16 @@ describe('nextSetup', () => {
     expect(ns.team).toBe('away')
     expect(ns.dir).toBe('down')
     expect(ns.setupSide).toBe('own')
-    expect(ns.point).toEqual({ x: 0.5, y: 0.8 })
+    // §6.11.1: inworp "van rechtover die plaats" → de breedte-positie (geklemd) blijft behouden.
+    expect(ns.point).toEqual({ x: 1, y: 0.8 })
   })
   it('buiten in de TEGENHELFT (vóór de middenlijn): opzet tegenhelft → minder worpen', () => {
     // bal ging buiten op y=0.3 (= away’s tegenhelft). away zet op vanaf de tegenhelft.
     const ns = nextSetup({ outcome: 'out_side', landing: { x: -0.05, y: 0.3 }, throwerTeam: 'home', throwerDir: 'up' })
     expect(ns.team).toBe('away')
     expect(ns.setupSide).toBe('opponent')
-    expect(ns.point).toEqual({ x: 0.5, y: 0.3 })
+    // §6.11.1: breedte-positie behouden (geklemd naar 0 aan de zijlijn).
+    expect(ns.point).toEqual({ x: 0, y: 0.3 })
   })
   it('buiten, aangeraakt door tegenstander: werpende ploeg houdt de bal, op die diepte', () => {
     const ns = nextSetup({ outcome: 'out_back', landing: { x: 0.5, y: 0.02 }, throwerTeam: 'home', throwerDir: 'up', touchedBeforeOut: true })

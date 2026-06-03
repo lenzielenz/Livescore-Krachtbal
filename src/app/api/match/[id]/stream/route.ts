@@ -1,10 +1,11 @@
 import { buildMatchState, buildTimeline } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
+import { SSE_HEADERS, acquireConnection, clientIp, releaseConnection, subscribe } from '@/lib/sse-hub'
 
 export const dynamic = 'force-dynamic'
 
-// SSE-livestream. Server-side polling (geen extra infra): bij elke wijziging van de
-// afgeleide state of tijdlijn wordt een nieuw event gepusht. Heartbeat houdt de
+// SSE-livestream. Eén GEDEELDE poller per wedstrijd (zie sse-hub.ts) pusht bij elke wijziging
+// een nieuw event; deze route doet enkel het fan-out naar deze ene client. Heartbeat houdt de
 // verbinding open achter proxies.
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -13,62 +14,64 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     return new Response('Ongeldig match-id', { status: 400 })
   }
 
+  const ip = clientIp(req)
+  if (!acquireConnection(ip)) {
+    return new Response('Te veel gelijktijdige verbindingen.', { status: 429 })
+  }
+
   const encoder = new TextEncoder()
   const payload = await getPayloadClient()
 
+  let cleanedUp = false
+  let unsubscribe: (() => void) | null = null
+  let heartbeat: ReturnType<typeof setInterval> | null = null
+  // Eén cleanup-functie, bereikbaar vanuit start(), het abort-signaal én cancel().
+  let cleanup: () => void = () => {}
+
   const stream = new ReadableStream({
-    async start(controller) {
-      let closed = false
-      let lastPayload = ''
-
-      const send = (event: string, data: unknown) => {
-        if (closed) return
-        controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`))
-      }
-
-      const tick = async () => {
+    start(controller) {
+      const safeEnqueue = (chunk: string) => {
+        if (cleanedUp) return
         try {
-          const [state, timeline] = await Promise.all([
-            buildMatchState(payload, matchId),
-            buildTimeline(payload, matchId),
-          ])
-          const serialized = JSON.stringify({ state, timeline })
-          if (serialized !== lastPayload) {
-            lastPayload = serialized
-            send('update', { state, timeline })
-          }
+          controller.enqueue(encoder.encode(chunk))
         } catch {
-          send('error', { message: 'Wedstrijd niet gevonden' })
+          cleanup() // controller al gesloten/errored → alles opruimen
         }
       }
 
-      await tick()
-      const interval = setInterval(tick, 1500)
-      const heartbeat = setInterval(() => {
-        if (!closed) controller.enqueue(encoder.encode(`: ping\n\n`))
-      }, 15000)
-
-      const cleanup = () => {
-        if (closed) return
-        closed = true
-        clearInterval(interval)
-        clearInterval(heartbeat)
+      cleanup = () => {
+        if (cleanedUp) return
+        cleanedUp = true
+        unsubscribe?.()
+        if (heartbeat) clearInterval(heartbeat)
         try {
           controller.close()
         } catch {
           /* al gesloten */
         }
+        releaseConnection(ip)
       }
 
+      // Abonneer op de gedeelde poller. Het `id`-veld laat de browser Last-Event-ID bijhouden.
+      unsubscribe = subscribe(
+        `match:${matchId}`,
+        async () => {
+          const [state, timeline] = await Promise.all([
+            buildMatchState(payload, matchId),
+            buildTimeline(payload, matchId),
+          ])
+          return { state, timeline }
+        },
+        (frame) => safeEnqueue(`id: ${frame.id}\nevent: update\ndata: ${JSON.stringify(frame.data)}\n\n`),
+      )
+
+      heartbeat = setInterval(() => safeEnqueue(`: ping\n\n`), 15000)
       req.signal.addEventListener('abort', cleanup)
+    },
+    cancel() {
+      cleanup()
     },
   })
 
-  return new Response(stream, {
-    headers: {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache, no-transform',
-      Connection: 'keep-alive',
-    },
-  })
+  return new Response(stream, { headers: SSE_HEADERS })
 }

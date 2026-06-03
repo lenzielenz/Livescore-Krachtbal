@@ -4,7 +4,7 @@
 import type { Payload } from 'payload'
 
 import { REEKS_OPTIONS } from './reeksen'
-import { berekenForfait, berekenKwitantie } from './vergoeding'
+import { FORFAIT_MAX_AUTOS, berekenForfait, berekenKwitantie } from './vergoeding'
 import type { ForfaitData, KwitantieData, KwitantieRegel } from './submit/pdf-vergoeding'
 
 function reeksLabel(code: unknown): string {
@@ -94,11 +94,14 @@ export async function buildForfaitData(payload: Payload, matchId: number | strin
   if (!match) return null
 
   const forfait = (sheet?.forfait ?? {}) as {
+    uitslag?: 'geen' | 'thuis' | 'uit' | 'dubbel'
     gemeldThuis?: boolean
     gemeldUit?: boolean
     aantalAutos?: number
     km?: number
   }
+  // Het forfaitblad geldt enkel bij een effectief forfait (FF). Geen FF → geen blad (AUDIT §5).
+  if (!forfait.uitslag || forfait.uitslag === 'geen') return null
   const km = forfait.km ?? 0
 
   return {
@@ -109,9 +112,11 @@ export async function buildForfaitData(payload: Payload, matchId: number | strin
     reeks: reeksLabel(match.reeks),
     thuis: teamName(match.homeTeam),
     uit: teamName(match.awayTeam),
+    uitslag: forfait.uitslag,
     gemeldThuis: Boolean(forfait.gemeldThuis),
     gemeldUit: Boolean(forfait.gemeldUit),
-    aantalAutos: forfait.aantalAutos ?? 0,
+    // Re-valideer de max op API-niveau (het admin-veld max is geen harde grens bij directe writes).
+    aantalAutos: Math.min(FORFAIT_MAX_AUTOS, Math.max(0, forfait.aantalAutos ?? 0)),
     km,
     berekening: berekenForfait(1, km),
   }

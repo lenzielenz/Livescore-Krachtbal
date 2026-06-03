@@ -1,6 +1,17 @@
 import { describe, it, expect } from 'vitest'
 
-import { voorgiftPunten } from '@/lib/reeksen'
+import { reeksUsesSeniorThrows, voorgiftPunten } from '@/lib/reeksen'
+
+describe('reeksUsesSeniorThrows (§6.8: U16-meisjes spelen senior-worpaantal)', () => {
+  it('U16-meisjes gebruiken het senior-worpaantal', () => {
+    expect(reeksUsesSeniorThrows('U16M')).toBe(true)
+  })
+  it('U16-jongens en andere jeugd niet', () => {
+    expect(reeksUsesSeniorThrows('U16J')).toBe(false)
+    expect(reeksUsesSeniorThrows('U14M')).toBe(false)
+    expect(reeksUsesSeniorThrows('1NAH')).toBe(false)
+  })
+})
 
 describe('voorgiftPunten (beker: 3 ptn per reeksverschil, max 6)', () => {
   it('geen verschil → 0', () => {

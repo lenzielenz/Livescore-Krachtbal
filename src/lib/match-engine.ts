@@ -10,6 +10,7 @@ import type { Category } from './categories'
 import { type ClubColors, clubColorsFrom } from './club-colors'
 import { type LogoFit, normalizeLogoFit } from './logo-fit'
 import { type AttackDir, type Point, FIELD, freeThrowNorm } from './field'
+import { reeksUsesSeniorThrows } from './reeksen'
 import { readSimpleScore } from './simple-score'
 import {
   type SetupSide,
@@ -57,6 +58,23 @@ async function resolveLineup(
   return res.docs.map((p) => p.id)
 }
 
+/** Minimaal 3 veldspelers (§4) en unieke rugnummers binnen de ploeg, anders een duidelijke fout. */
+async function assertValidLineup(payload: Payload, playerIds: number[], label: string): Promise<void> {
+  if (playerIds.length < 3) {
+    throw new Error(`De ${label} heeft minder dan 3 veldspelers — vul de opstelling aan (§4).`)
+  }
+  const res = await payload.find({
+    collection: 'players',
+    where: { id: { in: playerIds } },
+    depth: 0,
+    limit: FIELD_PLAYERS,
+  })
+  const nums = res.docs.map((p) => p.shirtNumber).filter((n): n is number => typeof n === 'number')
+  if (new Set(nums).size !== nums.length) {
+    throw new Error(`De ${label} heeft twee spelers met hetzelfde rugnummer (§4).`)
+  }
+}
+
 async function loadMatch(payload: Payload, matchId: number) {
   const match = await payload.findByID({ collection: 'matches', id: matchId, depth: 0 })
   const homeId = typeof match.homeTeam === 'object' ? match.homeTeam.id : match.homeTeam
@@ -79,6 +97,12 @@ async function getOpenPossession(payload: Payload, matchId: number) {
   return res.docs[0] ?? null
 }
 
+/** Toegestane worpen voor deze wedstrijd: categorie-gebaseerd, met U16-meisjes-override (§6.8). */
+function matchThrowsAllowed(category: Category, reeks: unknown, setupSide: SetupSide): number {
+  if (reeksUsesSeniorThrows(reeks)) return setupSide === 'own' ? 3 : 2
+  return throwsAllowed(category, setupSide)
+}
+
 async function createPossession(
   payload: Payload,
   args: {
@@ -86,6 +110,7 @@ async function createPossession(
     teamId: number
     setupSide: SetupSide
     category: Category
+    reeks?: unknown
     dir: AttackDir
     point: Point
     half: number
@@ -98,7 +123,7 @@ async function createPossession(
       match: args.matchId,
       team: args.teamId,
       setupSide: args.setupSide,
-      throwsAllowed: throwsAllowed(args.category, args.setupSide),
+      throwsAllowed: matchThrowsAllowed(args.category, args.reeks, args.setupSide),
       setupX: clamp01(args.point.x),
       setupY: clamp01(args.point.y),
       dir: args.dir,
@@ -118,6 +143,13 @@ export async function startMatch(payload: Payload, matchId: number, startingTeam
   // Leg de start-opstelling vast (eerste 4 op rugnummer) als ze nog niet gezet is.
   const homeLineup = await resolveLineup(payload, match.homeLineup, homeId)
   const awayLineup = await resolveLineup(payload, match.awayLineup, awayId)
+
+  // Reglement §4: minstens 3 veldspelers om te spelen, en rugnummers uniek binnen een ploeg.
+  // Een demo/oefenwedstrijd mag met minder (de uitleg-flow), dus daar slaan we de controle over.
+  if (!match.isDemo) {
+    await assertValidLineup(payload, homeLineup, 'thuisploeg')
+    await assertValidLineup(payload, awayLineup, 'uitploeg')
+  }
 
   await payload.update({
     collection: 'matches',
@@ -145,6 +177,7 @@ export async function startMatch(payload: Payload, matchId: number, startingTeam
     teamId: startingTeamId,
     setupSide: 'own',
     category: match.category as Category,
+    reeks: match.reeks,
     dir,
     point: { x: 0.5, y: ownHalfY },
     half: 1,
@@ -166,6 +199,8 @@ export interface RecordThrowInput {
 /** Registreer één worp en beheer het balbezit (afsluiten + volgend opzet). */
 export async function recordThrow(payload: Payload, input: RecordThrowInput) {
   const { match, homeId, awayId } = await loadMatch(payload, input.matchId)
+  // Na het eindsignaal is de uitslag definitief (§12/§19): geen worpen meer (AUDIT §3).
+  if (match.status === 'finished') throw new Error('Wedstrijd is afgelopen — heropen ze eerst om te corrigeren.')
   const open = await getOpenPossession(payload, input.matchId)
   if (!open) throw new Error('Geen lopend balbezit — start de wedstrijd eerst.')
 
@@ -223,8 +258,10 @@ export async function recordThrow(payload: Payload, input: RecordThrowInput) {
   })
 
   // Is dit een kruisje? En zo ja: het hoeveelste van de ploeg (3e → vrijworp tegenstander)?
+  // Een vrije worp is geen doelworp in open spel → telt nooit als kruisje (§6.7).
   const isDoelworp = throwNumber >= (open.throwsAllowed ?? 1)
-  const isCross = isCrossThrow({ outcome, isDoelworp, touchedBeforeOut: input.touchedBeforeOut })
+  const openIsFreeThrow = Boolean(open.freeThrow)
+  const isCross = isCrossThrow({ outcome, isDoelworp, touchedBeforeOut: input.touchedBeforeOut, freeThrow: openIsFreeThrow })
   const awardFreeThrow = isCross && (await countCrossesForTeam(payload, input.matchId, teamId)) % CROSS_LIMIT === 0
 
   // Bepaal of het balbezit eindigt.
@@ -254,7 +291,8 @@ export async function recordThrow(payload: Payload, input: RecordThrowInput) {
       data: { endOutcome },
       overrideAccess: true,
     })
-    if (match.status !== 'finished') {
+    {
+      // (Een afgesloten wedstrijd is hierboven al geweigerd, dus er is altijd een vervolg-opzet.)
       const ns = nextSetup({
         outcome: endOutcome as Parameters<typeof nextSetup>[0]['outcome'],
         landing: input.point,
@@ -289,6 +327,7 @@ export async function recordThrow(payload: Payload, input: RecordThrowInput) {
           teamId: nextTeamId,
           setupSide: ns.setupSide,
           category: match.category as Category,
+          reeks: match.reeks,
           dir: ns.dir,
           point: ns.point,
           half,
@@ -302,7 +341,7 @@ export async function recordThrow(payload: Payload, input: RecordThrowInput) {
     throwId: created.id,
     outcome,
     type: input.type,
-    points: pointsForThrow({ type: input.type, outcome }),
+    points: pointsForThrow({ type: input.type, outcome, freeThrow: openIsFreeThrow }),
     isCross,
     awardedFreeThrow: awardFreeThrow,
     state: await buildMatchState(payload, input.matchId),
@@ -322,11 +361,19 @@ async function countCrossesForTeam(payload: Payload, matchId: number, teamId: nu
   ]
   const possRes = await payload.find({ collection: 'possessions', where: { id: { in: possIds } }, depth: 0, limit: 1000 })
   const allowedById = new Map(possRes.docs.map((p) => [p.id, p.throwsAllowed ?? 1]))
+  const freeThrowById = new Map(possRes.docs.map((p) => [p.id, Boolean(p.freeThrow)]))
   let n = 0
   for (const t of throwsRes.docs) {
     const possId = typeof t.possession === 'object' ? t.possession.id : t.possession
     const allowed = allowedById.get(possId) ?? 1
-    if (isCrossThrow({ outcome: t.outcome, isDoelworp: t.throwNumber >= allowed, touchedBeforeOut: t.touchedBeforeOut ?? false })) {
+    if (
+      isCrossThrow({
+        outcome: t.outcome,
+        isDoelworp: t.throwNumber >= allowed,
+        touchedBeforeOut: t.touchedBeforeOut ?? false,
+        freeThrow: freeThrowById.get(possId) ?? false,
+      })
+    ) {
       n += 1
     }
   }
@@ -335,10 +382,15 @@ async function countCrossesForTeam(payload: Payload, matchId: number, teamId: nu
 
 /** Undo: verwijder de laatste worp en herstel het balbezit. */
 export async function undoLastThrow(payload: Payload, matchId: number) {
+  const { match } = await loadMatch(payload, matchId)
+  if (match.status === 'finished') throw new Error('Wedstrijd is afgelopen — heropen ze eerst om te corrigeren.')
+  // Enkel de laatste worp van de HUIDIGE helft, gesorteerd op het monotone id (niet createdAt —
+  // dat kan bij snelle tikken op ms-niveau gelijk zijn). Voorkomt dat undo over de helftgrens
+  // heen een oud balbezit heropent (AUDIT §3).
   const res = await payload.find({
     collection: 'throws',
-    where: { match: { equals: matchId } },
-    sort: '-createdAt',
+    where: { and: [{ match: { equals: matchId } }, { period: { equals: match.currentHalf ?? 1 } }] },
+    sort: '-id',
     depth: 0,
     limit: 1,
   })
@@ -383,6 +435,8 @@ export async function setClock(
   matchId: number,
   data: { running?: boolean; seconds?: number },
 ) {
+  const { match } = await loadMatch(payload, matchId)
+  if (match.status === 'finished') throw new Error('Wedstrijd is afgelopen — de klok ligt vast.')
   await payload.update({
     collection: 'matches',
     id: matchId,
@@ -470,6 +524,7 @@ export async function startNextHalf(payload: Payload, matchId: number) {
     teamId: startTeamId,
     setupSide: 'own',
     category: match.category as Category,
+    reeks: match.reeks,
     dir,
     point: { x: 0.5, y: ownHalfY },
     half: nextHalf,
@@ -487,6 +542,17 @@ export async function advanceHalf(payload: Payload, matchId: number) {
 
 export async function finishMatch(payload: Payload, matchId: number) {
   const { match } = await loadMatch(payload, matchId)
+  if (match.status === 'finished') return buildMatchState(payload, matchId)
+  // Sluit het lopende balbezit af zodat er na het eindsignaal geen "open" balbezit blijft hangen.
+  const open = await getOpenPossession(payload, matchId)
+  if (open) {
+    await payload.update({
+      collection: 'possessions',
+      id: open.id,
+      data: { endOutcome: 'throws_exhausted' },
+      overrideAccess: true,
+    })
+  }
   await payload.create({
     collection: 'match-events',
     data: {
@@ -506,12 +572,24 @@ export async function finishMatch(payload: Payload, matchId: number) {
   return buildMatchState(payload, matchId)
 }
 
+/** Heropen een afgesloten wedstrijd (federatie/admin-correctie). Zet terug op 'live'. */
+export async function reopenMatch(payload: Payload, matchId: number) {
+  await payload.update({
+    collection: 'matches',
+    id: matchId,
+    data: { status: 'live' },
+    overrideAccess: true,
+  })
+  return buildMatchState(payload, matchId)
+}
+
 /**
  * Vrije worp voor een ploeg: sluit het lopende balbezit af en maakt een balbezit met
  * exact één worp (vanaf de vrijeworplijn richting het tegendoel). Daarna gaat het spel verder.
  */
 export async function startFreeThrow(payload: Payload, matchId: number, teamId: number) {
   const { match, homeId } = await loadMatch(payload, matchId)
+  if (match.status === 'finished') throw new Error('Wedstrijd is afgelopen.')
   const half = match.currentHalf ?? 1
   const side = sideOfTeam(teamId, homeId)
   const dir = attackDirForSide(side, half)
@@ -617,6 +695,7 @@ export const TIMEOUTS_PER_HALF = 2
 /** Time-out registreren — max. 2 per ploeg per helft (reglement §8.1). */
 export async function recordTimeout(payload: Payload, matchId: number, teamId: number) {
   const { match } = await loadMatch(payload, matchId)
+  if (match.status === 'finished') throw new Error('Wedstrijd is afgelopen.')
   const half = match.currentHalf ?? 1
 
   const used = await payload.count({
@@ -758,8 +837,11 @@ export async function buildMatchSheet(payload: Payload, matchId: number): Promis
     const teamId = typeof t.team === 'object' ? t.team.id : t.team
     const side = sideOfTeam(teamId, homeId)
     const halfIdx = (t.period ?? 1) === 2 ? 1 : 0
+    const possId = typeof t.possession === 'object' ? t.possession.id : t.possession
+    const poss = sheetPossById.get(possId)
+    const isFreeThrow = Boolean(poss?.freeThrow)
     if (t.outcome === 'goal') {
-      const points = t.type === 'rug' ? 2 : 1
+      const points = pointsForThrow({ type: t.type, outcome: t.outcome, freeThrow: isFreeThrow })
       const player = typeof t.player === 'object' && t.player ? t.player : null
       goals.push({
         half: t.period,
@@ -772,9 +854,15 @@ export async function buildMatchSheet(payload: Payload, matchId: number): Promis
       })
       halfScores[side][halfIdx] += points
     } else {
-      const possId = typeof t.possession === 'object' ? t.possession.id : t.possession
-      const allowed = sheetPossById.get(possId)?.throwsAllowed ?? 1
-      if (isCrossThrow({ outcome: t.outcome, isDoelworp: t.throwNumber >= allowed, touchedBeforeOut: t.touchedBeforeOut ?? false })) {
+      const allowed = poss?.throwsAllowed ?? 1
+      if (
+        isCrossThrow({
+          outcome: t.outcome,
+          isDoelworp: t.throwNumber >= allowed,
+          touchedBeforeOut: t.touchedBeforeOut ?? false,
+          freeThrow: isFreeThrow,
+        })
+      ) {
         crosses[side] += 1
       }
     }
@@ -950,9 +1038,11 @@ export async function buildTimeline(payload: Payload, matchId: number): Promise<
     const teamId = typeof t.team === 'object' ? t.team.id : t.team
     const side = sideOfTeam(teamId, homeId)
     const tlPossId = typeof t.possession === 'object' ? t.possession.id : t.possession
-    const tlAllowed = tlPossById.get(tlPossId)?.throwsAllowed ?? 1
+    const tlPossDoc = tlPossById.get(tlPossId)
+    const tlAllowed = tlPossDoc?.throwsAllowed ?? 1
+    const tlFreeThrow = Boolean(tlPossDoc?.freeThrow)
     if (t.outcome === 'goal') {
-      const pts = t.type === 'rug' ? 2 : 1
+      const pts = pointsForThrow({ type: t.type, outcome: t.outcome, freeThrow: tlFreeThrow })
       const player = typeof t.player === 'object' && t.player ? t.player : null
       const who = player ? `#${player.shirtNumber} ${player.name}` : ''
       items.push({
@@ -964,7 +1054,7 @@ export async function buildTimeline(payload: Payload, matchId: number): Promise<
         label: `Doelpunt +${pts} ${who}`.trim(),
         _t: t.createdAt,
       })
-    } else if (isCrossThrow({ outcome: t.outcome, isDoelworp: t.throwNumber >= tlAllowed, touchedBeforeOut: t.touchedBeforeOut ?? false })) {
+    } else if (isCrossThrow({ outcome: t.outcome, isDoelworp: t.throwNumber >= tlAllowed, touchedBeforeOut: t.touchedBeforeOut ?? false, freeThrow: tlFreeThrow })) {
       items.push({
         id: `c${t.id}`,
         kind: 'cross',
@@ -1077,6 +1167,7 @@ export async function buildMatchState(payload: Payload, matchId: number): Promis
       outcome: t.outcome,
       isDoelworp: t.throwNumber >= allowed,
       touchedBeforeOut: t.touchedBeforeOut ?? false,
+      freeThrow: Boolean(poss?.freeThrow),
     }
   })
   const totals = reduceTotals(reducible)

@@ -1,4 +1,5 @@
-import { hasRole, isFederationLevel } from '@/lib/access'
+import { hasRole, isFederationLevel, userClubId } from '@/lib/access'
+import { authUser, isAssignedReferee, matchSideClubs } from '@/lib/api-auth'
 import { getOrCreateMatchSheet } from '@/lib/matchsheet-data'
 import { getPayloadClient } from '@/lib/payload-client'
 
@@ -19,12 +20,29 @@ export async function POST(req: Request, { params }: { params: Promise<{ matchId
 
   try {
     const payload = await getPayloadClient()
-    const { user } = await payload.auth({ headers: req.headers })
+    const user = await authUser(payload, req)
     if (!user) return Response.json({ error: 'Niet ingelogd.' }, { status: 401 })
 
     const maySign =
       isFederationLevel(user) || hasRole(user, 'scheidsrechter', 'kapitein', 'club-beheerder')
     if (!maySign) return Response.json({ error: 'Geen rechten om af te tekenen.' }, { status: 403 })
+
+    // Bind elke handtekening aan de juiste identiteit (voorkomt vervalsing — AUDIT §5):
+    // kapitein thuis/uit enkel door de eigen club, scheidsrechter enkel door de toegewezen SR.
+    if (!isFederationLevel(user)) {
+      if (who === 'scheidsrechter') {
+        if (!(await isAssignedReferee(payload, user, matchId))) {
+          return Response.json({ error: 'Enkel de toegewezen scheidsrechter kan hier tekenen.' }, { status: 403 })
+        }
+      } else {
+        const clubs = await matchSideClubs(payload, matchId)
+        const need = who === 'kapiteinThuis' ? clubs.home : clubs.away
+        const own = userClubId(user)
+        if (need == null || own == null || String(need) !== String(own)) {
+          return Response.json({ error: 'Je kan enkel voor je eigen ploeg tekenen.' }, { status: 403 })
+        }
+      }
+    }
 
     const sheet = await getOrCreateMatchSheet(payload, matchId)
     if (sheet.status === 'ingediend') {

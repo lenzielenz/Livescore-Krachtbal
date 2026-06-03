@@ -1,3 +1,4 @@
+import { authUser } from '@/lib/api-auth'
 import { getPayloadClient } from '@/lib/payload-client'
 import { readVeldMatchId } from '@/lib/screen-selection'
 
@@ -26,6 +27,9 @@ export async function POST(req: Request) {
   const id = Number.isFinite(n) && n > 0 ? n : null
   try {
     const payload = await getPayloadClient()
+    // Schermselectie wijzigen vereist een ingelogde operator (blokkeert anonieme defacement).
+    const user = await authUser(payload, req)
+    if (!user) return Response.json({ error: 'Niet ingelogd.' }, { status: 401 })
     await payload.updateGlobal({ slug: 'settings', data: { veldMatchId: id ? String(id) : '' }, overrideAccess: true })
     return Response.json({ ok: true, id })
   } catch (err) {

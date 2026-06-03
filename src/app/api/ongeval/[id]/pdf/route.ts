@@ -1,3 +1,4 @@
+import { authUser, hasRole, isFederationLevel } from '@/lib/api-auth'
 import { getPayloadClient } from '@/lib/payload-client'
 import { generateAccidentPdf, type AccidentPdfData } from '@/lib/submit/pdf-ongeval'
 
@@ -6,8 +7,12 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const { id } = await params
   try {
     const payload = await getPayloadClient()
-    const { user } = await payload.auth({ headers: req.headers })
+    const user = await authUser(payload, req)
     if (!user) return Response.json({ error: 'Niet ingelogd.' }, { status: 401 })
+    // Geen IDOR: medische dossiers enkel voor federatie/admin + scheidsrechter (zie Accidents.read).
+    if (!(isFederationLevel(user) || hasRole(user, 'scheidsrechter'))) {
+      return Response.json({ error: 'Geen rechten.' }, { status: 403 })
+    }
 
     const doc = await payload.findByID({ collection: 'accidents', id, depth: 1 }).catch(() => null)
     if (!doc) return Response.json({ error: 'Aangifte niet gevonden.' }, { status: 404 })

@@ -8,6 +8,9 @@
   --line: #224a33;
   --txt: #ecf7f0;
   --dim: #93b9a6;
+  /* Sterkere secundaire tekstkleur (~5.5:1 op --panel) voor kleine, informatieve labels
+     (kruisjes/minuten/stats) die met --dim onder WCAG AA zakken. Zie AUDIT §1. */
+  --dim-strong: #b6d6c6;
   /* Warmer en helderder goud → meer "pop" zonder de huisstijl te verlaten. */
   --accent: #ffd873;
   --accent-2: #f9b023;
@@ -26,6 +29,25 @@
   /* Gekleurde gloed-schaduw voor hover-states: tilt kaarten op met sfeer i.p.v. enkel zwart. */
   --glow-accent: 0 18px 44px -10px color-mix(in srgb, var(--accent) 30%, transparent);
   --glow-pop: 0 18px 44px -10px color-mix(in srgb, var(--pop) 32%, transparent);
+}
+
+/* Hoog-contrast modus voor slecht verlichte zalen of fel zonlicht (AUDIT §1):
+   automatisch wanneer de gebruiker "meer contrast" vraagt, of expliciet via data-theme="hc"
+   (toggle op de operatorschermen, bewaard in localStorage). Tilt de secundaire tekst en lijnen op. */
+@media (prefers-contrast: more) {
+  :root {
+    --dim: #cfe8db;
+    --dim-strong: #e3f3ec;
+    --line: #3a6b4d;
+    --txt: #ffffff;
+  }
+}
+:root[data-theme='hc'] {
+  --dim: #cfe8db;
+  --dim-strong: #e3f3ec;
+  --line: #3a6b4d;
+  --txt: #ffffff;
+  --panel: #0c2417;
 }
 
 * {

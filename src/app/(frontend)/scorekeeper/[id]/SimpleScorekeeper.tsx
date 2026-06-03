@@ -7,6 +7,7 @@ import { TeamLogo } from '@/components/TeamLogo'
 import { categoryConfig } from '@/lib/categories'
 import type { MatchState } from '@/lib/match-engine'
 import type { SimpleSide } from '@/lib/simple-score'
+import { useLiveStream } from '@/lib/use-live-stream'
 import './simple-scorekeeper.css'
 
 function fmtClock(total: number): string {
@@ -66,19 +67,12 @@ export function SimpleScorekeeper({
     return () => clearInterval(t)
   }, [state.match])
 
-  // SSE: vang wijzigingen op die op een ander toestel gemaakt worden.
-  useEffect(() => {
-    const es = new EventSource(`/api/match/${matchId}/stream`)
-    es.addEventListener('update', (e) => {
-      try {
-        const data = JSON.parse((e as MessageEvent).data) as { state?: MatchState }
-        if (data.state) setState(data.state)
-      } catch {
-        /* genegeerd */
-      }
-    })
-    return () => es.close()
-  }, [matchId])
+  // SSE: vang wijzigingen op die op een ander toestel gemaakt worden (met reconnect-backoff).
+  // Negeer updates terwijl een eigen actie loopt, zodat we geen optimistische schrijf overschrijven.
+  useLiveStream<{ state?: MatchState }>(`/api/match/${matchId}/stream`, (data) => {
+    if (busy.current) return
+    if (data.state) setState(data.state)
+  })
 
   const act = useCallback(
     async (body: Record<string, unknown>) => {
@@ -179,7 +173,17 @@ export function SimpleScorekeeper({
           {live && half === 1 && (
             <button type="button" className="ssk-btn" onClick={() => act({ action: 'simplehalf' })}>⏭ 2e helft</button>
           )}
-          {live && <button type="button" className="ssk-btn danger" onClick={() => act({ action: 'finish' })}>⏹ Einde</button>}
+          {live && (
+            <button
+              type="button"
+              className="ssk-btn danger"
+              onClick={() => {
+                if (window.confirm('Wedstrijd beëindigen? De eindstand wordt vastgelegd.')) act({ action: 'finish' })
+              }}
+            >
+              ⏹ Einde
+            </button>
+          )}
         </div>
       )}
 

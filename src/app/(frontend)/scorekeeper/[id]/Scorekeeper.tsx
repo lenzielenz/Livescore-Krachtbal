@@ -9,6 +9,7 @@ import { attackDirForSide, deriveOutcome } from '@/lib/krachtbal-rules'
 import type { AttackDir, Point } from '@/lib/field'
 import type { MatchState } from '@/lib/match-engine'
 import { LINEUP_MIN, type Readiness } from '@/lib/match-readiness'
+import { useLiveStream } from '@/lib/use-live-stream'
 import { DemoTutorial } from './DemoTutorial'
 
 interface RosterPlayer {
@@ -168,7 +169,9 @@ export function Scorekeeper({
         setState((data.state as MatchState) ?? (data as MatchState))
         return data as { outcome?: string; state?: MatchState }
       } catch (e) {
-        setError((e as Error).message)
+        // Netwerk/zaal-wifi-fout of serverfout: duidelijk melden i.p.v. stil falen (AUDIT §3).
+        const offline = typeof navigator !== 'undefined' && navigator.onLine === false
+        setError(offline ? 'Geen verbinding — actie NIET geregistreerd. Probeer opnieuw.' : (e as Error).message)
         return null
       } finally {
         setBusy(false)
@@ -176,6 +179,14 @@ export function Scorekeeper({
     },
     [matchId],
   )
+
+  // Live sync met de server (met reconnect-backoff): vangt wijzigingen van een tweede toestel of
+  // de scheidsrechter op, en herstelt de juiste stand na een verbroken/herstelde verbinding.
+  // Negeer updates terwijl een eigen actie loopt, zodat we geen optimistische schrijf overschrijven.
+  useLiveStream<{ state?: MatchState }>(`/api/match/${matchId}/stream`, (data) => {
+    if (busy) return
+    if (data.state) setState(data.state)
+  })
 
   const poss = state.possession
   const possSide = poss?.side ?? null
@@ -194,16 +205,18 @@ export function Scorekeeper({
       const teamName = scoringSide === 'home' ? state.teams.home.name : state.teams.away.name
       const wasFreeThrow = poss.freeThrow
 
-      setRecentTaps((prev) => [
-        ...prev.slice(-6),
-        {
-          x: Math.max(0, Math.min(1, p.x)),
-          y: Math.max(0, Math.min(1, p.y)),
-          color,
-          r: 7,
-          label: wasFreeThrow ? 'V' : String(poss.nextThrowNumber),
-        },
-      ])
+      // Optimistische markering met een eigen id, zodat we ze kunnen terugdraaien als de
+      // registratie faalt (anders "liegt" de stip dat de worp geregistreerd is — AUDIT §3).
+      const markerId = `${Date.now()}-${Math.round(p.x * 1000)}`
+      const marker: FieldMarker = {
+        id: markerId,
+        x: Math.max(0, Math.min(1, p.x)),
+        y: Math.max(0, Math.min(1, p.y)),
+        color,
+        r: 7,
+        label: wasFreeThrow ? 'V' : String(poss.nextThrowNumber),
+      }
+      setRecentTaps((prev) => [...prev.slice(-6), marker])
 
       const result = (await act({
         action: 'throw',
@@ -215,6 +228,12 @@ export function Scorekeeper({
         touchedBeforeOut,
         gameClock: Math.floor(clock),
       })) as { outcome?: string; type?: string; points?: number; isCross?: boolean; state?: MatchState } | null
+
+      // Mislukt → de optimistische stip weer weghalen (geen valse "geregistreerd"-indruk).
+      if (!result) {
+        setRecentTaps((prev) => prev.filter((m) => m.id !== markerId))
+        return
+      }
 
       const scorer = roster.find((r) => r.id === playerId)
       const scorerLabel = scorer ? `${scorer.shirtNumber} ${scorer.name}` : undefined
@@ -669,7 +688,8 @@ export function Scorekeeper({
         )
       })()}
 
-      {isDemo && <DemoTutorial matchId={matchId} />}
+      {/* Help/uitleg is altijd beschikbaar (ook op een echte wedstrijd), auto-opent één keer per operator. */}
+      <DemoTutorial matchId={matchId} />
 
       <div className="sk-topbar">
         <Link className="sk-back" href="/scorekeeper" title="Terug naar overzicht — de wedstrijd blijft gewoon live">← Overzicht</Link>
