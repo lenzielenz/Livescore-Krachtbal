@@ -123,8 +123,14 @@ export function SimpleScorekeeper({
         disabled={finished}
         onClick={() => {
           if (finished) return
-          if (!live) act({ action: 'simplestart' })
-          else act({ action: 'clock', running: !state.match.clockRunning })
+          if (!live) {
+            act({ action: 'simplestart' })
+          } else if (state.match.clockRunning) {
+            // Beveiliging: een per ongeluk tikken op de lopende klok mag hem niet pauzeren.
+            if (window.confirm('Klok pauzeren? De tijd stopt.')) act({ action: 'clock', running: false })
+          } else {
+            act({ action: 'clock', running: true })
+          }
         }}
       >
         <span className="ssk-clock-time">{fmtClock(clock)}</span>
@@ -199,7 +205,7 @@ export function SimpleScorekeeper({
               ⏭ Einde 1e helft → 2e
             </button>
           )}
-          {live && (
+          {half >= 2 && (
             <button
               type="button"
               className="ssk-btn danger"
