@@ -1,8 +1,10 @@
 import { headers } from 'next/headers'
 
+import { ProfileTools } from '@/components/ProfileTools'
 import { SiteHeader } from '@/components/SiteHeader'
 import { hasRole, isFederationLevel, userOfficialId } from '@/lib/access'
 import { getPayloadClient } from '@/lib/payload-client'
+import { getProfile } from '@/lib/profiles'
 import { personalCode, personalQrValue } from '@/lib/referee-credentials'
 import { RefereeLogin } from './RefereeLogin'
 import { RefereePortal } from './RefereePortal'
@@ -52,6 +54,7 @@ export default async function RefereePortaalPage() {
         <h1 className="page-title">
           Scheidsrechter <span className="brand">·</span> Mijn QR
         </h1>
+        <ProfileTools profile={getProfile('scheidsrechters')} currentHref="/scheidsrechter/portaal" />
         {body}
       </div>
     </>

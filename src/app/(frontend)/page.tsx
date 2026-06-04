@@ -1,6 +1,8 @@
 import Link from 'next/link'
 
 import { SiteHeader } from '@/components/SiteHeader'
+import { randomQuote } from '@/lib/krachtbal-quotes'
+import { PROFILES } from '@/lib/profiles'
 import { LiveBoard } from './live/LiveBoard'
 import { loadLiveDay } from './live/loadLiveDay'
 import './live/live.css'
@@ -8,62 +10,17 @@ import './live/live.css'
 export const dynamic = 'force-dynamic'
 
 // Profiel 1 — supporters — komt op de startpagina en volgt meteen de wedstrijden.
-// De tools voor de andere profielen (clubs, scheidsrechters, federatie) staan
-// discreet onderaan, netjes per profiel gegroepeerd.
-type Role = {
-  key: string
-  badge: string
-  title: string
-  intro: string
-  links: { href: string; label: string }[]
-}
-
-const ROLES: Role[] = [
-  {
-    key: 'clubs',
-    badge: '👥',
-    title: 'Voor clubs',
-    intro: 'Wedstrijd voorbereiden, aantekenen aan het veld en de schermen bedienen.',
-    links: [
-      { href: '/scorekeeper', label: '📝 Aantekenen' },
-      { href: '/club', label: 'Mijn club — opstelling & wedstrijden' },
-      { href: '/kantine', label: '🍻 Kantinescherm' },
-      { href: '/cast', label: '📺 Schermen naar tv' },
-      { href: '/beheer/spelers', label: 'Spelers toevoegen' },
-      { href: '/demo', label: '🎓 Demo spelen' },
-    ],
-  },
-  {
-    key: 'scheidsrechters',
-    badge: '🟨',
-    title: 'Voor scheidsrechters',
-    intro: 'Je wedstrijdblad vrijgeven en je onkostennota opmaken.',
-    links: [
-      { href: '/scheidsrechter/portaal', label: 'Mijn QR-portaal' },
-      { href: '/vergoedingen', label: 'Vergoedingen' },
-    ],
-  },
-  {
-    key: 'federatie',
-    badge: '🏛️',
-    title: 'Voor de federatie',
-    intro: 'Reglement, seizoensplanning en het volledige beheer.',
-    links: [
-      { href: '/admin', label: 'Beheer (admin)' },
-      { href: '/beheer/planning', label: '📅 Seizoensplanning' },
-      { href: '/reglement', label: 'Reglement' },
-      { href: '/knipjes', label: 'Knipjes' },
-      { href: '/bekerfinale', label: 'Bekerfinale' },
-    ],
-  },
-]
-
+// De andere profielen (clubs, scheidsrechters, federatie) staan discreet onderaan:
+// per profiel een instappunt + de bijhorende tools (gedeeld met de header en de
+// profielpagina's via lib/profiles).
 export default async function HomePage({ searchParams }: { searchParams: Promise<{ date?: string }> }) {
   const { date } = await searchParams
   const today = new Date().toISOString().slice(0, 10)
   const selected = date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : today
 
   const days = await loadLiveDay(selected, today)
+  // Elk bezoek een ander krachtbal-lijntje (LTT-stijl).
+  const quote = randomQuote()
 
   return (
     <>
@@ -74,9 +31,10 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
           <h1>
             <span className="brand">Krachtbal</span> Live
           </h1>
-          <p>Volg alle wedstrijden live — score, tijd, kruisjes en time-outs.</p>
           <Link href="/tornooi" className="home-intro-link">Tornooien →</Link>
         </div>
+        {/* Roterende quote — feit, wist-je-datje of een gekke oneliner. */}
+        <p className="home-quote">{quote}</p>
 
         <LiveBoard date={selected} today={today} matches={days} />
 
@@ -85,19 +43,22 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
           <h2 className="home-roles-head">Aan de slag</h2>
           <p className="home-roles-sub">Vul je wedstrijden in, teken het blad af of beheer de competitie.</p>
           <div className="role-grid">
-            {ROLES.map((r) => (
-              <div key={r.key} className="role-card">
-                <div className="role-card-top">
-                  <span className="role-badge" aria-hidden="true">{r.badge}</span>
-                  <h3>{r.title}</h3>
-                </div>
-                <p className="role-intro">{r.intro}</p>
+            {PROFILES.map((p) => (
+              <div key={p.key} className="role-card">
+                <Link href={p.hubHref} className="role-card-top">
+                  <span className="role-badge" aria-hidden="true">{p.badge}</span>
+                  <h3>{p.title}</h3>
+                </Link>
+                <p className="role-intro">{p.intro}</p>
                 <div className="role-links">
-                  {r.links.map((l) => (
-                    <Link key={l.href} href={l.href} className="role-link">
-                      {l.label}
-                    </Link>
-                  ))}
+                  <Link href={p.hubHref} className="role-link role-link-hub">{p.hubLabel} →</Link>
+                  {p.tools
+                    .filter((t) => t.href !== p.hubHref)
+                    .map((t) => (
+                      <Link key={t.href} href={t.href} className="role-link">
+                        {t.label}
+                      </Link>
+                    ))}
                 </div>
               </div>
             ))}

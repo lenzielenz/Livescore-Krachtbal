@@ -964,3 +964,34 @@ h3,
   font-weight: 800;
   color: var(--accent);
 }
+
+/* ── Profiel-tools (snelkoppelingen bovenaan een profielpagina) ── */
+.profile-lead {
+  color: var(--dim);
+  margin: 0 0 16px;
+  max-width: 60ch;
+}
+.ptools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 22px;
+}
+.ptools-link {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--txt);
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: border-color 0.14s ease, color 0.14s ease, transform 0.14s ease, box-shadow 0.14s ease;
+}
+.ptools-link:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px -8px color-mix(in srgb, var(--accent) 45%, transparent);
+}
