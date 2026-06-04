@@ -135,34 +135,38 @@ export function SimpleScorekeeper({
         </span>
       </div>
 
-      <button
-        type="button"
-        className={`ssk-clock ${overtime ? 'over' : ''} ${state.match.clockRunning ? 'running' : ''} ${!finished && (!live || (!state.match.clockRunning && clock < 1)) ? 'tostart' : ''}`}
-        disabled={finished}
-        onClick={() => {
-          if (finished) return
-          if (!live) {
-            act({ action: 'simplestart' })
-          } else if (state.match.clockRunning) {
-            // Beveiliging: een per ongeluk tikken op de lopende klok mag hem niet pauzeren.
-            if (window.confirm('Klok pauzeren? De tijd stopt.')) act({ action: 'clock', running: false })
-          } else {
-            act({ action: 'clock', running: true })
-          }
-        }}
-      >
-        <span className="ssk-clock-time">{fmtClock(clock)}</span>
-        <span className="ssk-clock-half">Helft {half} · doel {Math.round(targetSec / 60)} min</span>
-        {!finished && (
-          <span className="ssk-clock-action">
-            {!live || (!state.match.clockRunning && clock < 1)
-              ? '▶ Tik om te starten'
-              : state.match.clockRunning
-                ? '⏸ Tik om te pauzeren'
-                : '▶ Tik om verder te gaan'}
-          </span>
-        )}
-      </button>
+      <div className="ssk-clockrow">
+        <TeamLogo name={state.teams.home.name} logoUrl={state.teams.home.logoUrl} logoFit={state.teams.home.logoFit} side="home" size="md" ringColor={state.teams.home.colors?.primary ?? null} />
+        <button
+          type="button"
+          className={`ssk-clock ${overtime ? 'over' : ''} ${state.match.clockRunning ? 'running' : ''} ${!finished && (!live || (!state.match.clockRunning && clock < 1)) ? 'tostart' : ''}`}
+          disabled={finished}
+          onClick={() => {
+            if (finished) return
+            if (!live) {
+              act({ action: 'simplestart' })
+            } else if (state.match.clockRunning) {
+              // Beveiliging: een per ongeluk tikken op de lopende klok mag hem niet pauzeren.
+              if (window.confirm('Klok pauzeren? De tijd stopt.')) act({ action: 'clock', running: false })
+            } else {
+              act({ action: 'clock', running: true })
+            }
+          }}
+        >
+          <span className="ssk-clock-time">{fmtClock(clock)}</span>
+          <span className="ssk-clock-half">Helft {half} · doel {Math.round(targetSec / 60)} min</span>
+          {!finished && (
+            <span className="ssk-clock-action">
+              {!live || (!state.match.clockRunning && clock < 1)
+                ? '▶ Tik om te starten'
+                : state.match.clockRunning
+                  ? '⏸ Tik om te pauzeren'
+                  : '▶ Tik om verder te gaan'}
+            </span>
+          )}
+        </button>
+        <TeamLogo name={state.teams.away.name} logoUrl={state.teams.away.logoUrl} logoFit={state.teams.away.logoFit} side="away" size="md" ringColor={state.teams.away.colors?.primary ?? null} />
+      </div>
 
       <div className="ssk-board">
         {(['home', 'away'] as SimpleSide[]).map((side) => {
@@ -170,10 +174,7 @@ export function SimpleScorekeeper({
           const teamColor = team.colors?.primary ?? (side === 'home' ? '#0fe0a6' : '#4cc9f0')
           return (
             <div key={side} className={`ssk-team side-${side}`} style={{ ['--team-color' as string]: teamColor }}>
-              <div className="ssk-team-head">
-                <TeamLogo name={team.name} logoUrl={team.logoUrl} logoFit={team.logoFit} side={side} size="md" ringColor={team.colors?.primary ?? null} />
-                <div className="ssk-team-name">{team.name}</div>
-              </div>
+              <div className="ssk-team-name">{team.name}</div>
               <div className="ssk-score">{state.score[side]}</div>
               {!finished && (
                 <div className="ssk-goalbtns">
