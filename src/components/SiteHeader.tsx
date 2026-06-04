@@ -10,10 +10,11 @@ import './site-header.css'
 // onder één opgekuist "Meer"-menu: ontdekken (tornooi, demo) en de drie
 // profiel-instappunten. Klik je een profiel, dan vind je dáár de bijhorende tools.
 // De `active`-prop markeert de huidige sectie.
-export type NavSection = 'wedstrijden' | 'demo' | 'tornooi' | 'clubs' | 'scheidsrechters' | 'federatie' | null
+export type NavSection = 'wedstrijden' | 'stand' | 'demo' | 'tornooi' | 'clubs' | 'scheidsrechters' | 'federatie' | null
 
 const PRIMARY: { href: string; label: string; key: NavSection }[] = [
   { href: '/', label: 'Wedstrijden', key: 'wedstrijden' },
+  { href: '/rangschikking', label: '📊 Stand', key: 'stand' },
   { href: '/demo', label: '🎓 Demo', key: 'demo' },
 ]
 

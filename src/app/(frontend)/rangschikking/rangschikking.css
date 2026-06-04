@@ -1,0 +1,96 @@
+.rang-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.rang-picker {
+  padding: 9px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--txt);
+  font-size: 0.92rem;
+  font-weight: 600;
+  max-width: 100%;
+}
+.rang-picker:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.rang-legend {
+  color: var(--dim);
+  font-size: 0.85rem;
+  margin: 4px 0 18px;
+}
+
+.rang-scroll {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+}
+.rang-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.rang-table th,
+.rang-table td {
+  padding: 10px 8px;
+  text-align: center;
+  border-bottom: 1px solid var(--line);
+}
+.rang-table thead th {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--dim);
+  background: #0a1f14;
+}
+.rang-table tbody tr:last-child td {
+  border-bottom: none;
+}
+.rang-table tbody tr:nth-child(-n + 3) .rang-rank {
+  color: var(--accent);
+  font-weight: 800;
+}
+.rang-rank {
+  width: 34px;
+}
+.rang-teamh {
+  text-align: left;
+}
+.rang-team {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  text-align: left;
+  min-width: 160px;
+}
+.rang-name {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rang-goals {
+  color: var(--dim);
+}
+.rang-pts {
+  font-weight: 900;
+  color: var(--accent);
+  font-size: 1.05rem;
+}
+
+@media (max-width: 560px) {
+  .rang-table th,
+  .rang-table td {
+    padding: 9px 6px;
+    font-size: 0.9rem;
+  }
+  .rang-team {
+    min-width: 130px;
+  }
+}
