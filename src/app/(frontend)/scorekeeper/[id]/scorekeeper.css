@@ -340,6 +340,9 @@ a.sk-btn { display: inline-block; box-sizing: border-box; text-align: center; te
   color: var(--dim); font-weight: 700; font-size: 0.95rem;
 }
 .sk-confirm-status span.ok { border-color: var(--home); color: var(--home); background: #0c241a; }
+/* Subtiele "opstelling aanpassen"-knop onder de startknop. */
+.sk-kickoff-edit { width: 100%; margin-top: 10px; background: transparent; border: 1px solid var(--line); color: var(--dim); }
+.sk-kickoff-edit:hover { color: var(--txt); border-color: var(--accent); }
 
 /* Keuzescherm: tik precies 4 veldspelers aan (hergebruikt .sk-pick-player) */
 .sk-lineup-modal { max-width: 460px; }
