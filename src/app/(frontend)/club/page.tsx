@@ -1,11 +1,13 @@
 import { headers } from 'next/headers'
 import Link from 'next/link'
 
+import { ProfileTools } from '@/components/ProfileTools'
 import { SiteHeader } from '@/components/SiteHeader'
 import { userClubId } from '@/lib/access'
 import { buildMatchState } from '@/lib/match-engine'
 import { getMatchReadiness } from '@/lib/matchsheet-data'
 import { getPayloadClient } from '@/lib/payload-client'
+import { getProfile } from '@/lib/profiles'
 import { REEKS_OPTIONS } from '@/lib/reeksen'
 
 export const dynamic = 'force-dynamic'
@@ -20,6 +22,7 @@ function Shell({ children }: { children: React.ReactNode }) {
       <SiteHeader active="clubs" />
       <div className="site">
         <h1 className="page-title"><span className="brand">Mijn club</span></h1>
+        <ProfileTools profile={getProfile('clubs')} currentHref="/club" />
         {children}
       </div>
     </>
