@@ -878,7 +878,7 @@ export function Scorekeeper({
           </div>
           )}
 
-          {bothConfirmed ? (
+          {bothConfirmed && (
             <div className="sk-kickoff-card">
               <div className="sk-kickoff-title">{bypass ? 'Test-modus 🔧' : isDemo ? 'Demo — klaar 🎓' : 'Klaar om te starten ✓'}</div>
               <div className="sk-kickoff-sub">
@@ -891,22 +891,6 @@ export function Scorekeeper({
               <button type="button" className="sk-btn sk-kickoff-edit" disabled={busy} onClick={() => setLineupConfirmed({ home: false, away: false })}>
                 ✏️ Opstelling aanpassen
               </button>
-            </div>
-          ) : (
-            <div className="sk-kickoff-card sk-confirm-hint">
-              <div className="sk-kickoff-title">Bevestig de opstellingen</div>
-              <div className="sk-kickoff-sub">
-                Elke ploeg bevestigt met welke veldspelers ze starten. Zodra beide ploegen bevestigd
-                hebben, kan je de wedstrijd starten.
-              </div>
-              <div className="sk-confirm-status">
-                <span className={lineupConfirmed.home ? 'ok' : ''}>
-                  {lineupConfirmed.home ? '✓' : '○'} {state.teams.home.name}
-                </span>
-                <span className={lineupConfirmed.away ? 'ok' : ''}>
-                  {lineupConfirmed.away ? '✓' : '○'} {state.teams.away.name}
-                </span>
-              </div>
             </div>
           )}
         </div>
