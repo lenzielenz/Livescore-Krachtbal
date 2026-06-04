@@ -4,10 +4,7 @@ import { notFound } from 'next/navigation'
 import { MatchStats } from '@/components/MatchStats'
 import { Scoreboard } from '@/components/Scoreboard'
 import { SiteHeader } from '@/components/SiteHeader'
-import { isFederationLevel } from '@/lib/access'
-import { getAuthUser } from '@/lib/auth-user'
 import { buildMatchState, buildMatchStats, buildTimeline } from '@/lib/match-engine'
-import { effectiveMatchPackage, readPackagePreview } from '@/lib/package-preview'
 import { getPayloadClient } from '@/lib/payload-client'
 import { REEKS_OPTIONS } from '@/lib/reeksen'
 
@@ -36,10 +33,6 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   const matchDoc = await payload.findByID({ collection: 'matches', id: matchId, depth: 2 }).catch(() => null)
   const homeClub = (matchDoc?.homeTeam as { club?: { accommodatie?: string } } | null)?.club
   const accommodatie = homeClub?.accommodatie?.trim() || null
-  // Pakket van de thuisclub bepaalt welke statistieken publiek zichtbaar zijn.
-  // Een ingelogde admin kan een ander pakketniveau previewen (eigen weergave).
-  const previewer = await getAuthUser()
-  const pkg = effectiveMatchPackage(matchDoc, await readPackagePreview(isFederationLevel(previewer)))
   const reeks = reeksLabel(matchDoc?.reeks)
   const datum = matchDoc?.date
     ? new Date(matchDoc.date as string).toLocaleString('nl-BE', { dateStyle: 'long', timeStyle: 'short' })
@@ -86,7 +79,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
           📋 Wedstrijdblad (print / PDF / JSON)
         </Link>
       </p>
-      <MatchStats stats={stats.stats} shots={stats.shots} teams={{ home: state.teams.home.name, away: state.teams.away.name }} goalAreaDepth={state.match.goalAreaDepth} visibility={pkg.stats} packageName={pkg.name} />
+      <MatchStats stats={stats.stats} shots={stats.shots} teams={{ home: state.teams.home.name, away: state.teams.away.name }} goalAreaDepth={state.match.goalAreaDepth} />
       </div>
     </>
   )

@@ -134,7 +134,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
             Array.isArray(body.playerIds) ? body.playerIds.map(Number) : [],
           ),
         )
-      // ── Simpele aantekenmodus (Starter-pakket): +1/+2 zonder veldschema ──
+      // ── Simpele aantekenmodus (snelscoremodus): +1/+2 zonder veldschema ──
       case 'simplestart':
         return Response.json(await startSimpleMatch(payload, matchId))
       case 'simplegoal':

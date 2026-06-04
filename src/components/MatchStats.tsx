@@ -1,11 +1,9 @@
 'use client'
 
-import Link from 'next/link'
 import { useState } from 'react'
 
 import { FieldSchema, type FieldMarker } from '@/components/FieldSchema'
 import type { ShotPoint } from '@/lib/match-engine'
-import type { PackageStatsVisibility } from '@/lib/packages'
 import type { MatchStats as Stats } from '@/lib/stats'
 import './match-stats.css'
 
@@ -15,17 +13,6 @@ const OUTCOME_COLOR: Record<string, string> = {
   out_side: '#ef476f',
   out_back: '#f78c6b',
   in_field: '#8fb3a1',
-}
-
-// Standaard: alles zichtbaar (Elite-niveau). Callers zonder pakket-gating
-// (bv. demo) krijgen zo de volledige weergave.
-const ALL_VISIBLE: PackageStatsVisibility = {
-  teamCompare: true,
-  shotmapDots: true,
-  heatmap: true,
-  metersPerPlayer: true,
-  playerTable: true,
-  playerCards: true,
 }
 
 function CompareBar({ label, home, away, fmt }: { label: string; home: number; away: number; fmt?: (n: number) => string }) {
@@ -50,20 +37,15 @@ export function MatchStats({
   shots,
   teams,
   goalAreaDepth = 10,
-  visibility = ALL_VISIBLE,
-  packageName,
 }: {
   stats: Stats
   shots: ShotPoint[]
   teams: { home: string; away: string }
   goalAreaDepth?: number
-  visibility?: PackageStatsVisibility
-  packageName?: string
 }) {
   const [playerFilter, setPlayerFilter] = useState<number | 'all'>('all')
   const [goalsOnly, setGoalsOnly] = useState(false)
-  // Begin op de heatmap wanneer de punten-weergave niet toegestaan is.
-  const [view, setView] = useState<'dots' | 'heat'>(visibility.shotmapDots ? 'dots' : 'heat')
+  const [view, setView] = useState<'dots' | 'heat'>('dots')
   const [orderFilter, setOrderFilter] = useState<'all' | 'first' | 'second' | 'last'>('all')
   const [playerView, setPlayerView] = useState<'table' | 'cards'>('table')
 
@@ -89,238 +71,175 @@ export function MatchStats({
   }))
   const heatPoints = filteredShots.map((s) => ({ x: s.x, y: s.y }))
 
-  // Welke veldweergave tonen we echt, rekening houdend met wat het pakket toelaat.
-  const effView: 'dots' | 'heat' = visibility.shotmapDots
-    ? view === 'heat' && visibility.heatmap
-      ? 'heat'
-      : 'dots'
-    : 'heat'
-  const showField = visibility.shotmapDots || visibility.heatmap
-  const showFullPlayers = visibility.playerTable || visibility.playerCards
-  const showMetersOnly = !showFullPlayers && visibility.metersPerPlayer
-  const everythingVisible =
-    visibility.teamCompare &&
-    visibility.shotmapDots &&
-    visibility.heatmap &&
-    visibility.metersPerPlayer &&
-    visibility.playerTable &&
-    visibility.playerCards
-
   return (
     <div className="stats">
       <h2 className="section-title">Statistieken</h2>
 
-      {visibility.teamCompare && (
-        <div className="cmp">
-          <div className="cmp-head">
-            <span>{teams.home}</span>
-            <span>{teams.away}</span>
-          </div>
-          <CompareBar label="Worpen" home={stats.teams.home.throws} away={stats.teams.away.throws} />
-          <CompareBar label="Doelpunten" home={stats.teams.home.goals} away={stats.teams.away.goals} />
-          <CompareBar label="Punten" home={stats.teams.home.points} away={stats.teams.away.points} />
-          <CompareBar label="Gem. afstand (m)" home={stats.teams.home.avgDistance} away={stats.teams.away.avgDistance} fmt={(n) => n.toFixed(1)} />
-          <CompareBar label="Max afstand (m)" home={stats.teams.home.maxDistance} away={stats.teams.away.maxDistance} fmt={(n) => n.toFixed(1)} />
+      <div className="cmp">
+        <div className="cmp-head">
+          <span>{teams.home}</span>
+          <span>{teams.away}</span>
         </div>
-      )}
+        <CompareBar label="Worpen" home={stats.teams.home.throws} away={stats.teams.away.throws} />
+        <CompareBar label="Doelpunten" home={stats.teams.home.goals} away={stats.teams.away.goals} />
+        <CompareBar label="Punten" home={stats.teams.home.points} away={stats.teams.away.points} />
+        <CompareBar label="Gem. afstand (m)" home={stats.teams.home.avgDistance} away={stats.teams.away.avgDistance} fmt={(n) => n.toFixed(1)} />
+        <CompareBar label="Max afstand (m)" home={stats.teams.home.maxDistance} away={stats.teams.away.maxDistance} fmt={(n) => n.toFixed(1)} />
+      </div>
 
       <div className="stats-grid">
-        {showField && (
-          <div className="shotmap">
-            {visibility.shotmapDots && visibility.heatmap && (
+        <div className="shotmap">
+          <div className="shotmap-controls">
+            <button type="button" className={view === 'dots' ? 'on' : ''} onClick={() => setView('dots')}>Punten</button>
+            <button type="button" className={view === 'heat' ? 'on' : ''} onClick={() => setView('heat')}>Heatmap</button>
+          </div>
+          {view === 'dots' && (
+            <>
               <div className="shotmap-controls">
-                <button type="button" className={effView === 'dots' ? 'on' : ''} onClick={() => setView('dots')}>Punten</button>
-                <button type="button" className={effView === 'heat' ? 'on' : ''} onClick={() => setView('heat')}>Heatmap</button>
+                <button type="button" className={!goalsOnly ? 'on' : ''} onClick={() => setGoalsOnly(false)}>Alle worpen</button>
+                <button type="button" className={goalsOnly ? 'on' : ''} onClick={() => setGoalsOnly(true)}>Enkel doelpunten</button>
               </div>
-            )}
-            {visibility.shotmapDots && effView === 'dots' && (
-              <>
-                <div className="shotmap-controls">
-                  <button type="button" className={!goalsOnly ? 'on' : ''} onClick={() => setGoalsOnly(false)}>Alle worpen</button>
-                  <button type="button" className={goalsOnly ? 'on' : ''} onClick={() => setGoalsOnly(true)}>Enkel doelpunten</button>
-                </div>
-                <div className="shotmap-controls">
-                  <button type="button" className={orderFilter === 'all' ? 'on' : ''} onClick={() => setOrderFilter('all')}>Alle</button>
-                  <button type="button" className={orderFilter === 'first' ? 'on' : ''} onClick={() => setOrderFilter('first')}>1e worp</button>
-                  <button type="button" className={orderFilter === 'second' ? 'on' : ''} onClick={() => setOrderFilter('second')}>2e worp</button>
-                  <button type="button" className={orderFilter === 'last' ? 'on' : ''} onClick={() => setOrderFilter('last')}>Laatste</button>
-                </div>
-              </>
-            )}
-            <FieldSchema
-              className="shotmap-field"
-              markers={effView === 'dots' ? markers : []}
-              heatPoints={effView === 'heat' ? heatPoints : undefined}
-              goalAreaDepthM={goalAreaDepth}
-            />
-            {effView === 'dots' ? (
-              <div className="shotmap-legend">
-                <span><i style={{ background: OUTCOME_COLOR.goal }} /> doelpunt</span>
-                <span><i style={{ background: OUTCOME_COLOR.caught }} /> gevangen</span>
-                <span><i style={{ background: OUTCOME_COLOR.out_side }} /> buiten</span>
-                <span><i style={{ background: OUTCOME_COLOR.in_field }} /> in veld</span>
-                <span className="shotmap-note">cijfer = worpnummer</span>
+              <div className="shotmap-controls">
+                <button type="button" className={orderFilter === 'all' ? 'on' : ''} onClick={() => setOrderFilter('all')}>Alle</button>
+                <button type="button" className={orderFilter === 'first' ? 'on' : ''} onClick={() => setOrderFilter('first')}>1e worp</button>
+                <button type="button" className={orderFilter === 'second' ? 'on' : ''} onClick={() => setOrderFilter('second')}>2e worp</button>
+                <button type="button" className={orderFilter === 'last' ? 'on' : ''} onClick={() => setOrderFilter('last')}>Laatste</button>
               </div>
-            ) : (
-              <div className="shotmap-legend">
-                <span className="heat-scale" /> <span>weinig → veel worpen</span>
-                <span className="shotmap-note">{filteredShots.length} worpen</span>
-              </div>
-            )}
-          </div>
-        )}
-
-        {showFullPlayers ? (
-          <div className="player-table-wrap">
-            <div className="pt-filter">
-              <button className={playerFilter === 'all' ? 'on' : ''} onClick={() => setPlayerFilter('all')}>Alle spelers</button>
-              {stats.players.map((p) => (
-                <button key={p.playerId} className={playerFilter === p.playerId ? 'on' : ''} onClick={() => setPlayerFilter(p.playerId)}>
-                  #{p.shirtNumber} {p.playerName.split(/\s+/)[0]}
-                </button>
-              ))}
+            </>
+          )}
+          <FieldSchema
+            className="shotmap-field"
+            markers={view === 'dots' ? markers : []}
+            heatPoints={view === 'heat' ? heatPoints : undefined}
+            goalAreaDepthM={goalAreaDepth}
+          />
+          {view === 'dots' ? (
+            <div className="shotmap-legend">
+              <span><i style={{ background: OUTCOME_COLOR.goal }} /> doelpunt</span>
+              <span><i style={{ background: OUTCOME_COLOR.caught }} /> gevangen</span>
+              <span><i style={{ background: OUTCOME_COLOR.out_side }} /> buiten</span>
+              <span><i style={{ background: OUTCOME_COLOR.in_field }} /> in veld</span>
+              <span className="shotmap-note">cijfer = worpnummer</span>
             </div>
+          ) : (
+            <div className="shotmap-legend">
+              <span className="heat-scale" /> <span>weinig → veel worpen</span>
+              <span className="shotmap-note">{filteredShots.length} worpen</span>
+            </div>
+          )}
+        </div>
 
-            {visibility.playerTable && visibility.playerCards && (
-              <div className="pt-viewtoggle">
-                <button type="button" className={playerView === 'table' ? 'on' : ''} onClick={() => setPlayerView('table')}>Tabel</button>
-                <button type="button" className={playerView === 'cards' ? 'on' : ''} onClick={() => setPlayerView('cards')}>Kaarten</button>
-              </div>
-            )}
-
-            {visibility.playerTable && (!visibility.playerCards || playerView === 'table') ? (
-              <table className="player-table">
-                <thead>
-                  <tr>
-                    <th>#</th>
-                    <th>Speler</th>
-                    <th title="Worpen">W</th>
-                    <th title="Worpen per soort: nek / rug">N/R</th>
-                    <th title="Doelpunten (nek/rug)">D</th>
-                    <th title="Richting links/midden/rechts">L/M/R</th>
-                    <th title="Doelpogingen — raak / gegaan voor goal">Doel</th>
-                    <th title="Conversie = doelpunten / doelpogingen">Conv</th>
-                    <th title="Geforceerd / balverlies (gevangen + buiten)">Gefor.</th>
-                    <th title="Score = punten − geforceerd (gevangen én buiten tellen negatief)">Sco</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {stats.players.length === 0 && (
-                    <tr><td colSpan={10} className="empty">Nog geen worpen geregistreerd.</td></tr>
-                  )}
-                  {stats.players.map((p) => (
-                    <tr key={p.playerId} className={`side-${p.teamSide}`}>
-                      <td>{p.shirtNumber}</td>
-                      <td>{p.playerName}</td>
-                      <td>{p.throws}</td>
-                      <td>{p.byType.nek}/{p.byType.rug}</td>
-                      <td>{p.goals.total} ({p.goals.nek}/{p.goals.rug})</td>
-                      <td>{p.zones.links}/{p.zones.midden}/{p.zones.rechts}</td>
-                      <td>{p.goals.total}/{p.goalAttempts}</td>
-                      <td>{Math.round(p.conversion * 100)}%</td>
-                      <td className={p.lost > 0 ? 'neg' : undefined}>{p.lost} <span className="pt-sub">({p.caught}g/{p.out}b)</span></td>
-                      <td className={p.score < 0 ? 'neg' : undefined}>{p.score > 0 ? `+${p.score}` : p.score}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : (
-              <div className="pl-cards">
-                {stats.players.length === 0 && <p className="empty">Nog geen worpen geregistreerd.</p>}
-                {stats.players
-                  .filter((p) => playerFilter === 'all' || p.playerId === playerFilter)
-                  .map((p) => {
-                  const pShots = shots.filter((s) => s.playerId === p.playerId)
-                  const pMarkers: FieldMarker[] = pShots.map((s) => ({
-                    x: s.x,
-                    y: s.y,
-                    fromX: s.fromX,
-                    fromY: s.fromY,
-                    color: OUTCOME_COLOR[s.outcome] ?? '#ffd166',
-                    r: s.outcome === 'goal' ? 7 : 5,
-                  }))
-                  const zoneTot = p.zones.links + p.zones.midden + p.zones.rechts || 1
-                  return (
-                    <div key={p.playerId} className={`pl-card side-${p.teamSide}`}>
-                      <div className="pl-card-head">
-                        <span className="pl-num">{p.shirtNumber}</span>
-                        <span className="pl-name">{p.playerName}</span>
-                        <span className={`pl-score ${p.score < 0 ? 'neg' : ''}`}>{p.score > 0 ? `+${p.score}` : p.score}</span>
-                      </div>
-                      <div className="pl-card-body">
-                        <FieldSchema className="pl-map" markers={pMarkers} goalAreaDepthM={goalAreaDepth} />
-                        <div className="pl-metrics">
-                          <div className="pl-metric">
-                            <span className="pl-lbl">Doelpogingen</span>
-                            <span className="pl-val">{p.goals.total}/{p.goalAttempts} <em>({Math.round(p.conversion * 100)}%)</em></span>
-                          </div>
-                          <div className="pl-metric">
-                            <span className="pl-lbl">Richting</span>
-                            <span className="pl-bar">
-                              <i className="seg l" style={{ width: `${(p.zones.links / zoneTot) * 100}%` }} />
-                              <i className="seg m" style={{ width: `${(p.zones.midden / zoneTot) * 100}%` }} />
-                              <i className="seg r" style={{ width: `${(p.zones.rechts / zoneTot) * 100}%` }} />
-                            </span>
-                            <span className="pl-val">{p.zones.links}/{p.zones.midden}/{p.zones.rechts}</span>
-                          </div>
-                          <div className="pl-metric">
-                            <span className="pl-lbl">Nek / Rug (worpen)</span>
-                            <span className="pl-val">{p.byType.nek} / {p.byType.rug} <em>({p.goals.nek}/{p.goals.rug} goal)</em></span>
-                          </div>
-                          <div className="pl-metric">
-                            <span className="pl-lbl">Geforceerd</span>
-                            <span className={`pl-val ${p.lost > 0 ? 'neg' : ''}`}>{p.lost} <em>({p.caught} gevangen, {p.out} buiten)</em></span>
-                          </div>
-                          <div className="pl-metric">
-                            <span className="pl-lbl">Worpen · afstand</span>
-                            <span className="pl-val">{p.throws} · {p.distance.avg.toFixed(1)}m</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
+        <div className="player-table-wrap">
+          <div className="pt-filter">
+            <button className={playerFilter === 'all' ? 'on' : ''} onClick={() => setPlayerFilter('all')}>Alle spelers</button>
+            {stats.players.map((p) => (
+              <button key={p.playerId} className={playerFilter === p.playerId ? 'on' : ''} onClick={() => setPlayerFilter(p.playerId)}>
+                #{p.shirtNumber} {p.playerName.split(/\s+/)[0]}
+              </button>
+            ))}
           </div>
-        ) : showMetersOnly ? (
-          <div className="player-table-wrap">
-            <h3 className="meters-title">Meters per speler</h3>
+
+          <div className="pt-viewtoggle">
+            <button type="button" className={playerView === 'table' ? 'on' : ''} onClick={() => setPlayerView('table')}>Tabel</button>
+            <button type="button" className={playerView === 'cards' ? 'on' : ''} onClick={() => setPlayerView('cards')}>Kaarten</button>
+          </div>
+
+          {playerView === 'table' ? (
             <table className="player-table">
               <thead>
                 <tr>
                   <th>#</th>
                   <th>Speler</th>
                   <th title="Worpen">W</th>
-                  <th title="Gemiddelde worpafstand">Gem. (m)</th>
-                  <th title="Verste worp">Max (m)</th>
+                  <th title="Worpen per soort: nek / rug">N/R</th>
+                  <th title="Doelpunten (nek/rug)">D</th>
+                  <th title="Richting links/midden/rechts">L/M/R</th>
+                  <th title="Doelpogingen — raak / gegaan voor goal">Doel</th>
+                  <th title="Conversie = doelpunten / doelpogingen">Conv</th>
+                  <th title="Geforceerd / balverlies (gevangen + buiten)">Gefor.</th>
+                  <th title="Score = punten − geforceerd (gevangen én buiten tellen negatief)">Sco</th>
                 </tr>
               </thead>
               <tbody>
                 {stats.players.length === 0 && (
-                  <tr><td colSpan={5} className="empty">Nog geen worpen geregistreerd.</td></tr>
+                  <tr><td colSpan={10} className="empty">Nog geen worpen geregistreerd.</td></tr>
                 )}
                 {stats.players.map((p) => (
                   <tr key={p.playerId} className={`side-${p.teamSide}`}>
                     <td>{p.shirtNumber}</td>
                     <td>{p.playerName}</td>
                     <td>{p.throws}</td>
-                    <td>{p.distance.avg.toFixed(1)}</td>
-                    <td>{p.distance.max.toFixed(1)}</td>
+                    <td>{p.byType.nek}/{p.byType.rug}</td>
+                    <td>{p.goals.total} ({p.goals.nek}/{p.goals.rug})</td>
+                    <td>{p.zones.links}/{p.zones.midden}/{p.zones.rechts}</td>
+                    <td>{p.goals.total}/{p.goalAttempts}</td>
+                    <td>{Math.round(p.conversion * 100)}%</td>
+                    <td className={p.lost > 0 ? 'neg' : undefined}>{p.lost} <span className="pt-sub">({p.caught}g/{p.out}b)</span></td>
+                    <td className={p.score < 0 ? 'neg' : undefined}>{p.score > 0 ? `+${p.score}` : p.score}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
-          </div>
-        ) : null}
+          ) : (
+            <div className="pl-cards">
+              {stats.players.length === 0 && <p className="empty">Nog geen worpen geregistreerd.</p>}
+              {stats.players
+                .filter((p) => playerFilter === 'all' || p.playerId === playerFilter)
+                .map((p) => {
+                const pShots = shots.filter((s) => s.playerId === p.playerId)
+                const pMarkers: FieldMarker[] = pShots.map((s) => ({
+                  x: s.x,
+                  y: s.y,
+                  fromX: s.fromX,
+                  fromY: s.fromY,
+                  color: OUTCOME_COLOR[s.outcome] ?? '#ffd166',
+                  r: s.outcome === 'goal' ? 7 : 5,
+                }))
+                const zoneTot = p.zones.links + p.zones.midden + p.zones.rechts || 1
+                return (
+                  <div key={p.playerId} className={`pl-card side-${p.teamSide}`}>
+                    <div className="pl-card-head">
+                      <span className="pl-num">{p.shirtNumber}</span>
+                      <span className="pl-name">{p.playerName}</span>
+                      <span className={`pl-score ${p.score < 0 ? 'neg' : ''}`}>{p.score > 0 ? `+${p.score}` : p.score}</span>
+                    </div>
+                    <div className="pl-card-body">
+                      <FieldSchema className="pl-map" markers={pMarkers} goalAreaDepthM={goalAreaDepth} />
+                      <div className="pl-metrics">
+                        <div className="pl-metric">
+                          <span className="pl-lbl">Doelpogingen</span>
+                          <span className="pl-val">{p.goals.total}/{p.goalAttempts} <em>({Math.round(p.conversion * 100)}%)</em></span>
+                        </div>
+                        <div className="pl-metric">
+                          <span className="pl-lbl">Richting</span>
+                          <span className="pl-bar">
+                            <i className="seg l" style={{ width: `${(p.zones.links / zoneTot) * 100}%` }} />
+                            <i className="seg m" style={{ width: `${(p.zones.midden / zoneTot) * 100}%` }} />
+                            <i className="seg r" style={{ width: `${(p.zones.rechts / zoneTot) * 100}%` }} />
+                          </span>
+                          <span className="pl-val">{p.zones.links}/{p.zones.midden}/{p.zones.rechts}</span>
+                        </div>
+                        <div className="pl-metric">
+                          <span className="pl-lbl">Nek / Rug (worpen)</span>
+                          <span className="pl-val">{p.byType.nek} / {p.byType.rug} <em>({p.goals.nek}/{p.goals.rug} goal)</em></span>
+                        </div>
+                        <div className="pl-metric">
+                          <span className="pl-lbl">Geforceerd</span>
+                          <span className={`pl-val ${p.lost > 0 ? 'neg' : ''}`}>{p.lost} <em>({p.caught} gevangen, {p.out} buiten)</em></span>
+                        </div>
+                        <div className="pl-metric">
+                          <span className="pl-lbl">Worpen · afstand</span>
+                          <span className="pl-val">{p.throws} · {p.distance.avg.toFixed(1)}m</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
       </div>
-
-      {!everythingVisible && (
-        <p className="stats-upsell">
-          {packageName ? <><strong>{packageName}</strong>-pakket.</> : null} Meer statistieken beschikbaar in een hoger pakket.{' '}
-          <Link href="/pakketten">Bekijk de pakketten →</Link>
-        </p>
-      )}
     </div>
   )
 }

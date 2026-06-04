@@ -159,10 +159,6 @@ export interface Club {
   id: number;
   name: string;
   /**
-   * Bepaalt het aantekenmodel en de zichtbare statistieken voor wedstrijden van deze club.
-   */
-  package?: ('starter' | 'team' | 'elite') | null;
-  /**
    * Ontvangt het PDF-wedstrijdblad na indienen.
    */
   email?: string | null;
@@ -954,7 +950,6 @@ export interface PayloadMigration {
  */
 export interface ClubsSelect<T extends boolean = true> {
   name?: T;
-  package?: T;
   email?: T;
   logo?: T;
   logoUrl?: T;

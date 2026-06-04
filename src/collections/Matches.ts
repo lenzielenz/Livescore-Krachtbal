@@ -274,7 +274,7 @@ export const Matches: CollectionConfig = {
       ],
     },
     {
-      // Simpele aantekenmodus (Starter-pakket): snelle doelpunten +1/+2 en kruisjes,
+      // Simpele aantekenmodus (snelscoremodus): snelle doelpunten +1/+2 en kruisjes,
       // los van het worp-/balbezit-model. Vorm: { goals: [...], crosses: {home,away} }.
       // Zie src/lib/simple-score.ts. buildMatchState telt dit mee in de stand.
       name: 'simpleScore',
