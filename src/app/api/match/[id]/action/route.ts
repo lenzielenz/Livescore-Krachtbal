@@ -11,6 +11,7 @@ import {
   recordThrow,
   recordTimeout,
   reopenMatch,
+  setCaptain,
   setClock,
   setLineup,
   startFreeThrow,
@@ -133,6 +134,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
             body.side === 'away' ? 'away' : 'home',
             Array.isArray(body.playerIds) ? body.playerIds.map(Number) : [],
           ),
+        )
+      case 'setcaptain':
+        return Response.json(
+          await setCaptain(payload, matchId, body.side === 'away' ? 'away' : 'home', Number(body.playerId)),
         )
       // ── Simpele aantekenmodus (snelscoremodus): +1/+2 zonder veldschema ──
       case 'simplestart':

@@ -23,6 +23,7 @@ import * as migration_20260603_190000_match_simple_score from './20260603_190000
 import * as migration_20260603_200000_veld_scherm_selectie from './20260603_200000_veld_scherm_selectie';
 import * as migration_20260604_090000_user_official from './20260604_090000_user_official';
 import * as migration_20260604_100000_audit_pdf from './20260604_100000_audit_pdf';
+import * as migration_20260604_120000_match_captain from './20260604_120000_match_captain';
 
 export const migrations = [
   {
@@ -149,5 +150,10 @@ export const migrations = [
     up: migration_20260604_100000_audit_pdf.up,
     down: migration_20260604_100000_audit_pdf.down,
     name: '20260604_100000_audit_pdf',
+  },
+  {
+    up: migration_20260604_120000_match_captain.up,
+    down: migration_20260604_120000_match_captain.down,
+    name: '20260604_120000_match_captain',
   },
 ];

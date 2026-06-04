@@ -86,6 +86,13 @@ function sideOfTeam(teamId: number, homeId: number): TeamSide {
   return teamId === homeId ? 'home' : 'away'
 }
 
+/** Speler-id uit een kapitein-relatie (object, id of null). */
+function captainIdOf(v: unknown): number | null {
+  if (v == null) return null
+  if (typeof v === 'object') return (v as { id?: number }).id ?? null
+  return typeof v === 'number' ? v : null
+}
+
 async function getOpenPossession(payload: Payload, matchId: number) {
   const res = await payload.find({
     collection: 'possessions',
@@ -667,7 +674,7 @@ export async function setLineup(
   side: TeamSide,
   playerIds: number[],
 ) {
-  const { homeId, awayId } = await loadMatch(payload, matchId)
+  const { match, homeId, awayId } = await loadMatch(payload, matchId)
   const teamId = side === 'home' ? homeId : awayId
 
   const res = await payload.find({
@@ -683,10 +690,35 @@ export async function setLineup(
     throw new Error(`Kies precies ${FIELD_PLAYERS} veldspelers.`)
   }
 
+  // Als de huidige kapitein niet meer in de opstelling staat, de aanduiding wissen.
+  const curCaptain = captainIdOf((match as { homeCaptain?: unknown; awayCaptain?: unknown })[side === 'home' ? 'homeCaptain' : 'awayCaptain'])
+  const captainPatch =
+    curCaptain != null && !chosen.includes(curCaptain)
+      ? side === 'home'
+        ? { homeCaptain: null }
+        : { awayCaptain: null }
+      : {}
+
   await payload.update({
     collection: 'matches',
     id: matchId,
-    data: side === 'home' ? { homeLineup: chosen } : { awayLineup: chosen },
+    data: side === 'home' ? { homeLineup: chosen, ...captainPatch } : { awayLineup: chosen, ...captainPatch },
+    overrideAccess: true,
+  })
+  return buildMatchState(payload, matchId)
+}
+
+/** Kapitein van een ploeg aanduiden (moet een speler van die ploeg zijn). */
+export async function setCaptain(payload: Payload, matchId: number, side: TeamSide, playerId: number) {
+  const { homeId, awayId } = await loadMatch(payload, matchId)
+  const teamId = side === 'home' ? homeId : awayId
+  const player = await payload.findByID({ collection: 'players', id: playerId, depth: 0 }).catch(() => null)
+  const pTeam = player ? (typeof player.team === 'object' && player.team ? player.team.id : player.team) : null
+  if (pTeam !== teamId) throw new Error('De kapitein moet een speler van deze ploeg zijn.')
+  await payload.update({
+    collection: 'matches',
+    id: matchId,
+    data: side === 'home' ? { homeCaptain: playerId } : { awayCaptain: playerId },
     overrideAccess: true,
   })
   return buildMatchState(payload, matchId)
@@ -758,6 +790,8 @@ export interface MatchState {
   }
   /** Spelers die momenteel op het veld staan (selecteerbaar om te werpen). */
   lineup: { home: number[]; away: number[] }
+  /** Kapitein per ploeg (speler-id), aangeduid bij de opstelling. */
+  captain: { home: number | null; away: number | null }
   score: { home: number; away: number }
   crosses: { home: number; away: number }
   timeouts: { home: number; away: number }
@@ -1267,6 +1301,10 @@ export async function buildMatchState(payload: Payload, matchId: number): Promis
     lineup: {
       home: await resolveLineup(payload, match.homeLineup, homeId),
       away: await resolveLineup(payload, match.awayLineup, awayId),
+    },
+    captain: {
+      home: captainIdOf((match as { homeCaptain?: unknown }).homeCaptain),
+      away: captainIdOf((match as { awayCaptain?: unknown }).awayCaptain),
     },
     score: totals.score,
     crosses: totals.crosses,

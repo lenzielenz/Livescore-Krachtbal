@@ -80,6 +80,8 @@ export function Scorekeeper({
   const setConfirm = (side: 'home' | 'away', value: boolean) =>
     setLineupConfirmed((c) => ({ ...c, [side]: value }))
   const bothConfirmed = lineupConfirmed.home && lineupConfirmed.away
+  // Kapitein aanduiden = tik een veldspeler aan. Verplicht vóór het bevestigen.
+  const pickCaptain = (side: 'home' | 'away', playerId: number) => act({ action: 'setcaptain', side, playerId })
 
   // Basistijdstip voor de lopende klok: als de klok loopt, reken vanaf clockUpdatedAt (server),
   // zodat de verstreken tijd na een refresh behouden blijft — niet terug naar nul.
@@ -833,16 +835,26 @@ export function Scorekeeper({
                 const field = teamRoster.filter((p) => state.lineup[side].includes(p.id))
                 const bench = teamRoster.filter((p) => !state.lineup[side].includes(p.id))
                 const canPick = teamRoster.length > LINEUP_MIN
+                const captainId = state.captain[side]
+                const captainOk = captainId != null && field.some((p) => p.id === captainId)
                 return (
                   <div key={side} className={`sk-lineup-col ${side}`}>
                     <h4>{teamName}</h4>
                     <div className="sk-lineup-list">
-                      <span className="sk-lineup-lbl">veld</span>
+                      <span className="sk-lineup-lbl">veld — tik de kapitein aan (K)</span>
                       {field.map((p) => (
-                        <span key={p.id} className="sk-lineup-chip on">
+                        <button
+                          type="button"
+                          key={p.id}
+                          className={`sk-lineup-chip on ${captainId === p.id ? 'captain' : ''}`}
+                          disabled={busy || lineupConfirmed[side]}
+                          onClick={() => pickCaptain(side, p.id)}
+                          title="Tik aan om kapitein te maken"
+                        >
+                          {captainId === p.id && <span className="sk-cap-badge">K</span>}
                           <span className="num">{p.shirtNumber}</span>
                           <span className="nm">{firstName(p.name)}</span>
-                        </span>
+                        </button>
                       ))}
                       {field.length === 0 && <span className="sk-dim">nog niemand</span>}
                     </div>
@@ -868,14 +880,19 @@ export function Scorekeeper({
                           ✓ Bevestigd — wijzig
                         </button>
                       ) : (
-                        <button
-                          type="button"
-                          className="sk-btn primary"
-                          disabled={busy || field.length !== LINEUP_MIN}
-                          onClick={() => setConfirm(side, true)}
-                        >
-                          Bevestig opstelling
-                        </button>
+                        <>
+                          {field.length === LINEUP_MIN && !captainOk && (
+                            <span className="sk-cap-hint">Tik een veldspeler aan als kapitein.</span>
+                          )}
+                          <button
+                            type="button"
+                            className="sk-btn primary"
+                            disabled={busy || field.length !== LINEUP_MIN || !captainOk}
+                            onClick={() => setConfirm(side, true)}
+                          >
+                            Bevestig opstelling
+                          </button>
+                        </>
                       )}
                     </div>
                   </div>
