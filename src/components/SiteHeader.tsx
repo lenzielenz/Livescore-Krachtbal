@@ -7,8 +7,9 @@ import { PACKAGES_ENABLED } from '@/lib/packages'
 import './site-header.css'
 
 // Eén gedeelde navigatie voor alle pagina's, uitgelijnd op de vier profielen:
-// supporters volgen wedstrijden (primair), de rest staat per profiel onder een
-// eigen menu. De `active`-prop markeert de huidige sectie.
+// supporters volgen wedstrijden (primair); de tools voor clubs, scheidsrechters
+// en federatie staan samen onder één "Meer"-menu, daar netjes per profiel
+// gegroepeerd. De `active`-prop markeert de huidige sectie.
 export type NavSection = 'wedstrijden' | 'tornooi' | 'clubs' | 'scheidsrechters' | 'federatie' | null
 
 const PRIMARY: { href: string; label: string; key: NavSection }[] = [
@@ -17,9 +18,9 @@ const PRIMARY: { href: string; label: string; key: NavSection }[] = [
 ]
 
 type MenuItem = { href: string; label: string; external?: boolean }
-type Menu = { key: Exclude<NavSection, null>; label: string; items: MenuItem[] }
+type MenuGroup = { key: Exclude<NavSection, 'wedstrijden' | 'tornooi' | null>; label: string; items: MenuItem[] }
 
-const MENUS: Menu[] = [
+const GROUPS: MenuGroup[] = [
   {
     key: 'clubs',
     label: 'Voor clubs',
@@ -55,9 +56,11 @@ const MENUS: Menu[] = [
   },
 ]
 
+const MENU_KEYS = GROUPS.map((g) => g.key)
+
 export function SiteHeader({ active = null }: { active?: NavSection }) {
-  // Welk rolmenu staat open (één tegelijk).
-  const [open, setOpen] = useState<NavSection>(null)
+  const [open, setOpen] = useState(false)
+  const menuActive = active !== null && (MENU_KEYS as NavSection[]).includes(active)
 
   return (
     <header className="sh">
@@ -73,36 +76,39 @@ export function SiteHeader({ active = null }: { active?: NavSection }) {
             </Link>
           ))}
 
-          {MENUS.map((menu) => (
-            <div key={menu.key} className="sh-more">
-              <button
-                type="button"
-                className={`sh-link sh-more-btn ${active === menu.key ? 'on' : ''}`}
-                aria-expanded={open === menu.key ? 'true' : 'false'}
-                onClick={() => setOpen((v) => (v === menu.key ? null : menu.key))}
-              >
-                {menu.label} ▾
-              </button>
-              {open === menu.key && (
-                <>
-                  <div className="sh-more-backdrop" onClick={() => setOpen(null)} />
-                  <div className="sh-more-menu">
-                    {menu.items.map((l) =>
-                      l.external ? (
-                        <a key={l.href} href={l.href} className="sh-more-item" target="_blank" rel="noreferrer">
-                          {l.label}
-                        </a>
-                      ) : (
-                        <Link key={l.href} href={l.href} className="sh-more-item" onClick={() => setOpen(null)}>
-                          {l.label}
-                        </Link>
-                      ),
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
-          ))}
+          <div className="sh-more">
+            <button
+              type="button"
+              className={`sh-link sh-more-btn ${menuActive ? 'on' : ''}`}
+              aria-expanded={open ? 'true' : 'false'}
+              onClick={() => setOpen((v) => !v)}
+            >
+              Meer ▾
+            </button>
+            {open && (
+              <>
+                <div className="sh-more-backdrop" onClick={() => setOpen(false)} />
+                <div className="sh-more-menu">
+                  {GROUPS.map((group) => (
+                    <div key={group.key} className="sh-more-group">
+                      <div className="sh-more-grouphead">{group.label}</div>
+                      {group.items.map((l) =>
+                        l.external ? (
+                          <a key={l.href} href={l.href} className="sh-more-item" target="_blank" rel="noreferrer">
+                            {l.label}
+                          </a>
+                        ) : (
+                          <Link key={l.href} href={l.href} className="sh-more-item" onClick={() => setOpen(false)}>
+                            {l.label}
+                          </Link>
+                        ),
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
         </nav>
       </div>
     </header>
