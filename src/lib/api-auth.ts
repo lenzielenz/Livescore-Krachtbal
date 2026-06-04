@@ -63,8 +63,12 @@ export async function mayScoreMatch(
   user: AuthedUser | null,
   matchId: number | string,
 ): Promise<boolean> {
+  // Gemachtigde aantekenaars mogen meteen — geen extra query nodig.
+  if (user && (isFederationLevel(user) || hasRole(user, 'scorekeeper'))) return true
+  // Demo-wedstrijden zijn vrij speelbaar, ook zonder login (oefenmodus).
+  const match = await payload.findByID({ collection: 'matches', id: matchId, depth: 0 }).catch(() => null)
+  if (match && (match as { isDemo?: boolean }).isDemo) return true
   if (!user) return false
-  if (isFederationLevel(user) || hasRole(user, 'scorekeeper')) return true
   if (hasRole(user, 'scheidsrechter')) {
     const sheets = await payload
       .find({ collection: 'matchsheets', where: { match: { equals: matchId } }, depth: 0, limit: 1 })
