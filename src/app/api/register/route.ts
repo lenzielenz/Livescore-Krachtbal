@@ -29,11 +29,20 @@ export async function POST(req: Request) {
   }
 
   const payload = await getPayloadClient()
+
+  // Optionele club: enkel bewaren als ze echt bestaat (anders gewoon negeren).
+  let clubId: number | null = null
+  const rawClub = Number(body.clubId)
+  if (Number.isFinite(rawClub) && rawClub > 0) {
+    const club = await payload.findByID({ collection: 'clubs', id: rawClub, depth: 0 }).catch(() => null)
+    if (club) clubId = rawClub
+  }
+
   try {
     await payload.create({
       collection: 'users',
       // Rol ALTIJD 'viewer' — body.roles wordt bewust genegeerd (geen privilege-escalatie).
-      data: { name: name || undefined, email, password, roles: ['viewer'] },
+      data: { name: name || undefined, email, password, roles: ['viewer'], ...(clubId ? { club: clubId } : {}) },
       overrideAccess: true,
     })
   } catch {

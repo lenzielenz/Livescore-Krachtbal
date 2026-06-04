@@ -53,15 +53,15 @@ export const Users: CollectionConfig = {
       },
     },
     {
-      // Koppelt een club-beheerder aan zijn/haar club, zodat de toegang tot leden en
-      // opstellingen tot de eigen club beperkt blijft (WEDSTRIJDBLAD-PROMPT §Rollen).
+      // De club waar deze gebruiker bij hoort. Een supporter kiest ze (optioneel) bij
+      // registratie en wordt er overal naartoe gestuurd; voor een club-beheerder bepaalt
+      // ze de toegang tot leden en opstellingen (WEDSTRIJDBLAD-PROMPT §Rollen).
       name: 'club',
-      label: 'Club (voor club-beheerder)',
+      label: 'Club',
       type: 'relationship',
       relationTo: 'clubs',
       admin: {
-        description: 'Enkel relevant voor de rol "Club-beheerder".',
-        condition: (data) => Array.isArray(data?.roles) && data.roles.includes('club-beheerder'),
+        description: 'De eigen club (supporter volgt ze; club-beheerder beheert ze).',
       },
     },
     {

@@ -5,11 +5,12 @@ import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
 // Supporter-registratie: maakt een account (rol 'viewer') en logt meteen in.
-export function RegisterForm() {
+export function RegisterForm({ clubs }: { clubs: { id: number; name: string }[] }) {
   const router = useRouter()
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [clubId, setClubId] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [done, setDone] = useState(false)
@@ -22,7 +23,7 @@ export function RegisterForm() {
       const res = await fetch('/api/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password }),
+        body: JSON.stringify({ name, email, password, clubId: clubId || undefined }),
       })
       const data = (await res.json().catch(() => ({}))) as { error?: string }
       if (!res.ok) {
@@ -73,6 +74,17 @@ export function RegisterForm() {
           Wachtwoord (min. 8 tekens)
           <input className="wb-input" type="password" autoComplete="new-password" minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} required />
         </label>
+        {clubs.length > 0 && (
+          <label style={{ display: 'flex', flexDirection: 'column', gap: 2, fontSize: '0.8rem', color: 'var(--dim)' }}>
+            Mijn club (optioneel)
+            <select className="wb-input" value={clubId} onChange={(e) => setClubId(e.target.value)}>
+              <option value="">— Geen / kies later —</option>
+              {clubs.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+          </label>
+        )}
         <button type="submit" disabled={busy} className="wb-btn wb-btn-primary">
           {busy ? 'Bezig…' : 'Account aanmaken'}
         </button>
