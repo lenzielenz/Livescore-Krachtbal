@@ -228,6 +228,34 @@ export const Matches: CollectionConfig = {
       ],
     },
     {
+      // Kapitein per ploeg (één van de veldspelers). Reglement: een eigen doelpunt
+      // wordt op naam/nummer van de kapitein genoteerd. Wordt aangeduid bij de opstelling
+      // en getoond met een 'K'-badge op scorebord/matchpagina.
+      type: 'row',
+      fields: [
+        {
+          name: 'homeCaptain',
+          label: 'Kapitein thuis',
+          type: 'relationship',
+          relationTo: 'players',
+          filterOptions: ({ siblingData }) => {
+            const t = (siblingData as { homeTeam?: string })?.homeTeam
+            return t ? { team: { equals: t } } : false
+          },
+        },
+        {
+          name: 'awayCaptain',
+          label: 'Kapitein uit',
+          type: 'relationship',
+          relationTo: 'players',
+          filterOptions: ({ siblingData }) => {
+            const t = (siblingData as { awayTeam?: string })?.awayTeam
+            return t ? { team: { equals: t } } : false
+          },
+        },
+      ],
+    },
+    {
       // Klokstaat — runtime live-state. De definitieve tijdlijn blijft afleidbaar uit MatchEvents.
       label: 'Klokstaat',
       type: 'collapsible',

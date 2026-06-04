@@ -42,6 +42,16 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
     .catch(() => null)
   const referee = (sheetRes?.docs[0]?.assignedReferee as { name?: string } | null)?.name || null
 
+  // Kapiteins (één per ploeg) — bij depth 2 zijn dit speler-objecten met naam + rugnummer.
+  const capName = (c: unknown): string | null => {
+    if (!c || typeof c !== 'object') return null
+    const p = c as { name?: string; shirtNumber?: number }
+    if (!p.name) return null
+    return p.shirtNumber != null ? `#${p.shirtNumber} ${p.name}` : p.name
+  }
+  const homeCaptain = capName(matchDoc?.homeCaptain)
+  const awayCaptain = capName(matchDoc?.awayCaptain)
+
   return (
     <>
       <SiteHeader active="wedstrijden" />
@@ -50,7 +60,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
         ← Alle wedstrijden
       </Link>
       <Scoreboard matchId={matchId} initial={{ state, timeline }} />
-      {(reeks || datum || accommodatie || referee) && (
+      {(reeks || datum || accommodatie || referee || homeCaptain || awayCaptain) && (
         <div className="match-info">
           {(reeks || datum) && (
             <div className="match-info-row">
@@ -66,6 +76,14 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
           {referee && (
             <div className="match-info-row">
               <span aria-hidden>🟡</span> <span>Scheidsrechter: {referee}</span>
+            </div>
+          )}
+          {(homeCaptain || awayCaptain) && (
+            <div className="match-info-row">
+              <span aria-hidden>🅒</span>{' '}
+              <span>
+                Kapiteins: {state.teams.home.name} — {homeCaptain ?? '—'} · {state.teams.away.name} — {awayCaptain ?? '—'}
+              </span>
             </div>
           )}
         </div>
