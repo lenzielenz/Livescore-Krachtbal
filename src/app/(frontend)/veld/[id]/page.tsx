@@ -2,13 +2,11 @@ import { notFound } from 'next/navigation'
 
 import { buildMatchState, buildTimeline } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
-import { REEKS_OPTIONS } from '@/lib/reeksen'
+import { reeksNaam } from '@/lib/reeksen'
 import { FieldScreen } from './FieldScreen'
 import './veld.css'
 
 export const dynamic = 'force-dynamic'
-
-const reeksLabel = (v: unknown) => REEKS_OPTIONS.find((o) => o.value === v)?.label ?? (typeof v === 'string' ? v : null)
 
 // Veldscherm: fullscreen scorebord voor het grote scherm aan het veld. Eén vaste wedstrijd
 // per URL (/veld/[id]). Toont de stand live via SSE en speelt een doelpunt-animatie af.
@@ -26,7 +24,7 @@ export default async function VeldPage({ params }: { params: Promise<{ id: strin
   }
 
   const matchDoc = await payload.findByID({ collection: 'matches', id: matchId, depth: 0 }).catch(() => null)
-  const reeks = reeksLabel(matchDoc?.reeks)
+  const reeks = matchDoc?.reeks ? reeksNaam(matchDoc.reeks) : null
 
   return <FieldScreen matchId={matchId} reeks={reeks} initial={{ state, timeline }} />
 }
