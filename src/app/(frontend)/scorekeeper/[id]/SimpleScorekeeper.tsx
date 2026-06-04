@@ -101,13 +101,31 @@ export function SimpleScorekeeper({
 
   const overtime = live && clock >= targetSec
 
+  // Volledig scherm (handig op een tablet bij het veld).
+  const rootRef = useRef<HTMLDivElement>(null)
+  const [isFullscreen, setIsFullscreen] = useState(false)
+  useEffect(() => {
+    const onChange = () => setIsFullscreen(Boolean(document.fullscreenElement))
+    document.addEventListener('fullscreenchange', onChange)
+    return () => document.removeEventListener('fullscreenchange', onChange)
+  }, [])
+  const toggleFullscreen = () => {
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => {})
+    else rootRef.current?.requestFullscreen().catch(() => {})
+  }
+
   return (
-    <div className="ssk">
+    <div className="ssk" ref={rootRef}>
       <header className="ssk-top">
         <Link href="/scorekeeper" className="ssk-home">
           <span className="brand">Krachtbal</span> · Aantekentafel
         </Link>
-        <Link href={`/veld/${matchId}`} className="ssk-toplink">Veldscherm →</Link>
+        <span className="ssk-toplinks">
+          <button type="button" className="ssk-toplink" onClick={toggleFullscreen}>
+            {isFullscreen ? '⛶ Verlaten' : '⛶ Volledig scherm'}
+          </button>
+          <Link href={`/veld/${matchId}`} className="ssk-toplink">Veldscherm →</Link>
+        </span>
       </header>
 
       <div className="ssk-meta">
