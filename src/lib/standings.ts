@@ -12,6 +12,8 @@ export type StandingsMatch = {
   homeGoals: number
   awayGoals: number
   forfait: Forfait
+  /** Optioneel: speeldatum (ISO), voor week-over-week vergelijking. computeStandings negeert dit. */
+  date?: string
 }
 
 export type StandingRow = {

@@ -122,7 +122,7 @@
     display: none;
   }
   .rang-rank {
-    width: 22px;
+    width: 30px;
   }
   .rang-team {
     min-width: 0;
@@ -141,3 +141,26 @@
     width: 30px;
   }
 }
+
+/* Positie-verschil t.o.v. vorige week + highlight van de eigen club. */
+.rang-rank .rang-pos { display: block; }
+.rang-move {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.62rem;
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.rang-move.up { color: #0fe0a6; }
+.rang-move.down { color: #ef476f; }
+.rang-move.flat { color: var(--dim); opacity: 0.6; }
+
+/* De eigen club (ingelogd) springt eruit. */
+.rang-mine {
+  background: color-mix(in srgb, var(--accent) 13%, transparent);
+}
+.rang-mine .rang-pos,
+.rang-mine .rang-name { color: var(--accent); }
+.rang-mine td:first-child { box-shadow: inset 3px 0 0 0 var(--accent); }
+.rang-mybadge { margin-left: 6px; color: var(--accent); font-size: 0.85em; }
