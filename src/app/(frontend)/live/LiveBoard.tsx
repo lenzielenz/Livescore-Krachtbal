@@ -8,20 +8,31 @@ import { TeamLogo } from '@/components/TeamLogo'
 import { type ClubColors } from '@/lib/club-colors'
 import { type LogoFit } from '@/lib/logo-fit'
 
+type TeamRef = {
+  teamId: number
+  name: string
+  logoUrl: string | null
+  logoFit?: LogoFit | null
+  colors?: ClubColors | null
+  clubId: number | null
+  clubName: string | null
+}
+
 export type DayMatch = {
   id: number
   reeks: string
   time: string
   status: string
-  home: { name: string; logoUrl: string | null; logoFit?: LogoFit | null; colors?: ClubColors | null }
-  away: { name: string; logoUrl: string | null; logoFit?: LogoFit | null; colors?: ClubColors | null }
+  home: TeamRef
+  away: TeamRef
   score: { home: number; away: number }
   crosses?: { home: number; away: number }
   timeouts?: { home: number; away: number }
   refereeStops?: number
 }
 
-const FAV_KEY = 'krachtbal-favorieten'
+const FAV_TEAMS_KEY = 'kb-fav-ploegen'
+const FAV_CLUBS_KEY = 'kb-fav-clubs'
 
 function shiftDate(dateStr: string, days: number): string {
   const d = new Date(`${dateStr}T12:00:00`)
@@ -31,32 +42,37 @@ function shiftDate(dateStr: string, days: number): string {
 
 const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
 
-export function LiveBoard({ date, today, matches }: { date: string; today: string; matches: DayMatch[] }) {
-  const router = useRouter()
-  const [favs, setFavs] = useState<Set<number>>(new Set())
-  const [reeksFilter, setReeksFilter] = useState<string | null>(null)
-  const [onlyFavs, setOnlyFavs] = useState(false)
-  const [onlyLive, setOnlyLive] = useState(false)
-  const [query, setQuery] = useState('')
-
+function useFavSet(key: string): [Set<number>, (id: number) => void] {
+  const [set, setSet] = useState<Set<number>>(new Set())
   useEffect(() => {
     try {
-      const raw = localStorage.getItem(FAV_KEY)
-      if (raw) setFavs(new Set(JSON.parse(raw) as number[]))
+      const raw = localStorage.getItem(key)
+      if (raw) setSet(new Set(JSON.parse(raw) as number[]))
     } catch {}
-  }, [])
-
-  const toggleFav = (id: number) => {
-    setFavs((prev) => {
+  }, [key])
+  const toggle = (id: number) =>
+    setSet((prev) => {
       const next = new Set(prev)
       if (next.has(id)) next.delete(id)
       else next.add(id)
       try {
-        localStorage.setItem(FAV_KEY, JSON.stringify([...next]))
+        localStorage.setItem(key, JSON.stringify([...next]))
       } catch {}
       return next
     })
-  }
+  return [set, toggle]
+}
+
+export function LiveBoard({ date, today, matches }: { date: string; today: string; matches: DayMatch[] }) {
+  const router = useRouter()
+  const [favTeams, toggleTeam] = useFavSet(FAV_TEAMS_KEY)
+  const [favClubs, toggleClub] = useFavSet(FAV_CLUBS_KEY)
+  const [reeksFilter, setReeksFilter] = useState<string | null>(null)
+  const [onlyFavTeams, setOnlyFavTeams] = useState(false)
+  const [onlyFavClubs, setOnlyFavClubs] = useState(false)
+  const [onlyLive, setOnlyLive] = useState(false)
+  const [query, setQuery] = useState('')
+  const [openRow, setOpenRow] = useState<number | null>(null)
 
   const liveCount = useMemo(() => matches.filter((m) => m.status === 'live').length, [matches])
 
@@ -66,17 +82,25 @@ export function LiveBoard({ date, today, matches }: { date: string; today: strin
     return norm(m.home.name).includes(n) || norm(m.away.name).includes(n) || norm(m.reeks).includes(n)
   }
 
+  const teamFav = (m: DayMatch) => favTeams.has(m.home.teamId) || favTeams.has(m.away.teamId)
+  const clubFav = (m: DayMatch) =>
+    (m.home.clubId != null && favClubs.has(m.home.clubId)) || (m.away.clubId != null && favClubs.has(m.away.clubId))
+
   // Basis: alles behalve het reeks-filter toegepast, zodat de reeks-tellingen
-  // in de zijbalk tonen hoeveel er ná zoeken/live/favorieten overblijft.
+  // tonen hoeveel er ná zoeken/live/favorieten overblijft.
   const base = useMemo(
     () =>
-      matches.filter(
-        (m) =>
-          (!onlyLive || m.status === 'live') &&
-          (!onlyFavs || favs.has(m.id)) &&
-          (!query.trim() || matchesQuery(m, query)),
-      ),
-    [matches, onlyLive, onlyFavs, favs, query],
+      matches.filter((m) => {
+        if (onlyLive && m.status !== 'live') return false
+        if (query.trim() && !matchesQuery(m, query)) return false
+        // Favorieten-filters combineren met OF: toon wat een favoriete ploeg óf club bevat.
+        if (onlyFavTeams || onlyFavClubs) {
+          const hit = (onlyFavTeams && teamFav(m)) || (onlyFavClubs && clubFav(m))
+          if (!hit) return false
+        }
+        return true
+      }),
+    [matches, onlyLive, onlyFavTeams, onlyFavClubs, favTeams, favClubs, query],
   )
 
   // Reeksen + tellingen op basis van de actieve filters (slim navigeren).
@@ -88,7 +112,6 @@ export function LiveBoard({ date, today, matches }: { date: string; today: strin
 
   const visible = base.filter((m) => !reeksFilter || m.reeks === reeksFilter)
 
-  // Groepeer per reeks.
   const groups = useMemo(() => {
     const map = new Map<string, DayMatch[]>()
     for (const m of visible) {
@@ -104,6 +127,14 @@ export function LiveBoard({ date, today, matches }: { date: string; today: strin
     day: '2-digit',
     month: 'long',
   })
+
+  const emptyReason = query.trim()
+    ? ` voor “${query.trim()}”`
+    : onlyLive
+      ? ' live'
+      : onlyFavTeams || onlyFavClubs
+        ? ' bij je favorieten'
+        : ''
 
   return (
     <div className="lb">
@@ -123,9 +154,13 @@ export function LiveBoard({ date, today, matches }: { date: string; today: strin
           <span><span className="lb-livedot" /> Live</span>
           {liveCount > 0 && <span className="lb-reeks-n">{liveCount}</span>}
         </button>
-        <button type="button" className={`lb-reeks fav ${onlyFavs ? 'on' : ''}`} onClick={() => setOnlyFavs((v) => !v)}>
-          <span>★ Favorieten</span>
-          {favs.size > 0 && <span className="lb-reeks-n">{favs.size}</span>}
+        <button type="button" className={`lb-reeks fav ${onlyFavTeams ? 'on' : ''}`} onClick={() => setOnlyFavTeams((v) => !v)}>
+          <span>★ Ploegen</span>
+          {favTeams.size > 0 && <span className="lb-reeks-n">{favTeams.size}</span>}
+        </button>
+        <button type="button" className={`lb-reeks fav ${onlyFavClubs ? 'on' : ''}`} onClick={() => setOnlyFavClubs((v) => !v)}>
+          <span>★ Clubs</span>
+          {favClubs.size > 0 && <span className="lb-reeks-n">{favClubs.size}</span>}
         </button>
       </aside>
 
@@ -161,9 +196,7 @@ export function LiveBoard({ date, today, matches }: { date: string; today: strin
         </div>
 
         {groups.length === 0 ? (
-          <p className="lb-empty">
-            Geen wedstrijden{query.trim() ? ` voor “${query.trim()}”` : onlyLive ? ' live' : onlyFavs ? ' bij je favorieten' : ''} op deze dag.
-          </p>
+          <p className="lb-empty">Geen wedstrijden{emptyReason} op deze dag.</p>
         ) : (
           groups.map(([reeks, list]) => (
             <section key={reeks} className="lb-group">
@@ -172,43 +205,71 @@ export function LiveBoard({ date, today, matches }: { date: string; today: strin
                 const played = m.status !== 'scheduled'
                 const live = m.status === 'live'
                 const hasStats = played && (m.crosses || m.timeouts)
+                const rowFav = teamFav(m) || clubFav(m)
+                const open = openRow === m.id
                 return (
-                  <div key={m.id} className={`lb-row ${live ? 'live' : ''}`}>
-                    <button
-                      type="button"
-                      className={`lb-star ${favs.has(m.id) ? 'on' : ''}`}
-                      onClick={() => toggleFav(m.id)}
-                      aria-label="Favoriet"
-                      title="Markeer als favoriet"
-                    >
-                      {favs.has(m.id) ? '★' : '☆'}
-                    </button>
-                    <Link href={`/match/${m.id}`} className="lb-match">
-                      <span className="lb-status">
-                        {live ? <span className="lb-livebadge">LIVE</span> : <span className="lb-time">{m.time}</span>}
-                      </span>
-                      <span className="lb-team home">
-                        <TeamLogo name={m.home.name} logoUrl={m.home.logoUrl} logoFit={m.home.logoFit} side="home" size="sm" ringColor={m.home.colors?.primary} />
-                        <span className="lb-name">{m.home.name}</span>
-                      </span>
-                      <span className="lb-mid">
-                        <span className="lb-score">{played ? `${m.score.home} – ${m.score.away}` : 'vs'}</span>
-                        {hasStats && (
-                          <span className="lb-stats">
-                            <span title="Kruisjes">✖ {m.crosses?.home ?? 0}–{m.crosses?.away ?? 0}</span>
-                            <span className="lb-stat-sep">·</span>
-                            <span title="Minuten (time-outs)">
-                              ⏱ {m.timeouts?.home ?? 0}–{m.timeouts?.away ?? 0}
-                              {m.refereeStops ? ` +${m.refereeStops} SR` : ''}
+                  <div key={m.id} className="lb-rowwrap">
+                    <div className={`lb-row ${live ? 'live' : ''}`}>
+                      <button
+                        type="button"
+                        className={`lb-star ${rowFav ? 'on' : ''}`}
+                        onClick={() => setOpenRow(open ? null : m.id)}
+                        aria-label="Volgen"
+                        aria-expanded={open}
+                        title="Volg een ploeg of club"
+                      >
+                        {rowFav ? '★' : '☆'}
+                      </button>
+                      <Link href={`/match/${m.id}`} className="lb-match">
+                        <span className="lb-status">
+                          {live ? <span className="lb-livebadge">LIVE</span> : <span className="lb-time">{m.time}</span>}
+                        </span>
+                        <span className="lb-team home">
+                          <TeamLogo name={m.home.name} logoUrl={m.home.logoUrl} logoFit={m.home.logoFit} side="home" size="sm" ringColor={m.home.colors?.primary} />
+                          <span className="lb-name">{m.home.name}</span>
+                        </span>
+                        <span className="lb-mid">
+                          <span className="lb-score">{played ? `${m.score.home} – ${m.score.away}` : 'vs'}</span>
+                          {hasStats && (
+                            <span className="lb-stats">
+                              <span title="Kruisjes">✖ {m.crosses?.home ?? 0}–{m.crosses?.away ?? 0}</span>
+                              <span className="lb-stat-sep">·</span>
+                              <span title="Minuten (time-outs)">
+                                ⏱ {m.timeouts?.home ?? 0}–{m.timeouts?.away ?? 0}
+                                {m.refereeStops ? ` +${m.refereeStops} SR` : ''}
+                              </span>
                             </span>
-                          </span>
+                          )}
+                        </span>
+                        <span className="lb-team away">
+                          <span className="lb-name">{m.away.name}</span>
+                          <TeamLogo name={m.away.name} logoUrl={m.away.logoUrl} logoFit={m.away.logoFit} side="away" size="sm" ringColor={m.away.colors?.primary} />
+                        </span>
+                      </Link>
+                    </div>
+
+                    {open && (
+                      <div className="lb-follow">
+                        <span className="lb-follow-lbl">Volg ploeg</span>
+                        <button type="button" className={`lb-follow-chip ${favTeams.has(m.home.teamId) ? 'on' : ''}`} onClick={() => toggleTeam(m.home.teamId)}>
+                          {favTeams.has(m.home.teamId) ? '★' : '☆'} {m.home.name}
+                        </button>
+                        <button type="button" className={`lb-follow-chip ${favTeams.has(m.away.teamId) ? 'on' : ''}`} onClick={() => toggleTeam(m.away.teamId)}>
+                          {favTeams.has(m.away.teamId) ? '★' : '☆'} {m.away.name}
+                        </button>
+                        {(m.home.clubId != null || m.away.clubId != null) && <span className="lb-follow-lbl">Volg club</span>}
+                        {m.home.clubId != null && (
+                          <button type="button" className={`lb-follow-chip ${favClubs.has(m.home.clubId) ? 'on' : ''}`} onClick={() => toggleClub(m.home.clubId as number)}>
+                            {favClubs.has(m.home.clubId) ? '★' : '☆'} {m.home.clubName ?? m.home.name}
+                          </button>
                         )}
-                      </span>
-                      <span className="lb-team away">
-                        <span className="lb-name">{m.away.name}</span>
-                        <TeamLogo name={m.away.name} logoUrl={m.away.logoUrl} logoFit={m.away.logoFit} side="away" size="sm" ringColor={m.away.colors?.primary} />
-                      </span>
-                    </Link>
+                        {m.away.clubId != null && m.away.clubId !== m.home.clubId && (
+                          <button type="button" className={`lb-follow-chip ${favClubs.has(m.away.clubId) ? 'on' : ''}`} onClick={() => toggleClub(m.away.clubId as number)}>
+                            {favClubs.has(m.away.clubId) ? '★' : '☆'} {m.away.clubName ?? m.away.name}
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )
               })}

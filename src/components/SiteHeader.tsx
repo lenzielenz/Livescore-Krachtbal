@@ -75,6 +75,13 @@ export function SiteHeader({ active = null }: { active?: NavSection }) {
               </>
             )}
           </div>
+
+          {/* Admin-login: bewust een harde navigatie naar het Payload-beheer (aparte app),
+              niet via next/link client-routing. */}
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+          <a href="/admin" className="sh-login" title="Inloggen als admin">
+            🔐 <span className="sh-login-lbl">Inloggen</span>
+          </a>
         </nav>
       </div>
     </header>

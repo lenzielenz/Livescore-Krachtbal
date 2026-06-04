@@ -1289,9 +1289,29 @@ export interface ScoreboardData {
   timeouts: { home: number; away: number }
   refereeStops: number
   teams: {
-    home: { id: number; name: string; logoUrl: string | null; logoFit: LogoFit | null; colors: ClubColors | null }
-    away: { id: number; name: string; logoUrl: string | null; logoFit: LogoFit | null; colors: ClubColors | null }
+    home: ScoreboardTeam
+    away: ScoreboardTeam
   }
+}
+
+export interface ScoreboardTeam {
+  id: number
+  name: string
+  logoUrl: string | null
+  logoFit: LogoFit | null
+  colors: ClubColors | null
+  clubId: number | null
+  clubName: string | null
+}
+
+// Moederclub-id en -naam van een ploeg (voor club-favorieten op het live-bord).
+function clubIdOf(team: unknown): number | null {
+  const club = (team as { club?: unknown })?.club
+  return club && typeof club === 'object' ? ((club as { id?: number }).id ?? null) : typeof club === 'number' ? club : null
+}
+function clubNameOf(team: unknown): string | null {
+  const club = (team as { club?: unknown })?.club
+  return club && typeof club === 'object' ? ((club as { name?: string }).name ?? null) : null
 }
 
 type ScoreboardMatch = {
@@ -1407,8 +1427,8 @@ export async function buildScoreboards(
       timeouts,
       refereeStops,
       teams: {
-        home: { id: homeId, name: home.name, logoUrl: clubLogoUrl(home), logoFit: clubLogoFit(home), colors: clubColors(home) },
-        away: { id: awayId, name: away.name, logoUrl: clubLogoUrl(away), logoFit: clubLogoFit(away), colors: clubColors(away) },
+        home: { id: homeId, name: home.name, logoUrl: clubLogoUrl(home), logoFit: clubLogoFit(home), colors: clubColors(home), clubId: clubIdOf(home), clubName: clubNameOf(home) },
+        away: { id: awayId, name: away.name, logoUrl: clubLogoUrl(away), logoFit: clubLogoFit(away), colors: clubColors(away), clubId: clubIdOf(away), clubName: clubNameOf(away) },
       },
     })
   }
