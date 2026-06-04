@@ -119,7 +119,7 @@ export function SimpleScorekeeper({
 
       <button
         type="button"
-        className={`ssk-clock ${overtime ? 'over' : ''} ${state.match.clockRunning ? 'running' : ''} ${!live && !finished ? 'tostart' : ''}`}
+        className={`ssk-clock ${overtime ? 'over' : ''} ${state.match.clockRunning ? 'running' : ''} ${!finished && (!live || (!state.match.clockRunning && clock < 1)) ? 'tostart' : ''}`}
         disabled={finished}
         onClick={() => {
           if (finished) return
@@ -137,7 +137,11 @@ export function SimpleScorekeeper({
         <span className="ssk-clock-half">Helft {half} · doel {Math.round(targetSec / 60)} min</span>
         {!finished && (
           <span className="ssk-clock-action">
-            {!live ? '▶ Tik om te starten' : state.match.clockRunning ? '⏸ Tik om te pauzeren' : '▶ Tik om verder te gaan'}
+            {!live || (!state.match.clockRunning && clock < 1)
+              ? '▶ Tik om te starten'
+              : state.match.clockRunning
+                ? '⏸ Tik om te pauzeren'
+                : '▶ Tik om verder te gaan'}
           </span>
         )}
       </button>
