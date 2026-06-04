@@ -106,6 +106,25 @@
   color: var(--accent);
 }
 
+/* Admin-login-knop, rechts in de balk. */
+.sh-login {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--accent);
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--line));
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  white-space: nowrap;
+}
+.sh-login:hover {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
 @media (max-width: 560px) {
   .sh-brand {
     font-size: 1rem;
@@ -113,5 +132,12 @@
   .sh-link {
     padding: 6px 8px;
     font-size: 0.84rem;
+  }
+  /* Op gsm enkel het slot-icoon om plaats te sparen. */
+  .sh-login-lbl {
+    display: none;
+  }
+  .sh-login {
+    padding: 6px 9px;
   }
 }

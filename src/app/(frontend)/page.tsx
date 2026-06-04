@@ -1,5 +1,3 @@
-import Link from 'next/link'
-
 import { SiteHeader } from '@/components/SiteHeader'
 import { randomQuote } from '@/lib/krachtbal-quotes'
 import { LiveBoard } from './live/LiveBoard'
@@ -27,7 +25,6 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
           <h1>
             <span className="brand">Krachtbal</span> Live
           </h1>
-          <Link href="/tornooi" className="home-intro-link">Tornooien →</Link>
         </div>
         {/* Roterende quote — feit, wist-je-datje of een gekke oneliner. */}
         <p className="home-quote">{quote}</p>

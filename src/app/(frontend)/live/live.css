@@ -221,16 +221,52 @@
   color: var(--dim);
   font-weight: 700;
 }
+.lb-rowwrap {
+  border-bottom: 1px solid var(--line);
+}
+.lb-rowwrap:last-child {
+  border-bottom: none;
+}
 .lb-row {
   display: flex;
   align-items: center;
-  border-bottom: 1px solid var(--line);
-}
-.lb-row:last-child {
-  border-bottom: none;
 }
 .lb-row.live {
   background: rgba(239, 71, 111, 0.06);
+}
+
+/* Uitklap-paneel onder een rij: volg een ploeg en/of de hele club. */
+.lb-follow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 14px 14px 40px;
+}
+.lb-follow-lbl {
+  width: 100%;
+  margin-top: 4px;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--dim);
+}
+.lb-follow-chip {
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--txt);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: border-color 0.14s ease, color 0.14s ease;
+}
+.lb-follow-chip.on {
+  border-color: #ffd873;
+  color: #ffd873;
+}
+.lb-follow-chip:hover {
+  border-color: var(--accent);
 }
 .lb-star {
   flex: 0 0 auto;
