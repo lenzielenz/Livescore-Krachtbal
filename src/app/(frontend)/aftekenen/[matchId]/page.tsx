@@ -5,7 +5,7 @@ import { SiteHeader } from '@/components/SiteHeader'
 import { buildMatchSheet } from '@/lib/match-engine'
 import { getOrCreateMatchSheet } from '@/lib/matchsheet-data'
 import { getPayloadClient } from '@/lib/payload-client'
-import { AftekenenPanel } from './AftekenenPanel'
+import { AftekenenPanel, type SignatureData } from './AftekenenPanel'
 import '../../wedstrijdblad.css'
 
 export const dynamic = 'force-dynamic'
@@ -45,7 +45,17 @@ export default async function AftekenenPage({ params }: { params: Promise<{ matc
         </p>
       )}
 
-      <AftekenenPanel matchId={matchId} initialStatus={(sheet.status as string) ?? 'concept'} />
+      <AftekenenPanel
+        matchId={matchId}
+        initialStatus={(sheet.status as string) ?? 'concept'}
+        homeTeam={built?.teams.home.name}
+        awayTeam={built?.teams.away.name}
+        signatures={{
+          kapiteinThuis: sheet.kapiteinThuis as SignatureData | undefined,
+          kapiteinUit: sheet.kapiteinUit as SignatureData | undefined,
+          scheidsrechter: sheet.scheidsrechter as SignatureData | undefined,
+        }}
+      />
       </div>
     </>
   )

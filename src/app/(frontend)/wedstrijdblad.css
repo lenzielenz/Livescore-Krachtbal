@@ -321,3 +321,91 @@
   background: #f8fafc;
   touch-action: none;
 }
+
+/* Kop van een handtekening-vak: titel + thuis/uit-badge */
+.wb-sign-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+.wb-sign-head > h3 {
+  margin: 0;
+}
+.wb-side-badge {
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  padding: 3px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+  color: #06140d;
+}
+.wb-side-badge.home {
+  background: var(--home, #0fe0a6);
+}
+.wb-side-badge.away {
+  background: var(--away, #4cc9f0);
+}
+
+/* Vergrendelde (definitief afgetekende) handtekening — niet meer wisbaar. */
+.wb-sign-locked {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  border-style: solid;
+  border-color: color-mix(in srgb, var(--home, #0fe0a6) 60%, var(--line));
+  cursor: not-allowed;
+}
+.wb-sign-img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+.wb-lock-note {
+  margin-top: 10px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--home, #0fe0a6);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* QR-scanner (vrijgave wedstrijd) */
+.qr-scan-video {
+  width: 100%;
+  max-width: 320px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: #000;
+}
+
+/* Scheidsrechtersportaal — QR-weergave */
+.qr-box {
+  display: inline-flex;
+  padding: 12px;
+  background: #fff;
+  border-radius: 14px;
+  margin: 8px auto 0;
+}
+.qr-code-text {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 1.4rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  color: var(--accent);
+  margin: 4px 0 0;
+}
+.wb-link-btn {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0;
+}

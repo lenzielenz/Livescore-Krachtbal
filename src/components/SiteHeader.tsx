@@ -23,6 +23,7 @@ const MORE: { href: string; label: string; external?: boolean }[] = [
   // Prijspakketten alleen tonen wanneer de pakket-feature actief is.
   ...(PACKAGES_ENABLED ? [{ href: '/pakketten', label: '💎 Pakketten' }] : []),
   { href: '/club', label: '👥 Mijn club' },
+  { href: '/scheidsrechter/portaal', label: '🟨 Scheidsrechter — mijn QR' },
   { href: '/beheer/planning', label: '📅 Seizoensplanning' },
   { href: '/reglement', label: 'Reglement' },
   { href: '/knipjes', label: 'Knipjes' },

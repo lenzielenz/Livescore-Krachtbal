@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 
+import { QrScanner } from '@/components/QrScanner'
 import { toast } from '@/components/Toaster'
 import { KEURING_ITEMS, KEURING_OPTIONS } from '@/lib/keuring'
 import { MATCHSHEET_STATUS_OPTIONS, nextStatus, type MatchSheetStatus } from '@/lib/matchsheet-workflow'
@@ -80,11 +81,17 @@ export function RefereePanel({
     toast(ok ? 'success' : 'error', m)
   }
 
-  const saveStartAkkoord = async (akkoord: boolean) => {
-    const { ok, json } = await post({ action: 'wedstrijdstart', akkoord, naam: startNaam, code })
+  const saveStartAkkoord = async (akkoord: boolean, extra?: { qr?: string }) => {
+    const { ok, json } = await post({ action: 'wedstrijdstart', akkoord, naam: startNaam, code, qr: extra?.qr })
     if (ok) {
       setStartAkkoord(akkoord)
-      notify(true, akkoord ? 'Akkoord gegeven — de aantekenaar kan de wedstrijd openen.' : 'Akkoord ingetrokken.')
+      if (json.naam) setStartNaam(json.naam)
+      notify(
+        true,
+        akkoord
+          ? `Akkoord gegeven${json.naam ? ` (${json.naam})` : ''} — de aantekenaar kan de wedstrijd openen.`
+          : 'Akkoord ingetrokken.',
+      )
     } else {
       notify(false, json.error || 'Mislukt.')
     }
@@ -183,36 +190,50 @@ export function RefereePanel({
           />
         </label>
 
-        {/* Federatie ziet de code (om door te geven); de scheidsrechter voert ze in. */}
-        {isFederation ? (
+        {/* Federatie ziet de per-wedstrijdcode (om door te geven als backup). */}
+        {isFederation && (
           <p className="wb-sub" style={{ marginBottom: 10 }}>
-            Vrijgavecode (geef door aan de SR):{' '}
+            Vrijgavecode (backup, geef door aan de SR):{' '}
             <strong style={{ color: 'var(--accent)', fontSize: '1.05rem', letterSpacing: '0.12em' }}>{vrijgaveCode ?? '—'}</strong>
           </p>
-        ) : !startAkkoord ? (
-          <label style={{ display: 'flex', flexDirection: 'column', gap: 2, fontSize: '0.8rem', color: 'var(--dim)', marginBottom: 10 }}>
-            Vrijgavecode (van de federatie)
-            <input
-              className="wb-input"
-              placeholder="6 cijfers"
-              inputMode="numeric"
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-            />
-          </label>
-        ) : null}
+        )}
 
         {startAkkoord ? (
           <div className="wb-btn-row" style={{ marginTop: 0 }}>
-            <span className="wb-status" style={{ color: '#2a9d6a' }}>✓ Akkoord gegeven</span>
+            <span className="wb-status" style={{ color: '#2a9d6a' }}>✓ Akkoord gegeven{startNaam ? ` — ${startNaam}` : ''}</span>
             <button type="button" onClick={() => saveStartAkkoord(false)} disabled={busy} className="wb-btn">
               Akkoord intrekken
             </button>
           </div>
-        ) : (
+        ) : isFederation ? (
           <button type="button" onClick={() => saveStartAkkoord(true)} disabled={busy} className="wb-btn wb-btn-primary">
             ✓ Akkoord — wedstrijd mag starten
           </button>
+        ) : (
+          <>
+            {/* De scheidsrechter toont zijn persoonlijke QR; scan ze hier om vrij te geven. */}
+            <QrScanner onResult={(qr) => saveStartAkkoord(true, { qr })} />
+            <p className="wb-sub" style={{ margin: '12px 0 4px' }}>
+              Geen QR? Voer een code in (persoonlijke code of vrijgavecode) als backup:
+            </p>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+              <input
+                className="wb-input"
+                placeholder="Code"
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                style={{ flex: 1 }}
+              />
+              <button
+                type="button"
+                onClick={() => saveStartAkkoord(true)}
+                disabled={busy || !code.trim()}
+                className="wb-btn wb-btn-primary"
+              >
+                ✓ Akkoord
+              </button>
+            </div>
+          </>
         )}
       </section>
 
