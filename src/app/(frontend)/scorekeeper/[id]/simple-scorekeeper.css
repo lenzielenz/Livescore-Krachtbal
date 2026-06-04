@@ -26,6 +26,7 @@
   font-weight: 700;
   color: var(--accent, #0fe0a6);
 }
+.ssk-reeks { color: #ffd873; }
 .ssk-status {
   font-size: 12px;
   font-weight: 700;

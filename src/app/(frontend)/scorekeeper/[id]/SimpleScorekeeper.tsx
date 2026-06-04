@@ -34,10 +34,12 @@ export function SimpleScorekeeper({
   matchId,
   initialState,
   roster,
+  reeks,
 }: {
   matchId: number
   initialState: MatchState
   roster: RosterPlayer[]
+  reeks?: string
 }) {
   const [state, setState] = useState<MatchState>(initialState)
   const [error, setError] = useState<string | null>(null)
@@ -109,7 +111,7 @@ export function SimpleScorekeeper({
       </header>
 
       <div className="ssk-meta">
-        <span className="ssk-mode">⚡ Snel scoren · Starter</span>
+        <span className="ssk-mode">⚡ Snel scoren{reeks ? <> · <span className="ssk-reeks">{reeks}</span></> : null}</span>
         <span className={`ssk-status ${status}`}>
           {finished ? 'AFGELOPEN' : live ? `LIVE · H${half}` : 'NOG NIET GESTART'}
         </span>
