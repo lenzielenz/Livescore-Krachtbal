@@ -111,16 +111,30 @@ export function SimpleScorekeeper({
       </header>
 
       <div className="ssk-meta">
-        <span className="ssk-mode">⚡ Snel scoren{reeks ? <> · <span className="ssk-reeks">{reeks}</span></> : null}</span>
+        <span className="ssk-mode">{reeks ? <>⚡ <span className="ssk-reeks">{reeks}</span></> : '⚡ Aantekenen'}</span>
         <span className={`ssk-status ${status}`}>
           {finished ? 'AFGELOPEN' : live ? `LIVE · H${half}` : 'NOG NIET GESTART'}
         </span>
       </div>
 
-      <div className={`ssk-clock ${overtime ? 'over' : ''}`}>
+      <button
+        type="button"
+        className={`ssk-clock ${overtime ? 'over' : ''} ${state.match.clockRunning ? 'running' : ''} ${!live && !finished ? 'tostart' : ''}`}
+        disabled={finished}
+        onClick={() => {
+          if (finished) return
+          if (!live) act({ action: 'simplestart' })
+          else act({ action: 'clock', running: !state.match.clockRunning })
+        }}
+      >
         <span className="ssk-clock-time">{fmtClock(clock)}</span>
         <span className="ssk-clock-half">Helft {half} · doel {Math.round(targetSec / 60)} min</span>
-      </div>
+        {!finished && (
+          <span className="ssk-clock-action">
+            {!live ? '▶ Tik om te starten' : state.match.clockRunning ? '⏸ Tik om te pauzeren' : '▶ Tik om verder te gaan'}
+          </span>
+        )}
+      </button>
 
       <div className="ssk-board">
         {(['home', 'away'] as SimpleSide[]).map((side) => {
@@ -177,17 +191,10 @@ export function SimpleScorekeeper({
         </div>
       )}
 
-      {!finished && (
+      {live && (
         <div className="ssk-controls">
           <button type="button" className="ssk-btn" onClick={() => act({ action: 'simpleundo' })}>↶ Undo doelpunt</button>
-          {!live ? (
-            <button type="button" className="ssk-btn primary" onClick={() => act({ action: 'simplestart' })}>▶ Start</button>
-          ) : state.match.clockRunning ? (
-            <button type="button" className="ssk-btn" onClick={() => act({ action: 'clock', running: false })}>⏸ Pauze</button>
-          ) : (
-            <button type="button" className="ssk-btn" onClick={() => act({ action: 'clock', running: true })}>▶ Klok</button>
-          )}
-          {live && half === 1 && (
+          {half === 1 && (
             <button type="button" className="ssk-btn primary" onClick={() => act({ action: 'simplehalf' })}>
               ⏭ Einde 1e helft → 2e
             </button>
