@@ -1276,3 +1276,142 @@ export async function buildMatchState(payload: Payload, matchId: number): Promis
     possession,
   }
 }
+
+// ── Gebatcht scorebord voor een hele dag (publiek live-bord) ──
+// buildMatchState doet ~10 queries per wedstrijd; bij een vol weekend (100+
+// wedstrijden, sequentieel) wordt dat onwerkbaar traag. Het publieke overzicht
+// heeft enkel stand, kruisjes, time-outs en ploeg-info nodig. Deze functie haalt
+// dat voor ALLE wedstrijden samen op in vier queries en rekent in-memory uit.
+export interface ScoreboardData {
+  status: string
+  score: { home: number; away: number }
+  crosses: { home: number; away: number }
+  timeouts: { home: number; away: number }
+  refereeStops: number
+  teams: {
+    home: { id: number; name: string; logoUrl: string | null; logoFit: LogoFit | null; colors: ClubColors | null }
+    away: { id: number; name: string; logoUrl: string | null; logoFit: LogoFit | null; colors: ClubColors | null }
+  }
+}
+
+type ScoreboardMatch = {
+  id: number
+  homeTeam: unknown
+  awayTeam: unknown
+  currentHalf?: number | null
+  status?: string | null
+  simpleScore?: unknown
+}
+
+const relId = (v: unknown): number | null =>
+  v && typeof v === 'object' ? ((v as { id?: number }).id ?? null) : typeof v === 'number' ? v : null
+
+export async function buildScoreboards(
+  payload: Payload,
+  matches: ScoreboardMatch[],
+): Promise<Map<number, ScoreboardData>> {
+  const out = new Map<number, ScoreboardData>()
+  if (matches.length === 0) return out
+
+  const matchIds = matches.map((m) => m.id)
+  const teamIds = [
+    ...new Set(
+      matches.flatMap((m) => [relId(m.homeTeam), relId(m.awayTeam)]).filter((x): x is number => x != null),
+    ),
+  ]
+
+  // Eén query per collectie i.p.v. per wedstrijd (pagination:false = alle documenten).
+  const [teamsRes, throwsRes, possRes, eventsRes] = await Promise.all([
+    teamIds.length
+      ? payload.find({ collection: 'teams', where: { id: { in: teamIds } }, depth: 2, pagination: false })
+      : Promise.resolve({ docs: [] }),
+    payload.find({ collection: 'throws', where: { match: { in: matchIds } }, sort: 'createdAt', depth: 0, pagination: false }),
+    payload.find({ collection: 'possessions', where: { match: { in: matchIds } }, depth: 0, pagination: false }),
+    payload.find({
+      collection: 'match-events',
+      where: { and: [{ match: { in: matchIds } }, { type: { in: ['timeout', 'referee_stop'] } }] },
+      depth: 0,
+      pagination: false,
+    }),
+  ])
+
+  const teamById = new Map(teamsRes.docs.map((t) => [t.id, t]))
+  const possById = new Map(possRes.docs.map((p) => [p.id, p]))
+
+  // Worpen per wedstrijd (volgorde via de createdAt-sortering hierboven behouden).
+  const throwsByMatch = new Map<number, typeof throwsRes.docs>()
+  for (const t of throwsRes.docs) {
+    const mId = relId(t.match)
+    if (mId == null) continue
+    const arr = throwsByMatch.get(mId) ?? []
+    arr.push(t)
+    throwsByMatch.set(mId, arr)
+  }
+  const eventsByMatch = new Map<number, typeof eventsRes.docs>()
+  for (const e of eventsRes.docs) {
+    const mId = relId(e.match)
+    if (mId == null) continue
+    const arr = eventsByMatch.get(mId) ?? []
+    arr.push(e)
+    eventsByMatch.set(mId, arr)
+  }
+
+  for (const m of matches) {
+    const homeId = relId(m.homeTeam)
+    const awayId = relId(m.awayTeam)
+    if (homeId == null || awayId == null) continue
+    const home = teamById.get(homeId)
+    const away = teamById.get(awayId)
+    if (!home || !away) continue
+
+    const reducible = (throwsByMatch.get(m.id) ?? []).map((t) => {
+      const possId = relId(t.possession)
+      const poss = possId != null ? possById.get(possId) : undefined
+      const allowed = poss?.throwsAllowed ?? 1
+      const teamId = relId(t.team) ?? homeId
+      return {
+        team: sideOfTeam(teamId, homeId),
+        type: t.type,
+        outcome: t.outcome,
+        isDoelworp: t.throwNumber >= allowed,
+        touchedBeforeOut: t.touchedBeforeOut ?? false,
+        freeThrow: Boolean(poss?.freeThrow),
+      }
+    })
+    const totals = reduceTotals(reducible)
+
+    // snelscoremodus: snelle doelpunten (+1/+2) en kruisjes staan los van de worp-events.
+    const simple = readSimpleScore(m)
+    for (const g of simple.goals) totals.score[g.side] += g.points
+    totals.crosses.home += simple.crosses.home
+    totals.crosses.away += simple.crosses.away
+
+    const half = m.currentHalf ?? 1
+    const timeouts = { home: 0, away: 0 }
+    let refereeStops = 0
+    for (const e of eventsByMatch.get(m.id) ?? []) {
+      if ((e.half ?? 1) !== half) continue
+      if (e.type === 'referee_stop') {
+        refereeStops += 1
+      } else if (e.type === 'timeout') {
+        const tId = relId(e.team)
+        if (tId === homeId) timeouts.home += 1
+        else if (tId === awayId) timeouts.away += 1
+      }
+    }
+
+    out.set(m.id, {
+      status: m.status ?? 'scheduled',
+      score: totals.score,
+      crosses: totals.crosses,
+      timeouts,
+      refereeStops,
+      teams: {
+        home: { id: homeId, name: home.name, logoUrl: clubLogoUrl(home), logoFit: clubLogoFit(home), colors: clubColors(home) },
+        away: { id: awayId, name: away.name, logoUrl: clubLogoUrl(away), logoFit: clubLogoFit(away), colors: clubColors(away) },
+      },
+    })
+  }
+
+  return out
+}
