@@ -720,7 +720,11 @@ export function Scorekeeper({
               <span className={`sk-to-dot ${state.timeouts.home >= 1 ? 'used' : ''}`} />
               <span className={`sk-to-dot ${state.timeouts.home >= 2 ? 'used' : ''}`} />
             </button>
-            <span className="sk-cross" title="Kruisjes (rechtstreeks buiten)">✖ {state.crosses.home}</span>
+            <span className="sk-cross" title="Kruisjes — 3e = vrije worp voor de tegenstander">
+              {[0, 1, 2].map((i) => (
+                <span key={i} className={`sk-cross-x ${i < state.crosses.home ? 'on' : ''}`}>✖</span>
+              ))}
+            </span>
           </div>
           <button
             type="button"
@@ -742,7 +746,11 @@ export function Scorekeeper({
               <span className={`sk-to-dot ${state.timeouts.away >= 1 ? 'used' : ''}`} />
               <span className={`sk-to-dot ${state.timeouts.away >= 2 ? 'used' : ''}`} />
             </button>
-            <span className="sk-cross" title="Kruisjes (rechtstreeks buiten)">✖ {state.crosses.away}</span>
+            <span className="sk-cross" title="Kruisjes — 3e = vrije worp voor de tegenstander">
+              {[0, 1, 2].map((i) => (
+                <span key={i} className={`sk-cross-x ${i < state.crosses.away ? 'on' : ''}`}>✖</span>
+              ))}
+            </span>
           </div>
         </div>
       </header>
