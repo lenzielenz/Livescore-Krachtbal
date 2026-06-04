@@ -80,8 +80,23 @@
   display: flex;
   flex-direction: column;
 }
+/* Profielgroepen binnen het menu, met een dunne scheiding ertussen. */
+.sh-more-group + .sh-more-group {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid var(--line);
+}
+.sh-more-grouphead {
+  padding: 6px 12px 3px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--dim);
+}
 .sh-more-item {
-  padding: 9px 12px;
+  display: block;
+  padding: 8px 12px;
   border-radius: 8px;
   font-size: 0.9rem;
   color: var(--txt);
