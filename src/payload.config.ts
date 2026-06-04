@@ -39,15 +39,12 @@ if (process.env.NODE_ENV === 'production' && payloadSecret.length < 32) {
   throw new Error('PAYLOAD_SECRET ontbreekt of is te kort (min. 32 tekens). Zet hem in de Railway-omgeving.')
 }
 
-// Origins die credentialed admin/REST-calls mogen doen. In prod beperkt tot het eigen domein
-// (CSRF-bescherming); lokaal staan we localhost + LAN-IP toe voor het tablet bij het veld.
+// CSRF/CORS-beperking is OPT-IN via PUBLIC_SERVER_URL: enkel wanneer het productiedomein
+// expliciet gezet is, vergrendelen we credentialed admin/REST-calls tot dat domein. Zonder die
+// env-var laten we Payload z'n standaard (same-origin) gedrag staan — anders breekt de admin-login
+// lokaal en op een nog-niet-geconfigureerde deploy.
 const serverURL = process.env.PUBLIC_SERVER_URL || process.env.NEXT_PUBLIC_SERVER_URL || ''
-const allowedOrigins = [
-  serverURL,
-  ...(process.env.NODE_ENV === 'production'
-    ? []
-    : ['http://localhost:3000', 'http://192.168.0.65:3000']),
-].filter(Boolean)
+const originConfig = serverURL ? { serverURL, cors: [serverURL], csrf: [serverURL] } : {}
 // Productie (Postgres): schema via migraties (railway voert `payload migrate` uit bij deploy).
 // Lokaal (SQLite): dev-push maakt het schema automatisch aan.
 const db = isPostgres
@@ -86,10 +83,8 @@ export default buildConfig({
     Media,
   ],
   globals: [Season, Settings],
-  ...(serverURL ? { serverURL } : {}),
-  // CSRF/CORS: enkel eigen origin(s) mogen credentialed admin/REST-calls doen.
-  cors: allowedOrigins.length ? allowedOrigins : undefined,
-  csrf: allowedOrigins,
+  // serverURL + cors/csrf enkel wanneer PUBLIC_SERVER_URL gezet is (zie hierboven).
+  ...originConfig,
   editor: lexicalEditor(),
   secret: payloadSecret,
   typescript: {
