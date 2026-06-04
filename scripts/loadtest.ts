@@ -7,9 +7,11 @@
 // Gebruik (server moet draaien):
 //   pnpm loadtest --url http://localhost:3000 --match 1 --viewers 500 --seconds 20 --react
 //
-// Vereist Node 22+ (globale EventSource + fetch). Dit is een ONTWIKKEL-tool, geen prod-code.
+// Dependency-vrij: gebruikt de globale fetch (Node 18+) en parseert SSE zelf. ONTWIKKEL-tool.
 
 type Args = { url: string; match: number; viewers: number; seconds: number; react: boolean }
+
+type Stats = { opened: number; errors: number; updates: number; viewersSeen: number; reactionEvents: number; firstFrameMs: number[] }
 
 function parseArgs(argv: string[]): Args {
   const get = (flag: string, def?: string) => {
@@ -19,93 +21,115 @@ function parseArgs(argv: string[]): Args {
   return {
     url: get('--url', 'http://localhost:3000')!.replace(/\/$/, ''),
     match: Number(get('--match', '1')),
-    viewers: Number(get('--viewers', '200')),
     seconds: Number(get('--seconds', '15')),
+    viewers: Number(get('--viewers', '200')),
     react: argv.includes('--react'),
+  }
+}
+
+// Eén SSE-"kijker": leest de stream tot abort en telt de events per type.
+async function runViewer(url: string, signal: AbortSignal, stats: Stats) {
+  const t0 = Date.now()
+  let gotFirst = false
+  let res: Response
+  try {
+    res = await fetch(url, { headers: { accept: 'text/event-stream' }, signal })
+  } catch {
+    stats.errors++
+    return
+  }
+  if (!res.ok || !res.body) {
+    stats.errors++
+    return
+  }
+  stats.opened++
+  const reader = res.body.getReader()
+  const decoder = new TextDecoder()
+  let buf = ''
+  try {
+    for (;;) {
+      const { value, done } = await reader.read()
+      if (done) break
+      buf += decoder.decode(value, { stream: true })
+      let idx: number
+      while ((idx = buf.indexOf('\n\n')) >= 0) {
+        const frame = buf.slice(0, idx)
+        buf = buf.slice(idx + 2)
+        const ev = /event:\s*(\w+)/.exec(frame)?.[1]
+        if (ev === 'update') {
+          stats.updates++
+          if (!gotFirst) {
+            gotFirst = true
+            stats.firstFrameMs.push(Date.now() - t0)
+          }
+        } else if (ev === 'viewers') {
+          const m = /data:\s*(\{.*\})/.exec(frame)
+          if (m) stats.viewersSeen = Math.max(stats.viewersSeen, JSON.parse(m[1]).count ?? 0)
+        } else if (ev === 'reactions') {
+          stats.reactionEvents++
+        }
+      }
+    }
+  } catch {
+    /* abort of verbinding gesloten — normaal einde */
   }
 }
 
 async function main() {
   const args = parseArgs(process.argv.slice(2))
-  const ES = (globalThis as { EventSource?: typeof EventSource }).EventSource
-  if (!ES) {
-    console.error('Geen globale EventSource — gebruik Node 22+ (jij draait Node 24, dus dit zou moeten werken).')
-    process.exit(1)
-  }
   const streamUrl = `${args.url}/api/match/${args.match}/stream`
+  // eslint-disable-next-line no-console
   console.log(`Load-test: ${args.viewers} kijkers op ${streamUrl} gedurende ${args.seconds}s${args.react ? ' (+reacties)' : ''}`)
 
-  const sources: EventSource[] = []
-  let opened = 0
-  let errors = 0
-  let updates = 0
-  let viewersSeen = 0
-  let reactionEvents = 0
+  const stats: Stats = { opened: 0, errors: 0, updates: 0, viewersSeen: 0, reactionEvents: 0, firstFrameMs: [] }
+  const ac = new AbortController()
   const start = Date.now()
-  const firstFrameMs: number[] = []
 
+  const viewers: Promise<void>[] = []
   for (let i = 0; i < args.viewers; i++) {
-    const t0 = Date.now()
-    let gotFirst = false
-    const es = new ES(streamUrl)
-    es.onopen = () => {
-      opened++
-    }
-    es.addEventListener('update', () => {
-      updates++
-      if (!gotFirst) {
-        gotFirst = true
-        firstFrameMs.push(Date.now() - t0)
-      }
-    })
-    es.addEventListener('viewers', (e) => {
-      viewersSeen = Math.max(viewersSeen, JSON.parse((e as MessageEvent).data).count ?? 0)
-    })
-    es.addEventListener('reactions', () => {
-      reactionEvents++
-    })
-    es.onerror = () => {
-      errors++
-    }
-    sources.push(es)
+    viewers.push(runViewer(streamUrl, ac.signal, stats))
     if (i % 50 === 0) await new Promise((r) => setTimeout(r, 20)) // gespreid openen
   }
 
+  let reactTimer: ReturnType<typeof setInterval> | undefined
   if (args.react) {
     const emojis = ['clap', 'fire', 'heart', 'goal', 'wow']
-    const reactTimer = setInterval(() => {
-      // simuleer 30 supporters die tegelijk tikken (test aggregatie + rate limit)
+    reactTimer = setInterval(() => {
       for (let i = 0; i < 30; i++) {
-        const emoji = emojis[i % emojis.length]
         fetch(`${args.url}/api/match/${args.match}/react`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ emoji, count: 1 }),
+          body: JSON.stringify({ emoji: emojis[i % emojis.length], count: 1 }),
         }).catch(() => {})
       }
     }, 500)
-    setTimeout(() => clearInterval(reactTimer), args.seconds * 1000)
   }
 
   await new Promise((r) => setTimeout(r, args.seconds * 1000))
-  for (const es of sources) es.close()
+  if (reactTimer) clearInterval(reactTimer)
+  ac.abort()
+  await Promise.allSettled(viewers)
 
   const avg = (a: number[]) => (a.length ? Math.round(a.reduce((s, n) => s + n, 0) / a.length) : 0)
   const p95 = (a: number[]) => {
     if (!a.length) return 0
     const s = [...a].sort((x, y) => x - y)
-    return s[Math.floor(s.length * 0.95)]
+    return s[Math.min(s.length - 1, Math.floor(s.length * 0.95))]
   }
-  console.log('\n── Resultaat ──')
-  console.log(`Verbindingen geopend : ${opened}/${args.viewers}`)
-  console.log(`Fouten               : ${errors}`)
-  console.log(`'update'-events       : ${updates}`)
-  console.log(`Max viewer-count gezien: ${viewersSeen}`)
-  console.log(`'reactions'-flushes   : ${reactionEvents}`)
-  console.log(`Tijd-tot-1e-frame    : avg ${avg(firstFrameMs)}ms · p95 ${p95(firstFrameMs)}ms`)
-  console.log(`Totale duur          : ${Math.round((Date.now() - start) / 1000)}s`)
-  console.log('\nLet op: dit meet de SSE-fan-out + rate limit. Voor échte schaal: draai dit tegen een')
-  console.log('Railway-achtige Postgres en kijk of de DB-pool stabiel blijft (één gedeelde poller per match).')
+  const log = (m: string) => {
+    // eslint-disable-next-line no-console
+    console.log(m)
+  }
+  log('\n── Resultaat ──')
+  log(`Verbindingen geopend   : ${stats.opened}/${args.viewers}`)
+  log(`Fouten                 : ${stats.errors}`)
+  log(`'update'-events        : ${stats.updates}`)
+  log(`Max viewer-count gezien: ${stats.viewersSeen}`)
+  log(`'reactions'-flushes    : ${stats.reactionEvents}`)
+  log(`Tijd-tot-1e-frame      : avg ${avg(stats.firstFrameMs)}ms · p95 ${p95(stats.firstFrameMs)}ms`)
+  log(`Totale duur            : ${Math.round((Date.now() - start) / 1000)}s`)
+  log('\nLet op: dit meet de SSE-fan-out + rate limit. Voor échte schaal: draai tegen een')
+  log('Railway-achtige Postgres en kijk of de DB-pool stabiel blijft (één gedeelde poller per match).')
   process.exit(0)
 }
 

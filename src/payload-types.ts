@@ -503,6 +503,7 @@ export interface Matchsheet {
     handtekening?: string | null;
     tijdstip?: string | null;
   };
+  pdf?: (number | null) | Media;
   /**
    * Automatisch: elke manuele overschrijving (wie/wanneer/wat).
    */
@@ -543,6 +544,10 @@ export interface User {
    * Enkel relevant voor de rol "Club-beheerder".
    */
   club?: (number | null) | Club;
+  /**
+   * Enkel relevant voor de rol "Scheidsrechter". Beperkt de toegang tot de eigen kwitantie.
+   */
+  official?: (number | null) | Official;
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -791,6 +796,7 @@ export interface Throw {
   distance?: number | null;
   zone?: ('links' | 'midden' | 'rechts') | null;
   touchedBeforeOut?: boolean | null;
+  createdBy?: (number | null) | User;
   period: number;
   gameClock: number;
   updatedAt: string;
@@ -808,6 +814,7 @@ export interface MatchEvent {
   half: number;
   gameClock: number;
   note?: string | null;
+  createdBy?: (number | null) | User;
   updatedAt: string;
   createdAt: string;
 }
@@ -1140,6 +1147,7 @@ export interface MatchsheetsSelect<T extends boolean = true> {
         handtekening?: T;
         tijdstip?: T;
       };
+  pdf?: T;
   overrideLog?:
     | T
     | {
@@ -1298,6 +1306,7 @@ export interface ThrowsSelect<T extends boolean = true> {
   distance?: T;
   zone?: T;
   touchedBeforeOut?: T;
+  createdBy?: T;
   period?: T;
   gameClock?: T;
   updatedAt?: T;
@@ -1314,6 +1323,7 @@ export interface MatchEventsSelect<T extends boolean = true> {
   half?: T;
   gameClock?: T;
   note?: T;
+  createdBy?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -1325,6 +1335,7 @@ export interface UsersSelect<T extends boolean = true> {
   name?: T;
   roles?: T;
   club?: T;
+  official?: T;
   updatedAt?: T;
   createdAt?: T;
   email?: T;

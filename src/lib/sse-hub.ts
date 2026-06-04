@@ -80,7 +80,10 @@ export function subscribe(
 // ── Per-IP verbindingslimiet (DoS-rem; voorkomt dat één client duizenden streams opent) ──
 
 const perIp = new Map<string, number>()
-const MAX_CONNECTIONS_PER_IP = 12
+// LET OP NAT: een hele zaal supporters zit vaak achter ÉÉN publiek IP (venue-wifi). De cap moet
+// dus ruim genoeg zijn voor een volle zaal, maar nog steeds een bot-amplificatie afremmen. De
+// DB-kost is sowieso begrensd door de gedeelde poller, dus deze cap beschermt enkel geheugen/sockets.
+const MAX_CONNECTIONS_PER_IP = Number(process.env.SSE_MAX_CONN_PER_IP) || 250
 
 export function clientIp(req: Request): string {
   return req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'onbekend'

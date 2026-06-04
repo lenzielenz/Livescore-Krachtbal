@@ -14,8 +14,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const matchId = Number(id)
   if (!Number.isFinite(matchId)) return Response.json({ error: 'Ongeldig match-id' }, { status: 400 })
 
+  // Ruime per-IP limiet: een hele zaal achter één venue-IP mag samen vlot reageren; de
+  // server-side aggregatie + clamp houden de visuele/CPU-impact sowieso in toom (anti-spam, geen rem).
   const ip = clientIp(req)
-  if (!rateLimit(`react:${ip}`, 10, 1000)) {
+  if (!rateLimit(`react:${ip}`, Number(process.env.REACT_MAX_PER_SEC) || 60, 1000)) {
     return Response.json({ error: 'Te veel reacties.' }, { status: 429 })
   }
 
