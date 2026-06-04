@@ -106,6 +106,18 @@
   color: var(--accent);
 }
 
+/* Registreren-link (supporter), rechts in de balk. */
+.sh-register {
+  padding: 6px 8px;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--dim);
+  white-space: nowrap;
+}
+.sh-register:hover {
+  color: var(--txt);
+}
+
 /* Admin-login-knop, rechts in de balk. */
 .sh-login {
   display: inline-flex;

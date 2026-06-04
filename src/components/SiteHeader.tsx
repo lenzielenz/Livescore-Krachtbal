@@ -77,10 +77,12 @@ export function SiteHeader({ active = null }: { active?: NavSection }) {
             )}
           </div>
 
+          {/* Supporter-registratie + admin-login, rechts in de balk. */}
+          <Link href="/registreren" className="sh-register">Registreren</Link>
           {/* Admin-login: bewust een harde navigatie naar het Payload-beheer (aparte app),
               niet via next/link client-routing. */}
           {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
-          <a href="/admin" className="sh-login" title="Inloggen als admin">
+          <a href="/admin" className="sh-login" title="Inloggen">
             🔐 <span className="sh-login-lbl">Inloggen</span>
           </a>
         </nav>
