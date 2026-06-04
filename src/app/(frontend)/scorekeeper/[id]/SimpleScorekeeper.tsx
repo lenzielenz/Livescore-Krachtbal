@@ -125,7 +125,10 @@ export function SimpleScorekeeper({
           const team = state.teams[side]
           return (
             <div key={side} className={`ssk-team side-${side}`}>
-              <div className="ssk-team-name">{team.name}</div>
+              <div className="ssk-team-head">
+                <TeamLogo name={team.name} logoUrl={team.logoUrl} logoFit={team.logoFit} side={side} size="md" ringColor={team.colors?.primary ?? null} />
+                <div className="ssk-team-name">{team.name}</div>
+              </div>
               <div className="ssk-score">{state.score[side]}</div>
               {!finished && (
                 <div className="ssk-goalbtns">
@@ -141,17 +144,17 @@ export function SimpleScorekeeper({
                 <div className="ssk-stat">
                   <span className="ssk-stat-lbl">✖ Kruisjes</span>
                   <span className="ssk-stat-ctrl">
-                    {!finished && <button type="button" className="ssk-stat-btn" onClick={() => act({ action: 'simplecross', side, delta: -1 })} aria-label="Kruisje min">−</button>}
+                    {!finished && <button type="button" className="ssk-stat-btn" disabled={state.crosses[side] <= 0} onClick={() => act({ action: 'simplecross', side, delta: -1 })} aria-label="Kruisje min">−</button>}
                     <span className="ssk-stat-n">{state.crosses[side]}</span>
                     {!finished && <button type="button" className="ssk-stat-btn" onClick={() => act({ action: 'simplecross', side, delta: 1 })} aria-label="Kruisje plus">+</button>}
                   </span>
                 </div>
                 <div className="ssk-stat">
-                  <span className="ssk-stat-lbl">⏱ Time-outs</span>
+                  <span className="ssk-stat-lbl">⏱ Time-outs <small>(max 2)</small></span>
                   <span className="ssk-stat-ctrl">
-                    {!finished && <button type="button" className="ssk-stat-btn" onClick={() => act({ action: 'simpletimeout', side, delta: -1 })} aria-label="Time-out min">−</button>}
+                    {!finished && <button type="button" className="ssk-stat-btn" disabled={state.timeouts[side] <= 0} onClick={() => act({ action: 'simpletimeout', side, delta: -1 })} aria-label="Time-out min">−</button>}
                     <span className="ssk-stat-n">{state.timeouts[side]}</span>
-                    {!finished && <button type="button" className="ssk-stat-btn" onClick={() => act({ action: 'simpletimeout', side, delta: 1 })} aria-label="Time-out plus">+</button>}
+                    {!finished && <button type="button" className="ssk-stat-btn" disabled={state.timeouts[side] >= 2} onClick={() => act({ action: 'simpletimeout', side, delta: 1 })} aria-label="Time-out plus">+</button>}
                   </span>
                 </div>
               </div>
@@ -159,6 +162,17 @@ export function SimpleScorekeeper({
           )
         })}
       </div>
+
+      {!finished && (
+        <div className="ssk-refmin">
+          <span className="ssk-refmin-lbl">⏱ Scheidsrechter-minuut</span>
+          <span className="ssk-stat-ctrl">
+            <button type="button" className="ssk-stat-btn" disabled={state.refereeStops <= 0} onClick={() => act({ action: 'simplerefstop', delta: -1 })} aria-label="SR-minuut min">−</button>
+            <span className="ssk-stat-n">{state.refereeStops}</span>
+            <button type="button" className="ssk-stat-btn" onClick={() => act({ action: 'simplerefstop', delta: 1 })} aria-label="SR-minuut plus">+</button>
+          </span>
+        </div>
+      )}
 
       {!finished && (
         <div className="ssk-controls">

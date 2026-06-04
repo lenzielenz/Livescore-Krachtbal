@@ -23,6 +23,7 @@ import { getMatchReadiness } from '@/lib/matchsheet-data'
 import { missingSteps } from '@/lib/match-readiness'
 import { getPayloadClient } from '@/lib/payload-client'
 import {
+  adjustRefereeStop,
   adjustSimpleCross,
   adjustSimpleTimeout,
   advanceSimpleHalf,
@@ -160,6 +161,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         return Response.json(
           await adjustSimpleTimeout(payload, matchId, body.side === 'away' ? 'away' : 'home', Number(body.delta) || 1),
         )
+      case 'simplerefstop':
+        return Response.json(await adjustRefereeStop(payload, matchId, Number(body.delta) || 1))
       case 'simplehalf':
         return Response.json(await advanceSimpleHalf(payload, matchId))
       default:
