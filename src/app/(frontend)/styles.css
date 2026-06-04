@@ -546,18 +546,18 @@ h3,
 .mh-item {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 5px;
 }
 .mh-item + .mh-item {
-  margin-top: 6px;
+  margin-top: 8px;
 }
 .mh-steps {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   flex-wrap: wrap;
   justify-content: center;
-  padding: 2px 0 2px;
+  padding: 0;
 }
 .mh-steps-lead {
   font-size: 0.66rem;
@@ -569,13 +569,13 @@ h3,
 .mh-step {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  padding: 7px 13px;
+  gap: 6px;
+  padding: 5px 11px;
   border-radius: 999px;
   border: 1px solid var(--line);
   background: var(--panel);
   color: var(--txt);
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   font-weight: 600;
   transition: border-color 0.14s ease, transform 0.14s ease, background-color 0.14s ease;
 }
@@ -587,12 +587,12 @@ h3,
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 19px;
-  height: 19px;
+  width: 17px;
+  height: 17px;
   border-radius: 50%;
   background: var(--bg);
   border: 1px solid var(--line);
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   font-weight: 800;
   flex-shrink: 0;
 }
@@ -626,14 +626,15 @@ h3,
   border-color: transparent;
 }
 .mh-step.gate.is-active {
-  background: var(--grad-pop);
-  color: #fff;
-  border-color: color-mix(in srgb, var(--pop) 60%, var(--line));
+  background: linear-gradient(135deg, color-mix(in srgb, var(--home) 88%, #fff 10%), var(--home));
+  color: #06140d;
+  border-color: color-mix(in srgb, var(--home) 70%, var(--line));
+  box-shadow: 0 8px 22px -8px color-mix(in srgb, var(--home) 55%, transparent);
 }
 .mh-step.gate.is-active .mh-step-num {
-  background: rgba(255, 255, 255, 0.25);
+  background: rgba(6, 20, 13, 0.28);
   border-color: transparent;
-  color: #fff;
+  color: #06140d;
 }
 /* Start nog vergrendeld: gedempt slot tot opstelling + scheidsrechter klaar zijn. */
 .mh-step.gate.is-locked {
@@ -660,8 +661,8 @@ h3,
   gap: 12px;
   background: var(--panel-grad);
   border: 1px solid var(--line);
-  border-radius: 14px;
-  padding: 15px 18px;
+  border-radius: 12px;
+  padding: 10px 14px;
   box-shadow: var(--card-shadow);
   transition: border-color 0.16s ease, transform 0.16s ease, box-shadow 0.16s ease;
 }
@@ -698,9 +699,18 @@ h3,
   min-width: 86px;
 }
 .match-card .mc-score {
-  font-size: 1.4rem;
+  font-size: 1.25rem;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
+}
+/* Compacte stappenstrook op gsm: enkel de icoon-/nummer-bolletjes (labels weg),
+   zodat een lange lijst (50+ wedstrijden) overzichtelijk blijft. */
+@media (max-width: 600px) {
+  .mh-steps-lead { display: none; }
+  .mh-step-label { display: none; }
+  .mh-step { padding: 6px; gap: 0; }
+  .mh-step-num { width: 19px; height: 19px; }
+  .mh-steps { gap: 8px; }
 }
 .match-card .mc-meta {
   font-size: 0.72rem;
@@ -721,15 +731,30 @@ h3,
   opacity: 0.5;
 }
 .badge-live {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   font-size: 0.65rem;
   font-weight: 800;
   letter-spacing: 0.06em;
-  background: var(--grad-pop);
-  color: #fff;
-  padding: 2px 7px;
+  background: color-mix(in srgb, var(--home) 20%, #0a1f14);
+  color: var(--home);
+  padding: 3px 9px;
   border-radius: 999px;
-  box-shadow: 0 4px 14px -2px color-mix(in srgb, var(--pop) 60%, transparent);
+  border: 1px solid color-mix(in srgb, var(--home) 50%, transparent);
+}
+/* Pulserend bolletje vóór 'LIVE'. */
+.badge-live::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--home);
+  box-shadow: 0 0 8px var(--home);
+  animation: badge-live-pulse 1.6s ease-in-out infinite;
+}
+@keyframes badge-live-pulse {
+  50% { opacity: 0.35; }
 }
 .empty {
   color: var(--dim);
