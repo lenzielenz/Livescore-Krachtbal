@@ -53,6 +53,10 @@
   margin: 0 0 6px;
 }
 .lb-reeks {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   text-align: left;
   padding: 8px 10px;
   border: 1px solid transparent;
@@ -64,6 +68,38 @@
 }
 .lb-reeks:hover {
   background: var(--panel);
+}
+.lb-reeks:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.lb-reeks-n {
+  flex: 0 0 auto;
+  min-width: 20px;
+  text-align: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--dim);
+  background: var(--panel);
+  border-radius: 999px;
+  padding: 1px 7px;
+}
+.lb-reeks.on .lb-reeks-n {
+  color: var(--accent);
+}
+.lb-reeks.live .lb-livedot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ef476f;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+.lb-reeks.live.on {
+  border-color: #ef476f;
+  color: #ef476f;
 }
 .lb-reeks.on {
   background: var(--panel);
@@ -123,6 +159,43 @@
   cursor: pointer;
 }
 
+/* Zoekbalk: filter op ploeg of reeks (handig bij veel wedstrijden). */
+.lb-search {
+  position: relative;
+  margin-bottom: 14px;
+}
+.lb-search input {
+  width: 100%;
+  padding: 11px 38px 11px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--txt);
+  font-size: 0.95rem;
+}
+.lb-search input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.lb-search-clear {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  color: var(--dim);
+  font-size: 0.9rem;
+  cursor: pointer;
+  border-radius: 8px;
+}
+.lb-search-clear:hover {
+  color: var(--txt);
+  background: var(--bg);
+}
+
 /* Wedstrijdgroepen per reeks */
 .lb-group {
   background: var(--panel);
@@ -132,6 +205,9 @@
   margin-bottom: 12px;
 }
 .lb-group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   padding: 8px 14px;
   font-size: 0.78rem;
   font-weight: 800;
@@ -139,6 +215,11 @@
   color: var(--accent);
   background: #0a1f14;
   border-bottom: 1px solid var(--line);
+}
+.lb-group-n {
+  font-variant-numeric: tabular-nums;
+  color: var(--dim);
+  font-weight: 700;
 }
 .lb-row {
   display: flex;
