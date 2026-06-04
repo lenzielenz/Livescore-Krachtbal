@@ -74,6 +74,11 @@ export function Scorekeeper({
   // De rest zijn wissels; enkel veldspelers verschijnen in het worp-keuzescherm.
   const [lineupSide, setLineupSide] = useState<'home' | 'away' | null>(null)
   const [lineupSel, setLineupSel] = useState<number[]>([])
+  // Elke ploeg bevestigt vóór de aftrap met welke veldspelers ze starten. Pas als
+  // BEIDE bevestigd zijn, verschijnt de "Kies wie opzet"-melding.
+  const [lineupConfirmed, setLineupConfirmed] = useState<{ home: boolean; away: boolean }>({ home: false, away: false })
+  const setConfirm = (side: 'home' | 'away', value: boolean) =>
+    setLineupConfirmed((c) => ({ ...c, [side]: value }))
 
   // Basistijdstip voor de lopende klok: als de klok loopt, reken vanaf clockUpdatedAt (server),
   // zodat de verstreken tijd na een refresh behouden blijft — niet terug naar nul.
@@ -395,7 +400,11 @@ export function Scorekeeper({
   const saveLineup = async () => {
     if (lineupSide === null || lineupSel.length !== LINEUP_MIN) return
     const res = await act({ action: 'setlineup', side: lineupSide, playerIds: lineupSel })
-    if (res) setLineupSide(null)
+    if (res) {
+      // Opstelling gewijzigd → die ploeg moet opnieuw bevestigen.
+      setConfirm(lineupSide, false)
+      setLineupSide(null)
+    }
   }
 
   // De naam staat aan de EIGEN kant (het doel dat je verdedigt); je scoort aan de overkant.
@@ -838,27 +847,61 @@ export function Scorekeeper({
                         ))}
                       </div>
                     )}
-                    {canPick && (
-                      <button type="button" className="sk-btn" disabled={busy} onClick={() => openLineup(side)}>
-                        Veldspelers kiezen
-                      </button>
-                    )}
+                    <div className="sk-lineup-actions">
+                      {canPick && !lineupConfirmed[side] && (
+                        <button type="button" className="sk-btn" disabled={busy} onClick={() => openLineup(side)}>
+                          Veldspelers kiezen
+                        </button>
+                      )}
+                      {lineupConfirmed[side] ? (
+                        <button type="button" className="sk-btn sk-lineup-ok" disabled={busy} onClick={() => setConfirm(side, false)}>
+                          ✓ Bevestigd — wijzig
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          className="sk-btn primary"
+                          disabled={busy || field.length !== LINEUP_MIN}
+                          onClick={() => setConfirm(side, true)}
+                        >
+                          Bevestig opstelling
+                        </button>
+                      )}
+                    </div>
                   </div>
                 )
               })}
             </div>
           </div>
 
-          <div className="sk-kickoff-card">
-            <div className="sk-kickoff-title">{bypass ? 'Test-modus 🔧' : isDemo ? 'Demo — klaar 🎓' : 'Klaar om te starten ✓'}</div>
-            <div className="sk-kickoff-sub">
-              Tik op de timer bovenaan om te kiezen wie opzet. Daarna is de timer vrij en kan je
-              starten wanneer je wil.
+          {lineupConfirmed.home && lineupConfirmed.away ? (
+            <div className="sk-kickoff-card">
+              <div className="sk-kickoff-title">{bypass ? 'Test-modus 🔧' : isDemo ? 'Demo — klaar 🎓' : 'Klaar om te starten ✓'}</div>
+              <div className="sk-kickoff-sub">
+                Tik op de timer bovenaan om te kiezen wie opzet. Daarna is de timer vrij en kan je
+                starten wanneer je wil.
+              </div>
+              <button type="button" className="sk-kickoff-start" disabled={busy} onClick={() => setKickoffOpen(true)}>
+                Kies wie opzet
+              </button>
             </div>
-            <button type="button" className="sk-kickoff-start" disabled={busy} onClick={() => setKickoffOpen(true)}>
-              Kies wie opzet
-            </button>
-          </div>
+          ) : (
+            <div className="sk-kickoff-card sk-confirm-hint">
+              <div className="sk-kickoff-title">Bevestig de opstellingen</div>
+              <div className="sk-kickoff-sub">
+                Elke ploeg bevestigt met welke veldspelers ze starten. Zodra beide ploegen bevestigd
+                hebben, kan je de wedstrijd starten.
+              </div>
+              <div className="sk-confirm-status">
+                <span className={lineupConfirmed.home ? 'ok' : ''}>
+                  {lineupConfirmed.home ? '✓' : '○'} {state.teams.home.name}
+                </span>
+                <span className={lineupConfirmed.away ? 'ok' : ''}>
+                  {lineupConfirmed.away ? '✓' : '○'} {state.teams.away.name}
+                </span>
+              </div>
+            </div>
+          )}
         </div>
       ) : isFinished ? (
         <div className="sk-kickoff">

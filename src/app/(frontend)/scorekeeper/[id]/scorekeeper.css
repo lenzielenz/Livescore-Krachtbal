@@ -328,6 +328,18 @@ a.sk-btn { display: inline-block; box-sizing: border-box; text-align: center; te
 .sk-lineup-chip .num { font-weight: 800; font-variant-numeric: tabular-nums; }
 .sk-lineup-chip.on { border-color: var(--accent); background: #11301f; }
 .sk-lineup-card .sk-btn { width: 100%; padding: 10px; font-size: 0.92rem; }
+/* Acties onderaan elke ploeg-kolom: kiezen + bevestigen. */
+.sk-lineup-actions { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+.sk-lineup-ok { border-color: var(--home); color: var(--home); }
+
+/* Hint-kaart zolang nog niet beide opstellingen bevestigd zijn (vervangt de startkaart). */
+.sk-confirm-hint { opacity: 0.96; }
+.sk-confirm-status { display: flex; flex-direction: column; gap: 8px; }
+.sk-confirm-status span {
+  padding: 10px 14px; border-radius: 12px; border: 1px solid var(--line); background: #0a1f14;
+  color: var(--dim); font-weight: 700; font-size: 0.95rem;
+}
+.sk-confirm-status span.ok { border-color: var(--home); color: var(--home); background: #0c241a; }
 
 /* Keuzescherm: tik precies 4 veldspelers aan (hergebruikt .sk-pick-player) */
 .sk-lineup-modal { max-width: 460px; }
