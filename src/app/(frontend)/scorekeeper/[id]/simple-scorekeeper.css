@@ -14,7 +14,18 @@
 }
 .ssk-home { font-weight: 700; text-decoration: none; }
 .ssk-home .brand { color: var(--accent, #0fe0a6); }
-.ssk-toplink { text-decoration: none; opacity: 0.8; }
+.ssk-toplinks { display: inline-flex; align-items: center; gap: 14px; }
+.ssk-toplink {
+  text-decoration: none;
+  opacity: 0.8;
+  background: none;
+  border: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  padding: 0;
+}
+.ssk-toplink:hover { opacity: 1; }
 
 .ssk-meta {
   display: flex;
