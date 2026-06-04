@@ -77,9 +77,9 @@ export function SiteHeader({ active = null }: { active?: NavSection }) {
                     <Link href="/registreren" className="sh-more-item" onClick={() => setOpen(false)}>
                       📝 Registreren
                     </Link>
-                    {/* Admin-login: bewust een harde navigatie naar het Payload-beheer (aparte app). */}
-                    {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
-                    <a href="/admin" className="sh-more-item">🔐 Inloggen</a>
+                    <Link href="/inloggen" className="sh-more-item" onClick={() => setOpen(false)}>
+                      🔐 Inloggen
+                    </Link>
                   </div>
                 </div>
               </>

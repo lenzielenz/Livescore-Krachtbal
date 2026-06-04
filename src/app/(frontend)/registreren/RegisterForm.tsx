@@ -91,9 +91,7 @@ export function RegisterForm({ clubs }: { clubs: { id: number; name: string }[] 
         {error && <p className="wb-msg" style={{ color: '#e0533d' }}>{error}</p>}
       </form>
       <p className="wb-sub" style={{ marginTop: 14 }}>
-        Al een account?{' '}
-        {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
-        <a href="/admin" style={{ color: 'var(--accent)' }}>Inloggen →</a>
+        Al een account? <Link href="/inloggen" style={{ color: 'var(--accent)' }}>Inloggen →</Link>
       </p>
     </section>
   )
