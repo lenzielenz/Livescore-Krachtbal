@@ -35,10 +35,11 @@ async function writeSimpleScore(payload: Payload, matchId: number, score: Simple
 
 /** Start de wedstrijd in simpele modus: status live, helft 1, klok op 0. */
 export async function startSimpleMatch(payload: Payload, matchId: number) {
+  // Eén tik = starten én de klok laten lopen (intuïtiever dan eerst live, dan nog starten).
   await payload.update({
     collection: 'matches',
     id: matchId,
-    data: { status: 'live', currentHalf: 1, clockSeconds: 0, clockRunning: false },
+    data: { status: 'live', currentHalf: 1, clockSeconds: 0, clockRunning: true, clockUpdatedAt: new Date().toISOString() },
     overrideAccess: true,
   })
   await payload.create({
