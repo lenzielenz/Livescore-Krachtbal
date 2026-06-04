@@ -1104,7 +1104,7 @@ export async function buildTimeline(payload: Payload, matchId: number): Promise<
   return items.map(({ _t, ...rest }) => rest)
 }
 
-function clubLogoUrl(team: unknown): string | null {
+export function clubLogoUrl(team: unknown): string | null {
   const club = (team as { club?: unknown })?.club
   if (club && typeof club === 'object') {
     // Geüpload logo heeft voorrang; anders een logo-URL (extern).
@@ -1117,7 +1117,7 @@ function clubLogoUrl(team: unknown): string | null {
 }
 
 // Weergave-instelling (zoom + positie) van het clublogo binnen de ronde badge.
-function clubLogoFit(team: unknown): LogoFit | null {
+export function clubLogoFit(team: unknown): LogoFit | null {
   const club = (team as { club?: unknown })?.club
   if (!club || typeof club !== 'object') return null
   const c = club as { logoZoom?: number | null; logoOffsetX?: number | null; logoOffsetY?: number | null }
@@ -1130,7 +1130,7 @@ function clubLogoFit(team: unknown): LogoFit | null {
 }
 
 // Clubkleuren (primair + secundair) van de ploeg, waarop de live-weergaven hun stijl bouwen.
-function clubColors(team: unknown): ClubColors | null {
+export function clubColors(team: unknown): ClubColors | null {
   const club = (team as { club?: unknown })?.club
   if (!club || typeof club !== 'object') return null
   const c = club as { colorPrimary?: unknown; colorSecondary?: unknown }
