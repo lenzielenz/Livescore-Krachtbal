@@ -77,6 +77,12 @@
 }
 .ssk-team.side-home { border-top: 4px solid #0fe0a6; }
 .ssk-team.side-away { border-top: 4px solid #4cc9f0; }
+.ssk-team-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
 .ssk-team-name {
   font-weight: 700;
   font-size: 16px;
@@ -138,7 +144,26 @@
   font-weight: 700;
   cursor: pointer;
 }
+.ssk-stat-btn:disabled { opacity: 0.3; cursor: default; }
+.ssk-stat-lbl small { opacity: 0.7; font-weight: 400; }
 .ssk-stat-n { min-width: 18px; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+/* Scheidsrechter-minuut (gedeeld, niet per ploeg). */
+.ssk-refmin {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin: 14px auto 0;
+  padding: 10px 16px;
+  width: fit-content;
+  max-width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+  font-size: 14px;
+}
+.ssk-refmin-lbl { opacity: 0.85; font-weight: 600; }
 
 .ssk-controls {
   display: flex;

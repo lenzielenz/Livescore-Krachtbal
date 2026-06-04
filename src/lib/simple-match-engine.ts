@@ -1,6 +1,6 @@
 import type { Payload } from 'payload'
 
-import { buildMatchState, recordTimeout } from './match-engine'
+import { buildMatchState, recordRefereeStop, recordTimeout } from './match-engine'
 import { readSimpleScore, type SimpleScoreState, type SimpleSide } from './simple-score'
 
 // Engine voor de SIMPELE aantekenmodus (snelscoremodus). Werkt op een gewone
@@ -133,6 +133,27 @@ export async function adjustSimpleTimeout(payload: Payload, matchId: number, sid
   }
   // +1 — hergebruik de bestaande regel (max. 2 per ploeg per helft).
   return recordTimeout(payload, matchId, teamId)
+}
+
+/** Scheidsrechter-minuut (onderbreking) aanpassen: +1 toevoegen of −1 (laatste verwijderen). */
+export async function adjustRefereeStop(payload: Payload, matchId: number, delta: number) {
+  const { half } = await loadSimpleMatch(payload, matchId)
+  if (delta < 0) {
+    const last = await payload.find({
+      collection: 'match-events',
+      where: {
+        and: [{ match: { equals: matchId } }, { type: { equals: 'referee_stop' } }, { half: { equals: half } }],
+      },
+      sort: '-createdAt',
+      depth: 0,
+      limit: 1,
+    })
+    if (last.docs[0]) {
+      await payload.delete({ collection: 'match-events', id: last.docs[0].id, overrideAccess: true })
+    }
+    return buildMatchState(payload, matchId)
+  }
+  return recordRefereeStop(payload, matchId)
 }
 
 /** Beëindig de huidige helft en start meteen de volgende (zonder balbezit). */
