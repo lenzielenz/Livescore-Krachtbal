@@ -79,6 +79,7 @@ export function Scorekeeper({
   const [lineupConfirmed, setLineupConfirmed] = useState<{ home: boolean; away: boolean }>({ home: false, away: false })
   const setConfirm = (side: 'home' | 'away', value: boolean) =>
     setLineupConfirmed((c) => ({ ...c, [side]: value }))
+  const bothConfirmed = lineupConfirmed.home && lineupConfirmed.away
 
   // Basistijdstip voor de lopende klok: als de klok loopt, reken vanaf clockUpdatedAt (server),
   // zodat de verstreken tijd na een refresh behouden blijft — niet terug naar nul.
@@ -808,7 +809,9 @@ export function Scorekeeper({
       ) : isScheduled ? (
         <div className="sk-kickoff">
           {/* Veldspelers: kies per ploeg de 4 die op het veld staan; de rest zijn wissels.
-              Enkel veldspelers kunnen werpen, dus enkel zij verschijnen in het keuzescherm. */}
+              Enkel veldspelers kunnen werpen, dus enkel zij verschijnen in het keuzescherm.
+              Zodra BEIDE ploegen bevestigd hebben, verdwijnt dit en blijft enkel de startkaart. */}
+          {!bothConfirmed && (
           <div className="sk-kickoff-card sk-lineup-card">
             <div className="sk-kickoff-title">Veldspelers ({LINEUP_MIN} per ploeg)</div>
             <div className="sk-kickoff-sub">
@@ -873,16 +876,20 @@ export function Scorekeeper({
               })}
             </div>
           </div>
+          )}
 
-          {lineupConfirmed.home && lineupConfirmed.away ? (
+          {bothConfirmed ? (
             <div className="sk-kickoff-card">
               <div className="sk-kickoff-title">{bypass ? 'Test-modus 🔧' : isDemo ? 'Demo — klaar 🎓' : 'Klaar om te starten ✓'}</div>
               <div className="sk-kickoff-sub">
-                Tik op de timer bovenaan om te kiezen wie opzet. Daarna is de timer vrij en kan je
-                starten wanneer je wil.
+                Beide opstellingen zijn bevestigd. Tik op de timer bovenaan om te kiezen wie opzet,
+                daarna is de timer vrij en kan je starten wanneer je wil.
               </div>
               <button type="button" className="sk-kickoff-start" disabled={busy} onClick={() => setKickoffOpen(true)}>
                 Kies wie opzet
+              </button>
+              <button type="button" className="sk-btn sk-kickoff-edit" disabled={busy} onClick={() => setLineupConfirmed({ home: false, away: false })}>
+                ✏️ Opstelling aanpassen
               </button>
             </div>
           ) : (

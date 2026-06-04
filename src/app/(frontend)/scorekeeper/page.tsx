@@ -66,13 +66,6 @@ export default async function ScorekeeperHub() {
       </h1>
       <p className="empty">Kies een wedstrijd om te starten of bij te werken. Open dit scherm op een tablet bij het veld.</p>
 
-      <section>
-        <h2 className="section-title">Nieuw? Probeer de demo</h2>
-        <p className="empty">
-          <Link href="/demo" className="sk-demo-cta">🎓 Start de demo — 8 spelers per kant, uitleg in stappen</Link>
-        </p>
-      </section>
-
       <Section title="Live — nu aan het aantekenen" rows={live} empty="Geen lopende wedstrijden." />
       <Section title="Gepland — eerst klaarzetten, dan starten" rows={scheduled} empty="Geen geplande wedstrijden. Maak er een aan via Beheer." />
       </div>
