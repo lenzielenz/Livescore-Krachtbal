@@ -374,3 +374,38 @@
   align-items: center;
   gap: 6px;
 }
+
+/* QR-scanner (vrijgave wedstrijd) */
+.qr-scan-video {
+  width: 100%;
+  max-width: 320px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: #000;
+}
+
+/* Scheidsrechtersportaal — QR-weergave */
+.qr-box {
+  display: inline-flex;
+  padding: 12px;
+  background: #fff;
+  border-radius: 14px;
+  margin: 8px auto 0;
+}
+.qr-code-text {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 1.4rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  color: var(--accent);
+  margin: 4px 0 0;
+}
+.wb-link-btn {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0;
+}

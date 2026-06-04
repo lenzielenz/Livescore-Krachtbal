@@ -6,3 +6,18 @@ declare module '@payloadcms/next/css'
 declare module 'qrcode' {
   export function toDataURL(text: string, options?: Record<string, unknown>): Promise<string>
 }
+
+// De native BarcodeDetector-API (Chrome/Android) — gebruikt om de QR van de scheidsrechter te
+// scannen met de camera. Niet overal beschikbaar; we feature-detecten op `'BarcodeDetector' in window`.
+interface DetectedBarcode {
+  rawValue: string
+  format: string
+}
+declare class BarcodeDetector {
+  constructor(options?: { formats?: string[] })
+  detect(source: CanvasImageSource): Promise<DetectedBarcode[]>
+  static getSupportedFormats(): Promise<string[]>
+}
+interface Window {
+  BarcodeDetector?: typeof BarcodeDetector
+}
