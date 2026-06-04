@@ -40,6 +40,10 @@ export const Users: CollectionConfig = {
       hasMany: true,
       options: [...ROLE_OPTIONS],
       defaultValue: ['scorekeeper'],
+      admin: {
+        description:
+          'Elke rol geeft eigen rechten. Hiërarchie: Admin (volledige toegang, beheert gebruikers) staat boven Federatie (beheert competitie/vergunningen). Supporters registreren zichzelf; enkel een admin kent hier hogere rollen toe.',
+      },
       // Enkel admins mogen rollen wijzigen.
       access: {
         update: ({ req }) => hasRole(req.user, 'admin'),

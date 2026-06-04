@@ -10,7 +10,7 @@ export type UserRole =
   | 'club-beheerder' // beheert eigen club: leden + opstelling
   | 'kapitein' // tekent het blad af
   | 'scorekeeper' // bedient het live-aantekenscherm
-  | 'viewer' // alleen lezen
+  | 'viewer' // supporter — volgt live mee (alleen lezen). Standaardrol bij zelfregistratie.
 
 export const ROLE_OPTIONS: { label: string; value: UserRole }[] = [
   { label: 'Admin (volledige toegang)', value: 'admin' },
@@ -19,7 +19,7 @@ export const ROLE_OPTIONS: { label: string; value: UserRole }[] = [
   { label: 'Club-beheerder', value: 'club-beheerder' },
   { label: 'Kapitein', value: 'kapitein' },
   { label: 'Aantekenaar (scorekeeper)', value: 'scorekeeper' },
-  { label: 'Kijker (alleen lezen)', value: 'viewer' },
+  { label: 'Supporter (volgt live mee)', value: 'viewer' },
 ]
 
 type WithRoles = {
