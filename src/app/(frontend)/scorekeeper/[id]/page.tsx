@@ -52,7 +52,10 @@ export default async function ScorekeeperPage({ params }: { params: Promise<{ id
   // De demo toont altijd het volledige veldscherm (met tutorial) om te oefenen.
   const reeks = reeksNaam(matchDoc?.reeks)
 
-  if (!isAdmin && !matchDoc?.isDemo) {
+  // De basis snelscoremodus (+1/+2) is de standaard — ook voor de demo, want dat is
+  // de basisversie van het spel. Enkel een admin krijgt de volledige scoreopnemer
+  // (3-staps veldschema), ook bij de demo.
+  if (!isAdmin) {
     return <SimpleScorekeeper matchId={matchId} initialState={state} roster={roster} reeks={reeks} />
   }
 
