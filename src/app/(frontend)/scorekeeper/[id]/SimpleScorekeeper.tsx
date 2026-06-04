@@ -125,8 +125,9 @@ export function SimpleScorekeeper({
       <div className="ssk-board">
         {(['home', 'away'] as SimpleSide[]).map((side) => {
           const team = state.teams[side]
+          const teamColor = team.colors?.primary ?? (side === 'home' ? '#0fe0a6' : '#4cc9f0')
           return (
-            <div key={side} className={`ssk-team side-${side}`}>
+            <div key={side} className={`ssk-team side-${side}`} style={{ ['--team-color' as string]: teamColor }}>
               <div className="ssk-team-head">
                 <TeamLogo name={team.name} logoUrl={team.logoUrl} logoFit={team.logoFit} side={side} size="md" ringColor={team.colors?.primary ?? null} />
                 <div className="ssk-team-name">{team.name}</div>
@@ -152,7 +153,7 @@ export function SimpleScorekeeper({
                   </span>
                 </div>
                 <div className="ssk-stat">
-                  <span className="ssk-stat-lbl">⏱ Time-outs <small>(max 2)</small></span>
+                  <span className="ssk-stat-lbl">⏱ Time-outs</span>
                   <span className="ssk-stat-ctrl">
                     {!finished && <button type="button" className="ssk-stat-btn" disabled={state.timeouts[side] <= 0} onClick={() => act({ action: 'simpletimeout', side, delta: -1 })} aria-label="Time-out min">−</button>}
                     <span className="ssk-stat-n">{state.timeouts[side]}</span>

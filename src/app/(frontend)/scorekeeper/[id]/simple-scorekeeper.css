@@ -67,17 +67,21 @@
   gap: 12px;
 }
 .ssk-team {
-  background: var(--panel);
-  border: 1px solid var(--line);
+  --team-color: var(--accent, #0fe0a6);
+  background:
+    radial-gradient(120% 70% at 50% -10%, color-mix(in srgb, var(--team-color) 22%, transparent), transparent 65%),
+    var(--panel);
+  border: 1px solid color-mix(in srgb, var(--team-color) 45%, var(--line));
+  border-top: 4px solid var(--team-color);
   border-radius: 16px;
   padding: 16px 12px;
   text-align: center;
   display: flex;
   flex-direction: column;
   gap: 12px;
+  /* Glow in de clubkleur van de ploeg. */
+  box-shadow: 0 0 26px -6px color-mix(in srgb, var(--team-color) 55%, transparent), var(--card-shadow, 0 12px 34px rgba(0, 0, 0, 0.38));
 }
-.ssk-team.side-home { border-top: 4px solid #0fe0a6; }
-.ssk-team.side-away { border-top: 4px solid #4cc9f0; }
 .ssk-team-head {
   display: flex;
   flex-direction: column;
