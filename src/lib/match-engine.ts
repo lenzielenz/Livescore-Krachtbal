@@ -871,7 +871,7 @@ export async function buildMatchSheet(payload: Payload, matchId: number): Promis
     }
   }
 
-  // Starter-pakket: simpele doelpunten (+1/+2, zonder speler) en kruisjes meenemen
+  // snelscoremodus: simpele doelpunten (+1/+2, zonder speler) en kruisjes meenemen
   // zodat het blad dezelfde stand toont als het scorebord.
   const simpleSheet = readSimpleScore(match)
   for (const g of simpleSheet.goals) {
@@ -1070,7 +1070,7 @@ export async function buildTimeline(payload: Payload, matchId: number): Promise<
     }
   }
 
-  // Starter-pakket: simpele doelpunten (+1/+2) als tijdlijn-items toevoegen.
+  // snelscoremodus: simpele doelpunten (+1/+2) als tijdlijn-items toevoegen.
   const tlSimple = readSimpleScore(match)
   for (const g of tlSimple.goals) {
     items.push({
@@ -1175,7 +1175,7 @@ export async function buildMatchState(payload: Payload, matchId: number): Promis
   })
   const totals = reduceTotals(reducible)
 
-  // Starter-pakket: snelle doelpunten (+1/+2) en kruisjes staan los van de
+  // snelscoremodus: snelle doelpunten (+1/+2) en kruisjes staan los van de
   // worp-events op de match. Tel ze hier mee zodat het scorebord ze toont.
   const simple = readSimpleScore(match)
   for (const g of simple.goals) totals.score[g.side] += g.points

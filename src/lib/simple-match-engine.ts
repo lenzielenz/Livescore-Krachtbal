@@ -3,7 +3,7 @@ import type { Payload } from 'payload'
 import { buildMatchState, recordTimeout } from './match-engine'
 import { readSimpleScore, type SimpleScoreState, type SimpleSide } from './simple-score'
 
-// Engine voor de SIMPELE aantekenmodus (Starter-pakket). Werkt op een gewone
+// Engine voor de SIMPELE aantekenmodus (snelscoremodus). Werkt op een gewone
 // `matches`-record maar zonder het worp-/balbezit-model: doelpunten worden als
 // +1/+2 weggeschreven in matches.simpleScore. Klok, time-outs, helften en einde
 // hergebruiken (waar zinvol) de bestaande match-engine-infrastructuur.

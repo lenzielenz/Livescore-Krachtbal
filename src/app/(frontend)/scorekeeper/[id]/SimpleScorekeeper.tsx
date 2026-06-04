@@ -27,7 +27,7 @@ interface RosterPlayer {
   teamId: number
 }
 
-// Simpele aantekenmodus (Starter-pakket): snel scoren met +1 (nekworp) / +2
+// Simpele aantekenmodus (snelscoremodus): snel scoren met +1 (nekworp) / +2
 // (rugworp), zoals aan de tornooitafel. Geen veldschema, geen worp-per-worp data.
 // Anders dan bij tornooien moet hier wél de scorende speler gekozen worden.
 export function SimpleScorekeeper({

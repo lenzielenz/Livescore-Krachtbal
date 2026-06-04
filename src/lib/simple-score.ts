@@ -1,4 +1,4 @@
-// Simpele scoringsmodus (Starter-pakket): snelle doelpunten +1 (nekworp) / +2
+// Simpele scoringsmodus (snelscoremodus): snelle doelpunten +1 (nekworp) / +2
 // (rugworp), zoals in de tornooi-modus. Géén veldschema, géén worp-events.
 //
 // Deze data wordt los van de Throws-pipeline bewaard, op de match zelf
