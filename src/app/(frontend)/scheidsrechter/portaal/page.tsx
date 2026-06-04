@@ -47,7 +47,7 @@ export default async function RefereePortaalPage() {
 
   return (
     <>
-      <SiteHeader active="meer" />
+      <SiteHeader active="scheidsrechters" />
       <div className="site">
         <h1 className="page-title">
           Scheidsrechter <span className="brand">·</span> Mijn QR

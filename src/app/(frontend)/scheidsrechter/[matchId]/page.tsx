@@ -30,7 +30,7 @@ export default async function ScheidsrechterPage({ params }: { params: Promise<{
   if (!match) {
     return (
       <>
-        <SiteHeader active="aantekenen" />
+        <SiteHeader active="scheidsrechters" />
         <div className="site">
           <p className="empty">Wedstrijd niet gevonden.</p>
           <Link href="/">← Terug</Link>
@@ -62,7 +62,7 @@ export default async function ScheidsrechterPage({ params }: { params: Promise<{
 
   return (
     <>
-      <SiteHeader active="aantekenen" />
+      <SiteHeader active="scheidsrechters" />
       <div className="site">
       <h1 className="page-title">
         Scheidsrechter <span className="brand">·</span> {String(match.title ?? '')}

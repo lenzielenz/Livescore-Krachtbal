@@ -51,7 +51,7 @@ export default async function KnipjesDashboard() {
 
   return (
     <>
-      <SiteHeader active="meer" />
+      <SiteHeader active="federatie" />
       <div className="site">
       <h1 className="page-title">
         Knipjes <span className="brand">·</span> overzicht

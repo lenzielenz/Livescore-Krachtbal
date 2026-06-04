@@ -17,7 +17,7 @@ export default async function AftekenenPage({ params }: { params: Promise<{ matc
   if (!match) {
     return (
       <>
-        <SiteHeader active="aantekenen" />
+        <SiteHeader active="clubs" />
         <div className="site">
           <p className="empty">Wedstrijd niet gevonden.</p>
           <Link href="/">← Terug</Link>
@@ -31,7 +31,7 @@ export default async function AftekenenPage({ params }: { params: Promise<{ matc
 
   return (
     <>
-      <SiteHeader active="aantekenen" />
+      <SiteHeader active="clubs" />
       <div className="site">
       <h1 className="page-title">
         Aftekenen <span className="brand">·</span> {String(match.title ?? '')}

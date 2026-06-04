@@ -21,7 +21,7 @@ export default async function ReglementPage() {
   if (!reglement) {
     return (
       <>
-        <SiteHeader active="meer" />
+        <SiteHeader active="federatie" />
         <div className="site">
           <p className="empty">Reglement niet beschikbaar.</p>
           <Link href="/">← Terug</Link>
@@ -41,7 +41,7 @@ export default async function ReglementPage() {
 
   return (
     <>
-      <SiteHeader active="meer" />
+      <SiteHeader active="federatie" />
       <div className="site">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <h1 className="page-title">

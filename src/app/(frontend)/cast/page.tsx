@@ -58,7 +58,7 @@ export default async function CastPage() {
 
   return (
     <>
-      <SiteHeader active="kantine" />
+      <SiteHeader active="clubs" />
       <div className="cast-page">
         <h1 className="page-title"><span className="brand">Naar tv</span> · schermen</h1>
         <CastHub matches={matches} initialVeldId={veldId} />

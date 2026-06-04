@@ -6,40 +6,63 @@ import { useState } from 'react'
 import { PACKAGES_ENABLED } from '@/lib/packages'
 import './site-header.css'
 
-// Eén gedeelde navigatie voor alle inhoud-pagina's. Hoofdsecties altijd zichtbaar,
-// de rest onder "Meer". De `active`-prop markeert de huidige sectie.
-export type NavSection = 'live' | 'tornooi' | 'kantine' | 'aantekenen' | 'meer' | null
+// Eén gedeelde navigatie voor alle pagina's, uitgelijnd op de vier profielen:
+// supporters volgen wedstrijden (primair), de rest staat per profiel onder een
+// eigen menu. De `active`-prop markeert de huidige sectie.
+export type NavSection = 'wedstrijden' | 'tornooi' | 'clubs' | 'scheidsrechters' | 'federatie' | null
 
 const PRIMARY: { href: string; label: string; key: NavSection }[] = [
-  { href: '/live', label: 'Live', key: 'live' },
+  { href: '/', label: 'Wedstrijden', key: 'wedstrijden' },
   { href: '/tornooi', label: 'Tornooi', key: 'tornooi' },
-  { href: '/kantine', label: 'Kantine', key: 'kantine' },
-  { href: '/scorekeeper', label: 'Aantekenen', key: 'aantekenen' },
 ]
 
-const MORE: { href: string; label: string; external?: boolean }[] = [
-  { href: '/cast', label: '📺 Schermen naar tv' },
-  { href: '/demo', label: '🎓 Demo spelen' },
-  // Prijspakketten alleen tonen wanneer de pakket-feature actief is.
-  ...(PACKAGES_ENABLED ? [{ href: '/pakketten', label: '💎 Pakketten' }] : []),
-  { href: '/club', label: '👥 Mijn club' },
-  { href: '/scheidsrechter/portaal', label: '🟨 Scheidsrechter — mijn QR' },
-  { href: '/beheer/planning', label: '📅 Seizoensplanning' },
-  { href: '/reglement', label: 'Reglement' },
-  { href: '/knipjes', label: 'Knipjes' },
-  { href: '/vergoedingen', label: 'Vergoedingen' },
-  { href: '/bekerfinale', label: 'Bekerfinale' },
-  { href: '/beheer/spelers', label: 'Spelers toevoegen' },
-  { href: '/admin', label: 'Beheer (admin)' },
+type MenuItem = { href: string; label: string; external?: boolean }
+type Menu = { key: Exclude<NavSection, null>; label: string; items: MenuItem[] }
+
+const MENUS: Menu[] = [
+  {
+    key: 'clubs',
+    label: 'Voor clubs',
+    items: [
+      { href: '/scorekeeper', label: '📝 Aantekenen' },
+      { href: '/club', label: '👥 Mijn club' },
+      { href: '/kantine', label: '🍻 Kantinescherm' },
+      { href: '/cast', label: '📺 Schermen naar tv' },
+      { href: '/beheer/spelers', label: 'Spelers toevoegen' },
+      { href: '/demo', label: '🎓 Demo spelen' },
+    ],
+  },
+  {
+    key: 'scheidsrechters',
+    label: 'Scheidsrechters',
+    items: [
+      { href: '/scheidsrechter/portaal', label: '🟨 Mijn QR-portaal' },
+      { href: '/vergoedingen', label: '💶 Vergoedingen' },
+    ],
+  },
+  {
+    key: 'federatie',
+    label: 'Federatie',
+    items: [
+      { href: '/admin', label: 'Beheer (admin)' },
+      { href: '/beheer/planning', label: '📅 Seizoensplanning' },
+      { href: '/reglement', label: 'Reglement' },
+      { href: '/knipjes', label: 'Knipjes' },
+      { href: '/bekerfinale', label: 'Bekerfinale' },
+      // Prijspakketten alleen tonen wanneer de pakket-feature actief is.
+      ...(PACKAGES_ENABLED ? [{ href: '/pakketten', label: '💎 Pakketten' }] : []),
+    ],
+  },
 ]
 
 export function SiteHeader({ active = null }: { active?: NavSection }) {
-  const [open, setOpen] = useState(false)
+  // Welk rolmenu staat open (één tegelijk).
+  const [open, setOpen] = useState<NavSection>(null)
 
   return (
     <header className="sh">
       <div className="sh-inner">
-        <Link href="/" className="sh-brand" title="Naar het overzicht">
+        <Link href="/" className="sh-brand" title="Naar de wedstrijden">
           Krachtbal <span className="brand">Live</span>
         </Link>
 
@@ -50,34 +73,36 @@ export function SiteHeader({ active = null }: { active?: NavSection }) {
             </Link>
           ))}
 
-          <div className="sh-more">
-            <button
-              type="button"
-              className={`sh-link sh-more-btn ${active === 'meer' ? 'on' : ''}`}
-              aria-expanded={open ? 'true' : 'false'}
-              onClick={() => setOpen((v) => !v)}
-            >
-              Meer ▾
-            </button>
-            {open && (
-              <>
-                <div className="sh-more-backdrop" onClick={() => setOpen(false)} />
-                <div className="sh-more-menu">
-                  {MORE.map((l) =>
-                    l.external ? (
-                      <a key={l.href} href={l.href} className="sh-more-item" target="_blank" rel="noreferrer">
-                        {l.label}
-                      </a>
-                    ) : (
-                      <Link key={l.href} href={l.href} className="sh-more-item" onClick={() => setOpen(false)}>
-                        {l.label}
-                      </Link>
-                    ),
-                  )}
-                </div>
-              </>
-            )}
-          </div>
+          {MENUS.map((menu) => (
+            <div key={menu.key} className="sh-more">
+              <button
+                type="button"
+                className={`sh-link sh-more-btn ${active === menu.key ? 'on' : ''}`}
+                aria-expanded={open === menu.key ? 'true' : 'false'}
+                onClick={() => setOpen((v) => (v === menu.key ? null : menu.key))}
+              >
+                {menu.label} ▾
+              </button>
+              {open === menu.key && (
+                <>
+                  <div className="sh-more-backdrop" onClick={() => setOpen(null)} />
+                  <div className="sh-more-menu">
+                    {menu.items.map((l) =>
+                      l.external ? (
+                        <a key={l.href} href={l.href} className="sh-more-item" target="_blank" rel="noreferrer">
+                          {l.label}
+                        </a>
+                      ) : (
+                        <Link key={l.href} href={l.href} className="sh-more-item" onClick={() => setOpen(null)}>
+                          {l.label}
+                        </Link>
+                      ),
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          ))}
         </nav>
       </div>
     </header>

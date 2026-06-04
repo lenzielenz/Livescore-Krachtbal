@@ -17,7 +17,7 @@ type Row = { id: number; reeks: string; date: string; status: string; home: stri
 function Shell({ children }: { children: React.ReactNode }) {
   return (
     <>
-      <SiteHeader active="meer" />
+      <SiteHeader active="clubs" />
       <div className="site">
         <h1 className="page-title"><span className="brand">Mijn club</span></h1>
         {children}

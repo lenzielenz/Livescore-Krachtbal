@@ -1,147 +1,108 @@
 import Link from 'next/link'
 
 import { SiteHeader } from '@/components/SiteHeader'
-import { TeamLogo } from '@/components/TeamLogo'
-import { buildMatchState } from '@/lib/match-engine'
-import { getPayloadClient } from '@/lib/payload-client'
-import { reeksNaam } from '@/lib/reeksen'
+import { LiveBoard } from './live/LiveBoard'
+import { loadLiveDay } from './live/loadLiveDay'
+import './live/live.css'
 
 export const dynamic = 'force-dynamic'
 
-type LiveCard = {
-  id: number
-  reeks: string
-  home: { name: string; logoUrl: string | null; colors?: { primary?: string } | null }
-  away: { name: string; logoUrl: string | null; colors?: { primary?: string } | null }
-  score: { home: number; away: number }
+// Profiel 1 — supporters — komt op de startpagina en volgt meteen de wedstrijden.
+// De tools voor de andere profielen (clubs, scheidsrechters, federatie) staan
+// discreet onderaan, netjes per profiel gegroepeerd.
+type Role = {
+  key: string
+  badge: string
+  title: string
+  intro: string
+  links: { href: string; label: string }[]
 }
 
-// De startpagina is een overzicht ("hub"): alles wat we gebouwd hebben, logisch gegroepeerd,
-// met bovenaan een "Nu live"-strook voor directe waarde. Het pure live-bord leeft op /live.
-export default async function HomePage() {
-  const payload = await getPayloadClient()
-  const liveRes = await payload
-    .find({ collection: 'matches', where: { status: { equals: 'live' } }, depth: 0, limit: 8 })
-    .catch(() => ({ docs: [] as { id: number }[] }))
-  const live: LiveCard[] = []
-  for (const m of liveRes.docs) {
-    try {
-      const s = await buildMatchState(payload, m.id)
-      live.push({
-        id: m.id,
-        reeks: reeksNaam((m as { reeks?: unknown }).reeks),
-        home: { name: s.teams.home.name, logoUrl: s.teams.home.logoUrl, colors: s.teams.home.colors },
-        away: { name: s.teams.away.name, logoUrl: s.teams.away.logoUrl, colors: s.teams.away.colors },
-        score: s.score,
-      })
-    } catch {
-      // Wedstrijd met ontbrekende ploeg overslaan.
-    }
-  }
+const ROLES: Role[] = [
+  {
+    key: 'clubs',
+    badge: '👥',
+    title: 'Voor clubs',
+    intro: 'Wedstrijd voorbereiden, aantekenen aan het veld en de schermen bedienen.',
+    links: [
+      { href: '/scorekeeper', label: '📝 Aantekenen' },
+      { href: '/club', label: 'Mijn club — opstelling & wedstrijden' },
+      { href: '/kantine', label: '🍻 Kantinescherm' },
+      { href: '/cast', label: '📺 Schermen naar tv' },
+      { href: '/beheer/spelers', label: 'Spelers toevoegen' },
+      { href: '/demo', label: '🎓 Demo spelen' },
+    ],
+  },
+  {
+    key: 'scheidsrechters',
+    badge: '🟨',
+    title: 'Voor scheidsrechters',
+    intro: 'Je wedstrijdblad vrijgeven en je onkostennota opmaken.',
+    links: [
+      { href: '/scheidsrechter/portaal', label: 'Mijn QR-portaal' },
+      { href: '/vergoedingen', label: 'Vergoedingen' },
+    ],
+  },
+  {
+    key: 'federatie',
+    badge: '🏛️',
+    title: 'Voor de federatie',
+    intro: 'Reglement, seizoensplanning en het volledige beheer.',
+    links: [
+      { href: '/admin', label: 'Beheer (admin)' },
+      { href: '/beheer/planning', label: '📅 Seizoensplanning' },
+      { href: '/reglement', label: 'Reglement' },
+      { href: '/knipjes', label: 'Knipjes' },
+      { href: '/bekerfinale', label: 'Bekerfinale' },
+    ],
+  },
+]
+
+export default async function HomePage({ searchParams }: { searchParams: Promise<{ date?: string }> }) {
+  const { date } = await searchParams
+  const today = new Date().toISOString().slice(0, 10)
+  const selected = date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : today
+
+  const days = await loadLiveDay(selected, today)
 
   return (
     <>
-      <SiteHeader active={null} />
-      <div className="site hub">
-        <section className="hub-hero">
+      <SiteHeader active="wedstrijden" />
+      <div className="lb-page">
+        {/* Profiel 1: meteen de wedstrijden. */}
+        <div className="home-intro">
           <h1>
             <span className="brand">Krachtbal</span> Live
           </h1>
-          <p>Volg wedstrijden, bedien de schermen aan het veld en regel het wedstrijdblad — alles op één plek.</p>
+          <p>Volg alle wedstrijden live — score, tijd, kruisjes en time-outs.</p>
+          <Link href="/tornooi" className="home-intro-link">Tornooien →</Link>
+        </div>
+
+        <LiveBoard date={selected} today={today} matches={days} />
+
+        {/* De andere profielen, discreet onderaan. */}
+        <section className="home-roles">
+          <h2 className="home-roles-head">Aan de slag</h2>
+          <p className="home-roles-sub">Vul je wedstrijden in, teken het blad af of beheer de competitie.</p>
+          <div className="role-grid">
+            {ROLES.map((r) => (
+              <div key={r.key} className="role-card">
+                <div className="role-card-top">
+                  <span className="role-badge" aria-hidden="true">{r.badge}</span>
+                  <h3>{r.title}</h3>
+                </div>
+                <p className="role-intro">{r.intro}</p>
+                <div className="role-links">
+                  {r.links.map((l) => (
+                    <Link key={l.href} href={l.href} className="role-link">
+                      {l.label}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
         </section>
-
-        {/* Nu live — directe waarde bovenaan. */}
-        {live.length > 0 && (
-          <section className="hub-livewrap">
-            <h2 className="hub-h"><span className="hub-livedot" />Nu live</h2>
-            <div className="hub-live">
-              {live.map((m) => (
-                <Link key={m.id} href={`/match/${m.id}`} className="hub-livecard">
-                  <span className="hub-live-reeks">{m.reeks}</span>
-                  <span className="hub-live-row">
-                    <span className="hub-live-team">
-                      <TeamLogo name={m.home.name} logoUrl={m.home.logoUrl} side="home" size="md" ringColor={m.home.colors?.primary} />
-                      <span className="hub-live-nm">{m.home.name}</span>
-                    </span>
-                    <span className="hub-live-score">{m.score.home}<span className="hub-live-dash">–</span>{m.score.away}</span>
-                    <span className="hub-live-team away">
-                      <span className="hub-live-nm">{m.away.name}</span>
-                      <TeamLogo name={m.away.name} logoUrl={m.away.logoUrl} side="away" size="md" ringColor={m.away.colors?.primary} />
-                    </span>
-                  </span>
-                </Link>
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* De vier schermen van één wedstrijd, in logische volgorde: invoer → weergaven. */}
-        <h2 className="hub-h">Eén wedstrijd, vier schermen</h2>
-        <p className="hub-sub">
-          Het <strong>aantekenbord</strong> voert in. De drie andere schermen tonen datzelfde verloop live,
-          elk aan een eigen publiek.
-        </p>
-        <div className="hub-flow">
-          <Link href="/scorekeeper" className="hub-screen input">
-            <span className="hub-step">1 · invoer</span>
-            <span className="hub-ico">📝</span>
-            <h3>Aantekenbord</h3>
-            <p>De aantekenaar voert de wedstrijd live in op een tablet, naast de scheidsrechter.</p>
-          </Link>
-          <span className="hub-arrow" aria-hidden="true">→</span>
-          <Link href="/live" className="hub-screen">
-            <span className="hub-step">2 · aan het veld</span>
-            <span className="hub-ico">📺</span>
-            <h3>Veldscherm</h3>
-            <p>Groot scherm bij het terrein. Open een wedstrijd en kies “📺 Veldscherm”.</p>
-          </Link>
-          <Link href="/kantine" className="hub-screen">
-            <span className="hub-step">3 · in de kantine</span>
-            <span className="hub-ico">🍻</span>
-            <h3>Kantinescherm</h3>
-            <p>Scherm in de kantine: kies welke wedstrijden je daar wil tonen.</p>
-          </Link>
-          <Link href="/live" className="hub-screen">
-            <span className="hub-step">4 · overal</span>
-            <span className="hub-ico">📱</span>
-            <h3>Live-score</h3>
-            <p>Iedereen volgt mee op gsm of laptop, waar dan ook.</p>
-          </Link>
-        </div>
-
-        <div className="hub-cols">
-          <section className="hub-group">
-            <h2 className="hub-h">Wedstrijddag — voorbereiding & blad</h2>
-            <p className="hub-sub">In volgorde: opstelling → akkoord scheidsrechter → aantekenen → aftekenen.</p>
-            <Link href="/scorekeeper" className="hub-card">
-              <strong>Aantekenen-overzicht</strong>
-              <span>Kies een wedstrijd. Per wedstrijd: opstelling, scheidsrechter en aftekenen.</span>
-            </Link>
-            <Link href="/tornooi" className="hub-card">
-              <strong>Tornooien</strong>
-              <span>Knock-out-schema’s met eigen aantekenbord, veld- en kantinescherm.</span>
-            </Link>
-            <Link href="/demo" className="hub-card">
-              <strong>🎓 Demo spelen</strong>
-              <span>Oefen het aantekenbord met 8 fictieve spelers per kant — altijd speelbaar.</span>
-            </Link>
-          </section>
-
-          <section className="hub-group">
-            <h2 className="hub-h">Info & beheer</h2>
-            <p className="hub-sub">Naslag en administratie.</p>
-            <div className="hub-links">
-              <Link href="/club" className="hub-pill">👥 Mijn club</Link>
-              <Link href="/beheer/planning" className="hub-pill">📅 Seizoensplanning</Link>
-              <Link href="/reglement" className="hub-pill">Reglement</Link>
-              <Link href="/knipjes" className="hub-pill">Knipjes</Link>
-              <Link href="/vergoedingen" className="hub-pill">Vergoedingen</Link>
-              <Link href="/bekerfinale" className="hub-pill">Bekerfinale</Link>
-              <Link href="/beheer/spelers" className="hub-pill">Spelers toevoegen</Link>
-              <Link href="/admin" className="hub-pill">Beheer (admin)</Link>
-            </div>
-          </section>
-        </div>
       </div>
     </>
   )

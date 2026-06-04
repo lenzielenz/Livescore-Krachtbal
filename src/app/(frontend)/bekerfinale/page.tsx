@@ -20,7 +20,7 @@ export default async function BekerfinalePage() {
 
   return (
     <>
-      <SiteHeader active="meer" />
+      <SiteHeader active="federatie" />
       <div className="site">
       <h1 className="page-title">Bekerfinales — organisatie</h1>
 
