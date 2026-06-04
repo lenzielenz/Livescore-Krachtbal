@@ -40,13 +40,37 @@
 .ssk-status.finished { opacity: 0.7; }
 
 .ssk-clock {
+  display: block;
+  width: 100%;
   text-align: center;
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 14px;
   padding: 14px;
+  color: inherit;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
+.ssk-clock:disabled { cursor: default; }
 .ssk-clock.over { border-color: #ef476f; }
+.ssk-clock.running { border-color: var(--accent, #0fe0a6); }
+/* Nog niet gestart: nodig uit om op de klok te tikken. */
+.ssk-clock.tostart {
+  border-color: var(--accent, #0fe0a6);
+  box-shadow: 0 0 24px -6px color-mix(in srgb, var(--accent, #0fe0a6) 70%, transparent);
+  animation: ssk-clock-pulse 1.8s ease-in-out infinite;
+}
+@keyframes ssk-clock-pulse {
+  50% { box-shadow: 0 0 30px -2px color-mix(in srgb, var(--accent, #0fe0a6) 80%, transparent); }
+}
+.ssk-clock-action {
+  display: block;
+  margin-top: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent, #0fe0a6);
+}
 .ssk-clock-time {
   display: block;
   font-size: 44px;
