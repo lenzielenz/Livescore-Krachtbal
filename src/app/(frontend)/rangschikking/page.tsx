@@ -1,9 +1,11 @@
+import Link from 'next/link'
+
 import { SiteHeader } from '@/components/SiteHeader'
 import { TeamLogo } from '@/components/TeamLogo'
 import { buildScoreboards, clubColors, clubLogoFit, clubLogoUrl } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
 import { REEKS_OPTIONS } from '@/lib/reeksen'
-import { computeStandings, forfaitFromUitslag, STANDINGS_POINTS, type StandingsMatch } from '@/lib/standings'
+import { computeStandings, forfaitFromUitslag, type StandingsMatch } from '@/lib/standings'
 import { ReeksPicker } from './ReeksPicker'
 import './rangschikking.css'
 
@@ -73,19 +75,30 @@ export default async function RangschikkingPage({ searchParams }: { searchParams
   }
 
   const table = computeStandings(standingsMatches, [...teamInfo.keys()])
-  const reeksLabel = COMPETITIE_REEKSEN.find((o) => o.value === reeks)?.label ?? reeks
+
+  // Snel bladeren door de reeksen-rangschikkingen (prev/next).
+  const idx = COMPETITIE_REEKSEN.findIndex((o) => o.value === reeks)
+  const prevReeks = idx > 0 ? COMPETITIE_REEKSEN[idx - 1].value : null
+  const nextReeks = idx >= 0 && idx < COMPETITIE_REEKSEN.length - 1 ? COMPETITIE_REEKSEN[idx + 1].value : null
 
   return (
     <>
       <SiteHeader active="stand" />
       <div className="site">
-        <div className="rang-head">
-          <h1 className="page-title"><span className="brand">Rangschikking</span></h1>
+        <h1 className="page-title"><span className="brand">Rangschikking</span></h1>
+        <div className="rang-nav">
+          {prevReeks ? (
+            <Link href={`/rangschikking?reeks=${prevReeks}`} className="rang-arrow" aria-label="Vorige reeks">‹</Link>
+          ) : (
+            <span className="rang-arrow disabled" aria-hidden>‹</span>
+          )}
           <ReeksPicker reeks={reeks} options={[...COMPETITIE_REEKSEN]} />
+          {nextReeks ? (
+            <Link href={`/rangschikking?reeks=${nextReeks}`} className="rang-arrow" aria-label="Volgende reeks">›</Link>
+          ) : (
+            <span className="rang-arrow disabled" aria-hidden>›</span>
+          )}
         </div>
-        <p className="rang-legend">
-          {reeksLabel} · winst {STANDINGS_POINTS.win} · gelijk {STANDINGS_POINTS.draw} · verlies {STANDINGS_POINTS.loss} · forfait {STANDINGS_POINTS.forfait}
-        </p>
 
         {table.length === 0 ? (
           <p className="empty">Nog geen ploegen of wedstrijden in deze reeks.</p>
@@ -102,7 +115,6 @@ export default async function RangschikkingPage({ searchParams }: { searchParams
                   <th title="Verlies">V</th>
                   <th title="Forfait">FF</th>
                   <th className="rang-dv" title="Doelpunten voor–tegen">DV–DT</th>
-                  <th title="Doelsaldo">+/−</th>
                   <th title="Punten">Ptn</th>
                 </tr>
               </thead>
@@ -124,7 +136,6 @@ export default async function RangschikkingPage({ searchParams }: { searchParams
                       <td>{r.lost}</td>
                       <td>{r.forfaits}</td>
                       <td className="rang-dv rang-goals">{r.goalsFor}–{r.goalsAgainst}</td>
-                      <td>{r.diff > 0 ? `+${r.diff}` : r.diff}</td>
                       <td className="rang-pts">{r.points}</td>
                     </tr>
                   )
