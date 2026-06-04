@@ -1,28 +1,44 @@
-.rang-head {
+/* Reeks-navigatie: snel bladeren met ‹ ›, met de keuzelijst ertussen. */
+.rang-nav {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  align-items: stretch;
+  gap: 8px;
+  margin: 6px 0 18px;
 }
 .rang-picker {
-  padding: 9px 12px;
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 11px 12px;
   border-radius: 10px;
   border: 1px solid var(--line);
   background: var(--panel);
   color: var(--txt);
-  font-size: 0.92rem;
+  font-size: 0.95rem;
   font-weight: 600;
-  max-width: 100%;
 }
 .rang-picker:focus {
   outline: none;
   border-color: var(--accent);
 }
-.rang-legend {
-  color: var(--dim);
-  font-size: 0.85rem;
-  margin: 4px 0 18px;
+.rang-arrow {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+  color: var(--txt);
+  font-size: 1.4rem;
+  line-height: 1;
+}
+.rang-arrow:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.rang-arrow.disabled {
+  opacity: 0.35;
 }
 
 .rang-scroll {
