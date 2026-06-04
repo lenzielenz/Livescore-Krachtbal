@@ -59,7 +59,7 @@ export default async function ScorekeeperHub() {
 
   return (
     <>
-      <SiteHeader active="aantekenen" />
+      <SiteHeader active="clubs" />
       <div className="site">
       <h1 className="page-title">
         Aantekenen <span className="brand">·</span> Scorekeeper

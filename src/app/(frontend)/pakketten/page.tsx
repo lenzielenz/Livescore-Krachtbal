@@ -28,7 +28,7 @@ export default function PakkettenPage() {
 
   return (
     <>
-      <SiteHeader active="meer" />
+      <SiteHeader active="federatie" />
       <div className="site">
         <header className="pk-hero">
           <h1>Pakketten</h1>

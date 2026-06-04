@@ -51,7 +51,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
 
   return (
     <>
-      <SiteHeader active="live" />
+      <SiteHeader active="wedstrijden" />
       <div className="site">
       <Link href="/" className="back-link">
         ← Alle wedstrijden

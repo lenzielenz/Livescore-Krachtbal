@@ -18,7 +18,7 @@ export default async function OpstellingPage({ params }: { params: Promise<{ mat
   if (!match) {
     return (
       <>
-        <SiteHeader active="aantekenen" />
+        <SiteHeader active="clubs" />
         <div className="site">
           <p className="empty">Wedstrijd niet gevonden.</p>
           <Link href="/">← Terug</Link>
@@ -34,7 +34,7 @@ export default async function OpstellingPage({ params }: { params: Promise<{ mat
 
   return (
     <>
-      <SiteHeader active="aantekenen" />
+      <SiteHeader active="clubs" />
       <div className="site">
       <h1 className="page-title">
         Opstelling <span className="brand">·</span> {String(match.title ?? '')}

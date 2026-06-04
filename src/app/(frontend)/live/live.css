@@ -276,3 +276,116 @@
     font-size: 1.3rem;
   }
 }
+
+/* ── Startpagina: supporter-eerst ── */
+/* Slanke merk-intro boven het wedstrijdoverzicht. */
+.home-intro {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 14px;
+  margin: 6px 0 18px;
+}
+.home-intro h1 {
+  font-size: 2rem;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+.home-intro .brand {
+  filter: drop-shadow(0 2px 18px color-mix(in srgb, var(--accent) 42%, transparent));
+}
+.home-intro p {
+  color: var(--dim);
+  margin: 0;
+  font-size: 0.92rem;
+}
+.home-intro-link {
+  margin-left: auto;
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+.home-intro-link:hover {
+  text-decoration: underline;
+}
+
+/* Profielen 2-4: discreet onder het wedstrijdoverzicht. */
+.home-roles {
+  margin-top: 40px;
+  padding-top: 28px;
+  border-top: 1px solid var(--line);
+}
+.home-roles-head {
+  font-size: 1.1rem;
+  font-weight: 800;
+  margin: 0 0 2px;
+}
+.home-roles-sub {
+  color: var(--dim);
+  font-size: 0.88rem;
+  margin: 0 0 16px;
+}
+.role-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+.role-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px 18px;
+  background: var(--panel-grad);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: var(--card-shadow);
+}
+.role-card-top {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.role-badge {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+.role-card h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+.role-intro {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--dim);
+  line-height: 1.4;
+}
+.role-links {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 2px;
+}
+.role-link {
+  padding: 7px 10px;
+  margin: 0 -10px;
+  border-radius: 8px;
+  color: var(--txt);
+  font-size: 0.9rem;
+  transition: background 0.14s ease, color 0.14s ease;
+}
+.role-link:hover {
+  background: var(--panel);
+  color: var(--accent);
+}
+
+@media (max-width: 720px) {
+  .role-grid {
+    grid-template-columns: 1fr;
+  }
+  .home-intro-link {
+    margin-left: 0;
+  }
+}

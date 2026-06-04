@@ -68,7 +68,7 @@ export default async function KantinePage() {
 
   return (
     <>
-      <SiteHeader active="kantine" />
+      <SiteHeader active="clubs" />
       <div className="kt-page">
         <h1 className="page-title"><span className="brand">Kantine</span> · kiezen</h1>
         <KantineControl matches={list} initialSelected={selectedIds} />

@@ -15,7 +15,7 @@ export default async function VergoedingenPage() {
 
   return (
     <>
-      <SiteHeader active="meer" />
+      <SiteHeader active="scheidsrechters" />
       <div className="site">
       <h1 className="page-title">Scheidsrechtersvergoedingen</h1>
       <p className="wb-intro">

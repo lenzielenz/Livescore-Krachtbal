@@ -32,7 +32,7 @@ export default async function BulkPlayersPage() {
 
   return (
     <>
-      <SiteHeader active="meer" />
+      <SiteHeader active="clubs" />
       <div className="site">
       <h1 className="page-title">Spelers snel toevoegen</h1>
       {teams.length === 0 ? (
