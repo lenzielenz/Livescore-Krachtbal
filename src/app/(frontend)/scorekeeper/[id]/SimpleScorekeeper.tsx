@@ -144,7 +144,9 @@ export function SimpleScorekeeper({
       </div>
 
       <div className="ssk-clockrow">
-        <TeamLogo name={state.teams.home.name} logoUrl={state.teams.home.logoUrl} logoFit={state.teams.home.logoFit} side="home" size="md" ringColor={state.teams.home.colors?.primary ?? null} />
+        <span className="ssk-cl-logo home">
+          <TeamLogo name={state.teams.home.name} logoUrl={state.teams.home.logoUrl} logoFit={state.teams.home.logoFit} side="home" size="clamp(60px, 15vw, 104px)" ringColor={state.teams.home.colors?.primary ?? null} />
+        </span>
         <button
           type="button"
           className={`ssk-clock ${overtime ? 'over' : ''} ${state.match.clockRunning ? 'running' : ''} ${!finished && (!live || (!state.match.clockRunning && clock < 1)) ? 'tostart' : ''}`}
@@ -173,7 +175,9 @@ export function SimpleScorekeeper({
             </span>
           )}
         </button>
-        <TeamLogo name={state.teams.away.name} logoUrl={state.teams.away.logoUrl} logoFit={state.teams.away.logoFit} side="away" size="md" ringColor={state.teams.away.colors?.primary ?? null} />
+        <span className="ssk-cl-logo away">
+          <TeamLogo name={state.teams.away.name} logoUrl={state.teams.away.logoUrl} logoFit={state.teams.away.logoFit} side="away" size="clamp(60px, 15vw, 104px)" ringColor={state.teams.away.colors?.primary ?? null} />
+        </span>
       </div>
 
       <div className="ssk-board">
