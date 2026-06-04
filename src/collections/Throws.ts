@@ -154,6 +154,14 @@ export const Throws: CollectionConfig = {
       defaultValue: false,
     },
     {
+      // Audit-trail: welke gebruiker registreerde deze worp (accountability bij betwiste scores).
+      name: 'createdBy',
+      label: 'Geregistreerd door',
+      type: 'relationship',
+      relationTo: 'users',
+      admin: { readOnly: true, position: 'sidebar' },
+    },
+    {
       type: 'row',
       fields: [
         {

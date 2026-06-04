@@ -1,6 +1,7 @@
 import { isFederationLevel } from '@/lib/access'
 import { authUser, mayScoreMatch } from '@/lib/api-auth'
 import { withLock } from '@/lib/async-mutex'
+import { withDbLock } from '@/lib/db-lock'
 import {
   advanceHalf,
   endHalf,
@@ -58,8 +59,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       )
     }
 
-    // Serialiseer alle mutaties op dezelfde wedstrijd (voorkomt throw/undo-races, AUDIT §2).
-    return await withLock(`match:${matchId}`, async () => {
+    // Serialiseer alle mutaties op dezelfde wedstrijd: in-process mutex (zelfde instance) +
+    // Postgres advisory lock (cross-instance). Voorkomt throw/undo-races (AUDIT §2).
+    const actorId = typeof user?.id === 'number' ? user.id : undefined
+    return await withLock(`match:${matchId}`, () => withDbLock(payload, 'match', matchId, async () => {
     switch (action) {
       case 'start': {
         // Startcontrole: opstellingen + scheidsrechtersakkoord (of demo). Een admin/federatie
@@ -85,6 +88,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
           tapCount: body.tapCount === 2 ? 2 : 1,
           touchedBeforeOut: Boolean(body.touchedBeforeOut),
           gameClock: body.gameClock !== undefined ? Number(body.gameClock) : undefined,
+          actorId,
         })
         return Response.json(result)
       }
@@ -112,9 +116,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         }
         return Response.json(await reopenMatch(payload, matchId))
       case 'timeout':
-        return Response.json(await recordTimeout(payload, matchId, Number(body.teamId)))
+        return Response.json(await recordTimeout(payload, matchId, Number(body.teamId), actorId))
       case 'referee_stop':
-        return Response.json(await recordRefereeStop(payload, matchId))
+        return Response.json(await recordRefereeStop(payload, matchId, actorId))
       case 'freethrow':
         return Response.json(await startFreeThrow(payload, matchId, Number(body.teamId)))
       case 'substitute':
@@ -156,7 +160,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       default:
         return Response.json({ error: `Onbekende actie: ${action}` }, { status: 400 })
     }
-    })
+    }))
   } catch (err) {
     return Response.json({ error: (err as Error).message }, { status: 400 })
   }

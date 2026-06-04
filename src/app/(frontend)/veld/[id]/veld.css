@@ -36,6 +36,12 @@
   border-radius: 999px;
   animation: fs-blink 1.4s ease-in-out infinite;
 }
+.fs-viewers {
+  font-size: clamp(0.7rem, 1.6vw, 1rem);
+  font-weight: 700;
+  color: var(--txt);
+  opacity: 0.8;
+}
 .fs-contrast {
   position: fixed;
   top: 12px;

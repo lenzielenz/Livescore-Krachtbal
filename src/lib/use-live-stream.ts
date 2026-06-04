@@ -7,10 +7,18 @@ import { useEffect, useRef, useState } from 'react'
 // (thundering herd) en tonen ze ondertussen een bevroren stand. Deze hook beheert de reconnect
 // zelf (capped exponential backoff + jitter) en geeft een `connected`-vlag terug zodat passieve
 // borden zichtbaar "verbinding verbroken" kunnen tonen.
-export function useLiveStream<T>(url: string, onUpdate: (data: T) => void): { connected: boolean } {
+export function useLiveStream<T>(
+  url: string,
+  onUpdate: (data: T) => void,
+  // Extra named SSE-events op DEZELFDE verbinding (bv. 'viewers', 'reactions') — geen 2e socket.
+  extraEvents?: Record<string, (data: unknown) => void>,
+): { connected: boolean } {
   const [connected, setConnected] = useState(false)
   const cbRef = useRef(onUpdate)
   cbRef.current = onUpdate
+  const extraRef = useRef(extraEvents)
+  extraRef.current = extraEvents
+  const extraNames = extraEvents ? Object.keys(extraEvents).sort().join(',') : ''
 
   useEffect(() => {
     let es: EventSource | null = null
@@ -29,6 +37,15 @@ export function useLiveStream<T>(url: string, onUpdate: (data: T) => void): { co
           /* corrupte frame negeren */
         }
       })
+      for (const name of extraNames ? extraNames.split(',') : []) {
+        es.addEventListener(name, (e) => {
+          try {
+            extraRef.current?.[name]?.(JSON.parse((e as MessageEvent).data))
+          } catch {
+            /* negeer */
+          }
+        })
+      }
       es.onopen = () => {
         delay = 1000
         setConnected(true)
@@ -48,7 +65,7 @@ export function useLiveStream<T>(url: string, onUpdate: (data: T) => void): { co
       es?.close()
       if (retry) clearTimeout(retry)
     }
-  }, [url])
+  }, [url, extraNames])
 
   return { connected }
 }

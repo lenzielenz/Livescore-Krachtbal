@@ -74,5 +74,13 @@ export const MatchEvents: CollectionConfig = {
       label: 'Notitie',
       type: 'text',
     },
+    {
+      // Audit-trail: welke gebruiker deze gebeurtenis registreerde.
+      name: 'createdBy',
+      label: 'Geregistreerd door',
+      type: 'relationship',
+      relationTo: 'users',
+      admin: { readOnly: true, position: 'sidebar' },
+    },
   ],
 }

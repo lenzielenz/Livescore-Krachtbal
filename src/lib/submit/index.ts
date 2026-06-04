@@ -180,6 +180,21 @@ export async function submitMatchSheet(
   const pdf = await generateMatchSheetPdf(pdfData)
   const filename = `wedstrijdblad-${matchId}.pdf`
 
+  // Bevroren PDF-snapshot opslaan in de media-collectie (archief). Optioneel: faalt de opslag
+  // (bv. geen schrijfbare media-map), dan blijft de her-export-route regenereren uit de data.
+  let pdfMediaId: number | undefined
+  try {
+    const media = await payload.create({
+      collection: 'media',
+      file: { data: Buffer.from(pdf), mimetype: 'application/pdf', name: filename, size: pdf.length },
+      data: { alt: `Wedstrijdblad ${pdfData.titel}` },
+      overrideAccess: true,
+    })
+    pdfMediaId = media.id as number
+  } catch {
+    /* opslag optioneel — her-export regenereert sowieso */
+  }
+
   const mail = await mailMatchSheet({
     to: recipients,
     subject: `Wedstrijdblad — ${pdfData.titel}`,
@@ -194,7 +209,7 @@ export async function submitMatchSheet(
   const updated = await payload.update({
     collection: 'matchsheets',
     id: sheet.id,
-    data: { status: 'ingediend' },
+    data: { status: 'ingediend', ...(pdfMediaId ? { pdf: pdfMediaId } : {}) },
     user,
     overrideAccess: false,
   })

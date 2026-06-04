@@ -17,6 +17,9 @@ type Side = 'home' | 'away'
 
 type Goal = { key: number; side: Side; team: string; points: number; scorer: string | null }
 
+// Toegelaten supporter-emoji's (komt overeen met de server-whitelist in match-channel.ts).
+const EMOJI = { clap: '👏', fire: '🔥', heart: '❤️', goal: '⚽', wow: '😮' } as const
+
 function Dots({ filled, total, className }: { filled: number; total: number; className?: string }) {
   return (
     <span className={`sb-dots ${className ?? ''}`}>
@@ -44,6 +47,23 @@ export function Scoreboard({
   const seenGoals = useRef<Set<string>>(new Set(initial.timeline.filter((i) => i.kind === 'goal').map((i) => i.id)))
   const goalSeq = useRef(0)
   const goalTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Supporter-engagement: live kijkersaantal + zwevende emoji-reacties.
+  const [viewers, setViewers] = useState(0)
+  const [floats, setFloats] = useState<{ key: number; emoji: string }[]>([])
+  const floatSeq = useRef(0)
+
+  const spawnFloats = (counts: Record<string, number>) => {
+    const next: { key: number; emoji: string }[] = []
+    for (const [name, n] of Object.entries(counts)) {
+      const glyph = EMOJI[name as keyof typeof EMOJI]
+      if (!glyph) continue
+      for (let i = 0; i < Math.min(n, 6); i++) next.push({ key: ++floatSeq.current, emoji: glyph })
+    }
+    if (next.length === 0) return
+    setFloats((prev) => [...prev.slice(-40), ...next])
+    const keys = new Set(next.map((f) => f.key))
+    setTimeout(() => setFloats((prev) => prev.filter((f) => !keys.has(f.key))), 2600)
+  }
 
   const { connected } = useLiveStream<{ state: MatchState; timeline: TimelineItem[] }>(
     `/api/match/${matchId}/stream`,
@@ -69,11 +89,37 @@ export function Scoreboard({
         goalTimer.current = setTimeout(() => setGoal(null), 5000)
       }
     },
+    {
+      viewers: (d) => setViewers((d as { count?: number }).count ?? 0),
+      reactions: (d) => spawnFloats(d as Record<string, number>),
+    },
   )
+
+  // Eigen tikken gebatcht versturen (client-throttle ~300ms) zodat één supporter de server niet spamt.
+  const pendingReacts = useRef<Record<string, number>>({})
+  const reactTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const sendReaction = (name: keyof typeof EMOJI) => {
+    spawnFloats({ [name]: 1 }) // optimistisch: meteen voelbaar
+    pendingReacts.current[name] = (pendingReacts.current[name] ?? 0) + 1
+    if (reactTimer.current) return
+    reactTimer.current = setTimeout(() => {
+      const batch = pendingReacts.current
+      pendingReacts.current = {}
+      reactTimer.current = null
+      for (const [emoji, count] of Object.entries(batch)) {
+        fetch(`/api/match/${matchId}/react`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ emoji, count }),
+        }).catch(() => {})
+      }
+    }, 350)
+  }
 
   useEffect(() => {
     return () => {
       if (goalTimer.current) clearTimeout(goalTimer.current)
+      if (reactTimer.current) clearTimeout(reactTimer.current)
     }
   }, [])
 
@@ -119,6 +165,11 @@ export function Scoreboard({
           ) : (
             <span className="sb-conn off" title="Verbinding verbroken — opnieuw verbinden…">● verbinden…</span>
           ))}
+        {viewers > 0 && (
+          <span className="sb-viewers" title="Kijkers nu">
+            👁 {viewers}
+          </span>
+        )}
       </div>
 
       <div className="sb-main">
@@ -187,6 +238,30 @@ export function Scoreboard({
           ))}
         </ul>
       </div>
+
+      {/* Supporter-reacties: zwevende emoji's + een reactiebalk (enkel tijdens een live wedstrijd). */}
+      <div className="sb-floats" aria-hidden>
+        {floats.map((f) => (
+          <span key={f.key} className="sb-float">
+            {f.emoji}
+          </span>
+        ))}
+      </div>
+      {state.match.status === 'live' && (
+        <div className="sb-reactions">
+          {(Object.keys(EMOJI) as (keyof typeof EMOJI)[]).map((name) => (
+            <button
+              key={name}
+              type="button"
+              className="sb-react-btn"
+              onClick={() => sendReaction(name)}
+              aria-label={`Reageer met ${name}`}
+            >
+              {EMOJI[name]}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

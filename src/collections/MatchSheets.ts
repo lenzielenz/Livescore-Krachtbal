@@ -335,6 +335,15 @@ export const MatchSheets: CollectionConfig = {
       ],
     },
     {
+      // Bevroren PDF-snapshot van het ingediende blad (archief). De her-export-route regenereert
+      // óók on-demand uit de (onwijzigbare) data, dus dit is een snapshot, geen single point of failure.
+      name: 'pdf',
+      label: 'Ingediend wedstrijdblad (PDF)',
+      type: 'upload',
+      relationTo: 'media',
+      admin: { readOnly: true, position: 'sidebar' },
+    },
+    {
       name: 'overrideLog',
       label: 'Override-log',
       type: 'array',

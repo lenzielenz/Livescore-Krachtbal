@@ -100,6 +100,23 @@ export function releaseConnection(ip: string): void {
   else perIp.set(ip, n - 1)
 }
 
+// ── Eenvoudige per-sleutel fixed-window rate limit (anti-misbruik op publieke endpoints) ──
+
+const buckets = new Map<string, { count: number; reset: number }>()
+
+/** True = toegestaan, false = limiet bereikt. `key` is meestal "react:<ip>". */
+export function rateLimit(key: string, max: number, windowMs: number): boolean {
+  const now = Date.now()
+  const b = buckets.get(key)
+  if (!b || now > b.reset) {
+    buckets.set(key, { count: 1, reset: now + windowMs })
+    return true
+  }
+  if (b.count >= max) return false
+  b.count += 1
+  return true
+}
+
 /** Headers die SSE betrouwbaar door Railway/Cloudflare/nginx krijgen (geen buffering). */
 export const SSE_HEADERS = {
   'Content-Type': 'text/event-stream',

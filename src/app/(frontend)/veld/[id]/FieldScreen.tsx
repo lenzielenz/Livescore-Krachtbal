@@ -81,6 +81,7 @@ export function FieldScreen({
   const seenGoals = useRef<Set<string>>(new Set(initial.timeline.filter((i) => i.kind === 'goal').map((i) => i.id)))
   const goalSeq = useRef(0)
   const goalTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [viewers, setViewers] = useState(0)
 
   // SSE-abonnement op dezelfde stream als het publieke scorebord (met reconnect-backoff).
   const { connected } = useLiveStream<{ state: MatchState; timeline: TimelineItem[] }>(
@@ -105,6 +106,7 @@ export function FieldScreen({
         goalTimer.current = setTimeout(() => setGoal(null), 6000)
       }
     },
+    { viewers: (d) => setViewers((d as { count?: number }).count ?? 0) },
   )
 
   useEffect(() => {
@@ -157,6 +159,7 @@ export function FieldScreen({
         {status === 'live' && !connected && (
           <span className="fs-offline" title="Verbinding verbroken — opnieuw verbinden…">⚠ verbinden…</span>
         )}
+        {viewers > 0 && <span className="fs-viewers" title="Kijkers nu">👁 {viewers}</span>}
         <ContrastToggle className="fs-contrast" />
       </div>
 

@@ -194,6 +194,8 @@ export interface RecordThrowInput {
   tapCount: 1 | 2
   touchedBeforeOut?: boolean
   gameClock?: number
+  /** Audit-trail: de gebruiker die de worp registreert. */
+  actorId?: number
 }
 
 /** Registreer één worp en beheer het balbezit (afsluiten + volgend opzet). */
@@ -253,6 +255,7 @@ export async function recordThrow(payload: Payload, input: RecordThrowInput) {
       touchedBeforeOut: outcome === 'out_back' || outcome === 'out_side' ? !!input.touchedBeforeOut : false,
       period: half,
       gameClock: clock,
+      ...(input.actorId ? { createdBy: input.actorId } : {}),
     },
     overrideAccess: true,
   })
@@ -693,7 +696,7 @@ export async function setLineup(
 export const TIMEOUTS_PER_HALF = 2
 
 /** Time-out registreren — max. 2 per ploeg per helft (reglement §8.1). */
-export async function recordTimeout(payload: Payload, matchId: number, teamId: number) {
+export async function recordTimeout(payload: Payload, matchId: number, teamId: number, actorId?: number) {
   const { match } = await loadMatch(payload, matchId)
   if (match.status === 'finished') throw new Error('Wedstrijd is afgelopen.')
   const half = match.currentHalf ?? 1
@@ -715,7 +718,7 @@ export async function recordTimeout(payload: Payload, matchId: number, teamId: n
 
   await payload.create({
     collection: 'match-events',
-    data: { match: matchId, type: 'timeout', team: teamId, half, gameClock: match.clockSeconds ?? 0 },
+    data: { match: matchId, type: 'timeout', team: teamId, half, gameClock: match.clockSeconds ?? 0, ...(actorId ? { createdBy: actorId } : {}) },
     overrideAccess: true,
   })
   return buildMatchState(payload, matchId)
@@ -723,12 +726,12 @@ export async function recordTimeout(payload: Payload, matchId: number, teamId: n
 
 /** Scheidsrechter-onderbreking (minuut) registreren — door de scheidsrechter aangevraagd.
  * Onbeperkt (geen ploeg-limiet); verschijnt op de tijdlijn. */
-export async function recordRefereeStop(payload: Payload, matchId: number) {
+export async function recordRefereeStop(payload: Payload, matchId: number, actorId?: number) {
   const { match } = await loadMatch(payload, matchId)
   const half = match.currentHalf ?? 1
   await payload.create({
     collection: 'match-events',
-    data: { match: matchId, type: 'referee_stop', half, gameClock: match.clockSeconds ?? 0 },
+    data: { match: matchId, type: 'referee_stop', half, gameClock: match.clockSeconds ?? 0, ...(actorId ? { createdBy: actorId } : {}) },
     overrideAccess: true,
   })
   return buildMatchState(payload, matchId)

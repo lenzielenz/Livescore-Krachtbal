@@ -52,8 +52,10 @@ async function matchClubIds(payload: Payload, matchId: number | string): Promise
 
 /**
  * Mag deze gebruiker de score van DEZE wedstrijd bedienen?
- * - admin/federatie/scheidsrechter: altijd
- * - scorekeeper: ja (per-match-binding via vrijgaveCode is een opvolgpunt — zie AUDIT-2026-06.md)
+ * - admin/federatie: altijd
+ * - scorekeeper: ja (vertrouwde aantekenaar — strikte per-match-binding kan later via vrijgaveCode)
+ * - scheidsrechter: gebonden aan de toewijzing — is er een toegewezen (backup-)SR op het blad, dan
+ *   mag enkel die; staat er geen toewijzing, dan mag elke scheidsrechter (backwards compatible)
  * - club-beheerder: enkel als de eigen club bij de wedstrijd betrokken is
  */
 export async function mayScoreMatch(
@@ -62,7 +64,19 @@ export async function mayScoreMatch(
   matchId: number | string,
 ): Promise<boolean> {
   if (!user) return false
-  if (isFederationLevel(user) || hasRole(user, 'scheidsrechter', 'scorekeeper')) return true
+  if (isFederationLevel(user) || hasRole(user, 'scorekeeper')) return true
+  if (hasRole(user, 'scheidsrechter')) {
+    const sheets = await payload
+      .find({ collection: 'matchsheets', where: { match: { equals: matchId } }, depth: 0, limit: 1 })
+      .catch(() => null)
+    const sheet = sheets?.docs?.[0]
+    const assigned = [sheet?.assignedReferee, sheet?.backupReferee]
+      .map((r) => (typeof r === 'object' && r ? (r as { id: number }).id : r))
+      .filter((x) => x != null)
+    if (assigned.length === 0) return true // geen toewijzing → elke SR mag
+    const own = userOfficialId(user)
+    return own != null && assigned.some((id) => String(id) === String(own))
+  }
   if (hasRole(user, 'club-beheerder')) {
     const clubId = userClubId(user)
     if (clubId == null) return false

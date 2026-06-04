@@ -1,6 +1,6 @@
-import { buildMatchState, buildTimeline } from '@/lib/match-engine'
+import { joinMatch } from '@/lib/match-channel'
 import { getPayloadClient } from '@/lib/payload-client'
-import { SSE_HEADERS, acquireConnection, clientIp, releaseConnection, subscribe } from '@/lib/sse-hub'
+import { SSE_HEADERS, acquireConnection, clientIp, releaseConnection } from '@/lib/sse-hub'
 
 export const dynamic = 'force-dynamic'
 
@@ -52,18 +52,12 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
         releaseConnection(ip)
       }
 
-      // Abonneer op de gedeelde poller. Het `id`-veld laat de browser Last-Event-ID bijhouden.
-      unsubscribe = subscribe(
-        `match:${matchId}`,
-        async () => {
-          const [state, timeline] = await Promise.all([
-            buildMatchState(payload, matchId),
-            buildTimeline(payload, matchId),
-          ])
-          return { state, timeline }
-        },
-        (frame) => safeEnqueue(`id: ${frame.id}\nevent: update\ndata: ${JSON.stringify(frame.data)}\n\n`),
-      )
+      // Sluit aan op het gedeelde match-kanaal: één poller + geaggregeerde reacties + viewer-count,
+      // fan-out naar alle clients. Het `id`-veld laat de browser Last-Event-ID bijhouden.
+      unsubscribe = joinMatch(payload, matchId, (event, data, id) => {
+        const idLine = id !== undefined ? `id: ${id}\n` : ''
+        safeEnqueue(`${idLine}event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)
+      })
 
       heartbeat = setInterval(() => safeEnqueue(`: ping\n\n`), 15000)
       req.signal.addEventListener('abort', cleanup)
