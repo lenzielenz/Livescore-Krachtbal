@@ -38,7 +38,7 @@ export function RefereeLogin() {
   return (
     <section className="wb-card" style={{ maxWidth: 420 }}>
       <h2>Inloggen</h2>
-      <p className="wb-sub">Log in met je scheidsrechtersaccount om je persoonlijke QR-code te zien.</p>
+      <p className="wb-sub">Log in met je scheidsrechtersaccount.</p>
       <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         <label style={{ display: 'flex', flexDirection: 'column', gap: 2, fontSize: '0.8rem', color: 'var(--dim)' }}>
           E-mail

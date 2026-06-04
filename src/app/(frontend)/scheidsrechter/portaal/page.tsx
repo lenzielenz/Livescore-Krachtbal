@@ -19,6 +19,7 @@ export default async function RefereePortaalPage() {
   const { user } = await payload.auth({ headers: await headers() }).catch(() => ({ user: null }))
 
   const isReferee = hasRole(user, 'scheidsrechter') || isFederationLevel(user)
+  const loggedIn = Boolean(user && isReferee)
 
   let body
   if (!user || !isReferee) {
@@ -52,9 +53,14 @@ export default async function RefereePortaalPage() {
       <SiteHeader active="scheidsrechters" />
       <div className="site">
         <h1 className="page-title">
-          Scheidsrechter <span className="brand">·</span> Mijn QR
+          {loggedIn ? (
+            <>Scheidsrechter <span className="brand">·</span> Mijn QR</>
+          ) : (
+            <span className="brand">Scheidsrechter</span>
+          )}
         </h1>
-        <ProfileTools profile={getProfile('scheidsrechters')} currentHref="/scheidsrechter/portaal" />
+        {/* De extra opties (QR, vergoedingen) horen pas ná het inloggen. */}
+        {loggedIn && <ProfileTools profile={getProfile('scheidsrechters')} currentHref="/scheidsrechter/portaal" />}
         {body}
       </div>
     </>
