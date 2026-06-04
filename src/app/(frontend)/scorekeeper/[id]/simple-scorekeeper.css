@@ -72,13 +72,26 @@
 .ssk-clockrow {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: clamp(10px, 3vw, 28px);
 }
 .ssk-clockrow .ssk-clock {
   flex: 1 1 auto;
   width: auto;
   min-width: 0;
 }
+/* Logo met een club-gekleurde halo + glow, zodat het bij de klok hoort i.p.v.
+   los te zweven (premium afwerking). */
+.ssk-cl-logo {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  padding: 7px;
+  border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--logo-c) 30%, transparent), transparent 70%);
+  box-shadow: 0 0 38px -8px color-mix(in srgb, var(--logo-c) 80%, transparent);
+}
+.ssk-cl-logo.home { --logo-c: var(--home-c, #0fe0a6); }
+.ssk-cl-logo.away { --logo-c: var(--away-c, #4cc9f0); }
 .ssk-clock {
   display: block;
   width: 100%;
