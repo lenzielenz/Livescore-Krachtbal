@@ -4,15 +4,19 @@ import { SiteHeader } from '@/components/SiteHeader'
 import { TeamLogo } from '@/components/TeamLogo'
 import { buildScoreboards, clubColors, clubLogoFit, clubLogoUrl } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
-import { REEKS_OPTIONS } from '@/lib/reeksen'
+import { REEKS_OPTIONS, reeksNaam } from '@/lib/reeksen'
 import { computeStandings, forfaitFromUitslag, type StandingsMatch } from '@/lib/standings'
 import { ReeksPicker } from './ReeksPicker'
 import './rangschikking.css'
 
 export const dynamic = 'force-dynamic'
 
-// Enkel echte competitiereeksen tonen (geen beker/recreatief/andere).
-const COMPETITIE_REEKSEN = REEKS_OPTIONS.filter((o) => !['beker', 'recreatief', 'andere'].includes(o.value))
+// Enkel echte competitiereeksen tonen (geen beker/recreatief/andere). Label zonder
+// code-afkorting (bv. "1ste Nationale Heren" i.p.v. "1NAH — …").
+const COMPETITIE_REEKSEN = REEKS_OPTIONS.filter((o) => !['beker', 'recreatief', 'andere'].includes(o.value)).map((o) => ({
+  value: o.value,
+  label: reeksNaam(o.value),
+}))
 
 type TeamInfo = { name: string; logoUrl: string | null; logoFit: ReturnType<typeof clubLogoFit>; colors: ReturnType<typeof clubColors> }
 
