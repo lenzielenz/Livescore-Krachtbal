@@ -5,6 +5,7 @@ import { getAuthUser } from '@/lib/auth-user'
 import { buildMatchState } from '@/lib/match-engine'
 import { getMatchReadiness } from '@/lib/matchsheet-data'
 import { getPayloadClient } from '@/lib/payload-client'
+import { reeksNaam } from '@/lib/reeksen'
 import { Scorekeeper } from './Scorekeeper'
 import { SimpleScorekeeper } from './SimpleScorekeeper'
 import './scorekeeper.css'
@@ -49,8 +50,10 @@ export default async function ScorekeeperPage({ params }: { params: Promise<{ id
 
   // Niet-admins tekenen aan met de basis snelscoremodus (+1/+2 zonder veldschema).
   // De demo toont altijd het volledige veldscherm (met tutorial) om te oefenen.
+  const reeks = reeksNaam(matchDoc?.reeks)
+
   if (!isAdmin && !matchDoc?.isDemo) {
-    return <SimpleScorekeeper matchId={matchId} initialState={state} roster={roster} />
+    return <SimpleScorekeeper matchId={matchId} initialState={state} roster={roster} reeks={reeks} />
   }
 
   const readiness = await getMatchReadiness(payload, matchId)
