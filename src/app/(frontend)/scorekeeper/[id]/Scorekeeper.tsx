@@ -720,6 +720,7 @@ export function Scorekeeper({
               <span className={`sk-to-dot ${state.timeouts.home >= 1 ? 'used' : ''}`} />
               <span className={`sk-to-dot ${state.timeouts.home >= 2 ? 'used' : ''}`} />
             </button>
+            <span className="sk-cross" title="Kruisjes (rechtstreeks buiten)">✖ {state.crosses.home}</span>
           </div>
           <button
             type="button"
@@ -741,10 +742,8 @@ export function Scorekeeper({
               <span className={`sk-to-dot ${state.timeouts.away >= 1 ? 'used' : ''}`} />
               <span className={`sk-to-dot ${state.timeouts.away >= 2 ? 'used' : ''}`} />
             </button>
+            <span className="sk-cross" title="Kruisjes (rechtstreeks buiten)">✖ {state.crosses.away}</span>
           </div>
-        </div>
-        <div className="sk-crossrow" title="Kruisjes (rechtstreeks buiten)">
-          Kruisjes ✖ <strong>{state.crosses.home}</strong>–<strong>{state.crosses.away}</strong>
         </div>
       </header>
 
