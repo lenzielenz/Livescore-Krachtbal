@@ -32,6 +32,24 @@ export const KRACHTBAL_QUOTES: string[] = [
   'Minder scrollen, meer worpen volgen.',
   'Vier tegen vier, bal tegen zwaartekracht.',
   'De beste verdediging? De bal voorbij de middellijn rammen.',
+
+  // — Compleet absurd (citroenen, kometen, totale onzin — maar altijd krachtbal) —
+  'Werp de bal als een vliegende citroen richting het doelgebied — easy peasy lemon squeeze.',
+  'Een rugworp zo snel dat hij een komeet inhaalt. Twee punten, één staartster.',
+  'Als citroenen konden vliegen, speelden ze krachtbal. Met rugworp, uiteraard.',
+  'De bal is een citroen met ambitie; het doelgebied is z’n bestemming.',
+  'Drie kruisjes en het regent vliegende citroenen aan de overkant.',
+  'Rugworp = komeetinslag in het doelgebied. De krater telt dubbel.',
+  'Easy peasy lemon squeeze, zei niemand ooit vóór een doelworp in de slotseconde.',
+  'Sneller dan een komeet, zuurder dan een citroen, dubbel zoals een rugworp.',
+  'Wist je dat? Geen enkele komeet miste ooit een nekworp. Bron: het heelal.',
+  'Squeeze de citroen, ram de bal, scoor de rug — in ongeveer die volgorde.',
+  'Time-out: zelfs kometen pauzeren even. Eén minuut citroensap.',
+  'Het doelgebied is klein, het heelal is groot — jouw rugworp overbrugt beide.',
+  'Gooi met de kracht van duizend citroenen en de precisie van één komeet.',
+  'Een gevangen bal keert het spel, net als een citroen die plots besluit te vliegen.',
+  'Krachtbal: waar citroenen vliegen, kometen scoren en de zwaartekracht toekijkt.',
+  'De middellijn raken is easy peasy; de lemon squeeze komt bij de tweede worp.',
 ]
 
 // Een willekeurige quote. Server-side aangeroepen op een force-dynamic pagina,
