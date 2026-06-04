@@ -84,13 +84,44 @@
   font-size: 1.05rem;
 }
 
-@media (max-width: 560px) {
+/* Op gsm moet de volledige stand passen zonder horizontaal te scrollen:
+   logo en de DV–DT-detailkolom verdwijnen, de naam kapt af, cellen compacter. */
+@media (max-width: 640px) {
+  .rang-scroll {
+    overflow-x: visible;
+  }
+  .rang-table {
+    table-layout: fixed;
+    width: 100%;
+  }
   .rang-table th,
   .rang-table td {
-    padding: 9px 6px;
-    font-size: 0.9rem;
+    padding: 9px 2px;
+    font-size: 0.86rem;
+  }
+  .rang-dv {
+    display: none;
+  }
+  .rang-logo {
+    display: none;
+  }
+  .rang-rank {
+    width: 22px;
   }
   .rang-team {
-    min-width: 130px;
+    min-width: 0;
+    gap: 0;
+  }
+  .rang-name {
+    display: block;
+    max-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  /* Numerieke kolommen smal en gelijk; de ploegnaam krijgt de rest. */
+  .rang-table th:not(.rang-teamh):not(.rang-rank),
+  .rang-table td:not(.rang-team):not(.rang-rank) {
+    width: 30px;
   }
 }
