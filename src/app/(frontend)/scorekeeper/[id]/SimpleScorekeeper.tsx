@@ -188,17 +188,19 @@ export function SimpleScorekeeper({
             <button type="button" className="ssk-btn" onClick={() => act({ action: 'clock', running: true })}>▶ Klok</button>
           )}
           {live && half === 1 && (
-            <button type="button" className="ssk-btn" onClick={() => act({ action: 'simplehalf' })}>⏭ 2e helft</button>
+            <button type="button" className="ssk-btn primary" onClick={() => act({ action: 'simplehalf' })}>
+              ⏭ Einde 1e helft → 2e
+            </button>
           )}
           {live && (
             <button
               type="button"
               className="ssk-btn danger"
               onClick={() => {
-                if (window.confirm('Wedstrijd beëindigen? De eindstand wordt vastgelegd.')) act({ action: 'finish' })
+                if (window.confirm('Hele wedstrijd beëindigen? De eindstand wordt vastgelegd.')) act({ action: 'finish' })
               }}
             >
-              ⏹ Einde
+              ⏹ Einde wedstrijd
             </button>
           )}
         </div>
