@@ -215,7 +215,9 @@ a.sk-btn { display: inline-block; box-sizing: border-box; text-align: center; te
 .sk-btn.away { border-color: var(--away); color: var(--away); }
 
 /* ── Grote kickoff-melding (timer 0, 1e helft): kies opzet-ploeg, dan Start ── */
-.sk-kickoff { flex: 1 1 auto; display: flex; align-items: center; justify-content: center; padding: 12px; }
+/* Kan meerdere kaarten bevatten (bv. opstelling + "klaar om te starten"). Laten wrappen
+   zodat ze op smalle/tablet-schermen netjes onder elkaar stapelen i.p.v. te verknellen. */
+.sk-kickoff { flex: 1 1 auto; display: flex; flex-wrap: wrap; align-items: center; align-content: center; justify-content: center; gap: 14px; padding: 12px; }
 .sk-kickoff-card {
   width: min(440px, 94%); background: var(--panel); border: 1px solid var(--line);
   border-radius: 18px; padding: 28px 24px; text-align: center; box-shadow: 0 16px 50px rgba(0, 0, 0, 0.5);
@@ -476,6 +478,20 @@ a.sk-btn { display: inline-block; box-sizing: border-box; text-align: center; te
   .sk-to { min-width: 48px; }
   .sk-tn { font-size: 0.72rem; max-width: 22vw; }
   .sk-sc { font-size: 1.45rem; }
+}
+
+/* Gsm/tablet (smaller dan de desktop-breekpunt): kickoff-kaarten netjes onder
+   elkaar, volle breedte, en scrollbaar — anders valt de onderste kaart (bv.
+   "Kies wie opzet") buiten beeld door de overflow:hidden van .sk. */
+@media (max-width: 899px) {
+  .sk-kickoff {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: flex-start;
+    overflow-y: auto;
+  }
+  .sk-kickoff-card { width: 100%; max-width: 460px; }
 }
 
 /* Landschap op een laag scherm (gsm liggend): een hoog, smal veld kan niet breder worden,
