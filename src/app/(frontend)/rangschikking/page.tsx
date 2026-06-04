@@ -101,7 +101,7 @@ export default async function RangschikkingPage({ searchParams }: { searchParams
                   <th title="Gelijk">G</th>
                   <th title="Verlies">V</th>
                   <th title="Forfait">FF</th>
-                  <th title="Doelpunten voor–tegen">DV–DT</th>
+                  <th className="rang-dv" title="Doelpunten voor–tegen">DV–DT</th>
                   <th title="Doelsaldo">+/−</th>
                   <th title="Punten">Ptn</th>
                 </tr>
@@ -113,7 +113,9 @@ export default async function RangschikkingPage({ searchParams }: { searchParams
                     <tr key={r.teamId}>
                       <td className="rang-rank">{i + 1}</td>
                       <td className="rang-team">
-                        <TeamLogo name={info?.name ?? '?'} logoUrl={info?.logoUrl ?? null} logoFit={info?.logoFit} side="home" size="sm" ringColor={info?.colors?.primary} />
+                        <span className="rang-logo">
+                          <TeamLogo name={info?.name ?? '?'} logoUrl={info?.logoUrl ?? null} logoFit={info?.logoFit} side="home" size="sm" ringColor={info?.colors?.primary} />
+                        </span>
                         <span className="rang-name">{info?.name ?? '—'}</span>
                       </td>
                       <td>{r.played}</td>
@@ -121,7 +123,7 @@ export default async function RangschikkingPage({ searchParams }: { searchParams
                       <td>{r.drawn}</td>
                       <td>{r.lost}</td>
                       <td>{r.forfaits}</td>
-                      <td className="rang-goals">{r.goalsFor}–{r.goalsAgainst}</td>
+                      <td className="rang-dv rang-goals">{r.goalsFor}–{r.goalsAgainst}</td>
                       <td>{r.diff > 0 ? `+${r.diff}` : r.diff}</td>
                       <td className="rang-pts">{r.points}</td>
                     </tr>

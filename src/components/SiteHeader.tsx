@@ -14,17 +14,17 @@ export type NavSection = 'wedstrijden' | 'stand' | 'demo' | 'tornooi' | 'clubs' 
 
 const PRIMARY: { href: string; label: string; key: NavSection }[] = [
   { href: '/', label: 'Wedstrijden', key: 'wedstrijden' },
-  { href: '/rangschikking', label: '📊 Stand', key: 'stand' },
   { href: '/demo', label: '🎓 Demo', key: 'demo' },
 ]
 
-// Algemene ingangen bovenaan het Meer-menu.
+// Algemene ingangen bovenaan het Meer-menu (bekijken).
 const GENERAL = [
+  { href: '/rangschikking', label: '📊 Stand' },
   { href: '/tornooi', label: '🏆 Tornooi' },
 ]
 
 // Het Meer-menu licht op zodra je op een van deze secties zit.
-const MENU_SECTIONS: NavSection[] = ['tornooi', 'clubs', 'scheidsrechters', 'federatie']
+const MENU_SECTIONS: NavSection[] = ['stand', 'tornooi', 'clubs', 'scheidsrechters', 'federatie']
 
 export function SiteHeader({ active = null }: { active?: NavSection }) {
   const [open, setOpen] = useState(false)
@@ -72,19 +72,19 @@ export function SiteHeader({ active = null }: { active?: NavSection }) {
                       </Link>
                     ))}
                   </div>
+                  <div className="sh-more-group">
+                    <div className="sh-more-grouphead">Account</div>
+                    <Link href="/registreren" className="sh-more-item" onClick={() => setOpen(false)}>
+                      📝 Registreren
+                    </Link>
+                    {/* Admin-login: bewust een harde navigatie naar het Payload-beheer (aparte app). */}
+                    {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+                    <a href="/admin" className="sh-more-item">🔐 Inloggen</a>
+                  </div>
                 </div>
               </>
             )}
           </div>
-
-          {/* Supporter-registratie + admin-login, rechts in de balk. */}
-          <Link href="/registreren" className="sh-register">Registreren</Link>
-          {/* Admin-login: bewust een harde navigatie naar het Payload-beheer (aparte app),
-              niet via next/link client-routing. */}
-          {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
-          <a href="/admin" className="sh-login" title="Inloggen">
-            🔐 <span className="sh-login-lbl">Inloggen</span>
-          </a>
         </nav>
       </div>
     </header>
