@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from 'react'
 
-import { ContrastToggle } from '@/components/ContrastToggle'
 import { TeamLogo } from '@/components/TeamLogo'
 import { DEFAULT_AWAY_COLOR, DEFAULT_HOME_COLOR, inkOn, readableOnDark } from '@/lib/club-colors'
 import type { MatchState, TimelineItem } from '@/lib/match-engine'
@@ -160,7 +159,6 @@ export function FieldScreen({
           <span className="fs-offline" title="Verbinding verbroken — opnieuw verbinden…">⚠ verbinden…</span>
         )}
         {viewers > 0 && <span className="fs-viewers" title="Kijkers nu">👁 {viewers}</span>}
-        <ContrastToggle className="fs-contrast" />
       </div>
 
       <div className="fs-main">
