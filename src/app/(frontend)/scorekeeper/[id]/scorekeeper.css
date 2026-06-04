@@ -85,8 +85,10 @@
 .sk-clock-ico { font-size: 0.8rem; }
 .sk-half-chip { font-size: 0.62rem; background: rgba(255, 255, 255, 0.14); padding: 1px 5px; border-radius: 6px; }
 
-.sk-crossrow { text-align: center; margin-top: 5px; font-size: 0.72rem; color: var(--dim); font-variant-numeric: tabular-nums; }
-.sk-crossrow strong { color: var(--txt); }
+/* Kruisjes per ploeg, net onder de T.O.-balk (hoort visueel samen). Klein gehouden. */
+.sk-cross { font-size: 0.72rem; font-weight: 700; color: var(--dim); font-variant-numeric: tabular-nums; }
+.sk-team.home .sk-cross { color: color-mix(in srgb, var(--home) 65%, var(--dim)); }
+.sk-team.away .sk-cross { color: color-mix(in srgb, var(--away) 65%, var(--dim)); }
 
 /* Compacte beheer-balk (undo/vrijworp/wissel/helft/einde) — wrapt netjes op smal scherm */
 .sk-toolbar { flex: 0 0 auto; display: flex; flex-wrap: wrap; gap: 5px; }
@@ -550,19 +552,6 @@ a.sk-btn { display: inline-block; box-sizing: border-box; text-align: center; te
   .sk-half-chip { font-size: 0.8rem; padding: 2px 8px; }
   .sk-clock-ico { font-size: 1.1rem; }
 
-  /* Prominente kruisjes-rij (als een nette pill, gecentreerd). */
-  .sk-crossrow {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    width: fit-content;
-    margin: 10px auto 0;
-    font-size: 1.05rem;
-    padding: 6px 16px;
-    border-radius: 999px;
-    border: 1px solid var(--line);
-    background: color-mix(in srgb, var(--panel) 70%, transparent);
-  }
-  .sk-crossrow strong { color: var(--accent); }
+  /* Kruisje iets groter op een breed scherm, maar niet groter dan de T.O.-tekst. */
+  .sk-cross { font-size: 0.82rem; }
 }
