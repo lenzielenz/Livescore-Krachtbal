@@ -5,7 +5,25 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+  min-height: 100dvh;
+  position: relative;
+  isolation: isolate;
 }
+/* Premium ambient in de clubkleuren van BEIDE ploegen (thuis links, uit rechts).
+   Vast aan de viewport zodat het ook in volledig scherm de hele zaal-tv vult. */
+.ssk::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(58% 60% at 0% 42%, color-mix(in srgb, var(--home-c, #0fe0a6) 20%, transparent), transparent 62%),
+    radial-gradient(58% 60% at 100% 42%, color-mix(in srgb, var(--away-c, #4cc9f0) 20%, transparent), transparent 62%),
+    radial-gradient(120% 60% at 50% -10%, color-mix(in srgb, var(--accent, #ffd873) 7%, transparent), transparent 55%),
+    linear-gradient(180deg, #07170e, #050f0a);
+}
+.ssk:fullscreen { max-width: none; padding: clamp(16px, 3vw, 40px) clamp(16px, 6vw, 120px); }
+.ssk::backdrop { background: #050f0a; }
 .ssk-top {
   display: flex;
   justify-content: space-between;
@@ -135,18 +153,21 @@
   gap: 8px;
 }
 .ssk-team-name {
-  font-weight: 700;
+  font-weight: 800;
   font-size: 16px;
   min-height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
+  color: var(--team-ink, #fff);
 }
 .ssk-score {
   font-size: 56px;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   line-height: 1;
+  color: var(--team-ink, #fff);
+  text-shadow: 0 0 26px color-mix(in srgb, var(--team-color, transparent) 45%, transparent);
 }
 .ssk-goalbtns {
   display: grid;

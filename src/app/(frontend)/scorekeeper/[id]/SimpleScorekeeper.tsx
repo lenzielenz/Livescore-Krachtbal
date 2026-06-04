@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { TeamLogo } from '@/components/TeamLogo'
 import { categoryConfig } from '@/lib/categories'
+import { DEFAULT_AWAY_COLOR, DEFAULT_HOME_COLOR, readableOnDark } from '@/lib/club-colors'
 import type { MatchState } from '@/lib/match-engine'
 import type { SimpleSide } from '@/lib/simple-score'
 import { useLiveStream } from '@/lib/use-live-stream'
@@ -114,8 +115,15 @@ export function SimpleScorekeeper({
     else rootRef.current?.requestFullscreen().catch(() => {})
   }
 
+  const homeC = state.teams.home.colors?.primary ?? DEFAULT_HOME_COLOR
+  const awayC = state.teams.away.colors?.primary ?? DEFAULT_AWAY_COLOR
+
   return (
-    <div className="ssk" ref={rootRef}>
+    <div
+      className="ssk"
+      ref={rootRef}
+      style={{ ['--home-c' as string]: homeC, ['--away-c' as string]: awayC }}
+    >
       <header className="ssk-top">
         <Link href="/scorekeeper" className="ssk-home">
           <span className="brand">Krachtbal</span> · Aantekentafel
@@ -171,9 +179,14 @@ export function SimpleScorekeeper({
       <div className="ssk-board">
         {(['home', 'away'] as SimpleSide[]).map((side) => {
           const team = state.teams[side]
-          const teamColor = team.colors?.primary ?? (side === 'home' ? '#0fe0a6' : '#4cc9f0')
+          const teamColor = team.colors?.primary ?? (side === 'home' ? DEFAULT_HOME_COLOR : DEFAULT_AWAY_COLOR)
+          const teamInk = readableOnDark(teamColor)
           return (
-            <div key={side} className={`ssk-team side-${side}`} style={{ ['--team-color' as string]: teamColor }}>
+            <div
+              key={side}
+              className={`ssk-team side-${side}`}
+              style={{ ['--team-color' as string]: teamColor, ['--team-ink' as string]: teamInk }}
+            >
               <div className="ssk-team-name">{team.name}</div>
               <div className="ssk-score">{state.score[side]}</div>
               {!finished && (
