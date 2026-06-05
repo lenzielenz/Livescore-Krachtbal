@@ -7,6 +7,7 @@ const TABS = [
   { key: 'spelers', href: '/analyse/spelers', icon: '🎯', label: 'Spelers' },
   { key: 'verwacht', href: '/analyse/verwacht', icon: '📐', label: 'Verwacht' },
   { key: 'ploeg', href: '/analyse/ploeg', icon: '🛡️', label: 'Ploeg' },
+  { key: 'ploegen', href: '/analyse/ploegen', icon: '🆚', label: 'Vergelijk' },
   { key: 'gevaar', href: '/analyse/gevaar', icon: '🔥', label: 'Gevaar' },
 ] as const
 
