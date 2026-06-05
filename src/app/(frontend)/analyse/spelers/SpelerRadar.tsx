@@ -11,7 +11,8 @@ const METRICS: { key: string; label: string; full: string; fmt: (v: number) => s
   { key: 'succes', label: 'Succes', full: 'Succesvolle aanvallen — conversie (doelpunten per poging)', fmt: (v) => `${Math.round(v)}%`, get: (p) => p.conversion * 100 },
   { key: 'afstand', label: 'Afstand', full: 'Worpafstand — gemiddelde afstand (m)', fmt: (v) => `${v.toFixed(1)}m`, get: (p) => p.avgDistance },
   { key: 'forceren', label: 'Forceren', full: 'Forceren — worpen > 12 m die niet de laatste zijn, per wedstrijd', fmt: (v) => v.toFixed(1), get: (p) => p.forcedPerMatch },
-  { key: 'flank', label: 'Flankspel', full: 'Flankspel — aandeel worpen naar links of rechts', fmt: (v) => `${Math.round(v)}%`, get: (p) => p.flankShare * 100 },
+  { key: 'links', label: 'Links', full: 'Links werpen — aandeel worpen naar de linkerzone', fmt: (v) => `${Math.round(v)}%`, get: (p) => p.linksShare * 100 },
+  { key: 'rechts', label: 'Rechts', full: 'Rechts werpen — aandeel worpen naar de rechterzone', fmt: (v) => `${Math.round(v)}%`, get: (p) => p.rechtsShare * 100 },
   { key: 'verded', label: 'Verdediging', full: 'Verdediging — vangsten per wedstrijd', fmt: (v) => v.toFixed(1), get: (p) => p.catchesPerMatch },
 ]
 

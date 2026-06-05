@@ -26,8 +26,10 @@ export interface RadarPlayer {
   avgDistance: number
   /** Forceren — geforceerde worpen (> 12 m, niet de laatste) per wedstrijd. */
   forcedPerMatch: number
-  /** Flankspel — aandeel worpen naar links of rechts (i.p.v. midden), 0..1. */
-  flankShare: number
+  /** Links werpen — aandeel worpen naar de linkerzone, 0..1. */
+  linksShare: number
+  /** Rechts werpen — aandeel worpen naar de rechterzone, 0..1. */
+  rechtsShare: number
   /** Verdediging — vangsten per wedstrijd. */
   catchesPerMatch: number
 }
@@ -74,7 +76,8 @@ export async function buildRadarStats(payload: Payload, reeks: string): Promise<
     goals: number
     goalAttempts: number
     forced: number
-    flank: number
+    links: number
+    rechts: number
     zoned: number
     distSum: number
     distN: number
@@ -84,7 +87,7 @@ export async function buildRadarStats(payload: Payload, reeks: string): Promise<
   const get = (id: number, name: string, shirt: number): Acc => {
     let a = agg.get(id)
     if (!a) {
-      a = { playerId: id, name, shirt, matches: new Set(), throws: 0, goals: 0, goalAttempts: 0, forced: 0, flank: 0, zoned: 0, distSum: 0, distN: 0, catches: 0 }
+      a = { playerId: id, name, shirt, matches: new Set(), throws: 0, goals: 0, goalAttempts: 0, forced: 0, links: 0, rechts: 0, zoned: 0, distSum: 0, distN: 0, catches: 0 }
       agg.set(id, a)
     }
     return a
@@ -112,7 +115,8 @@ export async function buildRadarStats(payload: Payload, reeks: string): Promise<
       }
       if (t.zone) {
         a.zoned += 1
-        if (t.zone === 'links' || t.zone === 'rechts') a.flank += 1
+        if (t.zone === 'links') a.links += 1
+        else if (t.zone === 'rechts') a.rechts += 1
       }
     }
   }
@@ -144,7 +148,8 @@ export async function buildRadarStats(payload: Payload, reeks: string): Promise<
       conversion: a.goalAttempts ? Math.round((a.goals / a.goalAttempts) * 100) / 100 : 0,
       avgDistance: a.distN ? Math.round((a.distSum / a.distN) * 10) / 10 : 0,
       forcedPerMatch: Math.round((a.forced / mc) * 10) / 10,
-      flankShare: a.zoned ? Math.round((a.flank / a.zoned) * 100) / 100 : 0,
+      linksShare: a.zoned ? Math.round((a.links / a.zoned) * 100) / 100 : 0,
+      rechtsShare: a.zoned ? Math.round((a.rechts / a.zoned) * 100) / 100 : 0,
       catchesPerMatch: Math.round((a.catches / mc) * 10) / 10,
     }
   })
