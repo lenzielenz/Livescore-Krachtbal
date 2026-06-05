@@ -4,7 +4,7 @@ import { notFound } from 'next/navigation'
 import { MatchStats } from '@/components/MatchStats'
 import { SiteHeader } from '@/components/SiteHeader'
 import { TeamLogo } from '@/components/TeamLogo'
-import { hasRole } from '@/lib/access'
+import { canAnalyse } from '@/lib/access'
 import { getAuthUser } from '@/lib/auth-user'
 import { buildMatchStats, buildMatchState } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
@@ -16,14 +16,14 @@ export const dynamic = 'force-dynamic'
 
 export default async function AnalyseDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const me = await getAuthUser()
-  if (!hasRole(me, 'admin')) {
+  if (!canAnalyse(me)) {
     return (
       <>
         <SiteHeader active="analyse" />
         <div className="site">
           <h1 className="page-title"><span className="brand">Analyse</span></h1>
           <p className="empty">
-            Enkel een admin heeft toegang.{' '}
+            Je hebt geen toegang tot de analyse.{' '}
             <Link href="/inloggen" style={{ color: 'var(--accent)' }}>Inloggen →</Link>
           </p>
         </div>

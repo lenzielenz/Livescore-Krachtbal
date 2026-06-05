@@ -71,6 +71,20 @@ export const Users: CollectionConfig = {
       },
     },
     {
+      // Analyse-toegang: een admin kan een geregistreerd account toegang geven tot de
+      // analysemodule (data per speler/ploeg), zonder admin te worden.
+      name: 'analyseAccess',
+      label: 'Analyse-toegang',
+      type: 'checkbox',
+      defaultValue: false,
+      admin: {
+        description: 'Geef dit account toegang tot de analyse (naast de admin-rol).',
+      },
+      access: {
+        update: ({ req }) => hasRole(req.user, 'admin'),
+      },
+    },
+    {
       // Koppelt een scheidsrechter-account aan zijn/haar official-dossier, zodat hij enkel z'n
       // EIGEN kwitantie/forfaitblad kan ophalen en enkel toegewezen wedstrijden kan tekenen
       // (voorkomt IDOR op financiële PII — zie AUDIT-2026-06.md §4/§5).

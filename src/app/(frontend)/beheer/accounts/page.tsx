@@ -42,6 +42,7 @@ export default async function AccountsPage() {
     email: u.email as string,
     roles: Array.isArray((u as { roles?: unknown }).roles) ? ((u as { roles: string[] }).roles) : [],
     clubId: rel((u as { club?: unknown }).club),
+    analyseAccess: Boolean((u as { analyseAccess?: unknown }).analyseAccess),
   }))
   const clubs = clubsRes.docs.map((c) => ({ id: c.id as number, name: c.name as string }))
 

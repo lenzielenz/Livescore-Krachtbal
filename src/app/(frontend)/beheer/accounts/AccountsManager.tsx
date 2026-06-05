@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 
-type Account = { id: number; name: string | null; email: string; roles: string[]; clubId: number | null }
+type Account = { id: number; name: string | null; email: string; roles: string[]; clubId: number | null; analyseAccess: boolean }
 type RoleOption = { label: string; value: string }
 
 // Volgorde voor de groepering (hoogste rol bepaalt de groep van een account).
@@ -26,12 +26,14 @@ const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u
 function AccountRow({ acc, clubs, roleOptions }: { acc: Account; clubs: { id: number; name: string }[]; roleOptions: RoleOption[] }) {
   const [roles, setRoles] = useState<string[]>(acc.roles)
   const [clubId, setClubId] = useState<string>(acc.clubId != null ? String(acc.clubId) : '')
+  const [analyse, setAnalyse] = useState<boolean>(acc.analyseAccess)
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
 
   const dirty =
     roles.slice().sort().join(',') !== acc.roles.slice().sort().join(',') ||
-    clubId !== (acc.clubId != null ? String(acc.clubId) : '')
+    clubId !== (acc.clubId != null ? String(acc.clubId) : '') ||
+    analyse !== acc.analyseAccess
 
   const toggle = (r: string) => {
     setMsg(null)
@@ -47,13 +49,14 @@ function AccountRow({ acc, clubs, roleOptions }: { acc: Account; clubs: { id: nu
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ userId: acc.id, roles, clubId: clubId || null }),
+        body: JSON.stringify({ userId: acc.id, roles, clubId: clubId || null, analyseAccess: analyse }),
       })
       const data = (await res.json().catch(() => ({}))) as { error?: string }
       if (!res.ok) setMsg(data.error ?? 'Bewaren mislukt.')
       else {
         acc.roles = roles
         acc.clubId = clubId ? Number(clubId) : null
+        acc.analyseAccess = analyse
         setMsg('✓ Bewaard')
       }
     } catch {
@@ -83,6 +86,14 @@ function AccountRow({ acc, clubs, roleOptions }: { acc: Account; clubs: { id: nu
         ))}
       </div>
       <div className="acc-controls">
+        <button
+          type="button"
+          className={`acc-chip ${analyse ? 'on' : ''}`}
+          onClick={() => { setMsg(null); setAnalyse((v) => !v) }}
+          title="Toegang tot de analysemodule"
+        >
+          📈 Analyse
+        </button>
         <select className="acc-club" value={clubId} onChange={(e) => { setMsg(null); setClubId(e.target.value) }} aria-label="Club">
           <option value="">— Geen club —</option>
           {clubs.map((c) => (

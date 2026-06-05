@@ -48,11 +48,13 @@ export async function POST(req: Request) {
     return Response.json({ error: 'Je kan je eigen admin-rol niet verwijderen.' }, { status: 400 })
   }
 
+  const analyseAccess = Boolean(body.analyseAccess)
+
   try {
     await payload.update({
       collection: 'users',
       id: userId,
-      data: { roles: roles as UserRole[], club },
+      data: { roles: roles as UserRole[], club, analyseAccess },
       overrideAccess: true,
     })
   } catch {
