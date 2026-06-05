@@ -132,11 +132,11 @@ const CGY = 9
 const CONV_MIN_ATTEMPTS = 2
 
 function convColor(t: number): string {
-  // t = conversie 0..1: 0 = rood, 0.5 = amber, 1 = groen.
+  // t = conversie 0..1: 0 = groen (weinig scoringskans), 0.5 = amber, 1 = rood (gevaarlijk).
   const stops: [number, [number, number, number]][] = [
-    [0, [239, 71, 111]],
+    [0, [6, 214, 160]],
     [0.5, [255, 209, 102]],
-    [1, [6, 214, 160]],
+    [1, [239, 71, 111]],
   ]
   let lo = stops[0]
   let hi = stops[stops.length - 1]
