@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { MatchState, TimelineItem } from '@/lib/match-engine'
 import { KrachtbalIcon } from '@/components/KrachtbalIcon'
 import { TeamLogo } from '@/components/TeamLogo'
+import { WinProbability } from '@/components/WinProbability'
 import { DEFAULT_AWAY_COLOR, DEFAULT_HOME_COLOR, inkOn, readableOnDark } from '@/lib/club-colors'
 import { goalPointsFromLabel, goalScorerFromLabel, useLiveStream } from '@/lib/use-live-stream'
 import './scoreboard.css'
@@ -38,9 +39,15 @@ function Dots({ filled, total, className }: { filled: number; total: number; cla
 export function Scoreboard({
   matchId,
   initial,
+  halfSeconds,
+  ratePerMin,
 }: {
   matchId: number
   initial: { state: MatchState; timeline: TimelineItem[] }
+  /** Helftduur (sec), afgeleid uit de reeks — voor de live winstkans. */
+  halfSeconds: number
+  /** Verwachte punten/ploeg/min — voor de live winstkans. */
+  ratePerMin: number
 }) {
   const [state, setState] = useState<MatchState>(initial.state)
   const [timeline, setTimeline] = useState<TimelineItem[]>(initial.timeline)
@@ -214,6 +221,18 @@ export function Scoreboard({
           </div>
         </div>
       )}
+
+      <WinProbability
+        score={state.score}
+        currentHalf={state.match.currentHalf}
+        clockSeconds={clock}
+        halfSeconds={halfSeconds}
+        ratePerMin={ratePerMin}
+        status={state.match.status}
+        homeColor={homeInk}
+        awayColor={awayInk}
+        timeline={timeline}
+      />
 
       <div className="sb-crosses">
         <span>Kruisjes</span>
