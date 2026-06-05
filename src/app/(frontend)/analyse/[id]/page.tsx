@@ -6,10 +6,11 @@ import { SiteHeader } from '@/components/SiteHeader'
 import { TeamLogo } from '@/components/TeamLogo'
 import { canAnalyse } from '@/lib/access'
 import { getAuthUser } from '@/lib/auth-user'
-import { buildMatchStats, buildMatchState } from '@/lib/match-engine'
+import { buildMatchSheet, buildMatchStats, buildMatchState } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
 import { reeksNaam } from '@/lib/reeksen'
 import { AnalyseCharts } from './AnalyseCharts'
+import { MomentumChart } from './MomentumChart'
 import '../analyse.css'
 
 export const dynamic = 'force-dynamic'
@@ -43,6 +44,12 @@ export default async function AnalyseDetailPage({ params }: { params: Promise<{ 
     notFound()
   }
 
+  const sheet = await buildMatchSheet(payload, matchId).catch(() => null)
+  const momentumGoals = (sheet?.goals ?? [])
+    .slice()
+    .sort((a, b) => a.half - b.half || a.gameClock - b.gameClock)
+    .map((g) => ({ side: g.side, points: g.points, half: g.half }))
+
   const matchDoc = await payload.findByID({ collection: 'matches', id: matchId, depth: 0 }).catch(() => null)
   const reeks = reeksNaam(matchDoc?.reeks)
   const datum = matchDoc?.date
@@ -68,6 +75,8 @@ export default async function AnalyseDetailPage({ params }: { params: Promise<{ 
           </div>
         </div>
         <p className="an-head-meta">{reeks}{datum ? ` · ${datum}` : ''}</p>
+
+        {momentumGoals.length > 0 && <MomentumChart goals={momentumGoals} teams={teamNames} />}
 
         {stats.stats.players.length === 0 ? (
           <p className="empty">Deze wedstrijd heeft geen gedetailleerde worpdata (in snelscoremodus gespeeld).</p>

@@ -735,3 +735,25 @@ select.rang-picker {
 .an-pod-stats span { display: flex; flex-direction: column; font-size: 0.66rem; color: var(--dim); text-transform: uppercase; letter-spacing: 0.03em; }
 .an-pod-stats b { font-size: 1.2rem; color: var(--txt); font-weight: 900; font-variant-numeric: tabular-nums; }
 .an-pod.r1 .an-pod-stats b { color: var(--accent); }
+
+/* ── Match-detail: momentum / scoreverloop ── */
+.an-momentum {
+  background: var(--panel-grad);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 14px 16px;
+  box-shadow: var(--card-shadow);
+  margin: 6px 0 18px;
+}
+.an-momentum .an-sub { margin: 0 0 10px; }
+.an-mom-svg { width: 100%; height: 130px; display: block; }
+.an-mom-zero { stroke: var(--line); stroke-width: 1; stroke-dasharray: 4 4; }
+.an-mom-line { stroke: var(--txt); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; opacity: 0.85; }
+.an-mom-dot-h { fill: var(--home); }
+.an-mom-dot-a { fill: var(--away); }
+.an-mom-legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 8px; font-size: 0.78rem; color: var(--dim); }
+.an-mom-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.an-mom-legend i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.an-mom-legend i.h { background: var(--home); }
+.an-mom-legend i.a { background: var(--away); }
+.an-mom-note { color: var(--dim); font-style: italic; margin-left: auto; }
