@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { FieldSchema, type FieldMarker } from '@/components/FieldSchema'
@@ -46,9 +47,38 @@ export function Scorekeeper({
   readiness: Readiness
   isAdmin: boolean
 }) {
+  const router = useRouter()
   const [state, setState] = useState<MatchState>(initialState)
   const isDemo = readiness.isDemo
   const isAnalyseOnly = readiness.analyseOnly
+  // Manueel een speler toevoegen aan een ploeg (analyse / ontbrekende tegenstander).
+  const [addSide, setAddSide] = useState<'home' | 'away' | null>(null)
+  const [addNum, setAddNum] = useState('')
+  const [addName, setAddName] = useState('')
+  const [addBusy, setAddBusy] = useState(false)
+  const submitAddPlayer = async (side: 'home' | 'away') => {
+    setAddBusy(true)
+    setError(null)
+    try {
+      const res = await fetch(`/api/match/${matchId}/add-player`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ side, name: addName.trim(), shirtNumber: Number(addNum) }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setError(data.error || 'Speler toevoegen mislukt.')
+        return
+      }
+      setAddSide(null)
+      setAddNum('')
+      setAddName('')
+      router.refresh()
+    } finally {
+      setAddBusy(false)
+    }
+  }
   // Admin/federatie kan de startcontrole bewust overslaan (testen).
   const [bypass, setBypass] = useState(false)
   const unlocked = readiness.ready || bypass
@@ -938,6 +968,54 @@ export function Scorekeeper({
                         </>
                       )}
                     </div>
+                    {!lineupConfirmed[side] && (
+                      <div className="sk-addplayer">
+                        {addSide === side ? (
+                          <form
+                            className="sk-addplayer-form"
+                            onSubmit={(e) => {
+                              e.preventDefault()
+                              void submitAddPlayer(side)
+                            }}
+                          >
+                            <input
+                              className="sk-addp-num"
+                              inputMode="numeric"
+                              placeholder="nr"
+                              value={addNum}
+                              onChange={(e) => setAddNum(e.target.value.replace(/[^0-9]/g, ''))}
+                              aria-label="Rugnummer"
+                            />
+                            <input
+                              className="sk-addp-name"
+                              placeholder="naam"
+                              value={addName}
+                              onChange={(e) => setAddName(e.target.value)}
+                              aria-label="Naam"
+                            />
+                            <button type="submit" className="sk-btn primary" disabled={addBusy || !addName.trim() || !addNum.trim()}>
+                              Toevoegen
+                            </button>
+                            <button type="button" className="sk-btn" disabled={addBusy} onClick={() => setAddSide(null)} aria-label="Annuleren">
+                              ✕
+                            </button>
+                          </form>
+                        ) : (
+                          <button
+                            type="button"
+                            className="sk-addp-toggle"
+                            disabled={busy}
+                            onClick={() => {
+                              setAddSide(side)
+                              setAddNum('')
+                              setAddName('')
+                            }}
+                          >
+                            + speler toevoegen
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )
               })}
