@@ -28,11 +28,11 @@
 
 .sb-status { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
 .sb-badge { font-size: 0.72rem; font-weight: 800; letter-spacing: 0.08em; padding: 3px 10px; border-radius: 999px; }
-.sb-badge.live { background: #ef476f; color: #fff; }
+.sb-badge.live { background: var(--pop); color: #fff; }
 .sb-badge.finished { background: #2a3f33; color: var(--dim); }
 .sb-badge.scheduled { background: #1c3a2a; color: var(--dim); }
 .sb-conn { font-size: 0.72rem; color: #5a7a68; }
-.sb-conn.on { color: #ef476f; }
+.sb-conn.on { color: var(--pop); }
 .sb-conn.off { color: var(--accent); }
 .sb-viewers { font-size: 0.72rem; color: var(--dim-strong); margin-left: auto; }
 
