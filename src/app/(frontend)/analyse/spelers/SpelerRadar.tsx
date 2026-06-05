@@ -77,15 +77,6 @@ function pctColor(t: number): string {
   return `rgb(${c[0]}, ${c[1]}, ${c[2]})`
 }
 
-// Spelersprofiel uit de balans aanval ↔ verdediging — zegt méér dan een vage "sterk".
-function profileOf(att: number, def: number): string {
-  if (att >= 66 && def >= 66) return 'Complete speler'
-  if (att - def >= 18) return 'Aanvaller'
-  if (def - att >= 18) return 'Verdediger'
-  if (att >= 50 || def >= 50) return 'Gebalanceerd'
-  return 'Rol in opbouw'
-}
-
 function SubBar({ icon, label, v }: { icon: string; label: string; v: number }) {
   return (
     <div className="rad-sub">
@@ -101,7 +92,6 @@ function RatingGauge({ rating, att, def, name, sub }: { rating: number; att: num
   const c = 2 * Math.PI * r
   const dash = (Math.max(0, Math.min(100, rating)) / 100) * c
   const color = pctColor(rating / 100)
-  const profile = profileOf(att, def)
   return (
     <div className="rad-gauge">
       <svg viewBox="0 0 120 120" className="rad-gauge-svg" role="img" aria-label={`Rating ${rating}`}>
@@ -120,7 +110,6 @@ function RatingGauge({ rating, att, def, name, sub }: { rating: number; att: num
       </svg>
       <span className="rad-gauge-name">{name}</span>
       {sub && <span className="rad-gauge-sub">{sub}</span>}
-      <span className="rad-profile">{profile}</span>
       <div className="rad-subs">
         <SubBar icon="⚔️" label="Aanval" v={att} />
         <SubBar icon="🛡️" label="Verdediging" v={def} />
@@ -232,7 +221,6 @@ export function SpelerRadar({
                 {playerB && (
                   <RatingGauge rating={bRating} att={subRating(playerB, ATT_KEYS)} def={subRating(playerB, DEF_KEYS)} name={playerB.name} sub={`#${playerB.shirtNumber} · ${playerB.teamName}`} />
                 )}
-                <span className="rad-gauge-cap">Rating, aanval &amp; verdediging = percentiel binnen de reeks (0–100).</span>
               </div>
               <div className="rad-cards">
                 {HERO.map((m) => {
