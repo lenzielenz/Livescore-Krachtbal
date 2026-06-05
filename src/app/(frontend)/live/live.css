@@ -283,7 +283,10 @@
 .lb-match {
   flex: 1;
   display: grid;
-  grid-template-columns: 70px 1fr auto 1fr;
+  /* Status (LIVE/tijd) staat NIET meer als aparte kolom vooraan — die at op de gsm de breedte op
+     en kapte de ploegnamen af. Hij staat nu boven de score in het midden, zodat beide namen de
+     volle breedte krijgen. */
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
   gap: 14px;
   padding: 14px 18px 14px 4px;
@@ -292,6 +295,8 @@
 .lb-status {
   display: flex;
   justify-content: center;
+  min-height: 18px;
+  margin-bottom: 1px;
 }
 .lb-time {
   font-size: 0.82rem;
@@ -382,7 +387,7 @@
     margin-top: 0;
   }
   .lb-match {
-    grid-template-columns: 58px 1fr auto 1fr;
+    grid-template-columns: 1fr auto 1fr;
     gap: 10px;
     padding: 12px 12px 12px 2px;
   }

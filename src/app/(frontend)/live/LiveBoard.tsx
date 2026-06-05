@@ -221,14 +221,14 @@ export function LiveBoard({ date, today, matches }: { date: string; today: strin
                         {rowFav ? '★' : '☆'}
                       </button>
                       <Link href={`/match/${m.id}`} className="lb-match">
-                        <span className="lb-status">
-                          {live ? <span className="lb-livebadge">LIVE</span> : <span className="lb-time">{m.time}</span>}
-                        </span>
                         <span className="lb-team home">
                           <TeamLogo name={m.home.name} logoUrl={m.home.logoUrl} logoFit={m.home.logoFit} side="home" size="sm" ringColor={m.home.colors?.primary} />
                           <span className="lb-name">{m.home.name}</span>
                         </span>
                         <span className="lb-mid">
+                          <span className="lb-status">
+                            {live ? <span className="lb-livebadge">LIVE</span> : <span className="lb-time">{m.time}</span>}
+                          </span>
                           <span className="lb-score">{played ? `${m.score.home} – ${m.score.away}` : 'vs'}</span>
                           {hasStats && (
                             <span className="lb-stats">
