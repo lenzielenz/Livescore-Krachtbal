@@ -25,6 +25,7 @@ import * as migration_20260604_090000_user_official from './20260604_090000_user
 import * as migration_20260604_100000_audit_pdf from './20260604_100000_audit_pdf';
 import * as migration_20260604_120000_match_captain from './20260604_120000_match_captain';
 import * as migration_20260604_130000_user_analyse_access from './20260604_130000_user_analyse_access';
+import * as migration_20260604_140000_throw_caught_by from './20260604_140000_throw_caught_by';
 
 export const migrations = [
   {
@@ -161,5 +162,10 @@ export const migrations = [
     up: migration_20260604_130000_user_analyse_access.up,
     down: migration_20260604_130000_user_analyse_access.down,
     name: '20260604_130000_user_analyse_access',
+  },
+  {
+    up: migration_20260604_140000_throw_caught_by.up,
+    down: migration_20260604_140000_throw_caught_by.down,
+    name: '20260604_140000_throw_caught_by',
   },
 ];

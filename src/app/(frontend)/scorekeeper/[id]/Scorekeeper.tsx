@@ -61,6 +61,8 @@ export function Scorekeeper({
   // Nieuwe flow: eerst de bal-valt-plek (pendingThrow), dan kiezen wie wierp.
   const [pendingThrow, setPendingThrow] = useState<{ p: Point } | null>(null)
   const [pendingOut, setPendingOut] = useState<{ p: Point; tapCount: 1 | 2; playerId: number; isDoelworp: boolean } | null>(null)
+  // Gevangen worp: kies welke tegenstander de bal ving.
+  const [pendingCatch, setPendingCatch] = useState<{ p: Point; tapCount: 1 | 2; playerId: number } | null>(null)
   const [subOpen, setSubOpen] = useState(false)
   const [subSide, setSubSide] = useState<'home' | 'away'>('home')
   // Vlotte wissel: kies (in willekeurige volgorde) één veldspeler (eruit) en één bankspeler
@@ -206,7 +208,7 @@ export function Scorekeeper({
 
   // Registreer de worp (na ev. aanraking-vraag) en geef visuele feedback.
   const submitThrow = useCallback(
-    async (p: Point, tapCount: 1 | 2, touchedBeforeOut: boolean, playerId: number) => {
+    async (p: Point, tapCount: 1 | 2, touchedBeforeOut: boolean, playerId: number, caughtById?: number) => {
       if (!poss) return
       const scoringSide = poss.side
       const color = scoringSide === 'home' ? HOME_COLOR : AWAY_COLOR
@@ -234,6 +236,7 @@ export function Scorekeeper({
         y: p.y,
         tapCount,
         touchedBeforeOut,
+        caughtById,
         gameClock: Math.floor(clock),
       })) as { outcome?: string; type?: string; points?: number; isCross?: boolean; state?: MatchState } | null
 
@@ -299,6 +302,12 @@ export function Scorekeeper({
       // kruisje, op een eerdere worp bepaalt het wie de bal krijgt (inworp vanuit het midden).
       if (outcome === 'out_back' || outcome === 'out_side') {
         setPendingOut({ p, tapCount, playerId, isDoelworp })
+        setPendingThrow(null)
+        return
+      }
+      // Gevangen → vraag welke tegenstander de bal ving.
+      if (outcome === 'caught') {
+        setPendingCatch({ p, tapCount, playerId })
         setPendingThrow(null)
         return
       }
@@ -523,6 +532,35 @@ export function Scorekeeper({
           </div>
         </div>
       )}
+
+      {pendingCatch && (() => {
+        // De vangende ploeg is de tegenstander van de werpende ploeg.
+        const catchers = possSide === 'home' ? awayPlayers : homePlayers
+        const submit = (catcherId?: number) => {
+          const { p, tapCount, playerId } = pendingCatch
+          setPendingCatch(null)
+          void submitThrow(p, tapCount, false, playerId, catcherId)
+        }
+        return (
+          <div className="sk-modal-overlay">
+            <div className="sk-modal sk-lineup-modal">
+              <h3>Wie ving de bal?</h3>
+              <p>Tik de tegenstander aan die de bal ving (of sla over).</p>
+              <div className="sk-lineup-pick-grid">
+                {catchers.map((p) => (
+                  <button type="button" key={p.id} className="sk-pick-player" onClick={() => submit(p.id)}>
+                    <span className="sk-pick-num">{p.shirtNumber}</span>
+                    <span className="sk-pick-naam">{firstName(p.name)}</span>
+                  </button>
+                ))}
+              </div>
+              <div className="sk-modal-btns">
+                <button type="button" className="sk-btn" onClick={() => submit(undefined)}>Onbekend / overslaan</button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
 
       {pendingOut && (
         <div className="sk-modal-overlay">

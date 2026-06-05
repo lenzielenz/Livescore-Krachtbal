@@ -73,6 +73,13 @@ export const Throws: CollectionConfig = {
           relationTo: 'players',
           required: true,
         },
+        {
+          // Speler van de tegenploeg die de bal ving (enkel bij een gevangen worp).
+          name: 'caughtBy',
+          label: 'Gevangen door',
+          type: 'relationship',
+          relationTo: 'players',
+        },
       ],
     },
     {
