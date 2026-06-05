@@ -157,21 +157,27 @@ function ConvLayer({ points, h, minAttempts }: { points: ConvPoint[]; h: number;
   const uid = useId().replace(/[^a-zA-Z0-9]/g, '')
   const att = Array.from({ length: CGY }, () => new Array(CGX).fill(0))
   const gls = Array.from({ length: CGY }, () => new Array(CGX).fill(0))
+  // Som van de werkelijke posities per cel → zwaartepunt (de blob staat waar de worpen
+  // écht liggen, niet in het celmidden).
+  const sx = Array.from({ length: CGY }, () => new Array(CGX).fill(0))
+  const sy = Array.from({ length: CGY }, () => new Array(CGX).fill(0))
   let maxAtt = 0
   for (const p of points) {
     const gx = Math.min(CGX - 1, Math.max(0, Math.floor(p.x * CGX)))
     const gy = Math.min(CGY - 1, Math.max(0, Math.floor(p.y * CGY)))
     att[gy][gx] += 1
+    sx[gy][gx] += p.x
+    sy[gy][gx] += p.y
     if (p.goal) gls[gy][gx] += 1
     if (att[gy][gx] > maxAtt) maxAtt = att[gy][gx]
   }
   if (maxAtt === 0) return null
   const cw = W / CGX
   const ch = h / CGY
-  // Zachte radiale "blobs" i.p.v. harde rechthoeken: elke zone vloeit vloeiend naar
-  // transparant uit (mooie afloop), en overlappende blobs mengen naadloos.
-  const r = Math.max(cw, ch) * 1.05
-  const blobs: { id: string; color: string; op: number; cx: number; cy: number }[] = []
+  // Straal schaalt mee met het aantal worpen: weinig data = kleine, precieze stip;
+  // meer worpen in een zone = een ruimere gevaarvlek. Zachte radiale afloop.
+  const baseR = Math.min(cw, ch)
+  const blobs: { id: string; color: string; op: number; cx: number; cy: number; r: number }[] = []
   for (let y = 0; y < CGY; y++) {
     for (let x = 0; x < CGX; x++) {
       const n = att[y][x]
@@ -180,9 +186,10 @@ function ConvLayer({ points, h, minAttempts }: { points: ConvPoint[]; h: number;
       blobs.push({
         id: `${uid}-${x}-${y}`,
         color: convColor(conv),
-        op: 0.35 + 0.55 * Math.min(1, n / maxAtt),
-        cx: (x + 0.5) * cw,
-        cy: (y + 0.5) * ch,
+        op: 0.4 + 0.5 * Math.min(1, n / maxAtt),
+        cx: (sx[y][x] / n) * W,
+        cy: (sy[y][x] / n) * h,
+        r: baseR * Math.min(1.3, 0.5 + 0.2 * n),
       })
     }
   }
@@ -198,7 +205,7 @@ function ConvLayer({ points, h, minAttempts }: { points: ConvPoint[]; h: number;
         ))}
       </defs>
       {blobs.map((b) => (
-        <circle key={b.id} cx={b.cx} cy={b.cy} r={r} fill={`url(#${b.id})`} />
+        <circle key={b.id} cx={b.cx} cy={b.cy} r={b.r} fill={`url(#${b.id})`} />
       ))}
     </g>
   )
