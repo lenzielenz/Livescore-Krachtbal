@@ -42,13 +42,17 @@ export function SiteHeader({ active = null }: { active?: NavSection }) {
   const [open, setOpen] = useState(false)
   // Admin (of een account met analyse-toegang) krijgt er een 'Analyse'-menu bij.
   const [canAnalyse, setCanAnalyse] = useState(false)
+  // Enkel een admin krijgt 'Demo expert' (volledige scoreopnemer i.p.v. de basisdemo).
+  const [isAdmin, setIsAdmin] = useState(false)
   useEffect(() => {
     fetch('/api/users/me', { credentials: 'include' })
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
         const u = (d as { user?: { roles?: unknown; analyseAccess?: unknown } } | null)?.user
         const roles = u?.roles
-        setCanAnalyse((Array.isArray(roles) && roles.includes('admin')) || Boolean(u?.analyseAccess))
+        const admin = Array.isArray(roles) && roles.includes('admin')
+        setIsAdmin(admin)
+        setCanAnalyse(admin || Boolean(u?.analyseAccess))
       })
       .catch(() => {})
   }, [])
@@ -96,6 +100,11 @@ export function SiteHeader({ active = null }: { active?: NavSection }) {
                           {l.label}
                         </Link>
                       ))}
+                      {isAdmin && (
+                        <Link href="/demo/expert" className="sh-more-item" onClick={() => setOpen(false)}>
+                          🧪 Demo expert
+                        </Link>
+                      )}
                     </div>
                   )}
                   <div className="sh-more-group">

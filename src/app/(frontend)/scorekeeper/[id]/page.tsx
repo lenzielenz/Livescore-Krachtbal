@@ -12,8 +12,15 @@ import './scorekeeper.css'
 
 export const dynamic = 'force-dynamic'
 
-export default async function ScorekeeperPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function ScorekeeperPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>
+  searchParams: Promise<{ expert?: string }>
+}) {
   const { id } = await params
+  const { expert } = await searchParams
   const matchId = Number(id)
   if (!Number.isFinite(matchId)) notFound()
 
@@ -48,14 +55,17 @@ export default async function ScorekeeperPage({ params }: { params: Promise<{ id
     teamId: typeof p.team === 'object' ? p.team.id : p.team,
   }))
 
-  // Niet-admins tekenen aan met de basis snelscoremodus (+1/+2 zonder veldschema).
-  // De demo toont altijd het volledige veldscherm (met tutorial) om te oefenen.
   const reeks = reeksNaam(matchDoc?.reeks)
+  const isDemo = Boolean((matchDoc as { isDemo?: boolean } | null)?.isDemo)
 
-  // De basis snelscoremodus (+1/+2) is de standaard — ook voor de demo, want dat is
-  // de basisversie van het spel. Enkel een admin krijgt de volledige scoreopnemer
-  // (3-staps veldschema), ook bij de demo.
-  if (!isAdmin) {
+  // De basis snelscoremodus (+1/+2) is de standaard — ook voor de gewone demo, want dat is
+  // de basisversie van het spel. Een admin krijgt de volledige scoreopnemer (3-staps
+  // veldschema) bij echte wedstrijden. De demo blijft voor iedereen (ook de admin) de
+  // basisversie zoals een gewone gebruiker hem ziet — behalve via "Demo expert"
+  // (?expert=1), die een admin het volledige veldschema geeft om mee te oefenen.
+  const advanced = isDemo ? isAdmin && expert === '1' : isAdmin
+
+  if (!advanced) {
     return <SimpleScorekeeper matchId={matchId} initialState={state} roster={roster} reeks={reeks} />
   }
 
