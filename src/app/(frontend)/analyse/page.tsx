@@ -2,7 +2,7 @@ import Link from 'next/link'
 
 import { SiteHeader } from '@/components/SiteHeader'
 import { TeamLogo } from '@/components/TeamLogo'
-import { hasRole } from '@/lib/access'
+import { canAnalyse } from '@/lib/access'
 import { getAuthUser } from '@/lib/auth-user'
 import { buildScoreboards } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
@@ -14,14 +14,14 @@ export const dynamic = 'force-dynamic'
 // Analyse-hub (admin-only): kies een afgelopen wedstrijd om alle data te bekijken.
 export default async function AnalysePage() {
   const me = await getAuthUser()
-  if (!hasRole(me, 'admin')) {
+  if (!canAnalyse(me)) {
     return (
       <>
         <SiteHeader active="analyse" />
         <div className="site">
           <h1 className="page-title"><span className="brand">Analyse</span></h1>
           <p className="empty">
-            Enkel een admin heeft toegang tot de analyse.{' '}
+            Je hebt geen toegang tot de analyse. Vraag een admin om je toegang te geven.{' '}
             <Link href="/inloggen" style={{ color: 'var(--accent)' }}>Inloggen →</Link>
           </p>
         </div>

@@ -28,14 +28,15 @@ const MENU_SECTIONS: NavSection[] = ['stand', 'tornooi', 'clubs', 'scheidsrechte
 
 export function SiteHeader({ active = null }: { active?: NavSection }) {
   const [open, setOpen] = useState(false)
-  // Admin krijgt er een extra 'Analyse'-menu bij (rol uit /me opgehaald).
-  const [isAdmin, setIsAdmin] = useState(false)
+  // Admin (of een account met analyse-toegang) krijgt er een 'Analyse'-menu bij.
+  const [canAnalyse, setCanAnalyse] = useState(false)
   useEffect(() => {
     fetch('/api/users/me', { credentials: 'include' })
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
-        const roles = (d as { user?: { roles?: unknown } } | null)?.user?.roles
-        setIsAdmin(Array.isArray(roles) && roles.includes('admin'))
+        const u = (d as { user?: { roles?: unknown; analyseAccess?: unknown } } | null)?.user
+        const roles = u?.roles
+        setCanAnalyse((Array.isArray(roles) && roles.includes('admin')) || Boolean(u?.analyseAccess))
       })
       .catch(() => {})
   }, [])
@@ -54,7 +55,7 @@ export function SiteHeader({ active = null }: { active?: NavSection }) {
               {l.label}
             </Link>
           ))}
-          {isAdmin && (
+          {canAnalyse && (
             <Link href="/analyse" className={`sh-link ${active === 'analyse' ? 'on' : ''}`}>
               📈 Analyse
             </Link>

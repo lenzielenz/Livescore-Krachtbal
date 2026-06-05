@@ -543,6 +543,10 @@ export interface User {
    */
   club?: (number | null) | Club;
   /**
+   * Geef dit account toegang tot de analyse (naast de admin-rol).
+   */
+  analyseAccess?: boolean | null;
+  /**
    * Enkel relevant voor de rol "Scheidsrechter". Beperkt de toegang tot de eigen kwitantie.
    */
   official?: (number | null) | Official;
@@ -1334,6 +1338,7 @@ export interface UsersSelect<T extends boolean = true> {
   name?: T;
   roles?: T;
   club?: T;
+  analyseAccess?: T;
   official?: T;
   updatedAt?: T;
   createdAt?: T;

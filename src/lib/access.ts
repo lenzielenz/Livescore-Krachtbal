@@ -43,6 +43,13 @@ export function isFederationLevel(user: unknown): boolean {
   return hasRole(user, 'admin', 'federatie')
 }
 
+/** Mag deze gebruiker de analysemodule gebruiken? Admin altijd; anderen als de admin
+ * hen analyse-toegang gaf (users.analyseAccess). */
+export function canAnalyse(user: unknown): boolean {
+  if (hasRole(user, 'admin')) return true
+  return Boolean((user as { analyseAccess?: unknown } | null)?.analyseAccess)
+}
+
 /** De club waaraan een club-beheerder gekoppeld is (id), indien aanwezig. */
 export function userClubId(user: unknown): number | string | null {
   const club = (user as WithRoles | null)?.club
