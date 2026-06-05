@@ -30,6 +30,7 @@ const ANALYSE_LINKS = [
   { href: '/scorekeeper', label: '📝 Wedstrijd invullen' },
   { href: '/analyse/seizoen', label: '📊 Seizoensanalyse' },
   { href: '/analyse/spelers', label: '🎯 Spelersradar' },
+  { href: '/analyse/panini', label: '🃏 Panini-kaart' },
   { href: '/analyse/verwacht', label: '🎯 Verwachte punten (xP)' },
   { href: '/analyse/ploeg', label: '🛡️ Ploegrapport & export' },
   { href: '/analyse/ploegen', label: '🆚 Ploegvergelijking' },

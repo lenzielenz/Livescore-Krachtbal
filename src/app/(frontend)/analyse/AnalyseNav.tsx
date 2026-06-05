@@ -5,6 +5,7 @@ const TABS = [
   { key: 'overzicht', href: '/analyse', icon: '📈', label: 'Overzicht' },
   { key: 'seizoen', href: '/analyse/seizoen', icon: '📊', label: 'Seizoen' },
   { key: 'spelers', href: '/analyse/spelers', icon: '🎯', label: 'Spelers' },
+  { key: 'panini', href: '/analyse/panini', icon: '🃏', label: 'Panini' },
   { key: 'verwacht', href: '/analyse/verwacht', icon: '📐', label: 'Verwacht' },
   { key: 'ploeg', href: '/analyse/ploeg', icon: '🛡️', label: 'Ploeg' },
   { key: 'ploegen', href: '/analyse/ploegen', icon: '🆚', label: 'Vergelijk' },

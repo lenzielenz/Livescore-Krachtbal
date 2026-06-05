@@ -17,6 +17,7 @@ import './analyse.css'
 const TOOLS = [
   { href: '/analyse/seizoen', icon: '📊', title: 'Seizoensanalyse', desc: 'Ranglijst per reeks met vorm-curve.', tone: 'accent' },
   { href: '/analyse/spelers', icon: '🎯', title: 'Spelersradar', desc: 'Rating, profiel & vergelijking op zeven assen.', tone: 'home' },
+  { href: '/analyse/panini', icon: '🃏', title: 'Panini', desc: 'Maak een verzamelkaart van elke speler.', tone: 'accent' },
   { href: '/analyse/verwacht', icon: '📐', title: 'Verwachte punten', desc: 'xG-model: wie scoort boven verwachting?', tone: 'pop' },
   { href: '/analyse/ploeg', icon: '🛡️', title: 'Ploegrapport', desc: 'Scoutingrapport per ploeg + PDF/CSV-export.', tone: 'away' },
   { href: '/analyse/ploegen', icon: '🆚', title: 'Ploegvergelijking', desc: 'Twee ploegen op een radar van kerncijfers.', tone: 'home' },
