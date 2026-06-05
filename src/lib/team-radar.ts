@@ -1,6 +1,7 @@
 import type { Payload } from 'payload'
 
 import { loadMatchThrowData } from './match-engine'
+import { readSimpleScore } from './simple-score'
 
 // Ploeg-radar per reeks: aggregeert per ploeg de seizoensbrede aanvals- en verdedigingscijfers,
 // zodat twee ploegen onderling én met het reeks-gemiddelde vergeleken kunnen worden.
@@ -68,12 +69,14 @@ export async function buildTeamRadar(payload: Payload, reeks: string): Promise<{
     .catch(() => ({ docs: [] as Record<string, unknown>[] }))
   const matches = matchRes.docs.filter((m) => !(m as { isDemo?: boolean }).isDemo)
 
-  type Acc = { matches: Set<number>; throws: number; goals: number; goalAttempts: number; points: number; distSum: number; distN: number; catches: number }
+  // matches = alle gespeelde wedstrijden (worpen óf geïmporteerde eindstand); recMatches = enkel
+  // gedetailleerd opgenomen (worp)wedstrijden — voor de worp-gebaseerde gemiddelden.
+  type Acc = { matches: Set<number>; recMatches: Set<number>; throws: number; throwGoals: number; goals: number; goalAttempts: number; points: number; distSum: number; distN: number; catches: number }
   const agg = new Map<number, Acc>()
   const get = (id: number): Acc => {
     let a = agg.get(id)
     if (!a) {
-      a = { matches: new Set(), throws: 0, goals: 0, goalAttempts: 0, points: 0, distSum: 0, distN: 0, catches: 0 }
+      a = { matches: new Set(), recMatches: new Set(), throws: 0, throwGoals: 0, goals: 0, goalAttempts: 0, points: 0, distSum: 0, distN: 0, catches: 0 }
       agg.set(id, a)
     }
     return a
@@ -84,36 +87,53 @@ export async function buildTeamRadar(payload: Payload, reeks: string): Promise<{
     const matchId = (m as { id: number }).id
     const homeId = rel((m as { homeTeam?: unknown }).homeTeam)
     const awayId = rel((m as { awayTeam?: unknown }).awayTeam)
-    let stat
-    try {
-      ;({ stat } = await loadMatchThrowData(payload, matchId))
-    } catch {
-      continue
-    }
+    if (homeId == null || awayId == null || !teamName.has(homeId) || !teamName.has(awayId)) continue
+    // Elke afgelopen wedstrijd telt als "gespeeld" voor beide ploegen.
+    get(homeId).matches.add(matchId)
+    get(awayId).matches.add(matchId)
     let homePts = 0
     let awayPts = 0
-    for (const t of stat) {
-      const tid = t.teamSide === 'home' ? homeId : awayId
-      if (tid == null || !teamName.has(tid)) continue
+
+    // Gedetailleerde worpdata (indien opgenomen).
+    try {
+      const { stat } = await loadMatchThrowData(payload, matchId)
+      if (stat.length) {
+        get(homeId).recMatches.add(matchId)
+        get(awayId).recMatches.add(matchId)
+      }
+      for (const t of stat) {
+        const tid = t.teamSide === 'home' ? homeId : awayId
+        const a = get(tid)
+        a.throws += 1
+        if (t.isLastThrow) a.goalAttempts += 1
+        if (t.outcome === 'goal') {
+          a.throwGoals += 1
+          a.goals += 1
+          const pts = t.type === 'rug' ? 2 : 1
+          a.points += pts
+          if (t.teamSide === 'home') homePts += pts
+          else awayPts += pts
+        }
+        if (typeof t.distance === 'number') {
+          a.distSum += t.distance
+          a.distN += 1
+        }
+      }
+    } catch {
+      /* geen worpdata */
+    }
+
+    // Geïmporteerde/snel-genoteerde eindstand (geen worpdetail).
+    for (const g of readSimpleScore(m as { simpleScore?: unknown }).goals) {
+      const tid = g.side === 'home' ? homeId : awayId
       const a = get(tid)
-      a.matches.add(matchId)
-      a.throws += 1
-      if (t.isLastThrow) a.goalAttempts += 1
-      if (t.outcome === 'goal') {
-        a.goals += 1
-        const pts = t.type === 'rug' ? 2 : 1
-        a.points += pts
-        if (t.teamSide === 'home') homePts += pts
-        else awayPts += pts
-      }
-      if (typeof t.distance === 'number') {
-        a.distSum += t.distance
-        a.distN += 1
-      }
+      a.goals += 1
+      a.points += g.points
+      if (g.side === 'home') homePts += g.points
+      else awayPts += g.points
     }
-    if (homeId != null && awayId != null && teamName.has(homeId) && teamName.has(awayId)) {
-      results.push({ date: String((m as { date?: unknown }).date ?? ''), homeId, awayId, homePts, awayPts })
-    }
+
+    results.push({ date: String((m as { date?: unknown }).date ?? ''), homeId, awayId, homePts, awayPts })
   }
 
   // Vangsten per ploeg (verdediging): tegenstander-worpen gevangen door eigen spelers.
@@ -130,6 +150,7 @@ export async function buildTeamRadar(payload: Payload, reeks: string): Promise<{
 
   const teams: TeamRadar[] = [...agg.entries()].map(([teamId, a]) => {
     const mc = a.matches.size || 1
+    const rmc = a.recMatches.size || 1 // worp-gebaseerde gemiddelden over opgenomen wedstrijden
     return {
       teamId,
       teamName: teamName.get(teamId) ?? '—',
@@ -137,12 +158,12 @@ export async function buildTeamRadar(payload: Payload, reeks: string): Promise<{
       throws: a.throws,
       goals: a.goals,
       points: a.points,
-      throwsPerMatch: Math.round((a.throws / mc) * 10) / 10,
+      throwsPerMatch: Math.round((a.throws / rmc) * 10) / 10,
       goalsPerMatch: Math.round((a.goals / mc) * 10) / 10,
       pointsPerMatch: Math.round((a.points / mc) * 10) / 10,
-      conversion: a.goalAttempts ? Math.round((a.goals / a.goalAttempts) * 100) / 100 : 0,
+      conversion: a.goalAttempts ? Math.round(Math.min(1, a.throwGoals / a.goalAttempts) * 100) / 100 : 0,
       avgDistance: a.distN ? Math.round((a.distSum / a.distN) * 10) / 10 : 0,
-      catchesPerMatch: Math.round((a.catches / mc) * 10) / 10,
+      catchesPerMatch: Math.round((a.catches / rmc) * 10) / 10,
     }
   })
 
