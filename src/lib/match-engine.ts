@@ -201,6 +201,8 @@ export interface RecordThrowInput {
   tapCount: 1 | 2
   touchedBeforeOut?: boolean
   gameClock?: number
+  /** Speler van de tegenploeg die de bal ving (enkel bij een gevangen worp). */
+  caughtById?: number
   /** Audit-trail: de gebruiker die de worp registreert. */
   actorId?: number
 }
@@ -262,6 +264,8 @@ export async function recordThrow(payload: Payload, input: RecordThrowInput) {
       touchedBeforeOut: outcome === 'out_back' || outcome === 'out_side' ? !!input.touchedBeforeOut : false,
       period: half,
       gameClock: clock,
+      // Wie ving de bal (enkel zinvol bij een gevangen worp).
+      ...(outcome === 'caught' && input.caughtById ? { caughtBy: input.caughtById } : {}),
       ...(input.actorId ? { createdBy: input.actorId } : {}),
     },
     overrideAccess: true,
