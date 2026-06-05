@@ -242,6 +242,8 @@
   background: color-mix(in srgb, var(--accent) 8%, transparent);
 }
 .sb-half { font-size: 0.8rem; color: var(--dim-strong); text-transform: uppercase; letter-spacing: 0.06em; }
+/* Subtiele melding: tot waar de klok van deze helft loopt (+ gevraagde minuten). */
+.sb-playto { margin-top: 3px; font-size: 0.66rem; color: var(--dim); font-variant-numeric: tabular-nums; }
 
 .sb-dots { display: inline-flex; gap: 5px; }
 .sb-dot { width: 9px; height: 9px; border-radius: 50%; border: 1px solid var(--line); background: transparent; }

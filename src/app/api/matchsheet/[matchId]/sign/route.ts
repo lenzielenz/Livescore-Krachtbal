@@ -49,12 +49,15 @@ export async function POST(req: Request, { params }: { params: Promise<{ matchId
       return Response.json({ error: 'Blad is ingediend (Item 37).' }, { status: 409 })
     }
 
+    // Naam hoeft niet getypt te worden: gebruik de meegegeven (vooraf gekende) naam, of val terug
+    // op het ingelogde account zodat het blad altijd een ondertekenaar vermeldt.
+    const naam = body.naam?.trim() || (user as { name?: string }).name?.trim() || ''
     await payload.update({
       collection: 'matchsheets',
       id: sheet.id,
       data: {
         [who]: {
-          naam: body.naam ?? '',
+          naam,
           handtekening: body.handtekening ?? '',
           akkoord: Boolean(body.akkoord),
           tijdstip: body.akkoord ? new Date().toISOString() : null,

@@ -45,6 +45,13 @@
 .wb-sub strong {
   color: var(--txt);
 }
+/* Vooraf gekende ondertekenaar-naam (geen invoerveld meer — gewoon tekenen). */
+.wb-sign-naam {
+  margin: 0 0 8px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--txt);
+}
 
 /* Knoppen */
 .wb-btn {
