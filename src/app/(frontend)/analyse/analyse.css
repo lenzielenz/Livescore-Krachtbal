@@ -892,3 +892,36 @@ select.rang-picker {
 .nam-addrow .nam-prepare { flex: 0 0 auto; padding: 9px 12px; }
 .imp-check { display: flex; align-items: center; gap: 8px; font-size: 0.88rem; font-weight: 600; color: var(--txt); cursor: pointer; }
 .imp-check input { width: 18px; height: 18px; accent-color: var(--accent); }
+
+/* ── Panini high-end: clubkleuren + logo ── */
+.pan-card {
+  background:
+    radial-gradient(130% 90% at 50% -15%, color-mix(in srgb, var(--c1) 42%, transparent), transparent 62%),
+    radial-gradient(90% 60% at 100% 110%, color-mix(in srgb, var(--c2) 30%, transparent), transparent 60%),
+    linear-gradient(165deg, color-mix(in srgb, var(--c1) 22%, #0c2418) 0%, #0a1c12 55%, #06120b 100%);
+  box-shadow: 0 24px 60px -18px rgba(0,0,0,0.75), 0 0 0 1px color-mix(in srgb, var(--c1) 40%, var(--line)) inset;
+}
+.pan-card::before {
+  background: conic-gradient(from 200deg, var(--c1), var(--c2), #ffffff80, var(--c1), var(--c2), var(--c1));
+  opacity: 0.9;
+}
+.pan-watermark {
+  position: absolute; right: -28px; top: 96px;
+  width: 230px; height: 230px;
+  background-size: contain; background-repeat: no-repeat; background-position: center;
+  opacity: 0.10; filter: drop-shadow(0 0 8px var(--c1));
+  pointer-events: none; transform: rotate(-8deg);
+}
+.pan-club { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
+.pan-club-nm { font-weight: 900; font-size: 0.86rem; letter-spacing: 0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px; }
+.pan-season { color: var(--dim); text-align: right; }
+.pan-num { color: var(--c1); text-shadow: 0 0 10px color-mix(in srgb, var(--c1) 60%, transparent); }
+.pan-name { text-shadow: 0 1px 0 #000, 0 0 14px color-mix(in srgb, var(--c1) 45%, transparent); }
+.pan-prof {
+  background: color-mix(in srgb, var(--c1) 24%, transparent);
+  border-color: color-mix(in srgb, var(--c1) 60%, var(--line));
+  color: color-mix(in srgb, var(--c1) 75%, white);
+}
+.pan-poly { fill-opacity: 0.26; }
+.pan-stat { border-color: color-mix(in srgb, var(--c1) 26%, rgba(255,255,255,0.08)); }
+.pan-foot { color: color-mix(in srgb, var(--c1) 55%, var(--dim)); letter-spacing: 0.18em; }
