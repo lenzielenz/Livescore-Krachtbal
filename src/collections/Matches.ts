@@ -187,6 +187,27 @@ export const Matches: CollectionConfig = {
       },
     },
     {
+      // Aangeduide verantwoordelijke per club (coach/aantekenaar) die deze wedstrijd "claimt"
+      // via Mijn club, zodat iedereen in de club ziet wie waar staat. Thuis en bezoek apart.
+      type: 'row',
+      fields: [
+        {
+          name: 'homeCoach',
+          label: 'Verantwoordelijke thuis',
+          type: 'relationship',
+          relationTo: 'users',
+          admin: { readOnly: true, position: 'sidebar', description: 'Geclaimd via Mijn club.' },
+        },
+        {
+          name: 'awayCoach',
+          label: 'Verantwoordelijke bezoek',
+          type: 'relationship',
+          relationTo: 'users',
+          admin: { readOnly: true, position: 'sidebar', description: 'Geclaimd via Mijn club.' },
+        },
+      ],
+    },
+    {
       // Categorie volgt automatisch uit de reeks (leeftijdsniveau voor de spelregels) —
       // niet meer handmatig te kiezen.
       name: 'category',

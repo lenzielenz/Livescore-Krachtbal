@@ -893,6 +893,64 @@ h3,
   font-size: 0.86rem;
 }
 
+/* Toprij: rol (thuis/uit) + reeks + status-badge */
+.club-match-toprow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.club-role {
+  font-size: 0.64rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  padding: 2px 7px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+}
+.club-role.home { color: #06140d; background: var(--accent); border-color: var(--accent); }
+.club-role.away { color: var(--dim); background: transparent; }
+.club-badge {
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+.club-badge.live { color: #ef476f; }
+.club-badge.ready { color: #2dd4a7; }
+.club-badge.todo { color: var(--dim); }
+.club-match-coach {
+  margin-top: 4px;
+  font-size: 0.82rem;
+}
+.club-claim,
+.club-claim-take {
+  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--accent) 50%, var(--line));
+  color: var(--accent);
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-weight: 700;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.club-claim.mine { background: var(--accent); color: #06140d; border-color: var(--accent); }
+.club-claim:disabled,
+.club-claim-take:disabled { opacity: 0.6; cursor: default; }
+.club-claimed {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--txt);
+  font-weight: 600;
+}
+.club-claim-take {
+  padding: 2px 9px;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
 /* Seizoensplanning — import */
 .plan-area {
   width: 100%;
