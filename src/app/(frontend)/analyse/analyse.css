@@ -14,6 +14,32 @@
   padding: 4px 0 2px;
   border-top: 1px solid var(--line);
 }
+.an-summary { margin: 0 0 18px; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
+.an-record-new { margin: 6px 0 14px; }
+.nam-open { display: inline-block; }
+.nam-form {
+  background: var(--panel-grad);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px 16px;
+  box-shadow: var(--card-shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.nam-row { display: flex; flex-wrap: wrap; gap: 12px; }
+.nam-row .rad-field { flex: 1 1 160px; }
+.nam-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.nam-cancel {
+  background: none;
+  border: 1px solid var(--line);
+  color: var(--dim);
+  border-radius: 8px;
+  padding: 8px 14px;
+  cursor: pointer;
+}
+.nam-error { color: #ef476f; font-size: 0.85rem; margin: 0; }
+.nam-hint { color: var(--dim); font-size: 0.8rem; margin: 0; }
 .an-card-reeks.an-live {
   color: #ef476f;
   font-weight: 800;

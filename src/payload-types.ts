@@ -338,6 +338,7 @@ export interface Match {
    * Aanvinken voor een oefen-/uitlegwedstrijd. Mensen kunnen die starten om de live-registratie te leren; alle startcontroles worden overgeslagen.
    */
   isDemo?: boolean | null;
+  analyseOnly?: boolean | null;
   category?: ('U12' | 'U14' | 'U16' | 'U18' | 'U20' | 'senioren') | null;
   homeLineup?: (number | Player)[] | null;
   awayLineup?: (number | Player)[] | null;
@@ -1022,6 +1023,7 @@ export interface MatchesSelect<T extends boolean = true> {
   status?: T;
   goalAreaDepth?: T;
   isDemo?: T;
+  analyseOnly?: T;
   category?: T;
   homeLineup?: T;
   awayLineup?: T;

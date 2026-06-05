@@ -32,7 +32,7 @@ export default async function CastPage() {
 
   const seen = new Set<number>()
   const docs = [...liveRes.docs, ...dayRes.docs].filter((m) => {
-    if (seen.has(m.id) || (m as { isDemo?: boolean }).isDemo) return false
+    if (seen.has(m.id) || (m as { isDemo?: boolean }).isDemo || (m as { analyseOnly?: boolean }).analyseOnly) return false
     seen.add(m.id)
     return true
   })

@@ -29,6 +29,7 @@ export async function getMatchReadiness(
     awayLineup: sheet?.awayLineup,
     refereeAkkoord: Boolean((sheet?.wedstrijdstart as { akkoord?: boolean } | undefined)?.akkoord),
     isDemo: Boolean((match as { isDemo?: boolean } | null)?.isDemo),
+    analyseOnly: Boolean((match as { analyseOnly?: boolean } | null)?.analyseOnly),
   })
 }
 

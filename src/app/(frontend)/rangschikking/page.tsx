@@ -64,7 +64,7 @@ export default async function RangschikkingPage({ searchParams }: { searchParams
 
   // Afgelopen wedstrijden van de reeks → stand (gebatcht) + forfait van het wedstrijdblad.
   const matchRes = await payload
-    .find({ collection: 'matches', where: { and: [{ reeks: { equals: reeks } }, { status: { equals: 'finished' } }] }, depth: 0, limit: 1000 })
+    .find({ collection: 'matches', where: { and: [{ reeks: { equals: reeks } }, { status: { equals: 'finished' } }, { analyseOnly: { not_equals: true } }] }, depth: 0, limit: 1000 })
     .catch(() => ({ docs: [] as Record<string, unknown>[] }))
   const finished = matchRes.docs
   const cards = await buildScoreboards(payload, finished as Parameters<typeof buildScoreboards>[1])

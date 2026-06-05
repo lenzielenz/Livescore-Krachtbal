@@ -174,6 +174,19 @@ export const Matches: CollectionConfig = {
       },
     },
     {
+      // Enkel-voor-analyse: een wedstrijd die je manueel opneemt om data te verzamelen,
+      // maar die NIET publiek/live getoond wordt (niet op de startpagina, het live-bord,
+      // de rangschikking …). Dient puur om in de analysemodule te bekijken.
+      name: 'analyseOnly',
+      label: 'Enkel voor analyse (niet live tonen)',
+      type: 'checkbox',
+      defaultValue: false,
+      admin: {
+        description: 'Aanvinken voor een wedstrijd die je enkel opneemt voor analyse. Ze verschijnt niet live of in de rangschikking — alleen in de analysemodule.',
+        position: 'sidebar',
+      },
+    },
+    {
       // Categorie volgt automatisch uit de reeks (leeftijdsniveau voor de spelregels) —
       // niet meer handmatig te kiezen.
       name: 'category',
