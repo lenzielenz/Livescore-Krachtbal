@@ -7,6 +7,7 @@ import { getPayloadClient } from '@/lib/payload-client'
 import { buildPlayerDanger, type DangerBand } from '@/lib/player-danger'
 import { REEKS_OPTIONS, reeksNaam } from '@/lib/reeksen'
 import { buildSeasonStats } from '@/lib/season-stats'
+import { AnalyseNav } from '../AnalyseNav'
 import { GevaarMap } from './GevaarMap'
 import { GevaarPicker } from './GevaarPicker'
 import '../analyse.css'
@@ -79,7 +80,7 @@ export default async function GevaarPage({ searchParams }: { searchParams: Promi
     <>
       <SiteHeader active="analyse" />
       <div className="site">
-        <Link href="/analyse" className="back-link">← Analyse</Link>
+        <AnalyseNav active="gevaar" />
         <div className="an-head-bar">
           <h1 className="page-title"><span className="brand">Gevaarzone</span></h1>
           <GevaarPicker

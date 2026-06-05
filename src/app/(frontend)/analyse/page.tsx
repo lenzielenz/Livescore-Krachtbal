@@ -7,8 +7,42 @@ import { getAuthUser } from '@/lib/auth-user'
 import { buildScoreboards } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
 import { REEKS_OPTIONS, reeksNaam } from '@/lib/reeksen'
+import { buildSeasonStats, type SeasonPlayer } from '@/lib/season-stats'
+import { AnalyseNav } from './AnalyseNav'
+import { HubReeksPicker } from './HubReeksPicker'
 import { NieuweAnalyseMatch } from './NieuweAnalyseMatch'
 import './analyse.css'
+
+// De analyse-tools, als visuele kaarten op de hub.
+const TOOLS = [
+  { href: '/analyse/seizoen', icon: '📊', title: 'Seizoensanalyse', desc: 'Ranglijst per reeks met vorm-curve.', tone: 'accent' },
+  { href: '/analyse/spelers', icon: '🎯', title: 'Spelersradar', desc: 'Rating, profiel & vergelijking op zeven assen.', tone: 'home' },
+  { href: '/analyse/verwacht', icon: '📐', title: 'Verwachte punten', desc: 'xG-model: wie scoort boven verwachting?', tone: 'pop' },
+  { href: '/analyse/ploeg', icon: '🛡️', title: 'Ploegrapport', desc: 'Scoutingrapport per ploeg + PDF/CSV-export.', tone: 'away' },
+  { href: '/analyse/gevaar', icon: '🔥', title: 'Gevaarzone', desc: 'Van waar scoort een speler het gevaarlijkst?', tone: 'pop2' },
+] as const
+
+// Eén leaderboard-kaart (top 5) voor de league-insights op de hub.
+function LeaderCard({ icon, title, rows, unit }: { icon: string; title: string; rows: { name: string; shirt: number; team: string; val: string }[]; unit?: string }) {
+  return (
+    <div className="an-lead">
+      <h3 className="an-lead-title"><span aria-hidden>{icon}</span> {title}</h3>
+      {rows.length === 0 ? (
+        <p className="an-lead-empty">Nog geen data.</p>
+      ) : (
+        <ol className="an-lead-list">
+          {rows.map((r, i) => (
+            <li key={`${r.name}-${i}`} className="an-lead-row">
+              <span className={`an-lead-rank r${i + 1}`}>{i + 1}</span>
+              <span className="an-lead-name">#{r.shirt} {r.name}<span className="an-lead-team">{r.team}</span></span>
+              <span className="an-lead-val">{r.val}{unit ? <span className="an-lead-unit">{unit}</span> : null}</span>
+            </li>
+          ))}
+        </ol>
+      )}
+    </div>
+  )
+}
 
 const COMPETITIE_REEKSEN = REEKS_OPTIONS.filter((o) => !['beker', 'recreatief', 'andere'].includes(o.value)).map((o) => ({
   value: o.value,
@@ -17,8 +51,8 @@ const COMPETITIE_REEKSEN = REEKS_OPTIONS.filter((o) => !['beker', 'recreatief', 
 
 export const dynamic = 'force-dynamic'
 
-// Analyse-hub (admin-only): kies een afgelopen wedstrijd om alle data te bekijken.
-export default async function AnalysePage() {
+// Analyse-hub (admin-only): league-dashboard met toppers, tools en je analysewedstrijden.
+export default async function AnalysePage({ searchParams }: { searchParams: Promise<{ reeks?: string }> }) {
   const me = await getAuthUser()
   if (!canAnalyse(me)) {
     return (
@@ -123,26 +157,69 @@ export default async function AnalysePage() {
     reeks: String((t as { reeks?: unknown }).reeks ?? ''),
   }))
 
+  // League-insights: toppers van de gekozen reeks (seizoensbreed, over alle wedstrijden).
+  const { reeks: reeksParam } = await searchParams
+  const reeks =
+    typeof reeksParam === 'string' && COMPETITIE_REEKSEN.some((o) => o.value === reeksParam)
+      ? reeksParam
+      : COMPETITIE_REEKSEN[0].value
+  const season = await buildSeasonStats(payload, reeks).catch(() => [] as SeasonPlayer[])
+  const top = (sel: (a: SeasonPlayer, b: SeasonPlayer) => number, fmt: (p: SeasonPlayer) => string, filter?: (p: SeasonPlayer) => boolean) =>
+    [...(filter ? season.filter(filter) : season)]
+      .sort(sel)
+      .slice(0, 5)
+      .map((p) => ({ name: p.name, shirt: p.shirtNumber, team: p.teamName, val: fmt(p) }))
+  const ldTop = top((a, b) => b.points - a.points || b.goals - a.goals, (p) => String(p.points))
+  const ldConv = top((a, b) => b.conversion - a.conversion, (p) => `${Math.round(p.conversion * 100)}%`, (p) => p.goalAttempts >= 5)
+  const ldDist = top((a, b) => b.maxDistance - a.maxDistance, (p) => p.maxDistance.toFixed(1))
+  const ldVol = top((a, b) => b.throws - a.throws, (p) => String(p.throws))
+  const hasSeason = season.length > 0
+
   return (
     <>
       <SiteHeader active="analyse" />
       <div className="site">
+        <AnalyseNav active="overzicht" />
         <h1 className="page-title"><span className="brand">Analyse</span></h1>
-        <p className="an-intro">Je analysewedstrijden — kies een opgenomen wedstrijd om alle data per speler en ploeg te bekijken.</p>
+        <p className="an-intro">Het analysecentrum: league-toppers, krachtige tools en je opgenomen wedstrijden — alle data per speler en ploeg.</p>
+
+        {/* Tools als visuele kaarten */}
+        <div className="an-tools">
+          {TOOLS.map((t) => (
+            <Link key={t.href} href={t.href} className={`an-tool tone-${t.tone}`}>
+              <span className="an-tool-ico" aria-hidden>{t.icon}</span>
+              <span className="an-tool-body">
+                <span className="an-tool-title">{t.title}</span>
+                <span className="an-tool-desc">{t.desc}</span>
+              </span>
+              <span className="an-tool-arrow" aria-hidden>→</span>
+            </Link>
+          ))}
+        </div>
+
+        {/* League-insights: toppers van de gekozen reeks */}
+        <section id="toppers" className="an-toppers">
+          <div className="an-head-bar">
+            <h2 className="an-sub">🏆 Toppers van de reeks</h2>
+            <HubReeksPicker reeks={reeks} options={[...COMPETITIE_REEKSEN]} />
+          </div>
+          {!hasSeason ? (
+            <p className="empty">Nog geen seizoensdata in deze reeks.</p>
+          ) : (
+            <div className="an-leaders">
+              <LeaderCard icon="🏆" title="Topscorers" rows={ldTop} unit=" ptn" />
+              <LeaderCard icon="🎯" title="Beste afwerkers" rows={ldConv} />
+              <LeaderCard icon="💪" title="Verste worp" rows={ldDist} unit=" m" />
+              <LeaderCard icon="⚡" title="Meeste worpen" rows={ldVol} />
+            </div>
+          )}
+        </section>
 
         <div className="rep-cards an-summary">
           <div className="rep-card"><span className="rep-num">{rows.length}</span><span className="rep-lbl">Opgenomen</span></div>
           <div className="rep-card"><span className="rep-num">{totalPunten}</span><span className="rep-lbl">Punten gescoord</span></div>
           {isAdmin && <div className="rep-card"><span className="rep-num">{openRows.length}</span><span className="rep-lbl">Voorbereid</span></div>}
         </div>
-
-        <p className="an-hub-links">
-          <Link href="/analyse/seizoen" className="sk-demo-cta">📊 Seizoensanalyse per reeks →</Link>
-          <Link href="/analyse/spelers" className="sk-demo-cta">🎯 Spelersradar &amp; vergelijken →</Link>
-          <Link href="/analyse/verwacht" className="sk-demo-cta">📈 Verwachte punten (xP) →</Link>
-          <Link href="/analyse/ploeg" className="sk-demo-cta">🛡️ Ploegrapport &amp; export →</Link>
-          <Link href="/analyse/gevaar" className="sk-demo-cta">🔥 Gevaarzone per speler →</Link>
-        </p>
 
         {isAdmin && (
           <section className="an-record">
