@@ -22,7 +22,7 @@ export default async function PlanningPage() {
         {!allowed ? (
           <p className="empty">
             Enkel de federatie/admin kan het speelplan importeren.{' '}
-            <Link href="/admin" className="hub-pill">Inloggen →</Link>
+            <Link href="/inloggen" className="hub-pill">Inloggen →</Link>
           </p>
         ) : (
           <PlanningImport />

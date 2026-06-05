@@ -33,7 +33,7 @@ export default async function BulkPlayersPage() {
         <SiteHeader active="clubs" />
         <div className="site">
           <h1 className="page-title">Spelers snel toevoegen</h1>
-          <p className="empty">Log in om spelers toe te voegen. <Link href="/admin" style={{ color: 'var(--accent)' }}>Inloggen →</Link></p>
+          <p className="empty">Log in om spelers toe te voegen. <Link href="/inloggen" style={{ color: 'var(--accent)' }}>Inloggen →</Link></p>
         </div>
       </>
     )
