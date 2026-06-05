@@ -61,7 +61,7 @@ export default async function ClubPage() {
   if (!user) {
     return (
       <Shell>
-        <p className="empty">Log in als club-beheerder om je komende wedstrijden en opstellingen te beheren. <Link href="/admin" className="hub-pill">Inloggen →</Link></p>
+        <p className="empty">Log in als club-beheerder om je komende wedstrijden en opstellingen te beheren. <Link href="/inloggen" className="hub-pill">Inloggen →</Link></p>
       </Shell>
     )
   }
