@@ -9,6 +9,15 @@
   gap: 10px;
   margin: 0 0 16px;
 }
+.an-record {
+  margin: 8px 0 22px;
+  padding: 4px 0 2px;
+  border-top: 1px solid var(--line);
+}
+.an-card-reeks.an-live {
+  color: #ef476f;
+  font-weight: 800;
+}
 
 /* ── Lijst ── */
 .an-list {
