@@ -1,4 +1,8 @@
+import Link from 'next/link'
+
 import { SiteHeader } from '@/components/SiteHeader'
+import { isFederationLevel, userClubId } from '@/lib/access'
+import { getAuthUser } from '@/lib/auth-user'
 import { CATEGORY_OPTIONS } from '@/lib/categories'
 import { getPayloadClient } from '@/lib/payload-client'
 import { REEKS_OPTIONS } from '@/lib/reeksen'
@@ -18,8 +22,42 @@ const niveauLabel = (reeks: unknown, category: unknown): string => {
 }
 
 export default async function BulkPlayersPage() {
+  const me = await getAuthUser()
+  const fed = isFederationLevel(me)
+  const clubId = userClubId(me)
+
+  // Een club-beheerder ziet enkel de ploegen van de eigen club; federatie/admin ziet alles.
+  if (!me) {
+    return (
+      <>
+        <SiteHeader active="clubs" />
+        <div className="site">
+          <h1 className="page-title">Spelers snel toevoegen</h1>
+          <p className="empty">Log in om spelers toe te voegen. <Link href="/admin" style={{ color: 'var(--accent)' }}>Inloggen →</Link></p>
+        </div>
+      </>
+    )
+  }
+  if (!fed && clubId == null) {
+    return (
+      <>
+        <SiteHeader active="clubs" />
+        <div className="site">
+          <h1 className="page-title">Spelers snel toevoegen</h1>
+          <p className="empty">Je account is nog niet aan een club gekoppeld. Vraag de federatie om je gebruiker aan je club te koppelen.</p>
+        </div>
+      </>
+    )
+  }
+
   const payload = await getPayloadClient()
-  const teamsRes = await payload.find({ collection: 'teams', sort: 'name', depth: 1, limit: 200 })
+  const teamsRes = await payload.find({
+    collection: 'teams',
+    where: fed ? {} : { club: { equals: clubId } },
+    sort: 'name',
+    depth: 1,
+    limit: 300,
+  })
 
   const teams = teamsRes.docs.map((t) => {
     const club = typeof t.club === 'object' && t.club ? t.club.name : ''
@@ -36,7 +74,7 @@ export default async function BulkPlayersPage() {
       <div className="site">
       <h1 className="page-title">Spelers snel toevoegen</h1>
       {teams.length === 0 ? (
-        <p className="empty">Maak eerst een ploeg aan via Beheer.</p>
+        <p className="empty">Nog geen ploegen voor jouw club. Vraag de federatie om je ploegen aan te maken.</p>
       ) : (
         <BulkPlayers teams={teams} />
       )}
