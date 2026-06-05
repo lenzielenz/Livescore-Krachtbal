@@ -77,43 +77,72 @@ function heatColor(t: number): string {
   return `rgb(${c[0]}, ${c[1]}, ${c[2]})`
 }
 
+// Zachte radiale "blob" — vloeit vloeiend naar transparant uit (mooie afloop).
+interface Blob {
+  id: string
+  color: string
+  op: number
+  cx: number
+  cy: number
+  r: number
+}
+function BlobLayer({ blobs }: { blobs: Blob[] }) {
+  if (blobs.length === 0) return null
+  return (
+    <g clipPath="url(#fieldclip)">
+      <defs>
+        {blobs.map((b) => (
+          <radialGradient key={b.id} id={b.id} cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor={b.color} stopOpacity={b.op} />
+            <stop offset="50%" stopColor={b.color} stopOpacity={b.op * 0.6} />
+            <stop offset="100%" stopColor={b.color} stopOpacity={0} />
+          </radialGradient>
+        ))}
+      </defs>
+      {blobs.map((b) => (
+        <circle key={b.id} cx={b.cx} cy={b.cy} r={b.r} fill={`url(#${b.id})`} />
+      ))}
+    </g>
+  )
+}
+
+// Dichtheidskaart ("waar het meeste gebeurt"): tel de punten per cel, kleur naar volume
+// (groen = weinig, rood = veel) en teken zachte blobs op het zwaartepunt.
 function HeatLayer({ points, h }: { points: Point[]; h: number }) {
-  const H = h
+  const uid = useId().replace(/[^a-zA-Z0-9]/g, '')
   const grid = Array.from({ length: GY }, () => new Array(GX).fill(0))
+  const sx = Array.from({ length: GY }, () => new Array(GX).fill(0))
+  const sy = Array.from({ length: GY }, () => new Array(GX).fill(0))
   let max = 0
   for (const p of points) {
     const gx = Math.min(GX - 1, Math.max(0, Math.floor(p.x * GX)))
     const gy = Math.min(GY - 1, Math.max(0, Math.floor(p.y * GY)))
     grid[gy][gx] += 1
+    sx[gy][gx] += p.x
+    sy[gy][gx] += p.y
     if (grid[gy][gx] > max) max = grid[gy][gx]
   }
   if (max === 0) return null
   const cw = W / GX
-  const ch = H / GY
-  const cells: React.ReactElement[] = []
+  const ch = h / GY
+  const baseR = Math.max(cw, ch)
+  const blobs: Blob[] = []
   for (let y = 0; y < GY; y++) {
     for (let x = 0; x < GX; x++) {
       const n = grid[y][x]
       if (!n) continue
       const t = n / max
-      cells.push(
-        <rect
-          key={`${x}-${y}`}
-          x={x * cw}
-          y={y * ch}
-          width={cw}
-          height={ch}
-          fill={heatColor(t)}
-          opacity={0.25 + 0.6 * t}
-        />,
-      )
+      blobs.push({
+        id: `${uid}-${x}-${y}`,
+        color: heatColor(t),
+        op: 0.3 + 0.55 * t,
+        cx: (sx[y][x] / n) * W,
+        cy: (sy[y][x] / n) * h,
+        r: baseR * Math.min(1.4, 0.7 + 0.3 * n),
+      })
     }
   }
-  return (
-    <g filter="url(#heatblur)" clipPath="url(#fieldclip)">
-      {cells}
-    </g>
-  )
+  return <BlobLayer blobs={blobs} />
 }
 
 // Een doelpoging op een vaste positie (genormaliseerd, canoniek "aanval naar onder").
@@ -177,7 +206,7 @@ function ConvLayer({ points, h, minAttempts }: { points: ConvPoint[]; h: number;
   // Straal schaalt mee met het aantal worpen: weinig data = kleine, precieze stip;
   // meer worpen in een zone = een ruimere gevaarvlek. Zachte radiale afloop.
   const baseR = Math.min(cw, ch)
-  const blobs: { id: string; color: string; op: number; cx: number; cy: number; r: number }[] = []
+  const blobs: Blob[] = []
   for (let y = 0; y < CGY; y++) {
     for (let x = 0; x < CGX; x++) {
       const n = att[y][x]
@@ -193,22 +222,7 @@ function ConvLayer({ points, h, minAttempts }: { points: ConvPoint[]; h: number;
       })
     }
   }
-  return (
-    <g clipPath="url(#fieldclip)">
-      <defs>
-        {blobs.map((b) => (
-          <radialGradient key={b.id} id={b.id} cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor={b.color} stopOpacity={b.op} />
-            <stop offset="50%" stopColor={b.color} stopOpacity={b.op * 0.6} />
-            <stop offset="100%" stopColor={b.color} stopOpacity={0} />
-          </radialGradient>
-        ))}
-      </defs>
-      {blobs.map((b) => (
-        <circle key={b.id} cx={b.cx} cy={b.cy} r={b.r} fill={`url(#${b.id})`} />
-      ))}
-    </g>
-  )
+  return <BlobLayer blobs={blobs} />
 }
 
 export function FieldSchema({

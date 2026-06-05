@@ -2,15 +2,19 @@
 
 import { useState } from 'react'
 
-import { FieldSchema, type FieldMarker, type ConvPoint } from '@/components/FieldSchema'
+import { FieldSchema, type ConvPoint, type FieldMarker } from '@/components/FieldSchema'
+import type { Point } from '@/lib/field'
 import type { DangerShot } from '@/lib/player-danger'
 
-// Gevaarzone-visualisatie: schakel tussen de conversie-heatmap (waar is hij gevaarlijk)
-// en losse doelpogingen (groen = doelpunt, rood = gemist).
+// Twee verschillende beelden van een speler:
+//  • Gevaarzone — van waar is hij aanvallend het gevaarlijkst (conversie per zone);
+//  • Doelpunten — waar hij het meeste scoort (volume/dichtheid van zijn doelpunten);
+// plus Pogingen (losse worpen: groen = doelpunt, rood = gemist).
 export function GevaarMap({ shots }: { shots: DangerShot[] }) {
-  const [view, setView] = useState<'heat' | 'dots'>('heat')
+  const [view, setView] = useState<'danger' | 'scores' | 'dots'>('danger')
 
   const convPoints: ConvPoint[] = shots.map((s) => ({ x: s.x, y: s.y, goal: s.goal }))
+  const goalPoints: Point[] = shots.filter((s) => s.goal).map((s) => ({ x: s.x, y: s.y }))
   const markers: FieldMarker[] = shots.map((s) => ({
     x: s.x,
     y: s.y,
@@ -21,21 +25,28 @@ export function GevaarMap({ shots }: { shots: DangerShot[] }) {
   return (
     <div className="gev-map">
       <div className="gev-controls">
-        <button type="button" className={view === 'heat' ? 'on' : ''} onClick={() => setView('heat')}>Gevaarzone</button>
+        <button type="button" className={view === 'danger' ? 'on' : ''} onClick={() => setView('danger')}>Gevaarzone</button>
+        <button type="button" className={view === 'scores' ? 'on' : ''} onClick={() => setView('scores')}>Doelpunten</button>
         <button type="button" className={view === 'dots' ? 'on' : ''} onClick={() => setView('dots')}>Pogingen</button>
       </div>
       <FieldSchema
         className="gev-field"
         half="bottom"
         convMinAttempts={1}
-        convPoints={view === 'heat' ? convPoints : undefined}
+        convPoints={view === 'danger' ? convPoints : undefined}
+        heatPoints={view === 'scores' ? goalPoints : undefined}
         markers={view === 'dots' ? markers : []}
         ends={{ bottom: { text: '▼ Doel', color: '#06d6a0' } }}
       />
-      {view === 'heat' ? (
+      {view === 'danger' ? (
         <div className="gev-legend">
           <span className="gev-scale" /> <span>weinig kans → gevaarlijk (scoringskans)</span>
-          <span className="gev-note">van waar hij gooit · {shots.length} pogingen</span>
+          <span className="gev-note">van waar hij aanvallend het gevaarlijkst is · {shots.length} pogingen</span>
+        </div>
+      ) : view === 'scores' ? (
+        <div className="gev-legend">
+          <span className="gev-scale" /> <span>weinig → veel doelpunten</span>
+          <span className="gev-note">van waar hij het meeste scoort · {goalPoints.length} doelpunten</span>
         </div>
       ) : (
         <div className="gev-legend">
