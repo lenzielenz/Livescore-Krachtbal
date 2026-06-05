@@ -96,10 +96,16 @@
 }
 .sh-more-item {
   display: block;
+  width: 100%;
+  text-align: left;
   padding: 8px 12px;
   border-radius: 8px;
   font-size: 0.9rem;
   color: var(--txt);
+  background: none;
+  border: none;
+  font-family: inherit;
+  cursor: pointer;
 }
 .sh-more-item:hover {
   background: var(--bg);

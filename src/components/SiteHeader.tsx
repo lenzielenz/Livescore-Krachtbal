@@ -46,6 +46,7 @@ export function SiteHeader({ active = null }: { active?: NavSection }) {
   const [canAnalyse, setCanAnalyse] = useState(false)
   // Enkel een admin krijgt 'Demo expert' (volledige scoreopnemer i.p.v. de basisdemo).
   const [isAdmin, setIsAdmin] = useState(false)
+  const [loggedIn, setLoggedIn] = useState(false)
   useEffect(() => {
     fetch('/api/users/me', { credentials: 'include' })
       .then((r) => (r.ok ? r.json() : null))
@@ -53,11 +54,20 @@ export function SiteHeader({ active = null }: { active?: NavSection }) {
         const u = (d as { user?: { roles?: unknown; analyseAccess?: unknown } } | null)?.user
         const roles = u?.roles
         const admin = Array.isArray(roles) && roles.includes('admin')
+        setLoggedIn(Boolean(u))
         setIsAdmin(admin)
         setCanAnalyse(admin || Boolean(u?.analyseAccess))
       })
       .catch(() => {})
   }, [])
+  const logout = async () => {
+    try {
+      await fetch('/api/users/logout', { method: 'POST', credentials: 'include' })
+    } catch {
+      /* sessie verloopt sowieso server-side */
+    }
+    window.location.href = '/'
+  }
   const menuActive = active !== null && MENU_SECTIONS.includes(active)
 
   return (
@@ -119,12 +129,20 @@ export function SiteHeader({ active = null }: { active?: NavSection }) {
                   </div>
                   <div className="sh-more-group">
                     <div className="sh-more-grouphead">Account</div>
-                    <Link href="/registreren" className="sh-more-item" onClick={() => setOpen(false)}>
-                      📝 Registreren
-                    </Link>
-                    <Link href="/inloggen" className="sh-more-item" onClick={() => setOpen(false)}>
-                      🔐 Inloggen
-                    </Link>
+                    {loggedIn ? (
+                      <button type="button" className="sh-more-item" onClick={() => { setOpen(false); void logout() }}>
+                        🚪 Uitloggen
+                      </button>
+                    ) : (
+                      <>
+                        <Link href="/registreren" className="sh-more-item" onClick={() => setOpen(false)}>
+                          📝 Registreren
+                        </Link>
+                        <Link href="/inloggen" className="sh-more-item" onClick={() => setOpen(false)}>
+                          🔐 Inloggen
+                        </Link>
+                      </>
+                    )}
                   </div>
                 </div>
               </>
