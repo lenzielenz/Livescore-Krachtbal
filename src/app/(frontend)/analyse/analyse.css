@@ -332,3 +332,27 @@
 .xp-bar-fill.xp-pos { background: #2dd4a7; }
 .xp-bar-fill.xp-neg { background: #ef476f; }
 .xp-rate-fill { background: var(--accent); }
+
+/* ── Ploegrapport ── */
+.rep-pickers { display: flex; flex-wrap: wrap; gap: 8px; }
+.rep-exports { display: flex; flex-wrap: wrap; gap: 10px; margin: 4px 0 16px; }
+.rep-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 10px;
+}
+.rep-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 12px 10px;
+  background: var(--panel-grad);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: var(--card-shadow);
+  text-align: center;
+}
+.rep-num { font-size: 1.5rem; font-weight: 900; font-variant-numeric: tabular-nums; }
+.rep-lbl { font-size: 0.72rem; color: var(--dim); text-transform: uppercase; letter-spacing: 0.03em; }
+.rep-catch { font-weight: 800; color: var(--accent); }
