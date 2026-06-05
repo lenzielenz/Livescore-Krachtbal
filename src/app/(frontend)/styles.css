@@ -646,8 +646,13 @@ h3,
   padding: 12px 20px;
   border-radius: 12px;
   border: 1px solid var(--accent, #ffd873);
+  /* Expliciet transparant: anders toont een <button> de witte UA-achtergrond. */
+  background: transparent;
   color: var(--accent, #ffd873);
   font-weight: 800;
+  font-family: inherit;
+  font-size: inherit;
+  cursor: pointer;
   text-decoration: none;
 }
 .sk-demo-cta:hover {
