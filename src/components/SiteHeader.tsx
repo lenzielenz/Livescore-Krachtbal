@@ -17,14 +17,15 @@ const PRIMARY: { href: string; label: string; key: NavSection }[] = [
   { href: '/demo', label: '🎓 Demo', key: 'demo' },
 ]
 
-// Algemene ingangen bovenaan het Meer-menu (bekijken).
+// Algemene ingangen bovenaan het Meer-menu.
 const GENERAL = [
   { href: '/rangschikking', label: '📊 Stand' },
   { href: '/tornooi', label: '🏆 Tornooi' },
+  { href: '/scorekeeper', label: '📝 Wedstrijd invullen' },
 ]
 
 // Het Meer-menu licht op zodra je op een van deze secties zit.
-const MENU_SECTIONS: NavSection[] = ['stand', 'tornooi', 'clubs', 'scheidsrechters', 'federatie']
+const MENU_SECTIONS: NavSection[] = ['stand', 'analyse', 'tornooi', 'clubs', 'scheidsrechters', 'federatie']
 
 export function SiteHeader({ active = null }: { active?: NavSection }) {
   const [open, setOpen] = useState(false)
@@ -55,11 +56,6 @@ export function SiteHeader({ active = null }: { active?: NavSection }) {
               {l.label}
             </Link>
           ))}
-          {canAnalyse && (
-            <Link href="/analyse" className={`sh-link ${active === 'analyse' ? 'on' : ''}`}>
-              📈 Analyse
-            </Link>
-          )}
 
           <div className="sh-more">
             <button
@@ -80,6 +76,11 @@ export function SiteHeader({ active = null }: { active?: NavSection }) {
                         {l.label}
                       </Link>
                     ))}
+                    {canAnalyse && (
+                      <Link href="/analyse" className="sh-more-item" onClick={() => setOpen(false)}>
+                        📈 Analyse
+                      </Link>
+                    )}
                   </div>
                   <div className="sh-more-group">
                     <div className="sh-more-grouphead">Aan de slag</div>
