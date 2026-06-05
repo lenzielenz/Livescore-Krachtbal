@@ -1,5 +1,6 @@
 import type { Payload } from 'payload'
 
+import { buildExpectedPoints } from './expected-points'
 import { loadMatchThrowData } from './match-engine'
 
 // Match-gerelateerde radar-statistiek per speler (seizoen, per reeks). De assen zijn
@@ -32,6 +33,24 @@ export interface RadarPlayer {
   rechtsShare: number
   /** Verdediging — vangsten per wedstrijd. */
   catchesPerMatch: number
+  /** Totaal doelpunten. */
+  goals: number
+  /** Doelpunten per wedstrijd. */
+  goalsPerMatch: number
+  /** Werkelijk gescoorde punten (uit doelpogingen). */
+  points: number
+  /** Verwachte punten (xG-model). */
+  xPoints: number
+  /** Efficiëntie — punten boven (+) of onder (−) verwachting. */
+  diff: number
+  /** Verste worp (m). */
+  maxDistance: number
+  /** Aantal nekworpen. */
+  nek: number
+  /** Aantal rugworpen. */
+  rug: number
+  /** Aandeel worpen naar de middenzone, 0..1. */
+  middenShare: number
 }
 
 const rel = (v: unknown): number | null =>
@@ -78,16 +97,20 @@ export async function buildRadarStats(payload: Payload, reeks: string): Promise<
     forced: number
     links: number
     rechts: number
+    midden: number
     zoned: number
     distSum: number
     distN: number
+    maxDist: number
+    nek: number
+    rug: number
     catches: number
   }
   const agg = new Map<number, Acc>()
   const get = (id: number, name: string, shirt: number): Acc => {
     let a = agg.get(id)
     if (!a) {
-      a = { playerId: id, name, shirt, matches: new Set(), throws: 0, goals: 0, goalAttempts: 0, forced: 0, links: 0, rechts: 0, zoned: 0, distSum: 0, distN: 0, catches: 0 }
+      a = { playerId: id, name, shirt, matches: new Set(), throws: 0, goals: 0, goalAttempts: 0, forced: 0, links: 0, rechts: 0, midden: 0, zoned: 0, distSum: 0, distN: 0, maxDist: 0, nek: 0, rug: 0, catches: 0 }
       agg.set(id, a)
     }
     return a
@@ -108,15 +131,19 @@ export async function buildRadarStats(payload: Payload, reeks: string): Promise<
       a.throws += 1
       if (t.isLastThrow) a.goalAttempts += 1
       if (t.outcome === 'goal') a.goals += 1
+      if (t.type === 'nek') a.nek += 1
+      else if (t.type === 'rug') a.rug += 1
       if (typeof t.distance === 'number') {
         a.distSum += t.distance
         a.distN += 1
+        if (t.distance > a.maxDist) a.maxDist = t.distance
         if (t.distance > FORCE_DISTANCE_M && !t.isLastThrow) a.forced += 1
       }
       if (t.zone) {
         a.zoned += 1
         if (t.zone === 'links') a.links += 1
         else if (t.zone === 'rechts') a.rechts += 1
+        else a.midden += 1
       }
     }
   }
@@ -134,9 +161,15 @@ export async function buildRadarStats(payload: Payload, reeks: string): Promise<
     }
   }
 
+  // Verwachte-puntenmodel (xG): werkelijke vs verwachte punten per speler in deze reeks.
+  const xp = await buildExpectedPoints(payload, reeks).catch(() => ({ players: [] as { playerId: number; points: number; xPoints: number; diff: number }[] }))
+  const xpBy = new Map<number, { points: number; xPoints: number; diff: number }>()
+  for (const xpp of xp.players) xpBy.set(xpp.playerId, { points: xpp.points, xPoints: xpp.xPoints, diff: xpp.diff })
+
   const players: RadarPlayer[] = [...agg.values()].map((a) => {
     const mc = a.matches.size || 1
     const tid = playerTeam.get(a.playerId) ?? null
+    const x = xpBy.get(a.playerId) ?? { points: 0, xPoints: 0, diff: 0 }
     return {
       playerId: a.playerId,
       name: a.name,
@@ -151,6 +184,15 @@ export async function buildRadarStats(payload: Payload, reeks: string): Promise<
       linksShare: a.zoned ? Math.round((a.links / a.zoned) * 100) / 100 : 0,
       rechtsShare: a.zoned ? Math.round((a.rechts / a.zoned) * 100) / 100 : 0,
       catchesPerMatch: Math.round((a.catches / mc) * 10) / 10,
+      goals: a.goals,
+      goalsPerMatch: Math.round((a.goals / mc) * 10) / 10,
+      points: x.points,
+      xPoints: x.xPoints,
+      diff: x.diff,
+      maxDistance: Math.round(a.maxDist * 10) / 10,
+      nek: a.nek,
+      rug: a.rug,
+      middenShare: a.zoned ? Math.round((a.midden / a.zoned) * 100) / 100 : 0,
     }
   })
 
