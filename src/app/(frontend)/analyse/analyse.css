@@ -709,3 +709,29 @@ select.rang-picker {
 .an-lead-name .an-lead-team { color: var(--dim); font-weight: 600; font-size: 0.7rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .an-lead-val { margin-left: auto; font-weight: 900; font-variant-numeric: tabular-nums; color: var(--accent); white-space: nowrap; }
 .an-lead-unit { color: var(--dim); font-weight: 700; font-size: 0.72rem; }
+
+/* ── Seizoen: top-3 podium ── */
+.an-podium { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 4px 0 16px; }
+@media (max-width: 560px) { .an-podium { grid-template-columns: 1fr; } }
+.an-pod {
+  position: relative;
+  display: flex; flex-direction: column; gap: 2px;
+  background: var(--panel-grad);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 13px 15px 12px 17px;
+  box-shadow: var(--card-shadow);
+  overflow: hidden;
+}
+.an-pod::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--dim); }
+.an-pod.r1::before { background: #ffd873; }
+.an-pod.r1 { border-color: color-mix(in srgb, #ffd873 45%, var(--line)); box-shadow: 0 16px 40px -14px #ffd873; }
+.an-pod.r2::before { background: #cfe0d8; }
+.an-pod.r3::before { background: #e0a06a; }
+.an-pod-medal { font-size: 1.35rem; line-height: 1; }
+.an-pod-name { font-weight: 900; font-size: 0.98rem; }
+.an-pod-team { color: var(--dim); font-size: 0.74rem; }
+.an-pod-stats { display: flex; gap: 16px; margin-top: 7px; }
+.an-pod-stats span { display: flex; flex-direction: column; font-size: 0.66rem; color: var(--dim); text-transform: uppercase; letter-spacing: 0.03em; }
+.an-pod-stats b { font-size: 1.2rem; color: var(--txt); font-weight: 900; font-variant-numeric: tabular-nums; }
+.an-pod.r1 .an-pod-stats b { color: var(--accent); }

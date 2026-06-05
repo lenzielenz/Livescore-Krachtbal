@@ -66,6 +66,21 @@ export default async function SeizoenAnalysePage({ searchParams }: { searchParam
         {players.length === 0 ? (
           <p className="empty">Nog geen worpdata in deze reeks.</p>
         ) : (
+          <>
+          <div className="an-podium">
+            {players.slice(0, 3).map((p, i) => (
+              <div key={p.playerId} className={`an-pod r${i + 1}`}>
+                <span className="an-pod-medal" aria-hidden>{['🥇', '🥈', '🥉'][i]}</span>
+                <span className="an-pod-name">#{p.shirtNumber} {p.name}</span>
+                <span className="an-pod-team">{p.teamName}</span>
+                <div className="an-pod-stats">
+                  <span><b>{p.points}</b>punten</span>
+                  <span><b>{p.goals}</b>doelp.</span>
+                  <span><b>{Math.round(p.conversion * 100)}%</b>conv.</span>
+                </div>
+              </div>
+            ))}
+          </div>
           <div className="rang-scroll">
             <table className="rang-table an-season-table">
               <thead>
@@ -103,6 +118,7 @@ export default async function SeizoenAnalysePage({ searchParams }: { searchParam
               </tbody>
             </table>
           </div>
+          </>
         )}
       </div>
     </>
