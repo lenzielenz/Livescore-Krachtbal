@@ -356,3 +356,56 @@
 .rep-num { font-size: 1.5rem; font-weight: 900; font-variant-numeric: tabular-nums; }
 .rep-lbl { font-size: 0.72rem; color: var(--dim); text-transform: uppercase; letter-spacing: 0.03em; }
 .rep-catch { font-weight: 800; color: var(--accent); }
+
+/* ── Gevaarzone (speler-scoringskaart) ── */
+.gev-grid {
+  display: grid;
+  grid-template-columns: minmax(220px, 320px) 1fr;
+  gap: 18px;
+  align-items: start;
+}
+@media (max-width: 700px) {
+  .gev-grid { grid-template-columns: 1fr; }
+}
+.gev-map {
+  background: var(--panel-grad);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px 16px;
+  box-shadow: var(--card-shadow);
+}
+.gev-controls { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.gev-controls button {
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  background: #0a1f14;
+  color: var(--txt);
+  border-radius: 7px;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.gev-controls button.on {
+  background: var(--accent);
+  color: #06140d;
+  font-weight: 700;
+  border-color: var(--accent);
+}
+.gev-field { width: 100%; height: auto; max-height: 460px; border-radius: 10px; display: block; }
+.gev-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+  font-size: 0.72rem;
+  color: var(--dim);
+}
+.gev-legend span { display: inline-flex; align-items: center; gap: 4px; }
+.gev-legend i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.gev-note { color: var(--dim); font-style: italic; }
+.gev-scale {
+  width: 64px; height: 10px; border-radius: 4px; display: inline-block;
+  background: linear-gradient(to right, rgb(239, 71, 111), rgb(255, 209, 102), rgb(6, 214, 160));
+}
+.gev-side { display: flex; flex-direction: column; gap: 14px; }
+.gev-side .rep-cards { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }

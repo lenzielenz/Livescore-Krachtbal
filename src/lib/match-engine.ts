@@ -976,6 +976,10 @@ export interface ShotPoint {
   teamSide: TeamSide
   throwNumber: number
   isLastThrow: boolean
+  /** Helft (1 of 2) — nodig om posities te spiegelen voor een seizoens-gevaarkaart. */
+  period: number
+  /** Worpafstand in meters (afgeleid), indien beschikbaar. */
+  distance: number | null
 }
 
 /**
@@ -1042,6 +1046,8 @@ export async function loadMatchThrowData(
       teamSide: side,
       throwNumber: t.throwNumber,
       isLastThrow: t.throwNumber >= allowed,
+      period: t.period ?? 1,
+      distance: t.distance ?? null,
     })
     lastLanding.set(possId, { x: t.landingX, y: t.landingY })
   }
