@@ -4,6 +4,7 @@ import { SiteHeader } from '@/components/SiteHeader'
 import { hasRole, isFederationLevel } from '@/lib/access'
 import { getAuthUser } from '@/lib/auth-user'
 import { AnalyseNav } from '../AnalyseNav'
+import { ReeksindelingImport } from './ReeksindelingImport'
 import { ResultsImport } from './ResultsImport'
 import '../analyse.css'
 
@@ -41,6 +42,13 @@ export default async function ResultsImportPage() {
         </p>
 
         <ResultsImport />
+
+        <h2 className="an-sub">🕑 Thuisuren uit de reeksindeling</h2>
+        <p className="an-intro">
+          Laad de <strong>reeksindeling-PDF</strong>: per ploeg wordt het thuisuur (dag + uur) ingesteld op de
+          overeenkomstige ploeg in de juiste reeks. Eerst <em>Voorbeeld</em>, dan <em>Thuisuren instellen</em>.
+        </p>
+        <ReeksindelingImport />
       </div>
     </>
   )
