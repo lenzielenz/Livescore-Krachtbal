@@ -16,8 +16,8 @@
   --accent-2: #f9b023;
   --home: #0fe0a6;
   --away: #4cc9f0;
-  /* Nieuwe poppy-accenten: gebruikt voor gloed, randen en flair (spaarzaam). */
-  --pop: #ff5c8a;
+  /* Premium robijnrood-accent: gebruikt voor live, gloed, randen en flair (spaarzaam). */
+  --pop: #e23744;
   --pop-2: #b07bff;
   /* Gedeelde kleurverlopen — geven knoppen, merk en markers een premium glans. */
   --grad-accent: linear-gradient(135deg, #ffe7a0 0%, var(--accent) 45%, var(--accent-2) 100%);
@@ -917,7 +917,7 @@ h3,
   padding: 2px 8px;
   border-radius: 999px;
 }
-.club-badge.live { color: #ef476f; }
+.club-badge.live { color: var(--pop); }
 .club-badge.ready { color: #2dd4a7; }
 .club-badge.todo { color: var(--dim); }
 .club-match-coach {

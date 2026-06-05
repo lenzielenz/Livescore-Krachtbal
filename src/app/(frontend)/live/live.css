@@ -93,13 +93,13 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #ef476f;
+  background: var(--pop);
   margin-right: 6px;
   vertical-align: middle;
 }
 .lb-reeks.live.on {
-  border-color: #ef476f;
-  color: #ef476f;
+  border-color: var(--pop);
+  color: var(--pop);
 }
 .lb-reeks.on {
   background: var(--panel);
@@ -303,7 +303,7 @@
   font-weight: 900;
   letter-spacing: 0.06em;
   color: #fff;
-  background: #ef476f;
+  background: var(--pop);
   padding: 3px 9px;
   border-radius: 999px;
   animation: lb-livepulse 1.6s ease-in-out infinite;
