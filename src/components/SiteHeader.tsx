@@ -21,12 +21,13 @@ const PRIMARY: { href: string; label: string; key: NavSection }[] = [
 const GENERAL = [
   { href: '/rangschikking', label: '📊 Stand' },
   { href: '/tornooi', label: '🏆 Tornooi' },
-  { href: '/scorekeeper', label: '📝 Wedstrijd invullen' },
 ]
 
 // Alles wat de analysemodule aanbiedt — zichtbaar voor admin/analyse-toegang.
+// "Wedstrijd invullen" hoort hier ook bij: de opname voedt de analyse.
 const ANALYSE_LINKS = [
   { href: '/analyse', label: '📈 Analyse-overzicht' },
+  { href: '/scorekeeper', label: '📝 Wedstrijd invullen' },
   { href: '/analyse/seizoen', label: '📊 Seizoensanalyse' },
   { href: '/analyse/spelers', label: '🎯 Spelersradar' },
   { href: '/analyse/verwacht', label: '🎯 Verwachte punten (xP)' },
