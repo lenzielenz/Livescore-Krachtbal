@@ -233,6 +233,9 @@ export default async function AnalysePage({ searchParams }: { searchParams: Prom
             <div className="an-record-new">
               <NieuweAnalyseMatch teams={teamOptions} reeksOptions={[...COMPETITIE_REEKSEN]} />
             </div>
+            <p style={{ margin: '6px 0 14px' }}>
+              <Link href="/analyse/import" className="sk-demo-cta">⬆ Officiële uitslagen importeren →</Link>
+            </p>
             {openRows.length === 0 ? (
               <p className="empty">Nog geen voorbereide analysewedstrijden. Maak er een aan met de knop hierboven.</p>
             ) : (
