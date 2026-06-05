@@ -97,3 +97,21 @@
   background: #4a1020;
   color: #ffd5e0;
 }
+
+/* Geboorte-kolom + bestand opladen + handleiding */
+.bulk-table th:first-child, .bulk-num { width: 64px; }
+.bulk-table th:last-child, .bulk-birth { width: 110px; }
+.bulk select, .bulk input { min-width: 0; }
+.bulk-table-wrap { width: 100%; }
+.bulk-file {
+  display: inline-flex; align-items: center; gap: 10px;
+  border: 1px dashed color-mix(in srgb, var(--accent) 55%, var(--line));
+  border-radius: 10px; padding: 12px 14px; margin: 4px 0 14px; cursor: pointer;
+  background: var(--panel);
+}
+.bulk-file input { flex: 0 0 auto; width: auto; }
+.bulk-file span { color: var(--dim); font-weight: 600; }
+.bulk-guide { margin: 4px 0 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; }
+.bulk-guide summary { cursor: pointer; font-weight: 800; font-size: 0.9rem; }
+.bulk-guide ol { margin: 10px 0 6px; padding-left: 18px; color: var(--dim); font-size: 0.86rem; line-height: 1.5; }
+.bulk-guide-ex { color: var(--dim); font-size: 0.8rem; font-family: ui-monospace, monospace; background: rgba(255,255,255,0.04); border-radius: 8px; padding: 8px 10px; }
