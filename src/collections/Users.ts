@@ -1,6 +1,6 @@
 import type { CollectionConfig, FieldHook } from 'payload'
 
-import { ROLE_OPTIONS, hasRole, isAdmin } from '../lib/access'
+import { ROLE_OPTIONS, hasRole, isAdmin, isFederationLevel } from '../lib/access'
 
 // Eerste gebruiker (bij lege database) wordt automatisch admin; daarna erft de waarde
 // die de admin instelt.
@@ -23,7 +23,13 @@ export const Users: CollectionConfig = {
   access: {
     // Alleen admins beheren gebruikers; de eerste gebruiker mag aangemaakt worden bij lege db.
     create: isAdmin,
-    read: ({ req }) => Boolean(req.user),
+    // Privacy: enkel admin/federatie ziet álle accounts; een gewone gebruiker enkel zichzelf
+    // (zodat /me en eigen profiel blijven werken, maar niemand andermans e-mails kan opvragen).
+    read: ({ req }) => {
+      if (isFederationLevel(req.user)) return true
+      if (req.user) return { id: { equals: req.user.id } }
+      return false
+    },
     update: ({ req, id }) => hasRole(req.user, 'admin') || req.user?.id === id,
     delete: isAdmin,
   },
