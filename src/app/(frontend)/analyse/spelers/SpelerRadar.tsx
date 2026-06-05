@@ -77,18 +77,31 @@ function pctColor(t: number): string {
   return `rgb(${c[0]}, ${c[1]}, ${c[2]})`
 }
 
-function tierOf(r: number): { label: string; color: string } {
-  if (r >= 85) return { label: 'Elite', color: '#06d6a0' }
-  if (r >= 68) return { label: 'Sterk', color: '#3ddc97' }
-  if (r >= 50) return { label: 'Solide', color: '#ffd166' }
-  if (r >= 32) return { label: 'In ontwikkeling', color: '#f9a826' }
-  return { label: 'Beginnend', color: '#ef476f' }
+// Spelersprofiel uit de balans aanval ↔ verdediging — zegt méér dan een vage "sterk".
+function profileOf(att: number, def: number): string {
+  if (att >= 66 && def >= 66) return 'Complete speler'
+  if (att - def >= 18) return 'Aanvaller'
+  if (def - att >= 18) return 'Verdediger'
+  if (att >= 50 || def >= 50) return 'Gebalanceerd'
+  return 'Rol in opbouw'
 }
 
-function RatingGauge({ rating, color, label, name, sub }: { rating: number; color: string; label: string; name: string; sub?: string }) {
+function SubBar({ icon, label, v }: { icon: string; label: string; v: number }) {
+  return (
+    <div className="rad-sub">
+      <span className="rad-sub-lbl">{icon} {label}</span>
+      <span className="rad-sub-bar"><span className="rad-sub-bar-fill" style={{ width: `${v}%`, background: pctColor(v / 100) }} /></span>
+      <span className="rad-sub-val" style={{ color: pctColor(v / 100) }}>{v}</span>
+    </div>
+  )
+}
+
+function RatingGauge({ rating, att, def, name, sub }: { rating: number; att: number; def: number; name: string; sub?: string }) {
   const r = 46
   const c = 2 * Math.PI * r
   const dash = (Math.max(0, Math.min(100, rating)) / 100) * c
+  const color = pctColor(rating / 100)
+  const profile = profileOf(att, def)
   return (
     <div className="rad-gauge">
       <svg viewBox="0 0 120 120" className="rad-gauge-svg" role="img" aria-label={`Rating ${rating}`}>
@@ -102,11 +115,16 @@ function RatingGauge({ rating, color, label, name, sub }: { rating: number; colo
           strokeDasharray={`${dash} ${c}`}
           transform="rotate(-90 60 60)"
         />
-        <text x="60" y="56" className="rad-gauge-num" textAnchor="middle">{rating}</text>
-        <text x="60" y="78" className="rad-gauge-tier" fill={color} textAnchor="middle">{label}</text>
+        <text x="60" y="58" className="rad-gauge-num" textAnchor="middle">{rating}</text>
+        <text x="60" y="76" className="rad-gauge-lbl" textAnchor="middle">rating</text>
       </svg>
       <span className="rad-gauge-name">{name}</span>
       {sub && <span className="rad-gauge-sub">{sub}</span>}
+      <span className="rad-profile">{profile}</span>
+      <div className="rad-subs">
+        <SubBar icon="⚔️" label="Aanval" v={att} />
+        <SubBar icon="🛡️" label="Verdediging" v={def} />
+      </div>
     </div>
   )
 }
@@ -145,6 +163,17 @@ export function SpelerRadar({
     return le / arr.length
   }
   const ratingOf = (p: RadarPlayer): number => Math.round((RADAR.reduce((s, m) => s + pct(m.key, m.get(p)), 0) / N) * 100)
+  // Deel-ratings: aanval (offensieve assen) vs verdediging (vangsten).
+  const ATT_KEYS = ['aanval', 'doel', 'succes', 'effic', 'afstand', 'forceren']
+  const DEF_KEYS = ['verded']
+  const subRating = (p: RadarPlayer, keys: string[]): number => {
+    let s = 0
+    for (const k of keys) {
+      const m = RADAR.find((x) => x.key === k)
+      if (m) s += pct(k, m.get(p))
+    }
+    return Math.round((s / keys.length) * 100)
+  }
 
   const playerA = players.find((p) => p.playerId === aId) ?? null
   const playerB = players.find((p) => p.playerId === bId) ?? null
@@ -156,7 +185,6 @@ export function SpelerRadar({
 
   const aRating = playerA ? ratingOf(playerA) : 0
   const bRating = playerB ? ratingOf(playerB) : 0
-  const aTier = tierOf(aRating)
 
   // Hero-kaarten: de meest sprekende prestatie-assen.
   const HERO = [RADAR[1], RADAR[2], RADAR[3]] // Doelpunten, Succes, Efficiëntie
@@ -200,11 +228,11 @@ export function SpelerRadar({
           {playerA && (
             <div className="rad-hero">
               <div className="rad-gauge-card">
-                <RatingGauge rating={aRating} color={aTier.color} label={aTier.label} name={playerA.name} sub={`#${playerA.shirtNumber} · ${playerA.teamName}`} />
+                <RatingGauge rating={aRating} att={subRating(playerA, ATT_KEYS)} def={subRating(playerA, DEF_KEYS)} name={playerA.name} sub={`#${playerA.shirtNumber} · ${playerA.teamName}`} />
                 {playerB && (
-                  <RatingGauge rating={bRating} color={tierOf(bRating).color} label={tierOf(bRating).label} name={playerB.name} sub={`#${playerB.shirtNumber} · ${playerB.teamName}`} />
+                  <RatingGauge rating={bRating} att={subRating(playerB, ATT_KEYS)} def={subRating(playerB, DEF_KEYS)} name={playerB.name} sub={`#${playerB.shirtNumber} · ${playerB.teamName}`} />
                 )}
-                <span className="rad-gauge-cap">Rating = gemiddeld percentiel over alle prestatie-assen.</span>
+                <span className="rad-gauge-cap">Rating, aanval &amp; verdediging = percentiel binnen de reeks (0–100).</span>
               </div>
               <div className="rad-cards">
                 {HERO.map((m) => {
