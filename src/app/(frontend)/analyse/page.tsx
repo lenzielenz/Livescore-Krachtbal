@@ -58,8 +58,9 @@ export default async function AnalysePage() {
       <div className="site">
         <h1 className="page-title"><span className="brand">Analyse</span></h1>
         <p className="an-intro">Kies een afgelopen wedstrijd om alle data per speler en ploeg te bekijken.</p>
-        <p style={{ margin: '0 0 16px' }}>
+        <p className="an-hub-links">
           <Link href="/analyse/seizoen" className="sk-demo-cta">📊 Seizoensanalyse per reeks →</Link>
+          <Link href="/analyse/spelers" className="sk-demo-cta">🎯 Spelersradar &amp; vergelijken →</Link>
         </p>
 
         {rows.length === 0 ? (
