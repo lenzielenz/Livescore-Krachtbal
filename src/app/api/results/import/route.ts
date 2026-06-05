@@ -22,7 +22,7 @@ const rel = (v: unknown): number | null =>
   v && typeof v === 'object' ? ((v as { id?: number }).id ?? null) : typeof v === 'number' ? v : null
 
 export async function POST(req: Request) {
-  let body: { text?: string; commit?: boolean }
+  let body: { text?: string; commit?: boolean; createTeams?: boolean }
   try {
     body = await req.json()
   } catch {
@@ -30,6 +30,7 @@ export async function POST(req: Request) {
   }
   const text = String(body.text ?? '')
   const commit = body.commit === true
+  const createTeams = body.createTeams === true
   if (!text.trim()) return Response.json({ error: 'Geen bestandsinhoud.' }, { status: 400 })
 
   try {
@@ -58,7 +59,56 @@ export async function POST(req: Request) {
       if (list.length === 0) return null
       const exact = list.find((x) => x.reeks === reeks)
       if (exact) return exact.id
-      return list.length === 1 ? list[0].id : null
+      // Geen exacte reeks-match: enkel hergebruiken als de naam uniek én van dezelfde reeks is.
+      return null
+    }
+
+    // Clubs indexeren (voor het aanmaken van ontbrekende ploegen).
+    const clubsRes = await payload.find({ collection: 'clubs', depth: 0, limit: 5000 }).catch(() => ({ docs: [] as Record<string, unknown>[] }))
+    const clubByName = new Map<string, number>()
+    for (const c of clubsRes.docs) {
+      const k = norm(String((c as { name?: unknown }).name ?? ''))
+      if (k) clubByName.set(k, (c as { id: number }).id)
+    }
+    const ensureClub = async (clubName: string): Promise<number> => {
+      const k = norm(clubName)
+      const ex = clubByName.get(k)
+      if (ex != null) return ex
+      const created = await payload.create({ collection: 'clubs', data: { name: clubName }, overrideAccess: true })
+      const id = (created as { id: number }).id
+      clubByName.set(k, id)
+      return id
+    }
+    // Naam → club: strip een eventuele A/B-poule-suffix ("KBC St. Michiels A" → "KBC St. Michiels").
+    const clubNameOf = (teamName: string) => teamName.replace(/\s+[AB]$/, '').trim()
+    let teamsCreated = 0
+    const wouldCreate = new Set<string>()
+    const fakeId = new Map<string, number>()
+    // Zoekt de ploeg op; maakt ze (met club) aan indien gevraagd en in commit-modus. In preview
+    // krijgt een nog-aan-te-maken ploeg een tijdelijk (negatief) id, zodat de wedstrijd meetelt.
+    const ensureTeam = async (name: string, reeks: Reeks): Promise<number | null> => {
+      const found = resolveTeam(name, reeks)
+      if (found != null) return found
+      if (!createTeams) return null
+      if (!commit) {
+        const fk = `${norm(name)}|${reeks}`
+        wouldCreate.add(fk)
+        let fid = fakeId.get(fk)
+        if (fid == null) { fid = -(fakeId.size + 1); fakeId.set(fk, fid) }
+        return fid
+      }
+      const clubId = await ensureClub(clubNameOf(name))
+      const t = await payload.create({
+        collection: 'teams',
+        data: { name, reeks, category: reeksCategorie(reeks), club: clubId },
+        overrideAccess: true,
+      })
+      const id = (t as { id: number }).id
+      const arr = byName.get(norm(name)) ?? []
+      arr.push({ id, reeks })
+      byName.set(norm(name), arr)
+      teamsCreated++
+      return id
     }
 
     // Bestaande wedstrijden voor dedup (per reeks).
@@ -85,8 +135,9 @@ export async function POST(req: Request) {
 
     for (const r of played) {
       if (!r.reeks) { skippedReeks.add(r.reeksCode); continue }
-      const hid = resolveTeam(r.home, r.reeks)
-      const aid = resolveTeam(r.away, r.reeks)
+      const reeks = r.reeks as Reeks
+      const hid = await ensureTeam(r.home, reeks)
+      const aid = await ensureTeam(r.away, reeks)
       if (hid == null) unmatched.add(r.home)
       if (aid == null) unmatched.add(r.away)
       if (hid == null || aid == null) continue
@@ -146,6 +197,8 @@ export async function POST(req: Request) {
       toCreate,
       toUpdate,
       committed,
+      teamsCreated,
+      teamsToCreate: wouldCreate.size,
       skippedReeks: [...skippedReeks],
       unmatchedTeams: [...unmatched].slice(0, 60),
       unmatchedCount: unmatched.size,

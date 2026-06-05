@@ -10,6 +10,8 @@ type Report = {
   toCreate?: number
   toUpdate?: number
   committed?: number
+  teamsCreated?: number
+  teamsToCreate?: number
   skippedReeks?: string[]
   unmatchedTeams?: string[]
   unmatchedCount?: number
@@ -22,6 +24,7 @@ export function ResultsImport() {
   const [text, setText] = useState('')
   const [fileName, setFileName] = useState('')
   const [busy, setBusy] = useState(false)
+  const [createTeams, setCreateTeams] = useState(true)
   const [report, setReport] = useState<Report | null>(null)
 
   const onFile = async (f: File | null) => {
@@ -39,7 +42,7 @@ export function ResultsImport() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ text, commit }),
+        body: JSON.stringify({ text, commit, createTeams }),
       })
       setReport(await res.json())
     } catch (e) {
@@ -54,6 +57,11 @@ export function ResultsImport() {
       <label className="imp-file">
         <input type="file" accept=".xls,.html,.htm,.txt" onChange={(e) => onFile(e.target.files?.[0] ?? null)} />
         <span>{fileName || 'Kies het wedstrijden-bestand (.xls / .html)…'}</span>
+      </label>
+
+      <label className="imp-check">
+        <input type="checkbox" checked={createTeams} onChange={(e) => setCreateTeams(e.target.checked)} />
+        Ontbrekende ploegen automatisch aanmaken (met club)
       </label>
 
       <div className="imp-actions">
@@ -74,6 +82,7 @@ export function ResultsImport() {
               <div className="rep-card"><span className="rep-num">{report.played ?? 0}</span><span className="rep-lbl">Gespeeld</span></div>
               <div className="rep-card"><span className="rep-num">{report.toCreate ?? 0}</span><span className="rep-lbl">Nieuw</span></div>
               <div className="rep-card"><span className="rep-num">{report.toUpdate ?? 0}</span><span className="rep-lbl">Bijwerken</span></div>
+              <div className="rep-card"><span className="rep-num">{report.commit ? (report.teamsCreated ?? 0) : (report.teamsToCreate ?? 0)}</span><span className="rep-lbl">Ploegen {report.commit ? 'gemaakt' : 'nieuw'}</span></div>
               <div className="rep-card"><span className="rep-num">{report.commit ? (report.committed ?? 0) : '—'}</span><span className="rep-lbl">Opgeslagen</span></div>
             </div>
             <p className="imp-note">
