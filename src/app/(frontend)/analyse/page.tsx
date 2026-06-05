@@ -156,7 +156,9 @@ export default async function AnalysePage() {
                     <span className={`an-card-reeks ${r.status === 'live' ? 'an-live' : ''}`}>
                       {r.status === 'live'
                         ? '● LIVE — aantekenen'
-                        : `${r.analyseOnly ? '🎬 Analyse' : r.reeks} · ▶ opnemen`}
+                        : r.analyseOnly
+                          ? '🎬 Analyse · ▶ Activeren'
+                          : `${r.reeks} · ▶ opnemen`}
                     </span>
                     <span className="an-card-row">
                       <span className="an-team">
