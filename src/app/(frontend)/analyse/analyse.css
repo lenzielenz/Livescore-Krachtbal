@@ -66,9 +66,10 @@ select.rang-picker {
   display: flex;
   flex-direction: column;
   gap: 14px;
+  min-width: 0;
 }
 .nam-row { display: flex; flex-wrap: wrap; gap: 14px; }
-.nam-row .rad-field { flex: 1 1 160px; }
+.nam-row .rad-field { flex: 1 1 160px; min-width: 0; }
 .nam-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 2px; }
 .nam-actions .sk-demo-cta { flex: 1 1 auto; text-align: center; }
 .nam-prepare {
@@ -887,15 +888,16 @@ select.rang-picker {
 .pan-tip { color: var(--dim); font-size: 0.78rem; font-style: italic; }
 
 /* ── Nieuwe analysewedstrijd: spelers toevoegen ── */
-.nam-teams { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-@media (max-width: 560px) { .nam-teams { grid-template-columns: 1fr; } }
-.nam-team { background: rgba(0,0,0,0.18); border: 1px solid var(--line); border-radius: 12px; padding: 12px; }
+.nam-teams { display: grid; grid-template-columns: 1fr; gap: 14px; }
+@media (min-width: 620px) { .nam-teams { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+.nam-team { min-width: 0; background: rgba(0,0,0,0.18); border: 1px solid var(--line); border-radius: 12px; padding: 12px; }
 .nam-team-h { margin: 0 0 8px; font-size: 0.86rem; }
 .nam-roster { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
 .nam-chip { font-size: 0.8rem; background: rgba(255,255,255,0.06); border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; }
 .nam-chip b { color: var(--accent); font-variant-numeric: tabular-nums; }
-.nam-addrow { display: flex; gap: 6px; align-items: center; }
-.nam-addrow .nam-num { flex: 0 0 56px; text-align: center; }
+.nam-addrow { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.nam-addrow .nam-num { flex: 0 0 52px; width: 52px; text-align: center; }
+.nam-addrow input:not(.nam-num) { flex: 1 1 90px; min-width: 0; }
 .nam-addrow .nam-prepare { flex: 0 0 auto; padding: 9px 12px; }
 .imp-check { display: flex; align-items: center; gap: 8px; font-size: 0.88rem; font-weight: 600; color: var(--txt); cursor: pointer; }
 .imp-check input { width: 18px; height: 18px; accent-color: var(--accent); }
