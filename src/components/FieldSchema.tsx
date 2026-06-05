@@ -153,7 +153,7 @@ function convColor(t: number): string {
   return `rgb(${c[0]}, ${c[1]}, ${c[2]})`
 }
 
-function ConvLayer({ points, h }: { points: ConvPoint[]; h: number }) {
+function ConvLayer({ points, h, minAttempts }: { points: ConvPoint[]; h: number; minAttempts: number }) {
   const att = Array.from({ length: CGY }, () => new Array(CGX).fill(0))
   const gls = Array.from({ length: CGY }, () => new Array(CGX).fill(0))
   let maxAtt = 0
@@ -171,7 +171,7 @@ function ConvLayer({ points, h }: { points: ConvPoint[]; h: number }) {
   for (let y = 0; y < CGY; y++) {
     for (let x = 0; x < CGX; x++) {
       const n = att[y][x]
-      if (n < CONV_MIN_ATTEMPTS) continue
+      if (n < minAttempts) continue
       const conv = gls[y][x] / n
       cells.push(
         <rect
@@ -202,6 +202,7 @@ export function FieldSchema({
   glowGoal,
   goalAreaDepthM = 10,
   half,
+  convMinAttempts = CONV_MIN_ATTEMPTS,
   className,
 }: {
   onTap?: (p: Point) => void
@@ -210,6 +211,8 @@ export function FieldSchema({
   heatPoints?: Point[]
   /** Wanneer gezet: render een conversie-heatmap (gevaarzone) van doelpogingen. */
   convPoints?: ConvPoint[]
+  /** Min. aantal pogingen per cel voor de conversie-heatmap (default 2; 1 voor één speler). */
+  convMinAttempts?: number
   /** Richtingslabels per ploeg: bovenaan valt aan naar boven (↑), onderaan naar onder (↓). */
   ends?: { top?: EndLabel; bottom?: EndLabel }
   /** Laat een doelgebied oplichten (vrije worp). */
@@ -314,7 +317,7 @@ export function FieldSchema({
       {heatPoints && heatPoints.length > 0 && <HeatLayer points={heatPoints} h={H} />}
 
       {/* Conversie-heatmap (gevaarzone, optioneel) */}
-      {convPoints && convPoints.length > 0 && <ConvLayer points={convPoints} h={H} />}
+      {convPoints && convPoints.length > 0 && <ConvLayer points={convPoints} h={H} minAttempts={convMinAttempts} />}
 
       {/* Markers */}
       {markers.map((m, i) => {

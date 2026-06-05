@@ -26,6 +26,8 @@ export function GevaarMap({ shots }: { shots: DangerShot[] }) {
       </div>
       <FieldSchema
         className="gev-field"
+        half="bottom"
+        convMinAttempts={1}
         convPoints={view === 'heat' ? convPoints : undefined}
         markers={view === 'dots' ? markers : []}
         ends={{ bottom: { text: '▼ Doel', color: '#06d6a0' } }}

@@ -103,6 +103,7 @@ export function ScoringField({ shots, teams, players }: { shots: DangerShot[]; t
           <FieldSchema
             className="gev-field"
             half="bottom"
+            convMinAttempts={sel.startsWith('player:') ? 1 : 2}
             convPoints={view === 'heat' ? convPoints : undefined}
             markers={view === 'dots' ? markers : []}
             ends={{ bottom: { text: '▼ Doel', color: '#06d6a0' } }}
