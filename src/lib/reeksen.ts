@@ -93,6 +93,39 @@ export function reeksCategorie(reeks: Reeks): Category {
   return REEKS_CATEGORIE[reeks]
 }
 
+// Officiële balkleur per categorie (KVKBF): dames = rood, heren = wit, U12/U14 = geel,
+// U16/U18 = blauw. Recreatief/beker/andere kennen geen vaste kleur → wit als veilige default.
+export type KrachtbalKleur = 'wit' | 'rood' | 'geel' | 'blauw'
+
+const REEKS_BALKLEUR: Record<Reeks, KrachtbalKleur> = {
+  '1NAH': 'wit',
+  '1NAHB': 'wit',
+  '2NAH': 'wit',
+  '2NAHB': 'wit',
+  LH: 'wit',
+  RHA: 'wit',
+  RHB: 'wit',
+  '1NAD': 'rood',
+  LD: 'rood',
+  RDA: 'rood',
+  RDB: 'rood',
+  U12: 'geel',
+  U14J: 'geel',
+  U14M: 'geel',
+  U16J: 'blauw',
+  U16M: 'blauw',
+  U18J: 'blauw',
+  U18M: 'blauw',
+  recreatief: 'wit',
+  beker: 'wit',
+  andere: 'wit',
+}
+
+/** Balkleur die hoort bij een reeks (dames rood, heren wit, U12/U14 geel, U16/U18 blauw). */
+export function krachtbalKleur(reeks: unknown): KrachtbalKleur {
+  return (typeof reeks === 'string' && REEKS_BALKLEUR[reeks as Reeks]) || 'wit'
+}
+
 // Reglement §6.8/§8.1: U16-MEISJES spelen met het SENIOR-worpaantal (3 vanaf eigen helft, 2 op
 // tegenhelft) i.p.v. het jeugd-aantal (4/3) — al houden ze wél de jeugd-speelduur (2×20).
 // Omdat de categorie ('U16') geen geslacht kent, leiden we dit af uit de reeks (die het wél kent).

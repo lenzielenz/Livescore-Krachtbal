@@ -76,6 +76,9 @@ export function FieldScreen({
   const [state, setState] = useState<MatchState>(initial.state)
   const [clock, setClock] = useState(initial.state.match.clockSeconds)
   const [goal, setGoal] = useState<Goal | null>(null)
+  // Volledig scherm voor de zaal-tv: zet het veldscherm over het hele scherm (verbergt browser-UI).
+  const rootRef = useRef<HTMLDivElement>(null)
+  const [isFullscreen, setIsFullscreen] = useState(false)
   const base = useRef({ seconds: initial.state.match.clockSeconds, at: Date.now() })
   const seenGoals = useRef<Set<string>>(new Set(initial.timeline.filter((i) => i.kind === 'goal').map((i) => i.id)))
   const goalSeq = useRef(0)
@@ -114,6 +117,21 @@ export function FieldScreen({
     }
   }, [])
 
+  // Houd de knop-status in sync, ook als de gebruiker met Esc/F11 het volledige scherm verlaat.
+  useEffect(() => {
+    const onChange = () => setIsFullscreen(!!document.fullscreenElement)
+    document.addEventListener('fullscreenchange', onChange)
+    return () => document.removeEventListener('fullscreenchange', onChange)
+  }, [])
+
+  const toggleFullscreen = () => {
+    if (document.fullscreenElement) {
+      void document.exitFullscreen?.()
+    } else {
+      void rootRef.current?.requestFullscreen?.()
+    }
+  }
+
   // Klok-basis bijwerken bij elke state-update.
   useEffect(() => {
     base.current = { seconds: state.match.clockSeconds, at: Date.now() }
@@ -151,7 +169,22 @@ export function FieldScreen({
   } as React.CSSProperties
 
   return (
-    <div className="fs" style={fsStyle}>
+    <div className="fs" style={fsStyle} ref={rootRef}>
+      <button
+        type="button"
+        className="fs-fsbtn"
+        onClick={toggleFullscreen}
+        aria-label={isFullscreen ? 'Volledig scherm verlaten' : 'Volledig scherm'}
+        title={isFullscreen ? 'Volledig scherm verlaten' : 'Volledig scherm'}
+      >
+        <svg viewBox="0 0 24 24" width="56%" height="56%" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+          {isFullscreen ? (
+            <path d="M9 4v5H4 M15 4v5h5 M9 20v-5H4 M15 20v-5h5" />
+          ) : (
+            <path d="M4 9V4h5 M20 9V4h-5 M4 15v5h5 M20 15v5h-5" />
+          )}
+        </svg>
+      </button>
       <div className="fs-top">
         <span className={`fs-status ${status}`}>{statusLabel}</span>
         {reeks && <span className="fs-reeks">{reeks}</span>}

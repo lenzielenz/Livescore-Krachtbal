@@ -28,6 +28,34 @@
   gap: 12px 18px;
   padding: clamp(12px, 3vh, 32px) 16px 0;
 }
+
+/* Volledig-scherm-knop: rustige ronde knop rechtsboven; ingetogen tot je erover hovert. */
+.fs-fsbtn {
+  position: absolute;
+  top: clamp(10px, 2.4vh, 22px);
+  right: clamp(10px, 2.4vw, 24px);
+  z-index: 5;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: clamp(38px, 5vw, 52px);
+  height: clamp(38px, 5vw, 52px);
+  padding: 0;
+  color: var(--txt);
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  cursor: pointer;
+  opacity: 0.55;
+  transition: opacity 0.2s ease, background 0.2s ease;
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+}
+.fs-fsbtn:hover,
+.fs-fsbtn:focus-visible {
+  opacity: 1;
+  background: rgba(0, 0, 0, 0.6);
+}
 .fs-offline {
   font-size: clamp(0.7rem, 1.6vw, 1rem);
   font-weight: 800;

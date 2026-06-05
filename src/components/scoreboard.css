@@ -58,6 +58,86 @@
 }
 .sb-react-btn:hover { background: var(--panel-2); }
 .sb-react-btn:active { transform: scale(0.86); }
+/* Zichtbare teller per emoji: zo zie je dat er volop gereageerd wordt. */
+.sb-react-btn { display: inline-flex; align-items: center; gap: 6px; }
+.sb-react-count {
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--dim);
+  font-variant-numeric: tabular-nums;
+  min-width: 1ch;
+  text-align: left;
+}
+
+/* Live tribune (shoutouts van ingelogde supporters). */
+.sb-chat {
+  margin: 18px auto 4px;
+  max-width: 520px;
+}
+.sb-chat-title {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--dim);
+  margin: 0 0 8px;
+}
+.sb-chat-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 220px;
+  overflow-y: auto;
+  padding: 4px 2px;
+  scrollbar-width: thin;
+}
+.sb-shout {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  background: #0a1f14;
+  font-size: 0.9rem;
+}
+.sb-shout-name {
+  font-weight: 700;
+  color: var(--accent, #06d6a0);
+}
+.sb-shout-text { color: var(--txt); overflow-wrap: anywhere; }
+.sb-chat-form {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+.sb-chat-input {
+  flex: 1;
+  min-width: 0;
+  padding: 9px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--panel-2) 60%, transparent);
+  color: var(--txt);
+  font-size: 0.92rem;
+}
+.sb-chat-input:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent, #06d6a0) 60%, transparent);
+  outline-offset: 1px;
+}
+.sb-chat-send {
+  padding: 9px 16px;
+  border-radius: 999px;
+  border: none;
+  background: var(--accent, #06d6a0);
+  color: #06140d;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+.sb-chat-send:disabled { opacity: 0.45; cursor: default; }
+.sb-chat-login { color: var(--dim); font-size: 0.88rem; margin: 10px 0 0; }
+.sb-chat-login a { color: var(--accent, #06d6a0); font-weight: 600; }
 .sb-floats {
   pointer-events: none;
   position: absolute;
