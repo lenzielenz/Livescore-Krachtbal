@@ -6,6 +6,7 @@ import { getAuthUser } from '@/lib/auth-user'
 import { buildExpectedPoints } from '@/lib/expected-points'
 import { getPayloadClient } from '@/lib/payload-client'
 import { REEKS_OPTIONS, reeksNaam } from '@/lib/reeksen'
+import { AnalyseNav } from '../AnalyseNav'
 import { ScoringField } from './ScoringField'
 import { VerwachtPicker } from './VerwachtPicker'
 import '../../rangschikking/rangschikking.css'
@@ -51,7 +52,7 @@ export default async function VerwachtAnalysePage({ searchParams }: { searchPara
     <>
       <SiteHeader active="analyse" />
       <div className="site">
-        <Link href="/analyse" className="back-link">← Analyse</Link>
+        <AnalyseNav active="verwacht" />
         <div className="an-head-bar">
           <h1 className="page-title"><span className="brand">Verwachte punten</span></h1>
           <VerwachtPicker reeks={reeks} options={[...COMPETITIE_REEKSEN]} />

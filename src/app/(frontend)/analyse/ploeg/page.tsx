@@ -6,6 +6,7 @@ import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
 import { REEKS_OPTIONS, reeksNaam } from '@/lib/reeksen'
 import { buildTeamReport } from '@/lib/team-report'
+import { AnalyseNav } from '../AnalyseNav'
 import { PloegPicker } from './PloegPicker'
 import '../../rangschikking/rangschikking.css'
 import '../analyse.css'
@@ -59,7 +60,7 @@ export default async function PloegRapportPage({ searchParams }: { searchParams:
     <>
       <SiteHeader active="analyse" />
       <div className="site">
-        <Link href="/analyse" className="back-link">← Analyse</Link>
+        <AnalyseNav active="ploeg" />
         <div className="an-head-bar">
           <h1 className="page-title"><span className="brand">Ploegrapport</span></h1>
           <PloegPicker reeks={reeks} reeksOptions={[...COMPETITIE_REEKSEN]} teamOptions={teamOptions} team={teamId != null ? String(teamId) : ''} />

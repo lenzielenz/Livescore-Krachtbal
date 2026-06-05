@@ -6,6 +6,7 @@ import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
 import { REEKS_OPTIONS, reeksNaam } from '@/lib/reeksen'
 import { buildSeasonStats } from '@/lib/season-stats'
+import { AnalyseNav } from '../AnalyseNav'
 import { SeizoenPicker } from './SeizoenPicker'
 import '../../rangschikking/rangschikking.css'
 import '../analyse.css'
@@ -56,7 +57,7 @@ export default async function SeizoenAnalysePage({ searchParams }: { searchParam
     <>
       <SiteHeader active="analyse" />
       <div className="site">
-        <Link href="/analyse" className="back-link">← Analyse</Link>
+        <AnalyseNav active="seizoen" />
         <div className="an-head-bar">
           <h1 className="page-title"><span className="brand">Seizoensanalyse</span></h1>
           <SeizoenPicker reeks={reeks} options={[...COMPETITIE_REEKSEN]} />

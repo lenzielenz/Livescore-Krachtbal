@@ -6,6 +6,7 @@ import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
 import { buildRadarStats } from '@/lib/radar-stats'
 import { REEKS_OPTIONS, reeksNaam } from '@/lib/reeksen'
+import { AnalyseNav } from '../AnalyseNav'
 import { SpelerRadar } from './SpelerRadar'
 import '../analyse.css'
 
@@ -48,7 +49,7 @@ export default async function SpelerAnalysePage({ searchParams }: { searchParams
     <>
       <SiteHeader active="analyse" />
       <div className="site">
-        <Link href="/analyse" className="back-link">← Analyse</Link>
+        <AnalyseNav active="spelers" />
         <div className="an-head-bar">
           <h1 className="page-title"><span className="brand">Spelersradar</span></h1>
         </div>
