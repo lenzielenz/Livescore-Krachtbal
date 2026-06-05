@@ -46,6 +46,23 @@ export function SimpleScorekeeper({
   const [error, setError] = useState<string | null>(null)
   // Openstaand doelpunt dat wacht op een spelerkeuze (snel-scoren vereist een scorer).
   const [pending, setPending] = useState<{ side: SimpleSide; points: 1 | 2 } | null>(null)
+  // Veldspelers (max. 4 per ploeg) — enkel zij verschijnen in de scorerkeuze. Begint bij de
+  // voorbereide opstelling (of de eerste 4) en kan tijdens de match gewisseld worden.
+  const teamRosterOf = (side: SimpleSide) =>
+    roster.filter((p) => p.teamId === state.teams[side].id).sort((a, b) => a.shirtNumber - b.shirtNumber)
+  const initField = (side: SimpleSide): number[] => {
+    const tr = teamRosterOf(side)
+    const fromState = (state.lineup[side] ?? []).filter((id) => tr.some((p) => p.id === id))
+    return (fromState.length ? fromState : tr.slice(0, 4).map((p) => p.id)).slice(0, 4)
+  }
+  const [field, setField] = useState<{ home: number[]; away: number[] }>(() => ({ home: initField('home'), away: initField('away') }))
+  const fieldPlayersOf = (side: SimpleSide) => {
+    const tr = teamRosterOf(side)
+    return field[side].map((id) => tr.find((p) => p.id === id)).filter((p): p is RosterPlayer => !!p)
+  }
+  // Wisselscherm: kies wie eruit gaat, dan wie erin komt.
+  const [subSide, setSubSide] = useState<SimpleSide | null>(null)
+  const [subOut, setSubOut] = useState<number | null>(null)
   // Scheidsrechter bevestigt de stand vóór de overgang naar de 2e helft.
   const [confirmHalfEnd, setConfirmHalfEnd] = useState(false)
   const busy = useRef(false)
@@ -205,6 +222,11 @@ export function SimpleScorekeeper({
                   </button>
                 </div>
               )}
+              {!finished && teamRosterOf(side).length > 0 && (
+                <button type="button" className="ssk-wissel" onClick={() => { setSubSide(side); setSubOut(null) }}>
+                  ⇄ Wissel · veld: {fieldPlayersOf(side).map((p) => p.shirtNumber).join(' ') || '—'}
+                </button>
+              )}
               <div className="ssk-stats">
                 <div className="ssk-stat">
                   <span className="ssk-stat-lbl">✖ Kruisjes</span>
@@ -304,9 +326,7 @@ export function SimpleScorekeeper({
 
       {pending && (() => {
         const team = state.teams[pending.side]
-        const teamPlayers = roster
-          .filter((p) => p.teamId === team.id)
-          .sort((a, b) => a.shirtNumber - b.shirtNumber)
+        const teamPlayers = fieldPlayersOf(pending.side)
         return (
           <div className="ssk-modal-overlay" onClick={() => setPending(null)}>
             <div className="ssk-modal" onClick={(e) => e.stopPropagation()}>
@@ -353,7 +373,65 @@ export function SimpleScorekeeper({
                 </div>
               )}
               <div className="ssk-modal-btns">
+                <button type="button" className="ssk-btn" onClick={() => { const s = pending.side; setPending(null); setSubSide(s); setSubOut(null) }}>⇄ Wissel</button>
                 <button type="button" className="ssk-btn" onClick={() => setPending(null)}>Annuleren</button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+
+      {subSide && (() => {
+        const side = subSide
+        const team = state.teams[side]
+        const onField = fieldPlayersOf(side)
+        const bench = teamRosterOf(side).filter((p) => !field[side].includes(p.id))
+        return (
+          <div className="ssk-modal-overlay" onClick={() => { setSubSide(null); setSubOut(null) }}>
+            <div className="ssk-modal" onClick={(e) => e.stopPropagation()}>
+              <h3>Wissel <span className="ssk-modal-pts">{team.name}</span></h3>
+              <p className="ssk-sub-hint">{subOut == null ? 'Tik wie eruit gaat …' : 'Tik wie erin komt …'}</p>
+              <div className="ssk-sub-sec">
+                <span className="ssk-sub-lbl">Op het veld</span>
+                <div className="ssk-pick-grid">
+                  {onField.map((p) => (
+                    <button type="button" key={p.id} className={`ssk-pick-player ${subOut === p.id ? 'sel' : ''}`} onClick={() => setSubOut(subOut === p.id ? null : p.id)}>
+                      <span className="ssk-pick-num">{p.shirtNumber}</span>
+                      <span className="ssk-pick-naam">{firstName(p.name)}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="ssk-sub-sec">
+                <span className="ssk-sub-lbl">Bank</span>
+                {bench.length === 0 ? (
+                  <p className="ssk-dim">Geen wisselspelers.</p>
+                ) : (
+                  <div className="ssk-pick-grid">
+                    {bench.map((p) => (
+                      <button
+                        type="button"
+                        key={p.id}
+                        className="ssk-pick-player bench"
+                        disabled={subOut == null && field[side].length >= 4}
+                        onClick={() => {
+                          setField((f) => {
+                            const cur = f[side]
+                            const next = subOut != null ? cur.map((id) => (id === subOut ? p.id : id)) : cur.length < 4 ? [...cur, p.id] : cur
+                            return { ...f, [side]: next }
+                          })
+                          setSubOut(null)
+                        }}
+                      >
+                        <span className="ssk-pick-num">{p.shirtNumber}</span>
+                        <span className="ssk-pick-naam">{firstName(p.name)}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="ssk-modal-btns">
+                <button type="button" className="ssk-btn primary" onClick={() => { setSubSide(null); setSubOut(null) }}>Klaar</button>
               </div>
             </div>
           </div>

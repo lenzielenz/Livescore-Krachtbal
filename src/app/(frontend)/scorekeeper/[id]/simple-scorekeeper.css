@@ -375,3 +375,30 @@
   text-align: center;
   margin: 0 0 14px;
 }
+
+/* Grotere veldspeler-knoppen in de scorerkeuze + wisselscherm */
+.ssk-pick-grid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; }
+.ssk-pick-player { padding: 16px 8px; gap: 3px; }
+.ssk-pick-num { font-size: 26px; }
+.ssk-pick-player.sel { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 16%, transparent); }
+.ssk-pick-player.bench { opacity: 0.92; }
+.ssk-pick-player.bench:disabled { opacity: 0.4; cursor: default; }
+/* Wisselknop per ploeg */
+.ssk-wissel {
+  margin-top: 8px;
+  width: 100%;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: inherit;
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: 13px;
+  font-weight: 700;
+  opacity: 0.85;
+  cursor: pointer;
+}
+.ssk-wissel:hover { opacity: 1; border-color: var(--team-color, var(--line)); }
+/* Wisselscherm-secties */
+.ssk-sub-hint { opacity: 0.75; font-size: 14px; margin: 2px 0 10px; }
+.ssk-sub-sec { margin-bottom: 12px; }
+.ssk-sub-lbl { display: block; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; opacity: 0.7; margin-bottom: 6px; font-weight: 800; }
