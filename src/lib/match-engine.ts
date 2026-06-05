@@ -978,8 +978,15 @@ export interface ShotPoint {
   isLastThrow: boolean
 }
 
-/** Statistiek-aggregaten + shot map-punten voor de matchdetailpagina. */
-export async function buildMatchStats(payload: Payload, matchId: number) {
+/**
+ * Laadt de ruwe worp-events van één wedstrijd en reconstrueert per worp het
+ * vertrekpunt en `isLastThrow` (doelpoging) uit de balbezit-context. Hergebruikt
+ * door zowel `buildMatchStats` als het verwachte-punten-model (xG).
+ */
+export async function loadMatchThrowData(
+  payload: Payload,
+  matchId: number,
+): Promise<{ stat: import('./stats').StatThrow[]; shots: ShotPoint[] }> {
   const { homeId } = await loadMatch(payload, matchId)
   const throwsRes = await payload.find({
     collection: 'throws',
@@ -1039,6 +1046,12 @@ export async function buildMatchStats(payload: Payload, matchId: number) {
     lastLanding.set(possId, { x: t.landingX, y: t.landingY })
   }
 
+  return { stat, shots }
+}
+
+/** Statistiek-aggregaten + shot map-punten voor de matchdetailpagina. */
+export async function buildMatchStats(payload: Payload, matchId: number) {
+  const { stat, shots } = await loadMatchThrowData(payload, matchId)
   const { aggregateStats } = await import('./stats')
   return { stats: aggregateStats(stat), shots }
 }
