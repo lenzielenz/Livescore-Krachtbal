@@ -184,7 +184,7 @@
 }
 .ssk-goalbtns {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1.5fr 1fr;
   gap: 8px;
 }
 .ssk-goal {
@@ -201,8 +201,11 @@
   gap: 2px;
 }
 .ssk-goal small { font-size: 11px; font-weight: 600; opacity: 0.8; }
-.ssk-goal.nek { background: #ffd873; }
-.ssk-goal.rug { background: #0fe0a6; }
+/* +1 (nekworp) is veruit het vaakst → groen en groter (mensen drukken groen eerst).
+   +2 (rugworp) is uitzondering → gedempt/secundair zodat het niet de eerste reflex is. */
+.ssk-goal.nek { background: #0fe0a6; }
+.ssk-goal.rug { background: #173f2a; color: #bfe6d3; border: 1px solid #2f6044; box-shadow: none; }
+.ssk-goal.rug small { opacity: 0.7; }
 .ssk-goal:active { transform: translateY(1px); }
 
 .ssk-stats {
