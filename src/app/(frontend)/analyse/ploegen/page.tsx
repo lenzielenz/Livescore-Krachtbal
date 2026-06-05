@@ -43,7 +43,7 @@ export default async function PloegenAnalysePage({ searchParams }: { searchParam
       : COMPETITIE_REEKSEN[0].value
 
   const payload = await getPayloadClient()
-  const teams = await buildTeamRadar(payload, reeks)
+  const { teams, results } = await buildTeamRadar(payload, reeks)
 
   return (
     <>
@@ -58,7 +58,7 @@ export default async function PloegenAnalysePage({ searchParams }: { searchParam
           conversie, worpafstand en verdediging (vangsten). Elke as toont het <em>percentiel binnen de reeks</em>.
         </p>
 
-        <TeamRadarView reeks={reeks} options={[...COMPETITIE_REEKSEN]} teams={teams} />
+        <TeamRadarView reeks={reeks} options={[...COMPETITIE_REEKSEN]} teams={teams} results={results} />
       </div>
     </>
   )

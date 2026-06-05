@@ -25,16 +25,25 @@ export interface TeamRadar {
   catchesPerMatch: number
 }
 
+// Eén wedstrijdresultaat (op basis van de geregistreerde worpdata) — voor vorm & onderlinge duels.
+export interface TeamMatchResult {
+  date: string
+  homeId: number
+  awayId: number
+  homePts: number
+  awayPts: number
+}
+
 const rel = (v: unknown): number | null =>
   v && typeof v === 'object' ? ((v as { id?: number }).id ?? null) : typeof v === 'number' ? v : null
 
-export async function buildTeamRadar(payload: Payload, reeks: string): Promise<TeamRadar[]> {
+export async function buildTeamRadar(payload: Payload, reeks: string): Promise<{ teams: TeamRadar[]; results: TeamMatchResult[] }> {
   const teamsRes = await payload
     .find({ collection: 'teams', where: { reeks: { equals: reeks } }, depth: 0, limit: 200 })
     .catch(() => ({ docs: [] as { id: number; name: string }[] }))
   const teamName = new Map<number, string>(teamsRes.docs.map((t) => [t.id, t.name as string]))
   const teamIds = teamsRes.docs.map((t) => t.id)
-  if (teamIds.length === 0) return []
+  if (teamIds.length === 0) return { teams: [], results: [] }
 
   // Speler → ploeg (voor de vangsten-toewijzing).
   const playerTeam = new Map<number, number>()
@@ -70,6 +79,7 @@ export async function buildTeamRadar(payload: Payload, reeks: string): Promise<T
     return a
   }
 
+  const results: TeamMatchResult[] = []
   for (const m of matches) {
     const matchId = (m as { id: number }).id
     const homeId = rel((m as { homeTeam?: unknown }).homeTeam)
@@ -80,6 +90,8 @@ export async function buildTeamRadar(payload: Payload, reeks: string): Promise<T
     } catch {
       continue
     }
+    let homePts = 0
+    let awayPts = 0
     for (const t of stat) {
       const tid = t.teamSide === 'home' ? homeId : awayId
       if (tid == null || !teamName.has(tid)) continue
@@ -89,12 +101,18 @@ export async function buildTeamRadar(payload: Payload, reeks: string): Promise<T
       if (t.isLastThrow) a.goalAttempts += 1
       if (t.outcome === 'goal') {
         a.goals += 1
-        a.points += t.type === 'rug' ? 2 : 1
+        const pts = t.type === 'rug' ? 2 : 1
+        a.points += pts
+        if (t.teamSide === 'home') homePts += pts
+        else awayPts += pts
       }
       if (typeof t.distance === 'number') {
         a.distSum += t.distance
         a.distN += 1
       }
+    }
+    if (homeId != null && awayId != null && teamName.has(homeId) && teamName.has(awayId)) {
+      results.push({ date: String((m as { date?: unknown }).date ?? ''), homeId, awayId, homePts, awayPts })
     }
   }
 
@@ -129,5 +147,5 @@ export async function buildTeamRadar(payload: Payload, reeks: string): Promise<T
   })
 
   teams.sort((x, y) => y.pointsPerMatch - x.pointsPerMatch || y.goalsPerMatch - x.goalsPerMatch)
-  return teams
+  return { teams, results }
 }
