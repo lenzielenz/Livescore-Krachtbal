@@ -18,7 +18,7 @@ interface PlayerOpt {
 }
 
 // Halfveld-gevaarkaart op de verwachte-puntenpagina: van waar op het veld scoort men het
-// makkelijkst? Elke zone kleurt van rood (moeilijk) naar groen (makkelijk) volgens de
+// makkelijkst? Elke zone kleurt van groen (weinig kans) naar rood (gevaarlijk) volgens de
 // scoringskans, met onderscheid links/midden/rechts. Beide helften zijn naar één doel
 // (onderaan) gespiegeld. Met een keuzelijst filter je op de hele reeks, één ploeg
 // (optelling) of één speler (zijn worpen).
@@ -110,7 +110,7 @@ export function ScoringField({ shots, teams, players }: { shots: DangerShot[]; t
           />
           {view === 'heat' ? (
             <div className="gev-legend">
-              <span className="gev-scale" /> <span>moeilijk → makkelijk scoren</span>
+              <span className="gev-scale" /> <span>weinig kans → gevaarlijk (scoringskans)</span>
               <span className="gev-note">{selLabel} · {filtered.length} pogingen</span>
             </div>
           ) : (

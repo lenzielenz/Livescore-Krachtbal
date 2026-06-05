@@ -34,7 +34,7 @@ export function GevaarMap({ shots }: { shots: DangerShot[] }) {
       />
       {view === 'heat' ? (
         <div className="gev-legend">
-          <span className="gev-scale" /> <span>zwak → gevaarlijk (scoringskans)</span>
+          <span className="gev-scale" /> <span>weinig kans → gevaarlijk (scoringskans)</span>
           <span className="gev-note">van waar hij gooit · {shots.length} pogingen</span>
         </div>
       ) : (

@@ -509,7 +509,7 @@ select.rang-picker {
 .gev-note { color: var(--dim); font-style: italic; }
 .gev-scale {
   width: 64px; height: 10px; border-radius: 4px; display: inline-block;
-  background: linear-gradient(to right, rgb(239, 71, 111), rgb(255, 209, 102), rgb(6, 214, 160));
+  background: linear-gradient(to right, rgb(6, 214, 160), rgb(255, 209, 102), rgb(239, 71, 111));
 }
 .gev-side { display: flex; flex-direction: column; gap: 14px; }
 .gev-side .rep-cards { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }

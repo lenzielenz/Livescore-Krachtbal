@@ -121,9 +121,9 @@ export default async function VerwachtAnalysePage({ searchParams }: { searchPara
 
             <h2 className="an-sub">Scoringskans per zone</h2>
             <p className="an-intro">
-              De veldhelft kleurt per zone van <strong style={{ color: '#ef476f' }}>rood</strong> (moeilijk scoren) naar{' '}
-              <strong style={{ color: '#06d6a0' }}>groen</strong> (makkelijk), van waar er geworpen wordt — met onderscheid
-              links/midden/rechts. Beide speelhelften zijn naar één doel (onderaan) gespiegeld.
+              De veldhelft kleurt per zone van <strong style={{ color: '#06d6a0' }}>groen</strong> (weinig scoringskans) naar{' '}
+              <strong style={{ color: '#ef476f' }}>rood</strong> (gevaarlijk — hoge scoringskans), van waar er geworpen wordt —
+              met onderscheid links/midden/rechts. Beide speelhelften zijn naar één doel (onderaan) gespiegeld.
             </p>
             {dangerShots.length > 0 && (
               <div className="xp-fieldwrap">
