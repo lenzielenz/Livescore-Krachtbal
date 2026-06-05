@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { PROFILES } from '@/lib/profiles'
 import './site-header.css'
@@ -10,7 +10,7 @@ import './site-header.css'
 // onder één opgekuist "Meer"-menu: ontdekken (tornooi, demo) en de drie
 // profiel-instappunten. Klik je een profiel, dan vind je dáár de bijhorende tools.
 // De `active`-prop markeert de huidige sectie.
-export type NavSection = 'wedstrijden' | 'stand' | 'demo' | 'tornooi' | 'clubs' | 'scheidsrechters' | 'federatie' | null
+export type NavSection = 'wedstrijden' | 'stand' | 'demo' | 'analyse' | 'tornooi' | 'clubs' | 'scheidsrechters' | 'federatie' | null
 
 const PRIMARY: { href: string; label: string; key: NavSection }[] = [
   { href: '/', label: 'Wedstrijden', key: 'wedstrijden' },
@@ -28,6 +28,17 @@ const MENU_SECTIONS: NavSection[] = ['stand', 'tornooi', 'clubs', 'scheidsrechte
 
 export function SiteHeader({ active = null }: { active?: NavSection }) {
   const [open, setOpen] = useState(false)
+  // Admin krijgt er een extra 'Analyse'-menu bij (rol uit /me opgehaald).
+  const [isAdmin, setIsAdmin] = useState(false)
+  useEffect(() => {
+    fetch('/api/users/me', { credentials: 'include' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        const roles = (d as { user?: { roles?: unknown } } | null)?.user?.roles
+        setIsAdmin(Array.isArray(roles) && roles.includes('admin'))
+      })
+      .catch(() => {})
+  }, [])
   const menuActive = active !== null && MENU_SECTIONS.includes(active)
 
   return (
@@ -43,6 +54,11 @@ export function SiteHeader({ active = null }: { active?: NavSection }) {
               {l.label}
             </Link>
           ))}
+          {isAdmin && (
+            <Link href="/analyse" className={`sh-link ${active === 'analyse' ? 'on' : ''}`}>
+              📈 Analyse
+            </Link>
+          )}
 
           <div className="sh-more">
             <button
