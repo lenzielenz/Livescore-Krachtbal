@@ -180,3 +180,23 @@
   font-variant-numeric: tabular-nums;
   color: var(--dim);
 }
+
+/* ── Seizoensanalyse ── */
+.an-head-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.an-season-team {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--dim);
+}
+.an-season-sub { color: var(--dim); font-size: 0.82em; }
+.an-neg { color: #ef476f; }
+.an-spark-cell { color: var(--accent); }
+.an-spark { display: block; }
+.an-spark-empty { color: var(--dim); }
