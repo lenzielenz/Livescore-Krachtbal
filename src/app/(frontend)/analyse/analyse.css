@@ -45,7 +45,18 @@ select.rang-picker {
 }
 .an-summary { margin: 0 0 18px; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
 .an-record-new { margin: 6px 0 14px; }
-.nam-open { display: inline-block; }
+/* Primaire actie: gevulde accentknop met donkere tekst — duidelijk leesbaar. */
+.nam-open,
+.nam-actions .sk-demo-cta {
+  background: var(--accent);
+  color: #06140d;
+  border-color: var(--accent);
+}
+.nam-open:hover,
+.nam-actions .sk-demo-cta:hover {
+  filter: brightness(1.06);
+  color: #06140d;
+}
 .nam-form {
   background: var(--panel-grad);
   border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--line));
