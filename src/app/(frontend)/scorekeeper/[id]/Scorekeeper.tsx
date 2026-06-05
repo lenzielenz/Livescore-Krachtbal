@@ -769,8 +769,8 @@ export function Scorekeeper({
         )
       })()}
 
-      {/* Help/uitleg is altijd beschikbaar (ook op een echte wedstrijd), auto-opent één keer per operator. */}
-      <DemoTutorial matchId={matchId} />
+      {/* Help/uitleg op echte wedstrijden en demo, maar niet bij een analysewedstrijd. */}
+      {!isAnalyseOnly && <DemoTutorial matchId={matchId} />}
 
       <div className="sk-topbar">
         <Link className="sk-back" href={isAnalyseOnly ? '/analyse' : '/scorekeeper'} title="Terug naar overzicht — de wedstrijd blijft gewoon live">← Overzicht</Link>
