@@ -4,8 +4,8 @@ import { SiteHeader } from '@/components/SiteHeader'
 import { canAnalyse } from '@/lib/access'
 import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
+import { buildRadarStats } from '@/lib/radar-stats'
 import { REEKS_OPTIONS, reeksNaam } from '@/lib/reeksen'
-import { buildSeasonStats } from '@/lib/season-stats'
 import { SpelerRadar } from './SpelerRadar'
 import '../analyse.css'
 
@@ -42,7 +42,7 @@ export default async function SpelerAnalysePage({ searchParams }: { searchParams
       : COMPETITIE_REEKSEN[0].value
 
   const payload = await getPayloadClient()
-  const players = await buildSeasonStats(payload, reeks)
+  const players = await buildRadarStats(payload, reeks)
 
   return (
     <>
@@ -53,8 +53,9 @@ export default async function SpelerAnalysePage({ searchParams }: { searchParams
           <h1 className="page-title"><span className="brand">Spelersradar</span></h1>
         </div>
         <p className="an-intro">
-          Vergelijk een speler met het reeks-gemiddelde (de stippellijn) of met een tweede speler. Alle assen zijn
-          genormaliseerd op de sterkste waarde in de reeks.
+          Match-gerelateerd spelersprofiel: aanval, succesvolle aanvallen, worpafstand, forceren (worpen &gt; 12 m die
+          niet de laatste zijn), flankspel (links/rechts) en verdediging (vangsten). Vergelijk met het reeks-gemiddelde
+          (de stippellijn) of met een tweede speler — alle assen genormaliseerd op de sterkste waarde in de reeks.
         </p>
 
         <SpelerRadar reeks={reeks} options={[...COMPETITIE_REEKSEN]} players={players} />
