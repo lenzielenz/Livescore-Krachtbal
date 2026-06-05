@@ -127,7 +127,15 @@ export default async function VerwachtAnalysePage({ searchParams }: { searchPara
             </p>
             {dangerShots.length > 0 && (
               <div className="xp-fieldwrap">
-                <ScoringField shots={dangerShots} />
+                <ScoringField
+                  shots={dangerShots}
+                  teams={[...new Map(players.filter((p) => p.teamId != null).map((p) => [p.teamId as number, p.teamName])).entries()]
+                    .map(([id, name]) => ({ id, name }))
+                    .sort((a, b) => a.name.localeCompare(b.name))}
+                  players={players
+                    .filter((p) => p.teamId != null)
+                    .map((p) => ({ id: p.playerId, name: p.name, shirtNumber: p.shirtNumber, teamId: p.teamId as number, teamName: p.teamName }))}
+                />
               </div>
             )}
             <div className="an-charts-grid">

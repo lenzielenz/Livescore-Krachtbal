@@ -43,6 +43,10 @@ export interface DangerShot {
   x: number
   y: number
   goal: boolean
+  /** Wie de worp deed — om per speler te filteren. */
+  playerId: number | null
+  /** Welke ploeg — om per ploeg op te tellen. */
+  teamId: number | null
 }
 
 export interface XpResult {
@@ -104,6 +108,8 @@ export async function buildExpectedPoints(payload: Payload, reeks: string): Prom
   const dangerShots: DangerShot[] = []
   for (const m of matches) {
     const matchId = (m as { id: number }).id
+    const homeId = rel((m as { homeTeam?: unknown }).homeTeam)
+    const awayId = rel((m as { awayTeam?: unknown }).awayTeam)
     let stat
     let shots
     try {
@@ -131,6 +137,8 @@ export async function buildExpectedPoints(payload: Payload, reeks: string): Prom
         x: dir === 'up' ? s.fromX : 1 - s.fromX,
         y: dir === 'up' ? s.fromY : 1 - s.fromY,
         goal: s.outcome === 'goal',
+        playerId: s.playerId ?? null,
+        teamId: s.teamSide === 'home' ? homeId : awayId,
       })
     }
   }
