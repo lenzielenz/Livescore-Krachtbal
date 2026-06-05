@@ -7,8 +7,13 @@ import type { Payload } from 'payload'
 const DEMO_CLUB = 'Demo Club'
 const DEMO_HOME = 'Demo Reds'
 const DEMO_AWAY = 'Demo Blues'
-const DEMO_REEKS = '1NAH' // 1ste Nationale Heren → categorie senioren
+// Aparte categorie: 'andere' valt buiten alle competitielijsten (rangschikking, analyse-creator,
+// seizoensanalyse) → een demo vervuilt nooit de echte data. Categorie blijft 'senioren' (spelregels).
+const DEMO_REEKS = 'andere'
 const DEMO_CATEGORY = 'senioren'
+
+// Een demo-wedstrijd vervalt na 1 uur en wordt dan (met al haar data) verwijderd.
+const DEMO_TTL_MS = 60 * 60 * 1000
 
 const HOME_NAMES = [
   'Tom Aerts', 'Jan Beckers', 'Wout Claes', 'Niels De Smet',
@@ -26,7 +31,15 @@ async function findByName(payload: Payload, collection: 'clubs' | 'teams', name:
 
 async function ensureTeam(payload: Payload, name: string, clubId: number): Promise<number> {
   const existing = await findByName(payload, 'teams', name)
-  if (existing) return existing.id as number
+  if (existing) {
+    // Bestaande demo-ploegen (oude reeks) bijwerken naar de aparte demo-categorie.
+    if ((existing as { reeks?: string }).reeks !== DEMO_REEKS) {
+      await payload
+        .update({ collection: 'teams', id: existing.id, data: { reeks: DEMO_REEKS, category: DEMO_CATEGORY }, overrideAccess: true })
+        .catch(() => undefined)
+    }
+    return existing.id as number
+  }
   const created = await payload.create({
     collection: 'teams',
     data: { name, club: clubId, category: DEMO_CATEGORY, reeks: DEMO_REEKS },
@@ -46,37 +59,40 @@ async function ensurePlayers(payload: Payload, teamId: number, names: string[]):
   }
 }
 
-/** Zet de demo terug op een propere start: geen live-data, status gepland, klok op nul. */
-async function resetDemo(payload: Payload, matchId: number, homeId: number, awayId: number): Promise<void> {
-  await Promise.all(
-    (['throws', 'possessions', 'match-events'] as const).map((collection) =>
-      payload.delete({ collection, where: { match: { equals: matchId } }, overrideAccess: true }).catch(() => undefined),
-    ),
-  )
-  await payload.update({
-    collection: 'matches',
-    id: matchId,
-    data: {
-      // Herstel ook de ploegen (voor het geval een oude demo-match andere ploegen had).
-      homeTeam: homeId,
-      awayTeam: awayId,
-      status: 'scheduled',
-      currentHalf: 1,
-      clockSeconds: 0,
-      clockRunning: false,
-      clockUpdatedAt: null,
-      homeLineup: [],
-      awayLineup: [],
-    },
-    overrideAccess: true,
-  })
+/**
+ * Verwijdert vervallen demo-wedstrijden (ouder dan 1 uur) met al hun data. Best-effort —
+ * wordt opportunistisch aangeroepen (bij een demo-bezoek en bij het laden van het live-bord),
+ * zodat demo's vanzelf verdwijnen zonder geplande taak.
+ */
+export async function purgeExpiredDemos(payload: Payload): Promise<void> {
+  const cutoff = new Date(Date.now() - DEMO_TTL_MS).toISOString()
+  const expired = await payload
+    .find({
+      collection: 'matches',
+      where: { and: [{ isDemo: { equals: true } }, { createdAt: { less_than: cutoff } }] },
+      limit: 100,
+      depth: 0,
+    })
+    .catch(() => ({ docs: [] as { id: number }[] }))
+  for (const m of expired.docs) {
+    const id = m.id as number
+    await Promise.all(
+      (['throws', 'possessions', 'match-events', 'matchsheets'] as const).map((collection) =>
+        payload.delete({ collection, where: { match: { equals: id } }, overrideAccess: true }).catch(() => undefined),
+      ),
+    )
+    await payload.delete({ collection: 'matches', id, overrideAccess: true }).catch(() => undefined)
+  }
 }
 
 /**
- * Zorgt dat de ingebouwde demo bestaat + speelklaar is, en geeft het match-id terug.
- * Bij elke aanroep wordt de demo gereset zodat je altijd opnieuw kan spelen.
+ * Zorgt dat de ingebouwde demo speelklaar is en geeft het match-id terug. Ruimt eerst de
+ * vervallen demo's op en maakt dan een verse demo-wedstrijd aan (elk bezoek een propere start;
+ * de demo-ploegen en spelers worden hergebruikt). De demo vervalt na 1 uur (zie purgeExpiredDemos).
  */
 export async function ensureDemoMatch(payload: Payload): Promise<number> {
+  await purgeExpiredDemos(payload)
+
   const club =
     (await findByName(payload, 'clubs', DEMO_CLUB)) ??
     (await payload.create({ collection: 'clubs', data: { name: DEMO_CLUB }, overrideAccess: true }))
@@ -87,27 +103,18 @@ export async function ensureDemoMatch(payload: Payload): Promise<number> {
   await ensurePlayers(payload, homeId, HOME_NAMES)
   await ensurePlayers(payload, awayId, AWAY_NAMES)
 
-  const found = await payload.find({ collection: 'matches', where: { isDemo: { equals: true } }, sort: 'createdAt', limit: 1, depth: 0 })
-  let matchId: number
-  if (found.docs[0]) {
-    matchId = found.docs[0].id as number
-  } else {
-    const created = await payload.create({
-      collection: 'matches',
-      data: {
-        reeks: DEMO_REEKS,
-        homeTeam: homeId,
-        awayTeam: awayId,
-        date: new Date().toISOString(),
-        status: 'scheduled',
-        goalAreaDepth: 10,
-        isDemo: true,
-      },
-      overrideAccess: true,
-    })
-    matchId = created.id as number
-  }
-
-  await resetDemo(payload, matchId, homeId, awayId)
-  return matchId
+  const created = await payload.create({
+    collection: 'matches',
+    data: {
+      reeks: DEMO_REEKS,
+      homeTeam: homeId,
+      awayTeam: awayId,
+      date: new Date().toISOString(),
+      status: 'scheduled',
+      goalAreaDepth: 10,
+      isDemo: true,
+    },
+    overrideAccess: true,
+  })
+  return created.id as number
 }

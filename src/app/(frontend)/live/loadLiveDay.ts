@@ -1,3 +1,4 @@
+import { purgeExpiredDemos } from '@/lib/demo'
 import { buildScoreboards } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
 import { REEKS_OPTIONS } from '@/lib/reeksen'
@@ -19,12 +20,19 @@ function dayBounds(dateStr: string): { start: string; end: string } {
 // Gedeeld door /live en de startpagina.
 export async function loadLiveDay(selected: string, today: string): Promise<DayMatch[]> {
   const payload = await getPayloadClient()
+  // Ruim meteen vervallen demo's op (best-effort) — zo verdwijnen ze ~binnen het uur,
+  // ook zonder dat iemand de demo opent.
+  await purgeExpiredDemos(payload).catch(() => undefined)
   const { start, end } = dayBounds(selected)
-  // Analyse-only wedstrijden zijn nooit publiek/live zichtbaar.
+  // Analyse-only én demo-wedstrijden zijn nooit publiek/live zichtbaar.
   const dayRes = await payload.find({
     collection: 'matches',
     where: {
-      and: [{ date: { greater_than_equal: start, less_than: end } }, { analyseOnly: { not_equals: true } }],
+      and: [
+        { date: { greater_than_equal: start, less_than: end } },
+        { analyseOnly: { not_equals: true } },
+        { isDemo: { not_equals: true } },
+      ],
     },
     sort: 'date',
     depth: 0,
@@ -36,7 +44,9 @@ export async function loadLiveDay(selected: string, today: string): Promise<DayM
     selected === today
       ? await payload.find({
           collection: 'matches',
-          where: { and: [{ status: { equals: 'live' } }, { analyseOnly: { not_equals: true } }] },
+          where: {
+            and: [{ status: { equals: 'live' } }, { analyseOnly: { not_equals: true } }, { isDemo: { not_equals: true } }],
+          },
           depth: 0,
           limit: 100,
         })
