@@ -1,6 +1,6 @@
 import type { Payload } from 'payload'
 
-import { loadMatchThrowData } from './match-engine'
+import { attackDirForSide, loadMatchThrowData } from './match-engine'
 import type { ThrowType } from './krachtbal-rules'
 
 // Verwachte punten (xG-achtig model voor krachtbal).
@@ -38,10 +38,19 @@ export interface XpPlayer {
   diff: number
 }
 
+/** Canoniek vertrekpunt van een doelpoging (aanval steeds naar onder, doel bij y≈1). */
+export interface DangerShot {
+  x: number
+  y: number
+  goal: boolean
+}
+
 export interface XpResult {
   players: XpPlayer[]
   buckets: XpBucket[]
   totals: { attempts: number; goals: number; points: number; xPoints: number }
+  /** Alle doelpogingen van de reeks, gespiegeld naar één aanvalsrichting — voor de veldkaart. */
+  dangerShots: DangerShot[]
 }
 
 const pointValue = (type: ThrowType): number => (type === 'rug' ? 2 : 1)
@@ -92,11 +101,13 @@ export async function buildExpectedPoints(payload: Payload, reeks: string): Prom
   // Verzamel alle doelpogingen (laatste worp van een balbezit).
   type Attempt = { playerId: number; name: string; shirt: number; type: ThrowType; dist: number | null; goal: boolean }
   const attempts: Attempt[] = []
+  const dangerShots: DangerShot[] = []
   for (const m of matches) {
     const matchId = (m as { id: number }).id
     let stat
+    let shots
     try {
-      ;({ stat } = await loadMatchThrowData(payload, matchId))
+      ;({ stat, shots } = await loadMatchThrowData(payload, matchId))
     } catch {
       continue
     }
@@ -109,6 +120,17 @@ export async function buildExpectedPoints(payload: Payload, reeks: string): Prom
         type: t.type,
         dist: t.distance,
         goal: t.outcome === 'goal',
+      })
+    }
+    // Veldkaart: vertrekpunt van elke doelpoging, gespiegeld naar één aanvalsrichting
+    // (doel onderaan, y≈1), zodat beide helften samenvallen tot één gevaarbeeld.
+    for (const s of shots) {
+      if (!s.isLastThrow) continue
+      const dir = attackDirForSide(s.teamSide, s.period)
+      dangerShots.push({
+        x: dir === 'up' ? s.fromX : 1 - s.fromX,
+        y: dir === 'up' ? s.fromY : 1 - s.fromY,
+        goal: s.outcome === 'goal',
       })
     }
   }
@@ -181,5 +203,5 @@ export async function buildExpectedPoints(payload: Payload, reeks: string): Prom
     { attempts: 0, goals: 0, points: 0, xPoints: 0 },
   )
 
-  return { players, buckets, totals }
+  return { players, buckets, totals, dangerShots }
 }
