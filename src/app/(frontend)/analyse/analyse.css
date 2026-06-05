@@ -849,7 +849,7 @@ select.rang-picker {
   background: linear-gradient(115deg, transparent 38%, rgba(255,255,255,0.16) 48%, transparent 58%);
   pointer-events: none; mix-blend-mode: screen;
 }
-.pan-top { display: flex; justify-content: space-between; font-size: 0.66rem; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; color: var(--dim); }
+.pan-top { display: flex; align-items: center; gap: 9px; padding-right: 66px; min-height: 38px; }
 .pan-rating {
   position: absolute; top: 40px; right: 16px;
   width: 56px; height: 56px; border-radius: 50%;
@@ -912,9 +912,11 @@ select.rang-picker {
   opacity: 0.10; filter: drop-shadow(0 0 8px var(--c1));
   pointer-events: none; transform: rotate(-8deg);
 }
-.pan-club { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
-.pan-club-nm { font-weight: 900; font-size: 0.86rem; letter-spacing: 0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px; }
-.pan-season { color: var(--dim); text-align: right; }
+.pan-club-nm {
+  font-weight: 900; font-size: 0.98rem; letter-spacing: 0.01em; line-height: 1.1;
+  text-transform: uppercase; color: var(--txt); min-width: 0;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
 .pan-num { color: var(--c1); text-shadow: 0 0 10px color-mix(in srgb, var(--c1) 60%, transparent); }
 .pan-name { text-shadow: 0 1px 0 #000, 0 0 14px color-mix(in srgb, var(--c1) 45%, transparent); }
 .pan-prof {
