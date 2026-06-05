@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 
 import { Scoreboard } from '@/components/Scoreboard'
 import { SiteHeader } from '@/components/SiteHeader'
+import { getAuthUser } from '@/lib/auth-user'
 import { buildMatchState, buildTimeline } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
 import { krachtbalKleur, REEKS_OPTIONS, reeksHalfDurationSeconds, reeksType, type Reeks } from '@/lib/reeksen'
@@ -39,6 +40,8 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   const ratePerMin = BASE_RATE_PER_MIN[reeksType(reeksRaw)]
   // Balkleur volgt de categorie: dames rood, heren wit, U12/U14 geel, U16/U18 blauw.
   const ballKleur = krachtbalKleur(reeksRaw)
+  // Enkel ingelogde bezoekers mogen shoutouts plaatsen in de live tribune.
+  const me = await getAuthUser()
   const datum = matchDoc?.date
     ? new Date(matchDoc.date as string).toLocaleString('nl-BE', { dateStyle: 'long', timeStyle: 'short' })
     : null
@@ -64,7 +67,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
       <Link href="/" className="back-link">
         ← Alle wedstrijden
       </Link>
-      <Scoreboard matchId={matchId} initial={{ state, timeline }} halfSeconds={halfSeconds} ratePerMin={ratePerMin} ballKleur={ballKleur} />
+      <Scoreboard matchId={matchId} initial={{ state, timeline }} halfSeconds={halfSeconds} ratePerMin={ratePerMin} ballKleur={ballKleur} canChat={Boolean(me)} />
       {(reeks || datum || accommodatie || referee || homeCaptain || awayCaptain) && (
         <div className="match-info">
           {(reeks || datum) && (

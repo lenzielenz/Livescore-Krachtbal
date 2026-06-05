@@ -19,6 +19,7 @@ function fmtClock(total: number): string {
 type Side = 'home' | 'away'
 
 type Goal = { key: number; side: Side; team: string; points: number; scorer: string | null }
+type Shout = { id: number; name: string; text: string; at: number }
 
 // Toegelaten supporter-emoji's (komt overeen met de server-whitelist in match-channel.ts).
 const EMOJI = { clap: '👏', fire: '🔥', heart: '❤️', goal: '🏐', wow: '😮' } as const
@@ -44,6 +45,7 @@ export function Scoreboard({
   halfSeconds,
   ratePerMin,
   ballKleur = 'wit',
+  canChat = false,
 }: {
   matchId: number
   initial: { state: MatchState; timeline: TimelineItem[] }
@@ -53,6 +55,8 @@ export function Scoreboard({
   ratePerMin: number
   /** Categoriekleur van de krachtbal (dames rood, heren wit, U12/U14 geel, U16/U18 blauw). */
   ballKleur?: KrachtbalKleur
+  /** Mag de bezoeker live shoutouts plaatsen? (enkel ingelogd) */
+  canChat?: boolean
 }) {
   const [state, setState] = useState<MatchState>(initial.state)
   const [timeline, setTimeline] = useState<TimelineItem[]>(initial.timeline)
@@ -64,10 +68,16 @@ export function Scoreboard({
   const seenGoals = useRef<Set<string>>(new Set(initial.timeline.filter((i) => i.kind === 'goal').map((i) => i.id)))
   const goalSeq = useRef(0)
   const goalTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  // Supporter-engagement: live kijkersaantal + zwevende emoji-reacties.
+  // Supporter-engagement: live kijkersaantal + zwevende emoji-reacties + zichtbare tellers.
   const [viewers, setViewers] = useState(0)
   const [floats, setFloats] = useState<{ key: number; name: EmojiName }[]>([])
   const floatSeq = useRef(0)
+  const [totals, setTotals] = useState<Record<string, number>>({})
+  // Live tribune (shoutouts van ingelogde supporters).
+  const [shouts, setShouts] = useState<Shout[]>([])
+  const [chatText, setChatText] = useState('')
+  const [chatBusy, setChatBusy] = useState(false)
+  const chatFeedRef = useRef<HTMLDivElement>(null)
 
   const spawnFloats = (counts: Record<string, number>) => {
     const next: { key: number; name: EmojiName }[] = []
@@ -107,7 +117,13 @@ export function Scoreboard({
     },
     {
       viewers: (d) => setViewers((d as { count?: number }).count ?? 0),
-      reactions: (d) => spawnFloats(d as Record<string, number>),
+      reactions: (d) => {
+        const r = d as { delta?: Record<string, number>; totals?: Record<string, number> }
+        if (r.delta) spawnFloats(r.delta)
+        if (r.totals) setTotals(r.totals)
+      },
+      shoutout: (d) => setShouts((prev) => [...prev.slice(-79), d as Shout]),
+      shoutouts: (d) => setShouts(d as Shout[]),
     },
   )
 
@@ -132,12 +148,36 @@ export function Scoreboard({
     }, 350)
   }
 
+  const sendShout = async () => {
+    const text = chatText.replace(/\s+/g, ' ').trim()
+    if (!text || chatBusy) return
+    setChatBusy(true)
+    try {
+      const res = await fetch(`/api/match/${matchId}/shoutout`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      })
+      if (res.ok) setChatText('') // het eigen bericht komt via de stream terug in de feed
+    } catch {
+      /* stil falen — de gebruiker kan opnieuw proberen */
+    } finally {
+      setChatBusy(false)
+    }
+  }
+
   useEffect(() => {
     return () => {
       if (goalTimer.current) clearTimeout(goalTimer.current)
       if (reactTimer.current) clearTimeout(reactTimer.current)
     }
   }, [])
+
+  // Tribune-feed automatisch naar het nieuwste bericht scrollen.
+  useEffect(() => {
+    const el = chatFeedRef.current
+    if (el) el.scrollTop = el.scrollHeight
+  }, [shouts])
 
   // Klok-basis bijwerken bij elke state-update.
   useEffect(() => {
@@ -286,8 +326,53 @@ export function Scoreboard({
               aria-label={`Reageer met ${name}`}
             >
               {reactionGlyph(name, ballKleur)}
+              {totals[name] > 0 && <span className="sb-react-count">{totals[name]}</span>}
             </button>
           ))}
+        </div>
+      )}
+
+      {/* Live tribune: shoutouts van ingelogde supporters (efemeer, enkel tijdens een live wedstrijd). */}
+      {state.match.status === 'live' && (
+        <div className="sb-chat">
+          <h3 className="sb-chat-title">Live tribune</h3>
+          <div className="sb-chat-feed" ref={chatFeedRef}>
+            {shouts.length === 0 ? (
+              <p className="sb-dim">Nog stil in de tribune… wees de eerste om je ploeg aan te moedigen!</p>
+            ) : (
+              shouts.map((s) => (
+                <div key={s.id} className="sb-shout">
+                  <span className="sb-shout-name">{s.name}</span>
+                  <span className="sb-shout-text">{s.text}</span>
+                </div>
+              ))
+            )}
+          </div>
+          {canChat ? (
+            <form
+              className="sb-chat-form"
+              onSubmit={(e) => {
+                e.preventDefault()
+                void sendShout()
+              }}
+            >
+              <input
+                className="sb-chat-input"
+                value={chatText}
+                onChange={(e) => setChatText(e.target.value)}
+                maxLength={200}
+                placeholder="Moedig je ploeg aan…"
+                aria-label="Bericht voor de live tribune"
+              />
+              <button type="submit" className="sb-chat-send" disabled={chatBusy || !chatText.trim()}>
+                Stuur
+              </button>
+            </form>
+          ) : (
+            <p className="sb-chat-login">
+              <a href="/inloggen">Log in</a> om mee te juichen in de tribune.
+            </p>
+          )}
         </div>
       )}
     </div>
