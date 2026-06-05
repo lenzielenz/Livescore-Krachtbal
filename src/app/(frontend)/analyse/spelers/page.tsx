@@ -54,7 +54,7 @@ export default async function SpelerAnalysePage({ searchParams }: { searchParams
         </div>
         <p className="an-intro">
           Match-gerelateerd spelersprofiel: aanval, succesvolle aanvallen, worpafstand, forceren (worpen &gt; 12 m die
-          niet de laatste zijn), flankspel (links/rechts) en verdediging (vangsten). Vergelijk met het reeks-gemiddelde
+          niet de laatste zijn), links en rechts werpen, en verdediging (vangsten). Vergelijk met het reeks-gemiddelde
           (de stippellijn) of met een tweede speler — alle assen genormaliseerd op de sterkste waarde in de reeks.
         </p>
 
