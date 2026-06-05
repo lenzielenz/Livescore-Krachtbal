@@ -1,4 +1,5 @@
 import { SiteHeader } from '@/components/SiteHeader'
+import { dedupeKey } from '@/lib/dedupe'
 import { getPayloadClient } from '@/lib/payload-client'
 import { RegisterForm } from './RegisterForm'
 import '../wedstrijdblad.css'
@@ -11,7 +12,18 @@ export default async function RegistrerenPage() {
   const clubsRes = await payload
     .find({ collection: 'clubs', sort: 'name', depth: 0, limit: 500 })
     .catch(() => ({ docs: [] as { id: number; name: string }[] }))
-  const clubs = clubsRes.docs.map((c) => ({ id: c.id as number, name: c.name as string }))
+  // Geen dubbele clubs tonen: groepeer op genormaliseerde naam en hou de meest leesbare
+  // schrijfwijze (meeste spaties, dan langste).
+  const byKey = new Map<string, { id: number; name: string }>()
+  for (const c of clubsRes.docs) {
+    const name = String(c.name ?? '')
+    if (!name) continue
+    const k = dedupeKey(name)
+    const ex = byKey.get(k)
+    const better = !ex || name.split(' ').length > ex.name.split(' ').length || (name.split(' ').length === ex.name.split(' ').length && name.length > ex.name.length)
+    if (better) byKey.set(k, { id: c.id as number, name })
+  }
+  const clubs = [...byKey.values()].sort((a, b) => a.name.localeCompare(b.name))
 
   return (
     <>

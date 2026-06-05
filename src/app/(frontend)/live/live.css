@@ -533,3 +533,21 @@
     margin-left: 0;
   }
 }
+
+/* Subtiele supporter-registratie-uitnodiging (enkel uitgelogd) */
+.home-supporter {
+  display: block;
+  text-align: center;
+  margin: 2px auto 14px;
+  max-width: max-content;
+  padding: 7px 16px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--line));
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  color: var(--accent);
+  font-size: 0.84rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+.home-supporter:hover { background: color-mix(in srgb, var(--accent) 16%, transparent); transform: translateY(-1px); }

@@ -1,4 +1,7 @@
+import Link from 'next/link'
+
 import { SiteHeader } from '@/components/SiteHeader'
+import { getAuthUser } from '@/lib/auth-user'
 import { randomQuote } from '@/lib/krachtbal-quotes'
 import { LiveBoard } from './live/LiveBoard'
 import { loadLiveDay } from './live/loadLiveDay'
@@ -16,6 +19,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   const days = await loadLiveDay(selected, today)
   // Elk bezoek een ander krachtbal-lijntje (LTT-stijl).
   const quote = randomQuote()
+  const me = await getAuthUser()
 
   return (
     <>
@@ -28,6 +32,12 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         </div>
         {/* Roterende quote — feit, wist-je-datje of een gekke oneliner. */}
         <p className="home-quote">{quote}</p>
+
+        {!me && (
+          <Link href="/registreren" className="home-supporter">
+            📣 Volg je club — registreer gratis als supporter →
+          </Link>
+        )}
 
         <LiveBoard date={selected} today={today} matches={days} />
       </div>
