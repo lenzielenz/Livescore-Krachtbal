@@ -14,30 +14,76 @@ type Report = {
   error?: string
 }
 
+// PDF-tekst client-side uitlezen (inflate de Flate-streams met DecompressionStream) zodat we
+// enkel de kleine tekst naar de server hoeven te sturen i.p.v. de hele (grote) base64-PDF.
+async function inflate(bytes: Uint8Array): Promise<Uint8Array | null> {
+  for (const fmt of ['deflate', 'deflate-raw'] as const) {
+    try {
+      const ds = new DecompressionStream(fmt)
+      const ab = await new Response(new Blob([bytes.slice()]).stream().pipeThrough(ds)).arrayBuffer()
+      return new Uint8Array(ab)
+    } catch {
+      /* probeer volgende formaat */
+    }
+  }
+  return null
+}
+async function extractPdfText(buf: ArrayBuffer): Promise<string> {
+  const bytes = new Uint8Array(buf)
+  const lat = new TextDecoder('latin1').decode(bytes)
+  const parts: string[] = []
+  const re = /stream\r?\n/g
+  let m: RegExpExecArray | null
+  while ((m = re.exec(lat))) {
+    const start = m.index + m[0].length
+    const end = lat.indexOf('endstream', start)
+    if (end < 0) continue
+    const seg = bytes.subarray(start, end)
+    const inf = await inflate(seg)
+    const txt = inf ? new TextDecoder('latin1').decode(inf) : lat.slice(start, end)
+    for (const mm of txt.matchAll(/\(((?:[^()\\]|\\.)*)\)/g)) parts.push(mm[1].replace(/\\([()\\])/g, '$1'))
+  }
+  return parts.join('').replace(/ /g, '')
+}
+
 export function ReeksindelingImport() {
+  const [text, setText] = useState('')
   const [b64, setB64] = useState('')
   const [fileName, setFileName] = useState('')
   const [busy, setBusy] = useState(false)
   const [report, setReport] = useState<Report | null>(null)
 
-  const onFile = (f: File | null) => {
+  const onFile = async (f: File | null) => {
     if (!f) return
     setFileName(f.name)
     setReport(null)
+    setText('')
+    setB64('')
+    try {
+      const buf = await f.arrayBuffer()
+      const t = await extractPdfText(buf)
+      if (t && t.length > 50) {
+        setText(t)
+        return
+      }
+    } catch {
+      /* val terug op base64 */
+    }
+    // Fallback: stuur de volledige base64-PDF.
     const reader = new FileReader()
     reader.onload = () => setB64(String(reader.result || ''))
     reader.readAsDataURL(f)
   }
 
   const run = async (commit: boolean) => {
-    if (!b64) return
+    if (!text && !b64) return
     setBusy(true)
     try {
       const res = await fetch('/api/reeksindeling/import', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ pdfBase64: b64, commit }),
+        body: JSON.stringify(text ? { text, commit } : { pdfBase64: b64, commit }),
       })
       setReport(await res.json())
     } catch (e) {
@@ -47,15 +93,17 @@ export function ReeksindelingImport() {
     }
   }
 
+  const ready = Boolean(text || b64)
+
   return (
     <div className="imp">
       <label className="imp-file">
-        <input type="file" accept=".pdf,application/pdf" onChange={(e) => onFile(e.target.files?.[0] ?? null)} />
+        <input type="file" accept=".pdf,application/pdf" onChange={(e) => void onFile(e.target.files?.[0] ?? null)} />
         <span>{fileName || 'Kies de reeksindeling-PDF…'}</span>
       </label>
       <div className="imp-actions">
-        <button type="button" className="sk-btn" disabled={busy || !b64} onClick={() => run(false)}>{busy ? 'Bezig…' : '👁 Voorbeeld'}</button>
-        <button type="button" className="sk-btn primary" disabled={busy || !b64} onClick={() => run(true)}>{busy ? 'Bezig…' : '⬆ Thuisuren instellen'}</button>
+        <button type="button" className="sk-btn" disabled={busy || !ready} onClick={() => run(false)}>{busy ? 'Bezig…' : '👁 Voorbeeld'}</button>
+        <button type="button" className="sk-btn primary" disabled={busy || !ready} onClick={() => run(true)}>{busy ? 'Bezig…' : '⬆ Thuisuren instellen'}</button>
       </div>
 
       {report && (report.error ? (

@@ -6,15 +6,17 @@ import { extractPdfText, parseReeksindeling, teamKey } from '@/lib/reeksindeling
 // Importeer de thuisuren uit de reeksindeling-PDF en zet ze op de overeenkomstige ploegen.
 // Standaard PREVIEW; met { commit: true } worden de thuisuren weggeschreven. Federatie/admin.
 export async function POST(req: Request) {
-  let body: { pdfBase64?: string; commit?: boolean }
+  let body: { pdfBase64?: string; text?: string; commit?: boolean }
   try {
     body = await req.json()
   } catch {
     return Response.json({ error: 'Ongeldige JSON' }, { status: 400 })
   }
+  // Bij voorkeur stuurt de client de reeds-uitgelezen PDF-tekst (klein); anders de base64-PDF.
+  const clientText = typeof body.text === 'string' ? body.text : ''
   const b64 = String(body.pdfBase64 ?? '').replace(/^data:[^,]*,/, '')
   const commit = body.commit === true
-  if (!b64) return Response.json({ error: 'Geen PDF ontvangen.' }, { status: 400 })
+  if (!clientText && !b64) return Response.json({ error: 'Geen PDF ontvangen.' }, { status: 400 })
 
   try {
     const payload = await getPayloadClient()
@@ -24,7 +26,7 @@ export async function POST(req: Request) {
       return Response.json({ error: 'Enkel federatie/admin mag importeren.' }, { status: 403 })
     }
 
-    const text = extractPdfText(Buffer.from(b64, 'base64'))
+    const text = clientText || extractPdfText(Buffer.from(b64, 'base64'))
     const entries = parseReeksindeling(text)
     if (entries.length === 0) {
       return Response.json({ error: 'Geen reeksindeling herkend in deze PDF.' }, { status: 400 })
