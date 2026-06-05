@@ -94,10 +94,17 @@ export async function recordSimpleGoal(
   return writeSimpleScore(payload, matchId, score)
 }
 
-/** Neem het laatst geregistreerde doelpunt terug. */
+/** Neem het laatst geregistreerde doelpunt van de HUIDIGE helft terug.
+ * Een afgelopen, door de scheidsrechter bevestigde helft is vergrendeld en kan
+ * dus niet meer aangepast worden. */
 export async function undoSimpleGoal(payload: Payload, matchId: number) {
-  const { score } = await loadSimpleMatch(payload, matchId)
-  score.goals.pop()
+  const { score, half } = await loadSimpleMatch(payload, matchId)
+  for (let i = score.goals.length - 1; i >= 0; i--) {
+    if ((Number(score.goals[i].half) || 1) === half) {
+      score.goals.splice(i, 1)
+      break
+    }
+  }
   return writeSimpleScore(payload, matchId, score)
 }
 

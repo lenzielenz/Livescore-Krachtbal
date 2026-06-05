@@ -352,3 +352,26 @@
   .ssk-goal { font-size: 18px; padding: 12px 4px; }
   .ssk-score { font-size: 46px; }
 }
+
+/* Bevestig-stand-modal bij het einde van de 1e helft. */
+.ssk-confirm-score {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin: 10px 0 6px;
+  text-align: center;
+}
+.ssk-confirm-score span { font-weight: 700; max-width: 38%; }
+.ssk-confirm-score strong {
+  font-size: 2rem;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent, #ffd873);
+}
+.ssk-confirm-note {
+  color: var(--dim);
+  font-size: 0.85rem;
+  text-align: center;
+  margin: 0 0 14px;
+}
