@@ -841,6 +841,25 @@ h3,
 }
 
 /* Club-dashboard */
+.club-group { margin: 0 0 22px; }
+.club-group-h {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 10px;
+  font-size: 1.02rem;
+  font-weight: 900;
+  color: var(--accent);
+}
+.club-group-n {
+  font-size: 0.74rem;
+  font-weight: 800;
+  color: var(--dim);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 1px 9px;
+}
 .club-list {
   display: flex;
   flex-direction: column;

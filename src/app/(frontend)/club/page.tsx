@@ -7,16 +7,29 @@ import { userClubId } from '@/lib/access'
 import { getMatchReadiness } from '@/lib/matchsheet-data'
 import { getPayloadClient } from '@/lib/payload-client'
 import { getProfile } from '@/lib/profiles'
-import { reeksNaam } from '@/lib/reeksen'
+import { reeksNaam, REEKS_OPTIONS } from '@/lib/reeksen'
 import { ClaimButton } from './ClaimButton'
 
 export const dynamic = 'force-dynamic'
 
 const nameOf = (v: unknown): string => (v && typeof v === 'object' ? String((v as { name?: unknown }).name ?? '—') : '—')
 
+// Ploeg-groepering: 1NAH+1NAHB samen, 2NAH+2NAHB samen, alle jeugd samen, de rest apart.
+const HEREN_1 = new Set(['1NAH', '1NAHB'])
+const HEREN_2 = new Set(['2NAH', '2NAHB'])
+const JEUGD = new Set(['U18J', 'U18M', 'U16J', 'U16M', 'U14J', 'U14M', 'U12'])
+const REEKS_ORDER = new Map<string, number>(REEKS_OPTIONS.map((o, i) => [o.value, i]))
+function groupOf(code: string): { key: string; label: string; order: number } {
+  if (HEREN_1.has(code)) return { key: '1nh', label: '1ste Nationale Heren', order: REEKS_ORDER.get('1NAH') ?? 0 }
+  if (HEREN_2.has(code)) return { key: '2nh', label: '2de Nationale Heren', order: REEKS_ORDER.get('2NAH') ?? 0 }
+  if (JEUGD.has(code)) return { key: 'jeugd', label: 'Jeugd', order: 100 }
+  return { key: code, label: reeksNaam(code), order: REEKS_ORDER.get(code) ?? 50 }
+}
+
 type Row = {
   id: number
   reeks: string
+  reeksCode: string
   date: string
   status: string
   side: 'home' | 'away'
@@ -100,6 +113,7 @@ export default async function ClubPage() {
       rows.push({
         id: m.id,
         reeks: reeksNaam(m.reeks),
+        reeksCode: String(m.reeks ?? ''),
         date: m.date,
         status: String(m.status ?? 'scheduled'),
         side,
@@ -116,18 +130,34 @@ export default async function ClubPage() {
     }
   }
 
+  // Groepeer per ploeg(groep).
+  const groups = new Map<string, { label: string; order: number; rows: Row[] }>()
+  for (const r of rows) {
+    const g = groupOf(r.reeksCode)
+    let entry = groups.get(g.key)
+    if (!entry) {
+      entry = { label: g.label, order: g.order, rows: [] }
+      groups.set(g.key, entry)
+    }
+    entry.rows.push(r)
+  }
+  const groupList = [...groups.values()].sort((a, b) => a.order - b.order || a.label.localeCompare(b.label))
+
   return (
     <Shell>
       <p className="wb-intro">
-        {club?.name ? <><strong>{club.name}</strong> — </> : null}je komende wedstrijden (thuis én uit). Bereid je eigen
-        kant voor (opstelling), claim de wedstrijden die jij doet, en — als thuisploeg — start de wedstrijd voor het
-        wedstrijdblad.
+        {club?.name ? <><strong>{club.name}</strong> — </> : null}je komende wedstrijden (thuis én uit), per ploeg. Bereid
+        je eigen kant voor (opstelling), claim de wedstrijden die jij doet, en — als thuisploeg — start de wedstrijd voor
+        het wedstrijdblad.
       </p>
       {rows.length === 0 ? (
         <p className="empty">Geen geplande wedstrijden voor je ploegen.</p>
       ) : (
-        <div className="club-list">
-          {rows.map((m) => (
+        groupList.map((g) => (
+        <section key={g.label} className="club-group">
+          <h2 className="club-group-h">{g.label} <span className="club-group-n">{g.rows.length}</span></h2>
+          <div className="club-list">
+          {g.rows.map((m) => (
             <div key={m.id} className="club-match">
               <div className="club-match-info">
                 <span className="club-match-toprow">
@@ -160,7 +190,9 @@ export default async function ClubPage() {
               </div>
             </div>
           ))}
-        </div>
+          </div>
+        </section>
+        ))
       )}
     </Shell>
   )
