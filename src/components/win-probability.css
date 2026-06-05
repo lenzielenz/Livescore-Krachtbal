@@ -3,7 +3,7 @@
 .wp {
   --wp-home: #0fe0a6;
   --wp-away: #4cc9f0;
-  margin: 18px auto 4px;
+  margin: 14px auto 4px;
   max-width: 520px;
 }
 .wp * { box-sizing: border-box; }
@@ -13,43 +13,43 @@
   align-items: baseline;
   justify-content: space-between;
   gap: 10px;
-  margin-bottom: 7px;
+  margin-bottom: 6px;
 }
 .wp-title {
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.1em;
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--dim-strong, #9fb6aa);
+  color: var(--dim, #7e978a);
 }
-.wp-exp { font-size: 0.78rem; color: var(--dim, #7e978a); }
-.wp-exp b { color: var(--txt); font-variant-numeric: tabular-nums; }
+.wp-exp { font-size: 0.74rem; color: var(--dim, #7e978a); }
+.wp-exp b { color: var(--txt); font-weight: 600; font-variant-numeric: tabular-nums; }
 
 .wp-bar {
   display: flex;
-  height: 13px;
+  height: 7px;
   border-radius: 999px;
   overflow: hidden;
-  background: color-mix(in srgb, var(--line) 60%, transparent);
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.4);
+  background: color-mix(in srgb, var(--line) 45%, transparent);
 }
+/* Iets ingetogen segmenten: net wat doorzichtig zodat de balk "fijn aanwezig" is i.p.v. schreeuwerig. */
 .wp-seg { height: 100%; transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1); }
-.wp-seg.home { background: var(--wp-home); }
-.wp-seg.away { background: var(--wp-away); }
-.wp-seg.draw { background: color-mix(in srgb, var(--dim) 55%, #2a3b33); }
+.wp-seg.home { background: color-mix(in srgb, var(--wp-home) 72%, transparent); }
+.wp-seg.away { background: color-mix(in srgb, var(--wp-away) 72%, transparent); }
+.wp-seg.draw { background: color-mix(in srgb, var(--dim) 40%, transparent); }
 
 .wp-legend {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 6px;
-  font-size: 0.78rem;
-  font-weight: 700;
+  margin-top: 5px;
+  font-size: 0.72rem;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
-.wp-lg.home { color: var(--wp-home); }
-.wp-lg.away { color: var(--wp-away); }
-.wp-lg.draw { color: var(--dim, #7e978a); font-weight: 600; }
+.wp-lg.home { color: color-mix(in srgb, var(--wp-home) 85%, var(--dim)); }
+.wp-lg.away { color: color-mix(in srgb, var(--wp-away) 85%, var(--dim)); }
+.wp-lg.draw { color: var(--dim, #7e978a); font-weight: 500; }
 
 .wp-momentum {
   display: flex;

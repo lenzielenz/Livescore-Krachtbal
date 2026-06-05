@@ -1,10 +1,9 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
-import { MatchStats } from '@/components/MatchStats'
 import { Scoreboard } from '@/components/Scoreboard'
 import { SiteHeader } from '@/components/SiteHeader'
-import { buildMatchState, buildMatchStats, buildTimeline } from '@/lib/match-engine'
+import { buildMatchState, buildTimeline } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
 import { REEKS_OPTIONS, reeksHalfDurationSeconds, reeksType, type Reeks } from '@/lib/reeksen'
 import { BASE_RATE_PER_MIN } from '@/lib/win-probability'
@@ -19,12 +18,11 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   if (!Number.isFinite(matchId)) notFound()
 
   const payload = await getPayloadClient()
-  let state, timeline, stats
+  let state, timeline
   try {
-    ;[state, timeline, stats] = await Promise.all([
+    ;[state, timeline] = await Promise.all([
       buildMatchState(payload, matchId),
       buildTimeline(payload, matchId),
-      buildMatchStats(payload, matchId),
     ])
   } catch {
     notFound()
@@ -102,7 +100,6 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
           📋 Wedstrijdblad (print / PDF / JSON)
         </Link>
       </p>
-      <MatchStats stats={stats.stats} shots={stats.shots} teams={{ home: state.teams.home.name, away: state.teams.away.name }} goalAreaDepth={state.match.goalAreaDepth} />
       </div>
     </>
   )
