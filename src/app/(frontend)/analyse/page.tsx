@@ -61,6 +61,7 @@ export default async function AnalysePage() {
         <p className="an-hub-links">
           <Link href="/analyse/seizoen" className="sk-demo-cta">📊 Seizoensanalyse per reeks →</Link>
           <Link href="/analyse/spelers" className="sk-demo-cta">🎯 Spelersradar &amp; vergelijken →</Link>
+          <Link href="/analyse/verwacht" className="sk-demo-cta">📈 Verwachte punten (xP) →</Link>
         </p>
 
         {rows.length === 0 ? (
