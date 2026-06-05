@@ -46,6 +46,8 @@ export function SimpleScorekeeper({
   const [error, setError] = useState<string | null>(null)
   // Openstaand doelpunt dat wacht op een spelerkeuze (snel-scoren vereist een scorer).
   const [pending, setPending] = useState<{ side: SimpleSide; points: 1 | 2 } | null>(null)
+  // Scheidsrechter bevestigt de stand vóór de overgang naar de 2e helft.
+  const [confirmHalfEnd, setConfirmHalfEnd] = useState(false)
   const busy = useRef(false)
 
   const half = state.match.currentHalf
@@ -241,7 +243,7 @@ export function SimpleScorekeeper({
         <div className="ssk-controls">
           <button type="button" className="ssk-btn" onClick={() => act({ action: 'simpleundo' })}>↶ Undo doelpunt</button>
           {half === 1 && (
-            <button type="button" className="ssk-btn primary" onClick={() => act({ action: 'simplehalf' })}>
+            <button type="button" className="ssk-btn primary" onClick={() => setConfirmHalfEnd(true)}>
               ⏭ Einde 1e helft → 2e
             </button>
           )}
@@ -269,6 +271,36 @@ export function SimpleScorekeeper({
       )}
 
       {error && <p className="ssk-error">{error}</p>}
+
+      {confirmHalfEnd && (
+        <div className="ssk-modal-overlay" onClick={() => setConfirmHalfEnd(false)}>
+          <div className="ssk-modal" onClick={(e) => e.stopPropagation()}>
+            <h3>Einde 1e helft — bevestig de stand</h3>
+            <div className="ssk-confirm-score">
+              <span>{state.teams.home.name}</span>
+              <strong>{state.score.home} – {state.score.away}</strong>
+              <span>{state.teams.away.name}</span>
+            </div>
+            <p className="ssk-confirm-note">
+              De scheidsrechter bevestigt deze stand. Daarna kan de score van de 1e helft niet meer
+              aangepast worden.
+            </p>
+            <div className="ssk-modal-btns">
+              <button type="button" className="ssk-btn" onClick={() => setConfirmHalfEnd(false)}>Annuleren</button>
+              <button
+                type="button"
+                className="ssk-btn primary"
+                onClick={() => {
+                  setConfirmHalfEnd(false)
+                  void act({ action: 'simplehalf' })
+                }}
+              >
+                ✓ Bevestigen & naar 2e helft
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {pending && (() => {
         const team = state.teams[pending.side]
