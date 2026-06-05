@@ -26,6 +26,7 @@ function SignaturePad({
   side,
   teamName,
   initial,
+  onSigned,
 }: {
   matchId: string
   who: Who
@@ -33,6 +34,7 @@ function SignaturePad({
   side: Side
   teamName?: string
   initial?: SignatureData
+  onSigned?: () => void
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const drawing = useRef(false)
@@ -105,6 +107,8 @@ function SignaturePad({
       setSignedAt(new Date().toISOString())
       setLocked(true)
       setMsg(null)
+      // Vlot doorgaan: spring naar de volgende open handtekening i.p.v. handmatig scrollen.
+      onSigned?.()
     } else {
       setMsg(json.error || 'Mislukt.')
     }
@@ -184,6 +188,29 @@ export function AftekenenPanel({
   const [msg, setMsg] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
+  // Volgorde van de handtekeningen + verwijzingen naar hun kaart, zodat we na het aftekenen
+  // vlot naar de eerstvolgende open handtekening (of de indien-knop) kunnen scrollen.
+  const order: Who[] = ['kapiteinThuis', 'kapiteinUit', 'scheidsrechter']
+  const wrapRefs = useRef<Partial<Record<Who, HTMLDivElement | null>>>({})
+  const submitRef = useRef<HTMLDivElement>(null)
+  const isSigned = (w: Who) => Boolean(signatures?.[w]?.akkoord && signatures?.[w]?.handtekening)
+  const signedNow = useRef<Set<Who>>(new Set(order.filter(isSigned)))
+
+  const goNext = (justSigned: Who) => {
+    signedNow.current.add(justSigned)
+    const next = order.find((w) => !signedNow.current.has(w))
+    // Even wachten tot de zojuist vergrendelde kaart opnieuw gerenderd is.
+    setTimeout(() => {
+      if (next) {
+        const el = wrapRefs.current[next]
+        el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        el?.querySelector('input')?.focus({ preventScroll: true })
+      } else {
+        submitRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }
+    }, 80)
+  }
+
   const submit = async () => {
     setBusy(true)
     setMsg(null)
@@ -207,31 +234,40 @@ export function AftekenenPanel({
   return (
     <>
       <div className="wb-grid">
-        <SignaturePad
-          matchId={matchId}
-          who="kapiteinThuis"
-          label="Kapitein thuis"
-          side="home"
-          teamName={homeTeam}
-          initial={signatures?.kapiteinThuis}
-        />
-        <SignaturePad
-          matchId={matchId}
-          who="kapiteinUit"
-          label="Kapitein uit"
-          side="away"
-          teamName={awayTeam}
-          initial={signatures?.kapiteinUit}
-        />
-        <SignaturePad
-          matchId={matchId}
-          who="scheidsrechter"
-          label="Scheidsrechter"
-          side={null}
-          initial={signatures?.scheidsrechter}
-        />
+        <div ref={(el) => { wrapRefs.current.kapiteinThuis = el }}>
+          <SignaturePad
+            matchId={matchId}
+            who="kapiteinThuis"
+            label="Kapitein thuis"
+            side="home"
+            teamName={homeTeam}
+            initial={signatures?.kapiteinThuis}
+            onSigned={() => goNext('kapiteinThuis')}
+          />
+        </div>
+        <div ref={(el) => { wrapRefs.current.kapiteinUit = el }}>
+          <SignaturePad
+            matchId={matchId}
+            who="kapiteinUit"
+            label="Kapitein uit"
+            side="away"
+            teamName={awayTeam}
+            initial={signatures?.kapiteinUit}
+            onSigned={() => goNext('kapiteinUit')}
+          />
+        </div>
+        <div ref={(el) => { wrapRefs.current.scheidsrechter = el }}>
+          <SignaturePad
+            matchId={matchId}
+            who="scheidsrechter"
+            label="Scheidsrechter"
+            side={null}
+            initial={signatures?.scheidsrechter}
+            onSigned={() => goNext('scheidsrechter')}
+          />
+        </div>
       </div>
-      <div style={{ marginTop: 20 }}>
+      <div ref={submitRef} style={{ marginTop: 20 }}>
         <button onClick={submit} disabled={busy} className="wb-btn wb-btn-primary" style={{ padding: '11px 22px' }}>
           {busy ? 'Indienen…' : '📤 Indienen (PDF + mail + federatie)'}
         </button>
