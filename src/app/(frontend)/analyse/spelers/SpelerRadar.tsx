@@ -3,16 +3,16 @@
 import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
-import type { SeasonPlayer } from '@/lib/season-stats'
+import type { RadarPlayer } from '@/lib/radar-stats'
 
-// Zes assen voor de radar. `get` levert de ruwe (niet-genormaliseerde) waarde per speler.
-const METRICS: { key: string; label: string; full: string; fmt: (v: number) => string; get: (p: SeasonPlayer) => number }[] = [
-  { key: 'pPerM', label: 'Ptn/wd', full: 'Punten per wedstrijd', fmt: (v) => v.toFixed(1), get: (p) => (p.matches ? p.points / p.matches : 0) },
-  { key: 'gPerM', label: 'Dpt/wd', full: 'Doelpunten per wedstrijd', fmt: (v) => v.toFixed(1), get: (p) => (p.matches ? p.goals / p.matches : 0) },
-  { key: 'tPerM', label: 'Wrp/wd', full: 'Worpen per wedstrijd', fmt: (v) => v.toFixed(1), get: (p) => (p.matches ? p.throws / p.matches : 0) },
-  { key: 'conv', label: 'Conv%', full: 'Conversie (doelpunten per poging)', fmt: (v) => `${Math.round(v)}%`, get: (p) => p.conversion * 100 },
-  { key: 'dist', label: 'Afst', full: 'Gem. worpafstand (m)', fmt: (v) => `${v.toFixed(1)}m`, get: (p) => p.avgDistance },
-  { key: 'sPerM', label: 'Sco/wd', full: 'Score per wedstrijd (punten − geforceerd)', fmt: (v) => (v > 0 ? `+${v.toFixed(1)}` : v.toFixed(1)), get: (p) => (p.matches ? p.score / p.matches : 0) },
+// Zes match-gerelateerde assen. `get` levert de ruwe (niet-genormaliseerde) waarde per speler.
+const METRICS: { key: string; label: string; full: string; fmt: (v: number) => string; get: (p: RadarPlayer) => number }[] = [
+  { key: 'aanval', label: 'Aanval', full: 'Aanval — worpen per wedstrijd', fmt: (v) => v.toFixed(1), get: (p) => p.throwsPerMatch },
+  { key: 'succes', label: 'Succes', full: 'Succesvolle aanvallen — conversie (doelpunten per poging)', fmt: (v) => `${Math.round(v)}%`, get: (p) => p.conversion * 100 },
+  { key: 'afstand', label: 'Afstand', full: 'Worpafstand — gemiddelde afstand (m)', fmt: (v) => `${v.toFixed(1)}m`, get: (p) => p.avgDistance },
+  { key: 'forceren', label: 'Forceren', full: 'Forceren — worpen > 12 m die niet de laatste zijn, per wedstrijd', fmt: (v) => v.toFixed(1), get: (p) => p.forcedPerMatch },
+  { key: 'flank', label: 'Flankspel', full: 'Flankspel — aandeel worpen naar links of rechts', fmt: (v) => `${Math.round(v)}%`, get: (p) => p.flankShare * 100 },
+  { key: 'verded', label: 'Verdediging', full: 'Verdediging — vangsten per wedstrijd', fmt: (v) => v.toFixed(1), get: (p) => p.catchesPerMatch },
 ]
 
 const N = METRICS.length
@@ -41,38 +41,26 @@ export function SpelerRadar({
 }: {
   reeks: string
   options: { value: string; label: string }[]
-  players: SeasonPlayer[]
+  players: RadarPlayer[]
 }) {
   const router = useRouter()
   const [aId, setAId] = useState<number | null>(players[0]?.playerId ?? null)
   const [bId, setBId] = useState<number | null>(null)
 
-  // Reeks-gemiddelde (geaggregeerd) + per-as-maximum voor de normalisatie.
+  // Reeks-gemiddelde (de gemiddelde speler) + per-as-maximum voor de normalisatie.
   const { league, maxima } = useMemo(() => {
-    const tot = players.reduce(
-      (a, p) => ({
-        matches: a.matches + p.matches,
-        points: a.points + p.points,
-        goals: a.goals + p.goals,
-        throws: a.throws + p.throws,
-        goalAttempts: a.goalAttempts + p.goalAttempts,
-        score: a.score + p.score,
-        distSum: a.distSum + p.avgDistance * p.throws,
-      }),
-      { matches: 0, points: 0, goals: 0, throws: 0, goalAttempts: 0, score: 0, distSum: 0 },
-    )
-    const league: Record<string, number> = {
-      pPerM: tot.matches ? tot.points / tot.matches : 0,
-      gPerM: tot.matches ? tot.goals / tot.matches : 0,
-      tPerM: tot.matches ? tot.throws / tot.matches : 0,
-      conv: tot.goalAttempts ? (tot.goals / tot.goalAttempts) * 100 : 0,
-      dist: tot.throws ? tot.distSum / tot.throws : 0,
-      sPerM: tot.matches ? tot.score / tot.matches : 0,
-    }
+    const n = players.length || 1
+    const league: Record<string, number> = {}
     const maxima: Record<string, number> = {}
     for (const m of METRICS) {
-      let max = league[m.key]
-      for (const p of players) max = Math.max(max, m.get(p))
+      let sum = 0
+      let max = 0
+      for (const p of players) {
+        const v = m.get(p)
+        sum += v
+        if (v > max) max = v
+      }
+      league[m.key] = sum / n
       maxima[m.key] = max > 0 ? max : 1
     }
     return { league, maxima }
@@ -81,7 +69,7 @@ export function SpelerRadar({
   const playerA = players.find((p) => p.playerId === aId) ?? null
   const playerB = players.find((p) => p.playerId === bId) ?? null
 
-  const fracsOf = (p: SeasonPlayer | null) =>
+  const fracsOf = (p: RadarPlayer | null) =>
     p ? METRICS.map((m) => m.get(p) / maxima[m.key]) : []
   const leagueFracs = METRICS.map((m) => league[m.key] / maxima[m.key])
   const aFracs = fracsOf(playerA)
