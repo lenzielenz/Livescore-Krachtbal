@@ -32,6 +32,7 @@ const ANALYSE_LINKS = [
   { href: '/analyse/spelers', label: '🎯 Spelersradar' },
   { href: '/analyse/verwacht', label: '🎯 Verwachte punten (xP)' },
   { href: '/analyse/ploeg', label: '🛡️ Ploegrapport & export' },
+  { href: '/analyse/ploegen', label: '🆚 Ploegvergelijking' },
   { href: '/analyse/gevaar', label: '🔥 Gevaarzone per speler' },
 ]
 
