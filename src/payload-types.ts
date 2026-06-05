@@ -344,6 +344,8 @@ export interface Match {
   awayLineup?: (number | Player)[] | null;
   homeCaptain?: (number | null) | Player;
   awayCaptain?: (number | null) | Player;
+  homeCoach?: (number | null) | User;
+  awayCoach?: (number | null) | User;
   currentHalf?: number | null;
   clockSeconds?: number | null;
   clockRunning?: boolean | null;
@@ -1029,6 +1031,8 @@ export interface MatchesSelect<T extends boolean = true> {
   awayLineup?: T;
   homeCaptain?: T;
   awayCaptain?: T;
+  homeCoach?: T;
+  awayCoach?: T;
   currentHalf?: T;
   clockSeconds?: T;
   clockRunning?: T;
