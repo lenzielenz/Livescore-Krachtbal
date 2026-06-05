@@ -1,0 +1,88 @@
+/* Live winstkans-blok onder het scorebord. Erft --panel/--line/--txt/--dim uit :root;
+   --wp-home/--wp-away worden per wedstrijd inline gezet (leesbare clubkleuren). */
+.wp {
+  --wp-home: #0fe0a6;
+  --wp-away: #4cc9f0;
+  margin: 18px auto 4px;
+  max-width: 520px;
+}
+.wp * { box-sizing: border-box; }
+
+.wp-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 7px;
+}
+.wp-title {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--dim-strong, #9fb6aa);
+}
+.wp-exp { font-size: 0.78rem; color: var(--dim, #7e978a); }
+.wp-exp b { color: var(--txt); font-variant-numeric: tabular-nums; }
+
+.wp-bar {
+  display: flex;
+  height: 13px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--line) 60%, transparent);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+.wp-seg { height: 100%; transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1); }
+.wp-seg.home { background: var(--wp-home); }
+.wp-seg.away { background: var(--wp-away); }
+.wp-seg.draw { background: color-mix(in srgb, var(--dim) 55%, #2a3b33); }
+
+.wp-legend {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 6px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.wp-lg.home { color: var(--wp-home); }
+.wp-lg.away { color: var(--wp-away); }
+.wp-lg.draw { color: var(--dim, #7e978a); font-weight: 600; }
+
+.wp-momentum {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+.wp-momentum svg {
+  flex: 1;
+  height: 26px;
+  width: 100%;
+}
+.wp-mid {
+  stroke: color-mix(in srgb, var(--line) 70%, transparent);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+  vector-effect: non-scaling-stroke;
+}
+.wp-curve {
+  fill: none;
+  stroke: var(--dim, #7e978a);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+.wp-curve.home { stroke: var(--wp-home); }
+.wp-curve.away { stroke: var(--wp-away); }
+.wp-momentum-lbl {
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--dim, #7e978a);
+  white-space: nowrap;
+}

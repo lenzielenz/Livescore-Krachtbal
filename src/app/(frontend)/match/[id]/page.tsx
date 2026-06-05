@@ -6,7 +6,8 @@ import { Scoreboard } from '@/components/Scoreboard'
 import { SiteHeader } from '@/components/SiteHeader'
 import { buildMatchState, buildMatchStats, buildTimeline } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
-import { REEKS_OPTIONS } from '@/lib/reeksen'
+import { REEKS_OPTIONS, reeksHalfDurationSeconds, reeksType, type Reeks } from '@/lib/reeksen'
+import { BASE_RATE_PER_MIN } from '@/lib/win-probability'
 
 export const dynamic = 'force-dynamic'
 
@@ -34,6 +35,10 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   const homeClub = (matchDoc?.homeTeam as { club?: { accommodatie?: string } } | null)?.club
   const accommodatie = homeClub?.accommodatie?.trim() || null
   const reeks = reeksLabel(matchDoc?.reeks)
+  // Live winstkans: helftduur + verwacht scoretempo strikt uit de reeks (veilige defaults binnen reeksen.ts).
+  const reeksRaw = matchDoc?.reeks as Reeks
+  const halfSeconds = reeksHalfDurationSeconds(reeksRaw)
+  const ratePerMin = BASE_RATE_PER_MIN[reeksType(reeksRaw)]
   const datum = matchDoc?.date
     ? new Date(matchDoc.date as string).toLocaleString('nl-BE', { dateStyle: 'long', timeStyle: 'short' })
     : null
@@ -59,7 +64,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
       <Link href="/" className="back-link">
         ← Alle wedstrijden
       </Link>
-      <Scoreboard matchId={matchId} initial={{ state, timeline }} />
+      <Scoreboard matchId={matchId} initial={{ state, timeline }} halfSeconds={halfSeconds} ratePerMin={ratePerMin} />
       {(reeks || datum || accommodatie || referee || homeCaptain || awayCaptain) && (
         <div className="match-info">
           {(reeks || datum) && (
