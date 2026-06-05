@@ -54,6 +54,7 @@ export const PROFILES: Profile[] = [
     intro: 'Reglement, seizoensplanning en het volledige beheer.',
     tools: [
       { href: '/admin', label: '⚙️ Beheer (admin)' },
+      { href: '/beheer/accounts', label: '👤 Accounts' },
       { href: '/beheer/planning', label: '📅 Seizoensplanning' },
       { href: '/reglement', label: '📖 Reglement' },
       { href: '/knipjes', label: '✂️ Knipjes' },

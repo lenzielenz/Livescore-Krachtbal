@@ -1,0 +1,133 @@
+.acc-page-intro {
+  color: var(--dim);
+  font-size: 0.9rem;
+  margin: 0 0 16px;
+  max-width: 70ch;
+}
+.acc-search {
+  width: 100%;
+  padding: 11px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--txt);
+  font-size: 0.95rem;
+  margin-bottom: 18px;
+}
+.acc-search:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.acc-group {
+  margin-bottom: 22px;
+}
+.acc-group-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--accent);
+  margin: 0 0 8px;
+}
+.acc-count {
+  color: var(--dim);
+  font-weight: 700;
+}
+
+.acc-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel-grad);
+  margin-bottom: 8px;
+}
+.acc-id {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.acc-name {
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.acc-email {
+  font-size: 0.8rem;
+  color: var(--dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.acc-roles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.acc-chip {
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--dim);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.14s ease, color 0.14s ease, background 0.14s ease;
+}
+.acc-chip.on {
+  border-color: var(--accent);
+  color: #06140d;
+  background: var(--accent);
+}
+.acc-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.acc-club {
+  flex: 1 1 180px;
+  min-width: 0;
+  padding: 9px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--txt);
+  font-size: 0.9rem;
+}
+.acc-save {
+  padding: 9px 16px;
+  border-radius: 10px;
+  border: none;
+  background: var(--grad-accent);
+  color: #06140d;
+  font-weight: 800;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+.acc-save:disabled {
+  opacity: 0.45;
+  cursor: default;
+  filter: grayscale(0.4);
+}
+.acc-msg {
+  font-size: 0.82rem;
+  color: var(--home);
+  font-weight: 700;
+}
+
+@media (min-width: 720px) {
+  .acc-row {
+    grid-template-columns: 1.2fr 2fr auto;
+    align-items: center;
+    gap: 14px;
+  }
+}
