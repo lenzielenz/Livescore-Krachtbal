@@ -2,7 +2,7 @@ import Link from 'next/link'
 
 import { SiteHeader } from '@/components/SiteHeader'
 import { TeamLogo } from '@/components/TeamLogo'
-import { canAnalyse } from '@/lib/access'
+import { canAnalyse, hasRole } from '@/lib/access'
 import { getAuthUser } from '@/lib/auth-user'
 import { buildScoreboards } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
@@ -29,28 +29,47 @@ export default async function AnalysePage() {
     )
   }
 
+  // Enkel een admin krijgt de volledige scoreopnemer (veldschema) die de analyse-data voedt;
+  // daarom tonen we de "manueel opnemen"-sectie enkel aan admins.
+  const isAdmin = hasRole(me, 'admin')
+
   const payload = await getPayloadClient()
   const matchRes = await payload
     .find({ collection: 'matches', where: { status: { equals: 'finished' } }, sort: '-date', depth: 0, limit: 500 })
     .catch(() => ({ docs: [] as Record<string, unknown>[] }))
   const docs = matchRes.docs.filter((m) => !(m as { isDemo?: boolean }).isDemo)
-  const cards = await buildScoreboards(payload, docs as Parameters<typeof buildScoreboards>[1])
 
-  const rows = docs
-    .map((m) => {
-      const id = (m as { id: number }).id
-      const c = cards.get(id)
-      if (!c) return null
-      return {
-        id,
-        reeks: reeksNaam((m as { reeks?: unknown }).reeks),
-        date: (m as { date?: string }).date ?? '',
-        home: c.teams.home,
-        away: c.teams.away,
-        score: c.score,
-      }
-    })
-    .filter((r): r is NonNullable<typeof r> => r != null)
+  // Te-recorderen wedstrijden (gepland of live) — om manueel aan te tekenen met de volledige
+  // scoreopnemer. Enkel relevant voor admins.
+  const openRes = isAdmin
+    ? await payload
+        .find({ collection: 'matches', where: { status: { in: ['scheduled', 'live'] } }, sort: 'date', depth: 0, limit: 200 })
+        .catch(() => ({ docs: [] as Record<string, unknown>[] }))
+    : { docs: [] as Record<string, unknown>[] }
+  const openDocs = openRes.docs.filter((m) => !(m as { isDemo?: boolean }).isDemo)
+
+  // Eén batched scoreboard-opbouw voor afgelopen + open wedstrijden.
+  const cards = await buildScoreboards(payload, [...docs, ...openDocs] as Parameters<typeof buildScoreboards>[1])
+
+  const toRow = (m: Record<string, unknown> | { id: number }) => {
+    const id = (m as { id: number }).id
+    const c = cards.get(id)
+    if (!c) return null
+    return {
+      id,
+      reeks: reeksNaam((m as { reeks?: unknown }).reeks),
+      date: (m as { date?: string }).date ?? '',
+      status: String((m as { status?: unknown }).status ?? ''),
+      home: c.teams.home,
+      away: c.teams.away,
+      score: c.score,
+    }
+  }
+  type Row = NonNullable<ReturnType<typeof toRow>>
+  const notNull = (r: Row | null): r is Row => r != null
+
+  const rows = docs.map(toRow).filter(notNull)
+  const openRows = openDocs.map(toRow).filter(notNull)
 
   return (
     <>
@@ -66,6 +85,47 @@ export default async function AnalysePage() {
           <Link href="/analyse/gevaar" className="sk-demo-cta">🔥 Gevaarzone per speler →</Link>
         </p>
 
+        {isAdmin && (
+          <section className="an-record">
+            <h2 className="an-sub">🎬 Wedstrijd manueel opnemen</h2>
+            <p className="an-intro">
+              Start en teken een wedstrijd aan met de volledige scoreopnemer (veldschema). Die detaildata voedt meteen
+              de analyse hierboven.
+            </p>
+            {openRows.length === 0 ? (
+              <p className="empty">
+                Geen geplande of lopende wedstrijden. Maak er een aan via{' '}
+                <Link href="/beheer" style={{ color: 'var(--accent)' }}>Beheer</Link>.
+              </p>
+            ) : (
+              <div className="an-list">
+                {openRows.map((r) => (
+                  <Link key={r.id} href={`/scorekeeper/${r.id}`} className="an-card">
+                    <span className={`an-card-reeks ${r.status === 'live' ? 'an-live' : ''}`}>
+                      {r.status === 'live' ? '● LIVE — aantekenen' : `${r.reeks} · ▶ opnemen`}
+                    </span>
+                    <span className="an-card-row">
+                      <span className="an-team">
+                        <TeamLogo name={r.home.name} logoUrl={r.home.logoUrl} logoFit={r.home.logoFit} side="home" size="sm" ringColor={r.home.colors?.primary} />
+                        <span className="an-team-nm">{r.home.name}</span>
+                      </span>
+                      <span className="an-score">{r.status === 'live' ? `${r.score.home}–${r.score.away}` : 'vs'}</span>
+                      <span className="an-team away">
+                        <span className="an-team-nm">{r.away.name}</span>
+                        <TeamLogo name={r.away.name} logoUrl={r.away.logoUrl} logoFit={r.away.logoFit} side="away" size="sm" ringColor={r.away.colors?.primary} />
+                      </span>
+                    </span>
+                    <span className="an-card-date">
+                      {r.date ? new Date(r.date).toLocaleDateString('nl-BE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''}
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
+
+        <h2 className="an-sub">📊 Afgelopen wedstrijden</h2>
         {rows.length === 0 ? (
           <p className="empty">Nog geen afgelopen wedstrijden om te analyseren.</p>
         ) : (
