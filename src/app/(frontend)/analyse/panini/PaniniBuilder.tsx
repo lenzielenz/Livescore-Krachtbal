@@ -3,7 +3,10 @@
 import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
+import { TeamLogo } from '@/components/TeamLogo'
 import type { RadarPlayer } from '@/lib/radar-stats'
+
+type ClubInfo = { name: string; logoUrl: string | null; primary: string | null; secondary: string | null }
 
 // Radar-assen (zelfde als de spelersradar) — voor de mini-radar op de kaart.
 const AXES: { key: string; label: string; get: (p: RadarPlayer) => number }[] = [
@@ -43,7 +46,7 @@ function profileOf(att: number, def: number): string {
   return 'ALLROUNDER'
 }
 
-export function PaniniBuilder({ reeks, reeksLabel, options, players }: { reeks: string; reeksLabel: string; options: { value: string; label: string }[]; players: RadarPlayer[] }) {
+export function PaniniBuilder({ reeks, reeksLabel, options, players, clubs }: { reeks: string; reeksLabel: string; options: { value: string; label: string }[]; players: RadarPlayer[]; clubs: Record<number, ClubInfo> }) {
   const router = useRouter()
   const [pid, setPid] = useState<number | null>(players[0]?.playerId ?? null)
 
@@ -91,6 +94,9 @@ export function PaniniBuilder({ reeks, reeksLabel, options, players }: { reeks: 
         const def = sub(player, DEF)
         const fracs = AXES.map((a) => pct(a.key, a.get(player)))
         const rc = pctColor(rating / 100)
+        const club: ClubInfo | undefined = player.teamId != null ? clubs[player.teamId] : undefined
+        const c1 = club?.primary || '#ffd873'
+        const c2 = club?.secondary || rc
         const chips = [
           { ic: '⚽', lbl: 'Doelpunten', val: `${player.goals}`, sub: `${player.goalsPerMatch.toFixed(1)}/wd` },
           { ic: '🎯', lbl: 'Conversie', val: `${Math.round(player.conversion * 100)}%`, sub: '' },
@@ -101,11 +107,15 @@ export function PaniniBuilder({ reeks, reeksLabel, options, players }: { reeks: 
         ]
         return (
           <div className="pan-stage">
-            <div className="pan-card" style={{ ['--rc' as string]: rc }}>
+            <div className="pan-card" style={{ ['--rc' as string]: rc, ['--c1' as string]: c1, ['--c2' as string]: c2 }}>
               <div className="pan-foil" aria-hidden />
+              {club?.logoUrl && <div className="pan-watermark" style={{ backgroundImage: `url(${club.logoUrl})` }} aria-hidden />}
               <div className="pan-top">
-                <span className="pan-comp">{reeksLabel}</span>
-                <span className="pan-season">25/26</span>
+                <span className="pan-club">
+                  <TeamLogo name={club?.name || player.teamName} logoUrl={club?.logoUrl ?? null} size="sm" ringColor={c1} />
+                  <span className="pan-club-nm">{club?.name || player.teamName}</span>
+                </span>
+                <span className="pan-season">{reeksLabel} · 25/26</span>
               </div>
               <div className="pan-rating" style={{ color: rc, borderColor: rc }}>
                 <span className="pan-rating-n">{rating}</span>
@@ -114,7 +124,6 @@ export function PaniniBuilder({ reeks, reeksLabel, options, players }: { reeks: 
               <div className="pan-id">
                 <span className="pan-num">#{player.shirtNumber}</span>
                 <span className="pan-name">{player.name}</span>
-                <span className="pan-team">{player.teamName}</span>
                 <span className="pan-prof">{profileOf(att, def)}</span>
               </div>
               <svg className="pan-radar" viewBox={`0 0 ${SZ} ${SZ}`} aria-hidden>
