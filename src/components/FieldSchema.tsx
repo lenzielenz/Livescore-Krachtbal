@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useRef } from 'react'
+import React, { useId, useRef } from 'react'
 
 import type { Point } from '@/lib/field'
 
@@ -154,6 +154,7 @@ function convColor(t: number): string {
 }
 
 function ConvLayer({ points, h, minAttempts }: { points: ConvPoint[]; h: number; minAttempts: number }) {
+  const uid = useId().replace(/[^a-zA-Z0-9]/g, '')
   const att = Array.from({ length: CGY }, () => new Array(CGX).fill(0))
   const gls = Array.from({ length: CGY }, () => new Array(CGX).fill(0))
   let maxAtt = 0
@@ -167,28 +168,38 @@ function ConvLayer({ points, h, minAttempts }: { points: ConvPoint[]; h: number;
   if (maxAtt === 0) return null
   const cw = W / CGX
   const ch = h / CGY
-  const cells: React.ReactElement[] = []
+  // Zachte radiale "blobs" i.p.v. harde rechthoeken: elke zone vloeit vloeiend naar
+  // transparant uit (mooie afloop), en overlappende blobs mengen naadloos.
+  const r = Math.max(cw, ch) * 1.05
+  const blobs: { id: string; color: string; op: number; cx: number; cy: number }[] = []
   for (let y = 0; y < CGY; y++) {
     for (let x = 0; x < CGX; x++) {
       const n = att[y][x]
       if (n < minAttempts) continue
       const conv = gls[y][x] / n
-      cells.push(
-        <rect
-          key={`${x}-${y}`}
-          x={x * cw}
-          y={y * ch}
-          width={cw}
-          height={ch}
-          fill={convColor(conv)}
-          opacity={0.3 + 0.55 * Math.min(1, n / maxAtt)}
-        />,
-      )
+      blobs.push({
+        id: `${uid}-${x}-${y}`,
+        color: convColor(conv),
+        op: 0.35 + 0.55 * Math.min(1, n / maxAtt),
+        cx: (x + 0.5) * cw,
+        cy: (y + 0.5) * ch,
+      })
     }
   }
   return (
-    <g filter="url(#heatblur)" clipPath="url(#fieldclip)">
-      {cells}
+    <g clipPath="url(#fieldclip)">
+      <defs>
+        {blobs.map((b) => (
+          <radialGradient key={b.id} id={b.id} cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor={b.color} stopOpacity={b.op} />
+            <stop offset="50%" stopColor={b.color} stopOpacity={b.op * 0.6} />
+            <stop offset="100%" stopColor={b.color} stopOpacity={0} />
+          </radialGradient>
+        ))}
+      </defs>
+      {blobs.map((b) => (
+        <circle key={b.id} cx={b.cx} cy={b.cy} r={r} fill={`url(#${b.id})`} />
+      ))}
     </g>
   )
 }
