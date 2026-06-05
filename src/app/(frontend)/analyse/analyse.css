@@ -623,7 +623,14 @@ select.rang-picker {
   box-shadow: var(--glow-accent);
 }
 .an-nav-ico { font-size: 0.95rem; }
-@media (max-width: 520px) { .an-nav-lbl { display: none; } .an-nav-tab { padding: 8px 12px; } .an-nav-ico { font-size: 1.1rem; } }
+/* Smaller schermen: alle tabs samen op één scherm (geen swipe). Icoon-only, gelijk verdeeld. */
+@media (max-width: 760px) {
+  .an-nav { gap: 5px; overflow-x: visible; padding-bottom: 0; }
+  .an-nav-tab { flex: 1 1 0; min-width: 0; justify-content: center; padding: 9px 0; border-radius: 12px; }
+  .an-nav-lbl { display: none; }
+  .an-nav-ico { font-size: 1.2rem; }
+}
+@media (max-width: 360px) { .an-nav-ico { font-size: 1.05rem; } }
 
 /* ── Tool-kaarten op de hub ── */
 .an-tools {
