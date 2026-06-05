@@ -20,9 +20,12 @@ function dayBounds(dateStr: string): { start: string; end: string } {
 export async function loadLiveDay(selected: string, today: string): Promise<DayMatch[]> {
   const payload = await getPayloadClient()
   const { start, end } = dayBounds(selected)
+  // Analyse-only wedstrijden zijn nooit publiek/live zichtbaar.
   const dayRes = await payload.find({
     collection: 'matches',
-    where: { date: { greater_than_equal: start, less_than: end } },
+    where: {
+      and: [{ date: { greater_than_equal: start, less_than: end } }, { analyseOnly: { not_equals: true } }],
+    },
     sort: 'date',
     depth: 0,
     limit: 500,
@@ -31,7 +34,12 @@ export async function loadLiveDay(selected: string, today: string): Promise<DayM
   // Live wedstrijden altijd tonen wanneer je naar vandaag kijkt — ook al staat hun datum anders.
   const liveRes =
     selected === today
-      ? await payload.find({ collection: 'matches', where: { status: { equals: 'live' } }, depth: 0, limit: 100 })
+      ? await payload.find({
+          collection: 'matches',
+          where: { and: [{ status: { equals: 'live' } }, { analyseOnly: { not_equals: true } }] },
+          depth: 0,
+          limit: 100,
+        })
       : { docs: [] as (typeof dayRes)['docs'] }
 
   const seen = new Set<number>()

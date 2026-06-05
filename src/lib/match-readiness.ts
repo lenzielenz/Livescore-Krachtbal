@@ -16,6 +16,7 @@ export type Readiness = {
   awayOk: boolean
   refereeOk: boolean
   isDemo: boolean
+  analyseOnly: boolean
   /** Volledig klaar om te openen (demo OF alle controles in orde). */
   ready: boolean
 }
@@ -31,6 +32,7 @@ export function computeReadiness(opts: {
   awayLineup: unknown
   refereeAkkoord: boolean
   isDemo: boolean
+  analyseOnly?: boolean
 }): Readiness {
   const homeCount = countLineup(opts.homeLineup)
   const awayCount = countLineup(opts.awayLineup)
@@ -38,6 +40,7 @@ export function computeReadiness(opts: {
   const awayOk = awayCount >= LINEUP_MIN
   const refereeOk = Boolean(opts.refereeAkkoord)
   const isDemo = Boolean(opts.isDemo)
+  const analyseOnly = Boolean(opts.analyseOnly)
   return {
     homeCount,
     awayCount,
@@ -45,7 +48,10 @@ export function computeReadiness(opts: {
     awayOk,
     refereeOk,
     isDemo,
-    ready: isDemo || (homeOk && awayOk && refereeOk),
+    analyseOnly,
+    // Analyse-wedstrijd: geen scheidsrechtersakkoord nodig, maar wél opstellingen
+    // (anders kunnen we worpen niet aan spelers koppelen).
+    ready: isDemo || (homeOk && awayOk && (refereeOk || analyseOnly)),
   }
 }
 

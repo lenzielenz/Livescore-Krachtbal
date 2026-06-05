@@ -48,6 +48,7 @@ export function Scorekeeper({
 }) {
   const [state, setState] = useState<MatchState>(initialState)
   const isDemo = readiness.isDemo
+  const isAnalyseOnly = readiness.analyseOnly
   // Admin/federatie kan de startcontrole bewust overslaan (testen).
   const [bypass, setBypass] = useState(false)
   const unlocked = readiness.ready || bypass
@@ -742,8 +743,9 @@ export function Scorekeeper({
       <DemoTutorial matchId={matchId} />
 
       <div className="sk-topbar">
-        <Link className="sk-back" href="/scorekeeper" title="Terug naar overzicht — de wedstrijd blijft gewoon live">← Overzicht</Link>
+        <Link className="sk-back" href={isAnalyseOnly ? '/analyse' : '/scorekeeper'} title="Terug naar overzicht — de wedstrijd blijft gewoon live">← Overzicht</Link>
         {isDemo && <span className="sk-demo-chip">DEMO</span>}
+        {isAnalyseOnly && <span className="sk-demo-chip">ANALYSE</span>}
         <button type="button" className="sk-fs" onClick={toggleFullscreen} title="Volledig scherm aan/uit">
           {isFullscreen ? '⤡ Sluiten' : '⛶ Volledig scherm'}
         </button>

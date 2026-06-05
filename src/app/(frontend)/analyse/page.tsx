@@ -6,8 +6,14 @@ import { canAnalyse, hasRole } from '@/lib/access'
 import { getAuthUser } from '@/lib/auth-user'
 import { buildScoreboards } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
-import { reeksNaam } from '@/lib/reeksen'
+import { REEKS_OPTIONS, reeksNaam } from '@/lib/reeksen'
+import { NieuweAnalyseMatch } from './NieuweAnalyseMatch'
 import './analyse.css'
+
+const COMPETITIE_REEKSEN = REEKS_OPTIONS.filter((o) => !['beker', 'recreatief', 'andere'].includes(o.value)).map((o) => ({
+  value: o.value,
+  label: reeksNaam(o.value),
+}))
 
 export const dynamic = 'force-dynamic'
 
@@ -63,6 +69,7 @@ export default async function AnalysePage() {
       home: c.teams.home,
       away: c.teams.away,
       score: c.score,
+      analyseOnly: Boolean((m as { analyseOnly?: boolean }).analyseOnly),
     }
   }
   type Row = NonNullable<ReturnType<typeof toRow>>
@@ -71,12 +78,36 @@ export default async function AnalysePage() {
   const rows = docs.map(toRow).filter(notNull)
   const openRows = openDocs.map(toRow).filter(notNull)
 
+  // Samenvattende cijfers (goedkoop afgeleid uit de reeds geladen scoreboards).
+  const totalPunten = rows.reduce((s, r) => s + r.score.home + r.score.away, 0)
+  const analyseOnlyCount = [...rows, ...openRows].filter((r) => r.analyseOnly).length
+
+  // Ploegen voor de "nieuwe analysewedstrijd"-creator (enkel admin heeft die nodig).
+  const teamsRes = isAdmin
+    ? await payload
+        .find({ collection: 'teams', where: { reeks: { in: COMPETITIE_REEKSEN.map((o) => o.value) } }, sort: 'name', depth: 0, limit: 500 })
+        .catch(() => ({ docs: [] as Record<string, unknown>[] }))
+    : { docs: [] as Record<string, unknown>[] }
+  const teamOptions = teamsRes.docs.map((t) => ({
+    id: (t as { id: number }).id,
+    name: String((t as { name?: unknown }).name ?? '—'),
+    reeks: String((t as { reeks?: unknown }).reeks ?? ''),
+  }))
+
   return (
     <>
       <SiteHeader active="analyse" />
       <div className="site">
         <h1 className="page-title"><span className="brand">Analyse</span></h1>
         <p className="an-intro">Kies een afgelopen wedstrijd om alle data per speler en ploeg te bekijken.</p>
+
+        <div className="rep-cards an-summary">
+          <div className="rep-card"><span className="rep-num">{rows.length}</span><span className="rep-lbl">Wedstrijden</span></div>
+          <div className="rep-card"><span className="rep-num">{totalPunten}</span><span className="rep-lbl">Punten gescoord</span></div>
+          <div className="rep-card"><span className="rep-num">{analyseOnlyCount}</span><span className="rep-lbl">Analyse-wedstrijden</span></div>
+          {isAdmin && <div className="rep-card"><span className="rep-num">{openRows.length}</span><span className="rep-lbl">Te recorderen</span></div>}
+        </div>
+
         <p className="an-hub-links">
           <Link href="/analyse/seizoen" className="sk-demo-cta">📊 Seizoensanalyse per reeks →</Link>
           <Link href="/analyse/spelers" className="sk-demo-cta">🎯 Spelersradar &amp; vergelijken →</Link>
@@ -90,8 +121,12 @@ export default async function AnalysePage() {
             <h2 className="an-sub">🎬 Wedstrijd manueel opnemen</h2>
             <p className="an-intro">
               Start en teken een wedstrijd aan met de volledige scoreopnemer (veldschema). Die detaildata voedt meteen
-              de analyse hierboven.
+              de analyse hierboven. Een <strong>analysewedstrijd</strong> wordt niet live of in de rangschikking getoond
+              — ze dient puur om data te verzamelen.
             </p>
+            <div className="an-record-new">
+              <NieuweAnalyseMatch teams={teamOptions} reeksOptions={[...COMPETITIE_REEKSEN]} />
+            </div>
             {openRows.length === 0 ? (
               <p className="empty">
                 Geen geplande of lopende wedstrijden. Maak er een aan via{' '}
@@ -102,7 +137,9 @@ export default async function AnalysePage() {
                 {openRows.map((r) => (
                   <Link key={r.id} href={`/scorekeeper/${r.id}`} className="an-card">
                     <span className={`an-card-reeks ${r.status === 'live' ? 'an-live' : ''}`}>
-                      {r.status === 'live' ? '● LIVE — aantekenen' : `${r.reeks} · ▶ opnemen`}
+                      {r.status === 'live'
+                        ? '● LIVE — aantekenen'
+                        : `${r.analyseOnly ? '🎬 Analyse' : r.reeks} · ▶ opnemen`}
                     </span>
                     <span className="an-card-row">
                       <span className="an-team">

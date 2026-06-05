@@ -33,7 +33,8 @@ export default async function ScorekeeperHub() {
   const rows: Row[] = []
   for (const m of matches.docs) {
     // Demo-/oefenwedstrijden horen niet in de gewone lijsten — die start je via /demo.
-    if ((m as { isDemo?: boolean }).isDemo) continue
+    // Analyse-only wedstrijden start je via de analysemodule.
+    if ((m as { isDemo?: boolean }).isDemo || (m as { analyseOnly?: boolean }).analyseOnly) continue
     try {
       const s = await buildMatchState(payload, m.id)
       const isLive = s.match.status === 'live'

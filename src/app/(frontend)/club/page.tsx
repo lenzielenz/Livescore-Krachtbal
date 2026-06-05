@@ -75,7 +75,7 @@ export default async function ClubPage() {
 
   const rows: Row[] = []
   for (const m of matches.docs) {
-    if ((m as { isDemo?: boolean }).isDemo) continue
+    if ((m as { isDemo?: boolean }).isDemo || (m as { analyseOnly?: boolean }).analyseOnly) continue
     try {
       const s = await buildMatchState(payload, m.id)
       rows.push({

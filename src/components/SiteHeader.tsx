@@ -24,6 +24,16 @@ const GENERAL = [
   { href: '/scorekeeper', label: '📝 Wedstrijd invullen' },
 ]
 
+// Alles wat de analysemodule aanbiedt — zichtbaar voor admin/analyse-toegang.
+const ANALYSE_LINKS = [
+  { href: '/analyse', label: '📈 Analyse-overzicht' },
+  { href: '/analyse/seizoen', label: '📊 Seizoensanalyse' },
+  { href: '/analyse/spelers', label: '🎯 Spelersradar' },
+  { href: '/analyse/verwacht', label: '🎯 Verwachte punten (xP)' },
+  { href: '/analyse/ploeg', label: '🛡️ Ploegrapport & export' },
+  { href: '/analyse/gevaar', label: '🔥 Gevaarzone per speler' },
+]
+
 // Het Meer-menu licht op zodra je op een van deze secties zit.
 const MENU_SECTIONS: NavSection[] = ['stand', 'analyse', 'tornooi', 'clubs', 'scheidsrechters', 'federatie']
 
@@ -76,12 +86,17 @@ export function SiteHeader({ active = null }: { active?: NavSection }) {
                         {l.label}
                       </Link>
                     ))}
-                    {canAnalyse && (
-                      <Link href="/analyse" className="sh-more-item" onClick={() => setOpen(false)}>
-                        📈 Analyse
-                      </Link>
-                    )}
                   </div>
+                  {canAnalyse && (
+                    <div className="sh-more-group">
+                      <div className="sh-more-grouphead">Analyse</div>
+                      {ANALYSE_LINKS.map((l) => (
+                        <Link key={l.href} href={l.href} className="sh-more-item" onClick={() => setOpen(false)}>
+                          {l.label}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
                   <div className="sh-more-group">
                     <div className="sh-more-grouphead">Aan de slag</div>
                     {PROFILES.map((p) => (
