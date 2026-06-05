@@ -40,13 +40,22 @@ export default async function AnalysePage() {
   const isAdmin = hasRole(me, 'admin')
 
   const payload = await getPayloadClient()
+  // De analyse-hub toont enkel de wedstrijden die jíj voor analyse hebt ingestoken
+  // (analyseOnly) — geen live/competitiewedstrijden. Afgelopen analysewedstrijden moeten
+  // bovendien échte worpdata hebben.
   const matchRes = await payload
-    .find({ collection: 'matches', where: { status: { equals: 'finished' } }, sort: '-date', depth: 0, limit: 500 })
+    .find({
+      collection: 'matches',
+      where: { and: [{ status: { equals: 'finished' } }, { analyseOnly: { equals: true } }] },
+      sort: '-date',
+      depth: 0,
+      limit: 500,
+    })
     .catch(() => ({ docs: [] as Record<string, unknown>[] }))
   const finishedDocs = matchRes.docs.filter((m) => !(m as { isDemo?: boolean }).isDemo)
 
   // Enkel afgelopen wedstrijden met échte analyse-data (worp-events) horen op de analyse-hub.
-  // Wedstrijden zonder worpen (0-0 of met de basis-snelscoremodus ingevuld) tellen niet mee.
+  // Wedstrijden zonder worpen (afgebroken of niet opgenomen) tellen niet mee.
   const finishedIds = finishedDocs.map((m) => (m as { id: number }).id)
   const relId = (v: unknown): number | null =>
     v && typeof v === 'object' ? ((v as { id?: number }).id ?? null) : typeof v === 'number' ? v : null
@@ -66,7 +75,13 @@ export default async function AnalysePage() {
   // scoreopnemer. Enkel relevant voor admins.
   const openRes = isAdmin
     ? await payload
-        .find({ collection: 'matches', where: { status: { in: ['scheduled', 'live'] } }, sort: 'date', depth: 0, limit: 200 })
+        .find({
+          collection: 'matches',
+          where: { and: [{ status: { in: ['scheduled', 'live'] } }, { analyseOnly: { equals: true } }] },
+          sort: 'date',
+          depth: 0,
+          limit: 200,
+        })
         .catch(() => ({ docs: [] as Record<string, unknown>[] }))
     : { docs: [] as Record<string, unknown>[] }
   const openDocs = openRes.docs.filter((m) => !(m as { isDemo?: boolean }).isDemo)
@@ -86,7 +101,6 @@ export default async function AnalysePage() {
       home: c.teams.home,
       away: c.teams.away,
       score: c.score,
-      analyseOnly: Boolean((m as { analyseOnly?: boolean }).analyseOnly),
     }
   }
   type Row = NonNullable<ReturnType<typeof toRow>>
@@ -97,8 +111,6 @@ export default async function AnalysePage() {
 
   // Samenvattende cijfers (goedkoop afgeleid uit de reeds geladen scoreboards).
   const totalPunten = rows.reduce((s, r) => s + r.score.home + r.score.away, 0)
-  const analyseOnlyCount = [...rows, ...openRows].filter((r) => r.analyseOnly).length
-
   // Ploegen voor de "nieuwe analysewedstrijd"-creator (enkel admin heeft die nodig).
   const teamsRes = isAdmin
     ? await payload
@@ -116,13 +128,12 @@ export default async function AnalysePage() {
       <SiteHeader active="analyse" />
       <div className="site">
         <h1 className="page-title"><span className="brand">Analyse</span></h1>
-        <p className="an-intro">Kies een afgelopen wedstrijd om alle data per speler en ploeg te bekijken.</p>
+        <p className="an-intro">Je analysewedstrijden — kies een opgenomen wedstrijd om alle data per speler en ploeg te bekijken.</p>
 
         <div className="rep-cards an-summary">
-          <div className="rep-card"><span className="rep-num">{rows.length}</span><span className="rep-lbl">Wedstrijden</span></div>
+          <div className="rep-card"><span className="rep-num">{rows.length}</span><span className="rep-lbl">Opgenomen</span></div>
           <div className="rep-card"><span className="rep-num">{totalPunten}</span><span className="rep-lbl">Punten gescoord</span></div>
-          <div className="rep-card"><span className="rep-num">{analyseOnlyCount}</span><span className="rep-lbl">Analyse-wedstrijden</span></div>
-          {isAdmin && <div className="rep-card"><span className="rep-num">{openRows.length}</span><span className="rep-lbl">Te recorderen</span></div>}
+          {isAdmin && <div className="rep-card"><span className="rep-num">{openRows.length}</span><span className="rep-lbl">Voorbereid</span></div>}
         </div>
 
         <p className="an-hub-links">
@@ -145,20 +156,13 @@ export default async function AnalysePage() {
               <NieuweAnalyseMatch teams={teamOptions} reeksOptions={[...COMPETITIE_REEKSEN]} />
             </div>
             {openRows.length === 0 ? (
-              <p className="empty">
-                Geen geplande of lopende wedstrijden. Maak er een aan via{' '}
-                <Link href="/beheer" style={{ color: 'var(--accent)' }}>Beheer</Link>.
-              </p>
+              <p className="empty">Nog geen voorbereide analysewedstrijden. Maak er een aan met de knop hierboven.</p>
             ) : (
               <div className="an-list">
                 {openRows.map((r) => (
                   <Link key={r.id} href={`/scorekeeper/${r.id}`} className="an-card">
                     <span className={`an-card-reeks ${r.status === 'live' ? 'an-live' : ''}`}>
-                      {r.status === 'live'
-                        ? '● LIVE — aantekenen'
-                        : r.analyseOnly
-                          ? '🎬 Analyse · ▶ Activeren'
-                          : `${r.reeks} · ▶ opnemen`}
+                      {r.status === 'live' ? '● LIVE — aantekenen' : '🎬 Analyse · ▶ Activeren'}
                     </span>
                     <span className="an-card-row">
                       <span className="an-team">
