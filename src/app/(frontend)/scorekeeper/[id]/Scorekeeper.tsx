@@ -773,7 +773,7 @@ export function Scorekeeper({
             className={`sk-clock ${state.match.clockRunning ? 'running' : ''} ${isScheduled ? 'locked' : ''}`}
             disabled={busy || (!isLive && !isScheduled)}
             onClick={onClockClick}
-            title={isScheduled ? (unlocked ? 'Tik om te kiezen wie opzet' : 'Vergrendeld — opstelling + akkoord scheidsrechter nodig') : 'Tik om te starten/pauzeren'}
+            title={isScheduled ? (unlocked ? 'Tik om te kiezen wie opzet' : isAnalyseOnly ? 'Vergrendeld — opstellingen nodig' : 'Vergrendeld — opstelling + akkoord scheidsrechter nodig') : 'Tik om te starten/pauzeren'}
           >
             <span className="sk-half-chip">H{state.match.currentHalf}</span>
             {fmtClock(clock)}
@@ -819,25 +819,28 @@ export function Scorekeeper({
           <div className="sk-kickoff-card sk-lock-card">
             <div className="sk-kickoff-title">Wedstrijd vergrendeld 🔒</div>
             <div className="sk-kickoff-sub">
-              Voor je kan openen moeten beide opstellingen ingevuld zijn én moet de scheidsrechter
-              akkoord geven.
+              {isAnalyseOnly
+                ? 'Voeg eerst de spelers toe in beide opstellingen — voor een analysewedstrijd heb je geen akkoord van de scheidsrechter nodig.'
+                : 'Voor je kan openen moeten beide opstellingen ingevuld zijn én moet de scheidsrechter akkoord geven.'}
             </div>
             <ul className="sk-checklist">
               <li className={readiness.homeOk ? 'ok' : 'todo'}>
                 <span className="sk-check-ico">{readiness.homeOk ? '✓' : '○'}</span>
                 Opstelling thuis ({readiness.homeCount}/{LINEUP_MIN})
-                {!readiness.homeOk && <a className="sk-check-link" href={`/opstelling/${matchId}`}>invullen →</a>}
+                {!readiness.homeOk && <a className="sk-check-link" href={`/opstelling/${matchId}`}>spelers toevoegen →</a>}
               </li>
               <li className={readiness.awayOk ? 'ok' : 'todo'}>
                 <span className="sk-check-ico">{readiness.awayOk ? '✓' : '○'}</span>
                 Opstelling uit ({readiness.awayCount}/{LINEUP_MIN})
-                {!readiness.awayOk && <a className="sk-check-link" href={`/opstelling/${matchId}`}>invullen →</a>}
+                {!readiness.awayOk && <a className="sk-check-link" href={`/opstelling/${matchId}`}>spelers toevoegen →</a>}
               </li>
-              <li className={readiness.refereeOk ? 'ok' : 'todo'}>
-                <span className="sk-check-ico">{readiness.refereeOk ? '✓' : '○'}</span>
-                Akkoord scheidsrechter
-                {!readiness.refereeOk && <a className="sk-check-link" href={`/scheidsrechter/${matchId}`}>scheidsrechter →</a>}
-              </li>
+              {!isAnalyseOnly && (
+                <li className={readiness.refereeOk ? 'ok' : 'todo'}>
+                  <span className="sk-check-ico">{readiness.refereeOk ? '✓' : '○'}</span>
+                  Akkoord scheidsrechter
+                  {!readiness.refereeOk && <a className="sk-check-link" href={`/scheidsrechter/${matchId}`}>scheidsrechter →</a>}
+                </li>
+              )}
             </ul>
             {isAdmin && (
               <button
