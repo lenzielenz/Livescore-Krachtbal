@@ -45,7 +45,17 @@ export async function POST(req: Request) {
       },
     })
 
-    return Response.json({ id: (created as { id: number }).id })
+    // De huidige (onthouden) spelers van beide ploegen meegeven, zodat de creator ze toont
+    // en je er nieuwe aan kan toevoegen die voortaan ook geselecteerd kunnen worden.
+    const loadRoster = async (teamId: number) => {
+      const r = await payload
+        .find({ collection: 'players', where: { team: { equals: teamId } }, sort: 'shirtNumber', depth: 0, limit: 200 })
+        .catch(() => ({ docs: [] as Record<string, unknown>[] }))
+      return r.docs.map((p) => ({ id: p.id as number, name: String((p as { name?: unknown }).name ?? ''), shirtNumber: Number((p as { shirtNumber?: unknown }).shirtNumber ?? 0) }))
+    }
+    const [homeRoster, awayRoster] = await Promise.all([loadRoster(homeTeam), loadRoster(awayTeam)])
+
+    return Response.json({ id: (created as { id: number }).id, homeTeam, awayTeam, homeRoster, awayRoster })
   } catch (err) {
     return Response.json({ error: (err as Error).message }, { status: 400 })
   }

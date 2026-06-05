@@ -878,3 +878,15 @@ select.rang-picker {
 .pan-stat-lbl em { font-style: normal; opacity: 0.85; }
 .pan-foot { margin-top: 12px; text-align: center; font-size: 0.6rem; font-weight: 900; letter-spacing: 0.16em; color: var(--dim); }
 .pan-tip { color: var(--dim); font-size: 0.78rem; font-style: italic; }
+
+/* ── Nieuwe analysewedstrijd: spelers toevoegen ── */
+.nam-teams { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media (max-width: 560px) { .nam-teams { grid-template-columns: 1fr; } }
+.nam-team { background: rgba(0,0,0,0.18); border: 1px solid var(--line); border-radius: 12px; padding: 12px; }
+.nam-team-h { margin: 0 0 8px; font-size: 0.86rem; }
+.nam-roster { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.nam-chip { font-size: 0.8rem; background: rgba(255,255,255,0.06); border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; }
+.nam-chip b { color: var(--accent); font-variant-numeric: tabular-nums; }
+.nam-addrow { display: flex; gap: 6px; align-items: center; }
+.nam-addrow .nam-num { flex: 0 0 56px; text-align: center; }
+.nam-addrow .nam-prepare { flex: 0 0 auto; padding: 9px 12px; }
