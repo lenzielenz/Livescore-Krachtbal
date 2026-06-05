@@ -26,6 +26,7 @@ function SignaturePad({
   side,
   teamName,
   initial,
+  defaultNaam,
   onSigned,
 }: {
   matchId: string
@@ -34,11 +35,15 @@ function SignaturePad({
   side: Side
   teamName?: string
   initial?: SignatureData
+  /** Vooraf gekende naam (kapitein/scheidsrechter uit de wedstrijd) — niemand hoeft te typen. */
+  defaultNaam?: string
   onSigned?: () => void
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const drawing = useRef(false)
-  const [naam, setNaam] = useState(initial?.naam ?? '')
+  // Naam wordt NIET getypt: ze komt uit de wedstrijd (kapitein/SR), of valt server-side terug op
+  // het ingelogde account. Aftekenen = gewoon tekenen + bevestigen.
+  const naam = (initial?.naam || defaultNaam || '').trim()
   const [msg, setMsg] = useState<string | null>(null)
   const [hasInk, setHasInk] = useState(false)
 
@@ -92,7 +97,6 @@ function SignaturePad({
   }
 
   const save = async () => {
-    if (!naam.trim()) return setMsg('Vul je naam in.')
     if (!hasInk) return setMsg('Plaats eerst een handtekening.')
     const dataUrl = canvasRef.current!.toDataURL('image/png')
     const res = await fetch(`/api/matchsheet/${matchId}/sign`, {
@@ -128,7 +132,7 @@ function SignaturePad({
 
       {locked ? (
         <>
-          <input className="wb-input" value={naam} readOnly style={{ marginBottom: 8 }} />
+          {naam && <p className="wb-sign-naam">{naam}</p>}
           <div className="wb-sign wb-sign-locked">
             {signedImg && <img src={signedImg} alt={`Handtekening ${label}`} className="wb-sign-img" />}
           </div>
@@ -139,13 +143,7 @@ function SignaturePad({
         </>
       ) : (
         <>
-          <input
-            className="wb-input"
-            placeholder="Naam"
-            value={naam}
-            onChange={(e) => setNaam(e.target.value)}
-            style={{ marginBottom: 8 }}
-          />
+          {naam && <p className="wb-sign-naam">Tekent: {naam}</p>}
           <canvas
             ref={canvasRef}
             width={300}
@@ -177,12 +175,15 @@ export function AftekenenPanel({
   signatures,
   homeTeam,
   awayTeam,
+  defaultNames,
 }: {
   matchId: string
   initialStatus: string
   signatures?: Partial<Record<Who, SignatureData>>
   homeTeam?: string
   awayTeam?: string
+  /** Vooraf gekende namen per ondertekenaar (kapiteins/SR uit de wedstrijd). */
+  defaultNames?: Partial<Record<Who, string | undefined>>
 }) {
   const [status, setStatus] = useState(initialStatus)
   const [msg, setMsg] = useState<string | null>(null)
@@ -242,6 +243,7 @@ export function AftekenenPanel({
             side="home"
             teamName={homeTeam}
             initial={signatures?.kapiteinThuis}
+            defaultNaam={defaultNames?.kapiteinThuis}
             onSigned={() => goNext('kapiteinThuis')}
           />
         </div>
@@ -253,6 +255,7 @@ export function AftekenenPanel({
             side="away"
             teamName={awayTeam}
             initial={signatures?.kapiteinUit}
+            defaultNaam={defaultNames?.kapiteinUit}
             onSigned={() => goNext('kapiteinUit')}
           />
         </div>
@@ -263,6 +266,7 @@ export function AftekenenPanel({
             label="Scheidsrechter"
             side={null}
             initial={signatures?.scheidsrechter}
+            defaultNaam={defaultNames?.scheidsrechter}
             onSigned={() => goNext('scheidsrechter')}
           />
         </div>

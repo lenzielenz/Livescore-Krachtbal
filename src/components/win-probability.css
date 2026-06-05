@@ -3,8 +3,10 @@
 .wp {
   --wp-home: #0fe0a6;
   --wp-away: #4cc9f0;
-  margin: 14px auto 4px;
-  max-width: 520px;
+  margin: 10px auto 2px;
+  max-width: 460px;
+  /* Subtiel aanwezig: het hele blok treedt licht terug zodat het scorebord de hoofdrol houdt. */
+  opacity: 0.85;
 }
 .wp * { box-sizing: border-box; }
 
@@ -13,53 +15,53 @@
   align-items: baseline;
   justify-content: space-between;
   gap: 10px;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 .wp-title {
-  font-size: 0.66rem;
+  font-size: 0.58rem;
   font-weight: 600;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.07em;
   text-transform: uppercase;
   color: var(--dim, #7e978a);
 }
-.wp-exp { font-size: 0.74rem; color: var(--dim, #7e978a); }
+.wp-exp { font-size: 0.66rem; color: var(--dim, #7e978a); }
 .wp-exp b { color: var(--txt); font-weight: 600; font-variant-numeric: tabular-nums; }
 
 .wp-bar {
   display: flex;
-  height: 7px;
+  height: 5px;
   border-radius: 999px;
   overflow: hidden;
-  background: color-mix(in srgb, var(--line) 45%, transparent);
+  background: color-mix(in srgb, var(--line) 40%, transparent);
 }
 /* Iets ingetogen segmenten: net wat doorzichtig zodat de balk "fijn aanwezig" is i.p.v. schreeuwerig. */
 .wp-seg { height: 100%; transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1); }
-.wp-seg.home { background: color-mix(in srgb, var(--wp-home) 72%, transparent); }
-.wp-seg.away { background: color-mix(in srgb, var(--wp-away) 72%, transparent); }
-.wp-seg.draw { background: color-mix(in srgb, var(--dim) 40%, transparent); }
+.wp-seg.home { background: color-mix(in srgb, var(--wp-home) 65%, transparent); }
+.wp-seg.away { background: color-mix(in srgb, var(--wp-away) 65%, transparent); }
+.wp-seg.draw { background: color-mix(in srgb, var(--dim) 35%, transparent); }
 
 .wp-legend {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 5px;
-  font-size: 0.72rem;
+  margin-top: 4px;
+  font-size: 0.64rem;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
-.wp-lg.home { color: color-mix(in srgb, var(--wp-home) 85%, var(--dim)); }
-.wp-lg.away { color: color-mix(in srgb, var(--wp-away) 85%, var(--dim)); }
+.wp-lg.home { color: color-mix(in srgb, var(--wp-home) 80%, var(--dim)); }
+.wp-lg.away { color: color-mix(in srgb, var(--wp-away) 80%, var(--dim)); }
 .wp-lg.draw { color: var(--dim, #7e978a); font-weight: 500; }
 
 .wp-momentum {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-top: 10px;
+  margin-top: 8px;
 }
 .wp-momentum svg {
   flex: 1;
-  height: 26px;
+  height: 18px;
   width: 100%;
 }
 .wp-mid {
@@ -79,9 +81,9 @@
 .wp-curve.home { stroke: var(--wp-home); }
 .wp-curve.away { stroke: var(--wp-away); }
 .wp-momentum-lbl {
-  font-size: 0.64rem;
+  font-size: 0.56rem;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.07em;
   text-transform: uppercase;
   color: var(--dim, #7e978a);
   white-space: nowrap;

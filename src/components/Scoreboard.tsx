@@ -197,6 +197,11 @@ export function Scoreboard({
   const statusLabel =
     state.match.status === 'live' ? 'LIVE' : state.match.status === 'finished' ? 'AFGELOPEN' : 'GEPLAND'
 
+  // Speelduur-melding: tot waar de klok van deze helft loopt (de klok telt op tot `halfSeconds`)
+  // + hoeveel minuten er in totaal gevraagd zijn (time-outs van beide ploegen + SR-minuten), want
+  // die pauzeren de klok en rekken de échte speeltijd op.
+  const requestedMin = state.timeouts.home + state.timeouts.away + state.refereeStops
+
   // Accenten in de clubkleuren (ringen, tijdlijn, doelpunt-gloed). Valt terug op groen/blauw.
   // De rauwe kleur dient voor de ring/logo; voor TEKST/cijfers op het donkere paneel klemmen we
   // naar een leesbare variant zodat donkere crests de naam/score niet onzichtbaar maken (AUDIT §1).
@@ -245,6 +250,12 @@ export function Scoreboard({
           </div>
           <div className="sb-clock">{fmtClock(clock)}</div>
           <div className="sb-half">Helft {state.match.currentHalf}</div>
+          {state.match.status !== 'finished' && (
+            <div className="sb-playto" title="De klok telt op tot dit punt; time-outs en SR-minuten pauzeren ze, dus de échte speeltijd loopt langer.">
+              speelt tot {fmtClock(halfSeconds)}
+              {requestedMin > 0 && ` · ${requestedMin} min. gevraagd`}
+            </div>
+          )}
         </div>
         <div className={`sb-side-team ${goal?.side === 'away' ? 'scored' : ''}`}>
           <TeamLogo name={state.teams.away.name} logoUrl={state.teams.away.logoUrl} logoFit={state.teams.away.logoFit} side="away" size="lg" float ringColor={state.teams.away.colors?.primary} />

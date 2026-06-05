@@ -13,7 +13,8 @@ export const dynamic = 'force-dynamic'
 export default async function AftekenenPage({ params }: { params: Promise<{ matchId: string }> }) {
   const { matchId } = await params
   const payload = await getPayloadClient()
-  const match = await payload.findByID({ collection: 'matches', id: matchId, depth: 0 }).catch(() => null)
+  // depth 2 zodat de kapiteins (spelers) mee opgehaald worden voor de vooraf gekende namen.
+  const match = await payload.findByID({ collection: 'matches', id: matchId, depth: 2 }).catch(() => null)
   if (!match) {
     return (
       <>
@@ -28,6 +29,19 @@ export default async function AftekenenPage({ params }: { params: Promise<{ matc
 
   const sheet = await getOrCreateMatchSheet(payload, matchId)
   const built = await buildMatchSheet(payload, Number(matchId)).catch(() => null)
+
+  // Vooraf gekende namen zodat niemand z'n naam hoeft te typen: kapiteins uit de wedstrijd, de
+  // scheidsrechter uit het (toegewezen) wedstrijdblad.
+  const naamVan = (c: unknown): string | undefined =>
+    c && typeof c === 'object' ? (c as { name?: string }).name || undefined : undefined
+  const refereeRes = await payload
+    .find({ collection: 'matchsheets', where: { match: { equals: Number(matchId) } }, depth: 2, limit: 1 })
+    .catch(() => null)
+  const defaultNames = {
+    kapiteinThuis: naamVan(match.homeCaptain),
+    kapiteinUit: naamVan(match.awayCaptain),
+    scheidsrechter: naamVan(refereeRes?.docs[0]?.assignedReferee),
+  }
 
   return (
     <>
@@ -50,6 +64,7 @@ export default async function AftekenenPage({ params }: { params: Promise<{ matc
         initialStatus={(sheet.status as string) ?? 'concept'}
         homeTeam={built?.teams.home.name}
         awayTeam={built?.teams.away.name}
+        defaultNames={defaultNames}
         signatures={{
           kapiteinThuis: sheet.kapiteinThuis as SignatureData | undefined,
           kapiteinUit: sheet.kapiteinUit as SignatureData | undefined,
