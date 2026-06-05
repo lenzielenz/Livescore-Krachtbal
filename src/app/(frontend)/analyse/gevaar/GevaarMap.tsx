@@ -8,13 +8,14 @@ import type { DangerShot } from '@/lib/player-danger'
 
 // Twee verschillende beelden van een speler:
 //  • Gevaarzone — van waar is hij aanvallend het gevaarlijkst (conversie per zone);
-//  • Doelpunten — waar hij het meeste scoort (volume/dichtheid van zijn doelpunten);
+//  • Doelpunten — waar hij gescoord heeft (landingsplek/dichtheid van zijn doelpunten);
 // plus Pogingen (losse worpen: groen = doelpunt, rood = gemist).
 export function GevaarMap({ shots }: { shots: DangerShot[] }) {
   const [view, setView] = useState<'danger' | 'scores' | 'dots'>('danger')
 
   const convPoints: ConvPoint[] = shots.map((s) => ({ x: s.x, y: s.y, goal: s.goal }))
-  const goalPoints: Point[] = shots.filter((s) => s.goal).map((s) => ({ x: s.x, y: s.y }))
+  // Doelpunten = waar hij gescoord heeft → de landingsplek van zijn doelpunten (bij het doel).
+  const goalPoints: Point[] = shots.filter((s) => s.goal).map((s) => ({ x: s.landX, y: s.landY }))
   const markers: FieldMarker[] = shots.map((s) => ({
     x: s.x,
     y: s.y,
@@ -46,7 +47,7 @@ export function GevaarMap({ shots }: { shots: DangerShot[] }) {
       ) : view === 'scores' ? (
         <div className="gev-legend">
           <span className="gev-scale" /> <span>weinig → veel doelpunten</span>
-          <span className="gev-note">van waar hij het meeste scoort · {goalPoints.length} doelpunten</span>
+          <span className="gev-note">waar hij gescoord heeft · {goalPoints.length} doelpunten</span>
         </div>
       ) : (
         <div className="gev-legend">

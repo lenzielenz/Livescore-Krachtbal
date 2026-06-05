@@ -14,6 +14,9 @@ export interface DangerShot {
   /** Canoniek vertrekpunt (0..1), aanval steeds naar onder (doel bij y≈1). */
   x: number
   y: number
+  /** Canonieke landingsplek (0..1) — waar de bal neerkwam (bij een doelpunt: waar hij scoorde). */
+  landX: number
+  landY: number
   goal: boolean
   type: ThrowType
 }
@@ -76,12 +79,15 @@ export async function buildPlayerDanger(payload: Payload, playerId: number, reek
     }
     for (const s of raw) {
       if (s.playerId !== playerId || !s.isLastThrow) continue
-      // Spiegel naar canonieke aanval (doel onderaan, y≈1).
+      // Spiegel naar canonieke aanval (doel onderaan, y≈1) — zowel het vertrekpunt (van waar
+      // hij gooit) als de landingsplek (waar de bal/zijn doelpunt neerkwam).
       const dir = attackDirForSide(s.teamSide, s.period)
       const x = dir === 'up' ? s.fromX : 1 - s.fromX
       const y = dir === 'up' ? s.fromY : 1 - s.fromY
+      const landX = dir === 'up' ? s.x : 1 - s.x
+      const landY = dir === 'up' ? s.y : 1 - s.y
       const goal = s.outcome === 'goal'
-      shots.push({ x, y, goal, type: s.type })
+      shots.push({ x, y, landX, landY, goal, type: s.type })
       if (goal) goals += 1
       if (typeof s.distance === 'number') {
         distSum += s.distance
