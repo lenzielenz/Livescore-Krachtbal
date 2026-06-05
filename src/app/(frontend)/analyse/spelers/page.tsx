@@ -53,12 +53,6 @@ export default async function SpelerAnalysePage({ searchParams }: { searchParams
         <div className="an-head-bar">
           <h1 className="page-title"><span className="brand">Spelersradar</span></h1>
         </div>
-        <p className="an-intro">
-          Volledig spelersprofiel met een <strong>rating</strong> (gemiddeld percentiel over alle prestatie-assen),
-          sprekende kerncijfers en een radar op zeven assen: aanval, doelpunten, succes (conversie), efficiëntie
-          (punten boven/onder verwachting via het xG-model), worpafstand, forceren en verdediging. Elke as toont het
-          <em> percentiel binnen de reeks</em> — vergelijk met het reeks-gemiddelde (stippellijn) of met een tweede speler.
-        </p>
 
         <SpelerRadar reeks={reeks} options={[...COMPETITIE_REEKSEN]} players={players} />
       </div>

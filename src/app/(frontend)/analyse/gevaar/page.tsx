@@ -90,10 +90,6 @@ export default async function GevaarPage({ searchParams }: { searchParams: Promi
             player={playerId != null ? String(playerId) : ''}
           />
         </div>
-        <p className="an-intro">
-          Van waar op het veld is de speler gevaarlijk om te scoren? De kaart spiegelt beide helften naar één
-          aanvalsrichting (doel onderaan) en kleurt elke zone naar de scoringskans vanaf dat vertrekpunt.
-        </p>
 
         {danger == null ? (
           <p className="empty">Kies een speler om zijn gevaarzone te bekijken.</p>
