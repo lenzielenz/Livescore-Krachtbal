@@ -3,6 +3,12 @@
   font-size: 0.92rem;
   margin: 0 0 16px;
 }
+.an-hub-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0 0 16px;
+}
 
 /* ── Lijst ── */
 .an-list {
@@ -200,3 +206,88 @@
 .an-spark-cell { color: var(--accent); }
 .an-spark { display: block; }
 .an-spark-empty { color: var(--dim); }
+
+/* ── Spelersradar ── */
+.rad-wrap { margin: 4px 0 24px; }
+.rad-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.rad-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--dim);
+}
+.rad-dot { font-size: 0.7rem; }
+.rad-dot-a { color: var(--home); }
+.rad-dot-b { color: var(--away); }
+.rad-grid {
+  display: grid;
+  grid-template-columns: minmax(280px, 360px) 1fr;
+  gap: 16px;
+  align-items: start;
+}
+@media (max-width: 640px) {
+  .rad-grid { grid-template-columns: 1fr; }
+}
+.rad-chart-card,
+.rad-table-card {
+  background: var(--panel-grad);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px 16px;
+  box-shadow: var(--card-shadow);
+}
+.rad-svg { width: 100%; height: auto; display: block; overflow: visible; }
+.rad-ring { fill: none; stroke: var(--line); stroke-width: 1; }
+.rad-axis { stroke: var(--line); stroke-width: 1; }
+.rad-axis-lbl { fill: var(--dim); font-size: 11px; font-weight: 700; }
+.rad-league {
+  fill: none;
+  stroke: var(--dim);
+  stroke-width: 1.4;
+  stroke-dasharray: 4 4;
+}
+.rad-poly { fill-opacity: 0.18; stroke-width: 2; }
+.rad-a { fill: var(--home); stroke: var(--home); }
+.rad-b { fill: var(--away); stroke: var(--away); }
+.rad-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 8px;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+.rad-leg-league { color: var(--dim); }
+.rad-leg-a { color: var(--home); }
+.rad-leg-b { color: var(--away); }
+.rad-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.rad-table th,
+.rad-table td {
+  padding: 7px 8px;
+  text-align: right;
+  border-bottom: 1px solid var(--line);
+  font-variant-numeric: tabular-nums;
+}
+.rad-table th { color: var(--dim); font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.03em; }
+.rad-table th:first-child,
+.rad-table td:first-child { text-align: left; }
+.rad-stat { color: var(--txt); font-weight: 700; }
+.rad-col-a { color: var(--home); }
+.rad-col-b { color: var(--away); }
+.rad-lg { color: var(--dim); }
+.rad-good { font-weight: 800; }
+.rad-table thead th.rad-col-a,
+.rad-table thead th.rad-col-b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 90px;
+}
