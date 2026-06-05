@@ -6,6 +6,7 @@ import { getAuthUser } from '@/lib/auth-user'
 import { buildExpectedPoints } from '@/lib/expected-points'
 import { getPayloadClient } from '@/lib/payload-client'
 import { REEKS_OPTIONS, reeksNaam } from '@/lib/reeksen'
+import { ScoringField } from './ScoringField'
 import { VerwachtPicker } from './VerwachtPicker'
 import '../../rangschikking/rangschikking.css'
 import '../analyse.css'
@@ -42,7 +43,7 @@ export default async function VerwachtAnalysePage({ searchParams }: { searchPara
       : COMPETITIE_REEKSEN[0].value
 
   const payload = await getPayloadClient()
-  const { players, buckets, totals } = await buildExpectedPoints(payload, reeks)
+  const { players, buckets, totals, dangerShots } = await buildExpectedPoints(payload, reeks)
 
   const maxAbsDiff = Math.max(1, ...players.map((p) => Math.abs(p.diff)))
 
@@ -119,6 +120,16 @@ export default async function VerwachtAnalysePage({ searchParams }: { searchPara
             </p>
 
             <h2 className="an-sub">Scoringskans per zone</h2>
+            <p className="an-intro">
+              De veldhelft kleurt per zone van <strong style={{ color: '#ef476f' }}>rood</strong> (moeilijk scoren) naar{' '}
+              <strong style={{ color: '#06d6a0' }}>groen</strong> (makkelijk), van waar er geworpen wordt — met onderscheid
+              links/midden/rechts. Beide speelhelften zijn naar één doel (onderaan) gespiegeld.
+            </p>
+            {dangerShots.length > 0 && (
+              <div className="xp-fieldwrap">
+                <ScoringField shots={dangerShots} />
+              </div>
+            )}
             <div className="an-charts-grid">
               {(['nek', 'rug'] as const).map((type) => {
                 const rows = buckets.filter((b) => b.type === type)

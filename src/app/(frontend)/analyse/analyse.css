@@ -463,6 +463,9 @@ select.rang-picker {
   padding: 14px 16px;
   box-shadow: var(--card-shadow);
 }
+/* Halfveld-gevaarkaart op de verwachte-puntenpagina: beperk de breedte. */
+.xp-fieldwrap { max-width: 440px; margin: 0 0 18px; }
+.xp-fieldwrap .gev-field { max-height: 320px; }
 .gev-controls { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
 .gev-controls button {
   padding: 6px 12px;

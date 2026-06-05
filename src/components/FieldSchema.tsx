@@ -201,6 +201,7 @@ export function FieldSchema({
   ends,
   glowGoal,
   goalAreaDepthM = 10,
+  half,
   className,
 }: {
   onTap?: (p: Point) => void
@@ -215,10 +216,15 @@ export function FieldSchema({
   glowGoal?: { end: 'top' | 'bottom'; color: string }
   /** Diepte van het doelgebied (m) — bepaalt de veldlengte/verhoudingen. */
   goalAreaDepthM?: number
+  /** Toon enkel één speelhelft (van de middellijn tot het doel aan die zijde). */
+  half?: 'top' | 'bottom'
   className?: string
 }) {
   const ref = useRef<SVGSVGElement>(null)
   const { H, homeGoalY, awayGoalY, midY, ftTopY, ftBotY } = fieldPx(goalAreaDepthM)
+  // Halfveld-uitsnede: beperk de viewBox tot de aanvalshelft (middellijn → doel).
+  const viewY = half === 'bottom' ? midY : -M
+  const viewH = half === 'bottom' ? H + M - midY : half === 'top' ? midY + M : H + 2 * M
 
   function handleClick(e: React.MouseEvent<SVGSVGElement>) {
     if (!onTap || !ref.current) return
@@ -232,7 +238,7 @@ export function FieldSchema({
     <svg
       ref={ref}
       className={className}
-      viewBox={`${-M} ${-M} ${W + 2 * M} ${H + 2 * M}`}
+      viewBox={`${-M} ${viewY} ${W + 2 * M} ${viewH}`}
       onClick={handleClick}
       role="img"
       aria-label="Krachtbalveld"
