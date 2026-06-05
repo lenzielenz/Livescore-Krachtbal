@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 import { TeamLogo } from '@/components/TeamLogo'
+import { KrachtbalIcon } from '@/components/KrachtbalIcon'
 import type { RadarPlayer } from '@/lib/radar-stats'
 
 type ClubInfo = { name: string; logoUrl: string | null; primary: string | null; secondary: string | null }
@@ -145,7 +146,7 @@ export function PaniniBuilder({ reeks, reeksLabel, options, players, clubs }: { 
         const c1 = club?.primary || '#ffd873'
         const c2 = club?.secondary || rc
         const chips = [
-          { ic: '⚽', lbl: 'Doelpunten', val: `${player.goals}`, sub: `${player.goalsPerMatch.toFixed(1)}/wd` },
+          { ic: <KrachtbalIcon />, lbl: 'Doelpunten', val: `${player.goals}`, sub: `${player.goalsPerMatch.toFixed(1)}/wd` },
           { ic: '🎯', lbl: 'Conversie', val: `${Math.round(player.conversion * 100)}%`, sub: '' },
           { ic: '⚡', lbl: 'Efficiëntie', val: player.diff > 0 ? `+${player.diff.toFixed(1)}` : player.diff.toFixed(1), sub: 'xP±' },
           { ic: '📏', lbl: 'Gem. afstand', val: `${player.avgDistance.toFixed(1)}m`, sub: `max ${player.maxDistance.toFixed(0)}m` },
