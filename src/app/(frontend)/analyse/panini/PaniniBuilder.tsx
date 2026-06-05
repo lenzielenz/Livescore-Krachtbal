@@ -158,11 +158,8 @@ export function PaniniBuilder({ reeks, reeksLabel, options, players, clubs }: { 
               <div className="pan-foil" aria-hidden />
               {logo && <div className="pan-watermark" style={{ backgroundImage: `url(${logo})` }} aria-hidden />}
               <div className="pan-top">
-                <span className="pan-club">
-                  <TeamLogo name={club?.name || player.teamName} logoUrl={logo} size="sm" ringColor={c1} />
-                  <span className="pan-club-nm">{club?.name || player.teamName}</span>
-                </span>
-                <span className="pan-season">{reeksLabel} · 25/26</span>
+                <TeamLogo name={club?.name || player.teamName} logoUrl={logo} size="sm" ringColor={c1} />
+                <span className="pan-club-nm">{club?.name || player.teamName}</span>
               </div>
               <div className="pan-rating" style={{ color: rc, borderColor: rc }}>
                 <span className="pan-rating-n">{rating}</span>
@@ -192,7 +189,7 @@ export function PaniniBuilder({ reeks, reeksLabel, options, players, clubs }: { 
                   </div>
                 ))}
               </div>
-              <div className="pan-foot">KRACHTBAL LIVE · PANINI</div>
+              <div className="pan-foot">{reeksLabel} · 25/26 · PANINI</div>
             </div>
             <p className="pan-tip">Tip: maak een schermafbeelding om de sticker te delen.</p>
           </div>
