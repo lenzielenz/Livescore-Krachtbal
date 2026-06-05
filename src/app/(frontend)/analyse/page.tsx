@@ -43,7 +43,24 @@ export default async function AnalysePage() {
   const matchRes = await payload
     .find({ collection: 'matches', where: { status: { equals: 'finished' } }, sort: '-date', depth: 0, limit: 500 })
     .catch(() => ({ docs: [] as Record<string, unknown>[] }))
-  const docs = matchRes.docs.filter((m) => !(m as { isDemo?: boolean }).isDemo)
+  const finishedDocs = matchRes.docs.filter((m) => !(m as { isDemo?: boolean }).isDemo)
+
+  // Enkel afgelopen wedstrijden met échte analyse-data (worp-events) horen op de analyse-hub.
+  // Wedstrijden zonder worpen (0-0 of met de basis-snelscoremodus ingevuld) tellen niet mee.
+  const finishedIds = finishedDocs.map((m) => (m as { id: number }).id)
+  const relId = (v: unknown): number | null =>
+    v && typeof v === 'object' ? ((v as { id?: number }).id ?? null) : typeof v === 'number' ? v : null
+  const withData = new Set<number>()
+  if (finishedIds.length) {
+    const throwRes = await payload
+      .find({ collection: 'throws', where: { match: { in: finishedIds } }, depth: 0, pagination: false, select: { match: true } })
+      .catch(() => ({ docs: [] as Record<string, unknown>[] }))
+    for (const t of throwRes.docs) {
+      const mid = relId((t as { match?: unknown }).match)
+      if (mid != null) withData.add(mid)
+    }
+  }
+  const docs = finishedDocs.filter((m) => withData.has((m as { id: number }).id))
 
   // Te-recorderen wedstrijden (gepland of live) — om manueel aan te tekenen met de volledige
   // scoreopnemer. Enkel relevant voor admins.
