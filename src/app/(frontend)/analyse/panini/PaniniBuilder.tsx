@@ -1,12 +1,47 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 import { TeamLogo } from '@/components/TeamLogo'
 import type { RadarPlayer } from '@/lib/radar-stats'
 
 type ClubInfo = { name: string; logoUrl: string | null; primary: string | null; secondary: string | null }
+
+// Verwijdert (bijna-)wit uit een logo zodat het naadloos op de gekleurde kaart komt. Werkt voor
+// logo's van dezelfde oorsprong; bij een CORS-beperking valt het terug op het originele logo.
+function removeWhite(src: string): Promise<string> {
+  return new Promise((resolve) => {
+    const img = new Image()
+    img.crossOrigin = 'anonymous'
+    img.onload = () => {
+      try {
+        const w = img.naturalWidth
+        const h = img.naturalHeight
+        if (!w || !h) return resolve(src)
+        const cv = document.createElement('canvas')
+        cv.width = w
+        cv.height = h
+        const ctx = cv.getContext('2d')
+        if (!ctx) return resolve(src)
+        ctx.drawImage(img, 0, 0)
+        const im = ctx.getImageData(0, 0, w, h)
+        const a = im.data
+        for (let i = 0; i < a.length; i += 4) {
+          const mn = Math.min(a[i], a[i + 1], a[i + 2])
+          if (a[i] >= 232 && a[i + 1] >= 232 && a[i + 2] >= 232) a[i + 3] = 0
+          else if (mn >= 205) a[i + 3] = Math.round(a[i + 3] * Math.max(0, (255 - mn) / 50))
+        }
+        ctx.putImageData(im, 0, 0)
+        resolve(cv.toDataURL('image/png'))
+      } catch {
+        resolve(src)
+      }
+    }
+    img.onerror = () => resolve(src)
+    img.src = src
+  })
+}
 
 // Radar-assen (zelfde als de spelersradar) — voor de mini-radar op de kaart.
 const AXES: { key: string; label: string; get: (p: RadarPlayer) => number }[] = [
@@ -65,6 +100,19 @@ export function PaniniBuilder({ reeks, reeksLabel, options, players, clubs }: { 
   const sub = (p: RadarPlayer, keys: string[]) => Math.round((keys.reduce((s, k) => s + pct(k, (AXES.find((a) => a.key === k) as { get: (x: RadarPlayer) => number }).get(p)), 0) / keys.length) * 100)
 
   const player = players.find((p) => p.playerId === pid) ?? null
+  const club: ClubInfo | undefined = player?.teamId != null ? clubs[player.teamId] : undefined
+
+  // Logo zonder wit voorbereiden zodra de speler/club wijzigt.
+  const [cleanLogo, setCleanLogo] = useState<string | null>(null)
+  const rawLogo = club?.logoUrl ?? null
+  useEffect(() => {
+    setCleanLogo(null)
+    if (!rawLogo) return
+    let cancelled = false
+    void removeWhite(rawLogo).then((url) => { if (!cancelled) setCleanLogo(url) })
+    return () => { cancelled = true }
+  }, [rawLogo])
+  const logo = cleanLogo ?? rawLogo
 
   return (
     <div className="pan-wrap">
@@ -94,7 +142,6 @@ export function PaniniBuilder({ reeks, reeksLabel, options, players, clubs }: { 
         const def = sub(player, DEF)
         const fracs = AXES.map((a) => pct(a.key, a.get(player)))
         const rc = pctColor(rating / 100)
-        const club: ClubInfo | undefined = player.teamId != null ? clubs[player.teamId] : undefined
         const c1 = club?.primary || '#ffd873'
         const c2 = club?.secondary || rc
         const chips = [
@@ -109,10 +156,10 @@ export function PaniniBuilder({ reeks, reeksLabel, options, players, clubs }: { 
           <div className="pan-stage">
             <div className="pan-card" style={{ ['--rc' as string]: rc, ['--c1' as string]: c1, ['--c2' as string]: c2 }}>
               <div className="pan-foil" aria-hidden />
-              {club?.logoUrl && <div className="pan-watermark" style={{ backgroundImage: `url(${club.logoUrl})` }} aria-hidden />}
+              {logo && <div className="pan-watermark" style={{ backgroundImage: `url(${logo})` }} aria-hidden />}
               <div className="pan-top">
                 <span className="pan-club">
-                  <TeamLogo name={club?.name || player.teamName} logoUrl={club?.logoUrl ?? null} size="sm" ringColor={c1} />
+                  <TeamLogo name={club?.name || player.teamName} logoUrl={logo} size="sm" ringColor={c1} />
                   <span className="pan-club-nm">{club?.name || player.teamName}</span>
                 </span>
                 <span className="pan-season">{reeksLabel} · 25/26</span>
