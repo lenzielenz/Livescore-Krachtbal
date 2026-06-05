@@ -792,3 +792,24 @@ select.rang-picker {
 .an-h2h-score { margin-left: auto; font-weight: 900; font-size: 1.05rem; font-variant-numeric: tabular-nums; }
 .an-h2h-score.win-a { color: var(--accent); }
 .an-h2h-score.win-b { color: var(--away); }
+
+/* ── Uitslagen importeren ── */
+.imp { display: flex; flex-direction: column; gap: 14px; max-width: 720px; }
+.imp-file {
+  display: flex; align-items: center; gap: 12px;
+  border: 1px dashed color-mix(in srgb, var(--accent) 55%, var(--line));
+  border-radius: 12px; padding: 14px 16px; cursor: pointer;
+  background: var(--panel-grad);
+}
+.imp-file input { flex: 0 0 auto; }
+.imp-file span { color: var(--dim); font-weight: 600; }
+.imp-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.imp-actions .sk-btn { width: auto; padding: 11px 18px; }
+.imp-report { display: flex; flex-direction: column; gap: 10px; }
+.imp-report .rep-cards { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); }
+.imp-note { color: var(--dim); font-size: 0.88rem; }
+.imp-det { background: var(--panel-grad); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; }
+.imp-det summary { cursor: pointer; font-weight: 800; font-size: 0.88rem; }
+.imp-det p, .imp-det ul { margin: 8px 0 0; color: var(--dim); font-size: 0.84rem; }
+.imp-det ul { padding-left: 18px; }
+.imp-hint { font-style: italic; }
