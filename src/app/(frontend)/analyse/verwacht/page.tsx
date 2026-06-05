@@ -57,11 +57,6 @@ export default async function VerwachtAnalysePage({ searchParams }: { searchPara
           <h1 className="page-title"><span className="brand">Verwachte punten</span></h1>
           <VerwachtPicker reeks={reeks} options={[...COMPETITIE_REEKSEN]} />
         </div>
-        <p className="an-intro">
-          Het model schat per doelpoging de scoringskans op basis van worptype en afstand (geleerd uit de historiek van
-          de reeks). <strong>Boven verwachting</strong> = scherper afgewerkt dan een gemiddelde speler vanuit dezelfde
-          posities.
-        </p>
 
         {players.length === 0 ? (
           <p className="empty">Nog geen doelpogingen in deze reeks.</p>
@@ -121,11 +116,6 @@ export default async function VerwachtAnalysePage({ searchParams }: { searchPara
             </p>
 
             <h2 className="an-sub">Scoringskans per zone</h2>
-            <p className="an-intro">
-              De veldhelft kleurt per zone van <strong style={{ color: '#06d6a0' }}>groen</strong> (weinig scoringskans) naar{' '}
-              <strong style={{ color: '#ef476f' }}>rood</strong> (gevaarlijk — hoge scoringskans), van waar er geworpen wordt —
-              met onderscheid links/midden/rechts. Beide speelhelften zijn naar één doel (onderaan) gespiegeld.
-            </p>
             {dangerShots.length > 0 && (
               <div className="xp-fieldwrap">
                 <ScoringField

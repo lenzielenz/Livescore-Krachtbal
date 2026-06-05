@@ -65,10 +65,6 @@ export default async function PloegRapportPage({ searchParams }: { searchParams:
           <h1 className="page-title"><span className="brand">Ploegrapport</span></h1>
           <PloegPicker reeks={reeks} reeksOptions={[...COMPETITIE_REEKSEN]} teamOptions={teamOptions} team={teamId != null ? String(teamId) : ''} />
         </div>
-        <p className="an-intro">
-          Een scoutingrapport per ploeg: aanvallend per speler (worpen, doelpunten, conversie, zones) én verdedigend
-          (vangsten). Exporteer naar PDF of CSV voor de technische staf.
-        </p>
 
         {report == null ? (
           <p className="empty">Kies een ploeg om het rapport te bekijken.</p>

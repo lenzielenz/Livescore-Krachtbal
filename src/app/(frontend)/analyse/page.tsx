@@ -182,7 +182,6 @@ export default async function AnalysePage({ searchParams }: { searchParams: Prom
       <div className="site">
         <AnalyseNav active="overzicht" />
         <h1 className="page-title"><span className="brand">Analyse</span></h1>
-        <p className="an-intro">Het analysecentrum: league-toppers, krachtige tools en je opgenomen wedstrijden — alle data per speler en ploeg.</p>
 
         {/* Tools als visuele kaarten */}
         <div className="an-tools">

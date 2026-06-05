@@ -53,10 +53,6 @@ export default async function PloegenAnalysePage({ searchParams }: { searchParam
         <div className="an-head-bar">
           <h1 className="page-title"><span className="brand">Ploegvergelijking</span></h1>
         </div>
-        <p className="an-intro">
-          Vergelijk twee ploegen onderling en met het reeks-gemiddelde op aanval (worpvolume), doelpunten, punten,
-          conversie, worpafstand en verdediging (vangsten). Elke as toont het <em>percentiel binnen de reeks</em>.
-        </p>
 
         <TeamRadarView reeks={reeks} options={[...COMPETITIE_REEKSEN]} teams={teams} results={results} />
       </div>
