@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 
 import type { MatchState, TimelineItem } from '@/lib/match-engine'
+import type { KrachtbalKleur } from '@/lib/reeksen'
 import { KrachtbalIcon } from '@/components/KrachtbalIcon'
 import { TeamLogo } from '@/components/TeamLogo'
 import { WinProbability } from '@/components/WinProbability'
@@ -22,9 +23,10 @@ type Goal = { key: number; side: Side; team: string; points: number; scorer: str
 // Toegelaten supporter-emoji's (komt overeen met de server-whitelist in match-channel.ts).
 const EMOJI = { clap: '👏', fire: '🔥', heart: '❤️', goal: '🏐', wow: '😮' } as const
 type EmojiName = keyof typeof EMOJI
-// "goal" toont het echte krachtbal-icoon i.p.v. een voetbal/emoji.
-const reactionGlyph = (name: EmojiName) =>
-  name === 'goal' ? <KrachtbalIcon size="1.25em" style={{ verticalAlign: '-0.18em' }} /> : EMOJI[name]
+// "goal" toont het echte krachtbal-icoon i.p.v. een voetbal/emoji, in de categoriekleur van de
+// wedstrijd (dames rood, heren wit, U12/U14 geel, U16/U18 blauw).
+const reactionGlyph = (name: EmojiName, kleur: KrachtbalKleur) =>
+  name === 'goal' ? <KrachtbalIcon size="1.25em" kleur={kleur} style={{ verticalAlign: '-0.18em' }} /> : EMOJI[name]
 
 function Dots({ filled, total, className }: { filled: number; total: number; className?: string }) {
   return (
@@ -41,6 +43,7 @@ export function Scoreboard({
   initial,
   halfSeconds,
   ratePerMin,
+  ballKleur = 'wit',
 }: {
   matchId: number
   initial: { state: MatchState; timeline: TimelineItem[] }
@@ -48,6 +51,8 @@ export function Scoreboard({
   halfSeconds: number
   /** Verwachte punten/ploeg/min — voor de live winstkans. */
   ratePerMin: number
+  /** Categoriekleur van de krachtbal (dames rood, heren wit, U12/U14 geel, U16/U18 blauw). */
+  ballKleur?: KrachtbalKleur
 }) {
   const [state, setState] = useState<MatchState>(initial.state)
   const [timeline, setTimeline] = useState<TimelineItem[]>(initial.timeline)
@@ -266,7 +271,7 @@ export function Scoreboard({
       <div className="sb-floats" aria-hidden>
         {floats.map((f) => (
           <span key={f.key} className="sb-float">
-            {reactionGlyph(f.name)}
+            {reactionGlyph(f.name, ballKleur)}
           </span>
         ))}
       </div>
@@ -280,7 +285,7 @@ export function Scoreboard({
               onClick={() => sendReaction(name)}
               aria-label={`Reageer met ${name}`}
             >
-              {reactionGlyph(name)}
+              {reactionGlyph(name, ballKleur)}
             </button>
           ))}
         </div>
