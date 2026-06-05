@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 
 import type { MatchState, TimelineItem } from '@/lib/match-engine'
+import { KrachtbalIcon } from '@/components/KrachtbalIcon'
 import { TeamLogo } from '@/components/TeamLogo'
 import { DEFAULT_AWAY_COLOR, DEFAULT_HOME_COLOR, inkOn, readableOnDark } from '@/lib/club-colors'
 import { goalPointsFromLabel, goalScorerFromLabel, useLiveStream } from '@/lib/use-live-stream'
@@ -18,7 +19,11 @@ type Side = 'home' | 'away'
 type Goal = { key: number; side: Side; team: string; points: number; scorer: string | null }
 
 // Toegelaten supporter-emoji's (komt overeen met de server-whitelist in match-channel.ts).
-const EMOJI = { clap: '👏', fire: '🔥', heart: '❤️', goal: '⚽', wow: '😮' } as const
+const EMOJI = { clap: '👏', fire: '🔥', heart: '❤️', goal: '🏐', wow: '😮' } as const
+type EmojiName = keyof typeof EMOJI
+// "goal" toont het echte krachtbal-icoon i.p.v. een voetbal/emoji.
+const reactionGlyph = (name: EmojiName) =>
+  name === 'goal' ? <KrachtbalIcon size="1.25em" style={{ verticalAlign: '-0.18em' }} /> : EMOJI[name]
 
 function Dots({ filled, total, className }: { filled: number; total: number; className?: string }) {
   return (
@@ -49,15 +54,14 @@ export function Scoreboard({
   const goalTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   // Supporter-engagement: live kijkersaantal + zwevende emoji-reacties.
   const [viewers, setViewers] = useState(0)
-  const [floats, setFloats] = useState<{ key: number; emoji: string }[]>([])
+  const [floats, setFloats] = useState<{ key: number; name: EmojiName }[]>([])
   const floatSeq = useRef(0)
 
   const spawnFloats = (counts: Record<string, number>) => {
-    const next: { key: number; emoji: string }[] = []
+    const next: { key: number; name: EmojiName }[] = []
     for (const [name, n] of Object.entries(counts)) {
-      const glyph = EMOJI[name as keyof typeof EMOJI]
-      if (!glyph) continue
-      for (let i = 0; i < Math.min(n, 6); i++) next.push({ key: ++floatSeq.current, emoji: glyph })
+      if (!(name in EMOJI)) continue
+      for (let i = 0; i < Math.min(n, 6); i++) next.push({ key: ++floatSeq.current, name: name as EmojiName })
     }
     if (next.length === 0) return
     setFloats((prev) => [...prev.slice(-40), ...next])
@@ -243,7 +247,7 @@ export function Scoreboard({
       <div className="sb-floats" aria-hidden>
         {floats.map((f) => (
           <span key={f.key} className="sb-float">
-            {f.emoji}
+            {reactionGlyph(f.name)}
           </span>
         ))}
       </div>
@@ -257,7 +261,7 @@ export function Scoreboard({
               onClick={() => sendReaction(name)}
               aria-label={`Reageer met ${name}`}
             >
-              {EMOJI[name]}
+              {reactionGlyph(name)}
             </button>
           ))}
         </div>
