@@ -60,15 +60,28 @@ select.rang-picker {
 .nam-row .rad-field { flex: 1 1 160px; }
 .nam-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 2px; }
 .nam-actions .sk-demo-cta { flex: 1 1 auto; text-align: center; }
+.nam-prepare {
+  flex: 0 0 auto;
+  background: var(--panel);
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line));
+  color: var(--txt);
+  border-radius: 999px;
+  padding: 10px 18px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.nam-prepare:hover { border-color: var(--accent); }
+.nam-prepare:disabled { opacity: 0.6; cursor: default; }
 .nam-cancel {
   background: none;
   border: 1px solid var(--line);
   color: var(--dim);
-  border-radius: 8px;
-  padding: 8px 14px;
+  border-radius: 999px;
+  padding: 10px 16px;
   cursor: pointer;
 }
 .nam-error { color: #ef476f; font-size: 0.85rem; margin: 0; }
+.nam-ok { color: #2dd4a7; font-size: 0.85rem; font-weight: 600; margin: 0; }
 .nam-hint { color: var(--dim); font-size: 0.8rem; margin: 0; }
 .an-card-reeks.an-live {
   color: #ef476f;
