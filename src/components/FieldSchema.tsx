@@ -116,10 +116,88 @@ function HeatLayer({ points, h }: { points: Point[]; h: number }) {
   )
 }
 
+// Een doelpoging op een vaste positie (genormaliseerd, canoniek "aanval naar onder").
+export interface ConvPoint {
+  x: number
+  y: number
+  goal: boolean
+}
+
+// Conversie-heatmap ("gevaarzone"): bin de doelpogingen, kleur per zone naar scoringskans
+// (rood = zwak, groen = gevaarlijk). De dekking schaalt met het aantal pogingen, zodat
+// zones met weinig data licht blijven. Grover raster dan de dichtheid-heatmap (meer data
+// per cel = betrouwbaarder percentage).
+const CGX = 5
+const CGY = 9
+const CONV_MIN_ATTEMPTS = 2
+
+function convColor(t: number): string {
+  // t = conversie 0..1: 0 = rood, 0.5 = amber, 1 = groen.
+  const stops: [number, [number, number, number]][] = [
+    [0, [239, 71, 111]],
+    [0.5, [255, 209, 102]],
+    [1, [6, 214, 160]],
+  ]
+  let lo = stops[0]
+  let hi = stops[stops.length - 1]
+  for (let i = 0; i < stops.length - 1; i++) {
+    if (t >= stops[i][0] && t <= stops[i + 1][0]) {
+      lo = stops[i]
+      hi = stops[i + 1]
+      break
+    }
+  }
+  const span = hi[0] - lo[0] || 1
+  const f = (t - lo[0]) / span
+  const c = lo[1].map((v, i) => Math.round(v + (hi[1][i] - v) * f))
+  return `rgb(${c[0]}, ${c[1]}, ${c[2]})`
+}
+
+function ConvLayer({ points, h }: { points: ConvPoint[]; h: number }) {
+  const att = Array.from({ length: CGY }, () => new Array(CGX).fill(0))
+  const gls = Array.from({ length: CGY }, () => new Array(CGX).fill(0))
+  let maxAtt = 0
+  for (const p of points) {
+    const gx = Math.min(CGX - 1, Math.max(0, Math.floor(p.x * CGX)))
+    const gy = Math.min(CGY - 1, Math.max(0, Math.floor(p.y * CGY)))
+    att[gy][gx] += 1
+    if (p.goal) gls[gy][gx] += 1
+    if (att[gy][gx] > maxAtt) maxAtt = att[gy][gx]
+  }
+  if (maxAtt === 0) return null
+  const cw = W / CGX
+  const ch = h / CGY
+  const cells: React.ReactElement[] = []
+  for (let y = 0; y < CGY; y++) {
+    for (let x = 0; x < CGX; x++) {
+      const n = att[y][x]
+      if (n < CONV_MIN_ATTEMPTS) continue
+      const conv = gls[y][x] / n
+      cells.push(
+        <rect
+          key={`${x}-${y}`}
+          x={x * cw}
+          y={y * ch}
+          width={cw}
+          height={ch}
+          fill={convColor(conv)}
+          opacity={0.3 + 0.55 * Math.min(1, n / maxAtt)}
+        />,
+      )
+    }
+  }
+  return (
+    <g filter="url(#heatblur)" clipPath="url(#fieldclip)">
+      {cells}
+    </g>
+  )
+}
+
 export function FieldSchema({
   onTap,
   markers = [],
   heatPoints,
+  convPoints,
   ends,
   glowGoal,
   goalAreaDepthM = 10,
@@ -129,6 +207,8 @@ export function FieldSchema({
   markers?: FieldMarker[]
   /** Wanneer gezet: render een dichtheid-heatmap i.p.v. losse punten. */
   heatPoints?: Point[]
+  /** Wanneer gezet: render een conversie-heatmap (gevaarzone) van doelpogingen. */
+  convPoints?: ConvPoint[]
   /** Richtingslabels per ploeg: bovenaan valt aan naar boven (↑), onderaan naar onder (↓). */
   ends?: { top?: EndLabel; bottom?: EndLabel }
   /** Laat een doelgebied oplichten (vrije worp). */
@@ -226,6 +306,9 @@ export function FieldSchema({
 
       {/* Heatmap-laag (optioneel) */}
       {heatPoints && heatPoints.length > 0 && <HeatLayer points={heatPoints} h={H} />}
+
+      {/* Conversie-heatmap (gevaarzone, optioneel) */}
+      {convPoints && convPoints.length > 0 && <ConvLayer points={convPoints} h={H} />}
 
       {/* Markers */}
       {markers.map((m, i) => {

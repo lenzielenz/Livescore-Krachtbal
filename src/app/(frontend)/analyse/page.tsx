@@ -63,6 +63,7 @@ export default async function AnalysePage() {
           <Link href="/analyse/spelers" className="sk-demo-cta">🎯 Spelersradar &amp; vergelijken →</Link>
           <Link href="/analyse/verwacht" className="sk-demo-cta">📈 Verwachte punten (xP) →</Link>
           <Link href="/analyse/ploeg" className="sk-demo-cta">🛡️ Ploegrapport &amp; export →</Link>
+          <Link href="/analyse/gevaar" className="sk-demo-cta">🔥 Gevaarzone per speler →</Link>
         </p>
 
         {rows.length === 0 ? (
