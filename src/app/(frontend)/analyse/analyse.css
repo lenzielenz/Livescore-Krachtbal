@@ -757,3 +757,38 @@ select.rang-picker {
 .an-mom-legend i.h { background: var(--home); }
 .an-mom-legend i.a { background: var(--away); }
 .an-mom-note { color: var(--dim); font-style: italic; margin-left: auto; }
+
+/* ── Ploegvergelijking: vorm + onderlinge duels ── */
+.an-form-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; margin: 2px 0 16px; }
+.an-form { display: inline-flex; align-items: center; gap: 8px; }
+.an-form-team { font-weight: 800; font-size: 0.82rem; }
+.an-form-team.a { color: var(--accent); }
+.an-form-team.b { color: var(--away); }
+.an-form-chips { display: inline-flex; gap: 4px; }
+.an-form-chip {
+  width: 20px; height: 20px;
+  display: grid; place-items: center;
+  border-radius: 6px;
+  font-size: 0.66rem; font-weight: 900; color: #06140d;
+}
+.an-form-chip.W { background: #06d6a0; }
+.an-form-chip.G { background: #ffd166; }
+.an-form-chip.V { background: #ef476f; }
+.an-form-note { color: var(--dim); font-size: 0.72rem; font-style: italic; }
+.an-h2h {
+  background: var(--panel-grad);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 14px 16px;
+  box-shadow: var(--card-shadow);
+  margin-top: 14px;
+}
+.an-h2h-sum { font-weight: 900; font-size: 1rem; margin: 2px 0 10px; }
+.an-h2h-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.an-h2h-row { display: flex; align-items: center; gap: 12px; padding: 6px 0; border-bottom: 1px solid color-mix(in srgb, var(--line) 60%, transparent); }
+.an-h2h-row:last-child { border-bottom: none; }
+.an-h2h-date { color: var(--dim); font-size: 0.8rem; min-width: 56px; }
+.an-h2h-loc { color: var(--dim); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.03em; }
+.an-h2h-score { margin-left: auto; font-weight: 900; font-size: 1.05rem; font-variant-numeric: tabular-nums; }
+.an-h2h-score.win-a { color: var(--accent); }
+.an-h2h-score.win-b { color: var(--away); }

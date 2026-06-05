@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
-import type { TeamRadar } from '@/lib/team-radar'
+import type { TeamMatchResult, TeamRadar } from '@/lib/team-radar'
 
 type Metric = { key: string; label: string; full: string; fmt: (v: number) => string; get: (t: TeamRadar) => number; perf?: boolean }
 
@@ -52,10 +52,25 @@ function pctColor(t: number): string {
   return `rgb(${c[0]}, ${c[1]}, ${c[2]})`
 }
 
-export function TeamRadarView({ reeks, options, teams }: { reeks: string; options: { value: string; label: string }[]; teams: TeamRadar[] }) {
+export function TeamRadarView({ reeks, options, teams, results }: { reeks: string; options: { value: string; label: string }[]; teams: TeamRadar[]; results: TeamMatchResult[] }) {
   const router = useRouter()
   const [aId, setAId] = useState<number | null>(teams[0]?.teamId ?? null)
   const [bId, setBId] = useState<number | null>(teams[1]?.teamId ?? null)
+
+  const nameOf = (id: number | null) => teams.find((t) => t.teamId === id)?.teamName ?? '—'
+  // Recente vorm (laatste 6) van een ploeg, chronologisch.
+  const formOf = (teamId: number | null) => {
+    if (teamId == null) return [] as { res: 'W' | 'V' | 'G'; us: number; them: number }[]
+    return results
+      .filter((r) => r.homeId === teamId || r.awayId === teamId)
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .map((r) => {
+        const us = r.homeId === teamId ? r.homePts : r.awayPts
+        const them = r.homeId === teamId ? r.awayPts : r.homePts
+        return { res: (us > them ? 'W' : us < them ? 'V' : 'G') as 'W' | 'V' | 'G', us, them }
+      })
+      .slice(-6)
+  }
 
   const { league, sorted } = useMemo(() => {
     const n = teams.length || 1
@@ -85,6 +100,36 @@ export function TeamRadarView({ reeks, options, teams }: { reeks: string; option
   const leagueFracs = RADAR.map((m) => pct(m.key, league[m.key]))
 
   const HERO = [RADAR[2], RADAR[1], RADAR[3]] // Punten/wd, Doelpunten/wd, Conversie
+
+  // Onderlinge duels tussen A en B.
+  const h2h = aId != null && bId != null
+    ? results
+        .filter((r) => (r.homeId === aId && r.awayId === bId) || (r.homeId === bId && r.awayId === aId))
+        .sort((a, b) => a.date.localeCompare(b.date))
+        .map((r) => ({
+          date: r.date,
+          aPts: r.homeId === aId ? r.homePts : r.awayPts,
+          bPts: r.homeId === aId ? r.awayPts : r.homePts,
+          aHome: r.homeId === aId,
+        }))
+    : []
+  const aWins = h2h.filter((r) => r.aPts > r.bPts).length
+  const bWins = h2h.filter((r) => r.bPts > r.aPts).length
+
+  const FormStrip = ({ teamId, label, cls }: { teamId: number | null; label: string; cls: string }) => {
+    const form = formOf(teamId)
+    if (teamId == null || form.length === 0) return null
+    return (
+      <div className="an-form">
+        <span className={`an-form-team ${cls}`}>{label}</span>
+        <span className="an-form-chips">
+          {form.map((f, i) => (
+            <span key={i} className={`an-form-chip ${f.res}`} title={`${f.us}–${f.them}`}>{f.res}</span>
+          ))}
+        </span>
+      </div>
+    )
+  }
 
   return (
     <div className="rad-wrap">
@@ -135,6 +180,14 @@ export function TeamRadarView({ reeks, options, teams }: { reeks: string; option
                   </div>
                 )
               })}
+            </div>
+          )}
+
+          {(formOf(aId).length > 0 || formOf(bId).length > 0) && (
+            <div className="an-form-row">
+              <FormStrip teamId={aId} label={nameOf(aId)} cls="a" />
+              <FormStrip teamId={bId} label={nameOf(bId)} cls="b" />
+              <span className="an-form-note">recente vorm (oud → recent) · W winst · G gelijk · V verlies</span>
             </div>
           )}
 
@@ -222,6 +275,31 @@ export function TeamRadarView({ reeks, options, teams }: { reeks: string; option
               </table>
             </div>
           </div>
+
+          {teamA && teamB && (
+            <section className="an-h2h">
+              <h3 className="an-lead-title">🆚 Onderlinge duels — {teamA.teamName} vs {teamB.teamName}</h3>
+              {h2h.length === 0 ? (
+                <p className="an-lead-empty">Nog geen onderling duel met worpdata dit seizoen.</p>
+              ) : (
+                <>
+                  <p className="an-h2h-sum">
+                    <span className="rad-col-a">{teamA.teamName} {aWins}</span> — <span className="rad-col-b">{bWins} {teamB.teamName}</span>
+                    {h2h.length - aWins - bWins > 0 ? ` · ${h2h.length - aWins - bWins} gelijk` : ''}
+                  </p>
+                  <ul className="an-h2h-list">
+                    {h2h.map((r, i) => (
+                      <li key={i} className="an-h2h-row">
+                        <span className="an-h2h-date">{r.date ? new Date(r.date).toLocaleDateString('nl-BE', { day: '2-digit', month: 'short' }) : '—'}</span>
+                        <span className="an-h2h-loc">{r.aHome ? 'thuis' : 'uit'}</span>
+                        <span className={`an-h2h-score ${r.aPts > r.bPts ? 'win-a' : r.bPts > r.aPts ? 'win-b' : ''}`}>{r.aPts}<span className="an-dash">–</span>{r.bPts}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
+            </section>
+          )}
         </>
       )}
     </div>
