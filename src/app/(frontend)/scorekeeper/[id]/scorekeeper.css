@@ -347,6 +347,23 @@ a.sk-btn { display: inline-block; box-sizing: border-box; text-align: center; te
 .sk-lineup-actions { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
 .sk-lineup-ok { border-color: var(--home); color: var(--home); }
 
+/* Manueel speler toevoegen (analyse / ontbrekende ploeg) */
+.sk-addplayer { margin-top: 8px; }
+.sk-addp-toggle {
+  width: 100%; padding: 8px; border: 1px dashed color-mix(in srgb, var(--accent) 55%, var(--line));
+  background: transparent; color: var(--accent); border-radius: 10px; font-size: 0.86rem; font-weight: 700;
+  cursor: pointer;
+}
+.sk-addp-toggle:disabled { opacity: 0.5; cursor: default; }
+.sk-addplayer-form { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.sk-addp-num, .sk-addp-name {
+  padding: 9px 10px; border: 1px solid var(--line); background: #0a1f14; color: var(--txt);
+  border-radius: 8px; font-size: 0.95rem;
+}
+.sk-addp-num { width: 56px; text-align: center; }
+.sk-addp-name { flex: 1 1 80px; min-width: 80px; }
+.sk-addplayer-form .sk-btn { width: auto; padding: 9px 12px; font-size: 0.9rem; }
+
 /* Hint-kaart zolang nog niet beide opstellingen bevestigd zijn (vervangt de startkaart). */
 .sk-confirm-hint { opacity: 0.96; }
 .sk-confirm-status { display: flex; flex-direction: column; gap: 8px; }
