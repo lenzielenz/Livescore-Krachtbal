@@ -6,17 +6,30 @@ import { extractPdfText, parseReeksindeling, teamKey } from '@/lib/reeksindeling
 // Importeer de thuisuren uit de reeksindeling-PDF en zet ze op de overeenkomstige ploegen.
 // Standaard PREVIEW; met { commit: true } worden de thuisuren weggeschreven. Federatie/admin.
 export async function POST(req: Request) {
-  let body: { pdfBase64?: string; text?: string; commit?: boolean }
+  // De PDF komt bij voorkeur als bestand (multipart) — betrouwbaar en server-side uitgelezen.
+  // Fallback: JSON met { text } (reeds uitgelezen) of { pdfBase64 }.
+  let commit = false
+  let text = ''
   try {
-    body = await req.json()
+    const ct = req.headers.get('content-type') || ''
+    if (ct.includes('multipart/form-data')) {
+      const form = await req.formData()
+      commit = String(form.get('commit')) === 'true'
+      const file = form.get('pdf')
+      if (file && typeof file !== 'string') {
+        text = extractPdfText(Buffer.from(await file.arrayBuffer()))
+      }
+    } else {
+      const body = (await req.json()) as { pdfBase64?: string; text?: string; commit?: boolean }
+      commit = body.commit === true
+      const clientText = typeof body.text === 'string' ? body.text : ''
+      const b64 = String(body.pdfBase64 ?? '').replace(/^data:[^,]*,/, '')
+      text = clientText || (b64 ? extractPdfText(Buffer.from(b64, 'base64')) : '')
+    }
   } catch {
-    return Response.json({ error: 'Ongeldige JSON' }, { status: 400 })
+    return Response.json({ error: 'Ongeldige aanvraag.' }, { status: 400 })
   }
-  // Bij voorkeur stuurt de client de reeds-uitgelezen PDF-tekst (klein); anders de base64-PDF.
-  const clientText = typeof body.text === 'string' ? body.text : ''
-  const b64 = String(body.pdfBase64 ?? '').replace(/^data:[^,]*,/, '')
-  const commit = body.commit === true
-  if (!clientText && !b64) return Response.json({ error: 'Geen PDF ontvangen.' }, { status: 400 })
+  if (!text) return Response.json({ error: 'Geen PDF ontvangen.' }, { status: 400 })
 
   try {
     const payload = await getPayloadClient()
@@ -26,7 +39,6 @@ export async function POST(req: Request) {
       return Response.json({ error: 'Enkel federatie/admin mag importeren.' }, { status: 403 })
     }
 
-    const text = clientText || extractPdfText(Buffer.from(b64, 'base64'))
     const entries = parseReeksindeling(text)
     if (entries.length === 0) {
       return Response.json({ error: 'Geen reeksindeling herkend in deze PDF.' }, { status: 400 })
