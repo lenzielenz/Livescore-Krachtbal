@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { FieldSchema, type FieldMarker } from '@/components/FieldSchema'
+import { freeThrowNorm, goalLineNorm } from '@/lib/field'
 import type { ShotPoint } from '@/lib/match-engine'
 
 const OUTCOME_COLOR: Record<string, string> = {
@@ -35,6 +36,7 @@ export function FlowReplay({
   const [elapsed, setElapsed] = useState(0)
   const [speed, setSpeed] = useState(1)
   const [team, setTeam] = useState<'both' | 'home' | 'away'>('both')
+  const [recording, setRecording] = useState(false)
   const lastTs = useRef(0)
 
   // Enkel de gekozen ploeg afspelen (thuis/uit) of allebei.
@@ -109,6 +111,154 @@ export function FlowReplay({
     setPlaying(true)
   }
 
+  // De replay naar een echt videobestand (webm) opnemen via een canvas + MediaRecorder, en
+  // downloaden. Respecteert de thuis/uit-keuze. Niet elke browser ondersteunt dit (vooral iOS).
+  const recordVideo = async () => {
+    if (recording) return
+    const list = playShots
+    if (list.length === 0) return
+    const MR = (globalThis as { MediaRecorder?: typeof MediaRecorder }).MediaRecorder
+    const mime = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'].find((m) => MR?.isTypeSupported?.(m))
+    if (!MR || !mime) {
+      window.alert('Video downloaden wordt niet ondersteund in deze browser. Probeer het in Chrome.')
+      return
+    }
+
+    const d = goalAreaDepth
+    const FW = 320
+    const PAD = 16
+    const HEAD = 54
+    const fieldH = (FW * (26 + 2 * d)) / 14
+    const cw = FW + 2 * PAD
+    const chh = HEAD + fieldH + 2 * PAD
+    const x0 = PAD
+    const y0 = PAD + HEAD
+    const mx = (xn: number) => x0 + xn * FW
+    const my = (yn: number) => y0 + yn * fieldH
+
+    const canvas = document.createElement('canvas')
+    canvas.width = cw
+    canvas.height = chh
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    const seg = (a: number, b: number, c: number, e: number) => {
+      ctx.beginPath()
+      ctx.moveTo(a, b)
+      ctx.lineTo(c, e)
+      ctx.stroke()
+    }
+    const drawField = () => {
+      ctx.fillStyle = '#0e3a28'
+      ctx.fillRect(x0, y0, FW, fieldH)
+      ctx.strokeStyle = '#e8f5ee'
+      ctx.lineWidth = 2
+      ctx.strokeRect(x0, y0, FW, fieldH)
+      const gl = goalLineNorm(d)
+      const ft = freeThrowNorm(d)
+      ctx.lineWidth = 1.5
+      seg(x0, y0 + gl * fieldH, x0 + FW, y0 + gl * fieldH)
+      seg(x0, y0 + (1 - gl) * fieldH, x0 + FW, y0 + (1 - gl) * fieldH)
+      ctx.lineWidth = 1
+      seg(x0, y0 + ft * fieldH, x0 + FW, y0 + ft * fieldH)
+      seg(x0, y0 + (1 - ft) * fieldH, x0 + FW, y0 + (1 - ft) * fieldH)
+      ctx.setLineDash([4, 4])
+      seg(x0, y0 + 0.5 * fieldH, x0 + FW, y0 + 0.5 * fieldH)
+      ctx.setLineDash([])
+    }
+    const drawShot = (s: ShotPoint, prog: number) => {
+      const col = OUTCOME_COLOR[s.outcome] ?? '#ffd166'
+      const fx = mx(s.fromX)
+      const fy = my(s.fromY)
+      const tx = mx(s.fromX + (s.x - s.fromX) * prog)
+      const ty = my(s.fromY + (s.y - s.fromY) * prog)
+      ctx.strokeStyle = col
+      ctx.lineWidth = 2
+      ctx.globalAlpha = 0.8
+      seg(fx, fy, tx, ty)
+      ctx.globalAlpha = 1
+      ctx.fillStyle = col
+      ctx.beginPath()
+      ctx.arc(fx, fy, 2.5, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.beginPath()
+      ctx.arc(tx, ty, prog >= 1 ? 7 : 6, 0, Math.PI * 2)
+      ctx.fill()
+      if (prog >= 1) {
+        ctx.fillStyle = '#06140d'
+        ctx.font = 'bold 9px system-ui, sans-serif'
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+        ctx.fillText(String(s.throwNumber), tx, ty)
+        ctx.textBaseline = 'alphabetic'
+      }
+    }
+    const drawFrame = (ms: number) => {
+      const st = Math.min(Math.floor(ms / stepMs), list.length)
+      const wi = (ms - st * stepMs) / stepMs
+      const scoredN = st + (st < list.length && wi >= 0.7 ? 1 : 0)
+      let h = 0
+      let a = 0
+      for (const s of list.slice(0, scoredN)) {
+        if (s.outcome !== 'goal') continue
+        const pts = s.type === 'rug' ? 2 : 1
+        if (s.teamSide === 'home') h += pts
+        else a += pts
+      }
+      ctx.fillStyle = '#06140d'
+      ctx.fillRect(0, 0, cw, chh)
+      ctx.textAlign = 'center'
+      ctx.fillStyle = '#e8f5ee'
+      ctx.font = 'bold 20px system-ui, sans-serif'
+      ctx.fillText(`${h} – ${a}`, cw / 2, 28)
+      ctx.fillStyle = '#9fb6aa'
+      ctx.font = '12px system-ui, sans-serif'
+      ctx.fillText(`${teams.home}   vs   ${teams.away}`, cw / 2, 46)
+      drawField()
+      for (let i = 0; i < st; i++) drawShot(list[i], 1)
+      if (st < list.length) drawShot(list[st], Math.min(1, wi / 0.7))
+    }
+
+    const stream = (canvas as HTMLCanvasElement & { captureStream(fps?: number): MediaStream }).captureStream(30)
+    const rec = new MR(stream, { mimeType: mime })
+    const chunks: BlobPart[] = []
+    rec.ondataavailable = (e) => {
+      if (e.data.size) chunks.push(e.data)
+    }
+    const stopped = new Promise<void>((res) => {
+      rec.onstop = () => res()
+    })
+
+    setRecording(true)
+    setPlaying(false)
+    try {
+      rec.start()
+      const totalDur = list.length * stepMs
+      const HOLD = 1400
+      const start = performance.now()
+      await new Promise<void>((resolve) => {
+        const frame = (t: number) => {
+          const el = t - start
+          drawFrame(Math.min(el, totalDur))
+          if (el < totalDur + HOLD) requestAnimationFrame(frame)
+          else resolve()
+        }
+        requestAnimationFrame(frame)
+      })
+      rec.stop()
+      await stopped
+      const blob = new Blob(chunks, { type: mime })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = 'krachtbal-replay.webm'
+      link.click()
+      URL.revokeObjectURL(url)
+    } finally {
+      setRecording(false)
+    }
+  }
+
   // Live stand: tel de doelpunten tot nu (de huidige worp telt pas mee zodra de bal geland is).
   const score = useMemo(() => {
     const scoredN = step + (current && within >= 0.7 ? 1 : 0)
@@ -149,6 +299,9 @@ export function FlowReplay({
         </button>
         <button type="button" className={speed === 1 ? 'on' : ''} onClick={() => setSpeed(1)}>1×</button>
         <button type="button" className={speed === 2 ? 'on' : ''} onClick={() => setSpeed(2)}>2×</button>
+        <button type="button" className="replay-dl" onClick={recordVideo} disabled={recording || total === 0}>
+          {recording ? '⏺ Opnemen…' : '⬇ Download'}
+        </button>
       </div>
       <input
         className="replay-scrub"

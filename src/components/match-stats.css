@@ -199,3 +199,6 @@
 .replay-teams .side-away.on { background: var(--away); color: #06140d; border-color: var(--away); }
 .replay-teams .side-home { border-color: color-mix(in srgb, var(--home) 55%, var(--line)); }
 .replay-teams .side-away { border-color: color-mix(in srgb, var(--away) 55%, var(--line)); }
+
+.replay-dl { margin-left: auto; }
+.replay-dl:disabled { opacity: 0.6; cursor: default; }
