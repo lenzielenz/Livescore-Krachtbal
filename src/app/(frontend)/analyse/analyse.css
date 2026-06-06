@@ -1453,3 +1453,13 @@ select.rang-picker {
 }
 .tc-rn-ok { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); }
 .tc-rn-x { color: var(--dim); }
+
+/* Datum-/keuze-/invoervelden binnen een rad-field nooit buiten de kaart laten lopen
+   (datetime-local heeft anders een te brede eigen breedte). */
+.rad-field { min-width: 0; }
+.rad-field > input,
+.rad-field > select {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
