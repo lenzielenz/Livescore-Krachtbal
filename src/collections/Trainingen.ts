@@ -1,6 +1,7 @@
 import type { CollectionConfig } from 'payload'
 
 import { hasRole, isFederationLevel } from '../lib/access'
+import { REEKS_OPTIONS } from '../lib/reeksen'
 
 // Trainingssessies met aanwezigheidslijst: wie kwam (en dus hoeveel), het weer en de duur.
 // Eén record = één training. Beheerd door admin/federatie en club-beheerders (coaches).
@@ -34,6 +35,16 @@ export const Trainingen: CollectionConfig = {
       relationTo: 'clubs',
       index: true,
       admin: { description: 'De club die trainde (uit het account afgeleid).' },
+    },
+    {
+      name: 'reeks',
+      label: 'Reeks / leeftijdsgroep',
+      type: 'select',
+      options: [...REEKS_OPTIONS],
+      index: true,
+      admin: {
+        description: 'De leeftijdsgroep die trainde (U12, U14, dames, heren …). Leeg = clubbreed.',
+      },
     },
     {
       type: 'row',

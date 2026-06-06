@@ -3,15 +3,24 @@
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
 
+import { seasonFromDate } from '@/lib/seasons'
 import '../training.css'
 
-export type AwPlayer = { id: number; name: string }
-export type AwClub = { id: number; name: string; primaryTeamId: number | null; players: AwPlayer[] }
+export type AwPlayer = { id: number; name: string; reeks: string; reeksNaam: string }
+export type AwReeksTeam = { reeks: string; reeksNaam: string; teamId: number }
+export type AwClub = {
+  id: number
+  name: string
+  primaryTeamId: number | null
+  reeksTeams: AwReeksTeam[]
+  players: AwPlayer[]
+}
 export type AwSession = {
   id: number
   datum: string
   clubId: number | null
   club: string | null
+  reeks: string
   duurMinuten: number | null
   weer: string | null
   temperatuur: number | null
@@ -19,6 +28,8 @@ export type AwSession = {
   screenshot: string | null
   notitie: string | null
 }
+
+type ReeksGroup = { reeks: string; naam: string; teamId: number | null; players: AwPlayer[] }
 
 const WEER_LABEL: Record<string, string> = {
   zonnig: '☀️ Zonnig',
@@ -29,6 +40,8 @@ const WEER_LABEL: Record<string, string> = {
   mist: '🌫️ Mist',
 }
 const WEER_OPTIES = Object.entries(WEER_LABEL)
+
+const ALG = '__alg__' // token voor de "Algemeen"-tab
 
 function nowLocal(): string {
   const d = new Date()
@@ -46,11 +59,13 @@ export function AanwezigheidPanel({
   fixedClubId,
   sessions,
   canWrite,
+  currentSeason,
 }: {
   clubs: AwClub[]
   fixedClubId: number | null
   sessions: AwSession[]
   canWrite: boolean
+  currentSeason: string
 }) {
   const router = useRouter()
   const [datum, setDatum] = useState(nowLocal())
@@ -68,18 +83,92 @@ export function AanwezigheidPanel({
   const [addMsg, setAddMsg] = useState<string | null>(null)
 
   const club = useMemo(() => clubs.find((c) => c.id === clubId) ?? null, [clubs, clubId])
-  const rosterPlayers = club?.players ?? []
-  const primaryTeamId = club?.primaryTeamId ?? null
 
-  // Vorige training van deze club → dezelfde aanwezigen voorvinken voor een snelle invoer.
+  // Reeksgroepen van de club: leeftijdsgroepen (U12, U14, dames, heren …) uit de ploegen + spelers.
+  const reeksGroups = useMemo<ReeksGroup[]>(() => {
+    if (!club) return []
+    const byReeks = new Map<string, ReeksGroup>()
+    for (const rt of club.reeksTeams) {
+      byReeks.set(rt.reeks, { reeks: rt.reeks, naam: rt.reeksNaam, teamId: rt.teamId, players: [] })
+    }
+    for (const p of club.players) {
+      const key = p.reeks || ''
+      if (!key) continue
+      const g = byReeks.get(key) ?? { reeks: key, naam: p.reeksNaam, teamId: club.primaryTeamId, players: [] }
+      g.players.push(p)
+      byReeks.set(key, g)
+    }
+    return [...byReeks.values()].sort((a, b) => a.naam.localeCompare(b.naam, 'nl'))
+  }, [club])
+
+  const hasReeksen = reeksGroups.length > 0
+  // Actieve tab: een reekscode of ALG (Algemeen). Zonder reeksen blijft alles clubbreed.
+  const [tab, setTab] = useState<string>(hasReeksen ? reeksGroups[0].reeks : ALG)
+  useEffect(() => {
+    setTab(hasReeksen ? reeksGroups[0].reeks : ALG)
+  }, [clubId, hasReeksen, reeksGroups])
+
+  const isAlg = tab === ALG
+  const activeGroup = isAlg ? null : reeksGroups.find((g) => g.reeks === tab) ?? null
+  // Roster waarop je aanwezigheid aanvinkt / telt: de reeks, of de hele club bij Algemeen.
+  const roster = isAlg ? club?.players ?? [] : activeGroup?.players ?? []
+  const addTeamId = isAlg ? club?.primaryTeamId ?? null : activeGroup?.teamId ?? club?.primaryTeamId ?? null
+
+  // Seizoenen: uit de trainingsdatums van deze club + het huidige seizoen, nieuw → oud.
+  const seasons = useMemo(() => {
+    const set = new Set<string>([currentSeason])
+    for (const s of sessions) if (s.clubId === clubId) set.add(seasonFromDate(new Date(s.datum)))
+    return [...set].sort((a, b) => b.localeCompare(a))
+  }, [sessions, clubId, currentSeason])
+  const [season, setSeason] = useState(currentSeason)
+  useEffect(() => {
+    if (!seasons.includes(season)) setSeason(seasons[0] ?? currentSeason)
+  }, [seasons, season, currentSeason])
+
+  // Sessies binnen de huidige scope (club + seizoen + reeks/algemeen), nieuw → oud.
+  const scopedSessions = useMemo(
+    () =>
+      sessions.filter(
+        (s) =>
+          s.clubId === clubId &&
+          seasonFromDate(new Date(s.datum)) === season &&
+          (isAlg || s.reeks === tab),
+      ),
+    [sessions, clubId, season, isAlg, tab],
+  )
+
+  // Statistiek over het seizoen: opkomst per training + aanwezigheid per speler.
+  const stats = useMemo(() => {
+    const rosterIds = new Set(roster.map((p) => p.id))
+    const trainingen = scopedSessions.length
+    const presentPer = scopedSessions.map((s) => s.aanwezigen.filter((a) => rosterIds.has(a.id)).length)
+    const totalPresent = presentPer.reduce((a, b) => a + b, 0)
+    const avgPresent = trainingen ? totalPresent / trainingen : 0
+    const rosterSize = roster.length
+    const avgPct = rosterSize ? (avgPresent / rosterSize) * 100 : 0
+    const perPlayer = roster
+      .map((p) => {
+        const attended = scopedSessions.filter((s) => s.aanwezigen.some((a) => a.id === p.id)).length
+        return { id: p.id, name: p.name, attended, pct: trainingen ? (attended / trainingen) * 100 : 0 }
+      })
+      .sort((a, b) => b.attended - a.attended || a.name.localeCompare(b.name, 'nl'))
+    return { trainingen, avgPresent, avgPct, rosterSize, perPlayer }
+  }, [roster, scopedSessions])
+
+  // Vorige training in deze scope → dezelfde aanwezigen voorvinken voor snelle invoer.
   const lastSession = useMemo(
-    () => sessions.find((s) => s.clubId === clubId && s.aanwezigen.length > 0) ?? null,
-    [sessions, clubId],
+    () =>
+      sessions.find((s) => s.clubId === clubId && (isAlg || s.reeks === tab) && s.aanwezigen.length > 0) ?? null,
+    [sessions, clubId, isAlg, tab],
   )
   useEffect(() => {
-    const ids = new Set(rosterPlayers.map((p) => p.id))
+    const ids = new Set(roster.map((p) => p.id))
     setPresent(new Set((lastSession?.aanwezigen ?? []).map((a) => a.id).filter((id) => ids.has(id))))
-  }, [clubId, lastSession, rosterPlayers])
+  }, [clubId, tab, lastSession, roster])
+
+  // De invoervorm tonen we in een reeks-tab; bij Algemeen enkel als de club nog géén reeksen heeft
+  // (dan is "Algemeen" clubbreed en blijft invoeren mogelijk zoals voorheen).
+  const showForm = canWrite && (!isAlg || !hasReeksen)
 
   const toggle = (id: number) =>
     setPresent((prev) => {
@@ -88,9 +177,9 @@ export function AanwezigheidPanel({
       else next.add(id)
       return next
     })
-  const allOn = () => setPresent(new Set(rosterPlayers.map((p) => p.id)))
+  const allOn = () => setPresent(new Set(roster.map((p) => p.id)))
   const allOff = () => setPresent(new Set())
-  const presentCount = rosterPlayers.filter((p) => present.has(p.id)).length
+  const presentCount = roster.filter((p) => present.has(p.id)).length
 
   const onFile = (file: File | null) => {
     if (!file) return
@@ -117,14 +206,14 @@ export function AanwezigheidPanel({
 
   const addPlayers = async () => {
     const list = newNames.split(/[\n,;]+/).map((s) => s.trim()).filter(Boolean)
-    if (primaryTeamId == null || list.length === 0 || addBusy) return
+    if (addTeamId == null || list.length === 0 || addBusy) return
     setAddBusy(true)
     setAddMsg(null)
     try {
       const res = await fetch('/api/players/quick', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ teamId: primaryTeamId, names: list }),
+        body: JSON.stringify({ teamId: addTeamId, names: list }),
       })
       const json = await res.json()
       if (res.ok && json.ok) {
@@ -143,7 +232,7 @@ export function AanwezigheidPanel({
 
   const save = async () => {
     if (busy) return
-    const aanwezigen = rosterPlayers.filter((p) => present.has(p.id)).map((p) => p.id)
+    const aanwezigen = roster.filter((p) => present.has(p.id)).map((p) => p.id)
     if (aanwezigen.length === 0) {
       setMsg({ ok: false, text: 'Vink minstens één aanwezige speler aan.' })
       return
@@ -154,7 +243,17 @@ export function AanwezigheidPanel({
       const res = await fetch('/api/training/sessie', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ datum, club: clubId, duurMinuten: duur, weer, temperatuur: temp, aanwezigen, screenshot: shot, notitie }),
+        body: JSON.stringify({
+          datum,
+          club: clubId,
+          reeks: isAlg ? '' : tab,
+          duurMinuten: duur,
+          weer,
+          temperatuur: temp,
+          aanwezigen,
+          screenshot: shot,
+          notitie,
+        }),
       })
       const json = await res.json()
       if (res.ok && json.ok) {
@@ -180,26 +279,60 @@ export function AanwezigheidPanel({
     return <p className="empty">Geen club gevonden voor je account.</p>
   }
 
+  const scopeLabel = isAlg ? 'Algemeen' : activeGroup?.naam ?? ''
+
   return (
     <div className="tr">
-      {canWrite && (
+      {/* Enkel een account zonder eigen club mag de club kiezen; anders volgt die uit de login. */}
+      {fixedClubId == null && clubs.length > 1 && (
+        <label className="tr-field" style={{ maxWidth: 280 }}>
+          <span>Club</span>
+          <select value={clubId ?? ''} onChange={(e) => setClubId(e.target.value ? Number(e.target.value) : null)}>
+            {clubs.map((c) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
+        </label>
+      )}
+
+      {/* Reeks-keuze: Algemeen + één tab per leeftijdsgroep van de club. */}
+      <div className="tr-reekstabs">
+        <button type="button" className={`tr-reekstab${isAlg ? ' on' : ''}`} onClick={() => setTab(ALG)}>
+          📊 Algemeen
+        </button>
+        {reeksGroups.map((g) => (
+          <button
+            key={g.reeks}
+            type="button"
+            className={`tr-reekstab${tab === g.reeks ? ' on' : ''}`}
+            onClick={() => setTab(g.reeks)}
+          >
+            {g.naam} <span className="tr-reekstab-n">{g.players.length}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* Seizoenkiezer (scope voor de statistiek). */}
+      <label className="tr-field tr-seasonpick">
+        <span>Seizoen</span>
+        <select value={season} onChange={(e) => setSeason(e.target.value)}>
+          {seasons.map((s) => (
+            <option key={s} value={s}>{s}</option>
+          ))}
+        </select>
+      </label>
+
+      {showForm && (
         <section className="tr-entry">
-          <h2 className="tr-h2">Nieuwe training{club ? ` · ${club.name}` : ''}</h2>
+          <h2 className="tr-h2">
+            Nieuwe training{club ? ` · ${club.name}` : ''}
+            {!isAlg && scopeLabel ? ` · ${scopeLabel}` : ''}
+          </h2>
           <div className="tr-entry-grid">
             <label className="tr-field">
               <span>Datum &amp; uur</span>
               <input type="datetime-local" value={datum} onChange={(e) => setDatum(e.target.value)} />
             </label>
-            {fixedClubId == null && clubs.length > 1 && (
-              <label className="tr-field">
-                <span>Club</span>
-                <select value={clubId ?? ''} onChange={(e) => setClubId(e.target.value ? Number(e.target.value) : null)}>
-                  {clubs.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
-              </label>
-            )}
             <label className="tr-field">
               <span>Duur <small>(min)</small></span>
               <input type="number" inputMode="numeric" min="0" value={duur} onChange={(e) => setDuur(e.target.value)} placeholder="—" />
@@ -234,17 +367,17 @@ export function AanwezigheidPanel({
           </div>
 
           <div className="tr-att-head">
-            <span className="tr-att-title">Aanwezig <span className="tr-att-count">{presentCount}/{rosterPlayers.length}</span></span>
+            <span className="tr-att-title">Aanwezig <span className="tr-att-count">{presentCount}/{roster.length}</span></span>
             <span className="tr-att-actions">
               <button type="button" onClick={allOn}>Allen</button>
               <button type="button" onClick={allOff}>Geen</button>
             </span>
           </div>
-          {rosterPlayers.length === 0 ? (
-            <p className="sb-dim">Nog geen spelers voor deze club — voeg ze hieronder snel toe.</p>
+          {roster.length === 0 ? (
+            <p className="sb-dim">Nog geen spelers in deze groep — voeg ze hieronder snel toe.</p>
           ) : (
             <div className="tr-att-grid">
-              {rosterPlayers.map((p) => (
+              {roster.map((p) => (
                 <label key={p.id} className={`tr-att-chip ${present.has(p.id) ? 'on' : ''}`}>
                   <input type="checkbox" checked={present.has(p.id)} onChange={() => toggle(p.id)} />
                   {p.name}
@@ -253,17 +386,17 @@ export function AanwezigheidPanel({
             </div>
           )}
 
-          <details className="tr-addplayers" open={rosterPlayers.length === 0}>
+          <details className="tr-addplayers" open={roster.length === 0}>
             <summary>➕ Spelerslijst aanvullen</summary>
-            {primaryTeamId == null ? (
-              <p className="sb-dim">Maak eerst een ploeg aan voor deze club (Beheer → Spelers) om spelers te kunnen toevoegen.</p>
+            {addTeamId == null ? (
+              <p className="sb-dim">Maak eerst een ploeg aan voor deze reeks (Beheer → Ploegen) om spelers te kunnen toevoegen.</p>
             ) : (
               <>
                 <p className="sb-dim">Eén naam per lijn (of gescheiden door een komma). Rugnummers volgen automatisch; bestaande namen worden overgeslagen.</p>
                 <textarea rows={4} value={newNames} onChange={(e) => setNewNames(e.target.value)} placeholder={'Jan\nPiet\nJonas'} />
                 <div className="tr-addplayers-foot">
                   <button type="button" className="tr-save" onClick={addPlayers} disabled={addBusy || !newNames.trim()}>
-                    {addBusy ? 'Toevoegen…' : 'Toevoegen aan club'}
+                    {addBusy ? 'Toevoegen…' : 'Toevoegen'}
                   </button>
                   {addMsg && <span className="tr-msg ok">{addMsg}</span>}
                 </div>
@@ -285,20 +418,60 @@ export function AanwezigheidPanel({
         </section>
       )}
 
+      {/* Statistiek over het gekozen seizoen voor de actieve scope. */}
       <section>
-        <h2 className="tr-h2">Trainingen</h2>
-        {sessions.length === 0 ? (
-          <p className="sb-dim">Nog geen trainingen geregistreerd.</p>
+        <h2 className="tr-h2">
+          {isAlg ? 'Opkomst clubbreed' : `Opkomst · ${scopeLabel}`} <small className="sb-dim">· seizoen {season}</small>
+        </h2>
+        {stats.trainingen === 0 ? (
+          <p className="sb-dim">Nog geen trainingen in dit seizoen.</p>
+        ) : (
+          <>
+            <div className="tr-statcards">
+              <div className="tr-statcard">
+                <span className="tr-stat-n">{stats.trainingen}</span>
+                <span className="tr-stat-l">trainingen</span>
+              </div>
+              <div className="tr-statcard">
+                <span className="tr-stat-n">{stats.avgPresent.toFixed(1)}</span>
+                <span className="tr-stat-l">gem. aanwezig{stats.rosterSize ? ` / ${stats.rosterSize}` : ''}</span>
+              </div>
+              <div className="tr-statcard">
+                <span className="tr-stat-n">{Math.round(stats.avgPct)}%</span>
+                <span className="tr-stat-l">van de {isAlg ? 'club' : 'groep'} kwam trainen</span>
+              </div>
+            </div>
+            {stats.perPlayer.length > 0 && (
+              <div className="tr-attbars">
+                {stats.perPlayer.map((p) => (
+                  <div key={p.id} className="tr-attbar">
+                    <span className="tr-attbar-name">{p.name}</span>
+                    <span className="tr-attbar-track">
+                      <span className="tr-attbar-fill" style={{ width: `${p.pct}%` }} />
+                    </span>
+                    <span className="tr-attbar-val">{p.attended}/{stats.trainingen} · {Math.round(p.pct)}%</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      </section>
+
+      <section>
+        <h2 className="tr-h2">Trainingen{isAlg ? '' : ` · ${scopeLabel}`}</h2>
+        {scopedSessions.length === 0 ? (
+          <p className="sb-dim">Nog geen trainingen geregistreerd in dit seizoen.</p>
         ) : (
           <div className="tr-sessions">
-            {sessions.map((s) => (
+            {scopedSessions.map((s) => (
               <div key={s.id} className="tr-session">
                 <div className="tr-session-top">
                   <span className="tr-session-date">{fmtDatum(s.datum)}</span>
                   <span className="tr-session-count">👥 {s.aanwezigen.length}</span>
                 </div>
                 <div className="tr-session-meta">
-                  {s.club && <span>🛡️ {s.club}</span>}
+                  {isAlg && s.reeks && <span>🏷️ {reeksGroups.find((g) => g.reeks === s.reeks)?.naam ?? s.reeks}</span>}
                   {s.duurMinuten != null && <span>⏱️ {s.duurMinuten} min</span>}
                   {s.weer && <span>{WEER_LABEL[s.weer] ?? s.weer}</span>}
                   {s.temperatuur != null && <span>🌡️ {s.temperatuur}°C</span>}

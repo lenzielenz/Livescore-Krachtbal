@@ -33,6 +33,7 @@ import * as migration_20260606_080000_match_seizoen from './20260606_080000_matc
 import * as migration_20260606_081412_trainingen from './20260606_081412_trainingen';
 import * as migration_20260606_090000_training_screenshot from './20260606_090000_training_screenshot';
 import * as migration_20260606_093000_training_club from './20260606_093000_training_club';
+import * as migration_20260606_100000_training_reeks from './20260606_100000_training_reeks';
 
 export const migrations = [
   {
@@ -209,5 +210,10 @@ export const migrations = [
     up: migration_20260606_093000_training_club.up,
     down: migration_20260606_093000_training_club.down,
     name: '20260606_093000_training_club',
+  },
+  {
+    up: migration_20260606_100000_training_reeks.up,
+    down: migration_20260606_100000_training_reeks.down,
+    name: '20260606_100000_training_reeks',
   },
 ];

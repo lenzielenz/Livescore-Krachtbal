@@ -1,9 +1,13 @@
 import { authUser, hasRole, isFederationLevel, userClubId } from '@/lib/api-auth'
 import { getPayloadClient } from '@/lib/payload-client'
+import { REEKS_OPTIONS, type Reeks } from '@/lib/reeksen'
 
 type Weer = 'zonnig' | 'bewolkt' | 'regen' | 'wind' | 'sneeuw' | 'mist'
 const WEER_VALUES: Weer[] = ['zonnig', 'bewolkt', 'regen', 'wind', 'sneeuw', 'mist']
 const isWeer = (v: unknown): v is Weer => typeof v === 'string' && (WEER_VALUES as string[]).includes(v)
+
+const REEKS_VALUES = REEKS_OPTIONS.map((o) => o.value) as string[]
+const isReeks = (v: unknown): v is Reeks => typeof v === 'string' && REEKS_VALUES.includes(v)
 
 // Een trainingssessie (aanwezigheid + weer + duur) opslaan. Admin/federatie of club-beheerder
 // (die enkel voor een ploeg van de eigen club).
@@ -11,6 +15,7 @@ export async function POST(req: Request) {
   let body: {
     datum?: string
     club?: number | null
+    reeks?: string
     duurMinuten?: unknown
     weer?: string
     temperatuur?: unknown
@@ -37,6 +42,7 @@ export async function POST(req: Request) {
     return Number.isFinite(n) ? n : undefined
   }
   const weer: Weer | undefined = isWeer(body.weer) ? body.weer : undefined
+  const reeks: Reeks | undefined = isReeks(body.reeks) ? body.reeks : undefined
   // Screenshot: enkel een afbeelding-data-URL en begrensd (client schaalt al naar ~max 1280px).
   const screenshot =
     typeof body.screenshot === 'string' && body.screenshot.startsWith('data:image/') && body.screenshot.length < 4_000_000
@@ -59,6 +65,7 @@ export async function POST(req: Request) {
       data: {
         datum: datum.toISOString(),
         ...(clubId != null ? { club: clubId } : {}),
+        ...(reeks ? { reeks } : {}),
         ...(num(body.duurMinuten) != null ? { duurMinuten: num(body.duurMinuten) } : {}),
         ...(weer ? { weer } : {}),
         ...(num(body.temperatuur) != null ? { temperatuur: num(body.temperatuur) } : {}),
