@@ -81,7 +81,7 @@ export default async function SeizoenAnalysePage({ searchParams }: { searchParam
               </div>
             ))}
           </div>
-          <div className="rang-scroll">
+          <div className="rang-scroll an-season-scroll">
             <table className="rang-table an-season-table">
               <thead>
                 <tr>
