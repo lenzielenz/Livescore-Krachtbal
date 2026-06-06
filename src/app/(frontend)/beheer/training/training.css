@@ -87,6 +87,24 @@
   color: #ef476f;
 }
 
+/* Worp met 3 kansen: drie smalle invoervelden naast elkaar (beste telt). */
+.tr-poging { grid-column: 1 / -1; }
+.tr-poging-inputs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.tr-poging-inputs input {
+  padding: 9px 11px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--panel-2, #0a1f14) 60%, transparent);
+  color: var(--txt);
+  font-size: 0.95rem;
+  min-width: 0;
+  text-align: center;
+}
+
 /* Grafieken-raster */
 .tr-charts {
   display: grid;
