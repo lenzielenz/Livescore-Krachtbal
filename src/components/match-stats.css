@@ -192,3 +192,10 @@
   flex-wrap: wrap;
 }
 .replay-step { font-weight: 800; color: var(--text, inherit); font-variant-numeric: tabular-nums; }
+
+/* Thuis/uit-keuze in de video-replay. */
+.replay-teams { flex-wrap: wrap; }
+.replay-teams .side-home.on { background: var(--home); color: #06140d; border-color: var(--home); }
+.replay-teams .side-away.on { background: var(--away); color: #06140d; border-color: var(--away); }
+.replay-teams .side-home { border-color: color-mix(in srgb, var(--home) 55%, var(--line)); }
+.replay-teams .side-away { border-color: color-mix(in srgb, var(--away) 55%, var(--line)); }

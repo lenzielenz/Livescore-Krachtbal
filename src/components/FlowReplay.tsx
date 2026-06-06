@@ -34,17 +34,24 @@ export function FlowReplay({
   const [playing, setPlaying] = useState(false)
   const [elapsed, setElapsed] = useState(0)
   const [speed, setSpeed] = useState(1)
+  const [team, setTeam] = useState<'both' | 'home' | 'away'>('both')
   const lastTs = useRef(0)
 
-  const total = shots.length
+  // Enkel de gekozen ploeg afspelen (thuis/uit) of allebei.
+  const playShots = useMemo(
+    () => (team === 'both' ? shots : shots.filter((s) => s.teamSide === team)),
+    [shots, team],
+  )
+
+  const total = playShots.length
   const stepMs = 900 / speed
   const totalMs = total * stepMs
 
-  // Reset wanneer de selectie (filters) verandert.
+  // Reset wanneer de selectie (filters/ploeg) verandert.
   useEffect(() => {
     setElapsed(0)
     setPlaying(false)
-  }, [shots])
+  }, [playShots])
 
   useEffect(() => {
     if (!playing) return
@@ -71,7 +78,7 @@ export function FlowReplay({
   const within = total ? (elapsed - step * stepMs) / stepMs : 0
 
   const { markers, current } = useMemo(() => {
-    const ms: FieldMarker[] = shots.slice(0, step).map((s) => ({
+    const ms: FieldMarker[] = playShots.slice(0, step).map((s) => ({
       x: s.x,
       y: s.y,
       fromX: s.fromX,
@@ -82,7 +89,7 @@ export function FlowReplay({
     }))
     let cur: ShotPoint | null = null
     if (step < total) {
-      const s = shots[step]
+      const s = playShots[step]
       const tp = Math.min(1, within / 0.7) // eerste 70% = reizen, rest = even blijven hangen
       ms.push({
         x: s.fromX + (s.x - s.fromX) * tp,
@@ -95,7 +102,7 @@ export function FlowReplay({
       cur = s
     }
     return { markers: ms, current: cur }
-  }, [shots, step, within, total])
+  }, [playShots, step, within, total])
 
   const play = () => {
     if (elapsed >= totalMs) setElapsed(0)
@@ -107,16 +114,16 @@ export function FlowReplay({
     const scoredN = step + (current && within >= 0.7 ? 1 : 0)
     let h = 0
     let a = 0
-    for (const s of shots.slice(0, scoredN)) {
+    for (const s of playShots.slice(0, scoredN)) {
       if (s.outcome !== 'goal') continue
       const pts = s.type === 'rug' ? 2 : 1
       if (s.teamSide === 'home') h += pts
       else a += pts
     }
     return { h, a }
-  }, [shots, step, within, current])
+  }, [playShots, step, within, current])
 
-  if (total === 0) {
+  if (shots.length === 0) {
     return <p className="empty">Geen worpen in deze selectie om af te spelen.</p>
   }
 
@@ -130,8 +137,14 @@ export function FlowReplay({
         <span className="rs-num side-away">{score.a}</span>
         <span className="rs-team">{teams.away}</span>
       </div>
+      {/* Toon beide ploegen, of speel enkel thuis / enkel uit af. */}
+      <div className="shotmap-controls replay-teams">
+        <button type="button" className={team === 'both' ? 'on' : ''} onClick={() => setTeam('both')}>Beide</button>
+        <button type="button" className={`side-home ${team === 'home' ? 'on' : ''}`} onClick={() => setTeam('home')}>🏠 {teams.home}</button>
+        <button type="button" className={`side-away ${team === 'away' ? 'on' : ''}`} onClick={() => setTeam('away')}>🚌 {teams.away}</button>
+      </div>
       <div className="shotmap-controls replay-controls">
-        <button type="button" className="replay-play" onClick={() => (playing ? setPlaying(false) : play())}>
+        <button type="button" className="replay-play" onClick={() => (playing ? setPlaying(false) : play())} disabled={total === 0}>
           {playing ? '⏸ Pauze' : elapsed >= totalMs ? '↻ Opnieuw' : '▶ Speel af'}
         </button>
         <button type="button" className={speed === 1 ? 'on' : ''} onClick={() => setSpeed(1)}>1×</button>
@@ -150,6 +163,7 @@ export function FlowReplay({
         aria-label="Tijdlijn"
       />
       <FieldSchema className="shotmap-field" markers={markers} goalAreaDepthM={goalAreaDepth} />
+      {total === 0 && <p className="sb-dim" style={{ textAlign: 'center' }}>Geen worpen van deze ploeg.</p>}
       <div className="replay-status">
         <span className="replay-step">worp {shown}/{total}</span>
         {current && (
