@@ -38,13 +38,16 @@ export function MatchStats({
   shots,
   teams,
   goalAreaDepth = 10,
+  focusPlayerId,
 }: {
   stats: Stats
   shots: ShotPoint[]
   teams: { home: string; away: string }
   goalAreaDepth?: number
+  /** Start gefilterd op één speler (gezet via de snelwissel-balk bovenaan). */
+  focusPlayerId?: number
 }) {
-  const [playerFilter, setPlayerFilter] = useState<number | 'all'>('all')
+  const [playerFilter, setPlayerFilter] = useState<number | 'all'>(focusPlayerId ?? 'all')
   const [goalsOnly, setGoalsOnly] = useState(false)
   const [view, setView] = useState<'dots' | 'flow' | 'heat' | 'video'>('dots')
   const [orderFilter, setOrderFilter] = useState<'all' | 'first' | 'second' | 'last'>('all')
