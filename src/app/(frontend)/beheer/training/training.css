@@ -350,3 +350,32 @@
   border-radius: 8px;
   border: 1px solid var(--line);
 }
+
+/* Trainings-startpagina (hub): tegels naar de tools. */
+.tr-hub {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+}
+.tr-hub-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: var(--panel-grad, var(--panel, #0c1f16));
+  box-shadow: var(--card-shadow);
+  text-decoration: none;
+  color: var(--txt);
+  transition: border-color 0.16s ease, transform 0.16s ease;
+}
+.tr-hub-card:hover {
+  border-color: color-mix(in srgb, var(--accent, #06d6a0) 55%, var(--line));
+  transform: translateY(-2px);
+}
+.tr-hub-ico { font-size: 1.8rem; line-height: 1; flex: 0 0 auto; }
+.tr-hub-body { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.tr-hub-title { font-weight: 800; font-size: 1.05rem; }
+.tr-hub-desc { font-size: 0.86rem; color: var(--dim); }
+.tr-hub-arrow { margin-left: auto; color: var(--accent, #06d6a0); font-weight: 800; flex: 0 0 auto; }

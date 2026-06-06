@@ -88,16 +88,11 @@ export function TrainingPanel({
             {players.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.name}
-                {p.team ? ` — ${p.team}` : ''}
               </option>
             ))}
           </select>
         </label>
-        {selectedPlayer && (selectedPlayer.club || selectedPlayer.team) && (
-          <span className="tr-playermeta">
-            {[selectedPlayer.club, selectedPlayer.team].filter(Boolean).join(' · ')}
-          </span>
-        )}
+        {selectedPlayer?.club && <span className="tr-playermeta">{selectedPlayer.club}</span>}
       </div>
 
       {canWrite && (

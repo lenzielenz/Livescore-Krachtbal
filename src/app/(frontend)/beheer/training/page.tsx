@@ -1,25 +1,32 @@
 import Link from 'next/link'
-import type { Where } from 'payload'
 
 import { SiteHeader } from '@/components/SiteHeader'
-import { canAnalyse, hasRole, isFederationLevel, userClubId } from '@/lib/access'
+import { canAnalyse, hasRole } from '@/lib/access'
 import { getAuthUser } from '@/lib/auth-user'
-import { getPayloadClient } from '@/lib/payload-client'
-import { TRAINING_METRICS, type TrainingMeting } from '@/lib/training-metrics'
 import { TrainingNav } from './TrainingNav'
-import { TrainingPanel, type TrainingPlayer } from './TrainingPanel'
+import './training.css'
 
 export const dynamic = 'force-dynamic'
 
-// Trainingsdashboard: metingen invoeren + progressie-grafieken per speler.
-// Toegang: admin/federatie (alle spelers) of club-beheerder (enkel eigen club).
-export default async function TrainingPage() {
+// Trainings-startpagina: het vertrekpunt van het trainingsluik, met de tools eronder.
+const TOOLS = [
+  {
+    href: '/beheer/training/progressie',
+    icon: '📈',
+    title: 'Progressie',
+    desc: 'Meet snelheid (vooruit/achteruit) en werpafstand per aanloop (4/9/18 m), en volg de evolutie per speler met grafieken.',
+  },
+  {
+    href: '/beheer/training/aanwezigheid',
+    icon: '✅',
+    title: 'Aanwezigheid',
+    desc: 'Hou per training bij wie er was (en hoeveel), hoe lang jullie trainden en hoe het weer was.',
+  },
+] as const
+
+export default async function TrainingHubPage() {
   const me = await getAuthUser()
-  const fed = isFederationLevel(me)
-  const isClubBeheerder = hasRole(me, 'club-beheerder')
-  // Bekijken mag iedereen met analyse-toegang of een club-beheerder; invoeren enkel federatie/club.
-  const canView = canAnalyse(me) || isClubBeheerder
-  const canWrite = fed || isClubBeheerder
+  const canView = canAnalyse(me) || hasRole(me, 'club-beheerder')
 
   if (!canView) {
     return (
@@ -27,7 +34,7 @@ export default async function TrainingPage() {
         <SiteHeader active="training" />
         <div className="site">
           <h1 className="page-title">
-            Training <span className="brand">·</span> progressie
+            Training <span className="brand">·</span> overzicht
           </h1>
           <p className="empty">
             Enkel voor admin/federatie of club-beheerders.{' '}
@@ -38,53 +45,29 @@ export default async function TrainingPage() {
     )
   }
 
-  const payload = await getPayloadClient()
-  const clubId = userClubId(me)
-  // Club-beheerder ziet enkel de spelers van de eigen club; federatie/admin/analyse-toegang ziet alles.
-  const canSeeAll = fed || !isClubBeheerder
-  const playerWhere: Where = canSeeAll ? {} : { 'team.club': { equals: clubId } }
-
-  const [playersRes, metingenRes] = await Promise.all([
-    payload.find({ collection: 'players', where: playerWhere, depth: 2, limit: 2000, sort: 'name' }),
-    payload.find({ collection: 'trainingmetingen', depth: 0, limit: 5000, sort: 'datum' }),
-  ])
-
-  const players: TrainingPlayer[] = playersRes.docs.map((p) => {
-    const team = typeof p.team === 'object' && p.team ? p.team : null
-    const club = team && typeof team.club === 'object' && team.club ? team.club : null
-    return {
-      id: p.id,
-      name: p.name ?? '—',
-      team: team?.name ?? '',
-      club: club?.name ?? '',
-    }
-  })
-  const playerIds = new Set(players.map((p) => p.id))
-
-  const metingen: TrainingMeting[] = metingenRes.docs
-    .map((m) => {
-      const speler = typeof m.speler === 'object' && m.speler ? m.speler.id : (m.speler as number)
-      const row = { speler, datum: m.datum } as TrainingMeting
-      for (const metric of TRAINING_METRICS) {
-        row[metric.key] = (m[metric.key as keyof typeof m] as number | null | undefined) ?? null
-      }
-      return row
-    })
-    .filter((m) => playerIds.has(m.speler))
-
   return (
     <>
       <SiteHeader active="training" />
       <div className="site">
         <h1 className="page-title">
-          Training <span className="brand">·</span> progressie
+          Training <span className="brand">·</span> overzicht
         </h1>
-        <TrainingNav active="progressie" />
+        <TrainingNav active="start" />
         <p className="wb-intro">
-          Meet snelheid (vooruit/achteruit) en werpafstand per aanloop (4/9/18 m), en volg de
-          progressie per speler op.
+          Het vertrekpunt voor je trainingen. Kies hieronder wat je wil doen.
         </p>
-        <TrainingPanel players={players} metingen={metingen} canWrite={canWrite} />
+        <div className="tr-hub">
+          {TOOLS.map((t) => (
+            <Link key={t.href} href={t.href} className="tr-hub-card">
+              <span className="tr-hub-ico" aria-hidden>{t.icon}</span>
+              <span className="tr-hub-body">
+                <span className="tr-hub-title">{t.title}</span>
+                <span className="tr-hub-desc">{t.desc}</span>
+              </span>
+              <span className="tr-hub-arrow" aria-hidden>→</span>
+            </Link>
+          ))}
+        </div>
       </div>
     </>
   )
