@@ -792,9 +792,9 @@ export interface Trainingen {
   id: number;
   datum: string;
   /**
-   * Welke ploeg trainde (bepaalt de spelerslijst voor de aanwezigheid).
+   * De club die trainde (uit het account afgeleid).
    */
-  team?: (number | null) | Team;
+  club?: (number | null) | Club;
   duurMinuten?: number | null;
   weer?: ('zonnig' | 'bewolkt' | 'regen' | 'wind' | 'sneeuw' | 'mist') | null;
   temperatuur?: number | null;
@@ -1374,7 +1374,7 @@ export interface TrainingmetingenSelect<T extends boolean = true> {
  */
 export interface TrainingenSelect<T extends boolean = true> {
   datum?: T;
-  team?: T;
+  club?: T;
   duurMinuten?: T;
   weer?: T;
   temperatuur?: T;

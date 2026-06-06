@@ -5,13 +5,13 @@ import { useEffect, useMemo, useState } from 'react'
 
 import '../training.css'
 
-export type AwPlayer = { id: number; name: string; teamId: number | null; teamName: string }
-export type AwTeam = { id: number; name: string }
+export type AwPlayer = { id: number; name: string }
+export type AwClub = { id: number; name: string; primaryTeamId: number | null; players: AwPlayer[] }
 export type AwSession = {
   id: number
   datum: string
-  teamId: number | null
-  team: string | null
+  clubId: number | null
+  club: string | null
   duurMinuten: number | null
   weer: string | null
   temperatuur: number | null
@@ -30,7 +30,6 @@ const WEER_LABEL: Record<string, string> = {
 }
 const WEER_OPTIES = Object.entries(WEER_LABEL)
 
-// Lokale datetime-waarde (YYYY-MM-DDTHH:mm) voor het datetime-local-veld, op het huidige uur.
 function nowLocal(): string {
   const d = new Date()
   d.setMinutes(d.getMinutes() - d.getTimezoneOffset())
@@ -43,19 +42,19 @@ function fmtDatum(s: string): string {
 }
 
 export function AanwezigheidPanel({
-  teams,
-  players,
+  clubs,
+  fixedClubId,
   sessions,
   canWrite,
 }: {
-  teams: AwTeam[]
-  players: AwPlayer[]
+  clubs: AwClub[]
+  fixedClubId: number | null
   sessions: AwSession[]
   canWrite: boolean
 }) {
   const router = useRouter()
   const [datum, setDatum] = useState(nowLocal())
-  const [teamId, setTeamId] = useState<number | null>(teams[0]?.id ?? null)
+  const [clubId, setClubId] = useState<number | null>(fixedClubId ?? clubs[0]?.id ?? null)
   const [duur, setDuur] = useState('')
   const [weer, setWeer] = useState('')
   const [temp, setTemp] = useState('')
@@ -64,29 +63,35 @@ export function AanwezigheidPanel({
   const [shot, setShot] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
-  // Snel een spelerslijst aanvullen (enkel namen).
   const [newNames, setNewNames] = useState('')
   const [addBusy, setAddBusy] = useState(false)
   const [addMsg, setAddMsg] = useState<string | null>(null)
 
-  // Spelers van de gekozen ploeg (of alle, als er geen ploeg gekozen is).
-  const rosterPlayers = useMemo(
-    () => (teamId == null ? players : players.filter((p) => p.teamId === teamId)),
-    [players, teamId],
-  )
+  const club = useMemo(() => clubs.find((c) => c.id === clubId) ?? null, [clubs, clubId])
+  const rosterPlayers = club?.players ?? []
+  const primaryTeamId = club?.primaryTeamId ?? null
 
-  // Vorige training van deze ploeg → handig om dezelfde aanwezigen snel terug te vinden.
+  // Vorige training van deze club → dezelfde aanwezigen voorvinken voor een snelle invoer.
   const lastSession = useMemo(
-    () => sessions.find((s) => s.teamId === teamId && s.aanwezigen.length > 0) ?? null,
-    [sessions, teamId],
+    () => sessions.find((s) => s.clubId === clubId && s.aanwezigen.length > 0) ?? null,
+    [sessions, clubId],
   )
-  // Bij ploegwissel: voorvink de aanwezigen van de vorige training (enkel wie nog in de lijst staat).
   useEffect(() => {
     const ids = new Set(rosterPlayers.map((p) => p.id))
     setPresent(new Set((lastSession?.aanwezigen ?? []).map((a) => a.id).filter((id) => ids.has(id))))
-  }, [teamId, lastSession, rosterPlayers])
+  }, [clubId, lastSession, rosterPlayers])
 
-  // Bestand → verkleinde JPEG-data-URL (max 1280px), zodat hij compact in de DB past.
+  const toggle = (id: number) =>
+    setPresent((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  const allOn = () => setPresent(new Set(rosterPlayers.map((p) => p.id)))
+  const allOff = () => setPresent(new Set())
+  const presentCount = rosterPlayers.filter((p) => present.has(p.id)).length
+
   const onFile = (file: File | null) => {
     if (!file) return
     const reader = new FileReader()
@@ -112,14 +117,14 @@ export function AanwezigheidPanel({
 
   const addPlayers = async () => {
     const list = newNames.split(/[\n,;]+/).map((s) => s.trim()).filter(Boolean)
-    if (teamId == null || list.length === 0 || addBusy) return
+    if (primaryTeamId == null || list.length === 0 || addBusy) return
     setAddBusy(true)
     setAddMsg(null)
     try {
       const res = await fetch('/api/players/quick', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ teamId, names: list }),
+        body: JSON.stringify({ teamId: primaryTeamId, names: list }),
       })
       const json = await res.json()
       if (res.ok && json.ok) {
@@ -136,18 +141,6 @@ export function AanwezigheidPanel({
     }
   }
 
-  const toggle = (id: number) =>
-    setPresent((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
-  const allOn = () => setPresent(new Set(rosterPlayers.map((p) => p.id)))
-  const allOff = () => setPresent(new Set())
-
-  const presentCount = rosterPlayers.filter((p) => present.has(p.id)).length
-
   const save = async () => {
     if (busy) return
     const aanwezigen = rosterPlayers.filter((p) => present.has(p.id)).map((p) => p.id)
@@ -161,7 +154,7 @@ export function AanwezigheidPanel({
       const res = await fetch('/api/training/sessie', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ datum, team: teamId, duurMinuten: duur, weer, temperatuur: temp, aanwezigen, screenshot: shot, notitie }),
+        body: JSON.stringify({ datum, club: clubId, duurMinuten: duur, weer, temperatuur: temp, aanwezigen, screenshot: shot, notitie }),
       })
       const json = await res.json()
       if (res.ok && json.ok) {
@@ -183,22 +176,26 @@ export function AanwezigheidPanel({
     }
   }
 
+  if (clubs.length === 0) {
+    return <p className="empty">Geen club gevonden voor je account.</p>
+  }
+
   return (
     <div className="tr">
       {canWrite && (
         <section className="tr-entry">
-          <h2 className="tr-h2">Nieuwe training</h2>
+          <h2 className="tr-h2">Nieuwe training{club ? ` · ${club.name}` : ''}</h2>
           <div className="tr-entry-grid">
             <label className="tr-field">
               <span>Datum &amp; uur</span>
               <input type="datetime-local" value={datum} onChange={(e) => setDatum(e.target.value)} />
             </label>
-            {teams.length > 0 && (
+            {fixedClubId == null && clubs.length > 1 && (
               <label className="tr-field">
-                <span>Ploeg</span>
-                <select value={teamId ?? ''} onChange={(e) => setTeamId(e.target.value ? Number(e.target.value) : null)}>
-                  {teams.map((t) => (
-                    <option key={t.id} value={t.id}>{t.name}</option>
+                <span>Club</span>
+                <select value={clubId ?? ''} onChange={(e) => setClubId(e.target.value ? Number(e.target.value) : null)}>
+                  {clubs.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
                 </select>
               </label>
@@ -222,7 +219,6 @@ export function AanwezigheidPanel({
             </label>
           </div>
 
-          {/* Screenshot van de WhatsApp-stemming (optioneel) — bewaard bij de training. */}
           <div className="tr-shot">
             <label className="tr-field">
               <span>📸 Screenshot WhatsApp-stemming <small>(optioneel)</small></span>
@@ -245,7 +241,7 @@ export function AanwezigheidPanel({
             </span>
           </div>
           {rosterPlayers.length === 0 ? (
-            <p className="sb-dim">Nog geen spelers voor deze ploeg — voeg ze hieronder snel toe.</p>
+            <p className="sb-dim">Nog geen spelers voor deze club — voeg ze hieronder snel toe.</p>
           ) : (
             <div className="tr-att-grid">
               {rosterPlayers.map((p) => (
@@ -257,20 +253,23 @@ export function AanwezigheidPanel({
             </div>
           )}
 
-          {/* Spelerslijst van de club snel aanvullen (enkel namen). */}
-          {teamId != null && (
-            <details className="tr-addplayers" open={rosterPlayers.length === 0}>
-              <summary>➕ Spelerslijst aanvullen</summary>
-              <p className="sb-dim">Eén naam per lijn (of gescheiden door een komma). Rugnummers volgen automatisch; bestaande namen worden overgeslagen.</p>
-              <textarea rows={4} value={newNames} onChange={(e) => setNewNames(e.target.value)} placeholder={'Jan\nPiet\nJonas'} />
-              <div className="tr-addplayers-foot">
-                <button type="button" className="tr-save" onClick={addPlayers} disabled={addBusy || !newNames.trim()}>
-                  {addBusy ? 'Toevoegen…' : 'Toevoegen aan ploeg'}
-                </button>
-                {addMsg && <span className="tr-msg ok">{addMsg}</span>}
-              </div>
-            </details>
-          )}
+          <details className="tr-addplayers" open={rosterPlayers.length === 0}>
+            <summary>➕ Spelerslijst aanvullen</summary>
+            {primaryTeamId == null ? (
+              <p className="sb-dim">Maak eerst een ploeg aan voor deze club (Beheer → Spelers) om spelers te kunnen toevoegen.</p>
+            ) : (
+              <>
+                <p className="sb-dim">Eén naam per lijn (of gescheiden door een komma). Rugnummers volgen automatisch; bestaande namen worden overgeslagen.</p>
+                <textarea rows={4} value={newNames} onChange={(e) => setNewNames(e.target.value)} placeholder={'Jan\nPiet\nJonas'} />
+                <div className="tr-addplayers-foot">
+                  <button type="button" className="tr-save" onClick={addPlayers} disabled={addBusy || !newNames.trim()}>
+                    {addBusy ? 'Toevoegen…' : 'Toevoegen aan club'}
+                  </button>
+                  {addMsg && <span className="tr-msg ok">{addMsg}</span>}
+                </div>
+              </>
+            )}
+          </details>
 
           <label className="tr-field" style={{ marginTop: 12 }}>
             <span>Notitie</span>
@@ -299,7 +298,7 @@ export function AanwezigheidPanel({
                   <span className="tr-session-count">👥 {s.aanwezigen.length}</span>
                 </div>
                 <div className="tr-session-meta">
-                  {s.team && <span>🛡️ {s.team}</span>}
+                  {s.club && <span>🛡️ {s.club}</span>}
                   {s.duurMinuten != null && <span>⏱️ {s.duurMinuten} min</span>}
                   {s.weer && <span>{WEER_LABEL[s.weer] ?? s.weer}</span>}
                   {s.temperatuur != null && <span>🌡️ {s.temperatuur}°C</span>}

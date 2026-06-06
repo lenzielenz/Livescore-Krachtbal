@@ -9,7 +9,7 @@ export const Trainingen: CollectionConfig = {
   labels: { singular: 'Training', plural: 'Trainingen' },
   admin: {
     useAsTitle: 'datum',
-    defaultColumns: ['datum', 'team', 'duurMinuten', 'weer'],
+    defaultColumns: ['datum', 'club', 'duurMinuten', 'weer'],
     group: 'Training',
   },
   access: {
@@ -28,12 +28,12 @@ export const Trainingen: CollectionConfig = {
       admin: { date: { pickerAppearance: 'dayAndTime', displayFormat: 'dd/MM/yyyy HH:mm' } },
     },
     {
-      name: 'team',
-      label: 'Ploeg',
+      name: 'club',
+      label: 'Club',
       type: 'relationship',
-      relationTo: 'teams',
+      relationTo: 'clubs',
       index: true,
-      admin: { description: 'Welke ploeg trainde (bepaalt de spelerslijst voor de aanwezigheid).' },
+      admin: { description: 'De club die trainde (uit het account afgeleid).' },
     },
     {
       type: 'row',

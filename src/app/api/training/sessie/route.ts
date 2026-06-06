@@ -10,7 +10,7 @@ const isWeer = (v: unknown): v is Weer => typeof v === 'string' && (WEER_VALUES 
 export async function POST(req: Request) {
   let body: {
     datum?: string
-    team?: number | null
+    club?: number | null
     duurMinuten?: unknown
     weer?: string
     temperatuur?: unknown
@@ -27,7 +27,7 @@ export async function POST(req: Request) {
   const datum = body.datum ? new Date(body.datum) : new Date()
   if (Number.isNaN(datum.getTime())) return Response.json({ error: 'Ongeldige datum.' }, { status: 400 })
 
-  const teamId = body.team != null && Number.isFinite(Number(body.team)) ? Number(body.team) : null
+  const bodyClubId = body.club != null && Number.isFinite(Number(body.club)) ? Number(body.club) : null
   const aanwezigen = Array.isArray(body.aanwezigen)
     ? [...new Set(body.aanwezigen.map((v) => Number(v)).filter((n) => Number.isFinite(n)))]
     : []
@@ -50,21 +50,15 @@ export async function POST(req: Request) {
     if (!isFederationLevel(user) && !hasRole(user, 'club-beheerder')) {
       return Response.json({ error: 'Enkel club-beheerder/federatie.' }, { status: 403 })
     }
-    // Club-beheerder mag enkel een training van een ploeg van de eigen club ingeven.
-    if (!isFederationLevel(user) && teamId != null) {
-      const clubId = userClubId(user)
-      const team = await payload.findByID({ collection: 'teams', id: teamId, depth: 0 }).catch(() => null)
-      const teamClub = team ? (typeof team.club === 'object' && team.club ? team.club.id : team.club) : null
-      if (clubId == null || teamClub == null || String(teamClub) !== String(clubId)) {
-        return Response.json({ error: 'Deze ploeg hoort niet bij jouw club.' }, { status: 403 })
-      }
-    }
+    // De club komt uit het account (club-beheerder); federatie/admin mag een club meegeven.
+    const rawClub = isFederationLevel(user) ? bodyClubId : userClubId(user)
+    const clubId: number | null = rawClub != null && Number.isFinite(Number(rawClub)) ? Number(rawClub) : null
 
     const doc = await payload.create({
       collection: 'trainingen',
       data: {
         datum: datum.toISOString(),
-        ...(teamId != null ? { team: teamId } : {}),
+        ...(clubId != null ? { club: clubId } : {}),
         ...(num(body.duurMinuten) != null ? { duurMinuten: num(body.duurMinuten) } : {}),
         ...(weer ? { weer } : {}),
         ...(num(body.temperatuur) != null ? { temperatuur: num(body.temperatuur) } : {}),
