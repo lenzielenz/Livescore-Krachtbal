@@ -1,11 +1,12 @@
 import { purgeExpiredDemos } from '@/lib/demo'
 import { buildScoreboards } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
-import { REEKS_OPTIONS } from '@/lib/reeksen'
+import { reeksNaam } from '@/lib/reeksen'
 
 import type { DayMatch } from './LiveBoard'
 
-const reeksLabel = (v: unknown) => REEKS_OPTIONS.find((o) => o.value === v)?.label ?? (typeof v === 'string' ? v : 'Overig')
+// Leesbare reeksnaam zonder code-prefix (bv. "1ste Nationale Dames" i.p.v. "1NAD — …").
+const reeksLabel = (v: unknown) => reeksNaam(v)
 
 function dayBounds(dateStr: string): { start: string; end: string } {
   const start = new Date(`${dateStr}T00:00:00.000`)

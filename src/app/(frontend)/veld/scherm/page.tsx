@@ -2,7 +2,7 @@ import Link from 'next/link'
 
 import { buildMatchState, buildTimeline } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
-import { REEKS_OPTIONS } from '@/lib/reeksen'
+import { reeksNaam } from '@/lib/reeksen'
 import { readVeldMatchId } from '@/lib/screen-selection'
 import { FieldScreen } from '../[id]/FieldScreen'
 import { VeldSchermSync } from './VeldSchermSync'
@@ -10,7 +10,7 @@ import '../[id]/veld.css'
 
 export const dynamic = 'force-dynamic'
 
-const reeksLabel = (v: unknown) => REEKS_OPTIONS.find((o) => o.value === v)?.label ?? (typeof v === 'string' ? v : null)
+const reeksLabel = (v: unknown) => (v ? reeksNaam(v) : null)
 
 // Generiek veldscherm: toont de centraal gekozen wedstrijd (via /cast) op de veld-tv. De
 // tv opent deze ene URL en blijft staan; wissel je de wedstrijd op je gsm, dan herlaadt
