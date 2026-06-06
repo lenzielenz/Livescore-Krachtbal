@@ -79,6 +79,7 @@ export interface Config {
     tournaments: Tournament;
     'tournament-matches': TournamentMatch;
     trainingmetingen: Trainingmetingen;
+    trainingen: Trainingen;
     possessions: Possession;
     throws: Throw;
     'match-events': MatchEvent;
@@ -103,6 +104,7 @@ export interface Config {
     tournaments: TournamentsSelect<false> | TournamentsSelect<true>;
     'tournament-matches': TournamentMatchesSelect<false> | TournamentMatchesSelect<true>;
     trainingmetingen: TrainingmetingenSelect<false> | TrainingmetingenSelect<true>;
+    trainingen: TrainingenSelect<false> | TrainingenSelect<true>;
     possessions: PossessionsSelect<false> | PossessionsSelect<true>;
     throws: ThrowsSelect<false> | ThrowsSelect<true>;
     'match-events': MatchEventsSelect<false> | MatchEventsSelect<true>;
@@ -783,6 +785,28 @@ export interface Trainingmetingen {
   createdAt: string;
 }
 /**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "trainingen".
+ */
+export interface Trainingen {
+  id: number;
+  datum: string;
+  /**
+   * Welke ploeg trainde (bepaalt de spelerslijst voor de aanwezigheid).
+   */
+  team?: (number | null) | Team;
+  duurMinuten?: number | null;
+  weer?: ('zonnig' | 'bewolkt' | 'regen' | 'wind' | 'sneeuw' | 'mist') | null;
+  temperatuur?: number | null;
+  /**
+   * De spelers die aanwezig waren. Het aantal volgt automatisch.
+   */
+  aanwezigen?: (number | Player)[] | null;
+  notitie?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * Afgeleid uit de worp-events; doorgaans niet handmatig bewerken.
  *
  * This interface was referenced by `Config`'s JSON-Schema
@@ -930,6 +954,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'trainingmetingen';
         value: number | Trainingmetingen;
+      } | null)
+    | ({
+        relationTo: 'trainingen';
+        value: number | Trainingen;
       } | null)
     | ({
         relationTo: 'possessions';
@@ -1332,6 +1360,21 @@ export interface TrainingmetingenSelect<T extends boolean = true> {
   worp4?: T;
   worp9?: T;
   worp18?: T;
+  notitie?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "trainingen_select".
+ */
+export interface TrainingenSelect<T extends boolean = true> {
+  datum?: T;
+  team?: T;
+  duurMinuten?: T;
+  weer?: T;
+  temperatuur?: T;
+  aanwezigen?: T;
   notitie?: T;
   updatedAt?: T;
   createdAt?: T;

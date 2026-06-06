@@ -198,3 +198,104 @@
 .tr-table tbody tr:not(:last-child) td {
   border-bottom: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
 }
+
+/* Training-subnav (Progressie / Aanwezigheid). */
+.tr-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 16px;
+}
+.tr-nav-tab {
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--panel-2, #0a1f14) 60%, transparent);
+  color: var(--dim-strong, #9fb6aa);
+  font-weight: 700;
+  font-size: 0.9rem;
+  text-decoration: none;
+}
+.tr-nav-tab.on {
+  background: var(--accent, #06d6a0);
+  color: #06140d;
+  border-color: var(--accent, #06d6a0);
+}
+
+/* Aanwezigheid: kop + speler-chips. */
+.tr-att-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 14px 0 8px;
+}
+.tr-att-title { font-weight: 800; font-size: 0.95rem; }
+.tr-att-count { color: var(--accent, #06d6a0); margin-left: 6px; font-variant-numeric: tabular-nums; }
+.tr-att-actions { display: inline-flex; gap: 6px; }
+.tr-att-actions button {
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--dim);
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+.tr-att-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+}
+.tr-att-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--panel-2, #0a1f14) 50%, transparent);
+  font-size: 0.9rem;
+  cursor: pointer;
+  user-select: none;
+}
+.tr-att-chip.on {
+  border-color: color-mix(in srgb, var(--accent, #06d6a0) 70%, var(--line));
+  background: rgba(6, 214, 160, 0.12);
+}
+.tr-att-chip input { accent-color: var(--accent, #06d6a0); }
+
+/* Sessie-lijst. */
+.tr-sessions {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+}
+.tr-session {
+  background: var(--panel, #0c1f16);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+.tr-session-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.tr-session-date { font-weight: 700; }
+.tr-session-count {
+  font-weight: 800;
+  color: var(--accent, #06d6a0);
+  font-variant-numeric: tabular-nums;
+}
+.tr-session-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin: 6px 0;
+  font-size: 0.82rem;
+  color: var(--dim);
+}
+.tr-session-names { font-size: 0.86rem; color: var(--txt); overflow-wrap: anywhere; }
+.tr-session-note { margin-top: 6px; font-size: 0.82rem; color: var(--dim); font-style: italic; }

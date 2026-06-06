@@ -6,6 +6,7 @@ import { canAnalyse, hasRole, isFederationLevel, userClubId } from '@/lib/access
 import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
 import { TRAINING_METRICS, type TrainingMeting } from '@/lib/training-metrics'
+import { TrainingNav } from './TrainingNav'
 import { TrainingPanel, type TrainingPlayer } from './TrainingPanel'
 
 export const dynamic = 'force-dynamic'
@@ -78,6 +79,7 @@ export default async function TrainingPage() {
         <h1 className="page-title">
           Training <span className="brand">·</span> progressie
         </h1>
+        <TrainingNav active="progressie" />
         <p className="wb-intro">
           Meet snelheid (vooruit/achteruit) en werpafstand per aanloop (4/9/18 m), en volg de
           progressie per speler op.
