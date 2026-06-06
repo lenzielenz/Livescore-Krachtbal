@@ -53,7 +53,7 @@ export default async function VerwachtAnalysePage({ searchParams }: { searchPara
     <>
       <SiteHeader active="analyse" />
       <div className="site">
-        <AnalyseNav active="verwacht" />
+        <AnalyseNav active="spelers" />
         <div className="an-head-bar">
           <h1 className="page-title"><span className="brand">Verwachte punten</span></h1>
           <VerwachtPicker reeks={reeks} options={[...COMPETITIE_REEKSEN]} />

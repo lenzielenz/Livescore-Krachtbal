@@ -14,16 +14,19 @@ import { HubReeksPicker } from './HubReeksPicker'
 import { NieuweAnalyseMatch } from './NieuweAnalyseMatch'
 import './analyse.css'
 
-// De analyse-tools, als visuele kaarten op de hub.
-const TOOLS = [
+// De analyse-tools, gebundeld in twee groepen zodat het overzicht rustig blijft.
+const PLOEG_TOOLS = [
   { href: '/analyse/seizoen', icon: '📊', title: 'Seizoensanalyse', desc: 'Ranglijst per reeks met vorm-curve.', tone: 'accent' },
-  { href: '/analyse/spelers', icon: '🎯', title: 'Spelersradar', desc: 'Rating, profiel & vergelijking op zeven assen.', tone: 'home' },
-  { href: '/analyse/panini', icon: '🃏', title: 'Panini', desc: 'Maak een verzamelkaart van elke speler.', tone: 'accent' },
-  { href: '/analyse/verwacht', icon: '📐', title: 'Verwachte punten', desc: 'xG-model: wie scoort boven verwachting?', tone: 'pop' },
   { href: '/analyse/ploeg', icon: '🛡️', title: 'Ploegrapport', desc: 'Scoutingrapport per ploeg + PDF/CSV-export.', tone: 'away' },
   { href: '/analyse/ploegen', icon: '🆚', title: 'Ploegvergelijking', desc: 'Twee ploegen op een radar van kerncijfers.', tone: 'home' },
-  { href: '/analyse/gevaar', icon: '🔥', title: 'Gevaarzone', desc: 'Van waar scoort een speler het gevaarlijkst?', tone: 'pop2' },
 ] as const
+const SPELER_TOOLS = [
+  { href: '/analyse/spelers', icon: '🎯', title: 'Spelersradar', desc: 'Rating, profiel & vergelijking op zeven assen.', tone: 'home' },
+  { href: '/analyse/verwacht', icon: '📐', title: 'Verwachte punten', desc: 'xG-model: wie scoort boven verwachting?', tone: 'pop' },
+  { href: '/analyse/gevaar', icon: '🔥', title: 'Gevaarzone', desc: 'Van waar scoort een speler het gevaarlijkst?', tone: 'pop2' },
+  { href: '/analyse/panini', icon: '🃏', title: 'Panini', desc: 'Maak een verzamelkaart van elke speler.', tone: 'accent' },
+] as const
+type Tool = { href: string; icon: string; title: string; desc: string; tone: string }
 
 // Eén leaderboard-kaart (top 5) voor de league-insights op de hub.
 function LeaderCard({ icon, title, rows, unit }: { icon: string; title: string; rows: { name: string; shirt: number; team: string; val: string }[]; unit?: string }) {
@@ -185,9 +188,9 @@ export default async function AnalysePage({ searchParams }: { searchParams: Prom
         <AnalyseNav active="overzicht" />
         <h1 className="page-title"><span className="brand">Analyse</span></h1>
 
-        {/* Tools als visuele kaarten */}
-        <div className="an-tools">
-          {TOOLS.map((t) => (
+        {/* Tools, gebundeld in twee groepen i.p.v. één lange lijst losse menu's. */}
+        {(() => {
+          const card = (t: Tool) => (
             <Link key={t.href} href={t.href} className={`an-tool tone-${t.tone}`}>
               <span className="an-tool-ico" aria-hidden>{t.icon}</span>
               <span className="an-tool-body">
@@ -196,8 +199,20 @@ export default async function AnalysePage({ searchParams }: { searchParams: Prom
               </span>
               <span className="an-tool-arrow" aria-hidden>→</span>
             </Link>
-          ))}
-        </div>
+          )
+          return (
+            <>
+              <section id="ploegen" className="an-group">
+                <h2 className="an-sub">🛡️ Ploegen &amp; competitie</h2>
+                <div className="an-tools">{PLOEG_TOOLS.map(card)}</div>
+              </section>
+              <section id="spelers" className="an-group">
+                <h2 className="an-sub">🎯 Spelers</h2>
+                <div className="an-tools">{SPELER_TOOLS.map(card)}</div>
+              </section>
+            </>
+          )
+        })()}
 
         {/* League-insights: toppers van de gekozen reeks */}
         <section id="toppers" className="an-toppers">
