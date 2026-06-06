@@ -1385,10 +1385,10 @@ select.rang-picker {
 .an-card { position: relative; }
 .an-del {
   position: absolute;
-  top: 6px;
+  bottom: 6px;
   right: 6px;
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
