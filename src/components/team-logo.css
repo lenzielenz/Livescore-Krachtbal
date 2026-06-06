@@ -3,6 +3,7 @@
    zijde-gekleurde ring (thuis/uit). De font-size van de badge stuurt de initialen-fallback. */
 .tl {
   --tl-ring: rgba(255, 255, 255, 0.16);
+  --tl-glow: rgba(255, 255, 255, 0.10);
   flex: 0 0 auto;
   position: relative;
   display: inline-flex;
@@ -12,13 +13,20 @@
   height: 44px;
   font-size: 44px; /* basis voor .tl-init */
   border-radius: 50%;
-  overflow: hidden;
+  /* overflow zichtbaar zodat de gekleurde gloed-halo rond de badge te zien is. */
   background: #fff;
   box-shadow:
     0 0 0 2px var(--tl-ring),
+    0 0 11px 1px var(--tl-glow),
     0 4px 12px rgba(0, 0, 0, 0.35),
     inset 0 0 0 1px rgba(0, 0, 0, 0.06);
   animation: tl-pop 0.45s cubic-bezier(0.22, 1.2, 0.4, 1) both;
+}
+/* Het logo zelf netjes binnen de ronde plaat houden (de badge knipt enkel de afbeelding bij,
+   niet de gloed-schaduw). */
+.tl img,
+.tl-init {
+  border-radius: 50%;
 }
 .tl img {
   width: 100%;
