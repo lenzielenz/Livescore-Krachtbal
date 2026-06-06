@@ -951,29 +951,36 @@ select.rang-picker {
 .pan-stat { border-color: color-mix(in srgb, var(--c1) 26%, rgba(255,255,255,0.08)); }
 .pan-foot { color: color-mix(in srgb, var(--c1) 55%, var(--dim)); letter-spacing: 0.18em; }
 
-/* Seizoensanalyse-tabel op gsm: horizontaal scrollen met natuurlijke kolombreedtes i.p.v. de
-   30px-forcering van de rangschikking (die de Conv/Vorm-headers en de vorm-sparkline overlapte). */
+/* Seizoensanalyse-tabel op gsm: PAST binnen het scherm i.p.v. te scrollen. We verbergen de
+   secundaire kolommen (Worpen, Vorm-curve) en de nek/rug-subtekst; #, speler, M, D, Ptn en Conv
+   blijven over en passen netjes. */
 @media (max-width: 640px) {
   .an-season-scroll {
-    overflow-x: auto;
+    overflow-x: hidden;
   }
   .an-season-table {
-    table-layout: auto;
-    width: max-content;
-    min-width: 100%;
+    table-layout: fixed;
+    width: 100%;
   }
   .an-season-table th,
   .an-season-table td {
-    padding: 9px 8px;
-    font-size: 0.82rem;
+    padding: 9px 3px;
+    font-size: 0.84rem;
   }
-  /* Zelfde specificiteit als de rangschikking-regel die 30px forceert, maar later geladen → wint. */
+  .an-season-table .an-col-sec,
+  .an-season-table .an-season-sub {
+    display: none;
+  }
+  /* Vaste, smalle cijferkolommen; de spelersnaam krijgt de resterende ruimte. */
+  .an-season-table .rang-rank { width: 24px; }
   .an-season-table th:not(.rang-teamh):not(.rang-rank),
   .an-season-table td:not(.rang-team):not(.rang-rank) {
-    width: auto;
+    width: 42px;
   }
+  .an-season-table .rang-teamh,
   .an-season-table .rang-team {
-    min-width: 132px;
+    width: auto;
+    min-width: 0;
   }
 }
 
