@@ -6,8 +6,9 @@ import { getPayloadClient } from '@/lib/payload-client'
 //  • action 'delete' (of geen action, voor compat): de ploeg verwijderen, optioneel met haar spelers.
 //  • action 'merge': een dubbele ploeg samenvoegen met een andere — spelers en wedstrijden
 //    (thuis/uit) verhuizen naar de behouden ploeg, daarna wordt de dubbele verwijderd.
+//  • action 'rename': de naam van een ploeg corrigeren (bv. "Sint-Michiels" → "KBC Sint-Michiels").
 export async function POST(req: Request) {
-  let body: { action?: string; teamId?: number; deletePlayers?: boolean; fromTeamId?: number; intoTeamId?: number }
+  let body: { action?: string; teamId?: number; deletePlayers?: boolean; fromTeamId?: number; intoTeamId?: number; name?: string }
   try {
     body = await req.json()
   } catch {
@@ -20,6 +21,15 @@ export async function POST(req: Request) {
     if (!user) return Response.json({ error: 'Niet ingelogd.' }, { status: 401 })
     if (!isFederationLevel(user) && !hasRole(user, 'federatie')) {
       return Response.json({ error: 'Enkel federatie/admin.' }, { status: 403 })
+    }
+
+    if (body.action === 'rename') {
+      const id = Number(body.teamId)
+      const name = typeof body.name === 'string' ? body.name.trim() : ''
+      if (!Number.isFinite(id)) return Response.json({ error: 'Ongeldige ploeg.' }, { status: 400 })
+      if (!name) return Response.json({ error: 'Geef een naam in.' }, { status: 400 })
+      await payload.update({ collection: 'teams', id, data: { name }, overrideAccess: true })
+      return Response.json({ ok: true, renamed: true, name })
     }
 
     if (body.action === 'merge') {
