@@ -11,8 +11,10 @@ type Report = {
   clubsToCreate?: number
   teamsToCreate?: number
   existingTeams?: number
+  thuisToSet?: number
   createdClubs?: number
   createdTeams?: number
+  thuisSet?: number
   samples?: string[]
   errors?: string[]
   error?: string
@@ -74,12 +76,12 @@ export function ReeksindelingTeamsImport() {
           <div className="rep-cards">
             <div className="rep-card"><span className="rep-num">{report.teamsToCreate ?? 0}</span><span className="rep-lbl">Nieuwe ploegen</span></div>
             <div className="rep-card"><span className="rep-num">{report.clubsToCreate ?? 0}</span><span className="rep-lbl">Nieuwe clubs</span></div>
-            <div className="rep-card"><span className="rep-num">{report.existingTeams ?? 0}</span><span className="rep-lbl">Reeds aanwezig</span></div>
+            <div className="rep-card"><span className="rep-num">{report.thuisToSet ?? 0}</span><span className="rep-lbl">Speeluren</span></div>
             <div className="rep-card"><span className="rep-num">{report.commit ? (report.createdTeams ?? 0) : '—'}</span><span className="rep-lbl">Aangemaakt</span></div>
           </div>
           <p className="imp-note">
             {report.commit
-              ? `✓ Seizoen ${report.seizoen}: ${report.createdClubs} club(s) en ${report.createdTeams} ploeg(en) aangemaakt.`
+              ? `✓ Seizoen ${report.seizoen}: ${report.createdClubs} club(s) en ${report.createdTeams} ploeg(en) aangemaakt, ${report.thuisSet} speeluur/-uren ingesteld.`
               : 'Voorbeeld — nog niets opgeslagen. Controleer hieronder.'}
           </p>
           {report.samples && report.samples.length > 0 && (
