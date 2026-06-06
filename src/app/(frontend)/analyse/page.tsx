@@ -2,7 +2,7 @@ import Link from 'next/link'
 
 import { SiteHeader } from '@/components/SiteHeader'
 import { TeamLogo } from '@/components/TeamLogo'
-import { canAnalyse, hasRole } from '@/lib/access'
+import { canAnalyse, hasRole, isFederationLevel } from '@/lib/access'
 import { getSelectedSeason } from '@/lib/analyse-season'
 import { getAuthUser } from '@/lib/auth-user'
 import { buildScoreboards } from '@/lib/match-engine'
@@ -189,6 +189,12 @@ export default async function AnalysePage({ searchParams }: { searchParams: Prom
       <div className="site">
         <AnalyseNav active="overzicht" />
         <h1 className="page-title"><span className="brand">Analyse</span></h1>
+
+        {(isFederationLevel(me) || hasRole(me, 'federatie')) && (
+          <div className="an-hub-links">
+            <Link href="/analyse/import" className="sk-demo-cta">📥 Importeren &amp; opkuisen</Link>
+          </div>
+        )}
 
         {/* Tools, gebundeld in twee groepen i.p.v. één lange lijst losse menu's. */}
         {(() => {
