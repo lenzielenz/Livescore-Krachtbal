@@ -1043,3 +1043,51 @@ select.rang-picker {
   cursor: pointer;
 }
 .tc-del:disabled { opacity: 0.5; cursor: default; }
+
+/* ── Interactieve spelersradar (klik op een as → detail) ── */
+.rad-axis-g { cursor: pointer; }
+.rad-axis-g .rad-axis-lbl { transition: fill 0.15s ease; }
+.rad-axis-g:hover .rad-axis-lbl,
+.rad-axis-g.on .rad-axis-lbl { fill: var(--accent); }
+.rad-axis-g.on .rad-axis-lbl { font-weight: 900; }
+.rad-sel-axis { stroke: var(--accent); stroke-width: 1.6; opacity: 0.7; }
+.rad-sel-dot {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--accent) 70%, transparent));
+}
+.rad-hint { margin: 10px 2px 0; font-size: 0.8rem; color: var(--dim); }
+.rad-detail {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, var(--accent) 32%, var(--line));
+  border-radius: 12px;
+  background:
+    radial-gradient(120% 90% at 50% 0%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 60%),
+    var(--panel);
+  animation: radPop 0.3s ease;
+}
+.rad-detail-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.rad-detail-title { font-size: 1rem; font-weight: 800; color: var(--txt); }
+.rad-detail-x {
+  border: none; background: transparent; color: var(--dim);
+  font-size: 0.95rem; cursor: pointer; line-height: 1; padding: 2px 4px;
+}
+.rad-detail-desc { margin: 4px 0 10px; font-size: 0.84rem; color: var(--dim); }
+.rad-detail-rows { display: flex; flex-direction: column; gap: 4px; font-size: 0.88rem; }
+.rad-detail-row { display: flex; align-items: center; gap: 7px; }
+.rad-detail-row i { font-style: normal; font-size: 0.8rem; }
+.rad-detail-row .rad-dot-a { color: var(--accent); }
+.rad-detail-row .rad-dot-b { color: var(--away); }
+.rad-detail-row b { margin-left: auto; font-variant-numeric: tabular-nums; }
+.rad-detail-bar {
+  margin: 10px 0 6px; height: 8px; border-radius: 999px;
+  background: color-mix(in srgb, var(--line) 60%, transparent); overflow: hidden;
+}
+.rad-detail-bar span { display: block; height: 100%; border-radius: 999px; transition: width 0.4s ease; }
+.rad-detail-pct { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; font-size: 0.8rem; color: var(--dim); }
+.rad-detail-pct b { color: var(--txt); }
+.rad-row-axis { cursor: pointer; }
+.rad-row-axis:hover { background: color-mix(in srgb, var(--accent) 8%, transparent); }
+.rad-row-axis.sel { background: color-mix(in srgb, var(--accent) 16%, transparent); }

@@ -178,6 +178,11 @@ export function SpelerRadar({
   // Hero-kaarten: de meest sprekende prestatie-assen.
   const HERO = [RADAR[1], RADAR[2], RADAR[3]] // Doelpunten, Succes, Efficiëntie
 
+  // Interactief: tik op een as (of tabelrij) → die as licht op + detailkaart eronder.
+  const [selectedKey, setSelectedKey] = useState<string | null>(null)
+  const selected = RADAR.find((m) => m.key === selectedKey) ?? null
+  const toggleSel = (key: string) => setSelectedKey((cur) => (cur === key ? null : key))
+
   return (
     <div className="rad-wrap">
       <div className="rad-controls">
@@ -290,17 +295,34 @@ export function SpelerRadar({
                 {[0.5, 1].map((f) => (
                   <text key={`l${f}`} x={CX + 4} y={CY - f * R + 3} className="rad-ring-lbl">{f * 100}</text>
                 ))}
-                {/* Assen + labels */}
+                {/* Assen + labels — klikbaar voor details. */}
                 {RADAR.map((m, i) => {
                   const [x, y] = point(i, 1)
                   const [lx, ly] = point(i, 1.2)
+                  const on = m.key === selectedKey
                   return (
-                    <g key={m.key}>
+                    <g key={m.key} className={`rad-axis-g ${on ? 'on' : ''}`} onClick={() => toggleSel(m.key)} role="button" aria-label={`${m.label} — details`}>
                       <line x1={CX} y1={CY} x2={x} y2={y} className="rad-axis" />
+                      {/* ruim, onzichtbaar klikvlak op de astip */}
+                      <circle cx={x} cy={y} r={16} fill="transparent" />
                       <text x={lx} y={ly} className="rad-axis-lbl" textAnchor="middle" dominantBaseline="middle">{m.label}</text>
                     </g>
                   )
                 })}
+                {/* Gemarkeerde as (na aanklikken). */}
+                {selected && (() => {
+                  const i = RADAR.findIndex((m) => m.key === selectedKey)
+                  if (i < 0) return null
+                  const [ex, ey] = point(i, 1)
+                  const af = playerA ? pct(selected.key, selected.get(playerA)) : 0
+                  const [vx, vy] = point(i, af)
+                  return (
+                    <g className="rad-sel" pointerEvents="none">
+                      <line x1={CX} y1={CY} x2={ex} y2={ey} className="rad-sel-axis" />
+                      {playerA && <circle cx={vx} cy={vy} r={6.5} className="rad-sel-dot" />}
+                    </g>
+                  )
+                })()}
                 {/* Reeks-gemiddelde */}
                 <polygon points={polygon(leagueFracs)} className="rad-league" />
                 {/* Speler B (achter A) */}
@@ -333,6 +355,37 @@ export function SpelerRadar({
                 {playerA && <span className="rad-leg rad-leg-a">● {playerA.name}</span>}
                 {playerB && <span className="rad-leg rad-leg-b">● {playerB.name}</span>}
               </div>
+
+              {/* Detailkaart bij de aangeklikte as. */}
+              {selected && playerA ? (
+                (() => {
+                  const av = selected.get(playerA)
+                  const p = pct(selected.key, av)
+                  const lg = league[selected.key]
+                  const delta = av - lg
+                  return (
+                    <div className="rad-detail">
+                      <div className="rad-detail-head">
+                        <span className="rad-detail-title">{selected.label}</span>
+                        <button type="button" className="rad-detail-x" onClick={() => setSelectedKey(null)} aria-label="Sluiten">✕</button>
+                      </div>
+                      <p className="rad-detail-desc">{selected.full}</p>
+                      <div className="rad-detail-rows">
+                        <span className="rad-detail-row"><i className="rad-dot-a">●</i> {playerA.name}<b style={{ color: pctColor(p) }}>{selected.fmt(av)}</b></span>
+                        <span className="rad-detail-row"><i>— —</i> Reeks-gem.<b>{selected.fmt(lg)}</b></span>
+                        {playerB && <span className="rad-detail-row"><i className="rad-dot-b">●</i> {playerB.name}<b>{selected.fmt(selected.get(playerB))}</b></span>}
+                      </div>
+                      <div className="rad-detail-bar"><span style={{ width: `${Math.round(p * 100)}%`, background: pctColor(p) }} /></div>
+                      <div className="rad-detail-pct">
+                        Beter dan <b>{Math.round(p * 100)}%</b> van de reeks
+                        <span className={`rad-delta ${delta >= 0 ? 'up' : 'down'}`}>{delta >= 0 ? '▲' : '▼'} {selected.fmt(Math.abs(delta))} vs reeks</span>
+                      </div>
+                    </div>
+                  )
+                })()
+              ) : (
+                <p className="rad-hint">💡 Tik op een as voor meer info over die statistiek.</p>
+              )}
             </div>
 
             <div className="rad-table-card">
@@ -352,8 +405,14 @@ export function SpelerRadar({
                     const lg = league[m.key]
                     const aColor = m.perf && av != null ? pctColor(pct(m.key, av)) : undefined
                     const bColor = m.perf && bv != null ? pctColor(pct(m.key, bv)) : undefined
+                    const isAxis = RADAR.some((r) => r.key === m.key)
+                    const sel = isAxis && m.key === selectedKey
                     return (
-                      <tr key={m.key} className={m.perf ? '' : 'rad-row-style'}>
+                      <tr
+                        key={m.key}
+                        className={`${m.perf ? '' : 'rad-row-style'} ${isAxis ? 'rad-row-axis' : ''} ${sel ? 'sel' : ''}`.trim()}
+                        onClick={isAxis ? () => toggleSel(m.key) : undefined}
+                      >
                         <td className="rad-stat" title={m.full}>{m.label}</td>
                         <td className="rad-col-a" style={aColor ? { color: aColor, fontWeight: 800 } : undefined}>{av != null ? m.fmt(av) : '—'}</td>
                         <td className="rad-col-b" style={bColor ? { color: bColor, fontWeight: 800 } : undefined}>{bv != null ? m.fmt(bv) : '—'}</td>
