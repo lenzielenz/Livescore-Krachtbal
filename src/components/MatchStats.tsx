@@ -45,7 +45,7 @@ export function MatchStats({
 }) {
   const [playerFilter, setPlayerFilter] = useState<number | 'all'>('all')
   const [goalsOnly, setGoalsOnly] = useState(false)
-  const [view, setView] = useState<'dots' | 'heat'>('dots')
+  const [view, setView] = useState<'dots' | 'flow' | 'heat'>('dots')
   const [orderFilter, setOrderFilter] = useState<'all' | 'first' | 'second' | 'last'>('all')
   const [playerView, setPlayerView] = useState<'table' | 'cards'>('table')
 
@@ -61,10 +61,13 @@ export function MatchStats({
       (!goalsOnly || s.outcome === 'goal') &&
       matchesOrder(s),
   )
-  // Hoofd-shotmap (links): enkel punten — geen traject (dat hoort bij de speler-kaarten rechts).
+  // 'flow' = de baan van de bal als lijn op het veld (vertrekpunt → landing, met het
+  // worpnummer als stap 1/2/3). 'dots' toont enkel de landingspunten.
+  const isFlow = view === 'flow'
   const markers: FieldMarker[] = filteredShots.map((s) => ({
     x: s.x,
     y: s.y,
+    ...(isFlow ? { fromX: s.fromX, fromY: s.fromY } : {}),
     color: OUTCOME_COLOR[s.outcome] ?? '#ffd166',
     r: s.outcome === 'goal' ? 8 : 6,
     label: String(s.throwNumber),
@@ -91,9 +94,10 @@ export function MatchStats({
         <div className="shotmap">
           <div className="shotmap-controls">
             <button type="button" className={view === 'dots' ? 'on' : ''} onClick={() => setView('dots')}>Punten</button>
+            <button type="button" className={view === 'flow' ? 'on' : ''} onClick={() => setView('flow')}>Flow</button>
             <button type="button" className={view === 'heat' ? 'on' : ''} onClick={() => setView('heat')}>Heatmap</button>
           </div>
-          {view === 'dots' && (
+          {view !== 'heat' && (
             <>
               <div className="shotmap-controls">
                 <button type="button" className={!goalsOnly ? 'on' : ''} onClick={() => setGoalsOnly(false)}>Alle worpen</button>
@@ -109,17 +113,17 @@ export function MatchStats({
           )}
           <FieldSchema
             className="shotmap-field"
-            markers={view === 'dots' ? markers : []}
+            markers={view === 'heat' ? [] : markers}
             heatPoints={view === 'heat' ? heatPoints : undefined}
             goalAreaDepthM={goalAreaDepth}
           />
-          {view === 'dots' ? (
+          {view !== 'heat' ? (
             <div className="shotmap-legend">
               <span><i style={{ background: OUTCOME_COLOR.goal }} /> doelpunt</span>
               <span><i style={{ background: OUTCOME_COLOR.caught }} /> gevangen</span>
               <span><i style={{ background: OUTCOME_COLOR.out_side }} /> buiten</span>
               <span><i style={{ background: OUTCOME_COLOR.in_field }} /> in veld</span>
-              <span className="shotmap-note">cijfer = worpnummer</span>
+              <span className="shotmap-note">{isFlow ? 'lijn = baan van de bal · cijfer = stap (1→2→3)' : 'cijfer = worpnummer'}</span>
             </div>
           ) : (
             <div className="shotmap-legend">
