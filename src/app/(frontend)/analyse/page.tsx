@@ -10,6 +10,7 @@ import { getPayloadClient } from '@/lib/payload-client'
 import { REEKS_OPTIONS, reeksNaam } from '@/lib/reeksen'
 import { buildSeasonStats, type SeasonPlayer } from '@/lib/season-stats'
 import { AnalyseNav } from './AnalyseNav'
+import { DeleteMatchButton } from './DeleteMatchButton'
 import { HubReeksPicker } from './HubReeksPicker'
 import { NieuweAnalyseMatch } from './NieuweAnalyseMatch'
 import './analyse.css'
@@ -276,6 +277,7 @@ export default async function AnalysePage({ searchParams }: { searchParams: Prom
                     <span className="an-card-date">
                       {r.date ? new Date(r.date).toLocaleDateString('nl-BE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''}
                     </span>
+                    <DeleteMatchButton matchId={r.id} label={`${r.home.name} – ${r.away.name}`} />
                   </Link>
                 ))}
               </div>
@@ -305,6 +307,7 @@ export default async function AnalysePage({ searchParams }: { searchParams: Prom
                 <span className="an-card-date">
                   {r.date ? new Date(r.date).toLocaleDateString('nl-BE', { day: '2-digit', month: 'short', year: 'numeric' }) : ''}
                 </span>
+                {isAdmin && <DeleteMatchButton matchId={r.id} label={`${r.home.name} – ${r.away.name}`} />}
               </Link>
             ))}
           </div>

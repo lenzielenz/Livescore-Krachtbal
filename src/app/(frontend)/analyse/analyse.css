@@ -1380,3 +1380,26 @@ select.rang-picker {
 .dos-zonebar .seg.r { background: #ffd166; }
 .dos-zonelbl { display: flex; justify-content: space-between; font-size: 0.78rem; color: var(--dim); margin-top: 6px; }
 .dos-spark { width: 100%; height: 46px; display: block; }
+
+/* Verwijderknop op een analysewedstrijd-kaart (admin). */
+.an-card { position: relative; }
+.an-del {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, #ef476f 50%, var(--line));
+  background: color-mix(in srgb, var(--panel) 80%, transparent);
+  color: #ef476f;
+  font-size: 0.9rem;
+  cursor: pointer;
+  line-height: 1;
+  z-index: 2;
+}
+.an-del:hover { background: color-mix(in srgb, #ef476f 18%, var(--panel)); }
+.an-del:disabled { opacity: 0.5; cursor: default; }
