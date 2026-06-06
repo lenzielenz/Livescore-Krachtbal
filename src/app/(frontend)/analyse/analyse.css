@@ -1014,3 +1014,32 @@ select.rang-picker {
   outline: 2px solid color-mix(in srgb, var(--accent, #06d6a0) 60%, transparent);
   border-radius: 4px;
 }
+
+/* Ploeg-opkuis (verwijderen). */
+.tc-filter { display: inline-flex; align-items: center; gap: 8px; color: var(--dim); font-size: 0.88rem; margin: 0 0 10px; }
+.tc-list { display: flex; flex-direction: column; gap: 8px; }
+.tc-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+}
+.tc-row.dup { border-color: color-mix(in srgb, #ef476f 55%, var(--line)); }
+.tc-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.tc-name { font-weight: 700; }
+.tc-meta { font-size: 0.8rem; color: var(--dim); }
+.tc-del {
+  flex: 0 0 auto;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, #ef476f 60%, var(--line));
+  background: transparent;
+  color: #ef476f;
+  font-weight: 700;
+  cursor: pointer;
+}
+.tc-del:disabled { opacity: 0.5; cursor: default; }
