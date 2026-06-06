@@ -2,7 +2,7 @@ import Link from 'next/link'
 
 import { SiteHeader } from '@/components/SiteHeader'
 import { getAuthUser } from '@/lib/auth-user'
-import { randomQuote } from '@/lib/krachtbal-quotes'
+import { quoteForDay } from '@/lib/krachtbal-quotes'
 import { LiveBoard } from './live/LiveBoard'
 import { loadLiveDay } from './live/loadLiveDay'
 import './live/live.css'
@@ -17,8 +17,9 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   const selected = date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : today
 
   const days = await loadLiveDay(selected, today)
-  // Elk bezoek een ander krachtbal-lijntje (LTT-stijl).
-  const quote = randomQuote()
+  // Eén vast lijntje per dag (seed = vandaag): blijft staan bij het wisselen van datum,
+  // maar levert elke dag een verse krachtbal-quote op.
+  const quote = quoteForDay(today)
   const me = await getAuthUser()
 
   return (
