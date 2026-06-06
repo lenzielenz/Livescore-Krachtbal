@@ -23,7 +23,7 @@ export default async function TrainingPage() {
   if (!canView) {
     return (
       <>
-        <SiteHeader active="analyse" />
+        <SiteHeader active="training" />
         <div className="site">
           <h1 className="page-title">
             Training <span className="brand">·</span> progressie
@@ -73,7 +73,7 @@ export default async function TrainingPage() {
 
   return (
     <>
-      <SiteHeader active="analyse" />
+      <SiteHeader active="training" />
       <div className="site">
         <h1 className="page-title">
           Training <span className="brand">·</span> progressie

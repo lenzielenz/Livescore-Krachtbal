@@ -10,7 +10,7 @@ import './site-header.css'
 // onder één opgekuist "Meer"-menu: ontdekken (tornooi, demo) en de drie
 // profiel-instappunten. Klik je een profiel, dan vind je dáár de bijhorende tools.
 // De `active`-prop markeert de huidige sectie.
-export type NavSection = 'wedstrijden' | 'stand' | 'demo' | 'analyse' | 'tornooi' | 'clubs' | 'scheidsrechters' | 'federatie' | null
+export type NavSection = 'wedstrijden' | 'stand' | 'demo' | 'analyse' | 'training' | 'tornooi' | 'clubs' | 'scheidsrechters' | 'federatie' | null
 
 const PRIMARY: { href: string; label: string; key: NavSection }[] = [
   { href: '/', label: 'Wedstrijden', key: 'wedstrijden' },
@@ -23,14 +23,16 @@ const GENERAL = [
   { href: '/tornooi', label: '🏆 Tornooi' },
 ]
 
-// Het Meer-menu licht op zodra je op een van deze secties zit. Analyse zit als één item bovenaan
-// het menu (de analyse-hub bevat zelf al alle tools, dus geen apart submenu).
-const MENU_SECTIONS: NavSection[] = ['stand', 'analyse', 'tornooi', 'clubs', 'scheidsrechters', 'federatie']
+// Het Meer-menu licht op zodra je op een van deze secties zit. Analyse en Training zijn twee
+// aparte menu-items (de analyse-hub bevat zelf al z'n tools; training is een eigen luik).
+const MENU_SECTIONS: NavSection[] = ['stand', 'analyse', 'training', 'tornooi', 'clubs', 'scheidsrechters', 'federatie']
 
 export function SiteHeader({ active = null }: { active?: NavSection }) {
   const [open, setOpen] = useState(false)
-  // Admin (of een account met analyse-toegang) krijgt de 'Analyse'-knop in de balk.
+  // Analyse-toegang (admin/analyse) en training-toegang (analyse of club-beheerder) bepalen
+  // welke menu-items verschijnen.
   const [canAnalyse, setCanAnalyse] = useState(false)
+  const [canTraining, setCanTraining] = useState(false)
   const [loggedIn, setLoggedIn] = useState(false)
   useEffect(() => {
     fetch('/api/users/me', { credentials: 'include' })
@@ -39,8 +41,11 @@ export function SiteHeader({ active = null }: { active?: NavSection }) {
         const u = (d as { user?: { roles?: unknown; analyseAccess?: unknown } } | null)?.user
         const roles = u?.roles
         const admin = Array.isArray(roles) && roles.includes('admin')
+        const club = Array.isArray(roles) && roles.includes('club-beheerder')
+        const analyse = admin || Boolean(u?.analyseAccess)
         setLoggedIn(Boolean(u))
-        setCanAnalyse(admin || Boolean(u?.analyseAccess))
+        setCanAnalyse(analyse)
+        setCanTraining(analyse || club)
       })
       .catch(() => {})
   }, [])
@@ -85,6 +90,11 @@ export function SiteHeader({ active = null }: { active?: NavSection }) {
                     {canAnalyse && (
                       <Link href="/analyse" className="sh-more-item" onClick={() => setOpen(false)}>
                         📈 Analyse
+                      </Link>
+                    )}
+                    {canTraining && (
+                      <Link href="/beheer/training" className="sh-more-item" onClick={() => setOpen(false)}>
+                        🏋️ Training
                       </Link>
                     )}
                     {GENERAL.map((l) => (
