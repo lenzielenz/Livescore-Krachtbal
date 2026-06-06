@@ -81,6 +81,7 @@ export function AanwezigheidPanel({
   const [newNames, setNewNames] = useState('')
   const [addBusy, setAddBusy] = useState(false)
   const [addMsg, setAddMsg] = useState<string | null>(null)
+  const [q, setQ] = useState('')
 
   const club = useMemo(() => clubs.find((c) => c.id === clubId) ?? null, [clubs, clubId])
 
@@ -180,6 +181,25 @@ export function AanwezigheidPanel({
   const allOn = () => setPresent(new Set(roster.map((p) => p.id)))
   const allOff = () => setPresent(new Set())
   const presentCount = roster.filter((p) => present.has(p.id)).length
+
+  // Vaste gangers bovenaan: hoe vaker iemand kwam (in deze scope), hoe hoger in de lijst.
+  const freqByPlayer = useMemo(() => {
+    const f = new Map<number, number>()
+    for (const s of sessions) {
+      if (s.clubId !== clubId || (!isAlg && s.reeks !== tab)) continue
+      for (const a of s.aanwezigen) f.set(a.id, (f.get(a.id) ?? 0) + 1)
+    }
+    return f
+  }, [sessions, clubId, isAlg, tab])
+
+  const COMBINING = new RegExp('[\\u0300-\\u036f]', 'g') // diakritische tekens negeren bij zoeken
+  const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(COMBINING, '')
+  const byFreq = (a: AwPlayer, b: AwPlayer) =>
+    (freqByPlayer.get(b.id) ?? 0) - (freqByPlayer.get(a.id) ?? 0) || a.name.localeCompare(b.name, 'nl')
+  // Aanwezig bovenaan (geen scrollen); de rest gesorteerd op gangers, met een zoekfilter.
+  const presentList = roster.filter((p) => present.has(p.id)).sort(byFreq)
+  const absentAll = roster.filter((p) => !present.has(p.id)).sort(byFreq)
+  const absentList = q.trim() ? absentAll.filter((p) => norm(p.name).includes(norm(q))) : absentAll
 
   const onFile = (file: File | null) => {
     if (!file) return
@@ -376,14 +396,44 @@ export function AanwezigheidPanel({
           {roster.length === 0 ? (
             <p className="sb-dim">Nog geen spelers in deze groep — voeg ze hieronder snel toe.</p>
           ) : (
-            <div className="tr-att-grid">
-              {roster.map((p) => (
-                <label key={p.id} className={`tr-att-chip ${present.has(p.id) ? 'on' : ''}`}>
-                  <input type="checkbox" checked={present.has(p.id)} onChange={() => toggle(p.id)} />
-                  {p.name}
-                </label>
-              ))}
-            </div>
+            <>
+              {/* Aanwezig: tikbare chips, altijd bovenaan zodat je niet hoeft te scrollen. */}
+              {presentList.length > 0 ? (
+                <div className="tr-att-grid tr-att-present">
+                  {presentList.map((p) => (
+                    <button type="button" key={p.id} className="tr-att-chip on" onClick={() => toggle(p.id)}>
+                      <span className="tr-att-tick" aria-hidden>✓</span> {p.name}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <p className="sb-dim">Tik hieronder de spelers aan die er waren — ze springen meteen naar boven.</p>
+              )}
+
+              {/* Overige spelers: gangers bovenaan + zoekveld om snel iemand te vinden. */}
+              {absentAll.length > 0 && (
+                <div className="tr-att-rest">
+                  <div className="tr-att-resthead">
+                    <span className="sb-dim">Voeg toe</span>
+                    <input
+                      className="tr-att-search"
+                      type="search"
+                      value={q}
+                      onChange={(e) => setQ(e.target.value)}
+                      placeholder="🔍 Zoek speler…"
+                    />
+                  </div>
+                  <div className="tr-att-grid">
+                    {absentList.map((p) => (
+                      <button type="button" key={p.id} className="tr-att-chip" onClick={() => toggle(p.id)}>
+                        <span className="tr-att-plus" aria-hidden>＋</span> {p.name}
+                      </button>
+                    ))}
+                  </div>
+                  {absentList.length === 0 && <p className="sb-dim">Geen speler gevonden voor “{q}”.</p>}
+                </div>
+              )}
+            </>
           )}
 
           <details className="tr-addplayers" open={roster.length === 0}>

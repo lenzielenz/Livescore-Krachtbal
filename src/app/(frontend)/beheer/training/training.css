@@ -251,19 +251,65 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 10px;
+  width: 100%;
+  padding: 11px 12px;
   border-radius: 10px;
   border: 1px solid var(--line);
   background: color-mix(in srgb, var(--panel-2, #0a1f14) 50%, transparent);
-  font-size: 0.9rem;
+  color: var(--txt);
+  font-size: 0.92rem;
+  font-weight: 600;
+  text-align: left;
   cursor: pointer;
   user-select: none;
+  transition: background 0.12s ease, border-color 0.12s ease, transform 0.08s ease;
 }
+.tr-att-chip:active { transform: scale(0.97); }
 .tr-att-chip.on {
   border-color: color-mix(in srgb, var(--accent, #06d6a0) 70%, var(--line));
-  background: rgba(6, 214, 160, 0.12);
+  background: rgba(6, 214, 160, 0.16);
 }
-.tr-att-chip input { accent-color: var(--accent, #06d6a0); }
+.tr-att-tick {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: var(--accent, #06d6a0);
+  color: #06140d;
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+.tr-att-plus { color: var(--dim); font-weight: 800; flex: 0 0 auto; }
+
+/* Aanwezig-blok: licht gemarkeerd zodat het bovenaan opvalt. */
+.tr-att-present {
+  padding: 4px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--accent, #06d6a0) 6%, transparent);
+}
+/* Overige spelers + zoekveld. */
+.tr-att-rest { margin-top: 14px; }
+.tr-att-resthead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.tr-att-search {
+  flex: 1;
+  min-width: 0;
+  max-width: 260px;
+  margin-left: auto;
+  padding: 9px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--panel-2, #0a1f14) 60%, transparent);
+  color: var(--txt);
+  font-size: 0.92rem;
+}
 
 /* Sessie-lijst. */
 .tr-sessions {
