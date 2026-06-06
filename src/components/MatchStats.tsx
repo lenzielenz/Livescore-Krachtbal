@@ -3,6 +3,7 @@
 import { useState } from 'react'
 
 import { FieldSchema, type FieldMarker } from '@/components/FieldSchema'
+import { FlowReplay } from '@/components/FlowReplay'
 import type { ShotPoint } from '@/lib/match-engine'
 import type { MatchStats as Stats } from '@/lib/stats'
 import './match-stats.css'
@@ -45,7 +46,7 @@ export function MatchStats({
 }) {
   const [playerFilter, setPlayerFilter] = useState<number | 'all'>('all')
   const [goalsOnly, setGoalsOnly] = useState(false)
-  const [view, setView] = useState<'dots' | 'flow' | 'heat'>('dots')
+  const [view, setView] = useState<'dots' | 'flow' | 'heat' | 'video'>('dots')
   const [orderFilter, setOrderFilter] = useState<'all' | 'first' | 'second' | 'last'>('all')
   const [playerView, setPlayerView] = useState<'table' | 'cards'>('table')
 
@@ -95,9 +96,10 @@ export function MatchStats({
           <div className="shotmap-controls">
             <button type="button" className={view === 'dots' ? 'on' : ''} onClick={() => setView('dots')}>Punten</button>
             <button type="button" className={view === 'flow' ? 'on' : ''} onClick={() => setView('flow')}>Flow</button>
+            <button type="button" className={view === 'video' ? 'on' : ''} onClick={() => setView('video')}>🎬 Video</button>
             <button type="button" className={view === 'heat' ? 'on' : ''} onClick={() => setView('heat')}>Heatmap</button>
           </div>
-          {view !== 'heat' && (
+          {view !== 'heat' && view !== 'video' && (
             <>
               <div className="shotmap-controls">
                 <button type="button" className={!goalsOnly ? 'on' : ''} onClick={() => setGoalsOnly(false)}>Alle worpen</button>
@@ -111,25 +113,32 @@ export function MatchStats({
               </div>
             </>
           )}
-          <FieldSchema
-            className="shotmap-field"
-            markers={view === 'heat' ? [] : markers}
-            heatPoints={view === 'heat' ? heatPoints : undefined}
-            goalAreaDepthM={goalAreaDepth}
-          />
-          {view !== 'heat' ? (
-            <div className="shotmap-legend">
-              <span><i style={{ background: OUTCOME_COLOR.goal }} /> doelpunt</span>
-              <span><i style={{ background: OUTCOME_COLOR.caught }} /> gevangen</span>
-              <span><i style={{ background: OUTCOME_COLOR.out_side }} /> buiten</span>
-              <span><i style={{ background: OUTCOME_COLOR.in_field }} /> in veld</span>
-              <span className="shotmap-note">{isFlow ? 'lijn = baan van de bal · cijfer = stap (1→2→3)' : 'cijfer = worpnummer'}</span>
-            </div>
+          {view === 'video' ? (
+            // De "video": speelt de hele wedstrijd chronologisch af (filters niet van toepassing).
+            <FlowReplay shots={shots} teams={teams} goalAreaDepth={goalAreaDepth} />
           ) : (
-            <div className="shotmap-legend">
-              <span className="heat-scale" /> <span>weinig → veel worpen</span>
-              <span className="shotmap-note">{filteredShots.length} worpen</span>
-            </div>
+            <>
+              <FieldSchema
+                className="shotmap-field"
+                markers={view === 'heat' ? [] : markers}
+                heatPoints={view === 'heat' ? heatPoints : undefined}
+                goalAreaDepthM={goalAreaDepth}
+              />
+              {view !== 'heat' ? (
+                <div className="shotmap-legend">
+                  <span><i style={{ background: OUTCOME_COLOR.goal }} /> doelpunt</span>
+                  <span><i style={{ background: OUTCOME_COLOR.caught }} /> gevangen</span>
+                  <span><i style={{ background: OUTCOME_COLOR.out_side }} /> buiten</span>
+                  <span><i style={{ background: OUTCOME_COLOR.in_field }} /> in veld</span>
+                  <span className="shotmap-note">{isFlow ? 'lijn = baan van de bal · cijfer = stap (1→2→3)' : 'cijfer = worpnummer'}</span>
+                </div>
+              ) : (
+                <div className="shotmap-legend">
+                  <span className="heat-scale" /> <span>weinig → veel worpen</span>
+                  <span className="shotmap-note">{filteredShots.length} worpen</span>
+                </div>
+              )}
+            </>
           )}
         </div>
 

@@ -155,3 +155,40 @@
 }
 .stats-upsell strong { color: var(--text, inherit); }
 .stats-upsell a { font-weight: 600; white-space: nowrap; }
+
+/* ── Video-replay: afspeelbare animatie van het wedstrijdverloop ── */
+.replay { display: flex; flex-direction: column; gap: 8px; }
+.replay-score {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-weight: 800;
+  flex-wrap: wrap;
+}
+.replay-score .rs-team { color: var(--muted, #9aa); font-size: 0.9rem; max-width: 38%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.replay-score .rs-num { font-size: 1.5rem; font-variant-numeric: tabular-nums; }
+.replay-score .rs-num.side-home { color: var(--home); }
+.replay-score .rs-num.side-away { color: var(--away); }
+.replay-score .rs-dash { color: var(--muted, #9aa); }
+.replay-controls { display: flex; align-items: center; gap: 8px; }
+.replay-play {
+  font-weight: 800;
+  background: var(--accent, #06d6a0);
+  color: #06140d;
+  border: none;
+  border-radius: 999px;
+  padding: 7px 14px;
+  cursor: pointer;
+}
+.replay-scrub { width: 100%; accent-color: var(--accent, #06d6a0); cursor: pointer; }
+.replay-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 0.85rem;
+  color: var(--muted, #9aa);
+  flex-wrap: wrap;
+}
+.replay-step { font-weight: 800; color: var(--text, inherit); font-variant-numeric: tabular-nums; }
