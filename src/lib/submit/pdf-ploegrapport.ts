@@ -64,6 +64,13 @@ export async function generateTeamReportPdf(r: TeamReport): Promise<Uint8Array> 
     { size: 9, color: grey, gap: 16 },
   )
 
+  // Aanbevelingen (data-gedreven tendensen).
+  if (r.insights.length) {
+    line('Aanbevelingen', { size: 11, b: true })
+    for (const s of r.insights) line(`- ${s}`, { size: 9, color: dark })
+    y -= 6
+  }
+
   // Spelers-tabel.
   line('Per speler', { size: 11, b: true })
   const cols: { label: string; x: number }[] = [
@@ -105,6 +112,13 @@ export async function generateTeamReportPdf(r: TeamReport): Promise<Uint8Array> 
 
   y -= 8
   line('Legende: M wedstrijden - W worpen - D doelpunten - Conv conversie - Afst gem. afstand - Verl balverlies door vangst - Vang vangsten - Sco score', { size: 7, color: grey })
+
+  const tips = r.players.filter((p) => p.tip)
+  if (tips.length) {
+    y -= 8
+    line('Tendensen per speler', { size: 11, b: true })
+    for (const p of tips) line(`#${p.shirtNumber} ${p.name}: ${p.tip}`, { size: 8.5, color: grey })
+  }
 
   return doc.save()
 }

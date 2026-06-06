@@ -29,6 +29,8 @@ export interface TeamReportPlayer {
   zones: { links: number; midden: number; rechts: number }
   /** Vangsten: tegenstander-worpen die deze speler ving (verdedigende actie). */
   catches: number
+  /** Korte, data-gedreven tendens (bv. "1e worp rechts · scoort via links"). */
+  tip?: string
 }
 
 export interface TeamReport {
@@ -53,6 +55,8 @@ export interface TeamReport {
   }
   zones: { links: number; midden: number; rechts: number }
   players: TeamReportPlayer[]
+  /** Automatische aanbevelingen/tendensen uit de worpdata (scouting). */
+  insights: string[]
   generatedAt: string
 }
 
@@ -199,6 +203,112 @@ export async function buildTeamReport(payload: Payload, teamId: number, seizoen?
     { links: 0, midden: 0, rechts: 0 },
   )
 
+  // ── Aanbevelingen / tendensen uit de ruwe worpen (per worpnummer, richting, type, afstand) ──
+  const matchIdList = matches.map((m) => (m as { id: number }).id)
+  type TLite = { player: number; throwNumber: number; zone: string | null; outcome: string; type: string; distance: number | null }
+  let teamThrows: TLite[] = []
+  if (matchIdList.length) {
+    const tr = await payload
+      .find({ collection: 'throws', where: { and: [{ team: { equals: teamId } }, { match: { in: matchIdList } }] }, depth: 0, limit: 8000 })
+      .catch(() => ({ docs: [] as Record<string, unknown>[] }))
+    teamThrows = tr.docs.map((t) => ({
+      player: rel((t as { player?: unknown }).player) ?? 0,
+      throwNumber: Number((t as { throwNumber?: unknown }).throwNumber ?? 0),
+      zone: ((t as { zone?: unknown }).zone as string) ?? null,
+      outcome: String((t as { outcome?: unknown }).outcome ?? ''),
+      type: String((t as { type?: unknown }).type ?? ''),
+      distance: ((t as { distance?: unknown }).distance as number | null) ?? null,
+    }))
+  }
+
+  const ZONE_NL: Record<string, string> = { links: 'links', midden: 'het midden', rechts: 'rechts' }
+  const emptyZ = () => ({ links: 0, midden: 0, rechts: 0 }) as Record<string, number>
+  const domZone = (z: Record<string, number>) => {
+    const tot = z.links + z.midden + z.rechts
+    if (!tot) return null
+    const top = (['links', 'midden', 'rechts'] as const).reduce((a, b) => (z[b] > z[a] ? b : a), 'links' as 'links' | 'midden' | 'rechts')
+    return { zone: top, pct: Math.round((z[top] / tot) * 100) }
+  }
+
+  type Bucket = { zones: Record<string, number>; goalZones: Record<string, number>; goalDist: { sum: number; n: number }; goals: number }
+  const buckets: Record<number, Bucket> = {
+    1: { zones: emptyZ(), goalZones: emptyZ(), goalDist: { sum: 0, n: 0 }, goals: 0 },
+    2: { zones: emptyZ(), goalZones: emptyZ(), goalDist: { sum: 0, n: 0 }, goals: 0 },
+    3: { zones: emptyZ(), goalZones: emptyZ(), goalDist: { sum: 0, n: 0 }, goals: 0 },
+  }
+  let rugAll = 0
+  let nekAll = 0
+  const goalDistAll = { sum: 0, n: 0 }
+  for (const t of teamThrows) {
+    const b = buckets[Math.min(Math.max(t.throwNumber, 1), 3)]
+    if (t.zone) b.zones[t.zone] = (b.zones[t.zone] ?? 0) + 1
+    if (t.type === 'rug') rugAll += 1
+    else if (t.type === 'nek') nekAll += 1
+    if (t.outcome === 'goal') {
+      b.goals += 1
+      if (t.zone) b.goalZones[t.zone] = (b.goalZones[t.zone] ?? 0) + 1
+      if (t.distance != null) {
+        b.goalDist.sum += t.distance
+        b.goalDist.n += 1
+        goalDistAll.sum += t.distance
+        goalDistAll.n += 1
+      }
+    }
+  }
+
+  const insights: string[] = []
+  const totalTypes = rugAll + nekAll
+  if (totalTypes >= 8) {
+    insights.push(`Worpkeuze: ${Math.round((rugAll / totalTypes) * 100)}% rugworpen (dubbel) tegenover nekworpen.`)
+  }
+  for (const n of [1, 2] as const) {
+    const dz = domZone(buckets[n].zones)
+    if (!dz) continue
+    let s = `${n}e worp gaat meestal naar ${ZONE_NL[dz.zone]} (${dz.pct}%).`
+    const gz = domZone(buckets[n].goalZones)
+    if (buckets[n].goals >= 3 && gz) s += ` Scoort vooral via ${ZONE_NL[gz.zone]}.`
+    insights.push(s)
+  }
+  const allGoalZ = emptyZ()
+  for (const n of [1, 2, 3] as const) for (const k of ['links', 'midden', 'rechts']) allGoalZ[k] += buckets[n].goalZones[k]
+  const gzAll = domZone(allGoalZ)
+  if (gzAll && allGoalZ.links + allGoalZ.midden + allGoalZ.rechts >= 5) {
+    insights.push(`Meeste doelpunten vallen via ${ZONE_NL[gzAll.zone]}.`)
+  }
+  if (goalDistAll.n >= 5) insights.push(`Doelpunten vallen gemiddeld van ${(goalDistAll.sum / goalDistAll.n).toFixed(1)} m.`)
+
+  // Per speler een korte tendens (min. 5 worpen).
+  const byPlayer = new Map<number, TLite[]>()
+  for (const t of teamThrows) {
+    const a = byPlayer.get(t.player) ?? []
+    a.push(t)
+    byPlayer.set(t.player, a)
+  }
+  for (const p of players) {
+    const ts = byPlayer.get(p.playerId) ?? []
+    if (ts.length < 5) continue
+    const fz = emptyZ()
+    const gz = emptyZ()
+    const gd = { sum: 0, n: 0 }
+    for (const t of ts) {
+      if (t.throwNumber === 1 && t.zone) fz[t.zone] += 1
+      if (t.outcome === 'goal') {
+        if (t.zone) gz[t.zone] += 1
+        if (t.distance != null) {
+          gd.sum += t.distance
+          gd.n += 1
+        }
+      }
+    }
+    const parts: string[] = []
+    const fzd = domZone(fz)
+    if (fzd) parts.push(`1e worp ${ZONE_NL[fzd.zone]} (${fzd.pct}%)`)
+    const gzd = domZone(gz)
+    if (gzd) parts.push(`scoort via ${ZONE_NL[gzd.zone]}`)
+    if (gd.n >= 2) parts.push(`gem. ${(gd.sum / gd.n).toFixed(1)} m`)
+    if (parts.length) p.tip = parts.join(' · ')
+  }
+
   return {
     teamId,
     teamName: String((team as { name?: unknown }).name ?? '—'),
@@ -221,6 +331,7 @@ export async function buildTeamReport(payload: Payload, teamId: number, seizoen?
     },
     zones,
     players,
+    insights,
     generatedAt: new Date().toISOString(),
   }
 }
