@@ -104,6 +104,25 @@ export function parseResultsHtml(text: string): RawResult[] {
 
 const norm = (s: string) => s.trim().toLowerCase().replace(/\s+/g, ' ')
 
+// Naam uniform schrijven bij import: spaties opkuisen + consistente hoofdletters. Reeds
+// volledig-hoofdletterige tokens (acroniemen zoals KBC, D&W, HO, KBK) blijven staan; de rest
+// wordt netjes Titelcase (per koppelteken-deel). Zo zien alle ploeg-/clubnamen er hetzelfde uit.
+export function cleanTeamName(raw: string): string {
+  const s = String(raw ?? '').replace(/\s+/g, ' ').trim()
+  if (!s) return s
+  return s
+    .split(' ')
+    .map((w) => {
+      const letters = w.replace(/[^A-Za-zÀ-ÿ]/g, '')
+      if (letters && letters === letters.toUpperCase()) return w // acroniem/hoofdletters → behouden
+      return w
+        .split('-')
+        .map((p) => (p ? p[0].toUpperCase() + p.slice(1).toLowerCase() : p))
+        .join('-')
+    })
+    .join(' ')
+}
+
 // Is dit een effectief gespeelde wedstrijd? Vrije weekends en niet-gespeelde (0–0 zonder
 // scheidsrechter) slaan we over; forfaits (30–0) en echte uitslagen nemen we mee.
 export function isPlayed(r: RawResult): boolean {

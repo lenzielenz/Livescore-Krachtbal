@@ -2,7 +2,7 @@ import { hasRole, isFederationLevel } from '@/lib/access'
 import { authUser } from '@/lib/api-auth'
 import { getPayloadClient } from '@/lib/payload-client'
 import { reeksCategorie, type Reeks } from '@/lib/reeksen'
-import { isPlayed, norm, parseResultsHtml } from '@/lib/results-import'
+import { cleanTeamName, isPlayed, norm, parseResultsHtml } from '@/lib/results-import'
 
 // Importeer officiële uitslagen (HTML-tabel-export). Maakt/voltooit wedstrijden met eindstand.
 // Standaard PREVIEW (niets wegschrijven); met { commit: true } worden de wijzigingen toegepast.
@@ -74,7 +74,7 @@ export async function POST(req: Request) {
       const k = norm(clubName)
       const ex = clubByName.get(k)
       if (ex != null) return ex
-      const created = await payload.create({ collection: 'clubs', data: { name: clubName }, overrideAccess: true })
+      const created = await payload.create({ collection: 'clubs', data: { name: cleanTeamName(clubName) }, overrideAccess: true })
       const id = (created as { id: number }).id
       clubByName.set(k, id)
       return id
@@ -100,7 +100,7 @@ export async function POST(req: Request) {
       const clubId = await ensureClub(clubNameOf(name))
       const t = await payload.create({
         collection: 'teams',
-        data: { name, reeks, category: reeksCategorie(reeks), club: clubId },
+        data: { name: cleanTeamName(name), reeks, category: reeksCategorie(reeks), club: clubId },
         overrideAccess: true,
       })
       const id = (t as { id: number }).id
