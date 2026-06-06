@@ -1094,6 +1094,49 @@ select.rang-picker {
 }
 .tc-del:disabled { opacity: 0.5; cursor: default; }
 
+/* Dubbele ploegen gegroepeerd, met één-klik samenvoegen. */
+.tc-groups { display: flex; flex-direction: column; gap: 14px; }
+.tc-group {
+  border: 1px solid color-mix(in srgb, #ef476f 35%, var(--line));
+  border-radius: 12px;
+  padding: 12px;
+  background: color-mix(in srgb, #ef476f 5%, var(--panel));
+}
+.tc-group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.tc-dupn {
+  font-size: 0.74rem;
+  font-weight: 800;
+  color: #ef476f;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, #ef476f 16%, transparent);
+}
+.tc-merge {
+  flex: 0 0 auto;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: none;
+  background: var(--accent, #06d6a0);
+  color: #06140d;
+  font-weight: 800;
+  cursor: pointer;
+}
+.tc-merge:disabled { opacity: 0.5; cursor: default; }
+.tc-row.keep { border-color: color-mix(in srgb, var(--accent) 60%, var(--line)); }
+.tc-keepbadge {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--accent, #06d6a0);
+  margin-right: 4px;
+}
+.tc-group .tc-del { padding: 8px 12px; }
+
 /* ── Interactieve spelersradar (klik op een as → detail) ── */
 .rad-axis-g { cursor: pointer; }
 /* Aslabel als tikbare "chip": afgeronde achtergrond die omkleurt bij selectie. */
