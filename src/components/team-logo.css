@@ -28,6 +28,28 @@
   background: #fff;
   border-radius: 50%;
 }
+/* Premium glans: een schuine lichtveeg die af en toe over de badge sweept (per club gespreid via
+   --tl-sheen-delay). Wordt door overflow:hidden netjes binnen de ronde plaat geknipt. */
+.tl::after {
+  content: '';
+  position: absolute;
+  top: -15%;
+  bottom: -15%;
+  left: -60%;
+  width: 42%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+  transform: skewX(-18deg);
+  opacity: 0;
+  pointer-events: none;
+  animation: tl-sheen 7s ease-in-out infinite;
+  animation-delay: var(--tl-sheen-delay, 0s);
+}
+@keyframes tl-sheen {
+  0% { left: -60%; opacity: 0; }
+  4% { opacity: 0.85; }
+  16% { left: 118%; opacity: 0; }
+  100% { left: 118%; opacity: 0; }
+}
 .tl-init {
   font-size: 0.42em;
   font-weight: 800;
@@ -97,5 +119,9 @@
   .tl,
   .tl-float {
     animation: none;
+  }
+  .tl::after {
+    animation: none;
+    opacity: 0;
   }
 }
