@@ -1071,6 +1071,10 @@ h3,
   font-weight: 800;
   color: var(--accent);
 }
+/* Als kop boven het scorebord: wat compacter en losgemaakt van de back-link. */
+.match-info-top {
+  margin: 8px 0 14px;
+}
 
 /* ── Profiel-tools (snelkoppelingen bovenaan een profielpagina) ── */
 .profile-lead {
