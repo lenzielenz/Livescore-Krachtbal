@@ -551,3 +551,38 @@
 .tr-hub-title { font-weight: 800; font-size: 1.05rem; }
 .tr-hub-desc { font-size: 0.86rem; color: var(--dim); }
 .tr-hub-arrow { margin-left: auto; color: var(--accent, #06d6a0); font-weight: 800; flex: 0 0 auto; }
+
+/* VBT-records: huidige meting vs persoonlijk record + niveau. */
+.tr-vbt-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+}
+.tr-vbt-card {
+  background: var(--panel, #0c1f16);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--line);
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.tr-vbt-card.lvl-pr { border-left-color: #ffd166; }
+.tr-vbt-card.lvl-top { border-left-color: var(--accent, #06d6a0); }
+.tr-vbt-card.lvl-ok { border-left-color: #4cc9f0; }
+.tr-vbt-card.lvl-low { border-left-color: #ef476f; }
+.tr-vbt-lbl { font-size: 0.78rem; color: var(--dim); }
+.tr-vbt-now { font-size: 1.5rem; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.tr-vbt-now small { font-size: 0.62rem; font-weight: 600; color: var(--dim); }
+.tr-vbt-meta { font-size: 0.78rem; color: var(--dim); }
+.tr-vbt-delta { margin-left: 6px; font-weight: 800; }
+.tr-vbt-delta.up { color: #0fe0a6; }
+.tr-vbt-delta.down { color: #ef476f; }
+.tr-vbt-zone { font-size: 0.8rem; font-weight: 700; margin-top: 2px; }
+
+/* Aanloop–afstand-profiel. */
+.tr-profile { margin-top: 14px; background: var(--panel, #0c1f16); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; max-width: 360px; }
+.tr-profile-h { font-size: 0.85rem; font-weight: 700; margin: 0 0 6px; }
+.tr-profile-h small { color: var(--dim); font-weight: 400; }
+.tr-profile-svg { width: 100%; height: auto; display: block; }
