@@ -2,17 +2,19 @@
 
 import { useRouter } from 'next/navigation'
 
-// Reeks- + spelerkeuze voor de gevaarzone-kaart. Nieuwe reeks → spelerkeuze vervalt.
+// Reeks- + spelerkeuze (gevaarzone & spelerdossier). Nieuwe reeks → spelerkeuze vervalt.
 export function GevaarPicker({
   reeks,
   reeksOptions,
   playerOptions,
   player,
+  basePath = '/analyse/gevaar',
 }: {
   reeks: string
   reeksOptions: { value: string; label: string }[]
   playerOptions: { value: string; label: string }[]
   player: string
+  basePath?: string
 }) {
   const router = useRouter()
   return (
@@ -20,7 +22,7 @@ export function GevaarPicker({
       <select
         className="rang-picker"
         value={reeks}
-        onChange={(e) => router.push(`/analyse/gevaar?reeks=${e.target.value}`)}
+        onChange={(e) => router.push(`${basePath}?reeks=${e.target.value}`)}
         aria-label="Kies een reeks"
       >
         {reeksOptions.map((o) => (
@@ -30,7 +32,7 @@ export function GevaarPicker({
       <select
         className="rang-picker"
         value={player}
-        onChange={(e) => router.push(`/analyse/gevaar?reeks=${reeks}${e.target.value ? `&speler=${e.target.value}` : ''}`)}
+        onChange={(e) => router.push(`${basePath}?reeks=${reeks}${e.target.value ? `&speler=${e.target.value}` : ''}`)}
         aria-label="Kies een speler"
       >
         <option value="">— Kies een speler —</option>
