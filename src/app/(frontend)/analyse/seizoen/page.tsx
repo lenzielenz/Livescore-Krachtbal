@@ -58,7 +58,7 @@ export default async function SeizoenAnalysePage({ searchParams }: { searchParam
     <>
       <SiteHeader active="analyse" />
       <div className="site">
-        <AnalyseNav active="seizoen" />
+        <AnalyseNav active="ploegen" />
         <div className="an-head-bar">
           <h1 className="page-title"><span className="brand">Seizoensanalyse</span></h1>
           <SeizoenPicker reeks={reeks} options={[...COMPETITIE_REEKSEN]} />

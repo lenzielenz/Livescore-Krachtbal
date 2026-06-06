@@ -65,7 +65,7 @@ export default async function PaniniPage({ searchParams }: { searchParams: Promi
     <>
       <SiteHeader active="analyse" />
       <div className="site">
-        <AnalyseNav active="panini" />
+        <AnalyseNav active="spelers" />
         <div className="an-head-bar">
           <h1 className="page-title"><span className="brand">Panini</span></h1>
         </div>

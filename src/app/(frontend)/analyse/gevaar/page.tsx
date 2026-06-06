@@ -82,7 +82,7 @@ export default async function GevaarPage({ searchParams }: { searchParams: Promi
     <>
       <SiteHeader active="analyse" />
       <div className="site">
-        <AnalyseNav active="gevaar" />
+        <AnalyseNav active="spelers" />
         <div className="an-head-bar">
           <h1 className="page-title"><span className="brand">Gevaarzone</span></h1>
           <GevaarPicker

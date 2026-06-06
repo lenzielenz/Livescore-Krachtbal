@@ -1286,3 +1286,8 @@ select.rang-picker {
 .an-recap-lbl { font-size: 0.74rem; color: var(--dim); text-transform: uppercase; letter-spacing: 0.03em; }
 .an-recap-val { font-size: 1.15rem; font-weight: 800; font-variant-numeric: tabular-nums; }
 .an-recap-who { font-size: 0.8rem; color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Gegroepeerde analyse-tools (Ploegen / Spelers): rustig overzicht i.p.v. losse menu's. */
+.an-group { scroll-margin-top: 72px; }
+.an-group + .an-group { margin-top: 18px; }
+.an-group .an-sub { margin: 0 0 10px; }

@@ -4,17 +4,13 @@ import { getSelectedSeason, listSeasons } from '@/lib/analyse-season'
 import { getPayloadClient } from '@/lib/payload-client'
 import { SeizoenGlobalPicker } from './SeizoenGlobalPicker'
 
-// Gedeelde analyse-navigatie: één samenhangende tabbalk bovenaan elke analyse-pagina, met rechts
-// de globale seizoenkeuze (die voor de hele analyse geldt).
+// Gedeelde analyse-navigatie: één compacte tabbalk. De vele losse tools zijn gebundeld in twee
+// groepen (Ploegen / Spelers) die naar de gegroepeerde secties op de overzichtspagina springen,
+// zodat je niet door een lange rij menu's moet.
 const TABS = [
   { key: 'overzicht', href: '/analyse', icon: '📈', label: 'Overzicht' },
-  { key: 'seizoen', href: '/analyse/seizoen', icon: '📊', label: 'Seizoen' },
-  { key: 'spelers', href: '/analyse/spelers', icon: '🎯', label: 'Spelers' },
-  { key: 'panini', href: '/analyse/panini', icon: '🃏', label: 'Panini' },
-  { key: 'verwacht', href: '/analyse/verwacht', icon: '📐', label: 'Verwacht' },
-  { key: 'ploeg', href: '/analyse/ploeg', icon: '🛡️', label: 'Ploeg' },
-  { key: 'ploegen', href: '/analyse/ploegen', icon: '🆚', label: 'Vergelijk' },
-  { key: 'gevaar', href: '/analyse/gevaar', icon: '🔥', label: 'Gevaar' },
+  { key: 'ploegen', href: '/analyse#ploegen', icon: '🛡️', label: 'Ploegen' },
+  { key: 'spelers', href: '/analyse#spelers', icon: '🎯', label: 'Spelers' },
 ] as const
 
 export type AnalyseTab = (typeof TABS)[number]['key']

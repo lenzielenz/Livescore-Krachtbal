@@ -61,7 +61,7 @@ export default async function PloegRapportPage({ searchParams }: { searchParams:
     <>
       <SiteHeader active="analyse" />
       <div className="site">
-        <AnalyseNav active="ploeg" />
+        <AnalyseNav active="ploegen" />
         <div className="an-head-bar">
           <h1 className="page-title"><span className="brand">Ploegrapport</span></h1>
           <PloegPicker reeks={reeks} reeksOptions={[...COMPETITIE_REEKSEN]} teamOptions={teamOptions} team={teamId != null ? String(teamId) : ''} />
