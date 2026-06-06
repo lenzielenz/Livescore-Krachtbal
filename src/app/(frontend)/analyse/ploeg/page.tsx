@@ -78,6 +78,17 @@ export default async function PloegRapportPage({ searchParams }: { searchParams:
               <a className="sk-demo-cta" href={`/api/analyse/team/${report.teamId}/csv`}>📑 Download CSV</a>
             </div>
 
+            {report.insights.length > 0 && (
+              <section className="rep-advies">
+                <h2 className="an-sub">💡 Aanbevelingen <span className="an-chart-hint">automatisch uit de data</span></h2>
+                <ul className="rep-advies-list">
+                  {report.insights.map((s, i) => (
+                    <li key={i}>{s}</li>
+                  ))}
+                </ul>
+              </section>
+            )}
+
             <div className="rep-cards">
               <div className="rep-card"><span className="rep-num">{report.matchesAnalyzed}</span><span className="rep-lbl">Wedstrijden</span></div>
               <div className="rep-card"><span className="rep-num">{report.totals.throws}</span><span className="rep-lbl">Worpen</span></div>
@@ -137,7 +148,10 @@ export default async function PloegRapportPage({ searchParams }: { searchParams:
                   {report.players.map((p, i) => (
                     <tr key={p.playerId}>
                       <td className="rang-rank">{i + 1}</td>
-                      <td className="rang-team"><span className="rang-name">#{p.shirtNumber} {p.name}</span></td>
+                      <td className="rang-team">
+                        <span className="rang-name">#{p.shirtNumber} {p.name}</span>
+                        {p.tip && <span className="rep-tip">{p.tip}</span>}
+                      </td>
                       <td>{p.matches}</td>
                       <td>{p.throws}</td>
                       <td>{p.goals} <span className="an-season-sub">({p.nek}/{p.rug})</span></td>

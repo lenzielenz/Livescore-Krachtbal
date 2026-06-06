@@ -1403,3 +1403,23 @@ select.rang-picker {
 }
 .an-del:hover { background: color-mix(in srgb, #ef476f 18%, var(--panel)); }
 .an-del:disabled { opacity: 0.5; cursor: default; }
+
+/* Aanbevelingen (ploegrapport): data-gedreven tendensen. */
+.rep-advies { margin: 16px 0; }
+.rep-advies-list {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.rep-advies-list li {
+  padding: 10px 13px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent);
+  background: color-mix(in srgb, var(--accent) 6%, var(--panel));
+  font-size: 0.9rem;
+}
+.rep-tip { display: block; font-size: 0.74rem; color: var(--dim); margin-top: 2px; white-space: normal; }
