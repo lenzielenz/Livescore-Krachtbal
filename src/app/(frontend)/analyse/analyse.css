@@ -1053,18 +1053,72 @@ select.rang-picker {
 
 /* ── Interactieve spelersradar (klik op een as → detail) ── */
 .rad-axis-g { cursor: pointer; }
-.rad-axis-g .rad-axis-lbl { transition: fill 0.15s ease; }
-.rad-axis-g:hover .rad-axis-lbl,
-.rad-axis-g.on .rad-axis-lbl { fill: var(--accent); }
+/* Aslabel als tikbare "chip": afgeronde achtergrond die omkleurt bij selectie. */
+.rad-axis-chip {
+  fill: color-mix(in srgb, var(--panel-2, #0a1f14) 82%, transparent);
+  stroke: color-mix(in srgb, var(--accent) 30%, var(--line));
+  stroke-width: 1;
+  transition: fill 0.16s ease, stroke 0.16s ease;
+}
+.rad-axis-g:hover .rad-axis-chip {
+  fill: color-mix(in srgb, var(--accent) 18%, var(--panel-2, #0a1f14));
+  stroke: color-mix(in srgb, var(--accent) 65%, var(--line));
+}
+.rad-axis-g.on .rad-axis-chip { filter: drop-shadow(0 1px 5px rgba(0, 0, 0, 0.4)); }
+.rad-axis-lbl {
+  fill: color-mix(in srgb, var(--txt) 72%, var(--dim));
+  transition: fill 0.16s ease;
+}
+.rad-axis-g:hover .rad-axis-lbl { fill: var(--txt); }
 .rad-axis-g.on .rad-axis-lbl { font-weight: 900; }
-.rad-sel-axis { stroke: var(--accent); stroke-width: 1.6; opacity: 0.7; }
+/* Zichtbare tikstip op elke astip — nodigt uit om te klikken. */
+.rad-axis-tip {
+  fill: color-mix(in srgb, var(--accent) 55%, var(--panel));
+  stroke: color-mix(in srgb, var(--accent) 80%, #fff);
+  stroke-width: 1;
+  transition: r 0.16s ease, fill 0.16s ease;
+}
+.rad-axis-g:hover .rad-axis-tip { r: 5; fill: var(--accent); }
+/* Pulserende "tik mij" wenk zolang er nog niets gekozen is. */
+.rad-invite .rad-axis-tip {
+  animation: radTip 2s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.rad-invite .rad-axis-g:nth-child(2) .rad-axis-tip { animation-delay: 0.28s; }
+.rad-invite .rad-axis-g:nth-child(3) .rad-axis-tip { animation-delay: 0.56s; }
+.rad-invite .rad-axis-g:nth-child(4) .rad-axis-tip { animation-delay: 0.84s; }
+.rad-invite .rad-axis-g:nth-child(5) .rad-axis-tip { animation-delay: 1.12s; }
+.rad-invite .rad-axis-g:nth-child(6) .rad-axis-tip { animation-delay: 1.4s; }
+.rad-invite .rad-axis-g:nth-child(7) .rad-axis-tip { animation-delay: 1.68s; }
+@keyframes radTip {
+  0%, 100% { transform: scale(1); opacity: 0.85; }
+  50% { transform: scale(1.7); opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rad-invite .rad-axis-tip { animation: none; }
+}
+.rad-sel-axis { stroke: var(--accent); stroke-width: 1.8; opacity: 0.8; }
 .rad-sel-dot {
   fill: none;
   stroke: var(--accent);
-  stroke-width: 2;
+  stroke-width: 2.4;
   filter: drop-shadow(0 0 4px color-mix(in srgb, var(--accent) 70%, transparent));
+  animation: radSelPop 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  transform-box: fill-box;
+  transform-origin: center;
 }
-.rad-hint { margin: 10px 2px 0; font-size: 0.8rem; color: var(--dim); }
+@keyframes radSelPop { from { transform: scale(0.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.rad-hint {
+  margin: 12px 2px 0;
+  font-size: 0.82rem;
+  color: var(--dim);
+  text-align: center;
+  padding: 9px 12px;
+  border: 1px dashed color-mix(in srgb, var(--accent) 34%, var(--line));
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+}
 .rad-detail {
   margin-top: 12px;
   padding: 12px 14px;

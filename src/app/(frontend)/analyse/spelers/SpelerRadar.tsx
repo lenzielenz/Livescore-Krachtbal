@@ -182,6 +182,9 @@ export function SpelerRadar({
   const [selectedKey, setSelectedKey] = useState<string | null>(null)
   const selected = RADAR.find((m) => m.key === selectedKey) ?? null
   const toggleSel = (key: string) => setSelectedKey((cur) => (cur === key ? null : key))
+  // Kleurswitch: de gekozen as krijgt de percentielkleur van speler A (rood → amber → groen).
+  const selFrac = selected && playerA ? pct(selected.key, selected.get(playerA)) : 0
+  const selColor = selected ? pctColor(selFrac) : 'var(--accent)'
 
   return (
     <div className="rad-wrap">
@@ -295,21 +298,45 @@ export function SpelerRadar({
                 {[0.5, 1].map((f) => (
                   <text key={`l${f}`} x={CX + 4} y={CY - f * R + 3} className="rad-ring-lbl">{f * 100}</text>
                 ))}
-                {/* Assen + labels — klikbaar voor details. */}
-                {RADAR.map((m, i) => {
-                  const [x, y] = point(i, 1)
-                  const [lx, ly] = point(i, 1.2)
-                  const on = m.key === selectedKey
-                  return (
-                    <g key={m.key} className={`rad-axis-g ${on ? 'on' : ''}`} onClick={() => toggleSel(m.key)} role="button" aria-label={`${m.label} — details`}>
-                      <line x1={CX} y1={CY} x2={x} y2={y} className="rad-axis" />
-                      {/* ruim, onzichtbaar klikvlak op de astip */}
-                      <circle cx={x} cy={y} r={16} fill="transparent" />
-                      <text x={lx} y={ly} className="rad-axis-lbl" textAnchor="middle" dominantBaseline="middle">{m.label}</text>
-                    </g>
-                  )
-                })}
-                {/* Gemarkeerde as (na aanklikken). */}
+                {/* Assen + labels als tikbare chips — klikbaar voor details. */}
+                <g className={selectedKey ? undefined : 'rad-invite'}>
+                  {RADAR.map((m, i) => {
+                    const [x, y] = point(i, 1)
+                    const [lx, ly] = point(i, 1.26)
+                    const on = m.key === selectedKey
+                    const w = m.label.length * 6.7 + 18
+                    const h = 19
+                    return (
+                      <g key={m.key} className={`rad-axis-g ${on ? 'on' : ''}`} onClick={() => toggleSel(m.key)} role="button" aria-label={`${m.label} — details`}>
+                        <line x1={CX} y1={CY} x2={x} y2={y} className="rad-axis" />
+                        {/* zichtbare tikstip op de astip (pulseert wanneer nog niets gekozen is) */}
+                        <circle cx={x} cy={y} r={13} fill="transparent" />
+                        <circle cx={x} cy={y} r={3.4} className="rad-axis-tip" style={on ? { fill: selColor, stroke: selColor } : undefined} />
+                        {/* chip-achtergrond → ziet er tikbaar uit; kleurt om bij selectie */}
+                        <rect
+                          x={lx - w / 2}
+                          y={ly - h / 2}
+                          width={w}
+                          height={h}
+                          rx={9.5}
+                          className="rad-axis-chip"
+                          style={on ? { fill: selColor, stroke: selColor } : undefined}
+                        />
+                        <text
+                          x={lx}
+                          y={ly}
+                          className="rad-axis-lbl"
+                          textAnchor="middle"
+                          dominantBaseline="central"
+                          style={on ? { fill: '#06140d' } : undefined}
+                        >
+                          {m.label}
+                        </text>
+                      </g>
+                    )
+                  })}
+                </g>
+                {/* Gemarkeerde as (na aanklikken) — in de percentielkleur van de speler. */}
                 {selected && (() => {
                   const i = RADAR.findIndex((m) => m.key === selectedKey)
                   if (i < 0) return null
@@ -318,8 +345,16 @@ export function SpelerRadar({
                   const [vx, vy] = point(i, af)
                   return (
                     <g className="rad-sel" pointerEvents="none">
-                      <line x1={CX} y1={CY} x2={ex} y2={ey} className="rad-sel-axis" />
-                      {playerA && <circle cx={vx} cy={vy} r={6.5} className="rad-sel-dot" />}
+                      <line x1={CX} y1={CY} x2={ex} y2={ey} className="rad-sel-axis" style={{ stroke: selColor }} />
+                      {playerA && (
+                        <circle
+                          cx={vx}
+                          cy={vy}
+                          r={7}
+                          className="rad-sel-dot"
+                          style={{ stroke: selColor, filter: `drop-shadow(0 0 5px ${selColor})` }}
+                        />
+                      )}
                     </g>
                   )
                 })()}
@@ -364,9 +399,9 @@ export function SpelerRadar({
                   const lg = league[selected.key]
                   const delta = av - lg
                   return (
-                    <div className="rad-detail">
+                    <div className="rad-detail" style={{ borderColor: `color-mix(in srgb, ${selColor} 55%, var(--line))` }}>
                       <div className="rad-detail-head">
-                        <span className="rad-detail-title">{selected.label}</span>
+                        <span className="rad-detail-title" style={{ color: selColor }}>{selected.label}</span>
                         <button type="button" className="rad-detail-x" onClick={() => setSelectedKey(null)} aria-label="Sluiten">✕</button>
                       </div>
                       <p className="rad-detail-desc">{selected.full}</p>
@@ -384,7 +419,7 @@ export function SpelerRadar({
                   )
                 })()
               ) : (
-                <p className="rad-hint">💡 Tik op een as voor meer info over die statistiek.</p>
+                <p className="rad-hint">👆 Tik op een statistiek (de gekleurde knopjes rond de radar) om ze uit te lichten.</p>
               )}
             </div>
 
