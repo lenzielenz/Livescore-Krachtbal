@@ -28,6 +28,7 @@ import * as migration_20260604_130000_user_analyse_access from './20260604_13000
 import * as migration_20260604_140000_throw_caught_by from './20260604_140000_throw_caught_by';
 import * as migration_20260605_090000_match_analyse_only from './20260605_090000_match_analyse_only';
 import * as migration_20260605_100000_match_coach from './20260605_100000_match_coach';
+import * as migration_20260606_072858_trainingmetingen from './20260606_072858_trainingmetingen';
 
 export const migrations = [
   {
@@ -98,7 +99,7 @@ export const migrations = [
   {
     up: migration_20260602_194302_tornooi.up,
     down: migration_20260602_194302_tornooi.down,
-    name: '20260602_194302_tornooi'
+    name: '20260602_194302_tornooi',
   },
   {
     up: migration_20260602_220000_kantine_selectie.up,
@@ -179,5 +180,10 @@ export const migrations = [
     up: migration_20260605_100000_match_coach.up,
     down: migration_20260605_100000_match_coach.down,
     name: '20260605_100000_match_coach',
+  },
+  {
+    up: migration_20260606_072858_trainingmetingen.up,
+    down: migration_20260606_072858_trainingmetingen.down,
+    name: '20260606_072858_trainingmetingen'
   },
 ];
