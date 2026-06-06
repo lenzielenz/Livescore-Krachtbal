@@ -72,7 +72,16 @@ export function NieuweAnalyseMatch({ teams, reeksOptions }: { teams: Team[]; ree
   // Stap 2: na aanmaken tonen we de ploegen met hun spelers.
   const [created, setCreated] = useState<{ id: number; homeRoster: Player[]; awayRoster: Player[]; homeName: string; awayName: string } | null>(null)
 
-  const reeksTeams = useMemo(() => teams.filter((t) => t.reeks === reeks), [teams, reeks])
+  // Ploegen van de reeks, ontdubbeld op naam (dubbele records van dezelfde club tonen we maar één keer).
+  const reeksTeams = useMemo(() => {
+    const byName = new Map<string, Team>()
+    for (const t of teams) {
+      if (t.reeks !== reeks) continue
+      const key = t.name.trim().toLowerCase()
+      if (!byName.has(key)) byName.set(key, t)
+    }
+    return [...byName.values()].sort((a, b) => a.name.localeCompare(b.name, 'nl'))
+  }, [teams, reeks])
   const teamName = (id: string) => teams.find((t) => String(t.id) === id)?.name ?? ''
 
   async function create() {
