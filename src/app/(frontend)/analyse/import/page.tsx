@@ -9,6 +9,7 @@ import { AnalyseNav } from '../AnalyseNav'
 import { ClubMerge, type MergeClub } from './ClubMerge'
 import { DedupeTool } from './DedupeTool'
 import { ReeksindelingImport } from './ReeksindelingImport'
+import { ReeksindelingTeamsImport } from './ReeksindelingTeamsImport'
 import { ResultsImport } from './ResultsImport'
 import { TeamCleanup, type CleanupTeam } from './TeamCleanup'
 import '../analyse.css'
@@ -79,6 +80,10 @@ export default async function ResultsImportPage() {
         <p className="an-intro">Wedstrijden-export (.xls). Eerst <em>Voorbeeld</em>, dan <em>Importeren</em>.</p>
 
         <ResultsImport />
+
+        <h2 className="an-sub">📋 Reeksindeling importeren (ploegen per reeks)</h2>
+        <p className="an-intro">Reeksindeling-PDF: maakt automatisch alle clubs en ploegen aan met hun reeks. Kies het seizoen, dan eerst <em>Voorbeeld</em>, daarna <em>Importeren</em>. Bestaande ploegen blijven behouden.</p>
+        <ReeksindelingTeamsImport />
 
         <h2 className="an-sub">🕑 Thuisuren uit de reeksindeling</h2>
         <p className="an-intro">Reeksindeling-PDF. Eerst <em>Voorbeeld</em>, dan <em>Thuisuren instellen</em>.</p>
