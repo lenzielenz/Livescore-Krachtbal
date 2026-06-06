@@ -23,29 +23,14 @@ const GENERAL = [
   { href: '/tornooi', label: '🏆 Tornooi' },
 ]
 
-// Alles wat de analysemodule aanbiedt — zichtbaar voor admin/analyse-toegang.
-// "Wedstrijd invullen" hoort hier ook bij: de opname voedt de analyse.
-const ANALYSE_LINKS = [
-  { href: '/analyse', label: '📈 Analyse-overzicht' },
-  { href: '/scorekeeper', label: '📝 Wedstrijd invullen' },
-  { href: '/analyse/seizoen', label: '📊 Seizoensanalyse' },
-  { href: '/analyse/spelers', label: '🎯 Spelersradar' },
-  { href: '/analyse/panini', label: '🃏 Panini-kaart' },
-  { href: '/analyse/verwacht', label: '🎯 Verwachte punten (xP)' },
-  { href: '/analyse/ploeg', label: '🛡️ Ploegrapport & export' },
-  { href: '/analyse/ploegen', label: '🆚 Ploegvergelijking' },
-  { href: '/analyse/gevaar', label: '🔥 Gevaarzone per speler' },
-]
-
-// Het Meer-menu licht op zodra je op een van deze secties zit.
-const MENU_SECTIONS: NavSection[] = ['stand', 'analyse', 'tornooi', 'clubs', 'scheidsrechters', 'federatie']
+// Het Meer-menu licht op zodra je op een van deze secties zit. ('analyse' staat nu als eigen
+// knop in de balk — de analyse-hub bevat zelf al alle tools, dus geen apart submenu meer.)
+const MENU_SECTIONS: NavSection[] = ['stand', 'tornooi', 'clubs', 'scheidsrechters', 'federatie']
 
 export function SiteHeader({ active = null }: { active?: NavSection }) {
   const [open, setOpen] = useState(false)
-  // Admin (of een account met analyse-toegang) krijgt er een 'Analyse'-menu bij.
+  // Admin (of een account met analyse-toegang) krijgt de 'Analyse'-knop in de balk.
   const [canAnalyse, setCanAnalyse] = useState(false)
-  // Enkel een admin krijgt 'Demo expert' (volledige scoreopnemer i.p.v. de basisdemo).
-  const [isAdmin, setIsAdmin] = useState(false)
   const [loggedIn, setLoggedIn] = useState(false)
   useEffect(() => {
     fetch('/api/users/me', { credentials: 'include' })
@@ -55,7 +40,6 @@ export function SiteHeader({ active = null }: { active?: NavSection }) {
         const roles = u?.roles
         const admin = Array.isArray(roles) && roles.includes('admin')
         setLoggedIn(Boolean(u))
-        setIsAdmin(admin)
         setCanAnalyse(admin || Boolean(u?.analyseAccess))
       })
       .catch(() => {})
@@ -83,6 +67,11 @@ export function SiteHeader({ active = null }: { active?: NavSection }) {
               {l.label}
             </Link>
           ))}
+          {canAnalyse && (
+            <Link href="/analyse" className={`sh-link ${active === 'analyse' ? 'on' : ''}`}>
+              📈 Analyse
+            </Link>
+          )}
 
           <div className="sh-more">
             <button
@@ -104,21 +93,6 @@ export function SiteHeader({ active = null }: { active?: NavSection }) {
                       </Link>
                     ))}
                   </div>
-                  {canAnalyse && (
-                    <div className="sh-more-group">
-                      <div className="sh-more-grouphead">Analyse</div>
-                      {ANALYSE_LINKS.map((l) => (
-                        <Link key={l.href} href={l.href} className="sh-more-item" onClick={() => setOpen(false)}>
-                          {l.label}
-                        </Link>
-                      ))}
-                      {isAdmin && (
-                        <Link href="/demo/expert" className="sh-more-item" onClick={() => setOpen(false)}>
-                          🧪 Demo expert
-                        </Link>
-                      )}
-                    </div>
-                  )}
                   <div className="sh-more-group">
                     <div className="sh-more-grouphead">Aan de slag</div>
                     {PROFILES.map((p) => (

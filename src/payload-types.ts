@@ -78,6 +78,7 @@ export interface Config {
     sanctions: Sanction;
     tournaments: Tournament;
     'tournament-matches': TournamentMatch;
+    trainingmetingen: Trainingmetingen;
     possessions: Possession;
     throws: Throw;
     'match-events': MatchEvent;
@@ -101,6 +102,7 @@ export interface Config {
     sanctions: SanctionsSelect<false> | SanctionsSelect<true>;
     tournaments: TournamentsSelect<false> | TournamentsSelect<true>;
     'tournament-matches': TournamentMatchesSelect<false> | TournamentMatchesSelect<true>;
+    trainingmetingen: TrainingmetingenSelect<false> | TrainingmetingenSelect<true>;
     possessions: PossessionsSelect<false> | PossessionsSelect<true>;
     throws: ThrowsSelect<false> | ThrowsSelect<true>;
     'match-events': MatchEventsSelect<false> | MatchEventsSelect<true>;
@@ -338,14 +340,23 @@ export interface Match {
    * Aanvinken voor een oefen-/uitlegwedstrijd. Mensen kunnen die starten om de live-registratie te leren; alle startcontroles worden overgeslagen.
    */
   isDemo?: boolean | null;
+  /**
+   * Aanvinken voor een wedstrijd die je enkel opneemt voor analyse. Ze verschijnt niet live of in de rangschikking — alleen in de analysemodule.
+   */
   analyseOnly?: boolean | null;
+  /**
+   * Geclaimd via Mijn club.
+   */
+  homeCoach?: (number | null) | User;
+  /**
+   * Geclaimd via Mijn club.
+   */
+  awayCoach?: (number | null) | User;
   category?: ('U12' | 'U14' | 'U16' | 'U18' | 'U20' | 'senioren') | null;
   homeLineup?: (number | Player)[] | null;
   awayLineup?: (number | Player)[] | null;
   homeCaptain?: (number | null) | Player;
   awayCaptain?: (number | null) | Player;
-  homeCoach?: (number | null) | User;
-  awayCoach?: (number | null) | User;
   currentHalf?: number | null;
   clockSeconds?: number | null;
   clockRunning?: boolean | null;
@@ -362,6 +373,62 @@ export interface Match {
     | number
     | boolean
     | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "users".
+ */
+export interface User {
+  id: number;
+  name?: string | null;
+  /**
+   * Elke rol geeft eigen rechten. Hiërarchie: Admin (volledige toegang, beheert gebruikers) staat boven Federatie (beheert competitie/vergunningen). Supporters registreren zichzelf; enkel een admin kent hier hogere rollen toe.
+   */
+  roles?:
+    | ('admin' | 'federatie' | 'scheidsrechter' | 'club-beheerder' | 'kapitein' | 'scorekeeper' | 'viewer')[]
+    | null;
+  /**
+   * De eigen club (supporter volgt ze; club-beheerder beheert ze).
+   */
+  club?: (number | null) | Club;
+  /**
+   * Geef dit account toegang tot de analyse (naast de admin-rol).
+   */
+  analyseAccess?: boolean | null;
+  /**
+   * Enkel relevant voor de rol "Scheidsrechter". Beperkt de toegang tot de eigen kwitantie.
+   */
+  official?: (number | null) | Official;
+  updatedAt: string;
+  createdAt: string;
+  email: string;
+  resetPasswordToken?: string | null;
+  resetPasswordExpiration?: string | null;
+  salt?: string | null;
+  hash?: string | null;
+  loginAttempts?: number | null;
+  lockUntil?: string | null;
+  sessions?:
+    | {
+        id: string;
+        createdAt?: string | null;
+        expiresAt: string;
+      }[]
+    | null;
+  password?: string | null;
+  collection: 'users';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "officials".
+ */
+export interface Official {
+  id: number;
+  name: string;
+  type: 'scheidsrechter' | 'grensrechter' | 'aantekenaar' | 'tijdopnemer';
+  federationNumber?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -518,59 +585,6 @@ export interface Matchsheet {
     | null;
   updatedAt: string;
   createdAt: string;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "officials".
- */
-export interface Official {
-  id: number;
-  name: string;
-  type: 'scheidsrechter' | 'grensrechter' | 'aantekenaar' | 'tijdopnemer';
-  federationNumber?: string | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "users".
- */
-export interface User {
-  id: number;
-  name?: string | null;
-  roles?:
-    | ('admin' | 'federatie' | 'scheidsrechter' | 'club-beheerder' | 'kapitein' | 'scorekeeper' | 'viewer')[]
-    | null;
-  /**
-   * Enkel relevant voor de rol "Club-beheerder".
-   */
-  club?: (number | null) | Club;
-  /**
-   * Geef dit account toegang tot de analyse (naast de admin-rol).
-   */
-  analyseAccess?: boolean | null;
-  /**
-   * Enkel relevant voor de rol "Scheidsrechter". Beperkt de toegang tot de eigen kwitantie.
-   */
-  official?: (number | null) | Official;
-  updatedAt: string;
-  createdAt: string;
-  email: string;
-  resetPasswordToken?: string | null;
-  resetPasswordExpiration?: string | null;
-  salt?: string | null;
-  hash?: string | null;
-  loginAttempts?: number | null;
-  lockUntil?: string | null;
-  sessions?:
-    | {
-        id: string;
-        createdAt?: string | null;
-        expiresAt: string;
-      }[]
-    | null;
-  password?: string | null;
-  collection: 'users';
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -748,6 +762,23 @@ export interface TournamentMatch {
   createdAt: string;
 }
 /**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "trainingmetingen".
+ */
+export interface Trainingmetingen {
+  id: number;
+  speler: number | Player;
+  datum: string;
+  snelheidVooruit?: number | null;
+  snelheidAchteruit?: number | null;
+  worp4?: number | null;
+  worp9?: number | null;
+  worp18?: number | null;
+  notitie?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * Afgeleid uit de worp-events; doorgaans niet handmatig bewerken.
  *
  * This interface was referenced by `Config`'s JSON-Schema
@@ -893,6 +924,10 @@ export interface PayloadLockedDocument {
         value: number | TournamentMatch;
       } | null)
     | ({
+        relationTo: 'trainingmetingen';
+        value: number | Trainingmetingen;
+      } | null)
+    | ({
         relationTo: 'possessions';
         value: number | Possession;
       } | null)
@@ -1026,13 +1061,13 @@ export interface MatchesSelect<T extends boolean = true> {
   goalAreaDepth?: T;
   isDemo?: T;
   analyseOnly?: T;
+  homeCoach?: T;
+  awayCoach?: T;
   category?: T;
   homeLineup?: T;
   awayLineup?: T;
   homeCaptain?: T;
   awayCaptain?: T;
-  homeCoach?: T;
-  awayCoach?: T;
   currentHalf?: T;
   clockSeconds?: T;
   clockRunning?: T;
@@ -1277,6 +1312,22 @@ export interface TournamentMatchesSelect<T extends boolean = true> {
   clockSeconds?: T;
   clockRunning?: T;
   clockUpdatedAt?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "trainingmetingen_select".
+ */
+export interface TrainingmetingenSelect<T extends boolean = true> {
+  speler?: T;
+  datum?: T;
+  snelheidVooruit?: T;
+  snelheidAchteruit?: T;
+  worp4?: T;
+  worp9?: T;
+  worp18?: T;
+  notitie?: T;
   updatedAt?: T;
   createdAt?: T;
 }

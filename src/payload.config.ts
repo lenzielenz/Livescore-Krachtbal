@@ -22,6 +22,7 @@ import { CupFinals } from './collections/CupFinals'
 import { Sanctions } from './collections/Sanctions'
 import { Tournaments } from './collections/Tournaments'
 import { TournamentMatches } from './collections/TournamentMatches'
+import { Trainingmetingen } from './collections/Trainingmetingen'
 import { Season } from './globals/Season'
 import { Settings } from './globals/Settings'
 
@@ -76,6 +77,7 @@ export default buildConfig({
     Sanctions,
     Tournaments,
     TournamentMatches,
+    Trainingmetingen,
     Possessions,
     Throws,
     MatchEvents,

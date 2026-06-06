@@ -22,6 +22,7 @@ const TOOLS = [
   { href: '/analyse/ploeg', icon: '🛡️', title: 'Ploegrapport', desc: 'Scoutingrapport per ploeg + PDF/CSV-export.', tone: 'away' },
   { href: '/analyse/ploegen', icon: '🆚', title: 'Ploegvergelijking', desc: 'Twee ploegen op een radar van kerncijfers.', tone: 'home' },
   { href: '/analyse/gevaar', icon: '🔥', title: 'Gevaarzone', desc: 'Van waar scoort een speler het gevaarlijkst?', tone: 'pop2' },
+  { href: '/beheer/training', icon: '🏋️', title: 'Training', desc: 'Meet snelheid & werpafstand, volg de progressie per speler.', tone: 'accent' },
 ] as const
 
 // Eén leaderboard-kaart (top 5) voor de league-insights op de hub.
