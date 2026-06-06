@@ -2,6 +2,7 @@ import Link from 'next/link'
 
 import { SiteHeader } from '@/components/SiteHeader'
 import { canAnalyse } from '@/lib/access'
+import { getSelectedSeason } from '@/lib/analyse-season'
 import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
 import { REEKS_OPTIONS, reeksNaam } from '@/lib/reeksen'
@@ -43,7 +44,7 @@ export default async function PloegenAnalysePage({ searchParams }: { searchParam
       : COMPETITIE_REEKSEN[0].value
 
   const payload = await getPayloadClient()
-  const { teams, results } = await buildTeamRadar(payload, reeks)
+  const { teams, results } = await buildTeamRadar(payload, reeks, await getSelectedSeason())
 
   return (
     <>

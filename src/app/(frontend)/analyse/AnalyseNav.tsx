@@ -1,6 +1,11 @@
 import Link from 'next/link'
 
-// Gedeelde analyse-navigatie: één samenhangende tabbalk bovenaan elke analyse-pagina.
+import { getSelectedSeason, listSeasons } from '@/lib/analyse-season'
+import { getPayloadClient } from '@/lib/payload-client'
+import { SeizoenGlobalPicker } from './SeizoenGlobalPicker'
+
+// Gedeelde analyse-navigatie: één samenhangende tabbalk bovenaan elke analyse-pagina, met rechts
+// de globale seizoenkeuze (die voor de hele analyse geldt).
 const TABS = [
   { key: 'overzicht', href: '/analyse', icon: '📈', label: 'Overzicht' },
   { key: 'seizoen', href: '/analyse/seizoen', icon: '📊', label: 'Seizoen' },
@@ -15,15 +20,20 @@ const TABS = [
 
 export type AnalyseTab = (typeof TABS)[number]['key']
 
-export function AnalyseNav({ active }: { active: AnalyseTab }) {
+export async function AnalyseNav({ active }: { active: AnalyseTab }) {
+  const payload = await getPayloadClient()
+  const [seasons, current] = await Promise.all([listSeasons(payload), getSelectedSeason()])
   return (
-    <nav className="an-nav" aria-label="Analyse">
-      {TABS.map((t) => (
-        <Link key={t.key} href={t.href} className={`an-nav-tab${t.key === active ? ' on' : ''}`}>
-          <span className="an-nav-ico" aria-hidden>{t.icon}</span>
-          <span className="an-nav-lbl">{t.label}</span>
-        </Link>
-      ))}
-    </nav>
+    <div className="an-navwrap">
+      <nav className="an-nav" aria-label="Analyse">
+        {TABS.map((t) => (
+          <Link key={t.key} href={t.href} className={`an-nav-tab${t.key === active ? ' on' : ''}`}>
+            <span className="an-nav-ico" aria-hidden>{t.icon}</span>
+            <span className="an-nav-lbl">{t.label}</span>
+          </Link>
+        ))}
+      </nav>
+      <SeizoenGlobalPicker seasons={seasons} current={current ?? 'all'} />
+    </div>
   )
 }

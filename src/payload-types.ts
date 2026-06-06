@@ -326,6 +326,10 @@ export interface Match {
     | 'beker'
     | 'andere';
   /**
+   * Bv. 2025-2026. Leeg laten = automatisch afgeleid uit de datum (juli–juni).
+   */
+  seizoen?: string | null;
+  /**
    * Kies eerst een reeks hierboven.
    */
   homeTeam: number | Team;
@@ -1054,6 +1058,7 @@ export interface PlayersSelect<T extends boolean = true> {
 export interface MatchesSelect<T extends boolean = true> {
   title?: T;
   reeks?: T;
+  seizoen?: T;
   homeTeam?: T;
   awayTeam?: T;
   date?: T;

@@ -2,6 +2,7 @@ import type { Payload } from 'payload'
 
 import { buildExpectedPoints } from './expected-points'
 import { loadMatchThrowData } from './match-engine'
+import { seasonClause } from './seasons'
 
 // Match-gerelateerde radar-statistiek per speler (seizoen, per reeks). De assen zijn
 // krachtbal-specifiek: aanval (worpvolume), succesvolle aanvallen (conversie), worpafstand,
@@ -56,7 +57,7 @@ export interface RadarPlayer {
 const rel = (v: unknown): number | null =>
   v && typeof v === 'object' ? ((v as { id?: number }).id ?? null) : typeof v === 'number' ? v : null
 
-export async function buildRadarStats(payload: Payload, reeks: string): Promise<RadarPlayer[]> {
+export async function buildRadarStats(payload: Payload, reeks: string, seizoen?: string | null): Promise<RadarPlayer[]> {
   const teamsRes = await payload
     .find({ collection: 'teams', where: { reeks: { equals: reeks } }, depth: 0, limit: 200 })
     .catch(() => ({ docs: [] as { id: number; name: string }[] }))
@@ -78,7 +79,7 @@ export async function buildRadarStats(payload: Payload, reeks: string): Promise<
   const matchRes = await payload
     .find({
       collection: 'matches',
-      where: { and: [{ reeks: { equals: reeks } }, { status: { equals: 'finished' } }] },
+      where: { and: [{ reeks: { equals: reeks } }, { status: { equals: 'finished' } }, ...seasonClause(seizoen)] },
       sort: 'date',
       depth: 0,
       limit: 500,
@@ -162,7 +163,7 @@ export async function buildRadarStats(payload: Payload, reeks: string): Promise<
   }
 
   // Verwachte-puntenmodel (xG): werkelijke vs verwachte punten per speler in deze reeks.
-  const xp = await buildExpectedPoints(payload, reeks).catch(() => ({ players: [] as { playerId: number; points: number; xPoints: number; diff: number }[] }))
+  const xp = await buildExpectedPoints(payload, reeks, seizoen).catch(() => ({ players: [] as { playerId: number; points: number; xPoints: number; diff: number }[] }))
   const xpBy = new Map<number, { points: number; xPoints: number; diff: number }>()
   for (const xpp of xp.players) xpBy.set(xpp.playerId, { points: xpp.points, xPoints: xpp.xPoints, diff: xpp.diff })
 

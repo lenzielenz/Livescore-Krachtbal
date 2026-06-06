@@ -1,6 +1,7 @@
 import type { Payload } from 'payload'
 
 import { buildMatchStats } from './match-engine'
+import { seasonClause } from './seasons'
 
 // Seizoensaggregatie per speler over álle afgelopen wedstrijden van een reeks.
 // Telt de per-match statistieken op (buildMatchStats) en bewaart een punten-per-
@@ -33,7 +34,7 @@ export interface SeasonPlayer {
 const rel = (v: unknown): number | null =>
   v && typeof v === 'object' ? ((v as { id?: number }).id ?? null) : typeof v === 'number' ? v : null
 
-export async function buildSeasonStats(payload: Payload, reeks: string): Promise<SeasonPlayer[]> {
+export async function buildSeasonStats(payload: Payload, reeks: string, seizoen?: string | null): Promise<SeasonPlayer[]> {
   // Ploegen van de reeks → speler → ploegnaam.
   const teamsRes = await payload
     .find({ collection: 'teams', where: { reeks: { equals: reeks } }, depth: 0, limit: 200 })
@@ -53,7 +54,7 @@ export async function buildSeasonStats(payload: Payload, reeks: string): Promise
 
   // Afgelopen wedstrijden van de reeks, chronologisch (oud → nieuw) voor de trend.
   const matchRes = await payload
-    .find({ collection: 'matches', where: { and: [{ reeks: { equals: reeks } }, { status: { equals: 'finished' } }] }, sort: 'date', depth: 0, limit: 500 })
+    .find({ collection: 'matches', where: { and: [{ reeks: { equals: reeks } }, { status: { equals: 'finished' } }, ...seasonClause(seizoen)] }, sort: 'date', depth: 0, limit: 500 })
     .catch(() => ({ docs: [] as Record<string, unknown>[] }))
   const matches = matchRes.docs.filter((m) => !(m as { isDemo?: boolean }).isDemo)
 

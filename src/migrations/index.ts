@@ -29,6 +29,7 @@ import * as migration_20260604_140000_throw_caught_by from './20260604_140000_th
 import * as migration_20260605_090000_match_analyse_only from './20260605_090000_match_analyse_only';
 import * as migration_20260605_100000_match_coach from './20260605_100000_match_coach';
 import * as migration_20260606_072858_trainingmetingen from './20260606_072858_trainingmetingen';
+import * as migration_20260606_080000_match_seizoen from './20260606_080000_match_seizoen';
 
 export const migrations = [
   {
@@ -185,5 +186,10 @@ export const migrations = [
     up: migration_20260606_072858_trainingmetingen.up,
     down: migration_20260606_072858_trainingmetingen.down,
     name: '20260606_072858_trainingmetingen'
+  },
+  {
+    up: migration_20260606_080000_match_seizoen.up,
+    down: migration_20260606_080000_match_seizoen.down,
+    name: '20260606_080000_match_seizoen',
   },
 ];

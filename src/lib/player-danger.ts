@@ -2,6 +2,7 @@ import type { Payload } from 'payload'
 
 import { attackDirForSide, loadMatchThrowData } from './match-engine'
 import type { ThrowType } from './krachtbal-rules'
+import { seasonClause } from './seasons'
 
 // Gevaarzone-kaart per speler: vanaf welke vertrekpositie scoort hij het best?
 //
@@ -49,14 +50,14 @@ function finalize(b: DangerBand): DangerBand {
   return b
 }
 
-export async function buildPlayerDanger(payload: Payload, playerId: number, reeks: string): Promise<PlayerDanger | null> {
+export async function buildPlayerDanger(payload: Payload, playerId: number, reeks: string, seizoen?: string | null): Promise<PlayerDanger | null> {
   const player = await payload.findByID({ collection: 'players', id: playerId, depth: 0 }).catch(() => null)
   if (!player) return null
 
   const matchRes = await payload
     .find({
       collection: 'matches',
-      where: { and: [{ reeks: { equals: reeks } }, { status: { equals: 'finished' } }] },
+      where: { and: [{ reeks: { equals: reeks } }, { status: { equals: 'finished' } }, ...seasonClause(seizoen)] },
       sort: 'date',
       depth: 0,
       limit: 500,
