@@ -57,3 +57,12 @@ export const KRACHTBAL_QUOTES: string[] = [
 export function randomQuote(): string {
   return KRACHTBAL_QUOTES[Math.floor(Math.random() * KRACHTBAL_QUOTES.length)]
 }
+
+// Vaste quote voor één dag (deterministisch op basis van een seed, bv. de datum van vandaag).
+// Zo blijft de slogan stabiel tijdens het browsen — hij verandert niet telkens je van datum wisselt —
+// maar levert elke dag een vers lijntje op.
+export function quoteForDay(daySeed: string): string {
+  let h = 0
+  for (let i = 0; i < daySeed.length; i++) h = (h * 31 + daySeed.charCodeAt(i)) >>> 0
+  return KRACHTBAL_QUOTES[h % KRACHTBAL_QUOTES.length]
+}
