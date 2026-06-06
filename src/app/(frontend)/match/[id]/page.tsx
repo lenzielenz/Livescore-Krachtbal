@@ -6,12 +6,10 @@ import { SiteHeader } from '@/components/SiteHeader'
 import { getAuthUser } from '@/lib/auth-user'
 import { buildMatchState, buildTimeline } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
-import { krachtbalKleur, REEKS_OPTIONS, reeksHalfDurationSeconds, reeksType, type Reeks } from '@/lib/reeksen'
+import { krachtbalKleur, reeksHalfDurationSeconds, reeksNaam, reeksType, type Reeks } from '@/lib/reeksen'
 import { BASE_RATE_PER_MIN } from '@/lib/win-probability'
 
 export const dynamic = 'force-dynamic'
-
-const reeksLabel = (v: unknown) => REEKS_OPTIONS.find((o) => o.value === v)?.label ?? (typeof v === 'string' ? v : null)
 
 export default async function MatchPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -33,7 +31,8 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   const matchDoc = await payload.findByID({ collection: 'matches', id: matchId, depth: 2 }).catch(() => null)
   const homeClub = (matchDoc?.homeTeam as { club?: { accommodatie?: string } } | null)?.club
   const accommodatie = homeClub?.accommodatie?.trim() || null
-  const reeks = reeksLabel(matchDoc?.reeks)
+  // Toon de leesbare reeksnaam zonder de code-prefix ("1ste Nationale Dames" i.p.v. "1NAD — …").
+  const reeks = matchDoc?.reeks ? reeksNaam(matchDoc.reeks) : null
   // Live winstkans: helftduur + verwacht scoretempo strikt uit de reeks (veilige defaults binnen reeksen.ts).
   const reeksRaw = matchDoc?.reeks as Reeks
   const halfSeconds = reeksHalfDurationSeconds(reeksRaw)
