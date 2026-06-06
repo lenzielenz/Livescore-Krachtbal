@@ -23,6 +23,7 @@ import { Sanctions } from './collections/Sanctions'
 import { Tournaments } from './collections/Tournaments'
 import { TournamentMatches } from './collections/TournamentMatches'
 import { Trainingmetingen } from './collections/Trainingmetingen'
+import { Trainingdoelen } from './collections/Trainingdoelen'
 import { Trainingen } from './collections/Trainingen'
 import { Season } from './globals/Season'
 import { Settings } from './globals/Settings'
@@ -79,6 +80,7 @@ export default buildConfig({
     Tournaments,
     TournamentMatches,
     Trainingmetingen,
+    Trainingdoelen,
     Trainingen,
     Possessions,
     Throws,

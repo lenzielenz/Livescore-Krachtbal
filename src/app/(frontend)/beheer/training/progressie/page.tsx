@@ -46,9 +46,10 @@ export default async function TrainingProgressiePage() {
   // Enkel een (federatie/admin-)account zónder club ziet alle spelers.
   const playerWhere: Where = myClubId != null ? { 'team.club': { equals: myClubId } } : {}
 
-  const [playersRes, metingenRes] = await Promise.all([
+  const [playersRes, metingenRes, doelenRes] = await Promise.all([
     payload.find({ collection: 'players', where: playerWhere, depth: 2, limit: 2000, sort: 'name' }),
     payload.find({ collection: 'trainingmetingen', depth: 0, limit: 5000, sort: 'datum' }),
+    payload.find({ collection: 'trainingdoelen', depth: 0, limit: 2000 }).catch(() => ({ docs: [] as Record<string, unknown>[] })),
   ])
 
   const players: TrainingPlayer[] = playersRes.docs.map((p) => {
@@ -77,6 +78,15 @@ export default async function TrainingProgressiePage() {
     })
     .filter((m) => playerIds.has(m.speler))
 
+  const doelen = doelenRes.docs
+    .map((d) => ({
+      id: (d as { id: number }).id,
+      speler: typeof (d as { speler?: unknown }).speler === 'object' ? ((d as { speler: { id: number } }).speler.id) : ((d as { speler: number }).speler),
+      metriek: String((d as { metriek?: unknown }).metriek ?? ''),
+      doel: Number((d as { doel?: unknown }).doel ?? 0),
+    }))
+    .filter((d) => playerIds.has(d.speler))
+
   return (
     <>
       <SiteHeader active="training" />
@@ -89,7 +99,7 @@ export default async function TrainingProgressiePage() {
           Meet sprintsnelheid over 18 m (vooruit/achteruit) en werpafstand per aanloop (4/9/18 m), en
           volg de progressie per speler op.
         </p>
-        <TrainingPanel players={players} metingen={metingen} canWrite={canWrite} />
+        <TrainingPanel players={players} metingen={metingen} doelen={doelen} canWrite={canWrite} />
       </div>
     </>
   )
