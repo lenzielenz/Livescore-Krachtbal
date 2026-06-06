@@ -936,3 +936,29 @@ select.rang-picker {
 .pan-poly { fill-opacity: 0.26; }
 .pan-stat { border-color: color-mix(in srgb, var(--c1) 26%, rgba(255,255,255,0.08)); }
 .pan-foot { color: color-mix(in srgb, var(--c1) 55%, var(--dim)); letter-spacing: 0.18em; }
+
+/* Seizoensanalyse-tabel op gsm: horizontaal scrollen met natuurlijke kolombreedtes i.p.v. de
+   30px-forcering van de rangschikking (die de Conv/Vorm-headers en de vorm-sparkline overlapte). */
+@media (max-width: 640px) {
+  .an-season-scroll {
+    overflow-x: auto;
+  }
+  .an-season-table {
+    table-layout: auto;
+    width: max-content;
+    min-width: 100%;
+  }
+  .an-season-table th,
+  .an-season-table td {
+    padding: 9px 8px;
+    font-size: 0.82rem;
+  }
+  /* Zelfde specificiteit als de rangschikking-regel die 30px forceert, maar later geladen → wint. */
+  .an-season-table th:not(.rang-teamh):not(.rang-rank),
+  .an-season-table td:not(.rang-team):not(.rang-rank) {
+    width: auto;
+  }
+  .an-season-table .rang-team {
+    min-width: 132px;
+  }
+}
