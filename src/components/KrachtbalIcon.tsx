@@ -100,15 +100,23 @@ export function KrachtbalIcon({
         </radialGradient>
       </defs>
       <circle cx="12" cy="12" r="10.4" fill={`url(#${lid})`} stroke={c.ring} strokeWidth="1" />
-      {/* 8 leren naden vanuit de zijwaartse rozet (4 stroken van elk 2 naden). */}
-      <g fill="none" stroke={c.seam} strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" opacity="0.82">
-        {KB.seamPaths.map((d, i) => (
-          <path key={i} d={d} />
-        ))}
+      {/* 8 leren naden vanuit de zijwaartse rozet (4 stroken van elk 2 naden). Elke naad krijgt een
+          donkere basis + een lichte ribbel erbovenop, zodat de bal als een bal met "schelpen" leest. */}
+      <g fill="none" strokeLinecap="round" strokeLinejoin="round">
+        <g stroke={c.seam} strokeWidth="1.7" opacity="0.95">
+          {KB.seamPaths.map((d, i) => (
+            <path key={i} d={d} />
+          ))}
+        </g>
+        <g stroke="#ffffff" strokeWidth="0.55" opacity="0.42">
+          {KB.seamPaths.map((d, i) => (
+            <path key={i} d={d} />
+          ))}
+        </g>
       </g>
-      {/* De rozet ("bolletje") aan de zijkant waar alle stroken samenkomen. */}
-      <circle cx={KB.node[0]} cy={KB.node[1]} r="1.5" fill="none" stroke={c.seam} strokeWidth="1.1" opacity="0.9" />
-      <circle cx={KB.node[0]} cy={KB.node[1]} r="0.6" fill={c.seam} opacity="0.9" />
+      {/* De rozet ("bolletje") aan de zijkant waar alle schelpen samenkomen — open ringetje, geen punt. */}
+      <circle cx={KB.node[0]} cy={KB.node[1]} r="1.5" fill="none" stroke={c.seam} strokeWidth="1.5" opacity="0.95" />
+      <circle cx={KB.node[0]} cy={KB.node[1]} r="1.5" fill="none" stroke="#ffffff" strokeWidth="0.5" opacity="0.45" />
       {/* Blinkende glans: een felle specular hotspot + een zachtere veeg. */}
       <ellipse cx="9" cy="7.4" rx="4" ry="2.7" fill="url(#kbGloss)" />
       <ellipse cx="8" cy="6.3" rx="1.6" ry="1.05" fill="#ffffff" opacity="0.95" />
