@@ -89,13 +89,13 @@ export default async function SeizoenAnalysePage({ searchParams }: { searchParam
                   <th className="rang-rank">#</th>
                   <th className="rang-teamh">Speler</th>
                   <th title="Gespeelde wedstrijden">M</th>
-                  <th title="Worpen">W</th>
+                  <th className="an-col-sec" title="Worpen">W</th>
                   <th title="Doelpunten">D</th>
                   <th title="Punten">Ptn</th>
                   <th title="Conversie">Conv</th>
                   <th className="rang-dv" title="Score (punten − geforceerd)">Sco</th>
                   <th className="rang-dv" title="Gem. worpafstand">Afst</th>
-                  <th title="Vorm (punten per wedstrijd)">Vorm</th>
+                  <th className="an-col-sec" title="Vorm (punten per wedstrijd)">Vorm</th>
                 </tr>
               </thead>
               <tbody>
@@ -107,13 +107,13 @@ export default async function SeizoenAnalysePage({ searchParams }: { searchParam
                       <span className="an-season-team">{p.teamName}</span>
                     </td>
                     <td>{p.matches}</td>
-                    <td>{p.throws}</td>
+                    <td className="an-col-sec">{p.throws}</td>
                     <td>{p.goals} <span className="an-season-sub">({p.nek}/{p.rug})</span></td>
                     <td className="rang-pts">{p.points}</td>
                     <td>{Math.round(p.conversion * 100)}%</td>
                     <td className={`rang-dv ${p.score < 0 ? 'an-neg' : ''}`}>{p.score > 0 ? `+${p.score}` : p.score}</td>
                     <td className="rang-dv">{p.avgDistance.toFixed(1)}m</td>
-                    <td className="an-spark-cell"><Sparkline values={p.trend.map((t) => t.points)} /></td>
+                    <td className="an-col-sec an-spark-cell"><Sparkline values={p.trend.map((t) => t.points)} /></td>
                   </tr>
                 ))}
               </tbody>
