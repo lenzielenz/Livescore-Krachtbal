@@ -1,14 +1,14 @@
 import { SiteHeader } from '@/components/SiteHeader'
 import { buildMatchState } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
-import { REEKS_OPTIONS } from '@/lib/reeksen'
+import { reeksNaam } from '@/lib/reeksen'
 import { readVeldMatchId } from '@/lib/screen-selection'
 import { CastHub, type CastMatch } from './CastHub'
 import './cast.css'
 
 export const dynamic = 'force-dynamic'
 
-const reeksLabel = (v: unknown) => REEKS_OPTIONS.find((o) => o.value === v)?.label ?? (typeof v === 'string' ? v : 'Overig')
+const reeksLabel = (v: unknown) => reeksNaam(v)
 
 function todayBounds(): { start: string; end: string } {
   const now = new Date()
