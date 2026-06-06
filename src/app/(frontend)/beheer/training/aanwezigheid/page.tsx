@@ -5,12 +5,16 @@ import { SiteHeader } from '@/components/SiteHeader'
 import { canAnalyse, hasRole, isFederationLevel, userClubId } from '@/lib/access'
 import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
-import { AanwezigheidPanel, type AwPlayer, type AwSession, type AwTeam } from './AanwezigheidPanel'
+import { AanwezigheidPanel, type AwClub, type AwPlayer, type AwSession } from './AanwezigheidPanel'
 import { TrainingNav } from '../TrainingNav'
 
 export const dynamic = 'force-dynamic'
 
-// Aanwezigheidslijst per training: wie kwam (+ aantal), het weer en de duur.
+const relId = (v: unknown): number | null =>
+  v && typeof v === 'object' ? ((v as { id?: number }).id ?? null) : typeof v === 'number' ? v : null
+
+// Aanwezigheidslijst per training — per CLUB (uit het account afgeleid): wie kwam (+ aantal),
+// het weer en de duur. Geen ploegkeuze: de spelerslijst is die van de club.
 export default async function AanwezigheidPage() {
   const me = await getAuthUser()
   const fed = isFederationLevel(me)
@@ -34,40 +38,57 @@ export default async function AanwezigheidPage() {
   }
 
   const payload = await getPayloadClient()
-  const clubId = userClubId(me)
-  const canSeeAll = fed || !isClubBeheerder
-  const teamWhere: Where = canSeeAll ? {} : { club: { equals: clubId } }
-  const playerWhere: Where = canSeeAll ? {} : { 'team.club': { equals: clubId } }
+  const rawClubId = userClubId(me)
+  const myClubId: number | null = rawClubId != null && Number.isFinite(Number(rawClubId)) ? Number(rawClubId) : null
+  // Club-beheerder is vast aan de eigen club; federatie/admin kan kiezen uit alle clubs.
+  const fixedClubId = !fed && isClubBeheerder ? (myClubId ?? null) : null
+  const clubWhere: Where = fixedClubId != null ? { id: { equals: fixedClubId } } : {}
+  const teamWhere: Where = fixedClubId != null ? { club: { equals: fixedClubId } } : {}
+  const playerWhere: Where = fixedClubId != null ? { 'team.club': { equals: fixedClubId } } : {}
 
-  const [teamsRes, playersRes, sessiesRes] = await Promise.all([
-    payload.find({ collection: 'teams', where: teamWhere, depth: 0, limit: 1000, sort: 'name' }),
-    payload.find({ collection: 'players', where: playerWhere, depth: 2, limit: 2000, sort: 'name' }),
+  const [clubsRes, teamsRes, playersRes, sessiesRes] = await Promise.all([
+    payload.find({ collection: 'clubs', where: clubWhere, depth: 0, limit: 2000, sort: 'name' }),
+    payload.find({ collection: 'teams', where: teamWhere, depth: 0, limit: 4000, sort: 'name' }),
+    payload.find({ collection: 'players', where: playerWhere, depth: 2, limit: 5000, sort: 'name' }),
     payload.find({ collection: 'trainingen', depth: 1, limit: 500, sort: '-datum' }),
   ])
 
-  const teams: AwTeam[] = teamsRes.docs.map((t) => ({ id: t.id, name: (t.name as string) ?? '—' }))
-  const players: AwPlayer[] = playersRes.docs.map((p) => {
-    const team = typeof p.team === 'object' && p.team ? p.team : null
-    return { id: p.id, name: p.name ?? '—', teamId: team?.id ?? null, teamName: team?.name ?? '' }
-  })
-
-  // Club-beheerder ziet enkel z'n eigen trainingen (die met een ploeg van de eigen club).
-  const ownTeamIds = new Set(teams.map((t) => t.id))
-  const relName = (v: unknown): { id: number; name: string } | null => {
-    if (v && typeof v === 'object') return { id: (v as { id: number }).id, name: ((v as { name?: string }).name ?? '—') }
-    return null
+  // Eerste ploeg per club (voor het toekennen van nieuwe spelers bij het snel aanvullen).
+  const primaryTeam = new Map<number, number>()
+  for (const t of teamsRes.docs) {
+    const cid = relId((t as { club?: unknown }).club)
+    if (cid != null && !primaryTeam.has(cid)) primaryTeam.set(cid, (t as { id: number }).id)
   }
+
+  const clubs: AwClub[] = clubsRes.docs.map((c) => ({
+    id: (c as { id: number }).id,
+    name: ((c as { name?: string }).name ?? '—') as string,
+    primaryTeamId: primaryTeam.get((c as { id: number }).id) ?? null,
+    players: [] as AwPlayer[],
+  }))
+  const clubById = new Map(clubs.map((c) => [c.id, c]))
+
+  for (const p of playersRes.docs) {
+    const team = typeof p.team === 'object' && p.team ? p.team : null
+    const cid = team && typeof team.club === 'object' && team.club ? team.club.id : relId(team?.club)
+    if (cid == null) continue
+    clubById.get(cid)?.players.push({ id: p.id, name: p.name ?? '—' })
+  }
+
+  const relName = (v: unknown): { id: number; name: string } | null =>
+    v && typeof v === 'object' ? { id: (v as { id: number }).id, name: ((v as { name?: string }).name ?? '—') } : null
+
   const sessions: AwSession[] = sessiesRes.docs
     .map((s) => {
-      const team = relName(s.team)
+      const club = relName(s.club)
       const aanwezigen = Array.isArray(s.aanwezigen)
         ? s.aanwezigen.map(relName).filter((x): x is { id: number; name: string } => x != null)
         : []
       return {
         id: s.id,
         datum: s.datum as string,
-        teamId: team?.id ?? null,
-        team: team?.name ?? null,
+        clubId: club?.id ?? null,
+        club: club?.name ?? null,
         duurMinuten: (s.duurMinuten as number | null | undefined) ?? null,
         weer: (s.weer as string | null | undefined) ?? null,
         temperatuur: (s.temperatuur as number | null | undefined) ?? null,
@@ -76,7 +97,7 @@ export default async function AanwezigheidPage() {
         notitie: (s.notitie as string | null | undefined) ?? null,
       }
     })
-    .filter((s) => canSeeAll || s.teamId == null || ownTeamIds.has(s.teamId))
+    .filter((s) => fixedClubId == null || s.clubId == null || s.clubId === fixedClubId)
 
   return (
     <>
@@ -87,7 +108,7 @@ export default async function AanwezigheidPage() {
         <p className="wb-intro">
           Hou per training bij wie er was (en dus hoeveel), hoe lang jullie trainden en hoe het weer was.
         </p>
-        <AanwezigheidPanel teams={teams} players={players} sessions={sessions} canWrite={canWrite} />
+        <AanwezigheidPanel clubs={clubs} fixedClubId={fixedClubId} sessions={sessions} canWrite={canWrite} />
       </div>
     </>
   )
