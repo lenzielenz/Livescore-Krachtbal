@@ -23,9 +23,9 @@ const GENERAL = [
   { href: '/tornooi', label: '🏆 Tornooi' },
 ]
 
-// Het Meer-menu licht op zodra je op een van deze secties zit. ('analyse' staat nu als eigen
-// knop in de balk — de analyse-hub bevat zelf al alle tools, dus geen apart submenu meer.)
-const MENU_SECTIONS: NavSection[] = ['stand', 'tornooi', 'clubs', 'scheidsrechters', 'federatie']
+// Het Meer-menu licht op zodra je op een van deze secties zit. Analyse zit als één item bovenaan
+// het menu (de analyse-hub bevat zelf al alle tools, dus geen apart submenu).
+const MENU_SECTIONS: NavSection[] = ['stand', 'analyse', 'tornooi', 'clubs', 'scheidsrechters', 'federatie']
 
 export function SiteHeader({ active = null }: { active?: NavSection }) {
   const [open, setOpen] = useState(false)
@@ -67,11 +67,6 @@ export function SiteHeader({ active = null }: { active?: NavSection }) {
               {l.label}
             </Link>
           ))}
-          {canAnalyse && (
-            <Link href="/analyse" className={`sh-link ${active === 'analyse' ? 'on' : ''}`}>
-              📈 Analyse
-            </Link>
-          )}
 
           <div className="sh-more">
             <button
@@ -87,6 +82,11 @@ export function SiteHeader({ active = null }: { active?: NavSection }) {
                 <div className="sh-more-backdrop" onClick={() => setOpen(false)} />
                 <div className="sh-more-menu">
                   <div className="sh-more-group">
+                    {canAnalyse && (
+                      <Link href="/analyse" className="sh-more-item" onClick={() => setOpen(false)}>
+                        📈 Analyse
+                      </Link>
+                    )}
                     {GENERAL.map((l) => (
                       <Link key={l.href} href={l.href} className="sh-more-item" onClick={() => setOpen(false)}>
                         {l.label}
