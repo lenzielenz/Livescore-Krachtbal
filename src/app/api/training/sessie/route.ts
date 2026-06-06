@@ -15,6 +15,7 @@ export async function POST(req: Request) {
     weer?: string
     temperatuur?: unknown
     aanwezigen?: unknown
+    screenshot?: string
     notitie?: string
   }
   try {
@@ -36,6 +37,11 @@ export async function POST(req: Request) {
     return Number.isFinite(n) ? n : undefined
   }
   const weer: Weer | undefined = isWeer(body.weer) ? body.weer : undefined
+  // Screenshot: enkel een afbeelding-data-URL en begrensd (client schaalt al naar ~max 1280px).
+  const screenshot =
+    typeof body.screenshot === 'string' && body.screenshot.startsWith('data:image/') && body.screenshot.length < 4_000_000
+      ? body.screenshot
+      : undefined
 
   try {
     const payload = await getPayloadClient()
@@ -63,6 +69,7 @@ export async function POST(req: Request) {
         ...(weer ? { weer } : {}),
         ...(num(body.temperatuur) != null ? { temperatuur: num(body.temperatuur) } : {}),
         aanwezigen,
+        ...(screenshot ? { screenshot } : {}),
         ...(typeof body.notitie === 'string' && body.notitie.trim() ? { notitie: body.notitie.trim() } : {}),
       },
       overrideAccess: true,

@@ -802,6 +802,10 @@ export interface Trainingen {
    * De spelers die aanwezig waren. Het aantal volgt automatisch.
    */
   aanwezigen?: (number | Player)[] | null;
+  /**
+   * Optionele screenshot van de WhatsApp-poll, als data-URL bewaard (overleeft een deploy).
+   */
+  screenshot?: string | null;
   notitie?: string | null;
   updatedAt: string;
   createdAt: string;
@@ -1375,6 +1379,7 @@ export interface TrainingenSelect<T extends boolean = true> {
   weer?: T;
   temperatuur?: T;
   aanwezigen?: T;
+  screenshot?: T;
   notitie?: T;
   updatedAt?: T;
   createdAt?: T;
