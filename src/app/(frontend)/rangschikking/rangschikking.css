@@ -57,6 +57,7 @@
 .rang-table td {
   padding: 10px 8px;
   text-align: center;
+  vertical-align: middle;
   border-bottom: 1px solid var(--line);
 }
 .rang-table thead th {
@@ -80,11 +81,14 @@
   text-align: left;
 }
 .rang-team {
+  text-align: left;
+  min-width: 160px;
+}
+.rang-team-inner {
   display: flex;
   align-items: center;
   gap: 9px;
-  text-align: left;
-  min-width: 160px;
+  min-width: 0;
 }
 .rang-name {
   font-weight: 600;
@@ -126,6 +130,8 @@
   }
   .rang-team {
     min-width: 0;
+  }
+  .rang-team-inner {
     gap: 0;
   }
   .rang-name {
@@ -155,6 +161,39 @@
 .rang-move.up { color: #0fe0a6; }
 .rang-move.down { color: #ef476f; }
 .rang-move.flat { color: var(--dim); opacity: 0.6; }
+
+/* Klikbare rij: tik om de extra cijfers uit te klappen. */
+.rang-row { cursor: pointer; }
+.rang-row:hover { background: color-mix(in srgb, var(--accent) 7%, transparent); }
+.rang-row:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.rang-row.open { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+.rang-caret {
+  margin-left: auto;
+  padding-left: 8px;
+  color: var(--dim);
+  font-size: 0.8rem;
+  flex: 0 0 auto;
+  transition: color 0.15s ease;
+}
+.rang-row:hover .rang-caret,
+.rang-row.open .rang-caret { color: var(--accent); }
+
+/* Uitklapbaar detailpaneel onder een ploeg. */
+.rang-detailrow > td { padding: 0 !important; border-bottom: 1px solid var(--line); }
+.rang-detail {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  padding: 11px 14px;
+  background: color-mix(in srgb, var(--accent) 6%, #0a1f14);
+  font-size: 0.84rem;
+  color: var(--dim);
+  white-space: normal;
+  text-align: left;
+}
+.rang-detail-item b { color: var(--txt); font-variant-numeric: tabular-nums; }
+.rang-detail-item b.pos { color: #0fe0a6; }
+.rang-detail-item b.neg { color: #ef476f; }
 
 /* De eigen club (ingelogd) springt eruit. */
 .rang-mine {

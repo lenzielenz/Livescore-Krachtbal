@@ -1,13 +1,13 @@
 import Link from 'next/link'
 
 import { SiteHeader } from '@/components/SiteHeader'
-import { TeamLogo } from '@/components/TeamLogo'
 import { userClubId } from '@/lib/access'
 import { getAuthUser } from '@/lib/auth-user'
 import { buildScoreboards, clubColors, clubLogoFit, clubLogoUrl } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
 import { REEKS_OPTIONS, reeksNaam } from '@/lib/reeksen'
 import { computeStandings, forfaitFromUitslag, type StandingsMatch } from '@/lib/standings'
+import { RangTable, type RangRow } from './RangTable'
 import { ReeksPicker } from './ReeksPicker'
 import './rangschikking.css'
 
@@ -103,6 +103,34 @@ export default async function RangschikkingPage({ searchParams }: { searchParams
   const prevTable = computeStandings(prevMatches, teamIds)
   const prevRank = new Map(prevTable.map((r, i) => [r.teamId, i]))
 
+  // Rijen voor de (client) tabel: serialiseerbaar, met positieverloop t.o.v. vorige week.
+  const rows: RangRow[] = table.map((r, i) => {
+    const info = teamInfo.get(r.teamId)
+    const mine = myClubNum != null && info?.clubId === myClubNum
+    const prev = prevRank.get(r.teamId)
+    const delta = prev == null ? 0 : prev - i
+    const moveCls: RangRow['moveCls'] = prevMatches.length === 0 ? 'flat' : delta > 0 ? 'up' : delta < 0 ? 'down' : 'flat'
+    return {
+      teamId: r.teamId,
+      rank: i + 1,
+      name: info?.name ?? '—',
+      logoUrl: info?.logoUrl ?? null,
+      logoFit: info?.logoFit ?? null,
+      ringColor: info?.colors?.primary ?? null,
+      mine,
+      played: r.played,
+      won: r.won,
+      drawn: r.drawn,
+      lost: r.lost,
+      forfaits: r.forfaits,
+      goalsFor: r.goalsFor,
+      goalsAgainst: r.goalsAgainst,
+      points: r.points,
+      moveCls,
+      delta,
+    }
+  })
+
   // Snel bladeren door de reeksen-rangschikkingen (prev/next).
   const idx = COMPETITIE_REEKSEN.findIndex((o) => o.value === reeks)
   const prevReeks = idx > 0 ? COMPETITIE_REEKSEN[idx - 1].value : null
@@ -127,60 +155,10 @@ export default async function RangschikkingPage({ searchParams }: { searchParams
           )}
         </div>
 
-        {table.length === 0 ? (
+        {rows.length === 0 ? (
           <p className="empty">Nog geen ploegen of wedstrijden in deze reeks.</p>
         ) : (
-          <div className="rang-scroll">
-            <table className="rang-table">
-              <thead>
-                <tr>
-                  <th className="rang-rank">#</th>
-                  <th className="rang-teamh">Ploeg</th>
-                  <th title="Gespeeld">Sp</th>
-                  <th title="Winst">W</th>
-                  <th title="Gelijk">G</th>
-                  <th title="Verlies">V</th>
-                  <th title="Forfait">FF</th>
-                  <th className="rang-dv" title="Doelpunten voor–tegen">DV–DT</th>
-                  <th title="Punten">Ptn</th>
-                </tr>
-              </thead>
-              <tbody>
-                {table.map((r, i) => {
-                  const info = teamInfo.get(r.teamId)
-                  const mine = myClubNum != null && info?.clubId === myClubNum
-                  // Positie t.o.v. vorige week: positief = gestegen.
-                  const prev = prevRank.get(r.teamId)
-                  const delta = prev == null ? 0 : prev - i
-                  const moveCls = prevMatches.length === 0 ? 'flat' : delta > 0 ? 'up' : delta < 0 ? 'down' : 'flat'
-                  const moveArrow = moveCls === 'up' ? '▲' : moveCls === 'down' ? '▼' : '–'
-                  return (
-                    <tr key={r.teamId} className={mine ? 'rang-mine' : undefined}>
-                      <td className="rang-rank">
-                        <span className="rang-pos">{i + 1}</span>
-                        <span className={`rang-move ${moveCls}`} title="T.o.v. vorige week">
-                          {moveArrow}{delta !== 0 ? Math.abs(delta) : ''}
-                        </span>
-                      </td>
-                      <td className="rang-team">
-                        <span className="rang-logo">
-                          <TeamLogo name={info?.name ?? '?'} logoUrl={info?.logoUrl ?? null} logoFit={info?.logoFit} side="home" size="sm" ringColor={info?.colors?.primary} />
-                        </span>
-                        <span className="rang-name">{info?.name ?? '—'}{mine && <span className="rang-mybadge" title="Jouw club">★</span>}</span>
-                      </td>
-                      <td>{r.played}</td>
-                      <td>{r.won}</td>
-                      <td>{r.drawn}</td>
-                      <td>{r.lost}</td>
-                      <td>{r.forfaits}</td>
-                      <td className="rang-dv rang-goals">{r.goalsFor}–{r.goalsAgainst}</td>
-                      <td className="rang-pts">{r.points}</td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
+          <RangTable rows={rows} />
         )}
       </div>
     </>
