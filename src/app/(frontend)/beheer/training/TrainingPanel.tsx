@@ -71,6 +71,36 @@ export function TrainingPanel({
 
   const selectedPlayer = players.find((p) => p.id === spelerId) ?? null
 
+  // VBT-stijl records per metriek: huidige meting, persoonlijk record (PR), % van PR,
+  // verschil t.o.v. de vorige meting en een relatief niveau (PR-niveau → vermoeid).
+  const records = useMemo(() => {
+    return TRAINING_METRICS.map((m) => {
+      const vals = playerMetingen.filter((mt) => mt[m.key] != null).map((mt) => mt[m.key] as number)
+      if (vals.length === 0) return null
+      const latest = vals[vals.length - 1]
+      const prev = vals.length > 1 ? vals[vals.length - 2] : null
+      const pb = Math.max(...vals)
+      const pctPB = pb ? Math.round((latest / pb) * 100) : 0
+      const delta = prev != null ? Math.round((latest - prev) * 100) / 100 : null
+      const level = pctPB >= 99 ? 'pr' : pctPB >= 92 ? 'top' : pctPB >= 85 ? 'ok' : 'low'
+      return { m, latest, pb, pctPB, delta, level, n: vals.length }
+    }).filter((r): r is NonNullable<typeof r> => r != null)
+  }, [playerMetingen])
+
+  // Aanloop–afstand-profiel (4/9/18 m): beste worp per aanloop — het krachtbal-equivalent
+  // van een load-velocity-profiel.
+  const worpProfile = useMemo(() => {
+    const runs: { run: number; key: TrainingMetricKey }[] = [
+      { run: 4, key: 'worp4' },
+      { run: 9, key: 'worp9' },
+      { run: 18, key: 'worp18' },
+    ]
+    return runs.map(({ run, key }) => {
+      const vals = playerMetingen.filter((mt) => mt[key] != null).map((mt) => mt[key] as number)
+      return { run, best: vals.length ? Math.max(...vals) : null, latest: vals.length ? vals[vals.length - 1] : null }
+    })
+  }, [playerMetingen])
+
   const setVal = (k: TrainingMetricKey, i: number, v: string) =>
     setWaarden((prev) => {
       const arr = [...prev[k]]
@@ -203,6 +233,58 @@ export function TrainingPanel({
             </button>
           </div>
           {msg && <p className={`tr-msg ${msg.ok ? 'ok' : 'err'}`}>{msg.text}</p>}
+        </section>
+      )}
+
+      {records.length > 0 && (
+        <section>
+          <h2 className="tr-h2">Records &amp; niveau {selectedPlayer ? `· ${selectedPlayer.name}` : ''}</h2>
+          <div className="tr-vbt-cards">
+            {records.map((r) => (
+              <div key={r.m.key} className={`tr-vbt-card lvl-${r.level}`}>
+                <span className="tr-vbt-lbl">{r.m.kort}</span>
+                <span className="tr-vbt-now">{r.latest}<small> {r.m.unit}</small></span>
+                <span className="tr-vbt-meta">
+                  PR {r.pb} · {r.pctPB}% van PR
+                  {r.delta != null && (
+                    <span className={`tr-vbt-delta ${r.delta > 0 ? 'up' : r.delta < 0 ? 'down' : ''}`}>
+                      {r.delta > 0 ? '▲' : r.delta < 0 ? '▼' : ''}{r.delta !== 0 ? Math.abs(r.delta) : '='}
+                    </span>
+                  )}
+                </span>
+                <span className="tr-vbt-zone">
+                  {r.level === 'pr' ? '🏆 PR-niveau' : r.level === 'top' ? '💪 Sterk' : r.level === 'ok' ? '✔ Op niveau' : '⚠️ Laag (vermoeid?)'}
+                </span>
+              </div>
+            ))}
+          </div>
+          {worpProfile.some((w) => w.best != null) && (
+            <div className="tr-profile">
+              <h3 className="tr-profile-h">Aanloop–afstand-profiel <small>beste worp per aanloop</small></h3>
+              {(() => {
+                const W = 280
+                const H = 120
+                const PAD = 24
+                const maxD = Math.max(1, ...worpProfile.map((w) => w.best ?? 0))
+                const px = (run: number) => PAD + ((run - 4) / 14) * (W - 2 * PAD)
+                const py = (d: number) => H - PAD - (d / maxD) * (H - 2 * PAD)
+                const pts = worpProfile.filter((w) => w.best != null)
+                const line = pts.map((w) => `${px(w.run).toFixed(1)},${py(w.best as number).toFixed(1)}`).join(' ')
+                return (
+                  <svg viewBox={`0 0 ${W} ${H}`} className="tr-profile-svg" role="img" aria-label="Aanloop-afstand profiel">
+                    <polyline points={line} fill="none" stroke="var(--accent, #06d6a0)" strokeWidth={2} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+                    {pts.map((w) => (
+                      <g key={w.run}>
+                        <circle cx={px(w.run)} cy={py(w.best as number)} r={3.5} fill="var(--accent, #06d6a0)" />
+                        <text x={px(w.run)} y={py(w.best as number) - 7} fontSize={9} textAnchor="middle" fill="var(--txt)">{w.best}m</text>
+                        <text x={px(w.run)} y={H - 8} fontSize={9} textAnchor="middle" fill="var(--dim)">{w.run}m</text>
+                      </g>
+                    ))}
+                  </svg>
+                )
+              })()}
+            </div>
+          )}
         </section>
       )}
 
