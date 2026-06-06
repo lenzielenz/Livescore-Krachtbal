@@ -63,6 +63,14 @@ export const Trainingen: CollectionConfig = {
       hasMany: true,
       admin: { description: 'De spelers die aanwezig waren. Het aantal volgt automatisch.' },
     },
+    {
+      name: 'screenshot',
+      label: 'Screenshot (WhatsApp-stemming)',
+      type: 'textarea',
+      admin: {
+        description: 'Optionele screenshot van de WhatsApp-poll, als data-URL bewaard (overleeft een deploy).',
+      },
+    },
     { name: 'notitie', label: 'Notitie', type: 'textarea' },
   ],
 }

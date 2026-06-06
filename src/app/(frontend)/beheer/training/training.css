@@ -299,3 +299,54 @@
 }
 .tr-session-names { font-size: 0.86rem; color: var(--txt); overflow-wrap: anywhere; }
 .tr-session-note { margin-top: 6px; font-size: 0.82rem; color: var(--dim); font-style: italic; }
+
+/* Screenshot-upload + preview. */
+.tr-shot { margin: 12px 0 4px; }
+.tr-shot input[type="file"] { color: var(--dim); font-size: 0.85rem; }
+.tr-shot-prev { margin-top: 8px; display: flex; align-items: flex-start; gap: 10px; }
+.tr-shot-prev img {
+  max-width: 220px;
+  max-height: 220px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+}
+.tr-shot-prev button {
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--dim);
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+/* Spelerslijst snel aanvullen. */
+.tr-addplayers {
+  margin-top: 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: color-mix(in srgb, var(--panel-2, #0a1f14) 40%, transparent);
+}
+.tr-addplayers summary { cursor: pointer; font-weight: 700; }
+.tr-addplayers textarea {
+  width: 100%;
+  margin: 8px 0;
+  padding: 9px 11px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--panel-2, #0a1f14) 60%, transparent);
+  color: var(--txt);
+  font-size: 0.92rem;
+  resize: vertical;
+}
+.tr-addplayers-foot { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+/* Screenshot-thumbnail in de sessielijst. */
+.tr-session-shot { display: inline-block; margin-top: 8px; }
+.tr-session-shot img {
+  max-width: 100%;
+  max-height: 160px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+}

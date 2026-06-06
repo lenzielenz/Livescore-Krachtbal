@@ -72,6 +72,7 @@ export default async function AanwezigheidPage() {
         weer: (s.weer as string | null | undefined) ?? null,
         temperatuur: (s.temperatuur as number | null | undefined) ?? null,
         aanwezigen,
+        screenshot: (s.screenshot as string | null | undefined) ?? null,
         notitie: (s.notitie as string | null | undefined) ?? null,
       }
     })
