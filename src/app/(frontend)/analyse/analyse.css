@@ -1463,3 +1463,10 @@ select.rang-picker {
   max-width: 100%;
   box-sizing: border-box;
 }
+
+/* Periodevergelijking in het spelerdossier. */
+.dos-cmp-note { font-size: 0.78rem; color: var(--dim); margin: 0 0 6px; }
+.rep-card .dos-delta { font-size: 0.74rem; font-weight: 800; font-variant-numeric: tabular-nums; margin-top: 1px; }
+.dos-delta.up { color: #0fe0a6; }
+.dos-delta.down { color: #ef476f; }
+.dos-delta.flat { color: var(--dim); }
