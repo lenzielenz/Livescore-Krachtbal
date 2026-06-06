@@ -1047,6 +1047,10 @@ h3,
 
 .sheet-cta {
   margin-top: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 18px;
 }
 
 .match-info {
