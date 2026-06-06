@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 
+import { readableOnDark } from '@/lib/club-colors'
 import { type LogoFit, logoFitStyle } from '@/lib/logo-fit'
 import './team-logo.css'
 
@@ -47,9 +48,13 @@ export function TeamLogo({ name, logoUrl, logoFit, side, size = 'md', float, rin
     style.height = v
     style.fontSize = v
   }
-  // Clubkleur als ring; valt anders terug op het zijde-accent uit de CSS.
+  // Clubkleur als ring + zachte gloed; valt anders terug op het zijde-accent uit de CSS.
+  // Donkere clubkleuren (bv. een zwart logo) worden geklemd naar een leesbare variant zodat
+  // ook zij een zichtbare, persoonlijke gloed krijgen i.p.v. een onzichtbare zwarte ring.
   if (ringColor) {
-    ;(style as Record<string, string>)['--tl-ring'] = `color-mix(in srgb, ${ringColor} 70%, transparent)`
+    const ring = readableOnDark(ringColor)
+    ;(style as Record<string, string>)['--tl-ring'] = `color-mix(in srgb, ${ring} 78%, transparent)`
+    ;(style as Record<string, string>)['--tl-glow'] = `color-mix(in srgb, ${ring} 45%, transparent)`
   }
 
   const cls = ['tl', sizeClass, side ? `tl-${side}` : '', float ? 'tl-float' : ''].filter(Boolean).join(' ')
