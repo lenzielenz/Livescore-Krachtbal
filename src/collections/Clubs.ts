@@ -21,11 +21,42 @@ export const Clubs: CollectionConfig = {
     delete: ({ req }) => isFederationLevel(req.user),
   },
   hooks: {
-    // Verwijder eerst de ploegen van deze club (die op hun beurt hun spelers opruimen),
-    // anders blokkeert de NOT NULL-FK op teams.club_id het verwijderen van de club.
+    // Een club verwijderen ruimt alles netjes op, anders blokkeren FK's het verwijderen:
+    //  1) de wedstrijden van haar ploegen (+ worpen/balbezit/wedstrijdblad/…),
+    //  2) accounts die aan de club hingen worden losgekoppeld (niet verwijderd),
+    //  3) de ploegen zelf (die op hun beurt hun spelers opruimen via de teams-hook).
     beforeDelete: [
       async ({ req, id }) => {
-        await req.payload.delete({ collection: 'teams', where: { club: { equals: id } }, overrideAccess: true })
+        const payload = req.payload
+        const teamsRes = await payload
+          .find({ collection: 'teams', where: { club: { equals: id } }, depth: 0, limit: 1000 })
+          .catch(() => ({ docs: [] as { id: number }[] }))
+        const teamIds = teamsRes.docs.map((t) => (t as { id: number }).id)
+
+        if (teamIds.length) {
+          const matchesRes = await payload
+            .find({ collection: 'matches', where: { or: [{ homeTeam: { in: teamIds } }, { awayTeam: { in: teamIds } }] }, depth: 0, limit: 2000 })
+            .catch(() => ({ docs: [] as { id: number }[] }))
+          const deps: ('throws' | 'possessions' | 'match-events' | 'matchsheets' | 'accidents')[] = [
+            'throws',
+            'possessions',
+            'match-events',
+            'matchsheets',
+            'accidents',
+          ]
+          for (const m of matchesRes.docs) {
+            const mid = (m as { id: number }).id
+            for (const coll of deps) {
+              await payload.delete({ collection: coll, where: { match: { equals: mid } }, overrideAccess: true }).catch(() => {})
+            }
+            await payload.delete({ collection: 'matches', id: mid, overrideAccess: true }).catch(() => {})
+          }
+        }
+
+        // Accounts loskoppelen (niet verwijderen) zodat de FK de club niet blokkeert.
+        await payload.update({ collection: 'users', where: { club: { equals: id } }, data: { club: null }, overrideAccess: true }).catch(() => {})
+        // Ploegen verwijderen (ruimt hun spelers op via de teams-hook).
+        await payload.delete({ collection: 'teams', where: { club: { equals: id } }, overrideAccess: true }).catch(() => {})
       },
     ],
   },
