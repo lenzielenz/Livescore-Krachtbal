@@ -86,8 +86,8 @@ export default async function TrainingProgressiePage() {
         </h1>
         <TrainingNav active="progressie" />
         <p className="wb-intro">
-          Meet snelheid (vooruit/achteruit) en werpafstand per aanloop (4/9/18 m), en volg de
-          progressie per speler op.
+          Meet sprintsnelheid over 18 m (vooruit/achteruit) en werpafstand per aanloop (4/9/18 m), en
+          volg de progressie per speler op.
         </p>
         <TrainingPanel players={players} metingen={metingen} canWrite={canWrite} />
       </div>
