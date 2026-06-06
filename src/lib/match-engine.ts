@@ -451,11 +451,22 @@ export async function setClock(
 ) {
   const { match } = await loadMatch(payload, matchId)
   if (match.status === 'finished') throw new Error('Wedstrijd is afgelopen — de klok ligt vast.')
+
+  // Bij het pauzeren moet de reeds verstreken tijd vastgezet worden in clockSeconds.
+  // Anders blijft in de DB de oude basiswaarde staan (bv. 0 sinds de start) en springt
+  // de klok bij een pauze terug naar die waarde i.p.v. verder te tellen vanaf de huidige tijd.
+  let seconds = data.seconds
+  if (seconds === undefined && data.running === false && match.clockRunning) {
+    const at = match.clockUpdatedAt ? new Date(match.clockUpdatedAt).getTime() : Date.now()
+    const elapsed = Math.max(0, (Date.now() - at) / 1000)
+    seconds = (match.clockSeconds ?? 0) + elapsed
+  }
+
   await payload.update({
     collection: 'matches',
     id: matchId,
     data: {
-      ...(data.seconds !== undefined ? { clockSeconds: data.seconds } : {}),
+      ...(seconds !== undefined ? { clockSeconds: seconds } : {}),
       ...(data.running !== undefined ? { clockRunning: data.running } : {}),
       clockUpdatedAt: new Date().toISOString(),
     },
