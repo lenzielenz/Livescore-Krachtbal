@@ -18,8 +18,8 @@ export type TrainingMetric = {
 }
 
 export const TRAINING_METRICS: TrainingMetric[] = [
-  { key: 'snelheidVooruit', label: 'Snelheid vooruit', kort: 'Vooruit', unit: 'm/s' },
-  { key: 'snelheidAchteruit', label: 'Snelheid achteruit', kort: 'Achteruit', unit: 'm/s' },
+  { key: 'snelheidVooruit', label: 'Snelheid vooruit · 18 m', kort: 'Vooruit 18 m', unit: 'm/s' },
+  { key: 'snelheidAchteruit', label: 'Snelheid achteruit · 18 m', kort: 'Achteruit 18 m', unit: 'm/s' },
   { key: 'worp4', label: 'Werpafstand · aanloop 4 m', kort: 'Worp 4 m', unit: 'm', pogingen: true },
   { key: 'worp9', label: 'Werpafstand · aanloop 9 m', kort: 'Worp 9 m', unit: 'm', pogingen: true },
   { key: 'worp18', label: 'Werpafstand · aanloop 18 m', kort: 'Worp 18 m', unit: 'm', pogingen: true },

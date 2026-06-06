@@ -419,7 +419,7 @@ export function SpelerRadar({
                   )
                 })()
               ) : (
-                <p className="rad-hint">👆 Tik op een statistiek (de gekleurde knopjes rond de radar) om ze uit te lichten.</p>
+                <p className="rad-hint">👆 Tik op een statistiek</p>
               )}
             </div>
 

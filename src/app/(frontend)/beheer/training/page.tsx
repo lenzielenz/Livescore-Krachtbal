@@ -14,7 +14,7 @@ const TOOLS = [
     href: '/beheer/training/progressie',
     icon: '📈',
     title: 'Progressie',
-    desc: 'Meet snelheid (vooruit/achteruit) en werpafstand per aanloop (4/9/18 m), en volg de evolutie per speler met grafieken.',
+    desc: 'Meet sprintsnelheid over 18 m (vooruit/achteruit) en werpafstand per aanloop (4/9/18 m), en volg de evolutie per speler met grafieken.',
   },
   {
     href: '/beheer/training/aanwezigheid',
