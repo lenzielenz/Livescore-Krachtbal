@@ -2,6 +2,7 @@ import type { Payload } from 'payload'
 
 import { attackDirForSide, loadMatchThrowData } from './match-engine'
 import type { ThrowType } from './krachtbal-rules'
+import { seasonClause } from './seasons'
 
 // Verwachte punten (xG-achtig model voor krachtbal).
 //
@@ -73,7 +74,7 @@ const DIST_ORDER = ['0–5m', '5–8m', '8–11m', '11–14m', '14m+', 'onbekend
 const rel = (v: unknown): number | null =>
   v && typeof v === 'object' ? ((v as { id?: number }).id ?? null) : typeof v === 'number' ? v : null
 
-export async function buildExpectedPoints(payload: Payload, reeks: string): Promise<XpResult> {
+export async function buildExpectedPoints(payload: Payload, reeks: string, seizoen?: string | null): Promise<XpResult> {
   // Ploegen + spelers van de reeks (voor de ploegnaam per speler).
   const teamsRes = await payload
     .find({ collection: 'teams', where: { reeks: { equals: reeks } }, depth: 0, limit: 200 })
@@ -94,7 +95,7 @@ export async function buildExpectedPoints(payload: Payload, reeks: string): Prom
   const matchRes = await payload
     .find({
       collection: 'matches',
-      where: { and: [{ reeks: { equals: reeks } }, { status: { equals: 'finished' } }] },
+      where: { and: [{ reeks: { equals: reeks } }, { status: { equals: 'finished' } }, ...seasonClause(seizoen)] },
       sort: 'date',
       depth: 0,
       limit: 500,

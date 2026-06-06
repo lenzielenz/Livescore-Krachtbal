@@ -2,6 +2,7 @@ import Link from 'next/link'
 
 import { SiteHeader } from '@/components/SiteHeader'
 import { canAnalyse } from '@/lib/access'
+import { getSelectedSeason } from '@/lib/analyse-season'
 import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
 import { buildRadarStats } from '@/lib/radar-stats'
@@ -43,7 +44,7 @@ export default async function SpelerAnalysePage({ searchParams }: { searchParams
       : COMPETITIE_REEKSEN[0].value
 
   const payload = await getPayloadClient()
-  const players = await buildRadarStats(payload, reeks)
+  const players = await buildRadarStats(payload, reeks, await getSelectedSeason())
 
   return (
     <>

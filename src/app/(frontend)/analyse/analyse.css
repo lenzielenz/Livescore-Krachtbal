@@ -962,3 +962,41 @@ select.rang-picker {
     min-width: 132px;
   }
 }
+
+/* Analyse-subnav + globale seizoenkeuze op één rij (picker wikkelt onder de tabs op gsm). */
+.an-navwrap {
+  display: flex;
+  align-items: center;
+  gap: 10px 14px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.an-navwrap .an-nav {
+  flex: 1 1 auto;
+  margin-bottom: 0;
+}
+.an-season-pick {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--panel-2, #0a1f14) 60%, transparent);
+  font-size: 0.85rem;
+  color: var(--dim);
+}
+.an-season-pick select {
+  border: none;
+  background: transparent;
+  color: var(--txt);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 2px 2px;
+}
+.an-season-pick select:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent, #06d6a0) 60%, transparent);
+  border-radius: 4px;
+}

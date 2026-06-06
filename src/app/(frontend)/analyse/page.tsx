@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { SiteHeader } from '@/components/SiteHeader'
 import { TeamLogo } from '@/components/TeamLogo'
 import { canAnalyse, hasRole } from '@/lib/access'
+import { getSelectedSeason } from '@/lib/analyse-season'
 import { getAuthUser } from '@/lib/auth-user'
 import { buildScoreboards } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
@@ -166,7 +167,7 @@ export default async function AnalysePage({ searchParams }: { searchParams: Prom
     typeof reeksParam === 'string' && COMPETITIE_REEKSEN.some((o) => o.value === reeksParam)
       ? reeksParam
       : COMPETITIE_REEKSEN[0].value
-  const season = await buildSeasonStats(payload, reeks).catch(() => [] as SeasonPlayer[])
+  const season = await buildSeasonStats(payload, reeks, await getSelectedSeason()).catch(() => [] as SeasonPlayer[])
   const top = (sel: (a: SeasonPlayer, b: SeasonPlayer) => number, fmt: (p: SeasonPlayer) => string, filter?: (p: SeasonPlayer) => boolean) =>
     [...(filter ? season.filter(filter) : season)]
       .sort(sel)

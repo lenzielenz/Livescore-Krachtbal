@@ -2,6 +2,7 @@ import Link from 'next/link'
 
 import { SiteHeader } from '@/components/SiteHeader'
 import { canAnalyse } from '@/lib/access'
+import { getSelectedSeason } from '@/lib/analyse-season'
 import { getAuthUser } from '@/lib/auth-user'
 import { buildExpectedPoints } from '@/lib/expected-points'
 import { getPayloadClient } from '@/lib/payload-client'
@@ -44,7 +45,7 @@ export default async function VerwachtAnalysePage({ searchParams }: { searchPara
       : COMPETITIE_REEKSEN[0].value
 
   const payload = await getPayloadClient()
-  const { players, buckets, totals, dangerShots } = await buildExpectedPoints(payload, reeks)
+  const { players, buckets, totals, dangerShots } = await buildExpectedPoints(payload, reeks, await getSelectedSeason())
 
   const maxAbsDiff = Math.max(1, ...players.map((p) => Math.abs(p.diff)))
 

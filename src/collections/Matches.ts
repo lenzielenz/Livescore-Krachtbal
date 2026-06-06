@@ -1,8 +1,19 @@
-import type { CollectionConfig } from 'payload'
+import type { CollectionConfig, FieldHook } from 'payload'
 
 import { isFederationLevel } from '../lib/access'
 import { CATEGORY_OPTIONS } from '../lib/categories'
 import { REEKS_OPTIONS, reeksCategorie, type Reeks } from '../lib/reeksen'
+import { seasonFromDate } from '../lib/seasons'
+
+// Vul het seizoen automatisch in uit de datum wanneer het leeg gelaten wordt (de admin mag het
+// expliciet overschrijven). Zo heeft elke wedstrijd een seizoen zonder extra werk.
+const deriveSeizoen: FieldHook = ({ value, siblingData }) => {
+  if (typeof value === 'string' && value.trim()) return value
+  const raw = (siblingData as { date?: string | null })?.date
+  if (!raw) return value
+  const d = new Date(raw)
+  return Number.isNaN(d.getTime()) ? value : seasonFromDate(d)
+}
 
 export const MATCH_STATUS_OPTIONS = [
   { label: 'Gepland', value: 'scheduled' },
@@ -96,6 +107,16 @@ export const Matches: CollectionConfig = {
       admin: {
         description: 'Kies eerst de reeks. De categorie volgt automatisch en de ploegen worden hierop gefilterd.',
       },
+    },
+    {
+      name: 'seizoen',
+      label: 'Seizoen',
+      type: 'text',
+      admin: {
+        position: 'sidebar',
+        description: 'Bv. 2025-2026. Leeg laten = automatisch afgeleid uit de datum (juli–juni).',
+      },
+      hooks: { beforeChange: [deriveSeizoen] },
     },
     {
       type: 'row',

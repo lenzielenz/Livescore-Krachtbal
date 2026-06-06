@@ -1,6 +1,7 @@
 import type { Payload } from 'payload'
 
 import { buildMatchStats } from './match-engine'
+import { seasonClause } from './seasons'
 
 // Tegenstander-/ploegrapport (scouting). Aggregeert de detail-worpdata van één ploeg
 // over al haar afgelopen wedstrijden: aanvallend per speler (worpen, doelpunten,
@@ -58,7 +59,7 @@ export interface TeamReport {
 const rel = (v: unknown): number | null =>
   v && typeof v === 'object' ? ((v as { id?: number }).id ?? null) : typeof v === 'number' ? v : null
 
-export async function buildTeamReport(payload: Payload, teamId: number): Promise<TeamReport | null> {
+export async function buildTeamReport(payload: Payload, teamId: number, seizoen?: string | null): Promise<TeamReport | null> {
   const team = await payload.findByID({ collection: 'teams', id: teamId, depth: 0 }).catch(() => null)
   if (!team) return null
   const reeks = String((team as { reeks?: unknown }).reeks ?? '')
@@ -78,6 +79,7 @@ export async function buildTeamReport(payload: Payload, teamId: number): Promise
         and: [
           { status: { equals: 'finished' } },
           { or: [{ homeTeam: { equals: teamId } }, { awayTeam: { equals: teamId } }] },
+          ...seasonClause(seizoen),
         ],
       },
       sort: 'date',
