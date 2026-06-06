@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 import type { RadarPlayer } from '@/lib/radar-stats'
@@ -87,15 +87,42 @@ function SubBar({ icon, label, v }: { icon: string; label: string; v: number }) 
   )
 }
 
+// Telt vloeiend op van 0 → target (met arc-sweep); springt meteen bij reduced-motion.
+function useCountUp(target: number, ms = 900): number {
+  const [n, setN] = useState(0)
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+      setN(target)
+      return
+    }
+    let raf = 0
+    const start = performance.now()
+    const tick = (t: number) => {
+      const p = Math.min(1, (t - start) / ms)
+      const eased = 1 - Math.pow(1 - p, 3)
+      setN(Math.round(target * eased))
+      if (p < 1) raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [target, ms])
+  return n
+}
+
 function RatingGauge({ rating, att, def, name, sub }: { rating: number; att: number; def: number; name: string; sub?: string }) {
+  const shown = useCountUp(rating)
   const r = 46
   const c = 2 * Math.PI * r
-  const dash = (Math.max(0, Math.min(100, rating)) / 100) * c
+  const dash = (Math.max(0, Math.min(100, shown)) / 100) * c
   const color = pctColor(rating / 100)
   return (
     <div className="rad-gauge">
-      <svg viewBox="0 0 120 120" className="rad-gauge-svg" role="img" aria-label={`Rating ${rating}`}>
+      <svg viewBox="0 0 120 120" className="rad-gauge-svg" role="img" aria-label={`Rating ${rating}`} style={{ color }}>
         <circle cx="60" cy="60" r={r} className="rad-gauge-bg" />
+        {/* trage glinster-ring voor wat omgevingsbeweging */}
+        <circle cx="60" cy="60" r="55" className="rad-gauge-spin" />
+        {/* zachte pulserende halo achter de boog */}
+        <circle cx="60" cy="60" r={r} className="rad-gauge-halo" stroke={color} />
         <circle
           cx="60"
           cy="60"
@@ -105,7 +132,7 @@ function RatingGauge({ rating, att, def, name, sub }: { rating: number; att: num
           strokeDasharray={`${dash} ${c}`}
           transform="rotate(-90 60 60)"
         />
-        <text x="60" y="58" className="rad-gauge-num" textAnchor="middle">{rating}</text>
+        <text x="60" y="58" className="rad-gauge-num" textAnchor="middle">{shown}</text>
         <text x="60" y="76" className="rad-gauge-lbl" textAnchor="middle">rating</text>
       </svg>
       <span className="rad-gauge-name">{name}</span>
