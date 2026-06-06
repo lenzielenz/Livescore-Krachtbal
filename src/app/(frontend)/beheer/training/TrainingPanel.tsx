@@ -7,7 +7,9 @@ import { TRAINING_METRICS, metricAttempts, type TrainingMeting, type TrainingMet
 import { ProgressieChart } from './ProgressieChart'
 import './training.css'
 
-export type TrainingPlayer = { id: number; name: string; team: string; club: string }
+export type TrainingPlayer = { id: number; name: string; team: string; club: string; reeks: string; reeksNaam: string }
+
+const ALL = '__all__' // token: alle reeksen samen
 
 const todayISO = () => new Date().toISOString().slice(0, 10)
 
@@ -33,7 +35,26 @@ export function TrainingPanel({
   canWrite: boolean
 }) {
   const router = useRouter()
+  // Reeks-keuze: elke trainer heeft zijn eigen reeks → filter de spelerslijst per leeftijdsgroep.
+  const reeksGroups = useMemo(() => {
+    const m = new Map<string, { reeks: string; naam: string; n: number }>()
+    for (const p of players) {
+      const k = p.reeks || ''
+      if (!k) continue
+      const g = m.get(k) ?? { reeks: k, naam: p.reeksNaam, n: 0 }
+      g.n++
+      m.set(k, g)
+    }
+    return [...m.values()].sort((a, b) => a.naam.localeCompare(b.naam, 'nl'))
+  }, [players])
+  const [tab, setTab] = useState<string>(ALL)
+  const shownPlayers = tab === ALL ? players : players.filter((p) => (p.reeks || '') === tab)
   const [spelerId, setSpelerId] = useState<number | null>(players[0]?.id ?? null)
+  const selectTab = (t: string) => {
+    setTab(t)
+    const list = t === ALL ? players : players.filter((p) => (p.reeks || '') === t)
+    setSpelerId(list[0]?.id ?? null)
+  }
   const [datum, setDatum] = useState(todayISO())
   const [waarden, setWaarden] = useState<Record<TrainingMetricKey, string[]>>(emptyVals)
   const [busy, setBusy] = useState(false)
@@ -98,11 +119,29 @@ export function TrainingPanel({
 
   return (
     <div className="tr">
+      {reeksGroups.length > 0 && (
+        <div className="tr-reekstabs">
+          <button type="button" className={`tr-reekstab${tab === ALL ? ' on' : ''}`} onClick={() => selectTab(ALL)}>
+            Alle reeksen <span className="tr-reekstab-n">{players.length}</span>
+          </button>
+          {reeksGroups.map((g) => (
+            <button
+              key={g.reeks}
+              type="button"
+              className={`tr-reekstab${tab === g.reeks ? ' on' : ''}`}
+              onClick={() => selectTab(g.reeks)}
+            >
+              {g.naam} <span className="tr-reekstab-n">{g.n}</span>
+            </button>
+          ))}
+        </div>
+      )}
       <div className="tr-toolbar">
         <label className="tr-field">
           <span>Speler</span>
           <select value={spelerId ?? ''} onChange={(e) => setSpelerId(Number(e.target.value))}>
-            {players.map((p) => (
+            {shownPlayers.length === 0 && <option value="">— geen spelers —</option>}
+            {shownPlayers.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.name}
               </option>

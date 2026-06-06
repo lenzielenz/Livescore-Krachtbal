@@ -5,6 +5,7 @@ import { SiteHeader } from '@/components/SiteHeader'
 import { canAnalyse, hasRole, isFederationLevel, userClubId } from '@/lib/access'
 import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
+import { reeksNaam } from '@/lib/reeksen'
 import { TRAINING_METRICS, type TrainingMeting } from '@/lib/training-metrics'
 import { TrainingNav } from '../TrainingNav'
 import { TrainingPanel, type TrainingPlayer } from '../TrainingPanel'
@@ -53,11 +54,14 @@ export default async function TrainingProgressiePage() {
   const players: TrainingPlayer[] = playersRes.docs.map((p) => {
     const team = typeof p.team === 'object' && p.team ? p.team : null
     const club = team && typeof team.club === 'object' && team.club ? team.club : null
+    const reeks = (team?.reeks as string | null | undefined) ?? ''
     return {
       id: p.id,
       name: p.name ?? '—',
       team: team?.name ?? '',
       club: club?.name ?? '',
+      reeks,
+      reeksNaam: reeks ? reeksNaam(reeks) : 'Overig',
     }
   })
   const playerIds = new Set(players.map((p) => p.id))
