@@ -118,11 +118,15 @@ export function FlowReplay({
     const list = playShots
     if (list.length === 0) return
     const MR = (globalThis as { MediaRecorder?: typeof MediaRecorder }).MediaRecorder
-    const mime = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'].find((m) => MR?.isTypeSupported?.(m))
+    // mp4 eerst (speelt op de meeste toestellen af), anders webm.
+    const mime = ['video/mp4;codecs=avc1.42E01E', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'].find(
+      (m) => MR?.isTypeSupported?.(m),
+    )
     if (!MR || !mime) {
       window.alert('Video downloaden wordt niet ondersteund in deze browser. Probeer het in Chrome.')
       return
     }
+    const ext = mime.startsWith('video/mp4') ? 'mp4' : 'webm'
 
     const d = goalAreaDepth
     const FW = 320
@@ -139,8 +143,15 @@ export function FlowReplay({
     const canvas = document.createElement('canvas')
     canvas.width = cw
     canvas.height = chh
+    // In de DOM (buiten beeld) zodat de browser het canvas effectief tekent → captureStream
+    // krijgt echte frames (een los canvas levert soms een lege/onspeelbare video op).
+    canvas.style.cssText = 'position:fixed;left:-100000px;top:0;pointer-events:none;opacity:0.01'
+    document.body.appendChild(canvas)
     const ctx = canvas.getContext('2d')
-    if (!ctx) return
+    if (!ctx) {
+      canvas.remove()
+      return
+    }
 
     const seg = (a: number, b: number, c: number, e: number) => {
       ctx.beginPath()
@@ -219,7 +230,9 @@ export function FlowReplay({
       if (st < list.length) drawShot(list[st], Math.min(1, wi / 0.7))
     }
 
+    drawFrame(0) // eerste frame klaarzetten vóór de opname start
     const stream = (canvas as HTMLCanvasElement & { captureStream(fps?: number): MediaStream }).captureStream(30)
+    const track = stream.getVideoTracks()[0] as MediaStreamTrack & { requestFrame?: () => void }
     const rec = new MR(stream, { mimeType: mime })
     const chunks: BlobPart[] = []
     rec.ondataavailable = (e) => {
@@ -232,7 +245,7 @@ export function FlowReplay({
     setRecording(true)
     setPlaying(false)
     try {
-      rec.start()
+      rec.start(250) // periodiek chunks flushen → geldige, afspeelbare video
       const totalDur = list.length * stepMs
       const HOLD = 1400
       const start = performance.now()
@@ -240,6 +253,7 @@ export function FlowReplay({
         const frame = (t: number) => {
           const el = t - start
           drawFrame(Math.min(el, totalDur))
+          track.requestFrame?.() // duw elk getekend frame in de stream
           if (el < totalDur + HOLD) requestAnimationFrame(frame)
           else resolve()
         }
@@ -248,13 +262,18 @@ export function FlowReplay({
       rec.stop()
       await stopped
       const blob = new Blob(chunks, { type: mime })
+      if (blob.size === 0) {
+        window.alert('Opname mislukt — probeer het opnieuw (werkt het best in Chrome).')
+        return
+      }
       const url = URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url
-      link.download = 'krachtbal-replay.webm'
+      link.download = `krachtbal-replay.${ext}`
       link.click()
       URL.revokeObjectURL(url)
     } finally {
+      canvas.remove()
       setRecording(false)
     }
   }
