@@ -10,6 +10,7 @@ import { buildMatchSheet, buildMatchStats, buildMatchState } from '@/lib/match-e
 import { getPayloadClient } from '@/lib/payload-client'
 import { reeksNaam } from '@/lib/reeksen'
 import { AnalyseCharts } from './AnalyseCharts'
+import { MatchRecap } from './MatchRecap'
 import { MomentumChart } from './MomentumChart'
 import '../analyse.css'
 
@@ -81,7 +82,10 @@ export default async function AnalyseDetailPage({ params }: { params: Promise<{ 
         {stats.stats.players.length === 0 ? (
           <p className="empty">Deze wedstrijd heeft geen gedetailleerde worpdata (in snelscoremodus gespeeld).</p>
         ) : (
-          <AnalyseCharts stats={stats.stats} teams={teamNames} />
+          <>
+            <MatchRecap stats={stats.stats} teams={teamNames} />
+            <AnalyseCharts stats={stats.stats} teams={teamNames} />
+          </>
         )}
 
         <MatchStats stats={stats.stats} shots={stats.shots} teams={teamNames} goalAreaDepth={state.match.goalAreaDepth} />

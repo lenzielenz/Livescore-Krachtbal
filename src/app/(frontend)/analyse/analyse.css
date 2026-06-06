@@ -1238,3 +1238,51 @@ select.rang-picker {
 .rad-row-axis { cursor: pointer; }
 .rad-row-axis:hover { background: color-mix(in srgb, var(--accent) 8%, transparent); }
 .rad-row-axis.sel { background: color-mix(in srgb, var(--accent) 16%, transparent); }
+
+/* ── Automatische wedstrijdsamenvatting: speler van de wedstrijd + hoogtepunten ── */
+.an-recap { margin: 18px 0; }
+.an-mvp {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background:
+    radial-gradient(120% 100% at 0% 0%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 60%),
+    var(--panel, #0c1f16);
+  box-shadow: var(--card-shadow);
+}
+.an-mvp.side-home { border-left: 3px solid var(--home, #0fe0a6); }
+.an-mvp.side-away { border-left: 3px solid var(--away, #4cc9f0); }
+.an-mvp-badge {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--accent, #06d6a0);
+}
+.an-mvp-name { font-size: 1.25rem; font-weight: 900; }
+.an-mvp-why { font-size: 0.86rem; color: var(--dim); }
+.an-recap-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+.an-recap-card {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 11px 13px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--panel, #0c1f16);
+}
+.an-recap-card.side-home { border-left: 3px solid var(--home, #0fe0a6); }
+.an-recap-card.side-away { border-left: 3px solid var(--away, #4cc9f0); }
+.an-recap-ico { font-size: 1.5rem; flex: 0 0 auto; }
+.an-recap-body { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.an-recap-lbl { font-size: 0.74rem; color: var(--dim); text-transform: uppercase; letter-spacing: 0.03em; }
+.an-recap-val { font-size: 1.15rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.an-recap-who { font-size: 0.8rem; color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
