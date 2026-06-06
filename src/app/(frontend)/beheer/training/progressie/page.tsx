@@ -39,10 +39,11 @@ export default async function TrainingProgressiePage() {
   }
 
   const payload = await getPayloadClient()
-  const clubId = userClubId(me)
-  // Club-beheerder ziet enkel de spelers van de eigen club; federatie/admin/analyse-toegang ziet alles.
-  const canSeeAll = fed || !isClubBeheerder
-  const playerWhere: Where = canSeeAll ? {} : { 'team.club': { equals: clubId } }
+  const rawClubId = userClubId(me)
+  const myClubId: number | null = rawClubId != null && Number.isFinite(Number(rawClubId)) ? Number(rawClubId) : null
+  // Training hoort bij je eigen club: heeft het account een club, dan zie je enkel die spelers.
+  // Enkel een (federatie/admin-)account zónder club ziet alle spelers.
+  const playerWhere: Where = myClubId != null ? { 'team.club': { equals: myClubId } } : {}
 
   const [playersRes, metingenRes] = await Promise.all([
     payload.find({ collection: 'players', where: playerWhere, depth: 2, limit: 2000, sort: 'name' }),

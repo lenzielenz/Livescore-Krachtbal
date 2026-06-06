@@ -3,13 +3,25 @@
 import { useRouter } from 'next/navigation'
 import { useMemo, useState } from 'react'
 
-import { TRAINING_METRICS, type TrainingMeting, type TrainingMetricKey } from '@/lib/training-metrics'
+import { TRAINING_METRICS, metricAttempts, type TrainingMeting, type TrainingMetricKey } from '@/lib/training-metrics'
 import { ProgressieChart } from './ProgressieChart'
 import './training.css'
 
 export type TrainingPlayer = { id: number; name: string; team: string; club: string }
 
 const todayISO = () => new Date().toISOString().slice(0, 10)
+
+// Lege invoer: per metriek een rij pogingen (worpen: 3 kansen, de rest: 1).
+const emptyVals = (): Record<TrainingMetricKey, string[]> => {
+  const o = {} as Record<TrainingMetricKey, string[]>
+  for (const m of TRAINING_METRICS) o[m.key] = Array(metricAttempts(m)).fill('')
+  return o
+}
+// Beste (verste) geldige poging, of null als er niets ingevuld is.
+const bestOf = (arr: string[]): number | null => {
+  const nums = arr.map((s) => parseFloat(s)).filter((n) => Number.isFinite(n) && n >= 0)
+  return nums.length ? Math.max(...nums) : null
+}
 
 export function TrainingPanel({
   players,
@@ -23,13 +35,7 @@ export function TrainingPanel({
   const router = useRouter()
   const [spelerId, setSpelerId] = useState<number | null>(players[0]?.id ?? null)
   const [datum, setDatum] = useState(todayISO())
-  const [waarden, setWaarden] = useState<Record<TrainingMetricKey, string>>({
-    snelheidVooruit: '',
-    snelheidAchteruit: '',
-    worp4: '',
-    worp9: '',
-    worp18: '',
-  })
+  const [waarden, setWaarden] = useState<Record<TrainingMetricKey, string[]>>(emptyVals)
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
 
@@ -44,11 +50,22 @@ export function TrainingPanel({
 
   const selectedPlayer = players.find((p) => p.id === spelerId) ?? null
 
-  const setVal = (k: TrainingMetricKey, v: string) => setWaarden((prev) => ({ ...prev, [k]: v }))
+  const setVal = (k: TrainingMetricKey, i: number, v: string) =>
+    setWaarden((prev) => {
+      const arr = [...prev[k]]
+      arr[i] = v
+      return { ...prev, [k]: arr }
+    })
 
   const save = async () => {
     if (spelerId == null || busy) return
-    if (TRAINING_METRICS.every((m) => !waarden[m.key].trim())) {
+    // Per metriek de beste poging; worpen tellen dus de verste van 3.
+    const payloadVals: Record<string, number> = {}
+    for (const m of TRAINING_METRICS) {
+      const best = bestOf(waarden[m.key])
+      if (best != null) payloadVals[m.key] = best
+    }
+    if (Object.keys(payloadVals).length === 0) {
       setMsg({ ok: false, text: 'Vul minstens één meetwaarde in.' })
       return
     }
@@ -58,12 +75,12 @@ export function TrainingPanel({
       const res = await fetch('/api/training', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ speler: spelerId, datum, ...waarden }),
+        body: JSON.stringify({ speler: spelerId, datum, ...payloadVals }),
       })
       const json = await res.json()
       if (res.ok && json.ok) {
         setMsg({ ok: true, text: 'Meting opgeslagen.' })
-        setWaarden({ snelheidVooruit: '', snelheidAchteruit: '', worp4: '', worp9: '', worp18: '' })
+        setWaarden(emptyVals())
         router.refresh() // verse data → grafieken updaten
       } else {
         setMsg({ ok: false, text: json.error || 'Opslaan mislukt.' })
@@ -103,22 +120,45 @@ export function TrainingPanel({
               <span>Datum</span>
               <input type="date" value={datum} onChange={(e) => setDatum(e.target.value)} />
             </label>
-            {TRAINING_METRICS.map((m) => (
-              <label className="tr-field" key={m.key}>
-                <span>
-                  {m.kort} <small>({m.unit})</small>
-                </span>
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  step="0.01"
-                  min="0"
-                  value={waarden[m.key]}
-                  onChange={(e) => setVal(m.key, e.target.value)}
-                  placeholder="—"
-                />
-              </label>
-            ))}
+            {TRAINING_METRICS.map((m) =>
+              m.pogingen ? (
+                <div className="tr-field tr-poging" key={m.key}>
+                  <span>
+                    {m.kort} <small>({m.unit}) · 3 kansen, beste telt</small>
+                  </span>
+                  <div className="tr-poging-inputs">
+                    {waarden[m.key].map((val, i) => (
+                      <input
+                        key={i}
+                        type="number"
+                        inputMode="decimal"
+                        step="0.01"
+                        min="0"
+                        value={val}
+                        onChange={(e) => setVal(m.key, i, e.target.value)}
+                        placeholder={`${i + 1}e`}
+                        aria-label={`${m.kort} — poging ${i + 1}`}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <label className="tr-field" key={m.key}>
+                  <span>
+                    {m.kort} <small>({m.unit})</small>
+                  </span>
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    step="0.01"
+                    min="0"
+                    value={waarden[m.key][0]}
+                    onChange={(e) => setVal(m.key, 0, e.target.value)}
+                    placeholder="—"
+                  />
+                </label>
+              ),
+            )}
             <button type="button" className="tr-save" onClick={save} disabled={busy}>
               {busy ? 'Opslaan…' : 'Meting opslaan'}
             </button>
