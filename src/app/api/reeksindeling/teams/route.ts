@@ -46,11 +46,11 @@ export async function POST(req: Request) {
       const k = teamKey(String((c as { name?: unknown }).name ?? ''))
       if (k && !clubByKey.has(k)) clubByKey.set(k, (c as { id: number }).id)
     }
-    const teamByKeyReeks = new Set<string>()
+    const teamByKeyReeks = new Map<string, { id: number; thuis: string }>()
     for (const t of teamsRes.docs) {
       const k = teamKey(String((t as { name?: unknown }).name ?? ''))
       const rk = String((t as { reeks?: unknown }).reeks ?? '')
-      if (k) teamByKeyReeks.add(`${k}|${rk}`)
+      if (k) teamByKeyReeks.set(`${k}|${rk}`, { id: (t as { id: number }).id, thuis: String((t as { thuisUur?: unknown }).thuisUur ?? '') })
     }
 
     // Gewenste ploegen (naam + reeks) en clubs uit de PDF verzamelen.
@@ -67,10 +67,16 @@ export async function POST(req: Request) {
 
     const clubsToCreate = [...wantClubs.entries()].filter(([k]) => !clubByKey.has(k))
     const teamsToCreate = [...wantTeams.entries()].filter(([k]) => !teamByKeyReeks.has(k))
-    const samples = teamsToCreate.slice(0, 15).map(([, t]) => `${t.name} · ${t.reeks}`)
+    // Speeluren (thuisuren) die op bestaande ploegen gezet/bijgewerkt moeten worden.
+    const thuisUpdates = [...wantTeams.entries()].filter(([k, t]) => {
+      const ex = teamByKeyReeks.get(k)
+      return ex != null && t.thuis != null && ex.thuis !== t.thuis
+    })
+    const samples = teamsToCreate.slice(0, 15).map(([, t]) => `${t.name} · ${t.reeks}${t.thuis ? ` · ${t.thuis}` : ''}`)
 
     let createdClubs = 0
     let createdTeams = 0
+    let thuisSet = 0
     const errors: string[] = []
     if (commit) {
       // Eerst de ontbrekende clubs.
@@ -104,6 +110,17 @@ export async function POST(req: Request) {
           if (errors.length < 10) errors.push((e as Error).message)
         }
       }
+      // Speeluren op bestaande ploegen instellen/bijwerken.
+      for (const [, t] of thuisUpdates) {
+        const ex = teamByKeyReeks.get(`${teamKey(t.name)}|${t.reeks}`)
+        if (ex == null || t.thuis == null) continue
+        try {
+          await payload.update({ collection: 'teams', id: ex.id, data: { thuisUur: t.thuis }, overrideAccess: true })
+          thuisSet++
+        } catch (e) {
+          if (errors.length < 10) errors.push((e as Error).message)
+        }
+      }
     }
 
     return Response.json({
@@ -114,8 +131,10 @@ export async function POST(req: Request) {
       clubsToCreate: clubsToCreate.length,
       teamsToCreate: teamsToCreate.length,
       existingTeams: wantTeams.size - teamsToCreate.length,
+      thuisToSet: thuisUpdates.length,
       createdClubs,
       createdTeams,
+      thuisSet,
       samples,
       errors,
     })
