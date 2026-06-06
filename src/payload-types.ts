@@ -795,6 +795,34 @@ export interface Trainingen {
    * De club die trainde (uit het account afgeleid).
    */
   club?: (number | null) | Club;
+  /**
+   * De leeftijdsgroep die trainde (U12, U14, dames, heren …). Leeg = clubbreed.
+   */
+  reeks?:
+    | (
+        | '1NAH'
+        | '1NAHB'
+        | '1NAD'
+        | '2NAH'
+        | '2NAHB'
+        | 'LH'
+        | 'LD'
+        | 'RHA'
+        | 'RHB'
+        | 'RDA'
+        | 'RDB'
+        | 'U18J'
+        | 'U18M'
+        | 'U16J'
+        | 'U16M'
+        | 'U14J'
+        | 'U14M'
+        | 'U12'
+        | 'recreatief'
+        | 'beker'
+        | 'andere'
+      )
+    | null;
   duurMinuten?: number | null;
   weer?: ('zonnig' | 'bewolkt' | 'regen' | 'wind' | 'sneeuw' | 'mist') | null;
   temperatuur?: number | null;
@@ -1375,6 +1403,7 @@ export interface TrainingmetingenSelect<T extends boolean = true> {
 export interface TrainingenSelect<T extends boolean = true> {
   datum?: T;
   club?: T;
+  reeks?: T;
   duurMinuten?: T;
   weer?: T;
   temperatuur?: T;

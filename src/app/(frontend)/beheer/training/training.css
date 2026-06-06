@@ -351,6 +351,114 @@
   border: 1px solid var(--line);
 }
 
+/* Reeks-keuze (Algemeen + leeftijdsgroepen) binnen aanwezigheid. */
+.tr-reekstabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.tr-reekstab {
+  padding: 7px 13px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--panel-2, #0a1f14) 60%, transparent);
+  color: var(--dim-strong, #9fb6aa);
+  font-weight: 700;
+  font-size: 0.88rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.tr-reekstab.on {
+  background: var(--accent, #06d6a0);
+  color: #06140d;
+  border-color: var(--accent, #06d6a0);
+}
+.tr-reekstab-n {
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, currentColor 16%, transparent);
+}
+.tr-seasonpick {
+  max-width: 200px;
+}
+
+/* Opkomst-statistiek: kerncijfers + balkjes per speler. */
+.tr-statcards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.tr-statcard {
+  background: var(--panel, #0c1f16);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.tr-stat-n {
+  font-size: 1.7rem;
+  font-weight: 800;
+  color: var(--accent, #06d6a0);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+.tr-stat-l {
+  font-size: 0.8rem;
+  color: var(--dim);
+}
+.tr-attbars {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.tr-attbar {
+  display: grid;
+  grid-template-columns: minmax(90px, 1.4fr) 3fr auto;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.85rem;
+}
+.tr-attbar-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tr-attbar-track {
+  height: 9px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--line) 70%, transparent);
+  overflow: hidden;
+}
+.tr-attbar-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent, #06d6a0);
+  min-width: 2px;
+}
+.tr-attbar-val {
+  color: var(--dim);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  font-size: 0.78rem;
+}
+@media (max-width: 520px) {
+  .tr-attbar {
+    grid-template-columns: minmax(72px, 1.2fr) 2fr auto;
+    gap: 7px;
+  }
+  .tr-attbar-val {
+    font-size: 0.72rem;
+  }
+}
+
 /* Trainings-startpagina (hub): tegels naar de tools. */
 .tr-hub {
   display: grid;
