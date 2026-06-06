@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 
 import { Scoreboard } from '@/components/Scoreboard'
 import { SiteHeader } from '@/components/SiteHeader'
+import { canAnalyse } from '@/lib/access'
 import { getAuthUser } from '@/lib/auth-user'
 import { buildMatchState, buildTimeline } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
@@ -98,6 +99,11 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
       )}
       <Scoreboard matchId={matchId} initial={{ state, timeline }} halfSeconds={halfSeconds} ratePerMin={ratePerMin} ballKleur={ballKleur} canChat={Boolean(me)} />
       <p className="sheet-cta">
+        {canAnalyse(me) && (
+          <Link href={`/analyse/${matchId}`} className="back-link">
+            📈 Analyse &amp; video
+          </Link>
+        )}
         <Link href={`/veld/${matchId}`} className="back-link">
           📺 Veldscherm (groot scherm)
         </Link>
