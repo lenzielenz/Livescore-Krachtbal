@@ -1324,3 +1324,59 @@ select.rang-picker {
 }
 .an-switch-btn.on.side-home,
 .an-switch-btn.on.side-away { border-left-color: #06140d; }
+
+/* ── Spelerdossier: alles van één speler op één blad ── */
+.dos-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: var(--panel-grad, var(--panel, #0c1f16));
+  box-shadow: var(--card-shadow);
+  margin-bottom: 14px;
+}
+.dos-num {
+  font-size: 1.8rem;
+  font-weight: 900;
+  color: var(--accent, #06d6a0);
+  font-variant-numeric: tabular-nums;
+  flex: 0 0 auto;
+}
+.dos-id { display: flex; flex-direction: column; min-width: 0; flex: 1 1 auto; }
+.dos-name { font-size: 1.25rem; font-weight: 900; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dos-team { font-size: 0.84rem; color: var(--dim); }
+.dos-score {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: 1.6rem;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  flex: 0 0 auto;
+}
+.dos-score small { font-size: 0.6rem; font-weight: 700; color: var(--dim); text-transform: uppercase; letter-spacing: 0.04em; }
+.dos-score.an-neg { color: #ef476f; }
+.dos-zonebar {
+  display: flex;
+  height: 22px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+}
+.dos-zonebar .seg {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.74rem;
+  font-weight: 800;
+  color: #06140d;
+  min-width: 0;
+  font-style: normal;
+}
+.dos-zonebar .seg.l { background: #4cc9f0; }
+.dos-zonebar .seg.m { background: var(--accent, #06d6a0); }
+.dos-zonebar .seg.r { background: #ffd166; }
+.dos-zonelbl { display: flex; justify-content: space-between; font-size: 0.78rem; color: var(--dim); margin-top: 6px; }
+.dos-spark { width: 100%; height: 46px; display: block; }

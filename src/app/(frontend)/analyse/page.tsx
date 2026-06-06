@@ -21,6 +21,7 @@ const PLOEG_TOOLS = [
   { href: '/analyse/ploegen', icon: '🆚', title: 'Ploegvergelijking', desc: 'Twee ploegen op een radar van kerncijfers.', tone: 'home' },
 ] as const
 const SPELER_TOOLS = [
+  { href: '/analyse/speler', icon: '🪪', title: 'Spelerdossier', desc: 'Alles van één speler op één blad: cijfers, richting, vorm & gevaarzone.', tone: 'accent' },
   { href: '/analyse/spelers', icon: '🎯', title: 'Spelersradar', desc: 'Rating, profiel & vergelijking op zeven assen.', tone: 'home' },
   { href: '/analyse/verwacht', icon: '📐', title: 'Verwachte punten', desc: 'xG-model: wie scoort boven verwachting?', tone: 'pop' },
   { href: '/analyse/gevaar', icon: '🔥', title: 'Gevaarzone', desc: 'Van waar scoort een speler het gevaarlijkst?', tone: 'pop2' },
