@@ -101,6 +101,9 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
         <Link href={`/veld/${matchId}`} className="back-link">
           📺 Veldscherm (groot scherm)
         </Link>
+        <Link href="/kantine" className="back-link">
+          🍺 Kantinescherm (groot scherm)
+        </Link>
       </p>
       </div>
     </>
