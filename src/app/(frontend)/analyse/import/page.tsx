@@ -10,6 +10,7 @@ import { ClubMerge, type MergeClub } from './ClubMerge'
 import { DedupeTool } from './DedupeTool'
 import { EmptyCleanup } from './EmptyCleanup'
 import { ReeksindelingImport } from './ReeksindelingImport'
+import { ReeksindelingTeamsImport } from './ReeksindelingTeamsImport'
 import { ResultsImport } from './ResultsImport'
 import { TeamCleanup, type CleanupTeam } from './TeamCleanup'
 import '../analyse.css'
@@ -80,6 +81,10 @@ export default async function ResultsImportPage() {
         <p className="an-intro">Wedstrijden-export (.xls). Eerst <em>Voorbeeld</em>, dan <em>Importeren</em>.</p>
 
         <ResultsImport />
+
+        <h2 className="an-sub">📋 Reeksindeling importeren (club + ploeg + reeks + uur)</h2>
+        <p className="an-intro">De federatie-reeksindeling-PDF: maakt automatisch de clubs en ploegen aan met hun reeks én zet meteen het thuisuur (dag + uur). Kies het seizoen, eerst <em>Voorbeeld</em>, daarna <em>Importeren</em>. Bestaande clubs/ploegen blijven behouden.</p>
+        <ReeksindelingTeamsImport />
 
         <h2 className="an-sub">🕑 Thuisuren uit de reeksindeling</h2>
         <p className="an-intro">Reeksindeling-PDF. Eerst <em>Voorbeeld</em>, dan <em>Thuisuren instellen</em>.</p>
