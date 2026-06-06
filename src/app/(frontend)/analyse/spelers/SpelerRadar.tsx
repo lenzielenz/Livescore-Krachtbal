@@ -249,19 +249,39 @@ export function SpelerRadar({
             <div className="rad-chart-card">
               <svg className="rad-svg" viewBox={`0 0 ${SIZE} ${SIZE}`} role="img" aria-label="Spelersradar">
                 <defs>
-                  <radialGradient id="radGradA" cx="50%" cy="50%" r="65%">
-                    <stop offset="0%" stopColor="var(--accent)" stopOpacity="0.55" />
-                    <stop offset="100%" stopColor="var(--accent)" stopOpacity="0.12" />
+                  {/* Zachte achtergrondgloed achter de radar. */}
+                  <radialGradient id="radBack" cx="50%" cy="46%" r="60%">
+                    <stop offset="0%" stopColor="var(--accent)" stopOpacity="0.18" />
+                    <stop offset="55%" stopColor="var(--accent)" stopOpacity="0.05" />
+                    <stop offset="100%" stopColor="var(--accent)" stopOpacity="0" />
+                  </radialGradient>
+                  <radialGradient id="radGradA" cx="50%" cy="46%" r="68%">
+                    <stop offset="0%" stopColor="#fff2c8" stopOpacity="0.5" />
+                    <stop offset="45%" stopColor="var(--accent)" stopOpacity="0.34" />
+                    <stop offset="100%" stopColor="var(--accent)" stopOpacity="0.06" />
                   </radialGradient>
                   <radialGradient id="radGradB" cx="50%" cy="50%" r="65%">
                     <stop offset="0%" stopColor="var(--away)" stopOpacity="0.5" />
                     <stop offset="100%" stopColor="var(--away)" stopOpacity="0.1" />
                   </radialGradient>
+                  {/* Gouden verloop-rand voor speler A (premium look). */}
+                  <linearGradient id="radStrokeA" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stopColor="#ffe9a8" />
+                    <stop offset="50%" stopColor="var(--accent)" />
+                    <stop offset="100%" stopColor="#ffd166" />
+                  </linearGradient>
                   <filter id="radGlow" x="-30%" y="-30%" width="160%" height="160%">
                     <feGaussianBlur stdDeviation="3.4" result="b" />
                     <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
                   </filter>
+                  <filter id="radGlowStrong" x="-45%" y="-45%" width="190%" height="190%">
+                    <feGaussianBlur stdDeviation="5" result="b" />
+                    <feMerge><feMergeNode in="b" /><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
+                  </filter>
                 </defs>
+                {/* Premium achtergrond: zachte gloed + decoratieve buitenring. */}
+                <circle cx={CX} cy={CY} r={R * 1.28} fill="url(#radBack)" />
+                <circle cx={CX} cy={CY} r={R + 7} className="rad-outer-ring" />
                 {/* Rasterringen */}
                 {[0.25, 0.5, 0.75, 1].map((f) => (
                   <polygon key={f} points={polygon(RADAR.map(() => f))} className="rad-ring" />
@@ -290,13 +310,23 @@ export function SpelerRadar({
                     {bFracs.map((f, i) => { const [x, y] = point(i, f); return <circle key={i} cx={x} cy={y} r={2.6} className="rad-vertex-b" /> })}
                   </g>
                 )}
-                {/* Speler A */}
+                {/* Speler A — gouden verloop-rand, sterke gloed en glanzende hoekpunten. */}
                 {playerA && (
                   <g className="rad-anim" key={`a${aId}`}>
-                    <polygon points={polygon(aFracs)} className="rad-poly rad-a" fill="url(#radGradA)" filter="url(#radGlow)" />
-                    {aFracs.map((f, i) => { const [x, y] = point(i, f); return <circle key={i} cx={x} cy={y} r={2.8} className="rad-vertex-a" /> })}
+                    <polygon points={polygon(aFracs)} className="rad-poly rad-a" fill="url(#radGradA)" stroke="url(#radStrokeA)" filter="url(#radGlowStrong)" />
+                    {aFracs.map((f, i) => {
+                      const [x, y] = point(i, f)
+                      return (
+                        <g key={i}>
+                          <circle cx={x} cy={y} r={5.5} className="rad-vertex-halo-a" />
+                          <circle cx={x} cy={y} r={2.8} className="rad-vertex-a" />
+                        </g>
+                      )
+                    })}
                   </g>
                 )}
+                {/* Centrale naaf. */}
+                <circle cx={CX} cy={CY} r={2.2} className="rad-hub" />
               </svg>
               <div className="rad-legend">
                 <span className="rad-leg rad-leg-league">— — Reeks-gem.</span>

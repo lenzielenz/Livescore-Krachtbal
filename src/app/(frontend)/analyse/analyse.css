@@ -333,10 +333,21 @@ select.rang-picker {
   padding: 14px 16px;
   box-shadow: var(--card-shadow);
 }
+/* Premium radar-paneel: zachte accent-gloed + iets rijkere rand. */
+.rad-chart-card {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(120% 85% at 50% 14%, color-mix(in srgb, var(--accent) 11%, transparent), transparent 58%),
+    var(--panel-grad);
+  border-color: color-mix(in srgb, var(--accent) 18%, var(--line));
+}
 .rad-svg { width: 100%; height: auto; display: block; overflow: visible; }
-.rad-ring { fill: none; stroke: var(--line); stroke-width: 1; }
+.rad-ring { fill: none; stroke: color-mix(in srgb, var(--line) 85%, transparent); stroke-width: 1; }
+.rad-outer-ring { fill: none; stroke: color-mix(in srgb, var(--accent) 26%, transparent); stroke-width: 1; }
+.rad-hub { fill: color-mix(in srgb, var(--accent) 75%, #ffffff); }
 .rad-axis { stroke: var(--line); stroke-width: 1; }
-.rad-axis-lbl { fill: var(--dim); font-size: 11px; font-weight: 700; }
+.rad-axis-lbl { fill: color-mix(in srgb, var(--txt) 62%, var(--dim)); font-size: 11px; font-weight: 800; letter-spacing: 0.02em; }
 .rad-league {
   fill: none;
   stroke: var(--dim);
@@ -346,9 +357,12 @@ select.rang-picker {
 .rad-ring-lbl { fill: var(--dim); font-size: 8px; opacity: 0.7; }
 /* Gradient-fill via inline 'fill' attribuut → geen fill in CSS (CSS zou het overrulen). */
 .rad-poly { stroke-width: 2.2; stroke-linejoin: round; }
-.rad-a { stroke: var(--accent); }
+/* Speler A krijgt z'n gouden verloop-rand via het inline 'stroke'-attribuut (geen stroke in CSS,
+   die zou het overrulen). */
+.rad-a { stroke-width: 2.6; }
 .rad-b { stroke: var(--away); }
-.rad-vertex-a { fill: var(--accent); stroke: #06140d; stroke-width: 1; }
+.rad-vertex-halo-a { fill: var(--accent); opacity: 0.22; }
+.rad-vertex-a { fill: #fff6d8; stroke: color-mix(in srgb, var(--accent) 70%, #7a5b00); stroke-width: 1; }
 .rad-vertex-b { fill: var(--away); stroke: #06140d; stroke-width: 1; }
 .rad-anim { transform-box: fill-box; transform-origin: center; animation: radPop 0.5s cubic-bezier(0.22, 1, 0.36, 1); }
 @keyframes radPop { from { transform: scale(0.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
