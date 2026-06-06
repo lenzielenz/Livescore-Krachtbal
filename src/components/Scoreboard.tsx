@@ -22,7 +22,8 @@ type Goal = { key: number; side: Side; team: string; points: number; scorer: str
 type Shout = { id: number; name: string; text: string; at: number }
 
 // Toegelaten supporter-emoji's (komt overeen met de server-whitelist in match-channel.ts).
-const EMOJI = { clap: '👏', fire: '🔥', heart: '❤️', goal: '🏐', wow: '😮' } as const
+// 'rocket' = de speciale "rugworp (2 punten)"-reactie die een fullscreen-viering afvuurt.
+const EMOJI = { clap: '👏', fire: '🔥', heart: '❤️', goal: '🏐', wow: '😮', rocket: '🚀' } as const
 type EmojiName = keyof typeof EMOJI
 // "goal" toont het echte krachtbal-icoon i.p.v. een voetbal/emoji, in de categoriekleur van de
 // wedstrijd (dames rood, heren wit, U12/U14 geel, U16/U18 blauw).
@@ -73,6 +74,20 @@ export function Scoreboard({
   const [floats, setFloats] = useState<{ key: number; name: EmojiName }[]>([])
   const floatSeq = useRef(0)
   const [totals, setTotals] = useState<Record<string, number>>({})
+  // Fullscreen "rugworp +2"-viering (raket): key = nieuwe trigger, throttle tegen spam.
+  const [celebrate, setCelebrate] = useState<number | null>(null)
+  const celebrateSeq = useRef(0)
+  const lastCelebrate = useRef(0)
+  const celebrateTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const triggerCelebrate = (force = false) => {
+    const now = Date.now()
+    if (!force && now - lastCelebrate.current < 2500) return // throttle bij een raket-storm
+    lastCelebrate.current = now
+    const key = ++celebrateSeq.current
+    setCelebrate(key)
+    if (celebrateTimer.current) clearTimeout(celebrateTimer.current)
+    celebrateTimer.current = setTimeout(() => setCelebrate((c) => (c === key ? null : c)), 1800)
+  }
   // Live tribune (shoutouts van ingelogde supporters).
   const [shouts, setShouts] = useState<Shout[]>([])
   const [chatText, setChatText] = useState('')
@@ -120,6 +135,7 @@ export function Scoreboard({
       reactions: (d) => {
         const r = d as { delta?: Record<string, number>; totals?: Record<string, number> }
         if (r.delta) spawnFloats(r.delta)
+        if (r.delta?.rocket) triggerCelebrate() // iemand vuurde een rugworp af → fullscreen-viering
         if (r.totals) setTotals(r.totals)
       },
       shoutout: (d) => setShouts((prev) => [...prev.slice(-79), d as Shout]),
@@ -132,6 +148,7 @@ export function Scoreboard({
   const reactTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const sendReaction = (name: keyof typeof EMOJI) => {
     spawnFloats({ [name]: 1 }) // optimistisch: meteen voelbaar
+    if (name === 'rocket') triggerCelebrate(true) // eigen tik → meteen de fullscreen-viering
     pendingReacts.current[name] = (pendingReacts.current[name] ?? 0) + 1
     if (reactTimer.current) return
     reactTimer.current = setTimeout(() => {
@@ -170,6 +187,7 @@ export function Scoreboard({
     return () => {
       if (goalTimer.current) clearTimeout(goalTimer.current)
       if (reactTimer.current) clearTimeout(reactTimer.current)
+      if (celebrateTimer.current) clearTimeout(celebrateTimer.current)
     }
   }, [])
 
@@ -332,13 +350,29 @@ export function Scoreboard({
             <button
               key={name}
               type="button"
-              className="sb-react-btn"
+              className={`sb-react-btn${name === 'rocket' ? ' sb-react-rocket' : ''}`}
               onClick={() => sendReaction(name)}
-              aria-label={`Reageer met ${name}`}
+              aria-label={name === 'rocket' ? 'Vier een rugworp (2 punten)' : `Reageer met ${name}`}
+              title={name === 'rocket' ? 'Rugworp! 2 punten 🚀' : undefined}
             >
               {reactionGlyph(name, ballKleur)}
               {totals[name] > 0 && <span className="sb-react-count">{totals[name]}</span>}
             </button>
+          ))}
+        </div>
+      )}
+
+      {/* Fullscreen "rugworp +2"-viering: een raket schiet over het scherm. */}
+      {celebrate != null && (
+        <div className="sb-celebrate" key={celebrate} aria-hidden>
+          <div className="sb-celebrate-flash" />
+          <div className="sb-celebrate-rocket">🚀</div>
+          <div className="sb-celebrate-text">
+            <span className="sb-celebrate-word">RUGWORP</span>
+            <span className="sb-celebrate-pts">+2</span>
+          </div>
+          {Array.from({ length: 14 }).map((_, i) => (
+            <span key={i} className={`sb-celebrate-spark s${i % 7}`} />
           ))}
         </div>
       )}

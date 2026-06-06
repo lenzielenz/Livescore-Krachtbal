@@ -35,7 +35,7 @@ const channels = new Map<number, Channel>()
 
 const SCORE_POLL_MS = 1500
 const REACTION_FLUSH_MS = 300 // geaggregeerd venster (~3 flushes/sec)
-const ALLOWED_EMOJI = new Set(['clap', 'fire', 'heart', 'goal', 'wow'])
+const ALLOWED_EMOJI = new Set(['clap', 'fire', 'heart', 'goal', 'wow', 'rocket'])
 const MAX_SHOUTS = 40 // hou enkel de recentste berichten in het geheugen
 
 function broadcast(ch: Channel, event: string, data: unknown, id?: number) {
@@ -143,4 +143,4 @@ export function addShoutout(matchId: number, name: string, text: string): Shout 
   return shout
 }
 
-export const REACTION_EMOJI = ['clap', 'fire', 'heart', 'goal', 'wow'] as const
+export const REACTION_EMOJI = ['clap', 'fire', 'heart', 'goal', 'wow', 'rocket'] as const
