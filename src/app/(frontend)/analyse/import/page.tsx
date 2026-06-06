@@ -8,6 +8,7 @@ import { reeksNaam } from '@/lib/reeksen'
 import { AnalyseNav } from '../AnalyseNav'
 import { ClubMerge, type MergeClub } from './ClubMerge'
 import { DedupeTool } from './DedupeTool'
+import { EmptyCleanup } from './EmptyCleanup'
 import { ReeksindelingImport } from './ReeksindelingImport'
 import { ResultsImport } from './ResultsImport'
 import { TeamCleanup, type CleanupTeam } from './TeamCleanup'
@@ -83,6 +84,10 @@ export default async function ResultsImportPage() {
         <h2 className="an-sub">🕑 Thuisuren uit de reeksindeling</h2>
         <p className="an-intro">Reeksindeling-PDF. Eerst <em>Voorbeeld</em>, dan <em>Thuisuren instellen</em>.</p>
         <ReeksindelingImport />
+
+        <h2 className="an-sub">🧹 Bulk-opkuis: lege ploegen &amp; clubs</h2>
+        <p className="an-intro">Verwijdert in één keer alle lege ploegen (geen spelers én geen wedstrijden) en lege clubs (geen ploegen, geen account). Handig om foutief aangemaakte records op te kuisen. Eerst <em>Voorbeeld</em>.</p>
+        <EmptyCleanup />
 
         <h2 className="an-sub">🧹 Dubbele ploegen opkuisen</h2>
         <p className="an-intro">Voegt ploegen/clubs samen die dezelfde zijn maar net anders geschreven (per reeks). Eerst <em>Voorbeeld</em>.</p>
