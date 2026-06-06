@@ -12,6 +12,53 @@ export function TeamCleanup({ teams }: { teams: CleanupTeam[] }) {
   const [busyId, setBusyId] = useState<number | null>(null)
   const [msg, setMsg] = useState<string | null>(null)
   const [onlyDup, setOnlyDup] = useState(true)
+  const [editId, setEditId] = useState<number | null>(null)
+  const [editName, setEditName] = useState('')
+
+  const rename = async (t: CleanupTeam) => {
+    const name = editName.trim()
+    if (!name || name === t.name) {
+      setEditId(null)
+      return
+    }
+    setBusyId(t.id)
+    setMsg(null)
+    try {
+      const res = await fetch('/api/teams/manage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ action: 'rename', teamId: t.id, name }),
+      })
+      const json = await res.json()
+      if (res.ok && json.ok) {
+        setMsg(`✓ Hernoemd naar "${json.name}".`)
+        setEditId(null)
+        router.refresh()
+      } else {
+        setMsg(json.error || 'Hernoemen mislukt.')
+      }
+    } catch {
+      setMsg('Netwerkfout — probeer opnieuw.')
+    } finally {
+      setBusyId(null)
+    }
+  }
+  const startRename = (t: CleanupTeam) => {
+    setEditId(t.id)
+    setEditName(t.name)
+    setMsg(null)
+  }
+  const renameControls = (t: CleanupTeam) =>
+    editId === t.id ? (
+      <span className="tc-rename">
+        <input className="rang-picker" value={editName} onChange={(e) => setEditName(e.target.value)} aria-label="Nieuwe ploegnaam" autoFocus />
+        <button type="button" className="tc-rn-ok" disabled={busyId === t.id} onClick={() => rename(t)} aria-label="Bewaar naam">✓</button>
+        <button type="button" className="tc-rn-x" onClick={() => setEditId(null)} aria-label="Annuleer">✕</button>
+      </span>
+    ) : (
+      <button type="button" className="tc-rn" onClick={() => startRename(t)} aria-label="Hernoemen" title="Hernoemen">✏️</button>
+    )
 
   // Markeer ploegen waarvan de naam (genormaliseerd) meermaals voorkomt — die zijn verdacht dubbel.
   const dupNames = useMemo(() => {
@@ -132,9 +179,12 @@ export function TeamCleanup({ teams }: { teams: CleanupTeam[] }) {
                           </span>
                           <span className="tc-meta">{[t.club, t.reeks].filter(Boolean).join(' · ')} — {t.players} spelers · {t.matches} wedstrijden</span>
                         </div>
-                        <button type="button" className="tc-del" disabled={busyId !== null} onClick={() => remove(t)}>
-                          {busyId === t.id ? 'Bezig…' : '🗑'}
-                        </button>
+                        <div className="tc-rowactions">
+                          {renameControls(t)}
+                          <button type="button" className="tc-del" disabled={busyId !== null} onClick={() => remove(t)}>
+                            {busyId === t.id ? 'Bezig…' : '🗑'}
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -153,9 +203,12 @@ export function TeamCleanup({ teams }: { teams: CleanupTeam[] }) {
                 <span className="tc-name">{t.name}</span>
                 <span className="tc-meta">{[t.club, t.reeks].filter(Boolean).join(' · ')} — {t.players} spelers · {t.matches} wedstrijden</span>
               </div>
-              <button type="button" className="tc-del" disabled={busyId === t.id} onClick={() => remove(t)}>
-                {busyId === t.id ? 'Bezig…' : '🗑 Verwijder'}
-              </button>
+              <div className="tc-rowactions">
+                {renameControls(t)}
+                <button type="button" className="tc-del" disabled={busyId === t.id} onClick={() => remove(t)}>
+                  {busyId === t.id ? 'Bezig…' : '🗑'}
+                </button>
+              </div>
             </div>
           ))}
         </div>
