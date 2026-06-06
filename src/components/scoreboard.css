@@ -39,15 +39,20 @@
 /* Supporter-reacties */
 .sb-reactions {
   display: flex;
+  flex-wrap: nowrap;
   justify-content: center;
-  gap: 8px;
+  gap: 6px;
   margin-top: 16px;
-  flex-wrap: wrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
 }
+.sb-reactions::-webkit-scrollbar { display: none; }
 .sb-react-btn {
-  font-size: 1.4rem;
+  flex: 0 0 auto;
+  font-size: 1.35rem;
   line-height: 1;
-  padding: 8px 12px;
+  padding: 8px 10px;
   border-radius: 999px;
   border: 1px solid var(--line);
   background: color-mix(in srgb, var(--panel-2) 60%, transparent);
