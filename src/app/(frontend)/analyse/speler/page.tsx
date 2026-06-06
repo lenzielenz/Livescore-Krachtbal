@@ -108,6 +108,19 @@ export default async function SpelerDossierPage({ searchParams }: { searchParams
   const p = playerId != null ? seasonPlayers.find((sp) => sp.playerId === playerId) ?? null : null
   const danger = playerId != null ? await buildPlayerDanger(payload, playerId, reeks, seizoen) : null
 
+  // Periodevergelijking: dezelfde speler in het vorige seizoen (enkel als één seizoen gekozen is).
+  const sm = /^(\d{4})-(\d{4})$/.exec(seizoen ?? '')
+  const prevSeason = sm ? `${Number(sm[1]) - 1}-${Number(sm[2]) - 1}` : null
+  const prevPlayers = prevSeason && playerId != null ? await buildSeasonStats(payload, reeks, prevSeason).catch(() => []) : []
+  const prevP = playerId != null ? prevPlayers.find((sp) => sp.playerId === playerId) ?? null : null
+  const delta = (cur: number, prev: number | undefined, digits = 0, unit = '') => {
+    if (prev == null) return null
+    const d = cur - prev
+    const eps = digits ? 0.05 : 0.5
+    if (Math.abs(d) < eps) return <span className="dos-delta flat">=</span>
+    return <span className={`dos-delta ${d > 0 ? 'up' : 'down'}`}>{d > 0 ? '▲' : '▼'}{Math.abs(d).toFixed(digits)}{unit}</span>
+  }
+
   const zoneTot = p ? p.zones.links + p.zones.midden + p.zones.rechts || 1 : 1
 
   return (
@@ -140,15 +153,16 @@ export default async function SpelerDossierPage({ searchParams }: { searchParams
               <span className={`dos-score ${p.score < 0 ? 'an-neg' : ''}`}>{p.score > 0 ? `+${p.score}` : p.score}<small>score</small></span>
             </div>
 
+            {prevP && <p className="dos-cmp-note">↕ verschil t.o.v. seizoen {prevSeason}</p>}
             <div className="rep-cards an-summary">
               <div className="rep-card"><span className="rep-num">{p.matches}</span><span className="rep-lbl">Wedstrijden</span></div>
-              <div className="rep-card"><span className="rep-num">{p.points}</span><span className="rep-lbl">Punten</span></div>
-              <div className="rep-card"><span className="rep-num">{p.goals}</span><span className="rep-lbl">Doelpunten</span></div>
-              <div className="rep-card"><span className="rep-num">{p.throws}</span><span className="rep-lbl">Worpen</span></div>
-              <div className="rep-card"><span className="rep-num">{Math.round(p.conversion * 100)}%</span><span className="rep-lbl">Conversie</span></div>
+              <div className="rep-card"><span className="rep-num">{p.points}</span><span className="rep-lbl">Punten</span>{delta(p.points, prevP?.points)}</div>
+              <div className="rep-card"><span className="rep-num">{p.goals}</span><span className="rep-lbl">Doelpunten</span>{delta(p.goals, prevP?.goals)}</div>
+              <div className="rep-card"><span className="rep-num">{p.throws}</span><span className="rep-lbl">Worpen</span>{delta(p.throws, prevP?.throws)}</div>
+              <div className="rep-card"><span className="rep-num">{Math.round(p.conversion * 100)}%</span><span className="rep-lbl">Conversie</span>{delta(Math.round(p.conversion * 100), prevP ? Math.round(prevP.conversion * 100) : undefined, 0, '%')}</div>
               <div className="rep-card"><span className="rep-num">{p.nek}/{p.rug}</span><span className="rep-lbl">Nek / Rug</span></div>
-              <div className="rep-card"><span className="rep-num">{p.avgDistance.toFixed(1)}m</span><span className="rep-lbl">Gem. afstand</span></div>
-              <div className="rep-card"><span className="rep-num">{p.maxDistance.toFixed(1)}m</span><span className="rep-lbl">Verste worp</span></div>
+              <div className="rep-card"><span className="rep-num">{p.avgDistance.toFixed(1)}m</span><span className="rep-lbl">Gem. afstand</span>{delta(p.avgDistance, prevP?.avgDistance, 1, 'm')}</div>
+              <div className="rep-card"><span className="rep-num">{p.maxDistance.toFixed(1)}m</span><span className="rep-lbl">Verste worp</span>{delta(p.maxDistance, prevP?.maxDistance, 1, 'm')}</div>
               <div className="rep-card"><span className={`rep-num ${p.lost > 0 ? 'an-neg' : ''}`}>{p.lost}</span><span className="rep-lbl">Geforceerd</span></div>
             </div>
 
