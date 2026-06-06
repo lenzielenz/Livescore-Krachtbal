@@ -1,7 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
-import { MatchStats } from '@/components/MatchStats'
 import { SiteHeader } from '@/components/SiteHeader'
 import { TeamLogo } from '@/components/TeamLogo'
 import { canAnalyse } from '@/lib/access'
@@ -9,9 +8,7 @@ import { getAuthUser } from '@/lib/auth-user'
 import { buildMatchSheet, buildMatchStats, buildMatchState } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
 import { reeksNaam } from '@/lib/reeksen'
-import { AnalyseCharts } from './AnalyseCharts'
-import { MatchRecap } from './MatchRecap'
-import { MomentumChart } from './MomentumChart'
+import { AnalyseDetailView } from './AnalyseDetailView'
 import '../analyse.css'
 
 export const dynamic = 'force-dynamic'
@@ -77,18 +74,13 @@ export default async function AnalyseDetailPage({ params }: { params: Promise<{ 
         </div>
         <p className="an-head-meta">{reeks}{datum ? ` · ${datum}` : ''}</p>
 
-        {momentumGoals.length > 0 && <MomentumChart goals={momentumGoals} teams={teamNames} />}
-
-        {stats.stats.players.length === 0 ? (
-          <p className="empty">Deze wedstrijd heeft geen gedetailleerde worpdata (in snelscoremodus gespeeld).</p>
-        ) : (
-          <>
-            <MatchRecap stats={stats.stats} teams={teamNames} />
-            <AnalyseCharts stats={stats.stats} teams={teamNames} />
-          </>
-        )}
-
-        <MatchStats stats={stats.stats} shots={stats.shots} teams={teamNames} goalAreaDepth={state.match.goalAreaDepth} />
+        <AnalyseDetailView
+          stats={stats.stats}
+          shots={stats.shots}
+          teams={teamNames}
+          goalAreaDepth={state.match.goalAreaDepth}
+          momentumGoals={momentumGoals}
+        />
       </div>
     </>
   )

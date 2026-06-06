@@ -1291,3 +1291,36 @@ select.rang-picker {
 .an-group { scroll-margin-top: 72px; }
 .an-group + .an-group { margin-top: 18px; }
 .an-group .an-sub { margin: 0 0 10px; }
+
+/* Snelwissel-balk op de wedstrijdanalyse: hele wedstrijd ↔ één speler. */
+.an-switch {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  margin: 6px 0 14px;
+  padding-bottom: 2px;
+}
+.an-switch::-webkit-scrollbar { display: none; }
+.an-switch-btn {
+  flex: 0 0 auto;
+  padding: 8px 13px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--panel-2, #0a1f14) 60%, transparent);
+  color: var(--dim-strong, #9fb6aa);
+  font-weight: 700;
+  font-size: 0.88rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.an-switch-btn.side-home { border-left: 3px solid var(--home, #0fe0a6); }
+.an-switch-btn.side-away { border-left: 3px solid var(--away, #4cc9f0); }
+.an-switch-btn.on {
+  background: var(--accent, #06d6a0);
+  color: #06140d;
+  border-color: var(--accent, #06d6a0);
+}
+.an-switch-btn.on.side-home,
+.an-switch-btn.on.side-away { border-left-color: #06140d; }
