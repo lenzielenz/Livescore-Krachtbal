@@ -27,14 +27,18 @@ type Channel = {
   totals: Record<string, number> // cumulatief deze wedstrijd (zichtbare tellers)
   shoutouts: Shout[] // ringbuffer van recente berichten
   shoutSeq: number
-  poll: ReturnType<typeof setInterval>
-  flush: ReturnType<typeof setInterval>
+  poll: ReturnType<typeof setInterval> | null
+  flush: ReturnType<typeof setInterval> | null
+  idle: ReturnType<typeof setTimeout> | null // sloop-timer wanneer (even) niemand kijkt
 }
 
 const channels = new Map<number, Channel>()
 
 const SCORE_POLL_MS = 1500
 const REACTION_FLUSH_MS = 300 // geaggregeerd venster (~3 flushes/sec)
+// Houd het kanaal (met shoutouts + tellers) nog even in leven als de laatste kijker weggaat, zodat
+// een simpele page-refresh de tribune niet wist. Pas na deze grace-periode wordt het opgeruimd.
+const IDLE_GRACE_MS = 60_000
 const ALLOWED_EMOJI = new Set(['clap', 'fire', 'heart', 'goal', 'wow', 'rocket'])
 const MAX_SHOUTS = 40 // hou enkel de recentste berichten in het geheugen
 
@@ -94,9 +98,22 @@ export function joinMatch(payload: Payload, matchId: number, send: Send): () => 
       shoutSeq: 0,
       poll: setInterval(() => void pollScore(payload, matchId), SCORE_POLL_MS),
       flush: setInterval(() => flushReactions(matchId), REACTION_FLUSH_MS),
+      idle: null,
     }
     channels.set(matchId, ch)
     void pollScore(payload, matchId) // directe eerste score
+  } else {
+    // Bestaand kanaal: annuleer een lopende sloop-timer en herstart de polling als die stillag
+    // (kanaal overleefde een korte leegte, bv. een refresh) — shoutouts/tellers blijven bewaard.
+    if (ch.idle) {
+      clearTimeout(ch.idle)
+      ch.idle = null
+    }
+    if (!ch.poll) {
+      ch.poll = setInterval(() => void pollScore(payload, matchId), SCORE_POLL_MS)
+      void pollScore(payload, matchId)
+    }
+    if (!ch.flush) ch.flush = setInterval(() => flushReactions(matchId), REACTION_FLUSH_MS)
   }
   ch.subs.add(send)
   if (ch.lastScore) send('update', JSON.parse(ch.lastScore), ch.lastId)
@@ -111,9 +128,17 @@ export function joinMatch(payload: Payload, matchId: number, send: Send): () => 
     if (!c) return
     c.subs.delete(send)
     if (c.subs.size === 0) {
-      clearInterval(c.poll)
-      clearInterval(c.flush)
-      channels.delete(matchId)
+      // Stop het pollen (geen kijkers), maar bewaar het kanaal nog even: een refresh kan zo
+      // opnieuw aansluiten zonder dat de shoutouts en tellers verloren gaan.
+      if (c.poll) clearInterval(c.poll)
+      if (c.flush) clearInterval(c.flush)
+      c.poll = null
+      c.flush = null
+      if (c.idle) clearTimeout(c.idle)
+      c.idle = setTimeout(() => {
+        const cur = channels.get(matchId)
+        if (cur && cur.subs.size === 0) channels.delete(matchId)
+      }, IDLE_GRACE_MS)
     } else {
       broadcastViewers(c)
     }
