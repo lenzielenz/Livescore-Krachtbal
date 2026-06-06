@@ -10,7 +10,7 @@ import { REEKS_OPTIONS, reeksNaam } from '@/lib/reeksen'
 import { buildSeasonStats } from '@/lib/season-stats'
 import { AnalyseNav } from '../AnalyseNav'
 import { GevaarMap } from '../gevaar/GevaarMap'
-import { GevaarPicker } from '../gevaar/GevaarPicker'
+import { DossierPicker } from './DossierPicker'
 import '../analyse.css'
 
 export const dynamic = 'force-dynamic'
@@ -71,7 +71,7 @@ function FormSpark({ trend }: { trend: { date: string; points: number }[] }) {
 }
 
 // Spelerdossier: álles van één speler op één blad — kerncijfers, richting, vorm en gevaarzone.
-export default async function SpelerDossierPage({ searchParams }: { searchParams: Promise<{ reeks?: string; speler?: string }> }) {
+export default async function SpelerDossierPage({ searchParams }: { searchParams: Promise<{ reeks?: string; club?: string; speler?: string }> }) {
   const me = await getAuthUser()
   if (!canAnalyse(me)) {
     return (
@@ -88,14 +88,21 @@ export default async function SpelerDossierPage({ searchParams }: { searchParams
     )
   }
 
-  const { reeks: reeksParam, speler: spelerParam } = await searchParams
+  const { reeks: reeksParam, club: clubParam, speler: spelerParam } = await searchParams
   const reeks =
     typeof reeksParam === 'string' && COMPETITIE_REEKSEN.some((o) => o.value === reeksParam) ? reeksParam : COMPETITIE_REEKSEN[0].value
 
   const payload = await getPayloadClient()
   const seizoen = await getSelectedSeason()
   const seasonPlayers = await buildSeasonStats(payload, reeks, seizoen)
-  const playerOptions = seasonPlayers.map((p) => ({ value: String(p.playerId), label: `#${p.shirtNumber} ${p.name} · ${p.teamName}` }))
+
+  // Cascade: kies eerst een club (binnen de reeks), dan pas een speler van die club.
+  const clubOptions = [...new Map(seasonPlayers.filter((p) => p.teamId != null).map((p) => [p.teamId as number, p.teamName])).entries()]
+    .map(([id, name]) => ({ value: String(id), label: name }))
+    .sort((a, b) => a.label.localeCompare(b.label, 'nl'))
+  const clubId = clubParam && clubOptions.some((o) => o.value === clubParam) ? Number(clubParam) : null
+  const inClub = clubId != null ? seasonPlayers.filter((p) => p.teamId === clubId) : []
+  const playerOptions = inClub.map((p) => ({ value: String(p.playerId), label: `#${p.shirtNumber} ${p.name}` }))
 
   const playerId = spelerParam && playerOptions.some((o) => o.value === spelerParam) ? Number(spelerParam) : null
   const p = playerId != null ? seasonPlayers.find((sp) => sp.playerId === playerId) ?? null : null
@@ -110,17 +117,18 @@ export default async function SpelerDossierPage({ searchParams }: { searchParams
         <AnalyseNav active="spelers" />
         <div className="an-head-bar">
           <h1 className="page-title"><span className="brand">Spelerdossier</span></h1>
-          <GevaarPicker
+          <DossierPicker
             reeks={reeks}
             reeksOptions={[...COMPETITIE_REEKSEN]}
-            playerOptions={playerOptions}
+            club={clubId != null ? String(clubId) : ''}
+            clubOptions={clubOptions}
             player={playerId != null ? String(playerId) : ''}
-            basePath="/analyse/speler"
+            playerOptions={playerOptions}
           />
         </div>
 
         {p == null ? (
-          <p className="empty">Kies een speler om zijn volledige dossier te zien.</p>
+          <p className="empty">Kies een reeks, dan een club en dan een speler om zijn volledige dossier te zien.</p>
         ) : (
           <>
             <div className="dos-head">
