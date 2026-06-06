@@ -66,9 +66,10 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
       <Link href="/" className="back-link">
         ← Alle wedstrijden
       </Link>
-      <Scoreboard matchId={matchId} initial={{ state, timeline }} halfSeconds={halfSeconds} ratePerMin={ratePerMin} ballKleur={ballKleur} canChat={Boolean(me)} />
+      {/* Match-context als kop bovenaan (reeks · datum · locatie · scheidsrechter · kapiteins),
+          zodat duidelijk is over welke wedstrijd dit gaat — i.p.v. een losse regel onderaan. */}
       {(reeks || datum || accommodatie || referee || homeCaptain || awayCaptain) && (
-        <div className="match-info">
+        <div className="match-info match-info-top">
           {(reeks || datum) && (
             <div className="match-info-row">
               {reeks && <span className="match-info-reeks">{reeks}</span>}
@@ -95,6 +96,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
           )}
         </div>
       )}
+      <Scoreboard matchId={matchId} initial={{ state, timeline }} halfSeconds={halfSeconds} ratePerMin={ratePerMin} ballKleur={ballKleur} canChat={Boolean(me)} />
       <p className="sheet-cta">
         <Link href={`/veld/${matchId}`} className="back-link">
           📺 Veldscherm (groot scherm)
