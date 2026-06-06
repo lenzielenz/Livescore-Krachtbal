@@ -586,3 +586,20 @@
 .tr-profile-h { font-size: 0.85rem; font-weight: 700; margin: 0 0 6px; }
 .tr-profile-h small { color: var(--dim); font-weight: 400; }
 .tr-profile-svg { width: 100%; height: auto; display: block; }
+
+/* Doelen & mijlpalen per speler. */
+.tr-doelen { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+.tr-doel { display: grid; grid-template-columns: minmax(80px, 1.2fr) 3fr auto auto; align-items: center; gap: 10px; font-size: 0.85rem; }
+.tr-doel-lbl { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tr-doel-track { height: 9px; border-radius: 999px; background: color-mix(in srgb, var(--line) 70%, transparent); overflow: hidden; }
+.tr-doel-fill { display: block; height: 100%; border-radius: 999px; background: var(--accent, #06d6a0); }
+.tr-doel.done .tr-doel-fill { background: #ffd166; }
+.tr-doel-val { color: var(--dim); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tr-doel.done .tr-doel-val { color: var(--txt); font-weight: 700; }
+.tr-doel-x { border: none; background: transparent; color: var(--dim); cursor: pointer; font-size: 0.85rem; padding: 2px 6px; }
+.tr-doel-add { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.tr-doel-add select, .tr-doel-add input {
+  padding: 9px 11px; border-radius: 8px; border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--panel-2, #0a1f14) 60%, transparent); color: var(--txt); font-size: 0.92rem;
+}
+.tr-doel-add input { max-width: 140px; }

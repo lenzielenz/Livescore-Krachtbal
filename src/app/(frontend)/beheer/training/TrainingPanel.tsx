@@ -8,6 +8,7 @@ import { ProgressieChart } from './ProgressieChart'
 import './training.css'
 
 export type TrainingPlayer = { id: number; name: string; team: string; club: string; reeks: string; reeksNaam: string }
+export type TrainingDoel = { id: number; speler: number; metriek: string; doel: number }
 
 const ALL = '__all__' // token: alle reeksen samen
 
@@ -28,10 +29,12 @@ const bestOf = (arr: string[]): number | null => {
 export function TrainingPanel({
   players,
   metingen,
+  doelen = [],
   canWrite,
 }: {
   players: TrainingPlayer[]
   metingen: TrainingMeting[]
+  doelen?: TrainingDoel[]
   canWrite: boolean
 }) {
   const router = useRouter()
@@ -59,6 +62,10 @@ export function TrainingPanel({
   const [waarden, setWaarden] = useState<Record<TrainingMetricKey, string[]>>(emptyVals)
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
+  // Doelen toevoegen.
+  const [doelMetric, setDoelMetric] = useState<TrainingMetricKey>('worp18')
+  const [doelValue, setDoelValue] = useState('')
+  const [doelBusy, setDoelBusy] = useState(false)
 
   // Metingen van de geselecteerde speler, chronologisch (oud → nieuw) voor de grafieken.
   const playerMetingen = useMemo(() => {
@@ -100,6 +107,50 @@ export function TrainingPanel({
       return { run, best: vals.length ? Math.max(...vals) : null, latest: vals.length ? vals[vals.length - 1] : null }
     })
   }, [playerMetingen])
+
+  // Beste waarde per metriek (voor de voortgang naar een doel).
+  const bestByMetric = useMemo(() => {
+    const o = {} as Record<TrainingMetricKey, number | null>
+    for (const m of TRAINING_METRICS) {
+      const vals = playerMetingen.filter((mt) => mt[m.key] != null).map((mt) => mt[m.key] as number)
+      o[m.key] = vals.length ? Math.max(...vals) : null
+    }
+    return o
+  }, [playerMetingen])
+  const playerDoelen = doelen.filter((d) => d.speler === spelerId)
+
+  const addDoel = async () => {
+    const v = parseFloat(doelValue)
+    if (spelerId == null || !Number.isFinite(v) || v <= 0 || doelBusy) return
+    setDoelBusy(true)
+    try {
+      const res = await fetch('/api/training/doel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ speler: spelerId, metriek: doelMetric, doel: v }),
+      })
+      if (res.ok) {
+        setDoelValue('')
+        router.refresh()
+      }
+    } finally {
+      setDoelBusy(false)
+    }
+  }
+  const delDoel = async (id: number) => {
+    if (doelBusy) return
+    setDoelBusy(true)
+    try {
+      const res = await fetch('/api/training/doel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'delete', id }),
+      })
+      if (res.ok) router.refresh()
+    } finally {
+      setDoelBusy(false)
+    }
+  }
 
   const setVal = (k: TrainingMetricKey, i: number, v: string) =>
     setWaarden((prev) => {
@@ -283,6 +334,43 @@ export function TrainingPanel({
                   </svg>
                 )
               })()}
+            </div>
+          )}
+        </section>
+      )}
+
+      {spelerId != null && (
+        <section>
+          <h2 className="tr-h2">Doelen {selectedPlayer ? `· ${selectedPlayer.name}` : ''}</h2>
+          {playerDoelen.length === 0 ? (
+            <p className="sb-dim">Nog geen doelen ingesteld.</p>
+          ) : (
+            <div className="tr-doelen">
+              {playerDoelen.map((d) => {
+                const m = TRAINING_METRICS.find((x) => x.key === d.metriek)
+                const best = bestByMetric[d.metriek as TrainingMetricKey] ?? 0
+                const pct = d.doel ? Math.min(100, Math.round(((best ?? 0) / d.doel) * 100)) : 0
+                const done = (best ?? 0) >= d.doel
+                return (
+                  <div className={`tr-doel ${done ? 'done' : ''}`} key={d.id}>
+                    <span className="tr-doel-lbl">{m?.kort ?? d.metriek}</span>
+                    <span className="tr-doel-track"><span className="tr-doel-fill" style={{ width: `${pct}%` }} /></span>
+                    <span className="tr-doel-val">{best ?? 0}/{d.doel} {m?.unit}{done ? ' 🏆' : ''}</span>
+                    {canWrite && <button type="button" className="tr-doel-x" onClick={() => delDoel(d.id)} aria-label="Verwijder doel">✕</button>}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+          {canWrite && (
+            <div className="tr-doel-add">
+              <select value={doelMetric} onChange={(e) => setDoelMetric(e.target.value as TrainingMetricKey)} aria-label="Meetwaarde voor doel">
+                {TRAINING_METRICS.map((m) => (
+                  <option key={m.key} value={m.key}>{m.kort} ({m.unit})</option>
+                ))}
+              </select>
+              <input type="number" inputMode="decimal" step="0.01" min="0" value={doelValue} onChange={(e) => setDoelValue(e.target.value)} placeholder="streefwaarde" aria-label="Streefwaarde" />
+              <button type="button" className="tr-save" onClick={addDoel} disabled={doelBusy || !doelValue.trim()}>+ Doel</button>
             </div>
           )}
         </section>

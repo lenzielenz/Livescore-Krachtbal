@@ -79,6 +79,7 @@ export interface Config {
     tournaments: Tournament;
     'tournament-matches': TournamentMatch;
     trainingmetingen: Trainingmetingen;
+    trainingdoelen: Trainingdoelen;
     trainingen: Trainingen;
     possessions: Possession;
     throws: Throw;
@@ -104,6 +105,7 @@ export interface Config {
     tournaments: TournamentsSelect<false> | TournamentsSelect<true>;
     'tournament-matches': TournamentMatchesSelect<false> | TournamentMatchesSelect<true>;
     trainingmetingen: TrainingmetingenSelect<false> | TrainingmetingenSelect<true>;
+    trainingdoelen: TrainingdoelenSelect<false> | TrainingdoelenSelect<true>;
     trainingen: TrainingenSelect<false> | TrainingenSelect<true>;
     possessions: PossessionsSelect<false> | PossessionsSelect<true>;
     throws: ThrowsSelect<false> | ThrowsSelect<true>;
@@ -786,6 +788,19 @@ export interface Trainingmetingen {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "trainingdoelen".
+ */
+export interface Trainingdoelen {
+  id: number;
+  speler: number | Player;
+  metriek: 'snelheidVooruit' | 'snelheidAchteruit' | 'worp4' | 'worp9' | 'worp18';
+  doel: number;
+  notitie?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "trainingen".
  */
 export interface Trainingen {
@@ -986,6 +1001,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'trainingmetingen';
         value: number | Trainingmetingen;
+      } | null)
+    | ({
+        relationTo: 'trainingdoelen';
+        value: number | Trainingdoelen;
       } | null)
     | ({
         relationTo: 'trainingen';
@@ -1392,6 +1411,18 @@ export interface TrainingmetingenSelect<T extends boolean = true> {
   worp4?: T;
   worp9?: T;
   worp18?: T;
+  notitie?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "trainingdoelen_select".
+ */
+export interface TrainingdoelenSelect<T extends boolean = true> {
+  speler?: T;
+  metriek?: T;
+  doel?: T;
   notitie?: T;
   updatedAt?: T;
   createdAt?: T;
