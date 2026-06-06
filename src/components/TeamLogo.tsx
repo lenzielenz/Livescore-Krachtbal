@@ -51,6 +51,10 @@ export function TeamLogo({ name, logoUrl, logoFit, side, size = 'md', float, rin
   if (ringColor) {
     ;(style as Record<string, string>)['--tl-ring'] = `color-mix(in srgb, ${ringColor} 70%, transparent)`
   }
+  // Premium glans: een lichte veeg die af en toe over de badge loopt. Per club een eigen vertraging
+  // (uit de naam afgeleid) zodat niet alle logo's tegelijk glanzen — dat oogt natuurlijker/duurder.
+  const sheenDelay = (Array.from(name).reduce((a, c) => a + c.charCodeAt(0), 0) % 70) / 10
+  ;(style as Record<string, string>)['--tl-sheen-delay'] = `${sheenDelay}s`
 
   const cls = ['tl', sizeClass, side ? `tl-${side}` : '', float ? 'tl-float' : ''].filter(Boolean).join(' ')
 
