@@ -381,6 +381,30 @@ export interface Match {
     | number
     | boolean
     | null;
+  /**
+   * Cumulatieve emoji-tellers van de live tribune. Automatisch beheerd.
+   */
+  liveReactions?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  /**
+   * Recente supporter-berichten van de live tribune. Automatisch beheerd.
+   */
+  liveShoutouts?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -1161,6 +1185,8 @@ export interface MatchesSelect<T extends boolean = true> {
   clockRunning?: T;
   clockUpdatedAt?: T;
   simpleScore?: T;
+  liveReactions?: T;
+  liveShoutouts?: T;
   updatedAt?: T;
   createdAt?: T;
 }

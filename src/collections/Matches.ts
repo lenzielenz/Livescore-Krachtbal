@@ -368,5 +368,25 @@ export const Matches: CollectionConfig = {
         description: 'Beheerd via het simpele aantekenscherm. Niet handmatig bewerken.',
       },
     },
+    {
+      // Live tribune — persistente opslag zodat de emoji-tellers en shoutouts NIET verdwijnen
+      // wanneer (even) niemand kijkt of de server herstart. Het live-kanaal hydrateert hieruit.
+      name: 'liveReactions',
+      label: 'Live reacties (tellers)',
+      type: 'json',
+      admin: {
+        hidden: true,
+        description: 'Cumulatieve emoji-tellers van de live tribune. Automatisch beheerd.',
+      },
+    },
+    {
+      name: 'liveShoutouts',
+      label: 'Live shoutouts',
+      type: 'json',
+      admin: {
+        hidden: true,
+        description: 'Recente supporter-berichten van de live tribune. Automatisch beheerd.',
+      },
+    },
   ],
 }

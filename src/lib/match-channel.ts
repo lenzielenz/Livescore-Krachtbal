@@ -15,11 +15,13 @@ import { buildMatchState, buildTimeline } from './match-engine'
 
 type Send = (event: string, data: unknown, id?: number) => void
 
-// Eén live shoutout (ingelogde supporter). Bewust EFEMEER: enkel in-memory zolang het kanaal
-// leeft (≥1 kijker), nooit in de DB — geen opslag = geen moderatie-/privacyschuld voor v1.
+// Eén live shoutout (ingelogde supporter). Wordt nu ook PERSISTENT bewaard op de wedstrijd
+// (matches.liveShoutouts), zodat berichten en tellers niet verdwijnen wanneer (even) niemand
+// kijkt of de server herstart. Het kanaal hydrateert hieruit en schrijft terug.
 export type Shout = { id: number; name: string; text: string; at: number }
 
 type Channel = {
+  payload: Payload
   subs: Set<Send>
   lastScore: string
   lastId: number
@@ -27,6 +29,8 @@ type Channel = {
   totals: Record<string, number> // cumulatief deze wedstrijd (zichtbare tellers)
   shoutouts: Shout[] // ringbuffer van recente berichten
   shoutSeq: number
+  hydrated: boolean // al uit de DB geladen?
+  saveTimer: ReturnType<typeof setTimeout> | null // debounce voor het wegschrijven van tellers
   poll: ReturnType<typeof setInterval> | null
   flush: ReturnType<typeof setInterval> | null
   idle: ReturnType<typeof setTimeout> | null // sloop-timer wanneer (even) niemand kijkt
@@ -36,11 +40,13 @@ const channels = new Map<number, Channel>()
 
 const SCORE_POLL_MS = 1500
 const REACTION_FLUSH_MS = 300 // geaggregeerd venster (~3 flushes/sec)
+// Tellers worden gebundeld weggeschreven (niet bij elke tik) om DB-druk te vermijden.
+const REACTION_SAVE_MS = 5000
 // Houd het kanaal (met shoutouts + tellers) nog even in leven als de laatste kijker weggaat, zodat
 // een simpele page-refresh de tribune niet wist. Pas na deze grace-periode wordt het opgeruimd.
 const IDLE_GRACE_MS = 60_000
 const ALLOWED_EMOJI = new Set(['clap', 'fire', 'heart', 'goal', 'wow', 'rocket'])
-const MAX_SHOUTS = 40 // hou enkel de recentste berichten in het geheugen
+const MAX_SHOUTS = 40 // hou enkel de recentste berichten bij
 
 function broadcast(ch: Channel, event: string, data: unknown, id?: number) {
   for (const send of ch.subs) {
@@ -84,11 +90,74 @@ function flushReactions(matchId: number) {
   broadcast(ch, 'reactions', { delta, totals: ch.totals })
 }
 
+// Schrijf de cumulatieve tellers weg naar de wedstrijd (best-effort).
+async function saveReactions(ch: Channel, matchId: number) {
+  try {
+    await ch.payload.update({ collection: 'matches', id: matchId, data: { liveReactions: ch.totals }, overrideAccess: true })
+  } catch {
+    /* best-effort: een mislukte save mag de live-werking niet breken */
+  }
+}
+
+// Tellers gebundeld wegschrijven: plan één save, niet bij elke tik.
+function scheduleSaveReactions(ch: Channel, matchId: number) {
+  if (ch.saveTimer) return
+  ch.saveTimer = setTimeout(() => {
+    ch.saveTimer = null
+    void saveReactions(ch, matchId)
+  }, REACTION_SAVE_MS)
+}
+
+// Shoutouts onmiddellijk wegschrijven (ze zijn schaars en mogen niet verloren gaan).
+async function saveShoutouts(ch: Channel, matchId: number) {
+  try {
+    await ch.payload.update({ collection: 'matches', id: matchId, data: { liveShoutouts: ch.shoutouts }, overrideAccess: true })
+  } catch {
+    /* best-effort */
+  }
+}
+
+// Laad de bewaarde tellers + shoutouts uit de DB in een vers kanaal en broadcast ze één keer.
+async function hydrateChannel(ch: Channel, matchId: number) {
+  if (ch.hydrated) return
+  ch.hydrated = true
+  try {
+    const match = await ch.payload.findByID({ collection: 'matches', id: matchId, depth: 0 })
+    const dbTotals = (match?.liveReactions ?? null) as Record<string, number> | null
+    const dbShouts = (match?.liveShoutouts ?? null) as Shout[] | null
+    let changed = false
+    if (dbTotals && typeof dbTotals === 'object') {
+      for (const [k, v] of Object.entries(dbTotals)) {
+        if (ALLOWED_EMOJI.has(k) && typeof v === 'number' && v > 0) {
+          ch.totals[k] = (ch.totals[k] ?? 0) + v
+          changed = true
+        }
+      }
+    }
+    if (Array.isArray(dbShouts) && dbShouts.length) {
+      const seen = new Set(ch.shoutouts.map((s) => s.id))
+      const restored = dbShouts.filter(
+        (s): s is Shout => Boolean(s) && typeof s.id === 'number' && typeof s.text === 'string' && !seen.has(s.id),
+      )
+      ch.shoutouts = [...restored, ...ch.shoutouts].slice(-MAX_SHOUTS)
+      ch.shoutSeq = Math.max(ch.shoutSeq, ...ch.shoutouts.map((s) => s.id), 0)
+      changed = true
+    }
+    if (changed) {
+      if (Object.keys(ch.totals).length) broadcast(ch, 'reactions', { delta: {}, totals: ch.totals })
+      if (ch.shoutouts.length) broadcast(ch, 'shoutouts', ch.shoutouts)
+    }
+  } catch {
+    /* hydrate is best-effort */
+  }
+}
+
 /** Sluit een SSE-verbinding aan op het kanaal van een wedstrijd. Retourneert een leave-functie. */
 export function joinMatch(payload: Payload, matchId: number, send: Send): () => void {
   let ch = channels.get(matchId)
   if (!ch) {
     ch = {
+      payload,
       subs: new Set(),
       lastScore: '',
       lastId: 0,
@@ -96,12 +165,15 @@ export function joinMatch(payload: Payload, matchId: number, send: Send): () => 
       totals: {},
       shoutouts: [],
       shoutSeq: 0,
+      hydrated: false,
+      saveTimer: null,
       poll: setInterval(() => void pollScore(payload, matchId), SCORE_POLL_MS),
       flush: setInterval(() => flushReactions(matchId), REACTION_FLUSH_MS),
       idle: null,
     }
     channels.set(matchId, ch)
     void pollScore(payload, matchId) // directe eerste score
+    void hydrateChannel(ch, matchId) // bewaarde tribune (tellers + shoutouts) terugladen
   } else {
     // Bestaand kanaal: annuleer een lopende sloop-timer en herstart de polling als die stillag
     // (kanaal overleefde een korte leegte, bv. een refresh) — shoutouts/tellers blijven bewaard.
@@ -134,6 +206,13 @@ export function joinMatch(payload: Payload, matchId: number, send: Send): () => 
       if (c.flush) clearInterval(c.flush)
       c.poll = null
       c.flush = null
+      // Schrijf de laatste tellerstand nog weg (de debounce kan nog openstaan), zodat niets
+      // verloren gaat als het kanaal straks definitief opgeruimd wordt.
+      if (c.saveTimer) {
+        clearTimeout(c.saveTimer)
+        c.saveTimer = null
+      }
+      void saveReactions(c, matchId)
       if (c.idle) clearTimeout(c.idle)
       c.idle = setTimeout(() => {
         const cur = channels.get(matchId)
@@ -153,6 +232,7 @@ export function addReaction(matchId: number, emoji: string, count = 1): boolean 
   const n = Math.max(1, Math.min(20, Math.floor(count) || 1)) // clamp tegen inflatie
   ch.reactions[emoji] = (ch.reactions[emoji] ?? 0) + n
   ch.totals[emoji] = (ch.totals[emoji] ?? 0) + n
+  scheduleSaveReactions(ch, matchId) // gebundeld persisteren zodat de tellers blijven staan
   return true
 }
 
@@ -165,6 +245,7 @@ export function addShoutout(matchId: number, name: string, text: string): Shout 
   ch.shoutouts.push(shout)
   if (ch.shoutouts.length > MAX_SHOUTS) ch.shoutouts.splice(0, ch.shoutouts.length - MAX_SHOUTS)
   broadcast(ch, 'shoutout', shout)
+  void saveShoutouts(ch, matchId) // meteen persisteren zodat het bericht blijft staan
   return shout
 }
 
