@@ -472,6 +472,14 @@ export function Scoreboard({
         </div>
       </div>
 
+      {/* Uitgelogd zie je enkel de score en de tijd. Al de rest (tijdlijn, reacties, vieringen,
+          tribune) zit achter login — met een korte uitnodiging. */}
+      {!canChat ? (
+        <p className="sb-loginmore">
+          <a href="/inloggen">Log in</a> voor de tijdlijn, reacties, vieringen en de live tribune.
+        </p>
+      ) : (
+      <>
       {goal && (
         <div key={goal.key} className={`sb-goal side-${goal.side}`}>
           <div className="sb-goal-card">
@@ -724,6 +732,8 @@ export function Scoreboard({
             </p>
           )}
         </div>
+      )}
+      </>
       )}
     </div>
   )
