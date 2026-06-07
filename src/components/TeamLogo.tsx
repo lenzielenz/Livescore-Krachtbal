@@ -110,7 +110,10 @@ export function TeamLogo({ name, logoUrl, logoFit, side, size = 'md', float, rin
         typeof document !== 'undefined' &&
         createPortal(
           <div className="tl-medal-ov" onClick={() => setCoin(false)} role="presentation">
-            <div className="tl-medal">
+            <div
+              className="tl-medal"
+              style={ringColor ? ({ '--mc': ringColor } as React.CSSProperties) : undefined}
+            >
               <div className="tl-medal-face">
                 {inner}
                 <span className="tl-medal-shine" aria-hidden />
