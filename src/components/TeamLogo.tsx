@@ -111,7 +111,10 @@ export function TeamLogo({ name, logoUrl, logoFit, side, size = 'md', float, rin
         createPortal(
           <div className="tl-medal-ov" onClick={() => setCoin(false)} role="presentation">
             <div className="tl-medal">
-              <div className="tl-medal-face">{inner}</div>
+              <div className="tl-medal-face">
+                {inner}
+                <span className="tl-medal-shine" aria-hidden />
+              </div>
             </div>
           </div>,
           document.body,
