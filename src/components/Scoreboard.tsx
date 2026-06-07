@@ -9,6 +9,7 @@ import { TeamLogo } from '@/components/TeamLogo'
 import { WinProbability } from '@/components/WinProbability'
 import { DEFAULT_AWAY_COLOR, DEFAULT_HOME_COLOR, inkOn, readableOnDark } from '@/lib/club-colors'
 import { goalPointsFromLabel, goalScorerFromLabel, useLiveStream } from '@/lib/use-live-stream'
+import { isTribuneOpen, TRIBUNE_GRACE_MS } from '@/lib/tribune'
 import './scoreboard.css'
 
 function fmtClock(total: number): string {
@@ -215,6 +216,19 @@ export function Scoreboard({
   const statusLabel =
     state.match.status === 'live' ? 'LIVE' : state.match.status === 'finished' ? 'AFGELOPEN' : 'GEPLAND'
 
+  // De tribune (reacties + shoutouts) staat open tijdens de wedstrijd en nog tot 1u erna.
+  // Een tikje state zorgt dat ze vanzelf sluit op het einde van dat venster, zonder refresh.
+  const [, forceTribuneTick] = useState(0)
+  const tribuneOpen = isTribuneOpen(state.match.status, state.match.finishedAt)
+  const tribuneClosingSoon = state.match.status === 'finished' && tribuneOpen
+  useEffect(() => {
+    if (state.match.status !== 'finished' || !state.match.finishedAt) return
+    const remaining = new Date(state.match.finishedAt).getTime() + TRIBUNE_GRACE_MS - Date.now()
+    if (remaining <= 0) return
+    const t = setTimeout(() => forceTribuneTick((n) => n + 1), remaining + 500)
+    return () => clearTimeout(t)
+  }, [state.match.status, state.match.finishedAt])
+
   // Speelduur-melding: tot waar de klok van deze helft loopt (de klok telt op tot `halfSeconds`)
   // + hoeveel minuten er in totaal gevraagd zijn (time-outs van beide ploegen + SR-minuten), want
   // die pauzeren de klok en rekken de échte speeltijd op.
@@ -344,7 +358,7 @@ export function Scoreboard({
           </span>
         ))}
       </div>
-      {state.match.status === 'live' && (
+      {tribuneOpen && (
         <div className="sb-reactions">
           {(Object.keys(EMOJI) as (keyof typeof EMOJI)[]).map((name) => (
             <button
@@ -377,10 +391,13 @@ export function Scoreboard({
         </div>
       )}
 
-      {/* Live tribune: shoutouts van ingelogde supporters (efemeer, enkel tijdens een live wedstrijd). */}
-      {state.match.status === 'live' && (
+      {/* Live tribune: shoutouts van ingelogde supporters. Open tijdens de wedstrijd en nog tot 1u erna. */}
+      {tribuneOpen && (
         <div className="sb-chat">
           <h3 className="sb-chat-title">Live tribune</h3>
+          {tribuneClosingSoon && (
+            <p className="sb-chat-note">De wedstrijd is afgelopen — de tribune blijft nog tot een uur na de match open.</p>
+          )}
           <div className="sb-chat-feed" ref={chatFeedRef}>
             {shouts.length === 0 ? (
               <p className="sb-dim">Nog stil in de tribune… wees de eerste om je ploeg aan te moedigen!</p>

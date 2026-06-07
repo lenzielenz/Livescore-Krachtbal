@@ -405,6 +405,10 @@ export interface Match {
     | number
     | boolean
     | null;
+  /**
+   * Automatisch gezet bij het beëindigen. Bepaalt het 1u-navenster van de live tribune.
+   */
+  finishedAt?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -1187,6 +1191,7 @@ export interface MatchesSelect<T extends boolean = true> {
   simpleScore?: T;
   liveReactions?: T;
   liveShoutouts?: T;
+  finishedAt?: T;
   updatedAt?: T;
   createdAt?: T;
 }

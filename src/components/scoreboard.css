@@ -185,6 +185,11 @@
   color: var(--dim);
   margin: 0 0 8px;
 }
+.sb-chat-note {
+  margin: -2px 0 8px;
+  font-size: 0.8rem;
+  color: var(--accent, #06d6a0);
+}
 .sb-chat-feed {
   display: flex;
   flex-direction: column;

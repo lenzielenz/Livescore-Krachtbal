@@ -388,5 +388,28 @@ export const Matches: CollectionConfig = {
         description: 'Recente supporter-berichten van de live tribune. Automatisch beheerd.',
       },
     },
+    {
+      // Tijdstip waarop de wedstrijd afgelopen is. Wordt automatisch gezet zodra de status op
+      // 'finished' gaat en bepaalt het 1-uur-navenster waarin supporters nog kunnen reageren.
+      name: 'finishedAt',
+      label: 'Afgelopen op',
+      type: 'date',
+      admin: {
+        position: 'sidebar',
+        readOnly: true,
+        date: { pickerAppearance: 'dayAndTime' },
+        description: 'Automatisch gezet bij het beëindigen. Bepaalt het 1u-navenster van de live tribune.',
+      },
+      hooks: {
+        beforeChange: [
+          ({ siblingData, value }) => {
+            const status = (siblingData as { status?: string })?.status
+            if (status === 'finished') return value || new Date().toISOString()
+            // Niet (meer) afgelopen → geen eindtijd (bv. heropend).
+            return null
+          },
+        ],
+      },
+    },
   ],
 }
