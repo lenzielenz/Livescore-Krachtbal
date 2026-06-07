@@ -572,3 +572,49 @@
   transition: background 0.15s ease, transform 0.15s ease;
 }
 .home-supporter:hover { background: color-mix(in srgb, var(--accent) 16%, transparent); transform: translateY(-1px); }
+
+/* "Zo werkt het"-uitnodiging — een verzorgde pill met wat lucht eronder, zodat ze
+   niet tegen het reeksen-filter aankleeft. */
+.home-howto-wrap {
+  display: flex;
+  justify-content: center;
+  margin: 4px 0 26px;
+}
+.home-howto {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--panel-grad, color-mix(in srgb, var(--panel) 80%, transparent));
+  box-shadow: var(--card-shadow);
+  color: var(--txt);
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+.home-howto-q {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--grad-accent);
+  color: #06140d;
+  font-weight: 900;
+  font-size: 0.82rem;
+  flex: none;
+}
+.home-howto .arrow {
+  color: var(--accent);
+  font-weight: 800;
+  transition: transform 0.15s ease;
+}
+.home-howto:hover {
+  border-color: color-mix(in srgb, var(--accent) 50%, var(--line));
+  transform: translateY(-1px);
+  box-shadow: var(--card-shadow), var(--glow-accent);
+}
+.home-howto:hover .arrow { transform: translateX(3px); }
