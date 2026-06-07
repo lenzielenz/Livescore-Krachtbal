@@ -211,8 +211,8 @@
   z-index: 150;
   display: grid;
   place-items: center;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(2px);
+  background: rgba(0, 0, 0, 0.86);
+  backdrop-filter: blur(3px);
   padding: 24px;
 }
 .replay-rec-card {
