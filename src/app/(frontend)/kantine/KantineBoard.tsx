@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
 
+import { ClubColorBlast } from '@/components/ClubColorBlast'
 import { TeamLogo } from '@/components/TeamLogo'
 import { type ClubColors, DEFAULT_AWAY_COLOR, DEFAULT_HOME_COLOR, inkOn, readableOnDark } from '@/lib/club-colors'
 import type { MatchState, TimelineItem } from '@/lib/match-engine'
@@ -45,6 +46,12 @@ export function Tile({
   const seenGoals = useRef<Set<string>>(new Set())
   const seq = useRef(0)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Clubkleuren-viering (afgevuurd vanaf een supporter-scherm) ook hier over dit vak tonen.
+  const [blast, setBlast] = useState<{ key: number; colors: ClubColors; name: string } | null>(null)
+  const blastSeq = useRef(0)
+  const blastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const stateRef = useRef<MatchState | null>(null)
+  stateRef.current = state
 
   useLiveStream<{ state: MatchState; timeline: TimelineItem[] }>(
     `/api/match/${match.id}/stream`,
@@ -68,11 +75,26 @@ export function Tile({
         timer.current = setTimeout(() => setFlash(null), 5000)
       }
     },
+    {
+      blast: (d) => {
+        const side = (d as { side?: string }).side
+        if (side !== 'home' && side !== 'away') return
+        const teams = stateRef.current?.teams
+        const fallback = side === 'home' ? DEFAULT_HOME_COLOR : DEFAULT_AWAY_COLOR
+        const colors = (teams?.[side].colors ?? match[side].colors ?? { primary: fallback, secondary: fallback }) as ClubColors
+        const name = teams?.[side].name ?? match[side].name
+        const key = ++blastSeq.current
+        setBlast({ key, colors, name })
+        if (blastTimer.current) clearTimeout(blastTimer.current)
+        blastTimer.current = setTimeout(() => setBlast((b) => (b && b.key === key ? null : b)), 2800)
+      },
+    },
   )
 
   useEffect(() => {
     return () => {
       if (timer.current) clearTimeout(timer.current)
+      if (blastTimer.current) clearTimeout(blastTimer.current)
     }
   }, [])
 
@@ -114,6 +136,7 @@ export function Tile({
 
   return (
     <div className={`kt-tile ${status === 'live' ? 'live' : ''}`} style={tileStyle}>
+      {blast && <ClubColorBlast key={blast.key} colors={blast.colors} teamName={blast.name} contained />}
       <div className="kt-tile-head">
         <span className="kt-tile-reeks">{match.reeks}</span>
         <span className={`kt-tile-status ${status}`}>
