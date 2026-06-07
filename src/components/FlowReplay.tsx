@@ -215,9 +215,11 @@ export function FlowReplay({
     const canvas = document.createElement('canvas')
     canvas.width = cw
     canvas.height = chh
-    // In de DOM (buiten beeld) zodat de browser het canvas effectief tekent → captureStream
-    // krijgt echte frames (een los canvas levert soms een lege/onspeelbare video op).
-    canvas.style.cssText = 'position:fixed;left:-100000px;top:0;pointer-events:none;opacity:0.01'
+    // ZICHTBAAR in beeld (gecentreerd, achter de voortgang-overlay): sommige (Android-)browsers
+    // tekenen een onzichtbaar/offscreen canvas niet, waardoor captureStream een lege video oplevert.
+    // De fullscreen voortgang-overlay (hogere z-index) bedekt het, dus de gebruiker ziet enkel de balk.
+    canvas.style.cssText =
+      'position:fixed;left:50%;top:10px;transform:translateX(-50%);z-index:145;width:200px;height:auto;border-radius:8px;pointer-events:none'
     document.body.appendChild(canvas)
     const ctx = canvas.getContext('2d')
     if (!ctx) {
@@ -361,8 +363,17 @@ export function FlowReplay({
       rec.ondataavailable = (e) => {
         if (e.data.size) chunks.push(e.data)
       }
+      // Wacht op onstop, maar niet eindeloos: op sommige toestellen vuurt onstop niet betrouwbaar,
+      // waardoor de opname op 100% bleef hangen. Na 3 s gaan we verder met wat we hebben.
       const stopped = new Promise<void>((res) => {
-        rec.onstop = () => res()
+        let done = false
+        const finish = () => {
+          if (done) return
+          done = true
+          res()
+        }
+        rec.onstop = finish
+        setTimeout(finish, 3000)
       })
 
       rec.start(100) // vaak chunks flushen → geldige, afspeelbare video
