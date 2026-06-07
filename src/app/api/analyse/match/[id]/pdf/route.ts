@@ -1,7 +1,7 @@
 import { canAnalyse } from '@/lib/access'
 import { canViewAnalyseMatch } from '@/lib/analyse-access'
 import { authUser } from '@/lib/api-auth'
-import { buildMatchState, buildMatchStats } from '@/lib/match-engine'
+import { buildMatchSheet, buildMatchState } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
 import { generateMatchAnalysisPdf } from '@/lib/submit/pdf-match-analysis'
 
@@ -22,18 +22,40 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       return Response.json({ error: 'Deze analyse hoort bij een andere gebruiker.' }, { status: 403 })
     }
 
-    const [state, statsRes] = await Promise.all([buildMatchState(payload, matchId), buildMatchStats(payload, matchId)])
+    const [state, sheet] = await Promise.all([
+      buildMatchState(payload, matchId),
+      buildMatchSheet(payload, matchId).catch(() => null),
+    ])
     const teams = { home: state.teams.home.name, away: state.teams.away.name }
     const datum = matchDoc.date
       ? new Date(matchDoc.date as string).toLocaleDateString('nl-BE', { dateStyle: 'long' })
       : null
+
+    // Doelpunten (voor het scoreverloop + man van de match), emoji-reacties en supporter-shoutouts
+    // uit de live tribune — dit maakt er een leuke, deelbare samenvatting van i.p.v. een droge analyse.
+    const goals = (sheet?.goals ?? []).map((g) => ({
+      side: g.side,
+      points: g.points,
+      half: g.half,
+      gameClock: g.gameClock,
+      shirtNumber: g.shirtNumber,
+      playerName: g.playerName,
+    }))
+    const reactions = ((matchDoc as { liveReactions?: Record<string, number> | null }).liveReactions ?? {}) as Record<string, number>
+    const shoutouts = Array.isArray((matchDoc as { liveShoutouts?: unknown }).liveShoutouts)
+      ? ((matchDoc as { liveShoutouts: { name?: string; text?: string }[] }).liveShoutouts)
+          .map((s) => ({ name: String(s?.name ?? '').slice(0, 40), text: String(s?.text ?? '').slice(0, 140) }))
+          .filter((s) => s.text)
+      : []
 
     const pdf = await generateMatchAnalysisPdf({
       teams,
       score: state.score,
       reeks: String((matchDoc as { reeks?: unknown }).reeks ?? ''),
       datum,
-      stats: statsRes.stats,
+      goals,
+      reactions,
+      shoutouts,
     })
     const safeName = `${teams.home}-${teams.away}`.replace(/[^\w-]+/g, '_').toLowerCase()
     return new Response(Buffer.from(pdf), {
