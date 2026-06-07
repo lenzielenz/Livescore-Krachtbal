@@ -5,8 +5,15 @@ import { getPayloadClient } from '@/lib/payload-client'
 const rel = (v: unknown): number | null =>
   v && typeof v === 'object' ? ((v as { id?: number }).id ?? null) : typeof v === 'number' ? v : null
 
-// Een clublid "claimt" (of geeft vrij) een wedstrijd als verantwoordelijke voor zíjn kant
-// (thuis of bezoek). Zo ziet de hele club wie welke wedstrijd waar doet.
+// Een clublid beheert wie verantwoordelijk is voor zíjn kant (thuis/bezoek) van een wedstrijd.
+// Acties:
+//   - claim   : neem een nog vrije wedstrijd (zet jezelf als verantwoordelijke)
+//   - release : geef je eigen claim vrij
+//   - request : vraag om de claim van iemand anders over te nemen (beleefde aanvraag)
+//   - approve : (huidige verantwoordelijke) keur de overname-aanvraag goed → de aanvrager neemt over
+//   - deny    : (huidige verantwoordelijke) weiger de aanvraag
+//   - cancel  : (aanvrager) trek je eigen aanvraag in
+// Backwards compatible: { release: true } blijft werken als de actie 'release'.
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const matchId = Number(id)
@@ -18,7 +25,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   } catch {
     /* lege body = claimen */
   }
-  const release = body.release === true
+  const action: string = body.release === true ? 'release' : typeof body.action === 'string' ? body.action : 'claim'
 
   try {
     const payload = await getPayloadClient()
@@ -35,14 +42,53 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const side = Number(homeClub) === Number(clubId) ? 'home' : Number(awayClub) === Number(clubId) ? 'away' : null
     if (!side) return Response.json({ error: 'Deze wedstrijd hoort niet bij jouw club.' }, { status: 403 })
 
-    const field = side === 'home' ? 'homeCoach' : 'awayCoach'
-    await payload.update({
-      collection: 'matches',
-      id: matchId,
-      data: { [field]: release ? null : user.id },
-      overrideAccess: true,
-    })
-    return Response.json({ ok: true, side, coachId: release ? null : user.id })
+    const coachField = side === 'home' ? 'homeCoach' : 'awayCoach'
+    const takeoverField = side === 'home' ? 'homeTakeover' : 'awayTakeover'
+    const me = Number(user.id)
+    const coachId = rel(match[coachField as keyof typeof match])
+    const takeoverId = rel(match[takeoverField as keyof typeof match])
+
+    let data: Record<string, unknown>
+    switch (action) {
+      case 'release':
+        // Vrijgeven: ook een openstaande aanvraag mee wissen.
+        data = { [coachField]: null, [takeoverField]: null }
+        break
+      case 'claim':
+        if (coachId != null && coachId !== me) {
+          return Response.json({ error: 'Al geclaimd — vraag om over te nemen.' }, { status: 409 })
+        }
+        data = { [coachField]: me, [takeoverField]: null }
+        break
+      case 'request':
+        if (coachId == null) {
+          // Niemand claimde het → gewoon meteen claimen.
+          data = { [coachField]: me, [takeoverField]: null }
+        } else if (coachId === me) {
+          return Response.json({ error: 'Je hebt deze al.' }, { status: 409 })
+        } else {
+          data = { [takeoverField]: me }
+        }
+        break
+      case 'approve':
+        if (coachId !== me) return Response.json({ error: 'Enkel de huidige verantwoordelijke kan dit goedkeuren.' }, { status: 403 })
+        if (takeoverId == null) return Response.json({ error: 'Geen openstaande aanvraag.' }, { status: 409 })
+        data = { [coachField]: takeoverId, [takeoverField]: null }
+        break
+      case 'deny':
+        if (coachId !== me) return Response.json({ error: 'Enkel de huidige verantwoordelijke kan dit weigeren.' }, { status: 403 })
+        data = { [takeoverField]: null }
+        break
+      case 'cancel':
+        if (takeoverId !== me) return Response.json({ error: 'Geen eigen aanvraag om in te trekken.' }, { status: 409 })
+        data = { [takeoverField]: null }
+        break
+      default:
+        return Response.json({ error: 'Onbekende actie.' }, { status: 400 })
+    }
+
+    await payload.update({ collection: 'matches', id: matchId, data, overrideAccess: true })
+    return Response.json({ ok: true, side })
   } catch (err) {
     return Response.json({ error: (err as Error).message }, { status: 400 })
   }

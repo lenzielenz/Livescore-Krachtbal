@@ -229,6 +229,27 @@ export const Matches: CollectionConfig = {
       ],
     },
     {
+      // Openstaande overname-aanvraag per kant: wie vraagt om de claim van de huidige
+      // verantwoordelijke over te nemen (via Mijn club). De huidige verantwoordelijke keurt goed.
+      type: 'row',
+      fields: [
+        {
+          name: 'homeTakeover',
+          label: 'Overname-aanvraag thuis',
+          type: 'relationship',
+          relationTo: 'users',
+          admin: { readOnly: true, position: 'sidebar', description: 'Aanvraag via Mijn club.' },
+        },
+        {
+          name: 'awayTakeover',
+          label: 'Overname-aanvraag bezoek',
+          type: 'relationship',
+          relationTo: 'users',
+          admin: { readOnly: true, position: 'sidebar', description: 'Aanvraag via Mijn club.' },
+        },
+      ],
+    },
+    {
       // Categorie volgt automatisch uit de reeks (leeftijdsniveau voor de spelregels) —
       // niet meer handmatig te kiezen.
       name: 'category',

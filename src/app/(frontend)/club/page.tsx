@@ -39,6 +39,9 @@ type Row = {
   location: string
   coachName: string | null
   coachMine: boolean
+  // Overname-aanvraag: wie vraagt om over te nemen, en of dat ik ben.
+  takeoverName: string | null
+  takeoverMine: boolean
 }
 
 function Shell({ children }: { children: React.ReactNode }) {
@@ -110,6 +113,7 @@ export default async function ClubPage() {
       const r = await getMatchReadiness(payload, m.id)
       const homeClub = homeTeam?.club as { name?: string; accommodatie?: string } | null
       const coach = (side === 'home' ? m.homeCoach : m.awayCoach) as { id?: number; name?: string; email?: string } | null
+      const takeover = (side === 'home' ? m.homeTakeover : m.awayTakeover) as { id?: number; name?: string; email?: string } | null
       rows.push({
         id: m.id,
         reeks: reeksNaam(m.reeks),
@@ -124,6 +128,8 @@ export default async function ClubPage() {
         location: (homeClub?.accommodatie || homeClub?.name || nameOf(homeTeam)).trim(),
         coachName: coach ? (coach.name || coach.email || 'Geclaimd') : null,
         coachMine: coach?.id != null && Number(coach.id) === myUserId,
+        takeoverName: takeover ? (takeover.name || takeover.email || 'Iemand') : null,
+        takeoverMine: takeover?.id != null && Number(takeover.id) === myUserId,
       })
     } catch {
       // Wedstrijd met ontbrekende ploeg overslaan.
@@ -177,7 +183,7 @@ export default async function ClubPage() {
                   {m.location ? <> · 📍 {m.location}</> : null}
                 </span>
                 <span className="club-match-coach">
-                  <ClaimButton matchId={m.id} coachName={m.coachName} mine={m.coachMine} />
+                  <ClaimButton matchId={m.id} coachName={m.coachName} mine={m.coachMine} takeoverName={m.takeoverName} takeoverMine={m.takeoverMine} />
                 </span>
               </div>
               <div className="club-match-actions">

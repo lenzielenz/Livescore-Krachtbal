@@ -39,6 +39,7 @@ import * as migration_20260606_120000_user_training_access from './20260606_1200
 import * as migration_20260607_120000_match_live_tribune from './20260607_120000_match_live_tribune';
 import * as migration_20260607_140000_match_finished_at from './20260607_140000_match_finished_at';
 import * as migration_20260607_160000_match_analyse_owner from './20260607_160000_match_analyse_owner';
+import * as migration_20260607_180000_match_takeover from './20260607_180000_match_takeover';
 
 export const migrations = [
   {
@@ -245,5 +246,10 @@ export const migrations = [
     up: migration_20260607_160000_match_analyse_owner.up,
     down: migration_20260607_160000_match_analyse_owner.down,
     name: '20260607_160000_match_analyse_owner',
+  },
+  {
+    up: migration_20260607_180000_match_takeover.up,
+    down: migration_20260607_180000_match_takeover.down,
+    name: '20260607_180000_match_takeover',
   },
 ];
