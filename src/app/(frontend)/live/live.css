@@ -52,6 +52,40 @@
   color: var(--dim);
   margin: 0 0 6px;
 }
+/* Reeks-keuzemenu — schaalt naar veel reeksen zonder een wolk knoppen. */
+.lb-reeks-select {
+  width: 100%;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--txt);
+  border-radius: 8px;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.lb-reeks-select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+/* Snelfilters (Live/Ploegen/Clubs) als pillen. */
+.lb-quick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.lb-quick .lb-reeks {
+  flex: 0 0 auto;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 7px 12px;
+}
+.lb-quick .lb-reeks.fav {
+  margin-top: 0;
+  border-top: 1px solid var(--line);
+  padding-top: 7px;
+  border-radius: 999px;
+}
 .lb-reeks {
   display: flex;
   align-items: center;

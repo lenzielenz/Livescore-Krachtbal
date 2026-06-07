@@ -140,28 +140,33 @@ export function LiveBoard({ date, today, matches }: { date: string; today: strin
     <div className="lb">
       <aside className="lb-side">
         <h3>Reeksen</h3>
-        <button type="button" className={`lb-reeks ${reeksFilter === null ? 'on' : ''}`} onClick={() => setReeksFilter(null)}>
-          <span>Alle reeksen</span>
-          <span className="lb-reeks-n">{base.length}</span>
-        </button>
-        {reeksen.map(([r, n]) => (
-          <button type="button" key={r} className={`lb-reeks ${reeksFilter === r ? 'on' : ''}`} onClick={() => setReeksFilter(r)}>
-            <span>{r}</span>
-            <span className="lb-reeks-n">{n}</span>
+        {/* Eén keuzemenu i.p.v. een wolk knoppen — blijft overzichtelijk bij veel reeksen. */}
+        <select
+          className="lb-reeks-select"
+          value={reeksFilter ?? ''}
+          onChange={(e) => setReeksFilter(e.target.value || null)}
+          aria-label="Kies een reeks"
+        >
+          <option value="">Alle reeksen ({base.length})</option>
+          {reeksen.map(([r, n]) => (
+            <option key={r} value={r}>{r} ({n})</option>
+          ))}
+        </select>
+        {/* Snelfilters apart — Live + favorieten. */}
+        <div className="lb-quick">
+          <button type="button" className={`lb-reeks live ${onlyLive ? 'on' : ''}`} onClick={() => setOnlyLive((v) => !v)} disabled={liveCount === 0}>
+            <span><span className="lb-livedot" /> Live</span>
+            {liveCount > 0 && <span className="lb-reeks-n">{liveCount}</span>}
           </button>
-        ))}
-        <button type="button" className={`lb-reeks live ${onlyLive ? 'on' : ''}`} onClick={() => setOnlyLive((v) => !v)} disabled={liveCount === 0}>
-          <span><span className="lb-livedot" /> Live</span>
-          {liveCount > 0 && <span className="lb-reeks-n">{liveCount}</span>}
-        </button>
-        <button type="button" className={`lb-reeks fav ${onlyFavTeams ? 'on' : ''}`} onClick={() => setOnlyFavTeams((v) => !v)}>
-          <span>★ Ploegen</span>
-          {favTeams.size > 0 && <span className="lb-reeks-n">{favTeams.size}</span>}
-        </button>
-        <button type="button" className={`lb-reeks fav ${onlyFavClubs ? 'on' : ''}`} onClick={() => setOnlyFavClubs((v) => !v)}>
-          <span>★ Clubs</span>
-          {favClubs.size > 0 && <span className="lb-reeks-n">{favClubs.size}</span>}
-        </button>
+          <button type="button" className={`lb-reeks fav ${onlyFavTeams ? 'on' : ''}`} onClick={() => setOnlyFavTeams((v) => !v)}>
+            <span>★ Ploegen</span>
+            {favTeams.size > 0 && <span className="lb-reeks-n">{favTeams.size}</span>}
+          </button>
+          <button type="button" className={`lb-reeks fav ${onlyFavClubs ? 'on' : ''}`} onClick={() => setOnlyFavClubs((v) => !v)}>
+            <span>★ Clubs</span>
+            {favClubs.size > 0 && <span className="lb-reeks-n">{favClubs.size}</span>}
+          </button>
+        </div>
       </aside>
 
       <main className="lb-main">
