@@ -39,10 +39,24 @@ export function FlowReplay({
   const [recording, setRecording] = useState(false)
   const lastTs = useRef(0)
 
+  // Alleen bruikbare worpen (geldige landingscoördinaten) en met een gegarandeerd vertrekpunt,
+  // zodat de replay nooit op ontbrekende/null-posities crasht.
+  const safeShots = useMemo(
+    () =>
+      (shots ?? [])
+        .filter((s) => s && Number.isFinite(s.x) && Number.isFinite(s.y))
+        .map((s) => ({
+          ...s,
+          fromX: Number.isFinite(s.fromX as number) ? (s.fromX as number) : s.x,
+          fromY: Number.isFinite(s.fromY as number) ? (s.fromY as number) : s.y,
+        })),
+    [shots],
+  )
+
   // Enkel de gekozen ploeg afspelen (thuis/uit) of allebei.
   const playShots = useMemo(
-    () => (team === 'both' ? shots : shots.filter((s) => s.teamSide === team)),
-    [shots, team],
+    () => (team === 'both' ? safeShots : safeShots.filter((s) => s.teamSide === team)),
+    [safeShots, team],
   )
 
   const total = playShots.length
@@ -295,7 +309,7 @@ export function FlowReplay({
     return { h, a }
   }, [playShots, step, within, current])
 
-  if (shots.length === 0) {
+  if (safeShots.length === 0) {
     return <p className="empty">Geen worpen in deze selectie om af te spelen.</p>
   }
 
