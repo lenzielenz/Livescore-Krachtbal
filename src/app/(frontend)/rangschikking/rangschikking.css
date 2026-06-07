@@ -119,8 +119,18 @@
     padding: 9px 2px;
     font-size: 0.86rem;
   }
+  /* DV–DT-kolom verbergen, maar als 0-breedte kolom BEHOUDEN (niet display:none): zo blijft de
+     tabel 9 kolommen tellen en matcht de colSpan=9 van de detailrij — anders ontstaat er een
+     spookkolom die bij het openklappen alles opzij duwt. */
   .rang-dv {
-    display: none;
+    width: 0;
+    max-width: 0;
+    padding-left: 0;
+    padding-right: 0;
+    border: 0;
+    overflow: hidden;
+    color: transparent;
+    font-size: 0;
   }
   .rang-logo {
     display: none;
