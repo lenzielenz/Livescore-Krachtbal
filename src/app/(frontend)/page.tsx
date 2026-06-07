@@ -40,6 +40,12 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
           </Link>
         )}
 
+        <p style={{ textAlign: 'center', margin: '6px 0 0' }}>
+          <Link href="/uitleg" style={{ color: 'var(--muted)', fontSize: '0.85rem' }}>
+            ❓ Nieuw hier? Zo werkt een wedstrijd van A tot Z →
+          </Link>
+        </p>
+
         <LiveBoard date={selected} today={today} matches={days} />
       </div>
     </>

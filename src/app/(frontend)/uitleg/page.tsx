@@ -1,0 +1,237 @@
+import Link from 'next/link'
+
+import { SiteHeader } from '@/components/SiteHeader'
+import './uitleg.css'
+
+export const dynamic = 'force-static'
+
+// Tutorial: de volledige flow van een wedstrijd, van registreren tot aftekenen.
+// Bedoeld als instap voor iedereen — supporters, clubs, scheidsrechters en federatie zien
+// in één oogopslag wie wat doet en in welke volgorde.
+
+// Wie doet wat — de rollen kort uitgelegd.
+const ROLES = [
+  { badge: '📣', name: 'Supporter', desc: 'Volgt wedstrijden live, gratis.' },
+  { badge: '👥', name: 'Club', desc: 'Opstelling + aantekenen aan het veld.' },
+  { badge: '🟨', name: 'Scheidsrechter', desc: 'Geeft vrij, keurt goed en tekent af.' },
+  { badge: '🏛️', name: 'Federatie', desc: 'Plant het seizoen en beheert alles.' },
+] as const
+
+type Step = {
+  n: number
+  who: string
+  title: string
+  body: React.ReactNode
+  list?: string[]
+  actions?: { href: string; label: string; primary?: boolean }[]
+}
+
+const STEPS: Step[] = [
+  {
+    n: 1,
+    who: 'Iedereen',
+    title: 'Registreren',
+    body: (
+      <>
+        Maak een <strong>gratis account</strong> aan. Kies je een club, dan word je overal meteen
+        naar je eigen club gestuurd. Ben je clubmedewerker, scheidsrechter of van de federatie? Een
+        beheerder kent je nadien de juiste rol toe — een scheidsrechter wordt gekoppeld aan z'n
+        dossier en krijgt zo een persoonlijke QR-code.
+      </>
+    ),
+    list: [
+      'Naam, e-mail, wachtwoord — klaar.',
+      'Standaard ben je supporter (volgen).',
+      'Beheerder geeft clubmedewerker / scheidsrechter / federatie de juiste rechten.',
+    ],
+    actions: [
+      { href: '/registreren', label: '📝 Registreren', primary: true },
+      { href: '/inloggen', label: '🔐 Inloggen' },
+    ],
+  },
+  {
+    n: 2,
+    who: 'Federatie + club',
+    title: 'Wedstrijd selecteren',
+    body: (
+      <>
+        De federatie zet het seizoen klaar (reeksindeling, kalender en uren). Daarna kiest de club
+        de juiste wedstrijd. Vanaf dan verschijnen de <strong>vier wedstrijddag-stappen</strong>{' '}
+        in vaste volgorde: opstelling → scheidsrechter → aantekenen → aftekenen.
+      </>
+    ),
+    list: [
+      'Federatie plant: reeksen, kalender, speeluren.',
+      'Club opent z\'n wedstrijd via "Mijn club" of de wedstrijdenlijst.',
+      'De stappenbalk leidt je daarna door de hele wedstrijddag.',
+    ],
+    actions: [
+      { href: '/', label: '📅 Wedstrijden' },
+      { href: '/club', label: '👥 Mijn club' },
+    ],
+  },
+  {
+    n: 3,
+    who: 'Club',
+    title: 'Opstelling klaarzetten',
+    body: (
+      <>
+        De club vult vooraf de <strong>opstelling met rugnummers</strong> in voor thuis én uit. Om
+        eerlijk te spelen worden de opstellingen pas zichtbaar kort vóór aanvang (de vrijgavetijd,
+        standaard 60 min vooraf).
+      </>
+    ),
+    list: [
+      'Spelers + rugnummers per ploeg.',
+      'Kapiteins aanduiden (zij tekenen straks af).',
+      'Opstelling wordt zichtbaar vanaf de vrijgavetijd.',
+    ],
+    actions: [{ href: '/club', label: '👥 Naar mijn club' }],
+  },
+  {
+    n: 4,
+    who: 'Scheidsrechter',
+    title: 'Goedkeuring vóór de wedstrijd',
+    body: (
+      <>
+        De scheidsrechter logt in op z'n portaal en geeft de wedstrijd vrij met z'n{' '}
+        <strong>persoonlijke QR-code</strong> (of backup-code). Hij controleert de opstellingen en
+        de verplichte officials en geeft het <strong>akkoord voor de wedstrijdstart</strong>. De
+        federatie kan de vrijgavecode desnoods doorgeven.
+      </>
+    ),
+    list: [
+      'Inloggen op het QR-portaal → QR/code tonen.',
+      'Wedstrijd vrijgeven en opstellingen nakijken.',
+      'Verplichte officials controleren.',
+      'Akkoord geven: de wedstrijd mag starten.',
+    ],
+    actions: [{ href: '/scheidsrechter/portaal', label: '🟨 Scheidsrechtersportaal', primary: true }],
+  },
+  {
+    n: 5,
+    who: 'Club',
+    title: 'Aantekenen aan het veld',
+    body: (
+      <>
+        Tijdens de wedstrijd houdt de club aan het veld <strong>elke worp en het balbezit</strong>{' '}
+        bij. De stand loopt live mee — supporters volgen ze op de startpagina, en je kan de stand
+        naar het kantinescherm of de tv casten.
+      </>
+    ),
+    list: [
+      'Worpen en balbezit live aantekenen.',
+      'De stand verschijnt automatisch bij de supporters.',
+      'Toon ze groot op het kantinescherm of de tv.',
+    ],
+    actions: [
+      { href: '/scorekeeper', label: '📝 Aantekenen' },
+      { href: '/kantine', label: '🍻 Kantinescherm' },
+      { href: '/demo', label: '🎓 Probeer de demo' },
+    ],
+  },
+  {
+    n: 6,
+    who: 'Kapiteins + scheidsrechter',
+    title: 'Afwerken & aftekenen',
+    body: (
+      <>
+        Na de laatste worp controleer je de <strong>eindstand</strong>. Beide kapiteins tekenen
+        digitaal af, en de scheidsrechter tekent af en <strong>dient het wedstrijdblad in</strong>.
+        Daarna maakt de scheidsrechter z'n onkostennota op — en de wedstrijd is klaar voor de
+        analyse en de knipjes.
+      </>
+    ),
+    list: [
+      'Eindstand controleren.',
+      'Beide kapiteins tekenen af.',
+      'Scheidsrechter tekent af en dient in.',
+      'Vergoeding opmaken → analyse & knipjes volgen.',
+    ],
+    actions: [
+      { href: '/vergoedingen', label: '💶 Vergoedingen' },
+      { href: '/analyse', label: '📈 Analyse' },
+    ],
+  },
+]
+
+export default function UitlegPage() {
+  return (
+    <>
+      <SiteHeader active={null} />
+      <div className="site">
+        <h1 className="page-title">
+          Zo werkt het <span className="brand">·</span> van A tot Z
+        </h1>
+        <p className="tut-intro">
+          De <strong>volledige flow van een wedstrijd</strong> in zes stappen — van je account
+          aanmaken tot het wedstrijdblad aftekenen. Iedereen heeft zijn rol; samen krijg je een
+          vlotte wedstrijddag.
+        </p>
+
+        <div className="tut-roles">
+          {ROLES.map((r) => (
+            <div key={r.name} className="tut-role">
+              <span className="tut-role-badge" aria-hidden>
+                {r.badge}
+              </span>
+              <span className="tut-role-txt">
+                <span className="tut-role-name">{r.name}</span>
+                <span className="tut-role-desc">{r.desc}</span>
+              </span>
+            </div>
+          ))}
+        </div>
+
+        <div className="tut-timeline">
+          {STEPS.map((s) => (
+            <div key={s.n} className="tut-step">
+              <div className="tut-dot" aria-hidden>
+                {s.n}
+              </div>
+              <div className="tut-card">
+                <div className="tut-head">
+                  <span className="tut-title">{s.title}</span>
+                  <span className="tut-who">{s.who}</span>
+                </div>
+                <p className="tut-body">{s.body}</p>
+                {s.list && (
+                  <ul className="tut-list">
+                    {s.list.map((item, i) => (
+                      <li key={i}>{item}</li>
+                    ))}
+                  </ul>
+                )}
+                {s.actions && (
+                  <div className="tut-actions">
+                    {s.actions.map((a) => (
+                      <Link key={a.href + a.label} href={a.href} className={`tut-btn ${a.primary ? 'primary' : ''}`}>
+                        {a.label}
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="tut-outro">
+          <h2>Klaar om te starten?</h2>
+          <p>
+            Registreer je gratis als supporter, of probeer meteen de demo om het aantekenen te
+            voelen.
+          </p>
+          <div className="tut-actions" style={{ justifyContent: 'center' }}>
+            <Link href="/registreren" className="tut-btn primary">
+              📝 Registreren
+            </Link>
+            <Link href="/demo" className="tut-btn">
+              🎓 Demo proberen
+            </Link>
+          </div>
+        </div>
+      </div>
+    </>
+  )
+}
