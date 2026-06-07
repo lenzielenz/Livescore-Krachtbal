@@ -50,6 +50,21 @@
   color: var(--accent);
   flex: 0 0 auto;
 }
+/* Compacte header-variant: enkel icoon + temperatuur, subtiel naast de titel. */
+.wx-mini {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 9px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 8%, var(--panel));
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--txt);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
 .wx-skel {
   opacity: 0.7;
 }

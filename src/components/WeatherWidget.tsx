@@ -25,7 +25,8 @@ function describe(code: number): { emoji: string; label: string } {
   return { emoji: '⛅', label: 'Wisselend' }
 }
 
-export function WeatherWidget({ date }: { date: string }) {
+export function WeatherWidget({ date, variant = 'full' }: { date?: string; variant?: 'full' | 'compact' }) {
+  const day = date ?? new Date().toISOString().slice(0, 10)
   const [w, setW] = useState<Weather | null>(null)
   const [state, setState] = useState<'loading' | 'ok' | 'none'>('loading')
 
@@ -35,7 +36,7 @@ export function WeatherWidget({ date }: { date: string }) {
     const url =
       `https://api.open-meteo.com/v1/forecast?latitude=${DEFAULT.lat}&longitude=${DEFAULT.lon}` +
       `&daily=weather_code,temperature_2m_max,temperature_2m_min,wind_speed_10m_max` +
-      `&timezone=Europe%2FBrussels&start_date=${date}&end_date=${date}`
+      `&timezone=Europe%2FBrussels&start_date=${day}&end_date=${day}`
     fetch(url)
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error('weer'))))
       .then((d: { daily?: Record<string, (number | string)[]> }) => {
@@ -60,7 +61,18 @@ export function WeatherWidget({ date }: { date: string }) {
     return () => {
       cancelled = true
     }
-  }, [date])
+  }, [day])
+
+  // Compacte variant voor de header: enkel een icoon + temperatuur (toont niets tot het geladen is).
+  if (variant === 'compact') {
+    if (state !== 'ok' || !w) return null
+    const i = describe(w.code)
+    return (
+      <span className="wx-mini" title={`${i.label} · ${w.tmax}° · wind ${w.wind} km/u (${DEFAULT.place})`}>
+        <span aria-hidden>{i.emoji}</span> {w.tmax}°
+      </span>
+    )
+  }
 
   if (state === 'none') return null
   if (state === 'loading') {

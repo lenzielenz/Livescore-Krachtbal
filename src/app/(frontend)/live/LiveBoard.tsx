@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
 
 import { TeamLogo } from '@/components/TeamLogo'
-import { WeatherWidget } from '@/components/WeatherWidget'
 import { type ClubColors } from '@/lib/club-colors'
 import { type LogoFit } from '@/lib/logo-fit'
 
@@ -185,8 +184,6 @@ export function LiveBoard({ date, today, matches }: { date: string; today: strin
           </div>
           <Link href={`/?date=${shiftDate(date, 1)}`} className="lb-datebtn">›</Link>
         </div>
-
-        <WeatherWidget date={date} />
 
         <div className="lb-search">
           <input
