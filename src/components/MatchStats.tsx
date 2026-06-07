@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 
+import { ErrorCatch } from '@/components/ErrorCatch'
 import { FieldSchema, type FieldMarker } from '@/components/FieldSchema'
 import { FlowReplay } from '@/components/FlowReplay'
 import type { ShotPoint } from '@/lib/match-engine'
@@ -118,7 +119,10 @@ export function MatchStats({
           )}
           {view === 'video' ? (
             // De "video": speelt de hele wedstrijd chronologisch af (filters niet van toepassing).
-            <FlowReplay shots={shots} teams={teams} goalAreaDepth={goalAreaDepth} />
+            // In een error-boundary zodat een hapering hier niet de hele analysepagina platlegt.
+            <ErrorCatch fallback={<p className="empty">De video-replay kon niet laden. Probeer de andere weergaven (Punten/Flow/Heatmap).</p>}>
+              <FlowReplay shots={shots} teams={teams} goalAreaDepth={goalAreaDepth} />
+            </ErrorCatch>
           ) : (
             <>
               <FieldSchema

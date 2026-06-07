@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
+import { ErrorCatch } from '@/components/ErrorCatch'
 import { SiteHeader } from '@/components/SiteHeader'
 import { TeamLogo } from '@/components/TeamLogo'
 import { canAnalyse } from '@/lib/access'
@@ -92,13 +93,15 @@ export default async function AnalyseDetailPage({ params }: { params: Promise<{ 
         </div>
         <p className="an-head-meta">{reeks}{datum ? ` · ${datum}` : ''}</p>
 
-        <AnalyseDetailView
-          stats={stats.stats}
-          shots={stats.shots}
-          teams={teamNames}
-          goalAreaDepth={state.match.goalAreaDepth}
-          momentumGoals={momentumGoals}
-        />
+        <ErrorCatch label="De analyse-details">
+          <AnalyseDetailView
+            stats={stats.stats}
+            shots={stats.shots}
+            teams={teamNames}
+            goalAreaDepth={state.match.goalAreaDepth}
+            momentumGoals={momentumGoals}
+          />
+        </ErrorCatch>
       </div>
     </>
   )
