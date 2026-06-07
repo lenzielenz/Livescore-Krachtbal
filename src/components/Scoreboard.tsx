@@ -117,8 +117,12 @@ export function Scoreboard({
   }
   // Clubkleuren-viering: per ploeg "ladingen" die je verdient (ontgrendelt) en kan afvuren — een
   // fullscreen rook/vuurwerk-explosie in de clubkleuren. Ontgrendelt bij elke rugworp én bij elke
-  // 5 doelpunten. We tellen vanaf de huidige stand zodat reeds gespeelde doelpunten niets opleveren.
-  const [charges, setCharges] = useState<{ home: number; away: number }>({ home: 0, away: 0 })
+  // 5 doelpunten. We tellen vanaf de HUIDIGE stand: open je een wedstrijd die al op 5 (of 10, …)
+  // staat, dan staat de viering meteen klaar — en elke volgende mijlpaal voegt er één toe.
+  const [charges, setCharges] = useState<{ home: number; away: number }>({
+    home: Math.floor((initial.state.score.home ?? 0) / 5),
+    away: Math.floor((initial.state.score.away ?? 0) / 5),
+  })
   const awardedMilestone = useRef<{ home: number; away: number }>({
     home: Math.floor((initial.state.score.home ?? 0) / 5),
     away: Math.floor((initial.state.score.away ?? 0) / 5),
