@@ -54,12 +54,15 @@ export function AnalyseDetailView({
   teams,
   goalAreaDepth,
   momentumGoals,
+  matchLabel,
 }: {
   stats: Stats
   shots: ShotPoint[]
   teams: { home: string; away: string }
   goalAreaDepth: number
   momentumGoals: Goal[]
+  /** Wedstrijd-omschrijving (reeks · datum) voor de gedownloade video. */
+  matchLabel?: string
 }) {
   const players = stats.players
   const [scope, setScope] = useState<'match' | number>('match')
@@ -92,13 +95,13 @@ export function AnalyseDetailView({
       ) : focus ? (
         <>
           <PlayerFocus p={focus} team={focus.teamSide === 'home' ? teams.home : teams.away} />
-          <MatchStats key={`p${focus.playerId}`} stats={stats} shots={shots} teams={teams} goalAreaDepth={goalAreaDepth} focusPlayerId={focus.playerId} />
+          <MatchStats key={`p${focus.playerId}`} stats={stats} shots={shots} teams={teams} goalAreaDepth={goalAreaDepth} focusPlayerId={focus.playerId} matchLabel={matchLabel} />
         </>
       ) : (
         <>
           <MatchRecap stats={stats} teams={teams} />
           <AnalyseCharts stats={stats} teams={teams} />
-          <MatchStats key="match" stats={stats} shots={shots} teams={teams} goalAreaDepth={goalAreaDepth} />
+          <MatchStats key="match" stats={stats} shots={shots} teams={teams} goalAreaDepth={goalAreaDepth} matchLabel={matchLabel} />
         </>
       )}
     </>

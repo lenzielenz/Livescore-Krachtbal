@@ -27,10 +27,14 @@ export function FlowReplay({
   shots,
   teams,
   goalAreaDepth = 10,
+  matchLabel,
 }: {
   shots: ShotPoint[]
   teams: { home: string; away: string }
   goalAreaDepth?: number
+  /** Korte omschrijving van de wedstrijd (bv. "1ste Nationale Heren · 7 juni 2026"), wordt in de
+   * gedownloade video en de bestandsnaam meegegeven zodat duidelijk is welke match het was. */
+  matchLabel?: string
 }) {
   const [playing, setPlaying] = useState(false)
   const [elapsed, setElapsed] = useState(0)
@@ -146,7 +150,8 @@ export function FlowReplay({
     const d = goalAreaDepth
     const FW = 320
     const PAD = 16
-    const HEAD = 54
+    // Extra kopruimte als er een wedstrijd-omschrijving is (reeks · datum) onder de ploegnamen.
+    const HEAD = matchLabel ? 74 : 54
     const fieldH = (FW * (26 + 2 * d)) / 14
     const cw = FW + 2 * PAD
     const chh = HEAD + fieldH + 2 * PAD
@@ -240,6 +245,12 @@ export function FlowReplay({
       ctx.fillStyle = '#9fb6aa'
       ctx.font = '12px system-ui, sans-serif'
       ctx.fillText(`${teams.home}   vs   ${teams.away}`, cw / 2, 46)
+      // Welke wedstrijd het was (reeks · datum), zodat de video op zichzelf duidelijk is.
+      if (matchLabel) {
+        ctx.fillStyle = '#7c948a'
+        ctx.font = '10px system-ui, sans-serif'
+        ctx.fillText(matchLabel, cw / 2, 63)
+      }
       drawField()
       for (let i = 0; i < st; i++) drawShot(list[i], 1)
       if (st < list.length) drawShot(list[st], Math.min(1, wi / 0.7))
@@ -285,7 +296,10 @@ export function FlowReplay({
       const url = URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url
-      link.download = `krachtbal-replay.${ext}`
+      // Bestandsnaam met de ploegen (en evt. reeks/datum) zodat meteen duidelijk is welke match het is.
+      const slug = (s: string) => s.normalize('NFKD').replace(/[^\w]+/g, '-').replace(/^-+|-+$/g, '').toLowerCase()
+      const parts = ['krachtbal', slug(teams.home), 'vs', slug(teams.away), matchLabel ? slug(matchLabel) : ''].filter(Boolean)
+      link.download = `${parts.join('-')}.${ext}`
       link.click()
       URL.revokeObjectURL(url)
     } catch (err) {

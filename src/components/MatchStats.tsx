@@ -40,6 +40,7 @@ export function MatchStats({
   teams,
   goalAreaDepth = 10,
   focusPlayerId,
+  matchLabel,
 }: {
   stats: Stats
   shots: ShotPoint[]
@@ -47,6 +48,8 @@ export function MatchStats({
   goalAreaDepth?: number
   /** Start gefilterd op één speler (gezet via de snelwissel-balk bovenaan). */
   focusPlayerId?: number
+  /** Wedstrijd-omschrijving (reeks · datum) voor de gedownloade video. */
+  matchLabel?: string
 }) {
   const [playerFilter, setPlayerFilter] = useState<number | 'all'>(focusPlayerId ?? 'all')
   const [goalsOnly, setGoalsOnly] = useState(false)
@@ -134,7 +137,7 @@ export function MatchStats({
                 </p>
               )}
             >
-              <FlowReplay shots={shots} teams={teams} goalAreaDepth={goalAreaDepth} />
+              <FlowReplay shots={shots} teams={teams} goalAreaDepth={goalAreaDepth} matchLabel={matchLabel} />
             </ErrorCatch>
           ) : (
             <>

@@ -100,6 +100,7 @@ export default async function AnalyseDetailPage({ params }: { params: Promise<{ 
             teams={teamNames}
             goalAreaDepth={state.match.goalAreaDepth}
             momentumGoals={momentumGoals}
+            matchLabel={[reeks, datum].filter(Boolean).join(' · ')}
           />
         </ErrorCatch>
       </div>
