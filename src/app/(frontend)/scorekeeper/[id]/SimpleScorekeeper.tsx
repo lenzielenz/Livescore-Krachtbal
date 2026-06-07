@@ -63,6 +63,8 @@ export function SimpleScorekeeper({
   // Wisselscherm: kies wie eruit gaat, dan wie erin komt.
   const [subSide, setSubSide] = useState<SimpleSide | null>(null)
   const [subOut, setSubOut] = useState<number | null>(null)
+  // Na het wisselen van de kapitein: dwingt het kiezen van een nieuwe kapitein af.
+  const [needCaptain, setNeedCaptain] = useState<SimpleSide | null>(null)
   // Scheidsrechter bevestigt de stand vóór de overgang naar de 2e helft.
   const [confirmHalfEnd, setConfirmHalfEnd] = useState(false)
   const busy = useRef(false)
@@ -224,7 +226,7 @@ export function SimpleScorekeeper({
               )}
               {!finished && teamRosterOf(side).length > 0 && (
                 <button type="button" className="ssk-wissel" onClick={() => { setSubSide(side); setSubOut(null) }}>
-                  ⇄ Wissel · veld: {fieldPlayersOf(side).map((p) => p.shirtNumber).join(' ') || '—'}
+                  ⇄ Wissel · veld: {fieldPlayersOf(side).map((p) => (p.id === state.captain[side] ? `👑${p.shirtNumber}` : `${p.shirtNumber}`)).join(' ') || '—'}
                 </button>
               )}
               <div className="ssk-stats">
@@ -386,53 +388,83 @@ export function SimpleScorekeeper({
         const team = state.teams[side]
         const onField = fieldPlayersOf(side)
         const bench = teamRosterOf(side).filter((p) => !field[side].includes(p.id))
+        const captainId = state.captain[side]
+        // De kapitein ging eruit (of staat niet meer op het veld) → er moet een nieuwe aangeduid worden.
+        const mustPickCaptain = needCaptain === side
         return (
-          <div className="ssk-modal-overlay" onClick={() => { setSubSide(null); setSubOut(null) }}>
+          <div className="ssk-modal-overlay" onClick={() => { if (!mustPickCaptain) { setSubSide(null); setSubOut(null) } }}>
             <div className="ssk-modal" onClick={(e) => e.stopPropagation()}>
-              <h3>Wissel <span className="ssk-modal-pts">{team.name}</span></h3>
-              <p className="ssk-sub-hint">{subOut == null ? 'Tik wie eruit gaat …' : 'Tik wie erin komt …'}</p>
-              <div className="ssk-sub-sec">
-                <span className="ssk-sub-lbl">Op het veld</span>
-                <div className="ssk-pick-grid">
-                  {onField.map((p) => (
-                    <button type="button" key={p.id} className={`ssk-pick-player ${subOut === p.id ? 'sel' : ''}`} onClick={() => setSubOut(subOut === p.id ? null : p.id)}>
-                      <span className="ssk-pick-num">{p.shirtNumber}</span>
-                      <span className="ssk-pick-naam">{firstName(p.name)}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div className="ssk-sub-sec">
-                <span className="ssk-sub-lbl">Bank</span>
-                {bench.length === 0 ? (
-                  <p className="ssk-dim">Geen wisselspelers.</p>
-                ) : (
-                  <div className="ssk-pick-grid">
-                    {bench.map((p) => (
-                      <button
-                        type="button"
-                        key={p.id}
-                        className="ssk-pick-player bench"
-                        disabled={subOut == null && field[side].length >= 4}
-                        onClick={() => {
-                          setField((f) => {
-                            const cur = f[side]
-                            const next = subOut != null ? cur.map((id) => (id === subOut ? p.id : id)) : cur.length < 4 ? [...cur, p.id] : cur
-                            return { ...f, [side]: next }
-                          })
-                          setSubOut(null)
-                        }}
-                      >
-                        <span className="ssk-pick-num">{p.shirtNumber}</span>
-                        <span className="ssk-pick-naam">{firstName(p.name)}</span>
-                      </button>
-                    ))}
+              <h3>{mustPickCaptain ? 'Nieuwe kapitein' : 'Wissel'} <span className="ssk-modal-pts">{team.name}</span></h3>
+              {mustPickCaptain ? (
+                <>
+                  <p className="ssk-sub-hint">👑 De kapitein ging eruit — tik wie nu kapitein is.</p>
+                  <div className="ssk-sub-sec">
+                    <div className="ssk-pick-grid">
+                      {onField.map((p) => (
+                        <button
+                          type="button"
+                          key={p.id}
+                          className="ssk-pick-player"
+                          onClick={() => { void act({ action: 'setcaptain', side, playerId: p.id }); setNeedCaptain(null) }}
+                        >
+                          <span className="ssk-pick-num">{p.shirtNumber}</span>
+                          <span className="ssk-pick-naam">{firstName(p.name)}</span>
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                )}
-              </div>
-              <div className="ssk-modal-btns">
-                <button type="button" className="ssk-btn primary" onClick={() => { setSubSide(null); setSubOut(null) }}>Klaar</button>
-              </div>
+                </>
+              ) : (
+                <>
+                  <p className="ssk-sub-hint">{subOut == null ? 'Tik wie eruit gaat …' : 'Tik wie erin komt …'}</p>
+                  <div className="ssk-sub-sec">
+                    <span className="ssk-sub-lbl">Op het veld</span>
+                    <div className="ssk-pick-grid">
+                      {onField.map((p) => (
+                        <button type="button" key={p.id} className={`ssk-pick-player ${subOut === p.id ? 'sel' : ''}`} onClick={() => setSubOut(subOut === p.id ? null : p.id)}>
+                          {p.id === captainId && <span className="ssk-cap-badge" aria-hidden>👑</span>}
+                          <span className="ssk-pick-num">{p.shirtNumber}</span>
+                          <span className="ssk-pick-naam">{firstName(p.name)}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="ssk-sub-sec">
+                    <span className="ssk-sub-lbl">Bank</span>
+                    {bench.length === 0 ? (
+                      <p className="ssk-dim">Geen wisselspelers.</p>
+                    ) : (
+                      <div className="ssk-pick-grid">
+                        {bench.map((p) => (
+                          <button
+                            type="button"
+                            key={p.id}
+                            className="ssk-pick-player bench"
+                            disabled={subOut == null && field[side].length >= 4}
+                            onClick={() => {
+                              const wasCaptain = subOut != null && subOut === captainId
+                              setField((f) => {
+                                const cur = f[side]
+                                const next = subOut != null ? cur.map((id) => (id === subOut ? p.id : id)) : cur.length < 4 ? [...cur, p.id] : cur
+                                return { ...f, [side]: next }
+                              })
+                              setSubOut(null)
+                              // Ging de kapitein eruit, dan moet er meteen een nieuwe aangeduid worden.
+                              if (wasCaptain) setNeedCaptain(side)
+                            }}
+                          >
+                            <span className="ssk-pick-num">{p.shirtNumber}</span>
+                            <span className="ssk-pick-naam">{firstName(p.name)}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div className="ssk-modal-btns">
+                    <button type="button" className="ssk-btn primary" onClick={() => { setSubSide(null); setSubOut(null) }}>Klaar</button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )
