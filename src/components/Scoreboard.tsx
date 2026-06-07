@@ -330,7 +330,6 @@ export function Scoreboard({
         <div className="sb-arena-blob home" />
         <div className="sb-arena-blob away" />
         <div className="sb-arena-sheen" />
-        <div className="sb-arena-front" />
       </div>
       <div className="sb-status">
         <span className={`sb-badge ${state.match.status}`}>{statusLabel}</span>
@@ -462,10 +461,6 @@ export function Scoreboard({
           ÁLLE schermen — een fullscreen rook/vuurwerk-explosie in de clubkleuren. */}
       {tribuneOpen && (
         <div className="sb-blast">
-          <p className="sb-blast-intro">
-            🎆 <strong>Vieringsknop</strong> — laad op met elke 5 doelpunten of een rugworp en laat
-            jullie clubkleuren dan op <strong>álle schermen</strong> ontploffen.
-          </p>
           <div className="sb-blast-bar">
             {(['home', 'away'] as const).map((side) => {
               const team = state.teams[side]
