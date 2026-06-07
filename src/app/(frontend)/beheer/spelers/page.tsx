@@ -51,9 +51,11 @@ export default async function BulkPlayersPage() {
   }
 
   const payload = await getPayloadClient()
+  // Heb je een club aan je account (ook als admin/federatie), dan zie je ENKEL die club — geen
+  // andere clubs. Enkel een federatie-account zónder eigen club ziet alle ploegen.
   const teamsRes = await payload.find({
     collection: 'teams',
-    where: fed ? {} : { club: { equals: clubId } },
+    where: clubId != null ? { club: { equals: clubId } } : {},
     sort: 'name',
     depth: 1,
     limit: 300,
