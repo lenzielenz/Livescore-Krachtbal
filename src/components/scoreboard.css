@@ -440,6 +440,9 @@
 .sb-half { font-size: 0.8rem; color: var(--dim-strong); text-transform: uppercase; letter-spacing: 0.06em; }
 /* Melding (enkel bij extra minuten): tot welke minuut deze helft loopt. */
 .sb-playto { margin-top: 4px; font-size: 0.78rem; font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; }
+/* Afgelopen wedstrijd: de klok toont de vastgezette eindtijd, met een duidelijk eind-label. */
+.sb-clock.done { color: var(--dim-strong); border-color: var(--line); background: color-mix(in srgb, #fff 4%, transparent); }
+.sb-final { font-size: 0.8rem; font-weight: 800; color: var(--accent); text-transform: uppercase; letter-spacing: 0.06em; }
 
 .sb-dots { display: inline-flex; gap: 5px; }
 .sb-dot { width: 9px; height: 9px; border-radius: 50%; border: 1px solid var(--line); background: transparent; }
@@ -490,11 +493,35 @@
 }
 .sb-tl-pts.rug { background: var(--grad-accent, var(--accent)); color: #06140d; }
 .sb-tl-x { color: #ef476f; font-weight: 800; flex: none; }
-.sb-tl-scorer { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Wie scoorde: een verzorgde chip met het doelpunt-icoon en de naam in de ploegtint. */
+.sb-tl-scorer {
+  flex: 1 1 auto; min-width: 0;
+  display: inline-flex; align-items: center; gap: 6px;
+  animation: sb-tl-reveal 0.22s ease;
+}
+.sb-tl-scorer-ico { flex: none; font-size: 0.82rem; }
+.sb-tl-scorer-name {
+  font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  color: color-mix(in srgb, var(--tl-side, var(--accent)) 60%, #fff);
+}
+@keyframes sb-tl-reveal { from { opacity: 0; transform: translateX(-4px); } to { opacity: 1; transform: none; } }
+/* Pijltje rechts: affordance dat je het doelpunt kan openklikken; draait bij openen. */
+.sb-tl-rev {
+  flex: none; margin-left: auto; color: var(--dim); font-weight: 800;
+  transition: transform 0.2s ease, color 0.2s ease;
+}
+.sb-tl-rev.open { transform: rotate(90deg); color: var(--accent); }
 /* Aanklikbaar doelpunt: tik om te zien wie scoorde. Geopend → vol over de breedte met de naam. */
 .sb-tl-clickable { cursor: pointer; font-family: inherit; text-align: left; border: 0; border-left: 3px solid var(--line); }
 .sb-tl-clickable:hover { background: #0c2a1b; }
-.sb-tl.open { grid-column: 1 / -1; background: color-mix(in srgb, var(--accent) 10%, #0a1f14); }
+.sb-tl-clickable:hover .sb-tl-rev { color: var(--accent); }
+.sb-tl.open {
+  grid-column: 1 / -1;
+  background: color-mix(in srgb, var(--tl-side, var(--accent)) 14%, #0a1f14);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tl-side, var(--accent)) 22%, transparent);
+}
+.sb-tl.open.side-home { --tl-side: var(--home); }
+.sb-tl.open.side-away { --tl-side: var(--away); }
 .sb-tl-goal { border-left-color: var(--accent); }
 .sb-tl-cross { border-left-color: #ef476f; }
 .sb-tl.side-home { border-left-color: var(--home); }

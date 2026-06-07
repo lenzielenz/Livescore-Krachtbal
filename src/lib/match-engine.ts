@@ -568,6 +568,14 @@ export async function advanceHalf(payload: Payload, matchId: number) {
 export async function finishMatch(payload: Payload, matchId: number) {
   const { match } = await loadMatch(payload, matchId)
   if (match.status === 'finished') return buildMatchState(payload, matchId)
+  // Bevries de LIVE klokstand: clockSeconds is enkel de basis; terwijl de klok loopt moet de
+  // verstreken tijd sinds clockUpdatedAt erbij. Anders springt de eindtijd terug naar de oude
+  // basiswaarde (bv. 0:55) i.p.v. de werkelijk gespeelde tijd te tonen.
+  const base = match.clockSeconds ?? 0
+  const frozen =
+    match.clockRunning && match.clockUpdatedAt
+      ? base + Math.max(0, (Date.now() - new Date(match.clockUpdatedAt).getTime()) / 1000)
+      : base
   // Sluit het lopende balbezit af zodat er na het eindsignaal geen "open" balbezit blijft hangen.
   const open = await getOpenPossession(payload, matchId)
   if (open) {
@@ -584,14 +592,14 @@ export async function finishMatch(payload: Payload, matchId: number) {
       match: matchId,
       type: 'half_end',
       half: match.currentHalf ?? 2,
-      gameClock: match.clockSeconds ?? 0,
+      gameClock: Math.floor(frozen),
     },
     overrideAccess: true,
   })
   await payload.update({
     collection: 'matches',
     id: matchId,
-    data: { status: 'finished', clockRunning: false },
+    data: { status: 'finished', clockRunning: false, clockSeconds: frozen, clockUpdatedAt: new Date().toISOString() },
     overrideAccess: true,
   })
   return buildMatchState(payload, matchId)
