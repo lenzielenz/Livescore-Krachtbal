@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 
+import { WeatherWidget } from '@/components/WeatherWidget'
 import { PROFILES } from '@/lib/profiles'
 import './site-header.css'
 
@@ -69,6 +70,7 @@ export function SiteHeader({ active = null }: { active?: NavSection }) {
         </Link>
 
         <nav className="sh-nav">
+          <WeatherWidget variant="compact" />
           {PRIMARY.map((l) => (
             <Link key={l.href} href={l.href} className={`sh-link ${active === l.key ? 'on' : ''}`}>
               {l.label}
