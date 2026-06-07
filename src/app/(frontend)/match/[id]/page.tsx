@@ -98,7 +98,16 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
           )}
         </div>
       )}
-      <Scoreboard matchId={matchId} initial={{ state, timeline }} halfSeconds={halfSeconds} ratePerMin={ratePerMin} ballKleur={ballKleur} canChat={Boolean(me)} />
+      <Scoreboard
+        matchId={matchId}
+        initial={{ state, timeline }}
+        halfSeconds={halfSeconds}
+        ratePerMin={ratePerMin}
+        ballKleur={ballKleur}
+        canChat={Boolean(me)}
+        initialReactions={(matchDoc?.liveReactions as Record<string, number> | null) ?? undefined}
+        initialShouts={Array.isArray(matchDoc?.liveShoutouts) ? (matchDoc.liveShoutouts as { id: number; name: string; text: string; at: number }[]) : undefined}
+      />
       {/* Supporters duidelijk tonen dat ze de wedstrijd op hun tv kunnen volgen. */}
       <CastToTv matchId={matchId} />
       <p className="sheet-cta">
