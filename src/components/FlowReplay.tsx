@@ -231,20 +231,20 @@ export function FlowReplay({
     }
 
     drawFrame(0) // eerste frame klaarzetten vóór de opname start
-    const stream = (canvas as HTMLCanvasElement & { captureStream(fps?: number): MediaStream }).captureStream(30)
-    const track = stream.getVideoTracks()[0] as MediaStreamTrack & { requestFrame?: () => void }
-    const rec = new MR(stream, { mimeType: mime })
-    const chunks: BlobPart[] = []
-    rec.ondataavailable = (e) => {
-      if (e.data.size) chunks.push(e.data)
-    }
-    const stopped = new Promise<void>((res) => {
-      rec.onstop = () => res()
-    })
-
     setRecording(true)
     setPlaying(false)
     try {
+      const stream = (canvas as HTMLCanvasElement & { captureStream(fps?: number): MediaStream }).captureStream(30)
+      const track = stream.getVideoTracks()[0] as MediaStreamTrack & { requestFrame?: () => void }
+      const rec = new MR(stream, { mimeType: mime })
+      const chunks: BlobPart[] = []
+      rec.ondataavailable = (e) => {
+        if (e.data.size) chunks.push(e.data)
+      }
+      const stopped = new Promise<void>((res) => {
+        rec.onstop = () => res()
+      })
+
       rec.start(250) // periodiek chunks flushen → geldige, afspeelbare video
       const totalDur = list.length * stepMs
       const HOLD = 1400
@@ -272,6 +272,9 @@ export function FlowReplay({
       link.download = `krachtbal-replay.${ext}`
       link.click()
       URL.revokeObjectURL(url)
+    } catch (err) {
+      console.error('video record failed:', err)
+      window.alert('Video opnemen lukte niet op dit toestel. Tip: het werkt het best in Chrome op een computer.')
     } finally {
       canvas.remove()
       setRecording(false)
