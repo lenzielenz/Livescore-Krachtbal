@@ -570,3 +570,40 @@
   .sb-blast-btn.armed { animation: none; }
   .sb-blast-fill { transition: none; }
 }
+
+/* Ingesloten clubkleuren-viering: vult één positioned vak (bv. een kantine-tegel) i.p.v. het
+   volledige scherm. Rook in %-eenheden; vuurwerk-deeltjes (viewport-units) verbergen we hier. */
+.ccb--in {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  border-radius: inherit;
+}
+.ccb--in .ccb-spark { display: none; }
+.ccb--in .ccb-plume {
+  bottom: -10%;
+  width: 70%;
+  height: 80%;
+  filter: blur(14px);
+  animation-name: ccb-rise-in;
+}
+.ccb--in .ccb-plume.p0 { left: -12%; }
+.ccb--in .ccb-plume.p1 { left:   8%; }
+.ccb--in .ccb-plume.p2 { left:  26%; }
+.ccb--in .ccb-plume.p3 { left:  44%; }
+.ccb--in .ccb-plume.p4 { left:  60%; }
+.ccb--in .ccb-plume.p5 { left:  76%; }
+.ccb--in .ccb-plume.p6 { left:  34%; }
+@keyframes ccb-rise-in {
+  0%   { opacity: 0; transform: translateY(40%) scale(0.5); }
+  22%  { opacity: 0.95; }
+  70%  { opacity: 0.8; }
+  100% { opacity: 0; transform: translateY(-32%) scale(1.4); }
+}
+.ccb--in .ccb-banner {
+  top: 8%;
+  font-size: clamp(0.8rem, 4vmin, 1.4rem);
+  white-space: normal;
+  text-align: center;
+  max-width: 90%;
+}
