@@ -2,6 +2,7 @@ import Link from 'next/link'
 
 import { SiteHeader } from '@/components/SiteHeader'
 import { canAnalyse } from '@/lib/access'
+import { analyseMatchWhere } from '@/lib/analyse-access'
 import { getSelectedSeason } from '@/lib/analyse-season'
 import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
@@ -72,11 +73,11 @@ export default async function GevaarPage({ searchParams }: { searchParams: Promi
 
   const payload = await getPayloadClient()
   const seizoen = await getSelectedSeason()
-  const seasonPlayers = await buildSeasonStats(payload, reeks, seizoen)
+  const seasonPlayers = await buildSeasonStats(payload, reeks, seizoen, analyseMatchWhere(me))
   const playerOptions = seasonPlayers.map((p) => ({ value: String(p.playerId), label: `#${p.shirtNumber} ${p.name} · ${p.teamName}` }))
 
   const playerId = spelerParam && playerOptions.some((o) => o.value === spelerParam) ? Number(spelerParam) : null
-  const danger = playerId != null ? await buildPlayerDanger(payload, playerId, reeks, seizoen) : null
+  const danger = playerId != null ? await buildPlayerDanger(payload, playerId, reeks, seizoen, analyseMatchWhere(me)) : null
 
   return (
     <>

@@ -2,6 +2,7 @@ import Link from 'next/link'
 
 import { SiteHeader } from '@/components/SiteHeader'
 import { canAnalyse } from '@/lib/access'
+import { analyseMatchWhere } from '@/lib/analyse-access'
 import { getSelectedSeason } from '@/lib/analyse-season'
 import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
@@ -75,8 +76,8 @@ export default async function PloegRapportPage({ searchParams }: { searchParams:
 
   const teamId = teamParam && teamOptions.some((o) => o.value === teamParam) ? Number(teamParam) : null
   const seizoen = await getSelectedSeason()
-  const report = teamId != null ? await buildTeamReport(payload, teamId, seizoen) : null
-  const danger = teamId != null && report && report.matchesAnalyzed > 0 ? await buildTeamDanger(payload, teamId, reeks, seizoen) : null
+  const report = teamId != null ? await buildTeamReport(payload, teamId, seizoen, analyseMatchWhere(me)) : null
+  const danger = teamId != null && report && report.matchesAnalyzed > 0 ? await buildTeamDanger(payload, teamId, reeks, seizoen, analyseMatchWhere(me)) : null
   const zTot = report ? report.zones.links + report.zones.midden + report.zones.rechts : 0
 
   return (

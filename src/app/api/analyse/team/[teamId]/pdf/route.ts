@@ -1,4 +1,5 @@
 import { canAnalyse } from '@/lib/access'
+import { analyseMatchWhere } from '@/lib/analyse-access'
 import { authUser } from '@/lib/api-auth'
 import { getPayloadClient } from '@/lib/payload-client'
 import { generateTeamReportPdf } from '@/lib/submit/pdf-ploegrapport'
@@ -15,7 +16,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ teamId: 
     if (!user) return Response.json({ error: 'Niet ingelogd.' }, { status: 401 })
     if (!canAnalyse(user)) return Response.json({ error: 'Geen toegang tot de analyse.' }, { status: 403 })
 
-    const report = await buildTeamReport(payload, id)
+    const report = await buildTeamReport(payload, id, null, analyseMatchWhere(user))
     if (!report) return Response.json({ error: 'Ploeg niet gevonden.' }, { status: 404 })
 
     const pdf = await generateTeamReportPdf(report)

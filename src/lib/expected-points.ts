@@ -1,4 +1,4 @@
-import type { Payload } from 'payload'
+import type { Payload, Where } from 'payload'
 
 import { attackDirForSide, loadMatchThrowData } from './match-engine'
 import type { ThrowType } from './krachtbal-rules'
@@ -74,7 +74,7 @@ const DIST_ORDER = ['0–5m', '5–8m', '8–11m', '11–14m', '14m+', 'onbekend
 const rel = (v: unknown): number | null =>
   v && typeof v === 'object' ? ((v as { id?: number }).id ?? null) : typeof v === 'number' ? v : null
 
-export async function buildExpectedPoints(payload: Payload, reeks: string, seizoen?: string | null): Promise<XpResult> {
+export async function buildExpectedPoints(payload: Payload, reeks: string, seizoen?: string | null, matchFilter?: Where | null): Promise<XpResult> {
   // Ploegen + spelers van de reeks (voor de ploegnaam per speler).
   const teamsRes = await payload
     .find({ collection: 'teams', where: { reeks: { equals: reeks } }, depth: 0, limit: 200 })
@@ -95,7 +95,7 @@ export async function buildExpectedPoints(payload: Payload, reeks: string, seizo
   const matchRes = await payload
     .find({
       collection: 'matches',
-      where: { and: [{ reeks: { equals: reeks } }, { status: { equals: 'finished' } }, ...seasonClause(seizoen)] },
+      where: { and: [{ reeks: { equals: reeks } }, { status: { equals: 'finished' } }, ...seasonClause(seizoen), ...(matchFilter ? [matchFilter] : [])] },
       sort: 'date',
       depth: 0,
       limit: 500,
