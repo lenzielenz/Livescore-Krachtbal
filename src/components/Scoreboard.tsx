@@ -431,7 +431,7 @@ export function Scoreboard({
 
       <div className="sb-main">
         <div className={`sb-side-team ${goal?.side === 'home' ? 'scored' : ''}`}>
-          <TeamLogo name={state.teams.home.name} logoUrl={state.teams.home.logoUrl} logoFit={state.teams.home.logoFit} side="home" size="lg" float ringColor={state.teams.home.colors?.primary} />
+          <TeamLogo name={state.teams.home.name} logoUrl={state.teams.home.logoUrl} logoFit={state.teams.home.logoFit} side="home" size="lg" float medallion ringColor={state.teams.home.colors?.primary} />
           <div className="sb-name">{state.teams.home.name}</div>
           <div className="sb-min" title="Aangevraagde minuten (time-outs)">
             <span className="sb-min-lbl">min.</span>
@@ -460,7 +460,7 @@ export function Scoreboard({
           )}
         </div>
         <div className={`sb-side-team ${goal?.side === 'away' ? 'scored' : ''}`}>
-          <TeamLogo name={state.teams.away.name} logoUrl={state.teams.away.logoUrl} logoFit={state.teams.away.logoFit} side="away" size="lg" float ringColor={state.teams.away.colors?.primary} />
+          <TeamLogo name={state.teams.away.name} logoUrl={state.teams.away.logoUrl} logoFit={state.teams.away.logoFit} side="away" size="lg" float medallion ringColor={state.teams.away.colors?.primary} />
           <div className="sb-name">{state.teams.away.name}</div>
           <div className="sb-min" title="Aangevraagde minuten (time-outs)">
             <span className="sb-min-lbl">min.</span>
