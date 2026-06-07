@@ -63,10 +63,10 @@ export function FlowReplay({
   const stepMs = 900 / speed
   const totalMs = total * stepMs
 
-  // Reset wanneer de selectie (filters/ploeg) verandert.
+  // Bij het wisselen van ploeg (thuis/uit/beide): terug naar het begin, maar blíjf spelen als je
+  // al aan het afspelen was — zo zie je meteen de replay van de gekozen ploeg.
   useEffect(() => {
     setElapsed(0)
-    setPlaying(false)
   }, [playShots])
 
   useEffect(() => {
@@ -132,8 +132,9 @@ export function FlowReplay({
     const list = playShots
     if (list.length === 0) return
     const MR = (globalThis as { MediaRecorder?: typeof MediaRecorder }).MediaRecorder
-    // mp4 eerst (speelt op de meeste toestellen af), anders webm.
-    const mime = ['video/mp4;codecs=avc1.42E01E', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'].find(
+    // webm eerst: dat neemt op élk Chrome-toestel (ook Android) betrouwbaar op. mp4 enkel als
+    // terugval (recente desktop-Chrome) want mp4-opname wordt op de meeste telefoons niet ondersteund.
+    const mime = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm', 'video/mp4'].find(
       (m) => MR?.isTypeSupported?.(m),
     )
     if (!MR || !mime) {
@@ -248,8 +249,9 @@ export function FlowReplay({
     setRecording(true)
     setPlaying(false)
     try {
-      const stream = (canvas as HTMLCanvasElement & { captureStream(fps?: number): MediaStream }).captureStream(30)
-      const track = stream.getVideoTracks()[0] as MediaStreamTrack & { requestFrame?: () => void }
+      // Auto-capture op vaste fps (geen requestFrame): het mengen van beide modi liet op sommige
+      // toestellen een lege/onspeelbare video achter.
+      const stream = (canvas as HTMLCanvasElement & { captureStream(fps?: number): MediaStream }).captureStream(25)
       const rec = new MR(stream, { mimeType: mime })
       const chunks: BlobPart[] = []
       rec.ondataavailable = (e) => {
@@ -259,7 +261,7 @@ export function FlowReplay({
         rec.onstop = () => res()
       })
 
-      rec.start(250) // periodiek chunks flushen → geldige, afspeelbare video
+      rec.start(100) // vaak chunks flushen → geldige, afspeelbare video
       const totalDur = list.length * stepMs
       const HOLD = 1400
       const start = performance.now()
@@ -267,12 +269,12 @@ export function FlowReplay({
         const frame = (t: number) => {
           const el = t - start
           drawFrame(Math.min(el, totalDur))
-          track.requestFrame?.() // duw elk getekend frame in de stream
           if (el < totalDur + HOLD) requestAnimationFrame(frame)
           else resolve()
         }
         requestAnimationFrame(frame)
       })
+      rec.requestData?.() // laatste frames flushen vóór stop
       rec.stop()
       await stopped
       const blob = new Blob(chunks, { type: mime })
@@ -325,9 +327,9 @@ export function FlowReplay({
       </div>
       {/* Toon beide ploegen, of speel enkel thuis / enkel uit af. */}
       <div className="shotmap-controls replay-teams">
-        <button type="button" className={team === 'both' ? 'on' : ''} onClick={() => setTeam('both')}>Beide</button>
-        <button type="button" className={`side-home ${team === 'home' ? 'on' : ''}`} onClick={() => setTeam('home')}>🏠 {teams.home}</button>
-        <button type="button" className={`side-away ${team === 'away' ? 'on' : ''}`} onClick={() => setTeam('away')}>🚌 {teams.away}</button>
+        <button type="button" className={team === 'both' ? 'on' : ''} onClick={() => { setTeam('both'); setElapsed(0); setPlaying(true) }}>Beide</button>
+        <button type="button" className={`side-home ${team === 'home' ? 'on' : ''}`} onClick={() => { setTeam('home'); setElapsed(0); setPlaying(true) }}>🏠 {teams.home}</button>
+        <button type="button" className={`side-away ${team === 'away' ? 'on' : ''}`} onClick={() => { setTeam('away'); setElapsed(0); setPlaying(true) }}>🚌 {teams.away}</button>
       </div>
       <div className="shotmap-controls replay-controls">
         <button type="button" className="replay-play" onClick={() => (playing ? setPlaying(false) : play())} disabled={total === 0}>
