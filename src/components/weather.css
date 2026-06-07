@@ -1,0 +1,60 @@
+/* Weerwidget op de live-pagina — past bij de panelen/chips van het scorebord. */
+.wx {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 10px 0;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 8%, var(--panel)), var(--panel));
+  min-width: 0;
+}
+.wx-emoji {
+  font-size: 1.5rem;
+  line-height: 1;
+  flex: 0 0 auto;
+}
+.wx-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.wx-temp {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--txt);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+.wx-min {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--dim);
+}
+.wx-meta {
+  font-size: 0.74rem;
+  color: var(--dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.wx-place {
+  margin-left: auto;
+  align-self: flex-start;
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--accent);
+  flex: 0 0 auto;
+}
+.wx-skel {
+  opacity: 0.7;
+}
+.wx-skel .wx-temp {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--dim);
+}
