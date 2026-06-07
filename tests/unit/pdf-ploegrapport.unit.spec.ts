@@ -59,7 +59,11 @@ const danger: TeamDanger = {
   goals: 20,
   conversion: 0.77,
   avgDistance: 13.1,
-  shots: [],
+  shots: [
+    { x: 0.4, y: 0.3, landX: 0.7, landY: 0.82, goal: true, type: 'rug' },
+    { x: 0.5, y: 0.5, landX: 0.5, landY: 0.6, goal: false, type: 'nek' },
+    { x: 0.8, y: 0.2, landX: 0.85, landY: 0.78, goal: true, type: 'nek' },
+  ],
   depthBands: [
     { label: 'Dichtbij', attempts: 8, goals: 7, conversion: 0.88 },
     { label: 'Midden', attempts: 12, goals: 9, conversion: 0.75 },
@@ -72,9 +76,31 @@ const danger: TeamDanger = {
   ],
 }
 
+const conceded: TeamDanger = {
+  attempts: 14,
+  goals: 8,
+  conversion: 0.57,
+  avgDistance: 12,
+  shots: [
+    { x: 0.3, y: 0.2, landX: 0.2, landY: 0.85, goal: true, type: 'rug' },
+    { x: 0.6, y: 0.3, landX: 0.8, landY: 0.8, goal: true, type: 'nek' },
+    { x: 0.5, y: 0.4, landX: 0.5, landY: 0.7, goal: false, type: 'nek' },
+  ],
+  depthBands: [
+    { label: 'Dichtbij doel', attempts: 6, goals: 5, conversion: 0.83 },
+    { label: 'Middenveld', attempts: 5, goals: 2, conversion: 0.4 },
+    { label: 'Ver van doel', attempts: 3, goals: 1, conversion: 0.33 },
+  ],
+  zoneBands: [
+    { label: 'Links', attempts: 7, goals: 5, conversion: 0.71 },
+    { label: 'Midden', attempts: 4, goals: 2, conversion: 0.5 },
+    { label: 'Rechts', attempts: 3, goals: 1, conversion: 0.33 },
+  ],
+}
+
 describe('generateTeamReportPdf', () => {
-  it('levert een geldige PDF op (met gevaarzone-data)', async () => {
-    const bytes = await generateTeamReportPdf(report, danger)
+  it('levert een geldige PDF op (met aanvals- én verdedigingskaart)', async () => {
+    const bytes = await generateTeamReportPdf(report, danger, conceded)
     expect(bytes.length).toBeGreaterThan(1000)
     expect(new TextDecoder().decode(bytes.slice(0, 5))).toBe('%PDF-')
   })

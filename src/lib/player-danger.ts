@@ -144,7 +144,16 @@ const relId = (v: unknown): number | null =>
 
 // Gevaarzone van een hele ploeg: de doelpogingen van die ploeg over al haar wedstrijden,
 // gespiegeld naar één canonieke aanvalsrichting. Voor de tegenstander-voorbereiding.
-export async function buildTeamDanger(payload: Payload, teamId: number, reeks: string, seizoen?: string | null, matchFilter?: Where | null): Promise<TeamDanger> {
+export async function buildTeamDanger(
+  payload: Payload,
+  teamId: number,
+  reeks: string,
+  seizoen?: string | null,
+  matchFilter?: Where | null,
+  opts?: { conceded?: boolean },
+): Promise<TeamDanger> {
+  // conceded = de doelpogingen die de TEGENSTANDERS tegen deze ploeg maakten (verdedigend beeld).
+  const conceded = opts?.conceded ?? false
   const matchRes = await payload
     .find({
       collection: 'matches',
@@ -178,7 +187,8 @@ export async function buildTeamDanger(payload: Payload, teamId: number, reeks: s
       continue
     }
     for (const s of raw) {
-      if (s.teamSide !== side || !s.isLastThrow) continue
+      const mine = s.teamSide === side
+      if ((conceded ? mine : !mine) || !s.isLastThrow) continue
       const dir = attackDirForSide(s.teamSide, s.period)
       const x = dir === 'up' ? s.fromX : 1 - s.fromX
       const y = dir === 'up' ? s.fromY : 1 - s.fromY
