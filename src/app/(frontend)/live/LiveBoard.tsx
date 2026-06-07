@@ -230,7 +230,7 @@ export function LiveBoard({ date, today, matches }: { date: string; today: strin
                             {live ? (
                               <span className="lb-livebadge">LIVE</span>
                             ) : m.status === 'finished' ? (
-                              <span className="lb-donebadge">Gedaan</span>
+                              <span className="lb-donebadge">Einde</span>
                             ) : (
                               <span className="lb-time">{m.time}</span>
                             )}
