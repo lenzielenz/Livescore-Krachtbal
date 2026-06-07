@@ -333,6 +333,18 @@
   0%, 100% { opacity: 1; }
   50% { opacity: 0.55; }
 }
+/* Afgelopen wedstrijd: supporters zien meteen dat het gedaan is i.p.v. het aanvangsuur. */
+.lb-donebadge {
+  font-size: 0.66rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--dim-strong, #cbd5d1);
+  background: color-mix(in srgb, #fff 8%, transparent);
+  border: 1px solid var(--line);
+  padding: 2px 9px;
+  border-radius: 999px;
+}
 .lb-team {
   display: flex;
   align-items: center;
