@@ -49,6 +49,8 @@ export function Scoreboard({
   ratePerMin,
   ballKleur = 'wit',
   canChat = false,
+  initialReactions,
+  initialShouts,
 }: {
   matchId: number
   initial: { state: MatchState; timeline: TimelineItem[] }
@@ -60,6 +62,10 @@ export function Scoreboard({
   ballKleur?: KrachtbalKleur
   /** Mag de bezoeker live shoutouts plaatsen? (enkel ingelogd) */
   canChat?: boolean
+  /** Reeds bewaarde emoji-tellers (server-side), zodat ze meteen zichtbaar zijn voor iedereen. */
+  initialReactions?: Record<string, number>
+  /** Reeds bewaarde shoutouts (server-side), zodat de tribune meteen gevuld is voor iedereen. */
+  initialShouts?: Shout[]
 }) {
   const [state, setState] = useState<MatchState>(initial.state)
   const [timeline, setTimeline] = useState<TimelineItem[]>(initial.timeline)
@@ -75,7 +81,9 @@ export function Scoreboard({
   const [viewers, setViewers] = useState(0)
   const [floats, setFloats] = useState<{ key: number; name: EmojiName }[]>([])
   const floatSeq = useRef(0)
-  const [totals, setTotals] = useState<Record<string, number>>({})
+  // Start met de reeds bewaarde tellers/shoutouts (server-side), zodat iedereen — ook
+  // niet-ingelogde bezoekers — ze meteen ziet, zonder op de SSE-stream te wachten.
+  const [totals, setTotals] = useState<Record<string, number>>(initialReactions ?? {})
   // Fullscreen "rugworp +2"-viering (raket): key = nieuwe trigger, throttle tegen spam.
   const [celebrate, setCelebrate] = useState<number | null>(null)
   const celebrateSeq = useRef(0)
@@ -115,8 +123,8 @@ export function Scoreboard({
     blastTimer.current = setTimeout(() => setBlast((b) => (b && b.key === key ? null : b)), 2800)
   }
 
-  // Live tribune (shoutouts van ingelogde supporters).
-  const [shouts, setShouts] = useState<Shout[]>([])
+  // Live tribune (shoutouts van ingelogde supporters). Begin met de bewaarde berichten.
+  const [shouts, setShouts] = useState<Shout[]>(initialShouts ?? [])
   const [chatText, setChatText] = useState('')
   const [chatBusy, setChatBusy] = useState(false)
   const chatFeedRef = useRef<HTMLDivElement>(null)
