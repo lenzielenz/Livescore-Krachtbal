@@ -90,8 +90,9 @@
 @media (prefers-reduced-motion: reduce) {
   .sb-arena-blob, .sb-arena-sheen { animation: none; }
 }
-/* Premium hero: grotere logo's, namen in ploegkleur. */
-.sb-side-team .tl { width: 92px; height: 92px; font-size: 92px; }
+/* Premium hero: grotere logo's, namen in ploegkleur. Op smalle schermen schaalt het logo mee
+ * (clamp) zodat het nooit buiten zijn kolom/de kaart valt. */
+.sb-side-team .tl { width: clamp(58px, 17vw, 92px); height: clamp(58px, 17vw, 92px); font-size: clamp(58px, 17vw, 92px); }
 @media (min-width: 700px) {
   .sb-side-team .tl { width: 108px; height: 108px; font-size: 108px; }
 }
@@ -358,9 +359,11 @@
   .sb-float { animation-duration: 0.01s; opacity: 0; }
 }
 
-.sb-main { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 14px; }
-.sb-side-team { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 6px; }
-.sb-name { font-size: 1.5rem; font-weight: 800; letter-spacing: 0.01em; }
+/* minmax(0,…) laat de kolommen krimpen (i.p.v. overlopen) op smalle schermen. */
+.sb-main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, auto) minmax(0, 1fr); align-items: center; gap: 14px; }
+.sb-side-team { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 0; }
+.sb-scorebox { min-width: 0; }
+.sb-name { font-size: 1.5rem; font-weight: 800; letter-spacing: 0.01em; max-width: 100%; overflow-wrap: anywhere; }
 
 /* Doelpunt-viering: het logo van de scorende ploeg juicht mee. */
 .sb-side-team.scored .tl { animation: sb-logo-celebrate 0.9s cubic-bezier(0.22, 1.2, 0.4, 1) 2; }
@@ -498,6 +501,7 @@
 .sb-tl.side-away { border-left-color: var(--away); }
 
 @media (max-width: 560px) {
+  .sb-main { gap: 8px; }
   .sb-score { font-size: 2.4rem; }
   .sb-name { font-size: 0.95rem; }
 }
