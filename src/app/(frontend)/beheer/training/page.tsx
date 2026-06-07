@@ -1,7 +1,7 @@
 import Link from 'next/link'
 
 import { SiteHeader } from '@/components/SiteHeader'
-import { canAnalyse, hasRole } from '@/lib/access'
+import { canTraining } from '@/lib/access'
 import { getAuthUser } from '@/lib/auth-user'
 import { TrainingNav } from './TrainingNav'
 import './training.css'
@@ -26,7 +26,7 @@ const TOOLS = [
 
 export default async function TrainingHubPage() {
   const me = await getAuthUser()
-  const canView = canAnalyse(me) || hasRole(me, 'club-beheerder')
+  const canView = canTraining(me)
 
   if (!canView) {
     return (

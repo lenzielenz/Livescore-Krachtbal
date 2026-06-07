@@ -2,7 +2,7 @@ import Link from 'next/link'
 import type { Where } from 'payload'
 
 import { SiteHeader } from '@/components/SiteHeader'
-import { canAnalyse, hasRole, isFederationLevel, userClubId } from '@/lib/access'
+import { canTraining, hasRole, isFederationLevel, userClubId } from '@/lib/access'
 import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
 import { reeksNaam } from '@/lib/reeksen'
@@ -22,7 +22,7 @@ export default async function AanwezigheidPage() {
   const me = await getAuthUser()
   const fed = isFederationLevel(me)
   const isClubBeheerder = hasRole(me, 'club-beheerder')
-  const canView = canAnalyse(me) || isClubBeheerder
+  const canView = canTraining(me)
   const canWrite = fed || isClubBeheerder
 
   if (!canView) {
