@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 
 import type { MatchState, TimelineItem } from '@/lib/match-engine'
 import type { KrachtbalKleur } from '@/lib/reeksen'
+import { ClubColorBlast } from '@/components/ClubColorBlast'
 import { KrachtbalIcon } from '@/components/KrachtbalIcon'
 import { TeamLogo } from '@/components/TeamLogo'
 import { WinProbability } from '@/components/WinProbability'
@@ -89,6 +90,31 @@ export function Scoreboard({
     if (celebrateTimer.current) clearTimeout(celebrateTimer.current)
     celebrateTimer.current = setTimeout(() => setCelebrate((c) => (c === key ? null : c)), 1800)
   }
+  // Clubkleuren-viering: per ploeg "ladingen" die je verdient (ontgrendelt) en kan afvuren — een
+  // fullscreen rook/vuurwerk-explosie in de clubkleuren. Ontgrendelt bij elke rugworp én bij elke
+  // 5 doelpunten. We tellen vanaf de huidige stand zodat reeds gespeelde doelpunten niets opleveren.
+  const [charges, setCharges] = useState<{ home: number; away: number }>({ home: 0, away: 0 })
+  const awardedMilestone = useRef<{ home: number; away: number }>({
+    home: Math.floor((initial.state.score.home ?? 0) / 5),
+    away: Math.floor((initial.state.score.away ?? 0) / 5),
+  })
+  const [blast, setBlast] = useState<{ key: number; colors: { primary: string; secondary: string }; name: string } | null>(null)
+  const blastSeq = useRef(0)
+  const blastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const colorsFor = (side: Side): { primary: string; secondary: string } => {
+    const c = state.teams[side].colors
+    const fallback = side === 'home' ? DEFAULT_HOME_COLOR : DEFAULT_AWAY_COLOR
+    return c ?? { primary: fallback, secondary: fallback }
+  }
+  const fireBlast = (side: Side) => {
+    if (charges[side] <= 0) return
+    const key = ++blastSeq.current
+    setBlast({ key, colors: colorsFor(side), name: state.teams[side].name })
+    setCharges((c) => ({ ...c, [side]: Math.max(0, c[side] - 1) }))
+    if (blastTimer.current) clearTimeout(blastTimer.current)
+    blastTimer.current = setTimeout(() => setBlast((b) => (b && b.key === key ? null : b)), 2800)
+  }
+
   // Live tribune (shoutouts van ingelogde supporters).
   const [shouts, setShouts] = useState<Shout[]>([])
   const [chatText, setChatText] = useState('')
@@ -130,6 +156,21 @@ export function Scoreboard({
         if (goalTimer.current) clearTimeout(goalTimer.current)
         goalTimer.current = setTimeout(() => setGoal(null), 5000)
       }
+
+      // Clubkleuren-viering ontgrendelen: +1 lading per nieuwe rugworp (2 ptn) én per nieuwe
+      // 5-doelpunten-mijlpaal van een ploeg.
+      const add = { home: 0, away: 0 }
+      for (const g of fresh) {
+        if (g.side && goalPointsFromLabel(g.label) === 2) add[g.side] += 1
+      }
+      for (const side of ['home', 'away'] as const) {
+        const ms = Math.floor((data.state.score[side] ?? 0) / 5)
+        if (ms > awardedMilestone.current[side]) {
+          add[side] += ms - awardedMilestone.current[side]
+          awardedMilestone.current[side] = ms
+        }
+      }
+      if (add.home || add.away) setCharges((c) => ({ home: c.home + add.home, away: c.away + add.away }))
     },
     {
       viewers: (d) => setViewers((d as { count?: number }).count ?? 0),
@@ -189,6 +230,7 @@ export function Scoreboard({
       if (goalTimer.current) clearTimeout(goalTimer.current)
       if (reactTimer.current) clearTimeout(reactTimer.current)
       if (celebrateTimer.current) clearTimeout(celebrateTimer.current)
+      if (blastTimer.current) clearTimeout(blastTimer.current)
     }
   }, [])
 
@@ -375,6 +417,38 @@ export function Scoreboard({
           ))}
         </div>
       )}
+
+      {/* Clubkleuren-viering: per ploeg een knop die je ontgrendelt (rugworp of elke 5 doelpunten)
+          en kan afvuren — een fullscreen rook/vuurwerk-explosie in de clubkleuren. */}
+      {tribuneOpen && (
+        <div className="sb-blast-bar">
+          {(['home', 'away'] as const).map((side) => {
+            const team = state.teams[side]
+            const c = colorsFor(side)
+            const armed = charges[side] > 0
+            return (
+              <button
+                key={side}
+                type="button"
+                className={`sb-blast-btn ${armed ? 'armed' : 'locked'}`}
+                style={{ ['--bc' as string]: c.primary, ['--bc1' as string]: c.primary, ['--bc2' as string]: c.secondary || c.primary }}
+                onClick={() => fireBlast(side)}
+                disabled={!armed}
+                title={armed ? `Vier in de kleuren van ${team.name}!` : 'Ontgrendel met een rugworp of elke 5 doelpunten'}
+              >
+                <span className="sb-blast-dot" aria-hidden />
+                <span>{team.name}</span>
+                <span className="sb-blast-hint">
+                  {armed ? `🎆 Vier!${charges[side] > 1 ? ` ×${charges[side]}` : ''}` : '🔒 Ontgrendel'}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Fullscreen clubkleuren-explosie (rook + vuurwerk). */}
+      {blast && <ClubColorBlast key={blast.key} colors={blast.colors} teamName={blast.name} />}
 
       {/* Fullscreen "rugworp +2"-viering: een raket schiet over het scherm. */}
       {celebrate != null && (

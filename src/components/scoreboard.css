@@ -386,3 +386,143 @@
   .sb-score { font-size: 2.4rem; }
   .sb-name { font-size: 0.95rem; }
 }
+
+/* ── Clubkleuren-viering: fullscreen rook + vuurwerk in de twee clubtinten ─────────────── */
+.ccb {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  pointer-events: none;
+  overflow: hidden;
+}
+.ccb-flash {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(70% 60% at 50% 60%, color-mix(in srgb, var(--c1) 36%, transparent), transparent 72%);
+  animation: ccb-flash 2.4s ease-out forwards;
+}
+@keyframes ccb-flash {
+  0% { opacity: 0; }
+  12% { opacity: 1; }
+  100% { opacity: 0; }
+}
+/* Opstijgende rookpluimen, afwisselend in de twee clubkleuren. */
+.ccb-smoke { position: absolute; inset: 0; }
+.ccb-plume {
+  position: absolute;
+  bottom: -12vh;
+  width: 34vw;
+  height: 60vh;
+  border-radius: 50%;
+  filter: blur(26px);
+  opacity: 0;
+  transform: translateY(40vh) scale(0.5);
+  animation: ccb-rise 2.8s ease-out forwards;
+}
+.ccb-plume.p0 { left: -6vw;  background: radial-gradient(circle, color-mix(in srgb, var(--c1) 85%, transparent), transparent 70%); animation-delay: 0s; }
+.ccb-plume.p1 { left: 12vw;  background: radial-gradient(circle, color-mix(in srgb, var(--c2) 85%, transparent), transparent 70%); animation-delay: 0.12s; }
+.ccb-plume.p2 { left: 30vw;  background: radial-gradient(circle, color-mix(in srgb, var(--c1) 80%, transparent), transparent 70%); animation-delay: 0.26s; height: 72vh; }
+.ccb-plume.p3 { left: 48vw;  background: radial-gradient(circle, color-mix(in srgb, var(--c2) 82%, transparent), transparent 70%); animation-delay: 0.06s; }
+.ccb-plume.p4 { left: 64vw;  background: radial-gradient(circle, color-mix(in srgb, var(--c1) 84%, transparent), transparent 70%); animation-delay: 0.2s; height: 68vh; }
+.ccb-plume.p5 { left: 80vw;  background: radial-gradient(circle, color-mix(in srgb, var(--c2) 84%, transparent), transparent 70%); animation-delay: 0.34s; }
+.ccb-plume.p6 { left: 38vw;  background: radial-gradient(circle, color-mix(in srgb, var(--c1) 70%, transparent), transparent 70%); animation-delay: 0.45s; width: 46vw; }
+@keyframes ccb-rise {
+  0%   { opacity: 0; transform: translateY(45vh) scale(0.45); }
+  22%  { opacity: 0.95; }
+  70%  { opacity: 0.8; }
+  100% { opacity: 0; transform: translateY(-30vh) scale(1.5); }
+}
+/* Vuurwerk: deeltjes spatten uit het midden in beide clubkleuren + wit. */
+.ccb-fireworks { position: absolute; left: 50%; top: 42%; width: 0; height: 0; }
+.ccb-spark {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--c1);
+  box-shadow: 0 0 10px currentColor;
+  animation: ccb-spark 1.7s cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
+}
+.ccb-spark.s0  { --dx:  34vw; --dy: -22vh; background: var(--c1); animation-delay: 0.1s; }
+.ccb-spark.s1  { --dx: -32vw; --dy: -18vh; background: var(--c2); animation-delay: 0.18s; }
+.ccb-spark.s2  { --dx:  22vw; --dy: -34vh; background: #fff;       animation-delay: 0.05s; }
+.ccb-spark.s3  { --dx: -24vw; --dy: -30vh; background: var(--c1); animation-delay: 0.26s; }
+.ccb-spark.s4  { --dx:  40vw; --dy:   6vh; background: var(--c2); animation-delay: 0.14s; }
+.ccb-spark.s5  { --dx: -40vw; --dy:   2vh; background: var(--c1); animation-delay: 0.32s; }
+.ccb-spark.s6  { --dx:  12vw; --dy: -40vh; background: var(--c2); animation-delay: 0.4s; }
+.ccb-spark.s7  { --dx: -14vw; --dy: -38vh; background: #fff;       animation-delay: 0.22s; }
+.ccb-spark.s8  { --dx:  28vw; --dy:  18vh; background: var(--c1); animation-delay: 0.5s; }
+.ccb-spark.s9  { --dx: -28vw; --dy:  16vh; background: var(--c2); animation-delay: 0.46s; }
+.ccb-spark.s10 { --dx:   2vw; --dy: -44vh; background: var(--c1); animation-delay: 0.6s; }
+@keyframes ccb-spark {
+  0%   { transform: translate(0, 0) scale(0); opacity: 0; }
+  16%  { opacity: 1; transform: translate(calc(var(--dx) * 0.35), calc(var(--dy) * 0.35)) scale(1.1); }
+  100% { transform: translate(var(--dx), calc(var(--dy) + 22vh)) scale(0.2); opacity: 0; }
+}
+.ccb-banner {
+  position: absolute;
+  left: 50%;
+  top: 16%;
+  transform: translateX(-50%);
+  font-size: clamp(1.4rem, 7vw, 3rem);
+  font-weight: 900;
+  letter-spacing: 0.03em;
+  color: #fff;
+  text-shadow: 0 0 18px color-mix(in srgb, var(--c1) 80%, transparent), 0 2px 12px rgba(0, 0, 0, 0.6);
+  white-space: nowrap;
+  animation: ccb-banner 2.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+@keyframes ccb-banner {
+  0% { opacity: 0; transform: translateX(-50%) scale(0.6); }
+  18% { opacity: 1; transform: translateX(-50%) scale(1.08); }
+  72% { opacity: 1; transform: translateX(-50%) scale(1); }
+  100% { opacity: 0; transform: translateX(-50%) scale(1.02); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ccb-plume, .ccb-spark { display: none; }
+  .ccb-banner { animation: ccb-flash 2s ease-out forwards; }
+}
+
+/* Ontgrendelknop per ploeg om de clubkleuren-viering af te vuren. */
+.sb-blast-bar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+.sb-blast-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 2px solid var(--bc, var(--line));
+  background: color-mix(in srgb, var(--bc, var(--line)) 16%, transparent);
+  color: var(--txt);
+  font-weight: 800;
+  font-size: 0.85rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.18s ease, opacity 0.18s ease;
+}
+.sb-blast-btn.armed {
+  box-shadow: 0 0 0 1px var(--bc) inset, 0 0 18px -4px var(--bc);
+  animation: sb-blast-pulse 1.8s ease-in-out infinite;
+}
+.sb-blast-btn.armed:hover { transform: translateY(-1px); }
+.sb-blast-btn.locked { opacity: 0.55; cursor: default; }
+.sb-blast-dot {
+  width: 13px; height: 13px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--bc1), var(--bc2));
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  flex: none;
+}
+.sb-blast-hint { font-size: 0.72rem; font-weight: 600; opacity: 0.8; }
+@keyframes sb-blast-pulse {
+  0%, 100% { box-shadow: 0 0 0 1px var(--bc) inset, 0 0 10px -4px var(--bc); }
+  50% { box-shadow: 0 0 0 1px var(--bc) inset, 0 0 22px -2px var(--bc); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sb-blast-btn.armed { animation: none; }
+}
