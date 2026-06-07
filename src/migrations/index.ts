@@ -35,6 +35,7 @@ import * as migration_20260606_090000_training_screenshot from './20260606_09000
 import * as migration_20260606_093000_training_club from './20260606_093000_training_club';
 import * as migration_20260606_100000_training_reeks from './20260606_100000_training_reeks';
 import * as migration_20260606_110000_trainingdoelen from './20260606_110000_trainingdoelen';
+import * as migration_20260606_120000_user_training_access from './20260606_120000_user_training_access';
 
 export const migrations = [
   {
@@ -221,5 +222,10 @@ export const migrations = [
     up: migration_20260606_110000_trainingdoelen.up,
     down: migration_20260606_110000_trainingdoelen.down,
     name: '20260606_110000_trainingdoelen',
+  },
+  {
+    up: migration_20260606_120000_user_training_access.up,
+    down: migration_20260606_120000_user_training_access.down,
+    name: '20260606_120000_user_training_access',
   },
 ];

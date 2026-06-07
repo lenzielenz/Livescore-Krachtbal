@@ -406,6 +406,10 @@ export interface User {
    */
   analyseAccess?: boolean | null;
   /**
+   * Geef dit account toegang tot het trainingsluik (progressie + aanwezigheid).
+   */
+  trainingAccess?: boolean | null;
+  /**
    * Enkel relevant voor de rol "Scheidsrechter". Beperkt de toegang tot de eigen kwitantie.
    */
   official?: (number | null) | Official;
@@ -1511,6 +1515,7 @@ export interface UsersSelect<T extends boolean = true> {
   roles?: T;
   club?: T;
   analyseAccess?: T;
+  trainingAccess?: T;
   official?: T;
   updatedAt?: T;
   createdAt?: T;

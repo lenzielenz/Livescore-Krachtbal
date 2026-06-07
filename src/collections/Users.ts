@@ -85,6 +85,19 @@ export const Users: CollectionConfig = {
       },
     },
     {
+      // Idem voor het trainingsluik (progressie + aanwezigheid): toegang los van de admin-rol.
+      name: 'trainingAccess',
+      label: 'Training-toegang',
+      type: 'checkbox',
+      defaultValue: false,
+      admin: {
+        description: 'Geef dit account toegang tot het trainingsluik (progressie + aanwezigheid).',
+      },
+      access: {
+        update: ({ req }) => hasRole(req.user, 'admin'),
+      },
+    },
+    {
       // Koppelt een scheidsrechter-account aan zijn/haar official-dossier, zodat hij enkel z'n
       // EIGEN kwitantie/forfaitblad kan ophalen en enkel toegewezen wedstrijden kan tekenen
       // (voorkomt IDOR op financiële PII — zie AUDIT-2026-06.md §4/§5).

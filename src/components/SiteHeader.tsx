@@ -38,14 +38,15 @@ export function SiteHeader({ active = null }: { active?: NavSection }) {
     fetch('/api/users/me', { credentials: 'include' })
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
-        const u = (d as { user?: { roles?: unknown; analyseAccess?: unknown } } | null)?.user
+        const u = (d as { user?: { roles?: unknown; analyseAccess?: unknown; trainingAccess?: unknown } } | null)?.user
         const roles = u?.roles
-        const admin = Array.isArray(roles) && roles.includes('admin')
-        const club = Array.isArray(roles) && roles.includes('club-beheerder')
-        const analyse = admin || Boolean(u?.analyseAccess)
+        const has = (r: string) => Array.isArray(roles) && roles.includes(r)
+        const fed = has('admin') || has('federatie')
+        const club = has('club-beheerder')
+        const analyse = fed || Boolean(u?.analyseAccess)
         setLoggedIn(Boolean(u))
         setCanAnalyse(analyse)
-        setCanTraining(analyse || club)
+        setCanTraining(fed || club || Boolean(u?.trainingAccess))
       })
       .catch(() => {})
   }, [])
