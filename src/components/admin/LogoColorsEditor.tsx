@@ -1,10 +1,11 @@
 'use client'
 
-import { useField, useFormFields } from '@payloadcms/ui'
+import { useField } from '@payloadcms/ui'
 import type { TextFieldClientComponent } from 'payload'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { colorsFromPixels, normalizeHex } from '@/lib/club-colors'
+import { useClubLogoUrl } from './use-club-logo-url'
 
 // Aangepaste Field-component op het Club-formulier. Leidt automatisch twee clubkleuren
 // uit het logo af (op een canvas in de browser) en laat de beheerder ze handmatig
@@ -12,44 +13,10 @@ import { colorsFromPixels, normalizeHex } from '@/lib/club-colors'
 // de thuisploeg geeft de toon aan, maar als de tegenpartij scoort komen hún kleuren boven.
 const SAMPLE_PX = 72
 
-function useLogoUrl(): string | null {
-  const logoValue = useFormFields(([fields]) => fields?.logo?.value)
-  const [url, setUrl] = useState<string | null>(null)
-
-  useEffect(() => {
-    const id =
-      logoValue && typeof logoValue === 'object' && 'id' in logoValue
-        ? (logoValue as { id: number }).id
-        : logoValue
-    if (id === null || id === undefined || id === '') {
-      setUrl(null)
-      return
-    }
-    if (logoValue && typeof logoValue === 'object' && 'url' in logoValue && typeof (logoValue as { url?: string }).url === 'string') {
-      setUrl((logoValue as { url: string }).url)
-      return
-    }
-    let cancelled = false
-    fetch(`/api/media/${id}?depth=0`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((doc) => {
-        if (!cancelled) setUrl(doc && typeof doc.url === 'string' ? doc.url : null)
-      })
-      .catch(() => {
-        if (!cancelled) setUrl(null)
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [logoValue])
-
-  return url
-}
-
 export const LogoColorsEditor: TextFieldClientComponent = ({ path }) => {
   const { value: primary, setValue: setPrimary } = useField<string>({ path })
   const { value: secondary, setValue: setSecondary } = useField<string>({ path: 'colorSecondary' })
-  const url = useLogoUrl()
+  const { url, external } = useClubLogoUrl()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const autoTriedFor = useRef<string | null>(null)
@@ -80,7 +47,9 @@ export const LogoColorsEditor: TextFieldClientComponent = ({ path }) => {
           }
         }
         img.onerror = () => reject(new Error('logo kon niet geladen worden'))
-        img.src = url
+        // Externe logo-URL via de same-origin proxy laden, zodat de pixels uitleesbaar zijn
+        // (anders raakt het canvas "tainted" door CORS en mislukt de kleuranalyse).
+        img.src = external ? `/api/img-proxy?url=${encodeURIComponent(url)}` : url
       })
       if (colors) {
         setPrimary(colors.primary)
@@ -93,7 +62,7 @@ export const LogoColorsEditor: TextFieldClientComponent = ({ path }) => {
     } finally {
       setBusy(false)
     }
-  }, [url, setPrimary, setSecondary])
+  }, [url, external, setPrimary, setSecondary])
 
   // Automatisch afleiden zodra er een logo is en er nog geen kleuren ingesteld zijn.
   useEffect(() => {
@@ -133,7 +102,7 @@ export const LogoColorsEditor: TextFieldClientComponent = ({ path }) => {
           </div>
           {!url && (
             <p style={{ fontSize: 12, color: 'var(--theme-elevation-450)', marginTop: 8 }}>
-              Upload eerst een logo om de kleuren automatisch af te leiden.
+              Upload eerst een logo of geef een logo-URL op om de kleuren automatisch af te leiden.
             </p>
           )}
           {error && <p style={{ fontSize: 12, color: 'var(--theme-error-500, #c0392b)', marginTop: 8 }}>{error}</p>}
