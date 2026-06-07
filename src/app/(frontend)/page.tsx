@@ -40,14 +40,6 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
           </Link>
         )}
 
-        <div className="home-howto-wrap">
-          <Link href="/uitleg" className="home-howto">
-            <span className="home-howto-q" aria-hidden>?</span>
-            <span>Nieuw hier? Zo werkt een wedstrijd, van A tot Z</span>
-            <span className="arrow" aria-hidden>→</span>
-          </Link>
-        </div>
-
         <LiveBoard date={selected} today={today} matches={days} />
       </div>
     </>
