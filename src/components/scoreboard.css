@@ -131,6 +131,15 @@
 }
 .sb-react-btn:hover { background: var(--panel-2); }
 .sb-react-btn:active { transform: scale(0.86); }
+/* Niet ingelogd: de tellers blijven leesbaar, maar reageren kan niet (login-hint eronder). */
+.sb-reactions.locked .sb-react-btn { cursor: default; }
+.sb-react-login {
+  margin: 8px 0 0;
+  text-align: center;
+  font-size: 0.82rem;
+  color: var(--dim);
+}
+.sb-react-login a { color: var(--accent, #06d6a0); font-weight: 700; }
 /* De speciale "rugworp"-raket: premium gouden knop die zacht pulseert om uit te nodigen. */
 .sb-react-rocket {
   border-color: color-mix(in srgb, var(--accent) 60%, var(--line));
