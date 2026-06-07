@@ -1,8 +1,8 @@
 'use client'
 
-import { useField, useFormFields } from '@payloadcms/ui'
+import { useField } from '@payloadcms/ui'
 import type { NumberFieldClientComponent } from 'payload'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useRef } from 'react'
 
 import {
   LOGO_OFFSET_RANGE,
@@ -10,6 +10,7 @@ import {
   LOGO_ZOOM_MIN,
   logoFitStyle,
 } from '@/lib/logo-fit'
+import { useClubLogoUrl } from './use-club-logo-url'
 
 // Aangepaste Field-component op het Club-formulier. Toont een ronde voorvertoning
 // die exact overeenkomt met de badge op de site (witte achtergrond, contain, ronde
@@ -27,40 +28,11 @@ export const LogoFitEditor: NumberFieldClientComponent = ({ path }) => {
   const { value: offsetX, setValue: setOffsetX } = useField<number>({ path: 'logoOffsetX' })
   const { value: offsetY, setValue: setOffsetY } = useField<number>({ path: 'logoOffsetY' })
 
-  const logoValue = useFormFields(([fields]) => fields?.logo?.value)
-  const [url, setUrl] = useState<string | null>(null)
+  const { url } = useClubLogoUrl()
 
   const z = typeof zoom === 'number' && zoom > 0 ? zoom : 1
   const ox = typeof offsetX === 'number' ? offsetX : 0
   const oy = typeof offsetY === 'number' ? offsetY : 0
-
-  // Logo-URL ophalen op basis van het gekozen media-bestand.
-  useEffect(() => {
-    const id =
-      logoValue && typeof logoValue === 'object' && 'id' in logoValue
-        ? (logoValue as { id: number }).id
-        : logoValue
-    if (id === null || id === undefined || id === '') {
-      setUrl(null)
-      return
-    }
-    if (logoValue && typeof logoValue === 'object' && 'url' in logoValue && typeof (logoValue as { url?: string }).url === 'string') {
-      setUrl((logoValue as { url: string }).url)
-      return
-    }
-    let cancelled = false
-    fetch(`/api/media/${id}?depth=0`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((doc) => {
-        if (!cancelled) setUrl(doc && typeof doc.url === 'string' ? doc.url : null)
-      })
-      .catch(() => {
-        if (!cancelled) setUrl(null)
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [logoValue])
 
   // Slepen om te positioneren.
   const boxRef = useRef<HTMLDivElement>(null)
@@ -181,7 +153,7 @@ export const LogoFitEditor: NumberFieldClientComponent = ({ path }) => {
             fontSize: 14,
           }}
         >
-          Upload eerst een logo hierboven om de voorvertoning en zoom te gebruiken.
+          Upload eerst een logo hierboven (of geef een logo-URL op) om de voorvertoning en zoom te gebruiken.
         </div>
       )}
     </div>
