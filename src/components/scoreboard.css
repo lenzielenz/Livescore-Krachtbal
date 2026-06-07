@@ -185,6 +185,19 @@
   70% { opacity: 1; }
   100% { opacity: 0; }
 }
+/* Eén enkele raket vliegt elegant diagonaal over het scherm (de raket zelf, geen cartoon-zwerm). */
+.sb-celebrate-rocket {
+  position: absolute;
+  font-size: clamp(2.2rem, 9vw, 4rem);
+  filter: drop-shadow(0 0 14px color-mix(in srgb, var(--accent) 60%, transparent));
+  animation: sb-cel-rocket 1.6s cubic-bezier(0.35, 0.55, 0.4, 1) forwards;
+}
+@keyframes sb-cel-rocket {
+  0% { transform: translate(-52vw, 44vh) scale(0.55); opacity: 0; }
+  14% { opacity: 1; }
+  86% { opacity: 1; }
+  100% { transform: translate(52vw, -50vh) scale(1.05); opacity: 0; }
+}
 .sb-celebrate-text {
   position: relative;
   display: flex;
@@ -215,6 +228,7 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .sb-react-rocket { animation: none; }
+  .sb-celebrate-rocket { display: none; }
   .sb-celebrate-text { animation: sb-cel-flash 1.6s ease-out forwards; }
 }
 /* Zichtbare teller per emoji: zo zie je dat er volop gereageerd wordt. */

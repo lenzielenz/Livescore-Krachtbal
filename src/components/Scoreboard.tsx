@@ -680,6 +680,7 @@ export function Scoreboard({
       {celebrate != null && (
         <div className="sb-celebrate" key={celebrate} aria-hidden>
           <div className="sb-celebrate-flash" />
+          <div className="sb-celebrate-rocket">🚀</div>
           <div className="sb-celebrate-text">
             <span className="sb-celebrate-word">Rugworp</span>
             <span className="sb-celebrate-pts">+2</span>
