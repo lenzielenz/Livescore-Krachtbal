@@ -33,8 +33,17 @@ export function userRoles(user: unknown): UserRole[] {
   return Array.isArray(roles) ? roles : []
 }
 
+// Een admin is superuser en erft alle GEZAG-rollen (federatie, scheidsrechter, kapitein,
+// scorekeeper): admin mag overal aan, ook waar specifiek op die rollen gecontroleerd wordt.
+// 'club-beheerder' en 'viewer' worden bewust NIET geërfd — die bepalen een club-/identiteits-
+// scope (een admin heeft geen eigen club) en zouden anders de club-afbakening verstoren.
+const ADMIN_INHERITS: UserRole[] = ['federatie', 'scheidsrechter', 'kapitein', 'scorekeeper']
+
 export function hasRole(user: unknown, ...roles: UserRole[]): boolean {
   const have = userRoles(user)
+  if (have.includes('admin') && roles.some((r) => r === 'admin' || ADMIN_INHERITS.includes(r))) {
+    return true
+  }
   return roles.some((r) => have.includes(r))
 }
 
