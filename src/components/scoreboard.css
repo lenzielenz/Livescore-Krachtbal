@@ -153,7 +153,7 @@
   50% { box-shadow: 0 0 15px color-mix(in srgb, #ffd166 55%, transparent); }
 }
 
-/* Fullscreen "rugworp +2"-viering: een raket schiet diagonaal over het scherm. */
+/* Strakke "rugworp +2"-melding: een korte, verzorgde flits met clean typografie — geen cartoon. */
 .sb-celebrate {
   position: fixed;
   inset: 0;
@@ -166,80 +166,47 @@
 .sb-celebrate-flash {
   position: absolute;
   inset: 0;
-  background: radial-gradient(60% 50% at 50% 55%, color-mix(in srgb, var(--accent) 26%, transparent), transparent 70%);
-  animation: sb-cel-flash 1.3s ease-out forwards;
+  background:
+    radial-gradient(60% 45% at 50% 50%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 70%),
+    rgba(5, 16, 11, 0.42);
+  animation: sb-cel-flash 1.6s ease-out forwards;
 }
 @keyframes sb-cel-flash {
   0% { opacity: 0; }
-  18% { opacity: 1; }
+  16% { opacity: 1; }
+  70% { opacity: 1; }
   100% { opacity: 0; }
-}
-.sb-celebrate-rocket {
-  position: absolute;
-  font-size: clamp(3rem, 16vw, 7rem);
-  filter: drop-shadow(0 0 16px color-mix(in srgb, #ffd166 70%, transparent));
-  animation: sb-cel-rocket 1.5s cubic-bezier(0.3, 0.7, 0.4, 1) forwards;
-}
-@keyframes sb-cel-rocket {
-  0% { transform: translate(-46vw, 46vh) scale(0.4); opacity: 0; }
-  12% { opacity: 1; }
-  100% { transform: translate(46vw, -54vh) scale(1.15); opacity: 0; }
 }
 .sb-celebrate-text {
   position: relative;
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
+  align-items: baseline;
+  gap: 16px;
   text-align: center;
   animation: sb-cel-text 1.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 .sb-celebrate-word {
-  font-size: clamp(1.6rem, 9vw, 3.4rem);
-  font-weight: 900;
-  letter-spacing: 0.04em;
-  background: linear-gradient(135deg, #ffe9a8, var(--accent), #ffd166);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  filter: drop-shadow(0 2px 10px rgba(0, 0, 0, 0.5));
+  font-size: clamp(1.3rem, 6.5vw, 2.6rem);
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--accent);
 }
 .sb-celebrate-pts {
-  font-size: clamp(2.4rem, 14vw, 5.5rem);
+  font-size: clamp(2.4rem, 12vw, 4.6rem);
   font-weight: 900;
   line-height: 0.9;
   color: #fff;
-  text-shadow: 0 0 18px color-mix(in srgb, var(--accent) 80%, transparent);
+  text-shadow: 0 3px 18px rgba(0, 0, 0, 0.6);
 }
 @keyframes sb-cel-text {
-  0% { transform: scale(0.5); opacity: 0; }
-  18% { transform: scale(1.14); opacity: 1; }
-  68% { transform: scale(1); opacity: 1; }
-  100% { transform: scale(1.03); opacity: 0; }
-}
-.sb-celebrate-spark {
-  position: absolute;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: var(--accent);
-  animation: sb-cel-spark 1.4s ease-out forwards;
-}
-.sb-celebrate-spark.s0 { --dx: 32vw; --dy: -10vh; background: #ffd166; }
-.sb-celebrate-spark.s1 { --dx: -30vw; --dy: -14vh; background: var(--accent); }
-.sb-celebrate-spark.s2 { --dx: 18vw; --dy: 24vh; background: #ffe9a8; }
-.sb-celebrate-spark.s3 { --dx: -22vw; --dy: 20vh; background: var(--accent); }
-.sb-celebrate-spark.s4 { --dx: 8vw; --dy: -28vh; background: #ffd166; }
-.sb-celebrate-spark.s5 { --dx: -10vw; --dy: -26vh; background: #fff; }
-.sb-celebrate-spark.s6 { --dx: 28vw; --dy: 12vh; background: var(--accent); }
-@keyframes sb-cel-spark {
-  0% { transform: translate(0, 0) scale(0); opacity: 0; }
-  20% { opacity: 1; transform: translate(calc(var(--dx) * 0.4), calc(var(--dy) * 0.4)) scale(1); }
-  100% { transform: translate(var(--dx), var(--dy)) scale(0.2); opacity: 0; }
+  0% { opacity: 0; transform: translateY(12px) scale(0.96); }
+  16% { opacity: 1; transform: translateY(0) scale(1); }
+  78% { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(0) scale(1.02); }
 }
 @media (prefers-reduced-motion: reduce) {
   .sb-react-rocket { animation: none; }
-  .sb-celebrate-rocket, .sb-celebrate-spark { display: none; }
   .sb-celebrate-text { animation: sb-cel-flash 1.6s ease-out forwards; }
 }
 /* Zichtbare teller per emoji: zo zie je dat er volop gereageerd wordt. */
@@ -337,7 +304,7 @@
   position: absolute;
   left: var(--ox, 50%);
   top: var(--oy, 80%);
-  font-size: 1.7rem;
+  font-size: 1.25rem;
   will-change: transform, opacity;
   animation: sb-burst var(--dur, 2.2s) cubic-bezier(0.15, 0.75, 0.3, 1) forwards;
 }
@@ -359,10 +326,10 @@
     opacity: 0;
   }
 }
-/* De raket: groter, met een gouden gloed — duidelijk specialer dan de gewone emoji's. */
+/* De raket blijft iets specialer, maar ingetogen (subtiele gloed i.p.v. cartoon). */
 .sb-float.rocket {
-  font-size: 2.4rem;
-  filter: drop-shadow(0 0 14px color-mix(in srgb, #ffd166 80%, transparent));
+  font-size: 1.5rem;
+  filter: drop-shadow(0 0 7px color-mix(in srgb, var(--accent) 55%, transparent));
 }
 @media (prefers-reduced-motion: reduce) {
   .sb-float { animation-duration: 0.01s; opacity: 0; }
