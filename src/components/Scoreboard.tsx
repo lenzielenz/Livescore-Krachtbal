@@ -479,15 +479,35 @@ export function Scoreboard({
         <h3>Tijdlijn</h3>
         {timeline.length === 0 && <p className="sb-dim">Nog geen gebeurtenissen.</p>}
         <ul>
-          {[...timeline].reverse().map((item) => (
-            <li key={item.id} className={`sb-tl sb-tl-${item.kind} ${item.side ? `side-${item.side}` : ''}`}>
-              <span className="sb-tl-time">{item.half}H {fmtClock(item.gameClock)}</span>
-              <span className="sb-tl-team">
-                {item.side === 'home' ? state.teams.home.name : item.side === 'away' ? state.teams.away.name : ''}
-              </span>
-              <span className="sb-tl-label">{item.label}</span>
-            </li>
-          ))}
+          {[...timeline].reverse().map((item) => {
+            const team = item.side ? state.teams[item.side] : null
+            const isGoal = item.kind === 'goal'
+            const points = isGoal ? goalPointsFromLabel(item.label) : 0
+            // De scorer (wie scoorde) tonen we enkel aan ingelogde supporters.
+            const scorer = isGoal ? goalScorerFromLabel(item.label) : null
+            return (
+              <li key={item.id} className={`sb-tl sb-tl-${item.kind} ${item.side ? `side-${item.side}` : ''}`}>
+                <span className="sb-tl-time">{item.half}H {fmtClock(item.gameClock)}</span>
+                {team ? (
+                  <TeamLogo name={team.name} logoUrl={team.logoUrl} logoFit={team.logoFit} side={item.side ?? undefined} size={26} ringColor={team.colors?.primary} />
+                ) : (
+                  <span className="sb-tl-logo-ph" aria-hidden />
+                )}
+                {isGoal ? (
+                  <span className="sb-tl-goalinfo">
+                    <span className={`sb-tl-pts ${points === 2 ? 'rug' : 'nek'}`}>+{points}</span>
+                    {canChat && scorer ? (
+                      <span className="sb-tl-scorer">{scorer}</span>
+                    ) : (
+                      <span className="sb-tl-scorer dim">Doelpunt</span>
+                    )}
+                  </span>
+                ) : (
+                  <span className="sb-tl-label">{item.label}</span>
+                )}
+              </li>
+            )
+          })}
         </ul>
       </div>
 
