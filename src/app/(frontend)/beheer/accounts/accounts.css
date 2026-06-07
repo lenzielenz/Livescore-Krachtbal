@@ -131,3 +131,63 @@
     gap: 14px;
   }
 }
+
+/* Badge met aantal analyse-opnames per account. */
+.acc-badge {
+  display: inline-block;
+  margin-top: 3px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 32%, var(--line));
+  border-radius: 999px;
+  padding: 1px 8px;
+  width: max-content;
+}
+
+/* Analyse-data samenbrengen (overdracht van eigenaar). */
+.acc-transfer {
+  margin-top: 26px;
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--line));
+  border-radius: 14px;
+  background: var(--panel-grad, var(--panel));
+  padding: 16px 18px;
+}
+.acc-transfer-help {
+  color: var(--dim);
+  font-size: 0.86rem;
+  line-height: 1.5;
+  margin: 0 0 14px;
+  max-width: 80ch;
+}
+.acc-transfer-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+}
+.acc-transfer-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1 1 220px;
+  min-width: 0;
+}
+.acc-transfer-field span {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--dim);
+}
+.acc-transfer-field .acc-club {
+  width: 100%;
+}
+.acc-transfer-arrow {
+  color: var(--accent);
+  font-weight: 800;
+  font-size: 1.2rem;
+  padding-bottom: 8px;
+}
+@media (max-width: 560px) {
+  .acc-transfer-arrow { display: none; }
+}
