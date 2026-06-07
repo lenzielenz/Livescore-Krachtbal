@@ -182,22 +182,22 @@ export function FlowReplay({
     const list = playShots
     if (list.length === 0) return
     const MR = (globalThis as { MediaRecorder?: typeof MediaRecorder }).MediaRecorder
+    if (!MR) {
+      setRecMsg('⚠️ Video opnemen wordt niet ondersteund in deze browser. Probeer Chrome.')
+      setTimeout(() => setRecMsg(null), 4000)
+      return
+    }
     // mp4 (H.264) eerst: dat kan je wél via WhatsApp/sociale media doorsturen (webm wordt daar niet
-    // ondersteund). Waar mp4-opname niet kan (o.a. de meeste Android-Chrome), valt het terug op webm.
-    const mime = [
+    // ondersteund). isTypeSupported liegt op sommige Android-toestellen (zegt mp4 ondersteund, maar
+    // de recorder faalt dan), dus we PROBEREN elk type bij het aanmaken en vallen terug op webm.
+    const mimeCandidates = [
       'video/mp4;codecs=avc1.42E01E',
       'video/mp4;codecs=h264',
       'video/mp4',
       'video/webm;codecs=vp9',
       'video/webm;codecs=vp8',
       'video/webm',
-    ].find((m) => MR?.isTypeSupported?.(m))
-    if (!MR || !mime) {
-      setRecMsg('⚠️ Video opnemen wordt niet ondersteund in deze browser. Probeer Chrome.')
-      setTimeout(() => setRecMsg(null), 4000)
-      return
-    }
-    const ext = mime.startsWith('video/mp4') ? 'mp4' : 'webm'
+    ].filter((m) => MR.isTypeSupported?.(m))
 
     const d = goalAreaDepth
     const FW = 320
@@ -330,7 +330,32 @@ export function FlowReplay({
       // Auto-capture op vaste fps (geen requestFrame): het mengen van beide modi liet op sommige
       // toestellen een lege/onspeelbare video achter.
       const stream = (canvas as HTMLCanvasElement & { captureStream(fps?: number): MediaStream }).captureStream(25)
-      const rec = new MR(stream, { mimeType: mime })
+      // Neem het eerste type dat écht een recorder oplevert (mp4 verkozen, anders webm).
+      let rec: MediaRecorder | null = null
+      let mime = ''
+      for (const m of mimeCandidates) {
+        try {
+          rec = new MR(stream, { mimeType: m })
+          mime = m
+          break
+        } catch {
+          rec = null
+        }
+      }
+      if (!rec) {
+        try {
+          rec = new MR(stream) // laatste poging: laat de browser zelf een type kiezen
+          mime = rec.mimeType || 'video/webm'
+        } catch {
+          rec = null
+        }
+      }
+      if (!rec) {
+        setRecMsg('⚠️ Video opnemen lukte niet op dit toestel. Tip: het werkt het best in Chrome.')
+        setTimeout(() => setRecMsg(null), 4500)
+        return
+      }
+      const ext = mime.includes('mp4') ? 'mp4' : 'webm'
       const chunks: BlobPart[] = []
       rec.ondataavailable = (e) => {
         if (e.data.size) chunks.push(e.data)
