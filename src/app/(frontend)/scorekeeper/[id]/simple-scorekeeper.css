@@ -306,6 +306,9 @@
   padding: 20px;
   width: 100%;
   max-width: 480px;
+  /* Past altijd binnen het scherm, ook met veel spelers — scrollt indien nodig. */
+  max-height: 92vh;
+  overflow-y: auto;
 }
 .ssk-modal h3 {
   margin: 0 0 4px;
@@ -381,35 +384,37 @@
 
 /* Grote, contrastrijke veldspeler-knoppen — ook leesbaar in fel zonlicht.
    Heldere kaart + wit cijfer-schijfje (donker cijfer = maximaal contrast) + vette naam,
-   zodat nummer en naam er duidelijk uit springen, ook bij veel glans. */
-.ssk-pick-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
+   zodat nummer en naam er duidelijk uit springen, ook bij veel glans.
+   Vast 2 kolommen: nette 2×2-uitlijning die altijd binnen het scherm past. */
+.ssk-pick-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .ssk-pick-player {
-  padding: 16px 10px 14px;
-  gap: 9px;
-  min-height: 124px;
+  padding: 12px 8px;
+  gap: 7px;
+  min-height: 96px;
   justify-content: center;
-  border-radius: 16px;
+  border-radius: 14px;
   background: linear-gradient(160deg, #2f7a4f 0%, #1e5235 100%);
   border: 2px solid #56a577;
-  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.42), 0 8px 18px -8px rgba(0, 0, 0, 0.55);
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.4), 0 6px 14px -8px rgba(0, 0, 0, 0.5);
 }
 .ssk-pick-num {
   display: inline-grid;
   place-items: center;
-  width: 58px;
-  height: 58px;
+  width: 50px;
+  height: 50px;
   border-radius: 50%;
   background: #ffffff;
   color: #0b2316;
-  font-size: 30px;
+  font-size: 25px;
   font-weight: 900;
   line-height: 1;
   font-variant-numeric: tabular-nums;
   text-shadow: none;
-  box-shadow: 0 2px 7px rgba(0, 0, 0, 0.4), inset 0 0 0 2px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.38), inset 0 0 0 2px rgba(0, 0, 0, 0.06);
 }
 .ssk-pick-naam {
-  font-size: 16px;
+  max-width: 100%;
+  font-size: 15px;
   font-weight: 800;
   opacity: 1;
   color: #ffffff;
@@ -417,6 +422,9 @@
   letter-spacing: 0.01em;
   text-align: center;
   line-height: 1.1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .ssk-pick-player:active { transform: translateY(3px); box-shadow: 0 1px 0 rgba(0, 0, 0, 0.42); }
 .ssk-pick-player.sel {
