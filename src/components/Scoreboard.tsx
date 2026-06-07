@@ -182,17 +182,18 @@ export function Scoreboard({
     const next: FloatItem[] = []
     for (let i = 0; i < count; i++) {
       const ang = rnd(0, Math.PI * 2)
-      const dist = rnd(45, isRocket ? 200 : 150)
+      // Ingetogen: kleinere spreiding en schaal, zodat het verzorgd oogt i.p.v. een explosie.
+      const dist = rnd(35, isRocket ? 130 : 100)
       next.push({
         key: ++floatSeq.current,
         name,
         ox,
         oy,
         tx: Math.cos(ang) * dist,
-        ty: Math.sin(ang) * dist - rnd(50, 150), // opwaartse drift bovenop de explosie
-        rot: rnd(-200, 200),
-        sc: isRocket ? rnd(1.2, 2.1) : rnd(0.8, 1.5),
-        dur: isRocket ? rnd(1.8, 2.6) : rnd(1.6, 2.4),
+        ty: Math.sin(ang) * dist - rnd(40, 110), // zachte opwaartse drift
+        rot: rnd(-120, 120),
+        sc: isRocket ? rnd(0.95, 1.3) : rnd(0.7, 1.05),
+        dur: isRocket ? rnd(1.8, 2.4) : rnd(1.6, 2.2),
         delay: rnd(0, 0.12),
         big: isRocket,
       })
@@ -210,7 +211,7 @@ export function Scoreboard({
     for (const [name, n] of Object.entries(counts)) {
       if (!(name in EMOJI)) continue
       const isRocket = name === 'rocket'
-      const count = Math.min(n, isRocket ? 12 : 7)
+      const count = Math.min(n, isRocket ? 6 : 4)
       burst(name as EmojiName, w / 2 + rnd(-w * 0.32, w * 0.32), h - rnd(70, 150), count)
     }
   }
@@ -289,8 +290,8 @@ export function Scoreboard({
       ox = b.left + b.width / 2 - sbRect.left
       oy = b.top + b.height / 2 - sbRect.top
     }
-    burst(name, ox, oy, name === 'rocket' ? 18 : 13)
-    if (name === 'rocket') triggerCelebrate(true) // eigen tik → meteen de fullscreen-viering
+    burst(name, ox, oy, name === 'rocket' ? 8 : 6)
+    if (name === 'rocket') triggerCelebrate(true) // eigen tik → meteen de strakke rugworp-melding
     pendingReacts.current[name] = (pendingReacts.current[name] ?? 0) + 1
     if (reactTimer.current) return
     reactTimer.current = setTimeout(() => {
@@ -667,18 +668,14 @@ export function Scoreboard({
       {/* Fullscreen clubkleuren-explosie (rook + vuurwerk). */}
       {blast && <ClubColorBlast key={blast.key} colors={blast.colors} teamName={blast.name} />}
 
-      {/* Fullscreen "rugworp +2"-viering: een raket schiet over het scherm. */}
+      {/* Strakke "rugworp +2"-melding: een verzorgde flits met clean typografie (geen cartoon). */}
       {celebrate != null && (
         <div className="sb-celebrate" key={celebrate} aria-hidden>
           <div className="sb-celebrate-flash" />
-          <div className="sb-celebrate-rocket">🚀</div>
           <div className="sb-celebrate-text">
-            <span className="sb-celebrate-word">RUGWORP</span>
+            <span className="sb-celebrate-word">Rugworp</span>
             <span className="sb-celebrate-pts">+2</span>
           </div>
-          {Array.from({ length: 14 }).map((_, i) => (
-            <span key={i} className={`sb-celebrate-spark s${i % 7}`} />
-          ))}
         </div>
       )}
 
