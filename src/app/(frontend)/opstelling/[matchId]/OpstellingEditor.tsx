@@ -45,6 +45,11 @@ export function OpstellingEditor({
   const [addName, setAddName] = useState('')
   const [addNum, setAddNum] = useState('')
   const [adding, setAdding] = useState(false)
+  // Een bestaande speler aanpassen (naam/rugnummer) of verwijderen.
+  const [editId, setEditId] = useState<number | null>(null)
+  const [editName, setEditName] = useState('')
+  const [editNum, setEditNum] = useState('')
+  const [rowBusy, setRowBusy] = useState<number | null>(null)
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/matchsheet/${matchId}/lineup?side=${side}`)
@@ -116,6 +121,74 @@ export function OpstellingEditor({
     }
   }
 
+  // Roster opnieuw ophalen zonder de huidige selectie te verliezen (na een wijziging/verwijdering).
+  const reloadRoster = async () => {
+    const r = await fetch(`/api/matchsheet/${matchId}/lineup?side=${side}`)
+    const fresh: RosterResponse = await r.json()
+    setData(fresh)
+    setFavorites(fresh.favorites ?? [])
+  }
+
+  const startEdit = (p: RosterEntry) => {
+    setEditId(p.id)
+    setEditName(p.name)
+    setEditNum(String(p.shirtNumber))
+  }
+  const cancelEdit = () => {
+    setEditId(null)
+    setEditName('')
+    setEditNum('')
+  }
+
+  const saveEdit = async (id: number) => {
+    const name = editName.trim()
+    if (!name) return
+    setRowBusy(id)
+    setMsg(null)
+    try {
+      const res = await fetch(`/api/players/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, shirtNumber: editNum.trim() === '' ? undefined : Number(editNum) }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error ?? 'Aanpassen mislukt.')
+      await reloadRoster()
+      cancelEdit()
+      toast('success', `${name} aangepast.`)
+    } catch (e) {
+      const err = (e as Error).message
+      setMsg(err)
+      toast('error', err)
+    } finally {
+      setRowBusy(null)
+    }
+  }
+
+  const deletePlayer = async (p: RosterEntry) => {
+    if (!confirm(`${p.shirtNumber} ${p.name} definitief verwijderen uit de ploeg?`)) return
+    setRowBusy(p.id)
+    setMsg(null)
+    try {
+      const res = await fetch(`/api/players/${p.id}`, { method: 'DELETE' })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error ?? 'Verwijderen mislukt.')
+      setSelected((prev) => {
+        const next = new Set(prev)
+        next.delete(p.id)
+        return next
+      })
+      await reloadRoster()
+      toast('success', `${p.name} verwijderd.`)
+    } catch (e) {
+      const err = (e as Error).message
+      setMsg(err)
+      toast('error', err)
+    } finally {
+      setRowBusy(null)
+    }
+  }
+
   const save = async (asFavorite: boolean) => {
     if (!data) return
     setSaving(true)
@@ -181,21 +254,82 @@ export function OpstellingEditor({
       )}
 
       <ul className="wb-rows">
-        {visible.map((p) => (
-          <li
-            key={p.id}
-            className={`wb-row ${selected.has(p.id) ? 'on' : ''}`}
-            onClick={() => toggle(p.id)}
-            title={p.selectability.reasons.join(' ')}
-          >
-            <input type="checkbox" readOnly checked={selected.has(p.id)} aria-label={`Selecteer ${p.name}`} />
-            <span aria-hidden className="wb-dot" style={{ background: LEVEL_COLOR[p.selectability.level] }} />
-            <strong className="num">{p.shirtNumber}</strong>
-            <span className="nm">{p.name}</span>
-            {favSet.has(p.id) && <span className="wb-tag" title="Vaste opstelling">★</span>}
-            {!favSet.has(p.id) && p.suggested && <span className="wb-tag">voorstel</span>}
-          </li>
-        ))}
+        {visible.map((p) =>
+          editId === p.id ? (
+            <li key={p.id} className="wb-row ops-row-edit">
+              <input
+                type="number"
+                className="ops-add-num"
+                inputMode="numeric"
+                value={editNum}
+                onChange={(e) => setEditNum(e.target.value)}
+                aria-label="Rugnummer"
+              />
+              <input
+                type="text"
+                className="ops-add-name"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    void saveEdit(p.id)
+                  }
+                  if (e.key === 'Escape') cancelEdit()
+                }}
+                aria-label="Naam speler"
+                autoFocus
+              />
+              <button type="button" className="ops-row-btn ok" onClick={() => void saveEdit(p.id)} disabled={rowBusy === p.id || !editName.trim()} aria-label="Bewaren">
+                {rowBusy === p.id ? '…' : '✓'}
+              </button>
+              <button type="button" className="ops-row-btn" onClick={cancelEdit} disabled={rowBusy === p.id} aria-label="Annuleren">
+                ✕
+              </button>
+            </li>
+          ) : (
+            <li
+              key={p.id}
+              className={`wb-row ${selected.has(p.id) ? 'on' : ''}`}
+              onClick={() => toggle(p.id)}
+              title={p.selectability.reasons.join(' ')}
+            >
+              <input type="checkbox" readOnly checked={selected.has(p.id)} aria-label={`Selecteer ${p.name}`} />
+              <span aria-hidden className="wb-dot" style={{ background: LEVEL_COLOR[p.selectability.level] }} />
+              <strong className="num">{p.shirtNumber}</strong>
+              <span className="nm">{p.name}</span>
+              {favSet.has(p.id) && <span className="wb-tag" title="Vaste opstelling">★</span>}
+              {!favSet.has(p.id) && p.suggested && <span className="wb-tag">voorstel</span>}
+              <span className="ops-row-actions">
+                <button
+                  type="button"
+                  className="ops-row-btn"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    startEdit(p)
+                  }}
+                  title="Naam/nummer aanpassen"
+                  aria-label={`${p.name} aanpassen`}
+                >
+                  ✎
+                </button>
+                <button
+                  type="button"
+                  className="ops-row-btn danger"
+                  disabled={rowBusy === p.id}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    void deletePlayer(p)
+                  }}
+                  title="Speler verwijderen"
+                  aria-label={`${p.name} verwijderen`}
+                >
+                  🗑
+                </button>
+              </span>
+            </li>
+          ),
+        )}
       </ul>
 
       {/* Handmatig een speler toevoegen aan deze ploeg (naam + optioneel rugnummer). */}

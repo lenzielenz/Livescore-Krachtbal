@@ -244,6 +244,39 @@
   color: var(--accent);
 }
 
+/* Per-rij acties: speler aanpassen / verwijderen. */
+.ops-row-actions {
+  display: inline-flex;
+  gap: 4px;
+  margin-left: auto;
+  flex: none;
+}
+.ops-row-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  border: 1px solid var(--line);
+  background: #0c2417;
+  color: var(--txt);
+  font-size: 0.95rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.ops-row-btn:hover { border-color: var(--accent); }
+.ops-row-btn:disabled { opacity: 0.5; cursor: default; }
+.ops-row-btn.danger:hover { border-color: #ef4444; background: #2a1414; }
+.ops-row-btn.ok { border-color: var(--accent); color: var(--accent); }
+/* Inline-bewerkrij: nummer + naam + bevestig/annuleer. */
+.ops-row-edit {
+  cursor: default;
+  gap: 6px;
+}
+.ops-row-edit .ops-add-num { width: 56px; flex: none; }
+.ops-row-edit .ops-add-name { flex: 1; min-width: 0; }
+
 /* Form-velden */
 .wb-input,
 .wb-select {
