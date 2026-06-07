@@ -169,7 +169,9 @@
 .kt-pick-match {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
-  align-items: center;
+  /* Op de eerste regel uitlijnen: loopt een ploegnaam over 2 regels, dan blijven beide namen en
+     "vs" netjes op één lijn i.p.v. dat de korte naam in het midden zweeft. */
+  align-items: baseline;
   gap: 8px;
 }
 .kt-pick-team {
@@ -177,9 +179,13 @@
   font-size: 0.98rem;
   line-height: 1.15;
   overflow-wrap: anywhere;
+  min-width: 0;
 }
 .kt-pick-team:first-child {
   text-align: right;
+}
+.kt-pick-team:last-child {
+  text-align: left;
 }
 .kt-pick-vs {
   font-size: 0.72rem;
