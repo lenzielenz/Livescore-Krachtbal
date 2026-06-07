@@ -1625,3 +1625,7 @@ select.rang-picker {
   .an-tools > *, .rep-cards > *, .an-charts-grid > *, .an-leaders > *, .an-list > *, .an-group { animation: none; }
   .an-tool::after { display: none; }
 }
+
+/* Downloadknop voor de volledige wedstrijd-analyse (PDF). */
+.an-pdf-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 4px 0 14px; }
+.an-pdf-msg { font-size: 0.84rem; color: var(--dim); }

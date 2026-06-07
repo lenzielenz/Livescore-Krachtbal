@@ -11,6 +11,7 @@ import { buildMatchSheet, buildMatchStats, buildMatchState } from '@/lib/match-e
 import { getPayloadClient } from '@/lib/payload-client'
 import { reeksNaam } from '@/lib/reeksen'
 import { AnalyseDetailView } from './AnalyseDetailView'
+import { MatchPdfButton } from './MatchPdfButton'
 import '../analyse.css'
 
 export const dynamic = 'force-dynamic'
@@ -92,6 +93,8 @@ export default async function AnalyseDetailPage({ params }: { params: Promise<{ 
           </div>
         </div>
         <p className="an-head-meta">{reeks}{datum ? ` · ${datum}` : ''}</p>
+
+        <MatchPdfButton matchId={matchId} fileLabel={`${teamNames.home}-${teamNames.away}`} />
 
         <ErrorCatch label="De analyse-details">
           <AnalyseDetailView
