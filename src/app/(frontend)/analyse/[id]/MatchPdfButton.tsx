@@ -17,12 +17,12 @@ export function MatchPdfButton({ matchId, fileLabel }: { matchId: number; fileLa
       const res = await fetch(`/api/analyse/match/${matchId}/pdf`)
       if (!res.ok) throw new Error('mislukt')
       const blob = await res.blob()
-      const name = (fileLabel ? `analyse-${fileLabel}` : `analyse-wedstrijd-${matchId}`)
+      const name = (fileLabel ? `samenvatting-${fileLabel}` : `samenvatting-wedstrijd-${matchId}`)
         .normalize('NFKD')
         .replace(/[^\w-]+/g, '-')
         .replace(/^-+|-+$/g, '')
         .toLowerCase()
-      await saveOrShareBlob(blob, `${name}.pdf`, 'Krachtbal wedstrijd-analyse')
+      await saveOrShareBlob(blob, `${name}.pdf`, 'Onze Krachtbal-wedstrijd! 🏐')
     } catch {
       setMsg('Download mislukt — probeer opnieuw.')
       setTimeout(() => setMsg(null), 3500)
@@ -34,7 +34,7 @@ export function MatchPdfButton({ matchId, fileLabel }: { matchId: number; fileLa
   return (
     <div className="an-pdf-bar">
       <button type="button" className="sk-demo-cta" onClick={run} disabled={busy}>
-        {busy ? '⏳ Analyse maken…' : '📄 Analyse downloaden / delen'}
+        {busy ? '⏳ Samenvatting maken…' : '🎉 Wedstrijd-samenvatting delen'}
       </button>
       {msg && <span className="an-pdf-msg">{msg}</span>}
     </div>
