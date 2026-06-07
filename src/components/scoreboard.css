@@ -516,77 +516,51 @@
   pointer-events: none;
   overflow: hidden;
 }
-/* Scrim: dimt heel het scherm even + een kleurgloed, zodat de rook en het vuurwerk fel oplichten. */
+/* Korte scrim: dimt heel even + een kleurgloed, zodat de confetti fel afsteekt. */
 .ccb-flash {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(90% 78% at 50% 72%, color-mix(in srgb, var(--c1) 38%, transparent), transparent 70%),
-    rgba(5, 16, 11, 0.55);
-  animation: ccb-flash 2.6s ease-out forwards;
+    radial-gradient(80% 60% at 50% 38%, color-mix(in srgb, var(--c1) 26%, transparent), transparent 70%),
+    rgba(5, 16, 11, 0.4);
+  animation: ccb-flash 2.2s ease-out forwards;
 }
 @keyframes ccb-flash {
   0% { opacity: 0; }
-  12% { opacity: 1; }
-  80% { opacity: 1; }
+  10% { opacity: 1; }
+  60% { opacity: 0.7; }
   100% { opacity: 0; }
 }
-/* Opstijgende rookpluimen in de clubkleuren — screen-blend laat ze fel gloeien op de scrim. */
-.ccb-smoke { position: absolute; inset: 0; }
-.ccb-plume {
+/* Korte kleur-"pop" in het midden bij de start. */
+.ccb-pop {
   position: absolute;
-  bottom: -10vh;
-  width: 42vw;
-  height: 78vh;
+  left: 50%; top: 40%;
+  width: min(80vw, 360px); height: min(80vw, 360px);
   border-radius: 50%;
-  filter: blur(20px);
-  opacity: 0;
+  background: radial-gradient(circle, color-mix(in srgb, var(--c1) 60%, transparent), color-mix(in srgb, var(--c2) 24%, transparent) 45%, transparent 70%);
   mix-blend-mode: screen;
-  transform: translateY(40vh) scale(0.5);
-  animation: ccb-rise 2.8s ease-out forwards;
+  transform: translate(-50%, -50%) scale(0.2);
+  animation: ccb-pop 0.7s ease-out forwards;
 }
-.ccb-plume.p0 { left: -8vw;  background: radial-gradient(circle, color-mix(in srgb, var(--c1) 88%, transparent), color-mix(in srgb, var(--c1) 34%, transparent) 45%, transparent 75%); animation-delay: 0s; }
-.ccb-plume.p1 { left: 10vw;  background: radial-gradient(circle, color-mix(in srgb, var(--c2) 88%, transparent), color-mix(in srgb, var(--c2) 34%, transparent) 45%, transparent 75%); animation-delay: 0.12s; }
-.ccb-plume.p2 { left: 28vw;  background: radial-gradient(circle, color-mix(in srgb, var(--c1) 88%, transparent), color-mix(in srgb, var(--c1) 34%, transparent) 45%, transparent 75%); animation-delay: 0.26s; height: 74vh; }
-.ccb-plume.p3 { left: 46vw;  background: radial-gradient(circle, color-mix(in srgb, var(--c2) 88%, transparent), color-mix(in srgb, var(--c2) 34%, transparent) 45%, transparent 75%); animation-delay: 0.06s; }
-.ccb-plume.p4 { left: 62vw;  background: radial-gradient(circle, color-mix(in srgb, var(--c1) 90%, transparent), color-mix(in srgb, var(--c1) 36%, transparent) 45%, transparent 75%); animation-delay: 0.2s; height: 70vh; }
-.ccb-plume.p5 { left: 80vw;  background: radial-gradient(circle, color-mix(in srgb, var(--c2) 90%, transparent), color-mix(in srgb, var(--c2) 36%, transparent) 45%, transparent 75%); animation-delay: 0.34s; }
-.ccb-plume.p6 { left: 36vw;  background: radial-gradient(circle, color-mix(in srgb, var(--c1) 72%, transparent), transparent 70%); animation-delay: 0.45s; width: 52vw; }
-@keyframes ccb-rise {
-  0%   { opacity: 0; transform: translateY(50vh) scale(0.45); }
-  20%  { opacity: 0.72; }
-  70%  { opacity: 0.58; }
-  100% { opacity: 0; transform: translateY(-40vh) scale(1.6); }
+@keyframes ccb-pop {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.2); }
+  35% { opacity: 0.95; }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.7); }
 }
-/* Vuurwerk: heldere deeltjes spatten uit het midden in beide clubkleuren + wit. */
-.ccb-fireworks { position: absolute; left: 50%; top: 40%; width: 0; height: 0; }
-.ccb-spark {
+/* Confetti-stukjes vallen vloeiend van boven, met drift en spin. */
+.ccb-conf {
   position: absolute;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: currentColor;
-  color: var(--c1);
-  box-shadow: 0 0 28px 9px currentColor, 0 0 6px 2px rgba(255, 255, 255, 0.9) inset;
-  mix-blend-mode: screen;
-  animation: ccb-spark 2s cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
+  top: -24px;
+  will-change: transform, opacity;
+  animation-name: ccb-fall;
+  animation-timing-function: cubic-bezier(0.35, 0.15, 0.5, 1);
+  animation-fill-mode: forwards;
 }
-.ccb-spark.s0  { --dx:  34vw; --dy: -24vh; color: var(--c1); animation-delay: 0.1s; }
-.ccb-spark.s1  { --dx: -32vw; --dy: -20vh; color: var(--c2); animation-delay: 0.18s; }
-.ccb-spark.s2  { --dx:  22vw; --dy: -36vh; color: #fff;       animation-delay: 0.05s; }
-.ccb-spark.s3  { --dx: -24vw; --dy: -32vh; color: var(--c1); animation-delay: 0.26s; }
-.ccb-spark.s4  { --dx:  42vw; --dy:   4vh; color: var(--c2); animation-delay: 0.14s; }
-.ccb-spark.s5  { --dx: -42vw; --dy:   0vh; color: var(--c1); animation-delay: 0.32s; }
-.ccb-spark.s6  { --dx:  12vw; --dy: -42vh; color: var(--c2); animation-delay: 0.4s; }
-.ccb-spark.s7  { --dx: -14vw; --dy: -40vh; color: #fff;       animation-delay: 0.22s; }
-.ccb-spark.s8  { --dx:  28vw; --dy:  20vh; color: var(--c1); animation-delay: 0.5s; }
-.ccb-spark.s9  { --dx: -28vw; --dy:  18vh; color: var(--c2); animation-delay: 0.46s; }
-.ccb-spark.s10 { --dx:   2vw; --dy: -46vh; color: var(--c1); animation-delay: 0.6s; }
-@keyframes ccb-spark {
-  0%   { transform: translate(0, 0) scale(0); opacity: 0; }
-  14%  { opacity: 1; transform: translate(calc(var(--dx) * 0.35), calc(var(--dy) * 0.35)) scale(1.35); }
-  70%  { opacity: 1; }
-  100% { transform: translate(var(--dx), calc(var(--dy) + 26vh)) scale(0.25); opacity: 0; }
+@keyframes ccb-fall {
+  0% { transform: translate(0, -12vh) rotate(0deg); opacity: 0; }
+  8% { opacity: 1; }
+  85% { opacity: 1; }
+  100% { transform: translate(var(--dx, 0), 112vh) rotate(var(--spin, 540deg)); opacity: 0; }
 }
 .ccb-banner {
   position: absolute;
@@ -610,7 +584,7 @@
   100% { opacity: 0; transform: translate(-50%, -50%) scale(1.04); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .ccb-plume, .ccb-spark { display: none; }
+  .ccb-conf, .ccb-pop { display: none; }
   .ccb-banner { animation: ccb-flash 2s ease-out forwards; }
 }
 
@@ -695,38 +669,28 @@
 }
 
 /* Ingesloten clubkleuren-viering: vult één positioned vak (bv. een kantine-tegel) i.p.v. het
-   volledige scherm. Rook in %-eenheden; vuurwerk-deeltjes (viewport-units) verbergen we hier. */
+   volledige scherm. De confetti valt een korte vaste afstand (px) i.p.v. een volledige schermhoogte. */
 .ccb--in {
   position: absolute;
   inset: 0;
   z-index: 6;
   border-radius: inherit;
 }
-.ccb--in .ccb-spark { display: none; }
-.ccb--in .ccb-plume {
-  bottom: -10%;
-  width: 70%;
-  height: 80%;
-  filter: blur(14px);
-  animation-name: ccb-rise-in;
+.ccb--in .ccb-conf { animation-name: ccb-fall-in; }
+@keyframes ccb-fall-in {
+  0% { transform: translate(0, -20px) rotate(0deg); opacity: 0; }
+  12% { opacity: 1; }
+  85% { opacity: 1; }
+  100% { transform: translate(var(--dx, 0), 260px) rotate(var(--spin, 540deg)); opacity: 0; }
 }
-.ccb--in .ccb-plume.p0 { left: -12%; }
-.ccb--in .ccb-plume.p1 { left:   8%; }
-.ccb--in .ccb-plume.p2 { left:  26%; }
-.ccb--in .ccb-plume.p3 { left:  44%; }
-.ccb--in .ccb-plume.p4 { left:  60%; }
-.ccb--in .ccb-plume.p5 { left:  76%; }
-.ccb--in .ccb-plume.p6 { left:  34%; }
-@keyframes ccb-rise-in {
-  0%   { opacity: 0; transform: translateY(40%) scale(0.5); }
-  22%  { opacity: 0.95; }
-  70%  { opacity: 0.8; }
-  100% { opacity: 0; transform: translateY(-32%) scale(1.4); }
-}
+.ccb--in .ccb-pop { top: 45%; }
 .ccb--in .ccb-banner {
   top: 8%;
+  transform: translate(-50%, 0);
   font-size: clamp(0.8rem, 4vmin, 1.4rem);
   white-space: normal;
   text-align: center;
   max-width: 90%;
 }
+@keyframes ccb-banner-in { 0%{opacity:0} 18%{opacity:1} 80%{opacity:1} 100%{opacity:0} }
+.ccb--in .ccb-banner { animation: ccb-banner-in 2.4s ease-out forwards; }
