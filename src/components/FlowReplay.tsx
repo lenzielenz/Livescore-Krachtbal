@@ -46,7 +46,17 @@ export function FlowReplay({
   // gebeurt (anders lijkt de knop niets te doen).
   const [recPct, setRecPct] = useState(0)
   const [recMsg, setRecMsg] = useState<string | null>(null)
+  // Opgenomen video klaar om te bewaren: we downloaden NIET automatisch (dat gebeurt seconden na de
+  // tik → buiten de gebruikersactie, wat mobiel blokkeert). De gebruiker tikt zelf "Bewaren".
+  const [recReady, setRecReady] = useState<{ url: string; file: File; name: string } | null>(null)
   const lastTs = useRef(0)
+
+  // Object-URL opruimen wanneer het klaar-venster sluit of de component verdwijnt.
+  useEffect(() => {
+    return () => {
+      if (recReady) URL.revokeObjectURL(recReady.url)
+    }
+  }, [recReady])
 
   // Alleen bruikbare worpen (geldige landingscoördinaten) en met een gegarandeerd vertrekpunt,
   // zodat de replay nooit op ontbrekende/null-posities crasht.
@@ -307,25 +317,12 @@ export function FlowReplay({
         setTimeout(() => setRecMsg(null), 4500)
         return
       }
-      const url = URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
       // Bestandsnaam met de ploegen (en evt. reeks/datum) zodat meteen duidelijk is welke match het is.
       const slug = (s: string) => s.normalize('NFKD').replace(/[^\w]+/g, '-').replace(/^-+|-+$/g, '').toLowerCase()
       const parts = ['krachtbal', slug(teams.home), 'vs', slug(teams.away), matchLabel ? slug(matchLabel) : ''].filter(Boolean)
-      link.download = `${parts.join('-')}.${ext}`
-      link.rel = 'noopener'
-      link.target = '_blank'
-      // In de DOM hangen vóór de klik (vereist op sommige mobiele browsers) en de URL pas later
-      // vrijgeven: meteen revoken brak de download soms af nog vóór hij begon.
-      document.body.appendChild(link)
-      link.click()
-      setRecMsg('✅ Klaar! De video staat bij je downloads.')
-      setTimeout(() => {
-        link.remove()
-        URL.revokeObjectURL(url)
-      }, 4000)
-      setTimeout(() => setRecMsg(null), 4500)
+      const name = `${parts.join('-')}.${ext}`
+      // Klaarzetten: de gebruiker tikt zelf "Bewaren" (verse gebruikersactie → werkt mobiel betrouwbaar).
+      setRecReady({ url: URL.createObjectURL(blob), file: new File([blob], name, { type: mime }), name })
     } catch (err) {
       console.error('video record failed:', err)
       setRecMsg('⚠️ Video opnemen lukte niet op dit toestel. Tip: het werkt het best in Chrome.')
@@ -334,6 +331,37 @@ export function FlowReplay({
       canvas.remove()
       setRecording(false)
     }
+  }
+
+  // De opgenomen video bewaren — door de gebruiker zélf getikt (verse gebruikersactie). Op mobiel
+  // gebruiken we het deel-/bewaarvenster van het toestel (opslaan in Galerij/Bestanden of delen);
+  // anders een gewone download. Lukt geen van beide → openen in een nieuw tabblad als terugval.
+  const saveVideo = async () => {
+    if (!recReady) return
+    const nav = navigator as Navigator & {
+      canShare?: (data?: { files?: File[] }) => boolean
+      share?: (data: { files?: File[]; title?: string; text?: string }) => Promise<void>
+    }
+    try {
+      if (nav.share && nav.canShare?.({ files: [recReady.file] })) {
+        await nav.share({ files: [recReady.file], title: 'Krachtbal', text: matchLabel ?? 'Krachtbal' })
+        return
+      }
+    } catch (err) {
+      if ((err as Error).name === 'AbortError') return // gebruiker annuleerde → niets doen
+      // anders verder naar de download-terugval
+    }
+    const link = document.createElement('a')
+    link.href = recReady.url
+    link.download = recReady.name
+    document.body.appendChild(link)
+    link.click()
+    setTimeout(() => link.remove(), 1000)
+  }
+
+  const closeReady = () => {
+    if (recReady) URL.revokeObjectURL(recReady.url)
+    setRecReady(null)
   }
 
   // Live stand: tel de doelpunten tot nu (de huidige worp telt pas mee zodra de bal geland is).
@@ -405,16 +433,28 @@ export function FlowReplay({
         {!current && elapsed >= totalMs && <span className="replay-info">Einde — {total} worpen afgespeeld.</span>}
       </div>
       {/* Duidelijke voortgang/melding tijdens en na het opnemen (anders lijkt er niets te gebeuren). */}
-      {(recording || recMsg) &&
+      {(recording || recMsg || recReady) &&
         typeof document !== 'undefined' &&
         createPortal(
-          <div className="replay-rec-ov" role="status" aria-live="polite">
-            <div className="replay-rec-card">
+          <div className="replay-rec-ov" role="status" aria-live="polite" onClick={recReady ? closeReady : undefined}>
+            <div className="replay-rec-card" onClick={(e) => e.stopPropagation()}>
               {recording ? (
                 <>
                   <p className="replay-rec-title">🎥 Video opnemen… {recPct}%</p>
                   <div className="replay-rec-bar"><span style={{ width: `${recPct}%` }} /></div>
                   <p className="replay-rec-tip">Even geduld en blijf op deze pagina.</p>
+                </>
+              ) : recReady ? (
+                <>
+                  <p className="replay-rec-title">✅ Je video is klaar</p>
+                  <p className="replay-rec-tip">Tik op bewaren om ze op te slaan of te delen.</p>
+                  <div className="replay-rec-actions">
+                    <button type="button" className="replay-rec-save" onClick={saveVideo}>📥 Video bewaren</button>
+                    <button type="button" className="replay-rec-close" onClick={closeReady}>Sluiten</button>
+                  </div>
+                  <a className="replay-rec-alt" href={recReady.url} target="_blank" rel="noopener noreferrer">
+                    Lukt het niet? Open de video in een nieuw tabblad
+                  </a>
                 </>
               ) : (
                 <p className="replay-rec-title">{recMsg}</p>
