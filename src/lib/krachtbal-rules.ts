@@ -10,6 +10,7 @@ import {
   type Zone,
   distanceM,
   freeThrowNorm,
+  goalLineNorm,
   isInTargetGoalArea,
   isOnOwnHalf,
   isOutBack,
@@ -173,9 +174,20 @@ export function nextSetup(input: {
     }
   }
 
-  // Opzetpunt = waar de bal lag/gevangen werd; het worpaantal volgt uit de helft.
-  // Geldt voor vangst, opgebruikte worpen en de middellijn-fout (opzet vanaf grondcontact).
-  if (outcome === 'caught' || outcome === 'throws_exhausted' || outcome === 'midline_fault') {
+  // Vangst: de tegenploeg speelt verder vanaf waar de bal gevangen werd. MAAR wordt de bal in een
+  // doelgebied gevangen en gaat ze daarna de andere richting op, dan start de meting vanaf het
+  // MIDDEN van die doellijn (niet diep in het doelgebied) — anders zou de afstand vertekend zijn.
+  if (outcome === 'caught') {
+    const g = goalLineNorm(goalAreaDepthM)
+    let point: Point = landing
+    if (landing.y < g) point = { x: 0.5, y: g } // gevangen in het doelgebied aan de y=0-zijde
+    else if (landing.y > 1 - g) point = { x: 0.5, y: 1 - g } // … aan de y=1-zijde
+    return { team, dir, setupSide: isOnOwnHalf(point, dir) ? 'own' : 'opponent', point }
+  }
+
+  // Opzetpunt = waar de bal lag; het worpaantal volgt uit de helft.
+  // Geldt voor opgebruikte worpen en de middellijn-fout (opzet vanaf grondcontact).
+  if (outcome === 'throws_exhausted' || outcome === 'midline_fault') {
     return { team, dir, setupSide: isOnOwnHalf(landing, dir) ? 'own' : 'opponent', point: landing }
   }
 

@@ -119,13 +119,22 @@ describe('isMidlineFault', () => {
 })
 
 describe('nextSetup', () => {
-  it('gevangen: tegenploeg vertrekt vanaf vangpunt, richting omgedraaid', () => {
+  it('gevangen in open spel: tegenploeg vertrekt vanaf het vangpunt, richting omgedraaid', () => {
+    const ns = nextSetup({ outcome: 'caught', landing: { x: 0.4, y: 0.6 }, throwerTeam: 'home', throwerDir: 'up' })
+    expect(ns.team).toBe('away')
+    expect(ns.dir).toBe('down')
+    expect(ns.point).toEqual({ x: 0.4, y: 0.6 })
+    // y=0.6; away speelt 'down', eigen helft = y>0.5 → own
+    expect(ns.setupSide).toBe('own')
+  })
+  it('gevangen in het doelgebied: meting start vanaf het MIDDEN van de doellijn', () => {
+    const g = 10 / 46 // doellijn-norm bij doelgebied-diepte 10 m (totale lengte 46 m)
+    // Bal gevangen diep in het doelgebied aan de y=1-zijde (y=0.8 > doellijn ≈ 0.783).
     const ns = nextSetup({ outcome: 'caught', landing: { x: 0.4, y: 0.8 }, throwerTeam: 'home', throwerDir: 'up' })
     expect(ns.team).toBe('away')
     expect(ns.dir).toBe('down')
-    expect(ns.point).toEqual({ x: 0.4, y: 0.8 })
-    // y=0.8 (36.8m); away speelt 'down', eigen helft = y>23m → own
-    expect(ns.setupSide).toBe('own')
+    expect(ns.point.x).toBeCloseTo(0.5)
+    expect(ns.point.y).toBeCloseTo(1 - g)
   })
   it('buiten in EIGEN helft (achterin): tegenstander krijgt de bal met opzet eigen helft (meer worpen)', () => {
     // home wierp 'up', bal ging buiten op y=0.8 (= away’s eigen helft). away zet op vanaf eigen helft.
