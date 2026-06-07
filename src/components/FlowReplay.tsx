@@ -41,6 +41,12 @@ export function FlowReplay({
   const [elapsed, setElapsed] = useState(0)
   const [speed, setSpeed] = useState(1)
   const [team, setTeam] = useState<'both' | 'home' | 'away'>('both')
+  // Filters die óók in de video tellen: welke worp (alle/1e/2e/3e) en enkel doelpunten.
+  const [order, setOrder] = useState<'all' | 'first' | 'second' | 'third'>('all')
+  const [goalsOnly, setGoalsOnly] = useState(false)
+  // "Net veld": telkens een aanval scoort, verdwijnen de getekende lijnen en gaat het verder, zodat
+  // het veld niet volloopt met lijnen.
+  const [clearOnGoal, setClearOnGoal] = useState(false)
   const [recording, setRecording] = useState(false)
   // Voortgang (0–100) + korte status-melding tijdens/na het opnemen, zodat zichtbaar is dat er iets
   // gebeurt (anders lijkt de knop niets te doen).
@@ -82,11 +88,17 @@ export function FlowReplay({
       })
   }, [shots])
 
-  // Enkel de gekozen ploeg afspelen (thuis/uit) of allebei.
-  const playShots = useMemo(
-    () => (team === 'both' ? safeShots : safeShots.filter((s) => s.teamSide === team)),
-    [safeShots, team],
-  )
+  // Ploeg-, worp- en doelpunt-filter — gelden zowel voor het afspelen als voor de opname.
+  const playShots = useMemo(() => {
+    return safeShots.filter((s) => {
+      if (team !== 'both' && s.teamSide !== team) return false
+      if (order === 'first' && s.throwNumber !== 1) return false
+      if (order === 'second' && s.throwNumber !== 2) return false
+      if (order === 'third' && s.throwNumber < 3) return false
+      if (goalsOnly && s.outcome !== 'goal') return false
+      return true
+    })
+  }, [safeShots, team, order, goalsOnly])
 
   const total = playShots.length
   const stepMs = 900 / speed
@@ -122,8 +134,17 @@ export function FlowReplay({
   const step = total ? Math.min(Math.floor(elapsed / stepMs), total) : 0
   const within = total ? (elapsed - step * stepMs) / stepMs : 0
 
+  // "Net veld": toon enkel de worpen sinds het laatste (reeds gepasseerde) doelpunt, zodat het veld
+  // na elke score leegloopt en de volgende aanval helder opnieuw begint.
+  const trailStart = useMemo(() => {
+    if (!clearOnGoal) return 0
+    let start = 0
+    for (let i = 0; i < step; i++) if (playShots[i]?.outcome === 'goal') start = i + 1
+    return start
+  }, [clearOnGoal, playShots, step])
+
   const { markers, current } = useMemo(() => {
-    const ms: FieldMarker[] = playShots.slice(0, step).map((s) => ({
+    const ms: FieldMarker[] = playShots.slice(trailStart, step).map((s) => ({
       x: s.x,
       y: s.y,
       fromX: s.fromX,
@@ -147,7 +168,7 @@ export function FlowReplay({
       cur = s
     }
     return { markers: ms, current: cur }
-  }, [playShots, step, within, total])
+  }, [playShots, step, within, total, trailStart])
 
   const play = () => {
     if (elapsed >= totalMs) setElapsed(0)
@@ -161,11 +182,16 @@ export function FlowReplay({
     const list = playShots
     if (list.length === 0) return
     const MR = (globalThis as { MediaRecorder?: typeof MediaRecorder }).MediaRecorder
-    // webm eerst: dat neemt op élk Chrome-toestel (ook Android) betrouwbaar op. mp4 enkel als
-    // terugval (recente desktop-Chrome) want mp4-opname wordt op de meeste telefoons niet ondersteund.
-    const mime = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm', 'video/mp4'].find(
-      (m) => MR?.isTypeSupported?.(m),
-    )
+    // mp4 (H.264) eerst: dat kan je wél via WhatsApp/sociale media doorsturen (webm wordt daar niet
+    // ondersteund). Waar mp4-opname niet kan (o.a. de meeste Android-Chrome), valt het terug op webm.
+    const mime = [
+      'video/mp4;codecs=avc1.42E01E',
+      'video/mp4;codecs=h264',
+      'video/mp4',
+      'video/webm;codecs=vp9',
+      'video/webm;codecs=vp8',
+      'video/webm',
+    ].find((m) => MR?.isTypeSupported?.(m))
     if (!MR || !mime) {
       setRecMsg('⚠️ Video opnemen wordt niet ondersteund in deze browser. Probeer Chrome.')
       setTimeout(() => setRecMsg(null), 4000)
@@ -251,9 +277,8 @@ export function FlowReplay({
         ctx.textBaseline = 'alphabetic'
       }
     }
-    // Vaste, vlottere stap voor de opname (sneller dan de live-replay) zodat de video niet
-    // tientallen seconden duurt en op telefoons betrouwbaar wegschrijft.
-    const rstep = 360
+    // Opname-stap volgt de gekozen afspeelsnelheid (sneller = kortere video). Basis 360 ms/worp.
+    const rstep = 360 / speed
     const drawFrame = (ms: number) => {
       const st = Math.min(Math.floor(ms / rstep), list.length)
       const wi = (ms - st * rstep) / rstep
@@ -266,6 +291,9 @@ export function FlowReplay({
         if (s.teamSide === 'home') h += pts
         else a += pts
       }
+      // "Net veld": enkel de worpen sinds het laatste reeds-gescoorde doelpunt tekenen.
+      let from = 0
+      if (clearOnGoal) for (let i = 0; i < st; i++) if (list[i]?.outcome === 'goal') from = i + 1
       ctx.fillStyle = '#06140d'
       ctx.fillRect(0, 0, cw, chh)
       ctx.textAlign = 'center'
@@ -282,7 +310,7 @@ export function FlowReplay({
         ctx.fillText(matchLabel, cw / 2, 63)
       }
       drawField()
-      for (let i = 0; i < st; i++) drawShot(list[i], 1)
+      for (let i = from; i < st; i++) drawShot(list[i], 1)
       if (st < list.length) drawShot(list[st], Math.min(1, wi / 0.7))
     }
 
@@ -409,12 +437,26 @@ export function FlowReplay({
         <button type="button" className={`side-home ${team === 'home' ? 'on' : ''}`} onClick={() => { setTeam('home'); setElapsed(0); setPlaying(true) }}>🏠 {teams.home}</button>
         <button type="button" className={`side-away ${team === 'away' ? 'on' : ''}`} onClick={() => { setTeam('away'); setElapsed(0); setPlaying(true) }}>🚌 {teams.away}</button>
       </div>
+      {/* Welke worpen tonen (alle/1e/2e/3e) + enkel doelpunten — geldt ook voor de download. */}
+      <div className="shotmap-controls replay-filters">
+        {([['all', 'Alle'], ['first', '1e worp'], ['second', '2e worp'], ['third', '3e worp']] as const).map(([v, lbl]) => (
+          <button key={v} type="button" className={order === v ? 'on' : ''} onClick={() => { setOrder(v); setElapsed(0) }}>{lbl}</button>
+        ))}
+        <button type="button" className={goalsOnly ? 'on' : ''} onClick={() => { setGoalsOnly((g) => !g); setElapsed(0) }}>🥅 Enkel doelpunten</button>
+      </div>
+      {/* "Net veld": na elk doelpunt verdwijnen de lijnen en gaat het verder. */}
+      <div className="shotmap-controls replay-filters">
+        <button type="button" className={clearOnGoal ? 'on' : ''} onClick={() => setClearOnGoal((c) => !c)}>
+          🧹 Veld leegmaken na doelpunt
+        </button>
+      </div>
       <div className="shotmap-controls replay-controls">
         <button type="button" className="replay-play" onClick={() => (playing ? setPlaying(false) : play())} disabled={total === 0}>
           {playing ? '⏸ Pauze' : elapsed >= totalMs ? '↻ Opnieuw' : '▶ Speel af'}
         </button>
-        <button type="button" className={speed === 1 ? 'on' : ''} onClick={() => setSpeed(1)}>1×</button>
-        <button type="button" className={speed === 2 ? 'on' : ''} onClick={() => setSpeed(2)}>2×</button>
+        {([0.5, 1, 2, 3] as const).map((sp) => (
+          <button key={sp} type="button" className={speed === sp ? 'on' : ''} onClick={() => setSpeed(sp)}>{sp}×</button>
+        ))}
         <button type="button" className="replay-dl" onClick={recordVideo} disabled={recording || total === 0}>
           {recording ? `⏺ Opnemen… ${recPct}%` : '⬇ Download'}
         </button>
