@@ -461,33 +461,45 @@
 .sb-cross-val { font-size: 1.1rem; font-weight: 700; color: var(--txt); }
 
 .sb-timeline h3 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--dim); margin: 10px 0; }
-.sb-timeline ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
-.sb-dim { color: var(--dim); font-size: 0.85rem; }
-.sb-tl {
-  display: grid; grid-template-columns: 58px 26px 1fr; gap: 10px; align-items: center;
-  padding: 6px 10px; border-radius: 8px; background: #0a1f14; font-size: 0.88rem;
+/* Meerdere kolommen, zodat een lange stand (richting 25-25) compact blijft i.p.v. eindeloos lang. */
+.sb-timeline ul {
+  list-style: none; margin: 0; padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 6px;
+  align-content: start;
 }
-.sb-tl-time { color: var(--dim); font-variant-numeric: tabular-nums; font-size: 0.78rem; }
-.sb-tl-team { font-weight: 600; }
-.sb-tl-logo-ph { width: 26px; height: 26px; }
-/* Doelpunt-regel: puntenbadge + (enkel ingelogd) de scorer. Compact, want een stand loopt
-   makkelijk tot ~25–25. */
-.sb-tl-goalinfo { display: flex; align-items: center; gap: 9px; min-width: 0; }
+.sb-dim { color: var(--dim); font-size: 0.85rem; }
+/* "Xe helft"-scheiding: vol over de breedte. */
+.sb-tl-half {
+  grid-column: 1 / -1;
+  margin: 6px 0 1px;
+  font-size: 0.72rem; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase;
+  color: var(--accent);
+  display: flex; align-items: center; gap: 8px;
+}
+.sb-tl-half::after { content: ''; flex: 1; height: 1px; background: color-mix(in srgb, var(--accent) 30%, var(--line)); }
+/* Compacte doelpunt-/kruisje-chip: minuut · logo · +N · (ingelogd) scorer. */
+.sb-tl {
+  display: flex; align-items: center; gap: 7px; min-width: 0;
+  padding: 5px 9px; border-radius: 999px; background: #0a1f14; font-size: 0.84rem;
+  border-left: 3px solid var(--line);
+}
+.sb-tl-min { color: var(--dim); font-variant-numeric: tabular-nums; font-size: 0.78rem; flex: none; min-width: 22px; }
+.sb-tl-logo-ph { width: 22px; height: 22px; flex: none; }
 .sb-tl-pts {
   flex: none; font-weight: 800; font-variant-numeric: tabular-nums;
-  font-size: 0.8rem; padding: 1px 8px; border-radius: 999px; line-height: 1.4;
+  font-size: 0.78rem; padding: 0 7px; border-radius: 999px; line-height: 1.5;
   background: color-mix(in srgb, var(--accent) 16%, transparent);
   color: var(--accent);
-  border: 1px solid color-mix(in srgb, var(--accent) 32%, var(--line));
 }
-.sb-tl-pts.rug { background: var(--grad-accent, var(--accent)); color: #06140d; border-color: transparent; }
+.sb-tl-pts.rug { background: var(--grad-accent, var(--accent)); color: #06140d; }
+.sb-tl-x { color: #ef476f; font-weight: 800; flex: none; }
 .sb-tl-scorer { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sb-tl-scorer.dim { color: var(--dim); font-weight: 500; }
-.sb-tl-label { color: var(--dim); text-align: right; }
-.sb-tl-goal { border-left: 3px solid var(--accent); }
-.sb-tl-cross { border-left: 3px solid #ef476f; }
-.sb-tl.side-home .sb-tl-team { color: var(--home); }
-.sb-tl.side-away .sb-tl-team { color: var(--away); }
+.sb-tl-goal { border-left-color: var(--accent); }
+.sb-tl-cross { border-left-color: #ef476f; }
+.sb-tl.side-home { border-left-color: var(--home); }
+.sb-tl.side-away { border-left-color: var(--away); }
 
 @media (max-width: 560px) {
   .sb-score { font-size: 2.4rem; }

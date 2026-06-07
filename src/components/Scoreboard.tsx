@@ -483,35 +483,49 @@ export function Scoreboard({
         <h3>Tijdlijn</h3>
         {timeline.length === 0 && <p className="sb-dim">Nog geen gebeurtenissen.</p>}
         <ul>
-          {[...timeline].reverse().map((item) => {
-            const team = item.side ? state.teams[item.side] : null
-            const isGoal = item.kind === 'goal'
-            const points = isGoal ? goalPointsFromLabel(item.label) : 0
-            // De scorer (wie scoorde) tonen we enkel aan ingelogde supporters.
-            const scorer = isGoal ? goalScorerFromLabel(item.label) : null
-            return (
-              <li key={item.id} className={`sb-tl sb-tl-${item.kind} ${item.side ? `side-${item.side}` : ''}`}>
-                <span className="sb-tl-time">{item.half}H {fmtClock(item.gameClock)}</span>
-                {team ? (
-                  <TeamLogo name={team.name} logoUrl={team.logoUrl} logoFit={team.logoFit} side={item.side ?? undefined} size={26} ringColor={team.colors?.primary} />
-                ) : (
-                  <span className="sb-tl-logo-ph" aria-hidden />
-                )}
-                {isGoal ? (
-                  <span className="sb-tl-goalinfo">
-                    <span className={`sb-tl-pts ${points === 2 ? 'rug' : 'nek'}`}>+{points}</span>
-                    {canChat && scorer ? (
-                      <span className="sb-tl-scorer">{scorer}</span>
-                    ) : (
-                      <span className="sb-tl-scorer dim">Doelpunt</span>
-                    )}
-                  </span>
-                ) : (
-                  <span className="sb-tl-label">{item.label}</span>
-                )}
+          {(() => {
+            // Kort & krachtig: enkel doelpunten (en kruisjes) als compacte chips in meerdere
+            // kolommen — met een "Xe helft"-scheiding zodra een nieuwe helft begint, zodat een
+            // lange stand (richting 25-25) overzichtelijk blijft i.p.v. eindeloos lang.
+            const out: React.ReactNode[] = []
+            let lastHalf = 0
+            const divider = (half: number) => (
+              <li key={`half-${half}`} className="sb-tl-half">
+                {half === 1 ? '1e helft' : half === 2 ? '2e helft' : `${half}e helft`}
               </li>
             )
-          })}
+            for (const item of timeline) {
+              if (item.kind === 'half_start') {
+                if (item.half > lastHalf) { lastHalf = item.half; out.push(divider(item.half)) }
+                continue
+              }
+              if (item.kind !== 'goal' && item.kind !== 'cross') continue // time-out/sr enz. weglaten
+              if (item.half > lastHalf) { lastHalf = item.half; out.push(divider(item.half)) }
+              const team = item.side ? state.teams[item.side] : null
+              const min = Math.floor((item.gameClock ?? 0) / 60)
+              const isGoal = item.kind === 'goal'
+              const points = isGoal ? goalPointsFromLabel(item.label) : 0
+              const scorer = isGoal ? goalScorerFromLabel(item.label) : null
+              out.push(
+                <li key={item.id} className={`sb-tl sb-tl-${item.kind} ${item.side ? `side-${item.side}` : ''}`}>
+                  <span className="sb-tl-min">{min}&apos;</span>
+                  {team ? (
+                    <TeamLogo name={team.name} logoUrl={team.logoUrl} logoFit={team.logoFit} side={item.side ?? undefined} size={22} ringColor={team.colors?.primary} />
+                  ) : (
+                    <span className="sb-tl-logo-ph" aria-hidden />
+                  )}
+                  {isGoal ? (
+                    <span className={`sb-tl-pts ${points === 2 ? 'rug' : 'nek'}`}>+{points}</span>
+                  ) : (
+                    <span className="sb-tl-x" aria-hidden>✖</span>
+                  )}
+                  {/* Wie scoorde: enkel zichtbaar voor ingelogde supporters. */}
+                  {isGoal && canChat && scorer && <span className="sb-tl-scorer">{scorer}</span>}
+                </li>,
+              )
+            }
+            return out
+          })()}
         </ul>
       </div>
 
