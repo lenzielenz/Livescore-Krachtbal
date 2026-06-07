@@ -45,11 +45,21 @@ export async function POST(req: Request) {
       data: { name: name || undefined, email, password, roles: ['viewer'], ...(clubId ? { club: clubId } : {}) },
       overrideAccess: true,
     })
-  } catch {
-    // Meest voorkomend: e-mailadres bestaat al (unieke auth-email).
+  } catch (err) {
+    // We loggen de échte oorzaak server-side en geven enkel een bruikbare melding terug.
+    const msg = (err as Error)?.message || ''
+    console.error('register failed:', msg, err)
+    // Bestaand e-mailadres (unieke auth-email) → vriendelijke 409.
+    if (
+      /e-?mail/i.test(msg) &&
+      /(already|registered|taken|in use|uniek|unique|bestaat|duplicate)/i.test(msg)
+    ) {
+      return Response.json({ error: 'Dit e-mailadres is al in gebruik.' }, { status: 409 })
+    }
+    // Alle andere fouten: toon de werkelijke reden i.p.v. ze te verbergen.
     return Response.json(
-      { error: 'Registreren mislukt — dit e-mailadres is mogelijk al in gebruik.' },
-      { status: 409 },
+      { error: `Registreren mislukt: ${msg || 'onbekende fout'}` },
+      { status: 400 },
     )
   }
 

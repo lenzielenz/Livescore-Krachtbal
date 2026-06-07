@@ -19,6 +19,7 @@ const PRIMARY: { href: string; label: string; key: NavSection }[] = [
 
 // Algemene ingangen bovenaan het Meer-menu.
 const GENERAL = [
+  { href: '/uitleg', label: '❓ Zo werkt het' },
   { href: '/rangschikking', label: '📊 Stand' },
   { href: '/tornooi', label: '🏆 Tornooi' },
 ]
