@@ -159,6 +159,7 @@ export function Scoreboard({
   const [shouts, setShouts] = useState<Shout[]>(initialShouts ?? [])
   const [chatText, setChatText] = useState('')
   const [chatBusy, setChatBusy] = useState(false)
+  const [needLogin, setNeedLogin] = useState(false)
   const chatFeedRef = useRef<HTMLDivElement>(null)
 
   // Eén uitbarsting: deeltjes spatten vanuit (ox,oy) in alle richtingen uiteen en dwarrelen omhoog.
@@ -261,6 +262,11 @@ export function Scoreboard({
   const pendingReacts = useRef<Record<string, number>>({})
   const reactTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const sendReaction = (name: keyof typeof EMOJI, ev?: React.MouseEvent<HTMLButtonElement>) => {
+    // Reageren kan enkel ingelogd (net als de tribune). Niet ingelogd → toon de login-hint.
+    if (!canChat) {
+      setNeedLogin(true)
+      return
+    }
     // Eigen tik = een uitbarsting vanaf de ingedrukte knop (raket = grotere zwerm).
     const sbRect = sbRef.current?.getBoundingClientRect()
     let ox = (sbRect?.width ?? 360) / 2
@@ -507,21 +513,28 @@ export function Scoreboard({
         ))}
       </div>
       {tribuneOpen && (
-        <div className="sb-reactions">
-          {(Object.keys(EMOJI) as (keyof typeof EMOJI)[]).map((name) => (
-            <button
-              key={name}
-              type="button"
-              className={`sb-react-btn${name === 'rocket' ? ' sb-react-rocket' : ''}`}
-              onClick={(e) => sendReaction(name, e)}
-              aria-label={name === 'rocket' ? 'Vier een rugworp (2 punten)' : `Reageer met ${name}`}
-              title={name === 'rocket' ? 'Rugworp! 2 punten 🚀' : undefined}
-            >
-              {reactionGlyph(name, ballKleur)}
-              {totals[name] > 0 && <span className="sb-react-count">{totals[name]}</span>}
-            </button>
-          ))}
-        </div>
+        <>
+          <div className={`sb-reactions${canChat ? '' : ' locked'}`}>
+            {(Object.keys(EMOJI) as (keyof typeof EMOJI)[]).map((name) => (
+              <button
+                key={name}
+                type="button"
+                className={`sb-react-btn${name === 'rocket' ? ' sb-react-rocket' : ''}`}
+                onClick={(e) => sendReaction(name, e)}
+                aria-label={name === 'rocket' ? 'Vier een rugworp (2 punten)' : `Reageer met ${name}`}
+                title={!canChat ? 'Log in om te reageren' : name === 'rocket' ? 'Rugworp! 2 punten 🚀' : undefined}
+              >
+                {reactionGlyph(name, ballKleur)}
+                {totals[name] > 0 && <span className="sb-react-count">{totals[name]}</span>}
+              </button>
+            ))}
+          </div>
+          {!canChat && (
+            <p className="sb-react-login">
+              <a href="/inloggen">Log in</a> om te reageren{needLogin ? ' — gratis account 🎉' : ''}.
+            </p>
+          )}
+        </>
       )}
 
       {/* Clubkleuren-viering: laad op met elke 5 doelpunten of een rugworp; vuur ze dan af op
