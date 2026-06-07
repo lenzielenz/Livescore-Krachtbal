@@ -57,13 +57,13 @@ export default async function ScorekeeperPage({
 
   const reeks = reeksNaam(matchDoc?.reeks)
   const isDemo = Boolean((matchDoc as { isDemo?: boolean } | null)?.isDemo)
+  const isAnalyse = Boolean((matchDoc as { analyseOnly?: boolean } | null)?.analyseOnly)
 
-  // De basis snelscoremodus (+1/+2) is de standaard — ook voor de gewone demo, want dat is
-  // de basisversie van het spel. Een admin krijgt de volledige scoreopnemer (3-staps
-  // veldschema) bij echte wedstrijden. De demo blijft voor iedereen (ook de admin) de
-  // basisversie zoals een gewone gebruiker hem ziet — behalve via "Demo expert"
-  // (?expert=1), die een admin het volledige veldschema geeft om mee te oefenen.
-  const advanced = isDemo ? isAdmin && expert === '1' : isAdmin
+  // De basis snelscoremodus (+1/+2) is de standaard voor élke gewone wedstrijd — ook voor een admin.
+  // De volledige scoreopnemer (3-staps veldschema) is enkel voor ANALYSEWEDSTRIJDEN: wedstrijden die
+  // je zelf onder "Analyse" toevoegt om detaildata te verzamelen. De demo blijft de basisversie voor
+  // iedereen — behalve via "Demo expert" (?expert=1), waarmee een admin het veldschema kan oefenen.
+  const advanced = isDemo ? isAdmin && expert === '1' : isAnalyse
 
   if (!advanced) {
     return <SimpleScorekeeper matchId={matchId} initialState={state} roster={roster} reeks={reeks} />
