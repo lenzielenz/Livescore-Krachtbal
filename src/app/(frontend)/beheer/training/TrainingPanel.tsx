@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useMemo, useState } from 'react'
 
 import { TRAINING_METRICS, metricAttempts, type TrainingMeting, type TrainingMetricKey } from '@/lib/training-metrics'
+import { trainingGroupOf } from '@/lib/training-groups'
 import { ProgressieChart } from './ProgressieChart'
 import './training.css'
 
@@ -38,24 +39,25 @@ export function TrainingPanel({
   canWrite: boolean
 }) {
   const router = useRouter()
-  // Reeks-keuze: elke trainer heeft zijn eigen reeks → filter de spelerslijst per leeftijdsgroep.
+  // Trainingsgroep-keuze: senior dames/heren trainen samen, jeugd per reeks → filter de spelerslijst.
   const reeksGroups = useMemo(() => {
     const m = new Map<string, { reeks: string; naam: string; n: number }>()
     for (const p of players) {
-      const k = p.reeks || ''
-      if (!k) continue
-      const g = m.get(k) ?? { reeks: k, naam: p.reeksNaam, n: 0 }
-      g.n++
-      m.set(k, g)
+      if (!p.reeks) continue
+      const g = trainingGroupOf(p.reeks)
+      const ex = m.get(g.key) ?? { reeks: g.key, naam: g.label, n: 0 }
+      ex.n++
+      m.set(g.key, ex)
     }
     return [...m.values()].sort((a, b) => a.naam.localeCompare(b.naam, 'nl'))
   }, [players])
+  const inGroup = (p: TrainingPlayer, key: string) => trainingGroupOf(p.reeks).key === key
   const [tab, setTab] = useState<string>(ALL)
-  const shownPlayers = tab === ALL ? players : players.filter((p) => (p.reeks || '') === tab)
+  const shownPlayers = tab === ALL ? players : players.filter((p) => inGroup(p, tab))
   const [spelerId, setSpelerId] = useState<number | null>(players[0]?.id ?? null)
   const selectTab = (t: string) => {
     setTab(t)
-    const list = t === ALL ? players : players.filter((p) => (p.reeks || '') === t)
+    const list = t === ALL ? players : players.filter((p) => inGroup(p, t))
     setSpelerId(list[0]?.id ?? null)
   }
   const [datum, setDatum] = useState(todayISO())

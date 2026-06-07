@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
 
 import { seasonFromDate } from '@/lib/seasons'
+import { trainingGroupOf } from '@/lib/training-groups'
 import '../training.css'
 
 export type AwPlayer = { id: number; name: string; reeks: string; reeksNaam: string }
@@ -85,21 +86,25 @@ export function AanwezigheidPanel({
 
   const club = useMemo(() => clubs.find((c) => c.id === clubId) ?? null, [clubs, clubId])
 
-  // Reeksgroepen van de club: leeftijdsgroepen (U12, U14, dames, heren …) uit de ploegen + spelers.
+  // Trainingsgroepen van de club: senior dames/heren samen, jeugd per reeks. (`reeks` op een groep
+  // is hier de GROEPSLEUTEL, bv. 'dames'/'heren'/'U12'.)
   const reeksGroups = useMemo<ReeksGroup[]>(() => {
     if (!club) return []
-    const byReeks = new Map<string, ReeksGroup>()
+    const byKey = new Map<string, ReeksGroup>()
     for (const rt of club.reeksTeams) {
-      byReeks.set(rt.reeks, { reeks: rt.reeks, naam: rt.reeksNaam, teamId: rt.teamId, players: [] })
+      const g = trainingGroupOf(rt.reeks)
+      const ex = byKey.get(g.key) ?? { reeks: g.key, naam: g.label, teamId: rt.teamId, players: [] }
+      if (ex.teamId == null) ex.teamId = rt.teamId
+      byKey.set(g.key, ex)
     }
     for (const p of club.players) {
-      const key = p.reeks || ''
-      if (!key) continue
-      const g = byReeks.get(key) ?? { reeks: key, naam: p.reeksNaam, teamId: club.primaryTeamId, players: [] }
-      g.players.push(p)
-      byReeks.set(key, g)
+      if (!p.reeks) continue
+      const g = trainingGroupOf(p.reeks)
+      const ex = byKey.get(g.key) ?? { reeks: g.key, naam: g.label, teamId: club.primaryTeamId, players: [] }
+      ex.players.push(p)
+      byKey.set(g.key, ex)
     }
-    return [...byReeks.values()].sort((a, b) => a.naam.localeCompare(b.naam, 'nl'))
+    return [...byKey.values()].sort((a, b) => a.naam.localeCompare(b.naam, 'nl'))
   }, [club])
 
   const hasReeksen = reeksGroups.length > 0
@@ -133,7 +138,7 @@ export function AanwezigheidPanel({
         (s) =>
           s.clubId === clubId &&
           seasonFromDate(new Date(s.datum)) === season &&
-          (isAlg || s.reeks === tab),
+          (isAlg || trainingGroupOf(s.reeks).key === tab),
       ),
     [sessions, clubId, season, isAlg, tab],
   )
@@ -159,7 +164,7 @@ export function AanwezigheidPanel({
   // Vorige training in deze scope → dezelfde aanwezigen voorvinken voor snelle invoer.
   const lastSession = useMemo(
     () =>
-      sessions.find((s) => s.clubId === clubId && (isAlg || s.reeks === tab) && s.aanwezigen.length > 0) ?? null,
+      sessions.find((s) => s.clubId === clubId && (isAlg || trainingGroupOf(s.reeks).key === tab) && s.aanwezigen.length > 0) ?? null,
     [sessions, clubId, isAlg, tab],
   )
   useEffect(() => {
@@ -186,7 +191,7 @@ export function AanwezigheidPanel({
   const freqByPlayer = useMemo(() => {
     const f = new Map<number, number>()
     for (const s of sessions) {
-      if (s.clubId !== clubId || (!isAlg && s.reeks !== tab)) continue
+      if (s.clubId !== clubId || (!isAlg && trainingGroupOf(s.reeks).key !== tab)) continue
       for (const a of s.aanwezigen) f.set(a.id, (f.get(a.id) ?? 0) + 1)
     }
     return f
@@ -266,7 +271,7 @@ export function AanwezigheidPanel({
         body: JSON.stringify({
           datum,
           club: clubId,
-          reeks: isAlg ? '' : tab,
+          reeks: isAlg ? '' : (roster.find((p) => p.reeks)?.reeks ?? ''),
           duurMinuten: duur,
           weer,
           temperatuur: temp,
@@ -521,7 +526,7 @@ export function AanwezigheidPanel({
                   <span className="tr-session-count">👥 {s.aanwezigen.length}</span>
                 </div>
                 <div className="tr-session-meta">
-                  {isAlg && s.reeks && <span>🏷️ {reeksGroups.find((g) => g.reeks === s.reeks)?.naam ?? s.reeks}</span>}
+                  {isAlg && s.reeks && <span>🏷️ {trainingGroupOf(s.reeks).label}</span>}
                   {s.duurMinuten != null && <span>⏱️ {s.duurMinuten} min</span>}
                   {s.weer && <span>{WEER_LABEL[s.weer] ?? s.weer}</span>}
                   {s.temperatuur != null && <span>🌡️ {s.temperatuur}°C</span>}
