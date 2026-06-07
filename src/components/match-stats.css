@@ -202,3 +202,41 @@
 
 .replay-dl { margin-left: auto; }
 .replay-dl:disabled { opacity: 0.6; cursor: default; }
+
+/* Voortgang/melding bij het opnemen van de video — fullscreen overlay zodat de gebruiker ziet
+   dat er iets gebeurt (en dat de download klaar is). */
+.replay-rec-ov {
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(2px);
+  padding: 24px;
+}
+.replay-rec-card {
+  width: min(92vw, 340px);
+  background: var(--panel, #0e2a1d);
+  border: 1px solid var(--line, #1d3b2c);
+  border-radius: 14px;
+  padding: 18px 18px 16px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+  text-align: center;
+}
+.replay-rec-title { margin: 0; font-weight: 800; font-size: 1rem; color: var(--fg, #e8f5ee); }
+.replay-rec-bar {
+  margin: 12px 0 8px;
+  height: 9px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent, #06d6a0) 18%, transparent);
+  overflow: hidden;
+}
+.replay-rec-bar span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent, #06d6a0);
+  transition: width 0.15s linear;
+}
+.replay-rec-tip { margin: 0; font-size: 0.82rem; color: var(--dim, #9fb6aa); }
