@@ -172,7 +172,11 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--team-ink, #fff);
+  text-align: center;
+  /* Naam leunt naar wit (met clubtint) zodat ze altijd goed leesbaar is, ook bij donkere/zwakke
+     clubkleuren; de grote score blijft volledig in de clubkleur. */
+  color: color-mix(in srgb, var(--team-ink, #fff) 55%, #ffffff);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.55);
 }
 .ssk-score {
   font-size: 56px;
