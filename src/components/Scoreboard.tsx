@@ -310,15 +310,28 @@ export function Scoreboard({
   const awayColor = state.teams.away.colors?.primary ?? DEFAULT_AWAY_COLOR
   const homeInk = readableOnDark(homeColor)
   const awayInk = readableOnDark(awayColor)
+  // "Krachtmeting": de kleur van de leidende ploeg verovert steeds meer van het scherm.
+  // 0.5 bij gelijke stand; ~6% per puntverschil, geklemd zodat beide kleuren zichtbaar blijven.
+  const diff = state.score.home - state.score.away
+  const homeShare = Math.max(0.16, Math.min(0.84, 0.5 + diff * 0.06))
   const sbStyle = {
     '--home': homeInk,
     '--away': awayInk,
     '--home-ink': inkOn(homeColor),
     '--away-ink': inkOn(awayColor),
+    '--home-share': homeShare,
   } as React.CSSProperties
 
   return (
     <div className="sb" style={sbStyle}>
+      {/* Levende clubkleuren-arena: beide ploegkleuren strijden; de leider verovert meer terrein. */}
+      <div className="sb-arena" aria-hidden>
+        <div className="sb-arena-grad" />
+        <div className="sb-arena-blob home" />
+        <div className="sb-arena-blob away" />
+        <div className="sb-arena-sheen" />
+        <div className="sb-arena-front" />
+      </div>
       <div className="sb-status">
         <span className={`sb-badge ${state.match.status}`}>{statusLabel}</span>
         {state.match.status === 'live' &&

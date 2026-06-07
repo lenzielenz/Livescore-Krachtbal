@@ -1,30 +1,102 @@
+/* Animeerbare splitsing tussen de twee clubkleuren (0..1): de leider verovert meer terrein. */
+@property --home-share {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 0.5;
+}
+
 .sb {
   /* Erft --bg/--panel/--line/--txt/--dim/--accent uit :root (styles.css), zodat globale
      contrast-/huisstijlfixes ook het publieke scorebord bereiken (AUDIT §1). Enkel --home/--away
      blijven hier als fallback; de component zet ze per wedstrijd via een inline-stijl. */
   --home: #0fe0a6;
   --away: #4cc9f0;
+  --home-share: 0.5;
   position: relative;
   overflow: hidden;
-  background:
-    radial-gradient(62% 80% at 0% 0%, color-mix(in srgb, var(--home) 16%, transparent), transparent 60%),
-    radial-gradient(62% 80% at 100% 0%, color-mix(in srgb, var(--away) 16%, transparent), transparent 60%),
-    linear-gradient(180deg, color-mix(in srgb, var(--panel) 88%, #000), var(--panel));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 88%, #000), var(--panel));
   border: 1px solid color-mix(in srgb, var(--accent) 12%, var(--line));
   border-radius: 18px;
   padding: 26px 24px;
   color: var(--txt);
   font-family: var(--font-body), 'Segoe UI', ui-sans-serif, system-ui, sans-serif;
   box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+  /* De verschuiving van de krachtmeting vloeit zacht mee. */
+  transition: --home-share 1.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .sb * { box-sizing: border-box; }
+/* Alle inhoud boven de arena-achtergrond. */
+.sb > *:not(.sb-arena) { position: relative; z-index: 1; }
+
+/* ── Levende clubkleuren-arena ───────────────────────────────────────────────── */
+.sb-arena { position: absolute; inset: 0; z-index: 0; overflow: hidden; border-radius: inherit; pointer-events: none; }
+/* Splitsing: thuiskleur links, uitkleur rechts; de grens schuift met --home-share. */
+.sb-arena-grad {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    102deg,
+    color-mix(in srgb, var(--home) 44%, transparent) 0%,
+    color-mix(in srgb, var(--home) 24%, transparent) calc(var(--home-share) * 100% - 24%),
+    transparent calc(var(--home-share) * 100%),
+    color-mix(in srgb, var(--away) 24%, transparent) calc(var(--home-share) * 100% + 24%),
+    color-mix(in srgb, var(--away) 44%, transparent) 100%
+  );
+  opacity: 0.92;
+}
+/* Twee zacht drijvende kleur-blobs houden alles in beweging. */
+.sb-arena-blob { position: absolute; width: 78%; height: 82%; border-radius: 50%; filter: blur(58px); opacity: 0.5; }
+.sb-arena-blob.home {
+  left: -16%; top: -22%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--home) 72%, transparent), transparent 70%);
+  animation: sb-drift-a 13s ease-in-out infinite;
+}
+.sb-arena-blob.away {
+  right: -16%; bottom: -22%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--away) 72%, transparent), transparent 70%);
+  animation: sb-drift-b 17s ease-in-out infinite;
+}
+@keyframes sb-drift-a {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(14%, 12%) scale(1.14); }
+}
+@keyframes sb-drift-b {
+  0%, 100% { transform: translate(0, 0) scale(1.06); }
+  50% { transform: translate(-14%, -10%) scale(1); }
+}
+/* Trage lichtsweep — subtiele, constante glans. */
+.sb-arena-sheen {
+  position: absolute; inset: -50%;
+  background: linear-gradient(115deg, transparent 42%, color-mix(in srgb, #fff 8%, transparent) 50%, transparent 58%);
+  animation: sb-sheen 7.5s linear infinite;
+}
+@keyframes sb-sheen {
+  0% { transform: translateX(-26%); }
+  100% { transform: translateX(26%); }
+}
+/* De "frontlijn": glanzende, pulserende band op de grens van de krachtmeting. */
+.sb-arena-front {
+  position: absolute; top: 0; bottom: 0; width: 16%;
+  left: calc(var(--home-share) * 100%);
+  transform: translateX(-50%);
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, #fff 24%, transparent), transparent);
+  mix-blend-mode: screen;
+  animation: sb-front 3.4s ease-in-out infinite;
+}
+@keyframes sb-front {
+  0%, 100% { opacity: 0.28; }
+  50% { opacity: 0.62; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sb-arena-blob, .sb-arena-sheen, .sb-arena-front { animation: none; }
+}
 /* Premium hero: grotere logo's, namen in ploegkleur. */
 .sb-side-team .tl { width: 92px; height: 92px; font-size: 92px; }
 @media (min-width: 700px) {
   .sb-side-team .tl { width: 108px; height: 108px; font-size: 108px; }
 }
-.sb-main > .sb-side-team:first-child .sb-name { color: var(--home); }
-.sb-main > .sb-side-team:last-child .sb-name { color: var(--away); }
+.sb-main > .sb-side-team:first-child .sb-name { color: var(--home); text-shadow: 0 0 20px color-mix(in srgb, var(--home) 45%, transparent); }
+.sb-main > .sb-side-team:last-child .sb-name { color: var(--away); text-shadow: 0 0 20px color-mix(in srgb, var(--away) 45%, transparent); }
 
 .sb-status { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
 .sb-badge { font-size: 0.72rem; font-weight: 800; letter-spacing: 0.08em; padding: 3px 10px; border-radius: 999px; }
