@@ -164,6 +164,15 @@ export function Scoreboard({
   const [chatText, setChatText] = useState('')
   const [chatBusy, setChatBusy] = useState(false)
   const [needLogin, setNeedLogin] = useState(false)
+  // Tijdlijn: wie scoorde is standaard verborgen; je onthult het per doelpunt door erop te tikken.
+  const [revealedScorers, setRevealedScorers] = useState<Set<string>>(new Set())
+  const toggleScorer = (id: string) =>
+    setRevealedScorers((s) => {
+      const n = new Set(s)
+      if (n.has(id)) n.delete(id)
+      else n.add(id)
+      return n
+    })
   const chatFeedRef = useRef<HTMLDivElement>(null)
 
   // Eén uitbarsting: deeltjes spatten vanuit (ox,oy) in alle richtingen uiteen en dwarrelen omhoog.
@@ -506,8 +515,26 @@ export function Scoreboard({
               const isGoal = item.kind === 'goal'
               const points = isGoal ? goalPointsFromLabel(item.label) : 0
               const scorer = isGoal ? goalScorerFromLabel(item.label) : null
+              const open = revealedScorers.has(item.id)
               out.push(
-                <li key={item.id} className={`sb-tl sb-tl-${item.kind} ${item.side ? `side-${item.side}` : ''}`}>
+                <li
+                  key={item.id}
+                  className={`sb-tl sb-tl-${item.kind} ${item.side ? `side-${item.side}` : ''} ${isGoal ? 'sb-tl-clickable' : ''} ${open ? 'open' : ''}`}
+                  onClick={isGoal ? () => toggleScorer(item.id) : undefined}
+                  role={isGoal ? 'button' : undefined}
+                  tabIndex={isGoal ? 0 : undefined}
+                  onKeyDown={
+                    isGoal
+                      ? (e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault()
+                            toggleScorer(item.id)
+                          }
+                        }
+                      : undefined
+                  }
+                  title={isGoal ? 'Tik om te zien wie scoorde' : undefined}
+                >
                   <span className="sb-tl-min">{min}&apos;</span>
                   {team ? (
                     <TeamLogo name={team.name} logoUrl={team.logoUrl} logoFit={team.logoFit} side={item.side ?? undefined} size={22} ringColor={team.colors?.primary} />
@@ -519,8 +546,10 @@ export function Scoreboard({
                   ) : (
                     <span className="sb-tl-x" aria-hidden>✖</span>
                   )}
-                  {/* Wie scoorde: enkel zichtbaar voor ingelogde supporters. */}
-                  {isGoal && canChat && scorer && <span className="sb-tl-scorer">{scorer}</span>}
+                  {/* Wie scoorde verschijnt pas als je op het doelpunt tikt (en enkel voor ingelogden). */}
+                  {isGoal && open && (
+                    <span className="sb-tl-scorer">{canChat ? (scorer ?? 'Onbekend') : '🔒 Log in om te zien'}</span>
+                  )}
                 </li>,
               )
             }
