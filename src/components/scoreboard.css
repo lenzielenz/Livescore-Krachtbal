@@ -13,6 +13,10 @@
   --away: #4cc9f0;
   --home-share: 0.5;
   position: relative;
+  /* Eigen stacking context: zo kan de arena-achtergrond áchter de inhoud (z-index -1) zonder
+     dat we de inhoud zelf moeten herpositioneren (anders breekt dat de zwevende emoji's en de
+     fullscreen-vieringen, die position:absolute/fixed nodig hebben). */
+  isolation: isolate;
   overflow: hidden;
   background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 88%, #000), var(--panel));
   border: 1px solid color-mix(in srgb, var(--accent) 12%, var(--line));
@@ -25,14 +29,12 @@
   transition: --home-share 1.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .sb * { box-sizing: border-box; }
-/* Alle inhoud boven de arena-achtergrond. */
-.sb > *:not(.sb-arena) { position: relative; z-index: 1; }
 
 /* ── Levende clubkleuren-arena (subtiel, enkel bovenaan zodat tekst leesbaar blijft) ───── */
 .sb-arena {
   position: absolute;
   inset: 0;
-  z-index: 0;
+  z-index: -1; /* áchter de inhoud, maar binnen .sb (eigen stacking context) */
   overflow: hidden;
   border-radius: inherit;
   pointer-events: none;
