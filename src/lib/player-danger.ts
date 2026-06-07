@@ -1,4 +1,4 @@
-import type { Payload } from 'payload'
+import type { Payload, Where } from 'payload'
 
 import { attackDirForSide, loadMatchThrowData } from './match-engine'
 import type { ThrowType } from './krachtbal-rules'
@@ -50,14 +50,14 @@ function finalize(b: DangerBand): DangerBand {
   return b
 }
 
-export async function buildPlayerDanger(payload: Payload, playerId: number, reeks: string, seizoen?: string | null): Promise<PlayerDanger | null> {
+export async function buildPlayerDanger(payload: Payload, playerId: number, reeks: string, seizoen?: string | null, matchFilter?: Where | null): Promise<PlayerDanger | null> {
   const player = await payload.findByID({ collection: 'players', id: playerId, depth: 0 }).catch(() => null)
   if (!player) return null
 
   const matchRes = await payload
     .find({
       collection: 'matches',
-      where: { and: [{ reeks: { equals: reeks } }, { status: { equals: 'finished' } }, ...seasonClause(seizoen)] },
+      where: { and: [{ reeks: { equals: reeks } }, { status: { equals: 'finished' } }, ...seasonClause(seizoen), ...(matchFilter ? [matchFilter] : [])] },
       sort: 'date',
       depth: 0,
       limit: 500,
@@ -144,7 +144,7 @@ const relId = (v: unknown): number | null =>
 
 // Gevaarzone van een hele ploeg: de doelpogingen van die ploeg over al haar wedstrijden,
 // gespiegeld naar één canonieke aanvalsrichting. Voor de tegenstander-voorbereiding.
-export async function buildTeamDanger(payload: Payload, teamId: number, reeks: string, seizoen?: string | null): Promise<TeamDanger> {
+export async function buildTeamDanger(payload: Payload, teamId: number, reeks: string, seizoen?: string | null, matchFilter?: Where | null): Promise<TeamDanger> {
   const matchRes = await payload
     .find({
       collection: 'matches',
@@ -154,6 +154,7 @@ export async function buildTeamDanger(payload: Payload, teamId: number, reeks: s
           { status: { equals: 'finished' } },
           { or: [{ homeTeam: { equals: teamId } }, { awayTeam: { equals: teamId } }] },
           ...seasonClause(seizoen),
+          ...(matchFilter ? [matchFilter] : []),
         ],
       },
       sort: 'date',

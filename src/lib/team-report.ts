@@ -1,4 +1,4 @@
-import type { Payload } from 'payload'
+import type { Payload, Where } from 'payload'
 
 import { buildMatchStats } from './match-engine'
 import { seasonClause } from './seasons'
@@ -63,7 +63,7 @@ export interface TeamReport {
 const rel = (v: unknown): number | null =>
   v && typeof v === 'object' ? ((v as { id?: number }).id ?? null) : typeof v === 'number' ? v : null
 
-export async function buildTeamReport(payload: Payload, teamId: number, seizoen?: string | null): Promise<TeamReport | null> {
+export async function buildTeamReport(payload: Payload, teamId: number, seizoen?: string | null, matchFilter?: Where | null): Promise<TeamReport | null> {
   const team = await payload.findByID({ collection: 'teams', id: teamId, depth: 0 }).catch(() => null)
   if (!team) return null
   const reeks = String((team as { reeks?: unknown }).reeks ?? '')
@@ -84,6 +84,7 @@ export async function buildTeamReport(payload: Payload, teamId: number, seizoen?
           { status: { equals: 'finished' } },
           { or: [{ homeTeam: { equals: teamId } }, { awayTeam: { equals: teamId } }] },
           ...seasonClause(seizoen),
+          ...(matchFilter ? [matchFilter] : []),
         ],
       },
       sort: 'date',

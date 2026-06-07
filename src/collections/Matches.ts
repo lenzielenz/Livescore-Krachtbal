@@ -389,6 +389,20 @@ export const Matches: CollectionConfig = {
       },
     },
     {
+      // Eigenaar van een analyse-opname: de gebruiker die deze (analyseOnly) wedstrijd opnam.
+      // Analyse-data is privé per persoon — je ziet enkel je eigen opnames. Federatie/admin ziet
+      // alles en kan zo achteraf alle data samenbrengen.
+      name: 'analyseOwner',
+      label: 'Analyse-eigenaar',
+      type: 'relationship',
+      relationTo: 'users',
+      admin: {
+        position: 'sidebar',
+        readOnly: true,
+        description: 'Wie deze analysewedstrijd opnam. Bepaalt wie ze ziet (privé per persoon).',
+      },
+    },
+    {
       // Tijdstip waarop de wedstrijd afgelopen is. Wordt automatisch gezet zodra de status op
       // 'finished' gaat en bepaalt het 1-uur-navenster waarin supporters nog kunnen reageren.
       name: 'finishedAt',

@@ -2,6 +2,7 @@ import Link from 'next/link'
 
 import { SiteHeader } from '@/components/SiteHeader'
 import { canAnalyse } from '@/lib/access'
+import { analyseMatchWhere } from '@/lib/analyse-access'
 import { getSelectedSeason } from '@/lib/analyse-season'
 import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
@@ -52,7 +53,7 @@ export default async function SeizoenAnalysePage({ searchParams }: { searchParam
   const reeks = typeof reeksParam === 'string' && COMPETITIE_REEKSEN.some((o) => o.value === reeksParam) ? reeksParam : COMPETITIE_REEKSEN[0].value
 
   const payload = await getPayloadClient()
-  const players = await buildSeasonStats(payload, reeks, await getSelectedSeason())
+  const players = await buildSeasonStats(payload, reeks, await getSelectedSeason(), analyseMatchWhere(me))
 
   return (
     <>

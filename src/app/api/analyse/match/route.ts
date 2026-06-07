@@ -1,10 +1,12 @@
-import { hasRole } from '@/lib/access'
+import { canAnalyse, isFederationLevel, userClubId } from '@/lib/access'
 import { authUser } from '@/lib/api-auth'
 import { getPayloadClient } from '@/lib/payload-client'
 import type { Match } from '@/payload-types'
 
-// Maakt een "enkel voor analyse"-wedstrijd aan (niet live/publiek zichtbaar). Admin-only.
-// Wordt vanuit de analyse-hub gebruikt om manueel een wedstrijd op te nemen.
+// Maakt een "enkel voor analyse"-wedstrijd aan (niet live/publiek zichtbaar). Toegankelijk voor
+// iedereen met analyse-toegang (én een club aan z'n account); federatie/admin mag altijd. De
+// opname wordt op naam van de gebruiker gezet (analyseOwner) zodat analyse-data privé per persoon
+// blijft. Wordt vanuit de analyse-hub gebruikt om manueel een wedstrijd op te nemen.
 export async function POST(req: Request) {
   let body: Record<string, unknown>
   try {
@@ -17,7 +19,11 @@ export async function POST(req: Request) {
     const payload = await getPayloadClient()
     const user = await authUser(payload, req)
     if (!user) return Response.json({ error: 'Niet ingelogd.' }, { status: 401 })
-    if (!hasRole(user, 'admin')) return Response.json({ error: 'Enkel een admin kan dit.' }, { status: 403 })
+    if (!canAnalyse(user)) return Response.json({ error: 'Geen analyse-toegang.' }, { status: 403 })
+    // Een gewone analist neemt op vóór z'n eigen club: vereist dus een club aan het account.
+    if (!isFederationLevel(user) && userClubId(user) == null) {
+      return Response.json({ error: 'Koppel eerst een club aan je account om analyse-wedstrijden op te nemen.' }, { status: 403 })
+    }
 
     const homeTeam = Number(body.homeTeam)
     const awayTeam = Number(body.awayTeam)
@@ -42,6 +48,8 @@ export async function POST(req: Request) {
         status: 'scheduled',
         goalAreaDepth: 10,
         analyseOnly: true,
+        // Privé per persoon: deze opname hoort bij de gebruiker die ze aanmaakt.
+        analyseOwner: Number(user.id),
       },
     })
 

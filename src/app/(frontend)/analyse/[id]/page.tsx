@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import { SiteHeader } from '@/components/SiteHeader'
 import { TeamLogo } from '@/components/TeamLogo'
 import { canAnalyse } from '@/lib/access'
+import { canViewAnalyseMatch } from '@/lib/analyse-access'
 import { getAuthUser } from '@/lib/auth-user'
 import { buildMatchSheet, buildMatchStats, buildMatchState } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
@@ -35,6 +36,24 @@ export default async function AnalyseDetailPage({ params }: { params: Promise<{ 
   if (!Number.isFinite(matchId)) notFound()
 
   const payload = await getPayloadClient()
+  // Privé per persoon: een analyse-opname van iemand anders mag je niet bekijken (federatie wel).
+  const matchDoc = await payload.findByID({ collection: 'matches', id: matchId, depth: 0 }).catch(() => null)
+  if (!matchDoc) notFound()
+  if (!canViewAnalyseMatch(me, matchDoc as { analyseOnly?: boolean | null; analyseOwner?: unknown })) {
+    return (
+      <>
+        <SiteHeader active="analyse" />
+        <div className="site">
+          <h1 className="page-title"><span className="brand">Analyse</span></h1>
+          <p className="empty">
+            Deze analyse hoort bij een andere gebruiker. Je ziet enkel je eigen analyse-opnames.{' '}
+            <Link href="/analyse" style={{ color: 'var(--accent)' }}>← Naar mijn analyses</Link>
+          </p>
+        </div>
+      </>
+    )
+  }
+
   let state, stats
   try {
     ;[state, stats] = await Promise.all([buildMatchState(payload, matchId), buildMatchStats(payload, matchId)])
@@ -48,7 +67,6 @@ export default async function AnalyseDetailPage({ params }: { params: Promise<{ 
     .sort((a, b) => a.half - b.half || a.gameClock - b.gameClock)
     .map((g) => ({ side: g.side, points: g.points, half: g.half }))
 
-  const matchDoc = await payload.findByID({ collection: 'matches', id: matchId, depth: 0 }).catch(() => null)
   const reeks = reeksNaam(matchDoc?.reeks)
   const datum = matchDoc?.date
     ? new Date(matchDoc.date as string).toLocaleDateString('nl-BE', { dateStyle: 'long' })

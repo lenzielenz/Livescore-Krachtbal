@@ -406,6 +406,10 @@ export interface Match {
     | boolean
     | null;
   /**
+   * Wie deze analysewedstrijd opnam. Bepaalt wie ze ziet (privé per persoon).
+   */
+  analyseOwner?: (number | null) | User;
+  /**
    * Automatisch gezet bij het beëindigen. Bepaalt het 1u-navenster van de live tribune.
    */
   finishedAt?: string | null;
@@ -1191,6 +1195,7 @@ export interface MatchesSelect<T extends boolean = true> {
   simpleScore?: T;
   liveReactions?: T;
   liveShoutouts?: T;
+  analyseOwner?: T;
   finishedAt?: T;
   updatedAt?: T;
   createdAt?: T;

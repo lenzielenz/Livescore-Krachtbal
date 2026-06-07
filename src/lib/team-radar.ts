@@ -1,4 +1,4 @@
-import type { Payload } from 'payload'
+import type { Payload, Where } from 'payload'
 
 import { loadMatchThrowData } from './match-engine'
 import { seasonClause } from './seasons'
@@ -39,7 +39,7 @@ export interface TeamMatchResult {
 const rel = (v: unknown): number | null =>
   v && typeof v === 'object' ? ((v as { id?: number }).id ?? null) : typeof v === 'number' ? v : null
 
-export async function buildTeamRadar(payload: Payload, reeks: string, seizoen?: string | null): Promise<{ teams: TeamRadar[]; results: TeamMatchResult[] }> {
+export async function buildTeamRadar(payload: Payload, reeks: string, seizoen?: string | null, matchFilter?: Where | null): Promise<{ teams: TeamRadar[]; results: TeamMatchResult[] }> {
   const teamsRes = await payload
     .find({ collection: 'teams', where: { reeks: { equals: reeks } }, depth: 0, limit: 200 })
     .catch(() => ({ docs: [] as { id: number; name: string }[] }))
@@ -62,7 +62,7 @@ export async function buildTeamRadar(payload: Payload, reeks: string, seizoen?: 
   const matchRes = await payload
     .find({
       collection: 'matches',
-      where: { and: [{ reeks: { equals: reeks } }, { status: { equals: 'finished' } }, ...seasonClause(seizoen)] },
+      where: { and: [{ reeks: { equals: reeks } }, { status: { equals: 'finished' } }, ...seasonClause(seizoen), ...(matchFilter ? [matchFilter] : [])] },
       sort: 'date',
       depth: 0,
       limit: 500,

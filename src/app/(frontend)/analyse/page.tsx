@@ -2,7 +2,8 @@ import Link from 'next/link'
 
 import { SiteHeader } from '@/components/SiteHeader'
 import { TeamLogo } from '@/components/TeamLogo'
-import { canAnalyse, hasRole, isFederationLevel } from '@/lib/access'
+import { canAnalyse, hasRole, isFederationLevel, userClubId } from '@/lib/access'
+import { analyseMatchWhere } from '@/lib/analyse-access'
 import { getSelectedSeason } from '@/lib/analyse-season'
 import { getAuthUser } from '@/lib/auth-user'
 import { buildScoreboards } from '@/lib/match-engine'
@@ -77,18 +78,20 @@ export default async function AnalysePage({ searchParams }: { searchParams: Prom
     )
   }
 
-  // Enkel een admin krijgt de volledige scoreopnemer (veldschema) die de analyse-data voedt;
-  // daarom tonen we de "manueel opnemen"-sectie enkel aan admins.
-  const isAdmin = hasRole(me, 'admin')
+  // Analyse-data is privé per persoon: een gewone analist ziet/recordeert enkel z'n eigen opnames;
+  // federatie/admin ziet alles en kan zo achteraf alles samenbrengen. Opnemen vereist een club.
+  const isFed = isFederationLevel(me)
+  const canRecord = isFed || (canAnalyse(me) && userClubId(me) != null)
+  const vis = analyseMatchWhere(me) // null = federatie (geen beperking)
 
   const payload = await getPayloadClient()
-  // De analyse-hub toont enkel de wedstrijden die jíj voor analyse hebt ingestoken
-  // (analyseOnly) — geen live/competitiewedstrijden. Afgelopen analysewedstrijden moeten
-  // bovendien échte worpdata hebben.
+  // De analyse-hub toont enkel de wedstrijden die voor analyse zijn ingestoken (analyseOnly) — geen
+  // live/competitiewedstrijden — en voor een gewone analist enkel z'n eigen opnames. Afgelopen
+  // analysewedstrijden moeten bovendien échte worpdata hebben.
   const matchRes = await payload
     .find({
       collection: 'matches',
-      where: { and: [{ status: { equals: 'finished' } }, { analyseOnly: { equals: true } }] },
+      where: { and: [{ status: { equals: 'finished' } }, { analyseOnly: { equals: true } }, ...(vis ? [vis] : [])] },
       sort: '-date',
       depth: 0,
       limit: 500,
@@ -114,12 +117,12 @@ export default async function AnalysePage({ searchParams }: { searchParams: Prom
   const docs = finishedDocs.filter((m) => withData.has((m as { id: number }).id))
 
   // Te-recorderen wedstrijden (gepland of live) — om manueel aan te tekenen met de volledige
-  // scoreopnemer. Enkel relevant voor admins.
-  const openRes = isAdmin
+  // scoreopnemer. Enkel relevant voor wie mag opnemen, en per persoon afgeschermd.
+  const openRes = canRecord
     ? await payload
         .find({
           collection: 'matches',
-          where: { and: [{ status: { in: ['scheduled', 'live'] } }, { analyseOnly: { equals: true } }] },
+          where: { and: [{ status: { in: ['scheduled', 'live'] } }, { analyseOnly: { equals: true } }, ...(vis ? [vis] : [])] },
           sort: 'date',
           depth: 0,
           limit: 200,
@@ -153,8 +156,8 @@ export default async function AnalysePage({ searchParams }: { searchParams: Prom
 
   // Samenvattende cijfers (goedkoop afgeleid uit de reeds geladen scoreboards).
   const totalPunten = rows.reduce((s, r) => s + r.score.home + r.score.away, 0)
-  // Ploegen voor de "nieuwe analysewedstrijd"-creator (enkel admin heeft die nodig).
-  const teamsRes = isAdmin
+  // Ploegen voor de "nieuwe analysewedstrijd"-creator (enkel wie mag opnemen heeft die nodig).
+  const teamsRes = canRecord
     ? await payload
         .find({ collection: 'teams', where: { reeks: { in: COMPETITIE_REEKSEN.map((o) => o.value) } }, sort: 'name', depth: 0, limit: 500 })
         .catch(() => ({ docs: [] as Record<string, unknown>[] }))
@@ -171,7 +174,7 @@ export default async function AnalysePage({ searchParams }: { searchParams: Prom
     typeof reeksParam === 'string' && COMPETITIE_REEKSEN.some((o) => o.value === reeksParam)
       ? reeksParam
       : COMPETITIE_REEKSEN[0].value
-  const season = await buildSeasonStats(payload, reeks, await getSelectedSeason()).catch(() => [] as SeasonPlayer[])
+  const season = await buildSeasonStats(payload, reeks, await getSelectedSeason(), vis).catch(() => [] as SeasonPlayer[])
   const top = (sel: (a: SeasonPlayer, b: SeasonPlayer) => number, fmt: (p: SeasonPlayer) => string, filter?: (p: SeasonPlayer) => boolean) =>
     [...(filter ? season.filter(filter) : season)]
       .sort(sel)
@@ -243,10 +246,10 @@ export default async function AnalysePage({ searchParams }: { searchParams: Prom
         <div className="rep-cards an-summary">
           <div className="rep-card"><span className="rep-num">{rows.length}</span><span className="rep-lbl">Opgenomen</span></div>
           <div className="rep-card"><span className="rep-num">{totalPunten}</span><span className="rep-lbl">Punten gescoord</span></div>
-          {isAdmin && <div className="rep-card"><span className="rep-num">{openRows.length}</span><span className="rep-lbl">Voorbereid</span></div>}
+          {canRecord && <div className="rep-card"><span className="rep-num">{openRows.length}</span><span className="rep-lbl">Voorbereid</span></div>}
         </div>
 
-        {isAdmin && (
+        {canRecord && (
           <section className="an-record">
             <h2 className="an-sub">🎬 Wedstrijd manueel opnemen</h2>
             <p className="an-intro">
@@ -313,7 +316,7 @@ export default async function AnalysePage({ searchParams }: { searchParams: Prom
                 <span className="an-card-date">
                   {r.date ? new Date(r.date).toLocaleDateString('nl-BE', { day: '2-digit', month: 'short', year: 'numeric' }) : ''}
                 </span>
-                {isAdmin && <DeleteMatchButton matchId={r.id} label={`${r.home.name} – ${r.away.name}`} />}
+                {canRecord && <DeleteMatchButton matchId={r.id} label={`${r.home.name} – ${r.away.name}`} />}
               </Link>
             ))}
           </div>
