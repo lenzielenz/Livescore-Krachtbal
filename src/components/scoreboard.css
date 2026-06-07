@@ -545,31 +545,31 @@
   transform: translateY(40vh) scale(0.5);
   animation: ccb-rise 2.8s ease-out forwards;
 }
-.ccb-plume.p0 { left: -8vw;  background: radial-gradient(circle, color-mix(in srgb, var(--c1) 95%, transparent), color-mix(in srgb, var(--c1) 40%, transparent) 45%, transparent 75%); animation-delay: 0s; }
-.ccb-plume.p1 { left: 10vw;  background: radial-gradient(circle, color-mix(in srgb, var(--c2) 95%, transparent), color-mix(in srgb, var(--c2) 40%, transparent) 45%, transparent 75%); animation-delay: 0.12s; }
-.ccb-plume.p2 { left: 28vw;  background: radial-gradient(circle, color-mix(in srgb, var(--c1) 92%, transparent), color-mix(in srgb, var(--c1) 38%, transparent) 45%, transparent 75%); animation-delay: 0.26s; height: 88vh; }
-.ccb-plume.p3 { left: 46vw;  background: radial-gradient(circle, color-mix(in srgb, var(--c2) 92%, transparent), color-mix(in srgb, var(--c2) 38%, transparent) 45%, transparent 75%); animation-delay: 0.06s; }
-.ccb-plume.p4 { left: 62vw;  background: radial-gradient(circle, color-mix(in srgb, var(--c1) 94%, transparent), color-mix(in srgb, var(--c1) 40%, transparent) 45%, transparent 75%); animation-delay: 0.2s; height: 84vh; }
-.ccb-plume.p5 { left: 80vw;  background: radial-gradient(circle, color-mix(in srgb, var(--c2) 94%, transparent), color-mix(in srgb, var(--c2) 40%, transparent) 45%, transparent 75%); animation-delay: 0.34s; }
-.ccb-plume.p6 { left: 36vw;  background: radial-gradient(circle, color-mix(in srgb, var(--c1) 80%, transparent), transparent 70%); animation-delay: 0.45s; width: 52vw; }
+.ccb-plume.p0 { left: -8vw;  background: radial-gradient(circle, color-mix(in srgb, var(--c1) 88%, transparent), color-mix(in srgb, var(--c1) 34%, transparent) 45%, transparent 75%); animation-delay: 0s; }
+.ccb-plume.p1 { left: 10vw;  background: radial-gradient(circle, color-mix(in srgb, var(--c2) 88%, transparent), color-mix(in srgb, var(--c2) 34%, transparent) 45%, transparent 75%); animation-delay: 0.12s; }
+.ccb-plume.p2 { left: 28vw;  background: radial-gradient(circle, color-mix(in srgb, var(--c1) 88%, transparent), color-mix(in srgb, var(--c1) 34%, transparent) 45%, transparent 75%); animation-delay: 0.26s; height: 74vh; }
+.ccb-plume.p3 { left: 46vw;  background: radial-gradient(circle, color-mix(in srgb, var(--c2) 88%, transparent), color-mix(in srgb, var(--c2) 34%, transparent) 45%, transparent 75%); animation-delay: 0.06s; }
+.ccb-plume.p4 { left: 62vw;  background: radial-gradient(circle, color-mix(in srgb, var(--c1) 90%, transparent), color-mix(in srgb, var(--c1) 36%, transparent) 45%, transparent 75%); animation-delay: 0.2s; height: 70vh; }
+.ccb-plume.p5 { left: 80vw;  background: radial-gradient(circle, color-mix(in srgb, var(--c2) 90%, transparent), color-mix(in srgb, var(--c2) 36%, transparent) 45%, transparent 75%); animation-delay: 0.34s; }
+.ccb-plume.p6 { left: 36vw;  background: radial-gradient(circle, color-mix(in srgb, var(--c1) 72%, transparent), transparent 70%); animation-delay: 0.45s; width: 52vw; }
 @keyframes ccb-rise {
   0%   { opacity: 0; transform: translateY(50vh) scale(0.45); }
-  20%  { opacity: 0.95; }
-  70%  { opacity: 0.85; }
+  20%  { opacity: 0.72; }
+  70%  { opacity: 0.58; }
   100% { opacity: 0; transform: translateY(-40vh) scale(1.6); }
 }
 /* Vuurwerk: heldere deeltjes spatten uit het midden in beide clubkleuren + wit. */
 .ccb-fireworks { position: absolute; left: 50%; top: 40%; width: 0; height: 0; }
 .ccb-spark {
   position: absolute;
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
   background: currentColor;
   color: var(--c1);
-  box-shadow: 0 0 20px 6px currentColor;
+  box-shadow: 0 0 28px 9px currentColor, 0 0 6px 2px rgba(255, 255, 255, 0.9) inset;
   mix-blend-mode: screen;
-  animation: ccb-spark 1.8s cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
+  animation: ccb-spark 2s cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
 }
 .ccb-spark.s0  { --dx:  34vw; --dy: -24vh; color: var(--c1); animation-delay: 0.1s; }
 .ccb-spark.s1  { --dx: -32vw; --dy: -20vh; color: var(--c2); animation-delay: 0.18s; }
@@ -584,8 +584,9 @@
 .ccb-spark.s10 { --dx:   2vw; --dy: -46vh; color: var(--c1); animation-delay: 0.6s; }
 @keyframes ccb-spark {
   0%   { transform: translate(0, 0) scale(0); opacity: 0; }
-  16%  { opacity: 1; transform: translate(calc(var(--dx) * 0.35), calc(var(--dy) * 0.35)) scale(1.2); }
-  100% { transform: translate(var(--dx), calc(var(--dy) + 24vh)) scale(0.2); opacity: 0; }
+  14%  { opacity: 1; transform: translate(calc(var(--dx) * 0.35), calc(var(--dy) * 0.35)) scale(1.35); }
+  70%  { opacity: 1; }
+  100% { transform: translate(var(--dx), calc(var(--dy) + 26vh)) scale(0.25); opacity: 0; }
 }
 .ccb-banner {
   position: absolute;

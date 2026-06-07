@@ -28,7 +28,7 @@ export function ClubColorBlast({
           <span key={i} className={`ccb-spark s${i % 11}`} />
         ))}
       </div>
-      {teamName && <div className="ccb-banner">🎆 {teamName}</div>}
+      {teamName && <div className="ccb-banner">{teamName}</div>}
     </div>
   )
 }
