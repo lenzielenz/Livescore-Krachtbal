@@ -120,7 +120,20 @@ export function MatchStats({
           {view === 'video' ? (
             // De "video": speelt de hele wedstrijd chronologisch af (filters niet van toepassing).
             // In een error-boundary zodat een hapering hier niet de hele analysepagina platlegt.
-            <ErrorCatch fallback={<p className="empty">De video-replay kon niet laden. Probeer de andere weergaven (Punten/Flow/Heatmap).</p>}>
+            <ErrorCatch
+              label="De video-replay"
+              fallback={(err) => (
+                <p className="empty">
+                  De video-replay kon niet laden. Probeer de andere weergaven (Punten/Flow/Heatmap).
+                  {err.message && (
+                    <>
+                      <br />
+                      <small style={{ opacity: 0.7 }}>{err.message}</small>
+                    </>
+                  )}
+                </p>
+              )}
+            >
               <FlowReplay shots={shots} teams={teams} goalAreaDepth={goalAreaDepth} />
             </ErrorCatch>
           ) : (
