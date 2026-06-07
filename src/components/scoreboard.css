@@ -325,19 +325,26 @@
 .sb-float {
   position: absolute;
   bottom: 56px;
-  left: calc(50% + (var(--rnd, 0) * 1px));
   left: 50%;
-  font-size: 1.6rem;
-  animation: sb-rise 2.4s ease-out forwards;
+  font-size: 1.7rem;
+  will-change: transform, opacity;
+  animation: sb-rise var(--dur, 2.4s) cubic-bezier(0.3, 0.7, 0.4, 1) forwards;
 }
-.sb-float:nth-child(3n) { margin-left: -60px; }
-.sb-float:nth-child(3n + 1) { margin-left: 40px; }
-.sb-float:nth-child(4n) { margin-left: 90px; }
-.sb-float:nth-child(5n) { margin-left: -100px; }
+/* Elke emoji zweeft met eigen drift (--dx), rotatie (--rot) en eindschaal (--sc) omhoog,
+   zodat één tik een levendige, gevarieerde zwerm geeft. */
 @keyframes sb-rise {
-  0% { transform: translateY(0) scale(0.6); opacity: 0; }
-  15% { opacity: 1; }
-  100% { transform: translateY(-220px) scale(1.2); opacity: 0; }
+  0% { transform: translate(-50%, 0) scale(0.4) rotate(0deg); opacity: 0; }
+  12% { opacity: 1; }
+  60% { opacity: 1; }
+  100% {
+    transform: translate(calc(-50% + var(--dx, 0px)), -250px) scale(var(--sc, 1.2)) rotate(var(--rot, 0deg));
+    opacity: 0;
+  }
+}
+/* De raket: groter, met een gouden gloed — duidelijk specialer dan de gewone emoji's. */
+.sb-float.rocket {
+  font-size: 2.3rem;
+  filter: drop-shadow(0 0 12px color-mix(in srgb, #ffd166 75%, transparent));
 }
 @media (prefers-reduced-motion: reduce) {
   .sb-float { animation-duration: 0.01s; opacity: 0; }
