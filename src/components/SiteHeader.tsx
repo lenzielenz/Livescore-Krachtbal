@@ -89,22 +89,28 @@ export function SiteHeader({ active = null }: { active?: NavSection }) {
                 <div className="sh-more-backdrop" onClick={() => setOpen(false)} />
                 <div className="sh-more-menu">
                   <div className="sh-more-group">
-                    {canAnalyse && (
-                      <Link href="/analyse" className="sh-more-item" onClick={() => setOpen(false)}>
-                        📈 Analyse
-                      </Link>
-                    )}
-                    {canTraining && (
-                      <Link href="/beheer/training" className="sh-more-item" onClick={() => setOpen(false)}>
-                        🏋️ Training
-                      </Link>
-                    )}
                     {GENERAL.map((l) => (
                       <Link key={l.href} href={l.href} className="sh-more-item" onClick={() => setOpen(false)}>
                         {l.label}
                       </Link>
                     ))}
                   </div>
+                  {/* Analyse en training staan apart als eigen "Coach"-luik. */}
+                  {(canAnalyse || canTraining) && (
+                    <div className="sh-more-group">
+                      <div className="sh-more-grouphead">Coach</div>
+                      {canAnalyse && (
+                        <Link href="/analyse" className="sh-more-item" onClick={() => setOpen(false)}>
+                          📈 Analyse
+                        </Link>
+                      )}
+                      {canTraining && (
+                        <Link href="/beheer/training" className="sh-more-item" onClick={() => setOpen(false)}>
+                          🏋️ Training
+                        </Link>
+                      )}
+                    </div>
+                  )}
                   <div className="sh-more-group">
                     <div className="sh-more-grouphead">Aan de slag</div>
                     {PROFILES.map((p) => (
