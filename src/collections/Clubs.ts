@@ -146,6 +146,19 @@ export const Clubs: CollectionConfig = {
       fields: [
         { name: 'accommodatie', label: 'Terrein / accommodatie', type: 'textarea', admin: { description: 'Naam stadion, adres, type terrein (bv. kunstgras).' } },
         {
+          name: 'plaats',
+          label: 'Gemeente / plaats (voor het weer)',
+          type: 'text',
+          admin: { description: 'Bv. "Brugge" of "Snellegem". Wordt gebruikt voor de buienradar van de thuiswedstrijden.', placeholder: 'Brugge' },
+        },
+        {
+          type: 'row',
+          fields: [
+            { name: 'lat', label: 'Breedtegraad (optioneel)', type: 'number', admin: { description: 'Exacte locatie van het terrein (optioneel, nauwkeuriger dan de gemeente).' } },
+            { name: 'lng', label: 'Lengtegraad (optioneel)', type: 'number' },
+          ],
+        },
+        {
           type: 'row',
           fields: [
             { name: 'telefoon', label: 'Telefoon', type: 'text' },

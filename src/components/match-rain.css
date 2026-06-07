@@ -1,0 +1,63 @@
+/* Mini-buienradar per wedstrijd — past bij de match-info-panelen. */
+.mr {
+  margin: 10px 0 0;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+}
+.mr.wet { border-color: color-mix(in srgb, #4cc9f0 45%, var(--line)); }
+.mr.maybe { border-color: color-mix(in srgb, #ffd166 40%, var(--line)); }
+.mr.dry { border-color: color-mix(in srgb, var(--accent) 35%, var(--line)); }
+
+.mr-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.mr-icon { font-size: 1.6rem; line-height: 1; flex: 0 0 auto; }
+.mr-headtext { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.mr-title { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--dim); font-weight: 700; }
+.mr-verdict { font-size: 0.95rem; font-weight: 800; color: var(--txt); }
+.mr-sum {
+  margin-left: auto;
+  flex: 0 0 auto;
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: var(--txt);
+  font-variant-numeric: tabular-nums;
+}
+
+.mr-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  margin-top: 12px;
+}
+.mr-bar {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+}
+.mr-bar-track {
+  width: 100%;
+  max-width: 46px;
+  height: 46px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  border-radius: 6px;
+  background: color-mix(in srgb, #4cc9f0 10%, var(--bg, #0a1f14));
+  overflow: hidden;
+}
+.mr-bar-fill {
+  width: 100%;
+  min-height: 2px;
+  border-radius: 6px 6px 0 0;
+  background: linear-gradient(#4cc9f0, #2a7fb8);
+}
+.mr-bar-prob { font-size: 0.72rem; font-weight: 700; color: var(--dim); font-variant-numeric: tabular-nums; }
+.mr-bar-lbl { font-size: 0.7rem; color: var(--dim); font-variant-numeric: tabular-nums; }

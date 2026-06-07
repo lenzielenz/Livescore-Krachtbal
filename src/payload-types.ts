@@ -185,6 +185,15 @@ export interface Club {
    * Naam stadion, adres, type terrein (bv. kunstgras).
    */
   accommodatie?: string | null;
+  /**
+   * Bv. "Brugge" of "Snellegem". Wordt gebruikt voor de buienradar van de thuiswedstrijden.
+   */
+  plaats?: string | null;
+  /**
+   * Exacte locatie van het terrein (optioneel, nauwkeuriger dan de gemeente).
+   */
+  lat?: number | null;
+  lng?: number | null;
   telefoon?: string | null;
   website?: string | null;
   secretarisNaam?: string | null;
@@ -1143,6 +1152,9 @@ export interface ClubsSelect<T extends boolean = true> {
   colorPrimary?: T;
   colorSecondary?: T;
   accommodatie?: T;
+  plaats?: T;
+  lat?: T;
+  lng?: T;
   telefoon?: T;
   website?: T;
   secretarisNaam?: T;
