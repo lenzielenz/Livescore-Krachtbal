@@ -69,8 +69,9 @@ export function SiteHeader({ active = null }: { active?: NavSection }) {
           Krachtbal <span className="brand">Live</span>
         </Link>
 
+        <WeatherWidget variant="compact" />
+
         <nav className="sh-nav">
-          <WeatherWidget variant="compact" />
           {PRIMARY.map((l) => (
             <Link key={l.href} href={l.href} className={`sh-link ${active === l.key ? 'on' : ''}`}>
               {l.label}

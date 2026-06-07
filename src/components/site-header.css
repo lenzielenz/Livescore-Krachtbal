@@ -20,7 +20,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  flex-wrap: wrap;
+  gap: 8px 12px;
 }
 .sh-brand {
   font-size: 1.18rem;
@@ -28,11 +29,15 @@
   letter-spacing: 0.01em;
   white-space: nowrap;
 }
+/* Weerchip leunt naar rechts, naast/voor de navigatie. */
+.sh-inner .wx-mini {
+  margin-left: auto;
+}
 .sh-nav {
   display: flex;
   align-items: center;
   gap: 4px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   justify-content: flex-end;
 }
 .sh-link {
@@ -146,6 +151,11 @@
 @media (max-width: 560px) {
   .sh-brand {
     font-size: 1rem;
+  }
+  /* Op gsm: rij 1 = titel (links) + weer (rechts), rij 2 = volledige navigatie rechts.
+     Zo loopt de navigatie nooit middenin af en blijft de balk in balans. */
+  .sh-nav {
+    flex-basis: 100%;
   }
   .sh-link {
     padding: 6px 8px;
