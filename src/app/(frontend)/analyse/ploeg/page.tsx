@@ -12,6 +12,7 @@ import { buildTeamReport } from '@/lib/team-report'
 import { AnalyseNav } from '../AnalyseNav'
 import { GevaarMap } from '../gevaar/GevaarMap'
 import { PloegPicker } from './PloegPicker'
+import { SpeelstijlPanel } from './SpeelstijlPanel'
 import '../../rangschikking/rangschikking.css'
 import '../analyse.css'
 
@@ -90,6 +91,10 @@ export default async function PloegRapportPage({ searchParams }: { searchParams:
           <PloegPicker reeks={reeks} reeksOptions={[...COMPETITIE_REEKSEN]} teamOptions={teamOptions} team={teamId != null ? String(teamId) : ''} />
         </div>
 
+        {report != null && (
+          <SpeelstijlPanel teamId={report.teamId} teamName={report.teamName} initial={report.speelstijl} />
+        )}
+
         {report == null ? (
           <p className="empty">Kies een ploeg om het rapport te bekijken.</p>
         ) : report.matchesAnalyzed === 0 ? (
@@ -100,6 +105,17 @@ export default async function PloegRapportPage({ searchParams }: { searchParams:
               <a className="sk-demo-cta" href={`/api/analyse/team/${report.teamId}/pdf`}>📄 Download PDF</a>
               <a className="sk-demo-cta" href={`/api/analyse/team/${report.teamId}/csv`}>📑 Download CSV</a>
             </div>
+
+            {report.strategy.length > 0 && (
+              <section className="rep-advies rep-strategie">
+                <h2 className="an-sub">🎯 Strategie <span className="an-chart-hint">jullie speelstijl naast de data</span></h2>
+                <ul className="rep-advies-list">
+                  {report.strategy.map((s, i) => (
+                    <li key={i}>{s}</li>
+                  ))}
+                </ul>
+              </section>
+            )}
 
             {report.insights.length > 0 && (
               <section className="rep-advies">

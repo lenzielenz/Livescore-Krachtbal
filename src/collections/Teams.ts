@@ -72,6 +72,17 @@ export const Teams: CollectionConfig = {
       },
     },
     {
+      // Tactisch profiel "hoe spelen wij als ploeg": door de coach ingegeven via het
+      // ploegrapport (/analyse/ploeg). Wordt naast de gemeten worpdata gelegd om gerichte
+      // strategie-aanbevelingen te maken. Eén JSON-veld (shape: src/lib/speelstijl.ts).
+      name: 'speelstijl',
+      label: 'Speelstijl (tactisch profiel)',
+      type: 'json',
+      admin: {
+        description: 'Ingegeven via het ploegrapport. Voedt de strategie-aanbevelingen.',
+      },
+    },
+    {
       // Onthouden "vaste opstelling": de favoriete spelers van deze ploeg (komma-gescheiden
       // speler-ids). Wordt bij een volgende wedstrijd automatisch voorgesteld; de coach kan
       // nog steeds aanpassen. Beheerd via de opstelling-pagina.

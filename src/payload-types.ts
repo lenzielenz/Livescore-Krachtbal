@@ -260,6 +260,18 @@ export interface Team {
    */
   name: string;
   /**
+   * Ingegeven via het ploegrapport. Voedt de strategie-aanbevelingen.
+   */
+  speelstijl?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  /**
    * Komma-gescheiden speler-ids. Beheerd via /opstelling.
    */
   vasteOpstellingIds?: string | null;
@@ -1152,6 +1164,7 @@ export interface TeamsSelect<T extends boolean = true> {
   reeks?: T;
   thuisUur?: T;
   name?: T;
+  speelstijl?: T;
   vasteOpstellingIds?: T;
   logo?: T;
   updatedAt?: T;
