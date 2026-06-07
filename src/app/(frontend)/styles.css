@@ -1053,6 +1053,108 @@ h3,
   gap: 8px 18px;
 }
 
+/* "Bekijk op je tv"-kaart — opvallend, supporter-vriendelijk. */
+.cast-tv {
+  margin-top: 18px;
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--line));
+  border-radius: 16px;
+  background: var(--panel-grad, var(--panel));
+  box-shadow: var(--card-shadow);
+  padding: 14px 16px;
+}
+.cast-tv-main {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  flex-wrap: wrap;
+}
+.cast-tv-ico {
+  font-size: 1.7rem;
+  line-height: 1;
+  flex: none;
+}
+.cast-tv-txt {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1 1 200px;
+}
+.cast-tv-txt strong {
+  font-size: 1.02rem;
+  color: var(--txt);
+}
+.cast-tv-txt span {
+  font-size: 0.86rem;
+  color: var(--dim);
+  line-height: 1.4;
+}
+.cast-tv-btn {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 11px 16px;
+  border-radius: 12px;
+  background: var(--grad-accent);
+  color: #06140d;
+  font-weight: 800;
+  font-size: 0.92rem;
+  text-decoration: none;
+  box-shadow: var(--glow-accent);
+  transition: transform 0.15s ease;
+}
+.cast-tv-btn:hover {
+  transform: translateY(-1px);
+}
+.cast-tv-how {
+  margin-top: 10px;
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: 0.85rem;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  padding: 2px 0;
+}
+.cast-tv-steps {
+  margin: 8px 0 2px;
+  padding: 0 0 0 2px;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.cast-tv-steps li {
+  font-size: 0.86rem;
+  color: var(--txt);
+  line-height: 1.45;
+  padding-left: 14px;
+  position: relative;
+}
+.cast-tv-steps li::before {
+  content: '📍';
+  position: absolute;
+  left: -4px;
+  top: 0;
+  font-size: 0.72rem;
+}
+.cast-tv-steps strong {
+  color: var(--accent);
+}
+.cast-tv-steps em {
+  font-style: normal;
+  font-weight: 700;
+  color: var(--txt);
+}
+@media (max-width: 460px) {
+  .cast-tv-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
 .match-info {
   margin-top: 14px;
   display: flex;
