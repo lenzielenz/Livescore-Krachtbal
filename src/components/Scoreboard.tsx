@@ -109,18 +109,33 @@ export function Scoreboard({
   const [blast, setBlast] = useState<{ key: number; colors: { primary: string; secondary: string }; name: string } | null>(null)
   const blastSeq = useRef(0)
   const blastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const lastBlast = useRef(0)
   const colorsFor = (side: Side): { primary: string; secondary: string } => {
     const c = state.teams[side].colors
     const fallback = side === 'home' ? DEFAULT_HOME_COLOR : DEFAULT_AWAY_COLOR
     return c ?? { primary: fallback, secondary: fallback }
   }
-  const fireBlast = (side: Side) => {
-    if (charges[side] <= 0) return
+  // Toon de fullscreen clubkleuren-viering (lokaal of via de stream van een ander scherm),
+  // met throttle zodat de eigen optimistische trigger + de echo niet dubbel afgaan.
+  const triggerBlast = (side: Side) => {
+    const now = Date.now()
+    if (now - lastBlast.current < 2500) return
+    lastBlast.current = now
     const key = ++blastSeq.current
     setBlast({ key, colors: colorsFor(side), name: state.teams[side].name })
-    setCharges((c) => ({ ...c, [side]: Math.max(0, c[side] - 1) }))
     if (blastTimer.current) clearTimeout(blastTimer.current)
     blastTimer.current = setTimeout(() => setBlast((b) => (b && b.key === key ? null : b)), 2800)
+  }
+  // Afvuren: verbruik een lading, toon ze meteen lokaal én stuur ze naar ALLE schermen.
+  const fireBlast = (side: Side) => {
+    if (charges[side] <= 0) return
+    setCharges((c) => ({ ...c, [side]: Math.max(0, c[side] - 1) }))
+    triggerBlast(side)
+    fetch(`/api/match/${matchId}/blast`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ side }),
+    }).catch(() => {})
   }
 
   // Live tribune (shoutouts van ingelogde supporters). Begin met de bewaarde berichten.
@@ -190,6 +205,10 @@ export function Scoreboard({
       },
       shoutout: (d) => setShouts((prev) => [...prev.slice(-79), d as Shout]),
       shoutouts: (d) => setShouts(d as Shout[]),
+      blast: (d) => {
+        const side = (d as { side?: string }).side
+        if (side === 'home' || side === 'away') triggerBlast(side)
+      },
     },
   )
 
@@ -426,32 +445,49 @@ export function Scoreboard({
         </div>
       )}
 
-      {/* Clubkleuren-viering: per ploeg een knop die je ontgrendelt (rugworp of elke 5 doelpunten)
-          en kan afvuren — een fullscreen rook/vuurwerk-explosie in de clubkleuren. */}
+      {/* Clubkleuren-viering: laad op met elke 5 doelpunten of een rugworp; vuur ze dan af op
+          ÁLLE schermen — een fullscreen rook/vuurwerk-explosie in de clubkleuren. */}
       {tribuneOpen && (
-        <div className="sb-blast-bar">
-          {(['home', 'away'] as const).map((side) => {
-            const team = state.teams[side]
-            const c = colorsFor(side)
-            const armed = charges[side] > 0
-            return (
-              <button
-                key={side}
-                type="button"
-                className={`sb-blast-btn ${armed ? 'armed' : 'locked'}`}
-                style={{ ['--bc' as string]: c.primary, ['--bc1' as string]: c.primary, ['--bc2' as string]: c.secondary || c.primary }}
-                onClick={() => fireBlast(side)}
-                disabled={!armed}
-                title={armed ? `Vier in de kleuren van ${team.name}!` : 'Ontgrendel met een rugworp of elke 5 doelpunten'}
-              >
-                <span className="sb-blast-dot" aria-hidden />
-                <span>{team.name}</span>
-                <span className="sb-blast-hint">
-                  {armed ? `🎆 Vier!${charges[side] > 1 ? ` ×${charges[side]}` : ''}` : '🔒 Ontgrendel'}
-                </span>
-              </button>
-            )
-          })}
+        <div className="sb-blast">
+          <p className="sb-blast-intro">
+            🎆 <strong>Vieringsknop</strong> — laad op met elke 5 doelpunten of een rugworp en laat
+            jullie clubkleuren dan op <strong>álle schermen</strong> ontploffen.
+          </p>
+          <div className="sb-blast-bar">
+            {(['home', 'away'] as const).map((side) => {
+              const team = state.teams[side]
+              const c = colorsFor(side)
+              const armed = charges[side] > 0
+              const inCycle = (state.score[side] ?? 0) % 5
+              const remaining = 5 - inCycle
+              const pct = armed ? 100 : Math.round((inCycle / 5) * 100)
+              return (
+                <button
+                  key={side}
+                  type="button"
+                  className={`sb-blast-btn ${armed ? 'armed' : 'locked'}`}
+                  style={{ ['--bc' as string]: c.primary, ['--bc1' as string]: c.primary, ['--bc2' as string]: c.secondary || c.primary }}
+                  onClick={() => fireBlast(side)}
+                  disabled={!armed}
+                  title={armed ? `Vier ${team.name} op álle schermen!` : 'Laadt op met elke 5 doelpunten of een rugworp'}
+                >
+                  <span className="sb-blast-top">
+                    <span className="sb-blast-dot" aria-hidden />
+                    <span className="sb-blast-team">{team.name}</span>
+                    <span className="sb-blast-status">
+                      {armed ? `🎆 Vier!${charges[side] > 1 ? ` ×${charges[side]}` : ''}` : '🔒'}
+                    </span>
+                  </span>
+                  <span className="sb-blast-meter" aria-hidden>
+                    <span className="sb-blast-fill" style={{ width: `${pct}%` }} />
+                  </span>
+                  <span className="sb-blast-sub">
+                    {armed ? 'Klaar! Druk om op alle schermen te vieren' : `nog ${remaining} ${remaining === 1 ? 'doelpunt' : 'doelpunten'}`}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
         </div>
       )}
 

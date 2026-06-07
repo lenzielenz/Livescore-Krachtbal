@@ -263,3 +263,14 @@ export function addShoutout(matchId: number, name: string, text: string): Shout 
 }
 
 export const REACTION_EMOJI = ['clap', 'fire', 'heart', 'goal', 'wow', 'rocket'] as const
+
+/** Vuur een clubkleuren-viering af op ALLE schermen van deze wedstrijd. Null/false als niemand
+ * kijkt of de tribune gesloten is. Dit is wat de vieringsknop bijzonder maakt: iedereen ziet ze. */
+export function addBlast(matchId: number, side: 'home' | 'away'): boolean {
+  if (side !== 'home' && side !== 'away') return false
+  const ch = channels.get(matchId)
+  if (!ch) return false
+  if (!isTribuneOpen(ch.status, ch.finishedAt)) return false
+  broadcast(ch, 'blast', { side })
+  return true
+}

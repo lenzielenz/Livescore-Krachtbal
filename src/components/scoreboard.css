@@ -483,46 +483,90 @@
   .ccb-banner { animation: ccb-flash 2s ease-out forwards; }
 }
 
-/* Ontgrendelknop per ploeg om de clubkleuren-viering af te vuren. */
+/* Vieringsknop per ploeg: een oplaadbalk die vol loopt; eens vol vuur je de clubkleuren-viering
+   af op álle schermen. */
+.sb-blast {
+  margin-top: 12px;
+}
+.sb-blast-intro {
+  margin: 0 0 8px;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--dim);
+  text-align: center;
+}
+.sb-blast-intro strong { color: var(--txt); }
 .sb-blast-bar {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 8px;
-  margin-top: 10px;
+}
+@media (max-width: 460px) {
+  .sb-blast-bar { grid-template-columns: 1fr; }
 }
 .sb-blast-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  padding: 8px 14px;
-  border-radius: 999px;
-  border: 2px solid var(--bc, var(--line));
-  background: color-mix(in srgb, var(--bc, var(--line)) 16%, transparent);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 2px solid color-mix(in srgb, var(--bc, var(--line)) 45%, var(--line));
+  background: color-mix(in srgb, var(--bc, var(--line)) 12%, transparent);
   color: var(--txt);
-  font-weight: 800;
-  font-size: 0.85rem;
   font-family: inherit;
+  text-align: left;
   cursor: pointer;
   transition: transform 0.12s ease, box-shadow 0.18s ease, opacity 0.18s ease;
 }
-.sb-blast-btn.armed {
-  box-shadow: 0 0 0 1px var(--bc) inset, 0 0 18px -4px var(--bc);
-  animation: sb-blast-pulse 1.8s ease-in-out infinite;
+.sb-blast-top {
+  display: flex;
+  align-items: center;
+  gap: 7px;
 }
-.sb-blast-btn.armed:hover { transform: translateY(-1px); }
-.sb-blast-btn.locked { opacity: 0.55; cursor: default; }
 .sb-blast-dot {
-  width: 13px; height: 13px; border-radius: 50%;
+  width: 14px; height: 14px; border-radius: 50%;
   background: linear-gradient(135deg, var(--bc1), var(--bc2));
   border: 1px solid rgba(255, 255, 255, 0.4);
   flex: none;
 }
-.sb-blast-hint { font-size: 0.72rem; font-weight: 600; opacity: 0.8; }
+.sb-blast-team {
+  font-weight: 800;
+  font-size: 0.86rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
+}
+.sb-blast-status { font-size: 0.82rem; font-weight: 800; flex: none; }
+/* Oplaadbalk. */
+.sb-blast-meter {
+  height: 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--line) 80%, transparent);
+  overflow: hidden;
+}
+.sb-blast-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--bc1), var(--bc2));
+  transition: width 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.sb-blast-sub { font-size: 0.72rem; color: var(--dim); }
+.sb-blast-btn.armed {
+  border-color: var(--bc);
+  box-shadow: 0 0 0 1px var(--bc) inset, 0 0 18px -4px var(--bc);
+  animation: sb-blast-pulse 1.8s ease-in-out infinite;
+}
+.sb-blast-btn.armed .sb-blast-sub { color: var(--txt); font-weight: 700; }
+.sb-blast-btn.armed:hover { transform: translateY(-1px); }
+.sb-blast-btn.locked { opacity: 0.85; cursor: default; }
 @keyframes sb-blast-pulse {
   0%, 100% { box-shadow: 0 0 0 1px var(--bc) inset, 0 0 10px -4px var(--bc); }
   50% { box-shadow: 0 0 0 1px var(--bc) inset, 0 0 22px -2px var(--bc); }
 }
 @media (prefers-reduced-motion: reduce) {
   .sb-blast-btn.armed { animation: none; }
+  .sb-blast-fill { transition: none; }
 }
