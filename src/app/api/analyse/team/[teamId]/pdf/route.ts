@@ -20,13 +20,16 @@ export async function GET(req: Request, { params }: { params: Promise<{ teamId: 
     const report = await buildTeamReport(payload, id, null, analyseMatchWhere(user))
     if (!report) return Response.json({ error: 'Ploeg niet gevonden.' }, { status: 404 })
 
-    // Gevaarzone/veldbezetting (waar de ploeg scoort) — voedt de grafieken in de PDF.
-    const danger =
+    // Gevaarkaart (waar de ploeg scoort) + verdedigingskaart (waar tegenstanders tegen hen scoren).
+    const [danger, conceded] =
       report.matchesAnalyzed > 0
-        ? await buildTeamDanger(payload, id, report.reeks, null, analyseMatchWhere(user)).catch(() => null)
-        : null
+        ? await Promise.all([
+            buildTeamDanger(payload, id, report.reeks, null, analyseMatchWhere(user)).catch(() => null),
+            buildTeamDanger(payload, id, report.reeks, null, analyseMatchWhere(user), { conceded: true }).catch(() => null),
+          ])
+        : [null, null]
 
-    const pdf = await generateTeamReportPdf(report, danger)
+    const pdf = await generateTeamReportPdf(report, danger, conceded)
     const safeName = report.teamName.replace(/[^\w-]+/g, '_').toLowerCase()
     return new Response(Buffer.from(pdf), {
       headers: {
