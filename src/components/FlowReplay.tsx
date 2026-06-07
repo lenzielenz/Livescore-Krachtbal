@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 
 import { FieldSchema, type FieldMarker } from '@/components/FieldSchema'
 import { freeThrowNorm, goalLineNorm } from '@/lib/field'
@@ -41,6 +42,10 @@ export function FlowReplay({
   const [speed, setSpeed] = useState(1)
   const [team, setTeam] = useState<'both' | 'home' | 'away'>('both')
   const [recording, setRecording] = useState(false)
+  // Voortgang (0–100) + korte status-melding tijdens/na het opnemen, zodat zichtbaar is dat er iets
+  // gebeurt (anders lijkt de knop niets te doen).
+  const [recPct, setRecPct] = useState(0)
+  const [recMsg, setRecMsg] = useState<string | null>(null)
   const lastTs = useRef(0)
 
   // Alleen bruikbare worpen (geldige landingscoördinaten) en met een gegarandeerd vertrekpunt,
@@ -142,7 +147,8 @@ export function FlowReplay({
       (m) => MR?.isTypeSupported?.(m),
     )
     if (!MR || !mime) {
-      window.alert('Video downloaden wordt niet ondersteund in deze browser. Probeer het in Chrome.')
+      setRecMsg('⚠️ Video opnemen wordt niet ondersteund in deze browser. Probeer Chrome.')
+      setTimeout(() => setRecMsg(null), 4000)
       return
     }
     const ext = mime.startsWith('video/mp4') ? 'mp4' : 'webm'
@@ -224,9 +230,12 @@ export function FlowReplay({
         ctx.textBaseline = 'alphabetic'
       }
     }
+    // Vaste, vlottere stap voor de opname (sneller dan de live-replay) zodat de video niet
+    // tientallen seconden duurt en op telefoons betrouwbaar wegschrijft.
+    const rstep = 360
     const drawFrame = (ms: number) => {
-      const st = Math.min(Math.floor(ms / stepMs), list.length)
-      const wi = (ms - st * stepMs) / stepMs
+      const st = Math.min(Math.floor(ms / rstep), list.length)
+      const wi = (ms - st * rstep) / rstep
       const scoredN = st + (st < list.length && wi >= 0.7 ? 1 : 0)
       let h = 0
       let a = 0
@@ -258,6 +267,8 @@ export function FlowReplay({
 
     drawFrame(0) // eerste frame klaarzetten vóór de opname start
     setRecording(true)
+    setRecPct(0)
+    setRecMsg(null)
     setPlaying(false)
     try {
       // Auto-capture op vaste fps (geen requestFrame): het mengen van beide modi liet op sommige
@@ -273,24 +284,27 @@ export function FlowReplay({
       })
 
       rec.start(100) // vaak chunks flushen → geldige, afspeelbare video
-      const totalDur = list.length * stepMs
+      const totalDur = list.length * rstep
       const HOLD = 1400
       const start = performance.now()
       await new Promise<void>((resolve) => {
         const frame = (t: number) => {
           const el = t - start
           drawFrame(Math.min(el, totalDur))
+          setRecPct(Math.min(100, Math.round((el / totalDur) * 100)))
           if (el < totalDur + HOLD) requestAnimationFrame(frame)
           else resolve()
         }
         requestAnimationFrame(frame)
       })
+      setRecPct(100)
       rec.requestData?.() // laatste frames flushen vóór stop
       rec.stop()
       await stopped
       const blob = new Blob(chunks, { type: mime })
       if (blob.size === 0) {
-        window.alert('Opname mislukt — probeer het opnieuw (werkt het best in Chrome).')
+        setRecMsg('⚠️ Opname mislukt — probeer het opnieuw (werkt het best in Chrome).')
+        setTimeout(() => setRecMsg(null), 4500)
         return
       }
       const url = URL.createObjectURL(blob)
@@ -300,11 +314,22 @@ export function FlowReplay({
       const slug = (s: string) => s.normalize('NFKD').replace(/[^\w]+/g, '-').replace(/^-+|-+$/g, '').toLowerCase()
       const parts = ['krachtbal', slug(teams.home), 'vs', slug(teams.away), matchLabel ? slug(matchLabel) : ''].filter(Boolean)
       link.download = `${parts.join('-')}.${ext}`
+      link.rel = 'noopener'
+      link.target = '_blank'
+      // In de DOM hangen vóór de klik (vereist op sommige mobiele browsers) en de URL pas later
+      // vrijgeven: meteen revoken brak de download soms af nog vóór hij begon.
+      document.body.appendChild(link)
       link.click()
-      URL.revokeObjectURL(url)
+      setRecMsg('✅ Klaar! De video staat bij je downloads.')
+      setTimeout(() => {
+        link.remove()
+        URL.revokeObjectURL(url)
+      }, 4000)
+      setTimeout(() => setRecMsg(null), 4500)
     } catch (err) {
       console.error('video record failed:', err)
-      window.alert('Video opnemen lukte niet op dit toestel. Tip: het werkt het best in Chrome op een computer.')
+      setRecMsg('⚠️ Video opnemen lukte niet op dit toestel. Tip: het werkt het best in Chrome.')
+      setTimeout(() => setRecMsg(null), 4500)
     } finally {
       canvas.remove()
       setRecording(false)
@@ -352,7 +377,7 @@ export function FlowReplay({
         <button type="button" className={speed === 1 ? 'on' : ''} onClick={() => setSpeed(1)}>1×</button>
         <button type="button" className={speed === 2 ? 'on' : ''} onClick={() => setSpeed(2)}>2×</button>
         <button type="button" className="replay-dl" onClick={recordVideo} disabled={recording || total === 0}>
-          {recording ? '⏺ Opnemen…' : '⬇ Download'}
+          {recording ? `⏺ Opnemen… ${recPct}%` : '⬇ Download'}
         </button>
       </div>
       <input
@@ -379,6 +404,25 @@ export function FlowReplay({
         )}
         {!current && elapsed >= totalMs && <span className="replay-info">Einde — {total} worpen afgespeeld.</span>}
       </div>
+      {/* Duidelijke voortgang/melding tijdens en na het opnemen (anders lijkt er niets te gebeuren). */}
+      {(recording || recMsg) &&
+        typeof document !== 'undefined' &&
+        createPortal(
+          <div className="replay-rec-ov" role="status" aria-live="polite">
+            <div className="replay-rec-card">
+              {recording ? (
+                <>
+                  <p className="replay-rec-title">🎥 Video opnemen… {recPct}%</p>
+                  <div className="replay-rec-bar"><span style={{ width: `${recPct}%` }} /></div>
+                  <p className="replay-rec-tip">Even geduld en blijf op deze pagina.</p>
+                </>
+              ) : (
+                <p className="replay-rec-title">{recMsg}</p>
+              )}
+            </div>
+          </div>,
+          document.body,
+        )}
     </div>
   )
 }
