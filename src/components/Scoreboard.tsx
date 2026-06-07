@@ -444,13 +444,19 @@ export function Scoreboard({
             <span className="sb-dash">–</span>
             <span className={goal?.side === 'away' ? 'sb-pulse' : ''}>{state.score.away}</span>
           </div>
-          <div className="sb-clock">{fmtClock(clock)}</div>
-          <div className="sb-half">Helft {state.match.currentHalf}</div>
-          {/* Enkel iets tonen als er minuten bijkomen: dan loopt deze helft tot een latere minuut. */}
-          {state.match.status !== 'finished' && requestedMin > 0 && (
-            <div className="sb-playto" title="Time-outs en SR-minuten rekken deze helft op: ze speelt tot deze minuut.">
-              speelt tot minuut {playsUntilMin}
-            </div>
+          <div className={`sb-clock ${state.match.status === 'finished' ? 'done' : ''}`}>{fmtClock(clock)}</div>
+          {state.match.status === 'finished' ? (
+            <div className="sb-final">Afgelopen · eindstand</div>
+          ) : (
+            <>
+              <div className="sb-half">Helft {state.match.currentHalf}</div>
+              {/* Enkel iets tonen als er minuten bijkomen: dan loopt deze helft tot een latere minuut. */}
+              {requestedMin > 0 && (
+                <div className="sb-playto" title="Time-outs en SR-minuten rekken deze helft op: ze speelt tot deze minuut.">
+                  speelt tot minuut {playsUntilMin}
+                </div>
+              )}
+            </>
           )}
         </div>
         <div className={`sb-side-team ${goal?.side === 'away' ? 'scored' : ''}`}>
@@ -566,8 +572,12 @@ export function Scoreboard({
                   )}
                   {/* Wie scoorde verschijnt pas als je op het doelpunt tikt (en enkel voor ingelogden). */}
                   {isGoal && open && (
-                    <span className="sb-tl-scorer">{canChat ? (scorer ?? 'Onbekend') : '🔒 Log in om te zien'}</span>
+                    <span className="sb-tl-scorer">
+                      <span className="sb-tl-scorer-ico" aria-hidden>{canChat ? '⚡' : '🔒'}</span>
+                      <span className="sb-tl-scorer-name">{canChat ? (scorer ?? 'Onbekend') : 'Log in om te zien'}</span>
+                    </span>
                   )}
+                  {isGoal && <span className={`sb-tl-rev ${open ? 'open' : ''}`} aria-hidden>›</span>}
                 </li>,
               )
             }
