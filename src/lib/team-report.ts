@@ -2,6 +2,7 @@ import type { Payload, Where } from 'payload'
 
 import { buildMatchStats } from './match-engine'
 import { seasonClause } from './seasons'
+import { buildStrategie, parseSpeelstijl, type Speelstijl } from './speelstijl'
 
 // Tegenstander-/ploegrapport (scouting). Aggregeert de detail-worpdata van één ploeg
 // over al haar afgelopen wedstrijden: aanvallend per speler (worpen, doelpunten,
@@ -57,6 +58,10 @@ export interface TeamReport {
   players: TeamReportPlayer[]
   /** Automatische aanbevelingen/tendensen uit de worpdata (scouting). */
   insights: string[]
+  /** Door de coach ingegeven speelstijl van deze ploeg (tactisch profiel). */
+  speelstijl: Speelstijl
+  /** Strategie-aanbevelingen: speelstijl naast de gemeten data gelegd. */
+  strategy: string[]
   generatedAt: string
 }
 
@@ -330,6 +335,14 @@ export async function buildTeamReport(payload: Payload, teamId: number, seizoen?
     }
   }
 
+  // ── Strategie: de ingegeven speelstijl ("hoe spelen wij") naast de gemeten data. ──
+  const speelstijl = parseSpeelstijl((team as { speelstijl?: unknown }).speelstijl)
+  const strategy = buildStrategie(speelstijl, {
+    goalZone: gzAll && allGoalZ.links + allGoalZ.midden + allGoalZ.rechts >= 5 ? gzAll : null,
+    rugShare: totalTypes >= 8 ? rugAll / totalTypes : null,
+    verreWorpen: farTot,
+  })
+
   // Per speler een korte tendens (min. 5 worpen).
   const byPlayer = new Map<number, TLite[]>()
   for (const t of teamThrows) {
@@ -385,6 +398,8 @@ export async function buildTeamReport(payload: Payload, teamId: number, seizoen?
     zones,
     players,
     insights,
+    speelstijl,
+    strategy,
     generatedAt: new Date().toISOString(),
   }
 }
