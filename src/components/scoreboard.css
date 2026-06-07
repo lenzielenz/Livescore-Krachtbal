@@ -324,27 +324,34 @@
 }
 .sb-float {
   position: absolute;
-  bottom: 56px;
-  left: 50%;
+  left: var(--ox, 50%);
+  top: var(--oy, 80%);
   font-size: 1.7rem;
   will-change: transform, opacity;
-  animation: sb-rise var(--dur, 2.4s) cubic-bezier(0.3, 0.7, 0.4, 1) forwards;
+  animation: sb-burst var(--dur, 2.2s) cubic-bezier(0.15, 0.75, 0.3, 1) forwards;
 }
-/* Elke emoji zweeft met eigen drift (--dx), rotatie (--rot) en eindschaal (--sc) omhoog,
-   zodat één tik een levendige, gevarieerde zwerm geeft. */
-@keyframes sb-rise {
-  0% { transform: translate(-50%, 0) scale(0.4) rotate(0deg); opacity: 0; }
+/* Explosie vanaf de ingedrukte knop: het deeltje spat eerst snel uiteen (tx/ty), draait (rot)
+   en dwarrelt al schalend uit tot transparant — een levendige, "wauw"-zwerm per tik. */
+@keyframes sb-burst {
+  0% { transform: translate(-50%, -50%) scale(0.2) rotate(0deg); opacity: 0; }
   12% { opacity: 1; }
-  60% { opacity: 1; }
+  45% {
+    transform:
+      translate(calc(-50% + var(--tx, 0px) * 0.6), calc(-50% + var(--ty, 0px) * 0.6))
+      scale(calc(var(--sc, 1) * 1.15)) rotate(calc(var(--rot, 0deg) * 0.5));
+    opacity: 1;
+  }
   100% {
-    transform: translate(calc(-50% + var(--dx, 0px)), -250px) scale(var(--sc, 1.2)) rotate(var(--rot, 0deg));
+    transform:
+      translate(calc(-50% + var(--tx, 0px)), calc(-50% + var(--ty, 0px) - 60px))
+      scale(var(--sc, 1)) rotate(var(--rot, 0deg));
     opacity: 0;
   }
 }
 /* De raket: groter, met een gouden gloed — duidelijk specialer dan de gewone emoji's. */
 .sb-float.rocket {
-  font-size: 2.3rem;
-  filter: drop-shadow(0 0 12px color-mix(in srgb, #ffd166 75%, transparent));
+  font-size: 2.4rem;
+  filter: drop-shadow(0 0 14px color-mix(in srgb, #ffd166 80%, transparent));
 }
 @media (prefers-reduced-motion: reduce) {
   .sb-float { animation-duration: 0.01s; opacity: 0; }

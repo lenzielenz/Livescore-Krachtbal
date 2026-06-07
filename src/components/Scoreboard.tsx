@@ -22,9 +22,21 @@ type Side = 'home' | 'away'
 
 type Goal = { key: number; side: Side; team: string; points: number; scorer: string | null }
 type Shout = { id: number; name: string; text: string; at: number }
-// Eén zwevende emoji met eigen, willekeurige beweging (drift/rotatie/schaal/duur) zodat elke tik
-// levendig en gevarieerd aanvoelt.
-type FloatItem = { key: number; name: EmojiName; dx: number; rot: number; sc: number; dur: number; delay: number; big: boolean }
+// Eén "deeltje" van een emoji-uitbarsting: start (ox/oy) op de ingedrukte knop, spat dan uiteen
+// (tx/ty) en dwarrelt al draaiend omhoog. Eigen schaal/duur per deeltje voor een levendige zwerm.
+type FloatItem = {
+  key: number
+  name: EmojiName
+  ox: number
+  oy: number
+  tx: number
+  ty: number
+  rot: number
+  sc: number
+  dur: number
+  delay: number
+  big: boolean
+}
 const rnd = (min: number, max: number) => min + Math.random() * (max - min)
 
 // Toegelaten supporter-emoji's (komt overeen met de server-whitelist in match-channel.ts).
@@ -85,6 +97,7 @@ export function Scoreboard({
   const [viewers, setViewers] = useState(0)
   const [floats, setFloats] = useState<FloatItem[]>([])
   const floatSeq = useRef(0)
+  const sbRef = useRef<HTMLDivElement>(null)
   // Start met de reeds bewaarde tellers/shoutouts (server-side), zodat iedereen — ook
   // niet-ingelogde bezoekers — ze meteen ziet, zonder op de SSE-stream te wachten.
   const [totals, setTotals] = useState<Record<string, number>>(initialReactions ?? {})
@@ -148,30 +161,44 @@ export function Scoreboard({
   const [chatBusy, setChatBusy] = useState(false)
   const chatFeedRef = useRef<HTMLDivElement>(null)
 
-  const spawnFloats = (counts: Record<string, number>) => {
+  // Eén uitbarsting: deeltjes spatten vanuit (ox,oy) in alle richtingen uiteen en dwarrelen omhoog.
+  const burst = (name: EmojiName, ox: number, oy: number, count: number) => {
+    if (!(name in EMOJI)) return
+    const isRocket = name === 'rocket'
     const next: FloatItem[] = []
+    for (let i = 0; i < count; i++) {
+      const ang = rnd(0, Math.PI * 2)
+      const dist = rnd(45, isRocket ? 200 : 150)
+      next.push({
+        key: ++floatSeq.current,
+        name,
+        ox,
+        oy,
+        tx: Math.cos(ang) * dist,
+        ty: Math.sin(ang) * dist - rnd(50, 150), // opwaartse drift bovenop de explosie
+        rot: rnd(-200, 200),
+        sc: isRocket ? rnd(1.2, 2.1) : rnd(0.8, 1.5),
+        dur: isRocket ? rnd(1.8, 2.6) : rnd(1.6, 2.4),
+        delay: rnd(0, 0.12),
+        big: isRocket,
+      })
+    }
+    setFloats((prev) => [...prev.slice(-70), ...next])
+    const keys = new Set(next.map((f) => f.key))
+    setTimeout(() => setFloats((prev) => prev.filter((f) => !keys.has(f.key))), 3000)
+  }
+
+  // Inkomende reacties (van anderen): laat ze opborrelen nabij de reactiebalk.
+  const spawnFloats = (counts: Record<string, number>) => {
+    const rect = sbRef.current?.getBoundingClientRect()
+    const w = rect?.width ?? 360
+    const h = rect?.height ?? 600
     for (const [name, n] of Object.entries(counts)) {
       if (!(name in EMOJI)) continue
       const isRocket = name === 'rocket'
-      // De raket spat groter, hoger en met meer exemplaren uiteen — duidelijk specialer dan de rest.
-      const count = Math.min(n, isRocket ? 10 : 7)
-      for (let i = 0; i < count; i++) {
-        next.push({
-          key: ++floatSeq.current,
-          name: name as EmojiName,
-          dx: rnd(-130, 130) * (isRocket ? 1.3 : 1),
-          rot: rnd(-45, 45) * (isRocket ? 1.6 : 1),
-          sc: isRocket ? rnd(1.3, 2.1) : rnd(0.9, 1.5),
-          dur: isRocket ? rnd(1.7, 2.4) : rnd(2.1, 3.0),
-          delay: rnd(0, isRocket ? 0.15 : 0.28),
-          big: isRocket,
-        })
-      }
+      const count = Math.min(n, isRocket ? 12 : 7)
+      burst(name as EmojiName, w / 2 + rnd(-w * 0.32, w * 0.32), h - rnd(70, 150), count)
     }
-    if (next.length === 0) return
-    setFloats((prev) => [...prev.slice(-60), ...next])
-    const keys = new Set(next.map((f) => f.key))
-    setTimeout(() => setFloats((prev) => prev.filter((f) => !keys.has(f.key))), 3200)
   }
 
   const { connected } = useLiveStream<{ state: MatchState; timeline: TimelineItem[] }>(
@@ -233,9 +260,17 @@ export function Scoreboard({
   // Eigen tikken gebatcht versturen (client-throttle ~300ms) zodat één supporter de server niet spamt.
   const pendingReacts = useRef<Record<string, number>>({})
   const reactTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const sendReaction = (name: keyof typeof EMOJI) => {
-    // Eigen tik = meteen een levendige uitbarsting (raket = grotere zwerm).
-    spawnFloats({ [name]: name === 'rocket' ? 8 : 4 })
+  const sendReaction = (name: keyof typeof EMOJI, ev?: React.MouseEvent<HTMLButtonElement>) => {
+    // Eigen tik = een uitbarsting vanaf de ingedrukte knop (raket = grotere zwerm).
+    const sbRect = sbRef.current?.getBoundingClientRect()
+    let ox = (sbRect?.width ?? 360) / 2
+    let oy = (sbRect?.height ?? 600) - 90
+    if (ev && sbRect) {
+      const b = ev.currentTarget.getBoundingClientRect()
+      ox = b.left + b.width / 2 - sbRect.left
+      oy = b.top + b.height / 2 - sbRect.top
+    }
+    burst(name, ox, oy, name === 'rocket' ? 18 : 13)
     if (name === 'rocket') triggerCelebrate(true) // eigen tik → meteen de fullscreen-viering
     pendingReacts.current[name] = (pendingReacts.current[name] ?? 0) + 1
     if (reactTimer.current) return
@@ -342,7 +377,7 @@ export function Scoreboard({
   } as React.CSSProperties
 
   return (
-    <div className="sb" style={sbStyle}>
+    <div className="sb" style={sbStyle} ref={sbRef}>
       {/* Levende clubkleuren-arena: beide ploegkleuren strijden; de leider verovert meer terrein. */}
       <div className="sb-arena" aria-hidden>
         <div className="sb-arena-grad" />
@@ -457,7 +492,10 @@ export function Scoreboard({
             key={f.key}
             className={`sb-float${f.big ? ' rocket' : ''}`}
             style={{
-              ['--dx' as string]: `${f.dx}px`,
+              ['--ox' as string]: `${f.ox}px`,
+              ['--oy' as string]: `${f.oy}px`,
+              ['--tx' as string]: `${f.tx}px`,
+              ['--ty' as string]: `${f.ty}px`,
               ['--rot' as string]: `${f.rot}deg`,
               ['--sc' as string]: f.sc,
               ['--dur' as string]: `${f.dur}s`,
@@ -475,7 +513,7 @@ export function Scoreboard({
               key={name}
               type="button"
               className={`sb-react-btn${name === 'rocket' ? ' sb-react-rocket' : ''}`}
-              onClick={() => sendReaction(name)}
+              onClick={(e) => sendReaction(name, e)}
               aria-label={name === 'rocket' ? 'Vier een rugworp (2 punten)' : `Reageer met ${name}`}
               title={name === 'rocket' ? 'Rugworp! 2 punten 🚀' : undefined}
             >
