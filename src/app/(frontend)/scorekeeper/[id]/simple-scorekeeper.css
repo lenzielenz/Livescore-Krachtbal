@@ -379,24 +379,53 @@
   margin: 0 0 14px;
 }
 
-/* Grote, contrastrijke veldspeler-knoppen — ook leesbaar in fel zonlicht. */
-.ssk-pick-grid { grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 12px; }
+/* Grote, contrastrijke veldspeler-knoppen — ook leesbaar in fel zonlicht.
+   Heldere kaart + wit cijfer-schijfje (donker cijfer = maximaal contrast) + vette naam,
+   zodat nummer en naam er duidelijk uit springen, ook bij veel glans. */
+.ssk-pick-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
 .ssk-pick-player {
-  padding: 22px 10px;
-  gap: 4px;
-  min-height: 104px;
+  padding: 16px 10px 14px;
+  gap: 9px;
+  min-height: 124px;
   justify-content: center;
-  background: #1d4a30;
-  border: 2px solid #3f7d57;
-  box-shadow: 0 2px 0 rgba(0,0,0,0.35);
+  border-radius: 16px;
+  background: linear-gradient(160deg, #2f7a4f 0%, #1e5235 100%);
+  border: 2px solid #56a577;
+  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.42), 0 8px 18px -8px rgba(0, 0, 0, 0.55);
 }
-.ssk-pick-num { font-size: 40px; font-weight: 900; color: #fff; line-height: 1; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
-.ssk-pick-naam { font-size: 15px; font-weight: 700; opacity: 1; color: #eafff4; }
-.ssk-pick-player:active { transform: translateY(2px); box-shadow: none; }
-.ssk-pick-player.sel { border-color: var(--accent); background: var(--accent); }
-.ssk-pick-player.sel .ssk-pick-num, .ssk-pick-player.sel .ssk-pick-naam { color: #06140d; text-shadow: none; }
-.ssk-pick-player.bench { background: #163a26; border-color: #2f6044; }
-.ssk-pick-player.bench:disabled { opacity: 0.4; cursor: default; }
+.ssk-pick-num {
+  display: inline-grid;
+  place-items: center;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: #ffffff;
+  color: #0b2316;
+  font-size: 30px;
+  font-weight: 900;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  text-shadow: none;
+  box-shadow: 0 2px 7px rgba(0, 0, 0, 0.4), inset 0 0 0 2px rgba(0, 0, 0, 0.06);
+}
+.ssk-pick-naam {
+  font-size: 16px;
+  font-weight: 800;
+  opacity: 1;
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  letter-spacing: 0.01em;
+  text-align: center;
+  line-height: 1.1;
+}
+.ssk-pick-player:active { transform: translateY(3px); box-shadow: 0 1px 0 rgba(0, 0, 0, 0.42); }
+.ssk-pick-player.sel {
+  border-color: #fff;
+  background: linear-gradient(160deg, color-mix(in srgb, var(--accent) 90%, #fff) 0%, var(--accent) 100%);
+}
+.ssk-pick-player.sel .ssk-pick-naam { color: #06140d; text-shadow: none; }
+.ssk-pick-player.bench { background: linear-gradient(160deg, #266040 0%, #173d28 100%); border-color: #3f8a5e; }
+.ssk-pick-player.bench:disabled { opacity: 0.42; cursor: default; }
 /* Grotere, duidelijkere modal-knoppen (Wissel / Annuleren) */
 .ssk-modal .ssk-btn { padding: 14px 18px; font-size: 16px; font-weight: 800; border-width: 2px; }
 .ssk-modal .ssk-btn.primary { background: var(--accent); color: #06140d; border-color: var(--accent); }
