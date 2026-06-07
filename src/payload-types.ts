@@ -360,6 +360,14 @@ export interface Match {
    * Geclaimd via Mijn club.
    */
   awayCoach?: (number | null) | User;
+  /**
+   * Aanvraag via Mijn club.
+   */
+  homeTakeover?: (number | null) | User;
+  /**
+   * Aanvraag via Mijn club.
+   */
+  awayTakeover?: (number | null) | User;
   category?: ('U12' | 'U14' | 'U16' | 'U18' | 'U20' | 'senioren') | null;
   homeLineup?: (number | Player)[] | null;
   awayLineup?: (number | Player)[] | null;
@@ -1183,6 +1191,8 @@ export interface MatchesSelect<T extends boolean = true> {
   analyseOnly?: T;
   homeCoach?: T;
   awayCoach?: T;
+  homeTakeover?: T;
+  awayTakeover?: T;
   category?: T;
   homeLineup?: T;
   awayLineup?: T;
