@@ -29,16 +29,17 @@
   letter-spacing: 0.01em;
   white-space: nowrap;
 }
-/* Weerchip leunt naar rechts, naast/voor de navigatie. */
-.sh-inner .wx-mini {
-  margin-left: auto;
-}
+/* Navigatie + weerchip vormen samen het rechtercluster; het weer staat uiterst rechts. */
 .sh-nav {
   display: flex;
   align-items: center;
   gap: 4px;
   flex-wrap: nowrap;
   justify-content: flex-end;
+  margin-left: auto;
+}
+.sh-inner .wx-mini {
+  flex: 0 0 auto;
 }
 .sh-link {
   display: inline-block;
@@ -152,13 +153,13 @@
   .sh-brand {
     font-size: 1rem;
   }
-  /* Op gsm: rij 1 = titel (links) + weer (rechts), rij 2 = volledige navigatie rechts.
-     Zo loopt de navigatie nooit middenin af en blijft de balk in balans. */
-  .sh-nav {
-    flex-basis: 100%;
+  /* Op gsm: "Wedstrijden" verbergen (de titel linkt al naar de wedstrijden) zodat titel,
+     navigatie en het weer samen op één nette regel passen. */
+  .sh-link-wedstrijden {
+    display: none;
   }
   .sh-link {
-    padding: 6px 8px;
+    padding: 6px 7px;
     font-size: 0.84rem;
   }
   /* Op gsm enkel het slot-icoon om plaats te sparen. */

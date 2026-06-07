@@ -69,11 +69,9 @@ export function SiteHeader({ active = null }: { active?: NavSection }) {
           Krachtbal <span className="brand">Live</span>
         </Link>
 
-        <WeatherWidget variant="compact" />
-
         <nav className="sh-nav">
           {PRIMARY.map((l) => (
-            <Link key={l.href} href={l.href} className={`sh-link ${active === l.key ? 'on' : ''}`}>
+            <Link key={l.href} href={l.href} className={`sh-link sh-link-${l.key} ${active === l.key ? 'on' : ''}`}>
               {l.label}
             </Link>
           ))}
@@ -144,6 +142,8 @@ export function SiteHeader({ active = null }: { active?: NavSection }) {
             )}
           </div>
         </nav>
+
+        <WeatherWidget variant="compact" />
       </div>
     </header>
   )
