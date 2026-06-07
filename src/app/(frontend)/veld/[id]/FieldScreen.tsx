@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 
+import { ClubColorBlast } from '@/components/ClubColorBlast'
 import { TeamLogo } from '@/components/TeamLogo'
 import { DEFAULT_AWAY_COLOR, DEFAULT_HOME_COLOR, inkOn, readableOnDark } from '@/lib/club-colors'
 import type { MatchState, TimelineItem } from '@/lib/match-engine'
@@ -84,6 +85,23 @@ export function FieldScreen({
   const goalSeq = useRef(0)
   const goalTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [viewers, setViewers] = useState(0)
+  // Clubkleuren-viering die vanaf een supporter-scherm wordt afgevuurd, ook hier op de zaal-tv tonen.
+  const [blast, setBlast] = useState<{ key: number; colors: { primary: string; secondary: string }; name: string } | null>(null)
+  const blastSeq = useRef(0)
+  const blastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const lastBlast = useRef(0)
+  const triggerBlast = (side: 'home' | 'away') => {
+    const now = Date.now()
+    if (now - lastBlast.current < 2500) return
+    lastBlast.current = now
+    const t = state.teams[side]
+    const fallback = side === 'home' ? DEFAULT_HOME_COLOR : DEFAULT_AWAY_COLOR
+    const colors = t.colors ?? { primary: fallback, secondary: fallback }
+    const key = ++blastSeq.current
+    setBlast({ key, colors, name: t.name })
+    if (blastTimer.current) clearTimeout(blastTimer.current)
+    blastTimer.current = setTimeout(() => setBlast((b) => (b && b.key === key ? null : b)), 2800)
+  }
 
   // SSE-abonnement op dezelfde stream als het publieke scorebord (met reconnect-backoff).
   const { connected } = useLiveStream<{ state: MatchState; timeline: TimelineItem[] }>(
@@ -108,12 +126,19 @@ export function FieldScreen({
         goalTimer.current = setTimeout(() => setGoal(null), 6000)
       }
     },
-    { viewers: (d) => setViewers((d as { count?: number }).count ?? 0) },
+    {
+      viewers: (d) => setViewers((d as { count?: number }).count ?? 0),
+      blast: (d) => {
+        const side = (d as { side?: string }).side
+        if (side === 'home' || side === 'away') triggerBlast(side)
+      },
+    },
   )
 
   useEffect(() => {
     return () => {
       if (goalTimer.current) clearTimeout(goalTimer.current)
+      if (blastTimer.current) clearTimeout(blastTimer.current)
     }
   }, [])
 
@@ -170,6 +195,7 @@ export function FieldScreen({
 
   return (
     <div className="fs" style={fsStyle} ref={rootRef}>
+      {blast && <ClubColorBlast key={blast.key} colors={blast.colors} teamName={blast.name} />}
       <button
         type="button"
         className="fs-fsbtn"
