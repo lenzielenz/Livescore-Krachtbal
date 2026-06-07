@@ -297,6 +297,39 @@ export async function buildTeamReport(payload: Payload, teamId: number, seizoen?
     insights.push(`Verre worp (+15 m): ${parts.join(' · ')}.`)
   }
 
+  // ── Verdedigend: waar de ploeg het ZWAKST staat (vanwaar de tegenstanders scoren). ──
+  if (matchIdList.length) {
+    const cr = await payload
+      .find({
+        collection: 'throws',
+        where: { and: [{ match: { in: matchIdList } }, { team: { not_equals: teamId } }, { outcome: { equals: 'goal' } }] },
+        depth: 0,
+        limit: 8000,
+      })
+      .catch(() => ({ docs: [] as Record<string, unknown>[] }))
+    const concededZ = emptyZ()
+    let concededTot = 0
+    let concededRug = 0
+    let concededFar = 0
+    for (const t of cr.docs) {
+      const z = (t as { zone?: string }).zone
+      if (z && z in concededZ) concededZ[z] += 1
+      concededTot += 1
+      if (String((t as { type?: unknown }).type) === 'rug') concededRug += 1
+      if (((t as { distance?: number | null }).distance ?? 0) >= FAR_M) concededFar += 1
+    }
+    if (concededTot >= 5) {
+      const cz = domZone(concededZ)
+      if (cz) insights.push(`Verdedigend zwak: tegendoelpunten vallen vooral via ${ZONE_NL[cz.zone]} (${cz.pct}%).`)
+      if (concededRug / concededTot >= 0.25) {
+        insights.push(`Verdedigend: ${Math.round((concededRug / concededTot) * 100)}% van de tegendoelpunten zijn rugworpen (dubbel) — let op de verre/diepe worp.`)
+      }
+      if (concededFar >= 3) {
+        insights.push(`Verdedigend: ${concededFar} tegendoelpunten van ver (+15 m) — sluit de verre worp beter af.`)
+      }
+    }
+  }
+
   // Per speler een korte tendens (min. 5 worpen).
   const byPlayer = new Map<number, TLite[]>()
   for (const t of teamThrows) {
