@@ -49,12 +49,13 @@ export async function POST(req: Request) {
   }
 
   const analyseAccess = Boolean(body.analyseAccess)
+  const trainingAccess = Boolean(body.trainingAccess)
 
   try {
     await payload.update({
       collection: 'users',
       id: userId,
-      data: { roles: roles as UserRole[], club, analyseAccess },
+      data: { roles: roles as UserRole[], club, analyseAccess, trainingAccess },
       overrideAccess: true,
     })
   } catch {

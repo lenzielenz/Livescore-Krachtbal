@@ -1,8 +1,18 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
 
-type Account = { id: number; name: string | null; email: string; roles: string[]; clubId: number | null; analyseAccess: boolean }
+type Account = {
+  id: number
+  name: string | null
+  email: string
+  roles: string[]
+  clubId: number | null
+  analyseAccess: boolean
+  trainingAccess: boolean
+  analyseCount: number
+}
 type RoleOption = { label: string; value: string }
 
 // Volgorde voor de groepering (hoogste rol bepaalt de groep van een account).
@@ -27,13 +37,15 @@ function AccountRow({ acc, clubs, roleOptions }: { acc: Account; clubs: { id: nu
   const [roles, setRoles] = useState<string[]>(acc.roles)
   const [clubId, setClubId] = useState<string>(acc.clubId != null ? String(acc.clubId) : '')
   const [analyse, setAnalyse] = useState<boolean>(acc.analyseAccess)
+  const [training, setTraining] = useState<boolean>(acc.trainingAccess)
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
 
   const dirty =
     roles.slice().sort().join(',') !== acc.roles.slice().sort().join(',') ||
     clubId !== (acc.clubId != null ? String(acc.clubId) : '') ||
-    analyse !== acc.analyseAccess
+    analyse !== acc.analyseAccess ||
+    training !== acc.trainingAccess
 
   const toggle = (r: string) => {
     setMsg(null)
@@ -49,7 +61,7 @@ function AccountRow({ acc, clubs, roleOptions }: { acc: Account; clubs: { id: nu
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ userId: acc.id, roles, clubId: clubId || null, analyseAccess: analyse }),
+        body: JSON.stringify({ userId: acc.id, roles, clubId: clubId || null, analyseAccess: analyse, trainingAccess: training }),
       })
       const data = (await res.json().catch(() => ({}))) as { error?: string }
       if (!res.ok) setMsg(data.error ?? 'Bewaren mislukt.')
@@ -57,6 +69,7 @@ function AccountRow({ acc, clubs, roleOptions }: { acc: Account; clubs: { id: nu
         acc.roles = roles
         acc.clubId = clubId ? Number(clubId) : null
         acc.analyseAccess = analyse
+        acc.trainingAccess = training
         setMsg('✓ Bewaard')
       }
     } catch {
@@ -71,6 +84,11 @@ function AccountRow({ acc, clubs, roleOptions }: { acc: Account; clubs: { id: nu
       <div className="acc-id">
         <span className="acc-name">{acc.name || acc.email.split('@')[0]}</span>
         <span className="acc-email">{acc.email}</span>
+        {acc.analyseCount > 0 && (
+          <span className="acc-badge" title="Aantal analyse-opnames van deze gebruiker">
+            📈 {acc.analyseCount} {acc.analyseCount === 1 ? 'opname' : 'opnames'}
+          </span>
+        )}
       </div>
       <div className="acc-roles">
         {roleOptions.map((o) => (
@@ -94,6 +112,14 @@ function AccountRow({ acc, clubs, roleOptions }: { acc: Account; clubs: { id: nu
         >
           📈 Analyse
         </button>
+        <button
+          type="button"
+          className={`acc-chip ${training ? 'on' : ''}`}
+          onClick={() => { setMsg(null); setTraining((v) => !v) }}
+          title="Toegang tot het trainingsluik (progressie + aanwezigheid)"
+        >
+          🏋️ Training
+        </button>
         <select className="acc-club" value={clubId} onChange={(e) => { setMsg(null); setClubId(e.target.value) }} aria-label="Club">
           <option value="">— Geen club —</option>
           {clubs.map((c) => (
@@ -106,6 +132,85 @@ function AccountRow({ acc, clubs, roleOptions }: { acc: Account; clubs: { id: nu
         {msg && <span className="acc-msg">{msg}</span>}
       </div>
     </div>
+  )
+}
+
+// Tool om de analyse-opnames van de ene gebruiker bij een andere te brengen (data samenbrengen).
+function AnalyseTransfer({ users }: { users: Account[] }) {
+  const router = useRouter()
+  const [from, setFrom] = useState('')
+  const [to, setTo] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [msg, setMsg] = useState<string | null>(null)
+
+  const label = (u: Account) => `${u.name || u.email.split('@')[0]} (${u.email})`
+  const owners = users.filter((u) => u.analyseCount > 0)
+
+  const run = async () => {
+    setMsg(null)
+    if (!from || !to) return setMsg('Kies een van- en naar-gebruiker.')
+    if (from === to) return setMsg('Van en naar mogen niet dezelfde zijn.')
+    const fromUser = users.find((u) => String(u.id) === from)
+    const toUser = users.find((u) => String(u.id) === to)
+    if (!window.confirm(`Alle ${fromUser?.analyseCount ?? ''} analyse-opnames van ${fromUser ? label(fromUser) : ''} overdragen naar ${toUser ? label(toUser) : ''}?`)) return
+    setBusy(true)
+    try {
+      const res = await fetch('/api/admin/analyse/transfer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ fromUserId: Number(from), toUserId: Number(to) }),
+      })
+      const data = (await res.json().catch(() => ({}))) as { error?: string; moved?: number }
+      if (!res.ok) setMsg(data.error ?? 'Overdragen mislukt.')
+      else {
+        setMsg(`✓ ${data.moved ?? 0} opname(s) overgedragen.`)
+        setFrom('')
+        setTo('')
+        router.refresh()
+      }
+    } catch {
+      setMsg('Er ging iets mis.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <section className="acc-group acc-transfer">
+      <h2 className="acc-group-head">🔗 Analyse-data samenbrengen</h2>
+      <p className="acc-transfer-help">
+        Elke analist heeft z'n eigen analyse-opnames. Wil je de data van meerdere mensen samenbrengen
+        onder één persoon (bv. een centraal analyse-account)? Kies van wie je de opnames haalt en naar
+        wie ze gaan. De opnames blijven volledig behouden — enkel de eigenaar verandert.
+      </p>
+      <div className="acc-transfer-row">
+        <label className="acc-transfer-field">
+          <span>Van (eigenaar)</span>
+          <select className="acc-club" value={from} onChange={(e) => { setMsg(null); setFrom(e.target.value) }}>
+            <option value="">— Kies —</option>
+            {owners.map((u) => (
+              <option key={u.id} value={u.id}>{label(u)} · {u.analyseCount} opname(s)</option>
+            ))}
+          </select>
+        </label>
+        <span className="acc-transfer-arrow" aria-hidden>→</span>
+        <label className="acc-transfer-field">
+          <span>Naar (nieuwe eigenaar)</span>
+          <select className="acc-club" value={to} onChange={(e) => { setMsg(null); setTo(e.target.value) }}>
+            <option value="">— Kies —</option>
+            {users.map((u) => (
+              <option key={u.id} value={u.id}>{label(u)}</option>
+            ))}
+          </select>
+        </label>
+        <button type="button" className="acc-save" disabled={busy || !from || !to} onClick={run}>
+          {busy ? 'Bezig…' : 'Overdragen'}
+        </button>
+      </div>
+      {owners.length === 0 && <p className="empty">Nog geen analyse-opnames om samen te brengen.</p>}
+      {msg && <span className="acc-msg">{msg}</span>}
+    </section>
   )
 }
 
@@ -147,6 +252,8 @@ export function AccountsManager({ users, clubs, roleOptions }: { users: Account[
           </section>
         ))
       )}
+
+      <AnalyseTransfer users={users} />
     </div>
   )
 }
