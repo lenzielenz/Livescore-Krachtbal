@@ -498,6 +498,10 @@
 .sb-tl-pts.rug { background: var(--grad-accent, var(--accent)); color: #06140d; }
 .sb-tl-x { color: #ef476f; font-weight: 800; flex: none; }
 .sb-tl-scorer { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Aanklikbaar doelpunt: tik om te zien wie scoorde. Geopend → vol over de breedte met de naam. */
+.sb-tl-clickable { cursor: pointer; font-family: inherit; text-align: left; border: 0; border-left: 3px solid var(--line); }
+.sb-tl-clickable:hover { background: #0c2a1b; }
+.sb-tl.open { grid-column: 1 / -1; background: color-mix(in srgb, var(--accent) 10%, #0a1f14); }
 .sb-tl-goal { border-left-color: var(--accent); }
 .sb-tl-cross { border-left-color: #ef476f; }
 .sb-tl.side-home { border-left-color: var(--home); }
