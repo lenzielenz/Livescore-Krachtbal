@@ -28,67 +28,65 @@
 /* Alle inhoud boven de arena-achtergrond. */
 .sb > *:not(.sb-arena) { position: relative; z-index: 1; }
 
-/* ── Levende clubkleuren-arena ───────────────────────────────────────────────── */
-.sb-arena { position: absolute; inset: 0; z-index: 0; overflow: hidden; border-radius: inherit; pointer-events: none; }
-/* Splitsing: thuiskleur links, uitkleur rechts; de grens schuift met --home-share. */
+/* ── Levende clubkleuren-arena (subtiel, enkel bovenaan zodat tekst leesbaar blijft) ───── */
+.sb-arena {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  border-radius: inherit;
+  pointer-events: none;
+  /* Kleur enkel in de bovenste zone (achter logo's + score); vloeit weg vóór de tekst eronder,
+     zodat tijdlijn/reacties/tribune op een rustige donkere achtergrond staan. */
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 24%, transparent 52%);
+  mask-image: linear-gradient(to bottom, #000 0%, #000 24%, transparent 52%);
+}
+/* Zachte splitsing: thuiskleur links, uitkleur rechts; de grens schuift met --home-share. */
 .sb-arena-grad {
   position: absolute;
   inset: 0;
   background: linear-gradient(
-    102deg,
-    color-mix(in srgb, var(--home) 44%, transparent) 0%,
-    color-mix(in srgb, var(--home) 24%, transparent) calc(var(--home-share) * 100% - 24%),
+    100deg,
+    color-mix(in srgb, var(--home) 26%, transparent) 0%,
+    color-mix(in srgb, var(--home) 12%, transparent) calc(var(--home-share) * 100% - 30%),
     transparent calc(var(--home-share) * 100%),
-    color-mix(in srgb, var(--away) 24%, transparent) calc(var(--home-share) * 100% + 24%),
-    color-mix(in srgb, var(--away) 44%, transparent) 100%
+    color-mix(in srgb, var(--away) 12%, transparent) calc(var(--home-share) * 100% + 30%),
+    color-mix(in srgb, var(--away) 26%, transparent) 100%
   );
-  opacity: 0.92;
+  opacity: 0.85;
 }
-/* Twee zacht drijvende kleur-blobs houden alles in beweging. */
-.sb-arena-blob { position: absolute; width: 78%; height: 82%; border-radius: 50%; filter: blur(58px); opacity: 0.5; }
+/* Twee zacht drijvende kleur-blobs houden alles licht in beweging. */
+.sb-arena-blob { position: absolute; width: 70%; height: 70%; border-radius: 50%; filter: blur(64px); opacity: 0.26; }
 .sb-arena-blob.home {
-  left: -16%; top: -22%;
-  background: radial-gradient(circle, color-mix(in srgb, var(--home) 72%, transparent), transparent 70%);
-  animation: sb-drift-a 13s ease-in-out infinite;
+  left: -18%; top: -28%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--home) 60%, transparent), transparent 70%);
+  animation: sb-drift-a 15s ease-in-out infinite;
 }
 .sb-arena-blob.away {
-  right: -16%; bottom: -22%;
-  background: radial-gradient(circle, color-mix(in srgb, var(--away) 72%, transparent), transparent 70%);
-  animation: sb-drift-b 17s ease-in-out infinite;
+  right: -18%; top: -28%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--away) 60%, transparent), transparent 70%);
+  animation: sb-drift-b 18s ease-in-out infinite;
 }
 @keyframes sb-drift-a {
   0%, 100% { transform: translate(0, 0) scale(1); }
-  50% { transform: translate(14%, 12%) scale(1.14); }
+  50% { transform: translate(10%, 6%) scale(1.1); }
 }
 @keyframes sb-drift-b {
-  0%, 100% { transform: translate(0, 0) scale(1.06); }
-  50% { transform: translate(-14%, -10%) scale(1); }
+  0%, 100% { transform: translate(0, 0) scale(1.05); }
+  50% { transform: translate(-10%, 6%) scale(1); }
 }
-/* Trage lichtsweep — subtiele, constante glans. */
+/* Trage lichtsweep — heel subtiele, constante glans. */
 .sb-arena-sheen {
   position: absolute; inset: -50%;
-  background: linear-gradient(115deg, transparent 42%, color-mix(in srgb, #fff 8%, transparent) 50%, transparent 58%);
-  animation: sb-sheen 7.5s linear infinite;
+  background: linear-gradient(115deg, transparent 44%, color-mix(in srgb, #fff 5%, transparent) 50%, transparent 56%);
+  animation: sb-sheen 8.5s linear infinite;
 }
 @keyframes sb-sheen {
-  0% { transform: translateX(-26%); }
-  100% { transform: translateX(26%); }
-}
-/* De "frontlijn": glanzende, pulserende band op de grens van de krachtmeting. */
-.sb-arena-front {
-  position: absolute; top: 0; bottom: 0; width: 16%;
-  left: calc(var(--home-share) * 100%);
-  transform: translateX(-50%);
-  background: linear-gradient(90deg, transparent, color-mix(in srgb, #fff 24%, transparent), transparent);
-  mix-blend-mode: screen;
-  animation: sb-front 3.4s ease-in-out infinite;
-}
-@keyframes sb-front {
-  0%, 100% { opacity: 0.28; }
-  50% { opacity: 0.62; }
+  0% { transform: translateX(-24%); }
+  100% { transform: translateX(24%); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .sb-arena-blob, .sb-arena-sheen, .sb-arena-front { animation: none; }
+  .sb-arena-blob, .sb-arena-sheen { animation: none; }
 }
 /* Premium hero: grotere logo's, namen in ploegkleur. */
 .sb-side-team .tl { width: 92px; height: 92px; font-size: 92px; }
@@ -560,14 +558,6 @@
 .sb-blast {
   margin-top: 12px;
 }
-.sb-blast-intro {
-  margin: 0 0 8px;
-  font-size: 0.8rem;
-  line-height: 1.45;
-  color: var(--dim);
-  text-align: center;
-}
-.sb-blast-intro strong { color: var(--txt); }
 .sb-blast-bar {
   display: grid;
   grid-template-columns: 1fr 1fr;
