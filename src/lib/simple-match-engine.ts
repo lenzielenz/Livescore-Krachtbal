@@ -11,6 +11,16 @@ import { readSimpleScore, type SimpleScoreState, type SimpleSide } from './simpl
 const relId = (v: unknown): number =>
   typeof v === 'object' && v ? Number((v as { id: number }).id) : Number(v)
 
+// De LIVE klokstand (seconden): clockSeconds is enkel de vastgezette basis bij de laatste
+// pauze; terwijl de klok loopt moet de verstreken tijd sinds clockUpdatedAt erbij geteld
+// worden. Zonder dit kreeg elk snelscore-doelpunt clock 0 (en dus minuut 0 in de tijdlijn).
+export function liveClockSeconds(m: { clockRunning?: boolean | null; clockUpdatedAt?: string | null; clockSeconds?: number | null }): number {
+  const base = m.clockSeconds ?? 0
+  if (!m.clockRunning || !m.clockUpdatedAt) return base
+  const elapsed = (Date.now() - new Date(m.clockUpdatedAt).getTime()) / 1000
+  return base + Math.max(0, elapsed)
+}
+
 async function loadSimpleMatch(payload: Payload, matchId: number) {
   const match = await payload.findByID({ collection: 'matches', id: matchId, depth: 0 })
   return {
@@ -19,7 +29,7 @@ async function loadSimpleMatch(payload: Payload, matchId: number) {
     awayId: relId(match.awayTeam),
     score: readSimpleScore(match),
     half: match.currentHalf ?? 1,
-    clock: match.clockSeconds ?? 0,
+    clock: Math.floor(liveClockSeconds(match)),
   }
 }
 
