@@ -378,17 +378,13 @@ export function Scoreboard({
   // Speelduur-melding: tot waar de klok van deze helft loopt (de klok telt op tot `halfSeconds`)
   // + hoeveel minuten er in totaal gevraagd zijn (time-outs van beide ploegen + SR-minuten), want
   // die pauzeren de klok en rekken de échte speeltijd op.
+  // Gevraagde extra minuten in DEZE helft (time-outs van beide ploegen + SR-minuten). We spreken
+  // steeds over één helft. De helftduur volgt het reglement per leeftijd (reeksHalfDurationSeconds:
+  // U12/U14/U16 = 20 min, U18/landelijk/nationaal = 25 min).
   const requestedMin = state.timeouts.home + state.timeouts.away + state.refereeStops
-
-  // Geschatte resterende speeltijd, zodat supporters weten hoelang er nog gespeeld wordt: wat rest
-  // in deze helft + de nog te spelen helft(en) + de gevraagde extra minuten (time-outs/SR rekken
-  // de échte speeltijd op).
-  const HALVES = 2
-  const halvesLeftAfter = Math.max(0, HALVES - state.match.currentHalf)
-  const remainingMin =
-    state.match.status === 'live'
-      ? Math.max(0, Math.ceil((Math.max(0, halfSeconds - clock) + halvesLeftAfter * halfSeconds + requestedMin * 60) / 60))
-      : 0
+  const halfMin = Math.round(halfSeconds / 60)
+  // Tot welke minuut deze helft loopt als er minuten bijkomen (anders zeggen we niets).
+  const playsUntilMin = halfMin + requestedMin
 
   // Accenten in de clubkleuren (ringen, tijdlijn, doelpunt-gloed). Valt terug op groen/blauw.
   // De rauwe kleur dient voor de ring/logo; voor TEKST/cijfers op het donkere paneel klemmen we
@@ -450,15 +446,10 @@ export function Scoreboard({
           </div>
           <div className="sb-clock">{fmtClock(clock)}</div>
           <div className="sb-half">Helft {state.match.currentHalf}</div>
-          {state.match.status === 'live' && (
-            <div className="sb-remaining" title="Schatting: resterende speeltijd in deze + de volgende helft, inclusief de gevraagde extra minuten (time-outs/SR).">
-              ⏳ nog ± {remainingMin} min
-            </div>
-          )}
-          {state.match.status !== 'finished' && (
-            <div className="sb-playto" title="De klok telt op tot dit punt; time-outs en SR-minuten pauzeren ze, dus de échte speeltijd loopt langer.">
-              speelt tot {fmtClock(halfSeconds)}
-              {requestedMin > 0 && ` · ${requestedMin} min. gevraagd`}
+          {/* Enkel iets tonen als er minuten bijkomen: dan loopt deze helft tot een latere minuut. */}
+          {state.match.status !== 'finished' && requestedMin > 0 && (
+            <div className="sb-playto" title="Time-outs en SR-minuten rekken deze helft op: ze speelt tot deze minuut.">
+              speelt tot minuut {playsUntilMin}
             </div>
           )}
         </div>
