@@ -58,19 +58,29 @@ export function FlowReplay({
     }
   }, [recReady])
 
-  // Alleen bruikbare worpen (geldige landingscoördinaten) en met een gegarandeerd vertrekpunt,
-  // zodat de replay nooit op ontbrekende/null-posities crasht.
-  const safeShots = useMemo(
-    () =>
-      (shots ?? [])
-        .filter((s) => s && Number.isFinite(s.x) && Number.isFinite(s.y))
-        .map((s) => ({
+  // Volledig genormaliseerde worpen: élk veld dat de replay gebruikt krijgt een veilige waarde,
+  // zodat noch de weergave noch de opname ooit op een ontbrekend veld (bv. fromX) kan crashen.
+  const safeShots = useMemo(() => {
+    const num = (v: unknown, fb: number) => (typeof v === 'number' && Number.isFinite(v) ? v : fb)
+    return (Array.isArray(shots) ? shots : [])
+      .filter((s) => s && Number.isFinite((s as ShotPoint).x) && Number.isFinite((s as ShotPoint).y))
+      .map((s) => {
+        const x = num(s.x, 0.5)
+        const y = num(s.y, 0.5)
+        return {
           ...s,
-          fromX: Number.isFinite(s.fromX as number) ? (s.fromX as number) : s.x,
-          fromY: Number.isFinite(s.fromY as number) ? (s.fromY as number) : s.y,
-        })),
-    [shots],
-  )
+          x,
+          y,
+          fromX: num(s.fromX, x),
+          fromY: num(s.fromY, y),
+          outcome: typeof s.outcome === 'string' ? s.outcome : 'in_field',
+          type: s.type === 'rug' ? 'rug' : 'nek',
+          teamSide: s.teamSide === 'away' ? 'away' : 'home',
+          throwNumber: num(s.throwNumber, 1),
+          shirtNumber: num(s.shirtNumber, 0),
+        } as ShotPoint
+      })
+  }, [shots])
 
   // Enkel de gekozen ploeg afspelen (thuis/uit) of allebei.
   const playShots = useMemo(
@@ -123,8 +133,8 @@ export function FlowReplay({
       label: String(s.throwNumber),
     }))
     let cur: ShotPoint | null = null
-    if (step < total) {
-      const s = playShots[step]
+    const s = step < total ? playShots[step] : undefined
+    if (s) {
       const tp = Math.min(1, within / 0.7) // eerste 70% = reizen, rest = even blijven hangen
       ms.push({
         x: s.fromX + (s.x - s.fromX) * tp,
@@ -213,7 +223,8 @@ export function FlowReplay({
       seg(x0, y0 + 0.5 * fieldH, x0 + FW, y0 + 0.5 * fieldH)
       ctx.setLineDash([])
     }
-    const drawShot = (s: ShotPoint, prog: number) => {
+    const drawShot = (s: ShotPoint | undefined, prog: number) => {
+      if (!s) return
       const col = OUTCOME_COLOR[s.outcome] ?? '#ffd166'
       const fx = mx(s.fromX)
       const fy = my(s.fromY)
@@ -275,12 +286,12 @@ export function FlowReplay({
       if (st < list.length) drawShot(list[st], Math.min(1, wi / 0.7))
     }
 
-    drawFrame(0) // eerste frame klaarzetten vóór de opname start
     setRecording(true)
     setRecPct(0)
     setRecMsg(null)
     setPlaying(false)
     try {
+      drawFrame(0) // eerste frame klaarzetten vóór de opname start
       // Auto-capture op vaste fps (geen requestFrame): het mengen van beide modi liet op sommige
       // toestellen een lege/onspeelbare video achter.
       const stream = (canvas as HTMLCanvasElement & { captureStream(fps?: number): MediaStream }).captureStream(25)
