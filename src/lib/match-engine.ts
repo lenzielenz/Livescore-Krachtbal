@@ -409,6 +409,37 @@ export async function undoLastThrow(payload: Payload, matchId: number) {
     limit: 1,
   })
   const last = res.docs[0]
+
+  // Een net aangevraagde vrije worp (VW) heeft nog GEEN worp — undo moet ze dan tóch kunnen
+  // annuleren: verwijder het lege, openstaande vrijeworp-balbezit en heropen het vorige balbezit.
+  const newestPossRes = await payload.find({
+    collection: 'possessions',
+    where: { match: { equals: matchId } },
+    sort: '-id',
+    depth: 0,
+    limit: 1,
+  })
+  const newestPoss = newestPossRes.docs[0]
+  if (newestPoss && newestPoss.freeThrow && newestPoss.endOutcome == null) {
+    const lastPossId = last ? (typeof last.possession === 'object' ? (last.possession as { id: number }).id : last.possession) : null
+    const cnt = await payload.count({ collection: 'throws', where: { possession: { equals: newestPoss.id } } })
+    if (cnt.totalDocs === 0 && (lastPossId == null || Number(newestPoss.id) > Number(lastPossId))) {
+      await payload.delete({ collection: 'possessions', id: newestPoss.id, overrideAccess: true })
+      // Heropen het balbezit dat door de VW werd afgesloten (het nieuwste daarvóór).
+      const prev = await payload.find({
+        collection: 'possessions',
+        where: { and: [{ match: { equals: matchId } }, { id: { less_than: newestPoss.id } }] },
+        sort: '-id',
+        depth: 0,
+        limit: 1,
+      })
+      if (prev.docs[0]) {
+        await payload.update({ collection: 'possessions', id: prev.docs[0].id, data: { endOutcome: null }, overrideAccess: true })
+      }
+      return buildMatchState(payload, matchId)
+    }
+  }
+
   if (!last) return buildMatchState(payload, matchId)
 
   const possId = typeof last.possession === 'object' ? last.possession.id : last.possession
