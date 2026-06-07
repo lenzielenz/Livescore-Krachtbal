@@ -16,7 +16,8 @@ function displayName(user: { name?: string | null; email?: string | null }): str
 }
 
 // Live shoutout (ingelogde supporter). Vereist login (i.t.t. de publieke emoji-reacties), met
-// per-gebruiker rate limit en lengtebegrenzing. Berichten zijn efemeer (in-memory, niet opgeslagen).
+// per-gebruiker rate limit en lengtebegrenzing. Berichten worden persistent op de wedstrijd
+// bewaard (zie match-channel), zodat ze niet verdwijnen wanneer (even) niemand kijkt.
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const matchId = Number(id)
