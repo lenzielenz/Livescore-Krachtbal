@@ -914,7 +914,7 @@ export function Scorekeeper({
                   <div key={side} className={`sk-lineup-col ${side}`}>
                     <h4>{teamName}</h4>
                     <div className="sk-lineup-list">
-                      <span className="sk-lineup-lbl">veld — tik de kapitein aan (K)</span>
+                      <span className="sk-lineup-lbl">veld</span>
                       {field.map((p) => (
                         <button
                           type="button"
@@ -922,15 +922,31 @@ export function Scorekeeper({
                           className={`sk-lineup-chip on ${captainId === p.id ? 'captain' : ''}`}
                           disabled={busy || lineupConfirmed[side]}
                           onClick={() => pickCaptain(side, p.id)}
-                          title="Tik aan om kapitein te maken"
+                          title={captainId === p.id ? 'Kapitein' : 'Tik aan om kapitein te maken'}
                         >
-                          {captainId === p.id && <span className="sk-cap-badge">K</span>}
+                          {captainId === p.id && <span className="sk-cap-badge" aria-hidden>👑</span>}
                           <span className="num">{p.shirtNumber}</span>
                           <span className="nm">{firstName(p.name)}</span>
                         </button>
                       ))}
                       {field.length === 0 && <span className="sk-dim">nog niemand</span>}
                     </div>
+                    {field.length > 0 && !lineupConfirmed[side] && (
+                      <div className={`sk-cap-status ${captainOk ? 'ok' : 'todo'}`}>
+                        {captainOk ? (
+                          <>
+                            <span aria-hidden>👑</span> Kapitein:{' '}
+                            <strong>{firstName(field.find((p) => p.id === captainId)?.name ?? '')}</strong>
+                            <span className="sk-cap-change"> — tik een ander aan om te wijzigen</span>
+                          </>
+                        ) : (
+                          <>
+                            <span aria-hidden>👑</span> Kies de kapitein:{' '}
+                            <strong>tik een veldspeler aan</strong>
+                          </>
+                        )}
+                      </div>
+                    )}
                     {bench.length > 0 && (
                       <div className="sk-lineup-list">
                         <span className="sk-lineup-lbl">wissel</span>
@@ -954,9 +970,6 @@ export function Scorekeeper({
                         </button>
                       ) : (
                         <>
-                          {field.length === LINEUP_MIN && !captainOk && (
-                            <span className="sk-cap-hint">Tik een veldspeler aan als kapitein.</span>
-                          )}
                           <button
                             type="button"
                             className="sk-btn primary"
