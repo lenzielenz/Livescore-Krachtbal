@@ -1,10 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 
 import { ErrorCatch } from '@/components/ErrorCatch'
 import { FieldSchema, type FieldMarker } from '@/components/FieldSchema'
 import { FlowReplay } from '@/components/FlowReplay'
+import { saveOrShareBlob, slugFilename, svgToPngBlob } from '@/lib/client-download'
 import type { ShotPoint } from '@/lib/match-engine'
 import type { MatchStats as Stats } from '@/lib/stats'
 import './match-stats.css'
@@ -56,6 +57,25 @@ export function MatchStats({
   const [view, setView] = useState<'dots' | 'flow' | 'heat' | 'video'>('dots')
   const [orderFilter, setOrderFilter] = useState<'all' | 'first' | 'second' | 'last'>('all')
   const [playerView, setPlayerView] = useState<'table' | 'cards'>('table')
+  // Veldweergave (Punten/Flow/Heatmap) als afbeelding downloaden i.p.v. een screenshot.
+  const fieldWrapRef = useRef<HTMLDivElement>(null)
+  const [imgBusy, setImgBusy] = useState(false)
+
+  const downloadField = async () => {
+    const svg = fieldWrapRef.current?.querySelector('svg')
+    if (!svg || imgBusy) return
+    setImgBusy(true)
+    try {
+      const blob = await svgToPngBlob(svg as SVGSVGElement, { scale: 3, background: '#0b1c14' })
+      const viewName = view === 'flow' ? 'flow' : view === 'heat' ? 'heatmap' : 'punten'
+      const name = slugFilename('krachtbal', viewName, teams.home, 'vs', teams.away, matchLabel) + '.png'
+      await saveOrShareBlob(blob, name, matchLabel ?? 'Krachtbal')
+    } catch {
+      // stil: gebruiker kan opnieuw proberen
+    } finally {
+      setImgBusy(false)
+    }
+  }
 
   const matchesOrder = (s: ShotPoint) =>
     orderFilter === 'all' ||
@@ -141,12 +161,19 @@ export function MatchStats({
             </ErrorCatch>
           ) : (
             <>
-              <FieldSchema
-                className="shotmap-field"
-                markers={view === 'heat' ? [] : markers}
-                heatPoints={view === 'heat' ? heatPoints : undefined}
-                goalAreaDepthM={goalAreaDepth}
-              />
+              <div ref={fieldWrapRef}>
+                <FieldSchema
+                  className="shotmap-field"
+                  markers={view === 'heat' ? [] : markers}
+                  heatPoints={view === 'heat' ? heatPoints : undefined}
+                  goalAreaDepthM={goalAreaDepth}
+                />
+              </div>
+              <div className="shotmap-controls">
+                <button type="button" className="replay-dl" onClick={downloadField} disabled={imgBusy}>
+                  {imgBusy ? '⏳ Bezig…' : '⬇ Download afbeelding'}
+                </button>
+              </div>
               {view !== 'heat' ? (
                 <div className="shotmap-legend">
                   <span><i style={{ background: OUTCOME_COLOR.goal }} /> doelpunt</span>
