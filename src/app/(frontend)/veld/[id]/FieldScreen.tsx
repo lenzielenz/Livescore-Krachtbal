@@ -157,19 +157,21 @@ export function FieldScreen({
     }
   }
 
-  // Klok-basis bijwerken bij elke state-update.
+  // Klok-basis bijwerken — reken vanaf clockUpdatedAt (server) zodat de tijd klopt en niet reset.
   useEffect(() => {
-    base.current = { seconds: state.match.clockSeconds, at: Date.now() }
-    setClock(state.match.clockSeconds)
-  }, [state.match.clockSeconds, state.match.clockRunning])
+    const m = state.match
+    const at = m.clockUpdatedAt ? new Date(m.clockUpdatedAt).getTime() : Date.now()
+    base.current = { seconds: m.clockSeconds, at }
+    setClock(m.clockRunning ? m.clockSeconds + Math.max(0, (Date.now() - at) / 1000) : m.clockSeconds)
+  }, [state.match.clockSeconds, state.match.clockRunning, state.match.clockUpdatedAt])
 
   useEffect(() => {
     if (!state.match.clockRunning) return
     const t = setInterval(() => {
-      setClock(base.current.seconds + (Date.now() - base.current.at) / 1000)
+      setClock(base.current.seconds + Math.max(0, (Date.now() - base.current.at) / 1000))
     }, 250)
     return () => clearInterval(t)
-  }, [state.match.clockRunning])
+  }, [state.match.clockRunning, state.match.clockUpdatedAt])
 
   const status = state.match.status
   const statusLabel =

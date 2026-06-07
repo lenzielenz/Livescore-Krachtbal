@@ -445,6 +445,13 @@
   background: color-mix(in srgb, var(--accent) 8%, transparent);
 }
 .sb-half { font-size: 0.8rem; color: var(--dim-strong); text-transform: uppercase; letter-spacing: 0.06em; }
+/* Geschatte resterende speeltijd — zodat supporters weten hoelang er nog gespeeld wordt. */
+.sb-remaining {
+  margin-top: 4px;
+  font-size: 0.82rem; font-weight: 800;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
 /* Subtiele melding: tot waar de klok van deze helft loopt (+ gevraagde minuten). */
 .sb-playto { margin-top: 3px; font-size: 0.66rem; color: var(--dim); font-variant-numeric: tabular-nums; }
 

@@ -340,20 +340,23 @@ export function Scoreboard({
     if (el) el.scrollTop = el.scrollHeight
   }, [shouts])
 
-  // Klok-basis bijwerken bij elke state-update.
+  // Klok-basis bijwerken bij elke state-update — reken vanaf clockUpdatedAt (server), zodat de tijd
+  // klopt voor wie later instapt en NIET telkens terug naar 0 "reset".
   useEffect(() => {
-    base.current = { seconds: state.match.clockSeconds, running: state.match.clockRunning, at: Date.now() }
-    setClock(state.match.clockSeconds)
-  }, [state.match.clockSeconds, state.match.clockRunning])
+    const m = state.match
+    const at = m.clockUpdatedAt ? new Date(m.clockUpdatedAt).getTime() : Date.now()
+    base.current = { seconds: m.clockSeconds, running: m.clockRunning, at }
+    setClock(m.clockRunning ? m.clockSeconds + Math.max(0, (Date.now() - at) / 1000) : m.clockSeconds)
+  }, [state.match.clockSeconds, state.match.clockRunning, state.match.clockUpdatedAt])
 
   useEffect(() => {
     if (!state.match.clockRunning) return
     const t = setInterval(() => {
       const b = base.current
-      setClock(b.seconds + (Date.now() - b.at) / 1000)
+      setClock(b.seconds + Math.max(0, (Date.now() - b.at) / 1000))
     }, 250)
     return () => clearInterval(t)
-  }, [state.match.clockRunning])
+  }, [state.match.clockRunning, state.match.clockUpdatedAt])
 
   const statusLabel =
     state.match.status === 'live' ? 'LIVE' : state.match.status === 'finished' ? 'AFGELOPEN' : 'GEPLAND'
@@ -375,6 +378,16 @@ export function Scoreboard({
   // + hoeveel minuten er in totaal gevraagd zijn (time-outs van beide ploegen + SR-minuten), want
   // die pauzeren de klok en rekken de échte speeltijd op.
   const requestedMin = state.timeouts.home + state.timeouts.away + state.refereeStops
+
+  // Geschatte resterende speeltijd, zodat supporters weten hoelang er nog gespeeld wordt: wat rest
+  // in deze helft + de nog te spelen helft(en) + de gevraagde extra minuten (time-outs/SR rekken
+  // de échte speeltijd op).
+  const HALVES = 2
+  const halvesLeftAfter = Math.max(0, HALVES - state.match.currentHalf)
+  const remainingMin =
+    state.match.status === 'live'
+      ? Math.max(0, Math.ceil((Math.max(0, halfSeconds - clock) + halvesLeftAfter * halfSeconds + requestedMin * 60) / 60))
+      : 0
 
   // Accenten in de clubkleuren (ringen, tijdlijn, doelpunt-gloed). Valt terug op groen/blauw.
   // De rauwe kleur dient voor de ring/logo; voor TEKST/cijfers op het donkere paneel klemmen we
@@ -436,6 +449,11 @@ export function Scoreboard({
           </div>
           <div className="sb-clock">{fmtClock(clock)}</div>
           <div className="sb-half">Helft {state.match.currentHalf}</div>
+          {state.match.status === 'live' && (
+            <div className="sb-remaining" title="Schatting: resterende speeltijd in deze + de volgende helft, inclusief de gevraagde extra minuten (time-outs/SR).">
+              ⏳ nog ± {remainingMin} min
+            </div>
+          )}
           {state.match.status !== 'finished' && (
             <div className="sb-playto" title="De klok telt op tot dit punt; time-outs en SR-minuten pauzeren ze, dus de échte speeltijd loopt langer.">
               speelt tot {fmtClock(halfSeconds)}
