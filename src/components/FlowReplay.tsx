@@ -239,16 +239,17 @@ export function FlowReplay({
       ctx.strokeRect(x0, y0, FW, fieldH)
       const gl = goalLineNorm(d)
       const ft = freeThrowNorm(d)
-      const cx = x0 + FW / 2
-      const tick = (1.5 / (26 + 2 * d)) * fieldH // 1,5 m merkteken aan de doellijn
       const glTop = y0 + gl * fieldH
       const glBot = y0 + (1 - gl) * fieldH
+      const tickX = Math.min(PAD - 2, 12) // streepje buiten de zijlijn (binnen de marge)
       ctx.lineWidth = 1.5
       seg(x0, glTop, x0 + FW, glTop)
       seg(x0, glBot, x0 + FW, glBot)
-      // Doellijn-merkteken: kort streepje in het midden, naar buiten (richting achterlijn).
-      seg(cx, glTop, cx, glTop - tick)
-      seg(cx, glBot, cx, glBot + tick)
+      // Doellijn steekt aan beide zijlijnen een eindje buiten het veld (4 streepjes in totaal).
+      seg(x0 - tickX, glTop, x0, glTop)
+      seg(x0 + FW, glTop, x0 + FW + tickX, glTop)
+      seg(x0 - tickX, glBot, x0, glBot)
+      seg(x0 + FW, glBot, x0 + FW + tickX, glBot)
       ctx.lineWidth = 1
       seg(x0, y0 + ft * fieldH, x0 + FW, y0 + ft * fieldH)
       seg(x0, y0 + (1 - ft) * fieldH, x0 + FW, y0 + (1 - ft) * fieldH)

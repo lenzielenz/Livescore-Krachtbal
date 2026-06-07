@@ -302,10 +302,12 @@ export function FieldSchema({
       <line x1={0} y1={awayGoalY} x2={W} y2={awayGoalY} stroke="#e8f5ee" strokeWidth={1.5} />
       {/* Middellijn — volle lijn (zoals op het officiële terrein). */}
       <line x1={0} y1={midY} x2={W} y2={midY} stroke="#e8f5ee" strokeWidth={1.5} />
-      {/* Doellijn-merkteken: kort streepje in het midden dat naar buiten (richting achterlijn)
-          wijst, zoals op het reglementaire terrein (1,5 m). */}
-      <line x1={W / 2} y1={homeGoalY} x2={W / 2} y2={homeGoalY - 1.5 * SCALE} stroke="#e8f5ee" strokeWidth={1.5} />
-      <line x1={W / 2} y1={awayGoalY} x2={W / 2} y2={awayGoalY + 1.5 * SCALE} stroke="#e8f5ee" strokeWidth={1.5} />
+      {/* Doellijn steekt aan beide zijlijnen een eindje buiten het veld — 4 streepjes in totaal
+          (2 per doellijn), zoals op het reglementaire terrein. */}
+      <line x1={-1.2 * SCALE} y1={homeGoalY} x2={0} y2={homeGoalY} stroke="#e8f5ee" strokeWidth={1.5} />
+      <line x1={W} y1={homeGoalY} x2={W + 1.2 * SCALE} y2={homeGoalY} stroke="#e8f5ee" strokeWidth={1.5} />
+      <line x1={-1.2 * SCALE} y1={awayGoalY} x2={0} y2={awayGoalY} stroke="#e8f5ee" strokeWidth={1.5} />
+      <line x1={W} y1={awayGoalY} x2={W + 1.2 * SCALE} y2={awayGoalY} stroke="#e8f5ee" strokeWidth={1.5} />
       {/* Vrijworplijnen — volle lijn (zoals op het officiële terrein). */}
       <line x1={0} y1={ftTopY} x2={W} y2={ftTopY} stroke="#e8f5ee" strokeWidth={1} />
       <line x1={0} y1={ftBotY} x2={W} y2={ftBotY} stroke="#e8f5ee" strokeWidth={1} />
