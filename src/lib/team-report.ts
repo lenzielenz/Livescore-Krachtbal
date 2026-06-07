@@ -278,6 +278,25 @@ export async function buildTeamReport(payload: Payload, teamId: number, seizoen?
   }
   if (goalDistAll.n >= 5) insights.push(`Doelpunten vallen gemiddeld van ${(goalDistAll.sum / goalDistAll.n).toFixed(1)} m.`)
 
+  // Verre worp (+15 m): in krachtbal speelt een ploeg de bal soms ver "links of rechts over".
+  // We tonen hoe vaak en langs welke kant, zodat de tegenstander zich kan voorbereiden.
+  const FAR_M = 15
+  const farZ = emptyZ()
+  let farTot = 0
+  for (const t of teamThrows) {
+    if ((t.distance ?? 0) >= FAR_M && t.zone) {
+      farZ[t.zone] += 1
+      farTot += 1
+    }
+  }
+  if (farTot >= 3) {
+    const parts: string[] = []
+    if (farZ.links) parts.push(`${farZ.links}× links over`)
+    if (farZ.rechts) parts.push(`${farZ.rechts}× rechts over`)
+    if (farZ.midden) parts.push(`${farZ.midden}× centraal`)
+    insights.push(`Verre worp (+15 m): ${parts.join(' · ')}.`)
+  }
+
   // Per speler een korte tendens (min. 5 worpen).
   const byPlayer = new Map<number, TLite[]>()
   for (const t of teamThrows) {
