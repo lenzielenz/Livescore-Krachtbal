@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
 import { CastToTv } from '@/components/CastToTv'
+import { MatchRain } from '@/components/MatchRain'
 import { Scoreboard } from '@/components/Scoreboard'
 import { SiteHeader } from '@/components/SiteHeader'
 import { canAnalyse } from '@/lib/access'
@@ -31,8 +32,12 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
 
   // Extra context: reeks, datum/uur, locatie (terrein thuisclub) en toegewezen scheidsrechter.
   const matchDoc = await payload.findByID({ collection: 'matches', id: matchId, depth: 2 }).catch(() => null)
-  const homeClub = (matchDoc?.homeTeam as { club?: { accommodatie?: string } } | null)?.club
+  const homeClub = (matchDoc?.homeTeam as { club?: { accommodatie?: string; plaats?: string; lat?: number; lng?: number } } | null)?.club
   const accommodatie = homeClub?.accommodatie?.trim() || null
+  // Locatie voor de buienradar van de thuiswedstrijd.
+  const rainPlace = homeClub?.plaats?.trim() || null
+  const rainLat = typeof homeClub?.lat === 'number' ? homeClub.lat : null
+  const rainLng = typeof homeClub?.lng === 'number' ? homeClub.lng : null
   // Toon de leesbare reeksnaam zonder de code-prefix ("1ste Nationale Dames" i.p.v. "1NAD — …").
   const reeks = matchDoc?.reeks ? reeksNaam(matchDoc.reeks) : null
   // Live winstkans: helftduur + verwacht scoretempo strikt uit de reeks (veilige defaults binnen reeksen.ts).
@@ -97,6 +102,10 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
             </div>
           )}
         </div>
+      )}
+      {/* Mini-buienradar voor de thuiswedstrijd (zolang ze nog niet afgelopen is). */}
+      {state.match.status !== 'finished' && matchDoc?.date && (rainLat != null || rainPlace) && (
+        <MatchRain date={String(matchDoc.date)} lat={rainLat} lng={rainLng} place={rainPlace} />
       )}
       <Scoreboard
         matchId={matchId}
