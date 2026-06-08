@@ -37,59 +37,6 @@ const PANEL = rgb(0.96, 0.97, 0.97)
 const GRASS = rgb(0.07, 0.26, 0.18)
 const WHITE = rgb(1, 1, 1)
 
-const ZONE_NL: Record<string, string> = { links: 'links', midden: 'het midden', rechts: 'rechts', Links: 'links', Midden: 'het midden', Rechts: 'rechts' }
-
-// ── Afgeleide sterktes & zwaktes uit alle beschikbare data ──
-function bestBand(bands: { label: string; attempts: number; conversion: number }[], min = 3) {
-  return bands.filter((b) => b.attempts >= min).sort((a, b) => b.conversion - a.conversion)[0] ?? null
-}
-function worstBand(bands: { label: string; attempts: number; conversion: number }[], min = 3) {
-  return bands.filter((b) => b.attempts >= min).sort((a, b) => a.conversion - b.conversion)[0] ?? null
-}
-function topBand(bands: { label: string; attempts: number }[]) {
-  return [...bands].sort((a, b) => b.attempts - a.attempts)[0] ?? null
-}
-
-function strengthsWeaknesses(r: TeamReport, danger?: TeamDanger | null, conceded?: TeamDanger | null) {
-  const strong: string[] = []
-  const weak: string[] = []
-  const t = r.totals
-
-  if (r.players[0]?.points > 0) {
-    const p = r.players[0]
-    strong.push(`Gevaarlijkste speler: #${p.shirtNumber} ${p.name} (${p.points} ptn, ${p.goals} doelpunten). Schakel hem uit.`)
-  }
-  if (t.goalAttempts >= 6 && t.conversion >= 0.55) strong.push(`Koelbloedig voor doel: ${Math.round(t.conversion * 100)}% van de doelpogingen raak.`)
-  if (t.goals > 0 && t.rug / t.goals >= 0.4) strong.push(`Sterk in de rugworp (+2): ${Math.round((t.rug / t.goals) * 100)}% van de doelpunten zijn dubbel.`)
-  if (danger) {
-    const bz = bestBand(danger.zoneBands)
-    if (bz && bz.conversion >= 0.5) strong.push(`Scoort vlot via ${ZONE_NL[bz.label] ?? bz.label}: ${Math.round(bz.conversion * 100)}% rendement.`)
-    const far = danger.depthBands.find((b) => /ver/i.test(b.label))
-    if (far && far.attempts >= 3 && far.conversion >= 0.4) strong.push(`Dreigt ook van ver: ${Math.round(far.conversion * 100)}% raak van afstand.`)
-  }
-  if (t.avgDistance >= 16) strong.push(`Speelt met diepgang: gemiddeld ${t.avgDistance} m per worp.`)
-
-  // Zwaktes.
-  if (conceded && conceded.attempts >= 5) {
-    const cz = topBand(conceded.zoneBands)
-    if (cz) weak.push(`Verdedigend kwetsbaar via ${ZONE_NL[cz.label] ?? cz.label}: daar scoren tegenstanders het vaakst tegen hen. Zoek die ruimte op.`)
-    const cd = topBand(conceded.depthBands)
-    if (cd && /ver/i.test(cd.label)) weak.push('Geeft veel kansen weg van ver - durf van afstand af te werken.')
-  }
-  if (danger) {
-    const wz = worstBand(danger.zoneBands)
-    const bz = bestBand(danger.zoneBands)
-    if (wz && bz && wz.label !== bz.label && wz.conversion <= 0.35) weak.push(`Minder gevaarlijk via ${ZONE_NL[wz.label] ?? wz.label} (${Math.round(wz.conversion * 100)}%) - duw hen die kant op.`)
-  }
-  if (t.caughtAgainst >= 4) weak.push(`Verliest geregeld de bal door vangst (${t.caughtAgainst}x) - druk zetten loont.`)
-  if (t.out >= 5) weak.push(`Gooit vaak buiten (${t.out}x) - laat hen forceren.`)
-  if (t.goalAttempts >= 6 && t.conversion <= 0.4) weak.push(`Lage conversie (${Math.round(t.conversion * 100)}%) - onder druk haperen ze.`)
-
-  // Vul aan met de automatische tendensen zodat niets verborgen blijft.
-  for (const s of r.insights) if (weak.length + strong.length < 14 && !/verdedigend/i.test(s)) strong.push(s)
-  return { strong: strong.slice(0, 7), weak: weak.slice(0, 7) }
-}
-
 export async function generateTeamReportPdf(
   r: TeamReport,
   danger?: TeamDanger | null,
@@ -186,8 +133,52 @@ export async function generateTeamReportPdf(
   })
   y -= 6
 
+  // ── Profiel: DNA-labels + radar ──
+  const prof = r.profile
+  if (prof.tags.length || prof.radar.some((a) => a.value > 0)) {
+    sectionTitle('Profiel')
+    if (prof.tags.length) paragraph(`DNA: ${prof.tags.join('  ·  ')}`, 9, INK)
+    // Radar (6 assen) — outline, geen vulling (helder in print).
+    ensure(180)
+    const radR = 66
+    const cx = MARGIN + CW / 2
+    const cy = y - radR - 22
+    const nAx = prof.radar.length
+    const rv = (i: number, rr: number) => {
+      const a = (-90 + i * (360 / nAx)) * (Math.PI / 180)
+      return { x: cx + rr * Math.cos(a), y: cy - rr * Math.sin(a) }
+    }
+    for (const ring of [0.5, 1]) {
+      for (let i = 0; i < nAx; i++) {
+        const p1 = rv(i, ring * radR)
+        const p2 = rv((i + 1) % nAx, ring * radR)
+        page.drawLine({ start: p1, end: p2, thickness: 0.6, color: LINE })
+      }
+    }
+    for (let i = 0; i < nAx; i++) {
+      const p = rv(i, radR)
+      page.drawLine({ start: { x: cx, y: cy }, end: p, thickness: 0.5, color: LINE, opacity: 0.7 })
+    }
+    const dataPts = prof.radar.map((a, i) => rv(i, (Math.max(0, Math.min(100, a.value)) / 100) * radR))
+    for (let i = 0; i < dataPts.length; i++) {
+      page.drawLine({ start: dataPts[i], end: dataPts[(i + 1) % dataPts.length], thickness: 1.6, color: ACCENT })
+    }
+    for (const p of dataPts) dot(p.x, p.y, 1.8, ACCENT)
+    prof.radar.forEach((a, i) => {
+      const lp = rv(i, radR + 12)
+      const w = txtW(a.label, 7.5, bold)
+      const lx = lp.x < cx - 4 ? lp.x - w : lp.x > cx + 4 ? lp.x : lp.x - w / 2
+      txt(a.label, lx, lp.y + (lp.y > cy ? 2 : -6), 7.5, bold, INK)
+      const vw = txtW(a.display, 7, font)
+      const vx = lp.x < cx - 4 ? lp.x - vw : lp.x > cx + 4 ? lp.x : lp.x - vw / 2
+      txt(a.display, vx, lp.y + (lp.y > cy ? 2 : -6) - 9, 7, font, DIM)
+    })
+    y = cy - radR - 22
+  }
+
   // ── Sterktes & Zwaktes ──
-  const { strong, weak } = strengthsWeaknesses(r, danger, conceded)
+  const strong = prof.strengths.map((f) => `${f.title}: ${f.detail}`)
+  const weak = prof.weaknesses.map((f) => `${f.title}: ${f.detail}`)
   sectionTitle('Sterktes & zwaktes')
   const colGap = 14
   const colW = (CW - colGap) / 2

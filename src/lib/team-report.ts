@@ -34,6 +34,32 @@ export interface TeamReportPlayer {
   tip?: string
 }
 
+/** Eén as van het radar-profiel (0-100, hoger = sterker op die dimensie). */
+export interface RadarAxis {
+  key: string
+  label: string
+  value: number
+  display: string
+}
+
+/** Eén bevinding (sterkte of zwakte) met een gewicht voor de sortering. */
+export interface Finding {
+  area: 'Aanval' | 'Verdediging' | 'Balbezit' | 'Tactiek' | 'Spelers'
+  title: string
+  detail: string
+  weight: number
+}
+
+export interface TeamProfile {
+  /** Korte DNA-labels (bv. "Rechts-dominant", "Krachtploeg"). */
+  tags: string[]
+  radar: RadarAxis[]
+  strengths: Finding[]
+  weaknesses: Finding[]
+  /** Aandeel van de topscorer in de totale punten (afhankelijkheid). */
+  topScorerShare: number
+}
+
 export interface TeamReport {
   teamId: number
   teamName: string
@@ -62,6 +88,8 @@ export interface TeamReport {
   speelstijl: Speelstijl
   /** Strategie-aanbevelingen: speelstijl naast de gemeten data gelegd. */
   strategy: string[]
+  /** Gesynthetiseerd profiel: radar, DNA-labels en geprioriteerde sterktes/zwaktes. */
+  profile: TeamProfile
   generatedAt: string
 }
 
@@ -303,6 +331,10 @@ export async function buildTeamReport(payload: Payload, teamId: number, seizoen?
   }
 
   // ── Verdedigend: waar de ploeg het ZWAKST staat (vanwaar de tegenstanders scoren). ──
+  const concededZ = emptyZ()
+  let concededTot = 0
+  let concededRug = 0
+  let concededFar = 0
   if (matchIdList.length) {
     const cr = await payload
       .find({
@@ -312,10 +344,6 @@ export async function buildTeamReport(payload: Payload, teamId: number, seizoen?
         limit: 8000,
       })
       .catch(() => ({ docs: [] as Record<string, unknown>[] }))
-    const concededZ = emptyZ()
-    let concededTot = 0
-    let concededRug = 0
-    let concededFar = 0
     for (const t of cr.docs) {
       const z = (t as { zone?: string }).zone
       if (z && z in concededZ) concededZ[z] += 1
@@ -375,6 +403,71 @@ export async function buildTeamReport(payload: Payload, teamId: number, seizoen?
     if (parts.length) p.tip = parts.join(' · ')
   }
 
+  // ── Gesynthetiseerd profiel: radar + DNA-labels + geprioriteerde sterktes/zwaktes ──
+  const clampPct = (v: number) => Math.max(0, Math.min(100, Math.round(v)))
+  const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
+  const goalsTot = totals.goals
+  const conv = totals.goalAttempts ? totals.goals / totals.goalAttempts : 0
+  const rugShareGoals = goalsTot ? totals.rug / goalsTot : 0
+  const avgDist = totals.throws ? totals.distSum / totals.throws : 0
+  const zdom = domZone(zones) // {zone, pct} of null
+  const domPct = zdom ? zdom.pct / 100 : 0.34
+  const lossRate = totals.throws ? (totals.caughtAgainst + totals.out) / totals.throws : 0
+  const catchesPerMatch = matchesAnalyzed ? totals.catches / matchesAnalyzed : 0
+  const scorers = players.filter((p) => p.points > 0)
+  const top = players[0]
+  const topScorerShare = totals.points ? (top?.points ?? 0) / totals.points : 0
+
+  const radar: RadarAxis[] = [
+    { key: 'afwerking', label: 'Afwerking', value: clampPct(((conv - 0.25) / 0.35) * 100), display: `${Math.round(conv * 100)}%` },
+    { key: 'kracht', label: 'Kracht (rug)', value: clampPct((rugShareGoals / 0.5) * 100), display: `${Math.round(rugShareGoals * 100)}% dubbel` },
+    { key: 'diepgang', label: 'Diepgang', value: clampPct(((avgDist - 6) / 12) * 100), display: `${avgDist.toFixed(1)} m` },
+    { key: 'spreiding', label: 'Spreiding', value: clampPct(((0.66 - domPct) / 0.32) * 100), display: zdom ? `${zdom.pct}% ${zdom.zone}` : '—' },
+    { key: 'balveilig', label: 'Balveiligheid', value: clampPct(((0.2 - lossRate) / 0.15) * 100), display: `${Math.round(lossRate * 100)}% verlies` },
+    { key: 'verdediging', label: 'Verdediging', value: clampPct((catchesPerMatch / 8) * 100), display: `${catchesPerMatch.toFixed(1)}/match` },
+  ]
+
+  const strengths: Finding[] = []
+  const weaknesses: Finding[] = []
+
+  if (top && top.points > 0) {
+    strengths.push({ area: 'Spelers', title: `Sterspeler #${top.shirtNumber} ${top.name}`, detail: `${top.points} ptn · ${top.goals} doelpunten${top.tip ? ` — ${top.tip}` : ''}. Hou hem kort.`, weight: 95 })
+  }
+  if (totals.goalAttempts >= 6 && conv >= 0.5) strengths.push({ area: 'Aanval', title: 'Koelbloedig voor doel', detail: `${Math.round(conv * 100)}% van de doelpogingen raak — moeilijk af te stoppen.`, weight: clampPct(conv * 100) })
+  if (goalsTot >= 8 && rugShareGoals >= 0.3) strengths.push({ area: 'Aanval', title: 'Sterke rugworp (+2)', detail: `${Math.round(rugShareGoals * 100)}% van de doelpunten zijn dubbel — let op de diepe en verre worp.`, weight: clampPct(rugShareGoals * 120) })
+  if (totals.throws >= 20 && avgDist >= 14) strengths.push({ area: 'Aanval', title: 'Speelt met diepgang', detail: `Gemiddeld ${avgDist.toFixed(1)} m per worp — rekt je verdediging uit elkaar.`, weight: clampPct(avgDist * 4) })
+  if (zdom && domPct <= 0.42 && totals.throws >= 20) strengths.push({ area: 'Tactiek', title: 'Onvoorspelbaar', detail: 'Worpen mooi verdeeld over links, midden en rechts — moeilijk te lezen.', weight: 70 })
+  if (totals.throws >= 25 && lossRate <= 0.08) strengths.push({ area: 'Balbezit', title: 'Veilig balbezit', detail: `Amper balverlies (${Math.round(lossRate * 100)}%) — geduldig in de opbouw.`, weight: 72 })
+  if (matchesAnalyzed >= 2 && catchesPerMatch >= 5) strengths.push({ area: 'Verdediging', title: 'Sterke verdediging', detail: `${catchesPerMatch.toFixed(1)} vangsten per match — zij pakken veel ballen af.`, weight: clampPct(catchesPerMatch * 10) })
+  if (scorers.length >= 4 && topScorerShare <= 0.25) strengths.push({ area: 'Spelers', title: 'Brede aanval', detail: `${scorers.length} spelers scoren — één man uitschakelen volstaat niet.`, weight: 68 })
+
+  if (totals.goalAttempts >= 6 && conv <= 0.4) weaknesses.push({ area: 'Aanval', title: 'Wisselvallige afwerking', detail: `Slechts ${Math.round(conv * 100)}% conversie — onder druk haperen ze.`, weight: clampPct((0.4 - conv) * 250) })
+  if (zdom && domPct >= 0.55) weaknesses.push({ area: 'Tactiek', title: `Voorspelbaar via ${zdom.zone}`, detail: `${zdom.pct}% van de worpen gaat naar ${ZONE_NL[zdom.zone]} — overlaad die kant en duw hen weg van hun voorkeur.`, weight: clampPct(domPct * 110) })
+  if (totals.throws >= 20 && lossRate >= 0.16) weaknesses.push({ area: 'Balbezit', title: 'Slordig balbezit', detail: `${totals.caughtAgainst}× gevangen en ${totals.out}× buiten — vol druk zetten loont.`, weight: clampPct(lossRate * 320) })
+  if (matchesAnalyzed >= 2 && catchesPerMatch <= 1.5) weaknesses.push({ area: 'Verdediging', title: 'Weinig onderscheppingen', detail: `Amper ${totals.catches} vangsten — zij pakken weinig ballen af, durf te combineren.`, weight: 64 })
+  if (scorers.length >= 3 && topScorerShare >= 0.4 && top) weaknesses.push({ area: 'Spelers', title: 'Eenmansafhankelijk', detail: `${Math.round(topScorerShare * 100)}% van de punten komt van #${top.shirtNumber} ${top.name} — neutraliseer hem en de motor valt stil.`, weight: clampPct(topScorerShare * 130) })
+  if (concededTot >= 5) {
+    const cz = domZone(concededZ)
+    if (cz) weaknesses.push({ area: 'Verdediging', title: `Kwetsbaar via ${cz.zone}`, detail: `${cz.pct}% van de tegendoelpunten valt via ${ZONE_NL[cz.zone]} — zoek bewust die ruimte op.`, weight: clampPct(cz.pct * 1.1) })
+    if (concededRug / concededTot >= 0.25) weaknesses.push({ area: 'Verdediging', title: 'Gevoelig voor de rugworp', detail: `${Math.round((concededRug / concededTot) * 100)}% van de tegendoelpunten zijn rugworpen — durf van afstand en diep af te werken.`, weight: 66 })
+    if (concededFar >= 3) weaknesses.push({ area: 'Verdediging', title: 'Geeft ver weg', detail: `${concededFar} tegendoelpunten van ver (+15 m) — werk gerust van afstand af.`, weight: 62 })
+  }
+
+  strengths.sort((a, b) => b.weight - a.weight)
+  weaknesses.sort((a, b) => b.weight - a.weight)
+
+  const tags: string[] = []
+  if (zdom && domPct >= 0.45) tags.push(`${cap(zdom.zone)}-dominant`)
+  else if (zdom && domPct <= 0.4) tags.push('Evenwichtig verdeeld')
+  if (rugShareGoals >= 0.3) tags.push('Krachtploeg')
+  if (avgDist >= 14) tags.push('Sterk van ver')
+  if (totals.goalAttempts >= 6 && conv >= 0.5) tags.push('Klinisch')
+  if (matchesAnalyzed >= 2 && catchesPerMatch >= 5) tags.push('Sterke verdediging')
+  if (scorers.length >= 3 && topScorerShare >= 0.4) tags.push('Sterspeler-afhankelijk')
+  else if (scorers.length >= 4 && topScorerShare <= 0.25) tags.push('Brede aanval')
+
+  const profile: TeamProfile = { tags: tags.slice(0, 5), radar, strengths: strengths.slice(0, 6), weaknesses: weaknesses.slice(0, 6), topScorerShare }
+
   return {
     teamId,
     teamName: String((team as { name?: unknown }).name ?? '—'),
@@ -400,6 +493,7 @@ export async function buildTeamReport(payload: Payload, teamId: number, seizoen?
     insights,
     speelstijl,
     strategy,
+    profile,
     generatedAt: new Date().toISOString(),
   }
 }
