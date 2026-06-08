@@ -13,6 +13,7 @@ import { AnalyseNav } from '../AnalyseNav'
 import { GevaarMap } from '../gevaar/GevaarMap'
 import { PloegPicker } from './PloegPicker'
 import { SpeelstijlPanel } from './SpeelstijlPanel'
+import { TeamProfile } from './TeamProfile'
 import '../../rangschikking/rangschikking.css'
 import '../analyse.css'
 
@@ -105,6 +106,8 @@ export default async function PloegRapportPage({ searchParams }: { searchParams:
               <a className="sk-demo-cta" href={`/api/analyse/team/${report.teamId}/pdf`}>📄 Download PDF</a>
               <a className="sk-demo-cta" href={`/api/analyse/team/${report.teamId}/csv`}>📑 Download CSV</a>
             </div>
+
+            <TeamProfile profile={report.profile} />
 
             {report.strategy.length > 0 && (
               <section className="rep-advies rep-strategie">

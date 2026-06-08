@@ -51,6 +51,25 @@ const report: TeamReport = {
   insights: ['Meeste doelpunten vallen via rechts.', 'Worpkeuze: 40% rugworpen (dubbel).'],
   speelstijl: { accent: 'aanvallend', zone: 'rechts', worp: 'rug', verreWorp: true, notitie: 'Snelle omschakeling.' },
   strategy: ['Jullie willen via rechts spelen — en dat lukt (62%).'],
+  profile: {
+    tags: ['Rechts-dominant', 'Krachtploeg', 'Klinisch'],
+    radar: [
+      { key: 'afwerking', label: 'Afwerking', value: 80, display: '77%' },
+      { key: 'kracht', label: 'Kracht (rug)', value: 80, display: '40% dubbel' },
+      { key: 'diepgang', label: 'Diepgang', value: 60, display: '13.1 m' },
+      { key: 'spreiding', label: 'Spreiding', value: 35, display: '43% rechts' },
+      { key: 'balveilig', label: 'Balveiligheid', value: 55, display: '28% verlies' },
+      { key: 'verdediging', label: 'Verdediging', value: 38, display: '3.0/match' },
+    ],
+    strengths: [
+      { area: 'Spelers', title: 'Sterspeler #4 Jonáš', detail: '7 ptn · 5 doelpunten. Hou hem kort.', weight: 95 },
+      { area: 'Aanval', title: 'Koelbloedig voor doel', detail: '77% van de doelpogingen raak.', weight: 77 },
+    ],
+    weaknesses: [
+      { area: 'Verdediging', title: 'Kwetsbaar via links', detail: '60% van de tegendoelpunten valt via links.', weight: 66 },
+    ],
+    topScorerShare: 0.25,
+  },
   generatedAt: new Date('2026-06-07T20:00:00Z').toISOString(),
 }
 
