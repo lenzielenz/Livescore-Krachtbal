@@ -408,6 +408,8 @@ export async function buildTeamReport(payload: Payload, teamId: number, seizoen?
   const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
   const goalsTot = totals.goals
   const conv = totals.goalAttempts ? totals.goals / totals.goalAttempts : 0
+  // Conversie kan in de ruwe data >100% lijken als doelpogingen ondergeteld zijn — toon ze nooit boven 100%.
+  const convPct = Math.min(100, Math.round(conv * 100))
   const rugShareGoals = goalsTot ? totals.rug / goalsTot : 0
   const avgDist = totals.throws ? totals.distSum / totals.throws : 0
   const zdom = domZone(zones) // {zone, pct} of null
@@ -419,7 +421,7 @@ export async function buildTeamReport(payload: Payload, teamId: number, seizoen?
   const topScorerShare = totals.points ? (top?.points ?? 0) / totals.points : 0
 
   const radar: RadarAxis[] = [
-    { key: 'afwerking', label: 'Afwerking', value: clampPct(((conv - 0.25) / 0.35) * 100), display: `${Math.round(conv * 100)}%` },
+    { key: 'afwerking', label: 'Afwerking', value: clampPct(((conv - 0.25) / 0.35) * 100), display: `${convPct}%` },
     { key: 'kracht', label: 'Kracht (rug)', value: clampPct((rugShareGoals / 0.5) * 100), display: `${Math.round(rugShareGoals * 100)}% dubbel` },
     { key: 'diepgang', label: 'Diepgang', value: clampPct(((avgDist - 6) / 12) * 100), display: `${avgDist.toFixed(1)} m` },
     { key: 'spreiding', label: 'Spreiding', value: clampPct(((0.66 - domPct) / 0.32) * 100), display: zdom ? `${zdom.pct}% ${zdom.zone}` : '—' },
@@ -433,7 +435,7 @@ export async function buildTeamReport(payload: Payload, teamId: number, seizoen?
   if (top && top.points > 0) {
     strengths.push({ area: 'Spelers', title: `Sterspeler #${top.shirtNumber} ${top.name}`, detail: `${top.points} ptn · ${top.goals} doelpunten${top.tip ? ` — ${top.tip}` : ''}. Hou hem kort.`, weight: 95 })
   }
-  if (totals.goalAttempts >= 6 && conv >= 0.5) strengths.push({ area: 'Aanval', title: 'Koelbloedig voor doel', detail: `${Math.round(conv * 100)}% van de doelpogingen raak — moeilijk af te stoppen.`, weight: clampPct(conv * 100) })
+  if (totals.goalAttempts >= 6 && conv >= 0.5) strengths.push({ area: 'Aanval', title: 'Koelbloedig voor doel', detail: `${convPct}% van de doelpogingen raak — moeilijk af te stoppen.`, weight: clampPct(conv * 100) })
   if (goalsTot >= 8 && rugShareGoals >= 0.3) strengths.push({ area: 'Aanval', title: 'Sterke rugworp (+2)', detail: `${Math.round(rugShareGoals * 100)}% van de doelpunten zijn dubbel — let op de diepe en verre worp.`, weight: clampPct(rugShareGoals * 120) })
   if (totals.throws >= 20 && avgDist >= 14) strengths.push({ area: 'Aanval', title: 'Speelt met diepgang', detail: `Gemiddeld ${avgDist.toFixed(1)} m per worp — rekt je verdediging uit elkaar.`, weight: clampPct(avgDist * 4) })
   if (zdom && domPct <= 0.42 && totals.throws >= 20) strengths.push({ area: 'Tactiek', title: 'Onvoorspelbaar', detail: 'Worpen mooi verdeeld over links, midden en rechts — moeilijk te lezen.', weight: 70 })
@@ -461,7 +463,7 @@ export async function buildTeamReport(payload: Payload, teamId: number, seizoen?
   else if (zdom && domPct <= 0.4) tags.push('Evenwichtig verdeeld')
   if (rugShareGoals >= 0.3) tags.push('Krachtploeg')
   if (avgDist >= 14) tags.push('Sterk van ver')
-  if (totals.goalAttempts >= 6 && conv >= 0.5) tags.push('Klinisch')
+  if (totals.goalAttempts >= 6 && conv >= 0.5 && convPct >= 50) tags.push('Klinisch')
   if (matchesAnalyzed >= 2 && catchesPerMatch >= 5) tags.push('Sterke verdediging')
   if (scorers.length >= 3 && topScorerShare >= 0.4) tags.push('Sterspeler-afhankelijk')
   else if (scorers.length >= 4 && topScorerShare <= 0.25) tags.push('Brede aanval')

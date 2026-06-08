@@ -35,6 +35,8 @@ const GOLD = rgb(0.85, 0.62, 0.13)
 const LINE = rgb(0.86, 0.88, 0.88)
 const PANEL = rgb(0.96, 0.97, 0.97)
 const GRASS = rgb(0.07, 0.26, 0.18)
+const GRASS2 = rgb(0.1, 0.31, 0.22)
+const CHALK = rgb(0.85, 0.95, 0.9)
 const WHITE = rgb(1, 1, 1)
 
 export async function generateTeamReportPdf(
@@ -58,6 +60,20 @@ export async function generateTeamReportPdf(
     page.drawCircle({ x, y: yy, size: rad, color, opacity })
   const vline = (x: number, y1: number, y2: number, color: ReturnType<typeof rgb>, thickness = 1, opacity = 1) =>
     page.drawLine({ start: { x, y: y1 }, end: { x, y: y2 }, thickness, color, opacity })
+  // Gevulde polygoon (pdf-lib spiegelt de y-as intern, dus lokale (lx,ly) → pagina (x+lx, y-ly)).
+  const fillPoly = (cx: number, cy: number, pts: { x: number; y: number }[], color: ReturnType<typeof rgb>, opacity = 1) => {
+    const d = pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ') + ' Z'
+    page.drawSvgPath(d, { x: cx, y: cy, color, opacity, borderWidth: 0 })
+  }
+  const star = (sx: number, sy: number, outer: number, color: ReturnType<typeof rgb>, opacity = 1) => {
+    const inner = outer * 0.45
+    const pts = Array.from({ length: 10 }, (_, i) => {
+      const rr = i % 2 === 0 ? outer : inner
+      const a = (-90 + i * 36) * (Math.PI / 180)
+      return { x: rr * Math.cos(a), y: rr * Math.sin(a) }
+    })
+    fillPoly(sx, sy, pts, color, opacity)
+  }
 
   const ensure = (need: number) => {
     if (y - need < 44) {
@@ -138,42 +154,46 @@ export async function generateTeamReportPdf(
   if (prof.tags.length || prof.radar.some((a) => a.value > 0)) {
     sectionTitle('Profiel')
     if (prof.tags.length) paragraph(`DNA: ${prof.tags.join('  ·  ')}`, 9, INK)
-    // Radar (6 assen) — outline, geen vulling (helder in print).
-    ensure(180)
-    const radR = 66
+    // Radar (6 assen) — gevuld, met rasterringen en een gloed-outline.
+    ensure(206)
+    const radR = 74
     const cx = MARGIN + CW / 2
-    const cy = y - radR - 22
+    const cy = y - radR - 26
     const nAx = prof.radar.length
     const rv = (i: number, rr: number) => {
       const a = (-90 + i * (360 / nAx)) * (Math.PI / 180)
       return { x: cx + rr * Math.cos(a), y: cy - rr * Math.sin(a) }
     }
-    for (const ring of [0.5, 1]) {
+    // Zachte achtergrondgloed + rasterringen.
+    dot(cx, cy, radR + 9, ACCENT, 0.05)
+    for (const ring of [0.25, 0.5, 0.75, 1]) {
       for (let i = 0; i < nAx; i++) {
-        const p1 = rv(i, ring * radR)
-        const p2 = rv((i + 1) % nAx, ring * radR)
-        page.drawLine({ start: p1, end: p2, thickness: 0.6, color: LINE })
+        page.drawLine({ start: rv(i, ring * radR), end: rv((i + 1) % nAx, ring * radR), thickness: ring === 1 ? 0.8 : 0.5, color: LINE, opacity: ring === 1 ? 0.9 : 0.45 })
       }
     }
-    for (let i = 0; i < nAx; i++) {
-      const p = rv(i, radR)
-      page.drawLine({ start: { x: cx, y: cy }, end: p, thickness: 0.5, color: LINE, opacity: 0.7 })
-    }
+    for (let i = 0; i < nAx; i++) page.drawLine({ start: { x: cx, y: cy }, end: rv(i, radR), thickness: 0.4, color: LINE, opacity: 0.45 })
+    // Gevuld datavlak (lokale coördinaten voor fillPoly).
+    const dataLocal = prof.radar.map((a, i) => {
+      const ang = (-90 + i * (360 / nAx)) * (Math.PI / 180)
+      const rr = (Math.max(0, Math.min(100, a.value)) / 100) * radR
+      return { x: rr * Math.cos(ang), y: rr * Math.sin(ang) }
+    })
+    fillPoly(cx, cy, dataLocal, ACCENT, 0.18)
     const dataPts = prof.radar.map((a, i) => rv(i, (Math.max(0, Math.min(100, a.value)) / 100) * radR))
-    for (let i = 0; i < dataPts.length; i++) {
-      page.drawLine({ start: dataPts[i], end: dataPts[(i + 1) % dataPts.length], thickness: 1.6, color: ACCENT })
-    }
-    for (const p of dataPts) dot(p.x, p.y, 1.8, ACCENT)
+    for (let i = 0; i < dataPts.length; i++) page.drawLine({ start: dataPts[i], end: dataPts[(i + 1) % dataPts.length], thickness: 3.4, color: ACCENT, opacity: 0.2 })
+    for (let i = 0; i < dataPts.length; i++) page.drawLine({ start: dataPts[i], end: dataPts[(i + 1) % dataPts.length], thickness: 1.6, color: ACCENT })
+    for (const p of dataPts) { dot(p.x, p.y, 2.3, ACCENT); dot(p.x, p.y, 0.9, WHITE) }
+    dot(cx, cy, 1.4, ACCENT)
     prof.radar.forEach((a, i) => {
-      const lp = rv(i, radR + 12)
+      const lp = rv(i, radR + 13)
       const w = txtW(a.label, 7.5, bold)
       const lx = lp.x < cx - 4 ? lp.x - w : lp.x > cx + 4 ? lp.x : lp.x - w / 2
       txt(a.label, lx, lp.y + (lp.y > cy ? 2 : -6), 7.5, bold, INK)
-      const vw = txtW(a.display, 7, font)
+      const vw = txtW(a.display, 7, bold)
       const vx = lp.x < cx - 4 ? lp.x - vw : lp.x > cx + 4 ? lp.x : lp.x - vw / 2
-      txt(a.display, vx, lp.y + (lp.y > cy ? 2 : -6) - 9, 7, font, DIM)
+      txt(a.display, vx, lp.y + (lp.y > cy ? 2 : -6) - 9, 7, bold, ACCENT_DK)
     })
-    y = cy - radR - 22
+    y = cy - radR - 26
   }
 
   // ── Sterktes & Zwaktes ──
@@ -220,8 +240,10 @@ export async function generateTeamReportPdf(
     const total = 26 + 2 * d
     const h = w * (14 / total) // liggend: hoogte = breedte-verhouding
     const fy = topY - h
-    rect(x, fy, w, h, GRASS)
-    // zone-strips (breedte = verticale as, 3 stroken)
+    // Gemaaide stroken voor een echte pitch-look.
+    const stripes = 9
+    for (let i = 0; i < stripes; i++) rect(x + i * (w / stripes), fy, w / stripes + 0.6, h, i % 2 ? GRASS2 : GRASS)
+    // Zone-heat (3 horizontale stroken; intensiteit volgt het aandeel).
     const zTot = zoneShare.links + zoneShare.midden + zoneShare.rechts || 1
     const zs: [string, number][] = [
       ['links', zoneShare.links],
@@ -231,25 +253,52 @@ export async function generateTeamReportPdf(
     zs.forEach(([name, v], i) => {
       const stripH = h / 3
       const sy = fy + i * stripH
-      rect(x, sy, w, stripH, ACCENT, 0.1 + (v / zTot) * 0.4)
-      if (highlight === name) rect(x, sy, w, stripH, GOLD, 0.18)
-      if (i > 0) page.drawLine({ start: { x, y: sy }, end: { x: x + w, y: sy }, thickness: 0.4, color: rgb(0.8, 0.9, 0.85), opacity: 0.4 })
+      rect(x, sy, w, stripH, goalColor, 0.07 + (v / zTot) * 0.34)
+      if (highlight === name) {
+        rect(x, sy, w, stripH, GOLD, 0.16)
+        // Richtindicator: een gouden pijl die de voorkeurszone aanwijst.
+        const ay = sy + stripH / 2
+        page.drawLine({ start: { x: x + 6, y: ay }, end: { x: x + 22, y: ay }, thickness: 1.4, color: GOLD })
+        page.drawLine({ start: { x: x + 22, y: ay }, end: { x: x + 17, y: ay + 3 }, thickness: 1.4, color: GOLD })
+        page.drawLine({ start: { x: x + 22, y: ay }, end: { x: x + 17, y: ay - 3 }, thickness: 1.4, color: GOLD })
+      }
+      if (i > 0) page.drawLine({ start: { x, y: sy }, end: { x: x + w, y: sy }, thickness: 0.4, color: CHALK, opacity: 0.3 })
     })
-    // veldlijnen
-    page.drawRectangle({ x, y: fy, width: w, height: h, borderColor: rgb(0.85, 0.95, 0.9), borderWidth: 1, opacity: 0 })
-    vline(x + 0.5 * w, fy, fy + h, rgb(0.85, 0.95, 0.9), 1, 0.7) // middellijn
     const g = d / total
     const ft = (d + 4) / total
-    vline(x + (1 - g) * w, fy, fy + h, rgb(0.85, 0.95, 0.9), 1, 0.7) // aangevallen doellijn (rechts)
-    vline(x + (1 - ft) * w, fy, fy + h, rgb(0.8, 0.9, 0.85), 0.6, 0.5) // vrijworplijn
-    // doelpijl rechts
-    txt('doel', x + w - 22, fy + h / 2 - 3, 7, bold, rgb(0.85, 0.95, 0.9))
-    // shots: doelpunten in kleur, rest grijs/klein
+    // Doelgebied (rechts) lichtjes oplichten.
+    const gx = x + (1 - g) * w
+    rect(gx, fy, x + w - gx, h, WHITE, 0.07)
+    // Veldlijnen.
+    page.drawRectangle({ x, y: fy, width: w, height: h, borderColor: CHALK, borderWidth: 1.2, opacity: 0 })
+    vline(x + 0.5 * w, fy, fy + h, CHALK, 1, 0.7) // middellijn (vol)
+    page.drawCircle({ x: x + 0.5 * w, y: fy + h / 2, size: 9, color: CHALK, borderColor: CHALK, borderWidth: 0.8, opacity: 0, borderOpacity: 0.6 })
+    vline(gx, fy, fy + h, CHALK, 1.2, 0.85) // aangevallen doellijn
+    vline(x + (1 - ft) * w, fy, fy + h, CHALK, 0.6, 0.45) // vrijworplijn
+    // Vier streepjes die buiten de doellijn steken (reglement).
+    for (const fr of [0.12, 0.38, 0.62, 0.88]) {
+      const sy = fy + fr * h
+      page.drawLine({ start: { x: gx, y: sy }, end: { x: gx + 5, y: sy }, thickness: 0.8, color: CHALK, opacity: 0.7 })
+    }
+    // Doel (rechts) als korte dikke paal + label.
+    const gcy = fy + h / 2
+    vline(x + w - 1.5, gcy - h * 0.13, gcy + h * 0.13, WHITE, 2.6, 0.95)
+    txt('doel', x + w - 24, gcy - 3, 7, bold, CHALK)
+    // Aanvalsrichting bovenaan.
+    const ar = fy + h - 7
+    page.drawLine({ start: { x: x + w * 0.34, y: ar }, end: { x: x + w * 0.62, y: ar }, thickness: 1, color: CHALK, opacity: 0.55 })
+    page.drawLine({ start: { x: x + w * 0.62, y: ar }, end: { x: x + w * 0.62 - 4, y: ar + 2.6 }, thickness: 1, color: CHALK, opacity: 0.55 })
+    page.drawLine({ start: { x: x + w * 0.62, y: ar }, end: { x: x + w * 0.62 - 4, y: ar - 2.6 }, thickness: 1, color: CHALK, opacity: 0.55 })
+    txt('aanval', x + w * 0.34, ar - 9, 6.5, font, CHALK)
+    // Schoten: doelpunten als sterren, missers als kleine doffe stippen.
     for (const s of shots) {
       const px = x + Math.max(0, Math.min(1, s.landY)) * w
       const py = fy + Math.max(0, Math.min(1, s.landX)) * h
-      if (s.goal) dot(px, py, 2.4, goalColor, 0.9)
-      else dot(px, py, 1.5, rgb(0.75, 0.8, 0.8), 0.5)
+      if (s.goal) {
+        star(px, py, 4.3, WHITE, 0.9)
+        star(px, py, 3.4, goalColor, 1)
+        star(px, py, 1.5, WHITE, 0.95)
+      } else dot(px, py, 1.4, rgb(0.78, 0.83, 0.83), 0.45)
     }
     return h
   }
@@ -267,11 +316,11 @@ export async function generateTeamReportPdf(
     y -= 8
     const used = drawFieldMap(MARGIN, y, CW, danger.shots, ACCENT, r.zones, domZoneShare(r.zones))
     y -= used + 6
-    txt(`Doelpunt`, MARGIN + 8, y, 8, font, INK)
-    dot(MARGIN + 4, y + 3, 2.4, ACCENT)
-    txt(`Gemiste poging`, MARGIN + 70, y, 8, font, DIM)
-    dot(MARGIN + 66, y + 3, 1.5, rgb(0.75, 0.8, 0.8))
-    txt('Goudstrook = voorkeurszone', MARGIN + 170, y, 8, font, DIM)
+    star(MARGIN + 5, y + 3, 3.2, ACCENT)
+    txt(`Doelpunt`, MARGIN + 12, y, 8, font, INK)
+    dot(MARGIN + 70, y + 3, 1.5, rgb(0.75, 0.8, 0.8))
+    txt(`Gemiste poging`, MARGIN + 76, y, 8, font, DIM)
+    txt('Goudpijl = voorkeurszone', MARGIN + 176, y, 8, font, DIM)
     y -= 6
   }
 
@@ -283,9 +332,9 @@ export async function generateTeamReportPdf(
     y -= 8
     const used = drawFieldMap(MARGIN, y, CW, conceded.shots, BAD, cz, domZoneShare(cz))
     y -= used + 6
-    txt('Tegendoelpunt', MARGIN + 8, y, 8, font, INK)
-    dot(MARGIN + 4, y + 3, 2.4, BAD)
-    txt('Goudstrook = hun zwakste zone', MARGIN + 110, y, 8, font, DIM)
+    star(MARGIN + 5, y + 3, 3.2, BAD)
+    txt('Tegendoelpunt', MARGIN + 12, y, 8, font, INK)
+    txt('Goudpijl = hun zwakste zone', MARGIN + 120, y, 8, font, DIM)
     y -= 6
   }
 
