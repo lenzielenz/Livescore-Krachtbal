@@ -63,6 +63,12 @@ export default async function PloegRapportPage({ searchParams }: { searchParams:
   const seizoen = await getSelectedSeason()
   const report = teamId != null ? await buildTeamReport(payload, teamId, seizoen, analyseMatchWhere(me)) : null
   const danger = teamId != null && report && report.matchesAnalyzed > 0 ? await buildTeamDanger(payload, teamId, reeks, seizoen, analyseMatchWhere(me)) : null
+  // Verdedigend beeld: de doelpogingen die tegenstanders TÉGEN deze ploeg maakten — waar ze openingen
+  // geven, dus waar jij kan toeslaan.
+  const dangerConceded =
+    teamId != null && report && report.matchesAnalyzed > 0
+      ? await buildTeamDanger(payload, teamId, reeks, seizoen, analyseMatchWhere(me), { conceded: true })
+      : null
   const zTot = report ? report.zones.links + report.zones.midden + report.zones.rechts : 0
 
   return (
@@ -205,6 +211,29 @@ export default async function PloegRapportPage({ searchParams }: { searchParams:
                     </div>
                     <BandChart title="Diepte" bands={danger.depthBands} />
                     <BandChart title="Breedte" bands={danger.zoneBands} />
+                  </div>
+                </div>
+              </>
+            )}
+
+            {dangerConceded && dangerConceded.attempts > 0 && (
+              <>
+                <h2 className="an-sub">🔓 Waar ze openingen geven <span className="an-chart-hint">van waar tegenstanders tégen hen scoren</span></h2>
+                <p className="an-intro">
+                  De doelpogingen die tegenstanders <strong>tégen</strong> deze ploeg maakten. Hun zwakke zones zijn jouw
+                  kansen — speel naar waar zij het meest tegengoals slikken.
+                </p>
+                <div className="gev-grid">
+                  <TeamFlowMap shots={dangerConceded.shots} flowShots={dangerConceded.flowShots} />
+                  <div className="gev-side">
+                    <div className="rep-cards">
+                      <div className="rep-card"><span className="rep-num">{dangerConceded.attempts}</span><span className="rep-lbl">Tegen-pogingen</span></div>
+                      <div className="rep-card"><span className="rep-num">{dangerConceded.goals}</span><span className="rep-lbl">Tegengoals</span></div>
+                      <div className="rep-card"><span className="rep-num">{Math.round(dangerConceded.conversion * 100)}%</span><span className="rep-lbl">Conversie tegen</span></div>
+                      <div className="rep-card"><span className="rep-num">{dangerConceded.avgDistance}m</span><span className="rep-lbl">Gem. afstand</span></div>
+                    </div>
+                    <BandChart title="Diepte (openingen)" bands={dangerConceded.depthBands} />
+                    <BandChart title="Breedte (openingen)" bands={dangerConceded.zoneBands} />
                   </div>
                 </div>
               </>
