@@ -9,7 +9,8 @@ import { AnalyseCharts } from './AnalyseCharts'
 import { MatchRecap } from './MatchRecap'
 import { MomentumChart } from './MomentumChart'
 
-type Goal = { side: 'home' | 'away'; points: number; half: number }
+type Goal = { side: 'home' | 'away'; points: number; half: number; gameClock?: number }
+type Timeout = { side: 'home' | 'away'; half: number; gameClock: number }
 type Player = Stats['players'][number]
 
 const first = (n: string) => n.split(/\s+/)[0]
@@ -54,6 +55,8 @@ export function AnalyseDetailView({
   teams,
   goalAreaDepth,
   momentumGoals,
+  momentumTimeouts = [],
+  teamColors,
   matchLabel,
 }: {
   stats: Stats
@@ -61,6 +64,8 @@ export function AnalyseDetailView({
   teams: { home: string; away: string }
   goalAreaDepth: number
   momentumGoals: Goal[]
+  momentumTimeouts?: Timeout[]
+  teamColors?: { home: string | null; away: string | null }
   /** Wedstrijd-omschrijving (reeks · datum) voor de gedownloade video. */
   matchLabel?: string
 }) {
@@ -88,7 +93,7 @@ export function AnalyseDetailView({
         </div>
       )}
 
-      {momentumGoals.length > 0 && <MomentumChart goals={momentumGoals} teams={teams} />}
+      {momentumGoals.length > 0 && <MomentumChart goals={momentumGoals} timeouts={momentumTimeouts} teams={teams} colors={teamColors} />}
 
       {players.length === 0 ? (
         <p className="empty">Deze wedstrijd heeft geen gedetailleerde worpdata (in snelscoremodus gespeeld).</p>

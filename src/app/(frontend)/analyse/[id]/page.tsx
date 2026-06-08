@@ -67,7 +67,23 @@ export default async function AnalyseDetailPage({ params }: { params: Promise<{ 
   const momentumGoals = (sheet?.goals ?? [])
     .slice()
     .sort((a, b) => a.half - b.half || a.gameClock - b.gameClock)
-    .map((g) => ({ side: g.side, points: g.points, half: g.half }))
+    .map((g) => ({ side: g.side, points: g.points, half: g.half, gameClock: g.gameClock }))
+
+  // Time-outs (gevraagde minuten) voor verticale lijnen op het scoreverloop.
+  const toRes = await payload
+    .find({ collection: 'match-events', where: { and: [{ match: { equals: matchId } }, { type: { equals: 'timeout' } }] }, depth: 0, limit: 100 })
+    .catch(() => ({ docs: [] as Record<string, unknown>[] }))
+  const homeTeamId = state.teams.home.id
+  const momentumTimeouts = toRes.docs.map((e) => {
+    const tId = (e as { team?: unknown }).team
+    const teamId = tId && typeof tId === 'object' ? Number((tId as { id?: number }).id) : Number(tId)
+    return {
+      side: (teamId === homeTeamId ? 'home' : 'away') as 'home' | 'away',
+      half: Number((e as { half?: unknown }).half ?? 1),
+      gameClock: Number((e as { gameClock?: unknown }).gameClock ?? 0),
+    }
+  })
+  const teamColors = { home: state.teams.home.colors?.primary ?? null, away: state.teams.away.colors?.primary ?? null }
 
   const reeks = reeksNaam(matchDoc?.reeks)
   const datum = matchDoc?.date
@@ -103,6 +119,8 @@ export default async function AnalyseDetailPage({ params }: { params: Promise<{ 
             teams={teamNames}
             goalAreaDepth={state.match.goalAreaDepth}
             momentumGoals={momentumGoals}
+            momentumTimeouts={momentumTimeouts}
+            teamColors={teamColors}
             matchLabel={[reeks, datum].filter(Boolean).join(' · ')}
           />
         </ErrorCatch>
