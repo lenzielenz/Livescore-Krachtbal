@@ -7,6 +7,22 @@ type ShareNavigator = Navigator & {
   share?: (data: { files?: File[]; title?: string; text?: string }) => Promise<void>
 }
 
+/** Gewone bestand-download (nooit het deelvenster). */
+export function downloadBlob(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  a.rel = 'noopener'
+  document.body.appendChild(a)
+  a.click()
+  // URL pas later vrijgeven: meteen revoken brak de download soms af nog vóór hij begon.
+  setTimeout(() => {
+    a.remove()
+    URL.revokeObjectURL(url)
+  }, 4000)
+}
+
 /** Bewaar/deel een blob als bestand. Gebruikt het toestel-deelvenster waar mogelijk (mobiel:
  * opslaan in Galerij/Bestanden of delen), anders een gewone download. */
 export async function saveOrShareBlob(blob: Blob, filename: string, shareText?: string): Promise<void> {
@@ -21,18 +37,7 @@ export async function saveOrShareBlob(blob: Blob, filename: string, shareText?: 
       // anders: terugvallen op download
     }
   }
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = filename
-  a.rel = 'noopener'
-  document.body.appendChild(a)
-  a.click()
-  // URL pas later vrijgeven: meteen revoken brak de download soms af nog vóór hij begon.
-  setTimeout(() => {
-    a.remove()
-    URL.revokeObjectURL(url)
-  }, 4000)
+  downloadBlob(blob, filename)
 }
 
 /** Rendert een live <svg> naar een PNG-blob (op schaal, met achtergrond). Geen externe afbeeldingen
