@@ -102,6 +102,57 @@ export default async function PloegRapportPage({ searchParams }: { searchParams:
               <a className="sk-demo-cta" href={`/api/analyse/team/${report.teamId}/csv`}>📑 Download CSV</a>
             </div>
 
+            {/* Sleutelspelers — scout-TL;DR: wie in de gaten houden (aanvallend + verdedigend). */}
+            {(() => {
+              const first = (n: string) => n.split(/\s+/)[0]
+              const players = report.players
+              const topThreat = [...players].filter((p) => p.goals > 0).sort((a, b) => b.points - a.points || b.goals - a.goals)[0]
+              const rugSpec = [...players].filter((p) => p.rug > 0).sort((a, b) => b.rug - a.rug)[0]
+              const keyDef = defenders[0]
+              const cards: { ico: string; lbl: string; who: string; val: string; sub: string }[] = []
+              if (topThreat)
+                cards.push({
+                  ico: '⚡',
+                  lbl: 'Topdreiging',
+                  who: `#${topThreat.shirtNumber} ${first(topThreat.name)}`,
+                  val: `${topThreat.points} ptn`,
+                  sub: topThreat.tip || `${topThreat.goals} doelpunt${topThreat.goals === 1 ? '' : 'en'} · ${Math.round(topThreat.conversion * 100)}% conversie`,
+                })
+              if (rugSpec && (!topThreat || rugSpec.playerId !== topThreat.playerId))
+                cards.push({
+                  ico: '💪',
+                  lbl: 'Rugworp-specialist',
+                  who: `#${rugSpec.shirtNumber} ${first(rugSpec.name)}`,
+                  val: `${rugSpec.rug}× rug`,
+                  sub: `+${rugSpec.rug * 2} punten uit rugworpen`,
+                })
+              if (keyDef)
+                cards.push({
+                  ico: '🧤',
+                  lbl: 'Sleutelverdediger',
+                  who: `#${keyDef.shirtNumber} ${first(keyDef.name)}`,
+                  val: `${keyDef.total} acties`,
+                  sub: `${keyDef.catches} vangsten${keyDef.taps ? ` · ${keyDef.taps} tikken` : ''}`,
+                })
+              if (cards.length === 0) return null
+              return (
+                <section className="kp">
+                  <h2 className="an-sub">🔑 Sleutelspelers <span className="an-chart-hint">wie in de gaten houden</span></h2>
+                  <div className="kp-grid">
+                    {cards.map((c, i) => (
+                      <div className="kp-card" key={i}>
+                        <span className="kp-ico" aria-hidden>{c.ico}</span>
+                        <span className="kp-lbl">{c.lbl}</span>
+                        <span className="kp-who">{c.who}</span>
+                        <span className="kp-val">{c.val}</span>
+                        <span className="kp-sub">{c.sub}</span>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )
+            })()}
+
             <TeamProfile profile={report.profile} />
 
             {report.strategy.length > 0 && (
