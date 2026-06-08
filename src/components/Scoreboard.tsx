@@ -6,6 +6,7 @@ import type { MatchState, TimelineItem } from '@/lib/match-engine'
 import type { KrachtbalKleur } from '@/lib/reeksen'
 import { ClubColorBlast } from '@/components/ClubColorBlast'
 import { KrachtbalIcon } from '@/components/KrachtbalIcon'
+import { LiveMomentCard } from '@/components/LiveMomentCard'
 import { PhotoTribune, type Instant } from '@/components/PhotoTribune'
 import { TeamLogo } from '@/components/TeamLogo'
 import { WinProbability } from '@/components/WinProbability'
@@ -70,6 +71,7 @@ export function Scoreboard({
   initialShouts,
   canPostInstant = false,
   initialInstants,
+  reeks = '',
 }: {
   matchId: number
   initial: { state: MatchState; timeline: TimelineItem[] }
@@ -89,6 +91,8 @@ export function Scoreboard({
   canPostInstant?: boolean
   /** Reeds geplaatste, niet-verlopen foto's bij deze wedstrijd. */
   initialInstants?: Instant[]
+  /** Reeksnaam — voor de "deel dit moment"-kaart. */
+  reeks?: string
 }) {
   const [state, setState] = useState<MatchState>(initial.state)
   const [timeline, setTimeline] = useState<TimelineItem[]>(initial.timeline)
@@ -489,6 +493,20 @@ export function Scoreboard({
           </div>
         </div>
       </div>
+
+      {/* "Deel dit moment": legt de huidige live-stand vast als deelkaart — voor iedereen. */}
+      <LiveMomentCard
+        matchId={matchId}
+        teams={{
+          home: { name: state.teams.home.name, logoUrl: state.teams.home.logoUrl, color: state.teams.home.colors?.primary ?? null },
+          away: { name: state.teams.away.name, logoUrl: state.teams.away.logoUrl, color: state.teams.away.colors?.primary ?? null },
+        }}
+        score={state.score}
+        clockSeconds={clock}
+        half={state.match.currentHalf}
+        status={state.match.status as 'scheduled' | 'live' | 'finished'}
+        reeks={reeks}
+      />
 
       {/* Uitgelogd zie je enkel de score en de tijd. Al de rest (tijdlijn, reacties, vieringen,
           tribune) zit achter login — met een korte uitnodiging. */}

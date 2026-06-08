@@ -216,6 +216,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
         initialShouts={Array.isArray(matchDoc?.liveShoutouts) ? (matchDoc.liveShoutouts as { id: number; name: string; text: string; at: number }[]) : undefined}
         canPostInstant={canPostInstant}
         initialInstants={initialInstants}
+        reeks={reeks ?? ''}
       />
       {/* Supporters duidelijk tonen dat ze de wedstrijd op hun tv kunnen volgen. */}
       <CastToTv matchId={matchId} />
