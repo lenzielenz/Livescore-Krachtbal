@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
@@ -7,12 +8,43 @@ import { Scoreboard } from '@/components/Scoreboard'
 import { SiteHeader } from '@/components/SiteHeader'
 import { canAnalyse } from '@/lib/access'
 import { getAuthUser } from '@/lib/auth-user'
-import { buildMatchState, buildTimeline } from '@/lib/match-engine'
+import { buildMatchSheet, buildMatchState, buildMatchStats, buildTimeline } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
 import { krachtbalKleur, reeksHalfDurationSeconds, reeksNaam, reeksType, type Reeks } from '@/lib/reeksen'
 import { BASE_RATE_PER_MIN } from '@/lib/win-probability'
+import { MatchRecap } from '../../analyse/[id]/MatchRecap'
+import { ShareCard } from '../../analyse/[id]/ShareCard'
+import '../../analyse/analyse.css'
 
 export const dynamic = 'force-dynamic'
+
+// Social-preview-tekst per wedstrijd (de OG-kaart zelf komt uit opengraph-image.tsx). Zo toont een
+// gedeelde matchlink in WhatsApp/Insta meteen score + ploegen i.p.v. een generieke titel.
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params
+  const matchId = Number(id)
+  if (!Number.isFinite(matchId)) return { title: 'Krachtbal Live' }
+  const payload = await getPayloadClient()
+  const [state, matchDoc] = await Promise.all([
+    buildMatchState(payload, matchId).catch(() => null),
+    payload.findByID({ collection: 'matches', id: matchId, depth: 0 }).catch(() => null),
+  ])
+  if (!state) return { title: 'Krachtbal Live' }
+  const home = state.teams.home.name
+  const away = state.teams.away.name
+  const played = state.match.status !== 'scheduled'
+  const reeks = matchDoc?.reeks ? reeksNaam(matchDoc.reeks) : 'Krachtbal'
+  const scoreBit = played ? ` ${state.score.home}–${state.score.away} ` : ' – '
+  const statusBit = state.match.status === 'live' ? 'LIVE · ' : state.match.status === 'finished' ? 'Eindstand · ' : ''
+  const title = `${home}${scoreBit}${away} · Krachtbal Live`
+  const description = `${statusBit}${reeks} — volg de wedstrijd live met score, tijdlijn en statistieken.`
+  return {
+    title,
+    description,
+    openGraph: { title, description, type: 'website' },
+    twitter: { card: 'summary_large_image', title, description },
+  }
+}
 
 export default async function MatchPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -65,6 +97,31 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   }
   const homeCaptain = capName(matchDoc?.homeCaptain)
   const awayCaptain = capName(matchDoc?.awayCaptain)
+
+  // Publiek deel-/napraatmoment: zodra de wedstrijd afgelopen is, bouwen we de samenvatting +
+  // deelkaart voor IEDEREEN (niet enkel achter analyse-login). Dit is het virale moment — supporters
+  // delen de kaart of nemen er een screenshot van. Faalt de opbouw, dan tonen we gewoon niets.
+  let share: {
+    reeks: string
+    datum: string | null
+    stats: Awaited<ReturnType<typeof buildMatchStats>>['stats']
+    goals: { side: 'home' | 'away'; points: number; half: number; gameClock: number }[]
+  } | null = null
+  if (state.match.status === 'finished') {
+    try {
+      const [statsRes, sheet] = await Promise.all([
+        buildMatchStats(payload, matchId),
+        buildMatchSheet(payload, matchId).catch(() => null),
+      ])
+      const goals = (sheet?.goals ?? [])
+        .slice()
+        .sort((a, b) => a.half - b.half || a.gameClock - b.gameClock)
+        .map((g) => ({ side: g.side, points: g.points, half: g.half, gameClock: g.gameClock }))
+      share = { reeks: reeks ?? 'Krachtbal', datum, stats: statsRes.stats, goals }
+    } catch {
+      share = null
+    }
+  }
 
   return (
     <>
@@ -119,6 +176,25 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
       />
       {/* Supporters duidelijk tonen dat ze de wedstrijd op hun tv kunnen volgen. */}
       <CastToTv matchId={matchId} />
+
+      {/* Publiek deel-/napraatmoment na afloop — voor iedereen, zonder login. */}
+      {share && (
+        <section className="match-share" style={{ marginTop: 28 }}>
+          <h2 className="section-title">Napraten &amp; delen</h2>
+          <MatchRecap stats={share.stats} teams={{ home: state.teams.home.name, away: state.teams.away.name }} />
+          <ShareCard
+            matchId={matchId}
+            teams={{ home: state.teams.home.name, away: state.teams.away.name }}
+            score={{ home: state.score.home, away: state.score.away }}
+            colors={{ home: state.teams.home.colors?.primary ?? null, away: state.teams.away.colors?.primary ?? null }}
+            logos={{ home: state.teams.home.logoUrl, away: state.teams.away.logoUrl }}
+            goals={share.goals}
+            players={share.stats.players}
+            reeks={share.reeks}
+            datum={share.datum}
+          />
+        </section>
+      )}
       {canAnalyse(me) && (
         <p className="sheet-cta">
           <Link href={`/analyse/${matchId}`} className="back-link">

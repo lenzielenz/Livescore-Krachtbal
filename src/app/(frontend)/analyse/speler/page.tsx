@@ -6,7 +6,9 @@ import { analyseMatchWhere } from '@/lib/analyse-access'
 import { getSelectedSeason } from '@/lib/analyse-season'
 import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
-import { buildPlayerDanger, type DangerBand } from '@/lib/player-danger'
+import { BandChart } from '@/components/analytics/BandChart'
+import { Sparkline } from '@/components/analytics/Sparkline'
+import { buildPlayerDanger } from '@/lib/player-danger'
 import { REEKS_OPTIONS, reeksNaam } from '@/lib/reeksen'
 import { buildSeasonStats } from '@/lib/season-stats'
 import { AnalyseNav } from '../AnalyseNav'
@@ -20,56 +22,6 @@ const COMPETITIE_REEKSEN = REEKS_OPTIONS.filter((o) => !['beker', 'recreatief', 
   value: o.value,
   label: reeksNaam(o.value),
 }))
-
-function BandList({ title, bands }: { title: string; bands: DangerBand[] }) {
-  const max = Math.max(1, ...bands.map((b) => b.attempts))
-  return (
-    <div className="an-chart">
-      <h3 className="an-chart-title">{title} <span className="an-chart-hint">scoringskans</span></h3>
-      <div className="an-bars">
-        {bands.map((b) => (
-          <div className="an-bar-row" key={b.label}>
-            <span className="an-bar-lbl">{b.label}</span>
-            <span className="an-bar-track">
-              <span className="an-bar-fill" style={{ width: `${Math.round((b.attempts / max) * 100)}%`, background: 'var(--accent)' }} />
-            </span>
-            <span className="an-bar-val">
-              {b.attempts ? `${Math.round(b.conversion * 100)}%` : '—'} <span className="an-season-sub">({b.goals}/{b.attempts})</span>
-            </span>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-// Mini-sparkline van de punten per wedstrijd (vorm doorheen het seizoen).
-function FormSpark({ trend }: { trend: { date: string; points: number }[] }) {
-  if (trend.length < 2) return null
-  const W = 260
-  const H = 46
-  const max = Math.max(1, ...trend.map((t) => t.points))
-  const pts = trend
-    .map((t, i) => {
-      const x = (i / (trend.length - 1)) * (W - 6) + 3
-      const y = H - 4 - (t.points / max) * (H - 10)
-      return `${x.toFixed(1)},${y.toFixed(1)}`
-    })
-    .join(' ')
-  return (
-    <div className="an-chart">
-      <h3 className="an-chart-title">Vorm <span className="an-chart-hint">punten per wedstrijd</span></h3>
-      <svg viewBox={`0 0 ${W} ${H}`} className="dos-spark" preserveAspectRatio="none" role="img" aria-label="Vorm per wedstrijd">
-        <polyline points={pts} fill="none" stroke="var(--accent)" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
-        {trend.map((t, i) => {
-          const x = (i / (trend.length - 1)) * (W - 6) + 3
-          const y = H - 4 - (t.points / max) * (H - 10)
-          return <circle key={i} cx={x} cy={y} r={2.4} fill="var(--accent)" />
-        })}
-      </svg>
-    </div>
-  )
-}
 
 // Spelerdossier: álles van één speler op één blad — kerncijfers, richting, vorm en gevaarzone.
 export default async function SpelerDossierPage({ searchParams }: { searchParams: Promise<{ reeks?: string; club?: string; speler?: string }> }) {
@@ -177,7 +129,12 @@ export default async function SpelerDossierPage({ searchParams }: { searchParams
               <div className="dos-zonelbl"><span>Links {p.zones.links}</span><span>Midden {p.zones.midden}</span><span>Rechts {p.zones.rechts}</span></div>
             </div>
 
-            <FormSpark trend={p.trend} />
+            {p.trend.length >= 2 && (
+              <div className="an-chart">
+                <h3 className="an-chart-title">Vorm <span className="an-chart-hint">punten per wedstrijd</span></h3>
+                <Sparkline values={p.trend.map((t) => t.points)} width={280} height={60} ariaLabel="Vorm per wedstrijd" />
+              </div>
+            )}
 
             <h2 className="an-sub" style={{ marginTop: 18 }}>🔥 Gevaarzone</h2>
             {danger == null || danger.attempts === 0 ? (
@@ -192,8 +149,8 @@ export default async function SpelerDossierPage({ searchParams }: { searchParams
                     <div className="rep-card"><span className="rep-num">{Math.round(danger.conversion * 100)}%</span><span className="rep-lbl">Conversie</span></div>
                     <div className="rep-card"><span className="rep-num">{danger.avgDistance}m</span><span className="rep-lbl">Gem. afstand</span></div>
                   </div>
-                  <BandList title="Diepte" bands={danger.depthBands} />
-                  <BandList title="Breedte" bands={danger.zoneBands} />
+                  <BandChart title="Diepte" bands={danger.depthBands} />
+                  <BandChart title="Breedte" bands={danger.zoneBands} />
                 </div>
               </div>
             )}

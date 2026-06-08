@@ -8,6 +8,7 @@ import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
 import { REEKS_OPTIONS, reeksNaam } from '@/lib/reeksen'
 import { buildSeasonStats } from '@/lib/season-stats'
+import { Sparkline } from '@/components/analytics/Sparkline'
 import { AnalyseNav } from '../AnalyseNav'
 import { SeizoenPicker } from './SeizoenPicker'
 import '../../rangschikking/rangschikking.css'
@@ -19,21 +20,6 @@ const COMPETITIE_REEKSEN = REEKS_OPTIONS.filter((o) => !['beker', 'recreatief', 
   value: o.value,
   label: reeksNaam(o.value),
 }))
-
-// Compacte SVG-vormcurve (punten per gespeelde wedstrijd).
-function Sparkline({ values }: { values: number[] }) {
-  if (values.length < 2) return <span className="an-spark-empty">—</span>
-  const w = 80
-  const h = 22
-  const max = Math.max(1, ...values)
-  const step = w / (values.length - 1)
-  const pts = values.map((v, i) => `${(i * step).toFixed(1)},${(h - (v / max) * (h - 2) - 1).toFixed(1)}`).join(' ')
-  return (
-    <svg className="an-spark" width={w} height={h} viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" aria-hidden>
-      <polyline points={pts} fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  )
-}
 
 export default async function SeizoenAnalysePage({ searchParams }: { searchParams: Promise<{ reeks?: string }> }) {
   const me = await getAuthUser()
@@ -114,7 +100,7 @@ export default async function SeizoenAnalysePage({ searchParams }: { searchParam
                     <td>{Math.round(p.conversion * 100)}%</td>
                     <td className={`rang-dv ${p.score < 0 ? 'an-neg' : ''}`}>{p.score > 0 ? `+${p.score}` : p.score}</td>
                     <td className="rang-dv">{p.avgDistance.toFixed(1)}m</td>
-                    <td className="an-col-sec an-spark-cell"><Sparkline values={p.trend.map((t) => t.points)} /></td>
+                    <td className="an-col-sec an-spark-cell"><Sparkline values={p.trend.map((t) => t.points)} width={104} height={28} showAverage={false} ariaLabel={`Vorm ${p.name}`} /></td>
                   </tr>
                 ))}
               </tbody>

@@ -6,9 +6,10 @@ import { analyseMatchWhere } from '@/lib/analyse-access'
 import { getSelectedSeason } from '@/lib/analyse-season'
 import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
-import { buildTeamDanger, type DangerBand } from '@/lib/player-danger'
+import { buildTeamDanger } from '@/lib/player-danger'
 import { REEKS_OPTIONS, reeksNaam } from '@/lib/reeksen'
 import { buildTeamReport } from '@/lib/team-report'
+import { BandChart } from '@/components/analytics/BandChart'
 import { AnalyseNav } from '../AnalyseNav'
 import { PloegPicker } from './PloegPicker'
 import { SpeelstijlPanel } from './SpeelstijlPanel'
@@ -26,24 +27,6 @@ const COMPETITIE_REEKSEN = REEKS_OPTIONS.filter((o) => !['beker', 'recreatief', 
 
 function pct(part: number, total: number): number {
   return total ? Math.round((part / total) * 100) : 0
-}
-
-function BandList({ title, bands }: { title: string; bands: DangerBand[] }) {
-  const max = Math.max(1, ...bands.map((b) => b.attempts))
-  return (
-    <div className="an-chart">
-      <h3 className="an-chart-title">{title} <span className="an-chart-hint">scoringskans</span></h3>
-      <div className="an-bars">
-        {bands.map((b) => (
-          <div className="an-bar-row" key={b.label}>
-            <span className="an-bar-lbl">{b.label}</span>
-            <span className="an-bar-track"><span className="an-bar-fill" style={{ width: `${Math.round((b.attempts / max) * 100)}%`, background: 'var(--accent)' }} /></span>
-            <span className="an-bar-val">{b.attempts ? `${Math.round(b.conversion * 100)}%` : '—'} <span className="an-season-sub">({b.goals}/{b.attempts})</span></span>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
 }
 
 // Tegenstander-/ploegrapport (scouting) met CSV/PDF-export. Admin/analyse-only.
@@ -220,8 +203,8 @@ export default async function PloegRapportPage({ searchParams }: { searchParams:
                       <div className="rep-card"><span className="rep-num">{Math.round(danger.conversion * 100)}%</span><span className="rep-lbl">Conversie</span></div>
                       <div className="rep-card"><span className="rep-num">{danger.avgDistance}m</span><span className="rep-lbl">Gem. afstand</span></div>
                     </div>
-                    <BandList title="Diepte" bands={danger.depthBands} />
-                    <BandList title="Breedte" bands={danger.zoneBands} />
+                    <BandChart title="Diepte" bands={danger.depthBands} />
+                    <BandChart title="Breedte" bands={danger.zoneBands} />
                   </div>
                 </div>
               </>
