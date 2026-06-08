@@ -53,6 +53,7 @@ export default async function ScorekeeperPage({
     name: p.name,
     shirtNumber: p.shirtNumber,
     teamId: typeof p.team === 'object' ? p.team.id : p.team,
+    position: (p.position as string | null) ?? null,
   }))
 
   const reeks = reeksNaam(matchDoc?.reeks)

@@ -4,8 +4,11 @@ import { fieldIsFederation, hasRole, isFederationLevel, userClubId } from '../li
 
 export const POSITION_OPTIONS = [
   { label: 'Achter', value: 'achter' },
-  { label: 'Vleugel', value: 'vleugel' },
+  { label: 'Vleugel links', value: 'vleugel-links' },
+  { label: 'Vleugel rechts', value: 'vleugel-rechts' },
   { label: 'Barage', value: 'barage' },
+  // Legacy: bestaande spelers zonder aangeduide kant (re-set naar links/rechts waar mogelijk).
+  { label: 'Vleugel (kant onbekend)', value: 'vleugel' },
 ] as const
 
 export const VERGUNNING_OPTIONS = [
