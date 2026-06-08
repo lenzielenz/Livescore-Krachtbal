@@ -234,6 +234,7 @@ export function FieldSchema({
   glowGoal,
   goalAreaDepthM = 10,
   half,
+  zoom,
   convMinAttempts = CONV_MIN_ATTEMPTS,
   className,
 }: {
@@ -253,13 +254,16 @@ export function FieldSchema({
   goalAreaDepthM?: number
   /** Toon enkel één speelhelft (van de middellijn tot het doel aan die zijde). */
   half?: 'top' | 'bottom'
+  /** Zoom in op het doelgebied onderaan (bij scoren telt enkel het doelgebied). */
+  zoom?: 'goal'
   className?: string
 }) {
   const ref = useRef<SVGSVGElement>(null)
   const { H, homeGoalY, awayGoalY, midY, ftTopY, ftBotY } = fieldPx(goalAreaDepthM)
-  // Halfveld-uitsnede: beperk de viewBox tot de aanvalshelft (middellijn → doel).
-  const viewY = half === 'bottom' ? midY : -M
-  const viewH = half === 'bottom' ? H + M - midY : half === 'top' ? midY + M : H + 2 * M
+  // Uitsnede: doelgebied-zoom (scoren) > halfveld > volledig veld.
+  const goalTop = awayGoalY - 4 * SCALE // 4 m context boven de doellijn
+  const viewY = zoom === 'goal' ? goalTop : half === 'bottom' ? midY : -M
+  const viewH = zoom === 'goal' ? H - goalTop + 8 : half === 'bottom' ? H + M - midY : half === 'top' ? midY + M : H + 2 * M
 
   function handleClick(e: React.MouseEvent<SVGSVGElement>) {
     if (!onTap || !ref.current) return
