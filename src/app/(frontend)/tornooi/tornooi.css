@@ -941,3 +941,8 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Bekerwedstrijden-hub kop. */
+.trn-hub-head { margin: 8px 0 6px; }
+.trn-hub-title { font-size: 1.5rem; font-weight: 800; margin: 0 0 6px; color: var(--txt, #e8f5ee); }
+.trn-hub-intro { font-size: 0.92rem; color: var(--dim, #9fb6aa); max-width: 640px; margin: 0; }

@@ -23,13 +23,20 @@ export default async function TornooiHub() {
     <>
       <SiteHeader active="tornooi" />
       <div className="trn-page">
+      <div className="trn-hub-head">
+        <h1 className="trn-hub-title">🏆 Bekerwedstrijden</h1>
+        <p className="trn-hub-intro">
+          Beker- en tornooiwedstrijden in een boomstructuur — voor elke reeks. Maak een nieuwe beker aan,
+          kies de ploegen, en volg de hele bracket (van de eerste ronde tot de finale) live mee.
+        </p>
+      </div>
       <div className="trn-actions">
-        <Link href="/tornooi/nieuw" className="trn-btn primary">+ Nieuw tornooi</Link>
+        <Link href="/tornooi/nieuw" className="trn-btn primary">+ Nieuwe beker</Link>
       </div>
 
       <main className="trn-hub">
-        <Section title="Lopende tornooien" docs={live} empty="Geen lopend tornooi. Maak er een aan." />
-        {done.length > 0 && <Section title="Afgelopen tornooien" docs={done} empty="" />}
+        <Section title="Lopende bekers & tornooien" docs={live} empty="Geen lopende beker. Maak er een aan." />
+        {done.length > 0 && <Section title="Afgelopen bekers & tornooien" docs={done} empty="" />}
       </main>
       </div>
     </>
