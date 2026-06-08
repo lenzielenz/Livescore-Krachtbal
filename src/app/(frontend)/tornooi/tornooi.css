@@ -515,6 +515,21 @@
   align-items: center;
   margin-bottom: 7px;
 }
+/* Vanaf de halve finale: neutraal terrein. */
+.trn-match-neutral {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: -2px 0 7px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--accent, #ffd873);
+  background: color-mix(in srgb, var(--accent, #ffd873) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent, #ffd873) 35%, transparent);
+}
 .trn-match-label {
   font-size: 0.7rem;
   color: var(--dim);

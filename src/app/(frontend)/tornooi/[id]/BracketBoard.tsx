@@ -15,7 +15,7 @@ function pairUp(matches: TMatchState[]): TMatchState[][] {
   return out
 }
 
-function MatchCard({ id, m, canManage, logos }: { id: number; m: TMatchState; canManage: boolean; logos: Record<string, string> }) {
+function MatchCard({ id, m, canManage, logos, neutral = false }: { id: number; m: TMatchState; canManage: boolean; logos: Record<string, string>; neutral?: boolean }) {
   const clock = useTicking(m.clockSeconds, m.clockRunning)
   const bye = m.status === 'finished' && (!m.home || !m.away)
   const live = m.status === 'live'
@@ -42,6 +42,7 @@ function MatchCard({ id, m, canManage, logos }: { id: number; m: TMatchState; ca
           {live ? `LIVE · H${m.currentHalf} ${fmtClock(clock)}` : bye ? 'BYE' : done ? 'EINDE' : 'TE SPELEN'}
         </span>
       </div>
+      {neutral && <div className="trn-match-neutral">⚖️ neutraal terrein</div>}
       <Row side="home" />
       <Row side="away" />
       {!bye && canManage && (
@@ -113,6 +114,8 @@ export function BracketBoard({ id, initial, canManage = false, logos = {} }: { i
     .map((r) => ({ round: r.round, label: r.label, matches: r.matches.slice(halfOf(r.matches.length)) }))
     .filter((c) => c.matches.length > 0)
 
+  // Vanaf de halve finale (ronde R-1) speelt men op neutraal terrein.
+  const isNeutralRound = (round: number) => round >= R - 1
   const renderColumn = (c: { round: number; label: string; matches: TMatchState[] }, prefix: string) => (
     <section key={`${prefix}${c.round}`} className="trn-col">
       <h2 className="trn-col-title">{c.label}</h2>
@@ -120,7 +123,7 @@ export function BracketBoard({ id, initial, canManage = false, logos = {} }: { i
         {pairUp(c.matches).map((pair, pi) => (
           <div className="trn-pair" key={pi}>
             {pair.map((m) => (
-              <MatchCard key={m.id} id={id} m={m} canManage={canManage} logos={logos} />
+              <MatchCard key={m.id} id={id} m={m} canManage={canManage} logos={logos} neutral={isNeutralRound(c.round)} />
             ))}
           </div>
         ))}
@@ -155,7 +158,7 @@ export function BracketBoard({ id, initial, canManage = false, logos = {} }: { i
                 <h2 className="trn-col-title trn-final-title">{finalRound.label}</h2>
                 <div className="trn-center-body">
                   {finalRound.matches.map((m) => (
-                    <MatchCard key={m.id} id={id} m={m} canManage={canManage} logos={logos} />
+                    <MatchCard key={m.id} id={id} m={m} canManage={canManage} logos={logos} neutral />
                   ))}
                 </div>
               </div>
@@ -169,7 +172,7 @@ export function BracketBoard({ id, initial, canManage = false, logos = {} }: { i
         <section className="trn-third">
           <h2 className="trn-col-title">Kleine finale (3e plaats)</h2>
           <div className="trn-third-card">
-            <MatchCard id={id} m={state.thirdPlace} canManage={canManage} logos={logos} />
+            <MatchCard id={id} m={state.thirdPlace} canManage={canManage} logos={logos} neutral />
           </div>
         </section>
       )}
