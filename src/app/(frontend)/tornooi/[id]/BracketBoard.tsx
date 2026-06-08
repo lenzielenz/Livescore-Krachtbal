@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { TeamLogo } from '@/components/TeamLogo'
 import type { TMatchState, TournamentState } from '@/lib/tournament-engine'
 import { fmtClock, useTicking, useTournamentStream } from '../useTournament'
+import { BracketZoom } from './BracketZoom'
 
 // Twee opeenvolgende wedstrijden vormen een paar dat naar één wedstrijd in de volgende ronde
 // leidt — die paring tekent de verbindingslijnen (zie tornooi.css).
@@ -146,20 +147,22 @@ export function BracketBoard({ id, initial, canManage = false, logos = {} }: { i
       {state.format === 'roundrobin' ? (
         <RoundRobin id={id} state={state} canManage={canManage} logos={logos} />
       ) : (
-        <main className="trn-bracket2">
-          {leftCols.length > 0 && <div className="trn-side trn-side-left">{leftCols.map((c) => renderColumn(c, 'l'))}</div>}
-          {finalRound && finalRound.matches.length > 0 && (
-            <div className="trn-center">
-              <h2 className="trn-col-title trn-final-title">{finalRound.label}</h2>
-              <div className="trn-center-body">
-                {finalRound.matches.map((m) => (
-                  <MatchCard key={m.id} id={id} m={m} canManage={canManage} logos={logos} />
-                ))}
+        <BracketZoom>
+          <main className="trn-bracket2">
+            {leftCols.length > 0 && <div className="trn-side trn-side-left">{leftCols.map((c) => renderColumn(c, 'l'))}</div>}
+            {finalRound && finalRound.matches.length > 0 && (
+              <div className="trn-center">
+                <h2 className="trn-col-title trn-final-title">{finalRound.label}</h2>
+                <div className="trn-center-body">
+                  {finalRound.matches.map((m) => (
+                    <MatchCard key={m.id} id={id} m={m} canManage={canManage} logos={logos} />
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
-          {rightCols.length > 0 && <div className="trn-side trn-side-right">{rightCols.map((c) => renderColumn(c, 'r'))}</div>}
-        </main>
+            )}
+            {rightCols.length > 0 && <div className="trn-side trn-side-right">{rightCols.map((c) => renderColumn(c, 'r'))}</div>}
+          </main>
+        </BracketZoom>
       )}
 
       {state.format !== 'roundrobin' && state.thirdPlace && (
