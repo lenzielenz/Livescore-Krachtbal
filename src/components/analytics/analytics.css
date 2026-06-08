@@ -1,0 +1,64 @@
+/* ── Gedeeld premium analytics-systeem (BandChart + Sparkline) ──
+   Eén verzorgde stijl die de drie gekopieerde BandList'en en de twee mini-sparklines vervangt. */
+
+.ac-band-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ac-band-row {
+  display: grid;
+  grid-template-columns: 96px 1fr 80px;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.8rem;
+}
+.ac-band-lbl {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--txt);
+  font-weight: 600;
+}
+.ac-band-track {
+  position: relative;
+  height: 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+/* Breedte = volume (pogingen), kleur = kwaliteit (conversie), gezet via --c per balk. */
+.ac-band-fill {
+  display: block;
+  height: 100%;
+  min-width: 4px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--c) 45%, transparent), var(--c));
+  box-shadow: 0 0 8px -2px var(--c);
+  transition: width 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.ac-band-val {
+  text-align: right;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--txt);
+  white-space: nowrap;
+}
+.ac-band-sub {
+  color: var(--dim);
+  font-size: 0.82em;
+  font-weight: 600;
+}
+
+.ac-spark {
+  display: block;
+}
+.ac-spark-empty {
+  color: var(--dim);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ac-band-fill {
+    transition: none;
+  }
+}
