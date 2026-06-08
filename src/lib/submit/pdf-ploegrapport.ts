@@ -290,10 +290,21 @@ export async function generateTeamReportPdf(
     page.drawLine({ start: { x: x + w * 0.62, y: ar }, end: { x: x + w * 0.62 - 4, y: ar + 2.6 }, thickness: 1, color: CHALK, opacity: 0.55 })
     page.drawLine({ start: { x: x + w * 0.62, y: ar }, end: { x: x + w * 0.62 - 4, y: ar - 2.6 }, thickness: 1, color: CHALK, opacity: 0.55 })
     txt('aanval', x + w * 0.34, ar - 9, 6.5, font, CHALK)
+    // Scoreflow: dunne lijn van het vertrekpunt naar de landingsplek van elk doelpunt.
+    const cl = (v: number) => Math.max(0, Math.min(1, v))
+    for (const s of shots) {
+      if (!s.goal) continue
+      const ox = x + cl(s.y) * w
+      const oy = fy + cl(s.x) * h
+      const px = x + cl(s.landY) * w
+      const py = fy + cl(s.landX) * h
+      page.drawLine({ start: { x: ox, y: oy }, end: { x: px, y: py }, thickness: 0.6, color: goalColor, opacity: 0.35 })
+      dot(ox, oy, 0.9, goalColor, 0.5)
+    }
     // Schoten: doelpunten als sterren, missers als kleine doffe stippen.
     for (const s of shots) {
-      const px = x + Math.max(0, Math.min(1, s.landY)) * w
-      const py = fy + Math.max(0, Math.min(1, s.landX)) * h
+      const px = x + cl(s.landY) * w
+      const py = fy + cl(s.landX) * h
       if (s.goal) {
         star(px, py, 4.3, WHITE, 0.9)
         star(px, py, 3.4, goalColor, 1)
@@ -310,8 +321,8 @@ export async function generateTeamReportPdf(
   }
 
   if (danger && danger.attempts > 0) {
-    sectionTitle('Aanvalskaart - waar zij scoren')
-    paragraph('Elke stip is een afgewerkte aanval; gekleurd = doelpunt. De donkere strook toont hun voorkeurszone. Sluit die ruimte.', 8.5, DIM)
+    sectionTitle('Aanvalskaart - waar zij gooien & scoren')
+    paragraph('Elke ster is een doelpunt; de lijn toont van waar ze gooiden (de scoreflow). De donkere strook + gouden pijl tonen hun voorkeurszone. Sluit die ruimte.', 8.5, DIM)
     ensure(120)
     y -= 8
     const used = drawFieldMap(MARGIN, y, CW, danger.shots, ACCENT, r.zones, domZoneShare(r.zones))

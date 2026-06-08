@@ -10,9 +10,9 @@ import { buildTeamDanger, type DangerBand } from '@/lib/player-danger'
 import { REEKS_OPTIONS, reeksNaam } from '@/lib/reeksen'
 import { buildTeamReport } from '@/lib/team-report'
 import { AnalyseNav } from '../AnalyseNav'
-import { GevaarMap } from '../gevaar/GevaarMap'
 import { PloegPicker } from './PloegPicker'
 import { SpeelstijlPanel } from './SpeelstijlPanel'
+import { TeamFlowMap } from './TeamFlowMap'
 import { TeamProfile } from './TeamProfile'
 import '../../rangschikking/rangschikking.css'
 import '../analyse.css'
@@ -210,9 +210,9 @@ export default async function PloegRapportPage({ searchParams }: { searchParams:
 
             {danger && danger.attempts > 0 && (
               <>
-                <h2 className="an-sub">🔥 Gevaarzone <span className="an-chart-hint">van waar scoort deze ploeg</span></h2>
+                <h2 className="an-sub">🔥 Worp- &amp; scoreflow <span className="an-chart-hint">van waar ze smijten → waar ze scoren</span></h2>
                 <div className="gev-grid">
-                  <GevaarMap shots={danger.shots} />
+                  <TeamFlowMap shots={danger.shots} />
                   <div className="gev-side">
                     <div className="rep-cards">
                       <div className="rep-card"><span className="rep-num">{danger.attempts}</span><span className="rep-lbl">Doelpogingen</span></div>
