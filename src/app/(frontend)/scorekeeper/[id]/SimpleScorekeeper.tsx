@@ -98,27 +98,111 @@ export function SimpleScorekeeper({
     if (data.state) setState(data.state)
   })
 
+  // ── Offline-bestendigheid ──────────────────────────────────────────────────────────────
+  // Acties die niet verzonden raken (geen internet) worden lokaal bewaard en automatisch
+  // nagestuurd zodra de verbinding terug is — ook na een refresh (de wachtrij staat in
+  // localStorage). De score loopt intussen optimistisch verder, zodat een wegvallend netwerk de
+  // vooruitgang van de wedstrijd niet blokkeert.
+  const ACTION_URL = `/api/match/${matchId}/action`
+  const QKEY = `kb-actionqueue-${matchId}`
+  const queueRef = useRef<Record<string, unknown>[]>([])
+  const flushing = useRef(false)
+  const [pendingCount, setPendingCount] = useState(0)
+  const [offline, setOffline] = useState(false)
+
+  const persistQueue = useCallback(() => {
+    try {
+      localStorage.setItem(QKEY, JSON.stringify(queueRef.current))
+    } catch {}
+    setPendingCount(queueRef.current.length)
+  }, [QKEY])
+
+  const flush = useCallback(async () => {
+    if (flushing.current) return
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      setOffline(queueRef.current.length > 0)
+      return
+    }
+    flushing.current = true
+    try {
+      while (queueRef.current.length) {
+        if (typeof navigator !== 'undefined' && !navigator.onLine) break
+        const body = queueRef.current[0]
+        let res: Response
+        try {
+          res = await fetch(ACTION_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+        } catch {
+          break // nog steeds offline → later opnieuw proberen
+        }
+        // Verstuurd (ook al weigert de server de actie): uit de wachtrij halen.
+        queueRef.current.shift()
+        persistQueue()
+        try {
+          const data = (await res.json()) as MatchState & { error?: string }
+          if (res.ok) setState(data)
+        } catch {}
+      }
+      setOffline(queueRef.current.length > 0)
+    } finally {
+      flushing.current = false
+    }
+  }, [ACTION_URL, persistQueue])
+
+  // Wachtrij laden + automatisch nasturen bij (her)verbinding of periodiek.
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(QKEY)
+      if (raw) queueRef.current = JSON.parse(raw) as Record<string, unknown>[]
+    } catch {}
+    setPendingCount(queueRef.current.length)
+    void flush()
+    const onOnline = () => void flush()
+    const onOffline = () => setOffline(true)
+    window.addEventListener('online', onOnline)
+    window.addEventListener('offline', onOffline)
+    const t = setInterval(() => { if (queueRef.current.length) void flush() }, 8000)
+    return () => {
+      window.removeEventListener('online', onOnline)
+      window.removeEventListener('offline', onOffline)
+      clearInterval(t)
+    }
+  }, [QKEY, flush])
+
   const act = useCallback(
-    async (body: Record<string, unknown>) => {
-      if (busy.current) return
-      busy.current = true
+    async (body: Record<string, unknown>, optimistic?: (s: MatchState) => MatchState) => {
       setError(null)
+      if (optimistic) setState((prev) => optimistic(prev))
+      // Als er al een wachtrij is, we offline zijn, of er loopt al een actie: bewaren en nasturen
+      // (volgorde behouden) i.p.v. de tik te verliezen.
+      if (queueRef.current.length || busy.current || (typeof navigator !== 'undefined' && !navigator.onLine)) {
+        queueRef.current.push(body)
+        persistQueue()
+        void flush()
+        return
+      }
+      busy.current = true
       try {
-        const res = await fetch(`/api/match/${matchId}/action`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
-        })
+        const res = await fetch(ACTION_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
         const data = (await res.json()) as MatchState & { error?: string }
         if (!res.ok) throw new Error(data.error ?? 'Actie mislukt.')
         setState(data)
+        setOffline(false)
       } catch (e) {
-        setError((e as Error).message)
+        // Netwerkfout (fetch gooit een TypeError) → bewaren en later nasturen; de optimistische
+        // stand blijft staan. Een echte server-fout tonen we wel.
+        if (e instanceof TypeError) {
+          queueRef.current.push(body)
+          persistQueue()
+          setOffline(true)
+        } else {
+          setError((e as Error).message)
+        }
       } finally {
         busy.current = false
+        if (queueRef.current.length) void flush()
       }
     },
-    [matchId],
+    [ACTION_URL, persistQueue, flush],
   )
 
   const overtime = live && clock >= targetSec
@@ -156,6 +240,12 @@ export function SimpleScorekeeper({
           <Link href={`/veld/${matchId}`} className="ssk-toplink">Veldscherm →</Link>
         </span>
       </header>
+
+      {(offline || pendingCount > 0) && (
+        <div className="ssk-offline" role="status">
+          📴 Offline — je blijft aantekenen; {pendingCount > 0 ? `${pendingCount} wijziging${pendingCount === 1 ? '' : 'en'} word${pendingCount === 1 ? 't' : 'en'} bewaard` : 'wijzigingen worden bewaard'} en automatisch gesynct zodra je weer verbinding hebt.
+        </div>
+      )}
 
       <div className="ssk-meta">
         <span className="ssk-mode">{reeks ? <>⚡ <span className="ssk-reeks">{reeks}</span></> : '⚡ Aantekenen'}</span>
@@ -358,14 +448,11 @@ export function SimpleScorekeeper({
                       onClick={() => {
                         const { side, points } = pending
                         setPending(null)
-                        void act({
-                          action: 'simplegoal',
-                          side,
-                          points,
-                          playerId: p.id,
-                          shirtNumber: p.shirtNumber,
-                          playerName: p.name,
-                        })
+                        void act(
+                          { action: 'simplegoal', side, points, playerId: p.id, shirtNumber: p.shirtNumber, playerName: p.name },
+                          // Optimistisch: de score loopt meteen verder, ook zonder internet.
+                          (s) => ({ ...s, score: { ...s.score, [side]: s.score[side] + points } }),
+                        )
                       }}
                     >
                       <span className="ssk-pick-num">{p.shirtNumber}</span>

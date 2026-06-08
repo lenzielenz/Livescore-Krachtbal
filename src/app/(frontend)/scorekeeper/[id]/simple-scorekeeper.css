@@ -471,3 +471,16 @@
   line-height: 1;
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
 }
+
+/* Offline-melding: aantekenen blijft werken, wijzigingen worden later gesynct. */
+.ssk-offline {
+  margin: 8px 12px 0;
+  padding: 9px 13px;
+  border-radius: 10px;
+  background: color-mix(in srgb, #f6c544 20%, var(--panel, #0e2a1d));
+  border: 1px solid color-mix(in srgb, #f6c544 50%, var(--line, #1d3b2c));
+  color: var(--txt, #e8f5ee);
+  font-size: 0.86rem;
+  font-weight: 600;
+  text-align: center;
+}
