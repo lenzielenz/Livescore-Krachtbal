@@ -6,7 +6,6 @@ import { analyseMatchWhere } from '@/lib/analyse-access'
 import { getSelectedSeason } from '@/lib/analyse-season'
 import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
-import { clubColors, clubLogoUrl } from '@/lib/match-engine'
 import { buildTeamDanger } from '@/lib/player-danger'
 import { REEKS_OPTIONS, reeksNaam } from '@/lib/reeksen'
 import { buildTeamReport } from '@/lib/team-report'
@@ -16,7 +15,6 @@ import { PloegPicker } from './PloegPicker'
 import { SpeelstijlPanel } from './SpeelstijlPanel'
 import { TeamFlowMap } from './TeamFlowMap'
 import { TeamProfile } from './TeamProfile'
-import { TeamShareCard } from './TeamShareCard'
 import '../../rangschikking/rangschikking.css'
 import '../analyse.css'
 
@@ -67,14 +65,6 @@ export default async function PloegRapportPage({ searchParams }: { searchParams:
   const danger = teamId != null && report && report.matchesAnalyzed > 0 ? await buildTeamDanger(payload, teamId, reeks, seizoen, analyseMatchWhere(me)) : null
   const zTot = report ? report.zones.links + report.zones.midden + report.zones.rechts : 0
 
-  // Clubgegevens (logo + kleuren) voor de deelbare team-DNA-kaart — zelfde bron als de rest van de app.
-  const teamClub =
-    report && report.matchesAnalyzed > 0
-      ? await payload.findByID({ collection: 'teams', id: report.teamId, depth: 2 }).catch(() => null)
-      : null
-  const teamColors = teamClub ? clubColors(teamClub) : null
-  const teamLogo = teamClub ? clubLogoUrl(teamClub) : null
-
   return (
     <>
       <SiteHeader active="analyse" />
@@ -99,29 +89,6 @@ export default async function PloegRapportPage({ searchParams }: { searchParams:
               <a className="sk-demo-cta" href={`/api/analyse/team/${report.teamId}/pdf`}>📄 Download PDF</a>
               <a className="sk-demo-cta" href={`/api/analyse/team/${report.teamId}/csv`}>📑 Download CSV</a>
             </div>
-
-            {/* Deelbaar team-DNA: editoriale SVG-kaart, delen/downloaden. */}
-            <section className="match-share" style={{ marginTop: 4 }}>
-              <h2 className="an-sub">📲 Deel het team-DNA</h2>
-              <TeamShareCard
-                teamName={report.teamName}
-                clubLogoUrl={teamLogo}
-                colors={teamColors ?? { primary: '#06d6a0', secondary: '#06d6a0' }}
-                reeksLabel={reeksNaam(reeks)}
-                season="25/26"
-                tags={report.profile.tags}
-                radar={report.profile.radar.map((a) => ({ label: a.label, frac: a.value / 100 }))}
-                chips={[
-                  { label: 'Doelpunten', val: `${report.totals.goals}` },
-                  { label: 'Punten', val: `${report.totals.points}` },
-                  { label: 'Conversie', val: `${Math.round(report.totals.conversion * 100)}%` },
-                  { label: 'Gem. afstand', val: `${report.totals.avgDistance}m` },
-                  { label: 'Vangsten', val: `${report.totals.catches}` },
-                  { label: 'Wedstrijden', val: `${report.matchesAnalyzed}` },
-                ]}
-                headline={report.profile.strengths[0]?.title ?? null}
-              />
-            </section>
 
             <TeamProfile profile={report.profile} />
 
