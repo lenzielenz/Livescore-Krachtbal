@@ -1629,3 +1629,16 @@ select.rang-picker {
 /* Downloadknop voor de volledige wedstrijd-analyse (PDF). */
 .an-pdf-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 4px 0 14px; }
 .an-pdf-msg { font-size: 0.84rem; color: var(--dim); }
+
+/* Deelkaart-maker (PNG om te delen/downloaden). */
+.an-share { margin: 4px 0 16px; }
+.an-share-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+.an-share-fmt { display: inline-flex; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 999px; padding: 3px; gap: 2px; }
+.an-share-fmt-btn { border: none; background: transparent; color: var(--dim); font: inherit; font-size: 0.82rem; font-weight: 700; padding: 6px 14px; border-radius: 999px; cursor: pointer; }
+.an-share-fmt-btn.on { background: var(--accent); color: #06140d; }
+.an-share-photo { display: inline-flex; align-items: center; gap: 6px; font-size: 0.82rem; font-weight: 700; color: var(--ink); cursor: pointer; padding: 7px 14px; border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 999px; background: rgba(255, 255, 255, 0.04); }
+.an-share-photo input { display: none; }
+.an-share-photo-clear { border: none; background: transparent; color: var(--dim); font: inherit; font-size: 0.8rem; cursor: pointer; }
+.an-share-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.an-share-dl { font: inherit; font-weight: 700; font-size: 0.9rem; padding: 10px 18px; border-radius: 12px; cursor: pointer; color: var(--ink); background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.16); }
+.an-share-dl:disabled { opacity: 0.6; cursor: default; }
