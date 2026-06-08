@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 
+import { TeamLogo } from '@/components/TeamLogo'
 import type { TMatchState, TournamentState } from '@/lib/tournament-engine'
 import { fmtClock, useTicking, useTournamentStream } from '../useTournament'
 
@@ -13,7 +14,7 @@ function pairUp(matches: TMatchState[]): TMatchState[][] {
   return out
 }
 
-function MatchCard({ id, m }: { id: number; m: TMatchState }) {
+function MatchCard({ id, m, canManage, logos }: { id: number; m: TMatchState; canManage: boolean; logos: Record<string, string> }) {
   const clock = useTicking(m.clockSeconds, m.clockRunning)
   const bye = m.status === 'finished' && (!m.home || !m.away)
   const live = m.status === 'live'
@@ -25,6 +26,7 @@ function MatchCard({ id, m }: { id: number; m: TMatchState }) {
     const lost = done && m.winner && m.winner !== side
     return (
       <div className={`trn-row ${won ? 'won' : ''} ${lost ? 'lost' : ''} ${side}`}>
+        {name && <span className="trn-row-logo"><TeamLogo name={name} logoUrl={logos[name] ?? null} size="xs" /></span>}
         <span className="trn-row-name">{name ?? '— te bepalen —'}</span>
         <span className="trn-row-score">{name && (live || done) ? m.score[side] : ''}</span>
       </div>
@@ -41,7 +43,7 @@ function MatchCard({ id, m }: { id: number; m: TMatchState }) {
       </div>
       <Row side="home" />
       <Row side="away" />
-      {!bye && (
+      {!bye && canManage && (
         <div className="trn-match-actions">
           <Link href={`/tornooi/${id}/aantekenen/${m.id}`} className="trn-mini">Aantekenen</Link>
           <Link href={`/tornooi/${id}/veld/${m.id}`} className="trn-mini">Veld</Link>
@@ -52,7 +54,7 @@ function MatchCard({ id, m }: { id: number; m: TMatchState }) {
 }
 
 // Round-robin: live rangschikking (4/3/2 punten) + alle wedstrijden.
-function RoundRobin({ id, state }: { id: number; state: TournamentState }) {
+function RoundRobin({ id, state, canManage, logos }: { id: number; state: TournamentState; canManage: boolean; logos: Record<string, string> }) {
   const matches = state.rounds.flatMap((r) => r.matches)
   const standings = state.standings ?? []
   return (
@@ -67,7 +69,7 @@ function RoundRobin({ id, state }: { id: number; state: TournamentState }) {
             {standings.map((s, i) => (
               <tr key={s.team} className={i === 0 && state.status === 'finished' ? 'leader' : ''}>
                 <td>{i + 1}</td>
-                <td className="l">{s.team}</td>
+                <td className="l"><span className="trn-rr-team">{logos[s.team] && <TeamLogo name={s.team} logoUrl={logos[s.team]} size="xs" />}{s.team}</span></td>
                 <td>{s.played}</td>
                 <td>{s.won}</td>
                 <td>{s.drawn}</td>
@@ -84,7 +86,7 @@ function RoundRobin({ id, state }: { id: number; state: TournamentState }) {
         <h2 className="trn-col-title">Wedstrijden</h2>
         <div className="trn-rr-grid">
           {matches.map((m) => (
-            <MatchCard key={m.id} id={id} m={m} />
+            <MatchCard key={m.id} id={id} m={m} canManage={canManage} logos={logos} />
           ))}
         </div>
       </section>
@@ -92,7 +94,7 @@ function RoundRobin({ id, state }: { id: number; state: TournamentState }) {
   )
 }
 
-export function BracketBoard({ id, initial }: { id: number; initial: TournamentState }) {
+export function BracketBoard({ id, initial, canManage = false, logos = {} }: { id: number; initial: TournamentState; canManage?: boolean; logos?: Record<string, string> }) {
   const state = useTournamentStream(id, initial) ?? initial
 
   return (
@@ -103,16 +105,16 @@ export function BracketBoard({ id, initial }: { id: number; initial: TournamentS
         </Link>
         <nav className="trn-topnav">
           <Link href={`/tornooi/${id}/kantine`} className="trn-btn">Kantinescherm</Link>
-          <Link href="/tornooi" className="trn-toplink">Alle tornooien</Link>
+          <Link href="/tornooi" className="trn-toplink">Alle bekers</Link>
         </nav>
       </header>
 
       {state.champion && (
-        <div className="trn-champion">🏆 Winnaar: <strong>{state.champion}</strong></div>
+        <div className="trn-champion">🏆 Winnaar: {logos[state.champion] && <TeamLogo name={state.champion} logoUrl={logos[state.champion]} size="sm" />}<strong>{state.champion}</strong></div>
       )}
 
       {state.format === 'roundrobin' ? (
-        <RoundRobin id={id} state={state} />
+        <RoundRobin id={id} state={state} canManage={canManage} logos={logos} />
       ) : (
       <main className="trn-bracket">
         {state.rounds.map((r, ri) => {
@@ -124,7 +126,7 @@ export function BracketBoard({ id, initial }: { id: number; initial: TournamentS
                 {pairUp(r.matches).map((pair, pi) => (
                   <div className="trn-pair" key={pi}>
                     {pair.map((m) => (
-                      <MatchCard key={m.id} id={id} m={m} />
+                      <MatchCard key={m.id} id={id} m={m} canManage={canManage} logos={logos} />
                     ))}
                   </div>
                 ))}
@@ -139,7 +141,7 @@ export function BracketBoard({ id, initial }: { id: number; initial: TournamentS
         <section className="trn-third">
           <h2 className="trn-col-title">Kleine finale (3e plaats)</h2>
           <div className="trn-third-card">
-            <MatchCard id={id} m={state.thirdPlace} />
+            <MatchCard id={id} m={state.thirdPlace} canManage={canManage} logos={logos} />
           </div>
         </section>
       )}
