@@ -61,7 +61,7 @@ export function NewTournament({ categories }: { categories: ReadonlyArray<{ labe
     if (!name.trim()) return setError('Geef het tornooi een naam.')
     if (filled.length < 2) return setError('Vul minstens 2 ploegnamen in.')
     if (new Set(filled.map((n) => n.toLowerCase())).size !== filled.length)
-      return setError('Twee ploegen hebben dezelfde naam.')
+      return setError('Twee ploegen hebben dezelfde naam. Schrijft dezelfde club meerdere ploegen in, geef ze dan een nummer (bv. KBC Male 1 en KBC Male 2).')
 
     // Round-robin: alle ploegen één keer tegen elkaar — geen loting/bye's, namen volstaan.
     // Knock-out: toggle = automatische loting (schudden), manueel = volgorde zoals ingevuld.
@@ -132,6 +132,9 @@ export function NewTournament({ categories }: { categories: ReadonlyArray<{ labe
 
       <section className="trn-card">
         <h2>2 · Ploegen invullen</h2>
+        <p className="trn-hint trn-hint-sub">
+          Dezelfde club mag meerdere ploegen inschrijven — nummer ze dan (bv. <strong>KBC Male 1</strong> en <strong>KBC Male 2</strong>). Het clublogo verschijnt automatisch.
+        </p>
         <p className="trn-hint">
           {filledCount < 2
             ? 'Vul de ploegnamen in.'
