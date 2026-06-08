@@ -646,6 +646,8 @@ select.rang-picker {
 }
 .gev-side { display: flex; flex-direction: column; gap: 14px; }
 .gev-side .rep-cards { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
+.flow-check { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; color: var(--dim); }
+.flow-check input { accent-color: var(--accent); }
 
 /* ── Analyse-tabbalk (gedeeld over alle analyse-pagina's) ── */
 .an-nav {
