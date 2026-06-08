@@ -66,6 +66,12 @@ export function RefereePortal({ naam, qrValue, code }: { naam: string; qrValue: 
             Backup-code (intikken als scannen niet lukt):
           </p>
           <p className="qr-code-text">{code}</p>
+          <button type="button" onClick={() => window.print()} className="wb-btn" style={{ marginTop: 14 }}>
+            🖨️ QR afdrukken
+          </button>
+          <p className="wb-sub" style={{ marginTop: 6, fontSize: '0.78rem' }}>
+            Druk je QR af en hou ze op zak — zo kan je een wedstrijd starten, ook als je gsm leeg is.
+          </p>
         </section>
 
         <section className="wb-card">
@@ -104,6 +110,15 @@ export function RefereePortal({ naam, qrValue, code }: { naam: string; qrValue: 
             </div>
           )}
         </section>
+      </div>
+
+      {/* Alleen zichtbaar bij afdrukken: een propere QR-kaart om op zak te houden. */}
+      <div className="ref-printable" aria-hidden>
+        <h2 className="ref-print-title">Krachtbal — scheidsrechter</h2>
+        <p className="ref-print-name">{naam}</p>
+        <div className="ref-print-qr"><QrCode value={qrValue} size={300} /></div>
+        <p className="ref-print-code">Backup-code: {code}</p>
+        <p className="ref-print-note">Toon deze QR (of tik de code in) aan de aantekenaar om de wedstrijd vrij te geven.</p>
       </div>
     </>
   )
