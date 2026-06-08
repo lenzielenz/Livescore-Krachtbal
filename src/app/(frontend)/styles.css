@@ -841,6 +841,27 @@ h3,
 }
 
 /* Club-dashboard */
+/* Kampioenschap-banner: bijna/wel kampioen. */
+.club-champ-wrap { display: flex; flex-direction: column; gap: 8px; margin: 4px 0 18px; }
+.club-champ {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  font-size: 0.92rem;
+}
+.club-champ-ico { font-size: 1.6rem; line-height: 1; flex: 0 0 auto; }
+.club-champ-text { min-width: 0; }
+.club-champ.champion {
+  border-color: color-mix(in srgb, #ffd166 60%, var(--line));
+  background: linear-gradient(135deg, color-mix(in srgb, #ffd166 22%, var(--panel)), var(--panel));
+}
+.club-champ.almost { border-color: color-mix(in srgb, #f59e0b 45%, var(--line)); background: color-mix(in srgb, #f59e0b 8%, var(--panel)); }
+.club-champ.leading { border-color: color-mix(in srgb, var(--accent) 35%, var(--line)); }
+
 .club-group { margin: 0 0 22px; }
 .club-group-h {
   display: flex;

@@ -4,9 +4,11 @@ import Link from 'next/link'
 import { ProfileTools } from '@/components/ProfileTools'
 import { SiteHeader } from '@/components/SiteHeader'
 import { userClubId } from '@/lib/access'
+import { clinchStatus } from '@/lib/championship'
 import { getMatchReadiness } from '@/lib/matchsheet-data'
 import { getPayloadClient } from '@/lib/payload-client'
 import { getProfile } from '@/lib/profiles'
+import { buildReeksStandings } from '@/lib/reeks-standings'
 import { reeksNaam, REEKS_OPTIONS } from '@/lib/reeksen'
 import { ClaimButton } from './ClaimButton'
 
@@ -149,6 +151,25 @@ export default async function ClubPage() {
   }
   const groupList = [...groups.values()].sort((a, b) => a.order - b.order || a.label.localeCompare(b.label))
 
+  // Kampioenschap: per ploeg (in een competitiereeks) berekenen of ze (bijna) kampioen is.
+  const COMPETITIE = new Set<string>(REEKS_OPTIONS.map((o) => o.value).filter((v) => !['beker', 'recreatief', 'andere'].includes(v)))
+  const clubTeams = teams.docs
+    .map((t) => ({ id: Number(t.id), name: String((t as { name?: unknown }).name ?? '—'), reeks: String((t as { reeks?: unknown }).reeks ?? '') }))
+    .filter((t) => COMPETITIE.has(t.reeks))
+  const reeksSet = [...new Set(clubTeams.map((t) => t.reeks))]
+  type Champ = { teamName: string; reeks: string; clinched: boolean; leading: boolean; pointsToClinch: number | null; winsToClinch: number | null }
+  const champs: Champ[] = []
+  for (const reeks of reeksSet) {
+    const sb = await buildReeksStandings(payload, reeks).catch(() => null)
+    if (!sb || sb.standings.length < 2) continue
+    for (const t of clubTeams.filter((ct) => ct.reeks === reeks)) {
+      const st = clinchStatus(sb.standings, sb.remaining, t.id)
+      if (!st || !(st.clinched || st.leading)) continue
+      champs.push({ teamName: t.name, reeks: reeksNaam(reeks as Parameters<typeof reeksNaam>[0]), clinched: st.clinched, leading: st.leading, pointsToClinch: st.pointsToClinch, winsToClinch: st.winsToClinch })
+    }
+  }
+  champs.sort((a, b) => Number(b.clinched) - Number(a.clinched))
+
   return (
     <Shell>
       <p className="wb-intro">
@@ -156,6 +177,33 @@ export default async function ClubPage() {
         je eigen kant voor (opstelling), claim de wedstrijden die jij doet, en — als thuisploeg — start de wedstrijd voor
         het wedstrijdblad.
       </p>
+
+      {champs.length > 0 && (
+        <div className="club-champ-wrap">
+          {champs.map((c, i) => {
+            const almost = c.winsToClinch != null && c.winsToClinch <= 2
+            const cls = c.clinched ? 'champion' : almost ? 'almost' : 'leading'
+            return (
+              <div key={i} className={`club-champ ${cls}`}>
+                <span className="club-champ-ico" aria-hidden>{c.clinched ? '🏆' : almost ? '🔥' : '📈'}</span>
+                <span className="club-champ-text">
+                  {c.clinched ? (
+                    <><strong>{c.teamName}</strong> is wiskundig <strong>KAMPIOEN</strong> in {c.reeks}! 🎉</>
+                  ) : c.pointsToClinch != null ? (
+                    <>
+                      <strong>{c.teamName}</strong> leidt in {c.reeks} — nog <strong>{c.pointsToClinch} {c.pointsToClinch === 1 ? 'punt' : 'punten'}</strong>
+                      {c.winsToClinch != null && <> ({c.winsToClinch} {c.winsToClinch === 1 ? 'overwinning' : 'overwinningen'})</>} voor de titel.{almost ? ' Bijna zover!' : ''}
+                    </>
+                  ) : (
+                    <><strong>{c.teamName}</strong> staat aan de leiding in {c.reeks}.</>
+                  )}
+                </span>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
       {rows.length === 0 ? (
         <p className="empty">Geen geplande wedstrijden voor je ploegen.</p>
       ) : (
