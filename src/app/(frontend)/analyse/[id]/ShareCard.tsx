@@ -82,6 +82,8 @@ export function ShareCard({
   const [msg, setMsg] = useState<string | null>(null)
   const [logoData, setLogoData] = useState<{ home: string | null; away: string | null }>({ home: null, away: null })
   const [photo, setPhoto] = useState<string | null>(null)
+  const logoDataRef = useRef(logoData)
+  logoDataRef.current = logoData
 
   useEffect(() => {
     let alive = true
@@ -94,6 +96,21 @@ export function ShareCard({
     })()
     return () => { alive = false }
   }, [logos.home, logos.away])
+
+  // Garandeer dat de logo's geladen (en in de SVG getekend) zijn vóór we naar PNG omzetten —
+  // anders verschijnen de initialen i.p.v. de clublogo's als je snel klikt.
+  const ensureLogos = async () => {
+    const cur = logoDataRef.current
+    const needH = logos.home && !cur.home
+    const needA = logos.away && !cur.away
+    if (!needH && !needA) return
+    const [h, a] = await Promise.all([
+      needH ? urlToDataUrl(logos.home!) : Promise.resolve(cur.home),
+      needA ? urlToDataUrl(logos.away!) : Promise.resolve(cur.away),
+    ])
+    setLogoData({ home: h, away: a })
+    await new Promise<void>((res) => requestAnimationFrame(() => requestAnimationFrame(() => res())))
+  }
 
   const onPhoto = async (file: File | null) => {
     if (!file) return setPhoto(null)
@@ -116,7 +133,7 @@ export function ShareCard({
 
   const winner = score.home > score.away ? 'home' : score.away > score.home ? 'away' : 'draw'
   const winnerName = winner === 'home' ? teams.home : winner === 'away' ? teams.away : ''
-  const result = winner === 'draw' ? 'GELIJKSPEL ⚖️' : `${winnerName.toUpperCase()} WINT 🏆`
+  const result = winner === 'draw' ? 'GELIJKSPEL ⚖️' : `${shortName(winnerName, 18).toUpperCase()} WINT 🏆`
 
   // ── Hoogtepunten. ──
   const active = players.filter((p) => p.throws > 0)
@@ -148,7 +165,7 @@ export function ShareCard({
   const contentBot = H - footerH
   const avail = contentBot - contentTop
   // Blok-hoogtes (fracties); details groter als er spelerdata is.
-  const wHero = 0.34, wMom = 0.25, wFacts = 0.08, wDet = hasPlayers ? 0.33 : 0.22
+  const wHero = 0.40, wMom = 0.24, wFacts = 0.07, wDet = hasPlayers ? 0.29 : 0.16
   const wSum = wHero + wMom + wFacts + wDet
   const gaps = 3
   const blockSpace = avail - Math.round(avail * 0.06) // 6% van de hoogte voor tussenruimtes
@@ -163,53 +180,52 @@ export function ShareCard({
   const factsBox = { y, h: hFacts }; y += hFacts + gap
   const detBox = { y, h: hDet }
 
+  // Gedeelde hero-geometrie: badges + namen bovenaan, score eronder, uitslag onderaan — gestapeld,
+  // zodat de score nooit over de clublogo's valt.
+  const heroR = clamp(heroBox.h * 0.21, 52, 110)
+  const heroCy = heroBox.y + heroR + heroBox.h * 0.03
+  const heroNameSize = clamp(heroR * 0.34, 22, 36)
+
   // ── Render-helpers (alles schaalt mee met zijn vak). ──
   const Badge = ({ side }: { side: 'home' | 'away' }) => {
-    const r = clamp(heroBox.h * 0.30, 60, 132)
-    const cy = heroBox.y + r + heroBox.h * 0.02
-    const cx = side === 'home' ? W * 0.205 : W * 0.795
+    const r = heroR
+    const cy = heroCy
+    const cx = side === 'home' ? W * 0.25 : W * 0.75
     const c = side === 'home' ? homeC : awayC
     const data = side === 'home' ? logoData.home : logoData.away
     const name = side === 'home' ? teams.home : teams.away
-    const nameSize = clamp(r * 0.32, 24, 42)
     return (
       <g>
-        <circle cx={cx} cy={cy} r={r + r * 0.08} fill="none" stroke={c} strokeWidth={r * 0.06} opacity={0.9} />
-        <circle cx={cx} cy={cy} r={r} fill="#0c1f16" />
+        <circle cx={cx} cy={cy} r={r + r * 0.07} fill="none" stroke={c} strokeWidth={Math.max(3, r * 0.05)} opacity={0.85} />
+        <circle cx={cx} cy={cy} r={r} fill="#0b1d14" filter="url(#soft)" />
         {data ? (
           <>
             <clipPath id={`clip-${side}`}><circle cx={cx} cy={cy} r={r - 4} /></clipPath>
-            <image href={data} x={cx - r} y={cy - r} width={r * 2} height={r * 2} clipPath={`url(#clip-${side})`} preserveAspectRatio="xMidYMid slice" />
+            <image href={data} x={cx - (r - 4)} y={cy - (r - 4)} width={(r - 4) * 2} height={(r - 4) * 2} clipPath={`url(#clip-${side})`} preserveAspectRatio="xMidYMid meet" />
           </>
         ) : (
-          <text x={cx} y={cy + r * 0.34} textAnchor="middle" fontSize={r * 0.8} fontWeight={800} fill={c}>{initials(name)}</text>
+          <text x={cx} y={cy + r * 0.34} textAnchor="middle" fontSize={r * 0.78} fontWeight={800} fill={c}>{initials(name)}</text>
         )}
-        <text x={cx} y={cy + r + nameSize * 1.25} textAnchor="middle" fontSize={nameSize} fontWeight={800} fill={c}>{shortName(name)}</text>
+        <text x={cx} y={cy + r + heroNameSize * 1.3} textAnchor="middle" fontSize={heroNameSize} fontWeight={800} fill="#eafff5">{shortName(name, 16)}</text>
       </g>
     )
   }
 
   const Hero = () => {
-    const r = clamp(heroBox.h * 0.30, 60, 132)
-    const cy = heroBox.y + r + heroBox.h * 0.02
-    const scoreSize = clamp(r * 1.5, 96, 210)
-    const pillH = clamp(heroBox.h * 0.17, 56, 96)
-    const pillW = clamp(W * 0.62, 520, 760)
-    const pillY = heroBox.y + heroBox.h - pillH
-    const resultFont = clamp(pillH * (result.length > 22 ? 0.42 : result.length > 16 ? 0.5 : 0.58), 26, 50)
+    const scoreSize = clamp(heroBox.h * 0.30, 72, 156)
+    const scoreBaseline = heroBox.y + heroBox.h * 0.74
+    const capSize = clamp(heroBox.h * 0.078, 20, 38) * (result.length > 22 ? 0.78 : 1)
+    const capY = heroBox.y + heroBox.h - capSize * 0.4
     return (
       <>
         <Badge side="home" />
         <Badge side="away" />
-        <text x={W / 2} y={cy + scoreSize * 0.34} textAnchor="middle" fontSize={scoreSize} fontWeight={900} filter="url(#soft)">
-          <tspan fill={winner === 'away' ? '#9fb3aa' : homeC}>{score.home}</tspan>
-          <tspan fill="#7d8f86" fontSize={scoreSize * 0.62}> – </tspan>
-          <tspan fill={winner === 'home' ? '#9fb3aa' : awayC}>{score.away}</tspan>
+        <text x={W / 2} y={scoreBaseline} textAnchor="middle" fontSize={scoreSize} fontWeight={900} letterSpacing="-2">
+          <tspan fill={winner === 'away' ? '#8aa399' : homeC}>{score.home}</tspan>
+          <tspan fill="#5f7268" fontSize={scoreSize * 0.6} dx={scoreSize * 0.04}> – </tspan>
+          <tspan fill={winner === 'home' ? '#8aa399' : awayC} dx={scoreSize * 0.04}>{score.away}</tspan>
         </text>
-        <g filter="url(#soft)">
-          <rect x={W / 2 - pillW / 2} y={pillY} width={pillW} height={pillH} rx={pillH / 2} fill="#0e2b1d" stroke="#f4c430" strokeOpacity={0.55} strokeWidth={2} />
-          <text x={W / 2} y={pillY + pillH * 0.66} textAnchor="middle" fontSize={resultFont} fontWeight={800} fill="#f4c430">{result}</text>
-        </g>
+        <text x={W / 2} y={capY} textAnchor="middle" fontSize={capSize} fontWeight={800} letterSpacing="3" fill="#f4c430">{result}</text>
       </>
     )
   }
@@ -304,22 +320,18 @@ export function ShareCard({
         </>
       )
     }
-    // Geen worpdata: een vrolijke afsluiter.
+    // Geen worpdata (snelscore): een strakke, ingetogen afsluiter — geen emoji-parade.
+    const lineW = clamp(W * 0.34, 280, 460)
+    const cy = detBox.y + detBox.h * 0.5
+    const headline = winner === 'draw' ? 'Punten gedeeld' : `Overwinning voor ${shortName(winnerName, 20)}`
     return (
       <>
-        <text x={W / 2} y={detBox.y + detBox.h * 0.42} textAnchor="middle" fontSize={clamp(detBox.h * 0.26, 44, 72)} fontWeight={900} fill="#ffffff">Wat een match! 🔥</text>
-        <text x={W / 2} y={detBox.y + detBox.h * 0.62} textAnchor="middle" fontSize={clamp(detBox.h * 0.12, 24, 34)} fill="#cfe6dc">
-          {winner === 'draw' ? 'Geen winnaar, wel spektakel.' : `Knappe overwinning voor ${winnerName}.`}
-        </text>
-        <text x={W / 2} y={detBox.y + detBox.h * 0.86} textAnchor="middle" fontSize={clamp(detBox.h * 0.18, 36, 52)} opacity={0.85}>🎊  🏐  ⭐  🚀  🎉</text>
+        <line x1={W / 2 - lineW / 2} y1={cy - detBox.h * 0.28} x2={W / 2 + lineW / 2} y2={cy - detBox.h * 0.28} stroke="#f4c430" strokeOpacity={0.4} strokeWidth={2} />
+        <text x={W / 2} y={cy + clamp(detBox.h * 0.1, 14, 22)} textAnchor="middle" fontSize={clamp(detBox.h * 0.3, 30, 52)} fontWeight={800} fill="#ffffff">{headline}</text>
       </>
     )
   }
 
-  const confetti: [number, number, string][] = [
-    [W * 0.11, H * 0.2, '🎉'], [W * 0.9, H * 0.18, '🏐'], [W * 0.07, H * 0.9, '✨'],
-    [W * 0.93, H * 0.88, '🎊'], [W * 0.5, H * 0.11, '⭐'], [W * 0.16, H * 0.95, '🔥'], [W * 0.85, H * 0.95, '🚀'],
-  ]
   const brandSize = clamp(headerH * 0.34, 34, 56)
   const metaSize = clamp(headerH * 0.2, 22, 32)
 
@@ -330,6 +342,7 @@ export function ShareCard({
     if (busy || !svgRef.current) return
     setBusy(true); setMsg(null)
     try {
+      await ensureLogos()
       await saveOrShareBlob(await rasterize(), fileName(), `${teams.home} ${score.home}–${score.away} ${teams.away} 🏐`)
     } catch { setMsg('Kaart maken mislukt — probeer opnieuw.'); setTimeout(() => setMsg(null), 3500) }
     finally { setBusy(false) }
@@ -337,7 +350,7 @@ export function ShareCard({
   const download = async () => {
     if (busy || !svgRef.current) return
     setBusy(true); setMsg(null)
-    try { downloadBlob(await rasterize(), fileName()) }
+    try { await ensureLogos(); downloadBlob(await rasterize(), fileName()) }
     catch { setMsg('Download mislukt — probeer opnieuw.'); setTimeout(() => setMsg(null), 3500) }
     finally { setBusy(false) }
   }
@@ -373,17 +386,17 @@ export function ShareCard({
           fontFamily="'Inter','Segoe UI',system-ui,-apple-system,'Apple Color Emoji','Noto Color Emoji',sans-serif">
           <defs>
             <linearGradient id="cardBg" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={homeC} stopOpacity={0.22} />
-              <stop offset="32%" stopColor="#0a1c12" />
-              <stop offset="68%" stopColor="#081610" />
-              <stop offset="100%" stopColor={awayC} stopOpacity={0.22} />
+              <stop offset="0%" stopColor={homeC} stopOpacity={0.16} />
+              <stop offset="22%" stopColor="#0a1c12" />
+              <stop offset="78%" stopColor="#08160f" />
+              <stop offset="100%" stopColor={awayC} stopOpacity={0.16} />
             </linearGradient>
-            <radialGradient id="glowH" cx="20%" cy="20%" r="55%">
-              <stop offset="0%" stopColor={homeC} stopOpacity={0.28} />
+            <radialGradient id="glowH" cx="18%" cy="14%" r="50%">
+              <stop offset="0%" stopColor={homeC} stopOpacity={0.16} />
               <stop offset="100%" stopColor={homeC} stopOpacity={0} />
             </radialGradient>
-            <radialGradient id="glowA" cx="82%" cy="82%" r="55%">
-              <stop offset="0%" stopColor={awayC} stopOpacity={0.28} />
+            <radialGradient id="glowA" cx="84%" cy="86%" r="50%">
+              <stop offset="0%" stopColor={awayC} stopOpacity={0.16} />
               <stop offset="100%" stopColor={awayC} stopOpacity={0} />
             </radialGradient>
             <linearGradient id="momFill" x1="0" y1="0" x2="0" y2="1">
@@ -404,13 +417,10 @@ export function ShareCard({
           <rect x="0" y="0" width={W} height={H} fill="url(#cardBg)" />
           <rect x="0" y="0" width={W} height={H} fill="url(#glowH)" />
           <rect x="0" y="0" width={W} height={H} fill="url(#glowA)" />
-          <rect x="14" y="14" width={W - 28} height={H - 28} rx="36" fill="none" stroke="#ffffff" strokeOpacity={0.08} strokeWidth={2} />
-          {confetti.map(([x, yy, e], i) => (
-            <text key={i} x={x} y={yy} fontSize={i % 2 ? brandSize : brandSize * 1.3} opacity={0.5} textAnchor="middle">{e}</text>
-          ))}
+          <rect x="14" y="14" width={W - 28} height={H - 28} rx="36" fill="none" stroke="#f4c430" strokeOpacity={0.22} strokeWidth={2} />
 
           {/* Kop */}
-          <text x={W / 2} y={pad + brandSize} textAnchor="middle" fontSize={brandSize} fontWeight={900} letterSpacing="2" fill="#ffffff">🏐 KRACHTBAL <tspan fill="#f4c430">LIVE</tspan></text>
+          <text x={W / 2} y={pad + brandSize} textAnchor="middle" fontSize={brandSize} fontWeight={900} letterSpacing="3" fill="#ffffff">KRACHTBAL <tspan fill="#f4c430">LIVE</tspan></text>
           <text x={W / 2} y={pad + brandSize + metaSize * 1.5} textAnchor="middle" fontSize={metaSize} fill="#cfe6dc" opacity={0.85}>{[reeks, datum].filter(Boolean).join('  ·  ')}</text>
 
           <Hero />
