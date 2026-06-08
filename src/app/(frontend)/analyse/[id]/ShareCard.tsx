@@ -49,11 +49,25 @@ function pick(players: Player[], ok: (p: Player) => boolean, better: (a: Player,
 }
 
 // Bestand (logo of teamfoto) als data-URL — anders "tainted canvas" en mislukt de PNG-export op gsm.
-async function urlToDataUrl(url: string): Promise<string | null> {
+async function tryFetchDataUrl(url: string): Promise<string | null> {
   try {
-    const res = await fetch(url, { mode: 'cors' })
+    const res = await fetch(url)
     if (!res.ok) return null
-    return await blobToDataUrl(await res.blob())
+    const blob = await res.blob()
+    if (blob.type && !blob.type.startsWith('image/')) return null
+    return await blobToDataUrl(blob)
+  } catch {
+    return null
+  }
+}
+async function urlToDataUrl(url: string): Promise<string | null> {
+  // 1) Rechtstreeks (werkt voor eigen/CORS-vriendelijke logo's).
+  const direct = await tryFetchDataUrl(url)
+  if (direct) return direct
+  // 2) Extern logo zonder CORS → via onze eigen proxy (zelfde origin, geen taint).
+  try {
+    const abs = new URL(url, window.location.origin).href
+    return await tryFetchDataUrl(`/api/logo-proxy?url=${encodeURIComponent(abs)}`)
   } catch {
     return null
   }
