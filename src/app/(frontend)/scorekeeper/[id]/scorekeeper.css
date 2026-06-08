@@ -293,6 +293,18 @@ a.sk-btn { display: inline-block; box-sizing: border-box; text-align: center; te
 .sk-pick-player:disabled { opacity: 0.4; }
 .sk-pick-num { font-size: 1.5rem; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1; }
 .sk-pick-naam { font-size: 0.72rem; color: var(--dim); max-width: 84px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Slimme vanger-suggestie: de waarschijnlijke vangers groot en geaccentueerd bovenaan. */
+.sk-suggest-lbl { font-size: 0.78rem; font-weight: 700; color: var(--accent); text-align: center; margin: 2px 0 8px; }
+.sk-suggest-row { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin-bottom: 8px; }
+.sk-pick-player.sk-suggest {
+  min-width: 104px; padding: 12px 14px;
+  border: 2px solid var(--accent); background: #11301f;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent), 0 8px 22px rgba(0, 0, 0, 0.35);
+}
+.sk-pick-player.sk-suggest .sk-pick-num { font-size: 1.8rem; }
+.sk-pick-pos { font-size: 0.66rem; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: 0.04em; }
+.sk-suggest-or { font-size: 0.74rem; color: var(--dim); text-align: center; margin: 4px 0 10px; }
 /* Nummers in de zijkolommen zijn nu louter informatief (selectie gebeurt in het keuzescherm) */
 .sk-num.display { display: flex; align-items: center; justify-content: center; }
 /* Korte uitleg boven het veld */

@@ -7,6 +7,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { FieldSchema, type FieldMarker } from '@/components/FieldSchema'
 import { TeamLogo } from '@/components/TeamLogo'
 import { attackDirForSide, deriveOutcome } from '@/lib/krachtbal-rules'
+import { zoneOf } from '@/lib/field'
 import type { AttackDir, Point } from '@/lib/field'
 import type { MatchState } from '@/lib/match-engine'
 import { LINEUP_MIN, type Readiness } from '@/lib/match-readiness'
@@ -18,6 +19,7 @@ interface RosterPlayer {
   name: string
   shirtNumber: number
   teamId: number
+  position?: string | null
 }
 
 const HOME_COLOR = '#06d6a0'
@@ -336,16 +338,21 @@ export function Scorekeeper({
         setPendingThrow(null)
         return
       }
-      // Gevangen → vraag welke tegenstander de bal ving.
+      // Gevangen → enkel op een ANALYSE-wedstrijd vragen wie de bal ving (verdedigende registratie).
+      // Op een gewone live-match gaat de gevangen worp meteen door — geen extra vraag, geen gesleur.
       if (outcome === 'caught') {
-        setPendingCatch({ p, tapCount, playerId })
+        if (isAnalyseOnly) {
+          setPendingCatch({ p, tapCount, playerId })
+        } else {
+          void submitThrow(p, tapCount, false, playerId)
+        }
         setPendingThrow(null)
         return
       }
       void submitThrow(p, tapCount, false, playerId)
       setPendingThrow(null)
     },
-    [pendingThrow, poss, tapMode, state.match.goalAreaDepth, submitThrow],
+    [pendingThrow, poss, tapMode, state.match.goalAreaDepth, submitThrow, isAnalyseOnly],
   )
 
   const isScheduled = state.match.status === 'scheduled'
@@ -572,19 +579,48 @@ export function Scorekeeper({
           setPendingCatch(null)
           void submitThrow(p, tapCount, false, playerId, catcherId)
         }
+        // Slimme suggestie (geen gesleur): de zone van de vangst bepaalt de vleugel-kant; daarnaast
+        // is de achterman de meest waarschijnlijke bij een diepe worp. Beide groot bovenaan.
+        const zone = poss ? zoneOf(pendingCatch.p, poss.dir as AttackDir) : 'midden'
+        const wingPos = zone === 'links' ? 'vleugel-links' : zone === 'rechts' ? 'vleugel-rechts' : null
+        const wing = wingPos ? catchers.find((c) => c.position === wingPos) : undefined
+        const back = catchers.find((c) => c.position === 'achter')
+        const suggested = [wing, back].filter((c): c is RosterPlayer => Boolean(c))
+        const suggestedIds = new Set(suggested.map((c) => c.id))
+        const posLabel = (pos?: string | null) =>
+          pos === 'vleugel-links' ? 'vleugel links' : pos === 'vleugel-rechts' ? 'vleugel rechts' : pos === 'achter' ? 'achterman' : ''
+        const rest = catchers.filter((c) => !suggestedIds.has(c.id))
         return (
           <div className="sk-modal-overlay">
             <div className="sk-modal sk-lineup-modal">
               <h3>Wie ving de bal?</h3>
-              <p>Tik de tegenstander aan die de bal ving (of sla over).</p>
-              <div className="sk-lineup-pick-grid">
-                {catchers.map((p) => (
-                  <button type="button" key={p.id} className="sk-pick-player" onClick={() => submit(p.id)}>
-                    <span className="sk-pick-num">{p.shirtNumber}</span>
-                    <span className="sk-pick-naam">{firstName(p.name)}</span>
-                  </button>
-                ))}
-              </div>
+              {suggested.length > 0 ? (
+                <>
+                  <p className="sk-suggest-lbl">Waarschijnlijk — tik om te bevestigen</p>
+                  <div className="sk-suggest-row">
+                    {suggested.map((c) => (
+                      <button type="button" key={c.id} className="sk-pick-player sk-suggest" onClick={() => submit(c.id)}>
+                        <span className="sk-pick-num">{c.shirtNumber}</span>
+                        <span className="sk-pick-naam">{firstName(c.name)}</span>
+                        <span className="sk-pick-pos">{posLabel(c.position)}</span>
+                      </button>
+                    ))}
+                  </div>
+                  {rest.length > 0 && <p className="sk-suggest-or">of iemand anders</p>}
+                </>
+              ) : (
+                <p>Tik de tegenstander aan die de bal ving (of sla over).</p>
+              )}
+              {rest.length > 0 && (
+                <div className="sk-lineup-pick-grid">
+                  {rest.map((p) => (
+                    <button type="button" key={p.id} className="sk-pick-player" onClick={() => submit(p.id)}>
+                      <span className="sk-pick-num">{p.shirtNumber}</span>
+                      <span className="sk-pick-naam">{firstName(p.name)}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
               <div className="sk-modal-btns">
                 <button type="button" className="sk-btn" onClick={() => submit(undefined)}>Onbekend / overslaan</button>
               </div>

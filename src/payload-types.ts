@@ -302,7 +302,7 @@ export interface Player {
    * Voorkeur-rugnummer. Geen gelijke nummers binnen één ploeg op het blad.
    */
   shirtNumber: number;
-  position?: ('achter' | 'vleugel' | 'barage') | null;
+  position?: ('achter' | 'vleugel-links' | 'vleugel-rechts' | 'barage' | 'vleugel') | null;
   /**
    * Bepaalt de leeftijdscategorie (peildatum 1 januari).
    */
