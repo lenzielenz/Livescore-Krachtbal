@@ -193,64 +193,91 @@ export default async function AnalysePage({ searchParams }: { searchParams: Prom
         <AnalyseNav active="overzicht" />
         <h1 className="page-title"><span className="brand">Analyse</span></h1>
 
-        {(isFederationLevel(me) || hasRole(me, 'federatie')) && (
-          <div className="an-hub-links">
-            <Link href="/analyse/import" className="sk-demo-cta">📥 Importeren &amp; opkuisen</Link>
-          </div>
-        )}
-
-        {/* Wedstrijd manueel opnemen — bovenaan, als openklapbare menuvorm. */}
-        {canRecord && (
-          <details className="an-record-menu">
-            <summary className="an-record-summary">
-              <span className="an-record-summary-title">🎬 Wedstrijd manueel opnemen</span>
-              <span className="an-record-summary-hint">
-                open om analysewedstrijden te zien en toe te voegen{openRows.length ? ` · ${openRows.length} voorbereid` : ''}
-              </span>
-            </summary>
-            <div className="an-record-body">
-              <p className="an-intro">
-                Start en teken een wedstrijd aan met de volledige scoreopnemer (veldschema). Die detaildata voedt meteen
-                de analyse hieronder. Een <strong>analysewedstrijd</strong> wordt niet live of in de rangschikking getoond
-                — ze dient puur om data te verzamelen.
-              </p>
-              <div className="an-record-new">
-                <NieuweAnalyseMatch teams={teamOptions} reeksOptions={[...COMPETITIE_REEKSEN]} />
+        {/* Wedstrijden — openklapbaar menu (gesloten standaard) zodat de hub kort blijft: bovenaan de
+            afgelopen analyses, daaronder (voor wie mag opnemen) het manueel opnemen. */}
+        <details className="an-record-menu">
+          <summary className="an-record-summary">
+            <span className="an-record-summary-title">🎬 Wedstrijden</span>
+            <span className="an-record-summary-hint">
+              afgelopen analyses bekijken{canRecord ? ' · manueel opnemen & toevoegen' : ''}
+              {rows.length ? ` · ${rows.length} afgelopen` : ''}{canRecord && openRows.length ? ` · ${openRows.length} voorbereid` : ''}
+            </span>
+          </summary>
+          <div className="an-record-body">
+            <h2 className="an-sub" style={{ marginTop: 0 }}>📊 Afgelopen wedstrijden</h2>
+            {rows.length === 0 ? (
+              <p className="empty">Nog geen afgelopen wedstrijden om te analyseren.</p>
+            ) : (
+              <div className="an-list">
+                {rows.map((r) => (
+                  <Link key={r.id} href={`/analyse/${r.id}`} className="an-card">
+                    <span className="an-card-reeks">{r.reeks}</span>
+                    <span className="an-card-row">
+                      <span className="an-team">
+                        <TeamLogo name={r.home.name} logoUrl={r.home.logoUrl} logoFit={r.home.logoFit} side="home" size="sm" ringColor={r.home.colors?.primary} />
+                        <span className="an-team-nm">{r.home.name}</span>
+                      </span>
+                      <span className="an-score">{r.score.home}<span className="an-dash">–</span>{r.score.away}</span>
+                      <span className="an-team away">
+                        <span className="an-team-nm">{r.away.name}</span>
+                        <TeamLogo name={r.away.name} logoUrl={r.away.logoUrl} logoFit={r.away.logoFit} side="away" size="sm" ringColor={r.away.colors?.primary} />
+                      </span>
+                    </span>
+                    <span className="an-card-date">
+                      {r.date ? new Date(r.date).toLocaleDateString('nl-BE', { day: '2-digit', month: 'short', year: 'numeric' }) : ''}
+                    </span>
+                    {canRecord && <DeleteMatchButton matchId={r.id} label={`${r.home.name} – ${r.away.name}`} />}
+                  </Link>
+                ))}
               </div>
-              <p style={{ margin: '6px 0 14px' }}>
-                <Link href="/analyse/import" className="sk-demo-cta">⬆ Officiële uitslagen importeren →</Link>
-              </p>
-              {openRows.length === 0 ? (
-                <p className="empty">Nog geen voorbereide analysewedstrijden. Maak er een aan met de knop hierboven.</p>
-              ) : (
-                <div className="an-list">
-                  {openRows.map((r) => (
-                    <Link key={r.id} href={`/scorekeeper/${r.id}`} className="an-card">
-                      <span className={`an-card-reeks ${r.status === 'live' ? 'an-live' : ''}`}>
-                        {r.status === 'live' ? '● LIVE — aantekenen' : '🎬 Analyse · ▶ Activeren'}
-                      </span>
-                      <span className="an-card-row">
-                        <span className="an-team">
-                          <TeamLogo name={r.home.name} logoUrl={r.home.logoUrl} logoFit={r.home.logoFit} side="home" size="sm" ringColor={r.home.colors?.primary} />
-                          <span className="an-team-nm">{r.home.name}</span>
-                        </span>
-                        <span className="an-score">{r.status === 'live' ? `${r.score.home}–${r.score.away}` : 'vs'}</span>
-                        <span className="an-team away">
-                          <span className="an-team-nm">{r.away.name}</span>
-                          <TeamLogo name={r.away.name} logoUrl={r.away.logoUrl} logoFit={r.away.logoFit} side="away" size="sm" ringColor={r.away.colors?.primary} />
-                        </span>
-                      </span>
-                      <span className="an-card-date">
-                        {r.date ? new Date(r.date).toLocaleDateString('nl-BE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''}
-                      </span>
-                      <DeleteMatchButton matchId={r.id} label={`${r.home.name} – ${r.away.name}`} />
-                    </Link>
-                  ))}
+            )}
+
+            {canRecord && (
+              <>
+                <h2 className="an-sub">🎬 Wedstrijd manueel opnemen</h2>
+                <p className="an-intro">
+                  Start en teken een wedstrijd aan met de volledige scoreopnemer (veldschema). Een
+                  <strong> analysewedstrijd</strong> wordt niet live of in de rangschikking getoond — ze dient puur om data
+                  te verzamelen.
+                </p>
+                <div className="an-record-new">
+                  <NieuweAnalyseMatch teams={teamOptions} reeksOptions={[...COMPETITIE_REEKSEN]} />
                 </div>
-              )}
-            </div>
-          </details>
-        )}
+                <p style={{ margin: '6px 0 14px' }}>
+                  <Link href="/analyse/import" className="sk-demo-cta">⬆ Officiële uitslagen importeren →</Link>
+                </p>
+                {openRows.length === 0 ? (
+                  <p className="empty">Nog geen voorbereide analysewedstrijden. Maak er een aan met de knop hierboven.</p>
+                ) : (
+                  <div className="an-list">
+                    {openRows.map((r) => (
+                      <Link key={r.id} href={`/scorekeeper/${r.id}`} className="an-card">
+                        <span className={`an-card-reeks ${r.status === 'live' ? 'an-live' : ''}`}>
+                          {r.status === 'live' ? '● LIVE — aantekenen' : '🎬 Analyse · ▶ Activeren'}
+                        </span>
+                        <span className="an-card-row">
+                          <span className="an-team">
+                            <TeamLogo name={r.home.name} logoUrl={r.home.logoUrl} logoFit={r.home.logoFit} side="home" size="sm" ringColor={r.home.colors?.primary} />
+                            <span className="an-team-nm">{r.home.name}</span>
+                          </span>
+                          <span className="an-score">{r.status === 'live' ? `${r.score.home}–${r.score.away}` : 'vs'}</span>
+                          <span className="an-team away">
+                            <span className="an-team-nm">{r.away.name}</span>
+                            <TeamLogo name={r.away.name} logoUrl={r.away.logoUrl} logoFit={r.away.logoFit} side="away" size="sm" ringColor={r.away.colors?.primary} />
+                          </span>
+                        </span>
+                        <span className="an-card-date">
+                          {r.date ? new Date(r.date).toLocaleDateString('nl-BE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''}
+                        </span>
+                        <DeleteMatchButton matchId={r.id} label={`${r.home.name} – ${r.away.name}`} />
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </details>
 
         {/* Tools, gebundeld in twee groepen i.p.v. één lange lijst losse menu's. */}
         {(() => {
@@ -302,31 +329,10 @@ export default async function AnalysePage({ searchParams }: { searchParams: Prom
           {canRecord && <div className="rep-card"><span className="rep-num">{openRows.length}</span><span className="rep-lbl">Voorbereid</span></div>}
         </div>
 
-        <h2 className="an-sub">📊 Afgelopen wedstrijden</h2>
-        {rows.length === 0 ? (
-          <p className="empty">Nog geen afgelopen wedstrijden om te analyseren.</p>
-        ) : (
-          <div className="an-list">
-            {rows.map((r) => (
-              <Link key={r.id} href={`/analyse/${r.id}`} className="an-card">
-                <span className="an-card-reeks">{r.reeks}</span>
-                <span className="an-card-row">
-                  <span className="an-team">
-                    <TeamLogo name={r.home.name} logoUrl={r.home.logoUrl} logoFit={r.home.logoFit} side="home" size="sm" ringColor={r.home.colors?.primary} />
-                    <span className="an-team-nm">{r.home.name}</span>
-                  </span>
-                  <span className="an-score">{r.score.home}<span className="an-dash">–</span>{r.score.away}</span>
-                  <span className="an-team away">
-                    <span className="an-team-nm">{r.away.name}</span>
-                    <TeamLogo name={r.away.name} logoUrl={r.away.logoUrl} logoFit={r.away.logoFit} side="away" size="sm" ringColor={r.away.colors?.primary} />
-                  </span>
-                </span>
-                <span className="an-card-date">
-                  {r.date ? new Date(r.date).toLocaleDateString('nl-BE', { day: '2-digit', month: 'short', year: 'numeric' }) : ''}
-                </span>
-                {canRecord && <DeleteMatchButton matchId={r.id} label={`${r.home.name} – ${r.away.name}`} />}
-              </Link>
-            ))}
+        {/* Beheer-actie helemaal onderaan, weg uit het zicht. */}
+        {(isFederationLevel(me) || hasRole(me, 'federatie')) && (
+          <div className="an-hub-links an-hub-links-foot">
+            <Link href="/analyse/import" className="sk-demo-cta">📥 Importeren &amp; opkuisen</Link>
           </div>
         )}
       </div>
