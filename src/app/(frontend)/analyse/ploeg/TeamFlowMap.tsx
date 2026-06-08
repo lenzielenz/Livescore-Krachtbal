@@ -53,7 +53,8 @@ export function TeamFlowMap({ shots }: { shots: DangerShot[] }) {
 
       <FieldSchema
         className="gev-field"
-        half="bottom"
+        half={mode === 'doelpunten' ? undefined : 'bottom'}
+        zoom={mode === 'doelpunten' ? 'goal' : undefined}
         convMinAttempts={1}
         heatPoints={mode === 'worpen' ? origins : mode === 'doelpunten' ? goalLandings : undefined}
         convPoints={mode === 'gevaar' ? convPoints : undefined}
@@ -79,7 +80,7 @@ export function TeamFlowMap({ shots }: { shots: DangerShot[] }) {
       ) : mode === 'doelpunten' ? (
         <div className="gev-legend">
           <span className="gev-scale" /> <span>weinig → veel doelpunten</span>
-          <span className="gev-note">waar hun doelpunten binnenvallen · {goals.length} doelpunten</span>
+          <span className="gev-note">waar ze in het doelgebied scoren · {goals.length} doelpunten</span>
         </div>
       ) : (
         <div className="gev-legend">
