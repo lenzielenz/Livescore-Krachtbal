@@ -32,6 +32,7 @@ select.rang-picker {
   background-position: right 11px center;
   cursor: pointer;
 }
+.an-hub-links-foot { margin: 26px 0 8px; justify-content: center; }
 .an-hub-links {
   display: flex;
   flex-wrap: wrap;
