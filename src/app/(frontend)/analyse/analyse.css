@@ -140,6 +140,13 @@ select.rang-picker {
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 10px;
 }
+/* Compacte lijst (afgelopen wedstrijden onderaan het menu). */
+.an-list-sm { gap: 8px; }
+.an-list-sm .an-card { padding: 8px 12px; gap: 4px; border-radius: 11px; }
+.an-list-sm .an-card-reeks { font-size: 0.64rem; }
+.an-list-sm .an-team-nm { font-size: 0.82rem; }
+.an-list-sm .an-score { font-size: 1.02rem; }
+.an-list-sm .an-card-date { font-size: 0.68rem; }
 .an-card {
   display: flex;
   flex-direction: column;

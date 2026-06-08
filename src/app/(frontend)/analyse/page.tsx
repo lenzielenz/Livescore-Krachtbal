@@ -204,48 +204,11 @@ export default async function AnalysePage({ searchParams }: { searchParams: Prom
             </span>
           </summary>
           <div className="an-record-body">
-            <h2 className="an-sub" style={{ marginTop: 0 }}>📊 Afgelopen wedstrijden</h2>
-            {rows.length === 0 ? (
-              <p className="empty">Nog geen afgelopen wedstrijden om te analyseren.</p>
-            ) : (
-              <div className="an-list">
-                {rows.map((r) => (
-                  <Link key={r.id} href={`/analyse/${r.id}`} className="an-card">
-                    <span className="an-card-reeks">{r.reeks}</span>
-                    <span className="an-card-row">
-                      <span className="an-team">
-                        <TeamLogo name={r.home.name} logoUrl={r.home.logoUrl} logoFit={r.home.logoFit} side="home" size="sm" ringColor={r.home.colors?.primary} />
-                        <span className="an-team-nm">{r.home.name}</span>
-                      </span>
-                      <span className="an-score">{r.score.home}<span className="an-dash">–</span>{r.score.away}</span>
-                      <span className="an-team away">
-                        <span className="an-team-nm">{r.away.name}</span>
-                        <TeamLogo name={r.away.name} logoUrl={r.away.logoUrl} logoFit={r.away.logoFit} side="away" size="sm" ringColor={r.away.colors?.primary} />
-                      </span>
-                    </span>
-                    <span className="an-card-date">
-                      {r.date ? new Date(r.date).toLocaleDateString('nl-BE', { day: '2-digit', month: 'short', year: 'numeric' }) : ''}
-                    </span>
-                    {canRecord && <DeleteMatchButton matchId={r.id} label={`${r.home.name} – ${r.away.name}`} />}
-                  </Link>
-                ))}
-              </div>
-            )}
-
             {canRecord && (
               <>
-                <h2 className="an-sub">🎬 Wedstrijd manueel opnemen</h2>
-                <p className="an-intro">
-                  Start en teken een wedstrijd aan met de volledige scoreopnemer (veldschema). Een
-                  <strong> analysewedstrijd</strong> wordt niet live of in de rangschikking getoond — ze dient puur om data
-                  te verzamelen.
-                </p>
                 <div className="an-record-new">
                   <NieuweAnalyseMatch teams={teamOptions} reeksOptions={[...COMPETITIE_REEKSEN]} />
                 </div>
-                <p style={{ margin: '6px 0 14px' }}>
-                  <Link href="/analyse/import" className="sk-demo-cta">⬆ Officiële uitslagen importeren →</Link>
-                </p>
                 {openRows.length === 0 ? (
                   <p className="empty">Nog geen voorbereide analysewedstrijden. Maak er een aan met de knop hierboven.</p>
                 ) : (
@@ -275,6 +238,34 @@ export default async function AnalysePage({ searchParams }: { searchParams: Prom
                   </div>
                 )}
               </>
+            )}
+
+            <h2 className="an-sub" style={canRecord ? undefined : { marginTop: 0 }}>📊 Afgelopen wedstrijden</h2>
+            {rows.length === 0 ? (
+              <p className="empty">Nog geen afgelopen wedstrijden om te analyseren.</p>
+            ) : (
+              <div className="an-list an-list-sm">
+                {rows.map((r) => (
+                  <Link key={r.id} href={`/analyse/${r.id}`} className="an-card">
+                    <span className="an-card-reeks">{r.reeks}</span>
+                    <span className="an-card-row">
+                      <span className="an-team">
+                        <TeamLogo name={r.home.name} logoUrl={r.home.logoUrl} logoFit={r.home.logoFit} side="home" size="xs" ringColor={r.home.colors?.primary} />
+                        <span className="an-team-nm">{r.home.name}</span>
+                      </span>
+                      <span className="an-score">{r.score.home}<span className="an-dash">–</span>{r.score.away}</span>
+                      <span className="an-team away">
+                        <span className="an-team-nm">{r.away.name}</span>
+                        <TeamLogo name={r.away.name} logoUrl={r.away.logoUrl} logoFit={r.away.logoFit} side="away" size="xs" ringColor={r.away.colors?.primary} />
+                      </span>
+                    </span>
+                    <span className="an-card-date">
+                      {r.date ? new Date(r.date).toLocaleDateString('nl-BE', { day: '2-digit', month: 'short', year: 'numeric' }) : ''}
+                    </span>
+                    {canRecord && <DeleteMatchButton matchId={r.id} label={`${r.home.name} – ${r.away.name}`} />}
+                  </Link>
+                ))}
+              </div>
             )}
           </div>
         </details>
@@ -329,10 +320,13 @@ export default async function AnalysePage({ searchParams }: { searchParams: Prom
           {canRecord && <div className="rep-card"><span className="rep-num">{openRows.length}</span><span className="rep-lbl">Voorbereid</span></div>}
         </div>
 
-        {/* Beheer-actie helemaal onderaan, weg uit het zicht. */}
-        {(isFederationLevel(me) || hasRole(me, 'federatie')) && (
+        {/* Import-acties helemaal onderaan, weg uit het zicht. */}
+        {(canRecord || isFederationLevel(me) || hasRole(me, 'federatie')) && (
           <div className="an-hub-links an-hub-links-foot">
-            <Link href="/analyse/import" className="sk-demo-cta">📥 Importeren &amp; opkuisen</Link>
+            {canRecord && <Link href="/analyse/import" className="sk-demo-cta">⬆ Officiële uitslagen importeren →</Link>}
+            {(isFederationLevel(me) || hasRole(me, 'federatie')) && (
+              <Link href="/analyse/import" className="sk-demo-cta">📥 Importeren &amp; opkuisen</Link>
+            )}
           </div>
         )}
       </div>
