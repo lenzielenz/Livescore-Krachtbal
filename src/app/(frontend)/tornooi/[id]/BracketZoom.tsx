@@ -39,12 +39,18 @@ export function BracketZoom({ children }: { children: React.ReactNode }) {
 
   const fitActive = fit && overflows
 
-  // Na het inzoomen (1×): scroll zodat het aangetikte punt gecentreerd staat.
+  // Bij terugkeer naar overzicht de scrollpositie resetten (overflow:hidden behoudt 'm anders, wat
+  // de boom verschoven/afgesneden zou laten); bij inzoomen naar het aangetikte punt centreren.
   useEffect(() => {
-    if (fit) return
     const wrap = wrapRef.current
+    if (!wrap) return
+    if (fit) {
+      wrap.scrollLeft = 0
+      wrap.scrollTop = 0
+      return
+    }
     const ps = pendingScroll.current
-    if (wrap && ps) {
+    if (ps) {
       requestAnimationFrame(() => {
         wrap.scrollLeft = Math.max(0, ps.x - wrap.clientWidth / 2)
         wrap.scrollTop = Math.max(0, ps.y - wrap.clientHeight / 2)
