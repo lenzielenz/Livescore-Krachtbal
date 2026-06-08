@@ -13,7 +13,9 @@ import { getPayloadClient } from '@/lib/payload-client'
 import { krachtbalKleur, reeksHalfDurationSeconds, reeksNaam, reeksType, type Reeks } from '@/lib/reeksen'
 import { BASE_RATE_PER_MIN } from '@/lib/win-probability'
 import { MatchRecap } from '../../analyse/[id]/MatchRecap'
+import { MomentumChart } from '../../analyse/[id]/MomentumChart'
 import { ShareCard } from '../../analyse/[id]/ShareCard'
+import { MatchScorers } from './MatchScorers'
 import '../../analyse/analyse.css'
 
 export const dynamic = 'force-dynamic'
@@ -106,18 +108,33 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
     datum: string | null
     stats: Awaited<ReturnType<typeof buildMatchStats>>['stats']
     goals: { side: 'home' | 'away'; points: number; half: number; gameClock: number }[]
+    timeouts: { side: 'home' | 'away'; half: number; gameClock: number }[]
   } | null = null
   if (state.match.status === 'finished') {
     try {
-      const [statsRes, sheet] = await Promise.all([
+      const [statsRes, sheet, toRes] = await Promise.all([
         buildMatchStats(payload, matchId),
         buildMatchSheet(payload, matchId).catch(() => null),
+        payload
+          .find({ collection: 'match-events', where: { and: [{ match: { equals: matchId } }, { type: { equals: 'timeout' } }] }, depth: 0, limit: 100 })
+          .catch(() => ({ docs: [] as Record<string, unknown>[] })),
       ])
       const goals = (sheet?.goals ?? [])
         .slice()
         .sort((a, b) => a.half - b.half || a.gameClock - b.gameClock)
         .map((g) => ({ side: g.side, points: g.points, half: g.half, gameClock: g.gameClock }))
-      share = { reeks: reeks ?? 'Krachtbal', datum, stats: statsRes.stats, goals }
+      // Time-outs op de tijdas voor de momentum-grafiek (verticale streep op het juiste moment).
+      const homeTeamId = state.teams.home.id
+      const timeouts = toRes.docs.map((e) => {
+        const tId = (e as { team?: unknown }).team
+        const teamId = tId && typeof tId === 'object' ? Number((tId as { id?: number }).id) : Number(tId)
+        return {
+          side: (teamId === homeTeamId ? 'home' : 'away') as 'home' | 'away',
+          half: Number((e as { half?: unknown }).half ?? 1),
+          gameClock: Number((e as { gameClock?: unknown }).gameClock ?? 0),
+        }
+      })
+      share = { reeks: reeks ?? 'Krachtbal', datum, stats: statsRes.stats, goals, timeouts }
     } catch {
       share = null
     }
@@ -176,6 +193,23 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
       />
       {/* Supporters duidelijk tonen dat ze de wedstrijd op hun tv kunnen volgen. */}
       <CastToTv matchId={matchId} />
+
+      {/* Na afloop, publiek onder het scorebord: het scoreverloop (momentum) + iedereen die scoorde. */}
+      {share && (
+        <>
+          <MomentumChart
+            goals={share.goals}
+            timeouts={share.timeouts}
+            teams={{ home: state.teams.home.name, away: state.teams.away.name }}
+            colors={{ home: state.teams.home.colors?.primary ?? null, away: state.teams.away.colors?.primary ?? null }}
+          />
+          <MatchScorers
+            players={share.stats.players}
+            teams={{ home: state.teams.home.name, away: state.teams.away.name }}
+            colors={{ home: state.teams.home.colors?.primary ?? null, away: state.teams.away.colors?.primary ?? null }}
+          />
+        </>
+      )}
 
       {/* Publiek deel-/napraatmoment na afloop — voor iedereen, zonder login. */}
       {share && (
