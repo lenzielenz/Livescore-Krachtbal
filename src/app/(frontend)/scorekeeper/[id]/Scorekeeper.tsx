@@ -86,13 +86,13 @@ export function Scorekeeper({
   const unlocked = readiness.ready || bypass
   // Per-worp keuzes worden in het keuzescherm gezet (na het tikken op het veld).
   const [throwType, setThrowType] = useState<'nek' | 'rug'>('nek')
-  const [tapMode, setTapMode] = useState<'ground' | 'caught'>('ground')
   const [recentTaps, setRecentTaps] = useState<FieldMarker[]>([])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [flash, setFlash] = useState<{ title: string; big: string; color: string; team: string; player?: string } | null>(null)
-  // Nieuwe flow: eerst de bal-valt-plek (pendingThrow), dan kiezen wie wierp.
-  const [pendingThrow, setPendingThrow] = useState<{ p: Point } | null>(null)
+  // Flow: tik de bal-valt-plek (1 tik = grond, dubbeltik op dezelfde plek = gevangen), kies dan de
+  // werper uit het vaste roster onder het veld. Geen popup meer die het veld bedekt.
+  const [pendingThrow, setPendingThrow] = useState<{ p: Point; tapCount: 1 | 2 } | null>(null)
   const [pendingOut, setPendingOut] = useState<{ p: Point; tapCount: 1 | 2; playerId: number; isDoelworp: boolean } | null>(null)
   // Gevangen worp: kies welke tegenstander de bal ving.
   const [pendingCatch, setPendingCatch] = useState<{ p: Point; tapCount: 1 | 2; playerId: number } | null>(null)
@@ -304,24 +304,29 @@ export function Scorekeeper({
       }
 
       // Klaar voor de volgende worp.
-      setTapMode('ground')
       setThrowType('nek')
     },
     [poss, throwType, clock, act, state.teams, roster],
   )
 
-  // Stap 1: tik op het veld waar de bal valt → open het keuzescherm.
+  // Stap 1: tik op het veld waar de bal valt. 1 tik = grond; een tweede tik op (nagenoeg) dezelfde
+  // plek wisselt naar gevangen (en terug). Een tik op een andere plek verzet de plek (terug grond).
   const onTap = useCallback(
     (p: Point) => {
       if (state.match.status !== 'live' || !poss) {
         setError('Wedstrijd is niet live of geen lopend balbezit.')
         return
       }
-      setThrowType('nek')
-      setTapMode('ground')
-      setPendingThrow({ p })
+      // Tijdens een sub-stap (vanger/tikker/buiten) doet een veld-tik niets.
+      if (pendingCatch || pendingTap || pendingOut) return
+      setPendingThrow((cur) => {
+        if (cur && Math.hypot(cur.p.x - p.x, cur.p.y - p.y) < 0.06) {
+          return { p: cur.p, tapCount: cur.tapCount === 2 ? 1 : 2 }
+        }
+        return { p, tapCount: 1 }
+      })
     },
-    [state.match.status, poss],
+    [state.match.status, poss, pendingCatch, pendingTap, pendingOut],
   )
 
   // Stap 2: kies wie wierp → bereken de uitkomst en registreer (of vraag eerst naar aanraking).
@@ -330,7 +335,7 @@ export function Scorekeeper({
       if (!pendingThrow || !poss) return
       const p = pendingThrow.p
       const dir = poss.dir as AttackDir
-      const tapCount: 1 | 2 = tapMode === 'caught' ? 2 : 1
+      const tapCount = pendingThrow.tapCount
       const outcome = deriveOutcome({ tapCount, point: p, dir, goalAreaDepthM: state.match.goalAreaDepth })
       const isDoelworp = poss.nextThrowNumber >= poss.throwsAllowed || poss.freeThrow
 
@@ -355,7 +360,7 @@ export function Scorekeeper({
       void submitThrow(p, tapCount, false, playerId)
       setPendingThrow(null)
     },
-    [pendingThrow, poss, tapMode, state.match.goalAreaDepth, submitThrow, isAnalyseOnly],
+    [pendingThrow, poss, state.match.goalAreaDepth, submitThrow, isAnalyseOnly],
   )
 
   const isScheduled = state.match.status === 'scheduled'
@@ -476,16 +481,17 @@ export function Scorekeeper({
   const homeArrow = homeDirUp ? '▼' : '▲'
   const awayArrow = homeDirUp ? '▲' : '▼'
 
-  // Tijdelijke '?'-markering op de gekozen plek terwijl het keuzescherm openstaat.
+  // Tijdelijke markering op de gekozen plek terwijl je de werper kiest. Gevangen (dubbeltik) krijgt
+  // een eigen kleur + ✋ zodat je in één oogopslag ziet of het grond of gevangen is.
   const fieldMarkers: FieldMarker[] = pendingThrow
     ? [
         ...recentTaps,
         {
           x: Math.max(0, Math.min(1, pendingThrow.p.x)),
           y: Math.max(0, Math.min(1, pendingThrow.p.y)),
-          color: '#ffffff',
-          r: 8,
-          label: '?',
+          color: pendingThrow.tapCount === 2 ? '#4cc9f0' : '#ffffff',
+          r: 9,
+          label: pendingThrow.tapCount === 2 ? '✋' : '?',
         },
       ]
     : recentTaps
@@ -533,20 +539,29 @@ export function Scorekeeper({
         </div>
       )}
 
-      {/* Stap 2: keuzescherm — wie wierp + nek/rug + grond/gevangen, alles op één scherm. */}
+      {/* Werper kiezen — vaste balk onderaan (veld blijft zichtbaar). Grond/gevangen volgt de
+          (dubbel)tik op het veld; de indicator is ook hier tikbaar. */}
       {pendingThrow && (
-        <div className="sk-modal-overlay">
-          <div className="sk-modal sk-pick">
-            <h3>Wie wierp?</h3>
-            <p>
-              {possSide === 'home' ? state.teams.home.name : state.teams.away.name}
-              {poss && ` · ${poss.freeThrow ? 'vrijworp' : `worp ${poss.nextThrowNumber}/${poss.throwsAllowed}`}`}
-            </p>
+        <div className="sk-entry">
+          <div className="sk-entry-box sk-pick">
+            <div className="sk-entry-head">
+              <span className="sk-entry-title">Wie wierp?</span>
+              <span className="sk-entry-meta">
+                {possSide === 'home' ? state.teams.home.name : state.teams.away.name}
+                {poss && ` · ${poss.freeThrow ? 'vrijworp' : `worp ${poss.nextThrowNumber}/${poss.throwsAllowed}`}`}
+              </span>
+            </div>
             <div className="sk-pills sk-pick-pills">
               <button type="button" className={`pill ${throwType === 'nek' ? 'on' : ''}`} onClick={() => setThrowType('nek')}>Nek +1</button>
               <button type="button" className={`pill ${throwType === 'rug' ? 'on' : ''}`} onClick={() => setThrowType('rug')}>Rug +2</button>
-              <button type="button" className={`pill ${tapMode === 'ground' ? 'on' : ''}`} onClick={() => setTapMode('ground')}>Grond</button>
-              <button type="button" className={`pill ${tapMode === 'caught' ? 'on' : ''}`} onClick={() => setTapMode('caught')}>Gevangen</button>
+              <button
+                type="button"
+                className={`pill sk-tapmode ${pendingThrow.tapCount === 2 ? 'caught on' : ''}`}
+                onClick={() => setPendingThrow((c) => (c ? { p: c.p, tapCount: c.tapCount === 2 ? 1 : 2 } : c))}
+                title="Dubbeltik op het veld wisselt grond/gevangen — of tik hier"
+              >
+                {pendingThrow.tapCount === 2 ? '✋ Gevangen' : '● Grond'}
+              </button>
             </div>
             <div className="sk-pick-grid">
               {pickPlayers.length === 0 && <span className="sk-dim">Geen spelers op het veld.</span>}
@@ -600,8 +615,8 @@ export function Scorekeeper({
           pos === 'vleugel-links' ? 'vleugel links' : pos === 'vleugel-rechts' ? 'vleugel rechts' : pos === 'achter' ? 'achterman' : ''
         const rest = catchers.filter((c) => !suggestedIds.has(c.id))
         return (
-          <div className="sk-modal-overlay">
-            <div className="sk-modal sk-lineup-modal">
+          <div className="sk-entry">
+            <div className="sk-entry-box sk-lineup-modal">
               <h3>Wie ving de bal?</h3>
               {suggested.length > 0 ? (
                 <>
@@ -647,8 +662,8 @@ export function Scorekeeper({
           void submitThrow(p, tapCount, false, playerId, catcherId, tapperId)
         }
         return (
-          <div className="sk-modal-overlay">
-            <div className="sk-modal sk-lineup-modal">
+          <div className="sk-entry">
+            <div className="sk-entry-box sk-lineup-modal">
               <h3>Getikt naar de achterman door?</h3>
               <p>Wie tikte de bal naar de achterman? (optioneel)</p>
               <div className="sk-lineup-pick-grid">
@@ -668,8 +683,8 @@ export function Scorekeeper({
       })()}
 
       {pendingOut && (
-        <div className="sk-modal-overlay">
-          <div className="sk-modal">
+        <div className="sk-entry">
+          <div className="sk-entry-box">
             <h3>Bal buiten</h3>
             <p>Werd de bal door de tegenstander aangeraakt vóór hij buiten ging?</p>
             <div className="sk-modal-btns">

@@ -267,6 +267,42 @@ a.sk-btn { display: inline-block; box-sizing: border-box; text-align: center; te
 }
 .sk-modal h3 { margin: 0 0 6px; font-size: 1.2rem; color: var(--accent); }
 .sk-modal p { margin: 0 0 16px; color: var(--txt); font-size: 0.95rem; }
+
+/* Werp-invoer als bottom-sheet: vast onderaan; het veld blijft zichtbaar én tikbaar erboven. */
+.sk-entry {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 55;
+  display: flex;
+  justify-content: center;
+  padding: 0 8px;
+  padding-bottom: env(safe-area-inset-bottom, 0);
+  pointer-events: none;
+}
+.sk-entry-box {
+  pointer-events: auto;
+  width: 100%;
+  max-width: 540px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-bottom: none;
+  border-radius: 16px 16px 0 0;
+  padding: 12px 16px 16px;
+  box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.5);
+  max-height: 62vh;
+  overflow-y: auto;
+  animation: sk-entry-up 0.16s ease-out;
+}
+@keyframes sk-entry-up { from { transform: translateY(16px); opacity: 0.55; } to { transform: translateY(0); opacity: 1; } }
+.sk-entry-box h3 { margin: 0 0 6px; font-size: 1.05rem; color: var(--accent); text-align: left; }
+.sk-entry-box p { margin: 0 0 12px; color: var(--txt); font-size: 0.9rem; text-align: left; }
+.sk-entry-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+.sk-entry-title { font-size: 1.05rem; font-weight: 800; color: var(--accent); }
+.sk-entry-meta { font-size: 0.8rem; color: var(--dim); }
+.sk-pick-pills { grid-template-columns: repeat(3, 1fr); }
+.sk-tapmode.caught { border-color: #4cc9f0; color: #4cc9f0; }
 .sk-modal-btns { display: flex; flex-direction: column; gap: 10px; }
 .sk-modal-btns .sk-btn { font-size: 1rem; font-weight: 600; }
 .sk-btn.primary { border-color: var(--accent); color: var(--accent); }
