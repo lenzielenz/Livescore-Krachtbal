@@ -37,6 +37,9 @@ export interface FlowShot {
   isLast: boolean
   /** Ruwe uitkomst (goal/caught/out_side/out_back/in_field …) voor de kleur. */
   outcome: string
+  /** Werper (voor per-speler gevaarkaarten). */
+  playerId: number
+  shirtNumber: number
 }
 
 export interface DangerBand {
@@ -215,8 +218,8 @@ export async function buildTeamDanger(
       const landX = dir === 'up' ? s.x : 1 - s.x
       const landY = dir === 'up' ? s.y : 1 - s.y
       const goal = s.outcome === 'goal'
-      // Worp-/scoreflow: álle worpen (van→naar) met worpnummer.
-      flowShots.push({ x, y, landX, landY, goal, type: s.type, throwNumber: s.throwNumber, isLast: s.isLastThrow, outcome: s.outcome })
+      // Worp-/scoreflow: álle worpen (van→naar) met worpnummer + werper.
+      flowShots.push({ x, y, landX, landY, goal, type: s.type, throwNumber: s.throwNumber, isLast: s.isLastThrow, outcome: s.outcome, playerId: s.playerId, shirtNumber: s.shirtNumber })
       // Banden, conversie en afstand: enkel de afrondende (laatste) worp.
       if (!s.isLastThrow) continue
       shots.push({ x, y, landX, landY, goal, type: s.type })

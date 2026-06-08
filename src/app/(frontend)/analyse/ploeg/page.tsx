@@ -13,6 +13,7 @@ import { BandChart } from '@/components/analytics/BandChart'
 import { AnalyseNav } from '../AnalyseNav'
 import { PloegPicker } from './PloegPicker'
 import { SpeelstijlPanel } from './SpeelstijlPanel'
+import { DangerPlayers } from './DangerPlayers'
 import { TeamFlowMap } from './TeamFlowMap'
 import { TeamProfile } from './TeamProfile'
 import '../../rangschikking/rangschikking.css'
@@ -199,6 +200,9 @@ export default async function PloegRapportPage({ searchParams }: { searchParams:
 
             {danger && danger.attempts > 0 && (
               <>
+                <h2 className="an-sub">🎯 Gevaarspelers <span className="an-chart-hint">wie stoppen — en van waar ze scoren</span></h2>
+                <DangerPlayers flowShots={danger.flowShots} players={report.players} />
+
                 <h2 className="an-sub">🔥 Worp- &amp; scoreflow <span className="an-chart-hint">van waar ze smijten → waar ze scoren</span></h2>
                 <div className="gev-grid">
                   <TeamFlowMap shots={danger.shots} flowShots={danger.flowShots} />
