@@ -683,6 +683,14 @@ select.rang-picker {
 }
 .gev-side { display: flex; flex-direction: column; gap: 14px; }
 .gev-side .rep-cards { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
+/* Gevaarspelers: mini-shotmap per topscorer. */
+.dp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; margin: 4px 0 18px; }
+.dp-card { border: 1px solid var(--line); border-radius: 12px; padding: 10px; background: rgba(255, 255, 255, 0.02); min-width: 0; }
+.dp-head { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+.dp-num { font-weight: 800; color: var(--accent); font-variant-numeric: tabular-nums; }
+.dp-name { font-weight: 700; font-size: 0.92rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.dp-stat { font-size: 0.74rem; color: var(--dim); width: 100%; }
+.dp-field { width: 100%; height: auto; max-height: 240px; border-radius: 8px; display: block; }
 .flow-check { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; color: var(--dim); }
 .flow-check input { accent-color: var(--accent); }
 

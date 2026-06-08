@@ -13,7 +13,7 @@ import type { DangerShot, FlowShot } from '@/lib/player-danger'
 //  • Worphitte — heatzones van waar ze het meest smijten (vertrekpunten);
 //  • Doelhitte — heatzones van waar hun doelpunten binnenvallen (landingsplek aan het doel);
 //  • Gevaarzone — conversie per zone (van waar zijn ze het gevaarlijkst).
-type Mode = 'flow' | 'worpen' | 'doelpunten' | 'gevaar'
+type Mode = 'flow' | 'opzet' | 'worpen' | 'doelpunten' | 'gevaar'
 type ThrowSel = 'all' | 1 | 2 | 'last'
 
 const C_GOAL = '#06d6a0' // doelpunt (nek)
@@ -43,6 +43,8 @@ export function TeamFlowMap({ shots, flowShots = [] }: { shots: DangerShot[]; fl
   const origins: Point[] = shots.map((s) => ({ x: s.x, y: s.y }))
   const goalLandings: Point[] = goals.map((s) => ({ x: s.landX, y: s.landY }))
   const convPoints: ConvPoint[] = shots.map((s) => ({ x: s.x, y: s.y, goal: s.goal }))
+  // Opzet: van waar ze hun balbezit opzetten = de vertrekpunten van de 1e worp.
+  const opzetOrigins: Point[] = flowShots.filter((s) => s.throwNumber === 1).map((s) => ({ x: s.x, y: s.y }))
 
   // Flow-trajecten: van vertrekpunt (x/y) naar landingsplek (landX/landY), per gekozen worp.
   const flowSel = flowShots.filter((s) =>
@@ -65,6 +67,7 @@ export function TeamFlowMap({ shots, flowShots = [] }: { shots: DangerShot[]; fl
     <div className="gev-map flow-map">
       <div className="gev-controls">
         <button type="button" className={mode === 'flow' ? 'on' : ''} onClick={() => setMode('flow')}>Scoreflow</button>
+        <button type="button" className={mode === 'opzet' ? 'on' : ''} onClick={() => setMode('opzet')}>Opzet</button>
         <button type="button" className={mode === 'worpen' ? 'on' : ''} onClick={() => setMode('worpen')}>Worphitte</button>
         <button type="button" className={mode === 'doelpunten' ? 'on' : ''} onClick={() => setMode('doelpunten')}>Doelhitte</button>
         <button type="button" className={mode === 'gevaar' ? 'on' : ''} onClick={() => setMode('gevaar')}>Gevaarzone</button>
@@ -84,7 +87,7 @@ export function TeamFlowMap({ shots, flowShots = [] }: { shots: DangerShot[]; fl
         half={mode === 'doelpunten' ? undefined : 'bottom'}
         zoom={mode === 'doelpunten' ? 'goal' : undefined}
         convMinAttempts={1}
-        heatPoints={mode === 'worpen' ? origins : mode === 'doelpunten' ? goalLandings : undefined}
+        heatPoints={mode === 'worpen' ? origins : mode === 'opzet' ? opzetOrigins : mode === 'doelpunten' ? goalLandings : undefined}
         convPoints={mode === 'gevaar' ? convPoints : undefined}
         markers={markers}
         ends={{ bottom: { text: '▼ Doel', color: C_GOAL } }}
@@ -100,6 +103,11 @@ export function TeamFlowMap({ shots, flowShots = [] }: { shots: DangerShot[]; fl
             van waar → waar naartoe · {flowSel.length} {flowSel.length === 1 ? 'worp' : 'worpen'}
             {flowGoals ? ` · ${flowGoals} doelpunt${flowGoals === 1 ? '' : 'en'}` : ''}
           </span>
+        </div>
+      ) : mode === 'opzet' ? (
+        <div className="gev-legend">
+          <span className="gev-scale" /> <span>weinig → veel opzetten</span>
+          <span className="gev-note">van waar ze hun balbezit opzetten · {opzetOrigins.length} opzetten</span>
         </div>
       ) : mode === 'worpen' ? (
         <div className="gev-legend">
