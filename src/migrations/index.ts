@@ -46,6 +46,7 @@ import * as migration_20260608_120000_user_my_teams from './20260608_120000_user
 import * as migration_20260608_140000_match_instants from './20260608_140000_match_instants';
 import * as migration_20260608_160000_player_wing from './20260608_160000_player_wing';
 import * as migration_20260608_180000_throw_tapped_by from './20260608_180000_throw_tapped_by';
+import * as migration_20260608_200000_tournament_team_clubs from './20260608_200000_tournament_team_clubs';
 
 export const migrations = [
   {
@@ -287,5 +288,10 @@ export const migrations = [
     up: migration_20260608_180000_throw_tapped_by.up,
     down: migration_20260608_180000_throw_tapped_by.down,
     name: '20260608_180000_throw_tapped_by',
+  },
+  {
+    up: migration_20260608_200000_tournament_team_clubs.up,
+    down: migration_20260608_200000_tournament_team_clubs.down,
+    name: '20260608_200000_tournament_team_clubs',
   },
 ];

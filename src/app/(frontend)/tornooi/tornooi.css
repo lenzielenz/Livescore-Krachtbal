@@ -244,6 +244,18 @@
   padding: 9px 12px;
   color: var(--txt);
 }
+.trn-teamclub {
+  flex: 0 1 130px;
+  min-width: 0;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 9px 8px;
+  color: var(--txt);
+  font: inherit;
+  font-size: 0.85rem;
+}
+.trn-teamclub:disabled { opacity: 0.5; }
 .trn-moves {
   display: inline-flex;
   gap: 4px;
@@ -411,15 +423,34 @@
 }
 
 /* ── Tweezijdige boom: links + rechts groeien naar de finale in het midden ──── */
+/* Inzoombaar overzicht: de zoom-wrapper regelt scrollen/schalen; de boom zelf neemt z'n
+   natuurlijke breedte (max-content) zodat hij gemeten en geschaald kan worden. */
+.trn-zoom-root { position: relative; }
+.trn-zoom-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 8px auto;
+  padding: 7px 14px;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  color: var(--ink, #f1f5f2);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+}
+.trn-zoom { width: 100%; }
+.trn-zoom-inner { width: max-content; margin: 0 auto; }
 .trn-bracket2 {
   --g: 24px;
   display: flex;
   align-items: stretch;
-  justify-content: safe center; /* gecentreerd als het past, links uitgelijnd (geen clip) als het scrollt */
   gap: calc(var(--g) * 2);
-  overflow-x: auto;
   padding: 4px 4px 18px;
   min-height: 340px;
+  width: max-content;
 }
 .trn-side {
   display: flex;
@@ -1012,7 +1043,8 @@
 @media (max-width: 640px) {
   .trn-col { flex: 0 0 210px; }
   .trn-bracket { gap: calc(var(--g) * 1.4); scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch; }
-  .trn-bracket2 { gap: calc(var(--g) * 1.4); justify-content: flex-start; -webkit-overflow-scrolling: touch; }
+  .trn-bracket2 { gap: calc(var(--g) * 1.4); }
+  .trn-zoom { -webkit-overflow-scrolling: touch; }
   .trn-side { gap: calc(var(--g) * 1.4); }
   .trn-center { flex: 0 0 210px; }
   .trn-col { scroll-snap-align: start; }

@@ -28,11 +28,19 @@ export default async function NieuwTornooiPage() {
       </>
     )
   }
+  // Clubs voor de (optionele) club-koppeling per ploeg.
+  const clubsRes = await payload
+    .find({ collection: 'clubs', sort: 'name', depth: 0, limit: 500 })
+    .catch(() => ({ docs: [] as { id: number; name?: unknown }[] }))
+  const clubs = clubsRes.docs
+    .map((c) => ({ id: c.id as number, name: String((c as { name?: unknown }).name ?? '') }))
+    .filter((c) => c.name)
+
   return (
     <>
       <SiteHeader active="tornooi" />
       <div className="trn-page">
-        <NewTournament categories={CATEGORY_OPTIONS} />
+        <NewTournament categories={CATEGORY_OPTIONS} clubs={clubs} />
       </div>
     </>
   )

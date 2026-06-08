@@ -86,5 +86,13 @@ export const Tournaments: CollectionConfig = {
       min: 2,
       admin: { readOnly: true, description: 'Vastgelegd bij het aanmaken.' },
     },
+    {
+      // Expliciete koppeling ploegnaam → club, ingegeven bij het aanmaken. Zo is het clublogo
+      // betrouwbaar (i.p.v. naamherkenning) en is de club gekoppeld (basis om info te bezorgen).
+      // Vorm: [{ name: string, clubId: number }].
+      name: 'teamClubs',
+      type: 'json',
+      admin: { hidden: true },
+    },
   ],
 }

@@ -30,19 +30,39 @@ export default async function TornooiPage({ params }: { params: Promise<{ id: st
   const { user } = await payload.auth({ headers: await headers() }).catch(() => ({ user: null }))
   const canManage = isFederationLevel(user) || hasRole(user, 'scorekeeper', 'scheidsrechter')
 
-  // Clublogo's: koppel de (vrij ingegeven) ploegnamen aan een club via naamherkenning.
+  // Clublogo's: in de eerste plaats via de EXPLICIETE koppeling (teamClubs, ingegeven bij het
+  // aanmaken); anders via naamherkenning als terugval.
   const clubsRes = await payload.find({ collection: 'clubs', depth: 1, limit: 500 }).catch(() => ({ docs: [] as Record<string, unknown>[] }))
   const clubsNorm: { norm: string; url: string }[] = []
+  const logoByClubId = new Map<number, string>()
   for (const c of clubsRes.docs) {
     const name = String((c as { name?: unknown }).name ?? '')
     const logo = (c as { logo?: { url?: string } }).logo
     const url = logo && typeof logo === 'object' && logo.url ? logo.url : (typeof (c as { logoUrl?: unknown }).logoUrl === 'string' ? String((c as { logoUrl?: string }).logoUrl) : '')
-    if (name && url) clubsNorm.push({ norm: norm(name), url })
+    if (url) {
+      logoByClubId.set((c as { id: number }).id, url)
+      if (name) clubsNorm.push({ norm: norm(name), url })
+    }
   }
   clubsNorm.sort((a, b) => b.norm.length - a.norm.length)
+
+  // Expliciete ploeg→club-koppeling van dit tornooi.
+  const tourDoc = await payload.findByID({ collection: 'tournaments', id: tournamentId, depth: 0 }).catch(() => null)
+  const teamClubs = Array.isArray((tourDoc as { teamClubs?: unknown } | null)?.teamClubs)
+    ? (tourDoc as { teamClubs: { name?: unknown; clubId?: unknown }[] }).teamClubs
+    : []
+  const clubIdByName = new Map<string, number>()
+  for (const t of teamClubs) {
+    const nm = typeof t?.name === 'string' ? norm(t.name) : ''
+    const clubId = Number(t?.clubId)
+    if (nm && Number.isFinite(clubId)) clubIdByName.set(nm, clubId)
+  }
+
   const resolveLogo = (teamName: string): string | null => {
     const n = norm(teamName)
     if (!n) return null
+    const explicitId = clubIdByName.get(n)
+    if (explicitId != null && logoByClubId.has(explicitId)) return logoByClubId.get(explicitId) ?? null
     const hit = clubsNorm.find((c) => c.norm.length >= 3 && (n.includes(c.norm) || c.norm.includes(n)))
     return hit?.url ?? null
   }
