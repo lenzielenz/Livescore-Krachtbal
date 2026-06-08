@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import { Inter, Sora } from 'next/font/google'
 import React from 'react'
 
+import { ServiceWorker } from '@/components/ServiceWorker'
 import { Toaster } from '@/components/Toaster'
 import './styles.css'
 
@@ -30,6 +31,7 @@ export default function RootLayout(props: { children: React.ReactNode }) {
       <body>
         <main>{children}</main>
         <Toaster />
+        <ServiceWorker />
       </body>
     </html>
   )
