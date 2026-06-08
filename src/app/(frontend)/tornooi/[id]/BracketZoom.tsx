@@ -2,9 +2,9 @@
 
 import { useEffect, useRef, useState } from 'react'
 
-// Inzoombaar overzicht voor de beker-boom: standaard schaalt de hele boom tot hij op de breedte
-// past (overzicht in één blik). Een knop wisselt naar 1× (werkelijke grootte) met horizontaal
-// scrollen om op een deel in te zoomen. Past zichzelf aan bij draaien/resizen.
+// Inzoombaar overzicht voor de beker-boom: standaard past de hele boom op de breedte (overzicht).
+// Tik op een wedstrijd → je zoomt naar 1× gecentreerd op die plek; tik nog eens (op een lege plek)
+// → terug naar overzicht. Dynamisch en snel om door de boom te bewegen. Past zich aan bij resizen.
 export function BracketZoom({ children }: { children: React.ReactNode }) {
   const wrapRef = useRef<HTMLDivElement>(null)
   const innerRef = useRef<HTMLDivElement>(null)
@@ -12,6 +12,8 @@ export function BracketZoom({ children }: { children: React.ReactNode }) {
   const [scale, setScale] = useState(1)
   const [innerH, setInnerH] = useState(0)
   const [overflows, setOverflows] = useState(false)
+  // Doelpunt (in ware grootte) om naar te centreren zodra we naar 1× schakelen.
+  const pendingScroll = useRef<{ x: number; y: number } | null>(null)
 
   useEffect(() => {
     const measure = () => {
@@ -20,9 +22,8 @@ export function BracketZoom({ children }: { children: React.ReactNode }) {
       if (!wrap || !inner) return
       const w = wrap.clientWidth
       const iw = inner.scrollWidth
-      const ih = inner.scrollHeight
       setScale(iw > w ? w / iw : 1)
-      setInnerH(ih)
+      setInnerH(inner.scrollHeight)
       setOverflows(iw > w + 1)
     }
     measure()
@@ -36,8 +37,47 @@ export function BracketZoom({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
-  // Enkel schalen als de boom breder is dan het scherm én de gebruiker in "overzicht" staat.
   const fitActive = fit && overflows
+
+  // Bij terugkeer naar overzicht de scrollpositie resetten (overflow:hidden behoudt 'm anders, wat
+  // de boom verschoven/afgesneden zou laten); bij inzoomen naar het aangetikte punt centreren.
+  useEffect(() => {
+    const wrap = wrapRef.current
+    if (!wrap) return
+    if (fit) {
+      wrap.scrollLeft = 0
+      wrap.scrollTop = 0
+      return
+    }
+    const ps = pendingScroll.current
+    if (ps) {
+      requestAnimationFrame(() => {
+        wrap.scrollLeft = Math.max(0, ps.x - wrap.clientWidth / 2)
+        wrap.scrollTop = Math.max(0, ps.y - wrap.clientHeight / 2)
+        pendingScroll.current = null
+      })
+    }
+  }, [fit])
+
+  const onClick = (e: React.MouseEvent) => {
+    if (!overflows) return
+    if (fitActive) {
+      // Overzicht → zoom in op het aangetikte punt (en onderdruk de mini-knoppen in de kaart).
+      const inner = innerRef.current
+      if (inner) {
+        const rect = inner.getBoundingClientRect()
+        pendingScroll.current = { x: (e.clientX - rect.left) / scale, y: (e.clientY - rect.top) / scale }
+      }
+      e.preventDefault()
+      e.stopPropagation()
+      setFit(false)
+    } else {
+      // Ingezoomd → een tik op een lege plek (geen knop/link) gaat terug naar overzicht.
+      const el = e.target as HTMLElement
+      if (el.closest('a, button')) return
+      setFit(true)
+    }
+  }
 
   return (
     <div className="trn-zoom-root">
@@ -47,9 +87,10 @@ export function BracketZoom({ children }: { children: React.ReactNode }) {
         </button>
       )}
       <div
-        className="trn-zoom"
+        className={`trn-zoom${overflows ? (fitActive ? ' is-fit' : ' is-zoom') : ''}`}
         ref={wrapRef}
-        style={fitActive ? { overflow: 'hidden', height: Math.ceil(innerH * scale) } : { overflowX: 'auto' }}
+        onClick={onClick}
+        style={fitActive ? { overflow: 'hidden', height: Math.ceil(innerH * scale) } : { overflow: 'auto', maxHeight: '78vh' }}
       >
         <div
           className="trn-zoom-inner"
