@@ -1,0 +1,41 @@
+/* Wedstrijdenlijst in het scheidsrechtersportaal. */
+.rm { margin-bottom: 20px; }
+.rm-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.rm-filters { display: flex; gap: 6px; }
+.rm-filter {
+  padding: 5px 11px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--dim);
+  border-radius: 999px;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+.rm-filter.on { background: var(--accent); border-color: var(--accent); color: #06140d; font-weight: 700; }
+
+.rm-list { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.rm-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 11px 13px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+}
+.rm-row.live { border-left: 3px solid var(--pop, #ef476f); }
+.rm-info { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1 1 240px; }
+.rm-teams { font-weight: 800; font-size: 0.96rem; color: var(--txt); }
+.rm-vs { color: var(--dim); font-weight: 600; }
+.rm-meta { font-size: 0.76rem; color: var(--dim); }
+.rm-status.live { color: var(--pop, #ef476f); font-weight: 800; }
+.rm-ref { font-size: 0.82rem; font-weight: 700; color: var(--txt); }
+.rm-ref.free { color: #e0a33d; }
+
+.rm-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.rm-btn { padding: 7px 12px; font-size: 0.82rem; }
+.rm-handoff { display: inline-flex; align-items: center; gap: 8px; }
+.rm-select { padding: 6px 8px; font-size: 0.82rem; }
+.rm-release { font-size: 0.78rem; }
