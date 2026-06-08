@@ -119,16 +119,13 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
       />
       {/* Supporters duidelijk tonen dat ze de wedstrijd op hun tv kunnen volgen. */}
       <CastToTv matchId={matchId} />
-      <p className="sheet-cta">
-        {canAnalyse(me) && (
+      {canAnalyse(me) && (
+        <p className="sheet-cta">
           <Link href={`/analyse/${matchId}`} className="back-link">
             📈 Analyse &amp; video
           </Link>
-        )}
-        <Link href="/kantine" className="back-link">
-          🍺 Kantinescherm (groot scherm)
-        </Link>
-      </p>
+        </p>
+      )}
       </div>
     </>
   )
