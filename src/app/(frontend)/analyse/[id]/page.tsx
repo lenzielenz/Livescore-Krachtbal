@@ -11,7 +11,7 @@ import { buildMatchSheet, buildMatchStats, buildMatchState } from '@/lib/match-e
 import { getPayloadClient } from '@/lib/payload-client'
 import { reeksNaam } from '@/lib/reeksen'
 import { AnalyseDetailView } from './AnalyseDetailView'
-import { MatchPdfButton } from './MatchPdfButton'
+import { ShareCard } from './ShareCard'
 import '../analyse.css'
 
 export const dynamic = 'force-dynamic'
@@ -110,7 +110,17 @@ export default async function AnalyseDetailPage({ params }: { params: Promise<{ 
         </div>
         <p className="an-head-meta">{reeks}{datum ? ` · ${datum}` : ''}</p>
 
-        <MatchPdfButton matchId={matchId} fileLabel={`${teamNames.home}-${teamNames.away}`} />
+        <ShareCard
+          matchId={matchId}
+          teams={teamNames}
+          score={{ home: state.score.home, away: state.score.away }}
+          colors={teamColors}
+          logos={{ home: state.teams.home.logoUrl, away: state.teams.away.logoUrl }}
+          goals={momentumGoals}
+          players={stats.stats.players}
+          reeks={reeks}
+          datum={datum}
+        />
 
         <ErrorCatch label="De analyse-details">
           <AnalyseDetailView
