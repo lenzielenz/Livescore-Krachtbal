@@ -11,6 +11,7 @@ import { getProfile } from '@/lib/profiles'
 import { buildReeksStandings } from '@/lib/reeks-standings'
 import { reeksNaam, REEKS_OPTIONS } from '@/lib/reeksen'
 import { ClaimButton } from './ClaimButton'
+import { MyTeamsPicker } from './MyTeamsPicker'
 
 export const dynamic = 'force-dynamic'
 
@@ -35,6 +36,8 @@ type Row = {
   date: string
   status: string
   side: 'home' | 'away'
+  /** Id van de eigen (club-)ploeg in deze wedstrijd, voor de "Mijn ploegen"-focus. */
+  myTeamId: number
   home: string
   away: string
   ownReady: boolean
@@ -62,7 +65,9 @@ function Shell({ children }: { children: React.ReactNode }) {
 }
 
 // Club-dashboard: een club-beheerder ziet zijn komende wedstrijden en vult vlot de opstelling in.
-export default async function ClubPage() {
+export default async function ClubPage({ searchParams }: { searchParams: Promise<{ alle?: string }> }) {
+  const { alle } = await searchParams
+  const showAll = alle === '1'
   const payload = await getPayloadClient()
   const { user } = await payload.auth({ headers: await headers() }).catch(() => ({ user: null }))
   if (!user) {
@@ -139,6 +144,7 @@ export default async function ClubPage() {
         date: m.date,
         status: String(m.status ?? 'scheduled'),
         side,
+        myTeamId: Number((side === 'home' ? homeTeam?.id : awayTeam?.id) ?? 0),
         home: nameOf(homeTeam),
         away: nameOf(awayTeam),
         ownReady: side === 'home' ? r.homeOk : r.awayOk,
@@ -155,9 +161,19 @@ export default async function ClubPage() {
     }
   }
 
+  // "Mijn ploegen": de eigen voorkeur van de trainer/coach (team-ids). Enkel ploegen die nog
+  // bestaan in de club tellen mee.
+  const allTeams = teams.docs.map((t) => ({ id: Number(t.id), name: String((t as { name?: unknown }).name ?? '—') }))
+  const rawMine = (user as { myTeams?: unknown }).myTeams
+  const myTeams = (Array.isArray(rawMine) ? rawMine.map(Number).filter((n) => Number.isFinite(n)) : []).filter((id) => teamIdSet.has(id))
+  const mySet = new Set(myTeams)
+  const focusing = mySet.size > 0 && !showAll
+  // Bij een actieve focus tonen we enkel de wedstrijden van de eigen ploeg(en).
+  const visibleRows = focusing ? rows.filter((r) => mySet.has(r.myTeamId)) : rows
+
   // Groepeer per ploeg(groep).
   const groups = new Map<string, { label: string; order: number; rows: Row[] }>()
-  for (const r of rows) {
+  for (const r of visibleRows) {
     const g = groupOf(r.reeksCode)
     let entry = groups.get(g.key)
     if (!entry) {
@@ -173,6 +189,7 @@ export default async function ClubPage() {
   const clubTeams = teams.docs
     .map((t) => ({ id: Number(t.id), name: String((t as { name?: unknown }).name ?? '—'), reeks: String((t as { reeks?: unknown }).reeks ?? '') }))
     .filter((t) => COMPETITIE.has(t.reeks))
+    .filter((t) => !focusing || mySet.has(t.id))
   const reeksSet = [...new Set(clubTeams.map((t) => t.reeks))]
   type Champ = { teamName: string; reeks: string; clinched: boolean; leading: boolean; pointsToClinch: number | null; winsToClinch: number | null }
   const champs: Champ[] = []
@@ -194,6 +211,18 @@ export default async function ClubPage() {
         je eigen kant voor (opstelling), claim de wedstrijden die jij doet, en — als thuisploeg — start de wedstrijd voor
         het wedstrijdblad.
       </p>
+
+      <MyTeamsPicker teams={allTeams} initial={myTeams} />
+
+      {mySet.size > 0 && (
+        <p className="myteams-focusbar">
+          {focusing ? (
+            <>Gefocust op jouw ploeg(en). <Link href="/club?alle=1" className="myteams-link">Toon alle ploegen van de club →</Link></>
+          ) : (
+            <>Je ziet alle ploegen van de club. <Link href="/club" className="myteams-link">← Focus op mijn ploeg(en)</Link></>
+          )}
+        </p>
+      )}
 
       {champs.length > 0 && (
         <div className="club-champ-wrap">
@@ -221,8 +250,8 @@ export default async function ClubPage() {
         </div>
       )}
 
-      {rows.length === 0 ? (
-        <p className="empty">Geen geplande wedstrijden voor je ploegen.</p>
+      {visibleRows.length === 0 ? (
+        <p className="empty">{focusing ? 'Geen geplande wedstrijden voor je gekozen ploeg(en).' : 'Geen geplande wedstrijden voor je ploegen.'}</p>
       ) : (
         groupList.map((g) => (
         <section key={g.label} className="club-group">

@@ -71,6 +71,17 @@ export const Users: CollectionConfig = {
       },
     },
     {
+      // "Mijn ploegen": een trainer/coach duidt aan welke ploeg(en) van zijn club hij volgt,
+      // zodat "Mijn club" meteen op die ploeg(en) focust (de selectie is al gebeurd). Een lijst
+      // van team-ids (json) — de gebruiker beheert dit zelf via "Mijn club".
+      name: 'myTeams',
+      label: 'Mijn ploegen',
+      type: 'json',
+      admin: {
+        description: 'Eigen voorkeur: op welke ploeg(en) "Mijn club" focust. De gebruiker stelt dit zelf in.',
+      },
+    },
+    {
       // Analyse-toegang: een admin kan een geregistreerd account toegang geven tot de
       // analysemodule (data per speler/ploeg), zonder admin te worden.
       name: 'analyseAccess',

@@ -841,6 +841,40 @@ h3,
 }
 
 /* Club-dashboard */
+/* "Mijn ploegen": trainer/coach focust op zijn eigen ploeg(en). */
+.myteams {
+  margin: 4px 0 14px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--line));
+  background: color-mix(in srgb, var(--accent) 6%, var(--panel));
+}
+.myteams-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.myteams-title { font-weight: 800; font-size: 0.95rem; }
+.myteams-toggle {
+  font: inherit; font-size: 0.82rem; font-weight: 700; cursor: pointer;
+  padding: 5px 12px; border-radius: 999px;
+  color: var(--accent); background: transparent;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line));
+}
+.myteams-hint { margin: 8px 0 10px; font-size: 0.82rem; color: var(--dim); }
+.myteams-current { margin: 6px 0 0; font-size: 0.9rem; color: var(--ink, inherit); font-weight: 600; }
+.myteams-pills { display: flex; flex-wrap: wrap; gap: 8px; }
+.myteams-pill {
+  font: inherit; font-size: 0.86rem; font-weight: 600; cursor: pointer;
+  padding: 8px 14px; border-radius: 999px;
+  color: var(--ink, inherit); background: var(--panel);
+  border: 1px solid var(--line);
+}
+.myteams-pill.on {
+  color: #06140d; font-weight: 800;
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.myteams-pill:disabled { opacity: 0.6; cursor: default; }
+.myteams-focusbar { margin: 0 0 16px; font-size: 0.85rem; color: var(--dim); }
+.myteams-link { color: var(--accent); font-weight: 700; }
+
 /* Kampioenschap-banner: bijna/wel kampioen. */
 .club-champ-wrap { display: flex; flex-direction: column; gap: 8px; margin: 4px 0 18px; }
 .club-champ {
