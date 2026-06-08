@@ -121,6 +121,14 @@ export function ShareCard({
   const homeC = readableOnDark(colors.home ?? DEFAULT_HOME_COLOR)
   const awayC = readableOnDark(colors.away ?? DEFAULT_AWAY_COLOR)
 
+  // ── Ingetogen, editoriaal palet (geen felle kleuren, geen emoji op de kaart). ──
+  const INK = '#f1f5f2'
+  const DIM = '#8a9c93'
+  const FAINT = 'rgba(255,255,255,0.09)' // hairlines
+  const GOLD = '#c9a44c'
+  const M = Math.round(W * 0.085) // zijmarge
+  const upper = (s: string) => s.toUpperCase()
+
   // ── Scoreverloop (momentum). ──
   let diff = 0
   const seq = goals.map((g, i) => {
@@ -133,9 +141,9 @@ export function ShareCard({
 
   const winner = score.home > score.away ? 'home' : score.away > score.home ? 'away' : 'draw'
   const winnerName = winner === 'home' ? teams.home : winner === 'away' ? teams.away : ''
-  const result = winner === 'draw' ? 'GELIJKSPEL ⚖️' : `${shortName(winnerName, 18).toUpperCase()} WINT 🏆`
+  const resultLabel = winner === 'draw' ? 'GELIJKSPEL' : `WINST · ${upper(shortName(winnerName, 20))}`
 
-  // ── Hoogtepunten. ──
+  // ── Kerncijfers (data-forward, geen pillen). ──
   const active = players.filter((p) => p.throws > 0)
   const hasPlayers = active.length > 0
   const mvp = pick(active, () => true, (a, b) =>
@@ -144,142 +152,65 @@ export function ShareCard({
   const verste = pick(active, (p) => p.distance.max > 0, (a, b) => a.distance.max > b.distance.max)
   const topscorer = pick(active, (p) => p.goals.points > 0, (a, b) => a.goals.points > b.goals.points)
   const conv = pick(active, (p) => p.goalAttempts >= 3, (a, b) => a.conversion > b.conversion)
-  const cOf = (p: Player) => (p.teamSide === 'home' ? homeC : awayC)
-  const chips = [
-    verste && { ico: '🚀', lbl: 'Verste worp', val: `${verste.distance.max.toFixed(1)} m`, who: `#${verste.shirtNumber} ${first(verste.playerName)}`, c: cOf(verste) },
-    topscorer && { ico: '🎯', lbl: 'Topscorer', val: `${topscorer.goals.points} ptn`, who: `#${topscorer.shirtNumber} ${first(topscorer.playerName)}`, c: cOf(topscorer) },
-    conv && { ico: '✅', lbl: 'Conversie', val: `${Math.round(conv.conversion * 100)}%`, who: `#${conv.shirtNumber} ${first(conv.playerName)}`, c: cOf(conv) },
-  ].filter(Boolean) as { ico: string; lbl: string; val: string; who: string; c: string }[]
 
-  const facts = [
-    { ico: '🥅', txt: `${nGoals} doelpunten` },
-    { ico: '📊', txt: `grootste kloof ${maxAbs}` },
-    rugTotal > 0 ? { ico: '💪', txt: `${rugTotal} rugworp${rugTotal === 1 ? '' : 'en'}` } : null,
-  ].filter(Boolean) as { ico: string; txt: string }[]
+  const stats: { num: string; label: string }[] = [
+    { num: `${nGoals}`, label: 'DOELPUNTEN' },
+    { num: `${maxAbs}`, label: 'MAX. VOORSPRONG' },
+    ...(rugTotal > 0 ? [{ num: `${rugTotal}`, label: 'RUGWORPEN' }] : []),
+  ]
+  const mvpStats: { num: string; label: string; sub: string }[] = [
+    verste && { num: `${verste.distance.max.toFixed(1)} m`, label: 'VERSTE WORP', sub: `#${verste.shirtNumber} ${first(verste.playerName)}` },
+    topscorer && { num: `${topscorer.goals.points}`, label: 'MEESTE PUNTEN', sub: `#${topscorer.shirtNumber} ${first(topscorer.playerName)}` },
+    conv && { num: `${Math.round(conv.conversion * 100)}%`, label: 'CONVERSIE', sub: `#${conv.shirtNumber} ${first(conv.playerName)}` },
+  ].filter(Boolean) as { num: string; label: string; sub: string }[]
 
-  // ── Verticale flow: kop / hero / momentum / feiten / details / voet. ──
-  const pad = Math.round(H * 0.022)
-  const headerH = Math.round(H * 0.115)
-  const footerH = Math.round(H * 0.05)
+  // ── Verticale flow: scorebord / verloop / cijfers / feature. (Kop + voet vast.) ──
+  const pad = Math.round(H * 0.05)
+  const headerH = Math.round(H * 0.105)
+  const footerH = Math.round(H * 0.055)
   const contentTop = pad + headerH
   const contentBot = H - footerH
   const avail = contentBot - contentTop
-  // Blok-hoogtes (fracties); details groter als er spelerdata is.
-  const wHero = 0.40, wMom = 0.24, wFacts = 0.07, wDet = hasPlayers ? 0.29 : 0.16
-  const wSum = wHero + wMom + wFacts + wDet
+  const wScore = 0.36, wMom = 0.27, wStats = 0.12, wFeat = hasPlayers ? 0.25 : 0.09
+  const wSum = wScore + wMom + wStats + wFeat
   const gaps = 3
-  const blockSpace = avail - Math.round(avail * 0.06) // 6% van de hoogte voor tussenruimtes
+  const blockSpace = avail - Math.round(avail * 0.08)
   const gap = (avail - blockSpace) / gaps
-  const hHero = blockSpace * (wHero / wSum)
-  const hMom = blockSpace * (wMom / wSum)
-  const hFacts = blockSpace * (wFacts / wSum)
-  const hDet = blockSpace * (wDet / wSum)
   let y = contentTop
-  const heroBox = { y, h: hHero }; y += hHero + gap
-  const momBox = { y, h: hMom }; y += hMom + gap
-  const factsBox = { y, h: hFacts }; y += hFacts + gap
-  const detBox = { y, h: hDet }
+  const scoreBox = { y, h: blockSpace * (wScore / wSum) }; y += scoreBox.h + gap
+  const momBox = { y, h: blockSpace * (wMom / wSum) }; y += momBox.h + gap
+  const statsBox = { y, h: blockSpace * (wStats / wSum) }; y += statsBox.h + gap
+  const featBox = { y, h: blockSpace * (wFeat / wSum) }
 
-  // Gedeelde hero-geometrie: badges + namen bovenaan, score eronder, uitslag onderaan — gestapeld,
-  // zodat de score nooit over de clublogo's valt.
-  const heroR = clamp(heroBox.h * 0.21, 52, 110)
-  const heroCy = heroBox.y + heroR + heroBox.h * 0.03
-  const heroNameSize = clamp(heroR * 0.34, 22, 36)
-
-  // ── Render-helpers (alles schaalt mee met zijn vak). ──
-  const Badge = ({ side }: { side: 'home' | 'away' }) => {
-    const r = heroR
-    const cy = heroCy
-    const cx = side === 'home' ? W * 0.25 : W * 0.75
-    const c = side === 'home' ? homeC : awayC
-    const data = side === 'home' ? logoData.home : logoData.away
-    const name = side === 'home' ? teams.home : teams.away
-    return (
-      <g>
-        <circle cx={cx} cy={cy} r={r + r * 0.07} fill="none" stroke={c} strokeWidth={Math.max(3, r * 0.05)} opacity={0.85} />
-        <circle cx={cx} cy={cy} r={r} fill="#0b1d14" filter="url(#soft)" />
-        {data ? (
-          <>
-            <clipPath id={`clip-${side}`}><circle cx={cx} cy={cy} r={r - 4} /></clipPath>
-            <image href={data} x={cx - (r - 4)} y={cy - (r - 4)} width={(r - 4) * 2} height={(r - 4) * 2} clipPath={`url(#clip-${side})`} preserveAspectRatio="xMidYMid meet" />
-          </>
-        ) : (
-          <text x={cx} y={cy + r * 0.34} textAnchor="middle" fontSize={r * 0.78} fontWeight={800} fill={c}>{initials(name)}</text>
-        )}
-        <text x={cx} y={cy + r + heroNameSize * 1.3} textAnchor="middle" fontSize={heroNameSize} fontWeight={800} fill="#eafff5">{shortName(name, 16)}</text>
-      </g>
-    )
-  }
-
-  const Hero = () => {
-    const scoreSize = clamp(heroBox.h * 0.30, 72, 156)
-    const scoreBaseline = heroBox.y + heroBox.h * 0.74
-    const capSize = clamp(heroBox.h * 0.078, 20, 38) * (result.length > 22 ? 0.78 : 1)
-    const capY = heroBox.y + heroBox.h - capSize * 0.4
+  // Editoriaal kopje: label links + dunne haarlijn die doorloopt tot de rechtermarge.
+  const sectionSize = clamp(H * 0.0145, 17, 26)
+  const Section = ({ label, yy, color = DIM }: { label: string; yy: number; color?: string }) => {
+    const w = label.length * (sectionSize * 0.64 + 3.2) + 18
     return (
       <>
-        <Badge side="home" />
-        <Badge side="away" />
-        <text x={W / 2} y={scoreBaseline} textAnchor="middle" fontSize={scoreSize} fontWeight={900} letterSpacing="-2">
-          <tspan fill={winner === 'away' ? '#8aa399' : homeC}>{score.home}</tspan>
-          <tspan fill="#5f7268" fontSize={scoreSize * 0.6} dx={scoreSize * 0.04}> – </tspan>
-          <tspan fill={winner === 'home' ? '#8aa399' : awayC} dx={scoreSize * 0.04}>{score.away}</tspan>
-        </text>
-        <text x={W / 2} y={capY} textAnchor="middle" fontSize={capSize} fontWeight={800} letterSpacing="3" fill="#f4c430">{result}</text>
+        <text x={M} y={yy} fontSize={sectionSize} fontWeight={700} letterSpacing="3.2" fill={color}>{label}</text>
+        <line x1={M + w} y1={yy - sectionSize * 0.32} x2={W - M} y2={yy - sectionSize * 0.32} stroke={FAINT} strokeWidth={1.5} />
       </>
     )
   }
 
-  const Momentum = () => {
-    const titleSize = clamp(momBox.h * 0.13, 24, 40)
-    const cx0 = 96, cw = W - 192
-    const top = momBox.y + momBox.h * 0.34
-    const ch = momBox.h * 0.52
-    const cmid = top + ch / 2
-    const xAt = (i: number) => cx0 + (nGoals <= 1 ? cw / 2 : (i / nGoals) * cw)
-    const yAt = (d: number) => cmid - (d / maxAbs) * (ch / 2 - 6)
-    const dot = clamp(momBox.h * 0.035, 4, 8)
-    const linePts = nGoals > 0 ? [`${cx0},${cmid}`, ...seq.map((s) => `${xAt(s.x).toFixed(1)},${yAt(s.diff).toFixed(1)}`)] : []
-    const areaPath = nGoals > 0 ? `M ${linePts.join(' L ')} L ${xAt(nGoals).toFixed(1)},${cmid} L ${cx0},${cmid} Z` : ''
+  // Cijferkolommen met dunne verticale scheidingslijnen — geen pillen.
+  const StatColumns = ({ items, box, withSub = false }: { items: { num: string; label: string; sub?: string }[]; box: { y: number; h: number }; withSub?: boolean }) => {
+    const n = items.length || 1
+    const colW = (W - 2 * M) / n
+    const numSize = clamp(box.h * (withSub ? 0.34 : 0.46), 30, withSub ? 52 : 68)
+    const labelSize = clamp(box.h * 0.135, 13, 20)
+    const numY = box.y + box.h * (withSub ? 0.42 : 0.5)
     return (
       <>
-        <g filter="url(#soft)">
-          <rect x="60" y={momBox.y} width={W - 120} height={momBox.h} rx="26" fill="#0c2418" fillOpacity={photo ? 0.82 : 1} stroke="#ffffff" strokeOpacity={0.08} strokeWidth={2} />
-        </g>
-        <text x="92" y={momBox.y + titleSize * 1.4} fontSize={titleSize} fontWeight={800} fill="#eafff5">📈 Scoreverloop</text>
-        {nGoals > 0 && (
-          <>
-            <line x1={cx0} y1={cmid} x2={cx0 + cw} y2={cmid} stroke="#ffffff" strokeOpacity={0.18} strokeWidth={2} strokeDasharray="2 6" />
-            <path d={areaPath} fill="url(#momFill)" />
-            <polyline points={linePts.join(' ')} fill="none" stroke="#ffffff" strokeOpacity={0.92} strokeWidth={clamp(dot * 0.7, 3, 5)} strokeLinejoin="round" strokeLinecap="round" />
-            {seq.map((s, i) =>
-              s.rug ? (
-                <text key={i} x={xAt(s.x)} y={yAt(s.diff) + dot * 1.6} textAnchor="middle" fontSize={dot * 4.5} fill={s.side === 'home' ? homeC : awayC}>★</text>
-              ) : (
-                <circle key={i} cx={xAt(s.x)} cy={yAt(s.diff)} r={dot} fill={s.side === 'home' ? homeC : awayC} stroke="#08160f" strokeWidth={2} />
-              ),
-            )}
-          </>
-        )}
-      </>
-    )
-  }
-
-  const Facts = () => {
-    const n = facts.length || 1
-    const ph = clamp(factsBox.h * 0.82, 48, 72)
-    const pw = clamp((W - 120 - (n - 1) * 24) / n, 220, 320)
-    const totalW = n * pw + (n - 1) * 24
-    const fy = factsBox.y + (factsBox.h - ph) / 2
-    const fs = clamp(ph * 0.38, 20, 28)
-    return (
-      <>
-        {facts.map((f, i) => {
-          const x = W / 2 - totalW / 2 + i * (pw + 24)
+        {items.map((it, i) => {
+          const cx = M + colW * (i + 0.5)
           return (
             <g key={i}>
-              <rect x={x} y={fy} width={pw} height={ph} rx={ph / 2} fill="#103122" fillOpacity={photo ? 0.85 : 1} stroke="#ffffff" strokeOpacity={0.08} strokeWidth={2} />
-              <text x={x + pw / 2} y={fy + ph * 0.64} textAnchor="middle" fontSize={fs} fontWeight={700} fill="#eafff5">{f.ico} {f.txt}</text>
+              {i > 0 && <line x1={M + colW * i} y1={box.y + box.h * 0.12} x2={M + colW * i} y2={box.y + box.h * 0.88} stroke={FAINT} strokeWidth={1.5} />}
+              <text x={cx} y={numY} textAnchor="middle" fontSize={numSize} fontWeight={800} letterSpacing="-1" fill={INK}>{it.num}</text>
+              <text x={cx} y={numY + labelSize * 1.7} textAnchor="middle" fontSize={labelSize} fontWeight={700} letterSpacing="2" fill={DIM}>{it.label}</text>
+              {withSub && it.sub && <text x={cx} y={numY + labelSize * 3} textAnchor="middle" fontSize={labelSize * 0.92} fill={DIM} opacity={0.75}>{it.sub}</text>}
             </g>
           )
         })}
@@ -287,55 +218,104 @@ export function ShareCard({
     )
   }
 
-  const Details = () => {
-    if (hasPlayers && mvp) {
-      const bh = detBox.h * 0.34
-      const labelSize = clamp(bh * 0.22, 18, 30)
-      const nameSize = clamp(bh * 0.34, 28, 48)
-      return (
-        <>
-          <g filter="url(#soft)">
-            <rect x="60" y={detBox.y} width={W - 120} height={bh} rx="24" fill={cOf(mvp)} fillOpacity={0.16} stroke={cOf(mvp)} strokeWidth={2} strokeOpacity={0.6} />
-          </g>
-          <text x="92" y={detBox.y + bh * 0.4} fontSize={labelSize} fontWeight={800} letterSpacing="1" fill={cOf(mvp)}>★ SPELER VAN DE WEDSTRIJD</text>
-          <text x="92" y={detBox.y + bh * 0.82} fontSize={nameSize} fontWeight={900} fill="#ffffff">#{mvp.shirtNumber} {mvp.playerName}</text>
-          <text x={W - 90} y={detBox.y + bh * 0.62} textAnchor="end" fontSize={clamp(bh * 0.22, 18, 28)} fill="#cfe6dc">{mvp.goals.points} ptn · {mvp.goals.total} doelp.</text>
-          {(() => {
-            const n = chips.length || 1
-            const cy0 = detBox.y + bh + detBox.h * 0.05
-            const cardH = detBox.y + detBox.h - cy0
-            const cwid = (W - 120 - (n - 1) * 20) / n
-            return chips.map((ch, i) => {
-              const x = 60 + i * (cwid + 20)
-              return (
-                <g key={i}>
-                  <rect x={x} y={cy0} width={cwid} height={cardH} rx="22" fill="#0c2418" fillOpacity={photo ? 0.82 : 1} stroke={ch.c} strokeOpacity={0.5} strokeWidth={2} />
-                  <text x={x + cwid / 2} y={cy0 + cardH * 0.34} textAnchor="middle" fontSize={clamp(cardH * 0.3, 32, 48)}>{ch.ico}</text>
-                  <text x={x + cwid / 2} y={cy0 + cardH * 0.62} textAnchor="middle" fontSize={clamp(cardH * 0.13, 16, 22)} fill="#9fc6b6">{ch.lbl}</text>
-                  <text x={x + cwid / 2} y={cy0 + cardH * 0.86} textAnchor="middle" fontSize={clamp(cardH * 0.2, 22, 32)} fontWeight={800} fill={ch.c}>{ch.val}</text>
-                </g>
-              )
-            })
-          })()}
-        </>
-      )
-    }
-    // Geen worpdata (snelscore): een strakke, ingetogen afsluiter — geen emoji-parade.
-    const lineW = clamp(W * 0.34, 280, 460)
-    const cy = detBox.y + detBox.h * 0.5
-    const headline = winner === 'draw' ? 'Punten gedeeld' : `Overwinning voor ${shortName(winnerName, 20)}`
+  // ── Scorebord: logo's + namen, daaronder de grote score met een gouden accent onder de winnaar. ──
+  const logoR = clamp(scoreBox.h * 0.20, 50, 104)
+  const logoCy = scoreBox.y + logoR + scoreBox.h * 0.02
+  const ClubMark = ({ side }: { side: 'home' | 'away' }) => {
+    const cx = side === 'home' ? W * 0.27 : W * 0.73
+    const c = side === 'home' ? homeC : awayC
+    const data = side === 'home' ? logoData.home : logoData.away
+    const name = side === 'home' ? teams.home : teams.away
+    const nameSize = clamp(logoR * 0.3, 19, 30)
+    return (
+      <g>
+        <circle cx={cx} cy={logoCy} r={logoR} fill="#0a1610" stroke={c} strokeWidth={2.5} strokeOpacity={0.55} />
+        {data ? (
+          <>
+            <clipPath id={`clip-${side}`}><circle cx={cx} cy={logoCy} r={logoR - 5} /></clipPath>
+            <image href={data} x={cx - (logoR - 5)} y={logoCy - (logoR - 5)} width={(logoR - 5) * 2} height={(logoR - 5) * 2} clipPath={`url(#clip-${side})`} preserveAspectRatio="xMidYMid meet" />
+          </>
+        ) : (
+          <text x={cx} y={logoCy + logoR * 0.32} textAnchor="middle" fontSize={logoR * 0.74} fontWeight={800} fill={c}>{initials(name)}</text>
+        )}
+        <text x={cx} y={logoCy + logoR + nameSize * 1.5} textAnchor="middle" fontSize={nameSize} fontWeight={700} letterSpacing="1.5" fill={INK}>{upper(shortName(name, 15))}</text>
+      </g>
+    )
+  }
+
+  const Scoreboard = () => {
+    const scoreSize = clamp(scoreBox.h * 0.40, 84, 184)
+    const baseline = scoreBox.y + scoreBox.h * 0.74
+    const maxDigits = Math.max(String(score.home).length, String(score.away).length)
+    const sgap = scoreSize * (0.34 + 0.27 * maxDigits)
+    const homeX = W / 2 - sgap
+    const awayX = W / 2 + sgap
+    const capSize = clamp(scoreBox.h * 0.07, 18, 30) * (resultLabel.length > 24 ? 0.82 : 1)
     return (
       <>
-        <line x1={W / 2 - lineW / 2} y1={cy - detBox.h * 0.28} x2={W / 2 + lineW / 2} y2={cy - detBox.h * 0.28} stroke="#f4c430" strokeOpacity={0.4} strokeWidth={2} />
-        <text x={W / 2} y={cy + clamp(detBox.h * 0.1, 14, 22)} textAnchor="middle" fontSize={clamp(detBox.h * 0.3, 30, 52)} fontWeight={800} fill="#ffffff">{headline}</text>
+        <ClubMark side="home" />
+        <ClubMark side="away" />
+        <text x={homeX} y={baseline} textAnchor="middle" fontSize={scoreSize} fontWeight={800} letterSpacing="-3" fill={winner === 'away' ? DIM : INK}>{score.home}</text>
+        <text x={W / 2} y={baseline - scoreSize * 0.12} textAnchor="middle" fontSize={scoreSize * 0.5} fontWeight={300} fill={DIM}>–</text>
+        <text x={awayX} y={baseline} textAnchor="middle" fontSize={scoreSize} fontWeight={800} letterSpacing="-3" fill={winner === 'home' ? DIM : INK}>{score.away}</text>
+        {winner !== 'draw' && (
+          <line x1={(winner === 'home' ? homeX : awayX) - scoreSize * 0.26} y1={baseline + scoreSize * 0.16} x2={(winner === 'home' ? homeX : awayX) + scoreSize * 0.26} y2={baseline + scoreSize * 0.16} stroke={GOLD} strokeWidth={Math.max(3, scoreSize * 0.03)} />
+        )}
+        <text x={W / 2} y={scoreBox.y + scoreBox.h - capSize * 0.2} textAnchor="middle" fontSize={capSize} fontWeight={700} letterSpacing="4" fill={GOLD}>{resultLabel}</text>
       </>
     )
   }
 
-  const brandSize = clamp(headerH * 0.34, 34, 56)
-  const metaSize = clamp(headerH * 0.2, 22, 32)
+  const Momentum = () => {
+    const plotTop = momBox.y + momBox.h * 0.18
+    const plotH = momBox.h * 0.78
+    const cmid = plotTop + plotH / 2
+    const x0 = M, plotW = W - 2 * M
+    const xAt = (i: number) => x0 + (nGoals <= 1 ? plotW / 2 : (i / nGoals) * plotW)
+    const yAt = (d: number) => cmid - (d / maxAbs) * (plotH / 2 - 8)
+    const dot = clamp(momBox.h * 0.028, 3.5, 7)
+    const linePts = nGoals > 0 ? [`${x0},${cmid}`, ...seq.map((s) => `${xAt(s.x).toFixed(1)},${yAt(s.diff).toFixed(1)}`)] : []
+    const areaPath = nGoals > 0 ? `M ${linePts.join(' L ')} L ${xAt(nGoals).toFixed(1)},${cmid} L ${x0},${cmid} Z` : ''
+    return (
+      <>
+        <Section label="VERLOOP" yy={momBox.y} />
+        {nGoals > 0 ? (
+          <>
+            <line x1={x0} y1={cmid} x2={x0 + plotW} y2={cmid} stroke="rgba(255,255,255,0.16)" strokeWidth={1.5} strokeDasharray="1 7" strokeLinecap="round" />
+            <path d={areaPath} fill="url(#momFill)" />
+            <polyline points={linePts.join(' ')} fill="none" stroke={INK} strokeWidth={clamp(dot * 0.65, 2.5, 4)} strokeLinejoin="round" strokeLinecap="round" />
+            {seq.filter((s) => s.rug).map((s, i) => (
+              <circle key={i} cx={xAt(s.x)} cy={yAt(s.diff)} r={dot} fill={s.side === 'home' ? homeC : awayC} stroke="#08130d" strokeWidth={2} />
+            ))}
+          </>
+        ) : (
+          <text x={W / 2} y={cmid} textAnchor="middle" fontSize={sectionSize} fill={DIM}>Geen scoreverloop beschikbaar</text>
+        )}
+      </>
+    )
+  }
 
-  const rasterize = async () => svgToPngBlob(svgRef.current!, { scale: 2, background: '#08160f' })
+  const Feature = () => {
+    if (hasPlayers && mvp) {
+      const nameSize = clamp(featBox.h * 0.16, 26, 46)
+      const sub = `${mvp.goals.points} punten · ${mvp.goals.total} doelpunten`
+      return (
+        <>
+          <Section label="SPELER VAN DE WEDSTRIJD" yy={featBox.y} color={GOLD} />
+          <text x={M} y={featBox.y + nameSize * 1.4} fontSize={nameSize} fontWeight={800} fill={INK}>#{mvp.shirtNumber} {mvp.playerName}</text>
+          <text x={W - M} y={featBox.y + nameSize * 1.4} textAnchor="end" fontSize={clamp(featBox.h * 0.1, 16, 26)} fill={DIM}>{sub}</text>
+          <StatColumns items={mvpStats} box={{ y: featBox.y + featBox.h * 0.42, h: featBox.h * 0.58 }} withSub />
+        </>
+      )
+    }
+    return <line x1={M} y1={featBox.y + featBox.h * 0.5} x2={W - M} y2={featBox.y + featBox.h * 0.5} stroke={FAINT} strokeWidth={1.5} />
+  }
+
+  const brandSize = clamp(headerH * 0.3, 28, 46)
+  const metaSize = clamp(headerH * 0.17, 17, 26)
+  const headRuleY = pad + brandSize + metaSize * 1.4
+
+  const rasterize = async () => svgToPngBlob(svgRef.current!, { scale: 2, background: '#07120c' })
   const fileName = () => `${slugFilename('krachtbal', teams.home, teams.away, fmt) || `krachtbal-wedstrijd-${matchId}`}.png`
 
   const share = async () => {
@@ -343,7 +323,7 @@ export function ShareCard({
     setBusy(true); setMsg(null)
     try {
       await ensureLogos()
-      await saveOrShareBlob(await rasterize(), fileName(), `${teams.home} ${score.home}–${score.away} ${teams.away} 🏐`)
+      await saveOrShareBlob(await rasterize(), fileName(), `${teams.home} ${score.home}–${score.away} ${teams.away}`)
     } catch { setMsg('Kaart maken mislukt — probeer opnieuw.'); setTimeout(() => setMsg(null), 3500) }
     finally { setBusy(false) }
   }
@@ -383,53 +363,50 @@ export function ShareCard({
       {/* Off-screen render-doel — wordt naar PNG omgezet bij delen/downloaden. */}
       <div style={{ position: 'absolute', left: -99999, top: 0, width: W, height: H, pointerEvents: 'none' }} aria-hidden>
         <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} width={W} height={H} xmlns="http://www.w3.org/2000/svg"
-          fontFamily="'Inter','Segoe UI',system-ui,-apple-system,'Apple Color Emoji','Noto Color Emoji',sans-serif">
+          fontFamily="'Inter','Segoe UI',system-ui,-apple-system,sans-serif">
           <defs>
             <linearGradient id="cardBg" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={homeC} stopOpacity={0.16} />
-              <stop offset="22%" stopColor="#0a1c12" />
-              <stop offset="78%" stopColor="#08160f" />
-              <stop offset="100%" stopColor={awayC} stopOpacity={0.16} />
+              <stop offset="0%" stopColor="#0c1a12" />
+              <stop offset="55%" stopColor="#071009" />
+              <stop offset="100%" stopColor="#050d09" />
             </linearGradient>
-            <radialGradient id="glowH" cx="18%" cy="14%" r="50%">
-              <stop offset="0%" stopColor={homeC} stopOpacity={0.16} />
-              <stop offset="100%" stopColor={homeC} stopOpacity={0} />
-            </radialGradient>
-            <radialGradient id="glowA" cx="84%" cy="86%" r="50%">
-              <stop offset="0%" stopColor={awayC} stopOpacity={0.16} />
-              <stop offset="100%" stopColor={awayC} stopOpacity={0} />
+            <radialGradient id="vign" cx="50%" cy="42%" r="75%">
+              <stop offset="62%" stopColor="#000000" stopOpacity={0} />
+              <stop offset="100%" stopColor="#000000" stopOpacity={0.45} />
             </radialGradient>
             <linearGradient id="momFill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={homeC} stopOpacity={0.55} />
-              <stop offset="50%" stopColor={homeC} stopOpacity={0.04} />
-              <stop offset="50%" stopColor={awayC} stopOpacity={0.04} />
-              <stop offset="100%" stopColor={awayC} stopOpacity={0.55} />
+              <stop offset="0%" stopColor={homeC} stopOpacity={0.32} />
+              <stop offset="50%" stopColor={homeC} stopOpacity={0.02} />
+              <stop offset="50%" stopColor={awayC} stopOpacity={0.02} />
+              <stop offset="100%" stopColor={awayC} stopOpacity={0.32} />
             </linearGradient>
-            <filter id="soft" x="-30%" y="-30%" width="160%" height="160%">
-              <feDropShadow dx="0" dy="4" stdDeviation="10" floodColor="#000" floodOpacity="0.45" />
-            </filter>
           </defs>
 
-          {/* Achtergrond */}
-          <rect x="0" y="0" width={W} height={H} fill="#08160f" />
-          {photo && <image href={photo} x="0" y="0" width={W} height={H} preserveAspectRatio="xMidYMid slice" opacity={0.5} />}
-          {photo && <rect x="0" y="0" width={W} height={H} fill="#08160f" opacity={0.52} />}
+          {/* Achtergrond — diep, ingetogen, met een subtiele clubkleur-zweem boven/onder. */}
+          <rect x="0" y="0" width={W} height={H} fill="#07120c" />
           <rect x="0" y="0" width={W} height={H} fill="url(#cardBg)" />
-          <rect x="0" y="0" width={W} height={H} fill="url(#glowH)" />
-          <rect x="0" y="0" width={W} height={H} fill="url(#glowA)" />
-          <rect x="14" y="14" width={W - 28} height={H - 28} rx="36" fill="none" stroke="#f4c430" strokeOpacity={0.22} strokeWidth={2} />
+          {photo && <image href={photo} x="0" y="0" width={W} height={H} preserveAspectRatio="xMidYMid slice" opacity={0.42} />}
+          {photo && <rect x="0" y="0" width={W} height={H} fill="#07120c" opacity={0.6} />}
+          <rect x="0" y="0" width={W} height={Math.round(H * 0.16)} fill={homeC} opacity={0.06} />
+          <rect x="0" y={H - Math.round(H * 0.16)} width={W} height={Math.round(H * 0.16)} fill={awayC} opacity={0.06} />
+          <rect x="0" y="0" width={W} height={H} fill="url(#vign)" />
+          <rect x={Math.round(W * 0.04)} y={Math.round(W * 0.04)} width={W - Math.round(W * 0.08)} height={H - Math.round(W * 0.08)} rx="2" fill="none" stroke={FAINT} strokeWidth={1.5} />
 
-          {/* Kop */}
-          <text x={W / 2} y={pad + brandSize} textAnchor="middle" fontSize={brandSize} fontWeight={900} letterSpacing="3" fill="#ffffff">KRACHTBAL <tspan fill="#f4c430">LIVE</tspan></text>
-          <text x={W / 2} y={pad + brandSize + metaSize * 1.5} textAnchor="middle" fontSize={metaSize} fill="#cfe6dc" opacity={0.85}>{[reeks, datum].filter(Boolean).join('  ·  ')}</text>
+          {/* Kop — masthead met haarlijn en meta links/rechts. */}
+          <text x={M} y={pad + brandSize} fontSize={brandSize} fontWeight={800} letterSpacing="5" fill={INK}>KRACHTBAL <tspan fill={GOLD}>LIVE</tspan></text>
+          <line x1={M} y1={headRuleY} x2={W - M} y2={headRuleY} stroke={FAINT} strokeWidth={1.5} />
+          <text x={M} y={headRuleY + metaSize * 1.5} fontSize={metaSize} letterSpacing="2" fill={DIM}>{upper(reeks)}</text>
+          {datum && <text x={W - M} y={headRuleY + metaSize * 1.5} textAnchor="end" fontSize={metaSize} letterSpacing="2" fill={DIM}>{upper(datum)}</text>}
 
-          <Hero />
+          <Scoreboard />
           <Momentum />
-          <Facts />
-          <Details />
+          <Section label="WEDSTRIJD IN CIJFERS" yy={statsBox.y - statsBox.h * 0.16} />
+          <StatColumns items={stats} box={statsBox} />
+          <Feature />
 
           {/* Voet */}
-          <text x={W / 2} y={H - footerH * 0.4} textAnchor="middle" fontSize={clamp(footerH * 0.4, 20, 28)} fontWeight={700} fill="#f4c430" opacity={0.9}>gedeeld via krachtbal.live</text>
+          <line x1={M} y1={H - footerH} x2={W - M} y2={H - footerH} stroke={FAINT} strokeWidth={1.5} />
+          <text x={W / 2} y={H - footerH * 0.36} textAnchor="middle" fontSize={clamp(footerH * 0.32, 16, 24)} fontWeight={700} letterSpacing="4" fill={DIM}>KRACHTBAL.LIVE</text>
         </svg>
       </div>
     </div>
