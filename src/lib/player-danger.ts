@@ -257,3 +257,89 @@ export async function buildTeamDanger(
     zoneBands: [zL, zM, zR].map(finalize),
   }
 }
+
+export interface TeamDefender {
+  playerId: number
+  name: string
+  shirtNumber: number
+  /** Vangsten (bal van de tegenstander gevangen). */
+  catches: number
+  /** Tikken naar de achterman (verdedigende assist). */
+  taps: number
+  total: number
+}
+
+/** Sterkste verdedigers van een ploeg: wie vangt/tikt de meeste ballen af, over de wedstrijden van
+ * deze ploeg. Enkel gevoed door analyse-wedstrijden waar de vanger/tikker geregistreerd is. */
+export async function buildTeamDefense(
+  payload: Payload,
+  teamId: number,
+  reeks: string,
+  seizoen?: string | null,
+  matchFilter?: Where | null,
+): Promise<TeamDefender[]> {
+  const matchRes = await payload
+    .find({
+      collection: 'matches',
+      where: {
+        and: [
+          { reeks: { equals: reeks } },
+          { status: { equals: 'finished' } },
+          { or: [{ homeTeam: { equals: teamId } }, { awayTeam: { equals: teamId } }] },
+          ...seasonClause(seizoen),
+          ...(matchFilter ? [matchFilter] : []),
+        ],
+      },
+      depth: 0,
+      limit: 500,
+    })
+    .catch(() => ({ docs: [] as Record<string, unknown>[] }))
+  const matchIds = matchRes.docs.filter((m) => !(m as { isDemo?: boolean }).isDemo).map((m) => (m as { id: number }).id)
+  if (!matchIds.length) return []
+
+  const playersRes = await payload
+    .find({ collection: 'players', where: { team: { equals: teamId } }, depth: 0, limit: 200 })
+    .catch(() => ({ docs: [] as Record<string, unknown>[] }))
+  const nameById = new Map<number, { name: string; shirtNumber: number }>()
+  for (const p of playersRes.docs) {
+    nameById.set((p as { id: number }).id, {
+      name: String((p as { name?: unknown }).name ?? '?'),
+      shirtNumber: Number((p as { shirtNumber?: unknown }).shirtNumber ?? 0),
+    })
+  }
+  const ids = [...nameById.keys()]
+  if (!ids.length) return []
+
+  const res = await payload
+    .find({
+      collection: 'throws',
+      where: {
+        and: [
+          { match: { in: matchIds } },
+          { outcome: { equals: 'caught' } },
+          { or: [{ caughtBy: { in: ids } }, { tappedBy: { in: ids } }] },
+        ],
+      },
+      depth: 0,
+      limit: 12000,
+    })
+    .catch(() => ({ docs: [] as Record<string, unknown>[] }))
+
+  const by = new Map<number, TeamDefender>()
+  const ensure = (pid: number): TeamDefender => {
+    let d = by.get(pid)
+    if (!d) {
+      const n = nameById.get(pid)
+      d = { playerId: pid, name: n?.name ?? '?', shirtNumber: n?.shirtNumber ?? 0, catches: 0, taps: 0, total: 0 }
+      by.set(pid, d)
+    }
+    return d
+  }
+  for (const t of res.docs) {
+    const cb = relId((t as { caughtBy?: unknown }).caughtBy)
+    if (cb != null && nameById.has(cb)) { const d = ensure(cb); d.catches += 1; d.total += 1 }
+    const tp = relId((t as { tappedBy?: unknown }).tappedBy)
+    if (tp != null && nameById.has(tp)) { const d = ensure(tp); d.taps += 1; d.total += 1 }
+  }
+  return [...by.values()].sort((a, b) => b.total - a.total || b.catches - a.catches)
+}

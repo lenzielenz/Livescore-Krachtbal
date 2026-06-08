@@ -6,7 +6,7 @@ import { analyseMatchWhere } from '@/lib/analyse-access'
 import { getSelectedSeason } from '@/lib/analyse-season'
 import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
-import { buildTeamDanger } from '@/lib/player-danger'
+import { buildTeamDanger, buildTeamDefense } from '@/lib/player-danger'
 import { REEKS_OPTIONS, reeksNaam } from '@/lib/reeksen'
 import { buildTeamReport } from '@/lib/team-report'
 import { BandChart } from '@/components/analytics/BandChart'
@@ -70,6 +70,11 @@ export default async function PloegRapportPage({ searchParams }: { searchParams:
     teamId != null && report && report.matchesAnalyzed > 0
       ? await buildTeamDanger(payload, teamId, reeks, seizoen, analyseMatchWhere(me), { conceded: true })
       : null
+  // Sterkste verdedigers (vang-/tik-data, enkel uit analyse-wedstrijden).
+  const defenders =
+    teamId != null && report && report.matchesAnalyzed > 0
+      ? await buildTeamDefense(payload, teamId, reeks, seizoen, analyseMatchWhere(me))
+      : []
   const zTot = report ? report.zones.links + report.zones.midden + report.zones.rechts : 0
 
   return (
@@ -202,6 +207,26 @@ export default async function PloegRapportPage({ searchParams }: { searchParams:
               <>
                 <h2 className="an-sub">🎯 Gevaarspelers <span className="an-chart-hint">wie stoppen — en van waar ze scoren</span></h2>
                 <DangerPlayers flowShots={danger.flowShots} players={report.players} />
+
+                {defenders.length > 0 && (
+                  <>
+                    <h2 className="an-sub">🧤 Sterkste verdedigers <span className="an-chart-hint">wie pakt de ballen af</span></h2>
+                    <div className="an-recap-cards">
+                      {defenders.slice(0, 4).map((d) => (
+                        <div className="an-recap-card" key={d.playerId}>
+                          <span className="an-recap-ico" aria-hidden>🧤</span>
+                          <span className="an-recap-body">
+                            <span className="an-recap-lbl">#{d.shirtNumber} {d.name.split(/\s+/)[0]}</span>
+                            <span className="an-recap-val">{d.total} {d.total === 1 ? 'actie' : 'acties'}</span>
+                            <span className="an-recap-who">
+                              {d.catches} {d.catches === 1 ? 'vangst' : 'vangsten'}{d.taps ? ` · ${d.taps} ${d.taps === 1 ? 'tik' : 'tikken'}` : ''}
+                            </span>
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
 
                 <h2 className="an-sub">🔥 Worp- &amp; scoreflow <span className="an-chart-hint">van waar ze smijten → waar ze scoren</span></h2>
                 <div className="gev-grid">
