@@ -262,6 +262,27 @@ export function addShoutout(matchId: number, name: string, text: string): Shout 
   return shout
 }
 
+// Eén live foto-instant (vluchtige supporterfoto). De bron is de match-instants-collectie; het
+// kanaal broadcast enkel nieuwe/verwijderde foto's naar de huidige kijkers (geen persistentie hier).
+export type Instant = { id: number; url: string; authorName: string; at: number }
+
+/** Broadcast een nieuwe foto-instant naar alle kijkers van deze wedstrijd. */
+export function addInstant(matchId: number, instant: Instant): boolean {
+  const ch = channels.get(matchId)
+  if (!ch) return false
+  if (!isTribuneOpen(ch.status, ch.finishedAt)) return false
+  broadcast(ch, 'instant', instant)
+  return true
+}
+
+/** Broadcast dat een foto-instant verdween (moderatie of verval). */
+export function removeInstant(matchId: number, instantId: number): boolean {
+  const ch = channels.get(matchId)
+  if (!ch) return false
+  broadcast(ch, 'instant_removed', { id: instantId })
+  return true
+}
+
 export const REACTION_EMOJI = ['clap', 'fire', 'heart', 'goal', 'wow', 'rocket'] as const
 
 /** Vuur een clubkleuren-viering af op ALLE schermen van deze wedstrijd. Null/false als niemand

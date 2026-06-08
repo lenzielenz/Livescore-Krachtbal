@@ -10,7 +10,8 @@ import { canAnalyse } from '@/lib/access'
 import { getAuthUser } from '@/lib/auth-user'
 import { buildMatchSheet, buildMatchState, buildMatchStats, buildTimeline } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
-import { krachtbalKleur, reeksHalfDurationSeconds, reeksNaam, reeksType, type Reeks } from '@/lib/reeksen'
+import { isAdultReeks, krachtbalKleur, reeksHalfDurationSeconds, reeksNaam, reeksType, type Reeks } from '@/lib/reeksen'
+import { isTribuneOpen } from '@/lib/tribune'
 import { BASE_RATE_PER_MIN } from '@/lib/win-probability'
 import { MatchRecap } from '../../analyse/[id]/MatchRecap'
 import { MomentumChart } from '../../analyse/[id]/MomentumChart'
@@ -140,6 +141,29 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
     }
   }
 
+  // Vluchtige foto-tribune: ENKEL op volwassen reeksen (safeguarding, geen jeugd). Laad de recente,
+  // niet-verlopen foto's; posten mag enkel ingelogd terwijl de tribune open is.
+  const adultMatch = isAdultReeks(reeksRaw)
+  const canPostInstant = Boolean(me) && adultMatch && isTribuneOpen(state.match.status, state.match.finishedAt)
+  let initialInstants: { id: number; url: string; authorName: string; at: number }[] = []
+  if (adultMatch) {
+    const res = await payload
+      .find({
+        collection: 'match-instants',
+        where: { and: [{ match: { equals: matchId } }, { expiresAt: { greater_than: new Date().toISOString() } }] },
+        sort: '-createdAt',
+        depth: 0,
+        limit: 30,
+      })
+      .catch(() => null)
+    initialInstants = (res?.docs ?? []).map((d) => ({
+      id: d.id as number,
+      url: (d as { url?: string | null }).url || `/api/match-instants/file/${(d as { filename?: string }).filename ?? ''}`,
+      authorName: (d as { authorName?: string | null }).authorName || 'Supporter',
+      at: d.createdAt ? new Date(d.createdAt as string).getTime() : Date.now(),
+    }))
+  }
+
   return (
     <>
       <SiteHeader active="wedstrijden" />
@@ -190,6 +214,8 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
         canChat={Boolean(me)}
         initialReactions={(matchDoc?.liveReactions as Record<string, number> | null) ?? undefined}
         initialShouts={Array.isArray(matchDoc?.liveShoutouts) ? (matchDoc.liveShoutouts as { id: number; name: string; text: string; at: number }[]) : undefined}
+        canPostInstant={canPostInstant}
+        initialInstants={initialInstants}
       />
       {/* Supporters duidelijk tonen dat ze de wedstrijd op hun tv kunnen volgen. */}
       <CastToTv matchId={matchId} />

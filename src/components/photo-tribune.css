@@ -1,0 +1,152 @@
+/* Vluchtige foto-tribune — horizontale strip met sfeerbeelden. */
+.ptr {
+  margin: 14px 0 4px;
+}
+.ptr-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.ptr-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+.ptr-sub {
+  font-size: 0.72rem;
+  color: var(--dim, #8a9c93);
+}
+.ptr-strip {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+}
+.ptr-add,
+.ptr-thumb {
+  flex: 0 0 auto;
+  scroll-snap-align: start;
+  border-radius: 12px;
+  cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+  position: relative;
+  padding: 0;
+}
+.ptr-add {
+  width: 96px;
+  height: 128px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--ink, #f1f5f2);
+}
+.ptr-add:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.ptr-add-ico {
+  font-size: 1.8rem;
+  line-height: 1;
+}
+.ptr-add-lbl {
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+.ptr-thumb {
+  width: 96px;
+  height: 128px;
+  background: #0a1610;
+}
+.ptr-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.ptr-thumb-name {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 10px 6px 4px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.72));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ptr-empty {
+  align-self: center;
+  color: var(--dim, #8a9c93);
+  font-size: 0.84rem;
+  margin: 0 4px;
+}
+.ptr-err {
+  color: #ef476f;
+  font-size: 0.8rem;
+  margin: 6px 0 0;
+}
+
+/* Lightbox */
+.ptr-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(0, 0, 0, 0.82);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.ptr-lightbox-inner {
+  max-width: min(92vw, 560px);
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.ptr-lightbox-inner img {
+  max-width: 100%;
+  max-height: 76vh;
+  object-fit: contain;
+  border-radius: 12px;
+}
+.ptr-lightbox-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.ptr-lightbox-name {
+  color: #fff;
+  font-weight: 700;
+}
+.ptr-lightbox-actions {
+  display: inline-flex;
+  gap: 8px;
+}
+.ptr-del,
+.ptr-close {
+  font: inherit;
+  font-weight: 700;
+  font-size: 0.85rem;
+  padding: 8px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+.ptr-del {
+  border-color: rgba(239, 71, 111, 0.5);
+  color: #ff8ba3;
+}
