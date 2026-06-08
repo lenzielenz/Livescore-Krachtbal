@@ -59,7 +59,8 @@ export default async function Image({ params }: { params: Promise<{ id: string }
     return new ImageResponse(
       (
         <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#07120c', color: '#f1f5f2', fontSize: 64, fontWeight: 800, letterSpacing: 4 }}>
-          KRACHTBAL <span style={{ color: '#c9a44c', marginLeft: 16 }}>LIVE</span>
+          <span>KRACHTBAL</span>
+          <span style={{ color: '#c9a44c', marginLeft: 16 }}>LIVE</span>
         </div>
       ),
       size,
@@ -93,7 +94,6 @@ export default async function Image({ params }: { params: Promise<{ id: string }
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 360 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 200, height: 200, borderRadius: 200, background: '#0a1610', border: `5px solid ${color}`, opacity: dim ? 0.62 : 1 }}>
           {logo ? (
-            // eslint-disable-next-line @next/next/no-img-element
             <img src={logo} width={170} height={170} alt="" style={{ borderRadius: 170, objectFit: 'contain' }} />
           ) : (
             <div style={{ display: 'flex', fontSize: 96, fontWeight: 800, color }}>{initials(team.name)}</div>
@@ -116,11 +116,12 @@ export default async function Image({ params }: { params: Promise<{ id: string }
         {/* Kop */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '46px 64px 0' }}>
           <div style={{ display: 'flex', fontSize: 34, fontWeight: 800, letterSpacing: 5 }}>
-            KRACHTBAL <span style={{ color: '#c9a44c', marginLeft: 12 }}>LIVE</span>
+            <span>KRACHTBAL</span>
+            <span style={{ color: '#c9a44c', marginLeft: 12 }}>LIVE</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 26, fontWeight: 700, letterSpacing: 2, color: status === 'live' ? '#ff5a5f' : '#8a9c93' }}>
             {status === 'live' && <div style={{ display: 'flex', width: 16, height: 16, borderRadius: 16, background: '#ff5a5f' }} />}
-            {statusLabel}
+            <span>{statusLabel}</span>
           </div>
         </div>
 
