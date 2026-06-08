@@ -463,6 +463,18 @@ export interface User {
    */
   club?: (number | null) | Club;
   /**
+   * Eigen voorkeur: op welke ploeg(en) "Mijn club" focust. De gebruiker stelt dit zelf in.
+   */
+  myTeams?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  /**
    * Geef dit account toegang tot de analyse (naast de admin-rol).
    */
   analyseAccess?: boolean | null;
@@ -1585,6 +1597,7 @@ export interface UsersSelect<T extends boolean = true> {
   name?: T;
   roles?: T;
   club?: T;
+  myTeams?: T;
   analyseAccess?: T;
   trainingAccess?: T;
   official?: T;

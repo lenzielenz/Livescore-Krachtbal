@@ -42,6 +42,7 @@ import * as migration_20260607_160000_match_analyse_owner from './20260607_16000
 import * as migration_20260607_180000_match_takeover from './20260607_180000_match_takeover';
 import * as migration_20260607_200000_team_speelstijl from './20260607_200000_team_speelstijl';
 import * as migration_20260607_220000_club_locatie from './20260607_220000_club_locatie';
+import * as migration_20260608_120000_user_my_teams from './20260608_120000_user_my_teams';
 
 export const migrations = [
   {
@@ -263,5 +264,10 @@ export const migrations = [
     up: migration_20260607_220000_club_locatie.up,
     down: migration_20260607_220000_club_locatie.down,
     name: '20260607_220000_club_locatie',
+  },
+  {
+    up: migration_20260608_120000_user_my_teams.up,
+    down: migration_20260608_120000_user_my_teams.down,
+    name: '20260608_120000_user_my_teams',
   },
 ];
