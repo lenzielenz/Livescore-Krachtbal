@@ -4,41 +4,60 @@ import { useState } from 'react'
 
 import { FieldSchema, type ConvPoint, type FieldMarker } from '@/components/FieldSchema'
 import type { Point } from '@/lib/field'
-import type { DangerShot } from '@/lib/player-danger'
+import type { DangerShot, FlowShot } from '@/lib/player-danger'
 
-// Worp- & scoreflow van een hele ploeg op één veld. Alle doelpogingen zijn gespiegeld naar één
-// canonieke aanvalsrichting (doel onderaan), zodat je in één beeld ziet:
-//  • Scoreflow — van waar ze gooien → waar ze scoren (traject per doelpunt, rugworp in goud);
+// Worp- & scoreflow van een hele ploeg op één veld. Alle worpen zijn gespiegeld naar één canonieke
+// aanvalsrichting (doel onderaan), zodat je in één beeld ziet:
+//  • Scoreflow — van waar ze gooien → waar de bal naartoe gaat, per worp (1e/2e/laatste of alle),
+//    met de richting en de uitkomst in kleur;
 //  • Worphitte — heatzones van waar ze het meest smijten (vertrekpunten);
 //  • Doelhitte — heatzones van waar hun doelpunten binnenvallen (landingsplek aan het doel);
 //  • Gevaarzone — conversie per zone (van waar zijn ze het gevaarlijkst).
 type Mode = 'flow' | 'worpen' | 'doelpunten' | 'gevaar'
+type ThrowSel = 'all' | 1 | 2 | 'last'
 
-const C_GOAL = '#06d6a0'
-const C_RUG = '#ffd166'
-const C_MISS = '#ef476f'
+const C_GOAL = '#06d6a0' // doelpunt (nek)
+const C_RUG = '#ffd166' // rugworp-doelpunt (+2)
+const C_LOSS = '#ef476f' // balverlies (gevangen / buiten)
+const C_ADV = '#4cc9f0' // doorspelende worp (geen afronding)
 
-export function TeamFlowMap({ shots }: { shots: DangerShot[] }) {
+function flowColor(s: FlowShot): string {
+  if (s.goal) return s.type === 'rug' ? C_RUG : C_GOAL
+  if (s.outcome === 'caught' || s.outcome === 'out_side' || s.outcome === 'out_back') return C_LOSS
+  return C_ADV
+}
+
+const THROW_OPTS: [ThrowSel, string][] = [
+  ['all', 'Alle'],
+  [1, '1e'],
+  [2, '2e'],
+  ['last', 'Laatste'],
+]
+
+export function TeamFlowMap({ shots, flowShots = [] }: { shots: DangerShot[]; flowShots?: FlowShot[] }) {
   const [mode, setMode] = useState<Mode>('flow')
-  const [withMisses, setWithMisses] = useState(false)
+  // Welke worp tonen we in de flow? Standaard de afrondende (laatste) worp.
+  const [throwSel, setThrowSel] = useState<ThrowSel>('last')
 
   const goals = shots.filter((s) => s.goal)
-  const rugGoals = goals.filter((s) => s.type === 'rug').length
   const origins: Point[] = shots.map((s) => ({ x: s.x, y: s.y }))
   const goalLandings: Point[] = goals.map((s) => ({ x: s.landX, y: s.landY }))
   const convPoints: ConvPoint[] = shots.map((s) => ({ x: s.x, y: s.y, goal: s.goal }))
 
-  // Flow-trajecten: lijn van vertrekpunt (fromX/fromY) naar landingsplek (x/y).
-  const flowSource = withMisses ? shots : goals
+  // Flow-trajecten: van vertrekpunt (x/y) naar landingsplek (landX/landY), per gekozen worp.
+  const flowSel = flowShots.filter((s) =>
+    throwSel === 'all' ? true : throwSel === 'last' ? s.isLast : s.throwNumber === throwSel,
+  )
+  const flowGoals = flowSel.filter((s) => s.goal).length
   const markers: FieldMarker[] =
     mode === 'flow'
-      ? flowSource.map((s) => ({
+      ? flowSel.map((s) => ({
           x: s.landX,
           y: s.landY,
           fromX: s.x,
           fromY: s.y,
-          color: s.goal ? (s.type === 'rug' ? C_RUG : C_GOAL) : C_MISS,
-          r: s.goal ? 4 : 2.4,
+          color: flowColor(s),
+          r: s.goal ? 4 : 2.6,
         }))
       : []
 
@@ -50,6 +69,15 @@ export function TeamFlowMap({ shots }: { shots: DangerShot[] }) {
         <button type="button" className={mode === 'doelpunten' ? 'on' : ''} onClick={() => setMode('doelpunten')}>Doelhitte</button>
         <button type="button" className={mode === 'gevaar' ? 'on' : ''} onClick={() => setMode('gevaar')}>Gevaarzone</button>
       </div>
+
+      {mode === 'flow' && (
+        <div className="gev-controls flow-throwsel">
+          <span className="flow-throwsel-lbl">Worp:</span>
+          {THROW_OPTS.map(([v, l]) => (
+            <button key={String(v)} type="button" className={throwSel === v ? 'on' : ''} onClick={() => setThrowSel(v)}>{l}</button>
+          ))}
+        </div>
+      )}
 
       <FieldSchema
         className="gev-field"
@@ -64,13 +92,14 @@ export function TeamFlowMap({ shots }: { shots: DangerShot[] }) {
 
       {mode === 'flow' ? (
         <div className="gev-legend">
-          <span><i style={{ background: C_GOAL }} /> doelpunt (nek)</span>
+          <span><i style={{ background: C_GOAL }} /> doelpunt</span>
           <span><i style={{ background: C_RUG }} /> rugworp (+2)</span>
-          {withMisses && <span><i style={{ background: C_MISS }} /> gemist</span>}
-          <label className="flow-check">
-            <input type="checkbox" checked={withMisses} onChange={(e) => setWithMisses(e.target.checked)} /> ook gemiste pogingen
-          </label>
-          <span className="gev-note">van waar ze gooien → waar ze scoren · {goals.length} doelpunten{rugGoals ? ` (${rugGoals} rug)` : ''}</span>
+          <span><i style={{ background: C_LOSS }} /> balverlies</span>
+          <span><i style={{ background: C_ADV }} /> doorspelend</span>
+          <span className="gev-note">
+            van waar → waar naartoe · {flowSel.length} {flowSel.length === 1 ? 'worp' : 'worpen'}
+            {flowGoals ? ` · ${flowGoals} doelpunt${flowGoals === 1 ? '' : 'en'}` : ''}
+          </span>
         </div>
       ) : mode === 'worpen' ? (
         <div className="gev-legend">

@@ -22,6 +22,23 @@ export interface DangerShot {
   type: ThrowType
 }
 
+/** Eén worp in de worp-/scoreflow — ÁLLE worpen (niet enkel de afrondende), met het worpnummer
+ * en de uitkomst, zodat je per worp (1e/2e/laatste) het traject van→naar kan tonen. */
+export interface FlowShot {
+  x: number
+  y: number
+  landX: number
+  landY: number
+  goal: boolean
+  type: ThrowType
+  /** Worpnummer binnen het balbezit (1, 2, …). */
+  throwNumber: number
+  /** Is dit de afrondende (laatste) worp van het balbezit? */
+  isLast: boolean
+  /** Ruwe uitkomst (goal/caught/out_side/out_back/in_field …) voor de kleur. */
+  outcome: string
+}
+
 export interface DangerBand {
   label: string
   attempts: number
@@ -135,6 +152,8 @@ export interface TeamDanger {
   conversion: number
   avgDistance: number
   shots: DangerShot[]
+  /** Alle worpen (met worpnummer) voor de worp-/scoreflow met keuze per worp. */
+  flowShots: FlowShot[]
   depthBands: DangerBand[]
   zoneBands: DangerBand[]
 }
@@ -174,6 +193,7 @@ export async function buildTeamDanger(
   const matches = matchRes.docs.filter((m) => !(m as { isDemo?: boolean }).isDemo)
 
   const shots: DangerShot[] = []
+  const flowShots: FlowShot[] = []
   let goals = 0
   let distSum = 0
   let distN = 0
@@ -188,13 +208,17 @@ export async function buildTeamDanger(
     }
     for (const s of raw) {
       const mine = s.teamSide === side
-      if ((conceded ? mine : !mine) || !s.isLastThrow) continue
+      if (conceded ? mine : !mine) continue
       const dir = attackDirForSide(s.teamSide, s.period)
       const x = dir === 'up' ? s.fromX : 1 - s.fromX
       const y = dir === 'up' ? s.fromY : 1 - s.fromY
       const landX = dir === 'up' ? s.x : 1 - s.x
       const landY = dir === 'up' ? s.y : 1 - s.y
       const goal = s.outcome === 'goal'
+      // Worp-/scoreflow: álle worpen (van→naar) met worpnummer.
+      flowShots.push({ x, y, landX, landY, goal, type: s.type, throwNumber: s.throwNumber, isLast: s.isLastThrow, outcome: s.outcome })
+      // Banden, conversie en afstand: enkel de afrondende (laatste) worp.
+      if (!s.isLastThrow) continue
       shots.push({ x, y, landX, landY, goal, type: s.type })
       if (goal) goals += 1
       if (typeof s.distance === 'number') {
@@ -225,6 +249,7 @@ export async function buildTeamDanger(
     conversion: attempts ? Math.round((goals / attempts) * 100) / 100 : 0,
     avgDistance: distN ? Math.round((distSum / distN) * 10) / 10 : 0,
     shots,
+    flowShots,
     depthBands: [dNear, dMid, dFar].map(finalize),
     zoneBands: [zL, zM, zR].map(finalize),
   }
