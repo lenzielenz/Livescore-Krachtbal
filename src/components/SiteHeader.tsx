@@ -19,11 +19,12 @@ const PRIMARY: { href: string; label: string; key: NavSection }[] = [
 ]
 
 // Algemene ingangen bovenaan het Meer-menu.
-const GENERAL = [
+const GENERAL: { href: string; label: string; auth?: boolean }[] = [
   { href: '/uitleg', label: '❓ Zo werkt het' },
   { href: '/rangschikking', label: '📊 Stand' },
   { href: '/tornooi', label: '🏆 Tornooi' },
-  { href: '/kantine', label: '🍺 Kantinescherm' },
+  // Kantinescherm enkel voor ingelogde gebruikers (zo kan je het personaliseren).
+  { href: '/kantine', label: '🍺 Kantinescherm', auth: true },
 ]
 
 // Het Meer-menu licht op zodra je op een van deze secties zit. Analyse en Training zijn twee
@@ -94,7 +95,7 @@ export function SiteHeader({ active = null }: { active?: NavSection }) {
                 <div className="sh-more-backdrop" onClick={() => setOpen(false)} />
                 <div className="sh-more-menu">
                   <div className="sh-more-group">
-                    {GENERAL.map((l) => (
+                    {GENERAL.filter((l) => !l.auth || loggedIn).map((l) => (
                       <Link key={l.href} href={l.href} className="sh-more-item" onClick={() => setOpen(false)}>
                         {l.label}
                       </Link>
