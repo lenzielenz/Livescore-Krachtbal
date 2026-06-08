@@ -44,6 +44,8 @@ type Row = {
   // Overname-aanvraag: wie vraagt om over te nemen, en of dat ik ben.
   takeoverName: string | null
   takeoverMine: boolean
+  // Toegewezen scheidsrechter (uit het wedstrijdblad), indien gekoppeld.
+  refereeName: string | null
 }
 
 function Shell({ children }: { children: React.ReactNode }) {
@@ -105,6 +107,20 @@ export default async function ClubPage() {
     limit: 200,
   })
 
+  // Toegewezen scheidsrechter per wedstrijd (uit het wedstrijdblad) — zodat het in de planning zichtbaar is.
+  const planMatchIds = matches.docs.map((m) => m.id)
+  const planSheets = planMatchIds.length
+    ? await payload.find({ collection: 'matchsheets', where: { match: { in: planMatchIds } }, depth: 1, pagination: false }).catch(() => ({ docs: [] as Record<string, unknown>[] }))
+    : { docs: [] as Record<string, unknown>[] }
+  const refByMatch = new Map<number, string>()
+  for (const s of planSheets.docs) {
+    const mid = (s as { match?: unknown }).match
+    const midId = mid && typeof mid === 'object' ? Number((mid as { id?: number }).id) : Number(mid)
+    const ar = (s as { assignedReferee?: unknown }).assignedReferee
+    const name = ar && typeof ar === 'object' ? String((ar as { name?: unknown }).name ?? '') : ''
+    if (Number.isFinite(midId) && name) refByMatch.set(midId, name)
+  }
+
   const rows: Row[] = []
   for (const m of matches.docs) {
     if ((m as { isDemo?: boolean }).isDemo || (m as { analyseOnly?: boolean }).analyseOnly) continue
@@ -132,6 +148,7 @@ export default async function ClubPage() {
         coachMine: coach?.id != null && Number(coach.id) === myUserId,
         takeoverName: takeover ? (takeover.name || takeover.email || 'Iemand') : null,
         takeoverMine: takeover?.id != null && Number(takeover.id) === myUserId,
+        refereeName: refByMatch.get(m.id) ?? null,
       })
     } catch {
       // Wedstrijd met ontbrekende ploeg overslaan.
@@ -229,6 +246,7 @@ export default async function ClubPage() {
                 <span className="club-match-meta">
                   {new Date(m.date).toLocaleDateString('nl-BE', { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
                   {m.location ? <> · 📍 {m.location}</> : null}
+                  {m.refereeName ? <> · 🟡 SR: {m.refereeName}</> : null}
                 </span>
                 <span className="club-match-coach">
                   <ClaimButton matchId={m.id} coachName={m.coachName} mine={m.coachMine} takeoverName={m.takeoverName} takeoverMine={m.takeoverMine} />

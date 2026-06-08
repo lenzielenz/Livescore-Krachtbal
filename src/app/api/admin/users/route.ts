@@ -51,11 +51,25 @@ export async function POST(req: Request) {
   const analyseAccess = Boolean(body.analyseAccess)
   const trainingAccess = Boolean(body.trainingAccess)
 
+  // Scheidsrechtersdossier (official) koppelen — enkel meesturen als het veld aanwezig is.
+  const data: Record<string, unknown> = { roles: roles as UserRole[], club, analyseAccess, trainingAccess }
+  if ('officialId' in body) {
+    let official: number | null = null
+    if (body.officialId != null && body.officialId !== '') {
+      const oid = Number(body.officialId)
+      if (Number.isFinite(oid) && oid > 0) {
+        const exists = await payload.findByID({ collection: 'officials', id: oid, depth: 0 }).catch(() => null)
+        if (exists) official = oid
+      }
+    }
+    data.official = official
+  }
+
   try {
     await payload.update({
       collection: 'users',
       id: userId,
-      data: { roles: roles as UserRole[], club, analyseAccess, trainingAccess },
+      data,
       overrideAccess: true,
     })
   } catch {

@@ -11,9 +11,11 @@ type Account = {
   clubId: number | null
   analyseAccess: boolean
   trainingAccess: boolean
+  officialId: number | null
   analyseCount: number
 }
 type RoleOption = { label: string; value: string }
+type Official = { id: number; name: string }
 
 // Volgorde voor de groepering (hoogste rol bepaalt de groep van een account).
 const TYPE_ORDER = ['admin', 'federatie', 'scheidsrechter', 'club-beheerder', 'scorekeeper', 'kapitein', 'viewer'] as const
@@ -33,17 +35,20 @@ function primaryType(roles: string[]): string {
 
 const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
 
-function AccountRow({ acc, clubs, roleOptions }: { acc: Account; clubs: { id: number; name: string }[]; roleOptions: RoleOption[] }) {
+function AccountRow({ acc, clubs, officials, roleOptions }: { acc: Account; clubs: { id: number; name: string }[]; officials: Official[]; roleOptions: RoleOption[] }) {
   const [roles, setRoles] = useState<string[]>(acc.roles)
   const [clubId, setClubId] = useState<string>(acc.clubId != null ? String(acc.clubId) : '')
+  const [officialId, setOfficialId] = useState<string>(acc.officialId != null ? String(acc.officialId) : '')
   const [analyse, setAnalyse] = useState<boolean>(acc.analyseAccess)
   const [training, setTraining] = useState<boolean>(acc.trainingAccess)
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
 
+  const isReferee = roles.includes('scheidsrechter')
   const dirty =
     roles.slice().sort().join(',') !== acc.roles.slice().sort().join(',') ||
     clubId !== (acc.clubId != null ? String(acc.clubId) : '') ||
+    officialId !== (acc.officialId != null ? String(acc.officialId) : '') ||
     analyse !== acc.analyseAccess ||
     training !== acc.trainingAccess
 
@@ -61,13 +66,14 @@ function AccountRow({ acc, clubs, roleOptions }: { acc: Account; clubs: { id: nu
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ userId: acc.id, roles, clubId: clubId || null, analyseAccess: analyse, trainingAccess: training }),
+        body: JSON.stringify({ userId: acc.id, roles, clubId: clubId || null, officialId: officialId || null, analyseAccess: analyse, trainingAccess: training }),
       })
       const data = (await res.json().catch(() => ({}))) as { error?: string }
       if (!res.ok) setMsg(data.error ?? 'Bewaren mislukt.')
       else {
         acc.roles = roles
         acc.clubId = clubId ? Number(clubId) : null
+        acc.officialId = officialId ? Number(officialId) : null
         acc.analyseAccess = analyse
         acc.trainingAccess = training
         setMsg('✓ Bewaard')
@@ -126,6 +132,14 @@ function AccountRow({ acc, clubs, roleOptions }: { acc: Account; clubs: { id: nu
             <option key={c.id} value={c.id}>{c.name}</option>
           ))}
         </select>
+        {isReferee && (
+          <select className="acc-club" value={officialId} onChange={(e) => { setMsg(null); setOfficialId(e.target.value) }} aria-label="Scheidsrechtersdossier" title="Koppel het scheidsrechtersdossier (zo werkt de persoonlijke QR/code)">
+            <option value="">🟨 Geen dossier —</option>
+            {officials.map((o) => (
+              <option key={o.id} value={o.id}>🟨 {o.name}</option>
+            ))}
+          </select>
+        )}
         <button type="button" className="acc-save" disabled={!dirty || saving} onClick={save}>
           {saving ? 'Bezig…' : 'Bewaren'}
         </button>
@@ -214,7 +228,7 @@ function AnalyseTransfer({ users }: { users: Account[] }) {
   )
 }
 
-export function AccountsManager({ users, clubs, roleOptions }: { users: Account[]; clubs: { id: number; name: string }[]; roleOptions: RoleOption[] }) {
+export function AccountsManager({ users, clubs, officials, roleOptions }: { users: Account[]; clubs: { id: number; name: string }[]; officials: Official[]; roleOptions: RoleOption[] }) {
   const [query, setQuery] = useState('')
 
   const groups = useMemo(() => {
@@ -247,7 +261,7 @@ export function AccountsManager({ users, clubs, roleOptions }: { users: Account[
           <section key={type} className="acc-group">
             <h2 className="acc-group-head">{TYPE_LABEL[type]} <span className="acc-count">{list.length}</span></h2>
             {list.map((acc) => (
-              <AccountRow key={acc.id} acc={acc} clubs={clubs} roleOptions={roleOptions} />
+              <AccountRow key={acc.id} acc={acc} clubs={clubs} officials={officials} roleOptions={roleOptions} />
             ))}
           </section>
         ))
