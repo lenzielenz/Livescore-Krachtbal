@@ -203,6 +203,8 @@ export interface RecordThrowInput {
   gameClock?: number
   /** Speler van de tegenploeg die de bal ving (enkel bij een gevangen worp). */
   caughtById?: number
+  /** Speler van de tegenploeg die de bal naar de achterman tikte vóór de vangst (optioneel). */
+  tappedById?: number
   /** Audit-trail: de gebruiker die de worp registreert. */
   actorId?: number
 }
@@ -266,6 +268,8 @@ export async function recordThrow(payload: Payload, input: RecordThrowInput) {
       gameClock: clock,
       // Wie ving de bal (enkel zinvol bij een gevangen worp).
       ...(outcome === 'caught' && input.caughtById ? { caughtBy: input.caughtById } : {}),
+      // Wie tikte de bal naar de achterman vóór de vangst (optioneel).
+      ...(outcome === 'caught' && input.tappedById ? { tappedBy: input.tappedById } : {}),
       ...(input.actorId ? { createdBy: input.actorId } : {}),
     },
     overrideAccess: true,
@@ -1112,6 +1116,51 @@ export async function buildMatchStats(payload: Payload, matchId: number) {
   const { stat, shots } = await loadMatchThrowData(payload, matchId)
   const { aggregateStats } = await import('./stats')
   return { stats: aggregateStats(stat), shots }
+}
+
+export interface DefensePlayer {
+  playerId: number
+  name: string
+  shirtNumber: number
+  teamSide: TeamSide
+  /** Vangsten (de bal van de tegenstander gevangen). */
+  catches: number
+  /** Tikken naar de achterman (verdedigende assist). */
+  taps: number
+  /** Totale verdedigende acties (vangsten + tikken). */
+  total: number
+}
+
+/** Verdedigende statistiek per speler (vangsten + tikken). Enkel zinvol op analyse-wedstrijden,
+ * waar de aantekenaar de vanger/tikker registreert. */
+export async function buildDefenseStats(payload: Payload, matchId: number): Promise<DefensePlayer[]> {
+  const { homeId } = await loadMatch(payload, matchId)
+  const res = await payload.find({
+    collection: 'throws',
+    where: { and: [{ match: { equals: matchId } }, { outcome: { equals: 'caught' } }] },
+    depth: 1,
+    limit: 2000,
+  })
+  const by = new Map<number, DefensePlayer>()
+  const ensure = (pl: unknown): DefensePlayer | null => {
+    if (!pl || typeof pl !== 'object') return null
+    const p = pl as { id?: number; name?: string; shirtNumber?: number; team?: unknown }
+    if (typeof p.id !== 'number') return null
+    let d = by.get(p.id)
+    if (!d) {
+      const teamId = p.team && typeof p.team === 'object' ? (p.team as { id?: number }).id ?? -1 : (p.team as number) ?? -1
+      d = { playerId: p.id, name: p.name ?? '?', shirtNumber: p.shirtNumber ?? 0, teamSide: sideOfTeam(teamId, homeId) ?? 'home', catches: 0, taps: 0, total: 0 }
+      by.set(p.id, d)
+    }
+    return d
+  }
+  for (const t of res.docs) {
+    const c = ensure(t.caughtBy)
+    if (c) { c.catches += 1; c.total += 1 }
+    const tp = ensure(t.tappedBy)
+    if (tp) { tp.taps += 1; tp.total += 1 }
+  }
+  return [...by.values()].sort((a, b) => b.total - a.total || b.catches - a.catches)
 }
 
 export interface TimelineItem {

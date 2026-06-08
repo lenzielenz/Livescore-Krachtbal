@@ -7,7 +7,7 @@ import { TeamLogo } from '@/components/TeamLogo'
 import { canAnalyse } from '@/lib/access'
 import { canViewAnalyseMatch } from '@/lib/analyse-access'
 import { getAuthUser } from '@/lib/auth-user'
-import { buildMatchSheet, buildMatchStats, buildMatchState } from '@/lib/match-engine'
+import { buildDefenseStats, buildMatchSheet, buildMatchStats, buildMatchState } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
 import { reeksNaam } from '@/lib/reeksen'
 import { AnalyseDetailView } from './AnalyseDetailView'
@@ -63,6 +63,7 @@ export default async function AnalyseDetailPage({ params }: { params: Promise<{ 
     notFound()
   }
 
+  const defense = await buildDefenseStats(payload, matchId).catch(() => [])
   const sheet = await buildMatchSheet(payload, matchId).catch(() => null)
   const momentumGoals = (sheet?.goals ?? [])
     .slice()
@@ -121,6 +122,24 @@ export default async function AnalyseDetailPage({ params }: { params: Promise<{ 
           reeks={reeks}
           datum={datum}
         />
+
+        {defense.length > 0 && (
+          <section className="an-recap">
+            <h2 className="section-title">🛡️ Verdediging <span className="an-chart-hint">wie pakt de ballen af</span></h2>
+            <div className="an-recap-cards">
+              {defense.slice(0, 4).map((d) => (
+                <div key={d.playerId} className={`an-recap-card side-${d.teamSide}`}>
+                  <span className="an-recap-ico" aria-hidden>🧤</span>
+                  <span className="an-recap-body">
+                    <span className="an-recap-lbl">#{d.shirtNumber} {d.name.split(/\s+/)[0]}</span>
+                    <span className="an-recap-val">{d.total} {d.total === 1 ? 'actie' : 'acties'}</span>
+                    <span className="an-recap-who">{d.catches} {d.catches === 1 ? 'vangst' : 'vangsten'}{d.taps > 0 ? ` · ${d.taps} ${d.taps === 1 ? 'tik' : 'tikken'}` : ''}</span>
+                  </span>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         <ErrorCatch label="De analyse-details">
           <AnalyseDetailView

@@ -96,6 +96,8 @@ export function Scorekeeper({
   const [pendingOut, setPendingOut] = useState<{ p: Point; tapCount: 1 | 2; playerId: number; isDoelworp: boolean } | null>(null)
   // Gevangen worp: kies welke tegenstander de bal ving.
   const [pendingCatch, setPendingCatch] = useState<{ p: Point; tapCount: 1 | 2; playerId: number } | null>(null)
+  // Optionele "getikt naar de achterman door?"-stap na een diepe vangst (achterman).
+  const [pendingTap, setPendingTap] = useState<{ p: Point; tapCount: 1 | 2; playerId: number; catcherId: number } | null>(null)
   const [subOpen, setSubOpen] = useState(false)
   const [subSide, setSubSide] = useState<'home' | 'away'>('home')
   // Vlotte wissel: kies (in willekeurige volgorde) één veldspeler (eruit) en één bankspeler
@@ -241,7 +243,7 @@ export function Scorekeeper({
 
   // Registreer de worp (na ev. aanraking-vraag) en geef visuele feedback.
   const submitThrow = useCallback(
-    async (p: Point, tapCount: 1 | 2, touchedBeforeOut: boolean, playerId: number, caughtById?: number) => {
+    async (p: Point, tapCount: 1 | 2, touchedBeforeOut: boolean, playerId: number, caughtById?: number, tappedById?: number) => {
       if (!poss) return
       const scoringSide = poss.side
       const color = scoringSide === 'home' ? HOME_COLOR : AWAY_COLOR
@@ -270,6 +272,7 @@ export function Scorekeeper({
         tapCount,
         touchedBeforeOut,
         caughtById,
+        tappedById,
         gameClock: Math.floor(clock),
       })) as { outcome?: string; type?: string; points?: number; isCross?: boolean; state?: MatchState } | null
 
@@ -576,7 +579,13 @@ export function Scorekeeper({
         const catchers = possSide === 'home' ? awayPlayers : homePlayers
         const submit = (catcherId?: number) => {
           const { p, tapCount, playerId } = pendingCatch
+          const catcher = catcherId ? catchers.find((c) => c.id === catcherId) : undefined
           setPendingCatch(null)
+          // Diepe vangst door de achterman → vraag optioneel wie naar hem tikte.
+          if (catcherId && catcher && catcher.position === 'achter') {
+            setPendingTap({ p, tapCount, playerId, catcherId })
+            return
+          }
           void submitThrow(p, tapCount, false, playerId, catcherId)
         }
         // Slimme suggestie (geen gesleur): de zone van de vangst bepaalt de vleugel-kant; daarnaast
@@ -623,6 +632,35 @@ export function Scorekeeper({
               )}
               <div className="sk-modal-btns">
                 <button type="button" className="sk-btn" onClick={() => submit(undefined)}>Onbekend / overslaan</button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+
+      {pendingTap && (() => {
+        // Wie tikte naar de achterman? De vangende ploeg (tegenstander), zonder de vanger zelf.
+        const tappers = (possSide === 'home' ? awayPlayers : homePlayers).filter((c) => c.id !== pendingTap.catcherId)
+        const submit = (tapperId?: number) => {
+          const { p, tapCount, playerId, catcherId } = pendingTap
+          setPendingTap(null)
+          void submitThrow(p, tapCount, false, playerId, catcherId, tapperId)
+        }
+        return (
+          <div className="sk-modal-overlay">
+            <div className="sk-modal sk-lineup-modal">
+              <h3>Getikt naar de achterman door?</h3>
+              <p>Wie tikte de bal naar de achterman? (optioneel)</p>
+              <div className="sk-lineup-pick-grid">
+                {tappers.map((c) => (
+                  <button type="button" key={c.id} className="sk-pick-player" onClick={() => submit(c.id)}>
+                    <span className="sk-pick-num">{c.shirtNumber}</span>
+                    <span className="sk-pick-naam">{firstName(c.name)}</span>
+                  </button>
+                ))}
+              </div>
+              <div className="sk-modal-btns">
+                <button type="button" className="sk-btn" onClick={() => submit(undefined)}>Niet getikt / direct</button>
               </div>
             </div>
           </div>
