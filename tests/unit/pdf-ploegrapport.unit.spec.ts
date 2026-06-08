@@ -83,6 +83,7 @@ const danger: TeamDanger = {
     { x: 0.5, y: 0.5, landX: 0.5, landY: 0.6, goal: false, type: 'nek' },
     { x: 0.8, y: 0.2, landX: 0.85, landY: 0.78, goal: true, type: 'nek' },
   ],
+  flowShots: [],
   depthBands: [
     { label: 'Dichtbij', attempts: 8, goals: 7, conversion: 0.88 },
     { label: 'Midden', attempts: 12, goals: 9, conversion: 0.75 },
@@ -105,6 +106,7 @@ const conceded: TeamDanger = {
     { x: 0.6, y: 0.3, landX: 0.8, landY: 0.8, goal: true, type: 'nek' },
     { x: 0.5, y: 0.4, landX: 0.5, landY: 0.7, goal: false, type: 'nek' },
   ],
+  flowShots: [],
   depthBands: [
     { label: 'Dichtbij doel', attempts: 6, goals: 5, conversion: 0.83 },
     { label: 'Middenveld', attempts: 5, goals: 2, conversion: 0.4 },

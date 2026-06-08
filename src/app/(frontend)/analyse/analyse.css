@@ -612,6 +612,10 @@ select.rang-picker {
   font-weight: 600;
 }
 .gev-controls { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+/* Worp-keuze-rij onder de modus-knoppen (Scoreflow): kleiner, met label. */
+.flow-throwsel { align-items: center; margin: -2px 0 10px; }
+.flow-throwsel-lbl { font-size: 0.78rem; color: var(--dim); margin-right: 2px; }
+.flow-throwsel button { padding: 4px 11px; font-size: 0.78rem; }
 .gev-controls button {
   padding: 6px 12px;
   border: 1px solid var(--line);
