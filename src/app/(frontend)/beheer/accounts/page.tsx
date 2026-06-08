@@ -31,9 +31,10 @@ export default async function AccountsPage() {
   }
 
   const payload = await getPayloadClient()
-  const [usersRes, clubsRes, analyseRes] = await Promise.all([
+  const [usersRes, clubsRes, officialsRes, analyseRes] = await Promise.all([
     payload.find({ collection: 'users', sort: 'email', depth: 0, limit: 1000 }).catch(() => ({ docs: [] as Record<string, unknown>[] })),
     payload.find({ collection: 'clubs', sort: 'name', depth: 0, limit: 500 }).catch(() => ({ docs: [] as { id: number; name: string }[] })),
+    payload.find({ collection: 'officials', where: { type: { equals: 'scheidsrechter' } }, sort: 'name', depth: 0, limit: 500 }).catch(() => ({ docs: [] as { id: number; name: string }[] })),
     // Analyse-opnames per eigenaar tellen, zodat de admin ziet wie wat opnam (en het kan samenbrengen).
     payload
       .find({ collection: 'matches', where: { analyseOnly: { equals: true } }, depth: 0, limit: 5000, pagination: false })
@@ -55,9 +56,11 @@ export default async function AccountsPage() {
     clubId: rel((u as { club?: unknown }).club),
     analyseAccess: Boolean((u as { analyseAccess?: unknown }).analyseAccess),
     trainingAccess: Boolean((u as { trainingAccess?: unknown }).trainingAccess),
+    officialId: rel((u as { official?: unknown }).official),
     analyseCount: analyseCounts[u.id as number] ?? 0,
   }))
   const clubs = clubsRes.docs.map((c) => ({ id: c.id as number, name: c.name as string }))
+  const officials = officialsRes.docs.map((o) => ({ id: o.id as number, name: o.name as string }))
 
   return (
     <>
@@ -66,10 +69,11 @@ export default async function AccountsPage() {
         <h1 className="page-title"><span className="brand">Accounts</span></h1>
         <p className="acc-page-intro">
           Beheer alle accounts: ken rollen toe (supporter, club, scheidsrechter, federatie, admin), geef
-          analyse- of training-toegang en koppel een club. Onderaan kan je de analyse-opnames van
-          gebruikers samenbrengen.
+          analyse- of training-toegang, koppel een club en — voor scheidsrechters — koppel hun
+          scheidsrechtersdossier (zo werkt hun persoonlijke QR/code). Onderaan kan je de analyse-opnames
+          van gebruikers samenbrengen.
         </p>
-        <AccountsManager users={users} clubs={clubs} roleOptions={[...ROLE_OPTIONS]} />
+        <AccountsManager users={users} clubs={clubs} officials={officials} roleOptions={[...ROLE_OPTIONS]} />
       </div>
     </>
   )

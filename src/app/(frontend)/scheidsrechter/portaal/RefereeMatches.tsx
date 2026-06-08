@@ -104,19 +104,21 @@ export function RefereeMatches({
                   </span>
                 </div>
                 <div className="rm-actions">
-                  {free && (myOfficialId != null || isFederation) && (
+                  {/* Vrije wedstrijd: een SR neemt ze zelf; de federatie wijst ze toe. */}
+                  {free && myOfficialId != null && (
                     <button type="button" className="wb-btn wb-btn-primary rm-btn" disabled={busy === m.id} onClick={() => act(m.id, 'claim')}>
                       {busy === m.id ? '…' : 'Ik neem deze'}
                     </button>
                   )}
-                  {canHandoff && !free && (
+                  {/* Doorgeven (toegewezen wedstrijd) of toewijzen (federatie, vrije wedstrijd) via dezelfde keuze. */}
+                  {((!free && canHandoff) || (free && isFederation)) && (
                     handoff === m.id ? (
                       <span className="rm-handoff">
                         <select
                           className="wb-input rm-select"
                           defaultValue=""
                           onChange={(e) => e.target.value && act(m.id, 'handoff', Number(e.target.value))}
-                          aria-label="Doorgeven aan"
+                          aria-label={free ? 'Toewijzen aan' : 'Doorgeven aan'}
                         >
                           <option value="" disabled>Kies scheidsrechter…</option>
                           {officials.filter((o) => o.id !== m.assignedRefId).map((o) => (
@@ -127,11 +129,11 @@ export function RefereeMatches({
                       </span>
                     ) : (
                       <button type="button" className="wb-btn rm-btn" disabled={busy === m.id} onClick={() => setHandoff(m.id)}>
-                        Doorgeven
+                        {free ? 'Toewijzen' : 'Doorgeven'}
                       </button>
                     )
                   )}
-                  {canHandoff && !free && (
+                  {!free && canHandoff && (
                     <button type="button" className="wb-link-btn rm-release" disabled={busy === m.id} onClick={() => act(m.id, 'release')}>
                       vrijgeven
                     </button>
