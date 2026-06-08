@@ -338,16 +338,21 @@ export function Scorekeeper({
         setPendingThrow(null)
         return
       }
-      // Gevangen → vraag welke tegenstander de bal ving.
+      // Gevangen → enkel op een ANALYSE-wedstrijd vragen wie de bal ving (verdedigende registratie).
+      // Op een gewone live-match gaat de gevangen worp meteen door — geen extra vraag, geen gesleur.
       if (outcome === 'caught') {
-        setPendingCatch({ p, tapCount, playerId })
+        if (isAnalyseOnly) {
+          setPendingCatch({ p, tapCount, playerId })
+        } else {
+          void submitThrow(p, tapCount, false, playerId)
+        }
         setPendingThrow(null)
         return
       }
       void submitThrow(p, tapCount, false, playerId)
       setPendingThrow(null)
     },
-    [pendingThrow, poss, tapMode, state.match.goalAreaDepth, submitThrow],
+    [pendingThrow, poss, tapMode, state.match.goalAreaDepth, submitThrow, isAnalyseOnly],
   )
 
   const isScheduled = state.match.status === 'scheduled'
