@@ -80,6 +80,14 @@ export const Throws: CollectionConfig = {
           type: 'relationship',
           relationTo: 'players',
         },
+        {
+          // Speler van de tegenploeg die de bal naar de achterman tikte vóór de vangst (optioneel,
+          // enkel bij een diepe gevangen worp). Voedt de verdedigende statistiek.
+          name: 'tappedBy',
+          label: 'Getikt door',
+          type: 'relationship',
+          relationTo: 'players',
+        },
       ],
     },
     {

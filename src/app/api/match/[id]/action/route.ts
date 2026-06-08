@@ -91,6 +91,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
           touchedBeforeOut: Boolean(body.touchedBeforeOut),
           gameClock: body.gameClock !== undefined ? Number(body.gameClock) : undefined,
           caughtById: body.caughtById !== undefined && body.caughtById !== null ? Number(body.caughtById) : undefined,
+          tappedById: body.tappedById !== undefined && body.tappedById !== null ? Number(body.tappedById) : undefined,
           actorId,
         })
         return Response.json(result)

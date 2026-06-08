@@ -976,6 +976,7 @@ export interface Throw {
   team: number | Team;
   player: number | Player;
   caughtBy?: (number | null) | Player;
+  tappedBy?: (number | null) | Player;
   throwNumber: number;
   type: 'nek' | 'rug';
   outcome: 'in_field' | 'goal' | 'caught' | 'out_side' | 'out_back';
@@ -1593,6 +1594,7 @@ export interface ThrowsSelect<T extends boolean = true> {
   team?: T;
   player?: T;
   caughtBy?: T;
+  tappedBy?: T;
   throwNumber?: T;
   type?: T;
   outcome?: T;
