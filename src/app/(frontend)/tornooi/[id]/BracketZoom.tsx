@@ -72,9 +72,10 @@ export function BracketZoom({ children }: { children: React.ReactNode }) {
       e.stopPropagation()
       setFit(false)
     } else {
-      // Ingezoomd → een tik op een lege plek (geen knop/link) gaat terug naar overzicht.
+      // Ingezoomd → een tik náást de kaarten (of de Overzicht-knop) gaat terug naar overzicht; een
+      // tik óp een kaart laat je gewoon interageren (Aantekenen/Veld, score) zonder uit te zoomen.
       const el = e.target as HTMLElement
-      if (el.closest('a, button')) return
+      if (el.closest('.trn-match')) return
       setFit(true)
     }
   }
