@@ -97,6 +97,36 @@ function RoundRobin({ id, state, canManage, logos }: { id: number; state: Tourna
 export function BracketBoard({ id, initial, canManage = false, logos = {} }: { id: number; initial: TournamentState; canManage?: boolean; logos?: Record<string, string> }) {
   const state = useTournamentStream(id, initial) ?? initial
 
+  // Tweezijdige boom: de finale (laatste ronde) staat centraal; elke eerdere ronde wordt in een
+  // linker- en rechterhelft gesplitst die naar het midden toe groeien. Standaard-seeding zorgt dat
+  // de eerste helft van een ronde uit de eerste helft van de vorige voortkomt, dus de splitsing op
+  // index is consistent over de rondes heen.
+  const R = state.rounds.length
+  const finalRound = R > 0 ? state.rounds[R - 1] : null
+  const sideRounds = R > 1 ? state.rounds.slice(0, R - 1) : []
+  const halfOf = (n: number) => Math.ceil(n / 2)
+  const leftCols = sideRounds
+    .map((r) => ({ round: r.round, label: r.label, matches: r.matches.slice(0, halfOf(r.matches.length)) }))
+    .filter((c) => c.matches.length > 0)
+  const rightCols = sideRounds
+    .map((r) => ({ round: r.round, label: r.label, matches: r.matches.slice(halfOf(r.matches.length)) }))
+    .filter((c) => c.matches.length > 0)
+
+  const renderColumn = (c: { round: number; label: string; matches: TMatchState[] }, prefix: string) => (
+    <section key={`${prefix}${c.round}`} className="trn-col">
+      <h2 className="trn-col-title">{c.label}</h2>
+      <div className="trn-col-body">
+        {pairUp(c.matches).map((pair, pi) => (
+          <div className="trn-pair" key={pi}>
+            {pair.map((m) => (
+              <MatchCard key={m.id} id={id} m={m} canManage={canManage} logos={logos} />
+            ))}
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+
   return (
     <div className="trn-page">
       <header className="trn-top">
@@ -116,25 +146,20 @@ export function BracketBoard({ id, initial, canManage = false, logos = {} }: { i
       {state.format === 'roundrobin' ? (
         <RoundRobin id={id} state={state} canManage={canManage} logos={logos} />
       ) : (
-      <main className="trn-bracket">
-        {state.rounds.map((r, ri) => {
-          const isLast = ri === state.rounds.length - 1
-          return (
-            <section key={r.round} className={`trn-col ${isLast ? 'trn-col-last' : ''}`}>
-              <h2 className="trn-col-title">{r.label}</h2>
-              <div className="trn-col-body">
-                {pairUp(r.matches).map((pair, pi) => (
-                  <div className="trn-pair" key={pi}>
-                    {pair.map((m) => (
-                      <MatchCard key={m.id} id={id} m={m} canManage={canManage} logos={logos} />
-                    ))}
-                  </div>
+        <main className="trn-bracket2">
+          {leftCols.length > 0 && <div className="trn-side trn-side-left">{leftCols.map((c) => renderColumn(c, 'l'))}</div>}
+          {finalRound && finalRound.matches.length > 0 && (
+            <div className="trn-center">
+              <h2 className="trn-col-title trn-final-title">{finalRound.label}</h2>
+              <div className="trn-center-body">
+                {finalRound.matches.map((m) => (
+                  <MatchCard key={m.id} id={id} m={m} canManage={canManage} logos={logos} />
                 ))}
               </div>
-            </section>
-          )
-        })}
-      </main>
+            </div>
+          )}
+          {rightCols.length > 0 && <div className="trn-side trn-side-right">{rightCols.map((c) => renderColumn(c, 'r'))}</div>}
+        </main>
       )}
 
       {state.format !== 'roundrobin' && state.thirdPlace && (
