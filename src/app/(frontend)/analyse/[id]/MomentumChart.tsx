@@ -14,6 +14,19 @@ const PAD = 8
 
 const timeKey = (half: number, gameClock: number) => half * 100000 + gameClock
 
+// Vijfpuntige ster (voor de rugworp-markering) — als echte vorm i.p.v. een glyph, zodat we hem
+// groot en duidelijk kunnen tekenen.
+function starPoints(cx: number, cy: number, outer: number): string {
+  const inner = outer * 0.44
+  const pts: string[] = []
+  for (let i = 0; i < 10; i++) {
+    const r = i % 2 === 0 ? outer : inner
+    const a = (-90 + i * 36) * (Math.PI / 180)
+    pts.push(`${(cx + r * Math.cos(a)).toFixed(1)},${(cy + r * Math.sin(a)).toFixed(1)}`)
+  }
+  return pts.join(' ')
+}
+
 export function MomentumChart({
   goals,
   timeouts = [],
@@ -94,28 +107,27 @@ export function MomentumChart({
         <line x1={PAD} y1={mid} x2={W - PAD} y2={mid} className="an-mom-zero" />
         <path d={areaPath} fill="url(#momFill)" />
         <polyline points={linePts.join(' ')} className="an-mom-line" fill="none" />
-        {seq.map((s, i) =>
-          s.rug ? (
-            // Rugworp (+2): een ster-markering.
-            <text
-              key={i}
-              x={xAt(s.x)}
-              y={yAt(s.diff) + 3.4}
-              fontSize={10}
-              textAnchor="middle"
-              fill={s.side === 'home' ? 'var(--home)' : 'var(--away)'}
-            >
-              ★
-            </text>
-          ) : (
-            <circle key={i} cx={xAt(s.x)} cy={yAt(s.diff)} r={2.6} fill={s.side === 'home' ? 'var(--home)' : 'var(--away)'} />
-          ),
-        )}
+        {/* Gewone doelpunten: stippen. */}
+        {seq.filter((s) => !s.rug).map((s, i) => (
+          <circle key={`d${i}`} cx={xAt(s.x)} cy={yAt(s.diff)} r={2.6} fill={s.side === 'home' ? 'var(--home)' : 'var(--away)'} />
+        ))}
+        {/* Rugworpen (+2): een grote ster met gouden rand, bovenop — duidelijk te onderscheiden. */}
+        {seq.filter((s) => s.rug).map((s, i) => (
+          <polygon
+            key={`r${i}`}
+            points={starPoints(xAt(s.x), yAt(s.diff), 6.5)}
+            fill={s.side === 'home' ? 'var(--home)' : 'var(--away)'}
+            stroke="#f4c430"
+            strokeWidth={1.4}
+            strokeLinejoin="round"
+            paintOrder="stroke"
+          />
+        ))}
       </svg>
       <div className="an-mom-legend">
         <span><i className="h" style={{ background: homeC }} /> {teams.home} leidt</span>
         <span><i className="a" style={{ background: awayC }} /> {teams.away} leidt</span>
-        <span className="an-mom-leg-mark">★ rugworp (+2)</span>
+        <span className="an-mom-leg-mark"><span style={{ color: '#f4c430' }}>★</span> rugworp (+2)</span>
         {timeouts.length > 0 && <span className="an-mom-leg-mark">┊ time-out</span>}
         <span className="an-mom-note">{n} doelpunten · grootste kloof {maxAbs} · eindwinst: {leader}</span>
       </div>

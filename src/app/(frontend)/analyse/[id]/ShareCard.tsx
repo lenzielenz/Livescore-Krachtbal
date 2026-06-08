@@ -20,6 +20,18 @@ const FORMATS: Record<Fmt, { W: number; H: number; label: string }> = {
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v))
 const first = (n: string) => n.split(/\s+/)[0]
 
+// Vijfpuntige ster voor de rugworp-markering op het scoreverloop.
+function starPoints(cx: number, cy: number, outer: number): string {
+  const inner = outer * 0.44
+  const pts: string[] = []
+  for (let i = 0; i < 10; i++) {
+    const r = i % 2 === 0 ? outer : inner
+    const a = (-90 + i * 36) * (Math.PI / 180)
+    pts.push(`${(cx + r * Math.cos(a)).toFixed(1)},${(cy + r * Math.sin(a)).toFixed(1)}`)
+  }
+  return pts.join(' ')
+}
+
 // Eén compacte regel onder de badge (afgekort indien nodig) — zo botst de naam nooit met de
 // uitslag-pil eronder, ongeacht het formaat.
 function shortName(name: string, max = 18): string {
@@ -285,7 +297,7 @@ export function ShareCard({
             <path d={areaPath} fill="url(#momFill)" />
             <polyline points={linePts.join(' ')} fill="none" stroke={INK} strokeWidth={clamp(dot * 0.65, 2.5, 4)} strokeLinejoin="round" strokeLinecap="round" />
             {seq.filter((s) => s.rug).map((s, i) => (
-              <circle key={i} cx={xAt(s.x)} cy={yAt(s.diff)} r={dot} fill={s.side === 'home' ? homeC : awayC} stroke="#08130d" strokeWidth={2} />
+              <polygon key={i} points={starPoints(xAt(s.x), yAt(s.diff), dot * 2.1)} fill={s.side === 'home' ? homeC : awayC} stroke={GOLD} strokeWidth={1.6} strokeLinejoin="round" paintOrder="stroke" />
             ))}
           </>
         ) : (
