@@ -14,7 +14,6 @@ import { isAdultReeks, krachtbalKleur, reeksHalfDurationSeconds, reeksNaam, reek
 import { isTribuneOpen } from '@/lib/tribune'
 import { BASE_RATE_PER_MIN } from '@/lib/win-probability'
 import { MatchRecap } from '../../analyse/[id]/MatchRecap'
-import { ShareCard } from '../../analyse/[id]/ShareCard'
 import { MatchScorers } from './MatchScorers'
 import '../../analyse/analyse.css'
 
@@ -215,40 +214,23 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
         initialShouts={Array.isArray(matchDoc?.liveShoutouts) ? (matchDoc.liveShoutouts as { id: number; name: string; text: string; at: number }[]) : undefined}
         canPostInstant={canPostInstant}
         initialInstants={initialInstants}
-        reeks={reeks ?? ''}
         momentumGoals={share?.goals}
         momentumTimeouts={share?.timeouts}
       />
       {/* Supporters duidelijk tonen dat ze de wedstrijd op hun tv kunnen volgen. */}
       <CastToTv matchId={matchId} />
 
-      {/* Na afloop, publiek: de doelpuntenmakers. (Het scoreverloop staat nu vlak onder het
-          scorebord, in de Scoreboard zelf.) */}
+      {/* Na afloop, publiek: samenvatting (speler van de wedstrijd) + de doelpuntenmakers.
+          Het scoreverloop staat vlak onder het scorebord, in de Scoreboard zelf. */}
       {share && (
-        <MatchScorers
-          players={share.stats.players}
-          teams={{ home: state.teams.home.name, away: state.teams.away.name }}
-          colors={{ home: state.teams.home.colors?.primary ?? null, away: state.teams.away.colors?.primary ?? null }}
-        />
-      )}
-
-      {/* Publiek deel-/napraatmoment na afloop — voor iedereen, zonder login. */}
-      {share && (
-        <section className="match-share" style={{ marginTop: 28 }}>
-          <h2 className="section-title">Napraten &amp; delen</h2>
+        <>
           <MatchRecap stats={share.stats} teams={{ home: state.teams.home.name, away: state.teams.away.name }} />
-          <ShareCard
-            matchId={matchId}
-            teams={{ home: state.teams.home.name, away: state.teams.away.name }}
-            score={{ home: state.score.home, away: state.score.away }}
-            colors={{ home: state.teams.home.colors?.primary ?? null, away: state.teams.away.colors?.primary ?? null }}
-            logos={{ home: state.teams.home.logoUrl, away: state.teams.away.logoUrl }}
-            goals={share.goals}
+          <MatchScorers
             players={share.stats.players}
-            reeks={share.reeks}
-            datum={share.datum}
+            teams={{ home: state.teams.home.name, away: state.teams.away.name }}
+            colors={{ home: state.teams.home.colors?.primary ?? null, away: state.teams.away.colors?.primary ?? null }}
           />
-        </section>
+        </>
       )}
       {canAnalyse(me) && (
         <p className="sheet-cta">
