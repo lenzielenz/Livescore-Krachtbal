@@ -82,22 +82,35 @@ export function PhotoTribune({
         <span className="ptr-sub">spontane foto&apos;s · verdwijnen na 24u</span>
       </div>
 
-      <div className="ptr-strip">
-        {canPost && (
-          <button type="button" className="ptr-add" onClick={() => inputRef.current?.click()} disabled={busy} aria-label="Foto plaatsen">
-            <span className="ptr-add-ico" aria-hidden>{busy ? '⏳' : '＋'}</span>
-            <span className="ptr-add-lbl">{busy ? 'Bezig…' : 'Foto'}</span>
+      {instants.length === 0 ? (
+        canPost ? (
+          <button type="button" className="ptr-empty-cta" onClick={() => inputRef.current?.click()} disabled={busy}>
+            <span className="ptr-empty-ico" aria-hidden>{busy ? '⏳' : '＋'}</span>
+            <span className="ptr-empty-txt">
+              <span className="ptr-empty-title">{busy ? 'Bezig…' : 'Deel een sfeerbeeld'}</span>
+              <span className="ptr-empty-sub">Wees de eerste in de tribune!</span>
+            </span>
           </button>
-        )}
-        {instants.map((i) => (
-          <button type="button" key={i.id} className="ptr-thumb" onClick={() => setZoom(i)} aria-label={`Foto van ${i.authorName}`}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={i.url} alt={`Foto van ${i.authorName}`} loading="lazy" />
-            <span className="ptr-thumb-name">{i.authorName}</span>
-          </button>
-        ))}
-        {instants.length === 0 && canPost && <p className="ptr-empty">Wees de eerste — deel een sfeerbeeld!</p>}
-      </div>
+        ) : (
+          <p className="ptr-empty">Nog geen foto&apos;s.</p>
+        )
+      ) : (
+        <div className="ptr-strip">
+          {canPost && (
+            <button type="button" className="ptr-add" onClick={() => inputRef.current?.click()} disabled={busy} aria-label="Foto plaatsen">
+              <span className="ptr-add-ico" aria-hidden>{busy ? '⏳' : '＋'}</span>
+              <span className="ptr-add-lbl">{busy ? 'Bezig…' : 'Foto'}</span>
+            </button>
+          )}
+          {instants.map((i) => (
+            <button type="button" key={i.id} className="ptr-thumb" onClick={() => setZoom(i)} aria-label={`Foto van ${i.authorName}`}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={i.url} alt={`Foto van ${i.authorName}`} loading="lazy" />
+              <span className="ptr-thumb-name">{i.authorName}</span>
+            </button>
+          ))}
+        </div>
+      )}
       {err && <p className="ptr-err">{err}</p>}
       <input
         ref={inputRef}
