@@ -133,7 +133,15 @@ async function loadMatches(payload: Payload, tournamentId: number): Promise<Matc
  */
 export async function createTournament(
   payload: Payload,
-  args: { name: string; category: Category; method: 'manual' | 'auto'; slots: (string | null)[]; format?: TournamentFormat },
+  args: {
+    name: string
+    category: Category
+    method: 'manual' | 'auto'
+    slots: (string | null)[]
+    format?: TournamentFormat
+    /** Expliciete koppeling ploegnaam → club (betrouwbaar logo + club gekoppeld). */
+    teamClubs?: { name: string; clubId: number }[]
+  },
 ): Promise<number> {
   const format: TournamentFormat = args.format === 'roundrobin' ? 'roundrobin' : 'knockout'
   const filled = args.slots.filter((s): s is string => Boolean(s))
@@ -151,7 +159,15 @@ export async function createTournament(
 
   const tournament = await payload.create({
     collection: 'tournaments',
-    data: { name: args.name, category: args.category, method: args.method, format, status: 'live', teamCount: filled.length },
+    data: {
+      name: args.name,
+      category: args.category,
+      method: args.method,
+      format,
+      status: 'live',
+      teamCount: filled.length,
+      ...(args.teamClubs && args.teamClubs.length ? { teamClubs: args.teamClubs } : {}),
+    },
     overrideAccess: true,
   })
 

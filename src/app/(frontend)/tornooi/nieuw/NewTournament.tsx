@@ -16,12 +16,20 @@ function previewRound1(orderedNames: string[]): { home: string | null; away: str
     .map((m) => ({ home: m.home, away: m.away }))
 }
 
-export function NewTournament({ categories }: { categories: ReadonlyArray<{ label: string; value: string }> }) {
+export function NewTournament({
+  categories,
+  clubs = [],
+}: {
+  categories: ReadonlyArray<{ label: string; value: string }>
+  clubs?: { id: number; name: string }[]
+}) {
   const router = useRouter()
   const [name, setName] = useState('')
   const [category, setCategory] = useState(categories[categories.length - 1]?.value ?? 'senioren')
   const [count, setCount] = useState(4)
   const [names, setNames] = useState<string[]>(['', '', '', ''])
+  // Expliciete club per ploeg (optioneel): betrouwbaar logo + de club is gekoppeld.
+  const [clubIds, setClubIds] = useState<(number | null)[]>(() => Array(4).fill(null))
   // Geplaatste ploegen (vrijstelling): bv. de top van vorig seizoen. Zij worden uit elkaar geloot
   // en krijgen de bye's, zodat de sterke ploegen elkaar pas laat (finale) tegenkomen.
   const [seeded, setSeeded] = useState<boolean[]>(() => Array(4).fill(false))
@@ -43,14 +51,21 @@ export function NewTournament({ categories }: { categories: ReadonlyArray<{ labe
       while (next.length < c) next.push(false)
       return next
     })
+    setClubIds((prev) => {
+      const next = prev.slice(0, c)
+      while (next.length < c) next.push(null)
+      return next
+    })
   }
 
   const setNameAt = (i: number, v: string) => setNames((prev) => prev.map((n, idx) => (idx === i ? v : n)))
+  const setClubAt = (i: number, v: number | null) => setClubIds((prev) => prev.map((c, idx) => (idx === i ? v : c)))
   const toggleSeed = (i: number) => setSeeded((prev) => prev.map((s, idx) => (idx === i ? !s : s)))
 
   const move = (i: number, dir: -1 | 1) => {
     const j = i + dir
     if (j < 0 || j >= names.length) return
+    setClubIds((prev) => { const next = prev.slice(); [next[i], next[j]] = [next[j], next[i]]; return next })
     setNames((prev) => { const next = prev.slice(); [next[i], next[j]] = [next[j], next[i]]; return next })
     setSeeded((prev) => { const next = prev.slice(); [next[i], next[j]] = [next[j], next[i]]; return next })
   }
@@ -83,13 +98,17 @@ export function NewTournament({ categories }: { categories: ReadonlyArray<{ labe
     // Knock-out: geplaatste ploegen worden geseed (bye's + uit elkaar = sterke finale); de toggle
     // schudt de overige ploegen, manueel houdt de ingegeven volgorde aan.
     const slots = format === 'roundrobin' ? filled : seededSlots(orderedNames(method === 'auto'))
+    // Expliciete club-koppeling per ingevulde ploeg (optioneel).
+    const teamClubs = names
+      .map((nm, i) => ({ name: nm.trim(), clubId: clubIds[i] }))
+      .filter((t): t is { name: string; clubId: number } => Boolean(t.name && t.clubId))
 
     setBusy(true)
     try {
       const res = await fetch('/api/tournament', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: name.trim(), category, method, format, slots }),
+        body: JSON.stringify({ name: name.trim(), category, method, format, slots, teamClubs }),
       })
       const data = (await res.json()) as { id?: number; error?: string }
       if (!res.ok || !data.id) throw new Error(data.error ?? 'Aanmaken mislukt.')
@@ -169,6 +188,21 @@ export function NewTournament({ categories }: { categories: ReadonlyArray<{ labe
             <li key={i}>
               <span className="trn-teamnr">{i + 1}</span>
               <input value={n} onChange={(e) => setNameAt(i, e.target.value)} placeholder={`Ploeg ${i + 1}`} />
+              {clubs.length > 0 && (
+                <select
+                  className="trn-teamclub"
+                  value={clubIds[i] ?? ''}
+                  onChange={(e) => setClubAt(i, e.target.value ? Number(e.target.value) : null)}
+                  disabled={!n.trim()}
+                  title="Koppel de club (betrouwbaar logo + de club is gekoppeld)"
+                  aria-label="Club"
+                >
+                  <option value="">— club —</option>
+                  {clubs.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              )}
               {format === 'knockout' && (
                 <button
                   type="button"

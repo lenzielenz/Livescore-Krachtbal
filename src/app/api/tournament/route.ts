@@ -22,6 +22,17 @@ export async function POST(req: Request) {
   const slots = Array.isArray(body.slots)
     ? body.slots.map((s) => (typeof s === 'string' && s.trim() ? s.trim() : null))
     : []
+  // Expliciete club-koppeling per ploeg (optioneel): [{ name, clubId }].
+  const teamClubs = Array.isArray(body.teamClubs)
+    ? body.teamClubs
+        .map((t) => {
+          const o = t as { name?: unknown; clubId?: unknown }
+          const nm = typeof o?.name === 'string' ? o.name.trim() : ''
+          const clubId = Number(o?.clubId)
+          return nm && Number.isFinite(clubId) ? { name: nm, clubId } : null
+        })
+        .filter((t): t is { name: string; clubId: number } => t !== null)
+    : []
 
   if (!name) return Response.json({ error: 'Geef het tornooi een naam.' }, { status: 400 })
   if (!CATEGORIES.includes(category)) return Response.json({ error: 'Ongeldige categorie.' }, { status: 400 })
@@ -33,7 +44,7 @@ export async function POST(req: Request) {
     if (!isFederationLevel(user)) {
       return Response.json({ error: 'Enkel de federatie kan een beker/tornooi aanmaken.' }, { status: user ? 403 : 401 })
     }
-    const id = await createTournament(payload, { name, category, method, slots, format })
+    const id = await createTournament(payload, { name, category, method, slots, format, teamClubs })
     return Response.json({ id })
   } catch (err) {
     return Response.json({ error: (err as Error).message }, { status: 400 })

@@ -244,6 +244,18 @@
   padding: 9px 12px;
   color: var(--txt);
 }
+.trn-teamclub {
+  flex: 0 1 130px;
+  min-width: 0;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 9px 8px;
+  color: var(--txt);
+  font: inherit;
+  font-size: 0.85rem;
+}
+.trn-teamclub:disabled { opacity: 0.5; }
 .trn-moves {
   display: inline-flex;
   gap: 4px;

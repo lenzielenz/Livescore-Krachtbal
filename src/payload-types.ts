@@ -775,6 +775,15 @@ export interface Tournament {
    * Vastgelegd bij het aanmaken.
    */
   teamCount?: number | null;
+  teamClubs?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -1491,6 +1500,7 @@ export interface TournamentsSelect<T extends boolean = true> {
   method?: T;
   format?: T;
   teamCount?: T;
+  teamClubs?: T;
   updatedAt?: T;
   createdAt?: T;
 }
