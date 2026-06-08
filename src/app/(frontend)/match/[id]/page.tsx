@@ -14,7 +14,6 @@ import { isAdultReeks, krachtbalKleur, reeksHalfDurationSeconds, reeksNaam, reek
 import { isTribuneOpen } from '@/lib/tribune'
 import { BASE_RATE_PER_MIN } from '@/lib/win-probability'
 import { MatchRecap } from '../../analyse/[id]/MatchRecap'
-import { MomentumChart } from '../../analyse/[id]/MomentumChart'
 import { ShareCard } from '../../analyse/[id]/ShareCard'
 import { MatchScorers } from './MatchScorers'
 import '../../analyse/analyse.css'
@@ -217,25 +216,20 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
         canPostInstant={canPostInstant}
         initialInstants={initialInstants}
         reeks={reeks ?? ''}
+        momentumGoals={share?.goals}
+        momentumTimeouts={share?.timeouts}
       />
       {/* Supporters duidelijk tonen dat ze de wedstrijd op hun tv kunnen volgen. */}
       <CastToTv matchId={matchId} />
 
-      {/* Na afloop, publiek onder het scorebord: het scoreverloop (momentum) + iedereen die scoorde. */}
+      {/* Na afloop, publiek: de doelpuntenmakers. (Het scoreverloop staat nu vlak onder het
+          scorebord, in de Scoreboard zelf.) */}
       {share && (
-        <>
-          <MomentumChart
-            goals={share.goals}
-            timeouts={share.timeouts}
-            teams={{ home: state.teams.home.name, away: state.teams.away.name }}
-            colors={{ home: state.teams.home.colors?.primary ?? null, away: state.teams.away.colors?.primary ?? null }}
-          />
-          <MatchScorers
-            players={share.stats.players}
-            teams={{ home: state.teams.home.name, away: state.teams.away.name }}
-            colors={{ home: state.teams.home.colors?.primary ?? null, away: state.teams.away.colors?.primary ?? null }}
-          />
-        </>
+        <MatchScorers
+          players={share.stats.players}
+          teams={{ home: state.teams.home.name, away: state.teams.away.name }}
+          colors={{ home: state.teams.home.colors?.primary ?? null, away: state.teams.away.colors?.primary ?? null }}
+        />
       )}
 
       {/* Publiek deel-/napraatmoment na afloop — voor iedereen, zonder login. */}

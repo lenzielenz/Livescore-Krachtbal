@@ -7,6 +7,7 @@ import type { KrachtbalKleur } from '@/lib/reeksen'
 import { ClubColorBlast } from '@/components/ClubColorBlast'
 import { KrachtbalIcon } from '@/components/KrachtbalIcon'
 import { LiveMomentCard } from '@/components/LiveMomentCard'
+import { MomentumChart } from '@/app/(frontend)/analyse/[id]/MomentumChart'
 import { PhotoTribune, type Instant } from '@/components/PhotoTribune'
 import { TeamLogo } from '@/components/TeamLogo'
 import { WinProbability } from '@/components/WinProbability'
@@ -72,6 +73,8 @@ export function Scoreboard({
   canPostInstant = false,
   initialInstants,
   reeks = '',
+  momentumGoals,
+  momentumTimeouts,
 }: {
   matchId: number
   initial: { state: MatchState; timeline: TimelineItem[] }
@@ -93,6 +96,10 @@ export function Scoreboard({
   initialInstants?: Instant[]
   /** Reeksnaam — voor de "deel dit moment"-kaart. */
   reeks?: string
+  /** Doelpunten (op volgorde) voor het scoreverloop onder het scorebord (na afloop). */
+  momentumGoals?: { side: 'home' | 'away'; points: number; half: number; gameClock?: number }[]
+  /** Time-outs voor het scoreverloop. */
+  momentumTimeouts?: { side: 'home' | 'away'; half: number; gameClock: number }[]
 }) {
   const [state, setState] = useState<MatchState>(initial.state)
   const [timeline, setTimeline] = useState<TimelineItem[]>(initial.timeline)
@@ -493,6 +500,17 @@ export function Scoreboard({
           </div>
         </div>
       </div>
+
+      {/* Scoreverloop (momentum) vlak onder het scorebord — verschijnt zodra er doelpunten zijn
+          (na afloop). Verbergt zichzelf bij geen doelpunten. */}
+      {momentumGoals && momentumGoals.length > 0 && (
+        <MomentumChart
+          goals={momentumGoals}
+          timeouts={momentumTimeouts}
+          teams={{ home: state.teams.home.name, away: state.teams.away.name }}
+          colors={{ home: state.teams.home.colors?.primary ?? null, away: state.teams.away.colors?.primary ?? null }}
+        />
+      )}
 
       {/* "Deel dit moment": legt de huidige live-stand vast als deelkaart — voor iedereen. */}
       <LiveMomentCard
