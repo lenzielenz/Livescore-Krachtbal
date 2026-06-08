@@ -1,4 +1,5 @@
-import { authUser, requireRole } from '@/lib/api-auth'
+import { isFederationLevel } from '@/lib/access'
+import { authUser } from '@/lib/api-auth'
 import { CATEGORIES, type Category } from '@/lib/categories'
 import { getPayloadClient } from '@/lib/payload-client'
 import { createTournament } from '@/lib/tournament-engine'
@@ -28,8 +29,10 @@ export async function POST(req: Request) {
   try {
     const payload = await getPayloadClient()
     const user = await authUser(payload, req)
-    const denied = requireRole(user, 'scorekeeper', 'scheidsrechter')
-    if (denied) return denied
+    // Enkel de federatie/admin maakt bekers/tornooien aan; supporters kijken mee.
+    if (!isFederationLevel(user)) {
+      return Response.json({ error: 'Enkel de federatie kan een beker/tornooi aanmaken.' }, { status: user ? 403 : 401 })
+    }
     const id = await createTournament(payload, { name, category, method, slots, format })
     return Response.json({ id })
   } catch (err) {

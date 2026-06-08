@@ -946,3 +946,20 @@
 .trn-hub-head { margin: 8px 0 6px; }
 .trn-hub-title { font-size: 1.5rem; font-weight: 800; margin: 0 0 6px; color: var(--txt, #e8f5ee); }
 .trn-hub-intro { font-size: 0.92rem; color: var(--dim, #9fb6aa); max-width: 640px; margin: 0; }
+
+/* Clublogo's in de bracket-rijen + champion + round-robin. */
+.trn-row { justify-content: flex-start; }
+.trn-row-logo { flex: 0 0 auto; display: inline-flex; }
+.trn-row-name { flex: 1 1 auto; min-width: 0; }
+.trn-row-score { margin-left: auto; }
+.trn-rr-team { display: inline-flex; align-items: center; gap: 6px; }
+.trn-champion { display: flex; align-items: center; gap: 8px; justify-content: center; flex-wrap: wrap; }
+
+/* Mobielvriendelijk: smallere kolommen + soepel horizontaal scrollen door de boom. */
+@media (max-width: 640px) {
+  .trn-col { flex: 0 0 210px; }
+  .trn-bracket { gap: calc(var(--g) * 1.4); scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch; }
+  .trn-col { scroll-snap-align: start; }
+  .trn-row { font-size: 0.88rem; padding: 6px 8px; }
+  .trn-rr { grid-template-columns: 1fr; }
+}

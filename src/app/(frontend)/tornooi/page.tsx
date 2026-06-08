@@ -1,6 +1,8 @@
+import { headers } from 'next/headers'
 import Link from 'next/link'
 
 import { SiteHeader } from '@/components/SiteHeader'
+import { isFederationLevel } from '@/lib/access'
 import { CATEGORY_OPTIONS } from '@/lib/categories'
 import { getPayloadClient } from '@/lib/payload-client'
 import './tornooi.css'
@@ -9,9 +11,12 @@ export const dynamic = 'force-dynamic'
 
 const catLabel = (v: unknown) => CATEGORY_OPTIONS.find((o) => o.value === v)?.label ?? String(v ?? '')
 
-// Tornooi-hub: het ene scherm waar alles onder zit. Lijst van tornooien + knop om er een te maken.
+// Bekerwedstrijden-hub: lijst van bekers/tornooien. Enkel de federatie maakt er aan; supporters
+// kijken mee.
 export default async function TornooiHub() {
   const payload = await getPayloadClient()
+  const { user } = await payload.auth({ headers: await headers() }).catch(() => ({ user: null }))
+  const canCreate = isFederationLevel(user)
   const res = await payload
     .find({ collection: 'tournaments', sort: '-createdAt', depth: 0, limit: 100 })
     .catch(() => ({ docs: [] as Array<{ id: number; name: string; category: string; status: string; teamCount?: number | null }> }))
@@ -30,9 +35,11 @@ export default async function TornooiHub() {
           kies de ploegen, en volg de hele bracket (van de eerste ronde tot de finale) live mee.
         </p>
       </div>
-      <div className="trn-actions">
-        <Link href="/tornooi/nieuw" className="trn-btn primary">+ Nieuwe beker</Link>
-      </div>
+      {canCreate && (
+        <div className="trn-actions">
+          <Link href="/tornooi/nieuw" className="trn-btn primary">+ Nieuwe beker</Link>
+        </div>
+      )}
 
       <main className="trn-hub">
         <Section title="Lopende bekers & tornooien" docs={live} empty="Geen lopende beker. Maak er een aan." />
