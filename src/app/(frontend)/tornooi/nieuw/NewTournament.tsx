@@ -7,11 +7,10 @@ import { buildBracket, nextPow2, seededSlots, shuffle } from '@/lib/tournament'
 
 type Method = 'auto' | 'manual'
 
-// Loting-preview: hoe spelen de ploegen in ronde 1 (incl. bye's) bij de huidige volgorde?
-function previewRound1(names: string[]): { home: string | null; away: string | null }[] {
-  const filled = names.map((n) => n.trim()).filter(Boolean)
-  if (filled.length < 2) return []
-  const slots = seededSlots(filled)
+// Loting-preview: hoe spelen de ploegen in ronde 1 (incl. bye's) bij de huidige (seed)volgorde?
+function previewRound1(orderedNames: string[]): { home: string | null; away: string | null }[] {
+  if (orderedNames.length < 2) return []
+  const slots = seededSlots(orderedNames)
   return buildBracket(slots)
     .filter((m) => m.round === 1 && m.bracket === 'main')
     .map((m) => ({ home: m.home, away: m.away }))
@@ -23,6 +22,9 @@ export function NewTournament({ categories }: { categories: ReadonlyArray<{ labe
   const [category, setCategory] = useState(categories[categories.length - 1]?.value ?? 'senioren')
   const [count, setCount] = useState(4)
   const [names, setNames] = useState<string[]>(['', '', '', ''])
+  // Geplaatste ploegen (vrijstelling): bv. de top van vorig seizoen. Zij worden uit elkaar geloot
+  // en krijgen de bye's, zodat de sterke ploegen elkaar pas laat (finale) tegenkomen.
+  const [seeded, setSeeded] = useState<boolean[]>(() => Array(4).fill(false))
   const [method, setMethod] = useState<Method>('auto')
   const [format, setFormat] = useState<'knockout' | 'roundrobin'>('knockout')
   const [busy, setBusy] = useState(false)
@@ -36,24 +38,38 @@ export function NewTournament({ categories }: { categories: ReadonlyArray<{ labe
       while (next.length < c) next.push('')
       return next
     })
-  }
-
-  const setNameAt = (i: number, v: string) => setNames((prev) => prev.map((n, idx) => (idx === i ? v : n)))
-
-  const move = (i: number, dir: -1 | 1) => {
-    setNames((prev) => {
-      const j = i + dir
-      if (j < 0 || j >= prev.length) return prev
-      const next = prev.slice()
-      ;[next[i], next[j]] = [next[j], next[i]]
+    setSeeded((prev) => {
+      const next = prev.slice(0, c)
+      while (next.length < c) next.push(false)
       return next
     })
   }
 
+  const setNameAt = (i: number, v: string) => setNames((prev) => prev.map((n, idx) => (idx === i ? v : n)))
+  const toggleSeed = (i: number) => setSeeded((prev) => prev.map((s, idx) => (idx === i ? !s : s)))
+
+  const move = (i: number, dir: -1 | 1) => {
+    const j = i + dir
+    if (j < 0 || j >= names.length) return
+    setNames((prev) => { const next = prev.slice(); [next[i], next[j]] = [next[j], next[i]]; return next })
+    setSeeded((prev) => { const next = prev.slice(); [next[i], next[j]] = [next[j], next[i]]; return next })
+  }
+
+  // Geplaatste ploegen eerst (in ingegeven volgorde = seed-volgorde), dan de rest.
+  const orderedNames = (shuffleRest: boolean): string[] => {
+    const entries = names.map((nm, i) => ({ name: nm.trim(), seed: seeded[i] })).filter((e) => e.name)
+    const top = entries.filter((e) => e.seed).map((e) => e.name)
+    const restRaw = entries.filter((e) => !e.seed).map((e) => e.name)
+    const rest = shuffleRest ? shuffle(restRaw, Math.random) : restRaw
+    return [...top, ...rest]
+  }
+
   const filledCount = names.filter((n) => n.trim()).length
+  const seededCount = names.filter((n, i) => n.trim() && seeded[i]).length
   const bracketSize = useMemo(() => (filledCount >= 2 ? nextPow2(filledCount) : 0), [filledCount])
   const byes = bracketSize > 0 ? bracketSize - filledCount : 0
-  const preview = useMemo(() => previewRound1(names), [names])
+  // Preview deterministisch (geplaatst eerst, rest in ingegeven volgorde) zodat je de bye's/seeding ziet.
+  const preview = useMemo(() => previewRound1(orderedNames(false)), [names, seeded])
 
   const submit = async () => {
     setError(null)
@@ -64,9 +80,9 @@ export function NewTournament({ categories }: { categories: ReadonlyArray<{ labe
       return setError('Twee ploegen hebben dezelfde naam. Schrijft dezelfde club meerdere ploegen in, geef ze dan een nummer (bv. KBC Male 1 en KBC Male 2).')
 
     // Round-robin: alle ploegen één keer tegen elkaar — geen loting/bye's, namen volstaan.
-    // Knock-out: toggle = automatische loting (schudden), manueel = volgorde zoals ingevuld.
-    const slots =
-      format === 'roundrobin' ? filled : seededSlots(method === 'auto' ? shuffle(filled, Math.random) : filled)
+    // Knock-out: geplaatste ploegen worden geseed (bye's + uit elkaar = sterke finale); de toggle
+    // schudt de overige ploegen, manueel houdt de ingegeven volgorde aan.
+    const slots = format === 'roundrobin' ? filled : seededSlots(orderedNames(method === 'auto'))
 
     setBusy(true)
     try {
@@ -135,18 +151,36 @@ export function NewTournament({ categories }: { categories: ReadonlyArray<{ labe
         <p className="trn-hint trn-hint-sub">
           Dezelfde club mag meerdere ploegen inschrijven — nummer ze dan (bv. <strong>KBC Male 1</strong> en <strong>KBC Male 2</strong>). Het clublogo verschijnt automatisch.
         </p>
+        {format === 'knockout' && (
+          <p className="trn-hint trn-hint-sub">
+            ⭐ Duid de <strong>geplaatste ploegen</strong> aan (bv. de top van vorig seizoen). Zij krijgen een vrijstelling (bye)
+            en worden uit elkaar geloot, zodat de sterkste ploegen elkaar pas in de finale tegenkomen.
+          </p>
+        )}
         <p className="trn-hint">
           {filledCount < 2
             ? 'Vul de ploegnamen in.'
             : format === 'roundrobin'
               ? `${filledCount} ploegen · ${(filledCount * (filledCount - 1)) / 2} wedstrijden (iedereen één keer tegen elkaar)`
-              : `Schema van ${bracketSize} · ${byes > 0 ? `${byes} bye(s) — die ploeg${byes > 1 ? 'en' : ''} is vrij in ronde 1` : 'geen bye’s'}`}
+              : `Schema van ${bracketSize} · ${byes > 0 ? `${byes} bye(s)${seededCount > 0 ? ' (naar de geplaatste ploegen)' : ''}` : 'geen bye’s'}`}
         </p>
         <ol className="trn-teamlist">
           {names.map((n, i) => (
             <li key={i}>
               <span className="trn-teamnr">{i + 1}</span>
               <input value={n} onChange={(e) => setNameAt(i, e.target.value)} placeholder={`Ploeg ${i + 1}`} />
+              {format === 'knockout' && (
+                <button
+                  type="button"
+                  className={`trn-seed ${n.trim() && seeded[i] ? 'on' : ''}`}
+                  onClick={() => toggleSeed(i)}
+                  disabled={!n.trim()}
+                  title="Geplaatst (vrijstelling) — bv. top van vorig seizoen"
+                  aria-label="Geplaatst"
+                >
+                  ⭐
+                </button>
+              )}
               {method === 'manual' && (
                 <span className="trn-moves">
                   <button type="button" onClick={() => move(i, -1)} disabled={i === 0} aria-label="Omhoog">↑</button>
@@ -172,9 +206,9 @@ export function NewTournament({ categories }: { categories: ReadonlyArray<{ labe
           </button>
         </div>
 
-        {method === 'manual' && preview.length > 0 && (
+        {preview.length > 0 && (
           <div className="trn-preview">
-            <h3>Voorbeeld ronde 1</h3>
+            <h3>Voorbeeld ronde 1 {method === 'auto' && <span className="trn-preview-note">(de niet-geplaatste ploegen worden nog geschud)</span>}</h3>
             <ul>
               {preview.map((m, i) => (
                 <li key={i}>
