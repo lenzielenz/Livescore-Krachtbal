@@ -43,6 +43,39 @@ select.rang-picker {
   padding: 4px 0 2px;
   border-top: 1px solid var(--line);
 }
+/* Openklapbare "Wedstrijd manueel opnemen"-menuvorm bovenaan de analyse-hub. */
+.an-record-menu {
+  margin: 0 0 18px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.025);
+  overflow: hidden;
+}
+.an-record-summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 13px 16px;
+  position: relative;
+  padding-right: 40px;
+}
+.an-record-summary::-webkit-details-marker { display: none; }
+.an-record-summary::after {
+  content: '⌄';
+  position: absolute;
+  right: 16px;
+  top: 12px;
+  font-size: 1.2rem;
+  color: var(--dim);
+  transition: transform 0.18s ease;
+}
+.an-record-menu[open] .an-record-summary::after { transform: rotate(180deg); }
+.an-record-summary-title { font-size: 1.02rem; font-weight: 800; }
+.an-record-summary-hint { font-size: 0.78rem; color: var(--dim); }
+.an-record-menu[open] .an-record-summary { border-bottom: 1px solid var(--line); }
+.an-record-body { padding: 12px 16px 16px; }
 .an-summary { margin: 0 0 18px; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
 .an-record-new { margin: 6px 0 14px; }
 /* Primaire actie: gevulde accentknop met donkere tekst — duidelijk leesbaar. */
