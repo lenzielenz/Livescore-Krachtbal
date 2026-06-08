@@ -55,6 +55,7 @@ export const PROFILES: Profile[] = [
     tools: [
       { href: '/admin', label: '⚙️ Beheer (admin)' },
       { href: '/beheer/accounts', label: '👤 Accounts' },
+      { href: '/beheer/leden', label: '🩺 Ledenkeuring' },
       { href: '/beheer/planning', label: '📅 Seizoensplanning' },
       { href: '/reglement', label: '📖 Reglement' },
       { href: '/knipjes', label: '✂️ Knipjes' },
