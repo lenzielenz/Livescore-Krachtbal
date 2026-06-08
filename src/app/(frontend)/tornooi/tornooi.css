@@ -963,3 +963,6 @@
   .trn-row { font-size: 0.88rem; padding: 6px 8px; }
   .trn-rr { grid-template-columns: 1fr; }
 }
+
+.trn-hint-sub { font-size: 0.82rem; color: var(--dim); margin-bottom: 8px; }
+.trn-hint-sub strong { color: var(--txt); }
