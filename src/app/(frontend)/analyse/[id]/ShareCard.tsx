@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 
 import { DEFAULT_AWAY_COLOR, DEFAULT_HOME_COLOR, readableOnDark } from '@/lib/club-colors'
 import { downloadBlob, saveOrShareBlob, slugFilename, svgToPngBlob } from '@/lib/client-download'
+import { blobToDataUrl, urlToDataUrl } from '@/lib/share-image'
 import type { MatchStats } from '@/lib/stats'
 
 type Goal = { side: 'home' | 'away'; points: number; half: number; gameClock?: number }
@@ -46,39 +47,6 @@ function pick(players: Player[], ok: (p: Player) => boolean, better: (a: Player,
   const c = players.filter(ok)
   if (c.length === 0) return null
   return c.reduce((best, p) => (better(p, best) ? p : best))
-}
-
-// Bestand (logo of teamfoto) als data-URL — anders "tainted canvas" en mislukt de PNG-export op gsm.
-async function tryFetchDataUrl(url: string): Promise<string | null> {
-  try {
-    const res = await fetch(url)
-    if (!res.ok) return null
-    const blob = await res.blob()
-    if (blob.type && !blob.type.startsWith('image/')) return null
-    return await blobToDataUrl(blob)
-  } catch {
-    return null
-  }
-}
-async function urlToDataUrl(url: string): Promise<string | null> {
-  // 1) Rechtstreeks (werkt voor eigen/CORS-vriendelijke logo's).
-  const direct = await tryFetchDataUrl(url)
-  if (direct) return direct
-  // 2) Extern logo zonder CORS → via onze eigen proxy (zelfde origin, geen taint).
-  try {
-    const abs = new URL(url, window.location.origin).href
-    return await tryFetchDataUrl(`/api/logo-proxy?url=${encodeURIComponent(abs)}`)
-  } catch {
-    return null
-  }
-}
-function blobToDataUrl(blob: Blob): Promise<string | null> {
-  return new Promise((resolve) => {
-    const r = new FileReader()
-    r.onload = () => resolve(typeof r.result === 'string' ? r.result : null)
-    r.onerror = () => resolve(null)
-    r.readAsDataURL(blob)
-  })
 }
 
 export function ShareCard({

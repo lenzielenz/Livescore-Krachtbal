@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { TeamLogo } from '@/components/TeamLogo'
 import { KrachtbalIcon } from '@/components/KrachtbalIcon'
 import type { RadarPlayer } from '@/lib/radar-stats'
+import { PlayerShareCard } from './PlayerShareCard'
 
 type ClubInfo = { name: string; logoUrl: string | null; primary: string | null; secondary: string | null }
 
@@ -192,7 +193,22 @@ export function PaniniBuilder({ reeks, reeksLabel, options, players, clubs }: { 
               </div>
               <div className="pan-foot">{reeksLabel} · 25/26 · PANINI</div>
             </div>
-            <p className="pan-tip">Tip: maak een schermafbeelding om de sticker te delen.</p>
+            {/* Echte deelkaart: editoriale SVG → PNG, delen/downloaden (geen screenshot meer nodig). */}
+            <PlayerShareCard
+              name={player.name}
+              shirtNumber={player.shirtNumber}
+              teamName={club?.name || player.teamName}
+              clubLogoUrl={logo}
+              colors={{ primary: c1, secondary: c2 }}
+              rating={rating}
+              att={att}
+              def={def}
+              axes={AXES.map((a, i) => ({ label: a.label, frac: fracs[i] }))}
+              chips={chips.map((c) => ({ label: c.lbl, val: c.val, sub: c.sub || undefined }))}
+              profile={profileOf(att, def)}
+              reeksLabel={reeksLabel}
+              season="25/26"
+            />
           </div>
         )
       })()}

@@ -410,6 +410,59 @@
   transform: translateY(-1px);
 }
 
+/* ── Tweezijdige boom: links + rechts groeien naar de finale in het midden ──── */
+.trn-bracket2 {
+  --g: 24px;
+  display: flex;
+  align-items: stretch;
+  justify-content: safe center; /* gecentreerd als het past, links uitgelijnd (geen clip) als het scrollt */
+  gap: calc(var(--g) * 2);
+  overflow-x: auto;
+  padding: 4px 4px 18px;
+  min-height: 340px;
+}
+.trn-side {
+  display: flex;
+  align-items: stretch;
+  gap: calc(var(--g) * 2);
+}
+/* Rechterhelft loopt van buiten (rechts) naar binnen (de finale links ervan). */
+.trn-side-right {
+  flex-direction: row-reverse;
+}
+.trn-center {
+  flex: 0 0 250px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.trn-center-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.trn-final-title {
+  color: var(--accent);
+  font-weight: 800;
+}
+/* De finale krijgt extra nadruk. */
+.trn-center .trn-match {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent), 0 10px 26px rgba(0, 0, 0, 0.4);
+}
+/* Rechterhelft spiegelt de elleboog-connectoren naar links (⊂ i.p.v. ⊃). */
+.trn-side-right .trn-col .trn-pair::after {
+  right: auto;
+  left: calc(-1 * var(--g));
+  border-left: 2px solid var(--line);
+  border-right: 0;
+  border-radius: 10px 0 0 10px;
+}
+.trn-side-right .trn-col .trn-pair::before {
+  right: auto;
+  left: calc(-2 * var(--g));
+}
+
 /* ── Wedstrijdkaart ───────────────────────────────────────────────────────── */
 .trn-match {
   background: var(--panel);
@@ -959,6 +1012,9 @@
 @media (max-width: 640px) {
   .trn-col { flex: 0 0 210px; }
   .trn-bracket { gap: calc(var(--g) * 1.4); scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch; }
+  .trn-bracket2 { gap: calc(var(--g) * 1.4); justify-content: flex-start; -webkit-overflow-scrolling: touch; }
+  .trn-side { gap: calc(var(--g) * 1.4); }
+  .trn-center { flex: 0 0 210px; }
   .trn-col { scroll-snap-align: start; }
   .trn-row { font-size: 0.88rem; padding: 6px 8px; }
   .trn-rr { grid-template-columns: 1fr; }

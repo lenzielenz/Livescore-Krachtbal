@@ -10,10 +10,13 @@ import { canAnalyse } from '@/lib/access'
 import { getAuthUser } from '@/lib/auth-user'
 import { buildMatchSheet, buildMatchState, buildMatchStats, buildTimeline } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
-import { krachtbalKleur, reeksHalfDurationSeconds, reeksNaam, reeksType, type Reeks } from '@/lib/reeksen'
+import { isAdultReeks, krachtbalKleur, reeksHalfDurationSeconds, reeksNaam, reeksType, type Reeks } from '@/lib/reeksen'
+import { isTribuneOpen } from '@/lib/tribune'
 import { BASE_RATE_PER_MIN } from '@/lib/win-probability'
 import { MatchRecap } from '../../analyse/[id]/MatchRecap'
+import { MomentumChart } from '../../analyse/[id]/MomentumChart'
 import { ShareCard } from '../../analyse/[id]/ShareCard'
+import { MatchScorers } from './MatchScorers'
 import '../../analyse/analyse.css'
 
 export const dynamic = 'force-dynamic'
@@ -106,21 +109,59 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
     datum: string | null
     stats: Awaited<ReturnType<typeof buildMatchStats>>['stats']
     goals: { side: 'home' | 'away'; points: number; half: number; gameClock: number }[]
+    timeouts: { side: 'home' | 'away'; half: number; gameClock: number }[]
   } | null = null
   if (state.match.status === 'finished') {
     try {
-      const [statsRes, sheet] = await Promise.all([
+      const [statsRes, sheet, toRes] = await Promise.all([
         buildMatchStats(payload, matchId),
         buildMatchSheet(payload, matchId).catch(() => null),
+        payload
+          .find({ collection: 'match-events', where: { and: [{ match: { equals: matchId } }, { type: { equals: 'timeout' } }] }, depth: 0, limit: 100 })
+          .catch(() => ({ docs: [] as Record<string, unknown>[] })),
       ])
       const goals = (sheet?.goals ?? [])
         .slice()
         .sort((a, b) => a.half - b.half || a.gameClock - b.gameClock)
         .map((g) => ({ side: g.side, points: g.points, half: g.half, gameClock: g.gameClock }))
-      share = { reeks: reeks ?? 'Krachtbal', datum, stats: statsRes.stats, goals }
+      // Time-outs op de tijdas voor de momentum-grafiek (verticale streep op het juiste moment).
+      const homeTeamId = state.teams.home.id
+      const timeouts = toRes.docs.map((e) => {
+        const tId = (e as { team?: unknown }).team
+        const teamId = tId && typeof tId === 'object' ? Number((tId as { id?: number }).id) : Number(tId)
+        return {
+          side: (teamId === homeTeamId ? 'home' : 'away') as 'home' | 'away',
+          half: Number((e as { half?: unknown }).half ?? 1),
+          gameClock: Number((e as { gameClock?: unknown }).gameClock ?? 0),
+        }
+      })
+      share = { reeks: reeks ?? 'Krachtbal', datum, stats: statsRes.stats, goals, timeouts }
     } catch {
       share = null
     }
+  }
+
+  // Vluchtige foto-tribune: ENKEL op volwassen reeksen (safeguarding, geen jeugd). Laad de recente,
+  // niet-verlopen foto's; posten mag enkel ingelogd terwijl de tribune open is.
+  const adultMatch = isAdultReeks(reeksRaw)
+  const canPostInstant = Boolean(me) && adultMatch && isTribuneOpen(state.match.status, state.match.finishedAt)
+  let initialInstants: { id: number; url: string; authorName: string; at: number }[] = []
+  if (adultMatch) {
+    const res = await payload
+      .find({
+        collection: 'match-instants',
+        where: { and: [{ match: { equals: matchId } }, { expiresAt: { greater_than: new Date().toISOString() } }] },
+        sort: '-createdAt',
+        depth: 0,
+        limit: 30,
+      })
+      .catch(() => null)
+    initialInstants = (res?.docs ?? []).map((d) => ({
+      id: d.id as number,
+      url: (d as { url?: string | null }).url || `/api/match-instants/file/${(d as { filename?: string }).filename ?? ''}`,
+      authorName: (d as { authorName?: string | null }).authorName || 'Supporter',
+      at: d.createdAt ? new Date(d.createdAt as string).getTime() : Date.now(),
+    }))
   }
 
   return (
@@ -173,9 +214,29 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
         canChat={Boolean(me)}
         initialReactions={(matchDoc?.liveReactions as Record<string, number> | null) ?? undefined}
         initialShouts={Array.isArray(matchDoc?.liveShoutouts) ? (matchDoc.liveShoutouts as { id: number; name: string; text: string; at: number }[]) : undefined}
+        canPostInstant={canPostInstant}
+        initialInstants={initialInstants}
+        reeks={reeks ?? ''}
       />
       {/* Supporters duidelijk tonen dat ze de wedstrijd op hun tv kunnen volgen. */}
       <CastToTv matchId={matchId} />
+
+      {/* Na afloop, publiek onder het scorebord: het scoreverloop (momentum) + iedereen die scoorde. */}
+      {share && (
+        <>
+          <MomentumChart
+            goals={share.goals}
+            timeouts={share.timeouts}
+            teams={{ home: state.teams.home.name, away: state.teams.away.name }}
+            colors={{ home: state.teams.home.colors?.primary ?? null, away: state.teams.away.colors?.primary ?? null }}
+          />
+          <MatchScorers
+            players={share.stats.players}
+            teams={{ home: state.teams.home.name, away: state.teams.away.name }}
+            colors={{ home: state.teams.home.colors?.primary ?? null, away: state.teams.away.colors?.primary ?? null }}
+          />
+        </>
+      )}
 
       {/* Publiek deel-/napraatmoment na afloop — voor iedereen, zonder login. */}
       {share && (

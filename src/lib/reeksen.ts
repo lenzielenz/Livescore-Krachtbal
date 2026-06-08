@@ -93,6 +93,15 @@ export function reeksCategorie(reeks: Reeks): Category {
   return REEKS_CATEGORIE[reeks]
 }
 
+// Volwassen reeks = senioren-categorie (landelijk/nationaal/regionaal, recreatief, beker). Alle
+// jeugdreeksen (U12–U20) zijn NIET volwassen. Gebruikt voor de safeguarding-grens van de
+// vluchtige foto-tribune: gebruikersfoto's mogen enkel op volwassen wedstrijden.
+export function isAdultReeks(reeks: Reeks | null | undefined): boolean {
+  if (!reeks) return false
+  const cat = REEKS_CATEGORIE[reeks as Reeks]
+  return cat === 'senioren'
+}
+
 // Officiële balkleur per categorie (KVKBF): dames = rood, heren = wit, U12/U14 = geel,
 // U16/U18 = blauw. Recreatief/beker/andere kennen geen vaste kleur → wit als veilige default.
 export type KrachtbalKleur = 'wit' | 'rood' | 'geel' | 'blauw'

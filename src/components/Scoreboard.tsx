@@ -6,6 +6,8 @@ import type { MatchState, TimelineItem } from '@/lib/match-engine'
 import type { KrachtbalKleur } from '@/lib/reeksen'
 import { ClubColorBlast } from '@/components/ClubColorBlast'
 import { KrachtbalIcon } from '@/components/KrachtbalIcon'
+import { LiveMomentCard } from '@/components/LiveMomentCard'
+import { PhotoTribune, type Instant } from '@/components/PhotoTribune'
 import { TeamLogo } from '@/components/TeamLogo'
 import { WinProbability } from '@/components/WinProbability'
 import { DEFAULT_AWAY_COLOR, DEFAULT_HOME_COLOR, inkOn, readableOnDark } from '@/lib/club-colors'
@@ -67,6 +69,9 @@ export function Scoreboard({
   canChat = false,
   initialReactions,
   initialShouts,
+  canPostInstant = false,
+  initialInstants,
+  reeks = '',
 }: {
   matchId: number
   initial: { state: MatchState; timeline: TimelineItem[] }
@@ -82,6 +87,12 @@ export function Scoreboard({
   initialReactions?: Record<string, number>
   /** Reeds bewaarde shoutouts (server-side), zodat de tribune meteen gevuld is voor iedereen. */
   initialShouts?: Shout[]
+  /** Mag de bezoeker een foto in de tribune plaatsen? (ingelogd + volwassen reeks + tribune open) */
+  canPostInstant?: boolean
+  /** Reeds geplaatste, niet-verlopen foto's bij deze wedstrijd. */
+  initialInstants?: Instant[]
+  /** Reeksnaam — voor de "deel dit moment"-kaart. */
+  reeks?: string
 }) {
   const [state, setState] = useState<MatchState>(initial.state)
   const [timeline, setTimeline] = useState<TimelineItem[]>(initial.timeline)
@@ -158,6 +169,18 @@ export function Scoreboard({
       body: JSON.stringify({ side }),
     }).catch(() => {})
   }
+
+  // Vluchtige foto-tribune: live foto's + welke ik zelf plaatste (zodat ik die kan verwijderen).
+  const [instants, setInstants] = useState<Instant[]>(initialInstants ?? [])
+  const [mineIds, setMineIds] = useState<Set<number>>(new Set())
+  const addInstantLocal = (i: Instant) => {
+    setInstants((prev) => (prev.some((x) => x.id === i.id) ? prev : [i, ...prev].slice(0, 40)))
+  }
+  const onLocalAdd = (i: Instant) => {
+    setMineIds((s) => new Set(s).add(i.id))
+    addInstantLocal(i)
+  }
+  const removeInstantLocal = (id: number) => setInstants((prev) => prev.filter((x) => x.id !== id))
 
   // Live tribune (shoutouts van ingelogde supporters). Begin met de bewaarde berichten.
   const [shouts, setShouts] = useState<Shout[]>(initialShouts ?? [])
@@ -265,6 +288,8 @@ export function Scoreboard({
       },
       shoutout: (d) => setShouts((prev) => [...prev.slice(-79), d as Shout]),
       shoutouts: (d) => setShouts(d as Shout[]),
+      instant: (d) => addInstantLocal(d as Instant),
+      instant_removed: (d) => removeInstantLocal((d as { id: number }).id),
       blast: (d) => {
         const side = (d as { side?: string }).side
         if (side === 'home' || side === 'away') triggerBlast(side)
@@ -469,6 +494,20 @@ export function Scoreboard({
         </div>
       </div>
 
+      {/* "Deel dit moment": legt de huidige live-stand vast als deelkaart — voor iedereen. */}
+      <LiveMomentCard
+        matchId={matchId}
+        teams={{
+          home: { name: state.teams.home.name, logoUrl: state.teams.home.logoUrl, color: state.teams.home.colors?.primary ?? null },
+          away: { name: state.teams.away.name, logoUrl: state.teams.away.logoUrl, color: state.teams.away.colors?.primary ?? null },
+        }}
+        score={state.score}
+        clockSeconds={clock}
+        half={state.match.currentHalf}
+        status={state.match.status as 'scheduled' | 'live' | 'finished'}
+        reeks={reeks}
+      />
+
       {/* Uitgelogd zie je enkel de score en de tijd. Al de rest (tijdlijn, reacties, vieringen,
           tribune) zit achter login — met een korte uitnodiging. */}
       {!canChat ? (
@@ -585,6 +624,17 @@ export function Scoreboard({
           })()}
         </ul>
       </div>
+
+      {/* Vluchtige foto-tribune (enkel volwassen wedstrijden; verdwijnt na 24u). Verbergt zichzelf
+          als er niets te tonen valt en de bezoeker niet mag posten. */}
+      <PhotoTribune
+        matchId={matchId}
+        instants={instants}
+        canPost={canPostInstant}
+        mineIds={mineIds}
+        onLocalAdd={onLocalAdd}
+        onLocalRemove={removeInstantLocal}
+      />
 
       {/* Supporter-reacties: zwevende emoji's + een reactiebalk (enkel tijdens een live wedstrijd). */}
       <div className="sb-floats" aria-hidden>

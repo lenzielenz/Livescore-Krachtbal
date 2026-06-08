@@ -84,6 +84,7 @@ export interface Config {
     possessions: Possession;
     throws: Throw;
     'match-events': MatchEvent;
+    'match-instants': MatchInstant;
     users: User;
     media: Media;
     'payload-kv': PayloadKv;
@@ -110,6 +111,7 @@ export interface Config {
     possessions: PossessionsSelect<false> | PossessionsSelect<true>;
     throws: ThrowsSelect<false> | ThrowsSelect<true>;
     'match-events': MatchEventsSelect<false> | MatchEventsSelect<true>;
+    'match-instants': MatchInstantsSelect<false> | MatchInstantsSelect<true>;
     users: UsersSelect<false> | UsersSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
@@ -1008,6 +1010,33 @@ export interface MatchEvent {
   createdAt: string;
 }
 /**
+ * Vluchtige supporterfoto’s bij een wedstrijd. Verdwijnen automatisch na expiresAt.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "match-instants".
+ */
+export interface MatchInstant {
+  id: number;
+  match: number | Match;
+  author?: (number | null) | User;
+  authorName?: string | null;
+  /**
+   * Wanneer deze foto automatisch verdwijnt.
+   */
+  expiresAt: string;
+  updatedAt: string;
+  createdAt: string;
+  url?: string | null;
+  thumbnailURL?: string | null;
+  filename?: string | null;
+  mimeType?: string | null;
+  filesize?: number | null;
+  width?: number | null;
+  height?: number | null;
+  focalX?: number | null;
+  focalY?: number | null;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
@@ -1098,6 +1127,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'match-events';
         value: number | MatchEvent;
+      } | null)
+    | ({
+        relationTo: 'match-instants';
+        value: number | MatchInstant;
       } | null)
     | ({
         relationTo: 'users';
@@ -1588,6 +1621,27 @@ export interface MatchEventsSelect<T extends boolean = true> {
   createdBy?: T;
   updatedAt?: T;
   createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "match-instants_select".
+ */
+export interface MatchInstantsSelect<T extends boolean = true> {
+  match?: T;
+  author?: T;
+  authorName?: T;
+  expiresAt?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  url?: T;
+  thumbnailURL?: T;
+  filename?: T;
+  mimeType?: T;
+  filesize?: T;
+  width?: T;
+  height?: T;
+  focalX?: T;
+  focalY?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

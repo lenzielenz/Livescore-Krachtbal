@@ -15,6 +15,7 @@ import { Matches } from './collections/Matches'
 import { Possessions } from './collections/Possessions'
 import { Throws } from './collections/Throws'
 import { MatchEvents } from './collections/MatchEvents'
+import { MatchInstants } from './collections/MatchInstants'
 import { Officials } from './collections/Officials'
 import { MatchSheets } from './collections/MatchSheets'
 import { Accidents } from './collections/Accidents'
@@ -85,6 +86,7 @@ export default buildConfig({
     Possessions,
     Throws,
     MatchEvents,
+    MatchInstants,
     Users,
     Media,
   ],
