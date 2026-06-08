@@ -39,6 +39,30 @@ const GRASS2 = rgb(0.1, 0.31, 0.22)
 const CHALK = rgb(0.85, 0.95, 0.9)
 const WHITE = rgb(1, 1, 1)
 
+// Heatkleur: 0 = koel groen, 0.5 = amber, 1 = rood (druk/gevaarlijk). De heetste zone springt
+// er zo meteen uit in het rood, koude zones blijven groen.
+function heatRgb(t: number) {
+  const x = Math.max(0, Math.min(1, t))
+  const stops: [number, [number, number, number]][] = [
+    [0, [0.05, 0.5, 0.32]],
+    [0.5, [0.95, 0.73, 0.15]],
+    [1, [0.85, 0.16, 0.2]],
+  ]
+  let lo = stops[0]
+  let hi = stops[stops.length - 1]
+  for (let i = 0; i < stops.length - 1; i++) {
+    if (x >= stops[i][0] && x <= stops[i + 1][0]) {
+      lo = stops[i]
+      hi = stops[i + 1]
+      break
+    }
+  }
+  const span = hi[0] - lo[0] || 1
+  const f = (x - lo[0]) / span
+  const c = lo[1].map((v, i) => v + (hi[1][i] - v) * f)
+  return rgb(c[0], c[1], c[2])
+}
+
 export async function generateTeamReportPdf(
   r: TeamReport,
   danger?: TeamDanger | null,
@@ -243,20 +267,20 @@ export async function generateTeamReportPdf(
     // Gemaaide stroken voor een echte pitch-look.
     const stripes = 9
     for (let i = 0; i < stripes; i++) rect(x + i * (w / stripes), fy, w / stripes + 0.6, h, i % 2 ? GRASS2 : GRASS)
-    // Zone-heat (3 horizontale stroken; intensiteit volgt het aandeel).
-    const zTot = zoneShare.links + zoneShare.midden + zoneShare.rechts || 1
+    // Zone-heat (3 horizontale stroken): heatkleur naar relatieve intensiteit — heetste zone = rood.
     const zs: [string, number][] = [
       ['links', zoneShare.links],
       ['midden', zoneShare.midden],
       ['rechts', zoneShare.rechts],
     ]
+    const maxZone = Math.max(zoneShare.links, zoneShare.midden, zoneShare.rechts, 1)
     zs.forEach(([name, v], i) => {
       const stripH = h / 3
       const sy = fy + i * stripH
-      rect(x, sy, w, stripH, goalColor, 0.07 + (v / zTot) * 0.34)
+      const t = v / maxZone
+      rect(x, sy, w, stripH, heatRgb(t), 0.28 + 0.5 * t)
       if (highlight === name) {
-        rect(x, sy, w, stripH, GOLD, 0.16)
-        // Richtindicator: een gouden pijl die de voorkeurszone aanwijst.
+        // Richtindicator: een gouden pijl die de heetste (voorkeurs)zone aanwijst.
         const ay = sy + stripH / 2
         page.drawLine({ start: { x: x + 6, y: ay }, end: { x: x + 22, y: ay }, thickness: 1.4, color: GOLD })
         page.drawLine({ start: { x: x + 22, y: ay }, end: { x: x + 17, y: ay + 3 }, thickness: 1.4, color: GOLD })
@@ -331,7 +355,7 @@ export async function generateTeamReportPdf(
     txt(`Doelpunt`, MARGIN + 12, y, 8, font, INK)
     dot(MARGIN + 70, y + 3, 1.5, rgb(0.75, 0.8, 0.8))
     txt(`Gemiste poging`, MARGIN + 76, y, 8, font, DIM)
-    txt('Goudpijl = voorkeurszone', MARGIN + 176, y, 8, font, DIM)
+    txt('Rood = heetste zone (gouden pijl)', MARGIN + 176, y, 8, font, DIM)
     y -= 6
   }
 
@@ -345,7 +369,7 @@ export async function generateTeamReportPdf(
     y -= used + 6
     star(MARGIN + 5, y + 3, 3.2, BAD)
     txt('Tegendoelpunt', MARGIN + 12, y, 8, font, INK)
-    txt('Goudpijl = hun zwakste zone', MARGIN + 120, y, 8, font, DIM)
+    txt('Rood = hun zwakste zone (gouden pijl)', MARGIN + 120, y, 8, font, DIM)
     y -= 6
   }
 
