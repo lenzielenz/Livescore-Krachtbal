@@ -7,7 +7,7 @@
 import type { Payload } from 'payload'
 
 import type { Category } from './categories'
-import { type ClubColors, clubColorsFrom } from './club-colors'
+import { type ClubColors, clubColorsFrom, distinguishAway } from './club-colors'
 import { type LogoFit, normalizeLogoFit } from './logo-fit'
 import { type AttackDir, type Point, FIELD, freeThrowNorm } from './field'
 import { reeksUsesSeniorThrows } from './reeksen'
@@ -1432,7 +1432,7 @@ export async function buildMatchState(payload: Payload, matchId: number): Promis
     },
     teams: {
       home: { id: home.id, name: home.name, logoUrl: clubLogoUrl(home), logoFit: clubLogoFit(home), colors: clubColors(home) },
-      away: { id: away.id, name: away.name, logoUrl: clubLogoUrl(away), logoFit: clubLogoFit(away), colors: clubColors(away) },
+      away: { id: away.id, name: away.name, logoUrl: clubLogoUrl(away), logoFit: clubLogoFit(away), colors: distinguishAway(clubColors(home), clubColors(away)) },
     },
     lineup: {
       home: await resolveLineup(payload, match.homeLineup, homeId),
@@ -1617,7 +1617,7 @@ export async function buildScoreboards(
       refereeStops,
       teams: {
         home: { id: homeId, name: home.name, logoUrl: clubLogoUrl(home), logoFit: clubLogoFit(home), colors: clubColors(home), clubId: clubIdOf(home), clubName: clubNameOf(home), ...clubLocationOf(home) },
-        away: { id: awayId, name: away.name, logoUrl: clubLogoUrl(away), logoFit: clubLogoFit(away), colors: clubColors(away), clubId: clubIdOf(away), clubName: clubNameOf(away), ...clubLocationOf(away) },
+        away: { id: awayId, name: away.name, logoUrl: clubLogoUrl(away), logoFit: clubLogoFit(away), colors: distinguishAway(clubColors(home), clubColors(away)), clubId: clubIdOf(away), clubName: clubNameOf(away), ...clubLocationOf(away) },
       },
     })
   }
