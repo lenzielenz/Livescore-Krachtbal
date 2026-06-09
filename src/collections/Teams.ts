@@ -1,7 +1,7 @@
 import type { CollectionConfig } from 'payload'
 
 import { CATEGORY_OPTIONS } from '../lib/categories'
-import { REEKS_OPTIONS } from '../lib/reeksen'
+import { REEKS_OPTIONS, reeksNaam } from '../lib/reeksen'
 import { isFederationLevel } from '../lib/access'
 
 export const Teams: CollectionConfig = {
@@ -11,8 +11,10 @@ export const Teams: CollectionConfig = {
     plural: 'Ploegen',
   },
   admin: {
-    useAsTitle: 'name',
-    defaultColumns: ['name', 'club', 'category'],
+    // Toon naam + reeks als titel (ook in keuzelijsten), zodat gelijknamige ploegen van dezelfde
+    // club uit elkaar te houden zijn (bv. "KBC St. Michiels — 1ste Nationale Heren").
+    useAsTitle: 'displayTitle',
+    defaultColumns: ['name', 'reeks', 'club', 'category'],
     group: 'Beheer',
   },
   access: {
@@ -30,6 +32,25 @@ export const Teams: CollectionConfig = {
     ],
   },
   fields: [
+    {
+      // Weergavetitel "naam — reeks". Een echte (niet-virtuele) kolom omdat Payload een virtueel
+      // veld niet als useAsTitle toelaat; de waarde wordt altijd vers berekend bij het lezen, zodat
+      // gelijknamige ploegen overal (ook in keuzelijsten) onderscheiden worden op reeks.
+      name: 'displayTitle',
+      type: 'text',
+      admin: { hidden: true, readOnly: true },
+      hooks: {
+        afterRead: [
+          ({ data }) => {
+            const name = (data as { name?: unknown })?.name
+            const reeks = (data as { reeks?: unknown })?.reeks
+            const nm = typeof name === 'string' && name.trim() ? name : 'Ploeg'
+            const r = typeof reeks === 'string' && reeks ? reeksNaam(reeks as Parameters<typeof reeksNaam>[0]) : ''
+            return r ? `${nm} — ${r}` : nm
+          },
+        ],
+      },
+    },
     {
       name: 'club',
       label: 'Club',

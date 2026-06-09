@@ -57,11 +57,30 @@ export const Players: CollectionConfig = {
       required: true,
     },
     {
+      // Kies eerst de club; daaronder kies je de ploeg (gefilterd op die club). De club wordt ook
+      // gebruikt om de juiste ploegen te tonen — bv. wanneer dezelfde club meerdere ploegen heeft.
+      name: 'club',
+      label: 'Club',
+      type: 'relationship',
+      relationTo: 'clubs',
+      // Niet verplicht in de DB (zo blijven bestaande spelers geldig), maar in de praktijk kies je
+      // ze eerst: zonder club toont de ploegkeuze niets, dus je wordt er vanzelf naartoe geleid.
+      admin: { description: 'Kies eerst de club. Daaronder verschijnen enkel de ploegen van die club.' },
+    },
+    {
       name: 'team',
-      label: 'Ploeg',
+      label: 'Ploeg / reeks',
       type: 'relationship',
       relationTo: 'teams',
       required: true,
+      // Toon enkel de ploegen van de gekozen club (kies dus eerst de club hierboven). De ploegnaam
+      // toont ook de reeks (zie Teams.displayTitle) zodat gelijknamige ploegen te onderscheiden zijn.
+      filterOptions: ({ siblingData }) => {
+        const club = (siblingData as { club?: unknown })?.club
+        const clubId = club && typeof club === 'object' ? (club as { id?: unknown }).id : club
+        return clubId != null ? { club: { equals: clubId } } : false
+      },
+      admin: { description: 'Kies eerst een club hierboven. De reeks staat bij de ploegnaam.' },
     },
     {
       type: 'row',

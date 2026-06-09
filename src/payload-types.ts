@@ -232,6 +232,7 @@ export interface Media {
  */
 export interface Team {
   id: number;
+  displayTitle?: string | null;
   club: number | Club;
   category: 'U12' | 'U14' | 'U16' | 'U18' | 'U20' | 'senioren';
   /**
@@ -297,6 +298,13 @@ export interface Team {
 export interface Player {
   id: number;
   name: string;
+  /**
+   * Kies eerst de club. Daaronder verschijnen enkel de ploegen van die club.
+   */
+  club?: (number | null) | Club;
+  /**
+   * Kies eerst een club hierboven. De reeks staat bij de ploegnaam.
+   */
   team: number | Team;
   /**
    * Voorkeur-rugnummer. Geen gelijke nummers binnen één ploeg op het blad.
@@ -1236,6 +1244,7 @@ export interface ClubsSelect<T extends boolean = true> {
  * via the `definition` "teams_select".
  */
 export interface TeamsSelect<T extends boolean = true> {
+  displayTitle?: T;
   club?: T;
   category?: T;
   reeks?: T;
@@ -1253,6 +1262,7 @@ export interface TeamsSelect<T extends boolean = true> {
  */
 export interface PlayersSelect<T extends boolean = true> {
   name?: T;
+  club?: T;
   team?: T;
   shirtNumber?: T;
   position?: T;
