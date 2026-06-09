@@ -3,6 +3,9 @@
 import { useCallback, useEffect, useState } from 'react'
 
 import { toast } from '@/components/Toaster'
+import { LINEUP_MIN } from '@/lib/match-readiness'
+
+const setsEqual = (a: Set<number>, b: Set<number>) => a.size === b.size && [...a].every((x) => b.has(x))
 
 type RosterEntry = {
   id: number
@@ -37,6 +40,9 @@ export function OpstellingEditor({
 }) {
   const [data, setData] = useState<RosterResponse | null>(null)
   const [selected, setSelected] = useState<Set<number>>(new Set())
+  // Wat is er als laatst bewaard? Zo weten we of er nog onbewaarde wijzigingen zijn (en kunnen we
+  // duidelijk "klaar & bewaard" tonen i.p.v. de verwarrende technische status).
+  const [savedSet, setSavedSet] = useState<Set<number>>(new Set())
   const [favorites, setFavorites] = useState<number[]>([])
   const [showBlocked, setShowBlocked] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
@@ -62,6 +68,8 @@ export function OpstellingEditor({
     if (current.length) setSelected(new Set(current))
     else if (favs.length) setSelected(new Set(favs))
     else setSelected(new Set(json.players?.filter((p) => p.suggested).map((p) => p.id) ?? []))
+    // Het reeds bewaarde (de huidige opstelling op het blad) is de referentie voor "bewaard?".
+    setSavedSet(new Set(current))
   }, [matchId, side])
 
   useEffect(() => {
@@ -205,6 +213,7 @@ export function OpstellingEditor({
     setSaving(false)
     if (res.ok) {
       if (asFavorite) setFavorites(players.map((p) => p.player))
+      setSavedSet(new Set(selected))
       const ok = asFavorite ? `Bewaard én onthouden als vaste opstelling (${json.saved}).` : `Bewaard (${json.saved} spelers).`
       setMsg(ok)
       toast('success', ok)
@@ -227,8 +236,22 @@ export function OpstellingEditor({
     <section className={`wb-card side-${side}`}>
       <h2>{label}</h2>
       <p className="wb-sub">
-        Categorie {data.category} · status: <span className="wb-status">{data.status}</span> · {selected.size} geselecteerd
+        Categorie {data.category} · {selected.size} geselecteerd
       </p>
+
+      {/* Duidelijke klaar-indicator: genoeg spelers + bewaard = groen "klaar". Zo weet je zeker dat
+          het in orde is, i.p.v. te twijfelen bij de technische status. */}
+      {(() => {
+        const enough = selected.size >= LINEUP_MIN
+        const dirty = !setsEqual(selected, savedSet)
+        if (enough && !dirty) {
+          return <div className="ops-ready ok">✓ Opstelling klaar en bewaard · {selected.size} spelers</div>
+        }
+        if (enough && dirty) {
+          return <div className="ops-ready todo">{selected.size} spelers gekozen — tik op “Opstelling bewaren” om te bevestigen.</div>
+        }
+        return <div className="ops-ready need">Nog spelers nodig: {selected.size}/{LINEUP_MIN} minimum.</div>
+      })()}
 
       {/* Snelacties: in één klik de vaste opstelling invullen of alles wissen. */}
       <div className="ops-quick">
