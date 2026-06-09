@@ -337,6 +337,14 @@ export function Scorekeeper({
       }
       // Tijdens een sub-stap (vanger/tikker/buiten) doet een veld-tik niets.
       if (pendingCatch || pendingTap || pendingOut) return
+      // Werpplaats verleggen: vóór je de volgende landing aanduidt, verzet een tik op (ongeveer)
+      // dezelfde horizontale lijn als de laatste worp enkel de breedte van de werpplaats. Geen
+      // slepen — gewoon tikken op de hulplijn.
+      const lastTapY = recentTaps.length ? recentTaps[recentTaps.length - 1].y : null
+      if (!pendingThrow && lastTapY !== null && Math.abs(p.y - lastTapY) <= 0.05) {
+        setWerpX(Math.max(0, Math.min(1, p.x)))
+        return
+      }
       setPendingThrow((cur) => {
         if (cur && Math.hypot(cur.p.x - p.x, cur.p.y - p.y) < 0.06) {
           return { p: cur.p, tapCount: cur.tapCount === 2 ? 1 : 2 }
@@ -344,7 +352,7 @@ export function Scorekeeper({
         return { p, tapCount: 1 }
       })
     },
-    [state.match.status, poss, pendingCatch, pendingTap, pendingOut],
+    [state.match.status, poss, pendingCatch, pendingTap, pendingOut, pendingThrow, recentTaps],
   )
 
   // Stap 2: kies wie wierp → bereken de uitkomst en registreer (of vraag eerst naar aanraking).
@@ -500,14 +508,14 @@ export function Scorekeeper({
   const awayArrow = homeDirUp ? '▲' : '▼'
 
   // Werpplaats voor de volgende worp: de laatste landing in dit balbezit. De werper mag zich vóór
-  // de worp zijdelings (alleen breedte) verplaatsen → een horizontaal versleepbare greep. Vanaf
-  // die plek vertrekt de volgende worp (het traject wordt vanaf hier getekend).
+  // de worp zijdelings (alleen breedte) verplaatsen. Je verlegt ze door op de horizontale hulplijn
+  // te tikken (geen slepen). Vanaf die plek vertrekt de volgende worp (het traject start er).
   const lastTap = recentTaps.length ? recentTaps[recentTaps.length - 1] : null
   const showWerp = isLive && lastTap && !pendingCatch && !pendingTap && !pendingOut
   const werpPoint = lastTap ? { x: werpX ?? lastTap.x, y: lastTap.y } : null
   const werpMarker: FieldMarker | null =
     showWerp && werpPoint
-      ? { id: 'werpplaats', x: werpPoint.x, y: werpPoint.y, color: '#ffd166', r: 4, draggableX: true }
+      ? { id: 'werpplaats', x: werpPoint.x, y: werpPoint.y, color: '#ffd166', r: 4 }
       : null
   const baseMarkers: FieldMarker[] = werpMarker ? [...recentTaps, werpMarker] : recentTaps
 
@@ -1252,7 +1260,7 @@ export function Scorekeeper({
                 className="sk-field"
                 onTap={onTap}
                 markers={fieldMarkers}
-                onMarkerDragX={(id, x) => { if (id === 'werpplaats') setWerpX(x) }}
+                guideY={showWerp && werpPoint ? werpPoint.y : undefined}
                 ends={fieldEnds}
                 goalAreaDepthM={state.match.goalAreaDepth}
                 glowGoal={
