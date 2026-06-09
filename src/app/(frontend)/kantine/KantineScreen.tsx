@@ -29,7 +29,18 @@ function maxColsForWidth(w: number): number {
   return 5
 }
 
-export function KantineScreen() {
+export function KantineScreen({
+  endpoint = '/api/kantine',
+  editable = true,
+  title,
+}: {
+  /** Bron van de wedstrijden (default: de centrale selectie). */
+  endpoint?: string
+  /** Toon de "Aanpassen"-link + kies-CTA (enkel op de bedienbare versie). */
+  editable?: boolean
+  /** Titel/onderschrift, bv. de clubnaam op een vaste club-link. */
+  title?: string
+} = {}) {
   const [matches, setMatches] = useState<KantineMatch[]>([])
   const [loaded, setLoaded] = useState(false)
   // Viewport-breedte volgen zodat het raster niet 5 kolommen op een tablet propt (AUDIT §1).
@@ -46,7 +57,7 @@ export function KantineScreen() {
     let active = true
     const load = async () => {
       try {
-        const r = await fetch('/api/kantine', { cache: 'no-store' })
+        const r = await fetch(endpoint, { cache: 'no-store' })
         if (!r.ok) return
         const d = (await r.json()) as { matches?: KantineMatch[] }
         if (active) {
@@ -63,7 +74,7 @@ export function KantineScreen() {
       active = false
       clearInterval(t)
     }
-  }, [])
+  }, [endpoint])
 
   // Toon de gespeelde wedstrijden (live + afgelopen): een afgelopen wedstrijd blijft staan, en
   // zodra een geplande wedstrijd start komt ze er vanzelf bij. Zolang er nog niets begonnen is,
@@ -78,11 +89,18 @@ export function KantineScreen() {
 
   return (
     <div className="kt-screen">
-      <Link href="/kantine" className="kt-screen-edit">‹ Aanpassen</Link>
+      {editable && <Link href="/kantine" className="kt-screen-edit">‹ Aanpassen</Link>}
+      {title && <span className="kt-screen-title">{title}</span>}
       {loaded && matches.length === 0 ? (
         <div className="kt-screen-empty">
-          <p>Nog geen wedstrijden gekozen voor het kantinescherm.</p>
-          <Link href="/kantine" className="kt-screen-btn">Kies wedstrijden →</Link>
+          {editable ? (
+            <>
+              <p>Nog geen wedstrijden gekozen voor het kantinescherm.</p>
+              <Link href="/kantine" className="kt-screen-btn">Kies wedstrijden →</Link>
+            </>
+          ) : (
+            <p>Vandaag geen wedstrijden{title ? ` voor ${title}` : ''}. Zodra er een wedstrijd is, verschijnt ze hier vanzelf.</p>
+          )}
         </div>
       ) : (
         <div className="kt-grid-screen" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
