@@ -61,15 +61,20 @@ export async function loadLiveDay(selected: string, today: string): Promise<DayM
 
   const cards = await buildScoreboards(payload, docs)
 
+  // Auto-live: een geplande wedstrijd waarvan het ingestelde uur al voorbij is, tonen we als "live"
+  // (ook al heeft nog niemand ze gestart). Instant-vergelijking → tijdzone-onafhankelijk.
+  const now = Date.now()
+
   const days: DayMatch[] = []
   for (const m of docs) {
     const c = cards.get(m.id)
     if (!c) continue // ontbrekende ploeg → overslaan (zoals voorheen)
+    const autoLive = c.status === 'scheduled' && new Date(m.date as string).getTime() <= now
     days.push({
       id: m.id,
       reeks: reeksLabel(m.reeks),
       time: formatTimeBE(m.date),
-      status: c.status,
+      status: autoLive ? 'live' : c.status,
       home: { teamId: c.teams.home.id, name: c.teams.home.name, logoUrl: c.teams.home.logoUrl, logoFit: c.teams.home.logoFit, colors: c.teams.home.colors, clubId: c.teams.home.clubId, clubName: c.teams.home.clubName },
       away: { teamId: c.teams.away.id, name: c.teams.away.name, logoUrl: c.teams.away.logoUrl, logoFit: c.teams.away.logoFit, colors: c.teams.away.colors, clubId: c.teams.away.clubId, clubName: c.teams.away.clubName },
       score: c.score,

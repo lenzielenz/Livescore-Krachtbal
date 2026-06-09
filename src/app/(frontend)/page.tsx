@@ -1,6 +1,7 @@
 import Link from 'next/link'
 
 import { SiteHeader } from '@/components/SiteHeader'
+import { userClubId } from '@/lib/access'
 import { getAuthUser } from '@/lib/auth-user'
 import { dateStrBE } from '@/lib/datetime'
 import { quoteForDay } from '@/lib/krachtbal-quotes'
@@ -22,6 +23,8 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   // maar levert elke dag een verse krachtbal-quote op.
   const quote = quoteForDay(today)
   const me = await getAuthUser()
+  const cid = userClubId(me)
+  const myClubId = cid != null && Number.isFinite(Number(cid)) ? Number(cid) : null
 
   return (
     <>
@@ -41,7 +44,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
           </Link>
         )}
 
-        <LiveBoard date={selected} today={today} matches={days} />
+        <LiveBoard date={selected} today={today} matches={days} myClubId={myClubId} />
       </div>
     </>
   )
