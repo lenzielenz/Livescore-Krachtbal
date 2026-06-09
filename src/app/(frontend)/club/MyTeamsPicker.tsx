@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { useState, useTransition } from 'react'
 
-type Team = { id: number; name: string }
+type Team = { id: number; name: string; sub?: string }
 
 // Trainer/coach duidt zijn eigen ploeg(en) aan — daarna focust "Mijn club" op die ploeg(en).
 export function MyTeamsPicker({ teams, initial }: { teams: Team[]; initial: number[] }) {
@@ -53,7 +53,8 @@ export function MyTeamsPicker({ teams, initial }: { teams: Team[]; initial: numb
                 disabled={saving || pending}
                 aria-pressed={selected.includes(t.id)}
               >
-                {selected.includes(t.id) ? '✓ ' : ''}{t.name}
+                <span className="myteams-pill-name">{selected.includes(t.id) ? '✓ ' : ''}{t.name}</span>
+                {t.sub && <span className="myteams-pill-sub">{t.sub}</span>}
               </button>
             ))}
           </div>
@@ -61,7 +62,7 @@ export function MyTeamsPicker({ teams, initial }: { teams: Team[]; initial: numb
       ) : (
         <p className="myteams-current">
           {selected.length > 0
-            ? teams.filter((t) => selected.includes(t.id)).map((t) => t.name).join(' · ')
+            ? teams.filter((t) => selected.includes(t.id)).map((t) => (t.sub ? `${t.name} (${t.sub})` : t.name)).join(' · ')
             : 'Alle ploegen van de club'}
         </p>
       )}

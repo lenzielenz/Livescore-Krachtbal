@@ -162,8 +162,17 @@ export default async function ClubPage({ searchParams }: { searchParams: Promise
   }
 
   // "Mijn ploegen": de eigen voorkeur van de trainer/coach (team-ids). Enkel ploegen die nog
-  // bestaan in de club tellen mee.
-  const allTeams = teams.docs.map((t) => ({ id: Number(t.id), name: String((t as { name?: unknown }).name ?? '—') }))
+  // bestaan in de club tellen mee. We tonen ook de reeks (of categorie) zodat gelijknamige
+  // ploegen — bv. meerdere "KBC St. Michiels" — uit elkaar te houden zijn.
+  const allTeams = teams.docs.map((t) => {
+    const code = String((t as { reeks?: unknown }).reeks ?? '')
+    const cat = String((t as { category?: unknown }).category ?? '')
+    return {
+      id: Number(t.id),
+      name: String((t as { name?: unknown }).name ?? '—'),
+      sub: code ? reeksNaam(code as Parameters<typeof reeksNaam>[0]) : cat,
+    }
+  })
   const rawMine = (user as { myTeams?: unknown }).myTeams
   const myTeams = (Array.isArray(rawMine) ? rawMine.map(Number).filter((n) => Number.isFinite(n)) : []).filter((id) => teamIdSet.has(id))
   const mySet = new Set(myTeams)
