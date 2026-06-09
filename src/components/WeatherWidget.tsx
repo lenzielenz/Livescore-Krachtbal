@@ -5,9 +5,10 @@ import { useEffect, useState } from 'react'
 import './weather.css'
 
 // Compacte weersverwachting voor de gekozen dag — krachtbal is een buitensport, dus temperatuur
-// én wind tellen. Data via Open-Meteo (gratis, geen sleutel, client-side). Standaard centraal
-// België; geen locatie-prompt zodat het niet opdringerig is.
-const DEFAULT = { lat: 50.85, lon: 4.35, place: 'België' }
+// én wind tellen. Data via Open-Meteo (gratis, geen sleutel, client-side). Locatie: ingelogd met
+// een club → die club; anders de standaardplaats Brugge (geen locatie-prompt).
+const DEFAULT = { lat: 51.2093, lon: 3.2247, place: 'Brugge' }
+type Loc = { lat: number; lon: number; place: string }
 
 type Weather = { code: number; tmax: number; tmin: number; wind: number }
 
@@ -27,12 +28,12 @@ function describe(code: number): { emoji: string; label: string } {
 
 // Uren-voorspelling (popover onder de header-weerchip): de komende ~12 uur, temperatuur + icoon +
 // regenkans. Sluit bij een klik ernaast.
-function WeatherHours({ onClose }: { onClose: () => void }) {
+function WeatherHours({ onClose, loc }: { onClose: () => void; loc: Loc }) {
   const [hours, setHours] = useState<{ label: string; emoji: string; temp: number; prob: number }[] | null>(null)
   useEffect(() => {
     let cancelled = false
     const url =
-      `https://api.open-meteo.com/v1/forecast?latitude=${DEFAULT.lat}&longitude=${DEFAULT.lon}` +
+      `https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}` +
       `&hourly=temperature_2m,weather_code,precipitation_probability&forecast_days=2&timezone=Europe%2FBrussels`
     fetch(url)
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error('weer'))))
@@ -62,13 +63,13 @@ function WeatherHours({ onClose }: { onClose: () => void }) {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [loc.lat, loc.lon])
 
   return (
     <>
       <span className="wx-pop-backdrop" onClick={onClose} aria-hidden />
       <div className="wx-pop" role="dialog" aria-label="Uren-voorspelling">
-        <div className="wx-pop-head">Volgende uren · {DEFAULT.place}</div>
+        <div className="wx-pop-head">Volgende uren · {loc.place}</div>
         {hours == null ? (
           <div className="wx-pop-empty">Weer ophalen…</div>
         ) : hours.length === 0 ? (
@@ -95,12 +96,26 @@ export function WeatherWidget({ date, variant = 'full' }: { date?: string; varia
   const [w, setW] = useState<Weather | null>(null)
   const [state, setState] = useState<'loading' | 'ok' | 'none'>('loading')
   const [open, setOpen] = useState(false)
+  // Locatie: ingelogd met club → die club; anders Brugge. Wordt na het laden bijgewerkt.
+  const [loc, setLoc] = useState<Loc>(DEFAULT)
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/my-weather-place', { credentials: 'include' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: Loc | null) => {
+        if (!cancelled && d && Number.isFinite(d.lat) && Number.isFinite(d.lon)) setLoc(d)
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   useEffect(() => {
     let cancelled = false
     setState('loading')
     const url =
-      `https://api.open-meteo.com/v1/forecast?latitude=${DEFAULT.lat}&longitude=${DEFAULT.lon}` +
+      `https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}` +
       `&daily=weather_code,temperature_2m_max,temperature_2m_min,wind_speed_10m_max` +
       `&timezone=Europe%2FBrussels&start_date=${day}&end_date=${day}`
     fetch(url)
@@ -127,7 +142,7 @@ export function WeatherWidget({ date, variant = 'full' }: { date?: string; varia
     return () => {
       cancelled = true
     }
-  }, [day])
+  }, [day, loc.lat, loc.lon])
 
   // Compacte variant voor de header: icoon + temperatuur, klikbaar → uren-voorspelling.
   if (variant === 'compact') {
@@ -144,7 +159,7 @@ export function WeatherWidget({ date, variant = 'full' }: { date?: string; varia
         >
           <span aria-hidden>{i.emoji}</span> {w.tmax}° <span className="wx-mini-caret" aria-hidden>▾</span>
         </button>
-        {open && <WeatherHours onClose={() => setOpen(false)} />}
+        {open && <WeatherHours onClose={() => setOpen(false)} loc={loc} />}
       </span>
     )
   }
@@ -163,7 +178,7 @@ export function WeatherWidget({ date, variant = 'full' }: { date?: string; varia
   if (!w) return null
   const i = describe(w.code)
   return (
-    <div className="wx" title={`Weersverwachting (${DEFAULT.place})`}>
+    <div className="wx" title={`Weersverwachting (${loc.place})`}>
       <span className="wx-emoji" aria-hidden>{i.emoji}</span>
       <div className="wx-body">
         <span className="wx-temp">
@@ -171,7 +186,7 @@ export function WeatherWidget({ date, variant = 'full' }: { date?: string; varia
         </span>
         <span className="wx-meta">{i.label} · 💨 {w.wind} km/u</span>
       </div>
-      <span className="wx-place">{DEFAULT.place}</span>
+      <span className="wx-place">{loc.place}</span>
     </div>
   )
 }
