@@ -73,14 +73,16 @@ export const Players: CollectionConfig = {
       type: 'relationship',
       relationTo: 'teams',
       required: true,
-      // Toon enkel de ploegen van de gekozen club (kies dus eerst de club hierboven). De ploegnaam
-      // toont ook de reeks (zie Teams.displayTitle) zodat gelijknamige ploegen te onderscheiden zijn.
-      filterOptions: ({ siblingData }) => {
-        const club = (siblingData as { club?: unknown })?.club
-        const clubId = club && typeof club === 'object' ? (club as { id?: unknown }).id : club
-        return clubId != null ? { club: { equals: clubId } } : false
+      // Toon de ploegen van de gekozen club; de ploegnaam toont ook de reeks (Teams.displayTitle)
+      // zodat gelijknamige ploegen te onderscheiden zijn. Geen club gekozen → toon álle ploegen
+      // (zodat de lijst nooit leeg is en je altijd een ploeg kan kiezen).
+      filterOptions: ({ data, siblingData }) => {
+        const raw = (siblingData as { club?: unknown })?.club ?? (data as { club?: unknown })?.club
+        const id = raw && typeof raw === 'object' ? (raw as { id?: unknown }).id : raw
+        const clubId = id != null ? Number(id) : NaN
+        return Number.isFinite(clubId) ? { club: { equals: clubId } } : true
       },
-      admin: { description: 'Kies eerst een club hierboven. De reeks staat bij de ploegnaam.' },
+      admin: { description: 'Kies eerst een club hierboven om de lijst te beperken. De reeks staat bij de ploegnaam.' },
     },
     {
       type: 'row',
