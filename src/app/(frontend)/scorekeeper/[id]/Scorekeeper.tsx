@@ -338,10 +338,10 @@ export function Scorekeeper({
       // Tijdens een sub-stap (vanger/tikker/buiten) doet een veld-tik niets.
       if (pendingCatch || pendingTap || pendingOut) return
       // Werpplaats verleggen: vóór je de volgende landing aanduidt, verzet een tik op (ongeveer)
-      // dezelfde horizontale lijn als de laatste worp enkel de breedte van de werpplaats. Geen
-      // slepen — gewoon tikken op de hulplijn.
-      const lastTapY = recentTaps.length ? recentTaps[recentTaps.length - 1].y : null
-      if (!pendingThrow && lastTapY !== null && Math.abs(p.y - lastTapY) <= 0.05) {
+      // dezelfde horizontale lijn als de werpplaats enkel de breedte ervan. Bij de eerste worp is
+      // dat het opzetpunt (bv. de doellijn na een vangst in het doelgebied). Geen slepen — tikken.
+      const anchorY = recentTaps.length ? recentTaps[recentTaps.length - 1].y : poss.setupY
+      if (!pendingThrow && Math.abs(p.y - anchorY) <= 0.05) {
         setWerpX(Math.max(0, Math.min(1, p.x)))
         return
       }
@@ -507,12 +507,18 @@ export function Scorekeeper({
   const homeArrow = homeDirUp ? '▼' : '▲'
   const awayArrow = homeDirUp ? '▲' : '▼'
 
-  // Werpplaats voor de volgende worp: de laatste landing in dit balbezit. De werper mag zich vóór
-  // de worp zijdelings (alleen breedte) verplaatsen. Je verlegt ze door op de horizontale hulplijn
-  // te tikken (geen slepen). Vanaf die plek vertrekt de volgende worp (het traject start er).
+  // Werpplaats voor de volgende worp. Bij een vervolgworp is dat de laatste landing; bij de EERSTE
+  // worp van een balbezit het opzetpunt (bv. na een vangst in het doelgebied: het midden van de
+  // doellijn). De werper mag zich vóór de worp zijdelings (alleen breedte) verplaatsen — je verlegt
+  // de werpplaats door op de horizontale hulplijn te tikken (geen slepen). Het traject start er.
   const lastTap = recentTaps.length ? recentTaps[recentTaps.length - 1] : null
-  const showWerp = isLive && lastTap && !pendingCatch && !pendingTap && !pendingOut
-  const werpPoint = lastTap ? { x: werpX ?? lastTap.x, y: lastTap.y } : null
+  const werpAnchor = lastTap
+    ? { x: lastTap.x, y: lastTap.y }
+    : poss
+      ? { x: poss.setupX, y: poss.setupY }
+      : null
+  const showWerp = isLive && werpAnchor && !pendingCatch && !pendingTap && !pendingOut
+  const werpPoint = werpAnchor ? { x: werpX ?? werpAnchor.x, y: werpAnchor.y } : null
   const werpMarker: FieldMarker | null =
     showWerp && werpPoint
       ? { id: 'werpplaats', x: werpPoint.x, y: werpPoint.y, color: '#ffd166', r: 4 }

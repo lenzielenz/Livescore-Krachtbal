@@ -877,6 +877,9 @@ export interface MatchState {
     lastPlayerId: number | null
     /** Vrije worp: één worp richting het tegendoel. */
     freeThrow: boolean
+    /** Opzetpunt (genormaliseerd) van dit balbezit — de werpplaats voor de eerste worp. */
+    setupX: number
+    setupY: number
   } | null
 }
 
@@ -1409,6 +1412,8 @@ export async function buildMatchState(payload: Payload, matchId: number): Promis
       dir: (open.dir as AttackDir) ?? attackDirForSide(side, half),
       lastPlayerId,
       freeThrow: Boolean(open.freeThrow),
+      setupX: open.setupX ?? 0.5,
+      setupY: open.setupY ?? 0.5,
     }
   }
 
