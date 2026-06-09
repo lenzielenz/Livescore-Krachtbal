@@ -363,6 +363,22 @@ a.sk-btn { display: inline-block; box-sizing: border-box; text-align: center; te
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent), 0 8px 22px rgba(0, 0, 0, 0.35);
 }
 .sk-pick-player.sk-suggest .sk-pick-num { font-size: 1.8rem; }
+/* De #1-suggestie is al "voorgeselecteerd": gevuld accent met een vinkje. Eén tik bevestigt;
+   een andere knop corrigeren kan nog. Zo hoef je de naam niet te zoeken. */
+.sk-pick-player.sk-suggest.sk-suggest-top {
+  position: relative;
+  background: var(--accent); border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent), 0 8px 22px rgba(0, 0, 0, 0.4);
+}
+.sk-pick-player.sk-suggest.sk-suggest-top .sk-pick-num,
+.sk-pick-player.sk-suggest.sk-suggest-top .sk-pick-naam { color: #06140d; }
+.sk-pick-player.sk-suggest.sk-suggest-top .sk-pick-pos { color: #06140d; opacity: 0.8; }
+.sk-suggest-check {
+  position: absolute; top: -7px; right: -7px;
+  width: 20px; height: 20px; border-radius: 50%;
+  background: var(--accent); color: #06140d; font-weight: 900; font-size: 0.78rem;
+  display: grid; place-items: center; box-shadow: 0 0 0 2px var(--panel);
+}
 .sk-pick-pos { font-size: 0.66rem; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: 0.04em; }
 .sk-suggest-or { font-size: 0.74rem; color: var(--dim); text-align: center; margin: 4px 0 10px; }
 /* Nummers in de zijkolommen zijn nu louter informatief (selectie gebeurt in het keuzescherm) */

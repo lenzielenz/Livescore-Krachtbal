@@ -678,10 +678,18 @@ export function Scorekeeper({
               <h3>Wie ving de bal?</h3>
               {suggested.length > 0 ? (
                 <>
-                  <p className="sk-suggest-lbl">Waarschijnlijk — tik om te bevestigen</p>
+                  <p className="sk-suggest-lbl">
+                    Wellicht <strong>{firstName(suggested[0].name)}</strong> — bevestig of corrigeer
+                  </p>
                   <div className="sk-suggest-row">
-                    {suggested.map((c) => (
-                      <button type="button" key={c.id} className="sk-pick-player sk-suggest" onClick={() => submit(c.id)}>
+                    {suggested.map((c, i) => (
+                      <button
+                        type="button"
+                        key={c.id}
+                        className={`sk-pick-player sk-suggest${i === 0 ? ' sk-suggest-top' : ''}`}
+                        onClick={() => submit(c.id)}
+                      >
+                        {i === 0 && <span className="sk-suggest-check" aria-hidden>✓</span>}
                         <span className="sk-pick-num">{c.shirtNumber}</span>
                         <span className="sk-pick-naam">{firstName(c.name)}</span>
                         <span className="sk-pick-pos">{posLabel(posOf(c))}</span>
