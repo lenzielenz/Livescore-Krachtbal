@@ -51,6 +51,7 @@ import * as migration_20260609_120000_tournament_team_link from './20260609_1200
 import * as migration_20260609_140000_player_position_enum_fix from './20260609_140000_player_position_enum_fix';
 import * as migration_20260609_160000_player_position_text from './20260609_160000_player_position_text';
 import * as migration_20260609_180000_player_club from './20260609_180000_player_club';
+import * as migration_20260609_200000_player_position_text_v2 from './20260609_200000_player_position_text_v2';
 
 export const migrations = [
   {
@@ -317,5 +318,10 @@ export const migrations = [
     up: migration_20260609_180000_player_club.up,
     down: migration_20260609_180000_player_club.down,
     name: '20260609_180000_player_club',
+  },
+  {
+    up: migration_20260609_200000_player_position_text_v2.up,
+    down: migration_20260609_200000_player_position_text_v2.down,
+    name: '20260609_200000_player_position_text_v2',
   },
 ];
