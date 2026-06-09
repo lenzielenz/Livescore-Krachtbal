@@ -273,10 +273,15 @@ export function LiveBoard({
                             <span className="lb-stats">
                               <span title="Kruisjes">✖ {m.crosses?.home ?? 0}–{m.crosses?.away ?? 0}</span>
                               <span className="lb-stat-sep">·</span>
-                              <span title="Minuten (time-outs)">
+                              <span title="Time-outs">
                                 ⏱ {m.timeouts?.home ?? 0}–{m.timeouts?.away ?? 0}
-                                {m.refereeStops ? ` +${m.refereeStops} SR` : ''}
                               </span>
+                              {m.refereeStops ? (
+                                <>
+                                  <span className="lb-stat-sep">·</span>
+                                  <span title="Time-outs scheidsrechter">🧑‍⚖️ ⏱ {m.refereeStops}</span>
+                                </>
+                              ) : null}
                             </span>
                           )}
                         </span>

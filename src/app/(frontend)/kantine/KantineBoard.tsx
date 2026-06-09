@@ -175,7 +175,7 @@ export function Tile({
             <span className="kt-tile-clock dim">{match.time}</span>
           )}
           {played && state && state.refereeStops > 0 && (
-            <span className="kt-tile-sr" title="Time-outs scheidsrechter">🧑‍⚖️ {state.refereeStops}</span>
+            <span className="kt-tile-sr" title="Time-outs scheidsrechter">🧑‍⚖️ ⏱ {state.refereeStops}</span>
           )}
         </div>
         <div className="kt-tile-team">
