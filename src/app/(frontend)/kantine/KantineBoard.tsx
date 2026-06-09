@@ -155,6 +155,12 @@ export function Tile({
         <div className="kt-tile-team">
           <TeamLogo name={home} logoUrl={homeLogo} logoFit={homeLogoFit} side="home" size={logoSize} ringColor={homeColor} />
           <span className="kt-tile-name">{home}</span>
+          {played && state && (
+            <span className="kt-tile-teamstats home">
+              <span title="Kruisjes">✖ {state.crosses.home}</span>
+              <span title="Time-outs">⏱ {state.timeouts.home}</span>
+            </span>
+          )}
         </div>
         <div className="kt-tile-mid">
           <div className="kt-tile-score">{played ? `${score.home} – ${score.away}` : 'vs'}</div>
@@ -168,35 +174,21 @@ export function Tile({
           ) : (
             <span className="kt-tile-clock dim">{match.time}</span>
           )}
+          {played && state && state.refereeStops > 0 && (
+            <span className="kt-tile-sr" title="Scheidsrechter-minuten">+{state.refereeStops} SR</span>
+          )}
         </div>
         <div className="kt-tile-team">
           <TeamLogo name={away} logoUrl={awayLogo} logoFit={awayLogoFit} side="away" size={logoSize} ringColor={awayColor} />
           <span className="kt-tile-name">{away}</span>
+          {played && state && (
+            <span className="kt-tile-teamstats away">
+              <span title="Kruisjes">✖ {state.crosses.away}</span>
+              <span title="Time-outs">⏱ {state.timeouts.away}</span>
+            </span>
+          )}
         </div>
       </Link>
-
-      {played && state && (
-        <div className="kt-tile-foot">
-          <span className="kt-stat" title="Kruisjes">
-            <span className="kt-stat-lbl">Kruisjes</span>
-            <span className="kt-stat-val">
-              <b className="h">{state.crosses.home}</b>
-              <i>–</i>
-              <b className="a">{state.crosses.away}</b>
-            </span>
-          </span>
-          <span className="kt-stat-div" aria-hidden />
-          <span className="kt-stat" title="Minuten (time-outs)">
-            <span className="kt-stat-lbl">Minuten</span>
-            <span className="kt-stat-val">
-              <b className="h">{state.timeouts.home}</b>
-              <i>–</i>
-              <b className="a">{state.timeouts.away}</b>
-              {state.refereeStops > 0 && <em className="kt-stat-sr">+{state.refereeStops} SR</em>}
-            </span>
-          </span>
-        </div>
-      )}
 
       {flash && (
         <div key={flash.key} className={`kt-flash side-${flash.side}`}>
