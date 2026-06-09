@@ -47,15 +47,6 @@ export function OpstellingEditor({
   const [showBlocked, setShowBlocked] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
-  // Handmatig een speler toevoegen (bv. een nieuwe of niet-geregistreerde speler).
-  const [addName, setAddName] = useState('')
-  const [addNum, setAddNum] = useState('')
-  const [adding, setAdding] = useState(false)
-  // Een bestaande speler aanpassen (naam/rugnummer) of verwijderen.
-  const [editId, setEditId] = useState<number | null>(null)
-  const [editName, setEditName] = useState('')
-  const [editNum, setEditNum] = useState('')
-  const [rowBusy, setRowBusy] = useState<number | null>(null)
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/matchsheet/${matchId}/lineup?side=${side}`)
@@ -83,118 +74,6 @@ export function OpstellingEditor({
       else next.add(id)
       return next
     })
-  }
-
-  // Eerstvolgende vrije rugnummer (op basis van de huidige roster).
-  const nextFreeNumber = (): number => {
-    const used = new Set((data?.players ?? []).map((p) => p.shirtNumber))
-    let n = 1
-    while (used.has(n)) n += 1
-    return n
-  }
-
-  // Maakt een nieuwe speler aan voor deze ploeg, herlaadt de roster en selecteert hem meteen —
-  // zonder de bestaande selectie te wissen.
-  const addPlayer = async () => {
-    const name = addName.trim()
-    if (!name || !data) return
-    setAdding(true)
-    setMsg(null)
-    const shirtNumber = addNum.trim() ? Number(addNum) : nextFreeNumber()
-    const prevIds = new Set(data.players.map((p) => p.id))
-    try {
-      const res = await fetch('/api/players/bulk', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ teamId: data.teamId, players: [{ name, shirtNumber }] }),
-      })
-      const json = await res.json()
-      if (!res.ok) throw new Error(json.error ?? 'Toevoegen mislukt.')
-      // Roster opnieuw ophalen en de nieuwe speler(s) bij de selectie voegen.
-      const r2 = await fetch(`/api/matchsheet/${matchId}/lineup?side=${side}`)
-      const fresh: RosterResponse = await r2.json()
-      setData(fresh)
-      setFavorites(fresh.favorites ?? [])
-      const newIds = (fresh.players ?? []).map((p) => p.id).filter((id) => !prevIds.has(id))
-      if (newIds.length) setSelected((prev) => new Set([...prev, ...newIds]))
-      setAddName('')
-      setAddNum('')
-      toast('success', `${name} toegevoegd en geselecteerd.`)
-    } catch (e) {
-      const err = (e as Error).message
-      setMsg(err)
-      toast('error', err)
-    } finally {
-      setAdding(false)
-    }
-  }
-
-  // Roster opnieuw ophalen zonder de huidige selectie te verliezen (na een wijziging/verwijdering).
-  const reloadRoster = async () => {
-    const r = await fetch(`/api/matchsheet/${matchId}/lineup?side=${side}`)
-    const fresh: RosterResponse = await r.json()
-    setData(fresh)
-    setFavorites(fresh.favorites ?? [])
-  }
-
-  const startEdit = (p: RosterEntry) => {
-    setEditId(p.id)
-    setEditName(p.name)
-    setEditNum(String(p.shirtNumber))
-  }
-  const cancelEdit = () => {
-    setEditId(null)
-    setEditName('')
-    setEditNum('')
-  }
-
-  const saveEdit = async (id: number) => {
-    const name = editName.trim()
-    if (!name) return
-    setRowBusy(id)
-    setMsg(null)
-    try {
-      const res = await fetch(`/api/players/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, shirtNumber: editNum.trim() === '' ? undefined : Number(editNum) }),
-      })
-      const json = await res.json()
-      if (!res.ok) throw new Error(json.error ?? 'Aanpassen mislukt.')
-      await reloadRoster()
-      cancelEdit()
-      toast('success', `${name} aangepast.`)
-    } catch (e) {
-      const err = (e as Error).message
-      setMsg(err)
-      toast('error', err)
-    } finally {
-      setRowBusy(null)
-    }
-  }
-
-  const deletePlayer = async (p: RosterEntry) => {
-    if (!confirm(`${p.shirtNumber} ${p.name} definitief verwijderen uit de ploeg?`)) return
-    setRowBusy(p.id)
-    setMsg(null)
-    try {
-      const res = await fetch(`/api/players/${p.id}`, { method: 'DELETE' })
-      const json = await res.json()
-      if (!res.ok) throw new Error(json.error ?? 'Verwijderen mislukt.')
-      setSelected((prev) => {
-        const next = new Set(prev)
-        next.delete(p.id)
-        return next
-      })
-      await reloadRoster()
-      toast('success', `${p.name} verwijderd.`)
-    } catch (e) {
-      const err = (e as Error).message
-      setMsg(err)
-      toast('error', err)
-    } finally {
-      setRowBusy(null)
-    }
   }
 
   const save = async (asFavorite: boolean) => {
@@ -277,117 +156,30 @@ export function OpstellingEditor({
       )}
 
       <ul className="wb-rows">
-        {visible.map((p) =>
-          editId === p.id ? (
-            <li key={p.id} className="wb-row ops-row-edit">
-              <input
-                type="number"
-                className="ops-add-num"
-                inputMode="numeric"
-                value={editNum}
-                onChange={(e) => setEditNum(e.target.value)}
-                aria-label="Rugnummer"
-              />
-              <input
-                type="text"
-                className="ops-add-name"
-                value={editName}
-                onChange={(e) => setEditName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault()
-                    void saveEdit(p.id)
-                  }
-                  if (e.key === 'Escape') cancelEdit()
-                }}
-                aria-label="Naam speler"
-                autoFocus
-              />
-              <button type="button" className="ops-row-btn ok" onClick={() => void saveEdit(p.id)} disabled={rowBusy === p.id || !editName.trim()} aria-label="Bewaren">
-                {rowBusy === p.id ? '…' : '✓'}
-              </button>
-              <button type="button" className="ops-row-btn" onClick={cancelEdit} disabled={rowBusy === p.id} aria-label="Annuleren">
-                ✕
-              </button>
-            </li>
-          ) : (
-            <li
-              key={p.id}
-              className={`wb-row ${selected.has(p.id) ? 'on' : ''}`}
-              onClick={() => toggle(p.id)}
-              title={p.selectability.reasons.join(' ')}
-            >
-              <input type="checkbox" readOnly checked={selected.has(p.id)} aria-label={`Selecteer ${p.name}`} />
-              <span aria-hidden className="wb-dot" style={{ background: LEVEL_COLOR[p.selectability.level] }} />
-              <strong className="num">{p.shirtNumber}</strong>
-              <span className="nm">{p.name}</span>
-              {favSet.has(p.id) && <span className="wb-tag" title="Vaste opstelling">★</span>}
-              {!favSet.has(p.id) && p.suggested && <span className="wb-tag">voorstel</span>}
-              <span className="ops-row-actions">
-                <button
-                  type="button"
-                  className="ops-row-btn"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    startEdit(p)
-                  }}
-                  title="Naam/nummer aanpassen"
-                  aria-label={`${p.name} aanpassen`}
-                >
-                  ✎
-                </button>
-                <button
-                  type="button"
-                  className="ops-row-btn danger"
-                  disabled={rowBusy === p.id}
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    void deletePlayer(p)
-                  }}
-                  title="Speler verwijderen"
-                  aria-label={`${p.name} verwijderen`}
-                >
-                  🗑
-                </button>
-              </span>
-            </li>
-          ),
-        )}
+        {visible.map((p) => (
+          <li
+            key={p.id}
+            className={`wb-row ${selected.has(p.id) ? 'on' : ''}`}
+            onClick={() => toggle(p.id)}
+            title={p.selectability.reasons.join(' ')}
+          >
+            <input type="checkbox" readOnly checked={selected.has(p.id)} aria-label={`Selecteer ${p.name}`} />
+            <span aria-hidden className="wb-dot" style={{ background: LEVEL_COLOR[p.selectability.level] }} />
+            <strong className="num">{p.shirtNumber}</strong>
+            <span className="nm">{p.name}</span>
+            {favSet.has(p.id) && <span className="wb-tag" title="Vaste opstelling">★</span>}
+            {!favSet.has(p.id) && p.suggested && <span className="wb-tag">voorstel</span>}
+          </li>
+        ))}
       </ul>
 
-      {/* Handmatig een speler toevoegen aan deze ploeg (naam + optioneel rugnummer). */}
-      <div className="ops-add">
-        <span className="ops-add-title">Speler niet in de lijst? Voeg toe</span>
-        <div className="ops-add-row">
-          <input
-            type="number"
-            className="ops-add-num"
-            inputMode="numeric"
-            placeholder="#"
-            value={addNum}
-            onChange={(e) => setAddNum(e.target.value)}
-            aria-label="Rugnummer (optioneel)"
-          />
-          <input
-            type="text"
-            className="ops-add-name"
-            placeholder="Naam speler"
-            value={addName}
-            onChange={(e) => setAddName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault()
-                void addPlayer()
-              }
-            }}
-            aria-label="Naam speler"
-          />
-          <button type="button" className="ops-add-btn" onClick={() => void addPlayer()} disabled={adding || !addName.trim()}>
-            {adding ? '…' : '+ Toevoegen'}
-          </button>
-        </div>
-        <span className="ops-add-hint">Laat het nummer leeg voor het eerstvolgende vrije rugnummer.</span>
-      </div>
+      {/* Spelers worden hier enkel geselecteerd uit de goedgekeurde ledenlijst — je kan ze niet
+          zelf intikken, want een speler moet eerst door de federatie gekeurd zijn. Een nieuw lid
+          voeg je toe via "Spelers toevoegen" (Mijn club); daarna verschijnt hij hier in de lijst. */}
+      <p className="ops-add-hint">
+        Staat een speler niet in de lijst? Voeg hem eerst toe via <strong>Spelers toevoegen</strong> in
+        “Mijn club”. Na keuring door de federatie verschijnt hij hier vanzelf.
+      </p>
 
       <div className="ops-save">
         <button type="button" onClick={() => save(false)} disabled={saving} className="wb-btn wb-btn-primary">
