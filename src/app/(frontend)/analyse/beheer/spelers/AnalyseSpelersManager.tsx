@@ -70,14 +70,16 @@ export function AnalyseSpelersManager({ teams, spelers, positionOptions }: { tea
 
   if (teams.length === 0) {
     return (
-      <p className="empty">
-        Maak eerst een <Link href="/analyse/beheer/ploegen" style={{ color: 'var(--accent)' }}>ploeg</Link> aan om er spelers aan toe te voegen.
-      </p>
+      <div className="anb-panel" data-tone="accent">
+        <p className="empty">
+          Maak eerst een <Link href="/analyse/beheer/ploegen" style={{ color: 'var(--accent)' }}>ploeg</Link> aan om er spelers aan toe te voegen.
+        </p>
+      </div>
     )
   }
 
   return (
-    <div className="anb-panel">
+    <div className="anb-panel" data-tone="accent">
       <label className="rad-field anb-teampick">
         <span>Ploeg</span>
         <select className="rang-picker" value={teamId} onChange={(e) => setTeamId(e.target.value)}>

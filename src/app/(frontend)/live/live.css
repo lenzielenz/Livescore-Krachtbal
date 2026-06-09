@@ -280,9 +280,19 @@
 .lb-row {
   display: flex;
   align-items: center;
+  transition: background-color var(--dur-1) var(--ease-soft), box-shadow var(--dur-1) var(--ease-soft);
 }
+.lb-row:hover {
+  background: var(--panel-2);
+  box-shadow: inset 3px 0 0 color-mix(in srgb, var(--accent) 75%, transparent);
+}
+/* Live wedstrijd krijgt een vaste koraal accent-rand links — pop zonder beweging (reduced-motion-safe). */
 .lb-row.live {
   background: rgba(239, 71, 111, 0.06);
+  box-shadow: inset 3px 0 0 var(--pop);
+}
+.lb-row.live:hover {
+  background: color-mix(in srgb, var(--pop) 12%, transparent);
 }
 
 /* Uitklap-paneel onder een rij: volg een ploeg en/of de hele club. */

@@ -52,10 +52,13 @@ export default async function Image({ params }: { params: Promise<{ id: string }
   const origin = `${proto}://${host}`
 
   const payload = await getPayloadClient()
-  const state = await buildMatchState(payload, matchId).catch(() => null)
+  const [state, matchDoc] = await Promise.all([
+    buildMatchState(payload, matchId).catch(() => null),
+    payload.findByID({ collection: 'matches', id: matchId, depth: 0 }).catch(() => null),
+  ])
 
-  // Geen wedstrijd gevonden → een nette merk-kaart i.p.v. een fout.
-  if (!state) {
+  // Geen wedstrijd gevonden, of een privé analysewedstrijd → een nette merk-kaart i.p.v. lekken.
+  if (!state || matchDoc?.analyseOnly) {
     return new ImageResponse(
       (
         <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#07120c', color: '#f1f5f2', fontSize: 64, fontWeight: 800, letterSpacing: 4 }}>
@@ -67,7 +70,6 @@ export default async function Image({ params }: { params: Promise<{ id: string }
     )
   }
 
-  const matchDoc = await payload.findByID({ collection: 'matches', id: matchId, depth: 0 }).catch(() => null)
   const reeks = matchDoc?.reeks ? reeksNaam(matchDoc.reeks) : 'Krachtbal'
   const datum = matchDoc?.date
     ? new Date(matchDoc.date as string).toLocaleDateString('nl-BE', { weekday: 'long', day: '2-digit', month: 'long' })

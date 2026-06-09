@@ -15,6 +15,12 @@ export async function GET(req: Request, { params }: { params: Promise<{ teamId: 
     if (!user) return Response.json({ error: 'Niet ingelogd.' }, { status: 401 })
     if (!canAnalyse(user)) return Response.json({ error: 'Geen toegang tot de analyse.' }, { status: 403 })
 
+    // Enkel je eigen analyse-ploeg mag geëxporteerd worden — anders lekt de ploegnaam van een andere analist.
+    const owned = await payload
+      .find({ collection: 'teams', where: { and: [{ id: { equals: id } }, analyseOwnWhere(user)] }, depth: 0, limit: 1 })
+      .catch(() => ({ totalDocs: 0 }))
+    if (!owned.totalDocs) return Response.json({ error: 'Ploeg niet gevonden.' }, { status: 404 })
+
     const report = await buildTeamReport(payload, id, null, analyseOwnWhere(user))
     if (!report) return Response.json({ error: 'Ploeg niet gevonden.' }, { status: 404 })
 

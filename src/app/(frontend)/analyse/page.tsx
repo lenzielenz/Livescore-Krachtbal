@@ -8,7 +8,7 @@ import { getSelectedSeason } from '@/lib/analyse-season'
 import { getAuthUser } from '@/lib/auth-user'
 import { buildScoreboards } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
-import { REEKS_OPTIONS, reeksNaam } from '@/lib/reeksen'
+import { COMPETITIE_REEKSEN, reeksNaam, resolveCompetitieReeks } from '@/lib/reeksen'
 import { buildSeasonStats, type SeasonPlayer } from '@/lib/season-stats'
 import { AnalyseNav } from './AnalyseNav'
 import { DeleteMatchButton } from './DeleteMatchButton'
@@ -52,11 +52,6 @@ function LeaderCard({ icon, title, rows, unit }: { icon: string; title: string; 
     </div>
   )
 }
-
-const COMPETITIE_REEKSEN = REEKS_OPTIONS.filter((o) => !['beker', 'recreatief', 'andere'].includes(o.value)).map((o) => ({
-  value: o.value,
-  label: reeksNaam(o.value),
-}))
 
 export const dynamic = 'force-dynamic'
 
@@ -171,10 +166,7 @@ export default async function AnalysePage({ searchParams }: { searchParams: Prom
 
   // League-insights: toppers van de gekozen reeks (seizoensbreed, over alle wedstrijden).
   const { reeks: reeksParam } = await searchParams
-  const reeks =
-    typeof reeksParam === 'string' && COMPETITIE_REEKSEN.some((o) => o.value === reeksParam)
-      ? reeksParam
-      : COMPETITIE_REEKSEN[0].value
+  const reeks = resolveCompetitieReeks(reeksParam)
   const season = await buildSeasonStats(payload, reeks, await getSelectedSeason(), vis).catch(() => [] as SeasonPlayer[])
   const top = (sel: (a: SeasonPlayer, b: SeasonPlayer) => number, fmt: (p: SeasonPlayer) => string, filter?: (p: SeasonPlayer) => boolean) =>
     [...(filter ? season.filter(filter) : season)]

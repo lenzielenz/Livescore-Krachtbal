@@ -1,51 +1,86 @@
-/* Analyse-beheer (eigen database): clubs / ploegen / spelers. Compacte, rustige lijsten in de
-   stijl van de overige beheerschermen. Leunt op de bestaande design-tokens en an-/rang-/sk-classes. */
+/* Analyse-beheer: clubs / ploegen / spelers — je eigen database, op het niveau van de analyse-tools.
+   Leunt volledig op de design-tokens (--panel-grad, --line, --card-shadow, --accent, motion- en
+   radius-schaal). Elke sectie krijgt een tone-identiteit via data-tone op .anb-panel:
+   clubs = home-groen, ploegen = away-cyaan, spelers = accent-blauw. De an-rise-reveal komt uit
+   analyse.css (beheer-pagina's importeren die); het globale reduced-motion-vangnet dempt ze. */
 
+/* "Mijn data"-hubkaarten (hergebruiken .an-tool tone-*) — hier enkel de tellerpill. */
 .anb-cards {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 12px;
-  margin: 16px 0 8px;
+  margin: 18px 0 8px;
 }
-
 .anb-count {
-  font-size: 0.8em;
-  font-weight: 600;
-  opacity: 0.7;
-  margin-left: 6px;
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 9px;
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--line));
+  color: var(--dim-strong);
+  font-size: 0.72em;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  vertical-align: middle;
 }
 
+/* Sectie-paneel: zet de tone-variabelen die de rest van het scherm kleuren. */
 .anb-panel {
-  margin-top: 16px;
+  position: relative;
+  margin-top: 18px;
+  --tone: var(--accent);
+  --tone-glow: var(--glow-accent);
 }
+.anb-panel[data-tone='home'] { --tone: var(--home); --tone-glow: var(--glow-home); }
+.anb-panel[data-tone='away'] { --tone: var(--away); --tone-glow: var(--glow-away); }
+.anb-panel[data-tone='accent'] { --tone: var(--accent); --tone-glow: var(--glow-accent); }
 
+/* Toevoegrij als kaart: panel-grad + tone-getinte rand, zodat het invoeren tactiel aanvoelt. */
 .anb-addrow {
   display: flex;
   gap: 8px;
   align-items: center;
-  margin-bottom: 14px;
-}
-.anb-addrow.wrap {
   flex-wrap: wrap;
+  padding: 12px;
+  margin-bottom: 16px;
+  background: var(--panel-grad);
+  border: 1px solid color-mix(in srgb, var(--tone) 24%, var(--line));
+  border-radius: var(--r-card-lg);
+  box-shadow: var(--card-shadow);
 }
 .anb-addrow .rang-picker {
   flex: 1 1 160px;
   min-width: 0;
 }
 .anb-addrow .anb-num {
-  flex: 0 0 64px;
+  flex: 0 0 60px;
   text-align: center;
+  font-variant-numeric: tabular-nums;
 }
 
+/* Ploegen gegroepeerd per reeks, met een tone-stip als anker. */
 .anb-group {
-  margin-bottom: 18px;
+  margin-bottom: 20px;
 }
 .anb-group-h {
-  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.76rem;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
-  opacity: 0.65;
-  margin: 0 0 6px;
+  letter-spacing: 0.06em;
+  color: var(--dim);
+  margin: 0 0 8px;
+}
+.anb-group-h::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: var(--r-pill);
+  background: var(--tone);
+  box-shadow: 0 0 9px color-mix(in srgb, var(--tone) 70%, transparent);
 }
 
 .anb-list {
@@ -54,42 +89,57 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 
+/* Rij = volwaardige kaart met diepte, en een tone-lift bij hover. */
 .anb-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 10px 12px;
-  border: 1px solid var(--border, rgba(255, 255, 255, 0.1));
-  border-radius: 10px;
-  background: var(--card, rgba(255, 255, 255, 0.03));
+  padding: 11px 14px;
+  background: var(--panel-grad);
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  box-shadow: var(--card-shadow);
+  transition: border-color var(--dur-1) var(--ease-soft), transform var(--dur-2) var(--ease-out),
+    box-shadow var(--dur-2) var(--ease-soft);
+}
+.anb-row:hover {
+  border-color: color-mix(in srgb, var(--tone) 50%, var(--line));
+  transform: translateY(-1px);
+  box-shadow: var(--tone-glow);
 }
 
 .anb-name {
   display: flex;
   align-items: baseline;
-  gap: 8px;
+  gap: 9px;
   font-weight: 600;
   min-width: 0;
 }
 .anb-sub {
   font-size: 0.8em;
   font-weight: 500;
-  opacity: 0.6;
+  color: var(--dim);
 }
+
+/* Rugnummer-chip in de tone van de sectie (tabulaire cijfers, leesbaar). */
 .anb-shirt {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 1.6em;
-  padding: 1px 6px;
-  border-radius: 6px;
-  background: var(--accent, #4af);
-  color: #06121f;
-  font-size: 0.85em;
+  min-width: 2em;
+  padding: 2px 7px;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--tone) 22%, transparent);
+  border: 1px solid color-mix(in srgb, var(--tone) 45%, var(--line));
+  color: var(--txt);
+  font-size: 0.82em;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  align-self: center;
 }
 
 .anb-actions {
@@ -109,33 +159,81 @@
   flex: 1 1 auto;
 }
 
+/* Icoonknopjes (hernoemen/verwijderen). Destructief heeft óók in rust een rode signatuur. */
 .anb-mini {
-  border: 1px solid var(--border, rgba(255, 255, 255, 0.14));
-  background: transparent;
-  color: inherit;
-  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--dim-strong);
+  border-radius: var(--r-control);
   padding: 6px 9px;
   cursor: pointer;
   font-size: 0.95em;
   line-height: 1;
+  transition: background-color var(--dur-1) var(--ease-soft), border-color var(--dur-1) var(--ease-soft),
+    color var(--dur-1) var(--ease-soft);
 }
 .anb-mini:hover {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--panel-2);
+  color: var(--txt);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
 }
 .anb-mini.ok {
-  border-color: var(--accent, #4af);
-  color: var(--accent, #4af);
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
+  color: var(--accent);
+}
+.anb-mini.danger {
+  border-color: color-mix(in srgb, var(--pop) 32%, var(--line));
+  color: var(--pop);
 }
 .anb-mini.danger:hover {
-  background: rgba(255, 80, 80, 0.16);
-  border-color: rgba(255, 80, 80, 0.5);
+  background: color-mix(in srgb, var(--pop) 16%, transparent);
+  border-color: color-mix(in srgb, var(--pop) 58%, var(--line));
+  color: var(--pop);
 }
 
 .anb-teampick {
   margin-bottom: 14px;
-  max-width: 420px;
+  max-width: 440px;
 }
 .anb-possel {
   font-size: 0.85em;
   padding: 4px 6px;
+}
+
+/* Warme lege staat (i.p.v. kale tekst): gestippelde tone-rand op een zachte tone-wash. */
+.anb-panel .empty {
+  background: color-mix(in srgb, var(--tone) 8%, var(--panel));
+  border: 1px dashed color-mix(in srgb, var(--tone) 38%, var(--line));
+  border-radius: var(--r-card);
+  padding: 18px 16px;
+  color: var(--dim-strong);
+}
+
+/* Gestaggerde entree (an-rise uit analyse.css; reduced-motion-vangnet in styles.css dempt ze). */
+.anb-cards > *,
+.anb-list > * {
+  animation: an-rise var(--dur-3) var(--ease-out) both;
+}
+.anb-cards > *:nth-child(2),
+.anb-list > *:nth-child(2) { animation-delay: 0.05s; }
+.anb-cards > *:nth-child(3),
+.anb-list > *:nth-child(3) { animation-delay: 0.1s; }
+.anb-cards > *:nth-child(4),
+.anb-list > *:nth-child(4) { animation-delay: 0.15s; }
+.anb-cards > *:nth-child(5),
+.anb-list > *:nth-child(5) { animation-delay: 0.2s; }
+
+@media (max-width: 560px) {
+  .anb-addrow {
+    gap: 6px;
+  }
+  .anb-addrow .rang-picker {
+    flex-basis: 100%;
+  }
+  .anb-row {
+    flex-wrap: wrap;
+  }
+  .anb-teampick {
+    max-width: none;
+  }
 }

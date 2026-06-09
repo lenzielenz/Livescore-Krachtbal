@@ -20,6 +20,21 @@ export const Users: CollectionConfig = {
     group: 'Beheer',
   },
   auth: true,
+  hooks: {
+    // Een verwijderde gebruiker mag geen verweesde analyse-entiteiten achterlaten. Clubs/ploegen/
+    // spelers hebben bewust geen DB-FK op analyse_owner_id (zie migratie 20260609_260000 — vermijdt
+    // deploy-locks), dus we maken ze hier op app-niveau eigenaarloos — analoog aan de ON DELETE SET
+    // NULL die matches.analyse_owner_id wél via z'n FK krijgt. Zo blijft het model consistent.
+    beforeDelete: [
+      async ({ req, id }) => {
+        for (const collection of ['clubs', 'teams', 'players'] as const) {
+          await req.payload
+            .update({ collection, where: { analyseOwner: { equals: id } }, data: { analyseOwner: null }, overrideAccess: true })
+            .catch(() => {})
+        }
+      },
+    ],
+  },
   access: {
     // Alleen admins beheren gebruikers; de eerste gebruiker mag aangemaakt worden bij lege db.
     create: isAdmin,

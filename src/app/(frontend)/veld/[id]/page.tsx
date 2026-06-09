@@ -24,6 +24,8 @@ export default async function VeldPage({ params }: { params: Promise<{ id: strin
   }
 
   const matchDoc = await payload.findByID({ collection: 'matches', id: matchId, depth: 0 }).catch(() => null)
+  // Analysewedstrijden zijn privé en horen niet op het publieke veld-/tv-scherm.
+  if (matchDoc?.analyseOnly) notFound()
   const reeks = matchDoc?.reeks ? reeksNaam(matchDoc.reeks) : null
 
   return <FieldScreen matchId={matchId} reeks={reeks} initial={{ state, timeline }} />

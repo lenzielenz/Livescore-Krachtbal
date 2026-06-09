@@ -15,7 +15,8 @@ export default async function AftekenenPage({ params }: { params: Promise<{ matc
   const payload = await getPayloadClient()
   // depth 2 zodat de kapiteins (spelers) mee opgehaald worden voor de vooraf gekende namen.
   const match = await payload.findByID({ collection: 'matches', id: matchId, depth: 2 }).catch(() => null)
-  if (!match) {
+  // Analysewedstrijden horen niet in de competitie-wedstrijdbladflow (privé, eigen analyse-database).
+  if (!match || match.analyseOnly) {
     return (
       <>
         <SiteHeader active="clubs" />

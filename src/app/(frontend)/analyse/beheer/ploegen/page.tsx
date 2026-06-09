@@ -5,20 +5,13 @@ import { canAnalyse } from '@/lib/access'
 import { analyseOwnWhere } from '@/lib/analyse-access'
 import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
-import { REEKS_OPTIONS, reeksNaam } from '@/lib/reeksen'
+import { COMPETITIE_REEKSEN, reeksNaam } from '@/lib/reeksen'
 import { AnalyseNav } from '../../AnalyseNav'
 import { AnalysePloegenManager, type AnalysePloeg, type ClubOption } from './AnalysePloegenManager'
 import '../../analyse.css'
 import '../beheer.css'
 
 export const dynamic = 'force-dynamic'
-
-// Analyse hergebruikt de KVKBF-reekslijst, maar zonder beker/recreatief/andere (die de analyse-tools
-// ook niet tonen) — zo verschijnen je analyse-ploegen meteen in de seizoens-/ploegtools.
-const REEKS_KEUZE = REEKS_OPTIONS.filter((o) => !['beker', 'recreatief', 'andere'].includes(o.value)).map((o) => ({
-  value: o.value,
-  label: reeksNaam(o.value),
-}))
 
 const rel = (v: unknown): number | null =>
   v && typeof v === 'object' ? ((v as { id?: number }).id ?? null) : typeof v === 'number' ? v : null
@@ -69,7 +62,7 @@ export default async function AnalysePloegenPage() {
           Je eigen ploegen, per reeks en gekoppeld aan een van je <Link href="/analyse/beheer/clubs" style={{ color: 'var(--accent)' }}>clubs</Link>.
           Vul ze daarna met <Link href="/analyse/beheer/spelers" style={{ color: 'var(--accent)' }}>spelers</Link>.
         </p>
-        <AnalysePloegenManager ploegen={ploegen} clubs={clubs} reeksOptions={REEKS_KEUZE} />
+        <AnalysePloegenManager ploegen={ploegen} clubs={clubs} reeksOptions={COMPETITIE_REEKSEN} />
       </div>
     </>
   )

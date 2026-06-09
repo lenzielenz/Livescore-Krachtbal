@@ -44,6 +44,23 @@ export function reeksNaam(value: unknown): string {
   return typeof value === 'string' && value ? value : 'Overig'
 }
 
+// Reeksen die NIET in de analyse-/rangschikking-tools horen (geen echte competitieniveaus).
+const NIET_COMPETITIE_REEKSEN = ['beker', 'recreatief', 'andere']
+
+/**
+ * De echte competitiereeksen voor de analyse- en rangschikking-tools (REEKS_OPTIONS zonder
+ * beker/recreatief/andere), met leesbare labels. Eén bron van waarheid i.p.v. in elke pagina te
+ * herdefiniëren — voorkomt drift wanneer de federatie de indeling wijzigt.
+ */
+export const COMPETITIE_REEKSEN: { value: string; label: string }[] = REEKS_OPTIONS.filter(
+  (o) => !NIET_COMPETITIE_REEKSEN.includes(o.value),
+).map((o) => ({ value: o.value, label: reeksNaam(o.value) }))
+
+/** Kies de geldige reeks uit een (URL-)parameter, of val terug op de eerste competitiereeks. */
+export function resolveCompetitieReeks(param: unknown, options = COMPETITIE_REEKSEN): string {
+  return typeof param === 'string' && options.some((o) => o.value === param) ? param : options[0].value
+}
+
 /** Rangorde voor beker-voorgift (lager getal = hogere reeks). Enkel de geordende
  * competitiereeksen; 'beker'/'recreatief'/'andere' krijgen geen rang (null). */
 const REEKS_RANG: Partial<Record<Reeks, number>> = {

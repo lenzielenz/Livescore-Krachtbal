@@ -6,18 +6,13 @@ import { analyseOwnWhere } from '@/lib/analyse-access'
 import { getSelectedSeason } from '@/lib/analyse-season'
 import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
-import { REEKS_OPTIONS, reeksNaam } from '@/lib/reeksen'
+import { COMPETITIE_REEKSEN, resolveCompetitieReeks } from '@/lib/reeksen'
 import { buildTeamRadar } from '@/lib/team-radar'
 import { AnalyseNav } from '../AnalyseNav'
 import { TeamRadarView } from './TeamRadarView'
 import '../analyse.css'
 
 export const dynamic = 'force-dynamic'
-
-const COMPETITIE_REEKSEN = REEKS_OPTIONS.filter((o) => !['beker', 'recreatief', 'andere'].includes(o.value)).map((o) => ({
-  value: o.value,
-  label: reeksNaam(o.value),
-}))
 
 // Ploegvergelijking (admin/analyse-only): twee ploegen onderling en met het reeks-gemiddelde
 // op een radar van aanvals- en verdedigingscijfers.
@@ -39,10 +34,7 @@ export default async function PloegenAnalysePage({ searchParams }: { searchParam
   }
 
   const { reeks: reeksParam } = await searchParams
-  const reeks =
-    typeof reeksParam === 'string' && COMPETITIE_REEKSEN.some((o) => o.value === reeksParam)
-      ? reeksParam
-      : COMPETITIE_REEKSEN[0].value
+  const reeks = resolveCompetitieReeks(reeksParam)
 
   const payload = await getPayloadClient()
   const { teams, results } = await buildTeamRadar(payload, reeks, await getSelectedSeason(), analyseOwnWhere(me))

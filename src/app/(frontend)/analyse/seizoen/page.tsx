@@ -6,7 +6,7 @@ import { analyseOwnWhere } from '@/lib/analyse-access'
 import { getSelectedSeason } from '@/lib/analyse-season'
 import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
-import { REEKS_OPTIONS, reeksNaam } from '@/lib/reeksen'
+import { COMPETITIE_REEKSEN, resolveCompetitieReeks } from '@/lib/reeksen'
 import { buildSeasonStats } from '@/lib/season-stats'
 import { Sparkline } from '@/components/analytics/Sparkline'
 import { AnalyseNav } from '../AnalyseNav'
@@ -15,11 +15,6 @@ import '../../rangschikking/rangschikking.css'
 import '../analyse.css'
 
 export const dynamic = 'force-dynamic'
-
-const COMPETITIE_REEKSEN = REEKS_OPTIONS.filter((o) => !['beker', 'recreatief', 'andere'].includes(o.value)).map((o) => ({
-  value: o.value,
-  label: reeksNaam(o.value),
-}))
 
 export default async function SeizoenAnalysePage({ searchParams }: { searchParams: Promise<{ reeks?: string }> }) {
   const me = await getAuthUser()
@@ -36,7 +31,7 @@ export default async function SeizoenAnalysePage({ searchParams }: { searchParam
   }
 
   const { reeks: reeksParam } = await searchParams
-  const reeks = typeof reeksParam === 'string' && COMPETITIE_REEKSEN.some((o) => o.value === reeksParam) ? reeksParam : COMPETITIE_REEKSEN[0].value
+  const reeks = resolveCompetitieReeks(reeksParam)
 
   const payload = await getPayloadClient()
   const players = await buildSeasonStats(payload, reeks, await getSelectedSeason(), analyseOwnWhere(me))

@@ -406,6 +406,15 @@
   text-shadow: 0 2px 16px rgba(255, 209, 102, 0.5);
   animation: sb-goal-shake 0.5s ease-in-out 2;
 }
+/* Het doelpunt "ontploft" in de kleur van de scorende ploeg i.p.v. generiek geel — onmiskenbaar Krachtbal. */
+.sb-goal.side-home .sb-goal-title {
+  color: var(--home);
+  text-shadow: 0 2px 16px color-mix(in srgb, var(--home) 55%, transparent), 0 0 42px color-mix(in srgb, var(--home) 30%, transparent);
+}
+.sb-goal.side-away .sb-goal-title {
+  color: var(--away);
+  text-shadow: 0 2px 16px color-mix(in srgb, var(--away) 55%, transparent), 0 0 42px color-mix(in srgb, var(--away) 30%, transparent);
+}
 @keyframes sb-goal-shake {
   0%, 100% { transform: translateX(0); }
   25% { transform: translateX(-5px); }

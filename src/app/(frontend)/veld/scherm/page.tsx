@@ -21,15 +21,18 @@ export default async function VeldSchermPage() {
 
   if (id) {
     try {
-      const [state, timeline] = await Promise.all([buildMatchState(payload, id), buildTimeline(payload, id)])
       const matchDoc = await payload.findByID({ collection: 'matches', id, depth: 0 }).catch(() => null)
-      const reeks = reeksLabel(matchDoc?.reeks)
-      return (
-        <>
-          <FieldScreen matchId={id} reeks={reeks} initial={{ state, timeline }} />
-          <VeldSchermSync currentId={id} />
-        </>
-      )
+      // Analysewedstrijden zijn privé en horen niet op het publieke veldscherm → val terug op leeg.
+      if (matchDoc && !matchDoc.analyseOnly) {
+        const [state, timeline] = await Promise.all([buildMatchState(payload, id), buildTimeline(payload, id)])
+        const reeks = reeksLabel(matchDoc.reeks)
+        return (
+          <>
+            <FieldScreen matchId={id} reeks={reeks} initial={{ state, timeline }} />
+            <VeldSchermSync currentId={id} />
+          </>
+        )
+      }
     } catch {
       // Gekozen wedstrijd bestaat niet meer → val terug op de lege staat.
     }

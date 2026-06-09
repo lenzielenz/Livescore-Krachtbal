@@ -9,7 +9,7 @@ import { getPayloadClient } from '@/lib/payload-client'
 import { BandChart } from '@/components/analytics/BandChart'
 import { Sparkline } from '@/components/analytics/Sparkline'
 import { buildPlayerDanger } from '@/lib/player-danger'
-import { REEKS_OPTIONS, reeksNaam } from '@/lib/reeksen'
+import { COMPETITIE_REEKSEN, reeksNaam, resolveCompetitieReeks } from '@/lib/reeksen'
 import { buildSeasonStats } from '@/lib/season-stats'
 import { AnalyseNav } from '../AnalyseNav'
 import { GevaarMap } from '../gevaar/GevaarMap'
@@ -17,11 +17,6 @@ import { DossierPicker } from './DossierPicker'
 import '../analyse.css'
 
 export const dynamic = 'force-dynamic'
-
-const COMPETITIE_REEKSEN = REEKS_OPTIONS.filter((o) => !['beker', 'recreatief', 'andere'].includes(o.value)).map((o) => ({
-  value: o.value,
-  label: reeksNaam(o.value),
-}))
 
 // Spelerdossier: álles van één speler op één blad — kerncijfers, richting, vorm en gevaarzone.
 export default async function SpelerDossierPage({ searchParams }: { searchParams: Promise<{ reeks?: string; club?: string; speler?: string }> }) {
@@ -42,8 +37,7 @@ export default async function SpelerDossierPage({ searchParams }: { searchParams
   }
 
   const { reeks: reeksParam, club: clubParam, speler: spelerParam } = await searchParams
-  const reeks =
-    typeof reeksParam === 'string' && COMPETITIE_REEKSEN.some((o) => o.value === reeksParam) ? reeksParam : COMPETITIE_REEKSEN[0].value
+  const reeks = resolveCompetitieReeks(reeksParam)
 
   const payload = await getPayloadClient()
   const seizoen = await getSelectedSeason()

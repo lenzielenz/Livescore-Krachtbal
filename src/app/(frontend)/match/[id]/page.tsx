@@ -32,6 +32,8 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     payload.findByID({ collection: 'matches', id: matchId, depth: 0 }).catch(() => null),
   ])
   if (!state) return { title: 'Krachtbal Live' }
+  // Analysewedstrijden zijn privé — lek geen ploegnamen/score in de OG-tags.
+  if (matchDoc?.analyseOnly) return { title: 'Krachtbal Live' }
   const home = state.teams.home.name
   const away = state.teams.away.name
   const played = state.match.status !== 'scheduled'
@@ -66,6 +68,8 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
 
   // Extra context: reeks, datum/uur, locatie (terrein thuisclub) en toegewezen scheidsrechter.
   const matchDoc = await payload.findByID({ collection: 'matches', id: matchId, depth: 2 }).catch(() => null)
+  // Analysewedstrijden horen NOOIT in de publieke competitie-UI (de eigenaar bekijkt ze via /analyse/[id]).
+  if (matchDoc?.analyseOnly) notFound()
   const homeClub = (matchDoc?.homeTeam as { club?: { accommodatie?: string; plaats?: string; lat?: number; lng?: number } } | null)?.club
   const accommodatie = homeClub?.accommodatie?.trim() || null
   // Locatie voor de buienradar van de thuiswedstrijd.
