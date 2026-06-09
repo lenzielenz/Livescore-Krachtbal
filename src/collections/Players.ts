@@ -43,6 +43,27 @@ export const Players: CollectionConfig = {
     defaultColumns: ['shirtNumber', 'name', 'team', 'vergunningsstatus', 'actief'],
     group: 'Beheer',
   },
+  hooks: {
+    // De club is enkel een hulpfilter voor de ploegkeuze; de PLOEG is de bron van waarheid.
+    // Sync de club daarom altijd met de club van de gekozen ploeg. Zonder dit weigert de
+    // filterOptions-validatie van het team-veld élke save zodra club ≠ club-van-de-ploeg
+    // (bv. na een club-wissel zonder ploeg-wissel) → "400 / niets kan bewaard worden".
+    beforeValidate: [
+      async ({ data, originalDoc, req }) => {
+        if (!data) return data
+        const rawTeam = data.team ?? (originalDoc as { team?: unknown } | undefined)?.team
+        const teamId = rawTeam && typeof rawTeam === 'object' ? (rawTeam as { id?: unknown }).id : rawTeam
+        if (teamId == null || !Number.isFinite(Number(teamId))) return data
+        const team = await req.payload
+          .findByID({ collection: 'teams', id: Number(teamId), depth: 0 })
+          .catch(() => null)
+        const rawClub = team?.club
+        const clubId = rawClub && typeof rawClub === 'object' ? (rawClub as { id?: unknown }).id : rawClub
+        if (clubId != null && Number.isFinite(Number(clubId))) data.club = Number(clubId)
+        return data
+      },
+    ],
+  },
   access: {
     read: () => true,
     create: canWritePlayers,
@@ -79,8 +100,9 @@ export const Players: CollectionConfig = {
       filterOptions: ({ data, siblingData }) => {
         const raw = (siblingData as { club?: unknown })?.club ?? (data as { club?: unknown })?.club
         const id = raw && typeof raw === 'object' ? (raw as { id?: unknown }).id : raw
-        const clubId = id != null ? Number(id) : NaN
-        return Number.isFinite(clubId) ? { club: { equals: clubId } } : true
+        // '' zou via Number('') === 0 een onmogelijke filter (club=0) opleveren → lege lijst.
+        const clubId = id != null && id !== '' ? Number(id) : NaN
+        return Number.isFinite(clubId) && clubId > 0 ? { club: { equals: clubId } } : true
       },
       admin: { description: 'Kies eerst een club hierboven om de lijst te beperken. De reeks staat bij de ploegnaam.' },
     },
