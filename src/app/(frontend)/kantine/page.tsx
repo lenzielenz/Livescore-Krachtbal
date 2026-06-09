@@ -1,6 +1,7 @@
 import type { Payload } from 'payload'
 
 import { SiteHeader } from '@/components/SiteHeader'
+import { formatTimeBE } from '@/lib/datetime'
 import { buildMatchState } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
 import { reeksNaam } from '@/lib/reeksen'
@@ -55,7 +56,7 @@ export default async function KantinePage() {
       list.push({
         id: m.id,
         reeks: reeksLabel(m.reeks),
-        time: new Date(m.date).toLocaleTimeString('nl-BE', { hour: '2-digit', minute: '2-digit' }),
+        time: formatTimeBE(m.date),
         status: s.match.status,
         home: { name: s.teams.home.name, logoUrl: s.teams.home.logoUrl, logoFit: s.teams.home.logoFit, colors: s.teams.home.colors },
         away: { name: s.teams.away.name, logoUrl: s.teams.away.logoUrl, logoFit: s.teams.away.logoFit, colors: s.teams.away.colors },

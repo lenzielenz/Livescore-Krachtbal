@@ -98,7 +98,7 @@ export const TournamentMatches: CollectionConfig = {
             { name: 'clockRunning', label: 'Klok loopt', type: 'checkbox', defaultValue: false },
           ],
         },
-        { name: 'clockUpdatedAt', label: 'Klok bijgewerkt op', type: 'date', admin: { date: { pickerAppearance: 'dayAndTime' } } },
+        { name: 'clockUpdatedAt', label: 'Klok bijgewerkt op', type: 'date', admin: { date: { pickerAppearance: 'dayAndTime', displayFormat: 'dd/MM/yyyy HH:mm', timeFormat: 'HH:mm' } } },
       ],
     },
   ],

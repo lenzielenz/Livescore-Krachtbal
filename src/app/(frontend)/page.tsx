@@ -2,6 +2,7 @@ import Link from 'next/link'
 
 import { SiteHeader } from '@/components/SiteHeader'
 import { getAuthUser } from '@/lib/auth-user'
+import { dateStrBE } from '@/lib/datetime'
 import { quoteForDay } from '@/lib/krachtbal-quotes'
 import { LiveBoard } from './live/LiveBoard'
 import { loadLiveDay } from './live/loadLiveDay'
@@ -13,7 +14,7 @@ export const dynamic = 'force-dynamic'
 // De tools voor de andere profielen leven in het "Meer"-menu, niet hier.
 export default async function HomePage({ searchParams }: { searchParams: Promise<{ date?: string }> }) {
   const { date } = await searchParams
-  const today = new Date().toISOString().slice(0, 10)
+  const today = dateStrBE()
   const selected = date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : today
 
   const days = await loadLiveDay(selected, today)

@@ -8,6 +8,7 @@ import { Scoreboard } from '@/components/Scoreboard'
 import { SiteHeader } from '@/components/SiteHeader'
 import { canAnalyse } from '@/lib/access'
 import { getAuthUser } from '@/lib/auth-user'
+import { formatDateTimeBE } from '@/lib/datetime'
 import { buildMatchSheet, buildMatchState, buildMatchStats, buildTimeline } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
 import { isAdultReeks, krachtbalKleur, reeksHalfDurationSeconds, reeksNaam, reeksType, type Reeks } from '@/lib/reeksen'
@@ -81,9 +82,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   const ballKleur = krachtbalKleur(reeksRaw)
   // Enkel ingelogde bezoekers mogen shoutouts plaatsen in de live tribune.
   const me = await getAuthUser()
-  const datum = matchDoc?.date
-    ? new Date(matchDoc.date as string).toLocaleString('nl-BE', { dateStyle: 'long', timeStyle: 'short' })
-    : null
+  const datum = matchDoc?.date ? formatDateTimeBE(matchDoc.date as string) : null
   const sheetRes = await payload
     .find({ collection: 'matchsheets', where: { match: { equals: matchId } }, depth: 2, limit: 1 })
     .catch(() => null)

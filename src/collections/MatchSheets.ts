@@ -200,7 +200,7 @@ export const MatchSheets: CollectionConfig = {
           admin: { description: 'Opstellingen gecontroleerd, terrein in orde — de wedstrijd mag geopend worden.' },
         },
         { name: 'naam', label: 'Naam scheidsrechter', type: 'text' },
-        { name: 'tijdstip', label: 'Tijdstip akkoord', type: 'date', admin: { date: { pickerAppearance: 'dayAndTime' } } },
+        { name: 'tijdstip', label: 'Tijdstip akkoord', type: 'date', admin: { date: { pickerAppearance: 'dayAndTime', displayFormat: 'dd/MM/yyyy HH:mm', timeFormat: 'HH:mm' } } },
       ],
     },
     {
@@ -376,7 +376,7 @@ function signatureGroup(name: string, label: string): Field {
         type: 'textarea',
         admin: { description: 'Data-URL van de getekende handtekening.', hidden: true },
       },
-      { name: 'tijdstip', label: 'Tijdstip', type: 'date', admin: { date: { pickerAppearance: 'dayAndTime' } } },
+      { name: 'tijdstip', label: 'Tijdstip', type: 'date', admin: { date: { pickerAppearance: 'dayAndTime', displayFormat: 'dd/MM/yyyy HH:mm', timeFormat: 'HH:mm' } } },
     ],
   }
 }

@@ -80,7 +80,7 @@ export const Accidents: CollectionConfig = {
               name: 'ongevalDatum',
               label: 'Datum en uur',
               type: 'date',
-              admin: { date: { pickerAppearance: 'dayAndTime' } },
+              admin: { date: { pickerAppearance: 'dayAndTime', displayFormat: 'dd/MM/yyyy HH:mm', timeFormat: 'HH:mm' } },
             },
           ],
         },
