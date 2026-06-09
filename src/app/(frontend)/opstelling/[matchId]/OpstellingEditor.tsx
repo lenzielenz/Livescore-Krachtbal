@@ -151,26 +151,38 @@ export function OpstellingEditor({
       {blockedCount > 0 && (
         <label className="ops-blocked-toggle">
           <input type="checkbox" checked={showBlocked} onChange={(e) => setShowBlocked(e.target.checked)} />
-          Toon {blockedCount} geblokkeerde leden (override)
+          Toon {blockedCount} niet-selecteerbare {blockedCount === 1 ? 'speler' : 'spelers'} (met reden)
         </label>
       )}
 
       <ul className="wb-rows">
-        {visible.map((p) => (
-          <li
-            key={p.id}
-            className={`wb-row ${selected.has(p.id) ? 'on' : ''}`}
-            onClick={() => toggle(p.id)}
-            title={p.selectability.reasons.join(' ')}
-          >
-            <input type="checkbox" readOnly checked={selected.has(p.id)} aria-label={`Selecteer ${p.name}`} />
-            <span aria-hidden className="wb-dot" style={{ background: LEVEL_COLOR[p.selectability.level] }} />
-            <strong className="num">{p.shirtNumber}</strong>
-            <span className="nm">{p.name}</span>
-            {favSet.has(p.id) && <span className="wb-tag" title="Vaste opstelling">★</span>}
-            {!favSet.has(p.id) && p.suggested && <span className="wb-tag">voorstel</span>}
-          </li>
-        ))}
+        {visible.map((p) => {
+          const blocked = p.selectability.level === 'block'
+          // Toon de reden altijd zichtbaar (niet enkel als tooltip — die zie je niet op gsm), zodat
+          // duidelijk is waaróm een speler (nog) niet gekozen kan worden, of waar je op moet letten.
+          const reason = p.selectability.reasons.filter((r) => r !== 'Selecteerbaar.').join(' · ')
+          return (
+            <li
+              key={p.id}
+              className={`wb-row lvl-${p.selectability.level} ${selected.has(p.id) ? 'on' : ''} ${blocked ? 'blocked' : ''}`}
+              onClick={() => {
+                if (blocked) return // geblokkeerde spelers zijn zichtbaar maar niet selecteerbaar
+                toggle(p.id)
+              }}
+              aria-disabled={blocked}
+            >
+              <input type="checkbox" readOnly checked={selected.has(p.id)} disabled={blocked} aria-label={`Selecteer ${p.name}`} />
+              <span aria-hidden className="wb-dot" style={{ background: LEVEL_COLOR[p.selectability.level] }} />
+              <strong className="num">{p.shirtNumber}</strong>
+              <span className="nm">
+                <span className="wb-nm-name">{p.name}</span>
+                {reason && p.selectability.level !== 'ok' && <span className={`wb-reason lvl-${p.selectability.level}`}>{reason}</span>}
+              </span>
+              {favSet.has(p.id) && <span className="wb-tag" title="Vaste opstelling">★</span>}
+              {!favSet.has(p.id) && p.suggested && <span className="wb-tag">voorstel</span>}
+            </li>
+          )
+        })}
       </ul>
 
       {/* Spelers worden hier enkel geselecteerd uit de goedgekeurde ledenlijst — je kan ze niet

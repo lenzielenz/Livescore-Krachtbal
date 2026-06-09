@@ -45,7 +45,14 @@ export function playerSelectability(
 
   if (player.vergunningsstatus !== 'geldig') {
     level = worst(level, 'block')
-    reasons.push('Geen geldige vergunning.')
+    // Meest voorkomende reden bij een net toegevoegde speler: hij wacht nog op de keuring van de
+    // federatie. Maak dat expliciet (i.p.v. enkel "geen geldige vergunning"), zodat een club weet
+    // dat dit normaal is en geen fout — en wat er moet gebeuren.
+    reasons.push(
+      player.vergunningsstatus === 'aangevraagd'
+        ? 'Vergunning aangevraagd — nog niet goedgekeurd door de federatie.'
+        : 'Nog niet gekeurd door de federatie (geen geldige vergunning).',
+    )
   }
 
   if (player.knipjesGeblokkeerd) {

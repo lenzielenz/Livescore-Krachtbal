@@ -249,10 +249,31 @@
 .wb-row .nm {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+.wb-row .wb-nm-name {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* Reden waarom een speler niet (vrij) selecteerbaar is — altijd zichtbaar (geen tooltip), zodat
+   ook op gsm duidelijk is wat er aan de hand is en wat er moet gebeuren. */
+.wb-reason {
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: normal;
+}
+.wb-reason.lvl-block { color: #ff8a8a; }
+.wb-reason.lvl-warn { color: #f0b04a; }
+/* Geblokkeerde spelers: zichtbaar maar niet aanklikbaar. */
+.wb-row.blocked {
+  cursor: not-allowed;
+  background: #1b1215;
+  border-color: color-mix(in srgb, #ff8a8a 22%, transparent);
+}
+.wb-row.blocked .wb-nm-name { color: var(--dim); }
 .wb-dot {
   width: 9px;
   height: 9px;
