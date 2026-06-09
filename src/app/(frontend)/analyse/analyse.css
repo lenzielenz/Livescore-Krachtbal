@@ -884,7 +884,7 @@ select.rang-picker {
   margin: 6px 0 18px;
 }
 .an-momentum .an-sub { margin: 0 0 10px; }
-.an-mom-svg { width: 100%; height: 130px; display: block; }
+.an-mom-svg { width: 100%; max-width: 480px; aspect-ratio: 320 / 130; height: auto; display: block; margin-inline: auto; }
 .an-mom-zero { stroke: var(--line); stroke-width: 1; stroke-dasharray: 4 4; }
 .an-mom-line { stroke: var(--txt); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; opacity: 0.85; }
 .an-mom-dot-h { fill: var(--home); }
