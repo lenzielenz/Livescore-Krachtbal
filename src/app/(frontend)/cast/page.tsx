@@ -1,4 +1,5 @@
 import { SiteHeader } from '@/components/SiteHeader'
+import { formatTimeBE } from '@/lib/datetime'
 import { buildMatchState } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
 import { reeksNaam } from '@/lib/reeksen'
@@ -44,7 +45,7 @@ export default async function CastPage() {
       matches.push({
         id: m.id,
         reeks: reeksLabel(m.reeks),
-        time: new Date(m.date).toLocaleTimeString('nl-BE', { hour: '2-digit', minute: '2-digit' }),
+        time: formatTimeBE(m.date),
         status: s.match.status,
         home: s.teams.home.name,
         away: s.teams.away.name,

@@ -167,7 +167,7 @@ export const Matches: CollectionConfig = {
           type: 'date',
           required: true,
           admin: {
-            date: { pickerAppearance: 'dayAndTime' },
+            date: { pickerAppearance: 'dayAndTime', displayFormat: 'dd/MM/yyyy HH:mm', timeFormat: 'HH:mm' },
           },
         },
         {
@@ -383,7 +383,7 @@ export const Matches: CollectionConfig = {
           label: 'Klok bijgewerkt op',
           type: 'date',
           admin: {
-            date: { pickerAppearance: 'dayAndTime' },
+            date: { pickerAppearance: 'dayAndTime', displayFormat: 'dd/MM/yyyy HH:mm', timeFormat: 'HH:mm' },
           },
         },
       ],
@@ -443,7 +443,7 @@ export const Matches: CollectionConfig = {
       admin: {
         position: 'sidebar',
         readOnly: true,
-        date: { pickerAppearance: 'dayAndTime' },
+        date: { pickerAppearance: 'dayAndTime', displayFormat: 'dd/MM/yyyy HH:mm', timeFormat: 'HH:mm' },
         description: 'Automatisch gezet bij het beëindigen. Bepaalt het 1u-navenster van de live tribune.',
       },
       hooks: {

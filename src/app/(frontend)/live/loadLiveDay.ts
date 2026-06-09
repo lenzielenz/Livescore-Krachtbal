@@ -1,3 +1,4 @@
+import { brusselsDayBoundsUtc, formatTimeBE } from '@/lib/datetime'
 import { purgeExpiredDemos } from '@/lib/demo'
 import { buildScoreboards } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
@@ -8,11 +9,9 @@ import type { DayMatch } from './LiveBoard'
 // Leesbare reeksnaam zonder code-prefix (bv. "1ste Nationale Dames" i.p.v. "1NAD — …").
 const reeksLabel = (v: unknown) => reeksNaam(v)
 
-function dayBounds(dateStr: string): { start: string; end: string } {
-  const start = new Date(`${dateStr}T00:00:00.000`)
-  const end = new Date(start.getTime() + 24 * 60 * 60 * 1000)
-  return { start: start.toISOString(), end: end.toISOString() }
-}
+// Dag-grenzen in Belgische tijd (de server draait in UTC) zodat avondwedstrijden op de juiste dag
+// vallen.
+const dayBounds = (dateStr: string) => brusselsDayBoundsUtc(dateStr)
 
 // Laadt alle wedstrijden voor één dag + de actueel-live wedstrijden (wanneer je
 // naar vandaag kijkt) en berekent voor elk de afgeleide stand. De stand wordt
@@ -69,7 +68,7 @@ export async function loadLiveDay(selected: string, today: string): Promise<DayM
     days.push({
       id: m.id,
       reeks: reeksLabel(m.reeks),
-      time: new Date(m.date).toLocaleTimeString('nl-BE', { hour: '2-digit', minute: '2-digit' }),
+      time: formatTimeBE(m.date),
       status: c.status,
       home: { teamId: c.teams.home.id, name: c.teams.home.name, logoUrl: c.teams.home.logoUrl, logoFit: c.teams.home.logoFit, colors: c.teams.home.colors, clubId: c.teams.home.clubId, clubName: c.teams.home.clubName },
       away: { teamId: c.teams.away.id, name: c.teams.away.name, logoUrl: c.teams.away.logoUrl, logoFit: c.teams.away.logoFit, colors: c.teams.away.colors, clubId: c.teams.away.clubId, clubName: c.teams.away.clubName },
