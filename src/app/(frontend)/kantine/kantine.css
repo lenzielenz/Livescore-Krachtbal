@@ -346,6 +346,24 @@
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
 }
+/* Kruisjes + time-outs per club, pal onder het clublogo/de naam. */
+.kt-tile-teamstats {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75em;
+  font-size: 0.62em;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+.kt-tile-teamstats.home { color: var(--home); }
+.kt-tile-teamstats.away { color: var(--away); }
+.kt-tile-sr {
+  font-size: 0.5em;
+  font-weight: 800;
+  color: var(--dim, #98a1ad);
+  letter-spacing: 0.04em;
+}
 /* Middenkolom: score met de speeltijd er pal onder, als één geheel. */
 .kt-tile-mid {
   display: flex;
