@@ -2,6 +2,21 @@ import type { CollectionConfig } from 'payload'
 
 import { isFederationLevel } from '../lib/access'
 
+// Zet een gemeente/plaats om naar coördinaten (Open-Meteo geocoding, gratis). Zo heeft de
+// buienradar altijd exacte coördinaten — betrouwbaarder dan elke keer client-side geocoderen.
+async function geocodePlaats(plaats: string): Promise<{ lat: number; lng: number } | null> {
+  try {
+    const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(plaats)}&count=5&language=nl&format=json`
+    const res = await fetch(url).then((r) => (r.ok ? r.json() : null))
+    const list = (res?.results ?? []) as { latitude: number; longitude: number; country_code?: string }[]
+    if (!list.length) return null
+    const be = list.find((r) => r.country_code === 'BE') ?? list[0]
+    return { lat: be.latitude, lng: be.longitude }
+  } catch {
+    return null
+  }
+}
+
 // Bovenste niveau van de hiërarchie: Club → Ploegen (per categorie) → Spelers.
 export const Clubs: CollectionConfig = {
   slug: 'clubs',
@@ -21,6 +36,26 @@ export const Clubs: CollectionConfig = {
     delete: ({ req }) => isFederationLevel(req.user),
   },
   hooks: {
+    // Vul de coördinaten automatisch in vanuit de gemeente/plaats wanneer ze nog ontbreken, zodat
+    // de buienradar van de thuiswedstrijden meteen werkt na het invullen van de locatie.
+    beforeChange: [
+      async ({ data }) => {
+        if (!data) return data
+        const plaats = typeof data.plaats === 'string' ? data.plaats.trim() : ''
+        const hasLat = typeof data.lat === 'number' && Number.isFinite(data.lat)
+        const hasLng = typeof data.lng === 'number' && Number.isFinite(data.lng)
+        // Enkel geocoderen wanneer er een plaats is én er nog geen coördinaten zijn — handmatig
+        // ingegeven (exacte) coördinaten blijven dus altijd behouden.
+        if (plaats && !(hasLat && hasLng)) {
+          const coords = await geocodePlaats(plaats)
+          if (coords) {
+            data.lat = coords.lat
+            data.lng = coords.lng
+          }
+        }
+        return data
+      },
+    ],
     // Een club verwijderen ruimt alles netjes op, anders blokkeren FK's het verwijderen:
     //  1) de wedstrijden van haar ploegen (+ worpen/balbezit/wedstrijdblad/…),
     //  2) accounts die aan de club hingen worden losgekoppeld (niet verwijderd),
