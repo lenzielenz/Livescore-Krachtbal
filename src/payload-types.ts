@@ -784,6 +784,15 @@ export interface Tournament {
     | number
     | boolean
     | null;
+  teamTeams?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -832,6 +841,7 @@ export interface TournamentMatch {
     | number
     | boolean
     | null;
+  refereeStops?: number | null;
   winnerTo?:
     | {
         [k: string]: unknown;
@@ -1501,6 +1511,7 @@ export interface TournamentsSelect<T extends boolean = true> {
   format?: T;
   teamCount?: T;
   teamClubs?: T;
+  teamTeams?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -1521,6 +1532,7 @@ export interface TournamentMatchesSelect<T extends boolean = true> {
   goals?: T;
   crosses?: T;
   timeouts?: T;
+  refereeStops?: T;
   winnerTo?: T;
   loserTo?: T;
   currentHalf?: T;

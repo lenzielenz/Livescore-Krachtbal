@@ -33,6 +33,18 @@ export async function POST(req: Request) {
         })
         .filter((t): t is { name: string; clubId: number } => t !== null)
     : []
+  // Koppeling ploegnaam → echte ploeg (optioneel): [{ name, teamId }]. Hierdoor kan de
+  // aantekentafel exact hetzelfde aantekenblad met de echte spelerslijst gebruiken.
+  const teamTeams = Array.isArray(body.teamTeams)
+    ? body.teamTeams
+        .map((t) => {
+          const o = t as { name?: unknown; teamId?: unknown }
+          const nm = typeof o?.name === 'string' ? o.name.trim() : ''
+          const teamId = Number(o?.teamId)
+          return nm && Number.isFinite(teamId) ? { name: nm, teamId } : null
+        })
+        .filter((t): t is { name: string; teamId: number } => t !== null)
+    : []
 
   if (!name) return Response.json({ error: 'Geef het tornooi een naam.' }, { status: 400 })
   if (!CATEGORIES.includes(category)) return Response.json({ error: 'Ongeldige categorie.' }, { status: 400 })
@@ -44,7 +56,7 @@ export async function POST(req: Request) {
     if (!isFederationLevel(user)) {
       return Response.json({ error: 'Enkel de federatie kan een beker/tornooi aanmaken.' }, { status: user ? 403 : 401 })
     }
-    const id = await createTournament(payload, { name, category, method, slots, format, teamClubs })
+    const id = await createTournament(payload, { name, category, method, slots, format, teamClubs, teamTeams })
     return Response.json({ id })
   } catch (err) {
     return Response.json({ error: (err as Error).message }, { status: 400 })

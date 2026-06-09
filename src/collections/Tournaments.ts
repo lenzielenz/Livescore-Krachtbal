@@ -94,5 +94,13 @@ export const Tournaments: CollectionConfig = {
       type: 'json',
       admin: { hidden: true },
     },
+    {
+      // Koppeling ploegnaam → echte ploeg (Teams), ingegeven bij het aanmaken. Hierdoor kan de
+      // tornooi-aantekentafel exact hetzelfde aantekenblad als een gewone wedstrijd gebruiken —
+      // met de echte spelerslijst (scorerkeuze, wissels). Vorm: [{ name: string, teamId: number }].
+      name: 'teamTeams',
+      type: 'json',
+      admin: { hidden: true },
+    },
   ],
 }

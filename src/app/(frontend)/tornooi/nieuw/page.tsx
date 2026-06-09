@@ -36,11 +36,30 @@ export default async function NieuwTornooiPage() {
     .map((c) => ({ id: c.id as number, name: String((c as { name?: unknown }).name ?? '') }))
     .filter((c) => c.name)
 
+  // Echte ploegen (met spelers) zodat een tornooiploeg gekoppeld kan worden — dan gebruikt de
+  // aantekentafel exact hetzelfde aantekenblad als bij een gewone wedstrijd (scorerkeuze, wissels).
+  const teamsRes = await payload
+    .find({ collection: 'teams', sort: 'name', depth: 1, limit: 1000 })
+    .catch(() => ({ docs: [] as Record<string, unknown>[] }))
+  const teams = teamsRes.docs
+    .map((t) => {
+      const club = (t as { club?: unknown }).club
+      const clubObj = club && typeof club === 'object' ? (club as { id?: number; name?: unknown }) : null
+      return {
+        id: t.id as number,
+        name: String((t as { name?: unknown }).name ?? ''),
+        category: String((t as { category?: unknown }).category ?? ''),
+        clubId: clubObj?.id ?? (typeof club === 'number' ? club : null),
+        clubName: clubObj ? String(clubObj.name ?? '') : '',
+      }
+    })
+    .filter((t) => t.name)
+
   return (
     <>
       <SiteHeader active="tornooi" />
       <div className="trn-page">
-        <NewTournament categories={CATEGORY_OPTIONS} clubs={clubs} />
+        <NewTournament categories={CATEGORY_OPTIONS} clubs={clubs} teams={teams} />
       </div>
     </>
   )

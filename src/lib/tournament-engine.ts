@@ -37,6 +37,7 @@ export type TMatchState = {
   score: { home: number; away: number }
   crosses: { home: number; away: number }
   timeouts: { home: number; away: number }
+  refereeStops: number
   currentHalf: number
   clockSeconds: number
   clockRunning: boolean
@@ -70,6 +71,7 @@ type MatchDoc = {
   goals?: Goal[] | null
   crosses?: { home?: number; away?: number } | null
   timeouts?: { home?: number; away?: number } | null
+  refereeStops?: number | null
   winnerTo?: SlotRef | null
   loserTo?: SlotRef | null
   currentHalf?: number | null
@@ -110,6 +112,7 @@ function toState(m: MatchDoc): TMatchState {
     score: deriveScore(goalsOf(m)),
     crosses: countsOf(m.crosses),
     timeouts: countsOf(m.timeouts),
+    refereeStops: Number(m.refereeStops) || 0,
     currentHalf: m.currentHalf ?? 1,
     clockSeconds: Math.floor(liveClock(m)),
     clockRunning: Boolean(m.clockRunning),
@@ -141,6 +144,8 @@ export async function createTournament(
     format?: TournamentFormat
     /** Expliciete koppeling ploegnaam → club (betrouwbaar logo + club gekoppeld). */
     teamClubs?: { name: string; clubId: number }[]
+    /** Koppeling ploegnaam → echte ploeg (Teams) zodat de aantekentafel de spelers kan laden. */
+    teamTeams?: { name: string; teamId: number }[]
   },
 ): Promise<number> {
   const format: TournamentFormat = args.format === 'roundrobin' ? 'roundrobin' : 'knockout'
@@ -167,6 +172,7 @@ export async function createTournament(
       status: 'live',
       teamCount: filled.length,
       ...(args.teamClubs && args.teamClubs.length ? { teamClubs: args.teamClubs } : {}),
+      ...(args.teamTeams && args.teamTeams.length ? { teamTeams: args.teamTeams } : {}),
     },
     overrideAccess: true,
   })
@@ -275,13 +281,36 @@ export async function startMatch(payload: Payload, matchId: number): Promise<voi
   })
 }
 
-/** Registreer een doelpunt: nekworp = 1, rugworp = 2 (telt dubbel). */
-export async function recordGoal(payload: Payload, matchId: number, side: Side, points: 1 | 2): Promise<void> {
+/** Een scorer (optioneel) — gevuld als de tornooiploeg aan een echte ploeg gekoppeld is. */
+export type GoalScorer = { id: number; shirtNumber?: number; name?: string }
+
+/** Registreer een doelpunt: nekworp = 1, rugworp = 2 (telt dubbel). De scorer is optioneel. */
+export async function recordGoal(
+  payload: Payload,
+  matchId: number,
+  side: Side,
+  points: 1 | 2,
+  scorer?: GoalScorer,
+): Promise<void> {
   const m = await getMatch(payload, matchId)
   if (m.status === 'finished') throw new Error('Deze wedstrijd is al afgelopen.')
   const goals = goalsOf(m)
-  goals.push({ side, points, half: m.currentHalf ?? 1, clock: Math.floor(liveClock(m)), ts: Date.now() })
+  goals.push({
+    side,
+    points,
+    half: m.currentHalf ?? 1,
+    clock: Math.floor(liveClock(m)),
+    ts: Date.now(),
+    ...(scorer?.id ? { scorerId: scorer.id, scorerNumber: scorer.shirtNumber, scorerName: scorer.name } : {}),
+  })
   await update(payload, matchId, { goals, status: m.status === 'pending' ? 'live' : m.status })
+}
+
+/** Pas de scheidsrechter-minuten (gestopte tijd) aan (+1 / −1). */
+export async function recordRefereeStop(payload: Payload, matchId: number, delta: number): Promise<void> {
+  const m = await getMatch(payload, matchId)
+  const next = Math.max(0, (Number(m.refereeStops) || 0) + (delta < 0 ? -1 : 1))
+  await update(payload, matchId, { refereeStops: next })
 }
 
 /** Neem het laatste doelpunt terug (vangnet). */

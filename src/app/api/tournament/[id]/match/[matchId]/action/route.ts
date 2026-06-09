@@ -7,6 +7,7 @@ import {
   finishMatch,
   recordCross,
   recordGoal,
+  recordRefereeStop,
   recordTimeout,
   setClock,
   startMatch,
@@ -48,10 +49,25 @@ export async function POST(
         await startMatch(payload, matchId)
         break
       case 'goal':
-        await recordGoal(payload, matchId, body.side === 'away' ? 'away' : 'home', body.points === 2 ? 2 : 1)
+        await recordGoal(
+          payload,
+          matchId,
+          body.side === 'away' ? 'away' : 'home',
+          body.points === 2 ? 2 : 1,
+          body.playerId !== undefined && body.playerId !== null
+            ? {
+                id: Number(body.playerId),
+                shirtNumber: body.shirtNumber !== undefined ? Number(body.shirtNumber) : undefined,
+                name: typeof body.playerName === 'string' ? body.playerName : undefined,
+              }
+            : undefined,
+        )
         break
       case 'undo':
         await undoGoal(payload, matchId)
+        break
+      case 'refstop':
+        await recordRefereeStop(payload, matchId, Number(body.delta) < 0 ? -1 : 1)
         break
       case 'cross':
         await recordCross(payload, matchId, body.side === 'away' ? 'away' : 'home', Number(body.delta) < 0 ? -1 : 1)

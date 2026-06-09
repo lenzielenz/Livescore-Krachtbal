@@ -16,12 +16,16 @@ function previewRound1(orderedNames: string[]): { home: string | null; away: str
     .map((m) => ({ home: m.home, away: m.away }))
 }
 
+type TeamOpt = { id: number; name: string; category: string; clubId: number | null; clubName: string }
+
 export function NewTournament({
   categories,
   clubs = [],
+  teams = [],
 }: {
   categories: ReadonlyArray<{ label: string; value: string }>
   clubs?: { id: number; name: string }[]
+  teams?: TeamOpt[]
 }) {
   const router = useRouter()
   const [name, setName] = useState('')
@@ -30,6 +34,9 @@ export function NewTournament({
   const [names, setNames] = useState<string[]>(['', '', '', ''])
   // Expliciete club per ploeg (optioneel): betrouwbaar logo + de club is gekoppeld.
   const [clubIds, setClubIds] = useState<(number | null)[]>(() => Array(4).fill(null))
+  // Koppeling naar een echte ploeg (met spelers) per slot — dan gebruikt de aantekentafel hetzelfde
+  // aantekenblad als een gewone wedstrijd. null = vrije tekst (geen spelers).
+  const [teamIds, setTeamIds] = useState<(number | null)[]>(() => Array(4).fill(null))
   // Geplaatste ploegen (vrijstelling): bv. de top van vorig seizoen. Zij worden uit elkaar geloot
   // en krijgen de bye's, zodat de sterke ploegen elkaar pas laat (finale) tegenkomen.
   const [seeded, setSeeded] = useState<boolean[]>(() => Array(4).fill(false))
@@ -56,16 +63,35 @@ export function NewTournament({
       while (next.length < c) next.push(null)
       return next
     })
+    setTeamIds((prev) => {
+      const next = prev.slice(0, c)
+      while (next.length < c) next.push(null)
+      return next
+    })
   }
 
-  const setNameAt = (i: number, v: string) => setNames((prev) => prev.map((n, idx) => (idx === i ? v : n)))
+  // Vrije tekst aanpassen verbreekt de ploegkoppeling (de naam komt dan niet meer overeen).
+  const setNameAt = (i: number, v: string) => {
+    setNames((prev) => prev.map((n, idx) => (idx === i ? v : n)))
+    setTeamIds((prev) => prev.map((t, idx) => (idx === i ? null : t)))
+  }
   const setClubAt = (i: number, v: number | null) => setClubIds((prev) => prev.map((c, idx) => (idx === i ? v : c)))
+  // Een echte ploeg kiezen: vult de naam + koppelt de ploeg (en de club voor het logo).
+  const pickTeam = (i: number, teamId: number | null) => {
+    const t = teamId ? teams.find((x) => x.id === teamId) ?? null : null
+    setTeamIds((prev) => prev.map((v, idx) => (idx === i ? (t ? t.id : null) : v)))
+    if (t) {
+      setNames((prev) => prev.map((n, idx) => (idx === i ? t.name : n)))
+      if (t.clubId) setClubIds((prev) => prev.map((c, idx) => (idx === i ? t.clubId : c)))
+    }
+  }
   const toggleSeed = (i: number) => setSeeded((prev) => prev.map((s, idx) => (idx === i ? !s : s)))
 
   const move = (i: number, dir: -1 | 1) => {
     const j = i + dir
     if (j < 0 || j >= names.length) return
     setClubIds((prev) => { const next = prev.slice(); [next[i], next[j]] = [next[j], next[i]]; return next })
+    setTeamIds((prev) => { const next = prev.slice(); [next[i], next[j]] = [next[j], next[i]]; return next })
     setNames((prev) => { const next = prev.slice(); [next[i], next[j]] = [next[j], next[i]]; return next })
     setSeeded((prev) => { const next = prev.slice(); [next[i], next[j]] = [next[j], next[i]]; return next })
   }
@@ -78,6 +104,17 @@ export function NewTournament({
     const rest = shuffleRest ? shuffle(restRaw, Math.random) : restRaw
     return [...top, ...rest]
   }
+
+  // Ploegen van de gekozen categorie eerst (handig kiezen), daarna de rest — alfabetisch.
+  const sortedTeams = useMemo(
+    () =>
+      [...teams].sort(
+        (a, b) =>
+          (a.category === category ? 0 : 1) - (b.category === category ? 0 : 1) ||
+          a.name.localeCompare(b.name),
+      ),
+    [teams, category],
+  )
 
   const filledCount = names.filter((n) => n.trim()).length
   const seededCount = names.filter((n, i) => n.trim() && seeded[i]).length
@@ -102,13 +139,17 @@ export function NewTournament({
     const teamClubs = names
       .map((nm, i) => ({ name: nm.trim(), clubId: clubIds[i] }))
       .filter((t): t is { name: string; clubId: number } => Boolean(t.name && t.clubId))
+    // Koppeling naar echte ploegen (met spelers) per ingevulde ploeg (optioneel).
+    const teamTeams = names
+      .map((nm, i) => ({ name: nm.trim(), teamId: teamIds[i] }))
+      .filter((t): t is { name: string; teamId: number } => Boolean(t.name && t.teamId))
 
     setBusy(true)
     try {
       const res = await fetch('/api/tournament', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: name.trim(), category, method, format, slots, teamClubs }),
+        body: JSON.stringify({ name: name.trim(), category, method, format, slots, teamClubs, teamTeams }),
       })
       const data = (await res.json()) as { id?: number; error?: string }
       if (!res.ok || !data.id) throw new Error(data.error ?? 'Aanmaken mislukt.')
@@ -168,7 +209,9 @@ export function NewTournament({
       <section className="trn-card">
         <h2>2 · Ploegen invullen</h2>
         <p className="trn-hint trn-hint-sub">
-          Dezelfde club mag meerdere ploegen inschrijven — nummer ze dan (bv. <strong>KBC Male 1</strong> en <strong>KBC Male 2</strong>). Het clublogo verschijnt automatisch.
+          {teams.length > 0
+            ? <>Kies een <strong>echte ploeg</strong> waar mogelijk — dan tekent de aantekentafel met de echte spelerslijst aan (scorerkeuze, wissels), net als bij een gewone wedstrijd. Of typ een vrije naam voor een gastploeg.</>
+            : <>Dezelfde club mag meerdere ploegen inschrijven — nummer ze dan (bv. <strong>KBC Male 1</strong> en <strong>KBC Male 2</strong>). Het clublogo verschijnt automatisch.</>}
         </p>
         {format === 'knockout' && (
           <p className="trn-hint trn-hint-sub">
@@ -187,7 +230,24 @@ export function NewTournament({
           {names.map((n, i) => (
             <li key={i}>
               <span className="trn-teamnr">{i + 1}</span>
-              <input value={n} onChange={(e) => setNameAt(i, e.target.value)} placeholder={`Ploeg ${i + 1}`} />
+              {teams.length > 0 && (
+                <select
+                  className="trn-teampick"
+                  value={teamIds[i] ?? ''}
+                  onChange={(e) => pickTeam(i, e.target.value ? Number(e.target.value) : null)}
+                  title="Koppel een echte ploeg (met spelers) — of laat leeg voor een vrije naam"
+                  aria-label="Ploeg"
+                >
+                  <option value="">— ploeg kiezen —</option>
+                  {sortedTeams.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.clubName && t.clubName !== t.name ? `${t.clubName} · ${t.name}` : t.name}
+                      {t.category && t.category !== category ? ` (${t.category})` : ''}
+                    </option>
+                  ))}
+                </select>
+              )}
+              <input value={n} onChange={(e) => setNameAt(i, e.target.value)} placeholder={teams.length > 0 ? 'of vrije naam' : `Ploeg ${i + 1}`} />
               {clubs.length > 0 && (
                 <select
                   className="trn-teamclub"
