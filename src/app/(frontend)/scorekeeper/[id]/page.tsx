@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 
 import { hasRole } from '@/lib/access'
+import { canViewAnalyseMatch } from '@/lib/analyse-access'
 import { getAuthUser } from '@/lib/auth-user'
 import { buildMatchState } from '@/lib/match-engine'
 import { getMatchReadiness } from '@/lib/matchsheet-data'
@@ -39,6 +40,10 @@ export default async function ScorekeeperPage({
   // (3-staps veldschema). Iedereen anders tekent aan met de basis snelscoremodus.
   const user = await getAuthUser()
   const isAdmin = hasRole(user, 'admin')
+
+  // Analysewedstrijden zijn privé: enkel de eigenaar (of federatie/admin) mag het aantekenscherm en de
+  // roster zien. Zo lekt deze opname-route geen andermans analyse-spelers, ook niet via een gegokt id.
+  if (matchDoc?.analyseOnly && !canViewAnalyseMatch(user, matchDoc)) notFound()
 
   const players = await payload.find({
     collection: 'players',

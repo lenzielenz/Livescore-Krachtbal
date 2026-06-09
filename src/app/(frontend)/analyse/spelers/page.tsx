@@ -7,17 +7,12 @@ import { getSelectedSeason } from '@/lib/analyse-season'
 import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
 import { buildRadarStats } from '@/lib/radar-stats'
-import { REEKS_OPTIONS, reeksNaam } from '@/lib/reeksen'
+import { COMPETITIE_REEKSEN, resolveCompetitieReeks } from '@/lib/reeksen'
 import { AnalyseNav } from '../AnalyseNav'
 import { SpelerRadar } from './SpelerRadar'
 import '../analyse.css'
 
 export const dynamic = 'force-dynamic'
-
-const COMPETITIE_REEKSEN = REEKS_OPTIONS.filter((o) => !['beker', 'recreatief', 'andere'].includes(o.value)).map((o) => ({
-  value: o.value,
-  label: reeksNaam(o.value),
-}))
 
 // Spelersradar (admin/analyse-only): vergelijk een speler met het reeks-gemiddelde
 // en met een tweede speler op zes genormaliseerde assen.
@@ -39,10 +34,7 @@ export default async function SpelerAnalysePage({ searchParams }: { searchParams
   }
 
   const { reeks: reeksParam } = await searchParams
-  const reeks =
-    typeof reeksParam === 'string' && COMPETITIE_REEKSEN.some((o) => o.value === reeksParam)
-      ? reeksParam
-      : COMPETITIE_REEKSEN[0].value
+  const reeks = resolveCompetitieReeks(reeksParam)
 
   const payload = await getPayloadClient()
   const players = await buildRadarStats(payload, reeks, await getSelectedSeason(), analyseOwnWhere(me))

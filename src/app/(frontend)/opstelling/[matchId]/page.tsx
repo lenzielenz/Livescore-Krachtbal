@@ -15,7 +15,8 @@ export default async function OpstellingPage({ params }: { params: Promise<{ mat
     .findByID({ collection: 'matches', id: matchId, depth: 1 })
     .catch(() => null)
 
-  if (!match) {
+  // Analysewedstrijden horen niet in de competitie-wedstrijdbladflow (privé, eigen analyse-database).
+  if (!match || match.analyseOnly) {
     return (
       <>
         <SiteHeader active="clubs" />

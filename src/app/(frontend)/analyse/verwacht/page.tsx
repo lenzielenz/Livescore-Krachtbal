@@ -7,7 +7,7 @@ import { getSelectedSeason } from '@/lib/analyse-season'
 import { getAuthUser } from '@/lib/auth-user'
 import { buildExpectedPoints } from '@/lib/expected-points'
 import { getPayloadClient } from '@/lib/payload-client'
-import { REEKS_OPTIONS, reeksNaam } from '@/lib/reeksen'
+import { COMPETITIE_REEKSEN, resolveCompetitieReeks } from '@/lib/reeksen'
 import { AnalyseNav } from '../AnalyseNav'
 import { ScoringField } from './ScoringField'
 import { VerwachtPicker } from './VerwachtPicker'
@@ -15,11 +15,6 @@ import '../../rangschikking/rangschikking.css'
 import '../analyse.css'
 
 export const dynamic = 'force-dynamic'
-
-const COMPETITIE_REEKSEN = REEKS_OPTIONS.filter((o) => !['beker', 'recreatief', 'andere'].includes(o.value)).map((o) => ({
-  value: o.value,
-  label: reeksNaam(o.value),
-}))
 
 // Verwachte punten (xG-achtig): wie scoort er boven of onder verwachting?
 export default async function VerwachtAnalysePage({ searchParams }: { searchParams: Promise<{ reeks?: string }> }) {
@@ -40,10 +35,7 @@ export default async function VerwachtAnalysePage({ searchParams }: { searchPara
   }
 
   const { reeks: reeksParam } = await searchParams
-  const reeks =
-    typeof reeksParam === 'string' && COMPETITIE_REEKSEN.some((o) => o.value === reeksParam)
-      ? reeksParam
-      : COMPETITIE_REEKSEN[0].value
+  const reeks = resolveCompetitieReeks(reeksParam)
 
   const payload = await getPayloadClient()
   const { players, buckets, totals, dangerShots } = await buildExpectedPoints(payload, reeks, await getSelectedSeason(), analyseOwnWhere(me))

@@ -7,7 +7,7 @@ import { getSelectedSeason } from '@/lib/analyse-season'
 import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
 import { buildTeamDanger, buildTeamDefense } from '@/lib/player-danger'
-import { REEKS_OPTIONS, reeksNaam } from '@/lib/reeksen'
+import { COMPETITIE_REEKSEN, resolveCompetitieReeks } from '@/lib/reeksen'
 import { buildTeamReport } from '@/lib/team-report'
 import { BandChart } from '@/components/analytics/BandChart'
 import { AnalyseNav } from '../AnalyseNav'
@@ -20,11 +20,6 @@ import '../../rangschikking/rangschikking.css'
 import '../analyse.css'
 
 export const dynamic = 'force-dynamic'
-
-const COMPETITIE_REEKSEN = REEKS_OPTIONS.filter((o) => !['beker', 'recreatief', 'andere'].includes(o.value)).map((o) => ({
-  value: o.value,
-  label: reeksNaam(o.value),
-}))
 
 function pct(part: number, total: number): number {
   return total ? Math.round((part / total) * 100) : 0
@@ -49,10 +44,7 @@ export default async function PloegRapportPage({ searchParams }: { searchParams:
   }
 
   const { reeks: reeksParam, team: teamParam } = await searchParams
-  const reeks =
-    typeof reeksParam === 'string' && COMPETITIE_REEKSEN.some((o) => o.value === reeksParam)
-      ? reeksParam
-      : COMPETITIE_REEKSEN[0].value
+  const reeks = resolveCompetitieReeks(reeksParam)
 
   const payload = await getPayloadClient()
   // Enkel je eigen analyse-ploegen zijn selecteerbaar — competitie-ploegen verschijnen hier nooit.
@@ -64,18 +56,18 @@ export default async function PloegRapportPage({ searchParams }: { searchParams:
   const teamId = teamParam && teamOptions.some((o) => o.value === teamParam) ? Number(teamParam) : null
   const seizoen = await getSelectedSeason()
   const report = teamId != null ? await buildTeamReport(payload, teamId, seizoen, analyseOwnWhere(me)) : null
-  const danger = teamId != null && report && report.matchesAnalyzed > 0 ? await buildTeamDanger(payload, teamId, reeks, seizoen, analyseOwnWhere(me)) : null
-  // Verdedigend beeld: de doelpogingen die tegenstanders TÉGEN deze ploeg maakten — waar ze openingen
-  // geven, dus waar jij kan toeslaan.
-  const dangerConceded =
-    teamId != null && report && report.matchesAnalyzed > 0
-      ? await buildTeamDanger(payload, teamId, reeks, seizoen, analyseOwnWhere(me), { conceded: true })
-      : null
-  // Sterkste verdedigers (vang-/tik-data, enkel uit analyse-wedstrijden).
-  const defenders =
-    teamId != null && report && report.matchesAnalyzed > 0
-      ? await buildTeamDefense(payload, teamId, reeks, seizoen, analyseOwnWhere(me))
-      : []
+  // De drie afgeleiden (aanvallend gevaar, verdedigend "waar geven ze openingen", sterkste verdedigers)
+  // hangen enkel van `report` af, niet van elkaar → parallel ophalen i.p.v. sequentieel.
+  let danger: Awaited<ReturnType<typeof buildTeamDanger>> | null = null
+  let dangerConceded: Awaited<ReturnType<typeof buildTeamDanger>> | null = null
+  let defenders: Awaited<ReturnType<typeof buildTeamDefense>> = []
+  if (teamId != null && report && report.matchesAnalyzed > 0) {
+    ;[danger, dangerConceded, defenders] = await Promise.all([
+      buildTeamDanger(payload, teamId, reeks, seizoen, analyseOwnWhere(me)),
+      buildTeamDanger(payload, teamId, reeks, seizoen, analyseOwnWhere(me), { conceded: true }),
+      buildTeamDefense(payload, teamId, reeks, seizoen, analyseOwnWhere(me)),
+    ])
+  }
   const zTot = report ? report.zones.links + report.zones.midden + report.zones.rechts : 0
 
   return (

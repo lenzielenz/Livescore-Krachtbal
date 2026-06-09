@@ -27,7 +27,8 @@ export default async function ScheidsrechterPage({ params }: { params: Promise<{
   const { matchId } = await params
   const payload = await getPayloadClient()
   const match = await payload.findByID({ collection: 'matches', id: matchId, depth: 0 }).catch(() => null)
-  if (!match) {
+  // Analysewedstrijden horen niet in de competitie-wedstrijdbladflow (privé, eigen analyse-database).
+  if (!match || match.analyseOnly) {
     return (
       <>
         <SiteHeader active="scheidsrechters" />

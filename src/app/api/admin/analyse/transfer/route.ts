@@ -47,6 +47,18 @@ export async function POST(req: Request) {
         .then(() => { moved += 1 })
         .catch(() => undefined)
     }
+    // Verzet ook de eigen analyse-clubs/ploegen/spelers mee, zodat de volledige analyse-database van
+    // de ene analist onder de andere terechtkomt (niet enkel de wedstrijden).
+    for (const collection of ['clubs', 'teams', 'players'] as const) {
+      await payload
+        .update({
+          collection,
+          where: { and: [{ analyseOnly: { equals: true } }, { analyseOwner: { equals: fromUserId } }] },
+          data: { analyseOwner: toUserId },
+          overrideAccess: true,
+        })
+        .catch(() => undefined)
+    }
     return Response.json({ ok: true, moved })
   } catch {
     return Response.json({ error: 'Overdragen mislukt.' }, { status: 500 })

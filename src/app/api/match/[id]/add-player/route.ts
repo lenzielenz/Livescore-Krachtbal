@@ -1,3 +1,4 @@
+import { canAnalyse } from '@/lib/access'
 import { authUser, mayScoreMatch } from '@/lib/api-auth'
 import { getPayloadClient } from '@/lib/payload-client'
 
@@ -52,15 +53,22 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     // Bij een analysewedstrijd hoort de toegevoegde speler bij de analyse-database (privé per
     // eigenaar), niet bij de competitie-roster. Zo lekt een analyse-toevoeging nooit in de competitie.
+    // Owner: bij voorkeur de eigenaar van de wedstrijd; val terug op de (gemachtigde) gebruiker, zodat
+    // er nooit een eigenaarloze (en dus onzichtbare/onbeheerbare) analyse-speler ontstaat.
     const isAnalyse = Boolean((match as { analyseOnly?: boolean }).analyseOnly)
-    const owner = isAnalyse ? rel((match as { analyseOwner?: unknown }).analyseOwner) : null
+    const owner = isAnalyse
+      ? (rel((match as { analyseOwner?: unknown }).analyseOwner) ?? (canAnalyse(user) ? Number(user!.id) : null))
+      : null
+    if (isAnalyse && owner == null) {
+      return Response.json({ error: 'Analysewedstrijd zonder eigenaar.' }, { status: 400 })
+    }
     const created = await payload.create({
       collection: 'players',
       data: {
         name,
         shirtNumber,
         team: teamId,
-        ...(isAnalyse ? { analyseOnly: true, ...(owner != null ? { analyseOwner: owner } : {}) } : {}),
+        ...(isAnalyse ? { analyseOnly: true, analyseOwner: owner } : {}),
       },
       overrideAccess: true,
     })
