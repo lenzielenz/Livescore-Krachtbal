@@ -247,6 +247,20 @@
   color: var(--txt);
   border-color: var(--accent);
 }
+/* Clubnaam-onderschrift op een vaste club-link (rechtsboven, discreet). */
+.kt-screen-title {
+  position: fixed;
+  top: 10px;
+  right: 12px;
+  z-index: 20;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--dim);
+  background: color-mix(in srgb, var(--panel) 80%, transparent);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 5px 10px;
+}
 .kt-screen-empty {
   min-height: 100dvh;
   display: flex;
@@ -639,3 +653,29 @@
     grid-template-columns: 1fr !important;
   }
 }
+
+/* Vaste openbare kantine-link per club (op de kiespagina). */
+.kt-clublink {
+  background: var(--panel-grad, var(--panel));
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--line));
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin: 4px 0 18px;
+}
+.kt-clublink-title { margin: 0 0 6px; font-size: 1rem; color: var(--accent); }
+.kt-clublink-sub { margin: 0 0 12px; font-size: 0.85rem; color: var(--dim); line-height: 1.4; }
+.kt-clublink-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.kt-clublink-select {
+  flex: 0 1 220px; min-width: 0; padding: 9px 10px; border-radius: 9px;
+  border: 1px solid var(--line); background: var(--bg); color: var(--txt); font: inherit; font-size: 0.9rem;
+}
+.kt-clublink-url {
+  flex: 1 1 240px; min-width: 0; padding: 9px 12px; border-radius: 9px;
+  border: 1px solid var(--line); background: var(--bg); color: var(--dim-strong);
+  font: inherit; font-size: 0.85rem;
+}
+.kt-clublink-btn {
+  flex: 0 0 auto; padding: 9px 14px; border-radius: 9px; border: 1px solid var(--accent);
+  background: var(--accent); color: #06140d; font-weight: 700; font-size: 0.85rem; cursor: pointer; text-decoration: none;
+}
+.kt-clublink-btn.open { background: transparent; color: var(--accent); }

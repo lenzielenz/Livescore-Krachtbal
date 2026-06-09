@@ -1,10 +1,13 @@
 import type { Payload } from 'payload'
 
 import { SiteHeader } from '@/components/SiteHeader'
+import { userClubId } from '@/lib/access'
+import { getAuthUser } from '@/lib/auth-user'
 import { formatTimeBE } from '@/lib/datetime'
 import { buildMatchState } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
 import { reeksNaam } from '@/lib/reeksen'
+import { KantineClubLink } from './KantineClubLink'
 import { KantineControl } from './KantineControl'
 import { type KantineMatch } from './KantineBoard'
 import './kantine.css'
@@ -42,6 +45,13 @@ export default async function KantinePage() {
     currentSelection(payload),
   ])
 
+  // Clubs (voor de vaste club-link) + de eigen club van de ingelogde gebruiker (voorselectie).
+  const clubsRes = await payload.find({ collection: 'clubs', sort: 'name', depth: 0, limit: 500 }).catch(() => ({ docs: [] as { id: number; name?: unknown }[] }))
+  const clubs = clubsRes.docs.map((c) => ({ id: c.id as number, name: String((c as { name?: unknown }).name ?? '') })).filter((c) => c.name)
+  const me = await getAuthUser()
+  const cid = userClubId(me)
+  const myClubId = cid != null && Number.isFinite(Number(cid)) ? Number(cid) : null
+
   const seen = new Set<number>()
   const docs = [...liveRes.docs, ...dayRes.docs].filter((m) => {
     if (seen.has(m.id) || (m as { isDemo?: boolean }).isDemo || (m as { analyseOnly?: boolean }).analyseOnly) return false
@@ -72,6 +82,7 @@ export default async function KantinePage() {
       <SiteHeader active="clubs" />
       <div className="kt-page">
         <h1 className="page-title"><span className="brand">Kantine</span> · kiezen</h1>
+        <KantineClubLink clubs={clubs} myClubId={myClubId} />
         <KantineControl matches={list} initialSelected={selectedIds} />
       </div>
     </>
