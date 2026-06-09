@@ -89,6 +89,26 @@
 }
 
 /* Opstelling — snelacties (vaste opstelling invullen / wissen) + bewaar-knoppen */
+/* Klaar-indicator voor de opstelling: duidelijk groen wanneer alles in orde en bewaard is. */
+.ops-ready {
+  margin: 2px 0 12px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  border: 1px solid var(--line);
+}
+.ops-ready.ok {
+  color: #06140d;
+  background: var(--home, #0fe0a6);
+  border-color: var(--home, #0fe0a6);
+}
+.ops-ready.todo {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--line));
+}
+.ops-ready.need { color: var(--dim-strong); background: var(--panel); }
 .ops-quick {
   display: flex;
   gap: 8px;
