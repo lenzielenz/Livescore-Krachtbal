@@ -70,11 +70,14 @@ export async function loadLiveDay(selected: string, today: string): Promise<DayM
     const c = cards.get(m.id)
     if (!c) continue // ontbrekende ploeg → overslaan (zoals voorheen)
     const autoLive = c.status === 'scheduled' && new Date(m.date as string).getTime() <= now
+    const hw = c.teams.home
     days.push({
       id: m.id,
       reeks: reeksLabel(m.reeks),
       time: formatTimeBE(m.date),
+      kickoff: String(m.date),
       status: autoLive ? 'live' : c.status,
+      weather: { plaats: hw.plaats, lat: hw.lat, lng: hw.lng },
       home: { teamId: c.teams.home.id, name: c.teams.home.name, logoUrl: c.teams.home.logoUrl, logoFit: c.teams.home.logoFit, colors: c.teams.home.colors, clubId: c.teams.home.clubId, clubName: c.teams.home.clubName },
       away: { teamId: c.teams.away.id, name: c.teams.away.name, logoUrl: c.teams.away.logoUrl, logoFit: c.teams.away.logoFit, colors: c.teams.away.colors, clubId: c.teams.away.clubId, clubName: c.teams.away.clubName },
       score: c.score,

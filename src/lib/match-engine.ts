@@ -1476,6 +1476,10 @@ export interface ScoreboardTeam {
   colors: ClubColors | null
   clubId: number | null
   clubName: string | null
+  /** Locatie van het clubterrein (voor het weer per wedstrijd). */
+  plaats: string | null
+  lat: number | null
+  lng: number | null
 }
 
 // Moederclub-id en -naam van een ploeg (voor club-favorieten op het live-bord).
@@ -1486,6 +1490,17 @@ function clubIdOf(team: unknown): number | null {
 function clubNameOf(team: unknown): string | null {
   const club = (team as { club?: unknown })?.club
   return club && typeof club === 'object' ? ((club as { name?: string }).name ?? null) : null
+}
+// Terreinlocatie van de (moeder)club: gemeente + optionele exacte coördinaten — voor het weer.
+function clubLocationOf(team: unknown): { plaats: string | null; lat: number | null; lng: number | null } {
+  const club = (team as { club?: unknown })?.club
+  if (!club || typeof club !== 'object') return { plaats: null, lat: null, lng: null }
+  const c = club as { plaats?: unknown; lat?: unknown; lng?: unknown }
+  return {
+    plaats: typeof c.plaats === 'string' && c.plaats.trim() ? c.plaats.trim() : null,
+    lat: typeof c.lat === 'number' && Number.isFinite(c.lat) ? c.lat : null,
+    lng: typeof c.lng === 'number' && Number.isFinite(c.lng) ? c.lng : null,
+  }
 }
 
 type ScoreboardMatch = {
@@ -1601,8 +1616,8 @@ export async function buildScoreboards(
       timeouts,
       refereeStops,
       teams: {
-        home: { id: homeId, name: home.name, logoUrl: clubLogoUrl(home), logoFit: clubLogoFit(home), colors: clubColors(home), clubId: clubIdOf(home), clubName: clubNameOf(home) },
-        away: { id: awayId, name: away.name, logoUrl: clubLogoUrl(away), logoFit: clubLogoFit(away), colors: clubColors(away), clubId: clubIdOf(away), clubName: clubNameOf(away) },
+        home: { id: homeId, name: home.name, logoUrl: clubLogoUrl(home), logoFit: clubLogoFit(home), colors: clubColors(home), clubId: clubIdOf(home), clubName: clubNameOf(home), ...clubLocationOf(home) },
+        away: { id: awayId, name: away.name, logoUrl: clubLogoUrl(away), logoFit: clubLogoFit(away), colors: clubColors(away), clubId: clubIdOf(away), clubName: clubNameOf(away), ...clubLocationOf(away) },
       },
     })
   }
