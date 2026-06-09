@@ -237,6 +237,9 @@ export function FieldScreen({
           </div>
           <div className="fs-clock">{fmtClock(clock)}</div>
           <div className="fs-half">{status === 'finished' ? 'Einde' : `Helft ${state.match.currentHalf}`}</div>
+          {state.refereeStops > 0 && (
+            <div className="fs-refmin" title="Time-outs scheidsrechter">🧑‍⚖️ ⏱ {state.refereeStops}</div>
+          )}
         </div>
 
         <div className={`fs-team ${goal?.side === 'away' ? 'scored' : ''}`}>
