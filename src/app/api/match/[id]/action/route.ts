@@ -89,6 +89,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
           point: { x: Number(body.x), y: Number(body.y) },
           tapCount: body.tapCount === 2 ? 2 : 1,
           touchedBeforeOut: Boolean(body.touchedBeforeOut),
+          originX: body.originX !== undefined && body.originX !== null ? Number(body.originX) : undefined,
           gameClock: body.gameClock !== undefined ? Number(body.gameClock) : undefined,
           caughtById: body.caughtById !== undefined && body.caughtById !== null ? Number(body.caughtById) : undefined,
           tappedById: body.tappedById !== undefined && body.tappedById !== null ? Number(body.tappedById) : undefined,

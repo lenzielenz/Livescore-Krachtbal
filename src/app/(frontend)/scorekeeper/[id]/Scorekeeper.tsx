@@ -87,6 +87,9 @@ export function Scorekeeper({
   // Per-worp keuzes worden in het keuzescherm gezet (na het tikken op het veld).
   const [throwType, setThrowType] = useState<'nek' | 'rug'>('nek')
   const [recentTaps, setRecentTaps] = useState<FieldMarker[]>([])
+  // Werpplaats voor de volgende worp: de werper mag zich vóór de worp zijdelings verplaatsen. Dit
+  // is de (versleepbare) breedte-positie x; null = niet verschoven (gebruik de vorige landing).
+  const [werpX, setWerpX] = useState<number | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [flash, setFlash] = useState<{ title: string; big: string; color: string; team: string; player?: string } | null>(null)
@@ -248,6 +251,12 @@ export function Scorekeeper({
   // Spelers van de ploeg-aan-zet voor het keuzescherm.
   const pickPlayers = possSide === 'home' ? homePlayers : possSide === 'away' ? awayPlayers : []
 
+  // De werpplaats geldt per worp: zodra er een worp bijkomt (recentTaps groeit) of het balbezit
+  // wisselt, vervalt de zijdelingse verschuiving (de nieuwe werpplaats = de nieuwe landing).
+  useEffect(() => {
+    setWerpX(null)
+  }, [recentTaps.length, possSide, poss?.nextThrowNumber])
+
   // Registreer de worp (na ev. aanraking-vraag) en geef visuele feedback.
   const submitThrow = useCallback(
     async (p: Point, tapCount: 1 | 2, touchedBeforeOut: boolean, playerId: number, caughtById?: number, tappedById?: number) => {
@@ -280,6 +289,8 @@ export function Scorekeeper({
         touchedBeforeOut,
         caughtById,
         tappedById,
+        // Zijdelings verschoven werpplaats (breedte) voor deze worp, indien versleept.
+        originX: werpX ?? undefined,
         gameClock: Math.floor(clock),
       })) as { outcome?: string; type?: string; points?: number; isCross?: boolean; state?: MatchState } | null
 
@@ -313,7 +324,7 @@ export function Scorekeeper({
       // Klaar voor de volgende worp.
       setThrowType('nek')
     },
-    [poss, throwType, clock, act, state.teams, roster],
+    [poss, throwType, clock, act, state.teams, roster, werpX],
   )
 
   // Stap 1: tik op het veld waar de bal valt. 1 tik = grond; een tweede tik op (nagenoeg) dezelfde
@@ -488,20 +499,34 @@ export function Scorekeeper({
   const homeArrow = homeDirUp ? '▼' : '▲'
   const awayArrow = homeDirUp ? '▲' : '▼'
 
+  // Werpplaats voor de volgende worp: de laatste landing in dit balbezit. De werper mag zich vóór
+  // de worp zijdelings (alleen breedte) verplaatsen → een horizontaal versleepbare greep. Vanaf
+  // die plek vertrekt de volgende worp (het traject wordt vanaf hier getekend).
+  const lastTap = recentTaps.length ? recentTaps[recentTaps.length - 1] : null
+  const showWerp = isLive && lastTap && !pendingCatch && !pendingTap && !pendingOut
+  const werpPoint = lastTap ? { x: werpX ?? lastTap.x, y: lastTap.y } : null
+  const werpMarker: FieldMarker | null =
+    showWerp && werpPoint
+      ? { id: 'werpplaats', x: werpPoint.x, y: werpPoint.y, color: '#ffd166', r: 4, draggableX: true }
+      : null
+  const baseMarkers: FieldMarker[] = werpMarker ? [...recentTaps, werpMarker] : recentTaps
+
   // Tijdelijke markering op de gekozen plek terwijl je de werper kiest. Gevangen (dubbeltik) krijgt
   // een eigen kleur + ✋ zodat je in één oogopslag ziet of het grond of gevangen is.
   const fieldMarkers: FieldMarker[] = pendingThrow
     ? [
-        ...recentTaps,
+        ...baseMarkers,
         {
           x: Math.max(0, Math.min(1, pendingThrow.p.x)),
           y: Math.max(0, Math.min(1, pendingThrow.p.y)),
           color: pendingThrow.tapCount === 2 ? '#4cc9f0' : '#ffffff',
           r: 9,
           label: pendingThrow.tapCount === 2 ? '✋' : '?',
+          // Traject vertrekt vanaf de (eventueel verschoven) werpplaats.
+          ...(werpPoint ? { fromX: werpPoint.x, fromY: werpPoint.y } : {}),
         },
       ]
-    : recentTaps
+    : baseMarkers
 
   // Smalle zijbalk naast het veld: VW + wissel (makkelijk links/rechts), grote richtingspijl
   // en de worpteller voor de ploeg-aan-zet. Houdt het speelveld zo groot mogelijk.
@@ -1227,6 +1252,7 @@ export function Scorekeeper({
                 className="sk-field"
                 onTap={onTap}
                 markers={fieldMarkers}
+                onMarkerDragX={(id, x) => { if (id === 'werpplaats') setWerpX(x) }}
                 ends={fieldEnds}
                 goalAreaDepthM={state.match.goalAreaDepth}
                 glowGoal={

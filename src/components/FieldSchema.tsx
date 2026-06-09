@@ -44,6 +44,9 @@ export interface FieldMarker {
   /** Optioneel vertrekpunt (0..1) — tekent het worp-traject naar (x,y). */
   fromX?: number
   fromY?: number
+  /** Horizontaal versleepbaar (enkel de breedte): bv. de werpplaats voor de volgende worp.
+   *  Vereist een `id` en de `onMarkerDragX`-callback op het veld. */
+  draggableX?: boolean
 }
 
 export interface EndLabel {
@@ -228,6 +231,7 @@ function ConvLayer({ points, h, minAttempts }: { points: ConvPoint[]; h: number;
 export function FieldSchema({
   onTap,
   markers = [],
+  onMarkerDragX,
   heatPoints,
   convPoints,
   ends,
@@ -240,6 +244,8 @@ export function FieldSchema({
 }: {
   onTap?: (p: Point) => void
   markers?: FieldMarker[]
+  /** Versleep-callback voor horizontaal versleepbare markers (geeft de nieuwe x, 0..1). */
+  onMarkerDragX?: (id: string, x: number) => void
   /** Wanneer gezet: render een dichtheid-heatmap i.p.v. losse punten. */
   heatPoints?: Point[]
   /** Wanneer gezet: render een conversie-heatmap (gevaarzone) van doelpogingen. */
@@ -265,12 +271,44 @@ export function FieldSchema({
   const viewY = zoom === 'goal' ? goalTop : half === 'bottom' ? midY : -M
   const viewH = zoom === 'goal' ? H - goalTop + 8 : half === 'bottom' ? H + M - midY : half === 'top' ? midY + M : H + 2 * M
 
+  // Onderdruk de tik die een touch-device ná het slepen kan synthetiseren (anders zou die een
+  // worp plaatsen). We negeren elke veld-tik kort na het einde van een sleep.
+  const suppressTapUntil = useRef(0)
+
   function handleClick(e: React.MouseEvent<SVGSVGElement>) {
     if (!onTap || !ref.current) return
+    if (Date.now() < suppressTapUntil.current) return
     const rect = ref.current.getBoundingClientRect()
     const vx = -M + ((e.clientX - rect.left) / rect.width) * (W + 2 * M)
     const vy = -M + ((e.clientY - rect.top) / rect.height) * (H + 2 * M)
     onTap({ x: vx / W, y: vy / H })
+  }
+
+  // Horizontaal slepen van een marker (de werpplaats): enkel de breedte (x) wijzigt; de diepte
+  // blijft gelijk. Stopt de tik-propagatie zodat het verslepen geen nieuwe worp plaatst.
+  const dragId = useRef<string | null>(null)
+  function clientToNormX(clientX: number): number {
+    if (!ref.current) return 0.5
+    const rect = ref.current.getBoundingClientRect()
+    const vx = -M + ((clientX - rect.left) / rect.width) * (W + 2 * M)
+    return Math.max(0, Math.min(1, vx / W))
+  }
+  function startDrag(e: React.PointerEvent, id?: string) {
+    if (!onMarkerDragX || !id) return
+    e.stopPropagation()
+    e.preventDefault()
+    dragId.current = id
+    const move = (ev: PointerEvent) => {
+      if (dragId.current) onMarkerDragX(dragId.current, clientToNormX(ev.clientX))
+    }
+    const up = () => {
+      dragId.current = null
+      suppressTapUntil.current = Date.now() + 350
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', up)
+    }
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', up)
   }
 
   return (
@@ -366,8 +404,12 @@ export function FieldSchema({
       {markers.map((m, i) => {
         const color = m.color ?? '#ffd166'
         const hasFrom = typeof m.fromX === 'number' && typeof m.fromY === 'number'
+        const r = m.r ?? 6
+        const cx = m.x * W
+        const cy = m.y * H
+        const canDrag = Boolean(m.draggableX && m.id && onMarkerDragX)
         return (
-          <g key={i}>
+          <g key={m.id ?? i}>
             {hasFrom && (
               <>
                 <line
@@ -383,11 +425,25 @@ export function FieldSchema({
                 <circle cx={(m.fromX as number) * W} cy={(m.fromY as number) * H} r={2} fill={color} opacity={0.6} />
               </>
             )}
-            <circle cx={m.x * W} cy={m.y * H} r={m.r ?? 6} fill={color} stroke="#06140d" strokeWidth={1} />
+            <circle cx={cx} cy={cy} r={r} fill={color} stroke="#06140d" strokeWidth={1} />
             {m.label && (
-              <text x={m.x * W} y={m.y * H + 2.5} fontSize={7} textAnchor="middle" fill="#06140d" fontWeight={700}>
+              <text x={cx} y={cy + 2.5} fontSize={7} textAnchor="middle" fill="#06140d" fontWeight={700}>
                 {m.label}
               </text>
+            )}
+            {canDrag && (
+              // Versleep-affordance: een ruime, horizontaal versleepbare greep met ↔-pijlen.
+              <g
+                style={{ cursor: 'ew-resize', touchAction: 'none' }}
+                onPointerDown={(e) => startDrag(e, m.id)}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <circle cx={cx} cy={cy} r={r + 6} fill="transparent" stroke={color} strokeWidth={1} strokeDasharray="2 2" strokeOpacity={0.85} />
+                {/* Grote onzichtbare hitzone voor een vlotte aanraking. */}
+                <circle cx={cx} cy={cy} r={r + 12} fill="#ffffff" fillOpacity={0.001} />
+                <path d={`M ${cx - r - 9} ${cy} l 3 -3 M ${cx - r - 9} ${cy} l 3 3`} stroke={color} strokeWidth={1.4} fill="none" strokeLinecap="round" />
+                <path d={`M ${cx + r + 9} ${cy} l -3 -3 M ${cx + r + 9} ${cy} l -3 3`} stroke={color} strokeWidth={1.4} fill="none" strokeLinecap="round" />
+              </g>
             )}
           </g>
         )
