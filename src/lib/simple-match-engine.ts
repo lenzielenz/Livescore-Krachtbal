@@ -73,20 +73,28 @@ export async function recordSimpleGoal(
   matchId: number,
   side: SimpleSide,
   points: 1 | 2,
-  scorer: SimpleScorer,
+  scorer?: SimpleScorer,
 ) {
-  if (!scorer || !Number.isFinite(scorer.id) || scorer.id <= 0) {
-    throw new Error('Selecteer eerst de speler die scoorde.')
-  }
   const { match, score, half, clock } = await loadSimpleMatch(payload, matchId)
-  // Bewaak dat de gekozen speler tot de scorende ploeg behoort.
   const teamId = side === 'home' ? relId(match.homeTeam) : relId(match.awayTeam)
-  const player = await payload
-    .findByID({ collection: 'players', id: scorer.id, depth: 0 })
-    .catch(() => null)
-  if (!player || relId(player.team) !== teamId) {
-    throw new Error('Die speler hoort niet bij de scorende ploeg.')
+
+  let player: { id: number; shirtNumber?: number | null; name?: string | null; team?: unknown } | null = null
+  if (scorer && Number.isFinite(scorer.id) && scorer.id > 0) {
+    // Bewaak dat de gekozen speler tot de scorende ploeg behoort.
+    player = await payload.findByID({ collection: 'players', id: scorer.id, depth: 0 }).catch(() => null)
+    if (!player || relId(player.team) !== teamId) {
+      throw new Error('Die speler hoort niet bij de scorende ploeg.')
+    }
+  } else {
+    // Geen scorer gekozen: dat mag enkel als de ploeg nóg geen spelers heeft (dan kan je
+    // toch al aantekenen en de spelers later aanvullen). Heeft de ploeg wél spelers, dan
+    // moet er een gekozen worden — zo blijft de scorerregistratie sluitend bij echte ploegen.
+    const teamPlayers = await payload.count({ collection: 'players', where: { team: { equals: teamId } } }).catch(() => ({ totalDocs: 1 }))
+    if (teamPlayers.totalDocs > 0) {
+      throw new Error('Selecteer eerst de speler die scoorde.')
+    }
   }
+
   // Eerste doelpunt zet een nog niet gestarte wedstrijd meteen op 'live'.
   if (match.status !== 'live') {
     await payload.update({ collection: 'matches', id: matchId, data: { status: 'live' }, overrideAccess: true })
@@ -97,9 +105,13 @@ export async function recordSimpleGoal(
     half,
     clock,
     ts: Date.now(),
-    scorerId: player.id,
-    scorerNumber: typeof player.shirtNumber === 'number' ? player.shirtNumber : scorer.number,
-    scorerName: typeof player.name === 'string' ? player.name : scorer.name,
+    ...(player ? { scorerId: player.id } : {}),
+    ...(player
+      ? {
+          scorerNumber: typeof player.shirtNumber === 'number' ? player.shirtNumber : scorer?.number,
+          scorerName: typeof player.name === 'string' ? player.name : scorer?.name,
+        }
+      : {}),
   })
   return writeSimpleScore(payload, matchId, score)
 }

@@ -437,7 +437,26 @@ export function SimpleScorekeeper({
                 <span>{team.name}</span>
               </div>
               {teamPlayers.length === 0 ? (
-                <p className="ssk-dim">Geen spelers bekend voor deze ploeg — voeg ze toe in de opstelling.</p>
+                <>
+                  <p className="ssk-dim">
+                    Nog geen spelers ingevuld voor deze ploeg. Je kan het doelpunt tóch noteren en de
+                    spelers later aanvullen in de opstelling.
+                  </p>
+                  <button
+                    type="button"
+                    className="ssk-goal"
+                    onClick={() => {
+                      const { side, points } = pending
+                      setPending(null)
+                      void act(
+                        { action: 'simplegoal', side, points },
+                        (s) => ({ ...s, score: { ...s.score, [side]: s.score[side] + points } }),
+                      )
+                    }}
+                  >
+                    ✓ Noteer +{pending.points} {pending.points === 2 ? 'rugworp' : 'nekworp'} <small>zonder speler</small>
+                  </button>
+                </>
               ) : (
                 <div className="ssk-pick-grid">
                   {teamPlayers.map((p) => (
