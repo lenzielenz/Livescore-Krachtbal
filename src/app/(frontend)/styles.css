@@ -1,31 +1,32 @@
 :root {
-  --bg: #06140d;
-  --bg-2: #0a2014;
-  /* Iets opgetild t.o.v. vroeger (#0e261a/#123a25): meer contrast, minder "moerasdonker",
-     waardoor kaarten echt van de achtergrond loskomen. */
-  --panel: #0f2d1e;
-  --panel-2: #18482e;
-  --line: #224a33;
-  --txt: #ecf7f0;
-  --dim: #93b9a6;
+  /* Neutraal, high-end "antraciet + ijsblauw" thema (geen groen meer in de chrome). De
+     ploeg-kleuren (--home/--away) blijven functioneel behouden. */
+  --bg: #0a0b0d;
+  --bg-2: #101216;
+  /* Grafiet-panelen die duidelijk loskomen van de bijna-zwarte achtergrond. */
+  --panel: #14161a;
+  --panel-2: #1c1f26;
+  --line: #282c34;
+  --txt: #f5f7fa;
+  --dim: #98a1ad;
   /* Sterkere secundaire tekstkleur (~5.5:1 op --panel) voor kleine, informatieve labels
      (kruisjes/minuten/stats) die met --dim onder WCAG AA zakken. Zie AUDIT §1. */
-  --dim-strong: #b6d6c6;
-  /* Warmer en helderder goud → meer "pop" zonder de huisstijl te verlaten. */
-  --accent: #ffd873;
-  --accent-2: #f9b023;
+  --dim-strong: #c2c9d2;
+  /* Verfijnd ijsblauw/platina accent — clean en modern (Linear/Vercel-look). */
+  --accent: #7cb8ff;
+  --accent-2: #5a93e0;
   --home: #0fe0a6;
   --away: #4cc9f0;
-  /* Premium robijnrood-accent: gebruikt voor live, gloed, randen en flair (spaarzaam). */
-  --pop: #e23744;
+  /* Premium koraalrood-accent: gebruikt voor live, gloed, randen en flair (spaarzaam). */
+  --pop: #ff5a5f;
   --pop-2: #b07bff;
   /* Gedeelde kleurverlopen — geven knoppen, merk en markers een premium glans. */
-  --grad-accent: linear-gradient(135deg, #ffe7a0 0%, var(--accent) 45%, var(--accent-2) 100%);
+  --grad-accent: linear-gradient(135deg, #a9d2ff 0%, var(--accent) 45%, var(--accent-2) 100%);
   --grad-pop: linear-gradient(135deg, var(--pop) 0%, var(--pop-2) 100%);
   --grad-cool: linear-gradient(135deg, var(--home) 0%, var(--away) 100%);
   /* Gedeelde premium-effecten */
   --panel-grad: linear-gradient(155deg, color-mix(in srgb, var(--panel-2) 72%, var(--panel)), var(--panel) 92%);
-  --card-shadow: 0 12px 34px rgba(0, 0, 0, 0.38);
+  --card-shadow: 0 12px 34px rgba(0, 0, 0, 0.45);
   /* Gekleurde gloed-schaduw voor hover-states: tilt kaarten op met sfeer i.p.v. enkel zwart. */
   --glow-accent: 0 18px 44px -10px color-mix(in srgb, var(--accent) 30%, transparent);
   --glow-pop: 0 18px 44px -10px color-mix(in srgb, var(--pop) 32%, transparent);
@@ -36,18 +37,18 @@
    (toggle op de operatorschermen, bewaard in localStorage). Tilt de secundaire tekst en lijnen op. */
 @media (prefers-contrast: more) {
   :root {
-    --dim: #cfe8db;
-    --dim-strong: #e3f3ec;
-    --line: #3a6b4d;
+    --dim: #cdd5df;
+    --dim-strong: #eef2f6;
+    --line: #3a4150;
     --txt: #ffffff;
   }
 }
 :root[data-theme='hc'] {
-  --dim: #cfe8db;
-  --dim-strong: #e3f3ec;
-  --line: #3a6b4d;
+  --dim: #cdd5df;
+  --dim-strong: #eef2f6;
+  --line: #3a4150;
   --txt: #ffffff;
-  --panel: #0c2417;
+  --panel: #11141a;
 }
 
 * {
@@ -742,7 +743,7 @@ h3,
   font-size: 0.65rem;
   font-weight: 800;
   letter-spacing: 0.06em;
-  background: color-mix(in srgb, var(--home) 20%, #0a1f14);
+  background: color-mix(in srgb, var(--home) 20%, #10141a);
   color: var(--home);
   padding: 3px 9px;
   border-radius: 999px;

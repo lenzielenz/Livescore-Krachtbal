@@ -645,7 +645,7 @@ select.rang-picker {
 .gev-select {
   flex: 1 1 180px;
   padding: 7px 10px;
-  background: #0a1f14;
+  background: #10141a;
   color: var(--txt);
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -660,7 +660,7 @@ select.rang-picker {
 .gev-controls button {
   padding: 6px 12px;
   border: 1px solid var(--line);
-  background: #0a1f14;
+  background: #10141a;
   color: var(--txt);
   border-radius: 7px;
   font-size: 0.8rem;
@@ -964,7 +964,7 @@ select.rang-picker {
   color: var(--txt);
   background:
     radial-gradient(120% 80% at 50% -10%, color-mix(in srgb, var(--rc) 26%, transparent), transparent 60%),
-    linear-gradient(165deg, #123322 0%, #0b2418 55%, #07160e 100%);
+    linear-gradient(165deg, #123322 0%, #14161a 55%, #07160e 100%);
   border: 2px solid transparent;
   background-clip: padding-box;
   box-shadow: 0 20px 50px -16px rgba(0,0,0,0.7), 0 0 0 1px color-mix(in srgb, var(--rc) 30%, var(--line)) inset;
@@ -1037,7 +1037,7 @@ select.rang-picker {
   background:
     radial-gradient(130% 90% at 50% -15%, color-mix(in srgb, var(--c1) 42%, transparent), transparent 62%),
     radial-gradient(90% 60% at 100% 110%, color-mix(in srgb, var(--c2) 30%, transparent), transparent 60%),
-    linear-gradient(165deg, color-mix(in srgb, var(--c1) 22%, #0c2418) 0%, #0a1c12 55%, #06120b 100%);
+    linear-gradient(165deg, color-mix(in srgb, var(--c1) 22%, #14161a) 0%, #0a1c12 55%, #06120b 100%);
   box-shadow: 0 24px 60px -18px rgba(0,0,0,0.75), 0 0 0 1px color-mix(in srgb, var(--c1) 40%, var(--line)) inset;
 }
 .pan-card::before {
@@ -1120,7 +1120,7 @@ select.rang-picker {
   padding: 6px 10px;
   border: 1px solid var(--line);
   border-radius: 999px;
-  background: color-mix(in srgb, var(--panel-2, #0a1f14) 60%, transparent);
+  background: color-mix(in srgb, var(--panel-2, #10141a) 60%, transparent);
   font-size: 0.85rem;
   color: var(--dim);
 }
@@ -1214,13 +1214,13 @@ select.rang-picker {
 .rad-axis-g { cursor: pointer; }
 /* Aslabel als tikbare "chip": afgeronde achtergrond die omkleurt bij selectie. */
 .rad-axis-chip {
-  fill: color-mix(in srgb, var(--panel-2, #0a1f14) 82%, transparent);
+  fill: color-mix(in srgb, var(--panel-2, #10141a) 82%, transparent);
   stroke: color-mix(in srgb, var(--accent) 30%, var(--line));
   stroke-width: 1;
   transition: fill 0.16s ease, stroke 0.16s ease;
 }
 .rad-axis-g:hover .rad-axis-chip {
-  fill: color-mix(in srgb, var(--accent) 18%, var(--panel-2, #0a1f14));
+  fill: color-mix(in srgb, var(--accent) 18%, var(--panel-2, #10141a));
   stroke: color-mix(in srgb, var(--accent) 65%, var(--line));
 }
 .rad-axis-g.on .rad-axis-chip { filter: drop-shadow(0 1px 5px rgba(0, 0, 0, 0.4)); }
@@ -1381,7 +1381,7 @@ select.rang-picker {
   padding: 8px 13px;
   border-radius: 999px;
   border: 1px solid var(--line);
-  background: color-mix(in srgb, var(--panel-2, #0a1f14) 60%, transparent);
+  background: color-mix(in srgb, var(--panel-2, #10141a) 60%, transparent);
   color: var(--dim-strong, #9fb6aa);
   font-weight: 700;
   font-size: 0.88rem;

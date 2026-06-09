@@ -50,7 +50,7 @@
   align-items: flex-end;
   justify-content: center;
   border-radius: 6px;
-  background: color-mix(in srgb, #4cc9f0 10%, var(--bg, #0a1f14));
+  background: color-mix(in srgb, #4cc9f0 10%, var(--bg, #10141a));
   overflow: hidden;
 }
 .mr-bar-fill {

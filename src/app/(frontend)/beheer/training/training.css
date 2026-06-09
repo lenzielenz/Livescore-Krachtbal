@@ -41,7 +41,7 @@
   padding: 9px 11px;
   border-radius: 8px;
   border: 1px solid var(--line);
-  background: color-mix(in srgb, var(--panel-2, #0a1f14) 60%, transparent);
+  background: color-mix(in srgb, var(--panel-2, #10141a) 60%, transparent);
   color: var(--txt);
   font-size: 0.95rem;
   min-width: 0;
@@ -98,7 +98,7 @@
   padding: 9px 11px;
   border-radius: 8px;
   border: 1px solid var(--line);
-  background: color-mix(in srgb, var(--panel-2, #0a1f14) 60%, transparent);
+  background: color-mix(in srgb, var(--panel-2, #10141a) 60%, transparent);
   color: var(--txt);
   font-size: 0.95rem;
   min-width: 0;
@@ -228,7 +228,7 @@
   padding: 8px 14px;
   border-radius: 999px;
   border: 1px solid var(--line);
-  background: color-mix(in srgb, var(--panel-2, #0a1f14) 60%, transparent);
+  background: color-mix(in srgb, var(--panel-2, #10141a) 60%, transparent);
   color: var(--dim-strong, #9fb6aa);
   font-weight: 700;
   font-size: 0.9rem;
@@ -273,7 +273,7 @@
   padding: 11px 12px;
   border-radius: 10px;
   border: 1px solid var(--line);
-  background: color-mix(in srgb, var(--panel-2, #0a1f14) 50%, transparent);
+  background: color-mix(in srgb, var(--panel-2, #10141a) 50%, transparent);
   color: var(--txt);
   font-size: 0.92rem;
   font-weight: 600;
@@ -324,7 +324,7 @@
   padding: 9px 12px;
   border-radius: 999px;
   border: 1px solid var(--line);
-  background: color-mix(in srgb, var(--panel-2, #0a1f14) 60%, transparent);
+  background: color-mix(in srgb, var(--panel-2, #10141a) 60%, transparent);
   color: var(--txt);
   font-size: 0.92rem;
 }
@@ -390,7 +390,7 @@
   border: 1px solid var(--line);
   border-radius: 10px;
   padding: 10px 12px;
-  background: color-mix(in srgb, var(--panel-2, #0a1f14) 40%, transparent);
+  background: color-mix(in srgb, var(--panel-2, #10141a) 40%, transparent);
 }
 .tr-addplayers summary { cursor: pointer; font-weight: 700; }
 .tr-addplayers textarea {
@@ -399,7 +399,7 @@
   padding: 9px 11px;
   border-radius: 8px;
   border: 1px solid var(--line);
-  background: color-mix(in srgb, var(--panel-2, #0a1f14) 60%, transparent);
+  background: color-mix(in srgb, var(--panel-2, #10141a) 60%, transparent);
   color: var(--txt);
   font-size: 0.92rem;
   resize: vertical;
@@ -425,7 +425,7 @@
   padding: 7px 13px;
   border-radius: 999px;
   border: 1px solid var(--line);
-  background: color-mix(in srgb, var(--panel-2, #0a1f14) 60%, transparent);
+  background: color-mix(in srgb, var(--panel-2, #10141a) 60%, transparent);
   color: var(--dim-strong, #9fb6aa);
   font-weight: 700;
   font-size: 0.88rem;
@@ -600,6 +600,6 @@
 .tr-doel-add { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .tr-doel-add select, .tr-doel-add input {
   padding: 9px 11px; border-radius: 8px; border: 1px solid var(--line);
-  background: color-mix(in srgb, var(--panel-2, #0a1f14) 60%, transparent); color: var(--txt); font-size: 0.92rem;
+  background: color-mix(in srgb, var(--panel-2, #10141a) 60%, transparent); color: var(--txt); font-size: 0.92rem;
 }
 .tr-doel-add input { max-width: 140px; }

@@ -31,7 +31,7 @@
 .cmp-val { font-variant-numeric: tabular-nums; font-weight: 700; font-size: 0.9rem; }
 .cmp-val:first-child { text-align: right; grid-area: hv; }
 .cmp-val:nth-child(3) { text-align: left; grid-area: av; }
-.cmp-bar { grid-area: bar; display: flex; height: 8px; border-radius: 4px; overflow: hidden; background: #0a1f14; }
+.cmp-bar { grid-area: bar; display: flex; height: 8px; border-radius: 4px; overflow: hidden; background: #10141a; }
 .cmp-bar-home { background: var(--home); }
 .cmp-bar-away { background: var(--away); }
 .cmp-label { grid-area: lbl; text-align: center; font-size: 0.72rem; color: var(--dim); }
@@ -52,7 +52,7 @@
 .shotmap-controls button, .pt-filter button {
   padding: 6px 10px;
   border: 1px solid var(--line);
-  background: #0a1f14;
+  background: #10141a;
   color: var(--txt);
   border-radius: 7px;
   font-size: 0.8rem;
@@ -105,14 +105,14 @@
 /* Tabel / kaarten toggle */
 .pt-viewtoggle { display: flex; gap: 6px; margin: 8px 0; }
 .pt-viewtoggle button {
-  padding: 5px 14px; border: 1px solid var(--line); background: #0a1f14; color: var(--txt);
+  padding: 5px 14px; border: 1px solid var(--line); background: #10141a; color: var(--txt);
   border-radius: 8px; font-size: 0.82rem; cursor: pointer;
 }
 .pt-viewtoggle button.on { background: var(--accent); color: #06140d; border-color: var(--accent); font-weight: 700; }
 
 /* Per-speler kaarten */
 .pl-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
-.pl-card { border: 1px solid var(--line); border-radius: 12px; padding: 12px; background: #0a1f14; }
+.pl-card { border: 1px solid var(--line); border-radius: 12px; padding: 12px; background: #10141a; }
 .pl-card.side-home { border-left: 3px solid var(--home); }
 .pl-card.side-away { border-left: 3px solid var(--away); }
 .pl-card-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
@@ -128,7 +128,7 @@
 .pl-val { font-size: 0.9rem; font-weight: 700; font-variant-numeric: tabular-nums; }
 .pl-val em { font-style: normal; font-weight: 400; color: var(--dim); font-size: 0.8rem; }
 .pl-val.neg { color: #ef476f; }
-.pl-bar { display: flex; height: 7px; border-radius: 4px; overflow: hidden; background: #0a1f14; }
+.pl-bar { display: flex; height: 7px; border-radius: 4px; overflow: hidden; background: #10141a; }
 .pl-bar .seg { display: block; height: 100%; }
 .pl-bar .seg.l { background: #0fe0a6; }
 .pl-bar .seg.m { background: #ffd873; }
@@ -217,7 +217,7 @@
 }
 .replay-rec-card {
   width: min(92vw, 340px);
-  background: var(--panel, #0e2a1d);
+  background: var(--panel, #14161a);
   border: 1px solid var(--line, #1d3b2c);
   border-radius: 14px;
   padding: 18px 18px 16px;
