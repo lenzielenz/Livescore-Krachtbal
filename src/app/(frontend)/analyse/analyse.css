@@ -886,6 +886,9 @@ select.rang-picker {
 .an-momentum .an-sub { margin: 0 0 10px; }
 .an-mom-svg { width: 100%; max-width: 480px; aspect-ratio: 320 / 130; height: auto; display: block; margin-inline: auto; }
 .an-mom-zero { stroke: var(--line); stroke-width: 1; stroke-dasharray: 4 4; }
+/* Scheidingslijn waar een nieuwe helft begint (bv. de 2de helft). */
+.an-mom-half { stroke: var(--accent); stroke-width: 1; opacity: 0.6; }
+.an-mom-half-lbl { fill: var(--accent); opacity: 0.9; font-weight: 700; }
 .an-mom-line { stroke: var(--txt); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; opacity: 0.85; }
 .an-mom-dot-h { fill: var(--home); }
 .an-mom-dot-a { fill: var(--away); }

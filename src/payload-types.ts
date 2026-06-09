@@ -522,6 +522,10 @@ export interface User {
 export interface Official {
   id: number;
   name: string;
+  /**
+   * Koppel aan het login-account van deze persoon, zodat die z'n wedstrijden en QR ziet.
+   */
+  user?: (number | null) | User;
   type: 'scheidsrechter' | 'grensrechter' | 'aantekenaar' | 'tijdopnemer';
   federationNumber?: string | null;
   updatedAt: string;
@@ -1444,6 +1448,7 @@ export interface MatchsheetsSelect<T extends boolean = true> {
  */
 export interface OfficialsSelect<T extends boolean = true> {
   name?: T;
+  user?: T;
   type?: T;
   federationNumber?: T;
   updatedAt?: T;
