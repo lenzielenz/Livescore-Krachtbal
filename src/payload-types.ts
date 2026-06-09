@@ -303,7 +303,7 @@ export interface Player {
    */
   club?: (number | null) | Club;
   /**
-   * Kies eerst een club hierboven. De reeks staat bij de ploegnaam.
+   * Kies eerst een club hierboven om de lijst te beperken. De reeks staat bij de ploegnaam.
    */
   team: number | Team;
   /**
