@@ -27,7 +27,8 @@ export const PROFILES: Profile[] = [
     hubHref: '/club',
     intro: 'Wedstrijd voorbereiden, aantekenen aan het veld en de schermen bedienen.',
     tools: [
-      { href: '/scorekeeper', label: '📝 Aantekenen' },
+      // Aantekenen gebeurt per wedstrijd vanuit "Mijn club" (de knop op elke wedstrijd), niet via
+      // een aparte lijst van álle clubs — dat zorgde voor verwarring over welke je moest nemen.
       { href: '/kantine', label: '🍻 Kantinescherm' },
       { href: '/cast', label: '📺 Schermen naar tv' },
       { href: '/beheer/spelers', label: '➕ Spelers toevoegen' },
