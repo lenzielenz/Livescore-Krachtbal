@@ -63,13 +63,25 @@ function useFavSet(key: string): [Set<number>, (id: number) => void] {
   return [set, toggle]
 }
 
-export function LiveBoard({ date, today, matches }: { date: string; today: string; matches: DayMatch[] }) {
+export function LiveBoard({
+  date,
+  today,
+  matches,
+  myClubId = null,
+}: {
+  date: string
+  today: string
+  matches: DayMatch[]
+  /** De club van de ingelogde gebruiker (ingesteld in de admin) — voedt de "Mijn club"-filter. */
+  myClubId?: number | null
+}) {
   const router = useRouter()
   const [favTeams, toggleTeam] = useFavSet(FAV_TEAMS_KEY)
   const [favClubs, toggleClub] = useFavSet(FAV_CLUBS_KEY)
   const [reeksFilter, setReeksFilter] = useState<string | null>(null)
   const [onlyFavTeams, setOnlyFavTeams] = useState(false)
   const [onlyFavClubs, setOnlyFavClubs] = useState(false)
+  const [onlyMyClub, setOnlyMyClub] = useState(false)
   const [onlyLive, setOnlyLive] = useState(false)
   const [query, setQuery] = useState('')
   const [openRow, setOpenRow] = useState<number | null>(null)
@@ -85,6 +97,9 @@ export function LiveBoard({ date, today, matches }: { date: string; today: strin
   const teamFav = (m: DayMatch) => favTeams.has(m.home.teamId) || favTeams.has(m.away.teamId)
   const clubFav = (m: DayMatch) =>
     (m.home.clubId != null && favClubs.has(m.home.clubId)) || (m.away.clubId != null && favClubs.has(m.away.clubId))
+  // Wedstrijden van de eigen club (uit het login-account): thuis óf uit.
+  const myClubMatch = (m: DayMatch) => myClubId != null && (m.home.clubId === myClubId || m.away.clubId === myClubId)
+  const myClubCount = useMemo(() => (myClubId == null ? 0 : matches.filter(myClubMatch).length), [matches, myClubId])
 
   // Basis: alles behalve het reeks-filter toegepast, zodat de reeks-tellingen
   // tonen hoeveel er ná zoeken/live/favorieten overblijft.
@@ -93,6 +108,8 @@ export function LiveBoard({ date, today, matches }: { date: string; today: strin
       matches.filter((m) => {
         if (onlyLive && m.status !== 'live') return false
         if (query.trim() && !matchesQuery(m, query)) return false
+        // "Mijn club" beperkt tot de wedstrijden van de eigen club.
+        if (onlyMyClub && !myClubMatch(m)) return false
         // Favorieten-filters combineren met OF: toon wat een favoriete ploeg óf club bevat.
         if (onlyFavTeams || onlyFavClubs) {
           const hit = (onlyFavTeams && teamFav(m)) || (onlyFavClubs && clubFav(m))
@@ -100,7 +117,7 @@ export function LiveBoard({ date, today, matches }: { date: string; today: strin
         }
         return true
       }),
-    [matches, onlyLive, onlyFavTeams, onlyFavClubs, favTeams, favClubs, query],
+    [matches, onlyLive, onlyFavTeams, onlyFavClubs, onlyMyClub, myClubId, favTeams, favClubs, query],
   )
 
   // Reeksen + tellingen op basis van de actieve filters (slim navigeren).
@@ -158,6 +175,12 @@ export function LiveBoard({ date, today, matches }: { date: string; today: strin
             <span><span className="lb-livedot" /> Live</span>
             {liveCount > 0 && <span className="lb-reeks-n">{liveCount}</span>}
           </button>
+          {myClubId != null && (
+            <button type="button" className={`lb-reeks fav ${onlyMyClub ? 'on' : ''}`} onClick={() => setOnlyMyClub((v) => !v)}>
+              <span>🏠 Mijn club</span>
+              {myClubCount > 0 && <span className="lb-reeks-n">{myClubCount}</span>}
+            </button>
+          )}
           <button type="button" className={`lb-reeks fav ${onlyFavTeams ? 'on' : ''}`} onClick={() => setOnlyFavTeams((v) => !v)}>
             <span>★ Ploegen</span>
             {favTeams.size > 0 && <span className="lb-reeks-n">{favTeams.size}</span>}
