@@ -2,6 +2,7 @@ import type { Payload } from 'payload'
 
 import { SiteHeader } from '@/components/SiteHeader'
 import { userClubId } from '@/lib/access'
+import { competitionWhere } from '@/lib/analyse-access'
 import { getAuthUser } from '@/lib/auth-user'
 import { formatTimeBE } from '@/lib/datetime'
 import { buildMatchState } from '@/lib/match-engine'
@@ -40,13 +41,13 @@ export default async function KantinePage() {
 
   // Wedstrijden van vandaag + alle live wedstrijden (ook als hun datum afwijkt).
   const [dayRes, liveRes, selectedIds] = await Promise.all([
-    payload.find({ collection: 'matches', where: { date: { greater_than_equal: start, less_than: end } }, sort: 'date', depth: 0, limit: 200 }),
-    payload.find({ collection: 'matches', where: { status: { equals: 'live' } }, depth: 0, limit: 50 }),
+    payload.find({ collection: 'matches', where: { and: [{ date: { greater_than_equal: start, less_than: end } }, competitionWhere()] }, sort: 'date', depth: 0, limit: 200 }),
+    payload.find({ collection: 'matches', where: { and: [{ status: { equals: 'live' } }, competitionWhere()] }, depth: 0, limit: 50 }),
     currentSelection(payload),
   ])
 
   // Clubs (voor de vaste club-link) + de eigen club van de ingelogde gebruiker (voorselectie).
-  const clubsRes = await payload.find({ collection: 'clubs', sort: 'name', depth: 0, limit: 500 }).catch(() => ({ docs: [] as { id: number; name?: unknown }[] }))
+  const clubsRes = await payload.find({ collection: 'clubs', where: competitionWhere(), sort: 'name', depth: 0, limit: 500 }).catch(() => ({ docs: [] as { id: number; name?: unknown }[] }))
   const clubs = clubsRes.docs.map((c) => ({ id: c.id as number, name: String((c as { name?: unknown }).name ?? '') })).filter((c) => c.name)
   const me = await getAuthUser()
   const cid = userClubId(me)

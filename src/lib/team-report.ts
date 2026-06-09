@@ -192,10 +192,12 @@ export async function buildTeamReport(payload: Payload, teamId: number, seizoen?
     }
   }
 
-  // Verdedigend: vangsten per speler (tegenstander-worpen die zij vingen).
-  if (playerIds.length) {
+  // Verdedigend: vangsten per speler (tegenstander-worpen die zij vingen) — enkel binnen de reeds
+  // (analyse-/seizoen-)gefilterde wedstrijden, zodat de telling niet over andere matches lekt.
+  const matchIdList = matches.map((m) => (m as { id: number }).id)
+  if (playerIds.length && matchIdList.length) {
     const catchRes = await payload
-      .find({ collection: 'throws', where: { caughtBy: { in: playerIds } }, depth: 0, limit: 5000 })
+      .find({ collection: 'throws', where: { and: [{ caughtBy: { in: playerIds } }, { match: { in: matchIdList } }] }, depth: 0, limit: 5000 })
       .catch(() => ({ docs: [] as Record<string, unknown>[] }))
     for (const t of catchRes.docs) {
       const cid = rel((t as { caughtBy?: unknown }).caughtBy)
@@ -238,7 +240,7 @@ export async function buildTeamReport(payload: Payload, teamId: number, seizoen?
   )
 
   // ── Aanbevelingen / tendensen uit de ruwe worpen (per worpnummer, richting, type, afstand) ──
-  const matchIdList = matches.map((m) => (m as { id: number }).id)
+  // matchIdList is hierboven al berekend (gefilterde wedstrijden).
   type TLite = { player: number; throwNumber: number; zone: string | null; outcome: string; type: string; distance: number | null }
   let teamThrows: TLite[] = []
   if (matchIdList.length) {

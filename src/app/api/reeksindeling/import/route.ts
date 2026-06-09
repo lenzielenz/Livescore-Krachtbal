@@ -1,4 +1,5 @@
 import { hasRole, isFederationLevel } from '@/lib/access'
+import { competitionWhere } from '@/lib/analyse-access'
 import { authUser } from '@/lib/api-auth'
 import { getPayloadClient } from '@/lib/payload-client'
 import { extractPdfText, parseReeksindeling, teamKey } from '@/lib/reeksindeling-import'
@@ -45,7 +46,7 @@ export async function POST(req: Request) {
     }
 
     // Ploegen indexeren op (genormaliseerde naam, reeks).
-    const teamsRes = await payload.find({ collection: 'teams', depth: 0, limit: 5000 }).catch(() => ({ docs: [] as Record<string, unknown>[] }))
+    const teamsRes = await payload.find({ collection: 'teams', where: competitionWhere(), depth: 0, limit: 5000 }).catch(() => ({ docs: [] as Record<string, unknown>[] }))
     const byKeyReeks = new Map<string, number>()
     for (const t of teamsRes.docs) {
       const k = teamKey(String((t as { name?: unknown }).name ?? ''))

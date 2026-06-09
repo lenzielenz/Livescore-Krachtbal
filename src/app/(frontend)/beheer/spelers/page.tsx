@@ -2,6 +2,7 @@ import Link from 'next/link'
 
 import { SiteHeader } from '@/components/SiteHeader'
 import { isFederationLevel, userClubId } from '@/lib/access'
+import { competitionWhere } from '@/lib/analyse-access'
 import { getAuthUser } from '@/lib/auth-user'
 import { CATEGORY_OPTIONS } from '@/lib/categories'
 import { getPayloadClient } from '@/lib/payload-client'
@@ -55,7 +56,7 @@ export default async function BulkPlayersPage() {
   // andere clubs. Enkel een federatie-account zónder eigen club ziet alle ploegen.
   const teamsRes = await payload.find({
     collection: 'teams',
-    where: clubId != null ? { club: { equals: clubId } } : {},
+    where: clubId != null ? { and: [{ club: { equals: clubId } }, competitionWhere()] } : competitionWhere(),
     sort: 'name',
     depth: 1,
     limit: 300,

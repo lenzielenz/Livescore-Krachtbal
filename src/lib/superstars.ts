@@ -1,5 +1,6 @@
 import type { Payload, Where } from 'payload'
 
+import { competitionWhere } from './analyse-access'
 import { seasonClause } from './seasons'
 
 // "Superster"-klassement per reeks: wie scoorde het meest (doelpunten + punten) en wie gooide de
@@ -27,9 +28,10 @@ export async function buildSuperstars(
   seizoen?: string | null,
   matchFilter?: Where | null,
 ): Promise<Superstar[]> {
-  // Ploegen van de reeks → spelers (naam, rugnummer, ploegnaam).
+  // Ploegen van de reeks → spelers (naam, rugnummer, ploegnaam). Competitie-only: sluit analyse-
+  // eigen ploegen uit zodat ze nooit in dit publieke klassement opduiken.
   const teamsRes = await payload
-    .find({ collection: 'teams', where: { reeks: { equals: reeks } }, depth: 0, limit: 300 })
+    .find({ collection: 'teams', where: { and: [{ reeks: { equals: reeks } }, competitionWhere()] }, depth: 0, limit: 300 })
     .catch(() => ({ docs: [] as { id: number; name: string }[] }))
   const teamName = new Map<number, string>(teamsRes.docs.map((t) => [t.id, t.name as string]))
   const teamIds = teamsRes.docs.map((t) => t.id)

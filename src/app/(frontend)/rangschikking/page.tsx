@@ -2,6 +2,7 @@ import Link from 'next/link'
 
 import { SiteHeader } from '@/components/SiteHeader'
 import { userClubId } from '@/lib/access'
+import { competitionWhere } from '@/lib/analyse-access'
 import { getAuthUser } from '@/lib/auth-user'
 import { buildScoreboards, clubColors, clubLogoFit, clubLogoUrl } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
@@ -40,14 +41,14 @@ export default async function RangschikkingPage({ searchParams }: { searchParams
   let reeks = typeof reeksParam === 'string' && COMPETITIE_REEKSEN.some((o) => o.value === reeksParam) ? reeksParam : null
   if (!reeks && myClubNum != null) {
     const myTeam = await payload
-      .find({ collection: 'teams', where: { club: { equals: myClubNum } }, depth: 0, limit: 50 })
+      .find({ collection: 'teams', where: { and: [{ club: { equals: myClubNum } }, competitionWhere()] }, depth: 0, limit: 50 })
       .catch(() => ({ docs: [] as { reeks?: unknown }[] }))
     const r = myTeam.docs.map((t) => t.reeks).find((x) => COMPETITIE_REEKSEN.some((o) => o.value === x))
     if (typeof r === 'string') reeks = r
   }
   if (!reeks) {
     const latest = await payload
-      .find({ collection: 'matches', where: { status: { equals: 'finished' } }, sort: '-date', depth: 0, limit: 1 })
+      .find({ collection: 'matches', where: { and: [{ status: { equals: 'finished' } }, competitionWhere()] }, sort: '-date', depth: 0, limit: 1 })
       .catch(() => ({ docs: [] as { reeks?: unknown }[] }))
     const r = latest.docs[0]?.reeks
     reeks = typeof r === 'string' && COMPETITIE_REEKSEN.some((o) => o.value === r) ? r : COMPETITIE_REEKSEN[0].value
@@ -55,7 +56,7 @@ export default async function RangschikkingPage({ searchParams }: { searchParams
 
   // Ploegen van de reeks: namen/logo's + zorgt dat ploegen zonder wedstrijden ook in de tabel staan.
   const teamsRes = await payload
-    .find({ collection: 'teams', where: { reeks: { equals: reeks } }, depth: 2, limit: 200 })
+    .find({ collection: 'teams', where: { and: [{ reeks: { equals: reeks } }, competitionWhere()] }, depth: 2, limit: 200 })
     .catch(() => ({ docs: [] as { id: number; name: string }[] }))
   const teamInfo = new Map<number, TeamInfo>()
   for (const t of teamsRes.docs) {

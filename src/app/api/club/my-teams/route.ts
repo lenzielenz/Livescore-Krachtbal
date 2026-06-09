@@ -2,6 +2,7 @@ import { headers } from 'next/headers'
 import { NextResponse } from 'next/server'
 
 import { userClubId } from '@/lib/access'
+import { competitionWhere } from '@/lib/analyse-access'
 import { getPayloadClient } from '@/lib/payload-client'
 
 // Bewaar de "Mijn ploegen"-voorkeur van de ingelogde gebruiker (trainer/coach). Enkel ploegen van
@@ -24,7 +25,7 @@ export async function POST(req: Request) {
 
   // Enkel ploegen van de eigen club toelaten.
   const clubTeams = await payload
-    .find({ collection: 'teams', where: { club: { equals: clubId } }, depth: 0, limit: 500 })
+    .find({ collection: 'teams', where: { and: [{ club: { equals: clubId } }, competitionWhere()] }, depth: 0, limit: 500 })
     .catch(() => ({ docs: [] as { id: number }[] }))
   const allowed = new Set(clubTeams.docs.map((t) => Number(t.id)))
   const myTeams = [...new Set(requested.filter((id) => allowed.has(id)))]

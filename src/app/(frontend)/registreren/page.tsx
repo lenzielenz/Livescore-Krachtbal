@@ -1,4 +1,5 @@
 import { SiteHeader } from '@/components/SiteHeader'
+import { competitionWhere } from '@/lib/analyse-access'
 import { dedupeKey } from '@/lib/dedupe'
 import { getPayloadClient } from '@/lib/payload-client'
 import { RegisterForm } from './RegisterForm'
@@ -10,7 +11,7 @@ export const dynamic = 'force-dynamic'
 export default async function RegistrerenPage() {
   const payload = await getPayloadClient()
   const clubsRes = await payload
-    .find({ collection: 'clubs', sort: 'name', depth: 0, limit: 500 })
+    .find({ collection: 'clubs', where: competitionWhere(), sort: 'name', depth: 0, limit: 500 })
     .catch(() => ({ docs: [] as { id: number; name: string }[] }))
   // Geen dubbele clubs tonen: groepeer op genormaliseerde naam en hou de meest leesbare
   // schrijfwijze (meeste spaties, dan langste).

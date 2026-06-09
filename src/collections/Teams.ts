@@ -3,6 +3,7 @@ import type { CollectionConfig } from 'payload'
 import { CATEGORY_OPTIONS } from '../lib/categories'
 import { REEKS_OPTIONS, reeksNaam } from '../lib/reeksen'
 import { isFederationLevel } from '../lib/access'
+import { analyseEntityFields } from '../lib/analyse-fields'
 
 export const Teams: CollectionConfig = {
   slug: 'teams',
@@ -122,5 +123,6 @@ export const Teams: CollectionConfig = {
       relationTo: 'media',
       admin: { hidden: true },
     },
+    ...analyseEntityFields,
   ],
 }

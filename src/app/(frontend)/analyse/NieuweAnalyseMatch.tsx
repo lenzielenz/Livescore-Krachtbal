@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 
 type Team = { id: number; name: string; reeks: string }
 type Player = { id: number; name: string; shirtNumber: number }
@@ -179,7 +180,9 @@ export function NieuweAnalyseMatch({ teams, reeksOptions }: { teams: Team[]; ree
         </button>
         <button type="button" className="nam-cancel" onClick={() => setOpen(false)}>Sluiten</button>
       </div>
-      {reeksTeams.length === 0 && <p className="nam-hint">Geen ploegen in deze reeks. Maak ze aan via Beheer.</p>}
+      {reeksTeams.length === 0 && (
+        <p className="nam-hint">Nog geen analyse-ploegen in deze reeks. <Link href="/analyse/beheer/ploegen" style={{ color: 'var(--accent)' }}>Maak ze aan →</Link></p>
+      )}
     </div>
   )
 }

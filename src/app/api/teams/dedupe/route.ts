@@ -1,4 +1,5 @@
 import { hasRole, isFederationLevel } from '@/lib/access'
+import { competitionWhere } from '@/lib/analyse-access'
 import { authUser } from '@/lib/api-auth'
 import { dedupeKey } from '@/lib/dedupe'
 import { getPayloadClient } from '@/lib/payload-client'
@@ -27,7 +28,7 @@ export async function POST(req: Request) {
       return Response.json({ error: 'Enkel federatie/admin.' }, { status: 403 })
     }
 
-    const teamsRes = await payload.find({ collection: 'teams', depth: 0, limit: 8000 }).catch(() => ({ docs: [] as Record<string, unknown>[] }))
+    const teamsRes = await payload.find({ collection: 'teams', where: competitionWhere(), depth: 0, limit: 8000 }).catch(() => ({ docs: [] as Record<string, unknown>[] }))
     const teams = teamsRes.docs.map((t) => ({ id: (t as { id: number }).id, name: String((t as { name?: unknown }).name ?? ''), reeks: String((t as { reeks?: unknown }).reeks ?? ''), club: rel((t as { club?: unknown }).club) }))
 
     const matchesRes = await payload.find({ collection: 'matches', depth: 0, limit: 15000 }).catch(() => ({ docs: [] as Record<string, unknown>[] }))
@@ -67,7 +68,7 @@ export async function POST(req: Request) {
     }
 
     // Clubs groeperen op sleutel; behoud de club met de meeste ploegen.
-    const clubsRes = await payload.find({ collection: 'clubs', depth: 0, limit: 8000 }).catch(() => ({ docs: [] as Record<string, unknown>[] }))
+    const clubsRes = await payload.find({ collection: 'clubs', where: competitionWhere(), depth: 0, limit: 8000 }).catch(() => ({ docs: [] as Record<string, unknown>[] }))
     const clubs = clubsRes.docs.map((c) => ({ id: (c as { id: number }).id, name: String((c as { name?: unknown }).name ?? '') }))
     const clubTeamCount = new Map<number, number>()
     for (const t of teams) if (t.club != null) clubTeamCount.set(t.club, (clubTeamCount.get(t.club) ?? 0) + 1)

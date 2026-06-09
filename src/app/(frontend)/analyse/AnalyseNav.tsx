@@ -11,6 +11,7 @@ const TABS = [
   { key: 'overzicht', href: '/analyse', icon: '📈', label: 'Overzicht' },
   { key: 'ploegen', href: '/analyse#ploegen', icon: '🛡️', label: 'Ploegen' },
   { key: 'spelers', href: '/analyse#spelers', icon: '🎯', label: 'Spelers' },
+  { key: 'beheer', href: '/analyse/beheer', icon: '🗂️', label: 'Mijn data' },
 ] as const
 
 export type AnalyseTab = (typeof TABS)[number]['key']

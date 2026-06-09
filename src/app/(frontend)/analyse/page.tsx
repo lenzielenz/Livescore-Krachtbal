@@ -2,8 +2,8 @@ import Link from 'next/link'
 
 import { SiteHeader } from '@/components/SiteHeader'
 import { TeamLogo } from '@/components/TeamLogo'
-import { canAnalyse, hasRole, isFederationLevel, userClubId } from '@/lib/access'
-import { analyseMatchWhere } from '@/lib/analyse-access'
+import { canAnalyse, hasRole, isFederationLevel } from '@/lib/access'
+import { analyseOwnWhere } from '@/lib/analyse-access'
 import { getSelectedSeason } from '@/lib/analyse-season'
 import { getAuthUser } from '@/lib/auth-user'
 import { buildScoreboards } from '@/lib/match-engine'
@@ -78,11 +78,11 @@ export default async function AnalysePage({ searchParams }: { searchParams: Prom
     )
   }
 
-  // Analyse-data is privé per persoon: een gewone analist ziet/recordeert enkel z'n eigen opnames;
-  // federatie/admin ziet alles en kan zo achteraf alles samenbrengen. Opnemen vereist een club.
+  // Analyse-data is strikt privé per persoon: je ziet/recordeert enkel je eigen analyse-database
+  // (eigen clubs/ploegen/spelers). Iedereen met analyse-toegang mag opnemen — geen competitie-club nodig.
   const isFed = isFederationLevel(me)
-  const canRecord = isFed || (canAnalyse(me) && userClubId(me) != null)
-  const vis = analyseMatchWhere(me) // null = federatie (geen beperking)
+  const canRecord = canAnalyse(me)
+  const vis = analyseOwnWhere(me) // strikt: enkel je eigen analyse-data
 
   const payload = await getPayloadClient()
   // De analyse-hub toont enkel de wedstrijden die voor analyse zijn ingestoken (analyseOnly) — geen
@@ -157,9 +157,10 @@ export default async function AnalysePage({ searchParams }: { searchParams: Prom
   // Samenvattende cijfers (goedkoop afgeleid uit de reeds geladen scoreboards).
   const totalPunten = rows.reduce((s, r) => s + r.score.home + r.score.away, 0)
   // Ploegen voor de "nieuwe analysewedstrijd"-creator (enkel wie mag opnemen heeft die nodig).
+  // Enkel je eigen analyse-ploegen zijn selecteerbaar voor een nieuwe analysewedstrijd.
   const teamsRes = canRecord
     ? await payload
-        .find({ collection: 'teams', where: { reeks: { in: COMPETITIE_REEKSEN.map((o) => o.value) } }, sort: 'name', depth: 0, limit: 500 })
+        .find({ collection: 'teams', where: analyseOwnWhere(me), sort: 'name', depth: 0, limit: 500 })
         .catch(() => ({ docs: [] as Record<string, unknown>[] }))
     : { docs: [] as Record<string, unknown>[] }
   const teamOptions = teamsRes.docs.map((t) => ({
@@ -320,13 +321,10 @@ export default async function AnalysePage({ searchParams }: { searchParams: Prom
           {canRecord && <div className="rep-card"><span className="rep-num">{openRows.length}</span><span className="rep-lbl">Voorbereid</span></div>}
         </div>
 
-        {/* Import-acties helemaal onderaan, weg uit het zicht. */}
-        {(canRecord || isFederationLevel(me) || hasRole(me, 'federatie')) && (
+        {/* Import-acties (competitie-data) helemaal onderaan — enkel federatie/admin. */}
+        {(isFed || hasRole(me, 'federatie')) && (
           <div className="an-hub-links an-hub-links-foot">
-            {canRecord && <Link href="/analyse/import" className="sk-demo-cta">⬆ Officiële uitslagen importeren →</Link>}
-            {(isFederationLevel(me) || hasRole(me, 'federatie')) && (
-              <Link href="/analyse/import" className="sk-demo-cta">📥 Importeren &amp; opkuisen</Link>
-            )}
+            <Link href="/analyse/import" className="sk-demo-cta">📥 Officiële uitslagen importeren &amp; opkuisen</Link>
           </div>
         )}
       </div>

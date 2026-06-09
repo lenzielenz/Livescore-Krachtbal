@@ -1,7 +1,9 @@
 import { canAnalyse } from '@/lib/access'
+import { ownsAnalyse } from '@/lib/analyse-crud'
 import { authUser } from '@/lib/api-auth'
 import { getPayloadClient } from '@/lib/payload-client'
 import { parseSpeelstijl } from '@/lib/speelstijl'
+import type { Team } from '@/payload-types'
 
 // Bewaart het tactisch profiel ("hoe spelen wij als ploeg") van één ploeg. Analyse-only.
 // Teams.update is federatie-only, dus we slaan op met overrideAccess na de canAnalyse-check.
@@ -23,8 +25,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ teamId:
     if (!user) return Response.json({ error: 'Niet ingelogd.' }, { status: 401 })
     if (!canAnalyse(user)) return Response.json({ error: 'Geen toegang tot de analyse.' }, { status: 403 })
 
-    const team = await payload.findByID({ collection: 'teams', id, depth: 0 }).catch(() => null)
-    if (!team) return Response.json({ error: 'Ploeg niet gevonden.' }, { status: 404 })
+    const team = (await payload.findByID({ collection: 'teams', id, depth: 0 }).catch(() => null)) as Team | null
+    // Speelstijl hoort op je eigen analyse-ploeg — niet op een (gedeelde) competitie-ploeg.
+    if (!ownsAnalyse(team, user)) return Response.json({ error: 'Onbekende analyse-ploeg.' }, { status: 404 })
 
     const speelstijl = parseSpeelstijl(body)
     await payload.update({

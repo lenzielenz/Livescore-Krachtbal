@@ -1,4 +1,5 @@
 import { hasRole, isFederationLevel } from '@/lib/access'
+import { competitionWhere } from '@/lib/analyse-access'
 import { authUser } from '@/lib/api-auth'
 import { getPayloadClient } from '@/lib/payload-client'
 import { reeksCategorie, type Reeks } from '@/lib/reeksen'
@@ -45,7 +46,7 @@ export async function POST(req: Request) {
     const played = all.filter(isPlayed)
 
     // Ploegen → opzoeken op (reeks, naam), met val-terug op een unieke naam over alle reeksen.
-    const teamsRes = await payload.find({ collection: 'teams', depth: 0, limit: 5000 }).catch(() => ({ docs: [] as Record<string, unknown>[] }))
+    const teamsRes = await payload.find({ collection: 'teams', where: competitionWhere(), depth: 0, limit: 5000 }).catch(() => ({ docs: [] as Record<string, unknown>[] }))
     const byName = new Map<string, { id: number; reeks: string }[]>()
     for (const t of teamsRes.docs) {
       const key = norm(String((t as { name?: unknown }).name ?? ''))
@@ -64,7 +65,7 @@ export async function POST(req: Request) {
     }
 
     // Clubs indexeren (voor het aanmaken van ontbrekende ploegen).
-    const clubsRes = await payload.find({ collection: 'clubs', depth: 0, limit: 5000 }).catch(() => ({ docs: [] as Record<string, unknown>[] }))
+    const clubsRes = await payload.find({ collection: 'clubs', where: competitionWhere(), depth: 0, limit: 5000 }).catch(() => ({ docs: [] as Record<string, unknown>[] }))
     const clubByName = new Map<string, number>()
     for (const c of clubsRes.docs) {
       const k = norm(String((c as { name?: unknown }).name ?? ''))

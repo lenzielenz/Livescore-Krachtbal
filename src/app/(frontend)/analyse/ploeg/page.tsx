@@ -2,7 +2,7 @@ import Link from 'next/link'
 
 import { SiteHeader } from '@/components/SiteHeader'
 import { canAnalyse } from '@/lib/access'
-import { analyseMatchWhere } from '@/lib/analyse-access'
+import { analyseOwnWhere } from '@/lib/analyse-access'
 import { getSelectedSeason } from '@/lib/analyse-season'
 import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
@@ -55,25 +55,26 @@ export default async function PloegRapportPage({ searchParams }: { searchParams:
       : COMPETITIE_REEKSEN[0].value
 
   const payload = await getPayloadClient()
+  // Enkel je eigen analyse-ploegen zijn selecteerbaar — competitie-ploegen verschijnen hier nooit.
   const teamsRes = await payload
-    .find({ collection: 'teams', where: { reeks: { equals: reeks } }, sort: 'name', depth: 0, limit: 200 })
+    .find({ collection: 'teams', where: { and: [{ reeks: { equals: reeks } }, analyseOwnWhere(me)] }, sort: 'name', depth: 0, limit: 200 })
     .catch(() => ({ docs: [] as { id: number; name: string }[] }))
   const teamOptions = teamsRes.docs.map((t) => ({ value: String(t.id), label: t.name as string }))
 
   const teamId = teamParam && teamOptions.some((o) => o.value === teamParam) ? Number(teamParam) : null
   const seizoen = await getSelectedSeason()
-  const report = teamId != null ? await buildTeamReport(payload, teamId, seizoen, analyseMatchWhere(me)) : null
-  const danger = teamId != null && report && report.matchesAnalyzed > 0 ? await buildTeamDanger(payload, teamId, reeks, seizoen, analyseMatchWhere(me)) : null
+  const report = teamId != null ? await buildTeamReport(payload, teamId, seizoen, analyseOwnWhere(me)) : null
+  const danger = teamId != null && report && report.matchesAnalyzed > 0 ? await buildTeamDanger(payload, teamId, reeks, seizoen, analyseOwnWhere(me)) : null
   // Verdedigend beeld: de doelpogingen die tegenstanders TÉGEN deze ploeg maakten — waar ze openingen
   // geven, dus waar jij kan toeslaan.
   const dangerConceded =
     teamId != null && report && report.matchesAnalyzed > 0
-      ? await buildTeamDanger(payload, teamId, reeks, seizoen, analyseMatchWhere(me), { conceded: true })
+      ? await buildTeamDanger(payload, teamId, reeks, seizoen, analyseOwnWhere(me), { conceded: true })
       : null
   // Sterkste verdedigers (vang-/tik-data, enkel uit analyse-wedstrijden).
   const defenders =
     teamId != null && report && report.matchesAnalyzed > 0
-      ? await buildTeamDefense(payload, teamId, reeks, seizoen, analyseMatchWhere(me))
+      ? await buildTeamDefense(payload, teamId, reeks, seizoen, analyseOwnWhere(me))
       : []
   const zTot = report ? report.zones.links + report.zones.midden + report.zones.rechts : 0
 

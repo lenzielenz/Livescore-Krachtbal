@@ -41,7 +41,7 @@ const rel = (v: unknown): number | null =>
 
 export async function buildTeamRadar(payload: Payload, reeks: string, seizoen?: string | null, matchFilter?: Where | null): Promise<{ teams: TeamRadar[]; results: TeamMatchResult[] }> {
   const teamsRes = await payload
-    .find({ collection: 'teams', where: { reeks: { equals: reeks } }, depth: 0, limit: 200 })
+    .find({ collection: 'teams', where: { and: [{ reeks: { equals: reeks } }, ...(matchFilter ? [matchFilter] : [])] }, depth: 0, limit: 200 })
     .catch(() => ({ docs: [] as { id: number; name: string }[] }))
   const teamName = new Map<number, string>(teamsRes.docs.map((t) => [t.id, t.name as string]))
   const teamIds = teamsRes.docs.map((t) => t.id)
@@ -137,10 +137,12 @@ export async function buildTeamRadar(payload: Payload, reeks: string, seizoen?: 
     results.push({ date: String((m as { date?: unknown }).date ?? ''), homeId, awayId, homePts, awayPts })
   }
 
-  // Vangsten per ploeg (verdediging): tegenstander-worpen gevangen door eigen spelers.
-  if (playerIds.length) {
+  // Vangsten per ploeg (verdediging): tegenstander-worpen gevangen door eigen spelers — enkel binnen
+  // de reeds gefilterde wedstrijden, zodat de telling niet over andere (seizoenen/analyse) matches lekt.
+  const matchIdList = matches.map((m) => (m as { id: number }).id)
+  if (playerIds.length && matchIdList.length) {
     const catchRes = await payload
-      .find({ collection: 'throws', where: { caughtBy: { in: playerIds } }, depth: 0, limit: 12000 })
+      .find({ collection: 'throws', where: { and: [{ caughtBy: { in: playerIds } }, { match: { in: matchIdList } }] }, depth: 0, limit: 12000 })
       .catch(() => ({ docs: [] as Record<string, unknown>[] }))
     for (const tw of catchRes.docs) {
       const cid = rel((tw as { caughtBy?: unknown }).caughtBy)

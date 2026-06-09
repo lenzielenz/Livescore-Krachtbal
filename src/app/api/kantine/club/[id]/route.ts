@@ -1,5 +1,6 @@
 import type { Payload, Where } from 'payload'
 
+import { competitionWhere } from '@/lib/analyse-access'
 import { brusselsDayBoundsUtc, dateStrBE, formatTimeBE } from '@/lib/datetime'
 import { buildMatchState } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
@@ -13,7 +14,7 @@ export const dynamic = 'force-dynamic'
 const reeksLabel = (v: unknown) => REEKS_OPTIONS.find((o) => o.value === v)?.label ?? (typeof v === 'string' ? v : 'Overig')
 
 async function clubTeamIds(payload: Payload, clubId: number): Promise<number[]> {
-  const res = await payload.find({ collection: 'teams', where: { club: { equals: clubId } }, depth: 0, limit: 300 }).catch(() => null)
+  const res = await payload.find({ collection: 'teams', where: { and: [{ club: { equals: clubId } }, competitionWhere()] }, depth: 0, limit: 300 }).catch(() => null)
   return (res?.docs ?? []).map((t) => Number(t.id)).filter((n) => Number.isFinite(n))
 }
 

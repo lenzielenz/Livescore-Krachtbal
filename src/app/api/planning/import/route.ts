@@ -1,4 +1,5 @@
 import { hasRole, isFederationLevel } from '@/lib/access'
+import { competitionWhere } from '@/lib/analyse-access'
 import { getPayloadClient } from '@/lib/payload-client'
 import { REEKS_OPTIONS, reeksCategorie, type Reeks } from '@/lib/reeksen'
 
@@ -44,7 +45,7 @@ export async function POST(req: Request) {
     }
 
     // Eén keer alle ploegen ophalen → naam (kleine letters) → id.
-    const teams = await payload.find({ collection: 'teams', depth: 0, limit: 2000 })
+    const teams = await payload.find({ collection: 'teams', where: competitionWhere(), depth: 0, limit: 2000 })
     const teamByName = new Map<string, number>()
     for (const t of teams.docs) teamByName.set(String(t.name).trim().toLowerCase(), t.id as number)
 

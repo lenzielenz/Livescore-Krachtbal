@@ -54,6 +54,7 @@ import * as migration_20260609_180000_player_club from './20260609_180000_player
 import * as migration_20260609_200000_player_position_text_v2 from './20260609_200000_player_position_text_v2';
 import * as migration_20260609_220000_team_display_title_backfill from './20260609_220000_team_display_title_backfill';
 import * as migration_20260609_240000_official_user from './20260609_240000_official_user';
+import * as migration_20260609_260000_analyse_entities from './20260609_260000_analyse_entities';
 
 export const migrations = [
   {
@@ -335,5 +336,10 @@ export const migrations = [
     up: migration_20260609_240000_official_user.up,
     down: migration_20260609_240000_official_user.down,
     name: '20260609_240000_official_user',
+  },
+  {
+    up: migration_20260609_260000_analyse_entities.up,
+    down: migration_20260609_260000_analyse_entities.down,
+    name: '20260609_260000_analyse_entities',
   },
 ];

@@ -1,12 +1,13 @@
-import { canAnalyse, isFederationLevel, userClubId } from '@/lib/access'
+import { canAnalyse } from '@/lib/access'
+import { ownsAnalyse } from '@/lib/analyse-crud'
 import { authUser } from '@/lib/api-auth'
 import { getPayloadClient } from '@/lib/payload-client'
-import type { Match } from '@/payload-types'
+import type { Match, Team } from '@/payload-types'
 
 // Maakt een "enkel voor analyse"-wedstrijd aan (niet live/publiek zichtbaar). Toegankelijk voor
-// iedereen met analyse-toegang (én een club aan z'n account); federatie/admin mag altijd. De
-// opname wordt op naam van de gebruiker gezet (analyseOwner) zodat analyse-data privé per persoon
-// blijft. Wordt vanuit de analyse-hub gebruikt om manueel een wedstrijd op te nemen.
+// iedereen met analyse-toegang. Beide ploegen moeten EIGEN analyse-ploegen zijn — competitie-ploegen
+// kunnen hier nooit gekozen worden. De opname wordt op naam van de gebruiker gezet (analyseOwner)
+// zodat de analyse-database privé per persoon blijft.
 export async function POST(req: Request) {
   let body: Record<string, unknown>
   try {
@@ -20,10 +21,6 @@ export async function POST(req: Request) {
     const user = await authUser(payload, req)
     if (!user) return Response.json({ error: 'Niet ingelogd.' }, { status: 401 })
     if (!canAnalyse(user)) return Response.json({ error: 'Geen analyse-toegang.' }, { status: 403 })
-    // Een gewone analist neemt op vóór z'n eigen club: vereist dus een club aan het account.
-    if (!isFederationLevel(user) && userClubId(user) == null) {
-      return Response.json({ error: 'Koppel eerst een club aan je account om analyse-wedstrijden op te nemen.' }, { status: 403 })
-    }
 
     const homeTeam = Number(body.homeTeam)
     const awayTeam = Number(body.awayTeam)
@@ -37,6 +34,15 @@ export async function POST(req: Request) {
       return Response.json({ error: 'Thuis- en uitploeg moeten verschillen.' }, { status: 400 })
     }
     if (!reeks) return Response.json({ error: 'Kies een reeks.' }, { status: 400 })
+
+    // Beide ploegen moeten eigen analyse-ploegen zijn — competitie-ploegen zijn nooit selecteerbaar.
+    const [homeDoc, awayDoc] = await Promise.all([
+      payload.findByID({ collection: 'teams', id: homeTeam, depth: 0 }).catch(() => null),
+      payload.findByID({ collection: 'teams', id: awayTeam, depth: 0 }).catch(() => null),
+    ])
+    if (!ownsAnalyse(homeDoc as Team | null, user) || !ownsAnalyse(awayDoc as Team | null, user)) {
+      return Response.json({ error: 'Kies twee van je eigen analyse-ploegen.' }, { status: 400 })
+    }
 
     const created = await payload.create({
       collection: 'matches',

@@ -59,7 +59,7 @@ const rel = (v: unknown): number | null =>
 
 export async function buildRadarStats(payload: Payload, reeks: string, seizoen?: string | null, matchFilter?: Where | null): Promise<RadarPlayer[]> {
   const teamsRes = await payload
-    .find({ collection: 'teams', where: { reeks: { equals: reeks } }, depth: 0, limit: 200 })
+    .find({ collection: 'teams', where: { and: [{ reeks: { equals: reeks } }, ...(matchFilter ? [matchFilter] : [])] }, depth: 0, limit: 200 })
     .catch(() => ({ docs: [] as { id: number; name: string }[] }))
   const teamName = new Map<number, string>(teamsRes.docs.map((t) => [t.id, t.name as string]))
   const teamIds = teamsRes.docs.map((t) => t.id)
@@ -149,10 +149,12 @@ export async function buildRadarStats(payload: Payload, reeks: string, seizoen?:
     }
   }
 
-  // Verdediging: vangsten per speler (tegenstander-worpen die zij vingen).
-  if (playerIds.length) {
+  // Verdediging: vangsten per speler (tegenstander-worpen die zij vingen) — enkel binnen de reeds
+  // gefilterde wedstrijden, zodat de telling niet over andere (seizoenen/analyse) matches lekt.
+  const matchIdList = matches.map((m) => (m as { id: number }).id)
+  if (playerIds.length && matchIdList.length) {
     const catchRes = await payload
-      .find({ collection: 'throws', where: { caughtBy: { in: playerIds } }, depth: 0, limit: 8000 })
+      .find({ collection: 'throws', where: { and: [{ caughtBy: { in: playerIds } }, { match: { in: matchIdList } }] }, depth: 0, limit: 8000 })
       .catch(() => ({ docs: [] as Record<string, unknown>[] }))
     for (const tw of catchRes.docs) {
       const cid = rel((tw as { caughtBy?: unknown }).caughtBy)
@@ -162,8 +164,9 @@ export async function buildRadarStats(payload: Payload, reeks: string, seizoen?:
     }
   }
 
-  // Verwachte-puntenmodel (xG): werkelijke vs verwachte punten per speler in deze reeks.
-  const xp = await buildExpectedPoints(payload, reeks, seizoen).catch(() => ({ players: [] as { playerId: number; points: number; xPoints: number; diff: number }[] }))
+  // Verwachte-puntenmodel (xG): werkelijke vs verwachte punten per speler in deze reeks. Dezelfde
+  // scope (matchFilter) doorgeven, anders zou xG over competitie + andermans analyse mengen.
+  const xp = await buildExpectedPoints(payload, reeks, seizoen, matchFilter).catch(() => ({ players: [] as { playerId: number; points: number; xPoints: number; diff: number }[] }))
   const xpBy = new Map<number, { points: number; xPoints: number; diff: number }>()
   for (const xpp of xp.players) xpBy.set(xpp.playerId, { points: xpp.points, xPoints: xpp.xPoints, diff: xpp.diff })
 

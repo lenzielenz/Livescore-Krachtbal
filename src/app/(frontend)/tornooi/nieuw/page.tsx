@@ -3,6 +3,7 @@ import { headers } from 'next/headers'
 
 import { SiteHeader } from '@/components/SiteHeader'
 import { isFederationLevel } from '@/lib/access'
+import { competitionWhere } from '@/lib/analyse-access'
 import { CATEGORY_OPTIONS } from '@/lib/categories'
 import { getPayloadClient } from '@/lib/payload-client'
 import { NewTournament } from './NewTournament'
@@ -30,7 +31,7 @@ export default async function NieuwTornooiPage() {
   }
   // Clubs voor de (optionele) club-koppeling per ploeg.
   const clubsRes = await payload
-    .find({ collection: 'clubs', sort: 'name', depth: 0, limit: 500 })
+    .find({ collection: 'clubs', where: competitionWhere(), sort: 'name', depth: 0, limit: 500 })
     .catch(() => ({ docs: [] as { id: number; name?: unknown }[] }))
   const clubs = clubsRes.docs
     .map((c) => ({ id: c.id as number, name: String((c as { name?: unknown }).name ?? '') }))
@@ -39,7 +40,7 @@ export default async function NieuwTornooiPage() {
   // Echte ploegen (met spelers) zodat een tornooiploeg gekoppeld kan worden — dan gebruikt de
   // aantekentafel exact hetzelfde aantekenblad als bij een gewone wedstrijd (scorerkeuze, wissels).
   const teamsRes = await payload
-    .find({ collection: 'teams', sort: 'name', depth: 1, limit: 1000 })
+    .find({ collection: 'teams', where: competitionWhere(), sort: 'name', depth: 1, limit: 1000 })
     .catch(() => ({ docs: [] as Record<string, unknown>[] }))
   const teams = teamsRes.docs
     .map((t) => {
