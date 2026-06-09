@@ -450,7 +450,7 @@ export function Scoreboard({
           ) : (
             <span className="sb-conn off" title="Verbinding verbroken — opnieuw verbinden…">● verbinden…</span>
           ))}
-        {viewers > 0 && (
+        {state.match.status === 'live' && viewers > 0 && (
           <span className="sb-viewers" title="Kijkers nu">
             👁 {viewers}
           </span>
