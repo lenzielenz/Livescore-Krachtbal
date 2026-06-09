@@ -1,4 +1,4 @@
-import type { CollectionConfig, FieldHook } from 'payload'
+import type { CollectionConfig, FieldHook, Where } from 'payload'
 
 import { isFederationLevel } from '../lib/access'
 import { CATEGORY_OPTIONS } from '../lib/categories'
@@ -127,10 +127,16 @@ export const Matches: CollectionConfig = {
           type: 'relationship',
           relationTo: 'teams',
           required: true,
-          // Toon enkel ploegen uit de gekozen reeks (kies dus eerst de reeks).
+          // Toon enkel ploegen uit de gekozen reeks (kies dus eerst de reeks) en nooit de ploeg die
+          // al als uitploeg gekozen is — een ploeg kan niet tegen zichzelf spelen.
           filterOptions: ({ siblingData }) => {
-            const r = (siblingData as { reeks?: string })?.reeks
-            return r ? { reeks: { equals: r } } : false
+            const sd = siblingData as { reeks?: string; awayTeam?: unknown }
+            if (!sd?.reeks) return false
+            const other = sd.awayTeam
+            const otherId = other && typeof other === 'object' ? (other as { id?: unknown }).id : other
+            const and: Where[] = [{ reeks: { equals: sd.reeks } }]
+            if (otherId != null) and.push({ id: { not_equals: otherId } })
+            return { and }
           },
           admin: { description: 'Kies eerst een reeks hierboven.' },
         },
@@ -141,8 +147,13 @@ export const Matches: CollectionConfig = {
           relationTo: 'teams',
           required: true,
           filterOptions: ({ siblingData }) => {
-            const r = (siblingData as { reeks?: string })?.reeks
-            return r ? { reeks: { equals: r } } : false
+            const sd = siblingData as { reeks?: string; homeTeam?: unknown }
+            if (!sd?.reeks) return false
+            const other = sd.homeTeam
+            const otherId = other && typeof other === 'object' ? (other as { id?: unknown }).id : other
+            const and: Where[] = [{ reeks: { equals: sd.reeks } }]
+            if (otherId != null) and.push({ id: { not_equals: otherId } })
+            return { and }
           },
         },
       ],
