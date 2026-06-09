@@ -44,11 +44,11 @@ export function MomentumChart({
   const awayC = readableOnDark(colors?.away ?? DEFAULT_AWAY_COLOR)
 
   // Cumulatief verschil na elk doelpunt (start bij 0).
-  const seq: { x: number; diff: number; side: 'home' | 'away'; rug: boolean; t: number }[] = []
+  const seq: { x: number; diff: number; side: 'home' | 'away'; rug: boolean; t: number; half: number }[] = []
   let diff = 0
   goals.forEach((g, i) => {
     diff += g.side === 'home' ? g.points : -g.points
-    seq.push({ x: i + 1, diff, side: g.side, rug: g.points === 2, t: timeKey(g.half, g.gameClock ?? 0) })
+    seq.push({ x: i + 1, diff, side: g.side, rug: g.points === 2, t: timeKey(g.half, g.gameClock ?? 0), half: g.half })
   })
   const n = seq.length
   const maxAbs = Math.max(1, ...seq.map((s) => Math.abs(s.diff)))
@@ -78,6 +78,19 @@ export function MomentumChart({
     return xAt(before) + frac * (xAt(before + 1) - xAt(before))
   }
 
+  // Markeer waar een nieuwe helft begint (bv. de 2de helft): een verticale scheidingslijn tussen
+  // het laatste doelpunt van de vorige helft en het eerste van de nieuwe. Zo zie je in het
+  // scoreverloop meteen wanneer de 2de helft (of verlenging) startte.
+  const halfLines: { x: number; half: number }[] = []
+  for (let j = 0; j < seq.length; j++) {
+    const prevHalf = j === 0 ? 1 : seq[j - 1].half
+    if (seq[j].half > prevHalf) {
+      const xPrev = j === 0 ? xAt(0) : xAt(seq[j - 1].x)
+      halfLines.push({ x: (xPrev + xAt(seq[j].x)) / 2, half: seq[j].half })
+    }
+  }
+  const ordinal = (h: number) => `${h}e`
+
   const finalDiff = seq[n - 1].diff
   const leader = finalDiff > 0 ? teams.home : finalDiff < 0 ? teams.away : 'Gelijk'
 
@@ -105,6 +118,13 @@ export function MomentumChart({
           )
         })}
         <line x1={PAD} y1={mid} x2={W - PAD} y2={mid} className="an-mom-zero" />
+        {/* Start van een nieuwe helft (2de helft, verlenging, ...). */}
+        {halfLines.map((hl, i) => (
+          <g key={`hl${i}`}>
+            <line x1={hl.x} y1={PAD} x2={hl.x} y2={H - PAD} className="an-mom-half" />
+            <text x={hl.x} y={H - PAD - 2} fontSize={7} textAnchor="middle" className="an-mom-half-lbl">{ordinal(hl.half)} helft</text>
+          </g>
+        ))}
         <path d={areaPath} fill="url(#momFill)" />
         <polyline points={linePts.join(' ')} className="an-mom-line" fill="none" />
         {/* Gewone doelpunten: stippen. */}
@@ -129,6 +149,7 @@ export function MomentumChart({
         <span><i className="a" style={{ background: awayC }} /> {teams.away} leidt</span>
         <span className="an-mom-leg-mark"><span style={{ color: '#f4c430' }}>★</span> rugworp (+2)</span>
         {timeouts.length > 0 && <span className="an-mom-leg-mark">┊ time-out</span>}
+        {halfLines.length > 0 && <span className="an-mom-leg-mark" style={{ color: 'var(--accent)' }}>│ start helft</span>}
         <span className="an-mom-note">{n} doelpunten · grootste kloof {maxAbs} · eindwinst: {leader}</span>
       </div>
     </div>
