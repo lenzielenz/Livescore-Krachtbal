@@ -90,6 +90,33 @@ export async function lastKnownLineup(
   return []
 }
 
+/** Hoe vaak elke speler van een ploeg de afgelopen wedstrijden in de opstelling stond → om de
+ *  meest gebruikte spelers bovenaan te tonen (werkt vlotter voor de coach). */
+export async function teamLineupUsage(payload: Payload, teamId: number | string): Promise<Map<number, number>> {
+  const usage = new Map<number, number>()
+  const sheets = await payload
+    .find({ collection: 'matchsheets', sort: '-createdAt', limit: 80, depth: 1 })
+    .catch(() => null)
+  if (!sheets) return usage
+  const ids = (rows: { player?: number | { id: number } }[]) =>
+    (rows ?? [])
+      .map((r) => (typeof r.player === 'object' ? r.player?.id : r.player))
+      .filter((id): id is number => typeof id === 'number')
+  for (const sheet of sheets.docs) {
+    const match = sheet.match as { homeTeam?: number; awayTeam?: number } | number | null
+    if (!match || typeof match === 'number') continue
+    const rows =
+      match.homeTeam === Number(teamId)
+        ? (sheet.homeLineup as { player?: number | { id: number } }[])
+        : match.awayTeam === Number(teamId)
+          ? (sheet.awayLineup as { player?: number | { id: number } }[])
+          : null
+    if (!rows) continue
+    for (const pid of ids(rows)) usage.set(pid, (usage.get(pid) ?? 0) + 1)
+  }
+  return usage
+}
+
 export type RosterEntry = {
   id: number
   name: string
@@ -125,6 +152,7 @@ export async function buildRoster(
     lastKnownLineup(payload, team.id, matchId),
     payload.findGlobal({ slug: 'settings', depth: 0 }).catch(() => null),
   ])
+  const usage = await teamLineupUsage(payload, team.id)
   const suggested = new Set(suggestedIds)
   const drempel = (settings as { knipjesDrempel?: number } | null)?.knipjesDrempel ?? 3
 
@@ -167,6 +195,16 @@ export async function buildRoster(
     suggested: suggested.has(p.id as number),
   }))
 
-  players.sort((a, b) => a.shirtNumber - b.shirtNumber)
+  // Volgorde: geblokkeerde leden onderaan; daarboven de meest gebruikte spelers eerst (vlotter voor
+  // de coach), bij gelijk gebruik op rugnummer.
+  players.sort((a, b) => {
+    const ba = a.selectability.level === 'block' ? 1 : 0
+    const bb = b.selectability.level === 'block' ? 1 : 0
+    if (ba !== bb) return ba - bb
+    const ua = usage.get(a.id) ?? 0
+    const ub = usage.get(b.id) ?? 0
+    if (ua !== ub) return ub - ua
+    return a.shirtNumber - b.shirtNumber
+  })
   return { teamId: team.id, teamName: team.name, category: team.category, players, favorites }
 }
