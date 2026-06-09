@@ -243,6 +243,9 @@
 .replay-rec-actions { display: flex; gap: 10px; justify-content: center; margin-top: 14px; }
 .replay-rec-save {
   flex: 1 1 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: 11px 14px;
   border: 0;
   border-radius: 10px;
@@ -251,6 +254,17 @@
   font-weight: 800;
   font-size: 0.95rem;
   cursor: pointer;
+  text-decoration: none;
+}
+.replay-rec-save:disabled { opacity: 0.6; cursor: default; }
+.replay-rec-qr {
+  display: block;
+  width: 200px;
+  height: 200px;
+  margin: 12px auto 4px;
+  border-radius: 10px;
+  background: #fff;
+  padding: 8px;
 }
 .replay-rec-close {
   padding: 11px 14px;
@@ -263,8 +277,12 @@
 }
 .replay-rec-alt {
   display: block;
-  margin-top: 12px;
+  margin: 12px auto 0;
+  padding: 0;
+  border: 0;
+  background: none;
   font-size: 0.78rem;
   color: var(--dim, #9fb6aa);
   text-decoration: underline;
+  cursor: pointer;
 }
