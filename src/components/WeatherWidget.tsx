@@ -25,10 +25,76 @@ function describe(code: number): { emoji: string; label: string } {
   return { emoji: '⛅', label: 'Wisselend' }
 }
 
+// Uren-voorspelling (popover onder de header-weerchip): de komende ~12 uur, temperatuur + icoon +
+// regenkans. Sluit bij een klik ernaast.
+function WeatherHours({ onClose }: { onClose: () => void }) {
+  const [hours, setHours] = useState<{ label: string; emoji: string; temp: number; prob: number }[] | null>(null)
+  useEffect(() => {
+    let cancelled = false
+    const url =
+      `https://api.open-meteo.com/v1/forecast?latitude=${DEFAULT.lat}&longitude=${DEFAULT.lon}` +
+      `&hourly=temperature_2m,weather_code,precipitation_probability&forecast_days=2&timezone=Europe%2FBrussels`
+    fetch(url)
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error('weer'))))
+      .then((d: { hourly?: { time?: string[]; temperature_2m?: number[]; weather_code?: number[]; precipitation_probability?: number[] } }) => {
+        if (cancelled) return
+        const h = d.hourly
+        if (!h?.time?.length) {
+          setHours([])
+          return
+        }
+        const now = Date.now()
+        const out: { label: string; emoji: string; temp: number; prob: number }[] = []
+        for (let i = 0; i < h.time.length && out.length < 12; i++) {
+          if (new Date(h.time[i]).getTime() < now - 3600_000) continue
+          out.push({
+            label: `${h.time[i].slice(11, 13)}u`,
+            emoji: describe(Number(h.weather_code?.[i] ?? 0)).emoji,
+            temp: Math.round(Number(h.temperature_2m?.[i] ?? 0)),
+            prob: Number(h.precipitation_probability?.[i] ?? 0),
+          })
+        }
+        setHours(out)
+      })
+      .catch(() => {
+        if (!cancelled) setHours([])
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  return (
+    <>
+      <span className="wx-pop-backdrop" onClick={onClose} aria-hidden />
+      <div className="wx-pop" role="dialog" aria-label="Uren-voorspelling">
+        <div className="wx-pop-head">Volgende uren · {DEFAULT.place}</div>
+        {hours == null ? (
+          <div className="wx-pop-empty">Weer ophalen…</div>
+        ) : hours.length === 0 ? (
+          <div className="wx-pop-empty">Geen voorspelling beschikbaar.</div>
+        ) : (
+          <div className="wx-pop-hours">
+            {hours.map((h, i) => (
+              <div className="wx-pop-hour" key={i}>
+                <span className="wx-pop-time">{h.label}</span>
+                <span className="wx-pop-ico" aria-hidden>{h.emoji}</span>
+                <span className="wx-pop-temp">{h.temp}°</span>
+                <span className="wx-pop-prob">{h.prob >= 20 ? `${h.prob}%` : ''}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </>
+  )
+}
+
 export function WeatherWidget({ date, variant = 'full' }: { date?: string; variant?: 'full' | 'compact' }) {
   const day = date ?? new Date().toISOString().slice(0, 10)
   const [w, setW] = useState<Weather | null>(null)
   const [state, setState] = useState<'loading' | 'ok' | 'none'>('loading')
+  const [open, setOpen] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -63,13 +129,22 @@ export function WeatherWidget({ date, variant = 'full' }: { date?: string; varia
     }
   }, [day])
 
-  // Compacte variant voor de header: enkel een icoon + temperatuur (toont niets tot het geladen is).
+  // Compacte variant voor de header: icoon + temperatuur, klikbaar → uren-voorspelling.
   if (variant === 'compact') {
     if (state !== 'ok' || !w) return null
     const i = describe(w.code)
     return (
-      <span className="wx-mini" title={`${i.label} · ${w.tmax}° · wind ${w.wind} km/u (${DEFAULT.place})`}>
-        <span aria-hidden>{i.emoji}</span> {w.tmax}°
+      <span className="wx-mini-wrap">
+        <button
+          type="button"
+          className="wx-mini"
+          onClick={() => setOpen((o) => !o)}
+          aria-expanded={open}
+          title="Toon de voorspelling voor de volgende uren"
+        >
+          <span aria-hidden>{i.emoji}</span> {w.tmax}° <span className="wx-mini-caret" aria-hidden>▾</span>
+        </button>
+        {open && <WeatherHours onClose={() => setOpen(false)} />}
       </span>
     )
   }

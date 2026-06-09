@@ -51,6 +51,7 @@
   flex: 0 0 auto;
 }
 /* Compacte header-variant: enkel icoon + temperatuur, subtiel naast de titel. */
+.wx-mini-wrap { position: relative; display: inline-flex; }
 .wx-mini {
   display: inline-flex;
   align-items: center;
@@ -64,7 +65,42 @@
   color: var(--txt);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+  cursor: pointer;
+  font-family: inherit;
 }
+.wx-mini:hover { border-color: var(--accent); }
+.wx-mini-caret { font-size: 0.62rem; color: var(--dim); }
+/* Uren-voorspelling popover onder de chip. */
+.wx-pop-backdrop { position: fixed; inset: 0; z-index: 50; }
+.wx-pop {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 51;
+  width: min(280px, 86vw);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: var(--card-shadow, 0 12px 34px rgba(0, 0, 0, 0.45));
+  padding: 8px;
+}
+.wx-pop-head { font-size: 0.72rem; font-weight: 700; color: var(--dim); text-transform: uppercase; letter-spacing: 0.04em; padding: 2px 6px 8px; }
+.wx-pop-empty { font-size: 0.85rem; color: var(--dim); padding: 8px; text-align: center; }
+.wx-pop-hours { display: flex; flex-direction: column; }
+.wx-pop-hour {
+  display: grid;
+  grid-template-columns: 2.4em 1.6em 1fr auto;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 6px;
+  border-radius: 8px;
+  font-size: 0.86rem;
+}
+.wx-pop-hour:nth-child(odd) { background: color-mix(in srgb, var(--accent) 5%, transparent); }
+.wx-pop-time { color: var(--dim-strong); font-variant-numeric: tabular-nums; }
+.wx-pop-ico { font-size: 1rem; text-align: center; }
+.wx-pop-temp { font-weight: 700; font-variant-numeric: tabular-nums; }
+.wx-pop-prob { color: var(--away); font-size: 0.78rem; font-weight: 600; font-variant-numeric: tabular-nums; }
 .wx-skel {
   opacity: 0.7;
 }
