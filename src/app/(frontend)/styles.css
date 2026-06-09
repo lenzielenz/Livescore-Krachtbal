@@ -862,15 +862,18 @@ h3,
 .myteams-pills { display: flex; flex-wrap: wrap; gap: 8px; }
 .myteams-pill {
   font: inherit; font-size: 0.86rem; font-weight: 600; cursor: pointer;
-  padding: 8px 14px; border-radius: 999px;
+  padding: 7px 14px; border-radius: 999px;
   color: var(--ink, inherit); background: var(--panel);
   border: 1px solid var(--line);
+  display: inline-flex; flex-direction: column; align-items: flex-start; gap: 1px; line-height: 1.2;
 }
+.myteams-pill-sub { font-size: 0.7rem; font-weight: 600; color: var(--dim); }
 .myteams-pill.on {
   color: #06140d; font-weight: 800;
   background: var(--accent);
   border-color: var(--accent);
 }
+.myteams-pill.on .myteams-pill-sub { color: #06140d; opacity: 0.75; }
 .myteams-pill:disabled { opacity: 0.6; cursor: default; }
 .myteams-focusbar { margin: 0 0 16px; font-size: 0.85rem; color: var(--dim); }
 .myteams-link { color: var(--accent); font-weight: 700; }
