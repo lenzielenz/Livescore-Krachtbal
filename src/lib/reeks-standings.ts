@@ -1,5 +1,6 @@
 import type { Payload } from 'payload'
 
+import { competitionWhere } from './analyse-access'
 import { buildScoreboards } from './match-engine'
 import { computeStandings, forfaitFromUitslag, type StandingRow, type StandingsMatch } from './standings'
 
@@ -11,7 +12,7 @@ const rel = (v: unknown): number | null =>
 
 export async function buildReeksStandings(payload: Payload, reeks: string): Promise<{ standings: StandingRow[]; remaining: Map<number, number> }> {
   const teamsRes = await payload
-    .find({ collection: 'teams', where: { reeks: { equals: reeks } }, depth: 0, limit: 200 })
+    .find({ collection: 'teams', where: { and: [{ reeks: { equals: reeks } }, competitionWhere()] }, depth: 0, limit: 200 })
     .catch(() => ({ docs: [] as { id: number }[] }))
   const teamIds = teamsRes.docs.map((t) => Number(t.id))
 

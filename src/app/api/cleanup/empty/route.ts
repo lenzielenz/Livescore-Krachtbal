@@ -1,4 +1,5 @@
 import { hasRole, isFederationLevel } from '@/lib/access'
+import { competitionWhere } from '@/lib/analyse-access'
 import { authUser } from '@/lib/api-auth'
 import { getPayloadClient } from '@/lib/payload-client'
 
@@ -25,10 +26,10 @@ export async function POST(req: Request) {
     }
 
     const [teamsRes, playersRes, matchesRes, clubsRes, usersRes] = await Promise.all([
-      payload.find({ collection: 'teams', depth: 0, limit: 8000 }).catch(() => ({ docs: [] as Record<string, unknown>[] })),
-      payload.find({ collection: 'players', depth: 0, limit: 20000, select: { team: true } }).catch(() => ({ docs: [] as Record<string, unknown>[] })),
-      payload.find({ collection: 'matches', depth: 0, limit: 20000, select: { homeTeam: true, awayTeam: true } }).catch(() => ({ docs: [] as Record<string, unknown>[] })),
-      payload.find({ collection: 'clubs', depth: 0, limit: 8000 }).catch(() => ({ docs: [] as Record<string, unknown>[] })),
+      payload.find({ collection: 'teams', where: competitionWhere(), depth: 0, limit: 8000 }).catch(() => ({ docs: [] as Record<string, unknown>[] })),
+      payload.find({ collection: 'players', where: competitionWhere(), depth: 0, limit: 20000, select: { team: true } }).catch(() => ({ docs: [] as Record<string, unknown>[] })),
+      payload.find({ collection: 'matches', where: competitionWhere(), depth: 0, limit: 20000, select: { homeTeam: true, awayTeam: true } }).catch(() => ({ docs: [] as Record<string, unknown>[] })),
+      payload.find({ collection: 'clubs', where: competitionWhere(), depth: 0, limit: 8000 }).catch(() => ({ docs: [] as Record<string, unknown>[] })),
       payload.find({ collection: 'users', depth: 0, limit: 8000, select: { club: true } }).catch(() => ({ docs: [] as Record<string, unknown>[] })),
     ])
 

@@ -2,7 +2,7 @@ import Link from 'next/link'
 
 import { SiteHeader } from '@/components/SiteHeader'
 import { canAnalyse } from '@/lib/access'
-import { analyseMatchWhere } from '@/lib/analyse-access'
+import { analyseOwnWhere } from '@/lib/analyse-access'
 import { getSelectedSeason } from '@/lib/analyse-season'
 import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
@@ -47,7 +47,7 @@ export default async function SpelerDossierPage({ searchParams }: { searchParams
 
   const payload = await getPayloadClient()
   const seizoen = await getSelectedSeason()
-  const seasonPlayers = await buildSeasonStats(payload, reeks, seizoen, analyseMatchWhere(me))
+  const seasonPlayers = await buildSeasonStats(payload, reeks, seizoen, analyseOwnWhere(me))
 
   // Cascade: kies eerst een club (binnen de reeks), dan pas een speler van die club.
   const clubOptions = [...new Map(seasonPlayers.filter((p) => p.teamId != null).map((p) => [p.teamId as number, p.teamName])).entries()]
@@ -59,12 +59,12 @@ export default async function SpelerDossierPage({ searchParams }: { searchParams
 
   const playerId = spelerParam && playerOptions.some((o) => o.value === spelerParam) ? Number(spelerParam) : null
   const p = playerId != null ? seasonPlayers.find((sp) => sp.playerId === playerId) ?? null : null
-  const danger = playerId != null ? await buildPlayerDanger(payload, playerId, reeks, seizoen, analyseMatchWhere(me)) : null
+  const danger = playerId != null ? await buildPlayerDanger(payload, playerId, reeks, seizoen, analyseOwnWhere(me)) : null
 
   // Periodevergelijking: dezelfde speler in het vorige seizoen (enkel als één seizoen gekozen is).
   const sm = /^(\d{4})-(\d{4})$/.exec(seizoen ?? '')
   const prevSeason = sm ? `${Number(sm[1]) - 1}-${Number(sm[2]) - 1}` : null
-  const prevPlayers = prevSeason && playerId != null ? await buildSeasonStats(payload, reeks, prevSeason, analyseMatchWhere(me)).catch(() => []) : []
+  const prevPlayers = prevSeason && playerId != null ? await buildSeasonStats(payload, reeks, prevSeason, analyseOwnWhere(me)).catch(() => []) : []
   const prevP = playerId != null ? prevPlayers.find((sp) => sp.playerId === playerId) ?? null : null
   const delta = (cur: number, prev: number | undefined, digits = 0, unit = '') => {
     if (prev == null) return null

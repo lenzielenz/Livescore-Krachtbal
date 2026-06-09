@@ -204,6 +204,14 @@ export interface Club {
   jeugdNaam?: string | null;
   jeugdEmail?: string | null;
   jeugdTelefoon?: string | null;
+  /**
+   * Aangemaakt in de analysemodule. Verschijnt nooit in de competitie (live, rangschikking, beheer) — enkel in de eigen analyse-database.
+   */
+  analyseOnly?: boolean | null;
+  /**
+   * Wie deze analyse-entiteit aanmaakte. Bepaalt wie ze ziet (privé per persoon).
+   */
+  analyseOwner?: (number | null) | User;
   updatedAt: string;
   createdAt: string;
 }
@@ -225,6 +233,82 @@ export interface Media {
   height?: number | null;
   focalX?: number | null;
   focalY?: number | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "users".
+ */
+export interface User {
+  id: number;
+  name?: string | null;
+  /**
+   * Elke rol geeft eigen rechten. Hiërarchie: Admin (volledige toegang, beheert gebruikers) staat boven Federatie (beheert competitie/vergunningen). Supporters registreren zichzelf; enkel een admin kent hier hogere rollen toe.
+   */
+  roles?:
+    | ('admin' | 'federatie' | 'scheidsrechter' | 'club-beheerder' | 'kapitein' | 'scorekeeper' | 'viewer')[]
+    | null;
+  /**
+   * De eigen club (supporter volgt ze; club-beheerder beheert ze).
+   */
+  club?: (number | null) | Club;
+  /**
+   * Eigen voorkeur: op welke ploeg(en) "Mijn club" focust. De gebruiker stelt dit zelf in.
+   */
+  myTeams?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  /**
+   * Geef dit account toegang tot de analyse (naast de admin-rol).
+   */
+  analyseAccess?: boolean | null;
+  /**
+   * Geef dit account toegang tot het trainingsluik (progressie + aanwezigheid).
+   */
+  trainingAccess?: boolean | null;
+  /**
+   * Enkel relevant voor de rol "Scheidsrechter". Beperkt de toegang tot de eigen kwitantie.
+   */
+  official?: (number | null) | Official;
+  updatedAt: string;
+  createdAt: string;
+  email: string;
+  resetPasswordToken?: string | null;
+  resetPasswordExpiration?: string | null;
+  salt?: string | null;
+  hash?: string | null;
+  loginAttempts?: number | null;
+  lockUntil?: string | null;
+  sessions?:
+    | {
+        id: string;
+        createdAt?: string | null;
+        expiresAt: string;
+      }[]
+    | null;
+  password?: string | null;
+  collection: 'users';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "officials".
+ */
+export interface Official {
+  id: number;
+  name: string;
+  /**
+   * Koppel aan het login-account van deze persoon, zodat die z'n wedstrijden en QR ziet.
+   */
+  user?: (number | null) | User;
+  type: 'scheidsrechter' | 'grensrechter' | 'aantekenaar' | 'tijdopnemer';
+  federationNumber?: string | null;
+  updatedAt: string;
+  createdAt: string;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -288,6 +372,14 @@ export interface Team {
    */
   vasteOpstellingIds?: string | null;
   logo?: (number | null) | Media;
+  /**
+   * Aangemaakt in de analysemodule. Verschijnt nooit in de competitie (live, rangschikking, beheer) — enkel in de eigen analyse-database.
+   */
+  analyseOnly?: boolean | null;
+  /**
+   * Wie deze analyse-entiteit aanmaakte. Bepaalt wie ze ziet (privé per persoon).
+   */
+  analyseOwner?: (number | null) | User;
   updatedAt: string;
   createdAt: string;
 }
@@ -325,6 +417,14 @@ export interface Player {
    */
   hogerSpelenVerbod?: boolean | null;
   actief?: boolean | null;
+  /**
+   * Aangemaakt in de analysemodule. Verschijnt nooit in de competitie (live, rangschikking, beheer) — enkel in de eigen analyse-database.
+   */
+  analyseOnly?: boolean | null;
+  /**
+   * Wie deze analyse-entiteit aanmaakte. Bepaalt wie ze ziet (privé per persoon).
+   */
+  analyseOwner?: (number | null) | User;
   updatedAt: string;
   createdAt: string;
 }
@@ -452,82 +552,6 @@ export interface Match {
    * Automatisch gezet bij het beëindigen. Bepaalt het 1u-navenster van de live tribune.
    */
   finishedAt?: string | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "users".
- */
-export interface User {
-  id: number;
-  name?: string | null;
-  /**
-   * Elke rol geeft eigen rechten. Hiërarchie: Admin (volledige toegang, beheert gebruikers) staat boven Federatie (beheert competitie/vergunningen). Supporters registreren zichzelf; enkel een admin kent hier hogere rollen toe.
-   */
-  roles?:
-    | ('admin' | 'federatie' | 'scheidsrechter' | 'club-beheerder' | 'kapitein' | 'scorekeeper' | 'viewer')[]
-    | null;
-  /**
-   * De eigen club (supporter volgt ze; club-beheerder beheert ze).
-   */
-  club?: (number | null) | Club;
-  /**
-   * Eigen voorkeur: op welke ploeg(en) "Mijn club" focust. De gebruiker stelt dit zelf in.
-   */
-  myTeams?:
-    | {
-        [k: string]: unknown;
-      }
-    | unknown[]
-    | string
-    | number
-    | boolean
-    | null;
-  /**
-   * Geef dit account toegang tot de analyse (naast de admin-rol).
-   */
-  analyseAccess?: boolean | null;
-  /**
-   * Geef dit account toegang tot het trainingsluik (progressie + aanwezigheid).
-   */
-  trainingAccess?: boolean | null;
-  /**
-   * Enkel relevant voor de rol "Scheidsrechter". Beperkt de toegang tot de eigen kwitantie.
-   */
-  official?: (number | null) | Official;
-  updatedAt: string;
-  createdAt: string;
-  email: string;
-  resetPasswordToken?: string | null;
-  resetPasswordExpiration?: string | null;
-  salt?: string | null;
-  hash?: string | null;
-  loginAttempts?: number | null;
-  lockUntil?: string | null;
-  sessions?:
-    | {
-        id: string;
-        createdAt?: string | null;
-        expiresAt: string;
-      }[]
-    | null;
-  password?: string | null;
-  collection: 'users';
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "officials".
- */
-export interface Official {
-  id: number;
-  name: string;
-  /**
-   * Koppel aan het login-account van deze persoon, zodat die z'n wedstrijden en QR ziet.
-   */
-  user?: (number | null) | User;
-  type: 'scheidsrechter' | 'grensrechter' | 'aantekenaar' | 'tijdopnemer';
-  federationNumber?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -1240,6 +1264,8 @@ export interface ClubsSelect<T extends boolean = true> {
   jeugdNaam?: T;
   jeugdEmail?: T;
   jeugdTelefoon?: T;
+  analyseOnly?: T;
+  analyseOwner?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -1257,6 +1283,8 @@ export interface TeamsSelect<T extends boolean = true> {
   speelstijl?: T;
   vasteOpstellingIds?: T;
   logo?: T;
+  analyseOnly?: T;
+  analyseOwner?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -1275,6 +1303,8 @@ export interface PlayersSelect<T extends boolean = true> {
   medischAttest?: T;
   hogerSpelenVerbod?: T;
   actief?: T;
+  analyseOnly?: T;
+  analyseOwner?: T;
   updatedAt?: T;
   createdAt?: T;
 }

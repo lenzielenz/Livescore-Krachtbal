@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { ProfileTools } from '@/components/ProfileTools'
 import { SiteHeader } from '@/components/SiteHeader'
 import { userClubId } from '@/lib/access'
+import { competitionWhere } from '@/lib/analyse-access'
 import { clinchStatus } from '@/lib/championship'
 import { getMatchReadiness } from '@/lib/matchsheet-data'
 import { sheetOpenForScoring } from '@/lib/matchsheet-workflow'
@@ -90,7 +91,7 @@ export default async function ClubPage({ searchParams }: { searchParams: Promise
   }
 
   const club = await payload.findByID({ collection: 'clubs', id: clubId, depth: 0 }).catch(() => null)
-  const teams = await payload.find({ collection: 'teams', where: { club: { equals: clubId } }, depth: 0, limit: 200 })
+  const teams = await payload.find({ collection: 'teams', where: { and: [{ club: { equals: clubId } }, competitionWhere()] }, depth: 0, limit: 200 })
   const teamIds = teams.docs.map((t) => t.id)
   if (teamIds.length === 0) {
     return (
@@ -108,6 +109,7 @@ export default async function ClubPage({ searchParams }: { searchParams: Promise
       and: [
         { status: { in: ['scheduled', 'live'] } },
         { or: [{ homeTeam: { in: teamIds } }, { awayTeam: { in: teamIds } }] },
+        competitionWhere(),
       ],
     },
     sort: 'date',

@@ -1,6 +1,7 @@
 import type { CollectionConfig } from 'payload'
 
 import { isFederationLevel } from '../lib/access'
+import { analyseEntityFields } from '../lib/analyse-fields'
 
 // Zet een gemeente/plaats om naar coördinaten (Open-Meteo geocoding, gratis). Zo heeft de
 // buienradar altijd exacte coördinaten — betrouwbaarder dan elke keer client-side geocoderen.
@@ -232,5 +233,6 @@ export const Clubs: CollectionConfig = {
         },
       ],
     },
+    ...analyseEntityFields,
   ],
 }

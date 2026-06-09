@@ -1,4 +1,5 @@
 import { SiteHeader } from '@/components/SiteHeader'
+import { competitionWhere } from '@/lib/analyse-access'
 import { formatTimeBE } from '@/lib/datetime'
 import { buildMatchState } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
@@ -27,8 +28,8 @@ export default async function CastPage() {
 
   // Wedstrijden van vandaag + alle live wedstrijden (ook als hun datum afwijkt).
   const [dayRes, liveRes] = await Promise.all([
-    payload.find({ collection: 'matches', where: { date: { greater_than_equal: start, less_than: end } }, sort: 'date', depth: 0, limit: 200 }),
-    payload.find({ collection: 'matches', where: { status: { equals: 'live' } }, depth: 0, limit: 50 }),
+    payload.find({ collection: 'matches', where: { and: [{ date: { greater_than_equal: start, less_than: end } }, competitionWhere()] }, sort: 'date', depth: 0, limit: 200 }),
+    payload.find({ collection: 'matches', where: { and: [{ status: { equals: 'live' } }, competitionWhere()] }, depth: 0, limit: 50 }),
   ])
 
   const seen = new Set<number>()

@@ -48,7 +48,8 @@ export function SiteHeader({ active = null }: { active?: NavSection }) {
         const has = (r: string) => Array.isArray(roles) && roles.includes(r)
         const fed = has('admin') || has('federatie')
         const club = has('club-beheerder')
-        const analyse = fed || Boolean(u?.analyseAccess)
+        // Gelijklopend met canAnalyse: enkel admin of een account met analyseAccess (federatie niet).
+        const analyse = has('admin') || Boolean(u?.analyseAccess)
         setLoggedIn(Boolean(u))
         setCanAnalyse(analyse)
         setCanTraining(fed || club || Boolean(u?.trainingAccess))

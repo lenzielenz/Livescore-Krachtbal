@@ -1,8 +1,10 @@
 import { describe, it, expect } from 'vitest'
 
-import { analyseMatchWhere, canViewAnalyseMatch } from '@/lib/analyse-access'
+import { analyseMatchWhere, analyseOwnWhere, canViewAnalyseMatch, competitionWhere } from '@/lib/analyse-access'
+import { ownsAnalyse } from '@/lib/analyse-crud'
 
 const fed = { id: 1, roles: ['federatie'] as const }
+const admin = { id: 2, roles: ['admin'] as const }
 const analyst = { id: 7, roles: ['viewer'] as const, analyseAccess: true }
 const other = { id: 8, roles: ['viewer'] as const, analyseAccess: true }
 
@@ -41,5 +43,45 @@ describe('canViewAnalyseMatch', () => {
 
   it('werkt met een uitgeklapt owner-object', () => {
     expect(canViewAnalyseMatch(analyst, { analyseOnly: true, analyseOwner: { id: 7 } })).toBe(true)
+  })
+})
+
+describe('analyseOwnWhere', () => {
+  it('beperkt strikt tot eigen analyse-data (analyseOnly + eigen owner), ook voor admin/federatie', () => {
+    const expected = (id: number) => ({ and: [{ analyseOnly: { equals: true } }, { analyseOwner: { equals: id } }] })
+    expect(analyseOwnWhere(analyst)).toEqual(expected(7))
+    expect(analyseOwnWhere(admin)).toEqual(expected(2))
+    expect(analyseOwnWhere(fed)).toEqual(expected(1))
+  })
+
+  it('valt zonder gebruiker terug op een onmogelijke eigenaar (-1) zodat er niets lekt', () => {
+    expect(analyseOwnWhere(null)).toEqual({ and: [{ analyseOnly: { equals: true } }, { analyseOwner: { equals: -1 } }] })
+  })
+})
+
+describe('competitionWhere', () => {
+  it('sluit alle analyse-entiteiten uit', () => {
+    expect(competitionWhere()).toEqual({ analyseOnly: { not_equals: true } })
+  })
+})
+
+describe('ownsAnalyse', () => {
+  it('eigenaar mag zijn eigen analyse-entiteit bewerken', () => {
+    expect(ownsAnalyse({ analyseOnly: true, analyseOwner: 7 }, analyst)).toBe(true)
+    expect(ownsAnalyse({ analyseOnly: true, analyseOwner: { id: 7 } }, analyst)).toBe(true)
+  })
+
+  it('iemand anders zijn analyse-entiteit niet', () => {
+    expect(ownsAnalyse({ analyseOnly: true, analyseOwner: 7 }, other)).toBe(false)
+  })
+
+  it('admin mag elke analyse-entiteit bewerken', () => {
+    expect(ownsAnalyse({ analyseOnly: true, analyseOwner: 7 }, admin)).toBe(true)
+  })
+
+  it('een competitie-entiteit (niet analyseOnly) is nooit via deze route bewerkbaar', () => {
+    expect(ownsAnalyse({ analyseOnly: false, analyseOwner: 7 }, analyst)).toBe(false)
+    expect(ownsAnalyse({ analyseOnly: false, analyseOwner: 7 }, admin)).toBe(false)
+    expect(ownsAnalyse(null, admin)).toBe(false)
   })
 })

@@ -1,4 +1,5 @@
 import { hasRole, isFederationLevel } from '@/lib/access'
+import { competitionWhere } from '@/lib/analyse-access'
 import { authUser } from '@/lib/api-auth'
 import { getPayloadClient } from '@/lib/payload-client'
 import { extractPdfTextSpaced, parseReeksindelingTeams, teamKey } from '@/lib/reeksindeling-import'
@@ -37,8 +38,8 @@ export async function POST(req: Request) {
     if (entries.length === 0) return Response.json({ error: 'Geen reeksindeling herkend in deze PDF.' }, { status: 400 })
 
     const [clubsRes, teamsRes] = await Promise.all([
-      payload.find({ collection: 'clubs', depth: 0, limit: 8000 }).catch(() => ({ docs: [] as Record<string, unknown>[] })),
-      payload.find({ collection: 'teams', depth: 0, limit: 8000 }).catch(() => ({ docs: [] as Record<string, unknown>[] })),
+      payload.find({ collection: 'clubs', where: competitionWhere(), depth: 0, limit: 8000 }).catch(() => ({ docs: [] as Record<string, unknown>[] })),
+      payload.find({ collection: 'teams', where: competitionWhere(), depth: 0, limit: 8000 }).catch(() => ({ docs: [] as Record<string, unknown>[] })),
     ])
     const clubByKey = new Map<string, number>()
     for (const c of clubsRes.docs) {

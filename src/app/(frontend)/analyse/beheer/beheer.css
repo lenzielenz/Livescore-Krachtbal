@@ -1,0 +1,141 @@
+/* Analyse-beheer (eigen database): clubs / ploegen / spelers. Compacte, rustige lijsten in de
+   stijl van de overige beheerschermen. Leunt op de bestaande design-tokens en an-/rang-/sk-classes. */
+
+.anb-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+  margin: 16px 0 8px;
+}
+
+.anb-count {
+  font-size: 0.8em;
+  font-weight: 600;
+  opacity: 0.7;
+  margin-left: 6px;
+}
+
+.anb-panel {
+  margin-top: 16px;
+}
+
+.anb-addrow {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 14px;
+}
+.anb-addrow.wrap {
+  flex-wrap: wrap;
+}
+.anb-addrow .rang-picker {
+  flex: 1 1 160px;
+  min-width: 0;
+}
+.anb-addrow .anb-num {
+  flex: 0 0 64px;
+  text-align: center;
+}
+
+.anb-group {
+  margin-bottom: 18px;
+}
+.anb-group-h {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.65;
+  margin: 0 0 6px;
+}
+
+.anb-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.anb-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.1));
+  border-radius: 10px;
+  background: var(--card, rgba(255, 255, 255, 0.03));
+}
+
+.anb-name {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-weight: 600;
+  min-width: 0;
+}
+.anb-sub {
+  font-size: 0.8em;
+  font-weight: 500;
+  opacity: 0.6;
+}
+.anb-shirt {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.6em;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: var(--accent, #4af);
+  color: #06121f;
+  font-size: 0.85em;
+}
+
+.anb-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.anb-editrow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+.anb-editrow .rang-picker {
+  flex: 1 1 auto;
+}
+
+.anb-mini {
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.14));
+  background: transparent;
+  color: inherit;
+  border-radius: 8px;
+  padding: 6px 9px;
+  cursor: pointer;
+  font-size: 0.95em;
+  line-height: 1;
+}
+.anb-mini:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+.anb-mini.ok {
+  border-color: var(--accent, #4af);
+  color: var(--accent, #4af);
+}
+.anb-mini.danger:hover {
+  background: rgba(255, 80, 80, 0.16);
+  border-color: rgba(255, 80, 80, 0.5);
+}
+
+.anb-teampick {
+  margin-bottom: 14px;
+  max-width: 420px;
+}
+.anb-possel {
+  font-size: 0.85em;
+  padding: 4px 6px;
+}

@@ -1,6 +1,7 @@
 import type { Access, CollectionConfig, FieldAccess } from 'payload'
 
 import { fieldIsFederation, hasRole, isFederationLevel, userClubId } from '../lib/access'
+import { analyseEntityFields } from '../lib/analyse-fields'
 
 export const POSITION_OPTIONS = [
   { label: 'Achter', value: 'achter' },
@@ -102,7 +103,10 @@ export const Players: CollectionConfig = {
         const id = raw && typeof raw === 'object' ? (raw as { id?: unknown }).id : raw
         // '' zou via Number('') === 0 een onmogelijke filter (club=0) opleveren → lege lijst.
         const clubId = id != null && id !== '' ? Number(id) : NaN
-        return Number.isFinite(clubId) && clubId > 0 ? { club: { equals: clubId } } : true
+        // Analyse-speler → enkel analyse-ploegen tonen; competitie-speler → analyse-ploegen verbergen.
+        const isAnalyse = Boolean((siblingData as { analyseOnly?: boolean })?.analyseOnly ?? (data as { analyseOnly?: boolean })?.analyseOnly)
+        const analyseClause = { analyseOnly: isAnalyse ? { equals: true } : { not_equals: true } }
+        return Number.isFinite(clubId) && clubId > 0 ? { and: [{ club: { equals: clubId } }, analyseClause] } : analyseClause
       },
       admin: { description: 'Kies eerst een club hierboven om de lijst te beperken. De reeks staat bij de ploegnaam.' },
     },
@@ -204,5 +208,6 @@ export const Players: CollectionConfig = {
         },
       ],
     },
+    ...analyseEntityFields,
   ],
 }

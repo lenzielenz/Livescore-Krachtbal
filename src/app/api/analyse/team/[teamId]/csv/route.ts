@@ -1,5 +1,5 @@
 import { canAnalyse } from '@/lib/access'
-import { analyseMatchWhere } from '@/lib/analyse-access'
+import { analyseOwnWhere } from '@/lib/analyse-access'
 import { authUser } from '@/lib/api-auth'
 import { getPayloadClient } from '@/lib/payload-client'
 import { buildTeamReport, teamReportToCsv } from '@/lib/team-report'
@@ -15,7 +15,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ teamId: 
     if (!user) return Response.json({ error: 'Niet ingelogd.' }, { status: 401 })
     if (!canAnalyse(user)) return Response.json({ error: 'Geen toegang tot de analyse.' }, { status: 403 })
 
-    const report = await buildTeamReport(payload, id, null, analyseMatchWhere(user))
+    const report = await buildTeamReport(payload, id, null, analyseOwnWhere(user))
     if (!report) return Response.json({ error: 'Ploeg niet gevonden.' }, { status: 404 })
 
     const csv = teamReportToCsv(report)

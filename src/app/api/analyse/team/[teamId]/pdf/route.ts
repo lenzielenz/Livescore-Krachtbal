@@ -1,5 +1,5 @@
 import { canAnalyse } from '@/lib/access'
-import { analyseMatchWhere } from '@/lib/analyse-access'
+import { analyseOwnWhere } from '@/lib/analyse-access'
 import { authUser } from '@/lib/api-auth'
 import { getPayloadClient } from '@/lib/payload-client'
 import { buildTeamDanger } from '@/lib/player-danger'
@@ -17,15 +17,15 @@ export async function GET(req: Request, { params }: { params: Promise<{ teamId: 
     if (!user) return Response.json({ error: 'Niet ingelogd.' }, { status: 401 })
     if (!canAnalyse(user)) return Response.json({ error: 'Geen toegang tot de analyse.' }, { status: 403 })
 
-    const report = await buildTeamReport(payload, id, null, analyseMatchWhere(user))
+    const report = await buildTeamReport(payload, id, null, analyseOwnWhere(user))
     if (!report) return Response.json({ error: 'Ploeg niet gevonden.' }, { status: 404 })
 
     // Gevaarkaart (waar de ploeg scoort) + verdedigingskaart (waar tegenstanders tegen hen scoren).
     const [danger, conceded] =
       report.matchesAnalyzed > 0
         ? await Promise.all([
-            buildTeamDanger(payload, id, report.reeks, null, analyseMatchWhere(user)).catch(() => null),
-            buildTeamDanger(payload, id, report.reeks, null, analyseMatchWhere(user), { conceded: true }).catch(() => null),
+            buildTeamDanger(payload, id, report.reeks, null, analyseOwnWhere(user)).catch(() => null),
+            buildTeamDanger(payload, id, report.reeks, null, analyseOwnWhere(user), { conceded: true }).catch(() => null),
           ])
         : [null, null]
 

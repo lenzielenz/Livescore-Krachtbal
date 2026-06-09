@@ -75,9 +75,11 @@ const rel = (v: unknown): number | null =>
   v && typeof v === 'object' ? ((v as { id?: number }).id ?? null) : typeof v === 'number' ? v : null
 
 export async function buildExpectedPoints(payload: Payload, reeks: string, seizoen?: string | null, matchFilter?: Where | null): Promise<XpResult> {
-  // Ploegen + spelers van de reeks (voor de ploegnaam per speler).
+  // Ploegen + spelers van de reeks (voor de ploegnaam per speler). De scope (matchFilter) wordt óók
+  // op de ploegen toegepast — analyse-pagina's geven analyseOwnWhere mee zodat enkel eigen
+  // analyse-ploegen meetellen.
   const teamsRes = await payload
-    .find({ collection: 'teams', where: { reeks: { equals: reeks } }, depth: 0, limit: 200 })
+    .find({ collection: 'teams', where: { and: [{ reeks: { equals: reeks } }, ...(matchFilter ? [matchFilter] : [])] }, depth: 0, limit: 200 })
     .catch(() => ({ docs: [] as { id: number; name: string }[] }))
   const teamName = new Map<number, string>(teamsRes.docs.map((t) => [t.id, t.name as string]))
   const teamIds = teamsRes.docs.map((t) => t.id)

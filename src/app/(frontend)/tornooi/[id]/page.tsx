@@ -2,6 +2,7 @@ import { headers } from 'next/headers'
 import { notFound } from 'next/navigation'
 
 import { hasRole, isFederationLevel } from '@/lib/access'
+import { competitionWhere } from '@/lib/analyse-access'
 import { getPayloadClient } from '@/lib/payload-client'
 import { buildTournamentState } from '@/lib/tournament-engine'
 import { BracketBoard } from './BracketBoard'
@@ -32,7 +33,7 @@ export default async function TornooiPage({ params }: { params: Promise<{ id: st
 
   // Clublogo's: in de eerste plaats via de EXPLICIETE koppeling (teamClubs, ingegeven bij het
   // aanmaken); anders via naamherkenning als terugval.
-  const clubsRes = await payload.find({ collection: 'clubs', depth: 1, limit: 500 }).catch(() => ({ docs: [] as Record<string, unknown>[] }))
+  const clubsRes = await payload.find({ collection: 'clubs', where: competitionWhere(), depth: 1, limit: 500 }).catch(() => ({ docs: [] as Record<string, unknown>[] }))
   const clubsNorm: { norm: string; url: string }[] = []
   const logoByClubId = new Map<number, string>()
   for (const c of clubsRes.docs) {

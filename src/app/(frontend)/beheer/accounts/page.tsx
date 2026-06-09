@@ -2,6 +2,7 @@ import Link from 'next/link'
 
 import { SiteHeader } from '@/components/SiteHeader'
 import { ROLE_OPTIONS, hasRole } from '@/lib/access'
+import { competitionWhere } from '@/lib/analyse-access'
 import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
 import { AccountsManager } from './AccountsManager'
@@ -33,7 +34,7 @@ export default async function AccountsPage() {
   const payload = await getPayloadClient()
   const [usersRes, clubsRes, officialsRes, analyseRes] = await Promise.all([
     payload.find({ collection: 'users', sort: 'email', depth: 0, limit: 1000 }).catch(() => ({ docs: [] as Record<string, unknown>[] })),
-    payload.find({ collection: 'clubs', sort: 'name', depth: 0, limit: 500 }).catch(() => ({ docs: [] as { id: number; name: string }[] })),
+    payload.find({ collection: 'clubs', where: competitionWhere(), sort: 'name', depth: 0, limit: 500 }).catch(() => ({ docs: [] as { id: number; name: string }[] })),
     payload.find({ collection: 'officials', where: { type: { equals: 'scheidsrechter' } }, sort: 'name', depth: 0, limit: 500 }).catch(() => ({ docs: [] as { id: number; name: string }[] })),
     // Analyse-opnames per eigenaar tellen, zodat de admin ziet wie wat opnam (en het kan samenbrengen).
     payload

@@ -3,6 +3,7 @@ import type { Where } from 'payload'
 
 import { SiteHeader } from '@/components/SiteHeader'
 import { canTraining, hasRole, isFederationLevel, userClubId } from '@/lib/access'
+import { competitionWhere } from '@/lib/analyse-access'
 import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
 import { reeksNaam } from '@/lib/reeksen'
@@ -46,9 +47,9 @@ export default async function AanwezigheidPage() {
   // De club volgt uit het account. Enkel een (federatie/admin-)account zónder eigen club mag nog
   // kiezen; iedereen met een club zit er vast aan en ziet géén clubkeuze.
   const fixedClubId = myClubId
-  const clubWhere: Where = fixedClubId != null ? { id: { equals: fixedClubId } } : {}
-  const teamWhere: Where = fixedClubId != null ? { club: { equals: fixedClubId } } : {}
-  const playerWhere: Where = fixedClubId != null ? { 'team.club': { equals: fixedClubId } } : {}
+  const clubWhere: Where = fixedClubId != null ? { and: [{ id: { equals: fixedClubId } }, competitionWhere()] } : competitionWhere()
+  const teamWhere: Where = fixedClubId != null ? { and: [{ club: { equals: fixedClubId } }, competitionWhere()] } : competitionWhere()
+  const playerWhere: Where = fixedClubId != null ? { and: [{ 'team.club': { equals: fixedClubId } }, competitionWhere()] } : competitionWhere()
 
   const [clubsRes, teamsRes, playersRes, sessiesRes] = await Promise.all([
     payload.find({ collection: 'clubs', where: clubWhere, depth: 0, limit: 2000, sort: 'name' }),

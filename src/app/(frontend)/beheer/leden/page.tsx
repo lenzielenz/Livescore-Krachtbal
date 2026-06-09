@@ -2,6 +2,7 @@ import Link from 'next/link'
 
 import { SiteHeader } from '@/components/SiteHeader'
 import { isFederationLevel } from '@/lib/access'
+import { competitionWhere } from '@/lib/analyse-access'
 import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
 import { LedenManager, type Lid } from './LedenManager'
@@ -35,7 +36,7 @@ export default async function LedenPage() {
 
   const payload = await getPayloadClient()
   const playersRes = await payload
-    .find({ collection: 'players', sort: 'name', depth: 2, limit: 5000, pagination: false, overrideAccess: true })
+    .find({ collection: 'players', where: competitionWhere(), sort: 'name', depth: 2, limit: 5000, pagination: false, overrideAccess: true })
     .catch(() => ({ docs: [] as Record<string, unknown>[] }))
 
   const leden: Lid[] = playersRes.docs.map((p) => {

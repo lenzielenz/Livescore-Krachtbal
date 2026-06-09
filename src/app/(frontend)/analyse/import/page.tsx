@@ -2,6 +2,7 @@ import Link from 'next/link'
 
 import { SiteHeader } from '@/components/SiteHeader'
 import { hasRole, isFederationLevel } from '@/lib/access'
+import { competitionWhere } from '@/lib/analyse-access'
 import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
 import { reeksNaam } from '@/lib/reeksen'
@@ -39,10 +40,10 @@ export default async function ResultsImportPage() {
   // Ploegen met hun speler-/wedstrijdaantallen, voor de opkuis-tool.
   const payload = await getPayloadClient()
   const [teamsRes, playersRes, matchesRes, clubsRes] = await Promise.all([
-    payload.find({ collection: 'teams', depth: 1, limit: 8000, sort: 'name' }).catch(() => ({ docs: [] as Record<string, unknown>[] })),
-    payload.find({ collection: 'players', depth: 0, limit: 15000 }).catch(() => ({ docs: [] as Record<string, unknown>[] })),
-    payload.find({ collection: 'matches', depth: 0, limit: 15000 }).catch(() => ({ docs: [] as Record<string, unknown>[] })),
-    payload.find({ collection: 'clubs', depth: 0, limit: 8000, sort: 'name' }).catch(() => ({ docs: [] as Record<string, unknown>[] })),
+    payload.find({ collection: 'teams', where: competitionWhere(), depth: 1, limit: 8000, sort: 'name' }).catch(() => ({ docs: [] as Record<string, unknown>[] })),
+    payload.find({ collection: 'players', where: competitionWhere(), depth: 0, limit: 15000 }).catch(() => ({ docs: [] as Record<string, unknown>[] })),
+    payload.find({ collection: 'matches', where: competitionWhere(), depth: 0, limit: 15000 }).catch(() => ({ docs: [] as Record<string, unknown>[] })),
+    payload.find({ collection: 'clubs', where: competitionWhere(), depth: 0, limit: 8000, sort: 'name' }).catch(() => ({ docs: [] as Record<string, unknown>[] })),
   ])
   const playerCount = new Map<number, number>()
   for (const p of playersRes.docs) {

@@ -130,11 +130,12 @@ export const Matches: CollectionConfig = {
           // Toon enkel ploegen uit de gekozen reeks (kies dus eerst de reeks) en nooit de ploeg die
           // al als uitploeg gekozen is — een ploeg kan niet tegen zichzelf spelen.
           filterOptions: ({ siblingData }) => {
-            const sd = siblingData as { reeks?: string; awayTeam?: unknown }
+            const sd = siblingData as { reeks?: string; awayTeam?: unknown; analyseOnly?: boolean }
             if (!sd?.reeks) return false
             const other = sd.awayTeam
             const otherId = other && typeof other === 'object' ? (other as { id?: unknown }).id : other
-            const and: Where[] = [{ reeks: { equals: sd.reeks } }]
+            // Analyse-wedstrijd → enkel analyse-ploegen; competitie-wedstrijd → enkel competitie-ploegen.
+            const and: Where[] = [{ reeks: { equals: sd.reeks } }, { analyseOnly: sd.analyseOnly ? { equals: true } : { not_equals: true } }]
             if (otherId != null) and.push({ id: { not_equals: otherId } })
             return { and }
           },
@@ -147,11 +148,12 @@ export const Matches: CollectionConfig = {
           relationTo: 'teams',
           required: true,
           filterOptions: ({ siblingData }) => {
-            const sd = siblingData as { reeks?: string; homeTeam?: unknown }
+            const sd = siblingData as { reeks?: string; homeTeam?: unknown; analyseOnly?: boolean }
             if (!sd?.reeks) return false
             const other = sd.homeTeam
             const otherId = other && typeof other === 'object' ? (other as { id?: unknown }).id : other
-            const and: Where[] = [{ reeks: { equals: sd.reeks } }]
+            // Analyse-wedstrijd → enkel analyse-ploegen; competitie-wedstrijd → enkel competitie-ploegen.
+            const and: Where[] = [{ reeks: { equals: sd.reeks } }, { analyseOnly: sd.analyseOnly ? { equals: true } : { not_equals: true } }]
             if (otherId != null) and.push({ id: { not_equals: otherId } })
             return { and }
           },

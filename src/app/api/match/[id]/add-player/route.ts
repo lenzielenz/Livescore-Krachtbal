@@ -50,9 +50,18 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       return Response.json({ error: `Rugnummer ${shirtNumber} bestaat al in deze ploeg.` }, { status: 409 })
     }
 
+    // Bij een analysewedstrijd hoort de toegevoegde speler bij de analyse-database (privé per
+    // eigenaar), niet bij de competitie-roster. Zo lekt een analyse-toevoeging nooit in de competitie.
+    const isAnalyse = Boolean((match as { analyseOnly?: boolean }).analyseOnly)
+    const owner = isAnalyse ? rel((match as { analyseOwner?: unknown }).analyseOwner) : null
     const created = await payload.create({
       collection: 'players',
-      data: { name, shirtNumber, team: teamId },
+      data: {
+        name,
+        shirtNumber,
+        team: teamId,
+        ...(isAnalyse ? { analyseOnly: true, ...(owner != null ? { analyseOwner: owner } : {}) } : {}),
+      },
       overrideAccess: true,
     })
     return Response.json({ ok: true, player: { id: created.id, name, shirtNumber, teamId } })
