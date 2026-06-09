@@ -429,6 +429,30 @@
 .lb-stat-sep {
   opacity: 0.5;
 }
+/* Weer per wedstrijd (rond de aftrap, op de thuislocatie). */
+.lb-weather {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-top: 2px;
+  font-size: 0.72rem;
+  color: var(--dim);
+  white-space: nowrap;
+}
+.lb-weather-ico {
+  font-size: 0.82rem;
+  line-height: 1;
+}
+.lb-weather-t {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  color: var(--dim-strong);
+}
+.lb-weather-p {
+  font-variant-numeric: tabular-nums;
+  color: var(--away);
+  font-weight: 600;
+}
 .lb-empty {
   color: var(--dim);
   padding: 24px;

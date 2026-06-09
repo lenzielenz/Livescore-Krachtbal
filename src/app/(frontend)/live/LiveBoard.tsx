@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { TeamLogo } from '@/components/TeamLogo'
 import { type ClubColors } from '@/lib/club-colors'
 import { type LogoFit } from '@/lib/logo-fit'
+import { RowWeather } from './RowWeather'
 
 type TeamRef = {
   teamId: number
@@ -22,6 +23,8 @@ export type DayMatch = {
   id: number
   reeks: string
   time: string
+  /** ISO-datum/uur van de aftrap (voor het weer rond de wedstrijd). */
+  kickoff: string
   status: string
   home: TeamRef
   away: TeamRef
@@ -29,6 +32,8 @@ export type DayMatch = {
   crosses?: { home: number; away: number }
   timeouts?: { home: number; away: number }
   refereeStops?: number
+  /** Locatie van het thuisterrein → weer per wedstrijd. */
+  weather?: { plaats: string | null; lat: number | null; lng: number | null } | null
 }
 
 const FAV_TEAMS_KEY = 'kb-fav-ploegen'
@@ -273,6 +278,9 @@ export function LiveBoard({
                                 {m.refereeStops ? ` +${m.refereeStops} SR` : ''}
                               </span>
                             </span>
+                          )}
+                          {m.weather && (
+                            <RowWeather kickoff={m.kickoff} plaats={m.weather.plaats} lat={m.weather.lat} lng={m.weather.lng} />
                           )}
                         </span>
                         <span className="lb-team away">
