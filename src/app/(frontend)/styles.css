@@ -792,10 +792,16 @@ h3,
   transform: translateY(-1px);
   border-color: color-mix(in srgb, var(--accent) 50%, var(--line));
 }
-.btn:disabled {
+.btn:disabled,
+.btn.is-disabled {
   opacity: 0.5;
   cursor: not-allowed;
   transform: none;
+}
+/* Niet-klikbare info-knop (bv. "wacht op scheidsrechter"): geen hover-lift. */
+.btn.is-disabled {
+  font-size: 0.82rem;
+  pointer-events: none;
 }
 .btn-primary {
   background: var(--grad-accent);

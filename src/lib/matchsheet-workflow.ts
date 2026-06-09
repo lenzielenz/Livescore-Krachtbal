@@ -49,6 +49,16 @@ export function clubsMayEditLineup(status: MatchSheetStatus): boolean {
 }
 
 /**
+ * Is het blad door de scheidsrechter opengezet om aan te tekenen? Pas wanneer de scheidsrechter
+ * de wedstrijd heeft gecontroleerd en op 'wedstrijdklaar' (of verder) heeft gezet, mag de
+ * aantekenaar scoren. Dat een wedstrijd qua tijdstip "live" staat, volstaat dus niet — de SR geeft
+ * het groen licht. ('ingediend' is afgesloten en valt er bewust buiten.)
+ */
+export function sheetOpenForScoring(status: string | null | undefined): boolean {
+  return status === 'wedstrijdklaar' || status === 'bezig' || status === 'af_te_tekenen'
+}
+
+/**
  * Mag de scheidsrechter de opstellingen al zien? Vanaf `releaseMinutesBefore` vóór het
  * aanvangsuur (WEDSTRIJDBLAD-PROMPT §workflow vrijgegeven). Configureerbaar via Settings.
  */

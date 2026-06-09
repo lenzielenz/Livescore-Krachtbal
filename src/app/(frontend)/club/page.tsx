@@ -6,6 +6,7 @@ import { SiteHeader } from '@/components/SiteHeader'
 import { userClubId } from '@/lib/access'
 import { clinchStatus } from '@/lib/championship'
 import { getMatchReadiness } from '@/lib/matchsheet-data'
+import { sheetOpenForScoring } from '@/lib/matchsheet-workflow'
 import { getPayloadClient } from '@/lib/payload-client'
 import { getProfile } from '@/lib/profiles'
 import { buildReeksStandings } from '@/lib/reeks-standings'
@@ -49,6 +50,8 @@ type Row = {
   takeoverMine: boolean
   // Toegewezen scheidsrechter (uit het wedstrijdblad), indien gekoppeld.
   refereeName: string | null
+  // Status van het wedstrijdblad: bepaalt of de scheidsrechter het aantekenen al heeft opengezet.
+  sheetStatus: string | null
 }
 
 function Shell({ children }: { children: React.ReactNode }) {
@@ -118,12 +121,15 @@ export default async function ClubPage({ searchParams }: { searchParams: Promise
     ? await payload.find({ collection: 'matchsheets', where: { match: { in: planMatchIds } }, depth: 1, pagination: false }).catch(() => ({ docs: [] as Record<string, unknown>[] }))
     : { docs: [] as Record<string, unknown>[] }
   const refByMatch = new Map<number, string>()
+  const sheetStatusByMatch = new Map<number, string>()
   for (const s of planSheets.docs) {
     const mid = (s as { match?: unknown }).match
     const midId = mid && typeof mid === 'object' ? Number((mid as { id?: number }).id) : Number(mid)
     const ar = (s as { assignedReferee?: unknown }).assignedReferee
     const name = ar && typeof ar === 'object' ? String((ar as { name?: unknown }).name ?? '') : ''
     if (Number.isFinite(midId) && name) refByMatch.set(midId, name)
+    const st = (s as { status?: unknown }).status
+    if (Number.isFinite(midId) && typeof st === 'string') sheetStatusByMatch.set(midId, st)
   }
 
   const rows: Row[] = []
@@ -155,6 +161,7 @@ export default async function ClubPage({ searchParams }: { searchParams: Promise
         takeoverName: takeover ? (takeover.name || takeover.email || 'Iemand') : null,
         takeoverMine: takeover?.id != null && Number(takeover.id) === myUserId,
         refereeName: refByMatch.get(m.id) ?? null,
+        sheetStatus: sheetStatusByMatch.get(m.id) ?? null,
       })
     } catch {
       // Wedstrijd met ontbrekende ploeg overslaan.
@@ -287,7 +294,16 @@ export default async function ClubPage({ searchParams }: { searchParams: Promise
               <div className="club-match-actions">
                 <Link href={`/opstelling/${m.id}`} className="btn btn-primary">Opstelling</Link>
                 {m.side === 'home' ? (
-                  <Link href={`/scorekeeper/${m.id}`} className="btn btn-ghost">{m.status === 'live' ? 'Aantekenen' : 'Start ▶'}</Link>
+                  // Aantekenen kan pas als de scheidsrechter het blad heeft opengezet
+                  // (wedstrijdklaar/bezig). Een wedstrijd die qua tijdstip "live" staat is dáárom
+                  // nog niet open om aan te tekenen — de SR geeft het groen licht.
+                  sheetOpenForScoring(m.sheetStatus) ? (
+                    <Link href={`/scorekeeper/${m.id}`} className="btn btn-ghost">Aantekenen</Link>
+                  ) : (
+                    <span className="btn btn-ghost is-disabled" title="De scheidsrechter heeft het wedstrijdblad nog niet opengezet om aan te tekenen.">
+                      ⏳ Wacht op scheidsrechter
+                    </span>
+                  )
                 ) : (
                   <Link href={`/match/${m.id}`} className="btn btn-ghost">Bekijk</Link>
                 )}
