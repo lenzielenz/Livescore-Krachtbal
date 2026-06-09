@@ -1,63 +1,43 @@
-/* Mini-buienradar per wedstrijd — past bij de match-info-panelen. */
+/* Mini-buienradar per wedstrijd — slanke, elegante strip die bij de match-info-panelen past. */
 .mr {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   margin: 10px 0 0;
-  padding: 12px 14px;
+  padding: 9px 14px;
   border: 1px solid var(--line);
   border-radius: 12px;
   background: var(--panel);
 }
-.mr.wet { border-color: color-mix(in srgb, #4cc9f0 45%, var(--line)); }
-.mr.maybe { border-color: color-mix(in srgb, #ffd166 40%, var(--line)); }
-.mr.dry { border-color: color-mix(in srgb, var(--accent) 35%, var(--line)); }
+.mr.wet { border-color: color-mix(in srgb, #4cc9f0 40%, var(--line)); }
+.mr.maybe { border-color: color-mix(in srgb, #ffd166 36%, var(--line)); }
+.mr.dry { border-color: color-mix(in srgb, var(--accent) 30%, var(--line)); }
 
-.mr-head {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.mr-icon { font-size: 1.6rem; line-height: 1; flex: 0 0 auto; }
-.mr-headtext { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
-.mr-title { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--dim); font-weight: 700; }
-.mr-verdict { font-size: 0.95rem; font-weight: 800; color: var(--txt); }
+.mr-icon { font-size: 1.4rem; line-height: 1; flex: 0 0 auto; }
+.mr-body { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.mr-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.mr-verdict { font-size: 0.86rem; font-weight: 700; color: var(--txt); }
 .mr-sum {
-  margin-left: auto;
   flex: 0 0 auto;
-  font-size: 0.9rem;
-  font-weight: 800;
-  color: var(--txt);
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--dim-strong);
   font-variant-numeric: tabular-nums;
 }
 
-.mr-bars {
-  display: flex;
-  align-items: flex-end;
-  gap: 10px;
-  margin-top: 12px;
-}
-.mr-bar {
-  flex: 1 1 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 3px;
-  min-width: 0;
-}
-.mr-bar-track {
-  width: 100%;
-  max-width: 46px;
-  height: 46px;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  border-radius: 6px;
-  background: color-mix(in srgb, #4cc9f0 10%, var(--bg, #10141a));
+/* Per uur: een dunne kansbalk met een compact "69% · 17u"-label eronder. */
+.mr-hours { display: flex; gap: 14px; }
+.mr-hour { flex: 1 1 0; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.mr-hour-bar {
+  height: 5px;
+  border-radius: 999px;
+  background: color-mix(in srgb, #4cc9f0 14%, var(--bg, #10141a));
   overflow: hidden;
 }
-.mr-bar-fill {
-  width: 100%;
-  min-height: 2px;
-  border-radius: 6px 6px 0 0;
-  background: linear-gradient(#4cc9f0, #2a7fb8);
+.mr-hour-bar i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #4cc9f0, var(--accent, #7cb8ff));
 }
-.mr-bar-prob { font-size: 0.72rem; font-weight: 700; color: var(--dim); font-variant-numeric: tabular-nums; }
-.mr-bar-lbl { font-size: 0.7rem; color: var(--dim); font-variant-numeric: tabular-nums; }
+.mr-hour-meta { font-size: 0.68rem; color: var(--dim); font-variant-numeric: tabular-nums; }

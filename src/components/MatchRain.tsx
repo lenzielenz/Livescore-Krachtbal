@@ -108,28 +108,22 @@ export function MatchRain({
         ? { icon: '🌦️', text: 'Mogelijk een bui tijdens de wedstrijd', cls: 'maybe' }
         : { icon: '🌤️', text: 'Droog verwacht tijdens de wedstrijd', cls: 'dry' }
 
-  const maxMm = Math.max(0.5, ...fc.slots.map((s) => s.mm))
-
   return (
     <div className={`mr ${verdict.cls}`}>
-      <div className="mr-head">
-        <span className="mr-icon" aria-hidden>{verdict.icon}</span>
-        <div className="mr-headtext">
-          <span className="mr-title">Buienradar wedstrijd</span>
+      <span className="mr-icon" aria-hidden>{verdict.icon}</span>
+      <div className="mr-body">
+        <div className="mr-top">
           <span className="mr-verdict">{verdict.text}</span>
+          {fc.sumMm > 0 && <span className="mr-sum" title="Verwachte neerslag rond de aftrap">{fc.sumMm} mm</span>}
         </div>
-        <span className="mr-sum" title="Verwachte neerslag in het 2-uursvenster">{fc.sumMm} mm</span>
-      </div>
-      <div className="mr-bars">
-        {fc.slots.map((s, i) => (
-          <div className="mr-bar" key={i} title={`${s.label}: ${s.mm} mm · ${s.prob}% kans`}>
-            <span className="mr-bar-track">
-              <span className="mr-bar-fill" style={{ height: `${Math.round((s.mm / maxMm) * 100)}%` }} />
+        <div className="mr-hours">
+          {fc.slots.map((s, i) => (
+            <span className="mr-hour" key={i} title={`${s.label}: ${s.prob}% kans · ${s.mm} mm`}>
+              <span className="mr-hour-bar"><i style={{ width: `${s.prob}%` }} /></span>
+              <span className="mr-hour-meta">{s.prob}% · {s.label}</span>
             </span>
-            <span className="mr-bar-prob">{s.prob}%</span>
-            <span className="mr-bar-lbl">{s.label}</span>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </div>
   )
