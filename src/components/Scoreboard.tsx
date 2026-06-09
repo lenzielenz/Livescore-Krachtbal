@@ -50,16 +50,6 @@ type EmojiName = keyof typeof EMOJI
 const reactionGlyph = (name: EmojiName, kleur: KrachtbalKleur) =>
   name === 'goal' ? <KrachtbalIcon size="1.25em" kleur={kleur} style={{ verticalAlign: '-0.18em' }} /> : EMOJI[name]
 
-function Dots({ filled, total, className }: { filled: number; total: number; className?: string }) {
-  return (
-    <span className={`sb-dots ${className ?? ''}`}>
-      {Array.from({ length: total }).map((_, i) => (
-        <span key={i} className={`sb-dot ${i < filled ? 'on' : ''}`} />
-      ))}
-    </span>
-  )
-}
-
 export function Scoreboard({
   matchId,
   initial,
@@ -461,9 +451,9 @@ export function Scoreboard({
         <div className={`sb-side-team ${goal?.side === 'home' ? 'scored' : ''}`}>
           <TeamLogo name={state.teams.home.name} logoUrl={state.teams.home.logoUrl} logoFit={state.teams.home.logoFit} side="home" size="lg" float medallion ringColor={state.teams.home.colors?.primary} />
           <div className="sb-name">{state.teams.home.name}</div>
-          <div className="sb-min" title="Aangevraagde minuten (time-outs)">
-            <span className="sb-min-lbl">min.</span>
-            <Dots filled={state.timeouts.home} total={2} className="to" />
+          <div className="sb-teamstats home">
+            <span title="Kruisjes">✖ {state.crosses.home}</span>
+            <span title="Time-outs">⏱ {state.timeouts.home}</span>
           </div>
         </div>
         <div className="sb-scorebox">
@@ -486,13 +476,16 @@ export function Scoreboard({
               )}
             </>
           )}
+          {state.refereeStops > 0 && (
+            <div className="sb-refmin" title="Time-outs scheidsrechter">🧑‍⚖️ ⏱ {state.refereeStops}</div>
+          )}
         </div>
         <div className={`sb-side-team ${goal?.side === 'away' ? 'scored' : ''}`}>
           <TeamLogo name={state.teams.away.name} logoUrl={state.teams.away.logoUrl} logoFit={state.teams.away.logoFit} side="away" size="lg" float medallion ringColor={state.teams.away.colors?.primary} />
           <div className="sb-name">{state.teams.away.name}</div>
-          <div className="sb-min" title="Aangevraagde minuten (time-outs)">
-            <span className="sb-min-lbl">min.</span>
-            <Dots filled={state.timeouts.away} total={2} className="to" />
+          <div className="sb-teamstats away">
+            <span title="Kruisjes">✖ {state.crosses.away}</span>
+            <span title="Time-outs">⏱ {state.timeouts.away}</span>
           </div>
         </div>
       </div>
@@ -539,17 +532,6 @@ export function Scoreboard({
         timeline={timeline}
       />
 
-      <div className="sb-crosses">
-        <span>Kruisjes</span>
-        <span className="sb-cross-val">{state.crosses.home}</span>
-        <span className="sb-cross-sep">·</span>
-        <span className="sb-cross-val">{state.crosses.away}</span>
-        {state.refereeStops > 0 && (
-          <span className="sb-refmin" title="Minuten gevraagd door de scheidsrechter">
-            ⏱ SR-minuut: {state.refereeStops}
-          </span>
-        )}
-      </div>
 
       <div className="sb-timeline">
         <h3>Tijdlijn</h3>

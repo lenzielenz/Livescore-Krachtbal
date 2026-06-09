@@ -221,6 +221,21 @@
   margin-top: 4px;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
 }
+/* Scheidsrechter-time-outs centraal onder de klok (zelfde stijl als kantine/scorebord). */
+.fs-refmin {
+  margin-top: 0.5em;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+  font-size: clamp(0.8rem, 2vw, 1.4rem);
+  font-weight: 800;
+  color: var(--dim-strong);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 32%, var(--line));
+  border-radius: 999px;
+  padding: 0.15em 0.7em;
+  font-variant-numeric: tabular-nums;
+}
 /* Statblok onder de ploegnaam: kruisjes (per 3) en time-outs (per 2) als invul-vakjes. */
 .fs-stats {
   display: flex;

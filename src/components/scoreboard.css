@@ -447,16 +447,22 @@
 .sb-dots { display: inline-flex; gap: 5px; }
 .sb-dot { width: 9px; height: 9px; border-radius: 50%; border: 1px solid var(--line); background: transparent; }
 .sb-dots.to .sb-dot.on { background: var(--accent); border-color: var(--accent); }
-.sb-min { display: inline-flex; align-items: center; gap: 6px; margin-top: 4px; }
-.sb-min-lbl { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--dim-strong); }
-.sb-refmin { font-size: 0.85rem; font-weight: 700; color: var(--accent); margin-left: 6px; }
-
-.sb-crosses {
-  display: flex; align-items: center; justify-content: center; gap: 12px;
-  margin: 16px 0; padding: 8px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
-  font-size: 0.85rem; color: var(--dim);
+/* Kruisjes (✖) + time-outs (⏱) per ploeg, pal onder het clublogo — zelfde stijl als de kantine. */
+.sb-teamstats {
+  display: inline-flex; align-items: center; gap: 12px; margin-top: 4px;
+  font-size: 0.9rem; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: 0.02em;
 }
-.sb-cross-val { font-size: 1.1rem; font-weight: 700; color: var(--txt); }
+.sb-main > .sb-side-team:first-child .sb-teamstats { color: color-mix(in srgb, var(--home) 70%, #fff); }
+.sb-main > .sb-side-team:last-child .sb-teamstats { color: color-mix(in srgb, var(--away) 70%, #fff); }
+/* Scheidsrechter-time-outs centraal onder de klok. */
+.sb-refmin {
+  margin-top: 6px;
+  display: inline-flex; align-items: center; gap: 0.3em;
+  font-size: 0.8rem; font-weight: 800; color: var(--dim-strong);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--line));
+  border-radius: 999px; padding: 2px 10px; font-variant-numeric: tabular-nums;
+}
 
 .sb-timeline h3 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--dim); margin: 10px 0; }
 /* Meerdere kolommen, zodat een lange stand (richting 25-25) compact blijft i.p.v. eindeloos lang. */
