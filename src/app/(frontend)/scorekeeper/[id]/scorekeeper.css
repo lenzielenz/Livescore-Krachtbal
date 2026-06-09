@@ -302,7 +302,31 @@ a.sk-btn { display: inline-block; box-sizing: border-box; text-align: center; te
 .sk-entry-title { font-size: 1.05rem; font-weight: 800; color: var(--accent); }
 .sk-entry-meta { font-size: 0.8rem; color: var(--dim); }
 .sk-pick-pills { grid-template-columns: repeat(3, 1fr); }
-.sk-tapmode.caught { border-color: #4cc9f0; color: #4cc9f0; }
+/* Grond/gevangen-knop: de "gevangen"-stand moet onmiskenbaar zijn (gevuld blauw + ring),
+   want ze bepaalt of de worp als vangst telt. De "grond"-stand blijft een rustige omtrek. */
+.sk-tapmode { font-weight: 700; transition: background 0.12s, color 0.12s, box-shadow 0.12s; }
+.sk-tapmode.caught {
+  background: #4cc9f0;
+  border-color: #4cc9f0;
+  color: #06140d;
+  font-weight: 800;
+  box-shadow: 0 0 0 3px rgba(76, 201, 240, 0.32);
+}
+/* Volledige bottom-sheet krijgt een blauwe accentrand wanneer "gevangen" actief is. */
+.sk-entry-caught .sk-entry-box { border-color: #4cc9f0; box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.5), 0 0 0 2px rgba(76, 201, 240, 0.45) inset; }
+.sk-caught-banner {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 10px;
+  padding: 7px 10px;
+  border-radius: 9px;
+  background: rgba(76, 201, 240, 0.16);
+  border: 1px solid rgba(76, 201, 240, 0.5);
+  color: #4cc9f0;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
 .sk-modal-btns { display: flex; flex-direction: column; gap: 10px; }
 .sk-modal-btns .sk-btn { font-size: 1rem; font-weight: 600; }
 .sk-btn.primary { border-color: var(--accent); color: var(--accent); }
