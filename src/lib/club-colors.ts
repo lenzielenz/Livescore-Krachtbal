@@ -84,6 +84,33 @@ function dist2(a: [number, number, number], b: [number, number, number]): number
   return dr * dr + dg * dg + db * db
 }
 
+function hexToRgb(hex: string): [number, number, number] | null {
+  const h = normalizeHex(hex)
+  if (!h) return null
+  return [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)]
+}
+
+// Botsen twee kleuren (te dicht bij elkaar om uit elkaar te houden)? ~50 per kanaal.
+const CLASH_DIST2 = 2500
+export function colorsClash(a: string | null | undefined, b: string | null | undefined): boolean {
+  const ra = hexToRgb(a ?? '')
+  const rb = hexToRgb(b ?? '')
+  if (!ra || !rb) return false
+  return dist2(ra, rb) < CLASH_DIST2
+}
+
+// Geef de UIT-ploeg een onderscheidbare kleur: botst haar startkleur (primair) met die van de
+// thuisploeg, dan schakelt ze naar haar tweede kleur — maar enkel als die écht verschilt van de
+// thuiskleur (anders heeft wisselen geen zin en houden we de oorspronkelijke kleur).
+export function distinguishAway(home: ClubColors | null, away: ClubColors | null): ClubColors | null {
+  if (!home || !away) return away
+  if (!colorsClash(home.primary, away.primary)) return away
+  if (away.secondary && away.secondary !== away.primary && !colorsClash(home.primary, away.secondary)) {
+    return { primary: away.secondary, secondary: away.primary }
+  }
+  return away
+}
+
 type Bucket = { r: number; g: number; b: number; count: number }
 
 // Haalt twee prominente kleuren uit ruwe RGBA-pixels (canvas getImageData).
