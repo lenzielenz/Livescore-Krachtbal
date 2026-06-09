@@ -844,7 +844,7 @@ h3,
 /* "Mijn ploegen": trainer/coach focust op zijn eigen ploeg(en). */
 .myteams {
   margin: 4px 0 14px;
-  padding: 12px 14px;
+  padding: 10px 12px;
   border-radius: 14px;
   border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--line));
   background: color-mix(in srgb, var(--accent) 6%, var(--panel));
@@ -857,17 +857,17 @@ h3,
   color: var(--accent); background: transparent;
   border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line));
 }
-.myteams-hint { margin: 8px 0 10px; font-size: 0.82rem; color: var(--dim); }
+.myteams-hint { margin: 6px 0 8px; font-size: 0.78rem; color: var(--dim); }
 .myteams-current { margin: 6px 0 0; font-size: 0.9rem; color: var(--ink, inherit); font-weight: 600; }
-.myteams-pills { display: flex; flex-wrap: wrap; gap: 8px; }
+.myteams-pills { display: flex; flex-wrap: wrap; gap: 6px; }
 .myteams-pill {
-  font: inherit; font-size: 0.86rem; font-weight: 600; cursor: pointer;
-  padding: 7px 14px; border-radius: 999px;
+  font: inherit; font-size: 0.76rem; font-weight: 600; cursor: pointer;
+  padding: 4px 10px; border-radius: 10px;
   color: var(--ink, inherit); background: var(--panel);
   border: 1px solid var(--line);
-  display: inline-flex; flex-direction: column; align-items: flex-start; gap: 1px; line-height: 1.2;
+  display: inline-flex; flex-direction: column; align-items: flex-start; gap: 0; line-height: 1.25;
 }
-.myteams-pill-sub { font-size: 0.7rem; font-weight: 600; color: var(--dim); }
+.myteams-pill-sub { font-size: 0.62rem; font-weight: 600; color: var(--dim); }
 .myteams-pill.on {
   color: #06140d; font-weight: 800;
   background: var(--accent);
