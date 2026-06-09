@@ -7,7 +7,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { FieldSchema, type FieldMarker } from '@/components/FieldSchema'
 import { TeamLogo } from '@/components/TeamLogo'
 import { attackDirForSide, deriveOutcome } from '@/lib/krachtbal-rules'
-import { zoneOf } from '@/lib/field'
+import { goalLineNorm, totalLengthM, zoneOf } from '@/lib/field'
 import type { AttackDir, Point } from '@/lib/field'
 import type { MatchState } from '@/lib/match-engine'
 import { LINEUP_MIN, type Readiness } from '@/lib/match-readiness'
@@ -542,7 +542,7 @@ export function Scorekeeper({
       {/* Werper kiezen — vaste balk onderaan (veld blijft zichtbaar). Grond/gevangen volgt de
           (dubbel)tik op het veld; de indicator is ook hier tikbaar. */}
       {pendingThrow && (
-        <div className="sk-entry">
+        <div className={`sk-entry${pendingThrow.tapCount === 2 ? ' sk-entry-caught' : ''}`}>
           <div className="sk-entry-box sk-pick">
             <div className="sk-entry-head">
               <span className="sk-entry-title">Wie wierp?</span>
@@ -551,12 +551,15 @@ export function Scorekeeper({
                 {poss && ` · ${poss.freeThrow ? 'vrijworp' : `worp ${poss.nextThrowNumber}/${poss.throwsAllowed}`}`}
               </span>
             </div>
+            {pendingThrow.tapCount === 2 && (
+              <div className="sk-caught-banner">✋ Gevangen — tik nogmaals op het veld voor “grond”</div>
+            )}
             <div className="sk-pills sk-pick-pills">
               <button type="button" className={`pill ${throwType === 'nek' ? 'on' : ''}`} onClick={() => setThrowType('nek')}>Nek +1</button>
               <button type="button" className={`pill ${throwType === 'rug' ? 'on' : ''}`} onClick={() => setThrowType('rug')}>Rug +2</button>
               <button
                 type="button"
-                className={`pill sk-tapmode ${pendingThrow.tapCount === 2 ? 'caught on' : ''}`}
+                className={`pill sk-tapmode ${pendingThrow.tapCount === 2 ? 'caught' : 'ground'}`}
                 onClick={() => setPendingThrow((c) => (c ? { p: c.p, tapCount: c.tapCount === 2 ? 1 : 2 } : c))}
                 title="Dubbeltik op het veld wisselt grond/gevangen — of tik hier"
               >
@@ -603,13 +606,22 @@ export function Scorekeeper({
           }
           void submitThrow(p, tapCount, false, playerId, catcherId)
         }
-        // Slimme suggestie (geen gesleur): de zone van de vangst bepaalt de vleugel-kant; daarnaast
-        // is de achterman de meest waarschijnlijke bij een diepe worp. Beide groot bovenaan.
-        const zone = poss ? zoneOf(pendingCatch.p, poss.dir as AttackDir) : 'midden'
+        // Slimme suggestie op basis van wáár de bal viel (geen gesleur):
+        //  • de breedte-zone bepaalt wélke vleugel in beeld komt;
+        //  • de DIEPTE (afstand tot de aangevallen doellijn) bepaalt de volgorde — diep bij het
+        //    doel is het domein van de achterman (≈ 13 m-regel), ondieper op een vleugel is de
+        //    vleugelverdediger. Zo staat de meest waarschijnlijke vanger altijd eerst.
+        const dir = poss ? (poss.dir as AttackDir) : 'up'
+        const zone = poss ? zoneOf(pendingCatch.p, dir) : 'midden'
         const wingPos = zone === 'links' ? 'vleugel-links' : zone === 'rechts' ? 'vleugel-rechts' : null
         const wing = wingPos ? catchers.find((c) => c.position === wingPos) : undefined
         const back = catchers.find((c) => c.position === 'achter')
-        const suggested = [wing, back].filter((c): c is RosterPlayer => Boolean(c))
+        const depthM = state.match.goalAreaDepth
+        const goalY = dir === 'up' ? 1 - goalLineNorm(depthM) : goalLineNorm(depthM)
+        const distToGoalM = Math.abs(pendingCatch.p.y - goalY) * totalLengthM(depthM)
+        const deep = distToGoalM <= 13
+        const ordered = deep ? [back, wing] : [wing, back]
+        const suggested = ordered.filter((c): c is RosterPlayer => Boolean(c))
         const suggestedIds = new Set(suggested.map((c) => c.id))
         const posLabel = (pos?: string | null) =>
           pos === 'vleugel-links' ? 'vleugel links' : pos === 'vleugel-rechts' ? 'vleugel rechts' : pos === 'achter' ? 'achterman' : ''
