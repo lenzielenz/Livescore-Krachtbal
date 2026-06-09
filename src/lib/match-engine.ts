@@ -200,6 +200,9 @@ export interface RecordThrowInput {
   point: Point
   tapCount: 1 | 2
   touchedBeforeOut?: boolean
+  /** Werpplaats (origin x, 0..1): de werper mag vóór de worp zijdelings verschuiven. Enkel de
+   *  breedte (x) is vrij; de diepte (y) blijft die van de vorige landing / het opzetpunt. */
+  originX?: number
   gameClock?: number
   /** Speler van de tegenploeg die de bal ving (enkel bij een gevangen worp). */
   caughtById?: number
@@ -241,9 +244,12 @@ export async function recordThrow(payload: Payload, input: RecordThrowInput) {
     }
   }
 
+  // Werpplaats: standaard de vorige landing (of het opzetpunt), maar de aantekenaar kan de werper
+  // zijdelings verschuiven (alleen de breedte x — de diepte y blijft gelijk), zoals in het spel.
+  const hasOriginX = typeof input.originX === 'number' && Number.isFinite(input.originX)
   const origin: Point = last
-    ? { x: last.landingX, y: last.landingY }
-    : { x: open.setupX ?? 0.5, y: open.setupY ?? 0.5 }
+    ? { x: clamp01(hasOriginX ? (input.originX as number) : last.landingX), y: last.landingY }
+    : { x: clamp01(hasOriginX ? (input.originX as number) : (open.setupX ?? 0.5)), y: open.setupY ?? 0.5 }
 
   const depth = match.goalAreaDepth ?? FIELD.defaultGoalAreaDepthM
   const outcome = deriveOutcome({ tapCount: input.tapCount, point: input.point, dir, goalAreaDepthM: depth })
