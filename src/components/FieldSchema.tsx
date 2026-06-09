@@ -298,17 +298,26 @@ export function FieldSchema({
     e.stopPropagation()
     e.preventDefault()
     dragId.current = id
+    // Pointer capture: alle vervolg-events gaan naar dit element, ook buiten zijn vorm. Samen met
+    // touch-action:none belet dit dat de browser de beweging als scrollen kaapt (en zo de sleep in
+    // stukjes hakt). We luisteren op het element zelf zodat de capture/listeners ook na re-renders
+    // (de marker verschuift) blijven werken.
+    const el = e.currentTarget as SVGElement
+    try { el.setPointerCapture(e.pointerId) } catch {}
     const move = (ev: PointerEvent) => {
       if (dragId.current) onMarkerDragX(dragId.current, clientToNormX(ev.clientX))
     }
-    const up = () => {
+    const end = () => {
       dragId.current = null
       suppressTapUntil.current = Date.now() + 350
-      window.removeEventListener('pointermove', move)
-      window.removeEventListener('pointerup', up)
+      el.removeEventListener('pointermove', move)
+      el.removeEventListener('pointerup', end)
+      el.removeEventListener('pointercancel', end)
+      try { el.releasePointerCapture(e.pointerId) } catch {}
     }
-    window.addEventListener('pointermove', move)
-    window.addEventListener('pointerup', up)
+    el.addEventListener('pointermove', move)
+    el.addEventListener('pointerup', end)
+    el.addEventListener('pointercancel', end)
   }
 
   return (
