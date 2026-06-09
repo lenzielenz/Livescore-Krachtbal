@@ -24,6 +24,18 @@ export const Teams: CollectionConfig = {
     delete: ({ req }) => isFederationLevel(req.user),
   },
   hooks: {
+    // Bereken de weergavetitel "naam — reeks" en SLA HEM OP. Dit moet een opgeslagen waarde zijn
+    // (geen afterRead-berekening): bij het laden van relatie-keuzelijsten haalt Payload enkel het
+    // useAsTitle-veld op, niet name/reeks — dus een afterRead die op die velden steunt gaf overal
+    // "Ploeg". Door de titel bij elke wijziging te bewaren, tonen de keuzelijsten de echte naam.
+    beforeChange: [
+      ({ data }) => {
+        const name = typeof data?.name === 'string' && data.name.trim() ? data.name.trim() : 'Ploeg'
+        const r = typeof data?.reeks === 'string' && data.reeks ? reeksNaam(data.reeks as Parameters<typeof reeksNaam>[0]) : ''
+        data.displayTitle = r ? `${name} — ${r}` : name
+        return data
+      },
+    ],
     // Verwijder de spelers van deze ploeg eerst (anders blokkeert de NOT NULL-FK op players.team).
     beforeDelete: [
       async ({ req, id }) => {
@@ -33,23 +45,13 @@ export const Teams: CollectionConfig = {
   },
   fields: [
     {
-      // Weergavetitel "naam — reeks". Een echte (niet-virtuele) kolom omdat Payload een virtueel
-      // veld niet als useAsTitle toelaat; de waarde wordt altijd vers berekend bij het lezen, zodat
-      // gelijknamige ploegen overal (ook in keuzelijsten) onderscheiden worden op reeks.
+      // Weergavetitel "naam — reeks". Een echte (niet-virtuele) opgeslagen kolom: Payload laat een
+      // virtueel veld niet als useAsTitle toe, én keuzelijsten lezen enkel deze kolom. De waarde
+      // wordt bij elke wijziging berekend en bewaard (zie beforeChange hierboven), zodat
+      // gelijknamige ploegen overal — ook in relatie-keuzelijsten — op reeks te onderscheiden zijn.
       name: 'displayTitle',
       type: 'text',
       admin: { hidden: true, readOnly: true },
-      hooks: {
-        afterRead: [
-          ({ data }) => {
-            const name = (data as { name?: unknown })?.name
-            const reeks = (data as { reeks?: unknown })?.reeks
-            const nm = typeof name === 'string' && name.trim() ? name : 'Ploeg'
-            const r = typeof reeks === 'string' && reeks ? reeksNaam(reeks as Parameters<typeof reeksNaam>[0]) : ''
-            return r ? `${nm} — ${r}` : nm
-          },
-        ],
-      },
     },
     {
       name: 'club',
