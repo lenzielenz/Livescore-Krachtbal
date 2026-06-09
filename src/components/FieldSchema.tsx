@@ -232,6 +232,7 @@ export function FieldSchema({
   onTap,
   markers = [],
   onMarkerDragX,
+  guideY,
   heatPoints,
   convPoints,
   ends,
@@ -246,6 +247,8 @@ export function FieldSchema({
   markers?: FieldMarker[]
   /** Versleep-callback voor horizontaal versleepbare markers (geeft de nieuwe x, 0..1). */
   onMarkerDragX?: (id: string, x: number) => void
+  /** Toont een horizontale hulplijn (genormaliseerde y) — tik erop om de werpplaats te verleggen. */
+  guideY?: number
   /** Wanneer gezet: render een dichtheid-heatmap i.p.v. losse punten. */
   heatPoints?: Point[]
   /** Wanneer gezet: render een conversie-heatmap (gevaarzone) van doelpogingen. */
@@ -408,6 +411,15 @@ export function FieldSchema({
 
       {/* Conversie-heatmap (gevaarzone, optioneel) */}
       {convPoints && convPoints.length > 0 && <ConvLayer points={convPoints} h={H} minAttempts={convMinAttempts} />}
+
+      {/* Werpplaats-hulplijn: tik ergens op deze horizontale lijn om de werpplaats te verleggen. */}
+      {typeof guideY === 'number' && (
+        <g pointerEvents="none">
+          <line x1={0} y1={guideY * H} x2={W} y2={guideY * H} stroke="#ffd166" strokeWidth={1} strokeDasharray="3 3" strokeOpacity={0.7} />
+          <path d={`M 5 ${guideY * H} l 3 -3 M 5 ${guideY * H} l 3 3`} stroke="#ffd166" strokeWidth={1.2} fill="none" strokeLinecap="round" strokeOpacity={0.8} />
+          <path d={`M ${W - 5} ${guideY * H} l -3 -3 M ${W - 5} ${guideY * H} l -3 3`} stroke="#ffd166" strokeWidth={1.2} fill="none" strokeLinecap="round" strokeOpacity={0.8} />
+        </g>
+      )}
 
       {/* Markers */}
       {markers.map((m, i) => {
