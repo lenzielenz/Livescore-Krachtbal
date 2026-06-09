@@ -65,7 +65,7 @@
   text-transform: uppercase;
   letter-spacing: 0.03em;
   color: var(--dim);
-  background: #0a1f14;
+  background: #10141a;
 }
 .rang-table tbody tr:last-child td {
   border-bottom: none;
@@ -195,7 +195,7 @@
   flex-wrap: wrap;
   gap: 8px 18px;
   padding: 11px 14px;
-  background: color-mix(in srgb, var(--accent) 6%, #0a1f14);
+  background: color-mix(in srgb, var(--accent) 6%, #10141a);
   font-size: 0.84rem;
   color: var(--dim);
   white-space: normal;

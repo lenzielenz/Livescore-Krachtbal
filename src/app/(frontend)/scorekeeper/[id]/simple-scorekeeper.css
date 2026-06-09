@@ -197,7 +197,7 @@
   padding: 14px 6px;
   font-size: 22px;
   font-weight: 800;
-  color: #04231b;
+  color: #0e1014;
   cursor: pointer;
   display: flex;
   flex-direction: column;
@@ -274,7 +274,7 @@
   cursor: pointer;
   text-decoration: none;
 }
-.ssk-btn.primary { background: var(--accent, #0fe0a6); color: #04231b; border-color: transparent; }
+.ssk-btn.primary { background: var(--accent, #0fe0a6); color: #0e1014; border-color: transparent; }
 .ssk-btn.danger { border-color: #ef476f; color: #ef476f; }
 .ssk-btn:active { transform: translateY(1px); }
 
@@ -408,7 +408,7 @@
   height: 50px;
   border-radius: 50%;
   background: #ffffff;
-  color: #0b2316;
+  color: #14161a;
   font-size: 25px;
   font-weight: 900;
   line-height: 1;
@@ -477,7 +477,7 @@
   margin: 8px 12px 0;
   padding: 9px 13px;
   border-radius: 10px;
-  background: color-mix(in srgb, #f6c544 20%, var(--panel, #0e2a1d));
+  background: color-mix(in srgb, #f6c544 20%, var(--panel, #14161a));
   border: 1px solid color-mix(in srgb, #f6c544 50%, var(--line, #1d3b2c));
   color: var(--txt, #e8f5ee);
   font-size: 0.86rem;
