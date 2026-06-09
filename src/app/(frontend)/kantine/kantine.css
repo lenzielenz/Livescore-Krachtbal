@@ -373,10 +373,18 @@
 .kt-tile-teamstats.home { color: var(--home); }
 .kt-tile-teamstats.away { color: var(--away); }
 .kt-tile-sr {
-  font-size: 0.5em;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+  font-size: 0.52em;
   font-weight: 800;
-  color: var(--dim, #98a1ad);
-  letter-spacing: 0.04em;
+  color: var(--dim-strong, #c2c9d2);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--line));
+  border-radius: 999px;
+  padding: 0.2em 0.6em;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
 }
 /* Middenkolom: score met de speeltijd er pal onder, als één geheel. */
 .kt-tile-mid {
