@@ -22,6 +22,7 @@ const PRIMARY: { href: string; label: string; key: NavSection }[] = [
 const GENERAL: { href: string; label: string; auth?: boolean }[] = [
   { href: '/uitleg', label: '❓ Zo werkt het' },
   { href: '/rangschikking', label: '📊 Stand' },
+  { href: '/superster', label: '⭐ Jeugd-superster' },
   { href: '/tornooi', label: '🏆 Bekerwedstrijden' },
   // Kantinescherm enkel voor ingelogde gebruikers (zo kan je het personaliseren).
   { href: '/kantine', label: '🍺 Kantinescherm', auth: true },
