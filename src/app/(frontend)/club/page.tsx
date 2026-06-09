@@ -215,12 +215,6 @@ export default async function ClubPage({ searchParams }: { searchParams: Promise
 
   return (
     <Shell>
-      <p className="wb-intro">
-        {club?.name ? <><strong>{club.name}</strong> — </> : null}je komende wedstrijden (thuis én uit), per ploeg. Bereid
-        je eigen kant voor (opstelling), claim de wedstrijden die jij doet, en — als thuisploeg — start de wedstrijd voor
-        het wedstrijdblad.
-      </p>
-
       <MyTeamsPicker teams={allTeams} initial={myTeams} />
 
       {mySet.size > 0 && (
