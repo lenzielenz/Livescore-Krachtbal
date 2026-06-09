@@ -51,8 +51,26 @@ const serverURL = process.env.PUBLIC_SERVER_URL || process.env.NEXT_PUBLIC_SERVE
 const originConfig = serverURL ? { serverURL, cors: [serverURL], csrf: [serverURL] } : {}
 // Productie (Postgres): schema via migraties (railway voert `payload migrate` uit bij deploy).
 // Lokaal (SQLite): dev-push maakt het schema automatisch aan.
+//
+// Harde tijdslimieten op de pool. Zónder deze wacht een geblokkeerde query ONEINDIG: laat een
+// afgebroken migratie ooit een lock op een tabel achter, dan blijft élke paginalading die de tabel
+// raakt eeuwig hangen — de site "laadt" maar de response eindigt nooit. Met deze grenzen faalt zo'n
+// query snel en zichtbaar, en ruimt Postgres een achtergebleven transactie zélf op:
+//  - statement_timeout (30s): een enkele query mag max 30s duren (normaal: milliseconden).
+//  - lock_timeout (10s): max 10s wachten op een lock i.p.v. oneindig — vangt lock-strijd bij een
+//    rolling deploy (precies wat de FK-migratie deed hangen: die was na 10s gefaald i.p.v. te hangen).
+//  - idle_in_transaction_session_timeout (60s): dood een transactie die 60s "idle in transaction"
+//    blijft hangen — net de zombie die een gecrashte migratie achterlaat → locks komen vanzelf vrij.
+// LET OP: migraties draaien op dezelfde pool; houd elke migratie ruim onder statement_timeout.
 const db = isPostgres
-  ? postgresAdapter({ pool: { connectionString: databaseUrl } })
+  ? postgresAdapter({
+      pool: {
+        connectionString: databaseUrl,
+        statement_timeout: 30_000,
+        lock_timeout: 10_000,
+        idle_in_transaction_session_timeout: 60_000,
+      },
+    })
   : sqliteAdapter({ client: { url: databaseUrl } })
 
 export default buildConfig({
