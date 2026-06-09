@@ -60,7 +60,7 @@ export function AnalyseClubsManager({ clubs }: { clubs: AnalyseClub[] }) {
   }
 
   return (
-    <div className="anb-panel">
+    <div className="anb-panel" data-tone="home">
       <form className="anb-addrow" onSubmit={(e) => { e.preventDefault(); void add() }}>
         <input className="rang-picker" placeholder="Nieuwe clubnaam" value={name} onChange={(e) => setName(e.target.value)} aria-label="Clubnaam" />
         <button type="submit" className="sk-demo-cta" disabled={busy || !name.trim()}>➕ Club toevoegen</button>

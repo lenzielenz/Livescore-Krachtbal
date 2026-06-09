@@ -31,6 +31,20 @@
   /* Gekleurde gloed-schaduw voor hover-states: tilt kaarten op met sfeer i.p.v. enkel zwart. */
   --glow-accent: 0 18px 46px -10px color-mix(in srgb, var(--accent) 42%, transparent);
   --glow-pop: 0 18px 46px -10px color-mix(in srgb, var(--pop) 42%, transparent);
+  --glow-home: 0 18px 46px -10px color-mix(in srgb, var(--home) 42%, transparent);
+  --glow-away: 0 18px 46px -10px color-mix(in srgb, var(--away) 42%, transparent);
+  /* Motion-schaal — één bron van waarheid voor ritme & easing (de signatuur-overshoot + een zachte
+     standaard). Hergebruikt overal i.p.v. hardgecodeerde cubic-beziers/duraties. */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-soft: cubic-bezier(0.4, 0, 0.2, 1);
+  --dur-1: 0.14s;
+  --dur-2: 0.2s;
+  --dur-3: 0.42s;
+  /* Radius-schaal: controls (knoppen/inputs), kaarten en grote panelen + pills. */
+  --r-control: 11px;
+  --r-card: 14px;
+  --r-card-lg: 16px;
+  --r-pill: 999px;
 }
 
 /* Hoog-contrast modus voor slecht verlichte zalen of fel zonlicht (AUDIT §1):
@@ -83,6 +97,7 @@ body {
 a {
   color: inherit;
   text-decoration: none;
+  transition: color var(--dur-1) var(--ease-soft);
 }
 
 /* ── Gedeelde interactie-polish (premium gevoel, overal) ── */
@@ -101,6 +116,23 @@ button {
 button:not(:disabled):active {
   transform: translateY(1px);
 }
+
+/* ── Toegankelijkheid: respecteer "verminder beweging" (WCAG 2.3.3 / 2.2.2) ──
+   Eén globaal vangnet dat ALLE animaties/transities vrijwel instant maakt voor wie reduce-motion
+   vraagt — inclusief de oneindige pulsen (live-dot, LIVE-badge, skeleton-shine) en elke entree-/
+   scroll-animatie. De KLEUR blijft (var(--pop)/var(--home) is geen animatie), dus 'live' blijft
+   afleesbaar; enkel de beweging verdwijnt. 0.001ms i.p.v. 0 zodat animationend-events nog vuren. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* Premium, slanke scrollbars. */
 * {
   scrollbar-width: thin;
@@ -139,6 +171,17 @@ h3,
 .ts-score,
 .ts-clock-time {
   font-family: var(--font-display), var(--font-body), 'Segoe UI', sans-serif;
+}
+
+/* Display-discipline: strakke tracking + compacte line-height op TEKST-koppen (niet de scores,
+   zodat tabulaire cijfers leesbaar blijven). Geeft de hiërarchie een premium, samenhangende toon. */
+h1,
+h2,
+h3,
+.page-title,
+.section-title {
+  letter-spacing: -0.015em;
+  line-height: 1.15;
 }
 
 /* Gedeeld merk-accent: warme gouden tekst met lichte glans. */

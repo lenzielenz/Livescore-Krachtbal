@@ -76,14 +76,16 @@ export function AnalysePloegenManager({ ploegen, clubs, reeksOptions }: { ploege
 
   if (clubs.length === 0) {
     return (
-      <p className="empty">
-        Maak eerst een <Link href="/analyse/beheer/clubs" style={{ color: 'var(--accent)' }}>club</Link> aan — daar koppel je je ploegen aan.
-      </p>
+      <div className="anb-panel" data-tone="away">
+        <p className="empty">
+          Maak eerst een <Link href="/analyse/beheer/clubs" style={{ color: 'var(--accent)' }}>club</Link> aan — daar koppel je je ploegen aan.
+        </p>
+      </div>
     )
   }
 
   return (
-    <div className="anb-panel">
+    <div className="anb-panel" data-tone="away">
       <form className="anb-addrow wrap" onSubmit={(e) => { e.preventDefault(); void add() }}>
         <input className="rang-picker" placeholder="Ploegnaam" value={name} onChange={(e) => setName(e.target.value)} aria-label="Ploegnaam" />
         <select className="rang-picker" value={reeks} onChange={(e) => setReeks(e.target.value)} aria-label="Reeks">
