@@ -10,8 +10,19 @@ export type Side = 'home' | 'away'
 export type Bracket = 'main' | 'third'
 export type MatchStatus = 'pending' | 'live' | 'finished'
 
-/** Eén gescoorde worp. points: nekworp = 1, rugworp = 2 (telt dubbel). */
-export type Goal = { side: Side; points: 1 | 2; half: number; clock: number; ts: number }
+/** Eén gescoorde worp. points: nekworp = 1, rugworp = 2 (telt dubbel). De scorer-velden zijn
+ *  optioneel: ze worden gevuld wanneer de tornooiploeg aan een echte ploeg (met spelers) gekoppeld
+ *  is, zodat de aantekentafel — net als bij een gewone wedstrijd — de scorer kan vastleggen. */
+export type Goal = {
+  side: Side
+  points: 1 | 2
+  half: number
+  clock: number
+  ts: number
+  scorerId?: number
+  scorerNumber?: number
+  scorerName?: string
+}
 
 /** Verwijzing naar een slot van een andere wedstrijd (waar een winnaar/verliezer naartoe schuift). */
 export type SlotRef = { round: number; position: number; slot: Side; bracket: Bracket }

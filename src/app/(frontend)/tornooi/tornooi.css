@@ -244,6 +244,17 @@
   padding: 9px 12px;
   color: var(--txt);
 }
+.trn-teampick {
+  flex: 1 1 180px;
+  min-width: 0;
+  background: var(--bg);
+  border: 1px solid var(--accent);
+  border-radius: 9px;
+  padding: 9px 8px;
+  color: var(--txt);
+  font: inherit;
+  font-size: 0.85rem;
+}
 .trn-teamclub {
   flex: 0 1 130px;
   min-width: 0;

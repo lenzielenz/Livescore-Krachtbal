@@ -47,6 +47,7 @@ import * as migration_20260608_140000_match_instants from './20260608_140000_mat
 import * as migration_20260608_160000_player_wing from './20260608_160000_player_wing';
 import * as migration_20260608_180000_throw_tapped_by from './20260608_180000_throw_tapped_by';
 import * as migration_20260608_200000_tournament_team_clubs from './20260608_200000_tournament_team_clubs';
+import * as migration_20260609_120000_tournament_team_link from './20260609_120000_tournament_team_link';
 
 export const migrations = [
   {
