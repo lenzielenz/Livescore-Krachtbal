@@ -104,6 +104,13 @@ export function Scorekeeper({
   // (erin); zodra beide gekozen zijn, wisselt het meteen en blijft het paneel open.
   const [subOut, setSubOut] = useState<number | null>(null)
   const [subIn, setSubIn] = useState<number | null>(null)
+  // Positie-overschrijving voor DEZE match (verandert de globale spelersfiche niet): een invaller
+  // erft de positie van wie hij vervangt, zodat de vanger-suggestie blijft kloppen na een wissel.
+  const [posOverride, setPosOverride] = useState<Record<number, string>>({})
+  const posOf = useCallback(
+    (p: RosterPlayer): string | null => posOverride[p.id] ?? p.position ?? null,
+    [posOverride],
+  )
   // Kickoff: de timer is geblokkeerd tot er een ploeg gekozen is die opzet.
   // Tik op de geblokkeerde timer → dit keuzescherm opent.
   const [kickoffOpen, setKickoffOpen] = useState(false)
@@ -600,7 +607,7 @@ export function Scorekeeper({
           const catcher = catcherId ? catchers.find((c) => c.id === catcherId) : undefined
           setPendingCatch(null)
           // Diepe vangst door de achterman → vraag optioneel wie naar hem tikte.
-          if (catcherId && catcher && catcher.position === 'achter') {
+          if (catcherId && catcher && posOf(catcher) === 'achter') {
             setPendingTap({ p, tapCount, playerId, catcherId })
             return
           }
@@ -614,8 +621,8 @@ export function Scorekeeper({
         const dir = poss ? (poss.dir as AttackDir) : 'up'
         const zone = poss ? zoneOf(pendingCatch.p, dir) : 'midden'
         const wingPos = zone === 'links' ? 'vleugel-links' : zone === 'rechts' ? 'vleugel-rechts' : null
-        const wing = wingPos ? catchers.find((c) => c.position === wingPos) : undefined
-        const back = catchers.find((c) => c.position === 'achter')
+        const wing = wingPos ? catchers.find((c) => posOf(c) === wingPos) : undefined
+        const back = catchers.find((c) => posOf(c) === 'achter')
         const depthM = state.match.goalAreaDepth
         const goalY = dir === 'up' ? 1 - goalLineNorm(depthM) : goalLineNorm(depthM)
         const distToGoalM = Math.abs(pendingCatch.p.y - goalY) * totalLengthM(depthM)
@@ -638,7 +645,7 @@ export function Scorekeeper({
                       <button type="button" key={c.id} className="sk-pick-player sk-suggest" onClick={() => submit(c.id)}>
                         <span className="sk-pick-num">{c.shirtNumber}</span>
                         <span className="sk-pick-naam">{firstName(c.name)}</span>
-                        <span className="sk-pick-pos">{posLabel(c.position)}</span>
+                        <span className="sk-pick-pos">{posLabel(posOf(c))}</span>
                       </button>
                     ))}
                   </div>
@@ -738,6 +745,10 @@ export function Scorekeeper({
         // Zodra één veldspeler én één bankspeler gekozen zijn → meteen wisselen, paneel blijft open.
         const doSwap = (outId: number, inId: number) => {
           void act({ action: 'substitute', side: subSide, outPlayerId: outId, inPlayerId: inId })
+          // De invaller erft de positie van wie eruit gaat — enkel voor deze match.
+          const outPlayer = roster.find((p) => p.id === outId)
+          const inheritedPos = outPlayer ? posOf(outPlayer) : null
+          if (inheritedPos) setPosOverride((m) => ({ ...m, [inId]: inheritedPos }))
           setSubOut(null)
           setSubIn(null)
         }
