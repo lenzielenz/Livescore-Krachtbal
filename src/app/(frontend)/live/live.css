@@ -409,7 +409,19 @@
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  min-width: 72px;
+  /* Begrensde middenkolom: hij mag niet uitdijen met de stats en zo de ploegnamen verdringen. */
+  min-width: 64px;
+  max-width: 104px;
+}
+/* Weer als rustige, gecentreerde regel ONDER de wedstrijd (niet meer in de smalle middenkolom),
+   zodat de ploegnamen alle breedte houden. */
+.lb-weather-line {
+  display: flex;
+  justify-content: center;
+  padding: 0 14px 8px 40px;
+}
+.lb-weather-line:empty {
+  display: none;
 }
 .lb-score {
   font-weight: 900;
@@ -420,11 +432,13 @@
 .lb-stats {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  font-size: 0.7rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 1px 6px;
+  font-size: 0.68rem;
   color: var(--dim-strong);
   font-variant-numeric: tabular-nums;
-  white-space: nowrap;
+  text-align: center;
 }
 .lb-stat-sep {
   opacity: 0.5;
@@ -488,7 +502,11 @@
   }
   /* Smaller middenblok (tijd/VS) op de gsm → meer ruimte voor de ploegnamen. */
   .lb-mid {
-    min-width: 52px;
+    min-width: 48px;
+    max-width: 84px;
+  }
+  .lb-weather-line {
+    padding-left: 38px;
   }
   .lb-score {
     font-size: 1.3rem;

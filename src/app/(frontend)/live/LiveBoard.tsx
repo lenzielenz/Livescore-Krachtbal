@@ -279,9 +279,6 @@ export function LiveBoard({
                               </span>
                             </span>
                           )}
-                          {m.weather && (
-                            <RowWeather kickoff={m.kickoff} plaats={m.weather.plaats} lat={m.weather.lat} lng={m.weather.lng} />
-                          )}
                         </span>
                         <span className="lb-team away">
                           <span className="lb-name">{m.away.name}</span>
@@ -289,6 +286,11 @@ export function LiveBoard({
                         </span>
                       </Link>
                     </div>
+                    {m.weather && (m.weather.plaats || m.weather.lat != null) && (
+                      <div className="lb-weather-line">
+                        <RowWeather kickoff={m.kickoff} plaats={m.weather.plaats} lat={m.weather.lat} lng={m.weather.lng} />
+                      </div>
+                    )}
 
                     {open && (
                       <div className="lb-follow">

@@ -71,10 +71,12 @@ export function SiteHeader({ active = null }: { active?: NavSection }) {
           Krachtbal <span className="brand">Live</span>
         </Link>
 
-        {/* Weer leunt tegen de titel (links); de navigatie/menu staat helemaal rechts. */}
-        <WeatherWidget variant="compact" />
+        {/* Weer + navigatie vormen één rechtercluster: zo wikkelen ze samen netjes onder de titel
+            op smalle schermen i.p.v. dat het weer apart blijft hangen. */}
+        <div className="sh-right">
+          <WeatherWidget variant="compact" />
 
-        <nav className="sh-nav">
+          <nav className="sh-nav">
           {PRIMARY.map((l) => (
             <Link key={l.href} href={l.href} className={`sh-link sh-link-${l.key} ${active === l.key ? 'on' : ''}`}>
               {l.label}
@@ -147,6 +149,7 @@ export function SiteHeader({ active = null }: { active?: NavSection }) {
             )}
           </div>
         </nav>
+        </div>
       </div>
     </header>
   )

@@ -29,14 +29,21 @@
   letter-spacing: 0.01em;
   white-space: nowrap;
 }
-/* Navigatie + weerchip vormen samen het rechtercluster; het weer staat uiterst rechts. */
+/* Rechtercluster: weerchip + navigatie/menu. Wikkelt als geheel netjes onder de titel op smal. */
+.sh-right {
+  display: flex;
+  align-items: center;
+  gap: 8px 12px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  margin-left: auto;
+}
 .sh-nav {
   display: flex;
   align-items: center;
   gap: 4px;
   flex-wrap: nowrap;
   justify-content: flex-end;
-  margin-left: auto;
 }
 .sh-inner .wx-mini {
   flex: 0 0 auto;
