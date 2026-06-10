@@ -181,66 +181,89 @@ export async function generateMatchSheetPdf(data: MatchSheetPdfData): Promise<Ui
   line('(O) = effectief deelgenomen', { size: 7.5, color: DIM, gap: 10 })
 
   // ── Scorebord (zoals het papieren blad): vier vakjesbalken + totaal ──────
-  // Per helft en per ploeg een balk van genummerde vakjes. Elk doelpunt vult `points` vakjes
-  // met het RUGNUMMER van de scorer (geen naam): een nekworp (+1) één vak, een rugworp (+2)
-  // activeert TWEE gekleurde vakken. De balk groeit per rij van 25 — ook 50–50 (of meer)
-  // blijft zo compact op het blad staan.
+  // Per helft en per ploeg een balk met voorgedrukte scorecijfers (1, 2, 3 …) die gevuld raken
+  // tot de stand. Het RUGNUMMER van de scorer staat ONDER het vak dat hij scoorde; bij een
+  // rugworp (+2) verbindt een akolade de twee vakken, met het rugnummer eronder — precies zoals
+  // vroeger op papier. De balk groeit per rij van 25, dus ook 50–50 blijft compact.
   section('Scorebord')
   const PER_ROW = 25
   const BOX_W = (RIGHT - LEFT) / PER_ROW
-  const BOX_H = 15
-  const RUG_FILL = rgb(0.84, 0.94, 0.89)
+  const BOX_H = 13
+  const UNDER_H = 18
+  const REACHED_FILL = rgb(0.9, 0.96, 0.93)
   const drawTrack = (label: string, goalsFor: PdfGoal[]) => {
-    const cells: { nr: string; rug: boolean }[] = []
+    // Elke goal markeert zijn vak(ken): positie = lopende score, span = punten (rugworp: 2).
+    const marks: { pos: number; span: number; nr: string }[] = []
+    let p = 0
     for (const g of goalsFor) {
-      const nr = g.shirtNumber > 0 ? String(g.shirtNumber) : '?'
-      for (let k = 0; k < Math.max(1, g.points); k++) cells.push({ nr, rug: g.points >= 2 })
+      const span = Math.max(1, g.points)
+      marks.push({ pos: p + 1, span, nr: g.shirtNumber > 0 ? String(g.shirtNumber) : '?' })
+      p += span
     }
-    const score = cells.length
+    const score = p
     const rows = Math.max(1, Math.ceil(score / PER_ROW))
-    ensure(14 + rows * (BOX_H + 2) + 6)
+    ensure(13 + rows * (BOX_H + UNDER_H + 2) + 4)
     text(label, LEFT, { size: 9, b: true })
     const scoreTxt = String(score)
     text(scoreTxt, RIGHT - bold.widthOfTextAtSize(scoreTxt, 10), { size: 10, b: true })
-    y -= 13
+    y -= 12
     for (let r = 0; r < rows; r++) {
+      const rowTop = y
+      // Vakkenrij: voorgedrukte scorecijfers; gevuld (groen + zwart cijfer) tot de stand.
       for (let c = 0; c < PER_ROW; c++) {
-        const i = r * PER_ROW + c
+        const idx = r * PER_ROW + c + 1
         const x = LEFT + c * BOX_W
-        const cell = i < score ? cells[i] : null
+        const reached = idx <= score
         page.drawRectangle({
           x,
-          y: y - BOX_H,
+          y: rowTop - BOX_H,
           width: BOX_W,
           height: BOX_H,
           borderColor: RULE,
           borderWidth: 0.6,
-          ...(cell?.rug ? { color: RUG_FILL } : {}),
+          ...(reached ? { color: REACHED_FILL } : {}),
         })
-        if (cell) {
-          const t = safe(cell.nr)
-          page.drawText(t, {
-            x: x + BOX_W / 2 - bold.widthOfTextAtSize(t, 8) / 2,
-            y: y - BOX_H + 4.5,
-            size: 8,
-            font: bold,
-            color: INK,
-          })
-        } else {
-          // Leeg vak: het lopende scorecijfer in lichtgrijs — zo lees je de stand zoals op papier.
-          const t = String(i + 1)
-          page.drawText(t, {
-            x: x + BOX_W / 2 - font.widthOfTextAtSize(t, 5.5) / 2,
-            y: y - BOX_H + 5,
-            size: 5.5,
-            font,
-            color: RULE,
-          })
-        }
+        const t = String(idx)
+        const f = reached ? bold : font
+        page.drawText(t, {
+          x: x + BOX_W / 2 - f.widthOfTextAtSize(t, 7) / 2,
+          y: rowTop - BOX_H + 3.5,
+          size: 7,
+          font: f,
+          color: reached ? INK : RULE,
+        })
       }
-      y -= BOX_H + 2
+      // Onder-rij: rugnummer van de scorer onder zijn vak; akolade onder de 2 vakken van een rugworp.
+      const underTop = rowTop - BOX_H
+      const rowFirst = r * PER_ROW + 1
+      const rowLast = (r + 1) * PER_ROW
+      for (const m of marks) {
+        const a = Math.max(m.pos, rowFirst)
+        const b = Math.min(m.pos + m.span - 1, rowLast)
+        if (a > b) continue // valt niet in deze rij
+        const x1 = LEFT + ((a - rowFirst) % PER_ROW) * BOX_W + 1.5
+        const x2 = LEFT + ((b - rowFirst) % PER_ROW + 1) * BOX_W - 1.5
+        const mid = (x1 + x2) / 2
+        if (m.span >= 2) {
+          // Akolade-beugel: twee pootjes + dwarslijn + middentik richting het rugnummer.
+          const by = underTop - 4
+          page.drawLine({ start: { x: x1, y: underTop - 1.5 }, end: { x: x1, y: by }, thickness: 0.8, color: INK })
+          page.drawLine({ start: { x: x1, y: by }, end: { x: x2, y: by }, thickness: 0.8, color: INK })
+          page.drawLine({ start: { x: x2, y: underTop - 1.5 }, end: { x: x2, y: by }, thickness: 0.8, color: INK })
+          page.drawLine({ start: { x: mid, y: by }, end: { x: mid, y: by - 2.5 }, thickness: 0.8, color: INK })
+        }
+        const t = safe(m.nr)
+        page.drawText(t, {
+          x: mid - bold.widthOfTextAtSize(t, 8) / 2,
+          y: underTop - 13,
+          size: 8,
+          font: bold,
+          color: INK,
+        })
+      }
+      y = rowTop - BOX_H - UNDER_H
     }
-    y -= 6
+    y -= 5
   }
   const goalsOf = (side: 'home' | 'away', half: 1 | 2) =>
     (data.goals ?? []).filter((g) => g.side === side && (half === 1 ? g.half <= 1 : g.half >= 2))
@@ -255,7 +278,7 @@ export async function generateMatchSheetPdf(data: MatchSheetPdfData): Promise<Ui
   const totTxt = `${data.score?.home ?? totHome} – ${data.score?.away ?? totAway}`
   text(totTxt, RIGHT - bold.widthOfTextAtSize(safe(totTxt), 11), { size: 11, b: true })
   y -= 15
-  line('1 vak = nekworp (+1) · 2 gekleurde vakken = rugworp (+2) · cijfer in het vak = rugnummer van de scorer', {
+  line('Vakjes = lopende score (gevuld tot de stand) · rugnummer van de scorer staat onder zijn vak · akolade onder 2 vakken = rugworp (+2)', {
     size: 7.5,
     color: DIM,
     gap: 12,
