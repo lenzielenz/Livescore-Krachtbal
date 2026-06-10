@@ -46,19 +46,20 @@ describe('generateMatchSheetPdf', () => {
     expect(doc.getPageCount()).toBeGreaterThan(1)
   })
 
-  it('paginaleert een lange doelpuntenlijst mét tabelkop op elke pagina', async () => {
-    const goals = Array.from({ length: 120 }, (_, i) => ({
-      half: i < 60 ? 1 : 2,
-      gameClock: i * 10,
-      side: (i % 2 === 0 ? 'home' : 'away') as 'home' | 'away',
+  it('een 50–50 ontploft het scorebord niet (compacte vakjesbalken, max 2 pagina’s)', async () => {
+    // 25 rugworpen per ploeg per match = 50 punten per kant.
+    const goals = Array.from({ length: 50 }, (_, i) => ({
+      half: (i % 2 === 0 ? 1 : 2) as 1 | 2,
+      gameClock: i * 30,
+      side: (i < 25 ? 'home' : 'away') as 'home' | 'away',
       shirtNumber: (i % 8) + 1,
       playerName: `Speler ${i + 1}`,
-      points: (i % 3 === 0 ? 2 : 1) as 1 | 2,
-      type: (i % 3 === 0 ? 'rug' : 'nek') as 'rug' | 'nek',
+      points: 2 as const,
+      type: 'rug' as const,
     }))
-    const bytes = await generateMatchSheetPdf({ ...base, goals })
+    const bytes = await generateMatchSheetPdf({ ...base, goals, score: { home: 50, away: 50 } })
     const doc = await PDFDocument.load(bytes)
-    expect(doc.getPageCount()).toBeGreaterThan(1)
+    expect(doc.getPageCount()).toBeLessThanOrEqual(2)
   })
 
   it('verwerkt een blad zonder doelpunten/vervangingen (lege secties, geen crash)', async () => {
