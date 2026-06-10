@@ -49,11 +49,25 @@ export async function getOrCreateMatchSheet(payload: Payload, matchId: number | 
     depth: 0,
   })
   if (existing.docs[0]) return existing.docs[0]
-  return payload.create({
-    collection: 'matchsheets',
-    data: { match: id, status: 'concept' },
-    overrideAccess: true,
-  })
+  try {
+    return await payload.create({
+      collection: 'matchsheets',
+      data: { match: id, status: 'concept' },
+      overrideAccess: true,
+    })
+  } catch (err) {
+    // Race: de thuis- en uitkaart van de opstellingpagina maken het blad tegelijk aan. `match`
+    // is uniek, dus de verliezer krijgt een validatiefout ("The following field is invalid:
+    // match") — haal dan gewoon het blad van de winnaar op i.p.v. de fout door te geven.
+    const retry = await payload.find({
+      collection: 'matchsheets',
+      where: { match: { equals: id } },
+      limit: 1,
+      depth: 0,
+    })
+    if (retry.docs[0]) return retry.docs[0]
+    throw err
+  }
 }
 
 /** Laatst-gekende opstelling van een ploeg (player-ids), als startpunt-voorstel. */
