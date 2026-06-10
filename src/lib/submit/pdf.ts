@@ -180,41 +180,86 @@ export async function generateMatchSheetPdf(data: MatchSheetPdfData): Promise<Ui
   }
   line('(O) = effectief deelgenomen', { size: 7.5, color: DIM, gap: 10 })
 
-  // ── Doelpunten (tabel met lopende stand) ─────────────────────────────────
-  section('Doelpunten')
-  if (!data.goals || data.goals.length === 0) {
-    line('Geen doelpunten genoteerd.', { color: DIM })
-  } else {
-    const COLS = { helft: LEFT, tijd: LEFT + 34, ploeg: LEFT + 70, speler: LEFT + 215, worp: LEFT + 380, ptn: LEFT + 432, stand: LEFT + 468 }
-    const header = () => {
-      ensure(13)
-      text('Helft', COLS.helft, { size: 8, b: true, color: DIM })
-      text('Tijd', COLS.tijd, { size: 8, b: true, color: DIM })
-      text('Ploeg', COLS.ploeg, { size: 8, b: true, color: DIM })
-      text('Speler', COLS.speler, { size: 8, b: true, color: DIM })
-      text('Worp', COLS.worp, { size: 8, b: true, color: DIM })
-      text('Ptn', COLS.ptn, { size: 8, b: true, color: DIM })
-      text('Stand', COLS.stand, { size: 8, b: true, color: DIM })
-      y -= 11
+  // ── Scorebord (zoals het papieren blad): vier vakjesbalken + totaal ──────
+  // Per helft en per ploeg een balk van genummerde vakjes. Elk doelpunt vult `points` vakjes
+  // met het RUGNUMMER van de scorer (geen naam): een nekworp (+1) één vak, een rugworp (+2)
+  // activeert TWEE gekleurde vakken. De balk groeit per rij van 25 — ook 50–50 (of meer)
+  // blijft zo compact op het blad staan.
+  section('Scorebord')
+  const PER_ROW = 25
+  const BOX_W = (RIGHT - LEFT) / PER_ROW
+  const BOX_H = 15
+  const RUG_FILL = rgb(0.84, 0.94, 0.89)
+  const drawTrack = (label: string, goalsFor: PdfGoal[]) => {
+    const cells: { nr: string; rug: boolean }[] = []
+    for (const g of goalsFor) {
+      const nr = g.shirtNumber > 0 ? String(g.shirtNumber) : '?'
+      for (let k = 0; k < Math.max(1, g.points); k++) cells.push({ nr, rug: g.points >= 2 })
     }
-    header()
-    const stand = { home: 0, away: 0 }
-    for (const g of data.goals) {
-      if (y - 12 < BOTTOM) {
-        newPage()
-        header()
+    const score = cells.length
+    const rows = Math.max(1, Math.ceil(score / PER_ROW))
+    ensure(14 + rows * (BOX_H + 2) + 6)
+    text(label, LEFT, { size: 9, b: true })
+    const scoreTxt = String(score)
+    text(scoreTxt, RIGHT - bold.widthOfTextAtSize(scoreTxt, 10), { size: 10, b: true })
+    y -= 13
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < PER_ROW; c++) {
+        const i = r * PER_ROW + c
+        const x = LEFT + c * BOX_W
+        const cell = i < score ? cells[i] : null
+        page.drawRectangle({
+          x,
+          y: y - BOX_H,
+          width: BOX_W,
+          height: BOX_H,
+          borderColor: RULE,
+          borderWidth: 0.6,
+          ...(cell?.rug ? { color: RUG_FILL } : {}),
+        })
+        if (cell) {
+          const t = safe(cell.nr)
+          page.drawText(t, {
+            x: x + BOX_W / 2 - bold.widthOfTextAtSize(t, 8) / 2,
+            y: y - BOX_H + 4.5,
+            size: 8,
+            font: bold,
+            color: INK,
+          })
+        } else {
+          // Leeg vak: het lopende scorecijfer in lichtgrijs — zo lees je de stand zoals op papier.
+          const t = String(i + 1)
+          page.drawText(t, {
+            x: x + BOX_W / 2 - font.widthOfTextAtSize(t, 5.5) / 2,
+            y: y - BOX_H + 5,
+            size: 5.5,
+            font,
+            color: RULE,
+          })
+        }
       }
-      stand[g.side] += g.points
-      text(`${g.half}e`, COLS.helft, { size: 9 })
-      text(mmss(g.gameClock), COLS.tijd, { size: 9 })
-      text(clip(g.side === 'home' ? data.homeTeam : data.awayTeam, 28), COLS.ploeg, { size: 9 })
-      text(`#${g.shirtNumber} ${clip(g.playerName, 26)}`, COLS.speler, { size: 9 })
-      text(g.type === 'rug' ? 'rugworp' : g.type === 'nek' ? 'nekworp' : `+${g.points}`, COLS.worp, { size: 9 })
-      text(`+${g.points}`, COLS.ptn, { size: 9 })
-      text(`${stand.home}–${stand.away}`, COLS.stand, { size: 9, b: true })
-      y -= 12
+      y -= BOX_H + 2
     }
+    y -= 6
   }
+  const goalsOf = (side: 'home' | 'away', half: 1 | 2) =>
+    (data.goals ?? []).filter((g) => g.side === side && (half === 1 ? g.half <= 1 : g.half >= 2))
+  drawTrack(`1e helft — ${clip(data.homeTeam, 34)}`, goalsOf('home', 1))
+  drawTrack(`1e helft — ${clip(data.awayTeam, 34)}`, goalsOf('away', 1))
+  drawTrack(`2e helft — ${clip(data.homeTeam, 34)}`, goalsOf('home', 2))
+  drawTrack(`2e helft — ${clip(data.awayTeam, 34)}`, goalsOf('away', 2))
+  const totHome = (data.goals ?? []).filter((g) => g.side === 'home').reduce((s, g) => s + g.points, 0)
+  const totAway = (data.goals ?? []).filter((g) => g.side === 'away').reduce((s, g) => s + g.points, 0)
+  ensure(16)
+  text('Totaal', LEFT, { size: 10, b: true })
+  const totTxt = `${data.score?.home ?? totHome} – ${data.score?.away ?? totAway}`
+  text(totTxt, RIGHT - bold.widthOfTextAtSize(safe(totTxt), 11), { size: 11, b: true })
+  y -= 15
+  line('1 vak = nekworp (+1) · 2 gekleurde vakken = rugworp (+2) · cijfer in het vak = rugnummer van de scorer', {
+    size: 7.5,
+    color: DIM,
+    gap: 12,
+  })
 
   // ── Vervangingen (reglement §9) ──────────────────────────────────────────
   section('Vervangingen')
