@@ -39,6 +39,10 @@ export const Users: CollectionConfig = {
     // rechtstreeks uit het ingelogde user-object kunnen lezen (geen extra opzoeking per pagina).
     // De nestede updates wijzigen de bronvelden niet, dus deze hook loopt daarbij meteen leeg
     // (geen oneindige lus).
+    // BELANGRIJK: geef `req` door aan élke nestede operatie. Zonder req draait de nestede update
+    // in een eigen transactie, en die blokkeert op Postgres: de FK-check op users_rels wil een
+    // lock op de rij van de deler, die nog vast zit in de open buitenste transactie → wederzijds
+    // wachten tot de lock-timeout ("Failed query" bij het bewaren, inverses nooit geschreven).
     afterChange: [
       async ({ doc, previousDoc, req }) => {
         const ids = (v: unknown): number[] =>
@@ -59,7 +63,7 @@ export const Users: CollectionConfig = {
           const eraf = voor.filter((x) => !na.includes(x))
           if (!erbij.length && !eraf.length) continue
           for (const uid of [...erbij, ...eraf]) {
-            const u = await req.payload.findByID({ collection: 'users', id: uid, depth: 0 }).catch(() => null)
+            const u = await req.payload.findByID({ collection: 'users', id: uid, depth: 0, req }).catch(() => null)
             if (!u) continue
             const huidig = ids((u as unknown as Record<string, unknown>)[doel])
             const nieuw = erbij.includes(uid)
@@ -71,7 +75,7 @@ export const Users: CollectionConfig = {
                 : null
             if (nieuw) {
               await req.payload
-                .update({ collection: 'users', id: uid, data: { [doel]: nieuw }, overrideAccess: true })
+                .update({ collection: 'users', id: uid, data: { [doel]: nieuw }, overrideAccess: true, req })
                 .catch(() => {})
             }
           }
