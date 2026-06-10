@@ -1,6 +1,7 @@
 import type { Payload } from 'payload'
 
 import { canAnalyse, hasRole } from './access'
+import { analyseEditOwners } from './analyse-access'
 import { authUser, type AuthedUser } from './api-auth'
 
 // Gedeelde autorisatie voor de analyse-beheerroutes (clubs/ploegen/spelers CRUD). Analyse-entiteiten
@@ -23,8 +24,9 @@ const relId = (rel: unknown): number | string | null =>
 
 /**
  * Mag deze gebruiker deze analyse-entiteit (club/ploeg/speler) bewerken of verwijderen? Enkel een
- * échte analyse-entiteit (`analyseOnly`) die van de beller is — of de admin (mag alle). Geeft false
- * voor competitie-records, zodat de analyse-routes nooit competitie-data kunnen muteren.
+ * échte analyse-entiteit (`analyseOnly`) die van de beller is — of van iemand die hem "meedoen &
+ * aanpassen" toekende — of de admin (mag alle). Geeft false voor competitie-records, zodat de
+ * analyse-routes nooit competitie-data kunnen muteren.
  */
 export function ownsAnalyse(
   doc: { analyseOnly?: boolean | null; analyseOwner?: unknown } | null | undefined,
@@ -33,6 +35,6 @@ export function ownsAnalyse(
   if (!doc || !doc.analyseOnly) return false
   if (hasRole(user, 'admin')) return true
   const owner = relId(doc.analyseOwner)
-  const me = (user as { id?: number | string } | null)?.id
-  return owner != null && me != null && String(owner) === String(me)
+  if (owner == null) return false
+  return analyseEditOwners(user).some((x) => String(x) === String(owner))
 }

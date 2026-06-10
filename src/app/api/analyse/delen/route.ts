@@ -1,9 +1,10 @@
 import { canAnalyse } from '@/lib/access'
 import { getPayloadClient } from '@/lib/payload-client'
 
-// Analyse delen: beheer met wie je jouw analyse-data deelt (users.analyseDeeltMet).
-// GET → keuzelijst (alle accounts behalve jezelf) + huidige selectie; POST → selectie bewaren.
-// De inverse (analyseToegangTot bij de ontvangers) wordt door de Users-hook bijgehouden.
+// Analyse delen: beheer met wie je jouw analyse-data deelt — per account in twee gradaties:
+// alleen lezen (analyseDeeltMet) of meedoen & aanpassen (analyseDeeltBewerkMet).
+// GET → keuzelijst (alle accounts behalve jezelf) + huidige selecties; POST → selecties bewaren.
+// De inverses (analyseToegangTot/analyseBewerkTot bij de ontvangers) houdt de Users-hook bij.
 
 const relIds = (v: unknown): number[] =>
   Array.isArray(v)
@@ -30,7 +31,8 @@ export async function GET(req: Request) {
     return Response.json({
       ok: true,
       users,
-      shared: relIds((user as { analyseDeeltMet?: unknown }).analyseDeeltMet),
+      lezen: relIds((user as { analyseDeeltMet?: unknown }).analyseDeeltMet),
+      bewerken: relIds((user as { analyseDeeltBewerkMet?: unknown }).analyseDeeltBewerkMet),
     })
   } catch (err) {
     return Response.json({ error: (err as Error).message }, { status: 400 })
@@ -38,7 +40,7 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  let body: { userIds?: unknown }
+  let body: { lezen?: unknown; bewerken?: unknown; userIds?: unknown }
   try {
     body = await req.json()
   } catch {
@@ -49,14 +51,29 @@ export async function POST(req: Request) {
     const { user } = await payload.auth({ headers: req.headers })
     if (!user) return Response.json({ error: 'Niet ingelogd.' }, { status: 401 })
     if (!canAnalyse(user)) return Response.json({ error: 'Geen analyse-toegang.' }, { status: 403 })
-    const ids = [...new Set(relIds(body.userIds))].filter((id) => String(id) !== String(user.id))
+
+    const zonderMij = (ids: number[]) => [...new Set(ids)].filter((id) => String(id) !== String(user.id))
+    // Backwards compatible: een oude client die enkel userIds stuurt, deelt alleen-lezen.
+    const bewerkenRuw = zonderMij(relIds(body.bewerken))
+    const lezenRuw = zonderMij(relIds(body.lezen ?? body.userIds)).filter((id) => !bewerkenRuw.includes(id))
+
     // Enkel bestaande accounts bewaren.
-    const found = ids.length
-      ? await payload.find({ collection: 'users', where: { id: { in: ids } }, depth: 0, limit: ids.length, overrideAccess: true })
+    const alle = [...lezenRuw, ...bewerkenRuw]
+    const found = alle.length
+      ? await payload.find({ collection: 'users', where: { id: { in: alle } }, depth: 0, limit: alle.length, overrideAccess: true })
       : { docs: [] as { id: number }[] }
-    const geldig = found.docs.map((u) => Number(u.id))
-    await payload.update({ collection: 'users', id: user.id, data: { analyseDeeltMet: geldig }, user, overrideAccess: false })
-    return Response.json({ ok: true, shared: geldig })
+    const bestaat = new Set(found.docs.map((u) => Number(u.id)))
+    const lezen = lezenRuw.filter((id) => bestaat.has(id))
+    const bewerken = bewerkenRuw.filter((id) => bestaat.has(id))
+
+    await payload.update({
+      collection: 'users',
+      id: user.id,
+      data: { analyseDeeltMet: lezen, analyseDeeltBewerkMet: bewerken },
+      user,
+      overrideAccess: false,
+    })
+    return Response.json({ ok: true, lezen, bewerken })
   } catch (err) {
     return Response.json({ error: (err as Error).message }, { status: 400 })
   }

@@ -277,10 +277,15 @@ export interface User {
    */
   official?: (number | null) | Official;
   /**
-   * Deze accounts zien jouw analysewedstrijden en -rapporten mee.
+   * Deze accounts zien jouw analysewedstrijden en -rapporten mee (alleen-lezen).
    */
   analyseDeeltMet?: (number | User)[] | null;
+  /**
+   * Deze accounts mogen jouw analyses ook aantekenen en aanpassen.
+   */
+  analyseDeeltBewerkMet?: (number | User)[] | null;
   analyseToegangTot?: (number | User)[] | null;
+  analyseBewerkTot?: (number | User)[] | null;
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -1738,7 +1743,9 @@ export interface UsersSelect<T extends boolean = true> {
   trainingAccess?: T;
   official?: T;
   analyseDeeltMet?: T;
+  analyseDeeltBewerkMet?: T;
   analyseToegangTot?: T;
+  analyseBewerkTot?: T;
   updatedAt?: T;
   createdAt?: T;
   email?: T;

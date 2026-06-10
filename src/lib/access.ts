@@ -52,11 +52,15 @@ export function isFederationLevel(user: unknown): boolean {
   return hasRole(user, 'admin', 'federatie')
 }
 
-/** Mag deze gebruiker de analysemodule gebruiken? Admin altijd; anderen als de admin
- * hen analyse-toegang gaf (users.analyseAccess). */
+/** Mag deze gebruiker de analysemodule gebruiken? Admin altijd; anderen als de admin hen
+ * analyse-toegang gaf (users.analyseAccess) — of zodra iemand zijn analyses met hen deelt
+ * (lezen of meedoen): delen moet volstaan om het aan de andere kant ook écht te zien. */
 export function canAnalyse(user: unknown): boolean {
   if (hasRole(user, 'admin')) return true
-  return Boolean((user as { analyseAccess?: unknown } | null)?.analyseAccess)
+  const u = user as { analyseAccess?: unknown; analyseToegangTot?: unknown; analyseBewerkTot?: unknown } | null
+  if (u?.analyseAccess) return true
+  const heeft = (v: unknown) => Array.isArray(v) && v.length > 0
+  return heeft(u?.analyseToegangTot) || heeft(u?.analyseBewerkTot)
 }
 
 /** Mag deze gebruiker het trainingsluik (progressie + aanwezigheid) gebruiken? Admin/federatie

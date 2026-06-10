@@ -83,7 +83,7 @@ select.rang-picker {
   margin: 8px 0 0;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 4px 14px;
 }
 .an-delen-row {
@@ -92,10 +92,25 @@ select.rang-picker {
   gap: 8px;
   padding: 6px 4px;
   font-size: 0.9rem;
-  cursor: pointer;
   border-radius: 8px;
 }
 .an-delen-row:hover { background: rgba(255, 255, 255, 0.04); }
+/* Per account twee opties: 👁 lezen of ✏️ meedoen (aanpasbaar). */
+.an-delen-row-keuze { justify-content: space-between; }
+.an-delen-naam { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.an-delen-opties { display: flex; gap: 6px; flex-shrink: 0; }
+.an-delen-opt {
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--dim);
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.an-delen-opt.on { background: var(--accent); border-color: var(--accent); color: #06140d; }
+.an-delen-opt.bewerken.on { background: #f59e0b; border-color: #f59e0b; }
 .an-delen-hint { margin: 0 0 8px; font-size: 0.82rem; color: var(--dim); }
 .an-delen-error { margin: 6px 0; font-size: 0.84rem; color: #e0533d; }
 .an-delen-save {

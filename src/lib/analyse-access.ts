@@ -11,16 +11,29 @@ import { isFederationLevel } from './access'
 // zit mee in het ingelogde user-object, dus alle Where-helpers hieronder kunnen ze zonder extra
 // opzoeking meenemen.
 
-/** Alle analyse-eigenaars die deze gebruiker mag zien: zichzelf + wie met hem/haar deelt. */
-export function analyseOwners(user: unknown): (number | string)[] {
-  const own = (user as { id?: number | string } | null)?.id
-  const raw = (user as { analyseToegangTot?: unknown } | null)?.analyseToegangTot
-  const gedeeld = Array.isArray(raw)
+const relIds = (raw: unknown): (number | string)[] =>
+  Array.isArray(raw)
     ? raw
         .map((x) => (x && typeof x === 'object' ? (x as { id?: number | string }).id : (x as number | string)))
         .filter((x): x is number | string => x != null)
     : []
-  return own != null ? [own, ...gedeeld] : gedeeld
+
+/** Alle analyse-eigenaars die deze gebruiker mag ZIEN: zichzelf + wie met hem/haar deelt
+ * (alleen-lezen én meedoen — meedoeners zien uiteraard ook). */
+export function analyseOwners(user: unknown): (number | string)[] {
+  const own = (user as { id?: number | string } | null)?.id
+  const kijken = relIds((user as { analyseToegangTot?: unknown } | null)?.analyseToegangTot)
+  const bewerken = relIds((user as { analyseBewerkTot?: unknown } | null)?.analyseBewerkTot)
+  const gedeeld = [...new Set([...kijken, ...bewerken])]
+  return own != null ? [own, ...gedeeld.filter((x) => String(x) !== String(own))] : gedeeld
+}
+
+/** De analyse-eigenaars wiens data deze gebruiker mag BEWERKEN: zichzelf + wie "meedoen &
+ * aanpassen" toekende. Alleen-lezen-delers horen hier bewust NIET bij. */
+export function analyseEditOwners(user: unknown): (number | string)[] {
+  const own = (user as { id?: number | string } | null)?.id
+  const bewerken = relIds((user as { analyseBewerkTot?: unknown } | null)?.analyseBewerkTot)
+  return own != null ? [own, ...bewerken.filter((x) => String(x) !== String(own))] : bewerken
 }
 
 // Retourneert een Where-fragment dat je in de `and` van een matches-query duwt, of `null` als er

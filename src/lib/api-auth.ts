@@ -7,6 +7,7 @@
 import type { Payload } from 'payload'
 
 import { canAnalyse, hasRole, isFederationLevel, userClubId, userOfficialId, type UserRole } from './access'
+import { analyseEditOwners } from './analyse-access'
 
 export type AuthedUser = { id: number | string; roles?: UserRole[] | null } & Record<string, unknown>
 
@@ -69,10 +70,11 @@ export async function mayScoreMatch(
   const match = await payload.findByID({ collection: 'matches', id: matchId, depth: 0 }).catch(() => null)
   if (match && (match as { isDemo?: boolean }).isDemo) return true
   if (!user) return false
-  // Analyse-opname: de eigenaar (met analyse-toegang) tekent z'n eigen analysewedstrijd zelf aan.
+  // Analyse-opname: de eigenaar (met analyse-toegang) tekent z'n eigen analysewedstrijd aan —
+  // of iemand aan wie de eigenaar "meedoen & aanpassen" toekende.
   if (match && (match as { analyseOnly?: boolean }).analyseOnly && canAnalyse(user)) {
     const ownerId = relId((match as { analyseOwner?: unknown }).analyseOwner)
-    if (ownerId != null && String(ownerId) === String(user.id)) return true
+    if (ownerId != null && analyseEditOwners(user).some((x) => String(x) === String(ownerId))) return true
   }
   if (hasRole(user, 'scheidsrechter')) {
     const sheets = await payload

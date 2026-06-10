@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useEffect, useState } from 'react'
 
 import { WeatherWidget } from '@/components/WeatherWidget'
+import { canAnalyse as canAnalyseUser } from '@/lib/access'
 import { PROFILES } from '@/lib/profiles'
 import './site-header.css'
 
@@ -48,10 +49,10 @@ export function SiteHeader({ active = null }: { active?: NavSection }) {
         const has = (r: string) => Array.isArray(roles) && roles.includes(r)
         const fed = has('admin') || has('federatie')
         const club = has('club-beheerder')
-        // Gelijklopend met canAnalyse: enkel admin of een account met analyseAccess (federatie niet).
-        const analyse = has('admin') || Boolean(u?.analyseAccess)
         setLoggedIn(Boolean(u))
-        setCanAnalyse(analyse)
+        // Dezelfde regel als canAnalyse in lib/access: admin, eigen analyse-toegang, of iemand
+        // die zijn analyses met dit account deelt (anders vindt de gedeelde persoon het menu niet).
+        setCanAnalyse(canAnalyseUser(u))
         setCanTraining(fed || club || Boolean(u?.trainingAccess))
       })
       .catch(() => {})
