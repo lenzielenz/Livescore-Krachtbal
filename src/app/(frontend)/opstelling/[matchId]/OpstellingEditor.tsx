@@ -24,6 +24,7 @@ type RosterResponse = {
   players: RosterEntry[]
   current: { player?: number; rugnummer?: number }[]
   favorites?: number[]
+  confirmed?: boolean
   error?: string
 }
 
@@ -44,6 +45,9 @@ export function OpstellingEditor({
   // duidelijk "klaar & bewaard" tonen i.p.v. de verwarrende technische status).
   const [savedSet, setSavedSet] = useState<Set<number>>(new Set())
   const [favorites, setFavorites] = useState<number[]>([])
+  // Bevestigd ("vergrendeld"): de opstelling is door de club als definitief aangeduid. Zichtbaar
+  // verschil + de rijen zijn niet meer aanvinkbaar tot je ontgrendelt.
+  const [confirmed, setConfirmed] = useState(false)
   const [showBlocked, setShowBlocked] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
@@ -61,6 +65,7 @@ export function OpstellingEditor({
     else setSelected(new Set(json.players?.filter((p) => p.suggested).map((p) => p.id) ?? []))
     // Het reeds bewaarde (de huidige opstelling op het blad) is de referentie voor "bewaard?".
     setSavedSet(new Set(current))
+    setConfirmed(Boolean(json.confirmed))
   }, [matchId, side])
 
   useEffect(() => {
@@ -68,6 +73,7 @@ export function OpstellingEditor({
   }, [load])
 
   const toggle = (id: number) => {
+    if (confirmed) return // vergrendeld: eerst ontgrendelen om te wijzigen
     setSelected((prev) => {
       const next = new Set(prev)
       if (next.has(id)) next.delete(id)
@@ -76,7 +82,8 @@ export function OpstellingEditor({
     })
   }
 
-  const save = async (asFavorite: boolean) => {
+  // `confirm`: undefined laat de bevestiging ongemoeid; true vergrendelt, false ontgrendelt.
+  const save = async (asFavorite: boolean, confirm?: boolean) => {
     if (!data) return
     setSaving(true)
     setMsg(null)
@@ -86,14 +93,22 @@ export function OpstellingEditor({
     const res = await fetch(`/api/matchsheet/${matchId}/lineup`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ side, players, saveFavorites: asFavorite }),
+      body: JSON.stringify({ side, players, saveFavorites: asFavorite, confirmed: confirm }),
     })
     const json = await res.json()
     setSaving(false)
     if (res.ok) {
       if (asFavorite) setFavorites(players.map((p) => p.player))
       setSavedSet(new Set(selected))
-      const ok = asFavorite ? `Bewaard én onthouden als vaste opstelling (${json.saved}).` : `Bewaard (${json.saved} spelers).`
+      if (typeof confirm === 'boolean') setConfirmed(confirm)
+      const ok =
+        confirm === true
+          ? `Opstelling bevestigd en vergrendeld (${json.saved} spelers).`
+          : confirm === false
+            ? 'Opstelling ontgrendeld — je kan ze weer aanpassen.'
+            : asFavorite
+              ? `Bewaard én onthouden als vaste opstelling (${json.saved}).`
+              : `Bewaard (${json.saved} spelers).`
       setMsg(ok)
       toast('success', ok)
     } else {
@@ -111,39 +126,44 @@ export function OpstellingEditor({
   const favSet = new Set(favorites)
   const sameAsFav = favorites.length > 0 && favorites.length === selected.size && favorites.every((id) => selected.has(id))
 
+  const enough = selected.size >= LINEUP_MIN
+
   return (
-    <section className={`wb-card side-${side}`}>
+    <section className={`wb-card side-${side}${confirmed ? ' ops-locked' : ''}`}>
       <h2>{label}</h2>
       <p className="wb-sub">
         Categorie {data.category} · {selected.size} geselecteerd
       </p>
 
-      {/* Duidelijke klaar-indicator: genoeg spelers + bewaard = groen "klaar". Zo weet je zeker dat
-          het in orde is, i.p.v. te twijfelen bij de technische status. */}
-      {(() => {
-        const enough = selected.size >= LINEUP_MIN
-        const dirty = !setsEqual(selected, savedSet)
-        if (enough && !dirty) {
-          return <div className="ops-ready ok">✓ Opstelling klaar en bewaard · {selected.size} spelers</div>
-        }
-        if (enough && dirty) {
-          return <div className="ops-ready todo">{selected.size} spelers gekozen — tik op “Opstelling bewaren” om te bevestigen.</div>
-        }
-        return <div className="ops-ready need">Nog spelers nodig: {selected.size}/{LINEUP_MIN} minimum.</div>
-      })()}
+      {/* Bevestigd? Dan een duidelijk vergrendeld-signaal (los van "bewaard"). Anders de gewone
+          klaar-indicator: genoeg spelers + bewaard = groen "klaar". */}
+      {confirmed ? (
+        <div className="ops-ready locked">🔒 Opstelling bevestigd en vergrendeld · {selected.size} spelers</div>
+      ) : (
+        (() => {
+          const dirty = !setsEqual(selected, savedSet)
+          if (enough && !dirty) {
+            return <div className="ops-ready ok">✓ Opstelling klaar en bewaard · {selected.size} spelers</div>
+          }
+          if (enough && dirty) {
+            return <div className="ops-ready todo">{selected.size} spelers gekozen — tik op “Opstelling bewaren” om te bevestigen.</div>
+          }
+          return <div className="ops-ready need">Nog spelers nodig: {selected.size}/{LINEUP_MIN} minimum.</div>
+        })()
+      )}
 
-      {/* Snelacties: in één klik de vaste opstelling invullen of alles wissen. */}
+      {/* Snelacties: in één klik de vaste opstelling invullen of alles wissen. Vergrendeld = uit. */}
       <div className="ops-quick">
         <button
           type="button"
           className="ops-quick-btn"
-          disabled={favorites.length === 0}
+          disabled={confirmed || favorites.length === 0}
           onClick={() => setSelected(new Set(favorites))}
           title={favorites.length === 0 ? 'Nog geen vaste opstelling bewaard' : 'Vul de onthouden vaste opstelling in'}
         >
           ★ Vaste opstelling{favorites.length ? ` (${favorites.length})` : ''}
         </button>
-        <button type="button" className="ops-quick-btn" disabled={selected.size === 0} onClick={() => setSelected(new Set())}>
+        <button type="button" className="ops-quick-btn" disabled={confirmed || selected.size === 0} onClick={() => setSelected(new Set())}>
           Wissen
         </button>
       </div>
@@ -193,20 +213,38 @@ export function OpstellingEditor({
         “Mijn club”. Na keuring door de federatie verschijnt hij hier vanzelf.
       </p>
 
-      <div className="ops-save">
-        <button type="button" onClick={() => save(false)} disabled={saving} className="wb-btn wb-btn-primary">
-          {saving ? 'Bewaren…' : 'Opstelling bewaren'}
-        </button>
-        <button
-          type="button"
-          onClick={() => save(true)}
-          disabled={saving || selected.size === 0 || sameAsFav}
-          className="wb-btn"
-          title="Onthoud deze opstelling voor de volgende wedstrijden van deze ploeg"
-        >
-          ★ Bewaar als vaste opstelling
-        </button>
-      </div>
+      {confirmed ? (
+        // Vergrendeld: enkel ontgrendelen kan nog. Bewaren/wijzigen is geblokkeerd tot dan.
+        <div className="ops-save">
+          <button type="button" onClick={() => save(false, false)} disabled={saving} className="wb-btn">
+            {saving ? 'Bezig…' : '🔓 Opstelling ontgrendelen'}
+          </button>
+        </div>
+      ) : (
+        <div className="ops-save">
+          <button type="button" onClick={() => save(false)} disabled={saving} className="wb-btn wb-btn-primary">
+            {saving ? 'Bewaren…' : 'Opstelling bewaren'}
+          </button>
+          <button
+            type="button"
+            onClick={() => save(false, true)}
+            disabled={saving || !enough}
+            className="wb-btn wb-btn-confirm"
+            title={enough ? 'Bevestig en vergrendel deze opstelling' : `Minstens ${LINEUP_MIN} spelers nodig om te bevestigen`}
+          >
+            🔒 Bevestigen &amp; vergrendelen
+          </button>
+          <button
+            type="button"
+            onClick={() => save(true)}
+            disabled={saving || selected.size === 0 || sameAsFav}
+            className="wb-btn"
+            title="Onthoud deze opstelling voor de volgende wedstrijden van deze ploeg"
+          >
+            ★ Bewaar als vaste opstelling
+          </button>
+        </div>
+      )}
       {msg && <p className="wb-msg">{msg}</p>}
     </section>
   )

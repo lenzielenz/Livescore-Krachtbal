@@ -109,6 +109,35 @@
   border-color: color-mix(in srgb, var(--accent) 40%, var(--line));
 }
 .ops-ready.need { color: var(--dim-strong); background: var(--panel); }
+/* Bevestigd & vergrendeld: een duidelijk ander, "slot"-signaal (niet het groene "bewaard"). */
+.ops-ready.locked {
+  color: #fde68a;
+  background: color-mix(in srgb, #f59e0b 16%, transparent);
+  border-color: color-mix(in srgb, #f59e0b 55%, var(--line));
+  letter-spacing: 0.01em;
+}
+/* De hele kaart krijgt een vergrendeld accent + de rijen voelen "vast" aan (geen klik-cursor). */
+.wb-card.ops-locked {
+  border-color: color-mix(in srgb, #f59e0b 45%, var(--line));
+  box-shadow: 0 0 0 1px color-mix(in srgb, #f59e0b 30%, transparent), var(--card-shadow, 0 10px 30px rgba(0, 0, 0, 0.3));
+}
+.wb-card.ops-locked .wb-row {
+  cursor: default;
+  opacity: 0.92;
+}
+.wb-card.ops-locked .wb-row:not(.on) {
+  opacity: 0.5;
+}
+/* Bevestig-knop: oranje "slot"-accent, duidelijk anders dan de gewone bewaarknop. */
+.wb-btn-confirm {
+  background: color-mix(in srgb, #f59e0b 16%, #10141a);
+  border-color: color-mix(in srgb, #f59e0b 55%, var(--line));
+  color: #fde68a;
+}
+.wb-btn-confirm:hover:not(:disabled) {
+  border-color: #f59e0b;
+  color: #fff7e6;
+}
 .ops-quick {
   display: flex;
   gap: 8px;

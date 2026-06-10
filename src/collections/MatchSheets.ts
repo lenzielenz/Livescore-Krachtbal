@@ -182,6 +182,25 @@ export const MatchSheets: CollectionConfig = {
       fields: [
         { name: 'homeLineup', label: 'Opstelling thuis', type: 'array', fields: lineupFields },
         { name: 'awayLineup', label: 'Opstelling uit', type: 'array', fields: lineupFields },
+        {
+          type: 'row',
+          fields: [
+            {
+              // Per kant: de club bevestigt ("vergrendelt") haar opstelling. Puur een duidelijk
+              // signaal "deze is af" — los van de blad-status. Kan weer ontgrendeld worden.
+              name: 'homeLineupConfirmed',
+              label: 'Opstelling thuis bevestigd',
+              type: 'checkbox',
+              defaultValue: false,
+            },
+            {
+              name: 'awayLineupConfirmed',
+              label: 'Opstelling uit bevestigd',
+              type: 'checkbox',
+              defaultValue: false,
+            },
+          ],
+        },
       ],
     },
     {
