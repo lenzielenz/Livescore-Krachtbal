@@ -7,6 +7,8 @@ export type RefMatch = {
   id: number
   home: string
   away: string
+  homeClub: string | null
+  awayClub: string | null
   reeks: string
   date: string | null
   status: string
@@ -34,14 +36,33 @@ export function RefereeMatches({
   const [msg, setMsg] = useState<string | null>(null)
   const [handoff, setHandoff] = useState<number | null>(null) // matchId waarvoor de doorgeef-keuze open staat
   const [filter, setFilter] = useState<'all' | 'mine' | 'free'>('all')
+  const [reeksFilter, setReeksFilter] = useState('')
+  const [clubFilter, setClubFilter] = useState('')
+
+  // Keuzelijsten met tellingen over de volledige lijst — stabiel, ongeacht de andere filters.
+  const reeksOptions = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const m of matches) counts.set(m.reeks, (counts.get(m.reeks) ?? 0) + 1)
+    return [...counts.entries()].sort((a, b) => a[0].localeCompare(b[0], 'nl'))
+  }, [matches])
+
+  const clubOptions = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const m of matches)
+      for (const c of new Set([m.homeClub, m.awayClub])) if (c) counts.set(c, (counts.get(c) ?? 0) + 1)
+    return [...counts.entries()].sort((a, b) => a[0].localeCompare(b[0], 'nl'))
+  }, [matches])
 
   const shown = useMemo(() => {
     return matches.filter((m) => {
-      if (filter === 'mine') return myOfficialId != null && m.assignedRefId === myOfficialId
-      if (filter === 'free') return m.assignedRefId == null
+      if (filter === 'mine' && !(myOfficialId != null && m.assignedRefId === myOfficialId)) return false
+      if (filter === 'free' && m.assignedRefId != null) return false
+      if (reeksFilter && m.reeks !== reeksFilter) return false
+      // Club-filter: de club speelt thuis óf op verplaatsing.
+      if (clubFilter && m.homeClub !== clubFilter && m.awayClub !== clubFilter) return false
       return true
     })
-  }, [matches, filter, myOfficialId])
+  }, [matches, filter, myOfficialId, reeksFilter, clubFilter])
 
   const act = async (matchId: number, action: string, targetOfficialId?: number) => {
     setBusy(matchId)
@@ -80,6 +101,32 @@ export function RefereeMatches({
           ))}
         </div>
       </div>
+      {(reeksOptions.length > 1 || clubOptions.length > 1) && (
+        <div className="rm-selects">
+          <select
+            className="wb-input rm-fsel"
+            value={reeksFilter}
+            onChange={(e) => setReeksFilter(e.target.value)}
+            aria-label="Filter op reeks"
+          >
+            <option value="">Alle reeksen</option>
+            {reeksOptions.map(([r, n]) => (
+              <option key={r} value={r}>{r} ({n})</option>
+            ))}
+          </select>
+          <select
+            className="wb-input rm-fsel"
+            value={clubFilter}
+            onChange={(e) => setClubFilter(e.target.value)}
+            aria-label="Filter op club"
+          >
+            <option value="">Alle clubs</option>
+            {clubOptions.map(([c, n]) => (
+              <option key={c} value={c}>{c} ({n})</option>
+            ))}
+          </select>
+        </div>
+      )}
       <p className="wb-sub">
         Vrije wedstrijden kan je zelf opnemen. Een wedstrijd die je toegewezen kreeg, kan je doorgeven aan een
         andere scheidsrechter als je niet kan. De federatie kan altijd toewijzen.
