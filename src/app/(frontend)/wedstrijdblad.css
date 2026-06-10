@@ -177,6 +177,33 @@
   margin-top: 14px;
 }
 
+/* Knop naar de volgende stap, zodra beide opstellingen klaar zijn. Sticky onderaan,
+   zodat hij ook in beeld blijft terwijl je nog door de lijsten scrolt. */
+.ops-next {
+  position: sticky;
+  bottom: 10px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--home, #0fe0a6);
+  background: color-mix(in srgb, var(--home, #0fe0a6) 16%, #0c1117);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+.ops-next-msg {
+  font-weight: 800;
+  font-size: 0.9rem;
+  color: var(--home, #0fe0a6);
+}
+.ops-next-btn {
+  text-decoration: none;
+}
+
 /* Handmatig een speler toevoegen aan de ploeg, direct vanuit de opstelling. */
 .ops-add {
   display: flex;
