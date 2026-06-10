@@ -61,7 +61,10 @@ export async function buildMatchSheetPdfData(
     scheidsrechter: refSig.naam || undefined,
     score: built.totals,
     halfScores: built.halfScores,
-    goals: built.goals.map((g) => ({ half: g.half, gameClock: g.gameClock, side: g.side, shirtNumber: g.shirtNumber, playerName: g.playerName, points: g.points })),
+    crosses: built.crosses,
+    timeouts: built.timeouts,
+    goals: built.goals.map((g) => ({ half: g.half, gameClock: g.gameClock, side: g.side, shirtNumber: g.shirtNumber, playerName: g.playerName, points: g.points, type: g.type })),
+    substitutions: built.substitutions.map((s) => ({ half: s.half, gameClock: s.gameClock, side: s.side, wissel: s.wissel })),
     homeTeam: built.teams.home.name,
     awayTeam: built.teams.away.name,
     homeLineup: lineupRows(sheet?.homeLineup),
@@ -136,45 +139,11 @@ export async function submitMatchSheet(
     (e): e is string => Boolean(e),
   )
 
-  const keuring = (sheet.keuring ?? {}) as Record<string, string>
-  const refSig = sigOf(sheet.scheidsrechter)
-  const pdfData: MatchSheetPdfData = {
-    titel: String(sheet.titel ?? built.match.title ?? `Wedstrijd ${matchId}`),
-    datum: new Date(built.match.date).toLocaleString('nl-BE'),
-    categorie: built.match.category ?? '',
-    reeks: reeks ?? undefined,
-    scheidsrechter: refSig.naam || undefined,
-    score: built.totals,
-    halfScores: built.halfScores,
-    goals: built.goals.map((g) => ({
-      half: g.half,
-      gameClock: g.gameClock,
-      side: g.side,
-      shirtNumber: g.shirtNumber,
-      playerName: g.playerName,
-      points: g.points,
-    })),
-    homeTeam: built.teams.home.name,
-    awayTeam: built.teams.away.name,
-    homeLineup: lineupRows(sheet.homeLineup),
-    awayLineup: lineupRows(sheet.awayLineup),
-    officials: OFFICIAL_FUNCTIE_KEYS.map((key) => ({
-      label: OFFICIAL_LABELS[key],
-      naam: officials[key] ?? '',
-    })),
-    keuring: KEURING_ITEMS.map((k) => ({ label: k.label, waarde: keuring[k.name] ?? 'ok' })),
-    uitsluitingen: ((sheet.uitsluitingen ?? []) as { naam?: string; reden?: string }[]).map(
-      (u) => `${u.naam ?? '—'} — ${u.reden ?? ''}`,
-    ),
-    voorbehoud: ((sheet.voorbehoud ?? []) as { naam?: string; reden?: string }[]).map(
-      (v) => `${v.naam ?? '—'} — ${v.reden ?? ''}`,
-    ),
-    opmerkingen: (sheet.opmerkingen as string) ?? undefined,
-    handtekeningen: [
-      { label: 'Kapitein thuis', sig: kapThuis },
-      { label: 'Kapitein uit', sig: kapUit },
-      { label: 'Scheidsrechter', sig: refSig },
-    ],
+  // Eén bron van waarheid voor de PDF-inhoud: dezelfde builder als de her-export-route,
+  // zodat het ingediende blad en een latere her-export gegarandeerd identiek opgebouwd zijn.
+  const pdfData = await buildMatchSheetPdfData(payload, matchId)
+  if (!pdfData) {
+    return { ok: false, error: 'Kon het wedstrijdblad niet opbouwen — inzenden geblokkeerd.' }
   }
 
   const pdf = await generateMatchSheetPdf(pdfData)

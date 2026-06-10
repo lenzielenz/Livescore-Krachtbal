@@ -173,6 +173,16 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     }
     }))
   } catch (err) {
-    return Response.json({ error: (err as Error).message }, { status: 400 })
+    const msg = (err as Error).message
+    // Database-fouten (bv. een query die faalt tijdens een deploy/lock) bevatten de ruwe SQL —
+    // die hoort niet in de UI. Log volledig server-side, toon de aantekenaar een korte uitleg.
+    if (/Failed query|timeout|ECONNREFUSED|terminat/i.test(msg)) {
+      console.error('match-action databasefout:', err)
+      return Response.json(
+        { error: 'Bewaren mislukt (tijdelijke databasefout) — probeer het meteen opnieuw.' },
+        { status: 503 },
+      )
+    }
+    return Response.json({ error: msg }, { status: 400 })
   }
 }

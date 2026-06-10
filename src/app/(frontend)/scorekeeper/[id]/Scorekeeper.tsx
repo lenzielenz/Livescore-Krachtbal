@@ -728,13 +728,36 @@ export function Scorekeeper({
           setPendingTap(null)
           void submitThrow(p, tapCount, false, playerId, catcherId, tapperId)
         }
+        // De tik naar de achterman komt bijna altijd van de vleugel aan de kant waar de bal
+        // viel → die staat groot bovenaan zodat je hem in één tik bevestigt.
+        const dir = poss ? (poss.dir as AttackDir) : 'up'
+        const zone = poss ? zoneOf(pendingTap.p, dir) : 'midden'
+        const wingPos = zone === 'links' ? 'vleugel-links' : zone === 'rechts' ? 'vleugel-rechts' : null
+        const wing = wingPos ? tappers.find((c) => posOf(c) === wingPos) : undefined
+        const rest = wing ? tappers.filter((c) => c.id !== wing.id) : tappers
         return (
           <div className="sk-entry">
             <div className="sk-entry-box sk-lineup-modal">
               <h3>Getikt naar de achterman door?</h3>
               <p>Wie tikte de bal naar de achterman? (optioneel)</p>
+              {wing && (
+                <>
+                  <p className="sk-suggest-lbl">
+                    Wellicht <strong>{firstName(wing.name)}</strong> — bevestig of corrigeer
+                  </p>
+                  <div className="sk-suggest-row">
+                    <button type="button" className="sk-pick-player sk-suggest sk-suggest-top" onClick={() => submit(wing.id)}>
+                      <span className="sk-suggest-check" aria-hidden>✓</span>
+                      <span className="sk-pick-num">{wing.shirtNumber}</span>
+                      <span className="sk-pick-naam">{firstName(wing.name)}</span>
+                      <span className="sk-pick-pos">{zone === 'links' ? 'vleugel links' : 'vleugel rechts'}</span>
+                    </button>
+                  </div>
+                  {rest.length > 0 && <p className="sk-suggest-or">of iemand anders</p>}
+                </>
+              )}
               <div className="sk-lineup-pick-grid">
-                {tappers.map((c) => (
+                {rest.map((c) => (
                   <button type="button" key={c.id} className="sk-pick-player" onClick={() => submit(c.id)}>
                     <span className="sk-pick-num">{c.shirtNumber}</span>
                     <span className="sk-pick-naam">{firstName(c.name)}</span>

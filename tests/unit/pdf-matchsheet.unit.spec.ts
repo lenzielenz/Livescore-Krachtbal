@@ -12,7 +12,10 @@ const base: MatchSheetPdfData = {
   reeks: '1NAH',
   score: { home: 12, away: 9 },
   halfScores: { home: [6, 6], away: [4, 5] },
-  goals: [{ half: 1, gameClock: 65, side: 'home', shirtNumber: 7, playerName: 'Jonáš Œuvré', points: 2 }],
+  crosses: { home: 2, away: 1 },
+  timeouts: { home: [1, 0], away: [2, 1] },
+  goals: [{ half: 1, gameClock: 65, side: 'home', shirtNumber: 7, playerName: 'Jonáš Œuvré', points: 2, type: 'rug' }],
+  substitutions: [{ half: 2, gameClock: 120, side: 'away', wissel: '#4 Tom → #9 Bert' }],
   homeTeam: 'KV Brugge',
   awayTeam: 'KV Gent',
   homeLineup: [{ rugnummer: 7, name: 'Jonáš Œuvré', deelgenomen: true }],
@@ -29,7 +32,7 @@ const base: MatchSheetPdfData = {
 }
 
 describe('generateMatchSheetPdf', () => {
-  it('genereert een PDF zonder te crashen op ✓ of niet-Latin-1 namen', async () => {
+  it('genereert een PDF zonder te crashen op ✓, → of niet-Latin-1 namen', async () => {
     const bytes = await generateMatchSheetPdf(base)
     expect(bytes.length).toBeGreaterThan(500)
     // PDF-bestanden beginnen met "%PDF".
@@ -41,5 +44,25 @@ describe('generateMatchSheetPdf', () => {
     const bytes = await generateMatchSheetPdf({ ...base, homeLineup: many, awayLineup: many })
     const doc = await PDFDocument.load(bytes)
     expect(doc.getPageCount()).toBeGreaterThan(1)
+  })
+
+  it('paginaleert een lange doelpuntenlijst mét tabelkop op elke pagina', async () => {
+    const goals = Array.from({ length: 120 }, (_, i) => ({
+      half: i < 60 ? 1 : 2,
+      gameClock: i * 10,
+      side: (i % 2 === 0 ? 'home' : 'away') as 'home' | 'away',
+      shirtNumber: (i % 8) + 1,
+      playerName: `Speler ${i + 1}`,
+      points: (i % 3 === 0 ? 2 : 1) as 1 | 2,
+      type: (i % 3 === 0 ? 'rug' : 'nek') as 'rug' | 'nek',
+    }))
+    const bytes = await generateMatchSheetPdf({ ...base, goals })
+    const doc = await PDFDocument.load(bytes)
+    expect(doc.getPageCount()).toBeGreaterThan(1)
+  })
+
+  it('verwerkt een blad zonder doelpunten/vervangingen (lege secties, geen crash)', async () => {
+    const bytes = await generateMatchSheetPdf({ ...base, goals: [], substitutions: [], score: undefined })
+    expect(Buffer.from(bytes.slice(0, 4)).toString()).toBe('%PDF')
   })
 })
