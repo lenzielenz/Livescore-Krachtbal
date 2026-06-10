@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
-export type TeamOption = { id: number; name: string; reeksLabel: string }
+export type TeamOption = { id: number; name: string; reeksLabel: string; clubId: number | null; clubName: string }
 export type AnalyseSpeler = { id: number; name: string; shirtNumber: number; position: string; teamId: number | null }
 type PositionOption = { value: string; label: string }
 
@@ -22,8 +22,14 @@ async function call(method: 'POST' | 'PATCH' | 'DELETE', body: Record<string, un
 
 // Beheer van de roster per analyse-ploeg: kies een ploeg, voeg spelers toe (rugnummer, naam,
 // verplichte positie) en verwijder ze. De positie voedt de analyse-rapporten.
+// Een ploeg hoort bij een club én speelt in een reeks. Groepeer op club (club-loze ploegen staan
+// op zichzelf) zodat we eerst de club en dan de reeks kunnen kiezen i.p.v. één lange lijst.
+const clubKeyOf = (t: TeamOption): string => (t.clubId != null ? `c${t.clubId}` : `t${t.id}`)
+const clubLabelOf = (t: TeamOption): string => t.clubName || t.name || 'Club'
+
 export function AnalyseSpelersManager({ teams, spelers, positionOptions }: { teams: TeamOption[]; spelers: AnalyseSpeler[]; positionOptions: PositionOption[] }) {
   const router = useRouter()
+  const [clubKey, setClubKey] = useState(teams[0] ? clubKeyOf(teams[0]) : '')
   const [teamId, setTeamId] = useState(teams[0]?.id ? String(teams[0].id) : '')
   const [num, setNum] = useState('')
   const [name, setName] = useState('')
@@ -36,6 +42,22 @@ export function AnalyseSpelersManager({ teams, spelers, positionOptions }: { tea
     () => spelers.filter((s) => String(s.teamId) === teamId).sort((a, b) => a.shirtNumber - b.shirtNumber),
     [spelers, teamId],
   )
+
+  // Unieke clubs (in de volgorde waarin de ploegen binnenkomen) en de reeksen binnen de gekozen club.
+  const clubs = useMemo(() => {
+    const seen = new Map<string, string>()
+    for (const t of teams) if (!seen.has(clubKeyOf(t))) seen.set(clubKeyOf(t), clubLabelOf(t))
+    return [...seen].map(([key, label]) => ({ key, label }))
+  }, [teams])
+  const reeksen = useMemo(() => teams.filter((t) => clubKeyOf(t) === clubKey), [teams, clubKey])
+
+  // Bij clubwissel meteen naar de eerste reeks van die club springen (anders wijst teamId nog naar
+  // de vorige club en toont de roster verkeerde spelers).
+  const pickClub = (key: string) => {
+    setClubKey(key)
+    const first = teams.find((t) => clubKeyOf(t) === key)
+    if (first) setTeamId(String(first.id))
+  }
 
   const add = async () => {
     if (!teamId || !name.trim() || !num.trim() || !position) return
@@ -80,12 +102,20 @@ export function AnalyseSpelersManager({ teams, spelers, positionOptions }: { tea
 
   return (
     <div className="anb-panel" data-tone="accent">
-      <label className="rad-field anb-teampick">
-        <span>Ploeg</span>
-        <select className="rang-picker" value={teamId} onChange={(e) => setTeamId(e.target.value)}>
-          {teams.map((t) => (<option key={t.id} value={t.id}>{t.name} — {t.reeksLabel}</option>))}
-        </select>
-      </label>
+      <div className="anb-teampick anb-teampick-split">
+        <label className="rad-field">
+          <span>Club</span>
+          <select className="rang-picker" value={clubKey} onChange={(e) => pickClub(e.target.value)}>
+            {clubs.map((c) => (<option key={c.key} value={c.key}>{c.label}</option>))}
+          </select>
+        </label>
+        <label className="rad-field">
+          <span>Reeks</span>
+          <select className="rang-picker" value={teamId} onChange={(e) => setTeamId(e.target.value)}>
+            {reeksen.map((t) => (<option key={t.id} value={t.id}>{t.reeksLabel || t.name || 'Reeks'}</option>))}
+          </select>
+        </label>
+      </div>
 
       <form className="anb-addrow wrap" onSubmit={(e) => { e.preventDefault(); void add() }}>
         <input className="rang-picker anb-num" inputMode="numeric" placeholder="nr" value={num} onChange={(e) => setNum(e.target.value.replace(/[^0-9]/g, ''))} aria-label="Rugnummer" />
