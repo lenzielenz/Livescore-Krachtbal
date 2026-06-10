@@ -763,12 +763,47 @@ export async function setLineup(
         : { awayCaptain: null }
       : {}
 
+  // Vorige veldspelers vóór de update — tijdens een lopende wedstrijd is het verschil een
+  // VERVANGING en hoort die (wie eruit, wie erin) op het officiële wedstrijdblad (reglement §9).
+  const prevRaw = side === 'home' ? match.homeLineup : match.awayLineup
+  const prev = Array.isArray(prevRaw)
+    ? prevRaw
+        .map((v) => (v && typeof v === 'object' ? (v as { id?: number }).id : v))
+        .filter((v): v is number => typeof v === 'number')
+    : []
+
   await payload.update({
     collection: 'matches',
     id: matchId,
     data: side === 'home' ? { homeLineup: chosen, ...captainPatch } : { awayLineup: chosen, ...captainPatch },
     overrideAccess: true,
   })
+
+  if (match.status === 'live' && prev.length) {
+    const byId = new Map(res.docs.map((p) => [p.id, p]))
+    const wie = (id: number | undefined) => {
+      const p = id != null ? byId.get(id) : undefined
+      return p ? `#${p.shirtNumber} ${p.name}` : '—'
+    }
+    const outs = prev.filter((id) => !chosen.includes(id))
+    const ins = chosen.filter((id) => !prev.includes(id))
+    for (let i = 0; i < Math.max(outs.length, ins.length); i++) {
+      await payload
+        .create({
+          collection: 'match-events',
+          data: {
+            match: matchId,
+            type: 'substitution',
+            team: teamId,
+            half: match.currentHalf ?? 1,
+            gameClock: match.clockSeconds ?? 0,
+            note: `${wie(outs[i])} → ${wie(ins[i])}`,
+          },
+          overrideAccess: true,
+        })
+        .catch(() => {}) // best-effort: een gemiste logregel mag de wissel zelf niet blokkeren
+    }
+  }
   return buildMatchState(payload, matchId)
 }
 
@@ -893,6 +928,14 @@ export interface SheetGoal {
   points: number
 }
 
+export interface SheetSubstitution {
+  half: number
+  gameClock: number
+  side: TeamSide
+  /** Leesbaar "wie eruit → wie erin" (uit de event-notitie). */
+  wissel: string
+}
+
 export interface MatchSheet {
   match: { id: number; title: string | null; date: string; category: Category; status: string }
   teams: { home: { id: number; name: string }; away: { id: number; name: string } }
@@ -902,6 +945,7 @@ export interface MatchSheet {
   totals: { home: number; away: number }
   crosses: { home: number; away: number }
   timeouts: { home: [number, number]; away: [number, number] }
+  substitutions: SheetSubstitution[]
 }
 
 /** Geldig digitaal aantekenblad: opstellingen, doelpunten, helft-scores, time-outs, kruisjes. */
@@ -993,18 +1037,24 @@ export async function buildMatchSheet(payload: Payload, matchId: number): Promis
   crosses.home += simpleSheet.crosses.home
   crosses.away += simpleSheet.crosses.away
 
-  const timeoutsRes = await payload.find({
+  const eventsRes = await payload.find({
     collection: 'match-events',
-    where: { and: [{ match: { equals: matchId } }, { type: { equals: 'timeout' } }] },
+    where: { and: [{ match: { equals: matchId } }, { type: { in: ['timeout', 'substitution'] } }] },
+    sort: 'createdAt',
     depth: 0,
-    limit: 200,
+    limit: 400,
   })
   const timeouts = { home: [0, 0] as [number, number], away: [0, 0] as [number, number] }
-  for (const e of timeoutsRes.docs) {
+  const substitutions: SheetSubstitution[] = []
+  for (const e of eventsRes.docs) {
     const tId = typeof e.team === 'object' && e.team ? e.team.id : e.team
     if (!tId) continue
     const side = sideOfTeam(tId, homeId)
-    timeouts[side][(e.half ?? 1) === 2 ? 1 : 0] += 1
+    if (e.type === 'timeout') {
+      timeouts[side][(e.half ?? 1) === 2 ? 1 : 0] += 1
+    } else {
+      substitutions.push({ half: e.half ?? 1, gameClock: e.gameClock ?? 0, side, wissel: e.note ?? '—' })
+    }
   }
 
   return {
@@ -1025,6 +1075,7 @@ export async function buildMatchSheet(payload: Payload, matchId: number): Promis
     },
     crosses,
     timeouts,
+    substitutions,
   }
 }
 
@@ -1174,7 +1225,7 @@ export async function buildDefenseStats(payload: Payload, matchId: number): Prom
 
 export interface TimelineItem {
   id: string
-  kind: 'goal' | 'cross' | 'timeout' | 'half_start' | 'half_end' | 'referee_stop'
+  kind: 'goal' | 'cross' | 'timeout' | 'half_start' | 'half_end' | 'referee_stop' | 'substitution'
   half: number
   gameClock: number
   side: TeamSide | null
@@ -1259,11 +1310,13 @@ export async function buildTimeline(payload: Payload, matchId: number): Promise<
     const label =
       e.type === 'timeout'
         ? 'Time-out'
-        : e.type === 'referee_stop'
-          ? 'Scheidsrechter-onderbreking'
-          : e.type === 'half_start'
-            ? `Start helft ${e.half}`
-            : `Einde helft ${e.half}`
+        : e.type === 'substitution'
+          ? `Wissel${e.note ? ` ${e.note}` : ''}`
+          : e.type === 'referee_stop'
+            ? 'Scheidsrechter-onderbreking'
+            : e.type === 'half_start'
+              ? `Start helft ${e.half}`
+              : `Einde helft ${e.half}`
     items.push({ id: `e${e.id}`, kind: e.type, half: e.half, gameClock: e.gameClock, side, label, _t: e.createdAt })
   }
 

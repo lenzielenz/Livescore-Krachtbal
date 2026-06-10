@@ -5,10 +5,12 @@ export const MATCH_EVENT_TYPE_OPTIONS = [
   { label: 'Scheidsrechter-onderbreking', value: 'referee_stop' },
   { label: 'Start helft', value: 'half_start' },
   { label: 'Einde helft', value: 'half_end' },
+  { label: 'Vervanging (wissel)', value: 'substitution' },
 ] as const
 
 // Niet-worp-gebeurtenissen voor de tijdlijn: time-outs (tellen mee in quotum, 2 p/ploeg
-// p/helft), scheidsrechter-onderbrekingen (stoppen klok, tellen niet mee) en helft-grenzen.
+// p/helft), scheidsrechter-onderbrekingen (stoppen klok, tellen niet mee), helft-grenzen en
+// vervangingen (wie eruit/erin, leesbaar in de notitie — voor het officiële wedstrijdblad).
 export const MatchEvents: CollectionConfig = {
   slug: 'match-events',
   labels: {
@@ -40,13 +42,13 @@ export const MatchEvents: CollectionConfig = {
       required: true,
     },
     {
-      // Enkel bij een time-out: welke ploeg. Leeg voor scheidsrechter-onderbreking/helft-grenzen.
+      // Bij een time-out of vervanging: welke ploeg. Leeg voor SR-onderbreking/helft-grenzen.
       name: 'team',
       label: 'Ploeg',
       type: 'relationship',
       relationTo: 'teams',
       admin: {
-        condition: (_, siblingData) => siblingData?.type === 'timeout',
+        condition: (_, siblingData) => siblingData?.type === 'timeout' || siblingData?.type === 'substitution',
       },
     },
     {

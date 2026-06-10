@@ -60,6 +60,7 @@ import * as migration_20260610_140000_club_display_title from './20260610_140000
 import * as migration_20260610_160000_lineup_confirmed from './20260610_160000_lineup_confirmed';
 import * as migration_20260610_180000_keuring_bevestigd from './20260610_180000_keuring_bevestigd';
 import * as migration_20260610_200000_analyse_delen from './20260610_200000_analyse_delen';
+import * as migration_20260610_220000_wissel_events from './20260610_220000_wissel_events';
 
 export const migrations = [
   {
@@ -371,5 +372,10 @@ export const migrations = [
     up: migration_20260610_200000_analyse_delen.up,
     down: migration_20260610_200000_analyse_delen.down,
     name: '20260610_200000_analyse_delen',
+  },
+  {
+    up: migration_20260610_220000_wissel_events.up,
+    down: migration_20260610_220000_wissel_events.down,
+    name: '20260610_220000_wissel_events',
   },
 ];

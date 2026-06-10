@@ -1065,7 +1065,7 @@ export interface Throw {
 export interface MatchEvent {
   id: number;
   match: number | Match;
-  type: 'timeout' | 'referee_stop' | 'half_start' | 'half_end';
+  type: 'timeout' | 'referee_stop' | 'half_start' | 'half_end' | 'substitution';
   team?: (number | null) | Team;
   half: number;
   gameClock: number;
