@@ -60,6 +60,15 @@ export default async function AftekenenPage({ params }: { params: Promise<{ matc
         </p>
       )}
 
+      {/* Kwetsuren horen bij het einde van de wedstrijd: registreer ze vóór het aftekenen. */}
+      <section className="wb-card" style={{ marginBottom: 16 }}>
+        <h2>Kwetsuur / ongeval</h2>
+        <p className="wb-sub">Was er een kwetsuur? Registreer ze vóór het aftekenen — ze hoort bij het blad.</p>
+        <a className="wb-btn" href="/admin/collections/accidents/create" target="_blank" rel="noreferrer">
+          🚑 Kwetsuur / ongeval registreren
+        </a>
+      </section>
+
       <AftekenenPanel
         matchId={matchId}
         initialStatus={(sheet.status as string) ?? 'concept'}

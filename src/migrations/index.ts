@@ -58,6 +58,8 @@ import * as migration_20260609_260000_analyse_entities from './20260609_260000_a
 import * as migration_20260610_120000_user_official_backfill from './20260610_120000_user_official_backfill';
 import * as migration_20260610_140000_club_display_title from './20260610_140000_club_display_title';
 import * as migration_20260610_160000_lineup_confirmed from './20260610_160000_lineup_confirmed';
+import * as migration_20260610_180000_keuring_bevestigd from './20260610_180000_keuring_bevestigd';
+import * as migration_20260610_200000_analyse_delen from './20260610_200000_analyse_delen';
 
 export const migrations = [
   {
@@ -359,5 +361,15 @@ export const migrations = [
     up: migration_20260610_160000_lineup_confirmed.up,
     down: migration_20260610_160000_lineup_confirmed.down,
     name: '20260610_160000_lineup_confirmed',
+  },
+  {
+    up: migration_20260610_180000_keuring_bevestigd.up,
+    down: migration_20260610_180000_keuring_bevestigd.down,
+    name: '20260610_180000_keuring_bevestigd',
+  },
+  {
+    up: migration_20260610_200000_analyse_delen.up,
+    down: migration_20260610_200000_analyse_delen.down,
+    name: '20260610_200000_analyse_delen',
   },
 ];

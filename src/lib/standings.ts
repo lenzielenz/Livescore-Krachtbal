@@ -43,6 +43,23 @@ export function forfaitFromUitslag(u: unknown): Forfait {
   }
 }
 
+// Forfait-uitslag (KVKBF): de niet-forfaiterende ploeg wint met 30–0; bij dubbel forfait 0–0.
+export const FORFAIT_GOALS = 30
+
+/** De vaste eindstand die bij een forfait hoort, of null als er geen forfait is. */
+export function forfaitScore(uitslag: unknown): { home: number; away: number } | null {
+  switch (uitslag) {
+    case 'thuis':
+      return { home: 0, away: FORFAIT_GOALS }
+    case 'uit':
+      return { home: FORFAIT_GOALS, away: 0 }
+    case 'dubbel':
+      return { home: 0, away: 0 }
+    default:
+      return null
+  }
+}
+
 /**
  * Bouwt de rangschikking uit de afgelopen wedstrijden. `teamIds` (optioneel) zorgt
  * dat ook ploegen die nog niet speelden in de tabel staan (0 op alles).

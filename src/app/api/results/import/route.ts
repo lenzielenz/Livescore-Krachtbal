@@ -4,20 +4,11 @@ import { authUser } from '@/lib/api-auth'
 import { getPayloadClient } from '@/lib/payload-client'
 import { reeksCategorie, type Reeks } from '@/lib/reeksen'
 import { cleanTeamName, isPlayed, norm, parseResultsHtml } from '@/lib/results-import'
+import { buildFixedSimpleScore } from '@/lib/simple-score'
 
 // Importeer officiële uitslagen (HTML-tabel-export). Maakt/voltooit wedstrijden met eindstand.
 // Standaard PREVIEW (niets wegschrijven); met { commit: true } worden de wijzigingen toegepast.
 // Enkel federatie/admin.
-
-// Eindstand → simpleScore (de app bewaart geen vast scoreveld; de stand wordt uit simpleScore
-// + worpen afgeleid). We zetten X+Y losse doelpunten van 1 punt zodat de totaalstand klopt.
-function buildSimpleScore(home: number, away: number) {
-  const goals: { side: 'home' | 'away'; points: number; half: number; clock: number; ts: number }[] = []
-  let ts = 0
-  for (let k = 0; k < home; k++) goals.push({ side: 'home', points: 1, half: 1, clock: 0, ts: ts++ })
-  for (let k = 0; k < away; k++) goals.push({ side: 'away', points: 1, half: 1, clock: 0, ts: ts++ })
-  return { goals, crosses: { home: 0, away: 0 } }
-}
 
 const rel = (v: unknown): number | null =>
   v && typeof v === 'object' ? ((v as { id?: number }).id ?? null) : typeof v === 'number' ? v : null
@@ -163,7 +154,7 @@ export async function POST(req: Request) {
             await payload.update({
               collection: 'matches',
               id: op.id,
-              data: { status: 'finished', simpleScore: buildSimpleScore(op.home, op.away) },
+              data: { status: 'finished', simpleScore: buildFixedSimpleScore(op.home, op.away) as unknown as Record<string, unknown> },
               overrideAccess: true,
             })
           } else {
@@ -178,7 +169,7 @@ export async function POST(req: Request) {
                 status: 'finished',
                 goalAreaDepth: 10,
                 analyseOnly: false,
-                simpleScore: buildSimpleScore(op.home, op.away),
+                simpleScore: buildFixedSimpleScore(op.home, op.away) as unknown as Record<string, unknown>,
               },
               overrideAccess: true,
             })

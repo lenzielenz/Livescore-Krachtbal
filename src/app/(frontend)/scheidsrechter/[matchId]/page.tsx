@@ -14,12 +14,15 @@ import '../../wedstrijdblad.css'
 
 export const dynamic = 'force-dynamic'
 
-type LineupRow = { player?: { name?: string } | number; rugnummer?: number }
+type LineupRow = { player?: { name?: string; vergunningsstatus?: string } | number; rugnummer?: number }
 
-function names(rows: LineupRow[] | undefined): { rugnummer?: number; name: string }[] {
+// Naam + vergunningsstatus per speler, zodat de scheidsrechter in één oogopslag ziet dat
+// iedereen die speelt gekeurd is (geldige vergunning).
+function names(rows: LineupRow[] | undefined): { rugnummer?: number; name: string; vergunning: string | null }[] {
   return (rows ?? []).map((r) => ({
     rugnummer: r.rugnummer,
     name: typeof r.player === 'object' ? (r.player?.name ?? '—') : `#${r.player}`,
+    vergunning: typeof r.player === 'object' ? (r.player?.vergunningsstatus ?? null) : null,
   }))
 }
 
@@ -93,16 +96,17 @@ export default async function ScheidsrechterPage({ params }: { params: Promise<{
         }
         initialStatus={(sheet?.status as string) ?? 'concept'}
         initialKeuring={(sheet?.keuring as Record<string, string>) ?? {}}
+        initialKeuringBevestigd={Boolean(sheet?.keuringBevestigd)}
         initialOfficials={(sheet?.officials as Record<string, string>) ?? {}}
         initialVergoeding={{
           refereeKm: (sheet?.refereeKm as number) ?? '',
-          uitslag: (sheet?.forfait as { uitslag?: string } | undefined)?.uitslag ?? 'geen',
           vanToepassing: Boolean((sheet?.forfait as { vanToepassing?: boolean } | undefined)?.vanToepassing),
           gemeldThuis: Boolean((sheet?.forfait as { gemeldThuis?: boolean } | undefined)?.gemeldThuis),
           gemeldUit: Boolean((sheet?.forfait as { gemeldUit?: boolean } | undefined)?.gemeldUit),
           aantalAutos: (sheet?.forfait as { aantalAutos?: number } | undefined)?.aantalAutos ?? '',
           km: (sheet?.forfait as { km?: number } | undefined)?.km ?? '',
         }}
+        initialForfaitUitslag={(sheet?.forfait as { uitslag?: string } | undefined)?.uitslag ?? 'geen'}
         initialStartAkkoord={Boolean((sheet?.wedstrijdstart as { akkoord?: boolean } | undefined)?.akkoord)}
         initialStartNaam={(sheet?.wedstrijdstart as { naam?: string } | undefined)?.naam ?? ''}
         lineupReady={{
@@ -119,21 +123,41 @@ export default async function ScheidsrechterPage({ params }: { params: Promise<{
   )
 }
 
-function LineupView({ title, rows }: { title: string; rows: { rugnummer?: number; name: string }[] }) {
+function LineupView({
+  title,
+  rows,
+}: {
+  title: string
+  rows: { rugnummer?: number; name: string; vergunning: string | null }[]
+}) {
+  const allesGekeurd = rows.length > 0 && rows.every((r) => r.vergunning === 'geldig')
   return (
     <section className="wb-card">
       <h2>{title}</h2>
       {rows.length === 0 ? (
         <p className="wb-sub">Nog geen opstelling ingevuld.</p>
       ) : (
-        <ul className="wb-rows">
-          {rows.map((r, i) => (
-            <li key={i} className="wb-row" style={{ cursor: 'default' }}>
-              <strong className="num">{r.rugnummer ?? '–'}</strong>
-              <span className="nm">{r.name}</span>
-            </li>
-          ))}
-        </ul>
+        <>
+          {/* In één oogopslag: alle opgestelde spelers gekeurd (geldige vergunning) of niet. */}
+          {allesGekeurd ? (
+            <div className="ops-ready ok">✓ Alle spelers gekeurd</div>
+          ) : (
+            <div className="ops-ready todo">Niet alle spelers hebben een geldige vergunning.</div>
+          )}
+          <ul className="wb-rows">
+            {rows.map((r, i) => (
+              <li key={i} className="wb-row" style={{ cursor: 'default' }}>
+                <strong className="num">{r.rugnummer ?? '–'}</strong>
+                <span className="nm">{r.name}</span>
+                {r.vergunning === 'geldig' ? (
+                  <span className="off-st ok">✓ gekeurd</span>
+                ) : (
+                  <span className="off-st bad">⚠ {r.vergunning === 'aangevraagd' ? 'vergunning aangevraagd' : 'geen vergunning'}</span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </>
       )}
     </section>
   )

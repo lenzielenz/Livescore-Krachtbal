@@ -6,17 +6,34 @@ import { isFederationLevel } from './access'
 // officiële (niet-analyseOnly) wedstrijden gedeeld blijven. Federatie/admin ziet álles en kan zo
 // achteraf alle data samenbrengen/importeren.
 //
+// Delen: een eigenaar kan zijn analyses delen met gekozen accounts (users.analyseDeeltMet). De
+// inverse (users.analyseToegangTot — wiens analyses mag IK zien) wordt automatisch bijgehouden en
+// zit mee in het ingelogde user-object, dus alle Where-helpers hieronder kunnen ze zonder extra
+// opzoeking meenemen.
+
+/** Alle analyse-eigenaars die deze gebruiker mag zien: zichzelf + wie met hem/haar deelt. */
+export function analyseOwners(user: unknown): (number | string)[] {
+  const own = (user as { id?: number | string } | null)?.id
+  const raw = (user as { analyseToegangTot?: unknown } | null)?.analyseToegangTot
+  const gedeeld = Array.isArray(raw)
+    ? raw
+        .map((x) => (x && typeof x === 'object' ? (x as { id?: number | string }).id : (x as number | string)))
+        .filter((x): x is number | string => x != null)
+    : []
+  return own != null ? [own, ...gedeeld] : gedeeld
+}
+
 // Retourneert een Where-fragment dat je in de `and` van een matches-query duwt, of `null` als er
 // geen beperking nodig is (federatie/admin).
 export function analyseMatchWhere(user: unknown): Where | null {
   if (isFederationLevel(user)) return null // admin/federatie: geen beperking
-  const id = (user as { id?: number | string } | null)?.id
-  if (id == null) {
+  const owners = analyseOwners(user)
+  if (owners.length === 0) {
     // Niet (her)kend: enkel officiële wedstrijden, nooit andermans analyse-opnames.
     return { analyseOnly: { not_equals: true } }
   }
   return {
-    or: [{ analyseOnly: { not_equals: true } }, { analyseOwner: { equals: id } }],
+    or: [{ analyseOnly: { not_equals: true } }, { analyseOwner: { in: owners } }],
   }
 }
 
@@ -29,14 +46,15 @@ export function analyseMatchWhere(user: unknown): Where | null {
 
 /**
  * Strikt eigen-analyse Where-fragment voor clubs/teams/players/matches: enkel records die als
- * analyse gemarkeerd zijn (`analyseOnly`) én van deze gebruiker (`analyseOwner`). Zonder herkende
- * gebruiker valt het terug op een onmogelijke eigenaar (-1) zodat er niets lekt. Admin/federatie
- * krijgen bewust óók enkel hun eigen analyse-data: iedereen bouwt zo zijn eigen afgeschermde set.
+ * analyse gemarkeerd zijn (`analyseOnly`) én van deze gebruiker (`analyseOwner`) — of van iemand
+ * die zijn analyses met deze gebruiker deelt. Zonder herkende gebruiker valt het terug op een
+ * onmogelijke eigenaar (-1) zodat er niets lekt. Admin/federatie krijgen bewust óók enkel hun
+ * eigen (+ gedeelde) analyse-data: iedereen bouwt zo zijn eigen afgeschermde set.
  */
 export function analyseOwnWhere(user: unknown): Where {
-  const id = (user as { id?: number | string } | null)?.id
+  const owners = analyseOwners(user)
   return {
-    and: [{ analyseOnly: { equals: true } }, { analyseOwner: { equals: id ?? -1 } }],
+    and: [{ analyseOnly: { equals: true } }, { analyseOwner: { in: owners.length ? owners : [-1] } }],
   }
 }
 
@@ -60,6 +78,6 @@ export function canViewAnalyseMatch(
   const ownerId = match.analyseOwner && typeof match.analyseOwner === 'object'
     ? (match.analyseOwner as { id?: number | string }).id
     : match.analyseOwner
-  const me = (user as { id?: number | string } | null)?.id
-  return me != null && ownerId != null && String(ownerId) === String(me)
+  if (ownerId == null) return false
+  return analyseOwners(user).some((x) => String(x) === String(ownerId))
 }

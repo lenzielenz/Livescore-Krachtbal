@@ -70,6 +70,19 @@ function norm(value: string | null | undefined): string {
   return (value ?? '').trim().toLowerCase()
 }
 
+/** Status van één officials-veld, voor directe feedback in het formulier (✓ of wat er schort). */
+export type OfficialFieldStatus = 'leeg' | 'ok' | 'onvolledig' | 'conflict'
+
+export function officialFieldStatus(key: OfficialFunctie, officials: OfficialsData): OfficialFieldStatus {
+  const waarde = officials[key]
+  if (!waarde || !waarde.trim()) return 'leeg'
+  if (!isVolledigeNaam(waarde)) return 'onvolledig'
+  // Art. 25: een coach mag geen grensrechter zijn (aan dezelfde kant).
+  if (key === 'coachThuis' && norm(waarde) === norm(officials.grensrechterThuis)) return 'conflict'
+  if (key === 'coachUit' && norm(waarde) === norm(officials.grensrechterUit)) return 'conflict'
+  return 'ok'
+}
+
 export type OfficialsValidation = { ok: boolean; errors: string[] }
 
 /**

@@ -7,6 +7,8 @@ const fed = { id: 1, roles: ['federatie'] as const }
 const admin = { id: 2, roles: ['admin'] as const }
 const analyst = { id: 7, roles: ['viewer'] as const, analyseAccess: true }
 const other = { id: 8, roles: ['viewer'] as const, analyseAccess: true }
+// Iemand deelde zijn analyses met deze gebruiker (inverse zit in het user-object).
+const gedeeld = { id: 9, roles: ['viewer'] as const, analyseAccess: true, analyseToegangTot: [7] }
 
 describe('analyseMatchWhere', () => {
   it('legt federatie/admin geen beperking op', () => {
@@ -15,7 +17,13 @@ describe('analyseMatchWhere', () => {
 
   it('beperkt een gewone analist tot officiële wedstrijden + eigen opnames', () => {
     expect(analyseMatchWhere(analyst)).toEqual({
-      or: [{ analyseOnly: { not_equals: true } }, { analyseOwner: { equals: 7 } }],
+      or: [{ analyseOnly: { not_equals: true } }, { analyseOwner: { in: [7] } }],
+    })
+  })
+
+  it('neemt gedeelde eigenaars mee', () => {
+    expect(analyseMatchWhere(gedeeld)).toEqual({
+      or: [{ analyseOnly: { not_equals: true } }, { analyseOwner: { in: [9, 7] } }],
     })
   })
 
@@ -37,6 +45,11 @@ describe('canViewAnalyseMatch', () => {
     expect(canViewAnalyseMatch(other, { analyseOnly: true, analyseOwner: 7 })).toBe(false)
   })
 
+  it('gedeelde analyse-opname is zichtbaar voor wie ze gedeeld kreeg', () => {
+    expect(canViewAnalyseMatch(gedeeld, { analyseOnly: true, analyseOwner: 7 })).toBe(true)
+    expect(canViewAnalyseMatch(gedeeld, { analyseOnly: true, analyseOwner: 8 })).toBe(false)
+  })
+
   it('federatie ziet elke analyse-opname', () => {
     expect(canViewAnalyseMatch(fed, { analyseOnly: true, analyseOwner: 7 })).toBe(true)
   })
@@ -48,14 +61,23 @@ describe('canViewAnalyseMatch', () => {
 
 describe('analyseOwnWhere', () => {
   it('beperkt strikt tot eigen analyse-data (analyseOnly + eigen owner), ook voor admin/federatie', () => {
-    const expected = (id: number) => ({ and: [{ analyseOnly: { equals: true } }, { analyseOwner: { equals: id } }] })
-    expect(analyseOwnWhere(analyst)).toEqual(expected(7))
-    expect(analyseOwnWhere(admin)).toEqual(expected(2))
-    expect(analyseOwnWhere(fed)).toEqual(expected(1))
+    const expected = (ids: number[]) => ({ and: [{ analyseOnly: { equals: true } }, { analyseOwner: { in: ids } }] })
+    expect(analyseOwnWhere(analyst)).toEqual(expected([7]))
+    expect(analyseOwnWhere(admin)).toEqual(expected([2]))
+    expect(analyseOwnWhere(fed)).toEqual(expected([1]))
+  })
+
+  it('neemt gedeelde eigenaars mee (ook als uitgeklapte objecten)', () => {
+    expect(analyseOwnWhere(gedeeld)).toEqual({
+      and: [{ analyseOnly: { equals: true } }, { analyseOwner: { in: [9, 7] } }],
+    })
+    expect(analyseOwnWhere({ id: 9, analyseToegangTot: [{ id: 7 }] })).toEqual({
+      and: [{ analyseOnly: { equals: true } }, { analyseOwner: { in: [9, 7] } }],
+    })
   })
 
   it('valt zonder gebruiker terug op een onmogelijke eigenaar (-1) zodat er niets lekt', () => {
-    expect(analyseOwnWhere(null)).toEqual({ and: [{ analyseOnly: { equals: true } }, { analyseOwner: { equals: -1 } }] })
+    expect(analyseOwnWhere(null)).toEqual({ and: [{ analyseOnly: { equals: true } }, { analyseOwner: { in: [-1] } }] })
   })
 })
 

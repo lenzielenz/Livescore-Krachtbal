@@ -1,14 +1,21 @@
 'use client'
 
+import Link from 'next/link'
 import { useState } from 'react'
 
 import { QrScanner } from '@/components/QrScanner'
 import { toast } from '@/components/Toaster'
 import { KEURING_ITEMS, KEURING_OPTIONS } from '@/lib/keuring'
-import { MATCHSHEET_STATUS_OPTIONS, nextStatus, type MatchSheetStatus } from '@/lib/matchsheet-workflow'
+import {
+  MATCHSHEET_STATUS_OPTIONS,
+  nextStatus,
+  sheetOpenForScoring,
+  type MatchSheetStatus,
+} from '@/lib/matchsheet-workflow'
 import {
   OFFICIAL_FUNCTIE_KEYS,
   OFFICIAL_LABELS,
+  officialFieldStatus,
   requiredOfficials,
   validateOfficials,
 } from '@/lib/officials-rules'
@@ -19,7 +26,6 @@ const statusLabel = (s: string) =>
 
 export type VergoedingState = {
   refereeKm: number | ''
-  uitslag: string
   vanToepassing: boolean
   gemeldThuis: boolean
   gemeldUit: boolean
@@ -27,11 +33,12 @@ export type VergoedingState = {
   km: number | ''
 }
 
+// Forfait-uitslag: de niet-forfaiterende ploeg wint met 30–0; dubbel forfait = 0–0.
 const FORFAIT_OPTIES: { value: string; label: string }[] = [
-  { value: 'geen', label: 'Geen' },
-  { value: 'thuis', label: 'Thuis FF' },
-  { value: 'uit', label: 'Bezoekers FF' },
-  { value: 'dubbel', label: 'Dubbel FF' },
+  { value: 'geen', label: 'Geen forfait' },
+  { value: 'thuis', label: 'Thuis FF (0–30)' },
+  { value: 'uit', label: 'Bezoekers FF (30–0)' },
+  { value: 'dubbel', label: 'Dubbel FF (0–0)' },
 ]
 
 export function RefereePanel({
@@ -40,8 +47,10 @@ export function RefereePanel({
   assignedRefereeId,
   initialStatus,
   initialKeuring,
+  initialKeuringBevestigd,
   initialOfficials,
   initialVergoeding,
+  initialForfaitUitslag,
   initialStartAkkoord,
   initialStartNaam,
   lineupReady,
@@ -55,8 +64,10 @@ export function RefereePanel({
   assignedRefereeId: number | null
   initialStatus: string
   initialKeuring: Record<string, string>
+  initialKeuringBevestigd: boolean
   initialOfficials: Record<string, string>
   initialVergoeding: VergoedingState
+  initialForfaitUitslag: string
   initialStartAkkoord: boolean
   initialStartNaam: string
   lineupReady: { homeOk: boolean; awayOk: boolean }
@@ -67,8 +78,11 @@ export function RefereePanel({
 }) {
   const [status, setStatus] = useState<MatchSheetStatus>(initialStatus as MatchSheetStatus)
   const [keuring, setKeuring] = useState<Record<string, string>>(initialKeuring)
+  const [keuringBevestigd, setKeuringBevestigd] = useState<boolean>(initialKeuringBevestigd)
   const [officials, setOfficials] = useState<Record<string, string>>(initialOfficials)
   const [verg, setVerg] = useState<VergoedingState>(initialVergoeding)
+  const [ffUitslag, setFfUitslag] = useState<string>(initialForfaitUitslag || 'geen')
+  const [ffSaved, setFfSaved] = useState<string>(initialForfaitUitslag || 'geen')
   const [startAkkoord, setStartAkkoord] = useState<boolean>(initialStartAkkoord)
   const [startNaam, setStartNaam] = useState<string>(initialStartNaam)
   const [code, setCode] = useState<string>('')
@@ -102,7 +116,6 @@ export function RefereePanel({
       action: 'vergoeding',
       refereeKm: verg.refereeKm === '' ? 0 : Number(verg.refereeKm),
       forfait: {
-        uitslag: verg.uitslag || 'geen',
         vanToepassing: verg.vanToepassing,
         gemeldThuis: verg.gemeldThuis,
         gemeldUit: verg.gemeldUit,
@@ -110,11 +123,39 @@ export function RefereePanel({
         km: verg.km === '' ? 0 : Number(verg.km),
       },
     })
-    notify(ok, ok ? 'Vergoeding & forfait bewaard.' : json.error || 'Mislukt.')
+    notify(ok, ok ? 'Vergoeding bewaard.' : json.error || 'Mislukt.')
+  }
+
+  // Forfait-uitslag toepassen: zet meteen de score (0–30 / 30–0 / 0–0) en sluit de wedstrijd af;
+  // terug naar "geen forfait" zet de wedstrijd weer op gepland.
+  const saveForfait = async () => {
+    const { ok, json } = await post({ action: 'forfait', uitslag: ffUitslag })
+    if (!ok) {
+      notify(false, json.error || 'Mislukt.')
+      return
+    }
+    setFfSaved(json.uitslag)
+    notify(
+      true,
+      json.score
+        ? `Forfait toegepast — uitslag ${json.score.home}–${json.score.away}.`
+        : 'Forfait verwijderd — de wedstrijd staat terug op gepland.',
+    )
   }
 
   const required = new Set(reeks ? requiredOfficials(reeks) : [])
   const validation = reeks ? validateOfficials(reeks, officials) : { ok: true, errors: [] as string[] }
+  const keuringNietOk = KEURING_ITEMS.filter((i) => (keuring[i.name] ?? 'ok') === 'niet_ok').length
+  const keuringAllesOk = keuringNietOk === 0
+
+  // Alles wat in orde moet zijn vóór de wedstrijd kan starten — geen losse statuskeuzes meer.
+  const klaarChecks = [
+    { ok: lineupReady.homeOk && lineupReady.awayOk, label: 'Opstellingen (min. 4 per ploeg)' },
+    { ok: validation.ok, label: 'Officials volledig en geldig' },
+    { ok: keuringBevestigd, label: 'Keuring bevestigd' },
+    { ok: startAkkoord, label: 'Akkoord scheidsrechter' },
+  ]
+  const allesKlaar = klaarChecks.every((c) => c.ok)
 
   const saveOfficials = async () => {
     const { ok, json } = await post({ action: 'officials', officials })
@@ -143,9 +184,24 @@ export function RefereePanel({
     return { ok: res.ok, json }
   }
 
-  const saveKeuring = async () => {
-    const { ok, json } = await post({ action: 'keuring', keuring })
-    notify(ok, ok ? 'Keuring bewaard.' : json.error || 'Mislukt.')
+  // `confirm`: undefined laat de bevestiging ongemoeid; true vergrendelt, false ontgrendelt.
+  const saveKeuring = async (confirm?: boolean) => {
+    const { ok, json } = await post({
+      action: 'keuring',
+      keuring,
+      ...(typeof confirm === 'boolean' ? { bevestigd: confirm } : {}),
+    })
+    if (ok && typeof confirm === 'boolean') setKeuringBevestigd(confirm)
+    notify(
+      ok,
+      ok
+        ? confirm === true
+          ? 'Keuring bevestigd en vergrendeld.'
+          : confirm === false
+            ? 'Keuring ontgrendeld — je kan ze weer aanpassen.'
+            : 'Keuring bewaard.'
+        : json.error || 'Mislukt.',
+    )
   }
 
   const goTo = async (to: MatchSheetStatus) => {
@@ -158,7 +214,23 @@ export function RefereePanel({
     }
   }
 
-  const next = nextStatus(status)
+  // Eén knop i.p.v. losse statuskeuzes: doorloop de tussenstappen van de status-machine
+  // (concept → vrijgegeven → wedstrijdklaar) zodat de aantekenaar kan starten.
+  const wedstrijdKlaarzetten = async () => {
+    let s = status
+    while (s !== 'wedstrijdklaar') {
+      const n = nextStatus(s)
+      if (!n || n === 'bezig') break
+      const { ok, json } = await post({ action: 'status', to: n })
+      if (!ok) {
+        notify(false, json.error || 'Statuswijziging mislukt.')
+        return
+      }
+      s = json.status
+      setStatus(s)
+    }
+    notify(true, 'Wedstrijd klaargezet — de aantekenaar kan starten.')
+  }
 
   const startBlokkers: string[] = []
   if (!lineupReady.homeOk) startBlokkers.push('opstelling thuis')
@@ -237,37 +309,90 @@ export function RefereePanel({
         )}
       </section>
 
+      <section className="wb-card" style={ffSaved !== 'geen' ? { borderColor: '#e0533d' } : undefined}>
+        <h2>Forfait</h2>
+        <p className="wb-sub">
+          Ploeg niet opgedaagd? Duid aan wie forfait gaf — de uitslag (30–0 of 0–30) wordt meteen
+          op de wedstrijd gezet.
+        </p>
+        <div className="wb-btn-row" style={{ marginTop: 0 }}>
+          {FORFAIT_OPTIES.map((o) => (
+            <button
+              key={o.value}
+              type="button"
+              className={`wb-btn ${ffUitslag === o.value ? 'wb-btn-primary' : ''}`}
+              style={{ padding: '6px 12px', fontSize: '0.82rem' }}
+              onClick={() => setFfUitslag(o.value)}
+            >
+              {o.label}
+            </button>
+          ))}
+        </div>
+        {ffSaved !== 'geen' && (
+          <p className="wb-sub" style={{ color: '#e0533d', marginTop: 8 }}>
+            Forfait toegepast ({FORFAIT_OPTIES.find((o) => o.value === ffSaved)?.label}). De wedstrijd staat
+            als afgelopen met de forfait-uitslag.
+          </p>
+        )}
+        <button
+          onClick={saveForfait}
+          disabled={busy || ffUitslag === ffSaved}
+          className="wb-btn wb-btn-primary"
+          style={{ marginTop: 10 }}
+        >
+          {ffUitslag === 'geen' && ffSaved !== 'geen' ? 'Forfait verwijderen' : 'Forfait toepassen'}
+        </button>
+      </section>
+
       <section className="wb-card">
         <h2>Officials</h2>
         {officialsHint && <p className="wb-sub">{officialsHint}</p>}
+        {/* Eén oogopslag: alles geldig → groen. Wat schort, staat bij het veld zelf. */}
+        {validation.ok && <div className="ops-ready ok">✓ Officials volledig en geldig</div>}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {OFFICIAL_FUNCTIE_KEYS.map((key) => (
-            <label key={key} style={{ display: 'flex', flexDirection: 'column', gap: 2, fontSize: '0.8rem', color: 'var(--dim)' }}>
-              {OFFICIAL_LABELS[key]}
-              {required.has(key) && <span style={{ color: '#e0533d' }}> *verplicht</span>}
-              <input
-                className="wb-input"
-                placeholder="Volledige naam + voornaam"
-                value={officials[key] ?? ''}
-                onChange={(e) => setOfficials((o) => ({ ...o, [key]: e.target.value }))}
-              />
-            </label>
-          ))}
+          {OFFICIAL_FUNCTIE_KEYS.map((key) => {
+            const st = officialFieldStatus(key, officials)
+            return (
+              <label key={key} style={{ display: 'flex', flexDirection: 'column', gap: 2, fontSize: '0.8rem', color: 'var(--dim)' }}>
+                <span className="off-lbl">
+                  {OFFICIAL_LABELS[key]}
+                  {st === 'ok' ? (
+                    <span className="off-st ok">✓ OK</span>
+                  ) : st === 'onvolledig' ? (
+                    <span className="off-st bad">naam én voornaam nodig</span>
+                  ) : st === 'conflict' ? (
+                    <span className="off-st bad">mag geen grensrechter zijn (Art. 25)</span>
+                  ) : required.has(key) ? (
+                    <span className="off-st bad">*verplicht</span>
+                  ) : null}
+                </span>
+                <input
+                  className={`wb-input${st === 'ok' ? ' field-ok' : st === 'onvolledig' || st === 'conflict' ? ' field-bad' : ''}`}
+                  placeholder="Voornaam + naam"
+                  value={officials[key] ?? ''}
+                  onChange={(e) => setOfficials((o) => ({ ...o, [key]: e.target.value }))}
+                />
+              </label>
+            )
+          })}
         </div>
-        {!validation.ok && (
-          <ul className="wb-sub" style={{ marginTop: 10, color: '#e0533d', paddingLeft: 18 }}>
-            {validation.errors.map((e, i) => (
-              <li key={i}>{e}</li>
-            ))}
-          </ul>
-        )}
         <button onClick={saveOfficials} disabled={busy} className="wb-btn wb-btn-primary" style={{ marginTop: 14 }}>
           Officials bewaren
         </button>
       </section>
 
-      <section className="wb-card">
+      <section className={`wb-card${keuringBevestigd ? ' ops-locked' : ''}`}>
         <h2>Materiële keuring</h2>
+        {/* Bevestigd = vergrendeld slot, voor iedereen duidelijk dat de keuring in orde is. */}
+        {keuringBevestigd ? (
+          <div className="ops-ready locked">
+            🔒 Keuring bevestigd en vergrendeld{keuringAllesOk ? ' · alles OK' : ` · ${keuringNietOk} × NIET OK`}
+          </div>
+        ) : keuringAllesOk ? (
+          <div className="ops-ready ok">✓ Alles OK — bevestig om te vergrendelen.</div>
+        ) : (
+          <div className="ops-ready todo">{keuringNietOk} {keuringNietOk === 1 ? 'punt' : 'punten'} NIET OK.</div>
+        )}
         <div>
           {KEURING_ITEMS.map((item) => (
             <div key={item.name} className="wb-check">
@@ -276,6 +401,7 @@ export function RefereePanel({
                 className="wb-select"
                 aria-label={item.label}
                 value={keuring[item.name] ?? 'ok'}
+                disabled={keuringBevestigd}
                 onChange={(e) => setKeuring((k) => ({ ...k, [item.name]: e.target.value }))}
               >
                 {KEURING_OPTIONS.map((o) => (
@@ -287,13 +413,24 @@ export function RefereePanel({
             </div>
           ))}
         </div>
-        <button onClick={saveKeuring} disabled={busy} className="wb-btn wb-btn-primary" style={{ marginTop: 14 }}>
-          Keuring bewaren
-        </button>
+        {keuringBevestigd ? (
+          <button onClick={() => saveKeuring(false)} disabled={busy} className="wb-btn" style={{ marginTop: 14 }}>
+            🔓 Keuring ontgrendelen
+          </button>
+        ) : (
+          <div className="wb-btn-row" style={{ marginTop: 14 }}>
+            <button onClick={() => saveKeuring()} disabled={busy} className="wb-btn wb-btn-primary">
+              Keuring bewaren
+            </button>
+            <button onClick={() => saveKeuring(true)} disabled={busy} className="wb-btn wb-btn-confirm">
+              🔒 Bevestigen &amp; vergrendelen
+            </button>
+          </div>
+        )}
       </section>
 
       <section className="wb-card">
-        <h2>Vergoeding &amp; forfait</h2>
+        <h2>Vergoeding</h2>
         <label style={{ display: 'flex', flexDirection: 'column', gap: 2, fontSize: '0.8rem', color: 'var(--dim)' }}>
           Afgelegde km (kwitantie, €0,4327/km)
           <input
@@ -304,21 +441,6 @@ export function RefereePanel({
             onChange={(e) => setVerg((v) => ({ ...v, refereeKm: e.target.value === '' ? '' : Number(e.target.value) }))}
           />
         </label>
-
-        <p className="wb-sub" style={{ marginTop: 14, marginBottom: 4 }}>Forfait (FF) — welke ploeg gaf forfait?</p>
-        <div className="wb-btn-row" style={{ marginTop: 0, marginBottom: 6 }}>
-          {FORFAIT_OPTIES.map((o) => (
-            <button
-              key={o.value}
-              type="button"
-              className={`wb-btn ${(verg.uitslag || 'geen') === o.value ? 'wb-btn-primary' : ''}`}
-              style={{ padding: '6px 12px', fontSize: '0.82rem' }}
-              onClick={() => setVerg((v) => ({ ...v, uitslag: o.value }))}
-            >
-              {o.label}
-            </button>
-          ))}
-        </div>
 
         <p className="wb-sub" style={{ marginTop: 12, marginBottom: 4 }}>Forfait-onkostenblad (enkel bij FF):</p>
         <label className="wb-check"><span>Onkostenblad van toepassing</span>
@@ -355,30 +477,55 @@ export function RefereePanel({
               ⬇ Kwitantie scheidsrechter (PDF)
             </a>
           )}
-          <a className="wb-btn" href="/admin/collections/accidents/create" target="_blank" rel="noreferrer" style={{ padding: '6px 12px', fontSize: '0.82rem' }}>
-            🚑 Kwetsuur / ongeval registreren
-          </a>
         </div>
       </section>
 
       <section className="wb-card">
-        <h2>Status</h2>
+        <h2>Wedstrijd starten</h2>
         <p className="wb-sub">
           Huidige status: <span className="wb-status">{statusLabel(status)}</span>
         </p>
-        {next && (
-          <button onClick={() => goTo(next)} disabled={busy} className="wb-btn wb-btn-primary">
-            → Naar &quot;{statusLabel(next)}&quot;
+        {/* Geen losse statuskeuzes: alles juist ingevuld → één knop door naar de wedstrijd. */}
+        <ul className="sr-checks">
+          {klaarChecks.map((c) => (
+            <li key={c.label} className={c.ok ? 'ok' : ''}>
+              {c.ok ? '✓' : '·'} {c.label}
+            </li>
+          ))}
+        </ul>
+        {sheetOpenForScoring(status) ? (
+          <div className="wb-btn-row" style={{ marginTop: 6 }}>
+            <Link href={`/scorekeeper/${matchId}`} className="wb-btn wb-btn-primary">
+              → Naar stap 3 — Aantekenen
+            </Link>
+            {status === 'af_te_tekenen' && (
+              <Link href={`/aftekenen/${matchId}`} className="wb-btn">
+                → Naar stap 4 — Aftekenen
+              </Link>
+            )}
+          </div>
+        ) : (
+          <button
+            onClick={wedstrijdKlaarzetten}
+            disabled={busy || !allesKlaar}
+            className="wb-btn wb-btn-primary"
+            title={allesKlaar ? 'Zet de wedstrijd klaar voor de aantekenaar' : 'Eerst alles hierboven in orde brengen'}
+          >
+            {busy ? 'Bezig…' : '✓ Alles in orde — wedstrijd starten'}
           </button>
         )}
-        <p className="wb-sub" style={{ marginTop: 16 }}>Manueel overschrijven (override, gelogd):</p>
-        <div className="wb-btn-row" style={{ marginTop: 0 }}>
-          {MATCHSHEET_STATUS_OPTIONS.filter((o) => o.value !== status && o.value !== 'ingediend').map((o) => (
-            <button key={o.value} onClick={() => goTo(o.value)} disabled={busy} className="wb-btn" style={{ padding: '6px 12px', fontSize: '0.82rem' }}>
-              {o.label}
-            </button>
-          ))}
-        </div>
+        {isFederation && (
+          <>
+            <p className="wb-sub" style={{ marginTop: 16 }}>Manueel overschrijven (federatie, gelogd):</p>
+            <div className="wb-btn-row" style={{ marginTop: 0 }}>
+              {MATCHSHEET_STATUS_OPTIONS.filter((o) => o.value !== status && o.value !== 'ingediend').map((o) => (
+                <button key={o.value} onClick={() => goTo(o.value)} disabled={busy} className="wb-btn" style={{ padding: '6px 12px', fontSize: '0.82rem' }}>
+                  {o.label}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
         {msg && <p className="wb-msg">{msg}</p>}
       </section>
     </div>

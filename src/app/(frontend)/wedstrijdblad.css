@@ -138,6 +138,36 @@
   border-color: #f59e0b;
   color: #fff7e6;
 }
+/* Officials-/spelersvelden: per veld direct tonen of het ingevulde ok is. */
+.off-lbl {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.off-st {
+  font-weight: 700;
+  font-size: 0.74rem;
+  white-space: nowrap;
+}
+.off-st.ok { color: #2a9d6a; }
+.off-st.bad { color: #e0533d; }
+.wb-input.field-ok { border-color: #2a9d6a; }
+.wb-input.field-bad { border-color: #e0533d; }
+
+/* Klaar-checklist op de scheidsrechterpagina (vóór "wedstrijd starten"). */
+.sr-checks {
+  list-style: none;
+  margin: 6px 0 12px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.84rem;
+  color: var(--dim);
+}
+.sr-checks li.ok { color: #2a9d6a; font-weight: 600; }
+
 .ops-quick {
   display: flex;
   gap: 8px;

@@ -34,6 +34,43 @@ export const Users: CollectionConfig = {
         }
       },
     ],
+    // Houd de inverse van "analyse delen met" bij op de ONTVANGER (analyseToegangTot), zodat de
+    // analyse-queries de gedeelde eigenaars rechtstreeks uit het ingelogde user-object kunnen
+    // lezen (geen extra opzoeking per pagina). De nestede updates wijzigen analyseDeeltMet niet,
+    // dus deze hook loopt daarbij meteen leeg (geen oneindige lus).
+    afterChange: [
+      async ({ doc, previousDoc, req }) => {
+        const ids = (v: unknown): number[] =>
+          Array.isArray(v)
+            ? v
+                .map((x) => Number(x && typeof x === 'object' ? (x as { id?: unknown }).id : x))
+                .filter((n) => Number.isFinite(n) && n > 0)
+            : []
+        const voor = ids((previousDoc as { analyseDeeltMet?: unknown } | undefined)?.analyseDeeltMet)
+        const na = ids((doc as { analyseDeeltMet?: unknown }).analyseDeeltMet)
+        const erbij = na.filter((x) => !voor.includes(x))
+        const eraf = voor.filter((x) => !na.includes(x))
+        if (!erbij.length && !eraf.length) return
+        const me = Number((doc as { id: number | string }).id)
+        for (const uid of [...erbij, ...eraf]) {
+          const u = await req.payload.findByID({ collection: 'users', id: uid, depth: 0 }).catch(() => null)
+          if (!u) continue
+          const huidig = ids((u as { analyseToegangTot?: unknown }).analyseToegangTot)
+          const nieuw = erbij.includes(uid)
+            ? huidig.includes(me)
+              ? null
+              : [...huidig, me]
+            : huidig.includes(me)
+              ? huidig.filter((x) => x !== me)
+              : null
+          if (nieuw) {
+            await req.payload
+              .update({ collection: 'users', id: uid, data: { analyseToegangTot: nieuw }, overrideAccess: true })
+              .catch(() => {})
+          }
+        }
+      },
+    ],
   },
   access: {
     // Alleen admins beheren gebruikers; de eerste gebruiker mag aangemaakt worden bij lege db.
@@ -135,6 +172,28 @@ export const Users: CollectionConfig = {
         description: 'Enkel relevant voor de rol "Scheidsrechter". Beperkt de toegang tot de eigen kwitantie.',
         condition: (data) => Array.isArray(data?.roles) && data.roles.includes('scheidsrechter'),
       },
+    },
+    {
+      // Analyse delen: deze gebruikers mogen MIJN analyse-data (wedstrijden, rapporten) mee
+      // bekijken. De eigenaar beheert dit zelf op de analyse-hub.
+      name: 'analyseDeeltMet',
+      label: 'Analyse delen met',
+      type: 'relationship',
+      relationTo: 'users',
+      hasMany: true,
+      admin: {
+        description: 'Deze accounts zien jouw analysewedstrijden en -rapporten mee.',
+      },
+    },
+    {
+      // Automatisch bijgehouden inverse (wiens analyses mag IK zien) — zie de afterChange-hook.
+      // Hidden: dit veld beheer je nooit rechtstreeks.
+      name: 'analyseToegangTot',
+      label: 'Analyse-toegang tot',
+      type: 'relationship',
+      relationTo: 'users',
+      hasMany: true,
+      admin: { hidden: true, readOnly: true },
     },
   ],
 }

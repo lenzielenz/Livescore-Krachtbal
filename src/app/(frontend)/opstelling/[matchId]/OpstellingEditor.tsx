@@ -219,8 +219,8 @@ export function OpstellingEditor({
           zelf intikken, want een speler moet eerst door de federatie gekeurd zijn. Een nieuw lid
           voeg je toe via "Spelers toevoegen" (Mijn club); daarna verschijnt hij hier in de lijst. */}
       <p className="ops-add-hint">
-        Staat een speler niet in de lijst? Voeg hem eerst toe via <strong>Spelers toevoegen</strong> in
-        “Mijn club”. Na keuring door de federatie verschijnt hij hier vanzelf.
+        Speler niet in de lijst? Voeg hem toe via <strong>Spelers toevoegen</strong> in “Mijn club” —
+        na keuring verschijnt hij hier.
       </p>
 
       {confirmed ? (

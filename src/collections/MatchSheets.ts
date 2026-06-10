@@ -311,6 +311,14 @@ export const MatchSheets: CollectionConfig = {
             defaultValue: 'ok',
           })),
         },
+        {
+          // De scheidsrechter bevestigt ("vergrendelt") de keuring: duidelijk signaal voor
+          // iedereen dat ze gecontroleerd en in orde is. Kan weer ontgrendeld worden.
+          name: 'keuringBevestigd',
+          label: 'Keuring bevestigd',
+          type: 'checkbox',
+          defaultValue: false,
+        },
       ],
     },
     {
