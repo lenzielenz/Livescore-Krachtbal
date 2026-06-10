@@ -37,16 +37,22 @@ export const Officials: CollectionConfig = {
         const newUser = relId((doc as { user?: unknown }).user)
         const oldUser = relId((previousDoc as { user?: unknown } | undefined)?.user)
         if (newUser === oldUser) return
+        // BELANGRIJK: geef `req` mee aan elke geneste call, zodat ze in DEZELFDE transactie
+        // lopen als de Officials-update. Zonder `req` pakt Payload een aparte pool-connectie en
+        // een nieuwe transactie; die botst dan op de FK-rijlock die de buitenste transactie al op
+        // de users-rij houdt (officials.user → users), wacht tot `lock_timeout` (10s) en faalt —
+        // waarna de `.catch` de fout slikt. Gevolg: het formulier bleef "Submitting…" hangen en
+        // users.official werd nooit gezet (scheidsrechter bleef "niet gekoppeld").
         if (newUser != null) {
           await req.payload
-            .update({ collection: 'users', id: newUser, data: { official: doc.id }, overrideAccess: true })
+            .update({ collection: 'users', id: newUser, data: { official: doc.id }, overrideAccess: true, req })
             .catch(() => {})
         }
         if (oldUser != null && oldUser !== newUser) {
-          const prev = await req.payload.findByID({ collection: 'users', id: oldUser, depth: 0 }).catch(() => null)
+          const prev = await req.payload.findByID({ collection: 'users', id: oldUser, depth: 0, req }).catch(() => null)
           if (prev && relId((prev as { official?: unknown }).official) === doc.id) {
             await req.payload
-              .update({ collection: 'users', id: oldUser, data: { official: null }, overrideAccess: true })
+              .update({ collection: 'users', id: oldUser, data: { official: null }, overrideAccess: true, req })
               .catch(() => {})
           }
         }
