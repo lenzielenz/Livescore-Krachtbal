@@ -59,6 +59,8 @@ export function FlowReplay({
   // URL openen/bewaren werkt mobiel veel betrouwbaarder dan een blob-download (vooral op iOS).
   const [phoneBusy, setPhoneBusy] = useState(false)
   const [phoneShare, setPhoneShare] = useState<{ url: string; qr: string } | null>(null)
+  // Eén keer uploaden, daarna hergebruiken voor download/QR (niet bij elke tik opnieuw versturen).
+  const uploadedUrl = useRef<string | null>(null)
   const lastTs = useRef(0)
 
   // Object-URL opruimen wanneer het klaar-venster sluit of de component verdwijnt.
@@ -187,8 +189,8 @@ export function FlowReplay({
     if (list.length === 0) return
     const MR = (globalThis as { MediaRecorder?: typeof MediaRecorder }).MediaRecorder
     if (!MR) {
-      setRecMsg('⚠️ Video opnemen wordt niet ondersteund in deze browser. Probeer Chrome.')
-      setTimeout(() => setRecMsg(null), 4000)
+      setRecMsg('⚠️ Video opnemen kan niet in deze browser. Werk je iPhone/iPad bij naar een recente iOS-versie, of maak de video op een ander toestel — downloaden kan daarna via de link/QR.')
+      setTimeout(() => setRecMsg(null), 6000)
       return
     }
     // mp4 (H.264) eerst: dat kan je wél via WhatsApp/sociale media doorsturen (webm wordt daar niet
@@ -446,22 +448,55 @@ export function FlowReplay({
     setTimeout(() => link.remove(), 1000)
   }
 
-  // Stuur de clip naar de server → krijg een gewone URL + QR. Op de telefoon open je die link en
-  // bewaar je de video via de speler (iOS: deel → "Bewaar video"); of scan de QR met een ander
-  // toestel. Veel betrouwbaarder dan een blob-download op gsm.
+  // Upload de clip één keer naar de server en geef de absolute URL terug (gecachet).
+  const uploadClip = async (): Promise<string | null> => {
+    if (!recReady) return null
+    if (uploadedUrl.current) return uploadedUrl.current
+    const res = await fetch('/api/clip', {
+      method: 'POST',
+      headers: { 'Content-Type': recReady.file.type || 'video/mp4' },
+      body: recReady.file,
+    })
+    const data = (await res.json()) as { url?: string; error?: string }
+    if (!res.ok || !data.url) throw new Error(data.error ?? 'Uploaden mislukt.')
+    uploadedUrl.current = new URL(data.url, window.location.origin).href
+    return uploadedUrl.current
+  }
+
+  // Echte bestandsdownload-URL (Content-Disposition: attachment): Android zet de video meteen in
+  // Downloads, iOS Safari toont de downloadmanager — dé betrouwbare weg op een gsm.
+  const downloadUrl = (base: string) => `${base}?download=1&name=${encodeURIComponent(recReady?.name ?? 'krachtbal-replay')}`
+
+  // Eén tik: upload (indien nodig) en haal de video als echt bestand binnen op DIT toestel.
+  const downloadOnDevice = async () => {
+    if (!recReady || phoneBusy) return
+    setPhoneBusy(true)
+    setRecMsg(null)
+    try {
+      const base = await uploadClip()
+      if (!base) return
+      const link = document.createElement('a')
+      link.href = downloadUrl(base)
+      document.body.appendChild(link)
+      link.click()
+      setTimeout(() => link.remove(), 1000)
+    } catch (err) {
+      console.error('clip download failed:', err)
+      setRecMsg('⚠️ Downloaden lukte niet. Probeer "Link & QR" of "Bewaren / delen".')
+      setTimeout(() => setRecMsg(null), 4500)
+    } finally {
+      setPhoneBusy(false)
+    }
+  }
+
+  // Link + QR tonen: open/bewaar de video op dit toestel of scan de QR met een ander toestel.
   const sendToPhone = async () => {
     if (!recReady || phoneBusy) return
     setPhoneBusy(true)
     setRecMsg(null)
     try {
-      const res = await fetch('/api/clip', {
-        method: 'POST',
-        headers: { 'Content-Type': recReady.file.type || 'video/mp4' },
-        body: recReady.file,
-      })
-      const data = (await res.json()) as { url?: string; error?: string }
-      if (!res.ok || !data.url) throw new Error(data.error ?? 'Uploaden mislukt.')
-      const abs = new URL(data.url, window.location.origin).href
+      const abs = await uploadClip()
+      if (!abs) return
       const QRCode = (await import('qrcode')).default
       const qr = await QRCode.toDataURL(abs, { margin: 1, width: 240 })
       setPhoneShare({ url: abs, qr })
@@ -478,6 +513,7 @@ export function FlowReplay({
     if (recReady) URL.revokeObjectURL(recReady.url)
     setRecReady(null)
     setPhoneShare(null)
+    uploadedUrl.current = null
   }
 
   // Live stand: tel de doelpunten tot nu (de huidige worp telt pas mee zodra de bal geland is).
@@ -579,10 +615,11 @@ export function FlowReplay({
                   <p className="replay-rec-title">✅ Je video is klaar</p>
                   {phoneShare ? (
                     <>
-                      <p className="replay-rec-tip">Open de video op je telefoon en bewaar ze via de speler — of scan de QR met een ander toestel.</p>
+                      <p className="replay-rec-tip">Haal de video binnen met de downloadknop, open ze in de speler, of scan de QR met een ander toestel.</p>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img className="replay-rec-qr" src={phoneShare.qr} alt="QR-code naar de video" width={200} height={200} />
                       <div className="replay-rec-actions">
+                        <a className="replay-rec-save" href={downloadUrl(phoneShare.url)}>⬇ Download video</a>
                         <a className="replay-rec-save" href={phoneShare.url} target="_blank" rel="noopener noreferrer">▶ Open de video</a>
                         <button type="button" className="replay-rec-close" onClick={() => { void navigator.clipboard?.writeText(phoneShare.url) }}>🔗 Kopieer link</button>
                       </div>
@@ -590,11 +627,16 @@ export function FlowReplay({
                     </>
                   ) : (
                     <>
-                      <p className="replay-rec-tip">Bewaar ze rechtstreeks, of stuur ze naar je telefoon via een link/QR.</p>
+                      <p className="replay-rec-tip">
+                        Haal ze binnen als bestand (Downloads), bewaar/deel ze via je toestel, of toon een link/QR.
+                      </p>
                       <div className="replay-rec-actions">
-                        <button type="button" className="replay-rec-save" onClick={saveVideo}>📥 Bewaren</button>
+                        <button type="button" className="replay-rec-save" onClick={downloadOnDevice} disabled={phoneBusy}>
+                          {phoneBusy ? '⏳ Bezig…' : '⬇ Downloaden'}
+                        </button>
+                        <button type="button" className="replay-rec-save" onClick={saveVideo}>📥 Bewaren / delen</button>
                         <button type="button" className="replay-rec-save" onClick={sendToPhone} disabled={phoneBusy}>
-                          {phoneBusy ? '⏳ Bezig…' : '📲 Naar mijn telefoon'}
+                          {phoneBusy ? '⏳ Bezig…' : '📲 Link & QR'}
                         </button>
                         <button type="button" className="replay-rec-close" onClick={closeReady}>Sluiten</button>
                       </div>
