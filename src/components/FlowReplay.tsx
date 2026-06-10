@@ -338,32 +338,43 @@ export function FlowReplay({
       drawFrame(0) // eerste frame klaarzetten vóór de opname start
       // Auto-capture op vaste fps (geen requestFrame): het mengen van beide modi liet op sommige
       // toestellen een lege/onspeelbare video achter.
-      const stream = (canvas as HTMLCanvasElement & { captureStream(fps?: number): MediaStream }).captureStream(25)
-      // Neem het eerste type dat écht een recorder oplevert (mp4 verkozen, anders webm).
-      let rec: MediaRecorder | null = null
-      let mime = ''
-      for (const m of mimeCandidates) {
-        try {
-          rec = new MR(stream, { mimeType: m })
-          mime = m
-          break
-        } catch {
-          rec = null
-        }
-      }
-      if (!rec) {
-        try {
-          rec = new MR(stream) // laatste poging: laat de browser zelf een type kiezen
-          mime = rec.mimeType || 'video/webm'
-        } catch {
-          rec = null
-        }
-      }
-      if (!rec) {
-        setRecMsg('⚠️ Video opnemen lukte niet op dit toestel. Tip: het werkt het best in Chrome.')
-        setTimeout(() => setRecMsg(null), 4500)
+      const cap = canvas as HTMLCanvasElement & { captureStream?: (fps?: number) => MediaStream }
+      if (typeof cap.captureStream !== 'function') {
+        // Typisch een in-app browser (WhatsApp/Facebook) — daar ontbreekt canvas-opname.
+        setRecMsg('⚠️ Dit venster kan geen video opnemen. Open de site rechtstreeks in Chrome (niet via een app) en probeer opnieuw.')
+        setTimeout(() => setRecMsg(null), 6000)
         return
       }
+      // Probeer meerdere combinaties: eerst mp4/webm-codecs op 25 fps, dan zonder opgegeven type,
+      // dan hetzelfde op 15 fps. Sommige toestellen weigeren één combinatie maar slikken een andere.
+      const maakRecorder = (fps: number): { rec: MediaRecorder; mime: string } | null => {
+        let stream: MediaStream
+        try {
+          stream = cap.captureStream!(fps)
+        } catch {
+          return null
+        }
+        for (const m of mimeCandidates) {
+          try {
+            return { rec: new MR(stream, { mimeType: m }), mime: m }
+          } catch {
+            /* volgende kandidaat */
+          }
+        }
+        try {
+          const rec = new MR(stream) // laat de browser zelf een type kiezen
+          return { rec, mime: rec.mimeType || 'video/webm' }
+        } catch {
+          return null
+        }
+      }
+      const made = maakRecorder(25) ?? maakRecorder(15)
+      if (!made) {
+        setRecMsg('⚠️ Dit toestel weigert de video-opname te starten. Probeer het in Chrome (rechtstreeks, niet via een app) — of maak de video op een pc en haal ze met de QR binnen op je gsm.')
+        setTimeout(() => setRecMsg(null), 7000)
+        return
+      }
+      const { rec, mime } = made
       const ext = mime.includes('mp4') ? 'mp4' : 'webm'
       const chunks: BlobPart[] = []
       rec.ondataavailable = (e) => {
@@ -414,8 +425,12 @@ export function FlowReplay({
       setRecReady({ url: URL.createObjectURL(blob), file: new File([blob], name, { type: mime }), name })
     } catch (err) {
       console.error('video record failed:', err)
-      setRecMsg('⚠️ Video opnemen lukte niet op dit toestel. Tip: het werkt het best in Chrome.')
-      setTimeout(() => setRecMsg(null), 4500)
+      // Toon de technische oorzaak mee: zo weten we bij een melding meteen wat er op dat toestel
+      // misliep (en kan de gebruiker een screenshot doorsturen).
+      const e = err as Error
+      const detail = [e?.name, e?.message].filter(Boolean).join(': ')
+      setRecMsg(`⚠️ Opnemen lukte niet${detail ? ` (${detail})` : ''}. Probeer opnieuw in Chrome (rechtstreeks, niet via een app) — of maak de video op een pc en scan de QR met je gsm.`)
+      setTimeout(() => setRecMsg(null), 8000)
     } finally {
       canvas.remove()
       setRecording(false)
