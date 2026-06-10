@@ -165,6 +165,7 @@ export interface UserAuthOperations {
  */
 export interface Club {
   id: number;
+  displayTitle?: string | null;
   name: string;
   /**
    * Ontvangt het PDF-wedstrijdblad na indienen.
@@ -607,6 +608,8 @@ export interface Matchsheet {
         id?: string | null;
       }[]
     | null;
+  homeLineupConfirmed?: boolean | null;
+  awayLineupConfirmed?: boolean | null;
   wedstrijdstart?: {
     /**
      * Opstellingen gecontroleerd, terrein in orde — de wedstrijd mag geopend worden.
@@ -1243,6 +1246,7 @@ export interface PayloadMigration {
  * via the `definition` "clubs_select".
  */
 export interface ClubsSelect<T extends boolean = true> {
+  displayTitle?: T;
   name?: T;
   email?: T;
   logo?: T;
@@ -1385,6 +1389,8 @@ export interface MatchsheetsSelect<T extends boolean = true> {
         ibGecontroleerd?: T;
         id?: T;
       };
+  homeLineupConfirmed?: T;
+  awayLineupConfirmed?: T;
   wedstrijdstart?:
     | T
     | {

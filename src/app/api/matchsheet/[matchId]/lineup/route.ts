@@ -16,13 +16,14 @@ export async function GET(req: Request, { params }: { params: Promise<{ matchId:
     if (!roster) return Response.json({ error: 'Wedstrijd of ploeg niet gevonden.' }, { status: 404 })
     const sheet = await getOrCreateMatchSheet(payload, matchId)
     const lineupKey = side === 'home' ? 'homeLineup' : 'awayLineup'
+    const confirmKey = side === 'home' ? 'homeLineupConfirmed' : 'awayLineupConfirmed'
     const current = ((sheet[lineupKey] as { player?: number | { id: number }; rugnummer?: number }[]) ?? []).map(
       (r) => ({
         player: typeof r.player === 'object' ? r.player?.id : r.player,
         rugnummer: r.rugnummer,
       }),
     )
-    return Response.json({ ...roster, status: sheet.status, current })
+    return Response.json({ ...roster, status: sheet.status, current, confirmed: Boolean(sheet[confirmKey]) })
   } catch (err) {
     return Response.json({ error: (err as Error).message }, { status: 400 })
   }
@@ -31,7 +32,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ matchId:
 // POST: bewaart de opstelling van één kant op het blad.
 export async function POST(req: Request, { params }: { params: Promise<{ matchId: string }> }) {
   const { matchId } = await params
-  let body: { side?: string; players?: { player: number; rugnummer?: number }[]; saveFavorites?: boolean }
+  let body: { side?: string; players?: { player: number; rugnummer?: number }[]; saveFavorites?: boolean; confirmed?: boolean }
   try {
     body = await req.json()
   } catch {
@@ -83,10 +84,16 @@ export async function POST(req: Request, { params }: { params: Promise<{ matchId
     }
 
     const lineupKey = side === 'home' ? 'homeLineup' : 'awayLineup'
+    const confirmKey = side === 'home' ? 'homeLineupConfirmed' : 'awayLineupConfirmed'
+    // De opstelling bewaren én — indien meegegeven — de bevestiging (lock) zetten of weghalen.
+    // Het bevestigen is een bewuste extra stap bovenop het bewaren, zodat zichtbaar is dat de
+    // club de opstelling als definitief beschouwt (zonder dat ze daarna nog vastligt: ontgrendelen kan).
+    const data: Record<string, unknown> = { [lineupKey]: rows }
+    if (typeof body.confirmed === 'boolean') data[confirmKey] = body.confirmed
     await payload.update({
       collection: 'matchsheets',
       id: sheet.id,
-      data: { [lineupKey]: rows },
+      data,
       overrideAccess: true,
     })
 
@@ -108,7 +115,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ matchId
       }
     }
 
-    return Response.json({ ok: true, saved: rows.length, status, roles, favoritesSaved })
+    return Response.json({ ok: true, saved: rows.length, status, roles, favoritesSaved, confirmed: typeof body.confirmed === 'boolean' ? body.confirmed : undefined })
   } catch (err) {
     return Response.json({ error: (err as Error).message }, { status: 400 })
   }
