@@ -104,8 +104,9 @@ export function FieldScreen({
   }
 
   // SSE-abonnement op dezelfde stream als het publieke scorebord (met reconnect-backoff).
+  // display=1: het veldscherm is een passief scherm en telt niet mee in de kijkersteller.
   const { connected } = useLiveStream<{ state: MatchState; timeline: TimelineItem[] }>(
-    `/api/match/${matchId}/stream`,
+    `/api/match/${matchId}/stream?display=1`,
     (data) => {
       const fresh = data.timeline.filter((i) => i.kind === 'goal' && !seenGoals.current.has(i.id))
       fresh.forEach((i) => seenGoals.current.add(i.id))

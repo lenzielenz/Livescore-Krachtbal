@@ -53,8 +53,9 @@ export function Tile({
   const stateRef = useRef<MatchState | null>(null)
   stateRef.current = state
 
+  // display=1: het kantinescherm is een passief scherm en telt niet mee in de kijkersteller.
   useLiveStream<{ state: MatchState; timeline: TimelineItem[] }>(
-    `/api/match/${match.id}/stream`,
+    `/api/match/${match.id}/stream?display=1`,
     (data) => {
       // Eerste frame "leert" de bestaande doelpunten zonder te vieren; daarna enkel nieuwe id's.
       const first = seenGoals.current.size === 0 && !state

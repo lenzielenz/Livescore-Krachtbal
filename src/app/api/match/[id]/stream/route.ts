@@ -19,6 +19,14 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     return new Response('Te veel gelijktijdige verbindingen.', { status: 429 })
   }
 
+  // Kijkersteller: tel personen, niet verbindingen. `v` = stabiel per-browser id (zelfde persoon
+  // met meerdere tabbladen telt één keer); `display=1` markeert passieve schermen/tafels
+  // (veldscherm, kantine, aantekentafel) die wél meekijken maar niet als kijker tellen.
+  const url = new URL(req.url)
+  const isDisplay = url.searchParams.get('display') === '1'
+  const vParam = url.searchParams.get('v') ?? ''
+  const viewerKey = isDisplay ? null : /^[a-zA-Z0-9_-]{4,40}$/.test(vParam) ? vParam : undefined
+
   const encoder = new TextEncoder()
   const payload = await getPayloadClient()
 
@@ -54,10 +62,15 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 
       // Sluit aan op het gedeelde match-kanaal: één poller + geaggregeerde reacties + viewer-count,
       // fan-out naar alle clients. Het `id`-veld laat de browser Last-Event-ID bijhouden.
-      unsubscribe = joinMatch(payload, matchId, (event, data, id) => {
-        const idLine = id !== undefined ? `id: ${id}\n` : ''
-        safeEnqueue(`${idLine}event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)
-      })
+      unsubscribe = joinMatch(
+        payload,
+        matchId,
+        (event, data, id) => {
+          const idLine = id !== undefined ? `id: ${id}\n` : ''
+          safeEnqueue(`${idLine}event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)
+        },
+        viewerKey,
+      )
 
       heartbeat = setInterval(() => safeEnqueue(`: ping\n\n`), 15000)
       req.signal.addEventListener('abort', cleanup)

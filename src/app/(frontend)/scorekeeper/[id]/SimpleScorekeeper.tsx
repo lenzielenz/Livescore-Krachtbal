@@ -36,11 +36,14 @@ export function SimpleScorekeeper({
   initialState,
   roster,
   reeks,
+  exitHref = '/scorekeeper',
 }: {
   matchId: number
   initialState: MatchState
   roster: RosterPlayer[]
   reeks?: string
+  /** Waarheen "eruit gaan" leidt: voor clubwedstrijden Mijn club (daar start je de tijdopname). */
+  exitHref?: string
 }) {
   const [state, setState] = useState<MatchState>(initialState)
   const [error, setError] = useState<string | null>(null)
@@ -93,7 +96,8 @@ export function SimpleScorekeeper({
 
   // SSE: vang wijzigingen op die op een ander toestel gemaakt worden (met reconnect-backoff).
   // Negeer updates terwijl een eigen actie loopt, zodat we geen optimistische schrijf overschrijven.
-  useLiveStream<{ state?: MatchState }>(`/api/match/${matchId}/stream`, (data) => {
+  // display=1: de aantekentafel is geen kijker — anders staat het oogje nooit op nul.
+  useLiveStream<{ state?: MatchState }>(`/api/match/${matchId}/stream?display=1`, (data) => {
     if (busy.current) return
     if (data.state) setState(data.state)
   })
@@ -230,7 +234,11 @@ export function SimpleScorekeeper({
       style={{ ['--home-c' as string]: homeC, ['--away-c' as string]: awayC }}
     >
       <header className="ssk-top">
-        <Link href="/scorekeeper" className="ssk-home">
+        <Link
+          href={exitHref}
+          className="ssk-home"
+          title={`Terug naar ${exitHref === '/club' ? 'Mijn club' : 'het overzicht'} — de wedstrijd blijft gewoon live`}
+        >
           <span className="brand">Krachtbal</span> · Aantekentafel
         </Link>
         <span className="ssk-toplinks">

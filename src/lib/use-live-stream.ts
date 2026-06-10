@@ -70,6 +70,27 @@ export function useLiveStream<T>(
   return { connected }
 }
 
+/**
+ * Stabiel per-browser kijker-id (gedeeld over tabbladen via localStorage), zodat de
+ * kijkersteller personen telt en niet elke open tab/verbinding apart.
+ */
+export function useViewerId(): string {
+  const [id] = useState(() => {
+    if (typeof window === 'undefined') return ''
+    try {
+      const key = 'kl-viewer-id'
+      const existing = window.localStorage.getItem(key)
+      if (existing) return existing
+      const fresh = Math.random().toString(36).slice(2, 12)
+      window.localStorage.setItem(key, fresh)
+      return fresh
+    } catch {
+      return Math.random().toString(36).slice(2, 12)
+    }
+  })
+  return id
+}
+
 /** Punten uit een doelpunt-label ("Doelpunt +2 …") halen. */
 export function goalPointsFromLabel(label: string): number {
   const m = label.match(/\+(\d+)/)

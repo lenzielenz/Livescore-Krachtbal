@@ -72,7 +72,17 @@ export default async function ScorekeeperPage({
   const advanced = isDemo ? isAdmin && expert === '1' : isAnalyse
 
   if (!advanced) {
-    return <SimpleScorekeeper matchId={matchId} initialState={state} roster={roster} reeks={reeks} />
+    // Eruit gaan brengt je terug naar "Mijn club" (daar start je de tijdopname zodra de
+    // scheidsrechter alles goedkeurde) — enkel de demo blijft naar de kieslijst gaan.
+    return (
+      <SimpleScorekeeper
+        matchId={matchId}
+        initialState={state}
+        roster={roster}
+        reeks={reeks}
+        exitHref={isDemo ? '/scorekeeper' : '/club'}
+      />
+    )
   }
 
   const readiness = await getMatchReadiness(payload, matchId)

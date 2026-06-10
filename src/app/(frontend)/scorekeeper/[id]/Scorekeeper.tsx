@@ -238,7 +238,8 @@ export function Scorekeeper({
   // Live sync met de server (met reconnect-backoff): vangt wijzigingen van een tweede toestel of
   // de scheidsrechter op, en herstelt de juiste stand na een verbroken/herstelde verbinding.
   // Negeer updates terwijl een eigen actie loopt, zodat we geen optimistische schrijf overschrijven.
-  useLiveStream<{ state?: MatchState }>(`/api/match/${matchId}/stream`, (data) => {
+  // display=1: de aantekentafel is geen kijker — anders staat het oogje nooit op nul.
+  useLiveStream<{ state?: MatchState }>(`/api/match/${matchId}/stream?display=1`, (data) => {
     if (busy) return
     if (data.state) setState(data.state)
   })
