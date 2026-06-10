@@ -83,7 +83,10 @@ export function Scorekeeper({
   }
   // Admin/federatie kan de startcontrole bewust overslaan (testen).
   const [bypass, setBypass] = useState(false)
-  const unlocked = readiness.ready || bypass
+  // Analysewedstrijd: nooit het slot-scherm — de veldspelers kies je hier in het scherm zelf
+  // (de spelers voegde je al toe bij het aanmaken). Starten blijft server-side geblokkeerd tot
+  // beide opstellingen gekozen zijn.
+  const unlocked = readiness.ready || bypass || isAnalyseOnly
   // Per-worp keuzes worden in het keuzescherm gezet (na het tikken op het veld).
   const [throwType, setThrowType] = useState<'nek' | 'rug'>('nek')
   const [recentTaps, setRecentTaps] = useState<FieldMarker[]>([])
