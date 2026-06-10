@@ -42,10 +42,9 @@ export default async function OpstellingPage({ params }: { params: Promise<{ mat
       </h1>
       <MatchDayNav matchId={matchId} current="opstelling" />
       <p className="wb-intro">
-        Vink je spelers aan, of vul met één klik de <strong>vaste opstelling</strong> in. Bewaar je vaste
-        opstelling en ze wordt bij elke volgende wedstrijd van deze ploeg automatisch voorgesteld — de coach
-        kan ze daarna nog aanpassen. Alleen leden met een geldige vergunning en de juiste leeftijdscategorie
-        zijn vrij selecteerbaar; geblokkeerde leden kun je als scheidsrechter/federatie tonen en toch toevoegen.
+        Vink je spelers aan of vul met één klik de <strong>vaste opstelling</strong> in — die wordt bij
+        elke volgende wedstrijd automatisch voorgesteld. Enkel leden met een geldige vergunning en de
+        juiste leeftijdscategorie zijn selecteerbaar.
       </p>
 
       <OpstellingPanes matchId={matchId} homeLabel={`Thuis — ${homeName}`} awayLabel={`Uit — ${awayName}`} />

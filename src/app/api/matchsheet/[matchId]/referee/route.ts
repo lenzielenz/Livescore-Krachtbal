@@ -5,6 +5,8 @@ import { getOrCreateMatchSheet } from '@/lib/matchsheet-data'
 import type { MatchSheetStatus } from '@/lib/matchsheet-workflow'
 import { getPayloadClient } from '@/lib/payload-client'
 import { matchPersonalCode, verifyCredential } from '@/lib/referee-credentials'
+import { buildFixedSimpleScore, EMPTY_SIMPLE_SCORE } from '@/lib/simple-score'
+import { forfaitScore } from '@/lib/standings'
 
 const relId = (rel: unknown): number | string | null =>
   rel == null ? null : typeof rel === 'object' ? (rel as { id: number | string }).id : (rel as number | string)
@@ -70,9 +72,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ matchId
     action?: string
     to?: string
     keuring?: Record<string, string>
+    bevestigd?: boolean
     officials?: Record<string, string>
     refereeKm?: number
     forfait?: Record<string, unknown>
+    uitslag?: string
     akkoord?: boolean
     naam?: string
     code?: string
@@ -112,14 +116,52 @@ export async function POST(req: Request, { params }: { params: Promise<{ matchId
     }
 
     if (body.action === 'keuring') {
+      // `bevestigd`: undefined laat de bevestiging ongemoeid; true vergrendelt, false ontgrendelt.
       const updated = await payload.update({
         collection: 'matchsheets',
         id: sheet.id,
-        data: { keuring: body.keuring ?? {} },
+        data: {
+          keuring: body.keuring ?? {},
+          ...(typeof body.bevestigd === 'boolean' ? { keuringBevestigd: body.bevestigd } : {}),
+        },
         user,
         overrideAccess: false,
       })
-      return Response.json({ ok: true, keuring: updated.keuring })
+      return Response.json({ ok: true, keuring: updated.keuring, bevestigd: Boolean(updated.keuringBevestigd) })
+    }
+
+    if (body.action === 'forfait') {
+      // Forfait-uitslag van de wedstrijd: de niet-forfaiterende ploeg wint met 30–0 (dubbel: 0–0).
+      // De score wordt meteen op de wedstrijd gezet zodat ze overal (live, rangschikking) klopt.
+      const uitslag = (['geen', 'thuis', 'uit', 'dubbel'] as const).find((u) => u === body.uitslag) ?? 'geen'
+      const vorige = (sheet.forfait as { uitslag?: string } | undefined)?.uitslag ?? 'geen'
+      await payload.update({
+        collection: 'matchsheets',
+        id: sheet.id,
+        data: { forfait: { uitslag } },
+        user,
+        overrideAccess: false,
+      })
+      const score = forfaitScore(uitslag)
+      // De wedstrijd-update gebeurt met overrideAccess: enkel SR/federatie raakt tot hier, en de
+      // matches-collectie laat een SR-account zelf geen update toe.
+      if (score) {
+        await payload.update({
+          collection: 'matches',
+          id: matchId,
+          data: { status: 'finished', simpleScore: buildFixedSimpleScore(score.home, score.away) as unknown as Record<string, unknown> },
+          overrideAccess: true,
+        })
+      } else if (vorige !== 'geen') {
+        // Forfait teruggedraaid: zet de wedstrijd terug op gepland en wis de forfait-score.
+        await payload.update({
+          collection: 'matches',
+          id: matchId,
+          data: { status: 'scheduled', simpleScore: EMPTY_SIMPLE_SCORE as unknown as Record<string, unknown> },
+          overrideAccess: true,
+        })
+      }
+      return Response.json({ ok: true, uitslag, score })
     }
 
     if (body.action === 'officials') {
@@ -167,10 +209,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ matchId
     }
 
     if (body.action === 'vergoeding') {
+      // De forfait-UITSLAG hoort bij de 'forfait'-actie (die ook de score zet) — hier enkel
+      // de onkosten-velden, zodat dit formulier de uitslag niet stilletjes overschrijft.
+      const onkosten = { ...((body.forfait ?? {}) as Record<string, unknown>) }
+      delete onkosten.uitslag
       const updated = await payload.update({
         collection: 'matchsheets',
         id: sheet.id,
-        data: { refereeKm: body.refereeKm ?? null, forfait: body.forfait ?? {} },
+        data: { refereeKm: body.refereeKm ?? null, forfait: onkosten },
         user,
         overrideAccess: false,
       })

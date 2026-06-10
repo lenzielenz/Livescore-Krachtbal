@@ -10,6 +10,7 @@ import { buildScoreboards } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
 import { COMPETITIE_REEKSEN, reeksNaam, resolveCompetitieReeks } from '@/lib/reeksen'
 import { buildSeasonStats, type SeasonPlayer } from '@/lib/season-stats'
+import { AnalyseDelen } from './AnalyseDelen'
 import { AnalyseNav } from './AnalyseNav'
 import { DeleteMatchButton } from './DeleteMatchButton'
 import { HubReeksPicker } from './HubReeksPicker'
@@ -262,6 +263,9 @@ export default async function AnalysePage({ searchParams }: { searchParams: Prom
             )}
           </div>
         </details>
+
+        {/* Analyse delen: duid aan welke accounts jouw analyses mee mogen bekijken. */}
+        <AnalyseDelen />
 
         {/* Tools, gebundeld in twee groepen i.p.v. één lange lijst losse menu's. */}
         {(() => {

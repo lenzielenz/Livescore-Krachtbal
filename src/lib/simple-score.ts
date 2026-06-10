@@ -64,6 +64,19 @@ export function readSimpleScore(match: { simpleScore?: unknown } | null | undefi
   return { goals, crosses }
 }
 
+/**
+ * Bouwt een simpleScore die exact op een vaste eindstand uitkomt (resultaat-import, forfait).
+ * De app bewaart geen los scoreveld; de stand wordt uit simpleScore + worpen afgeleid — dus
+ * zetten we X+Y losse doelpunten van 1 punt zodat de totaalstand klopt.
+ */
+export function buildFixedSimpleScore(home: number, away: number): SimpleScoreState {
+  const goals: SimpleGoal[] = []
+  let ts = 0
+  for (let k = 0; k < home; k++) goals.push({ side: 'home', points: 1, half: 1, clock: 0, ts: ts++ })
+  for (let k = 0; k < away; k++) goals.push({ side: 'away', points: 1, half: 1, clock: 0, ts: ts++ })
+  return { goals, crosses: { home: 0, away: 0 } }
+}
+
 /** Helft-scores [helft1, helft2] per ploeg, afgeleid uit de simpele doelpunten. */
 export function simpleHalfScores(state: SimpleScoreState): { home: [number, number]; away: [number, number] } {
   const out = { home: [0, 0] as [number, number], away: [0, 0] as [number, number] }

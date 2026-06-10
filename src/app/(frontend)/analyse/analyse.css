@@ -77,6 +77,39 @@ select.rang-picker {
 .an-record-summary-hint { font-size: 0.78rem; color: var(--dim); }
 .an-record-menu[open] .an-record-summary { border-bottom: 1px solid var(--line); }
 .an-record-body { padding: 12px 16px 16px; }
+/* Analyse delen: compacte aanvinklijst van accounts. */
+.an-delen-list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 4px 14px;
+}
+.an-delen-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 4px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  border-radius: 8px;
+}
+.an-delen-row:hover { background: rgba(255, 255, 255, 0.04); }
+.an-delen-hint { margin: 0 0 8px; font-size: 0.82rem; color: var(--dim); }
+.an-delen-error { margin: 6px 0; font-size: 0.84rem; color: #e0533d; }
+.an-delen-save {
+  margin-top: 10px;
+  padding: 9px 16px;
+  border-radius: 9px;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: #06140d;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+.an-delen-save:disabled { opacity: 0.6; cursor: default; }
 .an-summary { margin: 0 0 18px; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
 .an-record-new { margin: 6px 0 14px; }
 /* Primaire actie: gevulde accentknop met donkere tekst — duidelijk leesbaar. */

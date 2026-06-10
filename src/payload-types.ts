@@ -276,6 +276,11 @@ export interface User {
    * Enkel relevant voor de rol "Scheidsrechter". Beperkt de toegang tot de eigen kwitantie.
    */
   official?: (number | null) | Official;
+  /**
+   * Deze accounts zien jouw analysewedstrijden en -rapporten mee.
+   */
+  analyseDeeltMet?: (number | User)[] | null;
+  analyseToegangTot?: (number | User)[] | null;
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -651,6 +656,7 @@ export interface Matchsheet {
     kentekenGrensrechter?: ('ok' | 'niet_ok' | 'nvt') | null;
     verlichting?: ('ok' | 'niet_ok' | 'nvt') | null;
   };
+  keuringBevestigd?: boolean | null;
   uitsluitingen?:
     | {
         player?: (number | null) | Player;
@@ -1423,6 +1429,7 @@ export interface MatchsheetsSelect<T extends boolean = true> {
         kentekenGrensrechter?: T;
         verlichting?: T;
       };
+  keuringBevestigd?: T;
   uitsluitingen?:
     | T
     | {
@@ -1730,6 +1737,8 @@ export interface UsersSelect<T extends boolean = true> {
   analyseAccess?: T;
   trainingAccess?: T;
   official?: T;
+  analyseDeeltMet?: T;
+  analyseToegangTot?: T;
   updatedAt?: T;
   createdAt?: T;
   email?: T;

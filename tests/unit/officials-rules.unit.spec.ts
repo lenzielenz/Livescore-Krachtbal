@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 
 import {
   isVolledigeNaam,
+  officialFieldStatus,
   requiredOfficials,
   validateOfficials,
 } from '@/lib/officials-rules'
@@ -86,5 +87,27 @@ describe('validateOfficials', () => {
     })
     expect(res.ok).toBe(false)
     expect(res.errors.some((e) => e.includes('Art. 25'))).toBe(true)
+  })
+})
+
+describe('officialFieldStatus (per-veld feedback)', () => {
+  it('leeg veld → leeg', () => {
+    expect(officialFieldStatus('aantekenaar', {})).toBe('leeg')
+    expect(officialFieldStatus('aantekenaar', { aantekenaar: '   ' })).toBe('leeg')
+  })
+  it('volledige naam → ok', () => {
+    expect(officialFieldStatus('aantekenaar', { aantekenaar: 'Jan Janssens' })).toBe('ok')
+  })
+  it('één woord → onvolledig', () => {
+    expect(officialFieldStatus('tijdopnemer', { tijdopnemer: 'Janssens' })).toBe('onvolledig')
+  })
+  it('coach die ook grensrechter is (zelfde kant) → conflict', () => {
+    expect(
+      officialFieldStatus('coachThuis', { coachThuis: 'Karel Karels', grensrechterThuis: 'karel karels' }),
+    ).toBe('conflict')
+    // Andere kant mag wél.
+    expect(
+      officialFieldStatus('coachUit', { coachUit: 'Karel Karels', grensrechterThuis: 'Karel Karels' }),
+    ).toBe('ok')
   })
 })
