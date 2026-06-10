@@ -75,6 +75,12 @@ export async function POST(req: Request) {
     })
     return Response.json({ ok: true, lezen, bewerken })
   } catch (err) {
-    return Response.json({ error: (err as Error).message }, { status: 400 })
+    // Databasefouten niet rauw (met SQL) naar de UI — log de oorzaak en toon een korte uitleg.
+    const e = err as Error & { cause?: Error }
+    if (/Failed query|timeout|terminat/i.test(e.message)) {
+      console.error('analyse-delen databasefout:', e.message, e.cause?.message)
+      return Response.json({ error: 'Bewaren mislukt (tijdelijke databasefout) — probeer het meteen opnieuw.' }, { status: 503 })
+    }
+    return Response.json({ error: e.message }, { status: 400 })
   }
 }

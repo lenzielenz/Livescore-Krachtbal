@@ -92,16 +92,6 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
     .catch(() => null)
   const referee = (sheetRes?.docs[0]?.assignedReferee as { name?: string } | null)?.name || null
 
-  // Kapiteins (één per ploeg) — bij depth 2 zijn dit speler-objecten met naam + rugnummer.
-  const capName = (c: unknown): string | null => {
-    if (!c || typeof c !== 'object') return null
-    const p = c as { name?: string; shirtNumber?: number }
-    if (!p.name) return null
-    return p.shirtNumber != null ? `#${p.shirtNumber} ${p.name}` : p.name
-  }
-  const homeCaptain = capName(matchDoc?.homeCaptain)
-  const awayCaptain = capName(matchDoc?.awayCaptain)
-
   // Publiek deel-/napraatmoment: zodra de wedstrijd afgelopen is, bouwen we de samenvatting +
   // deelkaart voor IEDEREEN (niet enkel achter analyse-login). Dit is het virale moment — supporters
   // delen de kaart of nemen er een screenshot van. Faalt de opbouw, dan tonen we gewoon niets.
@@ -172,9 +162,10 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
       <Link href="/" className="back-link">
         ← Alle wedstrijden
       </Link>
-      {/* Match-context als kop bovenaan (reeks · datum · locatie · scheidsrechter · kapiteins),
-          zodat duidelijk is over welke wedstrijd dit gaat — i.p.v. een losse regel onderaan. */}
-      {(reeks || datum || accommodatie || referee || homeCaptain || awayCaptain) && (
+      {/* Match-context als kop bovenaan (reeks · datum · locatie · scheidsrechter), zodat
+          duidelijk is over welke wedstrijd dit gaat. Kapiteins horen hier bewust níet bij —
+          die staan op het wedstrijdblad, niet op de publieke pagina. */}
+      {(reeks || datum || accommodatie || referee) && (
         <div className="match-info match-info-top">
           {(reeks || datum) && (
             <div className="match-info-row">
@@ -190,14 +181,6 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
           {referee && (
             <div className="match-info-row">
               <span aria-hidden>🟡</span> <span>Scheidsrechter: {referee}</span>
-            </div>
-          )}
-          {(homeCaptain || awayCaptain) && (
-            <div className="match-info-row">
-              <span aria-hidden>🅒</span>{' '}
-              <span>
-                Kapiteins: {state.teams.home.name} — {homeCaptain ?? '—'} · {state.teams.away.name} — {awayCaptain ?? '—'}
-              </span>
             </div>
           )}
         </div>
