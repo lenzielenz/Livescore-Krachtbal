@@ -26,8 +26,11 @@ export const Clubs: CollectionConfig = {
     plural: 'Clubs',
   },
   admin: {
-    useAsTitle: 'name',
-    defaultColumns: ['name'],
+    // Toon de naam + "(analyse)" als titel (ook in keuzelijsten), zodat een analyse-club en de
+    // gelijknamige competitie-club uit elkaar te houden zijn. Relatie-keuzelijsten lezen enkel het
+    // useAsTitle-veld (een opgeslagen kolom), daarom is displayTitle een echte, bijgehouden waarde.
+    useAsTitle: 'displayTitle',
+    defaultColumns: ['name', 'analyseOnly'],
     group: 'Beheer',
   },
   access: {
@@ -42,6 +45,11 @@ export const Clubs: CollectionConfig = {
     beforeChange: [
       async ({ data }) => {
         if (!data) return data
+        // Weergavetitel bijhouden: "naam" voor een competitie-club, "naam (analyse)" voor een
+        // analyse-only club. Zo zijn twee gelijknamige clubs (één in de competitie, één in de
+        // analysemodule) overal — ook in relatie-keuzelijsten — uit elkaar te houden.
+        const naam = typeof data.name === 'string' && data.name.trim() ? data.name.trim() : 'Club'
+        data.displayTitle = data.analyseOnly ? `${naam} (analyse)` : naam
         const plaats = typeof data.plaats === 'string' ? data.plaats.trim() : ''
         const hasLat = typeof data.lat === 'number' && Number.isFinite(data.lat)
         const hasLng = typeof data.lng === 'number' && Number.isFinite(data.lng)
@@ -97,6 +105,14 @@ export const Clubs: CollectionConfig = {
     ],
   },
   fields: [
+    {
+      // Opgeslagen weergavetitel "naam" / "naam (analyse)". Een echte kolom (geen virtueel veld):
+      // Payload laat een virtueel veld niet als useAsTitle toe, én keuzelijsten lezen enkel deze
+      // kolom. De waarde wordt bij elke wijziging berekend en bewaard (zie beforeChange hierboven).
+      name: 'displayTitle',
+      type: 'text',
+      admin: { hidden: true, readOnly: true },
+    },
     {
       name: 'name',
       label: 'Naam',
