@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 
-import { analyseMatchWhere, analyseOwnWhere, canViewAnalyseMatch, competitionWhere } from '@/lib/analyse-access'
+import { analyseEditOwners, analyseMatchWhere, analyseOwnWhere, canViewAnalyseMatch, competitionWhere } from '@/lib/analyse-access'
 import { ownsAnalyse } from '@/lib/analyse-crud'
 
 const fed = { id: 1, roles: ['federatie'] as const }
@@ -9,6 +9,8 @@ const analyst = { id: 7, roles: ['viewer'] as const, analyseAccess: true }
 const other = { id: 8, roles: ['viewer'] as const, analyseAccess: true }
 // Iemand deelde zijn analyses met deze gebruiker (inverse zit in het user-object).
 const gedeeld = { id: 9, roles: ['viewer'] as const, analyseAccess: true, analyseToegangTot: [7] }
+// Iemand gaf deze gebruiker "meedoen & aanpassen" (bewerk-inverse in het user-object).
+const meedoener = { id: 10, roles: ['viewer'] as const, analyseAccess: true, analyseBewerkTot: [7] }
 
 describe('analyseMatchWhere', () => {
   it('legt federatie/admin geen beperking op', () => {
@@ -84,6 +86,25 @@ describe('analyseOwnWhere', () => {
 describe('competitionWhere', () => {
   it('sluit alle analyse-entiteiten uit', () => {
     expect(competitionWhere()).toEqual({ analyseOnly: { not_equals: true } })
+  })
+})
+
+describe('analyseEditOwners / meedoen & aanpassen', () => {
+  it('meedoener mag ook ZIEN (analyseOwners-pad) én BEWERKEN', () => {
+    expect(canViewAnalyseMatch(meedoener, { analyseOnly: true, analyseOwner: 7 })).toBe(true)
+    expect(analyseEditOwners(meedoener).map(String)).toEqual(['10', '7'])
+    expect(ownsAnalyse({ analyseOnly: true, analyseOwner: 7 }, meedoener)).toBe(true)
+  })
+
+  it('alleen-lezen-deler mag NIET bewerken', () => {
+    expect(ownsAnalyse({ analyseOnly: true, analyseOwner: 7 }, gedeeld)).toBe(false)
+    expect(analyseEditOwners(gedeeld).map(String)).toEqual(['9'])
+  })
+
+  it('het scorebord-Where neemt bewerk-delingen mee', () => {
+    expect(analyseOwnWhere(meedoener)).toEqual({
+      and: [{ analyseOnly: { equals: true } }, { analyseOwner: { in: [10, 7] } }],
+    })
   })
 })
 

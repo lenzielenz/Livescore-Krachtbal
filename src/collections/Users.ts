@@ -34,10 +34,11 @@ export const Users: CollectionConfig = {
         }
       },
     ],
-    // Houd de inverse van "analyse delen met" bij op de ONTVANGER (analyseToegangTot), zodat de
-    // analyse-queries de gedeelde eigenaars rechtstreeks uit het ingelogde user-object kunnen
-    // lezen (geen extra opzoeking per pagina). De nestede updates wijzigen analyseDeeltMet niet,
-    // dus deze hook loopt daarbij meteen leeg (geen oneindige lus).
+    // Houd de inverses van "analyse delen met" bij op de ONTVANGER (analyseToegangTot voor
+    // kijkers, analyseBewerkTot voor meedoeners), zodat de analyse-queries de gedeelde eigenaars
+    // rechtstreeks uit het ingelogde user-object kunnen lezen (geen extra opzoeking per pagina).
+    // De nestede updates wijzigen de bronvelden niet, dus deze hook loopt daarbij meteen leeg
+    // (geen oneindige lus).
     afterChange: [
       async ({ doc, previousDoc, req }) => {
         const ids = (v: unknown): number[] =>
@@ -46,27 +47,33 @@ export const Users: CollectionConfig = {
                 .map((x) => Number(x && typeof x === 'object' ? (x as { id?: unknown }).id : x))
                 .filter((n) => Number.isFinite(n) && n > 0)
             : []
-        const voor = ids((previousDoc as { analyseDeeltMet?: unknown } | undefined)?.analyseDeeltMet)
-        const na = ids((doc as { analyseDeeltMet?: unknown }).analyseDeeltMet)
-        const erbij = na.filter((x) => !voor.includes(x))
-        const eraf = voor.filter((x) => !na.includes(x))
-        if (!erbij.length && !eraf.length) return
         const me = Number((doc as { id: number | string }).id)
-        for (const uid of [...erbij, ...eraf]) {
-          const u = await req.payload.findByID({ collection: 'users', id: uid, depth: 0 }).catch(() => null)
-          if (!u) continue
-          const huidig = ids((u as { analyseToegangTot?: unknown }).analyseToegangTot)
-          const nieuw = erbij.includes(uid)
-            ? huidig.includes(me)
-              ? null
-              : [...huidig, me]
-            : huidig.includes(me)
-              ? huidig.filter((x) => x !== me)
-              : null
-          if (nieuw) {
-            await req.payload
-              .update({ collection: 'users', id: uid, data: { analyseToegangTot: nieuw }, overrideAccess: true })
-              .catch(() => {})
+        const paren: { bron: string; doel: string }[] = [
+          { bron: 'analyseDeeltMet', doel: 'analyseToegangTot' },
+          { bron: 'analyseDeeltBewerkMet', doel: 'analyseBewerkTot' },
+        ]
+        for (const { bron, doel } of paren) {
+          const voor = ids((previousDoc as Record<string, unknown> | undefined)?.[bron])
+          const na = ids((doc as unknown as Record<string, unknown>)[bron])
+          const erbij = na.filter((x) => !voor.includes(x))
+          const eraf = voor.filter((x) => !na.includes(x))
+          if (!erbij.length && !eraf.length) continue
+          for (const uid of [...erbij, ...eraf]) {
+            const u = await req.payload.findByID({ collection: 'users', id: uid, depth: 0 }).catch(() => null)
+            if (!u) continue
+            const huidig = ids((u as unknown as Record<string, unknown>)[doel])
+            const nieuw = erbij.includes(uid)
+              ? huidig.includes(me)
+                ? null
+                : [...huidig, me]
+              : huidig.includes(me)
+                ? huidig.filter((x) => x !== me)
+                : null
+            if (nieuw) {
+              await req.payload
+                .update({ collection: 'users', id: uid, data: { [doel]: nieuw }, overrideAccess: true })
+                .catch(() => {})
+            }
           }
         }
       },
@@ -174,22 +181,42 @@ export const Users: CollectionConfig = {
       },
     },
     {
-      // Analyse delen: deze gebruikers mogen MIJN analyse-data (wedstrijden, rapporten) mee
-      // bekijken. De eigenaar beheert dit zelf op de analyse-hub.
+      // Analyse delen (alleen lezen): deze gebruikers mogen MIJN analyse-data (wedstrijden,
+      // rapporten) mee bekijken. De eigenaar beheert dit zelf op de analyse-hub.
       name: 'analyseDeeltMet',
-      label: 'Analyse delen met',
+      label: 'Analyse delen met (lezen)',
       type: 'relationship',
       relationTo: 'users',
       hasMany: true,
       admin: {
-        description: 'Deze accounts zien jouw analysewedstrijden en -rapporten mee.',
+        description: 'Deze accounts zien jouw analysewedstrijden en -rapporten mee (alleen-lezen).',
       },
     },
     {
-      // Automatisch bijgehouden inverse (wiens analyses mag IK zien) — zie de afterChange-hook.
-      // Hidden: dit veld beheer je nooit rechtstreeks.
+      // Analyse delen (meedoen): deze gebruikers mogen MIJN analyse-data ook aanpassen —
+      // wedstrijden aantekenen, spelers/ploegen bewerken, opnames toevoegen aan mijn set.
+      name: 'analyseDeeltBewerkMet',
+      label: 'Analyse delen met (meedoen & aanpassen)',
+      type: 'relationship',
+      relationTo: 'users',
+      hasMany: true,
+      admin: {
+        description: 'Deze accounts mogen jouw analyses ook aantekenen en aanpassen.',
+      },
+    },
+    {
+      // Automatisch bijgehouden inverses (wiens analyses mag IK zien/bewerken) — zie de
+      // afterChange-hook. Hidden: deze velden beheer je nooit rechtstreeks.
       name: 'analyseToegangTot',
-      label: 'Analyse-toegang tot',
+      label: 'Analyse-toegang tot (lezen)',
+      type: 'relationship',
+      relationTo: 'users',
+      hasMany: true,
+      admin: { hidden: true, readOnly: true },
+    },
+    {
+      name: 'analyseBewerkTot',
+      label: 'Analyse-toegang tot (bewerken)',
       type: 'relationship',
       relationTo: 'users',
       hasMany: true,

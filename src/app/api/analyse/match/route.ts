@@ -44,6 +44,15 @@ export async function POST(req: Request) {
       return Response.json({ error: 'Kies twee van je eigen analyse-ploegen.' }, { status: 400 })
     }
 
+    // De opname hoort bij de eigenaar van de ploegen: maak je een wedstrijd met ploegen van
+    // iemand die jou "meedoen & aanpassen" gaf, dan komt de opname in DIENS set terecht (zo
+    // blijft de gedeelde analyse-database één geheel). Eigen ploegen → eigen set, zoals altijd.
+    const teamOwner = homeDoc && typeof (homeDoc as Team).analyseOwner !== 'undefined'
+      ? (typeof (homeDoc as Team).analyseOwner === 'object' && (homeDoc as Team).analyseOwner
+          ? ((homeDoc as Team).analyseOwner as { id: number }).id
+          : ((homeDoc as Team).analyseOwner as number | null))
+      : null
+
     const created = await payload.create({
       collection: 'matches',
       data: {
@@ -54,8 +63,7 @@ export async function POST(req: Request) {
         status: 'scheduled',
         goalAreaDepth: 10,
         analyseOnly: true,
-        // Privé per persoon: deze opname hoort bij de gebruiker die ze aanmaakt.
-        analyseOwner: Number(user.id),
+        analyseOwner: Number(teamOwner ?? user.id),
       },
     })
 
