@@ -24,12 +24,17 @@ export async function getMatchReadiness(
     payload.find({ collection: 'matchsheets', where: { match: { equals: id } }, depth: 0, limit: 1 }),
   ])
   const sheet = sheetRes.docs[0]
+  const analyseOnly = Boolean((match as { analyseOnly?: boolean } | null)?.analyseOnly)
+  // Analysewedstrijd: de opstelling leeft op de MATCH zelf (gekozen via de veldspelers-kiezer in
+  // het aantekenscherm) — er is geen wedstrijdblad-flow voor analyse. Map de speler-ids naar
+  // {player}-rijen zodat countLineup voor beide bronnen werkt.
+  const matchLineup = (v: unknown) => (Array.isArray(v) ? v.map((p) => ({ player: p })) : [])
   return computeReadiness({
-    homeLineup: sheet?.homeLineup,
-    awayLineup: sheet?.awayLineup,
+    homeLineup: analyseOnly ? matchLineup((match as { homeLineup?: unknown } | null)?.homeLineup) : sheet?.homeLineup,
+    awayLineup: analyseOnly ? matchLineup((match as { awayLineup?: unknown } | null)?.awayLineup) : sheet?.awayLineup,
     refereeAkkoord: Boolean((sheet?.wedstrijdstart as { akkoord?: boolean } | undefined)?.akkoord),
     isDemo: Boolean((match as { isDemo?: boolean } | null)?.isDemo),
-    analyseOnly: Boolean((match as { analyseOnly?: boolean } | null)?.analyseOnly),
+    analyseOnly,
   })
 }
 

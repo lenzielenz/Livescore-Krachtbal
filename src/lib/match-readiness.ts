@@ -60,6 +60,7 @@ export function missingSteps(r: Readiness): string[] {
   const missing: string[] = []
   if (!r.homeOk) missing.push('opstelling thuis')
   if (!r.awayOk) missing.push('opstelling uit')
-  if (!r.refereeOk) missing.push('akkoord scheidsrechter')
+  // Een analysewedstrijd heeft geen scheidsrechtersakkoord nodig — niet als ontbrekend melden.
+  if (!r.refereeOk && !r.analyseOnly) missing.push('akkoord scheidsrechter')
   return missing
 }

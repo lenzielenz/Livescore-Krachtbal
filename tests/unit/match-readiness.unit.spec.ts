@@ -45,4 +45,15 @@ describe('computeReadiness', () => {
     expect(r.ready).toBe(true)
     expect(r.isDemo).toBe(true)
   })
+
+  it('analysewedstrijd: klaar met opstellingen, zonder SR-akkoord — en SR nooit als ontbrekend gemeld', () => {
+    const klaar = computeReadiness({ ...full, refereeAkkoord: false, isDemo: false, analyseOnly: true })
+    expect(klaar.ready).toBe(true)
+    expect(missingSteps(klaar)).toEqual([])
+
+    const leeg = computeReadiness({ homeLineup: [], awayLineup: [], refereeAkkoord: false, isDemo: false, analyseOnly: true })
+    expect(leeg.ready).toBe(false)
+    // Enkel de opstellingen ontbreken — geen "akkoord scheidsrechter" voor analyse.
+    expect(missingSteps(leeg)).toEqual(['opstelling thuis', 'opstelling uit'])
+  })
 })
