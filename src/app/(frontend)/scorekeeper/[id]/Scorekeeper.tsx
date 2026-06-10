@@ -495,6 +495,17 @@ export function Scorekeeper({
     }
   }
 
+  // Bevestigen = ook BEWAREN. De getoonde veldspelers kunnen de standaard "eerste 4" zijn die
+  // nooit opgeslagen werd (bij precies 4 spelers is er zelfs geen kies-knop) — zonder save
+  // weigert de server daarna de start met "opstelling thuis, opstelling uit".
+  const confirmLineup = async (side: 'home' | 'away') => {
+    const teamId = side === 'home' ? state.teams.home.id : state.teams.away.id
+    const ids = roster.filter((p) => p.teamId === teamId && state.lineup[side].includes(p.id)).map((p) => p.id)
+    if (ids.length !== LINEUP_MIN) return
+    const res = await act({ action: 'setlineup', side, playerIds: ids })
+    if (res) setConfirm(side, true)
+  }
+
   // De naam staat aan de EIGEN kant (het doel dat je verdedigt); je scoort aan de overkant.
   // home valt in helft 1 'up' (naar y=1 = onder) aan → verdedigt dus bovenaan.
   const homeDirUp = attackDirForSide('home', state.match.currentHalf) === 'up'
@@ -1160,7 +1171,7 @@ export function Scorekeeper({
                             type="button"
                             className="sk-btn primary"
                             disabled={busy || field.length !== LINEUP_MIN || !captainOk}
-                            onClick={() => setConfirm(side, true)}
+                            onClick={() => void confirmLineup(side)}
                           >
                             Bevestig opstelling
                           </button>
