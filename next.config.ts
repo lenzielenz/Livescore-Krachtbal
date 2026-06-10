@@ -11,6 +11,9 @@ const nextConfig: NextConfig = {
   // Zonder dit blokkeert Next 16 in dev de client-runtime bij een niet-localhost origin,
   // waardoor de pagina niet hydrateert en knoppen niet reageren.
   allowedDevOrigins: ['192.168.0.65'],
+  // ffmpeg-static levert een binaire ffmpeg (webm→mp4 voor replay-clips); niet mee bundelen,
+  // anders klopt het pad naar de binary niet meer.
+  serverExternalPackages: ['ffmpeg-static'],
   images: {
     localPatterns: [
       {
