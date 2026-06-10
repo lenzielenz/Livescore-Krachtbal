@@ -663,7 +663,8 @@ export function FlowReplay({
                   ) : (
                     <>
                       <p className="replay-rec-tip">
-                        Haal ze binnen als bestand (Downloads), bewaar/deel ze via je toestel, of toon een link/QR.
+                        ⬇ Downloaden zet ze klaar als mp4 (werkt overal, ook WhatsApp) en haalt ze binnen als
+                        bestand. Of bewaar/deel ze via je toestel, of toon een link/QR.
                       </p>
                       <div className="replay-rec-actions">
                         <button type="button" className="replay-rec-save" onClick={downloadOnDevice} disabled={phoneBusy}>
