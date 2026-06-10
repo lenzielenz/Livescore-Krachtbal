@@ -18,6 +18,12 @@ export const dynamic = 'force-dynamic'
 const relId = (v: unknown): number | null =>
   v && typeof v === 'object' ? ((v as { id?: number }).id ?? null) : typeof v === 'number' ? v : null
 const teamName = (t: unknown): string => (t && typeof t === 'object' ? String((t as { name?: unknown }).name ?? '—') : '—')
+// Clubnaam van een ploeg (club is op depth 2 mee gepopuleerd) — voor het club-filter in de lijst.
+const clubName = (t: unknown): string | null => {
+  const club = t && typeof t === 'object' ? (t as { club?: unknown }).club : null
+  const name = club && typeof club === 'object' ? (club as { name?: unknown }).name : null
+  return typeof name === 'string' && name ? name : null
+}
 
 // Haalt de wedstrijdenlijst + scheidsrechter-toewijzingen op voor het portaal.
 async function loadRefereeMatches(): Promise<{ matches: RefMatch[]; officials: RefOfficial[] }> {
@@ -49,6 +55,8 @@ async function loadRefereeMatches(): Promise<{ matches: RefMatch[]; officials: R
       id,
       home: teamName((m as { homeTeam?: unknown }).homeTeam),
       away: teamName((m as { awayTeam?: unknown }).awayTeam),
+      homeClub: clubName((m as { homeTeam?: unknown }).homeTeam),
+      awayClub: clubName((m as { awayTeam?: unknown }).awayTeam),
       reeks: reeksNaam((m as { reeks?: unknown }).reeks),
       date: ((m as { date?: unknown }).date as string | null) ?? null,
       status: String((m as { status?: unknown }).status ?? 'scheduled'),

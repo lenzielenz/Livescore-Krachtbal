@@ -13,6 +13,10 @@
 }
 .rm-filter.on { background: var(--accent); border-color: var(--accent); color: #06140d; font-weight: 700; }
 
+/* Keuzemenu's om op reeks en club te filteren. */
+.rm-selects { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.rm-fsel { width: auto; flex: 1 1 170px; max-width: 280px; padding: 7px 9px; font-size: 0.84rem; }
+
 .rm-list { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 .rm-row {
   display: flex;
