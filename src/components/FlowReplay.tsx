@@ -345,30 +345,40 @@ export function FlowReplay({
         setTimeout(() => setRecMsg(null), 6000)
         return
       }
-      // Probeer meerdere combinaties: eerst mp4/webm-codecs op 25 fps, dan zonder opgegeven type,
-      // dan hetzelfde op 15 fps. Sommige toestellen weigeren één combinatie maar slikken een andere.
-      const maakRecorder = (fps: number): { rec: MediaRecorder; mime: string } | null => {
-        let stream: MediaStream
-        try {
-          stream = cap.captureStream!(fps)
-        } catch {
-          return null
-        }
-        for (const m of mimeCandidates) {
+      // Probeer meerdere types mét een korte proefopname. Sommige Android-toestellen zeggen dat
+      // mp4 ondersteund is en laten de recorder ook aanmaken/starten — maar de encoder sterft
+      // meteen daarna (state wordt 'inactive', "InvalidStateError" bij requestData). Dat merk je
+      // alleen at runtime, dus: per kandidaat ±0,5 s proefdraaien en pas écht opnemen met een
+      // type dat aantoonbaar blijft leven.
+      const stream = cap.captureStream!(25)
+      const probeer = async (): Promise<{ rec: MediaRecorder; mime: string } | null> => {
+        const kandidaten: (string | undefined)[] = [...mimeCandidates, undefined]
+        for (const m of kandidaten) {
+          let test: MediaRecorder
           try {
-            return { rec: new MR(stream, { mimeType: m }), mime: m }
+            test = m ? new MR(stream, { mimeType: m }) : new MR(stream)
+            test.start(100)
           } catch {
-            /* volgende kandidaat */
+            continue
+          }
+          await new Promise((r) => setTimeout(r, 450))
+          const leeft = test.state === 'recording'
+          try {
+            if (test.state !== 'inactive') test.stop()
+          } catch {
+            /* proefrecorder opruimen is best-effort */
+          }
+          if (!leeft) continue
+          try {
+            const echte = m ? new MR(stream, { mimeType: m }) : new MR(stream)
+            return { rec: echte, mime: m ?? (echte.mimeType || 'video/webm') }
+          } catch {
+            continue
           }
         }
-        try {
-          const rec = new MR(stream) // laat de browser zelf een type kiezen
-          return { rec, mime: rec.mimeType || 'video/webm' }
-        } catch {
-          return null
-        }
+        return null
       }
-      const made = maakRecorder(25) ?? maakRecorder(15)
+      const made = await probeer()
       if (!made) {
         setRecMsg('⚠️ Dit toestel weigert de video-opname te starten. Probeer het in Chrome (rechtstreeks, niet via een app) — of maak de video op een pc en haal ze met de QR binnen op je gsm.')
         setTimeout(() => setRecMsg(null), 7000)
@@ -408,8 +418,18 @@ export function FlowReplay({
         requestAnimationFrame(frame)
       })
       setRecPct(100)
-      rec.requestData?.() // laatste frames flushen vóór stop
-      rec.stop()
+      // Afronden met staat-checks: een recorder die onderweg stierf ('inactive') mag de boel
+      // niet meer laten crashen — dan tonen we gewoon de "opname mislukt"-melding hieronder.
+      try {
+        if (rec.state === 'recording') rec.requestData?.() // laatste frames flushen vóór stop
+      } catch {
+        /* best-effort */
+      }
+      try {
+        if (rec.state !== 'inactive') rec.stop()
+      } catch {
+        /* al gestopt */
+      }
       await stopped
       const blob = new Blob(chunks, { type: mime })
       if (blob.size === 0) {
