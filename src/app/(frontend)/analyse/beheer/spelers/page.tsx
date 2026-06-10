@@ -33,16 +33,27 @@ export default async function AnalyseSpelersPage() {
 
   const payload = await getPayloadClient()
   const scope = analyseOwnWhere(me)
-  const [teamsRes, playersRes] = await Promise.all([
+  const [teamsRes, playersRes, clubsRes] = await Promise.all([
     payload.find({ collection: 'teams', where: scope, sort: 'name', depth: 0, limit: 2000 }).catch(() => ({ docs: [] as Record<string, unknown>[] })),
     payload.find({ collection: 'players', where: scope, sort: 'shirtNumber', depth: 0, limit: 8000 }).catch(() => ({ docs: [] as Record<string, unknown>[] })),
+    payload.find({ collection: 'clubs', depth: 0, limit: 2000 }).catch(() => ({ docs: [] as Record<string, unknown>[] })),
   ])
 
-  const teams: TeamOption[] = teamsRes.docs.map((t) => ({
-    id: (t as { id: number }).id,
-    name: String((t as { name?: unknown }).name ?? ''),
-    reeksLabel: reeksNaam((t as { reeks?: unknown }).reeks),
-  }))
+  // Clubnaam per id, zodat de roster-beheerder de ploeg op club én reeks apart kan kiezen.
+  const clubName = new Map<number, string>(
+    clubsRes.docs.map((c) => [(c as { id: number }).id, String((c as { name?: unknown }).name ?? '')]),
+  )
+
+  const teams: TeamOption[] = teamsRes.docs.map((t) => {
+    const clubId = rel((t as { club?: unknown }).club)
+    return {
+      id: (t as { id: number }).id,
+      name: String((t as { name?: unknown }).name ?? ''),
+      reeksLabel: reeksNaam((t as { reeks?: unknown }).reeks),
+      clubId,
+      clubName: (clubId != null ? clubName.get(clubId) : '') || '',
+    }
+  })
   const spelers: AnalyseSpeler[] = playersRes.docs.map((p) => ({
     id: (p as { id: number }).id,
     name: String((p as { name?: unknown }).name ?? ''),

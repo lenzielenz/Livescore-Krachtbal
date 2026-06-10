@@ -195,6 +195,16 @@
   margin-bottom: 14px;
   max-width: 440px;
 }
+/* Club + reeks naast elkaar: twee gekoppelde keuzelijsten i.p.v. één lange gecombineerde lijst. */
+.anb-teampick-split {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.anb-teampick-split .rad-field {
+  flex: 1 1 180px;
+  min-width: 0;
+}
 .anb-possel {
   font-size: 0.85em;
   padding: 4px 6px;
