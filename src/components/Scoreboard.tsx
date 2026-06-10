@@ -11,7 +11,7 @@ import { PhotoTribune, type Instant } from '@/components/PhotoTribune'
 import { TeamLogo } from '@/components/TeamLogo'
 import { WinProbability } from '@/components/WinProbability'
 import { DEFAULT_AWAY_COLOR, DEFAULT_HOME_COLOR, inkOn, readableOnDark } from '@/lib/club-colors'
-import { goalPointsFromLabel, goalScorerFromLabel, useLiveStream } from '@/lib/use-live-stream'
+import { goalPointsFromLabel, goalScorerFromLabel, useLiveStream, useViewerId } from '@/lib/use-live-stream'
 import { isTribuneOpen, TRIBUNE_GRACE_MS } from '@/lib/tribune'
 import './scoreboard.css'
 
@@ -232,8 +232,10 @@ export function Scoreboard({
     }
   }
 
+  // Per-browser kijker-id zodat het oogje personen telt (één persoon = één kijker).
+  const viewerId = useViewerId()
   const { connected } = useLiveStream<{ state: MatchState; timeline: TimelineItem[] }>(
-    `/api/match/${matchId}/stream`,
+    `/api/match/${matchId}/stream${viewerId ? `?v=${viewerId}` : ''}`,
     (data) => {
       // Nieuwe doelpunten = timeline-items 'goal' met een id dat we nog niet zagen.
       const fresh = data.timeline.filter((i) => i.kind === 'goal' && !seenGoals.current.has(i.id))

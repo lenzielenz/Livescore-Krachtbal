@@ -24,6 +24,9 @@ export type Shout = { id: number; name: string; text: string; at: number }
 type Channel = {
   payload: Payload
   subs: Set<Send>
+  // Kijker-identiteit per verbinding: een stabiel per-browser id (zelfde persoon met meerdere
+  // tabbladen telt één keer), of null voor schermen/tafels die niet als kijker meetellen.
+  viewerKeys: Map<Send, string | null>
   lastScore: string
   lastId: number
   status: string // laatst gekende wedstrijdstatus (voor het tribune-venster)
@@ -61,8 +64,16 @@ function broadcast(ch: Channel, event: string, data: unknown, id?: number) {
   }
 }
 
+// Het oogje telt PERSONEN, geen verbindingen: uniek per browser-id, en passieve schermen
+// (veldscherm, kantine, aantekentafel) tellen niet mee — anders klopt het aantal nooit.
+function viewerCount(ch: Channel): number {
+  const uniek = new Set<string>()
+  for (const key of ch.viewerKeys.values()) if (key) uniek.add(key)
+  return uniek.size
+}
+
 function broadcastViewers(ch: Channel) {
-  broadcast(ch, 'viewers', { count: ch.subs.size })
+  broadcast(ch, 'viewers', { count: viewerCount(ch) })
 }
 
 async function pollScore(payload: Payload, matchId: number) {
@@ -161,13 +172,18 @@ async function hydrateChannel(ch: Channel, matchId: number) {
   }
 }
 
-/** Sluit een SSE-verbinding aan op het kanaal van een wedstrijd. Retourneert een leave-functie. */
-export function joinMatch(payload: Payload, matchId: number, send: Send): () => void {
+/**
+ * Sluit een SSE-verbinding aan op het kanaal van een wedstrijd. Retourneert een leave-functie.
+ * `viewerKey`: stabiel per-browser id (telt als één kijker, ook met meerdere tabbladen);
+ * null = passief scherm/tafel (telt niet mee); undefined = onbekend → telt als één verbinding.
+ */
+export function joinMatch(payload: Payload, matchId: number, send: Send, viewerKey?: string | null): () => void {
   let ch = channels.get(matchId)
   if (!ch) {
     ch = {
       payload,
       subs: new Set(),
+      viewerKeys: new Map(),
       lastScore: '',
       lastId: 0,
       status: '',
@@ -199,8 +215,9 @@ export function joinMatch(payload: Payload, matchId: number, send: Send): () => 
     if (!ch.flush) ch.flush = setInterval(() => flushReactions(matchId), REACTION_FLUSH_MS)
   }
   ch.subs.add(send)
+  ch.viewerKeys.set(send, viewerKey === null ? null : viewerKey || `anon-${Math.random().toString(36).slice(2, 10)}`)
   if (ch.lastScore) send('update', JSON.parse(ch.lastScore), ch.lastId)
-  send('viewers', { count: ch.subs.size })
+  send('viewers', { count: viewerCount(ch) })
   // Nieuwe kijker meteen de huidige tellers + recente shoutouts geven (niet 1 flush wachten).
   if (Object.keys(ch.totals).length) send('reactions', { delta: {}, totals: ch.totals })
   if (ch.shoutouts.length) send('shoutouts', ch.shoutouts)
@@ -210,6 +227,7 @@ export function joinMatch(payload: Payload, matchId: number, send: Send): () => 
     const c = channels.get(matchId)
     if (!c) return
     c.subs.delete(send)
+    c.viewerKeys.delete(send)
     if (c.subs.size === 0) {
       // Stop het pollen (geen kijkers), maar bewaar het kanaal nog even: een refresh kan zo
       // opnieuw aansluiten zonder dat de shoutouts en tellers verloren gaan.
