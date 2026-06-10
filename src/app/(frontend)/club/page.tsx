@@ -295,20 +295,27 @@ export default async function ClubPage({ searchParams }: { searchParams: Promise
               </div>
               <div className="club-match-actions">
                 <Link href={`/opstelling/${m.id}`} className="btn btn-primary">Opstelling</Link>
-                {m.side === 'home' ? (
-                  // Aantekenen kan pas als de scheidsrechter het blad heeft opengezet
-                  // (wedstrijdklaar/bezig). Een wedstrijd die qua tijdstip "live" staat is dáárom
-                  // nog niet open om aan te tekenen — de SR geeft het groen licht.
-                  sheetOpenForScoring(m.sheetStatus) ? (
-                    <Link href={`/scorekeeper/${m.id}`} className="btn btn-ghost">Aantekenen</Link>
-                  ) : (
-                    <span className="btn btn-ghost is-disabled" title="De scheidsrechter heeft het wedstrijdblad nog niet opengezet om aan te tekenen.">
-                      ⏳ Wacht op scheidsrechter
-                    </span>
+                {(() => {
+                  // Aantekenen kan zodra de scheidsrechter het blad opende (wedstrijdklaar/bezig).
+                  // Een wedstrijd die al LOOPT is altijd open: de aantekentafel moet er terug in
+                  // kunnen (na een refresh of vanaf een ander toestel) — thuis én uit.
+                  const open = m.status === 'live' || sheetOpenForScoring(m.sheetStatus)
+                  if (m.side === 'home') {
+                    return open ? (
+                      <Link href={`/scorekeeper/${m.id}`} className="btn btn-ghost">Aantekenen</Link>
+                    ) : (
+                      <span className="btn btn-ghost is-disabled" title="De scheidsrechter heeft het wedstrijdblad nog niet opengezet om aan te tekenen.">
+                        ⏳ Wacht op scheidsrechter
+                      </span>
+                    )
+                  }
+                  return (
+                    <>
+                      {open && <Link href={`/scorekeeper/${m.id}`} className="btn btn-ghost">Aantekenen</Link>}
+                      <Link href={`/match/${m.id}`} className="btn btn-ghost">Bekijk</Link>
+                    </>
                   )
-                ) : (
-                  <Link href={`/match/${m.id}`} className="btn btn-ghost">Bekijk</Link>
-                )}
+                })()}
               </div>
             </div>
           ))}
