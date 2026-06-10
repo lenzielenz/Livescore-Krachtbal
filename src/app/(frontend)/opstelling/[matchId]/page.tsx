@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { MatchDayNav } from '@/components/MatchDayNav'
 import { SiteHeader } from '@/components/SiteHeader'
 import { getPayloadClient } from '@/lib/payload-client'
-import { OpstellingEditor } from './OpstellingEditor'
+import { OpstellingPanes } from './OpstellingPanes'
 import '../../wedstrijdblad.css'
 
 export const dynamic = 'force-dynamic'
@@ -48,10 +48,7 @@ export default async function OpstellingPage({ params }: { params: Promise<{ mat
         zijn vrij selecteerbaar; geblokkeerde leden kun je als scheidsrechter/federatie tonen en toch toevoegen.
       </p>
 
-      <div className="wb-grid">
-        <OpstellingEditor matchId={matchId} side="home" label={`Thuis — ${homeName}`} />
-        <OpstellingEditor matchId={matchId} side="away" label={`Uit — ${awayName}`} />
-      </div>
+      <OpstellingPanes matchId={matchId} homeLabel={`Thuis — ${homeName}`} awayLabel={`Uit — ${awayName}`} />
       </div>
     </>
   )

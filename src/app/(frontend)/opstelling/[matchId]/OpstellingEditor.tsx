@@ -34,10 +34,13 @@ export function OpstellingEditor({
   matchId,
   side,
   label,
+  onReadyChange,
 }: {
   matchId: string
   side: 'home' | 'away'
   label: string
+  /** Meldt of deze opstelling "klaar" is (bevestigd, of genoeg spelers én bewaard). */
+  onReadyChange?: (ready: boolean) => void
 }) {
   const [data, setData] = useState<RosterResponse | null>(null)
   const [selected, setSelected] = useState<Set<number>>(new Set())
@@ -71,6 +74,13 @@ export function OpstellingEditor({
   useEffect(() => {
     load()
   }, [load])
+
+  // Geef de klaar-status door aan de pagina, zodat die de knop naar de volgende stap kan tonen
+  // zodra beide opstellingen in orde zijn. Zelfde definitie als de groene indicator hieronder.
+  useEffect(() => {
+    if (!data || data.error) return
+    onReadyChange?.(confirmed || (selected.size >= LINEUP_MIN && setsEqual(selected, savedSet)))
+  }, [data, confirmed, selected, savedSet, onReadyChange])
 
   const toggle = (id: number) => {
     if (confirmed) return // vergrendeld: eerst ontgrendelen om te wijzigen
