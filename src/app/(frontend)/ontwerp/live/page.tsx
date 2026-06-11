@@ -50,11 +50,12 @@ export default async function OntwerpLivePage() {
       <SiteHeader active={null} />
       <div className="site">
         <h1 className="page-title">
-          <span className="brand">Live-looks</span> · ontwerp
+          <span className="brand">Logo in de balk</span> · ontwerp
         </h1>
         <p className="ll-intro">
-          Vijf manieren om een live wedstrijd te tonen, telkens met dezelfde echte ploegen (incl.
-          clublogo). Bekijk ze op je gsm en zeg welke we overal uitrollen.
+          Vijf kleurrijke, high-end uitwerkingen van het clublogo in de live-balk — telkens met
+          dezelfde echte ploegen en hun clubkleuren. Bekijk ze op je gsm en zeg welke we uitrollen
+          (of welke combinatie).
         </p>
         {samples.length === 0 ? (
           <p className="empty">Geen wedstrijden gevonden om te tonen.</p>

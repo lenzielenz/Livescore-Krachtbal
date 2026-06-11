@@ -1,5 +1,5 @@
-/* Ontwerp-speeltuin voor de live-rij. Hergebruikt de globale thema-variabelen (--accent, --panel,
-   --line, --txt, --dim, --pop). Elke variant heeft een eigen klasse-prefix zodat ze elkaar niet raken. */
+/* Ontwerp-speeltuin "logo in de balk" — kleurrijke, high-end varianten. Clubkleuren komen binnen als
+   --hc (thuis) en --ac (uit) op elke rij. Hergebruikt de globale thema-variabelen. */
 
 .ll-intro { color: var(--dim); font-size: 0.92rem; line-height: 1.5; margin: 0 0 18px; max-width: 60ch; }
 .ll-lab { display: flex; flex-direction: column; gap: 24px; }
@@ -12,70 +12,109 @@
 .ll-vdesc { flex-basis: 100%; font-size: 0.82rem; font-weight: 500; color: var(--dim); }
 .ll-cards { display: flex; flex-direction: column; gap: 8px; }
 
-/* Gedeelde kaart-look (zoals een live-rij op het bord): blauwe waas + accent-rand links. */
-.ll-card {
-  position: relative;
-  border-radius: 12px;
-  border: 1px solid var(--line);
-  background: color-mix(in srgb, var(--accent) 8%, var(--panel));
-  box-shadow: inset 3px 0 0 var(--accent);
-  overflow: hidden;
-}
+/* Neutrale kaart-omhulling: afronding + clip; elke variant vult zelf de (kleurrijke) achtergrond. */
+.ll-card { position: relative; border-radius: 14px; border: 1px solid var(--line); overflow: hidden; }
 
-/* Gedeelde live-pill + statistiek (rood = "live"-conventie). */
+/* Gedeelde live-pill + statistiek. */
 .ll-livebadge {
   font-size: 0.6rem; font-weight: 900; letter-spacing: 0.06em;
   color: #fff; background: var(--pop); padding: 2px 7px; border-radius: 999px; white-space: nowrap;
+  box-shadow: 0 1px 8px color-mix(in srgb, var(--pop) 55%, transparent);
 }
-.ll-stats { display: inline-flex; gap: 6px; font-size: 0.64rem; color: var(--dim); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ll-stats { display: inline-flex; gap: 6px; font-size: 0.64rem; color: rgba(255, 255, 255, 0.82); font-variant-numeric: tabular-nums; white-space: nowrap; text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5); }
 .ll-sep { opacity: 0.5; }
 
-/* ── A — Huidig ─────────────────────────────────────────────────────────────── */
-.la-row { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; padding: 10px 12px; }
-.la-team { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.la-team.away { justify-content: flex-end; }
-.la-logo { border-radius: 50%; flex: 0 0 auto; }
-.la-name { font-weight: 700; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.la-mid { display: flex; flex-direction: column; align-items: center; gap: 2px; }
-.la-score { font-weight: 900; font-size: 1.35rem; color: var(--accent); font-variant-numeric: tabular-nums; line-height: 1; }
+/* ── V1 — Kleurwaaier ──────────────────────────────────────────────────────── */
+.d1-row {
+  position: relative; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px;
+  padding: 14px 16px; min-height: 64px; overflow: hidden;
+  background:
+    linear-gradient(90deg,
+      color-mix(in srgb, var(--hc) 62%, transparent) 0%, transparent 42%,
+      transparent 58%, color-mix(in srgb, var(--ac) 62%, transparent) 100%),
+    var(--panel);
+}
+.d1-bleed { position: absolute; top: 50%; transform: translateY(-50%); height: 185%; width: auto; opacity: 0.3; pointer-events: none; }
+.d1-bleed.left { left: -28px; -webkit-mask-image: linear-gradient(90deg, #000 5%, transparent 78%); mask-image: linear-gradient(90deg, #000 5%, transparent 78%); }
+.d1-bleed.right { right: -28px; -webkit-mask-image: linear-gradient(270deg, #000 5%, transparent 78%); mask-image: linear-gradient(270deg, #000 5%, transparent 78%); }
+.d1-team { position: relative; min-width: 0; font-weight: 800; font-size: 1.02rem; color: #fff; text-shadow: 0 1px 6px rgba(0, 0, 0, 0.65); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.d1-team.away { text-align: right; }
+.d1-mid { position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.d1-score { font-weight: 900; font-size: 1.4rem; color: #fff; text-shadow: 0 1px 10px rgba(0, 0, 0, 0.55); font-variant-numeric: tabular-nums; line-height: 1; }
 
-/* ── B — Gestapeld ─────────────────────────────────────────────────────────── */
-.lb2-row { display: flex; align-items: center; gap: 14px; padding: 10px 12px; }
-.lb2-teams { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 7px; }
-.lb2-line { display: grid; grid-template-columns: 26px 1fr auto; align-items: center; gap: 9px; }
-.lb2-logo { border-radius: 50%; }
-.lb2-name { font-weight: 700; font-size: 0.98rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.lb2-score { font-weight: 800; font-size: 1.1rem; color: var(--dim); font-variant-numeric: tabular-nums; min-width: 1.1em; text-align: right; }
-.lb2-score.win { color: var(--accent); }
-.lb2-status { flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+/* ── V2 — Kleur-glow ───────────────────────────────────────────────────────── */
+.d2-row {
+  position: relative; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px;
+  padding: 14px 16px; min-height: 64px; overflow: hidden;
+  background:
+    radial-gradient(64% 130% at -4% 50%, color-mix(in srgb, var(--hc) 52%, transparent), transparent 62%),
+    radial-gradient(64% 130% at 104% 50%, color-mix(in srgb, var(--ac) 52%, transparent), transparent 62%),
+    var(--panel);
+}
+.d2-logo { position: absolute; top: 50%; transform: translateY(-50%); width: 48px; height: 48px; object-fit: contain; pointer-events: none; }
+.d2-logo.left { left: 12px; filter: drop-shadow(0 0 16px var(--hc)); }
+.d2-logo.right { right: 12px; filter: drop-shadow(0 0 16px var(--ac)); }
+.d2-team { position: relative; min-width: 0; font-weight: 800; font-size: 1rem; color: #fff; text-shadow: 0 1px 6px rgba(0, 0, 0, 0.6); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.d2-team.home { padding-left: 54px; }
+.d2-team.away { padding-right: 54px; text-align: right; }
+.d2-mid { position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.d2-score { font-weight: 900; font-size: 1.4rem; color: #fff; text-shadow: 0 1px 10px rgba(0, 0, 0, 0.5); font-variant-numeric: tabular-nums; line-height: 1; }
 
-/* ── C — Logo-watermerk ────────────────────────────────────────────────────── */
-.lc-row { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; padding: 12px; }
-.lc-team { position: relative; display: flex; align-items: center; min-width: 0; padding: 4px 2px; overflow: hidden; }
-.lc-team.away { justify-content: flex-end; }
-.lc-wm { position: absolute; top: 50%; width: 60px; height: 60px; object-fit: contain; opacity: 0.16; transform: translateY(-50%); pointer-events: none; }
-.lc-team.home .lc-wm { left: -6px; }
-.lc-team.away .lc-wm { right: -6px; }
-.lc-name { position: relative; font-weight: 800; font-size: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.lc-mid { display: flex; flex-direction: column; align-items: center; gap: 2px; }
-.lc-score { font-weight: 900; font-size: 1.35rem; color: var(--accent); font-variant-numeric: tabular-nums; line-height: 1; }
+/* ── V3 — Diagonale banden ─────────────────────────────────────────────────── */
+.d3-row {
+  position: relative; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px;
+  padding: 14px 16px; min-height: 66px; overflow: hidden; background: var(--panel);
+}
+.d3-band { position: absolute; top: 0; bottom: 0; width: 52%; pointer-events: none; }
+.d3-band.left { left: 0; background: linear-gradient(115deg, color-mix(in srgb, var(--hc) 90%, #000 14%) 0%, color-mix(in srgb, var(--hc) 36%, transparent) 100%); clip-path: polygon(0 0, 100% 0, 74% 100%, 0 100%); }
+.d3-band.right { right: 0; background: linear-gradient(245deg, color-mix(in srgb, var(--ac) 90%, #000 14%) 0%, color-mix(in srgb, var(--ac) 36%, transparent) 100%); clip-path: polygon(26% 0, 100% 0, 100% 100%, 0 100%); }
+.d3-logo { position: absolute; top: 50%; transform: translateY(-50%); width: 44px; height: 44px; object-fit: contain; filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.45)); pointer-events: none; }
+.d3-logo.left { left: 12px; }
+.d3-logo.right { right: 12px; }
+.d3-team { position: relative; min-width: 0; font-weight: 800; font-size: 1rem; color: #fff; text-shadow: 0 1px 7px rgba(0, 0, 0, 0.7); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.d3-team.home { padding-left: 50px; }
+.d3-team.away { padding-right: 50px; text-align: right; }
+.d3-mid { position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.d3-score { font-weight: 900; font-size: 1.4rem; color: #fff; text-shadow: 0 1px 10px rgba(0, 0, 0, 0.6); font-variant-numeric: tabular-nums; line-height: 1; }
 
-/* ── D — Logo in de balk (bleed) ───────────────────────────────────────────── */
-.ld-row { position: relative; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; padding: 14px; min-height: 60px; overflow: hidden; }
-.ld-bleed { position: absolute; top: 50%; transform: translateY(-50%); height: 150%; width: auto; object-fit: contain; opacity: 0.18; pointer-events: none; }
-.ld-bleed.left { left: -24px; -webkit-mask-image: linear-gradient(90deg, #000 10%, transparent 85%); mask-image: linear-gradient(90deg, #000 10%, transparent 85%); }
-.ld-bleed.right { right: -24px; -webkit-mask-image: linear-gradient(270deg, #000 10%, transparent 85%); mask-image: linear-gradient(270deg, #000 10%, transparent 85%); }
-.ld-team { position: relative; font-weight: 800; font-size: 1rem; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ld-team.away { text-align: right; }
-.ld-mid { position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; }
-.ld-score { font-weight: 900; font-size: 1.35rem; color: var(--accent); font-variant-numeric: tabular-nums; line-height: 1; }
+/* ── V4 — Matchup-tegels ───────────────────────────────────────────────────── */
+.d4-row {
+  position: relative; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px;
+  padding: 12px 14px; min-height: 64px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--hc) 9%, var(--panel)), color-mix(in srgb, var(--ac) 9%, var(--panel)));
+}
+.d4-side { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.d4-side.away { justify-content: flex-end; }
+.d4-tile {
+  flex: 0 0 auto; width: 46px; height: 46px; border-radius: 13px; display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(155deg, color-mix(in srgb, var(--c) 85%, #fff 15%), color-mix(in srgb, var(--c) 58%, #000 24%));
+  box-shadow: 0 5px 16px color-mix(in srgb, var(--c) 48%, transparent), inset 0 1px 0 rgba(255, 255, 255, 0.28);
+}
+.d4-tile img { width: 34px; height: 34px; object-fit: contain; }
+.d4-tile b { color: #fff; font-size: 1.2rem; }
+.d4-name { min-width: 0; font-weight: 800; font-size: 0.98rem; color: var(--txt); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.d4-mid { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.d4-score { font-weight: 900; font-size: 1.32rem; color: var(--txt); font-variant-numeric: tabular-nums; line-height: 1; }
+.d4-mid .ll-stats { color: var(--dim); text-shadow: none; }
 
-/* ── E — Clubkleur-accent (compact) ────────────────────────────────────────── */
-.le-row { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; padding: 9px 12px; }
-.le-team { display: flex; align-items: center; gap: 7px; min-width: 0; }
-.le-team.away { justify-content: flex-end; }
-.le-logo { border-radius: 50%; flex: 0 0 auto; }
-.le-name { font-weight: 800; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.le-mid { display: flex; flex-direction: column; align-items: center; gap: 2px; }
-.le-top { display: flex; align-items: center; gap: 7px; }
-.le-score { font-weight: 900; font-size: 1.12rem; color: var(--accent); font-variant-numeric: tabular-nums; }
+/* ── V5 — Poster-wash ──────────────────────────────────────────────────────── */
+.d5-row {
+  position: relative; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px;
+  padding: 16px; min-height: 74px; overflow: hidden;
+  background:
+    linear-gradient(100deg,
+      color-mix(in srgb, var(--hc) 78%, #000 10%) 0%, color-mix(in srgb, var(--hc) 28%, transparent) 34%,
+      transparent 50%, color-mix(in srgb, var(--ac) 28%, transparent) 66%, color-mix(in srgb, var(--ac) 78%, #000 10%) 100%),
+    var(--panel);
+}
+.d5-wash { position: absolute; top: 0; bottom: 0; width: 42%; pointer-events: none; }
+.d5-wash.left { left: 0; background: radial-gradient(80% 120% at 0% 28%, color-mix(in srgb, var(--hc) 55%, transparent), transparent 70%); }
+.d5-wash.right { right: 0; background: radial-gradient(80% 120% at 100% 28%, color-mix(in srgb, var(--ac) 55%, transparent), transparent 70%); }
+.d5-logo { position: absolute; top: 50%; transform: translateY(-50%); height: 200%; width: auto; object-fit: contain; opacity: 0.92; pointer-events: none; filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.45)); }
+.d5-logo.left { left: -18px; -webkit-mask-image: linear-gradient(90deg, #000 30%, transparent 92%); mask-image: linear-gradient(90deg, #000 30%, transparent 92%); }
+.d5-logo.right { right: -18px; -webkit-mask-image: linear-gradient(270deg, #000 30%, transparent 92%); mask-image: linear-gradient(270deg, #000 30%, transparent 92%); }
+.d5-team { position: relative; min-width: 0; font-weight: 900; font-size: 1.05rem; color: #fff; text-shadow: 0 1px 8px rgba(0, 0, 0, 0.7); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.d5-team.home { padding-left: 46px; }
+.d5-team.away { padding-right: 46px; text-align: right; }
+.d5-mid { position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.d5-score { font-weight: 900; font-size: 1.5rem; color: #fff; text-shadow: 0 2px 12px rgba(0, 0, 0, 0.6); font-variant-numeric: tabular-nums; line-height: 1; }
