@@ -7,7 +7,6 @@ import { useEffect, useMemo, useState } from 'react'
 import { TeamLogo } from '@/components/TeamLogo'
 import { type ClubColors } from '@/lib/club-colors'
 import { type LogoFit } from '@/lib/logo-fit'
-import { RowWeather } from './RowWeather'
 
 type TeamRef = {
   teamId: number
@@ -87,11 +86,16 @@ export function LiveBoard({
   const [onlyFavTeams, setOnlyFavTeams] = useState(false)
   const [onlyFavClubs, setOnlyFavClubs] = useState(false)
   const [onlyMyClub, setOnlyMyClub] = useState(false)
-  const [onlyLive, setOnlyLive] = useState(false)
+  // Startpagina opent op "Nu live": zijn er live wedstrijden, dan toont het bord enkel die,
+  // tot de supporter zelf naar "Hele dag" wisselt. Lazy initializer → enkel bij het opbouwen.
+  const [onlyLive, setOnlyLive] = useState(() => matches.some((m) => m.status === 'live'))
   const [query, setQuery] = useState('')
   const [openRow, setOpenRow] = useState<number | null>(null)
 
   const liveCount = useMemo(() => matches.filter((m) => m.status === 'live').length, [matches])
+  // "Enkel live" geldt alléén als er ook echt live wedstrijden zijn: op een dag zonder live
+  // (bv. een vorige datum) valt het bord vanzelf terug op alles i.p.v. een lege lijst.
+  const showLiveOnly = onlyLive && liveCount > 0
 
   // Zoek op ploegnaam of reeks (accent-ongevoelig).
   const matchesQuery = (m: DayMatch, q: string) => {
@@ -111,7 +115,7 @@ export function LiveBoard({
   const base = useMemo(
     () =>
       matches.filter((m) => {
-        if (onlyLive && m.status !== 'live') return false
+        if (showLiveOnly && m.status !== 'live') return false
         if (query.trim() && !matchesQuery(m, query)) return false
         // "Mijn club" beperkt tot de wedstrijden van de eigen club.
         if (onlyMyClub && !myClubMatch(m)) return false
@@ -152,7 +156,7 @@ export function LiveBoard({
 
   const emptyReason = query.trim()
     ? ` voor “${query.trim()}”`
-    : onlyLive
+    : showLiveOnly
       ? ' live'
       : onlyFavTeams || onlyFavClubs
         ? ' bij je favorieten'
@@ -174,12 +178,8 @@ export function LiveBoard({
             <option key={r} value={r}>{r} ({n})</option>
           ))}
         </select>
-        {/* Snelfilters apart — Live + favorieten. */}
+        {/* Snelfilters apart — favorieten. Live staat als eigen schakelaar bovenaan het bord. */}
         <div className="lb-quick">
-          <button type="button" className={`lb-reeks live ${onlyLive ? 'on' : ''}`} onClick={() => setOnlyLive((v) => !v)} disabled={liveCount === 0}>
-            <span><span className="lb-livedot" /> Live</span>
-            {liveCount > 0 && <span className="lb-reeks-n">{liveCount}</span>}
-          </button>
           {myClubId != null && (
             <button type="button" className={`lb-reeks fav ${onlyMyClub ? 'on' : ''}`} onClick={() => setOnlyMyClub((v) => !v)}>
               <span>🏠 Mijn club</span>
@@ -198,6 +198,32 @@ export function LiveBoard({
       </aside>
 
       <main className="lb-main">
+        {/* Hoofdschakelaar: "Nu live" (standaard aan zodra er live wedstrijden zijn) ↔ "Hele dag".
+            Eén rustige plek om te kiezen wat je ziet, i.p.v. een filter in de zijbalk. */}
+        {liveCount > 0 && (
+          <div className="lb-livetabs" role="tablist" aria-label="Toon live of de hele dag">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={showLiveOnly}
+              className={`lb-livetab ${showLiveOnly ? 'on' : ''}`}
+              onClick={() => setOnlyLive(true)}
+            >
+              <span className="lb-livedot" /> Nu live
+              <span className="lb-livetab-n">{liveCount}</span>
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={!showLiveOnly}
+              className={`lb-livetab ${!showLiveOnly ? 'on' : ''}`}
+              onClick={() => setOnlyLive(false)}
+            >
+              Hele dag
+            </button>
+          </div>
+        )}
+
         <div className="lb-datenav">
           <Link href={`/?date=${shiftDate(date, -1)}`} className="lb-datebtn">‹</Link>
           <div className="lb-date">
@@ -291,11 +317,6 @@ export function LiveBoard({
                         </span>
                       </Link>
                     </div>
-                    {m.weather && (m.weather.plaats || m.weather.lat != null) && (
-                      <div className="lb-weather-line">
-                        <RowWeather kickoff={m.kickoff} plaats={m.weather.plaats} lat={m.weather.lat} lng={m.weather.lng} />
-                      </div>
-                    )}
 
                     {open && (
                       <div className="lb-follow">

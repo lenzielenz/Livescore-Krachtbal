@@ -153,6 +153,57 @@
   border-top-color: var(--line);
 }
 
+/* Hoofdschakelaar "Nu live" ↔ "Hele dag" — rustig segmented control bovenaan het bord. */
+.lb-livetabs {
+  display: flex;
+  width: max-content;
+  max-width: 100%;
+  gap: 4px;
+  margin: 0 auto 14px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  border-radius: 999px;
+}
+.lb-livetab {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 16px;
+  border: none;
+  background: transparent;
+  color: var(--dim);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 700;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: color var(--dur-1) var(--ease-soft), background-color var(--dur-1) var(--ease-soft);
+}
+.lb-livetab:hover {
+  color: var(--txt);
+}
+.lb-livetab.on {
+  background: var(--bg);
+  color: var(--txt);
+  box-shadow: var(--card-shadow);
+}
+.lb-livetab .lb-livedot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--pop);
+}
+.lb-livetab.on .lb-livedot {
+  animation: lb-livepulse 1.6s ease-in-out infinite;
+}
+.lb-livetab-n {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.74rem;
+  font-weight: 800;
+  color: var(--pop);
+}
+
 /* Datumnavigatie */
 /* Vaste 3-koloms layout: de pijlen staan altijd op dezelfde plek, ongeacht de breedte van
    het datumlabel (anders "verspringen" ze bij elke dagwissel). */
@@ -254,16 +305,19 @@
   overflow: hidden;
   margin-bottom: 12px;
 }
+/* Reeks-kop: rustig en terughoudend — een label, geen blikvanger. De wedstrijden zelf
+   (en het live-accent) mogen de aandacht trekken, niet de groepstitel. */
 .lb-group-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 14px;
-  font-size: 0.78rem;
-  font-weight: 800;
-  letter-spacing: 0.03em;
-  color: var(--accent);
-  background: #10141a;
+  padding: 7px 14px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--dim);
+  background: transparent;
   border-bottom: 1px solid var(--line);
 }
 .lb-group-n {
@@ -524,45 +578,34 @@
 }
 
 /* ── Startpagina: supporter-eerst ── */
-/* Slanke merk-intro boven het wedstrijdoverzicht. */
+/* Slanke merk-intro boven het wedstrijdoverzicht — compact, zodat de wedstrijden
+   meteen in beeld komen i.p.v. een grote koptekst. */
 .home-intro {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: 6px 14px;
-  margin: 6px 0 6px;
+  gap: 4px 12px;
+  margin: 2px 0 2px;
 }
 .home-intro h1 {
-  font-size: 2rem;
+  font-size: 1.5rem;
   font-weight: 900;
   letter-spacing: -0.02em;
   margin: 0;
 }
 .home-intro .brand {
-  filter: drop-shadow(0 2px 18px color-mix(in srgb, var(--accent) 42%, transparent));
+  filter: drop-shadow(0 2px 14px color-mix(in srgb, var(--accent) 36%, transparent));
 }
-/* Roterende krachtbal-quote — speels, in de huisstijl, met een gloeiend accentstreepje. */
+/* Roterende krachtbal-quote — ingetogen: een fluisterende ondertitel naast de titel,
+   geen blikvanger met gloeiend streepje meer. */
 .home-quote {
-  position: relative;
-  margin: 0 0 20px;
-  padding-left: 14px;
+  margin: 0 0 14px;
   max-width: 62ch;
-  font-size: 1.05rem;
+  font-size: 0.84rem;
   font-style: italic;
   font-weight: 500;
   line-height: 1.4;
-  color: var(--txt);
-}
-.home-quote::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 3px;
-  bottom: 3px;
-  width: 3px;
-  border-radius: 999px;
-  background: var(--grad-accent);
-  box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 55%, transparent);
+  color: var(--dim);
 }
 .home-intro-link {
   margin-left: auto;
@@ -667,15 +710,15 @@
 .home-supporter {
   display: block;
   text-align: center;
-  margin: 2px auto 14px;
+  margin: 0 auto 14px;
   max-width: max-content;
-  padding: 7px 16px;
+  padding: 6px 14px;
   border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--line));
-  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--line));
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
   color: var(--accent);
-  font-size: 0.84rem;
-  font-weight: 700;
+  font-size: 0.8rem;
+  font-weight: 600;
   text-decoration: none;
   transition: background 0.15s ease, transform 0.15s ease;
 }
