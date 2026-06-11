@@ -12,8 +12,12 @@ export default function manifest(): MetadataRoute.Manifest {
     background_color: '#06140d',
     theme_color: '#06140d',
     icons: [
+      // SVG voor browsers die het ondersteunen (scherp op elk formaat) + PNG-varianten voor Android
+      // (gewoon én maskable) en iOS, dat geen SVG-beginschermicoon ondersteunt.
       { src: '/icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
-      { src: '/icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'maskable' },
+      { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+      { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+      { src: '/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
     ],
   }
 }

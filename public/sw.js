@@ -5,7 +5,7 @@
 //  - API (/api/*) en externe oorsprong: nooit cachen (dynamisch; de aantekentafel heeft een eigen
 //    offline-wachtrij voor mutaties).
 
-const CACHE = 'kb-cache-v1'
+const CACHE = 'kb-cache-v2'
 const OFFLINE_URL = '/offline'
 const PRECACHE = ['/', OFFLINE_URL, '/manifest.webmanifest', '/icon.svg']
 
@@ -79,4 +79,44 @@ self.addEventListener('fetch', (event) => {
 
   // Overige GET's: netwerk met cache-fallback.
   event.respondWith(fetch(req).catch(() => caches.match(req)))
+})
+
+// ── Web push: toon de binnenkomende melding ──────────────────────────────────
+self.addEventListener('push', (event) => {
+  let data = {}
+  try {
+    data = event.data ? event.data.json() : {}
+  } catch {
+    data = { body: event.data ? event.data.text() : '' }
+  }
+  const title = data.title || 'Krachtbal Live'
+  const options = {
+    body: data.body || '',
+    icon: '/icon-192.png',
+    badge: '/icon-192.png',
+    data: { url: data.url || '/' },
+    tag: data.tag, // zelfde tag → vervangt een vorige melding i.p.v. te stapelen
+    renotify: Boolean(data.tag),
+  }
+  event.waitUntil(self.registration.showNotification(title, options))
+})
+
+// Tik op de melding → bestaand tabblad focussen, anders een nieuw openen op de doel-URL.
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close()
+  const target = (event.notification.data && event.notification.data.url) || '/'
+  event.waitUntil(
+    (async () => {
+      const all = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+      for (const client of all) {
+        if (client.url.includes(target) && 'focus' in client) return client.focus()
+      }
+      if (all[0] && 'focus' in all[0]) {
+        await all[0].focus()
+        if ('navigate' in all[0]) return all[0].navigate(target).catch(() => {})
+        return
+      }
+      return self.clients.openWindow(target)
+    })(),
+  )
 })

@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
 
+import { PushOptIn } from '@/components/PushOptIn'
 import { TeamLogo } from '@/components/TeamLogo'
 import { type ClubColors } from '@/lib/club-colors'
 import { type LogoFit } from '@/lib/logo-fit'
@@ -205,6 +206,7 @@ export function LiveBoard({
             {favClubs.size > 0 && <span className="lb-reeks-n">{favClubs.size}</span>}
           </button>
         </div>
+        <PushOptIn />
       </aside>
 
       <main className="lb-main">
