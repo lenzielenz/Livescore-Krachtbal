@@ -122,14 +122,18 @@ export function SiteHeader({ active = null }: { active?: NavSection }) {
                       )}
                     </div>
                   )}
-                  <div className="sh-more-group">
-                    <div className="sh-more-grouphead">Aan de slag</div>
-                    {PROFILES.map((p) => (
-                      <Link key={p.key} href={p.hubHref} className="sh-more-item" onClick={() => setOpen(false)}>
-                        {p.badge} {p.hubLabel}
-                      </Link>
-                    ))}
-                  </div>
+                  {/* "Aan de slag" (profiel-instappunten) enkel voor ingelogde gebruikers —
+                      een uitgelogde bezoeker krijgt deze tools nog niet te zien. */}
+                  {loggedIn && (
+                    <div className="sh-more-group">
+                      <div className="sh-more-grouphead">Aan de slag</div>
+                      {PROFILES.map((p) => (
+                        <Link key={p.key} href={p.hubHref} className="sh-more-item" onClick={() => setOpen(false)}>
+                          {p.badge} {p.hubLabel}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
                   <div className="sh-more-group">
                     <div className="sh-more-grouphead">Account</div>
                     {loggedIn ? (
