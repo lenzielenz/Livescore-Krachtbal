@@ -59,11 +59,6 @@
   margin: 0;
 }
 
-.cast-link {
-  color: var(--accent);
-  text-decoration: underline;
-}
-
 .cast-field {
   display: flex;
   flex-direction: column;
@@ -271,13 +266,6 @@
   color: var(--dim);
   border-top: 1px dashed var(--line);
   padding-top: 12px;
-}
-
-.cast-tip {
-  color: var(--dim);
-  font-size: 13px;
-  margin-top: 18px;
-  text-align: center;
 }
 
 .cast-note {

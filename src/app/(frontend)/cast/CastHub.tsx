@@ -130,9 +130,7 @@ export function CastHub({ matches, initialVeldId }: { matches: CastMatch[]; init
   return (
     <div className="cast-hub">
       <p className="cast-intro">
-        Open op elke tv (smart-tv, laptop op hdmi, of een Chromecast) <strong>één keer</strong> de scherm-URL
-        hieronder. Daarna kies je <em>vanaf dit toestel</em> wat erop komt — de tv hoef je niet meer aan te
-        raken. Werkt op elk toestel met een browser, ook iPhone.
+        Open de scherm-URL <strong>één keer</strong> op de tv — hier kies je wat erop komt.
       </p>
 
       <div className="cast-grid">
@@ -202,10 +200,7 @@ export function CastHub({ matches, initialVeldId }: { matches: CastMatch[]; init
             <span className="cast-card-icon">🍻</span>
             <h2 className="cast-card-title">Kantinescherm</h2>
           </div>
-          <p className="cast-card-sub">
-            Alle gekozen wedstrijden naast elkaar. Kies welke verschijnen via{' '}
-            <Link href="/kantine" className="cast-link">de kantine-pagina</Link>.
-          </p>
+          <p className="cast-card-sub">Alle gekozen wedstrijden naast elkaar.</p>
 
           <Link href="/kantine" className="cast-btn ghost cast-kantine-pick">
             Kies wedstrijden →
@@ -231,11 +226,6 @@ export function CastHub({ matches, initialVeldId }: { matches: CastMatch[]; init
           )}
         </section>
       </div>
-
-      <p className="cast-tip">
-        Tip: heb je geen smart-tv? Sluit een laptop met hdmi aan de tv en open daar de scherm-URL — of scan de
-        QR-code met het toestel dat de tv aanstuurt.
-      </p>
     </div>
   )
 }
