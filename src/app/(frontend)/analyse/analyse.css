@@ -5,18 +5,19 @@
 }
 
 /* ── Clubhuis-hero ── Het eigen clublogo + naam bovenaan de analyse-hub: een claim.
-   "Deze zone is van ons." Leunt op de rood-grijze clubtokens van de analyse-zone. */
+   "Deze zone is van ons." Grijs (staal) draagt het ontwerp, rood is de scherpe accent. */
 .an-hero {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 22px;
   margin: 6px 0 22px;
-  padding: 20px 24px;
+  padding: 22px 26px;
   border-radius: 20px;
-  border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--line));
+  border: 1px solid color-mix(in srgb, var(--steel-2) 24%, var(--line));
   background:
-    radial-gradient(135% 150% at 0% 0%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 52%),
+    radial-gradient(130% 150% at 0% 0%, color-mix(in srgb, var(--accent) 11%, transparent), transparent 50%),
+    radial-gradient(120% 150% at 100% 0%, color-mix(in srgb, var(--steel) 9%, transparent), transparent 55%),
     var(--panel-grad);
   box-shadow: var(--card-shadow);
   overflow: hidden;
@@ -28,29 +29,64 @@
   left: 0;
   top: 0;
   bottom: 0;
-  width: 4px;
+  width: 3px;
   background: var(--grad-accent);
 }
-/* Logobadge: vangt elk logo (transparant, vierkant of wapenschild) netjes op. */
+/* Fijne staal-glansveeg langs de bovenrand — premium, neutraal. */
+.an-hero::after {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, #fff 22%, transparent) 50%, transparent);
+}
+/* Logobadge als premium medaillon: een geborsteld-stalen rand rond een donkere
+   plaat, met een fijne rode haarlijn ertussen. */
 .an-hero-badge {
   flex: 0 0 auto;
-  width: 96px;
-  height: 96px;
+  position: relative;
+  width: 104px;
+  height: 104px;
+  padding: 4px;
+  border-radius: 24px;
+  background: var(--grad-steel);
+  box-shadow:
+    0 16px 34px -12px rgba(0, 0, 0, 0.7),
+    0 0 24px -8px color-mix(in srgb, var(--accent) 22%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.45);
+}
+/* Donkere plaat waarop het logo rust — met rode haarlijn + diepte. */
+.an-hero-plate {
+  position: relative;
   display: grid;
   place-items: center;
-  border-radius: 22px;
+  width: 100%;
+  height: 100%;
+  border-radius: 20px;
   background:
-    radial-gradient(circle at 50% 28%, color-mix(in srgb, #fff 12%, transparent), transparent 70%),
-    color-mix(in srgb, var(--panel-2) 80%, #000);
-  border: 1px solid color-mix(in srgb, var(--accent) 38%, var(--line));
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 0 0 5px color-mix(in srgb, var(--accent) 9%, transparent);
+    radial-gradient(120% 92% at 50% 16%, color-mix(in srgb, #fff 9%, transparent), transparent 60%),
+    linear-gradient(160deg, #24262c 0%, #15161a 82%);
+  box-shadow:
+    0 0 0 1.5px color-mix(in srgb, var(--accent) 65%, transparent),
+    inset 0 2px 7px rgba(0, 0, 0, 0.6);
+  overflow: hidden;
+}
+/* Subtiele glans bovenop de plaat. */
+.an-hero-plate::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.12), transparent 40%);
+  pointer-events: none;
 }
 .an-hero-crest {
-  width: 78px;
-  height: 78px;
+  position: relative;
+  width: 74px;
+  height: 74px;
   object-fit: contain;
   display: block;
-  filter: drop-shadow(0 5px 14px rgba(0, 0, 0, 0.45));
+  filter: drop-shadow(0 4px 11px rgba(0, 0, 0, 0.55));
 }
 .an-hero-txt {
   min-width: 0;
@@ -59,9 +95,9 @@
   display: block;
   font-size: 0.7rem;
   font-weight: 800;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: var(--accent);
+  color: var(--steel);
   margin-bottom: 5px;
 }
 .an-hero-title {
