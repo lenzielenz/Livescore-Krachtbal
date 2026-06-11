@@ -7,6 +7,15 @@ import Link from 'next/link'
 type Team = { id: number; name: string; reeks: string }
 type Player = { id: number; name: string; shirtNumber: number }
 
+// Standaardwaarde voor een <input type="datetime-local">: dat veld toont/verwacht LOKALE tijd, dus
+// corrigeer voor de tijdzone vóór het ISO-knippen — anders staat de voorgestelde tijd de
+// UTC-offset (in de zomer 2u in België) in het verleden.
+function nowLocalInput(): string {
+  const d = new Date()
+  d.setMinutes(d.getMinutes() - d.getTimezoneOffset())
+  return d.toISOString().slice(0, 16)
+}
+
 // Eén ploegkolom: toon de (onthouden) spelers en voeg er nieuwe aan toe. Toegevoegde spelers
 // worden in de ploeg bewaard en zijn in latere wedstrijden opnieuw selecteerbaar. De positie is
 // verplicht (analysewedstrijd) — ze voedt de analyse, dus kies ze meteen bij het toevoegen.
@@ -73,7 +82,7 @@ export function NieuweAnalyseMatch({ teams, reeksOptions, positionOptions }: { t
   const [reeks, setReeks] = useState(reeksOptions[0]?.value ?? '')
   const [home, setHome] = useState('')
   const [away, setAway] = useState('')
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 16))
+  const [date, setDate] = useState(nowLocalInput)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
