@@ -3,10 +3,10 @@ import Link from 'next/link'
 import { SiteHeader } from '@/components/SiteHeader'
 import { canAnalyse } from '@/lib/access'
 import { analyseOwnWhere } from '@/lib/analyse-access'
-import { getSelectedSeason } from '@/lib/analyse-season'
+import { getSelectedSeason, reeksenMetData } from '@/lib/analyse-season'
 import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
-import { COMPETITIE_REEKSEN, resolveCompetitieReeks } from '@/lib/reeksen'
+import { resolveCompetitieReeks } from '@/lib/reeksen'
 import { buildSeasonStats } from '@/lib/season-stats'
 import { Sparkline } from '@/components/analytics/Sparkline'
 import { AnalyseNav } from '../AnalyseNav'
@@ -31,9 +31,10 @@ export default async function SeizoenAnalysePage({ searchParams }: { searchParam
   }
 
   const { reeks: reeksParam } = await searchParams
-  const reeks = resolveCompetitieReeks(reeksParam)
 
   const payload = await getPayloadClient()
+  const reeksOptions = await reeksenMetData(payload, analyseOwnWhere(me))
+  const reeks = resolveCompetitieReeks(reeksParam, reeksOptions)
   const players = await buildSeasonStats(payload, reeks, await getSelectedSeason(), analyseOwnWhere(me))
 
   return (
@@ -43,7 +44,7 @@ export default async function SeizoenAnalysePage({ searchParams }: { searchParam
         <AnalyseNav active="ploegen" />
         <div className="an-head-bar">
           <h1 className="page-title"><span className="brand">Seizoensanalyse</span></h1>
-          <SeizoenPicker reeks={reeks} options={[...COMPETITIE_REEKSEN]} />
+          <SeizoenPicker reeks={reeks} options={reeksOptions} />
         </div>
 
         {players.length === 0 ? (

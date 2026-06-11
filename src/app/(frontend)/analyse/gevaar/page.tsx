@@ -3,11 +3,11 @@ import Link from 'next/link'
 import { SiteHeader } from '@/components/SiteHeader'
 import { canAnalyse } from '@/lib/access'
 import { analyseOwnWhere } from '@/lib/analyse-access'
-import { getSelectedSeason } from '@/lib/analyse-season'
+import { getSelectedSeason, reeksenMetData } from '@/lib/analyse-season'
 import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
 import { buildPlayerDanger } from '@/lib/player-danger'
-import { COMPETITIE_REEKSEN, resolveCompetitieReeks } from '@/lib/reeksen'
+import { resolveCompetitieReeks } from '@/lib/reeksen'
 import { buildSeasonStats } from '@/lib/season-stats'
 import { BandChart } from '@/components/analytics/BandChart'
 import { AnalyseNav } from '../AnalyseNav'
@@ -36,9 +36,10 @@ export default async function GevaarPage({ searchParams }: { searchParams: Promi
   }
 
   const { reeks: reeksParam, speler: spelerParam } = await searchParams
-  const reeks = resolveCompetitieReeks(reeksParam)
 
   const payload = await getPayloadClient()
+  const reeksOptions = await reeksenMetData(payload, analyseOwnWhere(me))
+  const reeks = resolveCompetitieReeks(reeksParam, reeksOptions)
   const seizoen = await getSelectedSeason()
   const seasonPlayers = await buildSeasonStats(payload, reeks, seizoen, analyseOwnWhere(me))
   const playerOptions = seasonPlayers.map((p) => ({ value: String(p.playerId), label: `#${p.shirtNumber} ${p.name} · ${p.teamName}` }))
@@ -55,7 +56,7 @@ export default async function GevaarPage({ searchParams }: { searchParams: Promi
           <h1 className="page-title"><span className="brand">Gevaarzone</span></h1>
           <GevaarPicker
             reeks={reeks}
-            reeksOptions={[...COMPETITIE_REEKSEN]}
+            reeksOptions={reeksOptions}
             playerOptions={playerOptions}
             player={playerId != null ? String(playerId) : ''}
           />

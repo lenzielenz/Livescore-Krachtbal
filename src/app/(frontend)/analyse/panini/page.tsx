@@ -3,12 +3,12 @@ import Link from 'next/link'
 import { SiteHeader } from '@/components/SiteHeader'
 import { canAnalyse } from '@/lib/access'
 import { analyseOwnWhere } from '@/lib/analyse-access'
-import { getSelectedSeason } from '@/lib/analyse-season'
+import { getSelectedSeason, reeksenMetData } from '@/lib/analyse-season'
 import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
 import { clubColors, clubLogoUrl } from '@/lib/match-engine'
 import { buildRadarStats } from '@/lib/radar-stats'
-import { COMPETITIE_REEKSEN, reeksNaam, resolveCompetitieReeks } from '@/lib/reeksen'
+import { reeksNaam, resolveCompetitieReeks } from '@/lib/reeksen'
 import { AnalyseNav } from '../AnalyseNav'
 import { PaniniBuilder } from './PaniniBuilder'
 import '../analyse.css'
@@ -31,9 +31,10 @@ export default async function PaniniPage({ searchParams }: { searchParams: Promi
   }
 
   const { reeks: reeksParam } = await searchParams
-  const reeks = resolveCompetitieReeks(reeksParam)
 
   const payload = await getPayloadClient()
+  const reeksOptions = await reeksenMetData(payload, analyseOwnWhere(me))
+  const reeks = resolveCompetitieReeks(reeksParam, reeksOptions)
   const players = await buildRadarStats(payload, reeks, await getSelectedSeason(), analyseOwnWhere(me))
 
   // Clubgegevens (logo + kleuren) per ploeg via dezelfde bron als de rest van de app
@@ -62,7 +63,7 @@ export default async function PaniniPage({ searchParams }: { searchParams: Promi
         <div className="an-head-bar">
           <h1 className="page-title"><span className="brand">Panini</span></h1>
         </div>
-        <PaniniBuilder reeks={reeks} reeksLabel={reeksNaam(reeks)} options={[...COMPETITIE_REEKSEN]} players={players} clubs={clubByTeam} />
+        <PaniniBuilder reeks={reeks} reeksLabel={reeksNaam(reeks)} options={reeksOptions} players={players} clubs={clubByTeam} />
       </div>
     </>
   )
