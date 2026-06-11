@@ -1,4 +1,4 @@
-/* eslint-disable @next/next/no-img-element -- bewuste rauwe <img> voor watermerk/bleed-effecten in deze ontwerp-speeltuin */
+/* eslint-disable @next/next/no-img-element -- bewuste rauwe <img> voor logo-in-de-balk-effecten in deze ontwerp-speeltuin */
 import type { CSSProperties, ReactNode } from 'react'
 
 export type SampleTeam = { name: string; logoUrl: string | null; color: string | null }
@@ -11,27 +11,11 @@ export type SampleMatch = {
   timeouts?: { home: number; away: number }
 }
 
-// Klein logo of, zonder logo, een gekleurd initialen-schijfje. Eén bouwsteen voor alle looks.
-function Logo({ team, size = 34, className }: { team: SampleTeam; size?: number; className?: string }) {
-  const initials = team.name
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((w) => w[0])
-    .join('')
-    .toUpperCase()
-  if (team.logoUrl) {
-    return <img src={team.logoUrl} alt="" width={size} height={size} className={className} style={{ width: size, height: size, objectFit: 'contain' }} />
-  }
-  return (
-    <span
-      className={className}
-      style={{ width: size, height: size, background: team.color ?? 'var(--line)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%', fontSize: size * 0.38, fontWeight: 800, color: '#fff' }}
-    >
-      {initials}
-    </span>
-  )
-}
+// Clubkleuren als CSS-variabelen op de rij (val terug op het accent-blauw zonder kleur).
+const vars = (m: SampleMatch): CSSProperties =>
+  ({ '--hc': m.home.color ?? 'var(--accent)', '--ac': m.away.color ?? 'var(--accent)' }) as CSSProperties
 
+const Badge = () => <span className="ll-livebadge">LIVE</span>
 function Stats({ m }: { m: SampleMatch }) {
   return (
     <span className="ll-stats">
@@ -42,120 +26,111 @@ function Stats({ m }: { m: SampleMatch }) {
   )
 }
 
-const Badge = () => <span className="ll-livebadge">LIVE</span>
-
-// ── Variant A — Huidig (referentie) ──────────────────────────────────────────
-function LookA({ m }: { m: SampleMatch }) {
+// ── V1 — Kleurwaaier: clubkleur bloedt vanaf elke rand naar binnen + logo-bleed ──
+function LookD1({ m }: { m: SampleMatch }) {
   return (
-    <div className="la-row">
-      <span className="la-team home">
-        <Logo team={m.home} size={34} className="la-logo" />
-        <span className="la-name">{m.home.name}</span>
-      </span>
-      <span className="la-mid">
+    <div className="d1-row" style={vars(m)}>
+      {m.home.logoUrl && <img className="d1-bleed left" src={m.home.logoUrl} alt="" aria-hidden />}
+      {m.away.logoUrl && <img className="d1-bleed right" src={m.away.logoUrl} alt="" aria-hidden />}
+      <span className="d1-team home">{m.home.name}</span>
+      <span className="d1-mid">
         <Badge />
-        <span className="la-score">{m.score.home} – {m.score.away}</span>
+        <span className="d1-score">{m.score.home} – {m.score.away}</span>
         <Stats m={m} />
       </span>
-      <span className="la-team away">
-        <span className="la-name">{m.away.name}</span>
-        <Logo team={m.away} size={34} className="la-logo" />
-      </span>
+      <span className="d1-team away">{m.away.name}</span>
     </div>
   )
 }
 
-// ── Variant B — Gestapeld (volledige namen, score rechts) ────────────────────
-function LookB({ m }: { m: SampleMatch }) {
-  const homeWin = m.score.home > m.score.away
-  const awayWin = m.score.away > m.score.home
+// ── V2 — Kleur-glow: het logo gloeit in de clubkleur aan elke kant ──────────────
+function LookD2({ m }: { m: SampleMatch }) {
   return (
-    <div className="lb2-row">
-      <div className="lb2-status"><Badge /><Stats m={m} /></div>
-      <div className="lb2-teams">
-        <div className="lb2-line">
-          <Logo team={m.home} size={26} className="lb2-logo" />
-          <span className="lb2-name">{m.home.name}</span>
-          <span className={`lb2-score ${homeWin ? 'win' : ''}`}>{m.score.home}</span>
-        </div>
-        <div className="lb2-line">
-          <Logo team={m.away} size={26} className="lb2-logo" />
-          <span className="lb2-name">{m.away.name}</span>
-          <span className={`lb2-score ${awayWin ? 'win' : ''}`}>{m.score.away}</span>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ── Variant C — Logo-watermerk achter de naam ────────────────────────────────
-function LookC({ m }: { m: SampleMatch }) {
-  return (
-    <div className="lc-row">
-      <span className="lc-team home">
-        {m.home.logoUrl && <img className="lc-wm" src={m.home.logoUrl} alt="" aria-hidden />}
-        <span className="lc-name">{m.home.name}</span>
-      </span>
-      <span className="lc-mid">
+    <div className="d2-row" style={vars(m)}>
+      {m.home.logoUrl && <img className="d2-logo left" src={m.home.logoUrl} alt="" aria-hidden />}
+      {m.away.logoUrl && <img className="d2-logo right" src={m.away.logoUrl} alt="" aria-hidden />}
+      <span className="d2-team home">{m.home.name}</span>
+      <span className="d2-mid">
         <Badge />
-        <span className="lc-score">{m.score.home} – {m.score.away}</span>
+        <span className="d2-score">{m.score.home} – {m.score.away}</span>
         <Stats m={m} />
       </span>
-      <span className="lc-team away">
-        {m.away.logoUrl && <img className="lc-wm" src={m.away.logoUrl} alt="" aria-hidden />}
-        <span className="lc-name">{m.away.name}</span>
-      </span>
+      <span className="d2-team away">{m.away.name}</span>
     </div>
   )
 }
 
-// ── Variant D — Logo in de balk (bloedt uit de randen) ───────────────────────
-function LookD({ m }: { m: SampleMatch }) {
-  const homeStyle = { '--club': m.home.color ?? 'var(--accent)' } as CSSProperties
-  const awayStyle = { '--club': m.away.color ?? 'var(--accent)' } as CSSProperties
+// ── V3 — Diagonale arena-banden in de clubkleuren ──────────────────────────────
+function LookD3({ m }: { m: SampleMatch }) {
   return (
-    <div className="ld-row">
-      {m.home.logoUrl && <img className="ld-bleed left" src={m.home.logoUrl} alt="" aria-hidden />}
-      {m.away.logoUrl && <img className="ld-bleed right" src={m.away.logoUrl} alt="" aria-hidden />}
-      <span className="ld-team home" style={homeStyle}>{m.home.name}</span>
-      <span className="ld-mid">
+    <div className="d3-row" style={vars(m)}>
+      <span className="d3-band left" aria-hidden />
+      <span className="d3-band right" aria-hidden />
+      {m.home.logoUrl && <img className="d3-logo left" src={m.home.logoUrl} alt="" aria-hidden />}
+      {m.away.logoUrl && <img className="d3-logo right" src={m.away.logoUrl} alt="" aria-hidden />}
+      <span className="d3-team home">{m.home.name}</span>
+      <span className="d3-mid">
         <Badge />
-        <span className="ld-score">{m.score.home} – {m.score.away}</span>
+        <span className="d3-score">{m.score.home} – {m.score.away}</span>
         <Stats m={m} />
       </span>
-      <span className="ld-team away" style={awayStyle}>{m.away.name}</span>
+      <span className="d3-team away">{m.away.name}</span>
     </div>
   )
 }
 
-// ── Variant E — Compact met clubkleur-accent ─────────────────────────────────
-function LookE({ m }: { m: SampleMatch }) {
-  const homeStyle = { color: m.home.color ?? 'var(--txt)' } as CSSProperties
-  const awayStyle = { color: m.away.color ?? 'var(--txt)' } as CSSProperties
+// ── V4 — Matchup-tegels: het logo in een gekleurd paneel ───────────────────────
+function LookD4({ m }: { m: SampleMatch }) {
+  const homeTile = { '--c': m.home.color ?? 'var(--accent)' } as CSSProperties
+  const awayTile = { '--c': m.away.color ?? 'var(--accent)' } as CSSProperties
   return (
-    <div className="le-row">
-      <span className="le-team home">
-        <Logo team={m.home} size={28} className="le-logo" />
-        <span className="le-name" style={homeStyle}>{m.home.name}</span>
+    <div className="d4-row" style={vars(m)}>
+      <span className="d4-side home">
+        <span className="d4-tile" style={homeTile}>
+          {m.home.logoUrl ? <img src={m.home.logoUrl} alt="" aria-hidden /> : <b>{m.home.name.slice(0, 1)}</b>}
+        </span>
+        <span className="d4-name">{m.home.name}</span>
       </span>
-      <span className="le-mid">
-        <span className="le-top"><Badge /><span className="le-score">{m.score.home}–{m.score.away}</span></span>
+      <span className="d4-mid">
+        <Badge />
+        <span className="d4-score">{m.score.home} – {m.score.away}</span>
         <Stats m={m} />
       </span>
-      <span className="le-team away">
-        <span className="le-name" style={awayStyle}>{m.away.name}</span>
-        <Logo team={m.away} size={28} className="le-logo" />
+      <span className="d4-side away">
+        <span className="d4-name">{m.away.name}</span>
+        <span className="d4-tile" style={awayTile}>
+          {m.away.logoUrl ? <img src={m.away.logoUrl} alt="" aria-hidden /> : <b>{m.away.name.slice(0, 1)}</b>}
+        </span>
       </span>
+    </div>
+  )
+}
+
+// ── V5 — Vol kleurverloop met groot logo-anker (poster-stijl) ───────────────────
+function LookD5({ m }: { m: SampleMatch }) {
+  return (
+    <div className="d5-row" style={vars(m)}>
+      <span className="d5-wash left" aria-hidden />
+      <span className="d5-wash right" aria-hidden />
+      {m.home.logoUrl && <img className="d5-logo left" src={m.home.logoUrl} alt="" aria-hidden />}
+      {m.away.logoUrl && <img className="d5-logo right" src={m.away.logoUrl} alt="" aria-hidden />}
+      <span className="d5-team home">{m.home.name}</span>
+      <span className="d5-mid">
+        <Badge />
+        <span className="d5-score">{m.score.home} – {m.score.away}</span>
+        <Stats m={m} />
+      </span>
+      <span className="d5-team away">{m.away.name}</span>
     </div>
   )
 }
 
 const VARIANTS: { key: string; title: string; desc: string; render: (m: SampleMatch, i: number) => ReactNode }[] = [
-  { key: 'A', title: 'Huidig', desc: 'De rij zoals ze nu is — namen kappen af bij weinig plaats.', render: (m, i) => <LookA key={i} m={m} /> },
-  { key: 'B', title: 'Gestapeld', desc: 'Twee regels, score rechts. Volledige namen, nooit afgekapt.', render: (m, i) => <LookB key={i} m={m} /> },
-  { key: 'C', title: 'Logo-watermerk', desc: 'Het clublogo groot en vervaagd achter de naam; meer ruimte voor tekst.', render: (m, i) => <LookC key={i} m={m} /> },
-  { key: 'D', title: 'Logo in de balk', desc: 'Het logo bloedt subtiel uit de zijranden; namen liggen erbovenop.', render: (m, i) => <LookD key={i} m={m} /> },
-  { key: 'E', title: 'Clubkleur-accent', desc: 'Kleinere logo’s, ploegnaam in de clubkleur, smaller scoreblok → bredere namen.', render: (m, i) => <LookE key={i} m={m} /> },
+  { key: '1', title: 'Kleurwaaier', desc: 'Clubkleur bloedt vanaf beide randen naar binnen, met logo-bleed. Center blijft donker → score leesbaar.', render: (m, i) => <LookD1 key={i} m={m} /> },
+  { key: '2', title: 'Kleur-glow', desc: 'Het logo gloeit in de clubkleur aan elke kant — vivid, maar rustig in het midden.', render: (m, i) => <LookD2 key={i} m={m} /> },
+  { key: '3', title: 'Diagonale banden', desc: 'Schuine arena-banden in de clubkleuren, logo erop. Sportief poster-gevoel.', render: (m, i) => <LookD3 key={i} m={m} /> },
+  { key: '4', title: 'Matchup-tegels', desc: 'Het logo in een gekleurd paneel met glow, namen ernaast. Strak en premium.', render: (m, i) => <LookD4 key={i} m={m} /> },
+  { key: '5', title: 'Poster-wash', desc: 'Vol kleurverloop met een groot logo-anker dat uit de balk komt. Het meest uitgesproken.', render: (m, i) => <LookD5 key={i} m={m} /> },
 ]
 
 export function LiveLookLab({ samples }: { samples: SampleMatch[] }) {
