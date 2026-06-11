@@ -62,6 +62,7 @@ import * as migration_20260610_180000_keuring_bevestigd from './20260610_180000_
 import * as migration_20260610_200000_analyse_delen from './20260610_200000_analyse_delen';
 import * as migration_20260610_220000_wissel_events from './20260610_220000_wissel_events';
 import * as migration_20260610_240000_analyse_delen_backfill from './20260610_240000_analyse_delen_backfill';
+import * as migration_20260611_120000_push_subscriptions from './20260611_120000_push_subscriptions';
 
 export const migrations = [
   {
@@ -383,5 +384,10 @@ export const migrations = [
     up: migration_20260610_240000_analyse_delen_backfill.up,
     down: migration_20260610_240000_analyse_delen_backfill.down,
     name: '20260610_240000_analyse_delen_backfill',
+  },
+  {
+    up: migration_20260611_120000_push_subscriptions.up,
+    down: migration_20260611_120000_push_subscriptions.down,
+    name: '20260611_120000_push_subscriptions',
   },
 ];
