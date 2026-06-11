@@ -774,3 +774,30 @@
   transition: background 0.15s ease, transform 0.15s ease;
 }
 .home-supporter:hover { background: color-mix(in srgb, var(--accent) 16%, transparent); transform: translateY(-1px); }
+
+/* Push-meldingen opt-in (onderaan de zijbalk). */
+.push-optin {
+  margin-top: 14px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+}
+.push-optin h3 { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--dim); margin: 0 0 6px; }
+.push-optin-hint { font-size: 0.82rem; color: var(--txt); margin: 0 0 8px; line-height: 1.35; }
+.push-optin-btn {
+  width: 100%;
+  padding: 9px 10px;
+  border: 1px solid var(--accent);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  color: var(--accent);
+  border-radius: 8px;
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.push-optin-btn:hover { background: color-mix(in srgb, var(--accent) 24%, transparent); }
+.push-optin-btn:disabled { opacity: 0.5; cursor: default; }
+.push-optin-btn.off { border-color: var(--line); background: transparent; color: var(--dim); font-weight: 600; }
+.push-optin-msg { font-size: 0.78rem; color: var(--dim); margin: 8px 0 0; }

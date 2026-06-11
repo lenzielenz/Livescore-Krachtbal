@@ -16,7 +16,9 @@ export const metadata: Metadata = {
   manifest: '/manifest.webmanifest',
   // iOS: open als app vanaf het beginscherm (standalone, geen browserbalk).
   appleWebApp: { capable: true, statusBarStyle: 'black-translucent', title: 'Krachtbal' },
-  icons: { icon: '/icon.svg', apple: '/icon.svg' },
+  // iOS gebruikt voor het beginscherm de PNG apple-touch-icon (geen SVG); Android pakt de PNG's
+  // uit het manifest. De SVG blijft het scherpe favicon in de browser.
+  icons: { icon: '/icon.svg', apple: '/apple-icon-180.png' },
 }
 
 export const viewport: Viewport = {

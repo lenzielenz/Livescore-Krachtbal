@@ -2,6 +2,7 @@ import type { CollectionConfig, FieldHook, Where } from 'payload'
 
 import { isFederationLevel } from '../lib/access'
 import { CATEGORY_OPTIONS } from '../lib/categories'
+import { notifyMatchStatusChange } from '../lib/match-notify'
 import { REEKS_OPTIONS, reeksCategorie, type Reeks } from '../lib/reeksen'
 import { seasonFromDate } from '../lib/seasons'
 
@@ -41,6 +42,22 @@ export const Matches: CollectionConfig = {
     delete: ({ req }) => isFederationLevel(req.user),
   },
   hooks: {
+    // Supporters verwittigen bij de start en het einde van een (gewone) wedstrijd. We reageren op
+    // de status-overgang naar 'live'/'finished'; analyse-only en demo's verwittigen niemand. Het
+    // versturen gebeurt losgekoppeld (zie notifyMatchStatusChange) zodat het de actie niet vertraagt.
+    afterChange: [
+      ({ doc, previousDoc, operation }) => {
+        const status = (doc as { status?: string }).status ?? ''
+        const prevStatus = operation === 'update' ? ((previousDoc as { status?: string } | undefined)?.status ?? null) : null
+        notifyMatchStatusChange({
+          id: (doc as { id: number }).id,
+          status,
+          prevStatus,
+          analyseOnly: Boolean((doc as { analyseOnly?: boolean }).analyseOnly),
+          isDemo: Boolean((doc as { isDemo?: boolean }).isDemo),
+        })
+      },
+    ],
     // Een wedstrijd verwijderen moet ook de eraan vastgekoppelde live-data opruimen.
     // Noodzakelijk omdat het wedstrijdblad (matchsheets.match) verplicht is: de
     // Postgres-FK staat op ON DELETE SET NULL, wat botst met de NOT NULL-kolom en

@@ -26,6 +26,7 @@ import { TournamentMatches } from './collections/TournamentMatches'
 import { Trainingmetingen } from './collections/Trainingmetingen'
 import { Trainingdoelen } from './collections/Trainingdoelen'
 import { Trainingen } from './collections/Trainingen'
+import { PushSubscriptions } from './collections/PushSubscriptions'
 import { Season } from './globals/Season'
 import { Settings } from './globals/Settings'
 
@@ -107,6 +108,7 @@ export default buildConfig({
     MatchInstants,
     Users,
     Media,
+    PushSubscriptions,
   ],
   globals: [Season, Settings],
   // serverURL + cors/csrf enkel wanneer PUBLIC_SERVER_URL gezet is (zie hierboven).
