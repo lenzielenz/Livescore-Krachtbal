@@ -2,6 +2,7 @@ import Link from 'next/link'
 
 import { SiteHeader } from '@/components/SiteHeader'
 import { TeamLogo } from '@/components/TeamLogo'
+import { POSITION_OPTIONS } from '@/collections/Players'
 import { canAnalyse, hasRole, isFederationLevel, userClubId } from '@/lib/access'
 import { analyseOwnWhere } from '@/lib/analyse-access'
 import { getSelectedSeason, reeksenMetData } from '@/lib/analyse-season'
@@ -180,6 +181,9 @@ export default async function AnalysePage({ searchParams }: { searchParams: Prom
     name: String((t as { name?: unknown }).name ?? '—'),
     reeks: String((t as { reeks?: unknown }).reeks ?? ''),
   }))
+  // Posities voor een nieuw toegevoegde speler. De legacy "kant onbekend" laten we weg: een nieuwe
+  // speler kiest meteen links/rechts zodat de analyse meteen klopt.
+  const posOptions = POSITION_OPTIONS.filter((o) => o.value !== 'vleugel').map((o) => ({ value: o.value, label: o.label }))
 
   // League-insights: toppers van de gekozen reeks (seizoensbreed, over alle wedstrijden).
   // De reekskeuze toont enkel reeksen waar je eigen analyse-ploegen van hebt (niet de hele indeling).
@@ -240,7 +244,7 @@ export default async function AnalysePage({ searchParams }: { searchParams: Prom
             {canRecord && (
               <>
                 <div className="an-record-new">
-                  <NieuweAnalyseMatch teams={teamOptions} reeksOptions={reeksOptions} />
+                  <NieuweAnalyseMatch teams={teamOptions} reeksOptions={reeksOptions} positionOptions={posOptions} />
                 </div>
                 {openRows.length === 0 ? (
                   <p className="empty">Nog geen voorbereide analysewedstrijden. Maak er een aan met de knop hierboven.</p>

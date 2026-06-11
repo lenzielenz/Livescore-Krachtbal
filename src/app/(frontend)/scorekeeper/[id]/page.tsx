@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
 
+import { POSITION_OPTIONS } from '@/collections/Players'
 import { hasRole } from '@/lib/access'
 import { canViewAnalyseMatch } from '@/lib/analyse-access'
 import { getAuthUser } from '@/lib/auth-user'
@@ -87,6 +88,10 @@ export default async function ScorekeeperPage({
 
   const readiness = await getMatchReadiness(payload, matchId)
 
+  // Posities voor een nieuw toegevoegde speler. De legacy "kant onbekend" laten we weg: een
+  // nieuwe speler kiest meteen links/rechts zodat de analyse meteen klopt.
+  const positionOptions = POSITION_OPTIONS.filter((o) => o.value !== 'vleugel').map((o) => ({ value: o.value, label: o.label }))
+
   return (
     <Scorekeeper
       matchId={matchId}
@@ -94,6 +99,7 @@ export default async function ScorekeeperPage({
       roster={roster}
       readiness={readiness}
       isAdmin={isAdmin}
+      positionOptions={positionOptions}
     />
   )
 }

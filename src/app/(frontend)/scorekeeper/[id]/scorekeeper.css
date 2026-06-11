@@ -479,12 +479,13 @@ a.sk-btn { display: inline-block; box-sizing: border-box; text-align: center; te
 }
 .sk-addp-toggle:disabled { opacity: 0.5; cursor: default; }
 .sk-addplayer-form { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
-.sk-addp-num, .sk-addp-name {
+.sk-addp-num, .sk-addp-name, .sk-addp-pos {
   padding: 9px 10px; border: 1px solid var(--line); background: #10141a; color: var(--txt);
   border-radius: 8px; font-size: 0.95rem;
 }
 .sk-addp-num { width: 56px; text-align: center; }
 .sk-addp-name { flex: 1 1 80px; min-width: 80px; }
+.sk-addp-pos { flex: 1 1 110px; min-width: 110px; }
 .sk-addplayer-form .sk-btn { width: auto; padding: 9px 12px; font-size: 0.9rem; }
 
 /* Hint-kaart zolang nog niet beide opstellingen bevestigd zijn (vervangt de startkaart). */

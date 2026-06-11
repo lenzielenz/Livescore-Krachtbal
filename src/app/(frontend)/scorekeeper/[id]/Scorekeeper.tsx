@@ -42,22 +42,28 @@ export function Scorekeeper({
   roster,
   readiness,
   isAdmin,
+  positionOptions,
 }: {
   matchId: number
   initialState: MatchState
   roster: RosterPlayer[]
   readiness: Readiness
   isAdmin: boolean
+  positionOptions: { value: string; label: string }[]
 }) {
   const router = useRouter()
   const [state, setState] = useState<MatchState>(initialState)
   const isDemo = readiness.isDemo
   const isAnalyseOnly = readiness.analyseOnly
-  // Manueel een speler toevoegen aan een ploeg (analyse / ontbrekende tegenstander).
+  // Manueel een speler toevoegen aan een ploeg (analyse / ontbrekende tegenstander). Bij een
+  // analysewedstrijd is de positie verplicht — die voedt de analyse, dus kies ze meteen bij het
+  // eerste keer toevoegen.
   const [addSide, setAddSide] = useState<'home' | 'away' | null>(null)
   const [addNum, setAddNum] = useState('')
   const [addName, setAddName] = useState('')
+  const [addPos, setAddPos] = useState('')
   const [addBusy, setAddBusy] = useState(false)
+  const needsPosition = isAnalyseOnly
   const submitAddPlayer = async (side: 'home' | 'away') => {
     setAddBusy(true)
     setError(null)
@@ -66,7 +72,7 @@ export function Scorekeeper({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ side, name: addName.trim(), shirtNumber: Number(addNum) }),
+        body: JSON.stringify({ side, name: addName.trim(), shirtNumber: Number(addNum), ...(addPos ? { position: addPos } : {}) }),
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
@@ -76,6 +82,7 @@ export function Scorekeeper({
       setAddSide(null)
       setAddNum('')
       setAddName('')
+      setAddPos('')
       router.refresh()
     } finally {
       setAddBusy(false)
@@ -1203,7 +1210,20 @@ export function Scorekeeper({
                               onChange={(e) => setAddName(e.target.value)}
                               aria-label="Naam"
                             />
-                            <button type="submit" className="sk-btn primary" disabled={addBusy || !addName.trim() || !addNum.trim()}>
+                            {needsPosition && (
+                              <select
+                                className="sk-addp-pos"
+                                value={addPos}
+                                onChange={(e) => setAddPos(e.target.value)}
+                                aria-label="Positie"
+                              >
+                                <option value="">— positie —</option>
+                                {positionOptions.map((o) => (
+                                  <option key={o.value} value={o.value}>{o.label}</option>
+                                ))}
+                              </select>
+                            )}
+                            <button type="submit" className="sk-btn primary" disabled={addBusy || !addName.trim() || !addNum.trim() || (needsPosition && !addPos)}>
                               Toevoegen
                             </button>
                             <button type="button" className="sk-btn" disabled={addBusy} onClick={() => setAddSide(null)} aria-label="Annuleren">
@@ -1219,6 +1239,7 @@ export function Scorekeeper({
                               setAddSide(side)
                               setAddNum('')
                               setAddName('')
+                              setAddPos('')
                             }}
                           >
                             + speler toevoegen
