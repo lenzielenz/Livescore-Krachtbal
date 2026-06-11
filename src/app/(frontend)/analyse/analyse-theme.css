@@ -33,6 +33,13 @@
   --pop: #ef3340; /* live & flair: helder clubrood */
   --pop-2: #7e1c22;
 
+  /* Staal-grijs — de drager van het ontwerp (we zijn rood én grijs). Een
+     licht-naar-donker geborsteld staal voor premium kaders zoals het logo. */
+  --steel: #cbd0d6;
+  --steel-2: #9197a0;
+  --steel-deep: #5b616b;
+  --grad-steel: linear-gradient(150deg, #f3f5f7 0%, #cbd0d6 36%, #9197a0 68%, #5b616b 100%);
+
   /* Verlopen opnieuw in rood/grijs (anders bleven de blauwe stops zichtbaar in
      het merk, de knoppen en de markers). */
   --grad-accent: linear-gradient(135deg, #ff6168 0%, var(--accent) 45%, var(--accent-2) 100%);
@@ -48,13 +55,13 @@
   --glow-away: 0 18px 46px -10px color-mix(in srgb, var(--away) 42%, transparent);
 
   /* Eigen achtergrond: dekt de blauwe aurora van de body af binnen de
-     analyse-zone met een grijze basis en een zachte rode gloed. min-height
-     zorgt dat ook korte pagina's het hele scherm vullen. */
+     analyse-zone. Bewust grijzer uitgebalanceerd — een ingetogen rode gloed
+     bovenaan, met koel staallicht uit de hoeken zodat het grijs ademt. */
   min-height: 100vh;
   background-color: #0e0f12;
   background-image:
-    radial-gradient(1150px 660px at 50% -8%, color-mix(in srgb, var(--club-red) 22%, transparent), transparent 60%),
-    radial-gradient(880px 560px at 4% 0%, color-mix(in srgb, #ffffff 7%, transparent), transparent 55%),
-    radial-gradient(820px 620px at 96% 98%, color-mix(in srgb, var(--club-red) 14%, transparent), transparent 60%),
-    linear-gradient(180deg, #16171b 0%, #0e0f12 100%);
+    radial-gradient(1100px 620px at 50% -10%, color-mix(in srgb, var(--club-red) 13%, transparent), transparent 60%),
+    radial-gradient(820px 560px at 5% -2%, color-mix(in srgb, var(--steel) 9%, transparent), transparent 58%),
+    radial-gradient(760px 600px at 96% 100%, color-mix(in srgb, var(--steel-2) 10%, transparent), transparent 60%),
+    linear-gradient(180deg, #17181c 0%, #0e0f12 100%);
 }

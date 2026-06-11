@@ -203,13 +203,15 @@ export default async function AnalysePage({ searchParams }: { searchParams: Prom
         {/* Clubhuis-hero: het eigen clublogo + naam. "Dit is óns terrein." */}
         <header className="an-hero">
           <span className="an-hero-badge">
-            <img
-              className="an-hero-crest"
-              src={heroLogo ?? '/sint-michiels.svg'}
-              alt={`${heroClubName} clublogo`}
-              width={84}
-              height={84}
-            />
+            <span className="an-hero-plate">
+              <img
+                className="an-hero-crest"
+                src={heroLogo ?? '/sint-michiels.svg'}
+                alt={`${heroClubName} clublogo`}
+                width={84}
+                height={84}
+              />
+            </span>
           </span>
           <div className="an-hero-txt">
             <span className="an-hero-eyebrow">Clubhuis · Analyse</span>
