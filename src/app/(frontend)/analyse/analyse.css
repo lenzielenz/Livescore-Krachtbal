@@ -52,11 +52,31 @@
   background: var(--grad-steel);
   box-shadow:
     0 16px 34px -12px rgba(0, 0, 0, 0.7),
-    0 0 24px -8px color-mix(in srgb, var(--accent) 22%, transparent),
     inset 0 1px 0 rgba(255, 255, 255, 0.5),
     inset 0 -2px 4px rgba(0, 0, 0, 0.45);
+  /* Entree: het medaillon schaalt zelfverzekerd in beeld bij het openen. */
+  animation: an-badge-in 0.7s var(--ease-out, cubic-bezier(0.22, 1, 0.36, 1)) both;
 }
-/* Donkere plaat waarop het logo rust — met rode haarlijn + diepte. */
+/* Bewegend element: een traag draaiende rood-stalen aura ACHTER het medaillon —
+   de "wow" bij het inloggen. Staat met negatieve z-index achter de badge. */
+.an-hero-badge::before {
+  content: '';
+  position: absolute;
+  inset: -14px;
+  z-index: -1;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    color-mix(in srgb, var(--accent) 60%, transparent),
+    transparent 28%,
+    color-mix(in srgb, var(--steel) 50%, transparent) 50%,
+    transparent 72%,
+    color-mix(in srgb, var(--accent) 60%, transparent)
+  );
+  filter: blur(11px);
+  opacity: 0.55;
+  animation: an-aura-spin 8s linear infinite;
+}
 .an-hero-plate {
   position: relative;
   display: grid;
@@ -64,29 +84,72 @@
   width: 100%;
   height: 100%;
   border-radius: 20px;
-  background:
-    radial-gradient(120% 92% at 50% 16%, color-mix(in srgb, #fff 9%, transparent), transparent 60%),
-    linear-gradient(160deg, #24262c 0%, #15161a 82%);
-  box-shadow:
-    0 0 0 1.5px color-mix(in srgb, var(--accent) 65%, transparent),
-    inset 0 2px 7px rgba(0, 0, 0, 0.6);
   overflow: hidden;
+}
+/* Eénmalige glansveeg over het medaillon bij het verschijnen. */
+.an-hero-plate::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  background: linear-gradient(115deg, transparent 32%, rgba(255, 255, 255, 0.45) 48%, transparent 64%);
+  transform: translateX(-130%);
+  animation: an-sheen 1.5s ease 0.45s 1 both;
+  pointer-events: none;
 }
 /* Subtiele glans bovenop de plaat. */
 .an-hero-plate::after {
   content: '';
   position: absolute;
   inset: 0;
+  z-index: 2;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.12), transparent 40%);
   pointer-events: none;
 }
-.an-hero-crest {
-  position: relative;
+/* Donkere plaat — voor het clubwapen-fallback (transparant logo). */
+.an-hero-plate.is-crest {
+  background:
+    radial-gradient(120% 92% at 50% 16%, color-mix(in srgb, #fff 9%, transparent), transparent 60%),
+    linear-gradient(160deg, #24262c 0%, #15161a 82%);
+  box-shadow:
+    0 0 0 1.5px color-mix(in srgb, var(--accent) 65%, transparent),
+    inset 0 2px 7px rgba(0, 0, 0, 0.6);
+}
+.an-hero-plate.is-crest .an-hero-crest {
   width: 74px;
   height: 74px;
   object-fit: contain;
-  display: block;
   filter: drop-shadow(0 4px 11px rgba(0, 0, 0, 0.55));
+}
+/* Witte mat — voor een geüpload (foto-)logo met witte achtergrond: het witte
+   vierkant versmelt naadloos met de plaat en wordt netjes omkaderd door de
+   staalrand + rode haarlijn. Geen gevecht meer met de witte achtergrond. */
+.an-hero-plate.is-photo {
+  padding: 7px;
+  background: linear-gradient(160deg, #ffffff 0%, #eef1f4 100%);
+  box-shadow:
+    0 0 0 1.5px color-mix(in srgb, var(--accent) 62%, transparent),
+    inset 0 1px 2px rgba(0, 0, 0, 0.12);
+}
+.an-hero-plate.is-photo .an-hero-crest {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.an-hero-crest {
+  position: relative;
+  z-index: 1;
+  display: block;
+}
+@keyframes an-aura-spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes an-badge-in {
+  from { opacity: 0; transform: scale(0.82) rotate(-7deg); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes an-sheen {
+  to { transform: translateX(130%); }
 }
 .an-hero-txt {
   min-width: 0;
