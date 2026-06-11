@@ -1,0 +1,60 @@
+/* ───────────────────────────────────────────────────────────────────────────
+   Clubthema Sint-Michiels — rood + grijs, enkel binnen de analyse-zone.
+
+   We overschrijven hier de gedeelde ontwerp-tokens (dezelfde namen als in
+   styles.css). Omdat custom properties enkel naar BENEDEN erven, geldt dit
+   uitsluitend voor wat binnen `.analyse-theme` valt — buiten /analyse blijft
+   het standaard antraciet + ijsblauw-thema volledig intact.
+
+   Het exacte clubrood zit in het Sint-Michiels-logo; staat hieronder als
+   --club-red en is op één plek aan te passen zodra de precieze hex bekend is.
+   ─────────────────────────────────────────────────────────────────────────── */
+.analyse-theme {
+  /* Eén bron van waarheid voor het clubrood — pas enkel deze twee aan. */
+  --club-red: #d81e26;
+  --club-red-deep: #a8161d;
+
+  /* Grijze basis i.p.v. het blauwzwart: een koel, neutraal antraciet. */
+  --bg: #121316;
+  --bg-2: #181a1e;
+  --panel: #202227;
+  --panel-2: #2a2d34;
+  --line: #3a3e46;
+  --txt: #f6f7f9;
+  --dim: #a7aab1;
+  --dim-strong: #d5d8dd;
+
+  /* Rood als hoofdaccent; de 'team'-accenten schuiven naar grijs zodat de
+     volledige zone consequent rood-grijs leest. */
+  --accent: var(--club-red);
+  --accent-2: var(--club-red-deep);
+  --home: #9aa0a8;
+  --away: #c4c8ce;
+  --pop: #ef3340; /* live & flair: helder clubrood */
+  --pop-2: #7e1c22;
+
+  /* Verlopen opnieuw in rood/grijs (anders bleven de blauwe stops zichtbaar in
+     het merk, de knoppen en de markers). */
+  --grad-accent: linear-gradient(135deg, #ff6168 0%, var(--accent) 45%, var(--accent-2) 100%);
+  --grad-pop: linear-gradient(135deg, var(--pop) 0%, var(--club-red-deep) 100%);
+  --grad-cool: linear-gradient(135deg, #b2b7bf 0%, #7c828b 100%);
+  --panel-grad: linear-gradient(155deg, color-mix(in srgb, var(--panel-2) 78%, var(--panel)), var(--panel) 92%);
+
+  /* Schaduw/gloed in de nieuwe accentkleuren. */
+  --card-shadow: 0 16px 40px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  --glow-accent: 0 18px 46px -10px color-mix(in srgb, var(--accent) 42%, transparent);
+  --glow-pop: 0 18px 46px -10px color-mix(in srgb, var(--pop) 42%, transparent);
+  --glow-home: 0 18px 46px -10px color-mix(in srgb, var(--home) 42%, transparent);
+  --glow-away: 0 18px 46px -10px color-mix(in srgb, var(--away) 42%, transparent);
+
+  /* Eigen achtergrond: dekt de blauwe aurora van de body af binnen de
+     analyse-zone met een grijze basis en een zachte rode gloed. min-height
+     zorgt dat ook korte pagina's het hele scherm vullen. */
+  min-height: 100vh;
+  background-color: #0e0f12;
+  background-image:
+    radial-gradient(1150px 660px at 50% -8%, color-mix(in srgb, var(--club-red) 22%, transparent), transparent 60%),
+    radial-gradient(880px 560px at 4% 0%, color-mix(in srgb, #ffffff 7%, transparent), transparent 55%),
+    radial-gradient(820px 620px at 96% 98%, color-mix(in srgb, var(--club-red) 14%, transparent), transparent 60%),
+    linear-gradient(180deg, #16171b 0%, #0e0f12 100%);
+}
