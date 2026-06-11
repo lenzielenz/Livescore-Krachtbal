@@ -31,8 +31,8 @@ export default async function OntwerpLivePage() {
     if (!c) continue
     const s: SampleMatch = {
       reeks: reeksNaam(m.reeks),
-      home: { name: c.teams.home.name, logoUrl: c.teams.home.logoUrl, color: c.teams.home.colors?.primary ?? null },
-      away: { name: c.teams.away.name, logoUrl: c.teams.away.logoUrl, color: c.teams.away.colors?.primary ?? null },
+      home: { name: c.teams.home.name, logoUrl: c.teams.home.logoUrl, logoFit: c.teams.home.logoFit, color: c.teams.home.colors?.primary ?? null },
+      away: { name: c.teams.away.name, logoUrl: c.teams.away.logoUrl, logoFit: c.teams.away.logoFit, color: c.teams.away.colors?.primary ?? null },
       score: c.score,
       crosses: c.crosses,
       timeouts: c.timeouts,
