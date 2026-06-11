@@ -1,0 +1,81 @@
+/* Ontwerp-speeltuin voor de live-rij. Hergebruikt de globale thema-variabelen (--accent, --panel,
+   --line, --txt, --dim, --pop). Elke variant heeft een eigen klasse-prefix zodat ze elkaar niet raken. */
+
+.ll-intro { color: var(--dim); font-size: 0.92rem; line-height: 1.5; margin: 0 0 18px; max-width: 60ch; }
+.ll-lab { display: flex; flex-direction: column; gap: 24px; }
+.ll-vh { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 1.02rem; font-weight: 800; margin: 0 0 8px; }
+.ll-vbadge {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; border-radius: 6px;
+  background: var(--accent); color: #0a1424; font-weight: 900; font-size: 0.8rem;
+}
+.ll-vdesc { flex-basis: 100%; font-size: 0.82rem; font-weight: 500; color: var(--dim); }
+.ll-cards { display: flex; flex-direction: column; gap: 8px; }
+
+/* Gedeelde kaart-look (zoals een live-rij op het bord): blauwe waas + accent-rand links. */
+.ll-card {
+  position: relative;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--accent) 8%, var(--panel));
+  box-shadow: inset 3px 0 0 var(--accent);
+  overflow: hidden;
+}
+
+/* Gedeelde live-pill + statistiek (rood = "live"-conventie). */
+.ll-livebadge {
+  font-size: 0.6rem; font-weight: 900; letter-spacing: 0.06em;
+  color: #fff; background: var(--pop); padding: 2px 7px; border-radius: 999px; white-space: nowrap;
+}
+.ll-stats { display: inline-flex; gap: 6px; font-size: 0.64rem; color: var(--dim); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ll-sep { opacity: 0.5; }
+
+/* ── A — Huidig ─────────────────────────────────────────────────────────────── */
+.la-row { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; padding: 10px 12px; }
+.la-team { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.la-team.away { justify-content: flex-end; }
+.la-logo { border-radius: 50%; flex: 0 0 auto; }
+.la-name { font-weight: 700; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.la-mid { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.la-score { font-weight: 900; font-size: 1.35rem; color: var(--accent); font-variant-numeric: tabular-nums; line-height: 1; }
+
+/* ── B — Gestapeld ─────────────────────────────────────────────────────────── */
+.lb2-row { display: flex; align-items: center; gap: 14px; padding: 10px 12px; }
+.lb2-teams { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 7px; }
+.lb2-line { display: grid; grid-template-columns: 26px 1fr auto; align-items: center; gap: 9px; }
+.lb2-logo { border-radius: 50%; }
+.lb2-name { font-weight: 700; font-size: 0.98rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lb2-score { font-weight: 800; font-size: 1.1rem; color: var(--dim); font-variant-numeric: tabular-nums; min-width: 1.1em; text-align: right; }
+.lb2-score.win { color: var(--accent); }
+.lb2-status { flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+
+/* ── C — Logo-watermerk ────────────────────────────────────────────────────── */
+.lc-row { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; padding: 12px; }
+.lc-team { position: relative; display: flex; align-items: center; min-width: 0; padding: 4px 2px; overflow: hidden; }
+.lc-team.away { justify-content: flex-end; }
+.lc-wm { position: absolute; top: 50%; width: 60px; height: 60px; object-fit: contain; opacity: 0.16; transform: translateY(-50%); pointer-events: none; }
+.lc-team.home .lc-wm { left: -6px; }
+.lc-team.away .lc-wm { right: -6px; }
+.lc-name { position: relative; font-weight: 800; font-size: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lc-mid { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.lc-score { font-weight: 900; font-size: 1.35rem; color: var(--accent); font-variant-numeric: tabular-nums; line-height: 1; }
+
+/* ── D — Logo in de balk (bleed) ───────────────────────────────────────────── */
+.ld-row { position: relative; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; padding: 14px; min-height: 60px; overflow: hidden; }
+.ld-bleed { position: absolute; top: 50%; transform: translateY(-50%); height: 150%; width: auto; object-fit: contain; opacity: 0.18; pointer-events: none; }
+.ld-bleed.left { left: -24px; -webkit-mask-image: linear-gradient(90deg, #000 10%, transparent 85%); mask-image: linear-gradient(90deg, #000 10%, transparent 85%); }
+.ld-bleed.right { right: -24px; -webkit-mask-image: linear-gradient(270deg, #000 10%, transparent 85%); mask-image: linear-gradient(270deg, #000 10%, transparent 85%); }
+.ld-team { position: relative; font-weight: 800; font-size: 1rem; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ld-team.away { text-align: right; }
+.ld-mid { position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.ld-score { font-weight: 900; font-size: 1.35rem; color: var(--accent); font-variant-numeric: tabular-nums; line-height: 1; }
+
+/* ── E — Clubkleur-accent (compact) ────────────────────────────────────────── */
+.le-row { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; padding: 9px 12px; }
+.le-team { display: flex; align-items: center; gap: 7px; min-width: 0; }
+.le-team.away { justify-content: flex-end; }
+.le-logo { border-radius: 50%; flex: 0 0 auto; }
+.le-name { font-weight: 800; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.le-mid { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.le-top { display: flex; align-items: center; gap: 7px; }
+.le-score { font-weight: 900; font-size: 1.12rem; color: var(--accent); font-variant-numeric: tabular-nums; }
