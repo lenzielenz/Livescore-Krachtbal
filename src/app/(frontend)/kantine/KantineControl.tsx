@@ -39,10 +39,7 @@ export function KantineControl({ matches, initialSelected }: { matches: KantineM
   return (
     <div className="kt-control">
       <div className="kt-control-bar">
-        <p className="kt-control-help">
-          Vink de wedstrijden aan die op het <strong>kantinescherm</strong> moeten verschijnen.
-          De keuze wordt centraal bewaard — open daarna het scherm op de kantine-tv.
-        </p>
+        <p className="kt-control-help">Vink aan wat op het kantinescherm komt.</p>
         <Link href="/kantine/scherm" className="kt-screen-btn">📺 Open kantinescherm →</Link>
       </div>
 

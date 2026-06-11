@@ -19,11 +19,7 @@ export function KantineClubLink({ clubs, myClubId }: { clubs: { id: number; name
   return (
     <section className="kt-clublink">
       <h2 className="kt-clublink-title">📺 Vaste link voor jouw kantinescherm</h2>
-      <p className="kt-clublink-sub">
-        Eén vaste, openbare link die heel het seizoen blijft werken. Hij toont automatisch álle
-        wedstrijden van de club op die dag (de ene week meer dan de andere). Ideaal om op de
-        kantine-tv te zetten en nooit meer aan te raken.
-      </p>
+      <p className="kt-clublink-sub">Eén keer op de kantine-tv zetten — werkt heel het seizoen.</p>
       <div className="kt-clublink-row">
         <select
           className="kt-clublink-select"
