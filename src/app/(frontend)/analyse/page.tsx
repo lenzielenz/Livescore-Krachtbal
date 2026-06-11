@@ -214,6 +214,7 @@ export default async function AnalysePage({ searchParams }: { searchParams: Prom
           <div className="an-hero-txt">
             <span className="an-hero-eyebrow">Clubhuis · Analyse</span>
             <h1 className="an-hero-title">{heroClubName}</h1>
+            <p className="an-hero-motto">Oltegoare</p>
             <p className="an-hero-tag">
               Onze ploeg, onze cijfers. Hier zien wij wat de tegenstander niet ziet — dit is óns terrein.
             </p>
