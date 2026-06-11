@@ -185,8 +185,10 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
           )}
         </div>
       )}
-      {/* Weerbericht aan het veld voor de thuislocatie (zolang de wedstrijd niet afgelopen is). */}
-      {state.match.status !== 'finished' && matchDoc?.date && (weatherLat != null || weatherPlace) && (
+      {/* Weerbericht aan het veld voor de thuislocatie. Het paneel verbergt zichzelf zodra de
+          napraatperiode voorbij is (een paar uur na de aftrap) — ook voor afgelopen wedstrijden
+          blijft het dus even staan, net als de tribune. */}
+      {matchDoc?.date && (weatherLat != null || weatherPlace) && (
         <MatchWeather date={String(matchDoc.date)} lat={weatherLat} lng={weatherLng} place={weatherPlace} />
       )}
       <Scoreboard

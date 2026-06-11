@@ -12,8 +12,10 @@ import './match-weather.css'
 // de gemeente.
 
 const PRE_H = 1 // toon vanaf 1u vóór de aftrap (aankomst + opwarming)
-const POST_H = 3 // tot 3u erna (wedstrijd + uitloop)
+const POST_H = 3 // urenstrip tot 3u na de aftrap (wedstrijd + uitloop)
 const MATCH_H = 2 // het wedstrijdvenster zelf, voor de regen-conclusie
+// Blijf zichtbaar tot ruim na de wedstrijd (napraatmoment, tribune sluit 1u na het einde).
+const LINGER_MS = 3 * 3600_000
 
 type Slot = {
   label: string
@@ -81,9 +83,9 @@ export function MatchWeather({
 
     const start = new Date(date)
     const now = Date.now()
-    // Enkel zinvol vóór/tijdens de wedstrijd en binnen het voorspelvenster (~14 dagen).
+    // Enkel zinvol vóór, tijdens en kort ná de wedstrijd, binnen het voorspelvenster (~14 dagen).
     const end = start.getTime() + POST_H * 3600_000
-    if (Number.isNaN(start.getTime()) || end < now - 3600_000 || start.getTime() > now + 14 * 864e5) {
+    if (Number.isNaN(start.getTime()) || end < now - LINGER_MS || start.getTime() > now + 14 * 864e5) {
       setState('none')
       return
     }
@@ -171,12 +173,14 @@ export function MatchWeather({
 
   // Het uur van de aftrap is de blikvanger; de andere uren staan in de strip eronder.
   const hero = fc.slots.find((s) => s.kickoff) ?? fc.slots[0]
+  // Na de wedstrijd (napraatmoment) schakelt de conclusie naar verleden tijd.
+  const over = Date.now() > new Date(date).getTime() + MATCH_H * 3600_000
   const verdict =
     fc.maxProb >= 60 || fc.sumMm >= 2
-      ? { icon: '🌧️', text: 'Grote kans op regen tijdens de wedstrijd', cls: 'wet' }
+      ? { icon: '🌧️', text: over ? 'Regen tijdens de wedstrijd' : 'Grote kans op regen tijdens de wedstrijd', cls: 'wet' }
       : fc.maxProb >= 30 || fc.sumMm >= 0.3
-        ? { icon: '🌦️', text: 'Mogelijk een bui tijdens de wedstrijd', cls: 'maybe' }
-        : { icon: '🌤️', text: 'Droog verwacht tijdens de wedstrijd', cls: 'dry' }
+        ? { icon: '🌦️', text: over ? 'Wellicht een bui tijdens de wedstrijd' : 'Mogelijk een bui tijdens de wedstrijd', cls: 'maybe' }
+        : { icon: '🌤️', text: over ? 'Het bleef droog tijdens de wedstrijd' : 'Droog verwacht tijdens de wedstrijd', cls: 'dry' }
   // Stevige rukwinden zijn aan het veld voelbaar — enkel tonen wanneer ze er echt toe doen.
   const gustWorthy = hero.gust >= 40 && hero.gust >= hero.wind + 10
 
