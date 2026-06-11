@@ -71,6 +71,25 @@
   line-height: 1.04;
   letter-spacing: -0.02em;
 }
+/* Clubleus — altijd "Oltegoare". Een vaandel-regel onder de clubnaam. */
+.an-hero-motto {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  margin: 6px 0 0;
+  font-style: italic;
+  font-weight: 800;
+  font-size: 1.12rem;
+  letter-spacing: 0.01em;
+  color: var(--accent);
+}
+.an-hero-motto::before {
+  content: '✦';
+  font-style: normal;
+  font-size: 0.72em;
+  line-height: 1;
+  opacity: 0.95;
+}
 .an-hero-tag {
   margin: 9px 0 0;
   max-width: 52ch;
