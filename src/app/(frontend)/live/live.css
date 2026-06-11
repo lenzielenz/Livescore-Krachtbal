@@ -387,13 +387,14 @@
   background: var(--panel-2);
   box-shadow: inset 3px 0 0 color-mix(in srgb, var(--accent) 75%, transparent);
 }
-/* Live wedstrijd krijgt een vaste koraal accent-rand links — pop zonder beweging (reduced-motion-safe). */
+/* Live wedstrijd krijgt een vaste accent-rand links + subtiele accent-waas — op de huisstijl-blauwe
+   toon i.p.v. koraal/roze, pop zonder beweging (reduced-motion-safe). */
 .lb-row.live {
-  background: rgba(239, 71, 111, 0.06);
-  box-shadow: inset 3px 0 0 var(--pop);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  box-shadow: inset 3px 0 0 var(--accent);
 }
 .lb-row.live:hover {
-  background: color-mix(in srgb, var(--pop) 12%, transparent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
 }
 
 /* Uitklap-paneel onder een rij: volg een ploeg en/of de hele club. */
@@ -540,9 +541,9 @@
   font-variant-numeric: tabular-nums;
   line-height: 1;
 }
-/* Live wedstrijd: de score in het koraal-accent — meteen duidelijk wat nú telt. */
+/* Live wedstrijd: de score in het huisstijl-accent (blauw) — meteen duidelijk wat nú telt. */
 .lb-row.live .lb-score {
-  color: var(--pop);
+  color: var(--accent);
 }
 .lb-stats {
   display: inline-flex;
