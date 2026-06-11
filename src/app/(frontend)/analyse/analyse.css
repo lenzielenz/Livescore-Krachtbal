@@ -1289,6 +1289,7 @@ select.rang-picker {
 .nam-addrow { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .nam-addrow .nam-num { flex: 0 0 52px; width: 52px; text-align: center; }
 .nam-addrow input:not(.nam-num) { flex: 1 1 90px; min-width: 0; }
+.nam-addrow .nam-pos { flex: 1 1 110px; min-width: 0; }
 .nam-addrow .nam-prepare { flex: 0 0 auto; padding: 9px 12px; }
 .imp-check { display: flex; align-items: center; gap: 8px; font-size: 0.88rem; font-weight: 600; color: var(--txt); cursor: pointer; }
 .imp-check input { width: 18px; height: 18px; accent-color: var(--accent); }

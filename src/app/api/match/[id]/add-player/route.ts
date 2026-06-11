@@ -1,6 +1,10 @@
 import { canAnalyse } from '@/lib/access'
 import { authUser, mayScoreMatch } from '@/lib/api-auth'
 import { getPayloadClient } from '@/lib/payload-client'
+import { POSITION_OPTIONS } from '@/collections/Players'
+
+type Position = (typeof POSITION_OPTIONS)[number]['value']
+const isPosition = (v: unknown): v is Position => typeof v === 'string' && POSITION_OPTIONS.some((o) => o.value === v)
 
 const rel = (v: unknown): number | null =>
   v && typeof v === 'object' ? ((v as { id?: number }).id ?? null) : typeof v === 'number' ? v : null
@@ -25,6 +29,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (!side) return Response.json({ error: 'Kies thuis of uit.' }, { status: 400 })
   if (!name) return Response.json({ error: 'Naam is verplicht.' }, { status: 400 })
   if (!Number.isFinite(shirtNumber) || shirtNumber < 0) return Response.json({ error: 'Geef een geldig rugnummer.' }, { status: 400 })
+  // Positie is optioneel voor een snelle competitie-toevoeging, maar verplicht bij een
+  // analysewedstrijd (de positie voedt de analyse — zie hieronder).
+  if (body.position !== undefined && !isPosition(body.position)) return Response.json({ error: 'Kies een geldige positie.' }, { status: 400 })
 
   try {
     const payload = await getPayloadClient()
@@ -62,17 +69,23 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     if (isAnalyse && owner == null) {
       return Response.json({ error: 'Analysewedstrijd zonder eigenaar.' }, { status: 400 })
     }
+    // Bij een analysewedstrijd moet een nieuwe speler meteen een positie krijgen — die voedt de
+    // analyse (vanger-suggestie, ploegrapport per positie). Voor een gewone wedstrijd is ze optioneel.
+    if (isAnalyse && !isPosition(body.position)) {
+      return Response.json({ error: 'Kies een positie voor deze speler.' }, { status: 400 })
+    }
     const created = await payload.create({
       collection: 'players',
       data: {
         name,
         shirtNumber,
         team: teamId,
+        ...(isPosition(body.position) ? { position: body.position } : {}),
         ...(isAnalyse ? { analyseOnly: true, analyseOwner: owner } : {}),
       },
       overrideAccess: true,
     })
-    return Response.json({ ok: true, player: { id: created.id, name, shirtNumber, teamId } })
+    return Response.json({ ok: true, player: { id: created.id, name, shirtNumber, teamId, position: isPosition(body.position) ? body.position : null } })
   } catch (err) {
     return Response.json({ error: (err as Error).message }, { status: 400 })
   }
