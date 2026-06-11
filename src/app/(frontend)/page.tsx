@@ -40,20 +40,20 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
 
         {!me && (
           <section className="home-cta">
-            <span className="home-cta-eyebrow">Gratis · klaar in 30 seconden</span>
-            <h2 className="home-cta-title">Registreer, <span>beleef meer.</span></h2>
+            <span className="home-cta-eyebrow">Gratis · 30 seconden · geen gedoe</span>
+            <h2 className="home-cta-title">Wees erbij. <span>Élke match.</span></h2>
             <p className="home-cta-sub">
-              Volg je club van zó dichtbij dat je de bal hoort vallen. Maak je gratis account aan en
-              wees er élke match bij — niet als toeschouwer, maar als supporter die meetelt.
+              Jouw club, élke worp, élke ontknoping — live op je gsm. Maak je gratis account aan en sta
+              mee aan het veld, van de aftrap tot de laatste seconde. Geen account? Dan mis je het.
             </p>
             <ul className="home-cta-perks">
-              <li><span aria-hidden>🏠</span> Open de app, meteen bij je club</li>
-              <li><span aria-hidden>🔔</span> Een seintje bij start &amp; eindstand</li>
-              <li><span aria-hidden>📸</span> Deel je foto&apos;s aan het veld</li>
+              <li><span aria-hidden>🏠</span> Jouw club, meteen in beeld</li>
+              <li><span aria-hidden>🔔</span> Ping bij start &amp; eindstand</li>
+              <li><span aria-hidden>📸</span> Jouw foto&apos;s aan het veld</li>
             </ul>
             <div className="home-cta-actions">
-              <Link href="/registreren" className="home-cta-btn">Gratis registreren →</Link>
-              <Link href="/inloggen" className="home-cta-login">Al een account? Inloggen</Link>
+              <Link href="/registreren" className="home-cta-btn">Ik wil erbij — gratis →</Link>
+              <Link href="/inloggen" className="home-cta-login">Al lid? Inloggen</Link>
             </div>
           </section>
         )}
