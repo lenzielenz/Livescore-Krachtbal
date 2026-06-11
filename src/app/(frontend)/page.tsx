@@ -39,9 +39,23 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         <p className="home-quote">{quote}</p>
 
         {!me && (
-          <Link href="/registreren" className="home-supporter">
-            📣 Volg je club — registreer gratis als supporter →
-          </Link>
+          <section className="home-cta">
+            <span className="home-cta-eyebrow">Gratis · klaar in 30 seconden</span>
+            <h2 className="home-cta-title">Registreer, <span>beleef meer.</span></h2>
+            <p className="home-cta-sub">
+              Volg je club van zó dichtbij dat je de bal hoort vallen. Maak je gratis account aan en
+              wees er élke match bij — niet als toeschouwer, maar als supporter die meetelt.
+            </p>
+            <ul className="home-cta-perks">
+              <li><span aria-hidden>🏠</span> Open de app, meteen bij je club</li>
+              <li><span aria-hidden>🔔</span> Een seintje bij start &amp; eindstand</li>
+              <li><span aria-hidden>📸</span> Deel je foto&apos;s aan het veld</li>
+            </ul>
+            <div className="home-cta-actions">
+              <Link href="/registreren" className="home-cta-btn">Gratis registreren →</Link>
+              <Link href="/inloggen" className="home-cta-login">Al een account? Inloggen</Link>
+            </div>
+          </section>
         )}
 
         <LiveBoard date={selected} today={today} matches={days} myClubId={myClubId} />

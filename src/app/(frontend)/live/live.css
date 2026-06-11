@@ -757,23 +757,111 @@
   }
 }
 
-/* Subtiele supporter-registratie-uitnodiging (enkel uitgelogd) */
-.home-supporter {
-  display: block;
-  text-align: center;
-  margin: 0 auto 14px;
-  max-width: max-content;
-  padding: 6px 14px;
+/* Registreer-uitnodiging (enkel uitgelogd) — een blikvanger die je niet kán missen. */
+.home-cta {
+  position: relative;
+  margin: 4px 0 20px;
+  padding: 22px 24px;
+  border-radius: 18px;
+  border: 1px solid color-mix(in srgb, var(--accent) 48%, var(--line));
+  background:
+    radial-gradient(130% 150% at 0% 0%, color-mix(in srgb, var(--accent) 20%, transparent), transparent 58%),
+    linear-gradient(180deg, color-mix(in srgb, var(--accent) 12%, var(--panel)), var(--panel));
+  box-shadow:
+    0 14px 44px color-mix(in srgb, var(--accent) 20%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  overflow: hidden;
+}
+.home-cta-eyebrow {
+  display: inline-block;
+  margin-bottom: 10px;
+  padding: 3px 10px;
   border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--line));
-  background: color-mix(in srgb, var(--accent) 6%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 32%, transparent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
   color: var(--accent);
-  font-size: 0.8rem;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.home-cta-title {
+  margin: 0 0 8px;
+  font-size: 1.7rem;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+  color: var(--txt);
+}
+.home-cta-title span {
+  color: var(--accent);
+  filter: drop-shadow(0 2px 14px color-mix(in srgb, var(--accent) 40%, transparent));
+}
+.home-cta-sub {
+  margin: 0 0 14px;
+  max-width: 54ch;
+  font-size: 0.96rem;
+  line-height: 1.5;
+  color: var(--dim);
+}
+.home-cta-perks {
+  list-style: none;
+  margin: 0 0 18px;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+}
+.home-cta-perks li {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--txt);
+}
+.home-cta-perks li span {
+  font-size: 1.1rem;
+}
+.home-cta-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 18px;
+}
+.home-cta-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 13px 26px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 88%, white), var(--accent));
+  color: #0a1424;
+  font-size: 1.02rem;
+  font-weight: 800;
+  text-decoration: none;
+  box-shadow: 0 10px 26px color-mix(in srgb, var(--accent) 38%, transparent);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.home-cta-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 32px color-mix(in srgb, var(--accent) 48%, transparent);
+}
+.home-cta-login {
+  color: var(--dim);
+  font-size: 0.86rem;
   font-weight: 600;
   text-decoration: none;
-  transition: background 0.15s ease, transform 0.15s ease;
 }
-.home-supporter:hover { background: color-mix(in srgb, var(--accent) 16%, transparent); transform: translateY(-1px); }
+.home-cta-login:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+@media (max-width: 560px) {
+  .home-cta { padding: 18px 18px 20px; }
+  .home-cta-title { font-size: 1.42rem; }
+  .home-cta-sub { font-size: 0.92rem; }
+}
 
 /* Push-meldingen opt-in (onderaan de zijbalk). */
 .push-optin {
