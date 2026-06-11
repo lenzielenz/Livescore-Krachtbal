@@ -3,11 +3,11 @@ import Link from 'next/link'
 import { SiteHeader } from '@/components/SiteHeader'
 import { canAnalyse } from '@/lib/access'
 import { analyseOwnWhere } from '@/lib/analyse-access'
-import { getSelectedSeason } from '@/lib/analyse-season'
+import { getSelectedSeason, reeksenMetData } from '@/lib/analyse-season'
 import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
 import { buildRadarStats } from '@/lib/radar-stats'
-import { COMPETITIE_REEKSEN, resolveCompetitieReeks } from '@/lib/reeksen'
+import { resolveCompetitieReeks } from '@/lib/reeksen'
 import { AnalyseNav } from '../AnalyseNav'
 import { SpelerRadar } from './SpelerRadar'
 import '../analyse.css'
@@ -34,9 +34,10 @@ export default async function SpelerAnalysePage({ searchParams }: { searchParams
   }
 
   const { reeks: reeksParam } = await searchParams
-  const reeks = resolveCompetitieReeks(reeksParam)
 
   const payload = await getPayloadClient()
+  const reeksOptions = await reeksenMetData(payload, analyseOwnWhere(me))
+  const reeks = resolveCompetitieReeks(reeksParam, reeksOptions)
   const players = await buildRadarStats(payload, reeks, await getSelectedSeason(), analyseOwnWhere(me))
 
   return (
@@ -48,7 +49,7 @@ export default async function SpelerAnalysePage({ searchParams }: { searchParams
           <h1 className="page-title"><span className="brand">Spelersradar</span></h1>
         </div>
 
-        <SpelerRadar reeks={reeks} options={[...COMPETITIE_REEKSEN]} players={players} />
+        <SpelerRadar reeks={reeks} options={reeksOptions} players={players} />
       </div>
     </>
   )

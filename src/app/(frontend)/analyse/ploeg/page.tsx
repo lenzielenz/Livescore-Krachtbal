@@ -3,11 +3,11 @@ import Link from 'next/link'
 import { SiteHeader } from '@/components/SiteHeader'
 import { canAnalyse } from '@/lib/access'
 import { analyseOwnWhere } from '@/lib/analyse-access'
-import { getSelectedSeason } from '@/lib/analyse-season'
+import { getSelectedSeason, reeksenMetData } from '@/lib/analyse-season'
 import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
 import { buildTeamDanger, buildTeamDefense } from '@/lib/player-danger'
-import { COMPETITIE_REEKSEN, resolveCompetitieReeks } from '@/lib/reeksen'
+import { resolveCompetitieReeks } from '@/lib/reeksen'
 import { buildTeamReport } from '@/lib/team-report'
 import { BandChart } from '@/components/analytics/BandChart'
 import { AnalyseNav } from '../AnalyseNav'
@@ -44,9 +44,10 @@ export default async function PloegRapportPage({ searchParams }: { searchParams:
   }
 
   const { reeks: reeksParam, team: teamParam } = await searchParams
-  const reeks = resolveCompetitieReeks(reeksParam)
 
   const payload = await getPayloadClient()
+  const reeksOptions = await reeksenMetData(payload, analyseOwnWhere(me))
+  const reeks = resolveCompetitieReeks(reeksParam, reeksOptions)
   // Enkel je eigen analyse-ploegen zijn selecteerbaar — competitie-ploegen verschijnen hier nooit.
   const teamsRes = await payload
     .find({ collection: 'teams', where: { and: [{ reeks: { equals: reeks } }, analyseOwnWhere(me)] }, sort: 'name', depth: 0, limit: 200 })
@@ -77,7 +78,7 @@ export default async function PloegRapportPage({ searchParams }: { searchParams:
         <AnalyseNav active="ploegen" />
         <div className="an-head-bar">
           <h1 className="page-title"><span className="brand">Ploegrapport</span></h1>
-          <PloegPicker reeks={reeks} reeksOptions={[...COMPETITIE_REEKSEN]} teamOptions={teamOptions} team={teamId != null ? String(teamId) : ''} />
+          <PloegPicker reeks={reeks} reeksOptions={reeksOptions} teamOptions={teamOptions} team={teamId != null ? String(teamId) : ''} />
         </div>
 
         {report != null && (

@@ -3,10 +3,10 @@ import Link from 'next/link'
 import { SiteHeader } from '@/components/SiteHeader'
 import { canAnalyse } from '@/lib/access'
 import { analyseOwnWhere } from '@/lib/analyse-access'
-import { getSelectedSeason } from '@/lib/analyse-season'
+import { getSelectedSeason, reeksenMetData } from '@/lib/analyse-season'
 import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
-import { COMPETITIE_REEKSEN, resolveCompetitieReeks } from '@/lib/reeksen'
+import { resolveCompetitieReeks } from '@/lib/reeksen'
 import { buildTeamRadar } from '@/lib/team-radar'
 import { AnalyseNav } from '../AnalyseNav'
 import { TeamRadarView } from './TeamRadarView'
@@ -34,9 +34,10 @@ export default async function PloegenAnalysePage({ searchParams }: { searchParam
   }
 
   const { reeks: reeksParam } = await searchParams
-  const reeks = resolveCompetitieReeks(reeksParam)
 
   const payload = await getPayloadClient()
+  const reeksOptions = await reeksenMetData(payload, analyseOwnWhere(me))
+  const reeks = resolveCompetitieReeks(reeksParam, reeksOptions)
   const { teams, results } = await buildTeamRadar(payload, reeks, await getSelectedSeason(), analyseOwnWhere(me))
 
   return (
@@ -48,7 +49,7 @@ export default async function PloegenAnalysePage({ searchParams }: { searchParam
           <h1 className="page-title"><span className="brand">Ploegvergelijking</span></h1>
         </div>
 
-        <TeamRadarView reeks={reeks} options={[...COMPETITIE_REEKSEN]} teams={teams} results={results} />
+        <TeamRadarView reeks={reeks} options={reeksOptions} teams={teams} results={results} />
       </div>
     </>
   )

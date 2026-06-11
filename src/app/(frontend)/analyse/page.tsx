@@ -4,11 +4,11 @@ import { SiteHeader } from '@/components/SiteHeader'
 import { TeamLogo } from '@/components/TeamLogo'
 import { canAnalyse, hasRole, isFederationLevel, userClubId } from '@/lib/access'
 import { analyseOwnWhere } from '@/lib/analyse-access'
-import { getSelectedSeason } from '@/lib/analyse-season'
+import { getSelectedSeason, reeksenMetData } from '@/lib/analyse-season'
 import { getAuthUser } from '@/lib/auth-user'
 import { buildScoreboards, clubLogoUrl } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
-import { COMPETITIE_REEKSEN, reeksNaam, resolveCompetitieReeks } from '@/lib/reeksen'
+import { reeksNaam, resolveCompetitieReeks } from '@/lib/reeksen'
 import { buildSeasonStats, type SeasonPlayer } from '@/lib/season-stats'
 import { AnalyseDelen } from './AnalyseDelen'
 import { AnalyseNav } from './AnalyseNav'
@@ -182,8 +182,10 @@ export default async function AnalysePage({ searchParams }: { searchParams: Prom
   }))
 
   // League-insights: toppers van de gekozen reeks (seizoensbreed, over alle wedstrijden).
+  // De reekskeuze toont enkel reeksen waar je eigen analyse-ploegen van hebt (niet de hele indeling).
+  const reeksOptions = await reeksenMetData(payload, vis)
   const { reeks: reeksParam } = await searchParams
-  const reeks = resolveCompetitieReeks(reeksParam)
+  const reeks = resolveCompetitieReeks(reeksParam, reeksOptions)
   const season = await buildSeasonStats(payload, reeks, await getSelectedSeason(), vis).catch(() => [] as SeasonPlayer[])
   const top = (sel: (a: SeasonPlayer, b: SeasonPlayer) => number, fmt: (p: SeasonPlayer) => string, filter?: (p: SeasonPlayer) => boolean) =>
     [...(filter ? season.filter(filter) : season)]
@@ -238,7 +240,7 @@ export default async function AnalysePage({ searchParams }: { searchParams: Prom
             {canRecord && (
               <>
                 <div className="an-record-new">
-                  <NieuweAnalyseMatch teams={teamOptions} reeksOptions={[...COMPETITIE_REEKSEN]} />
+                  <NieuweAnalyseMatch teams={teamOptions} reeksOptions={reeksOptions} />
                 </div>
                 {openRows.length === 0 ? (
                   <p className="empty">Nog geen voorbereide analysewedstrijden. Maak er een aan met de knop hierboven.</p>
@@ -334,7 +336,7 @@ export default async function AnalysePage({ searchParams }: { searchParams: Prom
         <section id="toppers" className="an-toppers">
           <div className="an-head-bar">
             <h2 className="an-sub">🏆 Toppers van de reeks</h2>
-            <HubReeksPicker reeks={reeks} options={[...COMPETITIE_REEKSEN]} />
+            <HubReeksPicker reeks={reeks} options={reeksOptions} />
           </div>
           {!hasSeason ? (
             <p className="empty">Nog geen seizoensdata in deze reeks.</p>

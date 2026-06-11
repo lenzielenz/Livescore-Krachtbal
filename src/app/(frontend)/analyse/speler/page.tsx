@@ -3,13 +3,13 @@ import Link from 'next/link'
 import { SiteHeader } from '@/components/SiteHeader'
 import { canAnalyse } from '@/lib/access'
 import { analyseOwnWhere } from '@/lib/analyse-access'
-import { getSelectedSeason } from '@/lib/analyse-season'
+import { getSelectedSeason, reeksenMetData } from '@/lib/analyse-season'
 import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
 import { BandChart } from '@/components/analytics/BandChart'
 import { Sparkline } from '@/components/analytics/Sparkline'
 import { buildPlayerDanger } from '@/lib/player-danger'
-import { COMPETITIE_REEKSEN, reeksNaam, resolveCompetitieReeks } from '@/lib/reeksen'
+import { reeksNaam, resolveCompetitieReeks } from '@/lib/reeksen'
 import { buildSeasonStats } from '@/lib/season-stats'
 import { AnalyseNav } from '../AnalyseNav'
 import { GevaarMap } from '../gevaar/GevaarMap'
@@ -37,9 +37,10 @@ export default async function SpelerDossierPage({ searchParams }: { searchParams
   }
 
   const { reeks: reeksParam, club: clubParam, speler: spelerParam } = await searchParams
-  const reeks = resolveCompetitieReeks(reeksParam)
 
   const payload = await getPayloadClient()
+  const reeksOptions = await reeksenMetData(payload, analyseOwnWhere(me))
+  const reeks = resolveCompetitieReeks(reeksParam, reeksOptions)
   const seizoen = await getSelectedSeason()
   const seasonPlayers = await buildSeasonStats(payload, reeks, seizoen, analyseOwnWhere(me))
 
@@ -79,7 +80,7 @@ export default async function SpelerDossierPage({ searchParams }: { searchParams
           <h1 className="page-title"><span className="brand">Spelerdossier</span></h1>
           <DossierPicker
             reeks={reeks}
-            reeksOptions={[...COMPETITIE_REEKSEN]}
+            reeksOptions={reeksOptions}
             club={clubId != null ? String(clubId) : ''}
             clubOptions={clubOptions}
             player={playerId != null ? String(playerId) : ''}
