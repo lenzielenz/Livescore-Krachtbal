@@ -19,14 +19,17 @@ const PRIMARY: { href: string; label: string; key: NavSection }[] = [
   { href: '/demo', label: '🎓 Demo', key: 'demo' },
 ]
 
-// Algemene ingangen bovenaan het Meer-menu.
-const GENERAL: { href: string; label: string; auth?: boolean }[] = [
+// Algemene ingangen bovenaan het Meer-menu. Het kantinescherm staat hier niet
+// (meer): dat is een clubtool en vind je onder "Mijn club".
+const GENERAL: { href: string; label: string }[] = [
   { href: '/uitleg', label: '❓ Zo werkt het' },
+]
+
+// Wedstrijd-info onder een eigen kopje "Wedstrijden" in het menu.
+const WEDSTRIJDEN: { href: string; label: string }[] = [
   { href: '/rangschikking', label: '📊 Stand' },
-  { href: '/superster', label: '⭐ Jeugd-superster' },
   { href: '/tornooi', label: '🏆 Bekerwedstrijden' },
-  // Kantinescherm enkel voor ingelogde gebruikers (zo kan je het personaliseren).
-  { href: '/kantine', label: '🍺 Kantinescherm', auth: true },
+  { href: '/superster', label: '⭐ Jeugd-superster' },
 ]
 
 // Het Meer-menu licht op zodra je op een van deze secties zit. Analyse en Training zijn twee
@@ -100,7 +103,15 @@ export function SiteHeader({ active = null }: { active?: NavSection }) {
                 <div className="sh-more-backdrop" onClick={() => setOpen(false)} />
                 <div className="sh-more-menu">
                   <div className="sh-more-group">
-                    {GENERAL.filter((l) => !l.auth || loggedIn).map((l) => (
+                    {GENERAL.map((l) => (
+                      <Link key={l.href} href={l.href} className="sh-more-item" onClick={() => setOpen(false)}>
+                        {l.label}
+                      </Link>
+                    ))}
+                  </div>
+                  <div className="sh-more-group">
+                    <div className="sh-more-grouphead">Wedstrijden</div>
+                    {WEDSTRIJDEN.map((l) => (
                       <Link key={l.href} href={l.href} className="sh-more-item" onClick={() => setOpen(false)}>
                         {l.label}
                       </Link>
