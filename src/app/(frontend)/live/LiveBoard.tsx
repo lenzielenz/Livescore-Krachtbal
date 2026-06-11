@@ -91,6 +91,16 @@ export function LiveBoard({
   const [onlyLive, setOnlyLive] = useState(() => matches.some((m) => m.status === 'live'))
   const [query, setQuery] = useState('')
   const [openRow, setOpenRow] = useState<number | null>(null)
+  // Reeksen die de supporter zelf dichtklapte — zo veegt hij weg wat hem niet boeit
+  // zonder iets te verliezen (de telling blijft op de kop staan). Standaard alles open.
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
+  const toggleCollapsed = (reeks: string) =>
+    setCollapsed((prev) => {
+      const next = new Set(prev)
+      if (next.has(reeks)) next.delete(reeks)
+      else next.add(reeks)
+      return next
+    })
 
   const liveCount = useMemo(() => matches.filter((m) => m.status === 'live').length, [matches])
   // "Enkel live" geldt alléén als er ook echt live wedstrijden zijn: op een dag zonder live
@@ -257,10 +267,24 @@ export function LiveBoard({
         {groups.length === 0 ? (
           <p className="lb-empty">Geen wedstrijden{emptyReason} op deze dag.</p>
         ) : (
-          groups.map(([reeks, list]) => (
-            <section key={reeks} className="lb-group">
-              <div className="lb-group-head">{reeks}<span className="lb-group-n">{list.length}</span></div>
-              {list.map((m) => {
+          groups.map(([reeks, list]) => {
+            const isCollapsed = collapsed.has(reeks)
+            const liveInGroup = list.filter((m) => m.status === 'live').length
+            return (
+            <section key={reeks} className={`lb-group ${isCollapsed ? 'collapsed' : ''}`}>
+              <button
+                type="button"
+                className="lb-group-head"
+                onClick={() => toggleCollapsed(reeks)}
+                aria-expanded={!isCollapsed}
+                title={isCollapsed ? 'Reeks openklappen' : 'Reeks dichtklappen'}
+              >
+                <span className="lb-group-chevron" aria-hidden="true">▾</span>
+                <span className="lb-group-name">{reeks}</span>
+                {liveInGroup > 0 && <span className="lb-group-live"><span className="lb-livedot" />{liveInGroup}</span>}
+                <span className="lb-group-n">{list.length}</span>
+              </button>
+              {!isCollapsed && list.map((m) => {
                 const played = m.status !== 'scheduled'
                 const live = m.status === 'live'
                 const hasStats = played && (m.crosses || m.timeouts)
@@ -344,7 +368,8 @@ export function LiveBoard({
                 )
               })}
             </section>
-          ))
+            )
+          })
         )}
       </main>
     </div>

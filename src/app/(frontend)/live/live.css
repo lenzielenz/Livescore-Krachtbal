@@ -306,21 +306,68 @@
   margin-bottom: 12px;
 }
 /* Reeks-kop: rustig en terughoudend — een label, geen blikvanger. De wedstrijden zelf
-   (en het live-accent) mogen de aandacht trekken, niet de groepstitel. */
+   (en het live-accent) mogen de aandacht trekken, niet de groepstitel. Tegelijk een
+   klikbare in-/uitklapknop (zoals Flashscore/SofaScore) om reeksen weg te vegen. */
 .lb-group-head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 7px 14px;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 14px;
+  font: inherit;
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--dim);
   background: transparent;
+  border: none;
   border-bottom: 1px solid var(--line);
+  cursor: pointer;
+  transition: color var(--dur-1) var(--ease-soft);
+}
+.lb-group-head:hover {
+  color: var(--txt);
+}
+.lb-group.collapsed .lb-group-head {
+  border-bottom-color: transparent;
+}
+.lb-group-chevron {
+  flex: 0 0 auto;
+  font-size: 0.7rem;
+  line-height: 1;
+  color: var(--dim);
+  transition: transform var(--dur-1) var(--ease-soft);
+}
+.lb-group.collapsed .lb-group-chevron {
+  transform: rotate(-90deg);
+}
+.lb-group-name {
+  flex: 1 1 auto;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Live-telling op de kop — zo zie je een live wedstrijd ook in een dichtgeklapte reeks. */
+.lb-group-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: var(--pop);
+  font-variant-numeric: tabular-nums;
+}
+.lb-group-live .lb-livedot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--pop);
 }
 .lb-group-n {
+  flex: 0 0 auto;
   font-variant-numeric: tabular-nums;
   color: var(--dim);
   font-weight: 700;
@@ -492,6 +539,10 @@
   font-size: 1.5rem;
   font-variant-numeric: tabular-nums;
   line-height: 1;
+}
+/* Live wedstrijd: de score in het koraal-accent — meteen duidelijk wat nú telt. */
+.lb-row.live .lb-score {
+  color: var(--pop);
 }
 .lb-stats {
   display: inline-flex;
