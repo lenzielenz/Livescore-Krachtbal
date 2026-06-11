@@ -2,11 +2,11 @@ import Link from 'next/link'
 
 import { SiteHeader } from '@/components/SiteHeader'
 import { TeamLogo } from '@/components/TeamLogo'
-import { canAnalyse, hasRole, isFederationLevel } from '@/lib/access'
+import { canAnalyse, hasRole, isFederationLevel, userClubId } from '@/lib/access'
 import { analyseOwnWhere } from '@/lib/analyse-access'
 import { getSelectedSeason } from '@/lib/analyse-season'
 import { getAuthUser } from '@/lib/auth-user'
-import { buildScoreboards } from '@/lib/match-engine'
+import { buildScoreboards, clubLogoUrl } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
 import { COMPETITIE_REEKSEN, reeksNaam, resolveCompetitieReeks } from '@/lib/reeksen'
 import { buildSeasonStats, type SeasonPlayer } from '@/lib/season-stats'
@@ -81,6 +81,22 @@ export default async function AnalysePage({ searchParams }: { searchParams: Prom
   const vis = analyseOwnWhere(me) // strikt: enkel je eigen analyse-data
 
   const payload = await getPayloadClient()
+
+  // Clubhuis-identiteit: het echte logo + de naam van de eigen club (uit de clubs-data) geven de
+  // analyse-zone het gevoel "dit is van ons". Geen club of geen logo → terugval op het clubwapen.
+  const myClubId = userClubId(me)
+  let heroClubName = 'Sint-Michiels'
+  let heroLogo: string | null = null
+  if (myClubId != null) {
+    const club = await payload.findByID({ collection: 'clubs', id: myClubId, depth: 1 }).catch(() => null)
+    if (club) {
+      const c = club as { displayTitle?: unknown; name?: unknown }
+      const nm = (typeof c.displayTitle === 'string' && c.displayTitle.trim()) || (typeof c.name === 'string' && c.name.trim())
+      if (nm) heroClubName = nm
+      heroLogo = clubLogoUrl({ club })
+    }
+  }
+
   // De analyse-hub toont enkel de wedstrijden die voor analyse zijn ingestoken (analyseOnly) — geen
   // live/competitiewedstrijden — en voor een gewone analist enkel z'n eigen opnames. Afgelopen
   // analysewedstrijden moeten bovendien échte worpdata hebben.
@@ -184,8 +200,26 @@ export default async function AnalysePage({ searchParams }: { searchParams: Prom
     <>
       <SiteHeader active="analyse" />
       <div className="site">
+        {/* Clubhuis-hero: het eigen clublogo + naam. "Dit is óns terrein." */}
+        <header className="an-hero">
+          <span className="an-hero-badge">
+            <img
+              className="an-hero-crest"
+              src={heroLogo ?? '/sint-michiels.svg'}
+              alt={`${heroClubName} clublogo`}
+              width={84}
+              height={84}
+            />
+          </span>
+          <div className="an-hero-txt">
+            <span className="an-hero-eyebrow">Clubhuis · Analyse</span>
+            <h1 className="an-hero-title">{heroClubName}</h1>
+            <p className="an-hero-tag">
+              Onze ploeg, onze cijfers. Hier zien wij wat de tegenstander niet ziet — dit is óns terrein.
+            </p>
+          </div>
+        </header>
         <AnalyseNav active="overzicht" />
-        <h1 className="page-title"><span className="brand">Analyse</span></h1>
 
         {/* Wedstrijden — openklapbaar menu (gesloten standaard) zodat de hub kort blijft: bovenaan de
             afgelopen analyses, daaronder (voor wie mag opnemen) het manueel opnemen. */}

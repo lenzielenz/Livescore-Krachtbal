@@ -4,6 +4,98 @@
   margin: 0 0 16px;
 }
 
+/* ── Clubhuis-hero ── Het eigen clublogo + naam bovenaan de analyse-hub: een claim.
+   "Deze zone is van ons." Leunt op de rood-grijze clubtokens van de analyse-zone. */
+.an-hero {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin: 6px 0 22px;
+  padding: 20px 24px;
+  border-radius: 20px;
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--line));
+  background:
+    radial-gradient(135% 150% at 0% 0%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 52%),
+    var(--panel-grad);
+  box-shadow: var(--card-shadow);
+  overflow: hidden;
+}
+/* Dunne rode accentlijn links — het "vaandel". */
+.an-hero::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--grad-accent);
+}
+/* Logobadge: vangt elk logo (transparant, vierkant of wapenschild) netjes op. */
+.an-hero-badge {
+  flex: 0 0 auto;
+  width: 96px;
+  height: 96px;
+  display: grid;
+  place-items: center;
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 50% 28%, color-mix(in srgb, #fff 12%, transparent), transparent 70%),
+    color-mix(in srgb, var(--panel-2) 80%, #000);
+  border: 1px solid color-mix(in srgb, var(--accent) 38%, var(--line));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 0 0 5px color-mix(in srgb, var(--accent) 9%, transparent);
+}
+.an-hero-crest {
+  width: 78px;
+  height: 78px;
+  object-fit: contain;
+  display: block;
+  filter: drop-shadow(0 5px 14px rgba(0, 0, 0, 0.45));
+}
+.an-hero-txt {
+  min-width: 0;
+}
+.an-hero-eyebrow {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 5px;
+}
+.an-hero-title {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 900;
+  line-height: 1.04;
+  letter-spacing: -0.02em;
+}
+.an-hero-tag {
+  margin: 9px 0 0;
+  max-width: 52ch;
+  color: var(--dim-strong);
+  font-size: 0.95rem;
+  font-weight: 500;
+  line-height: 1.45;
+}
+@media (max-width: 560px) {
+  .an-hero {
+    flex-direction: column;
+    text-align: center;
+    gap: 14px;
+    padding: 22px 16px;
+  }
+  .an-hero-badge {
+    width: 88px;
+    height: 88px;
+  }
+  .an-hero-tag {
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
 /* Themed keuzelijsten/invoervelden — consistent op álle analyse-pagina's (ook waar
    rangschikking.css niet geladen is, zoals de hub, spelersradar en gevaarzone). */
 .rang-picker {
