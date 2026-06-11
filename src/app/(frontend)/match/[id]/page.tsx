@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
 import { CastToTv } from '@/components/CastToTv'
-import { MatchRain } from '@/components/MatchRain'
+import { MatchWeather } from '@/components/MatchWeather'
 import { Scoreboard } from '@/components/Scoreboard'
 import { SiteHeader } from '@/components/SiteHeader'
 import { canAnalyse } from '@/lib/access'
@@ -72,10 +72,10 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   if (matchDoc?.analyseOnly) notFound()
   const homeClub = (matchDoc?.homeTeam as { club?: { accommodatie?: string; plaats?: string; lat?: number; lng?: number } } | null)?.club
   const accommodatie = homeClub?.accommodatie?.trim() || null
-  // Locatie voor de buienradar van de thuiswedstrijd.
-  const rainPlace = homeClub?.plaats?.trim() || null
-  const rainLat = typeof homeClub?.lat === 'number' ? homeClub.lat : null
-  const rainLng = typeof homeClub?.lng === 'number' ? homeClub.lng : null
+  // Locatie voor het weerbericht aan het veld (thuislocatie).
+  const weatherPlace = homeClub?.plaats?.trim() || null
+  const weatherLat = typeof homeClub?.lat === 'number' ? homeClub.lat : null
+  const weatherLng = typeof homeClub?.lng === 'number' ? homeClub.lng : null
   // Toon de leesbare reeksnaam zonder de code-prefix ("1ste Nationale Dames" i.p.v. "1NAD — …").
   const reeks = matchDoc?.reeks ? reeksNaam(matchDoc.reeks) : null
   // Live winstkans: helftduur + verwacht scoretempo strikt uit de reeks (veilige defaults binnen reeksen.ts).
@@ -185,9 +185,9 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
           )}
         </div>
       )}
-      {/* Mini-buienradar voor de thuiswedstrijd (zolang ze nog niet afgelopen is). */}
-      {state.match.status !== 'finished' && matchDoc?.date && (rainLat != null || rainPlace) && (
-        <MatchRain date={String(matchDoc.date)} lat={rainLat} lng={rainLng} place={rainPlace} />
+      {/* Weerbericht aan het veld voor de thuislocatie (zolang de wedstrijd niet afgelopen is). */}
+      {state.match.status !== 'finished' && matchDoc?.date && (weatherLat != null || weatherPlace) && (
+        <MatchWeather date={String(matchDoc.date)} lat={weatherLat} lng={weatherLng} place={weatherPlace} />
       )}
       <Scoreboard
         matchId={matchId}
