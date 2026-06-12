@@ -31,13 +31,14 @@ function Stats({ m }: { m: SampleMatch }) {
   )
 }
 
-// Look B (Glas) — gekozen — met bewegende achtergrond (driftende kleur + zwevende glow-blobs) en
-// een glans-veeg die periodiek over de kop sweept. Alle beweging is reduce-motion-veilig (CSS).
-function LookB({ m }: { m: SampleMatch }) {
+// Look B (Glas) in vier dynamische varianten. De .pb-color-laag draagt de kleurbeweging, .pb-gl de
+// glans-veeg. Alle beweging zit achter prefers-reduced-motion (CSS).
+type GlasVariant = 'aurora' | 'flow' | 'swirl' | 'pulse'
+function Glas({ m, v }: { m: SampleMatch; v: GlasVariant }) {
   return (
-    <div className="pb-card" style={vars(m)}>
+    <div className={`pb-card pb-${v}`} style={vars(m)}>
       <div className="pb-head">
-        <span className="pb-blobs" aria-hidden />
+        <span className="pb-color" aria-hidden />
         <span className="pb-gl" aria-hidden />
         <span className="pb-badge"><Badge team={m.home} side="home" size={58} /></span>
         <span className="pb-center"><Live /><span className="pb-score">{m.score.home} – {m.score.away}</span><Stats m={m} /></span>
@@ -52,7 +53,10 @@ function LookB({ m }: { m: SampleMatch }) {
 }
 
 const VARIANTS: { key: string; title: string; desc: string; render: (m: SampleMatch, i: number) => ReactNode }[] = [
-  { key: 'B', title: 'Glas · met beweging & glans', desc: 'De gekozen look, nu met een rustig driftende kleur-achtergrond, zwevende glow-blobs en een glans-veeg over de kop. Beweging valt weg bij “reduce motion”.', render: (m, i) => <LookB key={i} m={m} /> },
+  { key: '1', title: 'Aurora', desc: 'Zachte kleurlichten in de clubkleuren die traag morrelen en draaien — een dromerige, brede glans.', render: (m, i) => <Glas key={i} m={m} v="aurora" /> },
+  { key: '2', title: 'Kleurstroom', desc: 'De clubkleuren stromen als vloeistof heen en weer door de balk — een scherpe, snelle glans-streep.', render: (m, i) => <Glas key={i} m={m} v="flow" /> },
+  { key: '3', title: 'Swirl', desc: 'De kleuren wervelen rond achter het glas (draaiend kleurverloop) — een trage glans erover.', render: (m, i) => <Glas key={i} m={m} v="swirl" /> },
+  { key: '4', title: 'Pulse', desc: 'De clubkleuren pulseren rustig op en neer in intensiteit — een korte, felle glans-flits.', render: (m, i) => <Glas key={i} m={m} v="pulse" /> },
 ]
 
 export function LiveLookLab({ samples }: { samples: SampleMatch[] }) {
