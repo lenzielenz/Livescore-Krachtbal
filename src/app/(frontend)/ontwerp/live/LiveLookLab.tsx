@@ -31,30 +31,14 @@ function Stats({ m }: { m: SampleMatch }) {
   )
 }
 
-// ── A — Spotlight: groot logo met een kleur-spotlight erachter + slagschaduw ────
-function LookA({ m }: { m: SampleMatch }) {
-  return (
-    <div className="pa-card" style={vars(m)}>
-      <div className="pa-head">
-        <span className="pa-spot left" aria-hidden />
-        <span className="pa-spot right" aria-hidden />
-        <span className="pa-badge"><Badge team={m.home} side="home" size={60} /></span>
-        <span className="pa-center"><Live /><span className="pa-score">{m.score.home} – {m.score.away}</span><Stats m={m} /></span>
-        <span className="pa-badge"><Badge team={m.away} side="away" size={60} /></span>
-      </div>
-      <div className="pa-names">
-        <span className="pa-name home">{m.home.name}</span>
-        <span className="pa-name away">{m.away.name}</span>
-      </div>
-    </div>
-  )
-}
-
-// ── B — Glas: reflecterende glaskop, frosted namenstrook, zwevend logo ─────────
+// Look B (Glas) — gekozen — met bewegende achtergrond (driftende kleur + zwevende glow-blobs) en
+// een glans-veeg die periodiek over de kop sweept. Alle beweging is reduce-motion-veilig (CSS).
 function LookB({ m }: { m: SampleMatch }) {
   return (
     <div className="pb-card" style={vars(m)}>
       <div className="pb-head">
+        <span className="pb-blobs" aria-hidden />
+        <span className="pb-gl" aria-hidden />
         <span className="pb-badge"><Badge team={m.home} side="home" size={58} /></span>
         <span className="pb-center"><Live /><span className="pb-score">{m.score.home} – {m.score.away}</span><Stats m={m} /></span>
         <span className="pb-badge"><Badge team={m.away} side="away" size={58} /></span>
@@ -67,27 +51,8 @@ function LookB({ m }: { m: SampleMatch }) {
   )
 }
 
-// ── C — Gelaagd 3D: een opgetild gekleurd paneel, logo springt eruit ───────────
-function LookC({ m }: { m: SampleMatch }) {
-  return (
-    <div className="pc-card" style={vars(m)}>
-      <div className="pc-head">
-        <span className="pc-badge"><Badge team={m.home} side="home" size={62} /></span>
-        <span className="pc-center"><Live /><span className="pc-score">{m.score.home} – {m.score.away}</span><Stats m={m} /></span>
-        <span className="pc-badge"><Badge team={m.away} side="away" size={62} /></span>
-      </div>
-      <div className="pc-names">
-        <span className="pc-name home">{m.home.name}</span>
-        <span className="pc-name away">{m.away.name}</span>
-      </div>
-    </div>
-  )
-}
-
 const VARIANTS: { key: string; title: string; desc: string; render: (m: SampleMatch, i: number) => ReactNode }[] = [
-  { key: 'A', title: 'Spotlight', desc: 'Groot logo met een kleur-spotlight erachter en een zachte slagschaduw — dramatisch en diep.', render: (m, i) => <LookA key={i} m={m} /> },
-  { key: 'B', title: 'Glas', desc: 'Reflecterende glaskop met een matglazen namenstrook; het logo zweeft erboven. Heel premium.', render: (m, i) => <LookB key={i} m={m} /> },
-  { key: 'C', title: 'Gelaagd 3D', desc: 'Een opgetild, gekleurd paneel met diepteschaduwen; het grote logo springt eruit.', render: (m, i) => <LookC key={i} m={m} /> },
+  { key: 'B', title: 'Glas · met beweging & glans', desc: 'De gekozen look, nu met een rustig driftende kleur-achtergrond, zwevende glow-blobs en een glans-veeg over de kop. Beweging valt weg bij “reduce motion”.', render: (m, i) => <LookB key={i} m={m} /> },
 ]
 
 export function LiveLookLab({ samples }: { samples: SampleMatch[] }) {
