@@ -50,12 +50,12 @@ export default async function OntwerpLivePage() {
       <SiteHeader active={null} />
       <div className="site">
         <h1 className="page-title">
-          <span className="brand">Glas</span> · finale
+          <span className="brand">Glas</span> · kleur &amp; glans
         </h1>
         <p className="ll-intro">
-          De gekozen look (B · Glas), nu met <strong>beweging in de achtergrond</strong> (driftende
-          kleur + zwevende glow-blobs) en een <strong>glans-veeg</strong> over de kop. Bekijk het op je
-          gsm; als dit goed zit, rol ik het uit naar het echte live-bord.
+          Vier dynamische varianten van Glas (B), elk met een andere <strong>kleurbeweging</strong> en
+          <strong> glans</strong>: 1 aurora, 2 kleurstroom, 3 swirl, 4 pulse. Bekijk ze op je gsm en
+          zeg welke we uitrollen (combineren mag ook).
         </p>
         {samples.length === 0 ? (
           <p className="empty">Geen wedstrijden gevonden om te tonen.</p>

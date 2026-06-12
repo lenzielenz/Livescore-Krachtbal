@@ -1,5 +1,5 @@
-/* Ontwerp-speeltuin — de gekozen look B (Glas), met bewegende achtergrond en glans.
-   Clubkleuren: --hc/--ac op de kaart. Alle beweging zit achter prefers-reduced-motion. */
+/* Ontwerp-speeltuin — Glas (look B) in vier dynamische kleur/glans-varianten.
+   .pb-color = bewegende kleurlaag, .pb-gl = glans-veeg. Beweging zit achter prefers-reduced-motion. */
 
 .ll-intro { color: var(--dim); font-size: 0.92rem; line-height: 1.5; margin: 0 0 18px; max-width: 60ch; }
 .ll-lab { display: flex; flex-direction: column; gap: 24px; }
@@ -13,50 +13,80 @@
 .ll-stats { display: inline-flex; gap: 6px; font-size: 0.66rem; color: rgba(255, 255, 255, 0.82); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .ll-sep { opacity: 0.5; }
 
-/* ── Look B — Glas ─────────────────────────────────────────────────────────── */
-.pb-card {
-  position: relative;
-  background: linear-gradient(135deg, color-mix(in srgb, var(--hc) 32%, #0d1119) 0%, #0c1017 46%, color-mix(in srgb, var(--ac) 32%, #0d1119) 100%);
-  background-size: 220% 220%;
-  background-position: 0% 50%;
-}
+/* ── Glas — gedeelde basis ─────────────────────────────────────────────────── */
+.pb-card { position: relative; background: #0b0f15; }
 .pb-head { position: relative; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px; padding: 18px 16px 16px; overflow: hidden; }
-
-/* Zwevende kleur-glow-blobs (bewegende achtergrond). */
-.pb-blobs {
-  position: absolute; inset: -45% -12%; z-index: 0; pointer-events: none; opacity: 0.85;
-  background:
-    radial-gradient(42% 52% at 22% 32%, color-mix(in srgb, var(--hc) 34%, transparent), transparent 70%),
-    radial-gradient(42% 52% at 78% 70%, color-mix(in srgb, var(--ac) 34%, transparent), transparent 70%);
-}
+.pb-color { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
 /* Glas-highlight bovenaan. */
-.pb-head::before { content: ''; position: absolute; inset: 0 0 auto 0; height: 62%; z-index: 1; background: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0)); pointer-events: none; }
-/* Glans-veeg die over de kop sweept. */
-.pb-gl {
-  position: absolute; top: -50%; left: 0; width: 38%; height: 200%; z-index: 3; pointer-events: none;
-  transform: translateX(-150%) rotate(8deg);
-  background: linear-gradient(100deg, transparent 35%, rgba(255, 255, 255, 0.20) 50%, transparent 65%);
-}
-
+.pb-head::before { content: ''; position: absolute; inset: 0 0 auto 0; height: 62%; z-index: 1; background: linear-gradient(180deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0)); pointer-events: none; }
+/* Glans-veeg (per variant ander tempo/breedte). */
+.pb-gl { position: absolute; top: -50%; left: 0; height: 200%; z-index: 3; pointer-events: none; transform: translateX(-160%) rotate(8deg); }
 .pb-badge { position: relative; z-index: 2; display: inline-flex; filter: drop-shadow(0 8px 14px rgba(0, 0, 0, 0.5)); }
 .pb-center { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; gap: 3px; }
-.pb-score { font-weight: 900; font-size: 1.7rem; color: #fff; line-height: 1; font-variant-numeric: tabular-nums; text-shadow: 0 2px 12px rgba(0, 0, 0, 0.5); }
-
-.pb-names { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 11px 16px 14px; background: rgba(10, 14, 22, 0.42); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); border-top: 1px solid rgba(255, 255, 255, 0.14); }
+.pb-score { font-weight: 900; font-size: 1.7rem; color: #fff; line-height: 1; font-variant-numeric: tabular-nums; text-shadow: 0 2px 12px rgba(0, 0, 0, 0.55); }
+.pb-names { position: relative; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 11px 16px 14px; background: rgba(9, 13, 20, 0.46); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); border-top: 1px solid rgba(255, 255, 255, 0.14); }
 .pb-name { min-width: 0; font-weight: 800; font-size: 1.06rem; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 6px rgba(0, 0, 0, 0.55); }
 .pb-name.away { text-align: right; }
 
-/* ── Beweging (enkel wanneer de gebruiker beweging niet afwijst) ────────────── */
-@keyframes ll-drift { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
-@keyframes ll-floatblob {
-  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
-  33% { transform: translate3d(4%, -3%, 0) scale(1.06); }
-  66% { transform: translate3d(-3%, 2%, 0) scale(0.97); }
+/* ── 1 — Aurora ────────────────────────────────────────────────────────────── */
+.pb-aurora .pb-color {
+  inset: -55% -22%;
+  background:
+    radial-gradient(45% 60% at 24% 34%, color-mix(in srgb, var(--hc) 58%, transparent), transparent 70%),
+    radial-gradient(45% 60% at 76% 66%, color-mix(in srgb, var(--ac) 58%, transparent), transparent 70%),
+    radial-gradient(40% 55% at 62% 28%, color-mix(in srgb, var(--hc) 32%, transparent), transparent 75%);
+  filter: blur(16px);
 }
-@keyframes ll-sheen { 0% { transform: translateX(-150%) rotate(8deg); } 60%, 100% { transform: translateX(360%) rotate(8deg); } }
+.pb-aurora .pb-gl { width: 56%; background: linear-gradient(100deg, transparent 28%, rgba(255, 255, 255, 0.13) 50%, transparent 72%); }
+
+/* ── 2 — Kleurstroom ───────────────────────────────────────────────────────── */
+.pb-flow .pb-color {
+  background: linear-gradient(100deg,
+    color-mix(in srgb, var(--hc) 62%, #0b0f15) 0%, color-mix(in srgb, var(--ac) 52%, #0b0f15) 26%,
+    color-mix(in srgb, var(--hc) 52%, #0b0f15) 50%, color-mix(in srgb, var(--ac) 62%, #0b0f15) 74%,
+    color-mix(in srgb, var(--hc) 62%, #0b0f15) 100%);
+  background-size: 280% 100%;
+  background-position: 0% 50%;
+}
+.pb-flow .pb-gl { width: 26%; background: linear-gradient(100deg, transparent 42%, rgba(255, 255, 255, 0.30) 50%, transparent 58%); }
+
+/* ── 3 — Swirl ─────────────────────────────────────────────────────────────── */
+.pb-swirl .pb-color {
+  inset: -70%;
+  background: conic-gradient(from 0deg at 50% 50%,
+    color-mix(in srgb, var(--hc) 56%, transparent), color-mix(in srgb, var(--ac) 56%, transparent),
+    color-mix(in srgb, var(--hc) 56%, transparent));
+  filter: blur(20px);
+}
+.pb-swirl .pb-gl { width: 34%; background: linear-gradient(100deg, transparent 38%, rgba(255, 255, 255, 0.17) 50%, transparent 62%); }
+
+/* ── 4 — Pulse ─────────────────────────────────────────────────────────────── */
+.pb-pulse .pb-color {
+  background:
+    radial-gradient(52% 130% at 0% 50%, color-mix(in srgb, var(--hc) 64%, transparent), transparent 60%),
+    radial-gradient(52% 130% at 100% 50%, color-mix(in srgb, var(--ac) 64%, transparent), transparent 60%);
+  opacity: 0.85;
+}
+.pb-pulse .pb-gl { width: 22%; background: linear-gradient(100deg, transparent 40%, rgba(255, 255, 255, 0.32) 50%, transparent 60%); }
+
+/* ── Beweging (enkel als de gebruiker beweging niet afwijst) ───────────────── */
+@keyframes ll-aurora {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg) scale(1); }
+  33% { transform: translate3d(5%, -4%, 0) rotate(4deg) scale(1.1); }
+  66% { transform: translate3d(-4%, 3%, 0) rotate(-3deg) scale(1.05); }
+}
+@keyframes ll-flow { 0% { background-position: 0% 50%; } 100% { background-position: 100% 50%; } }
+@keyframes ll-spin { to { transform: rotate(360deg); } }
+@keyframes ll-pulse { 0%, 100% { opacity: 0.62; } 50% { opacity: 1; } }
+@keyframes ll-sheen { 0% { transform: translateX(-160%) rotate(8deg); } 60%, 100% { transform: translateX(380%) rotate(8deg); } }
 
 @media (prefers-reduced-motion: no-preference) {
-  .pb-card { animation: ll-drift 16s ease-in-out infinite; }
-  .pb-blobs { animation: ll-floatblob 13s ease-in-out infinite; }
-  .pb-gl { animation: ll-sheen 7s ease-in-out infinite; }
+  .pb-aurora .pb-color { animation: ll-aurora 15s ease-in-out infinite; }
+  .pb-aurora .pb-gl { animation: ll-sheen 9s ease-in-out infinite; }
+  .pb-flow .pb-color { animation: ll-flow 13s ease-in-out infinite alternate; }
+  .pb-flow .pb-gl { animation: ll-sheen 6s ease-in-out infinite; }
+  .pb-swirl .pb-color { animation: ll-spin 22s linear infinite; }
+  .pb-swirl .pb-gl { animation: ll-sheen 8.5s ease-in-out infinite 1.5s; }
+  .pb-pulse .pb-color { animation: ll-pulse 4.5s ease-in-out infinite; }
+  .pb-pulse .pb-gl { animation: ll-sheen 5s ease-in-out infinite; }
 }
