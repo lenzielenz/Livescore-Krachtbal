@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type CSSProperties } from 'react'
 
 import { PushOptIn } from '@/components/PushOptIn'
 import { TeamLogo } from '@/components/TeamLogo'
@@ -305,42 +305,82 @@ export function LiveBoard({
                       >
                         {rowFav ? '★' : '☆'}
                       </button>
-                      <Link href={`/match/${m.id}`} className="lb-match">
-                        <span className="lb-team home">
-                          <TeamLogo name={m.home.name} logoUrl={m.home.logoUrl} logoFit={m.home.logoFit} side="home" size="sm" ringColor={m.home.colors?.primary} />
-                          <span className="lb-name">{m.home.name}</span>
-                        </span>
-                        <span className="lb-mid">
-                          <span className="lb-status">
-                            {live ? (
-                              <span className="lb-livebadge">LIVE</span>
-                            ) : m.status === 'finished' ? (
-                              <span className="lb-donebadge">Einde</span>
-                            ) : (
-                              <span className="lb-time">{m.time}</span>
-                            )}
-                          </span>
-                          <span className="lb-score">{played ? `${m.score.home} – ${m.score.away}` : 'vs'}</span>
-                          {hasStats && (
-                            <span className="lb-stats">
-                              <span title="Kruisjes">✖ {m.crosses?.home ?? 0}–{m.crosses?.away ?? 0}</span>
-                              <span className="lb-stat-sep">·</span>
-                              <span title="Time-outs">
-                                ⏱ {m.timeouts?.home ?? 0}–{m.timeouts?.away ?? 0}
+                      <Link
+                        href={`/match/${m.id}`}
+                        className={`lb-match ${live ? 'lb-match-live' : ''}`}
+                        style={live ? ({ '--hc': m.home.colors?.primary ?? 'var(--accent)', '--ac': m.away.colors?.primary ?? 'var(--accent)' } as CSSProperties) : undefined}
+                      >
+                        {live ? (
+                          <>
+                            <span className="lbl-head">
+                              <span className="lbl-color" aria-hidden />
+                              <span className="lbl-gl" aria-hidden />
+                              <span className="lbl-logo">
+                                <TeamLogo name={m.home.name} logoUrl={m.home.logoUrl} logoFit={m.home.logoFit} side="home" size={44} ringColor={m.home.colors?.primary} />
                               </span>
-                              {m.refereeStops ? (
-                                <>
-                                  <span className="lb-stat-sep">·</span>
-                                  <span title="Time-outs scheidsrechter">🧑‍⚖️ ⏱ {m.refereeStops}</span>
-                                </>
-                              ) : null}
+                              <span className="lbl-center">
+                                <span className="lb-livebadge">LIVE</span>
+                                <span className="lbl-score">{m.score.home} – {m.score.away}</span>
+                                {hasStats && (
+                                  <span className="lb-stats">
+                                    <span title="Kruisjes">✖ {m.crosses?.home ?? 0}–{m.crosses?.away ?? 0}</span>
+                                    <span className="lb-stat-sep">·</span>
+                                    <span title="Time-outs">⏱ {m.timeouts?.home ?? 0}–{m.timeouts?.away ?? 0}</span>
+                                    {m.refereeStops ? (
+                                      <>
+                                        <span className="lb-stat-sep">·</span>
+                                        <span title="Time-outs scheidsrechter">🧑‍⚖️ ⏱ {m.refereeStops}</span>
+                                      </>
+                                    ) : null}
+                                  </span>
+                                )}
+                              </span>
+                              <span className="lbl-logo">
+                                <TeamLogo name={m.away.name} logoUrl={m.away.logoUrl} logoFit={m.away.logoFit} side="away" size={44} ringColor={m.away.colors?.primary} />
+                              </span>
                             </span>
-                          )}
-                        </span>
-                        <span className="lb-team away">
-                          <span className="lb-name">{m.away.name}</span>
-                          <TeamLogo name={m.away.name} logoUrl={m.away.logoUrl} logoFit={m.away.logoFit} side="away" size="sm" ringColor={m.away.colors?.primary} />
-                        </span>
+                            <span className="lbl-names">
+                              <span className="lbl-name">{m.home.name}</span>
+                              <span className="lbl-name away">{m.away.name}</span>
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            <span className="lb-team home">
+                              <TeamLogo name={m.home.name} logoUrl={m.home.logoUrl} logoFit={m.home.logoFit} side="home" size="sm" ringColor={m.home.colors?.primary} />
+                              <span className="lb-name">{m.home.name}</span>
+                            </span>
+                            <span className="lb-mid">
+                              <span className="lb-status">
+                                {m.status === 'finished' ? (
+                                  <span className="lb-donebadge">Einde</span>
+                                ) : (
+                                  <span className="lb-time">{m.time}</span>
+                                )}
+                              </span>
+                              <span className="lb-score">{played ? `${m.score.home} – ${m.score.away}` : 'vs'}</span>
+                              {hasStats && (
+                                <span className="lb-stats">
+                                  <span title="Kruisjes">✖ {m.crosses?.home ?? 0}–{m.crosses?.away ?? 0}</span>
+                                  <span className="lb-stat-sep">·</span>
+                                  <span title="Time-outs">
+                                    ⏱ {m.timeouts?.home ?? 0}–{m.timeouts?.away ?? 0}
+                                  </span>
+                                  {m.refereeStops ? (
+                                    <>
+                                      <span className="lb-stat-sep">·</span>
+                                      <span title="Time-outs scheidsrechter">🧑‍⚖️ ⏱ {m.refereeStops}</span>
+                                    </>
+                                  ) : null}
+                                </span>
+                              )}
+                            </span>
+                            <span className="lb-team away">
+                              <span className="lb-name">{m.away.name}</span>
+                              <TeamLogo name={m.away.name} logoUrl={m.away.logoUrl} logoFit={m.away.logoFit} side="away" size="sm" ringColor={m.away.colors?.primary} />
+                            </span>
+                          </>
+                        )}
                       </Link>
                     </div>
 
