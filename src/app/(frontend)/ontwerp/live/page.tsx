@@ -50,11 +50,12 @@ export default async function OntwerpLivePage() {
       <SiteHeader active={null} />
       <div className="site">
         <h1 className="page-title">
-          <span className="brand">Naam &amp; logo</span> · ontwerp
+          <span className="brand">Look 3 · XL</span> · ontwerp
         </h1>
         <p className="ll-intro">
-          Vijf vernieuwde live-looks waarbij je de <strong>volledige clubnaam</strong> én het logo goed
-          ziet — geen afgekapte namen meer. Bekijk ze op je gsm en zeg welke we uitrollen.
+          Drie premium uitwerkingen van look 3 met een <strong>groter, uitspringend logo</strong> en
+          meer <strong>diepte</strong> — spotlight, glas en gelaagd 3D. De volledige clubnaam blijft
+          goed leesbaar. Bekijk ze op je gsm en zeg welke we uitrollen.
         </p>
         {samples.length === 0 ? (
           <p className="empty">Geen wedstrijden gevonden om te tonen.</p>

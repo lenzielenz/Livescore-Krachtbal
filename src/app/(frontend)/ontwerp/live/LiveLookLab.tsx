@@ -15,7 +15,6 @@ export type SampleMatch = {
 
 const vars = (m: SampleMatch): CSSProperties =>
   ({ '--hc': m.home.color ?? 'var(--accent)', '--ac': m.away.color ?? 'var(--accent)' }) as CSSProperties
-const clr = (t: SampleTeam): CSSProperties => ({ '--c': t.color ?? 'var(--accent)' }) as CSSProperties
 
 function Badge({ team, side, size }: { team: SampleTeam; side: 'home' | 'away'; size: number }) {
   return <TeamLogo name={team.name} logoUrl={team.logoUrl} logoFit={team.logoFit} ringColor={team.color} side={side} size={size} />
@@ -32,111 +31,63 @@ function Stats({ m }: { m: SampleMatch }) {
   )
 }
 
-// ── 1 — Gestapeld: elk team een eigen regel → volledige naam, score rechts ──────
-function Look1({ m }: { m: SampleMatch }) {
-  const hw = m.score.home > m.score.away
-  const aw = m.score.away > m.score.home
+// ── A — Spotlight: groot logo met een kleur-spotlight erachter + slagschaduw ────
+function LookA({ m }: { m: SampleMatch }) {
   return (
-    <div className="g1-card">
-      <div className="g1-top"><Live /><Stats m={m} /></div>
-      <div className="g1-line">
-        <Badge team={m.home} side="home" size={32} />
-        <span className="g1-name">{m.home.name}</span>
-        <span className={`g1-score ${hw ? 'win' : ''}`}>{m.score.home}</span>
+    <div className="pa-card" style={vars(m)}>
+      <div className="pa-head">
+        <span className="pa-spot left" aria-hidden />
+        <span className="pa-spot right" aria-hidden />
+        <span className="pa-badge"><Badge team={m.home} side="home" size={60} /></span>
+        <span className="pa-center"><Live /><span className="pa-score">{m.score.home} – {m.score.away}</span><Stats m={m} /></span>
+        <span className="pa-badge"><Badge team={m.away} side="away" size={60} /></span>
       </div>
-      <div className="g1-line">
-        <Badge team={m.away} side="away" size={32} />
-        <span className="g1-name">{m.away.name}</span>
-        <span className={`g1-score ${aw ? 'win' : ''}`}>{m.score.away}</span>
+      <div className="pa-names">
+        <span className="pa-name home">{m.home.name}</span>
+        <span className="pa-name away">{m.away.name}</span>
       </div>
     </div>
   )
 }
 
-// ── 2 — Gestapeld met clubkleur-accent (kleurbalk + winnaar in clubkleur) ───────
-function Look2({ m }: { m: SampleMatch }) {
-  const hw = m.score.home > m.score.away
-  const aw = m.score.away > m.score.home
+// ── B — Glas: reflecterende glaskop, frosted namenstrook, zwevend logo ─────────
+function LookB({ m }: { m: SampleMatch }) {
   return (
-    <div className="g2-card">
-      <div className="g2-top"><Live /><Stats m={m} /></div>
-      <div className="g2-line" style={clr(m.home)}>
-        <Badge team={m.home} side="home" size={32} />
-        <span className="g2-name">{m.home.name}</span>
-        <span className={`g2-score ${hw ? 'win' : ''}`}>{m.score.home}</span>
+    <div className="pb-card" style={vars(m)}>
+      <div className="pb-head">
+        <span className="pb-badge"><Badge team={m.home} side="home" size={58} /></span>
+        <span className="pb-center"><Live /><span className="pb-score">{m.score.home} – {m.score.away}</span><Stats m={m} /></span>
+        <span className="pb-badge"><Badge team={m.away} side="away" size={58} /></span>
       </div>
-      <div className="g2-line" style={clr(m.away)}>
-        <Badge team={m.away} side="away" size={32} />
-        <span className="g2-name">{m.away.name}</span>
-        <span className={`g2-score ${aw ? 'win' : ''}`}>{m.score.away}</span>
+      <div className="pb-names">
+        <span className="pb-name home">{m.home.name}</span>
+        <span className="pb-name away">{m.away.name}</span>
       </div>
     </div>
   )
 }
 
-// ── 3 — Poster-kop (logo's + score in kleur) met de volledige namen eronder ─────
-function Look3({ m }: { m: SampleMatch }) {
+// ── C — Gelaagd 3D: een opgetild gekleurd paneel, logo springt eruit ───────────
+function LookC({ m }: { m: SampleMatch }) {
   return (
-    <div className="g3-card" style={vars(m)}>
-      <div className="g3-head">
-        <span className="g3-logo"><Badge team={m.home} side="home" size={40} /></span>
-        <span className="g3-center"><Live /><span className="g3-score">{m.score.home} – {m.score.away}</span><Stats m={m} /></span>
-        <span className="g3-logo"><Badge team={m.away} side="away" size={40} /></span>
+    <div className="pc-card" style={vars(m)}>
+      <div className="pc-head">
+        <span className="pc-badge"><Badge team={m.home} side="home" size={62} /></span>
+        <span className="pc-center"><Live /><span className="pc-score">{m.score.home} – {m.score.away}</span><Stats m={m} /></span>
+        <span className="pc-badge"><Badge team={m.away} side="away" size={62} /></span>
       </div>
-      <div className="g3-names">
-        <span className="g3-name home">{m.home.name}</span>
-        <span className="g3-name away">{m.away.name}</span>
+      <div className="pc-names">
+        <span className="pc-name home">{m.home.name}</span>
+        <span className="pc-name away">{m.away.name}</span>
       </div>
-    </div>
-  )
-}
-
-// ── 4 — Tweekleurige panelen: per team een eigen gekleurde regel ────────────────
-function Look4({ m }: { m: SampleMatch }) {
-  const hw = m.score.home > m.score.away
-  const aw = m.score.away > m.score.home
-  return (
-    <div className="g4-card">
-      <div className="g4-row" style={clr(m.home)}>
-        <Badge team={m.home} side="home" size={34} />
-        <span className="g4-name">{m.home.name}</span>
-        <span className={`g4-score ${hw ? 'win' : ''}`}>{m.score.home}</span>
-      </div>
-      <div className="g4-row" style={clr(m.away)}>
-        <Badge team={m.away} side="away" size={34} />
-        <span className="g4-name">{m.away.name}</span>
-        <span className={`g4-score ${aw ? 'win' : ''}`}>{m.score.away}</span>
-      </div>
-      <div className="g4-foot"><Live /><Stats m={m} /></div>
-    </div>
-  )
-}
-
-// ── 5 — Groot logo met de naam eronder (mag op twee regels), score in het midden ─
-function Look5({ m }: { m: SampleMatch }) {
-  return (
-    <div className="g5-card" style={vars(m)}>
-      <span className="g5-wash left" aria-hidden />
-      <span className="g5-wash right" aria-hidden />
-      <span className="g5-side">
-        <Badge team={m.home} side="home" size={46} />
-        <span className="g5-name">{m.home.name}</span>
-      </span>
-      <span className="g5-mid"><Live /><span className="g5-score">{m.score.home} – {m.score.away}</span><Stats m={m} /></span>
-      <span className="g5-side">
-        <Badge team={m.away} side="away" size={46} />
-        <span className="g5-name">{m.away.name}</span>
-      </span>
     </div>
   )
 }
 
 const VARIANTS: { key: string; title: string; desc: string; render: (m: SampleMatch, i: number) => ReactNode }[] = [
-  { key: '1', title: 'Gestapeld', desc: 'Elk team op een eigen regel → de volledige naam past, score rechts. Het meest leesbaar.', render: (m, i) => <Look1 key={i} m={m} /> },
-  { key: '2', title: 'Gestapeld · clubkleur', desc: 'Zelfde, met een clubkleur-balk per regel en de winnende score in de clubkleur.', render: (m, i) => <Look2 key={i} m={m} /> },
-  { key: '3', title: 'Poster-kop + namen', desc: 'Kleurrijke kop met de logo’s en de score; de volledige namen staan rustig eronder.', render: (m, i) => <Look3 key={i} m={m} /> },
-  { key: '4', title: 'Tweekleurige panelen', desc: 'Per team een eigen gekleurd paneel met groot logo en volledige naam.', render: (m, i) => <Look4 key={i} m={m} /> },
-  { key: '5', title: 'Groot logo + naam eronder', desc: 'Prominente logo’s met de naam eronder (mag op twee regels), score groot in het midden.', render: (m, i) => <Look5 key={i} m={m} /> },
+  { key: 'A', title: 'Spotlight', desc: 'Groot logo met een kleur-spotlight erachter en een zachte slagschaduw — dramatisch en diep.', render: (m, i) => <LookA key={i} m={m} /> },
+  { key: 'B', title: 'Glas', desc: 'Reflecterende glaskop met een matglazen namenstrook; het logo zweeft erboven. Heel premium.', render: (m, i) => <LookB key={i} m={m} /> },
+  { key: 'C', title: 'Gelaagd 3D', desc: 'Een opgetild, gekleurd paneel met diepteschaduwen; het grote logo springt eruit.', render: (m, i) => <LookC key={i} m={m} /> },
 ]
 
 export function LiveLookLab({ samples }: { samples: SampleMatch[] }) {
