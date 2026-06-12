@@ -86,10 +86,20 @@ export function LiveBoard({
   const [reeksFilter, setReeksFilter] = useState<string | null>(null)
   const [onlyFavTeams, setOnlyFavTeams] = useState(false)
   const [onlyFavClubs, setOnlyFavClubs] = useState(false)
-  const [onlyMyClub, setOnlyMyClub] = useState(false)
-  // Startpagina opent op "Nu live": zijn er live wedstrijden, dan toont het bord enkel die,
-  // tot de supporter zelf naar "Hele dag" wisselt. Lazy initializer → enkel bij het opbouwen.
-  const [onlyLive, setOnlyLive] = useState(() => matches.some((m) => m.status === 'live'))
+  // Ingelogde supporter met een club ziet standaard meteen z'n EIGEN club (zolang die vandaag
+  // speelt). Hij kan de "Mijn club"-filter zelf uitzetten om andere wedstrijden te zien.
+  const [onlyMyClub, setOnlyMyClub] = useState(
+    () => myClubId != null && matches.some((m) => m.home.clubId === myClubId || m.away.clubId === myClubId),
+  )
+  // Open standaard op "Nu live" zodra er live wedstrijden zijn — tot de supporter naar "Hele dag"
+  // wisselt. Voor een ingelogde supporter wiens club vandaag speelt: toon z'n club live als die
+  // live is, anders z'n hele dag (i.p.v. een lege live-lijst). Lazy initializer → enkel bij opbouw.
+  const [onlyLive, setOnlyLive] = useState(() => {
+    const anyLive = matches.some((m) => m.status === 'live')
+    const isMine = (m: DayMatch) => myClubId != null && (m.home.clubId === myClubId || m.away.clubId === myClubId)
+    if (myClubId == null || !matches.some(isMine)) return anyLive
+    return matches.some((m) => isMine(m) && m.status === 'live')
+  })
   const [query, setQuery] = useState('')
   const [openRow, setOpenRow] = useState<number | null>(null)
   // Reeksen die de supporter zelf dichtklapte — zo veegt hij weg wat hem niet boeit
