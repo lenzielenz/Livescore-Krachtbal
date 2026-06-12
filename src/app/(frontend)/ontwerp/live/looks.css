@@ -1,5 +1,5 @@
-/* Ontwerp-speeltuin "logo in de balk" — kleurrijke, high-end varianten met verzorgde ronde
-   clublogo-badges (TeamLogo). Clubkleuren komen binnen als --hc (thuis) en --ac (uit) op elke rij. */
+/* Ontwerp-speeltuin — variaties op de poster-look (variant 5) met een beter leesbare clubnaam.
+   Clubkleuren komen binnen als --hc (thuis) en --ac (uit) op elke rij. */
 
 .ll-intro { color: var(--dim); font-size: 0.92rem; line-height: 1.5; margin: 0 0 18px; max-width: 60ch; }
 .ll-lab { display: flex; flex-direction: column; gap: 24px; }
@@ -11,11 +11,8 @@
 }
 .ll-vdesc { flex-basis: 100%; font-size: 0.82rem; font-weight: 500; color: var(--dim); }
 .ll-cards { display: flex; flex-direction: column; gap: 8px; }
-
-/* Neutrale kaart-omhulling: afronding + clip; elke variant vult zelf de (kleurrijke) achtergrond. */
 .ll-card { position: relative; border-radius: 14px; border: 1px solid var(--line); overflow: hidden; }
 
-/* Gedeelde live-pill + statistiek. */
 .ll-livebadge {
   font-size: 0.6rem; font-weight: 900; letter-spacing: 0.06em;
   color: #fff; background: var(--pop); padding: 2px 7px; border-radius: 999px; white-space: nowrap;
@@ -24,73 +21,59 @@
 .ll-stats { display: inline-flex; gap: 6px; font-size: 0.64rem; color: rgba(255, 255, 255, 0.82); font-variant-numeric: tabular-nums; white-space: nowrap; text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5); }
 .ll-sep { opacity: 0.5; }
 
-/* Gedeelde rij-grid: [badge] [naam] [midden] [naam] [badge]. Namen krimpen netjes met ellipsis. */
-.d1-row, .d2-row, .d3-row, .d4-row, .d5-row {
+/* ── Gedeelde poster-rij ────────────────────────────────────────────────────── */
+.pw-row {
   position: relative; display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto minmax(0, 1fr) auto;
-  align-items: center; gap: 10px; min-height: 62px; overflow: hidden;
+  align-items: center; gap: 10px; min-height: 72px; padding: 13px 14px; overflow: hidden;
 }
-.d1-badge, .d2-badge, .d3-badge, .d4-badge, .d5-badge { display: inline-flex; }
-.d1-mid, .d2-mid, .d3-mid, .d4-mid, .d5-mid { position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; }
-.d1-name, .d2-name, .d3-name, .d5-name {
-  position: relative; min-width: 0; font-weight: 800; font-size: 1rem; color: #fff;
-  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.7); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.d1-name.away, .d2-name.away, .d3-name.away, .d4-name.away, .d5-name.away { text-align: right; }
-.d1-score, .d2-score, .d3-score, .d5-score {
-  font-weight: 900; font-size: 1.35rem; color: #fff; text-shadow: 0 1px 10px rgba(0, 0, 0, 0.6);
-  font-variant-numeric: tabular-nums; line-height: 1;
-}
-
-/* ── V1 — Kleurwaaier ──────────────────────────────────────────────────────── */
-.d1-row {
-  padding: 11px 14px;
-  background:
-    linear-gradient(90deg, color-mix(in srgb, var(--hc) 55%, transparent) 0%, transparent 34%, transparent 66%, color-mix(in srgb, var(--ac) 55%, transparent) 100%),
-    var(--panel);
-}
-
-/* ── V2 — Kleur-glow ───────────────────────────────────────────────────────── */
-.d2-row {
-  padding: 11px 14px;
-  background:
-    radial-gradient(60% 130% at 0% 50%, color-mix(in srgb, var(--hc) 44%, transparent), transparent 60%),
-    radial-gradient(60% 130% at 100% 50%, color-mix(in srgb, var(--ac) 44%, transparent), transparent 60%),
-    var(--panel);
-}
-.d2-badge { border-radius: 50%; }
-.d2-badge.home { box-shadow: 0 0 16px 1px color-mix(in srgb, var(--hc) 78%, transparent); }
-.d2-badge.away { box-shadow: 0 0 16px 1px color-mix(in srgb, var(--ac) 78%, transparent); }
-
-/* ── V3 — Diagonale banden ─────────────────────────────────────────────────── */
-.d3-row { padding: 11px 14px; min-height: 64px; background: var(--panel); }
-.d3-band { position: absolute; top: 0; bottom: 0; width: 50%; z-index: 0; pointer-events: none; }
-.d3-band.left { left: 0; background: linear-gradient(115deg, color-mix(in srgb, var(--hc) 88%, #000 14%), color-mix(in srgb, var(--hc) 30%, transparent)); clip-path: polygon(0 0, 100% 0, 72% 100%, 0 100%); }
-.d3-band.right { right: 0; background: linear-gradient(245deg, color-mix(in srgb, var(--ac) 88%, #000 14%), color-mix(in srgb, var(--ac) 30%, transparent)); clip-path: polygon(28% 0, 100% 0, 100% 100%, 0 100%); }
-.d3-badge { z-index: 1; }
-.d3-row .d3-name, .d3-row .d3-mid { z-index: 1; }
-
-/* ── V4 — Clean matchup ────────────────────────────────────────────────────── */
-.d4-row {
-  padding: 11px 14px;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--hc) 8%, var(--panel)), color-mix(in srgb, var(--ac) 8%, var(--panel)));
-}
-.d4-name { min-width: 0; font-weight: 800; font-size: 1rem; color: color-mix(in srgb, var(--c) 78%, white); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.d4-score { font-weight: 900; font-size: 1.32rem; color: var(--txt); font-variant-numeric: tabular-nums; line-height: 1; }
-.d4-mid .ll-stats { color: var(--dim); text-shadow: none; }
-
-/* ── V5 — Poster-wash ──────────────────────────────────────────────────────── */
-.d5-row {
-  padding: 13px 14px; min-height: 70px;
+/* Volle kleurwaas (A/B/C). */
+.pw-a, .pw-b, .pw-c {
   background:
     linear-gradient(100deg,
       color-mix(in srgb, var(--hc) 72%, #000 10%) 0%, color-mix(in srgb, var(--hc) 22%, transparent) 32%,
       transparent 50%, color-mix(in srgb, var(--ac) 22%, transparent) 68%, color-mix(in srgb, var(--ac) 72%, #000 10%) 100%),
     var(--panel);
 }
-.d5-wash { position: absolute; top: 0; bottom: 0; width: 40%; pointer-events: none; }
-.d5-wash.left { left: 0; background: radial-gradient(80% 120% at 0% 30%, color-mix(in srgb, var(--hc) 45%, transparent), transparent 70%); }
-.d5-wash.right { right: 0; background: radial-gradient(80% 120% at 100% 30%, color-mix(in srgb, var(--ac) 45%, transparent), transparent 70%); }
-.d5-badge { position: relative; z-index: 1; }
-.d5-name { font-weight: 900; font-size: 1.05rem; }
-.d5-score { font-size: 1.5rem; text-shadow: 0 2px 12px rgba(0, 0, 0, 0.6); }
+/* D: kleur enkel aan de randen, donker midden voor de namen. */
+.pw-d {
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--hc) 82%, #000 8%) 0%, transparent 27%, transparent 73%, color-mix(in srgb, var(--ac) 82%, #000 8%) 100%),
+    var(--panel);
+}
+.pw-wash { position: absolute; top: 0; bottom: 0; width: 38%; pointer-events: none; }
+.pw-wash.left { left: 0; background: radial-gradient(80% 120% at 0% 30%, color-mix(in srgb, var(--hc) 40%, transparent), transparent 70%); }
+.pw-wash.right { right: 0; background: radial-gradient(80% 120% at 100% 30%, color-mix(in srgb, var(--ac) 40%, transparent), transparent 70%); }
+
+.pw-badge { position: relative; z-index: 1; display: inline-flex; }
+.pw-mid { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.pw-score { font-weight: 900; font-size: 1.5rem; color: #fff; text-shadow: 0 2px 12px rgba(0, 0, 0, 0.6); font-variant-numeric: tabular-nums; line-height: 1; }
+
+.pw-name { position: relative; z-index: 1; min-width: 0; }
+.pw-name.home { text-align: left; }
+.pw-name.away { text-align: right; }
+.pw-name-in {
+  display: inline-block; max-width: 100%; box-sizing: border-box; vertical-align: middle;
+  font-weight: 900; font-size: 1.05rem; color: #fff;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.7);
+}
+
+/* A — donkere leesband achter de tekst. */
+.pw-a .pw-name-in { padding: 3px 9px; border-radius: 7px; background: rgba(6, 10, 16, 0.44); }
+
+/* B — matglazen plaatje (frosted). */
+.pw-b .pw-name-in {
+  padding: 4px 11px; border-radius: 9px; background: rgba(10, 14, 22, 0.42);
+  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+  border: 1px solid rgba(255, 255, 255, 0.14); box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+/* C — witte tekst met fijne donkere contour. */
+.pw-c .pw-name-in {
+  -webkit-text-stroke: 0.7px rgba(0, 0, 0, 0.6);
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
+}
+
+/* D — geen plaatje nodig: het naam-gebied is al donker. */
+.pw-d .pw-name-in { text-shadow: 0 1px 7px rgba(0, 0, 0, 0.75); }
