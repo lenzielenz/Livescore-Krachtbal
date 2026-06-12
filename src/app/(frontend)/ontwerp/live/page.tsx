@@ -50,12 +50,11 @@ export default async function OntwerpLivePage() {
       <SiteHeader active={null} />
       <div className="site">
         <h1 className="page-title">
-          <span className="brand">Poster · leesbaarheid</span> · ontwerp
+          <span className="brand">Naam &amp; logo</span> · ontwerp
         </h1>
         <p className="ll-intro">
-          Vier variaties op de poster-look (variant 5), telkens met een beter leesbare clubnaam: een
-          donkere leesband, een matglazen plaatje, contourtekst, of de kleur enkel aan de randen.
-          Bekijk ze op je gsm en zeg welke het best leest.
+          Vijf vernieuwde live-looks waarbij je de <strong>volledige clubnaam</strong> én het logo goed
+          ziet — geen afgekapte namen meer. Bekijk ze op je gsm en zeg welke we uitrollen.
         </p>
         {samples.length === 0 ? (
           <p className="empty">Geen wedstrijden gevonden om te tonen.</p>

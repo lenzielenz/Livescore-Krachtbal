@@ -1,79 +1,83 @@
-/* Ontwerp-speeltuin — variaties op de poster-look (variant 5) met een beter leesbare clubnaam.
-   Clubkleuren komen binnen als --hc (thuis) en --ac (uit) op elke rij. */
+/* Ontwerp-speeltuin — vernieuwde live-looks die de clubnaam VOLLEDIG tonen (geen afkapping meer)
+   én het logo groot. Clubkleuren: --hc/--ac op de kaart, of --c per regel. */
 
 .ll-intro { color: var(--dim); font-size: 0.92rem; line-height: 1.5; margin: 0 0 18px; max-width: 60ch; }
 .ll-lab { display: flex; flex-direction: column; gap: 24px; }
 .ll-vh { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 1.02rem; font-weight: 800; margin: 0 0 8px; }
-.ll-vbadge {
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 22px; height: 22px; border-radius: 6px;
-  background: var(--accent); color: #0a1424; font-weight: 900; font-size: 0.8rem;
-}
+.ll-vbadge { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 6px; background: var(--accent); color: #0a1424; font-weight: 900; font-size: 0.8rem; }
 .ll-vdesc { flex-basis: 100%; font-size: 0.82rem; font-weight: 500; color: var(--dim); }
 .ll-cards { display: flex; flex-direction: column; gap: 8px; }
 .ll-card { position: relative; border-radius: 14px; border: 1px solid var(--line); overflow: hidden; }
 
-.ll-livebadge {
-  font-size: 0.6rem; font-weight: 900; letter-spacing: 0.06em;
-  color: #fff; background: var(--pop); padding: 2px 7px; border-radius: 999px; white-space: nowrap;
-  box-shadow: 0 1px 8px color-mix(in srgb, var(--pop) 55%, transparent);
-}
-.ll-stats { display: inline-flex; gap: 6px; font-size: 0.64rem; color: rgba(255, 255, 255, 0.82); font-variant-numeric: tabular-nums; white-space: nowrap; text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5); }
+.ll-livebadge { font-size: 0.6rem; font-weight: 900; letter-spacing: 0.06em; color: #fff; background: var(--pop); padding: 2px 7px; border-radius: 999px; white-space: nowrap; box-shadow: 0 1px 8px color-mix(in srgb, var(--pop) 55%, transparent); }
+.ll-stats { display: inline-flex; gap: 6px; font-size: 0.66rem; color: var(--dim); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .ll-sep { opacity: 0.5; }
 
-/* ── Gedeelde poster-rij ────────────────────────────────────────────────────── */
-.pw-row {
-  position: relative; display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto minmax(0, 1fr) auto;
-  align-items: center; gap: 10px; min-height: 72px; padding: 13px 14px; overflow: hidden;
+/* ── 1 — Gestapeld ─────────────────────────────────────────────────────────── */
+.g1-card { padding: 9px 14px 11px; background: var(--panel); }
+.g1-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 7px; }
+.g1-line { display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; align-items: center; gap: 11px; padding: 3px 0; }
+.g1-name { min-width: 0; font-weight: 700; font-size: 1.02rem; color: var(--txt); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.g1-score { font-weight: 900; font-size: 1.4rem; color: var(--dim); font-variant-numeric: tabular-nums; line-height: 1; min-width: 1.1em; text-align: right; }
+.g1-score.win { color: var(--accent); }
+
+/* ── 2 — Gestapeld met clubkleur ───────────────────────────────────────────── */
+.g2-card { padding: 9px 14px 11px; background: var(--panel); }
+.g2-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 7px; }
+.g2-line {
+  display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; align-items: center; gap: 11px;
+  padding: 5px 8px 5px 9px; border-radius: 8px; border-left: 3px solid var(--c);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--c) 18%, transparent), transparent 46%);
 }
-/* Volle kleurwaas (A/B/C). */
-.pw-a, .pw-b, .pw-c {
+.g2-line + .g2-line { margin-top: 5px; }
+.g2-name { min-width: 0; font-weight: 700; font-size: 1.02rem; color: var(--txt); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.g2-score { font-weight: 900; font-size: 1.4rem; color: var(--dim); font-variant-numeric: tabular-nums; line-height: 1; min-width: 1.1em; text-align: right; }
+.g2-score.win { color: color-mix(in srgb, var(--c) 78%, white); }
+
+/* ── 3 — Poster-kop + namen eronder ────────────────────────────────────────── */
+.g3-card {
   background:
-    linear-gradient(100deg,
-      color-mix(in srgb, var(--hc) 72%, #000 10%) 0%, color-mix(in srgb, var(--hc) 22%, transparent) 32%,
-      transparent 50%, color-mix(in srgb, var(--ac) 22%, transparent) 68%, color-mix(in srgb, var(--ac) 72%, #000 10%) 100%),
+    linear-gradient(100deg, color-mix(in srgb, var(--hc) 66%, #000 10%) 0%, color-mix(in srgb, var(--hc) 20%, transparent) 34%, transparent 50%, color-mix(in srgb, var(--ac) 20%, transparent) 66%, color-mix(in srgb, var(--ac) 66%, #000 10%) 100%),
     var(--panel);
 }
-/* D: kleur enkel aan de randen, donker midden voor de namen. */
-.pw-d {
+.g3-head { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px; padding: 11px 14px 9px; }
+.g3-center { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.g3-score { font-weight: 900; font-size: 1.5rem; color: #fff; text-shadow: 0 2px 12px rgba(0, 0, 0, 0.55); font-variant-numeric: tabular-nums; line-height: 1; }
+.g3-center .ll-stats { color: rgba(255, 255, 255, 0.82); text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5); }
+.g3-names { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 8px 14px 11px; background: rgba(6, 9, 14, 0.5); }
+.g3-name { min-width: 0; font-weight: 800; font-size: 1rem; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.g3-name.away { text-align: right; }
+
+/* ── 4 — Tweekleurige panelen ──────────────────────────────────────────────── */
+.g4-card { background: var(--panel); }
+.g4-row {
+  display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; align-items: center; gap: 11px;
+  padding: 9px 14px;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--c) 62%, #000 8%) 0%, color-mix(in srgb, var(--c) 20%, transparent) 22%, transparent 44%);
+}
+.g4-row + .g4-row { border-top: 1px solid color-mix(in srgb, #fff 8%, transparent); }
+.g4-name { min-width: 0; font-weight: 800; font-size: 1.02rem; color: #fff; text-shadow: 0 1px 5px rgba(0, 0, 0, 0.6); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.g4-score { font-weight: 900; font-size: 1.4rem; color: #fff; text-shadow: 0 1px 6px rgba(0, 0, 0, 0.5); font-variant-numeric: tabular-nums; line-height: 1; min-width: 1.1em; text-align: right; }
+.g4-score.win { color: #fff; }
+.g4-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 7px 14px; background: rgba(6, 9, 14, 0.4); }
+
+/* ── 5 — Groot logo + naam eronder ─────────────────────────────────────────── */
+.g5-card {
+  position: relative; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px;
+  padding: 12px 12px 13px; min-height: 78px; overflow: hidden;
   background:
-    linear-gradient(90deg, color-mix(in srgb, var(--hc) 82%, #000 8%) 0%, transparent 27%, transparent 73%, color-mix(in srgb, var(--ac) 82%, #000 8%) 100%),
+    linear-gradient(100deg, color-mix(in srgb, var(--hc) 60%, #000 10%) 0%, color-mix(in srgb, var(--hc) 16%, transparent) 32%, transparent 50%, color-mix(in srgb, var(--ac) 16%, transparent) 68%, color-mix(in srgb, var(--ac) 60%, #000 10%) 100%),
     var(--panel);
 }
-.pw-wash { position: absolute; top: 0; bottom: 0; width: 38%; pointer-events: none; }
-.pw-wash.left { left: 0; background: radial-gradient(80% 120% at 0% 30%, color-mix(in srgb, var(--hc) 40%, transparent), transparent 70%); }
-.pw-wash.right { right: 0; background: radial-gradient(80% 120% at 100% 30%, color-mix(in srgb, var(--ac) 40%, transparent), transparent 70%); }
-
-.pw-badge { position: relative; z-index: 1; display: inline-flex; }
-.pw-mid { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; }
-.pw-score { font-weight: 900; font-size: 1.5rem; color: #fff; text-shadow: 0 2px 12px rgba(0, 0, 0, 0.6); font-variant-numeric: tabular-nums; line-height: 1; }
-
-.pw-name { position: relative; z-index: 1; min-width: 0; }
-.pw-name.home { text-align: left; }
-.pw-name.away { text-align: right; }
-.pw-name-in {
-  display: inline-block; max-width: 100%; box-sizing: border-box; vertical-align: middle;
-  font-weight: 900; font-size: 1.05rem; color: #fff;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+.g5-wash { position: absolute; top: 0; bottom: 0; width: 38%; pointer-events: none; }
+.g5-wash.left { left: 0; background: radial-gradient(80% 120% at 0% 26%, color-mix(in srgb, var(--hc) 38%, transparent), transparent 70%); }
+.g5-wash.right { right: 0; background: radial-gradient(80% 120% at 100% 26%, color-mix(in srgb, var(--ac) 38%, transparent), transparent 70%); }
+.g5-side { position: relative; z-index: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.g5-name {
+  max-width: 100%; font-weight: 800; font-size: 0.9rem; color: #fff; text-align: center; line-height: 1.15;
   text-shadow: 0 1px 6px rgba(0, 0, 0, 0.7);
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
-
-/* A — donkere leesband achter de tekst. */
-.pw-a .pw-name-in { padding: 3px 9px; border-radius: 7px; background: rgba(6, 10, 16, 0.44); }
-
-/* B — matglazen plaatje (frosted). */
-.pw-b .pw-name-in {
-  padding: 4px 11px; border-radius: 9px; background: rgba(10, 14, 22, 0.42);
-  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
-  border: 1px solid rgba(255, 255, 255, 0.14); box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-}
-
-/* C — witte tekst met fijne donkere contour. */
-.pw-c .pw-name-in {
-  -webkit-text-stroke: 0.7px rgba(0, 0, 0, 0.6);
-  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
-}
-
-/* D — geen plaatje nodig: het naam-gebied is al donker. */
-.pw-d .pw-name-in { text-shadow: 0 1px 7px rgba(0, 0, 0, 0.75); }
+.g5-mid { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.g5-score { font-weight: 900; font-size: 1.5rem; color: #fff; text-shadow: 0 2px 12px rgba(0, 0, 0, 0.6); font-variant-numeric: tabular-nums; line-height: 1; }
+.g5-mid .ll-stats { color: rgba(255, 255, 255, 0.82); text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5); }
