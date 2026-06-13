@@ -2044,3 +2044,178 @@ select.rang-picker {
 .an-share-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .an-share-dl { font: inherit; font-weight: 700; font-size: 0.9rem; padding: 10px 18px; border-radius: 12px; cursor: pointer; color: var(--ink); background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.16); }
 .an-share-dl:disabled { opacity: 0.6; cursor: default; }
+
+/* ── Aanvalspatronen (scouting): keten-flow, routes, voorbeeldaanval, tips ── */
+.ap { margin: 18px 0 8px; }
+.ap-h3 { font-size: 0.98rem; font-weight: 800; margin: 18px 0 10px; }
+
+/* Flow-rail: opzet → worpen → doelworp, kolom per kolom. */
+.ap-flow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+.ap-step {
+  position: relative;
+  flex: 1 1 130px;
+  min-width: 130px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 12px 10px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel-grad);
+  box-shadow: var(--card-shadow);
+}
+.ap-step-arrow {
+  position: absolute;
+  left: -10px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 1.2rem;
+  font-weight: 900;
+  color: color-mix(in srgb, var(--accent) 60%, var(--dim));
+  line-height: 1;
+}
+.ap-step-lbl { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--dim); font-weight: 700; }
+.ap-step-dom { font-size: 1.02rem; font-weight: 800; color: var(--txt); }
+.ap-step-cnt { font-size: 0.74rem; color: var(--dim); }
+.ap-step-setup .ap-split { display: flex; height: 10px; border-radius: 999px; overflow: hidden; background: rgba(255,255,255,0.06); }
+.ap-split-seg.own { background: var(--accent); }
+.ap-split-seg.opp { background: color-mix(in srgb, #4cc9f0 70%, transparent); }
+
+/* Mini zone-balkjes (links/midden/rechts) per worpkolom. */
+.ap-zbars { display: flex; align-items: flex-end; gap: 6px; height: 42px; }
+.ap-zbar { display: flex; flex-direction: column; align-items: center; gap: 3px; flex: 1; height: 100%; }
+.ap-zbar-track { position: relative; width: 100%; flex: 1; display: flex; align-items: flex-end; background: rgba(255,255,255,0.05); border-radius: 4px 4px 0 0; overflow: hidden; }
+.ap-zbar-fill { width: 100%; background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 90%, white), var(--accent)); border-radius: 4px 4px 0 0; min-height: 2px; }
+.ap-zbar-lbl { font-size: 0.62rem; color: var(--dim); font-weight: 700; }
+
+/* Terugkerende routes. */
+.ap-routes { display: flex; flex-direction: column; gap: 8px; }
+.ap-route {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+  flex-wrap: wrap;
+}
+.ap-route-rank {
+  flex: none;
+  width: 26px; height: 26px;
+  display: grid; place-items: center;
+  border-radius: 999px;
+  background: var(--accent); color: #06140d;
+  font-weight: 900; font-size: 0.84rem;
+}
+.ap-route-path { flex: 1 1 220px; font-size: 0.92rem; font-weight: 600; color: var(--txt); display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.ap-route-setup { font-weight: 800; color: var(--accent); }
+.ap-route-chev { color: var(--dim); }
+.ap-route-goal { font-weight: 800; color: #06d6a0; }
+.ap-route-stats { font-size: 0.84rem; color: var(--dim); white-space: nowrap; }
+.ap-route-stats strong { color: var(--txt); }
+
+/* Voorbeeldaanval + tips naast elkaar. */
+.ap-grid { display: grid; grid-template-columns: minmax(0, 320px) 1fr; gap: 16px; align-items: start; margin-top: 6px; }
+.ap-example { display: flex; flex-direction: column; gap: 8px; }
+.ap-steplist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.ap-stepline { display: flex; align-items: center; gap: 9px; font-size: 0.86rem; color: var(--txt); }
+.ap-stepdot { flex: none; width: 11px; height: 11px; border-radius: 999px; box-shadow: 0 0 0 2px rgba(0,0,0,0.25); }
+.ap-stepline-goal { font-weight: 600; }
+
+.ap-tips-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.ap-tips-list li {
+  position: relative;
+  padding: 12px 14px 12px 40px;
+  border: 1px solid color-mix(in srgb, var(--accent) 26%, var(--line));
+  border-radius: 12px;
+  background:
+    radial-gradient(120% 160% at 0% 0%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 60%),
+    var(--panel);
+  font-size: 0.9rem;
+  line-height: 1.4;
+  color: var(--txt);
+}
+.ap-tips-list li::before {
+  content: "🛡️";
+  position: absolute;
+  left: 12px; top: 11px;
+  font-size: 0.95rem;
+}
+
+@media (max-width: 760px) {
+  .ap-grid { grid-template-columns: 1fr; }
+  .ap-step-arrow { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ap-step { animation: none; }
+}
+
+/* ── Matchplan-dossier (scouting-TL;DR, hero bovenaan het ploegrapport) ── */
+.mp {
+  margin: 8px 0 22px;
+  padding: 20px;
+  border: 1px solid color-mix(in srgb, var(--accent) 34%, var(--line));
+  border-radius: 18px;
+  background:
+    radial-gradient(120% 150% at 0% 0%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 58%),
+    var(--panel-grad);
+  box-shadow: var(--card-shadow);
+}
+.mp-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.mp-kicker { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 800; color: var(--accent); }
+.mp-title { margin: 2px 0 0; font-size: 1.5rem; font-weight: 900; letter-spacing: -0.01em; }
+.mp-print {
+  flex: none;
+  font: inherit; font-size: 0.82rem; font-weight: 700;
+  padding: 8px 14px; border-radius: 999px; cursor: pointer;
+  color: var(--txt); background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+}
+.mp-print:hover { border-color: color-mix(in srgb, var(--accent) 50%, var(--line)); }
+.mp-headline { margin: 12px 0 0; font-size: 1.06rem; font-weight: 700; line-height: 1.4; color: var(--txt); max-width: 70ch; }
+.mp-tags { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 12px; }
+.mp-tag { font-size: 0.74rem; font-weight: 700; padding: 4px 10px; border-radius: 999px; background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent); }
+.mp-conf { font-size: 0.74rem; color: var(--dim); margin-left: 2px; }
+
+.mp-cols { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 16px; }
+.mp-col { padding: 14px; border-radius: 14px; border: 1px solid var(--line); background: var(--panel); border-top: 3px solid var(--accent); }
+.mp-col-watch { border-top-color: #ef476f; }
+.mp-col-defend { border-top-color: #4cc9f0; }
+.mp-col-attack { border-top-color: #06d6a0; }
+.mp-col-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px; margin: 0 0 10px; font-size: 0.98rem; font-weight: 800; }
+.mp-col-hint { font-size: 0.72rem; font-weight: 600; color: var(--dim); }
+.mp-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.mp-list li { display: flex; flex-direction: column; gap: 2px; }
+.mp-item-title { font-size: 0.9rem; font-weight: 700; color: var(--txt); }
+.mp-item-detail { font-size: 0.82rem; line-height: 1.4; color: var(--dim); }
+
+.mp-keys { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
+.mp-keys-lbl { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 800; color: var(--dim); }
+.mp-key { display: inline-flex; align-items: center; gap: 7px; font-size: 0.88rem; font-weight: 600; color: var(--txt); }
+.mp-key-n { display: grid; place-items: center; width: 20px; height: 20px; border-radius: 999px; background: var(--accent); color: #06140d; font-size: 0.74rem; font-weight: 900; }
+
+@media (max-width: 760px) {
+  .mp-cols { grid-template-columns: 1fr; }
+  .mp-title { font-size: 1.25rem; }
+}
+
+/* Print: enkel het matchplan op papier — de rest van de pagina valt weg. */
+@media print {
+  body * { visibility: hidden !important; }
+  #matchplan, #matchplan * { visibility: visible !important; }
+  #matchplan {
+    position: absolute; left: 0; top: 0; width: 100%;
+    margin: 0; border: none; box-shadow: none;
+    background: #fff; color: #000;
+  }
+  #matchplan .mp-print { display: none !important; }
+  #matchplan .mp-title, #matchplan .mp-headline, #matchplan .mp-item-title { color: #000 !important; }
+  #matchplan .mp-item-detail, #matchplan .mp-conf, #matchplan .mp-col-hint { color: #333 !important; }
+  #matchplan .mp-col { border: 1px solid #ccc; background: #fff; }
+}

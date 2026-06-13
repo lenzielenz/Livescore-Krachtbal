@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
+import { clearNavAuth } from '@/lib/nav-auth-cache'
 import { QrCode } from '../../cast/QrCode'
 
 type Delegation = { qr: string; validUntil: string }
@@ -42,6 +43,7 @@ export function RefereePortal({ naam, qrValue, code }: { naam: string; qrValue: 
 
   const logout = async () => {
     await fetch('/api/users/logout', { method: 'POST', credentials: 'include' }).catch(() => {})
+    clearNavAuth()
     router.refresh()
   }
 

@@ -4,6 +4,8 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
+import { clearNavAuth } from '@/lib/nav-auth-cache'
+
 // Supporter-registratie: maakt een account (rol 'viewer') en logt meteen in.
 export function RegisterForm({ clubs }: { clubs: { id: number; name: string }[] }) {
   const router = useRouter()
@@ -39,6 +41,8 @@ export function RegisterForm({ clubs }: { clubs: { id: number; name: string }[] 
       })
       setDone(true)
       if (login.ok) {
+        // Verse rol-staat afdwingen zodat de navigatie meteen de juiste menu-items toont.
+        clearNavAuth()
         router.refresh()
         router.push('/')
       }

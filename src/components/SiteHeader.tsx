@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 
 import { WeatherWidget } from '@/components/WeatherWidget'
 import { canAnalyse as canAnalyseUser } from '@/lib/access'
+import { clearNavAuth, readNavAuth, writeNavAuth } from '@/lib/nav-auth-cache'
 import { PROFILES } from '@/lib/profiles'
 import './site-header.css'
 
@@ -44,6 +45,15 @@ export function SiteHeader({ active = null }: { active?: NavSection }) {
   const [canTraining, setCanTraining] = useState(false)
   const [loggedIn, setLoggedIn] = useState(false)
   useEffect(() => {
+    // Schilder meteen vanuit de cache (geen flikkering), en haal enkel verse staat op
+    // wanneer de cache ontbreekt of verlopen is — dat spaart een netwerkronde per navigatie.
+    const cached = readNavAuth()
+    if (cached) {
+      setLoggedIn(cached.state.loggedIn)
+      setCanAnalyse(cached.state.canAnalyse)
+      setCanTraining(cached.state.canTraining)
+    }
+    if (cached?.fresh) return
     fetch('/api/users/me', { credentials: 'include' })
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
@@ -52,11 +62,17 @@ export function SiteHeader({ active = null }: { active?: NavSection }) {
         const has = (r: string) => Array.isArray(roles) && roles.includes(r)
         const fed = has('admin') || has('federatie')
         const club = has('club-beheerder')
-        setLoggedIn(Boolean(u))
         // Dezelfde regel als canAnalyse in lib/access: admin, eigen analyse-toegang, of iemand
         // die zijn analyses met dit account deelt (anders vindt de gedeelde persoon het menu niet).
-        setCanAnalyse(canAnalyseUser(u))
-        setCanTraining(fed || club || Boolean(u?.trainingAccess))
+        const state = {
+          loggedIn: Boolean(u),
+          canAnalyse: canAnalyseUser(u),
+          canTraining: fed || club || Boolean(u?.trainingAccess),
+        }
+        setLoggedIn(state.loggedIn)
+        setCanAnalyse(state.canAnalyse)
+        setCanTraining(state.canTraining)
+        writeNavAuth(state)
       })
       .catch(() => {})
   }, [])
@@ -66,6 +82,7 @@ export function SiteHeader({ active = null }: { active?: NavSection }) {
     } catch {
       /* sessie verloopt sowieso server-side */
     }
+    clearNavAuth()
     window.location.href = '/'
   }
   const menuActive = active !== null && MENU_SECTIONS.includes(active)
