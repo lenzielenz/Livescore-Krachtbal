@@ -34,6 +34,11 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
           <h1>
             <span className="brand">Krachtbal</span> Live
           </h1>
+          {/* Altijd zichtbare oriëntatie voor nieuwkomers — i.p.v. verstopt onder "Meer".
+              Zo weet elke bezoeker meteen waar hij uitleg over het platform vindt. */}
+          <Link href="/uitleg" className="home-intro-link">
+            ❓ Zo werkt het
+          </Link>
         </div>
         {/* Roterende quote — feit, wist-je-datje of een gekke oneliner. */}
         <p className="home-quote">{quote}</p>

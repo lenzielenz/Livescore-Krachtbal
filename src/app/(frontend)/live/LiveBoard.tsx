@@ -159,6 +159,22 @@ export function LiveBoard({
 
   const visible = base.filter((m) => !reeksFilter || m.reeks === reeksFilter)
 
+  // Staat er een filter aan? Dan is een lege lijst gevolg van de keuze van de supporter —
+  // we bieden één knop om alles weer vrij te geven i.p.v. een doodlopend zinnetje.
+  const anyFilterActive =
+    Boolean(query.trim()) || showLiveOnly || onlyFavTeams || onlyFavClubs || onlyMyClub || reeksFilter != null
+  const clearFilters = () => {
+    setQuery('')
+    setOnlyLive(false)
+    setOnlyFavTeams(false)
+    setOnlyFavClubs(false)
+    setOnlyMyClub(false)
+    setReeksFilter(null)
+  }
+  // Een dag zónder wedstrijden is iets anders dan te strenge filters: dan helpt wissen niet,
+  // en sturen we de bezoeker naar een andere dag of de rest van het platform.
+  const dayEmpty = matches.length === 0
+
   const groups = useMemo(() => {
     const map = new Map<string, DayMatch[]>()
     for (const m of visible) {
@@ -277,7 +293,35 @@ export function LiveBoard({
         </div>
 
         {groups.length === 0 ? (
-          <p className="lb-empty">Geen wedstrijden{emptyReason} op deze dag.</p>
+          <div className="lb-empty">
+            {!dayEmpty && anyFilterActive ? (
+              <>
+                <p className="lb-empty-title">Niets gevonden{emptyReason}.</p>
+                <p className="lb-empty-sub">Pas je filters aan of toon weer alle wedstrijden van deze dag.</p>
+                <div className="lb-empty-actions">
+                  <button type="button" className="lb-empty-btn primary" onClick={clearFilters}>
+                    ↺ Wis filters
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="lb-empty-title">Geen wedstrijden op {date === today ? 'vandaag' : 'deze dag'}.</p>
+                <p className="lb-empty-sub">Spring naar een andere dag of ontdek de rest van het platform.</p>
+                <div className="lb-empty-actions">
+                  <Link href={`/?date=${shiftDate(date, 1)}`} className="lb-empty-btn primary">
+                    Volgende dag ›
+                  </Link>
+                  <Link href="/rangschikking" className="lb-empty-btn">
+                    📊 Bekijk de stand
+                  </Link>
+                  <Link href="/demo" className="lb-empty-btn">
+                    🎓 Probeer de demo
+                  </Link>
+                </div>
+              </>
+            )}
+          </div>
         ) : (
           groups.map(([reeks, list]) => {
             const isCollapsed = collapsed.has(reeks)
