@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { SiteHeader } from '@/components/SiteHeader'
 import { canAnalyse } from '@/lib/access'
 import { analyseOwnWhere } from '@/lib/analyse-access'
+import { buildAttackPatterns } from '@/lib/attack-patterns'
 import { getSelectedSeason, reeksenMetData } from '@/lib/analyse-season'
 import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
@@ -11,6 +12,7 @@ import { resolveCompetitieReeks } from '@/lib/reeksen'
 import { buildTeamReport } from '@/lib/team-report'
 import { BandChart } from '@/components/analytics/BandChart'
 import { AnalyseNav } from '../AnalyseNav'
+import { AanvalsPatronen } from './AanvalsPatronen'
 import { PloegPicker } from './PloegPicker'
 import { SpeelstijlPanel } from './SpeelstijlPanel'
 import { DangerPlayers } from './DangerPlayers'
@@ -62,11 +64,13 @@ export default async function PloegRapportPage({ searchParams }: { searchParams:
   let danger: Awaited<ReturnType<typeof buildTeamDanger>> | null = null
   let dangerConceded: Awaited<ReturnType<typeof buildTeamDanger>> | null = null
   let defenders: Awaited<ReturnType<typeof buildTeamDefense>> = []
+  let patterns: Awaited<ReturnType<typeof buildAttackPatterns>> | null = null
   if (teamId != null && report && report.matchesAnalyzed > 0) {
-    ;[danger, dangerConceded, defenders] = await Promise.all([
+    ;[danger, dangerConceded, defenders, patterns] = await Promise.all([
       buildTeamDanger(payload, teamId, reeks, seizoen, analyseOwnWhere(me)),
       buildTeamDanger(payload, teamId, reeks, seizoen, analyseOwnWhere(me), { conceded: true }),
       buildTeamDefense(payload, teamId, reeks, seizoen, analyseOwnWhere(me)),
+      buildAttackPatterns(payload, teamId, seizoen, analyseOwnWhere(me)),
     ])
   }
   const zTot = report ? report.zones.links + report.zones.midden + report.zones.rechts : 0
@@ -170,6 +174,8 @@ export default async function PloegRapportPage({ searchParams }: { searchParams:
                 </ul>
               </section>
             )}
+
+            {patterns && <AanvalsPatronen data={patterns} teamName={report.teamName} />}
 
             <div className="rep-cards">
               <div className="rep-card"><span className="rep-num">{report.matchesAnalyzed}</span><span className="rep-lbl">Wedstrijden</span></div>

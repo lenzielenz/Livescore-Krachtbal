@@ -2044,3 +2044,114 @@ select.rang-picker {
 .an-share-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .an-share-dl { font: inherit; font-weight: 700; font-size: 0.9rem; padding: 10px 18px; border-radius: 12px; cursor: pointer; color: var(--ink); background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.16); }
 .an-share-dl:disabled { opacity: 0.6; cursor: default; }
+
+/* ── Aanvalspatronen (scouting): keten-flow, routes, voorbeeldaanval, tips ── */
+.ap { margin: 18px 0 8px; }
+.ap-h3 { font-size: 0.98rem; font-weight: 800; margin: 18px 0 10px; }
+
+/* Flow-rail: opzet → worpen → doelworp, kolom per kolom. */
+.ap-flow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+.ap-step {
+  position: relative;
+  flex: 1 1 130px;
+  min-width: 130px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 12px 10px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel-grad);
+  box-shadow: var(--card-shadow);
+}
+.ap-step-arrow {
+  position: absolute;
+  left: -10px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 1.2rem;
+  font-weight: 900;
+  color: color-mix(in srgb, var(--accent) 60%, var(--dim));
+  line-height: 1;
+}
+.ap-step-lbl { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--dim); font-weight: 700; }
+.ap-step-dom { font-size: 1.02rem; font-weight: 800; color: var(--txt); }
+.ap-step-cnt { font-size: 0.74rem; color: var(--dim); }
+.ap-step-setup .ap-split { display: flex; height: 10px; border-radius: 999px; overflow: hidden; background: rgba(255,255,255,0.06); }
+.ap-split-seg.own { background: var(--accent); }
+.ap-split-seg.opp { background: color-mix(in srgb, #4cc9f0 70%, transparent); }
+
+/* Mini zone-balkjes (links/midden/rechts) per worpkolom. */
+.ap-zbars { display: flex; align-items: flex-end; gap: 6px; height: 42px; }
+.ap-zbar { display: flex; flex-direction: column; align-items: center; gap: 3px; flex: 1; height: 100%; }
+.ap-zbar-track { position: relative; width: 100%; flex: 1; display: flex; align-items: flex-end; background: rgba(255,255,255,0.05); border-radius: 4px 4px 0 0; overflow: hidden; }
+.ap-zbar-fill { width: 100%; background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 90%, white), var(--accent)); border-radius: 4px 4px 0 0; min-height: 2px; }
+.ap-zbar-lbl { font-size: 0.62rem; color: var(--dim); font-weight: 700; }
+
+/* Terugkerende routes. */
+.ap-routes { display: flex; flex-direction: column; gap: 8px; }
+.ap-route {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+  flex-wrap: wrap;
+}
+.ap-route-rank {
+  flex: none;
+  width: 26px; height: 26px;
+  display: grid; place-items: center;
+  border-radius: 999px;
+  background: var(--accent); color: #06140d;
+  font-weight: 900; font-size: 0.84rem;
+}
+.ap-route-path { flex: 1 1 220px; font-size: 0.92rem; font-weight: 600; color: var(--txt); display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.ap-route-setup { font-weight: 800; color: var(--accent); }
+.ap-route-chev { color: var(--dim); }
+.ap-route-goal { font-weight: 800; color: #06d6a0; }
+.ap-route-stats { font-size: 0.84rem; color: var(--dim); white-space: nowrap; }
+.ap-route-stats strong { color: var(--txt); }
+
+/* Voorbeeldaanval + tips naast elkaar. */
+.ap-grid { display: grid; grid-template-columns: minmax(0, 320px) 1fr; gap: 16px; align-items: start; margin-top: 6px; }
+.ap-example { display: flex; flex-direction: column; gap: 8px; }
+.ap-steplist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.ap-stepline { display: flex; align-items: center; gap: 9px; font-size: 0.86rem; color: var(--txt); }
+.ap-stepdot { flex: none; width: 11px; height: 11px; border-radius: 999px; box-shadow: 0 0 0 2px rgba(0,0,0,0.25); }
+.ap-stepline-goal { font-weight: 600; }
+
+.ap-tips-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.ap-tips-list li {
+  position: relative;
+  padding: 12px 14px 12px 40px;
+  border: 1px solid color-mix(in srgb, var(--accent) 26%, var(--line));
+  border-radius: 12px;
+  background:
+    radial-gradient(120% 160% at 0% 0%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 60%),
+    var(--panel);
+  font-size: 0.9rem;
+  line-height: 1.4;
+  color: var(--txt);
+}
+.ap-tips-list li::before {
+  content: "🛡️";
+  position: absolute;
+  left: 12px; top: 11px;
+  font-size: 0.95rem;
+}
+
+@media (max-width: 760px) {
+  .ap-grid { grid-template-columns: 1fr; }
+  .ap-step-arrow { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ap-step { animation: none; }
+}
