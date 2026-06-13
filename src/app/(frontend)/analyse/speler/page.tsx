@@ -7,12 +7,12 @@ import { getSelectedSeason, reeksenMetData } from '@/lib/analyse-season'
 import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
 import { BandChart } from '@/components/analytics/BandChart'
-import { Sparkline } from '@/components/analytics/Sparkline'
 import { buildPlayerDanger } from '@/lib/player-danger'
 import { reeksNaam, resolveCompetitieReeks } from '@/lib/reeksen'
 import { buildSeasonStats } from '@/lib/season-stats'
 import { AnalyseNav } from '../AnalyseNav'
 import { GevaarMap } from '../gevaar/GevaarMap'
+import { TeamForm } from '../ploeg/TeamForm'
 import { DossierPicker } from './DossierPicker'
 import '../analyse.css'
 
@@ -125,10 +125,7 @@ export default async function SpelerDossierPage({ searchParams }: { searchParams
             </div>
 
             {p.trend.length >= 2 && (
-              <div className="an-chart">
-                <h3 className="an-chart-title">Vorm <span className="an-chart-hint">punten per wedstrijd</span></h3>
-                <Sparkline values={p.trend.map((t) => t.points)} width={280} height={60} ariaLabel="Vorm per wedstrijd" />
-              </div>
+              <TeamForm form={p.trend.map((t) => ({ date: t.date, points: t.points, conversion: t.conversion }))} />
             )}
 
             <h2 className="an-sub" style={{ marginTop: 18 }}>🔥 Gevaarzone</h2>

@@ -2264,3 +2264,62 @@ select.rang-picker {
 .tf-legend i { display: inline-block; width: 11px; height: 11px; border-radius: 3px; vertical-align: -1px; margin-right: 5px; }
 .tf-note { margin-left: auto; }
 .tf .an-chart-title { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+/* ── Head-to-Head (matchup wij ↔ tegenstander) ── */
+.h2h { margin: 18px 0 8px; }
+.h2h-verdict { display: flex; align-items: center; gap: 12px; margin-top: 4px; }
+.h2h-verdict-team { font-size: 0.86rem; font-weight: 800; white-space: nowrap; max-width: 32%; overflow: hidden; text-overflow: ellipsis; }
+.h2h-verdict-team.ours { color: var(--accent); text-align: right; flex: 1; }
+.h2h-verdict-team.opp { color: #ff924c; flex: 1; }
+.h2h-meter { position: relative; flex: 0 0 46%; height: 10px; border-radius: 999px; background: rgba(255,255,255,0.07); overflow: hidden; }
+.h2h-meter-mid { position: absolute; left: 50%; top: -2px; bottom: -2px; width: 2px; background: rgba(255,255,255,0.3); transform: translateX(-50%); }
+.h2h-meter-fill { position: absolute; top: 0; bottom: 0; }
+.h2h-meter-fill.ours { background: linear-gradient(90deg, transparent, var(--accent)); border-radius: 999px 0 0 999px; }
+.h2h-meter-fill.opp { background: linear-gradient(90deg, #ff924c, transparent); border-radius: 0 999px 999px 0; }
+.h2h-verdict-lbl { text-align: center; font-size: 0.92rem; font-weight: 800; margin: 6px 0 12px; color: var(--txt); }
+
+.h2h-grid { display: grid; grid-template-columns: minmax(0, 340px) 1fr; gap: 18px; align-items: center; }
+.h2h-radar svg { width: 100%; height: auto; display: block; }
+.h2h-axis { font-size: 11px; font-weight: 700; fill: var(--dim); }
+.h2h-legend { display: flex; justify-content: center; gap: 16px; font-size: 0.8rem; color: var(--dim); margin-top: 2px; }
+.h2h-legend i { display: inline-block; width: 11px; height: 11px; border-radius: 3px; vertical-align: -1px; margin-right: 5px; }
+
+.h2h-bars { display: flex; flex-direction: column; gap: 9px; }
+.h2h-row { display: grid; grid-template-columns: 30px 1fr auto 1fr 30px; align-items: center; gap: 6px; }
+.h2h-num { font-size: 0.84rem; font-weight: 700; color: var(--dim); font-variant-numeric: tabular-nums; }
+.h2h-num.ours { text-align: right; }
+.h2h-num.win { color: var(--txt); font-weight: 900; }
+.h2h-track { height: 9px; border-radius: 999px; background: rgba(255,255,255,0.05); overflow: hidden; display: flex; }
+.h2h-track.left { justify-content: flex-end; }
+.h2h-fill { height: 100%; border-radius: 999px; }
+.h2h-fill.ours { background: var(--accent); }
+.h2h-fill.opp { background: #ff924c; }
+.h2h-axislbl { font-size: 0.74rem; font-weight: 700; color: var(--txt); text-align: center; white-space: nowrap; padding: 0 4px; }
+
+.h2h-edges { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
+.h2h-edge { display: flex; gap: 11px; padding: 13px 15px; border-radius: 14px; border: 1px solid var(--line); background: var(--panel); border-left: 4px solid var(--accent); }
+.h2h-edge.exploit { border-left-color: var(--accent); }
+.h2h-edge.danger { border-left-color: #ff924c; }
+.h2h-edge.even { border-left-color: var(--dim); }
+.h2h-edge-ico { font-size: 1.3rem; line-height: 1; }
+.h2h-edge-body { display: flex; flex-direction: column; gap: 3px; }
+.h2h-edge-lbl { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 800; color: var(--dim); }
+.h2h-edge-txt { font-size: 0.88rem; line-height: 1.4; color: var(--txt); }
+
+@media (max-width: 760px) {
+  .h2h-grid { grid-template-columns: 1fr; }
+  .h2h-edges { grid-template-columns: 1fr; }
+}
+
+/* ── Trainingsfocus (werkpunten → trainingsveld) ── */
+.tfoc { margin: 18px 0 8px; }
+.tfoc-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; }
+.tfoc-card { padding: 14px; border: 1px solid var(--line); border-radius: 14px; background: var(--panel-grad); border-top: 3px solid var(--accent); }
+.tfoc-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+.tfoc-title { font-size: 0.96rem; font-weight: 800; color: var(--txt); }
+.tfoc-metric { flex: none; font-size: 0.68rem; font-weight: 800; padding: 3px 8px; border-radius: 999px; background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); white-space: nowrap; }
+.tfoc-why { margin: 0 0 8px; font-size: 0.82rem; color: var(--dim); line-height: 1.4; }
+.tfoc-drill { margin: 0; font-size: 0.86rem; color: var(--txt); line-height: 1.4; }
+.tfoc-drill span { color: var(--accent); font-weight: 900; }
+.tfoc-cta { display: inline-block; margin-top: 12px; font-size: 0.88rem; font-weight: 700; color: var(--accent); text-decoration: none; }
+.tfoc-cta:hover { text-decoration: underline; }
