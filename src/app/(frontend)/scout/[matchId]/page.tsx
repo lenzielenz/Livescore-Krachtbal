@@ -4,12 +4,15 @@ import { MatchDayNav } from '@/components/MatchDayNav'
 import { SiteHeader } from '@/components/SiteHeader'
 import { canAnalyse, userClubId } from '@/lib/access'
 import { getSelectedSeason } from '@/lib/analyse-season'
+import { PrintButton } from '@/components/PrintButton'
 import { buildAttackPatterns } from '@/lib/attack-patterns'
 import { getAuthUser } from '@/lib/auth-user'
+import { buildExpectedPoints } from '@/lib/expected-points'
 import { buildGamePlan } from '@/lib/gameplan'
 import { buildMatchup } from '@/lib/matchup'
 import { getPayloadClient } from '@/lib/payload-client'
 import { reeksNaam } from '@/lib/reeksen'
+import { teamEfficiency } from '@/lib/team-efficiency'
 import { buildTeamReport } from '@/lib/team-report'
 import { AanvalsPatronen } from '../../analyse/ploeg/AanvalsPatronen'
 import { HeadToHead } from '../../analyse/ploeg/HeadToHead'
@@ -97,10 +100,11 @@ export default async function ScoutPage({
   const seizoen = await getSelectedSeason()
   // Enkel echte competitiewedstrijden (geen privé-analysematches).
   const compFilter = { analyseOnly: { not_equals: true } } as const
-  const [report, patterns, ourReport] = await Promise.all([
+  const [report, patterns, ourReport, xp] = await Promise.all([
     buildTeamReport(payload, opponentId, seizoen, compFilter),
     buildAttackPatterns(payload, opponentId, seizoen, compFilter),
     buildTeamReport(payload, ourId, seizoen, compFilter),
+    reeks ? buildExpectedPoints(payload, reeks, seizoen, compFilter).catch(() => null) : Promise.resolve(null),
   ])
 
   // Head-to-Head kan enkel met een profiel voor BEIDE ploegen.
@@ -111,6 +115,10 @@ export default async function ScoutPage({
           { name: opponentName, radar: report.profile.radar },
         )
       : null
+  // xP-laag: verdiende vs. echte punten van beide ploegen (zelfde reeks).
+  const efficiency = xp
+    ? { ours: teamEfficiency(xp.players, ourId), opp: teamEfficiency(xp.players, opponentId) }
+    : undefined
 
   const SideToggle = (
     <div className="scout-toggle" role="tablist" aria-label="Welke ploeg scouten">
@@ -125,14 +133,19 @@ export default async function ScoutPage({
 
   return shell(
     <>
-      <h1 className="page-title">
-        Scout <span className="brand">·</span> {homeName} – {awayName}
-      </h1>
+      <div className="scout-head">
+        <h1 className="page-title">
+          Scout <span className="brand">·</span> {homeName} – {awayName}
+        </h1>
+        {report != null && report.matchesAnalyzed > 0 && (
+          <PrintButton mode="dossier" label="🖨️ Print dossier" className="mp-print" />
+        )}
+      </div>
       <MatchDayNav matchId={matchId} current="scout" canScout />
       <p className="wb-intro">
-        Ken je tegenstander vóór de aftrap. Hieronder het <strong>matchplan</strong> en de{' '}
-        <strong>aanvalspatronen</strong> van {opponentName}, opgebouwd uit hun afgelopen wedstrijden
-        {reeks ? ` in ${reeksNaam(reeks)}` : ''}. Jij speelt met {ourName}.
+        Ken je tegenstander vóór de aftrap. Hieronder het <strong>matchplan</strong>, de{' '}
+        <strong>head-to-head</strong> en de <strong>aanvalspatronen</strong> van {opponentName},
+        opgebouwd uit hun afgelopen wedstrijden{reeks ? ` in ${reeksNaam(reeks)}` : ''}. Jij speelt met {ourName}.
       </p>
 
       {SideToggle}
@@ -140,11 +153,11 @@ export default async function ScoutPage({
       {report == null || report.matchesAnalyzed === 0 ? (
         <p className="empty">Nog geen wedstrijddata van {opponentName} om te scouten.</p>
       ) : (
-        <>
+        <div id="scout-dossier">
           <MatchPlan plan={buildGamePlan(report, patterns)} />
-          {matchup && <HeadToHead matchup={matchup} />}
+          {matchup && <HeadToHead matchup={matchup} efficiency={efficiency} />}
           <AanvalsPatronen data={patterns} teamName={opponentName} />
-        </>
+        </div>
       )}
     </>,
   )

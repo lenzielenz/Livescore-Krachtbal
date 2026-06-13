@@ -1,5 +1,6 @@
 'use client'
 
+import { PrintButton } from '@/components/PrintButton'
 import type { GamePlan } from '@/lib/gameplan'
 import { MatchPlanShare } from './MatchPlanShare'
 
@@ -25,9 +26,7 @@ export function MatchPlan({ plan }: { plan: GamePlan }) {
           <h2 className="mp-title">tegen {plan.opponent}</h2>
         </div>
         <div className="mp-actions">
-          <button type="button" className="mp-print" onClick={() => window.print()}>
-            🖨️ Print
-          </button>
+          <PrintButton mode="plan" label="🖨️ Print" />
           <MatchPlanShare plan={plan} />
         </div>
       </div>

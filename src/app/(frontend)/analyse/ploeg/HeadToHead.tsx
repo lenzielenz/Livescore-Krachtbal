@@ -1,4 +1,5 @@
 import type { Matchup } from '@/lib/matchup'
+import { efficiencyLabel, type TeamEfficiency } from '@/lib/team-efficiency'
 
 // Head-to-Head: het DNA-profiel van twee ploegen over elkaar. Dual-radar + per-as divergerende
 // vergelijking + een verdict-meter, en de scherpe conclusie: jullie troef ↔ het gevaar.
@@ -32,7 +33,13 @@ function poly(values: number[], n: number): string {
     .join(' ')
 }
 
-export function HeadToHead({ matchup }: { matchup: Matchup }) {
+export function HeadToHead({
+  matchup,
+  efficiency,
+}: {
+  matchup: Matchup
+  efficiency?: { ours: TeamEfficiency; opp: TeamEfficiency }
+}) {
   const { axes, ourName, oppName, verdict, edgeScore, exploit, danger, tips } = matchup
   if (axes.length === 0) return null
   const n = axes.length
@@ -63,6 +70,26 @@ export function HeadToHead({ matchup }: { matchup: Matchup }) {
         <span className="h2h-verdict-team opp">{oppName}</span>
       </div>
       <p className="h2h-verdict-lbl">{verdict.label}{verdict.side !== 'even' ? ` · +${Math.abs(edgeScore)}` : ''}</p>
+
+      {/* Efficiëntie (xP): werkelijke vs. verwachte punten — wie werkt boven verwachting af. */}
+      {efficiency && (efficiency.ours.attempts > 0 || efficiency.opp.attempts > 0) && (
+        <div className="h2h-xp">
+          {([['ours', ourName, efficiency.ours], ['opp', oppName, efficiency.opp]] as const).map(([k, name, e]) => {
+            const lbl = efficiencyLabel(e.diff)
+            return (
+              <div className={`h2h-xp-card ${k}`} key={k}>
+                <span className="h2h-xp-team">{name}</span>
+                <span className="h2h-xp-vals">
+                  <strong>{e.actual}</strong> punten · <span className="h2h-xp-exp">{e.expected} verwacht (xP)</span>
+                </span>
+                <span className={`h2h-xp-badge ${lbl.tone}`}>
+                  {e.diff > 0 ? '▲' : e.diff < 0 ? '▼' : '▬'} {e.diff > 0 ? `+${e.diff}` : e.diff} · {lbl.txt}
+                </span>
+              </div>
+            )
+          })}
+        </div>
+      )}
 
       <div className="h2h-grid">
         {/* Dual-radar */}

@@ -5,6 +5,7 @@ import { canAnalyse } from '@/lib/access'
 import { analyseOwnWhere } from '@/lib/analyse-access'
 import { buildAttackPatterns } from '@/lib/attack-patterns'
 import { buildGamePlan } from '@/lib/gameplan'
+import { buildTeamSeasonTrend } from '@/lib/season-trend'
 import { buildTrainingFocus } from '@/lib/training-focus'
 import { getSelectedSeason, reeksenMetData } from '@/lib/analyse-season'
 import { getAuthUser } from '@/lib/auth-user'
@@ -70,12 +71,15 @@ export default async function PloegRapportPage({ searchParams }: { searchParams:
   let dangerConceded: Awaited<ReturnType<typeof buildTeamDanger>> | null = null
   let defenders: Awaited<ReturnType<typeof buildTeamDefense>> = []
   let patterns: Awaited<ReturnType<typeof buildAttackPatterns>> | null = null
+  let seasonTrend: Awaited<ReturnType<typeof buildTeamSeasonTrend>> = []
   if (teamId != null && report && report.matchesAnalyzed > 0) {
-    ;[danger, dangerConceded, defenders, patterns] = await Promise.all([
+    ;[danger, dangerConceded, defenders, patterns, seasonTrend] = await Promise.all([
       buildTeamDanger(payload, teamId, reeks, seizoen, analyseOwnWhere(me)),
       buildTeamDanger(payload, teamId, reeks, seizoen, analyseOwnWhere(me), { conceded: true }),
       buildTeamDefense(payload, teamId, reeks, seizoen, analyseOwnWhere(me)),
       buildAttackPatterns(payload, teamId, seizoen, analyseOwnWhere(me)),
+      // Meerjaren-trend negeert het geselecteerde seizoen (toont de groei over alle seizoenen).
+      buildTeamSeasonTrend(payload, teamId, analyseOwnWhere(me)),
     ])
   }
   const zTot = report ? report.zones.links + report.zones.midden + report.zones.rechts : 0
@@ -229,6 +233,18 @@ export default async function PloegRapportPage({ searchParams }: { searchParams:
             {report.form && report.form.length >= 2 && (
               <div style={{ marginTop: 16 }}>
                 <TeamForm form={report.form} />
+              </div>
+            )}
+
+            {seasonTrend.length >= 2 && (
+              <div style={{ marginTop: 16 }}>
+                <TeamForm
+                  form={seasonTrend.map((s) => ({ date: null, points: s.pointsPerMatch, conversion: s.conversion }))}
+                  label="Meerjaren"
+                  hint="punten per match & conversie per seizoen"
+                  labels={seasonTrend.map((s) => s.season.replace(/^\d{2}(\d{2})-\d{2}(\d{2})$/, "'$1-'$2"))}
+                  note={`${seasonTrend.length} seizoenen`}
+                />
               </div>
             )}
 

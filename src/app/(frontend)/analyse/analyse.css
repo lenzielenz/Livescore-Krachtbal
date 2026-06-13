@@ -2205,19 +2205,40 @@ select.rang-picker {
   .mp-title { font-size: 1.25rem; }
 }
 
-/* Print: enkel het matchplan op papier — de rest van de pagina valt weg. */
+/* Print: gericht afdrukken via data-print op <html>.
+   "plan" = enkel het matchplan; "dossier" = het volledige scout-dossier. */
 @media print {
-  body * { visibility: hidden !important; }
-  #matchplan, #matchplan * { visibility: visible !important; }
-  #matchplan {
+  /* — Enkel het matchplan — */
+  html[data-print="plan"] body * { visibility: hidden !important; }
+  html[data-print="plan"] #matchplan, html[data-print="plan"] #matchplan * { visibility: visible !important; }
+  html[data-print="plan"] #matchplan {
     position: absolute; left: 0; top: 0; width: 100%;
     margin: 0; border: none; box-shadow: none;
     background: #fff; color: #000;
   }
-  #matchplan .mp-print { display: none !important; }
-  #matchplan .mp-title, #matchplan .mp-headline, #matchplan .mp-item-title { color: #000 !important; }
-  #matchplan .mp-item-detail, #matchplan .mp-conf, #matchplan .mp-col-hint { color: #333 !important; }
-  #matchplan .mp-col { border: 1px solid #ccc; background: #fff; }
+  html[data-print="plan"] #matchplan .mp-actions { display: none !important; }
+  html[data-print="plan"] #matchplan .mp-title,
+  html[data-print="plan"] #matchplan .mp-headline,
+  html[data-print="plan"] #matchplan .mp-item-title { color: #000 !important; }
+  html[data-print="plan"] #matchplan .mp-item-detail,
+  html[data-print="plan"] #matchplan .mp-conf,
+  html[data-print="plan"] #matchplan .mp-col-hint { color: #333 !important; }
+  html[data-print="plan"] #matchplan .mp-col { border: 1px solid #ccc; background: #fff; }
+
+  /* — Volledig scout-dossier — licht printthema door de tokens te herdefiniëren. */
+  html[data-print="dossier"] body * { visibility: hidden !important; }
+  html[data-print="dossier"] #scout-dossier, html[data-print="dossier"] #scout-dossier * { visibility: visible !important; }
+  html[data-print="dossier"] #scout-dossier {
+    position: absolute; left: 0; top: 0; width: 100%;
+    --txt: #0b1512; --dim: #555; --panel: #fff; --panel-grad: #fff; --line: #cfd6d2; --accent: #0a7d52;
+    --card-shadow: none;
+    background: #fff; color: #000;
+  }
+  html[data-print="dossier"] #scout-dossier .mp-actions { display: none !important; }
+  html[data-print="dossier"] #scout-dossier .mp,
+  html[data-print="dossier"] #scout-dossier .h2h,
+  html[data-print="dossier"] #scout-dossier .ap { break-inside: avoid; box-shadow: none; }
+  html[data-print="dossier"] #scout-dossier .ap { page-break-before: always; }
 }
 
 /* ── Scout-pagina: ploegkeuze-toggle ── */
@@ -2323,3 +2344,22 @@ select.rang-picker {
 .tfoc-drill span { color: var(--accent); font-weight: 900; }
 .tfoc-cta { display: inline-block; margin-top: 12px; font-size: 0.88rem; font-weight: 700; color: var(--accent); text-decoration: none; }
 .tfoc-cta:hover { text-decoration: underline; }
+
+/* ── Head-to-Head: efficiëntie (xP) ── */
+.h2h-xp { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 4px 0 14px; }
+.h2h-xp-card { display: flex; flex-direction: column; gap: 3px; padding: 10px 13px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); border-top: 3px solid var(--accent); }
+.h2h-xp-card.opp { border-top-color: #ff924c; }
+.h2h-xp-team { font-size: 0.84rem; font-weight: 800; color: var(--txt); }
+.h2h-xp-vals { font-size: 0.86rem; color: var(--txt); }
+.h2h-xp-exp { color: var(--dim); }
+.h2h-xp-badge { font-size: 0.76rem; font-weight: 800; }
+.h2h-xp-badge.over { color: #06d6a0; }
+.h2h-xp-badge.under { color: #ef476f; }
+.h2h-xp-badge.even { color: var(--dim); }
+
+/* ── Scout-kop (titel + print-dossier) ── */
+.scout-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+
+@media (max-width: 760px) {
+  .h2h-xp { grid-template-columns: 1fr; }
+}
