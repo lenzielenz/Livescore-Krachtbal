@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 
 import { MatchStats } from '@/components/MatchStats'
 import type { ShotPoint } from '@/lib/match-engine'
+import { detectMatchPatterns } from '@/lib/match-patterns'
 import type { MatchStats as Stats } from '@/lib/stats'
 import { AnalyseCharts } from './AnalyseCharts'
 import { MatchRecap } from './MatchRecap'
@@ -72,6 +73,8 @@ export function AnalyseDetailView({
   const players = stats.players
   const [scope, setScope] = useState<'match' | number>('match')
   const focus = typeof scope === 'number' ? players.find((p) => p.playerId === scope) ?? null : null
+  // Terugkerende "zelfde speler / zelfde worp"-patronen — om de naam prominent aanklikbaar te maken.
+  const patterns = useMemo(() => detectMatchPatterns(stats), [stats])
 
   return (
     <>
@@ -91,6 +94,34 @@ export function AnalyseDetailView({
             </button>
           ))}
         </div>
+      )}
+
+      {/* Opvallende patronen: klik de naam om meteen naar die spelerfocus te springen. */}
+      {scope === 'match' && patterns.length > 0 && (
+        <section className="an-patterns">
+          <h2 className="an-sub">
+            🔁 Opvallende patronen <span className="an-chart-hint">klik een naam om die speler te bekijken</span>
+          </h2>
+          <div className="an-pat-grid">
+            {patterns.map((p) => (
+              <button
+                key={`${p.playerId}-${p.kind}`}
+                type="button"
+                className={`an-pat side-${p.teamSide}`}
+                onClick={() => setScope(p.playerId)}
+                aria-label={`Bekijk #${p.shirtNumber} ${p.playerName} — ${p.label}`}
+              >
+                <span className="an-pat-ico" aria-hidden>{p.icon}</span>
+                <span className="an-pat-body">
+                  <span className="an-pat-label">{p.label}</span>
+                  <span className="an-pat-name">#{p.shirtNumber} {p.playerName}</span>
+                  <span className="an-pat-detail">{p.detail}</span>
+                </span>
+                <span className="an-pat-cta" aria-hidden>bekijken →</span>
+              </button>
+            ))}
+          </div>
+        </section>
       )}
 
       {momentumGoals.length > 0 && <MomentumChart goals={momentumGoals} timeouts={momentumTimeouts} teams={teams} colors={teamColors} />}
