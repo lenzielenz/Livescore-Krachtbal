@@ -16,7 +16,21 @@ function fmtDate(d: string | null, i: number): string {
   return dt.toLocaleDateString('nl-BE', { day: '2-digit', month: 'short' })
 }
 
-export function TeamForm({ form, label = 'Vorm' }: { form: FormPoint[]; label?: string }) {
+export function TeamForm({
+  form,
+  label = 'Vorm',
+  hint = 'punten & conversie per wedstrijd',
+  labels,
+  note,
+}: {
+  form: FormPoint[]
+  label?: string
+  hint?: string
+  /** Eigen x-as-labels (bv. seizoenen). Valt anders terug op de datum. */
+  labels?: string[]
+  /** Eigen voetnoot rechtsonder (bv. "4 seizoenen"). */
+  note?: string
+}) {
   if (!form || form.length < 2) return null
 
   const N = form.length
@@ -45,7 +59,7 @@ export function TeamForm({ form, label = 'Vorm' }: { form: FormPoint[]; label?: 
   return (
     <div className="an-chart tf">
       <h3 className="an-chart-title">
-        {label} <span className="an-chart-hint">punten &amp; conversie per wedstrijd</span>
+        {label} <span className="an-chart-hint">{hint}</span>
         <span className={`tf-trend ${trend.cls}`}>{trend.ico} {trend.txt}</span>
       </h3>
       <svg className="tf-svg" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img" aria-label="Vorm per wedstrijd">
@@ -56,7 +70,7 @@ export function TeamForm({ form, label = 'Vorm' }: { form: FormPoint[]; label?: 
           <g key={i}>
             <rect x={xAt(i) - barW / 2} y={yPts(f.points)} width={barW} height={padT + plotH - yPts(f.points)} rx={3} fill={ACCENT} opacity={0.85} />
             <text x={xAt(i)} y={yPts(f.points) - 5} textAnchor="middle" fontSize={11} fontWeight={700} fill="var(--txt)">{f.points}</text>
-            <text x={xAt(i)} y={H - 10} textAnchor="middle" fontSize={9.5} fill="var(--dim)">{fmtDate(f.date, i)}</text>
+            <text x={xAt(i)} y={H - 10} textAnchor="middle" fontSize={9.5} fill="var(--dim)">{labels?.[i] ?? fmtDate(f.date, i)}</text>
           </g>
         ))}
         <polyline points={convLine} fill="none" stroke={CONV} strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round" />
@@ -67,7 +81,7 @@ export function TeamForm({ form, label = 'Vorm' }: { form: FormPoint[]; label?: 
       <div className="tf-legend">
         <span><i style={{ background: 'var(--accent)' }} /> punten</span>
         <span><i style={{ background: CONV }} /> conversie</span>
-        <span className="tf-note">{N} wedstrijden</span>
+        <span className="tf-note">{note ?? `${N} wedstrijden`}</span>
       </div>
     </div>
   )
