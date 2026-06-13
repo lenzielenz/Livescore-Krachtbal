@@ -9,6 +9,7 @@ import { SeizoenGlobalPicker } from './SeizoenGlobalPicker'
 // zodat je niet door een lange rij menu's moet.
 const TABS = [
   { key: 'overzicht', href: '/analyse', icon: '📈', label: 'Overzicht' },
+  { key: 'coach', href: '/analyse/coach', icon: '🧭', label: 'Coach' },
   { key: 'ploegen', href: '/analyse#ploegen', icon: '🛡️', label: 'Ploegen' },
   { key: 'spelers', href: '/analyse#spelers', icon: '🎯', label: 'Spelers' },
   { key: 'beheer', href: '/analyse/beheer', icon: '🗂️', label: 'Mijn data' },
