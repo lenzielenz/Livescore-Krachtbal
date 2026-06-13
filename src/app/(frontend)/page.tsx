@@ -47,7 +47,9 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
           <section className="home-cta">
             <div className="home-cta-text">
               <h2 className="home-cta-title">Wees erbij. <span>Élke match.</span></h2>
-              <p className="home-cta-sub">Volg je club live — gratis account in 30 seconden.</p>
+              <p className="home-cta-sub">
+                Kijken kan gratis — zonder account. Registreer je om je club te volgen en niets te missen.
+              </p>
             </div>
             <div className="home-cta-actions">
               <Link href="/registreren" className="home-cta-btn">Gratis registreren →</Link>

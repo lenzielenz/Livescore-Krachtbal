@@ -3,6 +3,8 @@
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
+import { clearNavAuth } from '@/lib/nav-auth-cache'
+
 // Frontend-login voor scheidsrechters: gebruikt het bestaande account (rol 'scheidsrechter').
 // Logt in via Payload's REST-auth, waarna de pagina ververst en de persoonlijke QR toont.
 export function RefereeLogin() {
@@ -24,6 +26,7 @@ export function RefereeLogin() {
         body: JSON.stringify({ email, password }),
       })
       if (res.ok) {
+        clearNavAuth()
         router.refresh()
       } else {
         setError('Inloggen mislukt — controleer je e-mail en wachtwoord.')

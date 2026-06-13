@@ -4,6 +4,8 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
+import { clearNavAuth } from '@/lib/nav-auth-cache'
+
 // Gebrande frontend-login: logt in via Payload's REST-auth en stuurt door naar
 // de wedstrijden. Werkt voor elk account (supporter, club, scheidsrechter, admin).
 export function LoginForm() {
@@ -25,6 +27,8 @@ export function LoginForm() {
         body: JSON.stringify({ email, password }),
       })
       if (res.ok) {
+        // Verse rol-staat afdwingen zodat de navigatie meteen de juiste menu-items toont.
+        clearNavAuth()
         router.refresh()
         router.push('/')
       } else {
