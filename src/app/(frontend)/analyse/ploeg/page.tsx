@@ -4,6 +4,7 @@ import { SiteHeader } from '@/components/SiteHeader'
 import { canAnalyse } from '@/lib/access'
 import { analyseOwnWhere } from '@/lib/analyse-access'
 import { buildAttackPatterns } from '@/lib/attack-patterns'
+import { buildGamePlan } from '@/lib/gameplan'
 import { getSelectedSeason, reeksenMetData } from '@/lib/analyse-season'
 import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
@@ -13,6 +14,7 @@ import { buildTeamReport } from '@/lib/team-report'
 import { BandChart } from '@/components/analytics/BandChart'
 import { AnalyseNav } from '../AnalyseNav'
 import { AanvalsPatronen } from './AanvalsPatronen'
+import { MatchPlan } from './MatchPlan'
 import { PloegPicker } from './PloegPicker'
 import { SpeelstijlPanel } from './SpeelstijlPanel'
 import { DangerPlayers } from './DangerPlayers'
@@ -95,6 +97,10 @@ export default async function PloegRapportPage({ searchParams }: { searchParams:
           <p className="empty">Nog geen worpdata voor {report.teamName} in afgelopen wedstrijden.</p>
         ) : (
           <>
+            {/* Matchplan-dossier: de scouting-TL;DR als hero — wie kort houden, hoe verdedigen,
+                waar wij toeslaan. Gesynthetiseerd uit het rapport + de aanvalspatronen. */}
+            <MatchPlan plan={buildGamePlan(report, patterns)} />
+
             <div className="rep-exports">
               <a className="sk-demo-cta" href={`/api/analyse/team/${report.teamId}/pdf`}>📄 Download PDF</a>
               <a className="sk-demo-cta" href={`/api/analyse/team/${report.teamId}/csv`}>📑 Download CSV</a>

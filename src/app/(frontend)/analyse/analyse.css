@@ -2155,3 +2155,67 @@ select.rang-picker {
 @media (prefers-reduced-motion: reduce) {
   .ap-step { animation: none; }
 }
+
+/* ── Matchplan-dossier (scouting-TL;DR, hero bovenaan het ploegrapport) ── */
+.mp {
+  margin: 8px 0 22px;
+  padding: 20px;
+  border: 1px solid color-mix(in srgb, var(--accent) 34%, var(--line));
+  border-radius: 18px;
+  background:
+    radial-gradient(120% 150% at 0% 0%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 58%),
+    var(--panel-grad);
+  box-shadow: var(--card-shadow);
+}
+.mp-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.mp-kicker { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 800; color: var(--accent); }
+.mp-title { margin: 2px 0 0; font-size: 1.5rem; font-weight: 900; letter-spacing: -0.01em; }
+.mp-print {
+  flex: none;
+  font: inherit; font-size: 0.82rem; font-weight: 700;
+  padding: 8px 14px; border-radius: 999px; cursor: pointer;
+  color: var(--txt); background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+}
+.mp-print:hover { border-color: color-mix(in srgb, var(--accent) 50%, var(--line)); }
+.mp-headline { margin: 12px 0 0; font-size: 1.06rem; font-weight: 700; line-height: 1.4; color: var(--txt); max-width: 70ch; }
+.mp-tags { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 12px; }
+.mp-tag { font-size: 0.74rem; font-weight: 700; padding: 4px 10px; border-radius: 999px; background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent); }
+.mp-conf { font-size: 0.74rem; color: var(--dim); margin-left: 2px; }
+
+.mp-cols { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 16px; }
+.mp-col { padding: 14px; border-radius: 14px; border: 1px solid var(--line); background: var(--panel); border-top: 3px solid var(--accent); }
+.mp-col-watch { border-top-color: #ef476f; }
+.mp-col-defend { border-top-color: #4cc9f0; }
+.mp-col-attack { border-top-color: #06d6a0; }
+.mp-col-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px; margin: 0 0 10px; font-size: 0.98rem; font-weight: 800; }
+.mp-col-hint { font-size: 0.72rem; font-weight: 600; color: var(--dim); }
+.mp-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.mp-list li { display: flex; flex-direction: column; gap: 2px; }
+.mp-item-title { font-size: 0.9rem; font-weight: 700; color: var(--txt); }
+.mp-item-detail { font-size: 0.82rem; line-height: 1.4; color: var(--dim); }
+
+.mp-keys { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
+.mp-keys-lbl { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 800; color: var(--dim); }
+.mp-key { display: inline-flex; align-items: center; gap: 7px; font-size: 0.88rem; font-weight: 600; color: var(--txt); }
+.mp-key-n { display: grid; place-items: center; width: 20px; height: 20px; border-radius: 999px; background: var(--accent); color: #06140d; font-size: 0.74rem; font-weight: 900; }
+
+@media (max-width: 760px) {
+  .mp-cols { grid-template-columns: 1fr; }
+  .mp-title { font-size: 1.25rem; }
+}
+
+/* Print: enkel het matchplan op papier — de rest van de pagina valt weg. */
+@media print {
+  body * { visibility: hidden !important; }
+  #matchplan, #matchplan * { visibility: visible !important; }
+  #matchplan {
+    position: absolute; left: 0; top: 0; width: 100%;
+    margin: 0; border: none; box-shadow: none;
+    background: #fff; color: #000;
+  }
+  #matchplan .mp-print { display: none !important; }
+  #matchplan .mp-title, #matchplan .mp-headline, #matchplan .mp-item-title { color: #000 !important; }
+  #matchplan .mp-item-detail, #matchplan .mp-conf, #matchplan .mp-col-hint { color: #333 !important; }
+  #matchplan .mp-col { border: 1px solid #ccc; background: #fff; }
+}
