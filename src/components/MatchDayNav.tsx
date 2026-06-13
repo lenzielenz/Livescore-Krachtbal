@@ -12,10 +12,21 @@ const STEPS: { key: MatchDayStep; label: string; href: (id: string | number) => 
   { key: 'aftekenen', label: 'Aftekenen', href: (id) => `/aftekenen/${id}` },
 ]
 
-export function MatchDayNav({ matchId, current }: { matchId: string | number; current: MatchDayStep }) {
+// De Scout-stap (tegenstander-analyse) is privé: enkel zichtbaar voor wie analyse-toegang heeft
+// (canScout). Andere clubs/supporters zien hem niet. De nummering blijft doorlopen.
+export function MatchDayNav({
+  matchId,
+  current,
+  canScout = false,
+}: {
+  matchId: string | number
+  current: MatchDayStep
+  canScout?: boolean
+}) {
+  const steps = STEPS.filter((s) => s.key !== 'scout' || canScout)
   return (
     <nav className="mdn" aria-label="Wedstrijddag-stappen">
-      {STEPS.map((s, i) => (
+      {steps.map((s, i) => (
         <Link key={s.key} href={s.href(matchId)} className={`mdn-step ${s.key === current ? 'on' : ''}`}>
           <span className="mdn-num">{i + 1}</span>
           {s.label}

@@ -2,6 +2,8 @@ import Link from 'next/link'
 
 import { MatchDayNav } from '@/components/MatchDayNav'
 import { SiteHeader } from '@/components/SiteHeader'
+import { canAnalyse } from '@/lib/access'
+import { getAuthUser } from '@/lib/auth-user'
 import { buildMatchSheet } from '@/lib/match-engine'
 import { getOrCreateMatchSheet } from '@/lib/matchsheet-data'
 import { getPayloadClient } from '@/lib/payload-client'
@@ -13,6 +15,7 @@ export const dynamic = 'force-dynamic'
 export default async function AftekenenPage({ params }: { params: Promise<{ matchId: string }> }) {
   const { matchId } = await params
   const payload = await getPayloadClient()
+  const me = await getAuthUser()
   // depth 2 zodat de kapiteins (spelers) mee opgehaald worden voor de vooraf gekende namen.
   const match = await payload.findByID({ collection: 'matches', id: matchId, depth: 2 }).catch(() => null)
   // Analysewedstrijden horen niet in de competitie-wedstrijdbladflow (privé, eigen analyse-database).
@@ -51,7 +54,7 @@ export default async function AftekenenPage({ params }: { params: Promise<{ matc
       <h1 className="page-title">
         Aftekenen <span className="brand">·</span> {String(match.title ?? '')}
       </h1>
-      <MatchDayNav matchId={matchId} current="aftekenen" />
+      <MatchDayNav matchId={matchId} current="aftekenen" canScout={canAnalyse(me)} />
 
       {built && (
         <p className="wb-intro">

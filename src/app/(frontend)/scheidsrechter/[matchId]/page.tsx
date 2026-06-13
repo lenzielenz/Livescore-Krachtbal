@@ -3,7 +3,7 @@ import Link from 'next/link'
 
 import { MatchDayNav } from '@/components/MatchDayNav'
 import { SiteHeader } from '@/components/SiteHeader'
-import { isFederationLevel } from '@/lib/access'
+import { canAnalyse, isFederationLevel } from '@/lib/access'
 import { countLineup, LINEUP_MIN } from '@/lib/match-readiness'
 import { getOrCreateMatchSheet } from '@/lib/matchsheet-data'
 import { isReleaseTime } from '@/lib/matchsheet-workflow'
@@ -71,7 +71,7 @@ export default async function ScheidsrechterPage({ params }: { params: Promise<{
       <h1 className="page-title">
         Scheidsrechter <span className="brand">·</span> {String(match.title ?? '')}
       </h1>
-      <MatchDayNav matchId={matchId} current="scheidsrechter" />
+      <MatchDayNav matchId={matchId} current="scheidsrechter" canScout={canAnalyse(user)} />
 
       {!released ? (
         <p className="wb-intro">

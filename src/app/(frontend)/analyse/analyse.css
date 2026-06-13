@@ -2253,3 +2253,14 @@ select.rang-picker {
 @media print {
   .scout-toggle, .mdn, .sh { display: none !important; }
 }
+
+/* ── Vorm/trend-grafiek (eigen ploeg) ── */
+.tf-svg { width: 100%; height: auto; display: block; margin-top: 6px; }
+.tf-trend { margin-left: auto; font-size: 0.74rem; font-weight: 800; padding: 2px 9px; border-radius: 999px; }
+.tf-trend.up { color: #06d6a0; background: color-mix(in srgb, #06d6a0 16%, transparent); }
+.tf-trend.down { color: #ef476f; background: color-mix(in srgb, #ef476f 16%, transparent); }
+.tf-trend.flat { color: var(--dim); background: rgba(255,255,255,0.06); }
+.tf-legend { display: flex; align-items: center; gap: 14px; margin-top: 8px; font-size: 0.78rem; color: var(--dim); }
+.tf-legend i { display: inline-block; width: 11px; height: 11px; border-radius: 3px; vertical-align: -1px; margin-right: 5px; }
+.tf-note { margin-left: auto; }
+.tf .an-chart-title { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
