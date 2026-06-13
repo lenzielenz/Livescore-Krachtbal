@@ -7,10 +7,12 @@ import { getSelectedSeason } from '@/lib/analyse-season'
 import { buildAttackPatterns } from '@/lib/attack-patterns'
 import { getAuthUser } from '@/lib/auth-user'
 import { buildGamePlan } from '@/lib/gameplan'
+import { buildMatchup } from '@/lib/matchup'
 import { getPayloadClient } from '@/lib/payload-client'
 import { reeksNaam } from '@/lib/reeksen'
 import { buildTeamReport } from '@/lib/team-report'
 import { AanvalsPatronen } from '../../analyse/ploeg/AanvalsPatronen'
+import { HeadToHead } from '../../analyse/ploeg/HeadToHead'
 import { MatchPlan } from '../../analyse/ploeg/MatchPlan'
 import '../../analyse/analyse.css'
 
@@ -88,16 +90,27 @@ export default async function ScoutPage({
   else side = 'away'
 
   const opponentId = side === 'home' ? homeId : awayId
+  const ourId = side === 'home' ? awayId : homeId
   const opponentName = side === 'home' ? homeName : awayName
   const ourName = side === 'home' ? awayName : homeName
 
   const seizoen = await getSelectedSeason()
   // Enkel echte competitiewedstrijden (geen privé-analysematches).
   const compFilter = { analyseOnly: { not_equals: true } } as const
-  const [report, patterns] = await Promise.all([
+  const [report, patterns, ourReport] = await Promise.all([
     buildTeamReport(payload, opponentId, seizoen, compFilter),
     buildAttackPatterns(payload, opponentId, seizoen, compFilter),
+    buildTeamReport(payload, ourId, seizoen, compFilter),
   ])
+
+  // Head-to-Head kan enkel met een profiel voor BEIDE ploegen.
+  const matchup =
+    report && report.matchesAnalyzed > 0 && ourReport && ourReport.matchesAnalyzed > 0
+      ? buildMatchup(
+          { name: ourName, radar: ourReport.profile.radar },
+          { name: opponentName, radar: report.profile.radar },
+        )
+      : null
 
   const SideToggle = (
     <div className="scout-toggle" role="tablist" aria-label="Welke ploeg scouten">
@@ -129,6 +142,7 @@ export default async function ScoutPage({
       ) : (
         <>
           <MatchPlan plan={buildGamePlan(report, patterns)} />
+          {matchup && <HeadToHead matchup={matchup} />}
           <AanvalsPatronen data={patterns} teamName={opponentName} />
         </>
       )}

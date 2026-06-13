@@ -1,7 +1,10 @@
-import type { TeamFormPoint } from '@/lib/team-report'
-
-// Vorm/trend van de eigen ploeg: punten per wedstrijd (balken) + conversie% (lijn), chronologisch.
-// Privé eigen-club-zicht op de progressie over het seizoen.
+// Vorm/trend: punten per wedstrijd (balken) + conversie% (lijn), chronologisch. Gedeeld door het
+// ploegrapport (team-vorm) en het spelerdossier (speler-vorm) — één consistente visual.
+export interface FormPoint {
+  date: string | null
+  points: number
+  conversion: number
+}
 
 const ACCENT = 'var(--accent)'
 const CONV = '#ffd166'
@@ -13,7 +16,7 @@ function fmtDate(d: string | null, i: number): string {
   return dt.toLocaleDateString('nl-BE', { day: '2-digit', month: 'short' })
 }
 
-export function TeamForm({ form }: { form: TeamFormPoint[] }) {
+export function TeamForm({ form, label = 'Vorm' }: { form: FormPoint[]; label?: string }) {
   if (!form || form.length < 2) return null
 
   const N = form.length
@@ -33,7 +36,7 @@ export function TeamForm({ form }: { form: TeamFormPoint[] }) {
 
   // Korte trend: gemiddelde punten eerste helft vs. tweede helft van de reeks.
   const half = Math.floor(N / 2) || 1
-  const avg = (arr: TeamFormPoint[]) => (arr.length ? arr.reduce((a, f) => a + f.points, 0) / arr.length : 0)
+  const avg = (arr: FormPoint[]) => (arr.length ? arr.reduce((a, f) => a + f.points, 0) / arr.length : 0)
   const early = avg(form.slice(0, half))
   const late = avg(form.slice(-half))
   const delta = late - early
@@ -42,7 +45,7 @@ export function TeamForm({ form }: { form: TeamFormPoint[] }) {
   return (
     <div className="an-chart tf">
       <h3 className="an-chart-title">
-        Vorm <span className="an-chart-hint">punten &amp; conversie per wedstrijd</span>
+        {label} <span className="an-chart-hint">punten &amp; conversie per wedstrijd</span>
         <span className={`tf-trend ${trend.cls}`}>{trend.ico} {trend.txt}</span>
       </h3>
       <svg className="tf-svg" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img" aria-label="Vorm per wedstrijd">
@@ -50,7 +53,7 @@ export function TeamForm({ form }: { form: TeamFormPoint[] }) {
           <line key={g} x1={0} y1={padT + plotH * (1 - g)} x2={W} y2={padT + plotH * (1 - g)} stroke="rgba(255,255,255,0.07)" strokeWidth={1} />
         ))}
         {form.map((f, i) => (
-          <g key={f.matchId}>
+          <g key={i}>
             <rect x={xAt(i) - barW / 2} y={yPts(f.points)} width={barW} height={padT + plotH - yPts(f.points)} rx={3} fill={ACCENT} opacity={0.85} />
             <text x={xAt(i)} y={yPts(f.points) - 5} textAnchor="middle" fontSize={11} fontWeight={700} fill="var(--txt)">{f.points}</text>
             <text x={xAt(i)} y={H - 10} textAnchor="middle" fontSize={9.5} fill="var(--dim)">{fmtDate(f.date, i)}</text>
@@ -58,7 +61,7 @@ export function TeamForm({ form }: { form: TeamFormPoint[] }) {
         ))}
         <polyline points={convLine} fill="none" stroke={CONV} strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round" />
         {form.map((f, i) => (
-          <circle key={`c${f.matchId}`} cx={xAt(i)} cy={yConv(f.conversion)} r={3} fill={CONV} stroke="#06140d" strokeWidth={1} />
+          <circle key={`c${i}`} cx={xAt(i)} cy={yConv(f.conversion)} r={3} fill={CONV} stroke="#06140d" strokeWidth={1} />
         ))}
       </svg>
       <div className="tf-legend">

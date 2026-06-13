@@ -27,8 +27,8 @@ export interface SeasonPlayer {
   zones: { links: number; midden: number; rechts: number }
   avgDistance: number
   maxDistance: number
-  /** Punten per gespeelde wedstrijd (chronologisch) — voor de vormcurve. */
-  trend: { date: string; points: number }[]
+  /** Punten + conversie per gespeelde wedstrijd (chronologisch) — voor de vormcurve. */
+  trend: { date: string; points: number; conversion: number }[]
 }
 
 const rel = (v: unknown): number | null =>
@@ -120,7 +120,7 @@ export async function buildSeasonStats(payload: Payload, reeks: string, seizoen?
         d.sum += p.distance.avg * p.throws
         d.n += p.throws
       }
-      s.trend.push({ date, points: p.goals.points })
+      s.trend.push({ date, points: p.goals.points, conversion: p.goalAttempts ? p.goals.total / p.goalAttempts : 0 })
     }
   }
 

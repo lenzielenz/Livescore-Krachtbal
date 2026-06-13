@@ -5,6 +5,7 @@ import { canAnalyse } from '@/lib/access'
 import { analyseOwnWhere } from '@/lib/analyse-access'
 import { buildAttackPatterns } from '@/lib/attack-patterns'
 import { buildGamePlan } from '@/lib/gameplan'
+import { buildTrainingFocus } from '@/lib/training-focus'
 import { getSelectedSeason, reeksenMetData } from '@/lib/analyse-season'
 import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
@@ -17,6 +18,7 @@ import { AanvalsPatronen } from './AanvalsPatronen'
 import { MatchPlan } from './MatchPlan'
 import { PloegPicker } from './PloegPicker'
 import { TeamForm } from './TeamForm'
+import { TrainingFocus } from './TrainingFocus'
 import { SpeelstijlPanel } from './SpeelstijlPanel'
 import { DangerPlayers } from './DangerPlayers'
 import { TeamFlowMap } from './TeamFlowMap'
@@ -183,6 +185,8 @@ export default async function PloegRapportPage({ searchParams }: { searchParams:
             )}
 
             {patterns && <AanvalsPatronen data={patterns} teamName={report.teamName} />}
+
+            <TrainingFocus items={buildTrainingFocus(report)} />
 
             <div className="rep-cards">
               <div className="rep-card"><span className="rep-num">{report.matchesAnalyzed}</span><span className="rep-lbl">Wedstrijden</span></div>
