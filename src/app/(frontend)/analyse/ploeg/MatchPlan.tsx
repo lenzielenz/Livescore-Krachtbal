@@ -1,6 +1,7 @@
 'use client'
 
 import type { GamePlan } from '@/lib/gameplan'
+import { MatchPlanShare } from './MatchPlanShare'
 
 // Matchplan-dossier: de scouting-TL;DR als hero bovenaan het ploegrapport. Drie luiken
 // (wie kort houden · hoe verdedigen · waar wij toeslaan) + drie sleutels + een kopzin.
@@ -23,9 +24,12 @@ export function MatchPlan({ plan }: { plan: GamePlan }) {
           <span className="mp-kicker">📋 Matchplan</span>
           <h2 className="mp-title">tegen {plan.opponent}</h2>
         </div>
-        <button type="button" className="mp-print" onClick={() => window.print()}>
-          🖨️ Print
-        </button>
+        <div className="mp-actions">
+          <button type="button" className="mp-print" onClick={() => window.print()}>
+            🖨️ Print
+          </button>
+          <MatchPlanShare plan={plan} />
+        </div>
       </div>
 
       <p className="mp-headline">{plan.headline}</p>
