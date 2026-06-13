@@ -2,6 +2,8 @@ import Link from 'next/link'
 
 import { MatchDayNav } from '@/components/MatchDayNav'
 import { SiteHeader } from '@/components/SiteHeader'
+import { canAnalyse } from '@/lib/access'
+import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
 import { OpstellingPanes } from './OpstellingPanes'
 import '../../wedstrijdblad.css'
@@ -11,6 +13,7 @@ export const dynamic = 'force-dynamic'
 export default async function OpstellingPage({ params }: { params: Promise<{ matchId: string }> }) {
   const { matchId } = await params
   const payload = await getPayloadClient()
+  const me = await getAuthUser()
   const match = await payload
     .findByID({ collection: 'matches', id: matchId, depth: 1 })
     .catch(() => null)
@@ -40,7 +43,7 @@ export default async function OpstellingPage({ params }: { params: Promise<{ mat
       <h1 className="page-title">
         Opstelling <span className="brand">·</span> {String(match.title ?? '')}
       </h1>
-      <MatchDayNav matchId={matchId} current="opstelling" />
+      <MatchDayNav matchId={matchId} current="opstelling" canScout={canAnalyse(me)} />
       <p className="wb-intro">
         Vink je spelers aan of vul met één klik de <strong>vaste opstelling</strong> in — die wordt bij
         elke volgende wedstrijd automatisch voorgesteld. Enkel leden met een geldige vergunning en de

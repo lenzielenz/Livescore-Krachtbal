@@ -2,7 +2,7 @@ import Link from 'next/link'
 
 import { MatchDayNav } from '@/components/MatchDayNav'
 import { SiteHeader } from '@/components/SiteHeader'
-import { userClubId } from '@/lib/access'
+import { canAnalyse, userClubId } from '@/lib/access'
 import { getSelectedSeason } from '@/lib/analyse-season'
 import { buildAttackPatterns } from '@/lib/attack-patterns'
 import { getAuthUser } from '@/lib/auth-user'
@@ -40,11 +40,12 @@ export default async function ScoutPage({
     </>
   )
 
-  if (!me) {
+  // Analyse is privé voor de eigen club: enkel accounts met analyse-toegang scouten hier.
+  if (!canAnalyse(me)) {
     return shell(
       <p className="empty">
-        Log in om je tegenstander te scouten.{' '}
-        <Link href="/inloggen" style={{ color: 'var(--accent)' }}>Inloggen →</Link>
+        De scouting-analyse is privé voor je eigen club. Vraag een beheerder om analyse-toegang.{' '}
+        {!me && <Link href="/inloggen" style={{ color: 'var(--accent)' }}>Inloggen →</Link>}
       </p>,
     )
   }
@@ -114,7 +115,7 @@ export default async function ScoutPage({
       <h1 className="page-title">
         Scout <span className="brand">·</span> {homeName} – {awayName}
       </h1>
-      <MatchDayNav matchId={matchId} current="scout" />
+      <MatchDayNav matchId={matchId} current="scout" canScout />
       <p className="wb-intro">
         Ken je tegenstander vóór de aftrap. Hieronder het <strong>matchplan</strong> en de{' '}
         <strong>aanvalspatronen</strong> van {opponentName}, opgebouwd uit hun afgelopen wedstrijden

@@ -34,6 +34,16 @@ export interface TeamReportPlayer {
   tip?: string
 }
 
+/** Eén wedstrijd in de vorm-/trendlijn (chronologisch). */
+export interface TeamFormPoint {
+  matchId: number
+  date: string | null
+  points: number
+  goals: number
+  goalAttempts: number
+  conversion: number
+}
+
 /** Eén as van het radar-profiel (0-100, hoger = sterker op die dimensie). */
 export interface RadarAxis {
   key: string
@@ -84,6 +94,8 @@ export interface TeamReport {
   players: TeamReportPlayer[]
   /** Automatische aanbevelingen/tendensen uit de worpdata (scouting). */
   insights: string[]
+  /** Vorm/trend per wedstrijd (chronologisch) — voor de eigen-club progressie. */
+  form?: TeamFormPoint[]
   /** Door de coach ingegeven speelstijl van deze ploeg (tactisch profiel). */
   speelstijl: Speelstijl
   /** Strategie-aanbevelingen: speelstijl naast de gemeten data gelegd. */
@@ -129,6 +141,7 @@ export async function buildTeamReport(payload: Payload, teamId: number, seizoen?
 
   const agg = new Map<number, TeamReportPlayer>()
   const distAcc = new Map<number, { sum: number; n: number }>()
+  const form: TeamFormPoint[] = []
   let matchesAnalyzed = 0
 
   for (const m of matches) {
@@ -144,6 +157,18 @@ export async function buildTeamReport(payload: Payload, teamId: number, seizoen?
     const ours = stats.players.filter((p) => p.teamSide === side)
     if (ours.length === 0) continue
     matchesAnalyzed += 1
+    // Vorm-/trendpunt voor deze wedstrijd (chronologisch; matches is op datum gesorteerd).
+    const mPoints = ours.reduce((a, p) => a + p.goals.points, 0)
+    const mGoals = ours.reduce((a, p) => a + p.goals.total, 0)
+    const mAttempts = ours.reduce((a, p) => a + p.goalAttempts, 0)
+    form.push({
+      matchId,
+      date: ((m as { date?: unknown }).date as string) ?? null,
+      points: mPoints,
+      goals: mGoals,
+      goalAttempts: mAttempts,
+      conversion: mAttempts ? Math.round((mGoals / mAttempts) * 100) / 100 : 0,
+    })
     for (const p of ours) {
       let s = agg.get(p.playerId)
       if (!s) {
@@ -495,6 +520,7 @@ export async function buildTeamReport(payload: Payload, teamId: number, seizoen?
     zones,
     players,
     insights,
+    form,
     speelstijl,
     strategy,
     profile,

@@ -16,6 +16,7 @@ import { AnalyseNav } from '../AnalyseNav'
 import { AanvalsPatronen } from './AanvalsPatronen'
 import { MatchPlan } from './MatchPlan'
 import { PloegPicker } from './PloegPicker'
+import { TeamForm } from './TeamForm'
 import { SpeelstijlPanel } from './SpeelstijlPanel'
 import { DangerPlayers } from './DangerPlayers'
 import { TeamFlowMap } from './TeamFlowMap'
@@ -220,6 +221,12 @@ export default async function PloegRapportPage({ searchParams }: { searchParams:
                 </div>
               </div>
             </div>
+
+            {report.form && report.form.length >= 2 && (
+              <div style={{ marginTop: 16 }}>
+                <TeamForm form={report.form} />
+              </div>
+            )}
 
             <h2 className="an-sub">Per speler</h2>
             <div className="rang-scroll">
