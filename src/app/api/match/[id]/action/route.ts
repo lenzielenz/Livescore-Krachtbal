@@ -20,6 +20,7 @@ import {
   undoLastThrow,
 } from '@/lib/match-engine'
 import { getMatchReadiness } from '@/lib/matchsheet-data'
+import { notifyGoalScored } from '@/lib/match-notify'
 import { missingSteps } from '@/lib/match-readiness'
 import { getPayloadClient } from '@/lib/payload-client'
 import {
@@ -95,6 +96,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
           tappedById: body.tappedById !== undefined && body.tappedById !== null ? Number(body.tappedById) : undefined,
           actorId,
         })
+        // Doelpunt → fans van de scorende club een push sturen (fire-and-forget).
+        if (result.outcome === 'goal') notifyGoalScored({ matchId, playerId: Number(body.playerId) })
         return Response.json(result)
       }
       case 'undo':
@@ -146,14 +149,16 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       // ── Simpele aantekenmodus (snelscoremodus): +1/+2 zonder veldschema ──
       case 'simplestart':
         return Response.json(await startSimpleMatch(payload, matchId))
-      case 'simplegoal':
-        return Response.json(
-          await recordSimpleGoal(payload, matchId, body.side === 'away' ? 'away' : 'home', body.points === 2 ? 2 : 1, {
-            id: Number(body.playerId),
-            number: body.shirtNumber !== undefined ? Number(body.shirtNumber) : undefined,
-            name: typeof body.playerName === 'string' ? body.playerName : undefined,
-          }),
-        )
+      case 'simplegoal': {
+        const goalSide = body.side === 'away' ? 'away' : 'home'
+        const res = await recordSimpleGoal(payload, matchId, goalSide, body.points === 2 ? 2 : 1, {
+          id: Number(body.playerId),
+          number: body.shirtNumber !== undefined ? Number(body.shirtNumber) : undefined,
+          name: typeof body.playerName === 'string' ? body.playerName : undefined,
+        })
+        notifyGoalScored({ matchId, side: goalSide })
+        return Response.json(res)
+      }
       case 'simpleundo':
         return Response.json(await undoSimpleGoal(payload, matchId))
       case 'simplecross':

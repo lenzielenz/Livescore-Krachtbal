@@ -50,24 +50,12 @@ interface StoredSub {
   auth: string
 }
 
-/**
- * Stuurt één melding naar álle opgeslagen abonnementen. Een abonnement dat de browser niet meer
- * kent (404/410 — uitgeschreven of verlopen) wordt meteen opgeruimd zodat de lijst schoon blijft.
- * Faalt nooit hard: push is "best effort" en mag de aanroeper (bv. een match-hook) nooit breken.
- */
-export async function sendPushToAll(payload: Payload, notif: PushPayload): Promise<{ sent: number; pruned: number }> {
-  if (!ensureConfigured()) return { sent: 0, pruned: 0 }
-
-  const res = await payload
-    .find({ collection: 'push-subscriptions', depth: 0, limit: 10000, pagination: false })
-    .catch(() => ({ docs: [] as StoredSub[] }))
-  const subs = res.docs as unknown as StoredSub[]
+// Gedeelde verzendlus: stuur naar een lijst abonnementen en ruim verlopen/uitgeschreven op (404/410).
+async function sendToSubs(payload: Payload, subs: StoredSub[], notif: PushPayload): Promise<{ sent: number; pruned: number }> {
   if (subs.length === 0) return { sent: 0, pruned: 0 }
-
   const data = JSON.stringify(notif)
   let sent = 0
   let pruned = 0
-
   await Promise.all(
     subs.map(async (s) => {
       try {
@@ -82,6 +70,32 @@ export async function sendPushToAll(payload: Payload, notif: PushPayload): Promi
       }
     }),
   )
-
   return { sent, pruned }
+}
+
+/**
+ * Stuurt één melding naar álle opgeslagen abonnementen. Een abonnement dat de browser niet meer
+ * kent (404/410 — uitgeschreven of verlopen) wordt meteen opgeruimd zodat de lijst schoon blijft.
+ * Faalt nooit hard: push is "best effort" en mag de aanroeper (bv. een match-hook) nooit breken.
+ */
+export async function sendPushToAll(payload: Payload, notif: PushPayload): Promise<{ sent: number; pruned: number }> {
+  if (!ensureConfigured()) return { sent: 0, pruned: 0 }
+  const res = await payload
+    .find({ collection: 'push-subscriptions', depth: 0, limit: 10000, pagination: false })
+    .catch(() => ({ docs: [] as StoredSub[] }))
+  return sendToSubs(payload, res.docs as unknown as StoredSub[], notif)
+}
+
+/**
+ * Stuurt een melding enkel naar de abonnees wiens account-club tot `clubIds` behoort — bv. de fans
+ * van de scorende ploeg. Abonnementen zonder gekoppelde gebruiker (gasten) krijgen ze niet.
+ */
+export async function sendPushToClubs(payload: Payload, clubIds: (number | string | null | undefined)[], notif: PushPayload): Promise<{ sent: number; pruned: number }> {
+  if (!ensureConfigured()) return { sent: 0, pruned: 0 }
+  const ids = [...new Set(clubIds.filter((c): c is number | string => c != null))]
+  if (ids.length === 0) return { sent: 0, pruned: 0 }
+  const res = await payload
+    .find({ collection: 'push-subscriptions', where: { 'user.club': { in: ids } }, depth: 0, limit: 10000, pagination: false })
+    .catch(() => ({ docs: [] as StoredSub[] }))
+  return sendToSubs(payload, res.docs as unknown as StoredSub[], notif)
 }
