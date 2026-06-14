@@ -28,12 +28,12 @@
 /* Bonusrad-badge: er is een persoonlijke booster op deze voorspelling gezet. */
 .pn-bonus { display: inline-flex; align-items: center; gap: 3px; padding: 1px 8px; border-radius: 999px; font-size: 0.72rem; font-weight: 800; color: #3a2600; background: linear-gradient(135deg, #ffd166, #f4a300); }
 
-/* Booster-keuze in het pronostiekformulier. */
-.pn-boost { display: flex; align-items: center; gap: 8px; margin: 8px 0 2px; padding: 8px 11px; border-radius: 10px; cursor: pointer;
-  border: 1px solid color-mix(in srgb, #ffd166 35%, var(--line)); background: color-mix(in srgb, #ffd166 8%, transparent); font-size: 0.86rem; color: var(--txt); }
-.pn-boost input { width: 17px; height: 17px; accent-color: #f4a300; }
-.pn-boost b { color: #f4a300; }
-.pn-boost.pn-boost-on { border-color: #f4a300; background: color-mix(in srgb, #ffd166 16%, transparent); }
+/* Booster-keuze in het pronostiekformulier: kies welke gewonnen vermenigvuldiger je inzet. */
+.pn-boost { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin: 8px 0 2px; padding: 8px 11px; border-radius: 10px;
+  border: 1px solid color-mix(in srgb, #ffd166 35%, var(--line)); background: color-mix(in srgb, #ffd166 8%, transparent); font-size: 0.85rem; color: var(--txt); }
+.pn-boost-lbl { font-weight: 700; }
+.pn-boost-chip { padding: 4px 11px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel); color: var(--txt); font-weight: 700; font-size: 0.82rem; cursor: pointer; }
+.pn-boost-chip.on { border-color: #f4a300; background: linear-gradient(135deg, #ffd166, #f4a300); color: #3a2600; }
 .pn-h { margin: 0 0 10px; font-size: 0.98rem; font-weight: 800; color: var(--txt); }
 .pn-live { margin-left: 8px; font-size: 0.74rem; font-weight: 700; color: var(--accent); }
 .pn-note { margin: 0; font-size: 0.88rem; color: var(--dim); line-height: 1.45; }

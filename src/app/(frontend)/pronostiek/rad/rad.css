@@ -1,4 +1,4 @@
-/* Bonusrad — Las Vegas-stijl. Clublogo in het midden, clubkleuren op het rad (--rad-p / --rad-s). */
+/* Bonusrad — Las Vegas-stijl. Clublogo in het midden, kleuren van de deelnemende clubs op het rad. */
 .rad { display: flex; flex-direction: column; align-items: center; gap: 18px; margin: 8px 0 24px; }
 
 .rad-stage { position: relative; width: min(320px, 88vw); aspect-ratio: 1; display: grid; place-items: center; }
@@ -20,9 +20,17 @@
   width: 260px; height: 260px; border-radius: 999px; position: relative; z-index: 2;
   border: 8px solid #ffd166;
   box-shadow: 0 0 0 3px #b8860b, 0 18px 50px -18px rgba(0, 0, 0, 0.85), inset 0 0 30px rgba(0, 0, 0, 0.45);
-  transition: transform 4.2s cubic-bezier(0.12, 0.78, 0.12, 1);
+  transition: transform 6.2s cubic-bezier(0.08, 0.72, 0.06, 1);
 }
-.rad-stage.spinning .rad-wheel { box-shadow: 0 0 0 3px #b8860b, 0 0 36px 4px color-mix(in srgb, var(--rad-p, #06d6a0) 60%, transparent), inset 0 0 30px rgba(0, 0, 0, 0.45); }
+.rad-stage.spinning .rad-wheel { box-shadow: 0 0 0 3px #b8860b, 0 0 40px 6px color-mix(in srgb, #ffd166 70%, transparent), inset 0 0 30px rgba(0, 0, 0, 0.45); }
+
+/* Neon-achterglow: kleurenkrans die meedraait en oplicht tijdens het spinnen. */
+.rad-aura {
+  position: absolute; width: 320px; height: 320px; border-radius: 999px; z-index: 0;
+  filter: blur(26px); opacity: 0.25; transition: opacity 0.4s ease;
+}
+.rad-stage.spinning .rad-aura { opacity: 0.85; animation: rad-aura-spin 2.6s linear infinite; }
+@keyframes rad-aura-spin { to { transform: rotate(360deg); } }
 .rad-lab {
   position: absolute; top: 50%; left: 50%; font-weight: 900; font-size: 0.92rem; color: #fff;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7); white-space: nowrap; pointer-events: none;
@@ -64,6 +72,16 @@
 .rad-have { margin: 0; color: var(--dim); font-size: 0.9rem; }
 .rad-have b { color: var(--accent); }
 .rad-err { margin: 0; color: #ef476f; font-weight: 600; }
+.rad-done-txt { margin: 0; max-width: 44ch; text-align: center; color: var(--dim); line-height: 1.5; }
+
+/* Je gewonnen boosters. */
+.rad-tokens { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; }
+.rad-tokens-lbl { font-size: 0.86rem; color: var(--dim); font-weight: 700; }
+.rad-token {
+  display: inline-flex; align-items: center; padding: 5px 13px; border-radius: 999px; font-weight: 900; font-size: 0.92rem;
+  color: #3a2600; background: linear-gradient(135deg, #ffe39a, #f4a300); box-shadow: 0 4px 12px -6px #f4a300;
+}
+.rad-token.big { background: linear-gradient(135deg, #fff1b8, #ffd166); box-shadow: 0 0 14px -2px #ffd166; }
 
 /* Podium top 3. */
 .rad-podium { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 4px 0 16px; }

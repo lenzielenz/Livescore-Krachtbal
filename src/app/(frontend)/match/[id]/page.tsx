@@ -11,6 +11,7 @@ import { getAuthUser } from '@/lib/auth-user'
 import { formatDateTimeBE } from '@/lib/datetime'
 import { buildMatchSheet, buildMatchState, buildMatchStats, buildTimeline } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
+import { activeTokens, type RadToken } from '@/lib/pronostiek-rad'
 import { countUserWeekendPredictions, LIVE_PRONOSTIEK_MAX_PER_WEEKEND } from '@/lib/pronostiek-weekend'
 import { isAdultReeks, krachtbalKleur, reeksHalfDurationSeconds, reeksNaam, reeksType, type Reeks } from '@/lib/reeksen'
 import { isTribuneOpen } from '@/lib/tribune'
@@ -167,8 +168,10 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
     const used = await countUserWeekendPredictions(payload, myUid, String(matchDoc.date), matchId).catch(() => 0)
     predRemaining = Math.max(0, LIVE_PRONOSTIEK_MAX_PER_WEEKEND - used)
   }
-  // Persoonlijke bonusrad-booster van deze gebruiker (gewonnen door bij de top 3 te eindigen).
-  const myPower = (me as { pronostiekPower?: { mult: number; remaining: number } | null } | null)?.pronostiekPower ?? null
+  // Persoonlijke bonusrad-boosters van deze gebruiker (gewonnen door bij de top 3 te eindigen),
+  // enkel de nog geldige (niet-vervallen).
+  const myBoosters = activeTokens(((me as { pronostiekPower?: { tokens?: RadToken[] } | null } | null)?.pronostiekPower)?.tokens)
+    .map((t) => Number(t.mult))
 
   return (
     <>
@@ -207,8 +210,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
         initialAway={myPred ? myPred.away : null}
         remaining={predRemaining}
         max={LIVE_PRONOSTIEK_MAX_PER_WEEKEND}
-        boosterMult={myPower ? Number(myPower.mult) : undefined}
-        boosterRemaining={myPower ? Number(myPower.remaining) : undefined}
+        boosterTokens={myBoosters}
       />
       <Scoreboard
         matchId={matchId}

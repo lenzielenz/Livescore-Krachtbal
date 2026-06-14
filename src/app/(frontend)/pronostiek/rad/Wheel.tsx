@@ -2,49 +2,53 @@
 
 import { useRef, useState } from 'react'
 
+import { segmentArcs, type RadSegment } from '@/lib/pronostiek-rad'
 import './rad.css'
 
-type Colors = { primary: string; secondary: string }
+const fmt = (v: number) => `×${Number.isInteger(v) ? v : String(v).replace('.', ',')}`
 
-// Het bonusrad in Las Vegas-stijl: marquee-lampjes, neon-gloed, geluid en confetti. In het midden
-// staat je clublogo en de kleuren komen van je club — zodat het rad helemaal van jóu voelt. De
-// server kiest gezaghebbend de vermenigvuldiger (POST /api/pronostiek/spin); het rad animeert er
-// enkel naartoe. Wat je wint, krijg je als 3 persoonlijke boosters voor je volgende voorspellingen.
+// Het bonusrad in Las Vegas-stijl: ongelijke taartpunten, marquee-lampjes, neon-achterglow, geluid
+// en confetti. In het midden staat je clublogo; de punten dragen de kleuren van de deelnemende
+// clubs. Je mag tot 3 keer draaien en wint telkens een booster. De server kiest gezaghebbend het
+// vak (POST /api/pronostiek/spin); het rad animeert er enkel naartoe.
 export function Wheel({
   segments,
+  palette,
   clubLogoUrl,
-  clubColors,
   clubName,
-  tokens,
+  spinsLeft: initialSpins,
+  heldTokens,
 }: {
-  segments: number[]
+  segments: RadSegment[]
+  palette: string[]
   clubLogoUrl: string | null
-  clubColors: Colors | null
   clubName: string
-  tokens: number
+  spinsLeft: number
+  heldTokens: number[]
 }) {
-  const n = segments.length
-  const seg = 360 / Math.max(1, n)
+  const arcs = segmentArcs(segments)
+  const pal = palette.length ? palette : ['#06d6a0', '#118ab2', '#ef476f', '#ffd166']
   const [rotation, setRotation] = useState(0)
   const [busy, setBusy] = useState(false)
-  const [won, setWon] = useState<number | null>(null)
-  const [err, setErr] = useState<string | null>(null)
+  const [spinsLeft, setSpinsLeft] = useState(initialSpins)
+  const [won, setWon] = useState<number[]>([])
+  const [lastWon, setLastWon] = useState<number | null>(null)
   const [confetti, setConfetti] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
   const rotRef = useRef(0)
   const acRef = useRef<AudioContext | null>(null)
 
-  const primary = clubColors?.primary ?? '#06d6a0'
-  const secondary = clubColors?.secondary ?? '#118ab2'
-  const segColor = (v: number, i: number) =>
-    v >= 10 ? '#ffd166' : v >= 5 ? `color-mix(in srgb, ${primary} 55%, #ffd166)` : i % 2 === 0 ? primary : secondary
-  const gradient = `conic-gradient(${segments
-    .map((v, i) => `${segColor(v, i)} ${(i * seg).toFixed(2)}deg ${((i + 1) * seg).toFixed(2)}deg`)
+  const color = (i: number, mult: number) => (mult >= 10 ? '#ffd166' : pal[i % pal.length])
+  const gradient = `conic-gradient(from 0deg, ${arcs
+    .map((a, i) => `${color(i, a.mult)} ${a.start.toFixed(2)}deg ${a.end.toFixed(2)}deg`)
     .join(', ')})`
+  // Achterglow: dezelfde kleuren, zachter en groter — draait mee tijdens het spinnen.
+  const auraGradient = `conic-gradient(from 0deg, ${pal.concat(pal).map((c, i, arr) => `${c} ${((i / arr.length) * 360).toFixed(1)}deg ${(((i + 1) / arr.length) * 360).toFixed(1)}deg`).join(', ')})`
 
-  // ── Geluid (Web Audio, geen assets nodig) ──
+  // ── Geluid (Web Audio, geen assets) ──
   const ac = () => {
     if (!acRef.current) {
-      const Ctx = (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)
+      const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
       acRef.current = new Ctx()
     }
     return acRef.current!
@@ -65,47 +69,46 @@ export function Wheel({
   const playSpin = (durMs: number) => {
     const c = ac()
     const t0 = c.currentTime
-    // Ratel die vertraagt: tikjes met oplopende tussentijd.
     let t = 0
-    let gap = 0.05
+    let gap = 0.035
     while (t < durMs / 1000) {
-      tone(880, t0 + t, 0.03, 'square', 0.07)
+      tone(820, t0 + t, 0.028, 'square', 0.06)
       t += gap
-      gap *= 1.08
+      gap *= 1.06 // vertraagt → spannender naar het einde
     }
   }
   const playWin = (big: boolean) => {
     const c = ac()
     const t0 = c.currentTime + 0.02
-    const notes = big ? [523, 659, 784, 1047, 1319] : [523, 659, 784]
-    notes.forEach((f, i) => tone(f, t0 + i * 0.12, 0.25, 'triangle', 0.2))
+    const notes = big ? [523, 659, 784, 1047, 1319, 1568] : [523, 659, 784, 1047]
+    notes.forEach((f, i) => tone(f, t0 + i * 0.11, 0.28, 'triangle', 0.2))
   }
 
   const spin = async () => {
-    if (busy || won != null) return
+    if (busy || spinsLeft <= 0) return
     setBusy(true)
     setErr(null)
+    setLastWon(null)
     try {
       ac().resume?.()
     } catch {}
     try {
       const res = await fetch('/api/pronostiek/spin', { method: 'POST', credentials: 'include' })
-      const j = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string; mult?: number }
-      if (!res.ok || !j.ok || typeof j.mult !== 'number') throw new Error(j.error || 'Draaien mislukt.')
-      const mult = j.mult
-      // Kies een segment met die waarde om naartoe te draaien.
-      const candidates = segments.map((v, i) => (v === mult ? i : -1)).filter((i) => i >= 0)
-      const idx = candidates.length ? candidates[Math.floor(Math.random() * candidates.length)] : 0
-      const target = Math.ceil(rotRef.current / 360) * 360 + 6 * 360 + (360 - (idx + 0.5) * seg)
+      const j = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string; index?: number; mult?: number; spinsLeft?: number }
+      if (!res.ok || !j.ok || typeof j.index !== 'number' || typeof j.mult !== 'number') throw new Error(j.error || 'Draaien mislukt.')
+      const arc = arcs[j.index] ?? arcs[0]
+      const target = Math.ceil(rotRef.current / 360) * 360 + 9 * 360 + (360 - arc.mid)
       rotRef.current = target
-      const durMs = 4200
+      const durMs = 6200
       playSpin(durMs)
       setRotation(target)
       window.setTimeout(() => {
-        setWon(mult)
+        setLastWon(j.mult!)
+        setWon((w) => [...w, j.mult!])
+        setSpinsLeft(typeof j.spinsLeft === 'number' ? j.spinsLeft : spinsLeft - 1)
         setConfetti(true)
-        playWin(mult >= 5)
-        window.setTimeout(() => setConfetti(false), 2600)
+        playWin(j.mult! >= 5)
+        window.setTimeout(() => setConfetti(false), 2800)
         setBusy(false)
       }, durMs)
     } catch (e) {
@@ -114,22 +117,26 @@ export function Wheel({
     }
   }
 
-  const fmt = (v: number) => `×${Number.isInteger(v) ? v : v.toString().replace('.', ',')}`
+  const labelSize = (a: { start: number; end: number }) => {
+    const span = a.end - a.start
+    return span >= 55 ? '1.05rem' : span >= 35 ? '0.92rem' : span >= 22 ? '0.78rem' : '0.66rem'
+  }
+  const allWon = [...heldTokens, ...won]
 
   return (
-    <div className="rad" style={{ ['--rad-p' as string]: primary, ['--rad-s' as string]: secondary }}>
+    <div className="rad">
       <div className={`rad-stage${busy ? ' spinning' : ''}`}>
-        {/* Marquee-lampjes rond de rand (Vegas). */}
+        <div className="rad-aura" style={{ background: auraGradient }} aria-hidden />
         <div className="rad-bulbs" aria-hidden>
-          {Array.from({ length: 24 }).map((_, i) => (
-            <span key={i} className="rad-bulb" style={{ transform: `translate(-50%,-50%) rotate(${i * 15}deg) translateY(-148px)`, animationDelay: `${(i % 8) * 0.1}s` }} />
+          {Array.from({ length: 28 }).map((_, i) => (
+            <span key={i} className="rad-bulb" style={{ transform: `translate(-50%,-50%) rotate(${i * (360 / 28)}deg) translateY(-152px)`, animationDelay: `${(i % 8) * 0.09}s` }} />
           ))}
         </div>
         <span className="rad-pointer" aria-hidden>▼</span>
         <div className="rad-wheel" style={{ background: gradient, transform: `rotate(${rotation}deg)` }} role="img" aria-label="Bonusrad">
-          {segments.map((v, i) => (
-            <span key={i} className="rad-lab" style={{ transform: `translate(-50%,-50%) rotate(${(i + 0.5) * seg}deg) translateY(-96px)` }}>
-              {fmt(v)}
+          {arcs.map((a, i) => (
+            <span key={i} className="rad-lab" style={{ transform: `translate(-50%,-50%) rotate(${a.mid}deg) translateY(-94px)`, fontSize: labelSize(a) }}>
+              {fmt(a.mult)}
             </span>
           ))}
         </div>
@@ -143,15 +150,14 @@ export function Wheel({
         </div>
         {confetti && (
           <div className="rad-confetti" aria-hidden>
-            {Array.from({ length: 44 }).map((_, i) => (
+            {Array.from({ length: 56 }).map((_, i) => (
               <span
                 key={i}
                 className="rad-cf"
                 style={{
                   left: `${Math.random() * 100}%`,
-                  background: [primary, secondary, '#ffd166', '#fff'][i % 4],
+                  background: pal.concat(['#ffd166', '#fff'])[i % (pal.length + 2)],
                   animationDelay: `${Math.random() * 0.5}s`,
-                  transform: `rotate(${Math.random() * 360}deg)`,
                 }}
               />
             ))}
@@ -159,20 +165,28 @@ export function Wheel({
         )}
       </div>
 
-      {won == null ? (
-        <button className="rad-btn" onClick={spin} disabled={busy}>
-          {busy ? 'Draaien…' : `🎰 Draai het rad van ${clubName}`}
-        </button>
-      ) : (
+      {lastWon != null && (
         <div className="rad-prize">
-          <div className={`rad-prize-x${won >= 5 ? ' jackpot' : ''}`}>{fmt(won)}</div>
-          <p className="rad-prize-txt">
-            Gewonnen! Je krijgt <b>3 boosters van {fmt(won)}</b>. Gebruik ze bij het voorspellen — jij kiest op welke wedstrijden.
-          </p>
+          <div className={`rad-prize-x${lastWon >= 5 ? ' jackpot' : ''}`}>{fmt(lastWon)}</div>
+          <p className="rad-prize-txt">Gewonnen! Deze booster komt bij je voorraad.</p>
         </div>
       )}
-      {won == null && tokens > 0 && (
-        <p className="rad-have">Je hebt nog <b>{tokens}</b> booster(s) klaarstaan.</p>
+
+      {spinsLeft > 0 ? (
+        <button className="rad-btn" onClick={spin} disabled={busy}>
+          {busy ? 'Draaien…' : `🎰 Draai het rad van ${clubName}${spinsLeft < 90 ? ` (nog ${spinsLeft})` : ''}`}
+        </button>
+      ) : (
+        <p className="rad-done-txt">Je hebt je 3 beurten gebruikt. Gebruik je boosters bij het voorspellen — jij kiest welke op welke wedstrijd.</p>
+      )}
+
+      {allWon.length > 0 && (
+        <div className="rad-tokens">
+          <span className="rad-tokens-lbl">Jouw boosters:</span>
+          {allWon.map((m, i) => (
+            <span key={i} className={`rad-token${m >= 5 ? ' big' : ''}`}>{fmt(m)}</span>
+          ))}
+        </div>
       )}
       {err && <p className="rad-err">{err}</p>}
     </div>

@@ -3,9 +3,9 @@ import Link from 'next/link'
 import { SiteHeader } from '@/components/SiteHeader'
 import { isFederationLevel, userClubId } from '@/lib/access'
 import { getAuthUser } from '@/lib/auth-user'
-import { clubColorsFrom } from '@/lib/club-colors'
+import { clubColorsFrom, normalizeHex } from '@/lib/club-colors'
 import { getPayloadClient } from '@/lib/payload-client'
-import { RAD_SEGMENTS } from '@/lib/pronostiek-rad'
+import { activeTokens, RAD_SEGMENTS, SPINS_PER_WEEK, type RadToken } from '@/lib/pronostiek-rad'
 import { loadRadState } from '@/lib/pronostiek-rad-server'
 import { Wheel } from './Wheel'
 import './rad.css'
@@ -13,14 +13,14 @@ import '../../club/voorspel/voorspel.css'
 
 export const dynamic = 'force-dynamic'
 
-type Power = { mult: number; remaining: number; wonAt: string }
+type Power = { tokens?: RadToken[]; spinWeek?: string; spinsUsed?: number }
 
 const fmt = (v: number) => `×${Number.isInteger(v) ? v : String(v).replace('.', ',')}`
 const MEDAL = ['🥇', '🥈', '🥉']
 
-// Bonusrad (Las Vegas) — de top 3 van vorig weekend draaien aan een rad met vermenigvuldigers. Wat
-// je draait, win je als 3 persoonlijke boosters voor je volgende voorspellingen. Het rad draagt je
-// clublogo en -kleuren. Beheerders/federatie mogen altijd draaien (testmodus).
+// Bonusrad (Las Vegas) — de top 3 van vorig weekend draaien elk tot 3 keer aan een rad met
+// vermenigvuldigers. Wat je draait, win je als boosters (4 weken geldig) die je zelf op je
+// voorspellingen plakt. Het rad draagt je clublogo en de kleuren van de deelnemende clubs.
 export default async function RadPage() {
   const payload = await getPayloadClient()
   const me = await getAuthUser()
@@ -28,27 +28,42 @@ export default async function RadPage() {
   const canTest = isFederationLevel(me)
   const state = await loadRadState(payload)
 
-  const power = ((me as { pronostiekPower?: Power | null } | null)?.pronostiekPower) ?? null
+  const power = ((me as { pronostiekPower?: Power | null } | null)?.pronostiekPower ?? {}) as Power
+  const heldTokens = activeTokens(power.tokens).map((t) => t.mult).sort((a, b) => b - a)
   const myRank = state.top3.find((w) => w.userId === myId)?.rank ?? null
   const eligible = canTest || myRank != null
-  const spunThisWeek = power != null && power.wonAt === state.weekendStartIso
-  const showWheel = eligible && (canTest || !spunThisWeek)
-  const remaining = power && Number(power.remaining) > 0 ? Number(power.remaining) : 0
+  const usedThisWeek = power.spinWeek === state.weekendStartIso ? Number(power.spinsUsed) || 0 : 0
+  const spinsLeft = canTest ? 99 : eligible ? Math.max(0, SPINS_PER_WEEK - usedThisWeek) : 0
 
-  // Clublogo + clubkleuren: het rad voelt als jóuw club.
+  // Clublogo + een palet van clubkleuren: het rad voelt als jóuw club, met de kleuren van iedereen
+  // die meedoet.
   const cid = userClubId(me)
   const clubId = cid != null && Number.isFinite(Number(cid)) ? Number(cid) : null
   let clubLogoUrl: string | null = null
-  let clubColors: { primary: string; secondary: string } | null = null
   let clubName = 'je club'
+  let myColor: string | null = null
   if (clubId) {
     const c = await payload.findByID({ collection: 'clubs', id: clubId, depth: 0 }).catch(() => null)
     if (c) {
       clubLogoUrl = (c as { logoUrl?: string | null }).logoUrl || null
-      clubColors = clubColorsFrom((c as { colorPrimary?: unknown }).colorPrimary, (c as { colorSecondary?: unknown }).colorSecondary)
       clubName = (c as { name?: string }).name || 'je club'
+      myColor = clubColorsFrom((c as { colorPrimary?: unknown }).colorPrimary, (c as { colorSecondary?: unknown }).colorSecondary)?.primary ?? null
     }
   }
+  const clubsRes = await payload
+    .find({ collection: 'clubs', depth: 0, limit: 60, select: { colorPrimary: true, colorSecondary: true } })
+    .catch(() => ({ docs: [] as Record<string, unknown>[] }))
+  const palette: string[] = []
+  const pushColor = (v: unknown) => {
+    const h = normalizeHex(typeof v === 'string' ? v : null)
+    if (h && !palette.includes(h)) palette.push(h)
+  }
+  if (myColor) palette.push(myColor)
+  for (const c of clubsRes.docs) {
+    pushColor((c as { colorPrimary?: unknown }).colorPrimary)
+    pushColor((c as { colorSecondary?: unknown }).colorSecondary)
+  }
+  if (palette.length < 3) palette.push('#06d6a0', '#118ab2', '#ef476f', '#ffd166')
 
   return (
     <>
@@ -56,12 +71,13 @@ export default async function RadPage() {
       <div className="site">
         <h1 className="page-title">🎰 <span className="brand">Bonusrad</span></h1>
         <p className="vs-intro">
-          De <strong>top 3</strong> van de pronostiek van vorig weekend draaien aan het rad. Je wint een <strong>vermenigvuldiger</strong> die je
-          op je volgende <strong>3 voorspellingen</strong> kan gebruiken — jij kiest welke wedstrijden. <Link href="/pronostiek" style={{ color: 'var(--accent)' }}>Naar de stand</Link>.
+          De <strong>top 3</strong> van de pronostiek van vorig weekend draaien <strong>3×</strong> aan het rad. Je wint
+          <strong> vermenigvuldigers</strong> die je op je voorspellingen kan zetten — jij kiest welke wedstrijd. Boosters zijn
+          <strong> 4 weken</strong> geldig. <Link href="/pronostiek" style={{ color: 'var(--accent)' }}>Naar de stand</Link>.
         </p>
 
         {canTest && (
-          <p className="rad-test">🧪 Testmodus (beheerder): jij mag altijd draaien. Opnieuw draaien overschrijft je vorige booster.</p>
+          <p className="rad-test">🧪 Testmodus (beheerder): jij mag onbeperkt draaien om te testen.</p>
         )}
 
         {state.top3.length > 0 && (
@@ -75,17 +91,22 @@ export default async function RadPage() {
           </div>
         )}
 
-        {showWheel ? (
-          <Wheel segments={[...RAD_SEGMENTS]} clubLogoUrl={clubLogoUrl} clubColors={clubColors} clubName={clubName} tokens={remaining} />
-        ) : remaining > 0 ? (
+        {eligible && spinsLeft > 0 ? (
+          <Wheel segments={[...RAD_SEGMENTS]} palette={palette} clubLogoUrl={clubLogoUrl} clubName={clubName} spinsLeft={spinsLeft} heldTokens={heldTokens} />
+        ) : heldTokens.length > 0 ? (
           <div className="rad-card">
-            <h2>🎟️ Je booster staat klaar</h2>
-            <p>Je hebt <b>{remaining}</b> booster(s) van <b>{fmt(power!.mult)}</b>. Gebruik ze bij het voorspellen op een livewedstrijd — jij kiest op welke. <Link href="/" style={{ color: 'var(--accent)' }}>Voorspel mee →</Link></p>
+            <h2>🎟️ Je boosters staan klaar</h2>
+            <p>Gebruik ze bij het voorspellen op een livewedstrijd — jij kiest welke booster op welke wedstrijd. <Link href="/" style={{ color: 'var(--accent)' }}>Voorspel mee →</Link></p>
+            <div className="rad-tokens" style={{ marginTop: 12 }}>
+              {heldTokens.map((m, i) => (
+                <span key={i} className={`rad-token${m >= 5 ? ' big' : ''}`}>{fmt(m)}</span>
+              ))}
+            </div>
           </div>
         ) : eligible ? (
           <div className="rad-card">
-            <h2>Je boosters zijn op</h2>
-            <p>Je gebruikte je boosters van deze week. Eindig opnieuw bij de top 3 om volgende week weer te mogen draaien.</p>
+            <h2>Je beurten zijn op</h2>
+            <p>Je draaide deze week 3× en gebruikte je boosters. Eindig opnieuw bij de top 3 om volgende week weer te mogen draaien.</p>
           </div>
         ) : (
           <div className="rad-card">
