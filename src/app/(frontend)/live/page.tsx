@@ -4,6 +4,7 @@ import { getAuthUser } from '@/lib/auth-user'
 import { dateStrBE } from '@/lib/datetime'
 import { LiveBoard } from './LiveBoard'
 import { loadLiveDay } from './loadLiveDay'
+import { TournamentLiveStrip } from './TournamentLiveStrip'
 import './live.css'
 
 export const dynamic = 'force-dynamic'
@@ -23,6 +24,7 @@ export default async function LivePage({ searchParams }: { searchParams: Promise
     <>
       <SiteHeader active="wedstrijden" />
       <div className="lb-page">
+        <TournamentLiveStrip />
         <LiveBoard date={selected} today={today} matches={days} myClubId={myClubId} />
       </div>
     </>

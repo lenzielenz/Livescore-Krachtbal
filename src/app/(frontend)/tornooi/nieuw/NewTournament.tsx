@@ -42,6 +42,7 @@ export function NewTournament({
   const [seeded, setSeeded] = useState<boolean[]>(() => Array(4).fill(false))
   const [method, setMethod] = useState<Method>('auto')
   const [format, setFormat] = useState<'knockout' | 'roundrobin'>('knockout')
+  const [toonOpLive, setToonOpLive] = useState(true)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -149,7 +150,7 @@ export function NewTournament({
       const res = await fetch('/api/tournament', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: name.trim(), category, method, format, slots, teamClubs, teamTeams }),
+        body: JSON.stringify({ name: name.trim(), category, method, format, slots, teamClubs, teamTeams, toonOpLive }),
       })
       const data = (await res.json()) as { id?: number; error?: string }
       if (!res.ok || !data.id) throw new Error(data.error ?? 'Aanmaken mislukt.')
@@ -204,6 +205,10 @@ export function NewTournament({
             <span>Poule met rangschikking — winst 4, gelijk 3, verlies 2.</span>
           </button>
         </div>
+        <label className="trn-livecheck" style={{ marginTop: 14 }}>
+          <input type="checkbox" checked={toonOpLive} onChange={(e) => setToonOpLive(e.target.checked)} />
+          <span>📺 Tonen op de live-pagina <small>de lopende wedstrijden van deze beker verschijnen bovenaan de live-pagina</small></span>
+        </label>
       </section>
 
       <section className="trn-card">

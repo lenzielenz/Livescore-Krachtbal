@@ -7,6 +7,7 @@ import { dateStrBE } from '@/lib/datetime'
 import { quoteForDay } from '@/lib/krachtbal-quotes'
 import { LiveBoard } from './live/LiveBoard'
 import { loadLiveDay } from './live/loadLiveDay'
+import { TournamentLiveStrip } from './live/TournamentLiveStrip'
 import './live/live.css'
 
 export const dynamic = 'force-dynamic'
@@ -58,6 +59,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
           </section>
         )}
 
+        <TournamentLiveStrip />
         <LiveBoard date={selected} today={today} matches={days} myClubId={myClubId} />
       </div>
     </>

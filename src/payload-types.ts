@@ -860,6 +860,10 @@ export interface Tournament {
    */
   format?: ('knockout' | 'roundrobin') | null;
   /**
+   * Toon de (lopende) wedstrijden van deze beker bovenaan de live-pagina.
+   */
+  toonOpLive?: boolean | null;
+  /**
    * Vastgelegd bij het aanmaken.
    */
   teamCount?: number | null;
@@ -1631,6 +1635,7 @@ export interface TournamentsSelect<T extends boolean = true> {
   status?: T;
   method?: T;
   format?: T;
+  toonOpLive?: T;
   teamCount?: T;
   teamClubs?: T;
   teamTeams?: T;

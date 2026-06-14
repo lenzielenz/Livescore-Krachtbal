@@ -80,6 +80,13 @@ export const Tournaments: CollectionConfig = {
       ],
     },
     {
+      name: 'toonOpLive',
+      label: 'Tonen op de live-pagina',
+      type: 'checkbox',
+      defaultValue: false,
+      admin: { description: 'Toon de (lopende) wedstrijden van deze beker bovenaan de live-pagina.' },
+    },
+    {
       name: 'teamCount',
       label: 'Aantal ploegen',
       type: 'number',
