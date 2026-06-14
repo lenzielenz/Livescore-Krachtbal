@@ -1,6 +1,7 @@
 import { authUser, userClubId } from '@/lib/api-auth'
 import { buildMatchState } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
+import { activeTokens } from '@/lib/pronostiek-rad'
 import { countUserWeekendPredictions, LIVE_PRONOSTIEK_MAX_PER_WEEKEND } from '@/lib/pronostiek-weekend'
 import { reeksHalfDurationSeconds, type Reeks } from '@/lib/reeksen'
 import { clientIp, rateLimit } from '@/lib/sse-hub'
@@ -8,7 +9,8 @@ import { clientIp, rateLimit } from '@/lib/sse-hub'
 export const dynamic = 'force-dynamic'
 
 type PredEntry = { userId: number; name: string; clubId: number | null; home: number; away: number; at: number; weight: number; mult?: number }
-type Power = { mult: number; remaining: number; wonAt: string }
+type RadToken = { mult: number; wonAt: string; expiresAt: string }
+type Power = { tokens?: RadToken[]; spinWeek?: string; spinsUsed?: number }
 
 // Eén score-voorspelling van een clublid wegschrijven (upsert per persoon). Enkel vóór de aftrap
 // (status 'scheduled') en enkel voor wedstrijden van de eigen club.
@@ -18,7 +20,7 @@ export async function POST(req: Request) {
     return Response.json({ error: 'Te veel verzoeken.' }, { status: 429 })
   }
 
-  let body: { matchId?: number; home?: number; away?: number; useBooster?: boolean }
+  let body: { matchId?: number; home?: number; away?: number; boosterMult?: number }
   try {
     body = await req.json()
   } catch {
@@ -80,16 +82,22 @@ export async function POST(req: Request) {
     if (used >= LIVE_PRONOSTIEK_MAX_PER_WEEKEND) {
       return Response.json({ error: `Je ${LIVE_PRONOSTIEK_MAX_PER_WEEKEND} pronostieken voor dit weekend zijn op.` }, { status: 409 })
     }
-    // Bonusrad-booster: als de speler er een wil gebruiken én er nog heeft, plakken we de
-    // vermenigvuldiger op deze voorspelling en boeken we er één af van zijn account.
+    // Bonusrad-booster: de speler kiest welke gewonnen vermenigvuldiger hij op deze voorspelling
+    // zet. We zoeken een nog-geldige booster met die waarde, plakken hem op de voorspelling en
+    // verwijderen hem van het account (1 keer bruikbaar).
     let mult = 1
-    const power = (user as { pronostiekPower?: Power | null }).pronostiekPower ?? null
-    if (body.useBooster && power && Number(power.remaining) > 0 && Number(power.mult) > 1) {
-      mult = Number(power.mult)
-      const left = Number(power.remaining) - 1
-      await payload
-        .update({ collection: 'users', id: userId, data: { pronostiekPower: { ...power, remaining: left } }, overrideAccess: true })
-        .catch(() => null)
+    const wanted = Number(body.boosterMult)
+    if (Number.isFinite(wanted) && wanted > 1) {
+      const power = ((user as { pronostiekPower?: Power | null }).pronostiekPower ?? {}) as Power
+      const tokens = activeTokens(power.tokens)
+      const at = tokens.findIndex((t) => Number(t.mult) === wanted)
+      if (at >= 0) {
+        mult = Number(tokens[at].mult)
+        tokens.splice(at, 1)
+        await payload
+          .update({ collection: 'users', id: userId, data: { pronostiekPower: { ...power, tokens } }, overrideAccess: true })
+          .catch(() => null)
+      }
     }
     const next = [...existing, { userId, name, clubId, home, away, at: Date.now(), weight, mult }]
 
