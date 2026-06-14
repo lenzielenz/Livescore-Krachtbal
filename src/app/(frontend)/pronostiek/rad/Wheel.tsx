@@ -208,6 +208,10 @@ export function Wheel({
         {/* Flapper-pijl: tikt tegen elke pin die passeert. */}
         <div className="rad-flap" ref={flapRef} style={{ transform: FLAP_BASE }} aria-hidden />
         <div className="rad-wheel" ref={wheelRef} style={{ background: gradient, transform: `rotate(${rotation}deg)` }} role="img" aria-label="Bonusrad">
+          {/* Nette scheidingslijntjes tussen de vakken. */}
+          {arcs.map((a, i) => (
+            <span key={`div-${i}`} className="rad-div" style={{ transform: `translate(-50%, -100%) rotate(${a.start}deg)` }} />
+          ))}
           {Array.from({ length: PEG_COUNT }).map((_, i) => (
             <span key={`peg-${i}`} className="rad-peg" style={{ transform: `translate(-50%,-50%) rotate(${i * PEG_STEP}deg) translateY(-126px)` }} />
           ))}
@@ -216,6 +220,8 @@ export function Wheel({
               {fmt(a.mult)}
             </span>
           ))}
+          {/* Glans-ring binnenin de rand voor een verzorgde bezel. */}
+          <span className="rad-gloss" aria-hidden />
         </div>
         <button
           type="button"
@@ -231,6 +237,9 @@ export function Wheel({
           ) : (
             <span className="rad-hub-fallback">🎰</span>
           )}
+          {/* Glans + een vleugje bling op de verhoogde naaf. */}
+          <span className="rad-hub-shine" aria-hidden />
+          <span className="rad-hub-bling" aria-hidden>✦</span>
         </button>
         {confetti && (
           <div className="rad-confetti" aria-hidden>
