@@ -1314,6 +1314,8 @@ h3,
 }
 .match-meta-reeks { font-weight: 800; color: var(--accent); }
 .match-meta-bit::before { content: "·"; margin: 0 8px; color: var(--line); }
+.match-meta-cal { color: var(--accent); font-weight: 700; text-decoration: none; }
+.match-meta-cal:hover { text-decoration: underline; }
 
 /* ── Profiel-tools (snelkoppelingen bovenaan een profielpagina) ── */
 .profile-lead {

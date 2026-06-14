@@ -193,6 +193,9 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
           {datum && <span className="match-meta-bit">{datum}</span>}
           {accommodatie && <span className="match-meta-bit">📍 {accommodatie}</span>}
           {referee && <span className="match-meta-bit">🟡 {referee}</span>}
+          {state.match.status === 'scheduled' && matchDoc?.date && (
+            <a className="match-meta-bit match-meta-cal" href={`/api/match/${matchId}/ics`}>📅 In agenda</a>
+          )}
         </div>
       )}
       {/* Weerbericht aan het veld voor de thuislocatie. Het paneel verbergt zichzelf zodra de
