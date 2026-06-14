@@ -47,6 +47,12 @@ describe('scoreMatchPredictions', () => {
     const full = scoreMatchPredictions({ home: 11, away: 15 }, [pred(1, 11, 15)])
     expect(full[0].points).toBe(17)
   })
+
+  it('verdubbelt de punten voor een bonuswedstrijd (×2 via het rad)', () => {
+    const normal = scoreMatchPredictions({ home: 11, away: 15 }, [pred(1, 11, 15)])
+    const boosted = scoreMatchPredictions({ home: 11, away: 15 }, [pred(1, 11, 15)], 2)
+    expect(boosted[0].points).toBe(normal[0].points * 2)
+  })
 })
 
 describe('buildPredictionLeaderboard', () => {
@@ -68,5 +74,11 @@ describe('buildPredictionLeaderboard', () => {
     const lb = buildPredictionLeaderboard(matches)
     expect(lb).toHaveLength(1)
     expect(lb[0].userId).toBe(1)
+  })
+
+  it('past de wedstrijd-bonus toe in het klassement', () => {
+    const plain = buildPredictionLeaderboard([{ actual: { home: 11, away: 15 }, preds: [pred(1, 11, 15)] }])
+    const bonus = buildPredictionLeaderboard([{ actual: { home: 11, away: 15 }, preds: [pred(1, 11, 15)], bonus: 2 }])
+    expect(bonus[0].points).toBe(plain[0].points * 2)
   })
 })

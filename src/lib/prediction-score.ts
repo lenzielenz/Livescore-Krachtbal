@@ -46,9 +46,13 @@ export function basePoints(actual: ScoreGuess, pred: ScoreGuess): { base: number
   return { base, exact, resultOk, diffOk }
 }
 
-/** Scoor alle voorspellingen van één wedstrijd: basis + nabijheid + dichtste-bij-bonus. */
-export function scoreMatchPredictions(actual: ScoreGuess, preds: PredEntry[]): ScoredPred[] {
+/**
+ * Scoor alle voorspellingen van één wedstrijd: basis + nabijheid + dichtste-bij-bonus.
+ * `matchBonus` is de puntenmultiplier van de wedstrijd zelf (bonusrad): 1 = normaal, 2 = bonus.
+ */
+export function scoreMatchPredictions(actual: ScoreGuess, preds: PredEntry[], matchBonus = 1): ScoredPred[] {
   if (preds.length === 0) return []
+  const bonus = Number.isFinite(matchBonus) && matchBonus > 0 ? matchBonus : 1
   const rows = preds.map((p) => {
     const { base, exact, resultOk, diffOk } = basePoints(actual, p)
     const error = Math.abs(actual.home - p.home) + Math.abs(actual.away - p.away)
@@ -67,7 +71,7 @@ export function scoreMatchPredictions(actual: ScoreGuess, preds: PredEntry[]): S
       diffOk: r.diffOk,
       error: r.error,
       closest,
-      points: Math.round(raw * weight),
+      points: Math.round(raw * weight * bonus),
     }
   })
 }
@@ -86,10 +90,10 @@ export interface LeaderRow {
  * alle afgehandelde wedstrijden en tel de punten per persoon op. De "dichtste" wordt per wedstrijd
  * binnen de meegegeven groep bepaald — zo werkt zowel het clubklassement als een privé-pool.
  */
-export function buildPredictionLeaderboard(matches: { actual: ScoreGuess; preds: PredEntry[] }[]): LeaderRow[] {
+export function buildPredictionLeaderboard(matches: { actual: ScoreGuess; preds: PredEntry[]; bonus?: number }[]): LeaderRow[] {
   const agg = new Map<number, LeaderRow>()
   for (const m of matches) {
-    const scored = scoreMatchPredictions(m.actual, m.preds)
+    const scored = scoreMatchPredictions(m.actual, m.preds, m.bonus ?? 1)
     for (const s of scored) {
       let r = agg.get(s.userId)
       if (!r) {
