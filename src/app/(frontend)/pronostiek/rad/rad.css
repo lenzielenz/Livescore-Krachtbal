@@ -54,11 +54,12 @@
     0 0 0 1.5px rgba(90, 60, 10, 0.55);
 }
 /* Nette gouden scheidingsspaak tussen elk vak (van het midden naar de rand). */
+/* Subtiele scheiding tussen de vakken: een dunne donkere naad die naar de rand toe wegvalt — geen
+   heldere "balk" meer aan de buitenkant. Stopt net vóór de gouden rand. */
 .rad-div {
-  position: absolute; top: 50%; left: 50%; width: 3px; height: 125px; z-index: 2; border-radius: 2px;
+  position: absolute; top: 50%; left: 50%; width: 2px; height: 112px; z-index: 2;
   transform-origin: 50% 100%;
-  background: linear-gradient(to top, rgba(140, 100, 8, 0.7), #ffe7a0 70%, #fff);
-  box-shadow: 0 0 2px rgba(0, 0, 0, 0.45);
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.38) 0%, rgba(0, 0, 0, 0.22) 55%, transparent 100%);
 }
 /* Bolle (convexe) koepel: het midden ligt HOGER dan de rand. Een centrale lichtbel die naar de
    rand toe wegvalt, met een ronde randschaduw zodat de buitenkant lager lijkt te liggen. De
