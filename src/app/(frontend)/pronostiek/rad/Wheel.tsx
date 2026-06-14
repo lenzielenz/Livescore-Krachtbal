@@ -204,7 +204,7 @@ export function Wheel({
         <div className="rad-casing" aria-hidden />
         <div className="rad-bulbs" aria-hidden>
           {Array.from({ length: 28 }).map((_, i) => (
-            <span key={i} className="rad-bulb" style={{ transform: `translate(-50%,-50%) rotate(${i * (360 / 28)}deg) translateY(-152px)`, animationDelay: `${(i % 8) * 0.09}s` }} />
+            <span key={i} className="rad-bulb" style={{ transform: `translate(-50%,-50%) rotate(${i * (360 / 28)}deg) translateY(-150px)`, animationDelay: `${(i % 8) * 0.09}s` }} />
           ))}
         </div>
         {/* Flapper-pijl: tikt tegen elke pin die passeert. */}
