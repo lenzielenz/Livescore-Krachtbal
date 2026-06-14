@@ -1,6 +1,7 @@
 import { authUser, userClubId } from '@/lib/api-auth'
 import { buildMatchState } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
+import { countUserWeekendPredictions, LIVE_PRONOSTIEK_MAX_PER_WEEKEND } from '@/lib/pronostiek-weekend'
 import { reeksHalfDurationSeconds, type Reeks } from '@/lib/reeksen'
 import { clientIp, rateLimit } from '@/lib/sse-hub'
 
@@ -72,6 +73,11 @@ export async function POST(req: Request) {
     // Eenmaal doorgegeven, staat de voorspelling vast — niet meer te wijzigen (dat maakt het spannend).
     if (existing.some((p) => Number(p?.userId) === userId)) {
       return Response.json({ error: 'Je hebt al voorspeld voor deze wedstrijd — dat staat vast.' }, { status: 409 })
+    }
+    // Weekendlimiet: maximaal X wedstrijden per speelweekend (eerlijk globaal klassement).
+    const used = await countUserWeekendPredictions(payload, userId, String((match as { date?: unknown }).date ?? ''), matchId)
+    if (used >= LIVE_PRONOSTIEK_MAX_PER_WEEKEND) {
+      return Response.json({ error: `Je ${LIVE_PRONOSTIEK_MAX_PER_WEEKEND} pronostieken voor dit weekend zijn op.` }, { status: 409 })
     }
     const next = [...existing, { userId, name, clubId, home, away, at: Date.now(), weight }]
 

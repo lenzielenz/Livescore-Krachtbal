@@ -16,6 +16,8 @@ export function PronostiekWidget({
   awayName,
   initialHome,
   initialAway,
+  remaining,
+  max,
 }: {
   matchId: number
   status: string
@@ -25,6 +27,10 @@ export function PronostiekWidget({
   awayName: string
   initialHome: number | null
   initialAway: number | null
+  /** Resterende live-pronostieken deze speelweek. */
+  remaining?: number
+  /** Maximum per speelweek. */
+  max?: number
 }) {
   const [home, setHome] = useState('')
   const [away, setAway] = useState('')
@@ -61,23 +67,33 @@ export function PronostiekWidget({
 
   if (status !== 'scheduled' && status !== 'live') return null // na afloop gesloten
 
+  // Ingevuld → heel compact: een slank ✓-balkje dat amper plaats inneemt.
+  if (locked) {
+    return (
+      <div className="pn pn-mini">
+        <span className="pn-check sm">✓</span>
+        <span className="pn-mini-txt">Pronostiek binnen · <b>{locked.home}–{locked.away}</b> <span className="pn-mini-secret">(enkel jij ziet dit)</span></span>
+      </div>
+    )
+  }
+
   // Eén vaste <section> (geen inline-component): zo blijft het invoerveld gemount en behoudt het de
   // focus/het toetsenbord tussen toetsaanslagen door.
+  const limitReached = typeof remaining === 'number' && remaining <= 0
   return (
     <section className="pn">
-      <h3 className="pn-h">🔮 Pronostiek{status === 'live' && <span className="pn-live">· match bezig</span>}</h3>
+      <h3 className="pn-h">
+        🔮 Pronostiek{status === 'live' && <span className="pn-live">· match bezig</span>}
+        {loggedIn && hasClub && !limitReached && typeof remaining === 'number' && (
+          <span className="pn-left">nog {remaining}{max ? `/${max}` : ''} dit weekend</span>
+        )}
+      </h3>
       {!loggedIn ? (
         <p className="pn-note"><Link href="/inloggen">Log in</Link> om je uitslag door te geven en mee te doen voor het klassement.</p>
       ) : !hasClub ? (
         <p className="pn-note">Koppel je account aan je club om mee te pronostieken.</p>
-      ) : locked ? (
-        <div className="pn-done">
-          <span className="pn-check">✓</span>
-          <span className="pn-done-txt">
-            <strong>Pronostiek binnen</strong>
-            <span className="pn-secret">{homeName} <b>{locked.home}–{locked.away}</b> {awayName} · enkel jij ziet dit</span>
-          </span>
-        </div>
+      ) : limitReached ? (
+        <p className="pn-note">Je {max ?? ''} pronostieken voor dit weekend zijn op — volgend weekend mag je weer.</p>
       ) : (
         <>
           <form className="pn-form" onSubmit={submit}>

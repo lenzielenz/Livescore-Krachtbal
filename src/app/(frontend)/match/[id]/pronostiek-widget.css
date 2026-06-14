@@ -34,3 +34,13 @@
   .pn-team { flex-basis: 100%; text-align: left; }
   .pn-team.away { text-align: left; }
 }
+
+/* Compacte (ingevulde) staat: een slank ✓-balkje. */
+.pn-mini { display: flex; align-items: center; gap: 8px; margin: 10px 0; padding: 7px 12px; border-radius: 999px; border: 1px solid color-mix(in srgb, #06d6a0 35%, var(--line)); background: color-mix(in srgb, #06d6a0 8%, transparent); font-size: 0.84rem; color: var(--txt); }
+.pn-check.sm { width: 20px; height: 20px; font-size: 0.8rem; }
+.pn-mini-txt b { font-variant-numeric: tabular-nums; }
+.pn-mini-secret { color: var(--dim); }
+
+/* Weekendteller in de kop. */
+.pn-left { margin-left: auto; font-size: 0.74rem; font-weight: 700; color: var(--dim); }
+.pn-h { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
