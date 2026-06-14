@@ -20,7 +20,6 @@ export const RAD_SEGMENTS: RadSegment[] = [
   { mult: 3, weight: 4 },
   { mult: 1.5, weight: 7 },
   { mult: 5, weight: 2 },
-  { mult: 4, weight: 3 },
   { mult: 2, weight: 6 },
   { mult: 10, weight: 1 },
   { mult: 3, weight: 4 },
