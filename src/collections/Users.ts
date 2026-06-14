@@ -145,6 +145,17 @@ export const Users: CollectionConfig = {
       },
     },
     {
+      // Bonusrad-booster: de top 3 van het weekend winnen een persoonlijke vermenigvuldiger die ze
+      // op hun eigen voorspellingen kunnen gebruiken. Vorm: { mult, remaining, wonAt }. Automatisch beheerd.
+      name: 'pronostiekPower',
+      label: 'Bonusrad-booster',
+      type: 'json',
+      admin: {
+        hidden: true,
+        description: 'Gewonnen pronostiek-booster: { mult, remaining, wonAt }. Automatisch beheerd.',
+      },
+    },
+    {
       // Analyse-toegang: een admin kan een geregistreerd account toegang geven tot de
       // analysemodule (data per speler/ploeg), zonder admin te worden.
       name: 'analyseAccess',

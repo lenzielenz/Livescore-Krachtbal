@@ -36,15 +36,15 @@ export default async function PronostiekStandPage() {
     .map((m) => ({
       id: m.id as number,
       preds: Array.isArray((m as { scorePredictions?: unknown }).scorePredictions) ? (m as { scorePredictions: PredEntry[] }).scorePredictions : [],
-      bonus: Number((m as { pronostiekBonus?: unknown }).pronostiekBonus) || 1,
     }))
     .filter((m) => m.preds.length > 0)
 
-  const scored: { actual: { home: number; away: number }; preds: PredEntry[]; bonus: number }[] = []
+  // De bonusrad-booster zit per voorspelling (PredEntry.mult); het klassement past die automatisch toe.
+  const scored: { actual: { home: number; away: number }; preds: PredEntry[] }[] = []
   await Promise.all(
     withPreds.map(async (m) => {
       const st = await buildMatchState(payload, m.id).catch(() => null)
-      if (st) scored.push({ actual: { home: st.score.home, away: st.score.away }, preds: m.preds, bonus: m.bonus })
+      if (st) scored.push({ actual: { home: st.score.home, away: st.score.away }, preds: m.preds })
     }),
   )
 

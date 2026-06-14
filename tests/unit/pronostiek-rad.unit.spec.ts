@@ -1,44 +1,30 @@
 import { describe, it, expect } from 'vitest'
 
-import { BONUS_COUNT, BONUS_MULTIPLIER, pickBonusMatches, prevWeekendDateIso } from '@/lib/pronostiek-rad'
+import { pickMultiplier, prevWeekendDateIso, RAD_SEGMENTS, RAD_TOP_N, TOKENS_PER_WIN } from '@/lib/pronostiek-rad'
 
-describe('pickBonusMatches', () => {
-  // Een vaste pseudo-random bron maakt de keuze deterministisch en dus testbaar.
-  const seeded = (seq: number[]) => {
-    let i = 0
-    return () => seq[i++ % seq.length]
-  }
-
-  it('kiest het gevraagde aantal verschillende items', () => {
-    const items = [1, 2, 3, 4, 5, 6, 7, 8]
-    const got = pickBonusMatches(items, 3, seeded([0.1, 0.5, 0.9, 0.3]))
-    expect(got).toHaveLength(3)
-    expect(new Set(got).size).toBe(3)
-    got.forEach((g) => expect(items).toContain(g))
+describe('pickMultiplier', () => {
+  // Een vaste pseudo-random bron maakt de trekking deterministisch en dus testbaar.
+  it('geeft altijd een waarde die ook écht op het rad staat (animatie kan landen)', () => {
+    const values = new Set(RAD_SEGMENTS as readonly number[])
+    for (let r = 0; r < 1; r += 0.05) {
+      expect(values.has(pickMultiplier(() => r))).toBe(true)
+    }
   })
-
-  it('kiest nooit meer dan er beschikbaar zijn', () => {
-    const got = pickBonusMatches([1, 2], BONUS_COUNT)
-    expect(got).toHaveLength(2)
-    expect(new Set(got).size).toBe(2)
-  })
-
-  it('laat de oorspronkelijke lijst ongemoeid', () => {
-    const items = [1, 2, 3, 4]
-    const copy = items.slice()
-    pickBonusMatches(items, 2, seeded([0.9, 0.1]))
-    expect(items).toEqual(copy)
-  })
-
-  it('geeft een lege lijst bij geen kandidaten', () => {
-    expect(pickBonusMatches([], 3)).toEqual([])
+  it('dekt het hele gewogen bereik (eerste en laatste segmentwaarde)', () => {
+    const uniq = [...new Set(RAD_SEGMENTS as readonly number[])]
+    expect(pickMultiplier(() => 0)).toBe(uniq[0])
+    expect(pickMultiplier(() => 0.999999)).toBe(uniq[uniq.length - 1])
   })
 })
 
 describe('constanten', () => {
-  it('boost is ×2 en kiest 3 wedstrijden', () => {
-    expect(BONUS_MULTIPLIER).toBe(2)
-    expect(BONUS_COUNT).toBe(3)
+  it('top 3 mogen draaien en winnen 3 boosters', () => {
+    expect(RAD_TOP_N).toBe(3)
+    expect(TOKENS_PER_WIN).toBe(3)
+  })
+  it('het rad bevat meerdere vermenigvuldigers > 1', () => {
+    expect(RAD_SEGMENTS.length).toBeGreaterThanOrEqual(6)
+    expect(RAD_SEGMENTS.every((v) => v > 1)).toBe(true)
   })
 })
 

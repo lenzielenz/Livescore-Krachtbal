@@ -32,8 +32,6 @@ export type DayMatch = {
   crosses?: { home: number; away: number }
   timeouts?: { home: number; away: number }
   refereeStops?: number
-  /** Pronostiek-bonus via het rad (1 = normaal, 2 = dubbele punten). */
-  bonus?: number
   /** Locatie van het thuisterrein → weer per wedstrijd. */
   weather?: { plaats: string | null; lat: number | null; lng: number | null } | null
 }
@@ -347,7 +345,6 @@ export function LiveBoard({
                 const live = m.status === 'live'
                 const hasStats = played && (m.crosses || m.timeouts)
                 const rowFav = teamFav(m) || clubFav(m)
-                const bonus = (m.bonus ?? 1) >= 2
                 const open = openRow === m.id
                 return (
                   <div key={m.id} className="lb-rowwrap">
@@ -377,7 +374,6 @@ export function LiveBoard({
                               </span>
                               <span className="lbl-center">
                                 <span className="lb-livebadge">LIVE</span>
-                                {bonus && <span className="lb-bonus" title="Dubbele pronostiekpunten">✨ ×2</span>}
                                 <span className="lbl-score">{m.score.home} – {m.score.away}</span>
                                 {hasStats && (
                                   <span className="lb-stats">
@@ -417,7 +413,6 @@ export function LiveBoard({
                                 )}
                               </span>
                               <span className="lb-score">{played ? `${m.score.home} – ${m.score.away}` : 'vs'}</span>
-                              {bonus && <span className="lb-bonus" title="Dubbele pronostiekpunten">✨ ×2</span>}
                               {hasStats && (
                                 <span className="lb-stats">
                                   <span title="Kruisjes">✖ {m.crosses?.home ?? 0}–{m.crosses?.away ?? 0}</span>

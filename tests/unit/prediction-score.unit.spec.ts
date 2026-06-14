@@ -53,6 +53,12 @@ describe('scoreMatchPredictions', () => {
     const boosted = scoreMatchPredictions({ home: 11, away: 15 }, [pred(1, 11, 15)], 2)
     expect(boosted[0].points).toBe(normal[0].points * 2)
   })
+
+  it('past de persoonlijke booster (mult) op één voorspelling toe', () => {
+    const base = scoreMatchPredictions({ home: 11, away: 15 }, [pred(1, 11, 15)])[0].points
+    const boosted = scoreMatchPredictions({ home: 11, away: 15 }, [{ ...pred(1, 11, 15), mult: 3 }])[0].points
+    expect(boosted).toBe(base * 3)
+  })
 })
 
 describe('buildPredictionLeaderboard', () => {

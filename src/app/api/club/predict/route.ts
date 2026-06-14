@@ -7,7 +7,8 @@ import { clientIp, rateLimit } from '@/lib/sse-hub'
 
 export const dynamic = 'force-dynamic'
 
-type PredEntry = { userId: number; name: string; clubId: number | null; home: number; away: number; at: number; weight: number }
+type PredEntry = { userId: number; name: string; clubId: number | null; home: number; away: number; at: number; weight: number; mult?: number }
+type Power = { mult: number; remaining: number; wonAt: string }
 
 // Eén score-voorspelling van een clublid wegschrijven (upsert per persoon). Enkel vóór de aftrap
 // (status 'scheduled') en enkel voor wedstrijden van de eigen club.
@@ -17,7 +18,7 @@ export async function POST(req: Request) {
     return Response.json({ error: 'Te veel verzoeken.' }, { status: 429 })
   }
 
-  let body: { matchId?: number; home?: number; away?: number }
+  let body: { matchId?: number; home?: number; away?: number; useBooster?: boolean }
   try {
     body = await req.json()
   } catch {
@@ -79,10 +80,21 @@ export async function POST(req: Request) {
     if (used >= LIVE_PRONOSTIEK_MAX_PER_WEEKEND) {
       return Response.json({ error: `Je ${LIVE_PRONOSTIEK_MAX_PER_WEEKEND} pronostieken voor dit weekend zijn op.` }, { status: 409 })
     }
-    const next = [...existing, { userId, name, clubId, home, away, at: Date.now(), weight }]
+    // Bonusrad-booster: als de speler er een wil gebruiken én er nog heeft, plakken we de
+    // vermenigvuldiger op deze voorspelling en boeken we er één af van zijn account.
+    let mult = 1
+    const power = (user as { pronostiekPower?: Power | null }).pronostiekPower ?? null
+    if (body.useBooster && power && Number(power.remaining) > 0 && Number(power.mult) > 1) {
+      mult = Number(power.mult)
+      const left = Number(power.remaining) - 1
+      await payload
+        .update({ collection: 'users', id: userId, data: { pronostiekPower: { ...power, remaining: left } }, overrideAccess: true })
+        .catch(() => null)
+    }
+    const next = [...existing, { userId, name, clubId, home, away, at: Date.now(), weight, mult }]
 
     await payload.update({ collection: 'matches', id: matchId, data: { scorePredictions: next }, overrideAccess: true })
-    return Response.json({ ok: true })
+    return Response.json({ ok: true, boosterUsed: mult > 1 ? mult : undefined })
   } catch (err) {
     return Response.json({ error: (err as Error).message }, { status: 400 })
   }
