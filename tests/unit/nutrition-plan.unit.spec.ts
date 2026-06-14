@@ -53,4 +53,25 @@ describe('buildNutritionPlan', () => {
     const many = buildNutritionPlan({ ...base, goal: 'onderhoud', sessionsPerWeek: 5 })
     expect(many.hydrationMl).toBeGreaterThan(few.hydrationMl)
   })
+
+  it('geeft geavanceerde, op maat gemaakte velden', () => {
+    const cut = buildNutritionPlan({ ...base, goal: 'afvallen' })
+    // BMI 80 / 1.8^2 ≈ 24.7
+    expect(cut.bmi).toBeCloseTo(24.7, 1)
+    expect(cut.bmiText).toBe('gezond gewicht')
+    expect(cut.proteinPerMeal).toBe(Math.round(80 * 0.4)) // 32 g
+    // afvallen → negatieve weekverandering
+    expect(cut.weeklyChangeKg).toBeLessThan(0)
+    // koolhydraatperiodisering: trainingsdag meer dan rustdag
+    expect(cut.trainingDayCarbs).toBeGreaterThan(cut.restDayCarbs)
+    expect(cut.trainingDayCalories).toBeGreaterThan(cut.restDayCalories)
+  })
+
+  it('voorbeelddag schaalt mee met de calorieën', () => {
+    const small = buildNutritionPlan({ ...base, weightKg: 55, goal: 'afvallen' })
+    const big = buildNutritionPlan({ ...base, weightKg: 100, goal: 'spiermassa' })
+    expect(small.example.length).toBe(4)
+    const oats = (p: ReturnType<typeof buildNutritionPlan>) => Number(p.example[0].items[0].amount.replace(/\D/g, ''))
+    expect(oats(big)).toBeGreaterThan(oats(small))
+  })
 })

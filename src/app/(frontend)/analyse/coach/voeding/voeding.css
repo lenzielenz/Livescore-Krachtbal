@@ -77,3 +77,23 @@
 .vd-meal-tip { font-size: 0.8rem; color: var(--dim); line-height: 1.4; }
 .vd-tips { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; color: var(--dim); font-size: 0.86rem; line-height: 1.5; }
 .vd-tips li::marker { color: var(--accent); }
+
+/* Trainingsdag vs rustdag. */
+.vd-split { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+@media (max-width: 460px) { .vd-split { grid-template-columns: 1fr; } }
+.vd-day {
+  display: flex; flex-direction: column; gap: 3px; padding: 13px 14px; border-radius: 14px;
+  border: 1px solid color-mix(in srgb, #fff 8%, var(--line));
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0) 50%), var(--panel-grad, var(--panel));
+}
+.vd-day.train { border-color: color-mix(in srgb, #4cc9f0 35%, var(--line)); }
+.vd-day.rest { border-color: color-mix(in srgb, var(--line) 100%, transparent); }
+.vd-day-h { font-weight: 800; font-size: 0.9rem; }
+.vd-day-kcal { font-size: 1.3rem; font-weight: 900; color: var(--accent); font-variant-numeric: tabular-nums; }
+.vd-day.train .vd-day-kcal { color: #4cc9f0; }
+.vd-day-sub { font-size: 0.78rem; color: var(--dim); line-height: 1.4; }
+
+/* Voorbeelddag-items. */
+.vd-ex { margin: 6px 0 0; padding-left: 16px; display: flex; flex-direction: column; gap: 3px; font-size: 0.84rem; color: var(--dim); line-height: 1.45; }
+.vd-ex b { color: var(--txt); font-variant-numeric: tabular-nums; }
+.vd-ex li::marker { color: var(--accent); }
