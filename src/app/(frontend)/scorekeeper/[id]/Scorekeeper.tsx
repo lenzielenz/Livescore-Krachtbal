@@ -1003,7 +1003,7 @@ export function Scorekeeper({
       <header className="sk-head">
         <div className="sk-scorebar">
           <div className="sk-team home">
-            <TeamLogo name={state.teams.home.name} logoUrl={state.teams.home.logoUrl} logoFit={state.teams.home.logoFit} side="home" size="md" ringColor={state.teams.home.colors?.primary} />
+            <TeamLogo name={state.teams.home.name} logoUrl={state.teams.home.logoUrl} logoFit={state.teams.home.logoFit} side="home" size="sm" ringColor={state.teams.home.colors?.primary} />
             <span className="sk-tn">{state.teams.home.name}</span>
             <span className="sk-sc">{state.score.home}</span>
             <button type="button" className="sk-to" disabled={busy || !isLive || state.timeouts.home >= 2} onClick={() => act({ action: 'timeout', teamId: state.teams.home.id })} title="Time-out thuis (2 per helft)">
@@ -1029,7 +1029,7 @@ export function Scorekeeper({
             <span className="sk-clock-ico">{isScheduled ? '🔒' : state.match.clockRunning ? '⏸' : '▶'}</span>
           </button>
           <div className="sk-team away">
-            <TeamLogo name={state.teams.away.name} logoUrl={state.teams.away.logoUrl} logoFit={state.teams.away.logoFit} side="away" size="md" ringColor={state.teams.away.colors?.primary} />
+            <TeamLogo name={state.teams.away.name} logoUrl={state.teams.away.logoUrl} logoFit={state.teams.away.logoFit} side="away" size="sm" ringColor={state.teams.away.colors?.primary} />
             <span className="sk-tn">{state.teams.away.name}</span>
             <span className="sk-sc">{state.score.away}</span>
             <button type="button" className="sk-to" disabled={busy || !isLive || state.timeouts.away >= 2} onClick={() => act({ action: 'timeout', teamId: state.teams.away.id })} title="Time-out uit (2 per helft)">
