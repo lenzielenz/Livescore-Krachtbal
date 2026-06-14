@@ -233,6 +233,10 @@
 .rang-bronze { background: linear-gradient(90deg, color-mix(in srgb, #cd7f32 12%, transparent), transparent 45%); }
 .rang-bronze .rang-pos { color: #e0a064; }
 .rang-crown { margin-right: 3px; font-size: 0.9em; }
+/* Degradatie-/gevarenzone (enkel volwassen reeksen): rode linkrand + zachte rode gloed. */
+.rang-danger td:first-child { box-shadow: inset 4px 0 0 0 #ef476f; }
+.rang-danger { background: linear-gradient(90deg, color-mix(in srgb, #ef476f 13%, transparent), transparent 48%); }
+.rang-danger .rang-pos { color: #ef476f; }
 /* Eigen club (ingelogd) springt eruit — wint van de podium-styling wanneer ze samenvallen. */
 .rang-mine {
   background: color-mix(in srgb, var(--accent) 14%, transparent);
