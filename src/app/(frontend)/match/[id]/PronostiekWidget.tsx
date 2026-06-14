@@ -32,35 +32,6 @@ export function PronostiekWidget({
   const [err, setErr] = useState<string | null>(null)
   const [locked, setLocked] = useState<{ home: number; away: number } | null>(initialHome != null && initialAway != null ? { home: initialHome, away: initialAway } : null)
 
-  if (status !== 'scheduled' && status !== 'live') return null // na afloop gesloten
-
-  const Wrap = ({ children }: { children: React.ReactNode }) => (
-    <section className="pn">
-      <h3 className="pn-h">🔮 Pronostiek{status === 'live' && <span className="pn-live">· match bezig</span>}</h3>
-      {children}
-    </section>
-  )
-
-  if (!loggedIn) {
-    return <Wrap><p className="pn-note"><Link href="/inloggen">Log in</Link> om je uitslag door te geven en mee te doen voor het klassement.</p></Wrap>
-  }
-  if (!hasClub) {
-    return <Wrap><p className="pn-note">Koppel je account aan je club om mee te pronostieken.</p></Wrap>
-  }
-  if (locked) {
-    return (
-      <Wrap>
-        <div className="pn-done">
-          <span className="pn-check">✓</span>
-          <span className="pn-done-txt">
-            <strong>Pronostiek binnen</strong>
-            <span className="pn-secret">{homeName} <b>{locked.home}–{locked.away}</b> {awayName} · enkel jij ziet dit</span>
-          </span>
-        </div>
-      </Wrap>
-    )
-  }
-
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     const h = Number(home)
@@ -88,20 +59,41 @@ export function PronostiekWidget({
     }
   }
 
+  if (status !== 'scheduled' && status !== 'live') return null // na afloop gesloten
+
+  // Eén vaste <section> (geen inline-component): zo blijft het invoerveld gemount en behoudt het de
+  // focus/het toetsenbord tussen toetsaanslagen door.
   return (
-    <Wrap>
-      <form className="pn-form" onSubmit={submit}>
-        <span className="pn-team">{homeName}</span>
-        <input className="pn-score" type="number" min={0} max={199} inputMode="numeric" value={home} onChange={(e) => setHome(e.target.value)} placeholder="–" aria-label={`Jouw voorspelling ${homeName}`} />
-        <span className="pn-dash">–</span>
-        <input className="pn-score" type="number" min={0} max={199} inputMode="numeric" value={away} onChange={(e) => setAway(e.target.value)} placeholder="–" aria-label={`Jouw voorspelling ${awayName}`} />
-        <span className="pn-team away">{awayName}</span>
-        <button type="submit" className="pn-send" disabled={busy}>{busy ? '…' : 'Doorgeven'}</button>
-      </form>
-      <p className="pn-hint">
-        {status === 'live' ? '⏱ De match is bezig — hoe later je voorspelt, hoe minder punten.' : 'Je kan dit maar één keer doorgeven — daarna staat het vast.'} Niemand ziet je tip.
-      </p>
-      {err && <p className="pn-err">{err}</p>}
-    </Wrap>
+    <section className="pn">
+      <h3 className="pn-h">🔮 Pronostiek{status === 'live' && <span className="pn-live">· match bezig</span>}</h3>
+      {!loggedIn ? (
+        <p className="pn-note"><Link href="/inloggen">Log in</Link> om je uitslag door te geven en mee te doen voor het klassement.</p>
+      ) : !hasClub ? (
+        <p className="pn-note">Koppel je account aan je club om mee te pronostieken.</p>
+      ) : locked ? (
+        <div className="pn-done">
+          <span className="pn-check">✓</span>
+          <span className="pn-done-txt">
+            <strong>Pronostiek binnen</strong>
+            <span className="pn-secret">{homeName} <b>{locked.home}–{locked.away}</b> {awayName} · enkel jij ziet dit</span>
+          </span>
+        </div>
+      ) : (
+        <>
+          <form className="pn-form" onSubmit={submit}>
+            <span className="pn-team">{homeName}</span>
+            <input className="pn-score" type="number" min={0} max={199} inputMode="numeric" value={home} onChange={(e) => setHome(e.target.value)} placeholder="–" aria-label={`Jouw voorspelling ${homeName}`} />
+            <span className="pn-dash">–</span>
+            <input className="pn-score" type="number" min={0} max={199} inputMode="numeric" value={away} onChange={(e) => setAway(e.target.value)} placeholder="–" aria-label={`Jouw voorspelling ${awayName}`} />
+            <span className="pn-team away">{awayName}</span>
+            <button type="submit" className="pn-send" disabled={busy}>{busy ? '…' : 'Doorgeven'}</button>
+          </form>
+          <p className="pn-hint">
+            {status === 'live' ? '⏱ De match is bezig — hoe later je voorspelt, hoe minder punten.' : 'Je kan dit maar één keer doorgeven — daarna staat het vast.'} Niemand ziet je tip.
+          </p>
+          {err && <p className="pn-err">{err}</p>}
+        </>
+      )}
+    </section>
   )
 }

@@ -29,6 +29,7 @@ export const PROFILES: Profile[] = [
     tools: [
       // Aantekenen gebeurt per wedstrijd vanuit "Mijn club" (de knop op elke wedstrijd), niet via
       // een aparte lijst van álle clubs — dat zorgde voor verwarring over welke je moest nemen.
+      { href: '/club/voorspel', label: '🔮 Pronostiek' },
       { href: '/kantine', label: '🍻 Kantinescherm' },
       { href: '/cast', label: '📺 Schermen naar tv' },
       { href: '/beheer/spelers', label: '➕ Spelers toevoegen' },
