@@ -8,34 +8,38 @@
 .rang-picker {
   flex: 1 1 auto;
   min-width: 0;
-  padding: 11px 12px;
-  border-radius: 10px;
-  border: 1px solid var(--line);
-  background: var(--panel);
+  padding: 12px 13px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, #fff 8%, var(--line));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 88%, #fff 12%), var(--panel));
   color: var(--txt);
   font-size: 0.95rem;
-  font-weight: 600;
+  font-weight: 700;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 2px 6px rgba(0, 0, 0, 0.3);
 }
 .rang-picker:focus {
   outline: none;
-  border-color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 60%, var(--line));
 }
 .rang-arrow {
   flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: var(--panel);
+  width: 46px;
+  border: 1px solid color-mix(in srgb, #fff 8%, var(--line));
+  border-radius: 12px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 88%, #fff 12%), var(--panel));
   color: var(--txt);
   font-size: 1.4rem;
   line-height: 1;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 2px 6px rgba(0, 0, 0, 0.3);
+  transition: transform 0.14s ease, border-color 0.14s ease;
 }
 .rang-arrow:hover {
-  border-color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 50%, var(--line));
   color: var(--accent);
+  transform: translateY(-1px);
 }
 .rang-arrow.disabled {
   opacity: 0.35;
@@ -47,9 +51,12 @@
      blijven de kolomkoppen in beeld (sticky thead hieronder). */
   max-height: min(78vh, 900px);
   overscroll-behavior: contain;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: var(--panel);
+  border: 1px solid color-mix(in srgb, #fff 8%, var(--line));
+  border-radius: 16px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0) 30%),
+    var(--panel-grad, var(--panel));
+  box-shadow: 0 18px 44px -16px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.07);
 }
 .rang-table {
   width: 100%;
@@ -67,22 +74,22 @@
 .rang-table thead th {
   font-size: 0.72rem;
   text-transform: uppercase;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.04em;
+  font-weight: 800;
   color: var(--dim);
-  background: #10141a;
+  background: linear-gradient(180deg, #161b22, #0f131a);
   /* Kolomkoppen blijven staan bij het scrollen van een lange rangschikking. */
   position: sticky;
   top: 0;
   z-index: 2;
-  box-shadow: 0 1px 0 var(--line);
+  box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--accent) 45%, transparent), 0 2px 6px rgba(0, 0, 0, 0.4);
 }
 .rang-table tbody tr:last-child td {
   border-bottom: none;
 }
-.rang-table tbody tr:nth-child(-n + 3) .rang-rank {
-  color: var(--accent);
-  font-weight: 800;
-}
+/* Zebra + zachte rij-overgang voor een verzorgde tabel. */
+.rang-table tbody tr.rang-row:nth-child(4n + 1) { background: rgba(255, 255, 255, 0.018); }
+.rang-table tbody tr.rang-row { transition: background-color 0.14s ease; }
 .rang-rank {
   width: 34px;
 }
@@ -214,18 +221,26 @@
 .rang-detail-item b.pos { color: #0fe0a6; }
 .rang-detail-item b.neg { color: #ef476f; }
 
-/* De eigen club (ingelogd) springt eruit. */
-/* Leider/kampioen: subtiel goud accent bovenaan. */
-.rang-leader td:first-child { box-shadow: inset 3px 0 0 0 #ffd166; }
+/* Podium: goud / zilver / brons — een verzorgde linkrand + getinte rang + zachte achtergrondgloed. */
+.rang-leader td:first-child { box-shadow: inset 4px 0 0 0 #ffd166; }
+.rang-leader { background: linear-gradient(90deg, color-mix(in srgb, #ffd166 14%, transparent), transparent 45%); }
+.rang-leader .rang-pos { color: #ffd166; }
 .rang-leader .rang-name { font-weight: 800; }
-.rang-crown { margin-right: 2px; font-size: 0.82em; }
-/* Eigen club wint van de leider-styling wanneer ze samenvallen. */
+.rang-silver td:first-child { box-shadow: inset 4px 0 0 0 #cfd6de; }
+.rang-silver { background: linear-gradient(90deg, color-mix(in srgb, #cfd6de 10%, transparent), transparent 45%); }
+.rang-silver .rang-pos { color: #dfe4ea; }
+.rang-bronze td:first-child { box-shadow: inset 4px 0 0 0 #cd7f32; }
+.rang-bronze { background: linear-gradient(90deg, color-mix(in srgb, #cd7f32 12%, transparent), transparent 45%); }
+.rang-bronze .rang-pos { color: #e0a064; }
+.rang-crown { margin-right: 3px; font-size: 0.9em; }
+/* Eigen club (ingelogd) springt eruit — wint van de podium-styling wanneer ze samenvallen. */
 .rang-mine {
-  background: color-mix(in srgb, var(--accent) 13%, transparent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent);
 }
 .rang-mine .rang-pos,
 .rang-mine .rang-name { color: var(--accent); }
-.rang-mine td:first-child { box-shadow: inset 3px 0 0 0 var(--accent); }
+.rang-mine td:first-child { box-shadow: inset 4px 0 0 0 var(--accent); }
 .rang-mybadge { margin-left: 6px; color: var(--accent); font-size: 0.85em; }
 
 /* Legende onder de rangschikking. */

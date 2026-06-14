@@ -56,7 +56,7 @@ export function RangTable({ rows }: { rows: RangRow[] }) {
             return (
               <Fragment key={r.teamId}>
                 <tr
-                  className={`rang-row${r.mine ? ' rang-mine' : ''}${r.rank === 1 ? ' rang-leader' : ''}${isOpen ? ' open' : ''}`}
+                  className={`rang-row${r.mine ? ' rang-mine' : ''}${r.rank === 1 ? ' rang-leader' : ''}${r.rank === 2 ? ' rang-silver' : ''}${r.rank === 3 ? ' rang-bronze' : ''}${isOpen ? ' open' : ''}`}
                   onClick={toggle}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') {
@@ -70,7 +70,7 @@ export function RangTable({ rows }: { rows: RangRow[] }) {
                   aria-label={`${r.name} — meer cijfers`}
                 >
                   <td className="rang-rank">
-                    <span className="rang-pos">{r.rank === 1 && <span className="rang-crown" aria-hidden>🥇</span>}{r.rank}</span>
+                    <span className="rang-pos">{r.rank === 1 && <span className="rang-crown" aria-hidden>🥇</span>}{r.rank === 2 && <span className="rang-crown" aria-hidden>🥈</span>}{r.rank === 3 && <span className="rang-crown" aria-hidden>🥉</span>}{r.rank}</span>
                     <span className={`rang-move ${r.moveCls}`} title="T.o.v. vorige week">
                       {moveArrow}{r.delta !== 0 ? Math.abs(r.delta) : ''}
                     </span>
