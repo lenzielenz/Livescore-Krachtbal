@@ -47,7 +47,6 @@ export function Wheel({
   const wheelRef = useRef<HTMLDivElement | null>(null)
   const flapRef = useRef<HTMLDivElement | null>(null)
   const rafRef = useRef<number | null>(null)
-  const radRef = useRef<HTMLDivElement | null>(null)
 
   // Echte prijzenrad-mechaniek: gelijkmatig verdeelde pinnen rond de rand; de flapper bovenaan tikt
   // tegen elke pin die passeert. Elke tik = één pin (geluid + flapper-uitslag), gesynct met de draai.
@@ -149,10 +148,6 @@ export function Wheel({
     setBusy(true)
     setErr(null)
     setLastWon(null)
-    // Automatisch naar volledig scherm (vanuit de klik = toegestaan); best-effort.
-    try {
-      if (!document.fullscreenElement) void radRef.current?.requestFullscreen?.().catch(() => {})
-    } catch {}
     try {
       ac().resume?.()
     } catch {}
@@ -219,7 +214,7 @@ export function Wheel({
   const allWon = [...heldTokens, ...won]
 
   return (
-    <div className={`rad${busy ? ' focus' : ''}`} ref={radRef}>
+    <div className={`rad${busy ? ' focus' : ''}`}>
       {/* Spotlight: tijdens het draaien dimt de rest van de pagina zodat je op het rad focust. */}
       <div className={`rad-spotlight${busy ? ' on' : ''}`} aria-hidden />
       <div className={`rad-stage${busy ? ' spinning' : ''}`}>
