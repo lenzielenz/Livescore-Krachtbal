@@ -168,6 +168,21 @@ export function Scorekeeper({
       rootRef.current?.requestFullscreen().catch(() => {})
     }
   }
+  // Automatisch volledig scherm zodra je het scherm voor het eerst aanraakt (browsers staan
+  // fullscreen enkel toe vanuit een gebruikersgebaar). Eén keer per opening; verlaten kan altijd
+  // met de ⛶-knop of Esc — daarna trapt het je niet opnieuw.
+  const autoFsRef = useRef(false)
+  useEffect(() => {
+    const el = rootRef.current
+    if (!el) return
+    const tryFs = () => {
+      if (autoFsRef.current) return
+      autoFsRef.current = true
+      if (!document.fullscreenElement && el.requestFullscreen) el.requestFullscreen().catch(() => {})
+    }
+    el.addEventListener('pointerdown', tryFs, { once: true })
+    return () => el.removeEventListener('pointerdown', tryFs)
+  }, [])
 
   // Houd het scherm wakker zolang de wedstrijd live is (Wake Lock API), zodat de gsm niet
   // in slaap valt tijdens het aantekenen. Wordt vrijgegeven als de match niet meer live is.
