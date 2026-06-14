@@ -6,7 +6,7 @@ import { competitionWhere } from '@/lib/analyse-access'
 import { getAuthUser } from '@/lib/auth-user'
 import { buildScoreboards, clubColors, clubLogoFit, clubLogoUrl } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
-import { COMPETITIE_REEKSEN } from '@/lib/reeksen'
+import { COMPETITIE_REEKSEN, isAdultReeks, type Reeks } from '@/lib/reeksen'
 import { computeStandings, forfaitFromUitslag, type StandingsMatch } from '@/lib/standings'
 import { RangTable, type RangRow } from './RangTable'
 import { ReeksPicker } from './ReeksPicker'
@@ -91,6 +91,12 @@ export default async function RangschikkingPage({ searchParams }: { searchParams
   const teamIds = [...teamInfo.keys()]
   const table = computeStandings(standingsMatches, teamIds)
 
+  // Degradatie-/gevarenzone: enkel bij volwassen reeksen (jeugd kan niet stijgen/dalen). De laatste
+  // RELEGATION ploegen vallen in de zone — enkel tonen als de reeks groot genoeg is.
+  const RELEGATION = 2
+  const adult = isAdultReeks(reeks as Reeks)
+  const dangerFrom = adult && table.length >= 6 ? table.length - RELEGATION : -1
+
   // Positie t.o.v. een week geleden: rangschikking uit de wedstrijden van vóór 7 dagen.
   const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000
   const prevMatches = standingsMatches.filter((m) => m.date && new Date(m.date).getTime() < weekAgo)
@@ -122,6 +128,7 @@ export default async function RangschikkingPage({ searchParams }: { searchParams
       points: r.points,
       moveCls,
       delta,
+      danger: dangerFrom >= 0 && i >= dangerFrom,
     }
   })
 
@@ -152,7 +159,7 @@ export default async function RangschikkingPage({ searchParams }: { searchParams
         {rows.length === 0 ? (
           <p className="empty">Nog geen ploegen of wedstrijden in deze reeks.</p>
         ) : (
-          <RangTable rows={rows} />
+          <RangTable rows={rows} showMove={adult} />
         )}
       </div>
     </>

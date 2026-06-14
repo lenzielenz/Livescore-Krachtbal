@@ -23,12 +23,16 @@ export type RangRow = {
   points: number
   moveCls: 'up' | 'down' | 'flat'
   delta: number
+  /** In de degradatie-/gevarenzone (enkel volwassen reeksen). */
+  danger?: boolean
 }
 
 // Klikbare rangschikking: tik op een ploeg om de extra cijfers (doelpunten voor/tegen,
 // saldo, positieverloop) uit te klappen — handig op gsm, waar die kolommen wegvallen.
-export function RangTable({ rows }: { rows: RangRow[] }) {
+// `showMove`: stijgen/dalen tonen — uit voor jeugdreeksen (daar is geen promotie/degradatie).
+export function RangTable({ rows, showMove = true }: { rows: RangRow[]; showMove?: boolean }) {
   const [open, setOpen] = useState<number | null>(null)
+  const hasDanger = rows.some((r) => r.danger)
 
   return (
     <>
@@ -56,7 +60,7 @@ export function RangTable({ rows }: { rows: RangRow[] }) {
             return (
               <Fragment key={r.teamId}>
                 <tr
-                  className={`rang-row${r.mine ? ' rang-mine' : ''}${r.rank === 1 ? ' rang-leader' : ''}${r.rank === 2 ? ' rang-silver' : ''}${r.rank === 3 ? ' rang-bronze' : ''}${isOpen ? ' open' : ''}`}
+                  className={`rang-row${r.mine ? ' rang-mine' : ''}${r.rank === 1 ? ' rang-leader' : ''}${r.rank === 2 ? ' rang-silver' : ''}${r.rank === 3 ? ' rang-bronze' : ''}${r.danger ? ' rang-danger' : ''}${isOpen ? ' open' : ''}`}
                   onClick={toggle}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') {
@@ -70,10 +74,12 @@ export function RangTable({ rows }: { rows: RangRow[] }) {
                   aria-label={`${r.name} — meer cijfers`}
                 >
                   <td className="rang-rank">
-                    <span className="rang-pos">{r.rank === 1 && <span className="rang-crown" aria-hidden>🥇</span>}{r.rank === 2 && <span className="rang-crown" aria-hidden>🥈</span>}{r.rank === 3 && <span className="rang-crown" aria-hidden>🥉</span>}{r.rank}</span>
-                    <span className={`rang-move ${r.moveCls}`} title="T.o.v. vorige week">
-                      {moveArrow}{r.delta !== 0 ? Math.abs(r.delta) : ''}
-                    </span>
+                    <span className="rang-pos">{r.rank === 1 && <span className="rang-crown" aria-hidden>🥇</span>}{r.rank === 2 && <span className="rang-crown" aria-hidden>🥈</span>}{r.rank === 3 && <span className="rang-crown" aria-hidden>🥉</span>}{r.danger && <span className="rang-crown" aria-hidden>🔻</span>}{r.rank}</span>
+                    {showMove && (
+                      <span className={`rang-move ${r.moveCls}`} title="T.o.v. vorige week">
+                        {moveArrow}{r.delta !== 0 ? Math.abs(r.delta) : ''}
+                      </span>
+                    )}
                   </td>
                   <td className="rang-team">
                     <div className="rang-team-inner">
@@ -100,7 +106,7 @@ export function RangTable({ rows }: { rows: RangRow[] }) {
                         <span className="rang-detail-item"><b>{r.goalsAgainst}</b> tegen gekregen</span>
                         <span className="rang-detail-item">saldo <b className={saldo >= 0 ? 'pos' : 'neg'}>{saldo >= 0 ? '+' : ''}{saldo}</b></span>
                         <span className="rang-detail-item">{r.played} gespeeld · {r.won}W {r.drawn}G {r.lost}V{r.forfaits ? ` · ${r.forfaits} FF` : ''}</span>
-                        {r.moveCls !== 'flat' && (
+                        {showMove && r.moveCls !== 'flat' && (
                           <span className="rang-detail-item">
                             <span className={`rang-move ${r.moveCls}`}>{moveArrow}{Math.abs(r.delta)}</span> t.o.v. vorige week
                           </span>
@@ -115,7 +121,7 @@ export function RangTable({ rows }: { rows: RangRow[] }) {
         </tbody>
       </table>
     </div>
-    <p className="rang-legend">🥇 leider · ★ jouw club · ▲▼ t.o.v. vorige week · tik op een ploeg voor meer cijfers</p>
+    <p className="rang-legend">🥇 leider{hasDanger ? ' · 🔻 degradatiezone' : ''} · ★ jouw club{showMove ? ' · ▲▼ t.o.v. vorige week' : ''} · tik op een ploeg voor meer cijfers</p>
     </>
   )
 }
