@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 
-import { segmentArcs, type RadSegment } from '@/lib/pronostiek-rad'
+import { segmentArcs, SPINS_PER_WEEK, type RadSegment } from '@/lib/pronostiek-rad'
 import './rad.css'
 
 const fmt = (v: number) => `×${Number.isInteger(v) ? v : String(v).replace('.', ',')}`
@@ -47,6 +47,7 @@ export function Wheel({
   const wheelRef = useRef<HTMLDivElement | null>(null)
   const flapRef = useRef<HTMLDivElement | null>(null)
   const rafRef = useRef<number | null>(null)
+  const radRef = useRef<HTMLDivElement | null>(null)
 
   // Echte prijzenrad-mechaniek: gelijkmatig verdeelde pinnen rond de rand; de flapper bovenaan tikt
   // tegen elke pin die passeert. Elke tik = één pin (geluid + flapper-uitslag), gesynct met de draai.
@@ -148,6 +149,10 @@ export function Wheel({
     setBusy(true)
     setErr(null)
     setLastWon(null)
+    // Automatisch naar volledig scherm (vanuit de klik = toegestaan); best-effort.
+    try {
+      if (!document.fullscreenElement) void radRef.current?.requestFullscreen?.().catch(() => {})
+    } catch {}
     try {
       ac().resume?.()
     } catch {}
@@ -214,16 +219,28 @@ export function Wheel({
   const allWon = [...heldTokens, ...won]
 
   return (
-    <div className={`rad${busy ? ' focus' : ''}`}>
+    <div className={`rad${busy ? ' focus' : ''}`} ref={radRef}>
       {/* Spotlight: tijdens het draaien dimt de rest van de pagina zodat je op het rad focust. */}
       <div className={`rad-spotlight${busy ? ' on' : ''}`} aria-hidden />
       <div className={`rad-stage${busy ? ' spinning' : ''}`}>
         <div className="rad-aura" style={{ background: auraGradient }} aria-hidden />
         {/* Metalen gouden behuizing rond het rad (draait niet mee). */}
         <div className="rad-casing" aria-hidden />
+        {/* Metalen klinknagels op de gouden rand — structuur & diepte. */}
+        <div className="rad-studs" aria-hidden>
+          {Array.from({ length: 12 }).map((_, i) => (
+            <span key={i} className="rad-stud" style={{ transform: `translate(-50%,-50%) rotate(${i * 30}deg) translateY(-134px)` }} />
+          ))}
+        </div>
         <div className="rad-bulbs" aria-hidden>
           {Array.from({ length: 28 }).map((_, i) => (
             <span key={i} className="rad-bulb" style={{ transform: `translate(-50%,-50%) rotate(${i * (360 / 28)}deg) translateY(-150px)`, animationDelay: `${i * 0.05}s` }} />
+          ))}
+        </div>
+        {/* Bling: enkele twinkelende sterren rond het rad. */}
+        <div className="rad-sparks" aria-hidden>
+          {[28, 150, 212, 326].map((deg, i) => (
+            <span key={i} className="rad-spark" style={{ transform: `translate(-50%,-50%) rotate(${deg}deg) translateY(-162px)`, animationDelay: `${i * 0.6}s` }}>✦</span>
           ))}
         </div>
         {/* Flapper-pijl: tikt tegen elke pin die passeert. */}
@@ -241,9 +258,9 @@ export function Wheel({
               {fmt(a.mult)}
             </span>
           ))}
-          {/* Glans-ring binnenin de rand voor een verzorgde bezel. */}
-          <span className="rad-gloss" aria-hidden />
         </div>
+        {/* Vaste glaskoepel over de draaiende vakken: reflectie blijft staan terwijl het rad draait. */}
+        <div className="rad-glass" aria-hidden />
         <button
           type="button"
           className={`rad-hub${spinsLeft > 0 && !busy ? ' live' : ''}`}
@@ -291,6 +308,20 @@ export function Wheel({
             <div className="rad-curtain l" onAnimationEnd={() => setCurtain(false)} />
             <div className="rad-curtain r" />
           </div>
+        )}
+      </div>
+
+      {/* Hoeveel draaibeurten je nog hebt. */}
+      <div className="rad-spins">
+        {spinsLeft >= 90 ? (
+          <span className="rad-spins-test">🧪 Onbeperkt draaien (test)</span>
+        ) : (
+          <>
+            {Array.from({ length: SPINS_PER_WEEK }).map((_, i) => (
+              <span key={i} className={`rad-chance${i < spinsLeft ? ' on' : ''}`} />
+            ))}
+            <span className="rad-spins-lbl">{spinsLeft} {spinsLeft === 1 ? 'beurt' : 'beurten'} over</span>
+          </>
         )}
       </div>
 
