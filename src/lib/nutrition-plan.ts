@@ -20,6 +20,7 @@ export interface NutritionInput {
 }
 
 export interface Meal { name: string; kcal: number; pct: number; tip: string }
+export interface ExampleMeal { name: string; items: { amount: string; food: string }[] }
 export interface NutritionPlan {
   bmr: number
   tdee: number
@@ -32,6 +33,20 @@ export interface NutritionPlan {
   goalLabel: string
   meals: Meal[]
   tips: string[]
+  // ── Geavanceerd, op maat ──
+  /** Eiwit per maaltijd (≈0,4 g/kg) voor optimale spieropbouw. */
+  proteinPerMeal: number
+  bmi: number
+  bmiText: string
+  /** Verwachte gewichtsverandering per week (kg, +/-) bij dit caloriedoel. */
+  weeklyChangeKg: number
+  /** Koolhydraatperiodisering: meer op trainingsdagen, minder op rustdagen. */
+  trainingDayCalories: number
+  trainingDayCarbs: number
+  restDayCalories: number
+  restDayCarbs: number
+  /** Voorbeelddag met concrete porties, geschaald op jouw calorieën. */
+  example: ExampleMeal[]
 }
 
 export const ACTIVITY_FACTOR: Record<Activity, number> = {
@@ -74,7 +89,69 @@ export function buildNutritionPlan(input: NutritionInput): NutritionPlan {
   const meals = splitMeals(calories)
   const tips = buildTips(input.goal, sessions)
 
-  return { bmr, tdee, calories, protein, fat, carbs, hydrationMl, goalLabel: GOAL_LABEL[input.goal], meals, tips }
+  // Geavanceerd, op maat.
+  const proteinPerMeal = round(kg * 0.4)
+  const m = input.heightCm / 100
+  const bmi = Math.round((kg / (m * m)) * 10) / 10
+  const bmiText = bmi < 18.5 ? 'ondergewicht' : bmi < 25 ? 'gezond gewicht' : bmi < 30 ? 'licht overgewicht' : 'overgewicht'
+  // ~7700 kcal per kg lichaamsvet → verwachte weekverandering uit het calorieverschil.
+  const weeklyChangeKg = Math.round((((calories - tdee) * 7) / 7700) * 10) / 10
+  // Koolhydraatperiodisering: ±1 g/kg verschuiven tussen trainings- en rustdagen.
+  const carbShift = round(kg * 1)
+  const trainingDayCarbs = carbs + carbShift
+  const restDayCarbs = Math.max(0, carbs - carbShift)
+  const trainingDayCalories = round(calories + carbShift * 4, 10)
+  const restDayCalories = round(calories - carbShift * 4, 10)
+  const example = exampleDay(calories)
+
+  return {
+    bmr, tdee, calories, protein, fat, carbs, hydrationMl, goalLabel: GOAL_LABEL[input.goal], meals, tips,
+    proteinPerMeal, bmi, bmiText, weeklyChangeKg,
+    trainingDayCalories, trainingDayCarbs, restDayCalories, restDayCarbs, example,
+  }
+}
+
+// Basis-voorbeelddag (≈2200 kcal); de porties worden geschaald naar het persoonlijke caloriedoel.
+const EXAMPLE_BASE: { name: string; items: { unit: 'g' | 'ml' | 'st'; food: string; n: number }[] }[] = [
+  { name: 'Ontbijt', items: [
+    { unit: 'g', food: 'havermout', n: 70 },
+    { unit: 'ml', food: 'melk of sojadrink', n: 250 },
+    { unit: 'st', food: 'banaan', n: 1 },
+    { unit: 'g', food: 'walnoten', n: 20 },
+  ] },
+  { name: 'Lunch', items: [
+    { unit: 'g', food: 'volkorenbrood', n: 120 },
+    { unit: 'g', food: 'kipfilet of tonijn', n: 100 },
+    { unit: 'g', food: 'hummus of kaas', n: 30 },
+    { unit: 'g', food: 'groenten / salade', n: 150 },
+  ] },
+  { name: 'Avondeten', items: [
+    { unit: 'g', food: 'zalm of kipfilet', n: 170 },
+    { unit: 'g', food: 'rijst (droog gewogen)', n: 90 },
+    { unit: 'g', food: 'groenten', n: 200 },
+    { unit: 'ml', food: 'olijfolie', n: 10 },
+  ] },
+  { name: 'Tussendoor', items: [
+    { unit: 'g', food: 'magere kwark', n: 250 },
+    { unit: 'g', food: 'blauwe bessen', n: 80 },
+    { unit: 'g', food: 'amandelen', n: 20 },
+  ] },
+]
+
+function exampleDay(calories: number): ExampleMeal[] {
+  const factor = calories / 2200
+  return EXAMPLE_BASE.map((meal) => ({
+    name: meal.name,
+    items: meal.items.map((it) => {
+      if (it.unit === 'st') {
+        const n = Math.max(1, Math.round(it.n * factor))
+        return { amount: `${n}×`, food: it.food }
+      }
+      const step = it.unit === 'ml' ? 10 : 5
+      const n = Math.max(step, round(it.n * factor, step))
+      return { amount: `${n} ${it.unit}`, food: it.food }
+    }),
+  }))
 }
 
 function splitMeals(calories: number): Meal[] {

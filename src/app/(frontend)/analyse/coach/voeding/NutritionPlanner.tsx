@@ -18,6 +18,13 @@ const GOALS: { v: Goal; label: string; ico: string }[] = [
   { v: 'spiermassa', label: 'Spiermassa', ico: '💪' },
 ]
 
+const changeText = (kg: number): string => {
+  const a = Math.abs(kg).toString().replace('.', ',')
+  if (kg <= -0.1) return `≈ ${a} kg/week eraf`
+  if (kg >= 0.1) return `≈ ${a} kg/week erbij`
+  return 'gewicht blijft stabiel'
+}
+
 export function NutritionPlanner() {
   const [sex, setSex] = useState<Sex>('m')
   const [age, setAge] = useState('25')
@@ -86,8 +93,9 @@ export function NutritionPlanner() {
           <div className="vd-hero">
             <span className="vd-hero-goal">{plan.goalLabel}</span>
             <span className="vd-hero-kcal">{plan.calories.toLocaleString('nl-BE')}</span>
-            <span className="vd-hero-unit">kcal / dag</span>
+            <span className="vd-hero-unit">kcal / dag (gemiddeld)</span>
             <span className="vd-hero-sub">basis {plan.bmr} · verbruik ±{plan.tdee} kcal · 💧 {(plan.hydrationMl / 1000).toFixed(1)} L water/dag</span>
+            <span className="vd-hero-sub">BMI {plan.bmi.toString().replace('.', ',')} ({plan.bmiText}) · {changeText(plan.weeklyChangeKg)} · 🥄 {plan.proteinPerMeal} g eiwit per maaltijd</span>
           </div>
 
           <div className="vd-macros">
@@ -101,6 +109,34 @@ export function NutritionPlanner() {
                 <span className="vd-macro-k">{m.k}</span>
                 <span className="vd-macro-bar"><i style={{ width: `${Math.round((m.kcal / macroTotal) * 100)}%` }} /></span>
                 <span className="vd-macro-sub">{Math.round((m.kcal / macroTotal) * 100)}% · {m.tip}</span>
+              </div>
+            ))}
+          </div>
+
+          <h3 className="vd-h3">📅 Koolhydraten timen: trainingsdag vs rustdag</h3>
+          <div className="vd-split">
+            <div className="vd-day train">
+              <span className="vd-day-h">🏃 Trainings-/wedstrijddag</span>
+              <span className="vd-day-kcal">{plan.trainingDayCalories.toLocaleString('nl-BE')} kcal</span>
+              <span className="vd-day-sub">{plan.trainingDayCarbs} g koolhydraten — meer brandstof rond inspanning</span>
+            </div>
+            <div className="vd-day rest">
+              <span className="vd-day-h">🛋️ Rustdag</span>
+              <span className="vd-day-kcal">{plan.restDayCalories.toLocaleString('nl-BE')} kcal</span>
+              <span className="vd-day-sub">{plan.restDayCarbs} g koolhydraten — eiwit & vet blijven gelijk</span>
+            </div>
+          </div>
+
+          <h3 className="vd-h3">🍳 Voorbeelddag op maat</h3>
+          <div className="vd-meals">
+            {plan.example.map((m) => (
+              <div key={m.name} className="vd-meal">
+                <span className="vd-meal-top"><b>{m.name}</b></span>
+                <ul className="vd-ex">
+                  {m.items.map((it, i) => (
+                    <li key={i}><b>{it.amount}</b> {it.food}</li>
+                  ))}
+                </ul>
               </div>
             ))}
           </div>

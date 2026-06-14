@@ -71,6 +71,9 @@ export default async function CoachDashboardPage({ searchParams }: { searchParam
           <h1 className="page-title"><span className="brand">Coach-dashboard</span></h1>
           {picker}
         </div>
+        <p className="cd-quick">
+          <Link className="sk-demo-cta" href="/analyse/coach/voeding">🥗 Voedingsadvies op maat</Link>
+        </p>
         {body}
       </div>
     </>
