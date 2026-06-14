@@ -42,7 +42,11 @@
 }
 
 .rang-scroll {
-  overflow-x: auto;
+  overflow: auto;
+  /* Begrensde scroll-zone: bij een heel lange rangschikking blijft de pagina hanteerbaar en
+     blijven de kolomkoppen in beeld (sticky thead hieronder). */
+  max-height: min(78vh, 900px);
+  overscroll-behavior: contain;
   border: 1px solid var(--line);
   border-radius: 12px;
   background: var(--panel);
@@ -66,6 +70,11 @@
   letter-spacing: 0.03em;
   color: var(--dim);
   background: #10141a;
+  /* Kolomkoppen blijven staan bij het scrollen van een lange rangschikking. */
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  box-shadow: 0 1px 0 var(--line);
 }
 .rang-table tbody tr:last-child td {
   border-bottom: none;
@@ -206,6 +215,11 @@
 .rang-detail-item b.neg { color: #ef476f; }
 
 /* De eigen club (ingelogd) springt eruit. */
+/* Leider/kampioen: subtiel goud accent bovenaan. */
+.rang-leader td:first-child { box-shadow: inset 3px 0 0 0 #ffd166; }
+.rang-leader .rang-name { font-weight: 800; }
+.rang-crown { margin-right: 2px; font-size: 0.82em; }
+/* Eigen club wint van de leider-styling wanneer ze samenvallen. */
 .rang-mine {
   background: color-mix(in srgb, var(--accent) 13%, transparent);
 }
@@ -213,3 +227,6 @@
 .rang-mine .rang-name { color: var(--accent); }
 .rang-mine td:first-child { box-shadow: inset 3px 0 0 0 var(--accent); }
 .rang-mybadge { margin-left: 6px; color: var(--accent); font-size: 0.85em; }
+
+/* Legende onder de rangschikking. */
+.rang-legend { margin: 8px 2px 0; font-size: 0.76rem; color: var(--dim); line-height: 1.4; }
