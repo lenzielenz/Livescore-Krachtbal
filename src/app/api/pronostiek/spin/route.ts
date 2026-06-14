@@ -26,9 +26,9 @@ export async function POST(req: Request) {
     const isTester = isFederationLevel(user)
 
     const state = await loadRadState(payload)
-    const eligible = isTester || state.top3.some((w) => w.userId === userId)
+    const eligible = isTester || state.winners.some((w) => w.userId === userId)
     if (!eligible) {
-      return Response.json({ error: 'Alleen de top 3 van vorig weekend mag aan het rad draaien.' }, { status: 403 })
+      return Response.json({ error: 'Alleen de besten van vorig weekend mogen aan het rad draaien.' }, { status: 403 })
     }
 
     const power = ((user as { pronostiekPower?: Power | null }).pronostiekPower ?? {}) as Power

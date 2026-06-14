@@ -17,10 +17,12 @@ type Power = { tokens?: RadToken[]; spinWeek?: string; spinsUsed?: number }
 
 const fmt = (v: number) => `×${Number.isInteger(v) ? v : String(v).replace('.', ',')}`
 const MEDAL = ['🥇', '🥈', '🥉']
+const medalFor = (rank: number) => MEDAL[rank - 1] ?? `#${rank}`
 
-// Bonusrad (Las Vegas) — de top 3 van vorig weekend draaien elk tot 3 keer aan een rad met
-// vermenigvuldigers. Wat je draait, win je als boosters (4 weken geldig) die je zelf op je
-// voorspellingen plakt. Het rad draagt je clublogo en de kleuren van de deelnemende clubs.
+// Bonusrad (Las Vegas) — de besten van vorig weekend draaien elk tot 3 keer aan een rad met
+// vermenigvuldigers. Het aantal winnaars schaalt met het deelnemersveld (~10%). Wat je draait, win
+// je als boosters (4 weken geldig) die je zelf op je voorspellingen plakt. Het rad draagt je
+// clublogo en de kleuren van de deelnemende clubs.
 export default async function RadPage() {
   const payload = await getPayloadClient()
   const me = await getAuthUser()
@@ -30,7 +32,7 @@ export default async function RadPage() {
 
   const power = ((me as { pronostiekPower?: Power | null } | null)?.pronostiekPower ?? {}) as Power
   const heldTokens = activeTokens(power.tokens).map((t) => t.mult).sort((a, b) => b - a)
-  const myRank = state.top3.find((w) => w.userId === myId)?.rank ?? null
+  const myRank = state.winners.find((w) => w.userId === myId)?.rank ?? null
   const eligible = canTest || myRank != null
   const usedThisWeek = power.spinWeek === state.weekendStartIso ? Number(power.spinsUsed) || 0 : 0
   const spinsLeft = canTest ? 99 : eligible ? Math.max(0, SPINS_PER_WEEK - usedThisWeek) : 0
@@ -56,20 +58,21 @@ export default async function RadPage() {
       <div className="site rad-page">
         <h1 className="page-title rad-title">🎰 <span className="brand">Bonusrad</span></h1>
         <p className="vs-intro">
-          De <strong>top 3</strong> van de pronostiek van vorig weekend draaien <strong>3×</strong> aan het rad. Je wint
-          <strong> vermenigvuldigers</strong> die je op je voorspellingen kan zetten — jij kiest welke wedstrijd. Boosters zijn
-          <strong> 4 weken</strong> geldig. <Link href="/pronostiek" style={{ color: '#ffd166' }}>Naar de stand</Link>.
+          De <strong>beste {state.winners.length || ''} deelnemers</strong> van vorig weekend draaien <strong>3×</strong> aan het rad
+          {state.participants > 0 && <> (van de {state.participants} die meededen)</>}. Je wint <strong>vermenigvuldigers</strong> die je op je
+          voorspellingen kan zetten — jij kiest welke wedstrijd. Boosters zijn <strong>4 weken</strong> geldig.{' '}
+          <Link href="/pronostiek" style={{ color: '#ffd166' }}>Naar de stand</Link>.
         </p>
 
         {canTest && (
           <p className="rad-test">🧪 Testmodus (beheerder): jij mag onbeperkt draaien om te testen.</p>
         )}
 
-        {state.top3.length > 0 && (
+        {state.winners.length > 0 && (
           <div className="rad-podium">
-            {state.top3.map((w) => (
+            {state.winners.map((w) => (
               <span key={w.userId} className={`rad-pod${w.userId === myId ? ' me' : ''}`}>
-                <span className="rad-pod-m">{MEDAL[w.rank - 1]}</span>
+                <span className="rad-pod-m">{medalFor(w.rank)}</span>
                 <span className="rad-pod-n">{w.name}{w.userId === myId ? ' (jij)' : ''}</span>
               </span>
             ))}
@@ -91,12 +94,12 @@ export default async function RadPage() {
         ) : eligible ? (
           <div className="rad-card">
             <h2>Je beurten zijn op</h2>
-            <p>Je draaide deze week 3× en gebruikte je boosters. Eindig opnieuw bij de top 3 om volgende week weer te mogen draaien.</p>
+            <p>Je draaide deze week 3× en gebruikte je boosters. Eindig opnieuw bij de besten om volgende week weer te mogen draaien.</p>
           </div>
         ) : (
           <div className="rad-card">
             <h2>Speel mee voor het rad</h2>
-            <p>Enkel de <strong>top 3</strong> van het weekend mag aan het rad draaien. Voorspel mee en knok je naar de top! <Link href="/" style={{ color: '#ffd166' }}>Voorspel mee →</Link></p>
+            <p>Enkel de <strong>besten</strong> van het weekend mogen aan het rad draaien (hoe meer deelnemers, hoe meer winnaars). Voorspel mee en knok je naar de top! <Link href="/" style={{ color: '#ffd166' }}>Voorspel mee →</Link></p>
           </div>
         )}
       </div>
