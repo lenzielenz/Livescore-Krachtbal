@@ -74,4 +74,51 @@ describe('buildNutritionPlan', () => {
     const oats = (p: ReturnType<typeof buildNutritionPlan>) => Number(p.example[0].items[0].amount.replace(/\D/g, ''))
     expect(oats(big)).toBeGreaterThan(oats(small))
   })
+
+  it('tempo stuurt de grootte van het tekort/overschot', () => {
+    const calm = buildNutritionPlan({ ...base, goal: 'afvallen', pace: 'rustig' }).calories
+    const mid = buildNutritionPlan({ ...base, goal: 'afvallen', pace: 'gemiddeld' }).calories
+    const fast = buildNutritionPlan({ ...base, goal: 'afvallen', pace: 'snel' }).calories
+    expect(calm).toBeGreaterThan(mid)
+    expect(mid).toBeGreaterThan(fast)
+    // standaard-tempo 'gemiddeld' = de klassieke 0,8-factor op de TDEE
+    const midPlan = buildNutritionPlan({ ...base, goal: 'afvallen', pace: 'gemiddeld' })
+    expect(midPlan.calories).toBe(Math.round((midPlan.tdee * 0.8) / 10) * 10)
+  })
+
+  it('macro-stijl verschuift eiwit/koolhydraten/vet', () => {
+    const balanced = buildNutritionPlan({ ...base, goal: 'onderhoud', macroStyle: 'gebalanceerd' })
+    const protein = buildNutritionPlan({ ...base, goal: 'onderhoud', macroStyle: 'eiwitrijk' })
+    const lowCarb = buildNutritionPlan({ ...base, goal: 'onderhoud', macroStyle: 'koolhydraatarm' })
+    const endurance = buildNutritionPlan({ ...base, goal: 'onderhoud', macroStyle: 'duursport' })
+    expect(protein.protein).toBeGreaterThan(balanced.protein)
+    expect(lowCarb.carbs).toBeLessThan(balanced.carbs)
+    expect(endurance.carbs).toBeGreaterThan(balanced.carbs)
+    // gebalanceerd blijft de standaard (eiwit/vet per kg uit het doel)
+    expect(balanced.protein).toBe(Math.round(80 * 1.8))
+  })
+
+  it('dieet vervangt de juiste voorbeeldvoeding', () => {
+    const omni = buildNutritionPlan({ ...base, goal: 'onderhoud', diet: 'alles' })
+    const vegan = buildNutritionPlan({ ...base, goal: 'onderhoud', diet: 'veganistisch' })
+    const omniFoods = omni.example.flatMap((m) => m.items.map((i) => i.food)).join(' ')
+    const veganFoods = vegan.example.flatMap((m) => m.items.map((i) => i.food)).join(' ')
+    expect(omniFoods).toContain('kwark')
+    expect(veganFoods).not.toContain('kwark')
+    expect(veganFoods.toLowerCase()).toContain('tofu')
+  })
+
+  it('streefgewicht geeft een tijdlijn in de juiste richting', () => {
+    const cut = buildNutritionPlan({ ...base, goal: 'afvallen', targetWeightKg: 74 })
+    expect(cut.target).not.toBeNull()
+    expect(cut.target!.direction).toBe('down')
+    expect(cut.target!.deltaKg).toBeCloseTo(-6, 5)
+    expect(cut.target!.weeks).toBeGreaterThan(0)
+    // geen of een te klein verschil → geen tijdlijn
+    expect(buildNutritionPlan({ ...base, goal: 'onderhoud' }).target).toBeNull()
+    expect(buildNutritionPlan({ ...base, goal: 'afvallen', targetWeightKg: 80 }).target).toBeNull()
+    // verkeerde richting (afvallen maar zwaarder willen worden) → onbereikbaar
+    const wrong = buildNutritionPlan({ ...base, goal: 'afvallen', targetWeightKg: 90 })
+    expect(wrong.target!.weeks).toBeNull()
+  })
 })
