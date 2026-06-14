@@ -7,6 +7,7 @@ import { clubColorsFrom } from '@/lib/club-colors'
 import { getPayloadClient } from '@/lib/payload-client'
 import { activeTokens, RAD_SEGMENTS, SPINS_PER_WEEK, type RadToken } from '@/lib/pronostiek-rad'
 import { loadRadState } from '@/lib/pronostiek-rad-server'
+import { RadAdminBar } from './RadAdminBar'
 import { Wheel } from './Wheel'
 import './rad.css'
 import '../../club/voorspel/voorspel.css'
@@ -65,7 +66,10 @@ export default async function RadPage() {
         </p>
 
         {canTest && (
-          <p className="rad-test">🧪 Testmodus (beheerder): jij mag onbeperkt draaien om te testen.</p>
+          <>
+            <p className="rad-test">🧪 Testmodus (beheerder): jij mag onbeperkt draaien om te testen.</p>
+            <RadAdminBar />
+          </>
         )}
 
         {state.winners.length > 0 && (
