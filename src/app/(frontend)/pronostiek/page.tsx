@@ -6,6 +6,7 @@ import { getAuthUser } from '@/lib/auth-user'
 import { buildMatchState } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
 import { buildPredictionLeaderboard, type PredEntry } from '@/lib/prediction-score'
+import { LIVE_PRONOSTIEK_MAX_PER_WEEKEND } from '@/lib/pronostiek-weekend'
 import { seasonFromDate } from '@/lib/seasons'
 import '../club/voorspel/voorspel.css'
 
@@ -53,10 +54,17 @@ export default async function PronostiekStandPage() {
       <SiteHeader active="stand" />
       <div className="site">
         <h1 className="page-title"><span className="brand">Pronostiekstand</span></h1>
-        <p className="vs-intro">
-          De algemene stand van iedereen die op de wedstrijden de <strong>exacte uitslag</strong> voorspelt, over het seizoen ({seizoen}).
-          Voorspel mee op elke <Link href="/" style={{ color: 'var(--accent)' }}>livewedstrijd</Link>.
-        </p>
+        <p className="vs-intro">Seizoen {seizoen} · <Link href="/" style={{ color: 'var(--accent)' }}>voorspel mee op een livewedstrijd</Link>.</p>
+        <details className="vs-rules">
+          <summary>Hoe werken de punten?</summary>
+          <ul>
+            <li><strong>Exacte uitslag</strong>: 10 · juiste winnaar + doelsaldo: 6 · juiste winnaar: 4</li>
+            <li><strong>Nabijheid</strong>: tot +4 (hoe dichter, hoe meer)</li>
+            <li><strong>Dichtst bij</strong>: +3 per wedstrijd</li>
+            <li>Hoe later tijdens de match je voorspelt, hoe <strong>minder</strong> je punten waard zijn</li>
+            <li>Max. <strong>{LIVE_PRONOSTIEK_MAX_PER_WEEKEND}</strong> voorspellingen per weekend</li>
+          </ul>
+        </details>
 
         {leaderboard.length === 0 ? (
           <p className="empty">Nog geen punten — voorspel de uitslag op een wedstrijdpagina en kom later terug.</p>
