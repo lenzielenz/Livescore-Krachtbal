@@ -145,3 +145,48 @@
 .vd-ex { margin: 6px 0 0; padding-left: 16px; display: flex; flex-direction: column; gap: 3px; font-size: 0.84rem; color: var(--dim); line-height: 1.45; }
 .vd-ex b { color: var(--txt); font-variant-numeric: tabular-nums; }
 .vd-ex li::marker { color: var(--accent); }
+
+/* Week-eetplan + boodschappenlijst. */
+.vd-weekbar { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 6px; }
+.vd-week-toggle, .vd-week-print {
+  padding: 11px 16px; border-radius: 12px; cursor: pointer; font-weight: 800; font-size: 0.9rem; color: var(--txt);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--line));
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0) 60%), var(--panel-grad, var(--panel));
+  transition: transform 0.12s ease, border-color 0.12s ease;
+}
+.vd-week-toggle:hover, .vd-week-print:hover { transform: translateY(-1px); border-color: var(--accent); }
+.vd-week { display: flex; flex-direction: column; gap: 14px; }
+.vd-week-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+.vd-wday {
+  display: flex; flex-direction: column; gap: 8px; padding: 13px 14px; border-radius: 14px;
+  border: 1px solid color-mix(in srgb, #fff 8%, var(--line));
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0) 50%), var(--panel-grad, var(--panel));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+.vd-wday-h { font-weight: 900; font-size: 0.92rem; color: var(--accent); border-bottom: 1px solid color-mix(in srgb, #fff 7%, var(--line)); padding-bottom: 6px; }
+.vd-wmeal { display: flex; flex-direction: column; gap: 1px; }
+.vd-wmeal-h { font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.03em; color: var(--dim); }
+.vd-wmeal-items { font-size: 0.82rem; color: var(--txt); line-height: 1.4; }
+
+.vd-shop { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+.vd-shop-cat {
+  display: flex; flex-direction: column; gap: 6px; padding: 13px 14px; border-radius: 14px;
+  border: 1px solid color-mix(in srgb, #fff 8%, var(--line));
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0) 50%), var(--panel-grad, var(--panel));
+}
+.vd-shop-h { font-weight: 800; font-size: 0.84rem; color: var(--accent); }
+.vd-shop-list { margin: 0; padding-left: 16px; display: flex; flex-direction: column; gap: 3px; font-size: 0.84rem; color: var(--dim); line-height: 1.45; }
+.vd-shop-list b { color: var(--txt); font-variant-numeric: tabular-nums; }
+.vd-shop-list li::marker { color: var(--accent); }
+.vd-week-note { margin: 0; font-size: 0.78rem; color: var(--dim); line-height: 1.45; }
+
+/* Print / PDF: enkel het plan, geen formulier of knoppen. */
+@media print {
+  .vd { display: block; }
+  .vd-form, .vd-weekbar, .vd-form-live { display: none !important; }
+  .vd-result { gap: 12px; }
+  .vd-hero, .vd-macro, .vd-day, .vd-meal, .vd-wday, .vd-shop-cat, .vd-target {
+    box-shadow: none; break-inside: avoid;
+  }
+  .vd-donut { filter: none; }
+}
