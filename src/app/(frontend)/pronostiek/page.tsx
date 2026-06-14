@@ -62,10 +62,9 @@ export default async function PronostiekStandPage() {
           <ul>
             <li><strong>Exacte uitslag</strong>: {PRED_POINTS.exact} · juiste winnaar + doelsaldo: {PRED_POINTS.resultAndDiff} · juiste winnaar: {PRED_POINTS.result}</li>
             <li><strong>Nabijheid</strong>: tot +{PRED_POINTS.nearMax} (hoe dichter, hoe meer) · <strong>dichtst bij</strong>: +{PRED_POINTS.closest}</li>
-            <li>Max. <strong>{MAX_POINTS_PER_MATCH}</strong> punten per wedstrijd — krappe spreiding, zodat de kloof klein blijft</li>
+            <li>Max. <strong>{MAX_POINTS_PER_MATCH}</strong> punten per wedstrijd</li>
             <li>Hoe later tijdens de match je voorspelt, hoe <strong>minder</strong> je punten waard zijn</li>
             <li>Max. <strong>{LIVE_PRONOSTIEK_MAX_PER_WEEKEND}</strong> voorspellingen per weekend — élke <strong>maandag 08:00</strong> kan je opnieuw voorspellen</li>
-            <li>Iedereen evenveel kansen per week → wie later instapt, blijft meedoen voor de top</li>
           </ul>
         </details>
 

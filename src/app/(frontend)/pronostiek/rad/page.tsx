@@ -1,9 +1,10 @@
 import Link from 'next/link'
 
 import { SiteHeader } from '@/components/SiteHeader'
+import { isFederationLevel } from '@/lib/access'
 import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
-import { loadRadState } from '@/lib/pronostiek-rad-server'
+import { loadRadState, type RadMatch } from '@/lib/pronostiek-rad-server'
 import { Wheel } from './Wheel'
 import './rad.css'
 import '../../club/voorspel/voorspel.css'
@@ -12,12 +13,20 @@ export const dynamic = 'force-dynamic'
 
 // Bonusrad — de winnaar van vorig weekend draait aan het rad dat 3 wedstrijden uitkiest die deze
 // week dubbele punten waard worden. Iedereen kan de pagina bekijken; enkel de winnaar kan draaien.
+// Beheerders/federatie mogen altijd draaien (testmodus).
 export default async function RadPage() {
   const payload = await getPayloadClient()
   const me = await getAuthUser()
   const myId = me ? Number((me as { id?: number }).id) : null
   const state = await loadRadState(payload)
   const iAmWinner = myId != null && state.winner?.userId === myId
+  const canTest = isFederationLevel(me)
+
+  // In testmodus mag de beheerder ook opnieuw draaien (de API reset dan deze week), dus het rad
+  // moet alle wedstrijden van deze week kunnen tonen — ook de al-geboostte.
+  const dedupe = (arr: RadMatch[]) => arr.filter((m, i) => arr.findIndex((x) => x.id === m.id) === i)
+  const wheelCands = (canTest ? dedupe([...state.candidates, ...state.boosted]) : state.candidates).map((m) => ({ id: m.id, home: m.home, away: m.away }))
+  const showWheel = (iAmWinner && !state.alreadySpun && state.candidates.length > 0) || (canTest && wheelCands.length > 0)
 
   return (
     <>
@@ -29,7 +38,11 @@ export default async function RadPage() {
           <strong> dubbele punten</strong> opleveren. <Link href="/pronostiek" style={{ color: 'var(--accent)' }}>Naar de stand</Link>.
         </p>
 
-        {state.alreadySpun ? (
+        {canTest && (
+          <p className="rad-test">🧪 Testmodus (beheerder): jij mag het rad draaien om te testen. Opnieuw draaien reset eerst de bonus van deze week.</p>
+        )}
+
+        {state.alreadySpun && (
           <div className="rad-card">
             <h2>✨ De bonuswedstrijden zijn gekozen</h2>
             <p>Deze wedstrijden zijn deze week <strong>dubbele punten</strong> waard:</p>
@@ -44,15 +57,19 @@ export default async function RadPage() {
               ))}
             </ul>
           </div>
-        ) : iAmWinner && state.candidates.length > 0 ? (
+        )}
+
+        {showWheel ? (
           <>
-            <div className="rad-card">
-              <h2>🏆 Jij won vorig weekend!</h2>
-              <p>Draai aan het rad en bepaal welke 3 wedstrijden deze week dubbele punten worden.</p>
-            </div>
-            <Wheel candidates={state.candidates.map((m) => ({ id: m.id, home: m.home, away: m.away }))} />
+            {iAmWinner && !state.alreadySpun && (
+              <div className="rad-card">
+                <h2>🏆 Jij won vorig weekend!</h2>
+                <p>Draai aan het rad en bepaal welke 3 wedstrijden deze week dubbele punten worden.</p>
+              </div>
+            )}
+            <Wheel candidates={wheelCands} />
           </>
-        ) : state.winner ? (
+        ) : state.alreadySpun ? null : state.winner ? (
           <div className="rad-card">
             <h2>🏆 {state.winner.name} won vorig weekend</h2>
             <p>{state.winner.name} mag aan het rad draaien om de 3 bonuswedstrijden te kiezen. Kom straks terug om te zien welke het worden!</p>

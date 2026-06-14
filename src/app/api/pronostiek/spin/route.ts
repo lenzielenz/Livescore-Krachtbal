@@ -1,3 +1,4 @@
+import { isFederationLevel } from '@/lib/access'
 import { authUser } from '@/lib/api-auth'
 import { getPayloadClient } from '@/lib/payload-client'
 import { BONUS_COUNT, BONUS_MULTIPLIER, pickBonusMatches } from '@/lib/pronostiek-rad'
@@ -20,17 +21,27 @@ export async function POST(req: Request) {
     const user = await authUser(payload, req)
     if (!user) return Response.json({ error: 'Niet ingelogd.' }, { status: 401 })
     const userId = Number((user as { id: number }).id)
+    // Beheerders/federatie mogen altijd draaien (om te testen), ook zonder weekendwinst.
+    const isTester = isFederationLevel(user)
 
-    const state = await loadRadState(payload)
-    if (!state.winner) return Response.json({ error: 'Er is nog geen weekendwinnaar.' }, { status: 409 })
-    if (state.winner.userId !== userId) {
-      return Response.json({ error: 'Alleen de winnaar van vorig weekend mag aan het rad draaien.' }, { status: 403 })
-    }
-    if (state.alreadySpun) {
-      return Response.json({ error: 'Het rad is voor dit weekend al gedraaid.' }, { status: 409 })
+    let state = await loadRadState(payload)
+    if (!isTester) {
+      if (!state.winner) return Response.json({ error: 'Er is nog geen weekendwinnaar.' }, { status: 409 })
+      if (state.winner.userId !== userId) {
+        return Response.json({ error: 'Alleen de winnaar van vorig weekend mag aan het rad draaien.' }, { status: 403 })
+      }
+      if (state.alreadySpun) {
+        return Response.json({ error: 'Het rad is voor dit weekend al gedraaid.' }, { status: 409 })
+      }
+    } else if (state.alreadySpun) {
+      // Testmodus: reset de bonus van deze week zodat de beheerder opnieuw kan draaien.
+      await Promise.all(
+        state.boosted.map((m) => payload.update({ collection: 'matches', id: m.id, data: { pronostiekBonus: 1 }, overrideAccess: true }).catch(() => null)),
+      )
+      state = await loadRadState(payload)
     }
     if (state.candidates.length === 0) {
-      return Response.json({ error: 'Er zijn deze week geen wedstrijden om te boosten.' }, { status: 409 })
+      return Response.json({ error: 'Er zijn deze week geen geplande wedstrijden om te boosten.' }, { status: 409 })
     }
 
     const chosen = pickBonusMatches(state.candidates, BONUS_COUNT)
