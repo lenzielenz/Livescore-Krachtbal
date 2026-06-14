@@ -30,7 +30,28 @@ export interface ScoredPred extends PredEntry {
 }
 
 // Puntwaarden. Basis is oplopend en niet-cumulatief; nabijheid en de dichtste-bonus komen erbij.
-export const PRED_POINTS = { exact: 10, resultAndDiff: 6, result: 4, nearMax: 4, closest: 3 } as const
+// Gekozen voor een MOOIE BALANS (skill > geluk) bij een groot deelnemersveld:
+//  - 'exact' (10) blijft het wow-moment, maar de spreiding is bewust krap gehouden;
+//  - 'result' (3) ligt lager dan 'resultAndDiff' (6) zodat precisie (juist doelsaldo) echt beloond wordt;
+//  - 'closest' (2) is kleiner: de dichtste-bij-bonus is deels geluk en mag niet doorwegen.
+// Max per wedstrijd = 10 + 3 + 2 = 15 (zie MAX_POINTS_PER_MATCH). Een krappere spreiding houdt de kloof
+// klein → wie later instapt of een mindere dag heeft, blijft in de running voor de eerste plaats.
+export const PRED_POINTS = { exact: 10, resultAndDiff: 6, result: 3, nearMax: 3, closest: 2 } as const
+
+/** Maximaal haalbaar in één wedstrijd (exact + volle nabijheid + dichtste-bij). */
+export const MAX_POINTS_PER_MATCH = PRED_POINTS.exact + PRED_POINTS.nearMax + PRED_POINTS.closest
+
+/**
+ * Hoeveel "sterke weekends" een achterstand ongeveer kost om in te halen. Met de weekendlimiet
+ * (max. N voorspellingen/weekend) is de winst per weekend begrensd → een achterstand snoept je in
+ * een handvol goeie weekends weg. `swingPerWeekend` = realistische voorsprong die je per weekend op
+ * een rivaal kan pakken (lager dan het absolute maximum, want iedereen scoort doorgaans behoorlijk).
+ */
+export function catchUpWeekends(deficit: number, swingPerWeekend: number): number {
+  if (deficit <= 0) return 0
+  const swing = swingPerWeekend > 0 ? swingPerWeekend : 1
+  return Math.max(1, Math.ceil(deficit / swing))
+}
 
 const sign = (n: number) => (n > 0 ? 1 : n < 0 ? -1 : 0)
 

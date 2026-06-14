@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 
-import { basePoints, buildPredictionLeaderboard, scoreMatchPredictions, type PredEntry } from '@/lib/prediction-score'
+import { basePoints, buildPredictionLeaderboard, catchUpWeekends, MAX_POINTS_PER_MATCH, scoreMatchPredictions, type PredEntry } from '@/lib/prediction-score'
 
 const pred = (userId: number, home: number, away: number, clubId = 1, name = `U${userId}`): PredEntry => ({ userId, name, clubId, home, away })
 
@@ -11,8 +11,8 @@ describe('basePoints', () => {
   it('geeft 6 voor juiste winnaar + juist doelsaldo', () => {
     expect(basePoints({ home: 11, away: 15 }, { home: 10, away: 14 })).toMatchObject({ base: 6, exact: false, resultOk: true, diffOk: true })
   })
-  it('geeft 4 voor enkel de juiste winnaar', () => {
-    expect(basePoints({ home: 11, away: 15 }, { home: 12, away: 23 })).toMatchObject({ base: 4, resultOk: true, diffOk: false })
+  it('geeft 3 voor enkel de juiste winnaar', () => {
+    expect(basePoints({ home: 11, away: 15 }, { home: 12, away: 23 })).toMatchObject({ base: 3, resultOk: true, diffOk: false })
   })
   it('geeft 0 bij een verkeerde uitslag', () => {
     expect(basePoints({ home: 11, away: 15 }, { home: 22, away: 21 }).base).toBe(0)
@@ -27,8 +27,8 @@ describe('scoreMatchPredictions', () => {
   const byUser = (id: number) => scored.find((s) => s.userId === id)!
 
   it('beloont de dichtste voorspelling het meest', () => {
-    // #1 (11–16): juiste winnaar (4) + nabij (afw. 1 → 3) + dichtste (3) = 10.
-    expect(byUser(1).points).toBe(10)
+    // #1 (11–16): juiste winnaar (3) + nabij (afw. 1 → 2) + dichtste (2) = 7.
+    expect(byUser(1).points).toBe(7)
     expect(byUser(1).closest).toBe(true)
   })
   it('geeft 0 aan een volledig verkeerde voorspelling', () => {
@@ -36,16 +36,16 @@ describe('scoreMatchPredictions', () => {
     expect(byUser(2).closest).toBe(false)
   })
   it('geeft de juiste winnaar maar verre afwijking enkel de basis', () => {
-    // #3 (12–23): winnaar ok (4), afw. 1+8=9 → nabij 0, niet dichtste = 4.
-    expect(byUser(3).points).toBe(4)
+    // #3 (12–23): winnaar ok (3), afw. 1+8=9 → nabij 0, niet dichtste = 3.
+    expect(byUser(3).points).toBe(3)
   })
 
   it('schaalt de punten met de weging (later voorspeld = minder waard)', () => {
     const half = scoreMatchPredictions({ home: 11, away: 15 }, [{ ...pred(1, 11, 15), weight: 0.5 }])
-    // Exact (10) + nabij (4) + dichtste (3) = 17, × 0,5 = 8,5 → 9 (afgerond).
-    expect(half[0].points).toBe(9)
+    // Exact (10) + nabij (3) + dichtste (2) = 15, × 0,5 = 7,5 → 8 (afgerond).
+    expect(half[0].points).toBe(8)
     const full = scoreMatchPredictions({ home: 11, away: 15 }, [pred(1, 11, 15)])
-    expect(full[0].points).toBe(17)
+    expect(full[0].points).toBe(15)
   })
 
   it('verdubbelt de punten voor een bonuswedstrijd (×2 via het rad)', () => {
@@ -80,5 +80,28 @@ describe('buildPredictionLeaderboard', () => {
     const plain = buildPredictionLeaderboard([{ actual: { home: 11, away: 15 }, preds: [pred(1, 11, 15)] }])
     const bonus = buildPredictionLeaderboard([{ actual: { home: 11, away: 15 }, preds: [pred(1, 11, 15)], bonus: 2 }])
     expect(bonus[0].points).toBe(plain[0].points * 2)
+  })
+})
+
+describe('balans van het puntensysteem', () => {
+  it('houdt de spreiding krap: max 15 per wedstrijd', () => {
+    expect(MAX_POINTS_PER_MATCH).toBe(15)
+    const top = scoreMatchPredictions({ home: 11, away: 15 }, [pred(1, 11, 15)])[0].points
+    expect(top).toBe(MAX_POINTS_PER_MATCH)
+  })
+})
+
+describe('catchUpWeekends', () => {
+  it('geeft 0 bij geen achterstand', () => {
+    expect(catchUpWeekends(0, 15)).toBe(0)
+    expect(catchUpWeekends(-10, 15)).toBe(0)
+  })
+  it('rondt naar boven af op hele weekends', () => {
+    expect(catchUpWeekends(15, 15)).toBe(1)
+    expect(catchUpWeekends(16, 15)).toBe(2)
+    expect(catchUpWeekends(45, 15)).toBe(3)
+  })
+  it('blijft minstens 1 bij een kleine achterstand', () => {
+    expect(catchUpWeekends(1, 15)).toBe(1)
   })
 })
