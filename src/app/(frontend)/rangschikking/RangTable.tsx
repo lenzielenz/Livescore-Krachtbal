@@ -31,6 +31,7 @@ export function RangTable({ rows }: { rows: RangRow[] }) {
   const [open, setOpen] = useState<number | null>(null)
 
   return (
+    <>
     <div className="rang-scroll">
       <table className="rang-table">
         <thead>
@@ -55,7 +56,7 @@ export function RangTable({ rows }: { rows: RangRow[] }) {
             return (
               <Fragment key={r.teamId}>
                 <tr
-                  className={`rang-row${r.mine ? ' rang-mine' : ''}${isOpen ? ' open' : ''}`}
+                  className={`rang-row${r.mine ? ' rang-mine' : ''}${r.rank === 1 ? ' rang-leader' : ''}${isOpen ? ' open' : ''}`}
                   onClick={toggle}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') {
@@ -69,7 +70,7 @@ export function RangTable({ rows }: { rows: RangRow[] }) {
                   aria-label={`${r.name} — meer cijfers`}
                 >
                   <td className="rang-rank">
-                    <span className="rang-pos">{r.rank}</span>
+                    <span className="rang-pos">{r.rank === 1 && <span className="rang-crown" aria-hidden>🥇</span>}{r.rank}</span>
                     <span className={`rang-move ${r.moveCls}`} title="T.o.v. vorige week">
                       {moveArrow}{r.delta !== 0 ? Math.abs(r.delta) : ''}
                     </span>
@@ -114,5 +115,7 @@ export function RangTable({ rows }: { rows: RangRow[] }) {
         </tbody>
       </table>
     </div>
+    <p className="rang-legend">🥇 leider · ★ jouw club · ▲▼ t.o.v. vorige week · tik op een ploeg voor meer cijfers</p>
+    </>
   )
 }
