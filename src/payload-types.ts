@@ -570,6 +570,18 @@ export interface Match {
     | boolean
     | null;
   /**
+   * Exacte-uitslag-voorspellingen van clubleden: [{userId,name,clubId,home,away,at}]. Automatisch beheerd.
+   */
+  scorePredictions?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  /**
    * Wie deze analysewedstrijd opnam. Bepaalt wie ze ziet (privé per persoon).
    */
   analyseOwner?: (number | null) | User;
@@ -1387,6 +1399,7 @@ export interface MatchesSelect<T extends boolean = true> {
   liveReactions?: T;
   liveShoutouts?: T;
   livePoll?: T;
+  scorePredictions?: T;
   analyseOwner?: T;
   finishedAt?: T;
   updatedAt?: T;

@@ -14,6 +14,7 @@ import { buildReeksStandings } from '@/lib/reeks-standings'
 import { reeksNaam, REEKS_OPTIONS } from '@/lib/reeksen'
 import { ClaimButton } from './ClaimButton'
 import { MyTeamsPicker } from './MyTeamsPicker'
+import './voorspel/voorspel.css'
 
 export const dynamic = 'force-dynamic'
 
@@ -225,6 +226,8 @@ export default async function ClubPage({ searchParams }: { searchParams: Promise
   return (
     <Shell>
       <MyTeamsPicker teams={allTeams} initial={myTeams} />
+
+      <Link href="/club/voorspel" className="club-vs-cta">🔮 Voorspelcompetitie — voorspel de uitslagen &amp; bouw een klassement</Link>
 
       {mySet.size > 0 && (
         <p className="myteams-focusbar">

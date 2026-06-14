@@ -1,0 +1,100 @@
+// ── Voorspelcompetitie (club-intern): puntensysteem + seizoensklassement ────────────────────
+// Leden voorspellen de exacte eindstand van een clubwedstrijd. Na afloop verdien je punten naar
+// hoe dicht je zat. Pure functies → los testbaar; de UI/loader rendert enkel het resultaat.
+
+export interface ScoreGuess {
+  home: number
+  away: number
+}
+
+export interface PredEntry {
+  userId: number
+  name: string
+  clubId: number | null
+  home: number
+  away: number
+  at?: number
+}
+
+export interface ScoredPred extends PredEntry {
+  points: number
+  exact: boolean
+  resultOk: boolean
+  diffOk: boolean
+  /** Totale afwijking: |thuis−voorspeld| + |uit−voorspeld|. */
+  error: number
+  /** Eén van de dichtste voorspellingen voor deze wedstrijd (binnen de groep). */
+  closest: boolean
+}
+
+// Puntwaarden. Basis is oplopend en niet-cumulatief; nabijheid en de dichtste-bonus komen erbij.
+export const PRED_POINTS = { exact: 10, resultAndDiff: 6, result: 4, nearMax: 4, closest: 3 } as const
+
+const sign = (n: number) => (n > 0 ? 1 : n < 0 ? -1 : 0)
+
+/** Basispunten + de losse vlaggen, voor één voorspelling tegenover de eindstand. */
+export function basePoints(actual: ScoreGuess, pred: ScoreGuess): { base: number; exact: boolean; resultOk: boolean; diffOk: boolean } {
+  const exact = actual.home === pred.home && actual.away === pred.away
+  const resultOk = sign(actual.home - actual.away) === sign(pred.home - pred.away)
+  const diffOk = actual.home - actual.away === pred.home - pred.away
+  let base = 0
+  if (exact) base = PRED_POINTS.exact
+  else if (resultOk && diffOk) base = PRED_POINTS.resultAndDiff
+  else if (resultOk) base = PRED_POINTS.result
+  return { base, exact, resultOk, diffOk }
+}
+
+/** Scoor alle voorspellingen van één wedstrijd: basis + nabijheid + dichtste-bij-bonus. */
+export function scoreMatchPredictions(actual: ScoreGuess, preds: PredEntry[]): ScoredPred[] {
+  if (preds.length === 0) return []
+  const rows = preds.map((p) => {
+    const { base, exact, resultOk, diffOk } = basePoints(actual, p)
+    const error = Math.abs(actual.home - p.home) + Math.abs(actual.away - p.away)
+    const near = Math.max(0, PRED_POINTS.nearMax - error)
+    return { p, base, near, exact, resultOk, diffOk, error }
+  })
+  const minErr = Math.min(...rows.map((r) => r.error))
+  return rows.map((r) => ({
+    ...r.p,
+    exact: r.exact,
+    resultOk: r.resultOk,
+    diffOk: r.diffOk,
+    error: r.error,
+    closest: r.error === minErr,
+    points: r.base + r.near + (r.error === minErr ? PRED_POINTS.closest : 0),
+  }))
+}
+
+export interface LeaderRow {
+  userId: number
+  name: string
+  points: number
+  predictions: number
+  exact: number
+  closest: number
+}
+
+/**
+ * Bouw het seizoensklassement van één club: scoor de voorspellingen van de clubleden over alle
+ * afgehandelde wedstrijden en tel de punten per persoon op. De "dichtste" wordt per wedstrijd
+ * binnen de club bepaald (elke club speelt z'n eigen competitie).
+ */
+export function buildPredictionLeaderboard(matches: { actual: ScoreGuess; preds: PredEntry[] }[], clubId: number): LeaderRow[] {
+  const agg = new Map<number, LeaderRow>()
+  for (const m of matches) {
+    const scored = scoreMatchPredictions(m.actual, m.preds.filter((p) => p.clubId === clubId))
+    for (const s of scored) {
+      let r = agg.get(s.userId)
+      if (!r) {
+        r = { userId: s.userId, name: s.name, points: 0, predictions: 0, exact: 0, closest: 0 }
+        agg.set(s.userId, r)
+      }
+      r.points += s.points
+      r.predictions += 1
+      if (s.exact) r.exact += 1
+      if (s.closest) r.closest += 1
+      r.name = s.name // meest recente naam
+    }
+  }
+  return [...agg.values()].sort((a, b) => b.points - a.points || b.exact - a.exact || a.predictions - b.predictions)
+}
