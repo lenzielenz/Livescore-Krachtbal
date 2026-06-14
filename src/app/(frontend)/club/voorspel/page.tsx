@@ -1,5 +1,6 @@
 import { headers } from 'next/headers'
 import Link from 'next/link'
+import type { Where } from 'payload'
 
 import { SiteHeader } from '@/components/SiteHeader'
 import { userClubId } from '@/lib/access'
@@ -10,6 +11,7 @@ import { buildPredictionLeaderboard, scoreMatchPredictions, type PredEntry } fro
 import { reeksNaam } from '@/lib/reeksen'
 import { seasonFromDate } from '@/lib/seasons'
 import { PredictForm } from './PredictForm'
+import { ScopePicker } from './ScopePicker'
 import './voorspel.css'
 
 export const dynamic = 'force-dynamic'
@@ -29,7 +31,8 @@ function Shell({ children }: { children: React.ReactNode }) {
   )
 }
 
-export default async function VoorspelPage() {
+export default async function VoorspelPage({ searchParams }: { searchParams: Promise<{ scope?: string }> }) {
+  const { scope: scopeParam } = await searchParams
   const payload = await getPayloadClient()
   const { user } = await payload.auth({ headers: await headers() }).catch(() => ({ user: null }))
   if (!user) {
@@ -42,10 +45,31 @@ export default async function VoorspelPage() {
   }
   const myUserId = Number((user as { id: number }).id)
 
-  const teamsRes = await payload.find({ collection: 'teams', where: { and: [{ club: { equals: clubId } }, competitionWhere()] }, depth: 0, limit: 200 }).catch(() => ({ docs: [] as { id: number }[] }))
-  const teamIds = teamsRes.docs.map((t) => t.id)
+  const teamsRes = await payload.find({ collection: 'teams', where: { and: [{ club: { equals: clubId } }, competitionWhere()] }, depth: 0, limit: 200 }).catch(() => ({ docs: [] as Record<string, unknown>[] }))
+  const clubTeams = teamsRes.docs.map((t) => ({ id: Number(t.id), name: String((t as { name?: unknown }).name ?? '—'), reeks: String((t as { reeks?: unknown }).reeks ?? '') }))
+  const teamIds = clubTeams.map((t) => t.id)
   if (teamIds.length === 0) {
     return <Shell><p className="empty">Nog geen ploegen voor je club.</p></Shell>
+  }
+
+  // Keuze waarover je voorspelt: hele club, één ploeg, of een hele reeks (waar de club in speelt).
+  const reeksen = [...new Set(clubTeams.map((t) => t.reeks).filter(Boolean))]
+  const scopeOptions = [
+    { value: 'club', label: '🏠 Hele club' },
+    ...clubTeams.map((t) => ({ value: `team:${t.id}`, label: `👥 ${t.name}${t.reeks ? ` · ${reeksNaam(t.reeks)}` : ''}` })),
+    ...reeksen.map((r) => ({ value: `reeks:${r}`, label: `📋 Hele reeks · ${reeksNaam(r)}` })),
+  ]
+  const scope = scopeParam && scopeOptions.some((o) => o.value === scopeParam) ? scopeParam : 'club'
+
+  // Where-fragment voor de gekozen scope.
+  let scopeWhere: Where
+  if (scope.startsWith('team:')) {
+    const tid = Number(scope.slice(5))
+    scopeWhere = { or: [{ homeTeam: { equals: tid } }, { awayTeam: { equals: tid } }] }
+  } else if (scope.startsWith('reeks:')) {
+    scopeWhere = { reeks: { equals: scope.slice(6) } }
+  } else {
+    scopeWhere = { or: [{ homeTeam: { in: teamIds } }, { awayTeam: { in: teamIds } }] }
   }
 
   const seizoen = seasonFromDate(new Date())
@@ -55,7 +79,7 @@ export default async function VoorspelPage() {
       and: [
         { status: { in: ['scheduled', 'finished'] } },
         { seizoen: { equals: seizoen } },
-        { or: [{ homeTeam: { in: teamIds } }, { awayTeam: { in: teamIds } }] },
+        scopeWhere,
         competitionWhere(),
       ],
     },
@@ -97,9 +121,10 @@ export default async function VoorspelPage() {
   return (
     <Shell>
       <p className="vs-intro">
-        Voorspel de <strong>exacte eindstand</strong> van de wedstrijden van je club. Hoe dichter je zit, hoe meer punten —
-        over het hele seizoen ({seizoen}) bouw je zo een klassement op met je clubgenoten.
+        Voorspel de <strong>exacte eindstand</strong> van wedstrijden en bouw met je clubgenoten een klassement op
+        over het seizoen ({seizoen}). Kies waarover je speelt: de hele club, één ploeg, of een volledige reeks.
       </p>
+      <ScopePicker scope={scope} options={scopeOptions} />
       <details className="vs-rules">
         <summary>Hoe verdien je punten?</summary>
         <ul>
