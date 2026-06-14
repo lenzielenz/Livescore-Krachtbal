@@ -61,7 +61,6 @@ export function Scoreboard({
   initialShouts,
   canPostInstant = false,
   initialInstants,
-  initialPoll,
   momentumGoals,
   momentumTimeouts,
 }: {
@@ -83,8 +82,6 @@ export function Scoreboard({
   canPostInstant?: boolean
   /** Reeds geplaatste, niet-verlopen foto's bij deze wedstrijd. */
   initialInstants?: Instant[]
-  /** Reeds uitgebrachte voorspel-stemmen (server-side): { home, draw, away }. */
-  initialPoll?: Record<string, number>
   /** Doelpunten (op volgorde) voor het scoreverloop onder het scorebord (na afloop). */
   momentumGoals?: { side: 'home' | 'away'; points: number; half: number; gameClock?: number }[]
   /** Time-outs voor het scoreverloop. */
@@ -108,27 +105,6 @@ export function Scoreboard({
   // Start met de reeds bewaarde tellers/shoutouts (server-side), zodat iedereen — ook
   // niet-ingelogde bezoekers — ze meteen ziet, zonder op de SSE-stream te wachten.
   const [totals, setTotals] = useState<Record<string, number>>(initialReactions ?? {})
-  // Voorspel-poll: tellers per optie + de eigen (lokaal onthouden) stem.
-  const [pollTotals, setPollTotals] = useState<Record<string, number>>(initialPoll ?? {})
-  const [pollVoted, setPollVoted] = useState<string | null>(null)
-  useEffect(() => {
-    try {
-      setPollVoted(localStorage.getItem(`kb-poll-${matchId}`))
-    } catch {}
-  }, [matchId])
-  const votePoll = (option: 'home' | 'draw' | 'away') => {
-    if (pollVoted || state.match.status === 'finished') return
-    setPollVoted(option)
-    setPollTotals((t) => ({ ...t, [option]: (t[option] ?? 0) + 1 }))
-    try {
-      localStorage.setItem(`kb-poll-${matchId}`, option)
-    } catch {}
-    fetch(`/api/match/${matchId}/poll`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ option }),
-    }).catch(() => {})
-  }
   // Fullscreen "rugworp +2"-viering (raket): key = nieuwe trigger, throttle tegen spam.
   const [celebrate, setCelebrate] = useState<number | null>(null)
   const celebrateSeq = useRef(0)
@@ -305,7 +281,6 @@ export function Scoreboard({
         if (r.delta?.rocket) triggerCelebrate() // iemand vuurde een rugworp af → fullscreen-viering
         if (r.totals) setTotals(r.totals)
       },
-      poll: (d) => setPollTotals((d as { totals?: Record<string, number> }).totals ?? {}),
       shoutout: (d) => setShouts((prev) => [...prev.slice(-79), d as Shout]),
       shoutouts: (d) => setShouts(d as Shout[]),
       instant: (d) => addInstantLocal(d as Instant),
@@ -527,44 +502,6 @@ export function Scoreboard({
           colors={{ home: state.teams.home.colors?.primary ?? null, away: state.teams.away.colors?.primary ?? null }}
         />
       )}
-
-      {/* Voorspel-poll: open voor iedereen (ook uitgelogd), zolang de wedstrijd niet afgelopen is.
-          Eén stem per browser; daarna zie je de verdeling. */}
-      {state.match.status !== 'finished' && (() => {
-        const opts: { key: 'home' | 'draw' | 'away'; label: string }[] = [
-          { key: 'home', label: state.teams.home.name },
-          { key: 'draw', label: 'Gelijk' },
-          { key: 'away', label: state.teams.away.name },
-        ]
-        const total = (pollTotals.home ?? 0) + (pollTotals.draw ?? 0) + (pollTotals.away ?? 0)
-        const pct = (n: number) => (total ? Math.round((n / total) * 100) : 0)
-        return (
-          <div className="sb-poll">
-            <h3 className="sb-poll-h">
-              🔮 Wie wint?{pollVoted && <span className="sb-poll-done"> jouw stem telt mee</span>}
-            </h3>
-            <div className="sb-poll-opts">
-              {opts.map((o) => {
-                const n = pollTotals[o.key] ?? 0
-                return (
-                  <button
-                    key={o.key}
-                    type="button"
-                    className={`sb-poll-opt ${o.key}${pollVoted === o.key ? ' mine' : ''}${pollVoted ? ' voted' : ''}`}
-                    onClick={() => votePoll(o.key)}
-                    disabled={Boolean(pollVoted)}
-                  >
-                    <span className="sb-poll-fill" style={{ width: `${pollVoted ? pct(n) : 0}%` }} />
-                    <span className="sb-poll-lbl">{o.label}</span>
-                    {pollVoted && <span className="sb-poll-pct">{pct(n)}%</span>}
-                  </button>
-                )
-              })}
-            </div>
-            {pollVoted && <p className="sb-poll-total">{total} {total === 1 ? 'stem' : 'stemmen'}</p>}
-          </div>
-        )
-      })()}
 
       {/* Uitgelogd zie je enkel de score en de tijd. Al de rest (tijdlijn, reacties, vieringen,
           tribune) zit achter login — met een korte uitnodiging. */}
