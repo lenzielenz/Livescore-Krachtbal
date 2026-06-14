@@ -200,6 +200,8 @@ export function Wheel({
     <div className="rad">
       <div className={`rad-stage${busy ? ' spinning' : ''}`}>
         <div className="rad-aura" style={{ background: auraGradient }} aria-hidden />
+        {/* Metalen gouden behuizing rond het rad (draait niet mee). */}
+        <div className="rad-casing" aria-hidden />
         <div className="rad-bulbs" aria-hidden>
           {Array.from({ length: 28 }).map((_, i) => (
             <span key={i} className="rad-bulb" style={{ transform: `translate(-50%,-50%) rotate(${i * (360 / 28)}deg) translateY(-152px)`, animationDelay: `${(i % 8) * 0.09}s` }} />
@@ -231,15 +233,18 @@ export function Wheel({
           aria-label="Draai het rad"
           title="Klik om te draaien"
         >
-          {clubLogoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={clubLogoUrl} alt="" className="rad-hub-logo" />
-          ) : (
-            <span className="rad-hub-fallback">🎰</span>
-          )}
-          {/* Glans + een vleugje bling op de verhoogde naaf. */}
-          <span className="rad-hub-shine" aria-hidden />
-          <span className="rad-hub-bling" aria-hidden>✦</span>
+          {/* Donkere koepel met logo, omringd door een metalen gouden ring. */}
+          <span className="rad-hub-disc">
+            {clubLogoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={clubLogoUrl} alt="" className="rad-hub-logo" />
+            ) : (
+              <span className="rad-hub-fallback">🎰</span>
+            )}
+            {/* Glans + een vleugje bling op de verhoogde naaf. */}
+            <span className="rad-hub-shine" aria-hidden />
+            <span className="rad-hub-bling" aria-hidden>✦</span>
+          </span>
         </button>
         {confetti && (
           <div className="rad-confetti" aria-hidden>
