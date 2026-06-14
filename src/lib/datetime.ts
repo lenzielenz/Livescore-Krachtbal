@@ -46,6 +46,32 @@ function brusselsOffsetMs(at: Date): number {
   return asUtc - at.getTime()
 }
 
+/** Belgische kalenderdelen van een instant (DST-bewust). weekdayMon0: 0 = maandag … 6 = zondag. */
+export function brusselsParts(at: Date): { year: number; month: number; day: number; hour: number; minute: number; weekdayMon0: number } {
+  const dtf = new Intl.DateTimeFormat('en-US', {
+    timeZone: TZ,
+    hourCycle: 'h23',
+    weekday: 'short',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+  const p = dtf.formatToParts(at).reduce<Record<string, string>>((a, x) => {
+    a[x.type] = x.value
+    return a
+  }, {})
+  const wk: Record<string, number> = { Mon: 0, Tue: 1, Wed: 2, Thu: 3, Fri: 4, Sat: 5, Sun: 6 }
+  return { year: +p.year, month: +p.month, day: +p.day, hour: +p.hour, minute: +p.minute, weekdayMon0: wk[p.weekday] ?? 0 }
+}
+
+/** Het UTC-instant van een Belgische wandklok-tijd (jaar/maand/dag/uur, DST-bewust). */
+export function brusselsWallUtc(year: number, month: number, day: number, hour = 0, minute = 0): Date {
+  const guess = new Date(Date.UTC(year, month - 1, day, hour, minute, 0))
+  return new Date(guess.getTime() - brusselsOffsetMs(guess))
+}
+
 /** Het UTC-instant van middernacht (Belgische tijd) voor een datum "YYYY-MM-DD". */
 export function brusselsMidnightUtc(dateStr: string): Date {
   const utcMidnight = new Date(`${dateStr}T00:00:00Z`)

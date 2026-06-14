@@ -1,20 +1,29 @@
 import type { Payload } from 'payload'
 
 import { competitionWhere } from './analyse-access'
+import { brusselsParts, brusselsWallUtc } from './datetime'
 
 // Live-pronostiek: per speelweekend mag elke deelnemer maar een beperkt aantal wedstrijden
 // voorspellen. Zo blijft het globale competitieklassement eerlijk (iedereen evenveel kansen).
 export const LIVE_PRONOSTIEK_MAX_PER_WEEKEND = Number(process.env.PRONOSTIEK_MAX_PER_WEEKEND) || 3
 
-/** Het speelweek-venster (maandag 00:00 → volgende maandag) waarin een datum valt. */
+// De speelweek start élke maandagochtend om 08:00 (Belgische tijd): vanaf dan kan je opnieuw
+// pronostiekeren voor de komende wedstrijden. Een wedstrijd op maandag vóór 08:00 hoort dus nog
+// bij het vórige weekend.
+export const WEEKEND_RESET_HOUR = 8
+
+/** Het speelweek-venster (maandag 08:00 → volgende maandag 08:00, Belgische tijd) waarin een datum valt. */
 export function weekendRange(dateIso: string): { startIso: string; endIso: string } {
-  const d = new Date(dateIso)
-  const dow = (d.getDay() + 6) % 7 // 0 = maandag
-  const start = new Date(d)
-  start.setHours(0, 0, 0, 0)
-  start.setDate(d.getDate() - dow)
-  const end = new Date(start)
-  end.setDate(start.getDate() + 7)
+  const at = new Date(dateIso)
+  const p = brusselsParts(at)
+  // Aantal dagen terug tot maandag; maandag vóór de reset (08:00) telt nog bij het vorige weekend.
+  let back = p.weekdayMon0
+  if (p.weekdayMon0 === 0 && p.hour < WEEKEND_RESET_HOUR) back = 7
+  // Kalenderdatum van die maandag (zuiver datum-rekenwerk → geen DST-gedoe).
+  const monday = new Date(Date.UTC(p.year, p.month - 1, p.day) - back * 86_400_000)
+  const start = brusselsWallUtc(monday.getUTCFullYear(), monday.getUTCMonth() + 1, monday.getUTCDate(), WEEKEND_RESET_HOUR)
+  const nextMonday = new Date(monday.getTime() + 7 * 86_400_000)
+  const end = brusselsWallUtc(nextMonday.getUTCFullYear(), nextMonday.getUTCMonth() + 1, nextMonday.getUTCDate(), WEEKEND_RESET_HOUR)
   return { startIso: start.toISOString(), endIso: end.toISOString() }
 }
 

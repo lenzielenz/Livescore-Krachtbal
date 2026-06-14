@@ -5,9 +5,10 @@ import { competitionWhere } from '@/lib/analyse-access'
 import { getAuthUser } from '@/lib/auth-user'
 import { buildMatchState } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
-import { buildPredictionLeaderboard, type PredEntry } from '@/lib/prediction-score'
+import { buildPredictionLeaderboard, MAX_POINTS_PER_MATCH, PRED_POINTS, type PredEntry } from '@/lib/prediction-score'
 import { LIVE_PRONOSTIEK_MAX_PER_WEEKEND } from '@/lib/pronostiek-weekend'
 import { seasonFromDate } from '@/lib/seasons'
+import { PronostiekBoard } from './PronostiekBoard'
 import '../club/voorspel/voorspel.css'
 
 export const dynamic = 'force-dynamic'
@@ -59,11 +60,12 @@ export default async function PronostiekStandPage() {
         <details className="vs-rules">
           <summary>Hoe werken de punten?</summary>
           <ul>
-            <li><strong>Exacte uitslag</strong>: 10 · juiste winnaar + doelsaldo: 6 · juiste winnaar: 4</li>
-            <li><strong>Nabijheid</strong>: tot +4 (hoe dichter, hoe meer)</li>
-            <li><strong>Dichtst bij</strong>: +3 per wedstrijd</li>
+            <li><strong>Exacte uitslag</strong>: {PRED_POINTS.exact} · juiste winnaar + doelsaldo: {PRED_POINTS.resultAndDiff} · juiste winnaar: {PRED_POINTS.result}</li>
+            <li><strong>Nabijheid</strong>: tot +{PRED_POINTS.nearMax} (hoe dichter, hoe meer) · <strong>dichtst bij</strong>: +{PRED_POINTS.closest}</li>
+            <li>Max. <strong>{MAX_POINTS_PER_MATCH}</strong> punten per wedstrijd — krappe spreiding, zodat de kloof klein blijft</li>
             <li>Hoe later tijdens de match je voorspelt, hoe <strong>minder</strong> je punten waard zijn</li>
-            <li>Max. <strong>{LIVE_PRONOSTIEK_MAX_PER_WEEKEND}</strong> voorspellingen per weekend</li>
+            <li>Max. <strong>{LIVE_PRONOSTIEK_MAX_PER_WEEKEND}</strong> voorspellingen per weekend — élke <strong>maandag 08:00</strong> kan je opnieuw voorspellen</li>
+            <li>Iedereen evenveel kansen per week → wie later instapt, blijft meedoen voor de top</li>
           </ul>
         </details>
 
@@ -72,17 +74,11 @@ export default async function PronostiekStandPage() {
         ) : (
           <>
             <p className="vs-locked" style={{ color: 'var(--dim)' }}>{totalPlayers} {totalPlayers === 1 ? 'deelnemer' : 'deelnemers'}</p>
-            <div className="vs-board">
-              {leaderboard.map((r, i) => (
-                <div key={r.userId} className={`vs-row${r.userId === myUserId ? ' me' : ''}`}>
-                  <span className="vs-rank">{i + 1}</span>
-                  <span className="vs-who">{r.name}{r.userId === myUserId ? ' (jij)' : ''}</span>
-                  <span className="vs-stat" title="Exacte uitslagen">🎯 {r.exact}</span>
-                  <span className="vs-stat" title="Wedstrijden voorspeld">{r.predictions}×</span>
-                  <span className="vs-pts">{r.points}</span>
-                </div>
-              ))}
-            </div>
+            <PronostiekBoard
+              rows={leaderboard}
+              myUserId={myUserId}
+              swingPerWeekend={LIVE_PRONOSTIEK_MAX_PER_WEEKEND * 5}
+            />
           </>
         )}
       </div>
