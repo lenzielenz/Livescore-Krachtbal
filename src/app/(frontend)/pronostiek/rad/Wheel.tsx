@@ -271,6 +271,8 @@ export function Wheel({
           <polygon points="15,33 1.5,2 28.5,2" fill="url(#radFlapG)" stroke="#7a5610" strokeWidth="1.4" strokeLinejoin="round" />
         </svg>
         <div className="rad-wheel" ref={wheelRef} style={{ background: gradient, transform: `rotate(${rotation}deg)` }} role="img" aria-label="Bonusrad">
+          {/* Fluweel-/tapijtstructuur over de vakken (luxueus). Draait mee met het rad. */}
+          <div className="rad-velvet" aria-hidden />
           {/* Nette scheidingslijntjes tussen de vakken. */}
           {arcs.map((a, i) => (
             <span key={`div-${i}`} className="rad-div" style={{ transform: `translate(-50%, -100%) rotate(${a.start}deg)` }} />
