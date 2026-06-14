@@ -211,6 +211,7 @@ export default async function CoachDashboardPage({ searchParams }: { searchParam
       <div className="cd-links">
         <Link className="sk-demo-cta" href={`/analyse/ploeg?reeks=${reeks}&team=${teamId}`}>🛡️ Volledig ploegrapport</Link>
         <Link className="sk-demo-cta" href={`/analyse/spelers?reeks=${reeks}`}>🎯 Spelers vergelijken</Link>
+        <Link className="sk-demo-cta" href="/analyse/coach/voeding">🥗 Voedingsadvies</Link>
         <Link className="sk-demo-cta" href="/beheer/training">🏋️ Training</Link>
       </div>
     </>,
