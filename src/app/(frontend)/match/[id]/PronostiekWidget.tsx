@@ -67,49 +67,66 @@ export function PronostiekWidget({
 
   if (status !== 'scheduled' && status !== 'live') return null // na afloop gesloten
 
-  // Ingevuld → heel compact: een slank ✓-balkje dat amper plaats inneemt.
+  // Niet-actief → één slank lijntje (geen grote doffe doos die de pagina volprop maakt).
+  // Ingevuld: groen vinkje + je tip. Anders: een rustige hint.
   if (locked) {
     return (
-      <div className="pn pn-mini">
-        <span className="pn-check sm">✓</span>
-        <span className="pn-mini-txt">Pronostiek binnen · <b>{locked.home}–{locked.away}</b> <span className="pn-mini-secret">(enkel jij ziet dit)</span></span>
+      <div className="pn-line pn-line-done">
+        <span className="pn-line-ic">✓</span>
+        <span>Pronostiek binnen · <b>{locked.home}–{locked.away}</b> <span className="pn-dim">(enkel jij ziet dit)</span></span>
+      </div>
+    )
+  }
+  const limitReached = typeof remaining === 'number' && remaining <= 0
+  if (!loggedIn) {
+    return (
+      <div className="pn-line">
+        <span className="pn-line-ic">🔮</span>
+        <span><Link href="/inloggen">Log in</Link> en pronostikeer mee voor het klassement.</span>
+      </div>
+    )
+  }
+  if (!hasClub) {
+    return (
+      <div className="pn-line">
+        <span className="pn-line-ic">🔮</span>
+        <span>Koppel je account aan je club om mee te pronostikeren.</span>
+      </div>
+    )
+  }
+  if (limitReached) {
+    return (
+      <div className="pn-line">
+        <span className="pn-line-ic">🔮</span>
+        <span>Je pronostieken voor dit weekend zijn op — volgend weekend mag je weer.</span>
       </div>
     )
   }
 
+  // Actief → het enige paneel dat blijft staan, subtiel opvallend met een zachte accentgloed.
   // Eén vaste <section> (geen inline-component): zo blijft het invoerveld gemount en behoudt het de
   // focus/het toetsenbord tussen toetsaanslagen door.
-  const limitReached = typeof remaining === 'number' && remaining <= 0
   return (
-    <section className="pn">
+    <section className="pn pn-active">
       <h3 className="pn-h">
+        <span className="pn-dot" aria-hidden />
         🔮 Pronostiek{status === 'live' && <span className="pn-live">· match bezig</span>}
-        {loggedIn && hasClub && !limitReached && typeof remaining === 'number' && (
+        {typeof remaining === 'number' && (
           <span className="pn-left">nog {remaining}{max ? `/${max}` : ''} dit weekend</span>
         )}
       </h3>
-      {!loggedIn ? (
-        <p className="pn-note"><Link href="/inloggen">Log in</Link> om je uitslag door te geven en mee te doen voor het klassement.</p>
-      ) : !hasClub ? (
-        <p className="pn-note">Koppel je account aan je club om mee te pronostieken.</p>
-      ) : limitReached ? (
-        <p className="pn-note">Je {max ?? ''} pronostieken voor dit weekend zijn op — volgend weekend mag je weer.</p>
-      ) : (
-        <>
-          <form className="pn-form" onSubmit={submit}>
-            <span className="pn-team">{homeName}</span>
-            <input className="pn-score" type="number" min={0} max={199} inputMode="numeric" value={home} onChange={(e) => setHome(e.target.value)} placeholder="–" aria-label={`Jouw voorspelling ${homeName}`} />
-            <span className="pn-dash">–</span>
-            <input className="pn-score" type="number" min={0} max={199} inputMode="numeric" value={away} onChange={(e) => setAway(e.target.value)} placeholder="–" aria-label={`Jouw voorspelling ${awayName}`} />
-            <span className="pn-team away">{awayName}</span>
-            <button type="submit" className="pn-send" disabled={busy}>{busy ? '…' : 'Doorgeven'}</button>
-          </form>
-          <p className="pn-hint">
-            {status === 'live' ? '⏱ De match is bezig — hoe later je voorspelt, hoe minder punten.' : 'Je kan dit maar één keer doorgeven — daarna staat het vast.'} Niemand ziet je tip.
-          </p>
-          {err && <p className="pn-err">{err}</p>}
-        </>
-      )}
+      <form className="pn-form" onSubmit={submit}>
+        <span className="pn-team">{homeName}</span>
+        <input className="pn-score" type="number" min={0} max={199} inputMode="numeric" value={home} onChange={(e) => setHome(e.target.value)} placeholder="–" aria-label={`Jouw voorspelling ${homeName}`} />
+        <span className="pn-dash">–</span>
+        <input className="pn-score" type="number" min={0} max={199} inputMode="numeric" value={away} onChange={(e) => setAway(e.target.value)} placeholder="–" aria-label={`Jouw voorspelling ${awayName}`} />
+        <span className="pn-team away">{awayName}</span>
+        <button type="submit" className="pn-send" disabled={busy}>{busy ? '…' : 'Doorgeven'}</button>
+      </form>
+      <p className="pn-hint">
+        {status === 'live' ? '⏱ De match is bezig — hoe later je voorspelt, hoe minder punten.' : 'Je kan dit maar één keer doorgeven — daarna staat het vast.'} Niemand ziet je tip.
+      </p>
+      {err && <p className="pn-err">{err}</p>}
     </section>
   )
 }

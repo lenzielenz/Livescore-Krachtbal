@@ -1306,6 +1306,21 @@ h3,
   margin: 8px 0 14px;
 }
 
+/* Compacte, lichte match-kop: één regel zonder paneel — reeks · datum · 📍 · 🟡.
+   Houdt de top van de matchpagina rustig i.p.v. een stapel doosjes. */
+.match-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  row-gap: 4px;
+  margin: 6px 0 12px;
+  font-size: 0.82rem;
+  color: var(--dim);
+  line-height: 1.5;
+}
+.match-meta-reeks { font-weight: 800; color: var(--accent); }
+.match-meta-bit::before { content: "·"; margin: 0 8px; color: var(--line); }
+
 /* ── Profiel-tools (snelkoppelingen bovenaan een profielpagina) ── */
 .profile-lead {
   color: var(--dim);
