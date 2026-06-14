@@ -20,6 +20,10 @@
 .mw.wet { --mw-tint: color-mix(in srgb, #4cc9f0 16%, transparent); border-color: color-mix(in srgb, #4cc9f0 40%, var(--line)); }
 .mw.maybe { --mw-tint: color-mix(in srgb, #ffd166 13%, transparent); border-color: color-mix(in srgb, #ffd166 36%, var(--line)); }
 .mw.dry { --mw-tint: color-mix(in srgb, var(--accent) 12%, transparent); border-color: color-mix(in srgb, var(--accent) 30%, var(--line)); }
+.mw.windy { --mw-tint: color-mix(in srgb, #a0d8c0 15%, transparent); border-color: color-mix(in srgb, #a0d8c0 38%, var(--line)); }
+.mw.cold { --mw-tint: color-mix(in srgb, #7cc4ff 16%, transparent); border-color: color-mix(in srgb, #7cc4ff 40%, var(--line)); }
+.mw.hot { --mw-tint: color-mix(in srgb, #ff9e5e 16%, transparent); border-color: color-mix(in srgb, #ff9e5e 40%, var(--line)); }
+.mw.great { --mw-tint: color-mix(in srgb, #06d6a0 16%, transparent); border-color: color-mix(in srgb, #06d6a0 40%, var(--line)); }
 .mw > * { position: relative; }
 
 .mw-head {
