@@ -9,6 +9,13 @@ export function seasonFromDate(d: Date): string {
   return `${start}-${start + 1}`
 }
 
+/** Het volgende seizoenslabel ("2025-2026" → "2026-2027"). Ongewijzigd bij een onbekend formaat. */
+export function nextSeason(label: string): string {
+  const m = /^(\d{4})-(\d{4})$/.exec(label)
+  if (!m) return label
+  return `${Number(m[1]) + 1}-${Number(m[2]) + 1}`
+}
+
 /** Where-fragment om op een seizoen te filteren (leeg = alle seizoenen). Spread in een `and`-array. */
 export function seasonClause(seizoen?: string | null): { seizoen: { equals: string } }[] {
   return seizoen ? [{ seizoen: { equals: seizoen } }] : []

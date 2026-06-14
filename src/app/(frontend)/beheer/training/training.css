@@ -81,7 +81,7 @@
   font-weight: 600;
 }
 .tr-msg.ok {
-  color: var(--accent, #06d6a0);
+  color: #06d6a0;
 }
 .tr-msg.err {
   color: #ef476f;
@@ -285,7 +285,7 @@
 .tr-att-chip:active { transform: scale(0.97); }
 .tr-att-chip.on {
   border-color: color-mix(in srgb, var(--accent, #06d6a0) 70%, var(--line));
-  background: rgba(6, 214, 160, 0.16);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
 }
 .tr-att-tick {
   display: inline-flex;
@@ -570,7 +570,7 @@
 }
 .tr-vbt-card.lvl-pr { border-left-color: #ffd166; }
 .tr-vbt-card.lvl-top { border-left-color: var(--accent, #06d6a0); }
-.tr-vbt-card.lvl-ok { border-left-color: #4cc9f0; }
+.tr-vbt-card.lvl-ok { border-left-color: var(--steel-2, #9197a0); }
 .tr-vbt-card.lvl-low { border-left-color: #ef476f; }
 .tr-vbt-lbl { font-size: 0.78rem; color: var(--dim); }
 .tr-vbt-now { font-size: 1.5rem; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.1; }
@@ -603,3 +603,26 @@
   background: color-mix(in srgb, var(--panel-2, #10141a) 60%, transparent); color: var(--txt); font-size: 0.92rem;
 }
 .tr-doel-add input { max-width: 140px; }
+
+/* Gebrande trainingskop: clublogo + naam + slogan. */
+.tr-hero {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 18px;
+  margin: 4px 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background:
+    radial-gradient(130% 160% at 0% 0%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 60%),
+    var(--panel-grad, var(--panel));
+  box-shadow: var(--card-shadow);
+}
+.tr-hero-id { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.tr-hero-kicker { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 800; color: var(--accent); }
+.tr-hero-name { margin: 0; font-size: 1.5rem; font-weight: 900; letter-spacing: -0.01em; color: var(--txt); line-height: 1.1; }
+.tr-hero-slogan { margin: 2px 0 0; font-size: 0.9rem; font-style: italic; color: var(--dim); }
+@media (max-width: 520px) {
+  .tr-hero { gap: 12px; padding: 14px; }
+  .tr-hero-name { font-size: 1.2rem; }
+}

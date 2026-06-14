@@ -2,6 +2,7 @@ import Link from 'next/link'
 
 import { getSelectedSeason, listSeasons } from '@/lib/analyse-season'
 import { getPayloadClient } from '@/lib/payload-client'
+import { nextSeason, seasonFromDate } from '@/lib/seasons'
 import { SeizoenGlobalPicker } from './SeizoenGlobalPicker'
 
 // Gedeelde analyse-navigatie: één compacte tabbalk. De vele losse tools zijn gebundeld in twee
@@ -20,6 +21,12 @@ export type AnalyseTab = (typeof TABS)[number]['key']
 export async function AnalyseNav({ active }: { active: AnalyseTab }) {
   const payload = await getPayloadClient()
   const [seasons, current] = await Promise.all([listSeasons(payload), getSelectedSeason()])
+  // Nog niet bestaande seizoenen die je kan starten: het huidige (op datum) en het seizoen ná het
+  // laatste met data. Zo kan je altijd een vers, leeg seizoen openen — ook als er nog niets is.
+  const now = seasonFromDate(new Date())
+  const afterLatest = seasons.length ? nextSeason(seasons[0]) : now
+  const startable = [...new Set([now, afterLatest])].filter((s) => !seasons.includes(s)).sort()
+  const newSeason = startable.length ? startable[startable.length - 1] : null
   return (
     <div className="an-navwrap">
       <nav className="an-nav" aria-label="Analyse">
@@ -30,7 +37,7 @@ export async function AnalyseNav({ active }: { active: AnalyseTab }) {
           </Link>
         ))}
       </nav>
-      <SeizoenGlobalPicker seasons={seasons} current={current ?? 'all'} />
+      <SeizoenGlobalPicker seasons={seasons} startable={startable} newSeason={newSeason} current={current ?? 'all'} />
     </div>
   )
 }

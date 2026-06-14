@@ -2425,3 +2425,15 @@ select.rang-picker {
 .an-pat-cta { flex: none; font-size: 0.8rem; font-weight: 800; color: var(--accent); white-space: nowrap; opacity: 0.85; }
 .an-pat.side-away .an-pat-cta { color: #4cc9f0; }
 @media (prefers-reduced-motion: reduce) { .an-pat { transition: none; } }
+
+/* Seizoenkeuze + nieuw seizoen starten. */
+.an-season-wrap { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.an-season-new {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 7px 13px; border-radius: 999px; cursor: pointer;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line));
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent); font: inherit; font-size: 0.84rem; font-weight: 800;
+  white-space: nowrap;
+}
+.an-season-new:hover { background: color-mix(in srgb, var(--accent) 22%, transparent); }
