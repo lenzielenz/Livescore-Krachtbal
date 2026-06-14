@@ -1,6 +1,5 @@
 import { headers } from 'next/headers'
 import Link from 'next/link'
-import type { Where } from 'payload'
 
 import { SiteHeader } from '@/components/SiteHeader'
 import { userClubId } from '@/lib/access'
@@ -8,15 +7,18 @@ import { competitionWhere } from '@/lib/analyse-access'
 import { buildMatchState } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
 import { buildPredictionLeaderboard, scoreMatchPredictions, type PredEntry } from '@/lib/prediction-score'
+import { readPools } from '@/lib/pronostiek-pools'
 import { reeksNaam } from '@/lib/reeksen'
 import { seasonFromDate } from '@/lib/seasons'
 import { PredictForm } from './PredictForm'
+import { PoolCreate, PoolJoin, PoolLeave } from './PoolManager'
 import { ScopePicker } from './ScopePicker'
 import './voorspel.css'
 
 export const dynamic = 'force-dynamic'
 
 const nameOf = (v: unknown): string => (v && typeof v === 'object' ? String((v as { name?: unknown }).name ?? '—') : '—')
+const idOf = (v: unknown): number | null => (v && typeof v === 'object' ? (((v as { id?: number }).id) ?? null) : typeof v === 'number' ? v : null)
 const first = (n: string) => n.split(/\s+/)[0]
 
 function Shell({ children }: { children: React.ReactNode }) {
@@ -24,15 +26,17 @@ function Shell({ children }: { children: React.ReactNode }) {
     <>
       <SiteHeader active="clubs" />
       <div className="site">
-        <h1 className="page-title"><span className="brand">Pronostiek competitie</span></h1>
+        <h1 className="page-title"><span className="brand">Pronostiek</span></h1>
         {children}
       </div>
     </>
   )
 }
 
-export default async function VoorspelPage({ searchParams }: { searchParams: Promise<{ scope?: string }> }) {
-  const { scope: scopeParam } = await searchParams
+type MatchRow = { id: number; reeks: string; reeksCode: string; date: string; status: string; homeId: number | null; awayId: number | null; home: string; away: string; preds: PredEntry[] }
+
+export default async function VoorspelPage({ searchParams }: { searchParams: Promise<{ scope?: string; pool?: string }> }) {
+  const { scope: scopeParam, pool: poolParam } = await searchParams
   const payload = await getPayloadClient()
   const { user } = await payload.auth({ headers: await headers() }).catch(() => ({ user: null }))
   if (!user) {
@@ -45,100 +49,138 @@ export default async function VoorspelPage({ searchParams }: { searchParams: Pro
   }
   const myUserId = Number((user as { id: number }).id)
 
+  const club = await payload.findByID({ collection: 'clubs', id: clubId, depth: 0 }).catch(() => null)
   const teamsRes = await payload.find({ collection: 'teams', where: { and: [{ club: { equals: clubId } }, competitionWhere()] }, depth: 0, limit: 200 }).catch(() => ({ docs: [] as Record<string, unknown>[] }))
   const clubTeams = teamsRes.docs.map((t) => ({ id: Number(t.id), name: String((t as { name?: unknown }).name ?? '—'), reeks: String((t as { reeks?: unknown }).reeks ?? '') }))
   const teamIds = clubTeams.map((t) => t.id)
   if (teamIds.length === 0) {
     return <Shell><p className="empty">Nog geen ploegen voor je club.</p></Shell>
   }
-
-  // Keuze waarover je voorspelt: hele club, één ploeg, of een hele reeks (waar de club in speelt).
+  const teamIdSet = new Set(teamIds)
   const reeksen = [...new Set(clubTeams.map((t) => t.reeks).filter(Boolean))]
+  const teamName = (id: number) => clubTeams.find((t) => t.id === id)?.name ?? `Ploeg ${id}`
+
+  // Scope-opties (voor de clubweergave én bij het aanmaken van een pool).
   const scopeOptions = [
     { value: 'club', label: '🏠 Hele club' },
     ...clubTeams.map((t) => ({ value: `team:${t.id}`, label: `👥 ${t.name}${t.reeks ? ` · ${reeksNaam(t.reeks)}` : ''}` })),
     ...reeksen.map((r) => ({ value: `reeks:${r}`, label: `📋 Hele reeks · ${reeksNaam(r)}` })),
   ]
-  const scope = scopeParam && scopeOptions.some((o) => o.value === scopeParam) ? scopeParam : 'club'
-
-  // Where-fragment voor de gekozen scope.
-  let scopeWhere: Where
-  if (scope.startsWith('team:')) {
-    const tid = Number(scope.slice(5))
-    scopeWhere = { or: [{ homeTeam: { equals: tid } }, { awayTeam: { equals: tid } }] }
-  } else if (scope.startsWith('reeks:')) {
-    scopeWhere = { reeks: { equals: scope.slice(6) } }
-  } else {
-    scopeWhere = { or: [{ homeTeam: { in: teamIds } }, { awayTeam: { in: teamIds } }] }
-  }
 
   const seizoen = seasonFromDate(new Date())
+  // Eén query over alle reeksen waarin de club speelt — dekt club-, ploeg- én reeksscope.
   const matchesRes = await payload.find({
     collection: 'matches',
-    where: {
-      and: [
-        { status: { in: ['scheduled', 'finished'] } },
-        { seizoen: { equals: seizoen } },
-        scopeWhere,
-        competitionWhere(),
-      ],
-    },
+    where: { and: [{ status: { in: ['scheduled', 'finished'] } }, { seizoen: { equals: seizoen } }, { reeks: { in: reeksen } }, competitionWhere()] },
     sort: 'date',
     depth: 2,
-    limit: 500,
+    limit: 1000,
   }).catch(() => ({ docs: [] as Record<string, unknown>[] }))
 
-  type M = { id: number; reeks: string; date: string; status: string; home: string; away: string; preds: PredEntry[] }
-  const all: M[] = matchesRes.docs
+  const all: MatchRow[] = matchesRes.docs
     .filter((m) => !(m as { isDemo?: boolean }).isDemo && !(m as { analyseOnly?: boolean }).analyseOnly)
     .map((m) => ({
       id: m.id as number,
       reeks: reeksNaam((m as { reeks?: string }).reeks ?? ''),
+      reeksCode: String((m as { reeks?: string }).reeks ?? ''),
       date: m.date as string,
       status: String((m as { status?: string }).status ?? 'scheduled'),
+      homeId: idOf((m as { homeTeam?: unknown }).homeTeam),
+      awayId: idOf((m as { awayTeam?: unknown }).awayTeam),
       home: nameOf((m as { homeTeam?: unknown }).homeTeam),
       away: nameOf((m as { awayTeam?: unknown }).awayTeam),
-      preds: (Array.isArray((m as { scorePredictions?: unknown }).scorePredictions) ? (m as { scorePredictions: PredEntry[] }).scorePredictions : []).filter((p) => p && p.clubId === clubId),
+      preds: Array.isArray((m as { scorePredictions?: unknown }).scorePredictions) ? (m as { scorePredictions: PredEntry[] }).scorePredictions : [],
     }))
 
-  const myEntryOf = (m: M) => m.preds.find((p) => Number(p.userId) === myUserId) ?? null
-  // Voorspelde wedstrijden verdwijnen uit de lijst: eens doorgegeven staat je gok vast.
-  const upcoming = all.filter((m) => m.status === 'scheduled' && !myEntryOf(m))
-  const lockedCount = all.filter((m) => m.status === 'scheduled' && myEntryOf(m)).length
-  const finishedWithPreds = all.filter((m) => m.status === 'finished' && m.preds.length > 0)
+  // Eindstanden van alle afgehandelde wedstrijden met voorspellingen (eens berekenen, beide views).
+  const finished = all.filter((m) => m.status === 'finished' && m.preds.length > 0)
+  const finals = new Map<number, { home: number; away: number }>()
+  await Promise.all(finished.map(async (m) => {
+    const st = await buildMatchState(payload, m.id).catch(() => null)
+    if (st) finals.set(m.id, { home: st.score.home, away: st.score.away })
+  }))
 
-  // Eindstanden van de afgehandelde wedstrijden (event-sourced → buildMatchState).
-  const finals = await Promise.all(
-    finishedWithPreds.map(async (m) => {
-      const st = await buildMatchState(payload, m.id).catch(() => null)
-      return st ? { ...m, actual: { home: st.score.home, away: st.score.away } } : null
-    }),
+  // Pools van de club (huidig seizoen) en die van mij.
+  const pools = readPools((club as { pronostiekPools?: unknown } | null)?.pronostiekPools).filter((p) => p.seizoen === seizoen)
+  const myPools = pools.filter((p) => p.members.includes(myUserId))
+  const activePool = poolParam ? myPools.find((p) => p.id === poolParam) ?? null : null
+
+  // Actieve scope + ledenfilter: een pool legt scope + leden vast; anders de clubweergave met de keuzebalk.
+  const scope = activePool ? activePool.scope : scopeParam && scopeOptions.some((o) => o.value === scopeParam) ? scopeParam : 'club'
+  const memberSet = activePool ? new Set(activePool.members) : null
+  const keep = (p: PredEntry) => (memberSet ? memberSet.has(Number(p.userId)) : p.clubId === clubId)
+
+  const inScope = (m: MatchRow): boolean => {
+    if (scope.startsWith('team:')) {
+      const tid = Number(scope.slice(5))
+      return m.homeId === tid || m.awayId === tid
+    }
+    if (scope.startsWith('reeks:')) return m.reeksCode === scope.slice(6)
+    return (m.homeId != null && teamIdSet.has(m.homeId)) || (m.awayId != null && teamIdSet.has(m.awayId))
+  }
+
+  const scopedMatches = all.filter(inScope)
+  const myEntryOf = (m: MatchRow) => m.preds.find((p) => Number(p.userId) === myUserId) ?? null
+
+  const leaderboard = buildPredictionLeaderboard(
+    scopedMatches
+      .filter((m) => finals.has(m.id))
+      .map((m) => ({ actual: finals.get(m.id)!, preds: m.preds.filter(keep) })),
   )
-  const scored = finals.filter((x): x is M & { actual: { home: number; away: number } } => x != null)
-
-  const leaderboard = buildPredictionLeaderboard(scored.map((m) => ({ actual: m.actual, preds: m.preds })), clubId)
+  const upcoming = scopedMatches.filter((m) => m.status === 'scheduled' && !myEntryOf(m))
+  const lockedCount = scopedMatches.filter((m) => m.status === 'scheduled' && myEntryOf(m)).length
+  const scored = scopedMatches
+    .filter((m) => finals.has(m.id) && m.preds.filter(keep).length > 0)
+    .map((m) => ({ ...m, actual: finals.get(m.id)!, groupPreds: m.preds.filter(keep) }))
 
   const dt = (d: string) => new Date(d).toLocaleDateString('nl-BE', { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
 
   return (
     <Shell>
-      <p className="vs-intro">
-        Voorspel de <strong>exacte eindstand</strong> van wedstrijden en bouw met je clubgenoten een klassement op
-        over het seizoen ({seizoen}). Kies waarover je speelt: de hele club, één ploeg, of een volledige reeks.
-      </p>
-      <ScopePicker scope={scope} options={scopeOptions} />
-      <details className="vs-rules">
-        <summary>Hoe verdien je punten?</summary>
-        <ul>
-          <li><strong>Exacte uitslag</strong>: 10 punten.</li>
-          <li><strong>Juiste winnaar + juist doelsaldo</strong>: 6 punten.</li>
-          <li><strong>Juiste winnaar</strong>: 4 punten.</li>
-          <li><strong>Nabijheid</strong>: tot 4 extra (hoe kleiner je afwijking, hoe meer).</li>
-          <li><strong>Dichtst bij</strong> van de club: +3 bonus per wedstrijd.</li>
-        </ul>
-      </details>
+      {activePool ? (
+        <div className="vs-poolhead">
+          <Link href="/club/voorspel" className="vs-back">← Clubklassement</Link>
+          <h2 className="vs-poolname-h">🏆 {activePool.name}</h2>
+          <p className="vs-poolmeta">
+            {activePool.members.length} {activePool.members.length === 1 ? 'speler' : 'spelers'} · {scope === 'club' ? 'hele club' : scope.startsWith('team:') ? teamName(Number(scope.slice(5))) : `reeks ${reeksNaam(scope.slice(6))}`}
+            {' · '}code <strong className="vs-code">{activePool.code}</strong>
+          </p>
+          <PoolLeave poolId={activePool.id} />
+        </div>
+      ) : (
+        <>
+          <p className="vs-intro">
+            Voorspel de <strong>exacte eindstand</strong> en bouw met je clubgenoten een klassement op over het seizoen ({seizoen}).
+            Kies waarover je speelt, of start een <strong>privé-pool</strong> binnen je ploeg.
+          </p>
+          <ScopePicker scope={scope} options={scopeOptions} />
 
-      {/* Klassement */}
+          <section className="vs-pools">
+            <h2 className="vs-h2">👥 Privé-pools</h2>
+            {myPools.length > 0 && (
+              <div className="vs-poollist">
+                {myPools.map((p) => (
+                  <Link key={p.id} href={`/club/voorspel?pool=${p.id}`} className="vs-poolcard">
+                    <span className="vs-poolcard-name">{p.name}</span>
+                    <span className="vs-poolcard-meta">{p.members.length} spelers · {p.scope === 'club' ? 'hele club' : p.scope.startsWith('team:') ? teamName(Number(p.scope.slice(5))) : `reeks ${reeksNaam(p.scope.slice(6))}`}</span>
+                  </Link>
+                ))}
+              </div>
+            )}
+            <div className="vs-poolactions">
+              <div>
+                <span className="vs-poollbl">Nieuwe pool starten</span>
+                <PoolCreate scopeOptions={scopeOptions} />
+              </div>
+              <div>
+                <span className="vs-poollbl">Pool joinen met code</span>
+                <PoolJoin />
+              </div>
+            </div>
+          </section>
+        </>
+      )}
+
       <h2 className="vs-h2">🏆 Klassement</h2>
       {leaderboard.length === 0 ? (
         <p className="empty">Nog geen punten — voorspel de komende wedstrijden en kom later terug.</p>
@@ -156,7 +198,6 @@ export default async function VoorspelPage({ searchParams }: { searchParams: Pro
         </div>
       )}
 
-      {/* Te voorspellen */}
       <h2 className="vs-h2">🔮 Te voorspellen</h2>
       {lockedCount > 0 && (
         <p className="vs-locked">🔒 {lockedCount} {lockedCount === 1 ? 'voorspelling staat' : 'voorspellingen staan'} vast — je kan ze niet meer wijzigen.</p>
@@ -165,30 +206,25 @@ export default async function VoorspelPage({ searchParams }: { searchParams: Pro
         <p className="empty">{lockedCount > 0 ? 'Alles voorspeld — succes! 🤞' : 'Geen geplande wedstrijden om te voorspellen.'}</p>
       ) : (
         <div className="vs-list">
-          {upcoming.map((m) => {
-            const mine = myEntryOf(m)
-            return (
-              <div key={m.id} className="vs-match">
-                <div className="vs-match-head">
-                  <span className="vs-match-reeks">{m.reeks}</span>
-                  <span className="vs-match-date">{dt(m.date)}</span>
-                  <span className="vs-match-count">{m.preds.length} {m.preds.length === 1 ? 'voorspelling' : 'voorspellingen'}</span>
-                </div>
-                <div className="vs-match-teams">{m.home} <span className="vs-vs">–</span> {m.away}</div>
-                <PredictForm matchId={m.id} homeName={m.home} awayName={m.away} initialHome={mine?.home ?? null} initialAway={mine?.away ?? null} />
+          {upcoming.map((m) => (
+            <div key={m.id} className="vs-match">
+              <div className="vs-match-head">
+                <span className="vs-match-reeks">{m.reeks}</span>
+                <span className="vs-match-date">{dt(m.date)}</span>
               </div>
-            )
-          })}
+              <div className="vs-match-teams">{m.home} <span className="vs-vs">–</span> {m.away}</div>
+              <PredictForm matchId={m.id} homeName={m.home} awayName={m.away} initialHome={null} initialAway={null} />
+            </div>
+          ))}
         </div>
       )}
 
-      {/* Uitslagen */}
       {scored.length > 0 && (
         <>
           <h2 className="vs-h2">✅ Afgehandeld</h2>
           <div className="vs-list">
             {scored.slice().reverse().map((m) => {
-              const ranked = scoreMatchPredictions(m.actual, m.preds).sort((a, b) => b.points - a.points)
+              const ranked = scoreMatchPredictions(m.actual, m.groupPreds).sort((a, b) => b.points - a.points)
               const top = ranked[0]
               const mine = ranked.find((p) => Number(p.userId) === myUserId)
               return (

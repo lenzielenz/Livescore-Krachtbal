@@ -208,6 +208,18 @@ export interface Club {
   jeugdEmail?: string | null;
   jeugdTelefoon?: string | null;
   /**
+   * Privé-pronostiekpools van clubleden: [{id,name,scope,ownerId,members,code,seizoen,createdAt}]. Automatisch beheerd.
+   */
+  pronostiekPools?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  /**
    * Aangemaakt in de analysemodule. Verschijnt nooit in de competitie (live, rangschikking, beheer) — enkel in de eigen analyse-database.
    */
   analyseOnly?: boolean | null;
@@ -1323,6 +1335,7 @@ export interface ClubsSelect<T extends boolean = true> {
   jeugdNaam?: T;
   jeugdEmail?: T;
   jeugdTelefoon?: T;
+  pronostiekPools?: T;
   analyseOnly?: T;
   analyseOwner?: T;
   updatedAt?: T;

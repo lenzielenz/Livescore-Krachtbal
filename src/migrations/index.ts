@@ -65,6 +65,7 @@ import * as migration_20260610_240000_analyse_delen_backfill from './20260610_24
 import * as migration_20260611_120000_push_subscriptions from './20260611_120000_push_subscriptions';
 import * as migration_20260614_120000_match_live_poll from './20260614_120000_match_live_poll';
 import * as migration_20260614_140000_match_score_predictions from './20260614_140000_match_score_predictions';
+import * as migration_20260614_160000_club_pronostiek_pools from './20260614_160000_club_pronostiek_pools';
 
 export const migrations = [
   {
@@ -401,5 +402,10 @@ export const migrations = [
     up: migration_20260614_140000_match_score_predictions.up,
     down: migration_20260614_140000_match_score_predictions.down,
     name: '20260614_140000_match_score_predictions',
+  },
+  {
+    up: migration_20260614_160000_club_pronostiek_pools.up,
+    down: migration_20260614_160000_club_pronostiek_pools.down,
+    name: '20260614_160000_club_pronostiek_pools',
   },
 ];
