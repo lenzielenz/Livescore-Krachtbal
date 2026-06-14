@@ -125,19 +125,20 @@
    onbeperkt groeien; zo staan de pijl en knoppen altijd vlak naast het veld. */
 .sk-arena { flex: 1 1 auto; min-height: 0; display: flex; align-items: stretch; justify-content: center; gap: 10px; }
 .sk-rail {
-  flex: 0 0 auto; width: 64px; display: flex; flex-direction: column; align-items: center;
-  gap: 8px; padding-top: 4px;
+  flex: 0 0 auto; width: 52px; display: flex; flex-direction: column; align-items: stretch;
+  gap: 6px; padding-top: 2px;
 }
 /* Enkel de ploeg-items dimmen wanneer die ploeg niet aan zet is — de globale beheerknoppen
    onderaan blijven altijd helder en bruikbaar. */
 .sk-rail.dim .sk-rail-btn, .sk-rail.dim .sk-rail-dir, .sk-rail.dim .sk-rail-worp { opacity: 0.4; }
-/* Globale beheerknoppen onderaan de zijbalk. */
-.sk-rail-acts { margin-top: auto; display: flex; flex-direction: column; gap: 6px; width: 100%; padding-bottom: 2px; }
+/* Globale beheerknoppen: als lange balken in de zijbalk-stroom (display:contents → kinderen
+   worden flex-items van de rail, net als VW/⇄). */
+.sk-rail-acts { display: contents; }
 .sk-rail-act {
-  width: 100%; padding: 16px 2px; border-radius: 12px; border: 1px solid var(--line);
+  width: 100%; flex: 1 1 0; min-height: 52px; padding: 4px 2px; border-radius: 13px; border: 1px solid var(--line);
   background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 82%, transparent), #10141a);
   color: var(--txt); font-size: 1.05rem; line-height: 1; font-weight: 800;
-  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
 }
 .sk-rail-act span { font-size: 0.56rem; font-weight: 700; letter-spacing: 0.2px; }
@@ -145,7 +146,7 @@
 .sk-rail-act.danger { background: #3a1018; color: #ffd5e0; border-color: #5a1828; }
 .sk-rail-act:disabled { opacity: 0.4; }
 .sk-rail-btn {
-  width: 100%; padding: 26px 0; border-radius: 14px; font-size: 0.98rem; font-weight: 800;
+  width: 100%; flex: 1 1 0; min-height: 52px; padding: 0; border-radius: 13px; font-size: 0.98rem; font-weight: 800;
   border: 1px solid var(--line);
   background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 82%, transparent), #10141a);
   color: var(--txt); line-height: 1;
@@ -155,12 +156,13 @@
 .sk-rail-btn:hover { transform: translateY(-1px); }
 .sk-rail-home .sk-rail-btn { border-color: color-mix(in srgb, var(--home) 55%, var(--line)); color: var(--home); }
 .sk-rail-away .sk-rail-btn { border-color: color-mix(in srgb, var(--away) 55%, var(--line)); color: var(--away); }
-.sk-rail-dir { font-size: 3rem; font-weight: 900; line-height: 1; margin-top: 6px; }
+.sk-rail-dir { font-size: 2.6rem; font-weight: 900; line-height: 1; text-align: center; flex: 0 0 auto; }
 .sk-rail-home .sk-rail-dir { color: var(--home); filter: drop-shadow(0 0 12px color-mix(in srgb, var(--home) 50%, transparent)); }
 .sk-rail-away .sk-rail-dir { color: var(--away); filter: drop-shadow(0 0 12px color-mix(in srgb, var(--away) 50%, transparent)); }
 .sk-rail-worp {
   font-size: 1.05rem; font-weight: 900; font-variant-numeric: tabular-nums;
   background: var(--accent); color: #06140d; padding: 2px 9px; border-radius: 999px;
+  align-self: center; flex: 0 0 auto;
 }
 .sk-col { display: flex; flex-direction: column; justify-content: center; gap: 4px; flex: 0 0 auto; overflow-y: auto; }
 .sk-col.dim { opacity: 0.38; }
