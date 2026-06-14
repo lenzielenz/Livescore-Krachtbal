@@ -12,6 +12,7 @@ import {
   type Pace,
   type Sex,
 } from '@/lib/nutrition-plan'
+import { buildShoppingList, buildWeekPlan } from '@/lib/nutrition-week'
 import './voeding.css'
 
 const ACTIVITIES: { v: Activity; label: string; hint: string }[] = [
@@ -111,6 +112,7 @@ export function NutritionPlanner({ initial, canSave = false }: { initial?: Nutri
   const [diet, setDiet] = useState<Diet>(initial?.diet ?? 'alles')
   const [target, setTarget] = useState(initial?.targetWeightKg || '')
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const [showWeek, setShowWeek] = useState(false)
 
   const save = async () => {
     setSaveState('saving')
@@ -150,6 +152,9 @@ export function NutritionPlanner({ initial, canSave = false }: { initial?: Nutri
 
   const macroKcal = plan ? { p: plan.protein * 4, c: plan.carbs * 4, f: plan.fat * 9 } : null
   const macroTotal = macroKcal ? macroKcal.p + macroKcal.c + macroKcal.f || 1 : 1
+
+  const week = useMemo(() => (plan && showWeek ? buildWeekPlan(plan.calories, diet) : null), [plan, showWeek, diet])
+  const shopping = useMemo(() => (plan && showWeek ? buildShoppingList(plan.calories, diet) : null), [plan, showWeek, diet])
 
   return (
     <div className="vd">
@@ -328,6 +333,50 @@ export function NutritionPlanner({ initial, canSave = false }: { initial?: Nutri
           <ul className="vd-tips">
             {plan.tips.map((t, i) => <li key={i}>{t}</li>)}
           </ul>
+
+          {/* Week-eetplan + boodschappenlijst (kant-en-klaar, op maat). */}
+          <div className="vd-weekbar">
+            <button type="button" className="vd-week-toggle" onClick={() => setShowWeek((v) => !v)}>
+              {showWeek ? '▾ Verberg weekplan' : '📅 Toon weekplan + boodschappenlijst'}
+            </button>
+            {showWeek && (
+              <button type="button" className="vd-week-print" onClick={() => window.print()}>🖨️ Print / bewaar als PDF</button>
+            )}
+          </div>
+
+          {showWeek && week && shopping && (
+            <div className="vd-week">
+              <h3 className="vd-h3">📅 Jouw week-eetplan <span className="vd-h3-sub">7 dagen, gevarieerd</span></h3>
+              <div className="vd-week-grid">
+                {week.map((d) => (
+                  <div key={d.day} className="vd-wday">
+                    <span className="vd-wday-h">{d.day}</span>
+                    {d.meals.map((m) => (
+                      <div key={m.name} className="vd-wmeal">
+                        <span className="vd-wmeal-h">{m.name}</span>
+                        <span className="vd-wmeal-items">{m.items.map((it) => `${it.amount} ${it.food}`).join(' · ')}</span>
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+
+              <h3 className="vd-h3">🛒 Boodschappenlijst voor de week <span className="vd-h3-sub">{plan.dietLabel.toLowerCase()}</span></h3>
+              <div className="vd-shop">
+                {shopping.map((g) => (
+                  <div key={g.cat} className="vd-shop-cat">
+                    <span className="vd-shop-h">{g.cat}</span>
+                    <ul className="vd-shop-list">
+                      {g.items.map((it, i) => (
+                        <li key={i}><b>{it.amount}</b> {it.food}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+              <p className="vd-week-note">Richtlijn: porties zijn geschaald op je daginname en gemiddeld over de week — pas gerust aan naar smaak en honger.</p>
+            </div>
+          )}
         </div>
       )}
     </div>
