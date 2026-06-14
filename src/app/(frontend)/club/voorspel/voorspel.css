@@ -82,3 +82,23 @@
 .vs-code { color: var(--accent); letter-spacing: 0.12em; font-variant-numeric: tabular-nums; }
 .vs-poolleave { padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line); background: transparent; color: var(--dim); font: inherit; font-size: 0.8rem; cursor: pointer; }
 .vs-poolleave:hover { color: #ef476f; border-color: #ef476f; }
+
+/* Uitnodigen / pool-kop-acties. */
+.vs-poolhead-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.vs-invite { padding: 6px 12px; border-radius: 999px; border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line)); background: color-mix(in srgb, var(--accent) 12%, transparent); color: var(--accent); font: inherit; font-size: 0.8rem; font-weight: 800; cursor: pointer; }
+.vs-invite:hover { background: color-mix(in srgb, var(--accent) 20%, transparent); }
+
+/* Compacte bovenrij: scope-kiezer + snelkoppelingen naar mijn pools. */
+.vs-toprow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-bottom: 4px; }
+.vs-poolchips { display: flex; flex-wrap: wrap; gap: 6px; }
+.vs-poolchip { padding: 6px 12px; border-radius: 999px; border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--line)); background: color-mix(in srgb, var(--accent) 8%, var(--panel)); color: var(--txt); font-size: 0.84rem; font-weight: 700; text-decoration: none; }
+.vs-poolchip:hover { border-color: var(--accent); }
+
+/* Compacte privé-pools (ingeklapt). */
+.vs-h2-sub { font-size: 0.78rem; font-weight: 600; color: var(--dim); margin-left: 6px; }
+.vs-poolcompact { display: flex; flex-wrap: wrap; gap: 10px; }
+.vs-pooldd { flex: 1 1 260px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); padding: 4px 12px; }
+.vs-pooldd > summary { cursor: pointer; font-weight: 700; font-size: 0.9rem; padding: 8px 2px; list-style: none; color: var(--txt); }
+.vs-pooldd > summary::-webkit-details-marker { display: none; }
+.vs-pooldd[open] > summary { color: var(--accent); }
+.vs-pooldd .vs-poolform { padding: 4px 0 10px; }

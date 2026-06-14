@@ -44,14 +44,8 @@ export async function POST(req: Request) {
     if (match.status !== 'scheduled') {
       return Response.json({ error: 'Voorspellen kan enkel vóór de aftrap.' }, { status: 409 })
     }
-    // De wedstrijd moet in een reeks zitten waar de club in speelt (eigen club- of reeksmatchen).
-    const teamsRes = await payload
-      .find({ collection: 'teams', where: { club: { equals: clubId } }, depth: 0, limit: 200 })
-      .catch(() => ({ docs: [] as Record<string, unknown>[] }))
-    const clubReeksen = new Set(teamsRes.docs.map((t) => String((t as { reeks?: unknown }).reeks ?? '')).filter(Boolean))
-    if (!clubReeksen.has(String((match as { reeks?: unknown }).reeks ?? ''))) {
-      return Response.json({ error: 'Deze wedstrijd hoort niet bij een reeks van jouw club.' }, { status: 403 })
-    }
+    // Elke geplande competitiewedstrijd mag voorspeld worden (je kan via een pool uitgenodigd zijn
+    // voor de matchen van een andere ploeg/club). De klassementen filteren toch op club of pool.
 
     const userId = Number((user as { id: number }).id)
     const name = String((user as { name?: string; email?: string }).name || (user as { email?: string }).email || 'Lid')

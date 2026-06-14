@@ -38,9 +38,9 @@ export function PoolCreate({ scopeOptions }: { scopeOptions: { value: string; la
   )
 }
 
-export function PoolJoin() {
+export function PoolJoin({ initialCode = '' }: { initialCode?: string }) {
   const router = useRouter()
-  const [code, setCode] = useState('')
+  const [code, setCode] = useState(initialCode.toUpperCase())
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
   const submit = async (e: React.FormEvent) => {
@@ -60,6 +60,21 @@ export function PoolJoin() {
       {msg && <span className="vs-msg">{msg}</span>}
     </form>
   )
+}
+
+export function InviteCopy({ code }: { code: string }) {
+  const [done, setDone] = useState(false)
+  const copy = async () => {
+    const url = `${typeof window !== 'undefined' ? window.location.origin : ''}/club/voorspel?join=${code}`
+    try {
+      await navigator.clipboard.writeText(url)
+      setDone(true)
+      setTimeout(() => setDone(false), 2500)
+    } catch {
+      /* clipboard kan geweigerd zijn */
+    }
+  }
+  return <button type="button" className="vs-invite" onClick={copy}>{done ? '✓ Link gekopieerd' : '🔗 Kopieer uitnodiging'}</button>
 }
 
 export function PoolLeave({ poolId }: { poolId: string }) {
