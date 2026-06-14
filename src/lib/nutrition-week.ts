@@ -91,9 +91,29 @@ const SNACK: Recipe[] = [
 
 export const WEEKDAYS = ['Maandag', 'Dinsdag', 'Woensdag', 'Donderdag', 'Vrijdag', 'Zaterdag', 'Zondag'] as const
 
-export interface WeekDay { day: string; meals: ExampleMeal[] }
+export type DayKind = 'train' | 'rest' | 'plain'
+export interface WeekDay { day: string; kind: DayKind; calories: number; meals: ExampleMeal[] }
 export interface ShoppingItem { food: string; amount: string }
 export interface ShoppingGroup { cat: FoodCat; items: ShoppingItem[] }
+
+export interface WeekOpts {
+  /** Welke dagen (index 0=maandag … 6=zondag) trainingsdagen zijn → koolhydraatperiodisering. */
+  trainingDays?: boolean[]
+  /** Calorieën op een trainingsdag (bv. plan.trainingDayCalories). */
+  trainingCalories?: number
+  /** Calorieën op een rustdag (bv. plan.restDayCalories). */
+  restCalories?: number
+  /** Rotatie van de maaltijdvarianten (voor "andere variatie"). */
+  shift?: number
+}
+
+/** Spreid een aantal trainingen evenwichtig over de week (index 0=maandag … 6=zondag). */
+export function spreadTrainingDays(sessionsPerWeek: number): boolean[] {
+  const n = Math.max(0, Math.min(7, Math.round(sessionsPerWeek)))
+  const days = Array(7).fill(false) as boolean[]
+  for (let i = 0; i < n; i++) days[Math.round((i * 7) / n) % 7] = true
+  return days
+}
 
 const round = (n: number, step = 1) => Math.round(n / step) * step
 
@@ -109,24 +129,42 @@ function scaleItem(it: RecipeItem, factor: number, diet: Diet): ScaledItem {
 
 const fmt = (it: { unit: 'g' | 'ml' | 'st'; n: number }) => (it.unit === 'st' ? `${it.n}×` : `${it.n} ${it.unit}`)
 
+// Calorieën van dag i, rekening houdend met de eventuele trainings-/rustdag-periodisering.
+function dayCalories(i: number, calories: number, opts: WeekOpts): { cal: number; kind: DayKind } {
+  const base = calories > 0 ? calories : 2200
+  if (opts.trainingDays && opts.trainingDays[i]) return { cal: opts.trainingCalories ?? base, kind: 'train' }
+  if (opts.trainingDays && !opts.trainingDays[i]) return { cal: opts.restCalories ?? base, kind: 'rest' }
+  return { cal: base, kind: 'plain' }
+}
+
+const mod = (n: number, m: number) => ((n % m) + m) % m
+
 // De ruwe week (numeriek) — basis voor zowel het weekplan als de boodschappenlijst.
-function weekRaw(calories: number, diet: Diet): { day: string; meals: { name: string; items: ScaledItem[] }[] }[] {
-  const factor = (calories > 0 ? calories : 2200) / 2200
-  return WEEKDAYS.map((day, i) => ({
-    day,
-    meals: [
-      { name: 'Ontbijt', items: BREAKFAST[i % BREAKFAST.length].items.map((it) => scaleItem(it, factor, diet)) },
-      { name: 'Lunch', items: LUNCH[(i + 1) % LUNCH.length].items.map((it) => scaleItem(it, factor, diet)) },
-      { name: 'Avondeten', items: DINNER[(i + 2) % DINNER.length].items.map((it) => scaleItem(it, factor, diet)) },
-      { name: 'Tussendoor', items: SNACK[i % SNACK.length].items.map((it) => scaleItem(it, factor, diet)) },
-    ],
-  }))
+function weekRaw(calories: number, diet: Diet, opts: WeekOpts = {}): { day: string; kind: DayKind; calories: number; meals: { name: string; items: ScaledItem[] }[] }[] {
+  const shift = opts.shift ?? 0
+  return WEEKDAYS.map((day, i) => {
+    const { cal, kind } = dayCalories(i, calories, opts)
+    const factor = cal / 2200
+    return {
+      day,
+      kind,
+      calories: round(cal, 10),
+      meals: [
+        { name: 'Ontbijt', items: BREAKFAST[mod(i + shift, BREAKFAST.length)].items.map((it) => scaleItem(it, factor, diet)) },
+        { name: 'Lunch', items: LUNCH[mod(i + 1 + shift, LUNCH.length)].items.map((it) => scaleItem(it, factor, diet)) },
+        { name: 'Avondeten', items: DINNER[mod(i + 2 + shift, DINNER.length)].items.map((it) => scaleItem(it, factor, diet)) },
+        { name: 'Tussendoor', items: SNACK[mod(i + shift, SNACK.length)].items.map((it) => scaleItem(it, factor, diet)) },
+      ],
+    }
+  })
 }
 
 /** Gevarieerd 7-dagen eetplan, geschaald op het caloriedoel en aangepast aan het dieet. */
-export function buildWeekPlan(calories: number, diet: Diet): WeekDay[] {
-  return weekRaw(calories, diet).map((d) => ({
+export function buildWeekPlan(calories: number, diet: Diet, opts: WeekOpts = {}): WeekDay[] {
+  return weekRaw(calories, diet, opts).map((d) => ({
     day: d.day,
+    kind: d.kind,
+    calories: d.calories,
     meals: d.meals.map((m) => ({ name: m.name, items: m.items.map((it) => ({ amount: fmt(it), food: it.food })) })),
   }))
 }
@@ -134,9 +172,9 @@ export function buildWeekPlan(calories: number, diet: Diet): WeekDay[] {
 const CAT_ORDER: FoodCat[] = ['Eiwit', 'Koolhydraten', 'Groenten & fruit', 'Zuivel', 'Vetten & noten']
 
 /** Boodschappenlijst voor de hele week: opgeteld per voedingsmiddel, gegroepeerd per categorie. */
-export function buildShoppingList(calories: number, diet: Diet): ShoppingGroup[] {
+export function buildShoppingList(calories: number, diet: Diet, opts: WeekOpts = {}): ShoppingGroup[] {
   const totals = new Map<string, ScaledItem>()
-  for (const day of weekRaw(calories, diet)) {
+  for (const day of weekRaw(calories, diet, opts)) {
     for (const meal of day.meals) {
       for (const it of meal.items) {
         const key = `${it.cat}|${it.food}|${it.unit}`

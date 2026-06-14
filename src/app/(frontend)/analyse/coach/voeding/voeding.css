@@ -180,12 +180,83 @@
 .vd-shop-list li::marker { color: var(--accent); }
 .vd-week-note { margin: 0; font-size: 0.78rem; color: var(--dim); line-height: 1.45; }
 
+/* Tijdlijn-kaartjes (eiwit-timing & hydratatie). */
+.vd-timeline { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
+.vd-tl-item {
+  display: flex; flex-direction: column; gap: 2px; padding: 11px 13px; border-radius: 12px;
+  border: 1px solid color-mix(in srgb, #fff 8%, var(--line));
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0) 50%), var(--panel-grad, var(--panel));
+}
+.vd-tl-when { font-size: 0.74rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.03em; color: var(--accent); }
+.vd-tl-what { font-size: 0.86rem; color: var(--dim); line-height: 1.4; }
+.vd-tl-what b { color: var(--txt); }
+
+/* Wedstrijddag-fueling. */
+.vd-fuel { display: flex; flex-direction: column; gap: 8px; }
+.vd-fuel-step {
+  display: grid; grid-template-columns: 130px 1fr; gap: 2px 14px; padding: 11px 14px; border-radius: 12px;
+  border: 1px solid color-mix(in srgb, #fff 8%, var(--line));
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0) 50%), var(--panel-grad, var(--panel));
+}
+@media (max-width: 520px) { .vd-fuel-step { grid-template-columns: 1fr; } }
+.vd-fuel-when { grid-row: span 2; align-self: center; font-weight: 900; font-size: 0.84rem; color: var(--accent); }
+@media (max-width: 520px) { .vd-fuel-when { grid-row: auto; } }
+.vd-fuel-what { font-size: 0.86rem; color: var(--txt); line-height: 1.4; }
+.vd-fuel-why { font-size: 0.76rem; color: var(--dim); line-height: 1.4; }
+
+/* Supplementen. */
+.vd-supps { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; }
+.vd-supp {
+  display: flex; flex-direction: column; gap: 3px; padding: 12px 13px; border-radius: 12px;
+  border: 1px solid color-mix(in srgb, #fff 8%, var(--line));
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0) 50%), var(--panel-grad, var(--panel));
+}
+.vd-supp.note { background: color-mix(in srgb, var(--accent) 7%, var(--panel)); border-color: color-mix(in srgb, var(--accent) 25%, var(--line)); }
+.vd-supp-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.vd-supp-top b { font-size: 0.9rem; }
+.vd-supp-tag { padding: 2px 8px; border-radius: 999px; font-size: 0.66rem; font-weight: 800; white-space: nowrap; }
+.vd-supp-tag.t1 { color: #2ecc71; background: color-mix(in srgb, #2ecc71 16%, transparent); }
+.vd-supp-tag.t2 { color: #4cc9f0; background: color-mix(in srgb, #4cc9f0 16%, transparent); }
+.vd-supp-tag.t3 { color: #ffd166; background: color-mix(in srgb, #ffd166 16%, transparent); }
+.vd-supp-dose { font-size: 0.78rem; font-weight: 700; color: var(--accent); }
+.vd-supp-why { font-size: 0.8rem; color: var(--dim); line-height: 1.4; }
+
+/* Micronutriënt-aandachtspunten. */
+.vd-micros { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
+.vd-micro {
+  display: flex; flex-direction: column; gap: 2px; padding: 12px 13px; border-radius: 12px;
+  border: 1px solid color-mix(in srgb, #fff 8%, var(--line));
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0) 50%), var(--panel-grad, var(--panel));
+}
+.vd-micro-n { font-weight: 800; font-size: 0.88rem; color: var(--txt); }
+.vd-micro-why { font-size: 0.8rem; color: var(--dim); line-height: 1.4; }
+.vd-micro-src { font-size: 0.74rem; color: var(--accent); line-height: 1.4; }
+
+/* Carb-cycling controls in het weekplan. */
+.vd-cycle { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.vd-cycle-lbl { font-size: 0.8rem; font-weight: 800; color: var(--dim); }
+.vd-chip-day { padding: 7px 11px; font-size: 0.8rem; min-width: 38px; text-align: center; }
+.vd-shuffle { padding: 8px 13px; font-size: 0.84rem; margin-left: auto; }
+.vd-copy {
+  margin-left: 10px; padding: 5px 11px; border-radius: 999px; cursor: pointer; font-size: 0.74rem; font-weight: 800; vertical-align: middle;
+  color: var(--accent); border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--line)); background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+.vd-copy:hover { background: color-mix(in srgb, var(--accent) 18%, transparent); }
+
+/* Trainings-/rustdag-accent in de weekgrid. */
+.vd-wday.train { border-color: color-mix(in srgb, #4cc9f0 35%, var(--line)); }
+.vd-wday.rest { border-color: color-mix(in srgb, #fff 6%, var(--line)); }
+.vd-wday-h { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px; }
+.vd-wday-meta { font-size: 0.72rem; font-weight: 700; color: var(--dim); }
+.vd-wday.train .vd-wday-meta { color: #4cc9f0; }
+
 /* Print / PDF: enkel het plan, geen formulier of knoppen. */
 @media print {
   .vd { display: block; }
-  .vd-form, .vd-weekbar, .vd-form-live { display: none !important; }
+  .vd-form, .vd-weekbar, .vd-form-live, .vd-cycle, .vd-copy, .vd-shuffle { display: none !important; }
   .vd-result { gap: 12px; }
-  .vd-hero, .vd-macro, .vd-day, .vd-meal, .vd-wday, .vd-shop-cat, .vd-target {
+  .vd-hero, .vd-macro, .vd-day, .vd-meal, .vd-wday, .vd-shop-cat, .vd-target,
+  .vd-tl-item, .vd-fuel-step, .vd-supp, .vd-micro {
     box-shadow: none; break-inside: avoid;
   }
   .vd-donut { filter: none; }
