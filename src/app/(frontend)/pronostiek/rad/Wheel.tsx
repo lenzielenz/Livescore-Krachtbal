@@ -13,21 +13,25 @@ const fmt = (v: number) => `×${Number.isInteger(v) ? v : String(v).replace('.',
 // vak (POST /api/pronostiek/spin); het rad animeert er enkel naartoe.
 export function Wheel({
   segments,
-  palette,
+  clubColors,
   clubLogoUrl,
   clubName,
   spinsLeft: initialSpins,
   heldTokens,
 }: {
   segments: RadSegment[]
-  palette: string[]
+  clubColors: { primary: string; secondary: string } | null
   clubLogoUrl: string | null
   clubName: string
   spinsLeft: number
   heldTokens: number[]
 }) {
   const arcs = segmentArcs(segments)
-  const pal = palette.length ? palette : ['#06d6a0', '#118ab2', '#ef476f', '#ffd166']
+  const primary = clubColors?.primary ?? '#06d6a0'
+  const secondary = clubColors?.secondary ?? '#0b3d2e'
+  const GOLD = '#ffd166'
+  const maxMult = Math.max(...segments.map((s) => s.mult))
+  const pal = [primary, secondary, GOLD]
   const [rotation, setRotation] = useState(0)
   const [busy, setBusy] = useState(false)
   const [spinsLeft, setSpinsLeft] = useState(initialSpins)
@@ -38,7 +42,8 @@ export function Wheel({
   const rotRef = useRef(0)
   const acRef = useRef<AudioContext | null>(null)
 
-  const color = (i: number, mult: number) => (mult >= 10 ? '#ffd166' : pal[i % pal.length])
+  // De clubkleuren wisselen elkaar af; de hoogste waarde (jackpot) krijgt altijd goud.
+  const color = (i: number, mult: number) => (mult === maxMult ? GOLD : i % 2 === 0 ? primary : secondary)
   const gradient = `conic-gradient(from 0deg, ${arcs
     .map((a, i) => `${color(i, a.mult)} ${a.start.toFixed(2)}deg ${a.end.toFixed(2)}deg`)
     .join(', ')})`
@@ -140,14 +145,21 @@ export function Wheel({
             </span>
           ))}
         </div>
-        <div className="rad-hub" aria-hidden>
+        <button
+          type="button"
+          className={`rad-hub${spinsLeft > 0 && !busy ? ' live' : ''}`}
+          onClick={spin}
+          disabled={busy || spinsLeft <= 0}
+          aria-label="Draai het rad"
+          title="Klik om te draaien"
+        >
           {clubLogoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={clubLogoUrl} alt="" className="rad-hub-logo" />
           ) : (
             <span className="rad-hub-fallback">🎰</span>
           )}
-        </div>
+        </button>
         {confetti && (
           <div className="rad-confetti" aria-hidden>
             {Array.from({ length: 56 }).map((_, i) => (

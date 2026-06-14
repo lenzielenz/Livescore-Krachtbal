@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { SiteHeader } from '@/components/SiteHeader'
 import { isFederationLevel, userClubId } from '@/lib/access'
 import { getAuthUser } from '@/lib/auth-user'
-import { clubColorsFrom, normalizeHex } from '@/lib/club-colors'
+import { clubColorsFrom } from '@/lib/club-colors'
 import { getPayloadClient } from '@/lib/payload-client'
 import { activeTokens, RAD_SEGMENTS, SPINS_PER_WEEK, type RadToken } from '@/lib/pronostiek-rad'
 import { loadRadState } from '@/lib/pronostiek-rad-server'
@@ -35,35 +35,20 @@ export default async function RadPage() {
   const usedThisWeek = power.spinWeek === state.weekendStartIso ? Number(power.spinsUsed) || 0 : 0
   const spinsLeft = canTest ? 99 : eligible ? Math.max(0, SPINS_PER_WEEK - usedThisWeek) : 0
 
-  // Clublogo + een palet van clubkleuren: het rad voelt als jóuw club, met de kleuren van iedereen
-  // die meedoet.
+  // Clublogo + clubkleuren: het rad voelt helemaal als jóuw club.
   const cid = userClubId(me)
   const clubId = cid != null && Number.isFinite(Number(cid)) ? Number(cid) : null
   let clubLogoUrl: string | null = null
   let clubName = 'je club'
-  let myColor: string | null = null
+  let clubColors: { primary: string; secondary: string } | null = null
   if (clubId) {
     const c = await payload.findByID({ collection: 'clubs', id: clubId, depth: 0 }).catch(() => null)
     if (c) {
       clubLogoUrl = (c as { logoUrl?: string | null }).logoUrl || null
       clubName = (c as { name?: string }).name || 'je club'
-      myColor = clubColorsFrom((c as { colorPrimary?: unknown }).colorPrimary, (c as { colorSecondary?: unknown }).colorSecondary)?.primary ?? null
+      clubColors = clubColorsFrom((c as { colorPrimary?: unknown }).colorPrimary, (c as { colorSecondary?: unknown }).colorSecondary)
     }
   }
-  const clubsRes = await payload
-    .find({ collection: 'clubs', depth: 0, limit: 60, select: { colorPrimary: true, colorSecondary: true } })
-    .catch(() => ({ docs: [] as Record<string, unknown>[] }))
-  const palette: string[] = []
-  const pushColor = (v: unknown) => {
-    const h = normalizeHex(typeof v === 'string' ? v : null)
-    if (h && !palette.includes(h)) palette.push(h)
-  }
-  if (myColor) palette.push(myColor)
-  for (const c of clubsRes.docs) {
-    pushColor((c as { colorPrimary?: unknown }).colorPrimary)
-    pushColor((c as { colorSecondary?: unknown }).colorSecondary)
-  }
-  if (palette.length < 3) palette.push('#06d6a0', '#118ab2', '#ef476f', '#ffd166')
 
   return (
     <>
@@ -92,7 +77,7 @@ export default async function RadPage() {
         )}
 
         {eligible && spinsLeft > 0 ? (
-          <Wheel segments={[...RAD_SEGMENTS]} palette={palette} clubLogoUrl={clubLogoUrl} clubName={clubName} spinsLeft={spinsLeft} heldTokens={heldTokens} />
+          <Wheel segments={[...RAD_SEGMENTS]} clubColors={clubColors} clubLogoUrl={clubLogoUrl} clubName={clubName} spinsLeft={spinsLeft} heldTokens={heldTokens} />
         ) : heldTokens.length > 0 ? (
           <div className="rad-card">
             <h2>🎟️ Je boosters staan klaar</h2>
