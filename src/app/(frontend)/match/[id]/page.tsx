@@ -11,6 +11,7 @@ import { getAuthUser } from '@/lib/auth-user'
 import { formatDateTimeBE } from '@/lib/datetime'
 import { buildMatchSheet, buildMatchState, buildMatchStats, buildTimeline } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
+import { countUserWeekendPredictions, LIVE_PRONOSTIEK_MAX_PER_WEEKEND } from '@/lib/pronostiek-weekend'
 import { isAdultReeks, krachtbalKleur, reeksHalfDurationSeconds, reeksNaam, reeksType, type Reeks } from '@/lib/reeksen'
 import { isTribuneOpen } from '@/lib/tribune'
 import { BASE_RATE_PER_MIN } from '@/lib/win-probability'
@@ -156,6 +157,17 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
     }))
   }
 
+  // Live-pronostiek: eigen (vergrendelde) voorspelling + resterende beurten dit weekend.
+  const myUid = me ? Number((me as { id?: number }).id) : null
+  const myPred = myUid != null && Array.isArray(matchDoc?.scorePredictions)
+    ? (matchDoc!.scorePredictions as { userId: number; home: number; away: number }[]).find((p) => Number(p?.userId) === myUid)
+    : null
+  let predRemaining = LIVE_PRONOSTIEK_MAX_PER_WEEKEND
+  if (myUid != null && userClubId(me) != null && !myPred && (state.match.status === 'scheduled' || state.match.status === 'live') && matchDoc?.date) {
+    const used = await countUserWeekendPredictions(payload, myUid, String(matchDoc.date), matchId).catch(() => 0)
+    predRemaining = Math.max(0, LIVE_PRONOSTIEK_MAX_PER_WEEKEND - used)
+  }
+
   return (
     <>
       <SiteHeader active="wedstrijden" />
@@ -192,6 +204,20 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
       {matchDoc?.date && (weatherLat != null || weatherPlace) && (
         <MatchWeather date={String(matchDoc.date)} lat={weatherLat} lng={weatherLng} place={weatherPlace} />
       )}
+      {/* Pronostiek bovenaan, vóór het scorebord — zo verdwijnt ze niet onder de reacties/tijdlijn.
+          Eens ingevuld wordt ze heel compact (zie de widget). */}
+      <PronostiekWidget
+        matchId={matchId}
+        status={state.match.status}
+        loggedIn={Boolean(me)}
+        hasClub={userClubId(me) != null}
+        homeName={state.teams.home.name}
+        awayName={state.teams.away.name}
+        initialHome={myPred ? myPred.home : null}
+        initialAway={myPred ? myPred.away : null}
+        remaining={predRemaining}
+        max={LIVE_PRONOSTIEK_MAX_PER_WEEKEND}
+      />
       <Scoreboard
         matchId={matchId}
         initial={{ state, timeline }}
@@ -206,26 +232,6 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
         momentumGoals={share?.goals}
         momentumTimeouts={share?.timeouts}
       />
-      {/* Pronostiek: geef je uitslag door (kan tot tijdens de match; hoe later, hoe minder punten). */}
-      {(() => {
-        const myId = Number((me as { id?: number } | null)?.id)
-        const myPred = Number.isFinite(myId) && Array.isArray(matchDoc?.scorePredictions)
-          ? (matchDoc!.scorePredictions as { userId: number; home: number; away: number }[]).find((p) => Number(p?.userId) === myId)
-          : null
-        return (
-          <PronostiekWidget
-            matchId={matchId}
-            status={state.match.status}
-            loggedIn={Boolean(me)}
-            hasClub={userClubId(me) != null}
-            homeName={state.teams.home.name}
-            awayName={state.teams.away.name}
-            initialHome={myPred ? myPred.home : null}
-            initialAway={myPred ? myPred.away : null}
-          />
-        )
-      })()}
-
       {/* Supporters duidelijk tonen dat ze de wedstrijd op hun tv kunnen volgen. */}
       <CastToTv matchId={matchId} />
 
