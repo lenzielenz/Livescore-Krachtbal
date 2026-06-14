@@ -1,6 +1,9 @@
-// Privé-pronostiekpools: een groepje binnen een club dat een eigen pronostiekje speelt over een
-// bepaalde scope (hele club, één ploeg of een reeks), met een apart klassement. Opgeslagen als
-// json op de club. Voorspellingen blijven globaal per lid/wedstrijd en tellen mee in elke pool.
+import type { Payload } from 'payload'
+
+// Privé-pronostiekpools: een groepje dat een eigen pronostiekje speelt over een bepaalde scope
+// (hele club, één ploeg of een reeks), met een apart klassement. Opgeslagen als json op de club
+// die de pool host. Leden kunnen van een ándere ploeg/club zijn (uitnodiging via deelcode).
+// Voorspellingen blijven globaal per lid/wedstrijd en tellen mee in elke pool waarin je zit.
 
 export interface Pool {
   id: string
@@ -33,6 +36,24 @@ export function readPools(raw: unknown): Pool[] {
     (p): p is Pool =>
       Boolean(p) && typeof (p as Pool).id === 'string' && typeof (p as Pool).code === 'string' && Array.isArray((p as Pool).members),
   )
+}
+
+export interface HostedPool {
+  pool: Pool
+  hostClubId: number
+}
+
+/** Alle pools van alle clubs (met host-club), zodat joinen/leden over ploeg- en clubgrenzen werkt. */
+export async function loadAllPools(payload: Payload): Promise<HostedPool[]> {
+  const res = await payload
+    .find({ collection: 'clubs', depth: 0, limit: 1000, pagination: false, select: { pronostiekPools: true } })
+    .catch(() => ({ docs: [] as Record<string, unknown>[] }))
+  const out: HostedPool[] = []
+  for (const c of res.docs) {
+    const hostClubId = Number((c as { id: number }).id)
+    for (const pool of readPools((c as { pronostiekPools?: unknown }).pronostiekPools)) out.push({ pool, hostClubId })
+  }
+  return out
 }
 
 /** Label voor een scope, gegeven een reeks-namer. */

@@ -1,6 +1,6 @@
 import { authUser, userClubId } from '@/lib/api-auth'
 import { getPayloadClient } from '@/lib/payload-client'
-import { genPoolCode, genPoolId, readPools, type Pool } from '@/lib/pronostiek-pools'
+import { genPoolCode, genPoolId, loadAllPools, readPools, type Pool } from '@/lib/pronostiek-pools'
 import { seasonFromDate } from '@/lib/seasons'
 import { clientIp, rateLimit } from '@/lib/sse-hub'
 
@@ -57,21 +57,30 @@ export async function POST(req: Request) {
     }
 
     if (body.action === 'join') {
+      // Globaal joinen: de pool kan bij een ándere club horen (uitnodiging via deelcode).
       const code = String(body.code ?? '').trim().toUpperCase()
       if (!code) return Response.json({ error: 'Geef een code.' }, { status: 400 })
-      const idx = pools.findIndex((p) => p.code.toUpperCase() === code)
-      if (idx < 0) return Response.json({ error: 'Geen pool met die code.' }, { status: 404 })
-      if (!pools[idx].members.includes(userId)) pools[idx] = { ...pools[idx], members: [...pools[idx].members, userId] }
-      await payload.update({ collection: 'clubs', id: clubId, data: { pronostiekPools: pools }, overrideAccess: true })
-      return Response.json({ ok: true, pool: { id: pools[idx].id } })
+      const allPools = await loadAllPools(payload)
+      const hit = allPools.find((h) => h.pool.code.toUpperCase() === code)
+      if (!hit) return Response.json({ error: 'Geen pool met die code.' }, { status: 404 })
+      const hostClub = await payload.findByID({ collection: 'clubs', id: hit.hostClubId, depth: 0 }).catch(() => null)
+      const hostPools = readPools((hostClub as { pronostiekPools?: unknown } | null)?.pronostiekPools)
+      const next = hostPools.map((p) => (p.id === hit.pool.id && !p.members.includes(userId) ? { ...p, members: [...p.members, userId] } : p))
+      await payload.update({ collection: 'clubs', id: hit.hostClubId, data: { pronostiekPools: next }, overrideAccess: true })
+      return Response.json({ ok: true, pool: { id: hit.pool.id } })
     }
 
     if (body.action === 'leave') {
       const poolId = String(body.poolId ?? '')
-      const next = pools
+      const allPools = await loadAllPools(payload)
+      const hit = allPools.find((h) => h.pool.id === poolId)
+      if (!hit) return Response.json({ ok: true }) // al weg
+      const hostClub = await payload.findByID({ collection: 'clubs', id: hit.hostClubId, depth: 0 }).catch(() => null)
+      const hostPools = readPools((hostClub as { pronostiekPools?: unknown } | null)?.pronostiekPools)
+      const next = hostPools
         .map((p) => (p.id === poolId ? { ...p, members: p.members.filter((m) => m !== userId) } : p))
         .filter((p) => p.members.length > 0) // lege pool verdwijnt
-      await payload.update({ collection: 'clubs', id: clubId, data: { pronostiekPools: next }, overrideAccess: true })
+      await payload.update({ collection: 'clubs', id: hit.hostClubId, data: { pronostiekPools: next }, overrideAccess: true })
       return Response.json({ ok: true })
     }
 
