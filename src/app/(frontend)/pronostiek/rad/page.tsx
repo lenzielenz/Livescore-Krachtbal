@@ -54,7 +54,7 @@ export default async function RadPage() {
     <>
       <SiteHeader active="stand" />
       <div className="site">
-        <h1 className="page-title">🎰 <span className="brand">Bonusrad</span></h1>
+        <h1 className="page-title rad-title">🎰 <span className="brand">Bonusrad</span></h1>
         <p className="vs-intro">
           De <strong>top 3</strong> van de pronostiek van vorig weekend draaien <strong>3×</strong> aan het rad. Je wint
           <strong> vermenigvuldigers</strong> die je op je voorspellingen kan zetten — jij kiest welke wedstrijd. Boosters zijn
