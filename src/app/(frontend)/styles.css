@@ -1197,68 +1197,50 @@ h3,
 
 /* "Bekijk op je tv"-kaart — opvallend, supporter-vriendelijk. */
 .cast-tv {
-  margin-top: 18px;
-  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--line));
-  border-radius: 16px;
-  background: var(--panel-grad, var(--panel));
-  box-shadow: var(--card-shadow);
-  padding: 14px 16px;
+  margin-top: 12px;
 }
 .cast-tv-main {
   display: flex;
   align-items: center;
-  gap: 13px;
+  gap: 10px;
   flex-wrap: wrap;
 }
 .cast-tv-ico {
-  font-size: 1.7rem;
+  font-size: 1.1rem;
   line-height: 1;
   flex: none;
-}
-.cast-tv-txt {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-  flex: 1 1 200px;
-}
-.cast-tv-txt strong {
-  font-size: 1.02rem;
-  color: var(--txt);
-}
-.cast-tv-txt span {
-  font-size: 0.86rem;
-  color: var(--dim);
-  line-height: 1.4;
+  opacity: 0.85;
 }
 .cast-tv-btn {
   flex: none;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 11px 16px;
-  border-radius: 12px;
-  background: var(--grad-accent);
-  color: #06140d;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--line));
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
   font-weight: 800;
-  font-size: 0.92rem;
+  font-size: 0.86rem;
   text-decoration: none;
-  box-shadow: var(--glow-accent);
-  transition: transform 0.15s ease;
+  transition: background 0.15s ease;
 }
 .cast-tv-btn:hover {
-  transform: translateY(-1px);
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
 }
 .cast-tv-how {
-  margin-top: 10px;
   background: none;
   border: none;
-  color: var(--accent);
-  font-size: 0.85rem;
+  color: var(--dim);
+  font-size: 0.82rem;
   font-weight: 700;
   font-family: inherit;
   cursor: pointer;
-  padding: 2px 0;
+  padding: 2px 4px;
+}
+.cast-tv-how:hover {
+  color: var(--accent);
 }
 .cast-tv-steps {
   margin: 8px 0 2px;

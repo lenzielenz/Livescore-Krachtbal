@@ -11,25 +11,19 @@ export function CastToTv({ matchId }: { matchId: number }) {
   return (
     <div className="cast-tv">
       <div className="cast-tv-main">
-        <span className="cast-tv-ico" aria-hidden>
-          📺
-        </span>
-        <div className="cast-tv-txt">
-          <strong>Bekijk deze wedstrijd op je tv</strong>
-          <span>Open het grote scorebord en cast of spiegel het naar je televisie.</span>
-        </div>
+        <span className="cast-tv-ico" aria-hidden>📺</span>
         <a href={url} target="_blank" rel="noopener noreferrer" className="cast-tv-btn">
-          Open groot scherm →
+          Bekijk op tv →
         </a>
+        <button
+          type="button"
+          className="cast-tv-how"
+          onClick={() => setOpen((v) => !v)}
+          aria-expanded={open ? 'true' : 'false'}
+        >
+          {open ? 'Verberg' : 'Hoe?'}
+        </button>
       </div>
-      <button
-        type="button"
-        className="cast-tv-how"
-        onClick={() => setOpen((v) => !v)}
-        aria-expanded={open ? 'true' : 'false'}
-      >
-        {open ? '▾ Verberg uitleg' : '▸ Hoe zet ik dit op mijn tv?'}
-      </button>
       {open && (
         <ul className="cast-tv-steps">
           <li>
