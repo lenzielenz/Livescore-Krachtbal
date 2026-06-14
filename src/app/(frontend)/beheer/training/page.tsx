@@ -28,6 +28,12 @@ const TOOLS = [
     title: 'Aanwezigheid',
     desc: 'Hou per training bij wie er was (en hoeveel), hoe lang jullie trainden en hoe het weer was.',
   },
+  {
+    href: '/beheer/training/voeding',
+    icon: '🥗',
+    title: 'Voedingsplan op maat',
+    desc: 'Vul je gegevens en doel in en krijg een sportgericht eetplan: calorieën, eiwit/koolhydraten/vet, hydratatie, trainings- vs rustdag en een voorbeelddag.',
+  },
 ] as const
 
 export default async function TrainingHubPage() {

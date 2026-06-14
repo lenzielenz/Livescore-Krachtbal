@@ -6,6 +6,7 @@ const TABS = [
   { key: 'plan', href: '/beheer/training/plan', icon: '🧠', label: 'Trainingsplan' },
   { key: 'progressie', href: '/beheer/training/progressie', icon: '📈', label: 'Progressie' },
   { key: 'aanwezigheid', href: '/beheer/training/aanwezigheid', icon: '✅', label: 'Aanwezigheid' },
+  { key: 'voeding', href: '/beheer/training/voeding', icon: '🥗', label: 'Voeding' },
 ] as const
 
 export type TrainingTab = (typeof TABS)[number]['key']
