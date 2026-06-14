@@ -12,29 +12,23 @@
 }
 @keyframes rad-twinkle { from { opacity: 0.35; } to { opacity: 1; } }
 
-/* Flapper-pijl bovenaan: tikt langs de pinnen tijdens het draaien, valt daarna naar één kant. */
+/* Flapper-pijl, scharnierend aan de top: tikt tegen elke pin die passeert (JS-gestuurd). */
 .rad-flap {
-  position: absolute; top: -7px; left: 50%; z-index: 6;
-  width: 0; height: 0; border-left: 13px solid transparent; border-right: 13px solid transparent; border-top: 27px solid #fff;
-  transform: translateX(-50%); transform-origin: 50% 0%;
-  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.6));
+  position: absolute; top: 50%; left: 50%; z-index: 6;
+  width: 0; height: 0; border-left: 14px solid transparent; border-right: 14px solid transparent; border-top: 30px solid #fff;
+  transform-origin: 50% 0%;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.6));
 }
-.rad-stage.spinning .rad-flap { animation: rad-flap-tick 0.085s ease-in-out infinite; }
-@keyframes rad-flap-tick {
-  0%, 100% { transform: translateX(-50%) rotate(2deg); }
-  50% { transform: translateX(-50%) rotate(-17deg); }
-}
-/* Pinnen (stokjes) op de rand — de flapper tikt ertegen; zo zie je aan welke kant hij valt. */
+/* Pinnen (stokjes) op de rand — de flapper tikt ertegen; gelijkmatig verdeeld als een echt rad. */
 .rad-peg {
-  position: absolute; top: 50%; left: 50%; width: 8px; height: 8px; border-radius: 999px; z-index: 3;
-  background: #fff; box-shadow: 0 0 5px rgba(0, 0, 0, 0.55), 0 0 6px rgba(255, 255, 255, 0.5);
+  position: absolute; top: 50%; left: 50%; width: 9px; height: 9px; border-radius: 999px; z-index: 3;
+  background: #fff; box-shadow: 0 0 5px rgba(0, 0, 0, 0.6), 0 0 7px rgba(255, 255, 255, 0.6);
 }
 .rad-wheel {
   width: 260px; height: 260px; border-radius: 999px; position: relative; z-index: 2;
   border: 8px solid #ffd166;
   box-shadow: 0 0 0 3px #b8860b, 0 18px 50px -18px rgba(0, 0, 0, 0.85), inset 0 0 30px rgba(0, 0, 0, 0.45);
-  /* Lange, sterk vertragende staart → net voor het stilvalt wordt het extra spannend. */
-  transition: transform 7s cubic-bezier(0.16, 0.93, 0.03, 1);
+  /* De draai wordt via JS (requestAnimationFrame) geanimeerd, zodat de tikjes met de pinnen syncen. */
 }
 .rad-stage.spinning .rad-wheel { box-shadow: 0 0 0 3px #b8860b, 0 0 40px 6px color-mix(in srgb, #ffd166 70%, transparent), inset 0 0 30px rgba(0, 0, 0, 0.45); }
 

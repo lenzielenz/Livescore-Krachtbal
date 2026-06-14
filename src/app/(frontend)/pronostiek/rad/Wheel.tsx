@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { segmentArcs, type RadSegment } from '@/lib/pronostiek-rad'
 import './rad.css'
@@ -42,6 +42,17 @@ export function Wheel({
   const [err, setErr] = useState<string | null>(null)
   const rotRef = useRef(0)
   const acRef = useRef<AudioContext | null>(null)
+  const wheelRef = useRef<HTMLDivElement | null>(null)
+  const flapRef = useRef<HTMLDivElement | null>(null)
+  const rafRef = useRef<number | null>(null)
+
+  // Echte prijzenrad-mechaniek: gelijkmatig verdeelde pinnen rond de rand; de flapper bovenaan tikt
+  // tegen elke pin die passeert. Elke tik = één pin (geluid + flapper-uitslag), gesynct met de draai.
+  const PEG_COUNT = 24
+  const PEG_STEP = 360 / PEG_COUNT
+  const FLAP_BASE = 'translate(-50%, -157px)'
+
+  useEffect(() => () => { if (rafRef.current) cancelAnimationFrame(rafRef.current) }, [])
 
   // De clubkleuren wisselen elkaar af; de hoogste waarde (jackpot) krijgt altijd goud.
   const color = (i: number, mult: number) => (mult === maxMult ? GOLD : i % 2 === 0 ? primary : secondary)
@@ -72,17 +83,14 @@ export function Wheel({
     o.start(t0)
     o.stop(t0 + dur + 0.02)
   }
-  const playSpin = (durMs: number) => {
+  // Korte "klik" telkens een pin de flapper raakt (real-time, gesynct met de animatie).
+  const playClick = () => {
+    const c = ac()
+    tone(1150, c.currentTime, 0.02, 'square', 0.06)
+  }
+  const playRiser = (durMs: number) => {
     const c = ac()
     const t0 = c.currentTime
-    // Tikjes van de flapper langs de pinnen — vertragen naar het einde (spanning).
-    let t = 0
-    let gap = 0.03
-    while (t < durMs / 1000) {
-      tone(900, t0 + t, 0.024, 'square', 0.06)
-      t += gap
-      gap *= 1.065
-    }
     // Oplopende spannings-riser onder de tikjes.
     const o = c.createOscillator()
     const g = c.createGain()
@@ -112,6 +120,18 @@ export function Wheel({
     }
   }
 
+  // Flapper een tik geven: snel naar één kant slaan en zacht terugveren (CSS-transitie).
+  const deflectFlap = () => {
+    const el = flapRef.current
+    if (!el) return
+    el.style.transition = 'none'
+    el.style.transform = `${FLAP_BASE} rotate(-16deg)`
+    requestAnimationFrame(() => {
+      el.style.transition = 'transform 0.14s ease-out'
+      el.style.transform = `${FLAP_BASE} rotate(0deg)`
+    })
+  }
+
   const spin = async () => {
     if (busy || spinsLeft <= 0) return
     setBusy(true)
@@ -125,24 +145,45 @@ export function Wheel({
       const j = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string; index?: number; mult?: number; spinsLeft?: number }
       if (!res.ok || !j.ok || typeof j.index !== 'number' || typeof j.mult !== 'number') throw new Error(j.error || 'Draaien mislukt.')
       const arc = arcs[j.index] ?? arcs[0]
-      const target = Math.ceil(rotRef.current / 360) * 360 + 9 * 360 + (360 - arc.mid)
+      // Eindstand: het midden van het gewonnen vak komt exact onder de flapper (bovenaan).
+      const start = rotRef.current
+      const target = Math.ceil(start / 360) * 360 + 9 * 360 + (360 - arc.mid)
       rotRef.current = target
       const durMs = 7000
-      playSpin(durMs)
-      setRotation(target)
-      window.setTimeout(() => {
-        const mult = j.mult!
-        const level: 'mega' | 'big' | 'normal' = mult >= maxMult ? 'mega' : mult >= 5 ? 'big' : 'normal'
-        setLastWon(mult)
-        setWon((w) => [...w, mult])
-        setSpinsLeft(typeof j.spinsLeft === 'number' ? j.spinsLeft : spinsLeft - 1)
-        setConfetti(true)
-        if (level !== 'normal') setJackpot(level)
-        playWin(level)
-        window.setTimeout(() => setConfetti(false), level === 'mega' ? 4200 : 2800)
-        window.setTimeout(() => setJackpot(null), 3000)
-        setBusy(false)
-      }, durMs)
+      const t0 = performance.now()
+      // easeOutQuint: lange, sterk vertragende staart → net voor het stilvalt extra spannend.
+      const ease = (t: number) => 1 - Math.pow(1 - t, 5)
+      let lastPeg = Math.floor(start / PEG_STEP)
+      playRiser(durMs)
+      const frame = (now: number) => {
+        const t = Math.min(1, (now - t0) / durMs)
+        const rot = start + (target - start) * ease(t)
+        if (wheelRef.current) wheelRef.current.style.transform = `rotate(${rot}deg)`
+        // Elke keer een pin de flapper passeert: klik + flapper-uitslag.
+        const peg = Math.floor(rot / PEG_STEP)
+        if (peg !== lastPeg) {
+          lastPeg = peg
+          deflectFlap()
+          playClick()
+        }
+        if (t < 1) {
+          rafRef.current = requestAnimationFrame(frame)
+        } else {
+          setRotation(target)
+          const mult = j.mult!
+          const level: 'mega' | 'big' | 'normal' = mult >= maxMult ? 'mega' : mult >= 5 ? 'big' : 'normal'
+          setLastWon(mult)
+          setWon((w) => [...w, mult])
+          setSpinsLeft(typeof j.spinsLeft === 'number' ? j.spinsLeft : spinsLeft - 1)
+          setConfetti(true)
+          if (level !== 'normal') setJackpot(level)
+          playWin(level)
+          window.setTimeout(() => setConfetti(false), level === 'mega' ? 4200 : 2800)
+          window.setTimeout(() => setJackpot(null), 3000)
+          setBusy(false)
+        }
+      }
+      rafRef.current = requestAnimationFrame(frame)
     } catch (e) {
       setErr((e as Error).message)
       setBusy(false)
@@ -164,15 +205,14 @@ export function Wheel({
             <span key={i} className="rad-bulb" style={{ transform: `translate(-50%,-50%) rotate(${i * (360 / 28)}deg) translateY(-152px)`, animationDelay: `${(i % 8) * 0.09}s` }} />
           ))}
         </div>
-        {/* Flapper-pijl: tikt langs de pinnen tijdens het draaien — je ziet aan welke kant van het
-            stokje hij valt. */}
-        <div className="rad-flap" aria-hidden />
-        <div className="rad-wheel" style={{ background: gradient, transform: `rotate(${rotation}deg)` }} role="img" aria-label="Bonusrad">
-          {arcs.map((a, i) => (
-            <span key={`peg-${i}`} className="rad-peg" style={{ transform: `translate(-50%,-50%) rotate(${a.start}deg) translateY(-128px)` }} />
+        {/* Flapper-pijl: tikt tegen elke pin die passeert. */}
+        <div className="rad-flap" ref={flapRef} style={{ transform: FLAP_BASE }} aria-hidden />
+        <div className="rad-wheel" ref={wheelRef} style={{ background: gradient, transform: `rotate(${rotation}deg)` }} role="img" aria-label="Bonusrad">
+          {Array.from({ length: PEG_COUNT }).map((_, i) => (
+            <span key={`peg-${i}`} className="rad-peg" style={{ transform: `translate(-50%,-50%) rotate(${i * PEG_STEP}deg) translateY(-126px)` }} />
           ))}
           {arcs.map((a, i) => (
-            <span key={i} className="rad-lab" style={{ transform: `translate(-50%,-50%) rotate(${a.mid}deg) translateY(-92px)`, fontSize: labelSize(a) }}>
+            <span key={i} className="rad-lab" style={{ transform: `translate(-50%,-50%) rotate(${a.mid}deg) translateY(-90px)`, fontSize: labelSize(a) }}>
               {fmt(a.mult)}
             </span>
           ))}
