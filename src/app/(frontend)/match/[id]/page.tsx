@@ -179,23 +179,11 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
           duidelijk is over welke wedstrijd dit gaat. Kapiteins horen hier bewust níet bij —
           die staan op het wedstrijdblad, niet op de publieke pagina. */}
       {(reeks || datum || accommodatie || referee) && (
-        <div className="match-info match-info-top">
-          {(reeks || datum) && (
-            <div className="match-info-row">
-              {reeks && <span className="match-info-reeks">{reeks}</span>}
-              {datum && <span>{datum}</span>}
-            </div>
-          )}
-          {accommodatie && (
-            <div className="match-info-row">
-              <span aria-hidden>📍</span> <span>{accommodatie}</span>
-            </div>
-          )}
-          {referee && (
-            <div className="match-info-row">
-              <span aria-hidden>🟡</span> <span>Scheidsrechter: {referee}</span>
-            </div>
-          )}
+        <div className="match-meta">
+          {reeks && <span className="match-meta-reeks">{reeks}</span>}
+          {datum && <span className="match-meta-bit">{datum}</span>}
+          {accommodatie && <span className="match-meta-bit">📍 {accommodatie}</span>}
+          {referee && <span className="match-meta-bit">🟡 {referee}</span>}
         </div>
       )}
       {/* Weerbericht aan het veld voor de thuislocatie. Het paneel verbergt zichzelf zodra de
