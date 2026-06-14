@@ -29,6 +29,7 @@ const GENERAL: { href: string; label: string }[] = [
 // Wedstrijd-info onder een eigen kopje "Wedstrijden" in het menu.
 const WEDSTRIJDEN: { href: string; label: string }[] = [
   { href: '/rangschikking', label: '📊 Stand' },
+  { href: '/pronostiek', label: '🔮 Pronostiekstand' },
   { href: '/tornooi', label: '🏆 Bekerwedstrijden' },
   { href: '/superster', label: '⭐ Jeugd-superster' },
 ]
