@@ -38,6 +38,7 @@ export function Wheel({
   const [won, setWon] = useState<number[]>([])
   const [lastWon, setLastWon] = useState<number | null>(null)
   const [confetti, setConfetti] = useState(false)
+  const [jackpot, setJackpot] = useState<'mega' | 'big' | null>(null)
   const [err, setErr] = useState<string | null>(null)
   const rotRef = useRef(0)
   const acRef = useRef<AudioContext | null>(null)
@@ -74,19 +75,41 @@ export function Wheel({
   const playSpin = (durMs: number) => {
     const c = ac()
     const t0 = c.currentTime
+    // Tikjes van de flapper langs de pinnen — vertragen naar het einde (spanning).
     let t = 0
-    let gap = 0.035
+    let gap = 0.03
     while (t < durMs / 1000) {
-      tone(820, t0 + t, 0.028, 'square', 0.06)
+      tone(900, t0 + t, 0.024, 'square', 0.06)
       t += gap
-      gap *= 1.06 // vertraagt → spannender naar het einde
+      gap *= 1.065
     }
+    // Oplopende spannings-riser onder de tikjes.
+    const o = c.createOscillator()
+    const g = c.createGain()
+    o.type = 'sawtooth'
+    o.frequency.setValueAtTime(110, t0)
+    o.frequency.exponentialRampToValueAtTime(420, t0 + durMs / 1000)
+    g.gain.setValueAtTime(0.0001, t0)
+    g.gain.exponentialRampToValueAtTime(0.05, t0 + 0.3)
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + durMs / 1000)
+    o.connect(g).connect(c.destination)
+    o.start(t0)
+    o.stop(t0 + durMs / 1000 + 0.05)
   }
-  const playWin = (big: boolean) => {
+  const playWin = (level: 'mega' | 'big' | 'normal') => {
     const c = ac()
     const t0 = c.currentTime + 0.02
-    const notes = big ? [523, 659, 784, 1047, 1319, 1568] : [523, 659, 784, 1047]
-    notes.forEach((f, i) => tone(f, t0 + i * 0.11, 0.28, 'triangle', 0.2))
+    if (level === 'normal') {
+      ;[523, 659, 784, 1047].forEach((f, i) => tone(f, t0 + i * 0.1, 0.26, 'triangle', 0.2))
+      return
+    }
+    // Groot: triomfantelijke fanfare (×5) of een dubbele jackpot-cascade (×10) met sprankel-coins.
+    const fanfare = [523, 659, 784, 1047, 1319, 1568, 2093]
+    fanfare.forEach((f, i) => tone(f, t0 + i * 0.1, 0.34, 'triangle', 0.22))
+    if (level === 'mega') {
+      fanfare.forEach((f, i) => tone(f * 1.5, t0 + 0.7 + i * 0.09, 0.3, 'triangle', 0.2))
+      for (let i = 0; i < 14; i++) tone(1800 + Math.random() * 1400, t0 + 0.4 + i * 0.06, 0.12, 'sine', 0.12)
+    }
   }
 
   const spin = async () => {
@@ -104,16 +127,20 @@ export function Wheel({
       const arc = arcs[j.index] ?? arcs[0]
       const target = Math.ceil(rotRef.current / 360) * 360 + 9 * 360 + (360 - arc.mid)
       rotRef.current = target
-      const durMs = 6200
+      const durMs = 7000
       playSpin(durMs)
       setRotation(target)
       window.setTimeout(() => {
-        setLastWon(j.mult!)
-        setWon((w) => [...w, j.mult!])
+        const mult = j.mult!
+        const level: 'mega' | 'big' | 'normal' = mult >= maxMult ? 'mega' : mult >= 5 ? 'big' : 'normal'
+        setLastWon(mult)
+        setWon((w) => [...w, mult])
         setSpinsLeft(typeof j.spinsLeft === 'number' ? j.spinsLeft : spinsLeft - 1)
         setConfetti(true)
-        playWin(j.mult! >= 5)
-        window.setTimeout(() => setConfetti(false), 2800)
+        if (level !== 'normal') setJackpot(level)
+        playWin(level)
+        window.setTimeout(() => setConfetti(false), level === 'mega' ? 4200 : 2800)
+        window.setTimeout(() => setJackpot(null), 3000)
         setBusy(false)
       }, durMs)
     } catch (e) {
@@ -137,10 +164,15 @@ export function Wheel({
             <span key={i} className="rad-bulb" style={{ transform: `translate(-50%,-50%) rotate(${i * (360 / 28)}deg) translateY(-152px)`, animationDelay: `${(i % 8) * 0.09}s` }} />
           ))}
         </div>
-        <span className="rad-pointer" aria-hidden>▼</span>
+        {/* Flapper-pijl: tikt langs de pinnen tijdens het draaien — je ziet aan welke kant van het
+            stokje hij valt. */}
+        <div className="rad-flap" aria-hidden />
         <div className="rad-wheel" style={{ background: gradient, transform: `rotate(${rotation}deg)` }} role="img" aria-label="Bonusrad">
           {arcs.map((a, i) => (
-            <span key={i} className="rad-lab" style={{ transform: `translate(-50%,-50%) rotate(${a.mid}deg) translateY(-94px)`, fontSize: labelSize(a) }}>
+            <span key={`peg-${i}`} className="rad-peg" style={{ transform: `translate(-50%,-50%) rotate(${a.start}deg) translateY(-128px)` }} />
+          ))}
+          {arcs.map((a, i) => (
+            <span key={i} className="rad-lab" style={{ transform: `translate(-50%,-50%) rotate(${a.mid}deg) translateY(-92px)`, fontSize: labelSize(a) }}>
               {fmt(a.mult)}
             </span>
           ))}
@@ -162,17 +194,22 @@ export function Wheel({
         </button>
         {confetti && (
           <div className="rad-confetti" aria-hidden>
-            {Array.from({ length: 56 }).map((_, i) => (
+            {Array.from({ length: jackpot === 'mega' ? 90 : jackpot === 'big' ? 64 : 50 }).map((_, i) => (
               <span
                 key={i}
                 className="rad-cf"
                 style={{
                   left: `${Math.random() * 100}%`,
-                  background: pal.concat(['#ffd166', '#fff'])[i % (pal.length + 2)],
+                  background: pal.concat(['#ffd166', '#fff', '#ef476f', '#4cc9f0'])[i % (pal.length + 4)],
                   animationDelay: `${Math.random() * 0.5}s`,
                 }}
               />
             ))}
+          </div>
+        )}
+        {jackpot && (
+          <div className={`rad-jackpot rad-jackpot-${jackpot}`} aria-hidden>
+            <span className="rad-jackpot-txt">{jackpot === 'mega' ? '🎉 JACKPOT!' : '🔥 TOP!'}</span>
           </div>
         )}
       </div>

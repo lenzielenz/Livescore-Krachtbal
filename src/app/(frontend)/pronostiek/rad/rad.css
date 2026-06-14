@@ -12,15 +12,29 @@
 }
 @keyframes rad-twinkle { from { opacity: 0.35; } to { opacity: 1; } }
 
-.rad-pointer {
-  position: absolute; top: -2px; left: 50%; transform: translateX(-50%); z-index: 4;
-  color: #fff; font-size: 1.9rem; line-height: 1; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.6));
+/* Flapper-pijl bovenaan: tikt langs de pinnen tijdens het draaien, valt daarna naar één kant. */
+.rad-flap {
+  position: absolute; top: -7px; left: 50%; z-index: 6;
+  width: 0; height: 0; border-left: 13px solid transparent; border-right: 13px solid transparent; border-top: 27px solid #fff;
+  transform: translateX(-50%); transform-origin: 50% 0%;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.6));
+}
+.rad-stage.spinning .rad-flap { animation: rad-flap-tick 0.085s ease-in-out infinite; }
+@keyframes rad-flap-tick {
+  0%, 100% { transform: translateX(-50%) rotate(2deg); }
+  50% { transform: translateX(-50%) rotate(-17deg); }
+}
+/* Pinnen (stokjes) op de rand — de flapper tikt ertegen; zo zie je aan welke kant hij valt. */
+.rad-peg {
+  position: absolute; top: 50%; left: 50%; width: 8px; height: 8px; border-radius: 999px; z-index: 3;
+  background: #fff; box-shadow: 0 0 5px rgba(0, 0, 0, 0.55), 0 0 6px rgba(255, 255, 255, 0.5);
 }
 .rad-wheel {
   width: 260px; height: 260px; border-radius: 999px; position: relative; z-index: 2;
   border: 8px solid #ffd166;
   box-shadow: 0 0 0 3px #b8860b, 0 18px 50px -18px rgba(0, 0, 0, 0.85), inset 0 0 30px rgba(0, 0, 0, 0.45);
-  transition: transform 6.2s cubic-bezier(0.08, 0.72, 0.06, 1);
+  /* Lange, sterk vertragende staart → net voor het stilvalt wordt het extra spannend. */
+  transition: transform 7s cubic-bezier(0.16, 0.93, 0.03, 1);
 }
 .rad-stage.spinning .rad-wheel { box-shadow: 0 0 0 3px #b8860b, 0 0 40px 6px color-mix(in srgb, #ffd166 70%, transparent), inset 0 0 30px rgba(0, 0, 0, 0.45); }
 
@@ -49,6 +63,18 @@
 }
 .rad-hub-logo { width: 100%; height: 100%; object-fit: contain; }
 .rad-hub-fallback { font-size: 1.7rem; }
+
+/* Jackpot-flits + banner bij ×5 (TOP) en de hoogste waarde (JACKPOT). */
+.rad-jackpot { position: absolute; inset: 0; z-index: 7; display: grid; place-items: center; border-radius: 999px; pointer-events: none; }
+.rad-jackpot::before { content: ''; position: absolute; inset: -50px; border-radius: 999px; animation: rad-flash 0.42s ease-out 3; }
+.rad-jackpot-mega::before { background: radial-gradient(circle, rgba(255, 209, 102, 0.55), transparent 70%); }
+.rad-jackpot-big::before { background: radial-gradient(circle, rgba(239, 71, 111, 0.5), transparent 70%); }
+@keyframes rad-flash { 0% { opacity: 0.95; } 100% { opacity: 0; } }
+.rad-jackpot-txt {
+  position: relative; z-index: 1; font-weight: 900; font-size: 1.7rem; color: #fff; letter-spacing: 0.02em;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.8), 0 0 18px #ffd166; animation: rad-jack-pop 0.6s cubic-bezier(0.2, 1.5, 0.4, 1);
+}
+@keyframes rad-jack-pop { 0% { transform: scale(0.3) rotate(-8deg); opacity: 0; } 60% { transform: scale(1.15) rotate(3deg); } 100% { transform: scale(1) rotate(0); opacity: 1; } }
 
 /* Confetti bij winst. */
 .rad-confetti { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 5; }
@@ -109,6 +135,20 @@
 .rad-card h2 { margin: 0 0 6px; font-size: 1.05rem; }
 .rad-card p { margin: 0; color: var(--dim); line-height: 1.5; }
 .rad-card p b { color: var(--accent); }
+
+/* Kleurrijke titel + podium-accenten over de hele radpagina. */
+.rad-title .brand {
+  background: linear-gradient(90deg, #ef476f, #ffd166, #06d6a0, #4cc9f0, #b15cff, #ef476f);
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: rad-rainbow 6s linear infinite;
+}
+@keyframes rad-rainbow { to { background-position: 300% 0; } }
+.rad-podium .rad-pod:nth-child(1) { border-color: color-mix(in srgb, #ffd166 60%, var(--line)); background: color-mix(in srgb, #ffd166 10%, var(--panel)); }
+.rad-podium .rad-pod:nth-child(2) { border-color: color-mix(in srgb, #c0c8d0 55%, var(--line)); }
+.rad-podium .rad-pod:nth-child(3) { border-color: color-mix(in srgb, #cd7f32 55%, var(--line)); }
 
 /* Testmodus-melding (beheerder). */
 .rad-test {
