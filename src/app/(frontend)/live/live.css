@@ -323,11 +323,14 @@
 
 /* Wedstrijdgroepen per reeks */
 .lb-group {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 12px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0) 22%),
+    var(--panel-grad, var(--panel));
+  border: 1px solid color-mix(in srgb, #fff 8%, var(--line));
+  border-radius: 16px;
   overflow: hidden;
   margin-bottom: 12px;
+  box-shadow: 0 16px 38px -20px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 /* Reeks-kop: rustig en terughoudend — een label, geen blikvanger. De wedstrijden zelf
    (en het live-accent) mogen de aandacht trekken, niet de groepstitel. Tegelijk een
@@ -344,7 +347,7 @@
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--dim);
-  background: transparent;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0));
   border: none;
   border-bottom: 1px solid var(--line);
   cursor: pointer;
@@ -401,6 +404,10 @@
 }
 .lb-rowwrap:last-child {
   border-bottom: none;
+}
+/* Subtiele zebra op de gewone (niet-live) rijen — verzorgd zonder de live-aurora te storen. */
+.lb-rowwrap:nth-child(2n) .lb-row:not(.live) {
+  background: rgba(255, 255, 255, 0.015);
 }
 .lb-row {
   display: flex;
