@@ -52,7 +52,7 @@ export function Wheel({
   // tegen elke pin die passeert. Elke tik = één pin (geluid + flapper-uitslag), gesynct met de draai.
   const PEG_COUNT = 24
   const PEG_STEP = 360 / PEG_COUNT
-  const FLAP_BASE = 'translate(-50%, -157px)'
+  const FLAP_BASE = 'translate(-50%, -161px)'
 
   useEffect(() => () => { if (rafRef.current) cancelAnimationFrame(rafRef.current) }, [])
   // Eén keer per sessie: het gordijn-openingsmoment.
@@ -165,17 +165,23 @@ export function Wheel({
       // easeOutQuint: lange, sterk vertragende staart → net voor het stilvalt extra spannend.
       const ease = (t: number) => 1 - Math.pow(1 - t, 5)
       let lastPeg = Math.floor(start / PEG_STEP)
+      // Audio/flapper afremmen: bij hoge snelheid passeren er tientallen pinnen per seconde — elk een
+      // oscillator maken doet de hoofdthread haperen. We cappen op ~1 tik per 45 ms (vloeiend + realistisch).
+      let lastTick = 0
       playRiser(durMs)
       const frame = (now: number) => {
         const t = Math.min(1, (now - t0) / durMs)
         const rot = start + (target - start) * ease(t)
         if (wheelRef.current) wheelRef.current.style.transform = `rotate(${rot}deg)`
-        // Elke keer een pin de flapper passeert: klik + flapper-uitslag.
+        // Elke keer een pin de flapper passeert: klik + flapper-uitslag (afgeremd).
         const peg = Math.floor(rot / PEG_STEP)
         if (peg !== lastPeg) {
           lastPeg = peg
-          deflectFlap()
-          playClick()
+          if (now - lastTick >= 45) {
+            lastTick = now
+            deflectFlap()
+            playClick()
+          }
         }
         if (t < 1) {
           rafRef.current = requestAnimationFrame(frame)
@@ -208,7 +214,9 @@ export function Wheel({
   const allWon = [...heldTokens, ...won]
 
   return (
-    <div className="rad">
+    <div className={`rad${busy ? ' focus' : ''}`}>
+      {/* Spotlight: tijdens het draaien dimt de rest van de pagina zodat je op het rad focust. */}
+      <div className={`rad-spotlight${busy ? ' on' : ''}`} aria-hidden />
       <div className={`rad-stage${busy ? ' spinning' : ''}`}>
         <div className="rad-aura" style={{ background: auraGradient }} aria-hidden />
         {/* Metalen gouden behuizing rond het rad (draait niet mee). */}
