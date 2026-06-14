@@ -57,3 +57,6 @@
 /* Scope-kiezer (club / ploeg / reeks). */
 .vs-scope { display: inline-flex; align-items: center; gap: 8px; margin: 0 0 6px; padding: 6px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--panel); }
 .vs-scope select { border: none; background: transparent; color: var(--txt); font: inherit; font-weight: 700; font-size: 0.9rem; cursor: pointer; max-width: 70vw; }
+
+/* Vergrendelde voorspellingen. */
+.vs-locked { margin: 0 0 10px; font-size: 0.86rem; font-weight: 700; color: var(--accent); }

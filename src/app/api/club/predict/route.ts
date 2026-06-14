@@ -56,8 +56,11 @@ export async function POST(req: Request) {
     const userId = Number((user as { id: number }).id)
     const name = String((user as { name?: string; email?: string }).name || (user as { email?: string }).email || 'Lid')
     const existing = Array.isArray(match.scorePredictions) ? (match.scorePredictions as PredEntry[]) : []
-    const next = existing.filter((p) => Number(p?.userId) !== userId)
-    next.push({ userId, name, clubId, home, away, at: Date.now() })
+    // Eenmaal doorgegeven, staat de voorspelling vast — niet meer te wijzigen (dat maakt het spannend).
+    if (existing.some((p) => Number(p?.userId) === userId)) {
+      return Response.json({ error: 'Je hebt al voorspeld voor deze wedstrijd — dat staat vast.' }, { status: 409 })
+    }
+    const next = [...existing, { userId, name, clubId, home, away, at: Date.now() }]
 
     await payload.update({ collection: 'matches', id: matchId, data: { scorePredictions: next }, overrideAccess: true })
     return Response.json({ ok: true })

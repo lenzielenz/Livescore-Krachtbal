@@ -101,7 +101,10 @@ export default async function VoorspelPage({ searchParams }: { searchParams: Pro
       preds: (Array.isArray((m as { scorePredictions?: unknown }).scorePredictions) ? (m as { scorePredictions: PredEntry[] }).scorePredictions : []).filter((p) => p && p.clubId === clubId),
     }))
 
-  const upcoming = all.filter((m) => m.status === 'scheduled')
+  const myEntryOf = (m: M) => m.preds.find((p) => Number(p.userId) === myUserId) ?? null
+  // Voorspelde wedstrijden verdwijnen uit de lijst: eens doorgegeven staat je gok vast.
+  const upcoming = all.filter((m) => m.status === 'scheduled' && !myEntryOf(m))
+  const lockedCount = all.filter((m) => m.status === 'scheduled' && myEntryOf(m)).length
   const finishedWithPreds = all.filter((m) => m.status === 'finished' && m.preds.length > 0)
 
   // Eindstanden van de afgehandelde wedstrijden (event-sourced → buildMatchState).
@@ -114,7 +117,6 @@ export default async function VoorspelPage({ searchParams }: { searchParams: Pro
   const scored = finals.filter((x): x is M & { actual: { home: number; away: number } } => x != null)
 
   const leaderboard = buildPredictionLeaderboard(scored.map((m) => ({ actual: m.actual, preds: m.preds })), clubId)
-  const myEntryOf = (m: M) => m.preds.find((p) => Number(p.userId) === myUserId) ?? null
 
   const dt = (d: string) => new Date(d).toLocaleDateString('nl-BE', { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
 
@@ -156,8 +158,11 @@ export default async function VoorspelPage({ searchParams }: { searchParams: Pro
 
       {/* Te voorspellen */}
       <h2 className="vs-h2">🔮 Te voorspellen</h2>
+      {lockedCount > 0 && (
+        <p className="vs-locked">🔒 {lockedCount} {lockedCount === 1 ? 'voorspelling staat' : 'voorspellingen staan'} vast — je kan ze niet meer wijzigen.</p>
+      )}
       {upcoming.length === 0 ? (
-        <p className="empty">Geen geplande wedstrijden om te voorspellen.</p>
+        <p className="empty">{lockedCount > 0 ? 'Alles voorspeld — succes! 🤞' : 'Geen geplande wedstrijden om te voorspellen.'}</p>
       ) : (
         <div className="vs-list">
           {upcoming.map((m) => {
