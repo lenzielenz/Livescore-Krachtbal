@@ -36,9 +36,16 @@
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7); white-space: nowrap; pointer-events: none;
 }
 .rad-hub {
-  position: absolute; z-index: 3; width: 66px; height: 66px; border-radius: 999px; display: grid; place-items: center;
-  background: var(--panel, #0f1216); border: 4px solid #ffd166; overflow: hidden;
+  position: absolute; z-index: 3; width: 68px; height: 68px; border-radius: 999px; display: grid; place-items: center;
+  background: var(--panel, #0f1216); border: 4px solid #ffd166; overflow: hidden; padding: 0; cursor: pointer;
   box-shadow: 0 6px 18px -8px rgba(0, 0, 0, 0.8);
+}
+.rad-hub:disabled { cursor: default; }
+/* Klikbaar logo: rustige goud-puls die uitnodigt om te draaien. */
+.rad-hub.live { animation: rad-hub-pulse 1.6s ease-in-out infinite; }
+@keyframes rad-hub-pulse {
+  0%, 100% { box-shadow: 0 6px 18px -8px rgba(0, 0, 0, 0.8), 0 0 0 0 color-mix(in srgb, #ffd166 70%, transparent); }
+  50% { box-shadow: 0 6px 18px -8px rgba(0, 0, 0, 0.8), 0 0 0 7px transparent; }
 }
 .rad-hub-logo { width: 100%; height: 100%; object-fit: contain; }
 .rad-hub-fallback { font-size: 1.7rem; }
