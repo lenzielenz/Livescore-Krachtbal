@@ -339,6 +339,22 @@ export function FieldSchema({
         <clipPath id="fieldclip">
           <rect x={0} y={0} width={W} height={H} />
         </clipPath>
+        {/* Grasmat: zachte gradiënt + maaibanen + vignette → een echt veld i.p.v. een vlak groen vlak. */}
+        <linearGradient id="turf" x1="0" y1="0" x2="0.35" y2="1">
+          <stop offset="0" stopColor="#1c6440" />
+          <stop offset="0.5" stopColor="#124b30" />
+          <stop offset="1" stopColor="#0b3622" />
+        </linearGradient>
+        <pattern id="mow" patternUnits="userSpaceOnUse" width={W} height={16}>
+          <rect width={W} height={8} fill="#ffffff" opacity={0.045} />
+        </pattern>
+        <radialGradient id="turfvig" cx="0.5" cy="0.42" r="0.72">
+          <stop offset="0.55" stopColor="#000000" stopOpacity={0} />
+          <stop offset="1" stopColor="#000000" stopOpacity={0.42} />
+        </radialGradient>
+        <filter id="fieldshadow" x="-25%" y="-25%" width="150%" height="150%">
+          <feDropShadow dx="0" dy="3" stdDeviation="4" floodColor="#000000" floodOpacity="0.5" />
+        </filter>
       </defs>
       {/* Out-zone: rode rand rond het veld — tik hier = bal buiten gesmeten */}
       <rect x={-M} y={-M} width={W + 2 * M} height={H + 2 * M} fill="#3a1018" />
@@ -346,8 +362,10 @@ export function FieldSchema({
       <text x={W / 2} y={-M / 2 + 3} fontSize={6} textAnchor="middle" fill="#ffb3c1" letterSpacing={1}>
         BUITEN
       </text>
-      {/* Speelveld */}
-      <rect x={0} y={0} width={W} height={H} fill="#0f3d27" stroke="#e8f5ee" strokeWidth={1.5} />
+      {/* Speelveld: grasmat met diepte (schaduw), maaibanen en vignette */}
+      <rect x={0} y={0} width={W} height={H} fill="url(#turf)" stroke="#e8f5ee" strokeWidth={1.5} filter="url(#fieldshadow)" />
+      <rect x={0} y={0} width={W} height={H} fill="url(#mow)" clipPath="url(#fieldclip)" />
+      <rect x={0} y={0} width={W} height={H} fill="url(#turfvig)" clipPath="url(#fieldclip)" />
       {/* Doelgebieden — gekleurd in de kleur van de ploeg die ER NAARTOE aanvalt */}
       <rect x={0} y={0} width={W} height={homeGoalY} fill={ends?.top?.color ?? '#ffffff'} opacity={ends?.top ? 0.22 : 0.06} />
       <rect x={0} y={awayGoalY} width={W} height={H - awayGoalY} fill={ends?.bottom?.color ?? '#ffffff'} opacity={ends?.bottom ? 0.22 : 0.06} />
