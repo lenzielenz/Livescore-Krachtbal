@@ -696,3 +696,31 @@
 .tp-spread-track { height: 9px; border-radius: 999px; background: color-mix(in srgb, var(--line) 70%, transparent); overflow: hidden; }
 .tp-spread-fill { display: block; height: 100%; border-radius: 999px; background: var(--accent); min-width: 2px; }
 .tp-spread-n { color: var(--dim); font-variant-numeric: tabular-nums; font-size: 0.8rem; }
+
+/* Trainingsplan: actiebalk (opslaan + print). */
+.tp-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0 0 10px; }
+.tp-savewrap { display: inline-flex; align-items: center; gap: 8px; }
+.tp-save {
+  padding: 8px 15px; border-radius: 999px; cursor: pointer;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line));
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent); font: inherit; font-size: 0.86rem; font-weight: 800; white-space: nowrap;
+}
+.tp-save:hover { background: color-mix(in srgb, var(--accent) 22%, transparent); }
+.tp-save:disabled { opacity: 0.6; cursor: default; }
+.tp-savemsg { font-size: 0.82rem; font-weight: 700; color: var(--dim); }
+
+/* Print: enkel het trainingsplan, in een licht printthema (tokens herdefinieerd). */
+@media print {
+  html[data-print="trainingplan"] body * { visibility: hidden !important; }
+  html[data-print="trainingplan"] #training-plan, html[data-print="trainingplan"] #training-plan * { visibility: visible !important; }
+  html[data-print="trainingplan"] #training-plan {
+    position: absolute; left: 0; top: 0; width: 100%;
+    --txt: #0b1512; --dim: #555; --panel: #fff; --panel-grad: #fff; --line: #cfd6d2; --accent: #0a7d52; --steel-2: #6b7280;
+    --card-shadow: none;
+    background: #fff; color: #000;
+  }
+  html[data-print="trainingplan"] #training-plan .tp-session,
+  html[data-print="trainingplan"] #training-plan .tp-metric,
+  html[data-print="trainingplan"] #training-plan .tp-focus-card { break-inside: avoid; }
+}
