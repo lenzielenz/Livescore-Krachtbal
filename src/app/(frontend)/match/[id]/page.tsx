@@ -6,7 +6,7 @@ import { CastToTv } from '@/components/CastToTv'
 import { MatchWeather } from '@/components/MatchWeather'
 import { Scoreboard } from '@/components/Scoreboard'
 import { SiteHeader } from '@/components/SiteHeader'
-import { canAnalyse, userClubId } from '@/lib/access'
+import { userClubId } from '@/lib/access'
 import { getAuthUser } from '@/lib/auth-user'
 import { formatDateTimeBE } from '@/lib/datetime'
 import { buildMatchSheet, buildMatchState, buildMatchStats, buildTimeline } from '@/lib/match-engine'
@@ -235,13 +235,6 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
             colors={{ home: state.teams.home.colors?.primary ?? null, away: state.teams.away.colors?.primary ?? null }}
           />
         </>
-      )}
-      {canAnalyse(me) && (
-        <p className="sheet-cta">
-          <Link href={`/analyse/${matchId}`} className="back-link">
-            📈 Analyse &amp; video
-          </Link>
-        </p>
       )}
       </div>
     </>

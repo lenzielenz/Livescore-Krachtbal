@@ -11,7 +11,6 @@ export function CastToTv({ matchId }: { matchId: number }) {
   return (
     <div className="cast-tv">
       <div className="cast-tv-main">
-        <span className="cast-tv-ico" aria-hidden>📺</span>
         <a href={url} target="_blank" rel="noopener noreferrer" className="cast-tv-btn">
           Bekijk op tv →
         </a>

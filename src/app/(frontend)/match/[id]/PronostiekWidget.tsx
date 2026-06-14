@@ -102,7 +102,7 @@ export function PronostiekWidget({
     return (
       <div className="pn-line">
         <span className="pn-line-ic">🔮</span>
-        <span>Je pronostieken voor dit weekend zijn op — volgend weekend mag je weer.</span>
+        <span>Je pronostieken zijn op — tot volgend weekend.</span>
       </div>
     )
   }
