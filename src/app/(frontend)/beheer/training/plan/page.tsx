@@ -22,6 +22,7 @@ import {
 } from '@/lib/training-plan'
 import { TrainingHero } from '../TrainingHero'
 import { PlanPicker } from './PlanPicker'
+import { PlanWeek } from './PlanWeek'
 import { SavePlanGoals } from './SavePlanGoals'
 import '../training.css'
 
@@ -229,6 +230,9 @@ export default async function TrainingPlanPage({ searchParams }: { searchParams:
 
   // Wie mag doelen wegschrijven (federatie/club-beheerder)?
   const canWrite = isFederationLevel(me) || hasRole(me, 'club-beheerder')
+  // Inplannen kan enkel met een gekende club (sessies horen bij een club).
+  const canPlan = canWrite && myClubId != null
+  const planReeks = reeks === 'overig' ? '' : reeks
 
   let body: React.ReactNode = null
   let actions: React.ReactNode = null
@@ -242,6 +246,7 @@ export default async function TrainingPlanPage({ searchParams }: { searchParams:
       actions = (
         <>
           {canWrite && <SavePlanGoals speler={p.id} targets={plan.targets} />}
+          {canPlan && <PlanWeek club={myClubId!} reeks={planReeks} sessions={plan.week} />}
           <PrintButton mode="trainingplan" label="🖨️ Print plan" />
         </>
       )
@@ -251,8 +256,14 @@ export default async function TrainingPlanPage({ searchParams }: { searchParams:
   } else {
     const squad = inReeks.map((p) => ({ name: p.name, metingen: metingenOf(p.id), goals: doelenOf(p.id), hints: hintsBy.get(p.id) }))
     if (squad.length) {
-      body = <TeamPlanView plan={buildTeamTrainingPlan({ squad })} />
-      actions = <PrintButton mode="trainingplan" label="🖨️ Print plan" />
+      const teamPlan = buildTeamTrainingPlan({ squad })
+      body = <TeamPlanView plan={teamPlan} />
+      actions = (
+        <>
+          {canPlan && <PlanWeek club={myClubId!} reeks={planReeks} sessions={teamPlan.week} />}
+          <PrintButton mode="trainingplan" label="🖨️ Print plan" />
+        </>
+      )
     } else {
       body = <p className="empty">Nog geen spelers in deze reeks.</p>
     }
