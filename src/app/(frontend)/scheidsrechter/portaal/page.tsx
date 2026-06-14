@@ -116,7 +116,7 @@ export default async function RefereePortaalPage() {
   return (
     <>
       <SiteHeader active="scheidsrechters" />
-      <div className="site">
+      <div className="site ref-portal">
         <h1 className="page-title">
           {loggedIn ? (
             <>Scheidsrechter <span className="brand">·</span> Mijn QR</>
