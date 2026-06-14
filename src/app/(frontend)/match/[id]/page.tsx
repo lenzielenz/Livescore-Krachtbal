@@ -6,7 +6,7 @@ import { CastToTv } from '@/components/CastToTv'
 import { MatchWeather } from '@/components/MatchWeather'
 import { Scoreboard } from '@/components/Scoreboard'
 import { SiteHeader } from '@/components/SiteHeader'
-import { canAnalyse } from '@/lib/access'
+import { canAnalyse, userClubId } from '@/lib/access'
 import { getAuthUser } from '@/lib/auth-user'
 import { formatDateTimeBE } from '@/lib/datetime'
 import { buildMatchSheet, buildMatchState, buildMatchStats, buildTimeline } from '@/lib/match-engine'
@@ -16,6 +16,7 @@ import { isTribuneOpen } from '@/lib/tribune'
 import { BASE_RATE_PER_MIN } from '@/lib/win-probability'
 import { MatchRecap } from '../../analyse/[id]/MatchRecap'
 import { MatchScorers } from './MatchScorers'
+import { PronostiekWidget } from './PronostiekWidget'
 import '../../analyse/analyse.css'
 
 export const dynamic = 'force-dynamic'
@@ -205,6 +206,26 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
         momentumGoals={share?.goals}
         momentumTimeouts={share?.timeouts}
       />
+      {/* Pronostiek: geef je uitslag door (kan tot tijdens de match; hoe later, hoe minder punten). */}
+      {(() => {
+        const myId = Number((me as { id?: number } | null)?.id)
+        const myPred = Number.isFinite(myId) && Array.isArray(matchDoc?.scorePredictions)
+          ? (matchDoc!.scorePredictions as { userId: number; home: number; away: number }[]).find((p) => Number(p?.userId) === myId)
+          : null
+        return (
+          <PronostiekWidget
+            matchId={matchId}
+            status={state.match.status}
+            loggedIn={Boolean(me)}
+            hasClub={userClubId(me) != null}
+            homeName={state.teams.home.name}
+            awayName={state.teams.away.name}
+            initialHome={myPred ? myPred.home : null}
+            initialAway={myPred ? myPred.away : null}
+          />
+        )
+      })()}
+
       {/* Supporters duidelijk tonen dat ze de wedstrijd op hun tv kunnen volgen. */}
       <CastToTv matchId={matchId} />
 
