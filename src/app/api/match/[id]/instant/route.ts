@@ -68,7 +68,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     created = await payload.create({
       collection: 'match-instants',
       data: { match: matchId, author: user.id, authorName, expiresAt },
-      file: { data: buf, mimetype: file.type, name: file.name || `instant-${Date.now()}.jpg`, size: buf.length },
+      file: { data: buf, mimetype: file.type, name: `instant-${matchId}-${Date.now()}.jpg`, size: buf.length },
       overrideAccess: true,
     })
   } catch {
@@ -84,7 +84,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     })
     .catch(() => {})
 
-  const url = (created as { url?: string | null }).url || `/api/match-instants/file/${(created as { filename?: string }).filename ?? ''}`
+  // Altijd een RELATIEVE same-origin URL: zo kan een (verkeerd ingestelde of http-)serverURL nooit
+  // een absolute/mixed-content link maken die de browser blokkeert → anders blijft de foto onzichtbaar.
+  const fname = (created as { filename?: string }).filename
+  const url = fname ? `/api/match-instants/file/${encodeURIComponent(fname)}` : ((created as { url?: string | null }).url ?? '')
   const instant = { id: created.id as number, url, authorName, at: Date.now() }
   addInstant(matchId, instant)
   return Response.json({ instant })

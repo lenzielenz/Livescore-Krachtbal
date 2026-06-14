@@ -150,12 +150,16 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
         limit: 30,
       })
       .catch(() => null)
-    initialInstants = (res?.docs ?? []).map((d) => ({
-      id: d.id as number,
-      url: (d as { url?: string | null }).url || `/api/match-instants/file/${(d as { filename?: string }).filename ?? ''}`,
-      authorName: (d as { authorName?: string | null }).authorName || 'Supporter',
-      at: d.createdAt ? new Date(d.createdAt as string).getTime() : Date.now(),
-    }))
+    initialInstants = (res?.docs ?? []).map((d) => {
+      // Relatieve same-origin URL (zie upload-route): voorkomt geblokkeerde absolute/mixed-content links.
+      const fn = (d as { filename?: string }).filename
+      return {
+        id: d.id as number,
+        url: fn ? `/api/match-instants/file/${encodeURIComponent(fn)}` : ((d as { url?: string | null }).url || ''),
+        authorName: (d as { authorName?: string | null }).authorName || 'Supporter',
+        at: d.createdAt ? new Date(d.createdAt as string).getTime() : Date.now(),
+      }
+    })
   }
 
   // Live-pronostiek: eigen (vergrendelde) voorspelling + resterende beurten dit weekend.
