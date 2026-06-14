@@ -17,6 +17,16 @@ const ROLES = [
   { badge: '🏛️', name: 'Federatie', desc: 'Plant het seizoen en beheert alles.' },
 ] as const
 
+// Meer dan kijken — wat een supporter allemaal kan op het platform (de nieuwe dingen).
+const FEATURES = [
+  { ico: '💬', tone: 'accent', name: 'Live tribune', desc: 'Reageer met emoji’s en moedig je ploeg aan terwijl de match loopt.' },
+  { ico: '📸', tone: 'pop', name: 'Foto-tribune', desc: 'Deel sfeerbeelden bij volwassen wedstrijden — ze verdwijnen vanzelf na 24 u.' },
+  { ico: '🔮', tone: 'accent', name: 'Pronostiek', desc: 'Voorspel de exacte eindstand en strijd mee in het globale klassement.' },
+  { ico: '🎰', tone: 'pop', name: 'Bonusrad', desc: 'De top 3 van het weekend draaien aan het rad en winnen vermenigvuldigers voor hun voorspellingen.' },
+  { ico: '📺', tone: 'accent', name: 'Op tv', desc: 'Cast de live stand naar je televisie of het kantinescherm.' },
+  { ico: '📈', tone: 'pop', name: 'Analyse (clubs)', desc: 'Worp-voor-worp-analyse, gevaarzones en een video-replay op het veld.' },
+] as const
+
 type Step = {
   n: number
   who: string
@@ -115,14 +125,16 @@ const STEPS: Step[] = [
     body: (
       <>
         Tijdens de wedstrijd houdt de club aan het veld <strong>elke worp en het balbezit</strong>{' '}
-        bij. De stand loopt live mee — supporters volgen ze op de startpagina, en je kan de stand
-        naar het kantinescherm of de tv casten.
+        bij. De stand loopt live mee — supporters volgen ze op de startpagina, reageren in de{' '}
+        <strong>live tribune</strong>, delen foto’s, en geven hun <strong>pronostiek</strong> door.
+        Casten naar het kantinescherm of de tv kan ook.
       </>
     ),
     list: [
-      'Worpen en balbezit live aantekenen.',
-      'De stand verschijnt automatisch bij de supporters.',
-      'Toon ze groot op het kantinescherm of de tv.',
+      'Worpen en balbezit live aantekenen (groot veld, automatisch volledig scherm).',
+      'Supporters volgen live, reageren met emoji’s en delen sfeerfoto’s.',
+      'Voorspel mee de uitslag — pronostiek-klassement + bonusrad.',
+      'Toon de stand groot op het kantinescherm of de tv.',
     ],
     actions: [
       { href: '/scorekeeper', label: '📝 Aantekenen' },
@@ -160,15 +172,32 @@ export default function UitlegPage() {
     <>
       <SiteHeader active={null} />
       <div className="site">
-        <h1 className="page-title">
-          Zo werkt het <span className="brand">·</span> van A tot Z
-        </h1>
-        <p className="tut-intro">
-          De <strong>volledige flow van een wedstrijd</strong> in zes stappen — van je account
-          aanmaken tot het wedstrijdblad aftekenen. Iedereen heeft zijn rol; samen krijg je een
-          vlotte wedstrijddag.
-        </p>
+        <div className="tut-hero">
+          <span className="tut-hero-eyebrow">📘 Zo werkt het</span>
+          <h1 className="tut-hero-title">
+            Krachtbal Live, <span className="brand">van A tot Z</span>
+          </h1>
+          <p className="tut-hero-sub">
+            De <strong>volledige flow van een wedstrijd</strong> — van je account aanmaken tot het
+            wedstrijdblad aftekenen — plus alles wat je als supporter kan beleven: tribune, foto’s,
+            pronostiek en het bonusrad.
+          </p>
+        </div>
 
+        <h2 className="tut-section-h">⭐ Meer dan kijken</h2>
+        <div className="tut-features">
+          {FEATURES.map((f) => (
+            <div key={f.name} className={`tut-feat tone-${f.tone}`}>
+              <span className="tut-feat-ico" aria-hidden>{f.ico}</span>
+              <span className="tut-feat-txt">
+                <span className="tut-feat-name">{f.name}</span>
+                <span className="tut-feat-desc">{f.desc}</span>
+              </span>
+            </div>
+          ))}
+        </div>
+
+        <h2 className="tut-section-h">🗓️ De wedstrijddag, stap voor stap</h2>
         <div className="tut-roles">
           {ROLES.map((r) => (
             <div key={r.name} className="tut-role">
@@ -225,6 +254,9 @@ export default function UitlegPage() {
           <div className="tut-actions" style={{ justifyContent: 'center' }}>
             <Link href="/registreren" className="tut-btn primary">
               📝 Registreren
+            </Link>
+            <Link href="/pronostiek" className="tut-btn">
+              🔮 Pronostiek
             </Link>
             <Link href="/demo" className="tut-btn">
               🎓 Demo proberen
