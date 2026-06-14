@@ -1,7 +1,14 @@
 /* Bonusrad — Las Vegas-stijl. Clublogo in het midden, kleuren van de deelnemende clubs op het rad. */
-.rad { display: flex; flex-direction: column; align-items: center; gap: 18px; margin: 8px 0 24px; }
+.rad { display: flex; flex-direction: column; align-items: center; gap: 18px; margin: 8px 0 24px; position: relative; }
+/* Tijdens het draaien lift het rad boven de rest en dimt de spotlight de pagina. */
+.rad.focus { z-index: 60; }
+.rad-spotlight {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: 0; transition: opacity 0.55s ease;
+  background: radial-gradient(58% 48% at 50% 44%, transparent 0%, rgba(0, 0, 0, 0.5) 66%, rgba(0, 0, 0, 0.82) 100%);
+}
+.rad-spotlight.on { opacity: 1; }
 
-.rad-stage { position: relative; width: min(344px, 92vw); aspect-ratio: 1; display: grid; place-items: center; }
+.rad-stage { position: relative; z-index: 1; width: min(344px, 92vw); aspect-ratio: 1; display: grid; place-items: center; }
 
 /* Metalen gouden behuizing (bezel) rond het rad — geborsteld goud met diepte, draait niet mee. */
 .rad-casing {
@@ -27,11 +34,13 @@
 @keyframes rad-twinkle { from { opacity: 0.35; } to { opacity: 1; } }
 
 /* Flapper-pijl, scharnierend aan de top: tikt tegen elke pin die passeert (JS-gestuurd). */
+/* Metalen gouden flapper-pijl (zelfde kwaliteit als de gouden rand), scharnierend aan de top. */
 .rad-flap {
-  position: absolute; top: 50%; left: 50%; z-index: 6;
-  width: 0; height: 0; border-left: 14px solid transparent; border-right: 14px solid transparent; border-top: 30px solid #fff;
+  position: absolute; top: 50%; left: 50%; z-index: 6; width: 30px; height: 34px;
+  clip-path: polygon(50% 100%, 0 0, 100% 0);
+  background: linear-gradient(180deg, #fff6d6 0%, #ffe39a 32%, #f4a300 74%, #b8851c 100%);
   transform-origin: 50% 0%;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.6));
+  filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.6));
 }
 /* Pinnen (stokjes) op de rand — de flapper tikt ertegen; gelijkmatig verdeeld als een echt rad. */
 .rad-peg {
@@ -57,7 +66,8 @@
   width: 258px; height: 258px; border-radius: 999px; position: relative; z-index: 2;
   /* Donkere groef tussen de gouden behuizing en de vakken — strak ingelegd. */
   box-shadow: 0 0 0 3px #14100a, 0 0 0 4px rgba(255, 255, 255, 0.08), inset 0 0 24px rgba(0, 0, 0, 0.4);
-  /* De draai wordt via JS (requestAnimationFrame) geanimeerd, zodat de tikjes met de pinnen syncen. */
+  /* De draai wordt via JS (requestAnimationFrame) geanimeerd; GPU-laag → vloeiend, geen haperingen. */
+  will-change: transform; backface-visibility: hidden;
 }
 .rad-stage.spinning .rad-wheel { box-shadow: 0 0 0 3px #14100a, 0 0 0 4px rgba(255, 255, 255, 0.08), 0 0 42px 8px color-mix(in srgb, #ffd166 65%, transparent), inset 0 0 26px rgba(0, 0, 0, 0.4); }
 
@@ -197,8 +207,19 @@
 .rad-page::before {
   content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none;
   background:
-    radial-gradient(70% 50% at 50% 26%, rgba(255, 209, 102, 0.12), transparent 70%),
-    radial-gradient(120% 90% at 50% 0%, #2c0a0f 0%, #160710 42%, #07060a 100%);
+    radial-gradient(42% 30% at 50% 16%, rgba(255, 209, 102, 0.18), transparent 70%),
+    radial-gradient(85% 60% at 50% 30%, rgba(120, 17, 24, 0.55), transparent 72%),
+    radial-gradient(60% 50% at 18% 78%, rgba(80, 12, 18, 0.5), transparent 70%),
+    radial-gradient(60% 50% at 84% 80%, rgba(60, 10, 30, 0.45), transparent 70%),
+    radial-gradient(120% 100% at 50% 0%, #3a1019 0%, #1a0a12 46%, #07060a 100%);
+}
+/* Fijne gouden korrel/textuur die naar het midden toe oplicht — geeft diepte aan de achtergrond. */
+.rad-page::after {
+  content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none; opacity: 0.55;
+  background-image: radial-gradient(rgba(255, 224, 160, 0.07) 1px, transparent 1.5px);
+  background-size: 24px 24px;
+  -webkit-mask-image: radial-gradient(72% 62% at 50% 34%, #000, transparent 78%);
+  mask-image: radial-gradient(72% 62% at 50% 34%, #000, transparent 78%);
 }
 
 /* Neon-gouden titel, in stijl met het gouden rad. */
