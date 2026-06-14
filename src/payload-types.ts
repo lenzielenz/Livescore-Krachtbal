@@ -279,6 +279,18 @@ export interface User {
     | boolean
     | null;
   /**
+   * Gewonnen pronostiek-booster: { mult, remaining, wonAt }. Automatisch beheerd.
+   */
+  pronostiekPower?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  /**
    * Geef dit account toegang tot de analyse (naast de admin-rol).
    */
   analyseAccess?: boolean | null;
@@ -1808,6 +1820,7 @@ export interface UsersSelect<T extends boolean = true> {
   roles?: T;
   club?: T;
   myTeams?: T;
+  pronostiekPower?: T;
   analyseAccess?: T;
   trainingAccess?: T;
   official?: T;

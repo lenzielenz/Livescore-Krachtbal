@@ -1,15 +1,17 @@
 import { isFederationLevel } from '@/lib/access'
 import { authUser } from '@/lib/api-auth'
 import { getPayloadClient } from '@/lib/payload-client'
-import { BONUS_COUNT, BONUS_MULTIPLIER, pickBonusMatches } from '@/lib/pronostiek-rad'
+import { pickMultiplier, TOKENS_PER_WIN } from '@/lib/pronostiek-rad'
 import { loadRadState } from '@/lib/pronostiek-rad-server'
 import { clientIp, rateLimit } from '@/lib/sse-hub'
 
 export const dynamic = 'force-dynamic'
 
-// Bonusrad: de winnaar van vorig weekend draait aan het rad. De server kiest gezaghebbend
-// (nooit de client vertrouwen) 3 wedstrijden van het komende weekend en zet hun pronostiek-bonus
-// op ×2. Eén keer per weekend. Geeft de gekozen wedstrijden terug zodat het rad ernaartoe animeert.
+type Power = { mult: number; remaining: number; wonAt: string }
+
+// Bonusrad: de top 3 van vorig weekend draaien elk één keer aan het rad en winnen een PERSOONLIJKE
+// vermenigvuldiger. De server kiest gezaghebbend de waarde (nooit de client vertrouwen) en bewaart
+// 3 boosters op het account; het rad animeert er enkel naartoe.
 export async function POST(req: Request) {
   const ip = clientIp(req)
   if (!rateLimit(`spin:${ip}`, Number(process.env.SPIN_MAX_PER_SEC) || 3, 1000)) {
@@ -21,37 +23,25 @@ export async function POST(req: Request) {
     const user = await authUser(payload, req)
     if (!user) return Response.json({ error: 'Niet ingelogd.' }, { status: 401 })
     const userId = Number((user as { id: number }).id)
-    // Beheerders/federatie mogen altijd draaien (om te testen), ook zonder weekendwinst.
     const isTester = isFederationLevel(user)
 
-    let state = await loadRadState(payload)
-    if (!isTester) {
-      if (!state.winner) return Response.json({ error: 'Er is nog geen weekendwinnaar.' }, { status: 409 })
-      if (state.winner.userId !== userId) {
-        return Response.json({ error: 'Alleen de winnaar van vorig weekend mag aan het rad draaien.' }, { status: 403 })
-      }
-      if (state.alreadySpun) {
-        return Response.json({ error: 'Het rad is voor dit weekend al gedraaid.' }, { status: 409 })
-      }
-    } else if (state.alreadySpun) {
-      // Testmodus: reset de bonus van deze week zodat de beheerder opnieuw kan draaien.
-      await Promise.all(
-        state.boosted.map((m) => payload.update({ collection: 'matches', id: m.id, data: { pronostiekBonus: 1 }, overrideAccess: true }).catch(() => null)),
-      )
-      state = await loadRadState(payload)
-    }
-    if (state.candidates.length === 0) {
-      return Response.json({ error: 'Er zijn deze week geen geplande wedstrijden om te boosten.' }, { status: 409 })
+    const state = await loadRadState(payload)
+    const eligible = isTester || state.top3.some((w) => w.userId === userId)
+    if (!eligible) {
+      return Response.json({ error: 'Alleen de top 3 van vorig weekend mag aan het rad draaien.' }, { status: 403 })
     }
 
-    const chosen = pickBonusMatches(state.candidates, BONUS_COUNT)
-    await Promise.all(
-      chosen.map((m) =>
-        payload.update({ collection: 'matches', id: m.id, data: { pronostiekBonus: BONUS_MULTIPLIER }, overrideAccess: true }).catch(() => null),
-      ),
-    )
+    const power = (user as { pronostiekPower?: Power | null }).pronostiekPower ?? null
+    // Eén keer per speelweek (testers mogen opnieuw draaien om te testen).
+    if (!isTester && power && power.wonAt === state.weekendStartIso) {
+      return Response.json({ error: 'Je hebt deze week al aan het rad gedraaid.' }, { status: 409 })
+    }
 
-    return Response.json({ ok: true, chosen: chosen.map((m) => ({ id: m.id, home: m.home, away: m.away })) })
+    const mult = pickMultiplier()
+    const next: Power = { mult, remaining: TOKENS_PER_WIN, wonAt: state.weekendStartIso }
+    await payload.update({ collection: 'users', id: userId, data: { pronostiekPower: next }, overrideAccess: true })
+
+    return Response.json({ ok: true, mult, remaining: TOKENS_PER_WIN })
   } catch (err) {
     return Response.json({ error: (err as Error).message }, { status: 400 })
   }

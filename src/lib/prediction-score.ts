@@ -16,6 +16,8 @@ export interface PredEntry {
   at?: number
   /** Puntweging 0..1: vroeg voorspeld = 1; hoe verder in de match, hoe lager (bodem ~0,1). */
   weight?: number
+  /** Persoonlijke bonusrad-vermenigvuldiger op deze voorspelling (1 = geen booster gebruikt). */
+  mult?: number
 }
 
 export interface ScoredPred extends PredEntry {
@@ -85,6 +87,8 @@ export function scoreMatchPredictions(actual: ScoreGuess, preds: PredEntry[], ma
     const closest = r.error === minErr
     const raw = r.base + r.near + (closest ? PRED_POINTS.closest : 0)
     const weight = typeof r.p.weight === 'number' ? Math.max(0, Math.min(1, r.p.weight)) : 1
+    // Persoonlijke bonusrad-booster op deze voorspelling (top-3 van het weekend winnen die).
+    const mult = typeof r.p.mult === 'number' && r.p.mult > 0 ? r.p.mult : 1
     return {
       ...r.p,
       exact: r.exact,
@@ -92,7 +96,7 @@ export function scoreMatchPredictions(actual: ScoreGuess, preds: PredEntry[], ma
       diffOk: r.diffOk,
       error: r.error,
       closest,
-      points: Math.round(raw * weight * bonus),
+      points: Math.round(raw * weight * mult * bonus),
     }
   })
 }

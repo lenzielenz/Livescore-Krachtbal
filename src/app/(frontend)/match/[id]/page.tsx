@@ -167,6 +167,8 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
     const used = await countUserWeekendPredictions(payload, myUid, String(matchDoc.date), matchId).catch(() => 0)
     predRemaining = Math.max(0, LIVE_PRONOSTIEK_MAX_PER_WEEKEND - used)
   }
+  // Persoonlijke bonusrad-booster van deze gebruiker (gewonnen door bij de top 3 te eindigen).
+  const myPower = (me as { pronostiekPower?: { mult: number; remaining: number } | null } | null)?.pronostiekPower ?? null
 
   return (
     <>
@@ -205,7 +207,8 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
         initialAway={myPred ? myPred.away : null}
         remaining={predRemaining}
         max={LIVE_PRONOSTIEK_MAX_PER_WEEKEND}
-        bonus={Number(matchDoc?.pronostiekBonus) || 1}
+        boosterMult={myPower ? Number(myPower.mult) : undefined}
+        boosterRemaining={myPower ? Number(myPower.remaining) : undefined}
       />
       <Scoreboard
         matchId={matchId}

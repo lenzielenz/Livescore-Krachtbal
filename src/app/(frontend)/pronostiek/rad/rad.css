@@ -1,50 +1,89 @@
-/* Bonusrad — de weekendwinnaar draait, 3 wedstrijden worden dubbele punten. */
-.rad { display: flex; flex-direction: column; align-items: center; gap: 18px; margin: 8px 0 22px; }
+/* Bonusrad — Las Vegas-stijl. Clublogo in het midden, clubkleuren op het rad (--rad-p / --rad-s). */
+.rad { display: flex; flex-direction: column; align-items: center; gap: 18px; margin: 8px 0 24px; }
 
-.rad-stage { position: relative; width: min(300px, 80vw); aspect-ratio: 1; display: grid; place-items: center; }
+.rad-stage { position: relative; width: min(320px, 88vw); aspect-ratio: 1; display: grid; place-items: center; }
+
+/* Marquee-lampjes rond de rand. */
+.rad-bulbs { position: absolute; inset: 0; }
+.rad-bulb {
+  position: absolute; top: 50%; left: 50%; width: 9px; height: 9px; border-radius: 999px;
+  background: #ffd166; box-shadow: 0 0 8px 2px color-mix(in srgb, #ffd166 75%, transparent);
+  animation: rad-twinkle 0.8s ease-in-out infinite alternate;
+}
+@keyframes rad-twinkle { from { opacity: 0.35; } to { opacity: 1; } }
+
 .rad-pointer {
-  position: absolute; top: -6px; left: 50%; transform: translateX(-50%); z-index: 3;
-  color: #ffd166; font-size: 1.7rem; line-height: 1; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.5));
+  position: absolute; top: -2px; left: 50%; transform: translateX(-50%); z-index: 4;
+  color: #fff; font-size: 1.9rem; line-height: 1; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.6));
 }
 .rad-wheel {
-  width: 100%; height: 100%; border-radius: 999px; position: relative;
-  border: 6px solid color-mix(in srgb, #ffd166 55%, var(--line));
-  box-shadow: 0 18px 50px -22px rgba(0, 0, 0, 0.8), inset 0 0 0 2px rgba(255, 255, 255, 0.06);
-  transition: transform 3.4s cubic-bezier(0.16, 1, 0.3, 1);
+  width: 260px; height: 260px; border-radius: 999px; position: relative; z-index: 2;
+  border: 8px solid #ffd166;
+  box-shadow: 0 0 0 3px #b8860b, 0 18px 50px -18px rgba(0, 0, 0, 0.85), inset 0 0 30px rgba(0, 0, 0, 0.45);
+  transition: transform 4.2s cubic-bezier(0.12, 0.78, 0.12, 1);
+}
+.rad-stage.spinning .rad-wheel { box-shadow: 0 0 0 3px #b8860b, 0 0 36px 4px color-mix(in srgb, var(--rad-p, #06d6a0) 60%, transparent), inset 0 0 30px rgba(0, 0, 0, 0.45); }
+.rad-lab {
+  position: absolute; top: 50%; left: 50%; font-weight: 900; font-size: 0.92rem; color: #fff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7); white-space: nowrap; pointer-events: none;
 }
 .rad-hub {
-  position: absolute; width: 54px; height: 54px; border-radius: 999px; display: grid; place-items: center;
-  background: var(--panel); border: 3px solid color-mix(in srgb, #ffd166 55%, var(--line)); font-size: 1.4rem; z-index: 2;
-  box-shadow: 0 6px 18px -8px rgba(0, 0, 0, 0.7);
+  position: absolute; z-index: 3; width: 66px; height: 66px; border-radius: 999px; display: grid; place-items: center;
+  background: var(--panel, #0f1216); border: 4px solid #ffd166; overflow: hidden;
+  box-shadow: 0 6px 18px -8px rgba(0, 0, 0, 0.8);
+}
+.rad-hub-logo { width: 100%; height: 100%; object-fit: contain; }
+.rad-hub-fallback { font-size: 1.7rem; }
+
+/* Confetti bij winst. */
+.rad-confetti { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 5; }
+.rad-cf { position: absolute; top: -16px; width: 8px; height: 13px; border-radius: 2px; animation: rad-fall 2.4s linear forwards; }
+@keyframes rad-fall {
+  0% { transform: translateY(-16px) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(340px) rotate(540deg); opacity: 0; }
 }
 
 .rad-btn {
-  padding: 13px 26px; border-radius: 999px; border: none; cursor: pointer;
+  padding: 14px 26px; border-radius: 999px; border: none; cursor: pointer; text-align: center;
   background: linear-gradient(135deg, #ffd166, #f4a300); color: #3a2600; font-weight: 900; font-size: 1.02rem;
   box-shadow: 0 12px 30px -14px #f4a300;
 }
-.rad-btn:disabled { opacity: 0.7; cursor: default; }
-.rad-done { margin: 0; font-weight: 800; color: var(--txt); text-align: center; }
+.rad-btn:disabled { opacity: 0.75; cursor: default; }
+
+.rad-prize { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; }
+.rad-prize-x {
+  font-size: 2.6rem; font-weight: 900; color: #f4a300; line-height: 1;
+  text-shadow: 0 2px 12px color-mix(in srgb, #ffd166 60%, transparent);
+  animation: rad-pop 0.5s cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+.rad-prize-x.jackpot { color: #ffd166; animation: rad-pop 0.5s cubic-bezier(0.2, 1.4, 0.4, 1), rad-glow 1.2s ease-in-out infinite alternate; }
+@keyframes rad-pop { from { transform: scale(0.2); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes rad-glow { from { text-shadow: 0 0 8px #ffd166; } to { text-shadow: 0 0 26px #ffd166, 0 0 42px #f4a300; } }
+.rad-prize-txt { margin: 0; max-width: 40ch; color: var(--txt); line-height: 1.5; }
+.rad-prize-txt b { color: var(--accent); }
+.rad-have { margin: 0; color: var(--dim); font-size: 0.9rem; }
+.rad-have b { color: var(--accent); }
 .rad-err { margin: 0; color: #ef476f; font-weight: 600; }
 
-.rad-results { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; width: min(420px, 100%); }
-.rad-result {
-  display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 12px;
-  border: 1px solid color-mix(in srgb, #ffd166 35%, var(--line)); background: color-mix(in srgb, #ffd166 9%, transparent);
+/* Podium top 3. */
+.rad-podium { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 4px 0 16px; }
+.rad-pod {
+  display: inline-flex; align-items: center; gap: 7px; padding: 8px 14px; border-radius: 999px;
+  border: 1px solid color-mix(in srgb, #ffd166 30%, var(--line)); background: var(--panel); font-size: 0.9rem; color: var(--txt);
 }
-.rad-result-x { flex: 0 0 auto; font-weight: 900; color: #f4a300; font-size: 0.95rem; }
-.rad-result-m { font-weight: 700; color: var(--txt); }
-.rad-vs { color: var(--dim); }
+.rad-pod.me { border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); background: color-mix(in srgb, var(--accent) 8%, var(--panel)); }
+.rad-pod-m { font-size: 1.05rem; }
+.rad-pod-n { font-weight: 700; }
 
-/* Statuskaarten op de radpagina (geen winnaar / niet jij / al gedraaid). */
+/* Statuskaarten. */
 .rad-card {
-  margin: 6px 0 18px; padding: 16px 18px; border-radius: 14px;
+  margin: 6px 0 18px; padding: 16px 18px; border-radius: 14px; max-width: 560px; width: 100%; align-self: center;
   border: 1px solid color-mix(in srgb, #ffd166 25%, var(--line));
   background: radial-gradient(120% 160% at 0% 0%, color-mix(in srgb, #ffd166 10%, transparent), transparent 60%), var(--panel);
 }
 .rad-card h2 { margin: 0 0 6px; font-size: 1.05rem; }
 .rad-card p { margin: 0; color: var(--dim); line-height: 1.5; }
-.rad-bonuslist { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.rad-card p b { color: var(--accent); }
 
 /* Testmodus-melding (beheerder). */
 .rad-test {

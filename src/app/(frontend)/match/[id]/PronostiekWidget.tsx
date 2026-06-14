@@ -18,7 +18,8 @@ export function PronostiekWidget({
   initialAway,
   remaining,
   max,
-  bonus,
+  boosterMult,
+  boosterRemaining,
 }: {
   matchId: number
   status: string
@@ -32,15 +33,19 @@ export function PronostiekWidget({
   remaining?: number
   /** Maximum per speelweek. */
   max?: number
-  /** Puntenmultiplier via het bonusrad (1 = normaal, 2 = dubbele punten). */
-  bonus?: number
+  /** Gewonnen bonusrad-vermenigvuldiger (>1) die de speler kan inzetten. */
+  boosterMult?: number
+  /** Hoeveel boosters de speler nog heeft. */
+  boosterRemaining?: number
 }) {
-  const isBonus = typeof bonus === 'number' && bonus >= 2
+  const hasBooster = typeof boosterMult === 'number' && boosterMult > 1 && typeof boosterRemaining === 'number' && boosterRemaining > 0
+  const fmtMult = (v: number) => `×${Number.isInteger(v) ? v : String(v).replace('.', ',')}`
   const [home, setHome] = useState('')
   const [away, setAway] = useState('')
+  const [useBoost, setUseBoost] = useState(false)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
-  const [locked, setLocked] = useState<{ home: number; away: number } | null>(initialHome != null && initialAway != null ? { home: initialHome, away: initialAway } : null)
+  const [locked, setLocked] = useState<{ home: number; away: number; boosted: boolean } | null>(initialHome != null && initialAway != null ? { home: initialHome, away: initialAway, boosted: false } : null)
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -57,11 +62,11 @@ export function PronostiekWidget({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ matchId, home: h, away: a }),
+        body: JSON.stringify({ matchId, home: h, away: a, useBooster: hasBooster && useBoost }),
       })
-      const j = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string }
+      const j = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string; boosterUsed?: number }
       if (!res.ok || !j.ok) throw new Error(j.error || 'Doorgeven mislukt.')
-      setLocked({ home: h, away: a })
+      setLocked({ home: h, away: a, boosted: Boolean(j.boosterUsed) })
     } catch (e2) {
       setErr((e2 as Error).message)
     } finally {
@@ -77,7 +82,7 @@ export function PronostiekWidget({
     return (
       <div className="pn-line pn-line-done">
         <span className="pn-line-ic">✓</span>
-        <span>Pronostiek binnen · <b>{locked.home}–{locked.away}</b> {isBonus && <span className="pn-bonus">✨ ×2</span>} <span className="pn-dim">(enkel jij ziet dit)</span></span>
+        <span>Pronostiek binnen · <b>{locked.home}–{locked.away}</b> {locked.boosted && boosterMult ? <span className="pn-bonus">🎰 {fmtMult(boosterMult)}</span> : null} <span className="pn-dim">(enkel jij ziet dit)</span></span>
       </div>
     )
   }
@@ -115,7 +120,6 @@ export function PronostiekWidget({
       <h3 className="pn-h">
         <span className="pn-dot" aria-hidden />
         🔮 Pronostiek{status === 'live' && <span className="pn-live">· match bezig</span>}
-        {isBonus && <span className="pn-bonus">✨ Dubbele punten</span>}
         {typeof remaining === 'number' && (
           <span className="pn-left">nog {remaining}{max ? `/${max}` : ''} dit weekend</span>
         )}
@@ -128,6 +132,12 @@ export function PronostiekWidget({
         <span className="pn-team away">{awayName}</span>
         <button type="submit" className="pn-send" disabled={busy}>{busy ? '…' : 'Doorgeven'}</button>
       </form>
+      {hasBooster && (
+        <label className={`pn-boost${useBoost ? ' pn-boost-on' : ''}`}>
+          <input type="checkbox" checked={useBoost} onChange={(e) => setUseBoost(e.target.checked)} />
+          <span>🎰 Zet je <b>{fmtMult(boosterMult!)}</b>-booster in op deze wedstrijd (nog {boosterRemaining})</span>
+        </label>
+      )}
       <p className="pn-hint">
         {status === 'live' ? '⏱ De match is bezig — hoe later je voorspelt, hoe minder punten.' : 'Je kan dit maar één keer doorgeven — daarna staat het vast.'} Niemand ziet je tip.
       </p>
