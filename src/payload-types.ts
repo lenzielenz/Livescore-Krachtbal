@@ -558,6 +558,18 @@ export interface Match {
     | boolean
     | null;
   /**
+   * Cumulatieve voorspel-stemmen (home/draw/away). Automatisch beheerd.
+   */
+  livePoll?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  /**
    * Wie deze analysewedstrijd opnam. Bepaalt wie ze ziet (privé per persoon).
    */
   analyseOwner?: (number | null) | User;
@@ -1374,6 +1386,7 @@ export interface MatchesSelect<T extends boolean = true> {
   simpleScore?: T;
   liveReactions?: T;
   liveShoutouts?: T;
+  livePoll?: T;
   analyseOwner?: T;
   finishedAt?: T;
   updatedAt?: T;

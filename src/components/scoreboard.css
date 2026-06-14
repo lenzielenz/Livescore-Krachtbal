@@ -734,3 +734,25 @@
 }
 @keyframes ccb-banner-in { 0%{opacity:0} 18%{opacity:1} 80%{opacity:1} 100%{opacity:0} }
 .ccb--in .ccb-banner { animation: ccb-banner-in 2.4s ease-out forwards; }
+
+/* ── Voorspel-poll (wie wint?) ── */
+.sb-poll { margin: 14px 0; padding: 14px 16px; border: 1px solid var(--line); border-radius: 14px; background: var(--panel, rgba(255,255,255,0.03)); }
+.sb-poll-h { margin: 0 0 10px; font-size: 0.92rem; font-weight: 800; color: var(--txt); }
+.sb-poll-done { font-size: 0.74rem; font-weight: 600; color: var(--dim); }
+.sb-poll-opts { display: flex; flex-direction: column; gap: 8px; }
+.sb-poll-opt {
+  position: relative; display: flex; align-items: center; gap: 8px;
+  width: 100%; padding: 11px 14px; border-radius: 10px; overflow: hidden;
+  border: 1px solid var(--line); background: color-mix(in srgb, var(--line) 30%, transparent);
+  color: var(--txt); font: inherit; font-size: 0.95rem; font-weight: 700;
+  text-align: left; cursor: pointer; transition: border-color 0.15s ease, transform 0.08s ease;
+}
+.sb-poll-opt:not(.voted):hover { border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); transform: translateY(-1px); }
+.sb-poll-opt.voted { cursor: default; }
+.sb-poll-fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 10px 0 0 10px; background: color-mix(in srgb, var(--accent) 26%, transparent); transition: width 0.5s cubic-bezier(0.22,1,0.36,1); z-index: 0; }
+.sb-poll-opt.home .sb-poll-fill { background: color-mix(in srgb, var(--wp-home, var(--accent)) 30%, transparent); }
+.sb-poll-opt.away .sb-poll-fill { background: color-mix(in srgb, var(--wp-away, var(--accent)) 30%, transparent); }
+.sb-poll-opt.mine { border-color: var(--accent); }
+.sb-poll-lbl { position: relative; z-index: 1; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sb-poll-pct { position: relative; z-index: 1; font-variant-numeric: tabular-nums; font-weight: 800; }
+.sb-poll-total { margin: 8px 0 0; font-size: 0.78rem; color: var(--dim); text-align: right; }

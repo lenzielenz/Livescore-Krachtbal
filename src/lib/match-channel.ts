@@ -35,6 +35,8 @@ type Channel = {
   totals: Record<string, number> // cumulatief deze wedstrijd (zichtbare tellers)
   shoutouts: Shout[] // ringbuffer van recente berichten
   shoutSeq: number
+  pollVotes: Record<string, number> // voorspel-poll: cumulatieve stemmen per optie (home/draw/away)
+  pollSaveTimer: ReturnType<typeof setTimeout> | null
   hydrated: boolean // al uit de DB geladen?
   saveTimer: ReturnType<typeof setTimeout> | null // debounce voor het wegschrijven van tellers
   poll: ReturnType<typeof setInterval> | null
@@ -53,6 +55,8 @@ const REACTION_SAVE_MS = 5000
 const IDLE_GRACE_MS = 60_000
 const ALLOWED_EMOJI = new Set(['clap', 'fire', 'heart', 'goal', 'wow', 'rocket'])
 const MAX_SHOUTS = 40 // hou enkel de recentste berichten bij
+export const POLL_OPTIONS = ['home', 'draw', 'away'] as const
+const POLL_SET = new Set<string>(POLL_OPTIONS)
 
 function broadcast(ch: Channel, event: string, data: unknown, id?: number) {
   for (const send of ch.subs) {
@@ -125,6 +129,22 @@ function scheduleSaveReactions(ch: Channel, matchId: number) {
   }, REACTION_SAVE_MS)
 }
 
+// Poll-stemmen gebundeld wegschrijven (debounce, best-effort).
+async function savePoll(ch: Channel, matchId: number) {
+  try {
+    await ch.payload.update({ collection: 'matches', id: matchId, data: { livePoll: ch.pollVotes }, overrideAccess: true })
+  } catch {
+    /* best-effort */
+  }
+}
+function scheduleSavePoll(ch: Channel, matchId: number) {
+  if (ch.pollSaveTimer) return
+  ch.pollSaveTimer = setTimeout(() => {
+    ch.pollSaveTimer = null
+    void savePoll(ch, matchId)
+  }, REACTION_SAVE_MS)
+}
+
 // Shoutouts onmiddellijk wegschrijven (ze zijn schaars en mogen niet verloren gaan).
 async function saveShoutouts(ch: Channel, matchId: number) {
   try {
@@ -145,7 +165,13 @@ async function hydrateChannel(ch: Channel, matchId: number) {
     ch.finishedAt = (match?.finishedAt as string | null | undefined) ?? null
     const dbTotals = (match?.liveReactions ?? null) as Record<string, number> | null
     const dbShouts = (match?.liveShoutouts ?? null) as Shout[] | null
+    const dbPoll = (match?.livePoll ?? null) as Record<string, number> | null
     let changed = false
+    if (dbPoll && typeof dbPoll === 'object') {
+      for (const [k, v] of Object.entries(dbPoll)) {
+        if (POLL_SET.has(k) && typeof v === 'number' && v > 0) ch.pollVotes[k] = (ch.pollVotes[k] ?? 0) + v
+      }
+    }
     if (dbTotals && typeof dbTotals === 'object') {
       for (const [k, v] of Object.entries(dbTotals)) {
         if (ALLOWED_EMOJI.has(k) && typeof v === 'number' && v > 0) {
@@ -163,6 +189,7 @@ async function hydrateChannel(ch: Channel, matchId: number) {
       ch.shoutSeq = Math.max(ch.shoutSeq, ...ch.shoutouts.map((s) => s.id), 0)
       changed = true
     }
+    if (Object.keys(ch.pollVotes).length) broadcast(ch, 'poll', { totals: ch.pollVotes })
     if (changed) {
       if (Object.keys(ch.totals).length) broadcast(ch, 'reactions', { delta: {}, totals: ch.totals })
       if (ch.shoutouts.length) broadcast(ch, 'shoutouts', ch.shoutouts)
@@ -192,6 +219,8 @@ export function joinMatch(payload: Payload, matchId: number, send: Send, viewerK
       totals: {},
       shoutouts: [],
       shoutSeq: 0,
+      pollVotes: {},
+      pollSaveTimer: null,
       hydrated: false,
       saveTimer: null,
       poll: setInterval(() => void pollScore(payload, matchId), SCORE_POLL_MS),
@@ -221,6 +250,7 @@ export function joinMatch(payload: Payload, matchId: number, send: Send, viewerK
   // Nieuwe kijker meteen de huidige tellers + recente shoutouts geven (niet 1 flush wachten).
   if (Object.keys(ch.totals).length) send('reactions', { delta: {}, totals: ch.totals })
   if (ch.shoutouts.length) send('shoutouts', ch.shoutouts)
+  if (Object.keys(ch.pollVotes).length) send('poll', { totals: ch.pollVotes })
   broadcastViewers(ch)
 
   return () => {
@@ -242,6 +272,11 @@ export function joinMatch(payload: Payload, matchId: number, send: Send, viewerK
         c.saveTimer = null
       }
       void saveReactions(c, matchId)
+      if (c.pollSaveTimer) {
+        clearTimeout(c.pollSaveTimer)
+        c.pollSaveTimer = null
+      }
+      void savePoll(c, matchId)
       if (c.idle) clearTimeout(c.idle)
       c.idle = setTimeout(() => {
         const cur = channels.get(matchId)
@@ -263,6 +298,19 @@ export function addReaction(matchId: number, emoji: string, count = 1): boolean 
   ch.reactions[emoji] = (ch.reactions[emoji] ?? 0) + n
   ch.totals[emoji] = (ch.totals[emoji] ?? 0) + n
   scheduleSaveReactions(ch, matchId) // gebundeld persisteren zodat de tellers blijven staan
+  return true
+}
+
+/** Registreer een poll-stem (voorspelling). Sluit zodra de wedstrijd afgelopen is. */
+export function addPollVote(matchId: number, option: string, count = 1): boolean {
+  if (!POLL_SET.has(option)) return false
+  const ch = channels.get(matchId)
+  if (!ch) return false
+  if (ch.status === 'finished') return false // voorspellen sluit bij de eindstand
+  const n = Math.max(1, Math.min(5, Math.floor(count) || 1))
+  ch.pollVotes[option] = (ch.pollVotes[option] ?? 0) + n
+  scheduleSavePoll(ch, matchId)
+  broadcast(ch, 'poll', { totals: ch.pollVotes })
   return true
 }
 

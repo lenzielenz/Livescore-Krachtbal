@@ -440,6 +440,15 @@ export const Matches: CollectionConfig = {
       },
     },
     {
+      name: 'livePoll',
+      label: 'Voorspel-poll (stemmen)',
+      type: 'json',
+      admin: {
+        hidden: true,
+        description: 'Cumulatieve voorspel-stemmen (home/draw/away). Automatisch beheerd.',
+      },
+    },
+    {
       // Eigenaar van een analyse-opname: de gebruiker die deze (analyseOnly) wedstrijd opnam.
       // Analyse-data is privé per persoon — je ziet enkel je eigen opnames. Federatie/admin ziet
       // alles en kan zo achteraf alle data samenbrengen.

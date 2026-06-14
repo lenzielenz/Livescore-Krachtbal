@@ -66,8 +66,8 @@ export function WinProbability({
     <div className="wp" style={{ ['--wp-home' as string]: homeColor, ['--wp-away' as string]: awayColor }}>
       <div className="wp-head">
         <span className="wp-title">Live winstkans</span>
-        <span className="wp-exp">
-          Verwacht eind <b>{p.expHome}</b>–<b>{p.expAway}</b>
+        <span className="wp-exp" title="Verwachte eindstand op basis van het huidige scoretempo">
+          Verdiende stand <b>{p.expHome}</b>–<b>{p.expAway}</b>
         </span>
       </div>
 
