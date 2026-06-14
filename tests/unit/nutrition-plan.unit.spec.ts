@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 
-import { ACTIVITY_FACTOR, bmrMifflin, buildNutritionPlan } from '@/lib/nutrition-plan'
+import { ACTIVITY_FACTOR, bmrMifflin, buildNutritionPlan, sanitizeNutritionProfile } from '@/lib/nutrition-plan'
 
 describe('bmrMifflin', () => {
   it('Mifflin-St Jeor voor man en vrouw (verschil van 166)', () => {
@@ -120,5 +120,40 @@ describe('buildNutritionPlan', () => {
     // verkeerde richting (afvallen maar zwaarder willen worden) → onbereikbaar
     const wrong = buildNutritionPlan({ ...base, goal: 'afvallen', targetWeightKg: 90 })
     expect(wrong.target!.weeks).toBeNull()
+  })
+})
+
+describe('sanitizeNutritionProfile', () => {
+  it('geen object → null', () => {
+    expect(sanitizeNutritionProfile(null)).toBeNull()
+    expect(sanitizeNutritionProfile('x')).toBeNull()
+    expect(sanitizeNutritionProfile(42)).toBeNull()
+  })
+
+  it('bewaart geldige waarden en valt terug op defaults bij onzin', () => {
+    const p = sanitizeNutritionProfile({
+      sex: 'v', age: '28', heightCm: '170', weightKg: '64', activity: 'hoog',
+      sessionsPerWeek: '5', goal: 'afvallen', pace: 'snel', macroStyle: 'eiwitrijk',
+      diet: 'veganistisch', targetWeightKg: '60',
+    })!
+    expect(p.sex).toBe('v')
+    expect(p.age).toBe('28')
+    expect(p.goal).toBe('afvallen')
+    expect(p.pace).toBe('snel')
+    expect(p.diet).toBe('veganistisch')
+
+    const bad = sanitizeNutritionProfile({ sex: 'x', age: 'abc', activity: 'turbo', goal: 42, diet: null })!
+    expect(bad.sex).toBe('m')
+    expect(bad.age).toBe('')
+    expect(bad.activity).toBe('matig')
+    expect(bad.goal).toBe('onderhoud')
+    expect(bad.diet).toBe('alles')
+  })
+
+  it('saneert numerieke waarden naar een korte string', () => {
+    const p = sanitizeNutritionProfile({ age: 25.7, weightKg: -5, heightCm: 99999 })!
+    expect(p.age).toBe('26')
+    expect(p.weightKg).toBe('') // negatief → leeg
+    expect(p.heightCm.length).toBeLessThanOrEqual(3)
   })
 })

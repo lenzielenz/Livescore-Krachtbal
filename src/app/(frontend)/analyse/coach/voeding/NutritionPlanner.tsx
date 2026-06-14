@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 import {
   type Activity,
@@ -8,6 +8,7 @@ import {
   type Diet,
   type Goal,
   type MacroStyle,
+  type NutritionProfile,
   type Pace,
   type Sex,
 } from '@/lib/nutrition-plan'
@@ -97,18 +98,37 @@ function MacroDonut({ p, c, f }: { p: number; c: number; f: number }) {
   )
 }
 
-export function NutritionPlanner() {
-  const [sex, setSex] = useState<Sex>('m')
-  const [age, setAge] = useState('25')
-  const [height, setHeight] = useState('178')
-  const [weight, setWeight] = useState('72')
-  const [activity, setActivity] = useState<Activity>('matig')
-  const [sessions, setSessions] = useState('3')
-  const [goal, setGoal] = useState<Goal>('onderhoud')
-  const [pace, setPace] = useState<Pace>('gemiddeld')
-  const [style, setStyle] = useState<MacroStyle>('gebalanceerd')
-  const [diet, setDiet] = useState<Diet>('alles')
-  const [target, setTarget] = useState('')
+export function NutritionPlanner({ initial, canSave = false }: { initial?: NutritionProfile | null; canSave?: boolean }) {
+  const [sex, setSex] = useState<Sex>(initial?.sex ?? 'm')
+  const [age, setAge] = useState(initial?.age || '25')
+  const [height, setHeight] = useState(initial?.heightCm || '178')
+  const [weight, setWeight] = useState(initial?.weightKg || '72')
+  const [activity, setActivity] = useState<Activity>(initial?.activity ?? 'matig')
+  const [sessions, setSessions] = useState(initial?.sessionsPerWeek || '3')
+  const [goal, setGoal] = useState<Goal>(initial?.goal ?? 'onderhoud')
+  const [pace, setPace] = useState<Pace>(initial?.pace ?? 'gemiddeld')
+  const [style, setStyle] = useState<MacroStyle>(initial?.macroStyle ?? 'gebalanceerd')
+  const [diet, setDiet] = useState<Diet>(initial?.diet ?? 'alles')
+  const [target, setTarget] = useState(initial?.targetWeightKg || '')
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+
+  const save = async () => {
+    setSaveState('saving')
+    try {
+      const res = await fetch('/api/profile/nutrition', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sex, age, heightCm: height, weightKg: weight, activity, sessionsPerWeek: sessions, goal, pace, macroStyle: style, diet, targetWeightKg: target }),
+      })
+      setSaveState(res.ok ? 'saved' : 'error')
+    } catch {
+      setSaveState('error')
+    }
+  }
+  // Zodra er iets verandert, vervalt de "opgeslagen"-bevestiging.
+  useEffect(() => {
+    setSaveState((s) => (s === 'saved' ? 'idle' : s))
+  }, [sex, age, height, weight, activity, sessions, goal, pace, style, diet, target])
 
   // Live herberekening — geen knop nodig, alles past zich meteen aan.
   const { plan, err } = useMemo(() => {
@@ -198,6 +218,23 @@ export function NutritionPlanner() {
           </div>
         </div>
         {err && <p className="vd-err">{err}</p>}
+        {canSave && (
+          <div className="vd-save">
+            <button
+              type="button"
+              className={`vd-go vd-save-btn${saveState === 'saved' ? ' done' : ''}`}
+              onClick={save}
+              disabled={saveState === 'saving' || !!err}
+            >
+              {saveState === 'saving' ? '⏳ Bewaren…' : saveState === 'saved' ? '✓ Opgeslagen in mijn profiel' : '💾 Bewaar in mijn profiel'}
+            </button>
+            <span className="vd-save-hint">
+              {saveState === 'error'
+                ? 'Bewaren mislukt — probeer opnieuw.'
+                : 'Je gegevens worden bij je account bewaard, zodat ze de volgende keer al ingevuld staan.'}
+            </span>
+          </div>
+        )}
       </form>
 
       {plan && macroKcal && (

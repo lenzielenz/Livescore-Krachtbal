@@ -69,6 +69,7 @@ import * as migration_20260614_160000_club_pronostiek_pools from './20260614_160
 import * as migration_20260614_180000_tournament_toon_op_live from './20260614_180000_tournament_toon_op_live';
 import * as migration_20260614_200000_match_pronostiek_bonus from './20260614_200000_match_pronostiek_bonus';
 import * as migration_20260614_220000_user_pronostiek_power from './20260614_220000_user_pronostiek_power';
+import * as migration_20260614_240000_user_nutrition_profile from './20260614_240000_user_nutrition_profile';
 
 export const migrations = [
   {
@@ -425,5 +426,10 @@ export const migrations = [
     up: migration_20260614_220000_user_pronostiek_power.up,
     down: migration_20260614_220000_user_pronostiek_power.down,
     name: '20260614_220000_user_pronostiek_power',
+  },
+  {
+    up: migration_20260614_240000_user_nutrition_profile.up,
+    down: migration_20260614_240000_user_nutrition_profile.down,
+    name: '20260614_240000_user_nutrition_profile',
   },
 ];

@@ -279,6 +279,18 @@ export interface User {
     | boolean
     | null;
   /**
+   * Eigen voorkeur: de bewaarde gegevens van de voedingsplanner. De gebruiker beheert dit zelf.
+   */
+  nutritionProfile?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  /**
    * Gewonnen pronostiek-booster: { mult, remaining, wonAt }. Automatisch beheerd.
    */
   pronostiekPower?:
@@ -1820,6 +1832,7 @@ export interface UsersSelect<T extends boolean = true> {
   roles?: T;
   club?: T;
   myTeams?: T;
+  nutritionProfile?: T;
   pronostiekPower?: T;
   analyseAccess?: T;
   trainingAccess?: T;

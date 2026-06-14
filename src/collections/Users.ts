@@ -145,6 +145,17 @@ export const Users: CollectionConfig = {
       },
     },
     {
+      // Persoonlijk voedingsprofiel: de gegevens die de gebruiker in de voedingsplanner invult
+      // (geslacht, leeftijd, lengte, gewicht, activiteit, doel, tempo, macro-stijl, dieet,
+      // streefgewicht). De gebruiker bewaart dit zelf zodat hij het niet telkens opnieuw invult.
+      name: 'nutritionProfile',
+      label: 'Voedingsprofiel',
+      type: 'json',
+      admin: {
+        description: 'Eigen voorkeur: de bewaarde gegevens van de voedingsplanner. De gebruiker beheert dit zelf.',
+      },
+    },
+    {
       // Bonusrad-booster: de top 3 van het weekend winnen een persoonlijke vermenigvuldiger die ze
       // op hun eigen voorspellingen kunnen gebruiken. Vorm: { mult, remaining, wonAt }. Automatisch beheerd.
       name: 'pronostiekPower',

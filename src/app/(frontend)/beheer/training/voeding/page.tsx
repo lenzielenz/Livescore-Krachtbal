@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { SiteHeader } from '@/components/SiteHeader'
 import { canTraining } from '@/lib/access'
 import { getAuthUser } from '@/lib/auth-user'
+import { sanitizeNutritionProfile } from '@/lib/nutrition-plan'
 import { NutritionPlanner } from '../../../analyse/coach/voeding/NutritionPlanner'
 import { TrainingHero } from '../TrainingHero'
 import '../training.css'
@@ -27,6 +28,8 @@ export default async function TrainingVoedingPage() {
     )
   }
 
+  const profile = sanitizeNutritionProfile((me as { nutritionProfile?: unknown } | null)?.nutritionProfile)
+
   return (
     <>
       <SiteHeader active="training" />
@@ -35,8 +38,9 @@ export default async function TrainingVoedingPage() {
         <p className="wb-intro">
           Vul je gegevens en je doel in — je krijgt meteen een persoonlijk, sportgericht eetplan:
           calorieën, eiwit/koolhydraten/vet, hydratatie, trainings- vs rustdag en een voorbeelddag op maat.
+          Bewaar het bij je profiel zodat het de volgende keer al ingevuld staat.
         </p>
-        <NutritionPlanner />
+        <NutritionPlanner initial={profile} canSave />
       </div>
     </>
   )

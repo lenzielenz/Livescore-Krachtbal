@@ -37,6 +37,53 @@ export interface NutritionInput {
   targetWeightKg?: number
 }
 
+/** Bewaarbaar persoonlijk profiel: de ruwe formulierwaarden van de planner (numeriek als string). */
+export interface NutritionProfile {
+  sex: Sex
+  age: string
+  heightCm: string
+  weightKg: string
+  activity: Activity
+  sessionsPerWeek: string
+  goal: Goal
+  pace: Pace
+  macroStyle: MacroStyle
+  diet: Diet
+  targetWeightKg: string
+}
+
+const SEXES: Sex[] = ['m', 'v']
+const ACTIVITIES: Activity[] = ['laag', 'licht', 'matig', 'hoog', 'zeer-hoog']
+const GOALS: Goal[] = ['afvallen', 'onderhoud', 'spiermassa']
+const PACES: Pace[] = ['rustig', 'gemiddeld', 'snel']
+const STYLES: MacroStyle[] = ['gebalanceerd', 'eiwitrijk', 'koolhydraatarm', 'duursport']
+const DIETS: Diet[] = ['alles', 'vegetarisch', 'veganistisch', 'lactosevrij']
+
+/** Maak van willekeurige input (DB/API) een veilig profiel; ongeldige waarden vallen terug op defaults. */
+export function sanitizeNutritionProfile(raw: unknown): NutritionProfile | null {
+  if (raw == null || typeof raw !== 'object') return null
+  const r = raw as Record<string, unknown>
+  // Numeriek veld → korte string; niet-numeriek of leeg → ''. Max 3 tekens (geen onzin opslaan).
+  const num = (v: unknown): string => {
+    const n = Number(v)
+    return Number.isFinite(n) && n > 0 ? String(Math.round(n)).slice(0, 3) : ''
+  }
+  const oneOf = <T,>(v: unknown, opts: T[], dflt: T): T => (opts.includes(v as T) ? (v as T) : dflt)
+  return {
+    sex: oneOf(r.sex, SEXES, 'm'),
+    age: num(r.age),
+    heightCm: num(r.heightCm),
+    weightKg: num(r.weightKg),
+    activity: oneOf(r.activity, ACTIVITIES, 'matig'),
+    sessionsPerWeek: num(r.sessionsPerWeek),
+    goal: oneOf(r.goal, GOALS, 'onderhoud'),
+    pace: oneOf(r.pace, PACES, 'gemiddeld'),
+    macroStyle: oneOf(r.macroStyle, STYLES, 'gebalanceerd'),
+    diet: oneOf(r.diet, DIETS, 'alles'),
+    targetWeightKg: num(r.targetWeightKg),
+  }
+}
+
 export interface Meal { name: string; kcal: number; pct: number; tip: string }
 export interface ExampleMeal { name: string; items: { amount: string; food: string }[] }
 export interface TargetProjection {
