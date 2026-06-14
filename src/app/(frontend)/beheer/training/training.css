@@ -626,3 +626,73 @@
   .tr-hero { gap: 12px; padding: 14px; }
   .tr-hero-name { font-size: 1.2rem; }
 }
+
+/* ── Trainingsplan op maat ── */
+.tp-h2 { font-size: 1rem; font-weight: 800; margin: 20px 0 10px; color: var(--txt); }
+.tp-h2 .tp-sub { font-size: 0.8rem; font-weight: 600; color: var(--dim); margin-left: 6px; }
+.tp-sub { color: var(--dim); }
+
+.tp-phase {
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 12px 15px; margin: 4px 0 4px;
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--line));
+  border-left: 4px solid var(--accent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--accent) 7%, var(--panel));
+}
+.tp-phase-lbl { font-weight: 800; font-size: 0.92rem; color: var(--txt); }
+.tp-phase-note { font-size: 0.84rem; color: var(--dim); line-height: 1.4; }
+
+.tp-assess { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.tp-metric {
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px;
+  background: var(--panel); border-top: 3px solid var(--line);
+}
+.tp-metric.st-sterk { border-top-color: #06d6a0; }
+.tp-metric.st-ok { border-top-color: var(--steel-2, #9197a0); }
+.tp-metric.st-werkpunt { border-top-color: #ffb703; }
+.tp-metric.st-geen-data { border-top-color: var(--line); opacity: 0.75; }
+.tp-metric-lbl { font-size: 0.78rem; color: var(--dim); font-weight: 700; }
+.tp-metric-now { font-size: 1.4rem; font-weight: 800; color: var(--txt); font-variant-numeric: tabular-nums; line-height: 1.1; }
+.tp-metric-now small { font-size: 0.6rem; font-weight: 600; color: var(--dim); }
+.tp-metric-sub { font-size: 0.76rem; color: var(--dim); }
+.tp-metric-st { margin-top: 4px; font-size: 0.72rem; font-weight: 800; align-self: flex-start; padding: 2px 8px; border-radius: 999px; }
+.tp-metric-st.st-sterk { color: #06d6a0; background: rgba(6,214,160,0.14); }
+.tp-metric-st.st-ok { color: var(--steel-2, #9197a0); background: color-mix(in srgb, var(--steel-2, #9197a0) 16%, transparent); }
+.tp-metric-st.st-werkpunt { color: #ffb703; background: rgba(255,183,3,0.14); }
+.tp-metric-st.st-geen-data { color: var(--dim); background: color-mix(in srgb, var(--line) 50%, transparent); }
+
+.tp-focus { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
+.tp-focus-card {
+  display: flex; flex-direction: column; gap: 3px;
+  padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px;
+  background: var(--panel-grad, var(--panel)); border-left: 4px solid var(--accent);
+}
+.tp-focus-lbl { font-weight: 800; font-size: 0.95rem; color: var(--txt); }
+.tp-focus-why { font-size: 0.82rem; color: var(--dim); line-height: 1.4; }
+
+.tp-targets { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
+.tp-target { display: flex; flex-direction: column; gap: 2px; padding: 11px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); }
+.tp-target-lbl { font-size: 0.78rem; color: var(--dim); font-weight: 700; }
+.tp-target-val { font-size: 1rem; color: var(--txt); font-variant-numeric: tabular-nums; }
+.tp-target-val strong { color: var(--accent); }
+
+.tp-weeknote { font-size: 0.84rem; color: var(--dim); margin: 0 0 10px; }
+.tp-week { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.tp-session { border: 1px solid var(--line); border-radius: 14px; background: var(--panel); padding: 14px; }
+.tp-session-head { display: flex; flex-direction: column; gap: 1px; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
+.tp-session-day { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 800; color: var(--accent); }
+.tp-session-title { font-size: 1.02rem; font-weight: 800; color: var(--txt); }
+.tp-drills { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.tp-drill { display: flex; flex-direction: column; gap: 1px; }
+.tp-drill-name { font-size: 0.9rem; font-weight: 700; color: var(--txt); }
+.tp-drill-how { font-size: 0.8rem; color: var(--dim); }
+.tp-drill-prog { font-size: 0.76rem; color: var(--steel-2, #9197a0); }
+
+.tp-spread { display: flex; flex-direction: column; gap: 8px; margin-bottom: 6px; }
+.tp-spread-row { display: grid; grid-template-columns: minmax(120px, 1.4fr) 3fr auto; align-items: center; gap: 10px; font-size: 0.86rem; }
+.tp-spread-lbl { color: var(--txt); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tp-spread-track { height: 9px; border-radius: 999px; background: color-mix(in srgb, var(--line) 70%, transparent); overflow: hidden; }
+.tp-spread-fill { display: block; height: 100%; border-radius: 999px; background: var(--accent); min-width: 2px; }
+.tp-spread-n { color: var(--dim); font-variant-numeric: tabular-nums; font-size: 0.8rem; }

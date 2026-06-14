@@ -3,6 +3,7 @@ import Link from 'next/link'
 // Subnav voor het trainingsluik. Groeit mee als training verder uitgebreid wordt.
 const TABS = [
   { key: 'start', href: '/beheer/training', icon: '🏋️', label: 'Start' },
+  { key: 'plan', href: '/beheer/training/plan', icon: '🧠', label: 'Trainingsplan' },
   { key: 'progressie', href: '/beheer/training/progressie', icon: '📈', label: 'Progressie' },
   { key: 'aanwezigheid', href: '/beheer/training/aanwezigheid', icon: '✅', label: 'Aanwezigheid' },
 ] as const
