@@ -53,12 +53,12 @@ export default async function RadPage() {
   return (
     <>
       <SiteHeader active="stand" />
-      <div className="site">
+      <div className="site rad-page">
         <h1 className="page-title rad-title">🎰 <span className="brand">Bonusrad</span></h1>
         <p className="vs-intro">
           De <strong>top 3</strong> van de pronostiek van vorig weekend draaien <strong>3×</strong> aan het rad. Je wint
           <strong> vermenigvuldigers</strong> die je op je voorspellingen kan zetten — jij kiest welke wedstrijd. Boosters zijn
-          <strong> 4 weken</strong> geldig. <Link href="/pronostiek" style={{ color: 'var(--accent)' }}>Naar de stand</Link>.
+          <strong> 4 weken</strong> geldig. <Link href="/pronostiek" style={{ color: '#ffd166' }}>Naar de stand</Link>.
         </p>
 
         {canTest && (
@@ -81,7 +81,7 @@ export default async function RadPage() {
         ) : heldTokens.length > 0 ? (
           <div className="rad-card">
             <h2>🎟️ Je boosters staan klaar</h2>
-            <p>Gebruik ze bij het voorspellen op een livewedstrijd — jij kiest welke booster op welke wedstrijd. <Link href="/" style={{ color: 'var(--accent)' }}>Voorspel mee →</Link></p>
+            <p>Gebruik ze bij het voorspellen op een livewedstrijd — jij kiest welke booster op welke wedstrijd. <Link href="/" style={{ color: '#ffd166' }}>Voorspel mee →</Link></p>
             <div className="rad-tokens" style={{ marginTop: 12 }}>
               {heldTokens.map((m, i) => (
                 <span key={i} className={`rad-token${m >= 5 ? ' big' : ''}`}>{fmt(m)}</span>
@@ -96,7 +96,7 @@ export default async function RadPage() {
         ) : (
           <div className="rad-card">
             <h2>Speel mee voor het rad</h2>
-            <p>Enkel de <strong>top 3</strong> van het weekend mag aan het rad draaien. Voorspel mee en knok je naar de top! <Link href="/" style={{ color: 'var(--accent)' }}>Voorspel mee →</Link></p>
+            <p>Enkel de <strong>top 3</strong> van het weekend mag aan het rad draaien. Voorspel mee en knok je naar de top! <Link href="/" style={{ color: '#ffd166' }}>Voorspel mee →</Link></p>
           </div>
         )}
       </div>
