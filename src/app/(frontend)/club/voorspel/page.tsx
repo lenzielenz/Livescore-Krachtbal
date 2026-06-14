@@ -24,7 +24,7 @@ function Shell({ children }: { children: React.ReactNode }) {
     <>
       <SiteHeader active="clubs" />
       <div className="site">
-        <h1 className="page-title"><span className="brand">Voorspelcompetitie</span></h1>
+        <h1 className="page-title"><span className="brand">Pronostiek competitie</span></h1>
         {children}
       </div>
     </>

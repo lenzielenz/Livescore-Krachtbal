@@ -31,7 +31,7 @@ const WEDSTRIJDEN: { href: string; label: string }[] = [
   { href: '/rangschikking', label: '📊 Stand' },
   { href: '/tornooi', label: '🏆 Bekerwedstrijden' },
   { href: '/superster', label: '⭐ Jeugd-superster' },
-  { href: '/club/voorspel', label: '🔮 Voorspelcompetitie' },
+  { href: '/club/voorspel', label: '🔮 Pronostiek competitie' },
 ]
 
 // Het Meer-menu licht op zodra je op een van deze secties zit. Analyse en Training zijn twee
