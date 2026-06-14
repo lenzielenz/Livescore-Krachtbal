@@ -204,9 +204,6 @@ export default async function VoorspelPage({ searchParams }: { searchParams: Pro
       )}
 
       <h2 className="vs-h2">🔮 Te voorspellen</h2>
-      {lockedCount > 0 && (
-        <p className="vs-locked">🔒 {lockedCount} {lockedCount === 1 ? 'voorspelling staat' : 'voorspellingen staan'} vast — je kan ze niet meer wijzigen.</p>
-      )}
       {upcoming.length === 0 ? (
         <p className="empty">{lockedCount > 0 ? 'Alles voorspeld — succes! 🤞' : 'Geen geplande wedstrijden om te voorspellen.'}</p>
       ) : (
@@ -252,7 +249,7 @@ export default async function VoorspelPage({ searchParams }: { searchParams: Pro
 
       {!activePool && (
         <section className="vs-pools">
-          <h2 className="vs-h2">👥 Privé-pools <span className="vs-h2-sub">eigen pronostiekje met aparte stand</span></h2>
+          <h2 className="vs-h2">👥 Privé-pools</h2>
           <div className="vs-poolcompact">
             <details className="vs-pooldd">
               <summary>➕ Nieuwe pool starten</summary>

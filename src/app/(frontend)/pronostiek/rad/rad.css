@@ -189,14 +189,6 @@
 .rad-prize-x.jackpot { animation: rad-pop 0.5s cubic-bezier(0.2, 1.4, 0.4, 1), rad-glow 1.2s ease-in-out infinite alternate; }
 @keyframes rad-pop { from { transform: scale(0.2); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 @keyframes rad-glow { from { filter: drop-shadow(0 0 8px #ffd166); } to { filter: drop-shadow(0 0 26px #ffd166) drop-shadow(0 0 40px #f4a300); } }
-
-/* Volledig scherm tijdens het draaien: het rad centraal op een rijke casino-achtergrond, prijs extra groot. */
-.rad:fullscreen, .rad:-webkit-full-screen {
-  justify-content: center; padding: 24px;
-  background: radial-gradient(60% 50% at 50% 44%, #2c0a10, #0a0608 82%);
-}
-.rad:fullscreen .rad-prize-x, .rad:-webkit-full-screen .rad-prize-x { font-size: 5.6rem; }
-.rad:fullscreen .rad-prize-txt, .rad:-webkit-full-screen .rad-prize-txt { font-size: 1.1rem; }
 .rad-prize-txt { margin: 0; max-width: 40ch; color: var(--txt); line-height: 1.5; }
 .rad-prize-txt b { color: var(--accent); }
 .rad-have { margin: 0; color: var(--dim); font-size: 0.9rem; }
