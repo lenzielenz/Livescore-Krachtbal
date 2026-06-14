@@ -11,6 +11,12 @@ export const dynamic = 'force-dynamic'
 // Trainings-startpagina: het vertrekpunt van het trainingsluik, met de tools eronder.
 const TOOLS = [
   {
+    href: '/beheer/training/plan',
+    icon: '🧠',
+    title: 'Trainingsplan op maat',
+    desc: 'Laat de data een gepersonaliseerd, periodiek plan opstellen — per ploeg of per speler, met focuspunten, doelen en concrete oefeningen.',
+  },
+  {
     href: '/beheer/training/progressie',
     icon: '📈',
     title: 'Progressie',
