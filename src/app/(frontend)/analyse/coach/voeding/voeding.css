@@ -36,6 +36,18 @@
 .vd-opt { font-weight: 600; text-transform: none; letter-spacing: 0; color: var(--dim); opacity: 0.7; }
 .vd-err { margin: 0; color: #ef476f; font-weight: 600; font-size: 0.86rem; }
 
+/* Profiel bewaren. */
+.vd-go {
+  margin-top: 2px; padding: 13px 16px; border-radius: 12px; border: none; cursor: pointer; font-weight: 900; font-size: 0.98rem; color: #06140d;
+  background: var(--grad-accent, var(--accent)); box-shadow: var(--glow-accent, 0 12px 30px -12px var(--accent));
+}
+.vd-save { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; padding-top: 12px; border-top: 1px solid color-mix(in srgb, #fff 6%, var(--line)); }
+.vd-save-btn { width: 100%; transition: transform 0.12s ease, filter 0.12s ease; }
+.vd-save-btn:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.05); }
+.vd-save-btn:disabled { cursor: default; opacity: 0.8; }
+.vd-save-btn.done { background: linear-gradient(180deg, #2ecc71, #27ae60); box-shadow: 0 12px 30px -12px #2ecc71; }
+.vd-save-hint { font-size: 0.74rem; color: var(--dim); line-height: 1.4; }
+
 /* Streefgewicht-tijdlijn. */
 .vd-target {
   display: flex; align-items: center; gap: 10px; padding: 13px 15px; border-radius: 14px;

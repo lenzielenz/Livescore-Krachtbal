@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { SiteHeader } from '@/components/SiteHeader'
 import { canAnalyse } from '@/lib/access'
 import { getAuthUser } from '@/lib/auth-user'
+import { sanitizeNutritionProfile } from '@/lib/nutrition-plan'
 import { AnalyseNav } from '../../AnalyseNav'
 import { NutritionPlanner } from './NutritionPlanner'
 import '../../analyse.css'
@@ -34,8 +35,8 @@ export default async function VoedingPage() {
           <h1 className="page-title">🥗 <span className="brand">Voedingsadvies</span></h1>
           <Link className="sk-demo-cta" href="/analyse/coach">← Coach-dashboard</Link>
         </div>
-        <p className="an-lead">Vul je gegevens en je doel in — je krijgt meteen een persoonlijk, sportgericht eetplan: hoeveel calorieën, eiwit, koolhydraten en vet, hoeveel water, en hoe je het over de dag verdeelt.</p>
-        <NutritionPlanner />
+        <p className="an-lead">Vul je gegevens en je doel in — je krijgt meteen een persoonlijk, sportgericht eetplan: hoeveel calorieën, eiwit, koolhydraten en vet, hoeveel water, en hoe je het over de dag verdeelt. Bewaar het bij je profiel zodat het de volgende keer al ingevuld staat.</p>
+        <NutritionPlanner initial={sanitizeNutritionProfile((me as { nutritionProfile?: unknown }).nutritionProfile)} canSave />
       </div>
     </>
   )
