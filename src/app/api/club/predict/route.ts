@@ -1,4 +1,4 @@
-import { authUser, matchSideClubs, userClubId } from '@/lib/api-auth'
+import { authUser, userClubId } from '@/lib/api-auth'
 import { getPayloadClient } from '@/lib/payload-client'
 import { clientIp, rateLimit } from '@/lib/sse-hub'
 
@@ -44,17 +44,23 @@ export async function POST(req: Request) {
     if (match.status !== 'scheduled') {
       return Response.json({ error: 'Voorspellen kan enkel vóór de aftrap.' }, { status: 409 })
     }
-    // De wedstrijd moet van de eigen club zijn (thuis of uit).
-    const clubs = await matchSideClubs(payload, matchId)
-    if (String(clubs.home) !== String(clubId) && String(clubs.away) !== String(clubId)) {
-      return Response.json({ error: 'Dit is geen wedstrijd van jouw club.' }, { status: 403 })
+    // De wedstrijd moet in een reeks zitten waar de club in speelt (eigen club- of reeksmatchen).
+    const teamsRes = await payload
+      .find({ collection: 'teams', where: { club: { equals: clubId } }, depth: 0, limit: 200 })
+      .catch(() => ({ docs: [] as Record<string, unknown>[] }))
+    const clubReeksen = new Set(teamsRes.docs.map((t) => String((t as { reeks?: unknown }).reeks ?? '')).filter(Boolean))
+    if (!clubReeksen.has(String((match as { reeks?: unknown }).reeks ?? ''))) {
+      return Response.json({ error: 'Deze wedstrijd hoort niet bij een reeks van jouw club.' }, { status: 403 })
     }
 
     const userId = Number((user as { id: number }).id)
     const name = String((user as { name?: string; email?: string }).name || (user as { email?: string }).email || 'Lid')
     const existing = Array.isArray(match.scorePredictions) ? (match.scorePredictions as PredEntry[]) : []
-    const next = existing.filter((p) => Number(p?.userId) !== userId)
-    next.push({ userId, name, clubId, home, away, at: Date.now() })
+    // Eenmaal doorgegeven, staat de voorspelling vast — niet meer te wijzigen (dat maakt het spannend).
+    if (existing.some((p) => Number(p?.userId) === userId)) {
+      return Response.json({ error: 'Je hebt al voorspeld voor deze wedstrijd — dat staat vast.' }, { status: 409 })
+    }
+    const next = [...existing, { userId, name, clubId, home, away, at: Date.now() }]
 
     await payload.update({ collection: 'matches', id: matchId, data: { scorePredictions: next }, overrideAccess: true })
     return Response.json({ ok: true })
