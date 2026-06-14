@@ -4,8 +4,17 @@
 // Elke draai levert één booster op; je krijgt er dus tot 3 (mogelijk verschillende). Ze zijn 4
 // weken geldig en jij kiest zelf op welke wedstrijd je welke gebruikt. Pure helpers → los testbaar.
 
-/** Hoeveel deelnemers (de top N van het weekend) aan het rad mogen draaien. */
-export const RAD_TOP_N = 3
+/**
+ * Hoeveel deelnemers aan het rad mogen draaien, afhankelijk van de grootte van het deelnemersveld.
+ * ~10% van de deelnemers (instelbaar via PRONOSTIEK_RAD_WINNER_PCT), met minstens 1 en nooit meer
+ * dan er meedoen. Zo beloon je bij 4 deelnemers enkel de winnaar, en bij 100 ongeveer de top 10.
+ */
+export function radWinnerCount(participants: number): number {
+  if (participants <= 0) return 0
+  const pct = Number(process.env.PRONOSTIEK_RAD_WINNER_PCT) || 10
+  const n = Math.round((participants * pct) / 100)
+  return Math.max(1, Math.min(participants, n || 1))
+}
 /** Hoeveel keer je per speelweek mag draaien (= max. aantal boosters dat je wint). */
 export const SPINS_PER_WEEK = 3
 /** Hoeveel weken een gewonnen booster geldig blijft. */

@@ -22,7 +22,7 @@ const FEATURES = [
   { ico: '💬', tone: 'accent', name: 'Live tribune', desc: 'Reageer met emoji’s en moedig je ploeg aan terwijl de match loopt.' },
   { ico: '📸', tone: 'pop', name: 'Foto-tribune', desc: 'Deel sfeerbeelden bij volwassen wedstrijden — ze verdwijnen vanzelf na 24 u.' },
   { ico: '🔮', tone: 'accent', name: 'Pronostiek', desc: 'Voorspel de exacte eindstand en strijd mee in het globale klassement.' },
-  { ico: '🎰', tone: 'pop', name: 'Bonusrad', desc: 'De top 3 van het weekend draaien aan het rad en winnen vermenigvuldigers voor hun voorspellingen.' },
+  { ico: '🎰', tone: 'pop', name: 'Bonusrad', desc: 'De besten van het weekend (aantal schaalt met het deelnemersveld) draaien aan het rad en winnen vermenigvuldigers.' },
   { ico: '📺', tone: 'accent', name: 'Op tv', desc: 'Cast de live stand naar je televisie of het kantinescherm.' },
   { ico: '📈', tone: 'pop', name: 'Analyse (clubs)', desc: 'Worp-voor-worp-analyse, gevaarzones en een video-replay op het veld.' },
 ] as const

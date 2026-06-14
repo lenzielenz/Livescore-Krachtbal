@@ -3,7 +3,7 @@ import type { Payload } from 'payload'
 import { competitionWhere } from './analyse-access'
 import { buildMatchState } from './match-engine'
 import { buildPredictionLeaderboard, type PredEntry } from './prediction-score'
-import { prevWeekendDateIso } from './pronostiek-rad'
+import { prevWeekendDateIso, radWinnerCount } from './pronostiek-rad'
 import { weekendRange } from './pronostiek-weekend'
 
 export interface RadWinner {
@@ -15,8 +15,10 @@ export interface RadWinner {
 export interface RadState {
   /** Maandag (ISO) van het weekend waarvoor het rad/de boosters gelden (de huidige speelweek). */
   weekendStartIso: string
-  /** De top 3 van vorig weekend — zij mogen draaien. Leeg als er nog geen geschiedenis is. */
-  top3: RadWinner[]
+  /** De winnaars van vorig weekend (aantal schaalt met het deelnemersveld) — zij mogen draaien. */
+  winners: RadWinner[]
+  /** Totaal aantal deelnemers vorig weekend (voor de uitleg). */
+  participants: number
 }
 
 const isPlayable = (m: Record<string, unknown>) => !(m as { isDemo?: boolean }).isDemo && !(m as { analyseOnly?: boolean }).analyseOnly
@@ -49,7 +51,8 @@ export async function loadRadState(payload: Payload, now: Date = new Date()): Pr
     }),
   )
   const board = buildPredictionLeaderboard(scored)
-  const top3: RadWinner[] = board.slice(0, 3).map((r, i) => ({ userId: r.userId, name: r.name, rank: i + 1 }))
+  const count = radWinnerCount(board.length)
+  const winners: RadWinner[] = board.slice(0, count).map((r, i) => ({ userId: r.userId, name: r.name, rank: i + 1 }))
 
-  return { weekendStartIso: current.startIso, top3 }
+  return { weekendStartIso: current.startIso, winners, participants: board.length }
 }

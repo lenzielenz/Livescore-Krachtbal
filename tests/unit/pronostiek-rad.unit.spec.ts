@@ -5,7 +5,7 @@ import {
   pickSegmentIndex,
   prevWeekendDateIso,
   RAD_SEGMENTS,
-  RAD_TOP_N,
+  radWinnerCount,
   segmentArcs,
   SPINS_PER_WEEK,
   tokenExpiry,
@@ -41,9 +41,24 @@ describe('pickSegmentIndex', () => {
   })
 })
 
+describe('radWinnerCount — schaalt met het deelnemersveld', () => {
+  it('beloont bij weinig deelnemers enkel de winnaar', () => {
+    expect(radWinnerCount(1)).toBe(1)
+    expect(radWinnerCount(4)).toBe(1)
+    expect(radWinnerCount(10)).toBe(1)
+  })
+  it('groeit mee (~10%) bij grotere velden', () => {
+    expect(radWinnerCount(30)).toBe(3)
+    expect(radWinnerCount(100)).toBe(10)
+  })
+  it('nooit meer winnaars dan deelnemers, 0 bij geen deelnemers', () => {
+    expect(radWinnerCount(0)).toBe(0)
+    expect(radWinnerCount(2)).toBeLessThanOrEqual(2)
+  })
+})
+
 describe('constanten & rad', () => {
-  it('top 3 mogen draaien, 3 beurten, boosters 4 weken geldig', () => {
-    expect(RAD_TOP_N).toBe(3)
+  it('3 beurten, boosters 4 weken geldig', () => {
     expect(SPINS_PER_WEEK).toBe(3)
     expect(TOKEN_WEEKS_VALID).toBe(4)
   })
