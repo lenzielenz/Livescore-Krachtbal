@@ -47,16 +47,17 @@ describe('buildPredictionLeaderboard', () => {
       { actual: { home: 11, away: 15 }, preds: [pred(1, 11, 15), pred(2, 10, 16)] }, // #1 exact
       { actual: { home: 20, away: 18 }, preds: [pred(1, 19, 18), pred(2, 20, 18)] }, // #2 exact
     ]
-    const lb = buildPredictionLeaderboard(matches, 1)
+    const lb = buildPredictionLeaderboard(matches)
     expect(lb).toHaveLength(2)
     expect(lb[0].points).toBeGreaterThanOrEqual(lb[1].points)
     expect(lb.find((r) => r.userId === 1)!.exact).toBe(1)
     expect(lb.find((r) => r.userId === 2)!.exact).toBe(1)
   })
 
-  it('telt enkel de voorspellingen van de eigen club mee', () => {
-    const matches = [{ actual: { home: 11, away: 15 }, preds: [pred(1, 11, 15, 1), pred(9, 11, 15, 2)] }]
-    const lb = buildPredictionLeaderboard(matches, 1)
+  it('scoort enkel de meegegeven (gefilterde) groep — bv. een pool of club', () => {
+    // De aanroeper filtert vooraf op de groep; hier enkel speler 1.
+    const matches = [{ actual: { home: 11, away: 15 }, preds: [pred(1, 11, 15, 1)] }]
+    const lb = buildPredictionLeaderboard(matches)
     expect(lb).toHaveLength(1)
     expect(lb[0].userId).toBe(1)
   })

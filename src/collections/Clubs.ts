@@ -249,6 +249,15 @@ export const Clubs: CollectionConfig = {
         },
       ],
     },
+    {
+      name: 'pronostiekPools',
+      label: 'Pronostiek-pools (privé-competities)',
+      type: 'json',
+      admin: {
+        hidden: true,
+        description: 'Privé-pronostiekpools van clubleden: [{id,name,scope,ownerId,members,code,seizoen,createdAt}]. Automatisch beheerd.',
+      },
+    },
     ...analyseEntityFields,
   ],
 }

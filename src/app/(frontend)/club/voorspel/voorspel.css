@@ -60,3 +60,25 @@
 
 /* Vergrendelde voorspellingen. */
 .vs-locked { margin: 0 0 10px; font-size: 0.86rem; font-weight: 700; color: var(--accent); }
+
+/* Privé-pools. */
+.vs-pools { margin: 14px 0 6px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 14px; background: var(--panel); }
+.vs-poollist { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; margin-bottom: 14px; }
+.vs-poolcard { display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel-grad, var(--panel)); text-decoration: none; border-left: 3px solid var(--accent); }
+.vs-poolcard:hover { border-color: var(--accent); }
+.vs-poolcard-name { font-weight: 800; color: var(--txt); }
+.vs-poolcard-meta { font-size: 0.78rem; color: var(--dim); }
+.vs-poolactions { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+.vs-poollbl { display: block; font-size: 0.8rem; font-weight: 700; color: var(--dim); margin-bottom: 6px; }
+.vs-poolform { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.vs-poolname { flex: 1; min-width: 120px; padding: 9px 11px; border-radius: 8px; border: 1px solid var(--line); background: color-mix(in srgb, var(--panel-2, #2a2d34) 60%, transparent); color: var(--txt); font-size: 0.92rem; }
+.vs-poolscope { padding: 9px 11px; border-radius: 8px; border: 1px solid var(--line); background: color-mix(in srgb, var(--panel-2, #2a2d34) 60%, transparent); color: var(--txt); font-size: 0.9rem; }
+
+/* Pool-kop (binnen een pool). */
+.vs-poolhead { margin-bottom: 10px; }
+.vs-back { font-size: 0.86rem; color: var(--accent); text-decoration: none; font-weight: 700; }
+.vs-poolname-h { font-size: 1.3rem; font-weight: 900; margin: 6px 0 2px; }
+.vs-poolmeta { font-size: 0.84rem; color: var(--dim); margin: 0 0 8px; }
+.vs-code { color: var(--accent); letter-spacing: 0.12em; font-variant-numeric: tabular-nums; }
+.vs-poolleave { padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line); background: transparent; color: var(--dim); font: inherit; font-size: 0.8rem; cursor: pointer; }
+.vs-poolleave:hover { color: #ef476f; border-color: #ef476f; }

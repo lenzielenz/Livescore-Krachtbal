@@ -75,14 +75,14 @@ export interface LeaderRow {
 }
 
 /**
- * Bouw het seizoensklassement van één club: scoor de voorspellingen van de clubleden over alle
- * afgehandelde wedstrijden en tel de punten per persoon op. De "dichtste" wordt per wedstrijd
- * binnen de club bepaald (elke club speelt z'n eigen competitie).
+ * Bouw een seizoensklassement: scoor de (reeds tot de juiste groep gefilterde) voorspellingen over
+ * alle afgehandelde wedstrijden en tel de punten per persoon op. De "dichtste" wordt per wedstrijd
+ * binnen de meegegeven groep bepaald — zo werkt zowel het clubklassement als een privé-pool.
  */
-export function buildPredictionLeaderboard(matches: { actual: ScoreGuess; preds: PredEntry[] }[], clubId: number): LeaderRow[] {
+export function buildPredictionLeaderboard(matches: { actual: ScoreGuess; preds: PredEntry[] }[]): LeaderRow[] {
   const agg = new Map<number, LeaderRow>()
   for (const m of matches) {
-    const scored = scoreMatchPredictions(m.actual, m.preds.filter((p) => p.clubId === clubId))
+    const scored = scoreMatchPredictions(m.actual, m.preds)
     for (const s of scored) {
       let r = agg.get(s.userId)
       if (!r) {
