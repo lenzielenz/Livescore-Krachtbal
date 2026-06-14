@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { SiteHeader } from '@/components/SiteHeader'
 import { canTraining } from '@/lib/access'
 import { getAuthUser } from '@/lib/auth-user'
-import { TrainingNav } from './TrainingNav'
+import { TrainingHero } from './TrainingHero'
 import './training.css'
 
 export const dynamic = 'force-dynamic'
@@ -49,10 +49,7 @@ export default async function TrainingHubPage() {
     <>
       <SiteHeader active="training" />
       <div className="site">
-        <h1 className="page-title">
-          Training <span className="brand">·</span> overzicht
-        </h1>
-        <TrainingNav active="start" />
+        <TrainingHero active="start" />
         <p className="wb-intro">
           Het vertrekpunt voor je trainingen. Kies hieronder wat je wil doen.
         </p>

@@ -9,7 +9,7 @@ import { getPayloadClient } from '@/lib/payload-client'
 import { reeksNaam } from '@/lib/reeksen'
 import { seasonFromDate } from '@/lib/seasons'
 import { AanwezigheidPanel, type AwClub, type AwPlayer, type AwSession } from './AanwezigheidPanel'
-import { TrainingNav } from '../TrainingNav'
+import { TrainingHero } from '../TrainingHero'
 
 export const dynamic = 'force-dynamic'
 
@@ -128,8 +128,7 @@ export default async function AanwezigheidPage() {
     <>
       <SiteHeader active="training" />
       <div className="site">
-        <h1 className="page-title">Training <span className="brand">·</span> aanwezigheid</h1>
-        <TrainingNav active="aanwezigheid" />
+        <TrainingHero active="aanwezigheid" />
         <p className="wb-intro">
           Kies je reeks (U12, U14, dames, heren …) en hou per training bij wie er was. Onder
           <strong> Algemeen</strong> zie je over het hele seizoen hoeveel % van de club kwam trainen.

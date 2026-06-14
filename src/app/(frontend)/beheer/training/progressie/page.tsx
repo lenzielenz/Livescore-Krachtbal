@@ -7,7 +7,7 @@ import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
 import { reeksNaam } from '@/lib/reeksen'
 import { TRAINING_METRICS, type TrainingMeting } from '@/lib/training-metrics'
-import { TrainingNav } from '../TrainingNav'
+import { TrainingHero } from '../TrainingHero'
 import { TrainingPanel, type TrainingPlayer } from '../TrainingPanel'
 
 export const dynamic = 'force-dynamic'
@@ -91,10 +91,7 @@ export default async function TrainingProgressiePage() {
     <>
       <SiteHeader active="training" />
       <div className="site">
-        <h1 className="page-title">
-          Training <span className="brand">·</span> progressie
-        </h1>
-        <TrainingNav active="progressie" />
+        <TrainingHero active="progressie" />
         <p className="wb-intro">
           Meet sprintsnelheid over 18 m (vooruit/achteruit) en werpafstand per aanloop (4/9/18 m), en
           volg de progressie per speler op.
