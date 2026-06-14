@@ -24,6 +24,16 @@ import './voeding.css'
 
 const DAY_ABBR = ['Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za', 'Zo']
 
+type TabKey = 'overzicht' | 'maaltijden' | 'timing' | 'wedstrijd' | 'aanvulling' | 'weekplan'
+const TABS: { k: TabKey; ico: string; label: string }[] = [
+  { k: 'overzicht', ico: '📊', label: 'Overzicht' },
+  { k: 'maaltijden', ico: '🍽️', label: 'Maaltijden' },
+  { k: 'timing', ico: '⏱️', label: 'Timing' },
+  { k: 'wedstrijd', ico: '🏟️', label: 'Wedstrijddag' },
+  { k: 'aanvulling', ico: '💊', label: 'Aanvulling' },
+  { k: 'weekplan', ico: '📅', label: 'Weekplan' },
+]
+
 const ACTIVITIES: { v: Activity; label: string; hint: string }[] = [
   { v: 'laag', label: 'Laag', hint: 'weinig beweging, zittend werk' },
   { v: 'licht', label: 'Licht', hint: '1–2× sport per week' },
@@ -121,7 +131,7 @@ export function NutritionPlanner({ initial, canSave = false }: { initial?: Nutri
   const [diet, setDiet] = useState<Diet>(initial?.diet ?? 'alles')
   const [target, setTarget] = useState(initial?.targetWeightKg || '')
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
-  const [showWeek, setShowWeek] = useState(false)
+  const [tab, setTab] = useState<TabKey>('overzicht')
   const [weekShift, setWeekShift] = useState(0)
   const [copied, setCopied] = useState(false)
   // Trainingsdagen voor de carb-cycling, standaard gespreid uit het aantal trainingen/week.
@@ -176,8 +186,8 @@ export function NutritionPlanner({ initial, canSave = false }: { initial?: Nutri
     () => (plan ? { trainingDays: trainDays, trainingCalories: plan.trainingDayCalories, restCalories: plan.restDayCalories, shift: weekShift } : undefined),
     [plan, trainDays, weekShift],
   )
-  const week = useMemo(() => (plan && showWeek ? buildWeekPlan(plan.calories, diet, weekOpts) : null), [plan, showWeek, diet, weekOpts])
-  const shopping = useMemo(() => (plan && showWeek ? buildShoppingList(plan.calories, diet, weekOpts) : null), [plan, showWeek, diet, weekOpts])
+  const week = useMemo(() => (plan ? buildWeekPlan(plan.calories, diet, weekOpts) : null), [plan, diet, weekOpts])
+  const shopping = useMemo(() => (plan ? buildShoppingList(plan.calories, diet, weekOpts) : null), [plan, diet, weekOpts])
 
   // Op-maat extra's, afgeleid van het plan.
   const protein = useMemo(() => (plan ? proteinTiming(plan.protein) : null), [plan])
@@ -286,247 +296,259 @@ export function NutritionPlanner({ initial, canSave = false }: { initial?: Nutri
 
       {plan && macroKcal && (
         <div className="vd-result">
-          <div className="vd-hero">
-            <span className="vd-hero-goal">{plan.goalLabel}</span>
-            <span className="vd-hero-kcal">{plan.calories.toLocaleString('nl-BE')}</span>
-            <span className="vd-hero-unit">kcal / dag (gemiddeld)</span>
-            <span className="vd-hero-sub">basis {plan.bmr} · verbruik ±{plan.tdee} kcal · 💧 {(plan.hydrationMl / 1000).toFixed(1)} L water/dag</span>
-            <span className="vd-hero-sub">BMI {plan.bmi.toString().replace('.', ',')} ({plan.bmiText}) · {changeText(plan.weeklyChangeKg)} · 🥄 {plan.proteinPerMeal} g eiwit per maaltijd</span>
-            <div className="vd-hero-pills">
-              <span className="vd-pill">{plan.macroStyleLabel}</span>
-              <span className="vd-pill">🍽️ {plan.dietLabel}</span>
-            </div>
-          </div>
+          {/* Tabbladen — spring meteen naar wat je zoekt, geen eindeloze scroll. */}
+          <nav className="vd-tabs" aria-label="Voedingsplan-onderdelen">
+            {TABS.map((t) => (
+              <button key={t.k} type="button" className={`vd-tab${tab === t.k ? ' on' : ''}`} onClick={() => setTab(t.k)} aria-pressed={tab === t.k}>
+                <span aria-hidden>{t.ico}</span> <span className="vd-tab-lbl">{t.label}</span>
+              </button>
+            ))}
+          </nav>
 
-          {plan.target && (
-            <div className={`vd-target${plan.target.weeks == null ? ' off' : ''}`}>
-              <span className="vd-target-ico" aria-hidden>🎯</span>
-              {plan.target.weeks == null ? (
-                <span className="vd-target-txt">
-                  Met dit doel ga je niet richting <b>{plan.target.weightKg} kg</b>. Kies een passend doel
-                  ({plan.target.direction === 'down' ? 'afvallen' : 'spiermassa/op gewicht'}) om er te geraken.
-                </span>
-              ) : (
-                <span className="vd-target-txt">
-                  Naar <b>{plan.target.weightKg} kg</b> ({plan.target.deltaKg.toString().replace('.', ',')} kg):
-                  ± <b>{plan.target.weeks} weken</b> bij dit tempo — rond <b>{etaText(plan.target.weeks)}</b>.
-                </span>
-              )}
+          {/* Overzicht */}
+          <section className={`vd-panel${tab === 'overzicht' ? ' on' : ''}`}>
+            <div className="vd-hero">
+              <span className="vd-hero-goal">{plan.goalLabel}</span>
+              <span className="vd-hero-kcal">{plan.calories.toLocaleString('nl-BE')}</span>
+              <span className="vd-hero-unit">kcal / dag (gemiddeld)</span>
+              <span className="vd-hero-sub">basis {plan.bmr} · verbruik ±{plan.tdee} kcal · 💧 {(plan.hydrationMl / 1000).toFixed(1)} L water/dag</span>
+              <span className="vd-hero-sub">BMI {plan.bmi.toString().replace('.', ',')} ({plan.bmiText}) · {changeText(plan.weeklyChangeKg)} · 🥄 {plan.proteinPerMeal} g eiwit per maaltijd</span>
+              <div className="vd-hero-pills">
+                <span className="vd-pill">{plan.macroStyleLabel}</span>
+                <span className="vd-pill">🍽️ {plan.dietLabel}</span>
+              </div>
             </div>
-          )}
 
-          <div className="vd-macrowrap">
-            <MacroDonut p={macroKcal.p} c={macroKcal.c} f={macroKcal.f} />
-            <div className="vd-macros">
-              {([
-                { k: 'Eiwit', g: plan.protein, kcal: macroKcal.p, cls: 'p', tip: 'spierbehoud & herstel' },
-                { k: 'Koolhydraten', g: plan.carbs, kcal: macroKcal.c, cls: 'c', tip: 'energie & prestatie' },
-                { k: 'Vet', g: plan.fat, kcal: macroKcal.f, cls: 'f', tip: 'hormonen & vitamines' },
-              ] as const).map((m) => (
-                <div key={m.k} className={`vd-macro ${m.cls}`}>
-                  <span className="vd-macro-g">{m.g} g</span>
-                  <span className="vd-macro-k">{m.k}</span>
-                  <span className="vd-macro-bar"><i style={{ width: `${Math.round((m.kcal / macroTotal) * 100)}%` }} /></span>
-                  <span className="vd-macro-sub">{Math.round((m.kcal / macroTotal) * 100)}% · {m.tip}</span>
+            {plan.target && (
+              <div className={`vd-target${plan.target.weeks == null ? ' off' : ''}`}>
+                <span className="vd-target-ico" aria-hidden>🎯</span>
+                {plan.target.weeks == null ? (
+                  <span className="vd-target-txt">
+                    Met dit doel ga je niet richting <b>{plan.target.weightKg} kg</b>. Kies een passend doel
+                    ({plan.target.direction === 'down' ? 'afvallen' : 'spiermassa/op gewicht'}) om er te geraken.
+                  </span>
+                ) : (
+                  <span className="vd-target-txt">
+                    Naar <b>{plan.target.weightKg} kg</b> ({plan.target.deltaKg.toString().replace('.', ',')} kg):
+                    ± <b>{plan.target.weeks} weken</b> bij dit tempo — rond <b>{etaText(plan.target.weeks)}</b>.
+                  </span>
+                )}
+              </div>
+            )}
+
+            <div className="vd-macrowrap">
+              <MacroDonut p={macroKcal.p} c={macroKcal.c} f={macroKcal.f} />
+              <div className="vd-macros">
+                {([
+                  { k: 'Eiwit', g: plan.protein, kcal: macroKcal.p, cls: 'p', tip: 'spierbehoud & herstel' },
+                  { k: 'Koolhydraten', g: plan.carbs, kcal: macroKcal.c, cls: 'c', tip: 'energie & prestatie' },
+                  { k: 'Vet', g: plan.fat, kcal: macroKcal.f, cls: 'f', tip: 'hormonen & vitamines' },
+                ] as const).map((m) => (
+                  <div key={m.k} className={`vd-macro ${m.cls}`}>
+                    <span className="vd-macro-g">{m.g} g</span>
+                    <span className="vd-macro-k">{m.k}</span>
+                    <span className="vd-macro-bar"><i style={{ width: `${Math.round((m.kcal / macroTotal) * 100)}%` }} /></span>
+                    <span className="vd-macro-sub">{Math.round((m.kcal / macroTotal) * 100)}% · {m.tip}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          {/* Maaltijden */}
+          <section className={`vd-panel${tab === 'maaltijden' ? ' on' : ''}`}>
+            <h3 className="vd-h3">📅 Koolhydraten timen: trainingsdag vs rustdag</h3>
+            <div className="vd-split">
+              <div className="vd-day train">
+                <span className="vd-day-h">🏃 Trainings-/wedstrijddag</span>
+                <span className="vd-day-kcal">{plan.trainingDayCalories.toLocaleString('nl-BE')} kcal</span>
+                <span className="vd-day-sub">{plan.trainingDayCarbs} g koolhydraten — meer brandstof rond inspanning</span>
+              </div>
+              <div className="vd-day rest">
+                <span className="vd-day-h">🛋️ Rustdag</span>
+                <span className="vd-day-kcal">{plan.restDayCalories.toLocaleString('nl-BE')} kcal</span>
+                <span className="vd-day-sub">{plan.restDayCarbs} g koolhydraten — eiwit & vet blijven gelijk</span>
+              </div>
+            </div>
+
+            <h3 className="vd-h3">🍳 Voorbeelddag op maat <span className="vd-h3-sub">{plan.dietLabel.toLowerCase()}</span></h3>
+            <div className="vd-meals">
+              {plan.example.map((m) => (
+                <div key={m.name} className="vd-meal">
+                  <span className="vd-meal-top"><b>{m.name}</b></span>
+                  <ul className="vd-ex">
+                    {m.items.map((it, i) => (
+                      <li key={i}><b>{it.amount}</b> {it.food}</li>
+                    ))}
+                  </ul>
                 </div>
               ))}
             </div>
-          </div>
 
-          <h3 className="vd-h3">📅 Koolhydraten timen: trainingsdag vs rustdag</h3>
-          <div className="vd-split">
-            <div className="vd-day train">
-              <span className="vd-day-h">🏃 Trainings-/wedstrijddag</span>
-              <span className="vd-day-kcal">{plan.trainingDayCalories.toLocaleString('nl-BE')} kcal</span>
-              <span className="vd-day-sub">{plan.trainingDayCarbs} g koolhydraten — meer brandstof rond inspanning</span>
+            <h3 className="vd-h3">🍽️ Verdeling over de dag</h3>
+            <div className="vd-meals">
+              {plan.meals.map((m) => (
+                <div key={m.name} className="vd-meal">
+                  <span className="vd-meal-top"><b>{m.name}</b><span className="vd-meal-kcal">{m.kcal} kcal · {m.pct}%</span></span>
+                  <span className="vd-meal-tip">{m.tip}</span>
+                </div>
+              ))}
             </div>
-            <div className="vd-day rest">
-              <span className="vd-day-h">🛋️ Rustdag</span>
-              <span className="vd-day-kcal">{plan.restDayCalories.toLocaleString('nl-BE')} kcal</span>
-              <span className="vd-day-sub">{plan.restDayCarbs} g koolhydraten — eiwit & vet blijven gelijk</span>
-            </div>
-          </div>
+          </section>
 
-          <h3 className="vd-h3">🍳 Voorbeelddag op maat <span className="vd-h3-sub">{plan.dietLabel.toLowerCase()}</span></h3>
-          <div className="vd-meals">
-            {plan.example.map((m) => (
-              <div key={m.name} className="vd-meal">
-                <span className="vd-meal-top"><b>{m.name}</b></span>
-                <ul className="vd-ex">
-                  {m.items.map((it, i) => (
-                    <li key={i}><b>{it.amount}</b> {it.food}</li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-
-          <h3 className="vd-h3">🍽️ Verdeling over de dag</h3>
-          <div className="vd-meals">
-            {plan.meals.map((m) => (
-              <div key={m.name} className="vd-meal">
-                <span className="vd-meal-top"><b>{m.name}</b><span className="vd-meal-kcal">{m.kcal} kcal · {m.pct}%</span></span>
-                <span className="vd-meal-tip">{m.tip}</span>
-              </div>
-            ))}
-          </div>
-
-          {/* Eiwit-timing over de dag. */}
-          {protein && (
-            <>
-              <h3 className="vd-h3">🥩 Eiwit-timing <span className="vd-h3-sub">spreid voor maximaal herstel</span></h3>
-              <div className="vd-timeline">
-                {protein.map((s) => (
-                  <div key={s.moment} className="vd-tl-item">
-                    <span className="vd-tl-when">{s.moment}</span>
-                    <span className="vd-tl-what"><b>{s.grams} g</b> eiwit</span>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-
-          {/* Hydratatieschema. */}
-          {hydration && (
-            <>
-              <h3 className="vd-h3">💧 Hydratatieschema <span className="vd-h3-sub">±{(plan.hydrationMl / 1000).toFixed(1)} L/dag</span></h3>
-              <div className="vd-timeline">
-                {hydration.map((s) => (
-                  <div key={s.moment} className="vd-tl-item">
-                    <span className="vd-tl-when">{s.moment}</span>
-                    <span className="vd-tl-what"><b>{s.ml} ml</b> — {s.tip}</span>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-
-          {/* Wedstrijddag-fueling tijdlijn. */}
-          {fuel && (
-            <>
-              <h3 className="vd-h3">🏟️ Wedstrijddag-fueling <span className="vd-h3-sub">tijdlijn op maat</span></h3>
-              <div className="vd-fuel">
-                {fuel.map((s, i) => (
-                  <div key={i} className="vd-fuel-step">
-                    <span className="vd-fuel-when">{s.when}</span>
-                    <span className="vd-fuel-what">{s.what}</span>
-                    <span className="vd-fuel-why">{s.why}</span>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-
-          {/* Supplementenadvies. */}
-          {supps && (
-            <>
-              <h3 className="vd-h3">💊 Supplementen <span className="vd-h3-sub">evidence-based</span></h3>
-              <div className="vd-supps">
-                {supps.map((s, i) => (
-                  <div key={i} className={`vd-supp${s.name === 'Let op' ? ' note' : ''}`}>
-                    <span className="vd-supp-top">
-                      <b>{s.name}</b>
-                      {s.name !== 'Let op' && <span className={`vd-supp-tag t${s.tag === 'Sterk bewezen' ? '1' : s.tag === 'Nuttig' ? '2' : '3'}`}>{s.tag}</span>}
-                    </span>
-                    {s.dose !== '—' && <span className="vd-supp-dose">{s.dose}</span>}
-                    <span className="vd-supp-why">{s.why}</span>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-
-          {/* Micronutriënt-aandachtspunten. */}
-          {micros && (
-            <>
-              <h3 className="vd-h3">🔬 Aandachtspunten <span className="vd-h3-sub">{plan.dietLabel.toLowerCase()}</span></h3>
-              <div className="vd-micros">
-                {micros.map((m, i) => (
-                  <div key={i} className="vd-micro">
-                    <span className="vd-micro-n">{m.nutrient}</span>
-                    <span className="vd-micro-why">{m.why}</span>
-                    <span className="vd-micro-src">📍 {m.sources}</span>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-
-          <h3 className="vd-h3">⚡ Sporttips</h3>
-          <ul className="vd-tips">
-            {plan.tips.map((t, i) => <li key={i}>{t}</li>)}
-          </ul>
-
-          {/* Week-eetplan + boodschappenlijst (kant-en-klaar, op maat). */}
-          <div className="vd-weekbar">
-            <button type="button" className="vd-week-toggle" onClick={() => setShowWeek((v) => !v)}>
-              {showWeek ? '▾ Verberg weekplan' : '📅 Toon weekplan + boodschappenlijst'}
-            </button>
-            {showWeek && (
-              <button type="button" className="vd-week-print" onClick={() => window.print()}>🖨️ Print / bewaar als PDF</button>
-            )}
-          </div>
-
-          {showWeek && week && shopping && (
-            <div className="vd-week">
-              <h3 className="vd-h3">📅 Jouw week-eetplan <span className="vd-h3-sub">7 dagen, gevarieerd</span></h3>
-
-              {/* Carb-cycling: kies je trainingsdagen → meer koolhydraten/calorieën op die dagen. */}
-              <div className="vd-cycle">
-                <span className="vd-cycle-lbl">🏃 Trainingsdagen (meer koolhydraten):</span>
-                <div className="vd-chips">
-                  {DAY_ABBR.map((d, i) => (
-                    <button
-                      key={i}
-                      type="button"
-                      className={`vd-chip vd-chip-day${trainDays[i] ? ' on' : ''}`}
-                      onClick={() => setTrainDays((arr) => arr.map((v, j) => (j === i ? !v : v)))}
-                    >
-                      {d}
-                    </button>
+          {/* Timing */}
+          <section className={`vd-panel${tab === 'timing' ? ' on' : ''}`}>
+            {protein && (
+              <>
+                <h3 className="vd-h3">🥩 Eiwit-timing <span className="vd-h3-sub">spreid voor maximaal herstel</span></h3>
+                <div className="vd-timeline">
+                  {protein.map((s) => (
+                    <div key={s.moment} className="vd-tl-item">
+                      <span className="vd-tl-when">{s.moment}</span>
+                      <span className="vd-tl-what"><b>{s.grams} g</b> eiwit</span>
+                    </div>
                   ))}
                 </div>
-                <button type="button" className="vd-week-print vd-shuffle" onClick={() => setWeekShift((s) => s + 1)}>🔀 Andere variatie</button>
-              </div>
+              </>
+            )}
+            {hydration && (
+              <>
+                <h3 className="vd-h3">💧 Hydratatieschema <span className="vd-h3-sub">±{(plan.hydrationMl / 1000).toFixed(1)} L/dag</span></h3>
+                <div className="vd-timeline">
+                  {hydration.map((s) => (
+                    <div key={s.moment} className="vd-tl-item">
+                      <span className="vd-tl-when">{s.moment}</span>
+                      <span className="vd-tl-what"><b>{s.ml} ml</b> — {s.tip}</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </section>
 
-              <div className="vd-week-grid">
-                {week.map((d) => (
-                  <div key={d.day} className={`vd-wday ${d.kind}`}>
-                    <span className="vd-wday-h">
-                      {d.day}
-                      <span className="vd-wday-meta">
-                        {d.kind === 'train' ? '🏃 ' : d.kind === 'rest' ? '🛋️ ' : ''}{d.calories.toLocaleString('nl-BE')} kcal
+          {/* Wedstrijddag */}
+          <section className={`vd-panel${tab === 'wedstrijd' ? ' on' : ''}`}>
+            {fuel && (
+              <>
+                <h3 className="vd-h3">🏟️ Wedstrijddag-fueling <span className="vd-h3-sub">tijdlijn op maat</span></h3>
+                <div className="vd-fuel">
+                  {fuel.map((s, i) => (
+                    <div key={i} className="vd-fuel-step">
+                      <span className="vd-fuel-when">{s.when}</span>
+                      <span className="vd-fuel-what">{s.what}</span>
+                      <span className="vd-fuel-why">{s.why}</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </section>
+
+          {/* Aanvulling: supplementen + micronutriënten + sporttips */}
+          <section className={`vd-panel${tab === 'aanvulling' ? ' on' : ''}`}>
+            {supps && (
+              <>
+                <h3 className="vd-h3">💊 Supplementen <span className="vd-h3-sub">evidence-based</span></h3>
+                <div className="vd-supps">
+                  {supps.map((s, i) => (
+                    <div key={i} className={`vd-supp${s.name === 'Let op' ? ' note' : ''}`}>
+                      <span className="vd-supp-top">
+                        <b>{s.name}</b>
+                        {s.name !== 'Let op' && <span className={`vd-supp-tag t${s.tag === 'Sterk bewezen' ? '1' : s.tag === 'Nuttig' ? '2' : '3'}`}>{s.tag}</span>}
                       </span>
-                    </span>
-                    {d.meals.map((m) => (
-                      <div key={m.name} className="vd-wmeal">
-                        <span className="vd-wmeal-h">{m.name}</span>
-                        <span className="vd-wmeal-items">{m.items.map((it) => `${it.amount} ${it.food}`).join(' · ')}</span>
-                      </div>
+                      {s.dose !== '—' && <span className="vd-supp-dose">{s.dose}</span>}
+                      <span className="vd-supp-why">{s.why}</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+            {micros && (
+              <>
+                <h3 className="vd-h3">🔬 Aandachtspunten <span className="vd-h3-sub">{plan.dietLabel.toLowerCase()}</span></h3>
+                <div className="vd-micros">
+                  {micros.map((m, i) => (
+                    <div key={i} className="vd-micro">
+                      <span className="vd-micro-n">{m.nutrient}</span>
+                      <span className="vd-micro-why">{m.why}</span>
+                      <span className="vd-micro-src">📍 {m.sources}</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+            <h3 className="vd-h3">⚡ Sporttips</h3>
+            <ul className="vd-tips">
+              {plan.tips.map((t, i) => <li key={i}>{t}</li>)}
+            </ul>
+          </section>
+
+          {/* Weekplan + boodschappenlijst */}
+          <section className={`vd-panel${tab === 'weekplan' ? ' on' : ''}`}>
+            {week && shopping && (
+              <div className="vd-week">
+                <h3 className="vd-h3">
+                  📅 Jouw week-eetplan <span className="vd-h3-sub">7 dagen, gevarieerd</span>
+                  <button type="button" className="vd-copy" onClick={() => window.print()}>🖨️ Print / PDF</button>
+                </h3>
+
+                {/* Carb-cycling: kies je trainingsdagen → meer koolhydraten/calorieën op die dagen. */}
+                <div className="vd-cycle">
+                  <span className="vd-cycle-lbl">🏃 Trainingsdagen (meer koolhydraten):</span>
+                  <div className="vd-chips">
+                    {DAY_ABBR.map((d, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        className={`vd-chip vd-chip-day${trainDays[i] ? ' on' : ''}`}
+                        onClick={() => setTrainDays((arr) => arr.map((v, j) => (j === i ? !v : v)))}
+                      >
+                        {d}
+                      </button>
                     ))}
                   </div>
-                ))}
-              </div>
+                  <button type="button" className="vd-week-print vd-shuffle" onClick={() => setWeekShift((s) => s + 1)}>🔀 Andere variatie</button>
+                </div>
 
-              <h3 className="vd-h3">
-                🛒 Boodschappenlijst voor de week <span className="vd-h3-sub">{plan.dietLabel.toLowerCase()}</span>
-                <button type="button" className="vd-copy" onClick={copyShopping}>{copied ? '✓ Gekopieerd' : '📋 Kopieer lijst'}</button>
-              </h3>
-              <div className="vd-shop">
-                {shopping.map((g) => (
-                  <div key={g.cat} className="vd-shop-cat">
-                    <span className="vd-shop-h">{g.cat}</span>
-                    <ul className="vd-shop-list">
-                      {g.items.map((it, i) => (
-                        <li key={i}><b>{it.amount}</b> {it.food}</li>
+                <div className="vd-week-grid">
+                  {week.map((d) => (
+                    <div key={d.day} className={`vd-wday ${d.kind}`}>
+                      <span className="vd-wday-h">
+                        {d.day}
+                        <span className="vd-wday-meta">
+                          {d.kind === 'train' ? '🏃 ' : d.kind === 'rest' ? '🛋️ ' : ''}{d.calories.toLocaleString('nl-BE')} kcal
+                        </span>
+                      </span>
+                      {d.meals.map((m) => (
+                        <div key={m.name} className="vd-wmeal">
+                          <span className="vd-wmeal-h">{m.name}</span>
+                          <span className="vd-wmeal-items">{m.items.map((it) => `${it.amount} ${it.food}`).join(' · ')}</span>
+                        </div>
                       ))}
-                    </ul>
-                  </div>
-                ))}
+                    </div>
+                  ))}
+                </div>
+
+                <h3 className="vd-h3">
+                  🛒 Boodschappenlijst voor de week <span className="vd-h3-sub">{plan.dietLabel.toLowerCase()}</span>
+                  <button type="button" className="vd-copy" onClick={copyShopping}>{copied ? '✓ Gekopieerd' : '📋 Kopieer lijst'}</button>
+                </h3>
+                <div className="vd-shop">
+                  {shopping.map((g) => (
+                    <div key={g.cat} className="vd-shop-cat">
+                      <span className="vd-shop-h">{g.cat}</span>
+                      <ul className="vd-shop-list">
+                        {g.items.map((it, i) => (
+                          <li key={i}><b>{it.amount}</b> {it.food}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+                <p className="vd-week-note">Richtlijn: porties zijn geschaald op je daginname en gemiddeld over de week — pas gerust aan naar smaak en honger.</p>
               </div>
-              <p className="vd-week-note">Richtlijn: porties zijn geschaald op je daginname en gemiddeld over de week — pas gerust aan naar smaak en honger.</p>
-            </div>
-          )}
+            )}
+          </section>
         </div>
       )}
     </div>
