@@ -36,13 +36,12 @@
 @keyframes rad-twinkle { from { opacity: 0.35; } to { opacity: 1; } }
 
 /* Flapper-pijl, scharnierend aan de top: tikt tegen elke pin die passeert (JS-gestuurd). */
-/* Metalen gouden flapper-pijl (zelfde kwaliteit als de gouden rand), scharnierend aan de top. */
+/* Metalen gouden flapper-pijl als SVG (zelfde kwaliteit als de rand), scharnierend aan de top.
+   SVG i.p.v. clip-path → geen flikkeren/verdwijnen tijdens het draaien. */
 .rad-flap {
-  position: absolute; top: 50%; left: 50%; z-index: 6; width: 30px; height: 34px;
-  clip-path: polygon(50% 100%, 0 0, 100% 0);
-  background: linear-gradient(180deg, #fff6d6 0%, #ffe39a 32%, #f4a300 74%, #b8851c 100%);
+  position: absolute; top: 50%; left: 50%; z-index: 6; width: 30px; height: 34px; overflow: visible;
   transform-origin: 50% 0%;
-  filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.6));
+  filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.6));
 }
 /* Pinnen (stokjes) op de rand: gepolijste messing balletjes met highlight, schaduw en voetje. */
 .rad-peg {
@@ -70,15 +69,9 @@
     radial-gradient(60% 30% at 50% 6%, rgba(255, 255, 255, 0.5), transparent 60%),
     radial-gradient(80% 70% at 76% 92%, rgba(0, 0, 0, 0.5), transparent 56%);
   box-shadow:
-    inset 0 0 0 2px rgba(255, 255, 255, 0.12),
-    inset 0 22px 36px rgba(255, 255, 255, 0.08),
-    inset 0 -26px 52px rgba(0, 0, 0, 0.55),
-    inset 0 0 60px rgba(0, 0, 0, 0.28);
-}
-/* Lichte concentrische structuur op de vakken voor extra diepte. */
-.rad-glass::after {
-  content: ''; position: absolute; inset: 14px; border-radius: 999px;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06), inset 0 0 0 10px rgba(0, 0, 0, 0.05);
+    inset 0 22px 36px rgba(255, 255, 255, 0.07),
+    inset 0 -26px 52px rgba(0, 0, 0, 0.5),
+    inset 0 0 50px rgba(0, 0, 0, 0.22);
 }
 /* Metalen klinknagels op de gouden rand. */
 .rad-studs { position: absolute; inset: 0; z-index: 2; }
@@ -156,15 +149,14 @@
 }
 .rad-hub-disc {
   position: relative; width: 100%; height: 100%; border-radius: 999px; overflow: hidden; display: grid; place-items: center;
-  background: radial-gradient(circle at 38% 28%, #313a44, #0a0d11 80%);
-  /* Diepe "put" + dunne gouden binnenring rond het logo. */
+  background: radial-gradient(circle at 40% 32%, #3a434e, #11151b 82%);
+  /* Subtiele put + dunne gouden binnenring rond het logo (laat het logo netjes ademen). */
   box-shadow:
-    inset 0 2px 5px rgba(0, 0, 0, 0.8),
-    inset 0 -3px 6px rgba(0, 0, 0, 0.6),
-    inset 0 0 0 1px rgba(0, 0, 0, 0.7),
-    inset 0 0 0 3px rgba(255, 215, 120, 0.22);
+    inset 0 2px 4px rgba(0, 0, 0, 0.6),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.6),
+    inset 0 0 0 2px rgba(255, 215, 120, 0.18);
 }
-.rad-hub-logo { position: relative; z-index: 1; width: 84%; height: 84%; object-fit: contain; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.6)); }
+.rad-hub-logo { position: relative; z-index: 1; width: 80%; height: 80%; object-fit: contain; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.5)); }
 .rad-hub-fallback { position: relative; z-index: 1; font-size: 1.7rem; }
 /* Gebogen glasreflectie over de naaf (lichtbol). */
 .rad-hub-shine { position: absolute; inset: 0; border-radius: 999px; z-index: 2; pointer-events: none;
