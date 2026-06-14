@@ -40,6 +40,8 @@ export function Wheel({
   const [confetti, setConfetti] = useState(false)
   const [jackpot, setJackpot] = useState<'mega' | 'big' | null>(null)
   const [err, setErr] = useState<string | null>(null)
+  // Theatrale "opening": de eerste keer dat je het rad opent, gaan er rode gordijnen open.
+  const [curtain, setCurtain] = useState(false)
   const rotRef = useRef(0)
   const acRef = useRef<AudioContext | null>(null)
   const wheelRef = useRef<HTMLDivElement | null>(null)
@@ -53,6 +55,15 @@ export function Wheel({
   const FLAP_BASE = 'translate(-50%, -157px)'
 
   useEffect(() => () => { if (rafRef.current) cancelAnimationFrame(rafRef.current) }, [])
+  // Eén keer per sessie: het gordijn-openingsmoment.
+  useEffect(() => {
+    try {
+      if (!sessionStorage.getItem('kb-rad-opened')) {
+        setCurtain(true)
+        sessionStorage.setItem('kb-rad-opened', '1')
+      }
+    } catch {}
+  }, [])
 
   // De clubkleuren wisselen elkaar af; de hoogste waarde (jackpot) krijgt altijd goud.
   const color = (i: number, mult: number) => (mult === maxMult ? GOLD : i % 2 === 0 ? primary : secondary)
@@ -204,7 +215,7 @@ export function Wheel({
         <div className="rad-casing" aria-hidden />
         <div className="rad-bulbs" aria-hidden>
           {Array.from({ length: 28 }).map((_, i) => (
-            <span key={i} className="rad-bulb" style={{ transform: `translate(-50%,-50%) rotate(${i * (360 / 28)}deg) translateY(-150px)`, animationDelay: `${(i % 8) * 0.09}s` }} />
+            <span key={i} className="rad-bulb" style={{ transform: `translate(-50%,-50%) rotate(${i * (360 / 28)}deg) translateY(-150px)`, animationDelay: `${i * 0.05}s` }} />
           ))}
         </div>
         {/* Flapper-pijl: tikt tegen elke pin die passeert. */}
@@ -264,6 +275,13 @@ export function Wheel({
         {jackpot && (
           <div className={`rad-jackpot rad-jackpot-${jackpot}`} aria-hidden>
             <span className="rad-jackpot-txt">{jackpot === 'mega' ? '🎉 JACKPOT!' : '🔥 TOP!'}</span>
+          </div>
+        )}
+        {curtain && (
+          <div className="rad-curtains" aria-hidden>
+            <div className="rad-valance" />
+            <div className="rad-curtain l" onAnimationEnd={() => setCurtain(false)} />
+            <div className="rad-curtain r" />
           </div>
         )}
       </div>
