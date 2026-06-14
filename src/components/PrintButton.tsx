@@ -1,13 +1,13 @@
 'use client'
 
-// Print-knop die de printmodus op <html> zet (data-print="plan" | "dossier") zodat de print-CSS
-// precies het juiste deel toont, en de modus daarna weer opruimt.
+// Print-knop die de printmodus op <html> zet (data-print="plan" | "dossier" | "trainingplan")
+// zodat de print-CSS precies het juiste deel toont, en de modus daarna weer opruimt.
 export function PrintButton({
   mode,
   label,
   className = 'mp-print',
 }: {
-  mode: 'plan' | 'dossier'
+  mode: 'plan' | 'dossier' | 'trainingplan'
   label: string
   className?: string
 }) {

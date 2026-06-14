@@ -41,7 +41,8 @@ export async function POST(req: Request) {
       return Response.json({ ok: true })
     }
 
-    // Toevoegen.
+    // Toevoegen (action 'set' = upsert: vervangt een bestaand doel voor dezelfde speler+metriek,
+    // zodat het trainingsplan z'n doelen kan wegschrijven zonder duplicaten).
     const speler = Number(body.speler)
     const metriek = String(body.metriek ?? '')
     const doel = Number(body.doel)
@@ -49,6 +50,13 @@ export async function POST(req: Request) {
     if (!METRICS.includes(metriek)) return Response.json({ error: 'Ongeldige meetwaarde.' }, { status: 400 })
     if (!Number.isFinite(doel) || doel <= 0) return Response.json({ error: 'Geef een geldige streefwaarde.' }, { status: 400 })
     if (!(await ownsPlayer(speler))) return Response.json({ error: 'Deze speler hoort niet bij jouw club.' }, { status: 403 })
+
+    if (body.action === 'set') {
+      const existing = await payload
+        .find({ collection: 'trainingdoelen', where: { and: [{ speler: { equals: speler } }, { metriek: { equals: metriek } }] }, depth: 0, limit: 50, overrideAccess: true })
+        .catch(() => ({ docs: [] as { id: number }[] }))
+      for (const d of existing.docs) await payload.delete({ collection: 'trainingdoelen', id: (d as { id: number }).id, overrideAccess: true })
+    }
 
     const doc = await payload.create({
       collection: 'trainingdoelen',

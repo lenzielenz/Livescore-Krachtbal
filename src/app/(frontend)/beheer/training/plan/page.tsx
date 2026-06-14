@@ -1,15 +1,20 @@
 import Link from 'next/link'
 import type { Where } from 'payload'
 
+import { PrintButton } from '@/components/PrintButton'
 import { SiteHeader } from '@/components/SiteHeader'
-import { canTraining, userClubId } from '@/lib/access'
+import { canTraining, hasRole, isFederationLevel, userClubId } from '@/lib/access'
+import { competitionWhere } from '@/lib/analyse-access'
+import { getSelectedSeason } from '@/lib/analyse-season'
 import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
 import { reeksNaam } from '@/lib/reeksen'
+import { buildSeasonStats } from '@/lib/season-stats'
 import { TRAINING_METRICS, type TrainingMeting } from '@/lib/training-metrics'
 import {
   buildPlayerTrainingPlan,
   buildTeamTrainingPlan,
+  type MatchHints,
   type MetricAssessment,
   type PlanSession,
   type PlayerTrainingPlan,
@@ -17,6 +22,7 @@ import {
 } from '@/lib/training-plan'
 import { TrainingHero } from '../TrainingHero'
 import { PlanPicker } from './PlanPicker'
+import { SavePlanGoals } from './SavePlanGoals'
 import '../training.css'
 
 export const dynamic = 'force-dynamic'
@@ -208,23 +214,48 @@ export default async function TrainingPlanPage({ searchParams }: { searchParams:
   const metingenOf = (pid: number) => metingen.filter((m) => m.speler === pid)
   const doelenOf = (pid: number) => doelen.filter((d) => d.speler === pid)
 
-  let body: React.ReactNode
+  // Matchdata-hints per speler (echte competitiestats van de reeks) — voedt de focuskeuze.
+  const seizoen = await getSelectedSeason()
+  const seasonPlayers = reeks && reeks !== 'overig' ? await buildSeasonStats(payload, reeks, seizoen, competitionWhere()).catch(() => []) : []
+  const hintsBy = new Map<number, MatchHints>()
+  for (const sp of seasonPlayers) {
+    hintsBy.set(sp.playerId, {
+      conversion: sp.conversion,
+      avgDistance: sp.avgDistance,
+      rugShare: sp.goals ? sp.rug / sp.goals : null,
+      lossRate: sp.throws ? sp.lost / sp.throws : null,
+    })
+  }
+
+  // Wie mag doelen wegschrijven (federatie/club-beheerder)?
+  const canWrite = isFederationLevel(me) || hasRole(me, 'club-beheerder')
+
+  let body: React.ReactNode = null
+  let actions: React.ReactNode = null
   if (players.length === 0) {
     body = <p className="empty">Nog geen spelers gekoppeld. Voeg eerst leden toe.</p>
   } else if (speler !== 'team') {
     const p = inReeks.find((x) => String(x.id) === speler)
-    body = p ? (
-      <PlayerPlanView plan={buildPlayerTrainingPlan({ name: p.name, metingen: metingenOf(p.id), goals: doelenOf(p.id) })} />
-    ) : (
-      <p className="empty">Speler niet gevonden.</p>
-    )
+    if (p) {
+      const plan = buildPlayerTrainingPlan({ name: p.name, metingen: metingenOf(p.id), goals: doelenOf(p.id), hints: hintsBy.get(p.id) })
+      body = <PlayerPlanView plan={plan} />
+      actions = (
+        <>
+          {canWrite && <SavePlanGoals speler={p.id} targets={plan.targets} />}
+          <PrintButton mode="trainingplan" label="🖨️ Print plan" />
+        </>
+      )
+    } else {
+      body = <p className="empty">Speler niet gevonden.</p>
+    }
   } else {
-    const squad = inReeks.map((p) => ({ name: p.name, metingen: metingenOf(p.id), goals: doelenOf(p.id) }))
-    body = squad.length ? (
-      <TeamPlanView plan={buildTeamTrainingPlan({ squad })} />
-    ) : (
-      <p className="empty">Nog geen spelers in deze reeks.</p>
-    )
+    const squad = inReeks.map((p) => ({ name: p.name, metingen: metingenOf(p.id), goals: doelenOf(p.id), hints: hintsBy.get(p.id) }))
+    if (squad.length) {
+      body = <TeamPlanView plan={buildTeamTrainingPlan({ squad })} />
+      actions = <PrintButton mode="trainingplan" label="🖨️ Print plan" />
+    } else {
+      body = <p className="empty">Nog geen spelers in deze reeks.</p>
+    }
   }
 
   return (
@@ -234,11 +265,12 @@ export default async function TrainingPlanPage({ searchParams }: { searchParams:
         <TrainingHero active="plan" />
         <div className="an-head-bar">
           <p className="wb-intro" style={{ margin: 0 }}>
-            Een trainingsplan <strong>op maat</strong> uit de metingen, doelen en speelstijl — per ploeg of per speler.
+            Een trainingsplan <strong>op maat</strong> uit de metingen, doelen en wedstrijddata — per ploeg of per speler.
           </p>
           <PlanPicker reeks={reeks} reeksOptions={reeksOptions} speler={speler} spelerOptions={spelerOptions} />
         </div>
-        {body}
+        {actions && <div className="tp-actions">{actions}</div>}
+        <div id="training-plan">{body}</div>
       </div>
     </>
   )
