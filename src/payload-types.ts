@@ -594,6 +594,10 @@ export interface Match {
     | boolean
     | null;
   /**
+   * Puntenmultiplier voor de pronostiek (1 = normaal, 2 = bonus via het rad). Automatisch beheerd.
+   */
+  pronostiekBonus?: number | null;
+  /**
    * Wie deze analysewedstrijd opnam. Bepaalt wie ze ziet (privé per persoon).
    */
   analyseOwner?: (number | null) | User;
@@ -1417,6 +1421,7 @@ export interface MatchesSelect<T extends boolean = true> {
   liveShoutouts?: T;
   livePoll?: T;
   scorePredictions?: T;
+  pronostiekBonus?: T;
   analyseOwner?: T;
   finishedAt?: T;
   updatedAt?: T;

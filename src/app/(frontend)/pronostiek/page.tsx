@@ -35,14 +35,15 @@ export default async function PronostiekStandPage() {
     .map((m) => ({
       id: m.id as number,
       preds: Array.isArray((m as { scorePredictions?: unknown }).scorePredictions) ? (m as { scorePredictions: PredEntry[] }).scorePredictions : [],
+      bonus: Number((m as { pronostiekBonus?: unknown }).pronostiekBonus) || 1,
     }))
     .filter((m) => m.preds.length > 0)
 
-  const scored: { actual: { home: number; away: number }; preds: PredEntry[] }[] = []
+  const scored: { actual: { home: number; away: number }; preds: PredEntry[]; bonus: number }[] = []
   await Promise.all(
     withPreds.map(async (m) => {
       const st = await buildMatchState(payload, m.id).catch(() => null)
-      if (st) scored.push({ actual: { home: st.score.home, away: st.score.away }, preds: m.preds })
+      if (st) scored.push({ actual: { home: st.score.home, away: st.score.away }, preds: m.preds, bonus: m.bonus })
     }),
   )
 
@@ -54,7 +55,7 @@ export default async function PronostiekStandPage() {
       <SiteHeader active="stand" />
       <div className="site">
         <h1 className="page-title"><span className="brand">Pronostiekstand</span></h1>
-        <p className="vs-intro">Seizoen {seizoen} · <Link href="/" style={{ color: 'var(--accent)' }}>voorspel mee op een livewedstrijd</Link>.</p>
+        <p className="vs-intro">Seizoen {seizoen} · <Link href="/" style={{ color: 'var(--accent)' }}>voorspel mee op een livewedstrijd</Link> · <Link href="/pronostiek/rad" style={{ color: 'var(--accent)' }}>🎡 Bonusrad</Link>.</p>
         <details className="vs-rules">
           <summary>Hoe werken de punten?</summary>
           <ul>

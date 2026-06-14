@@ -458,6 +458,20 @@ export const Matches: CollectionConfig = {
       },
     },
     {
+      // Bonusrad: puntenmultiplier voor de pronostiek van deze wedstrijd (1 = normaal, 2 = bonus).
+      // De weekendwinnaar draait aan het rad en kiest zo 3 bonuswedstrijden voor het komende weekend.
+      name: 'pronostiekBonus',
+      label: 'Pronostiek-bonus (×)',
+      type: 'number',
+      defaultValue: 1,
+      min: 1,
+      max: 5,
+      admin: {
+        position: 'sidebar',
+        description: 'Puntenmultiplier voor de pronostiek (1 = normaal, 2 = bonus via het rad). Automatisch beheerd.',
+      },
+    },
+    {
       // Eigenaar van een analyse-opname: de gebruiker die deze (analyseOnly) wedstrijd opnam.
       // Analyse-data is privé per persoon — je ziet enkel je eigen opnames. Federatie/admin ziet
       // alles en kan zo achteraf alle data samenbrengen.

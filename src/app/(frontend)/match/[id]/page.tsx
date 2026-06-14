@@ -205,6 +205,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
         initialAway={myPred ? myPred.away : null}
         remaining={predRemaining}
         max={LIVE_PRONOSTIEK_MAX_PER_WEEKEND}
+        bonus={Number(matchDoc?.pronostiekBonus) || 1}
       />
       <Scoreboard
         matchId={matchId}

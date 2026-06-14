@@ -18,6 +18,7 @@ export function PronostiekWidget({
   initialAway,
   remaining,
   max,
+  bonus,
 }: {
   matchId: number
   status: string
@@ -31,7 +32,10 @@ export function PronostiekWidget({
   remaining?: number
   /** Maximum per speelweek. */
   max?: number
+  /** Puntenmultiplier via het bonusrad (1 = normaal, 2 = dubbele punten). */
+  bonus?: number
 }) {
+  const isBonus = typeof bonus === 'number' && bonus >= 2
   const [home, setHome] = useState('')
   const [away, setAway] = useState('')
   const [busy, setBusy] = useState(false)
@@ -73,7 +77,7 @@ export function PronostiekWidget({
     return (
       <div className="pn-line pn-line-done">
         <span className="pn-line-ic">✓</span>
-        <span>Pronostiek binnen · <b>{locked.home}–{locked.away}</b> <span className="pn-dim">(enkel jij ziet dit)</span></span>
+        <span>Pronostiek binnen · <b>{locked.home}–{locked.away}</b> {isBonus && <span className="pn-bonus">✨ ×2</span>} <span className="pn-dim">(enkel jij ziet dit)</span></span>
       </div>
     )
   }
@@ -111,6 +115,7 @@ export function PronostiekWidget({
       <h3 className="pn-h">
         <span className="pn-dot" aria-hidden />
         🔮 Pronostiek{status === 'live' && <span className="pn-live">· match bezig</span>}
+        {isBonus && <span className="pn-bonus">✨ Dubbele punten</span>}
         {typeof remaining === 'number' && (
           <span className="pn-left">nog {remaining}{max ? `/${max}` : ''} dit weekend</span>
         )}

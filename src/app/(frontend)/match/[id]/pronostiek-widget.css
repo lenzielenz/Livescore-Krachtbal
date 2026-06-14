@@ -24,6 +24,9 @@
 .pn-line-ic { flex: 0 0 auto; font-size: 0.95rem; opacity: 0.85; }
 .pn-line-done .pn-line-ic { display: grid; place-items: center; width: 18px; height: 18px; border-radius: 999px; background: #06d6a0; color: #06140d; font-size: 0.72rem; font-weight: 900; opacity: 1; }
 .pn-dim { color: var(--dim); }
+
+/* Bonusrad-badge: deze wedstrijd levert dubbele punten op. */
+.pn-bonus { display: inline-flex; align-items: center; gap: 3px; padding: 1px 8px; border-radius: 999px; font-size: 0.72rem; font-weight: 800; color: #3a2600; background: linear-gradient(135deg, #ffd166, #f4a300); }
 .pn-h { margin: 0 0 10px; font-size: 0.98rem; font-weight: 800; color: var(--txt); }
 .pn-live { margin-left: 8px; font-size: 0.74rem; font-weight: 700; color: var(--accent); }
 .pn-note { margin: 0; font-size: 0.88rem; color: var(--dim); line-height: 1.45; }
