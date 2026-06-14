@@ -592,6 +592,28 @@ export function Scorekeeper({
         {active && poss && (
           <div className="sk-rail-worp">{poss.freeThrow ? 'VW' : `${poss.nextThrowNumber}/${poss.throwsAllowed}`}</div>
         )}
+        {/* Globale beheerknoppen onderaan de zijbalken (zo houdt het veld alle hoogte). */}
+        {!isScheduled && (
+          <div className="sk-rail-acts">
+            {side === 'home' ? (
+              <>
+                <button type="button" className="sk-rail-act warn" disabled={busy} onClick={() => act({ action: 'undo' })} title="Ongedaan maken">↶<span>Undo</span></button>
+                {isLive && (
+                  <button type="button" className="sk-rail-act" disabled={busy} onClick={() => act({ action: 'referee_stop' })} title="Scheidsrechter-minuut / onderbreking">⏱<span>SR-min</span></button>
+                )}
+              </>
+            ) : (
+              <>
+                {isLive && state.match.currentHalf < 2 && !atHalfTime && (
+                  <button type="button" className="sk-rail-act" disabled={busy} onClick={() => act({ action: 'endhalf' })} title="Einde eerste helft">⏹<span>Einde 1e</span></button>
+                )}
+                {isLive && (
+                  <button type="button" className="sk-rail-act danger" disabled={busy} onClick={() => { if (window.confirm('Wedstrijd beëindigen?')) act({ action: 'finish' }) }} title="Wedstrijd beëindigen">🏁<span>Einde</span></button>
+                )}
+              </>
+            )}
+          </div>
+        )}
       </div>
     )
   }
@@ -1047,21 +1069,6 @@ export function Scorekeeper({
       </header>
 
       {error && <div className="sk-error" onClick={() => setError(null)}>{error}</div>}
-
-      {!isScheduled && (
-        <div className="sk-toolbar">
-          <button type="button" className="tb warn" disabled={busy} onClick={() => act({ action: 'undo' })}>↶ Undo</button>
-          {isLive && (
-            <button type="button" className="tb" disabled={busy} onClick={() => act({ action: 'referee_stop' })} title="Scheidsrechter-minuut / onderbreking">⏱ SR-minuut</button>
-          )}
-          {isLive && state.match.currentHalf < 2 && !atHalfTime && (
-            <button type="button" className="tb" disabled={busy} onClick={() => act({ action: 'endhalf' })}>⏹ Einde 1e helft</button>
-          )}
-          {isLive && (
-            <button type="button" className="tb danger" disabled={busy} onClick={() => { if (window.confirm('Wedstrijd beëindigen?')) act({ action: 'finish' }) }}>🏁 Einde</button>
-          )}
-        </div>
-      )}
 
       {isScheduled && !unlocked ? (
         <div className="sk-kickoff">

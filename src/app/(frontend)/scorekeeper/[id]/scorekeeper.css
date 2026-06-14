@@ -125,10 +125,25 @@
    onbeperkt groeien; zo staan de pijl en knoppen altijd vlak naast het veld. */
 .sk-arena { flex: 1 1 auto; min-height: 0; display: flex; align-items: stretch; justify-content: center; gap: 10px; }
 .sk-rail {
-  flex: 0 0 auto; width: 60px; display: flex; flex-direction: column; align-items: center;
+  flex: 0 0 auto; width: 64px; display: flex; flex-direction: column; align-items: center;
   gap: 8px; padding-top: 4px;
 }
-.sk-rail.dim { opacity: 0.4; }
+/* Enkel de ploeg-items dimmen wanneer die ploeg niet aan zet is — de globale beheerknoppen
+   onderaan blijven altijd helder en bruikbaar. */
+.sk-rail.dim .sk-rail-btn, .sk-rail.dim .sk-rail-dir, .sk-rail.dim .sk-rail-worp { opacity: 0.4; }
+/* Globale beheerknoppen onderaan de zijbalk. */
+.sk-rail-acts { margin-top: auto; display: flex; flex-direction: column; gap: 6px; width: 100%; padding-bottom: 2px; }
+.sk-rail-act {
+  width: 100%; padding: 7px 2px; border-radius: 10px; border: 1px solid var(--line);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 82%, transparent), #10141a);
+  color: var(--txt); font-size: 0.95rem; line-height: 1; font-weight: 800;
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+}
+.sk-rail-act span { font-size: 0.56rem; font-weight: 700; letter-spacing: 0.2px; }
+.sk-rail-act.warn { background: #2a1016; color: #ffd5e0; border-color: #5a1828; }
+.sk-rail-act.danger { background: #3a1018; color: #ffd5e0; border-color: #5a1828; }
+.sk-rail-act:disabled { opacity: 0.4; }
 .sk-rail-btn {
   width: 100%; padding: 13px 0; border-radius: 14px; font-size: 0.95rem; font-weight: 800;
   border: 1px solid var(--line);
