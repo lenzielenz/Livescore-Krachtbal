@@ -1,0 +1,29 @@
+/* "Bekerwedstrijden"-strip bovenaan de live-pagina. */
+.tstrip {
+  margin: 4px 0 14px;
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, #ffd166 30%, var(--line));
+  border-radius: 14px;
+  background:
+    radial-gradient(120% 150% at 0% 0%, color-mix(in srgb, #ffd166 10%, transparent), transparent 60%),
+    var(--panel, rgba(255, 255, 255, 0.03));
+}
+.tstrip-h { margin: 0 0 8px; font-size: 0.98rem; font-weight: 800; color: var(--txt); }
+.tstrip-tour { margin-top: 8px; }
+.tstrip-tour:first-of-type { margin-top: 0; }
+.tstrip-name { display: inline-flex; align-items: center; gap: 4px; font-weight: 800; font-size: 0.9rem; color: var(--accent); text-decoration: none; }
+.tstrip-name:hover { text-decoration: underline; }
+.tstrip-arrow { color: var(--dim); }
+.tstrip-matches { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 6px; margin-top: 6px; }
+.tstrip-m {
+  display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px;
+  padding: 8px 11px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel);
+  text-decoration: none; color: var(--txt); font-size: 0.86rem;
+}
+.tstrip-m.live { border-color: color-mix(in srgb, var(--pop, #ef3340) 45%, var(--line)); }
+.tstrip-m:hover { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
+.tstrip-team { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.tstrip-team.away { text-align: right; }
+.tstrip-score { display: inline-flex; align-items: center; gap: 5px; font-weight: 900; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tstrip-livedot { width: 7px; height: 7px; border-radius: 999px; background: var(--pop, #ef3340); animation: tstrip-pulse 1.4s ease-in-out infinite; }
+@keyframes tstrip-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }

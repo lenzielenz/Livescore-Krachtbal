@@ -146,6 +146,8 @@ export async function createTournament(
     teamClubs?: { name: string; clubId: number }[]
     /** Koppeling ploegnaam → echte ploeg (Teams) zodat de aantekentafel de spelers kan laden. */
     teamTeams?: { name: string; teamId: number }[]
+    /** Toon de lopende wedstrijden van deze beker bovenaan de live-pagina. */
+    toonOpLive?: boolean
   },
 ): Promise<number> {
   const format: TournamentFormat = args.format === 'roundrobin' ? 'roundrobin' : 'knockout'
@@ -171,6 +173,7 @@ export async function createTournament(
       format,
       status: 'live',
       teamCount: filled.length,
+      toonOpLive: Boolean(args.toonOpLive),
       ...(args.teamClubs && args.teamClubs.length ? { teamClubs: args.teamClubs } : {}),
       ...(args.teamTeams && args.teamTeams.length ? { teamTeams: args.teamTeams } : {}),
     },
