@@ -227,7 +227,7 @@ export default async function ClubPage({ searchParams }: { searchParams: Promise
     <Shell>
       <MyTeamsPicker teams={allTeams} initial={myTeams} />
 
-      <Link href="/club/voorspel" className="club-vs-cta">🔮 Voorspelcompetitie — voorspel de uitslagen &amp; bouw een klassement</Link>
+      <Link href="/club/voorspel" className="club-vs-cta">🔮 Pronostiek competitie — voorspel de uitslagen &amp; bouw een klassement</Link>
 
       {mySet.size > 0 && (
         <p className="myteams-focusbar">
