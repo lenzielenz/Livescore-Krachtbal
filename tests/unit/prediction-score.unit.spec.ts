@@ -39,6 +39,14 @@ describe('scoreMatchPredictions', () => {
     // #3 (12–23): winnaar ok (4), afw. 1+8=9 → nabij 0, niet dichtste = 4.
     expect(byUser(3).points).toBe(4)
   })
+
+  it('schaalt de punten met de weging (later voorspeld = minder waard)', () => {
+    const half = scoreMatchPredictions({ home: 11, away: 15 }, [{ ...pred(1, 11, 15), weight: 0.5 }])
+    // Exact (10) + nabij (4) + dichtste (3) = 17, × 0,5 = 8,5 → 9 (afgerond).
+    expect(half[0].points).toBe(9)
+    const full = scoreMatchPredictions({ home: 11, away: 15 }, [pred(1, 11, 15)])
+    expect(full[0].points).toBe(17)
+  })
 })
 
 describe('buildPredictionLeaderboard', () => {

@@ -1,10 +1,12 @@
 import { authUser, userClubId } from '@/lib/api-auth'
+import { buildMatchState } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
+import { reeksHalfDurationSeconds, type Reeks } from '@/lib/reeksen'
 import { clientIp, rateLimit } from '@/lib/sse-hub'
 
 export const dynamic = 'force-dynamic'
 
-type PredEntry = { userId: number; name: string; clubId: number | null; home: number; away: number; at: number }
+type PredEntry = { userId: number; name: string; clubId: number | null; home: number; away: number; at: number; weight: number }
 
 // Eén score-voorspelling van een clublid wegschrijven (upsert per persoon). Enkel vóór de aftrap
 // (status 'scheduled') en enkel voor wedstrijden van de eigen club.
@@ -41,11 +43,28 @@ export async function POST(req: Request) {
     if (!match || match.analyseOnly || (match as { isDemo?: boolean }).isDemo) {
       return Response.json({ error: 'Wedstrijd niet gevonden.' }, { status: 404 })
     }
-    if (match.status !== 'scheduled') {
-      return Response.json({ error: 'Voorspellen kan enkel vóór de aftrap.' }, { status: 409 })
+    // Voorspellen kan vóór én tijdens de match (iedereen mag meedoen) — enkel niet meer na afloop.
+    if (match.status !== 'scheduled' && match.status !== 'live') {
+      return Response.json({ error: 'De wedstrijd is afgelopen — voorspellen kan niet meer.' }, { status: 409 })
     }
-    // Elke geplande competitiewedstrijd mag voorspeld worden (je kan via een pool uitgenodigd zijn
-    // voor de matchen van een andere ploeg/club). De klassementen filteren toch op club of pool.
+    // Elke competitiewedstrijd mag voorspeld worden (je kan via een pool uitgenodigd zijn voor de
+    // matchen van een andere ploeg/club). De klassementen filteren toch op club of pool.
+
+    // Puntweging: vóór de aftrap volle waarde (1). Tijdens de match daalt ze met de speeltijd, met
+    // een bodem van 0,1 zodat een late voorspelling nog meetelt — we willen dat iedereen meedoet.
+    let weight = 1
+    if (match.status === 'live') {
+      try {
+        const st = await buildMatchState(payload, matchId)
+        const halfSec = reeksHalfDurationSeconds((match as { reeks?: Reeks }).reeks as Reeks)
+        const total = Math.max(1, 2 * halfSec)
+        const elapsed = Math.max(0, (st.match.currentHalf - 1) * halfSec + st.match.clockSeconds)
+        const frac = Math.min(1, elapsed / total)
+        weight = Math.max(0.1, Math.round((1 - frac) * 100) / 100)
+      } catch {
+        weight = 0.5 // kon de klok niet lezen → halve waarde als veilige tussenstand
+      }
+    }
 
     const userId = Number((user as { id: number }).id)
     const name = String((user as { name?: string; email?: string }).name || (user as { email?: string }).email || 'Lid')
@@ -54,7 +73,7 @@ export async function POST(req: Request) {
     if (existing.some((p) => Number(p?.userId) === userId)) {
       return Response.json({ error: 'Je hebt al voorspeld voor deze wedstrijd — dat staat vast.' }, { status: 409 })
     }
-    const next = [...existing, { userId, name, clubId, home, away, at: Date.now() }]
+    const next = [...existing, { userId, name, clubId, home, away, at: Date.now(), weight }]
 
     await payload.update({ collection: 'matches', id: matchId, data: { scorePredictions: next }, overrideAccess: true })
     return Response.json({ ok: true })

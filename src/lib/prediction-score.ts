@@ -14,6 +14,8 @@ export interface PredEntry {
   home: number
   away: number
   at?: number
+  /** Puntweging 0..1: vroeg voorspeld = 1; hoe verder in de match, hoe lager (bodem ~0,1). */
+  weight?: number
 }
 
 export interface ScoredPred extends PredEntry {
@@ -54,15 +56,20 @@ export function scoreMatchPredictions(actual: ScoreGuess, preds: PredEntry[]): S
     return { p, base, near, exact, resultOk, diffOk, error }
   })
   const minErr = Math.min(...rows.map((r) => r.error))
-  return rows.map((r) => ({
-    ...r.p,
-    exact: r.exact,
-    resultOk: r.resultOk,
-    diffOk: r.diffOk,
-    error: r.error,
-    closest: r.error === minErr,
-    points: r.base + r.near + (r.error === minErr ? PRED_POINTS.closest : 0),
-  }))
+  return rows.map((r) => {
+    const closest = r.error === minErr
+    const raw = r.base + r.near + (closest ? PRED_POINTS.closest : 0)
+    const weight = typeof r.p.weight === 'number' ? Math.max(0, Math.min(1, r.p.weight)) : 1
+    return {
+      ...r.p,
+      exact: r.exact,
+      resultOk: r.resultOk,
+      diffOk: r.diffOk,
+      error: r.error,
+      closest,
+      points: Math.round(raw * weight),
+    }
+  })
 }
 
 export interface LeaderRow {
