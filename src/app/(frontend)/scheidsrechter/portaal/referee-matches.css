@@ -43,3 +43,47 @@
 .rm-handoff { display: inline-flex; align-items: center; gap: 8px; }
 .rm-select { padding: 6px 8px; font-size: 0.82rem; }
 .rm-release { font-size: 0.78rem; }
+
+/* ── High-end behandeling van het scheidsrechtersportaal (gescoped op .ref-portal) ── */
+.ref-portal .wb-card {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0) 30%),
+    var(--panel-grad, var(--panel));
+  border-color: color-mix(in srgb, #fff 8%, var(--line));
+  box-shadow: var(--card-shadow, 0 10px 30px rgba(0, 0, 0, 0.3)), inset 0 1px 0 rgba(255, 255, 255, 0.07);
+}
+/* Wedstrijdrijen: glas + diepte + zachte hover-lift; live met gloeiende rand. */
+.ref-portal .rm-row {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0) 45%),
+    var(--panel-grad, var(--panel));
+  border: 1px solid color-mix(in srgb, #fff 8%, var(--line));
+  border-radius: 13px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 6px 16px -10px rgba(0, 0, 0, 0.5);
+  transition: transform 0.14s ease, border-color 0.14s ease;
+}
+.ref-portal .rm-row:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--accent) 35%, var(--line)); }
+.ref-portal .rm-row.live { border-left: 4px solid var(--pop, #ef476f); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 0 22px -8px color-mix(in srgb, var(--pop) 55%, transparent); }
+/* Filterpillen premium. */
+.ref-portal .rm-filter {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 86%, #fff 14%), var(--panel));
+  border-color: color-mix(in srgb, #fff 8%, var(--line));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+.ref-portal .rm-filter.on { background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 90%, #fff 10%), var(--accent)); box-shadow: 0 6px 16px -8px color-mix(in srgb, var(--accent) 55%, transparent); }
+/* Knoppen met diepte. */
+.ref-portal .wb-btn {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 2px 6px rgba(0, 0, 0, 0.3);
+  transition: transform 0.14s ease, border-color 0.14s ease;
+}
+.ref-portal .wb-btn:hover { transform: translateY(-1px); }
+.ref-portal .wb-btn-primary { box-shadow: 0 10px 24px -10px color-mix(in srgb, var(--accent) 55%, transparent); }
+/* QR-kaart als een verzorgd, oplichtend paneel. */
+.ref-portal .qr-box {
+  background:
+    radial-gradient(120% 120% at 50% 0%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 60%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0) 40%),
+    var(--panel-grad, var(--panel));
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--line));
+  box-shadow: var(--card-shadow, 0 10px 30px rgba(0, 0, 0, 0.3)), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
