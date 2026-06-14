@@ -55,35 +55,43 @@
 /* Reeks-keuzemenu — schaalt naar veel reeksen zonder een wolk knoppen. */
 .lb-reeks-select {
   width: 100%;
-  padding: 9px 10px;
-  border: 1px solid var(--line);
-  background: var(--panel);
+  padding: 11px 12px;
+  border: 1px solid color-mix(in srgb, #fff 9%, var(--line));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 88%, #fff 12%), var(--panel));
   color: var(--txt);
-  border-radius: 8px;
+  border-radius: 12px;
   font: inherit;
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 1px 2px rgba(0, 0, 0, 0.25);
+  transition: border-color var(--dur-1, 0.15s) ease, box-shadow var(--dur-1, 0.15s) ease;
 }
+.lb-reeks-select:hover { border-color: color-mix(in srgb, var(--accent) 40%, var(--line)); }
 .lb-reeks-select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
-/* Snelfilters (Live/Ploegen/Clubs) als pillen. */
+/* Snelfilters (Mijn club/Ploegen/Clubs) als nette toggle-pillen. */
 .lb-quick {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 8px;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 10px;
 }
 .lb-quick .lb-reeks {
   flex: 0 0 auto;
   justify-content: center;
-  border: 1px solid var(--line);
+  border: 1px solid color-mix(in srgb, #fff 8%, var(--line));
   border-radius: 999px;
-  padding: 7px 12px;
+  padding: 9px 15px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 88%, #fff 12%), var(--panel));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 1px 2px rgba(0, 0, 0, 0.2);
+  font-weight: 600;
 }
+.lb-quick .lb-reeks:hover { transform: translateY(-1px); border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
 .lb-quick .lb-reeks.fav {
   margin-top: 0;
-  border-top: 1px solid var(--line);
-  padding-top: 7px;
+  border-top: 1px solid color-mix(in srgb, #fff 8%, var(--line));
+  padding-top: 9px;
   border-radius: 999px;
 }
 .lb-reeks {
@@ -99,6 +107,7 @@
   border-radius: 8px;
   font-size: 0.85rem;
   cursor: pointer;
+  transition: transform var(--dur-1, 0.15s) ease, border-color var(--dur-1, 0.15s) ease, background-color var(--dur-1, 0.15s) ease, color var(--dur-1, 0.15s) ease;
 }
 .lb-reeks:hover {
   background: var(--panel);
@@ -112,15 +121,20 @@
   min-width: 20px;
   text-align: center;
   font-size: 0.72rem;
-  font-weight: 700;
+  font-weight: 800;
   font-variant-numeric: tabular-nums;
   color: var(--dim);
-  background: var(--panel);
+  background: color-mix(in srgb, #fff 8%, var(--bg, #0b0e12));
   border-radius: 999px;
   padding: 1px 7px;
 }
 .lb-reeks.on .lb-reeks-n {
-  color: var(--accent);
+  color: #06140d;
+  background: var(--accent);
+}
+.lb-reeks.fav.on .lb-reeks-n {
+  color: #2a1c00;
+  background: #ffd873;
 }
 .lb-reeks.live .lb-livedot {
   display: inline-block;
@@ -136,10 +150,11 @@
   color: var(--pop);
 }
 .lb-reeks.on {
-  background: var(--panel);
-  border-color: var(--accent);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 22%, var(--panel)), color-mix(in srgb, var(--accent) 12%, var(--panel)));
+  border-color: color-mix(in srgb, var(--accent) 70%, var(--line));
   color: var(--accent);
   font-weight: 700;
+  box-shadow: 0 2px 10px -4px color-mix(in srgb, var(--accent) 60%, transparent);
 }
 .lb-reeks.fav {
   margin-top: 8px;
@@ -149,8 +164,9 @@
 }
 .lb-reeks.fav.on {
   color: #ffd873;
-  border-color: transparent;
-  border-top-color: var(--line);
+  border-color: color-mix(in srgb, #ffd873 60%, var(--line));
+  background: linear-gradient(180deg, color-mix(in srgb, #ffd873 20%, var(--panel)), color-mix(in srgb, #ffd873 10%, var(--panel)));
+  box-shadow: 0 2px 10px -4px color-mix(in srgb, #ffd873 55%, transparent);
 }
 
 /* Hoofdschakelaar "Nu live" ↔ "Hele dag" — rustig segmented control bovenaan het bord. */
@@ -161,9 +177,10 @@
   gap: 4px;
   margin: 0 auto 14px;
   padding: 4px;
-  border: 1px solid var(--line);
-  background: var(--panel);
+  border: 1px solid color-mix(in srgb, #fff 8%, var(--line));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 90%, #000 10%), var(--panel));
   border-radius: 999px;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.4);
 }
 .lb-livetab {
   display: inline-flex;
@@ -184,9 +201,9 @@
   color: var(--txt);
 }
 .lb-livetab.on {
-  background: var(--bg);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 70%, #fff 12%), var(--panel));
   color: var(--txt);
-  box-shadow: var(--card-shadow);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 .lb-livetab .lb-livedot {
   width: 8px;
@@ -209,27 +226,31 @@
    het datumlabel (anders "verspringen" ze bij elke dagwissel). */
 .lb-datenav {
   display: grid;
-  grid-template-columns: 36px 210px 36px;
+  grid-template-columns: 38px 210px 38px;
   align-items: center;
   justify-content: center;
   gap: 10px;
   margin-bottom: 14px;
 }
 .lb-datebtn {
-  width: 36px;
-  height: 36px;
+  width: 38px;
+  height: 38px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid var(--line);
-  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, #fff 8%, var(--line));
+  border-radius: 12px;
   font-size: 1.3rem;
   color: var(--txt);
-  background: var(--panel);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 88%, #fff 12%), var(--panel));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 1px 2px rgba(0, 0, 0, 0.25);
+  transition: transform var(--dur-1, 0.15s) ease, border-color var(--dur-1, 0.15s) ease;
 }
 .lb-datebtn:hover {
-  border-color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 50%, var(--line));
+  transform: translateY(-1px);
 }
+.lb-datebtn:active { transform: translateY(0); }
 /* Geen blijvende (gele) focusring na een tik — enkel een nette ring bij toetsenbordnavigatie. */
 .lb-datebtn:focus {
   outline: none;
@@ -267,16 +288,19 @@
 }
 .lb-search input {
   width: 100%;
-  padding: 11px 38px 11px 14px;
-  border-radius: 10px;
-  border: 1px solid var(--line);
-  background: var(--panel);
+  padding: 12px 40px 12px 16px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, #fff 8%, var(--line));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 90%, #000 10%), var(--panel));
   color: var(--txt);
   font-size: 0.95rem;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.35);
+  transition: border-color var(--dur-1, 0.15s) ease, box-shadow var(--dur-1, 0.15s) ease;
 }
 .lb-search input:focus {
   outline: none;
-  border-color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 60%, var(--line));
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.35), 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
 }
 .lb-search-clear {
   position: absolute;
