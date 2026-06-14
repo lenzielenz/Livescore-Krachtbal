@@ -45,7 +45,7 @@ export function Wheel({
   const rotRef = useRef(0)
   const acRef = useRef<AudioContext | null>(null)
   const wheelRef = useRef<HTMLDivElement | null>(null)
-  const flapRef = useRef<HTMLDivElement | null>(null)
+  const flapRef = useRef<SVGSVGElement | null>(null)
   const rafRef = useRef<number | null>(null)
 
   // Echte prijzenrad-mechaniek: gelijkmatig verdeelde pinnen rond de rand; de flapper bovenaan tikt
@@ -99,21 +99,41 @@ export function Wheel({
     const c = ac()
     tone(1150, c.currentTime, 0.02, 'square', 0.06)
   }
-  const playRiser = (durMs: number) => {
+  // Spannend "casino"-deuntje tijdens het draaien: een stuwende bas + een oplopende melodie die
+  // naar het einde toe klimt, met een zachte spannings-riser eronder.
+  const playMelody = (durMs: number) => {
     const c = ac()
     const t0 = c.currentTime
-    // Oplopende spannings-riser onder de tikjes.
+    const secs = durMs / 1000
+    // Stuwende bas (galop) die mee vertraagt zodat het samen met de tikjes spanning opbouwt.
+    let bt = 0
+    let bgap = 0.26
+    while (bt < secs - 0.2) {
+      tone(110, t0 + bt, 0.12, 'sawtooth', 0.07)
+      tone(110, t0 + bt + bgap * 0.5, 0.08, 'sawtooth', 0.05)
+      bt += bgap
+      bgap *= 1.06
+    }
+    // Oplopende melodie (G-majeur pentatonisch) die naar de climax klimt.
+    const scale = [392, 440, 494, 587, 659, 784, 880, 988, 1175, 1319, 1568]
+    const steps = scale.length
+    for (let i = 0; i < steps; i++) {
+      // Vooraan sneller, achteraan trager (volgt het rad) → opbouwende spanning.
+      const frac = Math.pow(i / steps, 1.5)
+      tone(scale[i], t0 + frac * (secs - 0.3), 0.2, 'triangle', 0.13)
+    }
+    // Zachte riser onder alles.
     const o = c.createOscillator()
     const g = c.createGain()
-    o.type = 'sawtooth'
-    o.frequency.setValueAtTime(110, t0)
-    o.frequency.exponentialRampToValueAtTime(420, t0 + durMs / 1000)
+    o.type = 'sine'
+    o.frequency.setValueAtTime(90, t0)
+    o.frequency.exponentialRampToValueAtTime(360, t0 + secs)
     g.gain.setValueAtTime(0.0001, t0)
-    g.gain.exponentialRampToValueAtTime(0.05, t0 + 0.3)
-    g.gain.exponentialRampToValueAtTime(0.0001, t0 + durMs / 1000)
+    g.gain.exponentialRampToValueAtTime(0.04, t0 + 0.4)
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + secs)
     o.connect(g).connect(c.destination)
     o.start(t0)
-    o.stop(t0 + durMs / 1000 + 0.05)
+    o.stop(t0 + secs + 0.05)
   }
   const playWin = (level: 'mega' | 'big' | 'normal') => {
     const c = ac()
@@ -168,7 +188,7 @@ export function Wheel({
       // Audio/flapper afremmen: bij hoge snelheid passeren er tientallen pinnen per seconde — elk een
       // oscillator maken doet de hoofdthread haperen. We cappen op ~1 tik per 45 ms (vloeiend + realistisch).
       let lastTick = 0
-      playRiser(durMs)
+      playMelody(durMs)
       const frame = (now: number) => {
         const t = Math.min(1, (now - t0) / durMs)
         const rot = start + (target - start) * ease(t)
@@ -238,8 +258,18 @@ export function Wheel({
             <span key={i} className="rad-spark" style={{ transform: `translate(-50%,-50%) rotate(${deg}deg) translateY(-162px)`, animationDelay: `${i * 0.6}s` }}>✦</span>
           ))}
         </div>
-        {/* Flapper-pijl: tikt tegen elke pin die passeert. */}
-        <div className="rad-flap" ref={flapRef} style={{ transform: FLAP_BASE }} aria-hidden />
+        {/* Flapper-pijl (SVG, gouden metaal): tikt tegen elke pin die passeert. */}
+        <svg className="rad-flap" ref={flapRef} style={{ transform: FLAP_BASE }} viewBox="0 0 30 34" aria-hidden>
+          <defs>
+            <linearGradient id="radFlapG" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stopColor="#fff6d6" />
+              <stop offset="0.4" stopColor="#ffe39a" />
+              <stop offset="0.8" stopColor="#f4a300" />
+              <stop offset="1" stopColor="#b8851c" />
+            </linearGradient>
+          </defs>
+          <polygon points="15,33 1.5,2 28.5,2" fill="url(#radFlapG)" stroke="#7a5610" strokeWidth="1.4" strokeLinejoin="round" />
+        </svg>
         <div className="rad-wheel" ref={wheelRef} style={{ background: gradient, transform: `rotate(${rotation}deg)` }} role="img" aria-label="Bonusrad">
           {/* Nette scheidingslijntjes tussen de vakken. */}
           {arcs.map((a, i) => (
