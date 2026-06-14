@@ -54,14 +54,35 @@
   background: linear-gradient(to top, rgba(140, 100, 8, 0.7), #ffe7a0 70%, #fff);
   box-shadow: 0 0 2px rgba(0, 0, 0, 0.45);
 }
-/* Koepel-glans: lichte highlight linksboven + vignette rechtsonder → het rad lijkt bol (3D). */
-.rad-gloss {
-  position: absolute; inset: 0; border-radius: 999px; pointer-events: none; z-index: 4;
+/* Vaste glaskoepel over de draaiende vakken: glasreflectie blijft staan terwijl het rad draait. */
+.rad-glass {
+  position: absolute; width: 258px; height: 258px; border-radius: 999px; pointer-events: none; z-index: 3;
   background:
-    radial-gradient(circle at 32% 24%, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0) 38%),
-    radial-gradient(circle at 72% 84%, rgba(0, 0, 0, 0.34), rgba(0, 0, 0, 0) 48%);
-  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.1), inset 0 16px 28px rgba(255, 255, 255, 0.05), inset 0 -20px 38px rgba(0, 0, 0, 0.42);
+    radial-gradient(130% 92% at 30% 11%, rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0.08) 28%, transparent 46%),
+    radial-gradient(70% 60% at 74% 88%, rgba(0, 0, 0, 0.4), transparent 56%);
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.1), inset 0 18px 30px rgba(255, 255, 255, 0.06), inset 0 -22px 44px rgba(0, 0, 0, 0.46);
 }
+/* Metalen klinknagels op de gouden rand. */
+.rad-studs { position: absolute; inset: 0; z-index: 2; }
+.rad-stud {
+  position: absolute; top: 50%; left: 50%; width: 7px; height: 7px; border-radius: 999px;
+  background: radial-gradient(circle at 35% 30%, #fff7da, #b8851c 78%);
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.65), inset 0 -1px 1px rgba(0, 0, 0, 0.45);
+}
+/* Bling-sterren rond het rad. */
+.rad-sparks { position: absolute; inset: 0; z-index: 6; }
+.rad-spark {
+  position: absolute; top: 50%; left: 50%; color: #fff; font-size: 0.8rem; line-height: 1;
+  text-shadow: 0 0 6px #ffd166, 0 0 13px #ffd166; animation: rad-spark-tw 2.4s ease-in-out infinite;
+}
+@keyframes rad-spark-tw { 0%, 100% { opacity: 0.12; } 50% { opacity: 1; } }
+
+/* Draaibeurten-teller. */
+.rad-spins { display: flex; align-items: center; justify-content: center; gap: 7px; }
+.rad-chance { width: 11px; height: 11px; border-radius: 999px; border: 1px solid color-mix(in srgb, #ffd166 40%, var(--line)); background: transparent; }
+.rad-chance.on { background: linear-gradient(135deg, #ffe39a, #f4a300); box-shadow: 0 0 8px -1px #f4a300; border-color: #f4a300; }
+.rad-spins-lbl { font-size: 0.86rem; color: #efe2cb; font-weight: 700; margin-left: 4px; }
+.rad-spins-test { font-size: 0.86rem; color: #ffd166; font-weight: 700; }
 .rad-wheel {
   width: 258px; height: 258px; border-radius: 999px; position: relative; z-index: 2;
   /* Donkere groef tussen de gouden behuizing en de vakken — strak ingelegd. */
@@ -159,13 +180,23 @@
 
 .rad-prize { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; }
 .rad-prize-x {
-  font-size: 2.6rem; font-weight: 900; color: #f4a300; line-height: 1;
-  text-shadow: 0 2px 12px color-mix(in srgb, #ffd166 60%, transparent);
+  font-size: 4rem; font-weight: 900; line-height: 1;
+  background: linear-gradient(180deg, #fff6d6, #ffd166 45%, #f4a300);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 3px 10px color-mix(in srgb, #ffd166 65%, transparent));
   animation: rad-pop 0.5s cubic-bezier(0.2, 1.4, 0.4, 1);
 }
-.rad-prize-x.jackpot { color: #ffd166; animation: rad-pop 0.5s cubic-bezier(0.2, 1.4, 0.4, 1), rad-glow 1.2s ease-in-out infinite alternate; }
+.rad-prize-x.jackpot { animation: rad-pop 0.5s cubic-bezier(0.2, 1.4, 0.4, 1), rad-glow 1.2s ease-in-out infinite alternate; }
 @keyframes rad-pop { from { transform: scale(0.2); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-@keyframes rad-glow { from { text-shadow: 0 0 8px #ffd166; } to { text-shadow: 0 0 26px #ffd166, 0 0 42px #f4a300; } }
+@keyframes rad-glow { from { filter: drop-shadow(0 0 8px #ffd166); } to { filter: drop-shadow(0 0 26px #ffd166) drop-shadow(0 0 40px #f4a300); } }
+
+/* Volledig scherm tijdens het draaien: het rad centraal op een rijke casino-achtergrond, prijs extra groot. */
+.rad:fullscreen, .rad:-webkit-full-screen {
+  justify-content: center; padding: 24px;
+  background: radial-gradient(60% 50% at 50% 44%, #2c0a10, #0a0608 82%);
+}
+.rad:fullscreen .rad-prize-x, .rad:-webkit-full-screen .rad-prize-x { font-size: 5.6rem; }
+.rad:fullscreen .rad-prize-txt, .rad:-webkit-full-screen .rad-prize-txt { font-size: 1.1rem; }
 .rad-prize-txt { margin: 0; max-width: 40ch; color: var(--txt); line-height: 1.5; }
 .rad-prize-txt b { color: var(--accent); }
 .rad-have { margin: 0; color: var(--dim); font-size: 0.9rem; }
