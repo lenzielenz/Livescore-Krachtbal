@@ -177,19 +177,40 @@ export function MatchWeather({
   const hero = fc.slots.find((s) => s.kickoff) ?? fc.slots[0]
   // Na de wedstrijd (napraatmoment) schakelt de conclusie naar verleden tijd.
   const over = Date.now() > new Date(date).getTime() + MATCH_H * 3600_000
-  const verdict =
-    fc.maxProb >= 60 || fc.sumMm >= 2
-      ? { icon: '🌧️', text: over ? 'Regen tijdens de wedstrijd' : 'Grote kans op regen tijdens de wedstrijd', cls: 'wet' }
-      : fc.maxProb >= 30 || fc.sumMm >= 0.3
-        ? { icon: '🌦️', text: over ? 'Wellicht een bui tijdens de wedstrijd' : 'Mogelijk een bui tijdens de wedstrijd', cls: 'maybe' }
-        : { icon: '🌤️', text: over ? 'Het bleef droog tijdens de wedstrijd' : 'Droog verwacht tijdens de wedstrijd', cls: 'dry' }
+  // "Speelweer"-oordeel: geen kale regenfocus meer, maar een holistische conclusie voor een
+  // buitensport — regen, wind, kou en hitte samen, met een ideaal-weer-uitkomst.
+  const rainHeavy = fc.maxProb >= 60 || fc.sumMm >= 2
+  const rainMaybe = fc.maxProb >= 30 || fc.sumMm >= 0.3
+  const windStrong = hero.gust >= 50 || hero.wind >= 35
+  const windMod = hero.gust >= 38 || hero.wind >= 25
+  const cold = hero.feels <= 2
+  const hot = hero.feels >= 29
+  const verdict: { icon: string; text: string; short: string; cls: string } = rainHeavy
+    ? { icon: '🌧️', text: over ? 'Regen tijdens de wedstrijd' : 'Grote kans op regen', short: over ? 'Regen gevallen' : 'Kans op regen', cls: 'wet' }
+    : windStrong
+      ? { icon: '💨', text: over ? 'Het was stevig winderig' : 'Stevige wind — let op hoge worpen', short: 'Stevige wind', cls: 'windy' }
+      : rainMaybe
+        ? { icon: '🌦️', text: over ? 'Mogelijk een bui gehad' : 'Mogelijk een bui', short: 'Mogelijk een bui', cls: 'maybe' }
+        : cold
+          ? { icon: '🥶', text: over ? 'Het was koud' : 'Koud — kleed je warm aan', short: 'Koud', cls: 'cold' }
+          : hot
+            ? { icon: '🥵', text: over ? 'Het was warm' : 'Warm — drink voldoende', short: 'Warm', cls: 'hot' }
+            : windMod
+              ? { icon: '🌬️', text: over ? 'Het was een frisse bries' : 'Frisse bries', short: 'Frisse bries', cls: 'windy' }
+              : hero.feels >= 8 && hero.feels <= 26
+                ? { icon: hero.emoji, text: over ? 'Het was ideaal speelweer' : 'Ideaal speelweer', short: 'Ideaal weer', cls: 'great' }
+                : { icon: hero.emoji, text: over ? 'Het bleef droog' : 'Droog verwacht', short: over ? 'Bleef droog' : 'Droog', cls: 'dry' }
   // Stevige rukwinden zijn aan het veld voelbaar — enkel tonen wanneer ze er echt toe doen.
   const gustWorthy = hero.gust >= 40 && hero.gust >= hero.wind + 10
-  // Korte conclusie voor het ingeklapte regeltje.
-  const shortVerdict =
-    verdict.cls === 'wet' ? (over ? 'Regen gevallen' : 'Kans op regen')
-      : verdict.cls === 'maybe' ? (over ? 'Mogelijk een bui gehad' : 'Mogelijk een bui')
-        : (over ? 'Bleef droog' : 'Droog verwacht')
+  const shortVerdict = verdict.short
+  // De meest relevante kerncijfer naast de samenvatting: regen → wind → kou.
+  const summaryChip = rainHeavy || rainMaybe || hero.prob >= 20 || hero.mm > 0
+    ? { ico: '☔', val: `${fc.maxProb}%` }
+    : windStrong || windMod
+      ? { ico: '💨', val: `${hero.wind} km/u` }
+      : cold
+        ? { ico: '🥶', val: `${hero.feels}°` }
+        : null
 
   return (
     <section className={`mw mw-c ${verdict.cls}`} aria-label="Weerbericht aan het veld">
@@ -198,7 +219,7 @@ export function MatchWeather({
         <span className="mw-sum-ico" aria-hidden>{hero.emoji}</span>
         <span className="mw-sum-temp">{hero.temp}°</span>
         <span className="mw-sum-txt">{shortVerdict}</span>
-        {(fc.maxProb >= 20 || fc.sumMm > 0) && <span className="mw-sum-rain">☔ {fc.maxProb}%</span>}
+        {summaryChip && <span className="mw-sum-rain">{summaryChip.ico} {summaryChip.val}</span>}
         {fc.place && <span className="mw-sum-place">📍 {fc.place}</span>}
         <span className="mw-sum-chev" aria-hidden>{open ? '▴' : '▾'}</span>
       </button>
