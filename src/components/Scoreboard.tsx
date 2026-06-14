@@ -177,6 +177,11 @@ export function Scoreboard({
 
   // Live tribune (shoutouts van ingelogde supporters). Begin met de bewaarde berichten.
   const [shouts, setShouts] = useState<Shout[]>(initialShouts ?? [])
+  // "Op de hoogte blijven": zodra je zelf meedeed (reactie of bericht) en er komen nieuwe berichten
+  // binnen terwijl je niet onderaan de tribune kijkt, tonen we een belletje met het aantal nieuwe.
+  const engagedRef = useRef(false)
+  const atBottomRef = useRef(true)
+  const [unread, setUnread] = useState(0)
   const [chatText, setChatText] = useState('')
   const [chatBusy, setChatBusy] = useState(false)
   const [needLogin, setNeedLogin] = useState(false)
@@ -281,7 +286,11 @@ export function Scoreboard({
         if (r.delta?.rocket) triggerCelebrate() // iemand vuurde een rugworp af → fullscreen-viering
         if (r.totals) setTotals(r.totals)
       },
-      shoutout: (d) => setShouts((prev) => [...prev.slice(-79), d as Shout]),
+      shoutout: (d) => {
+        setShouts((prev) => [...prev.slice(-79), d as Shout])
+        // Nieuw bericht terwijl je meedeed maar niet onderaan kijkt → tel het als ongelezen.
+        if (engagedRef.current && !atBottomRef.current) setUnread((n) => n + 1)
+      },
       shoutouts: (d) => setShouts(d as Shout[]),
       instant: (d) => addInstantLocal(d as Instant),
       instant_removed: (d) => removeInstantLocal((d as { id: number }).id),
@@ -301,6 +310,7 @@ export function Scoreboard({
       setNeedLogin(true)
       return
     }
+    engagedRef.current = true // je deed mee → voortaan op de hoogte van nieuwe tribune-berichten
     // Eigen tik = een uitbarsting vanaf de ingedrukte knop (raket = grotere zwerm).
     const sbRect = sbRef.current?.getBoundingClientRect()
     let ox = (sbRect?.width ?? 360) / 2
@@ -338,7 +348,10 @@ export function Scoreboard({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text }),
       })
-      if (res.ok) setChatText('') // het eigen bericht komt via de stream terug in de feed
+      if (res.ok) {
+        setChatText('') // het eigen bericht komt via de stream terug in de feed
+        engagedRef.current = true // je deed mee → voortaan op de hoogte van nieuwe berichten
+      }
     } catch {
       /* stil falen — de gebruiker kan opnieuw proberen */
     } finally {
@@ -355,11 +368,29 @@ export function Scoreboard({
     }
   }, [])
 
-  // Tribune-feed automatisch naar het nieuwste bericht scrollen.
+  // Tribune-feed naar het nieuwste bericht scrollen — enkel als je al onderaan meevolgt, zodat we
+  // je niet wegtrekken terwijl je terugleest. Volg je mee, dan is er per definitie niets ongelezen.
   useEffect(() => {
     const el = chatFeedRef.current
-    if (el) el.scrollTop = el.scrollHeight
+    if (el && atBottomRef.current) {
+      el.scrollTop = el.scrollHeight
+      setUnread(0)
+    }
   }, [shouts])
+  // Bijhouden of je onderaan de feed kijkt; kom je onderaan, dan vervalt het "nieuw"-belletje.
+  const onFeedScroll = () => {
+    const el = chatFeedRef.current
+    if (!el) return
+    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 40
+    atBottomRef.current = atBottom
+    if (atBottom) setUnread(0)
+  }
+  const jumpToNewest = () => {
+    const el = chatFeedRef.current
+    if (el) el.scrollTop = el.scrollHeight
+    atBottomRef.current = true
+    setUnread(0)
+  }
 
   // Klok-basis bijwerken bij elke state-update — reken vanaf clockUpdatedAt (server), zodat de tijd
   // klopt voor wie later instapt en NIET telkens terug naar 0 "reset".
@@ -730,7 +761,7 @@ export function Scoreboard({
           {tribuneClosingSoon && (
             <p className="sb-chat-note">De wedstrijd is afgelopen — de tribune blijft nog tot een uur na de match open.</p>
           )}
-          <div className="sb-chat-feed" ref={chatFeedRef}>
+          <div className="sb-chat-feed" ref={chatFeedRef} onScroll={onFeedScroll}>
             {shouts.length === 0 ? (
               <p className="sb-dim">Nog stil in de tribune… wees de eerste om je ploeg aan te moedigen!</p>
             ) : (
@@ -742,6 +773,11 @@ export function Scoreboard({
               ))
             )}
           </div>
+          {unread > 0 && (
+            <button type="button" className="sb-chat-new" onClick={jumpToNewest}>
+              🔔 {unread} nieuwe {unread === 1 ? 'reactie' : 'reacties'} — bekijk
+            </button>
+          )}
           {canChat ? (
             <form
               className="sb-chat-form"

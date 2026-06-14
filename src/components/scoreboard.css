@@ -756,3 +756,13 @@
 .sb-poll-lbl { position: relative; z-index: 1; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sb-poll-pct { position: relative; z-index: 1; font-variant-numeric: tabular-nums; font-weight: 800; }
 .sb-poll-total { margin: 8px 0 0; font-size: 0.78rem; color: var(--dim); text-align: right; }
+
+/* "Nieuwe reacties"-belletje in de tribune (verschijnt als je niet onderaan meevolgt). */
+.sb-chat-new {
+  display: block; width: 100%; margin: 6px 0 0;
+  padding: 8px 12px; border-radius: 999px; cursor: pointer;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line));
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent); font: inherit; font-size: 0.82rem; font-weight: 800;
+}
+.sb-chat-new:hover { background: color-mix(in srgb, var(--accent) 22%, transparent); }
