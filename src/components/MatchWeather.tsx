@@ -76,6 +76,8 @@ export function MatchWeather({
 }) {
   const [fc, setFc] = useState<Forecast | null>(null)
   const [state, setState] = useState<'loading' | 'ok' | 'none'>('loading')
+  // Standaard ingeklapt — de matchpagina is druk; één rustig regeltje, uurdetail op aanvraag.
+  const [open, setOpen] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -183,57 +185,68 @@ export function MatchWeather({
         : { icon: '🌤️', text: over ? 'Het bleef droog tijdens de wedstrijd' : 'Droog verwacht tijdens de wedstrijd', cls: 'dry' }
   // Stevige rukwinden zijn aan het veld voelbaar — enkel tonen wanneer ze er echt toe doen.
   const gustWorthy = hero.gust >= 40 && hero.gust >= hero.wind + 10
+  // Korte conclusie voor het ingeklapte regeltje.
+  const shortVerdict =
+    verdict.cls === 'wet' ? (over ? 'Regen gevallen' : 'Kans op regen')
+      : verdict.cls === 'maybe' ? (over ? 'Mogelijk een bui gehad' : 'Mogelijk een bui')
+        : (over ? 'Bleef droog' : 'Droog verwacht')
 
   return (
-    <section className={`mw ${verdict.cls}`} aria-label="Weerbericht aan het veld">
-      <div className="mw-head">
-        <span className="mw-title">Weer aan het veld</span>
-        {fc.place && <span className="mw-place">📍 {fc.place}</span>}
-      </div>
+    <section className={`mw mw-c ${verdict.cls}`} aria-label="Weerbericht aan het veld">
+      {/* Ingeklapte samenvatting: één rustig regeltje dat past op een drukke matchpagina. */}
+      <button type="button" className="mw-sum" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
+        <span className="mw-sum-ico" aria-hidden>{hero.emoji}</span>
+        <span className="mw-sum-temp">{hero.temp}°</span>
+        <span className="mw-sum-txt">{shortVerdict}</span>
+        {(fc.maxProb >= 20 || fc.sumMm > 0) && <span className="mw-sum-rain">☔ {fc.maxProb}%</span>}
+        {fc.place && <span className="mw-sum-place">📍 {fc.place}</span>}
+        <span className="mw-sum-chev" aria-hidden>{open ? '▴' : '▾'}</span>
+      </button>
 
-      <div className="mw-hero">
-        <span className="mw-hero-ico" aria-hidden>{hero.emoji}</span>
-        <div className="mw-hero-temp">
-          <span className="mw-hero-deg">{hero.temp}°</span>
-          <span className="mw-hero-lbl">{hero.lbl}{hero.feels !== hero.temp ? ` · voelt als ${hero.feels}°` : ''}</span>
-        </div>
-        <div className="mw-hero-facts">
-          <span className="mw-fact">
-            <span className="mw-fact-ico" aria-hidden>💨</span>
-            {hero.wind} km/u {windStreek(hero.dir)}
-            <span className="mw-wind-arrow" aria-hidden style={{ transform: `rotate(${hero.dir + 180}deg)` }}>↑</span>
-          </span>
-          {gustWorthy && (
-            <span className="mw-fact mw-fact-warn">
-              <span className="mw-fact-ico" aria-hidden>🌬️</span>rukwinden tot {hero.gust} km/u
-            </span>
-          )}
-          {(hero.prob >= 20 || hero.mm > 0) && (
+      {open && (
+        <div className="mw-detail">
+          <div className="mw-hero-facts">
             <span className="mw-fact">
-              <span className="mw-fact-ico" aria-hidden>☔</span>
-              {hero.prob}%{hero.mm > 0 ? ` · ${hero.mm} mm` : ''}
+              <span className="mw-fact-ico" aria-hidden>🌡️</span>
+              {hero.temp}°{hero.feels !== hero.temp ? ` · voelt als ${hero.feels}°` : ''}
             </span>
-          )}
+            <span className="mw-fact">
+              <span className="mw-fact-ico" aria-hidden>💨</span>
+              {hero.wind} km/u {windStreek(hero.dir)}
+              <span className="mw-wind-arrow" aria-hidden style={{ transform: `rotate(${hero.dir + 180}deg)` }}>↑</span>
+            </span>
+            {gustWorthy && (
+              <span className="mw-fact mw-fact-warn">
+                <span className="mw-fact-ico" aria-hidden>🌬️</span>rukwinden tot {hero.gust} km/u
+              </span>
+            )}
+            {(hero.prob >= 20 || hero.mm > 0) && (
+              <span className="mw-fact">
+                <span className="mw-fact-ico" aria-hidden>☔</span>
+                {hero.prob}%{hero.mm > 0 ? ` · ${hero.mm} mm` : ''}
+              </span>
+            )}
+          </div>
+
+          <div className="mw-verdict">
+            <span aria-hidden>{verdict.icon}</span>
+            <span>{verdict.text}</span>
+            {fc.sumMm > 0 && <span className="mw-verdict-mm" title="Verwachte neerslag tijdens de wedstrijd">{fc.sumMm} mm</span>}
+          </div>
+
+          <div className="mw-hours">
+            {fc.slots.map((s, i) => (
+              <span className={`mw-hour ${s.kickoff ? 'kickoff' : ''}`} key={i} title={`${s.label}: ${s.temp}° · ${s.prob}% kans op neerslag · ${s.wind} km/u wind`}>
+                <span className="mw-hour-time">{s.kickoff ? '🏁 ' : ''}{s.label}</span>
+                <span className="mw-hour-ico" aria-hidden>{s.emoji}</span>
+                <span className="mw-hour-temp">{s.temp}°</span>
+                <span className="mw-hour-bar"><i style={{ width: `${s.prob}%` }} /></span>
+                <span className="mw-hour-prob">{s.prob >= 10 ? `${s.prob}%` : '·'}</span>
+              </span>
+            ))}
+          </div>
         </div>
-      </div>
-
-      <div className="mw-verdict">
-        <span aria-hidden>{verdict.icon}</span>
-        <span>{verdict.text}</span>
-        {fc.sumMm > 0 && <span className="mw-verdict-mm" title="Verwachte neerslag tijdens de wedstrijd">{fc.sumMm} mm</span>}
-      </div>
-
-      <div className="mw-hours">
-        {fc.slots.map((s, i) => (
-          <span className={`mw-hour ${s.kickoff ? 'kickoff' : ''}`} key={i} title={`${s.label}: ${s.temp}° · ${s.prob}% kans op neerslag · ${s.wind} km/u wind`}>
-            <span className="mw-hour-time">{s.kickoff ? '🏁 ' : ''}{s.label}</span>
-            <span className="mw-hour-ico" aria-hidden>{s.emoji}</span>
-            <span className="mw-hour-temp">{s.temp}°</span>
-            <span className="mw-hour-bar"><i style={{ width: `${s.prob}%` }} /></span>
-            <span className="mw-hour-prob">{s.prob >= 10 ? `${s.prob}%` : '·'}</span>
-          </span>
-        ))}
-      </div>
+      )}
     </section>
   )
 }
