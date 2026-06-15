@@ -20,6 +20,29 @@ function pointsFromLabel(label: string): number {
   return Number.isFinite(p) && p > 0 ? p : 1
 }
 
+/** Fictief verloop voor de testknop op het veldscherm: een paar doelpunten heen en weer, zodat
+ * de grafiek zichtbaar stijgt en daalt (i.p.v. een vlakke 0–0-lijn). Eindigt op 5–3. */
+export function demoMomentum(halfSeconds: number): MomentumPoint[] {
+  const dur = halfSeconds > 0 ? halfSeconds : 1500
+  const goals: { f: number; side: 'home' | 'away'; pts: number }[] = [
+    { f: 0.06, side: 'home', pts: 1 },
+    { f: 0.13, side: 'home', pts: 1 },
+    { f: 0.21, side: 'away', pts: 2 },
+    { f: 0.3, side: 'away', pts: 1 },
+    { f: 0.38, side: 'home', pts: 1 },
+    { f: 0.46, side: 'home', pts: 2 },
+  ]
+  const pts: MomentumPoint[] = [{ t: 0, home: 0, away: 0, diff: 0 }]
+  let home = 0
+  let away = 0
+  for (const g of goals) {
+    if (g.side === 'home') home += g.pts
+    else away += g.pts
+    pts.push({ t: Math.round(g.f * dur), home, away, diff: home - away })
+  }
+  return pts
+}
+
 /** Cumulatief scoreverloop uit de tijdlijn (chronologisch). Start altijd op 0–0. */
 export function buildMomentum(timeline: TimelineItem[], halfSeconds: number): MomentumPoint[] {
   const dur = halfSeconds > 0 ? halfSeconds : 1500

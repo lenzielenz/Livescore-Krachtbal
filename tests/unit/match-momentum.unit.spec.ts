@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 
-import { buildMomentum } from '@/lib/match-momentum'
+import { buildMomentum, demoMomentum } from '@/lib/match-momentum'
 import type { TimelineItem } from '@/lib/match-engine'
 
 const goal = (id: string, side: 'home' | 'away', half: number, gameClock: number, pts: number): TimelineItem => ({
@@ -51,5 +51,17 @@ describe('buildMomentum', () => {
     const tl: TimelineItem[] = [{ id: 'a', kind: 'goal', half: 1, gameClock: 10, side: 'away', label: 'Doelpunt' }]
     const m = buildMomentum(tl, 1500)
     expect(m[1]).toMatchObject({ away: 1, diff: -1 })
+  })
+})
+
+describe('demoMomentum', () => {
+  it('start op 0–0 en eindigt op 5–3 met oplopende tijd', () => {
+    const m = demoMomentum(1500)
+    expect(m[0]).toEqual({ t: 0, home: 0, away: 0, diff: 0 })
+    expect(m[m.length - 1]).toMatchObject({ home: 5, away: 3, diff: 2 })
+    for (let i = 1; i < m.length; i++) expect(m[i].t).toBeGreaterThan(m[i - 1].t)
+  })
+  it('schaalt de doelpunttijden mee met de helftduur', () => {
+    expect(demoMomentum(1200)[1].t).toBeLessThan(demoMomentum(1500)[1].t)
   })
 })
