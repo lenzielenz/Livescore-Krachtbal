@@ -73,6 +73,7 @@ import * as migration_20260614_240000_user_nutrition_profile from './20260614_24
 import * as migration_20260615_120000_user_profile from './20260615_120000_user_profile';
 import * as migration_20260615_140000_user_scorecard from './20260615_140000_user_scorecard';
 import * as migration_20260615_160000_advertenties from './20260615_160000_advertenties';
+import * as migration_20260615_180000_match_livestream from './20260615_180000_match_livestream';
 
 export const migrations = [
   {
@@ -449,5 +450,10 @@ export const migrations = [
     up: migration_20260615_160000_advertenties.up,
     down: migration_20260615_160000_advertenties.down,
     name: '20260615_160000_advertenties',
+  },
+  {
+    up: migration_20260615_180000_match_livestream.up,
+    down: migration_20260615_180000_match_livestream.down,
+    name: '20260615_180000_match_livestream',
   },
 ];

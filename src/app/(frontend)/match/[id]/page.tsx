@@ -17,6 +17,7 @@ import { isAdultReeks, krachtbalKleur, reeksHalfDurationSeconds, reeksNaam, reek
 import { isTribuneOpen } from '@/lib/tribune'
 import { BASE_RATE_PER_MIN } from '@/lib/win-probability'
 import { MatchRecap } from '../../analyse/[id]/MatchRecap'
+import { LiveStream } from './LiveStream'
 import { MatchScorers } from './MatchScorers'
 import { PronostiekWidget } from './PronostiekWidget'
 import '../../analyse/analyse.css'
@@ -233,6 +234,11 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
         momentumGoals={share?.goals}
         momentumTimeouts={share?.timeouts}
       />
+      {/* Live-uitzending van de wedstrijd (externe stream), als de beheerder er een instelde. */}
+      {matchDoc?.livestreamUrl && (
+        <LiveStream url={String(matchDoc.livestreamUrl)} live={state.match.status === 'live'} />
+      )}
+
       {/* Supporters duidelijk tonen dat ze de wedstrijd op hun tv kunnen volgen. */}
       <CastToTv matchId={matchId} />
 
