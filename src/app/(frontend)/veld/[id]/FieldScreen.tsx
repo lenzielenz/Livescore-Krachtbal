@@ -56,6 +56,19 @@ const DEMO_PHOTOS: string[] = [
   demoPhoto('📷 Wedstrijdfoto 3', '#143a2c'),
 ]
 
+// Speelse "kracht-cam"-bijschriften (kiss-cam-stijl, maar krachtbal) die met de foto's meewisselen.
+const CAM_CAPTIONS: string[] = [
+  '💪 Toon je kracht!',
+  '📣 Supporters aan zet!',
+  '🔥 Wat een sfeer!',
+  '❤️ Krachtbalfamilie',
+  '👀 Wie zien we daar?',
+  '🙌 Geef ze een applaus!',
+]
+// SVG-hartpad voor de kiss-cam-overlay.
+const HEART_PATH =
+  'M23.6,0c-3.4,0-6.3,2.7-7.6,5.6C14.7,2.7,11.8,0,8.4,0C3.8,0,0,3.8,0,8.4c0,9.4,9.5,11.9,16,21.2c6.1-9.3,16-12,16-21.2C32,3.8,28.2,0,23.6,0z'
+
 // Telmarkeringen onder de ploegnaam: invul-vakjes gegroepeerd per set.
 // Kruisjes per 3 (3e kruisje → vrije worp, §6.7); time-outs per 2 (max. 2 per helft, §8.1).
 function Marks({ count, group, kind }: { count: number; group: number; kind: 'cross' | 'timeout' }) {
@@ -158,6 +171,8 @@ export function FieldScreen({
   const [flowDemo, setFlowDemo] = useState(false)
   // Testknop: toon ook voorbeeld-reclame zodat de scrollende balk zichtbaar is zonder ingestelde reclame.
   const [previewAds, setPreviewAds] = useState(false)
+  // Testknop voor het start-/QR-scherm: forceer de pre-match lobby ook als de wedstrijd al bezig is.
+  const [previewLobby, setPreviewLobby] = useState(false)
   const flowShown = useRef(false)
   const flowTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const previewTimers = useRef<ReturnType<typeof setTimeout>[]>([])
@@ -368,6 +383,7 @@ export function FieldScreen({
     clock < 1 &&
     state.score.home === 0 &&
     state.score.away === 0
+  const showLobby = preMatch || previewLobby
   const lobbyAds = ads.length > 0 ? ads : DEMO_ADS
 
   // Dynamische stijl op basis van de clubkleuren. De thuisploeg geeft de toon aan;
@@ -404,9 +420,17 @@ export function FieldScreen({
           type="button"
           className="fs-ctrlbtn fs-photobtn"
           onClick={() => void showPhotos()}
-          title="Toon de wedstrijdfoto's (ideaal tijdens de pauze)"
+          title="Toon de wedstrijdfoto's (kracht-cam, ideaal tijdens de pauze)"
         >
           {photosLoading ? '📷 …' : photos !== null ? '✕ Foto’s' : '📷 Foto’s'}
+        </button>
+        <button
+          type="button"
+          className="fs-ctrlbtn fs-lobbybtn"
+          onClick={() => setPreviewLobby((v) => !v)}
+          title="Test het start-/QR-scherm"
+        >
+          {previewLobby ? '✕ Start' : '📱 Start'}
         </button>
         <button
           type="button"
@@ -463,7 +487,7 @@ export function FieldScreen({
 
       <AdMarquee ads={shownAds} position="bottom" />
 
-      {preMatch && (
+      {showLobby && (
         <div className="fs-lobby">
           <AdMarquee ads={lobbyAds} position="top" />
           <div className="fs-lobby-body">
@@ -485,11 +509,24 @@ export function FieldScreen({
       )}
 
       {photos !== null && (
-        <div className="fs-photos" onClick={() => setPhotos(null)}>
-          <div className="fs-photos-head">📷 Wedstrijdfoto’s {photos.length > 0 ? `· ${photoIdx + 1}/${photos.length}` : ''}</div>
+        <div className="fs-cam" onClick={() => setPhotos(null)}>
+          <div className="fs-cam-title">💪 KRACHT-CAM 💪</div>
           {photos.length > 0 ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img key={photoIdx} className="fs-photos-img" src={photos[photoIdx]} alt={`Wedstrijdfoto ${photoIdx + 1}`} />
+            <>
+              <div className="fs-cam-stage">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img key={photoIdx} className="fs-cam-img" src={photos[photoIdx]} alt={`Wedstrijdfoto ${photoIdx + 1}`} />
+                <svg className="fs-cam-heart" viewBox="0 0 32 29.6" aria-hidden>
+                  <path d={HEART_PATH} />
+                </svg>
+                <span className="fs-cam-float a" aria-hidden>❤️</span>
+                <span className="fs-cam-float b" aria-hidden>💪</span>
+                <span className="fs-cam-float c" aria-hidden>🔥</span>
+                <span className="fs-cam-float d" aria-hidden>❤️</span>
+              </div>
+              <div key={`cap-${photoIdx}`} className="fs-cam-caption">{CAM_CAPTIONS[photoIdx % CAM_CAPTIONS.length]}</div>
+              <div className="fs-cam-count">{photoIdx + 1} / {photos.length}</div>
+            </>
           ) : (
             <div className="fs-photos-empty">Nog geen foto’s van deze wedstrijd.</div>
           )}

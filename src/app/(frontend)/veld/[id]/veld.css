@@ -534,8 +534,8 @@
   .fs-ad-item img { height: clamp(26px, 9vh, 48px); }
 }
 
-/* ── Pauze-foto's: fullscreen slideshow van de wedstrijdfoto's ─────────────────────────────────── */
-.fs-photos {
+/* ── Kracht-cam: speelse kiss-cam-stijl slideshow van de wedstrijdfoto's (tijdens de pauze) ─────── */
+.fs-cam {
   position: absolute;
   inset: 0;
   z-index: 40;
@@ -543,26 +543,101 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2vmin;
-  padding: 4vmin;
-  background: rgba(3, 10, 7, 0.93);
-  -webkit-backdrop-filter: blur(4px);
-  backdrop-filter: blur(4px);
+  gap: clamp(8px, 1.8vmin, 22px);
+  padding: 3vmin;
   cursor: pointer;
+  background:
+    radial-gradient(circle at 50% 38%, rgba(255, 77, 157, 0.18), transparent 55%),
+    radial-gradient(circle at 50% 50%, rgba(3, 10, 7, 0.9), rgba(3, 10, 7, 0.97));
+  -webkit-backdrop-filter: blur(5px);
+  backdrop-filter: blur(5px);
   animation: fs-flow-in 0.4s ease both;
 }
-.fs-photos-head { font-size: clamp(1rem, 3.4vmin, 2rem); font-weight: 800; color: #ecf7f0; }
-.fs-photos-img {
-  max-width: 92vw;
-  max-height: 74vh;
-  object-fit: contain;
-  border-radius: 1.6vmin;
-  box-shadow: 0 3vmin 7vmin rgba(0, 0, 0, 0.6);
-  animation: fs-photo-fade 0.5s ease both;
+.fs-cam-title {
+  font-size: clamp(1.4rem, 5vmin, 3.4rem);
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  color: #fff;
+  text-shadow: 0 0 18px rgba(255, 77, 157, 0.8), 0 2px 6px rgba(0, 0, 0, 0.6);
+  animation: fs-cam-pulse 1.1s ease-in-out infinite;
 }
-@keyframes fs-photo-fade {
-  from { opacity: 0; transform: scale(0.98); }
+@keyframes fs-cam-pulse {
+  50% { transform: scale(1.06); }
+}
+.fs-cam-stage {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: min(92vw, 78vh);
+  max-height: 64vh;
+  overflow: hidden;
+  border-radius: 2vmin;
+  box-shadow: 0 3vmin 7vmin rgba(0, 0, 0, 0.6), 0 0 0 0.5vmin rgba(255, 255, 255, 0.9), 0 0 4vmin rgba(255, 77, 157, 0.5);
+}
+.fs-cam-img {
+  width: 100%;
+  height: 100%;
+  max-height: 64vh;
+  object-fit: cover;
+  display: block;
+  animation: fs-cam-zoom 4.6s ease-out both;
+}
+@keyframes fs-cam-zoom {
+  from { transform: scale(1.001); }
+  to { transform: scale(1.12) translate(1%, -1%); }
+}
+/* Hart-overlay (kiss-cam-signatuur) over de foto. */
+.fs-cam-heart {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 70%;
+  height: 70%;
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.92);
+  stroke-width: 1.1;
+  filter: drop-shadow(0 0 6px rgba(255, 77, 157, 0.9));
+  pointer-events: none;
+  animation: fs-cam-beat 0.9s ease-in-out infinite;
+}
+@keyframes fs-cam-beat {
+  0%, 100% { transform: scale(0.96); }
+  30% { transform: scale(1.04); }
+  45% { transform: scale(0.99); }
+}
+/* Zwevende emoji's. */
+.fs-cam-float {
+  position: absolute;
+  bottom: -8%;
+  font-size: clamp(1.6rem, 5vmin, 3.2rem);
+  pointer-events: none;
+  animation: fs-cam-rise 3.2s ease-in infinite;
+}
+.fs-cam-float.a { left: 14%; animation-delay: 0s; }
+.fs-cam-float.b { left: 38%; animation-delay: 0.8s; }
+.fs-cam-float.c { left: 62%; animation-delay: 1.5s; }
+.fs-cam-float.d { left: 84%; animation-delay: 2.2s; }
+@keyframes fs-cam-rise {
+  0% { transform: translateY(0) scale(0.8); opacity: 0; }
+  15% { opacity: 1; }
+  100% { transform: translateY(-72vh) scale(1.2); opacity: 0; }
+}
+.fs-cam-caption {
+  font-size: clamp(1.1rem, 3.4vmin, 2.4rem);
+  font-weight: 800;
+  color: #ffe08a;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+  animation: fs-cam-pop 0.5s ease both;
+}
+@keyframes fs-cam-pop {
+  from { opacity: 0; transform: translateY(8px) scale(0.96); }
   to { opacity: 1; transform: none; }
+}
+.fs-cam-count { font-size: clamp(0.8rem, 2vmin, 1.1rem); color: rgba(255, 255, 255, 0.7); font-variant-numeric: tabular-nums; }
+@media (prefers-reduced-motion: reduce) {
+  .fs-cam-title, .fs-cam-heart, .fs-cam-float, .fs-cam-img { animation: none; }
+  .fs-cam-float { opacity: 0; }
 }
 .fs-photos-empty { font-size: clamp(1rem, 3vmin, 1.8rem); color: rgba(236, 247, 240, 0.82); }
 .fs-photos-hint { font-size: clamp(0.8rem, 2vmin, 1.1rem); color: rgba(236, 247, 240, 0.55); }
