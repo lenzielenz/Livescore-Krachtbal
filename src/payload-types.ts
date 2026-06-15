@@ -517,6 +517,10 @@ export interface Match {
   id: number;
   title?: string | null;
   /**
+   * Link naar de live-uitzending (YouTube, Facebook of Twitch). Supporters volgen de wedstrijd dan live op de wedstrijdpagina.
+   */
+  livestreamUrl?: string | null;
+  /**
    * Kies eerst de reeks. De categorie volgt automatisch en de ploegen worden hierop gefilterd.
    */
   reeks:
@@ -1487,6 +1491,7 @@ export interface PlayersSelect<T extends boolean = true> {
  */
 export interface MatchesSelect<T extends boolean = true> {
   title?: T;
+  livestreamUrl?: T;
   reeks?: T;
   seizoen?: T;
   homeTeam?: T;

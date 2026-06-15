@@ -115,6 +115,16 @@ export const Matches: CollectionConfig = {
       },
     },
     {
+      // Optionele live-uitzending: een link naar de stream (YouTube, Facebook of Twitch). Is ze
+      // ingevuld, dan kunnen supporters de wedstrijd live volgen op de wedstrijdpagina.
+      name: 'livestreamUrl',
+      label: 'Livestream-URL (optioneel)',
+      type: 'text',
+      admin: {
+        description: 'Link naar de live-uitzending (YouTube, Facebook of Twitch). Supporters volgen de wedstrijd dan live op de wedstrijdpagina.',
+      },
+    },
+    {
       // Eerste keuze: de reeks. Die bepaalt de categorie én filtert de kiesbare ploegen.
       name: 'reeks',
       label: 'Reeks / niveau',
