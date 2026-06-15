@@ -2,15 +2,9 @@ import type { Access, CollectionConfig, FieldAccess } from 'payload'
 
 import { fieldIsFederation, hasRole, isFederationLevel, userClubId } from '../lib/access'
 import { analyseEntityFields } from '../lib/analyse-fields'
+import { POSITION_OPTIONS } from '../lib/positions'
 
-export const POSITION_OPTIONS = [
-  { label: 'Achter', value: 'achter' },
-  { label: 'Vleugel links', value: 'vleugel-links' },
-  { label: 'Vleugel rechts', value: 'vleugel-rechts' },
-  { label: 'Barage', value: 'barage' },
-  // Legacy: bestaande spelers zonder aangeduide kant (re-set naar links/rechts waar mogelijk).
-  { label: 'Vleugel (kant onbekend)', value: 'vleugel' },
-] as const
+export { POSITION_OPTIONS }
 
 export const VERGUNNING_OPTIONS = [
   { label: 'Geen', value: 'geen' },
