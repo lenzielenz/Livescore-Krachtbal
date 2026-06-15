@@ -1,6 +1,10 @@
-import type { CollectionConfig } from 'payload'
+import type { Access, CollectionConfig } from 'payload'
 
-import { isFederationLevel } from '../lib/access'
+import { hasRole, isFederationLevel } from '../lib/access'
+
+// Beheer van de reclamesectie is voorbehouden aan clubmedewerkers (rol 'club-beheerder');
+// federatie/admin staan daar uiteraard boven. Iedereen mag reclame wél lezen (de schermen tonen ze).
+const canManageAds: Access = ({ req }) => isFederationLevel(req.user) || hasRole(req.user, 'club-beheerder')
 
 // Waar een reclame getoond mag worden. Bewust uitbreidbaar zodat we dezelfde reclame later op
 // andere schermen/plekken kunnen hergebruiken. "Overal" = op alle ondersteunde plekken.
@@ -23,9 +27,9 @@ export const Advertenties: CollectionConfig = {
   },
   access: {
     read: () => true,
-    create: ({ req }) => isFederationLevel(req.user),
-    update: ({ req }) => isFederationLevel(req.user),
-    delete: ({ req }) => isFederationLevel(req.user),
+    create: canManageAds,
+    update: canManageAds,
+    delete: canManageAds,
   },
   fields: [
     { name: 'naam', label: 'Naam', type: 'text', required: true, admin: { description: 'Interne naam van de sponsor/reclame.' } },
