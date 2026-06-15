@@ -17,20 +17,21 @@
   overflow: hidden;
   border-radius: 26px;
   padding: 26px 22px 18px;
-  color: #f3f0ff;
-  /* Diepe, opvallende kleuren: neon-gloed (cyaan/magenta) + violette diepte over een donker indigo. */
+  color: #f2f8ff;
+  /* Elektrisch blauw/wit neon over een diep marineblauw-indigo. */
   background:
-    radial-gradient(85% 55% at 10% 0%, rgba(34, 211, 238, 0.24), transparent 60%),
-    radial-gradient(85% 55% at 100% 4%, rgba(255, 77, 157, 0.24), transparent 55%),
-    radial-gradient(130% 85% at 50% 122%, rgba(124, 58, 237, 0.32), transparent 62%),
-    linear-gradient(155deg, #2c1a59 0%, #1d1149 32%, #150c36 62%, #090619 100%);
-  border: 1px solid rgba(173, 196, 255, 0.22);
-  /* 3D-diepte: brede drop-shadow + felle neon-ambiance + glanzende bovenrand + donkere onderzijde. */
+    radial-gradient(85% 55% at 10% 0%, rgba(56, 189, 248, 0.30), transparent 60%),
+    radial-gradient(85% 55% at 100% 4%, rgba(255, 255, 255, 0.18), transparent 55%),
+    radial-gradient(130% 85% at 50% 122%, rgba(59, 130, 246, 0.36), transparent 62%),
+    linear-gradient(155deg, #1b2b6b 0%, #142057 32%, #0d1740 62%, #060a22 100%);
+  border: 1px solid rgba(173, 214, 255, 0.26);
+  /* 3D-diepte + een felle gloed die als halo achter de kaart uitwaaiert (elektrisch blauw + wit). */
   box-shadow:
-    0 38px 82px -32px rgba(0, 0, 0, 0.92),
-    0 0 46px -8px rgba(34, 211, 238, 0.36),
-    0 0 70px -16px rgba(255, 77, 157, 0.30),
-    inset 0 1px 0 rgba(255, 255, 255, 0.24),
+    0 40px 86px -30px rgba(0, 0, 0, 0.92),
+    0 0 80px -6px rgba(56, 189, 248, 0.55),
+    0 0 140px -10px rgba(59, 130, 246, 0.45),
+    0 0 110px -24px rgba(255, 255, 255, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.30),
     inset 0 -34px 72px -44px rgba(0, 0, 0, 0.88);
 }
 /* Structuur + glans: fijne satijnweave plus een specularе lichtband bovenaan. */
@@ -82,13 +83,13 @@
   overflow: hidden;
   display: grid;
   place-items: center;
-  background: linear-gradient(180deg, #2a1a55, #140c33);
-  /* Neon-ring met gloed (NYC-vibe) + diepte-schaduw eronder. */
+  background: linear-gradient(180deg, #1a2a63, #0d1740);
+  /* Neon-ring met felle elektrisch-blauwe/witte gloed + diepte-schaduw eronder. */
   box-shadow:
-    0 0 0 2px rgba(10, 7, 32, 0.95),
-    0 0 0 4px rgba(34, 211, 238, 0.95),
-    0 0 26px -2px rgba(34, 211, 238, 0.8),
-    0 0 38px -6px rgba(255, 77, 157, 0.45),
+    0 0 0 2px rgba(6, 10, 34, 0.95),
+    0 0 0 4px rgba(96, 165, 250, 0.98),
+    0 0 30px -2px rgba(56, 189, 248, 0.9),
+    0 0 46px -6px rgba(255, 255, 255, 0.4),
     0 14px 28px -12px rgba(0, 0, 0, 0.85);
 }
 .sc-photo img { width: 100%; height: 100%; object-fit: cover; transform-origin: center; }
@@ -99,10 +100,10 @@
   font-weight: 900;
   line-height: 1.05;
   letter-spacing: 0.01em;
-  text-shadow: 0 0 18px rgba(34, 211, 238, 0.45), 0 2px 5px rgba(0, 0, 0, 0.55);
+  text-shadow: 0 0 20px rgba(56, 189, 248, 0.55), 0 0 8px rgba(255, 255, 255, 0.25), 0 2px 5px rgba(0, 0, 0, 0.55);
 }
-.sc-pos { font-size: 0.95rem; font-weight: 800; color: #67e8f9; margin-top: 3px; text-shadow: 0 0 12px rgba(34, 211, 238, 0.6); }
-.sc-club { font-size: 0.82rem; color: rgba(220, 224, 255, 0.72); margin-top: 2px; }
+.sc-pos { font-size: 0.95rem; font-weight: 800; color: #7dd3fc; margin-top: 3px; text-shadow: 0 0 12px rgba(56, 189, 248, 0.7); }
+.sc-club { font-size: 0.82rem; color: rgba(214, 230, 255, 0.74); margin-top: 2px; }
 .sc-rating {
   flex-shrink: 0;
   text-align: center;
@@ -111,15 +112,15 @@
   align-items: center;
   padding: 8px 12px;
   border-radius: 14px;
-  background: linear-gradient(180deg, rgba(255, 209, 102, 0.22), rgba(255, 209, 102, 0.05));
-  border: 1px solid rgba(255, 209, 102, 0.6);
+  background: linear-gradient(180deg, rgba(96, 165, 250, 0.26), rgba(56, 189, 248, 0.05));
+  border: 1px solid rgba(125, 211, 252, 0.65);
   box-shadow:
-    0 0 22px -4px rgba(255, 209, 102, 0.6),
-    inset 0 1px 0 rgba(255, 255, 255, 0.35),
-    inset 0 -10px 16px -10px rgba(120, 80, 0, 0.5);
+    0 0 26px -4px rgba(56, 189, 248, 0.7),
+    inset 0 1px 0 rgba(255, 255, 255, 0.45),
+    inset 0 -10px 16px -10px rgba(0, 40, 90, 0.5);
 }
-.sc-rating-num { font-size: 1.9rem; font-weight: 900; color: #ffe08a; line-height: 1; text-shadow: 0 0 16px rgba(255, 209, 102, 0.8); }
-.sc-rating-cap { font-size: 0.6rem; letter-spacing: 0.16em; color: rgba(255, 224, 138, 0.85); margin-top: 3px; }
+.sc-rating-num { font-size: 1.9rem; font-weight: 900; color: #eaf6ff; line-height: 1; text-shadow: 0 0 18px rgba(56, 189, 248, 0.95); }
+.sc-rating-cap { font-size: 0.6rem; letter-spacing: 0.16em; color: rgba(186, 230, 253, 0.9); margin-top: 3px; }
 
 .sc-stats {
   display: flex;
@@ -131,23 +132,23 @@
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 .sc-stat { text-align: center; }
-.sc-stat b { display: block; font-size: 1.4rem; font-weight: 900; color: #ffe08a; text-shadow: 0 0 14px rgba(255, 209, 102, 0.6); }
-.sc-stat span { font-size: 0.6rem; letter-spacing: 0.1em; color: rgba(236, 247, 240, 0.62); }
+.sc-stat b { display: block; font-size: 1.4rem; font-weight: 900; color: #eaf6ff; text-shadow: 0 0 14px rgba(56, 189, 248, 0.75); }
+.sc-stat span { font-size: 0.6rem; letter-spacing: 0.1em; color: rgba(214, 230, 255, 0.64); }
 
 .sc-radar { width: 100%; height: auto; display: block; margin: 4px 0; overflow: visible; }
-.sc-ring { fill: none; stroke: rgba(255, 255, 255, 0.09); stroke-width: 1; }
-.sc-spoke { stroke: rgba(255, 255, 255, 0.12); stroke-width: 1; }
+.sc-ring { fill: none; stroke: rgba(125, 211, 252, 0.1); stroke-width: 1; }
+.sc-spoke { stroke: rgba(125, 211, 252, 0.14); stroke-width: 1; }
 .sc-poly {
-  fill: rgba(255, 209, 102, 0.30);
-  stroke: #ffd873;
-  stroke-width: 2.4;
+  fill: rgba(56, 189, 248, 0.28);
+  stroke: #7dd3fc;
+  stroke-width: 2.6;
   stroke-linejoin: round;
-  filter: drop-shadow(0 0 12px rgba(255, 209, 102, 0.7));
+  filter: drop-shadow(0 0 16px rgba(56, 189, 248, 0.9));
 }
-.sc-dot { fill: #ffe08a; stroke: #0a0719; stroke-width: 1; filter: drop-shadow(0 0 5px rgba(255, 209, 102, 0.9)); }
-.sc-axis { fill: #f3f0ff; }
+.sc-dot { fill: #eaf6ff; stroke: #060a22; stroke-width: 1; filter: drop-shadow(0 0 7px rgba(56, 189, 248, 1)); }
+.sc-axis { fill: #f2f8ff; }
 .sc-axis-lbl { font-size: 11px; font-weight: 800; }
-.sc-axis-val { font-size: 10px; fill: #67e8f9; font-weight: 700; }
+.sc-axis-val { font-size: 10px; fill: #7dd3fc; font-weight: 700; }
 
 /* Editor */
 .sc-editor { display: flex; flex-direction: column; gap: 12px; }
