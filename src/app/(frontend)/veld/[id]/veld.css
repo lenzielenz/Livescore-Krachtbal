@@ -29,12 +29,18 @@
   padding: clamp(12px, 3vh, 32px) 16px 0;
 }
 
-/* Volledig-scherm-knop: rustige ronde knop rechtsboven; ingetogen tot je erover hovert. */
-.fs-fsbtn {
+/* Bedieningscluster rechtsboven: test-, foto- en volledig-scherm-knop netjes naast elkaar. */
+.fs-controls {
   position: absolute;
   top: clamp(10px, 2.4vh, 22px);
   right: clamp(10px, 2.4vw, 24px);
-  z-index: 5;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: clamp(6px, 1vw, 10px);
+}
+/* Volledig-scherm-knop: rustige ronde knop; ingetogen tot je erover hovert. */
+.fs-fsbtn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -51,17 +57,8 @@
   -webkit-backdrop-filter: blur(2px);
   backdrop-filter: blur(2px);
 }
-.fs-fsbtn:hover,
-.fs-fsbtn:focus-visible {
-  opacity: 1;
-  background: rgba(0, 0, 0, 0.6);
-}
-/* Testknop: links van de volledig-scherm-knop; toont meteen de verloop-grafiek. */
-.fs-testbtn {
-  position: absolute;
-  top: clamp(10px, 2.4vh, 22px);
-  right: clamp(56px, 8vw, 86px);
-  z-index: 5;
+/* Tekstknoppen (test/foto): pil-vorm in dezelfde stijl. */
+.fs-ctrlbtn {
   display: inline-flex;
   align-items: center;
   height: clamp(38px, 5vw, 52px);
@@ -74,12 +71,15 @@
   border-radius: 999px;
   cursor: pointer;
   opacity: 0.55;
+  white-space: nowrap;
   transition: opacity 0.2s ease, background 0.2s ease;
   -webkit-backdrop-filter: blur(2px);
   backdrop-filter: blur(2px);
 }
-.fs-testbtn:hover,
-.fs-testbtn:focus-visible {
+.fs-fsbtn:hover,
+.fs-fsbtn:focus-visible,
+.fs-ctrlbtn:hover,
+.fs-ctrlbtn:focus-visible {
   opacity: 1;
   background: rgba(0, 0, 0, 0.6);
 }
@@ -526,3 +526,43 @@
   from { transform: translateX(0); }
   to { transform: translateX(-50%); }
 }
+
+/* Reclamebalk slanker in landschap zodat het scorebord niet verdrukt wordt. */
+@media (orientation: landscape) {
+  .fs-ad { height: clamp(40px, 13vh, 64px); }
+  .fs-ad-item { padding: 4px 10px; }
+  .fs-ad-item img { height: clamp(26px, 9vh, 48px); }
+}
+
+/* ── Pauze-foto's: fullscreen slideshow van de wedstrijdfoto's ─────────────────────────────────── */
+.fs-photos {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2vmin;
+  padding: 4vmin;
+  background: rgba(3, 10, 7, 0.93);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+  cursor: pointer;
+  animation: fs-flow-in 0.4s ease both;
+}
+.fs-photos-head { font-size: clamp(1rem, 3.4vmin, 2rem); font-weight: 800; color: #ecf7f0; }
+.fs-photos-img {
+  max-width: 92vw;
+  max-height: 74vh;
+  object-fit: contain;
+  border-radius: 1.6vmin;
+  box-shadow: 0 3vmin 7vmin rgba(0, 0, 0, 0.6);
+  animation: fs-photo-fade 0.5s ease both;
+}
+@keyframes fs-photo-fade {
+  from { opacity: 0; transform: scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+.fs-photos-empty { font-size: clamp(1rem, 3vmin, 1.8rem); color: rgba(236, 247, 240, 0.82); }
+.fs-photos-hint { font-size: clamp(0.8rem, 2vmin, 1.1rem); color: rgba(236, 247, 240, 0.55); }
