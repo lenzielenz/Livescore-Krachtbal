@@ -6,7 +6,7 @@ import { ClubColorBlast } from '@/components/ClubColorBlast'
 import { TeamLogo } from '@/components/TeamLogo'
 import { DEFAULT_AWAY_COLOR, DEFAULT_HOME_COLOR, inkOn, readableOnDark } from '@/lib/club-colors'
 import type { MatchState, TimelineItem } from '@/lib/match-engine'
-import { buildMomentum, type MomentumPoint } from '@/lib/match-momentum'
+import { buildMomentum, demoMomentum, type MomentumPoint } from '@/lib/match-momentum'
 import { goalPointsFromLabel, goalScorerFromLabel, useLiveStream } from '@/lib/use-live-stream'
 
 function fmtClock(total: number): string {
@@ -123,6 +123,8 @@ export function FieldScreen({
   const [goal, setGoal] = useState<Goal | null>(null)
   // Wedstrijdverloop-grafiek: rond het midden van de eerste helft ±1 min tonen (de score blijft staan).
   const [showFlow, setShowFlow] = useState(false)
+  // Demo-modus voor de testknop: toont de grafiek met fictieve doelpunten i.p.v. de echte (vlakke) stand.
+  const [flowDemo, setFlowDemo] = useState(false)
   const flowShown = useRef(false)
   const flowTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   // Volledig scherm voor de zaal-tv: zet het veldscherm over het hele scherm (verbergt browser-UI).
@@ -207,12 +209,16 @@ export function FieldScreen({
     }
   }
 
-  // Testknop: toon meteen de verloop-grafiek zoals ze rond de 10e minuut (midden eerste helft)
-  // vanzelf verschijnt — handig om de animatie/layout te bekijken zonder te wachten.
+  // Testknop: toon meteen de verloop-grafiek met FICTIEVE doelpunten, zoals ze rond de 10e minuut
+  // (midden eerste helft) zou verschijnen — zo zie je de lijn echt stijgen/dalen zonder te wachten.
   const previewFlow = () => {
     if (flowTimer.current) clearTimeout(flowTimer.current)
+    setFlowDemo(true)
     setShowFlow(true)
-    flowTimer.current = setTimeout(() => setShowFlow(false), 60_000)
+    flowTimer.current = setTimeout(() => {
+      setShowFlow(false)
+      setFlowDemo(false)
+    }, 60_000)
   }
 
   // Klok-basis bijwerken — reken vanaf clockUpdatedAt (server) zodat de tijd klopt en niet reset.
@@ -233,6 +239,7 @@ export function FieldScreen({
 
   const momentum = useMemo(() => buildMomentum(timeline, halfSeconds), [timeline, halfSeconds])
   const nowT = (Math.max(1, state.match.currentHalf) - 1) * halfSeconds + clock
+  const demoPts = useMemo(() => demoMomentum(halfSeconds), [halfSeconds])
 
   // Toon de verloop-grafiek één keer, rond het midden van de eerste helft (±30 s), ~1 minuut lang.
   useEffect(() => {
@@ -348,26 +355,35 @@ export function FieldScreen({
         </div>
       )}
 
-      {showFlow && (
-        <div className="fs-flow">
-          <div className="fs-flow-card">
-            <div className="fs-flow-head">
-              <span className="fs-flow-title">📈 Wedstrijdverloop</span>
-              <span className="fs-flow-score">
-                <b style={{ color: home1 }}>{state.score.home}</b>
-                <i>–</i>
-                <b style={{ color: away1 }}>{state.score.away}</b>
-              </span>
-            </div>
-            <MomentumChart points={momentum} nowT={nowT} homeColor={home1} awayColor={away1} />
-            <div className="fs-flow-legend">
-              <span><i style={{ background: home1 }} /> {state.teams.home.name}</span>
-              <span className="fs-flow-mid">{fmtClock(clock)} · Helft {state.match.currentHalf}</span>
-              <span>{state.teams.away.name} <i style={{ background: away1 }} /></span>
+      {showFlow && (() => {
+        // In demo-modus tonen we fictieve doelpunten zodat de lijn zichtbaar beweegt.
+        const pts = flowDemo ? demoPts : momentum
+        const last = pts[pts.length - 1]
+        const flowNowT = flowDemo ? halfSeconds / 2 : nowT
+        const scoreHome = flowDemo ? last.home : state.score.home
+        const scoreAway = flowDemo ? last.away : state.score.away
+        const flowClock = flowDemo ? halfSeconds / 2 : clock
+        return (
+          <div className="fs-flow">
+            <div className="fs-flow-card">
+              <div className="fs-flow-head">
+                <span className="fs-flow-title">📈 Wedstrijdverloop{flowDemo ? ' · TEST' : ''}</span>
+                <span className="fs-flow-score">
+                  <b style={{ color: home1 }}>{scoreHome}</b>
+                  <i>–</i>
+                  <b style={{ color: away1 }}>{scoreAway}</b>
+                </span>
+              </div>
+              <MomentumChart points={pts} nowT={flowNowT} homeColor={home1} awayColor={away1} />
+              <div className="fs-flow-legend">
+                <span><i style={{ background: home1 }} /> {state.teams.home.name}</span>
+                <span className="fs-flow-mid">{fmtClock(flowClock)} · Helft {flowDemo ? 1 : state.match.currentHalf}</span>
+                <span>{state.teams.away.name} <i style={{ background: away1 }} /></span>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      })()}
     </div>
   )
 }
