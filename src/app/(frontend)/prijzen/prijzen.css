@@ -12,6 +12,8 @@
 
 .pr-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; align-items: stretch; }
 @media (max-width: 820px) { .pr-grid { grid-template-columns: 1fr; max-width: 460px; margin: 0 auto; } }
+/* Eén zichtbaar pakket → gecentreerd tonen i.p.v. links uitgelijnd. */
+.pr-grid-single { grid-template-columns: minmax(280px, 420px); justify-content: center; }
 
 .pr-tier {
   position: relative; display: flex; flex-direction: column; gap: 10px; padding: 22px 20px; border-radius: 18px;
