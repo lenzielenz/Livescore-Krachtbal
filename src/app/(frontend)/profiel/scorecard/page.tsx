@@ -83,7 +83,6 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
 
   // ── Databron bepalen: echte matchstatistiek wanneer er een gekoppelde speler met data is. ──
   const playerId = rel(t.player)
-  let source: 'stats' | 'skills' | 'empty' = 'skills'
   let fracs: number[] = []
   let values: string[] = []
   let statsNums: { matches: number; goals: number; points: number } | null = null
@@ -97,7 +96,6 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
       const set = await buildRadarStats(payload, String(reeks), null, competitionWhere()).catch(() => [])
       const me = set.find((p) => p.playerId === playerId)
       if (me && me.matches > 0) {
-        source = 'stats'
         usingStats = true
         fracs = radarFromStats(me, set)
         values = SCORECARD_AXES.map((a) => a.fmt(a.get(me)))
@@ -110,7 +108,6 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
   if (!usingStats) {
     fracs = radarFromSkills(skills)
     values = SCORECARD_AXES.map((a) => String(skills[a.key] ?? 0))
-    source = Object.keys(skills).length > 0 ? 'skills' : 'empty'
   }
 
   const rating = ratingFromFracs(fracs)
@@ -171,7 +168,6 @@ export default async function ScorecardPage({ searchParams }: { searchParams: Pr
           fit={fit}
           axes={axes}
           rating={rating}
-          source={source}
           stats={statsNums}
         />
         {isOwn && (
