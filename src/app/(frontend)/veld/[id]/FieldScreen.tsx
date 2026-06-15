@@ -207,6 +207,14 @@ export function FieldScreen({
     }
   }
 
+  // Testknop: toon meteen de verloop-grafiek zoals ze rond de 10e minuut (midden eerste helft)
+  // vanzelf verschijnt — handig om de animatie/layout te bekijken zonder te wachten.
+  const previewFlow = () => {
+    if (flowTimer.current) clearTimeout(flowTimer.current)
+    setShowFlow(true)
+    flowTimer.current = setTimeout(() => setShowFlow(false), 60_000)
+  }
+
   // Klok-basis bijwerken — reken vanaf clockUpdatedAt (server) zodat de tijd klopt en niet reset.
   useEffect(() => {
     const m = state.match
@@ -269,6 +277,14 @@ export function FieldScreen({
   return (
     <div className="fs" style={fsStyle} ref={rootRef}>
       {blast && <ClubColorBlast key={blast.key} colors={blast.colors} teamName={blast.name} />}
+      <button
+        type="button"
+        className="fs-testbtn"
+        onClick={previewFlow}
+        title="Test: toon het wedstrijdverloop (zoals rond de 10e minuut)"
+      >
+        🧪 Test verloop
+      </button>
       <button
         type="button"
         className="fs-fsbtn"

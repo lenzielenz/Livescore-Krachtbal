@@ -56,6 +56,33 @@
   opacity: 1;
   background: rgba(0, 0, 0, 0.6);
 }
+/* Testknop: links van de volledig-scherm-knop; toont meteen de verloop-grafiek. */
+.fs-testbtn {
+  position: absolute;
+  top: clamp(10px, 2.4vh, 22px);
+  right: clamp(56px, 8vw, 86px);
+  z-index: 5;
+  display: inline-flex;
+  align-items: center;
+  height: clamp(38px, 5vw, 52px);
+  padding: 0 clamp(10px, 1.6vw, 16px);
+  font-size: clamp(0.72rem, 1.5vw, 0.95rem);
+  font-weight: 800;
+  color: var(--txt);
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  cursor: pointer;
+  opacity: 0.55;
+  transition: opacity 0.2s ease, background 0.2s ease;
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+}
+.fs-testbtn:hover,
+.fs-testbtn:focus-visible {
+  opacity: 1;
+  background: rgba(0, 0, 0, 0.6);
+}
 .fs-offline {
   font-size: clamp(0.7rem, 1.6vw, 1rem);
   font-weight: 800;
