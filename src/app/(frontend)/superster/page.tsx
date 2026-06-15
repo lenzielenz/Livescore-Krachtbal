@@ -1,6 +1,7 @@
 import { SiteHeader } from '@/components/SiteHeader'
+import { KrachtbalIcon } from '@/components/KrachtbalIcon'
 import { getPayloadClient } from '@/lib/payload-client'
-import { reeksNaam } from '@/lib/reeksen'
+import { krachtbalKleur, reeksNaam } from '@/lib/reeksen'
 import { seasonFromDate } from '@/lib/seasons'
 import { buildSuperstars, type Superstar } from '@/lib/superstars'
 import './superster.css'
@@ -25,7 +26,9 @@ function Board({ reeks, players }: { reeks: string; players: Superstar[] }) {
         <div className="ss-row ss-head" role="row">
           <span className="ss-rank">#</span>
           <span className="ss-player">Speler</span>
-          <span className="ss-num" title="Doelpunten">⚽</span>
+          <span className="ss-num" title="Doelpunten">
+            <KrachtbalIcon size="1.3em" kleur={krachtbalKleur(reeks)} style={{ display: 'block', margin: '0 auto' }} />
+          </span>
           <span className="ss-num" title="Rugworpen (+2)">🔄</span>
           <span className="ss-num ss-pts" title="Punten">Ptn</span>
         </div>
