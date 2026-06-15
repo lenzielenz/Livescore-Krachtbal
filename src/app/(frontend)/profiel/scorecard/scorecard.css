@@ -1,0 +1,95 @@
+/* Scorecard — spelerskaart met radar (foto, naam, positie, prestatie-assen). */
+.sc-layout {
+  display: grid;
+  grid-template-columns: minmax(300px, 380px) minmax(280px, 1fr);
+  gap: 18px;
+  align-items: start;
+  max-width: 860px;
+}
+@media (max-width: 720px) {
+  .sc-layout { grid-template-columns: 1fr; max-width: 420px; }
+}
+
+.sc-card {
+  border-radius: 20px;
+  padding: 20px 18px 14px;
+  color: #ecf7f0;
+  background:
+    radial-gradient(120% 90% at 50% -10%, rgba(6, 214, 160, 0.18), transparent 60%),
+    linear-gradient(180deg, #133024, #0a1c14 70%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 24px 60px -28px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.sc-head { display: flex; align-items: center; gap: 14px; }
+.sc-photo {
+  width: 76px;
+  height: 76px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(180deg, #1c4633, #0d2419);
+  border: 2px solid color-mix(in srgb, #06d6a0 55%, transparent);
+  box-shadow: 0 8px 20px -10px rgba(0, 0, 0, 0.7);
+}
+.sc-photo img { width: 100%; height: 100%; object-fit: cover; transform-origin: center; }
+.sc-photo-empty { font-size: 38px; opacity: 0.55; }
+.sc-id { flex: 1; min-width: 0; }
+.sc-name { font-size: 1.45rem; font-weight: 900; line-height: 1.05; }
+.sc-pos { font-size: 0.9rem; font-weight: 700; color: #9fe9cf; margin-top: 2px; }
+.sc-club { font-size: 0.8rem; color: rgba(236, 247, 240, 0.65); margin-top: 1px; }
+.sc-rating {
+  flex-shrink: 0;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(255, 209, 102, 0.18), rgba(255, 209, 102, 0.05));
+  border: 1px solid rgba(255, 209, 102, 0.45);
+}
+.sc-rating-num { font-size: 1.7rem; font-weight: 900; color: #ffd166; line-height: 1; }
+.sc-rating-cap { font-size: 0.6rem; letter-spacing: 0.14em; color: rgba(255, 209, 102, 0.8); margin-top: 2px; }
+
+.sc-stats {
+  display: flex;
+  justify-content: space-around;
+  gap: 8px;
+  margin: 14px 0 4px;
+  padding: 10px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.sc-stat { text-align: center; }
+.sc-stat b { display: block; font-size: 1.3rem; font-weight: 900; color: #ffd166; }
+.sc-stat span { font-size: 0.6rem; letter-spacing: 0.1em; color: rgba(236, 247, 240, 0.6); }
+
+.sc-radar { width: 100%; height: auto; display: block; margin: 2px 0; overflow: visible; }
+.sc-ring { fill: none; stroke: rgba(255, 255, 255, 0.08); stroke-width: 1; }
+.sc-spoke { stroke: rgba(255, 255, 255, 0.1); stroke-width: 1; }
+.sc-poly {
+  fill: rgba(255, 209, 102, 0.28);
+  stroke: #ffd166;
+  stroke-width: 2;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0 6px rgba(255, 209, 102, 0.4));
+}
+.sc-dot { fill: #ffd166; stroke: #0a1c14; stroke-width: 1; }
+.sc-axis { fill: #ecf7f0; }
+.sc-axis-lbl { font-size: 11px; font-weight: 800; }
+.sc-axis-val { font-size: 10px; fill: #9fe9cf; font-weight: 700; }
+
+.sc-source { font-size: 0.74rem; color: rgba(236, 247, 240, 0.6); text-align: center; margin: 6px 0 2px; line-height: 1.4; }
+
+/* Editor */
+.sc-editor { display: flex; flex-direction: column; gap: 12px; }
+.sc-editor h2 { margin: 0; font-size: 1.1rem; }
+.sc-edit-hint { font-size: 0.78rem; color: var(--dim); margin: 0; line-height: 1.45; }
+.sc-sliders { display: flex; flex-direction: column; gap: 10px; }
+.sc-slider { display: flex; flex-direction: column; gap: 3px; }
+.sc-slider-top { display: flex; justify-content: space-between; font-size: 0.82rem; color: var(--dim); }
+.sc-slider-top b { color: var(--accent); }
+.sc-slider input[type='range'] { width: 100%; accent-color: var(--accent); }

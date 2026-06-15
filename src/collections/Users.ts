@@ -169,6 +169,24 @@ export const Users: CollectionConfig = {
       admin: { description: 'De eigen speelpositie. De gebruiker stelt dit zelf in via "Mijn profiel".' },
     },
     {
+      // Koppeling account → speler-dossier. Is het lid gekoppeld én heeft die speler wedstrijddata,
+      // dan toont de scorecard de échte matchstatistiek (percentiel binnen de reeks). Zo niet, dan
+      // valt de radar terug op de zelf-/coachbeoordeling (scorecardSkills).
+      name: 'player',
+      label: 'Mijn speler (voor matchstatistiek)',
+      type: 'relationship',
+      relationTo: 'players',
+      admin: { description: 'Koppel je account aan je spelersdossier zodat je scorecard je echte cijfers toont.' },
+    },
+    {
+      // Zelf-/coachbeoordeling per radar-as (0..100). Vult de scorecard wanneer er (nog) geen
+      // wedstrijddata is. De gebruiker (of zijn coach) beheert dit zelf via de scorecard.
+      name: 'scorecardSkills',
+      label: 'Scorecard-beoordeling',
+      type: 'json',
+      admin: { description: 'Eigen/coach-beoordeling per as (0–100) voor de scorecard. De gebruiker beheert dit zelf.' },
+    },
+    {
       // "Mijn ploegen": een trainer/coach duidt aan welke ploeg(en) van zijn club hij volgt,
       // zodat "Mijn club" meteen op die ploeg(en) focust (de selectie is al gebeurd). Een lijst
       // van team-ids (json) — de gebruiker beheert dit zelf via "Mijn club".
