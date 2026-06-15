@@ -27,7 +27,6 @@ export function Scorecard({
   fit,
   axes,
   rating,
-  source,
   stats,
 }: {
   name: string
@@ -37,7 +36,6 @@ export function Scorecard({
   fit: { zoom: number; offsetX: number; offsetY: number }
   axes: ScorecardAxisView[]
   rating: number
-  source: 'stats' | 'skills' | 'empty'
   stats?: { matches: number; goals: number; points: number } | null
 }) {
   const n = axes.length
@@ -105,14 +103,6 @@ export function Scorecard({
           )
         })}
       </svg>
-
-      <p className="sc-source">
-        {source === 'stats'
-          ? '📊 Op basis van je echte wedstrijdstatistiek (percentiel binnen je reeks).'
-          : source === 'skills'
-            ? '✍️ Op basis van een eigen/coach-beoordeling — koppel een speler met wedstrijddata voor echte cijfers.'
-            : 'Nog geen gegevens — vul je beoordeling in of koppel je spelersdossier.'}
-      </p>
     </div>
   )
 }
