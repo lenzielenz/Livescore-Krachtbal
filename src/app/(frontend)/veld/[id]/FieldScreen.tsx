@@ -313,6 +313,13 @@ export function FieldScreen({
     }
   }
 
+  // Testknop: toon de kracht-cam meteen met voorbeeld-foto's (om de look te testen). Tik om te sluiten.
+  const testCam = () => {
+    if (photos !== null) { setPhotos(null); return }
+    setPhotoIdx(0)
+    setPhotos(DEMO_PHOTOS)
+  }
+
   // Slideshow: elke 4,5 s naar de volgende foto.
   useEffect(() => {
     if (!photos || photos.length < 2) return
@@ -414,7 +421,7 @@ export function FieldScreen({
           onClick={runTest}
           title="Test: speel doelpunt-animatie, reclamebalk en wedstrijdverloop af"
         >
-          🧪 Test scherm
+          🧪 Test
         </button>
         <button
           type="button"
@@ -423,6 +430,14 @@ export function FieldScreen({
           title="Toon de wedstrijdfoto's (kracht-cam, ideaal tijdens de pauze)"
         >
           {photosLoading ? '📷 …' : photos !== null ? '✕ Foto’s' : '📷 Foto’s'}
+        </button>
+        <button
+          type="button"
+          className="fs-ctrlbtn fs-cambtn"
+          onClick={testCam}
+          title="Test de kracht-cam met voorbeeld-foto's"
+        >
+          {photos !== null ? '✕ Cam' : '💪 Cam'}
         </button>
         <button
           type="button"
@@ -508,9 +523,13 @@ export function FieldScreen({
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img key={photoIdx} className="fs-cam-bg" src={photos[photoIdx]} alt={`Wedstrijdfoto ${photoIdx + 1}`} />
               <div className="fs-cam-shade" aria-hidden />
+              <div className="fs-cam-spin" aria-hidden />
               <svg className="fs-cam-heart" viewBox="0 0 32 29.6" aria-hidden>
                 <path d={HEART_PATH} />
               </svg>
+              <span className="fs-cam-spark s1" aria-hidden>✨</span>
+              <span className="fs-cam-spark s2" aria-hidden>⭐</span>
+              <span className="fs-cam-spark s3" aria-hidden>✨</span>
               <div className="fs-cam-title">💪 KRACHT-CAM 💪</div>
               <div key={`cap-${photoIdx}`} className="fs-cam-caption">{CAM_CAPTIONS[photoIdx % CAM_CAPTIONS.length]}</div>
               <span className="fs-cam-float a" aria-hidden>❤️</span>
