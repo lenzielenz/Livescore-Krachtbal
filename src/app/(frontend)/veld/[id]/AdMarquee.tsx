@@ -6,7 +6,8 @@ export type { Ad }
 // animatie naadloos doorloopt; de snelheid schaalt mee met het aantal reclames.
 export function AdMarquee({ ads, position }: { ads: Ad[]; position: 'top' | 'bottom' }) {
   if (ads.length === 0) return null
-  const duration = Math.max(24, ads.length * 9)
+  // Rustig tempo: hoe meer reclames, hoe trager — subtiel, niet opdringerig.
+  const duration = Math.max(46, ads.length * 16)
   const loop = [...ads, ...ads]
   return (
     <div className={`fs-ad fs-ad-${position}`} aria-hidden>
