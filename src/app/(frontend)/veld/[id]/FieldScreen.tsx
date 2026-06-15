@@ -8,6 +8,7 @@ import { DEFAULT_AWAY_COLOR, DEFAULT_HOME_COLOR, inkOn, readableOnDark } from '@
 import type { MatchState, TimelineItem } from '@/lib/match-engine'
 import { buildMomentum, demoMomentum, type MomentumPoint } from '@/lib/match-momentum'
 import { goalPointsFromLabel, goalScorerFromLabel, useLiveStream } from '@/lib/use-live-stream'
+import { QrCode } from '../../cast/QrCode'
 import { AdMarquee, type Ad } from './AdMarquee'
 
 function fmtClock(total: number): string {
@@ -164,6 +165,8 @@ export function FieldScreen({
   const [photos, setPhotos] = useState<string[] | null>(null) // null = dicht, [] = geen foto's
   const [photoIdx, setPhotoIdx] = useState(0)
   const [photosLoading, setPhotosLoading] = useState(false)
+  // Absolute URL naar de wedstrijdpagina (voor de QR-code in de pre-match lobby) — pas op de client bekend.
+  const [matchUrl, setMatchUrl] = useState('')
   // Volledig scherm voor de zaal-tv: zet het veldscherm over het hele scherm (verbergt browser-UI).
   const rootRef = useRef<HTMLDivElement>(null)
   const [isFullscreen, setIsFullscreen] = useState(false)
@@ -346,9 +349,26 @@ export function FieldScreen({
     previewTimers.current.forEach(clearTimeout)
   }, [])
 
+  useEffect(() => {
+    setMatchUrl(`${window.location.origin}/match/${matchId}`)
+  }, [matchId])
+
   const status = state.match.status
   const statusLabel =
     status === 'live' ? (state.atHalfTime ? 'RUST' : 'LIVE') : status === 'finished' ? 'AFGELOPEN' : 'GEPLAND'
+
+  // Pre-match "lobby": het scherm staat aan maar de wedstrijd is nog niet begonnen (klok op 0, niet
+  // lopend, 0–0, eerste helft). Dan tonen we scrollende sponsors + een grote QR om online mee te doen.
+  // Zodra de wedstrijd start (klok loopt / tijd > 0 / er is gescoord), verdwijnt de lobby vanzelf.
+  const preMatch =
+    status !== 'finished' &&
+    state.match.currentHalf === 1 &&
+    !state.match.clockRunning &&
+    (state.match.clockSeconds ?? 0) === 0 &&
+    clock < 1 &&
+    state.score.home === 0 &&
+    state.score.away === 0
+  const lobbyAds = ads.length > 0 ? ads : DEMO_ADS
 
   // Dynamische stijl op basis van de clubkleuren. De thuisploeg geeft de toon aan;
   // scoort de tegenpartij, dan komen tijdens de viering hún kleuren naar boven.
@@ -442,6 +462,27 @@ export function FieldScreen({
       </div>
 
       <AdMarquee ads={shownAds} position="bottom" />
+
+      {preMatch && (
+        <div className="fs-lobby">
+          <AdMarquee ads={lobbyAds} position="top" />
+          <div className="fs-lobby-body">
+            <div className="fs-lobby-teams">
+              {state.teams.home.name} <span>vs</span> {state.teams.away.name}
+            </div>
+            <div className="fs-lobby-title">📱 Doe online mee!</div>
+            <div className="fs-lobby-sub">Scan de QR-code en beleef deze wedstrijd mee op je telefoon</div>
+            <div className="fs-lobby-qr">{matchUrl && <QrCode value={matchUrl} size={300} />}</div>
+            <div className="fs-lobby-feats">
+              <span>📷 Foto’s</span>
+              <span>🎉 Emoji’s</span>
+              <span>💬 Aanmoedigingen</span>
+            </div>
+            <div className="fs-lobby-cta">Scan met je telefoon — de wedstrijd start zo!</div>
+          </div>
+          <AdMarquee ads={lobbyAds} position="bottom" />
+        </div>
+      )}
 
       {photos !== null && (
         <div className="fs-photos" onClick={() => setPhotos(null)}>
