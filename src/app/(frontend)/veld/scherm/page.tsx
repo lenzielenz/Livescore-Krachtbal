@@ -2,7 +2,7 @@ import Link from 'next/link'
 
 import { buildMatchState, buildTimeline } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
-import { reeksNaam } from '@/lib/reeksen'
+import { reeksHalfDurationSeconds, reeksNaam, type Reeks } from '@/lib/reeksen'
 import { readVeldMatchId } from '@/lib/screen-selection'
 import { FieldScreen } from '../[id]/FieldScreen'
 import { VeldSchermSync } from './VeldSchermSync'
@@ -26,9 +26,10 @@ export default async function VeldSchermPage() {
       if (matchDoc && !matchDoc.analyseOnly) {
         const [state, timeline] = await Promise.all([buildMatchState(payload, id), buildTimeline(payload, id)])
         const reeks = reeksLabel(matchDoc.reeks)
+        const halfSeconds = matchDoc.reeks ? reeksHalfDurationSeconds(matchDoc.reeks as Reeks) : 1500
         return (
           <>
-            <FieldScreen matchId={id} reeks={reeks} initial={{ state, timeline }} />
+            <FieldScreen matchId={id} reeks={reeks} halfSeconds={halfSeconds} initial={{ state, timeline }} />
             <VeldSchermSync currentId={id} />
           </>
         )

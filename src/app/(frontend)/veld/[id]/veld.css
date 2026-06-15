@@ -395,3 +395,59 @@
     padding: 0 12px;
   }
 }
+
+/* ── Wedstrijdverloop-grafiek (momentum) — rond het midden van de eerste helft ─────────────── */
+.fs-flow {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  padding: 4vmin;
+  background: radial-gradient(120% 120% at 50% 50%, rgba(3, 10, 7, 0.62), rgba(3, 10, 7, 0.82));
+  backdrop-filter: blur(3px);
+  animation: fs-flow-in 0.5s ease both;
+}
+@keyframes fs-flow-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.fs-flow-card {
+  width: min(86vw, 1100px);
+  display: flex;
+  flex-direction: column;
+  gap: 2.2vmin;
+  padding: 3.4vmin 3.8vmin;
+  border-radius: 2.4vmin;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0) 40%), rgba(6, 20, 13, 0.9);
+  box-shadow: 0 3vmin 8vmin rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+.fs-flow-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 3vmin;
+}
+.fs-flow-title { font-size: 3vmin; font-weight: 800; letter-spacing: 0.01em; color: #ecf7f0; }
+.fs-flow-score { font-size: 4.6vmin; font-weight: 900; line-height: 1; font-variant-numeric: tabular-nums; }
+.fs-flow-score i { margin: 0 1.4vmin; color: rgba(255, 255, 255, 0.5); font-style: normal; }
+.fs-flow-svg { width: 100%; height: 34vmin; display: block; }
+.fs-flow-legend {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2vmin;
+  font-size: 2.3vmin;
+  font-weight: 700;
+  color: rgba(236, 247, 240, 0.92);
+}
+.fs-flow-legend i {
+  display: inline-block;
+  width: 2.2vmin;
+  height: 2.2vmin;
+  border-radius: 50%;
+  vertical-align: -0.2vmin;
+  margin: 0 0.8vmin;
+}
+.fs-flow-mid { color: rgba(236, 247, 240, 0.6); font-weight: 600; font-variant-numeric: tabular-nums; }

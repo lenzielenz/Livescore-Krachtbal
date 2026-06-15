@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation'
 
 import { buildMatchState, buildTimeline } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
-import { reeksNaam } from '@/lib/reeksen'
+import { reeksHalfDurationSeconds, reeksNaam, type Reeks } from '@/lib/reeksen'
 import { FieldScreen } from './FieldScreen'
 import './veld.css'
 
@@ -27,6 +27,7 @@ export default async function VeldPage({ params }: { params: Promise<{ id: strin
   // Analysewedstrijden zijn privé en horen niet op het publieke veld-/tv-scherm.
   if (matchDoc?.analyseOnly) notFound()
   const reeks = matchDoc?.reeks ? reeksNaam(matchDoc.reeks) : null
+  const halfSeconds = matchDoc?.reeks ? reeksHalfDurationSeconds(matchDoc.reeks as Reeks) : 1500
 
-  return <FieldScreen matchId={matchId} reeks={reeks} initial={{ state, timeline }} />
+  return <FieldScreen matchId={matchId} reeks={reeks} halfSeconds={halfSeconds} initial={{ state, timeline }} />
 }
