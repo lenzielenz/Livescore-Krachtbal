@@ -88,6 +88,7 @@ export interface Config {
     users: User;
     media: Media;
     'push-subscriptions': PushSubscription;
+    advertenties: Advertenty;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -116,6 +117,7 @@ export interface Config {
     users: UsersSelect<false> | UsersSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
     'push-subscriptions': PushSubscriptionsSelect<false> | PushSubscriptionsSelect<true>;
+    advertenties: AdvertentiesSelect<false> | AdvertentiesSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -1222,6 +1224,39 @@ export interface PushSubscription {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "advertenties".
+ */
+export interface Advertenty {
+  id: number;
+  /**
+   * Interne naam van de sponsor/reclame.
+   */
+  naam: string;
+  /**
+   * Het logo of de banner die getoond wordt (PNG/JPG/WEBP).
+   */
+  afbeelding: number | Media;
+  /**
+   * Website van de sponsor — voor later gebruik (klikbare reclame).
+   */
+  link?: string | null;
+  /**
+   * Op welk scherm deze reclame verschijnt. "Overal" = op alle plekken.
+   */
+  plaatsing?: ('veldscherm' | 'kantine' | 'overal') | null;
+  /**
+   * Lager = eerder in de balk.
+   */
+  volgorde?: number | null;
+  /**
+   * Toon deze reclame momenteel.
+   */
+  actief?: boolean | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
 export interface PayloadKv {
@@ -1327,6 +1362,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'push-subscriptions';
         value: number | PushSubscription;
+      } | null)
+    | ({
+        relationTo: 'advertenties';
+        value: number | Advertenty;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -1923,6 +1962,20 @@ export interface PushSubscriptionsSelect<T extends boolean = true> {
   auth?: T;
   user?: T;
   userAgent?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "advertenties_select".
+ */
+export interface AdvertentiesSelect<T extends boolean = true> {
+  naam?: T;
+  afbeelding?: T;
+  link?: T;
+  plaatsing?: T;
+  volgorde?: T;
+  actief?: T;
   updatedAt?: T;
   createdAt?: T;
 }

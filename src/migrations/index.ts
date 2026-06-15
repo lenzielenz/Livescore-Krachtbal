@@ -72,6 +72,7 @@ import * as migration_20260614_220000_user_pronostiek_power from './20260614_220
 import * as migration_20260614_240000_user_nutrition_profile from './20260614_240000_user_nutrition_profile';
 import * as migration_20260615_120000_user_profile from './20260615_120000_user_profile';
 import * as migration_20260615_140000_user_scorecard from './20260615_140000_user_scorecard';
+import * as migration_20260615_160000_advertenties from './20260615_160000_advertenties';
 
 export const migrations = [
   {
@@ -443,5 +444,10 @@ export const migrations = [
     up: migration_20260615_140000_user_scorecard.up,
     down: migration_20260615_140000_user_scorecard.down,
     name: '20260615_140000_user_scorecard',
+  },
+  {
+    up: migration_20260615_160000_advertenties.up,
+    down: migration_20260615_160000_advertenties.down,
+    name: '20260615_160000_advertenties',
   },
 ];
