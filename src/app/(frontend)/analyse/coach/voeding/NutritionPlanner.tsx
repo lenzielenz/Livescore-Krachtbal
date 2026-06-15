@@ -45,6 +45,7 @@ const GOALS: { v: Goal; label: string; ico: string }[] = [
   { v: 'afvallen', label: 'Afvallen', ico: '🔥' },
   { v: 'onderhoud', label: 'Op gewicht', ico: '⚖️' },
   { v: 'spiermassa', label: 'Spiermassa', ico: '💪' },
+  { v: 'recompositie', label: 'Spier + vermageren', ico: '🔁' },
 ]
 const PACES: { v: Pace; label: string; hint: string }[] = [
   { v: 'rustig', label: 'Rustig', hint: 'klein verschil, makkelijk vol te houden' },

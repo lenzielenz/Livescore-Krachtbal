@@ -64,7 +64,7 @@ export function supplements(goal: Goal, diet: Diet, sessionsPerWeek: number): Su
     { name: 'Creatine monohydraat', dose: '3–5 g per dag, elke dag', why: 'Best onderbouwde supplement voor kracht, explosiviteit en spiermassa.', tag: 'Sterk bewezen' },
     { name: 'Vitamine D', dose: '1000–2000 IE/dag (vooral winter & binnensporters)', why: 'Ondersteunt botten, spierfunctie en immuniteit; tekort is wijdverbreid.', tag: 'Nuttig' },
   ]
-  if (goal === 'spiermassa' || goal === 'afvallen') {
+  if (goal === 'spiermassa' || goal === 'afvallen' || goal === 'recompositie') {
     list.push({ name: 'Eiwitpoeder (whey of plantaardig)', dose: '20–30 g indien je je eiwitdoel niet met voeding haalt', why: 'Handige manier om voldoende eiwit te halen voor herstel/spierbehoud.', tag: 'Nuttig' })
   }
   if (sessionsPerWeek >= 3) {

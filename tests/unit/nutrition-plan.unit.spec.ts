@@ -34,6 +34,21 @@ describe('buildNutritionPlan', () => {
     expect(gain.protein).toBe(160)
   })
 
+  it('recompositie combineert vetverlies + spier: licht tekort, hoogste eiwit', () => {
+    const maint = buildNutritionPlan({ ...base, goal: 'onderhoud' })
+    const cut = buildNutritionPlan({ ...base, goal: 'afvallen' })
+    const recomp = buildNutritionPlan({ ...base, goal: 'recompositie' })
+    // licht tekort: tussen afvallen en onderhoud in
+    expect(recomp.calories).toBeLessThan(maint.calories)
+    expect(recomp.calories).toBeGreaterThan(cut.calories)
+    // eiwit het hoogst van alle doelen (≈2,3 g/kg)
+    expect(recomp.protein).toBe(Math.round(80 * 2.3))
+    expect(recomp.protein).toBeGreaterThan(cut.protein)
+    expect(recomp.goalLabel.toLowerCase()).toContain('recompositie')
+    // licht tekort → langzaam gewichtsverlies
+    expect(recomp.weeklyChangeKg).toBeLessThan(0)
+  })
+
   it('macro-calorieën kloppen ongeveer met de doelinname', () => {
     const p = buildNutritionPlan({ ...base, goal: 'onderhoud' })
     const macroKcal = p.protein * 4 + p.fat * 9 + p.carbs * 4

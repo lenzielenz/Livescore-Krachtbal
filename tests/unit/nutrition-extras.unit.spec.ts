@@ -58,6 +58,11 @@ describe('supplements', () => {
     const many = supplements('onderhoud', 'alles', 5)
     expect(many.some((s) => /cafe/i.test(s.name))).toBe(true)
   })
+
+  it('recompositie krijgt eiwitpoeder-advies', () => {
+    const list = supplements('recompositie', 'alles', 3)
+    expect(list.some((s) => /eiwitpoeder/i.test(s.name))).toBe(true)
+  })
 })
 
 describe('micronutrientFocus', () => {

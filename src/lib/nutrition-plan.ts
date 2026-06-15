@@ -10,7 +10,7 @@
 
 export type Sex = 'm' | 'v'
 export type Activity = 'laag' | 'licht' | 'matig' | 'hoog' | 'zeer-hoog'
-export type Goal = 'afvallen' | 'onderhoud' | 'spiermassa'
+export type Goal = 'afvallen' | 'onderhoud' | 'spiermassa' | 'recompositie'
 /** Dieetvoorkeur — stuurt de voorbeelddag en extra aandachtspunten. */
 export type Diet = 'alles' | 'vegetarisch' | 'veganistisch' | 'lactosevrij'
 /** Macro-stijl — hoe de calorieën over eiwit/koolhydraten/vet verdeeld worden. */
@@ -54,7 +54,7 @@ export interface NutritionProfile {
 
 const SEXES: Sex[] = ['m', 'v']
 const ACTIVITIES: Activity[] = ['laag', 'licht', 'matig', 'hoog', 'zeer-hoog']
-const GOALS: Goal[] = ['afvallen', 'onderhoud', 'spiermassa']
+const GOALS: Goal[] = ['afvallen', 'onderhoud', 'spiermassa', 'recompositie']
 const PACES: Pace[] = ['rustig', 'gemiddeld', 'snel']
 const STYLES: MacroStyle[] = ['gebalanceerd', 'eiwitrijk', 'koolhydraatarm', 'duursport']
 const DIETS: Diet[] = ['alles', 'vegetarisch', 'veganistisch', 'lactosevrij']
@@ -139,12 +139,18 @@ export const ACTIVITY_FACTOR: Record<Activity, number> = {
 }
 
 // Doel-afwijking t.o.v. onderhoud (×tempo). Default-tempo 'gemiddeld' → afvallen 0,8 / spiermassa 1,12.
-const GOAL_DEVIATION: Record<Goal, number> = { afvallen: -0.2, onderhoud: 0, spiermassa: 0.12 }
+// Recompositie (spiermassa opbouwen én vet verliezen tegelijk) draait op een licht tekort met veel eiwit.
+const GOAL_DEVIATION: Record<Goal, number> = { afvallen: -0.2, onderhoud: 0, spiermassa: 0.12, recompositie: -0.05 }
 const PACE_MULT: Record<Pace, number> = { rustig: 0.6, gemiddeld: 1, snel: 1.4 }
 const PACE_LABEL: Record<Pace, string> = { rustig: 'Rustig', gemiddeld: 'Gemiddeld', snel: 'Snel' }
-const PROTEIN_PER_KG: Record<Goal, number> = { afvallen: 2.2, onderhoud: 1.8, spiermassa: 2.0 }
-const FAT_PER_KG: Record<Goal, number> = { afvallen: 0.8, onderhoud: 0.9, spiermassa: 1.0 }
-const GOAL_LABEL: Record<Goal, string> = { afvallen: 'Afvallen (vetverlies)', onderhoud: 'Op gewicht blijven', spiermassa: 'Spiermassa opbouwen' }
+const PROTEIN_PER_KG: Record<Goal, number> = { afvallen: 2.2, onderhoud: 1.8, spiermassa: 2.0, recompositie: 2.3 }
+const FAT_PER_KG: Record<Goal, number> = { afvallen: 0.8, onderhoud: 0.9, spiermassa: 1.0, recompositie: 0.9 }
+const GOAL_LABEL: Record<Goal, string> = {
+  afvallen: 'Afvallen (vetverlies)',
+  onderhoud: 'Op gewicht blijven',
+  spiermassa: 'Spiermassa opbouwen',
+  recompositie: 'Spiermassa + vermageren (recompositie)',
+}
 const MACRO_LABEL: Record<MacroStyle, string> = { gebalanceerd: 'Gebalanceerd', eiwitrijk: 'Eiwitrijk', koolhydraatarm: 'Koolhydraatarm', duursport: 'Duursport' }
 const DIET_LABEL: Record<Diet, string> = { alles: 'Alles', vegetarisch: 'Vegetarisch', veganistisch: 'Veganistisch', lactosevrij: 'Lactosevrij' }
 
@@ -287,6 +293,7 @@ function buildTips(goal: Goal, sessions: number, diet: Diet, style: MacroStyle):
   const t: string[] = []
   if (goal === 'afvallen') t.push('Houd je eiwit hoog (≈2,2 g/kg) om spiermassa te behouden tijdens het afvallen.', 'Vul je bord met groenten — veel volume, weinig calorieën, lang verzadigd.')
   else if (goal === 'spiermassa') t.push('Eet net boven je verbruik en spreid eiwit over 4 momenten (≈0,4 g/kg per maaltijd).', 'Plan je grootste koolhydraat-portie ná de training voor herstel en groei.')
+  else if (goal === 'recompositie') t.push('Recompositie = spier opbouwen én vet verliezen tegelijk: eet net onder je verbruik met véél eiwit (≈2,3 g/kg).', 'Train zwaar met krachttraining — de prikkel stuurt de calorieën naar spier i.p.v. vet.', 'Tim de meeste koolhydraten rond je training voor energie en herstel.')
   else t.push('Tim je koolhydraten rond training en wedstrijd voor de beste prestatie.')
   if (style === 'koolhydraatarm') t.push('Koolhydraatarm: kies vezelrijke groenten en gezonde vetten (olijfolie, noten, avocado). Tim wel wat koolhydraten rond intensieve training.')
   else if (style === 'duursport') t.push('Duursport: laad koolhydraten in de uren vóór een lange inspanning en vul tijdens aan (sportdrank/gel vanaf ~60 min).')
