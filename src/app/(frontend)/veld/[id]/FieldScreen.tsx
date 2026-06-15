@@ -28,6 +28,21 @@ type Goal = {
 // Responsieve logomaat voor het grote veldscherm.
 const FS_LOGO_SIZE = 'clamp(84px, 14vw, 200px)'
 
+// Voorbeeld-reclames voor de testknop (als er nog geen echte reclame is ingesteld): gekleurde
+// tegels als data-URI zodat de scrollende balk meteen iets toont. Eén keer opgebouwd.
+const demoTile = (label: string, bg: string): string =>
+  'data:image/svg+xml;utf8,' +
+  encodeURIComponent(
+    `<svg xmlns='http://www.w3.org/2000/svg' width='240' height='84'><rect width='100%' height='100%' rx='10' fill='${bg}'/><text x='50%' y='50%' font-family='Arial,sans-serif' font-size='22' font-weight='800' fill='#fff' text-anchor='middle' dominant-baseline='central'>${label}</text></svg>`,
+  )
+const DEMO_ADS: Ad[] = [
+  { id: -1, url: demoTile('JOUW LOGO HIER', '#1d4ed8'), naam: 'Demo' },
+  { id: -2, url: demoTile('SPONSOR', '#db2777'), naam: 'Demo' },
+  { id: -3, url: demoTile('CAFÉ DE KANTINE', '#059669'), naam: 'Demo' },
+  { id: -4, url: demoTile('BOUWWERKEN BV', '#d97706'), naam: 'Demo' },
+  { id: -5, url: demoTile('JOUW LOGO HIER', '#7c3aed'), naam: 'Demo' },
+]
+
 // Telmarkeringen onder de ploegnaam: invul-vakjes gegroepeerd per set.
 // Kruisjes per 3 (3e kruisje → vrije worp, §6.7); time-outs per 2 (max. 2 per helft, §8.1).
 function Marks({ count, group, kind }: { count: number; group: number; kind: 'cross' | 'timeout' }) {
@@ -128,8 +143,11 @@ export function FieldScreen({
   const [showFlow, setShowFlow] = useState(false)
   // Demo-modus voor de testknop: toont de grafiek met fictieve doelpunten i.p.v. de echte (vlakke) stand.
   const [flowDemo, setFlowDemo] = useState(false)
+  // Testknop: toon ook voorbeeld-reclame zodat de scrollende balk zichtbaar is zonder ingestelde reclame.
+  const [previewAds, setPreviewAds] = useState(false)
   const flowShown = useRef(false)
   const flowTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const previewTimers = useRef<ReturnType<typeof setTimeout>[]>([])
   // Volledig scherm voor de zaal-tv: zet het veldscherm over het hele scherm (verbergt browser-UI).
   const rootRef = useRef<HTMLDivElement>(null)
   const [isFullscreen, setIsFullscreen] = useState(false)
@@ -212,16 +230,31 @@ export function FieldScreen({
     }
   }
 
-  // Testknop: toon meteen de verloop-grafiek met FICTIEVE doelpunten, zoals ze rond de 10e minuut
-  // (midden eerste helft) zou verschijnen — zo zie je de lijn echt stijgen/dalen zonder te wachten.
-  const previewFlow = () => {
+  // Testknop: speelt het hele scherm-spektakel af zodat je alles in actie ziet zonder te wachten:
+  // 1) een voorbeeld-doelpunt (DOELPUNT!-animatie), 2) de scrollende reclamebalk (met voorbeeld-
+  // reclame als er nog geen is ingesteld), en 3) de verloop-grafiek met fictieve doelpunten.
+  const runTest = () => {
     if (flowTimer.current) clearTimeout(flowTimer.current)
-    setFlowDemo(true)
-    setShowFlow(true)
+    previewTimers.current.forEach(clearTimeout)
+    previewTimers.current = []
+
+    // Reclamebalk meteen aan.
+    setPreviewAds(true)
+    // Voorbeeld-doelpunt met viering.
+    goalSeq.current += 1
+    setGoal({ key: goalSeq.current, side: 'home', team: state.teams.home.name, points: 2, scorer: null })
+    previewTimers.current.push(setTimeout(() => setGoal(null), 4200))
+    // Daarna de verloop-grafiek.
+    previewTimers.current.push(setTimeout(() => {
+      setFlowDemo(true)
+      setShowFlow(true)
+    }, 4000))
+    // Alles terug uit na ~1 minuut.
     flowTimer.current = setTimeout(() => {
       setShowFlow(false)
       setFlowDemo(false)
-    }, 60_000)
+      setPreviewAds(false)
+    }, 64_000)
   }
 
   // Klok-basis bijwerken — reken vanaf clockUpdatedAt (server) zodat de tijd klopt en niet reset.
@@ -243,6 +276,8 @@ export function FieldScreen({
   const momentum = useMemo(() => buildMomentum(timeline, halfSeconds), [timeline, halfSeconds])
   const nowT = (Math.max(1, state.match.currentHalf) - 1) * halfSeconds + clock
   const demoPts = useMemo(() => demoMomentum(halfSeconds), [halfSeconds])
+  // Echte reclame heeft voorrang; staat er geen, dan tonen we tijdens een test voorbeeld-reclame.
+  const shownAds = ads.length > 0 ? ads : previewAds ? DEMO_ADS : []
 
   // Toon de verloop-grafiek één keer, rond het midden van de eerste helft (±30 s), ~1 minuut lang.
   useEffect(() => {
@@ -260,7 +295,10 @@ export function FieldScreen({
     flowTimer.current = setTimeout(() => setShowFlow(false), 60_000)
   }, [clock, halfSeconds, state.match.status, state.match.currentHalf, state.atHalfTime])
 
-  useEffect(() => () => { if (flowTimer.current) clearTimeout(flowTimer.current) }, [])
+  useEffect(() => () => {
+    if (flowTimer.current) clearTimeout(flowTimer.current)
+    previewTimers.current.forEach(clearTimeout)
+  }, [])
 
   const status = state.match.status
   const statusLabel =
@@ -290,10 +328,10 @@ export function FieldScreen({
       <button
         type="button"
         className="fs-testbtn"
-        onClick={previewFlow}
-        title="Test: toon het wedstrijdverloop (zoals rond de 10e minuut)"
+        onClick={runTest}
+        title="Test: speel doelpunt-animatie, reclamebalk en wedstrijdverloop af"
       >
-        🧪 Test verloop
+        🧪 Test scherm
       </button>
       <button
         type="button"
@@ -310,7 +348,7 @@ export function FieldScreen({
           )}
         </svg>
       </button>
-      <AdMarquee ads={ads} position="top" />
+      <AdMarquee ads={shownAds} position="top" />
       <div className="fs-top">
         <span className={`fs-status ${status}`}>{statusLabel}</span>
         {reeks && <span className="fs-reeks">{reeks}</span>}
@@ -347,7 +385,7 @@ export function FieldScreen({
         </div>
       </div>
 
-      <AdMarquee ads={ads} position="bottom" />
+      <AdMarquee ads={shownAds} position="bottom" />
 
       {goal && (
         <div key={goal.key} className={`fs-goal side-${goal.side}`}>
