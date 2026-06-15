@@ -492,17 +492,10 @@ export function FieldScreen({
           <AdMarquee ads={lobbyAds} position="top" />
           <div className="fs-lobby-body">
             <div className="fs-lobby-teams">
-              {state.teams.home.name} <span>vs</span> {state.teams.away.name}
+              {state.teams.home.name} <span>—</span> {state.teams.away.name}
             </div>
-            <div className="fs-lobby-title">📱 Doe online mee!</div>
-            <div className="fs-lobby-sub">Scan de QR-code en beleef deze wedstrijd mee op je telefoon</div>
-            <div className="fs-lobby-qr">{matchUrl && <QrCode value={matchUrl} size={300} />}</div>
-            <div className="fs-lobby-feats">
-              <span>📷 Foto’s</span>
-              <span>🎉 Emoji’s</span>
-              <span>💬 Aanmoedigingen</span>
-            </div>
-            <div className="fs-lobby-cta">Scan met je telefoon — de wedstrijd start zo!</div>
+            <div className="fs-lobby-qr">{matchUrl && <QrCode value={matchUrl} size={320} />}</div>
+            <div className="fs-lobby-title">📱 Scan &amp; doe mee</div>
           </div>
           <AdMarquee ads={lobbyAds} position="bottom" />
         </div>
@@ -510,27 +503,26 @@ export function FieldScreen({
 
       {photos !== null && (
         <div className="fs-cam" onClick={() => setPhotos(null)}>
-          <div className="fs-cam-title">💪 KRACHT-CAM 💪</div>
           {photos.length > 0 ? (
             <>
-              <div className="fs-cam-stage">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img key={photoIdx} className="fs-cam-img" src={photos[photoIdx]} alt={`Wedstrijdfoto ${photoIdx + 1}`} />
-                <svg className="fs-cam-heart" viewBox="0 0 32 29.6" aria-hidden>
-                  <path d={HEART_PATH} />
-                </svg>
-                <span className="fs-cam-float a" aria-hidden>❤️</span>
-                <span className="fs-cam-float b" aria-hidden>💪</span>
-                <span className="fs-cam-float c" aria-hidden>🔥</span>
-                <span className="fs-cam-float d" aria-hidden>❤️</span>
-              </div>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img key={photoIdx} className="fs-cam-bg" src={photos[photoIdx]} alt={`Wedstrijdfoto ${photoIdx + 1}`} />
+              <div className="fs-cam-shade" aria-hidden />
+              <svg className="fs-cam-heart" viewBox="0 0 32 29.6" aria-hidden>
+                <path d={HEART_PATH} />
+              </svg>
+              <div className="fs-cam-title">💪 KRACHT-CAM 💪</div>
               <div key={`cap-${photoIdx}`} className="fs-cam-caption">{CAM_CAPTIONS[photoIdx % CAM_CAPTIONS.length]}</div>
-              <div className="fs-cam-count">{photoIdx + 1} / {photos.length}</div>
+              <span className="fs-cam-float a" aria-hidden>❤️</span>
+              <span className="fs-cam-float b" aria-hidden>💪</span>
+              <span className="fs-cam-float c" aria-hidden>🔥</span>
+              <span className="fs-cam-float d" aria-hidden>❤️</span>
+              <span className="fs-cam-float e" aria-hidden>🎉</span>
+              <span className="fs-cam-float f" aria-hidden>💪</span>
             </>
           ) : (
             <div className="fs-photos-empty">Nog geen foto’s van deze wedstrijd.</div>
           )}
-          <div className="fs-photos-hint">Tik om te sluiten</div>
         </div>
       )}
 
