@@ -43,6 +43,18 @@ const DEMO_ADS: Ad[] = [
   { id: -5, url: demoTile('JOUW LOGO HIER', '#7c3aed'), naam: 'Demo' },
 ]
 
+// Voorbeeld-foto's voor de pauze-slideshow als er nog geen echte wedstrijdfoto's zijn.
+const demoPhoto = (label: string, bg: string): string =>
+  'data:image/svg+xml;utf8,' +
+  encodeURIComponent(
+    `<svg xmlns='http://www.w3.org/2000/svg' width='800' height='600'><rect width='100%' height='100%' fill='${bg}'/><text x='50%' y='50%' font-family='Arial,sans-serif' font-size='48' font-weight='800' fill='#ffffff' text-anchor='middle' dominant-baseline='central'>${label}</text></svg>`,
+  )
+const DEMO_PHOTOS: string[] = [
+  demoPhoto('📷 Wedstrijdfoto 1', '#0f2a44'),
+  demoPhoto('📷 Wedstrijdfoto 2', '#3a1d44'),
+  demoPhoto('📷 Wedstrijdfoto 3', '#143a2c'),
+]
+
 // Telmarkeringen onder de ploegnaam: invul-vakjes gegroepeerd per set.
 // Kruisjes per 3 (3e kruisje → vrije worp, §6.7); time-outs per 2 (max. 2 per helft, §8.1).
 function Marks({ count, group, kind }: { count: number; group: number; kind: 'cross' | 'timeout' }) {
@@ -148,6 +160,10 @@ export function FieldScreen({
   const flowShown = useRef(false)
   const flowTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const previewTimers = useRef<ReturnType<typeof setTimeout>[]>([])
+  // Pauze-foto's: een slideshow van de wedstrijdfoto's (supporter-instants), te tonen tijdens de rust.
+  const [photos, setPhotos] = useState<string[] | null>(null) // null = dicht, [] = geen foto's
+  const [photoIdx, setPhotoIdx] = useState(0)
+  const [photosLoading, setPhotosLoading] = useState(false)
   // Volledig scherm voor de zaal-tv: zet het veldscherm over het hele scherm (verbergt browser-UI).
   const rootRef = useRef<HTMLDivElement>(null)
   const [isFullscreen, setIsFullscreen] = useState(false)
@@ -257,6 +273,35 @@ export function FieldScreen({
     }, 64_000)
   }
 
+  // Pauze-foto's tonen: haalt de (niet-verlopen) wedstrijdfoto's op en start een slideshow.
+  // Zijn er nog geen, dan tonen we voorbeeld-foto's zodat je meteen ziet hoe het eruitziet.
+  const showPhotos = async () => {
+    if (photos !== null) { setPhotos(null); return } // toggle dicht
+    setPhotosLoading(true)
+    setPhotoIdx(0)
+    try {
+      const res = await fetch(`/api/match-instants?where[match][equals]=${matchId}&depth=0&limit=60&sort=-createdAt`, { credentials: 'include' })
+      const data = (await res.json().catch(() => ({}))) as { docs?: { filename?: string; url?: string; expiresAt?: string }[] }
+      const now = Date.now()
+      const urls = (data.docs ?? [])
+        .filter((d) => !d.expiresAt || new Date(d.expiresAt).getTime() > now)
+        .map((d) => (d.filename ? `/api/match-instants/file/${encodeURIComponent(d.filename)}` : d.url ?? ''))
+        .filter(Boolean)
+      setPhotos(urls.length > 0 ? urls : DEMO_PHOTOS)
+    } catch {
+      setPhotos(DEMO_PHOTOS)
+    } finally {
+      setPhotosLoading(false)
+    }
+  }
+
+  // Slideshow: elke 4,5 s naar de volgende foto.
+  useEffect(() => {
+    if (!photos || photos.length < 2) return
+    const t = setInterval(() => setPhotoIdx((i) => (i + 1) % photos.length), 4500)
+    return () => clearInterval(t)
+  }, [photos])
+
   // Klok-basis bijwerken — reken vanaf clockUpdatedAt (server) zodat de tijd klopt en niet reset.
   useEffect(() => {
     const m = state.match
@@ -276,8 +321,9 @@ export function FieldScreen({
   const momentum = useMemo(() => buildMomentum(timeline, halfSeconds), [timeline, halfSeconds])
   const nowT = (Math.max(1, state.match.currentHalf) - 1) * halfSeconds + clock
   const demoPts = useMemo(() => demoMomentum(halfSeconds), [halfSeconds])
-  // Echte reclame heeft voorrang; staat er geen, dan tonen we tijdens een test voorbeeld-reclame.
-  const shownAds = ads.length > 0 ? ads : previewAds ? DEMO_ADS : []
+  // Reclame verschijnt enkel tijdens een test (op de testknop). Is er echte reclame ingesteld, dan
+  // tonen we die; anders voorbeeld-reclame. In de gewone live-weergave blijft de balk weg.
+  const shownAds = previewAds ? (ads.length > 0 ? ads : DEMO_ADS) : []
 
   // Toon de verloop-grafiek één keer, rond het midden van de eerste helft (±30 s), ~1 minuut lang.
   useEffect(() => {
@@ -325,29 +371,39 @@ export function FieldScreen({
   return (
     <div className="fs" style={fsStyle} ref={rootRef}>
       {blast && <ClubColorBlast key={blast.key} colors={blast.colors} teamName={blast.name} />}
-      <button
-        type="button"
-        className="fs-testbtn"
-        onClick={runTest}
-        title="Test: speel doelpunt-animatie, reclamebalk en wedstrijdverloop af"
-      >
-        🧪 Test scherm
-      </button>
-      <button
-        type="button"
-        className="fs-fsbtn"
-        onClick={toggleFullscreen}
-        aria-label={isFullscreen ? 'Volledig scherm verlaten' : 'Volledig scherm'}
-        title={isFullscreen ? 'Volledig scherm verlaten' : 'Volledig scherm'}
-      >
-        <svg viewBox="0 0 24 24" width="56%" height="56%" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-          {isFullscreen ? (
-            <path d="M9 4v5H4 M15 4v5h5 M9 20v-5H4 M15 20v-5h5" />
-          ) : (
-            <path d="M4 9V4h5 M20 9V4h-5 M4 15v5h5 M20 15v5h-5" />
-          )}
-        </svg>
-      </button>
+      <div className="fs-controls">
+        <button
+          type="button"
+          className="fs-ctrlbtn fs-testbtn"
+          onClick={runTest}
+          title="Test: speel doelpunt-animatie, reclamebalk en wedstrijdverloop af"
+        >
+          🧪 Test scherm
+        </button>
+        <button
+          type="button"
+          className="fs-ctrlbtn fs-photobtn"
+          onClick={() => void showPhotos()}
+          title="Toon de wedstrijdfoto's (ideaal tijdens de pauze)"
+        >
+          {photosLoading ? '📷 …' : photos !== null ? '✕ Foto’s' : '📷 Foto’s'}
+        </button>
+        <button
+          type="button"
+          className="fs-fsbtn"
+          onClick={toggleFullscreen}
+          aria-label={isFullscreen ? 'Volledig scherm verlaten' : 'Volledig scherm'}
+          title={isFullscreen ? 'Volledig scherm verlaten' : 'Volledig scherm'}
+        >
+          <svg viewBox="0 0 24 24" width="56%" height="56%" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            {isFullscreen ? (
+              <path d="M9 4v5H4 M15 4v5h5 M9 20v-5H4 M15 20v-5h5" />
+            ) : (
+              <path d="M4 9V4h5 M20 9V4h-5 M4 15v5h5 M20 15v5h-5" />
+            )}
+          </svg>
+        </button>
+      </div>
       <AdMarquee ads={shownAds} position="top" />
       <div className="fs-top">
         <span className={`fs-status ${status}`}>{statusLabel}</span>
@@ -386,6 +442,19 @@ export function FieldScreen({
       </div>
 
       <AdMarquee ads={shownAds} position="bottom" />
+
+      {photos !== null && (
+        <div className="fs-photos" onClick={() => setPhotos(null)}>
+          <div className="fs-photos-head">📷 Wedstrijdfoto’s {photos.length > 0 ? `· ${photoIdx + 1}/${photos.length}` : ''}</div>
+          {photos.length > 0 ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img key={photoIdx} className="fs-photos-img" src={photos[photoIdx]} alt={`Wedstrijdfoto ${photoIdx + 1}`} />
+          ) : (
+            <div className="fs-photos-empty">Nog geen foto’s van deze wedstrijd.</div>
+          )}
+          <div className="fs-photos-hint">Tik om te sluiten</div>
+        </div>
+      )}
 
       {goal && (
         <div key={goal.key} className={`fs-goal side-${goal.side}`}>
