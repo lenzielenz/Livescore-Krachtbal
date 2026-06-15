@@ -479,21 +479,20 @@
 }
 .fs-flow-mid { color: rgba(236, 247, 240, 0.6); font-weight: 600; font-variant-numeric: tabular-nums; }
 
-/* ── Reclamebalk: scrollende sponsorlogo's boven- en onderaan het veldscherm ─────────────────── */
+/* ── Reclamebalk: subtiel scrollende sponsorlogo's boven- en onderaan het veldscherm ─────────── */
 .fs-ad {
   flex: 0 0 auto;
   width: 100%;
-  height: clamp(48px, 8.5vh, 92px);
+  height: clamp(38px, 6.5vh, 72px);
   overflow: hidden;
   display: flex;
   align-items: center;
-  background: rgba(0, 0, 0, 0.38);
+  /* Zachte fade i.p.v. een opvallende balk; de rand is donkerder, naar het scorebord toe vervaagt ze. */
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.28), rgba(0, 0, 0, 0.02));
+  opacity: 0.8;
   z-index: 4;
-  -webkit-backdrop-filter: blur(2px);
-  backdrop-filter: blur(2px);
 }
-.fs-ad-top { border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
-.fs-ad-bottom { border-top: 1px solid rgba(255, 255, 255, 0.1); }
+.fs-ad-bottom { background: linear-gradient(0deg, rgba(0, 0, 0, 0.28), rgba(0, 0, 0, 0.02)); }
 .fs-ad-track {
   display: inline-flex;
   align-items: center;
@@ -508,17 +507,19 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.94);
-  border-radius: 10px;
-  padding: 5px 14px;
-  box-shadow: 0 4px 14px -6px rgba(0, 0, 0, 0.6);
+  /* Heel licht, half-doorzichtig plaatje achter het logo zodat ook donkere logo's leesbaar blijven,
+     maar veel ingetogener dan een felwitte tegel. */
+  background: rgba(255, 255, 255, 0.62);
+  border-radius: 7px;
+  padding: 3px 10px;
 }
 .fs-ad-item img {
-  height: clamp(34px, 6vh, 66px);
+  height: clamp(24px, 4.6vh, 48px);
   width: auto;
-  max-width: clamp(140px, 28vw, 340px);
+  max-width: clamp(120px, 24vw, 280px);
   object-fit: contain;
   display: block;
+  opacity: 0.9;
   user-select: none;
   pointer-events: none;
 }
@@ -529,9 +530,9 @@
 
 /* Reclamebalk slanker in landschap zodat het scorebord niet verdrukt wordt. */
 @media (orientation: landscape) {
-  .fs-ad { height: clamp(40px, 13vh, 64px); }
-  .fs-ad-item { padding: 4px 10px; }
-  .fs-ad-item img { height: clamp(26px, 9vh, 48px); }
+  .fs-ad { height: clamp(34px, 11vh, 56px); }
+  .fs-ad-item { padding: 3px 9px; }
+  .fs-ad-item img { height: clamp(22px, 8vh, 42px); }
 }
 
 /* ── Kracht-cam: speelse kiss-cam-stijl slideshow van de wedstrijdfoto's (tijdens de pauze) ─────── */
