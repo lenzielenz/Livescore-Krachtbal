@@ -1,11 +1,12 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { ClubColorBlast } from '@/components/ClubColorBlast'
 import { TeamLogo } from '@/components/TeamLogo'
 import { DEFAULT_AWAY_COLOR, DEFAULT_HOME_COLOR, inkOn, readableOnDark } from '@/lib/club-colors'
 import type { MatchState, TimelineItem } from '@/lib/match-engine'
+import { buildMomentum, type MomentumPoint } from '@/lib/match-momentum'
 import { goalPointsFromLabel, goalScorerFromLabel, useLiveStream } from '@/lib/use-live-stream'
 
 function fmtClock(total: number): string {
@@ -65,18 +66,65 @@ function TeamStats({ crosses, timeouts }: { crosses: number; timeouts: number })
   )
 }
 
+// Momentum-grafiek: het verschil (thuis − uit) als een vloeiende lijn over de tijd, met een
+// gekleurd vlak boven/onder de middenlijn (thuis vs uit). Toont in één oogopslag hoe de match loopt.
+function MomentumChart({ points, nowT, homeColor, awayColor }: { points: MomentumPoint[]; nowT: number; homeColor: string; awayColor: string }) {
+  const W = 100
+  const H = 50
+  const mid = H / 2
+  // Laat de lijn doorlopen tot "nu" zodat de grafiek meebeweegt met de wedstrijd.
+  const last = points[points.length - 1]
+  const pts = nowT > last.t ? [...points, { ...last, t: nowT }] : points
+  const maxT = Math.max(1, pts[pts.length - 1].t)
+  const maxAbs = Math.max(1, ...pts.map((p) => Math.abs(p.diff)))
+  const x = (t: number) => (t / maxT) * W
+  const y = (d: number) => mid - (d / maxAbs) * (mid - 4)
+  // Stapsgewijs: een doelpunt verandert de stand meteen (horizontaal tot het punt, dan verticaal).
+  let d = `M ${x(pts[0].t).toFixed(2)} ${y(pts[0].diff).toFixed(2)}`
+  for (let i = 1; i < pts.length; i++) {
+    d += ` L ${x(pts[i].t).toFixed(2)} ${y(pts[i - 1].diff).toFixed(2)} L ${x(pts[i].t).toFixed(2)} ${y(pts[i].diff).toFixed(2)}`
+  }
+  const area = `${d} L ${x(pts[pts.length - 1].t).toFixed(2)} ${mid} L ${x(pts[0].t).toFixed(2)} ${mid} Z`
+  const goalDots = points.filter((p) => p.t > 0)
+  return (
+    <svg className="fs-flow-svg" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img" aria-label="Wedstrijdverloop">
+      <defs>
+        <linearGradient id="fsFlowFill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={homeColor} stopOpacity="0.55" />
+          <stop offset="50%" stopColor={homeColor} stopOpacity="0.05" />
+          <stop offset="50%" stopColor={awayColor} stopOpacity="0.05" />
+          <stop offset="100%" stopColor={awayColor} stopOpacity="0.55" />
+        </linearGradient>
+      </defs>
+      <line x1="0" y1={mid} x2={W} y2={mid} stroke="rgba(255,255,255,.28)" strokeWidth="0.4" strokeDasharray="1.5 1.5" />
+      <path d={area} fill="url(#fsFlowFill)" stroke="none" />
+      <path d={d} fill="none" stroke="rgba(255,255,255,.92)" strokeWidth="0.9" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+      {goalDots.map((p, i) => (
+        <circle key={i} cx={x(p.t)} cy={y(p.diff)} r="0.9" fill={p.diff >= 0 ? homeColor : awayColor} stroke="#fff" strokeWidth="0.3" />
+      ))}
+    </svg>
+  )
+}
+
 export function FieldScreen({
   matchId,
   reeks,
+  halfSeconds,
   initial,
 }: {
   matchId: number
   reeks: string | null
+  halfSeconds: number
   initial: { state: MatchState; timeline: TimelineItem[] }
 }) {
   const [state, setState] = useState<MatchState>(initial.state)
+  const [timeline, setTimeline] = useState<TimelineItem[]>(initial.timeline)
   const [clock, setClock] = useState(initial.state.match.clockSeconds)
   const [goal, setGoal] = useState<Goal | null>(null)
+  // Wedstrijdverloop-grafiek: rond het midden van de eerste helft ±1 min tonen (de score blijft staan).
+  const [showFlow, setShowFlow] = useState(false)
+  const flowShown = useRef(false)
+  const flowTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   // Volledig scherm voor de zaal-tv: zet het veldscherm over het hele scherm (verbergt browser-UI).
   const rootRef = useRef<HTMLDivElement>(null)
   const [isFullscreen, setIsFullscreen] = useState(false)
@@ -112,6 +160,7 @@ export function FieldScreen({
       fresh.forEach((i) => seenGoals.current.add(i.id))
 
       setState(data.state)
+      setTimeline(data.timeline)
 
       const last = fresh[fresh.length - 1]
       if (last && last.side) {
@@ -173,6 +222,27 @@ export function FieldScreen({
     }, 250)
     return () => clearInterval(t)
   }, [state.match.clockRunning, state.match.clockUpdatedAt])
+
+  const momentum = useMemo(() => buildMomentum(timeline, halfSeconds), [timeline, halfSeconds])
+  const nowT = (Math.max(1, state.match.currentHalf) - 1) * halfSeconds + clock
+
+  // Toon de verloop-grafiek één keer, rond het midden van de eerste helft (±30 s), ~1 minuut lang.
+  useEffect(() => {
+    if (flowShown.current) return
+    const mid = halfSeconds / 2
+    const inWindow =
+      state.match.status === 'live' &&
+      !state.atHalfTime &&
+      state.match.currentHalf === 1 &&
+      clock >= mid - 30 &&
+      clock <= mid + 30
+    if (!inWindow) return
+    flowShown.current = true
+    setShowFlow(true)
+    flowTimer.current = setTimeout(() => setShowFlow(false), 60_000)
+  }, [clock, halfSeconds, state.match.status, state.match.currentHalf, state.atHalfTime])
+
+  useEffect(() => () => { if (flowTimer.current) clearTimeout(flowTimer.current) }, [])
 
   const status = state.match.status
   const statusLabel =
@@ -258,6 +328,27 @@ export function FieldScreen({
             <div className="fs-goal-team">{goal.team}</div>
             {goal.scorer && <div className="fs-goal-scorer">{goal.scorer}</div>}
             <div className="fs-goal-pts">{goal.points === 2 ? 'RUGWORP +2' : 'NEKWORP +1'}</div>
+          </div>
+        </div>
+      )}
+
+      {showFlow && (
+        <div className="fs-flow">
+          <div className="fs-flow-card">
+            <div className="fs-flow-head">
+              <span className="fs-flow-title">📈 Wedstrijdverloop</span>
+              <span className="fs-flow-score">
+                <b style={{ color: home1 }}>{state.score.home}</b>
+                <i>–</i>
+                <b style={{ color: away1 }}>{state.score.away}</b>
+              </span>
+            </div>
+            <MomentumChart points={momentum} nowT={nowT} homeColor={home1} awayColor={away1} />
+            <div className="fs-flow-legend">
+              <span><i style={{ background: home1 }} /> {state.teams.home.name}</span>
+              <span className="fs-flow-mid">{fmtClock(clock)} · Helft {state.match.currentHalf}</span>
+              <span>{state.teams.away.name} <i style={{ background: away1 }} /></span>
+            </div>
           </div>
         </div>
       )}
