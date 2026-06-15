@@ -1,5 +1,6 @@
 import Link from 'next/link'
 
+import { loadAds } from '@/lib/ads'
 import { buildMatchState, buildTimeline } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
 import { reeksHalfDurationSeconds, reeksNaam, type Reeks } from '@/lib/reeksen'
@@ -27,9 +28,10 @@ export default async function VeldSchermPage() {
         const [state, timeline] = await Promise.all([buildMatchState(payload, id), buildTimeline(payload, id)])
         const reeks = reeksLabel(matchDoc.reeks)
         const halfSeconds = matchDoc.reeks ? reeksHalfDurationSeconds(matchDoc.reeks as Reeks) : 1500
+        const ads = await loadAds(payload, 'veldscherm')
         return (
           <>
-            <FieldScreen matchId={id} reeks={reeks} halfSeconds={halfSeconds} initial={{ state, timeline }} />
+            <FieldScreen matchId={id} reeks={reeks} halfSeconds={halfSeconds} ads={ads} initial={{ state, timeline }} />
             <VeldSchermSync currentId={id} />
           </>
         )

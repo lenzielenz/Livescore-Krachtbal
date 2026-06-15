@@ -8,6 +8,7 @@ import { DEFAULT_AWAY_COLOR, DEFAULT_HOME_COLOR, inkOn, readableOnDark } from '@
 import type { MatchState, TimelineItem } from '@/lib/match-engine'
 import { buildMomentum, demoMomentum, type MomentumPoint } from '@/lib/match-momentum'
 import { goalPointsFromLabel, goalScorerFromLabel, useLiveStream } from '@/lib/use-live-stream'
+import { AdMarquee, type Ad } from './AdMarquee'
 
 function fmtClock(total: number): string {
   const s = Math.max(0, Math.floor(total))
@@ -110,11 +111,13 @@ export function FieldScreen({
   matchId,
   reeks,
   halfSeconds,
+  ads = [],
   initial,
 }: {
   matchId: number
   reeks: string | null
   halfSeconds: number
+  ads?: Ad[]
   initial: { state: MatchState; timeline: TimelineItem[] }
 }) {
   const [state, setState] = useState<MatchState>(initial.state)
@@ -307,6 +310,7 @@ export function FieldScreen({
           )}
         </svg>
       </button>
+      <AdMarquee ads={ads} position="top" />
       <div className="fs-top">
         <span className={`fs-status ${status}`}>{statusLabel}</span>
         {reeks && <span className="fs-reeks">{reeks}</span>}
@@ -342,6 +346,8 @@ export function FieldScreen({
           <TeamStats crosses={state.crosses.away} timeouts={state.timeouts.away} />
         </div>
       </div>
+
+      <AdMarquee ads={ads} position="bottom" />
 
       {goal && (
         <div key={goal.key} className={`fs-goal side-${goal.side}`}>

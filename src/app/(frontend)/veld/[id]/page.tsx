@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
 
+import { loadAds } from '@/lib/ads'
 import { buildMatchState, buildTimeline } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
 import { reeksHalfDurationSeconds, reeksNaam, type Reeks } from '@/lib/reeksen'
@@ -28,6 +29,7 @@ export default async function VeldPage({ params }: { params: Promise<{ id: strin
   if (matchDoc?.analyseOnly) notFound()
   const reeks = matchDoc?.reeks ? reeksNaam(matchDoc.reeks) : null
   const halfSeconds = matchDoc?.reeks ? reeksHalfDurationSeconds(matchDoc.reeks as Reeks) : 1500
+  const ads = await loadAds(payload, 'veldscherm')
 
-  return <FieldScreen matchId={matchId} reeks={reeks} halfSeconds={halfSeconds} initial={{ state, timeline }} />
+  return <FieldScreen matchId={matchId} reeks={reeks} halfSeconds={halfSeconds} ads={ads} initial={{ state, timeline }} />
 }

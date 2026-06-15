@@ -478,3 +478,51 @@
   margin: 0 0.8vmin;
 }
 .fs-flow-mid { color: rgba(236, 247, 240, 0.6); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* ── Reclamebalk: scrollende sponsorlogo's boven- en onderaan het veldscherm ─────────────────── */
+.fs-ad {
+  flex: 0 0 auto;
+  width: 100%;
+  height: clamp(48px, 8.5vh, 92px);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.38);
+  z-index: 4;
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+}
+.fs-ad-top { border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
+.fs-ad-bottom { border-top: 1px solid rgba(255, 255, 255, 0.1); }
+.fs-ad-track {
+  display: inline-flex;
+  align-items: center;
+  gap: clamp(24px, 4vw, 70px);
+  white-space: nowrap;
+  animation-name: fs-ad-scroll;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  will-change: transform;
+}
+.fs-ad-item {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.94);
+  border-radius: 10px;
+  padding: 5px 14px;
+  box-shadow: 0 4px 14px -6px rgba(0, 0, 0, 0.6);
+}
+.fs-ad-item img {
+  height: clamp(34px, 6vh, 66px);
+  width: auto;
+  max-width: clamp(140px, 28vw, 340px);
+  object-fit: contain;
+  display: block;
+  user-select: none;
+  pointer-events: none;
+}
+@keyframes fs-ad-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
