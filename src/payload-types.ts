@@ -281,6 +281,22 @@ export interface User {
    */
   position?: ('achter' | 'vleugel-links' | 'vleugel-rechts' | 'barage' | 'vleugel') | null;
   /**
+   * Koppel je account aan je spelersdossier zodat je scorecard je echte cijfers toont.
+   */
+  player?: (number | null) | Player;
+  /**
+   * Eigen/coach-beoordeling per as (0–100) voor de scorecard. De gebruiker beheert dit zelf.
+   */
+  scorecardSkills?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  /**
    * Eigen voorkeur: op welke ploeg(en) "Mijn club" focust. De gebruiker stelt dit zelf in.
    */
   myTeams?:
@@ -359,17 +375,46 @@ export interface User {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "officials".
+ * via the `definition` "players".
  */
-export interface Official {
+export interface Player {
   id: number;
   name: string;
   /**
-   * Koppel aan het login-account van deze persoon, zodat die z'n wedstrijden en QR ziet.
+   * Kies eerst de club. Daaronder verschijnen enkel de ploegen van die club.
    */
-  user?: (number | null) | User;
-  type: 'scheidsrechter' | 'grensrechter' | 'aantekenaar' | 'tijdopnemer';
-  federationNumber?: string | null;
+  club?: (number | null) | Club;
+  /**
+   * Kies eerst een club hierboven om de lijst te beperken. De reeks staat bij de ploegnaam.
+   */
+  team: number | Team;
+  /**
+   * Voorkeur-rugnummer. Geen gelijke nummers binnen één ploeg op het blad.
+   */
+  shirtNumber: number;
+  position?: ('achter' | 'vleugel-links' | 'vleugel-rechts' | 'barage' | 'vleugel') | null;
+  /**
+   * Bepaalt de leeftijdscategorie (peildatum 1 januari).
+   */
+  birthDate?: string | null;
+  /**
+   * Enkel de federatie/admin zet dit. Groen = geldig.
+   */
+  vergunningsstatus?: ('geen' | 'aangevraagd' | 'geldig') | null;
+  medischAttest?: boolean | null;
+  /**
+   * Speler mag dan niet één categorie hoger spelen.
+   */
+  hogerSpelenVerbod?: boolean | null;
+  actief?: boolean | null;
+  /**
+   * Aangemaakt in de analysemodule. Verschijnt nooit in de competitie (live, rangschikking, beheer) — enkel in de eigen analyse-database.
+   */
+  analyseOnly?: boolean | null;
+  /**
+   * Wie deze analyse-entiteit aanmaakte. Bepaalt wie ze ziet (privé per persoon).
+   */
+  analyseOwner?: (number | null) | User;
   updatedAt: string;
   createdAt: string;
 }
@@ -448,46 +493,17 @@ export interface Team {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "players".
+ * via the `definition` "officials".
  */
-export interface Player {
+export interface Official {
   id: number;
   name: string;
   /**
-   * Kies eerst de club. Daaronder verschijnen enkel de ploegen van die club.
+   * Koppel aan het login-account van deze persoon, zodat die z'n wedstrijden en QR ziet.
    */
-  club?: (number | null) | Club;
-  /**
-   * Kies eerst een club hierboven om de lijst te beperken. De reeks staat bij de ploegnaam.
-   */
-  team: number | Team;
-  /**
-   * Voorkeur-rugnummer. Geen gelijke nummers binnen één ploeg op het blad.
-   */
-  shirtNumber: number;
-  position?: ('achter' | 'vleugel-links' | 'vleugel-rechts' | 'barage' | 'vleugel') | null;
-  /**
-   * Bepaalt de leeftijdscategorie (peildatum 1 januari).
-   */
-  birthDate?: string | null;
-  /**
-   * Enkel de federatie/admin zet dit. Groen = geldig.
-   */
-  vergunningsstatus?: ('geen' | 'aangevraagd' | 'geldig') | null;
-  medischAttest?: boolean | null;
-  /**
-   * Speler mag dan niet één categorie hoger spelen.
-   */
-  hogerSpelenVerbod?: boolean | null;
-  actief?: boolean | null;
-  /**
-   * Aangemaakt in de analysemodule. Verschijnt nooit in de competitie (live, rangschikking, beheer) — enkel in de eigen analyse-database.
-   */
-  analyseOnly?: boolean | null;
-  /**
-   * Wie deze analyse-entiteit aanmaakte. Bepaalt wie ze ziet (privé per persoon).
-   */
-  analyseOwner?: (number | null) | User;
+  user?: (number | null) | User;
+  type: 'scheidsrechter' | 'grensrechter' | 'aantekenaar' | 'tijdopnemer';
+  federationNumber?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -1850,6 +1866,8 @@ export interface UsersSelect<T extends boolean = true> {
   photoOffsetX?: T;
   photoOffsetY?: T;
   position?: T;
+  player?: T;
+  scorecardSkills?: T;
   myTeams?: T;
   nutritionProfile?: T;
   pronostiekPower?: T;
