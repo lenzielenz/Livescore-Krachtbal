@@ -349,6 +349,16 @@ export function removeInstant(matchId: number, instantId: number): boolean {
   return true
 }
 
+/** Roep ALLE kijkers op om samen een foto te nemen: broadcast een 'photomoment'-event met het
+ * tijdstip waarop iedereen tegelijk afdrukt (gesynchroniseerde aftelklok op elk toestel). */
+export function addPhotoMoment(matchId: number, at: number): boolean {
+  const ch = channels.get(matchId)
+  if (!ch) return false
+  if (!isTribuneOpen(ch.status, ch.finishedAt)) return false
+  broadcast(ch, 'photomoment', { at })
+  return true
+}
+
 export const REACTION_EMOJI = ['clap', 'fire', 'heart', 'goal', 'wow', 'rocket'] as const
 
 /** Vuur een clubkleuren-viering af op ALLE schermen van deze wedstrijd. Null/false als niemand
