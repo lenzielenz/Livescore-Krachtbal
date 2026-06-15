@@ -43,8 +43,15 @@ export const Users: CollectionConfig = {
     // in een eigen transactie, en die blokkeert op Postgres: de FK-check op users_rels wil een
     // lock op de rij van de deler, die nog vast zit in de open buitenste transactie → wederzijds
     // wachten tot de lock-timeout ("Failed query" bij het bewaren, inverses nooit geschreven).
+    //
+    // ÉN: de inverse-sync schrijft naar de users-collectie VANUIT de afterChange van users zelf.
+    // Elke nestede users-update triggert deze hook dus opnieuw. Zonder rem cascadeert dat (zeker bij
+    // een account met analyse-deelrelaties): het formulier blijft "Submitting…" hangen. Daarom een
+    // re-entrancy-guard via `req.context`: de nestede updates zetten een vlag waardoor deze hook bij
+    // hen meteen leeg terugkeert. Eén niveau diep volstaat — de doel-velden zijn dan al bijgewerkt.
     afterChange: [
       async ({ doc, previousDoc, req }) => {
+        if ((req.context as { skipAnalyseInverse?: boolean } | undefined)?.skipAnalyseInverse) return
         const ids = (v: unknown): number[] =>
           Array.isArray(v)
             ? v
@@ -75,7 +82,7 @@ export const Users: CollectionConfig = {
                 : null
             if (nieuw) {
               await req.payload
-                .update({ collection: 'users', id: uid, data: { [doel]: nieuw }, overrideAccess: true, req })
+                .update({ collection: 'users', id: uid, data: { [doel]: nieuw }, overrideAccess: true, req, context: { skipAnalyseInverse: true } })
                 .catch(() => {})
             }
           }
