@@ -167,9 +167,14 @@ export function SiteHeader({ active = null }: { active?: NavSection }) {
                   <div className="sh-more-group">
                     <div className="sh-more-grouphead">Account</div>
                     {loggedIn ? (
-                      <button type="button" className="sh-more-item" onClick={() => { setOpen(false); void logout() }}>
-                        🚪 Uitloggen
-                      </button>
+                      <>
+                        <Link href="/profiel" className="sh-more-item" onClick={() => setOpen(false)}>
+                          👤 Mijn profiel
+                        </Link>
+                        <button type="button" className="sh-more-item" onClick={() => { setOpen(false); void logout() }}>
+                          🚪 Uitloggen
+                        </button>
+                      </>
                     ) : (
                       <>
                         <Link href="/registreren" className="sh-more-item" onClick={() => setOpen(false)}>

@@ -70,6 +70,7 @@ import * as migration_20260614_180000_tournament_toon_op_live from './20260614_1
 import * as migration_20260614_200000_match_pronostiek_bonus from './20260614_200000_match_pronostiek_bonus';
 import * as migration_20260614_220000_user_pronostiek_power from './20260614_220000_user_pronostiek_power';
 import * as migration_20260614_240000_user_nutrition_profile from './20260614_240000_user_nutrition_profile';
+import * as migration_20260615_120000_user_profile from './20260615_120000_user_profile';
 
 export const migrations = [
   {
@@ -431,5 +432,10 @@ export const migrations = [
     up: migration_20260614_240000_user_nutrition_profile.up,
     down: migration_20260614_240000_user_nutrition_profile.down,
     name: '20260614_240000_user_nutrition_profile',
+  },
+  {
+    up: migration_20260615_120000_user_profile.up,
+    down: migration_20260615_120000_user_profile.down,
+    name: '20260615_120000_user_profile',
   },
 ];

@@ -267,6 +267,20 @@ export interface User {
    */
   club?: (number | null) | Club;
   /**
+   * Eigen profielfoto (de gebruiker beheert dit zelf via "Mijn profiel").
+   */
+  photo?: (number | null) | Media;
+  /**
+   * Inzoomfactor van de profielfoto (1–3). De gebruiker stelt dit zelf in.
+   */
+  photoZoom?: number | null;
+  photoOffsetX?: number | null;
+  photoOffsetY?: number | null;
+  /**
+   * De eigen speelpositie. De gebruiker stelt dit zelf in via "Mijn profiel".
+   */
+  position?: ('achter' | 'vleugel-links' | 'vleugel-rechts' | 'barage' | 'vleugel') | null;
+  /**
    * Eigen voorkeur: op welke ploeg(en) "Mijn club" focust. De gebruiker stelt dit zelf in.
    */
   myTeams?:
@@ -1831,6 +1845,11 @@ export interface UsersSelect<T extends boolean = true> {
   name?: T;
   roles?: T;
   club?: T;
+  photo?: T;
+  photoZoom?: T;
+  photoOffsetX?: T;
+  photoOffsetY?: T;
+  position?: T;
   myTeams?: T;
   nutritionProfile?: T;
   pronostiekPower?: T;

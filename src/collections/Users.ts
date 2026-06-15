@@ -1,6 +1,7 @@
 import type { CollectionConfig, FieldHook } from 'payload'
 
 import { ROLE_OPTIONS, hasRole, isAdmin, isFederationLevel } from '../lib/access'
+import { POSITION_OPTIONS } from '../lib/positions'
 
 // Eerste gebruiker (bij lege database) wordt automatisch admin; daarna erft de waarde
 // die de admin instelt.
@@ -139,6 +140,33 @@ export const Users: CollectionConfig = {
       admin: {
         description: 'De eigen club (supporter volgt ze; club-beheerder beheert ze).',
       },
+    },
+    {
+      // Eigen profielfoto: elk lid kan een foto uploaden en die op zijn profiel/scorecard tonen.
+      // De foto zelf staat in de media-collectie; bijsnijden gebeurt — net als bij clublogo's —
+      // met zoom + verschuiving (geen serverbewerking, de weergave gebruikt dezelfde CSS-transform).
+      name: 'photo',
+      label: 'Profielfoto',
+      type: 'upload',
+      relationTo: 'media',
+      admin: { description: 'Eigen profielfoto (de gebruiker beheert dit zelf via "Mijn profiel").' },
+    },
+    {
+      name: 'photoZoom',
+      label: 'Foto-zoom',
+      type: 'number',
+      defaultValue: 1,
+      admin: { description: 'Inzoomfactor van de profielfoto (1–3). De gebruiker stelt dit zelf in.' },
+    },
+    { name: 'photoOffsetX', label: 'Foto-verschuiving X', type: 'number', defaultValue: 0, admin: { hidden: true } },
+    { name: 'photoOffsetY', label: 'Foto-verschuiving Y', type: 'number', defaultValue: 0, admin: { hidden: true } },
+    {
+      // Eigen speelpositie (krachtbal): tonen we op het profiel en later op de scorecard.
+      name: 'position',
+      label: 'Positie in het spel',
+      type: 'select',
+      options: [...POSITION_OPTIONS],
+      admin: { description: 'De eigen speelpositie. De gebruiker stelt dit zelf in via "Mijn profiel".' },
     },
     {
       // "Mijn ploegen": een trainer/coach duidt aan welke ploeg(en) van zijn club hij volgt,
