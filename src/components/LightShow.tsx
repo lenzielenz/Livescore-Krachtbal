@@ -46,8 +46,11 @@ export function LightShow({
   const ref = useRef<HTMLDivElement>(null)
   const labelRef = useRef<HTMLDivElement>(null)
   const barRef = useRef<HTMLDivElement>(null)
+  const bloomRef = useRef<HTMLDivElement>(null)
   const seed = useRef(Math.random())
   const camp = useRef(Math.random() < 0.5)
+  const onDoneRef = useRef(onDone)
+  onDoneRef.current = onDone
 
   // Echt volledig scherm (verbergt de browserbalken) op het toestel dat de show start.
   useEffect(() => {
@@ -55,6 +58,22 @@ export function LightShow({
     el?.requestFullscreen?.().catch(() => {})
     return () => {
       if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {})
+    }
+  }, [])
+
+  // De terug-knop (Android) sluit de show i.p.v. weg te navigeren van de wedstrijdpagina.
+  useEffect(() => {
+    window.history.pushState({ overlay: 'lightshow' }, '')
+    let viaPop = false
+    const onPop = () => {
+      viaPop = true
+      onDoneRef.current()
+    }
+    window.addEventListener('popstate', onPop)
+    return () => {
+      window.removeEventListener('popstate', onPop)
+      // Gesloten via tik/auto → ruim de extra history-entry op zodat 'terug' op de match blijft.
+      if (!viaPop && window.history.state?.overlay === 'lightshow') window.history.back()
     }
   }, [])
 
@@ -76,17 +95,20 @@ export function LightShow({
       const t = ms / 1000
       let bg: string
       let label = ''
+      let bloom = 0
 
       if (ms < 0) {
         const left = Math.ceil(-ms / 1000)
         const breathe = (Math.sin(Date.now() / 500) + 1) / 2
         bg = radial(50, 42, mix(DEEP, MY, 0.25 + breathe * 0.2), NIGHT)
         label = `✨ LICHTSHOW ✨\nSamen op elk toestel\n${left}`
+        bloom = breathe * 0.12
       } else if (t < 4) {
         // UNISONO-FLITS — alle schermen flitsen tegelijk wit (duidelijkste sync-bewijs).
         const f = Math.pow((Math.sin(t * 9) + 1) / 2, 2)
         bg = radial(50, 40, mix(MY, WHITE, f), mix(DEEP, MY, f))
         label = '✨ SAMEN ✨'
+        bloom = f
       } else if (t < 9) {
         // TRAVELING WAVE — per toestel verschoven, samen golft de kleur door de tribune.
         const local = t * 1.6 - ph * Math.PI * 2
@@ -106,17 +128,20 @@ export function LightShow({
         const ramp = (t - 17) / 3
         const f = (Math.sin(t * (10 + ramp * 16)) + 1) / 2
         bg = radial(50, 45, mix(MY, WHITE, f), mix(MY, DEEP, 1 - f))
+        bloom = f * (0.4 + ramp * 0.6)
         if (ramp > 0.4) label = '🎉'
       } else {
         // GOUDEN SLOT — flits en uitdoven.
         const k = Math.max(0, 1 - (t - 20) / 2)
         bg = radial(50, 42, mix(NIGHT, GOLD, k), NIGHT)
+        bloom = k * 0.5
         if (k > 0.15) label = 'BEDANKT! 👏'
       }
 
       el.style.background = bg
       if (labelRef.current) labelRef.current.textContent = label
       if (barRef.current) barRef.current.style.transform = `scaleX(${Math.max(0, Math.min(1, t / SHOW_SECONDS))})`
+      if (bloomRef.current) bloomRef.current.style.opacity = String(Math.max(0, Math.min(1, bloom)))
       raf = requestAnimationFrame(render)
     }
     raf = requestAnimationFrame(render)
@@ -129,6 +154,8 @@ export function LightShow({
 
   return (
     <div ref={ref} className="lsw" role="dialog" aria-label="Lichtshow" onClick={onDone}>
+      <div ref={bloomRef} className="lsw-bloom" aria-hidden />
+      <div className="lsw-vignette" aria-hidden />
       <div ref={labelRef} className="lsw-label" />
       <div className="lsw-foot">
         <span className="lsw-dot" aria-hidden />

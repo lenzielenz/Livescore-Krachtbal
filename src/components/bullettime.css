@@ -56,18 +56,32 @@
 .bt-sub { font-size: clamp(1rem, 4vw, 1.5rem); font-weight: 600; color: rgba(255, 255, 255, 0.82); max-width: 22ch; line-height: 1.35; }
 .bt-sub a { color: #7dd3fc; }
 
-/* Capture — viewfinder met hoekhaken + sluiterknop. */
-.bt-viewfinder {
+/* Capture — viewfinder dat zelf de tap-knop is (één tik = camera, geen tussenstap). */
+.bt-capture {
   position: absolute;
   inset: 9vh 6vw;
   z-index: 2;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-end;
-  gap: 4vmin;
-  padding-bottom: 6vmin;
+  justify-content: center;
+  gap: 1.6vmin;
+  border: 0;
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
+  font: inherit;
 }
+.bt-capture:disabled { opacity: 0.7; cursor: default; }
+.bt-cap-cta {
+  font-size: clamp(1.2rem, 5.5vw, 2rem);
+  font-weight: 900;
+  letter-spacing: 0.01em;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.8);
+}
+.bt-cap-sub { font-size: clamp(0.85rem, 3.4vw, 1.2rem); font-weight: 600; color: rgba(255, 255, 255, 0.7); }
+.bt-capture .bt-kicker { margin-bottom: 1vmin; }
+.bt-capture .bt-rec { top: -2vh; left: 0; }
 .bt-corner {
   position: absolute;
   width: 38px;

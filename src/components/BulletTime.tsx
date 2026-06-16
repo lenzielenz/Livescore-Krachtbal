@@ -2,62 +2,74 @@
 
 import { useEffect, useRef, useState } from 'react'
 
+import { uploadInstant } from '@/lib/instant-upload'
 import './bullettime.css'
 
-// Multi-angle "bullet-time": iedereen rond de actie legt tegelijk hetzelfde moment vast vanuit zijn
-// eigen hoek; daarna speelt de app de foto's als één sweepende reeks af (heen en weer = boomerang).
-// Drie fasen, gestuurd door één gedeeld tijdstip (`at`) zodat alle toestellen gelijk lopen:
-//   count  → aftellen + ga rond de actie staan
-//   capture→ grote knop om je foto te maken (jouw hoek)
-//   sweep  → de verzamelde hoeken snel na elkaar = multi-angle replay
+// Multi-angle "bullet-time": iedereen rond de actie legt hetzelfde moment vast vanuit zijn eigen hoek;
+// daarna speelt de app de foto's als één sweepende reeks af (heen en weer = boomerang). Géén tussenstap:
+// de capture-fase opent de camera met één tik. Wie de multi-angle start, opent de camera al meteen
+// (in dezelfde tik, via het scorebord) en springt hier dus direct naar het verzamelen/de replay.
+//   capture → één tik opent je camera (jouw hoek)
+//   sweep   → de verzamelde hoeken snel na elkaar = multi-angle replay
 
 const CAPTURE_MS = 9000
-const SWEEP_MS = 14000
+const SWEEP_MS = 15000
 
-async function resize(file: File, max = 1100, quality = 0.8): Promise<Blob> {
-  const img = await createImageBitmap(file)
-  const scale = Math.min(1, max / Math.max(img.width, img.height))
-  const w = Math.max(1, Math.round(img.width * scale))
-  const h = Math.max(1, Math.round(img.height * scale))
-  const canvas = document.createElement('canvas')
-  canvas.width = w
-  canvas.height = h
-  const ctx = canvas.getContext('2d')
-  if (!ctx) throw new Error('Geen canvas')
-  ctx.drawImage(img, 0, 0, w, h)
-  return await new Promise<Blob>((res, rej) => canvas.toBlob((b) => (b ? res(b) : rej(new Error('resize'))), 'image/jpeg', quality))
-}
-
-export function BulletTime({ matchId, at, canCapture, onDone }: { matchId: number; at: number; canCapture: boolean; onDone: () => void }) {
-  const [phase, setPhase] = useState<'count' | 'capture' | 'sweep'>('count')
-  const [secs, setSecs] = useState(0)
+export function BulletTime({
+  matchId,
+  at,
+  canCapture,
+  selfInitiated = false,
+  onDone,
+}: {
+  matchId: number
+  at: number
+  canCapture: boolean
+  selfInitiated?: boolean
+  onDone: () => void
+}) {
+  const [phase, setPhase] = useState<'capture' | 'sweep'>(selfInitiated || !canCapture ? 'sweep' : 'capture')
   const [busy, setBusy] = useState(false)
   const [shot, setShot] = useState(false)
   const [frames, setFrames] = useState<string[]>([])
   const [frameIdx, setFrameIdx] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
+  const onDoneRef = useRef(onDone)
+  onDoneRef.current = onDone
 
-  // Fase-timing op basis van het gedeelde tijdstip.
+  // De terug-knop (Android) sluit de multi-angle i.p.v. weg te navigeren van de wedstrijdpagina.
   useEffect(() => {
-    const tick = () => {
-      const ms = at - Date.now()
-      if (ms > 0) {
-        setPhase('count')
-        setSecs(Math.ceil(ms / 1000))
-      } else if (Date.now() < at + CAPTURE_MS) {
-        setPhase('capture')
-      } else {
-        setPhase('sweep')
-      }
+    window.history.pushState({ overlay: 'bullettime' }, '')
+    let viaPop = false
+    const onPop = () => {
+      viaPop = true
+      onDoneRef.current()
     }
+    window.addEventListener('popstate', onPop)
+    return () => {
+      window.removeEventListener('popstate', onPop)
+      if (!viaPop && window.history.state?.overlay === 'bullettime') window.history.back()
+    }
+  }, [])
+
+  // Fase-timing: een korte capture-vensterperiode, daarna de replay. Wie zelf startte (of niet mag
+  // posten) ziet meteen de "verzamelen → replay".
+  useEffect(() => {
+    if (selfInitiated || !canCapture) {
+      setPhase('sweep')
+      const done = setTimeout(onDone, SWEEP_MS)
+      return () => clearTimeout(done)
+    }
+    const captureEnd = at + CAPTURE_MS
+    const tick = () => setPhase(Date.now() < captureEnd ? 'capture' : 'sweep')
     tick()
     const iv = setInterval(tick, 200)
-    const done = setTimeout(onDone, Math.max(0, at - Date.now()) + CAPTURE_MS + SWEEP_MS)
+    const done = setTimeout(onDone, Math.max(0, captureEnd - Date.now()) + SWEEP_MS)
     return () => {
       clearInterval(iv)
       clearTimeout(done)
     }
-  }, [at, onDone])
+  }, [at, canCapture, selfInitiated, onDone])
 
   // Bij de sweep: haal de recentste foto's op (de zojuist gemaakte hoeken) en speel ze af.
   useEffect(() => {
@@ -72,7 +84,7 @@ export function BulletTime({ matchId, at, canCapture, onDone }: { matchId: numbe
           .filter((d) => !d.expiresAt || new Date(d.expiresAt).getTime() > now)
           .map((d) => (d.filename ? `/api/match-instants/file/${encodeURIComponent(d.filename)}` : d.url ?? ''))
           .filter(Boolean)
-        if (active) setFrames(urls.reverse()) // oudste → nieuwste voor een consistente sweep
+        if (active) setFrames(urls.reverse())
       } catch {
         /* stilte */
       }
@@ -100,13 +112,8 @@ export function BulletTime({ matchId, at, canCapture, onDone }: { matchId: numbe
     if (!file || busy) return
     setBusy(true)
     try {
-      const blob = await resize(file)
-      const fd = new FormData()
-      fd.append('photo', new File([blob], 'angle.jpg', { type: 'image/jpeg' }))
-      await fetch(`/api/match/${matchId}/instant`, { method: 'POST', body: fd })
+      await uploadInstant(matchId, file)
       setShot(true)
-    } catch {
-      /* stilte */
     } finally {
       setBusy(false)
       if (inputRef.current) inputRef.current.value = ''
@@ -114,45 +121,26 @@ export function BulletTime({ matchId, at, canCapture, onDone }: { matchId: numbe
   }
 
   return (
-    <div className="bt" role="dialog" aria-label="Multi-angle" onClick={onDone}>
-      {/* Cinematische letterbox-balken voor de high-end look. */}
+    <div className="bt" role="dialog" aria-label="Multi-angle" onClick={() => phase === 'sweep' && onDone()}>
       <div className="bt-lb bt-lb-top" aria-hidden />
       <div className="bt-lb bt-lb-bottom" aria-hidden />
 
-      {phase === 'count' && (
-        <div className="bt-center" onClick={(e) => e.stopPropagation()}>
-          <div className="bt-kicker">🎬 MULTI-ANGLE</div>
-          <div key={secs} className="bt-count">{secs}</div>
-          <div className="bt-sub">Ga met z&apos;n allen rond de actie staan — ieder vanuit zijn eigen hoek</div>
-        </div>
-      )}
-
       {phase === 'capture' && (
-        <div className="bt-viewfinder" onClick={(e) => e.stopPropagation()}>
+        // Géén tussenstap: één tik op het hele vlak opent meteen de camera.
+        <button type="button" className="bt-capture" onClick={() => inputRef.current?.click()} disabled={busy}>
           <span className="bt-corner tl" aria-hidden />
           <span className="bt-corner tr" aria-hidden />
           <span className="bt-corner bl" aria-hidden />
           <span className="bt-corner br" aria-hidden />
-          <div className="bt-rec"><span className="bt-rec-dot" aria-hidden />REC · jouw hoek</div>
-          {canCapture ? (
-            shot ? (
-              <div className="bt-captured">✓ Vastgelegd!<span>wacht op de andere hoeken…</span></div>
-            ) : (
-              <button type="button" className="bt-shutter" onClick={() => inputRef.current?.click()} disabled={busy} aria-label="Foto maken">
-                <span className="bt-shutter-ring" />
-                <span className="bt-shutter-core">{busy ? '…' : ''}</span>
-              </button>
-            )
-          ) : (
-            <div className="bt-sub">
-              <a href="/inloggen">Log in</a> om mee te doen aan de multi-angle.
-            </div>
-          )}
-        </div>
+          <span className="bt-rec"><span className="bt-rec-dot" aria-hidden />REC · jouw hoek</span>
+          <span className="bt-kicker">🎬 MULTI-ANGLE</span>
+          <span className="bt-cap-cta">{busy ? '📸 …' : shot ? '✓ Vastgelegd — nog een hoek?' : '📸 Tik om je hoek vast te leggen'}</span>
+          <span className="bt-cap-sub">de replay komt zo automatisch</span>
+        </button>
       )}
 
       {phase === 'sweep' && (
-        <div className="bt-sweep" onClick={(e) => e.stopPropagation()}>
+        <div className="bt-sweep">
           {frames.length >= 2 ? (
             <>
               <div className="bt-stage">
@@ -168,6 +156,7 @@ export function BulletTime({ matchId, at, canCapture, onDone }: { matchId: numbe
                   <span key={i} className={i === frameIdx ? 'on' : ''} />
                 ))}
               </div>
+              <div className="bt-hint">Tik om te sluiten</div>
             </>
           ) : (
             <div className="bt-center">
@@ -176,7 +165,6 @@ export function BulletTime({ matchId, at, canCapture, onDone }: { matchId: numbe
               <div className="bt-sub">De hoeken verzamelen…</div>
             </div>
           )}
-          <div className="bt-hint">Tik om te sluiten</div>
         </div>
       )}
 

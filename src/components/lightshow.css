@@ -10,7 +10,26 @@
   cursor: pointer;
   transition: background 0.12s linear;
 }
+/* Witte bloom-flits voor extra punch op de unisono-momenten. */
+.lsw-bloom {
+  position: absolute;
+  inset: -10%;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(circle at 50% 45%, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0) 60%);
+  mix-blend-mode: screen;
+  will-change: opacity;
+}
+/* Vignette voor diepte/cinematische look. */
+.lsw-vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(120% 120% at 50% 45%, transparent 55%, rgba(0, 0, 0, 0.5) 100%);
+}
 .lsw-label {
+  position: relative;
+  z-index: 1;
   white-space: pre-line;
   text-align: center;
   font-size: clamp(1.4rem, 7vw, 3rem);
