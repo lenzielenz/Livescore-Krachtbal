@@ -12,6 +12,7 @@ import { type LogoFit, normalizeLogoFit } from './logo-fit'
 import { type AttackDir, type Point, FIELD, freeThrowNorm } from './field'
 import { reeksUsesSeniorThrows } from './reeksen'
 import { readSimpleScore } from './simple-score'
+import { TRIBUNE_GRACE_MS } from './tribune'
 import {
   type SetupSide,
   type TeamSide,
@@ -643,6 +644,16 @@ export async function finishMatch(payload: Payload, matchId: number) {
     data: { status: 'finished', clockRunning: false, clockSeconds: frozen, clockUpdatedAt: new Date().toISOString() },
     overrideAccess: true,
   })
+  // Tribunefoto's verdwijnen exact één uur ná het einde: zet de vervaldatum van alle foto's van
+  // deze wedstrijd op nu + 1u (de upload gebruikte tijdens de match nog een schatting).
+  await payload
+    .update({
+      collection: 'match-instants',
+      where: { match: { equals: matchId } },
+      data: { expiresAt: new Date(Date.now() + TRIBUNE_GRACE_MS).toISOString() },
+      overrideAccess: true,
+    })
+    .catch(() => {})
   return buildMatchState(payload, matchId)
 }
 

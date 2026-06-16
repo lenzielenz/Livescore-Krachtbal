@@ -1,15 +1,14 @@
 import { getAuthUser } from '@/lib/auth-user'
 import { addInstant } from '@/lib/match-channel'
 import { getPayloadClient } from '@/lib/payload-client'
-import { isAdultReeks, type Reeks } from '@/lib/reeksen'
+import { isAdultReeks, reeksHalfDurationSeconds, type Reeks } from '@/lib/reeksen'
 import { rateLimit } from '@/lib/sse-hub'
-import { isTribuneOpen } from '@/lib/tribune'
+import { isTribuneOpen, tribuneExpiresAt } from '@/lib/tribune'
 
 export const dynamic = 'force-dynamic'
 
 const MAX_BYTES = 6 * 1024 * 1024 // 6 MB (de client verkleint al vóór upload)
 const ALLOWED = new Set(['image/jpeg', 'image/png', 'image/webp'])
-const TTL_MS = 24 * 60 * 60 * 1000 // foto's verdwijnen na 24 uur
 
 function displayName(user: { name?: string | null; email?: string | null }): string {
   const n = user.name?.trim()
@@ -61,7 +60,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
   const buf = Buffer.from(await file.arrayBuffer())
   const authorName = displayName(user)
-  const expiresAt = new Date(Date.now() + TTL_MS).toISOString()
+  // Foto's verdwijnen één uur ná de wedstrijd (exact zodra de eindtijd bekend is; anders geschat).
+  const halfSeconds = reeksHalfDurationSeconds(match.reeks as Reeks)
+  const expiresAt = new Date(
+    tribuneExpiresAt(
+      { status: match.status as string, finishedAt: (match.finishedAt as string | null | undefined) ?? null, date: (match.date as string | null | undefined) ?? null },
+      halfSeconds,
+    ),
+  ).toISOString()
 
   let created
   try {

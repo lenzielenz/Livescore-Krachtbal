@@ -166,6 +166,8 @@ export function Scoreboard({
   // Vluchtige foto-tribune: live foto's + welke ik zelf plaatste (zodat ik die kan verwijderen).
   const [instants, setInstants] = useState<Instant[]>(initialInstants ?? [])
   const [mineIds, setMineIds] = useState<Set<number>>(new Set())
+  // "Samen-foto": tijdstip waarop iedereen tegelijk afdrukt (gesynchroniseerd via het live-kanaal).
+  const [photoMomentAt, setPhotoMomentAt] = useState<number | null>(null)
   const addInstantLocal = (i: Instant) => {
     setInstants((prev) => (prev.some((x) => x.id === i.id) ? prev : [i, ...prev].slice(0, 40)))
   }
@@ -297,6 +299,10 @@ export function Scoreboard({
       blast: (d) => {
         const side = (d as { side?: string }).side
         if (side === 'home' || side === 'away') triggerBlast(side)
+      },
+      photomoment: (d) => {
+        const at = Number((d as { at?: unknown }).at)
+        if (Number.isFinite(at) && at > Date.now()) setPhotoMomentAt(at)
       },
     },
   )
@@ -649,6 +655,8 @@ export function Scoreboard({
         mineIds={mineIds}
         onLocalAdd={onLocalAdd}
         onLocalRemove={removeInstantLocal}
+        momentAt={photoMomentAt}
+        onMomentDone={() => setPhotoMomentAt(null)}
       />
 
       {/* Supporter-reacties: zwevende emoji's + een reactiebalk (enkel tijdens een live wedstrijd). */}
