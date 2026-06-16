@@ -115,23 +115,32 @@ export function BulletTime({ matchId, at, canCapture, onDone }: { matchId: numbe
 
   return (
     <div className="bt" role="dialog" aria-label="Multi-angle" onClick={onDone}>
+      {/* Cinematische letterbox-balken voor de high-end look. */}
+      <div className="bt-lb bt-lb-top" aria-hidden />
+      <div className="bt-lb bt-lb-bottom" aria-hidden />
+
       {phase === 'count' && (
         <div className="bt-center" onClick={(e) => e.stopPropagation()}>
-          <div className="bt-title">🎥 MULTI-ANGLE</div>
+          <div className="bt-kicker">🎬 MULTI-ANGLE</div>
           <div key={secs} className="bt-count">{secs}</div>
-          <div className="bt-sub">Ga met z&apos;n allen rond de actie staan — ieder zijn hoek!</div>
+          <div className="bt-sub">Ga met z&apos;n allen rond de actie staan — ieder vanuit zijn eigen hoek</div>
         </div>
       )}
 
       {phase === 'capture' && (
-        <div className="bt-center" onClick={(e) => e.stopPropagation()}>
-          <div className="bt-title bt-now">📸 NU — vanuit jouw hoek!</div>
+        <div className="bt-viewfinder" onClick={(e) => e.stopPropagation()}>
+          <span className="bt-corner tl" aria-hidden />
+          <span className="bt-corner tr" aria-hidden />
+          <span className="bt-corner bl" aria-hidden />
+          <span className="bt-corner br" aria-hidden />
+          <div className="bt-rec"><span className="bt-rec-dot" aria-hidden />REC · jouw hoek</div>
           {canCapture ? (
             shot ? (
-              <div className="bt-sub">Top! 📸 Wacht op de andere hoeken…</div>
+              <div className="bt-captured">✓ Vastgelegd!<span>wacht op de andere hoeken…</span></div>
             ) : (
-              <button type="button" className="bt-snap" onClick={() => inputRef.current?.click()} disabled={busy}>
-                {busy ? 'Bezig…' : 'Maak je foto'}
+              <button type="button" className="bt-shutter" onClick={() => inputRef.current?.click()} disabled={busy} aria-label="Foto maken">
+                <span className="bt-shutter-ring" />
+                <span className="bt-shutter-core">{busy ? '…' : ''}</span>
               </button>
             )
           ) : (
@@ -144,11 +153,16 @@ export function BulletTime({ matchId, at, canCapture, onDone }: { matchId: numbe
 
       {phase === 'sweep' && (
         <div className="bt-sweep" onClick={(e) => e.stopPropagation()}>
-          <div className="bt-title">🎥 MULTI-ANGLE REPLAY</div>
           {frames.length >= 2 ? (
             <>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img className="bt-frame" src={frames[frameIdx]} alt="Multi-angle" />
+              <div className="bt-stage">
+                {frames.map((f, i) => (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img key={i} className={`bt-layer ${i === frameIdx ? 'on' : ''}`} src={f} alt="" draggable={false} />
+                ))}
+              </div>
+              <div className="bt-hud bt-hud-tl"><span className="bt-rec-dot" aria-hidden /> MULTI-ANGLE</div>
+              <div className="bt-hud bt-hud-tr">ANGLE {String(frameIdx + 1).padStart(2, '0')}/{String(frames.length).padStart(2, '0')}</div>
               <div className="bt-dots" aria-hidden>
                 {frames.map((_, i) => (
                   <span key={i} className={i === frameIdx ? 'on' : ''} />
@@ -156,7 +170,11 @@ export function BulletTime({ matchId, at, canCapture, onDone }: { matchId: numbe
               </div>
             </>
           ) : (
-            <div className="bt-sub">Hoeken verzamelen…</div>
+            <div className="bt-center">
+              <div className="bt-kicker">🎬 MULTI-ANGLE</div>
+              <div className="bt-spinner" aria-hidden />
+              <div className="bt-sub">De hoeken verzamelen…</div>
+            </div>
           )}
           <div className="bt-hint">Tik om te sluiten</div>
         </div>

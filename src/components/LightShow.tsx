@@ -5,17 +5,28 @@ import { useEffect, useRef } from 'react'
 import './lightshow.css'
 
 // Digitale tifo / lichtshow: alle telefoons in de tribune vormen samen één gesynchroniseerd
-// lichtscherm. Eén toestel is niks; met velen samen wordt het een zee van kleur. De timing komt
-// uit één gedeeld starttijdstip (`at`) via het live-kanaal, zodat alle schermen gelijklopen.
-// Per toestel een vaste willekeurige "fase" → de tribune schittert/golft i.p.v. exact gelijk.
-function hexToRgb(hex: string): [number, number, number] {
+// lichtscherm. De timing komt uit één gedeeld starttijdstip (`at`), zodat alle schermen gelijklopen.
+// High-end: vloeiende gradient-choreografie, traveling waves (per-toestel fase), unisono-flitsen als
+// duidelijk sync-bewijs, en een voortgangsbalk. Elk toestel kleurt in de eigen clubkleur.
+
+type RGB = [number, number, number]
+const SHOW_SECONDS = 22
+
+function hexToRgb(hex: string): RGB {
   const h = hex.replace('#', '').trim()
   const v = h.length === 3 ? h.split('').map((c) => c + c).join('') : h
   const n = parseInt(v.slice(0, 6) || 'ffffff', 16)
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255]
 }
-const mix = (a: [number, number, number], b: [number, number, number], t: number): string =>
-  `rgb(${Math.round(a[0] + (b[0] - a[0]) * t)}, ${Math.round(a[1] + (b[1] - a[1]) * t)}, ${Math.round(a[2] + (b[2] - a[2]) * t)})`
+const cl = (v: number) => Math.max(0, Math.min(255, Math.round(v)))
+const shade = (c: RGB, f: number): RGB => [cl(c[0] * f), cl(c[1] * f), cl(c[2] * f)]
+const mix = (a: RGB, b: RGB, t: number): RGB => {
+  const k = Math.max(0, Math.min(1, t))
+  return [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k]
+}
+const rgb = (c: RGB) => `rgb(${cl(c[0])},${cl(c[1])},${cl(c[2])})`
+const radial = (cx: number, cy: number, inner: RGB, outer: RGB) =>
+  `radial-gradient(130% 130% at ${cx.toFixed(1)}% ${cy.toFixed(1)}%, ${rgb(inner)}, ${rgb(outer)})`
 
 export function LightShow({
   at,
@@ -27,8 +38,6 @@ export function LightShow({
 }: {
   at: number
   durationMs: number
-  // De clubkleur van de ingelogde supporter op dít toestel (zo kleurt elk toestel in zijn eigen
-  // clubkleur → de tribune splitst vanzelf per club). Null = geen club → val terug op de matchkleuren.
   mine: string | null
   home: string
   away: string
@@ -36,12 +45,11 @@ export function LightShow({
 }) {
   const ref = useRef<HTMLDivElement>(null)
   const labelRef = useRef<HTMLDivElement>(null)
-  // Stabiele per-toestel waarden (deze telefoon = één tegel in de tifo).
+  const barRef = useRef<HTMLDivElement>(null)
   const seed = useRef(Math.random())
-  const camp = useRef(Math.random() < 0.5) // enkel gebruikt als terugval (geen eigen club)
+  const camp = useRef(Math.random() < 0.5)
 
-  // Echt volledig scherm (verbergt de browserbalken). Werkt op het toestel dat de show start (tik =
-  // gebaar); op andere toestellen kan de browser het weigeren — dan blijft het schermvullende overlay.
+  // Echt volledig scherm (verbergt de browserbalken) op het toestel dat de show start.
   useEffect(() => {
     const el = ref.current
     el?.requestFullscreen?.().catch(() => {})
@@ -51,12 +59,14 @@ export function LightShow({
   }, [])
 
   useEffect(() => {
-    const WHITE: [number, number, number] = [255, 255, 255]
-    const GOLD: [number, number, number] = [255, 209, 102]
-    const BLACK: [number, number, number] = [6, 20, 13]
-    // Kleur van dit toestel = eigen clubkleur; anders een van de twee matchkleuren.
+    const WHITE: RGB = [255, 255, 255]
+    const GOLD: RGB = [255, 209, 102]
+    const NIGHT: RGB = [4, 10, 16]
     const MY = hexToRgb(mine || (camp.current ? home || '#0fe0a6' : away || '#4cc9f0'))
+    const BRIGHT = shade(MY, 1.7)
+    const DEEP = shade(MY, 0.28)
     const ph = seed.current
+    const ease = (t: number) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2)
 
     let raf = 0
     const render = () => {
@@ -68,36 +78,45 @@ export function LightShow({
       let label = ''
 
       if (ms < 0) {
-        // Aftellen — overal exact hetzelfde getal: zo zie je meteen dat het synchroon loopt.
         const left = Math.ceil(-ms / 1000)
-        bg = mix(BLACK, MY, 0.18)
-        label = `💡 SAMEN op elk toestel\nHoud je scherm omhoog!\n${left}`
+        const breathe = (Math.sin(Date.now() / 500) + 1) / 2
+        bg = radial(50, 42, mix(DEEP, MY, 0.25 + breathe * 0.2), NIGHT)
+        label = `✨ LICHTSHOW ✨\nSamen op elk toestel\n${left}`
       } else if (t < 4) {
-        // Fase 1 — UNISONO-FLITS: ÁLLE schermen flitsen tegelijk wit (sterkste bewijs van sync).
-        const flash = (Math.sin(t * 9) + 1) / 2
-        bg = mix(MY, WHITE, flash * flash)
+        // UNISONO-FLITS — alle schermen flitsen tegelijk wit (duidelijkste sync-bewijs).
+        const f = Math.pow((Math.sin(t * 9) + 1) / 2, 2)
+        bg = radial(50, 40, mix(MY, WHITE, f), mix(DEEP, MY, f))
         label = '✨ SAMEN ✨'
       } else if (t < 9) {
-        // Fase 2 — PULS: heel de tribune pulseert samen, elk toestel in zijn eigen clubkleur.
-        const pulse = (Math.sin(t * 2.4) + 1) / 2
-        bg = mix(BLACK, MY, 0.3 + pulse * 0.7)
+        // TRAVELING WAVE — per toestel verschoven, samen golft de kleur door de tribune.
+        const local = t * 1.6 - ph * Math.PI * 2
+        const w = (Math.sin(local) + 1) / 2
+        const cx = 50 + 46 * Math.sin(t * 0.7 + ph * 6.28)
+        bg = radial(cx, 50, mix(DEEP, BRIGHT, ease(w)), DEEP)
       } else if (t < 13) {
-        // Fase 3 — SCHITTERING: elk toestel knippert op z'n eigen ritme (sterrenhemel in clubkleur).
-        const on = (Math.sin((t + ph * 6.28) * 6) + 1) / 2
-        bg = mix(BLACK, MY, on * on)
-      } else if (t < 18) {
-        // Fase 4 — UNISONO-FLITS opnieuw: samen wisselen tussen clubkleur en wit.
-        const cycle = Math.floor((t - 13) * 2) % 2
-        const frac = ((t - 13) * 2) % 1
-        bg = cycle === 0 ? mix(MY, WHITE, frac) : mix(WHITE, MY, frac)
+        // SCHITTERING — elk toestel knippert op z'n eigen ritme (sterrenhemel).
+        const on = Math.pow((Math.sin((t + ph * 6.28) * 7) + 1) / 2, 3)
+        bg = radial(50, 45, mix(NIGHT, mix(MY, WHITE, 0.3), on), NIGHT)
+      } else if (t < 17) {
+        // UNISONO-PULS — volle clubkleur, samen ademend.
+        const p = (Math.sin(t * 2.2) + 1) / 2
+        bg = radial(50, 40, mix(MY, BRIGHT, p * 0.6), mix(DEEP, MY, p))
+      } else if (t < 20) {
+        // FINALE — opbouwende unisono-stroboscoop.
+        const ramp = (t - 17) / 3
+        const f = (Math.sin(t * (10 + ramp * 16)) + 1) / 2
+        bg = radial(50, 45, mix(MY, WHITE, f), mix(MY, DEEP, 1 - f))
+        if (ramp > 0.4) label = '🎉'
       } else {
-        // Slot — gouden flits en uitdoven.
-        const k = Math.max(0, 1 - (t - 18) / 3)
-        bg = mix(BLACK, GOLD, k)
+        // GOUDEN SLOT — flits en uitdoven.
+        const k = Math.max(0, 1 - (t - 20) / 2)
+        bg = radial(50, 42, mix(NIGHT, GOLD, k), NIGHT)
+        if (k > 0.15) label = 'BEDANKT! 👏'
       }
 
       el.style.background = bg
       if (labelRef.current) labelRef.current.textContent = label
+      if (barRef.current) barRef.current.style.transform = `scaleX(${Math.max(0, Math.min(1, t / SHOW_SECONDS))})`
       raf = requestAnimationFrame(render)
     }
     raf = requestAnimationFrame(render)
@@ -111,8 +130,13 @@ export function LightShow({
   return (
     <div ref={ref} className="lsw" role="dialog" aria-label="Lichtshow" onClick={onDone}>
       <div ref={labelRef} className="lsw-label" />
-      {/* Vaste melding zodat iedereen wéét dat het op alle telefoons synchroon loopt. */}
-      <div className="lsw-foot"><span className="lsw-dot" aria-hidden />synchroon op elk toestel</div>
+      <div className="lsw-foot">
+        <span className="lsw-dot" aria-hidden />
+        synchroon op elk toestel
+      </div>
+      <div className="lsw-bar" aria-hidden>
+        <div ref={barRef} className="lsw-bar-fill" />
+      </div>
     </div>
   )
 }
