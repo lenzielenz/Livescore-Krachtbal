@@ -219,6 +219,14 @@ export const Users: CollectionConfig = {
       },
     },
     {
+      // "Ik ben erbij": wedstrijden die deze supporter bijwoonde — voedt het seizoenspaspoort.
+      // Vorm: [{ m: matchId, d: ISO-datum }]. De gebruiker beheert dit zelf via de wedstrijdpagina.
+      name: 'checkins',
+      label: 'Bijgewoonde wedstrijden',
+      type: 'json',
+      admin: { description: 'Eigen check-ins ("ik ben erbij"). De gebruiker beheert dit zelf.' },
+    },
+    {
       // Bonusrad-booster: de top 3 van het weekend winnen een persoonlijke vermenigvuldiger die ze
       // op hun eigen voorspellingen kunnen gebruiken. Vorm: { mult, remaining, wonAt }. Automatisch beheerd.
       name: 'pronostiekPower',

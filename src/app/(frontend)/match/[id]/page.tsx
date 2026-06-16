@@ -3,11 +3,13 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
 import { CastToTv } from '@/components/CastToTv'
+import { CheckInButton } from '@/components/CheckInButton'
 import { MatchWeather } from '@/components/MatchWeather'
 import { Scoreboard } from '@/components/Scoreboard'
 import { SiteHeader } from '@/components/SiteHeader'
 import { userClubId } from '@/lib/access'
 import { getAuthUser } from '@/lib/auth-user'
+import { isCheckedIn, sanitizeCheckins } from '@/lib/checkins'
 import { formatDateTimeBE } from '@/lib/datetime'
 import { buildMatchSheet, buildMatchState, buildMatchStats, buildTimeline } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
@@ -246,6 +248,14 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
       {/* Live-uitzending van de wedstrijd (externe stream), als de beheerder er een instelde. */}
       {matchDoc?.livestreamUrl && (
         <LiveStream url={String(matchDoc.livestreamUrl)} live={state.match.status === 'live'} />
+      )}
+
+      {/* "Ik ben erbij" — supporters bouwen zo hun seizoenspaspoort op. */}
+      {me && (
+        <div className="match-checkin">
+          <CheckInButton matchId={matchId} initial={isCheckedIn(sanitizeCheckins((me as { checkins?: unknown }).checkins), matchId)} />
+          <Link href="/profiel/paspoort" className="match-checkin-link">Mijn paspoort →</Link>
+        </div>
       )}
 
       {/* Supporters duidelijk tonen dat ze de wedstrijd op hun tv kunnen volgen. */}

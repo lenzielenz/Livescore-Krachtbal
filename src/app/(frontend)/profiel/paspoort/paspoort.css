@@ -1,0 +1,37 @@
+/* Supporterpaspoort. */
+.pp-card {
+  border-radius: 20px;
+  padding: 20px;
+  margin: 8px 0 20px;
+  color: #f2f8ff;
+  border: 1px solid rgba(125, 211, 252, 0.25);
+  background:
+    radial-gradient(90% 70% at 0% 0%, rgba(56, 189, 248, 0.22), transparent 60%),
+    radial-gradient(90% 70% at 100% 100%, rgba(124, 58, 237, 0.22), transparent 60%),
+    linear-gradient(160deg, #16224d, #0b1430);
+  box-shadow: 0 24px 60px -28px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+.pp-head { display: flex; align-items: center; gap: 14px; }
+.pp-badge { font-size: 2.2rem; }
+.pp-name { font-size: 1.4rem; font-weight: 900; line-height: 1.1; }
+.pp-sub { font-size: 0.8rem; color: rgba(214, 230, 255, 0.7); margin-top: 2px; }
+.pp-stats { display: flex; gap: 10px; margin-top: 18px; }
+.pp-stat {
+  flex: 1; text-align: center; padding: 12px 6px; border-radius: 14px;
+  background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.pp-stat b { display: block; font-size: 1.7rem; font-weight: 900; color: #7dd3fc; font-variant-numeric: tabular-nums; }
+.pp-stat span { font-size: 0.68rem; letter-spacing: 0.04em; color: rgba(214, 230, 255, 0.75); }
+
+.pp-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.pp-item {
+  display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 12px;
+  text-decoration: none; color: inherit;
+  border: 1px solid color-mix(in srgb, #fff 6%, var(--line));
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0) 60%), var(--panel-grad, var(--panel));
+}
+.pp-item:hover { border-color: color-mix(in srgb, var(--accent) 40%, var(--line)); }
+.pp-item-teams { flex: 1; font-weight: 700; min-width: 0; }
+.pp-item-teams i { color: var(--dim); font-style: normal; margin: 0 4px; }
+.pp-item-score { font-weight: 900; font-variant-numeric: tabular-nums; color: var(--accent); }
+.pp-item-date { font-size: 0.82rem; color: var(--dim); }

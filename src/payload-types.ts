@@ -337,6 +337,18 @@ export interface User {
     | boolean
     | null;
   /**
+   * Eigen check-ins ("ik ben erbij"). De gebruiker beheert dit zelf.
+   */
+  checkins?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  /**
    * Gewonnen pronostiek-booster: { mult, remaining, wonAt }. Automatisch beheerd.
    */
   pronostiekPower?:
@@ -1964,6 +1976,7 @@ export interface UsersSelect<T extends boolean = true> {
   myTeams?: T;
   nutritionProfile?: T;
   nutritionTracker?: T;
+  checkins?: T;
   pronostiekPower?: T;
   analyseAccess?: T;
   trainingAccess?: T;
