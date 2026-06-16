@@ -20,12 +20,16 @@ const mix = (a: [number, number, number], b: [number, number, number], t: number
 export function LightShow({
   at,
   durationMs,
+  mine,
   home,
   away,
   onDone,
 }: {
   at: number
   durationMs: number
+  // De clubkleur van de ingelogde supporter op dít toestel (zo kleurt elk toestel in zijn eigen
+  // clubkleur → de tribune splitst vanzelf per club). Null = geen club → val terug op de matchkleuren.
+  mine: string | null
   home: string
   away: string
   onDone: () => void
@@ -34,15 +38,14 @@ export function LightShow({
   const labelRef = useRef<HTMLDivElement>(null)
   // Stabiele per-toestel waarden (deze telefoon = één tegel in de tifo).
   const seed = useRef(Math.random())
-  const camp = useRef(Math.random() < 0.5) // links/rechts kamp voor de "twee kleuren"-fase
+  const camp = useRef(Math.random() < 0.5) // enkel gebruikt als terugval (geen eigen club)
 
   useEffect(() => {
-    const HOME = hexToRgb(home || '#0fe0a6')
-    const AWAY = hexToRgb(away || '#4cc9f0')
     const WHITE: [number, number, number] = [255, 255, 255]
     const GOLD: [number, number, number] = [255, 209, 102]
     const BLACK: [number, number, number] = [6, 20, 13]
-    const palette = [HOME, WHITE, AWAY, GOLD]
+    // Kleur van dit toestel = eigen clubkleur; anders een van de twee matchkleuren.
+    const MY = hexToRgb(mine || (camp.current ? home || '#0fe0a6' : away || '#4cc9f0'))
     const ph = seed.current
 
     let raf = 0
@@ -57,26 +60,25 @@ export function LightShow({
       if (ms < 0) {
         // Aftellen: houd je scherm omhoog.
         const left = Math.ceil(-ms / 1000)
-        bg = mix(BLACK, HOME, 0.15)
+        bg = mix(BLACK, MY, 0.18)
         label = `💡 Houd je scherm omhoog!\n${left}`
-      } else if (t < 6) {
-        // Fase 1 — UNISONO: heel de tribune wisselt samen van kleur (zee van kleur).
-        const idx = Math.floor(t / 1.2) % palette.length
-        const nxt = (idx + 1) % palette.length
-        const frac = (t / 1.2) % 1
-        bg = mix(palette[idx], palette[nxt], frac)
-        label = ''
-      } else if (t < 12) {
-        // Fase 2 — SCHITTERING: elk toestel knippert op z'n eigen ritme (sterrenhemel).
-        const on = (Math.sin((t + ph * 6.28) * 6) + 1) / 2 // 0..1, per toestel verschoven
-        const col = ph < 0.5 ? HOME : AWAY
-        bg = mix(BLACK, col, on * on) // pieken fel, dalen donker → twinkel
-        label = ''
+      } else if (t < 5) {
+        // Fase 1 — PULS: heel de tribune pulseert samen, elk toestel in zijn eigen clubkleur.
+        const pulse = (Math.sin(t * 2.4) + 1) / 2
+        bg = mix(BLACK, MY, 0.3 + pulse * 0.7)
+      } else if (t < 10) {
+        // Fase 2 — SCHITTERING: elk toestel knippert op z'n eigen ritme (sterrenhemel in clubkleur).
+        const on = (Math.sin((t + ph * 6.28) * 6) + 1) / 2
+        bg = mix(BLACK, MY, on * on)
+      } else if (t < 15) {
+        // Fase 3 — FLITS: wissel tussen clubkleur en wit (gesynchroniseerd) voor een felle vibe.
+        const cycle = Math.floor((t - 10) * 2) % 2
+        const frac = ((t - 10) * 2) % 1
+        bg = cycle === 0 ? mix(MY, WHITE, frac) : mix(WHITE, MY, frac)
       } else if (t < 18) {
-        // Fase 3 — TWEE KAMPEN: helft thuis-, helft uitkleur, samen pulserend.
+        // Fase 4 — VOL: volle clubkleur, zacht pulserend.
         const pulse = (Math.sin(t * 3) + 1) / 2
-        bg = mix(BLACK, camp.current ? HOME : AWAY, 0.35 + pulse * 0.65)
-        label = ''
+        bg = mix(BLACK, MY, 0.55 + pulse * 0.45)
       } else {
         // Slot — gouden flits en uitdoven.
         const k = Math.max(0, 1 - (t - 18) / 3)
@@ -93,7 +95,7 @@ export function LightShow({
       cancelAnimationFrame(raf)
       clearTimeout(stop)
     }
-  }, [at, durationMs, home, away, onDone])
+  }, [at, durationMs, mine, home, away, onDone])
 
   return (
     <div ref={ref} className="lsw" role="dialog" aria-label="Lichtshow" onClick={onDone}>

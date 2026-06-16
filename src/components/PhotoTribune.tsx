@@ -78,8 +78,12 @@ export function PhotoTribune({
   return (
     <div className="ptr">
       <div className="ptr-head">
-        <h3 className="ptr-title">📸 Foto-tribune</h3>
-        <span className="ptr-sub">spontane foto&apos;s · verdwijnen na de wedstrijd</span>
+        <span className="ptr-ico" aria-hidden>📸</span>
+        <div className="ptr-head-main">
+          <h3 className="ptr-title">Foto-tribune</h3>
+          <p className="ptr-lead">Deel je sfeerbeeld van de wedstrijd</p>
+        </div>
+        <span className="ptr-badge" title="Foto's verdwijnen automatisch één uur na de wedstrijd">⏳ verdwijnt na de match</span>
       </div>
 
       {instants.length === 0 ? (

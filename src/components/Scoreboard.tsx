@@ -65,6 +65,7 @@ export function Scoreboard({
   initialInstants,
   momentumGoals,
   momentumTimeouts,
+  myClubPrimary = null,
 }: {
   matchId: number
   initial: { state: MatchState; timeline: TimelineItem[] }
@@ -88,6 +89,8 @@ export function Scoreboard({
   momentumGoals?: { side: 'home' | 'away'; points: number; half: number; gameClock?: number }[]
   /** Time-outs voor het scoreverloop. */
   momentumTimeouts?: { side: 'home' | 'away'; half: number; gameClock: number }[]
+  /** Clubkleur van de ingelogde supporter (voor de lichtshow: elk toestel kleurt in zijn eigen club). */
+  myClubPrimary?: string | null
 }) {
   const [state, setState] = useState<MatchState>(initial.state)
   const [timeline, setTimeline] = useState<TimelineItem[]>(initial.timeline)
@@ -808,6 +811,7 @@ export function Scoreboard({
         <LightShow
           at={lightshow.at}
           durationMs={lightshow.dur}
+          mine={myClubPrimary}
           home={colorsFor('home').primary}
           away={colorsFor('away').primary}
           onDone={() => setLightshow(null)}
