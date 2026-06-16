@@ -1,0 +1,52 @@
+/* Mijn Krachtbal — persoonlijk startscherm. */
+.hub-sec { margin: 0 0 24px; }
+.hub-h2 {
+  display: flex; align-items: center; gap: 9px;
+  font-size: 0.82rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em;
+  color: var(--dim-strong); margin: 0 0 12px;
+}
+.hub-h2::before { content: ''; width: 3px; height: 0.95em; border-radius: 2px; background: var(--grad-accent, var(--accent)); box-shadow: 0 0 8px color-mix(in srgb, var(--accent) 60%, transparent); }
+.hub-live-dot { width: 9px; height: 9px; border-radius: 50%; background: #ef476f; box-shadow: 0 0 10px #ef476f; animation: hub-blink 1.4s ease-in-out infinite; }
+.hub-h2 .hub-live-dot + :where(*) { margin: 0; }
+@keyframes hub-blink { 50% { opacity: 0.4; } }
+.hub-empty { color: var(--dim); margin: 0; font-size: 0.92rem; }
+.hub-empty a { color: var(--accent); font-weight: 700; }
+
+.hub-live-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+.hub-live-card {
+  position: relative; display: flex; flex-direction: column; gap: 6px;
+  padding: 14px; border-radius: 14px; text-decoration: none; color: inherit;
+  border: 1px solid color-mix(in srgb, #ef476f 30%, var(--line));
+  background: radial-gradient(120% 100% at 0% 0%, rgba(239, 71, 111, 0.12), transparent 60%), var(--panel-grad, var(--panel));
+}
+.hub-live-badge { font-size: 0.66rem; font-weight: 900; letter-spacing: 0.1em; color: #fff; background: #ef476f; padding: 2px 8px; border-radius: 999px; align-self: flex-start; }
+.hub-live-teams { font-weight: 800; }
+.hub-live-teams i { color: var(--dim); font-style: normal; }
+.hub-live-score { font-weight: 900; font-size: 1.3rem; font-variant-numeric: tabular-nums; color: var(--accent); }
+
+.hub-club { border-radius: 16px; padding: 16px; border: 1px solid color-mix(in srgb, #fff 8%, var(--line)); background: var(--panel-grad, var(--panel)); box-shadow: var(--card-shadow); }
+.hub-club-name { font-size: 1.2rem; font-weight: 900; color: var(--accent); text-decoration: none; }
+.hub-club-rows { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.hub-club-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; text-decoration: none; color: inherit; background: color-mix(in srgb, #fff 3%, transparent); border: 1px solid color-mix(in srgb, #fff 6%, var(--line)); }
+.hub-club-row:hover { border-color: color-mix(in srgb, var(--accent) 40%, var(--line)); }
+.hub-club-lbl { font-size: 0.68rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; color: var(--accent); min-width: 4.5em; }
+.hub-club-teams { flex: 1; font-weight: 700; min-width: 0; }
+.hub-club-date { font-size: 0.8rem; color: var(--dim); }
+.hub-club-score { font-weight: 900; font-variant-numeric: tabular-nums; color: var(--accent); }
+
+.hub-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 10px; }
+.hub-tile {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 16px 8px; border-radius: 14px; text-decoration: none; color: inherit; font-size: 1.6rem;
+  border: 1px solid color-mix(in srgb, #fff 8%, var(--line));
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0) 50%), var(--panel-grad, var(--panel));
+  transition: transform 0.12s ease, border-color 0.12s ease;
+}
+.hub-tile span { font-size: 0.78rem; font-weight: 700; color: var(--txt); }
+.hub-tile:hover { transform: translateY(-3px); border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
+
+.hub-news { display: flex; flex-direction: column; gap: 8px; }
+.hub-news-item { display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; border-radius: 12px; text-decoration: none; color: inherit; border: 1px solid color-mix(in srgb, #fff 6%, var(--line)); background: color-mix(in srgb, #fff 3%, transparent); }
+.hub-news-item:hover { border-color: color-mix(in srgb, var(--accent) 40%, var(--line)); }
+.hub-news-title { font-weight: 800; }
+.hub-news-ex { font-size: 0.85rem; color: var(--dim); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }

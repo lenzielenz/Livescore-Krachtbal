@@ -23,6 +23,7 @@ const PRIMARY: { href: string; label: string; key: NavSection }[] = [
 // Algemene ingangen bovenaan het Meer-menu. Het kantinescherm staat hier niet
 // (meer): dat is een clubtool en vind je onder "Mijn club".
 const GENERAL: { href: string; label: string }[] = [
+  { href: '/hub', label: '🏠 Mijn Krachtbal' },
   { href: '/uitleg', label: '❓ Zo werkt het' },
   { href: '/nieuws', label: '📰 Nieuws' },
   { href: '/prijzen', label: '💎 Prijzen & pakketten' },
