@@ -1,8 +1,11 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
+import { searchLocalFoods, type LocalFood } from '@/lib/food-database'
 import { productByBarcode, scalePer100, searchFoods, type OffFood } from '@/lib/openfoodfacts'
+
+const localToOff = (l: LocalFood): OffFood => ({ id: `db-${l.name}`, name: l.name, brand: null, per100: { kcal: l.kcal, p: l.p, c: l.c, f: l.f }, servingGrams: l.serving })
 
 // Voeding opzoeken (op naam of via streepjescode) bij Open Food Facts en toevoegen aan de tracker.
 // Barcode-scannen gebruikt de ingebouwde BarcodeDetector (Android Chrome); waar dat niet kan, typ je
@@ -124,6 +127,8 @@ export function FoodSearch({ onAdd, onClose }: { onAdd: (e: { name: string; kcal
     setGrams(String(f.servingGrams || 100))
     setSelected(f)
   }
+  // Ingebouwde databank: meteen (offline) doorzoekbaar, getoond boven de Open Food Facts-producten.
+  const localResults = useMemo(() => (tab === 'search' && !selected ? searchLocalFoods(query) : []), [query, tab, selected])
 
   const preview = selected ? scalePer100(selected.per100, Math.max(1, Number(grams) || 100)) : null
   const addSelected = () => {
@@ -165,9 +170,25 @@ export function FoodSearch({ onAdd, onClose }: { onAdd: (e: { name: string; kcal
         ) : tab === 'search' ? (
           <div className="fsx-search">
             <input className="fsx-input" type="search" placeholder="Zoek een voedingsmiddel…" value={query} onChange={(e) => setQuery(e.target.value)} autoFocus />
-            {searching && <p className="fsx-note">Zoeken…</p>}
+            {localResults.length > 0 && (
+              <>
+                <p className="fsx-group">Algemeen</p>
+                <ul className="fsx-results">
+                  {localResults.map((l) => (
+                    <li key={l.name}>
+                      <button type="button" onClick={() => pick(localToOff(l))}>
+                        <span className="fsx-r-name">{l.name}</span>
+                        <span className="fsx-r-kcal">{l.kcal}<small> kcal/100g</small></span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+            {(searching || results.length > 0) && <p className="fsx-group">Producten (Open Food Facts)</p>}
+            {searching && <p className="fsx-note">Producten zoeken…</p>}
             {searchErr && <p className="fsx-note err">{searchErr}</p>}
-            {!searching && query.trim().length >= 2 && results.length === 0 && !searchErr && <p className="fsx-note">Niets gevonden.</p>}
+            {!searching && query.trim().length >= 2 && results.length === 0 && localResults.length === 0 && !searchErr && <p className="fsx-note">Niets gevonden.</p>}
             <ul className="fsx-results">
               {results.map((f) => (
                 <li key={f.id}>
@@ -178,7 +199,6 @@ export function FoodSearch({ onAdd, onClose }: { onAdd: (e: { name: string; kcal
                 </li>
               ))}
             </ul>
-            <p className="fsx-credit">Gegevens: Open Food Facts</p>
           </div>
         ) : (
           <div className="fsx-scan">
