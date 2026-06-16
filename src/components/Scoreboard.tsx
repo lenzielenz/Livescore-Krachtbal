@@ -7,6 +7,7 @@ import type { KrachtbalKleur } from '@/lib/reeksen'
 import { ClubColorBlast } from '@/components/ClubColorBlast'
 import { KrachtbalIcon } from '@/components/KrachtbalIcon'
 import { MomentumChart } from '@/app/(frontend)/analyse/[id]/MomentumChart'
+import { BulletTime } from '@/components/BulletTime'
 import { LightShow } from '@/components/LightShow'
 import { PhotoTribune, type Instant } from '@/components/PhotoTribune'
 import { TeamLogo } from '@/components/TeamLogo'
@@ -181,6 +182,20 @@ export function Scoreboard({
     }
     setTimeout(() => setLightshowBusy(false), 25_000)
   }
+  // Multi-angle "bullet-time": gedeeld starttijdstip; alle toestellen rond de actie leggen samen
+  // hetzelfde moment vast en de app speelt de hoeken als een sweep af.
+  const [bulletAt, setBulletAt] = useState<number | null>(null)
+  const [bulletBusy, setBulletBusy] = useState(false)
+  const startBulletTime = async () => {
+    if (bulletBusy) return
+    setBulletBusy(true)
+    try {
+      await fetch(`/api/match/${matchId}/bullettime`, { method: 'POST' })
+    } catch {
+      /* leuk extraatje */
+    }
+    setTimeout(() => setBulletBusy(false), 28_000)
+  }
   const addInstantLocal = (i: Instant) => {
     setInstants((prev) => (prev.some((x) => x.id === i.id) ? prev : [i, ...prev].slice(0, 40)))
   }
@@ -317,6 +332,10 @@ export function Scoreboard({
         const at = Number((d as { at?: unknown }).at)
         const dur = Number((d as { dur?: unknown }).dur) || 22_000
         if (Number.isFinite(at)) setLightshow({ at, dur })
+      },
+      bullettime: (d) => {
+        const at = Number((d as { at?: unknown }).at)
+        if (Number.isFinite(at)) setBulletAt(at)
       },
     },
   )
@@ -758,15 +777,26 @@ export function Scoreboard({
           </div>
           {/* Lichtshow / digitale tifo: één tik roept iedereen op; alle telefoons in de tribune
               vormen samen één gesynchroniseerd lichtscherm. Werkt enkel echt met véél toestellen. */}
-          <button
-            type="button"
-            className="sb-lightshow-btn"
-            onClick={() => void startLightshow()}
-            disabled={lightshowBusy}
-            title="Start een lichtshow op alle telefoons in de tribune"
-          >
-            {lightshowBusy ? '💡 Lichtshow loopt…' : '💡 Start de lichtshow — samen!'}
-          </button>
+          <div className="sb-crowd-acts">
+            <button
+              type="button"
+              className="sb-lightshow-btn"
+              onClick={() => void startLightshow()}
+              disabled={lightshowBusy}
+              title="Start een lichtshow op alle telefoons in de tribune"
+            >
+              {lightshowBusy ? '💡 Lichtshow loopt…' : '💡 Lichtshow'}
+            </button>
+            <button
+              type="button"
+              className="sb-lightshow-btn sb-bullet-btn"
+              onClick={() => void startBulletTime()}
+              disabled={bulletBusy}
+              title="Multi-angle: leg samen hetzelfde moment vast vanuit meerdere hoeken"
+            >
+              {bulletBusy ? '🎥 Bezig…' : '🎥 Multi-angle'}
+            </button>
+          </div>
         </div>
       )}
 
@@ -782,6 +812,11 @@ export function Scoreboard({
           away={colorsFor('away').primary}
           onDone={() => setLightshow(null)}
         />
+      )}
+
+      {/* Multi-angle bullet-time: samen vastleggen en als sweep afspelen. */}
+      {bulletAt && (
+        <BulletTime matchId={matchId} at={bulletAt} canCapture={canPostInstant} onDone={() => setBulletAt(null)} />
       )}
 
       {/* Strakke "rugworp +2"-melding: een verzorgde flits met clean typografie (geen cartoon). */}
