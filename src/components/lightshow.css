@@ -15,7 +15,36 @@
   text-align: center;
   font-size: clamp(1.4rem, 7vw, 3rem);
   font-weight: 900;
-  line-height: 1.2;
+  line-height: 1.25;
   color: #fff;
-  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.7);
+  letter-spacing: 0.02em;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.85), 0 0 22px rgba(0, 0, 0, 0.5);
 }
+/* Vaste "synchroon"-melding onderaan, met een kloppend stipje. */
+.lsw-foot {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: max(14px, env(safe-area-inset-bottom));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: clamp(0.78rem, 3vw, 1.05rem);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #fff;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.9);
+  pointer-events: none;
+}
+.lsw-dot {
+  width: 0.7em;
+  height: 0.7em;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.9);
+  animation: lsw-beat 1s ease-in-out infinite;
+}
+@keyframes lsw-beat { 0%, 100% { transform: scale(0.7); opacity: 0.5; } 50% { transform: scale(1.15); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .lsw-dot { animation: none; } }
