@@ -90,6 +90,7 @@ export interface Config {
     'push-subscriptions': PushSubscription;
     advertenties: Advertenty;
     news: News;
+    'match-mvp-votes': MatchMvpVote;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -120,6 +121,7 @@ export interface Config {
     'push-subscriptions': PushSubscriptionsSelect<false> | PushSubscriptionsSelect<true>;
     advertenties: AdvertentiesSelect<false> | AdvertentiesSelect<true>;
     news: NewsSelect<false> | NewsSelect<true>;
+    'match-mvp-votes': MatchMvpVotesSelect<false> | MatchMvpVotesSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -1317,6 +1319,23 @@ export interface News {
   createdAt: string;
 }
 /**
+ * Supporterstemmen voor de held van de match. Eén per supporter per wedstrijd.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "match-mvp-votes".
+ */
+export interface MatchMvpVote {
+  id: number;
+  match: number | Match;
+  user: number | User;
+  player: number | Player;
+  playerName?: string | null;
+  shirtNumber?: number | null;
+  side?: ('home' | 'away') | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
@@ -1431,6 +1450,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'news';
         value: number | News;
+      } | null)
+    | ({
+        relationTo: 'match-mvp-votes';
+        value: number | MatchMvpVote;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -2059,6 +2082,20 @@ export interface NewsSelect<T extends boolean = true> {
   club?: T;
   publishedAt?: T;
   published?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "match-mvp-votes_select".
+ */
+export interface MatchMvpVotesSelect<T extends boolean = true> {
+  match?: T;
+  user?: T;
+  player?: T;
+  playerName?: T;
+  shirtNumber?: T;
+  side?: T;
   updatedAt?: T;
   createdAt?: T;
 }
