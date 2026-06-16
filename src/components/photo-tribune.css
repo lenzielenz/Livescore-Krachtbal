@@ -2,6 +2,23 @@
 .ptr {
   margin: 12px 0 4px;
 }
+/* Lege staat: één nette knop op volle breedte, uitgelijnd met de overige knoppen. */
+.ptr-fullbtn {
+  display: block;
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px dashed color-mix(in srgb, var(--accent, #ffd873) 38%, rgba(255, 255, 255, 0.16));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent, #ffd873) 9%, transparent), transparent);
+  color: var(--ink, #f1f5f2);
+  font-weight: 800;
+  font-size: 0.92rem;
+  cursor: pointer;
+  transition: filter 0.15s ease, transform 0.1s ease, border-color 0.12s ease;
+}
+.ptr-fullbtn:hover:not(:disabled) { filter: brightness(1.08); border-color: color-mix(in srgb, var(--accent, #ffd873) 60%, transparent); }
+.ptr-fullbtn:active:not(:disabled) { transform: translateY(1px); }
+.ptr-fullbtn:disabled { opacity: 0.6; cursor: default; }
 .ptr-strip {
   display: flex;
   gap: 8px;
