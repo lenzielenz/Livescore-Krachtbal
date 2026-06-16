@@ -76,7 +76,7 @@ export default async function PaspoortPage() {
   return (
     <Shell>
       <p className="wb-intro">
-        Elke wedstrijd waar je "🙋 Ik ben erbij" aantikt, komt hier terecht. <Link href="/profiel" style={{ color: 'var(--accent)' }}>← Naar mijn profiel</Link>
+        Elke wedstrijd waar je "🙋 Ik ben erbij" aantikt, komt hier terecht. <Link href="/wrapped" style={{ color: 'var(--accent)' }}>🎁 Mijn Wrapped</Link> · <Link href="/profiel" style={{ color: 'var(--accent)' }}>← Naar mijn profiel</Link>
       </p>
 
       <div className="pp-card">
