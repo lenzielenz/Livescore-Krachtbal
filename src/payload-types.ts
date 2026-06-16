@@ -89,6 +89,7 @@ export interface Config {
     media: Media;
     'push-subscriptions': PushSubscription;
     advertenties: Advertenty;
+    news: News;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -118,6 +119,7 @@ export interface Config {
     media: MediaSelect<false> | MediaSelect<true>;
     'push-subscriptions': PushSubscriptionsSelect<false> | PushSubscriptionsSelect<true>;
     advertenties: AdvertentiesSelect<false> | AdvertentiesSelect<true>;
+    news: NewsSelect<false> | NewsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -1273,6 +1275,37 @@ export interface Advertenty {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "news".
+ */
+export interface News {
+  id: number;
+  title: string;
+  /**
+   * Grote foto bovenaan het artikel (optioneel).
+   */
+  coverImage?: (number | null) | Media;
+  /**
+   * Korte intro die in de nieuwslijst verschijnt.
+   */
+  excerpt?: string | null;
+  /**
+   * De volledige tekst. Lege regel = nieuwe alinea.
+   */
+  body: string;
+  /**
+   * Welke club dit nieuws plaatst (optioneel).
+   */
+  club?: (number | null) | Club;
+  publishedAt?: string | null;
+  /**
+   * Pas zichtbaar voor supporters wanneer dit aanstaat.
+   */
+  published?: boolean | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
 export interface PayloadKv {
@@ -1382,6 +1415,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'advertenties';
         value: number | Advertenty;
+      } | null)
+    | ({
+        relationTo: 'news';
+        value: number | News;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -1994,6 +2031,21 @@ export interface AdvertentiesSelect<T extends boolean = true> {
   plaatsing?: T;
   volgorde?: T;
   actief?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "news_select".
+ */
+export interface NewsSelect<T extends boolean = true> {
+  title?: T;
+  coverImage?: T;
+  excerpt?: T;
+  body?: T;
+  club?: T;
+  publishedAt?: T;
+  published?: T;
   updatedAt?: T;
   createdAt?: T;
 }
