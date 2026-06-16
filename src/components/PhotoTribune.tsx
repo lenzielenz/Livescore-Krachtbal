@@ -77,44 +77,22 @@ export function PhotoTribune({
 
   return (
     <div className="ptr">
-      <div className="ptr-head">
-        <span className="ptr-ico" aria-hidden>📸</span>
-        <div className="ptr-head-main">
-          <h3 className="ptr-title">Foto-tribune</h3>
-          <p className="ptr-lead">Deel je sfeerbeeld van de wedstrijd</p>
-        </div>
-        <span className="ptr-badge" title="Foto's verdwijnen automatisch één uur na de wedstrijd">⏳ verdwijnt na de match</span>
-      </div>
-
-      {instants.length === 0 ? (
-        canPost ? (
-          <button type="button" className="ptr-empty-cta" onClick={() => inputRef.current?.click()} disabled={busy}>
-            <span className="ptr-empty-ico" aria-hidden>{busy ? '⏳' : '＋'}</span>
-            <span className="ptr-empty-txt">
-              <span className="ptr-empty-title">{busy ? 'Bezig…' : 'Deel een sfeerbeeld'}</span>
-              <span className="ptr-empty-sub">Wees de eerste in de tribune!</span>
-            </span>
+      {/* Geen kop/info — enkel de knop; gemaakte foto's verschijnen als kleine thumbnails ernaast. */}
+      <div className="ptr-strip">
+        {canPost && (
+          <button type="button" className="ptr-add" onClick={() => inputRef.current?.click()} disabled={busy} aria-label="Foto toevoegen">
+            <span className="ptr-add-ico" aria-hidden>{busy ? '⏳' : '📸'}</span>
+            <span className="ptr-add-lbl">{busy ? 'Bezig…' : 'Foto'}</span>
           </button>
-        ) : (
-          <p className="ptr-empty">Nog geen foto&apos;s.</p>
-        )
-      ) : (
-        <div className="ptr-strip">
-          {canPost && (
-            <button type="button" className="ptr-add" onClick={() => inputRef.current?.click()} disabled={busy} aria-label="Foto plaatsen">
-              <span className="ptr-add-ico" aria-hidden>{busy ? '⏳' : '＋'}</span>
-              <span className="ptr-add-lbl">{busy ? 'Bezig…' : 'Foto'}</span>
-            </button>
-          )}
-          {instants.map((i) => (
-            <button type="button" key={i.id} className="ptr-thumb" onClick={() => setZoom(i)} aria-label={`Foto van ${i.authorName}`}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={i.url} alt={`Foto van ${i.authorName}`} loading="lazy" />
-              <span className="ptr-thumb-name">{i.authorName}</span>
-            </button>
-          ))}
-        </div>
-      )}
+        )}
+        {instants.map((i) => (
+          <button type="button" key={i.id} className="ptr-thumb" onClick={() => setZoom(i)} aria-label={`Foto van ${i.authorName}`}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={i.url} alt={`Foto van ${i.authorName}`} loading="lazy" />
+            <span className="ptr-thumb-name">{i.authorName}</span>
+          </button>
+        ))}
+      </div>
       {err && <p className="ptr-err">{err}</p>}
       <input
         ref={inputRef}
