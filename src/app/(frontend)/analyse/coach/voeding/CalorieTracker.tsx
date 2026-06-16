@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { remaining, ringFraction, statusMessage, sumEntries, zone, type FoodEntry } from '@/lib/calorie-tracker'
+import { FoodSearch } from './FoodSearch'
 import './calorie-tracker.css'
 
 // Een speelse, "delightful" dagelijkse calorie-tracker bovenop het persoonlijke caloriedoel uit het
@@ -73,6 +74,7 @@ export function CalorieTracker({ calories, protein, carbs, fat }: { calories: nu
   const [confetti, setConfetti] = useState(0)
   const [name, setName] = useState('')
   const [kcal, setKcal] = useState('')
+  const [showSearch, setShowSearch] = useState(false)
   const wasGood = useRef(false)
 
   // Laad de dag van vandaag + bereken de streak (opeenvolgende dagen met minstens één hap).
@@ -198,6 +200,10 @@ export function CalorieTracker({ calories, protein, carbs, fat }: { calories: nu
         ))}
       </div>
 
+      <button type="button" className="ct-search-btn" onClick={() => setShowSearch(true)}>
+        🔎 Zoek voeding of 📷 scan een barcode
+      </button>
+
       <form className="ct-custom" onSubmit={addCustom}>
         <input className="ct-input ct-input-name" type="text" placeholder="Eigen item…" value={name} onChange={(e) => setName(e.target.value)} maxLength={40} />
         <input className="ct-input ct-input-kcal" type="number" inputMode="numeric" placeholder="kcal" value={kcal} onChange={(e) => setKcal(e.target.value)} min={1} />
@@ -220,6 +226,8 @@ export function CalorieTracker({ calories, protein, carbs, fat }: { calories: nu
         <span>{entries.length} {entries.length === 1 ? 'item' : 'items'} vandaag</span>
         {entries.length > 0 && <button type="button" className="ct-reset" onClick={resetDay}>Dag wissen</button>}
       </div>
+
+      {showSearch && <FoodSearch onAdd={(f) => add(f)} onClose={() => setShowSearch(false)} />}
     </section>
   )
 }
