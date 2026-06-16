@@ -349,13 +349,14 @@ export function removeInstant(matchId: number, instantId: number): boolean {
   return true
 }
 
-/** Roep ALLE kijkers op om samen een foto te nemen: broadcast een 'photomoment'-event met het
- * tijdstip waarop iedereen tegelijk afdrukt (gesynchroniseerde aftelklok op elk toestel). */
-export function addPhotoMoment(matchId: number, at: number): boolean {
+/** Start een lichtshow / digitale tifo op ALLE toestellen van deze wedstrijd: broadcast een
+ * 'lightshow'-event met het gedeelde starttijdstip + duur, zodat elk scherm synchroon loopt en de
+ * tribune samen één lichtscherm vormt. */
+export function addLightshow(matchId: number, at: number, dur: number): boolean {
   const ch = channels.get(matchId)
   if (!ch) return false
   if (!isTribuneOpen(ch.status, ch.finishedAt)) return false
-  broadcast(ch, 'photomoment', { at })
+  broadcast(ch, 'lightshow', { at, dur })
   return true
 }
 

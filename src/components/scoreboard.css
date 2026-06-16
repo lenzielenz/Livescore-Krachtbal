@@ -766,3 +766,22 @@
   color: var(--accent); font: inherit; font-size: 0.82rem; font-weight: 800;
 }
 .sb-chat-new:hover { background: color-mix(in srgb, var(--accent) 22%, transparent); }
+
+/* Lichtshow-knop onder de vieringsbalk. */
+.sb-lightshow-btn {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 11px 14px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, #ffd166 45%, var(--line, #2a3a32));
+  background: linear-gradient(180deg, rgba(255, 209, 102, 0.16), rgba(255, 77, 157, 0.12));
+  color: var(--txt, #ecf7f0);
+  font-weight: 800;
+  font-size: 0.92rem;
+  cursor: pointer;
+  transition: filter 0.15s ease, transform 0.1s ease;
+}
+.sb-lightshow-btn:hover:not(:disabled) { filter: brightness(1.1); }
+.sb-lightshow-btn:active:not(:disabled) { transform: translateY(1px); }
+.sb-lightshow-btn:disabled { opacity: 0.6; cursor: default; }

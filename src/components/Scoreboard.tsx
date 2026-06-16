@@ -7,6 +7,7 @@ import type { KrachtbalKleur } from '@/lib/reeksen'
 import { ClubColorBlast } from '@/components/ClubColorBlast'
 import { KrachtbalIcon } from '@/components/KrachtbalIcon'
 import { MomentumChart } from '@/app/(frontend)/analyse/[id]/MomentumChart'
+import { LightShow } from '@/components/LightShow'
 import { PhotoTribune, type Instant } from '@/components/PhotoTribune'
 import { TeamLogo } from '@/components/TeamLogo'
 import { WinProbability } from '@/components/WinProbability'
@@ -166,8 +167,20 @@ export function Scoreboard({
   // Vluchtige foto-tribune: live foto's + welke ik zelf plaatste (zodat ik die kan verwijderen).
   const [instants, setInstants] = useState<Instant[]>(initialInstants ?? [])
   const [mineIds, setMineIds] = useState<Set<number>>(new Set())
-  // "Samen-foto": tijdstip waarop iedereen tegelijk afdrukt (gesynchroniseerd via het live-kanaal).
-  const [photoMomentAt, setPhotoMomentAt] = useState<number | null>(null)
+  // Lichtshow / digitale tifo: gedeeld starttijdstip + duur (gesynchroniseerd via het live-kanaal),
+  // zodat alle toestellen in de tribune samen één lichtscherm vormen.
+  const [lightshow, setLightshow] = useState<{ at: number; dur: number } | null>(null)
+  const [lightshowBusy, setLightshowBusy] = useState(false)
+  const startLightshow = async () => {
+    if (lightshowBusy) return
+    setLightshowBusy(true)
+    try {
+      await fetch(`/api/match/${matchId}/lightshow`, { method: 'POST' })
+    } catch {
+      /* leuk extraatje, geen kritieke actie */
+    }
+    setTimeout(() => setLightshowBusy(false), 25_000)
+  }
   const addInstantLocal = (i: Instant) => {
     setInstants((prev) => (prev.some((x) => x.id === i.id) ? prev : [i, ...prev].slice(0, 40)))
   }
@@ -300,9 +313,10 @@ export function Scoreboard({
         const side = (d as { side?: string }).side
         if (side === 'home' || side === 'away') triggerBlast(side)
       },
-      photomoment: (d) => {
+      lightshow: (d) => {
         const at = Number((d as { at?: unknown }).at)
-        if (Number.isFinite(at) && at > Date.now()) setPhotoMomentAt(at)
+        const dur = Number((d as { dur?: unknown }).dur) || 22_000
+        if (Number.isFinite(at)) setLightshow({ at, dur })
       },
     },
   )
@@ -655,8 +669,6 @@ export function Scoreboard({
         mineIds={mineIds}
         onLocalAdd={onLocalAdd}
         onLocalRemove={removeInstantLocal}
-        momentAt={photoMomentAt}
-        onMomentDone={() => setPhotoMomentAt(null)}
       />
 
       {/* Supporter-reacties: zwevende emoji's + een reactiebalk (enkel tijdens een live wedstrijd). */}
@@ -744,11 +756,33 @@ export function Scoreboard({
               )
             })}
           </div>
+          {/* Lichtshow / digitale tifo: één tik roept iedereen op; alle telefoons in de tribune
+              vormen samen één gesynchroniseerd lichtscherm. Werkt enkel echt met véél toestellen. */}
+          <button
+            type="button"
+            className="sb-lightshow-btn"
+            onClick={() => void startLightshow()}
+            disabled={lightshowBusy}
+            title="Start een lichtshow op alle telefoons in de tribune"
+          >
+            {lightshowBusy ? '💡 Lichtshow loopt…' : '💡 Start de lichtshow — samen!'}
+          </button>
         </div>
       )}
 
       {/* Fullscreen clubkleuren-explosie (rook + vuurwerk). */}
       {blast && <ClubColorBlast key={blast.key} colors={blast.colors} teamName={blast.name} />}
+
+      {/* Lichtshow: fullscreen gesynchroniseerd lichtscherm over alle toestellen. */}
+      {lightshow && (
+        <LightShow
+          at={lightshow.at}
+          durationMs={lightshow.dur}
+          home={colorsFor('home').primary}
+          away={colorsFor('away').primary}
+          onDone={() => setLightshow(null)}
+        />
+      )}
 
       {/* Strakke "rugworp +2"-melding: een verzorgde flits met clean typografie (geen cartoon). */}
       {celebrate != null && (

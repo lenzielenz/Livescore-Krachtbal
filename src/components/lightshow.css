@@ -1,0 +1,21 @@
+/* Lichtshow / digitale tifo: fullscreen, vult het hele scherm met kleur. */
+.lsw {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #06140d;
+  cursor: pointer;
+  transition: background 0.12s linear;
+}
+.lsw-label {
+  white-space: pre-line;
+  text-align: center;
+  font-size: clamp(1.4rem, 7vw, 3rem);
+  font-weight: 900;
+  line-height: 1.2;
+  color: #fff;
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.7);
+}
