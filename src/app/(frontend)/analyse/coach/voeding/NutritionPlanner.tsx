@@ -20,6 +20,7 @@ import {
   supplements,
 } from '@/lib/nutrition-extras'
 import { buildShoppingList, buildWeekPlan, spreadTrainingDays } from '@/lib/nutrition-week'
+import type { TrackerStore } from '@/lib/calorie-tracker'
 import { CalorieTracker } from './CalorieTracker'
 import './voeding.css'
 
@@ -120,7 +121,7 @@ function MacroDonut({ p, c, f }: { p: number; c: number; f: number }) {
   )
 }
 
-export function NutritionPlanner({ initial, canSave = false }: { initial?: NutritionProfile | null; canSave?: boolean }) {
+export function NutritionPlanner({ initial, canSave = false, tracker = null }: { initial?: NutritionProfile | null; canSave?: boolean; tracker?: TrackerStore | null }) {
   const [sex, setSex] = useState<Sex>(initial?.sex ?? 'm')
   const [age, setAge] = useState(initial?.age || '25')
   const [height, setHeight] = useState(initial?.heightCm || '178')
@@ -551,7 +552,15 @@ export function NutritionPlanner({ initial, canSave = false }: { initial?: Nutri
               </div>
             )}
           </section>
-          <CalorieTracker calories={plan.calories} protein={plan.protein} carbs={plan.carbs} fat={plan.fat} />
+          <CalorieTracker
+            calories={plan.calories}
+            protein={plan.protein}
+            carbs={plan.carbs}
+            fat={plan.fat}
+            targetWeightKg={Number(target) > 0 ? Number(target) : null}
+            initialStore={tracker}
+            canSave={canSave}
+          />
         </div>
       )}
     </div>

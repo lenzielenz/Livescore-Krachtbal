@@ -258,3 +258,19 @@
 .fsx-back { flex: 0 0 auto; padding: 11px 16px; border-radius: 12px; border: 1px solid var(--line, #25342c); background: transparent; color: var(--txt); font: inherit; font-weight: 700; cursor: pointer; }
 .fsx-add { flex: 1; padding: 11px 16px; border-radius: 12px; border: 0; font: inherit; font-weight: 800; color: #06140d; background: var(--grad-accent, var(--accent, #06d6a0)); cursor: pointer; }
 .fsx-add:disabled { opacity: 0.6; cursor: default; }
+
+/* Gewichtsopvolging. */
+.ct-weight {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid color-mix(in srgb, #fff 7%, var(--line, #25342c));
+}
+.ct-weight-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px; }
+.ct-weight-title { font-weight: 900; font-size: 0.98rem; }
+.ct-weight-now { margin-left: auto; font-weight: 900; font-variant-numeric: tabular-nums; color: var(--accent, #06d6a0); }
+.ct-weight-form { display: flex; gap: 8px; }
+.ct-weight-form .ct-input { flex: 1; }
+.ct-weight-info { display: flex; align-items: center; gap: 14px; margin-top: 12px; flex-wrap: wrap; }
+.ct-spark { width: 120px; height: 34px; flex: 0 0 auto; }
+.ct-weight-trend { display: flex; flex-direction: column; gap: 2px; font-size: 0.86rem; font-weight: 700; color: var(--dim-strong, #b9c8c0); }
+.ct-weight-eta { color: var(--accent, #06d6a0); font-weight: 800; }

@@ -209,6 +209,16 @@ export const Users: CollectionConfig = {
       },
     },
     {
+      // Persoonlijke calorie-tracker: de dagelijkse voedingslog en gewichtsmetingen die de gebruiker
+      // bijhoudt. Vorm: { days: { 'YYYY-MM-DD': [{name,kcal,p,c,f}] }, weights: [{d,kg}] }.
+      name: 'nutritionTracker',
+      label: 'Calorie-tracker',
+      type: 'json',
+      admin: {
+        description: 'Eigen voorkeur: bewaarde dagelijkse voedingslog + gewichtsmetingen. De gebruiker beheert dit zelf.',
+      },
+    },
+    {
       // Bonusrad-booster: de top 3 van het weekend winnen een persoonlijke vermenigvuldiger die ze
       // op hun eigen voorspellingen kunnen gebruiken. Vorm: { mult, remaining, wonAt }. Automatisch beheerd.
       name: 'pronostiekPower',
