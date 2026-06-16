@@ -1,0 +1,57 @@
+/* Supportersklassement. */
+.fan-intro { color: var(--dim); margin: 4px 0 18px; line-height: 1.5; max-width: 60ch; }
+
+.fan-card {
+  border-radius: 18px;
+  padding: 16px;
+  margin: 0 0 16px;
+  border: 1px solid var(--line);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0) 60%), var(--panel-grad, var(--panel));
+  box-shadow: var(--card-shadow, 0 16px 36px -26px rgba(0, 0, 0, 0.55));
+}
+.fan-h2 { margin: 0 0 12px; font-size: 1.02rem; font-weight: 900; }
+.fan-h2-sub { font-size: 0.72rem; font-weight: 600; color: var(--dim); text-transform: uppercase; letter-spacing: 0.04em; margin-left: 6px; }
+.fan-empty { color: var(--dim); margin: 0; }
+.fan-empty a { color: var(--accent); font-weight: 700; }
+
+/* Fanbase-rivaliteit */
+.fan-clubs { display: flex; flex-direction: column; gap: 8px; }
+.fan-club {
+  display: grid; grid-template-columns: 2em 1fr auto; align-items: center; gap: 4px 12px;
+  padding: 11px 14px; border-radius: 12px; text-decoration: none; color: inherit;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--panel) 88%, transparent);
+}
+.fan-club:hover { border-color: color-mix(in srgb, var(--accent) 40%, var(--line)); }
+.fan-club.is-top { border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); box-shadow: 0 12px 26px -22px var(--glow-accent, var(--accent)); }
+.fan-club-rank { grid-row: span 2; font-size: 1.3rem; font-weight: 900; text-align: center; }
+.fan-club-name { font-weight: 800; }
+.fan-club-meta { grid-column: 2; font-size: 0.74rem; color: var(--dim); }
+.fan-club-score { grid-row: span 2; font-size: 1.5rem; font-weight: 900; color: var(--accent); font-variant-numeric: tabular-nums; }
+
+/* Supporters-lijst */
+.fan-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; counter-reset: none; }
+.fan-row, .fan-myrank {
+  display: flex; align-items: center; gap: 12px; padding: 9px 12px; border-radius: 11px;
+  border: 1px solid transparent;
+}
+.fan-row:nth-child(odd) { background: color-mix(in srgb, var(--panel) 92%, transparent); }
+.fan-row.is-me, .fan-myrank {
+  border-color: color-mix(in srgb, var(--accent) 50%, var(--line));
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+.fan-myrank { margin-top: 8px; }
+.fan-rank { width: 1.8em; text-align: center; font-weight: 900; color: var(--dim); font-variant-numeric: tabular-nums; flex: none; }
+.fan-ava {
+  width: 36px; height: 36px; border-radius: 50%; flex: none;
+  display: grid; place-items: center; font-weight: 800; font-size: 0.8rem; color: #0a1020;
+  background: var(--grad-accent, linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 50%, #fff)));
+}
+.fan-id { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.fan-name { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fan-sub { font-size: 0.72rem; color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fan-score { font-size: 1.2rem; font-weight: 900; color: var(--accent); font-variant-numeric: tabular-nums; min-width: 2.4em; text-align: right; }
+
+.fan-rules { margin-top: 6px; font-size: 0.85rem; color: var(--dim); }
+.fan-rules summary { cursor: pointer; font-weight: 700; color: var(--txt, inherit); }
+.fan-rules ul { margin: 8px 0 0; padding-left: 1.2em; line-height: 1.6; }

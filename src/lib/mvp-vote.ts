@@ -56,3 +56,69 @@ export function tallyMvp(candidates: MvpCandidate[], totals: Record<string | num
 
   return { standings, total, winner }
 }
+
+// ── Seizoens-fanaward ("Publiekslievelingen") ─────────────────────────────────────────────────
+// Hoe vaak werd een speler over het seizoen tot held van de match verkozen, en hoeveel stemmen
+// kreeg hij in totaal. Eén stem-document per supporter per wedstrijd → groepeer per wedstrijd,
+// bepaal de winnaar (geen winst bij gelijkstand), en tel winsten + stemmen per speler op.
+
+export interface MvpVoteRow {
+  matchId: number
+  playerId: number
+  name: string
+  shirtNumber: number | null
+}
+
+export interface MvpAward {
+  playerId: number
+  name: string
+  shirtNumber: number | null
+  /** Aantal wedstrijden waarin deze speler held van de match werd. */
+  wins: number
+  /** Totaal aantal stemmen over het seizoen. */
+  votes: number
+}
+
+export function seasonMvpAwards(rows: MvpVoteRow[]): MvpAward[] {
+  // Per wedstrijd: stemmen per speler tellen + naam/rugnummer onthouden.
+  const perMatch = new Map<number, Map<number, { count: number; name: string; shirtNumber: number | null }>>()
+  for (const r of rows) {
+    if (!Number.isFinite(r.matchId) || !Number.isFinite(r.playerId)) continue
+    let m = perMatch.get(r.matchId)
+    if (!m) { m = new Map(); perMatch.set(r.matchId, m) }
+    const e = m.get(r.playerId) ?? { count: 0, name: r.name, shirtNumber: r.shirtNumber }
+    e.count += 1
+    if (r.name) e.name = r.name
+    if (r.shirtNumber != null) e.shirtNumber = r.shirtNumber
+    m.set(r.playerId, e)
+  }
+
+  const awards = new Map<number, MvpAward>()
+  const bump = (playerId: number, name: string, shirtNumber: number | null) => {
+    const a = awards.get(playerId) ?? { playerId, name, shirtNumber, wins: 0, votes: 0 }
+    if (name) a.name = name
+    if (shirtNumber != null) a.shirtNumber = shirtNumber
+    awards.set(playerId, a)
+    return a
+  }
+
+  for (const m of perMatch.values()) {
+    let maxCount = 0
+    for (const e of m.values()) maxCount = Math.max(maxCount, e.count)
+    const leaders: number[] = []
+    for (const [pid, e] of m.entries()) {
+      bump(pid, e.name, e.shirtNumber).votes += e.count
+      if (e.count > 0 && e.count === maxCount) leaders.push(pid)
+    }
+    // Winst enkel bij een duidelijke (niet-gedeelde) koppositie.
+    if (maxCount > 0 && leaders.length === 1) {
+      const pid = leaders[0]
+      const e = m.get(pid)!
+      bump(pid, e.name, e.shirtNumber).wins += 1
+    }
+  }
+
+  return [...awards.values()].sort(
+    (a, b) => b.wins - a.wins || b.votes - a.votes || a.name.localeCompare(b.name),
+  )
+}

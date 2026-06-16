@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 
-import { tallyMvp, type MvpCandidate } from '@/lib/mvp-vote'
+import { tallyMvp, seasonMvpAwards, type MvpCandidate, type MvpVoteRow } from '@/lib/mvp-vote'
 
 const cands: MvpCandidate[] = [
   { playerId: 1, name: 'Jan', shirtNumber: 7, side: 'home' },
@@ -41,5 +41,29 @@ describe('tallyMvp', () => {
     // Piet (#4) vóór Jan (#7) bij gelijke stemmen.
     expect(r.standings[0].playerId).toBe(2)
     expect(r.standings[1].playerId).toBe(1)
+  })
+})
+
+describe('seasonMvpAwards', () => {
+  const rows: MvpVoteRow[] = [
+    // Wedstrijd 1: speler 1 wint (2 vs 1).
+    { matchId: 1, playerId: 1, name: 'Jan', shirtNumber: 7 },
+    { matchId: 1, playerId: 1, name: 'Jan', shirtNumber: 7 },
+    { matchId: 1, playerId: 2, name: 'Piet', shirtNumber: 4 },
+    // Wedstrijd 2: speler 1 wint opnieuw (1 vs 0 anderen).
+    { matchId: 2, playerId: 1, name: 'Jan', shirtNumber: 7 },
+    // Wedstrijd 3: gelijkstand 1-1 → geen winnaar, wel stemmen.
+    { matchId: 3, playerId: 2, name: 'Piet', shirtNumber: 4 },
+    { matchId: 3, playerId: 3, name: 'Sam', shirtNumber: 9 },
+  ]
+
+  it('telt winsten (geen winst bij gelijkstand) en stemmen per speler', () => {
+    const a = seasonMvpAwards(rows)
+    const jan = a.find((x) => x.playerId === 1)!
+    expect(jan.wins).toBe(2)
+    expect(jan.votes).toBe(3)
+    expect(a[0].playerId).toBe(1) // meeste winsten bovenaan
+    expect(a.find((x) => x.playerId === 2)?.wins).toBe(0)
+    expect(a.find((x) => x.playerId === 3)?.votes).toBe(1)
   })
 })
