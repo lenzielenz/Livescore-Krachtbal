@@ -6,7 +6,7 @@ import { ClubColorBlast } from '@/components/ClubColorBlast'
 import { TeamLogo } from '@/components/TeamLogo'
 import { DEFAULT_AWAY_COLOR, DEFAULT_HOME_COLOR, inkOn, readableOnDark } from '@/lib/club-colors'
 import type { MatchState, TimelineItem } from '@/lib/match-engine'
-import { buildMomentum, demoMomentum, type MomentumPoint } from '@/lib/match-momentum'
+import { buildMomentum, type MomentumPoint } from '@/lib/match-momentum'
 import { goalPointsFromLabel, goalScorerFromLabel, useLiveStream } from '@/lib/use-live-stream'
 import { QrCode } from '../../cast/QrCode'
 import { AdMarquee, type Ad } from './AdMarquee'
@@ -167,15 +167,8 @@ export function FieldScreen({
   const [goal, setGoal] = useState<Goal | null>(null)
   // Wedstrijdverloop-grafiek: rond het midden van de eerste helft ±1 min tonen (de score blijft staan).
   const [showFlow, setShowFlow] = useState(false)
-  // Demo-modus voor de testknop: toont de grafiek met fictieve doelpunten i.p.v. de echte (vlakke) stand.
-  const [flowDemo, setFlowDemo] = useState(false)
-  // Testknop: toon ook voorbeeld-reclame zodat de scrollende balk zichtbaar is zonder ingestelde reclame.
-  const [previewAds, setPreviewAds] = useState(false)
-  // Testknop voor het start-/QR-scherm: forceer de pre-match lobby ook als de wedstrijd al bezig is.
-  const [previewLobby, setPreviewLobby] = useState(false)
   const flowShown = useRef(false)
   const flowTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const previewTimers = useRef<ReturnType<typeof setTimeout>[]>([])
   // Pauze-foto's: een slideshow van de wedstrijdfoto's (supporter-instants), te tonen tijdens de rust.
   const [photos, setPhotos] = useState<string[] | null>(null) // null = dicht, [] = geen foto's
   const [photoIdx, setPhotoIdx] = useState(0)
@@ -264,33 +257,6 @@ export function FieldScreen({
     }
   }
 
-  // Testknop: speelt het hele scherm-spektakel af zodat je alles in actie ziet zonder te wachten:
-  // 1) een voorbeeld-doelpunt (DOELPUNT!-animatie), 2) de scrollende reclamebalk (met voorbeeld-
-  // reclame als er nog geen is ingesteld), en 3) de verloop-grafiek met fictieve doelpunten.
-  const runTest = () => {
-    if (flowTimer.current) clearTimeout(flowTimer.current)
-    previewTimers.current.forEach(clearTimeout)
-    previewTimers.current = []
-
-    // Reclamebalk meteen aan.
-    setPreviewAds(true)
-    // Voorbeeld-doelpunt met viering.
-    goalSeq.current += 1
-    setGoal({ key: goalSeq.current, side: 'home', team: state.teams.home.name, points: 2, scorer: null })
-    previewTimers.current.push(setTimeout(() => setGoal(null), 4200))
-    // Daarna de verloop-grafiek.
-    previewTimers.current.push(setTimeout(() => {
-      setFlowDemo(true)
-      setShowFlow(true)
-    }, 4000))
-    // Alles terug uit na ~1 minuut.
-    flowTimer.current = setTimeout(() => {
-      setShowFlow(false)
-      setFlowDemo(false)
-      setPreviewAds(false)
-    }, 64_000)
-  }
-
   // Pauze-foto's tonen: haalt de (niet-verlopen) wedstrijdfoto's op en start een slideshow.
   // Zijn er nog geen, dan tonen we voorbeeld-foto's zodat je meteen ziet hoe het eruitziet.
   const showPhotos = async () => {
@@ -311,13 +277,6 @@ export function FieldScreen({
     } finally {
       setPhotosLoading(false)
     }
-  }
-
-  // Testknop: toon de kracht-cam meteen met voorbeeld-foto's (om de look te testen). Tik om te sluiten.
-  const testCam = () => {
-    if (photos !== null) { setPhotos(null); return }
-    setPhotoIdx(0)
-    setPhotos(DEMO_PHOTOS)
   }
 
   // Slideshow: elke 4,5 s naar de volgende foto.
@@ -345,10 +304,6 @@ export function FieldScreen({
 
   const momentum = useMemo(() => buildMomentum(timeline, halfSeconds), [timeline, halfSeconds])
   const nowT = (Math.max(1, state.match.currentHalf) - 1) * halfSeconds + clock
-  const demoPts = useMemo(() => demoMomentum(halfSeconds), [halfSeconds])
-  // Reclame verschijnt enkel tijdens een test (op de testknop). Is er echte reclame ingesteld, dan
-  // tonen we die; anders voorbeeld-reclame. In de gewone live-weergave blijft de balk weg.
-  const shownAds = previewAds ? (ads.length > 0 ? ads : DEMO_ADS) : []
 
   // Toon de verloop-grafiek één keer, rond het midden van de eerste helft (±30 s), ~1 minuut lang.
   useEffect(() => {
@@ -368,7 +323,6 @@ export function FieldScreen({
 
   useEffect(() => () => {
     if (flowTimer.current) clearTimeout(flowTimer.current)
-    previewTimers.current.forEach(clearTimeout)
   }, [])
 
   useEffect(() => {
@@ -390,7 +344,7 @@ export function FieldScreen({
     clock < 1 &&
     state.score.home === 0 &&
     state.score.away === 0
-  const showLobby = preMatch || previewLobby
+  const showLobby = preMatch
   const lobbyAds = ads.length > 0 ? ads : DEMO_ADS
 
   // Dynamische stijl op basis van de clubkleuren. De thuisploeg geeft de toon aan;
@@ -417,35 +371,11 @@ export function FieldScreen({
       <div className="fs-controls">
         <button
           type="button"
-          className="fs-ctrlbtn fs-testbtn"
-          onClick={runTest}
-          title="Test: speel doelpunt-animatie, reclamebalk en wedstrijdverloop af"
-        >
-          🧪 Test
-        </button>
-        <button
-          type="button"
           className="fs-ctrlbtn fs-photobtn"
           onClick={() => void showPhotos()}
           title="Toon de wedstrijdfoto's (kracht-cam, ideaal tijdens de pauze)"
         >
           {photosLoading ? '📷 …' : photos !== null ? '✕ Foto’s' : '📷 Foto’s'}
-        </button>
-        <button
-          type="button"
-          className="fs-ctrlbtn fs-cambtn"
-          onClick={testCam}
-          title="Test de kracht-cam met voorbeeld-foto's"
-        >
-          {photos !== null ? '✕ Cam' : '💪 Cam'}
-        </button>
-        <button
-          type="button"
-          className="fs-ctrlbtn fs-lobbybtn"
-          onClick={() => setPreviewLobby((v) => !v)}
-          title="Test het start-/QR-scherm"
-        >
-          {previewLobby ? '✕ Start' : '📱 Start'}
         </button>
         <button
           type="button"
@@ -463,7 +393,6 @@ export function FieldScreen({
           </svg>
         </button>
       </div>
-      <AdMarquee ads={shownAds} position="top" />
       <div className="fs-top">
         <span className={`fs-status ${status}`}>{statusLabel}</span>
         {reeks && <span className="fs-reeks">{reeks}</span>}
@@ -499,8 +428,6 @@ export function FieldScreen({
           <TeamStats crosses={state.crosses.away} timeouts={state.timeouts.away} />
         </div>
       </div>
-
-      <AdMarquee ads={shownAds} position="bottom" />
 
       {showLobby && (
         <div className="fs-lobby">
@@ -557,35 +484,26 @@ export function FieldScreen({
         </div>
       )}
 
-      {showFlow && (() => {
-        // In demo-modus tonen we fictieve doelpunten zodat de lijn zichtbaar beweegt.
-        const pts = flowDemo ? demoPts : momentum
-        const last = pts[pts.length - 1]
-        const flowNowT = flowDemo ? halfSeconds / 2 : nowT
-        const scoreHome = flowDemo ? last.home : state.score.home
-        const scoreAway = flowDemo ? last.away : state.score.away
-        const flowClock = flowDemo ? halfSeconds / 2 : clock
-        return (
+      {showFlow && (
           <div className="fs-flow">
             <div className="fs-flow-card">
               <div className="fs-flow-head">
-                <span className="fs-flow-title">📈 Wedstrijdverloop{flowDemo ? ' · TEST' : ''}</span>
+                <span className="fs-flow-title">📈 Wedstrijdverloop</span>
                 <span className="fs-flow-score">
-                  <b style={{ color: home1 }}>{scoreHome}</b>
+                  <b style={{ color: home1 }}>{state.score.home}</b>
                   <i>–</i>
-                  <b style={{ color: away1 }}>{scoreAway}</b>
+                  <b style={{ color: away1 }}>{state.score.away}</b>
                 </span>
               </div>
-              <MomentumChart points={pts} nowT={flowNowT} homeColor={home1} awayColor={away1} />
+              <MomentumChart points={momentum} nowT={nowT} homeColor={home1} awayColor={away1} />
               <div className="fs-flow-legend">
                 <span><i style={{ background: home1 }} /> {state.teams.home.name}</span>
-                <span className="fs-flow-mid">{fmtClock(flowClock)} · Helft {flowDemo ? 1 : state.match.currentHalf}</span>
+                <span className="fs-flow-mid">{fmtClock(clock)} · Helft {state.match.currentHalf}</span>
                 <span>{state.teams.away.name} <i style={{ background: away1 }} /></span>
               </div>
             </div>
           </div>
-        )
-      })()}
+      )}
     </div>
   )
 }
