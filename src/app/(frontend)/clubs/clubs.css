@@ -1,0 +1,57 @@
+/* Publieke clubpagina. */
+.cl { --club: var(--accent); }
+.cl-hero {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 20px;
+  border-radius: 20px;
+  margin: 8px 0 18px;
+  border: 1px solid color-mix(in srgb, var(--club) 30%, var(--line));
+  background:
+    radial-gradient(120% 100% at 0% 0%, color-mix(in srgb, var(--club) 20%, transparent), transparent 60%),
+    var(--panel-grad, var(--panel));
+  box-shadow: var(--card-shadow);
+}
+.cl-hero-id { min-width: 0; }
+.cl-name { margin: 0; font-size: clamp(1.5rem, 5vw, 2.3rem); font-weight: 900; line-height: 1.05; color: color-mix(in srgb, var(--club) 55%, #fff); }
+.cl-loc { margin: 6px 0 0; color: var(--dim); font-size: 0.9rem; }
+.cl-web { display: inline-block; margin-top: 6px; color: var(--accent); font-weight: 700; font-size: 0.88rem; }
+
+.cl-sec { margin: 0 0 22px; }
+.cl-h2 {
+  display: flex; align-items: center; gap: 9px;
+  font-size: 0.82rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em;
+  color: var(--dim-strong); margin: 0 0 12px;
+}
+.cl-h2::before { content: ''; width: 3px; height: 0.95em; border-radius: 2px; background: var(--club); box-shadow: 0 0 8px color-mix(in srgb, var(--club) 60%, transparent); }
+
+.cl-teams { display: flex; flex-wrap: wrap; gap: 8px; }
+.cl-team {
+  padding: 7px 13px; border-radius: 999px; font-weight: 700; font-size: 0.88rem;
+  background: color-mix(in srgb, var(--club) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--club) 30%, var(--line));
+}
+.cl-team i { color: var(--dim); font-style: normal; font-weight: 500; }
+
+.cl-matches { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.cl-match {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px; border-radius: 12px; text-decoration: none; color: inherit;
+  border: 1px solid color-mix(in srgb, #fff 6%, var(--line));
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0) 60%), var(--panel-grad, var(--panel));
+  transition: border-color 0.12s ease, transform 0.12s ease;
+}
+.cl-match:hover { border-color: color-mix(in srgb, var(--club) 45%, var(--line)); transform: translateX(2px); }
+.cl-match-date { font-size: 0.8rem; color: var(--dim); min-width: 9.5em; }
+.cl-match-teams { flex: 1; font-weight: 700; min-width: 0; }
+.cl-match-teams i { color: var(--dim); font-style: normal; margin: 0 4px; }
+.cl-score { font-weight: 900; font-variant-numeric: tabular-nums; color: color-mix(in srgb, var(--club) 60%, #fff); }
+.cl-live { font-size: 0.7rem; font-weight: 900; color: #fff; background: #ef476f; padding: 3px 9px; border-radius: 999px; }
+
+.cl-news { display: flex; flex-direction: column; gap: 8px; }
+.cl-news-item {
+  padding: 11px 14px; border-radius: 12px; text-decoration: none; color: inherit; font-weight: 700;
+  border: 1px solid color-mix(in srgb, #fff 6%, var(--line)); background: color-mix(in srgb, #fff 3%, transparent);
+}
+.cl-news-item:hover { border-color: color-mix(in srgb, var(--club) 45%, var(--line)); }
