@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 
 import './photo-tribune.css'
 
@@ -30,8 +30,6 @@ export function PhotoTribune({
   mineIds,
   onLocalAdd,
   onLocalRemove,
-  momentAt = null,
-  onMomentDone,
 }: {
   matchId: number
   instants: Instant[]
@@ -39,55 +37,11 @@ export function PhotoTribune({
   mineIds: Set<number>
   onLocalAdd: (i: Instant) => void
   onLocalRemove: (id: number) => void
-  // "Samen-foto": gedeeld tijdstip waarop iedereen tegelijk afdrukt (via het live-kanaal).
-  momentAt?: number | null
-  onMomentDone?: () => void
 }) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
   const [zoom, setZoom] = useState<Instant | null>(null)
-  const [momentBusy, setMomentBusy] = useState(false)
-  // Aftelfase van de samen-foto: 'idle' (geen), 'count' (3·2·1), 'snap' (nu afdrukken).
-  const [phase, setPhase] = useState<'idle' | 'count' | 'snap'>('idle')
-  const [secs, setSecs] = useState(0)
-
-  // Roep iedereen op om samen een foto te nemen. De aftelklok komt via het live-kanaal terug
-  // (ook bij de starter), zodat alle toestellen synchroon lopen.
-  const startMoment = async () => {
-    if (momentBusy) return
-    setMomentBusy(true)
-    try {
-      await fetch(`/api/match/${matchId}/photomoment`, { method: 'POST' })
-    } catch {
-      /* stilte: het is een leuk extraatje, geen kritieke actie */
-    }
-    setTimeout(() => setMomentBusy(false), 8000)
-  }
-
-  // Synchrone aftelklok op basis van het gedeelde tijdstip.
-  useEffect(() => {
-    if (!momentAt) {
-      setPhase('idle')
-      return
-    }
-    const tick = () => {
-      const ms = momentAt - Date.now()
-      if (ms > 0) {
-        setPhase('count')
-        setSecs(Math.ceil(ms / 1000))
-      } else {
-        setPhase('snap')
-      }
-    }
-    tick()
-    const iv = setInterval(tick, 200)
-    const close = setTimeout(() => onMomentDone?.(), Math.max(0, momentAt - Date.now()) + 12_000)
-    return () => {
-      clearInterval(iv)
-      clearTimeout(close)
-    }
-  }, [momentAt, onMomentDone])
 
   const pick = async (file: File | null) => {
     if (!file || busy) return
@@ -126,11 +80,6 @@ export function PhotoTribune({
       <div className="ptr-head">
         <h3 className="ptr-title">📸 Foto-tribune</h3>
         <span className="ptr-sub">spontane foto&apos;s · verdwijnen na de wedstrijd</span>
-        {canPost && (
-          <button type="button" className="ptr-moment-cta" onClick={() => void startMoment()} disabled={momentBusy} title="Roep iedereen op om samen een foto te nemen">
-            {momentBusy ? '📸 …' : '📸 Samen-foto'}
-          </button>
-        )}
       </div>
 
       {instants.length === 0 ? (
@@ -171,28 +120,6 @@ export function PhotoTribune({
         hidden
         onChange={(e) => pick(e.target.files?.[0] ?? null)}
       />
-
-      {phase !== 'idle' && (
-        <div className="ptr-moment" role="dialog" aria-modal="true" onClick={() => onMomentDone?.()}>
-          {phase === 'count' ? (
-            <>
-              <div className="ptr-moment-title">📸 Samen-foto!</div>
-              <div key={secs} className="ptr-moment-count">{secs}</div>
-              <div className="ptr-moment-sub">Maak je klaar — iedereen tegelijk!</div>
-            </>
-          ) : (
-            <>
-              <div className="ptr-moment-title ptr-moment-now">📸 NU!</div>
-              {canPost && (
-                <button type="button" className="ptr-moment-snap" onClick={(e) => { e.stopPropagation(); inputRef.current?.click() }}>
-                  Open camera
-                </button>
-              )}
-              <div className="ptr-moment-sub">Tik om te sluiten</div>
-            </>
-          )}
-        </div>
-      )}
 
       {zoom && (
         <div className="ptr-lightbox" role="dialog" aria-modal="true" onClick={() => setZoom(null)}>
