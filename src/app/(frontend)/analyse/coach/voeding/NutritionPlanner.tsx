@@ -20,6 +20,7 @@ import {
   supplements,
 } from '@/lib/nutrition-extras'
 import { buildShoppingList, buildWeekPlan, spreadTrainingDays } from '@/lib/nutrition-week'
+import { CalorieTracker } from './CalorieTracker'
 import './voeding.css'
 
 const DAY_ABBR = ['Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za', 'Zo']
@@ -550,6 +551,7 @@ export function NutritionPlanner({ initial, canSave = false }: { initial?: Nutri
               </div>
             )}
           </section>
+          <CalorieTracker calories={plan.calories} protein={plan.protein} carbs={plan.carbs} fat={plan.fat} />
         </div>
       )}
     </div>
