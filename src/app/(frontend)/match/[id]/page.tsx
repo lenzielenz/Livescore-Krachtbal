@@ -90,6 +90,14 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   const ballKleur = krachtbalKleur(reeksRaw)
   // Enkel ingelogde bezoekers mogen shoutouts plaatsen in de live tribune.
   const me = await getAuthUser()
+  // Clubkleur van de ingelogde supporter (voor de lichtshow: elk toestel kleurt in zijn eigen club).
+  let myClubPrimary: string | null = null
+  const myClubId = userClubId(me)
+  if (myClubId != null) {
+    const myClub = await payload.findByID({ collection: 'clubs', id: myClubId, depth: 0 }).catch(() => null)
+    const c = (myClub as { colorPrimary?: string | null } | null)?.colorPrimary
+    if (typeof c === 'string' && c.trim()) myClubPrimary = c.trim()
+  }
   const datum = matchDoc?.date ? formatDateTimeBE(matchDoc.date as string) : null
   const sheetRes = await payload
     .find({ collection: 'matchsheets', where: { match: { equals: matchId } }, depth: 2, limit: 1 })
@@ -233,6 +241,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
         initialInstants={initialInstants}
         momentumGoals={share?.goals}
         momentumTimeouts={share?.timeouts}
+        myClubPrimary={myClubPrimary}
       />
       {/* Live-uitzending van de wedstrijd (externe stream), als de beheerder er een instelde. */}
       {matchDoc?.livestreamUrl && (
