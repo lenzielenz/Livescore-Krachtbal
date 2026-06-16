@@ -6,12 +6,10 @@ import { uploadInstant } from '@/lib/instant-upload'
 import './bullettime.css'
 
 // Multi-angle "bullet-time": iedereen rond de actie legt hetzelfde moment vast vanuit zijn eigen hoek;
-// daarna speelt de app de foto's als één sweepende reeks af (heen en weer = boomerang). Géén tussenstap:
-// de capture-fase opent de camera met één tik. Wie de multi-angle start, opent de camera al meteen
-// (in dezelfde tik, via het scorebord) en springt hier dus direct naar het verzamelen/de replay.
-//   capture → één tik opent je camera (jouw hoek)
+// daarna speelt de app de foto's als één sweepende reeks af (heen en weer = boomerang).
+//   count   → aftellen + uitleg, zodat iedereen weet wat er gebeurt en zich klaarzet
+//   capture → één tik op het hele vlak opent meteen de camera (géén aparte sluiterknop)
 //   sweep   → de verzamelde hoeken snel na elkaar = multi-angle replay
-
 const CAPTURE_MS = 9000
 const SWEEP_MS = 15000
 
@@ -19,16 +17,15 @@ export function BulletTime({
   matchId,
   at,
   canCapture,
-  selfInitiated = false,
   onDone,
 }: {
   matchId: number
   at: number
   canCapture: boolean
-  selfInitiated?: boolean
   onDone: () => void
 }) {
-  const [phase, setPhase] = useState<'capture' | 'sweep'>(selfInitiated || !canCapture ? 'sweep' : 'capture')
+  const [phase, setPhase] = useState<'count' | 'capture' | 'sweep'>('count')
+  const [secs, setSecs] = useState(0)
   const [busy, setBusy] = useState(false)
   const [shot, setShot] = useState(false)
   const [frames, setFrames] = useState<string[]>([])
@@ -52,24 +49,28 @@ export function BulletTime({
     }
   }, [])
 
-  // Fase-timing: een korte capture-vensterperiode, daarna de replay. Wie zelf startte (of niet mag
-  // posten) ziet meteen de "verzamelen → replay".
+  // Fase-timing op basis van het gedeelde tijdstip (alle toestellen lopen gelijk).
   useEffect(() => {
-    if (selfInitiated || !canCapture) {
-      setPhase('sweep')
-      const done = setTimeout(onDone, SWEEP_MS)
-      return () => clearTimeout(done)
-    }
     const captureEnd = at + CAPTURE_MS
-    const tick = () => setPhase(Date.now() < captureEnd ? 'capture' : 'sweep')
+    const tick = () => {
+      const ms = at - Date.now()
+      if (ms > 0) {
+        setPhase('count')
+        setSecs(Math.ceil(ms / 1000))
+      } else if (Date.now() < captureEnd) {
+        setPhase('capture')
+      } else {
+        setPhase('sweep')
+      }
+    }
     tick()
     const iv = setInterval(tick, 200)
-    const done = setTimeout(onDone, Math.max(0, captureEnd - Date.now()) + SWEEP_MS)
+    const done = setTimeout(onDoneRef.current, Math.max(0, at - Date.now()) + CAPTURE_MS + SWEEP_MS)
     return () => {
       clearInterval(iv)
       clearTimeout(done)
     }
-  }, [at, canCapture, selfInitiated, onDone])
+  }, [at])
 
   // Bij de sweep: haal de recentste foto's op (de zojuist gemaakte hoeken) en speel ze af.
   useEffect(() => {
@@ -125,19 +126,32 @@ export function BulletTime({
       <div className="bt-lb bt-lb-top" aria-hidden />
       <div className="bt-lb bt-lb-bottom" aria-hidden />
 
-      {phase === 'capture' && (
-        // Géén tussenstap: één tik op het hele vlak opent meteen de camera.
-        <button type="button" className="bt-capture" onClick={() => inputRef.current?.click()} disabled={busy}>
-          <span className="bt-corner tl" aria-hidden />
-          <span className="bt-corner tr" aria-hidden />
-          <span className="bt-corner bl" aria-hidden />
-          <span className="bt-corner br" aria-hidden />
-          <span className="bt-rec"><span className="bt-rec-dot" aria-hidden />REC · jouw hoek</span>
-          <span className="bt-kicker">🎬 MULTI-ANGLE</span>
-          <span className="bt-cap-cta">{busy ? '📸 …' : shot ? '✓ Vastgelegd — nog een hoek?' : '📸 Tik om je hoek vast te leggen'}</span>
-          <span className="bt-cap-sub">de replay komt zo automatisch</span>
-        </button>
+      {phase === 'count' && (
+        <div className="bt-center" onClick={(e) => e.stopPropagation()}>
+          <div className="bt-kicker">🎬 MULTI-ANGLE</div>
+          <div key={secs} className="bt-count">{secs}</div>
+          <div className="bt-sub">Ga met z&apos;n allen rond de actie staan — straks leg je samen, ieder vanuit je eigen hoek, hetzelfde moment vast.</div>
+        </div>
       )}
+
+      {phase === 'capture' &&
+        (canCapture ? (
+          // Géén tussenstap: één tik op het hele vlak opent meteen de camera.
+          <button type="button" className="bt-capture" onClick={() => inputRef.current?.click()} disabled={busy}>
+            <span className="bt-corner tl" aria-hidden />
+            <span className="bt-corner tr" aria-hidden />
+            <span className="bt-corner bl" aria-hidden />
+            <span className="bt-corner br" aria-hidden />
+            <span className="bt-rec"><span className="bt-rec-dot" aria-hidden />REC · jouw hoek</span>
+            <span className="bt-cap-cta">{busy ? '📸 …' : shot ? '✓ Vastgelegd — nog een hoek?' : '📸 NU — tik om je hoek vast te leggen'}</span>
+            <span className="bt-cap-sub">de replay komt zo automatisch</span>
+          </button>
+        ) : (
+          <div className="bt-center" onClick={(e) => e.stopPropagation()}>
+            <div className="bt-kicker bt-now">📸 NU!</div>
+            <div className="bt-sub"><a href="/inloggen">Log in</a> om mee te doen aan de multi-angle.</div>
+          </div>
+        ))}
 
       {phase === 'sweep' && (
         <div className="bt-sweep">

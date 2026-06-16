@@ -5,10 +5,10 @@ import { rateLimit } from '@/lib/sse-hub'
 export const dynamic = 'force-dynamic'
 
 // Multi-angle "bullet-time": een supporter roept iedereen op om, ieder vanuit zijn eigen hoek,
-// hetzelfde moment vast te leggen. De app speelt de foto's daarna als één sweepende reeks af.
-// Geen aftelling/tussenstap: de capture start meteen (de camera opent met één tik). Vereist login,
-// per wedstrijd begrensd, enkel terwijl de tribune open is.
-const LEAD_MS = 0
+// hetzelfde moment vast te leggen. Er is een korte aftelling zodat iedereen weet wat er gaat
+// gebeuren en zich klaarzet; op nul opent de camera met één tik (geen aparte sluiterknop). Daarna
+// speelt de app de hoeken als één sweepende reeks af. Vereist login, per wedstrijd begrensd.
+const LEAD_MS = 4000
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
