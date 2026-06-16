@@ -9,7 +9,6 @@ import { KrachtbalIcon } from '@/components/KrachtbalIcon'
 import { MomentumChart } from '@/app/(frontend)/analyse/[id]/MomentumChart'
 import { BulletTime } from '@/components/BulletTime'
 import { LightShow } from '@/components/LightShow'
-import { uploadInstant } from '@/lib/instant-upload'
 import { PhotoTribune, type Instant } from '@/components/PhotoTribune'
 import { TeamLogo } from '@/components/TeamLogo'
 import { WinProbability } from '@/components/WinProbability'
@@ -186,20 +185,18 @@ export function Scoreboard({
     }
     setTimeout(() => setLightshowBusy(false), 25_000)
   }
-  // Multi-angle "bullet-time": gedeeld starttijdstip; alle toestellen rond de actie leggen samen
-  // hetzelfde moment vast en de app speelt de hoeken als een sweep af. Géén tussenstap: de starter
-  // opent meteen (binnen de tik) zijn camera; anderen krijgen één tik om hun hoek vast te leggen.
+  // Multi-angle "bullet-time": gedeeld starttijdstip; alle toestellen tellen samen af en leggen dan
+  // (ieder vanuit zijn eigen hoek) hetzelfde moment vast; de app speelt de hoeken als een sweep af.
   const [bulletAt, setBulletAt] = useState<number | null>(null)
   const [bulletBusy, setBulletBusy] = useState(false)
-  const [bulletSelf, setBulletSelf] = useState(false)
-  const angleInputRef = useRef<HTMLInputElement>(null)
-  const startBulletTime = () => {
+  const startBulletTime = async () => {
     if (bulletBusy) return
-    // Open meteen de camera binnen dít gebaar (browser-vereiste) — zo geen extra knop/tussenstap.
-    angleInputRef.current?.click()
-    setBulletSelf(true)
     setBulletBusy(true)
-    fetch(`/api/match/${matchId}/bullettime`, { method: 'POST' }).catch(() => {})
+    try {
+      await fetch(`/api/match/${matchId}/bullettime`, { method: 'POST' })
+    } catch {
+      /* leuk extraatje */
+    }
     setTimeout(() => setBulletBusy(false), 28_000)
   }
   const addInstantLocal = (i: Instant) => {
@@ -821,31 +818,9 @@ export function Scoreboard({
         />
       )}
 
-      {/* Verborgen camera-input zodat de starter meteen (binnen de tik) zijn hoek kan vastleggen. */}
-      <input
-        ref={angleInputRef}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        hidden
-        onChange={(e) => {
-          const f = e.target.files?.[0]
-          if (f) void uploadInstant(matchId, f)
-          if (angleInputRef.current) angleInputRef.current.value = ''
-        }}
-      />
-      {/* Multi-angle bullet-time: samen vastleggen en als sweep afspelen. */}
+      {/* Multi-angle bullet-time: samen aftellen, vastleggen en als sweep afspelen. */}
       {bulletAt && (
-        <BulletTime
-          matchId={matchId}
-          at={bulletAt}
-          canCapture={canPostInstant}
-          selfInitiated={bulletSelf}
-          onDone={() => {
-            setBulletAt(null)
-            setBulletSelf(false)
-          }}
-        />
+        <BulletTime matchId={matchId} at={bulletAt} canCapture={canPostInstant} onDone={() => setBulletAt(null)} />
       )}
 
       {/* Strakke "rugworp +2"-melding: een verzorgde flits met clean typografie (geen cartoon). */}

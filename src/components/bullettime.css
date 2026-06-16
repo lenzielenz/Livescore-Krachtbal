@@ -80,6 +80,7 @@
   text-shadow: 0 2px 12px rgba(0, 0, 0, 0.8);
 }
 .bt-cap-sub { font-size: clamp(0.85rem, 3.4vw, 1.2rem); font-weight: 600; color: rgba(255, 255, 255, 0.7); }
+.bt-now { color: #ffd166; text-shadow: 0 0 22px rgba(255, 209, 102, 0.8); }
 .bt-capture .bt-kicker { margin-bottom: 1vmin; }
 .bt-capture .bt-rec { top: -2vh; left: 0; }
 .bt-corner {
