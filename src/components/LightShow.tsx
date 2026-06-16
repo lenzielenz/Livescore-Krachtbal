@@ -40,6 +40,16 @@ export function LightShow({
   const seed = useRef(Math.random())
   const camp = useRef(Math.random() < 0.5) // enkel gebruikt als terugval (geen eigen club)
 
+  // Echt volledig scherm (verbergt de browserbalken). Werkt op het toestel dat de show start (tik =
+  // gebaar); op andere toestellen kan de browser het weigeren — dan blijft het schermvullende overlay.
+  useEffect(() => {
+    const el = ref.current
+    el?.requestFullscreen?.().catch(() => {})
+    return () => {
+      if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {})
+    }
+  }, [])
+
   useEffect(() => {
     const WHITE: [number, number, number] = [255, 255, 255]
     const GOLD: [number, number, number] = [255, 209, 102]
@@ -58,27 +68,28 @@ export function LightShow({
       let label = ''
 
       if (ms < 0) {
-        // Aftellen: houd je scherm omhoog.
+        // Aftellen — overal exact hetzelfde getal: zo zie je meteen dat het synchroon loopt.
         const left = Math.ceil(-ms / 1000)
         bg = mix(BLACK, MY, 0.18)
-        label = `💡 Houd je scherm omhoog!\n${left}`
-      } else if (t < 5) {
-        // Fase 1 — PULS: heel de tribune pulseert samen, elk toestel in zijn eigen clubkleur.
+        label = `💡 SAMEN op elk toestel\nHoud je scherm omhoog!\n${left}`
+      } else if (t < 4) {
+        // Fase 1 — UNISONO-FLITS: ÁLLE schermen flitsen tegelijk wit (sterkste bewijs van sync).
+        const flash = (Math.sin(t * 9) + 1) / 2
+        bg = mix(MY, WHITE, flash * flash)
+        label = '✨ SAMEN ✨'
+      } else if (t < 9) {
+        // Fase 2 — PULS: heel de tribune pulseert samen, elk toestel in zijn eigen clubkleur.
         const pulse = (Math.sin(t * 2.4) + 1) / 2
         bg = mix(BLACK, MY, 0.3 + pulse * 0.7)
-      } else if (t < 10) {
-        // Fase 2 — SCHITTERING: elk toestel knippert op z'n eigen ritme (sterrenhemel in clubkleur).
+      } else if (t < 13) {
+        // Fase 3 — SCHITTERING: elk toestel knippert op z'n eigen ritme (sterrenhemel in clubkleur).
         const on = (Math.sin((t + ph * 6.28) * 6) + 1) / 2
         bg = mix(BLACK, MY, on * on)
-      } else if (t < 15) {
-        // Fase 3 — FLITS: wissel tussen clubkleur en wit (gesynchroniseerd) voor een felle vibe.
-        const cycle = Math.floor((t - 10) * 2) % 2
-        const frac = ((t - 10) * 2) % 1
-        bg = cycle === 0 ? mix(MY, WHITE, frac) : mix(WHITE, MY, frac)
       } else if (t < 18) {
-        // Fase 4 — VOL: volle clubkleur, zacht pulserend.
-        const pulse = (Math.sin(t * 3) + 1) / 2
-        bg = mix(BLACK, MY, 0.55 + pulse * 0.45)
+        // Fase 4 — UNISONO-FLITS opnieuw: samen wisselen tussen clubkleur en wit.
+        const cycle = Math.floor((t - 13) * 2) % 2
+        const frac = ((t - 13) * 2) % 1
+        bg = cycle === 0 ? mix(MY, WHITE, frac) : mix(WHITE, MY, frac)
       } else {
         // Slot — gouden flits en uitdoven.
         const k = Math.max(0, 1 - (t - 18) / 3)
@@ -100,6 +111,8 @@ export function LightShow({
   return (
     <div ref={ref} className="lsw" role="dialog" aria-label="Lichtshow" onClick={onDone}>
       <div ref={labelRef} className="lsw-label" />
+      {/* Vaste melding zodat iedereen wéét dat het op alle telefoons synchroon loopt. */}
+      <div className="lsw-foot"><span className="lsw-dot" aria-hidden />synchroon op elk toestel</div>
     </div>
   )
 }
