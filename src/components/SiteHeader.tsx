@@ -35,10 +35,10 @@ const WEDSTRIJDEN: { href: string; label: string }[] = [
   { href: '/tornooi', label: '🏆 Bekerwedstrijden' },
 ]
 
-// Info/achtergrond onderaan het menu — minder vaak nodig, dus laag geplaatst.
+// Info onderaan het menu: één ingang. De infohub (/uitleg) bundelt "zo werkt het",
+// de prijzen & pakketten en de demo als doorklik-links — zo blijft het menu kort.
 const INFO: { href: string; label: string }[] = [
   { href: '/uitleg', label: '❓ Zo werkt het' },
-  { href: '/prijzen', label: '💎 Prijzen & pakketten' },
 ]
 
 // Welke rol een profiel-ingang mag zien. Federatie/admin zien alles.
@@ -212,7 +212,6 @@ export function SiteHeader({ active = null }: { active?: NavSection }) {
                     )}
                   </div>
                   <div className="sh-more-group">
-                    <div className="sh-more-grouphead">Info</div>
                     {INFO.map((l) => (
                       <Link key={l.href} href={l.href} className="sh-more-item" onClick={() => setOpen(false)}>
                         {l.label}

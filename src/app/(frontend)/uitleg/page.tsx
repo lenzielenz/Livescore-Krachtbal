@@ -248,18 +248,21 @@ export default function UitlegPage() {
         <div className="tut-outro">
           <h2>Klaar om te starten?</h2>
           <p>
-            Registreer je gratis als supporter, of probeer meteen de demo om het aantekenen te
-            voelen.
+            Registreer je gratis als supporter, probeer meteen de demo om het aantekenen te voelen,
+            of bekijk de prijzen &amp; pakketten.
           </p>
           <div className="tut-actions" style={{ justifyContent: 'center' }}>
             <Link href="/registreren" className="tut-btn primary">
               📝 Registreren
             </Link>
-            <Link href="/pronostiek" className="tut-btn">
-              🔮 Pronostiek
-            </Link>
             <Link href="/demo" className="tut-btn">
               🎓 Demo proberen
+            </Link>
+            <Link href="/prijzen" className="tut-btn">
+              💎 Prijzen &amp; pakketten
+            </Link>
+            <Link href="/pronostiek" className="tut-btn">
+              🔮 Pronostiek
             </Link>
           </div>
         </div>
