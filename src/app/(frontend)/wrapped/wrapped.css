@@ -1,0 +1,56 @@
+/* Krachtbal Wrapped — deelbare seizoensterugblik. */
+.wr-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 24px;
+  padding: 28px 22px 22px;
+  margin: 8px 0 16px;
+  text-align: center;
+  color: #f2f8ff;
+  border: 1px solid rgba(125, 211, 252, 0.28);
+  background:
+    radial-gradient(80% 60% at 20% 0%, rgba(56, 189, 248, 0.28), transparent 60%),
+    radial-gradient(80% 60% at 100% 100%, rgba(168, 85, 247, 0.3), transparent 60%),
+    linear-gradient(160deg, #141d44, #0a1230 70%);
+  box-shadow: 0 30px 70px -34px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+.wr-glow {
+  position: absolute; inset: -40% -10% auto; height: 70%; z-index: 0;
+  background: radial-gradient(50% 100% at 50% 0%, rgba(125, 211, 252, 0.25), transparent 70%);
+  filter: blur(20px); pointer-events: none;
+}
+.wr-card > * { position: relative; z-index: 1; }
+
+.wr-season { display: block; font-size: 0.74rem; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(214, 230, 255, 0.7); }
+.wr-persona-emoji { display: block; font-size: 3.6rem; line-height: 1.1; margin-top: 8px; filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.4)); }
+.wr-persona-title {
+  display: block; font-size: 1.9rem; font-weight: 900; line-height: 1.05; margin-top: 2px;
+  background: linear-gradient(100deg, #7dd3fc, #e9d5ff 60%, #fff);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.wr-name { display: block; font-size: 0.95rem; font-weight: 700; color: rgba(214, 230, 255, 0.92); margin-top: 4px; }
+.wr-blurb { margin: 8px auto 0; max-width: 30ch; font-size: 0.86rem; color: rgba(214, 230, 255, 0.78); line-height: 1.4; }
+
+.wr-stats {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin: 20px 0 4px;
+}
+@media (min-width: 480px) { .wr-stats { grid-template-columns: repeat(3, 1fr); } }
+.wr-stat {
+  padding: 14px 8px; border-radius: 16px;
+  background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.wr-stat b { display: block; font-size: 1.8rem; font-weight: 900; color: #7dd3fc; font-variant-numeric: tabular-nums; line-height: 1; }
+.wr-stat span { display: block; margin-top: 4px; font-size: 0.66rem; letter-spacing: 0.03em; color: rgba(214, 230, 255, 0.72); }
+
+.wr-highlights { list-style: none; margin: 18px 0 6px; padding: 0; display: flex; flex-direction: column; gap: 7px; text-align: left; }
+.wr-highlights li {
+  font-size: 0.86rem; color: rgba(232, 242, 255, 0.92);
+  padding: 9px 13px; border-radius: 11px;
+  background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.wr-highlights li span { color: #e9d5ff; margin-right: 4px; }
+
+.wr-foot { display: block; margin-top: 18px; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; color: rgba(214, 230, 255, 0.55); }
+
+.wr-share { text-align: center; color: var(--dim); font-size: 0.9rem; }
+.wr-empty { color: var(--dim); line-height: 1.5; max-width: 52ch; margin: 4px auto; text-align: center; }
