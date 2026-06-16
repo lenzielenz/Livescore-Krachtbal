@@ -48,3 +48,22 @@
 }
 @keyframes lsw-beat { 0%, 100% { transform: scale(0.7); opacity: 0.5; } 50% { transform: scale(1.15); opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .lsw-dot { animation: none; } }
+
+/* Voortgangsbalk: toont hoever de (gedeelde) show staat — versterkt het synchroon-gevoel. */
+.lsw-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.18);
+  overflow: hidden;
+}
+.lsw-bar-fill {
+  height: 100%;
+  width: 100%;
+  transform: scaleX(0);
+  transform-origin: left center;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
+}

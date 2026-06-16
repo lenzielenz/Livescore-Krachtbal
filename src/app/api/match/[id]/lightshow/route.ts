@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic'
 // volgen vormen samen één gesynchroniseerd lichtscherm. Vereist login en is per wedstrijd begrensd
 // (één gedeeld moment, geen spamknop). De show start na een korte aftelling en duurt ~21 s.
 const LEAD_MS = 4000
-const DURATION_MS = 21_000
+const DURATION_MS = 22_000
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -24,7 +24,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   }
 
   const at = Date.now() + LEAD_MS
-  const dur = LEAD_MS + DURATION_MS
+  // `dur` is de showduur vanaf `at` (de aftelling tot `at` zit al in de overlay zelf).
+  const dur = DURATION_MS
   const ok = addLightshow(matchId, at, dur)
   if (!ok) return Response.json({ error: 'De tribune is niet open.' }, { status: 403 })
   return Response.json({ ok: true, at, dur })
