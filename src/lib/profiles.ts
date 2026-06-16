@@ -33,6 +33,7 @@ export const PROFILES: Profile[] = [
       { href: '/kantine', label: '🍻 Kantinescherm' },
       { href: '/cast', label: '📺 Schermen naar tv' },
       { href: '/beheer/spelers', label: '➕ Spelers toevoegen' },
+      { href: '/beheer/training/aanwezigheid', label: '✅ Aanwezigheidslijst' },
     ],
   },
   {
