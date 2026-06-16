@@ -77,22 +77,31 @@ export function PhotoTribune({
 
   return (
     <div className="ptr">
-      {/* Geen kop/info — enkel de knop; gemaakte foto's verschijnen als kleine thumbnails ernaast. */}
-      <div className="ptr-strip">
-        {canPost && (
-          <button type="button" className="ptr-add" onClick={() => inputRef.current?.click()} disabled={busy} aria-label="Foto toevoegen">
-            <span className="ptr-add-ico" aria-hidden>{busy ? '⏳' : '📸'}</span>
-            <span className="ptr-add-lbl">{busy ? 'Bezig…' : 'Foto'}</span>
+      {/* Geen kop/info. Nog geen foto's → één nette knop op volle breedte (uitgelijnd met de rest).
+          Zodra er foto's zijn → horizontale strip met compacte knop + kleine thumbnails. */}
+      {instants.length === 0 ? (
+        canPost && (
+          <button type="button" className="ptr-fullbtn" onClick={() => inputRef.current?.click()} disabled={busy}>
+            {busy ? '⏳ Bezig…' : '📸 Foto toevoegen'}
           </button>
-        )}
-        {instants.map((i) => (
-          <button type="button" key={i.id} className="ptr-thumb" onClick={() => setZoom(i)} aria-label={`Foto van ${i.authorName}`}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={i.url} alt={`Foto van ${i.authorName}`} loading="lazy" />
-            <span className="ptr-thumb-name">{i.authorName}</span>
-          </button>
-        ))}
-      </div>
+        )
+      ) : (
+        <div className="ptr-strip">
+          {canPost && (
+            <button type="button" className="ptr-add" onClick={() => inputRef.current?.click()} disabled={busy} aria-label="Foto toevoegen">
+              <span className="ptr-add-ico" aria-hidden>{busy ? '⏳' : '📸'}</span>
+              <span className="ptr-add-lbl">{busy ? 'Bezig…' : 'Foto'}</span>
+            </button>
+          )}
+          {instants.map((i) => (
+            <button type="button" key={i.id} className="ptr-thumb" onClick={() => setZoom(i)} aria-label={`Foto van ${i.authorName}`}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={i.url} alt={`Foto van ${i.authorName}`} loading="lazy" />
+              <span className="ptr-thumb-name">{i.authorName}</span>
+            </button>
+          ))}
+        </div>
+      )}
       {err && <p className="ptr-err">{err}</p>}
       <input
         ref={inputRef}
