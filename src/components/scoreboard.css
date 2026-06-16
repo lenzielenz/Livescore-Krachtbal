@@ -18,13 +18,22 @@
      fullscreen-vieringen, die position:absolute/fixed nodig hebben). */
   isolation: isolate;
   overflow: hidden;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 88%, #000), var(--panel));
-  border: 1px solid color-mix(in srgb, var(--accent) 12%, var(--line));
-  border-radius: 18px;
+  background:
+    radial-gradient(120% 70% at 50% -10%, color-mix(in srgb, var(--accent) 9%, transparent), transparent 60%),
+    linear-gradient(180deg, color-mix(in srgb, var(--panel) 82%, #000), var(--panel) 55%, color-mix(in srgb, var(--panel) 92%, #000));
+  border: 1px solid color-mix(in srgb, #fff 9%, var(--line));
+  border-radius: 24px;
   padding: 26px 24px;
   color: var(--txt);
   font-family: var(--font-body), 'Segoe UI', ui-sans-serif, system-ui, sans-serif;
-  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+  /* Gelaagde diepte: brede drop-shadow + zachte accent-ambiance + glanzende bovenrand. */
+  box-shadow:
+    0 30px 70px -28px rgba(0, 0, 0, 0.7),
+    0 0 0 1px rgba(255, 255, 255, 0.02),
+    0 0 60px -30px color-mix(in srgb, var(--accent) 50%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
   /* De verschuiving van de krachtmeting vloeit zacht mee. */
   transition: --home-share 1.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -101,8 +110,12 @@
 .sb-main > .sb-side-team:last-child .sb-name { color: color-mix(in srgb, var(--away) 55%, #fff); text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5), 0 0 20px color-mix(in srgb, var(--away) 35%, transparent); }
 
 .sb-status { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
-.sb-badge { font-size: 0.72rem; font-weight: 800; letter-spacing: 0.08em; padding: 3px 10px; border-radius: 999px; }
-.sb-badge.live { background: var(--pop); color: #fff; }
+.sb-badge { font-size: 0.72rem; font-weight: 900; letter-spacing: 0.12em; padding: 4px 12px; border-radius: 999px; }
+.sb-badge.live {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--pop) 88%, #fff), var(--pop));
+  color: #fff;
+  box-shadow: 0 0 18px -3px color-mix(in srgb, var(--pop) 80%, transparent), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
 .sb-badge.finished { background: #2a3f33; color: var(--dim); }
 .sb-badge.scheduled { background: #1c3a2a; color: var(--dim); }
 .sb-conn { font-size: 0.72rem; color: #5a7a68; }
@@ -251,11 +264,23 @@
   max-width: 520px;
 }
 .sb-chat-title {
+  display: flex;
+  align-items: center;
+  gap: 9px;
   font-size: 0.8rem;
+  font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--dim);
+  letter-spacing: 0.12em;
+  color: var(--dim-strong);
   margin: 0 0 8px;
+}
+.sb-chat-title::before {
+  content: '';
+  width: 3px;
+  height: 0.95em;
+  border-radius: 2px;
+  background: var(--grad-accent, var(--accent));
+  box-shadow: 0 0 8px color-mix(in srgb, var(--accent) 60%, transparent);
 }
 .sb-chat-note {
   margin: -2px 0 8px;
@@ -434,17 +459,28 @@
 .sb-scorebox { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 8px; }
 .sb-score {
   font-family: var(--font-display), 'Segoe UI', sans-serif;
-  font-size: 4.4rem; font-weight: 900; font-variant-numeric: tabular-nums; line-height: 1;
-  display: flex; gap: 14px; justify-content: center;
-  text-shadow: 0 6px 26px rgba(0, 0, 0, 0.5);
+  font-size: 4.6rem; font-weight: 900; font-variant-numeric: tabular-nums; line-height: 1;
+  letter-spacing: -0.02em;
+  display: flex; gap: 16px; justify-content: center;
+  /* Subtiel parelmoer-verloop op de cijfers + diepte. */
+  background: linear-gradient(180deg, #ffffff, color-mix(in srgb, var(--txt) 70%, #9fb4ab));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 6px 26px rgba(0, 0, 0, 0.5));
 }
-.sb-dash { color: var(--dim); font-weight: 400; }
+.sb-dash { color: var(--dim); font-weight: 300; -webkit-text-fill-color: var(--dim); }
 .sb-clock {
   display: inline-flex; align-items: center;
-  font-size: 1.4rem; font-weight: 800; color: var(--accent); font-variant-numeric: tabular-nums;
-  padding: 6px 18px; border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line));
-  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  font-size: 1.45rem; font-weight: 800; color: var(--accent); font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  padding: 7px 20px; border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--accent) 50%, var(--line));
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--accent) 16%, transparent), color-mix(in srgb, var(--accent) 5%, transparent));
+  box-shadow:
+    0 0 22px -6px color-mix(in srgb, var(--accent) 60%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
 }
 .sb-half { font-size: 0.8rem; color: var(--dim-strong); text-transform: uppercase; letter-spacing: 0.06em; }
 /* Melding (enkel bij extra minuten): tot welke minuut deze helft loopt. */
@@ -473,7 +509,25 @@
   border-radius: 999px; padding: 2px 10px; font-variant-numeric: tabular-nums;
 }
 
-.sb-timeline h3 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--dim); margin: 10px 0; }
+.sb-timeline h3 {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 0.8rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--dim-strong);
+  margin: 12px 0;
+}
+.sb-timeline h3::before {
+  content: '';
+  width: 3px;
+  height: 0.95em;
+  border-radius: 2px;
+  background: var(--grad-accent, var(--accent));
+  box-shadow: 0 0 8px color-mix(in srgb, var(--accent) 60%, transparent);
+}
 /* Meerdere kolommen, zodat een lange stand (richting 25-25) compact blijft i.p.v. eindeloos lang. */
 .sb-timeline ul {
   list-style: none; margin: 0; padding: 0;
