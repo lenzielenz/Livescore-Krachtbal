@@ -37,6 +37,7 @@ type Channel = {
   shoutSeq: number
   pollVotes: Record<string, number> // voorspel-poll: cumulatieve stemmen per optie (home/draw/away)
   pollSaveTimer: ReturnType<typeof setTimeout> | null
+  mvpVotes: Record<string, number> // held van de match: stemmen per speler-id (bron = DB-collectie)
   hydrated: boolean // al uit de DB geladen?
   saveTimer: ReturnType<typeof setTimeout> | null // debounce voor het wegschrijven van tellers
   poll: ReturnType<typeof setInterval> | null
@@ -189,7 +190,27 @@ async function hydrateChannel(ch: Channel, matchId: number) {
       ch.shoutSeq = Math.max(ch.shoutSeq, ...ch.shoutouts.map((s) => s.id), 0)
       changed = true
     }
+    // Held van de match: stand opbouwen uit de stem-collectie (één stem per supporter).
+    try {
+      const votes = await ch.payload.find({
+        collection: 'match-mvp-votes',
+        where: { match: { equals: matchId } },
+        depth: 0,
+        limit: 100000,
+        pagination: false,
+      })
+      const tally: Record<string, number> = {}
+      for (const d of votes.docs) {
+        const p = (d as { player?: unknown }).player
+        const pid = p && typeof p === 'object' ? Number((p as { id?: unknown }).id) : Number(p)
+        if (Number.isFinite(pid) && pid > 0) tally[pid] = (tally[pid] ?? 0) + 1
+      }
+      ch.mvpVotes = tally
+    } catch {
+      /* mvp-hydrate is best-effort */
+    }
     if (Object.keys(ch.pollVotes).length) broadcast(ch, 'poll', { totals: ch.pollVotes })
+    if (Object.keys(ch.mvpVotes).length) broadcast(ch, 'mvp', { totals: ch.mvpVotes })
     if (changed) {
       if (Object.keys(ch.totals).length) broadcast(ch, 'reactions', { delta: {}, totals: ch.totals })
       if (ch.shoutouts.length) broadcast(ch, 'shoutouts', ch.shoutouts)
@@ -221,6 +242,7 @@ export function joinMatch(payload: Payload, matchId: number, send: Send, viewerK
       shoutSeq: 0,
       pollVotes: {},
       pollSaveTimer: null,
+      mvpVotes: {},
       hydrated: false,
       saveTimer: null,
       poll: setInterval(() => void pollScore(payload, matchId), SCORE_POLL_MS),
@@ -251,6 +273,7 @@ export function joinMatch(payload: Payload, matchId: number, send: Send, viewerK
   if (Object.keys(ch.totals).length) send('reactions', { delta: {}, totals: ch.totals })
   if (ch.shoutouts.length) send('shoutouts', ch.shoutouts)
   if (Object.keys(ch.pollVotes).length) send('poll', { totals: ch.pollVotes })
+  if (Object.keys(ch.mvpVotes).length) send('mvp', { totals: ch.mvpVotes })
   broadcastViewers(ch)
 
   return () => {
@@ -312,6 +335,20 @@ export function addPollVote(matchId: number, option: string, count = 1): boolean
   scheduleSavePoll(ch, matchId)
   broadcast(ch, 'poll', { totals: ch.pollVotes })
   return true
+}
+
+/**
+ * Held van de match: zet de actuele stand (stemmen per speler-id, bron = DB) en broadcast ze.
+ * De stem-route schrijft naar de collectie en roept dit aan zodat alle kijkers live meebewegen.
+ * No-op als niemand kijkt (geen kanaal): een nieuwe kijker krijgt de stand bij hydrate.
+ */
+export function setMvpTotals(matchId: number, totals: Record<string | number, number>): void {
+  const ch = channels.get(matchId)
+  if (!ch) return
+  const clean: Record<string, number> = {}
+  for (const [k, v] of Object.entries(totals)) if (typeof v === 'number' && v > 0) clean[k] = Math.floor(v)
+  ch.mvpVotes = clean
+  broadcast(ch, 'mvp', { totals: clean })
 }
 
 /** Voeg een live shoutout toe en broadcast hem meteen. Null als niemand kijkt (geen kanaal). */
