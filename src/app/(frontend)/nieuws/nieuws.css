@@ -1,0 +1,36 @@
+/* Clubnieuws — lijst + artikel. */
+.nw-empty { color: var(--dim); margin: 16px 0; }
+.nw-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+  margin: 8px 0 40px;
+}
+.nw-card {
+  display: flex;
+  flex-direction: column;
+  border-radius: 16px;
+  overflow: hidden;
+  text-decoration: none;
+  color: inherit;
+  border: 1px solid color-mix(in srgb, #fff 8%, var(--line));
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0) 40%), var(--panel-grad, var(--panel));
+  box-shadow: var(--card-shadow);
+  transition: transform 0.14s ease, border-color 0.14s ease;
+}
+.nw-card:hover { transform: translateY(-3px); border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
+.nw-card-img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; display: block; background: #0a1610; }
+.nw-card-noimg { display: grid; place-items: center; font-size: 2.6rem; opacity: 0.5; }
+.nw-card-body { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 6px; }
+.nw-card-meta { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent); }
+.nw-card-title { margin: 0; font-size: 1.15rem; font-weight: 900; line-height: 1.2; }
+.nw-card-excerpt { margin: 0; font-size: 0.9rem; color: var(--dim); line-height: 1.45; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.nw-card-more { margin-top: 4px; font-size: 0.85rem; font-weight: 800; color: var(--accent); }
+
+.nw-back { display: inline-block; margin: 6px 0 14px; color: var(--accent); font-weight: 700; }
+.nw-article { max-width: 720px; margin: 0 auto 48px; }
+.nw-article-cover { width: 100%; border-radius: 18px; margin-bottom: 18px; box-shadow: var(--card-shadow); }
+.nw-article-meta { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent); }
+.nw-article-title { margin: 6px 0 10px; font-size: clamp(1.6rem, 5vw, 2.4rem); font-weight: 900; line-height: 1.1; }
+.nw-article-lead { margin: 0 0 16px; font-size: 1.1rem; font-weight: 600; color: var(--dim-strong); line-height: 1.5; }
+.nw-article-body { font-size: 1.02rem; line-height: 1.7; white-space: pre-line; color: var(--txt); }

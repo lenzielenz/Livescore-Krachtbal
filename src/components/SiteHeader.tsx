@@ -24,6 +24,7 @@ const PRIMARY: { href: string; label: string; key: NavSection }[] = [
 // (meer): dat is een clubtool en vind je onder "Mijn club".
 const GENERAL: { href: string; label: string }[] = [
   { href: '/uitleg', label: '❓ Zo werkt het' },
+  { href: '/nieuws', label: '📰 Nieuws' },
   { href: '/prijzen', label: '💎 Prijzen & pakketten' },
 ]
 

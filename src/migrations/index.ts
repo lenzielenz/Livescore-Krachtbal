@@ -75,6 +75,7 @@ import * as migration_20260615_140000_user_scorecard from './20260615_140000_use
 import * as migration_20260615_160000_advertenties from './20260615_160000_advertenties';
 import * as migration_20260615_180000_match_livestream from './20260615_180000_match_livestream';
 import * as migration_20260616_120000_user_nutrition_tracker from './20260616_120000_user_nutrition_tracker';
+import * as migration_20260616_140000_news from './20260616_140000_news';
 
 export const migrations = [
   {
@@ -461,5 +462,10 @@ export const migrations = [
     up: migration_20260616_120000_user_nutrition_tracker.up,
     down: migration_20260616_120000_user_nutrition_tracker.down,
     name: '20260616_120000_user_nutrition_tracker',
+  },
+  {
+    up: migration_20260616_140000_news.up,
+    down: migration_20260616_140000_news.down,
+    name: '20260616_140000_news',
   },
 ];
