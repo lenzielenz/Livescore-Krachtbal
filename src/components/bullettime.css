@@ -1,0 +1,59 @@
+/* Multi-angle bullet-time: fullscreen overlay (aftellen → foto → sweep). */
+.bt {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2vmin;
+  text-align: center;
+  cursor: pointer;
+  background: radial-gradient(circle at 50% 40%, rgba(56, 189, 248, 0.22), rgba(3, 8, 14, 0.97));
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  animation: bt-in 0.25s ease both;
+}
+@keyframes bt-in { from { opacity: 0; } to { opacity: 1; } }
+.bt-center { display: flex; flex-direction: column; align-items: center; gap: 1.6vmin; padding: 4vmin; }
+.bt-title { font-size: clamp(1.4rem, 6vw, 2.8rem); font-weight: 900; letter-spacing: 0.06em; color: #fff; text-shadow: 0 0 18px rgba(56, 189, 248, 0.8); }
+.bt-now { color: #ffd166; text-shadow: 0 0 22px rgba(255, 209, 102, 0.9); }
+.bt-count {
+  font-size: clamp(6rem, 30vw, 15rem);
+  font-weight: 900;
+  line-height: 1;
+  color: #fff;
+  text-shadow: 0 0 32px rgba(56, 189, 248, 0.85);
+  animation: bt-pop 0.45s ease;
+}
+@keyframes bt-pop { from { transform: scale(1.6); opacity: 0.2; } to { transform: scale(1); opacity: 1; } }
+.bt-sub { font-size: clamp(1rem, 4vw, 1.6rem); color: rgba(255, 255, 255, 0.85); max-width: 22ch; }
+.bt-sub a { color: #7dd3fc; }
+.bt-snap {
+  margin-top: 1vmin;
+  padding: 16px 30px;
+  border-radius: 14px;
+  border: 0;
+  font-size: clamp(1.1rem, 4vw, 1.6rem);
+  font-weight: 900;
+  color: #06140d;
+  background: linear-gradient(180deg, #7dd3fc, #38bdf8);
+  box-shadow: 0 12px 30px -12px rgba(56, 189, 248, 0.8);
+  cursor: pointer;
+}
+.bt-snap:disabled { opacity: 0.6; cursor: default; }
+
+.bt-sweep { display: flex; flex-direction: column; align-items: center; gap: 1.6vmin; width: 100%; height: 100%; justify-content: center; padding: 3vmin; }
+.bt-frame {
+  max-width: 94vw;
+  max-height: 74vh;
+  object-fit: contain;
+  border-radius: 1.6vmin;
+  box-shadow: 0 2vmin 7vmin rgba(0, 0, 0, 0.6), 0 0 0 0.4vmin rgba(255, 255, 255, 0.9);
+}
+.bt-dots { display: flex; gap: 7px; }
+.bt-dots span { width: 7px; height: 7px; border-radius: 50%; background: rgba(255, 255, 255, 0.3); }
+.bt-dots span.on { background: #7dd3fc; box-shadow: 0 0 8px rgba(56, 189, 248, 0.9); }
+.bt-hint { font-size: clamp(0.8rem, 2.6vw, 1.1rem); color: rgba(255, 255, 255, 0.55); }
+@media (prefers-reduced-motion: reduce) { .bt, .bt-count { animation: none; } }
