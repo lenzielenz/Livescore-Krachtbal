@@ -10,6 +10,10 @@ export type NavAuth = {
   loggedIn: boolean
   canAnalyse: boolean
   canTraining: boolean
+  // Rolvlaggen voor het op-rol tonen van de profiel-ingangen (club/scheids/federatie).
+  isClub: boolean
+  isReferee: boolean
+  isFed: boolean
 }
 
 const KEY = 'kb-nav-auth'

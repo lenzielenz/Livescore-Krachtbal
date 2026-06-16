@@ -20,23 +20,33 @@ const PRIMARY: { href: string; label: string; key: NavSection }[] = [
   { href: '/demo', label: '🎓 Demo', key: 'demo' },
 ]
 
-// Algemene ingangen bovenaan het Meer-menu. Het kantinescherm staat hier niet
-// (meer): dat is een clubtool en vind je onder "Mijn club".
+// Algemene ingangen bovenaan het Meer-menu (de twee meest gebruikte). Het kantinescherm staat
+// hier niet (meer): dat is een clubtool en vind je onder "Mijn club".
 const GENERAL: { href: string; label: string }[] = [
   { href: '/hub', label: '🏠 Mijn Krachtbal' },
-  { href: '/uitleg', label: '❓ Zo werkt het' },
   { href: '/nieuws', label: '📰 Nieuws' },
-  { href: '/prijzen', label: '💎 Prijzen & pakketten' },
 ]
 
-// Wedstrijd-info onder een eigen kopje "Wedstrijden" in het menu.
+// Wedstrijd-info onder een eigen kopje "Wedstrijden" in het menu. Bewust kort gehouden: de overige
+// supporter-tools (jeugd-superster, supportersklassement) staan als tegels op de hub.
 const WEDSTRIJDEN: { href: string; label: string }[] = [
   { href: '/rangschikking', label: '📊 Stand' },
   { href: '/pronostiek', label: '🔮 Pronostiekstand' },
   { href: '/tornooi', label: '🏆 Bekerwedstrijden' },
-  { href: '/superster', label: '⭐ Jeugd-superster' },
-  { href: '/fans', label: '📣 Supporters' },
 ]
+
+// Info/achtergrond onderaan het menu — minder vaak nodig, dus laag geplaatst.
+const INFO: { href: string; label: string }[] = [
+  { href: '/uitleg', label: '❓ Zo werkt het' },
+  { href: '/prijzen', label: '💎 Prijzen & pakketten' },
+]
+
+// Welke rol een profiel-ingang mag zien. Federatie/admin zien alles.
+const PROFILE_VISIBLE: Record<string, (a: { isClub: boolean; isReferee: boolean; isFed: boolean }) => boolean> = {
+  clubs: (a) => a.isClub || a.isFed,
+  scheidsrechters: (a) => a.isReferee || a.isFed,
+  federatie: (a) => a.isFed,
+}
 
 // Het Meer-menu licht op zodra je op een van deze secties zit. Analyse en Training zijn twee
 // aparte menu-items (de analyse-hub bevat zelf al z'n tools; training is een eigen luik).
@@ -49,6 +59,7 @@ export function SiteHeader({ active = null }: { active?: NavSection }) {
   const [canAnalyse, setCanAnalyse] = useState(false)
   const [canTraining, setCanTraining] = useState(false)
   const [loggedIn, setLoggedIn] = useState(false)
+  const [roleFlags, setRoleFlags] = useState({ isClub: false, isReferee: false, isFed: false })
   useEffect(() => {
     // Schilder meteen vanuit de cache (geen flikkering), en haal enkel verse staat op
     // wanneer de cache ontbreekt of verlopen is — dat spaart een netwerkronde per navigatie.
@@ -57,6 +68,7 @@ export function SiteHeader({ active = null }: { active?: NavSection }) {
       setLoggedIn(cached.state.loggedIn)
       setCanAnalyse(cached.state.canAnalyse)
       setCanTraining(cached.state.canTraining)
+      setRoleFlags({ isClub: Boolean(cached.state.isClub), isReferee: Boolean(cached.state.isReferee), isFed: Boolean(cached.state.isFed) })
     }
     if (cached?.fresh) return
     fetch('/api/users/me', { credentials: 'include' })
@@ -67,16 +79,21 @@ export function SiteHeader({ active = null }: { active?: NavSection }) {
         const has = (r: string) => Array.isArray(roles) && roles.includes(r)
         const fed = has('admin') || has('federatie')
         const club = has('club-beheerder')
+        const referee = has('scheidsrechter')
         // Dezelfde regel als canAnalyse in lib/access: admin, eigen analyse-toegang, of iemand
         // die zijn analyses met dit account deelt (anders vindt de gedeelde persoon het menu niet).
         const state = {
           loggedIn: Boolean(u),
           canAnalyse: canAnalyseUser(u),
           canTraining: fed || club || Boolean(u?.trainingAccess),
+          isClub: club,
+          isReferee: referee,
+          isFed: fed,
         }
         setLoggedIn(state.loggedIn)
         setCanAnalyse(state.canAnalyse)
         setCanTraining(state.canTraining)
+        setRoleFlags({ isClub: state.isClub, isReferee: state.isReferee, isFed: state.isFed })
         writeNavAuth(state)
       })
       .catch(() => {})
@@ -91,6 +108,8 @@ export function SiteHeader({ active = null }: { active?: NavSection }) {
     window.location.href = '/'
   }
   const menuActive = active !== null && MENU_SECTIONS.includes(active)
+  // Toon enkel de profiel-ingangen die bij je rol horen (supporter ziet er geen).
+  const visibleProfiles = PROFILES.filter((p) => PROFILE_VISIBLE[p.key]?.(roleFlags))
 
   return (
     <header className="sh">
@@ -155,12 +174,12 @@ export function SiteHeader({ active = null }: { active?: NavSection }) {
                       )}
                     </div>
                   )}
-                  {/* "Aan de slag" (profiel-instappunten) enkel voor ingelogde gebruikers —
-                      een uitgelogde bezoeker krijgt deze tools nog niet te zien. */}
-                  {loggedIn && (
+                  {/* "Aan de slag" (profiel-instappunten) enkel voor wie de bijhorende rol heeft —
+                      een supporter (of uitgelogde bezoeker) krijgt deze tools niet te zien. */}
+                  {loggedIn && visibleProfiles.length > 0 && (
                     <div className="sh-more-group">
                       <div className="sh-more-grouphead">Aan de slag</div>
-                      {PROFILES.map((p) => (
+                      {visibleProfiles.map((p) => (
                         <Link key={p.key} href={p.hubHref} className="sh-more-item" onClick={() => setOpen(false)}>
                           {p.badge} {p.hubLabel}
                         </Link>
@@ -191,6 +210,14 @@ export function SiteHeader({ active = null }: { active?: NavSection }) {
                         </Link>
                       </>
                     )}
+                  </div>
+                  <div className="sh-more-group">
+                    <div className="sh-more-grouphead">Info</div>
+                    {INFO.map((l) => (
+                      <Link key={l.href} href={l.href} className="sh-more-item" onClick={() => setOpen(false)}>
+                        {l.label}
+                      </Link>
+                    ))}
                   </div>
                 </div>
               </>
