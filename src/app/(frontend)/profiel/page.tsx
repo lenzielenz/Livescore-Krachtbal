@@ -77,7 +77,7 @@ export default async function ProfielPage() {
         <h1 className="page-title"><span className="brand">Mijn profiel</span></h1>
         <p className="wb-intro">
           Stel hier je eigen profiel samen: je naam, je club, je positie in het spel en je profielfoto
-          (uploaden, inzoomen en verschuiven). Klaar? <Link href="/profiel/scorecard" style={{ color: 'var(--accent)', fontWeight: 700 }}>Bekijk je scorecard →</Link> · <Link href="/profiel/paspoort" style={{ color: 'var(--accent)', fontWeight: 700 }}>Supporterpaspoort →</Link>
+          (uploaden, inzoomen en verschuiven). Klaar? <Link href="/profiel/scorecard" style={{ color: 'var(--accent)', fontWeight: 700 }}>Bekijk je scorecard →</Link> · <Link href="/profiel/paspoort" style={{ color: 'var(--accent)', fontWeight: 700 }}>Supporterpaspoort →</Link> · <Link href="/profiel/badges" style={{ color: 'var(--accent)', fontWeight: 700 }}>Badges →</Link>
         </p>
         <ProfileForm initial={initial} clubs={clubs} />
       </div>
