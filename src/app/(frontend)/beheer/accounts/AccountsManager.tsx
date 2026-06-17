@@ -37,6 +37,17 @@ function primaryType(roles: string[]): string {
 
 const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
 
+const TYPE_RANK: string[] = [...TYPE_ORDER]
+// Binnen een groep: hoogste rol eerst (club-beheerder bovenaan z'n club), dan alfabetisch.
+function sortByRole(list: Account[]): Account[] {
+  return [...list].sort((a, b) => {
+    const ra = TYPE_RANK.indexOf(primaryType(a.roles))
+    const rb = TYPE_RANK.indexOf(primaryType(b.roles))
+    if (ra !== rb) return (ra < 0 ? 999 : ra) - (rb < 0 ? 999 : rb)
+    return norm(a.name ?? a.email).localeCompare(norm(b.name ?? b.email))
+  })
+}
+
 function AccountRow({ acc, clubs, officials, roleOptions }: { acc: Account; clubs: { id: number; name: string }[]; officials: Official[]; roleOptions: RoleOption[] }) {
   const [roles, setRoles] = useState<string[]>(acc.roles)
   const [clubId, setClubId] = useState<string>(acc.clubId != null ? String(acc.clubId) : '')
@@ -232,41 +243,118 @@ function AnalyseTransfer({ users }: { users: Account[] }) {
 
 export function AccountsManager({ users, clubs, officials, roleOptions }: { users: Account[]; clubs: { id: number; name: string }[]; officials: Official[]; roleOptions: RoleOption[] }) {
   const [query, setQuery] = useState('')
+  // Standaard per club gegroepeerd (zo blijft het beheersbaar als het aantal accounts groeit) —
+  // een club-beheerder krijgt z'n club apart en kent daarbinnen de rechten toe (zie Clubteam-beheer).
+  const [groupBy, setGroupBy] = useState<'club' | 'role'>('club')
+  const [clubFilter, setClubFilter] = useState<string>('') // '' = alle, '<id>' = één club, 'none' = zonder club
+  const [openKeys, setOpenKeys] = useState<Set<string>>(new Set())
 
-  const groups = useMemo(() => {
+  const { groups, shown } = useMemo(() => {
     const q = norm(query.trim())
-    const filtered = q ? users.filter((u) => norm(`${u.name ?? ''} ${u.email}`).includes(q)) : users
-    const map = new Map<string, Account[]>()
-    for (const u of filtered) {
-      const t = primaryType(u.roles)
-      const arr = map.get(t) ?? []
-      arr.push(u)
-      map.set(t, arr)
+    let list = users
+    if (q) list = list.filter((u) => norm(`${u.name ?? ''} ${u.email}`).includes(q))
+    if (clubFilter === 'none') list = list.filter((u) => u.clubId == null)
+    else if (clubFilter) list = list.filter((u) => String(u.clubId) === clubFilter)
+
+    const out: { key: string; label: string; list: Account[] }[] = []
+    if (groupBy === 'role') {
+      const map = new Map<string, Account[]>()
+      for (const u of list) {
+        const t = primaryType(u.roles)
+        const arr = map.get(t) ?? []
+        arr.push(u)
+        map.set(t, arr)
+      }
+      for (const t of TYPE_ORDER) {
+        const arr = map.get(t)
+        if (arr) out.push({ key: `r:${t}`, label: TYPE_LABEL[t], list: sortByRole(arr) })
+      }
+    } else {
+      const map = new Map<string, Account[]>()
+      for (const u of list) {
+        const k = u.clubId != null ? `c:${u.clubId}` : 'none'
+        const arr = map.get(k) ?? []
+        arr.push(u)
+        map.set(k, arr)
+      }
+      for (const c of clubs) {
+        const arr = map.get(`c:${c.id}`)
+        if (arr) out.push({ key: `c:${c.id}`, label: c.name, list: sortByRole(arr) })
+      }
+      const none = map.get('none')
+      if (none) out.push({ key: 'none', label: 'Zonder club', list: sortByRole(none) })
     }
-    return TYPE_ORDER.filter((t) => map.has(t)).map((t) => [t, map.get(t)!] as const)
-  }, [users, query])
+    return { groups: out, shown: list.length }
+  }, [users, clubs, query, groupBy, clubFilter])
+
+  // Bij zoeken/filteren of één enkele groep: alles open (anders zou je je resultaat moeten uitklappen).
+  const forceOpen = query.trim() !== '' || clubFilter !== '' || groups.length <= 1
+  const isOpen = (key: string) => forceOpen || openKeys.has(key)
+  const toggle = (key: string) =>
+    setOpenKeys((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
 
   return (
     <div className="acc-wrap">
-      <input
-        className="acc-search"
-        type="search"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder="Zoek op naam of e-mail…"
-        aria-label="Zoek account"
-      />
+      <div className="acc-toolbar">
+        <input
+          className="acc-search"
+          type="search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Zoek op naam of e-mail…"
+          aria-label="Zoek account"
+        />
+        <div className="acc-seg" role="group" aria-label="Groeperen">
+          <button type="button" className={`acc-seg-btn ${groupBy === 'club' ? 'on' : ''}`} onClick={() => setGroupBy('club')}>
+            Per club
+          </button>
+          <button type="button" className={`acc-seg-btn ${groupBy === 'role' ? 'on' : ''}`} onClick={() => setGroupBy('role')}>
+            Per rol
+          </button>
+        </div>
+        <select className="acc-club acc-clubfilter" value={clubFilter} onChange={(e) => setClubFilter(e.target.value)} aria-label="Filter op club">
+          <option value="">Alle clubs</option>
+          {clubs.map((c) => (
+            <option key={c.id} value={c.id}>{c.name}</option>
+          ))}
+          <option value="none">— Zonder club —</option>
+        </select>
+      </div>
+
+      <p className="acc-summary">
+        {shown === users.length ? `${users.length} accounts` : `${shown} van ${users.length} accounts`}
+        {groupBy === 'club' ? ' · per club' : ' · per rol'}
+      </p>
+
       {groups.length === 0 ? (
         <p className="empty">Geen accounts gevonden.</p>
       ) : (
-        groups.map(([type, list]) => (
-          <section key={type} className="acc-group">
-            <h2 className="acc-group-head">{TYPE_LABEL[type]} <span className="acc-count">{list.length}</span></h2>
-            {list.map((acc) => (
-              <AccountRow key={acc.id} acc={acc} clubs={clubs} officials={officials} roleOptions={roleOptions} />
-            ))}
-          </section>
-        ))
+        groups.map(({ key, label, list }) => {
+          const open = isOpen(key)
+          return (
+            <section key={key} className="acc-group">
+              <button
+                type="button"
+                className={`acc-group-head acc-group-toggle ${open ? 'is-open' : ''}`}
+                onClick={() => toggle(key)}
+                aria-expanded={open}
+              >
+                <span className="acc-chevron" aria-hidden>▸</span>
+                <span className="acc-group-label">{label}</span>
+                <span className="acc-count">{list.length}</span>
+              </button>
+              {open &&
+                list.map((acc) => (
+                  <AccountRow key={acc.id} acc={acc} clubs={clubs} officials={officials} roleOptions={roleOptions} />
+                ))}
+            </section>
+          )
+        })
       )}
 
       <AnalyseTransfer users={users} />
