@@ -27,6 +27,8 @@ export type MatchSheetPdfData = {
   reeks?: string
   scheidsrechter?: string
   score?: { home: number; away: number }
+  /** Scheidsrechterlijke bekrachtiging van de eindstand (officieel record, los van het start-akkoord). */
+  eindscoreBevestiging?: { akkoord: boolean; naam?: string; tijdstip?: string }
   halfScores?: { home: [number, number]; away: [number, number] }
   /** Kruisjes: laatste worpen die rechtstreeks buitenspel veroorzaakten (reglement §6.7). */
   crosses?: { home: number; away: number }
@@ -158,6 +160,18 @@ export async function generateMatchSheetPdf(data: MatchSheetPdfData): Promise<Ui
       )
     }
     for (const s of sub) line(s, { size: 8.5, color: DIM, gap: 11, x: LEFT })
+  }
+
+  // ── Scheidsrechterlijke bekrachtiging van de eindstand (officieel record) ──
+  // Los van het start-akkoord (§12/§19): pas hiermee is de uitslag officieel bekrachtigd.
+  if (data.eindscoreBevestiging) {
+    const e = data.eindscoreBevestiging
+    if (e.akkoord) {
+      const wie = [e.naam ? `door ${e.naam}` : null, e.tijdstip ? `op ${e.tijdstip}` : null].filter(Boolean).join(' ')
+      line(`Eindstand scheidsrechterlijk bevestigd${wie ? ` ${wie}` : ''}.`, { size: 9, b: true, color: ACCENT, gap: 13 })
+    } else {
+      line('Eindstand nog niet scheidsrechterlijk bevestigd.', { size: 9, color: DIM, gap: 13 })
+    }
   }
 
   // ── Opstellingen (twee kolommen naast elkaar) ────────────────────────────
