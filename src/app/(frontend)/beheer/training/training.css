@@ -218,13 +218,31 @@
 }
 
 /* Training-subnav (Progressie / Aanwezigheid). */
+/* Eén compacte, horizontaal-swipebare balk i.p.v. drie afgebroken rijen — zo ga je vlot door de
+   opties. Plakt bovenaan tijdens het scrollen zodat je ook diep in een lang formulier kan wisselen. */
 .tr-nav {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 8px;
   margin: 0 0 16px;
+  padding: 8px 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  scroll-snap-type: x proximity;
+  position: sticky;
+  top: 54px; /* net onder de sticky hoofdheader, zodat je ook diep in de pagina kan wisselen */
+  z-index: 5;
+  background: var(--bg);
+}
+.tr-nav::-webkit-scrollbar {
+  display: none;
 }
 .tr-nav-tab {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  scroll-snap-align: start;
   padding: 8px 14px;
   border-radius: 999px;
   border: 1px solid var(--line);
