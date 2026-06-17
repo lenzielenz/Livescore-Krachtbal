@@ -17,7 +17,8 @@ export type NavSection = 'wedstrijden' | 'stand' | 'demo' | 'analyse' | 'trainin
 
 const PRIMARY: { href: string; label: string; key: NavSection }[] = [
   { href: '/', label: 'Wedstrijden', key: 'wedstrijden' },
-  { href: '/demo', label: '🎓 Demo', key: 'demo' },
+  // Demo + uitleg samen: de infohub (/uitleg) legt uit hoe het werkt én biedt de demo aan.
+  { href: '/uitleg', label: '🎓 Zo werkt het', key: 'demo' },
 ]
 
 // Algemene ingangen bovenaan het Meer-menu (de twee meest gebruikte). Het kantinescherm staat
@@ -33,12 +34,6 @@ const WEDSTRIJDEN: { href: string; label: string }[] = [
   { href: '/rangschikking', label: '📊 Stand' },
   { href: '/pronostiek', label: '🔮 Pronostiekstand' },
   { href: '/tornooi', label: '🏆 Bekerwedstrijden' },
-]
-
-// Info onderaan het menu: één ingang. De infohub (/uitleg) bundelt "zo werkt het",
-// de prijzen & pakketten en de demo als doorklik-links — zo blijft het menu kort.
-const INFO: { href: string; label: string }[] = [
-  { href: '/uitleg', label: '❓ Zo werkt het' },
 ]
 
 // Welke rol een profiel-ingang mag zien. Federatie/admin zien alles.
@@ -204,13 +199,6 @@ export function SiteHeader({ active = null }: { active?: NavSection }) {
                         </Link>
                       </>
                     )}
-                  </div>
-                  <div className="sh-more-group">
-                    {INFO.map((l) => (
-                      <Link key={l.href} href={l.href} className="sh-more-item" onClick={() => setOpen(false)}>
-                        {l.label}
-                      </Link>
-                    ))}
                   </div>
                 </div>
               </>
