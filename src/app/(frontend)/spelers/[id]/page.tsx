@@ -103,7 +103,12 @@ export default async function SpelerProfiel({ params }: Params) {
           </div>
         </div>
 
-        {dev.overall.score > 0 ? <SpelerOntwikkeling dev={dev} /> : null}
+        <SpelerOntwikkeling dev={dev} />
+        <p style={{ margin: '-8px 0 20px' }}>
+          <Link href="/ontwikkeling" style={{ color: 'var(--accent)', fontSize: '0.85rem', fontWeight: 700 }}>
+            📈 Heel het ontwikkelings-klassement →
+          </Link>
+        </p>
 
         {!stat ? (
           <p className="an-empty">Nog geen wedstrijdstatistieken voor deze speler.</p>
