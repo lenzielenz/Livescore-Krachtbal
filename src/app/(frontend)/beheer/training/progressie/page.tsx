@@ -2,7 +2,7 @@ import Link from 'next/link'
 import type { Where } from 'payload'
 
 import { SiteHeader } from '@/components/SiteHeader'
-import { canTraining, hasRole, isFederationLevel, userClubId } from '@/lib/access'
+import { canTraining, hasRole, isFederationLevel, userClubId, userPlayerId } from '@/lib/access'
 import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
 import { reeksNaam } from '@/lib/reeksen'
@@ -45,9 +45,14 @@ export default async function TrainingProgressiePage() {
   // Training hoort bij je eigen club: heeft het account een club, dan zie je enkel die spelers.
   // Enkel een (federatie/admin-)account zónder club ziet alle spelers.
   const playerWhere: Where = myClubId != null ? { 'team.club': { equals: myClubId } } : {}
+  // Een 'lid van de club' (geen staf) ziet enkel z'n eigen gekoppelde speler.
+  const lidOnly = hasRole(me, 'club-lid') && !fed && !isClubBeheerder
+  const scopedWhere: Where = lidOnly
+    ? { and: [playerWhere, { id: { equals: Number(userPlayerId(me) ?? -1) } }] }
+    : playerWhere
 
   const [playersRes, metingenRes, doelenRes] = await Promise.all([
-    payload.find({ collection: 'players', where: playerWhere, depth: 2, limit: 2000, sort: 'name' }),
+    payload.find({ collection: 'players', where: scopedWhere, depth: 2, limit: 2000, sort: 'name' }),
     payload.find({ collection: 'trainingmetingen', depth: 0, limit: 5000, sort: 'datum' }),
     payload.find({ collection: 'trainingdoelen', depth: 0, limit: 2000 }).catch(() => ({ docs: [] as Record<string, unknown>[] })),
   ])

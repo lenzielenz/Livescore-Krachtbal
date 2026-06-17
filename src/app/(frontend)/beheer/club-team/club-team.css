@@ -1,4 +1,36 @@
-/* Clubteam-beheer (club-beheerder): rol per clublid toggelen. Sober en op de thema-tokens. */
+/* Clubteam-beheer (club-beheerder): rol + speler-koppeling per clublid, en een lid op e-mail erbij
+   halen. Sober en op de thema-tokens. */
+
+/* Lid toevoegen op e-mail */
+.ct-add {
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--line));
+  background:
+    radial-gradient(120% 120% at 0% 0%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 60%),
+    var(--panel-grad, var(--panel));
+  margin-bottom: 16px;
+}
+.ct-add-title {
+  margin: 0 0 4px;
+  font-size: 1rem;
+}
+.ct-add-hint {
+  margin: 0 0 10px;
+  font-size: 0.82rem;
+  color: var(--dim);
+}
+.ct-add-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.ct-add-email {
+  flex: 1 1 220px;
+  min-width: 0;
+}
+
 .ct-list {
   display: flex;
   flex-direction: column;
@@ -7,7 +39,7 @@
 .ct-row {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 10px 14px;
   padding: 12px 14px;
@@ -19,6 +51,7 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
+  padding-top: 4px;
 }
 .ct-name {
   font-weight: 700;
@@ -26,6 +59,12 @@
 .ct-email {
   font-size: 0.8rem;
   color: var(--dim);
+}
+.ct-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
 }
 .ct-pick {
   display: flex;
@@ -56,8 +95,22 @@
   opacity: 0.6;
   cursor: default;
 }
+.ct-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: var(--dim);
+}
+.ct-select {
+  padding: 6px 10px;
+  border-radius: 9px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--txt, #fff);
+  font-size: 0.85rem;
+}
 .ct-msg {
   font-size: 0.78rem;
   color: var(--dim);
-  margin-left: 4px;
 }
