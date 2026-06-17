@@ -36,9 +36,7 @@ export default async function TrainingVoedingPage() {
       <div className="site">
         <TrainingHero active="voeding" />
         <p className="wb-intro">
-          Vul je gegevens en je doel in — je krijgt meteen een persoonlijk, sportgericht eetplan:
-          calorieën, eiwit/koolhydraten/vet, hydratatie, trainings- vs rustdag en een voorbeelddag op maat.
-          Bewaar het bij je profiel zodat het de volgende keer al ingevuld staat.
+          Vul je gegevens en doel in → meteen een persoonlijk eetplan op maat, bewaard bij je profiel.
         </p>
         <NutritionPlanner initial={profile} canSave />
       </div>
