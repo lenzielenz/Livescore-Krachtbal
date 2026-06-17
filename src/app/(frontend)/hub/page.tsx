@@ -128,7 +128,6 @@ export default async function HubPage() {
             <Link href="/rangschikking" className="hub-tile">📊<span>Stand</span></Link>
             <Link href="/club/voorspel" className="hub-tile">🔮<span>Pronostiek</span></Link>
             <Link href="/profiel" className="hub-tile">👤<span>Mijn profiel</span></Link>
-            <Link href="/profiel/scorecard" className="hub-tile">🎴<span>Mijn scorecard</span></Link>
             <Link href="/profiel/paspoort" className="hub-tile">🎟️<span>Paspoort</span></Link>
             <Link href="/profiel/badges" className="hub-tile">🏅<span>Badges</span></Link>
             <Link href="/fans" className="hub-tile">📣<span>Supporters</span></Link>
