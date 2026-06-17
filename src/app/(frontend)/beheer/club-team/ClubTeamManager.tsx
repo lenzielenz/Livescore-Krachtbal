@@ -34,6 +34,7 @@ async function postTeam(payload: Record<string, unknown>): Promise<{ ok: boolean
 const playerLabel = (p: PlayerOption) => `${p.shirtNumber != null ? `#${p.shirtNumber} ` : ''}${p.name}`
 
 function MemberRow({ m, players }: { m: Member; players: PlayerOption[] }) {
+  const router = useRouter()
   const [role, setRole] = useState<TeamRole>(m.role)
   const [playerId, setPlayerId] = useState<string>(m.playerId != null ? String(m.playerId) : '')
   const [busy, setBusy] = useState(false)
@@ -67,11 +68,29 @@ function MemberRow({ m, players }: { m: Member; players: PlayerOption[] }) {
     } else setMsg('✓ Bewaard')
   }
 
+  const remove = async () => {
+    if (busy) return
+    if (!window.confirm(`${m.name || m.email} uit de club halen? Hun clubrol en speler-koppeling vervallen — het account zelf blijft bestaan.`)) return
+    setBusy(true)
+    setMsg(null)
+    const { ok, error } = await postTeam({ userId: m.id, remove: true })
+    if (!ok) {
+      setBusy(false)
+      setMsg(error ?? 'Verwijderen mislukt.')
+    } else {
+      router.refresh()
+    }
+  }
+
   return (
     <div className="ct-row">
       <div className="ct-id">
         <span className="ct-name">{m.name || m.email.split('@')[0]}</span>
         <span className="ct-email">{m.email}</span>
+        <span className="ct-tags">
+          {role === 'none' && <span className="ct-tag">geen clubrol</span>}
+          {!playerId && <span className="ct-tag">geen speler</span>}
+        </span>
       </div>
       <div className="ct-actions">
         <div className="ct-pick" role="group" aria-label={`Rol van ${m.name || m.email}`}>
@@ -87,26 +106,31 @@ function MemberRow({ m, players }: { m: Member; players: PlayerOption[] }) {
             </button>
           ))}
         </div>
-        {players.length > 0 && (
-          <label className="ct-link">
-            <span className="ct-link-lbl">Speler</span>
-            <select
-              className="ct-select"
-              value={playerId}
-              disabled={busy}
-              onChange={(e) => changePlayer(e.target.value)}
-              title="Koppel dit lid aan z'n speler-dossier (zo ziet een lid enkel z'n eigen training)"
-            >
-              <option value="">— geen —</option>
-              {players.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {playerLabel(p)}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
-        {msg && <span className="ct-msg">{msg}</span>}
+        <div className="ct-actions-row">
+          {players.length > 0 && (
+            <label className="ct-link">
+              <span className="ct-link-lbl">Speler</span>
+              <select
+                className="ct-select"
+                value={playerId}
+                disabled={busy}
+                onChange={(e) => changePlayer(e.target.value)}
+                title="Koppel dit lid aan z'n speler-dossier (zo ziet een lid enkel z'n eigen training)"
+              >
+                <option value="">— geen —</option>
+                {players.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {playerLabel(p)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+          <button type="button" className="ct-remove" disabled={busy} onClick={remove} title="Dit lid uit de club halen">
+            × Uit club
+          </button>
+          {msg && <span className="ct-msg">{msg}</span>}
+        </div>
       </div>
     </div>
   )

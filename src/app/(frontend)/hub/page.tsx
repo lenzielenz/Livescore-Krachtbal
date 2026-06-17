@@ -1,7 +1,7 @@
 import Link from 'next/link'
 
 import { SiteHeader } from '@/components/SiteHeader'
-import { userClubId } from '@/lib/access'
+import { userClubId, userPlayerId } from '@/lib/access'
 import { competitionWhere } from '@/lib/analyse-access'
 import { getAuthUser } from '@/lib/auth-user'
 import { formatDateTimeBE } from '@/lib/datetime'
@@ -27,6 +27,8 @@ export default async function HubPage() {
   const me = await getAuthUser()
   const payload = await getPayloadClient()
   const clubId = userClubId(me)
+  // Account gekoppeld aan een speler-dossier? Dan tonen we de eigen ontwikkeling.
+  const myPlayerId = userPlayerId(me)
 
   // Live nu (alle wedstrijden).
   const liveRes = await payload
@@ -118,6 +120,18 @@ export default async function HubPage() {
             <p className="hub-empty">
               {me ? <>Stel je club in op <Link href="/profiel">je profiel</Link> om hier je ploeg te volgen.</> : <><Link href="/inloggen">Log in</Link> en kies je club om alles op maat te zien.</>}
             </p>
+          </section>
+        )}
+
+        {/* Mijn ontwikkeling — enkel als het account aan een speler gekoppeld is. */}
+        {myPlayerId != null && (
+          <section className="hub-sec">
+            <h2 className="hub-h2">Mijn ontwikkeling</h2>
+            <div className="hub-tiles">
+              <Link href={`/spelers/${myPlayerId}`} className="hub-tile">📈<span>Skill &amp; Fame</span></Link>
+              <Link href="/beheer/training/progressie" className="hub-tile">🏋️<span>Mijn training</span></Link>
+              <Link href="/profiel/scorecard" className="hub-tile">🃏<span>Scorecard</span></Link>
+            </div>
           </section>
         )}
 

@@ -183,12 +183,14 @@ export function playerBadges(i: PlayerDevInput): PlayerDevBadge[] {
     tier('skill', 'rug5', '🤸', 'Rugworp-specialist', 'Scoor 5 rugworpen (dubbel)', i.rug, 5),
     tier('skill', 'rug20', '👑', 'Rugworp-koning', 'Scoor 20 rugworpen', i.rug, 20),
     flag('skill', 'sharp', '🏹', 'Scherpschutter', '40%+ conversie (min. 20 pogingen)', i.goalAttempts >= 20 && i.conversion >= 0.4),
+    flag('skill', 'range25', '↗️', 'Verre worp', 'Een worp van 25m+', i.maxDistance >= 25),
     flag('skill', 'range35', '📏', 'Langeafstandsschutter', 'Een worp van 35m+', i.maxDistance >= 35),
     flag('skill', 'range45', '💥', 'Kanon', 'Een worp van 45m+', i.maxDistance >= 45),
     flag('skill', 'allzones', '🧭', 'Alzijdig', 'Scoorde links, midden én rechts', allZones),
 
     // FAME — erkenning & aanwezigheid
     tier('fame', 'mvp1', '🌟', 'Held van de match', 'Ontvang 1 supporterstem', i.mvpVotesReceived, 1),
+    tier('fame', 'mvp5', '✨', 'Opgemerkt', 'Ontvang 5 supporterstemmen', i.mvpVotesReceived, 5),
     tier('fame', 'mvp25', '💖', 'Publiekslieveling', 'Ontvang 25 supporterstemmen', i.mvpVotesReceived, 25),
     tier('fame', 'mvp100', '🏆', 'Idool', 'Ontvang 100 supporterstemmen', i.mvpVotesReceived, 100),
     tier('fame', 'apps10', '📋', 'Vaste basis', 'Speel 10 wedstrijden', i.matches, 10),

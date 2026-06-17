@@ -114,3 +114,41 @@
   font-size: 0.78rem;
   color: var(--dim);
 }
+.ct-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 3px;
+}
+.ct-tag {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #e0a23d;
+  background: color-mix(in srgb, #e0a23d 16%, transparent);
+  border-radius: 99px;
+  padding: 1px 7px;
+}
+.ct-actions-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.ct-remove {
+  padding: 6px 10px;
+  border-radius: 9px;
+  border: 1px solid color-mix(in srgb, #e0533d 40%, var(--line));
+  background: transparent;
+  color: #e0533d;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.ct-remove:hover:not(:disabled) {
+  background: color-mix(in srgb, #e0533d 14%, transparent);
+}
+.ct-remove:disabled {
+  opacity: 0.6;
+  cursor: default;
+}

@@ -99,6 +99,22 @@ export async function POST(req: Request) {
     return Response.json({ error: 'Dit account beheer je niet hier (hogere rol — vraag de federatie).' }, { status: 403 })
   }
 
+  // Branch: lid uit de club halen — ontkoppelt club + clubrol + speler. Overige rollen (bv. supporter)
+  // blijven; het account zelf blijft uiteraard bestaan.
+  if (body.remove === true) {
+    try {
+      await payload.update({
+        collection: 'users',
+        id: userId,
+        data: { club: null, player: null, roles: withClubRole(current, 'none') },
+        overrideAccess: true,
+      })
+    } catch {
+      return Response.json({ error: 'Verwijderen mislukt.' }, { status: 500 })
+    }
+    return Response.json({ ok: true })
+  }
+
   // Branch 2: koppel/ontkoppel het speler-dossier (zodat een lid enkel z'n eigen training ziet).
   if ('playerId' in body) {
     const raw = body.playerId
