@@ -26,8 +26,9 @@ import './voeding.css'
 
 const DAY_ABBR = ['Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za', 'Zo']
 
-type TabKey = 'overzicht' | 'maaltijden' | 'timing' | 'wedstrijd' | 'aanvulling' | 'weekplan'
+type TabKey = 'vandaag' | 'overzicht' | 'maaltijden' | 'timing' | 'wedstrijd' | 'aanvulling' | 'weekplan'
 const TABS: { k: TabKey; ico: string; label: string }[] = [
+  { k: 'vandaag', ico: '🔥', label: 'Vandaag' },
   { k: 'overzicht', ico: '📊', label: 'Overzicht' },
   { k: 'maaltijden', ico: '🍽️', label: 'Maaltijden' },
   { k: 'timing', ico: '⏱️', label: 'Timing' },
@@ -134,7 +135,7 @@ export function NutritionPlanner({ initial, canSave = false, tracker = null }: {
   const [diet, setDiet] = useState<Diet>(initial?.diet ?? 'alles')
   const [target, setTarget] = useState(initial?.targetWeightKg || '')
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
-  const [tab, setTab] = useState<TabKey>('overzicht')
+  const [tab, setTab] = useState<TabKey>('vandaag')
   const [weekShift, setWeekShift] = useState(0)
   const [copied, setCopied] = useState(false)
   // Trainingsdagen voor de carb-cycling, standaard gespreid uit het aantal trainingen/week.
@@ -307,6 +308,19 @@ export function NutritionPlanner({ initial, canSave = false, tracker = null }: {
               </button>
             ))}
           </nav>
+
+          {/* Vandaag — de dagelijkse tracker staat vooraan zodat je meteen voeding kan toevoegen. */}
+          <section className={`vd-panel${tab === 'vandaag' ? ' on' : ''}`}>
+            <CalorieTracker
+              calories={plan.calories}
+              protein={plan.protein}
+              carbs={plan.carbs}
+              fat={plan.fat}
+              targetWeightKg={Number(target) > 0 ? Number(target) : null}
+              initialStore={tracker}
+              canSave={canSave}
+            />
+          </section>
 
           {/* Overzicht */}
           <section className={`vd-panel${tab === 'overzicht' ? ' on' : ''}`}>
@@ -552,15 +566,6 @@ export function NutritionPlanner({ initial, canSave = false, tracker = null }: {
               </div>
             )}
           </section>
-          <CalorieTracker
-            calories={plan.calories}
-            protein={plan.protein}
-            carbs={plan.carbs}
-            fat={plan.fat}
-            targetWeightKg={Number(target) > 0 ? Number(target) : null}
-            initialStore={tracker}
-            canSave={canSave}
-          />
         </div>
       )}
     </div>
