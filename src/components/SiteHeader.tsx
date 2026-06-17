@@ -23,8 +23,9 @@ const PRIMARY: { href: string; label: string; key: NavSection }[] = [
 
 // Algemene ingangen bovenaan het Meer-menu (de twee meest gebruikte). Het kantinescherm staat
 // hier niet (meer): dat is een clubtool en vind je onder "Mijn club".
-const GENERAL: { href: string; label: string }[] = [
-  { href: '/hub', label: '🏠 Mijn Krachtbal' },
+// `auth: true` → enkel tonen wanneer je ingelogd bent ("Mijn Krachtbal" is je persoonlijke hub).
+const GENERAL: { href: string; label: string; auth?: boolean }[] = [
+  { href: '/hub', label: '🏠 Mijn Krachtbal', auth: true },
   { href: '/nieuws', label: '📰 Nieuws' },
 ]
 
@@ -139,7 +140,7 @@ export function SiteHeader({ active = null }: { active?: NavSection }) {
                 <div className="sh-more-backdrop" onClick={() => setOpen(false)} />
                 <div className="sh-more-menu">
                   <div className="sh-more-group">
-                    {GENERAL.map((l) => (
+                    {GENERAL.filter((l) => !l.auth || loggedIn).map((l) => (
                       <Link key={l.href} href={l.href} className="sh-more-item" onClick={() => setOpen(false)}>
                         {l.label}
                       </Link>
