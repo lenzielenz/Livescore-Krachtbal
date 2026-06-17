@@ -24,6 +24,11 @@
   transition: width 0.4s ease;
 }
 
+.bg-group { margin-top: 20px; }
+.bg-group-title {
+  margin: 0 0 10px; font-size: 0.78rem; font-weight: 800; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--dim);
+}
 .bg-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));

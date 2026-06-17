@@ -97,16 +97,27 @@ export default async function WrappedPage() {
   const photosRes = await payload.find({ collection: 'match-instants', where: { author: { equals: myUserId } }, limit: 1, depth: 0 }).catch(() => ({ totalDocs: 0 }))
   const u = me as unknown as Record<string, unknown>
   const booster = u.pronostiekPower as { mult?: unknown } | null | undefined
-  const badges = computeBadges({
-    checkins: myCheckins.length,
-    photos: (photosRes as { totalDocs?: number }).totalDocs ?? 0,
-    profileComplete: Boolean(u.photo) && Boolean(u.club) && Boolean(u.position),
-    boosterWon: Boolean(booster && booster.mult),
-  })
   const finishedSeasonIds = seasonMatchesRes.docs.filter((m) => (m as { status?: string }).status === 'finished').map((m) => (m as { id: number }).id)
   const myVotesRes = finishedSeasonIds.length
     ? await payload.find({ collection: 'match-mvp-votes', where: { and: [{ user: { equals: myUserId } }, { match: { in: finishedSeasonIds } }] }, limit: 1, depth: 0 }).catch(() => ({ totalDocs: 0 }))
     : { totalDocs: 0 }
+  const mvpVotesCast = (myVotesRes as { totalDocs?: number }).totalDocs ?? 0
+  // Pronostiek-deelnames: wedstrijden waarop ik een uitslag voorspelde.
+  const myPredictions = seasonMatchesRes.docs.filter(
+    (m) => Array.isArray((m as { scorePredictions?: unknown }).scorePredictions) &&
+      (m as { scorePredictions: PredEntry[] }).scorePredictions.some((p) => Number(p?.userId) === myUserId),
+  ).length
+  const myFanScore = fanRankIdx >= 0 ? fanBoard[fanRankIdx].score : 0
+  const badges = computeBadges({
+    checkins: myCheckins.length,
+    photos: (photosRes as { totalDocs?: number }).totalDocs ?? 0,
+    predictions: myPredictions,
+    predictionPoints: myPred?.points ?? 0,
+    mvpVotes: mvpVotesCast,
+    fanScore: myFanScore,
+    profileComplete: Boolean(u.photo) && Boolean(u.club) && Boolean(u.position),
+    boosterWon: Boolean(booster && booster.mult),
+  })
 
   const wrapped = buildWrapped({
     season,
@@ -115,7 +126,7 @@ export default async function WrappedPage() {
     predictionPoints: myPred?.points ?? 0,
     exactPredictions: myPred?.exact ?? 0,
     badgesEarned: earnedCount(badges),
-    mvpVotesCast: (myVotesRes as { totalDocs?: number }).totalDocs ?? 0,
+    mvpVotesCast,
     fanRank: fanRankIdx >= 0 ? fanRankIdx : null,
     fanTotal: fanBoard.length,
   })
