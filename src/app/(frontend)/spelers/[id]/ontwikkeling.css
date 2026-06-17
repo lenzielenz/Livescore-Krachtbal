@@ -1,0 +1,214 @@
+/* Spelersontwikkeling — Skill + Fame verenigd. High-end paneel: tier-medaille, geanimeerde
+   niveauringen en een badge-collectie. Bouwt op de thema-tokens (--accent/--panel/--line/--dim). */
+.dev {
+  --skill-c: #2dd4bf;
+  --fame-c: #fbbf24;
+  --tier-c: #cd7f32;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin: 4px 0 22px;
+}
+
+/* ── Hero: tier-medaille + voortgang ─────────────────────────────────────────── */
+.dev-hero {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 20px;
+  border-radius: 22px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--tier-c) 38%, var(--line));
+  background:
+    radial-gradient(130% 130% at 0% 0%, color-mix(in srgb, var(--tier-c) 24%, transparent), transparent 58%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0) 55%),
+    var(--panel-grad, var(--panel));
+  box-shadow: 0 26px 60px -34px color-mix(in srgb, var(--tier-c) 70%, #000), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+.dev-hero::after {
+  /* trage glans over de hero */
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, 0.07) 48%, transparent 66%);
+  transform: translateX(-120%);
+  animation: dev-sheen 6s ease-in-out 0.6s infinite;
+  pointer-events: none;
+}
+@keyframes dev-sheen {
+  0%, 70%, 100% { transform: translateX(-120%); }
+  85% { transform: translateX(120%); }
+}
+
+.dev-medal {
+  position: relative;
+  flex: 0 0 auto;
+  width: 92px;
+  height: 92px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 32% 28%, color-mix(in srgb, var(--tier-c) 75%, #fff) 0%, var(--tier-c) 42%, color-mix(in srgb, var(--tier-c) 55%, #000) 100%);
+  box-shadow:
+    0 0 0 4px color-mix(in srgb, var(--tier-c) 30%, transparent),
+    0 10px 30px -8px color-mix(in srgb, var(--tier-c) 80%, #000),
+    inset 0 2px 6px rgba(255, 255, 255, 0.45),
+    inset 0 -6px 12px rgba(0, 0, 0, 0.35);
+  animation: dev-float 4.5s ease-in-out infinite;
+}
+@keyframes dev-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+.dev-medal-emoji {
+  font-size: 2.6rem;
+  line-height: 1;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.45));
+}
+
+.dev-hero-body { position: relative; z-index: 1; flex: 1; min-width: 0; }
+.dev-eyebrow {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--tier-c) 60%, var(--dim));
+}
+.dev-hero-title {
+  margin: 2px 0 0;
+  font-size: 1.7rem;
+  font-weight: 900;
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+}
+.dev-hero-lvl { margin-left: 8px; font-size: 0.95rem; font-weight: 700; color: var(--dim); }
+.dev-hero-bar {
+  margin: 12px 0 8px;
+  height: 9px;
+  border-radius: 99px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--tier-c) 14%, var(--line));
+}
+.dev-hero-bar > i {
+  display: block;
+  height: 100%;
+  border-radius: 99px;
+  background: linear-gradient(90deg, var(--tier-c), color-mix(in srgb, var(--tier-c) 45%, #fff));
+  box-shadow: 0 0 16px -1px var(--tier-c);
+  transition: width 1.1s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.dev-hero-sub { margin: 0; font-size: 0.86rem; color: var(--dim); display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
+.dev-hero-sub b { color: var(--txt, #fff); font-variant-numeric: tabular-nums; }
+
+/* ── Assen: Skill + Fame met niveauring ──────────────────────────────────────── */
+.dev-axes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+@media (max-width: 520px) { .dev-axes { grid-template-columns: 1fr; } }
+
+.dev-axis {
+  --axis-c: var(--accent);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  border-radius: 18px;
+  border: 1px solid color-mix(in srgb, var(--axis-c) 28%, var(--line));
+  background:
+    radial-gradient(120% 120% at 100% 0%, color-mix(in srgb, var(--axis-c) 14%, transparent), transparent 60%),
+    var(--panel-grad, var(--panel));
+}
+.dev-ring { position: relative; flex: 0 0 auto; width: 88px; height: 88px; }
+.dev-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.dev-ring-track { fill: none; stroke: color-mix(in srgb, var(--axis-c) 16%, var(--line)); stroke-width: 9; }
+.dev-ring-prog {
+  fill: none;
+  stroke: var(--axis-c);
+  stroke-width: 9;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--axis-c) 75%, transparent));
+  transition: stroke-dashoffset 1.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.dev-ring-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+.dev-ring-lvl { font-size: 1.7rem; font-weight: 900; color: var(--axis-c); font-variant-numeric: tabular-nums; }
+.dev-ring-lvl-lbl { margin-top: 2px; font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--dim); }
+
+.dev-axis-body { min-width: 0; flex: 1; }
+.dev-axis-label {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 0.72rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--axis-c);
+}
+.dev-axis-name { margin: 3px 0 0; font-size: 1.12rem; font-weight: 800; }
+.dev-axis-score { font-size: 0.82rem; color: var(--dim); }
+.dev-axis-score b { color: var(--txt, #fff); font-variant-numeric: tabular-nums; }
+.dev-axis-next { margin-top: 6px; font-size: 0.74rem; color: color-mix(in srgb, var(--axis-c) 70%, var(--dim)); }
+
+/* ── Badge-collectie ─────────────────────────────────────────────────────────── */
+.dev-badges {
+  padding: 16px;
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  background: var(--panel-grad, var(--panel));
+}
+.dev-badges-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.dev-badges-count { font-size: 1.5rem; font-weight: 900; color: var(--accent); font-variant-numeric: tabular-nums; }
+.dev-badges-count i { font-size: 0.9rem; font-style: normal; color: var(--dim); }
+.dev-badges-lbl { font-size: 0.74rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--dim); }
+.dev-badges-bar { flex: 1 1 120px; height: 7px; border-radius: 99px; overflow: hidden; background: color-mix(in srgb, var(--accent) 12%, var(--line)); }
+.dev-badges-bar > i {
+  display: block; height: 100%; border-radius: 99px;
+  background: var(--grad-accent, linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 50%, #fff)));
+  box-shadow: 0 0 12px -1px var(--glow-accent, var(--accent));
+  transition: width 1.1s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.dev-bgroup { margin-top: 16px; }
+.dev-bgroup-title {
+  margin: 0 0 10px; display: flex; align-items: center; gap: 6px;
+  font-size: 0.72rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--dim);
+}
+.dev-bgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(138px, 1fr)); gap: 10px; }
+
+.dev-badge {
+  position: relative;
+  display: flex; flex-direction: column; align-items: center; text-align: center; gap: 5px;
+  padding: 16px 10px 12px; border-radius: 15px;
+  border: 1px solid var(--line);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0) 60%), var(--panel-grad, var(--panel));
+  opacity: 0.6; filter: saturate(0.45);
+  transition: transform 0.15s ease, opacity 0.25s ease;
+}
+.dev-badge.is-earned {
+  opacity: 1; filter: none;
+  border-color: color-mix(in srgb, var(--badge-c, var(--accent)) 50%, var(--line));
+  box-shadow: 0 14px 30px -22px color-mix(in srgb, var(--badge-c, var(--accent)) 90%, #000), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+.dev-badge.is-earned::before {
+  content: '';
+  position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: radial-gradient(80% 60% at 50% 0%, color-mix(in srgb, var(--badge-c, var(--accent)) 22%, transparent), transparent 70%);
+}
+.dev-badge.is-earned:hover { transform: translateY(-3px); }
+.dev-badge-emoji { font-size: 2.2rem; line-height: 1; }
+.dev-badge:not(.is-earned) .dev-badge-emoji { filter: grayscale(1); }
+.dev-badge-title { font-weight: 800; font-size: 0.9rem; }
+.dev-badge-desc { font-size: 0.72rem; color: var(--dim); line-height: 1.3; }
+.dev-badge-state { margin-top: 3px; font-size: 0.66rem; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; color: var(--badge-c, var(--accent)); }
+.dev-badge-locked { margin-top: 3px; font-size: 0.66rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--dim); }
+.dev-badge-prog { width: 100%; margin-top: 3px; display: flex; flex-direction: column; gap: 3px; align-items: center; }
+.dev-badge-prog-bar { width: 100%; height: 5px; border-radius: 99px; overflow: hidden; background: color-mix(in srgb, var(--accent) 12%, var(--line)); }
+.dev-badge-prog-bar > i { display: block; height: 100%; border-radius: 99px; background: color-mix(in srgb, var(--badge-c, var(--accent)) 70%, transparent); transition: width 1s ease 0.2s; }
+.dev-badge-prog-txt { font-size: 0.66rem; color: var(--dim); font-variant-numeric: tabular-nums; }

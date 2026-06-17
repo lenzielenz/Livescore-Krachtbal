@@ -7,10 +7,12 @@ import { SiteHeader } from '@/components/SiteHeader'
 import { competitionWhere } from '@/lib/analyse-access'
 import { getPayloadClient } from '@/lib/payload-client'
 import { buildPlayerDanger } from '@/lib/player-danger'
+import { buildPlayerDevelopment } from '@/lib/player-development'
 import { reeksNaam, resolveCompetitieReeks } from '@/lib/reeksen'
 import { buildSeasonStats } from '@/lib/season-stats'
 import { GevaarMap } from '../../analyse/gevaar/GevaarMap'
 import { TeamForm } from '../../analyse/ploeg/TeamForm'
+import { SpelerOntwikkeling } from './SpelerOntwikkeling'
 import '../../analyse/analyse.css'
 import '../../publieke-stats.css'
 
@@ -57,15 +59,33 @@ export default async function SpelerProfiel({ params }: Params) {
   const reeksCode = team?.reeks ? resolveCompetitieReeks(team.reeks) : null
   const payload = await getPayloadClient()
 
-  const [seasonPlayers, danger] = await Promise.all([
+  const [seasonPlayers, danger, mvpVotesRes] = await Promise.all([
     reeksCode
       ? buildSeasonStats(payload, reeksCode, null, competitionWhere()).catch(() => [])
       : Promise.resolve([]),
     reeksCode
       ? buildPlayerDanger(payload, playerId, reeksCode, null, competitionWhere()).catch(() => null)
       : Promise.resolve(null),
+    // Fame: 'held van de match'-stemmen die deze speler ontving (carrière).
+    payload
+      .count({ collection: 'match-mvp-votes', where: { player: { equals: playerId } } })
+      .catch(() => ({ totalDocs: 0 })),
   ])
   const stat = seasonPlayers.find((s) => s.playerId === playerId) ?? null
+  const mvpVotesReceived = (mvpVotesRes as { totalDocs?: number }).totalDocs ?? 0
+
+  // Spelersontwikkeling: Skill (uit de stats) + Fame (uit ontvangen stemmen) verenigd.
+  const dev = buildPlayerDevelopment({
+    matches: stat?.matches ?? 0,
+    throws: stat?.throws ?? 0,
+    goals: stat?.goals ?? 0,
+    rug: stat?.rug ?? 0,
+    conversion: stat?.conversion ?? 0,
+    goalAttempts: stat?.goalAttempts ?? 0,
+    maxDistance: stat?.maxDistance ?? 0,
+    zones: stat?.zones ?? { links: 0, midden: 0, rechts: 0 },
+    mvpVotesReceived,
+  })
 
   return (
     <>
@@ -82,6 +102,8 @@ export default async function SpelerProfiel({ params }: Params) {
             </p>
           </div>
         </div>
+
+        {dev.overall.score > 0 ? <SpelerOntwikkeling dev={dev} /> : null}
 
         {!stat ? (
           <p className="an-empty">Nog geen wedstrijdstatistieken voor deze speler.</p>
