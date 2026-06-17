@@ -66,6 +66,25 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     // Postgres advisory lock (cross-instance). Voorkomt throw/undo-races (AUDIT §2).
     const actorId = typeof user?.id === 'number' ? user.id : undefined
     return await withLock(`match:${matchId}`, () => withDbLock(payload, 'match', matchId, async () => {
+    // Idempotentie (offline-hardening): elke muterende actie draagt een client-gegenereerde `opId`.
+    // Is die al verwerkt, dan geven we exact dezelfde response terug zónder de actie opnieuw toe te
+    // passen. Cruciaal bij wegvallend netwerk: de offline-wachtrij levert at-least-once, dus een
+    // worp/doelpunt/undo die de server al verwerkte (maar waarvan het antwoord verloren ging) mag
+    // bij heruitzending niet dubbel tellen. Acties zonder opId (oudere clients) lopen ongewijzigd.
+    const opId = typeof body.opId === 'string' && body.opId ? body.opId : null
+    if (opId) {
+      const prior = await payload.find({
+        collection: 'processed-ops',
+        where: { opId: { equals: opId } },
+        limit: 1,
+        depth: 0,
+        overrideAccess: true,
+      })
+      const seen = prior.docs[0] as { response?: unknown } | undefined
+      if (seen) return Response.json(seen.response ?? { ok: true, deduped: true })
+    }
+
+    let result: unknown
     switch (action) {
       case 'start': {
         // Startcontrole: opstellingen + scheidsrechtersakkoord (of demo). Een admin/federatie
@@ -80,10 +99,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
             )
           }
         }
-        return Response.json(await startMatch(payload, matchId, Number(body.startingTeamId)))
+        result = await startMatch(payload, matchId, Number(body.startingTeamId))
+        break
       }
       case 'throw': {
-        const result = await recordThrow(payload, {
+        const r = await recordThrow(payload, {
           matchId,
           playerId: Number(body.playerId),
           type: body.type === 'rug' ? 'rug' : 'nek',
@@ -97,58 +117,65 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
           actorId,
         })
         // Doelpunt → fans van de scorende club een push sturen (fire-and-forget).
-        if (result.outcome === 'goal') notifyGoalScored({ matchId, playerId: Number(body.playerId) })
-        return Response.json(result)
+        if (r.outcome === 'goal') notifyGoalScored({ matchId, playerId: Number(body.playerId) })
+        result = r
+        break
       }
       case 'undo':
-        return Response.json(await undoLastThrow(payload, matchId))
+        result = await undoLastThrow(payload, matchId)
+        break
       case 'clock':
-        return Response.json(
-          await setClock(payload, matchId, {
-            running: body.running !== undefined ? Boolean(body.running) : undefined,
-            seconds: body.seconds !== undefined ? Number(body.seconds) : undefined,
-          }),
-        )
+        result = await setClock(payload, matchId, {
+          running: body.running !== undefined ? Boolean(body.running) : undefined,
+          seconds: body.seconds !== undefined ? Number(body.seconds) : undefined,
+        })
+        break
       case 'half':
-        return Response.json(await advanceHalf(payload, matchId))
+        result = await advanceHalf(payload, matchId)
+        break
       case 'endhalf':
-        return Response.json(await endHalf(payload, matchId))
+        result = await endHalf(payload, matchId)
+        break
       case 'starthalf':
-        return Response.json(await startNextHalf(payload, matchId))
+        result = await startNextHalf(payload, matchId)
+        break
       case 'finish':
-        return Response.json(await finishMatch(payload, matchId))
+        result = await finishMatch(payload, matchId)
+        break
       case 'reopen':
         // Een afgesloten wedstrijd heropenen voor correcties — enkel federatie/admin.
         if (!isFederationLevel(user)) {
           return Response.json({ error: 'Enkel de federatie kan een wedstrijd heropenen.' }, { status: 403 })
         }
-        return Response.json(await reopenMatch(payload, matchId))
+        result = await reopenMatch(payload, matchId)
+        break
       case 'timeout':
-        return Response.json(await recordTimeout(payload, matchId, Number(body.teamId), actorId))
+        result = await recordTimeout(payload, matchId, Number(body.teamId), actorId)
+        break
       case 'referee_stop':
-        return Response.json(await recordRefereeStop(payload, matchId, actorId))
+        result = await recordRefereeStop(payload, matchId, actorId)
+        break
       case 'freethrow':
-        return Response.json(await startFreeThrow(payload, matchId, Number(body.teamId)))
+        result = await startFreeThrow(payload, matchId, Number(body.teamId))
+        break
       case 'substitute':
-        return Response.json(
-          await substitute(payload, matchId, body.side === 'away' ? 'away' : 'home', Number(body.outPlayerId), Number(body.inPlayerId)),
-        )
+        result = await substitute(payload, matchId, body.side === 'away' ? 'away' : 'home', Number(body.outPlayerId), Number(body.inPlayerId))
+        break
       case 'setlineup':
-        return Response.json(
-          await setLineup(
-            payload,
-            matchId,
-            body.side === 'away' ? 'away' : 'home',
-            Array.isArray(body.playerIds) ? body.playerIds.map(Number) : [],
-          ),
+        result = await setLineup(
+          payload,
+          matchId,
+          body.side === 'away' ? 'away' : 'home',
+          Array.isArray(body.playerIds) ? body.playerIds.map(Number) : [],
         )
+        break
       case 'setcaptain':
-        return Response.json(
-          await setCaptain(payload, matchId, body.side === 'away' ? 'away' : 'home', Number(body.playerId)),
-        )
+        result = await setCaptain(payload, matchId, body.side === 'away' ? 'away' : 'home', Number(body.playerId))
+        break
       // ── Simpele aantekenmodus (snelscoremodus): +1/+2 zonder veldschema ──
       case 'simplestart':
-        return Response.json(await startSimpleMatch(payload, matchId))
+        result = await startSimpleMatch(payload, matchId)
+        break
       case 'simplegoal': {
         const goalSide = body.side === 'away' ? 'away' : 'home'
         const res = await recordSimpleGoal(payload, matchId, goalSide, body.points === 2 ? 2 : 1, {
@@ -157,25 +184,42 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
           name: typeof body.playerName === 'string' ? body.playerName : undefined,
         })
         notifyGoalScored({ matchId, side: goalSide })
-        return Response.json(res)
+        result = res
+        break
       }
       case 'simpleundo':
-        return Response.json(await undoSimpleGoal(payload, matchId))
+        result = await undoSimpleGoal(payload, matchId)
+        break
       case 'simplecross':
-        return Response.json(
-          await adjustSimpleCross(payload, matchId, body.side === 'away' ? 'away' : 'home', Number(body.delta) || 1),
-        )
+        result = await adjustSimpleCross(payload, matchId, body.side === 'away' ? 'away' : 'home', Number(body.delta) || 1)
+        break
       case 'simpletimeout':
-        return Response.json(
-          await adjustSimpleTimeout(payload, matchId, body.side === 'away' ? 'away' : 'home', Number(body.delta) || 1),
-        )
+        result = await adjustSimpleTimeout(payload, matchId, body.side === 'away' ? 'away' : 'home', Number(body.delta) || 1)
+        break
       case 'simplerefstop':
-        return Response.json(await adjustRefereeStop(payload, matchId, Number(body.delta) || 1))
+        result = await adjustRefereeStop(payload, matchId, Number(body.delta) || 1)
+        break
       case 'simplehalf':
-        return Response.json(await advanceSimpleHalf(payload, matchId))
+        result = await advanceSimpleHalf(payload, matchId)
+        break
       default:
         return Response.json({ error: `Onbekende actie: ${action}` }, { status: 400 })
     }
+
+    // Bewaar de response onder de opId, zodat een herverzonden actie (zie boven) niet dubbel telt.
+    // Een unieke botsing (parallel al verwerkt) negeren we — de actie is dan al toegepast.
+    if (opId) {
+      try {
+        await payload.create({
+          collection: 'processed-ops',
+          data: { match: matchId, opId, response: result as Record<string, unknown> },
+          overrideAccess: true,
+        })
+      } catch {
+        /* unieke index-botsing = al verwerkt; negeren */
+      }
+    }
+    return Response.json(result)
     }))
   } catch (err) {
     const msg = (err as Error).message

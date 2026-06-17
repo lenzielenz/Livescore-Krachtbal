@@ -21,6 +21,16 @@ function firstName(name: string): string {
   return name.trim().split(/\s+/)[0] ?? ''
 }
 
+// Uniek id per actie → bij heruitzending vanuit de offline-wachtrij herkent de server het als
+// dezelfde actie en telt ze niet dubbel (idempotentie). De opId reist mee in de wachtrij, dus een
+// retry hergebruikt exact dezelfde id.
+function genOpId(): string {
+  try {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID()
+  } catch {}
+  return `op-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+}
+
 interface RosterPlayer {
   id: number
   name: string
@@ -176,17 +186,20 @@ export function SimpleScorekeeper({
     async (body: Record<string, unknown>, optimistic?: (s: MatchState) => MatchState) => {
       setError(null)
       if (optimistic) setState((prev) => optimistic(prev))
+      // Eén opId per actie (hergebruikt bij retry) → de server telt een heruitgezonden actie niet
+      // dubbel. Blijft in de wachtrij staan zodat een retry exact dezelfde id meestuurt.
+      const op = typeof body.opId === 'string' ? body : { ...body, opId: genOpId() }
       // Als er al een wachtrij is, we offline zijn, of er loopt al een actie: bewaren en nasturen
       // (volgorde behouden) i.p.v. de tik te verliezen.
       if (queueRef.current.length || busy.current || (typeof navigator !== 'undefined' && !navigator.onLine)) {
-        queueRef.current.push(body)
+        queueRef.current.push(op)
         persistQueue()
         void flush()
         return
       }
       busy.current = true
       try {
-        const res = await fetch(ACTION_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+        const res = await fetch(ACTION_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(op) })
         const data = (await res.json()) as MatchState & { error?: string }
         if (!res.ok) throw new Error(data.error ?? 'Actie mislukt.')
         setState(data)
@@ -195,7 +208,7 @@ export function SimpleScorekeeper({
         // Netwerkfout (fetch gooit een TypeError) → bewaren en later nasturen; de optimistische
         // stand blijft staan. Een echte server-fout tonen we wel.
         if (e instanceof TypeError) {
-          queueRef.current.push(body)
+          queueRef.current.push(op)
           persistQueue()
           setOffline(true)
         } else {

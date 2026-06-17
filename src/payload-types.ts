@@ -91,6 +91,7 @@ export interface Config {
     advertenties: Advertenty;
     news: News;
     'match-mvp-votes': MatchMvpVote;
+    'processed-ops': ProcessedOp;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -122,6 +123,7 @@ export interface Config {
     advertenties: AdvertentiesSelect<false> | AdvertentiesSelect<true>;
     news: NewsSelect<false> | NewsSelect<true>;
     'match-mvp-votes': MatchMvpVotesSelect<false> | MatchMvpVotesSelect<true>;
+    'processed-ops': ProcessedOpsSelect<false> | ProcessedOpsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -1336,6 +1338,28 @@ export interface MatchMvpVote {
   createdAt: string;
 }
 /**
+ * Idempotentie-logboek — herverzonden aantekenaar-acties niet dubbel toepassen.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "processed-ops".
+ */
+export interface ProcessedOp {
+  id: number;
+  match: number | Match;
+  opId: string;
+  response?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
@@ -1454,6 +1478,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'match-mvp-votes';
         value: number | MatchMvpVote;
+      } | null)
+    | ({
+        relationTo: 'processed-ops';
+        value: number | ProcessedOp;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -2096,6 +2124,17 @@ export interface MatchMvpVotesSelect<T extends boolean = true> {
   playerName?: T;
   shirtNumber?: T;
   side?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "processed-ops_select".
+ */
+export interface ProcessedOpsSelect<T extends boolean = true> {
+  match?: T;
+  opId?: T;
+  response?: T;
   updatedAt?: T;
   createdAt?: T;
 }
