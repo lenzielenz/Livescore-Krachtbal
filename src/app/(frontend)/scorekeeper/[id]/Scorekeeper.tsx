@@ -10,6 +10,7 @@ import { goalLineNorm, totalLengthM, zoneOf } from '@/lib/field'
 import type { AttackDir, Point } from '@/lib/field'
 import type { MatchState } from '@/lib/match-engine'
 import { LINEUP_MIN, type Readiness } from '@/lib/match-readiness'
+import { genOpId } from '@/lib/op-id'
 import { useLiveStream } from '@/lib/use-live-stream'
 import { DemoTutorial } from './DemoTutorial'
 
@@ -238,10 +239,12 @@ export function Scorekeeper({
       setBusy(true)
       setError(null)
       try {
+        // opId → de server past een (per ongeluk) heruitgezonden actie niet dubbel toe (idempotentie).
+        const op = typeof body.opId === 'string' ? body : { ...body, opId: genOpId() }
         const res = await fetch(`/api/match/${matchId}/action`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
+          body: JSON.stringify(op),
         })
         const data = await res.json()
         if (!res.ok) throw new Error(data.error ?? 'Actie mislukt')

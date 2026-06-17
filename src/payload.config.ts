@@ -30,6 +30,7 @@ import { PushSubscriptions } from './collections/PushSubscriptions'
 import { Advertenties } from './collections/Advertenties'
 import { News } from './collections/News'
 import { MatchMvpVotes } from './collections/MatchMvpVotes'
+import { ProcessedOps } from './collections/ProcessedOps'
 import { Season } from './globals/Season'
 import { Settings } from './globals/Settings'
 
@@ -115,6 +116,7 @@ export default buildConfig({
     Advertenties,
     News,
     MatchMvpVotes,
+    ProcessedOps,
   ],
   globals: [Season, Settings],
   // serverURL + cors/csrf enkel wanneer PUBLIC_SERVER_URL gezet is (zie hierboven).

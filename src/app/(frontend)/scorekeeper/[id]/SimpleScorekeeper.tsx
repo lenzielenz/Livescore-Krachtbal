@@ -7,6 +7,7 @@ import { TeamLogo } from '@/components/TeamLogo'
 import { categoryConfig } from '@/lib/categories'
 import { DEFAULT_AWAY_COLOR, DEFAULT_HOME_COLOR, readableOnDark } from '@/lib/club-colors'
 import type { MatchState } from '@/lib/match-engine'
+import { genOpId } from '@/lib/op-id'
 import type { SimpleSide } from '@/lib/simple-score'
 import { useLiveStream } from '@/lib/use-live-stream'
 import './simple-scorekeeper.css'
@@ -176,17 +177,20 @@ export function SimpleScorekeeper({
     async (body: Record<string, unknown>, optimistic?: (s: MatchState) => MatchState) => {
       setError(null)
       if (optimistic) setState((prev) => optimistic(prev))
+      // Eén opId per actie (hergebruikt bij retry) → de server telt een heruitgezonden actie niet
+      // dubbel. Blijft in de wachtrij staan zodat een retry exact dezelfde id meestuurt.
+      const op = typeof body.opId === 'string' ? body : { ...body, opId: genOpId() }
       // Als er al een wachtrij is, we offline zijn, of er loopt al een actie: bewaren en nasturen
       // (volgorde behouden) i.p.v. de tik te verliezen.
       if (queueRef.current.length || busy.current || (typeof navigator !== 'undefined' && !navigator.onLine)) {
-        queueRef.current.push(body)
+        queueRef.current.push(op)
         persistQueue()
         void flush()
         return
       }
       busy.current = true
       try {
-        const res = await fetch(ACTION_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+        const res = await fetch(ACTION_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(op) })
         const data = (await res.json()) as MatchState & { error?: string }
         if (!res.ok) throw new Error(data.error ?? 'Actie mislukt.')
         setState(data)
@@ -195,7 +199,7 @@ export function SimpleScorekeeper({
         // Netwerkfout (fetch gooit een TypeError) → bewaren en later nasturen; de optimistische
         // stand blijft staan. Een echte server-fout tonen we wel.
         if (e instanceof TypeError) {
-          queueRef.current.push(body)
+          queueRef.current.push(op)
           persistQueue()
           setOffline(true)
         } else {
