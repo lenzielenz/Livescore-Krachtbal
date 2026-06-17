@@ -3,7 +3,7 @@ import Link from 'next/link'
 
 import { ProfileTools } from '@/components/ProfileTools'
 import { SiteHeader } from '@/components/SiteHeader'
-import { userClubId } from '@/lib/access'
+import { hasRole, userClubId } from '@/lib/access'
 import { competitionWhere } from '@/lib/analyse-access'
 import { clinchStatus } from '@/lib/championship'
 import { getMatchReadiness } from '@/lib/matchsheet-data'
@@ -82,6 +82,7 @@ export default async function ClubPage({ searchParams }: { searchParams: Promise
     )
   }
   const clubId = userClubId(user)
+  const isBeheerder = hasRole(user, 'club-beheerder')
   if (clubId == null) {
     return (
       <Shell>
@@ -225,6 +226,12 @@ export default async function ClubPage({ searchParams }: { searchParams: Promise
   return (
     <Shell>
       <MyTeamsPicker teams={allTeams} initial={myTeams} />
+
+      {isBeheerder && (
+        <p className="myteams-focusbar">
+          <Link href="/beheer/club-team" className="myteams-link">👥 Clubteam beheren — leden een rol geven →</Link>
+        </p>
+      )}
 
       {mySet.size > 0 && (
         <p className="myteams-focusbar">

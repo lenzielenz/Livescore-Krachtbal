@@ -1,0 +1,63 @@
+/* Clubteam-beheer (club-beheerder): rol per clublid toggelen. Sober en op de thema-tokens. */
+.ct-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ct-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 14px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--panel-grad, var(--panel));
+}
+.ct-id {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.ct-name {
+  font-weight: 700;
+}
+.ct-email {
+  font-size: 0.8rem;
+  color: var(--dim);
+}
+.ct-pick {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.ct-chip {
+  padding: 6px 12px;
+  border-radius: 99px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--dim);
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.ct-chip:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+}
+.ct-chip.on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #0a0e14;
+}
+.ct-chip:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.ct-msg {
+  font-size: 0.78rem;
+  color: var(--dim);
+  margin-left: 4px;
+}
