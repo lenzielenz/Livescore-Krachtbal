@@ -9,19 +9,21 @@ relatief (S/M/L), niet in uren.
 
 ## Samenvatting & aanbevolen volgorde
 
-| Fase | Thema | Waarom nu | Effort | Risico |
+| Fase | Thema | Effort | Risico | Status |
 |---|---|---|---|---|
-| **1** | Hardening van de kern | Correctheid — beschermt de live-match | S–M | Laag |
-| **2** | Data-moat publiek tonen | Grootste zichtbare sprong voor fans/spelers | M | Laag* |
-| **3** | Realtime op schaal (Redis) | Voorwaarde vóór je horizontaal schaalt | M–L | Middel |
-| **4** | Officieel federatie-record | Strategische moat; deels extern afhankelijk | S–M | Laag |
+| **1** | Hardening van de kern | S–M | Laag | ✅ gemerged |
+| **2** | Data-moat publiek tonen | M | Laag* | ✅ gemerged |
+| **3** | Realtime op schaal (Redis) | M–L | Middel | ⏸ uitgesteld tot je opschaalt |
+| **4** | Officieel federatie-record | S–M | Laag | ◐ deels (eindscore-bevestiging gemerged) |
 
 \* mits de privacy-keuze (zie Fase 2) goed gezet wordt.
 
-**Korte versie:** Fase 1 is klein en fixt een echte bug (dubbele worp bij retry).
-Fase 2 is de grote, laag-risico "wow" voor je publiek — je toont gewoon wat je al
-berekent. Fase 3 is pas nodig wanneer je écht meerdere instances draait. Fase 4 is
-bijna af; wat rest hangt deels van de KVKBF af.
+**Voortgang (juni 2026):** Fase 1 (idempotente acties), Fase 2 (publieke speler-/
+ploegprofielen + shot map) en Fase 4-kern (scheidsrechter bevestigt de eindstand)
+zijn gebouwd, getest en gemerged. **Fase 3** is bewust uitgesteld tot er meer dan
+één app-instance draait (zie de Fase 3-sectie voor het runbook). Resterend in
+**Fase 4**: federatie-API (vereist een KVKBF-endpoint), per-veld versioning, en de
+eindscore-bevestiging mee in de PDF.
 
 ---
 
@@ -94,29 +96,46 @@ Overweeg een opt-out voor jeugd. Dit zetten we vast vóór we iets publiceren.
 horizontale schaal op Railway). Bij één instance werkt alles correct — dit is een
 **voorwaarde vóór** opschalen, geen acute bug.
 
-**Staat:** álle live-engagement-state is per-instance in het geheugen
-(`src/lib/match-channel.ts`): emoji-reacties, viewer-count, shoutouts, voorspel- en
-MVP-stemmen. Ook de per-IP-cap en rate-limit (`src/lib/sse-hub.ts`).
+> **Status: bewust uitgesteld** (beslissing juni 2026) zolang de app op **één**
+> instance draait. Dan verandert deze fase functioneel niets en zou ze enkel
+> ongeteste, dormante code aan de live-kern toevoegen. Pak ze op zodra je horizontaal
+> opschaalt (2+ Railway-instances). Onderstaande is het runbook voor dat moment.
+
+**Staat:** álle live-engagement-state is per-instance in het geheugen. Concreet:
+- `src/lib/match-channel.ts` → de `channels`-Map per match met: `reactions`/`totals`
+  (emoji), `viewerKeys` (viewer-count), `shoutouts` (ringbuffer), `pollVotes`,
+  `mvpVotes`, plus per-instance timers (`poll`, `flush`, debounced saves).
+- `src/lib/sse-hub.ts` → `hubs` (score-poller per match — correct maar dubbel werk
+  bij 2 instances), `perIp` (verbindingscap), `buckets` (rate-limit).
 
 **Wat breekt bij 2+ instances:**
 - Emoji- en viewer-tellers **splitsen** — niemand ziet het echte totaal.
 - Shoutouts verschijnen enkel op de instance waar ze binnenkwamen.
 - MVP-/voorspelstemmen: **lost-update race** (read-modify-write naar DB) → stemmen
   verdwijnen.
-- Per-IP-limieten gelden per instance → zwakkere bescherming.
+- Per-IP-cap + rate-limit gelden per instance → zwakkere bescherming.
 
-**Plan:**
-1. Redis-service (Railway) + één `ioredis`-singleton (`src/lib/redis.ts`).
-2. Engagement-state naar Redis met **atomic** counters: `INCR`/`HINCRBY` voor
-   reacties/stemmen, `LPUSH`+`LTRIM` voor shoutouts, `SETEX`+TTL-heartbeat voor
-   viewer-count. Eén Lua-script per teller voor atomiciteit.
-3. Per-IP-cap + rate-limit naar Redis (`INCR`+`EXPIRE`).
-4. *(Optioneel)* één gedeelde score-poller per cluster i.p.v. per instance.
-5. Load-test met 2 instances (`scripts/loadtest.ts` bestaat al).
+**Runbook (wanneer je opschaalt):**
+1. Railway: voeg een **Redis-service** toe → zet `REDIS_URL` in de app-omgeving.
+2. `pnpm add ioredis` + één lazy singleton `src/lib/redis.ts` die **null** teruggeeft
+   als `REDIS_URL` ontbreekt (→ strikte in-memory fallback, huidige werking blijft).
+3. **Pub/sub fan-out**: publiceer elke broadcast (reacties/shoutouts/score/viewers)
+   op een Redis-kanaal `match:<id>`; elke instance abonneert en her-broadcast remote
+   events naar z'n lokale SSE-abonnees (met een loop-guard tegen her-publiceren).
+4. **Atomic aggregaten** (alleen als Redis aan): `HINCRBY` voor reacties/poll/MVP,
+   `LPUSH`+`LTRIM` voor shoutouts, `SETEX`+TTL-heartbeat voor viewer-count;
+   periodiek naar de DB flushen zoals nu. Vervangt de read-modify-write-race.
+5. Per-IP-cap + rate-limit (`sse-hub.ts`) naar Redis `INCR`+`EXPIRE`.
+6. *(Optioneel)* leader-election zodat slechts één instance per match de DB pollt.
+7. **Valideer**: `pnpm loadtest --url … --match 1 --viewers 500 --react` tegen 2
+   instances; controleer dat tellers/viewers/shoutouts consistent zijn over instances.
+
+**Veiligheidsmodel:** alle Redis-paden achter `if (redis) { … }` met de bestaande
+in-memory code als `else` — zonder `REDIS_URL` blijft de live-kern ongewijzigd.
 
 **Raakt:** `src/lib/match-channel.ts`, `src/lib/sse-hub.ts`,
-`api/match/[id]/{stream,react,state}`, tornooi-streams. Fallback naar in-memory
-houden wanneer Redis niet geconfigureerd is (lokaal/dev).
+`api/match/[id]/{stream,react,state}`, tornooi-streams. **Niet** te mergen zonder
+een 2-instance load-test (kan niet in CI/dev gevalideerd worden).
 
 ---
 
