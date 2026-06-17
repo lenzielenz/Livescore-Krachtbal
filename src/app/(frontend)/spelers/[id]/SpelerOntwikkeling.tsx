@@ -22,6 +22,19 @@ const TIER_EMOJI: Record<string, string> = {
   Legende: '👑',
 }
 
+// Respecteert de systeemvoorkeur: wie 'minder beweging' kiest, krijgt geen tel-/glans-animaties.
+function usePrefersReducedMotion(): boolean {
+  const [reduced, setReduced] = useState(false)
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
+    setReduced(mq.matches)
+    const on = () => setReduced(mq.matches)
+    mq.addEventListener?.('change', on)
+    return () => mq.removeEventListener?.('change', on)
+  }, [])
+  return reduced
+}
+
 // Telt soepel op naar `target` zodra `run` waar is (cubic ease-out).
 function useCountUp(target: number, run: boolean, ms = 900): number {
   const [val, setVal] = useState(0)
@@ -71,7 +84,7 @@ function AxisCard({ axis, color, icon, sub, run }: { axis: DevAxis; color: strin
   const score = useCountUp(axis.score, run)
   const toNext = axis.nextAt != null ? Math.max(0, axis.nextAt - axis.score) : 0
   return (
-    <div className="dev-axis" style={{ ['--axis-c' as string]: color }}>
+    <div className={`dev-axis${axis.maxed ? ' dev-axis--max' : ''}`} style={{ ['--axis-c' as string]: color }}>
       <Ring axis={axis} />
       <div className="dev-axis-body">
         <span className="dev-axis-label">
@@ -89,9 +102,12 @@ function AxisCard({ axis, color, icon, sub, run }: { axis: DevAxis; color: strin
   )
 }
 
-function BadgeCard({ b, color }: { b: PlayerDevBadge; color: string }) {
+function BadgeCard({ b, color, i }: { b: PlayerDevBadge; color: string; i: number }) {
   return (
-    <div className={`dev-badge${b.earned ? ' is-earned' : ''}`} style={{ ['--badge-c' as string]: color }}>
+    <div
+      className={`dev-badge${b.earned ? ' is-earned' : ''}`}
+      style={{ ['--badge-c' as string]: color, animationDelay: `${Math.min(i * 45, 400)}ms` }}
+    >
       <span className="dev-badge-emoji" aria-hidden>
         {b.emoji}
       </span>
@@ -123,8 +139,8 @@ function BadgeGroup({ title, icon, color, badges }: { title: string; icon: strin
         <span aria-hidden>{icon}</span> {title}
       </h3>
       <div className="dev-bgrid">
-        {badges.map((b) => (
-          <BadgeCard key={b.key} b={b} color={color} />
+        {badges.map((b, i) => (
+          <BadgeCard key={b.key} b={b} color={color} i={i} />
         ))}
       </div>
     </div>
@@ -132,13 +148,17 @@ function BadgeGroup({ title, icon, color, badges }: { title: string; icon: strin
 }
 
 export function SpelerOntwikkeling({ dev }: { dev: PlayerDevelopment }) {
+  const reduced = usePrefersReducedMotion()
   const [run, setRun] = useState(false)
   useEffect(() => {
     const t = requestAnimationFrame(() => setRun(true))
     return () => cancelAnimationFrame(t)
   }, [])
+  // Tellen enkel als de gebruiker beweging toelaat; anders meteen het eindgetal.
+  const count = run && !reduced
 
-  const overallScore = useCountUp(dev.overall.score, run)
+  const overallScore = useCountUp(dev.overall.score, count)
+  const earnedCount = useCountUp(dev.earnedBadges, count)
   const tierColor = TIER_COLOR[dev.overall.tier] ?? '#cd7f32'
   const skillBadges = dev.badges.filter((b) => b.axis === 'skill')
   const fameBadges = dev.badges.filter((b) => b.axis === 'fame')
@@ -174,14 +194,14 @@ export function SpelerOntwikkeling({ dev }: { dev: PlayerDevelopment }) {
       </div>
 
       <div className="dev-axes">
-        <AxisCard axis={dev.skill} color="var(--skill-c)" icon="🎯" sub="beter worden" run={run} />
-        <AxisCard axis={dev.fame} color="var(--fame-c)" icon="⭐" sub="erkenning" run={run} />
+        <AxisCard axis={dev.skill} color="var(--skill-c)" icon="🎯" sub="beter worden" run={count} />
+        <AxisCard axis={dev.fame} color="var(--fame-c)" icon="⭐" sub="erkenning" run={count} />
       </div>
 
       <div className="dev-badges">
         <div className="dev-badges-head">
           <span className="dev-badges-count">
-            {dev.earnedBadges}
+            {earnedCount}
             <i>/{dev.totalBadges}</i>
           </span>
           <span className="dev-badges-lbl">badges verdiend</span>
