@@ -13,6 +13,12 @@ const relIds = (v: unknown): number[] =>
         .filter((n) => Number.isFinite(n) && n > 0)
     : []
 
+const relId = (v: unknown): number | null => {
+  const x = v && typeof v === 'object' ? (v as { id?: unknown }).id : v
+  const n = Number(x)
+  return Number.isFinite(n) && n > 0 ? n : null
+}
+
 export async function GET(req: Request) {
   try {
     const payload = await getPayloadClient()
@@ -21,16 +27,24 @@ export async function GET(req: Request) {
     if (!canAnalyse(user)) return Response.json({ error: 'Geen analyse-toegang.' }, { status: 403 })
     // Accountnamen ophalen vergt een override (een gewoon account leest enkel zichzelf) — we
     // geven bewust enkel id + weergavenaam terug, geen e-mailadressen of rollen.
-    const res = await payload.find({ collection: 'users', depth: 0, limit: 500, sort: 'name', overrideAccess: true })
+    const [res, clubsRes] = await Promise.all([
+      payload.find({ collection: 'users', depth: 0, limit: 500, sort: 'name', overrideAccess: true }),
+      payload
+        .find({ collection: 'clubs', depth: 0, limit: 1000, sort: 'name', overrideAccess: true })
+        .catch(() => ({ docs: [] as Record<string, unknown>[] })),
+    ])
     const users = res.docs
       .filter((u) => String(u.id) !== String(user.id))
       .map((u) => ({
         id: u.id,
         name: (u.name as string | undefined)?.trim() || String(u.email ?? '').split('@')[0] || `Account ${u.id}`,
+        clubId: relId((u as { club?: unknown }).club),
       }))
+    const clubs = clubsRes.docs.map((c) => ({ id: Number(c.id), name: String((c as { name?: unknown }).name ?? `Club ${c.id}`) }))
     return Response.json({
       ok: true,
       users,
+      clubs,
       lezen: relIds((user as { analyseDeeltMet?: unknown }).analyseDeeltMet),
       bewerken: relIds((user as { analyseDeeltBewerkMet?: unknown }).analyseDeeltBewerkMet),
     })

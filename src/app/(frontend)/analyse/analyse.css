@@ -335,6 +335,47 @@ select.rang-picker {
   cursor: pointer;
 }
 .an-delen-save:disabled { opacity: 0.6; cursor: default; }
+/* Analyse delen: zoeken + per club gegroepeerd en inklapbaar (beheersbaar bij veel accounts). */
+.an-delen-search {
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 9px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--txt);
+  font-size: 0.9rem;
+  margin: 4px 0 10px;
+}
+.an-delen-search:focus { outline: none; border-color: var(--accent); }
+.an-delen-group { margin-bottom: 6px; }
+.an-delen-group-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 4px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--line);
+  color: var(--accent);
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  text-align: left;
+}
+.an-delen-group-head:hover { color: color-mix(in srgb, var(--accent) 72%, #fff); }
+.an-delen-group-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.an-delen-shared {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #f59e0b;
+  background: color-mix(in srgb, #f59e0b 14%, transparent);
+  border-radius: 999px;
+  padding: 1px 8px;
+}
+.an-delen-count { color: var(--dim); font-weight: 700; font-size: 0.78rem; }
+.an-delen-chevron { display: inline-block; font-size: 0.7rem; transition: transform 0.15s ease; }
+.an-delen-group-head.is-open .an-delen-chevron { transform: rotate(90deg); }
 .an-summary { margin: 0 0 18px; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
 .an-record-new { margin: 6px 0 14px; }
 /* Primaire actie: gevulde accentknop met donkere tekst — duidelijk leesbaar. */
