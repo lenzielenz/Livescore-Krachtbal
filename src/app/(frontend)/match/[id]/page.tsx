@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 
 import { CastToTv } from '@/components/CastToTv'
 import { CheckInButton } from '@/components/CheckInButton'
+import { MatchStats } from '@/components/MatchStats'
 import { MatchWeather } from '@/components/MatchWeather'
 import { Scoreboard } from '@/components/Scoreboard'
 import { SiteHeader } from '@/components/SiteHeader'
@@ -114,6 +115,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
     reeks: string
     datum: string | null
     stats: Awaited<ReturnType<typeof buildMatchStats>>['stats']
+    shots: Awaited<ReturnType<typeof buildMatchStats>>['shots']
     goals: { side: 'home' | 'away'; points: number; half: number; gameClock: number }[]
     timeouts: { side: 'home' | 'away'; half: number; gameClock: number }[]
   } | null = null
@@ -141,7 +143,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
           gameClock: Number((e as { gameClock?: unknown }).gameClock ?? 0),
         }
       })
-      share = { reeks: reeks ?? 'Krachtbal', datum, stats: statsRes.stats, goals, timeouts }
+      share = { reeks: reeks ?? 'Krachtbal', datum, stats: statsRes.stats, shots: statsRes.shots, goals, timeouts }
     } catch {
       share = null
     }
@@ -330,6 +332,16 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
             teams={{ home: state.teams.home.name, away: state.teams.away.name }}
             colors={{ home: state.teams.home.colors?.primary ?? null, away: state.teams.away.colors?.primary ?? null }}
           />
+          {/* Publieke shot map: voorheen enkel achter de analyse-login. Het virale napraat-moment. */}
+          {share.shots.length > 0 && (
+            <MatchStats
+              stats={share.stats}
+              shots={share.shots}
+              teams={{ home: state.teams.home.name, away: state.teams.away.name }}
+              goalAreaDepth={(matchDoc as { goalAreaDepth?: number } | null)?.goalAreaDepth ?? undefined}
+              matchLabel={`${share.reeks}${share.datum ? ` · ${share.datum}` : ''}`}
+            />
+          )}
         </>
       )}
       </div>

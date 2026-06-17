@@ -94,7 +94,7 @@ export default async function ClubPage({ params }: { params: Promise<{ id: strin
             <h2 className="cl-h2">Ploegen</h2>
             <div className="cl-teams">
               {teamsRes.docs.map((t) => (
-                <span key={t.id} className="cl-team">{t.name}{t.reeks ? <i> · {reeksNaam(t.reeks)}</i> : null}</span>
+                <Link key={t.id} href={`/ploegen/${t.id}`} className="cl-team">{t.name}{t.reeks ? <i> · {reeksNaam(t.reeks)}</i> : null}</Link>
               ))}
             </div>
           </section>
