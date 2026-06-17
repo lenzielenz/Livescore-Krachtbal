@@ -1,3 +1,5 @@
+import Link from 'next/link'
+
 import { SiteHeader } from '@/components/SiteHeader'
 import { KrachtbalIcon } from '@/components/KrachtbalIcon'
 import { getPayloadClient } from '@/lib/payload-client'
@@ -71,6 +73,7 @@ export default async function SupersterPage({ searchParams }: { searchParams: Pr
         <header className="ss-intro">
           <h1>⭐ <span className="brand">Jeugd-superster</span></h1>
           <p>Wie scoort het meest in zijn reeks? Doelpunten én rugworpen (+2) tellen mee — jongens en meisjes apart. Seizoen {seizoen}.</p>
+          <p><Link href="/ontwikkeling" style={{ color: 'var(--accent)', fontWeight: 700 }}>📈 Naar de Skill &amp; Fame-ontwikkeling →</Link></p>
         </header>
 
         {top && (
