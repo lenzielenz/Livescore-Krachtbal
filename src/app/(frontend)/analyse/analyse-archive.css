@@ -1,0 +1,82 @@
+/* Analyse-archief: zoek/filter + per seizoen inklapbaar. Houdt de lijst kort bij veel opnames,
+   zonder iets te verwijderen. Bouwt voort op analyse.css (an-card/an-list/an-team …). */
+.an-archive {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.an-archive-bar {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.an-archive-search,
+.an-archive-reeks {
+  padding: 9px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--txt, #fff);
+  font-size: 0.9rem;
+}
+.an-archive-search {
+  flex: 1 1 180px;
+  min-width: 0;
+}
+.an-archive-reeks {
+  flex: 0 1 auto;
+}
+.an-archive-empty {
+  padding: 12px 2px;
+}
+
+.an-season {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--panel) 55%, transparent);
+}
+.an-season + .an-season {
+  margin-top: 8px;
+}
+.an-season-sum {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 14px;
+  cursor: pointer;
+  list-style: none;
+  font-weight: 700;
+  font-size: 0.92rem;
+}
+.an-season-sum::-webkit-details-marker {
+  display: none;
+}
+.an-season-name {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.an-season-count {
+  min-width: 22px;
+  text-align: center;
+  padding: 1px 9px;
+  border-radius: 99px;
+  background: color-mix(in srgb, var(--accent) 18%, var(--line));
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.an-season-sum::after {
+  content: '▾';
+  color: var(--dim);
+  transition: transform 0.2s ease;
+}
+.an-season[open] .an-season-sum::after {
+  transform: rotate(180deg);
+}
+.an-season > .an-list {
+  padding: 2px 10px 12px;
+}
