@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { MatchDayNav } from '@/components/MatchDayNav'
 import { SiteHeader } from '@/components/SiteHeader'
 import { isFederationLevel } from '@/lib/access'
+import { buildMatchState } from '@/lib/match-engine'
 import { countLineup, LINEUP_MIN } from '@/lib/match-readiness'
 import { getOrCreateMatchSheet } from '@/lib/matchsheet-data'
 import { isReleaseTime } from '@/lib/matchsheet-workflow'
@@ -55,6 +56,9 @@ export default async function ScheidsrechterPage({ params }: { params: Promise<{
     limit: 1,
   })
   const sheet = sheetFull.docs[0]
+
+  // Afgeleide eindstand voor de SR-eindscore-bevestiging (null als de opbouw faalt).
+  const liveState = await buildMatchState(payload, Number(matchId)).catch(() => null)
 
   // Rol bepalen: enkel de federatie ziet de vrijgavecode (om ze door te geven aan de SR).
   const { user } = await payload.auth({ headers: await headers() }).catch(() => ({ user: null }))
@@ -109,6 +113,13 @@ export default async function ScheidsrechterPage({ params }: { params: Promise<{
         initialForfaitUitslag={(sheet?.forfait as { uitslag?: string } | undefined)?.uitslag ?? 'geen'}
         initialStartAkkoord={Boolean((sheet?.wedstrijdstart as { akkoord?: boolean } | undefined)?.akkoord)}
         initialStartNaam={(sheet?.wedstrijdstart as { naam?: string } | undefined)?.naam ?? ''}
+        initialEindeAkkoord={Boolean((sheet?.wedstrijdeinde as { akkoord?: boolean } | undefined)?.akkoord)}
+        initialEindeNaam={(sheet?.wedstrijdeinde as { naam?: string } | undefined)?.naam ?? ''}
+        matchFinished={liveState?.match.status === 'finished'}
+        homeScore={liveState?.score.home ?? 0}
+        awayScore={liveState?.score.away ?? 0}
+        homeTeam={liveState?.teams.home.name ?? 'Thuis'}
+        awayTeam={liveState?.teams.away.name ?? 'Uit'}
         lineupReady={{
           homeOk: countLineup(sheet?.homeLineup) >= LINEUP_MIN,
           awayOk: countLineup(sheet?.awayLineup) >= LINEUP_MIN,
