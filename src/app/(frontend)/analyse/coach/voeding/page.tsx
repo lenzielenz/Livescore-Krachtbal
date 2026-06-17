@@ -36,7 +36,7 @@ export default async function VoedingPage() {
           <h1 className="page-title">🥗 <span className="brand">Voedingsadvies</span></h1>
           <Link className="sk-demo-cta" href="/analyse/coach">← Coach-dashboard</Link>
         </div>
-        <p className="an-lead">Vul je gegevens en je doel in — je krijgt meteen een persoonlijk, sportgericht eetplan: hoeveel calorieën, eiwit, koolhydraten en vet, hoeveel water, en hoe je het over de dag verdeelt. Bewaar het bij je profiel zodat het de volgende keer al ingevuld staat.</p>
+        <p className="an-lead">Vul je gegevens en doel in → meteen een persoonlijk eetplan op maat, bewaard bij je profiel.</p>
         <NutritionPlanner
           initial={sanitizeNutritionProfile((me as { nutritionProfile?: unknown }).nutritionProfile)}
           tracker={sanitizeTracker((me as { nutritionTracker?: unknown }).nutritionTracker)}
