@@ -1,6 +1,8 @@
 import Link from 'next/link'
 
 import { SiteHeader } from '@/components/SiteHeader'
+import { isFederationLevel } from '@/lib/access'
+import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
 import { VERANTWOORDELIJKE_OPTIONS, type Verantwoordelijke } from '@/lib/bekerfinale-checklist'
 import '../wedstrijdblad.css'
@@ -12,7 +14,23 @@ type Taak = { taak?: string; verantwoordelijke?: string | null; gedaan?: boolean
 const verantwLabel = (v: string | null | undefined) =>
   VERANTWOORDELIJKE_OPTIONS.find((o) => o.value === v)?.label ?? 'Overig'
 
+// Federatie/admin-only: de organisatie-/takenlijst van de bekerfinale.
 export default async function BekerfinalePage() {
+  const me = await getAuthUser()
+  if (!isFederationLevel(me)) {
+    return (
+      <>
+        <SiteHeader active="federatie" />
+        <div className="site">
+          <h1 className="page-title">Bekerfinales — organisatie</h1>
+          <p className="wb-intro">
+            Enkel de federatie/admin kan de bekerfinale-organisatie bekijken.{' '}
+            <Link href="/inloggen" style={{ color: 'var(--accent)' }}>Inloggen →</Link>
+          </p>
+        </div>
+      </>
+    )
+  }
   const payload = await getPayloadClient()
   const finals = await payload
     .find({ collection: 'cupfinals', sort: '-datum', limit: 50, depth: 0 })
