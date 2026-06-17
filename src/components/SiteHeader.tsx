@@ -17,16 +17,17 @@ export type NavSection = 'wedstrijden' | 'stand' | 'demo' | 'analyse' | 'trainin
 
 const PRIMARY: { href: string; label: string; key: NavSection }[] = [
   { href: '/', label: 'Wedstrijden', key: 'wedstrijden' },
-  // Demo + uitleg samen: de infohub (/uitleg) legt uit hoe het werkt én biedt de demo aan.
-  { href: '/uitleg', label: '🎓 Zo werkt het', key: 'demo' },
 ]
 
 // Algemene ingangen bovenaan het Meer-menu (de twee meest gebruikte). Het kantinescherm staat
 // hier niet (meer): dat is een clubtool en vind je onder "Mijn club".
 // `auth: true` → enkel tonen wanneer je ingelogd bent ("Mijn Krachtbal" is je persoonlijke hub).
+// "Zo werkt het" (de infohub /uitleg) bundelt uitleg + demo + prijzen en staat hier publiek,
+// zodat de bovenbalk strak blijft (titel · weer · Meer) i.p.v. af te breken op smalle schermen.
 const GENERAL: { href: string; label: string; auth?: boolean }[] = [
   { href: '/hub', label: '🏠 Mijn Krachtbal', auth: true },
   { href: '/nieuws', label: '📰 Nieuws' },
+  { href: '/uitleg', label: '🎓 Zo werkt het' },
 ]
 
 // Wedstrijd-info onder een eigen kopje "Wedstrijden" in het menu. Bewust kort gehouden: de overige
