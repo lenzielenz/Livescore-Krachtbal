@@ -44,7 +44,7 @@ async function main() {
     const sidePlayers = side === 'home' ? hp : ap
     const isDoel = (poss.nextThrowNumber ?? 1) >= (poss.throwsAllowed ?? 1)
     // Speler kiezen: doelworp thuis → de ster (tenzij die net wierp); anders roteren, nooit 2× na elkaar.
-    let pid = isDoel && side === 'home' && star.id !== lastPid ? star.id : (sidePlayers.find((p) => p.id !== lastPid)?.id ?? sidePlayers[0].id)
+    const pid = isDoel && side === 'home' && star.id !== lastPid ? star.id : (sidePlayers.find((p) => p.id !== lastPid)?.id ?? sidePlayers[0].id)
     const dir = poss.dir ?? 'up'
     const goalY = dir === 'up' ? 0.96 : 0.04
     const x = 0.2 + ((i * 0.13) % 0.6) // varieer de zone (links/midden/rechts)
