@@ -18,7 +18,7 @@ export type VergunningStatus = 'geen' | 'aangevraagd' | 'geldig'
 // (multi-tenant isolatie — AUDIT §4). Verwijderen enkel federatie.
 const canWritePlayers: Access = ({ req }) => {
   if (isFederationLevel(req.user)) return true
-  if (!hasRole(req.user, 'club-beheerder')) return false
+  if (!hasRole(req.user, 'club-beheerder', 'club-medewerker')) return false
   const clubId = userClubId(req.user)
   return clubId != null ? { 'team.club': { equals: clubId } } : false
 }

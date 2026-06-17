@@ -25,7 +25,7 @@ export async function POST(req: Request) {
     const payload = await getPayloadClient()
     const user = await authUser(payload, req)
     if (!user) return Response.json({ error: 'Niet ingelogd.' }, { status: 401 })
-    if (!isFederationLevel(user) && !hasRole(user, 'club-beheerder')) {
+    if (!isFederationLevel(user) && !hasRole(user, 'club-beheerder', 'club-medewerker')) {
       return Response.json({ error: 'Enkel club-beheerder/federatie.' }, { status: 403 })
     }
 

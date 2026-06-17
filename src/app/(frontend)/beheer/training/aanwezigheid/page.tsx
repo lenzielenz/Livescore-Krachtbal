@@ -22,7 +22,7 @@ const relId = (v: unknown): number | null =>
 export default async function AanwezigheidPage() {
   const me = await getAuthUser()
   const fed = isFederationLevel(me)
-  const isClubBeheerder = hasRole(me, 'club-beheerder')
+  const isClubBeheerder = hasRole(me, 'club-beheerder', 'club-medewerker')
   const canView = canTraining(me)
   const canWrite = fed || isClubBeheerder
 

@@ -8,6 +8,8 @@ export type UserRole =
   | 'federatie' // comité/afgevaardigde — beheert vergunningen, reeksindeling, kan altijd overschrijven
   | 'scheidsrechter' // toegewezen aan een wedstrijd
   | 'club-beheerder' // beheert eigen club: leden + opstelling
+  | 'club-medewerker' // operationele clubhelper: aantekenen, opstelling, spelers & training beheren — GEEN accounts/instellingen
+  | 'club-lid' // herkend clublid: leden-content + eigen trainingsluik (bekijken)
   | 'kapitein' // tekent het blad af
   | 'scorekeeper' // bedient het live-aantekenscherm
   | 'viewer' // supporter — volgt live mee (alleen lezen). Standaardrol bij zelfregistratie.
@@ -17,6 +19,8 @@ export const ROLE_OPTIONS: { label: string; value: UserRole }[] = [
   { label: 'Federatie / comité', value: 'federatie' },
   { label: 'Scheidsrechter', value: 'scheidsrechter' },
   { label: 'Club-beheerder', value: 'club-beheerder' },
+  { label: 'Club-medewerker (operationeel)', value: 'club-medewerker' },
+  { label: 'Lid van de club', value: 'club-lid' },
   { label: 'Kapitein', value: 'kapitein' },
   { label: 'Aantekenaar (scorekeeper)', value: 'scorekeeper' },
   { label: 'Supporter (volgt live mee)', value: 'viewer' },
@@ -63,10 +67,17 @@ export function canAnalyse(user: unknown): boolean {
   return heeft(u?.analyseToegangTot) || heeft(u?.analyseBewerkTot)
 }
 
-/** Mag deze gebruiker het trainingsluik (progressie + aanwezigheid) gebruiken? Admin/federatie
- * en club-beheerders altijd; anderen als de admin hen training-toegang gaf (users.trainingAccess). */
+/** Operationele clubstaf: beheert de eigen club (aantekenen, opstelling, spelers, training) — maar
+ * NIET de gevoelige zaken (accounts/rollen). Club-beheerder + club-medewerker. */
+export function isClubStaff(user: unknown): boolean {
+  return hasRole(user, 'club-beheerder', 'club-medewerker')
+}
+
+/** Mag deze gebruiker het trainingsluik (progressie + aanwezigheid) gebruiken? Admin/federatie,
+ * clubstaf en clubleden mogen het BEKIJKEN; anderen als de admin hen training-toegang gaf. Wie mag
+ * INVOEREN wordt apart gecheckt (isFederationLevel || isClubStaff) — een club-lid kijkt enkel. */
 export function canTraining(user: unknown): boolean {
-  if (isFederationLevel(user) || hasRole(user, 'club-beheerder')) return true
+  if (isFederationLevel(user) || hasRole(user, 'club-beheerder', 'club-medewerker', 'club-lid')) return true
   return Boolean((user as { trainingAccess?: unknown } | null)?.trainingAccess)
 }
 

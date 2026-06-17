@@ -229,7 +229,7 @@ export default async function TrainingPlanPage({ searchParams }: { searchParams:
   }
 
   // Wie mag doelen wegschrijven (federatie/club-beheerder)?
-  const canWrite = isFederationLevel(me) || hasRole(me, 'club-beheerder')
+  const canWrite = isFederationLevel(me) || hasRole(me, 'club-beheerder', 'club-medewerker')
   // Inplannen kan enkel met een gekende club (sessies horen bij een club).
   const canPlan = canWrite && myClubId != null
   const planReeks = reeks === 'overig' ? '' : reeks

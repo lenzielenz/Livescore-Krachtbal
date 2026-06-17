@@ -77,9 +77,9 @@ export const MatchSheets: CollectionConfig = {
     // Intern document — enkel ingelogde rollen lezen het.
     read: ({ req }) => Boolean(req.user),
     create: ({ req }) =>
-      isFederationLevel(req.user) || hasRole(req.user, 'scheidsrechter', 'club-beheerder'),
+      isFederationLevel(req.user) || hasRole(req.user, 'scheidsrechter', 'club-beheerder', 'club-medewerker'),
     update: ({ req }) =>
-      isFederationLevel(req.user) || hasRole(req.user, 'scheidsrechter', 'club-beheerder'),
+      isFederationLevel(req.user) || hasRole(req.user, 'scheidsrechter', 'club-beheerder', 'club-medewerker'),
     delete: ({ req }) => isFederationLevel(req.user),
   },
   hooks: {
