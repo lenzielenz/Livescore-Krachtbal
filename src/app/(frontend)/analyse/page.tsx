@@ -11,6 +11,7 @@ import { buildScoreboards, clubLogoUrl } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
 import { reeksNaam, resolveCompetitieReeks } from '@/lib/reeksen'
 import { buildSeasonStats, type SeasonPlayer } from '@/lib/season-stats'
+import { AnalyseArchive } from './AnalyseArchive'
 import { AnalyseDelen } from './AnalyseDelen'
 import { AnalyseNav } from './AnalyseNav'
 import { DeleteMatchButton } from './DeleteMatchButton'
@@ -278,32 +279,17 @@ export default async function AnalysePage({ searchParams }: { searchParams: Prom
             )}
 
             <h2 className="an-sub" style={canRecord ? undefined : { marginTop: 0 }}>📊 Afgelopen wedstrijden</h2>
-            {rows.length === 0 ? (
-              <p className="empty">Nog geen afgelopen wedstrijden om te analyseren.</p>
-            ) : (
-              <div className="an-list an-list-sm">
-                {rows.map((r) => (
-                  <Link key={r.id} href={`/analyse/${r.id}`} className="an-card">
-                    <span className="an-card-reeks">{r.reeks}</span>
-                    <span className="an-card-row">
-                      <span className="an-team">
-                        <TeamLogo name={r.home.name} logoUrl={r.home.logoUrl} logoFit={r.home.logoFit} side="home" size="xs" ringColor={r.home.colors?.primary} />
-                        <span className="an-team-nm">{r.home.name}</span>
-                      </span>
-                      <span className="an-score">{r.score.home}<span className="an-dash">–</span>{r.score.away}</span>
-                      <span className="an-team away">
-                        <span className="an-team-nm">{r.away.name}</span>
-                        <TeamLogo name={r.away.name} logoUrl={r.away.logoUrl} logoFit={r.away.logoFit} side="away" size="xs" ringColor={r.away.colors?.primary} />
-                      </span>
-                    </span>
-                    <span className="an-card-date">
-                      {r.date ? new Date(r.date).toLocaleDateString('nl-BE', { day: '2-digit', month: 'short', year: 'numeric' }) : ''}
-                    </span>
-                    {canRecord && <DeleteMatchButton matchId={r.id} label={`${r.home.name} – ${r.away.name}`} />}
-                  </Link>
-                ))}
-              </div>
-            )}
+            <AnalyseArchive
+              rows={rows.map((r) => ({
+                id: r.id,
+                reeks: r.reeks,
+                date: r.date,
+                score: r.score,
+                home: { name: r.home.name, logoUrl: r.home.logoUrl, logoFit: r.home.logoFit, primary: r.home.colors?.primary ?? null },
+                away: { name: r.away.name, logoUrl: r.away.logoUrl, logoFit: r.away.logoFit, primary: r.away.colors?.primary ?? null },
+              }))}
+              canDelete={canRecord}
+            />
           </div>
         </details>
 
