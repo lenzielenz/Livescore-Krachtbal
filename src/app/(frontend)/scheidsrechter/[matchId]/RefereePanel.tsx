@@ -53,6 +53,13 @@ export function RefereePanel({
   initialForfaitUitslag,
   initialStartAkkoord,
   initialStartNaam,
+  initialEindeAkkoord,
+  initialEindeNaam,
+  matchFinished,
+  homeScore,
+  awayScore,
+  homeTeam,
+  awayTeam,
   lineupReady,
   officialsHint,
   isFederation,
@@ -70,6 +77,13 @@ export function RefereePanel({
   initialForfaitUitslag: string
   initialStartAkkoord: boolean
   initialStartNaam: string
+  initialEindeAkkoord: boolean
+  initialEindeNaam: string
+  matchFinished: boolean
+  homeScore: number
+  awayScore: number
+  homeTeam: string
+  awayTeam: string
   lineupReady: { homeOk: boolean; awayOk: boolean }
   officialsHint: string | null
   isFederation: boolean
@@ -85,6 +99,9 @@ export function RefereePanel({
   const [ffSaved, setFfSaved] = useState<string>(initialForfaitUitslag || 'geen')
   const [startAkkoord, setStartAkkoord] = useState<boolean>(initialStartAkkoord)
   const [startNaam, setStartNaam] = useState<string>(initialStartNaam)
+  const [eindeAkkoord, setEindeAkkoord] = useState<boolean>(initialEindeAkkoord)
+  const [eindeNaam, setEindeNaam] = useState<string>(initialEindeNaam)
+  const [eindeCode, setEindeCode] = useState<string>('')
   const [code, setCode] = useState<string>('')
   const [msg, setMsg] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -106,6 +123,17 @@ export function RefereePanel({
           ? `Akkoord gegeven${json.naam ? ` (${json.naam})` : ''} — de aantekenaar kan de wedstrijd openen.`
           : 'Akkoord ingetrokken.',
       )
+    } else {
+      notify(false, json.error || 'Mislukt.')
+    }
+  }
+
+  const saveEindeAkkoord = async (akkoord: boolean, extra?: { qr?: string }) => {
+    const { ok, json } = await post({ action: 'wedstrijdeinde', akkoord, naam: eindeNaam, code: eindeCode, qr: extra?.qr })
+    if (ok) {
+      setEindeAkkoord(akkoord)
+      if (json.naam) setEindeNaam(json.naam)
+      notify(true, akkoord ? `Eindstand bevestigd${json.naam ? ` (${json.naam})` : ''}.` : 'Bevestiging ingetrokken.')
     } else {
       notify(false, json.error || 'Mislukt.')
     }
@@ -303,6 +331,68 @@ export function RefereePanel({
                 className="wb-btn wb-btn-primary"
               >
                 ✓ Akkoord
+              </button>
+            </div>
+          </>
+        )}
+      </section>
+
+      <section className="wb-card" style={{ gridColumn: '1 / -1', borderColor: eindeAkkoord ? '#2a9d6a' : undefined }}>
+        <h2>Eindstand bevestigen</h2>
+        <p className="wb-sub">
+          De scheidsrechter bekrachtigt de officiële eindstand. Pas hiermee is de uitslag
+          scheidsrechterlijk goedgekeurd.
+        </p>
+        <p style={{ fontSize: '1.25rem', fontWeight: 800, margin: '2px 0 12px', color: 'var(--txt)' }}>
+          {homeTeam} <span style={{ color: 'var(--accent)' }}>{homeScore} – {awayScore}</span> {awayTeam}
+        </p>
+        <label style={{ display: 'flex', flexDirection: 'column', gap: 2, fontSize: '0.8rem', color: 'var(--dim)', marginBottom: 10 }}>
+          Naam scheidsrechter
+          <input
+            className="wb-input"
+            placeholder="Voor- en achternaam"
+            value={eindeNaam}
+            onChange={(e) => setEindeNaam(e.target.value)}
+          />
+        </label>
+
+        {eindeAkkoord ? (
+          <div className="wb-btn-row" style={{ marginTop: 0 }}>
+            <span className="wb-status" style={{ color: '#2a9d6a' }}>✓ Eindstand bevestigd{eindeNaam ? ` — ${eindeNaam}` : ''}</span>
+            <button type="button" onClick={() => saveEindeAkkoord(false)} disabled={busy} className="wb-btn">
+              Bevestiging intrekken
+            </button>
+          </div>
+        ) : !matchFinished ? (
+          <p className="wb-sub" style={{ color: '#e0a23d' }}>
+            De eindstand kan pas bevestigd worden zodra de wedstrijd is afgelopen.
+          </p>
+        ) : isFederation ? (
+          <button type="button" onClick={() => saveEindeAkkoord(true)} disabled={busy} className="wb-btn wb-btn-primary">
+            ✓ Eindstand bevestigen
+          </button>
+        ) : (
+          <>
+            {/* De scheidsrechter toont zijn persoonlijke QR; scan ze hier om de eindstand te bekrachtigen. */}
+            <QrScanner onResult={(qr) => saveEindeAkkoord(true, { qr })} />
+            <p className="wb-sub" style={{ margin: '12px 0 4px' }}>
+              Geen QR? Voer een code in (persoonlijke code of vrijgavecode) als backup:
+            </p>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+              <input
+                className="wb-input"
+                placeholder="Code"
+                value={eindeCode}
+                onChange={(e) => setEindeCode(e.target.value)}
+                style={{ flex: 1 }}
+              />
+              <button
+                type="button"
+                onClick={() => saveEindeAkkoord(true)}
+                disabled={busy || !eindeCode.trim()}
+                className="wb-btn wb-btn-primary"
+              >
+                ✓ Bevestigen
               </button>
             </div>
           </>

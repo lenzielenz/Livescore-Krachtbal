@@ -79,6 +79,7 @@ import * as migration_20260616_140000_news from './20260616_140000_news';
 import * as migration_20260616_160000_user_checkins from './20260616_160000_user_checkins';
 import * as migration_20260616_180000_match_mvp_votes from './20260616_180000_match_mvp_votes';
 import * as migration_20260617_120000_processed_ops from './20260617_120000_processed_ops';
+import * as migration_20260617_140000_wedstrijdeinde from './20260617_140000_wedstrijdeinde';
 
 export const migrations = [
   {
@@ -485,5 +486,10 @@ export const migrations = [
     up: migration_20260617_120000_processed_ops.up,
     down: migration_20260617_120000_processed_ops.down,
     name: '20260617_120000_processed_ops',
+  },
+  {
+    up: migration_20260617_140000_wedstrijdeinde.up,
+    down: migration_20260617_140000_wedstrijdeinde.down,
+    name: '20260617_140000_wedstrijdeinde',
   },
 ];

@@ -760,6 +760,14 @@ export interface Matchsheet {
     naam?: string | null;
     tijdstip?: string | null;
   };
+  wedstrijdeinde?: {
+    /**
+     * De afgeleide eindscore klopt en is scheidsrechterlijk bekrachtigd.
+     */
+    akkoord?: boolean | null;
+    naam?: string | null;
+    tijdstip?: string | null;
+  };
   /**
    * Aantal km voor deze wedstrijd — telt mee op de kwitantie (€0,4327/km).
    */
@@ -1681,6 +1689,13 @@ export interface MatchsheetsSelect<T extends boolean = true> {
   homeLineupConfirmed?: T;
   awayLineupConfirmed?: T;
   wedstrijdstart?:
+    | T
+    | {
+        akkoord?: T;
+        naam?: T;
+        tijdstip?: T;
+      };
+  wedstrijdeinde?:
     | T
     | {
         akkoord?: T;

@@ -96,7 +96,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ matchId
     const referee = isFederationLevel(user) || hasRole(user, 'scheidsrechter')
     // Vrijgeven mag óók vanaf het aantekenscherm (scorekeeper-tablet): de gescande QR/code van
     // de scheidsrechter ís de toestemming. Alle andere acties blijven SR/federatie-only.
-    if (body.action !== 'wedstrijdstart' && !referee) {
+    if (body.action !== 'wedstrijdstart' && body.action !== 'wedstrijdeinde' && !referee) {
       return Response.json({ error: 'Enkel scheidsrechter/federatie.' }, { status: 403 })
     }
 
@@ -206,6 +206,36 @@ export async function POST(req: Request, { params }: { params: Promise<{ matchId
         overrideAccess: false,
       })
       return Response.json({ ok: true, wedstrijdstart: updated.wedstrijdstart, naam })
+    }
+
+    if (body.action === 'wedstrijdeinde') {
+      // Scheidsrechter bekrachtigt de officiële eindstand (los van het start-akkoord). Zelfde
+      // bewijs van aanwezigheid als wedstrijdstart: QR/persoonlijke code (federatie/admin zonder).
+      const akkoord = Boolean(body.akkoord)
+      let naam: string | null = body.naam ?? null
+
+      if (akkoord && !isFederationLevel(user)) {
+        const result = await resolveRelease(payload, sheet, { qr: body.qr, code: body.code, naam })
+        if (!result.ok) return Response.json({ error: result.error }, { status: 403 })
+        naam = result.naam ?? naam
+      } else if (!akkoord && !referee) {
+        return Response.json({ error: 'Enkel scheidsrechter/federatie.' }, { status: 403 })
+      }
+
+      const updated = await payload.update({
+        collection: 'matchsheets',
+        id: sheet.id,
+        data: {
+          wedstrijdeinde: {
+            akkoord,
+            naam,
+            tijdstip: akkoord ? new Date().toISOString() : null,
+          },
+        },
+        user,
+        overrideAccess: false,
+      })
+      return Response.json({ ok: true, wedstrijdeinde: updated.wedstrijdeinde, naam })
     }
 
     if (body.action === 'vergoeding') {

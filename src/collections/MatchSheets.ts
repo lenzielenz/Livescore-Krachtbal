@@ -223,6 +223,25 @@ export const MatchSheets: CollectionConfig = {
       ],
     },
     {
+      // Eindstand — bevestiging scheidsrechter (officieel federatie-record): de SR keurt de
+      // afgeleide eindscore expliciet goed. Los van de start-akkoord (§12/§19): pas hiermee is de
+      // uitslag scheidsrechterlijk bekrachtigd. Vrijgave via dezelfde QR/code als wedstrijdstart.
+      name: 'wedstrijdeinde',
+      label: 'Eindstand — bevestiging scheidsrechter',
+      type: 'group',
+      fields: [
+        {
+          name: 'akkoord',
+          label: 'Scheidsrechter bevestigt de eindstand',
+          type: 'checkbox',
+          defaultValue: false,
+          admin: { description: 'De afgeleide eindscore klopt en is scheidsrechterlijk bekrachtigd.' },
+        },
+        { name: 'naam', label: 'Naam scheidsrechter', type: 'text' },
+        { name: 'tijdstip', label: 'Tijdstip bevestiging', type: 'date', admin: { date: { pickerAppearance: 'dayAndTime', displayFormat: 'dd/MM/yyyy HH:mm', timeFormat: 'HH:mm' } } },
+      ],
+    },
+    {
       // Scheidsrechtersvergoeding (kwitantie, formulier_2) + forfait-onkostenblad (formulier_3).
       label: 'Scheidsrechter — vergoeding & forfait',
       type: 'collapsible',
