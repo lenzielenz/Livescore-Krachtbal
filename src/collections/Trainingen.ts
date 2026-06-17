@@ -15,9 +15,9 @@ export const Trainingen: CollectionConfig = {
   },
   access: {
     read: ({ req }) => Boolean(req.user),
-    create: ({ req }) => isFederationLevel(req.user) || hasRole(req.user, 'club-beheerder'),
-    update: ({ req }) => isFederationLevel(req.user) || hasRole(req.user, 'club-beheerder'),
-    delete: ({ req }) => isFederationLevel(req.user) || hasRole(req.user, 'club-beheerder'),
+    create: ({ req }) => isFederationLevel(req.user) || hasRole(req.user, 'club-beheerder', 'club-medewerker'),
+    update: ({ req }) => isFederationLevel(req.user) || hasRole(req.user, 'club-beheerder', 'club-medewerker'),
+    delete: ({ req }) => isFederationLevel(req.user) || hasRole(req.user, 'club-beheerder', 'club-medewerker'),
   },
   fields: [
     {

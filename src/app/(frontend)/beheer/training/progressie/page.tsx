@@ -17,7 +17,7 @@ export const dynamic = 'force-dynamic'
 export default async function TrainingProgressiePage() {
   const me = await getAuthUser()
   const fed = isFederationLevel(me)
-  const isClubBeheerder = hasRole(me, 'club-beheerder')
+  const isClubBeheerder = hasRole(me, 'club-beheerder', 'club-medewerker')
   // Bekijken mag iedereen met training-toegang (federatie/club-beheerder of toegekend); invoeren enkel federatie/club.
   const canView = canTraining(me)
   const canWrite = fed || isClubBeheerder

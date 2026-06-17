@@ -88,7 +88,7 @@ export async function mayScoreMatch(
     const own = userOfficialId(user)
     return own != null && assigned.some((id) => String(id) === String(own))
   }
-  if (hasRole(user, 'club-beheerder')) {
+  if (hasRole(user, 'club-beheerder', 'club-medewerker')) {
     const clubId = userClubId(user)
     if (clubId == null) return false
     const clubs = await matchClubIds(payload, matchId)

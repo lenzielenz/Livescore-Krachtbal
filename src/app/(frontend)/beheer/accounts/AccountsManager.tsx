@@ -18,12 +18,14 @@ type RoleOption = { label: string; value: string }
 type Official = { id: number; name: string }
 
 // Volgorde voor de groepering (hoogste rol bepaalt de groep van een account).
-const TYPE_ORDER = ['admin', 'federatie', 'scheidsrechter', 'club-beheerder', 'scorekeeper', 'kapitein', 'viewer'] as const
+const TYPE_ORDER = ['admin', 'federatie', 'scheidsrechter', 'club-beheerder', 'club-medewerker', 'club-lid', 'scorekeeper', 'kapitein', 'viewer'] as const
 const TYPE_LABEL: Record<string, string> = {
   admin: 'Admins',
   federatie: 'Federatie',
   scheidsrechter: 'Scheidsrechters',
   'club-beheerder': 'Clubs',
+  'club-medewerker': 'Clubmedewerkers',
+  'club-lid': 'Clubleden',
   scorekeeper: 'Aantekenaars',
   kapitein: 'Kapiteins',
   viewer: 'Supporters',

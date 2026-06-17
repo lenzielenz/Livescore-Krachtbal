@@ -75,14 +75,14 @@ export function SiteHeader({ active = null }: { active?: NavSection }) {
         const roles = u?.roles
         const has = (r: string) => Array.isArray(roles) && roles.includes(r)
         const fed = has('admin') || has('federatie')
-        const club = has('club-beheerder')
+        const club = has('club-beheerder') || has('club-medewerker')
         const referee = has('scheidsrechter')
         // Dezelfde regel als canAnalyse in lib/access: admin, eigen analyse-toegang, of iemand
         // die zijn analyses met dit account deelt (anders vindt de gedeelde persoon het menu niet).
         const state = {
           loggedIn: Boolean(u),
           canAnalyse: canAnalyseUser(u),
-          canTraining: fed || club || Boolean(u?.trainingAccess),
+          canTraining: fed || club || has('club-lid') || Boolean(u?.trainingAccess),
           isClub: club,
           isReferee: referee,
           isFed: fed,

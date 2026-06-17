@@ -10,9 +10,9 @@ export const Trainingdoelen: CollectionConfig = {
   admin: { useAsTitle: 'metriek', defaultColumns: ['speler', 'metriek', 'doel'], group: 'Training' },
   access: {
     read: ({ req }) => Boolean(req.user),
-    create: ({ req }) => isFederationLevel(req.user) || hasRole(req.user, 'club-beheerder'),
-    update: ({ req }) => isFederationLevel(req.user) || hasRole(req.user, 'club-beheerder'),
-    delete: ({ req }) => isFederationLevel(req.user) || hasRole(req.user, 'club-beheerder'),
+    create: ({ req }) => isFederationLevel(req.user) || hasRole(req.user, 'club-beheerder', 'club-medewerker'),
+    update: ({ req }) => isFederationLevel(req.user) || hasRole(req.user, 'club-beheerder', 'club-medewerker'),
+    delete: ({ req }) => isFederationLevel(req.user) || hasRole(req.user, 'club-beheerder', 'club-medewerker'),
   },
   fields: [
     { name: 'speler', label: 'Speler', type: 'relationship', relationTo: 'players', required: true, index: true },

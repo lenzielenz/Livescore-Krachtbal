@@ -268,7 +268,17 @@ export interface User {
    * Elke rol geeft eigen rechten. Hiërarchie: Admin (volledige toegang, beheert gebruikers) staat boven Federatie (beheert competitie/vergunningen). Supporters registreren zichzelf; enkel een admin kent hier hogere rollen toe.
    */
   roles?:
-    | ('admin' | 'federatie' | 'scheidsrechter' | 'club-beheerder' | 'kapitein' | 'scorekeeper' | 'viewer')[]
+    | (
+        | 'admin'
+        | 'federatie'
+        | 'scheidsrechter'
+        | 'club-beheerder'
+        | 'club-medewerker'
+        | 'club-lid'
+        | 'kapitein'
+        | 'scorekeeper'
+        | 'viewer'
+      )[]
     | null;
   /**
    * De eigen club (supporter volgt ze; club-beheerder beheert ze).

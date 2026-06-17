@@ -47,11 +47,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ matchId
 
     const roles = userRoles(user)
     const mayEdit =
-      isFederationLevel(user) || hasRole(user, 'scheidsrechter', 'club-beheerder')
+      isFederationLevel(user) || hasRole(user, 'scheidsrechter', 'club-beheerder', 'club-medewerker')
     if (!mayEdit) return Response.json({ error: 'Geen rechten voor de opstelling.' }, { status: 403 })
 
-    // Een club-beheerder mag enkel de opstelling van de EIGEN club bewerken (multi-tenant isolatie).
-    if (!isFederationLevel(user) && hasRole(user, 'club-beheerder') && !hasRole(user, 'scheidsrechter')) {
+    // Een club-beheerder/-medewerker mag enkel de opstelling van de EIGEN club bewerken (multi-tenant isolatie).
+    if (!isFederationLevel(user) && hasRole(user, 'club-beheerder', 'club-medewerker') && !hasRole(user, 'scheidsrechter')) {
       const clubs = await matchSideClubs(payload, matchId)
       const need = side === 'home' ? clubs.home : clubs.away
       const own = userClubId(user)
