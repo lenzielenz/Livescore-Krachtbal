@@ -33,6 +33,23 @@
   border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--line));
   background: color-mix(in srgb, var(--accent) 12%, transparent);
 }
+/* Kop met de live-badge + inklap-knop, en de compacte samenvatting wanneer ingeklapt. */
+.vd-form-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.vd-form-toggle {
+  padding: 5px 12px; border-radius: 999px; cursor: pointer; font: inherit; font-size: 0.78rem; font-weight: 800;
+  color: var(--dim); background: transparent; border: 1px solid color-mix(in srgb, #fff 8%, var(--line));
+}
+.vd-form-toggle:hover { color: var(--txt); border-color: color-mix(in srgb, var(--accent) 40%, var(--line)); }
+.vd-summary {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; text-align: left;
+  padding: 12px 14px; border-radius: 12px; cursor: pointer; font: inherit;
+  border: 1px solid color-mix(in srgb, #fff 8%, var(--line));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 86%, #fff 8%), var(--panel));
+  transition: border-color 0.12s ease, transform 0.12s ease;
+}
+.vd-summary:hover { border-color: color-mix(in srgb, var(--accent) 40%, var(--line)); transform: translateY(-1px); }
+.vd-summary-txt { font-weight: 700; font-size: 0.92rem; color: var(--txt); min-width: 0; }
+.vd-summary-edit { flex: none; font-size: 0.78rem; font-weight: 800; color: var(--accent); white-space: nowrap; }
 .vd-opt { font-weight: 600; text-transform: none; letter-spacing: 0; color: var(--dim); opacity: 0.7; }
 .vd-err { margin: 0; color: #ef476f; font-weight: 600; font-size: 0.86rem; }
 

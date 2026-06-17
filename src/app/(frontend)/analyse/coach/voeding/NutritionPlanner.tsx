@@ -122,7 +122,7 @@ function MacroDonut({ p, c, f }: { p: number; c: number; f: number }) {
   )
 }
 
-export function NutritionPlanner({ initial, canSave = false, tracker = null }: { initial?: NutritionProfile | null; canSave?: boolean; tracker?: TrackerStore | null }) {
+export function NutritionPlanner({ initial, canSave = false, tracker = null, startCollapsed = false }: { initial?: NutritionProfile | null; canSave?: boolean; tracker?: TrackerStore | null; startCollapsed?: boolean }) {
   const [sex, setSex] = useState<Sex>(initial?.sex ?? 'm')
   const [age, setAge] = useState(initial?.age || '25')
   const [height, setHeight] = useState(initial?.heightCm || '178')
@@ -135,6 +135,9 @@ export function NutritionPlanner({ initial, canSave = false, tracker = null }: {
   const [diet, setDiet] = useState<Diet>(initial?.diet ?? 'alles')
   const [target, setTarget] = useState(initial?.targetWeightKg || '')
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  // Zodra je gegevens ingevuld zijn (reeds bewaard), klapt het formulier in tot een compacte
+  // samenvatting — je hebt het dan niet meer nodig en het plan/de tracker krijgt de ruimte.
+  const [formOpen, setFormOpen] = useState(!startCollapsed)
   const [tab, setTab] = useState<TabKey>('vandaag')
   const [weekShift, setWeekShift] = useState(0)
   const [copied, setCopied] = useState(false)
@@ -215,7 +218,24 @@ export function NutritionPlanner({ initial, canSave = false, tracker = null }: {
   return (
     <div className="vd">
       <form className="vd-form" onSubmit={(e) => e.preventDefault()}>
-        <span className="vd-form-live">⚡ Live — alles past zich meteen aan</span>
+        <div className="vd-form-head">
+          <span className="vd-form-live">⚡ Live — alles past zich meteen aan</span>
+          {plan && formOpen && (
+            <button type="button" className="vd-form-toggle" onClick={() => setFormOpen(false)} aria-expanded={formOpen}>
+              ▲ Inklappen
+            </button>
+          )}
+        </div>
+        {plan && !formOpen ? (
+          <button type="button" className="vd-summary" onClick={() => setFormOpen(true)}>
+            <span className="vd-summary-txt">
+              {sex === 'm' ? '♂ Man' : '♀ Vrouw'} · {age} j · {height} cm · {weight} kg
+              {' · '}{GOALS.find((g) => g.v === goal)?.label ?? ''}{goal !== 'onderhoud' && target ? ` → ${target} kg` : ''}
+            </span>
+            <span className="vd-summary-edit">✏️ Aanpassen</span>
+          </button>
+        ) : (
+        <>
         <div className="vd-field">
           <span className="vd-lbl">Geslacht</span>
           <div className="vd-chips">
@@ -295,6 +315,8 @@ export function NutritionPlanner({ initial, canSave = false, tracker = null }: {
                 : 'Je gegevens worden bij je account bewaard, zodat ze de volgende keer al ingevuld staan.'}
             </span>
           </div>
+        )}
+        </>
         )}
       </form>
 
