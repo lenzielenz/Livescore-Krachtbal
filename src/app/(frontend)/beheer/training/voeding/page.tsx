@@ -38,7 +38,7 @@ export default async function TrainingVoedingPage() {
         <p className="wb-intro">
           Vul je gegevens en doel in → meteen een persoonlijk eetplan op maat, bewaard bij je profiel.
         </p>
-        <NutritionPlanner initial={profile} canSave />
+        <NutritionPlanner initial={profile} canSave startCollapsed={Boolean((me as { nutritionProfile?: unknown } | null)?.nutritionProfile)} />
       </div>
     </>
   )

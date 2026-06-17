@@ -41,6 +41,7 @@ export default async function VoedingPage() {
           initial={sanitizeNutritionProfile((me as { nutritionProfile?: unknown }).nutritionProfile)}
           tracker={sanitizeTracker((me as { nutritionTracker?: unknown }).nutritionTracker)}
           canSave
+          startCollapsed={Boolean((me as { nutritionProfile?: unknown }).nutritionProfile)}
         />
       </div>
     </>
