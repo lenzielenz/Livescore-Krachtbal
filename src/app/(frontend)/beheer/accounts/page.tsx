@@ -71,8 +71,11 @@ export default async function AccountsPage() {
         <p className="acc-page-intro">
           Beheer alle accounts: ken rollen toe (supporter, club, scheidsrechter, federatie, admin), geef
           analyse- of training-toegang, koppel een club en — voor scheidsrechters — koppel hun
-          scheidsrechtersdossier (zo werkt hun persoonlijke QR/code). Onderaan kan je de analyse-opnames
-          van gebruikers samenbrengen.
+          scheidsrechtersdossier (zo werkt hun persoonlijke QR/code). Standaard staan de accounts
+          <strong> per club</strong> gegroepeerd (in- en uitklapbaar) — filter op een club of schakel naar
+          “per rol”. Geef iemand de rol <strong>club-beheerder</strong>, dan kent die binnen de eigen club
+          zelf de juiste rechten toe via Clubteam-beheer. Onderaan kan je de analyse-opnames van gebruikers
+          samenbrengen.
         </p>
         <AccountsManager users={users} clubs={clubs} officials={officials} roleOptions={[...ROLE_OPTIONS]} />
       </div>
