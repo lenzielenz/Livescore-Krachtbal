@@ -4,7 +4,7 @@
 //  - de startpagina ("Aan de slag"-sectie)
 //  - de profielpagina's zelf, die via <ProfileTools> "de rest" tonen
 // Zo blijft alles automatisch uitgelijnd.
-export type ProfileTool = { href: string; label: string }
+export type ProfileTool = { href: string; label: string; adminOnly?: boolean }
 
 export type ProfileKey = 'clubs' | 'scheidsrechters' | 'federatie'
 
@@ -56,8 +56,8 @@ export const PROFILES: Profile[] = [
     hubHref: '/federatie',
     intro: 'Reglement, seizoensplanning en het volledige beheer.',
     tools: [
-      { href: '/admin', label: '⚙️ Beheer (admin)' },
-      { href: '/beheer/accounts', label: '👤 Accounts' },
+      { href: '/admin', label: '⚙️ Beheer (admin)', adminOnly: true },
+      { href: '/beheer/accounts', label: '👤 Accounts', adminOnly: true },
       { href: '/beheer/leden', label: '🩺 Ledenkeuring' },
       { href: '/beheer/planning', label: '📅 Seizoensplanning' },
       { href: '/reglement', label: '📖 Reglement' },
