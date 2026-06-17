@@ -7,6 +7,7 @@ import { TeamLogo } from '@/components/TeamLogo'
 import { categoryConfig } from '@/lib/categories'
 import { DEFAULT_AWAY_COLOR, DEFAULT_HOME_COLOR, readableOnDark } from '@/lib/club-colors'
 import type { MatchState } from '@/lib/match-engine'
+import { genOpId } from '@/lib/op-id'
 import type { SimpleSide } from '@/lib/simple-score'
 import { useLiveStream } from '@/lib/use-live-stream'
 import './simple-scorekeeper.css'
@@ -19,16 +20,6 @@ function fmtClock(total: number): string {
 // Voornaam = eerste woord van de naam (compact tonen naast het rugnummer).
 function firstName(name: string): string {
   return name.trim().split(/\s+/)[0] ?? ''
-}
-
-// Uniek id per actie → bij heruitzending vanuit de offline-wachtrij herkent de server het als
-// dezelfde actie en telt ze niet dubbel (idempotentie). De opId reist mee in de wachtrij, dus een
-// retry hergebruikt exact dezelfde id.
-function genOpId(): string {
-  try {
-    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID()
-  } catch {}
-  return `op-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
 }
 
 interface RosterPlayer {
