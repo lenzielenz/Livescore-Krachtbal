@@ -35,7 +35,6 @@ const GENERAL: { href: string; label: string; auth?: boolean }[] = [
 const WEDSTRIJDEN: { href: string; label: string }[] = [
   { href: '/rangschikking', label: '📊 Stand' },
   { href: '/pronostiek', label: '🔮 Pronostiekstand' },
-  { href: '/ontwikkeling', label: '📈 Spelersontwikkeling' },
   { href: '/tornooi', label: '🏆 Bekerwedstrijden' },
 ]
 
