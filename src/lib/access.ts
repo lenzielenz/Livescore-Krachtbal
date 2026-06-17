@@ -97,6 +97,14 @@ export function userOfficialId(user: unknown): number | string | null {
   return off
 }
 
+/** Het speler-dossier dat aan dit account gekoppeld is (id), indien aanwezig. */
+export function userPlayerId(user: unknown): number | string | null {
+  const p = (user as { player?: unknown } | null)?.player
+  if (p == null) return null
+  if (typeof p === 'object') return (p as { id: number | string }).id
+  return p as number | string
+}
+
 // ---- Collection-level Access helpers ----
 
 export const isAdmin: Access = ({ req }) => hasRole(req.user, 'admin')

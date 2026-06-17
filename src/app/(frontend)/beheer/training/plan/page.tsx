@@ -3,7 +3,7 @@ import type { Where } from 'payload'
 
 import { PrintButton } from '@/components/PrintButton'
 import { SiteHeader } from '@/components/SiteHeader'
-import { canTraining, hasRole, isFederationLevel, userClubId } from '@/lib/access'
+import { canTraining, hasRole, isFederationLevel, userClubId, userPlayerId } from '@/lib/access'
 import { competitionWhere } from '@/lib/analyse-access'
 import { getSelectedSeason } from '@/lib/analyse-season'
 import { getAuthUser } from '@/lib/auth-user'
@@ -172,9 +172,14 @@ export default async function TrainingPlanPage({ searchParams }: { searchParams:
   const rawClubId = userClubId(me)
   const myClubId: number | null = rawClubId != null && Number.isFinite(Number(rawClubId)) ? Number(rawClubId) : null
   const playerWhere: Where = myClubId != null ? { 'team.club': { equals: myClubId } } : {}
+  // Een 'lid van de club' (geen staf) ziet enkel z'n eigen gekoppelde speler.
+  const lidOnly = hasRole(me, 'club-lid') && !isFederationLevel(me) && !hasRole(me, 'club-beheerder', 'club-medewerker')
+  const scopedWhere: Where = lidOnly
+    ? { and: [playerWhere, { id: { equals: Number(userPlayerId(me) ?? -1) } }] }
+    : playerWhere
 
   const [playersRes, metingenRes, doelenRes] = await Promise.all([
-    payload.find({ collection: 'players', where: playerWhere, depth: 2, limit: 2000, sort: 'name' }),
+    payload.find({ collection: 'players', where: scopedWhere, depth: 2, limit: 2000, sort: 'name' }),
     payload.find({ collection: 'trainingmetingen', depth: 0, limit: 5000, sort: 'datum' }),
     payload.find({ collection: 'trainingdoelen', depth: 0, limit: 2000 }).catch(() => ({ docs: [] as Record<string, unknown>[] })),
   ])

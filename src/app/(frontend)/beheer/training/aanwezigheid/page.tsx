@@ -2,7 +2,7 @@ import Link from 'next/link'
 import type { Where } from 'payload'
 
 import { SiteHeader } from '@/components/SiteHeader'
-import { canTraining, hasRole, isFederationLevel, userClubId } from '@/lib/access'
+import { canTraining, hasRole, isFederationLevel, userClubId, userPlayerId } from '@/lib/access'
 import { competitionWhere } from '@/lib/analyse-access'
 import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
@@ -50,11 +50,16 @@ export default async function AanwezigheidPage() {
   const clubWhere: Where = fixedClubId != null ? { and: [{ id: { equals: fixedClubId } }, competitionWhere()] } : competitionWhere()
   const teamWhere: Where = fixedClubId != null ? { and: [{ club: { equals: fixedClubId } }, competitionWhere()] } : competitionWhere()
   const playerWhere: Where = fixedClubId != null ? { and: [{ 'team.club': { equals: fixedClubId } }, competitionWhere()] } : competitionWhere()
+  // Een 'lid van de club' (geen staf) ziet enkel z'n eigen gekoppelde speler.
+  const lidOnly = hasRole(me, 'club-lid') && !fed && !isClubBeheerder
+  const scopedPlayerWhere: Where = lidOnly
+    ? { and: [playerWhere, { id: { equals: Number(userPlayerId(me) ?? -1) } }] }
+    : playerWhere
 
   const [clubsRes, teamsRes, playersRes, sessiesRes] = await Promise.all([
     payload.find({ collection: 'clubs', where: clubWhere, depth: 0, limit: 2000, sort: 'name' }),
     payload.find({ collection: 'teams', where: teamWhere, depth: 0, limit: 4000, sort: 'name' }),
-    payload.find({ collection: 'players', where: playerWhere, depth: 2, limit: 5000, sort: 'name' }),
+    payload.find({ collection: 'players', where: scopedPlayerWhere, depth: 2, limit: 5000, sort: 'name' }),
     payload.find({ collection: 'trainingen', depth: 1, limit: 1000, sort: '-datum' }),
   ])
 
