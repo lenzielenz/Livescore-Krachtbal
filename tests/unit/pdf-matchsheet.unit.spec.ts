@@ -66,4 +66,15 @@ describe('generateMatchSheetPdf', () => {
     const bytes = await generateMatchSheetPdf({ ...base, goals: [], substitutions: [], score: undefined })
     expect(Buffer.from(bytes.slice(0, 4)).toString()).toBe('%PDF')
   })
+
+  it('rendert de scheidsrechterlijk bevestigde eindstand zonder te crashen (ook met ✓ in de naam)', async () => {
+    const bevestigd = await generateMatchSheetPdf({
+      ...base,
+      eindscoreBevestiging: { akkoord: true, naam: 'Wim ✓ Janssens', tijdstip: '04/06/2026 16:10' },
+    })
+    expect(Buffer.from(bevestigd.slice(0, 4)).toString()).toBe('%PDF')
+    // Niet-bevestigd toont de tegenhanger-regel; mag evenmin crashen.
+    const nietBevestigd = await generateMatchSheetPdf({ ...base, eindscoreBevestiging: { akkoord: false } })
+    expect(Buffer.from(nietBevestigd.slice(0, 4)).toString()).toBe('%PDF')
+  })
 })

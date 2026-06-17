@@ -26,6 +26,13 @@ const sigOf = (group: unknown) => {
   return { naam: g.naam, akkoord: Boolean(g.akkoord), tijdstip: g.tijdstip, handtekening: g.handtekening }
 }
 
+// Datumstring leesbaar maken (nl-BE); ongeldige/lege waarde valt terug op de ruwe input.
+const fmtDate = (v?: string): string | undefined => {
+  if (!v) return undefined
+  const d = new Date(v)
+  return Number.isNaN(d.getTime()) ? v : d.toLocaleString('nl-BE')
+}
+
 const lineupRows = (rows: unknown): PdfLineupRow[] =>
   ((rows ?? []) as { rugnummer?: number; player?: { name?: string } | number; deelgenomen?: boolean }[]).map(
     (r) => ({
@@ -53,6 +60,7 @@ export async function buildMatchSheetPdfData(
   const officials = ((sheet?.officials ?? {}) as Record<string, string>) || {}
   const keuring = (sheet?.keuring ?? {}) as Record<string, string>
   const refSig = sigOf(sheet?.scheidsrechter)
+  const eind = (sheet?.wedstrijdeinde ?? {}) as { akkoord?: boolean; naam?: string; tijdstip?: string }
   return {
     titel: String(sheet?.titel ?? built.match.title ?? `Wedstrijd ${matchId}`),
     datum: new Date(built.match.date).toLocaleString('nl-BE'),
@@ -60,6 +68,7 @@ export async function buildMatchSheetPdfData(
     reeks: reeks ?? undefined,
     scheidsrechter: refSig.naam || undefined,
     score: built.totals,
+    eindscoreBevestiging: { akkoord: Boolean(eind.akkoord), naam: eind.naam || undefined, tijdstip: fmtDate(eind.tijdstip) },
     halfScores: built.halfScores,
     crosses: built.crosses,
     timeouts: built.timeouts,
