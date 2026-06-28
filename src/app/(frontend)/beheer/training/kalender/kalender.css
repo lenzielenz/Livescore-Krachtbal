@@ -1,0 +1,213 @@
+/* Trainingskalender + jaarplan. Bouwt op de thema-tokens. */
+.kal-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 6px 0 16px;
+}
+.kal-nav {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--dim);
+  text-decoration: none;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+}
+.kal-nav:hover {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+  color: var(--txt);
+}
+.kal-season {
+  font-weight: 800;
+  font-size: 0.95rem;
+}
+
+/* ── Jaarplan-strip ───────────────────────────────────────────────────────────── */
+.kal-plan {
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel-grad, var(--panel));
+  margin-bottom: 20px;
+}
+.kal-plan-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.kal-h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+.kal-plan-legend {
+  font-size: 0.76rem;
+  color: var(--dim);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.kal-dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  margin-left: 6px;
+}
+.kal-dot.t {
+  background: var(--accent);
+}
+.kal-dot.m {
+  background: #e0a23d;
+}
+.kal-months {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 4px;
+  align-items: end;
+}
+.kal-mcell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+.kal-mbar {
+  display: flex;
+  flex-direction: column-reverse;
+  justify-content: flex-start;
+  width: 100%;
+  height: 64px;
+  border-radius: 6px 6px 3px 3px;
+  background: color-mix(in srgb, var(--line) 60%, transparent);
+  overflow: hidden;
+}
+/* De gevulde hoogte = aandeel van de drukste maand. */
+.kal-mbar > i {
+  display: block;
+  width: 100%;
+}
+.kal-mbar-t {
+  background: var(--accent);
+}
+.kal-mbar-m {
+  background: #e0a23d;
+}
+/* Bovenste deel van de balk leeg laten zodat de totale hoogte = --h. */
+.kal-mbar::before {
+  content: '';
+  display: block;
+  flex: 0 0 calc(100% - var(--h, 0%));
+}
+.kal-mname {
+  font-size: 0.66rem;
+  color: var(--dim);
+  text-transform: capitalize;
+}
+.kal-mcount {
+  font-size: 0.72rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  min-height: 0.9em;
+}
+
+/* ── Kalenderlijst ────────────────────────────────────────────────────────────── */
+.kal-list {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.kal-month-head {
+  margin: 0 0 8px;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.kal-month-n {
+  color: var(--dim);
+  font-weight: 700;
+}
+.kal-ev {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-left-width: 3px;
+  border-radius: 10px;
+  background: var(--panel-grad, var(--panel));
+  margin-bottom: 6px;
+  text-decoration: none;
+  color: inherit;
+}
+a.kal-ev:hover {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+}
+.kal-ev-training {
+  border-left-color: var(--accent);
+}
+.kal-ev-match {
+  border-left-color: #e0a23d;
+}
+.kal-ev-date {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 38px;
+  flex: 0 0 auto;
+  line-height: 1.05;
+}
+.kal-ev-date b {
+  font-size: 1.1rem;
+  font-variant-numeric: tabular-nums;
+}
+.kal-ev-date small {
+  font-size: 0.62rem;
+  color: var(--dim);
+  text-transform: lowercase;
+}
+.kal-ev-ico {
+  font-size: 1.2rem;
+  flex: 0 0 auto;
+}
+.kal-ev-body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+.kal-ev-title {
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.kal-ev-sub {
+  font-size: 0.76rem;
+  color: var(--dim);
+}
+.kal-ev-time {
+  font-size: 0.78rem;
+  color: var(--dim);
+  font-variant-numeric: tabular-nums;
+  flex: 0 0 auto;
+}
+
+@media (max-width: 560px) {
+  .kal-mname {
+    font-size: 0.58rem;
+  }
+  .kal-ev-time {
+    display: none;
+  }
+}
