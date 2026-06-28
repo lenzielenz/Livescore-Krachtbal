@@ -1,0 +1,148 @@
+/* Belasting & opkomsttrends — tabel + sparkline-verloop per speler. */
+
+.tr-legend {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 0.78rem;
+  color: var(--dim);
+  margin-bottom: 12px;
+}
+.tr-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.tr-legend-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+.tr-legend-dot.high { background: var(--accent); }
+.tr-legend-dot.mid  { background: #d48f1a; }
+.tr-legend-dot.low  { background: #c0392b; }
+.tr-legend-sep { flex: 1; min-width: 8px; }
+
+/* ── Tabel ────────────────────────────────────────────────────────────────────── */
+.tr-trends-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel-grad, var(--panel));
+}
+
+.tr-trends-tbl {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.tr-trends-tbl th {
+  padding: 10px 14px 8px;
+  text-align: left;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--dim);
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+.tr-trends-tbl th.r { text-align: right; }
+
+.tr-trends-tbl td {
+  padding: 9px 14px;
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 50%, transparent);
+  vertical-align: middle;
+}
+.tr-trends-tbl tbody tr:last-child td { border-bottom: none; }
+.tr-trends-tbl td.r {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.tr-trend-name { font-weight: 600; }
+.tr-trend-nr {
+  display: inline-block;
+  width: 2.6ch;
+  color: var(--dim);
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-right: 4px;
+}
+.tr-trend-tot { color: var(--dim); }
+.tr-trend-dim { color: var(--dim); }
+
+.tr-trend-badge {
+  display: inline-block;
+  font-size: 0.78rem;
+  font-weight: 800;
+  padding: 2px 9px;
+  border-radius: 20px;
+}
+.tr-trend-badge.tr-trend-high {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+.tr-trend-badge.tr-trend-mid {
+  color: #d48f1a;
+  background: color-mix(in srgb, #d48f1a 14%, transparent);
+}
+.tr-trend-badge.tr-trend-low {
+  color: #c0392b;
+  background: color-mix(in srgb, #c0392b 14%, transparent);
+}
+
+/* ── Sparkline (12 maanden jul → jun) ────────────────────────────────────────── */
+.tr-sparkline {
+  display: inline-flex;
+  gap: 2px;
+  align-items: flex-end;
+  height: 22px;
+  vertical-align: middle;
+}
+
+.tr-spark-bar {
+  display: block;
+  width: 8px;
+  height: 22px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--line) 70%, transparent);
+  position: relative;
+  overflow: hidden;
+  flex: 0 0 auto;
+}
+
+/* Gevulde hoogte = --h = sessies/total × 100% */
+.tr-spark-bar::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: var(--h, 0%);
+  border-radius: 3px 3px 2px 2px;
+  background: var(--accent);
+}
+
+/* Maand zonder geplande sessies: sterk vervaagd */
+.tr-spark-bar.empty {
+  opacity: 0.18;
+}
+
+/* Sessies gepland maar speler was er nooit: rode tint */
+.tr-spark-bar.none {
+  background: color-mix(in srgb, #c0392b 22%, color-mix(in srgb, var(--line) 70%, transparent));
+}
+
+/* Gedeeltelijk aanwezig: gemixte kleur */
+.tr-spark-bar.part::after {
+  background: color-mix(in srgb, var(--accent) 75%, #d48f1a);
+}
+
+@media (max-width: 640px) {
+  .tr-sparkline { display: none; }
+}
