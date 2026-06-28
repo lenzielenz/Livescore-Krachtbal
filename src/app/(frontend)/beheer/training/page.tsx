@@ -35,6 +35,12 @@ const TOOLS = [
     desc: 'Hou per training bij wie er was (en hoeveel), hoe lang jullie trainden en hoe het weer was.',
   },
   {
+    href: '/beheer/training/trends',
+    icon: '📊',
+    title: 'Belasting & opkomsttrends',
+    desc: 'Wie traint regelmatig, wie dreigt af te haken? Zie de opkomstfrequentie en trainingsbelasting per speler in één tabel, met maandelijks verloop.',
+  },
+  {
     href: '/beheer/training/voeding',
     icon: '🥗',
     title: 'Voedingsplan op maat',
