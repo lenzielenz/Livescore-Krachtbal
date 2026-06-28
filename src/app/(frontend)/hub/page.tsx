@@ -128,7 +128,7 @@ export default async function HubPage() {
           <section className="hub-sec">
             <h2 className="hub-h2">Mijn ontwikkeling</h2>
             <div className="hub-tiles">
-              <Link href={`/spelers/${myPlayerId}`} className="hub-tile">📈<span>Skill &amp; Fame</span></Link>
+              <Link href="/ontwikkeling" className="hub-tile">📈<span>Skill &amp; Fame</span></Link>
               <Link href="/beheer/training/progressie" className="hub-tile">🏋️<span>Mijn training</span></Link>
               <Link href="/profiel/scorecard" className="hub-tile">🃏<span>Scorecard</span></Link>
             </div>
@@ -148,7 +148,6 @@ export default async function HubPage() {
             <Link href="/wrapped" className="hub-tile">🎁<span>Wrapped</span></Link>
             <Link href="/nieuws" className="hub-tile">📰<span>Nieuws</span></Link>
             <Link href="/superster" className="hub-tile">⭐<span>Superster</span></Link>
-            <Link href="/ontwikkeling" className="hub-tile">📈<span>Ontwikkeling</span></Link>
             <Link href="/tornooi" className="hub-tile">🏆<span>Beker</span></Link>
           </div>
         </section>
