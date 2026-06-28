@@ -11,6 +11,12 @@ export const dynamic = 'force-dynamic'
 // Trainings-startpagina: het vertrekpunt van het trainingsluik, met de tools eronder.
 const TOOLS = [
   {
+    href: '/beheer/training/kalender',
+    icon: '📅',
+    title: 'Trainingskalender + jaarplan',
+    desc: 'Je trainingen én wedstrijden in één kalender, met een jaarplan over het seizoen — zie in één oogopslag hoe druk elke maand is.',
+  },
+  {
     href: '/beheer/training/plan',
     icon: '🧠',
     title: 'Trainingsplan op maat',
