@@ -1,0 +1,51 @@
+/* Persoonlijke ontwikkelingspagina (privé). Sober; bouwt op de thema-tokens + ps-kpi's. */
+.mo {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 18px 16px 60px;
+}
+.mo-head h1 {
+  margin: 0 0 4px;
+  font-size: 1.7rem;
+  font-weight: 900;
+}
+.mo-sub {
+  margin: 0 0 8px;
+  color: var(--dim);
+  font-size: 0.9rem;
+}
+.mo-private {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--line));
+  border-radius: 999px;
+  padding: 2px 10px;
+  margin-bottom: 14px;
+}
+.mo-empty {
+  color: var(--dim);
+  border: 1px dashed var(--line);
+  border-radius: 14px;
+  padding: 20px;
+  text-align: center;
+}
+.mo-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 18px;
+}
+.mo-link {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--accent);
+  text-decoration: none;
+}
+.mo-link:hover {
+  text-decoration: underline;
+}
