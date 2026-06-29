@@ -81,6 +81,8 @@ export interface Config {
     trainingmetingen: Trainingmetingen;
     trainingdoelen: Trainingdoelen;
     trainingen: Trainingen;
+    oefeningen: Oefeningen;
+    sessiesjablonen: Sessiesjablonen;
     possessions: Possession;
     throws: Throw;
     'match-events': MatchEvent;
@@ -113,6 +115,8 @@ export interface Config {
     trainingmetingen: TrainingmetingenSelect<false> | TrainingmetingenSelect<true>;
     trainingdoelen: TrainingdoelenSelect<false> | TrainingdoelenSelect<true>;
     trainingen: TrainingenSelect<false> | TrainingenSelect<true>;
+    oefeningen: OefeningenSelect<false> | OefeningenSelect<true>;
+    sessiesjablonen: SessiesjablonenSelect<false> | SessiesjablonenSelect<true>;
     possessions: PossessionsSelect<false> | PossessionsSelect<true>;
     throws: ThrowsSelect<false> | ThrowsSelect<true>;
     'match-events': MatchEventsSelect<false> | MatchEventsSelect<true>;
@@ -1156,6 +1160,57 @@ export interface Trainingen {
   createdAt: string;
 }
 /**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "oefeningen".
+ */
+export interface Oefeningen {
+  id: number;
+  naam: string;
+  domein?:
+    | (
+        | 'worpkracht'
+        | 'aanloop'
+        | 'snelheid'
+        | 'wendbaarheid'
+        | 'afwerking'
+        | 'core'
+        | 'conditie'
+        | 'warming-up'
+        | 'cooling-down'
+      )
+    | null;
+  beschrijving?: string | null;
+  progressie?: string | null;
+  duurMinuten?: number | null;
+  materiaal?: string | null;
+  club?: (number | null) | Club;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "sessiesjablonen".
+ */
+export interface Sessiesjablonen {
+  id: number;
+  naam: string;
+  fase?: ('voorbereiding' | 'competitie' | 'uitloop' | 'algemeen') | null;
+  duurTotaal?: number | null;
+  oefeningen?:
+    | {
+        oefening: number | Oefeningen;
+        duurMinuten?: number | null;
+        sets?: number | null;
+        notitie?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  beschrijving?: string | null;
+  club?: (number | null) | Club;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * Afgeleid uit de worp-events; doorgaans niet handmatig bewerken.
  *
  * This interface was referenced by `Config`'s JSON-Schema
@@ -1456,6 +1511,14 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'trainingen';
         value: number | Trainingen;
+      } | null)
+    | ({
+        relationTo: 'oefeningen';
+        value: number | Oefeningen;
+      } | null)
+    | ({
+        relationTo: 'sessiesjablonen';
+        value: number | Sessiesjablonen;
       } | null)
     | ({
         relationTo: 'possessions';
@@ -1951,6 +2014,43 @@ export interface TrainingenSelect<T extends boolean = true> {
   aanwezigen?: T;
   screenshot?: T;
   notitie?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "oefeningen_select".
+ */
+export interface OefeningenSelect<T extends boolean = true> {
+  naam?: T;
+  domein?: T;
+  beschrijving?: T;
+  progressie?: T;
+  duurMinuten?: T;
+  materiaal?: T;
+  club?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "sessiesjablonen_select".
+ */
+export interface SessiesjablonenSelect<T extends boolean = true> {
+  naam?: T;
+  fase?: T;
+  duurTotaal?: T;
+  oefeningen?:
+    | T
+    | {
+        oefening?: T;
+        duurMinuten?: T;
+        sets?: T;
+        notitie?: T;
+        id?: T;
+      };
+  beschrijving?: T;
+  club?: T;
   updatedAt?: T;
   createdAt?: T;
 }

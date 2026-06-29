@@ -4,6 +4,7 @@ import Link from 'next/link'
 const TABS = [
   { key: 'start', href: '/beheer/training', icon: '🏋️', label: 'Start' },
   { key: 'kalender', href: '/beheer/training/kalender', icon: '📅', label: 'Kalender' },
+  { key: 'oefeningen', href: '/beheer/training/oefeningen', icon: '💪', label: 'Oefeningen' },
   { key: 'plan', href: '/beheer/training/plan', icon: '🧠', label: 'Trainingsplan' },
   { key: 'progressie', href: '/beheer/training/progressie', icon: '📈', label: 'Progressie' },
   { key: 'aanwezigheid', href: '/beheer/training/aanwezigheid', icon: '✅', label: 'Aanwezigheid' },
