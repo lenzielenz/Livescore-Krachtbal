@@ -29,6 +29,12 @@ const TOOLS = [
     desc: 'Laat de data een gepersonaliseerd, periodiek plan opstellen — per ploeg of per speler, met focuspunten, doelen en concrete oefeningen.',
   },
   {
+    href: '/beheer/training/spelers',
+    icon: '👤',
+    title: 'Spelerdossier',
+    desc: 'Open het trainingsdossier van een speler: meetwaarden, doelen, aanwezigheidsgeschiedenis en evolutie in één overzicht.',
+  },
+  {
     href: '/beheer/training/progressie',
     icon: '📈',
     title: 'Progressie',

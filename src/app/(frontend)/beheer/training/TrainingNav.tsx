@@ -6,6 +6,7 @@ const TABS = [
   { key: 'kalender', href: '/beheer/training/kalender', icon: '📅', label: 'Kalender' },
   { key: 'oefeningen', href: '/beheer/training/oefeningen', icon: '💪', label: 'Oefeningen' },
   { key: 'plan', href: '/beheer/training/plan', icon: '🧠', label: 'Trainingsplan' },
+  { key: 'spelers', href: '/beheer/training/spelers', icon: '👤', label: 'Spelers' },
   { key: 'progressie', href: '/beheer/training/progressie', icon: '📈', label: 'Progressie' },
   { key: 'aanwezigheid', href: '/beheer/training/aanwezigheid', icon: '✅', label: 'Aanwezigheid' },
   { key: 'trends', href: '/beheer/training/trends', icon: '📊', label: 'Trends' },
