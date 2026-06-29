@@ -26,6 +26,8 @@ import { TournamentMatches } from './collections/TournamentMatches'
 import { Trainingmetingen } from './collections/Trainingmetingen'
 import { Trainingdoelen } from './collections/Trainingdoelen'
 import { Trainingen } from './collections/Trainingen'
+import { Oefeningen } from './collections/Oefeningen'
+import { Sessiesjablonen } from './collections/Sessiesjablonen'
 import { PushSubscriptions } from './collections/PushSubscriptions'
 import { Advertenties } from './collections/Advertenties'
 import { News } from './collections/News'
@@ -106,6 +108,8 @@ export default buildConfig({
     Trainingmetingen,
     Trainingdoelen,
     Trainingen,
+    Oefeningen,
+    Sessiesjablonen,
     Possessions,
     Throws,
     MatchEvents,

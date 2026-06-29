@@ -17,6 +17,12 @@ const TOOLS = [
     desc: 'Je trainingen én wedstrijden in één kalender, met een jaarplan over het seizoen — zie in één oogopslag hoe druk elke maand is.',
   },
   {
+    href: '/beheer/training/oefeningen',
+    icon: '💪',
+    title: 'Oefeningen & sjablonen',
+    desc: 'Blader door de oefeningenbibliotheek (systeem + club-eigen drills) en gebruik kant-en-klare sessiesjablonen als startpunt voor elke training.',
+  },
+  {
     href: '/beheer/training/plan',
     icon: '🧠',
     title: 'Trainingsplan op maat',
