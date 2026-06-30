@@ -293,7 +293,9 @@ export function Scoreboard({
           scorer: goalScorerFromLabel(last.label),
         })
         if (goalTimer.current) clearTimeout(goalTimer.current)
-        goalTimer.current = setTimeout(() => setGoal(null), 5000)
+        // Korte, strakke melding (3 s, sync met sb-goal-fade): bij snel opeenvolgende doelpunten
+        // blijft de live score zichtbaar i.p.v. seconden achter een overlay te verdwijnen.
+        goalTimer.current = setTimeout(() => setGoal(null), 3000)
       }
 
       // Clubkleuren-viering ontgrendelen: +1 lading per nieuwe rugworp (2 ptn) én per nieuwe

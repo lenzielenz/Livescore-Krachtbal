@@ -19,6 +19,7 @@ import {
   substitute,
   undoLastThrow,
 } from '@/lib/match-engine'
+import { nudgeMatch } from '@/lib/match-channel'
 import { getMatchReadiness } from '@/lib/matchsheet-data'
 import { notifyGoalScored } from '@/lib/match-notify'
 import { missingSteps } from '@/lib/match-readiness'
@@ -205,6 +206,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       default:
         return Response.json({ error: `Onbekende actie: ${action}` }, { status: 400 })
     }
+
+    // Instant push: de mutatie is verwerkt → forceer meteen een score-poll op het live-kanaal
+    // (zelfde proces) zodat doelpunt/score/klok vrijwel onmiddellijk bij de kijkers verschijnen,
+    // i.p.v. tot de volgende poll-tik (~1,5 s) te wachten. Best-effort, no-op als niemand kijkt.
+    nudgeMatch(matchId)
 
     // Bewaar de response onder de opId, zodat een herverzonden actie (zie boven) niet dubbel telt.
     // Een unieke botsing (parallel al verwerkt) negeren we — de actie is dan al toegepast.

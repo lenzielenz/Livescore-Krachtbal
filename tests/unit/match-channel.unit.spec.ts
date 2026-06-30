@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import type { Payload } from 'payload'
 
-import { joinMatch } from '@/lib/match-channel'
+import { joinMatch, nudgeMatch } from '@/lib/match-channel'
 
 // Stub volstaat: pollScore/hydrate vangen elke fout zelf op (best-effort), en de teller-logica
 // die we hier testen raakt de database nooit aan.
@@ -52,5 +52,20 @@ describe('match-channel kijkersteller (het oogje)', () => {
     expect(y.lastViewers()).toBe(2)
     leaveX()
     leaveY()
+  })
+})
+
+describe('match-channel instant push (nudgeMatch)', () => {
+  it('is een no-op zonder actieve kijkers (geen kanaal) en gooit nooit', () => {
+    // Geen enkele kijker op dit match-id → geen kanaal → nudge mag niets doen en niet falen.
+    expect(() => nudgeMatch(990101)).not.toThrow()
+  })
+
+  it('is veilig wanneer er wél een kanaal is (best-effort poll, geen exception)', () => {
+    const k = collector()
+    const leave = joinMatch(stubPayload, 990102, k.send, 'browser-x')
+    // pollScore vangt DB-fouten zelf op (stubPayload), dus de nudge mag de aanroeper nooit breken.
+    expect(() => nudgeMatch(990102)).not.toThrow()
+    leave()
   })
 })

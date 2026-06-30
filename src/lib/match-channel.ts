@@ -43,11 +43,18 @@ type Channel = {
   poll: ReturnType<typeof setInterval> | null
   flush: ReturnType<typeof setInterval> | null
   idle: ReturnType<typeof setTimeout> | null // sloop-timer wanneer (even) niemand kijkt
+  lastPoll: number // tijdstip (ms) van de laatste pollScore — gedeeld door interval én nudge
+  nudgeTimer: ReturnType<typeof setTimeout> | null // trailing nudge-poll (coalescing)
 }
 
 const channels = new Map<number, Channel>()
 
 const SCORE_POLL_MS = 1500
+// Instant push: zodra de aantekenaar muteert (worp/doelpunt/undo/klok…) roept de actie-route
+// `nudgeMatch()` aan, zodat de score NIET tot de volgende poll-tik (tot 1,5 s) hoeft te wachten —
+// de viering start vrijwel meteen. De interval-poll blijft als vangnet (en cross-instance fallback).
+// We coalescen nudges met een ondergrens zodat een undo→redo-burst de DB niet hamert.
+const NUDGE_MIN_MS = 250
 const REACTION_FLUSH_MS = 300 // geaggregeerd venster (~3 flushes/sec)
 // Tellers worden gebundeld weggeschreven (niet bij elke tik) om DB-druk te vermijden.
 const REACTION_SAVE_MS = 5000
@@ -84,6 +91,7 @@ function broadcastViewers(ch: Channel) {
 async function pollScore(payload: Payload, matchId: number) {
   const ch = channels.get(matchId)
   if (!ch) return
+  ch.lastPoll = Date.now() // zowel de interval-poll als een nudge tikken dit aan (coalescing)
   let payloadData: unknown
   try {
     const [state, timeline] = await Promise.all([buildMatchState(payload, matchId), buildTimeline(payload, matchId)])
@@ -99,6 +107,30 @@ async function pollScore(payload: Payload, matchId: number) {
   ch.lastScore = s
   ch.lastId += 1
   broadcast(ch, 'update', payloadData, ch.lastId)
+}
+
+/**
+ * Instant push: forceer meteen een score-poll voor deze wedstrijd, los van de interval-cadans.
+ * Aangeroepen door de aantekenaar-actie (zelfde proces) na een geslaagde mutatie, zodat een
+ * doelpunt vrijwel onmiddellijk bij alle kijkers verschijnt i.p.v. tot ~1,5 s te wachten.
+ *
+ * Best-effort en goedkoop: no-op als niemand kijkt (geen kanaal op deze instance — de interval-poll
+ * van de kijkende instance pikt de wijziging dan zelf op). Bij een undo→redo-burst coalescen we tot
+ * één poll per `NUDGE_MIN_MS`, met een trailing poll zodat de laatste stand altijd doorkomt. De
+ * diff-check in pollScore voorkomt sowieso dubbele broadcasts.
+ */
+export function nudgeMatch(matchId: number): void {
+  const ch = channels.get(matchId)
+  if (!ch || !ch.poll) return // geen actieve kijkers/poller op deze instance → niets te pushen
+  const since = Date.now() - ch.lastPoll
+  if (since >= NUDGE_MIN_MS) {
+    void pollScore(ch.payload, matchId)
+  } else if (!ch.nudgeTimer) {
+    ch.nudgeTimer = setTimeout(() => {
+      ch.nudgeTimer = null
+      if (channels.get(matchId)) void pollScore(ch.payload, matchId)
+    }, NUDGE_MIN_MS - since)
+  }
 }
 
 function flushReactions(matchId: number) {
@@ -248,6 +280,8 @@ export function joinMatch(payload: Payload, matchId: number, send: Send, viewerK
       poll: setInterval(() => void pollScore(payload, matchId), SCORE_POLL_MS),
       flush: setInterval(() => flushReactions(matchId), REACTION_FLUSH_MS),
       idle: null,
+      lastPoll: 0,
+      nudgeTimer: null,
     }
     channels.set(matchId, ch)
     void pollScore(payload, matchId) // directe eerste score
@@ -288,6 +322,10 @@ export function joinMatch(payload: Payload, matchId: number, send: Send, viewerK
       if (c.flush) clearInterval(c.flush)
       c.poll = null
       c.flush = null
+      if (c.nudgeTimer) {
+        clearTimeout(c.nudgeTimer)
+        c.nudgeTimer = null
+      }
       // Schrijf de laatste tellerstand nog weg (de debounce kan nog openstaan), zodat niets
       // verloren gaat als het kanaal straks definitief opgeruimd wordt.
       if (c.saveTimer) {
