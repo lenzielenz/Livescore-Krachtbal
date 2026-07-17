@@ -8,6 +8,7 @@ import type { Payload } from 'payload'
 
 import { canAnalyse, hasRole, isFederationLevel, userClubId, userOfficialId, type UserRole } from './access'
 import { analyseEditOwners } from './analyse-access'
+import { isSupportersMode } from './score-mode'
 
 export type AuthedUser = { id: number | string; roles?: UserRole[] | null } & Record<string, unknown>
 
@@ -53,7 +54,7 @@ async function matchClubIds(payload: Payload, matchId: number | string): Promise
 
 /**
  * Mag deze gebruiker de score van DEZE wedstrijd bedienen?
- * - supporters-wedstrijd (scoreMode 'supporters') of demo: iedereen, ook zonder login
+ * - globale supporters-modus of demo: iedereen, ook zonder login (analyse-opnames uitgezonderd)
  * - admin/federatie: altijd
  * - scorekeeper: ja (vertrouwde aantekenaar — strikte per-match-binding kan later via vrijgaveCode)
  * - scheidsrechter: gebonden aan de toewijzing — is er een toegewezen (backup-)SR op het blad, dan
@@ -67,12 +68,13 @@ export async function mayScoreMatch(
 ): Promise<boolean> {
   // Gemachtigde aantekenaars mogen meteen — geen extra query nodig.
   if (user && (isFederationLevel(user) || hasRole(user, 'scorekeeper'))) return true
-  // Demo-wedstrijden zijn vrij speelbaar, ook zonder login (oefenmodus). Supporters-wedstrijden
-  // (vrije livescore) zijn losgekoppeld van de federatie: iedereen mag de score doorgeven — ook
-  // zonder login. De scheidsrechter-/aftekenflow valt hier volledig weg.
+  // Demo-wedstrijden zijn vrij speelbaar, ook zonder login (oefenmodus).
   const match = await payload.findByID({ collection: 'matches', id: matchId, depth: 0 }).catch(() => null)
   if (match && (match as { isDemo?: boolean }).isDemo) return true
-  if (match && (match as { scoreMode?: string }).scoreMode === 'supporters') return true
+  // Globale supporters-modus (één knop voor alle wedstrijden): vrije livescore, losgekoppeld van de
+  // federatie — iedereen mag de score doorgeven, ook zonder login. Private analyse-opnames blijven
+  // wél afgeschermd (die zijn geen publieke wedstrijd).
+  if (match && !(match as { analyseOnly?: boolean }).analyseOnly && (await isSupportersMode(payload))) return true
   if (!user) return false
   // Analyse-opname: de eigenaar (met analyse-toegang) tekent z'n eigen analysewedstrijd aan —
   // of iemand aan wie de eigenaar "meedoen & aanpassen" toekende.

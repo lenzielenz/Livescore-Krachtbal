@@ -13,6 +13,25 @@ export const Settings: GlobalConfig = {
   },
   fields: [
     {
+      // Eén knop voor ALLE wedstrijden: wie tekent aan?
+      //  - 'federatie' (standaard): volledige flow (opstelling, scheidsrechtersakkoord, aftekenen).
+      //  - 'supporters': vrije livescore — de scheidsrechter-/aftekenflow valt weg en iedereen kan
+      //    elke wedstrijd openen en gewoon de score doorgeven (ook zonder login).
+      name: 'scoreMode',
+      label: 'Wie tekent aan? (alle wedstrijden)',
+      type: 'select',
+      options: [
+        { label: 'Federatie — met scheidsrechter & aftekenen', value: 'federatie' },
+        { label: 'Supporters — vrije livescore (geen scheidsrechter)', value: 'supporters' },
+      ],
+      defaultValue: 'federatie',
+      required: true,
+      admin: {
+        description:
+          'Geldt voor álle wedstrijden. Federatie = volledige flow (opstelling, scheidsrechtersakkoord, aftekenen). Supporters = vrije livescore: de scheidsrechterflow valt weg en iedereen kan elke wedstrijd openen en de score doorgeven.',
+      },
+    },
+    {
       name: 'releaseMinutesBefore',
       label: 'Vrijgave (minuten vóór aanvang)',
       type: 'number',

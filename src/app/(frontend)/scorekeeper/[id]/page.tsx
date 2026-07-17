@@ -8,6 +8,7 @@ import { buildMatchState } from '@/lib/match-engine'
 import { getMatchReadiness } from '@/lib/matchsheet-data'
 import { getPayloadClient } from '@/lib/payload-client'
 import { reeksNaam } from '@/lib/reeksen'
+import { isSupportersMode } from '@/lib/score-mode'
 import { Scorekeeper } from './Scorekeeper'
 import { SimpleScorekeeper } from './SimpleScorekeeper'
 import './scorekeeper.css'
@@ -65,7 +66,8 @@ export default async function ScorekeeperPage({
   const reeks = reeksNaam(matchDoc?.reeks)
   const isDemo = Boolean((matchDoc as { isDemo?: boolean } | null)?.isDemo)
   const isAnalyse = Boolean((matchDoc as { analyseOnly?: boolean } | null)?.analyseOnly)
-  const supportersMode = (matchDoc as { scoreMode?: string } | null)?.scoreMode === 'supporters'
+  // Globale supporters-modus (één knop voor alle wedstrijden) — geldt niet voor privé-analyse.
+  const supportersMode = !isAnalyse && (await isSupportersMode(payload))
 
   // De basis snelscoremodus (+1/+2) is de standaard voor élke gewone wedstrijd — ook voor een admin.
   // De volledige scoreopnemer (3-staps veldschema) is enkel voor ANALYSEWEDSTRIJDEN: wedstrijden die

@@ -7,6 +7,7 @@ import type { Category } from './categories'
 import { playerSelectability, type Selectability } from './lineup'
 import { computeReadiness, type Readiness } from './match-readiness'
 import { isKnipjesBlocked, openKnipjes } from './sanctions'
+import { isSupportersMode } from './score-mode'
 
 export type Side = 'home' | 'away'
 
@@ -25,7 +26,9 @@ export async function getMatchReadiness(
   ])
   const sheet = sheetRes.docs[0]
   const analyseOnly = Boolean((match as { analyseOnly?: boolean } | null)?.analyseOnly)
-  const supportersMode = (match as { scoreMode?: string } | null)?.scoreMode === 'supporters'
+  // Globale supporters-modus (één knop voor alle wedstrijden) → altijd startklaar. Private
+  // analyse-opnames houden wél hun opstellingscontrole (nodig om worpen aan spelers te koppelen).
+  const supportersMode = !analyseOnly && (await isSupportersMode(payload))
   // Analysewedstrijd: de opstelling leeft op de MATCH zelf (gekozen via de veldspelers-kiezer in
   // het aantekenscherm) — er is geen wedstrijdblad-flow voor analyse. Map de speler-ids naar
   // {player}-rijen zodat countLineup voor beide bronnen werkt.

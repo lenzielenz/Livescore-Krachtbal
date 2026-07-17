@@ -4,6 +4,7 @@ import { SiteHeader } from '@/components/SiteHeader'
 import { buildMatchState } from '@/lib/match-engine'
 import { getMatchReadiness } from '@/lib/matchsheet-data'
 import { getPayloadClient } from '@/lib/payload-client'
+import { isSupportersMode } from '@/lib/score-mode'
 
 export const dynamic = 'force-dynamic'
 
@@ -24,6 +25,8 @@ type Row = {
 
 export default async function ScorekeeperHub() {
   const payload = await getPayloadClient()
+  // Eén knop voor alle wedstrijden: staat het platform in supporters-modus (vrije livescore)?
+  const supportersMode = await isSupportersMode(payload)
   const matches = await payload.find({
     collection: 'matches',
     where: { status: { in: ['scheduled', 'live'] } },
@@ -40,7 +43,6 @@ export default async function ScorekeeperHub() {
     try {
       const s = await buildMatchState(payload, m.id)
       const isLive = s.match.status === 'live'
-      const supportersMode = (m as { scoreMode?: string }).scoreMode === 'supporters'
       const r = isLive ? null : await getMatchReadiness(payload, m.id)
       rows.push({
         id: m.id,

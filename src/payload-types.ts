@@ -605,10 +605,6 @@ export interface Match {
    */
   goalAreaDepth: number;
   /**
-   * Federatie = volledige flow (opstelling, scheidsrechtersakkoord, aftekenen). Supporters = vrije livescore: de scheidsrechterflow valt weg en iedereen kan de wedstrijd openen en de score doorgeven.
-   */
-  scoreMode?: ('federatie' | 'supporters') | null;
-  /**
    * Aanvinken voor een oefen-/uitlegwedstrijd. Mensen kunnen die starten om de live-registratie te leren; alle startcontroles worden overgeslagen.
    */
   isDemo?: boolean | null;
@@ -1696,7 +1692,6 @@ export interface MatchesSelect<T extends boolean = true> {
   date?: T;
   status?: T;
   goalAreaDepth?: T;
-  scoreMode?: T;
   isDemo?: T;
   analyseOnly?: T;
   homeCoach?: T;
@@ -2328,6 +2323,10 @@ export interface Season {
 export interface Setting {
   id: number;
   /**
+   * Geldt voor álle wedstrijden. Federatie = volledige flow (opstelling, scheidsrechtersakkoord, aftekenen). Supporters = vrije livescore: de scheidsrechterflow valt weg en iedereen kan elke wedstrijd openen en de score doorgeven.
+   */
+  scoreMode: 'federatie' | 'supporters';
+  /**
    * Vanaf hoeveel minuten vóór het aanvangsuur mag de scheidsrechter beide opstellingen zien.
    */
   releaseMinutesBefore: number;
@@ -2361,6 +2360,7 @@ export interface SeasonSelect<T extends boolean = true> {
  * via the `definition` "settings_select".
  */
 export interface SettingsSelect<T extends boolean = true> {
+  scoreMode?: T;
   releaseMinutesBefore?: T;
   kantineMatchIds?: T;
   veldMatchId?: T;
