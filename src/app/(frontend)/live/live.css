@@ -447,6 +447,41 @@
   color: #ffd873;
 }
 
+/* Supporters-modus: "Aantekenen"-knop onder een wedstrijd. Duidelijke, brede call-to-action
+   zodat iedereen meteen vanaf het live-bord de score kan beginnen doorgeven. */
+.lb-score-cta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 10px 10px 40px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line));
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--txt);
+  font-weight: 700;
+  font-size: 0.92rem;
+  text-decoration: none;
+  transition: background-color var(--dur-1) var(--ease-soft), border-color var(--dur-1) var(--ease-soft), transform var(--dur-1) var(--ease-soft);
+}
+.lb-score-cta:hover {
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  border-color: var(--accent);
+}
+.lb-score-cta:active {
+  transform: translateY(1px);
+}
+.lb-score-cta-ico {
+  font-size: 1.05rem;
+}
+.lb-score-cta-txt {
+  flex: 1 1 auto;
+}
+.lb-score-cta-arrow {
+  color: var(--accent);
+  font-size: 1.1rem;
+}
+
 /* Uitklap-paneel onder een rij: volg een ploeg en/of de hele club. */
 .lb-follow {
   display: flex;
