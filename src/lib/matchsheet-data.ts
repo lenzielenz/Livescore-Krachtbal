@@ -25,6 +25,7 @@ export async function getMatchReadiness(
   ])
   const sheet = sheetRes.docs[0]
   const analyseOnly = Boolean((match as { analyseOnly?: boolean } | null)?.analyseOnly)
+  const supportersMode = (match as { scoreMode?: string } | null)?.scoreMode === 'supporters'
   // Analysewedstrijd: de opstelling leeft op de MATCH zelf (gekozen via de veldspelers-kiezer in
   // het aantekenscherm) — er is geen wedstrijdblad-flow voor analyse. Map de speler-ids naar
   // {player}-rijen zodat countLineup voor beide bronnen werkt.
@@ -35,6 +36,7 @@ export async function getMatchReadiness(
     refereeAkkoord: Boolean((sheet?.wedstrijdstart as { akkoord?: boolean } | undefined)?.akkoord),
     isDemo: Boolean((match as { isDemo?: boolean } | null)?.isDemo),
     analyseOnly,
+    supportersMode,
   })
 }
 

@@ -222,6 +222,28 @@ export const Matches: CollectionConfig = {
       ],
     },
     {
+      // Wie tekent deze wedstrijd aan? Losgekoppeld van de federatie:
+      //  - 'federatie' (standaard): de volledige flow — opstelling + scheidsrechtersakkoord vóór
+      //    de start, en aftekenen achteraf. Enkel gemachtigde aantekenaars muteren.
+      //  - 'supporters': vrije livescore. De hele scheidsrechter-/aftekenflow valt weg; iedereen
+      //    kan de wedstrijd openen en gewoon de score doorgeven (geen akkoord, geen aftekenen).
+      // Handig bij een geïmporteerde agenda: zet zulke wedstrijden op 'supporters' zodat elke
+      // supporter de score van die wedstrijd kan invullen.
+      name: 'scoreMode',
+      label: 'Wie tekent aan?',
+      type: 'select',
+      options: [
+        { label: 'Federatie — met scheidsrechter & aftekenen', value: 'federatie' },
+        { label: 'Supporters — vrije livescore (geen scheidsrechter)', value: 'supporters' },
+      ],
+      defaultValue: 'federatie',
+      admin: {
+        position: 'sidebar',
+        description:
+          'Federatie = volledige flow (opstelling, scheidsrechtersakkoord, aftekenen). Supporters = vrije livescore: de scheidsrechterflow valt weg en iedereen kan de wedstrijd openen en de score doorgeven.',
+      },
+    },
+    {
       // Demo/oefenwedstrijd: bedoeld om de live-registratie uit te leggen. Een demo mag
       // altijd geopend worden (geen opstelling-/scheidsrechtercontrole) en toont in het
       // aantekenscherm een stap-voor-stap uitleg.

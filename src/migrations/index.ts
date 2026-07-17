@@ -82,6 +82,7 @@ import * as migration_20260617_120000_processed_ops from './20260617_120000_proc
 import * as migration_20260617_140000_wedstrijdeinde from './20260617_140000_wedstrijdeinde';
 import * as migration_20260617_160000_club_rollen from './20260617_160000_club_rollen';
 import * as migration_20260629_090000_oefeningen_sessiesjablonen from './20260629_090000_oefeningen_sessiesjablonen';
+import * as migration_20260717_120000_match_score_mode from './20260717_120000_match_score_mode';
 
 export const migrations = [
   {
@@ -503,5 +504,10 @@ export const migrations = [
     up: migration_20260629_090000_oefeningen_sessiesjablonen.up,
     down: migration_20260629_090000_oefeningen_sessiesjablonen.down,
     name: '20260629_090000_oefeningen_sessiesjablonen',
+  },
+  {
+    up: migration_20260717_120000_match_score_mode.up,
+    down: migration_20260717_120000_match_score_mode.down,
+    name: '20260717_120000_match_score_mode',
   },
 ];
