@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useState } from 'react'
 
 import { clearNavAuth } from '@/lib/nav-auth-cache'
@@ -10,6 +10,11 @@ import { clearNavAuth } from '@/lib/nav-auth-cache'
 // de wedstrijden. Werkt voor elk account (supporter, club, scheidsrechter, admin).
 export function LoginForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  // Optionele terugkeerbestemming (?next=/…). Enkel interne paden toelaten — nooit een externe
+  // URL — zodat de login niet als open redirect misbruikt kan worden.
+  const nextRaw = searchParams.get('next')
+  const nextPath = nextRaw && nextRaw.startsWith('/') && !nextRaw.startsWith('//') ? nextRaw : '/'
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [busy, setBusy] = useState(false)
@@ -30,7 +35,7 @@ export function LoginForm() {
         // Verse rol-staat afdwingen zodat de navigatie meteen de juiste menu-items toont.
         clearNavAuth()
         router.refresh()
-        router.push('/')
+        router.push(nextPath)
       } else {
         setError('Inloggen mislukt — controleer je e-mail en wachtwoord.')
       }

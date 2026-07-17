@@ -1,5 +1,7 @@
+import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
+import { SiteHeader } from '@/components/SiteHeader'
 import { POSITION_OPTIONS } from '@/collections/Players'
 import { hasRole } from '@/lib/access'
 import { canViewAnalyseMatch } from '@/lib/analyse-access'
@@ -68,6 +70,31 @@ export default async function ScorekeeperPage({
   const isAnalyse = Boolean((matchDoc as { analyseOnly?: boolean } | null)?.analyseOnly)
   // Globale supporters-modus (één knop voor alle wedstrijden) — geldt niet voor privé-analyse.
   const supportersMode = !isAnalyse && (await isSupportersMode(payload))
+
+  // Supporters-modus: iedereen mag aantekenen, maar je moet wél ingelogd zijn om de score te
+  // veranderen. Toon een nette inlog-uitnodiging i.p.v. een 401 verderop in de flow.
+  if (supportersMode && !user) {
+    return (
+      <>
+        <SiteHeader active="wedstrijden" />
+        <div className="site">
+          <h1 className="page-title">Aantekenen</h1>
+          <p className="empty">
+            Log in om de score van deze wedstrijd door te geven. Aantekenen kan door elke ingelogde
+            supporter — een account maken is gratis.
+          </p>
+          <p className="sk-login-actions">
+            <Link href={`/inloggen?next=/scorekeeper/${matchId}`} className="match-score-cta">
+              <span aria-hidden>🔑</span>
+              <span>Inloggen om aan te tekenen</span>
+              <span className="match-score-cta-arrow" aria-hidden>→</span>
+            </Link>
+            <Link href="/registreren" className="back-link">Nog geen account? Registreren →</Link>
+          </p>
+        </div>
+      </>
+    )
+  }
 
   // De basis snelscoremodus (+1/+2) is de standaard voor élke gewone wedstrijd — ook voor een admin.
   // De volledige scoreopnemer (3-staps veldschema) is enkel voor ANALYSEWEDSTRIJDEN: wedstrijden die
