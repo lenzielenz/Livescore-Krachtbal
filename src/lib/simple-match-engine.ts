@@ -1,6 +1,7 @@
 import type { Payload } from 'payload'
 
 import { buildMatchState, recordRefereeStop, recordTimeout } from './match-engine'
+import { isSupportersMode } from './score-mode'
 import { readSimpleScore, type SimpleScoreState, type SimpleSide } from './simple-score'
 
 // Engine voor de SIMPELE aantekenmodus (snelscoremodus). Werkt op een gewone
@@ -85,10 +86,11 @@ export async function recordSimpleGoal(
     if (!player || relId(player.team) !== teamId) {
       throw new Error('Die speler hoort niet bij de scorende ploeg.')
     }
-  } else {
+  } else if (!(await isSupportersMode(payload))) {
     // Geen scorer gekozen: dat mag enkel als de ploeg nóg geen spelers heeft (dan kan je
     // toch al aantekenen en de spelers later aanvullen). Heeft de ploeg wél spelers, dan
     // moet er een gekozen worden — zo blijft de scorerregistratie sluitend bij echte ploegen.
+    // In supporters-modus (vrije livescore) noteren we bewust géén scorer: doel is doel.
     const teamPlayers = await payload.count({ collection: 'players', where: { team: { equals: teamId } } }).catch(() => ({ totalDocs: 1 }))
     if (teamPlayers.totalDocs > 0) {
       throw new Error('Selecteer eerst de speler die scoorde.')

@@ -442,9 +442,9 @@ export function LiveBoard({
                       </Link>
                     </div>
 
-                    {/* Supporters-modus: vrije livescore. Iedereen kan meteen vanaf het live-bord
-                        beginnen aantekenen — geen scheidsrechter of aftekenen nodig. */}
-                    {supportersMode && m.status !== 'finished' && (
+                    {/* Supporters-modus: vrije livescore. De "Aantekenen"-knop verschijnt pas
+                        wanneer de supporter de rij openklikt (via de ster) — zo blijft het bord rustig. */}
+                    {supportersMode && open && m.status !== 'finished' && (
                       <Link href={`/scorekeeper/${m.id}`} className="lb-score-cta">
                         <span className="lb-score-cta-ico" aria-hidden>✏️</span>
                         <span className="lb-score-cta-txt">
