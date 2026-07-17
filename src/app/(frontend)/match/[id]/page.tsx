@@ -17,6 +17,7 @@ import { getPayloadClient } from '@/lib/payload-client'
 import { activeTokens, type RadToken } from '@/lib/pronostiek-rad'
 import { countUserWeekendPredictions, LIVE_PRONOSTIEK_MAX_PER_WEEKEND } from '@/lib/pronostiek-weekend'
 import { isAdultReeks, krachtbalKleur, reeksHalfDurationSeconds, reeksNaam, reeksType, type Reeks } from '@/lib/reeksen'
+import { isSupportersMode } from '@/lib/score-mode'
 import { isTribuneOpen } from '@/lib/tribune'
 import { BASE_RATE_PER_MIN } from '@/lib/win-probability'
 import { MatchRecap } from '../../analyse/[id]/MatchRecap'
@@ -78,6 +79,8 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   const matchDoc = await payload.findByID({ collection: 'matches', id: matchId, depth: 2 }).catch(() => null)
   // Analysewedstrijden horen NOOIT in de publieke competitie-UI (de eigenaar bekijkt ze via /analyse/[id]).
   if (matchDoc?.analyseOnly) notFound()
+  // Globale supporters-modus: iedereen mag de score doorgeven → toon een "Aantekenen"-knop.
+  const supportersMode = await isSupportersMode(payload)
   const homeClub = (matchDoc?.homeTeam as { club?: { accommodatie?: string; plaats?: string; lat?: number; lng?: number } } | null)?.club
   const accommodatie = homeClub?.accommodatie?.trim() || null
   // Locatie voor het weerbericht aan het veld (thuislocatie).
@@ -237,6 +240,19 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
       <Link href="/" className="back-link">
         ← Alle wedstrijden
       </Link>
+      {/* Supporters-modus: vrije livescore. Iedereen kan meteen beginnen aantekenen — geen
+          scheidsrechter of aftekenen nodig. */}
+      {supportersMode && state.match.status !== 'finished' && (
+        <Link href={`/scorekeeper/${matchId}`} className="match-score-cta">
+          <span aria-hidden>✏️</span>
+          <span>
+            {state.match.status === 'live'
+              ? 'Aantekenen — verder scoren'
+              : 'Aantekenen — start de wedstrijd'}
+          </span>
+          <span className="match-score-cta-arrow" aria-hidden>→</span>
+        </Link>
+      )}
       {/* Match-context als kop bovenaan (reeks · datum · locatie · scheidsrechter), zodat
           duidelijk is over welke wedstrijd dit gaat. Kapiteins horen hier bewust níet bij —
           die staan op het wedstrijdblad, niet op de publieke pagina. */}

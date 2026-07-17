@@ -2,6 +2,8 @@ import { SiteHeader } from '@/components/SiteHeader'
 import { userClubId } from '@/lib/access'
 import { getAuthUser } from '@/lib/auth-user'
 import { dateStrBE } from '@/lib/datetime'
+import { getPayloadClient } from '@/lib/payload-client'
+import { isSupportersMode } from '@/lib/score-mode'
 import { LiveBoard } from './LiveBoard'
 import { loadLiveDay } from './loadLiveDay'
 import { TournamentLiveStrip } from './TournamentLiveStrip'
@@ -19,13 +21,14 @@ export default async function LivePage({ searchParams }: { searchParams: Promise
   const myClubId = cid != null && Number.isFinite(Number(cid)) ? Number(cid) : null
 
   const days = await loadLiveDay(selected, today)
+  const supportersMode = await isSupportersMode(await getPayloadClient())
 
   return (
     <>
       <SiteHeader active="wedstrijden" />
       <div className="lb-page">
         <TournamentLiveStrip />
-        <LiveBoard date={selected} today={today} matches={days} myClubId={myClubId} />
+        <LiveBoard date={selected} today={today} matches={days} myClubId={myClubId} supportersMode={supportersMode} />
       </div>
     </>
   )

@@ -73,12 +73,16 @@ export function LiveBoard({
   today,
   matches,
   myClubId = null,
+  supportersMode = false,
 }: {
   date: string
   today: string
   matches: DayMatch[]
   /** De club van de ingelogde gebruiker (ingesteld in de admin) — voedt de "Mijn club"-filter. */
   myClubId?: number | null
+  /** Globale supporters-modus: dan krijgt elke wedstrijd een "Aantekenen"-knop zodat iedereen
+   *  meteen vanaf het live-bord de score kan beginnen doorgeven. */
+  supportersMode?: boolean
 }) {
   const router = useRouter()
   const [favTeams, toggleTeam] = useFavSet(FAV_TEAMS_KEY)
@@ -437,6 +441,18 @@ export function LiveBoard({
                         )}
                       </Link>
                     </div>
+
+                    {/* Supporters-modus: vrije livescore. Iedereen kan meteen vanaf het live-bord
+                        beginnen aantekenen — geen scheidsrechter of aftekenen nodig. */}
+                    {supportersMode && m.status !== 'finished' && (
+                      <Link href={`/scorekeeper/${m.id}`} className="lb-score-cta">
+                        <span className="lb-score-cta-ico" aria-hidden>✏️</span>
+                        <span className="lb-score-cta-txt">
+                          {live ? 'Aantekenen — verder scoren' : 'Aantekenen — start de wedstrijd'}
+                        </span>
+                        <span className="lb-score-cta-arrow" aria-hidden>→</span>
+                      </Link>
+                    )}
 
                     {open && (
                       <div className="lb-follow">

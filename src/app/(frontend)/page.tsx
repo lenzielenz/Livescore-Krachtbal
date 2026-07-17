@@ -5,6 +5,8 @@ import { userClubId } from '@/lib/access'
 import { getAuthUser } from '@/lib/auth-user'
 import { dateStrBE } from '@/lib/datetime'
 import { quoteForDay } from '@/lib/krachtbal-quotes'
+import { getPayloadClient } from '@/lib/payload-client'
+import { isSupportersMode } from '@/lib/score-mode'
 import { LiveBoard } from './live/LiveBoard'
 import { loadLiveDay } from './live/loadLiveDay'
 import { TournamentLiveStrip } from './live/TournamentLiveStrip'
@@ -26,6 +28,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   const me = await getAuthUser()
   const cid = userClubId(me)
   const myClubId = cid != null && Number.isFinite(Number(cid)) ? Number(cid) : null
+  const supportersMode = await isSupportersMode(await getPayloadClient())
 
   return (
     <>
@@ -60,7 +63,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         )}
 
         <TournamentLiveStrip />
-        <LiveBoard date={selected} today={today} matches={days} myClubId={myClubId} />
+        <LiveBoard date={selected} today={today} matches={days} myClubId={myClubId} supportersMode={supportersMode} />
       </div>
     </>
   )
