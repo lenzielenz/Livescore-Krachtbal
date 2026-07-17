@@ -18,6 +18,8 @@ type Row = {
   // Status van de twee start-voorwaarden, zodat de hub toont wat er nog moet gebeuren.
   opstellingOk: boolean
   refereeOk: boolean
+  // Supporters-wedstrijd: vrije livescore, geen scheidsrechter-/aftekenflow.
+  supportersMode: boolean
 }
 
 export default async function ScorekeeperHub() {
@@ -38,6 +40,7 @@ export default async function ScorekeeperHub() {
     try {
       const s = await buildMatchState(payload, m.id)
       const isLive = s.match.status === 'live'
+      const supportersMode = (m as { scoreMode?: string }).scoreMode === 'supporters'
       const r = isLive ? null : await getMatchReadiness(payload, m.id)
       rows.push({
         id: m.id,
@@ -46,9 +49,10 @@ export default async function ScorekeeperHub() {
         home: s.teams.home.name,
         away: s.teams.away.name,
         score: s.score,
-        ready: isLive ? true : (r?.ready ?? false),
+        ready: isLive || supportersMode ? true : (r?.ready ?? false),
         opstellingOk: isLive ? true : Boolean(r?.homeOk && r?.awayOk),
         refereeOk: isLive ? true : Boolean(r?.refereeOk),
+        supportersMode,
       })
     } catch {
       // Wedstrijd met ontbrekende ploeg-referentie overslaan.
@@ -120,6 +124,22 @@ function Section({ title, rows, empty }: { title: string; rows: Row[]; empty: st
 // vrijgeeft, zodat niemand nog hoeft te raden waar hij moet zijn.
 function MatchSteps({ m }: { m: Row }) {
   const live = m.status === 'live'
+  // Supporters-wedstrijd: vrije livescore. De hele scheidsrechter-/aftekenflow valt weg —
+  // enkel de score doorgeven. Toon dus alleen de start-/aantekenknop.
+  if (m.supportersMode) {
+    return (
+      <div className="mh-steps">
+        <span className="mh-steps-lead">🎉 Vrije livescore</span>
+        <Step
+          n={1}
+          href={`/scorekeeper/${m.id}`}
+          label={live ? 'Aantekenen' : 'Score invullen'}
+          state={live ? 'active' : 'ready'}
+          isGate
+        />
+      </div>
+    )
+  }
   return (
     <div className="mh-steps">
       <span className="mh-steps-lead">{live ? 'Stappen' : 'Vóór de start'}</span>

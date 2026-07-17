@@ -4,7 +4,8 @@
 // Een wedstrijd is "klaar" wanneer:
 //   - beide ploegen een volledige opstelling hebben (≥ LINEUP_MIN veldspelers), én
 //   - de scheidsrechter akkoord gaf om te starten (controle vooraf).
-// Een demo-/oefenwedstrijd is altijd klaar (alle controles worden overgeslagen).
+// Een demo-/oefenwedstrijd is altijd klaar (alle controles worden overgeslagen). Ook een
+// supporters-wedstrijd (vrije livescore) is altijd klaar: de scheidsrechterflow valt daar weg.
 
 // Een volledige opstelling telt 4 veldspelers (= FIELD_PLAYERS in match-engine).
 export const LINEUP_MIN = 4
@@ -17,7 +18,9 @@ export type Readiness = {
   refereeOk: boolean
   isDemo: boolean
   analyseOnly: boolean
-  /** Volledig klaar om te openen (demo OF alle controles in orde). */
+  /** Supporters-modus: vrije livescore, geen scheidsrechter-/aftekenflow. */
+  supportersMode: boolean
+  /** Volledig klaar om te openen (demo/supporters OF alle controles in orde). */
   ready: boolean
 }
 
@@ -33,6 +36,7 @@ export function computeReadiness(opts: {
   refereeAkkoord: boolean
   isDemo: boolean
   analyseOnly?: boolean
+  supportersMode?: boolean
 }): Readiness {
   const homeCount = countLineup(opts.homeLineup)
   const awayCount = countLineup(opts.awayLineup)
@@ -41,6 +45,7 @@ export function computeReadiness(opts: {
   const refereeOk = Boolean(opts.refereeAkkoord)
   const isDemo = Boolean(opts.isDemo)
   const analyseOnly = Boolean(opts.analyseOnly)
+  const supportersMode = Boolean(opts.supportersMode)
   return {
     homeCount,
     awayCount,
@@ -49,14 +54,17 @@ export function computeReadiness(opts: {
     refereeOk,
     isDemo,
     analyseOnly,
+    supportersMode,
     // Analyse-wedstrijd: geen scheidsrechtersakkoord nodig, maar wél opstellingen
-    // (anders kunnen we worpen niet aan spelers koppelen).
-    ready: isDemo || (homeOk && awayOk && (refereeOk || analyseOnly)),
+    // (anders kunnen we worpen niet aan spelers koppelen). Demo/supporters: altijd klaar.
+    ready: isDemo || supportersMode || (homeOk && awayOk && (refereeOk || analyseOnly)),
   }
 }
 
 /** De ontbrekende stappen, voor een korte foutmelding/checklist. */
 export function missingSteps(r: Readiness): string[] {
+  // Supporters-wedstrijd: vrije livescore, geen voorwaarden om te starten.
+  if (r.supportersMode) return []
   const missing: string[] = []
   if (!r.homeOk) missing.push('opstelling thuis')
   if (!r.awayOk) missing.push('opstelling uit')

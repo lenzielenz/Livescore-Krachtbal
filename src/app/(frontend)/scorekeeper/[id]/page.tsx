@@ -65,6 +65,7 @@ export default async function ScorekeeperPage({
   const reeks = reeksNaam(matchDoc?.reeks)
   const isDemo = Boolean((matchDoc as { isDemo?: boolean } | null)?.isDemo)
   const isAnalyse = Boolean((matchDoc as { analyseOnly?: boolean } | null)?.analyseOnly)
+  const supportersMode = (matchDoc as { scoreMode?: string } | null)?.scoreMode === 'supporters'
 
   // De basis snelscoremodus (+1/+2) is de standaard voor élke gewone wedstrijd — ook voor een admin.
   // De volledige scoreopnemer (3-staps veldschema) is enkel voor ANALYSEWEDSTRIJDEN: wedstrijden die
@@ -81,7 +82,7 @@ export default async function ScorekeeperPage({
         initialState={state}
         roster={roster}
         reeks={reeks}
-        exitHref={isDemo ? '/scorekeeper' : '/club'}
+        exitHref={isDemo || supportersMode ? '/scorekeeper' : '/club'}
       />
     )
   }

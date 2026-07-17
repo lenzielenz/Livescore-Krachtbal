@@ -46,6 +46,13 @@ describe('computeReadiness', () => {
     expect(r.isDemo).toBe(true)
   })
 
+  it('supporters-wedstrijd is altijd klaar, ook zonder opstelling of akkoord — geen stappen', () => {
+    const r = computeReadiness({ homeLineup: [], awayLineup: [], refereeAkkoord: false, isDemo: false, supportersMode: true })
+    expect(r.ready).toBe(true)
+    expect(r.supportersMode).toBe(true)
+    expect(missingSteps(r)).toEqual([])
+  })
+
   it('analysewedstrijd: klaar met opstellingen, zonder SR-akkoord — en SR nooit als ontbrekend gemeld', () => {
     const klaar = computeReadiness({ ...full, refereeAkkoord: false, isDemo: false, analyseOnly: true })
     expect(klaar.ready).toBe(true)

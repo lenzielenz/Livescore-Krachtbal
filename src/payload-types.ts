@@ -605,6 +605,10 @@ export interface Match {
    */
   goalAreaDepth: number;
   /**
+   * Federatie = volledige flow (opstelling, scheidsrechtersakkoord, aftekenen). Supporters = vrije livescore: de scheidsrechterflow valt weg en iedereen kan de wedstrijd openen en de score doorgeven.
+   */
+  scoreMode?: ('federatie' | 'supporters') | null;
+  /**
    * Aanvinken voor een oefen-/uitlegwedstrijd. Mensen kunnen die starten om de live-registratie te leren; alle startcontroles worden overgeslagen.
    */
   isDemo?: boolean | null;
@@ -1692,6 +1696,7 @@ export interface MatchesSelect<T extends boolean = true> {
   date?: T;
   status?: T;
   goalAreaDepth?: T;
+  scoreMode?: T;
   isDemo?: T;
   analyseOnly?: T;
   homeCoach?: T;
