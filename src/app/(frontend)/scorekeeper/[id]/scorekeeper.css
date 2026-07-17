@@ -727,3 +727,12 @@ a.sk-btn { display: inline-block; box-sizing: border-box; text-align: center; te
   /* Kruisjes iets groter op een breed scherm, maar niet groter dan de T.O.-tekst. */
   .sk-cross-x { font-size: 0.82rem; }
 }
+
+/* Inlog-uitnodiging (supporters-modus): je moet ingelogd zijn om de score te veranderen. */
+.sk-login-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  margin-top: 20px;
+}

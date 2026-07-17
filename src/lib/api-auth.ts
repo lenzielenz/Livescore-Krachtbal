@@ -54,7 +54,8 @@ async function matchClubIds(payload: Payload, matchId: number | string): Promise
 
 /**
  * Mag deze gebruiker de score van DEZE wedstrijd bedienen?
- * - globale supporters-modus of demo: iedereen, ook zonder login (analyse-opnames uitgezonderd)
+ * - demo: iedereen, ook zonder login (oefenmodus)
+ * - globale supporters-modus: élke ingelogde gebruiker (login verplicht, analyse-opnames uitgezonderd)
  * - admin/federatie: altijd
  * - scorekeeper: ja (vertrouwde aantekenaar — strikte per-match-binding kan later via vrijgaveCode)
  * - scheidsrechter: gebonden aan de toewijzing — is er een toegewezen (backup-)SR op het blad, dan
@@ -72,9 +73,10 @@ export async function mayScoreMatch(
   const match = await payload.findByID({ collection: 'matches', id: matchId, depth: 0 }).catch(() => null)
   if (match && (match as { isDemo?: boolean }).isDemo) return true
   // Globale supporters-modus (één knop voor alle wedstrijden): vrije livescore, losgekoppeld van de
-  // federatie — iedereen mag de score doorgeven, ook zonder login. Private analyse-opnames blijven
-  // wél afgeschermd (die zijn geen publieke wedstrijd).
-  if (match && !(match as { analyseOnly?: boolean }).analyseOnly && (await isSupportersMode(payload))) return true
+  // federatie — élke INGELOGDE gebruiker mag de score doorgeven (geen scheidsrechter/aftekenen nodig).
+  // Aanmelden is wél verplicht: anonieme wijzigingen laten we niet toe. Private analyse-opnames
+  // blijven afgeschermd (die zijn geen publieke wedstrijd).
+  if (user && match && !(match as { analyseOnly?: boolean }).analyseOnly && (await isSupportersMode(payload))) return true
   if (!user) return false
   // Analyse-opname: de eigenaar (met analyse-toegang) tekent z'n eigen analysewedstrijd aan —
   // of iemand aan wie de eigenaar "meedoen & aanpassen" toekende.
