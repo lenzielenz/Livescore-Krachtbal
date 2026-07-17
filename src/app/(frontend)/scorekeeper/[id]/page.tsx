@@ -85,6 +85,7 @@ export default async function ScorekeeperPage({
         roster={roster}
         reeks={reeks}
         exitHref={isDemo || supportersMode ? '/scorekeeper' : '/club'}
+        supportersMode={supportersMode}
       />
     )
   }

@@ -38,6 +38,7 @@ export function SimpleScorekeeper({
   roster,
   reeks,
   exitHref = '/scorekeeper',
+  supportersMode = false,
 }: {
   matchId: number
   initialState: MatchState
@@ -45,6 +46,8 @@ export function SimpleScorekeeper({
   reeks?: string
   /** Waarheen "eruit gaan" leidt: voor clubwedstrijden Mijn club (daar start je de tijdopname). */
   exitHref?: string
+  /** Supporters-modus (vrije livescore): doel is doel — geen scorer kiezen, geen wissel. */
+  supportersMode?: boolean
 }) {
   const [state, setState] = useState<MatchState>(initialState)
   const [error, setError] = useState<string | null>(null)
@@ -213,6 +216,13 @@ export function SimpleScorekeeper({
     [ACTION_URL, persistQueue, flush],
   )
 
+  // Supporters-modus: doel is doel — noteer het doelpunt meteen, zonder een scorer te kiezen.
+  const scoreAnon = (side: SimpleSide, points: 1 | 2) =>
+    void act(
+      { action: 'simplegoal', side, points },
+      (s) => ({ ...s, score: { ...s.score, [side]: s.score[side] + points } }),
+    )
+
   const overtime = live && clock >= targetSec
 
   // Volledig scherm (handig op een tablet bij het veld).
@@ -318,15 +328,25 @@ export function SimpleScorekeeper({
               <div className="ssk-score">{state.score[side]}</div>
               {!finished && (
                 <div className="ssk-goalbtns">
-                  <button type="button" className="ssk-goal nek" onClick={() => setPending({ side, points: 1 })}>
+                  <button
+                    type="button"
+                    className="ssk-goal nek"
+                    onClick={() => (supportersMode ? scoreAnon(side, 1) : setPending({ side, points: 1 }))}
+                  >
                     +1 <small>nekworp</small>
                   </button>
-                  <button type="button" className="ssk-goal rug" onClick={() => setPending({ side, points: 2 })}>
+                  <button
+                    type="button"
+                    className="ssk-goal rug"
+                    onClick={() => (supportersMode ? scoreAnon(side, 2) : setPending({ side, points: 2 }))}
+                  >
                     +2 <small>rugworp</small>
                   </button>
                 </div>
               )}
-              {!finished && teamRosterOf(side).length > 0 && (
+              {/* Wissel/veldspelers enkel in de gewone modus — in supporters-modus tellen we geen
+                  spelers (doel is doel). */}
+              {!finished && !supportersMode && teamRosterOf(side).length > 0 && (
                 <button type="button" className="ssk-wissel" onClick={() => { setSubSide(side); setSubOut(null) }}>
                   ⇄ Wissel · veld: {fieldPlayersOf(side).map((p) => (p.id === state.captain[side] ? `👑${p.shirtNumber}` : `${p.shirtNumber}`)).join(' ') || '—'}
                 </button>
