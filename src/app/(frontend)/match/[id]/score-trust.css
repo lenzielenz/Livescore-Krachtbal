@@ -1,0 +1,50 @@
+/* Vertrouwenslaag op een supporters-score: wie tekent aan, klopt de stand? */
+.trust-panel {
+  --trust-c: #e8c34a;
+  margin: 16px 0;
+  border-radius: 18px;
+  padding: 14px 16px;
+  border: 1px solid color-mix(in srgb, var(--trust-c) 40%, var(--line));
+  background:
+    radial-gradient(120% 120% at 0% 0%, color-mix(in srgb, var(--trust-c) 14%, transparent), transparent 62%),
+    var(--panel-grad, var(--panel));
+  box-shadow: var(--card-shadow, 0 16px 36px -26px rgba(0, 0, 0, 0.55));
+}
+.trust-panel.confirmed,
+.trust-panel.official { --trust-c: var(--pop); }
+.trust-panel.disputed { --trust-c: #e4573d; }
+
+.trust-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.trust-label { font-size: 1rem; font-weight: 900; color: var(--trust-c); }
+.trust-scorer { font-size: 0.78rem; color: var(--dim); }
+
+.trust-long { margin: 6px 0 0; font-size: 0.84rem; color: var(--dim); }
+
+.trust-counts { margin: 8px 0 0; display: flex; flex-wrap: wrap; gap: 6px 12px; font-size: 0.8rem; }
+.trust-count { font-variant-numeric: tabular-nums; }
+.trust-count.ok { color: var(--pop); }
+.trust-count.nok { color: #e4573d; }
+
+.trust-login { margin: 10px 0 0; font-size: 0.82rem; color: var(--dim); }
+.trust-login a { color: var(--accent); font-weight: 700; }
+
+.trust-actions { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 8px; }
+.trust-btn {
+  padding: 9px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--panel) 86%, transparent);
+  color: inherit;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.15s ease, transform 0.1s ease;
+}
+.trust-btn:hover:not(:disabled) { transform: translateY(-1px); }
+.trust-btn:disabled { opacity: 0.55; cursor: default; }
+.trust-btn.ok.on { border-color: var(--pop); color: var(--pop); }
+.trust-btn.nok.on { border-color: #e4573d; color: #e4573d; }
+.trust-btn.ghost { color: var(--dim); }
+
+.trust-error { margin: 10px 0 0; font-size: 0.82rem; color: #f87171; }

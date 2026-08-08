@@ -11,6 +11,8 @@ import { type ClubColors, clubColorsFrom, distinguishAway } from './club-colors'
 import { type LogoFit, normalizeLogoFit } from './logo-fit'
 import { type AttackDir, type Point, FIELD, freeThrowNorm } from './field'
 import { reeksUsesSeniorThrows } from './reeksen'
+import { sanitizeTrust, trustView, type TrustView } from './score-trust'
+import { isOfficialScore } from './score-trust-store'
 import { readSimpleScore } from './simple-score'
 import { TRIBUNE_GRACE_MS } from './tribune'
 import {
@@ -911,6 +913,8 @@ export interface MatchState {
   refereeStops: number
   /** Rust: de huidige helft is beëindigd, de volgende nog niet gestart. */
   atHalfTime: boolean
+  /** Hoe betrouwbaar deze stand is: 🟢 officieel/bevestigd, 🟡 nog niet bevestigd, 🔴 betwist. */
+  trust: TrustView
   possession: {
     side: TeamSide
     teamId: number
@@ -1451,6 +1455,10 @@ export async function buildMatchState(payload: Payload, matchId: number): Promis
   })
   const atHalfTime = match.status === 'live' && half < 2 && halfEndRes.totalDocs > 0
 
+  // Vertrouwenslabel op de stand: in de federatieflow is ze officieel, in supporters-modus moet
+  // ze bevestigd worden door andere kijkers (zie score-trust.ts).
+  const official = await isOfficialScore(payload)
+
   const open = await getOpenPossession(payload, matchId)
   let possession: MatchState['possession'] = null
   if (open) {
@@ -1511,6 +1519,7 @@ export async function buildMatchState(payload: Payload, matchId: number): Promis
     timeouts,
     refereeStops,
     atHalfTime,
+    trust: trustView(sanitizeTrust((match as { scoreTrust?: unknown }).scoreTrust), { official }),
     possession,
   }
 }
@@ -1526,6 +1535,8 @@ export interface ScoreboardData {
   crosses: { home: number; away: number }
   timeouts: { home: number; away: number }
   refereeStops: number
+  /** Vertrouwenslabel op de stand — zodat het live-bord fan-scores als zodanig toont. */
+  trust: TrustView
   teams: {
     home: ScoreboardTeam
     away: ScoreboardTeam
@@ -1574,6 +1585,7 @@ type ScoreboardMatch = {
   currentHalf?: number | null
   status?: string | null
   simpleScore?: unknown
+  scoreTrust?: unknown
 }
 
 const relId = (v: unknown): number | null =>
@@ -1610,6 +1622,8 @@ export async function buildScoreboards(
 
   const teamById = new Map(teamsRes.docs.map((t) => [t.id, t]))
   const possById = new Map(possRes.docs.map((p) => [p.id, p]))
+  // Eén keer voor de hele lijst: de aantekenmodus is globaal (federatieflow = officiële uitslag).
+  const official = await isOfficialScore(payload)
 
   // Worpen per wedstrijd (volgorde via de createdAt-sortering hierboven behouden).
   const throwsByMatch = new Map<number, typeof throwsRes.docs>()
@@ -1679,6 +1693,7 @@ export async function buildScoreboards(
       crosses: totals.crosses,
       timeouts,
       refereeStops,
+      trust: trustView(sanitizeTrust(m.scoreTrust), { official }),
       teams: {
         home: { id: homeId, name: home.name, logoUrl: clubLogoUrl(home), logoFit: clubLogoFit(home), colors: clubColors(home), clubId: clubIdOf(home), clubName: clubNameOf(home), ...clubLocationOf(home) },
         away: { id: awayId, name: away.name, logoUrl: clubLogoUrl(away), logoFit: clubLogoFit(away), colors: distinguishAway(clubColors(home), clubColors(away)), clubId: clubIdOf(away), clubName: clubNameOf(away), ...clubLocationOf(away) },

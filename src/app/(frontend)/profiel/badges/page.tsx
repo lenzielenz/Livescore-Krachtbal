@@ -9,6 +9,8 @@ import { fanScore } from '@/lib/fan-score'
 import { buildMatchState } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
 import { buildPredictionLeaderboard, type PredEntry } from '@/lib/prediction-score'
+import { trustLevel, trustScore } from '@/lib/score-trust'
+import { readUserTrust } from '@/lib/score-trust-store'
 import { seasonFromDate } from '@/lib/seasons'
 import './badges.css'
 
@@ -71,6 +73,10 @@ export default async function BadgesPage() {
   const myPred = buildPredictionLeaderboard(scored).find((r) => r.userId === myUserId)
   const predictionPoints = myPred?.points ?? 0
 
+  // Trust-historiek van het aantekenen. De score zelf blijft onzichtbaar; enkel het bereikte
+  // niveau vertaalt zich in een badge (zie score-trust.ts).
+  const myTrust = await readUserTrust(payload, myUserId)
+
   const checkins = sanitizeCheckins(u.checkins).length
   const booster = u.pronostiekPower as { mult?: unknown } | null | undefined
   const stats: BadgeStats = {
@@ -82,6 +88,8 @@ export default async function BadgesPage() {
     fanScore: fanScore(checkins, predictionPoints),
     profileComplete: Boolean(u.photo) && Boolean(u.club) && Boolean(u.position),
     boosterWon: Boolean(booster && booster.mult),
+    scoredMatches: myTrust.confirmed,
+    trustedScorer: trustLevel(trustScore(myTrust)) === 'vertrouwd',
   }
 
   const badges = computeBadges(stats)

@@ -123,6 +123,21 @@
 .sb-conn.off { color: var(--accent); }
 .sb-viewers { font-size: 0.72rem; color: var(--dim-strong); margin-left: auto; }
 
+/* Vertrouwenslabel op een supporters-score (🟡 nog niet bevestigd / 🟢 bevestigd / 🔴 betwist). */
+.sb-trust {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid #2a4535;
+  color: var(--dim-strong);
+  white-space: nowrap;
+}
+.sb-trust.confirmed { border-color: color-mix(in srgb, var(--pop) 45%, transparent); color: var(--pop); }
+.sb-trust.unconfirmed { border-color: color-mix(in srgb, #e8c34a 45%, transparent); color: #e8c34a; }
+.sb-trust.disputed { border-color: color-mix(in srgb, #e4573d 55%, transparent); color: #e4573d; }
+
 /* Supporter-reacties */
 .sb-reactions {
   display: flex;

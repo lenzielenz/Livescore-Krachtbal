@@ -94,6 +94,7 @@ een throw bewerken, per-connectie pollen): zie [`CLAUDE.md`](../CLAUDE.md).
 | `src/lib/sse-hub.ts` | Gedeelde SSE-infra: één poller per sleutel → fan-out, per-IP-cap, rate-limit, `SSE_HEADERS`. |
 | `src/lib/match-channel.ts` | Match-specifieke kanaallaag (reacties, viewer-count) bovenop de hub. |
 | `src/lib/db-lock.ts` | Postgres advisory lock per match (cross-instance). No-op op SQLite. |
+| `src/lib/score-trust.ts` | Pure vertrouwensregels op een supporters-score: official scorer per wedstrijd, gewogen consensus, trust-score per gebruiker. Opslag in `score-trust-store.ts`. |
 | `src/payload.config.ts` | Payload-config: collections, globals, DB-adapter-keuze (Postgres/SQLite), CORS/CSRF. |
 
 ## Datamodel (Payload-collections)
@@ -142,7 +143,7 @@ Daaromheen, per feature-cluster:
 | **Statistiek** | `/analyse`, `/rangschikking` | `season-stats`, `team-radar`, `radar-stats`, `expected-points`, `team-efficiency`, `match-analysis`, `player-danger`, `attack-patterns`, `standings` |
 | **Wedstrijdblad** | `/aftekenen`, `/beheer` | `submit/`, `matchsheet-data`, `matchsheet-workflow`, `officials-rules` |
 | **Training & voeding** | `/training`, `/opstelling` | `training-plan`, `training-metrics`, `nutrition-plan`, `calorie-tracker`, `food-database`, `gameplan` |
-| **Engagement** | `/hub`, `/pronostiek`, `/fans`, `/profiel`, `/wrapped`, `/superster` | `badges`, `fan-score`, `pronostiek-*`, `prediction-score`, `scorecard`, `mvp-vote`, `tribune`, `checkins` |
+| **Engagement** | `/hub`, `/pronostiek`, `/fans`, `/profiel`, `/wrapped`, `/superster`, `/recap` | `badges`, `fan-score`, `pronostiek-*`, `prediction-score`, `scorecard`, `mvp-vote`, `tribune`, `checkins`, `weekly-recap`, `team-of-the-week`, `match-report` |
 | **Clubs & federatie** | `/clubs`, `/club`, `/federatie`, `/scheidsrechter`, `/vergoedingen`, `/bekerfinale` | `club-colors`, `reeksen`, `reeks-standings`, `referee-credentials`, `vergoeding`, `sanctions` |
 | **Nieuws & info** | `/nieuws`, `/reglement`, `/uitleg`, `/demo`, `/prijzen` | `reglement`, `demo`, `krachtbal-quotes` |
 
@@ -153,6 +154,30 @@ werd dat N×15 → een finale met duizenden telefoons legde de DB-pool plat. De
 gedeelde hub draait **één** poller per match en doet fan-out naar alle abonnees:
 DB-kost blijft constant ongeacht het publiek. Voor échte horizontale schaal hoort
 dit later achter Redis pub/sub (nu per-instance in-memory). Zie `AUDIT-2026-06.md` §2/§6.
+
+## Vertrouwen op een supporters-score
+
+In supporters-modus (`settings.scoreMode`) mag élke ingelogde supporter de score
+doorgeven. Om dat betrouwbaar te houden zonder de drempel te verhogen:
+
+- **Eén official scorer per wedstrijd.** Wie als eerste aantekent, claimt de match
+  automatisch; anderen worden geweigerd door `mayScoreMatch` (`api-auth.ts`) en
+  kunnen enkel nog bevestigen of betwisten. De claim vervalt na 45 min stilte, zodat
+  een lege batterij een wedstrijd nooit blokkeert.
+- **Gewogen consensus.** Andere kijkers stemmen via `/api/match/[id]/trust`; het
+  gewicht van een stem hangt af van de (onzichtbare) trust-score van de stemmer.
+- **Label op de stand.** `buildMatchState` en `buildScoreboards` geven een
+  `trust`-blok mee: 🟢 officieel/bevestigd, 🟡 nog niet bevestigd, 🔴 betwist.
+- **Trust-score per gebruiker** (`users.scoreTrust`, alleen leesbaar voor federatie):
+  na het bevestigingsvenster (24 u) boekt `/api/cron/recap` het oordeel; wie
+  herhaaldelijk bevestigd wordt, gaat meteen als bevestigd door de deur.
+
+## Wekelijkse recap
+
+`/recap` toont de vorige speelweek (uitslagen, ploeg van de week, selectie van de
+week, klimmers), volledig afgeleid — er wordt geen recap opgeslagen. Het endpoint
+`/api/cron/recap` (beveiligd met `CRON_SECRET`, dagelijks aan te roepen) sluit de
+vertrouwenslaag af en pusht op maandag het overzicht.
 
 ## Deploy
 

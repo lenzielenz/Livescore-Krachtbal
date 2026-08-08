@@ -9,6 +9,8 @@ import { buildFanLeaderboard, type FanInput } from '@/lib/fan-score'
 import { buildMatchState } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
 import { buildPredictionLeaderboard, type PredEntry } from '@/lib/prediction-score'
+import { trustLevel, trustScore } from '@/lib/score-trust'
+import { readUserTrust } from '@/lib/score-trust-store'
 import { seasonFromDate } from '@/lib/seasons'
 import { buildWrapped } from '@/lib/wrapped'
 import './wrapped.css'
@@ -108,6 +110,8 @@ export default async function WrappedPage() {
       (m as { scorePredictions: PredEntry[] }).scorePredictions.some((p) => Number(p?.userId) === myUserId),
   ).length
   const myFanScore = fanRankIdx >= 0 ? fanBoard[fanRankIdx].score : 0
+  // Aantekenhistoriek (bevestigde wedstrijden) voor de aanteken-badges — zie score-trust.ts.
+  const myScoreTrust = await readUserTrust(payload, myUserId)
   const badges = computeBadges({
     checkins: myCheckins.length,
     photos: (photosRes as { totalDocs?: number }).totalDocs ?? 0,
@@ -117,6 +121,8 @@ export default async function WrappedPage() {
     fanScore: myFanScore,
     profileComplete: Boolean(u.photo) && Boolean(u.club) && Boolean(u.position),
     boosterWon: Boolean(booster && booster.mult),
+    scoredMatches: myScoreTrust.confirmed,
+    trustedScorer: trustLevel(trustScore(myScoreTrust)) === 'vertrouwd',
   })
 
   const wrapped = buildWrapped({

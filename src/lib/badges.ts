@@ -16,6 +16,10 @@ export interface BadgeStats {
   fanScore: number
   profileComplete: boolean
   boosterWon: boolean
+  /** Wedstrijden die je zelf aantekende en die bevestigd werden (zie score-trust.ts). */
+  scoredMatches: number
+  /** Trust-niveau 'vertrouwd' bereikt: je invoer gaat meteen als bevestigd door. */
+  trustedScorer: boolean
 }
 
 export interface Badge {
@@ -79,6 +83,12 @@ export function computeBadges(stats: BadgeStats): Badge[] {
     // Fanscore (gecombineerde betrokkenheid).
     tier('Superfan', 'superfan', '📣', 'Superfan', 'Bereik een fanscore van 200', stats.fanScore, 200),
     tier('Superfan', 'megafan', '🌟', 'Megafan', 'Bereik een fanscore van 500', stats.fanScore, 500),
+
+    // Aantekenen: badges belonen hier bewust NIEUW gedrag (zelf de score doorgeven), niet het
+    // kijken zelf — dat vinden supporters al leuk uit zichzelf.
+    tier('Aantekenen', 'score1', '✏️', 'Eerste keer aangetekend', 'Teken 1 wedstrijd aan die bevestigd wordt', stats.scoredMatches, 1),
+    tier('Aantekenen', 'score5', '📝', 'Vaste aantekenaar', 'Teken 5 bevestigde wedstrijden aan', stats.scoredMatches, 5),
+    flag('Aantekenen', 'trusted', '🛡️', 'Vertrouwde aantekenaar', 'Jouw scores gaan meteen als bevestigd door', stats.trustedScorer),
 
     // Profiel & bonusrad.
     flag('Profiel', 'profile', '🧑', 'Profiel compleet', 'Foto, club én positie ingevuld', stats.profileComplete),

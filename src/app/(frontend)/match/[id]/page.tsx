@@ -12,12 +12,15 @@ import { userClubId } from '@/lib/access'
 import { getAuthUser } from '@/lib/auth-user'
 import { isCheckedIn, sanitizeCheckins } from '@/lib/checkins'
 import { formatDateTimeBE } from '@/lib/datetime'
-import { buildMatchSheet, buildMatchState, buildMatchStats, buildTimeline } from '@/lib/match-engine'
+import { buildMatchSheet, buildMatchState, buildMatchStats, buildTimeline, type SheetGoal } from '@/lib/match-engine'
+import { buildMatchReport } from '@/lib/match-report'
+import { tallyMvp } from '@/lib/mvp-vote'
 import { getPayloadClient } from '@/lib/payload-client'
 import { activeTokens, type RadToken } from '@/lib/pronostiek-rad'
 import { countUserWeekendPredictions, LIVE_PRONOSTIEK_MAX_PER_WEEKEND } from '@/lib/pronostiek-weekend'
 import { isAdultReeks, krachtbalKleur, reeksHalfDurationSeconds, reeksNaam, reeksType, type Reeks } from '@/lib/reeksen'
 import { isSupportersMode } from '@/lib/score-mode'
+import { mayClaim, mayVote, sanitizeTrust, voteWindowOpen } from '@/lib/score-trust'
 import { isTribuneOpen } from '@/lib/tribune'
 import { BASE_RATE_PER_MIN } from '@/lib/win-probability'
 import { MatchRecap } from '../../analyse/[id]/MatchRecap'
@@ -25,6 +28,7 @@ import { LiveStream } from './LiveStream'
 import { MatchScorers } from './MatchScorers'
 import { MvpVote } from './MvpVote'
 import { PronostiekWidget } from './PronostiekWidget'
+import { ScoreTrust } from './ScoreTrust'
 import '../../analyse/analyse.css'
 
 export const dynamic = 'force-dynamic'
@@ -121,6 +125,8 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
     shots: Awaited<ReturnType<typeof buildMatchStats>>['shots']
     goals: { side: 'home' | 'away'; points: number; half: number; gameClock: number }[]
     timeouts: { side: 'home' | 'away'; half: number; gameClock: number }[]
+    /** Doelpunten mét scorer — voedt het automatische matchverslag. */
+    sheetGoals: SheetGoal[]
   } | null = null
   if (state.match.status === 'finished') {
     try {
@@ -131,10 +137,8 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
           .find({ collection: 'match-events', where: { and: [{ match: { equals: matchId } }, { type: { equals: 'timeout' } }] }, depth: 0, limit: 100 })
           .catch(() => ({ docs: [] as Record<string, unknown>[] })),
       ])
-      const goals = (sheet?.goals ?? [])
-        .slice()
-        .sort((a, b) => a.half - b.half || a.gameClock - b.gameClock)
-        .map((g) => ({ side: g.side, points: g.points, half: g.half, gameClock: g.gameClock }))
+      const sheetGoals = (sheet?.goals ?? []).slice().sort((a, b) => a.half - b.half || a.gameClock - b.gameClock)
+      const goals = sheetGoals.map((g) => ({ side: g.side, points: g.points, half: g.half, gameClock: g.gameClock }))
       // Time-outs op de tijdas voor de momentum-grafiek (verticale streep op het juiste moment).
       const homeTeamId = state.teams.home.id
       const timeouts = toRes.docs.map((e) => {
@@ -146,7 +150,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
           gameClock: Number((e as { gameClock?: unknown }).gameClock ?? 0),
         }
       })
-      share = { reeks: reeks ?? 'Krachtbal', datum, stats: statsRes.stats, shots: statsRes.shots, goals, timeouts }
+      share = { reeks: reeks ?? 'Krachtbal', datum, stats: statsRes.stats, shots: statsRes.shots, goals, timeouts, sheetGoals }
     } catch {
       share = null
     }
@@ -217,6 +221,50 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
     }
   }
   const mvpCanVote = Boolean(me) && isTribuneOpen(state.match.status, state.match.finishedAt)
+
+  // Automatisch matchverslag (krantstijl) na afloop: volledig afgeleid uit de doelpunten-events,
+  // de kruisjes en de supporterstem. Geen opgeslagen tekst — het verslag wordt telkens opgebouwd.
+  const mvpWinner = mvpCandidates.length > 0 ? tallyMvp(mvpCandidates, mvpTotals).winner : null
+  const report =
+    share && state.match.status === 'finished'
+      ? buildMatchReport({
+          home: state.teams.home.name,
+          away: state.teams.away.name,
+          score: state.score,
+          crosses: state.crosses,
+          goals: share.sheetGoals.map((g) => ({
+            half: g.half,
+            gameClock: g.gameClock,
+            side: g.side,
+            points: g.points,
+            playerName: g.playerName,
+            shirtNumber: g.shirtNumber,
+          })),
+          reeks,
+          datum,
+          mvp: mvpWinner ? { name: mvpWinner.name, votes: mvpWinner.votes } : null,
+        })
+      : null
+
+  // Vertrouwenslaag: enkel zinvol bij een vrije supporters-score. Wie zelf meetekende, mag niet
+  // bevestigen (geen onafhankelijke controle); wie niets claimde, kan het aantekenen overnemen.
+  const trust = state.trust
+  const trustState = sanitizeTrust((matchDoc as { scoreTrust?: unknown } | null)?.scoreTrust)
+  const meId = me ? Number((me as { id?: number }).id) : null
+  const trustMe =
+    meId != null
+      ? {
+          isScorer: trustState.scorerId === meId,
+          mayClaim: state.match.status !== 'finished' && mayClaim(trustState, meId),
+          mayVote:
+            voteWindowOpen(state.match.status, state.match.finishedAt) && mayVote(trustState, meId),
+          myVote: trustState.confirms.some((v) => v.userId === meId)
+            ? ('confirm' as const)
+            : trustState.disputes.some((v) => v.userId === meId)
+              ? ('dispute' as const)
+              : null,
+        }
+      : null
 
   // Live-pronostiek: eigen (vergrendelde) voorspelling + resterende beurten dit weekend.
   const myUid = me ? Number((me as { id?: number }).id) : null
@@ -303,6 +351,20 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
         momentumTimeouts={share?.timeouts}
         myClubPrimary={myClubPrimary}
       />
+      {/* Vertrouwenslaag onder het scorebord: wie tekent aan, en klopt deze stand? Alleen bij een
+          vrije supporters-score — in de federatieflow is de uitslag per definitie officieel. */}
+      {trust.label !== 'official' && state.match.status !== 'scheduled' && (
+        <ScoreTrust
+          matchId={matchId}
+          initial={trust}
+          loggedIn={Boolean(me)}
+          initialMayClaim={trustMe?.mayClaim ?? false}
+          initialMayVote={trustMe?.mayVote ?? false}
+          initialMyVote={trustMe?.myVote ?? null}
+          isScorer={trustMe?.isScorer ?? false}
+        />
+      )}
+
       {/* Live-uitzending van de wedstrijd (externe stream), als de beheerder er een instelde. */}
       {matchDoc?.livestreamUrl && (
         <LiveStream url={String(matchDoc.livestreamUrl)} live={state.match.status === 'live'} />
@@ -340,6 +402,20 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
 
       {/* Na afloop, publiek: samenvatting (speler van de wedstrijd) + de doelpuntenmakers.
           Het scoreverloop staat vlak onder het scorebord, in de Scoreboard zelf. */}
+      {/* Automatisch wedstrijdverslag: het napraatmoment in woorden, meteen deelbaar. */}
+      {report && (
+        <section className="match-report" aria-label="Wedstrijdverslag">
+          <h2 className="match-report-headline">{report.headline}</h2>
+          <p className="match-report-lead">{report.lead}</p>
+          {report.paragraphs.map((p, i) => (
+            <p key={i} className="match-report-p">
+              {p}
+            </p>
+          ))}
+          <p className="match-report-note">Automatisch samengesteld uit de geregistreerde wedstrijddata.</p>
+        </section>
+      )}
+
       {share && (
         <>
           <MatchRecap stats={share.stats} teams={{ home: state.teams.home.name, away: state.teams.away.name }} />
