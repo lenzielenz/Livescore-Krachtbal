@@ -239,6 +239,20 @@ export async function recordThrow(payload: Payload, input: RecordThrowInput) {
   const throwNumber = existing.docs.length + 1
   const last = existing.docs[existing.docs.length - 1]
 
+  // De werper moet bij de ploeg horen die aan bal is. Zonder deze controle schrijft een
+  // misklik (of een herverzonden actie ná een balbezitwissel) de worp weg op naam van een
+  // speler van de ándere ploeg: de worp krijgt dan het teamId van het balbezit, en alle
+  // afgeleide statistiek rekent die speler bij de verkeerde kant. De snelscoremodus bewaakt
+  // dit al (zie simple-match-engine.ts); het veldschema deed dat niet.
+  const thrower = await payload
+    .findByID({ collection: 'players', id: input.playerId, depth: 0 })
+    .catch(() => null)
+  if (!thrower) throw new Error('Onbekende speler.')
+  const throwerTeamId = typeof thrower.team === 'object' && thrower.team ? (thrower.team as { id: number }).id : thrower.team
+  if (Number(throwerTeamId) !== Number(teamId)) {
+    throw new Error('Die speler hoort niet bij de ploeg die aan bal is.')
+  }
+
   // Een speler mag niet twee worpen na elkaar doen binnen hetzelfde balbezit.
   if (last) {
     const lastPlayerId = typeof last.player === 'object' ? last.player.id : last.player

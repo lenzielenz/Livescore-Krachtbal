@@ -30,6 +30,17 @@ export async function POST(req: Request) {
 
   const payload = await getPayloadClient()
 
+  // Bestaat het adres al? Expliciet controleren i.p.v. de foutmelding van de database te
+  // interpreteren: Payload meldt een dubbele auth-e-mail als "The following field is invalid:
+  // email", wat niemand begrijpt. Wie zich opnieuw inschrijft, hoort te lezen dat hij al een
+  // account heeft (en dus kan inloggen).
+  const bestaat = await payload
+    .count({ collection: 'users', where: { email: { equals: email } }, overrideAccess: true })
+    .catch(() => ({ totalDocs: 0 }))
+  if (bestaat.totalDocs > 0) {
+    return Response.json({ error: 'Dit e-mailadres is al in gebruik — log gewoon in.' }, { status: 409 })
+  }
+
   // Optionele club: enkel bewaren als ze echt bestaat (anders gewoon negeren).
   let clubId: number | null = null
   const rawClub = Number(body.clubId)
@@ -49,12 +60,9 @@ export async function POST(req: Request) {
     // We loggen de échte oorzaak server-side en geven enkel een bruikbare melding terug.
     const msg = (err as Error)?.message || ''
     console.error('register failed:', msg, err)
-    // Bestaand e-mailadres (unieke auth-email) → vriendelijke 409.
-    if (
-      /e-?mail/i.test(msg) &&
-      /(already|registered|taken|in use|uniek|unique|bestaat|duplicate)/i.test(msg)
-    ) {
-      return Response.json({ error: 'Dit e-mailadres is al in gebruik.' }, { status: 409 })
+    // Race: tussen de controle hierboven en het aanmaken raakte het adres toch bezet.
+    if (/e-?mail/i.test(msg)) {
+      return Response.json({ error: 'Dit e-mailadres is al in gebruik — log gewoon in.' }, { status: 409 })
     }
     // Alle andere fouten: toon de werkelijke reden i.p.v. ze te verbergen.
     return Response.json(

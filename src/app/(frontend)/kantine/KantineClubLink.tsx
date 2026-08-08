@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 // Vaste, openbare kantine-link per club: kies je club en deel/plak de link op de kantine-tv. Hij
 // blijft heel het seizoen geldig en toont automatisch al jullie wedstrijden van die dag.
@@ -8,11 +8,13 @@ export function KantineClubLink({ clubs, myClubId }: { clubs: { id: number; name
   const [clubId, setClubId] = useState<number | null>(myClubId ?? (clubs.length === 1 ? clubs[0].id : null))
   const [copied, setCopied] = useState(false)
 
-  const url = useMemo(() => {
-    if (clubId == null) return ''
-    const origin = typeof window !== 'undefined' ? window.location.origin : ''
-    return `${origin}/kantine/club/${clubId}`
-  }, [clubId])
+  // De volledige link heeft het domein nodig, maar dat kent de server niet: gebruik je
+  // window.location tijdens het renderen, dan verschilt de server-HTML van wat de browser
+  // maakt en klaagt React over de hydratatie. Daarom pas ná de eerste render invullen.
+  const [origin, setOrigin] = useState('')
+  useEffect(() => setOrigin(window.location.origin), [])
+
+  const url = useMemo(() => (clubId == null ? '' : `${origin}/kantine/club/${clubId}`), [clubId, origin])
 
   if (clubs.length === 0) return null
 
