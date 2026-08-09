@@ -172,6 +172,22 @@ doorgeven. Om dat betrouwbaar te houden zonder de drempel te verhogen:
   na het bevestigingsvenster (24 u) boekt `/api/cron/recap` het oordeel; wie
   herhaaldelijk bevestigd wordt, gaat meteen als bevestigd door de deur.
 
+## Seizoensimport
+
+De federatie levert het speelplan als één bestand met álle reeksen. `/beheer/planning` neemt een
+**Excel (.xlsx)**, CSV of geplakte tekst aan en maakt in één keer de ontbrekende clubs, ploegen en
+wedstrijden aan. Drie lagen:
+
+- `src/lib/xlsx-read.ts` — minimale .xlsx-lezer (ZIP + XML via `zlib`, zonder extra afhankelijkheid,
+  net als de PDF-parser). Zet Excel-datumgetallen om naar leesbare datums.
+- `src/lib/season-import.ts` — puur: kolommen herkennen (aan de koprij, of aan de inhoud wanneer
+  die ontbreekt), datum/uur lezen in Belgische tijd, reeks resolven, dubbels detecteren.
+- `src/lib/season-import-run.ts` — schrijft weg. Twee standen: proef (niets wegschrijven, enkel
+  rapporteren) en echt. Opnieuw importeren is veilig: bestaande wedstrijden (zelfde reeks, dag en
+  ploegen) worden overgeslagen.
+
+De aantekenmodus zelf schakel je om op `/federatie` (`ScoreModeSwitch` → `/api/settings/score-mode`).
+
 ## Wekelijkse recap
 
 `/recap` toont de vorige speelweek (uitslagen, ploeg van de week, selectie van de

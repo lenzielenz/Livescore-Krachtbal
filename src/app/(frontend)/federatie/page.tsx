@@ -4,7 +4,10 @@ import { ProfileTools } from '@/components/ProfileTools'
 import { SiteHeader } from '@/components/SiteHeader'
 import { hasRole, isFederationLevel } from '@/lib/access'
 import { getAuthUser } from '@/lib/auth-user'
+import { getPayloadClient } from '@/lib/payload-client'
 import { getProfile } from '@/lib/profiles'
+import { getScoreMode } from '@/lib/score-mode'
+import { ScoreModeSwitch } from './ScoreModeSwitch'
 
 export const dynamic = 'force-dynamic'
 
@@ -29,6 +32,10 @@ export default async function FederatiePage() {
   }
 
   const profile = getProfile('federatie')
+  // De aantekenmodus staat bovenaan: het is de schakelaar met de grootste impact op het platform.
+  const payload = await getPayloadClient()
+  const scoreMode = await getScoreMode(payload)
+
   return (
     <>
       <SiteHeader active="federatie" />
@@ -37,6 +44,7 @@ export default async function FederatiePage() {
           <span className="brand">Federatie</span>
         </h1>
         <p className="profile-lead">{profile.intro}</p>
+        <ScoreModeSwitch initial={scoreMode} />
         <ProfileTools profile={profile} isAdmin={hasRole(me, 'admin')} />
       </div>
     </>
