@@ -1,0 +1,64 @@
+/* Schakelaar voor de globale aantekenmodus (federatiepagina). */
+.sms {
+  margin: 0 0 22px;
+  padding: 18px 20px;
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0) 60%), var(--panel-grad, var(--panel));
+  box-shadow: var(--card-shadow, 0 16px 36px -26px rgba(0, 0, 0, 0.55));
+}
+.sms-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.sms-title { margin: 0; font-size: 1.1rem; font-weight: 900; }
+.sms-now {
+  font-size: 0.78rem;
+  font-weight: 800;
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  white-space: nowrap;
+}
+.sms-now.federatie { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 45%, transparent); }
+.sms-now.supporters { color: var(--pop); border-color: color-mix(in srgb, var(--pop) 45%, transparent); }
+
+.sms-lead { margin: 8px 0 16px; font-size: 0.86rem; color: var(--dim); max-width: 62ch; line-height: 1.55; }
+
+.sms-opts { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+.sms-opt {
+  --sms-c: var(--accent);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--panel) 70%, transparent);
+}
+.sms-opt.supporters { --sms-c: var(--pop); }
+.sms-opt.on {
+  border-color: color-mix(in srgb, var(--sms-c) 55%, transparent);
+  background: radial-gradient(120% 120% at 0% 0%, color-mix(in srgb, var(--sms-c) 14%, transparent), transparent 62%), var(--panel);
+}
+.sms-opt-head { display: flex; align-items: flex-start; gap: 10px; }
+.sms-opt-emoji { font-size: 1.5rem; line-height: 1.1; }
+.sms-opt-head b { display: block; font-size: 1rem; font-weight: 900; }
+.sms-opt-head i { display: block; font-style: normal; font-size: 0.8rem; color: var(--dim); }
+
+.sms-opt-list { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
+.sms-opt-list li { font-size: 0.82rem; color: var(--dim-strong, var(--dim)); line-height: 1.45; }
+
+.sms-btn {
+  margin-top: auto;
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--sms-c) 45%, var(--line));
+  background: color-mix(in srgb, var(--sms-c) 12%, transparent);
+  color: inherit;
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform 0.1s ease, border-color 0.15s ease;
+}
+.sms-btn:hover:not(:disabled) { transform: translateY(-1px); }
+.sms-btn:disabled { cursor: default; }
+.sms-btn.is-on { color: var(--sms-c); background: transparent; opacity: 0.85; }

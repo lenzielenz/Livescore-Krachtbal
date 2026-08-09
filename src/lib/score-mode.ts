@@ -5,7 +5,8 @@ import type { Payload } from 'payload'
 //    start, en aftekenen achteraf. Enkel gemachtigde aantekenaars muteren.
 //  - 'supporters': vrije livescore voor alle wedstrijden. De hele scheidsrechter-/aftekenflow
 //    valt weg; iedereen kan een wedstrijd openen en gewoon de score doorgeven, ook zonder login.
-export type ScoreMode = 'federatie' | 'supporters'
+export const SCORE_MODES = ['federatie', 'supporters'] as const
+export type ScoreMode = (typeof SCORE_MODES)[number]
 
 /** Lees de globale aantekenmodus (standaard 'federatie'). */
 export async function getScoreMode(payload: Payload): Promise<ScoreMode> {
