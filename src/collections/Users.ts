@@ -238,6 +238,23 @@ export const Users: CollectionConfig = {
       },
     },
     {
+      // Trust-historiek van een aantekenaar in supporters-modus: hoeveel van zijn aangetekende
+      // wedstrijden bevestigd dan wel betwist werden. Bewust ONZICHTBAAR voor de gebruiker zelf
+      // (enkel federatie/admin leest ze): een zichtbare score nodigt uit tot spelen met het systeem.
+      // Vorm: { confirmed, disputed, matches } — zie src/lib/score-trust.ts. Automatisch beheerd.
+      name: 'scoreTrust',
+      label: 'Trust-historiek (aantekenen)',
+      type: 'json',
+      access: {
+        read: ({ req }) => isFederationLevel(req.user),
+        update: ({ req }) => isFederationLevel(req.user),
+      },
+      admin: {
+        hidden: true,
+        description: 'Bevestigde/betwiste aangetekende wedstrijden: { confirmed, disputed, matches }. Automatisch beheerd.',
+      },
+    },
+    {
       // Analyse-toegang: een admin kan een geregistreerd account toegang geven tot de
       // analysemodule (data per speler/ploeg), zonder admin te worden.
       name: 'analyseAccess',

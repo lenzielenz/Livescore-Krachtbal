@@ -96,6 +96,42 @@ export default async function ScorekeeperPage({
     )
   }
 
+  // Vertrouwenslaag: tekent een ándere supporter deze wedstrijd al aan, dan mag jij niet muteren
+  // (zie mayScoreMatch). Zeg dat hier meteen, i.p.v. een volledig werkend ogend scorebord te tonen
+  // waarvan elke tik met een foutmelding eindigt. Bevestigen of betwisten kan wél — op de
+  // wedstrijdpagina. Federatie/aantekenaars gaan altijd voor op de crowd.
+  const trust = state.trust
+  const someoneElseScores =
+    supportersMode &&
+    !isDemo &&
+    trust.claimActive &&
+    trust.scorerId != null &&
+    Number(trust.scorerId) !== Number((user as { id?: number } | null)?.id) &&
+    !hasRole(user, 'admin', 'federatie', 'scorekeeper')
+  if (someoneElseScores) {
+    return (
+      <>
+        <SiteHeader active="wedstrijden" />
+        <div className="site">
+          <h1 className="page-title">Aantekenen</h1>
+          <p className="empty">
+            <b>{trust.scorerName ?? 'Iemand anders'}</b> tekent deze wedstrijd al aan. Om te vermijden
+            dat twee mensen door elkaar scoren, kan er maar één tegelijk aantekenen. Volg de wedstrijd
+            mee en bevestig of betwist de stand op de wedstrijdpagina — geeft hij het aantekenen door
+            (of valt hij stil), dan kan jij het overnemen.
+          </p>
+          <p className="sk-login-actions">
+            <Link href={`/match/${matchId}`} className="match-score-cta">
+              <span aria-hidden>📺</span>
+              <span>Naar de wedstrijd</span>
+              <span className="match-score-cta-arrow" aria-hidden>→</span>
+            </Link>
+          </p>
+        </div>
+      </>
+    )
+  }
+
   // De basis snelscoremodus (+1/+2) is de standaard voor élke gewone wedstrijd — ook voor een admin.
   // De volledige scoreopnemer (3-staps veldschema) is enkel voor ANALYSEWEDSTRIJDEN: wedstrijden die
   // je zelf onder "Analyse" toevoegt om detaildata te verzamelen. De demo blijft de basisversie voor

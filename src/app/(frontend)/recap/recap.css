@@ -1,0 +1,66 @@
+/* Maandag-recap: het weekoverzicht. Rustige leeslay-out, één kolom. */
+.recap-head { margin: 6px 0 20px; }
+.recap-period {
+  display: block;
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--dim);
+  margin-bottom: 4px;
+}
+.recap-title { margin: 0; font-size: 1.5rem; font-weight: 900; line-height: 1.2; text-wrap: balance; }
+
+.recap-empty { color: var(--dim); max-width: 60ch; line-height: 1.6; }
+.recap-empty a { color: var(--accent); font-weight: 700; }
+
+.recap-block {
+  margin: 0 0 16px;
+  padding: 16px 18px;
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0) 60%), var(--panel-grad, var(--panel));
+  box-shadow: var(--card-shadow, 0 16px 36px -26px rgba(0, 0, 0, 0.55));
+}
+.recap-h2 { margin: 0 0 12px; font-size: 1rem; font-weight: 900; letter-spacing: 0.02em; }
+.recap-count { color: var(--dim); font-weight: 700; }
+
+.recap-highlights,
+.recap-climbers,
+.recap-results,
+.recap-players { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+
+.recap-highlight { display: flex; gap: 12px; align-items: flex-start; }
+.recap-highlight-emoji { font-size: 1.3rem; line-height: 1.2; }
+.recap-highlight-txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.recap-highlight-txt b { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--dim); }
+.recap-highlight-txt a { color: inherit; text-decoration: none; font-weight: 700; }
+.recap-highlight-txt a:hover { color: var(--accent); }
+
+.recap-team { margin: 0; line-height: 1.6; }
+
+.recap-player { display: flex; align-items: center; gap: 12px; }
+.recap-player-rank {
+  flex: none;
+  width: 26px; height: 26px;
+  display: grid; place-items: center;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--accent);
+  font-size: 0.8rem; font-weight: 900;
+}
+.recap-player-txt { flex: 1; display: flex; flex-direction: column; line-height: 1.25; min-width: 0; }
+.recap-player-txt i { font-style: normal; font-size: 0.76rem; color: var(--dim); }
+.recap-player-stat { flex: none; font-weight: 900; font-variant-numeric: tabular-nums; }
+
+.recap-climber { display: flex; align-items: baseline; gap: 10px; line-height: 1.5; }
+.recap-climber-delta { flex: none; color: var(--pop); font-weight: 900; font-variant-numeric: tabular-nums; }
+
+.recap-result-link {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
+  color: inherit; text-decoration: none;
+  padding: 8px 10px; border-radius: 12px;
+  border: 1px solid transparent;
+}
+.recap-result-link:hover { border-color: var(--line); background: color-mix(in srgb, var(--panel) 60%, transparent); }
+.recap-result-teams { font-variant-numeric: tabular-nums; }
+.recap-result-reeks { flex: none; font-size: 0.74rem; color: var(--dim); }

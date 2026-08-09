@@ -30,12 +30,25 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'], channel: 'chromium' },
+      use: {
+        ...devices['Desktop Chrome'],
+        channel: 'chromium',
+        // Draait er al een Chromium op de machine (CI-image, container), wijs er dan naar met
+        // PLAYWRIGHT_CHROMIUM_PATH i.p.v. een tweede exemplaar te downloaden. Niet gezet = standaard.
+        launchOptions: process.env.PLAYWRIGHT_CHROMIUM_PATH
+          ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH }
+          : undefined,
+      },
     },
   ],
   webServer: {
     command: 'pnpm dev',
     reuseExistingServer: true,
     url: 'http://localhost:3000',
+    // `pnpm test:e2e` zet NODE_OPTIONS met `--import=tsx/esm` voor de testrunner zelf. Dat erft de
+    // webserver mee, waardoor pnpm zijn eigen opstart door tsx haalt en struikelt ("Error during
+    // pnpmfile execution"). De dev server heeft tsx niet nodig — geef hem dus schone opties mee.
+    env: { NODE_OPTIONS: '--no-deprecation' },
+    timeout: 180_000,
   },
 })

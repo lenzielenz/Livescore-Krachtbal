@@ -515,6 +515,14 @@ export function Scoreboard({
           ) : (
             <span className="sb-conn off" title="Verbinding verbroken — opnieuw verbinden…">● verbinden…</span>
           ))}
+        {/* Vertrouwenslabel: enkel tonen wanneer de stand NIET uit de officiële wedstrijdflow komt.
+            Een supporters-score is "nog niet bevestigd" tot genoeg kijkers ze bevestigden — zo blijft
+            het leuk én eerlijk (zie src/lib/score-trust.ts). */}
+        {state.trust.label !== 'official' && (
+          <span className={`sb-trust ${state.trust.label}`} title={state.trust.long}>
+            {state.trust.emoji} {state.trust.short}
+          </span>
+        )}
         {state.match.status === 'live' && viewers > 0 && (
           <span className="sb-viewers" title="Kijkers nu">
             👁 {viewers}

@@ -34,6 +34,7 @@ const GENERAL: { href: string; label: string; auth?: boolean }[] = [
 // supporter-tools (jeugd-superster, supportersklassement) staan als tegels op de hub.
 const WEDSTRIJDEN: { href: string; label: string }[] = [
   { href: '/rangschikking', label: '📊 Stand' },
+  { href: '/recap', label: '📰 Weekoverzicht' },
   { href: '/pronostiek', label: '🔮 Pronostiekstand' },
   { href: '/tornooi', label: '🏆 Bekerwedstrijden' },
 ]

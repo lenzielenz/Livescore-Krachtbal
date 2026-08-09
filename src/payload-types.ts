@@ -379,6 +379,18 @@ export interface User {
     | boolean
     | null;
   /**
+   * Bevestigde/betwiste aangetekende wedstrijden: { confirmed, disputed, matches }. Automatisch beheerd.
+   */
+  scoreTrust?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  /**
    * Geef dit account toegang tot de analyse (naast de admin-rol).
    */
   analyseAccess?: boolean | null;
@@ -641,6 +653,18 @@ export interface Match {
    * Beheerd via het simpele aantekenscherm. Niet handmatig bewerken.
    */
   simpleScore?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  /**
+   * Official scorer + bevestigingen van de supporters-score. Automatisch beheerd.
+   */
+  scoreTrust?:
     | {
         [k: string]: unknown;
       }
@@ -1708,6 +1732,7 @@ export interface MatchesSelect<T extends boolean = true> {
   clockRunning?: T;
   clockUpdatedAt?: T;
   simpleScore?: T;
+  scoreTrust?: T;
   liveReactions?: T;
   liveShoutouts?: T;
   livePoll?: T;
@@ -2154,6 +2179,7 @@ export interface UsersSelect<T extends boolean = true> {
   nutritionTracker?: T;
   checkins?: T;
   pronostiekPower?: T;
+  scoreTrust?: T;
   analyseAccess?: T;
   trainingAccess?: T;
   official?: T;

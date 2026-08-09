@@ -23,6 +23,7 @@ import { getMatchReadiness } from '@/lib/matchsheet-data'
 import { notifyGoalScored } from '@/lib/match-notify'
 import { missingSteps } from '@/lib/match-readiness'
 import { getPayloadClient } from '@/lib/payload-client'
+import { noteContribution } from '@/lib/score-trust-store'
 import {
   adjustRefereeStop,
   adjustSimpleCross,
@@ -204,6 +205,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         break
       default:
         return Response.json({ error: `Onbekende actie: ${action}` }, { status: 400 })
+    }
+
+    // Vertrouwenslaag: onthoud wie deze wedstrijd aantekent. De eerste die scoort wordt official
+    // scorer; elke volgende actie houdt die claim levend (zie score-trust.ts). Fire-and-forget.
+    if (actorId != null) {
+      noteContribution(matchId, { id: actorId, name: String((user as { name?: unknown })?.name ?? '').trim() || 'Supporter' })
     }
 
     // Bewaar de response onder de opId, zodat een herverzonden actie (zie boven) niet dubbel telt.

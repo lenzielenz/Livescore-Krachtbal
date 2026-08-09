@@ -430,6 +430,18 @@ export const Matches: CollectionConfig = {
       },
     },
     {
+      // Vertrouwenslaag op supporters-scores: wie deze wedstrijd claimde als official scorer, wie
+      // meetekende, en de bevestigingen/betwistingen van andere kijkers. Bepaalt het 🟢/🟡-label op
+      // het scorebord. Vorm: zie src/lib/score-trust.ts (MatchTrust). Automatisch beheerd.
+      name: 'scoreTrust',
+      label: 'Vertrouwen op de score',
+      type: 'json',
+      admin: {
+        hidden: true,
+        description: 'Official scorer + bevestigingen van de supporters-score. Automatisch beheerd.',
+      },
+    },
+    {
       // Live tribune — persistente opslag zodat de emoji-tellers en shoutouts NIET verdwijnen
       // wanneer (even) niemand kijkt of de server herstart. Het live-kanaal hydrateert hieruit.
       name: 'liveReactions',

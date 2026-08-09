@@ -22,10 +22,12 @@ export async function seedTestUser(): Promise<void> {
     },
   })
 
-  // Create fresh test user
+  // Create fresh test user. Rol 'admin' is nodig: de admin-tests openen het gebruikersbeheer, en
+  // `users.access.create` staat enkel voor admins open — met de standaardrol (aantekenaar) rendert
+  // het aanmaakformulier zonder velden en falen de tests op iets dat geen bug is.
   await payload.create({
     collection: 'users',
-    data: testUser,
+    data: { ...testUser, roles: ['admin'] },
   })
 }
 

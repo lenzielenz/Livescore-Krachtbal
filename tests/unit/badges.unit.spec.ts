@@ -11,6 +11,8 @@ const base: BadgeStats = {
   fanScore: 0,
   profileComplete: false,
   boosterWon: false,
+  scoredMatches: 0,
+  trustedScorer: false,
 }
 
 describe('computeBadges', () => {

@@ -9,6 +9,7 @@ import type { Payload } from 'payload'
 import { canAnalyse, hasRole, isFederationLevel, userClubId, userOfficialId, type UserRole } from './access'
 import { analyseEditOwners } from './analyse-access'
 import { isSupportersMode } from './score-mode'
+import { mayClaim, sanitizeTrust } from './score-trust'
 
 export type AuthedUser = { id: number | string; roles?: UserRole[] | null } & Record<string, unknown>
 
@@ -76,7 +77,13 @@ export async function mayScoreMatch(
   // federatie — élke INGELOGDE gebruiker mag de score doorgeven (geen scheidsrechter/aftekenen nodig).
   // Aanmelden is wél verplicht: anonieme wijzigingen laten we niet toe. Private analyse-opnames
   // blijven afgeschermd (die zijn geen publieke wedstrijd).
-  if (user && match && !(match as { analyseOnly?: boolean }).analyseOnly && (await isSupportersMode(payload))) return true
+  if (user && match && !(match as { analyseOnly?: boolean }).analyseOnly && (await isSupportersMode(payload))) {
+    // Vertrouwenslaag: heeft iemand deze wedstrijd geclaimd als official scorer en is die claim nog
+    // levend, dan tekent enkel hij aan — de rest bevestigt of betwist de stand (zie score-trust.ts).
+    // Zo krijg je het beste van beide: crowd voor de liveness, één vertrouwd persoon voor de uitslag.
+    // Een claim vervalt bij lange stilte, zodat een lege batterij de wedstrijd nooit blokkeert.
+    return mayClaim(sanitizeTrust((match as { scoreTrust?: unknown }).scoreTrust), Number(user.id))
+  }
   if (!user) return false
   // Analyse-opname: de eigenaar (met analyse-toegang) tekent z'n eigen analysewedstrijd aan —
   // of iemand aan wie de eigenaar "meedoen & aanpassen" toekende.
