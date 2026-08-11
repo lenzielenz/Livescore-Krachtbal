@@ -21,6 +21,7 @@ import { countUserWeekendPredictions, LIVE_PRONOSTIEK_MAX_PER_WEEKEND } from '@/
 import { isAdultReeks, krachtbalKleur, reeksHalfDurationSeconds, reeksNaam, reeksType, type Reeks } from '@/lib/reeksen'
 import { isSupportersMode } from '@/lib/score-mode'
 import { mayClaim, mayVote, sanitizeTrust, voteWindowOpen } from '@/lib/score-trust'
+import { MATCH_ASSUMED_DONE_MS } from '@/lib/simple-score'
 import { isTribuneOpen } from '@/lib/tribune'
 import { BASE_RATE_PER_MIN } from '@/lib/win-probability'
 import { MatchRecap } from '../../analyse/[id]/MatchRecap'
@@ -28,6 +29,7 @@ import { LiveStream } from './LiveStream'
 import { MatchScorers } from './MatchScorers'
 import { MvpVote } from './MvpVote'
 import { PronostiekWidget } from './PronostiekWidget'
+import { ReportResult } from './ReportResult'
 import { ScoreTrust } from './ScoreTrust'
 import '../../analyse/analyse.css'
 
@@ -301,6 +303,20 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
           <span className="match-score-cta-arrow" aria-hidden>→</span>
         </Link>
       )}
+      {/* Aftrap ruim voorbij maar niemand tekende aan? Dan geeft een supporter hier de eindstand
+          door (de vertrouwenslaag labelt ze 🟡 tot anderen bevestigen). Zelfde venster als het
+          live-bord en de server-guard: pas als de match zeker gedaan is. */}
+      {supportersMode &&
+        state.match.status === 'scheduled' &&
+        matchDoc?.date &&
+        Date.now() >= new Date(matchDoc.date as string).getTime() + MATCH_ASSUMED_DONE_MS && (
+          <ReportResult
+            matchId={matchId}
+            loggedIn={Boolean(me)}
+            homeName={state.teams.home.name}
+            awayName={state.teams.away.name}
+          />
+        )}
       {/* Match-context als kop bovenaan (reeks · datum · locatie · scheidsrechter), zodat
           duidelijk is over welke wedstrijd dit gaat. Kapiteins horen hier bewust níet bij —
           die staan op het wedstrijdblad, niet op de publieke pagina. */}

@@ -10,6 +10,13 @@
 
 export type SimpleSide = 'home' | 'away'
 
+/**
+ * Zoveel ms na de aftrap beschouwen we een niet-genoteerde wedstrijd als gespeeld: het live-bord
+ * stopt met "auto-live" tonen, en supporters mogen de eindstand doorgeven (reportFinalResult).
+ * Ruim genoeg voor de langste wedstrijden (2×30 min + rust + onderbrekingen + late aftrap).
+ */
+export const MATCH_ASSUMED_DONE_MS = 2 * 60 * 60 * 1000
+
 export interface SimpleGoal {
   side: SimpleSide
   /** 1 = nekworp, 2 = rugworp. */

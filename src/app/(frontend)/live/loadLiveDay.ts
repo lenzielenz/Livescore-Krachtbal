@@ -3,6 +3,7 @@ import { purgeExpiredDemos } from '@/lib/demo'
 import { buildScoreboards } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
 import { reeksNaam } from '@/lib/reeksen'
+import { MATCH_ASSUMED_DONE_MS } from '@/lib/simple-score'
 
 import type { DayMatch } from './LiveBoard'
 
@@ -63,13 +64,19 @@ export async function loadLiveDay(selected: string, today: string): Promise<DayM
 
   // Auto-live: een geplande wedstrijd waarvan het ingestelde uur al voorbij is, tonen we als "live"
   // (ook al heeft nog niemand ze gestart). Instant-vergelijking → tijdzone-onafhankelijk.
+  // MAAR: dat venster is begrensd. Een match die uren geleden begon en nooit genoteerd werd, is
+  // in werkelijkheid gedaan — die eeuwig "LIVE 0–0" tonen misleidt. Na het venster markeren we ze
+  // als "wacht op uitslag": het bord toont dan een uitslag-vraagteken i.p.v. een live-badge, en
+  // supporters kunnen de eindstand doorgeven (zie ReportResult op de matchpagina).
   const now = Date.now()
 
   const days: DayMatch[] = []
   for (const m of docs) {
     const c = cards.get(m.id)
     if (!c) continue // ontbrekende ploeg → overslaan (zoals voorheen)
-    const autoLive = c.status === 'scheduled' && new Date(m.date as string).getTime() <= now
+    const kickoffTs = new Date(m.date as string).getTime()
+    const autoLive = c.status === 'scheduled' && kickoffTs <= now && now - kickoffTs < MATCH_ASSUMED_DONE_MS
+    const awaitingResult = c.status === 'scheduled' && now - kickoffTs >= MATCH_ASSUMED_DONE_MS
     const hw = c.teams.home
     days.push({
       id: m.id,
@@ -77,6 +84,7 @@ export async function loadLiveDay(selected: string, today: string): Promise<DayM
       time: formatTimeBE(m.date),
       kickoff: String(m.date),
       status: autoLive ? 'live' : c.status,
+      awaitingResult,
       weather: { plaats: hw.plaats, lat: hw.lat, lng: hw.lng },
       home: { teamId: c.teams.home.id, name: c.teams.home.name, logoUrl: c.teams.home.logoUrl, logoFit: c.teams.home.logoFit, colors: c.teams.home.colors, clubId: c.teams.home.clubId, clubName: c.teams.home.clubName },
       away: { teamId: c.teams.away.id, name: c.teams.away.name, logoUrl: c.teams.away.logoUrl, logoFit: c.teams.away.logoFit, colors: c.teams.away.colors, clubId: c.teams.away.clubId, clubName: c.teams.away.clubName },
