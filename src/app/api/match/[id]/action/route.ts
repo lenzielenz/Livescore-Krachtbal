@@ -30,6 +30,7 @@ import {
   adjustSimpleTimeout,
   advanceSimpleHalf,
   recordSimpleGoal,
+  reportFinalResult,
   startSimpleMatch,
   undoSimpleGoal,
 } from '@/lib/simple-match-engine'
@@ -202,6 +203,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         break
       case 'simplehalf':
         result = await advanceSimpleHalf(payload, matchId)
+        break
+      // Wedstrijd gedaan zonder live-notatie: een supporter geeft achteraf de eindstand door.
+      case 'reportresult':
+        result = await reportFinalResult(payload, matchId, Number(body.home), Number(body.away))
         break
       default:
         return Response.json({ error: `Onbekende actie: ${action}` }, { status: 400 })

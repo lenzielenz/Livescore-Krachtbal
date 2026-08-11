@@ -52,8 +52,14 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
             <div className="home-cta-text">
               <h2 className="home-cta-title">Wees erbij. <span>Élke match.</span></h2>
               <p className="home-cta-sub">
-                Kijken kan gratis — zonder account. Registreer je om je club te volgen en niets te missen.
+                Kijken kan gratis — zonder account. Met een account doe je mee.
               </p>
+              {/* Het hele verhaal in drie punten — zo snapt een nieuwkomer meteen wat hier kan. */}
+              <ul className="home-cta-points">
+                <li>🔴 Volg élke match live</li>
+                {supportersMode && <li>🏁 Match gedaan? Geef zelf de uitslag door</li>}
+                <li>🔮 Pronostiek, held van de match &amp; badges</li>
+              </ul>
             </div>
             <div className="home-cta-actions">
               <Link href="/registreren" className="home-cta-btn">Gratis registreren →</Link>

@@ -2,7 +2,13 @@ import type { Payload } from 'payload'
 
 import { buildMatchState, recordRefereeStop, recordTimeout } from './match-engine'
 import { isSupportersMode } from './score-mode'
-import { readSimpleScore, type SimpleScoreState, type SimpleSide } from './simple-score'
+import {
+  buildFixedSimpleScore,
+  MATCH_ASSUMED_DONE_MS,
+  readSimpleScore,
+  type SimpleScoreState,
+  type SimpleSide,
+} from './simple-score'
 
 // Engine voor de SIMPELE aantekenmodus (snelscoremodus). Werkt op een gewone
 // `matches`-record maar zonder het worp-/balbezit-model: doelpunten worden als
@@ -186,6 +192,56 @@ export async function adjustRefereeStop(payload: Payload, matchId: number, delta
     return buildMatchState(payload, matchId)
   }
   return recordRefereeStop(payload, matchId)
+}
+
+/**
+ * Wedstrijd gedaan maar niet live aangetekend? Dan geeft een supporter achteraf in één keer de
+ * eindstand door. De stand wordt — zoals overal — niet los opgeslagen maar als simpleScore
+ * weggeschreven (zelfde primitieve als de uitslagen-import), zodat buildMatchState ze gewoon
+ * afleidt. De vertrouwenslaag (score-trust) labelt de uitslag 🟡 tot supporters bevestigen.
+ */
+export async function reportFinalResult(payload: Payload, matchId: number, home: number, away: number) {
+  const match = await payload.findByID({ collection: 'matches', id: matchId, depth: 0 })
+  if ((match as { analyseOnly?: boolean }).analyseOnly) {
+    throw new Error('Analyse-opnames hebben geen publieke uitslag.')
+  }
+  if (match.status === 'finished') {
+    throw new Error('Deze wedstrijd is al afgesloten. Klopt de uitslag niet? Betwist ze dan onder het scorebord.')
+  }
+  if (match.status === 'live') {
+    throw new Error('Deze wedstrijd wordt live aangetekend — geef doelpunten door via het aantekenscherm.')
+  }
+  // Pas ná het aangenomen-gedaan-venster: tot dan kan de match in werkelijkheid nog bezig zijn
+  // (auto-live op het bord) en hoort de score via het aantekenscherm te lopen, niet als eindstand.
+  const kickoff = match.date ? new Date(match.date as string).getTime() : NaN
+  if (!Number.isFinite(kickoff) || Date.now() < kickoff + MATCH_ASSUMED_DONE_MS) {
+    throw new Error('Een uitslag doorgeven kan pas als de wedstrijd zeker gedaan is — teken ze anders gewoon live aan.')
+  }
+  if (![home, away].every((n) => Number.isInteger(n) && n >= 0 && n <= 199)) {
+    throw new Error('Geef een geldige eindstand op (gehele cijfers, 0–199).')
+  }
+  // Dubbele bron uitsluiten: zijn er al worp-events of snelscore-doelpunten geregistreerd,
+  // dan loopt de uitslag via die notatie en niet via dit formulier.
+  const thrown = await payload
+    .count({ collection: 'throws', where: { match: { equals: matchId } } })
+    .catch(() => ({ totalDocs: 0 }))
+  if (thrown.totalDocs > 0 || readSimpleScore(match).goals.length > 0) {
+    throw new Error('Deze wedstrijd heeft al genoteerde doelpunten — pas de score aan via het aantekenscherm.')
+  }
+  // Status → finished zet server-side automatisch finishedAt (hook op Matches), waarmee ook het
+  // bevestig-/betwistvenster van de vertrouwenslaag opent.
+  await payload.update({
+    collection: 'matches',
+    id: matchId,
+    data: {
+      status: 'finished',
+      currentHalf: 2,
+      clockRunning: false,
+      simpleScore: buildFixedSimpleScore(home, away) as unknown as Record<string, unknown>,
+    },
+    overrideAccess: true,
+  })
+  return buildMatchState(payload, matchId)
 }
 
 /** Beëindig de huidige helft en start meteen de volgende (zonder balbezit). */

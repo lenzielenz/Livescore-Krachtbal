@@ -26,6 +26,8 @@ export type DayMatch = {
   /** ISO-datum/uur van de aftrap (voor het weer rond de wedstrijd). */
   kickoff: string
   status: string
+  /** Aftrap ruim voorbij zonder notatie: in werkelijkheid gespeeld, maar zonder uitslag. */
+  awaitingResult?: boolean
   home: TeamRef
   away: TeamRef
   score: { home: number; away: number }
@@ -412,6 +414,8 @@ export function LiveBoard({
                               <span className="lb-status">
                                 {m.status === 'finished' ? (
                                   <span className="lb-donebadge">Einde</span>
+                                ) : m.awaitingResult && supportersMode ? (
+                                  <span className="lb-needsresult" title="Vermoedelijk gespeeld — nog geen uitslag doorgegeven">🏁 uitslag?</span>
                                 ) : (
                                   <span className="lb-time">{m.time}</span>
                                 )}
@@ -450,6 +454,15 @@ export function LiveBoard({
                         <span className="lb-score-cta-txt">
                           {live ? 'Aantekenen — verder scoren' : 'Aantekenen — start de wedstrijd'}
                         </span>
+                        <span className="lb-score-cta-arrow" aria-hidden>→</span>
+                      </Link>
+                    )}
+                    {/* Aftrap ruim voorbij zonder notatie? Rechtstreeks naar het uitslag-formulier
+                        op de matchpagina — zo raakt elke gespeelde match toch aan zijn eindstand. */}
+                    {supportersMode && open && m.awaitingResult && (
+                      <Link href={`/match/${m.id}#uitslag`} className="lb-score-cta">
+                        <span className="lb-score-cta-ico" aria-hidden>🏁</span>
+                        <span className="lb-score-cta-txt">Gespeeld? Geef de uitslag door</span>
                         <span className="lb-score-cta-arrow" aria-hidden>→</span>
                       </Link>
                     )}

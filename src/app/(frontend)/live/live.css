@@ -576,6 +576,18 @@
   padding: 2px 9px;
   border-radius: 999px;
 }
+/* Gespeeld maar zonder genoteerde uitslag: zachte accent-badge die uitnodigt om ze door te geven. */
+.lb-needsresult {
+  font-size: 0.66rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--line));
+  padding: 2px 9px;
+  border-radius: 999px;
+}
 .lb-team {
   display: flex;
   align-items: center;
@@ -924,6 +936,18 @@
   font-size: 0.85rem;
   line-height: 1.35;
   color: var(--dim);
+}
+/* Drie punten die het platform samenvatten: live volgen · uitslag doorgeven · meedoen. */
+.home-cta-points {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 7px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--txt);
 }
 .home-cta-actions {
   display: flex;

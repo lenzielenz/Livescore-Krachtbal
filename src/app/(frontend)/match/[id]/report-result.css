@@ -1,0 +1,28 @@
+/* Uitslag-doorgeven-paneel: een gespeelde match zonder live-notatie krijgt hier zijn eindstand. */
+.rr {
+  margin: 14px 0;
+  padding: 14px 16px;
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--line));
+  border-radius: 14px;
+  background:
+    radial-gradient(120% 160% at 0% 0%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 60%),
+    var(--panel, rgba(255, 255, 255, 0.03));
+}
+.rr-h { margin: 0 0 10px; font-size: 0.98rem; font-weight: 800; color: var(--txt); }
+.rr-note { margin: 0; font-size: 0.88rem; color: var(--dim); line-height: 1.45; }
+.rr-note a { color: var(--accent); font-weight: 700; }
+
+.rr-form { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.rr-team { font-size: 0.9rem; font-weight: 700; color: var(--txt); flex: 1 1 30%; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rr-team.away { text-align: right; }
+.rr-score { width: 52px; text-align: center; padding: 9px 6px; border-radius: 8px; border: 1px solid var(--line); background: color-mix(in srgb, var(--panel-2, #10141a) 60%, transparent); color: var(--txt); font-size: 1.05rem; font-weight: 800; }
+.rr-dash { color: var(--dim); font-weight: 800; }
+.rr-send { padding: 9px 16px; border-radius: 999px; border: none; background: var(--accent); color: #06140d; font-weight: 800; font-size: 0.9rem; cursor: pointer; flex: 0 0 auto; }
+.rr-send:disabled { opacity: 0.6; cursor: default; }
+.rr-hint { margin: 8px 0 0; font-size: 0.78rem; color: var(--dim); line-height: 1.4; }
+.rr-err { margin: 6px 0 0; font-size: 0.82rem; font-weight: 600; color: #ef476f; }
+
+@media (max-width: 480px) {
+  .rr-team { flex-basis: 100%; text-align: left; }
+  .rr-team.away { text-align: left; }
+}
