@@ -14,7 +14,6 @@ import { isCheckedIn, sanitizeCheckins } from '@/lib/checkins'
 import { formatDateTimeBE } from '@/lib/datetime'
 import { buildMatchSheet, buildMatchState, buildMatchStats, buildTimeline, type SheetGoal } from '@/lib/match-engine'
 import { buildMatchReport } from '@/lib/match-report'
-import { tallyMvp } from '@/lib/mvp-vote'
 import { getPayloadClient } from '@/lib/payload-client'
 import { activeTokens, type RadToken } from '@/lib/pronostiek-rad'
 import { countUserWeekendPredictions, LIVE_PRONOSTIEK_MAX_PER_WEEKEND } from '@/lib/pronostiek-weekend'
@@ -27,7 +26,6 @@ import { BASE_RATE_PER_MIN } from '@/lib/win-probability'
 import { MatchRecap } from '../../analyse/[id]/MatchRecap'
 import { LiveStream } from './LiveStream'
 import { MatchScorers } from './MatchScorers'
-import { MvpVote } from './MvpVote'
 import { PronostiekWidget } from './PronostiekWidget'
 import { ReportResult } from './ReportResult'
 import { ScoreTrust } from './ScoreTrust'
@@ -103,14 +101,6 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   const ballKleur = krachtbalKleur(reeksRaw)
   // Enkel ingelogde bezoekers mogen shoutouts plaatsen in de live tribune.
   const me = await getAuthUser()
-  // Clubkleur van de ingelogde supporter (voor de lichtshow: elk toestel kleurt in zijn eigen club).
-  let myClubPrimary: string | null = null
-  const myClubId = userClubId(me)
-  if (myClubId != null) {
-    const myClub = await payload.findByID({ collection: 'clubs', id: myClubId, depth: 0 }).catch(() => null)
-    const c = (myClub as { colorPrimary?: string | null } | null)?.colorPrimary
-    if (typeof c === 'string' && c.trim()) myClubPrimary = c.trim()
-  }
   const datum = matchDoc?.date ? formatDateTimeBE(matchDoc.date as string) : null
   const sheetRes = await payload
     .find({ collection: 'matchsheets', where: { match: { equals: matchId } }, depth: 2, limit: 1 })
@@ -185,48 +175,8 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
     })
   }
 
-  // Held van de match: supporters stemmen op hun favoriete speler (live + tot 1u na de match). We
-  // tonen het zodra de match speelt; kandidaten = de spelers van beide ploegen.
-  const mvpPlayed = state.match.status === 'live' || state.match.status === 'finished'
-  let mvpCandidates: { playerId: number; name: string; shirtNumber: number | null; side: 'home' | 'away' }[] = []
-  const mvpTotals: Record<string, number> = {}
-  let mvpMyVote: number | null = null
-  if (mvpPlayed) {
-    const homeTeamId = state.teams.home.id
-    const awayTeamId = state.teams.away.id
-    const [playersRes, votesRes] = await Promise.all([
-      payload
-        .find({ collection: 'players', where: { and: [{ team: { in: [homeTeamId, awayTeamId] } }, { actief: { not_equals: false } }] }, sort: 'shirtNumber', depth: 0, limit: 200 })
-        .catch(() => ({ docs: [] as Record<string, unknown>[] })),
-      payload
-        .find({ collection: 'match-mvp-votes', where: { match: { equals: matchId } }, depth: 0, limit: 100000, pagination: false })
-        .catch(() => ({ docs: [] as Record<string, unknown>[] })),
-    ])
-    mvpCandidates = playersRes.docs.map((p) => {
-      const teamId = (() => { const t = (p as { team?: unknown }).team; return t && typeof t === 'object' ? Number((t as { id?: number }).id) : Number(t) })()
-      const sn = Number((p as { shirtNumber?: unknown }).shirtNumber)
-      return {
-        playerId: (p as { id: number }).id,
-        name: String((p as { name?: unknown }).name ?? '—'),
-        shirtNumber: Number.isFinite(sn) ? sn : null,
-        side: (teamId === homeTeamId ? 'home' : 'away') as 'home' | 'away',
-      }
-    })
-    const myUidNum = me ? Number((me as { id?: number }).id) : null
-    for (const v of votesRes.docs) {
-      const pid = (() => { const p = (v as { player?: unknown }).player; return p && typeof p === 'object' ? Number((p as { id?: number }).id) : Number(p) })()
-      if (Number.isFinite(pid) && pid > 0) mvpTotals[String(pid)] = (mvpTotals[String(pid)] ?? 0) + 1
-      if (myUidNum != null) {
-        const uid = (() => { const u = (v as { user?: unknown }).user; return u && typeof u === 'object' ? Number((u as { id?: number }).id) : Number(u) })()
-        if (uid === myUidNum && Number.isFinite(pid)) mvpMyVote = pid
-      }
-    }
-  }
-  const mvpCanVote = Boolean(me) && isTribuneOpen(state.match.status, state.match.finishedAt)
-
-  // Automatisch matchverslag (krantstijl) na afloop: volledig afgeleid uit de doelpunten-events,
-  // de kruisjes en de supporterstem. Geen opgeslagen tekst — het verslag wordt telkens opgebouwd.
-  const mvpWinner = mvpCandidates.length > 0 ? tallyMvp(mvpCandidates, mvpTotals).winner : null
+  // Automatisch matchverslag (krantstijl) na afloop: volledig afgeleid uit de doelpunten-events
+  // en de kruisjes. Geen opgeslagen tekst — het verslag wordt telkens opgebouwd.
   const report =
     share && state.match.status === 'finished'
       ? buildMatchReport({
@@ -244,7 +194,6 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
           })),
           reeks,
           datum,
-          mvp: mvpWinner ? { name: mvpWinner.name, votes: mvpWinner.votes } : null,
         })
       : null
 
@@ -365,7 +314,6 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
         initialInstants={initialInstants}
         momentumGoals={share?.goals}
         momentumTimeouts={share?.timeouts}
-        myClubPrimary={myClubPrimary}
       />
       {/* Vertrouwenslaag onder het scorebord: wie tekent aan, en klopt deze stand? Alleen bij een
           vrije supporters-score — in de federatieflow is de uitslag per definitie officieel. */}
@@ -392,25 +340,6 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
           <CheckInButton matchId={matchId} initial={isCheckedIn(sanitizeCheckins((me as { checkins?: unknown }).checkins), matchId)} />
           <Link href="/profiel/paspoort" className="match-checkin-link">Mijn paspoort →</Link>
         </div>
-      )}
-
-      {/* Held van de match: supporters kiezen hun favoriete speler — live tally + winnaar na afloop. */}
-      {mvpPlayed && mvpCandidates.length > 0 && (
-        <MvpVote
-          matchId={matchId}
-          candidates={mvpCandidates}
-          teams={{
-            home: state.teams.home.name,
-            away: state.teams.away.name,
-            homeColor: state.teams.home.colors?.primary ?? null,
-            awayColor: state.teams.away.colors?.primary ?? null,
-          }}
-          initialTotals={mvpTotals}
-          initialMyVote={mvpMyVote}
-          canVote={mvpCanVote}
-          loggedIn={Boolean(me)}
-          finished={state.match.status === 'finished'}
-        />
       )}
 
       {/* Supporters duidelijk tonen dat ze de wedstrijd op hun tv kunnen volgen. */}

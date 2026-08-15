@@ -7,8 +7,6 @@ import type { KrachtbalKleur } from '@/lib/reeksen'
 import { ClubColorBlast } from '@/components/ClubColorBlast'
 import { KrachtbalIcon } from '@/components/KrachtbalIcon'
 import { MomentumChart } from '@/app/(frontend)/analyse/[id]/MomentumChart'
-import { BulletTime } from '@/components/BulletTime'
-import { LightShow } from '@/components/LightShow'
 import { PhotoTribune, type Instant } from '@/components/PhotoTribune'
 import { TeamLogo } from '@/components/TeamLogo'
 import { WinProbability } from '@/components/WinProbability'
@@ -65,7 +63,6 @@ export function Scoreboard({
   initialInstants,
   momentumGoals,
   momentumTimeouts,
-  myClubPrimary = null,
 }: {
   matchId: number
   initial: { state: MatchState; timeline: TimelineItem[] }
@@ -89,8 +86,6 @@ export function Scoreboard({
   momentumGoals?: { side: 'home' | 'away'; points: number; half: number; gameClock?: number }[]
   /** Time-outs voor het scoreverloop. */
   momentumTimeouts?: { side: 'home' | 'away'; half: number; gameClock: number }[]
-  /** Clubkleur van de ingelogde supporter (voor de lichtshow: elk toestel kleurt in zijn eigen club). */
-  myClubPrimary?: string | null
 }) {
   const [state, setState] = useState<MatchState>(initial.state)
   const [timeline, setTimeline] = useState<TimelineItem[]>(initial.timeline)
@@ -171,34 +166,6 @@ export function Scoreboard({
   // Vluchtige foto-tribune: live foto's + welke ik zelf plaatste (zodat ik die kan verwijderen).
   const [instants, setInstants] = useState<Instant[]>(initialInstants ?? [])
   const [mineIds, setMineIds] = useState<Set<number>>(new Set())
-  // Lichtshow / digitale tifo: gedeeld starttijdstip + duur (gesynchroniseerd via het live-kanaal),
-  // zodat alle toestellen in de tribune samen één lichtscherm vormen.
-  const [lightshow, setLightshow] = useState<{ at: number; dur: number } | null>(null)
-  const [lightshowBusy, setLightshowBusy] = useState(false)
-  const startLightshow = async () => {
-    if (lightshowBusy) return
-    setLightshowBusy(true)
-    try {
-      await fetch(`/api/match/${matchId}/lightshow`, { method: 'POST' })
-    } catch {
-      /* leuk extraatje, geen kritieke actie */
-    }
-    setTimeout(() => setLightshowBusy(false), 25_000)
-  }
-  // Multi-angle "bullet-time": gedeeld starttijdstip; alle toestellen tellen samen af en leggen dan
-  // (ieder vanuit zijn eigen hoek) hetzelfde moment vast; de app speelt de hoeken als een sweep af.
-  const [bulletAt, setBulletAt] = useState<number | null>(null)
-  const [bulletBusy, setBulletBusy] = useState(false)
-  const startBulletTime = async () => {
-    if (bulletBusy) return
-    setBulletBusy(true)
-    try {
-      await fetch(`/api/match/${matchId}/bullettime`, { method: 'POST' })
-    } catch {
-      /* leuk extraatje */
-    }
-    setTimeout(() => setBulletBusy(false), 28_000)
-  }
   const addInstantLocal = (i: Instant) => {
     setInstants((prev) => (prev.some((x) => x.id === i.id) ? prev : [i, ...prev].slice(0, 40)))
   }
@@ -330,15 +297,6 @@ export function Scoreboard({
       blast: (d) => {
         const side = (d as { side?: string }).side
         if (side === 'home' || side === 'away') triggerBlast(side)
-      },
-      lightshow: (d) => {
-        const at = Number((d as { at?: unknown }).at)
-        const dur = Number((d as { dur?: unknown }).dur) || 22_000
-        if (Number.isFinite(at)) setLightshow({ at, dur })
-      },
-      bullettime: (d) => {
-        const at = Number((d as { at?: unknown }).at)
-        if (Number.isFinite(at)) setBulletAt(at)
       },
     },
   )
@@ -786,50 +744,11 @@ export function Scoreboard({
               )
             })}
           </div>
-          {/* Lichtshow / digitale tifo: één tik roept iedereen op; alle telefoons in de tribune
-              vormen samen één gesynchroniseerd lichtscherm. Werkt enkel echt met véél toestellen. */}
-          <div className="sb-crowd-acts">
-            <button
-              type="button"
-              className="sb-lightshow-btn"
-              onClick={() => void startLightshow()}
-              disabled={lightshowBusy}
-              title="Start een lichtshow op alle telefoons in de tribune"
-            >
-              {lightshowBusy ? '💡 Lichtshow loopt…' : '💡 Lichtshow'}
-            </button>
-            <button
-              type="button"
-              className="sb-lightshow-btn sb-bullet-btn"
-              onClick={() => void startBulletTime()}
-              disabled={bulletBusy}
-              title="Multi-angle: leg samen hetzelfde moment vast vanuit meerdere hoeken"
-            >
-              {bulletBusy ? '🎥 Bezig…' : '🎥 Multi-angle'}
-            </button>
-          </div>
         </div>
       )}
 
       {/* Fullscreen clubkleuren-explosie (rook + vuurwerk). */}
       {blast && <ClubColorBlast key={blast.key} colors={blast.colors} teamName={blast.name} />}
-
-      {/* Lichtshow: fullscreen gesynchroniseerd lichtscherm over alle toestellen. */}
-      {lightshow && (
-        <LightShow
-          at={lightshow.at}
-          durationMs={lightshow.dur}
-          mine={myClubPrimary}
-          home={colorsFor('home').primary}
-          away={colorsFor('away').primary}
-          onDone={() => setLightshow(null)}
-        />
-      )}
-
-      {/* Multi-angle bullet-time: samen aftellen, vastleggen en als sweep afspelen. */}
-      {bulletAt && (
-        <BulletTime matchId={matchId} at={bulletAt} canCapture={canPostInstant} onDone={() => setBulletAt(null)} />
-      )}
 
       {/* Strakke "rugworp +2"-melding: een verzorgde flits met clean typografie (geen cartoon). */}
       {celebrate != null && (
