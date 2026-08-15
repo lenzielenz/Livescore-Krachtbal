@@ -386,28 +386,6 @@ export function removeInstant(matchId: number, instantId: number): boolean {
   return true
 }
 
-/** Start een lichtshow / digitale tifo op ALLE toestellen van deze wedstrijd: broadcast een
- * 'lightshow'-event met het gedeelde starttijdstip + duur, zodat elk scherm synchroon loopt en de
- * tribune samen één lichtscherm vormt. */
-export function addLightshow(matchId: number, at: number, dur: number): boolean {
-  const ch = channels.get(matchId)
-  if (!ch) return false
-  if (!isTribuneOpen(ch.status, ch.finishedAt)) return false
-  broadcast(ch, 'lightshow', { at, dur })
-  return true
-}
-
-/** Start een multi-angle "bullet-time"-moment: alle toestellen rond de actie leggen tegelijk hetzelfde
- * moment vast vanuit hun eigen hoek; daarna speelt de app de foto's als één sweepende reeks af.
- * Broadcast het gedeelde starttijdstip zodat de aftelklok op elk toestel gelijk loopt. */
-export function addBulletTime(matchId: number, at: number): boolean {
-  const ch = channels.get(matchId)
-  if (!ch) return false
-  if (!isTribuneOpen(ch.status, ch.finishedAt)) return false
-  broadcast(ch, 'bullettime', { at })
-  return true
-}
-
 export const REACTION_EMOJI = ['clap', 'fire', 'heart', 'goal', 'wow', 'rocket'] as const
 
 /** Vuur een clubkleuren-viering af op ALLE schermen van deze wedstrijd. Null/false als niemand
