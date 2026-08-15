@@ -226,8 +226,9 @@ export function clubVanPloeg(ploeg: string): string {
   return cleanTeamName(String(ploeg ?? '').replace(/\s+[A-D]$/i, '').trim())
 }
 
-// Vrije weekends staan als "vrij"/"bye" in het schema en zijn geen wedstrijd.
-const VRIJ = /^(vrij|bye|vrijaf|--+)$/i
+// Vrije weekends staan als "vrij"/"bye" in het schema, soms met een poule-letter erbij
+// ("Vrij A", "Vrij B" — welke poule er die week vrij is) — geen wedstrijd, dus geen tegenstander.
+const VRIJ = /^(vrij|bye|vrijaf|--+)(\s+[a-d])?$/i
 
 // ── Plannen ──────────────────────────────────────────────────────────────────────────────────
 
@@ -397,6 +398,12 @@ export interface ImportSamenvatting {
   header: string[] | null
   /** Alleen bij een echte import ingevuld. */
   aangemaakt?: { clubs: number; ploegen: number; wedstrijden: number }
+  /** Enkel ingevuld wanneer "vervang volledig speelplan" aangevraagd is: hoeveel bestaande
+   *  wedstrijden (elk seizoen, elke reeks — met al hun worpen/statistieken/wedstrijdbladen) er
+   *  vóór de import verwijderd zouden worden. */
+  teVerwijderen?: number
+  /** Alleen bij een echte wipe-commit ingevuld: hoeveel wedstrijden er effectief verwijderd zijn. */
+  verwijderd?: number
 }
 
 // ── Tekst (CSV / geplakt) ────────────────────────────────────────────────────────────────────

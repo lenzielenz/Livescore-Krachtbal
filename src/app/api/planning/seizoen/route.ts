@@ -14,12 +14,20 @@ export const dynamic = 'force-dynamic'
 
 const MAX_BYTES = 5 * 1024 * 1024
 
-/** Haalt de tabel uit de aanvraag: een Excel-bestand, of tekst (CSV/geplakt). */
-async function leesTabel(req: Request): Promise<{ rows: string[][]; bron: string } | { error: string }> {
+// Server-side vangnet voor "vervang volledig speelplan": een aparte checkbox in de UI is genoeg
+// tegen een ongelukkige klik, maar niet tegen een losstaande aanvraag (devtools, herhaalde
+// request). Wie écht alles wil wissen, moet deze frase letterlijk meesturen.
+export const WIPE_CONFIRM_PHRASE = 'VERWIJDER ALLES'
+
+/** Haalt de tabel (+ eventuele wipe-bevestiging) uit de aanvraag: een Excel-bestand, of tekst. */
+async function leesTabel(
+  req: Request,
+): Promise<{ rows: string[][]; bron: string; confirm: string } | { error: string }> {
   const type = req.headers.get('content-type') ?? ''
 
   if (type.includes('multipart/form-data')) {
     const form = await req.formData()
+    const confirm = String(form.get('confirm') ?? '')
     const file = form.get('file')
     if (file && typeof file === 'object' && 'arrayBuffer' in file) {
       const blob = file as File
@@ -31,7 +39,7 @@ async function leesTabel(req: Request): Promise<{ rows: string[][]; bron: string
           const sheets = readXlsx(buf)
           const gevraagd = String(form.get('sheet') ?? '').trim()
           const blad = gevraagd ? (sheets.find((s) => s.name === gevraagd) ?? sheets[0]) : sheets[0]
-          return { rows: blad.rows, bron: `${blob.name} · blad "${blad.name}"` }
+          return { rows: blad.rows, bron: `${blob.name} · blad "${blad.name}"`, confirm }
         } catch (e) {
           return { error: `Excel-bestand kon niet gelezen worden: ${(e as Error).message}` }
         }
@@ -43,14 +51,14 @@ async function leesTabel(req: Request): Promise<{ rows: string[][]; bron: string
         }
       }
       // CSV en andere tekstbestanden.
-      return { rows: parseDelimited(buf.toString('utf8')), bron: blob.name }
+      return { rows: parseDelimited(buf.toString('utf8')), bron: blob.name, confirm }
     }
     const tekst = String(form.get('text') ?? '')
-    if (tekst.trim()) return { rows: parseDelimited(tekst), bron: 'geplakte tekst' }
+    if (tekst.trim()) return { rows: parseDelimited(tekst), bron: 'geplakte tekst', confirm }
     return { error: 'Geen bestand of tekst meegestuurd.' }
   }
 
-  let body: { text?: unknown }
+  let body: { text?: unknown; confirm?: unknown }
   try {
     body = await req.json()
   } catch {
@@ -58,7 +66,7 @@ async function leesTabel(req: Request): Promise<{ rows: string[][]; bron: string
   }
   const tekst = String(body.text ?? '')
   if (!tekst.trim()) return { error: 'Geen tekst meegestuurd.' }
-  return { rows: parseDelimited(tekst), bron: 'geplakte tekst' }
+  return { rows: parseDelimited(tekst), bron: 'geplakte tekst', confirm: String(body.confirm ?? '') }
 }
 
 export async function POST(req: Request) {
@@ -71,16 +79,24 @@ export async function POST(req: Request) {
 
   const url = new URL(req.url)
   const commit = url.searchParams.get('commit') === '1'
+  const wipe = url.searchParams.get('wipe') === '1'
 
   const gelezen = await leesTabel(req).catch((e) => ({ error: (e as Error).message }))
   if ('error' in gelezen) return NextResponse.json({ error: gelezen.error }, { status: 400 })
   if (gelezen.rows.length === 0) {
     return NextResponse.json({ error: 'Het bestand bevat geen rijen.' }, { status: 400 })
   }
+  // Destructieve stap: pas uitvoeren als de bevestigingsfrase letterlijk meegestuurd is.
+  if (wipe && commit && gelezen.confirm !== WIPE_CONFIRM_PHRASE) {
+    return NextResponse.json(
+      { error: `Typ exact "${WIPE_CONFIRM_PHRASE}" om alle bestaande wedstrijden te bevestigen.` },
+      { status: 400 },
+    )
+  }
 
   try {
-    const resultaat = await runSeasonImport(payload, gelezen.rows, { commit })
-    return NextResponse.json({ ok: true, commit, bron: gelezen.bron, ...resultaat })
+    const resultaat = await runSeasonImport(payload, gelezen.rows, { commit, wipe })
+    return NextResponse.json({ ok: true, commit, wipe, bron: gelezen.bron, ...resultaat })
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 400 })
   }

@@ -85,6 +85,7 @@ import * as migration_20260629_090000_oefeningen_sessiesjablonen from './2026062
 import * as migration_20260717_120000_match_score_mode from './20260717_120000_match_score_mode';
 import * as migration_20260717_140000_score_mode_global from './20260717_140000_score_mode_global';
 import * as migration_20260808_100000_score_trust from './20260808_100000_score_trust';
+import * as migration_20260815_090000_reeks_uitbreiding_2026_2027 from './20260815_090000_reeks_uitbreiding_2026_2027';
 
 export const migrations = [
   {
@@ -521,5 +522,10 @@ export const migrations = [
     up: migration_20260808_100000_score_trust.up,
     down: migration_20260808_100000_score_trust.down,
     name: '20260808_100000_score_trust',
+  },
+  {
+    up: migration_20260815_090000_reeks_uitbreiding_2026_2027.up,
+    down: migration_20260815_090000_reeks_uitbreiding_2026_2027.down,
+    name: '20260815_090000_reeks_uitbreiding_2026_2027',
   },
 ];

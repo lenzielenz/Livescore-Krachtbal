@@ -1,10 +1,10 @@
 import { canAnalyse, hasRole, isFederationLevel } from '@/lib/access'
 import { authUser } from '@/lib/api-auth'
+import { MATCH_DEPENDENT_COLLECTIONS } from '@/lib/match-cleanup'
 import { getPayloadClient } from '@/lib/payload-client'
 
 // Een wedstrijd én alle bijhorende data verwijderen. Federatie/admin mag alles; een analist mag
-// z'n eigen analyse-opname verwijderen (privé per persoon). Worpen eerst (FK naar balbezit), dan de rest.
-const DEPENDENTS = ['throws', 'possessions', 'match-events', 'matchsheets', 'accidents'] as const
+// z'n eigen analyse-opname verwijderen (privé per persoon).
 
 const relId = (v: unknown): number | null =>
   v && typeof v === 'object' ? ((v as { id?: number }).id ?? null) : typeof v === 'number' ? v : null
@@ -34,7 +34,7 @@ export async function POST(req: Request) {
       if (!isOwnAnalyse) return Response.json({ error: 'Enkel je eigen analyse-opname of federatie/admin.' }, { status: 403 })
     }
 
-    for (const collection of DEPENDENTS) {
+    for (const collection of MATCH_DEPENDENT_COLLECTIONS) {
       await payload.delete({ collection, where: { match: { equals: matchId } }, overrideAccess: true }).catch(() => {})
     }
     await payload.delete({ collection: 'matches', id: matchId, overrideAccess: true })

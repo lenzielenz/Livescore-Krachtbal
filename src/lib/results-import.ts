@@ -29,14 +29,23 @@ const REEKS_MAP: Record<string, string> = {
   LD: 'LD',
   'REGHA': 'RHA', 'REGH A': 'RHA', 'REG HA': 'RHA', 'RHA': 'RHA',
   'REGHB': 'RHB', 'REGH B': 'RHB', 'REG HB': 'RHB', 'RHB': 'RHB',
+  'REGHC': 'RHC', 'REGH C': 'RHC', 'REG HC': 'RHC', 'RHC': 'RHC',
   'REGDA': 'RDA', 'REGD A': 'RDA', 'REG DA': 'RDA', 'RDA': 'RDA',
   'REGDB': 'RDB', 'REGD B': 'RDB', 'REG DB': 'RDB', 'RDB': 'RDB',
   // Jeugd
   'U18J': 'U18J', 'U18JA': 'U18J', 'U18JB': 'U18J',
-  'U18M': 'U18M',
-  'U16J': 'U16J', 'U16M': 'U16M',
-  'U14J': 'U14J', 'U14M': 'U14M',
-  'U12': 'U12', 'U12B': 'U12', 'U12-16': 'U12', 'U12-44': 'U12',
+  'U18M': 'U18M', 'U18 M': 'U18M',
+  'U16J': 'U16J',
+  'U16M': 'U16M',
+  'U16MA': 'U16MA', 'U16 MA': 'U16MA',
+  'U16MB': 'U16MB', 'U16 MB': 'U16MB',
+  'U14J': 'U14J',
+  'U14JA': 'U14JA', 'U14 JA': 'U14JA',
+  'U14JB': 'U14JB', 'U14 JB': 'U14JB',
+  'U14M': 'U14M',
+  'U12': 'U12', 'U12-16': 'U12', 'U12-44': 'U12',
+  'U12A': 'U12A', 'U12 A': 'U12A',
+  'U12B': 'U12B', 'U12 B': 'U12B',
 }
 
 export function mapReeks(code: string): string | null {

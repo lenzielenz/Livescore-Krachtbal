@@ -9,7 +9,12 @@ import './superster.css'
 export const dynamic = 'force-dynamic'
 
 // Jeugdreeksen, jongens en meisjes apart (U12 is gemengd). Per reeks een eigen klassement.
-const YOUTH_REEKSEN = ['U18J', 'U18M', 'U16J', 'U16M', 'U14J', 'U14M', 'U12'] as const
+const YOUTH_REEKSEN = [
+  'U18J', 'U18M',
+  'U16J', 'U16M', 'U16MA', 'U16MB',
+  'U14J', 'U14JA', 'U14JB', 'U14M',
+  'U12', 'U12A', 'U12B',
+] as const
 
 const MEDAL = ['🥇', '🥈', '🥉']
 const reeksLabel = (r: string) => reeksNaam(r as Parameters<typeof reeksNaam>[0])
