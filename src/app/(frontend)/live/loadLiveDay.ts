@@ -1,4 +1,4 @@
-import { brusselsDayBoundsUtc, formatTimeBE } from '@/lib/datetime'
+import { brusselsDayBoundsUtc, dateStrBE, formatTimeBE } from '@/lib/datetime'
 import { purgeExpiredDemos } from '@/lib/demo'
 import { buildScoreboards } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
@@ -13,6 +13,56 @@ const reeksLabel = (v: unknown) => reeksNaam(v)
 // Dag-grenzen in Belgische tijd (de server draait in UTC) zodat avondwedstrijden op de juiste dag
 // vallen.
 const dayBounds = (dateStr: string) => brusselsDayBoundsUtc(dateStr)
+
+/**
+ * Welke dag moet een bezoeker zonder expliciete `?date=` te zien krijgen? Vandaag als daar al iets
+ * gepland/bezig is — anders de eerstvolgende dag mét een wedstrijd (bv. in augustus, vóór de
+ * seizoensstart in september), zodat het bord nooit blanco opent en een bezoeker altijd meteen de
+ * eerstvolgende wedstrijden ziet i.p.v. zelf te moeten doorklikken. Niets gepland in de toekomst?
+ * Dan blijft "vandaag" de terugval (bestaande lege-staat met een link naar de volgende dag).
+ */
+export async function resolveDefaultDay(today: string): Promise<string> {
+  const payload = await getPayloadClient()
+  const { start: todayStart, end: todayEnd } = dayBounds(today)
+  // "Vandaag" telt als geldig zodra er vandaag zelf iets staat (binnen de daggrenzen), of als er
+  // een wedstrijd LIVE is (ongeacht de datum erop — een match die gisterenavond begon kan nog
+  // steeds bezig zijn), zelfde logica als loadLiveDay(). Let op: NIET "datum >= vandaag" alleen —
+  // dat is altijd waar zodra er ooit nog een toekomstige wedstrijd bestaat.
+  const heeftVandaag = await payload
+    .count({
+      collection: 'matches',
+      where: {
+        and: [
+          {
+            or: [
+              { and: [{ date: { greater_than_equal: todayStart } }, { date: { less_than: todayEnd } }] },
+              { status: { equals: 'live' } },
+            ],
+          },
+          { analyseOnly: { not_equals: true } },
+          { isDemo: { not_equals: true } },
+        ],
+      },
+      overrideAccess: true,
+    })
+    .catch(() => ({ totalDocs: 0 }))
+  if (heeftVandaag.totalDocs > 0) return today
+
+  const eerstvolgende = await payload
+    .find({
+      collection: 'matches',
+      where: { and: [{ analyseOnly: { not_equals: true } }, { isDemo: { not_equals: true } }] },
+      sort: 'date',
+      depth: 0,
+      limit: 1,
+      overrideAccess: true,
+    })
+    .catch(() => ({ docs: [] as { date?: unknown }[] }))
+  const datumVeld = eerstvolgende.docs[0]?.date
+  if (!datumVeld) return today
+  const d = new Date(String(datumVeld))
+  return Number.isNaN(d.getTime()) ? today : dateStrBE(d)
+}
 
 // Laadt alle wedstrijden voor één dag + de actueel-live wedstrijden (wanneer je
 // naar vandaag kijkt) en berekent voor elk de afgeleide stand. De stand wordt

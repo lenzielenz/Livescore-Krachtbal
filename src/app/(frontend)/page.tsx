@@ -8,7 +8,7 @@ import { quoteForDay } from '@/lib/krachtbal-quotes'
 import { getPayloadClient } from '@/lib/payload-client'
 import { isSupportersMode } from '@/lib/score-mode'
 import { LiveBoard } from './live/LiveBoard'
-import { loadLiveDay } from './live/loadLiveDay'
+import { loadLiveDay, resolveDefaultDay } from './live/loadLiveDay'
 import { TournamentLiveStrip } from './live/TournamentLiveStrip'
 import './live/live.css'
 
@@ -19,7 +19,10 @@ export const dynamic = 'force-dynamic'
 export default async function HomePage({ searchParams }: { searchParams: Promise<{ date?: string }> }) {
   const { date } = await searchParams
   const today = dateStrBE()
-  const selected = date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : today
+  // Geen expliciete datum in de URL? Dan nooit blanco openen: spring naar de eerstvolgende dag
+  // mét een wedstrijd (bv. in augustus, vóór de seizoensstart in september) i.p.v. "vandaag" te
+  // tonen met niets erop. Staat er wél al iets vandaag (of bezig), dan blijft dat "vandaag".
+  const selected = date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : await resolveDefaultDay(today)
 
   const days = await loadLiveDay(selected, today)
   // Eén vast lijntje per dag (seed = vandaag): blijft staan bij het wisselen van datum,

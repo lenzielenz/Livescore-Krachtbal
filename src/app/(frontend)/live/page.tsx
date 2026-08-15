@@ -5,7 +5,7 @@ import { dateStrBE } from '@/lib/datetime'
 import { getPayloadClient } from '@/lib/payload-client'
 import { isSupportersMode } from '@/lib/score-mode'
 import { LiveBoard } from './LiveBoard'
-import { loadLiveDay } from './loadLiveDay'
+import { loadLiveDay, resolveDefaultDay } from './loadLiveDay'
 import { TournamentLiveStrip } from './TournamentLiveStrip'
 import './live.css'
 
@@ -14,7 +14,9 @@ export const dynamic = 'force-dynamic'
 export default async function LivePage({ searchParams }: { searchParams: Promise<{ date?: string }> }) {
   const { date } = await searchParams
   const today = dateStrBE()
-  const selected = date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : today
+  // Zelfde gedrag als de startpagina: zonder expliciete datum meteen naar de eerstvolgende
+  // speeldag springen i.p.v. een blanco "vandaag" te tonen.
+  const selected = date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : await resolveDefaultDay(today)
 
   const user = await getAuthUser()
   const cid = userClubId(user)
