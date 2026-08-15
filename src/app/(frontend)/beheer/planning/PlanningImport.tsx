@@ -14,6 +14,10 @@ type Antwoord = ImportSamenvatting & { ok: true; commit: boolean; bron: string }
  * doorvoeren. De tussenstap is er niet voor de vorm — je ziet er of de kolommen juist gelezen zijn
  * en welke clubs/ploegen nieuw aangemaakt worden, vóór je 600 wedstrijden in de kalender zet.
  */
+// Moet letterlijk (hoofdlettergevoelig) ingetypt worden vóór de wipe-import mag draaien — zelfde
+// frase als de server verwacht (api/planning/seizoen/route.ts, WIPE_CONFIRM_PHRASE).
+const WIPE_CONFIRM_PHRASE = 'VERWIJDER ALLES'
+
 export function PlanningImport() {
   const [bestand, setBestand] = useState<File | null>(null)
   const [tekst, setTekst] = useState('')
@@ -21,18 +25,29 @@ export function PlanningImport() {
   const [busy, setBusy] = useState<'proef' | 'echt' | null>(null)
   const [klaar, setKlaar] = useState<Antwoord | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+  // "Vervang volledig speelplan": verwijdert ALLE bestaande competitiewedstrijden (elk seizoen,
+  // elke reeks — met hun worpen/statistieken/wedstrijdbladen) vóór het importeren. Bewust een
+  // aparte, uitgeklapte keuze met een letterlijke bevestigingsfrase — niet zomaar een vinkje.
+  const [wipe, setWipe] = useState(false)
+  const [wipeConfirm, setWipeConfirm] = useState('')
 
   const heeftInvoer = Boolean(bestand) || tekst.trim().length > 0
+  const wipeBevestigd = !wipe || wipeConfirm.trim() === WIPE_CONFIRM_PHRASE
 
   const verstuur = async (commit: boolean) => {
     if (busy || !heeftInvoer) return
+    if (commit && wipe && !wipeBevestigd) return
     setBusy(commit ? 'echt' : 'proef')
     try {
       const body = new FormData()
       if (bestand) body.append('file', bestand)
       else body.append('text', tekst)
+      if (wipe && commit) body.append('confirm', wipeConfirm.trim())
 
-      const r = await fetch(`/api/planning/seizoen${commit ? '?commit=1' : ''}`, { method: 'POST', body })
+      const params = new URLSearchParams()
+      if (commit) params.set('commit', '1')
+      if (wipe) params.set('wipe', '1')
+      const r = await fetch(`/api/planning/seizoen?${params}`, { method: 'POST', body })
       const d = (await r.json()) as Antwoord & { error?: string }
       if (!r.ok || d.error) throw new Error(d.error ?? 'Import mislukt.')
 
@@ -40,11 +55,12 @@ export function PlanningImport() {
         setKlaar(d)
         setProef(null)
         const a = d.aangemaakt
-        toast('success', `${a?.wedstrijden ?? 0} wedstrijden, ${a?.ploegen ?? 0} ploegen en ${a?.clubs ?? 0} clubs aangemaakt.`)
+        const verwijderdBit = wipe ? `${d.verwijderd ?? 0} oude wedstrijden verwijderd, ` : ''
+        toast('success', `${verwijderdBit}${a?.wedstrijden ?? 0} wedstrijden, ${a?.ploegen ?? 0} ploegen en ${a?.clubs ?? 0} clubs aangemaakt.`)
       } else {
         setProef(d)
         setKlaar(null)
-        if (d.nieuweWedstrijden === 0) toast('info', 'Niets nieuws gevonden — alles staat er al in.')
+        if (d.nieuweWedstrijden === 0 && !wipe) toast('info', 'Niets nieuws gevonden — alles staat er al in.')
       }
     } catch (e) {
       toast('error', (e as Error).message)
@@ -58,6 +74,8 @@ export function PlanningImport() {
     setTekst('')
     setProef(null)
     setKlaar(null)
+    setWipe(false)
+    setWipeConfirm('')
     if (fileRef.current) fileRef.current.value = ''
   }
 
@@ -108,6 +126,32 @@ export function PlanningImport() {
         )}
       </div>
 
+      <details className="pi-wipe" open={wipe}>
+        <summary onClick={(e) => { e.preventDefault(); setWipe((v) => !v) }}>
+          <input type="checkbox" checked={wipe} readOnly /> ⚠️ Vervang het volledige speelplan (nieuwe competitie)
+        </summary>
+        <div className="pi-wipe-body">
+          <p className="pi-wipe-warn">
+            Verwijdert <strong>ALLE</strong> bestaande wedstrijden — élk seizoen, élke reeks, ook
+            afgesloten historische wedstrijden met hun worpen, statistieken en wedstrijdbladen —
+            vóór dit bestand ingeladen wordt. <strong>Onomkeerbaar.</strong> Clubs en ploegen
+            blijven wél staan. Gebruik dit enkel om een volledig nieuw seizoen op te starten.
+          </p>
+          {wipe && (
+            <label className="pi-wipe-confirm">
+              Typ <code>{WIPE_CONFIRM_PHRASE}</code> om te bevestigen:
+              <input
+                type="text"
+                value={wipeConfirm}
+                onChange={(e) => { setWipeConfirm(e.target.value); setProef(null); setKlaar(null) }}
+                placeholder={WIPE_CONFIRM_PHRASE}
+                autoComplete="off"
+              />
+            </label>
+          )}
+        </div>
+      </details>
+
       <div className="plan-actions">
         <button type="button" className="btn" onClick={() => void verstuur(false)} disabled={busy !== null || !heeftInvoer}>
           {busy === 'proef' ? 'Controleren…' : '1. Controleren'}
@@ -116,8 +160,8 @@ export function PlanningImport() {
           type="button"
           className="btn btn-primary"
           onClick={() => void verstuur(true)}
-          disabled={busy !== null || !proef || proef.nieuweWedstrijden === 0}
-          title={!proef ? 'Controleer eerst het bestand' : undefined}
+          disabled={busy !== null || !proef || proef.nieuweWedstrijden === 0 || (wipe && !wipeBevestigd)}
+          title={!proef ? 'Controleer eerst het bestand' : wipe && !wipeBevestigd ? `Typ "${WIPE_CONFIRM_PHRASE}" om te bevestigen` : undefined}
         >
           {busy === 'echt' ? 'Importeren…' : `2. Importeren${proef ? ` (${proef.nieuweWedstrijden})` : ''}`}
         </button>
@@ -139,6 +183,13 @@ export function PlanningImport() {
           </p>
 
           <div className="pi-cijfers">
+            {(res.teVerwijderen != null || res.verwijderd != null) && (
+              <Cijfer
+                label={klaar ? 'oude wedstrijden verwijderd' : 'zouden verwijderd worden'}
+                waarde={(klaar ? res.verwijderd : res.teVerwijderen) ?? 0}
+                waarschuwing
+              />
+            )}
             <Cijfer label="wedstrijden in het bestand" waarde={res.gelezen.wedstrijden} />
             <Cijfer label={klaar ? 'aangemaakt' : 'nieuw'} waarde={klaar ? (res.aangemaakt?.wedstrijden ?? 0) : res.nieuweWedstrijden} sterk />
             <Cijfer label="stonden er al in" waarde={res.bestaandeWedstrijden} />

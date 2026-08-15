@@ -88,6 +88,16 @@ describe('resolveReeks', () => {
     expect(resolveReeks('kabouterreeks')).toBeNull()
     expect(resolveReeks('')).toBeNull()
   })
+  it('herkent de nieuwe reeksen van seizoen 2026-2027 (kalender KVKBF)', () => {
+    expect(resolveReeks('REGHC')).toBe('RHC')
+    expect(resolveReeks('U12 A')).toBe('U12A')
+    expect(resolveReeks('U12 B')).toBe('U12B')
+    expect(resolveReeks('U16 MA')).toBe('U16MA')
+    expect(resolveReeks('U16 MB')).toBe('U16MB')
+    expect(resolveReeks('U14JA')).toBe('U14JA')
+    expect(resolveReeks('U14JB')).toBe('U14JB')
+    expect(resolveReeks('U18 M')).toBe('U18M')
+  })
 })
 
 describe('clubVanPloeg', () => {
@@ -155,6 +165,16 @@ describe('planSeason', () => {
 
   it('slaat vrije weekends over zonder te klagen', () => {
     const plan = planSeason([header, rij('1', '1NAH', '13/09/2026', '14:00', 'KBK Temse', 'VRIJ')])
+    expect(plan.matches).toEqual([])
+    expect(plan.issues).toEqual([])
+  })
+
+  it('slaat vrije weekends met een poule-letter over ("Vrij A"/"Vrij B")', () => {
+    const plan = planSeason([
+      header,
+      rij('1', '1NAH', '13/09/2026', '14:00', 'KBC Heist', 'Vrij A'),
+      rij('2', '1NAH', '13/09/2026', '14:00', 'Vrij B', 'Atlas Varsenare'),
+    ])
     expect(plan.matches).toEqual([])
     expect(plan.issues).toEqual([])
   })

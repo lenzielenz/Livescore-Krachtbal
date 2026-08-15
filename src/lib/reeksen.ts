@@ -19,6 +19,7 @@ export const REEKS_OPTIONS = [
   // Regionaal
   { label: 'RHA — Regionale Heren A', value: 'RHA' },
   { label: 'RHB — Regionale Heren B', value: 'RHB' },
+  { label: 'RHC — Regionale Heren C', value: 'RHC' },
   { label: 'RDA — Regionale Dames A', value: 'RDA' },
   { label: 'RDB — Regionale Dames B', value: 'RDB' },
   // Jeugd
@@ -26,9 +27,15 @@ export const REEKS_OPTIONS = [
   { label: 'U18M — U18 Meisjes', value: 'U18M' },
   { label: 'U16J — U16 Jongens', value: 'U16J' },
   { label: 'U16M — U16 Meisjes', value: 'U16M' },
+  { label: 'U16MA — U16 Meisjes A', value: 'U16MA' },
+  { label: 'U16MB — U16 Meisjes B', value: 'U16MB' },
   { label: 'U14J — U14 Jongens', value: 'U14J' },
+  { label: 'U14JA — U14 Jongens A', value: 'U14JA' },
+  { label: 'U14JB — U14 Jongens B', value: 'U14JB' },
   { label: 'U14M — U14 Meisjes', value: 'U14M' },
   { label: 'U12 — U12', value: 'U12' },
+  { label: 'U12A — U12 A', value: 'U12A' },
+  { label: 'U12B — U12 B', value: 'U12B' },
   // Overig
   { label: 'Recreatief', value: 'recreatief' },
   { label: 'Beker', value: 'beker' },
@@ -73,6 +80,7 @@ const REEKS_RANG: Partial<Record<Reeks, number>> = {
   LD: 3,
   RHA: 4,
   RHB: 4,
+  RHC: 4,
   RDA: 4,
   RDB: 4,
 }
@@ -91,15 +99,22 @@ const REEKS_CATEGORIE: Record<Reeks, Category> = {
   LD: 'senioren',
   RHA: 'senioren',
   RHB: 'senioren',
+  RHC: 'senioren',
   RDA: 'senioren',
   RDB: 'senioren',
   U18J: 'U18',
   U18M: 'U18',
   U16J: 'U16',
   U16M: 'U16',
+  U16MA: 'U16',
+  U16MB: 'U16',
   U14J: 'U14',
+  U14JA: 'U14',
+  U14JB: 'U14',
   U14M: 'U14',
   U12: 'U12',
+  U12A: 'U12',
+  U12B: 'U12',
   recreatief: 'senioren',
   beker: 'senioren',
   andere: 'senioren',
@@ -131,15 +146,22 @@ const REEKS_BALKLEUR: Record<Reeks, KrachtbalKleur> = {
   LH: 'wit',
   RHA: 'wit',
   RHB: 'wit',
+  RHC: 'wit',
   '1NAD': 'rood',
   LD: 'rood',
   RDA: 'rood',
   RDB: 'rood',
   U12: 'geel',
+  U12A: 'geel',
+  U12B: 'geel',
   U14J: 'geel',
+  U14JA: 'geel',
+  U14JB: 'geel',
   U14M: 'geel',
   U16J: 'blauw',
   U16M: 'blauw',
+  U16MA: 'blauw',
+  U16MB: 'blauw',
   U18J: 'blauw',
   U18M: 'blauw',
   recreatief: 'wit',
@@ -155,7 +177,7 @@ export function krachtbalKleur(reeks: unknown): KrachtbalKleur {
 // Reglement §6.8/§8.1: U16-MEISJES spelen met het SENIOR-worpaantal (3 vanaf eigen helft, 2 op
 // tegenhelft) i.p.v. het jeugd-aantal (4/3) — al houden ze wél de jeugd-speelduur (2×20).
 // Omdat de categorie ('U16') geen geslacht kent, leiden we dit af uit de reeks (die het wél kent).
-const SENIOR_THROW_YOUTH: ReadonlySet<string> = new Set(['U16M'])
+const SENIOR_THROW_YOUTH: ReadonlySet<string> = new Set(['U16M', 'U16MA', 'U16MB'])
 export function reeksUsesSeniorThrows(reeks: unknown): boolean {
   return typeof reeks === 'string' && SENIOR_THROW_YOUTH.has(reeks)
 }
@@ -164,7 +186,19 @@ export function reeksUsesSeniorThrows(reeks: unknown): boolean {
 export type ReeksType = 'jeugd' | 'landelijk' | 'nationaal'
 
 const NATIONAAL: ReadonlySet<Reeks> = new Set<Reeks>(['1NAH', '1NAHB', '1NAD', '2NAH', '2NAHB'])
-const JEUGD_2X20: ReadonlySet<Reeks> = new Set<Reeks>(['U12', 'U14J', 'U14M', 'U16J', 'U16M'])
+const JEUGD_2X20: ReadonlySet<Reeks> = new Set<Reeks>([
+  'U12',
+  'U12A',
+  'U12B',
+  'U14J',
+  'U14JA',
+  'U14JB',
+  'U14M',
+  'U16J',
+  'U16M',
+  'U16MA',
+  'U16MB',
+])
 
 export function reeksType(reeks: Reeks): ReeksType {
   if (NATIONAAL.has(reeks)) return 'nationaal'

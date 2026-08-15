@@ -22,7 +22,12 @@ const nameOf = (v: unknown): string => (v && typeof v === 'object' ? String((v a
 // Ploeg-groepering: 1NAH+1NAHB samen, 2NAH+2NAHB samen, alle jeugd samen, de rest apart.
 const HEREN_1 = new Set(['1NAH', '1NAHB'])
 const HEREN_2 = new Set(['2NAH', '2NAHB'])
-const JEUGD = new Set(['U18J', 'U18M', 'U16J', 'U16M', 'U14J', 'U14M', 'U12'])
+const JEUGD = new Set([
+  'U18J', 'U18M',
+  'U16J', 'U16M', 'U16MA', 'U16MB',
+  'U14J', 'U14JA', 'U14JB', 'U14M',
+  'U12', 'U12A', 'U12B',
+])
 const REEKS_ORDER = new Map<string, number>(REEKS_OPTIONS.map((o, i) => [o.value, i]))
 function groupOf(code: string): { key: string; label: string; order: number } {
   if (HEREN_1.has(code)) return { key: '1nh', label: '1ste Nationale Heren', order: REEKS_ORDER.get('1NAH') ?? 0 }

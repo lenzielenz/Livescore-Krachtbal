@@ -1,6 +1,7 @@
-import type { Payload } from 'payload'
+import type { Payload, Where } from 'payload'
 
 import { competitionWhere } from './analyse-access'
+import { countMatches, deleteMatchesCascade } from './match-cleanup'
 import { reeksCategorie, type Reeks } from './reeksen'
 import {
   matchSleutel,
@@ -23,14 +24,22 @@ import {
 
 export type { ImportSamenvatting }
 
+// "Vervang volledig speelplan": elke competitiewedstrijd (elk seizoen, elke reeks) verdwijnt vóór
+// de nieuwe kalender ingeladen wordt — inclusief afgesloten historische wedstrijden. Bewust NIET:
+// analyse-opnames (privé scoutingdata van een analist, geen competitiewedstrijd) en demo's
+// (vluchtig, ruimt zichzelf al op). Clubs/ploegen blijven altijd staan — enkel wedstrijden wissen.
+const WIPE_WHERE: Where = { and: [competitionWhere(), { isDemo: { not_equals: true } }] }
+
 /**
  * Bepaal wat er moet gebeuren en (optioneel) voer het uit.
  * `commit: false` schrijft niets — dat is de proefronde die de gebruiker eerst te zien krijgt.
+ * `wipe: true` verwijdert vóór het importeren ALLE bestaande competitiewedstrijden (zie
+ * WIPE_WHERE hierboven) — onomkeerbaar, enkel voor een volledige seizoensvervanging.
  */
 export async function runSeasonImport(
   payload: Payload,
   rows: string[][],
-  opts: { commit: boolean },
+  opts: { commit: boolean; wipe?: boolean },
 ): Promise<ImportSamenvatting> {
   const plan: SeasonPlan = planSeason(rows)
 
@@ -50,6 +59,14 @@ export async function runSeasonImport(
     header: plan.header,
   }
   if (plan.matches.length === 0) return samenvatting
+
+  // ── Vervang volledig speelplan ──
+  // Proefronde: enkel tellen. Commit: eerst effectief verwijderen, vóórdat we hieronder bepalen
+  // welke wedstrijden "nieuw" zijn — na een wipe is dat altijd het complete bestand.
+  if (opts.wipe) {
+    if (opts.commit) samenvatting.verwijderd = await deleteMatchesCascade(payload, WIPE_WHERE)
+    else samenvatting.teVerwijderen = await countMatches(payload, WIPE_WHERE)
+  }
 
   // ── Bestaande clubs en ploegen inlezen ──
   const clubsRes = await payload
@@ -72,27 +89,31 @@ export async function runSeasonImport(
   samenvatting.nieuwePloegen = plan.teams.filter((t) => !teamIdPerSleutel.has(`${naamSleutel(t.naam)}|${t.reeks}`))
 
   // ── Bestaande wedstrijden van de betrokken seizoenen inlezen ──
-  const seizoenen = [...new Set(plan.matches.map((m) => m.seizoen))]
-  const bestaandeRes = await payload
-    .find({
-      collection: 'matches',
-      where: { and: [{ seizoen: { in: seizoenen } }, competitionWhere()] },
-      depth: 1,
-      limit: 5000,
-      overrideAccess: true,
-    })
-    .catch(() => ({ docs: [] as Record<string, unknown>[] }))
-
-  const naamVanTeam = (v: unknown): string =>
-    v && typeof v === 'object' ? String((v as { name?: unknown }).name ?? '') : ''
+  // Bij een volledige vervanging slaan we dit bewust over: na de wipe hierboven bestaat er
+  // sowieso niets meer, dus telt straks élke wedstrijd uit het bestand als nieuw.
   const bestaandeSleutels = new Set<string>()
-  for (const m of bestaandeRes.docs) {
-    const reeks = String((m as { reeks?: unknown }).reeks ?? '')
-    const datum = String((m as { date?: unknown }).date ?? '')
-    const thuis = naamVanTeam((m as { homeTeam?: unknown }).homeTeam)
-    const uit = naamVanTeam((m as { awayTeam?: unknown }).awayTeam)
-    if (!reeks || !datum || !thuis || !uit) continue
-    bestaandeSleutels.add(matchSleutel(reeks, datum, thuis, uit))
+  if (!opts.wipe) {
+    const seizoenen = [...new Set(plan.matches.map((m) => m.seizoen))]
+    const bestaandeRes = await payload
+      .find({
+        collection: 'matches',
+        where: { and: [{ seizoen: { in: seizoenen } }, competitionWhere()] },
+        depth: 1,
+        limit: 5000,
+        overrideAccess: true,
+      })
+      .catch(() => ({ docs: [] as Record<string, unknown>[] }))
+
+    const naamVanTeam = (v: unknown): string =>
+      v && typeof v === 'object' ? String((v as { name?: unknown }).name ?? '') : ''
+    for (const m of bestaandeRes.docs) {
+      const reeks = String((m as { reeks?: unknown }).reeks ?? '')
+      const datum = String((m as { date?: unknown }).date ?? '')
+      const thuis = naamVanTeam((m as { homeTeam?: unknown }).homeTeam)
+      const uit = naamVanTeam((m as { awayTeam?: unknown }).awayTeam)
+      if (!reeks || !datum || !thuis || !uit) continue
+      bestaandeSleutels.add(matchSleutel(reeks, datum, thuis, uit))
+    }
   }
 
   const teDoen = plan.matches.filter((m) => !bestaandeSleutels.has(m.sleutel))
