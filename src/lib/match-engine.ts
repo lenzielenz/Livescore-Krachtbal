@@ -911,6 +911,8 @@ export interface MatchState {
     goalAreaDepth: number
     /** Tijdstip waarop de wedstrijd op 'finished' ging (voor het 1u-navenster van de tribune). */
     finishedAt: string | null
+    /** Aftrap (ISO) — bepaalt of de tribune al open is op de speeldag zelf, vóór de aftrap. */
+    date: string | null
   }
   teams: {
     home: { id: number; name: string; logoUrl: string | null; logoFit: LogoFit | null; colors: ClubColors | null }
@@ -1515,6 +1517,7 @@ export async function buildMatchState(payload: Payload, matchId: number): Promis
       clockUpdatedAt: match.clockUpdatedAt ?? null,
       goalAreaDepth: match.goalAreaDepth ?? FIELD.defaultGoalAreaDepthM,
       finishedAt: (match.finishedAt as string | null | undefined) ?? null,
+      date: (match.date as string | null | undefined) ?? null,
     },
     teams: {
       home: { id: home.id, name: home.name, logoUrl: clubLogoUrl(home), logoFit: clubLogoFit(home), colors: clubColors(home) },

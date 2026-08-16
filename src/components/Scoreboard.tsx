@@ -416,7 +416,7 @@ export function Scoreboard({
   // De tribune (reacties + shoutouts) staat open tijdens de wedstrijd en nog tot 1u erna.
   // Een tikje state zorgt dat ze vanzelf sluit op het einde van dat venster, zonder refresh.
   const [, forceTribuneTick] = useState(0)
-  const tribuneOpen = isTribuneOpen(state.match.status, state.match.finishedAt)
+  const tribuneOpen = isTribuneOpen(state.match.status, state.match.finishedAt, state.match.date)
   const tribuneClosingSoon = state.match.status === 'finished' && tribuneOpen
   useEffect(() => {
     if (state.match.status !== 'finished' || !state.match.finishedAt) return
@@ -473,10 +473,12 @@ export function Scoreboard({
           ) : (
             <span className="sb-conn off" title="Verbinding verbroken — opnieuw verbinden…">● verbinden…</span>
           ))}
-        {/* Vertrouwenslabel: enkel tonen wanneer de stand NIET uit de officiële wedstrijdflow komt.
-            Een supporters-score is "nog niet bevestigd" tot genoeg kijkers ze bevestigden — zo blijft
-            het leuk én eerlijk (zie src/lib/score-trust.ts). */}
-        {state.trust.label !== 'official' && (
+        {/* Vertrouwenslabel: enkel tonen wanneer de stand NIET uit de officiële wedstrijdflow komt
+            ÉN de wedstrijd al bezig is/was — een geplande match heeft nog geen score om te
+            vertrouwen of te wantrouwen, dus "nog niet bevestigd" zegt daar niets zinvols (zie
+            src/lib/score-trust.ts). Een supporters-score is "nog niet bevestigd" tot genoeg kijkers
+            ze bevestigden — zo blijft het leuk én eerlijk. */}
+        {state.trust.label !== 'official' && state.match.status !== 'scheduled' && (
           <span className={`sb-trust ${state.trust.label}`} title={state.trust.long}>
             {state.trust.emoji} {state.trust.short}
           </span>

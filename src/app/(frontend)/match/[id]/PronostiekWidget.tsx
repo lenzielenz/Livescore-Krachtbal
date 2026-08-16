@@ -19,6 +19,7 @@ export function PronostiekWidget({
   remaining,
   max,
   boosterTokens,
+  isMatchDay,
 }: {
   matchId: number
   status: string
@@ -34,6 +35,8 @@ export function PronostiekWidget({
   max?: number
   /** Gewonnen bonusrad-boosters (vermenigvuldigers) die de speler kan inzetten. */
   boosterTokens?: number[]
+  /** Is het vandaag de speeldag zelf? Vóór de speeldag mag nog niet voorspeld worden. */
+  isMatchDay: boolean
 }) {
   const fmtMult = (v: number) => `×${Number.isInteger(v) ? v : String(v).replace('.', ',')}`
   // Unieke boosterwaarden + hoeveel je er van hebt (bv. ×2 (2), ×5).
@@ -83,6 +86,14 @@ export function PronostiekWidget({
       <div className="pn-line pn-line-done">
         <span className="pn-line-ic">✓</span>
         <span>Pronostiek binnen · <b>{locked.home}–{locked.away}</b> {locked.boosted > 1 ? <span className="pn-bonus">🎰 {fmtMult(locked.boosted)}</span> : null} <span className="pn-dim">(enkel jij ziet dit)</span></span>
+      </div>
+    )
+  }
+  if (status === 'scheduled' && !isMatchDay) {
+    return (
+      <div className="pn-line">
+        <span className="pn-line-ic">🔮</span>
+        <span>Pronostiek opent op de dag van de wedstrijd zelf.</span>
       </div>
     )
   }

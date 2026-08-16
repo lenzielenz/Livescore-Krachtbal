@@ -1,4 +1,5 @@
 import { authUser, userClubId } from '@/lib/api-auth'
+import { dateStrBE } from '@/lib/datetime'
 import { buildMatchState } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
 import { activeTokens } from '@/lib/pronostiek-rad'
@@ -50,6 +51,10 @@ export async function POST(req: Request) {
     // Voorspellen kan vóór én tijdens de match (iedereen mag meedoen) — enkel niet meer na afloop.
     if (match.status !== 'scheduled' && match.status !== 'live') {
       return Response.json({ error: 'De wedstrijd is afgelopen — voorspellen kan niet meer.' }, { status: 409 })
+    }
+    // Vóór de speeldag zelf mag nog niet voorspeld worden — pas vanaf de dag van de wedstrijd.
+    if (match.status === 'scheduled' && dateStrBE(new Date(String((match as { date?: unknown }).date ?? ''))) !== dateStrBE()) {
+      return Response.json({ error: 'Voorspellen kan pas vanaf de dag van de wedstrijd zelf.' }, { status: 409 })
     }
     // Elke competitiewedstrijd mag voorspeld worden (je kan via een pool uitgenodigd zijn voor de
     // matchen van een andere ploeg/club). De klassementen filteren toch op club of pool.
