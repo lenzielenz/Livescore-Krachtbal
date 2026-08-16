@@ -979,17 +979,17 @@
   pointer-events: none;
   background: linear-gradient(
     120deg,
-    color-mix(in srgb, var(--hc) 40%, #0b0f15) 0%,
-    #0b0f15 48%,
-    color-mix(in srgb, var(--ac) 40%, #0b0f15) 100%
+    color-mix(in srgb, var(--hc) 66%, #0b0f15) 0%,
+    #0b0f15 46%,
+    color-mix(in srgb, var(--ac) 66%, #0b0f15) 100%
   );
 }
 .lb-row.now .lbl-color {
   inset: -55% -22%;
   background:
-    radial-gradient(45% 60% at 24% 34%, color-mix(in srgb, var(--hc) 58%, transparent), transparent 70%),
-    radial-gradient(45% 60% at 76% 66%, color-mix(in srgb, var(--ac) 58%, transparent), transparent 70%),
-    radial-gradient(40% 55% at 62% 28%, color-mix(in srgb, var(--hc) 32%, transparent), transparent 75%);
+    radial-gradient(45% 60% at 24% 34%, color-mix(in srgb, var(--hc) 72%, transparent), transparent 70%),
+    radial-gradient(45% 60% at 76% 66%, color-mix(in srgb, var(--ac) 72%, transparent), transparent 70%),
+    radial-gradient(40% 55% at 62% 28%, color-mix(in srgb, var(--hc) 45%, transparent), transparent 75%);
   filter: blur(14px);
 }
 .lbl-head::before {
