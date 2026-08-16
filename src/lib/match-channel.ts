@@ -31,6 +31,7 @@ type Channel = {
   lastId: number
   status: string // laatst gekende wedstrijdstatus (voor het tribune-venster)
   finishedAt: string | null // tijdstip van afloop (voor het 1u-navenster)
+  date: string | null // aftrap (voor het "al open op de speeldag zelf"-venster)
   reactions: Record<string, number> // delta sinds de laatste flush (zwevende emoji's)
   totals: Record<string, number> // cumulatief deze wedstrijd (zichtbare tellers)
   shoutouts: Shout[] // ringbuffer van recente berichten
@@ -87,9 +88,11 @@ async function pollScore(payload: Payload, matchId: number) {
   let payloadData: unknown
   try {
     const [state, timeline] = await Promise.all([buildMatchState(payload, matchId), buildTimeline(payload, matchId)])
-    // Status + eindtijd bijhouden zodat het tribune-venster (live + 1u na) klopt.
+    // Status + eindtijd bijhouden zodat het tribune-venster (live + 1u na, of al open op de
+    // speeldag zelf) klopt.
     ch.status = state.match.status
     ch.finishedAt = state.match.finishedAt ?? null
+    ch.date = state.match.date ?? null
     payloadData = { state, timeline }
   } catch {
     return // transiënt → overslaan
@@ -161,9 +164,10 @@ async function hydrateChannel(ch: Channel, matchId: number) {
   ch.hydrated = true
   try {
     const match = await ch.payload.findByID({ collection: 'matches', id: matchId, depth: 0 })
-    // Status + eindtijd meteen kennen (vóór de eerste poll) zodat het tribune-venster klopt.
+    // Status + eindtijd + aftrap meteen kennen (vóór de eerste poll) zodat het tribune-venster klopt.
     if (typeof match?.status === 'string') ch.status = match.status
     ch.finishedAt = (match?.finishedAt as string | null | undefined) ?? null
+    ch.date = (match?.date as string | null | undefined) ?? null
     const dbTotals = (match?.liveReactions ?? null) as Record<string, number> | null
     const dbShouts = (match?.liveShoutouts ?? null) as Shout[] | null
     const dbPoll = (match?.livePoll ?? null) as Record<string, number> | null
@@ -236,6 +240,7 @@ export function joinMatch(payload: Payload, matchId: number, send: Send, viewerK
       lastId: 0,
       status: '',
       finishedAt: null,
+      date: null,
       reactions: {},
       totals: {},
       shoutouts: [],
@@ -316,7 +321,7 @@ export function addReaction(matchId: number, emoji: string, count = 1): boolean 
   if (!ALLOWED_EMOJI.has(emoji)) return false
   const ch = channels.get(matchId)
   if (!ch) return false // geen actieve kijkers → niets te tonen
-  if (!isTribuneOpen(ch.status, ch.finishedAt)) return false // gesloten (>1u na de match)
+  if (!isTribuneOpen(ch.status, ch.finishedAt, ch.date)) return false // gesloten (>1u na de match)
   const n = Math.max(1, Math.min(20, Math.floor(count) || 1)) // clamp tegen inflatie
   ch.reactions[emoji] = (ch.reactions[emoji] ?? 0) + n
   ch.totals[emoji] = (ch.totals[emoji] ?? 0) + n
@@ -355,7 +360,7 @@ export function setMvpTotals(matchId: number, totals: Record<string | number, nu
 export function addShoutout(matchId: number, name: string, text: string): Shout | null {
   const ch = channels.get(matchId)
   if (!ch) return null
-  if (!isTribuneOpen(ch.status, ch.finishedAt)) return null // gesloten (>1u na de match)
+  if (!isTribuneOpen(ch.status, ch.finishedAt, ch.date)) return null // gesloten (>1u na de match)
   ch.shoutSeq += 1
   const shout: Shout = { id: ch.shoutSeq, name, text, at: Date.now() }
   ch.shoutouts.push(shout)

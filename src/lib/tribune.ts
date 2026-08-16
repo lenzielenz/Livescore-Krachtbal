@@ -1,11 +1,16 @@
-// De live tribune (emoji-reacties + shoutouts) staat open tijdens de wedstrijd en nog tot
-// één uur ná het einde. Daarna sluit ze. Eén bron van waarheid voor zowel de client (scorebord)
-// als de server (live-kanaal), zodat tonen en toelaten altijd gelijklopen.
+import { dateStrBE } from './datetime'
+
+// De live tribune (emoji-reacties + shoutouts) staat open vanaf de speeldag zelf (niet pas
+// wanneer de aantekenaar effectief start) tot één uur ná het einde. Zo kunnen supporters al
+// meedoen terwijl ze wachten op de aftrap, i.p.v. een lege pagina te zien. Eén bron van waarheid
+// voor zowel de client (scorebord) als de server (live-kanaal), zodat tonen en toelaten altijd
+// gelijklopen.
 export const TRIBUNE_GRACE_MS = 60 * 60 * 1000 // 1 uur na de wedstrijd
 
 export function isTribuneOpen(
   status: string | null | undefined,
   finishedAt: string | null | undefined,
+  date?: string | null,
   now: number = Date.now(),
 ): boolean {
   if (status === 'live') return true
@@ -15,7 +20,12 @@ export function isTribuneOpen(
     if (Number.isNaN(t)) return false
     return now - t < TRIBUNE_GRACE_MS
   }
-  return false // gepland / onbekend → nog niet open
+  if (status === 'scheduled' && date) {
+    const kickoff = new Date(date)
+    if (Number.isNaN(kickoff.getTime())) return false
+    return dateStrBE(kickoff) === dateStrBE(new Date(now))
+  }
+  return false // gepland zonder (geldige) datum, of onbekende status → gesloten
 }
 
 // Wanneer een tribunefoto moet verdwijnen: één uur ná de wedstrijd. Is de eindtijd al bekend, dan

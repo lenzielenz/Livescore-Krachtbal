@@ -11,7 +11,7 @@ import { SiteHeader } from '@/components/SiteHeader'
 import { userClubId } from '@/lib/access'
 import { getAuthUser } from '@/lib/auth-user'
 import { isCheckedIn, sanitizeCheckins } from '@/lib/checkins'
-import { formatDateTimeBE } from '@/lib/datetime'
+import { dateStrBE, formatDateTimeBE } from '@/lib/datetime'
 import { buildMatchSheet, buildMatchState, buildMatchStats, buildTimeline, type SheetGoal } from '@/lib/match-engine'
 import { buildMatchReport } from '@/lib/match-report'
 import { getPayloadClient } from '@/lib/payload-client'
@@ -149,7 +149,9 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   }
 
   // Vluchtige foto-tribune: ENKEL op volwassen reeksen (safeguarding, geen jeugd). Laad de recente,
-  // niet-verlopen foto's; posten mag enkel ingelogd terwijl de tribune open is.
+  // niet-verlopen foto's; posten mag enkel ingelogd terwijl de wedstrijd bezig is/pas voorbij —
+  // bewust NIET verruimd naar "matchday vóór de aftrap" (in tegenstelling tot reacties/chat): een
+  // foto van een wedstrijd die nog niet begonnen is, bestaat niet.
   const adultMatch = isAdultReeks(reeksRaw)
   const canPostInstant = Boolean(me) && adultMatch && isTribuneOpen(state.match.status, state.match.finishedAt)
   let initialInstants: { id: number; url: string; authorName: string; at: number }[] = []
@@ -300,6 +302,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
         remaining={predRemaining}
         max={LIVE_PRONOSTIEK_MAX_PER_WEEKEND}
         boosterTokens={myBoosters}
+        isMatchDay={Boolean(matchDoc?.date) && dateStrBE(new Date(String(matchDoc?.date))) === dateStrBE()}
       />
       <Scoreboard
         matchId={matchId}

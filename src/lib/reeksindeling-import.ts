@@ -1,8 +1,13 @@
 import zlib from 'zlib'
 
+import { COLOR_NOISE_SOURCE } from './club-colors-import'
+
 // Parser voor de reeksindeling-PDF (KVKBF) → per ploeg het thuisuur (dag + uur) per reeks.
 // De PDF-tekst komt er "per glyph gespatieerd" uit; door alle spaties te verwijderen
 // reconstrueert elke regel netjes als <index><ploeg><reekscode><za|zo><u:mm>.
+// Sommige jaargangen van de PDF schuiven de truikleur van de ploeg tussen de reekscode en het
+// dag/uur ("...1NHZwart/Roodza18:00") — COLOR_NOISE_SOURCE (uit club-colors-import.ts) laat de
+// aankerregex die optionele kleurtekst overslaan zodat de reekscode weer los komt te staan.
 
 export interface ReeksEntry {
   team: string // ploegnaam zoals in de PDF (zonder spaties), bv. "KBCSt.MichielsA"
@@ -46,20 +51,24 @@ const CODE_TO_REEKS: Record<string, string[]> = {
   '1NH': ['1NAH'], '1NHB': ['1NAHB'], '1ND': ['1NAD'],
   '2NH': ['2NAH'], '2NHB': ['2NAHB'],
   LH: ['LH'], LD: ['LD'],
-  REGD: ['RDA', 'RDB'], REGH: ['RHA', 'RHB'],
-  REGDA: ['RDA'], REGDB: ['RDB'], REGHA: ['RHA'], REGHB: ['RHB'],
-  U18J: ['U18J'], U18M: ['U18M'], U16J: ['U16J'], U16M: ['U16M'],
-  U14J: ['U14J'], U14M: ['U14M'], U12: ['U12'],
+  REGD: ['RDA', 'RDB'], REGH: ['RHA', 'RHB', 'RHC'],
+  REGDA: ['RDA'], REGDB: ['RDB'], REGHA: ['RHA'], REGHB: ['RHB'], REGHC: ['RHC'],
+  U18J: ['U18J'], U18M: ['U18M'], U16J: ['U16J'],
+  U16M: ['U16M'], U16MA: ['U16MA'], U16MB: ['U16MB'],
+  U14J: ['U14J'], U14JA: ['U14JA'], U14JB: ['U14JB'], U14M: ['U14M'],
+  U12: ['U12'], U12A: ['U12A'], U12B: ['U12B'],
 }
 
 // Langste codes eerst zodat suffix-matching klopt (bv. "1NHB" vóór "1NH").
 const CODES = Object.keys(CODE_TO_REEKS).sort((a, b) => b.length - a.length)
 
+const ANCHOR_RE = new RegExp(`${COLOR_NOISE_SOURCE}(za|zo)(\\d{1,2}:\\d{2})`, 'gi')
+
 export function parseReeksindeling(pdfText: string): ReeksEntry[] {
   const nos = pdfText
   const out: ReeksEntry[] = []
   let prev = 0
-  for (const m of nos.matchAll(/(za|zo)(\d{1,2}:\d{2})/g)) {
+  for (const m of nos.matchAll(ANCHOR_RE)) {
     const seg = nos.slice(prev, m.index)
     prev = (m.index ?? 0) + m[0].length
     const code = CODES.find((c) => seg.endsWith(c))
@@ -123,12 +132,14 @@ function reeksForEntry(code: string, team: string): string {
   return suf === 'B' ? (opts[1] ?? opts[0]) : opts[0]
 }
 
+const ANCHOR_RE_SPACED = new RegExp(`${COLOR_NOISE_SOURCE}\\s*(za|zo)\\s*(\\d{1,2}:\\d{2})`, 'gi')
+
 // Elke regel: <rij><ploegnaam><reekscode><za|zo><u:mm>. Op de spatiebehoudende tekst geeft dit
 // nette ploeg-/clubnamen. Legende-/notitietekst onderaan wordt eruit gefilterd (te lang / vreemd).
 export function parseReeksindelingTeams(pdfText: string): ReeksTeamEntry[] {
   const out: ReeksTeamEntry[] = []
   let prev = 0
-  for (const mm of pdfText.matchAll(/(za|zo)\s*(\d{1,2}:\d{2})/g)) {
+  for (const mm of pdfText.matchAll(ANCHOR_RE_SPACED)) {
     const seg = pdfText.slice(prev, mm.index)
     prev = (mm.index ?? 0) + mm[0].length
     const trimmed = seg.replace(/\s+$/, '')
