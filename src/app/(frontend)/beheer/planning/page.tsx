@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { SiteHeader } from '@/components/SiteHeader'
 import { isFederationLevel } from '@/lib/access'
 import { getPayloadClient } from '@/lib/payload-client'
+import { ClubKleurenImport } from './ClubKleurenImport'
 import { PlanningImport } from './PlanningImport'
 
 export const dynamic = 'force-dynamic'
@@ -25,7 +26,10 @@ export default async function PlanningPage() {
             <Link href="/inloggen" className="hub-pill">Inloggen →</Link>
           </p>
         ) : (
-          <PlanningImport />
+          <>
+            <PlanningImport />
+            <ClubKleurenImport />
+          </>
         )}
       </div>
     </>
