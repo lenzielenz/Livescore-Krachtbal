@@ -967,11 +967,25 @@
   padding: 12px 16px 11px 34px;
   overflow: hidden;
 }
+/* Gemeten (Playwright-scrollprofiel op 85 rijen): een geblurde achtergrond op ÉLKE kaart was —
+   los van de animatie — zelf al de grootste resterende jank-bron (filter: blur() is zwaar om te
+   componeren, ook stilstaand, ook op tientallen elementen tegelijk). De gewone rijen krijgen
+   daarom een even kleurrijke maar goedkope lineaire gradient zonder blur-filter; enkel de
+   écht-lopende wedstrijd (".now", meestal een handvol) krijgt de volle geblurde aurora-look. */
 .lbl-color {
   position: absolute;
-  inset: -55% -22%;
+  inset: 0;
   z-index: 0;
   pointer-events: none;
+  background: linear-gradient(
+    120deg,
+    color-mix(in srgb, var(--hc) 40%, #0b0f15) 0%,
+    #0b0f15 48%,
+    color-mix(in srgb, var(--ac) 40%, #0b0f15) 100%
+  );
+}
+.lb-row.now .lbl-color {
+  inset: -55% -22%;
   background:
     radial-gradient(45% 60% at 24% 34%, color-mix(in srgb, var(--hc) 58%, transparent), transparent 70%),
     radial-gradient(45% 60% at 76% 66%, color-mix(in srgb, var(--ac) 58%, transparent), transparent 70%),
