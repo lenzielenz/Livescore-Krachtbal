@@ -99,8 +99,24 @@ export function excelSerialToText(serial: number): string {
   return min === 0 ? datum : `${datum} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`
 }
 
-// Ingebouwde Excel-opmaakcodes die een datum of tijd voorstellen.
-const BUILTIN_DATE_FORMATS = new Set([14, 15, 16, 17, 18, 19, 20, 21, 22, 45, 46, 47])
+/**
+ * Een Excel-TIJDgetal (geen echte datum, enkel een fractie van een dag — bv. een cel opgemaakt
+ * als "uu:mm") → "uu:mm". Zo'n cel bevat geen bruikbaar datumdeel: het "epoch"-datumdeel dat
+ * excelSerialToText() erbij zou plakken (1899-12-30) is schijn en hoort niet in de tekst, anders
+ * herkent parseUur() (season-import.ts) het aanvangsuur niet meer (elke wedstrijd viel terug op
+ * 00:00 — zie AUDIT/bugfix seizoensimport 2026-2027).
+ */
+export function excelSerialToTimeText(serial: number): string {
+  const dagFractie = ((serial % 1) + 1) % 1
+  const totaalMin = Math.round(dagFractie * 24 * 60) % (24 * 60)
+  const p = (n: number) => String(n).padStart(2, '0')
+  return `${p(Math.floor(totaalMin / 60))}:${p(totaalMin % 60)}`
+}
+
+// Ingebouwde Excel-opmaakcodes: datum(+tijd) met een echt datumdeel, versus zuiver tijd (enkel
+// een fractie van de dag — geen datumdeel om weer te geven).
+const BUILTIN_DATE_FORMATS = new Set([14, 15, 16, 17, 22])
+const BUILTIN_TIME_FORMATS = new Set([18, 19, 20, 21, 45, 46, 47])
 
 /** Bevat deze opmaakcode datum-/tijdonderdelen? (tekst tussen "" telt niet mee) */
 export function isDateFormatCode(code: string): boolean {
@@ -109,24 +125,38 @@ export function isDateFormatCode(code: string): boolean {
 }
 
 /**
- * Welke stijlindexen (cellen) tonen een datum? Leest styles.xml: de eigen opmaakcodes (numFmts)
- * plus de ingebouwde, en koppelt ze aan de stijlen uit cellXfs.
+ * Is deze eigen opmaakcode zuiver tijd (geen datumdeel)? 'm' is dubbelzinnig in Excel-opmaak
+ * (maand óf minuut) — we gebruiken enkel de ondubbelzinnige letters: 'h'/'s' wijzen op tijd,
+ * 'y' (jaar) of 'd' (dag) wijzen op een echt datumdeel. Zuiver tijd = wél h/s, geen y/d.
  */
-export function dateStyleIndexes(stylesXml: string): Set<number> {
+function isTimeOnlyFormatCode(code: string): boolean {
+  const zonderTekst = code.replace(/"[^"]*"/g, '').replace(/\\./g, '')
+  return /[hs]/i.test(zonderTekst) && !/[yd]/i.test(zonderTekst)
+}
+
+/**
+ * Welke stijlindexen (cellen) tonen een datum(+tijd), en welke enkel een tijd (geen datumdeel)?
+ * Leest styles.xml: de eigen opmaakcodes (numFmts) plus de ingebouwde, gekoppeld aan cellXfs.
+ */
+export function dateStyleIndexes(stylesXml: string): { date: Set<number>; time: Set<number> } {
   const eigen = new Map<number, string>()
   for (const m of stylesXml.matchAll(/<numFmt\b[^>]*numFmtId="(\d+)"[^>]*formatCode="([^"]*)"[^>]*\/?>/g)) {
     eigen.set(Number(m[1]), decodeXml(m[2]))
   }
-  const out = new Set<number>()
+  const date = new Set<number>()
+  const time = new Set<number>()
   const cellXfs = /<cellXfs\b[^>]*>([\s\S]*?)<\/cellXfs>/.exec(stylesXml)?.[1] ?? ''
   let i = 0
   for (const m of cellXfs.matchAll(/<xf\b[^>]*>/g)) {
     const id = Number(/numFmtId="(\d+)"/.exec(m[0])?.[1] ?? '0')
     const code = eigen.get(id)
-    if (BUILTIN_DATE_FORMATS.has(id) || (code !== undefined && isDateFormatCode(code))) out.add(i)
+    if (BUILTIN_TIME_FORMATS.has(id)) time.add(i)
+    else if (BUILTIN_DATE_FORMATS.has(id)) date.add(i)
+    else if (code !== undefined && isTimeOnlyFormatCode(code)) time.add(i)
+    else if (code !== undefined && isDateFormatCode(code)) date.add(i)
     i++
   }
-  return out
+  return { date, time }
 }
 
 // ── Werkblad ─────────────────────────────────────────────────────────────────────────────────
@@ -148,7 +178,7 @@ function parseSharedStrings(xml: string): string[] {
   return out
 }
 
-function parseSheet(xml: string, shared: string[], dateStyles: Set<number>): string[][] {
+function parseSheet(xml: string, shared: string[], dateStyles: { date: Set<number>; time: Set<number> }): string[][] {
   const rows: string[][] = []
   for (const r of xml.matchAll(/<row\b[^>]*>([\s\S]*?)<\/row>/g)) {
     const cells: string[] = []
@@ -169,7 +199,9 @@ function parseSheet(xml: string, shared: string[], dateStyles: Set<number>): str
           const raw = decodeXml(v)
           if (type === 's') waarde = shared[Number(raw)] ?? ''
           else if (type === 'b') waarde = raw === '1' ? 'WAAR' : 'ONWAAR'
-          else if (type === 'n' && dateStyles.has(style) && raw !== '' && Number.isFinite(Number(raw))) {
+          else if (type === 'n' && raw !== '' && Number.isFinite(Number(raw)) && dateStyles.time.has(style)) {
+            waarde = excelSerialToTimeText(Number(raw))
+          } else if (type === 'n' && raw !== '' && Number.isFinite(Number(raw)) && dateStyles.date.has(style)) {
             waarde = excelSerialToText(Number(raw))
           } else waarde = raw
         }

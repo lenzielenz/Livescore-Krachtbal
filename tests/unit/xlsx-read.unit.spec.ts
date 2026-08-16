@@ -3,7 +3,15 @@ import path from 'node:path'
 
 import { describe, it, expect } from 'vitest'
 
-import { colIndex, dateStyleIndexes, excelSerialToText, isDateFormatCode, readXlsx, unzip } from '@/lib/xlsx-read'
+import {
+  colIndex,
+  dateStyleIndexes,
+  excelSerialToText,
+  excelSerialToTimeText,
+  isDateFormatCode,
+  readXlsx,
+  unzip,
+} from '@/lib/xlsx-read'
 
 // De fixture is een écht .xlsx-bestand (door een onafhankelijke ZIP-schrijver gemaakt), met
 // gedeelde strings, een eigen datumopmaak en een cel met datum + uur in één getal.
@@ -39,6 +47,21 @@ describe('excelSerialToText', () => {
   })
 })
 
+describe('excelSerialToTimeText', () => {
+  it('zet een zuivere tijd-fractie om naar "uu:mm", zonder schijndatum', () => {
+    // Excel bewaart een cel opgemaakt als "uu:mm" (bv. de "Tijdstip"-kolom van een KVKBF-kalender)
+    // als fractie van één dag — 18:15 = 18.25/24. Zonder deze functie plakte excelSerialToText()
+    // er "1899-12-30 " voor, waardoor parseUur() het aanvangsuur niet meer herkende en élke
+    // geïmporteerde wedstrijd op 00:00 terechtkwam.
+    expect(excelSerialToTimeText(18.25 / 24)).toBe('18:15')
+    expect(excelSerialToTimeText(10.25 / 24)).toBe('10:15')
+    expect(excelSerialToTimeText(0)).toBe('00:00')
+  })
+  it('negeert een eventueel geheel dagdeel (enkel de fractie telt)', () => {
+    expect(excelSerialToTimeText(45900 + 18.25 / 24)).toBe('18:15')
+  })
+})
+
 describe('isDateFormatCode', () => {
   it('herkent datum- en tijdopmaak', () => {
     expect(isDateFormatCode('dd/mm/yyyy')).toBe(true)
@@ -55,8 +78,23 @@ describe('dateStyleIndexes', () => {
     const xml =
       '<styleSheet><numFmts><numFmt numFmtId="164" formatCode="dd/mm/yyyy"/></numFmts>' +
       '<cellXfs><xf numFmtId="0"/><xf numFmtId="164"/><xf numFmtId="14"/><xf numFmtId="3"/></cellXfs></styleSheet>'
-    const set = dateStyleIndexes(xml)
-    expect([...set].sort()).toEqual([1, 2]) // eigen datumopmaak + ingebouwde 14
+    const { date, time } = dateStyleIndexes(xml)
+    expect([...date].sort()).toEqual([1, 2]) // eigen datumopmaak + ingebouwde 14
+    expect([...time]).toEqual([])
+  })
+
+  it('houdt zuivere tijdopmaak (ingebouwd én eigen "h:mm") apart van echte datums', () => {
+    const xml =
+      '<styleSheet><numFmts><numFmt numFmtId="165" formatCode="h:mm"/><numFmt numFmtId="166" formatCode="yyyy-mm-dd hh:mm"/></numFmts>' +
+      '<cellXfs>' +
+      '<xf numFmtId="20"/>' + // ingebouwd: zuivere tijd (h:mm)
+      '<xf numFmtId="14"/>' + // ingebouwd: datum
+      '<xf numFmtId="165"/>' + // eigen: zuivere tijd
+      '<xf numFmtId="166"/>' + // eigen: datum + tijd (heeft een echt datumdeel)
+      '</cellXfs></styleSheet>'
+    const { date, time } = dateStyleIndexes(xml)
+    expect([...time].sort()).toEqual([0, 2])
+    expect([...date].sort()).toEqual([1, 3])
   })
 })
 
