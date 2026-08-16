@@ -401,6 +401,11 @@
 }
 .lb-rowwrap {
   border-bottom: 1px solid var(--line);
+  /* Laat de browser layout/paint overslaan voor rijen buiten beeld — scheelt veel op een lange
+     speeldag (100+ wedstrijden). De geschatte hoogte is enkel een placeholder tot de rij in
+     beeld scrollt; nadien meet de browser gewoon de echte hoogte (ook als een rij openklapt). */
+  content-visibility: auto;
+  contain-intrinsic-size: 0 150px;
 }
 .lb-rowwrap:last-child {
   border-bottom: none;
@@ -962,11 +967,25 @@
   padding: 12px 16px 11px 34px;
   overflow: hidden;
 }
+/* Gemeten (Playwright-scrollprofiel op 85 rijen): een geblurde achtergrond op ÉLKE kaart was —
+   los van de animatie — zelf al de grootste resterende jank-bron (filter: blur() is zwaar om te
+   componeren, ook stilstaand, ook op tientallen elementen tegelijk). De gewone rijen krijgen
+   daarom een even kleurrijke maar goedkope lineaire gradient zonder blur-filter; enkel de
+   écht-lopende wedstrijd (".now", meestal een handvol) krijgt de volle geblurde aurora-look. */
 .lbl-color {
   position: absolute;
-  inset: -55% -22%;
+  inset: 0;
   z-index: 0;
   pointer-events: none;
+  background: linear-gradient(
+    120deg,
+    color-mix(in srgb, var(--hc) 40%, #0b0f15) 0%,
+    #0b0f15 48%,
+    color-mix(in srgb, var(--ac) 40%, #0b0f15) 100%
+  );
+}
+.lb-row.now .lbl-color {
+  inset: -55% -22%;
   background:
     radial-gradient(45% 60% at 24% 34%, color-mix(in srgb, var(--hc) 58%, transparent), transparent 70%),
     radial-gradient(45% 60% at 76% 66%, color-mix(in srgb, var(--ac) 58%, transparent), transparent 70%),
@@ -1002,10 +1021,16 @@
   grid-template-columns: 1fr 1fr;
   gap: 10px;
   padding: 9px 16px 11px 34px;
+  background: rgba(9, 13, 20, 0.72);
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+/* Matglas-effect (backdrop-blur) enkel op écht-lopende rijen — met tientallen rijen tegelijk is
+   backdrop-filter een gekende scroll-jank-bron; de gewone rijen krijgen een iets dekkendere
+   effen achtergrond in de plaats (zelfde ogende strook, geen doorlopende herblur bij het scrollen). */
+.lb-row.now .lbl-names {
   background: rgba(9, 13, 20, 0.5);
   -webkit-backdrop-filter: blur(7px);
   backdrop-filter: blur(7px);
-  border-top: 1px solid rgba(255, 255, 255, 0.12);
 }
 .lbl-name { min-width: 0; font-weight: 800; font-size: 1rem; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 6px rgba(0, 0, 0, 0.5); }
 .lbl-name.away { text-align: right; }
@@ -1019,7 +1044,11 @@
   0% { transform: translateX(-160%) rotate(8deg); }
   60%, 100% { transform: translateX(380%) rotate(8deg); }
 }
+/* De bewegende aurora/glans lopen bewust enkel op écht-lopende wedstrijden (".now") — meestal
+   maar een handvol tegelijk. Overal laten animeren (elke rij, soms tientallen op één speeldag)
+   was de oorzaak van het haperende scrollen: continu animerende, geblurde lagen zijn zwaar voor
+   de compositor. Geplande/afgelopen rijen tonen wél nog de kleurrijke kaart, gewoon stilstaand. */
 @media (prefers-reduced-motion: no-preference) {
-  .lbl-color { animation: lbl-aurora 15s ease-in-out infinite; }
-  .lbl-gl { animation: lbl-sheen 9s ease-in-out infinite; }
+  .lb-row.now .lbl-color { animation: lbl-aurora 15s ease-in-out infinite; }
+  .lb-row.now .lbl-gl { animation: lbl-sheen 9s ease-in-out infinite; }
 }

@@ -354,8 +354,11 @@ export function LiveBoard({
                 const open = openRow === m.id
                 return (
                   <div key={m.id} className="lb-rowwrap">
-                    {/* "live" hier = de kaart-look (zie hierboven), niet de wedstrijdstatus. */}
-                    <div className="lb-row live">
+                    {/* "live" hier = de kaart-look (zie hierboven), niet de wedstrijdstatus. "now"
+                        schakelt de dure bewegende/blur-effecten (aurora, glans, matglas) in — enkel
+                        voor de paar écht-lopende wedstrijden, anders hapert het scrollen door
+                        tientallen tegelijk animerende/blurrende rijen. */}
+                    <div className={`lb-row live ${live ? 'now' : ''}`}>
                       <button
                         type="button"
                         className={`lb-star ${rowFav ? 'on' : ''}`}
