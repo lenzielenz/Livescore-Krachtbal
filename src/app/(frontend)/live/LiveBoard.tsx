@@ -372,18 +372,31 @@ export function LiveBoard({
                       {/* Elke rij krijgt dezelfde "Glas"-kaart (logo's + bewegende clubkleuren +
                           glans), ongeacht status — enkel het middenbadge en de score/'vs' wisselen.
                           De CSS-klassen heten nog "live"/"lb-match-live" (historisch: dit was ooit
-                          enkel voor lopende wedstrijden), maar gelden nu voor élke rij. */}
-                      <Link
-                        href={`/match/${m.id}`}
+                          enkel voor lopende wedstrijden), maar gelden nu voor élke rij.
+                          Geen <Link> meer als buitenste element (kan geen <a> in <a> nesten) — de
+                          kaart navigeert zelf via JS naar de match, zodat logo/naam er WEL twee
+                          eigen linkjes naar het ploegprofiel in kunnen zitten (1 tik: bord → hele
+                          seizoensagenda van je ploeg). stopPropagation op die linkjes voorkomt dat
+                          de tik ook de kaart (match) opent. */}
+                      <div
                         className="lb-match lb-match-live"
                         style={{ '--hc': m.home.colors?.primary ?? 'var(--accent)', '--ac': m.away.colors?.primary ?? 'var(--accent)' } as CSSProperties}
+                        role="link"
+                        tabIndex={0}
+                        onClick={() => router.push(`/match/${m.id}`)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault()
+                            router.push(`/match/${m.id}`)
+                          }
+                        }}
                       >
                         <span className="lbl-head">
                           <span className="lbl-color" aria-hidden />
                           <span className="lbl-gl" aria-hidden />
-                          <span className="lbl-logo">
+                          <Link href={`/ploegen/${m.home.teamId}`} className="lbl-logo" onClick={(e) => e.stopPropagation()} aria-label={`${m.home.name} — seizoensagenda`}>
                             <TeamLogo name={m.home.name} logoUrl={m.home.logoUrl} logoFit={m.home.logoFit} side="home" size={44} ringColor={m.home.colors?.primary} />
-                          </span>
+                          </Link>
                           <span className="lbl-center">
                             {live ? (
                               <span className="lb-livebadge">LIVE</span>
@@ -409,15 +422,15 @@ export function LiveBoard({
                               </span>
                             )}
                           </span>
-                          <span className="lbl-logo">
+                          <Link href={`/ploegen/${m.away.teamId}`} className="lbl-logo" onClick={(e) => e.stopPropagation()} aria-label={`${m.away.name} — seizoensagenda`}>
                             <TeamLogo name={m.away.name} logoUrl={m.away.logoUrl} logoFit={m.away.logoFit} side="away" size={44} ringColor={m.away.colors?.primary} />
-                          </span>
+                          </Link>
                         </span>
                         <span className="lbl-names">
-                          <span className="lbl-name">{m.home.name}</span>
-                          <span className="lbl-name away">{m.away.name}</span>
+                          <Link href={`/ploegen/${m.home.teamId}`} className="lbl-name" onClick={(e) => e.stopPropagation()}>{m.home.name}</Link>
+                          <Link href={`/ploegen/${m.away.teamId}`} className="lbl-name away" onClick={(e) => e.stopPropagation()}>{m.away.name}</Link>
                         </span>
-                      </Link>
+                      </div>
                     </div>
 
                     {/* Supporters-modus: vrije livescore. De "Aantekenen"-knop verschijnt pas
