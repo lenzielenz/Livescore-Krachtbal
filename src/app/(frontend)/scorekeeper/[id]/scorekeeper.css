@@ -128,6 +128,20 @@
 
 .sk-error { flex: 0 0 auto; padding: 7px 10px; border-radius: 8px; background: #4a1020; color: #ffd5e0; cursor: pointer; font-size: 0.82rem; text-align: center; }
 
+/* Offline-banner (gedeelde wachtrij, zie use-action-queue.ts): rustig amber — geen alarm, want er
+   gaat niets verloren; de acties worden bewaard en automatisch nagestuurd. */
+.sk-offline {
+  flex: 0 0 auto;
+  padding: 7px 12px;
+  border-radius: 10px;
+  background: color-mix(in srgb, #f6c544 20%, var(--panel));
+  border: 1px solid color-mix(in srgb, #f6c544 50%, var(--line));
+  color: var(--txt);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-align: center;
+}
+
 /* ── Arena: vult alle resterende hoogte; veld zo groot mogelijk ── */
 /* Smalle zijbalken links/rechts van het veld: VW + wissel + grote richtingspijl + worp.
    Vullen de horizontale ruimte naast het (smalle, hoge) veld op gsm. */

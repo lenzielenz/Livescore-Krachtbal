@@ -11,6 +11,7 @@ import type { AttackDir, Point } from '@/lib/field'
 import type { MatchState } from '@/lib/match-engine'
 import { LINEUP_MIN, type Readiness } from '@/lib/match-readiness'
 import { genOpId } from '@/lib/op-id'
+import { useActionQueue } from '@/lib/use-action-queue'
 import { useLiveStream } from '@/lib/use-live-stream'
 import { DemoTutorial } from './DemoTutorial'
 
@@ -245,6 +246,14 @@ export function Scorekeeper({
     return () => clearInterval(t)
   }, [state.match.clockRunning])
 
+  // Offline-bestendigheid (ROADMAP 1b): dezelfde wachtrij als de snelscoremodus. Valt het netwerk
+  // weg, dan gaat een worp niet meer verloren met een foutmelding — hij wordt bewaard (localStorage)
+  // en in volgorde nagestuurd (met vaste opId, dus nooit dubbel) zodra er weer verbinding is.
+  const { send, pendingCount, offline } = useActionQueue(matchId, (data) => {
+    const d = data as { state?: MatchState }
+    setState(d.state ?? (data as MatchState))
+  })
+
   const act = useCallback(
     async (body: Record<string, unknown>) => {
       setBusy(true)
@@ -252,25 +261,20 @@ export function Scorekeeper({
       try {
         // opId → de server past een (per ongeluk) heruitgezonden actie niet dubbel toe (idempotentie).
         const op = typeof body.opId === 'string' ? body : { ...body, opId: genOpId() }
-        const res = await fetch(`/api/match/${matchId}/action`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(op),
-        })
-        const data = await res.json()
-        if (!res.ok) throw new Error(data.error ?? 'Actie mislukt')
-        setState((data.state as MatchState) ?? (data as MatchState))
-        return data as { outcome?: string; state?: MatchState }
-      } catch (e) {
-        // Netwerk/zaal-wifi-fout of serverfout: duidelijk melden i.p.v. stil falen (AUDIT §3).
-        const offline = typeof navigator !== 'undefined' && navigator.onLine === false
-        setError(offline ? 'Geen verbinding — actie NIET geregistreerd. Probeer opnieuw.' : (e as Error).message)
-        return null
+        const r = await send(op)
+        // Serverfout: duidelijk melden i.p.v. stil falen (AUDIT §3). Gequeued (offline) is géén
+        // fout — de banner meldt dat er nagestuurd wordt zodra de verbinding terug is.
+        if (r.status === 'error') {
+          setError(r.message)
+          return null
+        }
+        if (r.status === 'queued') return { queued: true }
+        return r.data as { outcome?: string; state?: MatchState }
       } finally {
         setBusy(false)
       }
     },
-    [matchId],
+    [send],
   )
 
   // Live sync met de server (met reconnect-backoff): vangt wijzigingen van een tweede toestel of
@@ -1044,6 +1048,12 @@ export function Scorekeeper({
           {isFullscreen ? '⤡ Sluiten' : '⛶ Volledig scherm'}
         </button>
       </div>
+
+      {(offline || pendingCount > 0) && (
+        <div className="sk-offline" role="status">
+          📴 Offline — je blijft aantekenen; {pendingCount > 0 ? `${pendingCount} worp${pendingCount === 1 ? '' : 'en'}/actie${pendingCount === 1 ? '' : 's'} word${pendingCount === 1 ? 't' : 'en'} bewaard` : 'alles wordt bewaard'} en automatisch gesynct zodra je weer verbinding hebt.
+        </div>
+      )}
 
       <header className="sk-head">
         <div className="sk-scorebar">
