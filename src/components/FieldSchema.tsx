@@ -341,9 +341,9 @@ export function FieldSchema({
         </clipPath>
         {/* Grasmat: zachte gradiënt + maaibanen + vignette → een echt veld i.p.v. een vlak groen vlak. */}
         <linearGradient id="turf" x1="0" y1="0" x2="0.35" y2="1">
-          <stop offset="0" stopColor="#1c6440" />
-          <stop offset="0.5" stopColor="#124b30" />
-          <stop offset="1" stopColor="#0b3622" />
+          <stop offset="0" stopColor="#22854f" />
+          <stop offset="0.5" stopColor="#155a37" />
+          <stop offset="1" stopColor="#0c4028" />
         </linearGradient>
         <pattern id="mow" patternUnits="userSpaceOnUse" width={W} height={16}>
           <rect width={W} height={8} fill="#ffffff" opacity={0.045} />
@@ -385,8 +385,8 @@ export function FieldSchema({
       <line x1={0} y1={ftBotY} x2={W} y2={ftBotY} stroke="#e8f5ee" strokeWidth={1} />
       {/* Zone-derden — enkel binnen het speelvak (tussen de doellijnen), niet tot in de
           doelgebieden, anders steken er kleine lijntjes voorbij de doellijn uit. */}
-      <line x1={THIRD_1} y1={homeGoalY} x2={THIRD_1} y2={awayGoalY} stroke="#9fd9ba" strokeWidth={0.5} strokeDasharray="2 4" opacity={0.5} />
-      <line x1={THIRD_2} y1={homeGoalY} x2={THIRD_2} y2={awayGoalY} stroke="#9fd9ba" strokeWidth={0.5} strokeDasharray="2 4" opacity={0.5} />
+      <line x1={THIRD_1} y1={homeGoalY} x2={THIRD_1} y2={awayGoalY} stroke="#c7f2d9" strokeWidth={0.6} strokeDasharray="2 4" opacity={0.62} />
+      <line x1={THIRD_2} y1={homeGoalY} x2={THIRD_2} y2={awayGoalY} stroke="#c7f2d9" strokeWidth={0.6} strokeDasharray="2 4" opacity={0.62} />
 
       {/* Oplichtend doelgebied bij vrije worp — duidelijk t.o.v. de rest: gevulde glow,
           opvallende pulserende rand en een VW-label. */}

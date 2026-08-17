@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
 type Team = { id: number; name: string; reeks: string }
-type Player = { id: number; name: string; shirtNumber: number }
+type Player = { id: number; name: string; shirtNumber: number; position?: string | null }
 
 // Standaardwaarde voor een <input type="datetime-local">: dat veld toont/verwacht LOKALE tijd, dus
 // corrigeer voor de tijdzone vóór het ISO-knippen — anders staat de voorgestelde tijd de
@@ -16,10 +16,77 @@ function nowLocalInput(): string {
   return d.toISOString().slice(0, 16)
 }
 
+// Eén speler-chip: toont rugnummer + naam + huidige positie, en laat die positie ter plekke
+// wijzigen (tikken opent een kleine keuzelijst) i.p.v. enkel bij het eenmalig toevoegen. De positie
+// zit op de speler zelf, dus dit geldt ook voor volgende wedstrijden.
+function PositionChip({
+  matchId,
+  player,
+  positionOptions,
+  onChanged,
+}: {
+  matchId: number
+  player: Player
+  positionOptions: { value: string; label: string }[]
+  onChanged: (playerId: number, position: string) => void
+}) {
+  const [editing, setEditing] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+  const posLabel = positionOptions.find((o) => o.value === player.position)?.label ?? null
+
+  const change = async (position: string) => {
+    setErr(null)
+    setBusy(true)
+    try {
+      const res = await fetch(`/api/match/${matchId}/set-player-position`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ playerId: player.id, position }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) { setErr(data.error || 'Wijzigen mislukt.'); return }
+      onChanged(player.id, position)
+      setEditing(false)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  if (editing) {
+    return (
+      <span className="nam-chip nam-chip-editing">
+        <b>{player.shirtNumber}</b> {player.name}
+        <select
+          className="nam-chip-pos-select"
+          autoFocus
+          disabled={busy}
+          value={player.position ?? ''}
+          onChange={(e) => e.target.value && void change(e.target.value)}
+          onBlur={() => setEditing(false)}
+          aria-label={`Positie van ${player.name}`}
+        >
+          <option value="">— positie —</option>
+          {positionOptions.map((o) => (<option key={o.value} value={o.value}>{o.label}</option>))}
+        </select>
+        {err && <span className="nam-error nam-chip-err">{err}</span>}
+      </span>
+    )
+  }
+  return (
+    <button type="button" className="nam-chip nam-chip-btn" onClick={() => setEditing(true)} title="Tik om de positie te wijzigen">
+      <b>{player.shirtNumber}</b> {player.name}
+      <i className="nam-chip-pos">{posLabel ?? '— positie —'}</i>
+    </button>
+  )
+}
+
 // Eén ploegkolom: toon de (onthouden) spelers en voeg er nieuwe aan toe. Toegevoegde spelers
 // worden in de ploeg bewaard en zijn in latere wedstrijden opnieuw selecteerbaar. De positie is
-// verplicht (analysewedstrijd) — ze voedt de analyse, dus kies ze meteen bij het toevoegen.
-function RosterEditor({ matchId, side, label, roster, positionOptions, onAdd }: { matchId: number; side: 'home' | 'away'; label: string; roster: Player[]; positionOptions: { value: string; label: string }[]; onAdd: (p: Player) => void }) {
+// verplicht (analysewedstrijd) — ze voedt de analyse, dus kies ze meteen bij het toevoegen (en kan
+// nadien nog aangepast worden door op de speler te tikken).
+function RosterEditor({ matchId, side, label, roster, positionOptions, onAdd, onPositionChange }: { matchId: number; side: 'home' | 'away'; label: string; roster: Player[]; positionOptions: { value: string; label: string }[]; onAdd: (p: Player) => void; onPositionChange: (playerId: number, position: string) => void }) {
   const [num, setNum] = useState('')
   const [name, setName] = useState('')
   const [pos, setPos] = useState('')
@@ -39,7 +106,7 @@ function RosterEditor({ matchId, side, label, roster, positionOptions, onAdd }: 
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) { setErr(data.error || 'Toevoegen mislukt.'); return }
-      onAdd({ id: data.player.id, name: data.player.name, shirtNumber: data.player.shirtNumber })
+      onAdd({ id: data.player.id, name: data.player.name, shirtNumber: data.player.shirtNumber, position: data.player.position ?? null })
       setNum('')
       setName('')
       setPos('')
@@ -56,7 +123,7 @@ function RosterEditor({ matchId, side, label, roster, positionOptions, onAdd }: 
           <span className="nam-hint">Nog geen spelers — voeg ze hieronder toe.</span>
         ) : (
           roster.map((p) => (
-            <span className="nam-chip" key={p.id}><b>{p.shirtNumber}</b> {p.name}</span>
+            <PositionChip key={p.id} matchId={matchId} player={p} positionOptions={positionOptions} onChanged={onPositionChange} />
           ))
         )}
       </div>
@@ -147,8 +214,28 @@ export function NieuweAnalyseMatch({ teams, reeksOptions, positionOptions }: { t
       <div className="nam-form">
         <p className="nam-ok">✓ {created.homeName} – {created.awayName} aangemaakt. Voeg de spelers toe (ze worden onthouden voor latere wedstrijden).</p>
         <div className="nam-teams">
-          <RosterEditor matchId={created.id} side="home" label={`Thuis · ${created.homeName}`} roster={created.homeRoster} positionOptions={positionOptions} onAdd={(p) => setCreated((c) => c && { ...c, homeRoster: [...c.homeRoster, p] })} />
-          <RosterEditor matchId={created.id} side="away" label={`Uit · ${created.awayName}`} roster={created.awayRoster} positionOptions={positionOptions} onAdd={(p) => setCreated((c) => c && { ...c, awayRoster: [...c.awayRoster, p] })} />
+          <RosterEditor
+            matchId={created.id}
+            side="home"
+            label={`Thuis · ${created.homeName}`}
+            roster={created.homeRoster}
+            positionOptions={positionOptions}
+            onAdd={(p) => setCreated((c) => c && { ...c, homeRoster: [...c.homeRoster, p] })}
+            onPositionChange={(playerId, position) =>
+              setCreated((c) => c && { ...c, homeRoster: c.homeRoster.map((p) => (p.id === playerId ? { ...p, position } : p)) })
+            }
+          />
+          <RosterEditor
+            matchId={created.id}
+            side="away"
+            label={`Uit · ${created.awayName}`}
+            roster={created.awayRoster}
+            positionOptions={positionOptions}
+            onAdd={(p) => setCreated((c) => c && { ...c, awayRoster: [...c.awayRoster, p] })}
+            onPositionChange={(playerId, position) =>
+              setCreated((c) => c && { ...c, awayRoster: c.awayRoster.map((p) => (p.id === playerId ? { ...p, position } : p)) })
+            }
+          />
         </div>
         <div className="nam-actions">
           <button type="button" className="sk-demo-cta" onClick={() => router.push(`/scorekeeper/${created.id}`)}>▶ Opnemen</button>

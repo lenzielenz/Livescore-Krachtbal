@@ -26,8 +26,14 @@ const HOME_COLOR = '#06d6a0'
 const AWAY_COLOR = '#4cc9f0'
 const OUT_COLOR = '#ef476f'
 
+// Veiligheidsgrens tegen een weggelopen klok: een analysewedstrijd kan dagen blijven openstaan met
+// de klok nog "running" (niemand pauzeerde bij het wegklikken) — de verstreken tijd zou dan
+// duizenden minuten tonen ("H1 96748:50"). Geen enkele helft duurt realistisch langer dan dit; erna
+// clampen we de weergave en tonen we een waarschuwing zodat de aantekenaar pauzeert en corrigeert.
+const MAX_CLOCK_SECONDS = 3 * 60 * 60
+
 function fmtClock(total: number): string {
-  const s = Math.max(0, Math.floor(total))
+  const s = Math.max(0, Math.min(MAX_CLOCK_SECONDS, Math.floor(total)))
   return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
 }
 
@@ -215,6 +221,11 @@ export function Scorekeeper({
     }
   }, [state.match.status])
 
+  // Clamp tegen de weggelopen-klok-bug (zie MAX_CLOCK_SECONDS hierboven): nooit een groter getal
+  // in de state zetten dan de grens, anders zou "pauzeren" dat foute getal alsnog naar de server
+  // wegschrijven (de pauzeknop stuurt Math.floor(clock) mee als nieuwe clockSeconds).
+  const clampClock = (s: number) => Math.max(0, Math.min(MAX_CLOCK_SECONDS, s))
+
   useEffect(() => {
     baseRef.current = {
       seconds: state.match.clockSeconds,
@@ -222,14 +233,14 @@ export function Scorekeeper({
       at: clockBaseAt(state.match),
     }
     const b = baseRef.current
-    setClock(b.running ? b.seconds + (Date.now() - b.at) / 1000 : b.seconds)
+    setClock(clampClock(b.running ? b.seconds + (Date.now() - b.at) / 1000 : b.seconds))
   }, [state.match.clockSeconds, state.match.clockRunning, state.match.clockUpdatedAt])
 
   useEffect(() => {
     if (!state.match.clockRunning) return
     const t = setInterval(() => {
       const b = baseRef.current
-      setClock(b.seconds + (Date.now() - b.at) / 1000)
+      setClock(clampClock(b.seconds + (Date.now() - b.at) / 1000))
     }, 250)
     return () => clearInterval(t)
   }, [state.match.clockRunning])
@@ -477,12 +488,22 @@ export function Scorekeeper({
     }
   }
 
+  // Signaleert de weggelopen-klok-situatie (zie MAX_CLOCK_SECONDS): de werkelijke verstreken tijd
+  // is dan toch onbetrouwbaar (dagenlang "running" vergeten) — 180:00 in een helft laten staan zou
+  // even fout zijn als de oorspronkelijke gigantische waarde, dus resetten we naar 0 i.p.v. te
+  // pauzeren op de geclampte grens.
+  const clockStale = clock >= MAX_CLOCK_SECONDS
+
   // Tik op de timer: zolang de wedstrijd nog niet gestart is, is hij geblokkeerd en
   // opent het keuzescherm "wie zet op?". Pas daarna kan de klok gestart/gepauzeerd worden.
   const onClockClick = () => {
     if (isScheduled) {
       // Geblokkeerd zolang de wedstrijd niet ontgrendeld is (opstelling + SR-akkoord, of demo).
       if (unlocked) setKickoffOpen(true)
+      return
+    }
+    if (clockStale) {
+      act({ action: 'clock', running: false, seconds: 0 })
       return
     }
     act({ action: 'clock', running: !state.match.clockRunning, seconds: Math.floor(clock) })
@@ -607,7 +628,7 @@ export function Scorekeeper({
             ) : (
               <>
                 {isLive && state.match.currentHalf < 2 && !atHalfTime && (
-                  <button type="button" className="sk-rail-act" disabled={busy} onClick={() => act({ action: 'endhalf' })} title="Einde eerste helft">⏹<span>Einde 1e</span></button>
+                  <button type="button" className="sk-rail-act notice" disabled={busy} onClick={() => act({ action: 'endhalf' })} title="Einde eerste helft">⏹<span>Einde 1e</span></button>
                 )}
                 {isLive && (
                   <button type="button" className="sk-rail-act danger" disabled={busy} onClick={() => { if (window.confirm('Wedstrijd beëindigen?')) act({ action: 'finish' }) }} title="Wedstrijd beëindigen">🏁<span>Einde</span></button>
@@ -1042,13 +1063,19 @@ export function Scorekeeper({
           </div>
           <button
             type="button"
-            className={`sk-clock ${state.match.clockRunning ? 'running' : ''} ${isScheduled ? 'locked' : ''}`}
+            className={`sk-clock ${state.match.clockRunning ? 'running' : ''} ${isScheduled ? 'locked' : ''} ${clockStale ? 'stale' : ''}`}
             disabled={busy || (!isLive && !isScheduled)}
             onClick={onClockClick}
-            title={isScheduled ? (unlocked ? 'Tik om te kiezen wie opzet' : isAnalyseOnly ? 'Vergrendeld — opstellingen nodig' : 'Vergrendeld — opstelling + akkoord scheidsrechter nodig') : 'Tik om te starten/pauzeren'}
+            title={
+              clockStale
+                ? 'De klok liep te lang door (waarschijnlijk vergeten pauzeren) — tik om terug te zetten naar 0:00'
+                : isScheduled
+                  ? (unlocked ? 'Tik om te kiezen wie opzet' : isAnalyseOnly ? 'Vergrendeld — opstellingen nodig' : 'Vergrendeld — opstelling + akkoord scheidsrechter nodig')
+                  : 'Tik om te starten/pauzeren'
+            }
           >
             <span className="sk-half-chip">H{state.match.currentHalf}</span>
-            {fmtClock(clock)}
+            {clockStale ? <span className="sk-clock-stale">⚠️ corrigeren</span> : fmtClock(clock)}
             <span className="sk-clock-ico">{isScheduled ? '🔒' : state.match.clockRunning ? '⏸' : '▶'}</span>
           </button>
           <div className="sk-team away">

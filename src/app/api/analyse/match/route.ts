@@ -73,7 +73,12 @@ export async function POST(req: Request) {
       const r = await payload
         .find({ collection: 'players', where: { team: { equals: teamId } }, sort: 'shirtNumber', depth: 0, limit: 200 })
         .catch(() => ({ docs: [] as Record<string, unknown>[] }))
-      return r.docs.map((p) => ({ id: p.id as number, name: String((p as { name?: unknown }).name ?? ''), shirtNumber: Number((p as { shirtNumber?: unknown }).shirtNumber ?? 0) }))
+      return r.docs.map((p) => ({
+        id: p.id as number,
+        name: String((p as { name?: unknown }).name ?? ''),
+        shirtNumber: Number((p as { shirtNumber?: unknown }).shirtNumber ?? 0),
+        position: ((p as { position?: unknown }).position as string | undefined) ?? null,
+      }))
     }
     const [homeRoster, awayRoster] = await Promise.all([loadRoster(homeTeam), loadRoster(awayTeam)])
 

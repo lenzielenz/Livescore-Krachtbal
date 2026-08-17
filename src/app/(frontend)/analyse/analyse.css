@@ -1325,8 +1325,17 @@ select.rang-picker {
 .nam-team { min-width: 0; background: rgba(0,0,0,0.18); border: 1px solid var(--line); border-radius: 12px; padding: 12px; }
 .nam-team-h { margin: 0 0 8px; font-size: 0.86rem; }
 .nam-roster { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
-.nam-chip { font-size: 0.8rem; background: rgba(255,255,255,0.06); border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; }
+.nam-chip { font-size: 0.8rem; background: rgba(255,255,255,0.06); border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; display: inline-flex; align-items: center; gap: 5px; }
 .nam-chip b { color: var(--accent); font-variant-numeric: tabular-nums; }
+/* Speler-chip is nu ook een knop: tikken opent de positie-keuze ter plekke i.p.v. enkel bij het
+   eenmalig toevoegen — de positie voedt de analyse en verandert wel eens (bv. wisselspelers). */
+.nam-chip-btn { color: inherit; font: inherit; cursor: pointer; }
+.nam-chip-btn:hover { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); background: rgba(255,255,255,0.1); }
+.nam-chip-pos { font-style: normal; color: var(--dim); font-size: 0.72rem; }
+.nam-chip-btn:hover .nam-chip-pos { color: var(--accent); }
+.nam-chip-editing { padding-right: 4px; border-color: var(--accent); }
+.nam-chip-pos-select { background: transparent; border: none; color: var(--accent); font-size: 0.75rem; font-weight: 700; }
+.nam-chip-err { font-size: 0.7rem; color: #ef476f; }
 .nam-addrow { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .nam-addrow .nam-num { flex: 0 0 52px; width: 52px; text-align: center; }
 .nam-addrow input:not(.nam-num) { flex: 1 1 90px; min-width: 0; }
