@@ -2529,3 +2529,56 @@ select.rang-picker {
   background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0) 55%), var(--panel-grad);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07), 0 4px 12px rgba(0, 0, 0, 0.3);
 }
+
+/* ── Video-analyse: de opname naast de wedstrijdmomenten ────────────────────────────────────── */
+.va-setup { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.va-url {
+  flex: 1 1 260px; min-width: 0; padding: 9px 12px; border-radius: 10px;
+  border: 1px solid var(--line); background: rgba(0, 0, 0, 0.25); color: var(--txt); font-size: 0.9rem;
+}
+.va-url:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.va-btn {
+  flex: 0 0 auto; padding: 9px 15px; border-radius: 999px; font-weight: 800; font-size: 0.85rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 55%, var(--line));
+  background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent); cursor: pointer;
+}
+.va-btn:hover:not(:disabled) { background: color-mix(in srgb, var(--accent) 26%, transparent); }
+.va-btn:disabled { opacity: 0.45; cursor: default; }
+.va-btn.small { padding: 6px 11px; font-size: 0.78rem; }
+
+/* 16:9 speler, zwart ingekaderd — video en YouTube-iframe delen exact dezelfde plek. */
+.va-player {
+  position: relative; width: 100%; aspect-ratio: 16 / 9; border-radius: 12px; overflow: hidden;
+  background: #000; border: 1px solid var(--line);
+}
+.va-video { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block; }
+
+.va-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; font-size: 0.82rem; }
+.va-pos { font-variant-numeric: tabular-nums; font-weight: 700; color: var(--accent); }
+.va-cal { display: flex; gap: 6px; }
+.va-synced { margin-left: auto; color: var(--dim); font-variant-numeric: tabular-nums; }
+.va-hint { margin: 10px 0 0; font-size: 0.85rem; color: var(--dim); line-height: 1.5; }
+.va-hint a { color: var(--accent); }
+.va-hint-sm { font-size: 0.78rem; font-style: italic; }
+.va-msg { margin: 10px 0 0; font-size: 0.84rem; font-weight: 600; color: var(--accent); }
+
+/* Momentenlijst: elk doelpunt is een springknop naar het beeld. */
+.va-moments { list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-direction: column; gap: 5px; max-height: 340px; overflow-y: auto; }
+.va-moment {
+  width: 100%; display: grid; grid-template-columns: auto auto 1fr auto auto; align-items: center; gap: 9px;
+  padding: 9px 12px; border-radius: 10px; border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.04); color: inherit; font: inherit; font-size: 0.85rem;
+  text-align: left; cursor: pointer; transition: background 0.12s ease, border-color 0.12s ease;
+}
+.va-moment:hover:not(:disabled) { background: rgba(255, 255, 255, 0.09); }
+.va-moment:disabled { opacity: 0.5; cursor: default; }
+.va-moment.side-home { border-left: 3px solid var(--home, #0fe0a6); }
+.va-moment.side-away { border-left: 3px solid var(--away, #4cc9f0); }
+/* Het moment dat nu in beeld is (enkel bij een videobestand: daar kennen we de positie). */
+.va-moment.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 16%, transparent); }
+.va-moment-t { font-variant-numeric: tabular-nums; color: var(--dim); white-space: nowrap; }
+.va-moment-team { font-weight: 700; max-width: 12ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.va-moment-lbl { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--dim); }
+.va-moment-pts { font-weight: 900; color: var(--accent); font-variant-numeric: tabular-nums; }
+.va-moment-go { color: var(--dim); font-size: 0.7rem; }
+.va-moment.on .va-moment-go { color: var(--accent); }

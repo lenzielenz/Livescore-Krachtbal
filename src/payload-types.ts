@@ -584,6 +584,18 @@ export interface Match {
    */
   livestreamUrl?: string | null;
   /**
+   * YouTube-link of een direct videobestand (.mp4/.webm). Een bestand laat exact springen; YouTube herlaadt bij elke sprong.
+   */
+  videoUrl?: string | null;
+  /**
+   * Meestal makkelijker te zetten via "IJk hier" in de analysepagina.
+   */
+  videoOffsetH1?: number | null;
+  /**
+   * Leeg = doorrekenen alsof de video ononderbroken loopt.
+   */
+  videoOffsetH2?: number | null;
+  /**
    * Kies eerst de reeks. De categorie volgt automatisch en de ploegen worden hierop gefilterd.
    */
   reeks:
@@ -1730,6 +1742,9 @@ export interface PlayersSelect<T extends boolean = true> {
 export interface MatchesSelect<T extends boolean = true> {
   title?: T;
   livestreamUrl?: T;
+  videoUrl?: T;
+  videoOffsetH1?: T;
+  videoOffsetH2?: T;
   reeks?: T;
   seizoen?: T;
   homeTeam?: T;

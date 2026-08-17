@@ -9,9 +9,10 @@ import { canViewAnalyseMatch } from '@/lib/analyse-access'
 import { getAuthUser } from '@/lib/auth-user'
 import { buildDefenseStats, buildMatchSheet, buildMatchStats, buildMatchState } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
-import { reeksNaam } from '@/lib/reeksen'
+import { reeksHalfDurationSeconds, reeksNaam, type Reeks } from '@/lib/reeksen'
 import { AnalyseDetailView } from './AnalyseDetailView'
 import { ShareCard } from './ShareCard'
+import { VideoAnalyse, type VideoMoment } from './VideoAnalyse'
 import '../analyse.css'
 
 export const dynamic = 'force-dynamic'
@@ -86,6 +87,24 @@ export default async function AnalyseDetailPage({ params }: { params: Promise<{ 
   })
   const teamColors = { home: state.teams.home.colors?.primary ?? null, away: state.teams.away.colors?.primary ?? null }
 
+  // ── Video-analyse: de doelpunten als springpunten in de opname ──
+  // Elk doelpunt kent zijn helft + wedstrijdklok; met de ijkpunten op de wedstrijd (videoOffsetH1/H2)
+  // springt de speler daarmee naar het juiste beeld (zie src/lib/video-sync.ts).
+  const videoMoments: VideoMoment[] = (sheet?.goals ?? [])
+    .slice()
+    .sort((a, b) => a.half - b.half || a.gameClock - b.gameClock)
+    .map((g) => ({
+      half: g.half,
+      gameClock: g.gameClock,
+      side: g.side,
+      label: `${g.shirtNumber} ${g.playerName.split(/\s+/)[0]} · ${g.type === 'rug' ? 'rugworp' : 'nekworp'}`,
+      points: g.points,
+    }))
+  const halfSeconds = reeksHalfDurationSeconds(matchDoc?.reeks as Reeks)
+  // Video koppelen/ijken mag wie de analyse beheert: de federatie, of de eigenaar van deze
+  // privé-opname (dezelfde kring die ze al mag bekijken — de paginatoegang hierboven).
+  const mayEditVideo = canViewAnalyseMatch(me, matchDoc as { analyseOnly?: boolean | null; analyseOwner?: unknown })
+
   const reeks = reeksNaam(matchDoc?.reeks)
   const datum = matchDoc?.date
     ? new Date(matchDoc.date as string).toLocaleDateString('nl-BE', { dateStyle: 'long' })
@@ -140,6 +159,19 @@ export default async function AnalyseDetailPage({ params }: { params: Promise<{ 
             </div>
           </section>
         )}
+
+        <ErrorCatch label="De video-analyse">
+          <VideoAnalyse
+            matchId={matchId}
+            initialUrl={(matchDoc?.videoUrl as string | null) ?? null}
+            initialOffsetH1={(matchDoc?.videoOffsetH1 as number | null) ?? null}
+            initialOffsetH2={(matchDoc?.videoOffsetH2 as number | null) ?? null}
+            moments={videoMoments}
+            halfSeconds={halfSeconds}
+            teams={teamNames}
+            canEdit={mayEditVideo}
+          />
+        </ErrorCatch>
 
         <ErrorCatch label="De analyse-details">
           <AnalyseDetailView

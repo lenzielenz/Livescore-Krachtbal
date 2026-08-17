@@ -125,6 +125,44 @@ export const Matches: CollectionConfig = {
       },
     },
     {
+      // Video-analyse: de opname van de wedstrijd, geijkt op de wedstrijdklok. Met één ijkpunt per
+      // helft ("op welke seconde in de video begint deze helft?") springt de analyse van elk
+      // doelpunt/worp naar het juiste beeld. Zie src/lib/video-sync.ts.
+      type: 'collapsible',
+      label: 'Video-analyse',
+      admin: { initCollapsed: true, description: 'Opname van de wedstrijd, gekoppeld aan de tijdlijn (analysemodule).' },
+      fields: [
+        {
+          name: 'videoUrl',
+          label: 'Video-URL',
+          type: 'text',
+          admin: {
+            description: 'YouTube-link of een direct videobestand (.mp4/.webm). Een bestand laat exact springen; YouTube herlaadt bij elke sprong.',
+            placeholder: 'https://youtu.be/… of https://…/wedstrijd.mp4',
+          },
+        },
+        {
+          type: 'row',
+          fields: [
+            {
+              name: 'videoOffsetH1',
+              label: 'Aftrap 1e helft (seconden in de video)',
+              type: 'number',
+              min: 0,
+              admin: { description: 'Meestal makkelijker te zetten via "IJk hier" in de analysepagina.' },
+            },
+            {
+              name: 'videoOffsetH2',
+              label: 'Aftrap 2e helft (seconden in de video)',
+              type: 'number',
+              min: 0,
+              admin: { description: 'Leeg = doorrekenen alsof de video ononderbroken loopt.' },
+            },
+          ],
+        },
+      ],
+    },
+    {
       // Eerste keuze: de reeks. Die bepaalt de categorie én filtert de kiesbare ploegen.
       name: 'reeks',
       label: 'Reeks / niveau',
