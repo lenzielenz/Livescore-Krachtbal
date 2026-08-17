@@ -130,6 +130,19 @@
 /* Seizoensagenda: alle wedstrijden van de ploeg, chronologisch, elk een tik verwijderd van de
    matchpagina — dit is waar "wanneer speelt mijn ploeg" in één oogopslag beantwoord wordt. */
 .ps-fixtures { margin-top: 1.25rem; }
+.ps-fixtures-head { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; flex-wrap: wrap; }
+.ps-fixtures-head .an-h2 { margin: 0; }
+.ps-ics {
+  flex: 0 0 auto;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--accent, #06d6a0);
+  border: 1px solid color-mix(in srgb, var(--accent, #06d6a0) 45%, var(--line, rgba(255, 255, 255, 0.12)));
+  border-radius: 999px;
+  padding: 0.3rem 0.7rem;
+  white-space: nowrap;
+}
+.ps-ics:hover { background: color-mix(in srgb, var(--accent, #06d6a0) 12%, transparent); }
 .ps-matches {
   list-style: none;
   margin: 0.6rem 0 0;

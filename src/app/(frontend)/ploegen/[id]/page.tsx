@@ -101,7 +101,16 @@ export default async function PloegProfiel({ params }: Params) {
 
         {fixtures.length > 0 && (
           <section className="an-card ps-fixtures">
-            <h2 className="an-h2">Seizoensagenda</h2>
+            <div className="ps-fixtures-head">
+              <h2 className="an-h2">Seizoensagenda</h2>
+              <a
+                className="ps-ics"
+                href={`/api/agenda/ics?teams=${teamId}&name=${encodeURIComponent(team.name ?? 'Ploeg')}`}
+                title="Hele seizoensagenda downloaden (Google/Apple/Outlook)"
+              >
+                📅 In agenda
+              </a>
+            </div>
             <ul className="ps-matches">
               {fixtures.map((f) => (
                 <Link key={f.id} href={`/match/${f.id}`} className="ps-match">
