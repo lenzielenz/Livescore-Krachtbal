@@ -42,11 +42,12 @@ de `throws`-collection op met een unieke index en negeert een al-bestaande id
 (nieuw veld + unique index + migratie), `SimpleScorekeeper.tsx`,
 `api/match/[id]/action/route.ts`.
 
-### 1b. Offline-pariteit voor de volledige Scorekeeper
-**Staat:** de veldschema-`Scorekeeper` (analyse/demo) heeft géén offline-queue; bij
-netwerkuitval gaat de worp verloren met een foutmelding.
-**Plan:** dezelfde queue/optimistische-UI/banner als `SimpleScorekeeper` hergebruiken.
-**Raakt:** `src/app/(frontend)/scorekeeper/[id]/Scorekeeper.tsx` (+ gedeelde queue-hook).
+### 1b. Offline-pariteit voor de volledige Scorekeeper — ✅ gebouwd (aug 2026)
+**Staat:** klaar. De wachtrij uit `SimpleScorekeeper` is naar een gedeelde hook
+getild (`src/lib/use-action-queue.ts`: localStorage, volgorde-behoud, auto-nasturen,
+vaste opId per actie) en het veldschema (`Scorekeeper.tsx`) gebruikt ze ook: offline
+= de worp wordt bewaard + amberkleurige banner, en na herverbinding exact één keer
+toegepast (dedup via `processed-ops`). Unit-tests: `tests/unit/use-action-queue.unit.spec.ts`.
 
 ### 1c. Scheidsrechter bevestigt de eindscore
 (Zie ook Fase 4 — klein maar strategisch, past hier qua omvang.)
