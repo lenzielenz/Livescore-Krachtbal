@@ -142,6 +142,19 @@
   text-align: center;
 }
 
+/* Rust, maar er staat nog een vrije worp open (§8): het veld blijft zichtbaar tot ze genomen is. */
+.sk-halftime-vw {
+  flex: 0 0 auto;
+  padding: 7px 12px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent) 18%, var(--panel));
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line));
+  color: var(--txt);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-align: center;
+}
+
 /* ── Arena: vult alle resterende hoogte; veld zo groot mogelijk ── */
 /* Smalle zijbalken links/rechts van het veld: VW + wissel + grote richtingspijl + worp.
    Vullen de horizontale ruimte naast het (smalle, hoge) veld op gsm. */

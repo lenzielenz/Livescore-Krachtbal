@@ -7,6 +7,7 @@ import {
   isOnOwnHalf,
   isOutBack,
   isOutSide,
+  projectWerpplaats,
   reachedMidline,
   toMeters,
   totalLengthM,
@@ -77,5 +78,38 @@ describe('field — doelgebied & buiten', () => {
     expect(isOutBack({ x: 0.5, y: 1.02 }, 'up')).toBe(true)
     expect(isOutBack({ x: 0.5, y: -0.02 }, 'down')).toBe(true)
     expect(isOutBack({ x: 0.5, y: 1.02 }, 'down')).toBe(false)
+  })
+})
+
+describe('field — werpplaats-projectie (§6.4)', () => {
+  // Standaardveld: 10 m doelgebied → totaal 46 m. Doellijn op 10/46, vrijeworplijn op 14/46.
+  const g = 10 / 46
+  const ft = 14 / 46
+
+  it('schuift een werpplaats tussen doellijn en vrijeworplijn terug tot op de vrijeworplijn', () => {
+    expect(projectWerpplaats({ x: 0.3, y: 12 / 46 }).y).toBeCloseTo(ft, 6)
+    expect(projectWerpplaats({ x: 0.3, y: 34 / 46 }).y).toBeCloseTo(1 - ft, 6)
+  })
+
+  it('behoudt de breedte (loodrechte projectie)', () => {
+    expect(projectWerpplaats({ x: 0.17, y: 11 / 46 }).x).toBe(0.17)
+  })
+
+  it('laat punten op of voorbij de vrijeworplijn ongemoeid', () => {
+    expect(projectWerpplaats({ x: 0.5, y: ft }).y).toBeCloseTo(ft, 6)
+    expect(projectWerpplaats({ x: 0.5, y: 0.5 }).y).toBe(0.5)
+    expect(projectWerpplaats({ x: 0.5, y: 1 - ft }).y).toBeCloseTo(1 - ft, 6)
+  })
+
+  it('raakt punten in het doelgebied niet aan (dat is een doelpunt, geen werpplaats)', () => {
+    expect(projectWerpplaats({ x: 0.5, y: 0.02 }).y).toBe(0.02)
+    expect(projectWerpplaats({ x: 0.5, y: 0.98 }).y).toBe(0.98)
+    expect(projectWerpplaats({ x: 0.5, y: g }).y).toBeCloseTo(ft, 6) // exact op de doellijn = wél
+  })
+
+  it('volgt een diepere doelgebied-instelling (15 m → totaal 56 m)', () => {
+    const ft15 = 19 / 56
+    expect(projectWerpplaats({ x: 0.5, y: 17 / 56 }, 15).y).toBeCloseTo(ft15, 6)
+    expect(projectWerpplaats({ x: 0.5, y: 0.5 }, 15).y).toBe(0.5)
   })
 })

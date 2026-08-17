@@ -6,7 +6,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { FieldSchema, type FieldMarker } from '@/components/FieldSchema'
 import { attackDirForSide, deriveOutcome } from '@/lib/krachtbal-rules'
-import { goalLineNorm, totalLengthM, zoneOf } from '@/lib/field'
+import { goalLineNorm, projectWerpplaats, totalLengthM, zoneOf } from '@/lib/field'
 import type { AttackDir, Point } from '@/lib/field'
 import type { MatchState } from '@/lib/match-engine'
 import { LINEUP_MIN, type Readiness } from '@/lib/match-readiness'
@@ -436,6 +436,9 @@ export function Scorekeeper({
   const isLive = state.match.status === 'live'
   const isFinished = state.match.status === 'finished'
   const atHalfTime = state.atHalfTime
+  // Reglement §8: een vrije worp die vóór het rustsignaal werd toegekend, mag nog genomen worden.
+  // Zolang die openstaat blijft het veld dus zichtbaar i.p.v. meteen naar het rustscherm te springen.
+  const vrijeWorpNaRust = atHalfTime && Boolean(poss?.freeThrow) && (poss?.throwsUsed ?? 0) === 0
 
   // Na 'Einde': de scheidsrechter duidt aan wie effectief gespeeld heeft (O-markering op het blad).
   const [played, setPlayed] = useState<{ home: Set<number>; away: Set<number> }>(() => ({
@@ -575,11 +578,14 @@ export function Scorekeeper({
   // worp van een balbezit het opzetpunt (bv. na een vangst in het doelgebied: het midden van de
   // doellijn). De werper mag zich vóór de worp zijdelings (alleen breedte) verplaatsen — je verlegt
   // de werpplaats door op de horizontale hulplijn te tikken (geen slepen). Het traject start er.
+  // Lag de bal binnen de 4 m van een doellijn, dan schuift de werpplaats terug tot op de
+  // vrijeworplijn (§6.4) — exact dezelfde projectie als op de server, zodat de gele stip en de
+  // berekende afstand niet uit elkaar lopen.
   const lastTap = recentTaps.length ? recentTaps[recentTaps.length - 1] : null
   const werpAnchor = lastTap
-    ? { x: lastTap.x, y: lastTap.y }
+    ? projectWerpplaats({ x: lastTap.x, y: lastTap.y }, state.match.goalAreaDepth ?? undefined)
     : poss
-      ? { x: poss.setupX, y: poss.setupY }
+      ? projectWerpplaats({ x: poss.setupX, y: poss.setupY }, state.match.goalAreaDepth ?? undefined)
       : null
   const showWerp = isLive && werpAnchor && !pendingCatch && !pendingTap && !pendingOut
   const werpPoint = werpAnchor ? { x: werpX ?? werpAnchor.x, y: werpAnchor.y } : null
@@ -1373,7 +1379,7 @@ export function Scorekeeper({
             </div>
           </div>
         </div>
-      ) : atHalfTime ? (
+      ) : atHalfTime && !vrijeWorpNaRust ? (
         <div className="sk-kickoff">
           <div className="sk-kickoff-card">
             <div className="sk-kickoff-title">Rust</div>
@@ -1385,6 +1391,12 @@ export function Scorekeeper({
         </div>
       ) : (
         <>
+          {vrijeWorpNaRust && (
+            <div className="sk-halftime-vw" role="status">
+              ⏸ Rust — nog één vrije worp te nemen (toegekend vóór het signaal). Registreer ze;
+              daarna verschijnt het rustscherm.
+            </div>
+          )}
           <div className="sk-arena">
             <SideRail side="home" arrow={homeArrow} />
             <div className="sk-field-wrap">

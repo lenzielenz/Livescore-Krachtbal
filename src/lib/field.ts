@@ -82,6 +82,22 @@ export function isInTargetGoalArea(
   return dir === 'up' ? p.y > 1 - g : p.y < g
 }
 
+/**
+ * Reglement §6.4: "Bal raakt grond tussen doellijn en vrijeworplijn → werpplaats loodrecht
+ * geprojecteerd tot juist vóór de vrijeworplijn." Je mag dus nooit van dichter dan 4 m van een
+ * doellijn werpen; de werper schuift terug tot op de vrijeworplijn (breedte blijft behouden).
+ *
+ * Punten ín een doelgebied blijven ongemoeid: die zijn een doelpunt (of een vangst, waarvoor
+ * §6.4 een eigen regel heeft — werpplaats naar de doellijn).
+ */
+export function projectWerpplaats(p: Point, goalAreaDepthM: number = FIELD.defaultGoalAreaDepthM): Point {
+  const g = goalLineNorm(goalAreaDepthM)
+  const ft = freeThrowNorm(goalAreaDepthM)
+  if (p.y >= g && p.y < ft) return { x: p.x, y: ft }
+  if (p.y <= 1 - g && p.y > 1 - ft) return { x: p.x, y: 1 - ft }
+  return p
+}
+
 /** Voorbij de zijlijn? */
 export function isOutSide(p: Point): boolean {
   return p.x < 0 || p.x > 1

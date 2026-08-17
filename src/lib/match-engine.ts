@@ -9,7 +9,7 @@ import type { Payload } from 'payload'
 import type { Category } from './categories'
 import { type ClubColors, clubColorsFrom, distinguishAway } from './club-colors'
 import { type LogoFit, normalizeLogoFit } from './logo-fit'
-import { type AttackDir, type Point, FIELD, freeThrowNorm } from './field'
+import { type AttackDir, type Point, FIELD, freeThrowNorm, projectWerpplaats } from './field'
 import { reeksUsesSeniorThrows } from './reeksen'
 import { sanitizeTrust, trustView, type TrustView } from './score-trust'
 import { isOfficialScore } from './score-trust-store'
@@ -264,11 +264,15 @@ export async function recordThrow(payload: Payload, input: RecordThrowInput) {
   // Werpplaats: standaard de vorige landing (of het opzetpunt), maar de aantekenaar kan de werper
   // zijdelings verschuiven (alleen de breedte x — de diepte y blijft gelijk), zoals in het spel.
   const hasOriginX = typeof input.originX === 'number' && Number.isFinite(input.originX)
-  const origin: Point = last
+  const rawOrigin: Point = last
     ? { x: clamp01(hasOriginX ? (input.originX as number) : last.landingX), y: last.landingY }
     : { x: clamp01(hasOriginX ? (input.originX as number) : (open.setupX ?? 0.5)), y: open.setupY ?? 0.5 }
 
   const depth = match.goalAreaDepth ?? FIELD.defaultGoalAreaDepthM
+  // §6.4: lag de bal tussen doellijn en vrijeworplijn, dan schuift de werpplaats terug tot op de
+  // vrijeworplijn — van dichterbij mag je niet werpen. Zonder deze projectie meet de statistiek
+  // worpen te kort (en zou een doelworp van binnen de 4 m als geldig doorgaan).
+  const origin = projectWerpplaats(rawOrigin, depth)
   const outcome = deriveOutcome({ tapCount: input.tapCount, point: input.point, dir, goalAreaDepthM: depth })
   const geom = deriveGeometry(origin, input.point, dir, depth)
 
@@ -533,6 +537,13 @@ export async function setClock(
   return buildMatchState(payload, matchId)
 }
 
+/** Een toegekende vrije worp waarvan de worp zelf nog niet geregistreerd is (§8). */
+async function isPendingFreeThrow(payload: Payload, poss: { id: number; freeThrow?: boolean | null }) {
+  if (!poss.freeThrow) return false
+  const cnt = await payload.count({ collection: 'throws', where: { possession: { equals: poss.id } } })
+  return cnt.totalDocs === 0
+}
+
 /**
  * Beëindig de huidige helft (rustsignaal): sluit het lopende balbezit af, log het einde en
  * stop de klok. De volgende helft wordt NIET automatisch gestart — dat gebeurt met startNextHalf.
@@ -541,8 +552,11 @@ export async function endHalf(payload: Payload, matchId: number) {
   const { match } = await loadMatch(payload, matchId)
   const half = match.currentHalf ?? 1
 
+  // Reglement §8: na het eindsignaal mag er niet meer gescoord worden, BEHALVE met een vrije worp
+  // die binnen de speeltijd werd toegekend — die wordt nog genomen en kan nog een punt opleveren.
+  // Een toegekende maar nog niet genomen vrije worp blijft dus openstaan; al de rest sluit af.
   const open = await getOpenPossession(payload, matchId)
-  if (open) {
+  if (open && !(await isPendingFreeThrow(payload, open))) {
     await payload.update({
       collection: 'possessions',
       id: open.id,
@@ -571,6 +585,18 @@ export async function endHalf(payload: Payload, matchId: number) {
 export async function startNextHalf(payload: Payload, matchId: number) {
   const { match, homeId, awayId } = await loadMatch(payload, matchId)
   const nextHalf = (match.currentHalf ?? 1) + 1
+
+  // Bleef er nog een vrije worp openstaan uit de vorige helft (zie endHalf, §8)? Dan is ze niet
+  // meer genomen: sluit ze nu af, anders zou de nieuwe helft met twéé open balbezitten starten.
+  const leftover = await getOpenPossession(payload, matchId)
+  if (leftover) {
+    await payload.update({
+      collection: 'possessions',
+      id: leftover.id,
+      data: { endOutcome: 'throws_exhausted' },
+      overrideAccess: true,
+    })
+  }
 
   await payload.update({
     collection: 'matches',
