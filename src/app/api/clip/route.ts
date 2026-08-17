@@ -7,6 +7,7 @@ import { promisify } from 'util'
 import ffmpegPath from 'ffmpeg-static'
 
 import { resolveMediaDir } from '@/lib/media-dir'
+import { clientIp, rateLimit } from '@/lib/sse-hub'
 
 export const dynamic = 'force-dynamic'
 // Genoeg ruimte voor een korte replay-clip (laagdrempelig, niet voor lange video's).
@@ -57,6 +58,13 @@ async function webmNaarMp4(dir: string, webmFile: string): Promise<string | null
 // iOS). De clip krijgt een onraadbare naam; de opslag is tijdelijk (bedoeld om meteen te bewaren).
 // Publiek: de replay-video staat ook op de publieke wedstrijdpagina (supporters), dus geen login.
 export async function POST(req: Request) {
+  // Bewust zonder login (supporters delen een replay vanaf de publieke wedstrijdpagina), maar wél
+  // begrensd: elke upload kost schijf én een ffmpeg-conversie. Zonder deze rem is dit een open
+  // CPU-/opslagkraan voor het hele internet.
+  if (!rateLimit(`clip:${clientIp(req)}`, 5, 60_000)) {
+    return Response.json({ error: 'Te veel clips na elkaar — probeer zo dadelijk opnieuw.' }, { status: 429 })
+  }
+
   const type = req.headers.get('content-type') || ''
   const ext = type.includes('mp4') ? 'mp4' : type.includes('webm') ? 'webm' : null
   if (!ext) return Response.json({ error: 'Enkel mp4/webm.' }, { status: 415 })

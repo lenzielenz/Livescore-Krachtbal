@@ -2582,3 +2582,8 @@ select.rang-picker {
 .va-moment-pts { font-weight: 900; color: var(--accent); font-variant-numeric: tabular-nums; }
 .va-moment-go { color: var(--dim); font-size: 0.7rem; }
 .va-moment.on .va-moment-go { color: var(--accent); }
+/* Uploadknop (verbergt de echte file-input) + voortgangsbalk. */
+.va-upload { position: relative; overflow: hidden; cursor: pointer; }
+.va-upload input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.va-progress { margin-top: 10px; height: 6px; border-radius: 999px; background: rgba(255, 255, 255, 0.1); overflow: hidden; }
+.va-progress span { display: block; height: 100%; background: var(--accent); transition: width 0.2s ease; }

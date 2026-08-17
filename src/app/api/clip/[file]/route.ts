@@ -1,15 +1,22 @@
+import { createReadStream } from 'fs'
 import fs from 'fs/promises'
 import path from 'path'
+import { Readable } from 'stream'
 
 import { resolveMediaDir } from '@/lib/media-dir'
 
 export const dynamic = 'force-dynamic'
 
-// Serveert een opgeslagen replay-clip. Publiek leesbaar (de bestandsnaam is onraadbaar), zodat een
-// telefoon de video via de link/QR kan openen en bewaren. Ondersteunt Range-verzoeken (206), wat
-// mobiele videospelers (vooral iOS Safari) nodig hebben om vlot af te spelen/bewaren.
+// Serveert een opgeslagen clip of matchvideo. Publiek leesbaar (de bestandsnaam is onraadbaar),
+// zodat een telefoon de video via de link/QR kan openen en bewaren. Ondersteunt Range-verzoeken
+// (206), wat mobiele videospelers (vooral iOS Safari) nodig hebben om vlot af te spelen/bewaren.
 // Met ?download=1 (en optioneel ?name=…) wordt het een échte bestandsdownload (attachment):
 // Android Chrome zet de video meteen in Downloads, iOS Safari toont de downloadmanager.
+//
+// We STREAMEN vanaf schijf (createReadStream met start/end) i.p.v. het bestand in te lezen. Bij een
+// korte replay-clip scheelt dat al geheugen, maar bij een volledige matchvideo (video-analyse,
+// honderden MB) is het noodzakelijk: een speler vuurt tijdens het scrubben tientallen
+// Range-verzoeken af, en telkens het hele bestand inlezen legt de server plat.
 export async function GET(req: Request, { params }: { params: Promise<{ file: string }> }) {
   const { file } = await params
   // Strikt: enkel onze eigen onraadbare bestandsnamen (geen path traversal).
@@ -17,14 +24,15 @@ export async function GET(req: Request, { params }: { params: Promise<{ file: st
     return new Response('Niet gevonden', { status: 404 })
   }
   const full = path.join(resolveMediaDir(), 'clips', file)
-  let data: Buffer
+  let total: number
   try {
-    data = await fs.readFile(full)
+    const st = await fs.stat(full)
+    if (!st.isFile()) return new Response('Niet gevonden', { status: 404 })
+    total = st.size
   } catch {
     return new Response('Niet gevonden', { status: 404 })
   }
   const ctype = file.endsWith('.mp4') ? 'video/mp4' : 'video/webm'
-  const total = data.length
 
   // Downloadnaam: strikt opgeschoond, en altijd met de échte extensie van het bestand.
   const url = new URL(req.url)
@@ -41,20 +49,24 @@ export async function GET(req: Request, { params }: { params: Promise<{ file: st
     'Content-Disposition': `${asDownload ? 'attachment' : 'inline'}; filename="${asDownload ? filename : file}"`,
   }
 
+  const bodyOf = (start: number, end: number) =>
+    Readable.toWeb(createReadStream(full, { start, end })) as unknown as ReadableStream<Uint8Array>
+
   const range = req.headers.get('range')
   const m = range && /^bytes=(\d*)-(\d*)$/.exec(range)
   if (m) {
-    const start = m[1] ? parseInt(m[1], 10) : 0
-    const end = m[2] ? parseInt(m[2], 10) : total - 1
-    if (start >= total || end >= total || start > end) {
+    // "bytes=-500" = de laatste 500 bytes; "bytes=500-" = vanaf 500 tot het einde.
+    const suffix = m[1] === '' && m[2] !== ''
+    const start = suffix ? Math.max(0, total - parseInt(m[2], 10)) : parseInt(m[1] || '0', 10)
+    const end = suffix || m[2] === '' ? total - 1 : Math.min(parseInt(m[2], 10), total - 1)
+    if (!Number.isFinite(start) || start >= total || start > end) {
       return new Response(null, { status: 416, headers: { 'Content-Range': `bytes */${total}` } })
     }
-    const chunk = new Uint8Array(data.subarray(start, end + 1))
-    return new Response(chunk, {
+    return new Response(bodyOf(start, end), {
       status: 206,
-      headers: { ...baseHeaders, 'Content-Range': `bytes ${start}-${end}/${total}`, 'Content-Length': String(chunk.length) },
+      headers: { ...baseHeaders, 'Content-Range': `bytes ${start}-${end}/${total}`, 'Content-Length': String(end - start + 1) },
     })
   }
 
-  return new Response(new Uint8Array(data), { status: 200, headers: { ...baseHeaders, 'Content-Length': String(total) } })
+  return new Response(bodyOf(0, total - 1), { status: 200, headers: { ...baseHeaders, 'Content-Length': String(total) } })
 }

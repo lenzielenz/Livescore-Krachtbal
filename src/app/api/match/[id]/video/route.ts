@@ -1,6 +1,6 @@
-import { canViewAnalyseMatch } from '@/lib/analyse-access'
-import { authUser, isFederationLevel } from '@/lib/api-auth'
+import { authUser } from '@/lib/api-auth'
 import { getPayloadClient } from '@/lib/payload-client'
+import { mayEditMatchVideo } from '@/lib/video-access'
 import { parseVideoSource } from '@/lib/video-sync'
 
 export const dynamic = 'force-dynamic'
@@ -31,9 +31,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const match = await payload.findByID({ collection: 'matches', id: matchId, depth: 0 }).catch(() => null)
     if (!match) return Response.json({ error: 'Wedstrijd niet gevonden.' }, { status: 404 })
 
-    const analyse = match as { analyseOnly?: boolean | null; analyseOwner?: unknown }
-    const mayEdit = isFederationLevel(user) || (Boolean(analyse.analyseOnly) && canViewAnalyseMatch(user, analyse))
-    if (!mayEdit) return Response.json({ error: 'Geen rechten voor de video van deze wedstrijd.' }, { status: 403 })
+    if (!mayEditMatchVideo(user, match as { analyseOnly?: boolean | null; analyseOwner?: unknown })) {
+      return Response.json({ error: 'Geen rechten voor de video van deze wedstrijd.' }, { status: 403 })
+    }
 
     // URL: leeg = video loskoppelen. Anders moet ze herkenbaar zijn (bestand, YouTube of uitlink).
     const data: Record<string, unknown> = {}

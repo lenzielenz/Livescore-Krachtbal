@@ -52,6 +52,8 @@ export function VideoAnalyse({
   // Waar de video nu staat. Bij een bestand leest de speler dit zelf uit; bij YouTube weten we
   // enkel waar we laatst naartoe sprongen (de iframe vertelt zijn positie niet).
   const [pos, setPos] = useState(0)
+  // Uploadvoortgang in % (null = geen upload bezig). Via XHR, want fetch meldt geen zendvoortgang.
+  const [upPct, setUpPct] = useState<number | null>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
   // Herlaad-sleutel voor de YouTube-iframe: bij elke sprong een nieuwe waarde → nieuwe start.
   const [ytSeek, setYtSeek] = useState(0)
@@ -100,8 +102,20 @@ export function VideoAnalyse({
   )
 
   const jumpTo = useCallback(
-    (m: VideoMoment) => seek(momentToVideo(m, sync, halfSeconds)),
-    [seek, sync, halfSeconds],
+    (m: VideoMoment) => {
+      const t = momentToVideo(m, sync, halfSeconds)
+      // Valt het moment voorbij het einde van de video, dan zou de speler stilzwijgend op het einde
+      // blijven staan ("ik klik en er gebeurt niets"). Zeg wat er scheelt: meestal staat de ijking
+      // verkeerd, of is dit een fragment i.p.v. de volledige wedstrijd.
+      const dur = videoRef.current?.duration
+      if (isFile && dur && Number.isFinite(dur) && t > dur) {
+        setMsg(`Dit moment valt op ${fmtVideoTime(t)}, voorbij het einde van de video (${fmtVideoTime(dur)}). Klopt de ijking van de aftrap?`)
+        return
+      }
+      setMsg(null)
+      seek(t)
+    },
+    [seek, sync, halfSeconds, isFile],
   )
 
   /** IJk: "de video staat nu precies op de aftrap van deze helft". */
@@ -110,6 +124,33 @@ export function VideoAnalyse({
     const key = half === 1 ? 'videoOffsetH1' : 'videoOffsetH2'
     const ok = await save({ [key]: at }, `Aftrap ${half}e helft geijkt op ${fmtVideoTime(at)}.`)
     if (ok) setSync((s) => (half === 1 ? { ...s, offsetH1: at } : { ...s, offsetH2: at }))
+  }
+
+  /** De volledige matchvideo uploaden naar de server (streamt daar meteen naar schijf). */
+  const upload = (f: File) => {
+    setMsg(null)
+    setUpPct(0)
+    const xhr = new XMLHttpRequest()
+    xhr.open('POST', `/api/match/${matchId}/video/upload`)
+    xhr.setRequestHeader('Content-Type', f.type || 'video/mp4')
+    xhr.withCredentials = true
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) setUpPct(Math.round((e.loaded / e.total) * 100))
+    }
+    xhr.onload = () => {
+      setUpPct(null)
+      let data: { url?: string; error?: string } = {}
+      try { data = JSON.parse(xhr.responseText) } catch {}
+      if (xhr.status >= 200 && xhr.status < 300 && data.url) {
+        setUrl(data.url)
+        setDraftUrl(data.url)
+        setMsg('Video geüpload en gekoppeld. IJk nu de aftrap van elke helft.')
+      } else {
+        setMsg(data.error ?? 'Uploaden mislukt.')
+      }
+    }
+    xhr.onerror = () => { setUpPct(null); setMsg('Uploaden mislukt (verbinding).') }
+    xhr.send(f)
   }
 
   const saveUrl = async () => {
@@ -154,9 +195,28 @@ export function VideoAnalyse({
             onChange={(e) => setDraftUrl(e.target.value)}
             aria-label="Video-URL"
           />
-          <button type="button" className="va-btn" onClick={() => void saveUrl()} disabled={busy || draftUrl.trim() === url.trim()}>
+          <button type="button" className="va-btn" onClick={() => void saveUrl()} disabled={busy || upPct !== null || draftUrl.trim() === url.trim()}>
             {url ? 'Bijwerken' : 'Koppelen'}
           </button>
+          <label className="va-btn va-upload">
+            {upPct === null ? '⬆ Video uploaden' : `Uploaden… ${upPct}%`}
+            <input
+              type="file"
+              accept="video/mp4,video/webm"
+              disabled={upPct !== null}
+              onChange={(e) => {
+                const f = e.target.files?.[0]
+                e.target.value = ''
+                if (f) upload(f)
+              }}
+            />
+          </label>
+        </div>
+      )}
+
+      {upPct !== null && (
+        <div className="va-progress" role="progressbar" aria-valuenow={upPct} aria-valuemin={0} aria-valuemax={100}>
+          <span style={{ width: `${upPct}%` }} />
         </div>
       )}
 

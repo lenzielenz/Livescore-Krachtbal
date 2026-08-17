@@ -10,6 +10,7 @@ import { getAuthUser } from '@/lib/auth-user'
 import { buildDefenseStats, buildMatchSheet, buildMatchStats, buildMatchState } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
 import { reeksHalfDurationSeconds, reeksNaam, type Reeks } from '@/lib/reeksen'
+import { mayEditMatchVideo } from '@/lib/video-access'
 import { AnalyseDetailView } from './AnalyseDetailView'
 import { ShareCard } from './ShareCard'
 import { VideoAnalyse, type VideoMoment } from './VideoAnalyse'
@@ -103,7 +104,7 @@ export default async function AnalyseDetailPage({ params }: { params: Promise<{ 
   const halfSeconds = reeksHalfDurationSeconds(matchDoc?.reeks as Reeks)
   // Video koppelen/ijken mag wie de analyse beheert: de federatie, of de eigenaar van deze
   // privé-opname (dezelfde kring die ze al mag bekijken — de paginatoegang hierboven).
-  const mayEditVideo = canViewAnalyseMatch(me, matchDoc as { analyseOnly?: boolean | null; analyseOwner?: unknown })
+  const mayEditVideo = mayEditMatchVideo(me, matchDoc as { analyseOnly?: boolean | null; analyseOwner?: unknown })
 
   const reeks = reeksNaam(matchDoc?.reeks)
   const datum = matchDoc?.date
