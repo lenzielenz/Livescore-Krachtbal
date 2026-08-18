@@ -9,6 +9,7 @@ import { getSelectedSeason, reeksenMetData } from '@/lib/analyse-season'
 import { getAuthUser } from '@/lib/auth-user'
 import { buildScoreboards, clubLogoUrl } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
+import { mayEditMatchVideo } from '@/lib/video-access'
 import { reeksNaam, resolveCompetitieReeks } from '@/lib/reeksen'
 import { buildSeasonStats, type SeasonPlayer } from '@/lib/season-stats'
 import { AnalyseArchive } from './AnalyseArchive'
@@ -157,6 +158,10 @@ export default async function AnalysePage({ searchParams }: { searchParams: Prom
       reeks: reeksNaam((m as { reeks?: unknown }).reeks),
       date: (m as { date?: string }).date ?? '',
       status: String((m as { status?: unknown }).status ?? ''),
+      // Hangt er al een opname aan? Daarmee toont het archief per wedstrijd of er video is,
+      // en anders een rechtstreekse "video toevoegen"-ingang.
+      hasVideo: Boolean((m as { videoUrl?: unknown }).videoUrl),
+      canAddVideo: mayEditMatchVideo(me, m as { analyseOnly?: boolean | null; analyseOwner?: unknown }),
       home: c.teams.home,
       away: c.teams.away,
       score: c.score,
@@ -285,6 +290,8 @@ export default async function AnalysePage({ searchParams }: { searchParams: Prom
                 reeks: r.reeks,
                 date: r.date,
                 score: r.score,
+                hasVideo: r.hasVideo,
+                canAddVideo: r.canAddVideo,
                 home: { name: r.home.name, logoUrl: r.home.logoUrl, logoFit: r.home.logoFit, primary: r.home.colors?.primary ?? null },
                 away: { name: r.away.name, logoUrl: r.away.logoUrl, logoFit: r.away.logoFit, primary: r.away.colors?.primary ?? null },
               }))}

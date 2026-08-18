@@ -2545,6 +2545,21 @@ select.rang-picker {
 .va-btn:hover:not(:disabled) { background: color-mix(in srgb, var(--accent) 26%, transparent); }
 .va-btn:disabled { opacity: 0.45; cursor: default; }
 .va-btn.small { padding: 6px 11px; font-size: 0.78rem; }
+/* Lege staat: de kaart nodigt uit om een opname toe te voegen i.p.v. een rij instellingen te zijn. */
+.va-empty {
+  border-color: color-mix(in srgb, var(--accent) 38%, var(--line));
+  background-image: linear-gradient(180deg, color-mix(in srgb, var(--accent) 9%, transparent), transparent 60%);
+}
+.va-lead { margin: 4px 0 12px; font-size: 0.88rem; color: var(--dim); line-height: 1.5; }
+.va-of { align-self: center; font-size: 0.8rem; color: var(--dim); }
+.va-btn.primary {
+  background: var(--accent);
+  color: #06121f;
+  border-color: var(--accent);
+  padding: 11px 18px;
+  font-size: 0.9rem;
+}
+.va-btn.primary:hover:not(:disabled) { filter: brightness(1.08); background: var(--accent); }
 
 /* 16:9 speler, zwart ingekaderd — video en YouTube-iframe delen exact dezelfde plek. */
 .va-player {

@@ -15,6 +15,10 @@ export type ArchiveRow = {
   reeks: string
   date: string
   score: { home: number; away: number }
+  /** Hangt er al een opname aan deze wedstrijd? */
+  hasVideo?: boolean
+  /** Mag deze gebruiker er een video aan toevoegen? */
+  canAddVideo?: boolean
   home: ArchiveTeam
   away: ArchiveTeam
 }
@@ -98,7 +102,7 @@ export function AnalyseArchive({ rows, canDelete }: { rows: ArchiveRow[]; canDel
             </summary>
             <div className="an-list an-list-sm">
               {list.map((r) => (
-                <Link key={r.id} href={`/analyse/${r.id}`} className="an-card">
+                <Link key={r.id} href={r.hasVideo ? `/analyse/${r.id}` : `/analyse/${r.id}#video`} className="an-card">
                   <span className="an-card-reeks">{r.reeks}</span>
                   <span className="an-card-row">
                     <span className="an-team">
@@ -115,6 +119,11 @@ export function AnalyseArchive({ rows, canDelete }: { rows: ArchiveRow[]; canDel
                       <TeamLogo name={r.away.name} logoUrl={r.away.logoUrl} logoFit={r.away.logoFit} side="away" size="xs" ringColor={r.away.primary} />
                     </span>
                   </span>
+                  {(r.hasVideo || r.canAddVideo) && (
+                    <span className={`an-card-video${r.hasVideo ? ' on' : ''}`}>
+                      {r.hasVideo ? '🎥 video' : '🎥 video toevoegen'}
+                    </span>
+                  )}
                   <span className="an-card-date">
                     {r.date ? new Date(r.date).toLocaleDateString('nl-BE', { day: '2-digit', month: 'short', year: 'numeric' }) : ''}
                   </span>

@@ -80,3 +80,23 @@
 .an-season > .an-list {
   padding: 2px 10px 12px;
 }
+
+/* Video-status per wedstrijd: meteen zichtbaar of er een opname hangt — en zo niet, dat je er
+   een kan toevoegen (de kaart linkt dan rechtstreeks naar het videoblok). */
+.an-card-video {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px dashed color-mix(in srgb, var(--accent) 45%, var(--line));
+  color: var(--dim);
+  font-size: 0.7rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.an-card-video.on {
+  border-style: solid;
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent);
+}

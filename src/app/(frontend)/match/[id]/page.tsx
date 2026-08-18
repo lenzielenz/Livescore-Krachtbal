@@ -10,6 +10,7 @@ import { Scoreboard } from '@/components/Scoreboard'
 import { SiteHeader } from '@/components/SiteHeader'
 import { userClubId } from '@/lib/access'
 import { getAuthUser } from '@/lib/auth-user'
+import { mayEditMatchVideo } from '@/lib/video-access'
 import { isCheckedIn, sanitizeCheckins } from '@/lib/checkins'
 import { dateStrBE, formatDateTimeBE } from '@/lib/datetime'
 import { buildMatchSheet, buildMatchState, buildMatchStats, buildTimeline, type SheetGoal } from '@/lib/match-engine'
@@ -101,6 +102,8 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   const ballKleur = krachtbalKleur(reeksRaw)
   // Enkel ingelogde bezoekers mogen shoutouts plaatsen in de live tribune.
   const me = await getAuthUser()
+  // Video koppelen/uploaden mag de federatie (competitiewedstrijden) — zie mayEditMatchVideo.
+  const mayVideo = mayEditMatchVideo(me, matchDoc as { analyseOnly?: boolean | null; analyseOwner?: unknown } | null)
   const datum = matchDoc?.date ? formatDateTimeBE(matchDoc.date as string) : null
   const sheetRes = await payload
     .find({ collection: 'matchsheets', where: { match: { equals: matchId } }, depth: 2, limit: 1 })
@@ -279,6 +282,13 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
           {referee && <span className="match-meta-bit">🟡 {referee}</span>}
           {state.match.status === 'scheduled' && matchDoc?.date && (
             <a className="match-meta-bit match-meta-cal" href={`/api/match/${matchId}/ics`}>📅 In agenda</a>
+          )}
+          {/* Wie de video van deze wedstrijd mag beheren, ziet hier meteen wáár dat gebeurt —
+              anders is de video-analyse alleen te vinden als je de analysepagina al kent. */}
+          {mayVideo && (
+            <Link className="match-meta-bit match-meta-video" href={`/analyse/${matchId}#video`}>
+              🎥 {matchDoc?.videoUrl ? 'Video bekijken' : 'Video toevoegen'}
+            </Link>
           )}
         </div>
       )}
