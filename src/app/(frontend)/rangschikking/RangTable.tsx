@@ -25,6 +25,8 @@ export type RangRow = {
   delta: number
   /** In de degradatie-/gevarenzone (enkel volwassen reeksen). */
   danger?: boolean
+  /** Wiskundig kampioen — de titel kan niet meer ontnomen worden. */
+  champion?: boolean
 }
 
 // Klikbare rangschikking: tik op een ploeg om de extra cijfers (doelpunten voor/tegen,
@@ -74,7 +76,7 @@ export function RangTable({ rows, showMove = true }: { rows: RangRow[]; showMove
                   aria-label={`${r.name} — meer cijfers`}
                 >
                   <td className="rang-rank">
-                    <span className="rang-pos">{r.rank === 1 && <span className="rang-crown" aria-hidden>🥇</span>}{r.rank === 2 && <span className="rang-crown" aria-hidden>🥈</span>}{r.rank === 3 && <span className="rang-crown" aria-hidden>🥉</span>}{r.danger && <span className="rang-crown" aria-hidden>🔻</span>}{r.rank}</span>
+                    <span className="rang-pos">{r.rank === 1 && <span className="rang-crown" aria-hidden title={r.champion ? 'Wiskundig kampioen' : undefined}>{r.champion ? '🏆' : '🥇'}</span>}{r.rank === 2 && <span className="rang-crown" aria-hidden>🥈</span>}{r.rank === 3 && <span className="rang-crown" aria-hidden>🥉</span>}{r.danger && <span className="rang-crown" aria-hidden>🔻</span>}{r.rank}</span>
                     {showMove && (
                       <span className={`rang-move ${r.moveCls}`} title="T.o.v. vorige week">
                         {moveArrow}{r.delta !== 0 ? Math.abs(r.delta) : ''}

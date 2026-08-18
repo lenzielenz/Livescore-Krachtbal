@@ -5,12 +5,14 @@ import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { FieldSchema, type FieldMarker } from '@/components/FieldSchema'
+import { balgewichtLabel } from '@/lib/balgewicht'
 import { attackDirForSide, deriveOutcome } from '@/lib/krachtbal-rules'
-import { goalLineNorm, totalLengthM, zoneOf } from '@/lib/field'
+import { goalLineNorm, projectWerpplaats, totalLengthM, zoneOf } from '@/lib/field'
 import type { AttackDir, Point } from '@/lib/field'
 import type { MatchState } from '@/lib/match-engine'
 import { LINEUP_MIN, type Readiness } from '@/lib/match-readiness'
 import { genOpId } from '@/lib/op-id'
+import { useActionQueue } from '@/lib/use-action-queue'
 import { useLiveStream } from '@/lib/use-live-stream'
 import { DemoTutorial } from './DemoTutorial'
 
@@ -26,8 +28,14 @@ const HOME_COLOR = '#06d6a0'
 const AWAY_COLOR = '#4cc9f0'
 const OUT_COLOR = '#ef476f'
 
+// Veiligheidsgrens tegen een weggelopen klok: een analysewedstrijd kan dagen blijven openstaan met
+// de klok nog "running" (niemand pauzeerde bij het wegklikken) — de verstreken tijd zou dan
+// duizenden minuten tonen ("H1 96748:50"). Geen enkele helft duurt realistisch langer dan dit; erna
+// clampen we de weergave en tonen we een waarschuwing zodat de aantekenaar pauzeert en corrigeert.
+const MAX_CLOCK_SECONDS = 3 * 60 * 60
+
 function fmtClock(total: number): string {
-  const s = Math.max(0, Math.floor(total))
+  const s = Math.max(0, Math.min(MAX_CLOCK_SECONDS, Math.floor(total)))
   return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
 }
 
@@ -106,6 +114,10 @@ export function Scorekeeper({
   // Flow: tik de bal-valt-plek (1 tik = grond, dubbeltik op dezelfde plek = gevangen), kies dan de
   // werper uit het vaste roster onder het veld. Geen popup meer die het veld bedekt.
   const [pendingThrow, setPendingThrow] = useState<{ p: Point; tapCount: 1 | 2 } | null>(null)
+  // Pass-modus (§6.10): één tik legt vast wáár de bal doorgegeven wordt, daarna kies je de vanger.
+  // Bewust een aparte modus: de gewone tik-flow (worp) mag er geen stap bij krijgen.
+  const [passMode, setPassMode] = useState(false)
+  const [pendingPass, setPendingPass] = useState<{ p: Point } | null>(null)
   const [pendingOut, setPendingOut] = useState<{ p: Point; tapCount: 1 | 2; playerId: number; isDoelworp: boolean } | null>(null)
   // Gevangen worp: kies welke tegenstander de bal ving.
   const [pendingCatch, setPendingCatch] = useState<{ p: Point; tapCount: 1 | 2; playerId: number } | null>(null)
@@ -215,6 +227,11 @@ export function Scorekeeper({
     }
   }, [state.match.status])
 
+  // Clamp tegen de weggelopen-klok-bug (zie MAX_CLOCK_SECONDS hierboven): nooit een groter getal
+  // in de state zetten dan de grens, anders zou "pauzeren" dat foute getal alsnog naar de server
+  // wegschrijven (de pauzeknop stuurt Math.floor(clock) mee als nieuwe clockSeconds).
+  const clampClock = (s: number) => Math.max(0, Math.min(MAX_CLOCK_SECONDS, s))
+
   useEffect(() => {
     baseRef.current = {
       seconds: state.match.clockSeconds,
@@ -222,17 +239,25 @@ export function Scorekeeper({
       at: clockBaseAt(state.match),
     }
     const b = baseRef.current
-    setClock(b.running ? b.seconds + (Date.now() - b.at) / 1000 : b.seconds)
+    setClock(clampClock(b.running ? b.seconds + (Date.now() - b.at) / 1000 : b.seconds))
   }, [state.match.clockSeconds, state.match.clockRunning, state.match.clockUpdatedAt])
 
   useEffect(() => {
     if (!state.match.clockRunning) return
     const t = setInterval(() => {
       const b = baseRef.current
-      setClock(b.seconds + (Date.now() - b.at) / 1000)
+      setClock(clampClock(b.seconds + (Date.now() - b.at) / 1000))
     }, 250)
     return () => clearInterval(t)
   }, [state.match.clockRunning])
+
+  // Offline-bestendigheid (ROADMAP 1b): dezelfde wachtrij als de snelscoremodus. Valt het netwerk
+  // weg, dan gaat een worp niet meer verloren met een foutmelding — hij wordt bewaard (localStorage)
+  // en in volgorde nagestuurd (met vaste opId, dus nooit dubbel) zodra er weer verbinding is.
+  const { send, pendingCount, offline } = useActionQueue(matchId, (data) => {
+    const d = data as { state?: MatchState }
+    setState(d.state ?? (data as MatchState))
+  })
 
   const act = useCallback(
     async (body: Record<string, unknown>) => {
@@ -241,25 +266,20 @@ export function Scorekeeper({
       try {
         // opId → de server past een (per ongeluk) heruitgezonden actie niet dubbel toe (idempotentie).
         const op = typeof body.opId === 'string' ? body : { ...body, opId: genOpId() }
-        const res = await fetch(`/api/match/${matchId}/action`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(op),
-        })
-        const data = await res.json()
-        if (!res.ok) throw new Error(data.error ?? 'Actie mislukt')
-        setState((data.state as MatchState) ?? (data as MatchState))
-        return data as { outcome?: string; state?: MatchState }
-      } catch (e) {
-        // Netwerk/zaal-wifi-fout of serverfout: duidelijk melden i.p.v. stil falen (AUDIT §3).
-        const offline = typeof navigator !== 'undefined' && navigator.onLine === false
-        setError(offline ? 'Geen verbinding — actie NIET geregistreerd. Probeer opnieuw.' : (e as Error).message)
-        return null
+        const r = await send(op)
+        // Serverfout: duidelijk melden i.p.v. stil falen (AUDIT §3). Gequeued (offline) is géén
+        // fout — de banner meldt dat er nagestuurd wordt zodra de verbinding terug is.
+        if (r.status === 'error') {
+          setError(r.message)
+          return null
+        }
+        if (r.status === 'queued') return { queued: true }
+        return r.data as { outcome?: string; state?: MatchState }
       } finally {
         setBusy(false)
       }
     },
-    [matchId],
+    [send],
   )
 
   // Live sync met de server (met reconnect-backoff): vangt wijzigingen van een tweede toestel of
@@ -334,6 +354,11 @@ export function Scorekeeper({
       let f: { title: string; big: string; color: string; team: string; player?: string } | null = null
       if (result?.outcome === 'goal') {
         f = { title: result.type === 'rug' ? 'RUGWORP' : 'DOELPUNT', big: `+${result.points ?? 1}`, color, team: teamName, player: scorerLabel }
+      } else if (result?.outcome === 'own_goal') {
+        // §6.6: bal aan de grond in het EIGEN doelgebied = punt voor de tegenpartij. Duidelijk
+        // anders tonen dan een gewoon doelpunt, anders lijkt het alsof de verkeerde ploeg scoorde.
+        const other = scoringSide === 'home' ? state.teams.away : state.teams.home
+        f = { title: 'EIGEN DOELPUNT', big: '+1', color: OUT_COLOR, team: other.name, player: scorerLabel }
       } else if (result?.isCross) {
         f = { title: 'KRUISJE', big: '✕', color: OUT_COLOR, team: teamName }
       } else if (result?.outcome === 'out_side' || result?.outcome === 'out_back') {
@@ -355,6 +380,39 @@ export function Scorekeeper({
     [poss, throwType, clock, act, state.teams, roster, werpX],
   )
 
+  // Pass registreren (§6.10): geen werpbeurt, wel een nieuwe werpplaats. Een voorwaartse pass is
+  // een fout — dan gaat de bal naar de tegenpartij en maken we het veld leeg.
+  const submitPass = useCallback(
+    async (playerId: number) => {
+      if (!pendingPass || !poss) return
+      const p = pendingPass.p
+      setPendingPass(null)
+      const res = (await act({
+        action: 'pass',
+        playerId,
+        x: p.x,
+        y: p.y,
+        gameClock: Math.floor(clock),
+      })) as { forward?: boolean; state?: MatchState } | null
+      if (!res) return
+      if (res.forward) {
+        setFlash({ title: 'VOORWAARTSE PASS', big: '⟂', color: OUT_COLOR, team: 'Bal naar de tegenpartij' })
+        window.setTimeout(() => setFlash(null), 1600)
+        setRecentTaps([])
+        setPassMode(false)
+        return
+      }
+      // De bal ligt nu bij de vanger: die plek is de nieuwe werpplaats.
+      setRecentTaps((prev) => [
+        ...prev.slice(-6),
+        { id: `pass-${Date.now()}`, x: Math.max(0, Math.min(1, p.x)), y: Math.max(0, Math.min(1, p.y)), color: '#c9a0ff', r: 6, label: 'P' },
+      ])
+      setWerpX(null)
+      setPassMode(false)
+    },
+    [pendingPass, poss, act, clock],
+  )
+
   // Stap 1: tik op het veld waar de bal valt. 1 tik = grond; een tweede tik op (nagenoeg) dezelfde
   // plek wisselt naar gevangen (en terug). Een tik op een andere plek verzet de plek (terug grond).
   const onTap = useCallback(
@@ -365,6 +423,11 @@ export function Scorekeeper({
       }
       // Tijdens een sub-stap (vanger/tikker/buiten) doet een veld-tik niets.
       if (pendingCatch || pendingTap || pendingOut) return
+      // Pass-modus: de tik legt de plek vast waar de medespeler de bal aanneemt.
+      if (passMode) {
+        setPendingPass({ p })
+        return
+      }
       // Werpplaats verleggen: vóór je de volgende landing aanduidt, verzet een tik op (ongeveer)
       // dezelfde horizontale lijn als de werpplaats enkel de breedte ervan. Bij de eerste worp is
       // dat het opzetpunt (bv. de doellijn na een vangst in het doelgebied). Geen slepen — tikken.
@@ -380,7 +443,7 @@ export function Scorekeeper({
         return { p, tapCount: 1 }
       })
     },
-    [state.match.status, poss, pendingCatch, pendingTap, pendingOut, pendingThrow, recentTaps],
+    [state.match.status, poss, pendingCatch, pendingTap, pendingOut, pendingThrow, recentTaps, passMode],
   )
 
   // Stap 2: kies wie wierp → bereken de uitkomst en registreer (of vraag eerst naar aanraking).
@@ -421,6 +484,9 @@ export function Scorekeeper({
   const isLive = state.match.status === 'live'
   const isFinished = state.match.status === 'finished'
   const atHalfTime = state.atHalfTime
+  // Reglement §8: een vrije worp die vóór het rustsignaal werd toegekend, mag nog genomen worden.
+  // Zolang die openstaat blijft het veld dus zichtbaar i.p.v. meteen naar het rustscherm te springen.
+  const vrijeWorpNaRust = atHalfTime && Boolean(poss?.freeThrow) && (poss?.throwsUsed ?? 0) === 0
 
   // Na 'Einde': de scheidsrechter duidt aan wie effectief gespeeld heeft (O-markering op het blad).
   const [played, setPlayed] = useState<{ home: Set<number>; away: Set<number> }>(() => ({
@@ -477,12 +543,22 @@ export function Scorekeeper({
     }
   }
 
+  // Signaleert de weggelopen-klok-situatie (zie MAX_CLOCK_SECONDS): de werkelijke verstreken tijd
+  // is dan toch onbetrouwbaar (dagenlang "running" vergeten) — 180:00 in een helft laten staan zou
+  // even fout zijn als de oorspronkelijke gigantische waarde, dus resetten we naar 0 i.p.v. te
+  // pauzeren op de geclampte grens.
+  const clockStale = clock >= MAX_CLOCK_SECONDS
+
   // Tik op de timer: zolang de wedstrijd nog niet gestart is, is hij geblokkeerd en
   // opent het keuzescherm "wie zet op?". Pas daarna kan de klok gestart/gepauzeerd worden.
   const onClockClick = () => {
     if (isScheduled) {
       // Geblokkeerd zolang de wedstrijd niet ontgrendeld is (opstelling + SR-akkoord, of demo).
       if (unlocked) setKickoffOpen(true)
+      return
+    }
+    if (clockStale) {
+      act({ action: 'clock', running: false, seconds: 0 })
       return
     }
     act({ action: 'clock', running: !state.match.clockRunning, seconds: Math.floor(clock) })
@@ -550,11 +626,14 @@ export function Scorekeeper({
   // worp van een balbezit het opzetpunt (bv. na een vangst in het doelgebied: het midden van de
   // doellijn). De werper mag zich vóór de worp zijdelings (alleen breedte) verplaatsen — je verlegt
   // de werpplaats door op de horizontale hulplijn te tikken (geen slepen). Het traject start er.
+  // Lag de bal binnen de 4 m van een doellijn, dan schuift de werpplaats terug tot op de
+  // vrijeworplijn (§6.4) — exact dezelfde projectie als op de server, zodat de gele stip en de
+  // berekende afstand niet uit elkaar lopen.
   const lastTap = recentTaps.length ? recentTaps[recentTaps.length - 1] : null
   const werpAnchor = lastTap
-    ? { x: lastTap.x, y: lastTap.y }
+    ? projectWerpplaats({ x: lastTap.x, y: lastTap.y }, state.match.goalAreaDepth ?? undefined)
     : poss
-      ? { x: poss.setupX, y: poss.setupY }
+      ? projectWerpplaats({ x: poss.setupX, y: poss.setupY }, state.match.goalAreaDepth ?? undefined)
       : null
   const showWerp = isLive && werpAnchor && !pendingCatch && !pendingTap && !pendingOut
   const werpPoint = werpAnchor ? { x: werpX ?? werpAnchor.x, y: werpAnchor.y } : null
@@ -566,7 +645,19 @@ export function Scorekeeper({
 
   // Tijdelijke markering op de gekozen plek terwijl je de werper kiest. Gevangen (dubbeltik) krijgt
   // een eigen kleur + ✋ zodat je in één oogopslag ziet of het grond of gevangen is.
-  const fieldMarkers: FieldMarker[] = pendingThrow
+  const fieldMarkers: FieldMarker[] = pendingPass
+    ? [
+        ...baseMarkers,
+        {
+          x: Math.max(0, Math.min(1, pendingPass.p.x)),
+          y: Math.max(0, Math.min(1, pendingPass.p.y)),
+          color: '#c9a0ff',
+          r: 9,
+          label: 'P',
+          ...(werpPoint ? { fromX: werpPoint.x, fromY: werpPoint.y } : {}),
+        },
+      ]
+    : pendingThrow
     ? [
         ...baseMarkers,
         {
@@ -589,6 +680,17 @@ export function Scorekeeper({
     return (
       <div className={`sk-rail sk-rail-${side} ${active ? 'active' : 'dim'}`}>
         <button type="button" className="sk-rail-btn" disabled={busy || !isLive} title="Vrijworp" onClick={() => act({ action: 'freethrow', teamId })}>VW</button>
+        {active && (
+          <button
+            type="button"
+            className={`sk-rail-btn sk-rail-pass${passMode ? ' on' : ''}`}
+            disabled={busy || !isLive}
+            title="Pass: tik waar de medespeler de bal aanneemt (verbruikt geen worp)"
+            onClick={() => { setPendingThrow(null); setPassMode((v) => !v) }}
+          >
+            P
+          </button>
+        )}
         <button type="button" className="sk-rail-btn" disabled={busy} title="Wissel" onClick={() => { setSubOut(null); setSubIn(null); setSubSide(side); setSubOpen(true) }}>⇄</button>
         <div className="sk-rail-dir" aria-label="speelrichting">{arrow}</div>
         {active && poss && (
@@ -607,7 +709,7 @@ export function Scorekeeper({
             ) : (
               <>
                 {isLive && state.match.currentHalf < 2 && !atHalfTime && (
-                  <button type="button" className="sk-rail-act" disabled={busy} onClick={() => act({ action: 'endhalf' })} title="Einde eerste helft">⏹<span>Einde 1e</span></button>
+                  <button type="button" className="sk-rail-act notice" disabled={busy} onClick={() => act({ action: 'endhalf' })} title="Einde eerste helft">⏹<span>Einde 1e</span></button>
                 )}
                 {isLive && (
                   <button type="button" className="sk-rail-act danger" disabled={busy} onClick={() => { if (window.confirm('Wedstrijd beëindigen?')) act({ action: 'finish' }) }} title="Wedstrijd beëindigen">🏁<span>Einde</span></button>
@@ -694,6 +796,33 @@ export function Scorekeeper({
             </div>
             <div className="sk-modal-btns">
               <button type="button" className="sk-btn" onClick={() => setPendingThrow(null)}>Annuleren</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Pass (§6.10): wie neemt de bal aan? Verbruikt geen werpbeurt — enkel de werpplaats
+          verschuift. Voorwaarts doorgeven mag niet; dat meldt de server als fout. */}
+      {pendingPass && (
+        <div className="sk-entry sk-entry-pass">
+          <div className="sk-entry-box sk-pick">
+            <div className="sk-entry-head">
+              <span className="sk-entry-title">Wie vangt de pass?</span>
+              <span className="sk-entry-meta">
+                {possSide === 'home' ? state.teams.home.name : state.teams.away.name} · pass (geen worp)
+              </span>
+            </div>
+            <div className="sk-pick-grid">
+              {pickPlayers.length === 0 && <span className="sk-dim">Geen spelers op het veld.</span>}
+              {pickPlayers.map((p) => (
+                <button type="button" key={p.id} className="sk-pick-player" onClick={() => void submitPass(p.id)} title={p.name}>
+                  <span className="sk-pick-num">{p.shirtNumber}</span>
+                  <span className="sk-pick-naam">{firstName(p.name)}</span>
+                </button>
+              ))}
+            </div>
+            <div className="sk-modal-btns">
+              <button type="button" className="sk-btn" onClick={() => setPendingPass(null)}>Annuleren</button>
             </div>
           </div>
         </div>
@@ -1024,6 +1153,12 @@ export function Scorekeeper({
         </button>
       </div>
 
+      {(offline || pendingCount > 0) && (
+        <div className="sk-offline" role="status">
+          📴 Offline — je blijft aantekenen; {pendingCount > 0 ? `${pendingCount} worp${pendingCount === 1 ? '' : 'en'}/actie${pendingCount === 1 ? '' : 's'} word${pendingCount === 1 ? 't' : 'en'} bewaard` : 'alles wordt bewaard'} en automatisch gesynct zodra je weer verbinding hebt.
+        </div>
+      )}
+
       <header className="sk-head">
         <div className="sk-scorebar">
           <div className="sk-team home">
@@ -1042,13 +1177,19 @@ export function Scorekeeper({
           </div>
           <button
             type="button"
-            className={`sk-clock ${state.match.clockRunning ? 'running' : ''} ${isScheduled ? 'locked' : ''}`}
+            className={`sk-clock ${state.match.clockRunning ? 'running' : ''} ${isScheduled ? 'locked' : ''} ${clockStale ? 'stale' : ''}`}
             disabled={busy || (!isLive && !isScheduled)}
             onClick={onClockClick}
-            title={isScheduled ? (unlocked ? 'Tik om te kiezen wie opzet' : isAnalyseOnly ? 'Vergrendeld — opstellingen nodig' : 'Vergrendeld — opstelling + akkoord scheidsrechter nodig') : 'Tik om te starten/pauzeren'}
+            title={
+              clockStale
+                ? 'De klok liep te lang door (waarschijnlijk vergeten pauzeren) — tik om terug te zetten naar 0:00'
+                : isScheduled
+                  ? (unlocked ? 'Tik om te kiezen wie opzet' : isAnalyseOnly ? 'Vergrendeld — opstellingen nodig' : 'Vergrendeld — opstelling + akkoord scheidsrechter nodig')
+                  : 'Tik om te starten/pauzeren'
+            }
           >
             <span className="sk-half-chip">H{state.match.currentHalf}</span>
-            {fmtClock(clock)}
+            {clockStale ? <span className="sk-clock-stale">⚠️ corrigeren</span> : fmtClock(clock)}
             <span className="sk-clock-ico">{isScheduled ? '🔒' : state.match.clockRunning ? '⏸' : '▶'}</span>
           </button>
           <div className="sk-team away">
@@ -1283,6 +1424,11 @@ export function Scorekeeper({
                 Beide opstellingen zijn bevestigd. Tik op de timer bovenaan om te kiezen wie opzet,
                 daarna is de timer vrij en kan je starten wanneer je wil.
               </div>
+              {/* Laatste materiaalcontrole vóór de aftrap: het reglement (§3) schrijft het balgewicht
+                  voor per categorie en geslacht — handig net wanneer de bal op het veld komt. */}
+              <div className="sk-kickoff-bal">
+                🏐 Voorgeschreven bal: <strong>{balgewichtLabel(state.match.category, state.match.reeks)}</strong>
+              </div>
               <button type="button" className="sk-kickoff-start" disabled={busy} onClick={() => setKickoffOpen(true)}>
                 Kies wie opzet
               </button>
@@ -1336,7 +1482,7 @@ export function Scorekeeper({
             </div>
           </div>
         </div>
-      ) : atHalfTime ? (
+      ) : atHalfTime && !vrijeWorpNaRust ? (
         <div className="sk-kickoff">
           <div className="sk-kickoff-card">
             <div className="sk-kickoff-title">Rust</div>
@@ -1348,6 +1494,12 @@ export function Scorekeeper({
         </div>
       ) : (
         <>
+          {vrijeWorpNaRust && (
+            <div className="sk-halftime-vw" role="status">
+              ⏸ Rust — nog één vrije worp te nemen (toegekend vóór het signaal). Registreer ze;
+              daarna verschijnt het rustscherm.
+            </div>
+          )}
           <div className="sk-arena">
             <SideRail side="home" arrow={homeArrow} />
             <div className="sk-field-wrap">

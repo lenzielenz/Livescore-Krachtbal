@@ -9,6 +9,7 @@ import { DEFAULT_AWAY_COLOR, DEFAULT_HOME_COLOR, readableOnDark } from '@/lib/cl
 import type { MatchState } from '@/lib/match-engine'
 import { genOpId } from '@/lib/op-id'
 import type { SimpleSide } from '@/lib/simple-score'
+import { useActionQueue } from '@/lib/use-action-queue'
 import { useLiveStream } from '@/lib/use-live-stream'
 import './simple-scorekeeper.css'
 
@@ -74,7 +75,10 @@ export function SimpleScorekeeper({
   const [needCaptain, setNeedCaptain] = useState<SimpleSide | null>(null)
   // Scheidsrechter bevestigt de stand vóór de overgang naar de 2e helft.
   const [confirmHalfEnd, setConfirmHalfEnd] = useState(false)
-  const busy = useRef(false)
+
+  // Offline-bestendigheid: gedeelde wachtrij-hook (localStorage + auto-nasturen + opId-idempotentie,
+  // zie use-action-queue.ts). `busy` = er loopt een eigen actie → SSE-updates even negeren.
+  const { send, pendingCount, offline, busyRef: busy } = useActionQueue(matchId, (data) => setState(data as MatchState))
 
   const half = state.match.currentHalf
   const status = state.match.status
@@ -106,76 +110,6 @@ export function SimpleScorekeeper({
     if (data.state) setState(data.state)
   })
 
-  // ── Offline-bestendigheid ──────────────────────────────────────────────────────────────
-  // Acties die niet verzonden raken (geen internet) worden lokaal bewaard en automatisch
-  // nagestuurd zodra de verbinding terug is — ook na een refresh (de wachtrij staat in
-  // localStorage). De score loopt intussen optimistisch verder, zodat een wegvallend netwerk de
-  // vooruitgang van de wedstrijd niet blokkeert.
-  const ACTION_URL = `/api/match/${matchId}/action`
-  const QKEY = `kb-actionqueue-${matchId}`
-  const queueRef = useRef<Record<string, unknown>[]>([])
-  const flushing = useRef(false)
-  const [pendingCount, setPendingCount] = useState(0)
-  const [offline, setOffline] = useState(false)
-
-  const persistQueue = useCallback(() => {
-    try {
-      localStorage.setItem(QKEY, JSON.stringify(queueRef.current))
-    } catch {}
-    setPendingCount(queueRef.current.length)
-  }, [QKEY])
-
-  const flush = useCallback(async () => {
-    if (flushing.current) return
-    if (typeof navigator !== 'undefined' && !navigator.onLine) {
-      setOffline(queueRef.current.length > 0)
-      return
-    }
-    flushing.current = true
-    try {
-      while (queueRef.current.length) {
-        if (typeof navigator !== 'undefined' && !navigator.onLine) break
-        const body = queueRef.current[0]
-        let res: Response
-        try {
-          res = await fetch(ACTION_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
-        } catch {
-          break // nog steeds offline → later opnieuw proberen
-        }
-        // Verstuurd (ook al weigert de server de actie): uit de wachtrij halen.
-        queueRef.current.shift()
-        persistQueue()
-        try {
-          const data = (await res.json()) as MatchState & { error?: string }
-          if (res.ok) setState(data)
-        } catch {}
-      }
-      setOffline(queueRef.current.length > 0)
-    } finally {
-      flushing.current = false
-    }
-  }, [ACTION_URL, persistQueue])
-
-  // Wachtrij laden + automatisch nasturen bij (her)verbinding of periodiek.
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(QKEY)
-      if (raw) queueRef.current = JSON.parse(raw) as Record<string, unknown>[]
-    } catch {}
-    setPendingCount(queueRef.current.length)
-    void flush()
-    const onOnline = () => void flush()
-    const onOffline = () => setOffline(true)
-    window.addEventListener('online', onOnline)
-    window.addEventListener('offline', onOffline)
-    const t = setInterval(() => { if (queueRef.current.length) void flush() }, 8000)
-    return () => {
-      window.removeEventListener('online', onOnline)
-      window.removeEventListener('offline', onOffline)
-      clearInterval(t)
-    }
-  }, [QKEY, flush])
-
   const act = useCallback(
     async (body: Record<string, unknown>, optimistic?: (s: MatchState) => MatchState) => {
       setError(null)
@@ -183,37 +117,12 @@ export function SimpleScorekeeper({
       // Eén opId per actie (hergebruikt bij retry) → de server telt een heruitgezonden actie niet
       // dubbel. Blijft in de wachtrij staan zodat een retry exact dezelfde id meestuurt.
       const op = typeof body.opId === 'string' ? body : { ...body, opId: genOpId() }
-      // Als er al een wachtrij is, we offline zijn, of er loopt al een actie: bewaren en nasturen
-      // (volgorde behouden) i.p.v. de tik te verliezen.
-      if (queueRef.current.length || busy.current || (typeof navigator !== 'undefined' && !navigator.onLine)) {
-        queueRef.current.push(op)
-        persistQueue()
-        void flush()
-        return
-      }
-      busy.current = true
-      try {
-        const res = await fetch(ACTION_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(op) })
-        const data = (await res.json()) as MatchState & { error?: string }
-        if (!res.ok) throw new Error(data.error ?? 'Actie mislukt.')
-        setState(data)
-        setOffline(false)
-      } catch (e) {
-        // Netwerkfout (fetch gooit een TypeError) → bewaren en later nasturen; de optimistische
-        // stand blijft staan. Een echte server-fout tonen we wel.
-        if (e instanceof TypeError) {
-          queueRef.current.push(op)
-          persistQueue()
-          setOffline(true)
-        } else {
-          setError((e as Error).message)
-        }
-      } finally {
-        busy.current = false
-        if (queueRef.current.length) void flush()
-      }
+      const r = await send(op)
+      // Gequeued (offline) is géén fout: de optimistische stand blijft staan en de banner meldt
+      // dat er nagestuurd wordt. Enkel een echte server-weigering tonen we.
+      if (r.status === 'error') setError(r.message)
     },
-    [ACTION_URL, persistQueue, flush],
+    [send],
   )
 
   // Supporters-modus: doel is doel — noteer het doelpunt meteen, zonder een scorer te kiezen.

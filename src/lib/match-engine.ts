@@ -9,7 +9,9 @@ import type { Payload } from 'payload'
 import type { Category } from './categories'
 import { type ClubColors, clubColorsFrom, distinguishAway } from './club-colors'
 import { type LogoFit, normalizeLogoFit } from './logo-fit'
-import { type AttackDir, type Point, FIELD, freeThrowNorm } from './field'
+import { type AttackDir, type Point, FIELD, freeThrowNorm, projectWerpplaats } from './field'
+import { buildPassNetwork, type PlayerPassStats } from './pass-network'
+import { isForwardPass, passGainM } from './pass-rules'
 import { reeksUsesSeniorThrows } from './reeksen'
 import { sanitizeTrust, trustView, type TrustView } from './score-trust'
 import { isOfficialScore } from './score-trust-store'
@@ -27,6 +29,7 @@ import {
   isMidlineFault,
   isTerminalOutcome,
   nextSetup,
+  ownGoalPointsForThrow,
   pointsForThrow,
   reduceTotals,
   throwsAllowed,
@@ -105,6 +108,36 @@ async function getOpenPossession(payload: Payload, matchId: number) {
     limit: 1,
   })
   return res.docs[0] ?? null
+}
+
+/**
+ * Waar de bal nu ligt binnen een balbezit — de werpplaats voor de volgende worp:
+ * het laatste passpunt ná de laatste worp (§6.10), anders de laatste landing, anders het opzetpunt.
+ */
+async function werpplaatsIn(
+  payload: Payload,
+  open: { id: number; setupX?: number | null; setupY?: number | null },
+  last: { landingX: number; landingY: number } | null,
+  throwsSoFar: number,
+): Promise<Point> {
+  const passRes = await payload.find({
+    collection: 'match-events',
+    where: {
+      and: [
+        { possession: { equals: open.id } },
+        { type: { equals: 'pass' } },
+        { afterThrows: { equals: throwsSoFar } },
+        { forward: { not_equals: true } },
+      ],
+    },
+    sort: '-id',
+    depth: 0,
+    limit: 1,
+  })
+  const p = passRes.docs[0]
+  if (p && typeof p.x === 'number' && typeof p.y === 'number') return { x: clamp01(p.x), y: clamp01(p.y) }
+  if (last) return { x: clamp01(last.landingX), y: last.landingY }
+  return { x: clamp01(open.setupX ?? 0.5), y: open.setupY ?? 0.5 }
 }
 
 /** Toegestane worpen voor deze wedstrijd: categorie-gebaseerd, met U16-meisjes-override (§6.8). */
@@ -261,14 +294,18 @@ export async function recordThrow(payload: Payload, input: RecordThrowInput) {
     }
   }
 
-  // Werpplaats: standaard de vorige landing (of het opzetpunt), maar de aantekenaar kan de werper
-  // zijdelings verschuiven (alleen de breedte x — de diepte y blijft gelijk), zoals in het spel.
+  // Werpplaats: het laatste passpunt, anders de vorige landing, anders het opzetpunt. De
+  // aantekenaar kan de werper daarna nog zijdelings verschuiven (alleen de breedte x — de diepte y
+  // blijft gelijk), zoals in het spel.
   const hasOriginX = typeof input.originX === 'number' && Number.isFinite(input.originX)
-  const origin: Point = last
-    ? { x: clamp01(hasOriginX ? (input.originX as number) : last.landingX), y: last.landingY }
-    : { x: clamp01(hasOriginX ? (input.originX as number) : (open.setupX ?? 0.5)), y: open.setupY ?? 0.5 }
+  const base = await werpplaatsIn(payload, open, last, existing.docs.length)
+  const rawOrigin: Point = { x: clamp01(hasOriginX ? (input.originX as number) : base.x), y: base.y }
 
   const depth = match.goalAreaDepth ?? FIELD.defaultGoalAreaDepthM
+  // §6.4: lag de bal tussen doellijn en vrijeworplijn, dan schuift de werpplaats terug tot op de
+  // vrijeworplijn — van dichterbij mag je niet werpen. Zonder deze projectie meet de statistiek
+  // worpen te kort (en zou een doelworp van binnen de 4 m als geldig doorgaan).
+  const origin = projectWerpplaats(rawOrigin, depth)
   const outcome = deriveOutcome({ tapCount: input.tapCount, point: input.point, dir, goalAreaDepthM: depth })
   const geom = deriveGeometry(origin, input.point, dir, depth)
 
@@ -309,6 +346,7 @@ export async function recordThrow(payload: Payload, input: RecordThrowInput) {
   const fault = isMidlineFault({
     setupSide: open.setupSide as SetupSide,
     throwNumber,
+    throwsAllowed: open.throwsAllowed ?? undefined,
     outcome,
     landing: input.point,
     dir,
@@ -316,7 +354,7 @@ export async function recordThrow(payload: Payload, input: RecordThrowInput) {
   const terminal = isTerminalOutcome(outcome)
   const exhausted = !terminal && throwNumber >= (open.throwsAllowed ?? 1)
 
-  type PossessionEnd = 'goal' | 'caught' | 'out_side' | 'out_back' | 'midline_fault' | 'throws_exhausted'
+  type PossessionEnd = 'goal' | 'own_goal' | 'caught' | 'out_side' | 'out_back' | 'midline_fault' | 'throws_exhausted'
   const endOutcome: PossessionEnd | null = fault
     ? 'midline_fault'
     : terminal
@@ -383,8 +421,108 @@ export async function recordThrow(payload: Payload, input: RecordThrowInput) {
     outcome,
     type: input.type,
     points: pointsForThrow({ type: input.type, outcome, freeThrow: openIsFreeThrow }),
+    // Punt voor de TEGENPARTIJ bij een eigen doelpunt (§6.6) — zodat de UI het juist kan melden.
+    opponentPoints: ownGoalPointsForThrow({ outcome }),
     isCross,
     awardedFreeThrow: awardFreeThrow,
+    state: await buildMatchState(payload, input.matchId),
+  }
+}
+
+export interface RecordPassInput {
+  matchId: number
+  /** De speler die de bal vángt — hij bepaalt de nieuwe werpplaats (§6.10). */
+  playerId: number
+  point: Point
+  gameClock?: number
+  actorId?: number
+}
+
+/**
+ * Registreer een pass (§6.10). Een pass verbruikt géén werpbeurt: hij verlegt de werpplaats naar
+ * waar de vanger staat. Doorgeven mag enkel zijwaarts of achterwaarts — een voorwaartse pass is een
+ * fout (Item 14.10) en levert de tegenpartij een opzet op vanaf de vórige werpplaats.
+ *
+ * We registreren de vánger, niet de gever: die volgt vanzelf uit de vorige balhouder, en zo blijft
+ * de invoer even snel als bij een worp (tik + speler). Daarmee is de keten
+ * pass → pass → worp bruikbaar als passnetwerk in de analyse.
+ */
+export async function recordPass(payload: Payload, input: RecordPassInput) {
+  const { match, homeId, awayId } = await loadMatch(payload, input.matchId)
+  if (match.status === 'finished') throw new Error('Wedstrijd is afgelopen — heropen ze eerst om te corrigeren.')
+  const open = await getOpenPossession(payload, input.matchId)
+  if (!open) throw new Error('Geen lopend balbezit — start de wedstrijd eerst.')
+
+  const teamId = typeof open.team === 'object' ? open.team.id : open.team
+  const side = sideOfTeam(teamId, homeId)
+  const dir = (open.dir as AttackDir | null) ?? attackDirForSide(side, match.currentHalf ?? 1)
+  const half = match.currentHalf ?? 1
+  const clock = input.gameClock ?? match.clockSeconds ?? 0
+  const depth = match.goalAreaDepth ?? FIELD.defaultGoalAreaDepthM
+
+  const catcher = await payload.findByID({ collection: 'players', id: input.playerId, depth: 0 }).catch(() => null)
+  if (!catcher) throw new Error('Onbekende speler.')
+  const catcherTeamId = typeof catcher.team === 'object' && catcher.team ? (catcher.team as { id: number }).id : catcher.team
+  if (Number(catcherTeamId) !== Number(teamId)) {
+    throw new Error('Die speler hoort niet bij de ploeg die aan bal is.')
+  }
+
+  const existing = await payload.find({
+    collection: 'throws',
+    where: { possession: { equals: open.id } },
+    sort: 'throwNumber',
+    depth: 0,
+    limit: 100,
+  })
+  const lastThrow = existing.docs[existing.docs.length - 1] ?? null
+  const from = await werpplaatsIn(payload, open, lastThrow, existing.docs.length)
+  const to: Point = { x: clamp01(input.point.x), y: clamp01(input.point.y) }
+  const forward = isForwardPass(from, to, dir, depth)
+
+  await payload.create({
+    collection: 'match-events',
+    data: {
+      match: input.matchId,
+      type: 'pass',
+      team: teamId,
+      possession: open.id,
+      player: input.playerId,
+      x: to.x,
+      y: to.y,
+      forward,
+      afterThrows: existing.docs.length,
+      half,
+      gameClock: clock,
+      ...(input.actorId ? { createdBy: input.actorId } : {}),
+    },
+    overrideAccess: true,
+  })
+
+  if (forward) {
+    // Item 14.10: opzet voor de tegenpartij vanaf de vórige werpplaats (niet vanaf de vangplaats).
+    await payload.update({
+      collection: 'possessions',
+      id: open.id,
+      data: { endOutcome: 'pass_fault' },
+      overrideAccess: true,
+    })
+    const ns = nextSetup({ outcome: 'pass_fault', landing: from, throwerTeam: side, throwerDir: dir, goalAreaDepthM: depth })
+    await createPossession(payload, {
+      matchId: input.matchId,
+      teamId: ns.team === 'home' ? homeId : awayId,
+      setupSide: ns.setupSide,
+      category: match.category as Category,
+      reeks: match.reeks,
+      dir: ns.dir,
+      point: ns.point,
+      half,
+      clock,
+    })
+  }
+
+  return {
+    forward,
+    gainM: passGainM(from, to, dir, depth),
     state: await buildMatchState(payload, input.matchId),
   }
 }
@@ -467,10 +605,76 @@ export async function undoLastThrow(payload: Payload, matchId: number) {
     }
   }
 
+  // Een pass ná de laatste worp is de jongste gebeurtenis: die moet undo eerst terugdraaien,
+  // anders zou een verkeerd getikte pass blijven staan terwijl de worp ervóór verdwijnt (§6.10).
+  if (newestPoss && newestPoss.endOutcome == null) {
+    const throwsHere = await payload.count({ collection: 'throws', where: { possession: { equals: newestPoss.id } } })
+    const lastPass = await payload.find({
+      collection: 'match-events',
+      where: {
+        and: [
+          { possession: { equals: newestPoss.id } },
+          { type: { equals: 'pass' } },
+          { afterThrows: { equals: throwsHere.totalDocs } },
+        ],
+      },
+      sort: '-id',
+      depth: 0,
+      limit: 1,
+    })
+    if (lastPass.docs[0]) {
+      await payload.delete({ collection: 'match-events', id: lastPass.docs[0].id, overrideAccess: true })
+      return buildMatchState(payload, matchId)
+    }
+  }
+
+  // Een voorwaartse pass sloot het balbezit af zonder worp: dan is er een leeg vervolg-balbezit.
+  // Undo draait de fout terug — pass weg, vorig balbezit weer open.
+  if (newestPoss && newestPoss.endOutcome == null) {
+    const cntNew = await payload.count({ collection: 'throws', where: { possession: { equals: newestPoss.id } } })
+    if (cntNew.totalDocs === 0) {
+      const prev = await payload.find({
+        collection: 'possessions',
+        where: { and: [{ match: { equals: matchId } }, { id: { less_than: newestPoss.id } }, { endOutcome: { equals: 'pass_fault' } }] },
+        sort: '-id',
+        depth: 0,
+        limit: 1,
+      })
+      const vorige = prev.docs[0]
+      if (vorige) {
+        const fout = await payload.find({
+          collection: 'match-events',
+          where: { and: [{ possession: { equals: vorige.id } }, { type: { equals: 'pass' } }, { forward: { equals: true } }] },
+          sort: '-id',
+          depth: 0,
+          limit: 1,
+        })
+        if (fout.docs[0]) await payload.delete({ collection: 'match-events', id: fout.docs[0].id, overrideAccess: true })
+        await payload.delete({ collection: 'possessions', id: newestPoss.id, overrideAccess: true })
+        await payload.update({ collection: 'possessions', id: vorige.id, data: { endOutcome: null }, overrideAccess: true })
+        return buildMatchState(payload, matchId)
+      }
+    }
+  }
+
   if (!last) return buildMatchState(payload, matchId)
 
   const possId = typeof last.possession === 'object' ? last.possession.id : last.possession
   await payload.delete({ collection: 'throws', id: last.id, overrideAccess: true })
+  // Passes die ná deze worp geregistreerd werden, horen bij de verwijderde worp — weg ermee.
+  const naPasses = await payload.find({
+    collection: 'match-events',
+    where: {
+      and: [
+        { possession: { equals: possId } },
+        { type: { equals: 'pass' } },
+        { afterThrows: { greater_than_equal: last.throwNumber } },
+      ],
+    },
+    depth: 0,
+    limit: 50,
+  })
+  for (const p of naPasses.docs) await payload.delete({ collection: 'match-events', id: p.id, overrideAccess: true })
 
   // Verwijder een eventueel daarna aangemaakt (leeg) vervolg-balbezit.
   const laterEmpty = await payload.find({
@@ -533,6 +737,13 @@ export async function setClock(
   return buildMatchState(payload, matchId)
 }
 
+/** Een toegekende vrije worp waarvan de worp zelf nog niet geregistreerd is (§8). */
+async function isPendingFreeThrow(payload: Payload, poss: { id: number; freeThrow?: boolean | null }) {
+  if (!poss.freeThrow) return false
+  const cnt = await payload.count({ collection: 'throws', where: { possession: { equals: poss.id } } })
+  return cnt.totalDocs === 0
+}
+
 /**
  * Beëindig de huidige helft (rustsignaal): sluit het lopende balbezit af, log het einde en
  * stop de klok. De volgende helft wordt NIET automatisch gestart — dat gebeurt met startNextHalf.
@@ -541,8 +752,11 @@ export async function endHalf(payload: Payload, matchId: number) {
   const { match } = await loadMatch(payload, matchId)
   const half = match.currentHalf ?? 1
 
+  // Reglement §8: na het eindsignaal mag er niet meer gescoord worden, BEHALVE met een vrije worp
+  // die binnen de speeltijd werd toegekend — die wordt nog genomen en kan nog een punt opleveren.
+  // Een toegekende maar nog niet genomen vrije worp blijft dus openstaan; al de rest sluit af.
   const open = await getOpenPossession(payload, matchId)
-  if (open) {
+  if (open && !(await isPendingFreeThrow(payload, open))) {
     await payload.update({
       collection: 'possessions',
       id: open.id,
@@ -571,6 +785,18 @@ export async function endHalf(payload: Payload, matchId: number) {
 export async function startNextHalf(payload: Payload, matchId: number) {
   const { match, homeId, awayId } = await loadMatch(payload, matchId)
   const nextHalf = (match.currentHalf ?? 1) + 1
+
+  // Bleef er nog een vrije worp openstaan uit de vorige helft (zie endHalf, §8)? Dan is ze niet
+  // meer genomen: sluit ze nu af, anders zou de nieuwe helft met twéé open balbezitten starten.
+  const leftover = await getOpenPossession(payload, matchId)
+  if (leftover) {
+    await payload.update({
+      collection: 'possessions',
+      id: leftover.id,
+      data: { endOutcome: 'throws_exhausted' },
+      overrideAccess: true,
+    })
+  }
 
   await payload.update({
     collection: 'matches',
@@ -903,6 +1129,8 @@ export interface MatchState {
     title: string | null
     status: string
     category: Category
+    /** Reekscode (bv. 1NAD) — bepaalt o.a. het voorgeschreven balgewicht (§3). */
+    reeks: string | null
     currentHalf: number
     clockSeconds: number
     clockRunning: boolean
@@ -1000,6 +1228,15 @@ export async function buildMatchSheet(payload: Payload, matchId: number): Promis
     ;(tId === homeId ? rosters.home : rosters.away).push({ shirtNumber: p.shirtNumber, name: p.name })
   }
 
+  // Kapiteins: een eigen doelpunt komt op hun naam te staan (§6.6).
+  const captainOf = (v: unknown) => {
+    const id = captainIdOf(v)
+    const p = id == null ? null : playersRes.docs.find((d) => d.id === id)
+    return p ? { shirtNumber: p.shirtNumber, name: p.name } : null
+  }
+  const homeCaptain = captainOf((match as { homeCaptain?: unknown }).homeCaptain)
+  const awayCaptain = captainOf((match as { awayCaptain?: unknown }).awayCaptain)
+
   const throwsRes = await payload.find({
     collection: 'throws',
     where: { match: { equals: matchId } },
@@ -1034,6 +1271,21 @@ export async function buildMatchSheet(payload: Payload, matchId: number): Promis
         points,
       })
       halfScores[side][halfIdx] += points
+    } else if (t.outcome === 'own_goal') {
+      // §6.6: een eigen doelpunt telt voor de tegenpartij en komt op naam van de KAPITEIN van de
+      // ploeg die het maakte — zo staat het ook op het papieren wedstrijdblad.
+      const other = side === 'home' ? 'away' : 'home'
+      const kap = side === 'home' ? homeCaptain : awayCaptain
+      goals.push({
+        half: t.period,
+        gameClock: t.gameClock,
+        side: other,
+        shirtNumber: kap?.shirtNumber ?? 0,
+        playerName: kap ? `${kap.name} (eigen doelpunt)` : 'Eigen doelpunt',
+        type: 'nek',
+        points: 1,
+      })
+      halfScores[other][halfIdx] += 1
     } else {
       const allowed = poss?.throwsAllowed ?? 1
       if (
@@ -1209,6 +1461,91 @@ export async function buildMatchStats(payload: Payload, matchId: number) {
   return { stats: aggregateStats(stat), shots }
 }
 
+export interface PassPlayer extends PlayerPassStats {
+  name: string
+  shirtNumber: number
+  teamSide: TeamSide
+}
+
+export interface PassStats {
+  spelers: PassPlayer[]
+  lijnen: { from: PassPlayer; to: PassPlayer; count: number }[]
+  totaal: number
+  fouten: number
+}
+
+/**
+ * Passstatistiek (§6.10): wie geeft aan wie, en wie legt het doelpunt klaar. Enkel gevuld wanneer
+ * de aantekenaar passes registreert (pass-modus) — anders leeg, en dan tonen we de kaart niet.
+ */
+export async function buildPassStats(payload: Payload, matchId: number): Promise<PassStats> {
+  const { homeId } = await loadMatch(payload, matchId)
+  const [passRes, throwRes] = await Promise.all([
+    payload.find({
+      collection: 'match-events',
+      where: { and: [{ match: { equals: matchId } }, { type: { equals: 'pass' } }] },
+      sort: 'id',
+      depth: 0,
+      limit: 2000,
+    }),
+    payload.find({ collection: 'throws', where: { match: { equals: matchId } }, sort: 'id', depth: 0, limit: 2000 }),
+  ])
+  if (passRes.docs.length === 0) return { spelers: [], lijnen: [], totaal: 0, fouten: 0 }
+
+  const idOf = (v: unknown) => (v && typeof v === 'object' ? Number((v as { id?: number }).id) : Number(v))
+  const net = buildPassNetwork(
+    passRes.docs.map((p) => ({
+      possessionId: idOf(p.possession),
+      afterThrows: Number(p.afterThrows ?? 0),
+      playerId: idOf(p.player),
+      forward: Boolean(p.forward),
+    })),
+    throwRes.docs.map((t) => ({
+      possessionId: idOf(t.possession),
+      throwNumber: t.throwNumber,
+      playerId: idOf(t.player),
+      isGoal: t.outcome === 'goal',
+    })),
+  )
+
+  // Ook de eindpunten van de passlijnen ophalen: een werper die zelf nooit een pass ving, staat
+  // niet in net.spelers maar moet wél een naam krijgen in het netwerk.
+  const ids = [
+    ...new Set([
+      ...net.spelers.map((s) => s.playerId),
+      ...net.lijnen.flatMap((l) => [l.fromPlayerId, l.toPlayerId]),
+    ]),
+  ]
+  const playersRes = ids.length
+    ? await payload.find({ collection: 'players', where: { id: { in: ids } }, depth: 0, limit: 200 })
+    : { docs: [] as { id: number; name: string; shirtNumber: number; team: unknown }[] }
+  const byId = new Map(playersRes.docs.map((p) => [p.id, p]))
+  const verrijk = (s: PlayerPassStats): PassPlayer => {
+    const p = byId.get(s.playerId)
+    return {
+      ...s,
+      name: p?.name ?? '?',
+      shirtNumber: p?.shirtNumber ?? 0,
+      teamSide: sideOfTeam(idOf(p?.team), homeId) ?? 'home',
+    }
+  }
+  const spelers = net.spelers.map(verrijk)
+  const perId = new Map(spelers.map((s) => [s.playerId, s]))
+  const lijnen = net.lijnen
+    .map((l) => {
+      const from = perId.get(l.fromPlayerId)
+      const to = perId.get(l.toPlayerId) ?? verrijk(leegPassStats(l.toPlayerId))
+      return from ? { from, to, count: l.count } : null
+    })
+    .filter((l): l is { from: PassPlayer; to: PassPlayer; count: number } => l !== null)
+
+  return { spelers, lijnen, totaal: net.totaal, fouten: net.fouten }
+}
+
+function leegPassStats(playerId: number): PlayerPassStats {
+  return { playerId, gegeven: 0, ontvangen: 0, aangevers: 0, fouten: 0, winstM: 0 }
+}
+
 export interface DefensePlayer {
   playerId: number
   name: string
@@ -1306,6 +1643,19 @@ export async function buildTimeline(payload: Payload, matchId: number): Promise<
         label: `Doelpunt +${pts} ${who}`.trim(),
         _t: t.createdAt,
       })
+    } else if (t.outcome === 'own_goal') {
+      // Het punt staat op de tegenpartij (§6.6) — dus ook op hun kant van de tijdlijn.
+      const player = typeof t.player === 'object' && t.player ? t.player : null
+      const who = player ? `#${player.shirtNumber} ${player.name}` : ''
+      items.push({
+        id: `t${t.id}`,
+        kind: 'goal',
+        half: t.period,
+        gameClock: t.gameClock,
+        side: side === 'home' ? 'away' : 'home',
+        label: who ? `Doelpunt +1 (eigen doelpunt ${who})` : 'Doelpunt +1 (eigen doelpunt)',
+        _t: t.createdAt,
+      })
     } else if (isCrossThrow({ outcome: t.outcome, isDoelworp: t.throwNumber >= tlAllowed, touchedBeforeOut: t.touchedBeforeOut ?? false, freeThrow: tlFreeThrow })) {
       items.push({
         id: `c${t.id}`,
@@ -1336,6 +1686,9 @@ export async function buildTimeline(payload: Payload, matchId: number): Promise<
   }
 
   for (const e of eventsRes.docs) {
+    // Passes zijn spelverloop, geen tijdlijn-gebeurtenis voor het publiek — die zouden de lijn
+    // overspoelen. Ze zitten wel in de analyse (passnetwerk).
+    if (e.type === 'pass') continue
     const teamId = typeof e.team === 'object' && e.team ? e.team.id : e.team
     const side = teamId ? sideOfTeam(teamId, homeId) : null
     const label =
@@ -1511,6 +1864,7 @@ export async function buildMatchState(payload: Payload, matchId: number): Promis
       title: match.title ?? null,
       status: match.status,
       category: match.category as Category,
+      reeks: (match.reeks as string | null | undefined) ?? null,
       currentHalf: half,
       clockSeconds: match.clockSeconds ?? 0,
       clockRunning: match.clockRunning ?? false,

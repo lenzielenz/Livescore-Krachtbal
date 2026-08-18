@@ -23,6 +23,28 @@ export interface ClinchResult {
   winsToClinch: number | null
 }
 
+/**
+ * Eén regel over de titelstrijd voor boven de rangschikking — of null wanneer er niets zinvols te
+ * melden valt (begin van het seizoen: iedereen kan nog kampioen worden, dus zwijgen we).
+ */
+export function titelBoodschap(input: {
+  status: ClinchResult | null
+  leaderName: string | null
+  reeksLabel: string
+  /** Aantal ploegen in de stand — met één ploeg is er geen titelstrijd. */
+  teamsInTable: number
+}): { text: string; clinched: boolean } | null {
+  const { status, leaderName, reeksLabel, teamsInTable } = input
+  if (!status || !leaderName || teamsInTable < 2) return null
+  if (status.clinched) return { text: `${leaderName} is wiskundig kampioen van ${reeksLabel}.`, clinched: true }
+  const zeges = status.winsToClinch
+  if (zeges == null || zeges <= 0 || status.remaining <= 0) return null
+  return {
+    text: `${leaderName} leidt en heeft nog ${zeges} ${zeges === 1 ? 'zege' : 'zeges'} nodig om de titel te verzekeren.`,
+    clinched: false,
+  }
+}
+
 /** Status van één ploeg in de titelstrijd van haar reeks. */
 export function clinchStatus(standings: StandingRow[], remaining: Map<number, number>, teamId: number): ClinchResult | null {
   const idx = standings.findIndex((r) => r.teamId === teamId)

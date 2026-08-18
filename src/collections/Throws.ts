@@ -8,6 +8,7 @@ export const THROW_TYPE_OPTIONS = [
 export const THROW_OUTCOME_OPTIONS = [
   { label: 'In het veld (doorspelen)', value: 'in_field' },
   { label: 'Doelpunt', value: 'goal' },
+  { label: 'Eigen doelpunt (punt voor de tegenpartij)', value: 'own_goal' },
   { label: 'Gevangen', value: 'caught' },
   { label: 'Buiten zijlijn', value: 'out_side' },
   { label: 'Buiten achterlijn', value: 'out_back' },

@@ -83,6 +83,17 @@
 }
 /* Geblokkeerde timer (vóór de aftrap): gedempt en met slot-cursor, maar wel klikbaar. */
 .sk-clock.locked { border-color: var(--line); color: var(--dim); border-style: dashed; cursor: pointer; }
+/* Weggelopen klok (zie MAX_CLOCK_SECONDS in Scorekeeper.tsx) — duidelijk alarmerend, want dit
+   verbergt de echte speeltijd tot de aantekenaar tikt om te pauzeren/corrigeren. */
+.sk-clock.stale {
+  background: linear-gradient(180deg, #ffe08a, #ef476f); color: #240208;
+  border-color: #ef476f; box-shadow: 0 0 26px color-mix(in srgb, #ef476f 55%, transparent);
+  animation: sk-clock-alarm 1.1s ease-in-out infinite;
+}
+.sk-clock-stale { font-size: 0.86rem; font-weight: 900; }
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes sk-clock-alarm { 0%, 100% { opacity: 1; } 50% { opacity: 0.72; } }
+}
 .sk-clock-ico { font-size: 0.8rem; }
 .sk-half-chip { font-size: 0.62rem; background: rgba(255, 255, 255, 0.14); padding: 1px 5px; border-radius: 6px; }
 
@@ -117,6 +128,33 @@
 
 .sk-error { flex: 0 0 auto; padding: 7px 10px; border-radius: 8px; background: #4a1020; color: #ffd5e0; cursor: pointer; font-size: 0.82rem; text-align: center; }
 
+/* Offline-banner (gedeelde wachtrij, zie use-action-queue.ts): rustig amber — geen alarm, want er
+   gaat niets verloren; de acties worden bewaard en automatisch nagestuurd. */
+.sk-offline {
+  flex: 0 0 auto;
+  padding: 7px 12px;
+  border-radius: 10px;
+  background: color-mix(in srgb, #f6c544 20%, var(--panel));
+  border: 1px solid color-mix(in srgb, #f6c544 50%, var(--line));
+  color: var(--txt);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+/* Rust, maar er staat nog een vrije worp open (§8): het veld blijft zichtbaar tot ze genomen is. */
+.sk-halftime-vw {
+  flex: 0 0 auto;
+  padding: 7px 12px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent) 18%, var(--panel));
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line));
+  color: var(--txt);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-align: center;
+}
+
 /* ── Arena: vult alle resterende hoogte; veld zo groot mogelijk ── */
 /* Smalle zijbalken links/rechts van het veld: VW + wissel + grote richtingspijl + worp.
    Vullen de horizontale ruimte naast het (smalle, hoge) veld op gsm. */
@@ -134,35 +172,60 @@
 /* Globale beheerknoppen: als lange balken in de zijbalk-stroom (display:contents → kinderen
    worden flex-items van de rail, net als VW/⇄). */
 .sk-rail-acts { display: contents; }
+/* Beheerknoppen: elke actie krijgt een eigen "gewicht" via kleur, zodat je op gevoel (niet enkel
+   op tekst) meteen het verschil voelt tussen routine (SR-min), voorzichtig (Undo/Einde 1e) en
+   onomkeerbaar (Einde) — snelheid zonder mis-tikken op zo'n dicht bezette balk. */
 .sk-rail-act {
-  width: 100%; flex: 1 1 0; min-height: 52px; padding: 4px 2px; border-radius: 13px; border: 1px solid var(--line);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 82%, transparent), #10141a);
-  color: var(--txt); font-size: 1.05rem; line-height: 1; font-weight: 800;
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+  width: 100%; flex: 1 1 0; min-height: 54px; padding: 4px 2px; border-radius: 14px;
+  border: 1px solid color-mix(in srgb, #fff 10%, var(--line));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 92%, #fff 6%), #10141a);
+  color: var(--txt); font-size: 1.15rem; line-height: 1; font-weight: 800;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px;
+  box-shadow: 0 5px 16px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
 }
-.sk-rail-act span { font-size: 0.56rem; font-weight: 700; letter-spacing: 0.2px; }
-.sk-rail-act.warn { background: #2a1016; color: #ffd5e0; border-color: #5a1828; }
-.sk-rail-act.danger { background: #3a1018; color: #ffd5e0; border-color: #5a1828; }
+.sk-rail-act span { font-size: 0.6rem; font-weight: 800; letter-spacing: 0.2px; }
+.sk-rail-act:active:not(:disabled) { transform: scale(0.95); }
+.sk-rail-act.warn {
+  background: linear-gradient(180deg, #3a1016, #24070c); color: #ffb8c8; border-color: #7a2438;
+  box-shadow: 0 5px 16px rgba(122, 36, 56, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+.sk-rail-act.notice {
+  background: linear-gradient(180deg, #4a2f0c, #2e1c06); color: #ffd08a; border-color: #8a5a1c;
+  box-shadow: 0 5px 16px rgba(138, 90, 28, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+.sk-rail-act.danger {
+  background: linear-gradient(180deg, #5a1018, #33060c); color: #ffc2cd; border-color: #ef476f;
+  box-shadow: 0 5px 18px rgba(239, 71, 111, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
 .sk-rail-act:disabled { opacity: 0.4; }
 .sk-rail-btn {
-  width: 100%; flex: 1 1 0; min-height: 52px; padding: 0; border-radius: 13px; font-size: 0.98rem; font-weight: 800;
-  border: 1px solid var(--line);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 82%, transparent), #10141a);
+  width: 100%; flex: 1 1 0; min-height: 54px; padding: 0; border-radius: 14px; font-size: 1.05rem; font-weight: 800;
+  border: 1px solid color-mix(in srgb, #fff 10%, var(--line));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 92%, #fff 6%), #10141a);
   color: var(--txt); line-height: 1;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
-  transition: transform 0.14s ease, border-color 0.14s ease;
+  box-shadow: 0 5px 16px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
 }
 .sk-rail-btn:hover { transform: translateY(-1px); }
-.sk-rail-home .sk-rail-btn { border-color: color-mix(in srgb, var(--home) 55%, var(--line)); color: var(--home); }
-.sk-rail-away .sk-rail-btn { border-color: color-mix(in srgb, var(--away) 55%, var(--line)); color: var(--away); }
+.sk-rail-btn:active:not(:disabled) { transform: scale(0.95); }
+.sk-rail-home .sk-rail-btn {
+  border-color: color-mix(in srgb, var(--home) 65%, var(--line)); color: var(--home);
+  box-shadow: 0 5px 16px rgba(0, 0, 0, 0.35), 0 0 0 1px color-mix(in srgb, var(--home) 18%, transparent) inset;
+}
+.sk-rail-away .sk-rail-btn {
+  border-color: color-mix(in srgb, var(--away) 65%, var(--line)); color: var(--away);
+  box-shadow: 0 5px 16px rgba(0, 0, 0, 0.35), 0 0 0 1px color-mix(in srgb, var(--away) 18%, transparent) inset;
+}
 .sk-rail-dir { font-size: 2.6rem; font-weight: 900; line-height: 1; text-align: center; flex: 0 0 auto; }
-.sk-rail-home .sk-rail-dir { color: var(--home); filter: drop-shadow(0 0 12px color-mix(in srgb, var(--home) 50%, transparent)); }
-.sk-rail-away .sk-rail-dir { color: var(--away); filter: drop-shadow(0 0 12px color-mix(in srgb, var(--away) 50%, transparent)); }
+.sk-rail-home .sk-rail-dir { color: var(--home); filter: drop-shadow(0 0 14px color-mix(in srgb, var(--home) 65%, transparent)); }
+.sk-rail-away .sk-rail-dir { color: var(--away); filter: drop-shadow(0 0 14px color-mix(in srgb, var(--away) 65%, transparent)); }
 .sk-rail-worp {
   font-size: 1.05rem; font-weight: 900; font-variant-numeric: tabular-nums;
-  background: var(--accent); color: #06140d; padding: 2px 9px; border-radius: 999px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 92%, #fff), var(--accent));
+  color: #06140d; padding: 3px 10px; border-radius: 999px;
   align-self: center; flex: 0 0 auto;
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--accent) 45%, transparent);
 }
 .sk-col { display: flex; flex-direction: column; justify-content: center; gap: 4px; flex: 0 0 auto; overflow-y: auto; }
 .sk-col.dim { opacity: 0.38; }
@@ -736,3 +799,19 @@ a.sk-btn { display: inline-block; box-sizing: border-box; text-align: center; te
   gap: 12px;
   margin-top: 20px;
 }
+
+/* Materiaalcontrole vóór de aftrap: het voorgeschreven balgewicht (§3). */
+.sk-kickoff-bal {
+  margin-top: 8px;
+  font-size: 0.82rem;
+  color: var(--dim);
+}
+.sk-kickoff-bal strong { color: var(--txt); }
+
+/* Pass-modus (§6.10): eigen kleur (paars) zodat je nooit verwart met een worp. */
+.sk-rail-pass.on {
+  background: #c9a0ff;
+  border-color: #c9a0ff;
+  color: #1b0b2e;
+}
+.sk-entry-pass .sk-entry-title { color: #c9a0ff; }

@@ -45,18 +45,12 @@ export interface MatchIcsInput {
   stampIso?: string
 }
 
-/** Bouw een volledige VCALENDAR-string met één wedstrijd-event. */
-export function buildMatchIcs(o: MatchIcsInput): string {
+function eventLines(o: MatchIcsInput): (string | null)[] {
   const start = new Date(o.startIso)
   const end = new Date(start.getTime() + (o.durationMin ?? 120) * 60_000)
   const stamp = o.stampIso ? new Date(o.stampIso) : new Date()
   const summary = o.reeks ? `${o.home} – ${o.away} (${o.reeks})` : `${o.home} – ${o.away}`
-  const lines: (string | null)[] = [
-    'BEGIN:VCALENDAR',
-    'VERSION:2.0',
-    'PRODID:-//Krachtbal Live//NL',
-    'CALSCALE:GREGORIAN',
-    'METHOD:PUBLISH',
+  return [
     'BEGIN:VEVENT',
     `UID:krachtbal-match-${o.id}@krachtbal-live`,
     `DTSTAMP:${toIcsUtc(stamp)}`,
@@ -67,13 +61,45 @@ export function buildMatchIcs(o: MatchIcsInput): string {
     o.url ? `URL:${icsEscape(o.url)}` : null,
     o.description ? `DESCRIPTION:${icsEscape(o.description)}` : null,
     'END:VEVENT',
+  ]
+}
+
+function calendar(name: string | null, events: (string | null)[]): string {
+  const lines: (string | null)[] = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Krachtbal Live//NL',
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH',
+    name ? `X-WR-CALNAME:${icsEscape(name)}` : null,
+    ...events,
     'END:VCALENDAR',
   ]
   return lines.filter((l): l is string => l !== null).map(fold).join('\r\n') + '\r\n'
+}
+
+/** Bouw een volledige VCALENDAR-string met één wedstrijd-event. */
+export function buildMatchIcs(o: MatchIcsInput): string {
+  return calendar(null, eventLines(o))
+}
+
+/** Bouw één VCALENDAR met meerdere wedstrijd-events — een hele seizoensagenda in één bestand
+ * (ploeg, club, of een combinatie van beide/meerdere). Dubbele UID's (dezelfde match via twee
+ * bronnen, bv. een club met meerdere ploegen tegen elkaar) worden er automatisch uit gefilterd. */
+export function buildMultiMatchIcs(name: string | null, matches: MatchIcsInput[]): string {
+  const seen = new Set<string | number>()
+  const events = matches.filter((m) => (seen.has(m.id) ? false : (seen.add(m.id), true))).flatMap(eventLines)
+  return calendar(name, events)
 }
 
 /** Veilige bestandsnaam voor de download. */
 export function icsFilename(home: string, away: string): string {
   const slug = (s: string) => s.normalize('NFKD').replace(/[^\w]+/g, '-').replace(/^-+|-+$/g, '').toLowerCase()
   return `krachtbal-${slug(home)}-vs-${slug(away)}.ics`
+}
+
+/** Veilige bestandsnaam voor een gecombineerde/team-/clubagenda. */
+export function icsFilenameFor(label: string): string {
+  const slug = label.normalize('NFKD').replace(/[^\w]+/g, '-').replace(/^-+|-+$/g, '').toLowerCase()
+  return `krachtbal-agenda-${slug || 'seizoen'}.ics`
 }

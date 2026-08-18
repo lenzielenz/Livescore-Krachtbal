@@ -957,7 +957,15 @@
 .lb-match.lb-match-live {
   display: block;
   padding: 0;
+  cursor: pointer;
 }
+/* Logo/naam zijn nu eigen linkjes naar het ploegprofiel (stopPropagation tegen de kaart-tik) —
+   geen onderstreping/kleurwissel, wél een duidelijke hover zodat je voelt dat het een eigen tik is. */
+.lbl-logo, .lbl-name {
+  text-decoration: none;
+  color: inherit;
+}
+.lbl-logo:hover, .lbl-name:hover { text-decoration: underline; }
 .lbl-head {
   position: relative;
   display: grid;

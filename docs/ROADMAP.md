@@ -29,24 +29,22 @@ eindscore-bevestiging mee in de PDF.
 
 ## Fase 1 — Hardening van de kern (S–M, laag risico)
 
-### 1a. Idempotente worp-registratie *(de belangrijkste)*
-**Staat:** `SimpleScorekeeper` (standaardmodus voor echte wedstrijden) is al
-offline-bestendig: lokale queue in `localStorage`, optimistische UI, auto-retry bij
-herverbinding, "📴 Offline"-banner. Maar `recordThrow` dedupliceert **niet**.
-**Gat:** valt de verbinding weg ná het opslaan maar vóór het antwoord, dan stuurt de
-retry dezelfde worp opnieuw → **dubbele worp** in de event-stream → foute score.
-**Plan:** client genereert een `clientThrowId` (UUID) per worp; server slaat die op
-de `throws`-collection op met een unieke index en negeert een al-bestaande id
-(idempotent). Queue stuurt dezelfde id bij retry.
-**Raakt:** `src/lib/match-engine.ts` (`recordThrow`), `src/collections/Throws.ts`
-(nieuw veld + unique index + migratie), `SimpleScorekeeper.tsx`,
-`api/match/[id]/action/route.ts`.
+### 1a. Idempotente worp-registratie — ✅ gebouwd (anders dan gepland)
+**Staat:** klaar, maar niet via een `clientThrowId` op de worp. De dedup zit één laag
+hoger en dekt daardoor **elke** actie, niet enkel een worp: elke actie uit de
+wachtrij draagt een vaste `opId` (`use-action-queue.ts`), en
+`api/match/[id]/action/route.ts` geeft bij een al verwerkte `opId` exact hetzelfde
+antwoord terug zonder de actie opnieuw toe te passen (collection `processed-ops`).
+Een heruitgezonden worp, undo, time-out of wissel telt dus nooit dubbel.
+**Daarom geen `clientThrowId` meer nodig** — dat zou een tweede, smallere dedup
+naast deze zijn.
 
-### 1b. Offline-pariteit voor de volledige Scorekeeper
-**Staat:** de veldschema-`Scorekeeper` (analyse/demo) heeft géén offline-queue; bij
-netwerkuitval gaat de worp verloren met een foutmelding.
-**Plan:** dezelfde queue/optimistische-UI/banner als `SimpleScorekeeper` hergebruiken.
-**Raakt:** `src/app/(frontend)/scorekeeper/[id]/Scorekeeper.tsx` (+ gedeelde queue-hook).
+### 1b. Offline-pariteit voor de volledige Scorekeeper — ✅ gebouwd (aug 2026)
+**Staat:** klaar. De wachtrij uit `SimpleScorekeeper` is naar een gedeelde hook
+getild (`src/lib/use-action-queue.ts`: localStorage, volgorde-behoud, auto-nasturen,
+vaste opId per actie) en het veldschema (`Scorekeeper.tsx`) gebruikt ze ook: offline
+= de worp wordt bewaard + amberkleurige banner, en na herverbinding exact één keer
+toegepast (dedup via `processed-ops`). Unit-tests: `tests/unit/use-action-queue.unit.spec.ts`.
 
 ### 1c. Scheidsrechter bevestigt de eindscore
 (Zie ook Fase 4 — klein maar strategisch, past hier qua omvang.)
@@ -79,6 +77,13 @@ ploegprofiel. Dit is grotendeels *publiceren wat al bestaat*, geen nieuwe wiskun
    `/analyse`). (`MatchStats` hergebruiken.)
 4. **Publieke seizoensranglijst**: topscorers, conversie, xP-overperformers.
 5. **Championship-status** op `/rangschikking` (wiskundig kampioen / punten nodig).
+
+**Voortgang (aug 2026):** 1 (`/spelers/[id]`), 2 (`/ploegen/[id]`) en 3 (shot map op
+`/match/[id]`) staan publiek. 4 bestaat voor de jeugd (`/superster`) en staat nu ook
+per reeks onder de rangschikking (topscorers uit `buildSuperstars`). 5 is gebouwd:
+`clinchStatus` + `titelBoodschap` tonen boven de tabel of de leider al wiskundig
+kampioen is of hoeveel zeges ze nog nodig heeft, met 🏆 op de eerste rij.
+Blijft over: een volledige seizoensranglijst met conversie en xP-overperformers.
 
 ### ⚠️ Privacy-keuze vooraf (blokkerend)
 De audit (§4) flagde dat **geboortedata van (jeugd)spelers** wereld-leesbaar waren.

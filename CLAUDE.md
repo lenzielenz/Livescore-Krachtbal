@@ -16,8 +16,11 @@ Naast de kern (livescore) is het uitgegroeid tot een breed clubplatform: trainin
 rechters & vergoedingen, nieuws, en een digitaal wedstrijdblad.
 
 Volledig projectplan + officiële regels: **`PROJECT.md`** en
-**`KRACHTBAL-REGLEMENT.md`**. Taal van UI, comments, commits en documentatie is
-**Nederlands**.
+**`KRACHTBAL-REGLEMENT.md`**. Wat er van dat reglement al dan niet geïmplementeerd
+is — per ⚙️ SYSTEEM-regel, met de bewuste afwijkingen — staat in
+**`docs/REGELS-CONFORMITEIT.md`**; lees dat vóór je aan de spellogica of de
+afgeleide statistiek raakt, en werk het bij als je een regel verandert. Taal van
+UI, comments, commits en documentatie is **Nederlands**.
 
 ## Stack
 

@@ -6,6 +6,7 @@ export const MATCH_EVENT_TYPE_OPTIONS = [
   { label: 'Start helft', value: 'half_start' },
   { label: 'Einde helft', value: 'half_end' },
   { label: 'Vervanging (wissel)', value: 'substitution' },
+  { label: 'Pass (bal doorgegeven)', value: 'pass' },
 ] as const
 
 // Niet-worp-gebeurtenissen voor de tijdlijn: time-outs (tellen mee in quotum, 2 p/ploeg
@@ -70,6 +71,49 @@ export const MatchEvents: CollectionConfig = {
           min: 0,
         },
       ],
+    },
+    // ── Pass (§6.10) ────────────────────────────────────────────────────────────────────────
+    // Een pass verbruikt geen werpbeurt; hij verlegt de werpplaats naar waar de vanger staat.
+    // Daarom hangt hij aan een balbezit en houdt hij zijn eigen plaats bij. Net als een worp is
+    // dit een immutable feit: corrigeren = verwijderen (undo) en opnieuw registreren.
+    {
+      name: 'possession',
+      label: 'Balbezit',
+      type: 'relationship',
+      relationTo: 'possessions',
+      index: true,
+      admin: { condition: (_, siblingData) => siblingData?.type === 'pass' },
+    },
+    {
+      name: 'player',
+      label: 'Speler (vanger van de pass)',
+      type: 'relationship',
+      relationTo: 'players',
+      admin: { condition: (_, siblingData) => siblingData?.type === 'pass' },
+    },
+    {
+      type: 'row',
+      admin: { condition: (_, siblingData) => siblingData?.type === 'pass' },
+      fields: [
+        { name: 'x', label: 'Plaats X (0-1)', type: 'number', min: 0, max: 1 },
+        { name: 'y', label: 'Plaats Y (0-1)', type: 'number', min: 0, max: 1 },
+      ],
+    },
+    {
+      name: 'forward',
+      label: 'Voorwaartse pass (fout — opzet tegenpartij)',
+      type: 'checkbox',
+      defaultValue: false,
+      admin: { condition: (_, siblingData) => siblingData?.type === 'pass' },
+    },
+    {
+      // Aantal worpen dat in dit balbezit al genomen was toen de pass gebeurde. Daarmee weten we
+      // of de pass ná de laatste worp kwam — en dus of hij de werpplaats bepaalt.
+      name: 'afterThrows',
+      label: 'Na hoeveel worpen',
+      type: 'number',
+      min: 0,
+      admin: { condition: (_, siblingData) => siblingData?.type === 'pass' },
     },
     {
       name: 'note',

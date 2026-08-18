@@ -86,6 +86,15 @@ export default async function ClubPage({ params }: { params: Promise<{ id: strin
             {Boolean(club.website) && (
               <a className="cl-web" href={String(club.website)} target="_blank" rel="noopener noreferrer">🌐 Website</a>
             )}
+            {teamIds.length > 0 && (
+              <a
+                className="cl-web"
+                href={`/api/agenda/ics?clubs=${cid}&name=${encodeURIComponent(String(club.name))}`}
+                title="Alle wedstrijden van alle ploegen van deze club downloaden (Google/Apple/Outlook)"
+              >
+                📅 Hele clubagenda
+              </a>
+            )}
           </div>
         </header>
 

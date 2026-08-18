@@ -4,10 +4,13 @@ import type { ReactNode } from 'react'
 
 import { SiteHeader } from '@/components/SiteHeader'
 import { competitionWhere } from '@/lib/analyse-access'
+import { formatDateTimeBE } from '@/lib/datetime'
+import { buildScoreboards } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
 import { reeksNaam } from '@/lib/reeksen'
 import { buildTeamSeasonTrend } from '@/lib/season-trend'
 import { buildTeamReport } from '@/lib/team-report'
+import type { Match } from '@/payload-types'
 import { TeamForm } from '../../analyse/ploeg/TeamForm'
 import { TeamProfile } from '../../analyse/ploeg/TeamProfile'
 import '../../analyse/analyse.css'
@@ -41,10 +44,39 @@ export default async function PloegProfiel({ params }: Params) {
   if (!team || team.analyseOnly) notFound()
 
   const payload = await getPayloadClient()
-  const [report, trend] = await Promise.all([
+  const [report, trend, matchesRes] = await Promise.all([
     buildTeamReport(payload, teamId, null, competitionWhere()).catch(() => null),
     buildTeamSeasonTrend(payload, teamId, competitionWhere()).catch(() => []),
+    // Volledige seizoensagenda (verleden + toekomst) — ongelimiteerd, i.t.t. de club-pagina die
+    // maar 6 wedstrijden vooruit/terug toont. Dit ís de "hele agenda" die vanaf het live-bord
+    // met één tik (op ploegnaam/logo) bereikbaar moet zijn.
+    payload
+      .find({
+        collection: 'matches',
+        where: { and: [{ or: [{ homeTeam: { equals: teamId } }, { awayTeam: { equals: teamId } }] }, competitionWhere()] },
+        sort: 'date',
+        depth: 1,
+        limit: 300,
+      })
+      .catch(() => ({ docs: [] as Match[] })),
   ])
+
+  const scoreboards = await buildScoreboards(payload, matchesRes.docs)
+  const opponentName = (v: Match['homeTeam']): string => (v && typeof v === 'object' ? (v.name ?? '—') : '—')
+  const relId = (v: Match['homeTeam']): number | null => (v && typeof v === 'object' ? v.id : (v ?? null))
+  const fixtures = matchesRes.docs.map((m) => {
+    const thuis = relId(m.homeTeam) === teamId
+    const sb = scoreboards.get(m.id)
+    return {
+      id: m.id,
+      date: m.date ?? null,
+      reeks: m.reeks ?? null,
+      thuis,
+      opponent: opponentName(thuis ? m.awayTeam : m.homeTeam),
+      status: sb?.status ?? m.status ?? 'scheduled',
+      score: sb?.score ?? null,
+    }
+  })
 
   const club = (team.club && typeof team.club === 'object' ? team.club : null) as
     | { id: number; name?: string }
@@ -66,6 +98,39 @@ export default async function PloegProfiel({ params }: Params) {
             </p>
           </div>
         </div>
+
+        {fixtures.length > 0 && (
+          <section className="an-card ps-fixtures">
+            <div className="ps-fixtures-head">
+              <h2 className="an-h2">Seizoensagenda</h2>
+              <a
+                className="ps-ics"
+                href={`/api/agenda/ics?teams=${teamId}&name=${encodeURIComponent(team.name ?? 'Ploeg')}`}
+                title="Hele seizoensagenda downloaden (Google/Apple/Outlook)"
+              >
+                📅 In agenda
+              </a>
+            </div>
+            <ul className="ps-matches">
+              {fixtures.map((f) => (
+                <Link key={f.id} href={`/match/${f.id}`} className="ps-match">
+                  <span className="ps-match-date">{f.date ? formatDateTimeBE(f.date) : 'Datum n.t.b.'}</span>
+                  <span className="ps-match-opp">
+                    {f.thuis ? 'vs' : '@'} {f.opponent}
+                    {f.reeks && f.reeks !== team.reeks ? <i className="ps-match-reeks"> · {reeksNaam(f.reeks)}</i> : null}
+                  </span>
+                  {f.status === 'live' ? (
+                    <span className="ps-match-live">LIVE</span>
+                  ) : f.status === 'finished' && f.score ? (
+                    <span className="ps-match-score">{f.score.home}–{f.score.away}</span>
+                  ) : (
+                    <span className="ps-match-vs">nog te spelen</span>
+                  )}
+                </Link>
+              ))}
+            </ul>
+          </section>
+        )}
 
         {!report ? (
           <p className="an-empty">Nog geen wedstrijdstatistieken voor deze ploeg.</p>
