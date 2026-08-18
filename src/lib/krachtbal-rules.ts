@@ -11,6 +11,7 @@ import {
   distanceM,
   freeThrowNorm,
   goalLineNorm,
+  isInOwnGoalArea,
   isInTargetGoalArea,
   isOnOwnHalf,
   isOutBack,
@@ -21,7 +22,7 @@ import {
 
 export type TeamSide = 'home' | 'away'
 export type ThrowType = 'nek' | 'rug'
-export type ThrowOutcome = 'in_field' | 'goal' | 'caught' | 'out_side' | 'out_back'
+export type ThrowOutcome = 'in_field' | 'goal' | 'own_goal' | 'caught' | 'out_side' | 'out_back'
 export type SetupSide = 'own' | 'opponent'
 
 export const CROSS_LIMIT = 3
@@ -49,6 +50,16 @@ export function pointsForThrow(t: { type: ThrowType; outcome: ThrowOutcome; free
   return t.type === 'rug' ? 2 : 1
 }
 
+/**
+ * Punten die een worp aan de TEGENPARTIJ oplevert. Enkel bij een eigen doelpunt (§6.6: "bal aan de
+ * grond in eigen doelgebied = doelpunt voor de tegenpartij"). Dat telt enkelvoudig: de dubbeltelling
+ * van de rugworp beloont de werptechniek van de scorende ploeg, en die gooide hier niet.
+ * Op het wedstrijdblad komt zo'n doelpunt op naam van de kapitein.
+ */
+export function ownGoalPointsForThrow(t: { outcome: ThrowOutcome }): 0 | 1 {
+  return t.outcome === 'own_goal' ? 1 : 0
+}
+
 // ── Worpteller ────────────────────────────────────────────────────────────────
 
 /** Aantal toegestane worpen, afhankelijk van categorie en opzetpunt. */
@@ -62,7 +73,8 @@ export function throwsAllowed(category: Category, setupSide: SetupSide): number 
 /**
  * Leidt de worp-uitkomst af uit de tik. Twee tikken = gevangen (balbezit draait om),
  * ongeacht plek. Eén tik: voorbij achterlijn → out_back, voorbij zijlijn → out_side,
- * in doelgebied → goal, anders → in_field (doorspelen).
+ * in het aangevallen doelgebied → goal, in het eigen doelgebied → own_goal (§6.6),
+ * anders → in_field (doorspelen).
  */
 export function deriveOutcome(input: {
   tapCount: 1 | 2
@@ -75,6 +87,7 @@ export function deriveOutcome(input: {
   if (isOutBack(point, dir)) return 'out_back'
   if (isOutSide(point)) return 'out_side'
   if (isInTargetGoalArea(point, dir, goalAreaDepthM)) return 'goal'
+  if (isInOwnGoalArea(point, dir, goalAreaDepthM)) return 'own_goal'
   return 'in_field'
 }
 
@@ -106,19 +119,29 @@ export function deriveGeometry(
 // ── 2e-worp-regel ──────────────────────────────────────────────────────────
 
 /**
- * Bij opzet vanaf eigen helft moet de 2e worp de middellijn raken/overschrijden,
- * anders opzet voor de tegenpartij. True = fout (balverlies).
+ * Bij opzet vanaf eigen helft moet "de 2e (of 3e) worp" de middellijn raken/overschrijden
+ * (§6.9 / Item 14.9), anders opzet voor de tegenpartij. True = fout (balverlies).
+ *
+ * Het haakje in het reglement betekent overal "… bij jeugd" (vgl. §6.8: "3 werpbeurten (of 2 bij
+ * opzet tegenhelft)"). Consistent gelezen is het telkens de worp vlák vóór de doelworp: nummer 2
+ * bij 3 toegestane worpen, nummer 3 bij 4 (jeugd). Daarom leiden we ze af uit `throwsAllowed`
+ * i.p.v. hard op 2 te toetsen. Zonder `throwsAllowed` valt het terug op het senioren-geval.
  */
 export function isMidlineFault(input: {
   setupSide: SetupSide
   throwNumber: number
+  /** Toegestane worpen in dit balbezit — bepaalt wélke worp de middellijn moet halen. */
+  throwsAllowed?: number
   outcome: ThrowOutcome
   landing: Point
   dir: AttackDir
 }): boolean {
   const { setupSide, throwNumber, outcome, landing, dir } = input
-  if (setupSide !== 'own' || throwNumber !== 2) return false
-  if (outcome === 'caught' || outcome === 'out_side' || outcome === 'out_back') return false
+  if (setupSide !== 'own') return false
+  const allowed = input.throwsAllowed ?? 3
+  if (throwNumber !== Math.max(2, allowed - 1)) return false
+  // Buitenspel, een vangst en een eigen doelpunt hebben hun eigen gevolg — die gaan vóór.
+  if (outcome === 'caught' || outcome === 'out_side' || outcome === 'out_back' || outcome === 'own_goal') return false
   return !reachedMidline(landing, dir)
 }
 
@@ -191,6 +214,13 @@ export function nextSetup(input: {
     return { team, dir, setupSide: isOnOwnHalf(landing, dir) ? 'own' : 'opponent', point: landing }
   }
 
+  // own_goal (§6.6): het punt is voor de tegenpartij, dus de WERPENDE ploeg incasseerde en zet
+  // zelf opnieuw op — vanaf haar eigen vrijeworplijn, net als na een tegendoelpunt.
+  if (outcome === 'own_goal') {
+    const ownFtY = throwerDir === 'up' ? ftLine : 1 - ftLine
+    return { team: throwerTeam, dir: throwerDir, setupSide: 'own', point: { x: 0.5, y: ownFtY } }
+  }
+
   // goal: tegenploeg zet op vanaf de eigen vrijeworplijn (eigen helft, volle breedte).
   const ftY = dir === 'up' ? ftLine : 1 - ftLine
   return { team, dir, setupSide: 'own', point: { x: 0.5, y: ftY } }
@@ -240,6 +270,8 @@ export function reduceTotals(throws: ReducibleThrow[]): MatchTotals {
 
   for (const t of throws) {
     score[t.team] += pointsForThrow({ type: t.type, outcome: t.outcome, freeThrow: t.freeThrow })
+    // Eigen doelpunt: het punt gaat naar de andere ploeg (§6.6).
+    score[t.team === 'home' ? 'away' : 'home'] += ownGoalPointsForThrow({ outcome: t.outcome })
     if (isCrossThrow(t)) {
       crosses[t.team] += 1
       if (crosses[t.team] >= CROSS_LIMIT) crosses[t.team] = 0

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { FieldSchema, type FieldMarker } from '@/components/FieldSchema'
+import { balgewichtLabel } from '@/lib/balgewicht'
 import { attackDirForSide, deriveOutcome } from '@/lib/krachtbal-rules'
 import { goalLineNorm, projectWerpplaats, totalLengthM, zoneOf } from '@/lib/field'
 import type { AttackDir, Point } from '@/lib/field'
@@ -349,6 +350,11 @@ export function Scorekeeper({
       let f: { title: string; big: string; color: string; team: string; player?: string } | null = null
       if (result?.outcome === 'goal') {
         f = { title: result.type === 'rug' ? 'RUGWORP' : 'DOELPUNT', big: `+${result.points ?? 1}`, color, team: teamName, player: scorerLabel }
+      } else if (result?.outcome === 'own_goal') {
+        // §6.6: bal aan de grond in het EIGEN doelgebied = punt voor de tegenpartij. Duidelijk
+        // anders tonen dan een gewoon doelpunt, anders lijkt het alsof de verkeerde ploeg scoorde.
+        const other = scoringSide === 'home' ? state.teams.away : state.teams.home
+        f = { title: 'EIGEN DOELPUNT', big: '+1', color: OUT_COLOR, team: other.name, player: scorerLabel }
       } else if (result?.isCross) {
         f = { title: 'KRUISJE', big: '✕', color: OUT_COLOR, team: teamName }
       } else if (result?.outcome === 'out_side' || result?.outcome === 'out_back') {
@@ -1325,6 +1331,11 @@ export function Scorekeeper({
               <div className="sk-kickoff-sub">
                 Beide opstellingen zijn bevestigd. Tik op de timer bovenaan om te kiezen wie opzet,
                 daarna is de timer vrij en kan je starten wanneer je wil.
+              </div>
+              {/* Laatste materiaalcontrole vóór de aftrap: het reglement (§3) schrijft het balgewicht
+                  voor per categorie en geslacht — handig net wanneer de bal op het veld komt. */}
+              <div className="sk-kickoff-bal">
+                🏐 Voorgeschreven bal: <strong>{balgewichtLabel(state.match.category, state.match.reeks)}</strong>
               </div>
               <button type="button" className="sk-kickoff-start" disabled={busy} onClick={() => setKickoffOpen(true)}>
                 Kies wie opzet

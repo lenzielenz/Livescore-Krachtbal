@@ -98,6 +98,17 @@ export function projectWerpplaats(p: Point, goalAreaDepthM: number = FIELD.defau
   return p
 }
 
+/** Ligt het punt in het EIGEN doelgebied? (§6.6: bal daar aan de grond = punt voor de tegenpartij) */
+export function isInOwnGoalArea(
+  p: Point,
+  dir: AttackDir,
+  goalAreaDepthM: number = FIELD.defaultGoalAreaDepthM,
+): boolean {
+  if (p.x < 0 || p.x > 1) return false
+  const g = goalLineNorm(goalAreaDepthM)
+  return dir === 'up' ? p.y < g : p.y > 1 - g
+}
+
 /** Voorbij de zijlijn? */
 export function isOutSide(p: Point): boolean {
   return p.x < 0 || p.x > 1

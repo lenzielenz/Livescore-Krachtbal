@@ -27,6 +27,7 @@ import {
   isMidlineFault,
   isTerminalOutcome,
   nextSetup,
+  ownGoalPointsForThrow,
   pointsForThrow,
   reduceTotals,
   throwsAllowed,
@@ -313,6 +314,7 @@ export async function recordThrow(payload: Payload, input: RecordThrowInput) {
   const fault = isMidlineFault({
     setupSide: open.setupSide as SetupSide,
     throwNumber,
+    throwsAllowed: open.throwsAllowed ?? undefined,
     outcome,
     landing: input.point,
     dir,
@@ -320,7 +322,7 @@ export async function recordThrow(payload: Payload, input: RecordThrowInput) {
   const terminal = isTerminalOutcome(outcome)
   const exhausted = !terminal && throwNumber >= (open.throwsAllowed ?? 1)
 
-  type PossessionEnd = 'goal' | 'caught' | 'out_side' | 'out_back' | 'midline_fault' | 'throws_exhausted'
+  type PossessionEnd = 'goal' | 'own_goal' | 'caught' | 'out_side' | 'out_back' | 'midline_fault' | 'throws_exhausted'
   const endOutcome: PossessionEnd | null = fault
     ? 'midline_fault'
     : terminal
@@ -387,6 +389,8 @@ export async function recordThrow(payload: Payload, input: RecordThrowInput) {
     outcome,
     type: input.type,
     points: pointsForThrow({ type: input.type, outcome, freeThrow: openIsFreeThrow }),
+    // Punt voor de TEGENPARTIJ bij een eigen doelpunt (§6.6) — zodat de UI het juist kan melden.
+    opponentPoints: ownGoalPointsForThrow({ outcome }),
     isCross,
     awardedFreeThrow: awardFreeThrow,
     state: await buildMatchState(payload, input.matchId),
@@ -929,6 +933,8 @@ export interface MatchState {
     title: string | null
     status: string
     category: Category
+    /** Reekscode (bv. 1NAD) — bepaalt o.a. het voorgeschreven balgewicht (§3). */
+    reeks: string | null
     currentHalf: number
     clockSeconds: number
     clockRunning: boolean
@@ -1026,6 +1032,15 @@ export async function buildMatchSheet(payload: Payload, matchId: number): Promis
     ;(tId === homeId ? rosters.home : rosters.away).push({ shirtNumber: p.shirtNumber, name: p.name })
   }
 
+  // Kapiteins: een eigen doelpunt komt op hun naam te staan (§6.6).
+  const captainOf = (v: unknown) => {
+    const id = captainIdOf(v)
+    const p = id == null ? null : playersRes.docs.find((d) => d.id === id)
+    return p ? { shirtNumber: p.shirtNumber, name: p.name } : null
+  }
+  const homeCaptain = captainOf((match as { homeCaptain?: unknown }).homeCaptain)
+  const awayCaptain = captainOf((match as { awayCaptain?: unknown }).awayCaptain)
+
   const throwsRes = await payload.find({
     collection: 'throws',
     where: { match: { equals: matchId } },
@@ -1060,6 +1075,21 @@ export async function buildMatchSheet(payload: Payload, matchId: number): Promis
         points,
       })
       halfScores[side][halfIdx] += points
+    } else if (t.outcome === 'own_goal') {
+      // §6.6: een eigen doelpunt telt voor de tegenpartij en komt op naam van de KAPITEIN van de
+      // ploeg die het maakte — zo staat het ook op het papieren wedstrijdblad.
+      const other = side === 'home' ? 'away' : 'home'
+      const kap = side === 'home' ? homeCaptain : awayCaptain
+      goals.push({
+        half: t.period,
+        gameClock: t.gameClock,
+        side: other,
+        shirtNumber: kap?.shirtNumber ?? 0,
+        playerName: kap ? `${kap.name} (eigen doelpunt)` : 'Eigen doelpunt',
+        type: 'nek',
+        points: 1,
+      })
+      halfScores[other][halfIdx] += 1
     } else {
       const allowed = poss?.throwsAllowed ?? 1
       if (
@@ -1332,6 +1362,19 @@ export async function buildTimeline(payload: Payload, matchId: number): Promise<
         label: `Doelpunt +${pts} ${who}`.trim(),
         _t: t.createdAt,
       })
+    } else if (t.outcome === 'own_goal') {
+      // Het punt staat op de tegenpartij (§6.6) — dus ook op hun kant van de tijdlijn.
+      const player = typeof t.player === 'object' && t.player ? t.player : null
+      const who = player ? `#${player.shirtNumber} ${player.name}` : ''
+      items.push({
+        id: `t${t.id}`,
+        kind: 'goal',
+        half: t.period,
+        gameClock: t.gameClock,
+        side: side === 'home' ? 'away' : 'home',
+        label: who ? `Doelpunt +1 (eigen doelpunt ${who})` : 'Doelpunt +1 (eigen doelpunt)',
+        _t: t.createdAt,
+      })
     } else if (isCrossThrow({ outcome: t.outcome, isDoelworp: t.throwNumber >= tlAllowed, touchedBeforeOut: t.touchedBeforeOut ?? false, freeThrow: tlFreeThrow })) {
       items.push({
         id: `c${t.id}`,
@@ -1537,6 +1580,7 @@ export async function buildMatchState(payload: Payload, matchId: number): Promis
       title: match.title ?? null,
       status: match.status,
       category: match.category as Category,
+      reeks: (match.reeks as string | null | undefined) ?? null,
       currentHalf: half,
       clockSeconds: match.clockSeconds ?? 0,
       clockRunning: match.clockRunning ?? false,

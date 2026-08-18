@@ -799,3 +799,11 @@ a.sk-btn { display: inline-block; box-sizing: border-box; text-align: center; te
   gap: 12px;
   margin-top: 20px;
 }
+
+/* Materiaalcontrole vóór de aftrap: het voorgeschreven balgewicht (§3). */
+.sk-kickoff-bal {
+  margin-top: 8px;
+  font-size: 0.82rem;
+  color: var(--dim);
+}
+.sk-kickoff-bal strong { color: var(--txt); }

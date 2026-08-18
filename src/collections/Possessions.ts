@@ -9,10 +9,11 @@ export const SETUP_SIDE_OPTIONS = [
 // Hoe het balbezit eindigde. Wordt door de regellogica (fase 3) gezet; null = nog lopend.
 export const POSSESSION_OUTCOME_OPTIONS = [
   { label: 'Doelpunt', value: 'goal' },
+  { label: 'Eigen doelpunt', value: 'own_goal' },
   { label: 'Gevangen (balbezit draait om)', value: 'caught' },
   { label: 'Buiten zijlijn', value: 'out_side' },
   { label: 'Buiten achterlijn', value: 'out_back' },
-  { label: 'Middellijn-fout (2e worp)', value: 'midline_fault' },
+  { label: 'Middellijn-fout (worp vóór de doelworp)', value: 'midline_fault' },
   { label: 'Worpen op (geen doelpunt)', value: 'throws_exhausted' },
 ] as const
 

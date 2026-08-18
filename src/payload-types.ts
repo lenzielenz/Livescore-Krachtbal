@@ -1294,7 +1294,7 @@ export interface Possession {
   /**
    * Leeg = balbezit nog lopend.
    */
-  endOutcome?: ('goal' | 'caught' | 'out_side' | 'out_back' | 'midline_fault' | 'throws_exhausted') | null;
+  endOutcome?: ('goal' | 'own_goal' | 'caught' | 'out_side' | 'out_back' | 'midline_fault' | 'throws_exhausted') | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -1314,7 +1314,7 @@ export interface Throw {
   tappedBy?: (number | null) | Player;
   throwNumber: number;
   type: 'nek' | 'rug';
-  outcome: 'in_field' | 'goal' | 'caught' | 'out_side' | 'out_back';
+  outcome: 'in_field' | 'goal' | 'own_goal' | 'caught' | 'out_side' | 'out_back';
   landingX: number;
   landingY: number;
   /**

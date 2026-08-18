@@ -8,6 +8,7 @@ import {
   isMidlineFault,
   isTerminalOutcome,
   nextSetup,
+  ownGoalPointsForThrow,
   pointsForThrow,
   reduceTotals,
   throwsAllowed,
@@ -218,5 +219,71 @@ describe('reduceTotals — score & kruisjes', () => {
     expect(reduceTotals([cross(), cross()]).crosses.away).toBe(2)
     expect(reduceTotals([cross(), cross(), cross()]).crosses.away).toBe(0)
     expect(reduceTotals([cross(), cross(), cross(), cross()]).crosses.away).toBe(1)
+  })
+})
+
+describe('middellijnregel volgt het worpaantal (§6.9 / Item 14.9)', () => {
+  const kort = { setupSide: 'own' as const, outcome: 'in_field' as const, landing: { x: 0.5, y: 0.4 }, dir: 'up' as const }
+
+  it('senioren (3 worpen): de 2e worp moet de middellijn halen', () => {
+    expect(isMidlineFault({ ...kort, throwNumber: 2, throwsAllowed: 3 })).toBe(true)
+    expect(isMidlineFault({ ...kort, throwNumber: 1, throwsAllowed: 3 })).toBe(false)
+    expect(isMidlineFault({ ...kort, throwNumber: 3, throwsAllowed: 3 })).toBe(false)
+  })
+
+  it('jeugd (4 worpen): de 3e worp — die vlak vóór de doelworp', () => {
+    expect(isMidlineFault({ ...kort, throwNumber: 3, throwsAllowed: 4 })).toBe(true)
+    expect(isMidlineFault({ ...kort, throwNumber: 2, throwsAllowed: 4 })).toBe(false)
+    expect(isMidlineFault({ ...kort, throwNumber: 4, throwsAllowed: 4 })).toBe(false)
+  })
+
+  it('zonder throwsAllowed valt het terug op het senioren-geval', () => {
+    expect(isMidlineFault({ ...kort, throwNumber: 2 })).toBe(true)
+  })
+
+  it('een vrije worp (1 worp) kan nooit een middellijn-fout zijn', () => {
+    expect(isMidlineFault({ ...kort, throwNumber: 1, throwsAllowed: 1 })).toBe(false)
+  })
+
+  it('een eigen doelpunt gaat vóór de middellijn-fout', () => {
+    expect(isMidlineFault({ ...kort, throwNumber: 2, throwsAllowed: 3, outcome: 'own_goal' })).toBe(false)
+  })
+})
+
+describe('eigen doelpunt (§6.6)', () => {
+  it('een tik in het eigen doelgebied is own_goal, niet in_field', () => {
+    expect(deriveOutcome({ tapCount: 1, point: { x: 0.5, y: 0.05 }, dir: 'up' })).toBe('own_goal')
+    expect(deriveOutcome({ tapCount: 1, point: { x: 0.5, y: 0.95 }, dir: 'down' })).toBe('own_goal')
+    expect(deriveOutcome({ tapCount: 1, point: { x: 0.5, y: 0.5 }, dir: 'up' })).toBe('in_field')
+  })
+
+  it('een vangst in het eigen doelgebied blijft een vangst', () => {
+    expect(deriveOutcome({ tapCount: 2, point: { x: 0.5, y: 0.05 }, dir: 'up' })).toBe('caught')
+  })
+
+  it('sluit het balbezit af', () => {
+    expect(isTerminalOutcome('own_goal')).toBe(true)
+  })
+
+  it('levert de werper zelf niets op, de tegenpartij 1 punt', () => {
+    expect(pointsForThrow({ type: 'rug', outcome: 'own_goal' })).toBe(0)
+    expect(ownGoalPointsForThrow({ outcome: 'own_goal' })).toBe(1)
+    expect(ownGoalPointsForThrow({ outcome: 'goal' })).toBe(0)
+  })
+
+  it('telt in de stand voor de ándere ploeg — ook bij een rugworp maar één punt', () => {
+    const totals = reduceTotals([
+      { team: 'home', type: 'rug', outcome: 'own_goal', isDoelworp: false },
+      { team: 'away', type: 'rug', outcome: 'goal', isDoelworp: true },
+    ])
+    expect(totals.score).toEqual({ home: 0, away: 3 })
+  })
+
+  it('de ploeg die het maakte zet zelf opnieuw op, vanaf haar eigen vrijeworplijn', () => {
+    const ns = nextSetup({ outcome: 'own_goal', landing: { x: 0.5, y: 0.05 }, throwerTeam: 'home', throwerDir: 'up' })
+    expect(ns.team).toBe('home')
+    expect(ns.dir).toBe('up')
+    expect(ns.setupSide).toBe('own')
+    expect(ns.point.y).toBeCloseTo(14 / 46, 6)
   })
 })

@@ -37,6 +37,9 @@ Peildatum: augustus 2026. Codebestanden: `src/lib/field.ts`, `src/lib/krachtbal-
 | §12/§19 uitslag definitief na afloop | finished-guard in `recordThrow` | |
 | §8 vrije worp toegekend vóór het rustsignaal mag nog genomen worden | `endHalf` + `isPendingFreeThrow` | Een toegekende, nog niet genomen vrije worp blijft openstaan; het scorekeeper-scherm toont het veld tot ze geregistreerd is. `startNextHalf` ruimt ze op als ze niet meer genomen werd |
 | §6.4 werpplaats schuift terug tot op de vrijeworplijn | `projectWerpplaats` (`field.ts`), toegepast in `recordThrow` én in het veldschema | Van dichter dan 4 m werpen kan niet meer; afstandsstatistiek klopt |
+| §6.6 eigen doelpunt = punt voor de tegenpartij | `deriveOutcome` (`own_goal`), `reduceTotals`, `nextSetup` | Telt enkelvoudig (ook bij een rugworp), komt op het wedstrijdblad op naam van de kapitein, en de ploeg die het maakte zet zelf opnieuw op |
+| §6.9 middellijnregel volgt het worpaantal | `isMidlineFault` (`throwsAllowed`) | Worp 2 bij 3 toegestane worpen, worp 3 bij 4 (jeugd) — zie de noot hieronder |
+| §3 balgewicht per categorie en geslacht | `balgewicht.ts`, getoond op het aftrapscherm | Geslacht wordt uit de reekscode afgeleid (1NAD/LD/RDx en U16M/U18M → dames) |
 | §4 posities (achterspeler, 2 vleugels, barage) en uniek rugnummer | `Players`, `assertValidLineup` | Minimum 3 veldspelers wordt gecontroleerd |
 | §11 scheiding ruwe invoer / afgeleide staat | event-sourcing over `throws` | Score, balbezit, worpteller en kruisjes worden nergens apart bewaard |
 
@@ -75,32 +78,22 @@ we leggen de keuze hier expliciet vast zodat ze niet per ongeluk verandert.
 
 ---
 
-## 3. Ontbreekt ⛔
+## 3. Openstaand of te bevestigen ⛔
 
-### 3.1 Eigen doelpunt (§6.6) — echte gat
-
-> "Bal aan de grond in eigen doelgebied = doelpunt voor de tegenpartij (genoteerd op naam/nummer
-> van de kapitein)."
-
-`deriveOutcome` kijkt uitsluitend naar het **aangevallen** doelgebied (`isInTargetGoalArea`). Een tik
-in het eigen doelgebied levert `in_field` op: geen punt, geen balbezitwissel. Zeldzaam (het vergt een
-achterwaartse worp of een misgrepen bal in eigen doelgebied), maar de score klopt dan niet.
-Oplossing vraagt een nieuwe uitkomst (`own_goal`) op de `throws`-collection plus toewijzing aan de
-kapitein — dus een schema- + migratiewijziging.
-
-### 3.2 Middellijnregel bij jeugd (§6.9 / Item 14.9) — te bevestigen
+### 3.1 Middellijnregel bij jeugd (§6.9 / Item 14.9) — interpretatie, te bevestigen
 
 > "De **2e (of 3e)** worp na opzet uit eigen helft moet de middellijn raken/overschrijden."
 
-`isMidlineFault` toetst altijd `throwNumber === 2`. Overal elders in het reglement betekent zo'n
-haakje "… bij jeugd" (vgl. §6.8: "3 werpbeurten (of 2 bij opzet tegenhelft)"). Consistent gelezen is
-de bedoelde worp telkens **de worp vlak vóór de doelworp**: nummer 2 bij 3 worpen, nummer 3 bij 4
-worpen. Als dat klopt, straft de app jeugdwedstrijden één worp te vroeg af.
+Overal elders in het reglement betekent zo'n haakje "… bij jeugd" (vgl. §6.8: "3 werpbeurten (of 2
+bij opzet tegenhelft)"). Consistent gelezen is het telkens **de worp vlak vóór de doelworp**: nummer
+2 bij 3 toegestane worpen, nummer 3 bij 4. Zo is het nu geïmplementeerd — `isMidlineFault` leidt de
+worp af uit `throwsAllowed` i.p.v. hard op 2 te toetsen.
 
-**Niet gewijzigd** — dit verandert echte spelbeslissingen. Voorleggen aan de federatie, dan in
-`isMidlineFault` de doelworp-index gebruiken i.p.v. de harde 2.
+Voor senioren verandert er niets (3 worpen → nog steeds worp 2); enkel jeugdwedstrijden met vier
+worpen worden nu op worp 3 getoetst i.p.v. op worp 2. **Laat dit bevestigen door de federatie**: als
+de andere lezing klopt, is het één regel terugdraaien (`throwNumber !== 2`).
 
-### 3.3 De pass bestaat niet in het datamodel (§6.10)
+### 3.2 De pass bestaat niet in het datamodel (§6.10)
 
 Spelers mogen de bal 5 seconden zijwaarts/achterwaarts doorgeven, en **een zijwaartse pass verlegt de
 werpplaats**. De app registreert enkel worpen. Gevolgen:
@@ -110,7 +103,7 @@ werpplaats**. De app registreert enkel worpen. Gevolgen:
 
 Dit is de grootste ontbrekende **analyse**-laag, niet zozeer een scorefout.
 
-### 3.4 Fouten worden niet geregistreerd (§6.2, §6.5, §6.10, §10.1, §10.2)
+### 3.3 Fouten worden niet geregistreerd (§6.2, §6.5, §6.10, §10.1, §10.2)
 
 Geen invoer voor: foutieve nek-/rugworp, rugworp na aanloop, foutief hinderen binnen 2 m,
 5-secondenfout, voorwaartse pass, zijdelings afwijken >1 m, voorbij de werpplaats lopen, aanvaller in
@@ -120,11 +113,6 @@ Dat is grotendeels **bewust**: §11 zegt dat de aantekenaar ruwe feiten invoert 
 oordeelt. Vandaag is de enige uitweg de handmatige `freethrow`-actie, die het gevolg vastlegt maar
 niet de oorzaak. Voor analyse betekent het: geen foutenstatistiek, geen disciplineprofiel per ploeg.
 
-### 3.5 Balgewicht per categorie en geslacht (§3)
-
-Niet gemodelleerd. Puur informatief (wedstrijdblad/materiaalcontrole), geen invloed op afgeleide
-staat — maar het hoort wel bij een volledig digitaal wedstrijdblad.
-
 ---
 
 ## 4. Wat dit betekent voor de analysemodules
@@ -133,7 +121,7 @@ staat — maar het hoort wel bij een volledig digitaal wedstrijdblad.
 | --- | --- |
 | Score, kruisjes, time-outs, worpnummer/doelworp, balbezitwissels | ✅ regelgetrouw |
 | Zone (links/midden/rechts, vanuit aanvalsrichting) | ✅ |
-| Worpafstand en alles wat erop bouwt (expected points, gevaarsprofiel, afstandsverdeling) | 🟡 de werpplaats respecteert nu de vrijeworplijn, maar blijft **te kort** zolang passes ontbreken (§3.3) |
+| Worpafstand en alles wat erop bouwt (expected points, gevaarsprofiel, afstandsverdeling) | 🟡 de werpplaats respecteert nu de vrijeworplijn, maar blijft **te kort** zolang passes ontbreken (§3.2) |
 | Doelworp-analyse (hoe dicht wordt afgewerkt) | 🟡 idem |
 | Passnetwerk, balcirculatie, 5-secondendruk | ⛔ ontbreekt (geen passen in het model) |
 | Foutenstatistiek, discipline | ⛔ ontbreekt (geen fout-events) |
@@ -149,9 +137,11 @@ gemakswaarde op het worp-record.
 
 1. ~~§8 vrije worp bij het eindsignaal~~ — **gedaan**.
 2. ~~§6.4 werpplaats-projectie tot vóór de vrijeworplijn~~ — **gedaan** (`projectWerpplaats`).
-3. **§3.2 middellijnregel bij jeugd** — eerst bevestigen bij de federatie, dan één regel code.
-4. **§3.1 eigen doelpunt** — schema + migratie + toewijzing aan de kapitein.
-5. **§3.3 de pass** — nieuwe event-soort; de grootste uitbreiding, maar ook de grootste
+3. ~~§6.6 eigen doelpunt~~ — **gedaan** (nieuwe uitkomst `own_goal` + migratie).
+4. ~~§3 balgewicht~~ — **gedaan** (`balgewicht.ts`, zichtbaar vóór de aftrap).
+5. **§6.9 middellijnregel bij jeugd** — geïmplementeerd volgens de meest consistente lezing;
+   **nog te bevestigen bij de federatie** (§3.1 hierboven).
+6. **§3.2 de pass** — nieuwe event-soort; de grootste openstaande uitbreiding, en de grootste
    analysewinst (passnetwerk + correcte werpplaats).
-6. **§3.4 fout-events** — enkel als de aantekenaar het ritme aankan; anders bewust buiten scope
+7. **§3.3 fout-events** — enkel als de aantekenaar het ritme aankan; anders bewust buiten scope
    houden zoals §11 voorschrijft.
