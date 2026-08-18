@@ -8,6 +8,7 @@ import {
   finishMatch,
   recordRefereeStop,
   startNextHalf,
+  recordPass,
   recordThrow,
   recordTimeout,
   reopenMatch,
@@ -123,6 +124,16 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         result = r
         break
       }
+      case 'pass':
+        // Pass (§6.10): verbruikt geen werpbeurt, verlegt enkel de werpplaats.
+        result = await recordPass(payload, {
+          matchId,
+          playerId: Number(body.playerId),
+          point: { x: Number(body.x), y: Number(body.y) },
+          gameClock: body.gameClock !== undefined ? Number(body.gameClock) : undefined,
+          actorId,
+        })
+        break
       case 'undo':
         result = await undoLastThrow(payload, matchId)
         break

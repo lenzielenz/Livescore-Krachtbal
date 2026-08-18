@@ -807,3 +807,11 @@ a.sk-btn { display: inline-block; box-sizing: border-box; text-align: center; te
   color: var(--dim);
 }
 .sk-kickoff-bal strong { color: var(--txt); }
+
+/* Pass-modus (§6.10): eigen kleur (paars) zodat je nooit verwart met een worp. */
+.sk-rail-pass.on {
+  background: #c9a0ff;
+  border-color: #c9a0ff;
+  color: #1b0b2e;
+}
+.sk-entry-pass .sk-entry-title { color: #c9a0ff; }

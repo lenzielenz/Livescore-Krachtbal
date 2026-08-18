@@ -40,6 +40,8 @@ Peildatum: augustus 2026. Codebestanden: `src/lib/field.ts`, `src/lib/krachtbal-
 | §6.6 eigen doelpunt = punt voor de tegenpartij | `deriveOutcome` (`own_goal`), `reduceTotals`, `nextSetup` | Telt enkelvoudig (ook bij een rugworp), komt op het wedstrijdblad op naam van de kapitein, en de ploeg die het maakte zet zelf opnieuw op |
 | §6.9 middellijnregel volgt het worpaantal | `isMidlineFault` (`throwsAllowed`) | Worp 2 bij 3 toegestane worpen, worp 3 bij 4 (jeugd) — zie de noot hieronder |
 | §3 balgewicht per categorie en geslacht | `balgewicht.ts`, getoond op het aftrapscherm | Geslacht wordt uit de reekscode afgeleid (1NAD/LD/RDx en U16M/U18M → dames) |
+| §6.10 de pass: verlegt de werpplaats, verbruikt geen werpbeurt | `recordPass` + `werpplaatsIn` | Registratie via de pass-modus (P) in het aantekenscherm |
+| §6.10 / Item 14.10 voorwaartse pass = fout | `isForwardPass`, `nextSetup` (`pass_fault`) | Opzet voor de tegenpartij vanaf de vórige werpplaats; in het eigen doelgebied mag voorwaarts wél |
 | §4 posities (achterspeler, 2 vleugels, barage) en uniek rugnummer | `Players`, `assertValidLineup` | Minimum 3 veldspelers wordt gecontroleerd |
 | §11 scheiding ruwe invoer / afgeleide staat | event-sourcing over `throws` | Score, balbezit, worpteller en kruisjes worden nergens apart bewaard |
 
@@ -93,15 +95,23 @@ Voor senioren verandert er niets (3 worpen → nog steeds worp 2); enkel jeugdwe
 worpen worden nu op worp 3 getoetst i.p.v. op worp 2. **Laat dit bevestigen door de federatie**: als
 de andere lezing klopt, is het één regel terugdraaien (`throwNumber !== 2`).
 
-### 3.2 De pass bestaat niet in het datamodel (§6.10)
+### 3.2 De pass — geregistreerd, maar optioneel
 
-Spelers mogen de bal 5 seconden zijwaarts/achterwaarts doorgeven, en **een zijwaartse pass verlegt de
-werpplaats**. De app registreert enkel worpen. Gevolgen:
+Passes bestaan nu als event (§6.10): de aantekenaar zet de pass-modus aan, tikt waar de medespeler
+de bal aanneemt en kiest de vanger. Dat verlegt de werpplaats (en dus de gemeten worpafstand) en
+levert het passnetwerk op de analysepagina op: wie geeft aan wie, en wie legt het doelpunt klaar.
+Een voorwaartse pass wordt automatisch als fout afgehandeld.
 
-- de werpplaats van de volgende worp klopt niet wanneer er gepast werd → opnieuw de afstandsstatistiek;
-- er is geen passnetwerk, geen "wie zet wie op", geen balcirculatie-analyse mogelijk.
+Twee bewuste beperkingen:
 
-Dit is de grootste ontbrekende **analyse**-laag, niet zozeer een scorefout.
+- **Enkel de vanger wordt geregistreerd**, niet de gever. Die volgt uit de keten (vorige balhouder),
+  zodat de invoer even snel blijft als bij een worp — twee tikken, geen extra vraag.
+- **Passen invoeren is optioneel.** Doet de aantekenaar het niet, dan werkt alles zoals voorheen;
+  de werpafstand is dan wat ze vroeger ook was (gemeten vanaf de vorige landing) en de passkaart
+  blijft verborgen. Voor een volledige afstandsstatistiek moeten de passen wél mee ingevoerd worden.
+
+De 5-secondenregel (§6.5) blijft buiten beeld: daarvoor zou elke balaanraking een tijdstempel
+moeten krijgen, wat de invoer te zwaar maakt.
 
 ### 3.3 Fouten worden niet geregistreerd (§6.2, §6.5, §6.10, §10.1, §10.2)
 
@@ -121,9 +131,10 @@ niet de oorzaak. Voor analyse betekent het: geen foutenstatistiek, geen discipli
 | --- | --- |
 | Score, kruisjes, time-outs, worpnummer/doelworp, balbezitwissels | ✅ regelgetrouw |
 | Zone (links/midden/rechts, vanuit aanvalsrichting) | ✅ |
-| Worpafstand en alles wat erop bouwt (expected points, gevaarsprofiel, afstandsverdeling) | 🟡 de werpplaats respecteert nu de vrijeworplijn, maar blijft **te kort** zolang passes ontbreken (§3.2) |
+| Worpafstand en alles wat erop bouwt (expected points, gevaarsprofiel, afstandsverdeling) | 🟡 klopt zodra de passen mee ingevoerd worden (§3.2); zonder passinvoer nog steeds gemeten vanaf de vorige landing |
 | Doelworp-analyse (hoe dicht wordt afgewerkt) | 🟡 idem |
-| Passnetwerk, balcirculatie, 5-secondendruk | ⛔ ontbreekt (geen passen in het model) |
+| Passnetwerk, aangevers, balcirculatie | ✅ zodra de aantekenaar passen registreert (`buildPassStats`) |
+| 5-secondendruk | ⛔ ontbreekt (geen tijdstempel per balaanraking) |
 | Foutenstatistiek, discipline | ⛔ ontbreekt (geen fout-events) |
 
 Let op: worpen van vóór deze wijziging bewaren de oude (ongeprojecteerde) `distance`. Wie
@@ -141,7 +152,7 @@ gemakswaarde op het worp-record.
 4. ~~§3 balgewicht~~ — **gedaan** (`balgewicht.ts`, zichtbaar vóór de aftrap).
 5. **§6.9 middellijnregel bij jeugd** — geïmplementeerd volgens de meest consistente lezing;
    **nog te bevestigen bij de federatie** (§3.1 hierboven).
-6. **§3.2 de pass** — nieuwe event-soort; de grootste openstaande uitbreiding, en de grootste
-   analysewinst (passnetwerk + correcte werpplaats).
+6. ~~§6.10 de pass~~ — **gedaan**: pass-events, voorwaartse-pass-fout, correcte werpplaats en een
+   passnetwerk op de analysepagina. Invoer is optioneel.
 7. **§3.3 fout-events** — enkel als de aantekenaar het ritme aankan; anders bewust buiten scope
    houden zoals §11 voorschrijft.

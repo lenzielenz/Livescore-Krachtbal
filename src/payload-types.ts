@@ -1294,7 +1294,9 @@ export interface Possession {
   /**
    * Leeg = balbezit nog lopend.
    */
-  endOutcome?: ('goal' | 'own_goal' | 'caught' | 'out_side' | 'out_back' | 'midline_fault' | 'throws_exhausted') | null;
+  endOutcome?:
+    | ('goal' | 'own_goal' | 'caught' | 'out_side' | 'out_back' | 'midline_fault' | 'pass_fault' | 'throws_exhausted')
+    | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -1336,10 +1338,16 @@ export interface Throw {
 export interface MatchEvent {
   id: number;
   match: number | Match;
-  type: 'timeout' | 'referee_stop' | 'half_start' | 'half_end' | 'substitution';
+  type: 'timeout' | 'referee_stop' | 'half_start' | 'half_end' | 'substitution' | 'pass';
   team?: (number | null) | Team;
   half: number;
   gameClock: number;
+  possession?: (number | null) | Possession;
+  player?: (number | null) | Player;
+  x?: number | null;
+  y?: number | null;
+  forward?: boolean | null;
+  afterThrows?: number | null;
   note?: string | null;
   createdBy?: (number | null) | User;
   updatedAt: string;
@@ -2169,6 +2177,12 @@ export interface MatchEventsSelect<T extends boolean = true> {
   team?: T;
   half?: T;
   gameClock?: T;
+  possession?: T;
+  player?: T;
+  x?: T;
+  y?: T;
+  forward?: T;
+  afterThrows?: T;
   note?: T;
   createdBy?: T;
   updatedAt?: T;

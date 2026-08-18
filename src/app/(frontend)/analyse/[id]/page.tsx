@@ -7,7 +7,7 @@ import { TeamLogo } from '@/components/TeamLogo'
 import { canAnalyse } from '@/lib/access'
 import { canViewAnalyseMatch } from '@/lib/analyse-access'
 import { getAuthUser } from '@/lib/auth-user'
-import { buildDefenseStats, buildMatchSheet, buildMatchStats, buildMatchState } from '@/lib/match-engine'
+import { buildDefenseStats, buildMatchSheet, buildMatchStats, buildMatchState, buildPassStats } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
 import { reeksHalfDurationSeconds, reeksNaam, type Reeks } from '@/lib/reeksen'
 import { mayEditMatchVideo } from '@/lib/video-access'
@@ -66,6 +66,7 @@ export default async function AnalyseDetailPage({ params }: { params: Promise<{ 
   }
 
   const defense = await buildDefenseStats(payload, matchId).catch(() => [])
+  const passen = await buildPassStats(payload, matchId).catch(() => null)
   const sheet = await buildMatchSheet(payload, matchId).catch(() => null)
   const momentumGoals = (sheet?.goals ?? [])
     .slice()
@@ -158,6 +159,41 @@ export default async function AnalyseDetailPage({ params }: { params: Promise<{ 
                 </div>
               ))}
             </div>
+          </section>
+        )}
+
+        {passen && passen.totaal > 0 && (
+          <section className="an-recap">
+            <h2 className="section-title">
+              🔗 Passen <span className="an-chart-hint">wie legt het klaar (§6.10)</span>
+            </h2>
+            <div className="an-recap-cards">
+              {passen.spelers.slice(0, 4).map((s) => (
+                <div key={s.playerId} className={`an-recap-card side-${s.teamSide}`}>
+                  <span className="an-recap-ico" aria-hidden>🤝</span>
+                  <span className="an-recap-body">
+                    <span className="an-recap-lbl">#{s.shirtNumber} {s.name.split(/\s+/)[0]}</span>
+                    <span className="an-recap-val">
+                      {s.aangevers > 0 ? `${s.aangevers} ${s.aangevers === 1 ? 'aangever' : 'aangevers'}` : `${s.gegeven} ${s.gegeven === 1 ? 'pass' : 'passen'}`}
+                    </span>
+                    <span className="an-recap-who">
+                      {s.gegeven} gegeven · {s.ontvangen} ontvangen{s.fouten > 0 ? ` · ${s.fouten} voorwaarts` : ''}
+                    </span>
+                  </span>
+                </div>
+              ))}
+            </div>
+            {passen.lijnen.length > 0 && (
+              <p className="an-head-meta">
+                Vaakste passlijnen:{' '}
+                {passen.lijnen.slice(0, 3).map((l, i) => (
+                  <span key={`${l.from.playerId}-${l.to.playerId}`}>
+                    {i > 0 ? ' · ' : ''}#{l.from.shirtNumber} → #{l.to.shirtNumber} ({l.count}×)
+                  </span>
+                ))}
+                {passen.fouten > 0 ? ` · ${passen.fouten} voorwaartse ${passen.fouten === 1 ? 'pass' : 'passen'} (balverlies)` : ''}
+              </p>
+            )}
           </section>
         )}
 

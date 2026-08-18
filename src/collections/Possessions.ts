@@ -14,6 +14,7 @@ export const POSSESSION_OUTCOME_OPTIONS = [
   { label: 'Buiten zijlijn', value: 'out_side' },
   { label: 'Buiten achterlijn', value: 'out_back' },
   { label: 'Middellijn-fout (worp vóór de doelworp)', value: 'midline_fault' },
+  { label: 'Voorwaartse pass (fout)', value: 'pass_fault' },
   { label: 'Worpen op (geen doelpunt)', value: 'throws_exhausted' },
 ] as const
 

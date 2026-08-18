@@ -162,9 +162,11 @@ export interface NextSetup {
  * - out_back: tegenploeg herstart vanaf haar eigen doellijn → eigen-helft-opzet.
  * - goal: tegenploeg herstart vanaf eigen helft.
  * - midline_fault wordt door de aanroeper als out behandeld → eigen-helft-opzet vanuit midden.
+ * - pass_fault (voorwaartse pass, §6.10): tegenploeg zet op vanaf de VÓRIGE werpplaats — de
+ *   aanroeper geeft die als `landing` mee, niet de vangplaats.
  */
 export function nextSetup(input: {
-  outcome: ThrowOutcome | 'midline_fault' | 'throws_exhausted'
+  outcome: ThrowOutcome | 'midline_fault' | 'throws_exhausted' | 'pass_fault'
   landing: Point
   throwerTeam: TeamSide
   throwerDir: AttackDir
@@ -210,7 +212,7 @@ export function nextSetup(input: {
 
   // Opzetpunt = waar de bal lag; het worpaantal volgt uit de helft.
   // Geldt voor opgebruikte worpen en de middellijn-fout (opzet vanaf grondcontact).
-  if (outcome === 'throws_exhausted' || outcome === 'midline_fault') {
+  if (outcome === 'throws_exhausted' || outcome === 'midline_fault' || outcome === 'pass_fault') {
     return { team, dir, setupSide: isOnOwnHalf(landing, dir) ? 'own' : 'opponent', point: landing }
   }
 

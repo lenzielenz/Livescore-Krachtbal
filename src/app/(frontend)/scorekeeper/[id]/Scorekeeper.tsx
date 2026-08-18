@@ -114,6 +114,10 @@ export function Scorekeeper({
   // Flow: tik de bal-valt-plek (1 tik = grond, dubbeltik op dezelfde plek = gevangen), kies dan de
   // werper uit het vaste roster onder het veld. Geen popup meer die het veld bedekt.
   const [pendingThrow, setPendingThrow] = useState<{ p: Point; tapCount: 1 | 2 } | null>(null)
+  // Pass-modus (§6.10): één tik legt vast wáár de bal doorgegeven wordt, daarna kies je de vanger.
+  // Bewust een aparte modus: de gewone tik-flow (worp) mag er geen stap bij krijgen.
+  const [passMode, setPassMode] = useState(false)
+  const [pendingPass, setPendingPass] = useState<{ p: Point } | null>(null)
   const [pendingOut, setPendingOut] = useState<{ p: Point; tapCount: 1 | 2; playerId: number; isDoelworp: boolean } | null>(null)
   // Gevangen worp: kies welke tegenstander de bal ving.
   const [pendingCatch, setPendingCatch] = useState<{ p: Point; tapCount: 1 | 2; playerId: number } | null>(null)
@@ -376,6 +380,39 @@ export function Scorekeeper({
     [poss, throwType, clock, act, state.teams, roster, werpX],
   )
 
+  // Pass registreren (§6.10): geen werpbeurt, wel een nieuwe werpplaats. Een voorwaartse pass is
+  // een fout — dan gaat de bal naar de tegenpartij en maken we het veld leeg.
+  const submitPass = useCallback(
+    async (playerId: number) => {
+      if (!pendingPass || !poss) return
+      const p = pendingPass.p
+      setPendingPass(null)
+      const res = (await act({
+        action: 'pass',
+        playerId,
+        x: p.x,
+        y: p.y,
+        gameClock: Math.floor(clock),
+      })) as { forward?: boolean; state?: MatchState } | null
+      if (!res) return
+      if (res.forward) {
+        setFlash({ title: 'VOORWAARTSE PASS', big: '⟂', color: OUT_COLOR, team: 'Bal naar de tegenpartij' })
+        window.setTimeout(() => setFlash(null), 1600)
+        setRecentTaps([])
+        setPassMode(false)
+        return
+      }
+      // De bal ligt nu bij de vanger: die plek is de nieuwe werpplaats.
+      setRecentTaps((prev) => [
+        ...prev.slice(-6),
+        { id: `pass-${Date.now()}`, x: Math.max(0, Math.min(1, p.x)), y: Math.max(0, Math.min(1, p.y)), color: '#c9a0ff', r: 6, label: 'P' },
+      ])
+      setWerpX(null)
+      setPassMode(false)
+    },
+    [pendingPass, poss, act, clock],
+  )
+
   // Stap 1: tik op het veld waar de bal valt. 1 tik = grond; een tweede tik op (nagenoeg) dezelfde
   // plek wisselt naar gevangen (en terug). Een tik op een andere plek verzet de plek (terug grond).
   const onTap = useCallback(
@@ -386,6 +423,11 @@ export function Scorekeeper({
       }
       // Tijdens een sub-stap (vanger/tikker/buiten) doet een veld-tik niets.
       if (pendingCatch || pendingTap || pendingOut) return
+      // Pass-modus: de tik legt de plek vast waar de medespeler de bal aanneemt.
+      if (passMode) {
+        setPendingPass({ p })
+        return
+      }
       // Werpplaats verleggen: vóór je de volgende landing aanduidt, verzet een tik op (ongeveer)
       // dezelfde horizontale lijn als de werpplaats enkel de breedte ervan. Bij de eerste worp is
       // dat het opzetpunt (bv. de doellijn na een vangst in het doelgebied). Geen slepen — tikken.
@@ -401,7 +443,7 @@ export function Scorekeeper({
         return { p, tapCount: 1 }
       })
     },
-    [state.match.status, poss, pendingCatch, pendingTap, pendingOut, pendingThrow, recentTaps],
+    [state.match.status, poss, pendingCatch, pendingTap, pendingOut, pendingThrow, recentTaps, passMode],
   )
 
   // Stap 2: kies wie wierp → bereken de uitkomst en registreer (of vraag eerst naar aanraking).
@@ -603,7 +645,19 @@ export function Scorekeeper({
 
   // Tijdelijke markering op de gekozen plek terwijl je de werper kiest. Gevangen (dubbeltik) krijgt
   // een eigen kleur + ✋ zodat je in één oogopslag ziet of het grond of gevangen is.
-  const fieldMarkers: FieldMarker[] = pendingThrow
+  const fieldMarkers: FieldMarker[] = pendingPass
+    ? [
+        ...baseMarkers,
+        {
+          x: Math.max(0, Math.min(1, pendingPass.p.x)),
+          y: Math.max(0, Math.min(1, pendingPass.p.y)),
+          color: '#c9a0ff',
+          r: 9,
+          label: 'P',
+          ...(werpPoint ? { fromX: werpPoint.x, fromY: werpPoint.y } : {}),
+        },
+      ]
+    : pendingThrow
     ? [
         ...baseMarkers,
         {
@@ -626,6 +680,17 @@ export function Scorekeeper({
     return (
       <div className={`sk-rail sk-rail-${side} ${active ? 'active' : 'dim'}`}>
         <button type="button" className="sk-rail-btn" disabled={busy || !isLive} title="Vrijworp" onClick={() => act({ action: 'freethrow', teamId })}>VW</button>
+        {active && (
+          <button
+            type="button"
+            className={`sk-rail-btn sk-rail-pass${passMode ? ' on' : ''}`}
+            disabled={busy || !isLive}
+            title="Pass: tik waar de medespeler de bal aanneemt (verbruikt geen worp)"
+            onClick={() => { setPendingThrow(null); setPassMode((v) => !v) }}
+          >
+            P
+          </button>
+        )}
         <button type="button" className="sk-rail-btn" disabled={busy} title="Wissel" onClick={() => { setSubOut(null); setSubIn(null); setSubSide(side); setSubOpen(true) }}>⇄</button>
         <div className="sk-rail-dir" aria-label="speelrichting">{arrow}</div>
         {active && poss && (
@@ -731,6 +796,33 @@ export function Scorekeeper({
             </div>
             <div className="sk-modal-btns">
               <button type="button" className="sk-btn" onClick={() => setPendingThrow(null)}>Annuleren</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Pass (§6.10): wie neemt de bal aan? Verbruikt geen werpbeurt — enkel de werpplaats
+          verschuift. Voorwaarts doorgeven mag niet; dat meldt de server als fout. */}
+      {pendingPass && (
+        <div className="sk-entry sk-entry-pass">
+          <div className="sk-entry-box sk-pick">
+            <div className="sk-entry-head">
+              <span className="sk-entry-title">Wie vangt de pass?</span>
+              <span className="sk-entry-meta">
+                {possSide === 'home' ? state.teams.home.name : state.teams.away.name} · pass (geen worp)
+              </span>
+            </div>
+            <div className="sk-pick-grid">
+              {pickPlayers.length === 0 && <span className="sk-dim">Geen spelers op het veld.</span>}
+              {pickPlayers.map((p) => (
+                <button type="button" key={p.id} className="sk-pick-player" onClick={() => void submitPass(p.id)} title={p.name}>
+                  <span className="sk-pick-num">{p.shirtNumber}</span>
+                  <span className="sk-pick-naam">{firstName(p.name)}</span>
+                </button>
+              ))}
+            </div>
+            <div className="sk-modal-btns">
+              <button type="button" className="sk-btn" onClick={() => setPendingPass(null)}>Annuleren</button>
             </div>
           </div>
         </div>
