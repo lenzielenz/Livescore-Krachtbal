@@ -4,9 +4,11 @@ import { SiteHeader } from '@/components/SiteHeader'
 import { userClubId } from '@/lib/access'
 import { competitionWhere } from '@/lib/analyse-access'
 import { getAuthUser } from '@/lib/auth-user'
+import { clinchStatus, titelBoodschap } from '@/lib/championship'
 import { buildScoreboards, clubColors, clubLogoFit, clubLogoUrl } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
-import { COMPETITIE_REEKSEN, isAdultReeks, type Reeks } from '@/lib/reeksen'
+import { COMPETITIE_REEKSEN, isAdultReeks, reeksNaam, type Reeks } from '@/lib/reeksen'
+import { buildSuperstars } from '@/lib/superstars'
 import { computeStandings, forfaitFromUitslag, type StandingsMatch } from '@/lib/standings'
 import { RangTable, type RangRow } from './RangTable'
 import { ReeksPicker } from './ReeksPicker'
@@ -91,6 +93,33 @@ export default async function RangschikkingPage({ searchParams }: { searchParams
   const teamIds = [...teamInfo.keys()]
   const table = computeStandings(standingsMatches, teamIds)
 
+  // Titelstrijd: hoeveel wedstrijden heeft elke ploeg nog te spelen? Daarmee weet je of de leider
+  // al wiskundig kampioen is, of hoeveel zeges ze nog nodig heeft (src/lib/championship.ts).
+  const openRes = await payload
+    .find({
+      collection: 'matches',
+      where: { and: [{ reeks: { equals: reeks } }, { status: { not_equals: 'finished' } }, { analyseOnly: { not_equals: true } }] },
+      depth: 0,
+      limit: 1000,
+    })
+    .catch(() => ({ docs: [] as Record<string, unknown>[] }))
+  const remaining = new Map<number, number>()
+  for (const m of openRes.docs) {
+    for (const key of ['homeTeam', 'awayTeam'] as const) {
+      const id = rel((m as Record<string, unknown>)[key])
+      if (id == null) continue
+      remaining.set(id, (remaining.get(id) ?? 0) + 1)
+    }
+  }
+  const leaderId = table[0]?.teamId ?? null
+  const titel = leaderId != null ? clinchStatus(table, remaining, leaderId) : null
+  const titelMsg = titelBoodschap({
+    status: titel,
+    leaderName: leaderId != null ? (teamInfo.get(leaderId)?.name ?? null) : null,
+    reeksLabel: reeksNaam(reeks),
+    teamsInTable: table.length,
+  })
+
   // Degradatie-/gevarenzone: enkel bij volwassen reeksen (jeugd kan niet stijgen/dalen). De laatste
   // RELEGATION ploegen vallen in de zone — enkel tonen als de reeks groot genoeg is.
   const RELEGATION = 2
@@ -129,8 +158,13 @@ export default async function RangschikkingPage({ searchParams }: { searchParams
       moveCls,
       delta,
       danger: dangerFrom >= 0 && i >= dangerFrom,
+      champion: i === 0 && Boolean(titelMsg?.clinched),
     }
   })
+
+  // Topscorers van dezelfde reeks: je kijkt hier tóch al naar deze reeks, dus dat hoort hier —
+  // geen extra pagina of klik voor. Telt zowel worp-events als snelscore-doelpunten mee.
+  const topscorers = (await buildSuperstars(payload, reeks).catch(() => [])).slice(0, 5)
 
   // Snel bladeren door de reeksen-rangschikkingen (prev/next).
   const idx = COMPETITIE_REEKSEN.findIndex((o) => o.value === reeks)
@@ -156,10 +190,38 @@ export default async function RangschikkingPage({ searchParams }: { searchParams
           )}
         </div>
 
+        {titelMsg && (
+          <p className={`rang-titel${titelMsg.clinched ? ' clinched' : ''}`}>
+            <span aria-hidden>{titelMsg.clinched ? '🏆' : '🎯'}</span> {titelMsg.text}
+          </p>
+        )}
+
         {rows.length === 0 ? (
           <p className="empty">Nog geen ploegen of wedstrijden in deze reeks.</p>
         ) : (
           <RangTable rows={rows} showMove={adult} />
+        )}
+
+        {topscorers.length > 0 && (
+          <section className="rang-top">
+            <h2 className="rang-top-title">Topscorers</h2>
+            <ol className="rang-top-list">
+              {topscorers.map((p, i) => (
+                <li key={p.playerId} className="rang-top-row">
+                  <span className="rang-top-rank">{i + 1}</span>
+                  <Link href={`/spelers/${p.playerId}`} className="rang-top-naam">
+                    {p.shirtNumber != null && <span className="rang-top-num">{p.shirtNumber}</span>}
+                    {p.name}
+                    <span className="rang-top-team">{p.teamName}</span>
+                  </Link>
+                  <span className="rang-top-cijfers">
+                    <b>{p.points}</b> ptn
+                    <span className="rang-top-sub">{p.goals} {p.goals === 1 ? 'doelpunt' : 'doelpunten'}{p.rug > 0 ? ` · ${p.rug} rugworp${p.rug === 1 ? '' : 'en'}` : ''}</span>
+                  </span>
+                </li>
+              ))}
+            </ol>
+          </section>
         )}
       </div>
     </>
