@@ -132,6 +132,19 @@ export default async function AnalyseDetailPage({ params }: { params: Promise<{ 
         </div>
         <p className="an-head-meta">{reeks}{datum ? ` · ${datum}` : ''}</p>
 
+        <ErrorCatch label="De video-analyse">
+          <VideoAnalyse
+            matchId={matchId}
+            initialUrl={(matchDoc?.videoUrl as string | null) ?? null}
+            initialOffsetH1={(matchDoc?.videoOffsetH1 as number | null) ?? null}
+            initialOffsetH2={(matchDoc?.videoOffsetH2 as number | null) ?? null}
+            moments={videoMoments}
+            halfSeconds={halfSeconds}
+            teams={teamNames}
+            canEdit={mayEditVideo}
+          />
+        </ErrorCatch>
+
         <ShareCard
           matchId={matchId}
           teams={teamNames}
@@ -196,19 +209,6 @@ export default async function AnalyseDetailPage({ params }: { params: Promise<{ 
             )}
           </section>
         )}
-
-        <ErrorCatch label="De video-analyse">
-          <VideoAnalyse
-            matchId={matchId}
-            initialUrl={(matchDoc?.videoUrl as string | null) ?? null}
-            initialOffsetH1={(matchDoc?.videoOffsetH1 as number | null) ?? null}
-            initialOffsetH2={(matchDoc?.videoOffsetH2 as number | null) ?? null}
-            moments={videoMoments}
-            halfSeconds={halfSeconds}
-            teams={teamNames}
-            canEdit={mayEditVideo}
-          />
-        </ErrorCatch>
 
         <ErrorCatch label="De analyse-details">
           <AnalyseDetailView

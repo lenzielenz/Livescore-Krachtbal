@@ -180,38 +180,52 @@ export function VideoAnalyse({
 
   if (!canEdit && !source) return null
 
+  // Nog geen video? Dan is dit blok een uitnodiging, geen instellingenrij: grote uploadknop,
+  // duidelijke titel, en de link-invoer als tweede keuze. Zonder dat viel de plek waar je een
+  // opname toevoegt niet op tussen de rest van de analyse.
+  const leeg = !source
+
   return (
-    <section className="an-card va">
+    <section className={`an-card va${leeg && canEdit ? ' va-empty' : ''}`} id="video">
       <h2 className="an-h2">🎥 Video-analyse</h2>
 
       {canEdit && (
-        <div className="va-setup">
-          <input
-            className="va-url"
-            type="url"
-            inputMode="url"
-            placeholder="YouTube-link of https://…/wedstrijd.mp4"
-            value={draftUrl}
-            onChange={(e) => setDraftUrl(e.target.value)}
-            aria-label="Video-URL"
-          />
-          <button type="button" className="va-btn" onClick={() => void saveUrl()} disabled={busy || upPct !== null || draftUrl.trim() === url.trim()}>
-            {url ? 'Bijwerken' : 'Koppelen'}
-          </button>
-          <label className="va-btn va-upload">
-            {upPct === null ? '⬆ Video uploaden' : `Uploaden… ${upPct}%`}
+        <>
+          {leeg && (
+            <p className="va-lead">
+              Nog geen opname bij deze wedstrijd. Voeg ze toe — daarna springt elk doelpunt
+              hieronder rechtstreeks naar het juiste beeld.
+            </p>
+          )}
+          <div className="va-setup">
+            <label className={`va-btn va-upload${leeg ? ' primary' : ''}`}>
+              {upPct === null ? '⬆ Video uploaden' : `Uploaden… ${upPct}%`}
+              <input
+                type="file"
+                accept="video/mp4,video/webm"
+                disabled={upPct !== null}
+                onChange={(e) => {
+                  const f = e.target.files?.[0]
+                  e.target.value = ''
+                  if (f) upload(f)
+                }}
+              />
+            </label>
+            <span className="va-of">of</span>
             <input
-              type="file"
-              accept="video/mp4,video/webm"
-              disabled={upPct !== null}
-              onChange={(e) => {
-                const f = e.target.files?.[0]
-                e.target.value = ''
-                if (f) upload(f)
-              }}
+              className="va-url"
+              type="url"
+              inputMode="url"
+              placeholder="YouTube-link of https://…/wedstrijd.mp4"
+              value={draftUrl}
+              onChange={(e) => setDraftUrl(e.target.value)}
+              aria-label="Video-URL"
             />
-          </label>
-        </div>
+            <button type="button" className="va-btn" onClick={() => void saveUrl()} disabled={busy || upPct !== null || draftUrl.trim() === url.trim()}>
+              {url ? 'Bijwerken' : 'Koppelen'}
+            </button>
+          </div>
+        </>
       )}
 
       {upPct !== null && (
@@ -221,9 +235,9 @@ export function VideoAnalyse({
       )}
 
       {!source ? (
-        <p className="va-hint">
-          Koppel de opname van de wedstrijd. Daarna springt elk doelpunt hieronder rechtstreeks naar het juiste beeld.
-        </p>
+        canEdit ? null : (
+          <p className="va-hint">Nog geen opname bij deze wedstrijd.</p>
+        )
       ) : source.kind === 'link' ? (
         <p className="va-hint">
           Deze host laat insluiten niet toe.{' '}
