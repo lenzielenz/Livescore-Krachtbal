@@ -35,3 +35,20 @@
 .pf-avatar-ctrl { display: flex; flex-direction: column; gap: 8px; min-width: 180px; flex: 1; }
 .pf-zoom { display: flex; flex-direction: column; gap: 4px; font-size: 0.78rem; color: var(--dim); font-weight: 600; }
 .pf-zoom input[type='range'] { width: 100%; accent-color: var(--accent); }
+
+/* Account verwijderen — bewust onderaan en rustig van toon: geen knop waar je per ongeluk op tikt,
+   maar ook niet verstopt (verplicht vindbaar volgens het Play Store-beleid). */
+.av-card { margin-top: 22px; border-color: color-mix(in srgb, #ef476f 32%, var(--line)); }
+.av-title { margin: 0 0 6px; font-size: 1rem; }
+.av-tekst { margin: 0 0 12px; font-size: 0.86rem; color: var(--dim); line-height: 1.55; }
+.av-link { color: var(--accent); }
+.av-label { display: block; font-size: 0.82rem; margin-bottom: 6px; }
+.av-input {
+  width: 100%; max-width: 240px; padding: 9px 12px; border-radius: 10px; margin-bottom: 12px;
+  border: 1px solid var(--line); background: rgba(0, 0, 0, 0.25); color: var(--txt); font: inherit;
+  letter-spacing: 0.08em; text-transform: uppercase;
+}
+.av-fout { margin: 0 0 12px; font-size: 0.84rem; font-weight: 600; color: #ffd5e0; }
+.av-knoppen { display: flex; flex-wrap: wrap; gap: 8px; }
+.av-btn.danger { background: #3a1018; border-color: #5a1828; color: #ffd5e0; }
+.av-btn.danger:disabled { opacity: 0.45; }

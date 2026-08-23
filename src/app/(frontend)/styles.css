@@ -199,6 +199,21 @@ h3,
   padding: 24px 16px 64px;
 }
 
+/* Voettekst: privacybeleid + account verwijderen moeten vindbaar zijn (app-winkelbeleid). */
+.site-foot {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 0 16px 28px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  font-size: 0.78rem;
+  color: var(--dim);
+}
+.site-foot a { color: var(--dim); text-decoration: none; }
+.site-foot a:hover { color: var(--txt); text-decoration: underline; }
+
 /* ── Hub-dashboard (startpagina) ── */
 .hub-hero {
   margin: 14px 0 30px;

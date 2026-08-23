@@ -32,6 +32,15 @@ export default function RootLayout(props: { children: React.ReactNode }) {
     <html lang="nl" className={`${display.variable} ${body.variable}`}>
       <body>
         <main>{children}</main>
+        {/* Kleine voettekst met de pagina's die een app-winkel (en de wet) verwacht: het
+            privacybeleid en hoe je je account verwijdert. Bewust minimaal — geen linkfabriek. */}
+        <footer className="site-foot">
+          <a href="/privacy">Privacybeleid</a>
+          <span aria-hidden>·</span>
+          <a href="/account-verwijderen">Account verwijderen</a>
+          <span aria-hidden>·</span>
+          <a href="/reglement">Reglement</a>
+        </footer>
         <Toaster />
         <ServiceWorker />
       </body>
