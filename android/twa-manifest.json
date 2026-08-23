@@ -4,7 +4,7 @@
   "name": "Krachtbal Live",
   "launcherName": "Krachtbal",
   "display": "standalone",
-  "orientation": "portrait",
+  "orientation": "any",
   "themeColor": "#06140d",
   "themeColorDark": "#06140d",
   "navigationColor": "#06140d",
@@ -34,6 +34,12 @@
       "name": "Rangschikking",
       "shortName": "Stand",
       "url": "/rangschikking",
+      "chosenIconUrl": "https://livescore.kvkbf.be/icon-192.png"
+    },
+    {
+      "name": "Analyse",
+      "shortName": "Analyse",
+      "url": "/analyse",
       "chosenIconUrl": "https://livescore.kvkbf.be/icon-192.png"
     }
   ],

@@ -12,6 +12,31 @@ deploy: wat je op Railway uitrolt, staat meteen ook in de app.
 
 ---
 
+## Wat zit er in de app?
+
+Alles wat op de site staat, staat ook in de app — het is dezelfde webapp. Er is dus geen aparte
+"lite"-versie: live-bord, wedstrijdblad, aantekentafel, klassementen, pronostiek, training én de
+**volledige analyse inclusief video-analyse** zitten erin. Wat je te zien krijgt hangt af van je
+account, precies zoals op de site: een supporter ziet de publieke schermen, een coach met
+analyse-toegang ziet `/analyse` met de shot map, het passnetwerk en de video-analyse.
+
+Drie dingen zijn bewust op de app afgestemd:
+
+- **Schermstand vrij.** Het manifest staat op `orientation: "any"` in plaats van `portrait`. In een
+  TWA wordt die waarde de schermstand van de héle Android-activiteit: op `portrait` kan je een
+  wedstrijdvideo niet liggend bekijken, ook niet in volledig scherm. Video-analyse op een gsm is
+  liggend, dus die lock kan er niet zijn.
+- **Video kiezen of opnemen.** Het uploadveld aanvaardt `video/*`, zodat Android naast de galerij
+  ook de camera aanbiedt. Wat de server aanvaardt blijft mp4 en webm (wat een Android-toestel ook
+  opneemt); een ander formaat wordt meteen gemeld in plaats van na de upload.
+- **Grote uploads.** De app waarschuwt bij meer dan 50 MB op mobiele data, weigert vooraf wat groter
+  is dan `MAX_MATCH_VIDEO_MB`, en vraagt de app open te houden tijdens het uploaden. Een volledige
+  wedstrijd is al snel enkele honderden MB — over wifi uploaden is het advies.
+
+Snelkoppelingen (lang drukken op het app-icoon): **Live-bord**, **Rangschikking** en **Analyse**.
+
+---
+
 ## 0. Wat je nodig hebt
 
 | Wat | Waarom | Kost |
@@ -134,7 +159,8 @@ Play laat je niet publiceren tot dit compleet is:
 Gebaseerd op wat de app echt bewaart (zie ook `/privacy`):
 
 - **Persoonlijke info**: naam, e-mailadres — *verzameld*, *versleuteld onderweg*, *verwijderbaar*.
-- **Foto's**: profielfoto en tribunefoto's — *verzameld*.
+- **Foto's en video's**: profielfoto, tribunefoto's en de wedstrijdvideo's die coaches uploaden voor
+  de video-analyse — *verzameld*.
 - **Gezondheid**: ongevalsaangiften bevatten medische gegevens — *verzameld*, enkel toegankelijk
   voor club en federatie.
 - **App-activiteit**: check-ins, stemmen, pronostiek.
@@ -143,6 +169,15 @@ Gebaseerd op wat de app echt bewaart (zie ook `/privacy`):
 
 > Ga hier zorgvuldig door: een foutief ingevulde gegevensveiligheidsverklaring is een van de
 > vaakste redenen voor een afkeuring, en medische gegevens vallen op.
+
+### Inhoud van gebruikers
+
+De app laat mensen inhoud plaatsen: tribunefoto's en aanmoedigingen tijdens een wedstrijd, en
+wedstrijdvideo's bij de analyse. Google's beleid rond door gebruikers gemaakte inhoud vraagt dan om
+een manier om ongepaste inhoud te melden en te verwijderen. Vandaag kan de federatie/admin alles
+verwijderen in het beheer, en tribunefoto's verdwijnen sowieso een uur na de wedstrijd. Wil je
+zeker zitten vóór de review, voorzie dan ook een meldknop bij tribune-inhoud — dat is een kleine
+uitbreiding, maar ze hoort in de aanvraag beschreven te staan.
 
 ---
 

@@ -142,6 +142,7 @@ export default async function AnalyseDetailPage({ params }: { params: Promise<{ 
             halfSeconds={halfSeconds}
             teams={teamNames}
             canEdit={mayEditVideo}
+            maxMb={Number(process.env.MAX_MATCH_VIDEO_MB) || 512}
           />
         </ErrorCatch>
 

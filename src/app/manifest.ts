@@ -21,7 +21,10 @@ export default function manifest(): MetadataRoute.Manifest {
     // Alles binnen het domein hoort bij de app — anders opent de TWA interne links in een browser.
     scope: '/',
     display: 'standalone',
-    orientation: 'portrait',
+    // Bewust NIET op 'portrait' vastgezet: in de Android-app (TWA) wordt dit de schermstand van de
+    // hele activiteit, en dan kan je een wedstrijdvideo niet liggend bekijken. De schermen zijn
+    // responsief, dus we volgen het toestel.
+    orientation: 'any',
     background_color: '#06140d',
     theme_color: '#06140d',
     categories: ['sports'],
