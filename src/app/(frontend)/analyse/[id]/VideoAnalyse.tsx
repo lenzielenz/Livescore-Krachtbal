@@ -34,6 +34,7 @@ export function VideoAnalyse({
   halfSeconds,
   teams,
   canEdit,
+  maxMb,
 }: {
   matchId: number
   initialUrl: string | null
@@ -43,6 +44,9 @@ export function VideoAnalyse({
   halfSeconds: number
   teams: { home: string; away: string }
   canEdit: boolean
+  /** Maximale uploadgrootte van de server (MAX_MATCH_VIDEO_MB) — zo weigeren we een te groot
+   *  bestand vóór we een half uur zitten uploaden. */
+  maxMb: number
 }) {
   const [url, setUrl] = useState(initialUrl ?? '')
   const [draftUrl, setDraftUrl] = useState(initialUrl ?? '')
@@ -126,8 +130,30 @@ export function VideoAnalyse({
     if (ok) setSync((s) => (half === 1 ? { ...s, offsetH1: at } : { ...s, offsetH2: at }))
   }
 
-  /** De volledige matchvideo uploaden naar de server (streamt daar meteen naar schijf). */
+  /**
+   * De volledige matchvideo uploaden naar de server (streamt daar meteen naar schijf).
+   * Op een gsm is dit de gevoeligste stap: een wedstrijd van een uur is al snel honderden MB.
+   * Daarom eerst controleren wat we hier al weten, i.p.v. na tien minuten een foutmelding.
+   */
   const upload = (f: File) => {
+    const mb = f.size / (1024 * 1024)
+    // Android's camera levert mp4; de server aanvaardt mp4 en webm. Andere formaten (bv. .mkv of
+    // een .mov uit een iPhone-back-up) worden geweigerd — dat zeggen we meteen.
+    const bruikbaar = /mp4|webm/i.test(f.type) || /\.(mp4|webm)$/i.test(f.name)
+    if (!bruikbaar) {
+      setMsg(`Dit bestand (${f.name}) is geen mp4 of webm. Zet het eerst om, of plak een YouTube-link.`)
+      return
+    }
+    if (mb > maxMb) {
+      setMsg(`Deze video is ${Math.round(mb)} MB, meer dan de ${maxMb} MB die de server aanvaardt. Zet ze op YouTube en plak de link.`)
+      return
+    }
+    // Mobiele data: een grote upload kost dan echt geld/tijd. Even bevestigen.
+    const conn = (navigator as { connection?: { type?: string; effectiveType?: string; saveData?: boolean } }).connection
+    const mobiel = conn?.type === 'cellular' || conn?.saveData === true
+    if (mobiel && mb > 50 && !window.confirm(`Deze video is ${Math.round(mb)} MB en je zit op mobiele data. Toch uploaden?`)) {
+      return
+    }
     setMsg(null)
     setUpPct(0)
     const xhr = new XMLHttpRequest()
@@ -202,7 +228,7 @@ export function VideoAnalyse({
               {upPct === null ? '⬆ Video uploaden' : `Uploaden… ${upPct}%`}
               <input
                 type="file"
-                accept="video/mp4,video/webm"
+                accept="video/mp4,video/webm,video/*"
                 disabled={upPct !== null}
                 onChange={(e) => {
                   const f = e.target.files?.[0]
@@ -229,9 +255,12 @@ export function VideoAnalyse({
       )}
 
       {upPct !== null && (
-        <div className="va-progress" role="progressbar" aria-valuenow={upPct} aria-valuemin={0} aria-valuemax={100}>
-          <span style={{ width: `${upPct}%` }} />
-        </div>
+        <>
+          <div className="va-progress" role="progressbar" aria-valuenow={upPct} aria-valuemin={0} aria-valuemax={100}>
+            <span style={{ width: `${upPct}%` }} />
+          </div>
+          <p className="va-hint va-hint-sm">Hou de app open tot het uploaden klaar is.</p>
+        </>
       )}
 
       {!source ? (

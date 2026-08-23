@@ -62,3 +62,59 @@ export async function POST(req: Request) {
   await payload.update({ collection: 'users', id: (user as { id: number }).id, data, overrideAccess: true })
   return NextResponse.json({ ok: true })
 }
+
+/**
+ * Eigen account verwijderen. Verplicht voor de Play Store (apps met accountaanmaak moeten in de
+ * app én via het web te verwijderen zijn), en het is gewoon correct: je moet weg kunnen.
+ *
+ * Wat verdwijnt: het account zelf (naam, e-mail, foto, club, positie, check-ins, badges,
+ * voedings- en trainingsgegevens die op het account staan), de pushabonnementen en de MVP-stemmen.
+ * Wat blijft: de wedstrijdgegevens die je registreerde. Dat is het officiële verslag van een
+ * wedstrijd (score, worpen, wedstrijdblad) en dat mag niet verdwijnen omdat één aantekenaar zijn
+ * account sluit — de verwijzing naar jou wordt wel losgekoppeld. Zie /account-verwijderen.
+ */
+export async function DELETE(req: Request) {
+  const payload = await getPayloadClient()
+  const { user } = await payload.auth({ headers: await headers() }).catch(() => ({ user: null }))
+  if (!user) return NextResponse.json({ error: 'Niet ingelogd.' }, { status: 401 })
+  const userId = (user as { id: number }).id
+
+  // Bewuste bevestiging: dit is onomkeerbaar, dus niet met één toevallige klik.
+  let body: Record<string, unknown> = {}
+  try {
+    body = (await req.json()) as Record<string, unknown>
+  } catch {
+    // Lege body mag; de controle hieronder weigert dan alsnog.
+  }
+  if (String(body.bevestiging ?? '').trim().toUpperCase() !== 'VERWIJDER') {
+    return NextResponse.json({ error: 'Typ VERWIJDER om je account definitief te verwijderen.' }, { status: 400 })
+  }
+
+  // De laatste admin mag zichzelf niet verwijderen: dan raakt niemand nog in het beheer.
+  const roles = ((user as { roles?: unknown }).roles ?? []) as string[]
+  if (Array.isArray(roles) && roles.includes('admin')) {
+    const admins = await payload.count({ collection: 'users', where: { roles: { contains: 'admin' } }, overrideAccess: true })
+    if (admins.totalDocs <= 1) {
+      return NextResponse.json(
+        { error: 'Je bent de laatste beheerder. Maak eerst iemand anders beheerder, anders blijft het platform onbeheerd achter.' },
+        { status: 409 },
+      )
+    }
+  }
+
+  // Persoonlijke bijzaken die niets met het wedstrijdverslag te maken hebben: expliciet weg.
+  await payload.delete({ collection: 'push-subscriptions', where: { user: { equals: userId } }, overrideAccess: true }).catch(() => {})
+  await payload.delete({ collection: 'match-mvp-votes', where: { user: { equals: userId } }, overrideAccess: true }).catch(() => {})
+  const photoId = (user as { photo?: unknown }).photo
+  const photoRel = photoId && typeof photoId === 'object' ? (photoId as { id?: number }).id : photoId
+  if (typeof photoRel === 'number') {
+    await payload.delete({ collection: 'media', id: photoRel, overrideAccess: true }).catch(() => {})
+  }
+
+  await payload.delete({ collection: 'users', id: userId, overrideAccess: true })
+
+  // Meteen uitloggen: de sessie hoort bij een account dat niet meer bestaat.
+  const res = NextResponse.json({ ok: true })
+  res.cookies.set('payload-token', '', { maxAge: 0, path: '/' })
+  return res
+}

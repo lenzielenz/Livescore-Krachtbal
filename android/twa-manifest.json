@@ -1,0 +1,65 @@
+{
+  "packageId": "be.krachtbal.live",
+  "host": "livescore.kvkbf.be",
+  "name": "Krachtbal Live",
+  "launcherName": "Krachtbal",
+  "display": "standalone",
+  "orientation": "any",
+  "themeColor": "#06140d",
+  "themeColorDark": "#06140d",
+  "navigationColor": "#06140d",
+  "navigationColorDark": "#06140d",
+  "navigationDividerColor": "#06140d",
+  "navigationDividerColorDark": "#06140d",
+  "backgroundColor": "#06140d",
+  "enableNotifications": true,
+  "startUrl": "/",
+  "iconUrl": "https://livescore.kvkbf.be/icon-512.png",
+  "maskableIconUrl": "https://livescore.kvkbf.be/icon-maskable-512.png",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": "./android.keystore",
+    "alias": "krachtbal"
+  },
+  "appVersionName": "1.0.0",
+  "appVersionCode": 1,
+  "shortcuts": [
+    {
+      "name": "Live-bord",
+      "shortName": "Live",
+      "url": "/live",
+      "chosenIconUrl": "https://livescore.kvkbf.be/icon-192.png"
+    },
+    {
+      "name": "Rangschikking",
+      "shortName": "Stand",
+      "url": "/rangschikking",
+      "chosenIconUrl": "https://livescore.kvkbf.be/icon-192.png"
+    },
+    {
+      "name": "Analyse",
+      "shortName": "Analyse",
+      "url": "/analyse",
+      "chosenIconUrl": "https://livescore.kvkbf.be/icon-192.png"
+    }
+  ],
+  "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "https://livescore.kvkbf.be/manifest.webmanifest",
+  "fallbackType": "customtabs",
+  "features": {},
+  "alphaDependencies": {
+    "enabled": false
+  },
+  "enableSiteSettingsShortcut": true,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "fullScopeUrl": "https://livescore.kvkbf.be/",
+  "minSdkVersion": 21,
+  "appVersion": "1.0.0",
+  "additionalTrustedOrigins": [],
+  "retainedBundles": [],
+  "protocolHandlers": [],
+  "fileHandlers": [],
+  "launchHandlerClientMode": "navigate-existing",
+  "orientationLock": false
+}

@@ -6,6 +6,7 @@ import { getAuthUser } from '@/lib/auth-user'
 import { dedupeKey } from '@/lib/dedupe'
 import { normalizeLogoFit } from '@/lib/logo-fit'
 import { getPayloadClient } from '@/lib/payload-client'
+import { AccountVerwijderen } from './AccountVerwijderen'
 import { ProfileForm, type ProfileInitial } from './ProfileForm'
 import '../wedstrijdblad.css'
 import './profiel.css'
@@ -80,6 +81,7 @@ export default async function ProfielPage() {
           (uploaden, inzoomen en verschuiven). Klaar? <Link href="/profiel/scorecard" style={{ color: 'var(--accent)', fontWeight: 700 }}>Bekijk je scorecard →</Link> · <Link href="/profiel/paspoort" style={{ color: 'var(--accent)', fontWeight: 700 }}>Supporterpaspoort →</Link> · <Link href="/profiel/badges" style={{ color: 'var(--accent)', fontWeight: 700 }}>Badges →</Link>
         </p>
         <ProfileForm initial={initial} clubs={clubs} />
+        <AccountVerwijderen />
       </div>
     </>
   )
