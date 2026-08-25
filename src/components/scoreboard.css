@@ -30,7 +30,8 @@
   box-shadow:
     0 30px 70px -28px rgba(0, 0, 0, 0.7),
     0 0 0 1px rgba(255, 255, 255, 0.02),
-    0 0 60px -30px color-mix(in srgb, var(--accent) 50%, transparent),
+    0 24px 60px -26px color-mix(in srgb, var(--home) 42%, transparent),
+    0 24px 60px -26px color-mix(in srgb, var(--away) 42%, transparent),
     inset 0 1px 0 rgba(255, 255, 255, 0.08);
   -webkit-backdrop-filter: blur(6px);
   backdrop-filter: blur(6px);
@@ -49,25 +50,27 @@
   pointer-events: none;
   /* Kleur enkel in de bovenste zone (achter logo's + score); vloeit weg vóór de tekst eronder,
      zodat tijdlijn/reacties/tribune op een rustige donkere achtergrond staan. */
-  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 24%, transparent 52%);
-  mask-image: linear-gradient(to bottom, #000 0%, #000 24%, transparent 52%);
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 30%, transparent 60%);
+  mask-image: linear-gradient(to bottom, #000 0%, #000 30%, transparent 60%);
 }
 /* Zachte splitsing: thuiskleur links, uitkleur rechts; de grens schuift met --home-share. */
 .sb-arena-grad {
   position: absolute;
   inset: 0;
+  /* Verzadigder dan voorheen: de clubkleuren mogen poppen — de mask (hieronder) houdt de
+     tekstzone eronder sowieso rustig. */
   background: linear-gradient(
     100deg,
-    color-mix(in srgb, var(--home) 26%, transparent) 0%,
-    color-mix(in srgb, var(--home) 12%, transparent) calc(var(--home-share) * 100% - 30%),
+    color-mix(in srgb, var(--home) 46%, transparent) 0%,
+    color-mix(in srgb, var(--home) 20%, transparent) calc(var(--home-share) * 100% - 30%),
     transparent calc(var(--home-share) * 100%),
-    color-mix(in srgb, var(--away) 12%, transparent) calc(var(--home-share) * 100% + 30%),
-    color-mix(in srgb, var(--away) 26%, transparent) 100%
+    color-mix(in srgb, var(--away) 20%, transparent) calc(var(--home-share) * 100% + 30%),
+    color-mix(in srgb, var(--away) 46%, transparent) 100%
   );
-  opacity: 0.85;
+  opacity: 0.95;
 }
 /* Twee zacht drijvende kleur-blobs houden alles licht in beweging. */
-.sb-arena-blob { position: absolute; width: 70%; height: 70%; border-radius: 50%; filter: blur(64px); opacity: 0.26; }
+.sb-arena-blob { position: absolute; width: 70%; height: 70%; border-radius: 50%; filter: blur(64px); opacity: 0.42; }
 .sb-arena-blob.home {
   left: -18%; top: -28%;
   background: radial-gradient(circle, color-mix(in srgb, var(--home) 60%, transparent), transparent 70%);
