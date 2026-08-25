@@ -2,6 +2,7 @@ import { headers } from 'next/headers'
 import Link from 'next/link'
 import type { Where } from 'payload'
 
+import { BewaarWedstrijd } from '@/components/BewaarWedstrijd'
 import { SiteHeader } from '@/components/SiteHeader'
 import { TeamLogo } from '@/components/TeamLogo'
 import { competitionWhere } from '@/lib/analyse-access'
@@ -325,6 +326,10 @@ function WedstrijdRegel({
       </div>
       {!gespeeld && datum && (
         <div className="zk-agenda">
+          {/* Bewaren kan meteen vanuit de lijst — daarvoor hoef je de wedstrijd niet te openen. */}
+          <BewaarWedstrijd
+            wedstrijd={{ id, home: homeNaam, away: awayNaam, date: datum, reeks: reeksLabel }}
+          />
           {google && (
             <a className="zk-knop klein" href={google} target="_blank" rel="noopener noreferrer">
               📅 Google Agenda

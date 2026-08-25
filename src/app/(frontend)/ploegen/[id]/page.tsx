@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import type { ReactNode } from 'react'
 
+import { BewaarWedstrijd } from '@/components/BewaarWedstrijd'
 import { SiteHeader } from '@/components/SiteHeader'
 import { competitionWhere } from '@/lib/analyse-access'
 import { formatDateTimeBE } from '@/lib/datetime'
@@ -73,10 +74,16 @@ export default async function PloegProfiel({ params }: Params) {
       reeks: m.reeks ?? null,
       thuis,
       opponent: opponentName(thuis ? m.awayTeam : m.homeTeam),
+      // Beide ploegnamen: die gaan mee in het bewaar-lijstje, dat los van deze pagina leesbaar
+      // moet blijven ("KV Izegem – KV Roeselare" zegt meer dan "@ KV Roeselare").
+      home: opponentName(m.homeTeam),
+      away: opponentName(m.awayTeam),
       status: sb?.status ?? m.status ?? 'scheduled',
       score: sb?.score ?? null,
     }
   })
+  // Nog te spelen wedstrijden krijgen een sterretje om ze te bewaren; gespeelde uiteraard niet.
+  const nu = Date.now()
 
   const club = (team.club && typeof team.club === 'object' ? team.club : null) as
     | { id: number; name?: string }
@@ -113,20 +120,33 @@ export default async function PloegProfiel({ params }: Params) {
             </div>
             <ul className="ps-matches">
               {fixtures.map((f) => (
-                <Link key={f.id} href={`/match/${f.id}`} className="ps-match">
-                  <span className="ps-match-date">{f.date ? formatDateTimeBE(f.date) : 'Datum n.t.b.'}</span>
-                  <span className="ps-match-opp">
-                    {f.thuis ? 'vs' : '@'} {f.opponent}
-                    {f.reeks && f.reeks !== team.reeks ? <i className="ps-match-reeks"> · {reeksNaam(f.reeks)}</i> : null}
-                  </span>
-                  {f.status === 'live' ? (
-                    <span className="ps-match-live">LIVE</span>
-                  ) : f.status === 'finished' && f.score ? (
-                    <span className="ps-match-score">{f.score.home}–{f.score.away}</span>
-                  ) : (
-                    <span className="ps-match-vs">nog te spelen</span>
+                <li key={f.id} className="ps-match-rij">
+                  <Link href={`/match/${f.id}`} className="ps-match">
+                    <span className="ps-match-date">{f.date ? formatDateTimeBE(f.date) : 'Datum n.t.b.'}</span>
+                    <span className="ps-match-opp">
+                      {f.thuis ? 'vs' : '@'} {f.opponent}
+                      {f.reeks && f.reeks !== team.reeks ? <i className="ps-match-reeks"> · {reeksNaam(f.reeks)}</i> : null}
+                    </span>
+                    {f.status === 'live' ? (
+                      <span className="ps-match-live">LIVE</span>
+                    ) : f.status === 'finished' && f.score ? (
+                      <span className="ps-match-score">{f.score.home}–{f.score.away}</span>
+                    ) : (
+                      <span className="ps-match-vs">nog te spelen</span>
+                    )}
+                  </Link>
+                  {f.status === 'scheduled' && f.date && new Date(f.date).getTime() > nu && (
+                    <BewaarWedstrijd
+                      wedstrijd={{
+                        id: f.id,
+                        home: f.home,
+                        away: f.away,
+                        date: f.date,
+                        reeks: f.reeks ? reeksNaam(f.reeks) : null,
+                      }}
+                    />
                   )}
-                </Link>
+                </li>
               ))}
             </ul>
           </section>

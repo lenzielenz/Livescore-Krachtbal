@@ -1,0 +1,32 @@
+/* Sterretje "bewaar deze wedstrijd" in lijsten (zoekresultaat, seizoensagenda). Bewust klein en
+   stil: het mag de rij niet overstemmen, maar moet wel meteen te vinden zijn. */
+.bewaar-ster {
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--dim);
+  font: inherit;
+  font-size: 0.95rem;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    color var(--dur-1, 0.15s) ease,
+    border-color var(--dur-1, 0.15s) ease,
+    background var(--dur-1, 0.15s) ease;
+}
+.bewaar-ster:hover {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
+}
+.bewaar-ster.on {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+.bewaar-ster:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
