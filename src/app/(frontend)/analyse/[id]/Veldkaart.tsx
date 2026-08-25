@@ -96,8 +96,10 @@ export function Veldkaart({
     if (!svg || imgBusy) return
     setImgBusy(true)
     try {
-      const blob = await svgToPngBlob(svg as SVGSVGElement, { scale: 3, background: '#0b1c14' })
-      const name = slugFilename('krachtbal', 'veldkaart', teams.home, 'vs', teams.away, matchLabel) + '.png'
+      // Hoge resolutie (ook voor de heatmap): schaal 6 ≈ 1100×3000 px — scherp genoeg om in
+      // WhatsApp op in te zoomen of af te drukken.
+      const blob = await svgToPngBlob(svg as SVGSVGElement, { scale: 6, background: '#0b1c14' })
+      const name = slugFilename('krachtbal', wat === 'heat' ? 'heatmap' : 'veldkaart', teams.home, 'vs', teams.away, matchLabel) + '.png'
       await saveOrShareBlob(blob, name, matchLabel ?? 'Krachtbal')
     } catch {
       // stil: gebruiker kan opnieuw proberen

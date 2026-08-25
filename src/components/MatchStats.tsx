@@ -69,7 +69,8 @@ export function MatchStats({
     if (!svg || imgBusy) return
     setImgBusy(true)
     try {
-      const blob = await svgToPngBlob(svg as SVGSVGElement, { scale: 3, background: '#0b1c14' })
+      // Hoge resolutie (ook voor de heatmap): schaal 6 is scherp genoeg voor inzoomen/afdrukken.
+      const blob = await svgToPngBlob(svg as SVGSVGElement, { scale: 6, background: '#0b1c14' })
       const viewName = view === 'flow' ? 'flow' : view === 'heat' ? 'heatmap' : 'punten'
       const name = slugFilename('krachtbal', viewName, teams.home, 'vs', teams.away, matchLabel) + '.png'
       await saveOrShareBlob(blob, name, matchLabel ?? 'Krachtbal')
