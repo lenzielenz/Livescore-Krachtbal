@@ -1060,3 +1060,29 @@
   .lb-row.now .lbl-color { animation: lbl-aurora 15s ease-in-out infinite; }
   .lb-row.now .lbl-gl { animation: lbl-sheen 9s ease-in-out infinite; }
 }
+
+/* ── Net gescoord ─────────────────────────────────────────────────────────────────────────────
+   Het bord werkt zichzelf bij (day-channel.ts). Verandert een stand, dan licht die ene rij even
+   op — genoeg om het te zien wanneer je toevallig kijkt, kort genoeg om niet te storen wanneer je
+   naar iets anders zoekt. Wie beweging liever mijdt, krijgt enkel een rustige rand. */
+.lb-row.scored .lb-match {
+  animation: lb-scored 2.4s ease-out 1;
+}
+@keyframes lb-scored {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 70%, transparent); }
+  18% { box-shadow: 0 0 26px 6px color-mix(in srgb, var(--accent) 55%, transparent); }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+.lb-row.scored .lbl-score {
+  animation: lb-scored-num 2.4s ease-out 1;
+}
+@keyframes lb-scored-num {
+  0% { transform: scale(1); }
+  16% { transform: scale(1.22); color: var(--accent); }
+  100% { transform: scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lb-row.scored .lb-match,
+  .lb-row.scored .lbl-score { animation: none; }
+  .lb-row.scored .lb-match { outline: 2px solid color-mix(in srgb, var(--accent) 60%, transparent); }
+}

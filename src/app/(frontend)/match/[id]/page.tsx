@@ -347,6 +347,24 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
         <LiveStream url={String(matchDoc.livestreamUrl)} live={state.match.status === 'live'} />
       )}
 
+      {/* Niet ingelogd? Toon dan wat je hier mist — concreet, niet als reclame. Wie enkel de
+          score komt halen, heeft alles al gezien; wie meedoet, krijgt er een wedstrijd bij. */}
+      {!me && (
+        <section className="match-meedoen">
+          <h2 className="match-meedoen-titel">Meedoen kan ook</h2>
+          <ul className="match-meedoen-lijst">
+            <li><span aria-hidden>💬</span> Moedig aan in de tribune — je bericht verschijnt live op het scorebord</li>
+            <li><span aria-hidden>🔮</span> Voorspel de uitslag en klim in de pronostiekstand</li>
+            <li><span aria-hidden>⭐</span> Stem op de held van de match</li>
+            <li><span aria-hidden>🎫</span> Duid aan dat je erbij was — dat vult je supporterspaspoort en levert badges op</li>
+          </ul>
+          <div className="match-meedoen-knoppen">
+            <Link href="/registreren" className="match-meedoen-btn">Gratis account →</Link>
+            <Link href="/inloggen" className="match-meedoen-link">Al lid? Inloggen</Link>
+          </div>
+        </section>
+      )}
+
       {/* "Ik ben erbij" — supporters bouwen zo hun seizoenspaspoort op. */}
       {me && (
         <div className="match-checkin">

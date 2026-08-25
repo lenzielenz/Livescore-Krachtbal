@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useEffect, useMemo, useState, type CSSProperties } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 
 import { PushOptIn } from '@/components/PushOptIn'
 import { TeamLogo } from '@/components/TeamLogo'
@@ -70,10 +70,90 @@ function useFavSet(key: string): [Set<number>, (id: number) => void] {
   return [set, toggle]
 }
 
+
+/**
+ * Houdt het bord vanzelf actueel. Eén gedeelde verbinding per dag (zie day-channel.ts) stuurt
+ * enkel de veranderlijke stand door; namen, logo's en kleuren blijven staan. Bewust alleen
+ * verbinden wanneer er iets te volgen valt (vandaag, of een lopende/te noteren wedstrijd) en
+ * alleen terwijl het tabblad zichtbaar is — een bord dat in je achterzak openstaat, hoeft niet
+ * te blijven pollen.
+ *
+ * Geeft ook terug welke wedstrijden NET gescoord hebben, zodat de rij even kan oplichten.
+ */
+function useLiveScores(initial: DayMatch[], date: string, today: string): [DayMatch[], Set<number>] {
+  const [scores, setScores] = useState<Record<number, Partial<DayMatch>>>({})
+  const [flash, setFlash] = useState<Set<number>>(new Set())
+  const vorige = useRef<Record<number, string>>({})
+
+  const nodig = date === today || initial.some((m) => m.status === 'live' || m.awaitingResult)
+
+  useEffect(() => {
+    if (!nodig || typeof window === 'undefined') return
+    let es: EventSource | null = null
+    const timers: ReturnType<typeof setTimeout>[] = []
+
+    const open = () => {
+      if (es) return
+      es = new EventSource(`/api/live/stream?date=${date}`)
+      es.addEventListener('scores', (e) => {
+        let lijst: (Partial<DayMatch> & { id: number })[] = []
+        try {
+          lijst = JSON.parse((e as MessageEvent).data) as (Partial<DayMatch> & { id: number })[]
+        } catch {
+          return
+        }
+        const perId: Record<number, Partial<DayMatch>> = {}
+        const nieuw = new Set<number>()
+        for (const s of lijst) {
+          perId[s.id] = s
+          const sleutel = `${s.score?.home ?? 0}-${s.score?.away ?? 0}`
+          const was = vorige.current[s.id]
+          // Enkel oplichten bij een ECHTE wijziging, niet bij de eerste frame (dan weet je nog
+          // niets en zou het hele bord knipperen).
+          if (was !== undefined && was !== sleutel) nieuw.add(s.id)
+          vorige.current[s.id] = sleutel
+        }
+        setScores(perId)
+        if (nieuw.size > 0) {
+          setFlash((prev) => new Set([...prev, ...nieuw]))
+          timers.push(
+            setTimeout(() => {
+              setFlash((prev) => {
+                const next = new Set(prev)
+                for (const id of nieuw) next.delete(id)
+                return next
+              })
+            }, 2600),
+          )
+        }
+      })
+    }
+    const close = () => {
+      es?.close()
+      es = null
+    }
+    const onVis = () => (document.visibilityState === 'visible' ? open() : close())
+
+    onVis()
+    document.addEventListener('visibilitychange', onVis)
+    return () => {
+      document.removeEventListener('visibilitychange', onVis)
+      for (const t of timers) clearTimeout(t)
+      close()
+    }
+  }, [date, nodig])
+
+  const samen = useMemo(
+    () => initial.map((m) => (scores[m.id] ? { ...m, ...scores[m.id] } : m)),
+    [initial, scores],
+  )
+  return [samen, flash]
+}
+
 export function LiveBoard({
   date,
   today,
-  matches,
+  matches: initialMatches,
   myClubId = null,
   supportersMode = false,
 }: {
@@ -87,6 +167,8 @@ export function LiveBoard({
   supportersMode?: boolean
 }) {
   const router = useRouter()
+  // Het bord werkt zichzelf bij zolang er iets te volgen valt (zie useLiveScores hierboven).
+  const [matches, netGescoord] = useLiveScores(initialMatches, date, today)
   const [favTeams, toggleTeam] = useFavSet(FAV_TEAMS_KEY)
   const [favClubs, toggleClub] = useFavSet(FAV_CLUBS_KEY)
   const [reeksFilter, setReeksFilter] = useState<string | null>(null)
@@ -373,7 +455,7 @@ export function LiveBoard({
                         schakelt de dure bewegende/blur-effecten (aurora, glans, matglas) in — enkel
                         voor de paar écht-lopende wedstrijden, anders hapert het scrollen door
                         tientallen tegelijk animerende/blurrende rijen. */}
-                    <div className={`lb-row live ${live ? 'now' : ''}`}>
+                    <div className={`lb-row live ${live ? 'now' : ''}${netGescoord.has(m.id) ? ' scored' : ''}`}>
                       <button
                         type="button"
                         className={`lb-star ${rowFav ? 'on' : ''}`}
