@@ -1455,28 +1455,99 @@ h3,
 .match-meedoen-link:hover { color: var(--txt); text-decoration: underline; }
 
 /* ── Wedstrijd die nog moet komen ────────────────────────────────────────────────────────────
-   Geen scorebord op 0–0, geen tribune, geen aantekenknop: enkel wie tegen wie, wanneer, en de
-   twee dingen die je nú wil doen — bewaren in je lijstje en in je agenda zetten. */
-.match-aankondiging {
+   Geen scorebord op 0–0, geen tribune, geen aantekenknop — maar wél een echte affiche: logo's
+   en clubkleuren zoals op de live-bordkaarten (--hc/--ac per wedstrijd via inline-stijl), met
+   daaronder de twee dingen die je nú wil doen: bewaren en in je agenda zetten. */
+.match-affiche {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
   margin: 16px 0 10px;
-  padding: 20px 16px;
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  background: var(--panel);
+  padding: 22px 18px 16px;
+  border-radius: 18px;
+  background: #0b0f15;
   text-align: center;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 0 0 1px rgba(255, 255, 255, 0.07),
+    0 14px 34px -14px color-mix(in srgb, var(--hc, var(--accent)) 55%, transparent),
+    0 14px 34px -14px color-mix(in srgb, var(--ac, var(--accent)) 55%, transparent),
+    0 16px 38px -18px rgba(0, 0, 0, 0.85);
 }
-.match-aankondiging-ploegen {
-  margin: 0;
+/* Zelfde rijke diagonaal als de live-bordkaarten: clubkleuren die elkaar in een lichte naad
+   ontmoeten; een mask houdt de onderkant (namen + aftrap) rustig leesbaar. */
+.match-affiche-kleur {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(
+    115deg,
+    color-mix(in srgb, var(--hc, var(--accent)) 82%, #0a0e14) 0%,
+    color-mix(in srgb, var(--hc, var(--accent)) 34%, #0c1018) 40%,
+    color-mix(in srgb, var(--ac, var(--accent)) 34%, #0c1018) 60%,
+    color-mix(in srgb, var(--ac, var(--accent)) 82%, #0a0e14) 100%
+  );
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 45%, rgba(0, 0, 0, 0.25) 100%);
+  mask-image: linear-gradient(to bottom, #000 0%, #000 45%, rgba(0, 0, 0, 0.25) 100%);
+}
+.match-affiche::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 55%;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.13), rgba(255, 255, 255, 0));
+}
+.match-affiche-kop {
   display: flex;
-  flex-wrap: wrap;
+  align-items: center;
   justify-content: center;
-  align-items: baseline;
-  gap: 10px;
-  font-size: 1.15rem;
-  font-weight: 800;
+  gap: 22px;
 }
-.match-aankondiging-vs { color: var(--dim); font-size: 0.82rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; }
-.match-aankondiging-wanneer { margin: 8px 0 0; color: var(--dim); font-size: 0.9rem; }
+.match-affiche-kop > * { filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.5)); }
+.match-affiche-vs {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.32em;
+  text-indent: 0.32em;
+  color: #fff;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.05));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+.match-affiche-namen {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 14px;
+}
+.match-affiche-naam {
+  min-width: 0;
+  font-weight: 800;
+  font-size: 1.02rem;
+  color: #fff;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+}
+.match-affiche-naam.away { text-align: right; }
+.match-affiche-wanneer {
+  display: inline-block;
+  margin: 12px 0 0;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: rgba(6, 9, 14, 0.5);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.84rem;
+}
 
 .match-toekomst { margin: 0 0 18px; }
 .match-toekomst-lead { margin: 0 0 10px; font-size: 0.88rem; color: var(--dim); text-align: center; }
