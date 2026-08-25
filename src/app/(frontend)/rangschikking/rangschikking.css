@@ -137,8 +137,10 @@
   }
   /* DV–DT-kolom verbergen, maar als 0-breedte kolom BEHOUDEN (niet display:none): zo blijft de
      tabel 9 kolommen tellen en matcht de colSpan=9 van de detailrij — anders ontstaat er een
-     spookkolom die bij het openklappen alles opzij duwt. */
-  .rang-dv {
+     spookkolom die bij het openklappen alles opzij duwt.
+     Dubbele klasse-selector: moet winnen van `.rang-table thead th` (font-size/kleur), anders
+     lekt er een sliertje "DV–DT"-tekst naast de PTN-kop. */
+  .rang-table .rang-dv {
     width: 0;
     max-width: 0;
     padding-left: 0;
@@ -175,7 +177,12 @@
 }
 
 /* Positie-verschil t.o.v. vorige week + highlight van de eigen club. */
-.rang-rank .rang-pos { display: block; }
+.rang-rank .rang-pos {
+  display: block;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
 .rang-move {
   display: block;
   margin-top: 2px;
@@ -221,28 +228,33 @@
 .rang-detail-item b.pos { color: #0fe0a6; }
 .rang-detail-item b.neg { color: #ef476f; }
 
-/* Podium: goud / zilver / brons — een verzorgde linkrand + getinte rang + zachte achtergrondgloed. */
+/* Zones zoals de professionele standen: enkel een dun kleurbalkje links van de rij — geen
+   medailles, geen getint cijfer, geen gloed. Het cijfer blijft overal identiek en uitgelijnd. */
 .rang-leader td:first-child { box-shadow: inset 4px 0 0 0 #ffd166; }
-.rang-leader { background: linear-gradient(90deg, color-mix(in srgb, #ffd166 14%, transparent), transparent 45%); }
-.rang-leader .rang-pos { color: #ffd166; }
 .rang-leader .rang-name { font-weight: 800; }
 .rang-silver td:first-child { box-shadow: inset 4px 0 0 0 #cfd6de; }
-.rang-silver { background: linear-gradient(90deg, color-mix(in srgb, #cfd6de 10%, transparent), transparent 45%); }
-.rang-silver .rang-pos { color: #dfe4ea; }
 .rang-bronze td:first-child { box-shadow: inset 4px 0 0 0 #cd7f32; }
-.rang-bronze { background: linear-gradient(90deg, color-mix(in srgb, #cd7f32 12%, transparent), transparent 45%); }
-.rang-bronze .rang-pos { color: #e0a064; }
-.rang-crown { margin-right: 3px; font-size: 0.9em; }
-/* Degradatie-/gevarenzone (enkel volwassen reeksen): rode linkrand + zachte rode gloed. */
+/* Degradatie-/gevarenzone (enkel volwassen reeksen): rood balkje. */
 .rang-danger td:first-child { box-shadow: inset 4px 0 0 0 #ef476f; }
-.rang-danger { background: linear-gradient(90deg, color-mix(in srgb, #ef476f 13%, transparent), transparent 48%); }
-.rang-danger .rang-pos { color: #ef476f; }
+/* Kampioensbadge naast de naam (enkel wanneer de titel wiskundig binnen is). */
+.rang-champ { font-size: 0.9em; }
+/* Kleursleutels in de legende. */
+.rang-key {
+  display: inline-block;
+  width: 4px;
+  height: 11px;
+  border-radius: 2px;
+  vertical-align: -1px;
+  margin-right: 3px;
+}
+.rang-key.goud { background: #ffd166; }
+.rang-key.rood { background: #ef476f; }
 /* Eigen club (ingelogd) springt eruit — wint van de podium-styling wanneer ze samenvallen. */
 .rang-mine {
   background: color-mix(in srgb, var(--accent) 14%, transparent);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent);
 }
-.rang-mine .rang-pos,
+/* Enkel de naam kleurt mee — het positiecijfer blijft neutraal, net als bij elke andere rij. */
 .rang-mine .rang-name { color: var(--accent); }
 .rang-mine td:first-child { box-shadow: inset 4px 0 0 0 var(--accent); }
 .rang-mybadge { margin-left: 6px; color: var(--accent); font-size: 0.85em; }

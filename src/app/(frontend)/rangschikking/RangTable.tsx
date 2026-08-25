@@ -75,8 +75,10 @@ export function RangTable({ rows, showMove = true }: { rows: RangRow[]; showMove
                   aria-expanded={isOpen}
                   aria-label={`${r.name} — meer cijfers`}
                 >
+                  {/* Enkel het cijfer, altijd op exact dezelfde plek — de zone (leider/podium/
+                      degradatie) zit in het kleurbalkje links van de rij, niet in het cijfer. */}
                   <td className="rang-rank">
-                    <span className="rang-pos">{r.rank === 1 && <span className="rang-crown" aria-hidden title={r.champion ? 'Wiskundig kampioen' : undefined}>{r.champion ? '🏆' : '🥇'}</span>}{r.rank === 2 && <span className="rang-crown" aria-hidden>🥈</span>}{r.rank === 3 && <span className="rang-crown" aria-hidden>🥉</span>}{r.danger && <span className="rang-crown" aria-hidden>🔻</span>}{r.rank}</span>
+                    <span className="rang-pos">{r.rank}</span>
                     {showMove && (
                       <span className={`rang-move ${r.moveCls}`} title="T.o.v. vorige week">
                         {moveArrow}{r.delta !== 0 ? Math.abs(r.delta) : ''}
@@ -88,7 +90,7 @@ export function RangTable({ rows, showMove = true }: { rows: RangRow[]; showMove
                       <span className="rang-logo">
                         <TeamLogo name={r.name} logoUrl={r.logoUrl} logoFit={r.logoFit} side="home" size="sm" ringColor={r.ringColor} />
                       </span>
-                      <span className="rang-name">{r.name}{r.mine && <span className="rang-mybadge" title="Jouw club">★</span>}</span>
+                      <span className="rang-name">{r.name}{r.champion && <span className="rang-champ" title="Wiskundig kampioen" aria-label="Wiskundig kampioen"> 🏆</span>}{r.mine && <span className="rang-mybadge" title="Jouw club">★</span>}</span>
                       <span className="rang-caret" aria-hidden>{isOpen ? '▾' : '▸'}</span>
                     </div>
                   </td>
@@ -123,7 +125,11 @@ export function RangTable({ rows, showMove = true }: { rows: RangRow[]; showMove
         </tbody>
       </table>
     </div>
-    <p className="rang-legend">🥇 leider{hasDanger ? ' · 🔻 degradatiezone' : ''} · ★ jouw club{showMove ? ' · ▲▼ t.o.v. vorige week' : ''} · tik op een ploeg voor meer cijfers</p>
+    <p className="rang-legend">
+      <i className="rang-key goud" aria-hidden /> leider
+      {hasDanger && <> · <i className="rang-key rood" aria-hidden /> degradatiezone</>}
+      {' · '}★ jouw club{showMove ? ' · ▲▼ t.o.v. vorige week' : ''} · tik op een ploeg voor meer cijfers
+    </p>
     </>
   )
 }
