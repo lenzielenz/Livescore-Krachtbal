@@ -1,0 +1,117 @@
+/* ── Veldkaart: het hoofdscherm van de analyse ─────────────────────────────────────────────────
+   Eén groot veld met twee vragen eromheen: welke worp en welke speler. Bewust rijker gestyled
+   dan de rest — dit is de kaart waar de coach mee begint, de rest is detail. */
+
+.vk {
+  margin: 18px 0 22px;
+  padding: 18px 16px 16px;
+  border: 1px solid color-mix(in srgb, var(--accent, #06d6a0) 32%, var(--line, rgba(255, 255, 255, 0.12)));
+  border-radius: 18px;
+  background:
+    radial-gradient(120% 80% at 50% 0%, color-mix(in srgb, var(--accent, #06d6a0) 10%, transparent), transparent 60%),
+    var(--panel, rgba(255, 255, 255, 0.03));
+  box-shadow: 0 18px 44px -28px color-mix(in srgb, var(--accent, #06d6a0) 55%, transparent);
+}
+
+.vk-head { text-align: center; margin-bottom: 12px; }
+.vk-titel {
+  margin: 0;
+  font-size: 1.2rem;
+  letter-spacing: 0.01em;
+}
+.vk-sub { margin: 4px 0 0; font-size: 0.84rem; color: var(--dim, #9aa7b4); }
+
+.vk-filters,
+.vk-spelers {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin: 0 0 8px;
+}
+.vk-spelers { margin-bottom: 12px; }
+
+.vk-chip {
+  padding: 7px 13px;
+  border-radius: 999px;
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.14));
+  background: rgba(0, 0, 0, 0.22);
+  color: var(--dim, #9aa7b4);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+}
+.vk-chip:hover { color: var(--txt, #e8eef2); border-color: color-mix(in srgb, var(--accent, #06d6a0) 45%, var(--line, rgba(255, 255, 255, 0.14))); }
+.vk-chip.on {
+  color: #06121f;
+  background: var(--accent, #06d6a0);
+  border-color: var(--accent, #06d6a0);
+  transform: translateY(-1px);
+}
+/* Spelerchips dragen de ploegkant mee zodat je in één oogopslag ziet wie bij wie hoort. */
+.vk-chip.side-home:not(.on) { border-left: 3px solid var(--accent, #06d6a0); }
+.vk-chip.side-away:not(.on) { border-left: 3px solid #4cc9f0; }
+.vk-chip.side-away.on { background: #4cc9f0; border-color: #4cc9f0; }
+
+.vk-veldwrap { display: flex; justify-content: center; }
+.vk-veld {
+  width: min(420px, 100%);
+  height: auto;
+  filter: drop-shadow(0 10px 30px rgba(0, 0, 0, 0.45));
+}
+
+.vk-telling {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 14px;
+  margin: 12px 0 6px;
+  font-size: 0.86rem;
+  color: var(--dim, #9aa7b4);
+}
+.vk-tel b { color: var(--txt, #e8eef2); font-variant-numeric: tabular-nums; }
+.vk-tel.goal b { color: #06d6a0; }
+.vk-tel.vang b { color: #4cc9f0; }
+.vk-tel.uit b { color: #ef476f; }
+
+.vk-legende {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px 14px;
+  font-size: 0.76rem;
+  color: var(--dim, #9aa7b4);
+}
+.vk-legende i {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  margin-right: 4px;
+  vertical-align: baseline;
+}
+.vk-note { opacity: 0.8; }
+.vk-heat-scale {
+  display: inline-block;
+  width: 64px;
+  height: 10px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #06d6a0, #ffd166, #ef476f);
+}
+
+.vk-acties { display: flex; justify-content: center; margin-top: 12px; }
+.vk-dl {
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.14));
+  background: transparent;
+  color: var(--dim, #9aa7b4);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.vk-dl:hover:not(:disabled) { color: var(--txt, #e8eef2); background: rgba(255, 255, 255, 0.06); }
+.vk-dl:disabled { opacity: 0.5; cursor: default; }

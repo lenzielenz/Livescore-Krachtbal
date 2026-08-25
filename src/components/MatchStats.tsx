@@ -42,6 +42,7 @@ export function MatchStats({
   goalAreaDepth = 10,
   focusPlayerId,
   matchLabel,
+  hideShotmap = false,
 }: {
   stats: Stats
   shots: ShotPoint[]
@@ -51,6 +52,8 @@ export function MatchStats({
   focusPlayerId?: number
   /** Wedstrijd-omschrijving (reeks · datum) voor de gedownloade video. */
   matchLabel?: string
+  /** Verberg het veld met de worpenkaart — voor pagina's die al een (grotere) veldkaart tonen. */
+  hideShotmap?: boolean
 }) {
   const [playerFilter, setPlayerFilter] = useState<number | 'all'>(focusPlayerId ?? 'all')
   const [goalsOnly, setGoalsOnly] = useState(false)
@@ -118,7 +121,8 @@ export function MatchStats({
         <CompareBar label="Max afstand (m)" home={stats.teams.home.maxDistance} away={stats.teams.away.maxDistance} fmt={(n) => n.toFixed(1)} />
       </div>
 
-      <div className="stats-grid">
+      <div className={hideShotmap ? undefined : 'stats-grid'}>
+        {!hideShotmap && (
         <div className="shotmap">
           <div className="shotmap-controls">
             <button type="button" className={view === 'dots' ? 'on' : ''} onClick={() => setView('dots')}>Punten</button>
@@ -191,6 +195,7 @@ export function MatchStats({
             </>
           )}
         </div>
+        )}
 
         <div className="player-table-wrap">
           <div className="pt-filter">

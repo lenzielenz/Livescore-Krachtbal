@@ -2602,3 +2602,40 @@ select.rang-picker {
 .va-upload input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
 .va-progress { margin-top: 10px; height: 6px; border-radius: 999px; background: rgba(255, 255, 255, 0.1); overflow: hidden; }
 .va-progress span { display: block; height: 100%; background: var(--accent); transition: width 0.2s ease; }
+
+/* ── Ingeklapte verdieping op de analyse-detailpagina ─────────────────────────────────────────
+   De veldkaart en de video zijn het dagelijkse werk; grafieken, spelerstabellen en de deelkaart
+   staan hieronder achter één klik, zodat de pagina niet meer aanvoelt als tien schermen op elkaar. */
+.an-fold {
+  margin: 12px 0;
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.12));
+  border-radius: 14px;
+  background: var(--panel, rgba(255, 255, 255, 0.03));
+  overflow: hidden;
+}
+.an-fold > summary {
+  padding: 13px 16px;
+  cursor: pointer;
+  font-weight: 800;
+  font-size: 0.95rem;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.an-fold > summary::-webkit-details-marker { display: none; }
+.an-fold > summary::after {
+  content: '▾';
+  margin-left: auto;
+  color: var(--dim, #9aa7b4);
+  transition: transform 0.15s ease;
+}
+.an-fold[open] > summary::after { transform: rotate(180deg); }
+.an-fold > summary:hover { background: rgba(255, 255, 255, 0.04); }
+.an-fold[open] { padding-bottom: 12px; }
+.an-fold[open] > summary { border-bottom: 1px solid var(--line, rgba(255, 255, 255, 0.12)); margin-bottom: 10px; }
+.an-fold > *:not(summary) { margin-left: 12px; margin-right: 12px; }
+
+/* Video bewaren/doorsturen op de gsm (onder de speler). a-elementen delen de va-btn-stijl. */
+.va-take { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 4px; }
+.va-take .va-btn { text-decoration: none; display: inline-flex; align-items: center; gap: 4px; }

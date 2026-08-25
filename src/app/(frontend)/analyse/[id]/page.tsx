@@ -13,6 +13,7 @@ import { reeksHalfDurationSeconds, reeksNaam, type Reeks } from '@/lib/reeksen'
 import { mayEditMatchVideo } from '@/lib/video-access'
 import { AnalyseDetailView } from './AnalyseDetailView'
 import { ShareCard } from './ShareCard'
+import { Veldkaart } from './Veldkaart'
 import { VideoAnalyse, type VideoMoment } from './VideoAnalyse'
 import '../analyse.css'
 
@@ -132,6 +133,25 @@ export default async function AnalyseDetailPage({ params }: { params: Promise<{ 
         </div>
         <p className="an-head-meta">{reeks}{datum ? ` · ${datum}` : ''}</p>
 
+        {/* Hét scherm van de analyse: waar valt alles en waar wordt er gevangen, per worp en per
+            speler. De rest van de pagina is verdieping en staat ingeklapt. */}
+        {stats.shots.length > 0 && (
+          <ErrorCatch label="De veldkaart">
+            <Veldkaart
+              shots={stats.shots}
+              spelers={stats.stats.players.map((p) => ({
+                playerId: p.playerId,
+                playerName: p.playerName,
+                shirtNumber: p.shirtNumber,
+                teamSide: p.teamSide,
+              }))}
+              teams={teamNames}
+              goalAreaDepth={state.match.goalAreaDepth}
+              matchLabel={[reeks, datum].filter(Boolean).join(' · ')}
+            />
+          </ErrorCatch>
+        )}
+
         <ErrorCatch label="De video-analyse">
           <VideoAnalyse
             matchId={matchId}
@@ -146,6 +166,26 @@ export default async function AnalyseDetailPage({ params }: { params: Promise<{ 
           />
         </ErrorCatch>
 
+        {/* Verdieping, ingeklapt: de veldkaart en de video zijn het dagelijkse werk; wie meer
+            wil (grafieken, spelerstabellen, deelkaart) klapt het hieronder open. */}
+        <details className="an-fold">
+          <summary>📊 Alle statistieken &amp; grafieken</summary>
+          <ErrorCatch label="De analyse-details">
+            <AnalyseDetailView
+              stats={stats.stats}
+              shots={stats.shots}
+              teams={teamNames}
+              goalAreaDepth={state.match.goalAreaDepth}
+              momentumGoals={momentumGoals}
+              momentumTimeouts={momentumTimeouts}
+              teamColors={teamColors}
+              matchLabel={[reeks, datum].filter(Boolean).join(' · ')}
+            />
+          </ErrorCatch>
+        </details>
+
+        <details className="an-fold">
+          <summary>📣 Deelkaart</summary>
         <ShareCard
           matchId={matchId}
           teams={teamNames}
@@ -157,7 +197,11 @@ export default async function AnalyseDetailPage({ params }: { params: Promise<{ 
           reeks={reeks}
           datum={datum}
         />
+        </details>
 
+        {(defense.length > 0 || (passen && passen.totaal > 0)) && (
+          <details className="an-fold">
+            <summary>🛡️ Verdediging &amp; passen</summary>
         {defense.length > 0 && (
           <section className="an-recap">
             <h2 className="section-title">🛡️ Verdediging <span className="an-chart-hint">wie pakt de ballen af</span></h2>
@@ -210,19 +254,8 @@ export default async function AnalyseDetailPage({ params }: { params: Promise<{ 
             )}
           </section>
         )}
-
-        <ErrorCatch label="De analyse-details">
-          <AnalyseDetailView
-            stats={stats.stats}
-            shots={stats.shots}
-            teams={teamNames}
-            goalAreaDepth={state.match.goalAreaDepth}
-            momentumGoals={momentumGoals}
-            momentumTimeouts={momentumTimeouts}
-            teamColors={teamColors}
-            matchLabel={[reeks, datum].filter(Boolean).join(' · ')}
-          />
-        </ErrorCatch>
+          </details>
+        )}
       </div>
     </>
   )

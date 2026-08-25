@@ -65,6 +65,33 @@ export function VideoAnalyse({
   const source = useMemo(() => parseVideoSource(url), [url])
   const isFile = source?.kind === 'file'
 
+  // ── Download & delen (gsm) ──
+  // Een videobestand moet je ook op je telefoon kunnen bewaren en doorsturen. Onze eigen
+  // clip-route (/api/clip/…) maakt er met ?download=1 een échte download van (Android: meteen in
+  // Downloads); delen gaat via het toestel-deelvenster (WhatsApp staat daar tussen) met de link —
+  // de ontvanger tikt en kijkt. Een extern .mp4-bestand delen we op dezelfde manier.
+  const videoNaam = `krachtbal-${teams.home}-${teams.away}`.replace(/[^A-Za-z0-9_-]+/g, '-').slice(0, 60)
+  const downloadHref =
+    isFile && source
+      ? `${source.src}${source.src.includes('?') ? '&' : '?'}download=1&name=${encodeURIComponent(videoNaam)}`
+      : null
+  const shareVideo = useCallback(async () => {
+    if (!source || source.kind !== 'file') return
+    const abs = new URL(source.src, window.location.origin).toString()
+    const tekst = `🎥 Wedstrijdvideo ${teams.home} – ${teams.away}`
+    const nav = navigator as Navigator & { share?: (d: { title?: string; text?: string; url?: string }) => Promise<void> }
+    if (nav.share) {
+      try {
+        await nav.share({ title: tekst, text: tekst, url: abs })
+        return
+      } catch (err) {
+        if ((err as Error).name === 'AbortError') return // gebruiker annuleerde
+      }
+    }
+    // Geen deelvenster (desktopbrowser): rechtstreeks naar WhatsApp met de link in het bericht.
+    window.open(`https://wa.me/?text=${encodeURIComponent(`${tekst}: ${abs}`)}`, '_blank', 'noopener')
+  }, [source, teams])
+
   const save = useCallback(
     async (patch: Record<string, unknown>, okMsg: string) => {
       setBusy(true)
@@ -316,6 +343,21 @@ export function VideoAnalyse({
               H1 {fmtVideoTime(sync.offsetH1)} · H2 {sync.offsetH2 == null ? 'geschat' : fmtVideoTime(sync.offsetH2)}
             </span>
           </div>
+
+          {/* Bewaren op je telefoon en doorsturen — de twee dingen die je na de wedstrijd met de
+              opname wil doen. Voor iedereen die de video mag zien, niet enkel de beheerder. */}
+          {isFile && (
+            <div className="va-take">
+              {downloadHref && (
+                <a className="va-btn small" href={downloadHref}>
+                  ⬇ Download op je gsm
+                </a>
+              )}
+              <button type="button" className="va-btn small" onClick={() => void shareVideo()}>
+                📤 Delen (WhatsApp)
+              </button>
+            </div>
+          )}
 
           {!isFile && (
             <p className="va-hint va-hint-sm">
