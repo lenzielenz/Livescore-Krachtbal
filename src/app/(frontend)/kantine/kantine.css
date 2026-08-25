@@ -228,7 +228,11 @@
 /* ── Kantinescherm (kantine-tv) ── */
 .kt-screen {
   min-height: 100dvh;
-  background: var(--bg);
+  /* Zelfde aurora-sfeer als de site zelf — een kantine-tv verdient geen vlak zwart. */
+  background:
+    radial-gradient(1150px 660px at 50% -10%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 60%),
+    radial-gradient(900px 560px at 92% 100%, color-mix(in srgb, var(--pop, #ff5d6c) 12%, transparent), transparent 60%),
+    linear-gradient(180deg, #0c0e12 0%, #070809 100%);
   padding: 20px;
 }
 .kt-screen-edit {
@@ -280,20 +284,39 @@
   height: calc(100dvh - 40px);
 }
 
-/* Eén bord — flex-kolom die zijn cel vult; alle binnenmaten in em zodat alles meeschaalt. */
+/* Eén bord — flex-kolom die zijn cel vult; alle binnenmaten in em zodat alles meeschaalt.
+   Clubkleuren dragen de kaart (zelfde taal als de live-bordkaarten), maar gematigder dan daar:
+   hier staat de tekst rechtstreeks op het verloop, dus leesbaarheid eerst. */
 .kt-tile {
   position: relative;
   display: flex;
   flex-direction: column;
   min-height: 0;
   font-size: 16px;
-  background: var(--panel);
-  border: 1px solid var(--line);
+  background: linear-gradient(
+    115deg,
+    color-mix(in srgb, var(--home) 30%, #0b0f15) 0%,
+    color-mix(in srgb, var(--home) 11%, #0c1018) 40%,
+    color-mix(in srgb, var(--away) 11%, #0c1018) 60%,
+    color-mix(in srgb, var(--away) 30%, #0b0f15) 100%
+  );
+  border: none;
   border-radius: 14px;
   overflow: hidden;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 0 0 1px rgba(255, 255, 255, 0.07),
+    0 14px 34px -16px color-mix(in srgb, var(--home) 45%, transparent),
+    0 14px 34px -16px color-mix(in srgb, var(--away) 45%, transparent),
+    0 16px 36px -18px rgba(0, 0, 0, 0.85);
 }
 .kt-tile.live {
-  border-color: color-mix(in srgb, #ef476f 45%, var(--line));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 0 0 1px color-mix(in srgb, #ef476f 55%, rgba(255, 255, 255, 0.07)),
+    0 14px 34px -16px color-mix(in srgb, var(--home) 55%, transparent),
+    0 14px 34px -16px color-mix(in srgb, var(--away) 55%, transparent),
+    0 16px 36px -18px rgba(0, 0, 0, 0.85);
 }
 .kt-tile-head {
   display: flex;
@@ -400,7 +423,12 @@
   font-variant-numeric: tabular-nums;
   text-align: center;
   line-height: 1;
-  text-shadow: 0 0.06em 0.3em rgba(0, 0, 0, 0.45);
+  /* Zelfde parelmoer-cijfers als het grote scorebord. */
+  background: linear-gradient(180deg, #ffffff, color-mix(in srgb, var(--txt) 70%, #9fb4ab));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0.06em 0.3em rgba(0, 0, 0, 0.5));
 }
 /* Kruisjes & minuten als één geïntegreerde balk ín de kaart (niet los eronder). */
 .kt-tile-foot {
@@ -427,14 +455,17 @@
   line-height: 1;
 }
 .kt-tile-clock.live {
-  color: #06140d;
-  background: linear-gradient(180deg, #ffe7a0, var(--accent-2, #f9b023));
-  box-shadow: 0 0.18em 0.7em -0.2em color-mix(in srgb, var(--accent) 65%, transparent);
+  /* Glas-pil in de huisstijl (i.p.v. de oude gele blikvanger die naast de clubkleuren vloekte). */
+  color: #fff;
+  background: rgba(6, 9, 14, 0.55);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.22),
+    0 0.18em 0.7em -0.2em color-mix(in srgb, var(--accent) 65%, transparent);
   animation: kt-clock-glow 2.4s ease-in-out infinite;
 }
 @keyframes kt-clock-glow {
-  0%, 100% { box-shadow: 0 0.18em 0.7em -0.2em color-mix(in srgb, var(--accent) 55%, transparent); }
-  50% { box-shadow: 0 0.18em 1em -0.1em color-mix(in srgb, var(--accent) 85%, transparent); }
+  0%, 100% { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22), 0 0.18em 0.7em -0.2em color-mix(in srgb, var(--accent) 55%, transparent); }
+  50% { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.3), 0 0.18em 1em -0.1em color-mix(in srgb, var(--accent) 85%, transparent); }
 }
 .kt-tile-clock.dim {
   color: var(--dim);
