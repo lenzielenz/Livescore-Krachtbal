@@ -10,7 +10,6 @@ import { MatchWeather } from '@/components/MatchWeather'
 import { Scoreboard } from '@/components/Scoreboard'
 import { SiteHeader } from '@/components/SiteHeader'
 import { TeamLogo } from '@/components/TeamLogo'
-import { userClubId } from '@/lib/access'
 import { getAuthUser } from '@/lib/auth-user'
 import { mayEditMatchVideo } from '@/lib/video-access'
 import { isCheckedIn, sanitizeCheckins } from '@/lib/checkins'
@@ -269,7 +268,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
     ? (matchDoc!.scorePredictions as { userId: number; home: number; away: number }[]).find((p) => Number(p?.userId) === myUid)
     : null
   let predRemaining = LIVE_PRONOSTIEK_MAX_PER_WEEKEND
-  if (myUid != null && userClubId(me) != null && !myPred && (state.match.status === 'scheduled' || state.match.status === 'live') && matchDoc?.date) {
+  if (myUid != null && !myPred && (state.match.status === 'scheduled' || state.match.status === 'live') && matchDoc?.date) {
     const used = await countUserWeekendPredictions(payload, myUid, String(matchDoc.date), matchId).catch(() => 0)
     predRemaining = Math.max(0, LIVE_PRONOSTIEK_MAX_PER_WEEKEND - used)
   }
@@ -397,7 +396,6 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
         matchId={matchId}
         status={state.match.status}
         loggedIn={Boolean(me)}
-        hasClub={userClubId(me) != null}
         homeName={state.teams.home.name}
         awayName={state.teams.away.name}
         initialHome={myPred ? myPred.home : null}

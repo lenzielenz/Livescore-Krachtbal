@@ -13,8 +13,8 @@ type PredEntry = { userId: number; name: string; clubId: number | null; home: nu
 type RadToken = { mult: number; wonAt: string; expiresAt: string }
 type Power = { tokens?: RadToken[]; spinWeek?: string; spinsUsed?: number }
 
-// Eén score-voorspelling van een clublid wegschrijven (upsert per persoon). Enkel vóór de aftrap
-// (status 'scheduled') en enkel voor wedstrijden van de eigen club.
+// Eén score-voorspelling wegschrijven (upsert per persoon). Elke ingelogde supporter mag meedoen
+// (club niet vereist); voorspellen kan vóór en tijdens de wedstrijd, nooit erna.
 export async function POST(req: Request) {
   const ip = clientIp(req)
   if (!rateLimit(`predict:${ip}`, Number(process.env.PREDICT_MAX_PER_SEC) || 10, 1000)) {
@@ -40,9 +40,10 @@ export async function POST(req: Request) {
     const payload = await getPayloadClient()
     const user = await authUser(payload, req)
     if (!user) return Response.json({ error: 'Niet ingelogd.' }, { status: 401 })
+    // Een clubkoppeling is géén voorwaarde: iedereen met een account speelt mee in het globale
+    // klassement. De club blijft wel mee opgeslagen (indien gekend) voor de club-klassementen.
     const rawClub = userClubId(user)
     const clubId = rawClub != null && Number.isFinite(Number(rawClub)) ? Number(rawClub) : null
-    if (clubId == null) return Response.json({ error: 'Je account is niet aan een club gekoppeld.' }, { status: 403 })
 
     const match = await payload.findByID({ collection: 'matches', id: matchId, depth: 0 }).catch(() => null)
     if (!match || match.analyseOnly || (match as { isDemo?: boolean }).isDemo) {
