@@ -1,9 +1,9 @@
 import { authUser, userClubId } from '@/lib/api-auth'
-import { dateStrBE } from '@/lib/datetime'
+import { formatDateTimeBE } from '@/lib/datetime'
 import { buildMatchState } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
 import { activeTokens } from '@/lib/pronostiek-rad'
-import { countUserWeekendPredictions, LIVE_PRONOSTIEK_MAX_PER_WEEKEND } from '@/lib/pronostiek-weekend'
+import { countUserWeekendPredictions, LIVE_PRONOSTIEK_MAX_PER_WEEKEND, pronostiekOpen, pronostiekOpenVanaf } from '@/lib/pronostiek-weekend'
 import { reeksHalfDurationSeconds, type Reeks } from '@/lib/reeksen'
 import { clientIp, rateLimit } from '@/lib/sse-hub'
 
@@ -52,9 +52,12 @@ export async function POST(req: Request) {
     if (match.status !== 'scheduled' && match.status !== 'live') {
       return Response.json({ error: 'De wedstrijd is afgelopen — voorspellen kan niet meer.' }, { status: 409 })
     }
-    // Vóór de speeldag zelf mag nog niet voorspeld worden — pas vanaf de dag van de wedstrijd.
-    if (match.status === 'scheduled' && dateStrBE(new Date(String((match as { date?: unknown }).date ?? ''))) !== dateStrBE()) {
-      return Response.json({ error: 'Voorspellen kan pas vanaf de dag van de wedstrijd zelf.' }, { status: 409 })
+    // De pronostiek opent zodra het vorige speelweekend afgelopen is (zondag om middernacht):
+    // vanaf maandag 00:00 staat de hele komende speelweek open.
+    const matchDateIso = String((match as { date?: unknown }).date ?? '')
+    if (match.status === 'scheduled' && !pronostiekOpen(matchDateIso)) {
+      const vanaf = formatDateTimeBE(pronostiekOpenVanaf(matchDateIso), { dateStyle: 'full' })
+      return Response.json({ error: `De pronostiek voor deze wedstrijd opent op ${vanaf} om middernacht.` }, { status: 409 })
     }
     // Elke competitiewedstrijd mag voorspeld worden (je kan via een pool uitgenodigd zijn voor de
     // matchen van een andere ploeg/club). De klassementen filteren toch op club of pool.

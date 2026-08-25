@@ -21,7 +21,7 @@ import { buildMatchSheet, buildMatchState, buildMatchStats, buildTimeline, type 
 import { buildMatchReport } from '@/lib/match-report'
 import { getPayloadClient } from '@/lib/payload-client'
 import { activeTokens, type RadToken } from '@/lib/pronostiek-rad'
-import { countUserWeekendPredictions, LIVE_PRONOSTIEK_MAX_PER_WEEKEND } from '@/lib/pronostiek-weekend'
+import { countUserWeekendPredictions, LIVE_PRONOSTIEK_MAX_PER_WEEKEND, pronostiekOpen, pronostiekOpenVanaf } from '@/lib/pronostiek-weekend'
 import { isAdultReeks, krachtbalKleur, reeksHalfDurationSeconds, reeksNaam, reeksType, type Reeks } from '@/lib/reeksen'
 import { isSupportersMode } from '@/lib/score-mode'
 import { mayClaim, mayVote, sanitizeTrust, voteWindowOpen } from '@/lib/score-trust'
@@ -405,7 +405,8 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
         remaining={predRemaining}
         max={LIVE_PRONOSTIEK_MAX_PER_WEEKEND}
         boosterTokens={myBoosters}
-        isMatchDay={isMatchDag}
+        pronostiekOpen={Boolean(matchDatum) && pronostiekOpen(matchDatum as string)}
+        openVanafTekst={matchDatum ? formatDateTimeBE(pronostiekOpenVanaf(matchDatum), { dateStyle: 'full' }) : null}
       />
       {/* Alles wat "live" is — bord, tijdlijn, tribune, vertrouwenslaag, stream — slaan we over
           zolang de wedstrijd nog moet komen. */}

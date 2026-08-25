@@ -19,7 +19,8 @@ export function PronostiekWidget({
   remaining,
   max,
   boosterTokens,
-  isMatchDay,
+  pronostiekOpen,
+  openVanafTekst,
 }: {
   matchId: number
   status: string
@@ -35,8 +36,10 @@ export function PronostiekWidget({
   max?: number
   /** Gewonnen bonusrad-boosters (vermenigvuldigers) die de speler kan inzetten. */
   boosterTokens?: number[]
-  /** Is het vandaag de speeldag zelf? Vóór de speeldag mag nog niet voorspeld worden. */
-  isMatchDay: boolean
+  /** Staat de pronostiek al open? (vanaf zondagmiddernacht vóór de speelweek — server beslist) */
+  pronostiekOpen: boolean
+  /** Leesbaar openingsmoment voor de gesloten-melding (bv. "maandag 14 september 2026"). */
+  openVanafTekst?: string | null
 }) {
   const fmtMult = (v: number) => `×${Number.isInteger(v) ? v : String(v).replace('.', ',')}`
   // Unieke boosterwaarden + hoeveel je er van hebt (bv. ×2 (2), ×5).
@@ -89,11 +92,13 @@ export function PronostiekWidget({
       </div>
     )
   }
-  if (status === 'scheduled' && !isMatchDay) {
+  if (status === 'scheduled' && !pronostiekOpen) {
     return (
       <div className="pn-line">
         <span className="pn-line-ic">🔮</span>
-        <span>Pronostiek opent op de dag van de wedstrijd zelf.</span>
+        <span>
+          Pronostiek opent {openVanafTekst ? <>op <b>{openVanafTekst}</b></> : 'in de week van de wedstrijd'} — telkens vanaf zondagmiddernacht na het vorige speelweekend.
+        </span>
       </div>
     )
   }
