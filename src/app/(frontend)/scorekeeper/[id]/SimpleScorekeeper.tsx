@@ -296,7 +296,18 @@ export function SimpleScorekeeper({
 
       {live && (
         <div className="ssk-controls">
-          <button type="button" className="ssk-btn" onClick={() => act({ action: 'simpleundo' })}>↶ Undo doelpunt</button>
+          {/* Undo zegt WAT het wegneemt. Je tikt op een telefoon, vlak naast de knoppen van de
+              andere ploeg; zonder die context is terugdraaien een gok. Niets te ondoen → uit. */}
+          <button
+            type="button"
+            className="ssk-btn"
+            disabled={!state.lastSimpleGoal}
+            onClick={() => act({ action: 'simpleundo' })}
+          >
+            {state.lastSimpleGoal
+              ? `↶ Ondoen: +${state.lastSimpleGoal.points} ${state.teams[state.lastSimpleGoal.side].name}`
+              : '↶ Niets te ondoen'}
+          </button>
           {half === 1 && (
             <button type="button" className="ssk-btn primary" onClick={() => setConfirmHalfEnd(true)}>
               ⏭ Einde 1e helft → 2e
