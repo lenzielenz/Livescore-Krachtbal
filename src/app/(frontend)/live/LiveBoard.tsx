@@ -8,6 +8,7 @@ import { PushOptIn } from '@/components/PushOptIn'
 import { TeamLogo } from '@/components/TeamLogo'
 import { type ClubColors } from '@/lib/club-colors'
 import { type LogoFit } from '@/lib/logo-fit'
+import { pastBijZoekterm } from '@/lib/team-search'
 
 type TeamRef = {
   teamId: number
@@ -46,8 +47,6 @@ function shiftDate(dateStr: string, days: number): string {
   d.setDate(d.getDate() + days)
   return d.toISOString().slice(0, 10)
 }
-
-const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
 
 function useFavSet(key: string): [Set<number>, (id: number) => void] {
   const [set, setSet] = useState<Set<number>>(new Set())
@@ -206,11 +205,10 @@ export function LiveBoard({
   // (bv. een vorige datum) valt het bord vanzelf terug op alles i.p.v. een lege lijst.
   const showLiveOnly = onlyLive && liveCount > 0
 
-  // Zoek op ploegnaam of reeks (accent-ongevoelig).
-  const matchesQuery = (m: DayMatch, q: string) => {
-    const n = norm(q)
-    return norm(m.home.name).includes(n) || norm(m.away.name).includes(n) || norm(m.reeks).includes(n)
-  }
+  // Zoek op ploegnaam, clubnaam of reeks — zoals mensen ze typen ("sint michiels" vindt
+  // "KBC St. Michiels B", "baasro" vindt "'T Botterken Baasrode"). Zie team-search.ts.
+  const matchesQuery = (m: DayMatch, q: string) =>
+    pastBijZoekterm(q, m.home.name, m.away.name, m.home.clubName, m.away.clubName, m.reeks)
 
   const teamFav = (m: DayMatch) => favTeams.has(m.home.teamId) || favTeams.has(m.away.teamId)
   const clubFav = (m: DayMatch) =>
@@ -394,6 +392,15 @@ export function LiveBoard({
             </button>
           )}
         </div>
+
+        {/* Je zoekt hier meestal je eigen ploeg. Speelt die vandaag niet, dan is het bord een
+            doodlopend straatje — daarom een rechtstreekse doorstap naar de volledige agenda van
+            die ploeg. Staat er wél iets vandaag, dan blijft de link discreet onderaan de zoekbalk. */}
+        {query.trim().length >= 2 && (
+          <Link href={`/zoeken?ploeg=${encodeURIComponent(query.trim())}`} className="lb-wanneer">
+            📅 Wanneer speelt <b>{query.trim()}</b> nog? Bekijk de hele agenda →
+          </Link>
+        )}
 
         {groups.length === 0 ? (
           <div className="lb-empty">

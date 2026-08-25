@@ -1086,3 +1086,19 @@
   .lb-row.scored .lbl-score { animation: none; }
   .lb-row.scored .lb-match { outline: 2px solid color-mix(in srgb, var(--accent) 60%, transparent); }
 }
+
+/* Doorstap van de zoekbalk naar de volledige agenda van die ploeg ("wanneer spelen we?").
+   Wie hier zoekt, zoekt meestal zijn eigen ploeg — en die speelt niet elke dag. */
+.lb-wanneer {
+  display: block;
+  margin: -4px 0 12px;
+  padding: 9px 12px;
+  border: 1px dashed color-mix(in srgb, var(--accent) 40%, var(--line));
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent) 7%, transparent);
+  color: var(--txt);
+  font-size: 0.82rem;
+  text-decoration: none;
+}
+.lb-wanneer:hover { background: color-mix(in srgb, var(--accent) 14%, transparent); }
+.lb-wanneer b { color: var(--accent); }
