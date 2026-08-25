@@ -80,7 +80,17 @@ export async function GET(req: Request) {
           startIso: String(m.date),
           location,
           url: matchUrl,
-          description: `Krachtbal Live — ${reeksLabel ?? 'wedstrijd'} · ${formatDateTimeBE(String(m.date))}. Volg live: ${matchUrl}`,
+          // Wat je in je agenda wil zien zonder ergens op te klikken: reeks, wie thuis speelt en
+          // dus waar je moet zijn, en pas dan de link.
+          description: [
+            reeksLabel ? `Reeks: ${reeksLabel}` : null,
+            `Thuisploeg: ${home}`,
+            location ? `Terrein: ${location}` : 'Terrein: nog niet gekend',
+            `Aftrap: ${formatDateTimeBE(String(m.date))}`,
+            `Live volgen: ${matchUrl}`,
+          ]
+            .filter(Boolean)
+            .join('\n'),
         }
       })
 
