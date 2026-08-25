@@ -132,8 +132,13 @@ export default async function PloegProfiel({ params }: Params) {
           </section>
         )}
 
-        {!report ? (
-          <p className="an-empty">Nog geen wedstrijdstatistieken voor deze ploeg.</p>
+        {/* Vóór de eerste gespeelde wedstrijd is er niets af te leiden: dan een korte zin i.p.v.
+            een rij nullen, die eruitziet als een fout in plaats van als een leeg seizoen. */}
+        {!report || report.matchesAnalyzed === 0 ? (
+          <p className="an-empty">
+            Nog geen wedstrijdstatistieken voor deze ploeg — ze verschijnen zodra er een wedstrijd
+            gespeeld en aangetekend is.
+          </p>
         ) : (
           <>
             <section className="ps-kpis">

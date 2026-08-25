@@ -12,6 +12,7 @@ import { clubColors, clubLogoFit, clubLogoUrl } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
 import { reeksNaam, type Reeks } from '@/lib/reeksen'
 import { pastBijZoekterm } from '@/lib/team-search'
+import { MijnWedstrijden } from './MijnWedstrijden'
 import './zoeken.css'
 
 export const dynamic = 'force-dynamic'
@@ -142,6 +143,10 @@ export default async function ZoekenPage({
           </label>
           <button type="submit" className="zk-knop">🔎 Zoeken</button>
         </form>
+
+        {/* Wat je op een wedstrijdpagina bewaarde, staat hier klaar (uit je browser, geen account
+            nodig). Niets bewaard? Dan toont dit blok zichzelf niet. */}
+        <MijnWedstrijden />
 
         {!gezocht ? (
           <p className="empty">Typ minstens twee letters van je ploeg- of clubnaam.</p>
