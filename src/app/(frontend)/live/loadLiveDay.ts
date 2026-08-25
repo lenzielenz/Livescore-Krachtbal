@@ -4,6 +4,7 @@ import { buildScoreboards } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
 import { reeksNaam } from '@/lib/reeksen'
 import { MATCH_ASSUMED_DONE_MS } from '@/lib/simple-score'
+import type { Speeldag } from '@/lib/speeldagen'
 
 import type { DayMatch } from './LiveBoard'
 
@@ -145,4 +146,40 @@ export async function loadLiveDay(selected: string, today: string): Promise<DayM
     })
   }
   return days
+}
+
+/**
+ * Alle dagen waarop er gespeeld wordt, met hoeveel wedstrijden er die dag staan. Voedt de
+ * datumnavigatie: de pijltjes springen naar de volgende dag waar écht iets staat (i.p.v. vier
+ * lege dagen door te tikken tot het weekend), en de kiezer toont per dag een teller.
+ *
+ * Eén query over de hele kalender, met enkel het datumveld — dat weegt niet, ook niet met een
+ * volledig seizoen erin.
+ */
+export async function loadSpeeldagen(): Promise<Speeldag[]> {
+  const payload = await getPayloadClient()
+  const res = await payload
+    .find({
+      collection: 'matches',
+      where: { and: [{ analyseOnly: { not_equals: true } }, { isDemo: { not_equals: true } }] },
+      sort: 'date',
+      depth: 0,
+      pagination: false,
+      select: { date: true },
+      overrideAccess: true,
+    })
+    .catch(() => ({ docs: [] as { date?: unknown }[] }))
+
+  const perDag = new Map<string, number>()
+  for (const m of res.docs) {
+    const ruw = (m as { date?: unknown }).date
+    if (!ruw) continue
+    const d = new Date(String(ruw))
+    if (Number.isNaN(d.getTime())) continue
+    const dag = dateStrBE(d)
+    perDag.set(dag, (perDag.get(dag) ?? 0) + 1)
+  }
+  return [...perDag.entries()]
+    .map(([datum, aantal]) => ({ datum, aantal }))
+    .sort((a, b) => a.datum.localeCompare(b.datum))
 }
