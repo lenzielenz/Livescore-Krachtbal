@@ -13,6 +13,7 @@ import { EmptyCleanup } from './EmptyCleanup'
 import { ReeksindelingImport } from './ReeksindelingImport'
 import { ReeksindelingTeamsImport } from './ReeksindelingTeamsImport'
 import { ResultsImport } from './ResultsImport'
+import { UitslagenSync } from './UitslagenSync'
 import { TeamCleanup, type CleanupTeam } from './TeamCleanup'
 import '../analyse.css'
 
@@ -82,6 +83,15 @@ export default async function ResultsImportPage() {
         <p className="an-intro">Wedstrijden-export (.xls). Eerst <em>Voorbeeld</em>, dan <em>Importeren</em>.</p>
 
         <ResultsImport />
+
+        <h2 className="an-sub">🔄 Uitslagen ophalen bij de federatie</h2>
+        <p className="an-intro">
+          Haalt de kalenderpagina van krachtbal.be op en neemt de eindstanden over. Wedstrijden die
+          wij zélf aantekenden (worpen of een ingediend wedstrijdblad) blijven onaangeroerd. Eerst
+          <em> Ophalen en tonen</em>, dan <em>Overnemen</em>. Wil je dit automatisch elke speeldag?
+          Zet dan een scheduler op <code>/api/cron/uitslagen</code> — zie <code>.env.example</code>.
+        </p>
+        <UitslagenSync />
 
         <h2 className="an-sub">📋 Reeksindeling importeren (club + ploeg + reeks + uur)</h2>
         <p className="an-intro">De federatie-reeksindeling-PDF: maakt automatisch de clubs en ploegen aan met hun reeks én zet meteen het thuisuur (dag + uur). Kies het seizoen, eerst <em>Voorbeeld</em>, daarna <em>Importeren</em>. Bestaande clubs/ploegen blijven behouden.</p>

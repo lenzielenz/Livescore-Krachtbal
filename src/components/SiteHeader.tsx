@@ -33,6 +33,7 @@ const GENERAL: { href: string; label: string; auth?: boolean }[] = [
 // Wedstrijd-info onder een eigen kopje "Wedstrijden" in het menu. Bewust kort gehouden: de overige
 // supporter-tools (jeugd-superster, supportersklassement) staan als tegels op de hub.
 const WEDSTRIJDEN: { href: string; label: string }[] = [
+  { href: '/zoeken', label: '🔎 Wanneer spelen we?' },
   { href: '/rangschikking', label: '📊 Stand' },
   { href: '/recap', label: '📰 Weekoverzicht' },
   { href: '/pronostiek', label: '🔮 Pronostiekstand' },
