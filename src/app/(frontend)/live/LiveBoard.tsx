@@ -530,9 +530,12 @@ export function LiveBoard({
                       </div>
                     </div>
 
-                    {/* Supporters-modus: vrije livescore. De "Aantekenen"-knop verschijnt pas
-                        wanneer de supporter de rij openklikt (via de ster) — zo blijft het bord rustig. */}
-                    {supportersMode && open && m.status !== 'finished' && (
+                    {/* Supporters-modus: vrije livescore. Bij een LOPENDE wedstrijd staat de
+                        "Aantekenen"-knop er meteen — daar telt elke seconde, en wie de score wil
+                        doorgeven mag niet eerst moeten ontdekken dat hij de rij kan openklikken.
+                        Voor wedstrijden die nog moeten beginnen blijft de knop achter de ster: dat
+                        zijn er op een speeldag tientallen, en die hoeven het bord niet vol te zetten. */}
+                    {supportersMode && (live || open) && m.status !== 'finished' && (
                       <Link href={`/scorekeeper/${m.id}`} className="lb-score-cta">
                         <span className="lb-score-cta-ico" aria-hidden>✏️</span>
                         <span className="lb-score-cta-txt">
