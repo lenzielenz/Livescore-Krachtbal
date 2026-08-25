@@ -10,6 +10,7 @@ import { googleCalendarUrl } from '@/lib/google-calendar'
 import { clubColors, clubLogoFit, clubLogoUrl } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
 import { reeksNaam, type Reeks } from '@/lib/reeksen'
+import { pastBijZoekterm } from '@/lib/team-search'
 import './zoeken.css'
 
 export const dynamic = 'force-dynamic'
@@ -29,20 +30,29 @@ const MAX_MATCHES = 60
 type TeamDoc = { id: number; name?: unknown; reeks?: unknown; club?: unknown }
 
 const naamVan = (v: unknown): string => (v && typeof v === 'object' ? String((v as { name?: unknown }).name ?? '—') : '—')
-/** Ploegen zoeken op naam (ploegnaam of clubnaam). */
+/**
+ * Ploegen zoeken op naam of clubnaam, zoals mensen ze typen: "Sint Michiels" moet "KBC St.
+ * Michiels B" vinden en "baasro" moet "'T Botterken Baasrode" vinden.
+ *
+ * Dat kan een databank-`like` niet (die struikelt over het punt, de afkorting en de woordvolgorde),
+ * dus halen we de competitieploegen één keer op en filteren we ze met dezelfde regels als het
+ * live-bord (team-search.ts). Een paar honderd ploegen — dat weegt niet.
+ */
 async function zoekPloegen(payload: Awaited<ReturnType<typeof getPayloadClient>>, term: string): Promise<TeamDoc[]> {
   const q = term.trim()
   if (q.length < 2) return []
   const res = await payload
-    .find({
-      collection: 'teams',
-      where: { and: [{ name: { like: q } }, competitionWhere()] },
-      sort: 'name',
-      depth: 2,
-      limit: MAX_TEAMS,
-    })
+    .find({ collection: 'teams', where: competitionWhere(), sort: 'name', depth: 2, limit: 5000 })
     .catch(() => ({ docs: [] as TeamDoc[] }))
-  return res.docs as TeamDoc[]
+  return (res.docs as TeamDoc[])
+    .filter((t) => pastBijZoekterm(q, String(t.name ?? ''), clubNaamVan(t)))
+    .slice(0, MAX_TEAMS)
+}
+
+/** Clubnaam van een ploeg (bij depth 2 zit de club als object mee). */
+function clubNaamVan(t: TeamDoc): string | null {
+  const c = t.club
+  return c && typeof c === 'object' ? String((c as { name?: unknown }).name ?? '') || null : null
 }
 
 export default async function ZoekenPage({

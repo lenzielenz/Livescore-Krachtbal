@@ -8,7 +8,7 @@ import { quoteForDay } from '@/lib/krachtbal-quotes'
 import { getPayloadClient } from '@/lib/payload-client'
 import { isSupportersMode } from '@/lib/score-mode'
 import { LiveBoard } from './live/LiveBoard'
-import { loadLiveDay, resolveDefaultDay } from './live/loadLiveDay'
+import { loadLiveDay, loadSpeeldagen, resolveDefaultDay } from './live/loadLiveDay'
 import { TournamentLiveStrip } from './live/TournamentLiveStrip'
 import './live/live.css'
 
@@ -25,6 +25,9 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   const selected = date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : await resolveDefaultDay(today)
 
   const days = await loadLiveDay(selected, today)
+  // Alle dagen mét wedstrijden, zodat de pijltjes de lege dagen overslaan en de kiezer per dag
+  // toont hoeveel er gepland staat.
+  const speeldagen = await loadSpeeldagen()
   // Eén vast lijntje per dag (seed = vandaag): blijft staan bij het wisselen van datum,
   // maar levert elke dag een verse krachtbal-quote op.
   const quote = quoteForDay(today)
@@ -79,7 +82,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         )}
 
         <TournamentLiveStrip />
-        <LiveBoard date={selected} today={today} matches={days} myClubId={myClubId} supportersMode={supportersMode} />
+        <LiveBoard date={selected} today={today} matches={days} speeldagen={speeldagen} myClubId={myClubId} supportersMode={supportersMode} />
       </div>
     </>
   )

@@ -8,6 +8,8 @@ import { PushOptIn } from '@/components/PushOptIn'
 import { TeamLogo } from '@/components/TeamLogo'
 import { type ClubColors } from '@/lib/club-colors'
 import { type LogoFit } from '@/lib/logo-fit'
+import { speeldagenRond, volgendeSpeeldag, vorigeSpeeldag, type Speeldag } from '@/lib/speeldagen'
+import { pastBijZoekterm } from '@/lib/team-search'
 
 type TeamRef = {
   teamId: number
@@ -47,7 +49,16 @@ function shiftDate(dateStr: string, days: number): string {
   return d.toISOString().slice(0, 10)
 }
 
-const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+
+/** Korte dagnaam voor de speeldagenlijst: "Vandaag", anders "za 12 sep". */
+function dagLabel(datum: string, today: string): string {
+  if (datum === today) return 'Vandaag'
+  return new Date(`${datum}T12:00:00`).toLocaleDateString('nl-BE', {
+    weekday: 'short',
+    day: '2-digit',
+    month: 'short',
+  })
+}
 
 function useFavSet(key: string): [Set<number>, (id: number) => void] {
   const [set, setSet] = useState<Set<number>>(new Set())
@@ -154,12 +165,15 @@ export function LiveBoard({
   date,
   today,
   matches: initialMatches,
+  speeldagen = [],
   myClubId = null,
   supportersMode = false,
 }: {
   date: string
   today: string
   matches: DayMatch[]
+  /** Dagen waarop er gespeeld wordt, met hun aantal — voedt de pijltjes en de datumkiezer. */
+  speeldagen?: Speeldag[]
   /** De club van de ingelogde gebruiker (ingesteld in de admin) — voedt de "Mijn club"-filter. */
   myClubId?: number | null
   /** Globale supporters-modus: dan krijgt elke wedstrijd een "Aantekenen"-knop zodat iedereen
@@ -206,11 +220,10 @@ export function LiveBoard({
   // (bv. een vorige datum) valt het bord vanzelf terug op alles i.p.v. een lege lijst.
   const showLiveOnly = onlyLive && liveCount > 0
 
-  // Zoek op ploegnaam of reeks (accent-ongevoelig).
-  const matchesQuery = (m: DayMatch, q: string) => {
-    const n = norm(q)
-    return norm(m.home.name).includes(n) || norm(m.away.name).includes(n) || norm(m.reeks).includes(n)
-  }
+  // Zoek op ploegnaam, clubnaam of reeks — zoals mensen ze typen ("sint michiels" vindt
+  // "KBC St. Michiels B", "baasro" vindt "'T Botterken Baasrode"). Zie team-search.ts.
+  const matchesQuery = (m: DayMatch, q: string) =>
+    pastBijZoekterm(q, m.home.name, m.away.name, m.home.clubName, m.away.clubName, m.reeks)
 
   const teamFav = (m: DayMatch) => favTeams.has(m.home.teamId) || favTeams.has(m.away.teamId)
   const clubFav = (m: DayMatch) =>
@@ -278,6 +291,20 @@ export function LiveBoard({
     day: '2-digit',
     month: 'long',
   })
+
+  // Datumnavigatie op basis van de échte speeldagen (zie speeldagen.ts). Zonder die lijst (bv. een
+  // lege kalender) valt alles terug op één dag opschuiven.
+  const dagenRef = useRef<HTMLDetailsElement>(null)
+  const vorigeDag = useMemo(
+    () => (speeldagen.length ? vorigeSpeeldag(speeldagen, date) : shiftDate(date, -1)),
+    [speeldagen, date],
+  )
+  const volgendeDag = useMemo(
+    () => (speeldagen.length ? volgendeSpeeldag(speeldagen, date) : shiftDate(date, 1)),
+    [speeldagen, date],
+  )
+  const venster = useMemo(() => (speeldagen.length ? speeldagenRond(speeldagen, date) : []), [speeldagen, date])
+  const aantalVandaag = useMemo(() => speeldagen.find((d) => d.datum === date)?.aantal ?? 0, [speeldagen, date])
 
   const emptyReason = query.trim()
     ? ` voor “${query.trim()}”`
@@ -366,18 +393,58 @@ export function LiveBoard({
         )}
 
         <div className="lb-datenav">
-          <Link href={`/?date=${shiftDate(date, -1)}`} className="lb-datebtn">‹</Link>
-          <div className="lb-date">
-            <span className="lb-datelabel">{date === today ? 'Vandaag' : dateLabel}</span>
-            <input
-              type="date"
-              className="lb-dateinput"
-              value={date}
-              onChange={(e) => e.target.value && router.push(`/?date=${e.target.value}`)}
-              aria-label="Kies datum"
-            />
-          </div>
-          <Link href={`/?date=${shiftDate(date, 1)}`} className="lb-datebtn">›</Link>
+          {/* De pijltjes springen naar de vorige/volgende dag waar écht gespeeld wordt. In een
+              competitie die enkel in het weekend speelt, scheelt dat vier tikken op leegte.
+              Is er niets meer in die richting, dan staat de pijl uit i.p.v. naar een lege dag te
+              leiden. Zijn er (nog) geen speeldagen bekend, dan valt alles terug op één dag
+              opschuiven — beter dan een dood bord. */}
+          {vorigeDag ? (
+            <Link href={`/?date=${vorigeDag}`} className="lb-datebtn" aria-label="Vorige speeldag">‹</Link>
+          ) : (
+            <span className="lb-datebtn uit" aria-hidden>‹</span>
+          )}
+          <details className="lb-date" ref={dagenRef}>
+            <summary className="lb-datesum">
+              <span className="lb-datelabel">{date === today ? 'Vandaag' : dateLabel}</span>
+              <span className="lb-datesub">
+                {date.split('-').reverse().join('-')}
+                {aantalVandaag > 0 && <span className="lb-datecount">{aantalVandaag}</span>}
+                <span aria-hidden> ⌄</span>
+              </span>
+            </summary>
+            <div className="lb-dagen">
+              {venster.length === 0 ? (
+                <p className="lb-dagen-leeg">Nog geen wedstrijden ingepland.</p>
+              ) : (
+                venster.map((d) => (
+                  <Link
+                    key={d.datum}
+                    href={`/?date=${d.datum}`}
+                    className={`lb-dag${d.datum === date ? ' nu' : ''}${d.aantal === 0 ? ' leeg' : ''}`}
+                    onClick={() => dagenRef.current?.removeAttribute('open')}
+                  >
+                    <span className="lb-dag-naam">{dagLabel(d.datum, today)}</span>
+                    <span className="lb-dag-aantal">{d.aantal > 0 ? d.aantal : '—'}</span>
+                  </Link>
+                ))
+              )}
+              {/* Verder terug of vooruit dan het venster? Dan blijft de gewone datumkiezer er. */}
+              <label className="lb-dag-anders">
+                Andere datum
+                <input
+                  type="date"
+                  value={date}
+                  onChange={(e) => e.target.value && router.push(`/?date=${e.target.value}`)}
+                  aria-label="Kies datum"
+                />
+              </label>
+            </div>
+          </details>
+          {volgendeDag ? (
+            <Link href={`/?date=${volgendeDag}`} className="lb-datebtn" aria-label="Volgende speeldag">›</Link>
+          ) : (
+            <span className="lb-datebtn uit" aria-hidden>›</span>
+          )}
         </div>
 
         <div className="lb-search">
@@ -394,6 +461,15 @@ export function LiveBoard({
             </button>
           )}
         </div>
+
+        {/* Je zoekt hier meestal je eigen ploeg. Speelt die vandaag niet, dan is het bord een
+            doodlopend straatje — daarom een rechtstreekse doorstap naar de volledige agenda van
+            die ploeg. Staat er wél iets vandaag, dan blijft de link discreet onderaan de zoekbalk. */}
+        {query.trim().length >= 2 && (
+          <Link href={`/zoeken?ploeg=${encodeURIComponent(query.trim())}`} className="lb-wanneer">
+            📅 Wanneer speelt <b>{query.trim()}</b> nog? Bekijk de hele agenda →
+          </Link>
+        )}
 
         {groups.length === 0 ? (
           <div className="lb-empty">
@@ -530,9 +606,12 @@ export function LiveBoard({
                       </div>
                     </div>
 
-                    {/* Supporters-modus: vrije livescore. De "Aantekenen"-knop verschijnt pas
-                        wanneer de supporter de rij openklikt (via de ster) — zo blijft het bord rustig. */}
-                    {supportersMode && open && m.status !== 'finished' && (
+                    {/* Supporters-modus: vrije livescore. Bij een LOPENDE wedstrijd staat de
+                        "Aantekenen"-knop er meteen — daar telt elke seconde, en wie de score wil
+                        doorgeven mag niet eerst moeten ontdekken dat hij de rij kan openklikken.
+                        Voor wedstrijden die nog moeten beginnen blijft de knop achter de ster: dat
+                        zijn er op een speeldag tientallen, en die hoeven het bord niet vol te zetten. */}
+                    {supportersMode && (live || open) && m.status !== 'finished' && (
                       <Link href={`/scorekeeper/${m.id}`} className="lb-score-cta">
                         <span className="lb-score-cta-ico" aria-hidden>✏️</span>
                         <span className="lb-score-cta-txt">

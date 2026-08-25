@@ -5,7 +5,7 @@ import { dateStrBE } from '@/lib/datetime'
 import { getPayloadClient } from '@/lib/payload-client'
 import { isSupportersMode } from '@/lib/score-mode'
 import { LiveBoard } from './LiveBoard'
-import { loadLiveDay, resolveDefaultDay } from './loadLiveDay'
+import { loadLiveDay, loadSpeeldagen, resolveDefaultDay } from './loadLiveDay'
 import { TournamentLiveStrip } from './TournamentLiveStrip'
 import './live.css'
 
@@ -23,6 +23,9 @@ export default async function LivePage({ searchParams }: { searchParams: Promise
   const myClubId = cid != null && Number.isFinite(Number(cid)) ? Number(cid) : null
 
   const days = await loadLiveDay(selected, today)
+  // Alle dagen mét wedstrijden, zodat de pijltjes de lege dagen overslaan en de kiezer per dag
+  // toont hoeveel er gepland staat.
+  const speeldagen = await loadSpeeldagen()
   const supportersMode = await isSupportersMode(await getPayloadClient())
 
   return (
@@ -30,7 +33,7 @@ export default async function LivePage({ searchParams }: { searchParams: Promise
       <SiteHeader active="wedstrijden" />
       <div className="lb-page">
         <TournamentLiveStrip />
-        <LiveBoard date={selected} today={today} matches={days} myClubId={myClubId} supportersMode={supportersMode} />
+        <LiveBoard date={selected} today={today} matches={days} speeldagen={speeldagen} myClubId={myClubId} supportersMode={supportersMode} />
       </div>
     </>
   )
