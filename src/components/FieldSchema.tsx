@@ -54,28 +54,32 @@ export interface EndLabel {
   color: string
 }
 
-// Heatmap: bin de punten in een raster, kleur per dichtheid (groen→geel→rood) en vervaag.
-const GX = 7
-const GY = 18
+// Heatmap: fijn raster voor een vloeiend "thermisch" vlak (zie HeatLayer).
+const GX = 14
+
+// Koud→heet-kleurenschaal zoals de professionele sportanalyse-heatmaps: diepblauw (weinig) via
+// cyaan, groen en geel naar oranje en rood (veel). Lineair geïnterpoleerd tussen de stops.
+const HEAT_STOPS: [number, [number, number, number]][] = [
+  [0, [13, 71, 161]], // diepblauw
+  [0.25, [0, 172, 193]], // cyaan
+  [0.45, [67, 160, 71]], // groen
+  [0.65, [253, 216, 53]], // geel
+  [0.85, [251, 140, 0]], // oranje
+  [1, [229, 57, 53]], // rood
+]
 
 function heatColor(t: number): string {
-  // t in [0,1]: 0 = koel groen, 0.5 = geel, 1 = rood.
-  const stops: [number, [number, number, number]][] = [
-    [0, [6, 214, 160]],
-    [0.5, [255, 209, 102]],
-    [1, [239, 71, 111]],
-  ]
-  let lo = stops[0]
-  let hi = stops[stops.length - 1]
-  for (let i = 0; i < stops.length - 1; i++) {
-    if (t >= stops[i][0] && t <= stops[i + 1][0]) {
-      lo = stops[i]
-      hi = stops[i + 1]
+  let lo = HEAT_STOPS[0]
+  let hi = HEAT_STOPS[HEAT_STOPS.length - 1]
+  for (let i = 0; i < HEAT_STOPS.length - 1; i++) {
+    if (t >= HEAT_STOPS[i][0] && t <= HEAT_STOPS[i + 1][0]) {
+      lo = HEAT_STOPS[i]
+      hi = HEAT_STOPS[i + 1]
       break
     }
   }
   const span = hi[0] - lo[0] || 1
-  const f = (t - lo[0]) / span
+  const f = (Math.max(0, Math.min(1, t)) - lo[0]) / span
   const c = lo[1].map((v, i) => Math.round(v + (hi[1][i] - v) * f))
   return `rgb(${c[0]}, ${c[1]}, ${c[2]})`
 }
@@ -109,43 +113,67 @@ function BlobLayer({ blobs }: { blobs: Blob[] }) {
   )
 }
 
-// Dichtheidskaart ("waar het meeste gebeurt"): tel de punten per cel, kleur naar volume
-// (groen = weinig, rood = veel) en teken zachte blobs op het zwaartepunt.
+// Dichtheidskaart ("waar het meeste gebeurt") als één vloeiend thermisch vlak, zoals de
+// professionele analyse-tools: elk punt wordt met een gaussische kernel over een fijn raster
+// uitgesmeerd (KDE), elke cel kleurt koud→heet naar dichtheid, en één blur-filter smelt de
+// cellen tot een doorlopend veld. Alles inline SVG — de PNG-download ziet er dus identiek uit.
 function HeatLayer({ points, h }: { points: Point[]; h: number }) {
   const uid = useId().replace(/[^a-zA-Z0-9]/g, '')
-  const grid = Array.from({ length: GY }, () => new Array(GX).fill(0))
-  const sx = Array.from({ length: GY }, () => new Array(GX).fill(0))
-  const sy = Array.from({ length: GY }, () => new Array(GX).fill(0))
-  let max = 0
+  const GY = Math.max(10, Math.round((h / W) * GX))
+  const grid = Array.from({ length: GY }, () => new Array<number>(GX).fill(0))
+  // Kernel-splat: het punt telt mee in de omliggende cellen, gewogen naar afstand. Zo ontstaat
+  // een gladde dichtheid i.p.v. hokjes — één worp is een zachte heuvel, een cluster een piek.
+  const R = 2.2 // kernelstraal in cellen
+  const s2 = 2 * (R / 1.8) ** 2
   for (const p of points) {
-    const gx = Math.min(GX - 1, Math.max(0, Math.floor(p.x * GX)))
-    const gy = Math.min(GY - 1, Math.max(0, Math.floor(p.y * GY)))
-    grid[gy][gx] += 1
-    sx[gy][gx] += p.x
-    sy[gy][gx] += p.y
-    if (grid[gy][gx] > max) max = grid[gy][gx]
+    const cx = Math.min(GX - 1, Math.max(0, p.x * GX - 0.5))
+    const cy = Math.min(GY - 1, Math.max(0, p.y * GY - 0.5))
+    const y0 = Math.max(0, Math.floor(cy - R))
+    const y1 = Math.min(GY - 1, Math.ceil(cy + R))
+    const x0 = Math.max(0, Math.floor(cx - R))
+    const x1 = Math.min(GX - 1, Math.ceil(cx + R))
+    for (let y = y0; y <= y1; y++) {
+      for (let x = x0; x <= x1; x++) {
+        const d2 = (x - cx) * (x - cx) + (y - cy) * (y - cy)
+        grid[y][x] += Math.exp(-d2 / s2)
+      }
+    }
   }
+  let max = 0
+  for (const row of grid) for (const v of row) if (v > max) max = v
   if (max === 0) return null
   const cw = W / GX
   const ch = h / GY
-  const baseR = Math.max(cw, ch)
-  const blobs: Blob[] = []
+  const cells: { x: number; y: number; t: number }[] = []
   for (let y = 0; y < GY; y++) {
     for (let x = 0; x < GX; x++) {
-      const n = grid[y][x]
-      if (!n) continue
-      const t = n / max
-      blobs.push({
-        id: `${uid}-${x}-${y}`,
-        color: heatColor(t),
-        op: 0.3 + 0.55 * t,
-        cx: (sx[y][x] / n) * W,
-        cy: (sy[y][x] / n) * h,
-        r: baseR * Math.min(1.4, 0.7 + 0.3 * n),
-      })
+      const t = grid[y][x] / max
+      if (t > 0.04) cells.push({ x, y, t })
     }
   }
-  return <BlobLayer blobs={blobs} />
+  return (
+    <g clipPath="url(#fieldclip)">
+      <defs>
+        <filter id={`hb-${uid}`} x="-30%" y="-30%" width="160%" height="160%">
+          <feGaussianBlur stdDeviation={Math.max(cw, ch) * 0.7} />
+        </filter>
+      </defs>
+      <g filter={`url(#hb-${uid})`}>
+        {cells.map((c) => (
+          <rect
+            key={`${c.x}-${c.y}`}
+            x={c.x * cw - cw * 0.05}
+            y={c.y * ch - ch * 0.05}
+            width={cw * 1.1}
+            height={ch * 1.1}
+            fill={heatColor(c.t)}
+            // Gamma < 1 zodat het koele middenveld zichtbaar blijft; de piek wordt vol.
+            opacity={0.16 + 0.72 * Math.pow(c.t, 0.75)}
+          />
+        ))}
+      </g>
+    </g>
+  )
 }
 
 // Een doelpoging op een vaste positie (genormaliseerd, canoniek "aanval naar onder").

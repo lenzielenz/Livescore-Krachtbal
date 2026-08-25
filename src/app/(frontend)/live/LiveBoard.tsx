@@ -580,7 +580,8 @@ export function LiveBoard({
                             ) : (
                               <span className="lb-time">{m.time}</span>
                             )}
-                            <span className="lbl-score">{played ? `${m.score.home} – ${m.score.away}` : 'vs'}</span>
+                            {/* Nog te spelen: geen kale "vs" maar een verzorgde chip (lbl-vs). */}
+                            <span className={`lbl-score${played ? '' : ' lbl-vs'}`}>{played ? `${m.score.home} – ${m.score.away}` : 'VS'}</span>
                             {hasStats && (
                               <span className="lb-stats">
                                 <span title="Kruisjes">✖ {m.crosses?.home ?? 0}–{m.crosses?.away ?? 0}</span>

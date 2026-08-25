@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { headers } from 'next/headers'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
@@ -13,6 +14,8 @@ import { getAuthUser } from '@/lib/auth-user'
 import { mayEditMatchVideo } from '@/lib/video-access'
 import { isCheckedIn, sanitizeCheckins } from '@/lib/checkins'
 import { dateStrBE, formatDateTimeBE } from '@/lib/datetime'
+import { googleCalendarUrl } from '@/lib/google-calendar'
+import { matchTitel } from '@/lib/match-ics'
 import { buildMatchSheet, buildMatchState, buildMatchStats, buildTimeline, type SheetGoal } from '@/lib/match-engine'
 import { buildMatchReport } from '@/lib/match-report'
 import { getPayloadClient } from '@/lib/payload-client'
@@ -30,6 +33,7 @@ import { MatchScorers } from './MatchScorers'
 import { PronostiekWidget } from './PronostiekWidget'
 import { ReportResult } from './ReportResult'
 import { ScoreTrust } from './ScoreTrust'
+import { ToekomstigeWedstrijd } from './ToekomstigeWedstrijd'
 import '../../analyse/analyse.css'
 
 export const dynamic = 'force-dynamic'
@@ -105,6 +109,42 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   // Video koppelen/uploaden mag de federatie (competitiewedstrijden) — zie mayEditMatchVideo.
   const mayVideo = mayEditMatchVideo(me, matchDoc as { analyseOnly?: boolean | null; analyseOwner?: unknown } | null)
   const datum = matchDoc?.date ? formatDateTimeBE(matchDoc.date as string) : null
+  // Een wedstrijd die pas later gespeeld wordt, heeft geen scorebord nodig: er valt niets te volgen
+  // en niets door te geven. Alles wat met "live" te maken heeft (bord, aantekenen, tribune, cast,
+  // vertrouwenslaag) blijft dan weg; je krijgt de aankondiging met agenda-knoppen.
+  // "Later" = niet vandaag én de aftrap ligt nog voor ons — zo blijft een oude, nooit-ingevulde
+  // wedstrijd wél zijn "geef de uitslag door"-flow houden.
+  const matchDatum = matchDoc?.date ? String(matchDoc.date) : null
+  const isMatchDag = Boolean(matchDatum) && dateStrBE(new Date(matchDatum as string)) === dateStrBE()
+  const toekomstig =
+    state.match.status === 'scheduled' &&
+    Boolean(matchDatum) &&
+    !isMatchDag &&
+    new Date(matchDatum as string).getTime() > Date.now()
+  // Agenda-link voor die aankondiging: zelfde titel, terrein en omschrijving als in /zoeken en in
+  // het .ics-bestand, zodat een wedstrijd er in je agenda hetzelfde uitziet langs welke weg ook.
+  let googleAgenda = ''
+  if (toekomstig && matchDatum) {
+    const h = await headers()
+    const host = h.get('x-forwarded-host') ?? h.get('host') ?? ''
+    const proto = h.get('x-forwarded-proto') ?? (host.startsWith('localhost') ? 'http' : 'https')
+    const origin = host ? `${proto}://${host}` : ''
+    // Het terrein is altijd dat van de thuisploeg: accommodatie als de club ze invulde, anders de gemeente.
+    const terrein = accommodatie || homeClub?.plaats?.trim() || null
+    googleAgenda = googleCalendarUrl({
+      title: matchTitel(state.teams.home.name, state.teams.away.name, reeks),
+      startIso: matchDatum,
+      location: terrein,
+      details: [
+        reeks ? `Reeks: ${reeks}` : null,
+        `Thuisploeg: ${state.teams.home.name}`,
+        terrein ? `Terrein: ${terrein}` : 'Terrein: nog niet gekend',
+        origin ? `Live volgen: ${origin}/match/${matchId}` : null,
+      ]
+        .filter(Boolean)
+        .join('\n'),
+    })
+  }
   const sheetRes = await payload
     .find({ collection: 'matchsheets', where: { match: { equals: matchId } }, depth: 2, limit: 1 })
     .catch(() => null)
@@ -246,7 +286,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
       </Link>
       {/* Supporters-modus: vrije livescore. Iedereen kan meteen beginnen aantekenen — geen
           scheidsrechter of aftekenen nodig. */}
-      {supportersMode && state.match.status !== 'finished' && (
+      {supportersMode && state.match.status !== 'finished' && !toekomstig && (
         <Link href={`/scorekeeper/${matchId}`} className="match-score-cta">
           <span aria-hidden>✏️</span>
           <span>
@@ -280,7 +320,9 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
           {datum && <span className="match-meta-bit">{datum}</span>}
           {accommodatie && <span className="match-meta-bit">📍 {accommodatie}</span>}
           {referee && <span className="match-meta-bit">🟡 {referee}</span>}
-          {state.match.status === 'scheduled' && matchDoc?.date && (
+          {/* Bij een wedstrijd die nog moet komen staan de agenda-knoppen groot in het blok
+              hieronder — dan hoeft dit chipje er niet nóg eens bij. */}
+          {state.match.status === 'scheduled' && matchDoc?.date && !toekomstig && (
             <a className="match-meta-bit match-meta-cal" href={`/api/match/${matchId}/ics`}>📅 In agenda</a>
           )}
           {/* Wie de video van deze wedstrijd mag beheren, ziet hier meteen wáár dat gebeurt —
@@ -291,6 +333,29 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
             </Link>
           )}
         </div>
+      )}
+      {/* Nog te spelen: een rustige aankondiging i.p.v. een scorebord op 0–0. Bewaren + agenda. */}
+      {toekomstig && (
+        <>
+          <section className="match-aankondiging" aria-label="Nog te spelen">
+            <p className="match-aankondiging-ploegen">
+              <span className="match-aankondiging-ploeg">{state.teams.home.name}</span>
+              <span className="match-aankondiging-vs">tegen</span>
+              <span className="match-aankondiging-ploeg">{state.teams.away.name}</span>
+            </p>
+            {datum && <p className="match-aankondiging-wanneer">{datum}</p>}
+          </section>
+          <ToekomstigeWedstrijd
+            wedstrijd={{
+              id: matchId,
+              home: state.teams.home.name,
+              away: state.teams.away.name,
+              date: matchDatum ?? '',
+              reeks,
+            }}
+            googleUrl={googleAgenda}
+          />
+        </>
       )}
       {/* Weerbericht aan het veld voor de thuislocatie. Het paneel verbergt zichzelf zodra de
           napraatperiode voorbij is (een paar uur na de aftrap) — ook voor afgelopen wedstrijden
@@ -312,8 +377,12 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
         remaining={predRemaining}
         max={LIVE_PRONOSTIEK_MAX_PER_WEEKEND}
         boosterTokens={myBoosters}
-        isMatchDay={Boolean(matchDoc?.date) && dateStrBE(new Date(String(matchDoc?.date))) === dateStrBE()}
+        isMatchDay={isMatchDag}
       />
+      {/* Alles wat "live" is — bord, tijdlijn, tribune, vertrouwenslaag, stream — slaan we over
+          zolang de wedstrijd nog moet komen. */}
+      {!toekomstig && (
+        <>
       <Scoreboard
         matchId={matchId}
         initial={{ state, timeline }}
@@ -346,6 +415,8 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
       {matchDoc?.livestreamUrl && (
         <LiveStream url={String(matchDoc.livestreamUrl)} live={state.match.status === 'live'} />
       )}
+        </>
+      )}
 
       {/* Niet ingelogd? Toon dan wat je hier mist — concreet, niet als reclame. Wie enkel de
           score komt halen, heeft alles al gezien; wie meedoet, krijgt er een wedstrijd bij. */}
@@ -365,8 +436,9 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
         </section>
       )}
 
-      {/* "Ik ben erbij" — supporters bouwen zo hun seizoenspaspoort op. */}
-      {me && (
+      {/* "Ik ben erbij" — supporters bouwen zo hun seizoenspaspoort op. Pas op de dag zelf: je
+          bent er niet bij op een wedstrijd die nog drie weken weg is. */}
+      {me && !toekomstig && (
         <div className="match-checkin">
           <CheckInButton matchId={matchId} initial={isCheckedIn(sanitizeCheckins((me as { checkins?: unknown }).checkins), matchId)} />
           <Link href="/profiel/paspoort" className="match-checkin-link">Mijn paspoort →</Link>
@@ -374,7 +446,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
       )}
 
       {/* Supporters duidelijk tonen dat ze de wedstrijd op hun tv kunnen volgen. */}
-      <CastToTv matchId={matchId} />
+      {!toekomstig && <CastToTv matchId={matchId} />}
 
       {/* Na afloop, publiek: samenvatting (speler van de wedstrijd) + de doelpuntenmakers.
           Het scoreverloop staat vlak onder het scorebord, in de Scoreboard zelf. */}

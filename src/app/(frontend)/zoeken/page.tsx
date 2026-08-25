@@ -2,15 +2,18 @@ import { headers } from 'next/headers'
 import Link from 'next/link'
 import type { Where } from 'payload'
 
+import { BewaarWedstrijd } from '@/components/BewaarWedstrijd'
 import { SiteHeader } from '@/components/SiteHeader'
 import { TeamLogo } from '@/components/TeamLogo'
 import { competitionWhere } from '@/lib/analyse-access'
 import { formatDateTimeBE } from '@/lib/datetime'
 import { googleCalendarUrl } from '@/lib/google-calendar'
+import { matchTitel } from '@/lib/match-ics'
 import { clubColors, clubLogoFit, clubLogoUrl } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
 import { reeksNaam, type Reeks } from '@/lib/reeksen'
 import { pastBijZoekterm } from '@/lib/team-search'
+import { MijnWedstrijden } from './MijnWedstrijden'
 import './zoeken.css'
 
 export const dynamic = 'force-dynamic'
@@ -58,9 +61,9 @@ function clubNaamVan(t: TeamDoc): string | null {
 export default async function ZoekenPage({
   searchParams,
 }: {
-  searchParams: Promise<{ ploeg?: string; tegen?: string }>
+  searchParams: Promise<{ ploeg?: string; tegen?: string; team?: string; alles?: string }>
 }) {
-  const { ploeg = '', tegen = '' } = await searchParams
+  const { ploeg = '', tegen = '', team = '', alles = '' } = await searchParams
   const payload = await getPayloadClient()
   // Google Agenda krijgt een klikbare link mee; die moet absoluut zijn, dus lezen we de host van
   // het verzoek i.p.v. een domein te veronderstellen.
@@ -73,13 +76,30 @@ export default async function ZoekenPage({
   const tegenPloegen = tegen.trim() ? await zoekPloegen(payload, tegen) : []
   const gezocht = ploeg.trim().length >= 2
 
-  const mijnIds = mijne.map((t) => t.id)
+  // Eén club heeft al snel twintig ploegen (van U12 tot 1ste Nationale). Daarom kies je eerst wélke
+  // ploeg je bedoelt; pas dan tonen we een kalender. Bij één treffer, een gekozen ploeg of een
+  // uitdrukkelijk "alles samen" slaan we die stap over.
+  const gekozenId = Number(team)
+  const gekozen = mijne.find((t) => t.id === gekozenId) ?? null
+  const toonAlles = alles === '1'
+  const kiezen = mijne.length > 1 && !gekozen && !toonAlles
+
+  const selectie = gekozen ? [gekozen] : mijne
+  const mijnIds = selectie.map((t) => t.id)
   const tegenIds = tegenPloegen.map((t) => t.id)
+
+  /** Link naar dezelfde zoekopdracht, met een andere ploegkeuze. */
+  const keuzeLink = (extra: Record<string, string>) => {
+    const p = new URLSearchParams({ ploeg })
+    if (tegen.trim()) p.set('tegen', tegen)
+    for (const [k, v] of Object.entries(extra)) p.set(k, v)
+    return `/zoeken?${p.toString()}`
+  }
 
   // Wedstrijden van de gevonden ploeg(en); staat er een tegenstander, dan moet die aan de andere
   // kant staan. Alles op datum, aankomende eerst — je zoekt hier meestal naar wat nog komt.
   let wedstrijden: Record<string, unknown>[] = []
-  if (mijnIds.length > 0) {
+  if (mijnIds.length > 0 && !kiezen) {
     const kant = (ids: number[]): Where[] => [{ homeTeam: { in: ids } }, { awayTeam: { in: ids } }]
     const clauses: Where[] = [{ or: kant(mijnIds) }, competitionWhere()]
     if (tegen.trim()) {
@@ -97,9 +117,10 @@ export default async function ZoekenPage({
   const komend = wedstrijden.filter((m) => new Date(String(m.date ?? '')).getTime() >= nu - 3 * 60 * 60 * 1000)
   const voorbij = wedstrijden.filter((m) => new Date(String(m.date ?? '')).getTime() < nu - 3 * 60 * 60 * 1000).reverse()
 
+  const agendaNaam = selectie.map((t) => naamVan(t)).join(' + ')
   const agendaAlles =
-    mijnIds.length > 0
-      ? `/api/agenda/ics?teams=${mijnIds.join(',')}&name=${encodeURIComponent(mijne.map((t) => naamVan(t)).join(' + '))}`
+    mijnIds.length > 0 && !kiezen
+      ? `/api/agenda/ics?teams=${mijnIds.join(',')}&name=${encodeURIComponent(agendaNaam)}`
       : null
 
   return (
@@ -124,6 +145,10 @@ export default async function ZoekenPage({
           <button type="submit" className="zk-knop">🔎 Zoeken</button>
         </form>
 
+        {/* Wat je op een wedstrijdpagina bewaarde, staat hier klaar (uit je browser, geen account
+            nodig). Niets bewaard? Dan toont dit blok zichzelf niet. */}
+        <MijnWedstrijden />
+
         {!gezocht ? (
           <p className="empty">Typ minstens twee letters van je ploeg- of clubnaam.</p>
         ) : mijne.length === 0 ? (
@@ -133,13 +158,55 @@ export default async function ZoekenPage({
           </p>
         ) : (
           <>
-            <p className="zk-gevonden">
-              {mijne.length === 1 ? 'Ploeg: ' : `${mijne.length} ploegen: `}
-              {mijne.map((t) => `${naamVan(t)}${t.reeks ? ` (${reeksNaam(t.reeks as Reeks)})` : ''}`).join(' · ')}
-              {tegen.trim() && tegenPloegen.length === 0 ? ` — geen tegenstander gevonden voor “${tegen}”` : ''}
-            </p>
+            {/* Eén club telt al snel twintig ploegen. Ze als één lange zin opsommen is onleesbaar,
+                dus staan ze hier als keuze — één tik en je hebt de kalender van díe ploeg. */}
+            {kiezen ? (
+              <section className="zk-kies">
+                <h2 className="zk-kies-titel">Welke ploeg bedoel je?</h2>
+                <p className="zk-kies-sub">
+                  {mijne.length} ploegen gevonden voor “{ploeg}”. Kies er een — of{' '}
+                  <Link href={keuzeLink({ alles: '1' })}>toon ze allemaal samen</Link>.
+                </p>
+                <ul className="zk-kies-lijst">
+                  {mijne.map((t) => (
+                    <li key={t.id}>
+                      <Link href={keuzeLink({ team: String(t.id) })} className="zk-kies-knop">
+                        <span className="zk-kies-naam">{naamVan(t)}</span>
+                        {t.reeks ? <span className="zk-kies-reeks">{reeksNaam(t.reeks as Reeks)}</span> : null}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ) : (
+              <p className="zk-gevonden">
+                {gekozen ? (
+                  <>
+                    Kalender van <b>{naamVan(gekozen)}</b>
+                    {gekozen.reeks ? ` — ${reeksNaam(gekozen.reeks as Reeks)}` : ''}
+                    {mijne.length > 1 && (
+                      <>
+                        {' · '}
+                        <Link href={keuzeLink({})}>andere ploeg kiezen</Link>
+                      </>
+                    )}
+                  </>
+                ) : mijne.length === 1 ? (
+                  <>
+                    Kalender van <b>{naamVan(mijne[0])}</b>
+                    {mijne[0].reeks ? ` — ${reeksNaam(mijne[0].reeks as Reeks)}` : ''}
+                  </>
+                ) : (
+                  <>
+                    Alle {mijne.length} ploegen samen ·{' '}
+                    <Link href={keuzeLink({})}>één ploeg kiezen</Link>
+                  </>
+                )}
+                {tegen.trim() && tegenPloegen.length === 0 ? ` — geen tegenstander gevonden voor “${tegen}”` : ''}
+              </p>
+            )}
 
-            {komend.length === 0 && voorbij.length === 0 ? (
+            {kiezen ? null : komend.length === 0 && voorbij.length === 0 ? (
               <p className="empty">Geen wedstrijden gevonden voor deze combinatie.</p>
             ) : (
               <>
@@ -204,13 +271,24 @@ function WedstrijdRegel({
         null
       : null
 
-  const titel = reeksLabel ? `${homeNaam} – ${awayNaam} (${reeksLabel})` : `${homeNaam} – ${awayNaam}`
+  // Zelfde titel als in het .ics-bestand (match-ics.ts), zodat een wedstrijd er in je agenda
+  // hetzelfde uitziet langs welke weg je ze ook toevoegde.
+  const titel = matchTitel(homeNaam, awayNaam, reeksLabel)
+  // De locatie is altijd het terrein van de THUISPLOEG: de accommodatie als de club ze invulde,
+  // anders de gemeente. Zo weet je waar je moet zijn zonder de wedstrijdpagina te openen.
   const google = datum
     ? googleCalendarUrl({
         title: titel,
         startIso: datum,
         location: plaats,
-        details: origin ? `Krachtbal Live · volg de wedstrijd op ${origin}/match/${id}` : 'Krachtbal Live',
+        details: [
+          reeksLabel ? `Reeks: ${reeksLabel}` : null,
+          `Thuisploeg: ${homeNaam}`,
+          plaats ? `Terrein: ${plaats}` : 'Terrein: nog niet gekend',
+          origin ? `Live volgen: ${origin}/match/${id}` : null,
+        ]
+          .filter(Boolean)
+          .join('\n'),
       })
     : ''
 
@@ -248,6 +326,10 @@ function WedstrijdRegel({
       </div>
       {!gespeeld && datum && (
         <div className="zk-agenda">
+          {/* Bewaren kan meteen vanuit de lijst — daarvoor hoef je de wedstrijd niet te openen. */}
+          <BewaarWedstrijd
+            wedstrijd={{ id, home: homeNaam, away: awayNaam, date: datum, reeks: reeksLabel }}
+          />
           {google && (
             <a className="zk-knop klein" href={google} target="_blank" rel="noopener noreferrer">
               📅 Google Agenda

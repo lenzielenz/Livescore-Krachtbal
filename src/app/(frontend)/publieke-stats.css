@@ -153,6 +153,8 @@
   max-height: 420px;
   overflow-y: auto;
 }
+.ps-match-rij { display: flex; align-items: center; gap: 0.4rem; }
+.ps-match-rij .ps-match { flex: 1 1 auto; min-width: 0; }
 .ps-match {
   display: grid;
   grid-template-columns: auto 1fr auto;

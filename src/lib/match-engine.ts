@@ -1155,6 +1155,12 @@ export interface MatchState {
   timeouts: { home: number; away: number }
   /** Scheidsrechter-minuten (onderbrekingen) in de huidige helft. */
   refereeStops: number
+  /**
+   * Het laatst doorgegeven doelpunt in de snelscoremodus — wat "undo" zou wegnemen. De
+   * aantekenaar tikt op een telefoon, naast de knoppen van de ándere ploeg; door te tonen wát er
+   * verdwijnt, is undo een gerust gebaar i.p.v. een gok. Null zodra er niets (meer) weg te nemen is.
+   */
+  lastSimpleGoal: { side: TeamSide; points: number; half: number; clock: number; scorer: string | null } | null
   /** Rust: de huidige helft is beëindigd, de volgende nog niet gestart. */
   atHalfTime: boolean
   /** Hoe betrouwbaar deze stand is: 🟢 officieel/bevestigd, 🟡 nog niet bevestigd, 🔴 betwist. */
@@ -1786,6 +1792,21 @@ export async function buildMatchState(payload: Payload, matchId: number): Promis
   totals.crosses.home += simple.crosses.home
   totals.crosses.away += simple.crosses.away
 
+  // Wat "undo" in de snelscoremodus zou wegnemen: het laatst toegevoegde doelpunt (op ts, want zo
+  // ordent de snelscoremodus ze ook bij het terugdraaien).
+  const laatste = simple.goals.length
+    ? simple.goals.reduce((a, b) => (b.ts >= a.ts ? b : a))
+    : null
+  const lastSimpleGoal = laatste
+    ? {
+        side: laatste.side as TeamSide,
+        points: laatste.points,
+        half: laatste.half,
+        clock: laatste.clock,
+        scorer: laatste.scorerName ?? null,
+      }
+    : null
+
   const half = match.currentHalf ?? 1
   const timeoutRes = await payload.find({
     collection: 'match-events',
@@ -1889,6 +1910,7 @@ export async function buildMatchState(payload: Payload, matchId: number): Promis
     crosses: totals.crosses,
     timeouts,
     refereeStops,
+    lastSimpleGoal,
     atHalfTime,
     trust: trustView(sanitizeTrust((match as { scoreTrust?: unknown }).scoreTrust), { official }),
     possession,

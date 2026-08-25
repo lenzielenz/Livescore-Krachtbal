@@ -131,13 +131,15 @@ export function AnalyseDetailView({
       ) : focus ? (
         <>
           <PlayerFocus p={focus} team={focus.teamSide === 'home' ? teams.home : teams.away} />
-          <MatchStats key={`p${focus.playerId}`} stats={stats} shots={shots} teams={teams} goalAreaDepth={goalAreaDepth} focusPlayerId={focus.playerId} matchLabel={matchLabel} />
+          {/* hideShotmap: de grote veldkaart bovenaan de pagina toont het veld al (met dezelfde
+              spelerfilter) — hier nog eens een veld zou dubbel zijn. */}
+          <MatchStats key={`p${focus.playerId}`} stats={stats} shots={shots} teams={teams} goalAreaDepth={goalAreaDepth} focusPlayerId={focus.playerId} matchLabel={matchLabel} hideShotmap />
         </>
       ) : (
         <>
           <MatchRecap stats={stats} teams={teams} />
           <AnalyseCharts stats={stats} teams={teams} />
-          <MatchStats key="match" stats={stats} shots={shots} teams={teams} goalAreaDepth={goalAreaDepth} matchLabel={matchLabel} />
+          <MatchStats key="match" stats={stats} shots={shots} teams={teams} goalAreaDepth={goalAreaDepth} matchLabel={matchLabel} hideShotmap />
         </>
       )}
     </>

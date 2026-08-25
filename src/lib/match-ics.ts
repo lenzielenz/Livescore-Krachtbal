@@ -68,11 +68,21 @@ function alarmLines(minuten: number[] | undefined, summary: string): string[] {
   ])
 }
 
+/**
+ * Titel zoals ze in een agenda thuishoort. In je agenda staat van alles door elkaar, dus begint ze
+ * met de sport; daarna de affiche en de reeks, zodat je bij drie ploegen in één gezin meteen ziet
+ * wélke wedstrijd het is.
+ */
+export function matchTitel(home: string, away: string, reeks?: string | null): string {
+  const affiche = `${home} – ${away}`
+  return reeks ? `Krachtbal: ${affiche} (${reeks})` : `Krachtbal: ${affiche}`
+}
+
 function eventLines(o: MatchIcsInput): (string | null)[] {
   const start = new Date(o.startIso)
   const end = new Date(start.getTime() + (o.durationMin ?? 120) * 60_000)
   const stamp = o.stampIso ? new Date(o.stampIso) : new Date()
-  const summary = o.reeks ? `${o.home} – ${o.away} (${o.reeks})` : `${o.home} – ${o.away}`
+  const summary = matchTitel(o.home, o.away, o.reeks)
   return [
     'BEGIN:VEVENT',
     `UID:krachtbal-match-${o.id}@krachtbal-live`,

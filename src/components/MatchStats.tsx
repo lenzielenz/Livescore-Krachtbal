@@ -42,6 +42,7 @@ export function MatchStats({
   goalAreaDepth = 10,
   focusPlayerId,
   matchLabel,
+  hideShotmap = false,
 }: {
   stats: Stats
   shots: ShotPoint[]
@@ -51,6 +52,8 @@ export function MatchStats({
   focusPlayerId?: number
   /** Wedstrijd-omschrijving (reeks · datum) voor de gedownloade video. */
   matchLabel?: string
+  /** Verberg het veld met de worpenkaart — voor pagina's die al een (grotere) veldkaart tonen. */
+  hideShotmap?: boolean
 }) {
   const [playerFilter, setPlayerFilter] = useState<number | 'all'>(focusPlayerId ?? 'all')
   const [goalsOnly, setGoalsOnly] = useState(false)
@@ -66,7 +69,8 @@ export function MatchStats({
     if (!svg || imgBusy) return
     setImgBusy(true)
     try {
-      const blob = await svgToPngBlob(svg as SVGSVGElement, { scale: 3, background: '#0b1c14' })
+      // Hoge resolutie (ook voor de heatmap): schaal 6 is scherp genoeg voor inzoomen/afdrukken.
+      const blob = await svgToPngBlob(svg as SVGSVGElement, { scale: 6, background: '#0b1c14' })
       const viewName = view === 'flow' ? 'flow' : view === 'heat' ? 'heatmap' : 'punten'
       const name = slugFilename('krachtbal', viewName, teams.home, 'vs', teams.away, matchLabel) + '.png'
       await saveOrShareBlob(blob, name, matchLabel ?? 'Krachtbal')
@@ -118,7 +122,8 @@ export function MatchStats({
         <CompareBar label="Max afstand (m)" home={stats.teams.home.maxDistance} away={stats.teams.away.maxDistance} fmt={(n) => n.toFixed(1)} />
       </div>
 
-      <div className="stats-grid">
+      <div className={hideShotmap ? undefined : 'stats-grid'}>
+        {!hideShotmap && (
         <div className="shotmap">
           <div className="shotmap-controls">
             <button type="button" className={view === 'dots' ? 'on' : ''} onClick={() => setView('dots')}>Punten</button>
@@ -191,6 +196,7 @@ export function MatchStats({
             </>
           )}
         </div>
+        )}
 
         <div className="player-table-wrap">
           <div className="pt-filter">

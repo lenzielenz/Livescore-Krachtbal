@@ -484,15 +484,20 @@
   font-weight: 700;
 }
 .lb-rowwrap {
-  border-bottom: 1px solid var(--line);
+  /* Zwevende kaarten i.p.v. rijen met scheidingslijnen: elke wedstrijd is een eigen juweeltje
+     met clubkleur-gloed (zie .lb-match-live), de groep is enkel nog de rustige houder. */
+  padding: 7px 10px;
   /* Laat de browser layout/paint overslaan voor rijen buiten beeld — scheelt veel op een lange
      speeldag (100+ wedstrijden). De geschatte hoogte is enkel een placeholder tot de rij in
      beeld scrollt; nadien meet de browser gewoon de echte hoogte (ook als een rij openklapt). */
   content-visibility: auto;
   contain-intrinsic-size: 0 150px;
 }
+.lb-rowwrap:first-of-type {
+  padding-top: 10px;
+}
 .lb-rowwrap:last-child {
-  border-bottom: none;
+  padding-bottom: 10px;
 }
 .lb-row {
   display: flex;
@@ -508,10 +513,11 @@
    De ster zit als overlay IN de kaart (eigen rail links), niet in een aparte gutter ernaast. */
 .lb-row.live {
   position: relative;
-  background: #0b0f15;
+  background: transparent;
 }
 .lb-row.live:hover {
-  background: #0d121a;
+  background: transparent;
+  box-shadow: none;
 }
 /* Ster: subtiele overlay links in de glas-kaart, uitgelijnd met de logo's. */
 .lb-row.live .lb-star {
@@ -1042,6 +1048,27 @@
   display: block;
   padding: 0;
   cursor: pointer;
+  /* Elke kaart zweeft los, met een haarscherpe lichtrand en een gloed in de clubkleuren —
+     de kleuren van de affiche zelf zetten de kaart in de verf. */
+  border-radius: 14px;
+  overflow: hidden;
+  background: #0b0f15;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 0 0 1px rgba(255, 255, 255, 0.07),
+    0 12px 30px -14px color-mix(in srgb, var(--hc) 55%, transparent),
+    0 12px 30px -14px color-mix(in srgb, var(--ac) 55%, transparent),
+    0 14px 34px -18px rgba(0, 0, 0, 0.85);
+  transition: transform var(--dur-1) var(--ease-soft), box-shadow var(--dur-1) var(--ease-soft);
+}
+.lb-match.lb-match-live:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    0 0 0 1px rgba(255, 255, 255, 0.12),
+    0 16px 38px -14px color-mix(in srgb, var(--hc) 70%, transparent),
+    0 16px 38px -14px color-mix(in srgb, var(--ac) 70%, transparent),
+    0 18px 40px -18px rgba(0, 0, 0, 0.85);
 }
 /* Logo/naam zijn nu eigen linkjes naar het ploegprofiel (stopPropagation tegen de kaart-tik) —
    geen onderstreping/kleurwissel, wél een duidelijke hover zodat je voelt dat het een eigen tik is. */
@@ -1069,11 +1096,14 @@
   inset: 0;
   z-index: 0;
   pointer-events: none;
+  /* Rijker verloop: de clubkleuren dragen verder de kaart in en ontmoeten elkaar in een
+     lichtere naad in het midden — dieper en verzadigder dan de vlakke fade van vroeger. */
   background: linear-gradient(
-    120deg,
-    color-mix(in srgb, var(--hc) 66%, #0b0f15) 0%,
-    #0b0f15 46%,
-    color-mix(in srgb, var(--ac) 66%, #0b0f15) 100%
+    115deg,
+    color-mix(in srgb, var(--hc) 82%, #0a0e14) 0%,
+    color-mix(in srgb, var(--hc) 34%, #0c1018) 40%,
+    color-mix(in srgb, var(--ac) 34%, #0c1018) 60%,
+    color-mix(in srgb, var(--ac) 82%, #0a0e14) 100%
   );
 }
 .lb-row.now .lbl-color {
@@ -1107,6 +1137,28 @@
 .lbl-logo { position: relative; z-index: 2; display: inline-flex; filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.45)); }
 .lbl-center { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 0; }
 .lbl-score { font-weight: 900; font-size: 1.5rem; color: #fff; line-height: 1; font-variant-numeric: tabular-nums; text-shadow: 0 2px 12px rgba(0, 0, 0, 0.5); }
+/* "VS" bij een nog te spelen affiche: klein, gespatieerd chipje op glas i.p.v. een kale tekst. */
+.lbl-score.lbl-vs {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.32em;
+  text-indent: 0.32em; /* compenseert de spatiëring achter de S, zodat de chip optisch centreert */
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.05));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+/* Aanvangsuur op de kaart: wit pil-chipje dat leesbaar blijft op elke clubkleur. */
+.lbl-center .lb-time {
+  color: #fff;
+  font-weight: 800;
+  font-size: 0.76rem;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: rgba(6, 9, 14, 0.5);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
+}
 .lbl-center .lb-stats { color: rgba(255, 255, 255, 0.82); }
 .lbl-names {
   display: grid;
