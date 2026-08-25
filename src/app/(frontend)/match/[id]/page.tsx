@@ -9,6 +9,7 @@ import { MatchStats } from '@/components/MatchStats'
 import { MatchWeather } from '@/components/MatchWeather'
 import { Scoreboard } from '@/components/Scoreboard'
 import { SiteHeader } from '@/components/SiteHeader'
+import { TeamLogo } from '@/components/TeamLogo'
 import { userClubId } from '@/lib/access'
 import { getAuthUser } from '@/lib/auth-user'
 import { mayEditMatchVideo } from '@/lib/video-access'
@@ -334,16 +335,43 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
           )}
         </div>
       )}
-      {/* Nog te spelen: een rustige aankondiging i.p.v. een scorebord op 0–0. Bewaren + agenda. */}
+      {/* Nog te spelen: een affiche i.p.v. een scorebord op 0–0 — logo's en clubkleuren zoals op
+          de live-bordkaarten, met de aftrap eronder. Bewaren + agenda. */}
       {toekomstig && (
         <>
-          <section className="match-aankondiging" aria-label="Nog te spelen">
-            <p className="match-aankondiging-ploegen">
-              <span className="match-aankondiging-ploeg">{state.teams.home.name}</span>
-              <span className="match-aankondiging-vs">tegen</span>
-              <span className="match-aankondiging-ploeg">{state.teams.away.name}</span>
-            </p>
-            {datum && <p className="match-aankondiging-wanneer">{datum}</p>}
+          <section
+            className="match-affiche"
+            aria-label="Nog te spelen"
+            style={{
+              '--hc': state.teams.home.colors?.primary ?? 'var(--accent)',
+              '--ac': state.teams.away.colors?.primary ?? 'var(--accent)',
+            } as React.CSSProperties}
+          >
+            <span className="match-affiche-kleur" aria-hidden />
+            <div className="match-affiche-kop">
+              <TeamLogo
+                name={state.teams.home.name}
+                logoUrl={state.teams.home.logoUrl}
+                logoFit={state.teams.home.logoFit}
+                side="home"
+                size={64}
+                ringColor={state.teams.home.colors?.primary}
+              />
+              <span className="match-affiche-vs">VS</span>
+              <TeamLogo
+                name={state.teams.away.name}
+                logoUrl={state.teams.away.logoUrl}
+                logoFit={state.teams.away.logoFit}
+                side="away"
+                size={64}
+                ringColor={state.teams.away.colors?.primary}
+              />
+            </div>
+            <div className="match-affiche-namen">
+              <span className="match-affiche-naam">{state.teams.home.name}</span>
+              <span className="match-affiche-naam away">{state.teams.away.name}</span>
+            </div>
+            {datum && <p className="match-affiche-wanneer">{datum}</p>}
           </section>
           <ToekomstigeWedstrijd
             wedstrijd={{
