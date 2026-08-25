@@ -83,10 +83,10 @@ body {
   /* Premium, diepe achtergrond met levendige kleurgloed (aurora-gevoel) i.p.v. een vlak zwart vlak.
      Neutrale bijna-zwarte basis met blauw/koraal-accenten die wat meer poppen. */
   background-image:
-    radial-gradient(1150px 660px at 50% -10%, color-mix(in srgb, var(--accent) 17%, transparent), transparent 60%),
-    radial-gradient(900px 560px at 4% 2%, color-mix(in srgb, var(--home) 10%, transparent), transparent 55%),
-    radial-gradient(900px 560px at 97% 1%, color-mix(in srgb, var(--away) 15%, transparent), transparent 55%),
-    radial-gradient(820px 620px at 88% 92%, color-mix(in srgb, var(--pop) 12%, transparent), transparent 60%),
+    radial-gradient(1150px 660px at 50% -10%, color-mix(in srgb, var(--accent) 21%, transparent), transparent 60%),
+    radial-gradient(900px 560px at 4% 2%, color-mix(in srgb, var(--home) 13%, transparent), transparent 55%),
+    radial-gradient(900px 560px at 97% 1%, color-mix(in srgb, var(--away) 18%, transparent), transparent 55%),
+    radial-gradient(820px 620px at 88% 92%, color-mix(in srgb, var(--pop) 15%, transparent), transparent 60%),
     linear-gradient(180deg, #0c0e12 0%, #070809 100%);
   background-attachment: fixed;
   -webkit-font-smoothing: antialiased;
