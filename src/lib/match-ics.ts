@@ -43,6 +43,29 @@ export interface MatchIcsInput {
   description?: string | null
   /** Vast tijdstip voor DTSTAMP (testbaar); default nu. */
   stampIso?: string
+  /**
+   * Meldingen vóór de aftrap, in minuten (bv. [1440, 60] = daags ervoor en een uur ervoor).
+   * Een lege lijst betekent: geen melding. Agenda's die VALARM ondersteunen (Google bij het
+   * importeren van een bestand, Apple Agenda, Outlook) zetten die er dan zelf bij.
+   */
+  alarmsMin?: number[]
+}
+
+/** Standaardmeldingen: de dag ervoor (plannen) en een uur ervoor (vertrekken). */
+export const DEFAULT_ALARMS_MIN = [24 * 60, 60]
+
+/** VALARM-blokken voor de opgegeven meldingen. Waarden ≤ 0 of onzin worden genegeerd. */
+function alarmLines(minuten: number[] | undefined, summary: string): string[] {
+  const lijst = (minuten ?? DEFAULT_ALARMS_MIN)
+    .map((m) => Math.round(Number(m)))
+    .filter((m) => Number.isFinite(m) && m > 0)
+  return [...new Set(lijst)].flatMap((m) => [
+    'BEGIN:VALARM',
+    'ACTION:DISPLAY',
+    `DESCRIPTION:${icsEscape(summary)}`,
+    `TRIGGER:-PT${m}M`,
+    'END:VALARM',
+  ])
 }
 
 function eventLines(o: MatchIcsInput): (string | null)[] {
@@ -60,6 +83,7 @@ function eventLines(o: MatchIcsInput): (string | null)[] {
     o.location ? `LOCATION:${icsEscape(o.location)}` : null,
     o.url ? `URL:${icsEscape(o.url)}` : null,
     o.description ? `DESCRIPTION:${icsEscape(o.description)}` : null,
+    ...alarmLines(o.alarmsMin, summary),
     'END:VEVENT',
   ]
 }

@@ -1,0 +1,73 @@
+/* "Wanneer spelen we?" — zoeken op ploeg (en optioneel tegenstander) met agenda-knoppen. */
+
+.zk-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+  margin: 0 0 18px;
+}
+.zk-veld { flex: 1 1 220px; display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.zk-veld span { font-size: 0.76rem; color: var(--dim); font-weight: 700; }
+.zk-veld input {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--txt);
+  font: inherit;
+  min-width: 0;
+}
+.zk-veld input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.zk-knop {
+  flex: 0 0 auto;
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--accent) 55%, var(--line));
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  color: var(--accent);
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.zk-knop:hover { background: color-mix(in srgb, var(--accent) 28%, transparent); }
+.zk-knop.klein { padding: 6px 12px; font-size: 0.8rem; }
+.zk-knop.zacht { border-color: var(--line); background: transparent; color: var(--dim); }
+.zk-knop.zacht:hover { color: var(--txt); background: rgba(255, 255, 255, 0.06); }
+
+.zk-gevonden { font-size: 0.84rem; color: var(--dim); margin: 0 0 14px; }
+
+.zk-lijst { list-style: none; margin: 0 0 16px; padding: 0; display: grid; gap: 10px; }
+.zk-item {
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+}
+.zk-wedstrijd {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 10px;
+  color: inherit;
+  text-decoration: none;
+  font-weight: 700;
+}
+.zk-wedstrijd:hover .zk-naam { color: var(--accent); }
+.zk-ploeg { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.zk-ploeg.away { justify-content: flex-end; }
+.zk-naam { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.zk-vs { color: var(--dim); }
+
+.zk-meta { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 8px; font-size: 0.8rem; }
+.zk-wanneer { font-weight: 700; }
+.zk-chip { color: var(--dim); }
+
+.zk-agenda { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+
+.zk-alles { margin: 0 0 18px; }
+.zk-voorbij { margin-top: 8px; }
+.zk-voorbij summary { cursor: pointer; font-size: 0.86rem; color: var(--dim); margin-bottom: 10px; }

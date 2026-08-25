@@ -93,3 +93,76 @@ describe('buildMultiMatchIcs', () => {
     expect(ics).not.toContain('BEGIN:VEVENT')
   })
 })
+
+describe('meldingen (VALARM)', () => {
+  const basis = {
+    id: 7,
+    home: 'Sint-Michiels',
+    away: 'Beveren',
+    startIso: '2026-03-07T14:00:00.000Z',
+    stampIso: '2026-03-01T10:00:00.000Z',
+  }
+
+  it('zet standaard een melding daags ervoor én een uur ervoor', () => {
+    const ics = buildMatchIcs(basis)
+    expect(ics).toContain('BEGIN:VALARM')
+    expect(ics).toContain('TRIGGER:-PT1440M')
+    expect(ics).toContain('TRIGGER:-PT60M')
+    expect(ics).toContain('ACTION:DISPLAY')
+    // De melding hoort binnen het event te staan, niet erbuiten.
+    expect(ics.indexOf('BEGIN:VALARM')).toBeGreaterThan(ics.indexOf('BEGIN:VEVENT'))
+    expect(ics.indexOf('END:VALARM')).toBeLessThan(ics.indexOf('END:VEVENT'))
+  })
+
+  it('respecteert eigen meldingen', () => {
+    const ics = buildMatchIcs({ ...basis, alarmsMin: [15] })
+    expect(ics).toContain('TRIGGER:-PT15M')
+    expect(ics).not.toContain('TRIGGER:-PT1440M')
+  })
+
+  it('laat de melding weg met een lege lijst', () => {
+    expect(buildMatchIcs({ ...basis, alarmsMin: [] })).not.toContain('VALARM')
+  })
+
+  it('negeert onzinnige waarden en ontdubbelt', () => {
+    const ics = buildMatchIcs({ ...basis, alarmsMin: [60, 60, 0, -30, Number.NaN] })
+    expect(ics.match(/BEGIN:VALARM/g)).toHaveLength(1)
+    expect(ics).toContain('TRIGGER:-PT60M')
+  })
+
+  it('zet de meldingen ook in een agenda met meerdere wedstrijden', () => {
+    const ics = buildMultiMatchIcs('Mijn ploeg', [basis, { ...basis, id: 8, startIso: '2026-03-14T14:00:00.000Z' }])
+    expect(ics.match(/BEGIN:VALARM/g)).toHaveLength(4) // 2 wedstrijden × 2 meldingen
+  })
+})
+
+describe('googleCalendarUrl', () => {
+  it('bouwt een ingevulde template-link', async () => {
+    const { googleCalendarUrl } = await import('@/lib/google-calendar')
+    const url = googleCalendarUrl({
+      title: 'Sint-Michiels – Beveren',
+      startIso: '2026-03-07T14:00:00.000Z',
+      location: 'Sportpark, Brugge',
+      details: 'Landelijke Heren',
+    })
+    expect(url).toContain('https://calendar.google.com/calendar/render?')
+    expect(url).toContain('action=TEMPLATE')
+    expect(url).toContain('dates=20260307T140000Z%2F20260307T160000Z')
+    // Spaties komen als '+' in een querystring — uitlezen via URLSearchParams, niet als tekst.
+    const p = new URL(url).searchParams
+    expect(p.get('text')).toBe('Sint-Michiels – Beveren')
+    expect(p.get('location')).toBe('Sportpark, Brugge')
+    expect(p.get('details')).toBe('Landelijke Heren')
+  })
+
+  it('volgt een afwijkende duur', async () => {
+    const { googleCalendarUrl } = await import('@/lib/google-calendar')
+    const url = googleCalendarUrl({ title: 'X', startIso: '2026-03-07T14:00:00.000Z', durationMin: 90 })
+    expect(url).toContain('dates=20260307T140000Z%2F20260307T153000Z')
+  })
+
+  it('geeft een lege string bij een onbruikbare datum', async () => {
+    const { googleCalendarUrl } = await import('@/lib/google-calendar')
+    expect(googleCalendarUrl({ title: 'X', startIso: 'geen-datum' })).toBe('')
+  })
+})
