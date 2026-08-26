@@ -1,9 +1,9 @@
 import { authUser, userClubId } from '@/lib/api-auth'
-import { dateStrBE } from '@/lib/datetime'
+import { formatDateTimeBE } from '@/lib/datetime'
 import { buildMatchState } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
 import { activeTokens } from '@/lib/pronostiek-rad'
-import { countUserWeekendPredictions, LIVE_PRONOSTIEK_MAX_PER_WEEKEND } from '@/lib/pronostiek-weekend'
+import { countUserWeekendPredictions, LIVE_PRONOSTIEK_MAX_PER_WEEKEND, pronostiekOpen, pronostiekOpenVanaf } from '@/lib/pronostiek-weekend'
 import { reeksHalfDurationSeconds, type Reeks } from '@/lib/reeksen'
 import { clientIp, rateLimit } from '@/lib/sse-hub'
 
@@ -13,8 +13,8 @@ type PredEntry = { userId: number; name: string; clubId: number | null; home: nu
 type RadToken = { mult: number; wonAt: string; expiresAt: string }
 type Power = { tokens?: RadToken[]; spinWeek?: string; spinsUsed?: number }
 
-// Eén score-voorspelling van een clublid wegschrijven (upsert per persoon). Enkel vóór de aftrap
-// (status 'scheduled') en enkel voor wedstrijden van de eigen club.
+// Eén score-voorspelling wegschrijven (upsert per persoon). Elke ingelogde supporter mag meedoen
+// (club niet vereist); voorspellen kan vóór en tijdens de wedstrijd, nooit erna.
 export async function POST(req: Request) {
   const ip = clientIp(req)
   if (!rateLimit(`predict:${ip}`, Number(process.env.PREDICT_MAX_PER_SEC) || 10, 1000)) {
@@ -40,9 +40,10 @@ export async function POST(req: Request) {
     const payload = await getPayloadClient()
     const user = await authUser(payload, req)
     if (!user) return Response.json({ error: 'Niet ingelogd.' }, { status: 401 })
+    // Een clubkoppeling is géén voorwaarde: iedereen met een account speelt mee in het globale
+    // klassement. De club blijft wel mee opgeslagen (indien gekend) voor de club-klassementen.
     const rawClub = userClubId(user)
     const clubId = rawClub != null && Number.isFinite(Number(rawClub)) ? Number(rawClub) : null
-    if (clubId == null) return Response.json({ error: 'Je account is niet aan een club gekoppeld.' }, { status: 403 })
 
     const match = await payload.findByID({ collection: 'matches', id: matchId, depth: 0 }).catch(() => null)
     if (!match || match.analyseOnly || (match as { isDemo?: boolean }).isDemo) {
@@ -52,9 +53,12 @@ export async function POST(req: Request) {
     if (match.status !== 'scheduled' && match.status !== 'live') {
       return Response.json({ error: 'De wedstrijd is afgelopen — voorspellen kan niet meer.' }, { status: 409 })
     }
-    // Vóór de speeldag zelf mag nog niet voorspeld worden — pas vanaf de dag van de wedstrijd.
-    if (match.status === 'scheduled' && dateStrBE(new Date(String((match as { date?: unknown }).date ?? ''))) !== dateStrBE()) {
-      return Response.json({ error: 'Voorspellen kan pas vanaf de dag van de wedstrijd zelf.' }, { status: 409 })
+    // De pronostiek opent zodra het vorige speelweekend afgelopen is (zondag om middernacht):
+    // vanaf maandag 00:00 staat de hele komende speelweek open.
+    const matchDateIso = String((match as { date?: unknown }).date ?? '')
+    if (match.status === 'scheduled' && !pronostiekOpen(matchDateIso)) {
+      const vanaf = formatDateTimeBE(pronostiekOpenVanaf(matchDateIso), { dateStyle: 'full' })
+      return Response.json({ error: `De pronostiek voor deze wedstrijd opent op ${vanaf} om middernacht.` }, { status: 409 })
     }
     // Elke competitiewedstrijd mag voorspeld worden (je kan via een pool uitgenodigd zijn voor de
     // matchen van een andere ploeg/club). De klassementen filteren toch op club of pool.

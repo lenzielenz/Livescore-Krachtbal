@@ -568,6 +568,17 @@
 .lb-score-cta-txt {
   flex: 1 1 auto;
 }
+/* Pronostiek-variant: zelfde vorm, paarse toon — zo lees je in één oogopslag dat dit spelen
+   is (pronostiek) en niet werken (aantekenen). */
+.lb-score-cta.pronostiek {
+  border-color: color-mix(in srgb, var(--pop-2, #b07bff) 45%, var(--line));
+  background: color-mix(in srgb, var(--pop-2, #b07bff) 12%, transparent);
+}
+.lb-score-cta.pronostiek:hover {
+  background: color-mix(in srgb, var(--pop-2, #b07bff) 22%, transparent);
+  border-color: var(--pop-2, #b07bff);
+}
+.lb-score-cta.pronostiek .lb-score-cta-arrow { color: var(--pop-2, #b07bff); }
 .lb-score-cta-arrow {
   color: var(--accent);
   font-size: 1.1rem;

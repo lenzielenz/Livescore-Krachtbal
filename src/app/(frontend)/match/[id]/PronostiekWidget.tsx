@@ -7,11 +7,51 @@ import './pronostiek-widget.css'
 
 // Pronostiek-widget op de matchpagina: geef je exacte uitslag door. Eens ingediend → ✓ vergrendeld,
 // niemand ziet je tip. Voorspellen kan tot tijdens de match; hoe later, hoe minder punten.
+
+// Eén ploegkolom van het formulier: naam, groot cijfer en − / + knoppen eromheen.
+function Stepper({
+  naam,
+  waarde,
+  zet,
+  away = false,
+}: {
+  naam: string
+  waarde: string
+  zet: (v: string) => void
+  away?: boolean
+}) {
+  const n = Number(waarde)
+  const num = Number.isInteger(n) && n >= 0 ? n : 0
+  const stap = (d: number) => zet(String(Math.min(199, Math.max(0, num + d))))
+  return (
+    <div className={`pn-col${away ? ' away' : ''}`}>
+      <span className="pn-team">{naam}</span>
+      <div className="pn-stepper">
+        <button type="button" className="pn-step" onClick={() => stap(-1)} disabled={num <= 0} aria-label={`Eén minder voor ${naam}`}>
+          −
+        </button>
+        <input
+          className="pn-score"
+          type="number"
+          min={0}
+          max={199}
+          inputMode="numeric"
+          value={waarde}
+          onChange={(e) => zet(e.target.value)}
+          onFocus={(e) => e.target.select()}
+          aria-label={`Jouw voorspelling ${naam}`}
+        />
+        <button type="button" className="pn-step" onClick={() => stap(1)} aria-label={`Eén meer voor ${naam}`}>
+          +
+        </button>
+      </div>
+    </div>
+  )
+}
 export function PronostiekWidget({
   matchId,
   status,
   loggedIn,
-  hasClub,
   homeName,
   awayName,
   initialHome,
@@ -19,12 +59,12 @@ export function PronostiekWidget({
   remaining,
   max,
   boosterTokens,
-  isMatchDay,
+  pronostiekOpen,
+  openVanafTekst,
 }: {
   matchId: number
   status: string
   loggedIn: boolean
-  hasClub: boolean
   homeName: string
   awayName: string
   initialHome: number | null
@@ -35,16 +75,20 @@ export function PronostiekWidget({
   max?: number
   /** Gewonnen bonusrad-boosters (vermenigvuldigers) die de speler kan inzetten. */
   boosterTokens?: number[]
-  /** Is het vandaag de speeldag zelf? Vóór de speeldag mag nog niet voorspeld worden. */
-  isMatchDay: boolean
+  /** Staat de pronostiek al open? (vanaf zondagmiddernacht vóór de speelweek — server beslist) */
+  pronostiekOpen: boolean
+  /** Leesbaar openingsmoment voor de gesloten-melding (bv. "maandag 14 september 2026"). */
+  openVanafTekst?: string | null
 }) {
   const fmtMult = (v: number) => `×${Number.isInteger(v) ? v : String(v).replace('.', ',')}`
   // Unieke boosterwaarden + hoeveel je er van hebt (bv. ×2 (2), ×5).
   const tokenCounts = (boosterTokens ?? []).reduce<Map<number, number>>((m, v) => m.set(v, (m.get(v) ?? 0) + 1), new Map())
   const tokenChoices = [...tokenCounts.entries()].sort((a, b) => b[0] - a[0])
   const hasBooster = tokenChoices.length > 0
-  const [home, setHome] = useState('')
-  const [away, setAway] = useState('')
+  // Tap-eerst invoer: de score begint op 0 en gaat met − / + omhoog of omlaag — typen hoeft
+  // niet (maar kan wel: het cijfer zelf is een gewoon invoerveld).
+  const [home, setHome] = useState('0')
+  const [away, setAway] = useState('0')
   const [chosenBoost, setChosenBoost] = useState<number | null>(null)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
@@ -89,11 +133,13 @@ export function PronostiekWidget({
       </div>
     )
   }
-  if (status === 'scheduled' && !isMatchDay) {
+  if (status === 'scheduled' && !pronostiekOpen) {
     return (
       <div className="pn-line">
         <span className="pn-line-ic">🔮</span>
-        <span>Pronostiek opent op de dag van de wedstrijd zelf.</span>
+        <span>
+          Pronostiek opent {openVanafTekst ? <>op <b>{openVanafTekst}</b></> : 'in de week van de wedstrijd'} — telkens vanaf zondagmiddernacht na het vorige speelweekend.
+        </span>
       </div>
     )
   }
@@ -103,14 +149,6 @@ export function PronostiekWidget({
       <div className="pn-line">
         <span className="pn-line-ic">🔮</span>
         <span><Link href="/inloggen">Log in</Link> en pronostikeer mee voor het klassement.</span>
-      </div>
-    )
-  }
-  if (!hasClub) {
-    return (
-      <div className="pn-line">
-        <span className="pn-line-ic">🔮</span>
-        <span>Koppel je account aan je club om mee te pronostikeren.</span>
       </div>
     )
   }
@@ -135,13 +173,16 @@ export function PronostiekWidget({
           <span className="pn-left">nog {remaining}{max ? `/${max}` : ''} dit weekend</span>
         )}
       </h3>
+      {/* Tap-eerst: twee kolommen met grote − / + knoppen rond het cijfer — niemand hoeft te
+          typen of iets te lezen om dit te snappen. Het cijfer blijft wél een invoerveld voor wie
+          liever tikt. */}
       <form className="pn-form" onSubmit={submit}>
-        <span className="pn-team">{homeName}</span>
-        <input className="pn-score" type="number" min={0} max={199} inputMode="numeric" value={home} onChange={(e) => setHome(e.target.value)} placeholder="–" aria-label={`Jouw voorspelling ${homeName}`} />
-        <span className="pn-dash">–</span>
-        <input className="pn-score" type="number" min={0} max={199} inputMode="numeric" value={away} onChange={(e) => setAway(e.target.value)} placeholder="–" aria-label={`Jouw voorspelling ${awayName}`} />
-        <span className="pn-team away">{awayName}</span>
-        <button type="submit" className="pn-send" disabled={busy}>{busy ? '…' : 'Doorgeven'}</button>
+        <Stepper naam={homeName} waarde={home} zet={setHome} />
+        <span className="pn-dash" aria-hidden>–</span>
+        <Stepper naam={awayName} waarde={away} zet={setAway} away />
+        <button type="submit" className="pn-send" disabled={busy}>
+          {busy ? '…' : '🔮 Speel mijn tip'}
+        </button>
       </form>
       {hasBooster && (
         <div className="pn-boost">

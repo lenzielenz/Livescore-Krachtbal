@@ -8,6 +8,7 @@ import { PushOptIn } from '@/components/PushOptIn'
 import { TeamLogo } from '@/components/TeamLogo'
 import { type ClubColors } from '@/lib/club-colors'
 import { type LogoFit } from '@/lib/logo-fit'
+import { pronostiekOpen } from '@/lib/pronostiek-weekend'
 import { speeldagenRond, volgendeSpeeldag, vorigeSpeeldag, type Speeldag } from '@/lib/speeldagen'
 import { pastBijZoekterm } from '@/lib/team-search'
 
@@ -291,6 +292,8 @@ export function LiveBoard({
     day: '2-digit',
     month: 'long',
   })
+  // Mag er voor deze speeldag al gepronostikeerd worden? (open vanaf zondagmiddernacht ervoor)
+  const kanVoorspellen = useMemo(() => pronostiekOpen(`${date}T12:00:00`), [date])
 
   // Datumnavigatie op basis van de échte speeldagen (zie speeldagen.ts). Zonder die lijst (bv. een
   // lege kalender) valt alles terug op één dag opschuiven.
@@ -627,6 +630,17 @@ export function LiveBoard({
                       <Link href={`/match/${m.id}#uitslag`} className="lb-score-cta">
                         <span className="lb-score-cta-ico" aria-hidden>🏁</span>
                         <span className="lb-score-cta-txt">Gespeeld? Geef de uitslag door</span>
+                        <span className="lb-score-cta-arrow" aria-hidden>→</span>
+                      </Link>
+                    )}
+                    {/* Pronostiek-uitnodiging in de uitgeklapte rij: de speelweek staat open
+                        (vanaf zondagmiddernacht) en er valt nog te voorspellen. */}
+                    {open && !m.awaitingResult && m.status !== 'finished' && kanVoorspellen && (
+                      <Link href={`/match/${m.id}`} className="lb-score-cta pronostiek">
+                        <span className="lb-score-cta-ico" aria-hidden>🔮</span>
+                        <span className="lb-score-cta-txt">
+                          {m.status === 'live' ? 'Voorspel de uitslag — kan nog tijdens de match' : 'Voorspel de uitslag — speel de pronostiek'}
+                        </span>
                         <span className="lb-score-cta-arrow" aria-hidden>→</span>
                       </Link>
                     )}
