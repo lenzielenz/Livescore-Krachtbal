@@ -41,6 +41,8 @@ export type TMatchState = {
   currentHalf: number
   clockSeconds: number
   clockRunning: boolean
+  /** Gepland aanvangsuur (ISO) — het groep-kantinescherm telt hiernaar af. */
+  plannedAt: string | null
 }
 
 export type TournamentState = {
@@ -78,6 +80,7 @@ type MatchDoc = {
   clockSeconds?: number | null
   clockRunning?: boolean | null
   clockUpdatedAt?: string | null
+  plannedAt?: string | null
 }
 
 const COLL = 'tournament-matches' as const
@@ -116,6 +119,7 @@ function toState(m: MatchDoc): TMatchState {
     currentHalf: m.currentHalf ?? 1,
     clockSeconds: Math.floor(liveClock(m)),
     clockRunning: Boolean(m.clockRunning),
+    plannedAt: (m as { plannedAt?: string | null }).plannedAt ?? null,
   }
 }
 
@@ -148,6 +152,8 @@ export async function createTournament(
     teamTeams?: { name: string; teamId: number }[]
     /** Toon de lopende wedstrijden van deze beker bovenaan de live-pagina. */
     toonOpLive?: boolean
+    /** Hoofdgroep/tornooidag (bv. "Beker van Brugge") die meerdere reeksen bundelt. */
+    groep?: string
   },
 ): Promise<number> {
   const format: TournamentFormat = args.format === 'roundrobin' ? 'roundrobin' : 'knockout'
@@ -174,6 +180,7 @@ export async function createTournament(
       status: 'live',
       teamCount: filled.length,
       toonOpLive: Boolean(args.toonOpLive),
+      ...(args.groep?.trim() ? { groep: args.groep.trim() } : {}),
       ...(args.teamClubs && args.teamClubs.length ? { teamClubs: args.teamClubs } : {}),
       ...(args.teamTeams && args.teamTeams.length ? { teamTeams: args.teamTeams } : {}),
     },
@@ -341,6 +348,14 @@ export async function recordTimeout(payload: Payload, matchId: number, side: Sid
 }
 
 /** Klok starten/pauzeren of de tijd zetten. Bij pauzeren wordt de verstreken tijd vastgeklikt. */
+/** Gepland aanvangsuur zetten of wissen (tornooidag-planning; voedt het aftellen op de kantine). */
+export async function planMatch(payload: Payload, matchId: number, plannedAtIso: string | null): Promise<void> {
+  if (plannedAtIso != null && Number.isNaN(new Date(plannedAtIso).getTime())) {
+    throw new Error('Ongeldig tijdstip.')
+  }
+  await update(payload, matchId, { plannedAt: plannedAtIso } as Partial<MatchDoc>)
+}
+
 export async function setClock(
   payload: Payload,
   matchId: number,

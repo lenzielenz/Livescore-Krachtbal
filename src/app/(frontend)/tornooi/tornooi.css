@@ -776,9 +776,10 @@
   line-height: 1;
   margin-bottom: 10px;
 }
+/* Naast elkaar (zoals op de gewone aantekentafel): nekworp krijgt iets meer breedte. */
 .ts-goalbtns {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
   gap: 8px;
 }
 .ts-goal {
@@ -1099,3 +1100,80 @@
 .trn-seed.on { filter: none; border-color: #f6c544; background: color-mix(in srgb, #f6c544 14%, transparent); }
 .trn-seed:disabled { opacity: 0.3; cursor: default; }
 .trn-preview-note { font-size: 0.74rem; color: var(--dim); font-weight: 400; }
+
+/* ── Groep-kantinescherm (tornooidag): zelfaanpassend, hele dag open ─────────────────────────── */
+.gk-scherm {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  gap: 14px;
+  background:
+    radial-gradient(1150px 660px at 50% -10%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 60%),
+    linear-gradient(180deg, #0c0e12 0%, #070809 100%);
+  color: var(--txt);
+}
+.gk-kop { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.gk-titel { font-size: 1.15rem; font-weight: 800; }
+.gk-kop-status { font-size: 0.85rem; font-weight: 700; color: var(--dim); }
+
+.gk-raster { flex: 1 1 auto; display: grid; gap: 14px; grid-auto-rows: 1fr; }
+.gk-bord {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3vmin;
+  padding: 3vmin;
+  border-radius: 18px;
+  background: linear-gradient(115deg, color-mix(in srgb, var(--accent) 18%, #0b0f15), #0c1018 55%, color-mix(in srgb, var(--pop, #ff5d6c) 12%, #0b0f15));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 0 0 1px rgba(255, 255, 255, 0.07), 0 16px 36px -18px rgba(0, 0, 0, 0.85);
+}
+.gk-bord-kop { display: flex; justify-content: space-between; gap: 10px; font-size: clamp(0.8rem, 1.6vmin, 1.1rem); color: var(--dim-strong, #cad2dc); font-weight: 700; }
+.gk-bord-klok {
+  color: #fff; font-variant-numeric: tabular-nums;
+  padding: 0.2em 0.8em; border-radius: 999px; background: rgba(6, 9, 14, 0.55);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+}
+.gk-bord-body { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 2vmin; }
+.gk-bord-team { font-size: clamp(1rem, 3.2vmin, 2.4rem); font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gk-bord-team.uit { text-align: right; }
+.gk-bord-score {
+  font-family: var(--font-display), sans-serif; font-weight: 900; font-variant-numeric: tabular-nums;
+  font-size: clamp(2rem, 7vmin, 6rem); line-height: 1;
+  background: linear-gradient(180deg, #ffffff, color-mix(in srgb, var(--txt) 70%, #9fb4ab));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 0.06em 0.3em rgba(0, 0, 0, 0.5));
+}
+.gk-bord.groot .gk-bord-team { font-size: clamp(1.4rem, 5vmin, 3.6rem); }
+.gk-bord.groot .gk-bord-score { font-size: clamp(3rem, 13vmin, 11rem); }
+.gk-bord-voet { display: flex; justify-content: center; gap: 2em; font-size: clamp(0.78rem, 1.6vmin, 1.05rem); color: var(--dim-strong, #cad2dc); font-variant-numeric: tabular-nums; }
+
+/* Pauzestand: aftellen + wat er komt. */
+.gk-pauze { flex: 1 1 auto; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3vmin; text-align: center; }
+.gk-aftel-lbl { margin: 0; font-size: clamp(1rem, 2.6vmin, 1.6rem); color: var(--dim-strong, #cad2dc); font-weight: 700; }
+.gk-aftel-tijd, .gk-aftel-nu {
+  font-family: var(--font-display), sans-serif; font-weight: 900; font-variant-numeric: tabular-nums; line-height: 1;
+  font-size: clamp(3.4rem, 15vmin, 12rem);
+  background: linear-gradient(180deg, #ffffff, color-mix(in srgb, var(--txt) 70%, #9fb4ab));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 0.05em 0.3em rgba(0, 0, 0, 0.5));
+}
+.gk-aftel-nu { font-size: clamp(2rem, 8vmin, 6rem); }
+.gk-komend { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; width: min(720px, 94vw); }
+.gk-komend-rij {
+  display: grid; grid-template-columns: auto 1fr auto; align-items: baseline; gap: 12px;
+  padding: 10px 16px; border-radius: 12px; background: var(--panel);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07);
+  font-size: clamp(0.9rem, 2vmin, 1.2rem); text-align: left;
+}
+.gk-komend-uur { font-weight: 800; font-variant-numeric: tabular-nums; color: var(--accent); }
+.gk-komend-affiche { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gk-komend-reeks { font-size: 0.8em; color: var(--dim); white-space: nowrap; }
+.gk-kampioenen { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; font-size: clamp(1rem, 2.6vmin, 1.5rem); }
+
+/* Kleine hint bij het veld in het nieuw-formulier. */
+.trn-field-hint { display: block; margin-top: 4px; font-size: 0.76rem; color: var(--dim); }
+
+/* Plannen (tornooidag): uurtje per wedstrijd, enkel zichtbaar voor wie beheert. */
+.trn-plan { display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 0.76rem; color: var(--dim); }
+.trn-plan input { font: inherit; padding: 3px 6px; border-radius: 7px; border: 1px solid var(--line); background: var(--panel); color: var(--txt); }

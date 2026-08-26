@@ -56,7 +56,17 @@ export async function POST(req: Request) {
     if (!isFederationLevel(user)) {
       return Response.json({ error: 'Enkel de federatie kan een beker/tornooi aanmaken.' }, { status: user ? 403 : 401 })
     }
-    const id = await createTournament(payload, { name, category, method, slots, format, teamClubs, teamTeams, toonOpLive: Boolean(body.toonOpLive) })
+    const id = await createTournament(payload, {
+      name,
+      category,
+      method,
+      slots,
+      format,
+      teamClubs,
+      teamTeams,
+      toonOpLive: Boolean(body.toonOpLive),
+      groep: typeof body.groep === 'string' ? body.groep : undefined,
+    })
     return Response.json({ id })
   } catch (err) {
     return Response.json({ error: (err as Error).message }, { status: 400 })

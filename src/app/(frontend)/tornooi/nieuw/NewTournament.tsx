@@ -43,6 +43,9 @@ export function NewTournament({
   const [method, setMethod] = useState<Method>('auto')
   const [format, setFormat] = useState<'knockout' | 'roundrobin'>('knockout')
   const [toonOpLive, setToonOpLive] = useState(true)
+  // Hoofdgroep/tornooidag (bv. "Beker van Brugge"): reeksen met dezelfde groep delen één
+  // publieke groepspagina en één zelfaanpassend kantinescherm.
+  const [groep, setGroep] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -150,7 +153,7 @@ export function NewTournament({
       const res = await fetch('/api/tournament', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: name.trim(), category, method, format, slots, teamClubs, teamTeams, toonOpLive }),
+        body: JSON.stringify({ name: name.trim(), category, method, format, slots, teamClubs, teamTeams, toonOpLive, groep: groep.trim() }),
       })
       const data = (await res.json()) as { id?: number; error?: string }
       if (!res.ok || !data.id) throw new Error(data.error ?? 'Aanmaken mislukt.')
@@ -167,7 +170,12 @@ export function NewTournament({
         <h2>1 · Gegevens</h2>
         <label className="trn-field">
           <span>Naam van het tornooi</span>
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Bv. Paastornooi U14 2026" />
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Bv. Beker van Brugge — U14" />
+        </label>
+        <label className="trn-field">
+          <span>Hoofdgroep / tornooidag (optioneel)</span>
+          <input value={groep} onChange={(e) => setGroep(e.target.value)} placeholder='Bv. "Beker van Brugge" — bundelt alle reeksen van die dag' />
+          <small className="trn-field-hint">Reeksen met dezelfde groepsnaam delen één publieke pagina en één kantinescherm dat zichzelf de hele dag aanpast.</small>
         </label>
         <div className="trn-row2">
           <label className="trn-field">

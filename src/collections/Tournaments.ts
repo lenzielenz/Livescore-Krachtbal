@@ -44,6 +44,16 @@ export const Tournaments: CollectionConfig = {
   fields: [
     { name: 'name', label: 'Naam', type: 'text', required: true, admin: { description: 'Bv. "Paastornooi U14 2026".' } },
     {
+      // Hoofdgroep die meerdere reeksen bundelt (bv. "Beker van Brugge" met U12 t/m dames &
+      // heren). Alle tornooien met dezelfde groepsnaam delen één publieke groepspagina en één
+      // zelfaanpassend kantinescherm voor de hele dag.
+      name: 'groep',
+      label: 'Hoofdgroep (tornooidag)',
+      type: 'text',
+      index: true,
+      admin: { description: 'Bv. "Beker van Brugge". Reeksen met dezelfde groepsnaam horen bij dezelfde tornooidag en delen één kantinescherm.' },
+    },
+    {
       type: 'row',
       fields: [
         {
