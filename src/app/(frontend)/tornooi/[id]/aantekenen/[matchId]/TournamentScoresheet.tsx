@@ -106,7 +106,9 @@ export function TournamentScoresheet({
             {(['home', 'away'] as Side[]).map((side) => (
               <div key={side} className={`ts-team ${m.winner === side ? 'won' : ''}`}>
                 <div className="ts-team-name">{side === 'home' ? m.home : m.away}</div>
-                <div className="ts-score">{m.score[side]}</div>
+                {/* key op de stand: elke wijziging triggert de flits opnieuw — zo VOELT een tik
+                    meteen geregistreerd, ook op een traag netwerk aan het veld. */}
+                <div key={`${side}-${m.score[side]}`} className="ts-score flash">{m.score[side]}</div>
                 {!finished && (
                   <div className="ts-goalbtns">
                     <button type="button" className="ts-goal nek" onClick={() => act({ action: 'goal', side, points: 1 })}>
@@ -141,7 +143,12 @@ export function TournamentScoresheet({
 
           {!finished && (
             <div className="ts-controls">
-              <button type="button" className="trn-btn" onClick={() => act({ action: 'undo' })}>↶ Undo</button>
+              {/* De undo zegt wát ze wegneemt — geen blinde gok meer of je de juiste tik terugdraait. */}
+              <button type="button" className="trn-btn" disabled={!m.lastGoal} onClick={() => act({ action: 'undo' })}>
+                {m.lastGoal
+                  ? `↶ Ondoen: +${m.lastGoal.points} ${m.lastGoal.side === 'home' ? m.home : m.away}`
+                  : '↶ Niets te ondoen'}
+              </button>
               {m.status === 'pending' ? (
                 <button type="button" className="trn-btn primary" onClick={() => act({ action: 'start' })}>▶ Start</button>
               ) : m.clockRunning ? (
@@ -152,7 +159,15 @@ export function TournamentScoresheet({
               {half === 1 && (
                 <button type="button" className="trn-btn" onClick={() => act({ action: 'half' })}>⏭ 2e helft</button>
               )}
-              <button type="button" className="trn-btn danger" onClick={() => act({ action: 'finish' })}>⏹ Einde</button>
+              {/* Bevestiging tegen een verdwaalde tik: einde legt de uitslag vast en schuift de
+                  winnaar door in het schema. */}
+              <button
+                type="button"
+                className="trn-btn danger"
+                onClick={() => { if (window.confirm('Wedstrijd beëindigen? De eindstand wordt vastgelegd.')) void act({ action: 'finish' }) }}
+              >
+                ⏹ Einde
+              </button>
             </div>
           )}
 

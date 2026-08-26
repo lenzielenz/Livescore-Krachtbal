@@ -776,6 +776,13 @@
   line-height: 1;
   margin-bottom: 10px;
 }
+/* Elke standwijziging flitst het cijfer even op (key wisselt in de component): de tik VOELT
+   geregistreerd, ook wanneer het netwerk aan het veld traag is. */
+.ts-score.flash { animation: ts-score-flash 0.5s ease-out; }
+@keyframes ts-score-flash {
+  0% { transform: scale(1.35); color: var(--accent); text-shadow: 0 0 18px color-mix(in srgb, var(--accent) 70%, transparent); }
+  100% { transform: scale(1); }
+}
 /* Naast elkaar (zoals op de gewone aantekentafel): nekworp krijgt iets meer breedte. */
 .ts-goalbtns {
   display: grid;
@@ -790,7 +797,10 @@
   font-weight: 800;
   cursor: pointer;
   color: #06140d;
+  touch-action: manipulation; /* geen dubbeltik-zoom bij snel natikken aan het veld */
+  transition: transform 0.1s ease;
 }
+.ts-goal:active { transform: scale(0.95); }
 .ts-goal small {
   display: block;
   font-size: 0.7rem;
@@ -1128,8 +1138,31 @@
   gap: 3vmin;
   padding: 3vmin;
   border-radius: 18px;
-  background: linear-gradient(115deg, color-mix(in srgb, var(--gk-a, var(--accent)) 22%, #0b0f15), #0c1018 55%, color-mix(in srgb, var(--gk-b, var(--pop, #ff5d6c)) 14%, #0b0f15));
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 0 0 1px rgba(255, 255, 255, 0.07), 0 16px 36px -18px rgba(0, 0, 0, 0.85);
+  /* De twee clubkleuren van het bord zelf (--bc-a/--bc-b, met de host-kleur als terugval)
+     ontmoeten elkaar in een lichtere naad — zelfde taal als de live-bordkaarten. */
+  background: linear-gradient(
+    115deg,
+    color-mix(in srgb, var(--bc-a, var(--gk-a, var(--accent))) 34%, #0b0f15) 0%,
+    color-mix(in srgb, var(--bc-a, var(--gk-a, var(--accent))) 13%, #0c1018) 40%,
+    color-mix(in srgb, var(--bc-b, var(--gk-b, var(--pop, #ff5d6c))) 13%, #0c1018) 60%,
+    color-mix(in srgb, var(--bc-b, var(--gk-b, var(--pop, #ff5d6c))) 34%, #0b0f15) 100%
+  );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 0 0 1px rgba(255, 255, 255, 0.07),
+    0 16px 36px -20px color-mix(in srgb, var(--bc-a, var(--gk-a, var(--accent))) 50%, transparent),
+    0 16px 36px -20px color-mix(in srgb, var(--bc-b, var(--gk-b, var(--accent))) 50%, transparent),
+    0 16px 36px -18px rgba(0, 0, 0, 0.85);
+}
+/* Zachte lichtrand bovenaan het bord. */
+.gk-bord { position: relative; overflow: hidden; }
+.gk-bord::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 45%;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0));
 }
 .gk-bord-kop { display: flex; justify-content: space-between; gap: 10px; font-size: clamp(0.8rem, 1.6vmin, 1.1rem); color: var(--dim-strong, #cad2dc); font-weight: 700; }
 .gk-bord-klok {
@@ -1183,3 +1216,67 @@
 /* Plannen (tornooidag): uurtje per wedstrijd, enkel zichtbaar voor wie beheert. */
 .trn-plan { display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 0.76rem; color: var(--dim); }
 .trn-plan input { font: inherit; padding: 3px 6px; border-radius: 7px; border: 1px solid var(--line); background: var(--panel); color: var(--txt); }
+
+/* ── Schermvullende doelpunt-viering: clubkleur-burst + logo + punten ─────────────────────────
+   Neemt het hele scherm kort over wanneer een poll een hogere stand ziet. --vc = clubkleur. */
+.gk-viering {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: rgba(5, 7, 10, 0.82);
+  animation: gk-v-in 0.25s ease-out;
+}
+@keyframes gk-v-in { from { opacity: 0; } to { opacity: 1; } }
+.gk-viering-burst {
+  position: absolute;
+  inset: -30%;
+  background:
+    radial-gradient(42% 42% at 50% 50%, color-mix(in srgb, var(--vc, var(--accent)) 55%, transparent), transparent 70%),
+    conic-gradient(from 0deg,
+      color-mix(in srgb, var(--vc, var(--accent)) 32%, transparent) 0deg 14deg, transparent 14deg 45deg,
+      color-mix(in srgb, var(--vc, var(--accent)) 32%, transparent) 45deg 59deg, transparent 59deg 90deg,
+      color-mix(in srgb, var(--vc, var(--accent)) 32%, transparent) 90deg 104deg, transparent 104deg 135deg,
+      color-mix(in srgb, var(--vc, var(--accent)) 32%, transparent) 135deg 149deg, transparent 149deg 180deg,
+      color-mix(in srgb, var(--vc, var(--accent)) 32%, transparent) 180deg 194deg, transparent 194deg 225deg,
+      color-mix(in srgb, var(--vc, var(--accent)) 32%, transparent) 225deg 239deg, transparent 239deg 270deg,
+      color-mix(in srgb, var(--vc, var(--accent)) 32%, transparent) 270deg 284deg, transparent 284deg 315deg,
+      color-mix(in srgb, var(--vc, var(--accent)) 32%, transparent) 315deg 329deg, transparent 329deg 360deg);
+  animation: gk-v-draai 9s linear infinite;
+}
+@keyframes gk-v-draai { to { transform: rotate(360deg); } }
+.gk-viering-inhoud {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.4vmin;
+  text-align: center;
+  animation: gk-v-pop 0.5s cubic-bezier(0.22, 1.4, 0.36, 1);
+}
+@keyframes gk-v-pop { from { transform: scale(0.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.gk-viering-logo { filter: drop-shadow(0 1.2vmin 3vmin rgba(0, 0, 0, 0.6)); animation: gk-v-zweef 2.4s ease-in-out infinite; }
+@keyframes gk-v-zweef { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-1.2vmin); } }
+.gk-viering-punten {
+  font-family: var(--font-display), sans-serif;
+  font-weight: 900;
+  font-size: clamp(3rem, 12vmin, 9rem);
+  line-height: 1;
+  color: var(--vc, var(--accent));
+  text-shadow: 0 0 4vmin color-mix(in srgb, var(--vc, var(--accent)) 70%, transparent);
+}
+.gk-viering-titel {
+  font-family: var(--font-display), sans-serif;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  text-indent: 0.18em;
+  font-size: clamp(1.6rem, 6vmin, 4.4rem);
+  color: #fff;
+}
+.gk-viering-team { font-size: clamp(1.2rem, 4vmin, 3rem); font-weight: 800; color: #fff; }
+.gk-viering-reeks { font-size: clamp(0.85rem, 2vmin, 1.3rem); color: var(--dim-strong, #cad2dc); font-weight: 700; }
+@media (prefers-reduced-motion: reduce) {
+  .gk-viering-burst, .gk-viering-logo { animation: none; }
+}

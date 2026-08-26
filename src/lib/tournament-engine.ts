@@ -43,6 +43,8 @@ export type TMatchState = {
   clockRunning: boolean
   /** Gepland aanvangsuur (ISO) — het groep-kantinescherm telt hiernaar af. */
   plannedAt: string | null
+  /** Laatst genoteerde doelpunt — wat "undo" zou wegnemen; voedt ook de kantine-viering. */
+  lastGoal: { side: Side; points: 1 | 2 } | null
 }
 
 export type TournamentState = {
@@ -102,6 +104,8 @@ function liveClock(m: Pick<MatchDoc, 'clockRunning' | 'clockUpdatedAt' | 'clockS
 }
 
 function toState(m: MatchDoc): TMatchState {
+  const goals = goalsOf(m)
+  const laatste = goals.length ? goals[goals.length - 1] : null
   return {
     id: m.id,
     round: m.round,
@@ -112,7 +116,7 @@ function toState(m: MatchDoc): TMatchState {
     away: m.away ?? null,
     status: m.status,
     winner: m.winner ?? null,
-    score: deriveScore(goalsOf(m)),
+    score: deriveScore(goals),
     crosses: countsOf(m.crosses),
     timeouts: countsOf(m.timeouts),
     refereeStops: Number(m.refereeStops) || 0,
@@ -120,6 +124,7 @@ function toState(m: MatchDoc): TMatchState {
     clockSeconds: Math.floor(liveClock(m)),
     clockRunning: Boolean(m.clockRunning),
     plannedAt: (m as { plannedAt?: string | null }).plannedAt ?? null,
+    lastGoal: laatste ? { side: laatste.side, points: laatste.points === 2 ? 2 : 1 } : null,
   }
 }
 

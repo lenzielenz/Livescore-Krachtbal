@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState, type CSSProperties } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 
 import { TeamLogo } from '@/components/TeamLogo'
 import type { GroepData, GroepMatch } from '@/lib/tornooi-groep'
@@ -12,11 +12,12 @@ import { fmtClock, useTicking } from '../../../useTournament'
 //  • één wedstrijd bezig → die staat schermvullend;
 //  • meerdere bezig → het raster verdeelt zichzelf netjes (2, 3, 4 … naast/onder elkaar);
 //  • wordt er één afgesloten, dan past het scherm zich vanzelf weer aan.
-// De clublogo's komen uit het systeem; de organiserende club kleurt het hele scherm
-// (--gk-a/--gk-b) en staat met logo en naam in de kop. Data via de publieke groep-API
-// (poll om de 8 s, zoals het club-kantinescherm).
+// Elk bord draagt de kleuren van de twee clubs; scoort er iemand, dan neemt een schermvullende
+// viering met het clublogo even het hele scherm over. De organiserende club kleurt de rest
+// (--gk-a/--gk-b). Data via de publieke groep-API (poll om de 5 s).
 
-const POLL_MS = 8000
+const POLL_MS = 5000
+const VIERING_MS = 6000
 
 // Rasterindeling naar aantal live borden — zelfde filosofie als het club-kantinescherm.
 function kolommenVoor(n: number): number {
@@ -26,23 +27,28 @@ function kolommenVoor(n: number): number {
   return 4
 }
 
-function LiveBord({ m, groot, logos }: { m: GroepMatch; groot: boolean; logos: Record<string, string> }) {
+function LiveBord({ m, groot, logos, kleuren }: { m: GroepMatch; groot: boolean; logos: Record<string, string>; kleuren: Record<string, string> }) {
   const clock = useTicking(m.clockSeconds, m.clockRunning)
   const logoMaat = groot ? 'clamp(72px, 14vmin, 170px)' : 'clamp(48px, 8vmin, 110px)'
+  // Clubkleuren dragen het bord (zelfde taal als de live-bordkaarten van de competitie).
+  const stijl = {
+    ...(m.home && kleuren[m.home] ? { '--bc-a': kleuren[m.home] } : {}),
+    ...(m.away && kleuren[m.away] ? { '--bc-b': kleuren[m.away] } : {}),
+  } as CSSProperties
   return (
-    <div className={`gk-bord${groot ? ' groot' : ''}`}>
+    <div className={`gk-bord${groot ? ' groot' : ''}`} style={stijl}>
       <div className="gk-bord-kop">
         <span className="gk-bord-reeks">{m.reeksNaam}{m.label ? ` · ${m.label}` : ''}</span>
         <span className="gk-bord-klok">H{m.currentHalf} · {fmtClock(clock)}</span>
       </div>
       <div className="gk-bord-body">
         <span className="gk-bord-ploeg">
-          {m.home && <TeamLogo name={m.home} logoUrl={logos[m.home] ?? null} side="home" size={logoMaat} />}
+          {m.home && <TeamLogo name={m.home} logoUrl={logos[m.home] ?? null} side="home" size={logoMaat} ringColor={m.home ? kleuren[m.home] : undefined} />}
           <span className="gk-bord-team">{m.home ?? '—'}</span>
         </span>
         <span className="gk-bord-score">{m.score.home} – {m.score.away}</span>
         <span className="gk-bord-ploeg uit">
-          {m.away && <TeamLogo name={m.away} logoUrl={logos[m.away] ?? null} side="away" size={logoMaat} />}
+          {m.away && <TeamLogo name={m.away} logoUrl={logos[m.away] ?? null} side="away" size={logoMaat} ringColor={m.away ? kleuren[m.away] : undefined} />}
           <span className="gk-bord-team">{m.away ?? '—'}</span>
         </span>
       </div>
@@ -77,8 +83,39 @@ function Aftel({ naar }: { naar: number }) {
 const tijdBE = (iso: string) =>
   new Date(iso).toLocaleTimeString('nl-BE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Brussels' })
 
+// Schermvullende doelpunt-viering: clubkleur-burst + logo + hoeveel punten erbij kwamen.
+type Viering = { key: number; team: string; punten: number; kleur: string | null; logo: string | null; reeks: string }
+
+function VieringOverlay({ v }: { v: Viering }) {
+  return (
+    <div className="gk-viering" style={{ ...(v.kleur ? { '--vc': v.kleur } : {}) } as CSSProperties} aria-live="polite">
+      <div className="gk-viering-burst" aria-hidden />
+      <div className="gk-viering-inhoud">
+        <span className="gk-viering-logo">
+          <TeamLogo name={v.team} logoUrl={v.logo} side="home" size="clamp(140px, 34vmin, 380px)" ringColor={v.kleur ?? undefined} />
+        </span>
+        <span className="gk-viering-punten">+{v.punten}</span>
+        <span className="gk-viering-titel">DOELPUNT!</span>
+        <span className="gk-viering-team">{v.team}</span>
+        <span className="gk-viering-reeks">{v.reeks}</span>
+      </div>
+    </div>
+  )
+}
+
 export function GroepKantine({ naam, initial }: { naam: string; initial: GroepData }) {
   const [data, setData] = useState<GroepData>(initial)
+  const [viering, setViering] = useState<Viering | null>(null)
+  // Vorige standen per wedstrijd — het verschil tussen twee polls IS het doelpunt.
+  const vorige = useRef<Map<number, { home: number; away: number }>>(new Map())
+  const vieringSeq = useRef(0)
+  const vieringTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Eerste momentopname "leren" zonder te vieren (anders barst het scherm los bij het openen).
+  useEffect(() => {
+    for (const m of initial.matches) vorige.current.set(m.id, { ...m.score })
+    // bewust enkel bij mount: latere standen leert de poll-lus zelf bij
+  }, []) // eslint-disable-line
 
   useEffect(() => {
     let actief = true
@@ -87,7 +124,27 @@ export function GroepKantine({ naam, initial }: { naam: string; initial: GroepDa
         const r = await fetch(`/api/tornooi-groep?naam=${encodeURIComponent(naam)}`, { cache: 'no-store' })
         if (!r.ok) return
         const d = (await r.json()) as GroepData
-        if (actief) setData(d)
+        if (!actief) return
+
+        // Doelpunt gedetecteerd? Vier het schermvullend, met het logo en de kleur van die club.
+        for (const m of d.matches) {
+          const oud = vorige.current.get(m.id)
+          if (oud && m.status === 'live') {
+            const kant = m.score.home > oud.home ? ('home' as const) : m.score.away > oud.away ? ('away' as const) : null
+            if (kant) {
+              const team = kant === 'home' ? m.home : m.away
+              if (team) {
+                const punten = kant === 'home' ? m.score.home - oud.home : m.score.away - oud.away
+                const key = ++vieringSeq.current
+                setViering({ key, team, punten, kleur: d.kleuren[team] ?? null, logo: d.logos[team] ?? null, reeks: m.reeksNaam })
+                if (vieringTimer.current) clearTimeout(vieringTimer.current)
+                vieringTimer.current = setTimeout(() => setViering((v) => (v && v.key === key ? null : v)), VIERING_MS)
+              }
+            }
+          }
+          vorige.current.set(m.id, { ...m.score })
+        }
+        setData(d)
       } catch {
         /* netwerkfout — volgende poll probeert opnieuw */
       }
@@ -96,6 +153,7 @@ export function GroepKantine({ naam, initial }: { naam: string; initial: GroepDa
     return () => {
       actief = false
       clearInterval(t)
+      if (vieringTimer.current) clearTimeout(vieringTimer.current)
     }
   }, [naam])
 
@@ -123,6 +181,7 @@ export function GroepKantine({ naam, initial }: { naam: string; initial: GroepDa
 
   return (
     <div className="gk-scherm" style={stijl}>
+      {viering && <VieringOverlay key={viering.key} v={viering} />}
       <header className="gk-kop">
         <span className="gk-titel">
           {data.host?.logoUrl && (
@@ -138,7 +197,7 @@ export function GroepKantine({ naam, initial }: { naam: string; initial: GroepDa
       {live.length > 0 ? (
         <div className="gk-raster" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
           {live.map((m) => (
-            <LiveBord key={m.id} m={m} groot={live.length === 1} logos={data.logos} />
+            <LiveBord key={m.id} m={m} groot={live.length === 1} logos={data.logos} kleuren={data.kleuren} />
           ))}
         </div>
       ) : komend.length > 0 ? (
