@@ -1337,3 +1337,27 @@
   background: var(--bg);
   color: var(--txt);
 }
+
+/* Prullenbakje op de tornooikaart (enkel voor beheerders). Rechtsboven, buiten de leesflow. */
+.trn-hub-card { position: relative; }
+.trn-hub-del {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--dim);
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+.trn-hub-del:hover {
+  border-color: #ef476f;
+  color: #ef476f;
+  background: color-mix(in srgb, #ef476f 10%, transparent);
+}
+.trn-hub-del:disabled { opacity: 0.5; cursor: default; }

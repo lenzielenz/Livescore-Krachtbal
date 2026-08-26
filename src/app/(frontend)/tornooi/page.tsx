@@ -5,6 +5,7 @@ import { SiteHeader } from '@/components/SiteHeader'
 import { isFederationLevel } from '@/lib/access'
 import { CATEGORY_OPTIONS } from '@/lib/categories'
 import { getPayloadClient } from '@/lib/payload-client'
+import { VerwijderTornooi } from './VerwijderTornooi'
 import './tornooi.css'
 
 export const dynamic = 'force-dynamic'
@@ -71,13 +72,14 @@ export default async function TornooiHub() {
                   <span className="trn-hub-name">{t.name}</span>
                   <span className="trn-hub-meta">{catLabel(t.category)} · {t.teamCount ?? '?'} ploegen</span>
                   <span className={`trn-hub-status ${t.status}`}>{t.status === 'live' ? 'BEZIG' : 'AFGELOPEN'}</span>
+                  {canCreate && <VerwijderTornooi id={t.id} naam={t.name} />}
                 </Link>
               ))}
             </div>
           </section>
         ))}
-        <Section title="Lopende bekers & tornooien" docs={live} empty={groepen.size > 0 ? '' : 'Geen lopende beker. Maak er een aan.'} />
-        {done.length > 0 && <Section title="Afgelopen bekers & tornooien" docs={done} empty="" />}
+        <Section title="Lopende bekers & tornooien" docs={live} empty={groepen.size > 0 ? '' : 'Geen lopende beker. Maak er een aan.'} canDelete={canCreate} />
+        {done.length > 0 && <Section title="Afgelopen bekers & tornooien" docs={done} empty="" canDelete={canCreate} />}
       </main>
       </div>
     </>
@@ -88,10 +90,12 @@ function Section({
   title,
   docs,
   empty,
+  canDelete = false,
 }: {
   title: string
   docs: Array<{ id: number; name: string; category: string; status: string; teamCount?: number | null }>
   empty: string
+  canDelete?: boolean
 }) {
   return (
     <section className="trn-hub-sec">
@@ -107,6 +111,7 @@ function Section({
                 {catLabel(t.category)} · {t.teamCount ?? '?'} ploegen
               </span>
               <span className={`trn-hub-status ${t.status}`}>{t.status === 'live' ? 'BEZIG' : 'AFGELOPEN'}</span>
+              {canDelete && <VerwijderTornooi id={t.id} naam={t.name} />}
             </Link>
           ))}
         </div>
