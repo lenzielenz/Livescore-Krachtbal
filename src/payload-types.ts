@@ -1020,6 +1020,10 @@ export interface Tournament {
    */
   groep?: string | null;
   /**
+   * Logo en clubkleuren van deze club kleuren het kantinescherm van de tornooidag.
+   */
+  hostClub?: (number | null) | Club;
+  /**
    * Bepaalt de spelregels (helftduur). U12/U14/U16 = 2×20 min, rest 2×25 min.
    */
   category: 'U12' | 'U14' | 'U16' | 'U18' | 'U20' | 'senioren';
@@ -2009,6 +2013,7 @@ export interface SanctionsSelect<T extends boolean = true> {
 export interface TournamentsSelect<T extends boolean = true> {
   name?: T;
   groep?: T;
+  hostClub?: T;
   category?: T;
   status?: T;
   method?: T;

@@ -1,7 +1,9 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type CSSProperties } from 'react'
 
+import { TeamLogo } from '@/components/TeamLogo'
+import type { GroepData, GroepMatch } from '@/lib/tornooi-groep'
 import { fmtClock, useTicking } from '../../../useTournament'
 
 // ── Het zelfaanpassende kantinescherm van een tornooidag ─────────────────────────────────────
@@ -10,25 +12,9 @@ import { fmtClock, useTicking } from '../../../useTournament'
 //  • één wedstrijd bezig → die staat schermvullend;
 //  • meerdere bezig → het raster verdeelt zichzelf netjes (2, 3, 4 … naast/onder elkaar);
 //  • wordt er één afgesloten, dan past het scherm zich vanzelf weer aan.
-// Data komt uit de publieke groep-API (poll om de 8 s, zoals het club-kantinescherm).
-
-type GMatch = {
-  id: number
-  tournamentId: number
-  reeksNaam: string
-  label: string
-  home: string | null
-  away: string | null
-  status: 'pending' | 'live' | 'finished'
-  score: { home: number; away: number }
-  crosses: { home: number; away: number }
-  timeouts: { home: number; away: number }
-  currentHalf: number
-  clockSeconds: number
-  clockRunning: boolean
-  plannedAt: string | null
-}
-type GroepData = { naam: string; reeksen: { id: number; naam: string; champion: string | null }[]; matches: GMatch[] }
+// De clublogo's komen uit het systeem; de organiserende club kleurt het hele scherm
+// (--gk-a/--gk-b) en staat met logo en naam in de kop. Data via de publieke groep-API
+// (poll om de 8 s, zoals het club-kantinescherm).
 
 const POLL_MS = 8000
 
@@ -40,8 +26,9 @@ function kolommenVoor(n: number): number {
   return 4
 }
 
-function LiveBord({ m, groot }: { m: GMatch; groot: boolean }) {
+function LiveBord({ m, groot, logos }: { m: GroepMatch; groot: boolean; logos: Record<string, string> }) {
   const clock = useTicking(m.clockSeconds, m.clockRunning)
+  const logoMaat = groot ? 'clamp(72px, 14vmin, 170px)' : 'clamp(48px, 8vmin, 110px)'
   return (
     <div className={`gk-bord${groot ? ' groot' : ''}`}>
       <div className="gk-bord-kop">
@@ -49,9 +36,15 @@ function LiveBord({ m, groot }: { m: GMatch; groot: boolean }) {
         <span className="gk-bord-klok">H{m.currentHalf} · {fmtClock(clock)}</span>
       </div>
       <div className="gk-bord-body">
-        <span className="gk-bord-team">{m.home ?? '—'}</span>
+        <span className="gk-bord-ploeg">
+          {m.home && <TeamLogo name={m.home} logoUrl={logos[m.home] ?? null} side="home" size={logoMaat} />}
+          <span className="gk-bord-team">{m.home ?? '—'}</span>
+        </span>
         <span className="gk-bord-score">{m.score.home} – {m.score.away}</span>
-        <span className="gk-bord-team uit">{m.away ?? '—'}</span>
+        <span className="gk-bord-ploeg uit">
+          {m.away && <TeamLogo name={m.away} logoUrl={logos[m.away] ?? null} side="away" size={logoMaat} />}
+          <span className="gk-bord-team">{m.away ?? '—'}</span>
+        </span>
       </div>
       <div className="gk-bord-voet">
         <span title="Kruisjes">✖ {m.crosses.home}–{m.crosses.away}</span>
@@ -122,10 +115,21 @@ export function GroepKantine({ naam, initial }: { naam: string; initial: GroepDa
   const cols = kolommenVoor(live.length)
   const kampioenen = data.reeksen.filter((r) => r.champion)
 
+  // Look van de organiserende club: haar kleuren dragen het scherm (val terug op de huisstijl).
+  const stijl = {
+    ...(data.host?.colorPrimary ? { '--gk-a': data.host.colorPrimary } : {}),
+    ...(data.host?.colorSecondary ? { '--gk-b': data.host.colorSecondary } : {}),
+  } as CSSProperties
+
   return (
-    <div className="gk-scherm">
+    <div className="gk-scherm" style={stijl}>
       <header className="gk-kop">
-        <span className="gk-titel"><span className="brand">Krachtbal</span> · {data.naam}</span>
+        <span className="gk-titel">
+          {data.host?.logoUrl && (
+            <img className="gk-hostlogo" src={data.host.logoUrl} alt={data.host.name || 'Organiserende club'} />
+          )}
+          <span><span className="brand">Krachtbal</span> · {data.naam}</span>
+        </span>
         <span className="gk-kop-status">
           {live.length > 0 ? `● ${live.length} bezig` : komend.length > 0 ? `${komend.length} nog te spelen` : 'dag afgerond'}
         </span>
@@ -134,7 +138,7 @@ export function GroepKantine({ naam, initial }: { naam: string; initial: GroepDa
       {live.length > 0 ? (
         <div className="gk-raster" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
           {live.map((m) => (
-            <LiveBord key={m.id} m={m} groot={live.length === 1} />
+            <LiveBord key={m.id} m={m} groot={live.length === 1} logos={data.logos} />
           ))}
         </div>
       ) : komend.length > 0 ? (
@@ -151,7 +155,11 @@ export function GroepKantine({ naam, initial }: { naam: string; initial: GroepDa
             {komend.slice(0, 6).map((m) => (
               <li key={m.id} className="gk-komend-rij">
                 <span className="gk-komend-uur">{m.plannedAt ? tijdBE(m.plannedAt) : '—'}</span>
-                <span className="gk-komend-affiche">{m.home} – {m.away}</span>
+                <span className="gk-komend-affiche">
+                  {m.home && data.logos[m.home] && <img className="gk-komend-logo" src={data.logos[m.home]} alt="" />}
+                  {m.home} – {m.away}
+                  {m.away && data.logos[m.away] && <img className="gk-komend-logo" src={data.logos[m.away]} alt="" />}
+                </span>
                 <span className="gk-komend-reeks">{m.reeksNaam}</span>
               </li>
             ))}

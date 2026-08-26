@@ -54,6 +54,15 @@ export const Tournaments: CollectionConfig = {
       admin: { description: 'Bv. "Beker van Brugge". Reeksen met dezelfde groepsnaam horen bij dezelfde tornooidag en delen één kantinescherm.' },
     },
     {
+      // De club die de tornooidag organiseert: haar logo en clubkleuren bepalen de look van het
+      // groep-kantinescherm (en de groepspagina).
+      name: 'hostClub',
+      label: 'Organiserende club',
+      type: 'relationship',
+      relationTo: 'clubs',
+      admin: { description: 'Logo en clubkleuren van deze club kleuren het kantinescherm van de tornooidag.' },
+    },
+    {
       type: 'row',
       fields: [
         {

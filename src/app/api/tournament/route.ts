@@ -66,6 +66,7 @@ export async function POST(req: Request) {
       teamTeams,
       toonOpLive: Boolean(body.toonOpLive),
       groep: typeof body.groep === 'string' ? body.groep : undefined,
+      hostClub: Number.isFinite(Number(body.hostClub)) && Number(body.hostClub) > 0 ? Number(body.hostClub) : undefined,
     })
     return Response.json({ id })
   } catch (err) {

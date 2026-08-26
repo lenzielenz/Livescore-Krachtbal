@@ -46,6 +46,8 @@ export function NewTournament({
   // Hoofdgroep/tornooidag (bv. "Beker van Brugge"): reeksen met dezelfde groep delen één
   // publieke groepspagina en één zelfaanpassend kantinescherm.
   const [groep, setGroep] = useState('')
+  // Organiserende club: logo + kleuren bepalen de look van het groep-kantinescherm.
+  const [hostClub, setHostClub] = useState<number | ''>('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -153,7 +155,7 @@ export function NewTournament({
       const res = await fetch('/api/tournament', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: name.trim(), category, method, format, slots, teamClubs, teamTeams, toonOpLive, groep: groep.trim() }),
+        body: JSON.stringify({ name: name.trim(), category, method, format, slots, teamClubs, teamTeams, toonOpLive, groep: groep.trim(), hostClub: hostClub || undefined }),
       })
       const data = (await res.json()) as { id?: number; error?: string }
       if (!res.ok || !data.id) throw new Error(data.error ?? 'Aanmaken mislukt.')
@@ -177,6 +179,15 @@ export function NewTournament({
           <input value={groep} onChange={(e) => setGroep(e.target.value)} placeholder='Bv. "Beker van Brugge" — bundelt alle reeksen van die dag' />
           <small className="trn-field-hint">Reeksen met dezelfde groepsnaam delen één publieke pagina en één kantinescherm dat zichzelf de hele dag aanpast.</small>
         </label>
+        {clubs.length > 0 && (
+          <label className="trn-field">
+            <span>Organiserende club (look van het kantinescherm)</span>
+            <select value={hostClub} onChange={(e) => setHostClub(e.target.value ? Number(e.target.value) : '')}>
+              <option value="">— geen (standaard huisstijl) —</option>
+              {clubs.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
+            </select>
+          </label>
+        )}
         <div className="trn-row2">
           <label className="trn-field">
             <span>Leeftijdscategorie (bepaalt de regels)</span>

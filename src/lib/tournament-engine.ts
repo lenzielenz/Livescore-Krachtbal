@@ -154,6 +154,8 @@ export async function createTournament(
     toonOpLive?: boolean
     /** Hoofdgroep/tornooidag (bv. "Beker van Brugge") die meerdere reeksen bundelt. */
     groep?: string
+    /** Organiserende club: logo + kleuren bepalen de look van het groep-kantinescherm. */
+    hostClub?: number
   },
 ): Promise<number> {
   const format: TournamentFormat = args.format === 'roundrobin' ? 'roundrobin' : 'knockout'
@@ -181,6 +183,7 @@ export async function createTournament(
       teamCount: filled.length,
       toonOpLive: Boolean(args.toonOpLive),
       ...(args.groep?.trim() ? { groep: args.groep.trim() } : {}),
+      ...(args.hostClub != null && Number.isFinite(args.hostClub) ? { hostClub: args.hostClub } : {}),
       ...(args.teamClubs && args.teamClubs.length ? { teamClubs: args.teamClubs } : {}),
       ...(args.teamTeams && args.teamTeams.length ? { teamTeams: args.teamTeams } : {}),
     },
