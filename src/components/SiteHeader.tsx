@@ -5,9 +5,24 @@ import { useEffect, useState } from 'react'
 
 import { WeatherWidget } from '@/components/WeatherWidget'
 import { canAnalyse as canAnalyseUser } from '@/lib/access'
+import { KIJKMODUS_COOKIE } from '@/lib/kijkmodus'
 import { clearNavAuth, readNavAuth, writeNavAuth } from '@/lib/nav-auth-cache'
 import { PROFILES } from '@/lib/profiles'
 import './site-header.css'
+
+// Kijkmodus (beheerder bekijkt de site als vers lid): cookie zetten/wissen + herladen, zodat
+// zowel de server-render als deze navigatie meteen de gestripte kijk tonen.
+function kijkmodusCookieAan(): boolean {
+  if (typeof document === 'undefined') return false
+  return document.cookie.split(';').some((c) => c.trim() === `${KIJKMODUS_COOKIE}=1`)
+}
+function zetKijkmodus(aan: boolean) {
+  document.cookie = aan
+    ? `${KIJKMODUS_COOKIE}=1; path=/; max-age=${12 * 3600}`
+    : `${KIJKMODUS_COOKIE}=; path=/; max-age=0`
+  clearNavAuth()
+  window.location.reload()
+}
 
 // Eén gedeelde navigatie. Supporters volgen wedstrijden (primair). Al de rest zit
 // onder één opgekuist "Meer"-menu: ontdekken (tornooi, demo) en de drie
@@ -59,6 +74,11 @@ export function SiteHeader({ active = null }: { active?: NavSection }) {
   const [canTraining, setCanTraining] = useState(false)
   const [loggedIn, setLoggedIn] = useState(false)
   const [roleFlags, setRoleFlags] = useState({ isClub: false, isReferee: false, isFed: false })
+  // Kijkmodus pas ná het mounten lezen (cookie bestaat niet op de server → geen hydration-mismatch).
+  const [kijkmodus, setKijkmodus] = useState(false)
+  useEffect(() => {
+    setKijkmodus(kijkmodusCookieAan())
+  }, [])
   useEffect(() => {
     // Schilder meteen vanuit de cache (geen flikkering), en haal enkel verse staat op
     // wanneer de cache ontbreekt of verlopen is — dat spaart een netwerkronde per navigatie.
@@ -107,10 +127,16 @@ export function SiteHeader({ active = null }: { active?: NavSection }) {
     window.location.href = '/'
   }
   const menuActive = active !== null && MENU_SECTIONS.includes(active)
+  // Kijkmodus: de navigatie toont wat een VERS lid ziet — alle rol-gebonden ingangen weg.
+  // (De echte vlaggen blijven bewaard voor het menu-item en de exit-banner.)
+  const zichtFlags = kijkmodus ? { isClub: false, isReferee: false, isFed: false } : roleFlags
+  const zichtAnalyse = kijkmodus ? false : canAnalyse
+  const zichtTraining = kijkmodus ? false : canTraining
   // Toon enkel de profiel-ingangen die bij je rol horen (supporter ziet er geen).
-  const visibleProfiles = PROFILES.filter((p) => PROFILE_VISIBLE[p.key]?.(roleFlags))
+  const visibleProfiles = PROFILES.filter((p) => PROFILE_VISIBLE[p.key]?.(zichtFlags))
 
   return (
+    <>
     <header className="sh">
       <div className="sh-inner">
         <Link href="/" className="sh-brand" title="Naar de wedstrijden">
@@ -158,15 +184,15 @@ export function SiteHeader({ active = null }: { active?: NavSection }) {
                     ))}
                   </div>
                   {/* Analyse en training staan apart als eigen "Coach"-luik. */}
-                  {(canAnalyse || canTraining) && (
+                  {(zichtAnalyse || zichtTraining) && (
                     <div className="sh-more-group">
                       <div className="sh-more-grouphead">Coach</div>
-                      {canAnalyse && (
+                      {zichtAnalyse && (
                         <Link href="/analyse" className="sh-more-item" onClick={() => setOpen(false)}>
                           📈 Analyse
                         </Link>
                       )}
-                      {canTraining && (
+                      {zichtTraining && (
                         <Link href="/beheer/training" className="sh-more-item" onClick={() => setOpen(false)}>
                           🏋️ Training
                         </Link>
@@ -189,6 +215,14 @@ export function SiteHeader({ active = null }: { active?: NavSection }) {
                     <div className="sh-more-grouphead">Account</div>
                     {loggedIn ? (
                       <>
+                        {/* Beheerder? Bekijk de site zoals een vers geregistreerd lid ze ziet.
+                            Terugkeren gebeurt via de vaste banner onderaan (die blijft altijd
+                            zichtbaar, ook al is dit menu-item in kijkmodus verborgen). */}
+                        {roleFlags.isFed && !kijkmodus && (
+                          <button type="button" className="sh-more-item" onClick={() => { setOpen(false); zetKijkmodus(true) }}>
+                            👁 Bekijk als supporter
+                          </button>
+                        )}
                         <button type="button" className="sh-more-item" onClick={() => { setOpen(false); void logout() }}>
                           🚪 Uitloggen
                         </button>
@@ -212,5 +246,17 @@ export function SiteHeader({ active = null }: { active?: NavSection }) {
         </div>
       </div>
     </header>
+    {/* Vaste kijkmodus-banner, BUITEN de header: de backdrop-filter van de header zou een
+        fixed-element anders aan de header vastklinken i.p.v. aan de viewport. In kijkmodus zijn
+        alle beheer-ingangen verborgen, dus de weg terug moet altijd zichtbaar blijven. */}
+    {kijkmodus && (
+      <div className="sh-kijkmodus" role="status">
+        <span className="sh-kijkmodus-txt">👁 Je bekijkt de site als supporter — zo ziet een vers lid ze.</span>
+        <button type="button" className="sh-kijkmodus-btn" onClick={() => zetKijkmodus(false)}>
+          Terug naar beheer
+        </button>
+      </div>
+    )}
+    </>
   )
 }

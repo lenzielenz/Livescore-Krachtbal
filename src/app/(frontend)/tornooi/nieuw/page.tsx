@@ -1,10 +1,10 @@
 import Link from 'next/link'
-import { headers } from 'next/headers'
 
 import { SiteHeader } from '@/components/SiteHeader'
 import { isFederationLevel } from '@/lib/access'
 import { competitionWhere } from '@/lib/analyse-access'
 import { CATEGORY_OPTIONS } from '@/lib/categories'
+import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
 import { NewTournament } from './NewTournament'
 import '../tornooi.css'
@@ -15,7 +15,7 @@ export const dynamic = 'force-dynamic'
 // Enkel de federatie/admin kan een beker/tornooi aanmaken; supporters kijken mee.
 export default async function NieuwTornooiPage() {
   const payload = await getPayloadClient()
-  const { user } = await payload.auth({ headers: await headers() }).catch(() => ({ user: null }))
+  const user = await getAuthUser()
   if (!isFederationLevel(user)) {
     return (
       <>

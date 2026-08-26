@@ -187,3 +187,37 @@
     padding: 6px 9px;
   }
 }
+
+/* Kijkmodus-banner: vaste strook onderaan — de enige weg terug naar beheer terwijl alle
+   beheer-ingangen verborgen zijn, dus altijd zichtbaar en duidelijk "dit is een modus". */
+.sh-kijkmodus {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  padding: 10px 14px calc(10px + env(safe-area-inset-bottom, 0px));
+  background: color-mix(in srgb, var(--pop-2, #b07bff) 22%, #0c0f15);
+  border-top: 1px solid color-mix(in srgb, var(--pop-2, #b07bff) 55%, transparent);
+  box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.45);
+  font-size: 0.86rem;
+  color: var(--txt);
+}
+.sh-kijkmodus-txt { font-weight: 600; }
+.sh-kijkmodus-btn {
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: none;
+  background: var(--pop-2, #b07bff);
+  color: #14061f;
+  font: inherit;
+  font-weight: 800;
+  font-size: 0.84rem;
+  cursor: pointer;
+}
+.sh-kijkmodus-btn:hover { filter: brightness(1.1); }

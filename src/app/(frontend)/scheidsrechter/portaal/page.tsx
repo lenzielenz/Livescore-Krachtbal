@@ -1,8 +1,8 @@
-import { headers } from 'next/headers'
 
 import { ProfileTools } from '@/components/ProfileTools'
 import { SiteHeader } from '@/components/SiteHeader'
 import { hasRole, isFederationLevel, userOfficialId } from '@/lib/access'
+import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
 import { getProfile } from '@/lib/profiles'
 import { reeksNaam } from '@/lib/reeksen'
@@ -71,7 +71,7 @@ async function loadRefereeMatches(): Promise<{ matches: RefMatch[]; officials: R
 // waarmee een wedstrijd vrijgegeven wordt, en maak desnoods een tijdelijke 'ziek'-QR aan.
 export default async function RefereePortaalPage() {
   const payload = await getPayloadClient()
-  const { user } = await payload.auth({ headers: await headers() }).catch(() => ({ user: null }))
+  const user = await getAuthUser()
 
   const isReferee = hasRole(user, 'scheidsrechter') || isFederationLevel(user)
   const loggedIn = Boolean(user && isReferee)

@@ -1,4 +1,3 @@
-import { headers } from 'next/headers'
 import Link from 'next/link'
 
 import { MatchDayNav } from '@/components/MatchDayNav'
@@ -8,6 +7,7 @@ import { buildMatchState } from '@/lib/match-engine'
 import { countLineup, LINEUP_MIN } from '@/lib/match-readiness'
 import { getOrCreateMatchSheet } from '@/lib/matchsheet-data'
 import { isReleaseTime } from '@/lib/matchsheet-workflow'
+import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
 import { vereisteOfficialsTekst, type Reeks } from '@/lib/reeksen'
 import { RefereePanel } from './RefereePanel'
@@ -61,7 +61,7 @@ export default async function ScheidsrechterPage({ params }: { params: Promise<{
   const liveState = await buildMatchState(payload, Number(matchId)).catch(() => null)
 
   // Rol bepalen: enkel de federatie ziet de vrijgavecode (om ze door te geven aan de SR).
-  const { user } = await payload.auth({ headers: await headers() }).catch(() => ({ user: null }))
+  const user = await getAuthUser()
   const isFederation = isFederationLevel(user)
   const backupRef = sheet?.backupReferee as { name?: string } | number | null | undefined
   const backupRefereeName = backupRef && typeof backupRef === 'object' ? (backupRef.name ?? null) : null

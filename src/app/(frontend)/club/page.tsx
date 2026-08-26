@@ -1,4 +1,3 @@
-import { headers } from 'next/headers'
 import Link from 'next/link'
 
 import { ProfileTools } from '@/components/ProfileTools'
@@ -8,6 +7,7 @@ import { competitionWhere } from '@/lib/analyse-access'
 import { clinchStatus } from '@/lib/championship'
 import { getMatchReadiness } from '@/lib/matchsheet-data'
 import { sheetOpenForScoring } from '@/lib/matchsheet-workflow'
+import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
 import { getProfile } from '@/lib/profiles'
 import { buildReeksStandings } from '@/lib/reeks-standings'
@@ -78,7 +78,7 @@ export default async function ClubPage({ searchParams }: { searchParams: Promise
   const { alle } = await searchParams
   const showAll = alle === '1'
   const payload = await getPayloadClient()
-  const { user } = await payload.auth({ headers: await headers() }).catch(() => ({ user: null }))
+  const user = await getAuthUser()
   if (!user) {
     return (
       <Shell>

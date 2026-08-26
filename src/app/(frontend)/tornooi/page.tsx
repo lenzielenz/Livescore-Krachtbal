@@ -1,9 +1,9 @@
-import { headers } from 'next/headers'
 import Link from 'next/link'
 
 import { SiteHeader } from '@/components/SiteHeader'
 import { isFederationLevel } from '@/lib/access'
 import { CATEGORY_OPTIONS } from '@/lib/categories'
+import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
 import { VerwijderTornooi } from './VerwijderTornooi'
 import './tornooi.css'
@@ -16,7 +16,7 @@ const catLabel = (v: unknown) => CATEGORY_OPTIONS.find((o) => o.value === v)?.la
 // kijken mee.
 export default async function TornooiHub() {
   const payload = await getPayloadClient()
-  const { user } = await payload.auth({ headers: await headers() }).catch(() => ({ user: null }))
+  const user = await getAuthUser()
   const canCreate = isFederationLevel(user)
   const res = await payload
     .find({ collection: 'tournaments', sort: '-createdAt', depth: 0, limit: 100 })
