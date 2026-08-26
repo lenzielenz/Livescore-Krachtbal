@@ -37,8 +37,11 @@ function LiveBord({ m, groot, logos, kleuren }: { m: GroepMatch; groot: boolean;
   } as CSSProperties
   return (
     <div className={`gk-bord${groot ? ' groot' : ''}`} style={stijl}>
+      {/* Drie vaste kolommen (label · reeks · klok): de reeks staat groot en exact gecentreerd,
+          zodat iedereen in de kantine in één oogopslag ziet wélke reeks er speelt. */}
       <div className="gk-bord-kop">
-        <span className="gk-bord-reeks">{m.reeksNaam}{m.label ? ` · ${m.label}` : ''}</span>
+        <span className="gk-bord-label">{m.label}</span>
+        <span className="gk-bord-reeks">{m.reeksNaam}</span>
         <span className="gk-bord-klok">H{m.currentHalf} · {fmtClock(clock)}</span>
       </div>
       <div className="gk-bord-body">

@@ -67,6 +67,9 @@ export async function POST(req: Request) {
       toonOpLive: Boolean(body.toonOpLive),
       groep: typeof body.groep === 'string' ? body.groep : undefined,
       hostClub: Number.isFinite(Number(body.hostClub)) && Number(body.hostClub) > 0 ? Number(body.hostClub) : undefined,
+      plannedTimes: Array.isArray(body.plannedTimes)
+        ? body.plannedTimes.map((t) => (typeof t === 'string' && !Number.isNaN(new Date(t).getTime()) ? t : null))
+        : undefined,
     })
     return Response.json({ id })
   } catch (err) {

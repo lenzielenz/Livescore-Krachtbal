@@ -161,6 +161,8 @@ export async function createTournament(
     groep?: string
     /** Organiserende club: logo + kleuren bepalen de look van het groep-kantinescherm. */
     hostClub?: number
+    /** Geplande uren (ISO of null) per ronde-1-wedstrijd, in bracket-volgorde. */
+    plannedTimes?: (string | null)[]
   },
 ): Promise<number> {
   const format: TournamentFormat = args.format === 'roundrobin' ? 'roundrobin' : 'knockout'
@@ -196,7 +198,10 @@ export async function createTournament(
   })
 
   // Wedstrijden in schema-volgorde aanmaken (bye-wedstrijden zijn al 'finished' met winnaar).
+  // De geplande uren gelden per ronde-1-slot, in dezelfde volgorde als de preview toonde.
+  let ronde1Index = 0
   for (const m of bracket) {
+    const gepland = m.round === 1 && m.bracket === 'main' ? args.plannedTimes?.[ronde1Index++] : undefined
     await payload.create({
       collection: COLL,
       data: {
@@ -215,6 +220,7 @@ export async function createTournament(
         currentHalf: 1,
         clockSeconds: 0,
         clockRunning: false,
+        ...(gepland ? { plannedAt: gepland } : {}),
       },
       overrideAccess: true,
     })
