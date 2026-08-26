@@ -1,11 +1,12 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
 type Team = { id: number; name: string; reeks: string }
 type Player = { id: number; name: string; shirtNumber: number; position?: string | null }
+type KalenderMatch = { id: number; wanneer: string; home: string; away: string; gespeeld: boolean }
 
 // Standaardwaarde voor een <input type="datetime-local">: dat veld toont/verwacht LOKALE tijd, dus
 // corrigeer voor de tijdzone vóór het ISO-knippen — anders staat de voorgestelde tijd de
@@ -152,6 +153,12 @@ export function NieuweAnalyseMatch({ teams, reeksOptions, positionOptions }: { t
   const [date, setDate] = useState(nowLocalInput)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Standaardpad: een wedstrijd uit de échte kalender kiezen — de affiche (reeks, datum, namen)
+  // wordt overgenomen, maar de opname werkt met eigen analyse-kopieën en raakt het live-platform
+  // dus nooit. "Zelf samenstellen" blijft bestaan voor trainingen/oefenwedstrijden.
+  const [bron, setBron] = useState<'kalender' | 'zelf'>('kalender')
+  const [kalender, setKalender] = useState<KalenderMatch[] | null>(null)
+  const [gekozen, setGekozen] = useState<number | null>(null)
 
   // Stap 2: na aanmaken tonen we de ploegen met hun spelers.
   const [created, setCreated] = useState<{ id: number; homeRoster: Player[]; awayRoster: Player[]; homeName: string; awayName: string } | null>(null)
@@ -168,28 +175,57 @@ export function NieuweAnalyseMatch({ teams, reeksOptions, positionOptions }: { t
   }, [teams, reeks])
   const teamName = (id: string) => teams.find((t) => String(t.id) === id)?.name ?? ''
 
-  async function create() {
-    setError(null)
-    if (!home || !away || home === away) {
-      setError('Kies een verschillende thuis- en uitploeg.')
-      return
+  // Kalender van de gekozen reeks laden zodra de kiezer openstaat (en bij een reekswissel).
+  useEffect(() => {
+    if (!open || bron !== 'kalender' || !reeks) return
+    let actief = true
+    setKalender(null)
+    setGekozen(null)
+    fetch(`/api/analyse/kalender?reeks=${encodeURIComponent(reeks)}`, { credentials: 'include' })
+      .then((r) => (r.ok ? r.json() : { matches: [] }))
+      .then((d: { matches?: KalenderMatch[] }) => {
+        if (actief) setKalender(d.matches ?? [])
+      })
+      .catch(() => {
+        if (actief) setKalender([])
+      })
+    return () => {
+      actief = false
     }
+  }, [open, bron, reeks])
+
+  async function create(body: Record<string, unknown>) {
+    setError(null)
     setBusy(true)
     try {
       const res = await fetch('/api/analyse/match', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ reeks, homeTeam: Number(home), awayTeam: Number(away), date: new Date(date).toISOString() }),
+        body: JSON.stringify(body),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data?.error ?? 'Aanmaken mislukt.')
-      setCreated({ id: data.id, homeRoster: data.homeRoster ?? [], awayRoster: data.awayRoster ?? [], homeName: teamName(home), awayName: teamName(away) })
+      setCreated({
+        id: data.id,
+        homeRoster: data.homeRoster ?? [],
+        awayRoster: data.awayRoster ?? [],
+        homeName: data.homeName || teamName(home),
+        awayName: data.awayName || teamName(away),
+      })
     } catch (e) {
       setError((e as Error).message)
     } finally {
       setBusy(false)
     }
+  }
+
+  function createZelf() {
+    if (!home || !away || home === away) {
+      setError('Kies een verschillende thuis- en uitploeg.')
+      return
+    }
+    void create({ reeks, homeTeam: Number(home), awayTeam: Number(away), date: new Date(date).toISOString() })
   }
 
   function reset() {
@@ -245,9 +281,18 @@ export function NieuweAnalyseMatch({ teams, reeksOptions, positionOptions }: { t
     )
   }
 
-  // Stap 1 — wie tegen wie.
+  // Stap 1 — wie tegen wie: standaard uit de échte kalender, of zelf samenstellen.
   return (
     <div className="nam-form">
+      <div className="nam-bron" role="tablist" aria-label="Waar komt de wedstrijd vandaan?">
+        <button type="button" role="tab" aria-selected={bron === 'kalender'} className={`nam-bron-tab${bron === 'kalender' ? ' on' : ''}`} onClick={() => { setBron('kalender'); setError(null) }}>
+          📅 Uit de kalender
+        </button>
+        <button type="button" role="tab" aria-selected={bron === 'zelf'} className={`nam-bron-tab${bron === 'zelf' ? ' on' : ''}`} onClick={() => { setBron('zelf'); setError(null) }}>
+          ✍️ Zelf samenstellen
+        </button>
+      </div>
+
       <div className="nam-row">
         <label className="rad-field">
           <span>Reeks</span>
@@ -255,36 +300,78 @@ export function NieuweAnalyseMatch({ teams, reeksOptions, positionOptions }: { t
             {reeksOptions.map((o) => (<option key={o.value} value={o.value}>{o.label}</option>))}
           </select>
         </label>
-        <label className="rad-field">
-          <span>Datum</span>
-          <input className="rang-picker" type="datetime-local" value={date} onChange={(e) => setDate(e.target.value)} />
-        </label>
+        {bron === 'zelf' && (
+          <label className="rad-field">
+            <span>Datum</span>
+            <input className="rang-picker" type="datetime-local" value={date} onChange={(e) => setDate(e.target.value)} />
+          </label>
+        )}
       </div>
-      <div className="nam-row">
-        <label className="rad-field">
-          <span>Thuisploeg</span>
-          <select className="rang-picker" value={home} onChange={(e) => setHome(e.target.value)}>
-            <option value="">— Kies —</option>
-            {reeksTeams.map((t) => (<option key={t.id} value={t.id}>{t.name}</option>))}
-          </select>
-        </label>
-        <label className="rad-field">
-          <span>Uitploeg</span>
-          <select className="rang-picker" value={away} onChange={(e) => setAway(e.target.value)}>
-            <option value="">— Kies —</option>
-            {reeksTeams.map((t) => (<option key={t.id} value={t.id}>{t.name}</option>))}
-          </select>
-        </label>
-      </div>
-      {error && <p className="nam-error">{error}</p>}
-      <div className="nam-actions">
-        <button type="button" className="sk-demo-cta" disabled={busy} onClick={create}>
-          {busy ? 'Bezig…' : '➕ Aanmaken & spelers toevoegen'}
-        </button>
-        <button type="button" className="nam-cancel" onClick={() => setOpen(false)}>Sluiten</button>
-      </div>
-      {reeksTeams.length === 0 && (
-        <p className="nam-hint">Nog geen analyse-ploegen in deze reeks. <Link href="/analyse/beheer/ploegen" style={{ color: 'var(--accent)' }}>Maak ze aan →</Link></p>
+
+      {bron === 'kalender' ? (
+        <>
+          {kalender == null ? (
+            <p className="nam-hint">Kalender laden…</p>
+          ) : kalender.length === 0 ? (
+            <p className="nam-hint">Geen kalenderwedstrijden gevonden in deze reeks — stel er zelf een samen via het tweede tabblad.</p>
+          ) : (
+            <div className="nam-kalender" role="radiogroup" aria-label="Kies een wedstrijd">
+              {kalender.map((m) => (
+                <button
+                  key={m.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={gekozen === m.id}
+                  className={`nam-kal-item${gekozen === m.id ? ' on' : ''}`}
+                  onClick={() => setGekozen(m.id)}
+                >
+                  <span className="nam-kal-affiche">{m.home} <i>–</i> {m.away}</span>
+                  <span className="nam-kal-wanneer">{m.wanneer}{m.gespeeld ? ' · gespeeld' : ''}</span>
+                </button>
+              ))}
+            </div>
+          )}
+          <p className="nam-hint">
+            De opname staat volledig los van het live-platform: de kalender wordt enkel gelezen —
+            wat je hier aantekent, blijft in jouw analyse.
+          </p>
+          {error && <p className="nam-error">{error}</p>}
+          <div className="nam-actions">
+            <button type="button" className="sk-demo-cta" disabled={busy || gekozen == null} onClick={() => gekozen != null && void create({ fromMatch: gekozen })}>
+              {busy ? 'Bezig…' : '➕ Aanmaken & spelers toevoegen'}
+            </button>
+            <button type="button" className="nam-cancel" onClick={() => setOpen(false)}>Sluiten</button>
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="nam-row">
+            <label className="rad-field">
+              <span>Thuisploeg</span>
+              <select className="rang-picker" value={home} onChange={(e) => setHome(e.target.value)}>
+                <option value="">— Kies —</option>
+                {reeksTeams.map((t) => (<option key={t.id} value={t.id}>{t.name}</option>))}
+              </select>
+            </label>
+            <label className="rad-field">
+              <span>Uitploeg</span>
+              <select className="rang-picker" value={away} onChange={(e) => setAway(e.target.value)}>
+                <option value="">— Kies —</option>
+                {reeksTeams.map((t) => (<option key={t.id} value={t.id}>{t.name}</option>))}
+              </select>
+            </label>
+          </div>
+          {error && <p className="nam-error">{error}</p>}
+          <div className="nam-actions">
+            <button type="button" className="sk-demo-cta" disabled={busy} onClick={createZelf}>
+              {busy ? 'Bezig…' : '➕ Aanmaken & spelers toevoegen'}
+            </button>
+            <button type="button" className="nam-cancel" onClick={() => setOpen(false)}>Sluiten</button>
+          </div>
+          {reeksTeams.length === 0 && (
+            <p className="nam-hint">Nog geen analyse-ploegen in deze reeks. <Link href="/analyse/beheer/ploegen" style={{ color: 'var(--accent)' }}>Maak ze aan →</Link></p>
+          )}
+        </>
       )}
     </div>
   )
