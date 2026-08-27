@@ -494,3 +494,132 @@ export async function reopenMatch(payload: Payload, matchId: number): Promise<vo
     .update({ collection: 'tournaments', id: tournamentId, data: { status: 'live' }, overrideAccess: true })
     .catch(() => undefined)
 }
+
+// ── Tornooi-beheer: schrijffouten rechtzetten en herloten ────────────────────────────────────
+
+/** Tornooinaam (categorienaam) wijzigen — voor een simpele schrijffout. */
+export async function renameTournament(payload: Payload, tournamentId: number, naam: string): Promise<void> {
+  const schoon = naam.trim()
+  if (!schoon) throw new Error('Geef een naam in.')
+  await payload.update({ collection: 'tournaments', id: tournamentId, data: { name: schoon }, overrideAccess: true })
+}
+
+/**
+ * Ploegnaam wijzigen doorheen het hele tornooi: elke wedstrijd (thuis/uit/winnaar blijft per
+ * kant kloppen) én de club-/ploegkoppelingen. Voor een schrijffout — de identiteit blijft
+ * dezelfde ploeg.
+ */
+export async function renameTeam(payload: Payload, tournamentId: number, van: string, naar: string): Promise<void> {
+  const oud = van.trim()
+  const nieuw = naar.trim()
+  if (!oud || !nieuw) throw new Error('Geef een ploegnaam in.')
+  if (oud === nieuw) return
+  const docs = await loadMatches(payload, tournamentId)
+  const namen = new Set<string>()
+  for (const d of docs) {
+    if (d.home) namen.add(d.home)
+    if (d.away) namen.add(d.away)
+  }
+  if (!namen.has(oud)) throw new Error(`Ploeg "${oud}" niet gevonden in dit tornooi.`)
+  if (namen.has(nieuw)) throw new Error(`Er speelt al een ploeg "${nieuw}" in dit tornooi.`)
+
+  for (const d of docs) {
+    const data: Partial<MatchDoc> = {}
+    if (d.home === oud) data.home = nieuw
+    if (d.away === oud) data.away = nieuw
+    if (Object.keys(data).length) await update(payload, d.id, data)
+  }
+
+  // Koppelingen (logo/club en echte-ploeg) mee hernoemen zodat ze blijven werken.
+  const t = (await payload.findByID({ collection: 'tournaments', id: tournamentId, depth: 0 })) as {
+    teamClubs?: { name?: string }[] | null
+    teamTeams?: { name?: string }[] | null
+  }
+  const hernoem = (lijst: { name?: string }[] | null | undefined) =>
+    Array.isArray(lijst) ? lijst.map((x) => (x?.name === oud ? { ...x, name: nieuw } : x)) : undefined
+  const teamClubs = hernoem(t.teamClubs)
+  const teamTeams = hernoem(t.teamTeams)
+  if (teamClubs || teamTeams) {
+    await payload.update({
+      collection: 'tournaments',
+      id: tournamentId,
+      data: { ...(teamClubs ? { teamClubs } : {}), ...(teamTeams ? { teamTeams } : {}) },
+      overrideAccess: true,
+    })
+  }
+}
+
+/**
+ * Herloting: gooi het schema opnieuw met een nieuwe slot-volgorde (manueel gekozen of geschud).
+ * Kan enkel zolang er nog NIETS gespeeld is (geen enkele echte wedstrijd gestart of genoteerd) —
+ * bye's tellen niet mee. De geplande uren van ronde 1 blijven per wedstrijdslot behouden.
+ */
+export async function redrawTournament(
+  payload: Payload,
+  tournamentId: number,
+  slots: (string | null)[],
+): Promise<void> {
+  const t = (await payload.findByID({ collection: 'tournaments', id: tournamentId, depth: 0 })) as {
+    format?: string
+  }
+  const format: TournamentFormat = t.format === 'roundrobin' ? 'roundrobin' : 'knockout'
+  const docs = await loadMatches(payload, tournamentId)
+  const gespeeld = docs.some((d) => {
+    const bye = d.status === 'finished' && (!d.home || !d.away)
+    return !bye && (d.status !== 'pending' || goalsOf(d).length > 0)
+  })
+  if (gespeeld) throw new Error('Er is al gespeeld — herloten kan niet meer.')
+
+  const filled = slots.filter((s): s is string => Boolean(s))
+  if (filled.length < 2) throw new Error('Een tornooi heeft minstens 2 ploegen nodig.')
+
+  // Geplande uren van ronde 1 bewaren per slot-volgorde, zodat de dagplanning blijft staan.
+  const oudeUren = docs
+    .filter((d) => d.round === 1 && d.bracket === 'main')
+    .sort((a, b) => a.position - b.position)
+    .map((d) => d.plannedAt ?? null)
+
+  const bracket = format === 'roundrobin' ? buildRoundRobin(filled) : buildBracket(slots)
+  if (format === 'knockout') {
+    for (const m of bracket) {
+      if (m.round === 1 && m.bracket === 'main' && !m.home && !m.away) {
+        throw new Error('Ongeldige loting: een wedstrijd zonder ploegen. Verdeel de bye’s anders.')
+      }
+    }
+  }
+
+  // Oud schema weg, nieuw schema erin (zelfde patroon als bij het aanmaken).
+  await payload.delete({ collection: COLL, where: { tournament: { equals: tournamentId } }, overrideAccess: true })
+  let ronde1Index = 0
+  for (const m of bracket) {
+    const gepland = m.round === 1 && m.bracket === 'main' ? oudeUren[ronde1Index++] : undefined
+    await payload.create({
+      collection: COLL,
+      data: {
+        tournament: tournamentId,
+        round: m.round,
+        position: m.position,
+        bracket: m.bracket,
+        label: m.label,
+        home: m.home,
+        away: m.away,
+        status: m.status,
+        winner: m.winner ?? undefined,
+        goals: [],
+        winnerTo: m.winnerTo ?? undefined,
+        loserTo: m.loserTo ?? undefined,
+        currentHalf: 1,
+        clockSeconds: 0,
+        clockRunning: false,
+        ...(gepland ? { plannedAt: gepland } : {}),
+      },
+      overrideAccess: true,
+    })
+  }
+  await payload.update({
+    collection: 'tournaments',
+    id: tournamentId,
+    data: { teamCount: filled.length, status: 'live' },
+    overrideAccess: true,
+  })
+}
