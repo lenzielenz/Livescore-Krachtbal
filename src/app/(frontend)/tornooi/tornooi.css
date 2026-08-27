@@ -752,6 +752,9 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 14px;
+  /* Vult de resterende schermhoogte (zie .trn-page.sheet): grote tikdoelen aan het veld. */
+  flex: 1 1 auto;
+  align-content: stretch;
 }
 .ts-team {
   background: var(--panel);
@@ -759,6 +762,9 @@
   border-radius: 14px;
   padding: 14px;
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
 }
 .ts-team.won {
   border-color: var(--accent);
@@ -783,17 +789,21 @@
   0% { transform: scale(1.35); color: var(--accent); text-shadow: 0 0 18px color-mix(in srgb, var(--accent) 70%, transparent); }
   100% { transform: scale(1); }
 }
-/* Naast elkaar (zoals op de gewone aantekentafel): nekworp krijgt iets meer breedte. */
+/* Naast elkaar (zoals op de gewone aantekentafel): nekworp krijgt iets meer breedte.
+   De knoppen nemen alle resterende hoogte van het ploegvak in — je kúnt er bijna niet naast
+   tikken. */
 .ts-goalbtns {
   display: grid;
   grid-template-columns: 1.5fr 1fr;
-  gap: 8px;
+  gap: 10px;
+  flex: 1 1 auto;
+  min-height: clamp(110px, 18dvh, 240px);
 }
 .ts-goal {
-  padding: 14px;
-  border-radius: 11px;
+  padding: 14px 6px;
+  border-radius: 14px;
   border: none;
-  font-size: 1.2rem;
+  font-size: clamp(1.4rem, 6vw, 2.2rem);
   font-weight: 800;
   cursor: pointer;
   color: #06140d;
@@ -803,7 +813,7 @@
 .ts-goal:active { transform: scale(0.95); }
 .ts-goal small {
   display: block;
-  font-size: 0.7rem;
+  font-size: clamp(0.7rem, 2.6vw, 0.95rem);
   font-weight: 600;
   opacity: 0.8;
 }
@@ -817,15 +827,15 @@
 .ts-stats {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  margin-top: 10px;
+  gap: 10px;
+  margin-top: 12px;
 }
 .ts-stat {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  font-size: 0.82rem;
+  font-size: 0.95rem;
   color: var(--dim);
 }
 .ts-stat-lbl {
@@ -837,23 +847,25 @@
   gap: 8px;
 }
 .ts-stat-btn {
-  width: 30px;
-  height: 30px;
-  border-radius: 8px;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
   border: 1px solid var(--line);
   background: var(--bg);
   color: var(--txt);
-  font-size: 1.05rem;
+  font-size: 1.4rem;
   font-weight: 800;
   line-height: 1;
   cursor: pointer;
+  touch-action: manipulation;
 }
 .ts-stat-btn:hover {
   border-color: var(--accent);
   color: var(--accent);
 }
 .ts-stat-n {
-  min-width: 18px;
+  min-width: 26px;
+  font-size: 1.1rem;
   text-align: center;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
@@ -863,8 +875,24 @@
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+  margin-top: 14px;
+}
+.ts-controls .trn-btn {
+  flex: 1 1 40%;
   justify-content: center;
-  margin-top: 16px;
+  min-height: 58px;
+  font-size: 1.05rem;
+  border-radius: 14px;
+  touch-action: manipulation;
+}
+/* De undo (zegt wát ze wegneemt) en Einde krijgen de volle breedte, met wat lucht ertussen —
+   nooit per ongeluk een wedstrijd beëindigd. */
+.ts-controls .trn-btn:first-child,
+.ts-controls .trn-btn.danger {
+  flex-basis: 100%;
+}
+.ts-controls .trn-btn.danger {
+  margin-top: 6px;
 }
 .ts-tie {
   margin-top: 16px;
@@ -1067,8 +1095,11 @@
   .ts-board { gap: 8px; }
   .ts-team { padding: 10px 8px; }
   .ts-score { font-size: 2.4rem; }
-  .ts-goal { font-size: 1.05rem; padding: 12px 6px; }
-  .ts-goalbtns { grid-template-columns: 1fr 1fr; }
+  .ts-goal { padding: 12px 4px; }
+  .ts-goalbtns { grid-template-columns: 1fr 1fr; gap: 8px; }
+  /* Label boven de knoppen: zo passen de grote −/+ tikdoelen naast elkaar in het smalle vak. */
+  .ts-stat { flex-direction: column; gap: 4px; }
+  .ts-stat-btn { width: 46px; height: 46px; }
 }
 
 /* Bekerwedstrijden-hub kop. */
@@ -1453,3 +1484,134 @@
 .trn-beheer-rij { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .trn-beheer-rij input { flex: 1 1 220px; }
 .trn-beheer-naam { flex: 1; font-weight: 600; }
+
+/* Aantekentafel vult het hele scherm: kop en klok compact, het bord met de grote knoppen
+   krijgt alle resterende hoogte. */
+.trn-page.sheet {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+.trn-page.sheet .trn-top { margin-bottom: 10px; }
+.trn-page.sheet .ts-meta { margin-bottom: 8px; }
+.trn-page.sheet .ts-clock { padding: 8px 12px; margin-bottom: 10px; }
+.trn-page.sheet .ts-clock-time { font-size: 2.1rem; }
+
+/* Manuele planner (round-robin) in het beheerpaneel: rijen "thuis – uit · uur" met verplaats-
+   en verwijderknoppen. Op smal scherm wikkelen de velden netjes onder elkaar. */
+.trn-planlist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.trn-planlist li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+.trn-planlist select,
+.trn-planlist input[type='datetime-local'] {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 9px 8px;
+  color: var(--txt);
+  font: inherit;
+  font-size: 0.9rem;
+  min-width: 0;
+}
+.trn-planlist select { flex: 1 1 120px; }
+.trn-planlist input[type='datetime-local'] { flex: 1 1 150px; }
+.trn-plan-vs { color: var(--dim); font-weight: 700; }
+
+/* Paren-voorbeeld bij de knock-out-herloting: zo zie je vóór het bewaren exact wie tegen wie. */
+.trn-parenlijst {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.9rem;
+}
+.trn-parenlijst li {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 6px 10px;
+}
+.trn-parenlijst em {
+  font-style: normal;
+  color: var(--dim);
+  font-size: 0.78rem;
+  margin-right: 8px;
+}
+
+/* ── Kantinescherm: doorlopende balk met de nog te spelen wedstrijden ─────────────────────────
+   Onderaan het scherm, altijd zichtbaar (ook terwijl er wedstrijden bezig zijn): per wedstrijd
+   enkel de twee clublogo's tegenover elkaar met het geplande uur ernaast. Vanaf 4 wedstrijden
+   loopt de balk naadloos in een lus; daaronder staat ze rustig gecentreerd. */
+.gk-ticker {
+  margin-top: auto;
+  flex: none;
+  overflow: hidden;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(6, 9, 14, 0.55);
+  border-radius: 14px;
+  backdrop-filter: blur(8px);
+  padding: 10px 0;
+}
+.gk-ticker-strook {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  will-change: transform;
+  /* Niet in lus: rustig gecentreerd over de volle breedte. */
+  width: 100%;
+  justify-content: center;
+}
+.gk-ticker-strook.loop {
+  width: max-content;
+  justify-content: flex-start;
+  animation: gk-tick-loop var(--dur, 40s) linear infinite;
+}
+@keyframes gk-tick-loop {
+  to { transform: translateX(-50%); }
+}
+.gk-ticker-helft {
+  display: inline-flex;
+  align-items: center;
+  gap: clamp(28px, 4vw, 72px);
+  padding: 0 clamp(14px, 2vw, 36px);
+}
+.gk-tick {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: clamp(1rem, 2.4vmin, 1.6rem);
+}
+.gk-tick-vs {
+  color: var(--dim);
+  font-weight: 800;
+}
+.gk-tick-uur {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.85em;
+  color: var(--txt);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  padding: 3px 10px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .gk-ticker-strook.loop { animation: none; }
+}

@@ -250,8 +250,9 @@ export function GroepKantine({ naam, initial }: { naam: string; initial: GroepDa
           ) : (
             <p className="gk-aftel-lbl">Volgende wedstrijden</p>
           )}
+          {/* Enkel de eerstvolgende affiche groot — de rest van de dag loopt in de ticker onderaan. */}
           <ul className="gk-komend">
-            {komend.slice(0, 6).map((m) => (
+            {komend.slice(0, 1).map((m) => (
               <li
                 key={m.id}
                 className="gk-komend-rij"
@@ -289,6 +290,38 @@ export function GroepKantine({ naam, initial }: { naam: string; initial: GroepDa
           )}
         </div>
       )}
+
+      {/* Alle nog te spelen wedstrijden schuiven in een doorlopende balk onderaan voorbij:
+          gewoon de logo's tegen elkaar met het uur ernaast. Bij een handvol wedstrijden staat
+          de balk stil (niets om te scrollen); daarboven loopt ze naadloos in een lus. */}
+      {komend.length > 0 && <KomendTicker komend={komend} logos={data.logos} kleuren={data.kleuren} />}
+    </div>
+  )
+}
+
+function KomendTicker({ komend, logos, kleuren }: { komend: GroepMatch[]; logos: Record<string, string>; kleuren: Record<string, string> }) {
+  const loop = komend.length >= 4
+  // Snelheid schaalt met de lengte van de lijst: elke wedstrijd krijgt ± 5 s in beeld.
+  const duur = `${Math.max(20, komend.length * 5)}s`
+  const helft = (verborgen: boolean) => (
+    <span className="gk-ticker-helft" aria-hidden={verborgen}>
+      {komend.map((m) => (
+        <span key={m.id} className="gk-tick">
+          {m.home && <TeamLogo name={m.home} logoUrl={logos[m.home] ?? null} side="home" size="1.7em" ringColor={m.home ? kleuren[m.home] : undefined} />}
+          <span className="gk-tick-vs">–</span>
+          {m.away && <TeamLogo name={m.away} logoUrl={logos[m.away] ?? null} side="away" size="1.7em" ringColor={m.away ? kleuren[m.away] : undefined} />}
+          {m.plannedAt && <span className="gk-tick-uur">{tijdBE(m.plannedAt)}</span>}
+        </span>
+      ))}
+    </span>
+  )
+  return (
+    <div className="gk-ticker">
+      <div className={`gk-ticker-strook${loop ? ' loop' : ''}`} style={{ '--dur': duur } as CSSProperties}>
+        {helft(false)}
+        {/* Tweede identieke helft maakt de lus naadloos: -50% verschuiven = exact één helft. */}
+        {loop && helft(true)}
+      </div>
     </div>
   )
 }
