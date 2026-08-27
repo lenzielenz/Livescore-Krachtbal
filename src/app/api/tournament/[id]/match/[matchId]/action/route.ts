@@ -6,6 +6,7 @@ import {
   buildTournamentState,
   finishMatch,
   planMatch,
+  reopenMatch,
   recordCross,
   recordGoal,
   recordRefereeStop,
@@ -90,6 +91,9 @@ export async function POST(
         break
       case 'finish':
         await finishMatch(payload, matchId, body.winner === 'home' ? 'home' : body.winner === 'away' ? 'away' : undefined)
+        break
+      case 'reopen':
+        await reopenMatch(payload, matchId)
         break
       default:
         return Response.json({ error: `Onbekende actie: ${action}` }, { status: 400 })

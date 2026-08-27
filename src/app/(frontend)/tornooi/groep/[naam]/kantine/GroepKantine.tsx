@@ -215,12 +215,25 @@ export function GroepKantine({ naam, initial }: { naam: string; initial: GroepDa
           )}
           <ul className="gk-komend">
             {komend.slice(0, 6).map((m) => (
-              <li key={m.id} className="gk-komend-rij">
+              <li
+                key={m.id}
+                className="gk-komend-rij"
+                style={{
+                  ...(m.home && data.kleuren[m.home] ? { '--ka': data.kleuren[m.home] } : {}),
+                  ...(m.away && data.kleuren[m.away] ? { '--kb': data.kleuren[m.away] } : {}),
+                } as CSSProperties}
+              >
                 <span className="gk-komend-uur">{m.plannedAt ? tijdBE(m.plannedAt) : '—'}</span>
                 <span className="gk-komend-affiche">
-                  {m.home && data.logos[m.home] && <img className="gk-komend-logo" src={data.logos[m.home]} alt="" />}
-                  {m.home} – {m.away}
-                  {m.away && data.logos[m.away] && <img className="gk-komend-logo" src={data.logos[m.away]} alt="" />}
+                  {m.home && (
+                    <TeamLogo name={m.home} logoUrl={data.logos[m.home] ?? null} side="home" size="1.9em" ringColor={data.kleuren[m.home]} />
+                  )}
+                  <span className="gk-komend-team">{m.home}</span>
+                  <span className="gk-komend-vs">VS</span>
+                  <span className="gk-komend-team">{m.away}</span>
+                  {m.away && (
+                    <TeamLogo name={m.away} logoUrl={data.logos[m.away] ?? null} side="away" size="1.9em" ringColor={data.kleuren[m.away]} />
+                  )}
                 </span>
                 <span className="gk-komend-reeks">{m.reeksNaam}</span>
               </li>

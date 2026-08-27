@@ -2,8 +2,11 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
 import { SiteHeader } from '@/components/SiteHeader'
+import { isFederationLevel } from '@/lib/access'
 import { CATEGORY_OPTIONS } from '@/lib/categories'
+import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
+import { VerwijderTornooi } from '../../VerwijderTornooi'
 import '../../tornooi.css'
 
 export const dynamic = 'force-dynamic'
@@ -21,6 +24,7 @@ export default async function TornooiGroepPage({ params }: { params: Promise<{ n
   if (!naam) notFound()
 
   const payload = await getPayloadClient()
+  const canManage = isFederationLevel(await getAuthUser())
   const res = await payload
     .find({ collection: 'tournaments', where: { groep: { equals: naam } }, sort: 'createdAt', depth: 0, limit: 50 })
     .catch(() => ({ docs: [] }))
@@ -37,8 +41,7 @@ export default async function TornooiGroepPage({ params }: { params: Promise<{ n
         <div className="trn-hub-head">
           <h1 className="trn-hub-title">🏆 {naam}</h1>
           <p className="trn-hub-intro">
-            Alle reeksen van deze tornooidag op één plek. Tik een reeks aan voor het volledige
-            schema en de live scores.
+            Tik een categorie aan voor het volledige schema en de live scores.
           </p>
         </div>
         <div className="trn-actions">
@@ -48,15 +51,15 @@ export default async function TornooiGroepPage({ params }: { params: Promise<{ n
         </div>
 
         <main className="trn-hub">
-          <GroepSectie titel="Bezig" docs={live} />
-          {done.length > 0 && <GroepSectie titel="Afgelopen" docs={done} />}
+          <GroepSectie titel="Categorieën" docs={live} canManage={canManage} />
+          {done.length > 0 && <GroepSectie titel="Afgelopen" docs={done} canManage={canManage} />}
         </main>
       </div>
     </>
   )
 }
 
-function GroepSectie({ titel, docs }: { titel: string; docs: Record<string, unknown>[] }) {
+function GroepSectie({ titel, docs, canManage = false }: { titel: string; docs: Record<string, unknown>[]; canManage?: boolean }) {
   if (docs.length === 0) return null
   return (
     <section className="trn-hub-sec">
@@ -71,6 +74,7 @@ function GroepSectie({ titel, docs }: { titel: string; docs: Record<string, unkn
             <span className={`trn-hub-status ${String(t.status)}`}>
               {t.status === 'live' ? 'BEZIG' : 'AFGELOPEN'}
             </span>
+            {canManage && <VerwijderTornooi id={Number(t.id)} naam={String(t.name ?? '')} />}
           </Link>
         ))}
       </div>
