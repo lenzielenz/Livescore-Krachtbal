@@ -1554,3 +1554,64 @@
   font-size: 0.78rem;
   margin-right: 8px;
 }
+
+/* ── Kantinescherm: doorlopende balk met de nog te spelen wedstrijden ─────────────────────────
+   Onderaan het scherm, altijd zichtbaar (ook terwijl er wedstrijden bezig zijn): per wedstrijd
+   enkel de twee clublogo's tegenover elkaar met het geplande uur ernaast. Vanaf 4 wedstrijden
+   loopt de balk naadloos in een lus; daaronder staat ze rustig gecentreerd. */
+.gk-ticker {
+  margin-top: auto;
+  flex: none;
+  overflow: hidden;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(6, 9, 14, 0.55);
+  border-radius: 14px;
+  backdrop-filter: blur(8px);
+  padding: 10px 0;
+}
+.gk-ticker-strook {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  will-change: transform;
+  /* Niet in lus: rustig gecentreerd over de volle breedte. */
+  width: 100%;
+  justify-content: center;
+}
+.gk-ticker-strook.loop {
+  width: max-content;
+  justify-content: flex-start;
+  animation: gk-tick-loop var(--dur, 40s) linear infinite;
+}
+@keyframes gk-tick-loop {
+  to { transform: translateX(-50%); }
+}
+.gk-ticker-helft {
+  display: inline-flex;
+  align-items: center;
+  gap: clamp(28px, 4vw, 72px);
+  padding: 0 clamp(14px, 2vw, 36px);
+}
+.gk-tick {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: clamp(1rem, 2.4vmin, 1.6rem);
+}
+.gk-tick-vs {
+  color: var(--dim);
+  font-weight: 800;
+}
+.gk-tick-uur {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.85em;
+  color: var(--txt);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  padding: 3px 10px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .gk-ticker-strook.loop { animation: none; }
+}
