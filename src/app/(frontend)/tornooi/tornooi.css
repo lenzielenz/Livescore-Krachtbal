@@ -1059,10 +1059,16 @@
 
 @media (max-width: 560px) {
   .trn-row2,
-  .trn-methods,
-  .ts-board {
+  .trn-methods {
     grid-template-columns: 1fr;
   }
+  /* De twee ploegvakken blijven NAAST elkaar (zo zie je beide standen in één oogopslag);
+     op smal scherm worden ze compacter i.p.v. gestapeld. */
+  .ts-board { gap: 8px; }
+  .ts-team { padding: 10px 8px; }
+  .ts-score { font-size: 2.4rem; }
+  .ts-goal { font-size: 1.05rem; padding: 12px 6px; }
+  .ts-goalbtns { grid-template-columns: 1fr 1fr; }
 }
 
 /* Bekerwedstrijden-hub kop. */
@@ -1223,16 +1229,72 @@
   filter: drop-shadow(0 0.05em 0.3em rgba(0, 0, 0, 0.5));
 }
 .gk-aftel-nu { font-size: clamp(2rem, 8vmin, 6rem); }
-.gk-komend { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; width: min(720px, 94vw); }
+.gk-komend { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; width: min(860px, 94vw); }
+/* Mini-affiche per komende wedstrijd: het uur groot in een glas-pil, de twee clubs met logo
+   rond een vs-teken, de reeks als chip — gedragen door de clubkleuren van de affiche zelf
+   (--ka/--kb, met de hostkleur als terugval). */
 .gk-komend-rij {
-  display: grid; grid-template-columns: auto 1fr auto; align-items: baseline; gap: 12px;
-  padding: 10px 16px; border-radius: 12px; background: var(--panel);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07);
-  font-size: clamp(0.9rem, 2vmin, 1.2rem); text-align: left;
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 18px;
+  border-radius: 14px;
+  background: linear-gradient(
+    115deg,
+    color-mix(in srgb, var(--ka, var(--gk-a, var(--accent))) 30%, #0b0f15) 0%,
+    color-mix(in srgb, var(--ka, var(--gk-a, var(--accent))) 11%, #0c1018) 40%,
+    color-mix(in srgb, var(--kb, var(--gk-b, var(--accent))) 11%, #0c1018) 60%,
+    color-mix(in srgb, var(--kb, var(--gk-b, var(--accent))) 30%, #0b0f15) 100%
+  );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 0 0 1px rgba(255, 255, 255, 0.07),
+    0 10px 26px -14px color-mix(in srgb, var(--ka, var(--gk-a, var(--accent))) 45%, transparent),
+    0 10px 26px -14px color-mix(in srgb, var(--kb, var(--gk-b, var(--accent))) 45%, transparent);
+  font-size: clamp(0.95rem, 2.2vmin, 1.35rem);
+  text-align: left;
 }
-.gk-komend-uur { font-weight: 800; font-variant-numeric: tabular-nums; color: var(--gk-a, var(--accent)); }
-.gk-komend-affiche { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.gk-komend-logo { width: 1.4em; height: 1.4em; border-radius: 50%; object-fit: cover; background: #fff; flex: 0 0 auto; }
+.gk-komend-uur {
+  font-family: var(--font-display), sans-serif;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  font-size: 1.15em;
+  color: #fff;
+  padding: 0.3em 0.7em;
+  border-radius: 999px;
+  background: rgba(6, 9, 14, 0.5);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+  white-space: nowrap;
+}
+.gk-komend-affiche {
+  display: grid;
+  grid-template-columns: auto auto auto auto auto;
+  justify-content: center;
+  align-items: center;
+  gap: 0.55em;
+  min-width: 0;
+  font-weight: 800;
+  color: #fff;
+}
+.gk-komend-team { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gk-komend-vs {
+  font-size: 0.62em;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-indent: 0.18em;
+  color: rgba(255, 255, 255, 0.85);
+  padding: 0.35em 0.8em;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.08);
+}
+.gk-komend-logo { width: 1.9em; height: 1.9em; border-radius: 50%; object-fit: cover; background: #fff; flex: 0 0 auto; box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.35); }
+@media (max-width: 640px) {
+  .gk-komend-rij { grid-template-columns: 1fr; justify-items: center; gap: 8px; text-align: center; }
+}
 .gk-titel { display: inline-flex; align-items: center; gap: 10px; }
 .gk-hostlogo { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; background: #fff; box-shadow: 0 0 0 2px color-mix(in srgb, var(--gk-a, var(--accent)) 65%, transparent); }
 .gk-komend-reeks {
@@ -1240,9 +1302,11 @@
   font-weight: 800;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: var(--gk-a, var(--accent));
-  background: color-mix(in srgb, var(--gk-a, var(--accent)) 14%, transparent);
-  padding: 0.25em 0.8em;
+  /* Donkere glas-chip met witte tekst: leesbaar op élk clubkleuren-verloop (ook lichte). */
+  color: #fff;
+  background: rgba(6, 9, 14, 0.55);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+  padding: 0.3em 0.9em;
   border-radius: 999px;
   white-space: nowrap;
 }

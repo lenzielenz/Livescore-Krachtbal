@@ -190,6 +190,11 @@ export function TournamentScoresheet({
               ✅ Afgelopen — winnaar: <strong>{m.winner === 'home' ? m.home : m.away}</strong>
               <div className="ts-after">
                 <Link href={`/tornooi/${id}`} className="trn-btn">Terug naar schema</Link>
+                {/* Score toch fout genoteerd? Heropen kan zolang de volgende ronde niet bezig is
+                    (de server bewaakt dat en trekt de doorgeschoven winnaar terug). */}
+                <button type="button" className="trn-btn" onClick={() => act({ action: 'reopen' })}>
+                  🔓 Score aanpassen
+                </button>
               </div>
             </div>
           )}

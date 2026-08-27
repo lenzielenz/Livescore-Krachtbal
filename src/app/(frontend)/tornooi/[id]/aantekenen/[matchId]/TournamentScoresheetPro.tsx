@@ -300,6 +300,11 @@ export function TournamentScoresheetPro({
               {m.winner && <> · winnaar <strong>{m.winner === 'home' ? m.home : m.away}</strong></>}
               <div className="ssk-after">
                 <Link href={`/tornooi/${id}`} className="ssk-btn">Terug naar schema</Link>
+                {/* Score toch fout genoteerd? Heropen kan zolang de volgende ronde niet bezig is
+                    (de server bewaakt dat en trekt de doorgeschoven winnaar terug). */}
+                <button type="button" className="ssk-btn" onClick={() => act({ action: 'reopen' })}>
+                  🔓 Score aanpassen
+                </button>
               </div>
             </div>
           )}

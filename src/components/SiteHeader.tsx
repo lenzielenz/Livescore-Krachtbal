@@ -52,7 +52,7 @@ const WEDSTRIJDEN: { href: string; label: string }[] = [
   { href: '/rangschikking', label: '📊 Stand' },
   { href: '/recap', label: '📰 Weekoverzicht' },
   { href: '/pronostiek', label: '🔮 Pronostiekstand' },
-  { href: '/tornooi', label: '🏆 Bekerwedstrijden' },
+  { href: '/tornooi', label: '🏆 Tornooien' },
 ]
 
 // Welke rol een profiel-ingang mag zien. Federatie/admin zien alles.

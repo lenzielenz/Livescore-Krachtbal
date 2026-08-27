@@ -438,9 +438,8 @@ async function tournamentIdOf(payload: Payload, m: MatchDoc): Promise<number> {
   return typeof full.tournament === 'object' ? full.tournament.id : full.tournament
 }
 
-/** Schrijf een ploegnaam in het doel-slot (volgende ronde / kleine finale). */
-async function applyToSlot(payload: Payload, source: MatchDoc, ref: SlotRef, name: string): Promise<void> {
-  const tournamentId = await tournamentIdOf(payload, source)
+/** Zoek de wedstrijd waar een doel-slot (ronde/positie/schema) naar verwijst. */
+async function findSlotMatch(payload: Payload, tournamentId: number, ref: SlotRef): Promise<MatchDoc | null> {
   const res = await payload.find({
     collection: COLL,
     where: {
@@ -454,6 +453,44 @@ async function applyToSlot(payload: Payload, source: MatchDoc, ref: SlotRef, nam
     depth: 0,
     limit: 1,
   })
-  const target = res.docs[0]
-  if (target) await update(payload, target.id as number, { [ref.slot]: name } as Partial<MatchDoc>)
+  return (res.docs[0] as unknown as MatchDoc) ?? null
+}
+
+/** Schrijf een ploegnaam in het doel-slot (volgende ronde / kleine finale). */
+async function applyToSlot(payload: Payload, source: MatchDoc, ref: SlotRef, name: string): Promise<void> {
+  const tournamentId = await tournamentIdOf(payload, source)
+  const target = await findSlotMatch(payload, tournamentId, ref)
+  if (target) await update(payload, target.id, { [ref.slot]: name } as Partial<MatchDoc>)
+}
+
+/**
+ * Heropen een afgelopen wedstrijd om de score nog aan te passen. De doorgeschoven winnaar (en
+ * eventueel verliezer) wordt uit de vervolgronde teruggetrokken — dat kan enkel zolang daar nog
+ * niet gespeeld wordt. Het tornooi zelf gaat terug op 'live' als het al afgesloten was.
+ */
+export async function reopenMatch(payload: Payload, matchId: number): Promise<void> {
+  const m = await getMatch(payload, matchId)
+  if (m.status !== 'finished') throw new Error('Deze wedstrijd is niet afgelopen.')
+  if (!m.home || !m.away) throw new Error('Een bye kan niet heropend worden.')
+  const tournamentId = await tournamentIdOf(payload, m)
+
+  // Eerst BEIDE vervolg-slots controleren, dan pas leegmaken — geen half werk bij een weigering.
+  const refs = [m.winnerTo, m.loserTo].filter((r): r is SlotRef => Boolean(r))
+  const targets: { ref: SlotRef; doc: MatchDoc }[] = []
+  for (const ref of refs) {
+    const doc = await findSlotMatch(payload, tournamentId, ref)
+    if (!doc) continue
+    if (doc.status !== 'pending' || goalsOf(doc).length > 0) {
+      throw new Error('De volgende ronde is al bezig — deze wedstrijd kan niet meer heropend worden.')
+    }
+    targets.push({ ref, doc })
+  }
+  for (const t of targets) {
+    await update(payload, t.doc.id, { [t.ref.slot]: null } as unknown as Partial<MatchDoc>)
+  }
+
+  await update(payload, matchId, { status: 'live', winner: null, clockRunning: false })
+  await payload
+    .update({ collection: 'tournaments', id: tournamentId, data: { status: 'live' }, overrideAccess: true })
+    .catch(() => undefined)
 }

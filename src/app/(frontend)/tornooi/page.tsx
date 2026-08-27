@@ -45,41 +45,42 @@ export default async function TornooiHub() {
       <SiteHeader active="tornooi" />
       <div className="trn-page">
       <div className="trn-hub-head">
-        <h1 className="trn-hub-title">🏆 Bekerwedstrijden</h1>
+        <h1 className="trn-hub-title">🏆 Tornooien</h1>
         <p className="trn-hub-intro">
-          Beker- en tornooiwedstrijden in een boomstructuur — voor elke reeks. Maak een nieuwe beker aan,
-          kies de ploegen, en volg de hele bracket (van de eerste ronde tot de finale) live mee.
+          Open een tornooi en je ziet de categorieën (senioren, U12, U14 …) met hun volledige
+          schema — van de eerste ronde tot de finale, live te volgen.
         </p>
       </div>
       {canCreate && (
         <div className="trn-actions">
-          <Link href="/tornooi/nieuw" className="trn-btn primary">+ Nieuwe beker</Link>
+          <Link href="/tornooi/nieuw" className="trn-btn primary">+ Nieuw tornooi / categorie</Link>
         </div>
       )}
 
       <main className="trn-hub">
-        {[...groepen.entries()].map(([groep, reeksen]) => (
-          <section key={groep} className="trn-hub-sec">
-            <h2>
-              🏆 {groep}{' '}
-              <Link href={`/tornooi/groep/${encodeURIComponent(groep)}`} style={{ color: 'var(--accent)' }}>overzicht</Link>
-              {' · '}
-              <Link href={`/tornooi/groep/${encodeURIComponent(groep)}/kantine`} style={{ color: 'var(--accent)' }}>📺 kantinescherm</Link>
-            </h2>
+        {/* Tornooi-eerst: één kaart per tornooidag. Openen = de categorieën zien (groepspagina). */}
+        {groepen.size > 0 && (
+          <section className="trn-hub-sec">
+            <h2>Tornooien</h2>
             <div className="trn-hub-list">
-              {reeksen.map((t) => (
-                <Link key={t.id} href={`/tornooi/${t.id}`} className="trn-hub-card">
-                  <span className="trn-hub-name">{t.name}</span>
-                  <span className="trn-hub-meta">{catLabel(t.category)} · {t.teamCount ?? '?'} ploegen</span>
-                  <span className={`trn-hub-status ${t.status}`}>{t.status === 'live' ? 'BEZIG' : 'AFGELOPEN'}</span>
-                  {canCreate && <VerwijderTornooi id={t.id} naam={t.name} />}
-                </Link>
-              ))}
+              {[...groepen.entries()].map(([groep, reeksen]) => {
+                const bezig = reeksen.some((t) => t.status === 'live')
+                const cats = [...new Set(reeksen.map((t) => catLabel(t.category)))]
+                return (
+                  <Link key={groep} href={`/tornooi/groep/${encodeURIComponent(groep)}`} className="trn-hub-card groep">
+                    <span className="trn-hub-name">🏆 {groep}</span>
+                    <span className="trn-hub-meta">
+                      {reeksen.length} {reeksen.length === 1 ? 'categorie' : 'categorieën'} · {cats.join(', ')}
+                    </span>
+                    <span className={`trn-hub-status ${bezig ? 'live' : 'finished'}`}>{bezig ? 'BEZIG' : 'AFGELOPEN'}</span>
+                  </Link>
+                )
+              })}
             </div>
           </section>
-        ))}
-        <Section title="Lopende bekers & tornooien" docs={live} empty={groepen.size > 0 ? '' : 'Geen lopende beker. Maak er een aan.'} canDelete={canCreate} />
-        {done.length > 0 && <Section title="Afgelopen bekers & tornooien" docs={done} empty="" canDelete={canCreate} />}
+        )}
+        <Section title="Losse tornooien" docs={live} empty={groepen.size > 0 ? '' : 'Nog geen tornooi. Maak er een aan.'} canDelete={canCreate} />
+        {done.length > 0 && <Section title="Afgelopen" docs={done} empty="" canDelete={canCreate} />}
       </main>
       </div>
     </>
