@@ -5,6 +5,7 @@ import {
   advanceHalf,
   buildTournamentState,
   finishMatch,
+  planMatch,
   recordCross,
   recordGoal,
   recordRefereeStop,
@@ -83,6 +84,9 @@ export async function POST(
         break
       case 'half':
         await advanceHalf(payload, matchId)
+        break
+      case 'plan':
+        await planMatch(payload, matchId, typeof body.plannedAt === 'string' && body.plannedAt ? body.plannedAt : null)
         break
       case 'finish':
         await finishMatch(payload, matchId, body.winner === 'home' ? 'home' : body.winner === 'away' ? 'away' : undefined)

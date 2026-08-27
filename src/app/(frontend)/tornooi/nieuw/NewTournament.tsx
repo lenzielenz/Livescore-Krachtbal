@@ -43,6 +43,14 @@ export function NewTournament({
   const [method, setMethod] = useState<Method>('auto')
   const [format, setFormat] = useState<'knockout' | 'roundrobin'>('knockout')
   const [toonOpLive, setToonOpLive] = useState(true)
+  // Hoofdgroep/tornooidag (bv. "Beker van Brugge"): reeksen met dezelfde groep delen één
+  // publieke groepspagina en één zelfaanpassend kantinescherm.
+  const [groep, setGroep] = useState('')
+  // Organiserende club: logo + kleuren bepalen de look van het groep-kantinescherm.
+  const [hostClub, setHostClub] = useState<number | ''>('')
+  // Gepland uur per wedstrijd van ronde 1 (knock-out): het uur hoort bij het wedstrijdslot;
+  // bij "Manueel" bepaal je daarbovenop zélf wie er in dat slot speelt (volgorde ↑/↓).
+  const [tijden, setTijden] = useState<Record<number, string>>({})
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -136,6 +144,10 @@ export function NewTournament({
     // Knock-out: geplaatste ploegen worden geseed (bye's + uit elkaar = sterke finale); de toggle
     // schudt de overige ploegen, manueel houdt de ingegeven volgorde aan.
     const slots = format === 'roundrobin' ? filled : seededSlots(orderedNames(method === 'auto'))
+    // Geplande uren per ronde-1-wedstrijd (zelfde volgorde als de preview/bracket).
+    const plannedTimes = format === 'knockout'
+      ? preview.map((_, i) => (tijden[i] ? new Date(tijden[i]).toISOString() : null))
+      : []
     // Expliciete club-koppeling per ingevulde ploeg (optioneel).
     const teamClubs = names
       .map((nm, i) => ({ name: nm.trim(), clubId: clubIds[i] }))
@@ -150,7 +162,7 @@ export function NewTournament({
       const res = await fetch('/api/tournament', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: name.trim(), category, method, format, slots, teamClubs, teamTeams, toonOpLive }),
+        body: JSON.stringify({ name: name.trim(), category, method, format, slots, teamClubs, teamTeams, toonOpLive, groep: groep.trim(), hostClub: hostClub || undefined, plannedTimes }),
       })
       const data = (await res.json()) as { id?: number; error?: string }
       if (!res.ok || !data.id) throw new Error(data.error ?? 'Aanmaken mislukt.')
@@ -167,8 +179,22 @@ export function NewTournament({
         <h2>1 · Gegevens</h2>
         <label className="trn-field">
           <span>Naam van het tornooi</span>
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Bv. Paastornooi U14 2026" />
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Bv. Beker van Brugge — U14" />
         </label>
+        <label className="trn-field">
+          <span>Hoofdgroep / tornooidag (optioneel)</span>
+          <input value={groep} onChange={(e) => setGroep(e.target.value)} placeholder='Bv. "Beker van Brugge" — bundelt alle reeksen van die dag' />
+          <small className="trn-field-hint">Reeksen met dezelfde groepsnaam delen één publieke pagina en één kantinescherm dat zichzelf de hele dag aanpast.</small>
+        </label>
+        {clubs.length > 0 && (
+          <label className="trn-field">
+            <span>Organiserende club (look van het kantinescherm)</span>
+            <select value={hostClub} onChange={(e) => setHostClub(e.target.value ? Number(e.target.value) : '')}>
+              <option value="">— geen (standaard huisstijl) —</option>
+              {clubs.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
+            </select>
+          </label>
+        )}
         <div className="trn-row2">
           <label className="trn-field">
             <span>Leeftijdscategorie (bepaalt de regels)</span>
@@ -310,10 +336,22 @@ export function NewTournament({
             <h3>Voorbeeld ronde 1 {method === 'auto' && <span className="trn-preview-note">(de niet-geplaatste ploegen worden nog geschud)</span>}</h3>
             <ul>
               {preview.map((m, i) => (
-                <li key={i}>
+                <li key={i} className="trn-preview-rij">
                   <span>{m.home ?? '— vrij —'}</span>
                   <em>vs</em>
                   <span>{m.away ?? '— vrij —'}</span>
+                  {/* Gepland uur van dit wedstrijdslot — voedt het aftellen op het kantinescherm. */}
+                  {(m.home || m.away) && (
+                    <label className="trn-preview-tijd">
+                      <span aria-hidden>🕐</span>
+                      <input
+                        type="datetime-local"
+                        value={tijden[i] ?? ''}
+                        onChange={(e) => setTijden((t) => ({ ...t, [i]: e.target.value }))}
+                        aria-label={`Gepland uur wedstrijd ${i + 1}`}
+                      />
+                    </label>
+                  )}
                 </li>
               ))}
             </ul>

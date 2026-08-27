@@ -1016,6 +1016,14 @@ export interface Tournament {
    */
   name: string;
   /**
+   * Bv. "Beker van Brugge". Reeksen met dezelfde groepsnaam horen bij dezelfde tornooidag en delen één kantinescherm.
+   */
+  groep?: string | null;
+  /**
+   * Logo en clubkleuren van deze club kleuren het kantinescherm van de tornooidag.
+   */
+  hostClub?: (number | null) | Club;
+  /**
    * Bepaalt de spelregels (helftduur). U12/U14/U16 = 2×20 min, rest 2×25 min.
    */
   category: 'U12' | 'U14' | 'U16' | 'U18' | 'U20' | 'senioren';
@@ -1072,6 +1080,7 @@ export interface TournamentMatch {
   away?: string | null;
   status: 'pending' | 'live' | 'finished';
   winner?: ('home' | 'away') | null;
+  plannedAt?: string | null;
   goals?:
     | {
         [k: string]: unknown;
@@ -2003,6 +2012,8 @@ export interface SanctionsSelect<T extends boolean = true> {
  */
 export interface TournamentsSelect<T extends boolean = true> {
   name?: T;
+  groep?: T;
+  hostClub?: T;
   category?: T;
   status?: T;
   method?: T;
@@ -2028,6 +2039,7 @@ export interface TournamentMatchesSelect<T extends boolean = true> {
   away?: T;
   status?: T;
   winner?: T;
+  plannedAt?: T;
   goals?: T;
   crosses?: T;
   timeouts?: T;

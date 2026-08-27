@@ -259,7 +259,12 @@ export function TournamentScoresheetPro({
 
           {live && (
             <div className="ssk-controls">
-              <button type="button" className="ssk-btn" onClick={() => act({ action: 'undo' })}>↶ Undo doelpunt</button>
+              {/* De undo zegt wát ze wegneemt — geen blinde gok of je de juiste tik terugdraait. */}
+              <button type="button" className="ssk-btn" disabled={!m.lastGoal} onClick={() => act({ action: 'undo' })}>
+                {m.lastGoal
+                  ? `↶ Ondoen: +${m.lastGoal.points} ${m.lastGoal.side === 'home' ? m.home : m.away}`
+                  : '↶ Niets te ondoen'}
+              </button>
               {half === 1 && (
                 <button type="button" className="ssk-btn primary" onClick={() => setConfirmHalfEnd(true)}>
                   ⏭ Einde 1e helft → 2e

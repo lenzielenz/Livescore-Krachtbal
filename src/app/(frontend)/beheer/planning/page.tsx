@@ -1,8 +1,8 @@
-import { headers } from 'next/headers'
 import Link from 'next/link'
 
 import { SiteHeader } from '@/components/SiteHeader'
 import { isFederationLevel } from '@/lib/access'
+import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
 import { ClubKleurenImport } from './ClubKleurenImport'
 import { PlanningImport } from './PlanningImport'
@@ -12,7 +12,7 @@ export const dynamic = 'force-dynamic'
 // Federatie: het volledige seizoensplan in één keer importeren (plak/CSV).
 export default async function PlanningPage() {
   const payload = await getPayloadClient()
-  const { user } = await payload.auth({ headers: await headers() }).catch(() => ({ user: null }))
+  const user = await getAuthUser()
   const allowed = isFederationLevel(user)
 
   return (

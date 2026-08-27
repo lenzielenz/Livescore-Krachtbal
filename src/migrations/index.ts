@@ -89,6 +89,7 @@ import * as migration_20260815_090000_reeks_uitbreiding_2026_2027 from './202608
 import * as migration_20260818_090000_match_video_analyse from './20260818_090000_match_video_analyse';
 import * as migration_20260818_120000_eigen_doelpunt from './20260818_120000_eigen_doelpunt';
 import * as migration_20260818_140000_pass_events from './20260818_140000_pass_events';
+import * as migration_20260826_090000_tornooi_groep_planning from './20260826_090000_tornooi_groep_planning';
 
 export const migrations = [
   {
@@ -545,5 +546,10 @@ export const migrations = [
     up: migration_20260818_140000_pass_events.up,
     down: migration_20260818_140000_pass_events.down,
     name: '20260818_140000_pass_events',
+  },
+  {
+    up: migration_20260826_090000_tornooi_groep_planning.up,
+    down: migration_20260826_090000_tornooi_groep_planning.down,
+    name: '20260826_090000_tornooi_groep_planning',
   },
 ];

@@ -1,11 +1,45 @@
 'use client'
 
 import Link from 'next/link'
+import { useState } from 'react'
 
 import { TeamLogo } from '@/components/TeamLogo'
 import type { TMatchState, TournamentState } from '@/lib/tournament-engine'
 import { fmtClock, useTicking, useTournamentStream } from '../useTournament'
 import { BracketZoom } from './BracketZoom'
+
+// Gepland uur van een nog te spelen wedstrijd — beheerders passen het hier meteen aan (voedt
+// het aftellen op het groep-kantinescherm). Bewaart bij het verlaten van het veldje.
+function PlanUur({ tournamentId, m }: { tournamentId: number; m: TMatchState }) {
+  const naarLokaal = (iso: string | null) => {
+    if (!iso) return ''
+    const d = new Date(iso)
+    if (Number.isNaN(d.getTime())) return ''
+    d.setMinutes(d.getMinutes() - d.getTimezoneOffset())
+    return d.toISOString().slice(0, 16)
+  }
+  const [val, setVal] = useState(() => naarLokaal(m.plannedAt))
+  const bewaar = async (v: string) => {
+    await fetch(`/api/tournament/${tournamentId}/match/${m.id}/action`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ action: 'plan', plannedAt: v ? new Date(v).toISOString() : null }),
+    }).catch(() => undefined)
+  }
+  return (
+    <label className="trn-plan" onClick={(e) => e.stopPropagation()}>
+      <span aria-hidden>🕐</span>
+      <input
+        type="datetime-local"
+        value={val}
+        onChange={(e) => setVal(e.target.value)}
+        onBlur={(e) => void bewaar(e.target.value)}
+        aria-label="Gepland aanvangsuur"
+      />
+    </label>
+  )
+}
 
 // Twee opeenvolgende wedstrijden vormen een paar dat naar één wedstrijd in de volgende ronde
 // leidt — die paring tekent de verbindingslijnen (zie tornooi.css).
@@ -51,6 +85,8 @@ function MatchCard({ id, m, canManage, logos, neutral = false }: { id: number; m
           <Link href={`/tornooi/${id}/veld/${m.id}`} className="trn-mini">Veld</Link>
         </div>
       )}
+      {/* Plannen kan zolang ze niet gespeeld is — het groep-kantinescherm telt hiernaar af. */}
+      {!bye && !done && canManage && <PlanUur tournamentId={id} m={m} />}
     </div>
   )
 }

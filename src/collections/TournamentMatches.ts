@@ -71,6 +71,14 @@ export const TournamentMatches: CollectionConfig = {
       ],
     },
     {
+      // Gepland aanvangsuur (tornooidag-planning). Het groep-kantinescherm telt hiernaar af
+      // zolang er geen wedstrijd bezig is.
+      name: 'plannedAt',
+      label: 'Gepland om',
+      type: 'date',
+      admin: { date: { pickerAppearance: 'dayAndTime', displayFormat: 'dd/MM/yyyy HH:mm', timeFormat: 'HH:mm' } },
+    },
+    {
       // Event-sourced score: lijst van { side, points (1/2), half, clock, ts }.
       name: 'goals',
       label: 'Doelpunten',

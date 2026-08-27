@@ -1,8 +1,8 @@
-import { headers } from 'next/headers'
 import { notFound } from 'next/navigation'
 
 import { hasRole, isFederationLevel } from '@/lib/access'
 import { competitionWhere } from '@/lib/analyse-access'
+import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
 import { buildTournamentState } from '@/lib/tournament-engine'
 import { BracketBoard } from './BracketBoard'
@@ -28,7 +28,7 @@ export default async function TornooiPage({ params }: { params: Promise<{ id: st
     notFound()
   }
 
-  const { user } = await payload.auth({ headers: await headers() }).catch(() => ({ user: null }))
+  const user = await getAuthUser()
   const canManage = isFederationLevel(user) || hasRole(user, 'scorekeeper', 'scheidsrechter')
 
   // Clublogo's: in de eerste plaats via de EXPLICIETE koppeling (teamClubs, ingegeven bij het

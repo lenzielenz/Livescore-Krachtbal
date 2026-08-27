@@ -41,6 +41,10 @@ export type TMatchState = {
   currentHalf: number
   clockSeconds: number
   clockRunning: boolean
+  /** Gepland aanvangsuur (ISO) — het groep-kantinescherm telt hiernaar af. */
+  plannedAt: string | null
+  /** Laatst genoteerde doelpunt — wat "undo" zou wegnemen; voedt ook de kantine-viering. */
+  lastGoal: { side: Side; points: 1 | 2 } | null
 }
 
 export type TournamentState = {
@@ -78,6 +82,7 @@ type MatchDoc = {
   clockSeconds?: number | null
   clockRunning?: boolean | null
   clockUpdatedAt?: string | null
+  plannedAt?: string | null
 }
 
 const COLL = 'tournament-matches' as const
@@ -99,6 +104,8 @@ function liveClock(m: Pick<MatchDoc, 'clockRunning' | 'clockUpdatedAt' | 'clockS
 }
 
 function toState(m: MatchDoc): TMatchState {
+  const goals = goalsOf(m)
+  const laatste = goals.length ? goals[goals.length - 1] : null
   return {
     id: m.id,
     round: m.round,
@@ -109,13 +116,15 @@ function toState(m: MatchDoc): TMatchState {
     away: m.away ?? null,
     status: m.status,
     winner: m.winner ?? null,
-    score: deriveScore(goalsOf(m)),
+    score: deriveScore(goals),
     crosses: countsOf(m.crosses),
     timeouts: countsOf(m.timeouts),
     refereeStops: Number(m.refereeStops) || 0,
     currentHalf: m.currentHalf ?? 1,
     clockSeconds: Math.floor(liveClock(m)),
     clockRunning: Boolean(m.clockRunning),
+    plannedAt: (m as { plannedAt?: string | null }).plannedAt ?? null,
+    lastGoal: laatste ? { side: laatste.side, points: laatste.points === 2 ? 2 : 1 } : null,
   }
 }
 
@@ -148,6 +157,12 @@ export async function createTournament(
     teamTeams?: { name: string; teamId: number }[]
     /** Toon de lopende wedstrijden van deze beker bovenaan de live-pagina. */
     toonOpLive?: boolean
+    /** Hoofdgroep/tornooidag (bv. "Beker van Brugge") die meerdere reeksen bundelt. */
+    groep?: string
+    /** Organiserende club: logo + kleuren bepalen de look van het groep-kantinescherm. */
+    hostClub?: number
+    /** Geplande uren (ISO of null) per ronde-1-wedstrijd, in bracket-volgorde. */
+    plannedTimes?: (string | null)[]
   },
 ): Promise<number> {
   const format: TournamentFormat = args.format === 'roundrobin' ? 'roundrobin' : 'knockout'
@@ -174,6 +189,8 @@ export async function createTournament(
       status: 'live',
       teamCount: filled.length,
       toonOpLive: Boolean(args.toonOpLive),
+      ...(args.groep?.trim() ? { groep: args.groep.trim() } : {}),
+      ...(args.hostClub != null && Number.isFinite(args.hostClub) ? { hostClub: args.hostClub } : {}),
       ...(args.teamClubs && args.teamClubs.length ? { teamClubs: args.teamClubs } : {}),
       ...(args.teamTeams && args.teamTeams.length ? { teamTeams: args.teamTeams } : {}),
     },
@@ -181,7 +198,10 @@ export async function createTournament(
   })
 
   // Wedstrijden in schema-volgorde aanmaken (bye-wedstrijden zijn al 'finished' met winnaar).
+  // De geplande uren gelden per ronde-1-slot, in dezelfde volgorde als de preview toonde.
+  let ronde1Index = 0
   for (const m of bracket) {
+    const gepland = m.round === 1 && m.bracket === 'main' ? args.plannedTimes?.[ronde1Index++] : undefined
     await payload.create({
       collection: COLL,
       data: {
@@ -200,6 +220,7 @@ export async function createTournament(
         currentHalf: 1,
         clockSeconds: 0,
         clockRunning: false,
+        ...(gepland ? { plannedAt: gepland } : {}),
       },
       overrideAccess: true,
     })
@@ -341,6 +362,14 @@ export async function recordTimeout(payload: Payload, matchId: number, side: Sid
 }
 
 /** Klok starten/pauzeren of de tijd zetten. Bij pauzeren wordt de verstreken tijd vastgeklikt. */
+/** Gepland aanvangsuur zetten of wissen (tornooidag-planning; voedt het aftellen op de kantine). */
+export async function planMatch(payload: Payload, matchId: number, plannedAtIso: string | null): Promise<void> {
+  if (plannedAtIso != null && Number.isNaN(new Date(plannedAtIso).getTime())) {
+    throw new Error('Ongeldig tijdstip.')
+  }
+  await update(payload, matchId, { plannedAt: plannedAtIso } as Partial<MatchDoc>)
+}
+
 export async function setClock(
   payload: Payload,
   matchId: number,

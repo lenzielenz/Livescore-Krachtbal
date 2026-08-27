@@ -1,4 +1,3 @@
-import { headers } from 'next/headers'
 import Link from 'next/link'
 import type { Where } from 'payload'
 
@@ -6,6 +5,7 @@ import { SiteHeader } from '@/components/SiteHeader'
 import { userClubId } from '@/lib/access'
 import { competitionWhere } from '@/lib/analyse-access'
 import { buildMatchState } from '@/lib/match-engine'
+import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
 import { buildPredictionLeaderboard, scoreMatchPredictions, type PredEntry } from '@/lib/prediction-score'
 import { loadAllPools } from '@/lib/pronostiek-pools'
@@ -39,7 +39,7 @@ type MatchRow = { id: number; reeks: string; reeksCode: string; date: string; st
 export default async function VoorspelPage({ searchParams }: { searchParams: Promise<{ scope?: string; pool?: string; join?: string }> }) {
   const { scope: scopeParam, pool: poolParam, join: joinParam } = await searchParams
   const payload = await getPayloadClient()
-  const { user } = await payload.auth({ headers: await headers() }).catch(() => ({ user: null }))
+  const user = await getAuthUser()
   if (!user) {
     return <Shell><p className="empty">Log in om mee te voorspellen. <Link href="/inloggen" style={{ color: 'var(--accent)' }}>Inloggen →</Link></p></Shell>
   }
