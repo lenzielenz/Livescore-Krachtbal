@@ -90,7 +90,21 @@ export default async function TornooiPage({ params }: { params: Promise<{ id: st
     <>
       {canManage && (
         <div className="trn-page trn-beheer-wrap">
-          <TornooiBeheer id={tournamentId} naam={state.name} teams={[...names].sort((a, b) => a.localeCompare(b, 'nl'))} magHerloten={magHerloten} />
+          <TornooiBeheer
+            id={tournamentId}
+            naam={state.name}
+            teams={[...names].sort((a, b) => a.localeCompare(b, 'nl'))}
+            magHerloten={magHerloten}
+            format={state.format}
+            schema={
+              // Voorinvulling van de manuele planner (enkel round-robin: alles is ronde 1).
+              state.format === 'roundrobin'
+                ? alleMatches
+                    .filter((m) => m.home && m.away)
+                    .map((m) => ({ home: m.home as string, away: m.away as string, plannedAt: m.plannedAt ?? null }))
+                : []
+            }
+          />
         </div>
       )}
       <BracketBoard id={tournamentId} initial={state} canManage={canManage} logos={logos} />

@@ -1496,3 +1496,61 @@
 .trn-page.sheet .ts-meta { margin-bottom: 8px; }
 .trn-page.sheet .ts-clock { padding: 8px 12px; margin-bottom: 10px; }
 .trn-page.sheet .ts-clock-time { font-size: 2.1rem; }
+
+/* Manuele planner (round-robin) in het beheerpaneel: rijen "thuis – uit · uur" met verplaats-
+   en verwijderknoppen. Op smal scherm wikkelen de velden netjes onder elkaar. */
+.trn-planlist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.trn-planlist li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+.trn-planlist select,
+.trn-planlist input[type='datetime-local'] {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 9px 8px;
+  color: var(--txt);
+  font: inherit;
+  font-size: 0.9rem;
+  min-width: 0;
+}
+.trn-planlist select { flex: 1 1 120px; }
+.trn-planlist input[type='datetime-local'] { flex: 1 1 150px; }
+.trn-plan-vs { color: var(--dim); font-weight: 700; }
+
+/* Paren-voorbeeld bij de knock-out-herloting: zo zie je vóór het bewaren exact wie tegen wie. */
+.trn-parenlijst {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.9rem;
+}
+.trn-parenlijst li {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 6px 10px;
+}
+.trn-parenlijst em {
+  font-style: normal;
+  color: var(--dim);
+  font-size: 0.78rem;
+  margin-right: 8px;
+}

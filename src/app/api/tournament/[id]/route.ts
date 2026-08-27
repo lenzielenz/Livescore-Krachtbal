@@ -1,7 +1,7 @@
 import { isFederationLevel } from '@/lib/access'
 import { authUser } from '@/lib/api-auth'
 import { getPayloadClient } from '@/lib/payload-client'
-import { redrawTournament, renameTeam, renameTournament } from '@/lib/tournament-engine'
+import { planSchedule, redrawTournament, renameTeam, renameTournament } from '@/lib/tournament-engine'
 
 // Een beker/tornooi verwijderen — enkel de federatie/admin (dezelfde rol die ze aanmaakt).
 // De beforeDelete-hook op de Tournaments-collectie ruimt het hele wedstrijdschema mee op.
@@ -50,6 +50,18 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       case 'ploegnaam':
         await renameTeam(payload, tournamentId, String(body.van ?? ''), String(body.naar ?? ''))
         break
+      case 'planning': {
+        // Manuele planning (round-robin): [{ home, away, plannedAt? }] in speelvolgorde.
+        const wedstrijden = Array.isArray(body.wedstrijden)
+          ? (body.wedstrijden as Record<string, unknown>[]).map((w) => ({
+              home: String(w?.home ?? '').trim(),
+              away: String(w?.away ?? '').trim(),
+              plannedAt: typeof w?.plannedAt === 'string' && w.plannedAt ? w.plannedAt : null,
+            }))
+          : []
+        await planSchedule(payload, tournamentId, wedstrijden)
+        break
+      }
       case 'herloting': {
         const slots = Array.isArray(body.slots)
           ? body.slots.map((x) => (typeof x === 'string' && x.trim() ? x.trim() : null))

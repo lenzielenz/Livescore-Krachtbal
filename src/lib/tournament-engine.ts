@@ -550,6 +550,73 @@ export async function renameTeam(payload: Payload, tournamentId: number, van: st
 }
 
 /**
+ * Manuele planning (round-robin): vervang het volledige speelschema door een zelf samengestelde
+ * lijst wedstrijden — wie tegen wie, in welke volgorde, en optioneel om welk uur. Zo kan de
+ * organisator bv. "A tegen C, daarna C tegen B" plannen i.p.v. de automatische rotatie.
+ * Kan enkel zolang er nog NIETS gespeeld is (zelfde bewaking als de herloting).
+ */
+export async function planSchedule(
+  payload: Payload,
+  tournamentId: number,
+  wedstrijden: { home: string; away: string; plannedAt?: string | null }[],
+): Promise<void> {
+  const t = (await payload.findByID({ collection: 'tournaments', id: tournamentId, depth: 0 })) as {
+    format?: string
+  }
+  if (t.format !== 'roundrobin')
+    throw new Error('Manueel plannen kan enkel bij een poule (round-robin); bij knock-out bepaalt de loting de paren.')
+
+  const docs = await loadMatches(payload, tournamentId)
+  const gespeeld = docs.some((d) => d.status !== 'pending' || goalsOf(d).length > 0)
+  if (gespeeld) throw new Error('Er is al gespeeld — de planning hertekenen kan niet meer.')
+
+  // Enkel gekende ploegen: de planning kiest paren, ze voegt geen nieuwe ploegen toe.
+  const gekend = new Set<string>()
+  for (const d of docs) {
+    if (d.home) gekend.add(d.home)
+    if (d.away) gekend.add(d.away)
+  }
+  if (wedstrijden.length === 0) throw new Error('Plan minstens één wedstrijd.')
+  for (const w of wedstrijden) {
+    if (!w.home || !w.away) throw new Error('Elke wedstrijd heeft twee ploegen nodig.')
+    if (w.home === w.away) throw new Error(`${w.home} kan niet tegen zichzelf spelen.`)
+    if (!gekend.has(w.home)) throw new Error(`Onbekende ploeg: ${w.home}`)
+    if (!gekend.has(w.away)) throw new Error(`Onbekende ploeg: ${w.away}`)
+  }
+
+  // Oud schema weg, de zelf samengestelde lijst erin — de volgorde ís de speelvolgorde.
+  await payload.delete({ collection: COLL, where: { tournament: { equals: tournamentId } }, overrideAccess: true })
+  let position = 0
+  for (const w of wedstrijden) {
+    await payload.create({
+      collection: COLL,
+      data: {
+        tournament: tournamentId,
+        round: 1,
+        position: position++,
+        bracket: 'main',
+        label: `${w.home} – ${w.away}`,
+        home: w.home,
+        away: w.away,
+        status: 'pending',
+        goals: [],
+        currentHalf: 1,
+        clockSeconds: 0,
+        clockRunning: false,
+        ...(w.plannedAt ? { plannedAt: w.plannedAt } : {}),
+      },
+      overrideAccess: true,
+    })
+  }
+  await payload.update({
+    collection: 'tournaments',
+    id: tournamentId,
+    data: { status: 'live' },
+    overrideAccess: true,
+  })
+}
+
+/**
  * Herloting: gooi het schema opnieuw met een nieuwe slot-volgorde (manueel gekozen of geschud).
  * Kan enkel zolang er nog NIETS gespeeld is (geen enkele echte wedstrijd gestart of genoteerd) —
  * bye's tellen niet mee. De geplande uren van ronde 1 blijven per wedstrijdslot behouden.
