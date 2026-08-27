@@ -6,6 +6,7 @@ import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
 import { buildTournamentState } from '@/lib/tournament-engine'
 import { BracketBoard } from './BracketBoard'
+import { TornooiBeheer } from './TornooiBeheer'
 import '../tornooi.css'
 
 export const dynamic = 'force-dynamic'
@@ -77,5 +78,22 @@ export default async function TornooiPage({ params }: { params: Promise<{ id: st
     if (url) logos[nm] = url
   }
 
-  return <BracketBoard id={tournamentId} initial={state} canManage={canManage} logos={logos} />
+  // Beheer (naam/ploegnamen/herloting): ploegnamen in vaste volgorde; herloten kan enkel zolang
+  // er nog niets gespeeld is (zelfde regel als de server hanteert).
+  const alleMatches = [...state.rounds.flatMap((r) => r.matches), ...(state.thirdPlace ? [state.thirdPlace] : [])]
+  const magHerloten = alleMatches.every((m) => {
+    const bye = m.status === 'finished' && (!m.home || !m.away)
+    return bye || (m.status === 'pending' && m.score.home === 0 && m.score.away === 0)
+  })
+
+  return (
+    <>
+      {canManage && (
+        <div className="trn-page trn-beheer-wrap">
+          <TornooiBeheer id={tournamentId} naam={state.name} teams={[...names].sort((a, b) => a.localeCompare(b, 'nl'))} magHerloten={magHerloten} />
+        </div>
+      )}
+      <BracketBoard id={tournamentId} initial={state} canManage={canManage} logos={logos} />
+    </>
+  )
 }

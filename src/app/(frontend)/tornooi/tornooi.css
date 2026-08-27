@@ -1446,3 +1446,10 @@
 :root:fullscreen .gk-scherm { cursor: none; }
 :root:fullscreen .gk-fs-btn { opacity: 0.35; }
 :root:fullscreen .gk-fs-btn:hover { opacity: 1; cursor: pointer; }
+
+/* Beheerpaneel op de tornooipagina (federatie): compact, ingeklapt tot je het nodig hebt. */
+.trn-beheer-wrap { padding-bottom: 0; }
+.trn-beheer { max-width: 720px; }
+.trn-beheer-rij { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.trn-beheer-rij input { flex: 1 1 220px; }
+.trn-beheer-naam { flex: 1; font-weight: 600; }
