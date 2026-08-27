@@ -142,6 +142,10 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
+  /* Vult de resterende schermhoogte (.ssk is al een flex-kolom van 100dvh):
+     grote tikdoelen aan het veld. */
+  flex: 1 1 auto;
+  align-content: stretch;
 }
 .ssk-team {
   --team-color: var(--accent, #0fe0a6);
@@ -156,6 +160,7 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+  min-width: 0;
   /* Glow in de clubkleur van de ploeg. */
   box-shadow: 0 0 26px -6px color-mix(in srgb, var(--team-color) 55%, transparent), var(--card-shadow, 0 12px 34px rgba(0, 0, 0, 0.38));
 }
@@ -189,22 +194,27 @@
 .ssk-goalbtns {
   display: grid;
   grid-template-columns: 1.5fr 1fr;
-  gap: 8px;
+  gap: 10px;
+  /* Alle resterende hoogte van het ploegvak — je kúnt er bijna niet naast tikken. */
+  flex: 1 1 auto;
+  min-height: clamp(110px, 18dvh, 240px);
 }
 .ssk-goal {
   border: none;
-  border-radius: 12px;
-  padding: 14px 6px;
-  font-size: 22px;
+  border-radius: 14px;
+  padding: 14px 4px;
+  font-size: clamp(22px, 6vw, 34px);
   font-weight: 800;
   color: #0e1014;
   cursor: pointer;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 2px;
+  touch-action: manipulation; /* geen dubbeltik-zoom bij snel natikken aan het veld */
 }
-.ssk-goal small { font-size: 11px; font-weight: 600; opacity: 0.8; }
+.ssk-goal small { font-size: clamp(11px, 2.6vw, 15px); font-weight: 600; opacity: 0.8; }
 /* +1 (nekworp) is veruit het vaakst → accent en groter (mensen drukken die eerst).
    +2 (rugworp) is uitzondering → gedempt/secundair zodat het niet de eerste reflex is. */
 .ssk-goal.nek { background: var(--accent); }
@@ -221,24 +231,25 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 13px;
+  font-size: 15px;
 }
 .ssk-stat-lbl { opacity: 0.8; }
 .ssk-stat-ctrl { display: inline-flex; align-items: center; gap: 8px; }
 .ssk-stat-btn {
-  width: 30px;
-  height: 30px;
-  border-radius: 8px;
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
   border: 1px solid var(--line);
   background: transparent;
   color: inherit;
-  font-size: 18px;
+  font-size: 22px;
   font-weight: 700;
   cursor: pointer;
+  touch-action: manipulation;
 }
 .ssk-stat-btn:disabled { opacity: 0.3; cursor: default; }
 .ssk-stat-lbl small { opacity: 0.7; font-weight: 400; }
-.ssk-stat-n { min-width: 18px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.ssk-stat-n { min-width: 26px; font-size: 17px; text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; }
 
 /* Scheidsrechter-minuut (gedeeld, niet per ploeg). */
 .ssk-refmin {
@@ -260,8 +271,15 @@
 .ssk-controls {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 10px;
   justify-content: center;
+}
+.ssk-controls .ssk-btn {
+  flex: 1 1 100%;
+  min-height: 56px;
+  font-size: 17px;
+  border-radius: 14px;
+  touch-action: manipulation;
 }
 .ssk-btn {
   border: 1px solid var(--line);
@@ -359,8 +377,13 @@
 }
 
 @media (max-width: 480px) {
-  .ssk-goal { font-size: 18px; padding: 12px 4px; }
+  /* Compacter bovenaan zodat de knoppen zoveel mogelijk van het scherm krijgen. */
+  .ssk { gap: 12px; }
+  .ssk-clock { padding: 10px; }
+  .ssk-clock-time { font-size: 36px; }
   .ssk-score { font-size: 46px; }
+  /* Label boven de knoppen: zo passen de grote −/+ tikdoelen naast elkaar in het smalle vak. */
+  .ssk-stat { flex-direction: column; gap: 4px; }
 }
 
 /* Bevestig-stand-modal bij het einde van de 1e helft. */
