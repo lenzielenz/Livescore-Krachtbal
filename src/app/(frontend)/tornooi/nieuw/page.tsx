@@ -13,7 +13,10 @@ export const dynamic = 'force-dynamic'
 
 // Aanmaakscherm: aantal ploegen → alle gegevens invullen → loting (manueel of toggle).
 // Enkel de federatie/admin kan een beker/tornooi aanmaken; supporters kijken mee.
-export default async function NieuwTornooiPage() {
+export default async function NieuwTornooiPage({ searchParams }: { searchParams: Promise<{ groep?: string }> }) {
+  // Vanaf een tornooidag-pagina komt de hoofdgroep als queryparameter mee: de nieuwe categorie
+  // hangt dan automatisch aan die dag (en dus aan haar kantinescherm).
+  const { groep } = await searchParams
   const payload = await getPayloadClient()
   const user = await getAuthUser()
   if (!isFederationLevel(user)) {
@@ -60,7 +63,7 @@ export default async function NieuwTornooiPage() {
     <>
       <SiteHeader active="tornooi" />
       <div className="trn-page">
-        <NewTournament categories={CATEGORY_OPTIONS} clubs={clubs} teams={teams} />
+        <NewTournament categories={CATEGORY_OPTIONS} clubs={clubs} teams={teams} initialGroep={typeof groep === 'string' ? groep : ''} />
       </div>
     </>
   )

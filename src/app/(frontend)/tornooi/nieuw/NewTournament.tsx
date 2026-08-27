@@ -22,10 +22,13 @@ export function NewTournament({
   categories,
   clubs = [],
   teams = [],
+  initialGroep = '',
 }: {
   categories: ReadonlyArray<{ label: string; value: string }>
   clubs?: { id: number; name: string }[]
   teams?: TeamOpt[]
+  /** Vooringevulde hoofdgroep (komt van de tornooidag-pagina via ?groep=). */
+  initialGroep?: string
 }) {
   const router = useRouter()
   const [name, setName] = useState('')
@@ -45,7 +48,7 @@ export function NewTournament({
   const [toonOpLive, setToonOpLive] = useState(true)
   // Hoofdgroep/tornooidag (bv. "Beker van Brugge"): reeksen met dezelfde groep delen één
   // publieke groepspagina en één zelfaanpassend kantinescherm.
-  const [groep, setGroep] = useState('')
+  const [groep, setGroep] = useState(initialGroep)
   // Organiserende club: logo + kleuren bepalen de look van het groep-kantinescherm.
   const [hostClub, setHostClub] = useState<number | ''>('')
   // Gepland uur per wedstrijd van ronde 1 (knock-out): het uur hoort bij het wedstrijdslot;

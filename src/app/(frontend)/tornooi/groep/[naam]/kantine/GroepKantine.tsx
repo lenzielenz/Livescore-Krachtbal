@@ -108,6 +108,37 @@ function VieringOverlay({ v }: { v: Viering }) {
 
 export function GroepKantine({ naam, initial }: { naam: string; initial: GroepData }) {
   const [data, setData] = useState<GroepData>(initial)
+  // Volledig scherm voor de kantine-tv: geen browserbalk, alleen het bord.
+  const [fullscreen, setFullscreen] = useState(false)
+  useEffect(() => {
+    const bijwerken = () => setFullscreen(Boolean(document.fullscreenElement))
+    document.addEventListener('fullscreenchange', bijwerken)
+    return () => document.removeEventListener('fullscreenchange', bijwerken)
+  }, [])
+  const wisselFullscreen = () => {
+    if (document.fullscreenElement) void document.exitFullscreen().catch(() => undefined)
+    else void document.documentElement.requestFullscreen().catch(() => undefined)
+  }
+  // Schermvergrendeling: de tv mag niet in slaap vallen tijdens de tornooidag. Best-effort
+  // (niet elke browser ondersteunt het); na een tab-wissel vragen we ze opnieuw aan.
+  useEffect(() => {
+    let lock: { release: () => Promise<void> } | null = null
+    const vraag = async () => {
+      try {
+        const wl = (navigator as { wakeLock?: { request: (t: 'screen') => Promise<{ release: () => Promise<void> }> } }).wakeLock
+        if (wl && document.visibilityState === 'visible') lock = await wl.request('screen')
+      } catch {
+        /* geen ondersteuning of geweigerd — geen probleem */
+      }
+    }
+    void vraag()
+    const opZicht = () => void vraag()
+    document.addEventListener('visibilitychange', opZicht)
+    return () => {
+      document.removeEventListener('visibilitychange', opZicht)
+      void lock?.release().catch(() => undefined)
+    }
+  }, [])
   const [viering, setViering] = useState<Viering | null>(null)
   // Vorige standen per wedstrijd — het verschil tussen twee polls IS het doelpunt.
   const vorige = useRef<Map<number, { home: number; away: number }>>(new Map())
@@ -192,8 +223,14 @@ export function GroepKantine({ naam, initial }: { naam: string; initial: GroepDa
           )}
           <span><span className="brand">Krachtbal</span> · {data.naam}</span>
         </span>
-        <span className="gk-kop-status">
-          {live.length > 0 ? `● ${live.length} bezig` : komend.length > 0 ? `${komend.length} nog te spelen` : 'dag afgerond'}
+        <span className="gk-kop-rechts">
+          <span className="gk-kop-status">
+            {live.length > 0 ? `● ${live.length} bezig` : komend.length > 0 ? `${komend.length} nog te spelen` : 'dag afgerond'}
+          </span>
+          {/* Volledig scherm: één tik en de tv toont enkel nog het bord (geen browserbalk). */}
+          <button type="button" className="gk-fs-btn" onClick={wisselFullscreen} title={fullscreen ? 'Volledig scherm verlaten' : 'Volledig scherm'}>
+            {fullscreen ? '✕ Verlaten' : '⛶ Volledig scherm'}
+          </button>
         </span>
       </header>
 
