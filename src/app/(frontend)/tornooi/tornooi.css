@@ -1425,3 +1425,24 @@
   background: color-mix(in srgb, #ef476f 10%, transparent);
 }
 .trn-hub-del:disabled { opacity: 0.5; cursor: default; }
+
+/* Volledig-scherm-knop op het groep-kantinescherm: klein glas-chipje in de kop. */
+.gk-kop-rechts { display: inline-flex; align-items: center; gap: 12px; }
+.gk-fs-btn {
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(6, 9, 14, 0.5);
+  color: var(--txt);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.gk-fs-btn:hover { border-color: rgba(255, 255, 255, 0.45); }
+/* In volledig scherm (aangevraagd op het document): cursor en knop vervagen zodat het scherm
+   écht clean is; eroverheen bewegen brengt ze terug. */
+:root:fullscreen .gk-scherm { cursor: none; }
+:root:fullscreen .gk-fs-btn { opacity: 0.35; }
+:root:fullscreen .gk-fs-btn:hover { opacity: 1; cursor: pointer; }
