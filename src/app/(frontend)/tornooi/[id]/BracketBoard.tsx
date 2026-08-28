@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useRef, useState } from 'react'
 
 import { TeamLogo } from '@/components/TeamLogo'
+import type { LogoFit } from '@/lib/logo-fit'
 import type { TMatchState, TournamentState } from '@/lib/tournament-engine'
 import { fmtClock, useTicking, useTournamentStream } from '../useTournament'
 import { BracketZoom } from './BracketZoom'
@@ -93,7 +94,7 @@ function pairUp(matches: TMatchState[]): TMatchState[][] {
   return out
 }
 
-function MatchCard({ id, m, canManage, logos, neutral = false }: { id: number; m: TMatchState; canManage: boolean; logos: Record<string, string>; neutral?: boolean }) {
+function MatchCard({ id, m, canManage, logos, fits, neutral = false }: { id: number; m: TMatchState; canManage: boolean; logos: Record<string, string>; fits: Record<string, LogoFit>; neutral?: boolean }) {
   const clock = useTicking(m.clockSeconds, m.clockRunning)
   const bye = m.status === 'finished' && (!m.home || !m.away)
   const live = m.status === 'live'
@@ -105,7 +106,7 @@ function MatchCard({ id, m, canManage, logos, neutral = false }: { id: number; m
     const lost = done && m.winner && m.winner !== side
     return (
       <div className={`trn-row ${won ? 'won' : ''} ${lost ? 'lost' : ''} ${side}`}>
-        {name && <span className="trn-row-logo"><TeamLogo name={name} logoUrl={logos[name] ?? null} size="xs" /></span>}
+        {name && <span className="trn-row-logo"><TeamLogo name={name} logoUrl={logos[name] ?? null} logoFit={fits[name] ?? null} size="xs" /></span>}
         <span className="trn-row-name">{name ?? '— te bepalen —'}</span>
         <span className="trn-row-score">{name && (live || done) ? m.score[side] : ''}</span>
       </div>
@@ -138,7 +139,7 @@ function MatchCard({ id, m, canManage, logos, neutral = false }: { id: number; m
 }
 
 // Round-robin: live rangschikking (4/3/2 punten) + alle wedstrijden.
-function RoundRobin({ id, state, canManage, logos }: { id: number; state: TournamentState; canManage: boolean; logos: Record<string, string> }) {
+function RoundRobin({ id, state, canManage, logos, fits }: { id: number; state: TournamentState; canManage: boolean; logos: Record<string, string>; fits: Record<string, LogoFit> }) {
   const matches = state.rounds.flatMap((r) => r.matches)
   const standings = state.standings ?? []
   return (
@@ -153,7 +154,7 @@ function RoundRobin({ id, state, canManage, logos }: { id: number; state: Tourna
             {standings.map((s, i) => (
               <tr key={s.team} className={i === 0 && state.status === 'finished' ? 'leader' : ''}>
                 <td>{i + 1}</td>
-                <td className="l"><span className="trn-rr-team">{logos[s.team] && <TeamLogo name={s.team} logoUrl={logos[s.team]} size="xs" />}{s.team}</span></td>
+                <td className="l"><span className="trn-rr-team">{logos[s.team] && <TeamLogo name={s.team} logoUrl={logos[s.team]} logoFit={fits[s.team] ?? null} size="xs" />}{s.team}</span></td>
                 <td>{s.played}</td>
                 <td>{s.won}</td>
                 <td>{s.drawn}</td>
@@ -170,7 +171,7 @@ function RoundRobin({ id, state, canManage, logos }: { id: number; state: Tourna
         <h2 className="trn-col-title">Wedstrijden</h2>
         <div className="trn-rr-grid">
           {matches.map((m) => (
-            <MatchCard key={m.id} id={id} m={m} canManage={canManage} logos={logos} />
+            <MatchCard key={m.id} id={id} m={m} canManage={canManage} logos={logos} fits={fits} />
           ))}
         </div>
       </section>
@@ -178,7 +179,7 @@ function RoundRobin({ id, state, canManage, logos }: { id: number; state: Tourna
   )
 }
 
-export function BracketBoard({ id, initial, canManage = false, logos = {} }: { id: number; initial: TournamentState; canManage?: boolean; logos?: Record<string, string> }) {
+export function BracketBoard({ id, initial, canManage = false, logos = {}, fits = {} }: { id: number; initial: TournamentState; canManage?: boolean; logos?: Record<string, string>; fits?: Record<string, LogoFit> }) {
   const state = useTournamentStream(id, initial) ?? initial
 
   // Tweezijdige boom: de finale (laatste ronde) staat centraal; elke eerdere ronde wordt in een
@@ -205,7 +206,7 @@ export function BracketBoard({ id, initial, canManage = false, logos = {} }: { i
         {pairUp(c.matches).map((pair, pi) => (
           <div className="trn-pair" key={pi}>
             {pair.map((m) => (
-              <MatchCard key={m.id} id={id} m={m} canManage={canManage} logos={logos} neutral={isNeutralRound(c.round)} />
+              <MatchCard key={m.id} id={id} m={m} canManage={canManage} logos={logos} fits={fits} neutral={isNeutralRound(c.round)} />
             ))}
           </div>
         ))}
@@ -231,7 +232,7 @@ export function BracketBoard({ id, initial, canManage = false, logos = {} }: { i
       )}
 
       {state.format === 'roundrobin' ? (
-        <RoundRobin id={id} state={state} canManage={canManage} logos={logos} />
+        <RoundRobin id={id} state={state} canManage={canManage} logos={logos} fits={fits} />
       ) : (
         <BracketZoom>
           <main className="trn-bracket2">
@@ -241,7 +242,7 @@ export function BracketBoard({ id, initial, canManage = false, logos = {} }: { i
                 <h2 className="trn-col-title trn-final-title">{finalRound.label}</h2>
                 <div className="trn-center-body">
                   {finalRound.matches.map((m) => (
-                    <MatchCard key={m.id} id={id} m={m} canManage={canManage} logos={logos} neutral />
+                    <MatchCard key={m.id} id={id} m={m} canManage={canManage} logos={logos} fits={fits} neutral />
                   ))}
                 </div>
               </div>
@@ -255,7 +256,7 @@ export function BracketBoard({ id, initial, canManage = false, logos = {} }: { i
         <section className="trn-third">
           <h2 className="trn-col-title">Kleine finale (3e plaats)</h2>
           <div className="trn-third-card">
-            <MatchCard id={id} m={state.thirdPlace} canManage={canManage} logos={logos} neutral />
+            <MatchCard id={id} m={state.thirdPlace} canManage={canManage} logos={logos} fits={fits} neutral />
           </div>
         </section>
       )}

@@ -1636,3 +1636,13 @@
   color: #ffb9a8;
   font-weight: 800;
 }
+
+/* Kantinescherm: laat elk clublogo "shinen" — een zachte gloed in de eigen clubkleur rond de
+   badge (de ring-variabele draagt die kleur al), bovenop de bestaande glansveeg. */
+.gk-scherm .tl {
+  box-shadow:
+    0 0 0 2px var(--tl-ring),
+    0 0 26px -2px var(--tl-ring),
+    0 4px 12px rgba(0, 0, 0, 0.35),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.06);
+}
