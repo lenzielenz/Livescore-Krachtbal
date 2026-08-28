@@ -44,7 +44,8 @@ function LiveTile({ m }: { m: TMatchState }) {
 }
 
 export function TournamentKantine({ id, initial }: { id: number; initial: TournamentState }) {
-  const state = useTournamentStream(id, initial) ?? initial
+  const [stream] = useTournamentStream(id, initial)
+  const state = stream ?? initial
   const allMatches = [...state.rounds.flatMap((r) => r.matches), ...(state.thirdPlace ? [state.thirdPlace] : [])]
   const liveMatches = allMatches.filter((m) => m.status === 'live')
 

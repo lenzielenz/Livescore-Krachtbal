@@ -1,5 +1,7 @@
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 
+import { hasRole, isFederationLevel } from '@/lib/access'
+import { getAuthUser } from '@/lib/auth-user'
 import { clubColors, clubLogoFit, clubLogoUrl } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
 import { buildTournamentState } from '@/lib/tournament-engine'
@@ -17,6 +19,11 @@ export default async function AantekenenPage({ params }: { params: Promise<{ id:
   const tournamentId = Number(id)
   const mId = Number(matchId)
   if (!Number.isFinite(tournamentId) || !Number.isFinite(mId)) notFound()
+
+  // Aantekenen is voor de organisatie (federatie/admin + scheidsrechters). Een supporter die de
+  // URL raadt, krijgt geen tafel vol knoppen die toch 403 geven — die volgt op de tornooipagina.
+  const user = await getAuthUser()
+  if (!isFederationLevel(user) && !hasRole(user, 'scheidsrechter')) redirect(`/tornooi/${tournamentId}`)
 
   const payload = await getPayloadClient()
   let state

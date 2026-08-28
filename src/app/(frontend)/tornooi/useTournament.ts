@@ -5,11 +5,16 @@ import { useEffect, useRef, useState } from 'react'
 import type { TournamentState } from '@/lib/tournament-engine'
 import { useLiveStream } from '@/lib/use-live-stream'
 
-/** Abonneer op de SSE-stream van een tornooi; start met de server-snapshot (met reconnect-backoff). */
-export function useTournamentStream(id: number, initial: TournamentState | null): TournamentState | null {
+/** Abonneer op de SSE-stream van een tornooi; start met de server-snapshot (met reconnect-backoff).
+ * De setter laat een actie-antwoord (dat de verse state al meebrengt) direct toepassen, zodat de
+ * gebruiker niet op de volgende stream-tik hoeft te wachten. */
+export function useTournamentStream(
+  id: number,
+  initial: TournamentState | null,
+): [TournamentState | null, (s: TournamentState) => void] {
   const [state, setState] = useState<TournamentState | null>(initial)
   useLiveStream<TournamentState>(`/api/tournament/${id}/stream`, (data) => setState(data))
-  return state
+  return [state, setState]
 }
 
 /** Laat de klok lokaal doortikken tussen de SSE-updates. */

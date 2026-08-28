@@ -62,19 +62,22 @@ function PlanUur({ tournamentId, m }: { tournamentId: number; m: TMatchState }) 
   )
 }
 
-// Thuis- en uitploeg van plaats wisselen — kan zolang de wedstrijd niet gestart is. De verse
-// state komt via de SSE-stream terug, dus het bord draait vanzelf mee.
-function WisselKnop({ tournamentId, m }: { tournamentId: number; m: TMatchState }) {
+// Thuis- en uitploeg van plaats wisselen — kan zolang de wedstrijd niet gestart is. Het antwoord
+// draagt de verse state al mee: die passen we direct toe, zodat het bord meteen draait (de
+// SSE-stream bevestigt daarna hetzelfde beeld voor alle andere kijkers).
+function WisselKnop({ tournamentId, m, onState }: { tournamentId: number; m: TMatchState; onState?: (s: TournamentState) => void }) {
   const [busy, setBusy] = useState(false)
   const wissel = async () => {
     setBusy(true)
     try {
-      await fetch(`/api/tournament/${tournamentId}/match/${m.id}/action`, {
+      const res = await fetch(`/api/tournament/${tournamentId}/match/${m.id}/action`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({ action: 'wissel' }),
       })
+      const data = (await res.json().catch(() => null)) as { state?: TournamentState } | null
+      if (res.ok && data?.state) onState?.(data.state)
     } finally {
       setBusy(false)
     }
@@ -94,7 +97,7 @@ function pairUp(matches: TMatchState[]): TMatchState[][] {
   return out
 }
 
-function MatchCard({ id, m, canManage, logos, fits, neutral = false }: { id: number; m: TMatchState; canManage: boolean; logos: Record<string, string>; fits: Record<string, LogoFit>; neutral?: boolean }) {
+function MatchCard({ id, m, canManage, logos, fits, neutral = false, onState }: { id: number; m: TMatchState; canManage: boolean; logos: Record<string, string>; fits: Record<string, LogoFit>; neutral?: boolean; onState?: (s: TournamentState) => void }) {
   const clock = useTicking(m.clockSeconds, m.clockRunning)
   const bye = m.status === 'finished' && (!m.home || !m.away)
   const live = m.status === 'live'
@@ -129,7 +132,7 @@ function MatchCard({ id, m, canManage, logos, fits, neutral = false }: { id: num
           <Link href={`/tornooi/${id}/aantekenen/${m.id}`} className="trn-mini">Aantekenen</Link>
           <Link href={`/tornooi/${id}/veld/${m.id}`} className="trn-mini">Veld</Link>
           {/* Thuis/uit omdraaien kan tot de eerste worp — daarna zou de score van kant wisselen. */}
-          {m.status === 'pending' && m.home && m.away && <WisselKnop tournamentId={id} m={m} />}
+          {m.status === 'pending' && m.home && m.away && <WisselKnop tournamentId={id} m={m} onState={onState} />}
         </div>
       )}
       {/* Plannen kan zolang ze niet gespeeld is — het groep-kantinescherm telt hiernaar af. */}
@@ -139,7 +142,7 @@ function MatchCard({ id, m, canManage, logos, fits, neutral = false }: { id: num
 }
 
 // Round-robin: live rangschikking (4/3/2 punten) + alle wedstrijden.
-function RoundRobin({ id, state, canManage, logos, fits }: { id: number; state: TournamentState; canManage: boolean; logos: Record<string, string>; fits: Record<string, LogoFit> }) {
+function RoundRobin({ id, state, canManage, logos, fits, onState }: { id: number; state: TournamentState; canManage: boolean; logos: Record<string, string>; fits: Record<string, LogoFit>; onState?: (s: TournamentState) => void }) {
   const matches = state.rounds.flatMap((r) => r.matches)
   const standings = state.standings ?? []
   return (
@@ -171,7 +174,7 @@ function RoundRobin({ id, state, canManage, logos, fits }: { id: number; state: 
         <h2 className="trn-col-title">Wedstrijden</h2>
         <div className="trn-rr-grid">
           {matches.map((m) => (
-            <MatchCard key={m.id} id={id} m={m} canManage={canManage} logos={logos} fits={fits} />
+            <MatchCard key={m.id} id={id} m={m} canManage={canManage} logos={logos} fits={fits} onState={onState} />
           ))}
         </div>
       </section>
@@ -180,7 +183,8 @@ function RoundRobin({ id, state, canManage, logos, fits }: { id: number; state: 
 }
 
 export function BracketBoard({ id, initial, canManage = false, logos = {}, fits = {} }: { id: number; initial: TournamentState; canManage?: boolean; logos?: Record<string, string>; fits?: Record<string, LogoFit> }) {
-  const state = useTournamentStream(id, initial) ?? initial
+  const [stream, setStream] = useTournamentStream(id, initial)
+  const state = stream ?? initial
 
   // Tweezijdige boom: de finale (laatste ronde) staat centraal; elke eerdere ronde wordt in een
   // linker- en rechterhelft gesplitst die naar het midden toe groeien. Standaard-seeding zorgt dat
@@ -206,7 +210,7 @@ export function BracketBoard({ id, initial, canManage = false, logos = {}, fits 
         {pairUp(c.matches).map((pair, pi) => (
           <div className="trn-pair" key={pi}>
             {pair.map((m) => (
-              <MatchCard key={m.id} id={id} m={m} canManage={canManage} logos={logos} fits={fits} neutral={isNeutralRound(c.round)} />
+              <MatchCard key={m.id} id={id} m={m} canManage={canManage} logos={logos} fits={fits} neutral={isNeutralRound(c.round)} onState={setStream} />
             ))}
           </div>
         ))}
@@ -232,7 +236,7 @@ export function BracketBoard({ id, initial, canManage = false, logos = {}, fits 
       )}
 
       {state.format === 'roundrobin' ? (
-        <RoundRobin id={id} state={state} canManage={canManage} logos={logos} fits={fits} />
+        <RoundRobin id={id} state={state} canManage={canManage} logos={logos} fits={fits} onState={setStream} />
       ) : (
         <BracketZoom>
           <main className="trn-bracket2">
@@ -242,7 +246,7 @@ export function BracketBoard({ id, initial, canManage = false, logos = {}, fits 
                 <h2 className="trn-col-title trn-final-title">{finalRound.label}</h2>
                 <div className="trn-center-body">
                   {finalRound.matches.map((m) => (
-                    <MatchCard key={m.id} id={id} m={m} canManage={canManage} logos={logos} fits={fits} neutral />
+                    <MatchCard key={m.id} id={id} m={m} canManage={canManage} logos={logos} fits={fits} neutral onState={setStream} />
                   ))}
                 </div>
               </div>
@@ -256,7 +260,7 @@ export function BracketBoard({ id, initial, canManage = false, logos = {}, fits 
         <section className="trn-third">
           <h2 className="trn-col-title">Kleine finale (3e plaats)</h2>
           <div className="trn-third-card">
-            <MatchCard id={id} m={state.thirdPlace} canManage={canManage} logos={logos} fits={fits} neutral />
+            <MatchCard id={id} m={state.thirdPlace} canManage={canManage} logos={logos} fits={fits} neutral onState={setStream} />
           </div>
         </section>
       )}
