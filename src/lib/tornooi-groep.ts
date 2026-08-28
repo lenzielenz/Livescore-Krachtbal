@@ -24,6 +24,9 @@ export type GroepData = {
   host: GroepHost | null
   /** Aantal velden op de tornooidag (eerste reeks die het instelde; null = nog niet gezet). */
   veldCount: number | null
+  /** Recent ingestuurde supportersfoto's (enkel id + tijdstip, max 15 min oud): het
+   *  kantinescherm gebruikt dit om een nieuwe inzending even feestelijk te tonen. */
+  fotos: { id: number; ts: string }[]
 }
 
 const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]/g, '')
@@ -136,5 +139,20 @@ export async function loadGroepData(payload: Payload, naam: string): Promise<Gro
     }
   }
 
-  return { naam, reeksen, matches, logos, kleuren, fits, host, veldCount }
+  // Verse supportersfoto's (kwartier oud max): alleen de id's — de bytes gaan via een aparte,
+  // eveneens tijdsbegrensde route. Zo blijft het foto-archief zelf federatie-only.
+  const kwartier = new Date(Date.now() - 15 * 60000).toISOString()
+  const fotosRes = await payload
+    .find({
+      collection: 'tornooi-fotos',
+      where: { and: [{ groep: { equals: naam } }, { createdAt: { greater_than: kwartier } }] },
+      sort: '-createdAt',
+      depth: 0,
+      limit: 5,
+      overrideAccess: true,
+    })
+    .catch(() => ({ docs: [] as { id: number; createdAt: string }[] }))
+  const fotos = (fotosRes.docs as { id: number; createdAt: string }[]).map((f) => ({ id: f.id, ts: f.createdAt }))
+
+  return { naam, reeksen, matches, logos, kleuren, fits, host, veldCount, fotos }
 }

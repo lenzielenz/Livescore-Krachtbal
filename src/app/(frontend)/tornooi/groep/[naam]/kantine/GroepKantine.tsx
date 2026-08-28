@@ -19,6 +19,9 @@ import { fmtClock, useTicking } from '../../../useTournament'
 
 const POLL_MS = 5000
 const VIERING_MS = 6000
+// Fotoshow: 3-2-1 meetellen, dan de foto heel even in beeld en weer weg.
+const FOTO_TEL_VANAF = 3
+const FOTO_TOON_MS = 6500
 
 // Rasterindeling naar aantal live borden — zelfde filosofie als het club-kantinescherm.
 function kolommenVoor(n: number): number {
@@ -107,6 +110,66 @@ function VieringOverlay({ v }: { v: Viering }) {
   )
 }
 
+// ── Fotoshow: een supporter stuurde een foto in ────────────────────────────────────────────────
+// "📸 OH OHHH… hier komt 'm!" met een 3-2-1-aftelklok waar de hele kantine luidop mee aftelt,
+// dan popt de foto als polaroid in beeld en lost weer op. De foto laadt alvast tijdens het
+// aftellen; lukt het laden niet, dan slaan we de onthulling stilletjes over.
+function FotoShow({ id, naam, klaar }: { id: number; naam: string; klaar: () => void }) {
+  const [tel, setTel] = useState(FOTO_TEL_VANAF)
+  const url = `/api/tornooi-groep/foto/${id}?naam=${encodeURIComponent(naam)}`
+  const [geladen, setGeladen] = useState<boolean | null>(null)
+
+  // Voorladen tijdens het aftellen — de onthulling mag niet haperen.
+  useEffect(() => {
+    const img = new Image()
+    img.onload = () => setGeladen(true)
+    img.onerror = () => setGeladen(false)
+    img.src = url
+    // eslint-disable-next-line
+  }, [id])
+
+  useEffect(() => {
+    setTel(FOTO_TEL_VANAF)
+    // Blijft op 0 staan (niet verder de min in): zo triggert het toon-effect precies één keer.
+    const iv = setInterval(() => setTel((t) => Math.max(0, t - 1)), 1000)
+    return () => clearInterval(iv)
+  }, [id])
+
+  // Aftellen voorbij: foto tonen (of stil overslaan als ze niet laadde) en daarna opruimen.
+  useEffect(() => {
+    if (tel > 0) return
+    if (geladen === false) {
+      klaar()
+      return
+    }
+    const t = setTimeout(klaar, FOTO_TOON_MS)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line
+  }, [tel, geladen])
+
+  return (
+    <div className="gk-fotoshow" aria-live="polite">
+      {tel > 0 ? (
+        <div className="gk-fs-tease">
+          <span className="gk-fs-titel">📸 OH OHHH…</span>
+          <span className="gk-fs-sub">hier komt ’m!</span>
+          {/* key per cijfer: elke seconde popt het cijfer opnieuw — mee aftellen dus. */}
+          <span key={tel} className="gk-fs-tel">
+            <i className="gk-fs-ring" aria-hidden />
+            {tel}
+          </span>
+        </div>
+      ) : (
+        <div className="gk-fs-reveal">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={url} alt="Supportersfoto van de dag" onError={klaar} />
+          <span className="gk-fs-onder">📷 Supportersfoto van de dag</span>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function GroepKantine({ naam, initial }: { naam: string; initial: GroepData }) {
   const [data, setData] = useState<GroepData>(initial)
   // Volledig scherm voor de kantine-tv: geen browserbalk, alleen het bord.
@@ -141,6 +204,9 @@ export function GroepKantine({ naam, initial }: { naam: string; initial: GroepDa
     }
   }, [])
   const [viering, setViering] = useState<Viering | null>(null)
+  // Fotoshow-wachtrij: nieuwe inzendingen komen één voor één met aftelklok in beeld.
+  const [fotoRij, setFotoRij] = useState<number[]>([])
+  const fotoGezien = useRef<Set<number>>(new Set())
   // Vorige standen per wedstrijd — het verschil tussen twee polls IS het doelpunt.
   const vorige = useRef<Map<number, { home: number; away: number }>>(new Map())
   const vieringSeq = useRef(0)
@@ -149,6 +215,7 @@ export function GroepKantine({ naam, initial }: { naam: string; initial: GroepDa
   // Eerste momentopname "leren" zonder te vieren (anders barst het scherm los bij het openen).
   useEffect(() => {
     for (const m of initial.matches) vorige.current.set(m.id, { ...m.score })
+    for (const f of initial.fotos ?? []) fotoGezien.current.add(f.id)
     // bewust enkel bij mount: latere standen leert de poll-lus zelf bij
   }, []) // eslint-disable-line
 
@@ -178,6 +245,12 @@ export function GroepKantine({ naam, initial }: { naam: string; initial: GroepDa
             }
           }
           vorige.current.set(m.id, { ...m.score })
+        }
+        // Nieuwe supportersfoto('s)? In de rij voor de fotoshow (oudste eerst).
+        for (const f of [...(d.fotos ?? [])].reverse()) {
+          if (fotoGezien.current.has(f.id)) continue
+          fotoGezien.current.add(f.id)
+          setFotoRij((rij) => [...rij, f.id])
         }
         setData(d)
       } catch {
@@ -217,6 +290,9 @@ export function GroepKantine({ naam, initial }: { naam: string; initial: GroepDa
   return (
     <div className="gk-scherm" style={stijl}>
       {viering && <VieringOverlay key={viering.key} v={viering} />}
+      {fotoRij.length > 0 && (
+        <FotoShow key={fotoRij[0]} id={fotoRij[0]} naam={naam} klaar={() => setFotoRij((rij) => rij.slice(1))} />
+      )}
       <header className="gk-kop">
         <span className="gk-titel">
           {data.host?.logoUrl && (

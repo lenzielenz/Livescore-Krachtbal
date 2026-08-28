@@ -1987,3 +1987,120 @@ button.trn-toplink {
   font-weight: 700;
   color: var(--accent);
 }
+
+/* ── Fotoshow op het kantinescherm ────────────────────────────────────────────────────────────
+   Een supporter stuurde een foto in: "OH OHHH… hier komt 'm!" met een 3-2-1-aftelklok om
+   luidop mee af te tellen, dan popt de foto als polaroid in beeld en lost weer op. */
+.gk-fotoshow {
+  position: fixed;
+  inset: 0;
+  z-index: 130; /* onder de doelpunt-viering (150): een goal wint altijd */
+  display: grid;
+  place-items: center;
+  background: radial-gradient(90% 90% at 50% 45%, rgba(8, 14, 11, 0.82), rgba(3, 6, 5, 0.94));
+  backdrop-filter: blur(7px);
+  animation: gk-fs-in 0.35s ease both;
+}
+@keyframes gk-fs-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.gk-fs-tease {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2.4vmin;
+  text-align: center;
+}
+.gk-fs-titel {
+  font-size: clamp(2.2rem, 8vmin, 5rem);
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  color: #fff;
+  text-shadow: 0 2px 18px rgba(0, 0, 0, 0.6);
+  animation: gk-fs-wiebel 1s ease-in-out infinite;
+}
+@keyframes gk-fs-wiebel {
+  0%, 100% { transform: rotate(-1.6deg) scale(1); }
+  50% { transform: rotate(1.6deg) scale(1.04); }
+}
+.gk-fs-sub {
+  font-size: clamp(1.1rem, 3.4vmin, 2rem);
+  font-weight: 700;
+  color: var(--dim);
+  letter-spacing: 0.04em;
+}
+/* De aftelklok: club-goud cijfer in een ring die per seconde rondsnort — mee aftellen! */
+.gk-fs-tel {
+  position: relative;
+  width: clamp(130px, 26vmin, 260px);
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  font-size: clamp(72px, 16vmin, 160px);
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent, #ffd873);
+  text-shadow: 0 0 34px color-mix(in srgb, var(--accent, #ffd873) 65%, transparent);
+  animation: gk-fs-telpop 0.95s cubic-bezier(0.2, 1.2, 0.3, 1) both;
+}
+@keyframes gk-fs-telpop {
+  0% { transform: scale(1.7); opacity: 0; }
+  25% { opacity: 1; }
+  60% { transform: scale(0.96); }
+  100% { transform: scale(1); }
+}
+.gk-fs-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 0.55vmin solid color-mix(in srgb, var(--accent, #ffd873) 22%, transparent);
+  border-top-color: var(--accent, #ffd873);
+  box-shadow: 0 0 28px -6px color-mix(in srgb, var(--accent, #ffd873) 60%, transparent);
+  animation: gk-fs-draai 1s linear infinite;
+}
+@keyframes gk-fs-draai {
+  to { transform: rotate(360deg); }
+}
+/* De onthulling: polaroid die inpopt, even blijft hangen en weer oplost. */
+.gk-fs-reveal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2vmin;
+  animation: gk-fs-show 6.5s cubic-bezier(0.2, 1, 0.3, 1) both;
+}
+.gk-fs-reveal img {
+  max-width: min(84vw, 980px);
+  max-height: 68vh;
+  border: 1.4vmin solid #fff;
+  border-bottom-width: 4.6vmin; /* polaroid-rand */
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.25);
+  transform: rotate(-2.4deg);
+}
+.gk-fs-onder {
+  font-size: clamp(0.95rem, 2.6vmin, 1.5rem);
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--txt);
+  background: rgba(6, 9, 14, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  padding: 6px 18px;
+}
+@keyframes gk-fs-show {
+  0% { transform: scale(0.55) rotate(5deg); opacity: 0; }
+  6% { transform: scale(1.05) rotate(-1deg); opacity: 1; }
+  10% { transform: scale(1) rotate(0deg); }
+  88% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(0.94); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gk-fs-titel,
+  .gk-fs-ring { animation: none; }
+  .gk-fs-tel { animation: gk-fs-in 0.2s ease both; }
+  .gk-fs-reveal { animation: gk-fs-in 0.3s ease both; }
+}
