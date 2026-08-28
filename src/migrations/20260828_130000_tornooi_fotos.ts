@@ -8,6 +8,7 @@ export async function up({ db }: MigrateUpArgs): Promise<void> {
   	"groep" varchar NOT NULL,
   	"uploader_id" integer,
   	"uploader_name" varchar,
+  	"opdracht" varchar,
   	"updated_at" timestamp(3) with time zone DEFAULT now() NOT NULL,
   	"created_at" timestamp(3) with time zone DEFAULT now() NOT NULL,
   	"url" varchar,

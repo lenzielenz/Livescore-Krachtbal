@@ -1,14 +1,32 @@
 'use client'
 
 import Link from 'next/link'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+
+import { opdrachtOp, startIndexVoor } from '@/lib/foto-opdrachten'
 
 // 📷 Supporters delen hun foto's van de tornooidag. Na het insturen zien ze de foto niet terug —
-// alles komt samen op één plek bij de organisatie. Niet ingelogd? Vriendelijk doorverwijzen.
+// alles komt samen op één plek bij de organisatie. Om de mensen te prikkelen hangt er een
+// foto-opdracht aan ("Foto met het scorebord", …) die doorschuift telkens ze er één volbracht
+// hebben; de voortgang leeft per toestel in localStorage. Niet ingelogd? Vriendelijk doorverwijzen.
 export function FotoUpload({ groep, ingelogd }: { groep: string; ingelogd: boolean }) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [busy, setBusy] = useState(false)
   const [melding, setMelding] = useState<string | null>(null)
+  // Opdracht-index start pas na de mount (localStorage bestaat niet op de server).
+  const [stap, setStap] = useState<number | null>(null)
+  const sleutel = `kb-foto-opdracht:${groep}`
+  useEffect(() => {
+    let bewaard: number | null = null
+    try {
+      const ruw = localStorage.getItem(sleutel)
+      if (ruw != null && Number.isFinite(Number(ruw))) bewaard = Number(ruw)
+    } catch {
+      /* privémodus of geblokkeerde opslag — start gewoon vooraan */
+    }
+    setStap(bewaard ?? startIndexVoor(groep))
+    // eslint-disable-next-line
+  }, [groep])
 
   if (!ingelogd) {
     return (
@@ -18,6 +36,8 @@ export function FotoUpload({ groep, ingelogd }: { groep: string; ingelogd: boole
     )
   }
 
+  const opdracht = stap != null ? opdrachtOp(stap) : null
+
   const upload = async (files: FileList | null) => {
     if (!files || files.length === 0) return
     setBusy(true)
@@ -25,12 +45,21 @@ export function FotoUpload({ groep, ingelogd }: { groep: string; ingelogd: boole
     try {
       const form = new FormData()
       form.set('groep', groep)
+      if (opdracht) form.set('opdracht', opdracht)
       for (const f of Array.from(files)) form.append('fotos', f)
       const res = await fetch('/api/tornooi-foto', { method: 'POST', credentials: 'include', body: form })
       const data = (await res.json().catch(() => ({}))) as { aantal?: number; error?: string }
       if (!res.ok) throw new Error(data.error || 'Insturen mislukt.')
       const n = data.aantal ?? files.length
-      setMelding(`✅ Bedankt! ${n === 1 ? 'Je foto is' : `${n} foto’s zijn`} bezorgd aan de organisatie.`)
+      // Opdracht volbracht → de volgende schuift aan (en blijft onthouden op dit toestel).
+      const volgende = (stap ?? startIndexVoor(groep)) + 1
+      setStap(volgende)
+      try {
+        localStorage.setItem(sleutel, String(volgende))
+      } catch {
+        /* geen opslag — de opdracht wisselt dan enkel binnen deze sessie */
+      }
+      setMelding(`✅ Bedankt! ${n === 1 ? 'Je foto is' : `${n} foto’s zijn`} bezorgd aan de organisatie. Nieuwe opdracht hieronder!`)
     } catch (e) {
       setMelding(`⚠️ ${(e as Error).message}`)
     } finally {
@@ -44,6 +73,11 @@ export function FotoUpload({ groep, ingelogd }: { groep: string; ingelogd: boole
       <button type="button" className="trn-btn" disabled={busy} onClick={() => inputRef.current?.click()}>
         {busy ? '⏳ Insturen…' : '📷 Deel je foto’s van de dag'}
       </button>
+      {opdracht && (
+        <span className="trn-foto-opdracht" title="Volbreng de opdracht en stuur je foto in — dan verschijnt de volgende!">
+          <em>Opdracht:</em> {opdracht}
+        </span>
+      )}
       <input
         ref={inputRef}
         type="file"

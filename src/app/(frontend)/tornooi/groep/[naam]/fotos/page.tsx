@@ -26,7 +26,7 @@ export default async function TornooiFotosPage({ params }: { params: Promise<{ n
   const res = await payload
     .find({ collection: 'tornooi-fotos', where: { groep: { equals: naam } }, sort: '-createdAt', depth: 0, limit: 500 })
     .catch(() => ({ docs: [] as Record<string, unknown>[], totalDocs: 0 }))
-  const fotos = res.docs as { id: number; url?: string | null; filename?: string | null; uploaderName?: string | null; createdAt: string }[]
+  const fotos = res.docs as { id: number; url?: string | null; filename?: string | null; uploaderName?: string | null; opdracht?: string | null; createdAt: string }[]
 
   return (
     <>
@@ -57,6 +57,7 @@ export default async function TornooiFotosPage({ params }: { params: Promise<{ n
                     <b>{f.uploaderName || 'Onbekend'}</b>
                     <span>{wanneer(f.createdAt)}</span>
                   </span>
+                  {f.opdracht && <span className="tf-opdracht">{f.opdracht}</span>}
                 </li>
               )
             })}

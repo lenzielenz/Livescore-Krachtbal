@@ -34,6 +34,13 @@ export const TornooiFotos: CollectionConfig = {
     },
     { name: 'uploader', label: 'Ingestuurd door', type: 'relationship', relationTo: 'users' },
     { name: 'uploaderName', label: 'Naam inzender', type: 'text' },
+    {
+      // De foto-opdracht die actief was bij het insturen ("📸 Foto met het scorebord", …) —
+      // zo ziet de organisatie meteen welke opdracht de foto beantwoordt.
+      name: 'opdracht',
+      label: 'Opdracht',
+      type: 'text',
+    },
   ],
   upload: {
     staticDir: uploadDirFor('tornooi-fotos'),

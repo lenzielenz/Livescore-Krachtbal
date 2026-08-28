@@ -1162,6 +1162,7 @@ export interface TornooiFoto {
   groep: string;
   uploader?: (number | null) | User;
   uploaderName?: string | null;
+  opdracht?: string | null;
   updatedAt: string;
   createdAt: string;
   url?: string | null;
@@ -2108,6 +2109,7 @@ export interface TornooiFotosSelect<T extends boolean = true> {
   groep?: T;
   uploader?: T;
   uploaderName?: T;
+  opdracht?: T;
   updatedAt?: T;
   createdAt?: T;
   url?: T;

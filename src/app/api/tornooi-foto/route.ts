@@ -17,6 +17,8 @@ export async function POST(req: Request) {
     if (!form) return Response.json({ error: 'Ongeldige upload.' }, { status: 400 })
     const groep = String(form.get('groep') ?? '').trim()
     if (!groep) return Response.json({ error: 'Tornooidag ontbreekt.' }, { status: 400 })
+    // De actieve foto-opdracht (optioneel) — puur informatief voor de organisatie.
+    const opdracht = String(form.get('opdracht') ?? '').trim().slice(0, 120)
 
     // Enkel voor échte tornooidagen — geen vrije opslagbak.
     const bestaat = await payload.find({ collection: 'tournaments', where: { groep: { equals: groep } }, limit: 1, depth: 0 })
@@ -34,6 +36,7 @@ export async function POST(req: Request) {
         collection: 'tornooi-fotos',
         data: {
           groep,
+          ...(opdracht ? { opdracht } : {}),
           uploader: (user as { id: number }).id,
           uploaderName: String((user as { name?: string; email?: string }).name ?? (user as { email?: string }).email ?? ''),
         },
