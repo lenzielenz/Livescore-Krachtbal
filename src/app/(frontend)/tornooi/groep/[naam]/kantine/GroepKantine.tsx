@@ -339,22 +339,28 @@ export function GroepKantine({ naam, initial }: { naam: string; initial: GroepDa
       {fotoRij.length > 0 && (
         <FotoShow key={fotoRij[0]} id={fotoRij[0]} naam={naam} klaar={() => setFotoRij((rij) => rij.slice(1))} />
       )}
+      {/* De kop draait om het evenement: hostlogo en naam staan groot en exact gecentreerd,
+          met de merknaam er discreet boven. Tellers horen hier niet thuis — de kantine wil de
+          naam van de dag zien. De fullscreen-knop zweeft rechts en vaagt weg zodra hij actief
+          is (op de tv verdwijnt hij helemaal uit beeld). */}
       <header className="gk-kop">
         <span className="gk-titel">
           {data.host?.logoUrl && (
             <img className="gk-hostlogo" src={data.host.logoUrl} alt={data.host.name || 'Organiserende club'} />
           )}
-          <span><span className="brand">Krachtbal</span> · {data.naam}</span>
-        </span>
-        <span className="gk-kop-rechts">
-          <span className="gk-kop-status">
-            {live.length > 0 ? `● ${live.length} bezig` : komend.length > 0 ? `${komend.length} nog te spelen` : 'dag afgerond'}
+          <span className="gk-titel-tekst">
+            <span className="gk-merk">Krachtbal Live</span>
+            <span className="gk-evenement">{data.naam}</span>
           </span>
-          {/* Volledig scherm: één tik en de tv toont enkel nog het bord (geen browserbalk). */}
-          <button type="button" className="gk-fs-btn" onClick={wisselFullscreen} title={fullscreen ? 'Volledig scherm verlaten' : 'Volledig scherm'}>
-            {fullscreen ? '✕ Verlaten' : '⛶ Volledig scherm'}
-          </button>
         </span>
+        <button
+          type="button"
+          className={`gk-fs-btn${fullscreen ? ' actief' : ''}`}
+          onClick={wisselFullscreen}
+          title={fullscreen ? 'Volledig scherm verlaten' : 'Volledig scherm'}
+        >
+          {fullscreen ? '✕' : '⛶ Volledig scherm'}
+        </button>
       </header>
 
       {live.length > 0 ? (

@@ -118,9 +118,7 @@ export function Dagprogramma({
     const t = setInterval(() => setNu(Date.now()), 30000)
     return () => clearInterval(t)
   }, [])
-  const [busy, setBusy] = useState(false)
   const [fout, setFout] = useState<string | null>(null)
-  const [velden, setVelden] = useState<number>(initial.veldCount ?? 1)
   // Eigen pronostiek-tips van deze supporter (andermans tips blijven verborgen tot na de match).
   const [picks, setPicks] = useState<Record<number, { home: number; away: number }>>({})
   useEffect(() => {
@@ -208,45 +206,7 @@ export function Dagprogramma({
     return { label: 'te spelen', cls: 'pending' }
   }
 
-  // Aantal velden bewaren op de eerste reeks van de dag (de loader leest de eerste ingestelde).
-  const bewaarVelden = async () => {
-    const eerste = data.reeksen[0]
-    if (!eerste) return
-    setBusy(true)
-    setFout(null)
-    try {
-      const res = await fetch(`/api/tournament/${eerste.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ actie: 'velden', velden }),
-      })
-      const d = (await res.json().catch(() => ({}))) as { error?: string }
-      if (!res.ok) throw new Error(d.error || 'Bewaren mislukt.')
-      await laad()
-    } catch (e) {
-      setFout((e as Error).message)
-    } finally {
-      setBusy(false)
-    }
-  }
 
-  // Wedstrijd aan een veld toewijzen — het antwoord is per reeks, dus we herladen de hele groep.
-  const zetVeld = async (m: GroepMatch, veld: string) => {
-    setFout(null)
-    try {
-      const res = await fetch(`/api/tournament/${m.tournamentId}/match/${m.id}/action`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ action: 'veld', veld: veld || null }),
-      })
-      if (!res.ok) throw new Error(((await res.json().catch(() => ({}))) as { error?: string }).error || 'Toewijzen mislukt.')
-      await laad()
-    } catch (e) {
-      setFout((e as Error).message)
-    }
-  }
 
   const aantalVelden = data.veldCount ?? 0
 
@@ -269,19 +229,6 @@ export function Dagprogramma({
         <p className="trn-hub-intro">Alle wedstrijden van de dag onder elkaar — met per veld wat er speelt en wat er komt.</p>
       </div>
 
-      {canManage && (
-        <div className="dp-velden-instel">
-          <span>Aantal velden op deze tornooidag</span>
-          <span className="trn-stepper">
-            <button type="button" onClick={() => setVelden((v) => Math.max(1, v - 1))} aria-label="Minder velden">−</button>
-            <input value={velden} readOnly aria-label="Aantal velden" />
-            <button type="button" onClick={() => setVelden((v) => Math.min(12, v + 1))} aria-label="Meer velden">+</button>
-          </span>
-          <button type="button" className="trn-btn" disabled={busy || velden === (data.veldCount ?? 0)} onClick={() => void bewaarVelden()}>
-            Bewaren
-          </button>
-        </div>
-      )}
 
       {aantalVelden >= 1 && (
         <section className="dp-velden" aria-label="Veldoverzicht">
@@ -340,21 +287,9 @@ export function Dagprogramma({
               {canManage && m.status !== 'finished' && (
                 <Link href={`/tornooi/${m.tournamentId}/aantekenen/${m.id}`} className="trn-mini">Aantekenen</Link>
               )}
-              {canManage ? (
-                <select
-                  className="dp-veldkeuze"
-                  value={m.veld ?? ''}
-                  onChange={(e) => void zetVeld(m, e.target.value)}
-                  aria-label="Veld toewijzen"
-                >
-                  <option value="">veld —</option>
-                  {Array.from({ length: Math.max(aantalVelden, m.veld ?? 0) }, (_, i) => (
-                    <option key={i + 1} value={i + 1}>Veld {i + 1}</option>
-                  ))}
-                </select>
-              ) : (
-                m.veld != null && <span className="dp-veldtag">Veld {m.veld}</span>
-              )}
+              {/* Vaste veldtag: het veld wijzig je bewust op de wedstrijdkaart (reekspagina) of
+                  in de beheer-planner — niet per ongeluk vanuit dit overzicht. */}
+              {m.veld != null && <span className="dp-veldtag">Veld {m.veld}</span>}
               {/* Supersimpel meespelen: enkel zolang de wedstrijd nog niet begonnen is. */}
               {m.status === 'pending' && m.home && m.away && (
                 <TornooiPronostiek

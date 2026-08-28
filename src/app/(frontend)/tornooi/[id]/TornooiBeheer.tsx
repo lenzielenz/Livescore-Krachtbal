@@ -57,6 +57,7 @@ export function TornooiBeheer({
   const [nieuweNaam, setNieuweNaam] = useState(naam)
   const [nieuweCat, setNieuweCat] = useState(categorie)
   const [nieuweDuur, setNieuweDuur] = useState(duurMin)
+  const [nieuweVelden, setNieuweVelden] = useState(veldCount || 1)
   // Ploegnamen lokaal bewerkbaar; bewaren gebeurt per ploeg (oud → nieuw).
   const [namen, setNamen] = useState<string[]>(teams)
   const [volgorde, setVolgorde] = useState<string[]>(teams)
@@ -221,6 +222,25 @@ export function TornooiBeheer({
             className="trn-btn"
             disabled={busy || nieuweDuur === duurMin}
             onClick={() => void patch({ actie: 'duur', minuten: nieuweDuur })}
+          >
+            Bewaren
+          </button>
+        </div>
+      </label>
+
+      <label className="trn-field">
+        <span>Aantal velden op de tornooidag (het dagprogramma toont ze in het overzicht)</span>
+        <div className="trn-beheer-rij">
+          <span className="trn-stepper">
+            <button type="button" onClick={() => setNieuweVelden((v) => Math.max(1, v - 1))} aria-label="Minder velden">−</button>
+            <input value={nieuweVelden} readOnly aria-label="Aantal velden" />
+            <button type="button" onClick={() => setNieuweVelden((v) => Math.min(12, v + 1))} aria-label="Meer velden">+</button>
+          </span>
+          <button
+            type="button"
+            className="trn-btn"
+            disabled={busy || nieuweVelden === veldCount}
+            onClick={() => void patch({ actie: 'velden', velden: nieuweVelden })}
           >
             Bewaren
           </button>
