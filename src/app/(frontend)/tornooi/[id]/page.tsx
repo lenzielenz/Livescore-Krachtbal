@@ -61,6 +61,23 @@ export default async function TornooiPage({ params }: { params: Promise<{ id: st
 
   // Expliciete ploeg→club-koppeling van dit tornooi.
   const tourDoc = await payload.findByID({ collection: 'tournaments', id: tournamentId, depth: 0 }).catch(() => null)
+
+  // Aantal velden van de tornooidag: eigen waarde, anders de eerste reeks van de groep die het
+  // instelde (zelfde regel als het dagprogramma) — voedt de veldweergave op de wedstrijdkaarten.
+  let veldCount = Number((tourDoc as { veldCount?: number | null } | null)?.veldCount) || 0
+  const groepNaam = typeof (tourDoc as { groep?: string | null } | null)?.groep === 'string' ? String((tourDoc as { groep?: string | null }).groep).trim() : ''
+  if (!veldCount && groepNaam) {
+    const zusters = await payload
+      .find({ collection: 'tournaments', where: { groep: { equals: groepNaam } }, sort: 'createdAt', depth: 0, limit: 50 })
+      .catch(() => ({ docs: [] as Record<string, unknown>[] }))
+    for (const z of zusters.docs as { veldCount?: number | null }[]) {
+      const n = Number(z.veldCount)
+      if (Number.isFinite(n) && n >= 1) {
+        veldCount = n
+        break
+      }
+    }
+  }
   const teamClubs = Array.isArray((tourDoc as { teamClubs?: unknown } | null)?.teamClubs)
     ? (tourDoc as { teamClubs: { name?: unknown; clubId?: unknown }[] }).teamClubs
     : []
@@ -126,7 +143,7 @@ export default async function TornooiPage({ params }: { params: Promise<{ id: st
           />
         </div>
       )}
-      <BracketBoard id={tournamentId} initial={state} canManage={canManage} logos={logos} fits={fits} />
+      <BracketBoard id={tournamentId} initial={state} canManage={canManage} logos={logos} fits={fits} veldCount={veldCount} />
     </>
   )
 }
