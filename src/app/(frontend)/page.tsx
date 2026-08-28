@@ -7,9 +7,9 @@ import { dateStrBE } from '@/lib/datetime'
 import { quoteForDay } from '@/lib/krachtbal-quotes'
 import { getPayloadClient } from '@/lib/payload-client'
 import { isSupportersMode } from '@/lib/score-mode'
+import { TornooiTeaser } from '@/components/TornooiTeaser'
 import { LiveBoard } from './live/LiveBoard'
 import { loadLiveDay, loadSpeeldagen, resolveDefaultDay } from './live/loadLiveDay'
-import { TournamentLiveStrip } from './live/TournamentLiveStrip'
 import './live/live.css'
 
 export const dynamic = 'force-dynamic'
@@ -81,7 +81,9 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
           </section>
         )}
 
-        <TournamentLiveStrip />
+        {/* Geen tornooi-wedstrijden op de homepage — wél de snellink met aftelklok naar de
+            tornooidag, zodat nieuwe mensen meteen hun weg vinden. */}
+        <TornooiTeaser />
         <LiveBoard date={selected} today={today} matches={days} speeldagen={speeldagen} myClubId={myClubId} supportersMode={supportersMode} />
       </div>
     </>

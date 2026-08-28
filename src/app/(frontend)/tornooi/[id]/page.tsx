@@ -129,6 +129,7 @@ export default async function TornooiPage({ params }: { params: Promise<{ id: st
             naam={state.name}
             categorie={state.category}
             duurMin={Math.round(state.halfDurationSeconds / 60)}
+            veldCount={veldCount}
             teams={[...names].sort((a, b) => a.localeCompare(b, 'nl'))}
             magHerloten={magHerloten}
             format={state.format}
@@ -137,7 +138,7 @@ export default async function TornooiPage({ params }: { params: Promise<{ id: st
               state.format === 'roundrobin'
                 ? alleMatches
                     .filter((m) => m.home && m.away)
-                    .map((m) => ({ home: m.home as string, away: m.away as string, plannedAt: m.plannedAt ?? null }))
+                    .map((m) => ({ home: m.home as string, away: m.away as string, plannedAt: m.plannedAt ?? null, veld: m.veld ?? null }))
                 : []
             }
           />

@@ -610,7 +610,7 @@ export async function changeCategory(payload: Payload, tournamentId: number, cat
 export async function planSchedule(
   payload: Payload,
   tournamentId: number,
-  wedstrijden: { home: string; away: string; plannedAt?: string | null }[],
+  wedstrijden: { home: string; away: string; plannedAt?: string | null; veld?: number | null }[],
 ): Promise<void> {
   const t = (await payload.findByID({ collection: 'tournaments', id: tournamentId, depth: 0 })) as {
     format?: string
@@ -634,6 +634,7 @@ export async function planSchedule(
     if (w.home === w.away) throw new Error(`${w.home} kan niet tegen zichzelf spelen.`)
     if (!gekend.has(w.home)) throw new Error(`Onbekende ploeg: ${w.home}`)
     if (!gekend.has(w.away)) throw new Error(`Onbekende ploeg: ${w.away}`)
+    if (w.veld != null && (!Number.isInteger(w.veld) || w.veld < 1 || w.veld > 12)) throw new Error('Ongeldig veldnummer.')
   }
 
   // Oud schema weg, de zelf samengestelde lijst erin — de volgorde ís de speelvolgorde.
@@ -656,6 +657,7 @@ export async function planSchedule(
         clockSeconds: 0,
         clockRunning: false,
         ...(w.plannedAt ? { plannedAt: w.plannedAt } : {}),
+        ...(w.veld != null ? { veld: w.veld } : {}),
       },
       overrideAccess: true,
     })

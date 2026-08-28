@@ -1885,3 +1885,6 @@
   font: inherit;
   font-size: 0.82rem;
 }
+
+/* Veldkeuze in de beheer-planner: compact naast het uur. */
+.trn-planlist select.trn-planveld { flex: 0 1 110px; }

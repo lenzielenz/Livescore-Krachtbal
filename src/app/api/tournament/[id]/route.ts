@@ -68,6 +68,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
               home: String(w?.home ?? '').trim(),
               away: String(w?.away ?? '').trim(),
               plannedAt: typeof w?.plannedAt === 'string' && w.plannedAt ? w.plannedAt : null,
+              veld: w?.veld == null || w.veld === '' ? null : Number(w.veld),
             }))
           : []
         await planSchedule(payload, tournamentId, wedstrijden)
