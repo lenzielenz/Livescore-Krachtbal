@@ -2402,3 +2402,11 @@ button.trn-toplink {
 .tp-naam { flex: 1 1 auto; min-width: 0; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tp-detail { font-size: 0.78rem; color: var(--dim); white-space: nowrap; }
 .tp-punten { font-weight: 800; font-variant-numeric: tabular-nums; color: var(--accent); }
+
+/* Foto insturen: fotograferen of galerij — twee knoppen die op gsm naast elkaar passen. */
+.trn-foto-knoppen {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
