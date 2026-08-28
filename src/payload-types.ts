@@ -78,6 +78,7 @@ export interface Config {
     sanctions: Sanction;
     tournaments: Tournament;
     'tournament-matches': TournamentMatch;
+    'tornooi-fotos': TornooiFoto;
     trainingmetingen: Trainingmetingen;
     trainingdoelen: Trainingdoelen;
     trainingen: Trainingen;
@@ -112,6 +113,7 @@ export interface Config {
     sanctions: SanctionsSelect<false> | SanctionsSelect<true>;
     tournaments: TournamentsSelect<false> | TournamentsSelect<true>;
     'tournament-matches': TournamentMatchesSelect<false> | TournamentMatchesSelect<true>;
+    'tornooi-fotos': TornooiFotosSelect<false> | TornooiFotosSelect<true>;
     trainingmetingen: TrainingmetingenSelect<false> | TrainingmetingenSelect<true>;
     trainingdoelen: TrainingdoelenSelect<false> | TrainingdoelenSelect<true>;
     trainingen: TrainingenSelect<false> | TrainingenSelect<true>;
@@ -1147,6 +1149,32 @@ export interface TournamentMatch {
   createdAt: string;
 }
 /**
+ * Foto’s die supporters van een tornooidag insturen — enkel zichtbaar voor de federatie.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "tornooi-fotos".
+ */
+export interface TornooiFoto {
+  id: number;
+  /**
+   * Hoofdgroep van de tornooidag waarop de foto genomen is.
+   */
+  groep: string;
+  uploader?: (number | null) | User;
+  uploaderName?: string | null;
+  updatedAt: string;
+  createdAt: string;
+  url?: string | null;
+  thumbnailURL?: string | null;
+  filename?: string | null;
+  mimeType?: string | null;
+  filesize?: number | null;
+  width?: number | null;
+  height?: number | null;
+  focalX?: number | null;
+  focalY?: number | null;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "trainingmetingen".
  */
@@ -1585,6 +1613,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'tournament-matches';
         value: number | TournamentMatch;
+      } | null)
+    | ({
+        relationTo: 'tornooi-fotos';
+        value: number | TornooiFoto;
       } | null)
     | ({
         relationTo: 'trainingmetingen';
@@ -2067,6 +2099,26 @@ export interface TournamentMatchesSelect<T extends boolean = true> {
   clockUpdatedAt?: T;
   updatedAt?: T;
   createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "tornooi-fotos_select".
+ */
+export interface TornooiFotosSelect<T extends boolean = true> {
+  groep?: T;
+  uploader?: T;
+  uploaderName?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  url?: T;
+  thumbnailURL?: T;
+  filename?: T;
+  mimeType?: T;
+  filesize?: T;
+  width?: T;
+  height?: T;
+  focalX?: T;
+  focalY?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

@@ -91,6 +91,7 @@ import * as migration_20260818_120000_eigen_doelpunt from './20260818_120000_eig
 import * as migration_20260818_140000_pass_events from './20260818_140000_pass_events';
 import * as migration_20260826_090000_tornooi_groep_planning from './20260826_090000_tornooi_groep_planning';
 import * as migration_20260828_110000_tornooi_velden from './20260828_110000_tornooi_velden';
+import * as migration_20260828_130000_tornooi_fotos from './20260828_130000_tornooi_fotos';
 
 export const migrations = [
   {
@@ -557,5 +558,10 @@ export const migrations = [
     up: migration_20260828_110000_tornooi_velden.up,
     down: migration_20260828_110000_tornooi_velden.down,
     name: '20260828_110000_tornooi_velden',
+  },
+  {
+    up: migration_20260828_130000_tornooi_fotos.up,
+    down: migration_20260828_130000_tornooi_fotos.down,
+    name: '20260828_130000_tornooi_fotos',
   },
 ];
