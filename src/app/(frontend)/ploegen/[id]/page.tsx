@@ -5,7 +5,7 @@ import type { ReactNode } from 'react'
 import { BewaarWedstrijd } from '@/components/BewaarWedstrijd'
 import { SiteHeader } from '@/components/SiteHeader'
 import { competitionWhere } from '@/lib/analyse-access'
-import { formatDateTimeBE } from '@/lib/datetime'
+
 import { buildScoreboards } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
 import { reeksNaam } from '@/lib/reeksen'
@@ -35,6 +35,16 @@ export async function generateMetadata({ params }: Params) {
   const { id } = await params
   const team = await loadTeam(Number(id))
   return { title: team?.name ? `${team.name} — Krachtbal Live` : 'Ploeg — Krachtbal Live' }
+}
+
+// Compacte agenda-datum: "za · 12 sep" met het uur apart — en géén "om 00:00" wanneer het
+// aanvangsuur (nog) niet gekend is (geïmporteerde kalenders staan op middernacht).
+function kortDatum(iso: string): { dag: string; datum: string; uur: string | null } {
+  const d = new Date(iso)
+  const dag = d.toLocaleDateString('nl-BE', { weekday: 'short', timeZone: 'Europe/Brussels' }).replace('.', '')
+  const datum = d.toLocaleDateString('nl-BE', { day: 'numeric', month: 'short', timeZone: 'Europe/Brussels' }).replace('.', '')
+  const uur = d.toLocaleTimeString('nl-BE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Brussels' })
+  return { dag, datum, uur: uur === '00:00' ? null : uur }
 }
 
 export default async function PloegProfiel({ params }: Params) {
@@ -84,6 +94,8 @@ export default async function PloegProfiel({ params }: Params) {
   })
   // Nog te spelen wedstrijden krijgen een sterretje om ze te bewaren; gespeelde uiteraard niet.
   const nu = Date.now()
+  // De eerstvolgende wedstrijd springt eruit — dát is wat je meestal komt opzoeken.
+  const volgendeId = fixtures.find((f) => f.status !== 'finished' && f.date && new Date(f.date).getTime() > nu)?.id ?? null
 
   const club = (team.club && typeof team.club === 'object' ? team.club : null) as
     | { id: number; name?: string }
@@ -119,20 +131,37 @@ export default async function PloegProfiel({ params }: Params) {
               </a>
             </div>
             <ul className="ps-matches">
-              {fixtures.map((f) => (
+              {fixtures.map((f) => {
+                const kd = f.date ? kortDatum(f.date) : null
+                return (
                 <li key={f.id} className="ps-match-rij">
-                  <Link href={`/match/${f.id}`} className="ps-match">
-                    <span className="ps-match-date">{f.date ? formatDateTimeBE(f.date) : 'Datum n.t.b.'}</span>
+                  <Link href={`/match/${f.id}`} className={`ps-match${f.id === volgendeId ? ' volgende' : ''}`}>
+                    {/* Compact datumblok: weekdag boven, dag+maand eronder — de tegenstander
+                        krijgt zo alle ruimte. */}
+                    <span className="ps-match-date">
+                      {kd ? (
+                        <>
+                          <b>{kd.dag}</b>
+                          {kd.datum}
+                        </>
+                      ) : (
+                        'n.t.b.'
+                      )}
+                    </span>
                     <span className="ps-match-opp">
-                      {f.thuis ? 'vs' : '@'} {f.opponent}
-                      {f.reeks && f.reeks !== team.reeks ? <i className="ps-match-reeks"> · {reeksNaam(f.reeks)}</i> : null}
+                      <i className={`ps-thuisuit ${f.thuis ? 'thuis' : 'uit'}`}>{f.thuis ? 'THUIS' : 'UIT'}</i>
+                      <span className="ps-opp-naam">{f.opponent}</span>
+                      {f.id === volgendeId && <i className="ps-volgende-chip">VOLGENDE</i>}
+                      {f.reeks && f.reeks !== team.reeks ? <i className="ps-match-reeks">{reeksNaam(f.reeks)}</i> : null}
                     </span>
                     {f.status === 'live' ? (
                       <span className="ps-match-live">LIVE</span>
                     ) : f.status === 'finished' && f.score ? (
                       <span className="ps-match-score">{f.score.home}–{f.score.away}</span>
+                    ) : kd?.uur ? (
+                      <span className="ps-match-uur">{kd.uur}</span>
                     ) : (
-                      <span className="ps-match-vs">nog te spelen</span>
+                      <span className="ps-match-vs">—</span>
                     )}
                   </Link>
                   {f.status === 'scheduled' && f.date && new Date(f.date).getTime() > nu && (
@@ -147,7 +176,8 @@ export default async function PloegProfiel({ params }: Params) {
                     />
                   )}
                 </li>
-              ))}
+                )
+              })}
             </ul>
           </section>
         )}
