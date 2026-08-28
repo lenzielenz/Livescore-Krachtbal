@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState, type CSSProperties } from 'react'
 import { FieldSchema } from '@/components/FieldSchema'
 import { TeamLogo } from '@/components/TeamLogo'
 import type { GroepData, GroepMatch } from '@/lib/tornooi-groep'
+import { fmtClock, useTicking } from '../../../useTournament'
 
 // ── Dagprogramma van een tornooidag ──────────────────────────────────────────────────────────
 // Eén venster met alle wedstrijden van alle categorieën onder elkaar, chronologisch zodra de
@@ -32,6 +33,11 @@ function sorteer(matches: GroepMatch[]): GroepMatch[] {
     })
 }
 
+function LiveKlok({ m }: { m: GroepMatch }) {
+  const clock = useTicking(m.clockSeconds, m.clockRunning)
+  return <>{fmtClock(clock)}</>
+}
+
 function VeldKaartje({ nr, data, nu }: { nr: number; data: GroepData; nu: number | null }) {
   // Wat toont dit veld? Een lopende wedstrijd wint; anders de eerstvolgende geplande.
   const opVeld = data.matches.filter((m) => m.veld === nr && m.home && m.away)
@@ -54,7 +60,7 @@ function VeldKaartje({ nr, data, nu }: { nr: number; data: GroepData; nu: number
           <>
             <span className={`dp-veld-status ${m.status}${!live && nu != null && m.plannedAt && new Date(m.plannedAt).getTime() <= nu ? ' nu' : ''}`}>
               {live
-                ? `● LIVE · H${m.currentHalf}`
+                ? <>● LIVE · H{m.currentHalf} · <LiveKlok m={m} /></>
                 : nu != null && m.plannedAt && new Date(m.plannedAt).getTime() <= nu
                   ? '⏰ kan starten'
                   : m.plannedAt
@@ -113,6 +119,12 @@ export function Dagprogramma({ naam, initial, canManage }: { naam: string; initi
   }, [naam])
 
   const wedstrijden = useMemo(() => sorteer(data.matches), [data.matches])
+  // Wedstrijdduur per reeks (2×N min): zo kan de organisatie inschatten hoelang alles duurt.
+  const duurPerReeks = useMemo(() => {
+    const uit = new Map<string, number>()
+    for (const r of data.reeksen) uit.set(r.naam, r.duurMin)
+    return uit
+  }, [data.reeksen])
 
   // Voor de organisatie: wat is de EERSTVOLGENDE wedstrijd per veld? Die "gaat starten" —
   // en zodra haar geplande uur verstreken is, mag ze effectief beginnen (⏰ kan starten).
@@ -125,8 +137,10 @@ export function Dagprogramma({ naam, initial, canManage }: { naam: string; initi
     return uit
   }, [wedstrijden])
 
-  const rijStatus = (m: GroepMatch): { label: string; cls: string } => {
-    if (m.status === 'live') return { label: `● LIVE · H${m.currentHalf} · ${m.score.home}–${m.score.away}`, cls: 'live' }
+  const rijStatus = (m: GroepMatch): { label: React.ReactNode; cls: string } => {
+    // Gestart: toon hoelang er al gespeeld wordt (tikt lokaal mee tussen twee polls).
+    if (m.status === 'live')
+      return { label: <>● LIVE · H{m.currentHalf} · <LiveKlok m={m} /> · {m.score.home}–{m.score.away}</>, cls: 'live' }
     if (m.status === 'finished') return { label: `${m.score.home}–${m.score.away}`, cls: 'finished' }
     const isVolgende = m.veld != null && volgendePerVeld.get(m.veld) === m.id
     if (isVolgende && nu != null && m.plannedAt && new Date(m.plannedAt).getTime() <= nu)
@@ -234,6 +248,9 @@ export function Dagprogramma({ naam, initial, canManage }: { naam: string; initi
                 )}
               </span>
               <span className="dp-reeks">{m.reeksNaam}</span>
+              {duurPerReeks.get(m.reeksNaam) != null && (
+                <span className="dp-duur" title="Wedstrijdduur">2×{duurPerReeks.get(m.reeksNaam)}&#8242;</span>
+              )}
               {(() => {
                 const st = rijStatus(m)
                 return <span className={`dp-status ${st.cls}`}>{st.label}</span>

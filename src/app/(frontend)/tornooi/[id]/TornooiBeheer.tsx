@@ -28,6 +28,7 @@ export function TornooiBeheer({
   id,
   naam,
   categorie,
+  duurMin,
   teams,
   magHerloten,
   format,
@@ -37,6 +38,8 @@ export function TornooiBeheer({
   naam: string
   /** Huidige categorie — verkeerd bewaard? Hier rechtzetten (bepaalt speelduur en worpen). */
   categorie: string
+  /** Huidige wedstrijdduur in minuten per helft (manueel of de standaard van de categorie). */
+  duurMin: number
   teams: string[]
   /** Nog niets gespeeld → herloten/plannen toegestaan (de server bewaakt het sowieso ook). */
   magHerloten: boolean
@@ -50,6 +53,7 @@ export function TornooiBeheer({
   const [fout, setFout] = useState<string | null>(null)
   const [nieuweNaam, setNieuweNaam] = useState(naam)
   const [nieuweCat, setNieuweCat] = useState(categorie)
+  const [nieuweDuur, setNieuweDuur] = useState(duurMin)
   // Ploegnamen lokaal bewerkbaar; bewaren gebeurt per ploeg (oud → nieuw).
   const [namen, setNamen] = useState<string[]>(teams)
   const [volgorde, setVolgorde] = useState<string[]>(teams)
@@ -191,6 +195,25 @@ export function TornooiBeheer({
             className="trn-btn"
             disabled={busy || nieuweCat === categorie}
             onClick={() => void patch({ actie: 'categorie', categorie: nieuweCat })}
+          >
+            Bewaren
+          </button>
+        </div>
+      </label>
+
+      <label className="trn-field">
+        <span>Wedstrijdduur — minuten per helft, voor álle wedstrijden van deze categorie (nu 2×{duurMin} min)</span>
+        <div className="trn-beheer-rij">
+          <span className="trn-stepper">
+            <button type="button" onClick={() => setNieuweDuur((v) => Math.max(1, v - 5))} aria-label="Korter">−</button>
+            <input value={`2×${nieuweDuur}'`} readOnly aria-label="Minuten per helft" />
+            <button type="button" onClick={() => setNieuweDuur((v) => Math.min(60, v + 5))} aria-label="Langer">+</button>
+          </span>
+          <button
+            type="button"
+            className="trn-btn"
+            disabled={busy || nieuweDuur === duurMin}
+            onClick={() => void patch({ actie: 'duur', minuten: nieuweDuur })}
           >
             Bewaren
           </button>

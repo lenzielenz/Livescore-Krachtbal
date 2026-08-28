@@ -12,7 +12,7 @@ export type GroepMatch = TMatchState & { tournamentId: number; reeksNaam: string
 export type GroepHost = { name: string; logoUrl: string | null; colorPrimary: string | null; colorSecondary: string | null }
 export type GroepData = {
   naam: string
-  reeksen: { id: number; naam: string; status: string; format: string; teamCount: number | null; champion: string | null }[]
+  reeksen: { id: number; naam: string; status: string; format: string; teamCount: number | null; champion: string | null; duurMin: number }[]
   matches: GroepMatch[]
   /** Ploegnaam → clublogo-url (expliciete koppeling eerst, naamherkenning als terugval). */
   logos: Record<string, string>
@@ -90,6 +90,8 @@ export async function loadGroepData(payload: Payload, naam: string): Promise<Gro
       format: state.format,
       teamCount: t.teamCount ?? null,
       champion: state.champion ?? null,
+      // Wedstrijdduur (min/helft) — manueel per categorie of de leeftijdsstandaard.
+      duurMin: Math.round(state.halfDurationSeconds / 60),
     })
 
     // Organiserende club: de eerste reeks die er een instelde bepaalt de look.

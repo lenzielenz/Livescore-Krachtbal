@@ -281,7 +281,11 @@ export async function buildTournamentState(payload: Payload, tournamentId: numbe
     status: t.status as 'live' | 'finished',
     method: (t.method as string) ?? 'auto',
     format,
-    halfDurationSeconds: categoryConfig(t.category as Category).halfDurationSeconds,
+    // Manuele duur van deze categorie (2×N min) wint van de leeftijdsstandaard.
+    halfDurationSeconds:
+      Number((t as { halfMinutes?: number | null }).halfMinutes) >= 1
+        ? Number((t as { halfMinutes?: number | null }).halfMinutes) * 60
+        : categoryConfig(t.category as Category).halfDurationSeconds,
     rounds,
     thirdPlace,
     champion,
@@ -392,6 +396,13 @@ export async function swapSides(payload: Payload, matchId: number): Promise<void
 export async function assignVeld(payload: Payload, matchId: number, veld: number | null): Promise<void> {
   if (veld != null && (!Number.isInteger(veld) || veld < 1 || veld > 12)) throw new Error('Ongeldig veldnummer.')
   await update(payload, matchId, { veld } as Partial<MatchDoc>)
+}
+
+/** Wedstrijdduur van de categorie: minuten per helft (2×N); null = terug naar de standaard. */
+export async function setHalfMinutes(payload: Payload, tournamentId: number, minuten: number | null): Promise<void> {
+  if (minuten != null && (!Number.isInteger(minuten) || minuten < 1 || minuten > 60))
+    throw new Error('Minuten per helft moet tussen 1 en 60 liggen.')
+  await payload.update({ collection: 'tournaments', id: tournamentId, data: { halfMinutes: minuten }, overrideAccess: true })
 }
 
 /** Aantal velden van de tornooidag (op het tornooi zelf; de groep leest de eerste ingestelde). */

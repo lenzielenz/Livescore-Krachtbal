@@ -111,6 +111,7 @@ export default async function TornooiPage({ params }: { params: Promise<{ id: st
             id={tournamentId}
             naam={state.name}
             categorie={state.category}
+            duurMin={Math.round(state.halfDurationSeconds / 60)}
             teams={[...names].sort((a, b) => a.localeCompare(b, 'nl'))}
             magHerloten={magHerloten}
             format={state.format}

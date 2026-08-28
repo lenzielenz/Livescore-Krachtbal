@@ -1819,3 +1819,15 @@
 
 /* In de programmarijen blijft de Aantekenen-knop compact (niet mee uitrekken met de flexrij). */
 .dp-rij .trn-mini { flex: 0 0 auto; }
+
+/* Wedstrijdduur-chip in het dagprogramma (2×N minuten per categorie). */
+.dp-duur {
+  font-size: 0.78rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--dim);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 2px 9px;
+}

@@ -1042,6 +1042,10 @@ export interface Tournament {
    */
   teamCount?: number | null;
   /**
+   * Bv. 10 voor 2×10 min. Leeg = standaard van de categorie.
+   */
+  halfMinutes?: number | null;
+  /**
    * Hoeveel velden liggen er op deze tornooidag?
    */
   veldCount?: number | null;
@@ -2028,6 +2032,7 @@ export interface TournamentsSelect<T extends boolean = true> {
   format?: T;
   toonOpLive?: T;
   teamCount?: T;
+  halfMinutes?: T;
   veldCount?: T;
   teamClubs?: T;
   teamTeams?: T;
