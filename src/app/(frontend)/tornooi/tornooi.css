@@ -1607,10 +1607,17 @@ button.trn-toplink {
 }
 .gk-tick {
   display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: clamp(1rem, 2.4vmin, 1.6rem);
+}
+/* Logo-blok: de reeksnaam staat hier exact centraal onder de twee logo's; het uur hangt als
+   pil naast het blok en trekt de centrering dus niet meer scheef. */
+.gk-tick-blok {
+  display: inline-flex;
   flex-direction: column;
   align-items: center;
   gap: 3px;
-  font-size: clamp(1rem, 2.4vmin, 1.6rem);
 }
 .gk-tick-affiche {
   display: inline-flex;
@@ -1979,4 +1986,228 @@ button.trn-toplink {
   font-size: 0.78rem;
   font-weight: 700;
   color: var(--accent);
+}
+
+/* ── Fotoshow op het kantinescherm ────────────────────────────────────────────────────────────
+   Een supporter stuurde een foto in: "OH OHHH… hier komt 'm!" met een 3-2-1-aftelklok om
+   luidop mee af te tellen, dan popt de foto als polaroid in beeld en lost weer op. */
+.gk-fotoshow {
+  position: fixed;
+  inset: 0;
+  z-index: 130; /* onder de doelpunt-viering (150): een goal wint altijd */
+  display: grid;
+  place-items: center;
+  background: radial-gradient(90% 90% at 50% 45%, rgba(8, 14, 11, 0.82), rgba(3, 6, 5, 0.94));
+  backdrop-filter: blur(7px);
+  animation: gk-fs-in 0.35s ease both;
+}
+@keyframes gk-fs-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.gk-fs-tease {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2.4vmin;
+  text-align: center;
+}
+.gk-fs-titel {
+  font-size: clamp(2.2rem, 8vmin, 5rem);
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  color: #fff;
+  text-shadow: 0 2px 18px rgba(0, 0, 0, 0.6);
+  animation: gk-fs-wiebel 1s ease-in-out infinite;
+}
+@keyframes gk-fs-wiebel {
+  0%, 100% { transform: rotate(-1.6deg) scale(1); }
+  50% { transform: rotate(1.6deg) scale(1.04); }
+}
+.gk-fs-sub {
+  font-size: clamp(1.1rem, 3.4vmin, 2rem);
+  font-weight: 700;
+  color: var(--dim);
+  letter-spacing: 0.04em;
+}
+/* De aftelklok: club-goud cijfer in een ring die per seconde rondsnort — mee aftellen! */
+.gk-fs-tel {
+  position: relative;
+  width: clamp(130px, 26vmin, 260px);
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  font-size: clamp(72px, 16vmin, 160px);
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent, #ffd873);
+  text-shadow: 0 0 34px color-mix(in srgb, var(--accent, #ffd873) 65%, transparent);
+  animation: gk-fs-telpop 0.95s cubic-bezier(0.2, 1.2, 0.3, 1) both;
+}
+@keyframes gk-fs-telpop {
+  0% { transform: scale(1.7); opacity: 0; }
+  25% { opacity: 1; }
+  60% { transform: scale(0.96); }
+  100% { transform: scale(1); }
+}
+.gk-fs-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 0.55vmin solid color-mix(in srgb, var(--accent, #ffd873) 22%, transparent);
+  border-top-color: var(--accent, #ffd873);
+  box-shadow: 0 0 28px -6px color-mix(in srgb, var(--accent, #ffd873) 60%, transparent);
+  animation: gk-fs-draai 1s linear infinite;
+}
+@keyframes gk-fs-draai {
+  to { transform: rotate(360deg); }
+}
+/* De onthulling: polaroid die inpopt, even blijft hangen en weer oplost. */
+.gk-fs-reveal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2vmin;
+  animation: gk-fs-show 6.5s cubic-bezier(0.2, 1, 0.3, 1) both;
+}
+.gk-fs-reveal img {
+  max-width: min(84vw, 980px);
+  max-height: 68vh;
+  border: 1.4vmin solid #fff;
+  border-bottom-width: 4.6vmin; /* polaroid-rand */
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.25);
+  transform: rotate(-2.4deg);
+}
+.gk-fs-onder {
+  font-size: clamp(0.95rem, 2.6vmin, 1.5rem);
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--txt);
+  background: rgba(6, 9, 14, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  padding: 6px 18px;
+}
+@keyframes gk-fs-show {
+  0% { transform: scale(0.55) rotate(5deg); opacity: 0; }
+  6% { transform: scale(1.05) rotate(-1deg); opacity: 1; }
+  10% { transform: scale(1) rotate(0deg); }
+  88% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(0.94); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gk-fs-titel,
+  .gk-fs-ring { animation: none; }
+  .gk-fs-tel { animation: gk-fs-in 0.2s ease both; }
+  .gk-fs-reveal { animation: gk-fs-in 0.3s ease both; }
+}
+
+/* Hub-badge voor een tornooi dat er nog aankomt (niets gespeeld): neutraal, geen groen. */
+.trn-hub-status.pending {
+  background: #1c2028;
+  color: var(--dim);
+}
+
+/* ── Doelpunt-specials op het kantinescherm ───────────────────────────────────────────────────
+   +1 (nekworp): het logo van de scorende club groeit én draait rond.
+   +2 (rugworp): een raket vliegt in een boog naar het logo van de tegenstander en ontploft
+   erop — dé special voor twee punten. */
+.gk-viering-logo.draai {
+  animation: gk-v-groeidraai 1.9s cubic-bezier(0.2, 0.9, 0.3, 1) both, gk-v-zweef 2.4s ease-in-out 2s infinite;
+}
+@keyframes gk-v-groeidraai {
+  0% { transform: scale(0.35) rotate(0deg); opacity: 0; }
+  12% { opacity: 1; }
+  70% { transform: scale(1.22) rotate(650deg); }
+  100% { transform: scale(1.12) rotate(720deg); }
+}
+
+.gk-raketbaan {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: min(86vw, 1100px);
+  padding: 2vmin 0;
+}
+.gk-raket-af,
+.gk-raket-doel {
+  position: relative;
+  display: inline-flex;
+  filter: drop-shadow(0 1vmin 2.6vmin rgba(0, 0, 0, 0.55));
+}
+/* De raket: vertrekt bij de scorende club, boogje omhoog, inslag rechts. Het emoji wijst
+   standaard naar rechtsboven; 45° erbij en hij vliegt horizontaal. */
+.gk-raket {
+  position: absolute;
+  left: 10%;
+  top: 50%;
+  z-index: 2;
+  font-size: clamp(44px, 10vmin, 110px);
+  filter: drop-shadow(0 0 2.4vmin rgba(255, 170, 70, 0.85));
+  animation: gk-raket-vlucht 1.25s cubic-bezier(0.45, 0, 0.7, 1) both;
+  pointer-events: none;
+}
+@keyframes gk-raket-vlucht {
+  0% { left: 10%; transform: translate(-50%, -50%) rotate(45deg) scale(0.55); opacity: 0; }
+  10% { opacity: 1; }
+  50% { transform: translate(-50%, -160%) rotate(45deg) scale(1.05); }
+  92% { opacity: 1; }
+  100% { left: 90%; transform: translate(-50%, -50%) rotate(45deg) scale(1); opacity: 0; }
+}
+/* De inslag: 💥 barst open op het logo van de tegenstander zodra de raket aankomt… */
+.gk-boem {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  font-size: clamp(80px, 20vmin, 220px);
+  opacity: 0;
+  animation: gk-boem-knal 1s cubic-bezier(0.2, 1, 0.3, 1) 1.2s both;
+  pointer-events: none;
+}
+@keyframes gk-boem-knal {
+  0% { transform: scale(0.2); opacity: 0; }
+  12% { transform: scale(1.5); opacity: 1; }
+  55% { transform: scale(1.1); opacity: 1; }
+  100% { transform: scale(1.9); opacity: 0; }
+}
+/* …en het getroffen logo schudt ervan na. */
+.gk-raket-doel-logo {
+  display: inline-flex;
+  animation: gk-schud 0.75s cubic-bezier(0.3, 0.9, 0.4, 1) 1.25s both;
+}
+@keyframes gk-schud {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  15% { transform: translate(-2.2vmin, 0.6vmin) rotate(-7deg); }
+  35% { transform: translate(1.8vmin, -0.7vmin) rotate(5deg); }
+  55% { transform: translate(-1.2vmin, 0.4vmin) rotate(-3deg); }
+  75% { transform: translate(0.7vmin, -0.3vmin) rotate(2deg); }
+}
+/* Bij de raket-special verschijnen de +2 en de tekst pas ná de inslag. */
+.gk-viering.raket .gk-viering-punten,
+.gk-viering.raket .gk-viering-titel,
+.gk-viering.raket .gk-viering-team,
+.gk-viering.raket .gk-viering-reeks {
+  opacity: 0;
+  animation: gk-v-natekst 0.5s cubic-bezier(0.22, 1.4, 0.36, 1) 1.45s both;
+}
+@keyframes gk-v-natekst {
+  from { transform: scale(0.7) translateY(1.4vmin); opacity: 0; }
+  to { transform: scale(1) translateY(0); opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gk-viering-logo.draai,
+  .gk-raket,
+  .gk-boem,
+  .gk-raket-doel-logo { animation: none; }
+  .gk-raket { display: none; }
+  .gk-viering.raket .gk-viering-punten,
+  .gk-viering.raket .gk-viering-titel,
+  .gk-viering.raket .gk-viering-team,
+  .gk-viering.raket .gk-viering-reeks { opacity: 1; animation: none; }
 }

@@ -13,7 +13,10 @@ describe('foto-opdrachten', () => {
       expect(i).toBeLessThan(FOTO_OPDRACHTEN.length)
     }
     // Verschillende toestellen (verschillende loting) → verschillende startopdrachten.
-    const spreiding = new Set(Array.from({ length: FOTO_OPDRACHTEN.length }, (_, k) => willekeurigeStart(() => k / FOTO_OPDRACHTEN.length)))
+    // Middens van de vakjes: (k + 0.5)/n ligt nooit op een floatgrens, dus de floor is exact k.
+    const spreiding = new Set(
+      Array.from({ length: FOTO_OPDRACHTEN.length }, (_, k) => willekeurigeStart(() => (k + 0.5) / FOTO_OPDRACHTEN.length)),
+    )
     expect(spreiding.size).toBe(FOTO_OPDRACHTEN.length)
   })
 
