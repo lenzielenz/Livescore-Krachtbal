@@ -34,25 +34,22 @@ const PRIMARY: { href: string; label: string; key: NavSection }[] = [
   { href: '/', label: 'Wedstrijden', key: 'wedstrijden' },
 ]
 
-// Algemene ingangen bovenaan het Meer-menu (de twee meest gebruikte). Het kantinescherm staat
-// hier niet (meer): dat is een clubtool en vind je onder "Mijn club".
-// `auth: true` → enkel tonen wanneer je ingelogd bent ("Mijn Krachtbal" is je persoonlijke hub).
-// "Zo werkt het" (de infohub /uitleg) bundelt uitleg + demo + prijzen en staat hier publiek,
-// zodat de bovenbalk strak blijft (titel · weer · Meer) i.p.v. af te breken op smalle schermen.
-const GENERAL: { href: string; label: string; auth?: boolean }[] = [
-  { href: '/hub', label: '🏠 Mijn Krachtbal', auth: true },
-  { href: '/nieuws', label: '📰 Nieuws' },
-  { href: '/uitleg', label: '🎓 Zo werkt het' },
+// Het menu is bewust in twee begrijpelijke blokken verdeeld, zodat een supporter meteen weet
+// waar hij moet zijn: eerst álles rond wedstrijden volgen en meespelen, daarna het leesvoer.
+// "Mijn Krachtbal" staat er los bovenaan als uitgelichte hoofdingang (enkel ingelogd).
+const VOLGEN: { href: string; label: string }[] = [
+  { href: '/zoeken', label: '🔎 Wanneer spelen we?' },
+  { href: '/rangschikking', label: '📊 Klassement' },
+  { href: '/tornooi', label: '🏆 Tornooien' },
+  { href: '/pronostiek', label: '🔮 Pronostiek' },
 ]
 
-// Wedstrijd-info onder een eigen kopje "Wedstrijden" in het menu. Bewust kort gehouden: de overige
-// supporter-tools (jeugd-superster, supportersklassement) staan als tegels op de hub.
-const WEDSTRIJDEN: { href: string; label: string }[] = [
-  { href: '/zoeken', label: '🔎 Wanneer spelen we?' },
-  { href: '/rangschikking', label: '📊 Stand' },
-  { href: '/recap', label: '📰 Weekoverzicht' },
-  { href: '/pronostiek', label: '🔮 Pronostiekstand' },
-  { href: '/tornooi', label: '🏆 Tornooien' },
+// Leesvoer en uitleg. Elk item een eigen icoon (geen twee keer 📰) zodat ze uit elkaar te
+// houden zijn in één oogopslag.
+const ONTDEKKEN: { href: string; label: string }[] = [
+  { href: '/recap', label: '🗞️ Weekoverzicht' },
+  { href: '/nieuws', label: '📣 Nieuws' },
+  { href: '/uitleg', label: '🎓 Zo werkt het' },
 ]
 
 // Welke rol een profiel-ingang mag zien. Federatie/admin zien alles.
@@ -168,16 +165,25 @@ export function SiteHeader({ active = null }: { active?: NavSection }) {
               <>
                 <div className="sh-more-backdrop" onClick={() => setOpen(false)} />
                 <div className="sh-more-menu">
+                  {/* Eén duidelijke hoofdingang bovenaan: je eigen startpagina. */}
+                  {loggedIn && (
+                    <div className="sh-more-group">
+                      <Link href="/hub" className="sh-more-item sh-more-hoofd" onClick={() => setOpen(false)}>
+                        🏠 Mijn Krachtbal
+                      </Link>
+                    </div>
+                  )}
                   <div className="sh-more-group">
-                    {GENERAL.filter((l) => !l.auth || loggedIn).map((l) => (
+                    <div className="sh-more-grouphead">Volgen &amp; meespelen</div>
+                    {VOLGEN.map((l) => (
                       <Link key={l.href} href={l.href} className="sh-more-item" onClick={() => setOpen(false)}>
                         {l.label}
                       </Link>
                     ))}
                   </div>
                   <div className="sh-more-group">
-                    <div className="sh-more-grouphead">Wedstrijden</div>
-                    {WEDSTRIJDEN.map((l) => (
+                    <div className="sh-more-grouphead">Ontdekken</div>
+                    {ONTDEKKEN.map((l) => (
                       <Link key={l.href} href={l.href} className="sh-more-item" onClick={() => setOpen(false)}>
                         {l.label}
                       </Link>

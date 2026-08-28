@@ -11,7 +11,11 @@ import { opdrachtOp, willekeurigeStart } from '@/lib/foto-opdrachten'
 // hebben. Elke gsm begint op een willekeurige plek in de lijst (en onthoudt zijn voortgang in
 // localStorage) — zo jaagt niet iedereen op dezelfde foto. Niet ingelogd? Vriendelijk doorverwijzen.
 export function FotoUpload({ groep, ingelogd }: { groep: string; ingelogd: boolean }) {
-  const inputRef = useRef<HTMLInputElement>(null)
+  // Twee wegen naar dezelfde upload: rechtstreeks fotograferen (capture opent de camera-app) of
+  // uit de galerij kiezen. Eén gedeeld input met `multiple` toont op veel telefoons enkel de
+  // galerij — vandaar twee aparte inputs, elk met hun eigen knop.
+  const cameraRef = useRef<HTMLInputElement>(null)
+  const galerijRef = useRef<HTMLInputElement>(null)
   const [busy, setBusy] = useState(false)
   const [melding, setMelding] = useState<string | null>(null)
   // Opdracht-index start pas na de mount (localStorage bestaat niet op de server).
@@ -74,22 +78,45 @@ export function FotoUpload({ groep, ingelogd }: { groep: string; ingelogd: boole
       setMelding(`⚠️ ${(e as Error).message}`)
     } finally {
       setBusy(false)
-      if (inputRef.current) inputRef.current.value = ''
+      // Leegmaken zodat dezelfde foto meteen opnieuw gekozen kan worden.
+      if (cameraRef.current) cameraRef.current.value = ''
+      if (galerijRef.current) galerijRef.current.value = ''
     }
   }
 
   return (
     <span className="trn-fotoupload">
-      <button type="button" className="trn-btn" disabled={busy} onClick={() => inputRef.current?.click()}>
-        {busy ? '⏳ Insturen…' : '📷 Deel je foto’s van de dag'}
-      </button>
+      <span className="trn-foto-knoppen">
+        <button
+          type="button"
+          className="trn-btn primary"
+          disabled={busy}
+          onClick={() => cameraRef.current?.click()}
+        >
+          {busy ? '⏳ Insturen…' : '📸 Foto nemen'}
+        </button>
+        <button type="button" className="trn-btn" disabled={busy} onClick={() => galerijRef.current?.click()}>
+          🖼️ Uit galerij
+        </button>
+      </span>
       {opdracht && (
         <span className="trn-foto-opdracht" title="Volbreng de opdracht en stuur je foto in — dan verschijnt de volgende!">
           <em>Opdracht:</em> {opdracht}
         </span>
       )}
+      {/* Camera: `capture=environment` opent meteen de achtercamera op gsm (op desktop valt
+          de browser gewoon terug op een bestandskiezer). */}
       <input
-        ref={inputRef}
+        ref={cameraRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        hidden
+        onChange={(e) => void upload(e.target.files)}
+      />
+      {/* Galerij: meerdere foto's in één keer. */}
+      <input
+        ref={galerijRef}
         type="file"
         accept="image/*"
         multiple

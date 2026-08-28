@@ -1095,6 +1095,15 @@ export interface TournamentMatch {
    * Veldnummer op de tornooidag (leeg = nog niet toegewezen).
    */
   veld?: number | null;
+  scorePredictions?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
   goals?:
     | {
         [k: string]: unknown;
@@ -2088,6 +2097,7 @@ export interface TournamentMatchesSelect<T extends boolean = true> {
   winner?: T;
   plannedAt?: T;
   veld?: T;
+  scorePredictions?: T;
   goals?: T;
   crosses?: T;
   timeouts?: T;

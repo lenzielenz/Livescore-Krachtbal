@@ -1,11 +1,12 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useMemo, useState, type CSSProperties } from 'react'
+import React, { useEffect, useMemo, useState, type CSSProperties } from 'react'
 
 import { FieldSchema } from '@/components/FieldSchema'
 import { TeamLogo } from '@/components/TeamLogo'
 import type { GroepData, GroepMatch } from '@/lib/tornooi-groep'
+import { TornooiPronostiek } from '../TornooiPronostiek'
 import { fmtClock, useTicking } from '../../../useTournament'
 
 // ── Dagprogramma van een tornooidag ──────────────────────────────────────────────────────────
@@ -18,6 +19,12 @@ const POLL_MS = 10000
 
 const tijdBE = (iso: string) =>
   new Date(iso).toLocaleTimeString('nl-BE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Brussels' })
+
+/** Kalenderdag in Brussel (yyyy-mm-dd) — sleutel om wedstrijden per dag te groeperen. */
+const dagSleutel = (iso: string) => new Date(iso).toLocaleDateString('sv-SE', { timeZone: 'Europe/Brussels' })
+/** Volle datum: "zaterdag 5 september". */
+const datumBE = (iso: string) =>
+  new Date(iso).toLocaleDateString('nl-BE', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Europe/Brussels' })
 
 // Chronologisch: geplande eerst (op uur), dan ongeplande; afgelopen zakken naar hun eigen uur —
 // zo leest de lijst als het dagverloop zelf.
@@ -91,7 +98,18 @@ function VeldKaartje({ nr, data, nu }: { nr: number; data: GroepData; nu: number
   )
 }
 
-export function Dagprogramma({ naam, initial, canManage }: { naam: string; initial: GroepData; canManage: boolean }) {
+export function Dagprogramma({
+  naam,
+  initial,
+  canManage,
+  ingelogd,
+}: {
+  naam: string
+  initial: GroepData
+  canManage: boolean
+  /** Ingelogd? Dan mag je meespelen met de pronostiek (anders een nette inloglink). */
+  ingelogd: boolean
+}) {
   const [data, setData] = useState<GroepData>(initial)
   // "Nu" bestaat pas na het mounten (anders hydration-mismatch); per halve minuut verversen is zat.
   const [nu, setNu] = useState<number | null>(null)
@@ -100,9 +118,18 @@ export function Dagprogramma({ naam, initial, canManage }: { naam: string; initi
     const t = setInterval(() => setNu(Date.now()), 30000)
     return () => clearInterval(t)
   }, [])
-  const [busy, setBusy] = useState(false)
   const [fout, setFout] = useState<string | null>(null)
-  const [velden, setVelden] = useState<number>(initial.veldCount ?? 1)
+  // Eigen pronostiek-tips van deze supporter (andermans tips blijven verborgen tot na de match).
+  const [picks, setPicks] = useState<Record<number, { home: number; away: number }>>({})
+  useEffect(() => {
+    if (!ingelogd) return
+    void fetch(`/api/tornooi-pronostiek?groep=${encodeURIComponent(naam)}`, { credentials: 'include', cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (d?.picks) setPicks(d.picks as Record<number, { home: number; away: number }>)
+      })
+      .catch(() => undefined)
+  }, [naam, ingelogd])
 
   const laad = async () => {
     try {
@@ -119,6 +146,36 @@ export function Dagprogramma({ naam, initial, canManage }: { naam: string; initi
   }, [naam])
 
   const wedstrijden = useMemo(() => sorteer(data.matches), [data.matches])
+
+  // Alle speeldagen van dit evenement (meestal één) — voedt zowel de kop als de dag-splitsing.
+  const dagen = useMemo(() => {
+    const uit = new Map<string, string>()
+    for (const m of wedstrijden) if (m.plannedAt) uit.set(dagSleutel(m.plannedAt), m.plannedAt)
+    return [...uit.entries()].sort(([a], [b]) => a.localeCompare(b))
+  }, [wedstrijden])
+
+  // Kop-status: aankondiging (nog x nachtjes), vandaag, of afgesloten na de laatste dag.
+  const dagKop = useMemo(() => {
+    if (nu == null || dagen.length === 0) return null
+    const vandaag = new Date(nu).toLocaleDateString('sv-SE', { timeZone: 'Europe/Brussels' })
+    const eerste = dagen[0][0]
+    const laatste = dagen[dagen.length - 1][0]
+    const alGespeeld = wedstrijden.some((m) => m.status !== 'pending')
+    const allesGedaan = wedstrijden.length > 0 && wedstrijden.every((m) => m.status === 'finished')
+    if (vandaag > laatste || allesGedaan) return { cls: 'gesloten', label: `🏁 Afgelopen — ${datumBE(dagen[dagen.length - 1][1])}` }
+    if (vandaag >= eerste && vandaag <= laatste) {
+      const vandaagIso = dagen.find(([d]) => d === vandaag)?.[1]
+      return {
+        cls: alGespeeld ? 'vandaag bezig' : 'vandaag',
+        label: `📍 VANDAAG · ${datumBE(vandaagIso ?? dagen[0][1])}`,
+      }
+    }
+    const dagenTot = Math.ceil((new Date(`${eerste}T12:00:00`).getTime() - new Date(`${vandaag}T12:00:00`).getTime()) / 86400000)
+    return {
+      cls: 'aankondiging',
+      label: `📣 ${datumBE(dagen[0][1])} — nog ${dagenTot} ${dagenTot === 1 ? 'nachtje' : 'nachtjes'} slapen`,
+    }
+  }, [nu, dagen, wedstrijden])
   // Wedstrijdduur per reeks (2×N min): zo kan de organisatie inschatten hoelang alles duurt.
   const duurPerReeks = useMemo(() => {
     const uit = new Map<string, number>()
@@ -149,45 +206,7 @@ export function Dagprogramma({ naam, initial, canManage }: { naam: string; initi
     return { label: 'te spelen', cls: 'pending' }
   }
 
-  // Aantal velden bewaren op de eerste reeks van de dag (de loader leest de eerste ingestelde).
-  const bewaarVelden = async () => {
-    const eerste = data.reeksen[0]
-    if (!eerste) return
-    setBusy(true)
-    setFout(null)
-    try {
-      const res = await fetch(`/api/tournament/${eerste.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ actie: 'velden', velden }),
-      })
-      const d = (await res.json().catch(() => ({}))) as { error?: string }
-      if (!res.ok) throw new Error(d.error || 'Bewaren mislukt.')
-      await laad()
-    } catch (e) {
-      setFout((e as Error).message)
-    } finally {
-      setBusy(false)
-    }
-  }
 
-  // Wedstrijd aan een veld toewijzen — het antwoord is per reeks, dus we herladen de hele groep.
-  const zetVeld = async (m: GroepMatch, veld: string) => {
-    setFout(null)
-    try {
-      const res = await fetch(`/api/tournament/${m.tournamentId}/match/${m.id}/action`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ action: 'veld', veld: veld || null }),
-      })
-      if (!res.ok) throw new Error(((await res.json().catch(() => ({}))) as { error?: string }).error || 'Toewijzen mislukt.')
-      await laad()
-    } catch (e) {
-      setFout((e as Error).message)
-    }
-  }
 
   const aantalVelden = data.veldCount ?? 0
 
@@ -204,22 +223,12 @@ export function Dagprogramma({ naam, initial, canManage }: { naam: string; initi
 
       <div className="trn-hub-head">
         <h1 className="trn-hub-title">📋 Dagprogramma</h1>
+        {/* Wanneer speelt dit evenement? Vóór de dag een aankondiging met het aantal nachtjes
+            slapen, op de dag zelf "VANDAAG", en erna netjes afgesloten. */}
+        {dagKop && <div className={`dp-datum ${dagKop.cls}`}>{dagKop.label}</div>}
         <p className="trn-hub-intro">Alle wedstrijden van de dag onder elkaar — met per veld wat er speelt en wat er komt.</p>
       </div>
 
-      {canManage && (
-        <div className="dp-velden-instel">
-          <span>Aantal velden op deze tornooidag</span>
-          <span className="trn-stepper">
-            <button type="button" onClick={() => setVelden((v) => Math.max(1, v - 1))} aria-label="Minder velden">−</button>
-            <input value={velden} readOnly aria-label="Aantal velden" />
-            <button type="button" onClick={() => setVelden((v) => Math.min(12, v + 1))} aria-label="Meer velden">+</button>
-          </span>
-          <button type="button" className="trn-btn" disabled={busy || velden === (data.veldCount ?? 0)} onClick={() => void bewaarVelden()}>
-            Bewaren
-          </button>
-        </div>
-      )}
 
       {aantalVelden >= 1 && (
         <section className="dp-velden" aria-label="Veldoverzicht">
@@ -233,8 +242,28 @@ export function Dagprogramma({ naam, initial, canManage }: { naam: string; initi
         <h2 className="trn-col-title">Alle wedstrijden</h2>
         {wedstrijden.length === 0 && <p className="trn-empty">Nog geen wedstrijden met twee gekende ploegen.</p>}
         <ul>
-          {wedstrijden.map((m) => (
-            <li key={`${m.tournamentId}-${m.id}`} className={`dp-rij ${m.status}`}>
+          {wedstrijden.map((m, i) => {
+            // Splitsing per speeldag: bij een nieuwe dag een kop met datum, aantal wedstrijden
+            // en hoeveel er al gespeeld zijn.
+            const dag = m.plannedAt ? dagSleutel(m.plannedAt) : ''
+            const vorige = i > 0 ? (wedstrijden[i - 1].plannedAt ? dagSleutel(wedstrijden[i - 1].plannedAt as string) : '') : null
+            const nieuweDag = i === 0 || dag !== vorige
+            const vanDag = wedstrijden.filter((x) => (x.plannedAt ? dagSleutel(x.plannedAt) : '') === dag)
+            const gedaan = vanDag.filter((x) => x.status === 'finished').length
+            const isVandaag = nu != null && dag === new Date(nu).toLocaleDateString('sv-SE', { timeZone: 'Europe/Brussels' })
+            return (
+            <React.Fragment key={`${m.tournamentId}-${m.id}`}>
+              {nieuweDag && (
+                <li className={`dp-dagkop${isVandaag ? ' vandaag' : ''}`}>
+                  <span className="dp-dagkop-naam">{m.plannedAt ? datumBE(m.plannedAt) : 'Nog te plannen'}</span>
+                  <span className="dp-dagkop-telling">
+                    {vanDag.length} wedstrijd{vanDag.length === 1 ? '' : 'en'}
+                    {gedaan > 0 ? ` · ${gedaan} gespeeld` : ''}
+                  </span>
+                </li>
+              )}
+              {(
+            <li className={`dp-rij ${m.status}`}>
               <span className="dp-uur">{m.plannedAt ? tijdBE(m.plannedAt) : '—'}</span>
               <span className="dp-affiche">
                 {m.home && (
@@ -258,23 +287,25 @@ export function Dagprogramma({ naam, initial, canManage }: { naam: string; initi
               {canManage && m.status !== 'finished' && (
                 <Link href={`/tornooi/${m.tournamentId}/aantekenen/${m.id}`} className="trn-mini">Aantekenen</Link>
               )}
-              {canManage ? (
-                <select
-                  className="dp-veldkeuze"
-                  value={m.veld ?? ''}
-                  onChange={(e) => void zetVeld(m, e.target.value)}
-                  aria-label="Veld toewijzen"
-                >
-                  <option value="">veld —</option>
-                  {Array.from({ length: Math.max(aantalVelden, m.veld ?? 0) }, (_, i) => (
-                    <option key={i + 1} value={i + 1}>Veld {i + 1}</option>
-                  ))}
-                </select>
-              ) : (
-                m.veld != null && <span className="dp-veldtag">Veld {m.veld}</span>
+              {/* Vaste veldtag: het veld wijzig je bewust op de wedstrijdkaart (reekspagina) of
+                  in de beheer-planner — niet per ongeluk vanuit dit overzicht. */}
+              {m.veld != null && <span className="dp-veldtag">Veld {m.veld}</span>}
+              {/* Supersimpel meespelen: enkel zolang de wedstrijd nog niet begonnen is. */}
+              {m.status === 'pending' && m.home && m.away && (
+                <TornooiPronostiek
+                  matchId={m.id}
+                  home={m.home}
+                  away={m.away}
+                  ingelogd={ingelogd}
+                  terug={`/tornooi/groep/${encodeURIComponent(naam)}/programma`}
+                  bestaand={picks[m.id] ?? null}
+                />
               )}
             </li>
-          ))}
+              )}
+            </React.Fragment>
+            )
+          })}
         </ul>
       </section>
 

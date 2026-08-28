@@ -7,6 +7,7 @@ import { CATEGORY_OPTIONS } from '@/lib/categories'
 import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
 import { gestarteTornooien, tornooiBadge } from '@/lib/tornooi-status'
+import { tornooiPronostiekStand } from '@/lib/tornooi-pronostiek'
 import { VerwijderTornooi } from '../../VerwijderTornooi'
 import { FotoUpload } from './FotoUpload'
 import '../../tornooi.css'
@@ -39,6 +40,9 @@ export default async function TornooiGroepPage({ params }: { params: Promise<{ n
   // "Bezig" pas wanneer er écht gespeeld wordt — anders "Nog niet gestart".
   const gestart = await gestarteTornooien(payload, docs.map((t) => Number(t.id)))
 
+  // Pronostiekstand van de dag (zelfde puntensysteem als de competitie).
+  const stand = await tornooiPronostiekStand(payload, naam).catch(() => [])
+
   // Ingestuurde supportersfoto's: de federatie ziet meteen hoeveel er al binnen zijn.
   const fotoRes = canManage
     ? await payload
@@ -56,38 +60,58 @@ export default async function TornooiGroepPage({ params }: { params: Promise<{ n
             Tik een categorie aan voor het volledige schema en de live scores.
           </p>
         </div>
-        <div className="trn-actions">
-          {/* Het dagprogramma is publiek: zo ziet iedereen wanneer welke wedstrijd op welk veld
-              gespeeld wordt. */}
-          <Link href={`/tornooi/groep/${encodeURIComponent(naam)}/programma`} className="trn-btn">
-            📋 Dagprogramma
-          </Link>
-          {/* De kantinescherm-link is voor de organisatie (tv opzetten); supporters volgen hier
-              gewoon de uurregeling en de rangschikking per categorie. */}
-          {canManage && (
-            <Link href={`/tornooi/groep/${encodeURIComponent(naam)}/kantine`} className="trn-btn primary">
-              📺 Kantinescherm (hele dag)
+        {/* Eén nette actiebalk i.p.v. losse knoppen door elkaar: eerst wat iederéén nodig heeft
+            (programma + foto's), daaronder — enkel voor de organisatie — het beheer. */}
+        <div className="trn-balk">
+          <div className="trn-balk-rij">
+            <Link href={`/tornooi/groep/${encodeURIComponent(naam)}/programma`} className="trn-btn primary">
+              📋 Dagprogramma
             </Link>
-          )}
-          {/* Supporters delen hun foto's van de dag — die verzamelen federatie-only. */}
-          <FotoUpload groep={naam} ingelogd={Boolean(user)} />
+            <FotoUpload groep={naam} ingelogd={Boolean(user)} />
+          </div>
           {canManage && (
-            <Link href={`/tornooi/groep/${encodeURIComponent(naam)}/fotos`} className="trn-btn">
-              📷 Foto’s ({fotoRes.totalDocs})
-            </Link>
-          )}
-          {/* Nieuwe categorie meteen aan deze tornooidag hangen: het aanmaakformulier opent met
-              de hoofdgroep al ingevuld, dus ze verschijnt vanzelf op ditzelfde kantinescherm. */}
-          {canManage && (
-            <Link href={`/tornooi/nieuw?groep=${encodeURIComponent(naam)}`} className="trn-btn">
-              + Categorie toevoegen
-            </Link>
+            <div className="trn-balk-rij beheer">
+              <span className="trn-balk-lbl">Organisatie</span>
+              <Link href={`/tornooi/groep/${encodeURIComponent(naam)}/kantine`} className="trn-btn">
+                📺 Kantinescherm
+              </Link>
+              <Link href={`/tornooi/groep/${encodeURIComponent(naam)}/fotos`} className="trn-btn">
+                📷 Foto’s ({fotoRes.totalDocs})
+              </Link>
+              <Link href={`/tornooi/nieuw?groep=${encodeURIComponent(naam)}`} className="trn-btn">
+                + Categorie
+              </Link>
+            </div>
           )}
         </div>
 
         <main className="trn-hub">
           <GroepSectie titel="Categorieën" docs={live} canManage={canManage} gestart={gestart} />
           {done.length > 0 && <GroepSectie titel="Afgelopen" docs={done} canManage={canManage} gestart={gestart} />}
+
+          {/* Pronostiekstand van de dag — zelfde punten als de competitie (exact 10, resultaat +
+              saldo 6, resultaat 3, nabijheid tot 3, dichtste-bij 2). */}
+          {stand.length > 0 && (
+            <section className="trn-hub-sec">
+              <h2>🔮 Pronostiekstand</h2>
+              <ol className="tp-stand">
+                {stand.slice(0, 15).map((r, i) => (
+                  <li key={r.userId} className={i === 0 ? 'leider' : ''}>
+                    <span className="tp-plaats">{i + 1}</span>
+                    <span className="tp-naam">{r.name}</span>
+                    <span className="tp-detail">
+                      {r.predictions} tip{r.predictions === 1 ? '' : 's'}
+                      {r.exact > 0 ? ` · ${r.exact}× exact` : ''}
+                    </span>
+                    <span className="tp-punten">{r.points}</span>
+                  </li>
+                ))}
+              </ol>
+              <p className="trn-hint">
+                Exact = 10 punten · juiste winnaar én saldo = 6 · juiste winnaar = 3 · dichtst bij = 2 bonus.
+              </p>
+            </section>
+          )}
         </main>
       </div>
     </>

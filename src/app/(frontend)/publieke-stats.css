@@ -146,10 +146,10 @@
 .ps-matches {
   list-style: none;
   margin: 0.6rem 0 0;
-  padding: 0;
+  padding: 0.6rem 0 0;
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 0.45rem;
   max-height: 420px;
   overflow-y: auto;
 }
@@ -170,22 +170,93 @@
 .ps-match:hover {
   background: rgba(255, 255, 255, 0.08);
 }
+/* De eerstvolgende wedstrijd licht op: dat is waar je voor komt. */
+.ps-match.volgende {
+  border: 1px solid color-mix(in srgb, var(--accent, #06d6a0) 55%, transparent);
+  background: color-mix(in srgb, var(--accent, #06d6a0) 8%, rgba(255, 255, 255, 0.04));
+}
+.ps-match.volgende { position: relative; overflow: visible; }
+/* Als tag óp de kaderrand: zo houdt de tegenstandersnaam alle ruimte in de rij. */
+.ps-volgende-chip {
+  position: absolute;
+  top: -0.55rem;
+  right: 0.7rem;
+  font-style: normal;
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: var(--accent, #06d6a0);
+  background: var(--panel, #10141a);
+  border: 1px solid color-mix(in srgb, var(--accent, #06d6a0) 55%, transparent);
+  border-radius: 999px;
+  padding: 0.1rem 0.5rem;
+}
 .ps-match-date {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 3.4rem;
+  line-height: 1.15;
   color: var(--dim, #9aa7b4);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+  font-size: 0.82rem;
+}
+.ps-match-date b {
+  color: var(--txt, #e8f0f7);
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 .ps-match-opp {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+.ps-opp-naam {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-weight: 600;
+}
+/* Thuis (groen) of uit (blauw) — in één oogopslag te scannen door de hele lijst. */
+.ps-thuisuit {
+  flex: 0 0 auto;
+  font-style: normal;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  border-radius: 999px;
+  padding: 0.14rem 0.5rem;
+  min-width: 3.1rem;
+  text-align: center;
+}
+.ps-thuisuit.thuis {
+  background: color-mix(in srgb, #06d6a0 18%, transparent);
+  color: #6ee7a0;
+  border: 1px solid color-mix(in srgb, #06d6a0 45%, transparent);
+}
+.ps-thuisuit.uit {
+  background: color-mix(in srgb, #4cc9f0 16%, transparent);
+  color: #7dd8f5;
+  border: 1px solid color-mix(in srgb, #4cc9f0 45%, transparent);
 }
 .ps-match-reeks {
   color: var(--dim, #9aa7b4);
   font-style: normal;
   font-weight: 400;
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+.ps-match-uur {
+  color: var(--txt, #e8f0f7);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.85rem;
 }
 .ps-match-score {
   font-weight: 800;

@@ -25,5 +25,5 @@ export default async function DagprogrammaPage({ params }: { params: Promise<{ n
   const user = await getAuthUser()
   const canManage = isFederationLevel(user) || hasRole(user, 'scheidsrechter')
 
-  return <Dagprogramma naam={naam} initial={data} canManage={canManage} />
+  return <Dagprogramma naam={naam} initial={data} canManage={canManage} ingelogd={Boolean(user)} />
 }

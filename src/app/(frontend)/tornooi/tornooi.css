@@ -1174,9 +1174,18 @@ button.trn-toplink {
     linear-gradient(180deg, #0c0e12 0%, #070809 100%);
   color: var(--txt);
 }
-.gk-kop { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
-.gk-titel { font-size: 1.15rem; font-weight: 800; }
-.gk-kop-status { font-size: 0.85rem; font-weight: 700; color: var(--dim); }
+/* Kop van het kantinescherm: de evenementsnaam is de ster — groot en exact gecentreerd,
+   met het hostlogo ernaast. De fullscreen-knop zweeft rechts en telt niet mee voor de
+   centrering. */
+.gk-kop {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 3.2rem;
+  padding: 0 clamp(90px, 12vw, 190px);
+}
+.gk-titel { font-weight: 800; }
 
 .gk-raster { flex: 1 1 auto; display: grid; gap: 14px; grid-auto-rows: 1fr; }
 .gk-bord {
@@ -1337,8 +1346,37 @@ button.trn-toplink {
 @media (max-width: 640px) {
   .gk-komend-rij { grid-template-columns: 1fr; justify-items: center; gap: 8px; text-align: center; }
 }
-.gk-titel { display: inline-flex; align-items: center; gap: 10px; }
-.gk-hostlogo { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; background: #fff; box-shadow: 0 0 0 2px color-mix(in srgb, var(--gk-a, var(--accent)) 65%, transparent); }
+.gk-titel { display: inline-flex; align-items: center; gap: clamp(10px, 1.6vw, 20px); min-width: 0; }
+.gk-titel-tekst { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; line-height: 1.1; }
+.gk-merk {
+  font-size: clamp(0.6rem, 1.1vmin, 0.85rem);
+  font-weight: 800;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--gk-a, var(--accent)) 75%, #fff);
+  opacity: 0.85;
+}
+/* Dé naam van de dag: groot, strak, met een zachte gloed in de kleur van de organisator. */
+.gk-evenement {
+  font-size: clamp(1.35rem, 3.4vmin, 2.6rem);
+  font-weight: 900;
+  letter-spacing: 0.01em;
+  color: #fff;
+  text-shadow: 0 2px 18px color-mix(in srgb, var(--gk-a, var(--accent)) 45%, transparent);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+.gk-hostlogo {
+  width: clamp(40px, 5.4vmin, 74px);
+  height: clamp(40px, 5.4vmin, 74px);
+  flex: 0 0 auto;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #fff;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--gk-a, var(--accent)) 65%, transparent), 0 0 24px -6px color-mix(in srgb, var(--gk-a, var(--accent)) 70%, transparent);
+}
 .gk-komend-reeks {
   font-size: 0.72em;
   font-weight: 800;
@@ -1469,7 +1507,8 @@ button.trn-toplink {
 .trn-hub-del:disabled { opacity: 0.5; cursor: default; }
 
 /* Volledig-scherm-knop op het groep-kantinescherm: klein glas-chipje in de kop. */
-.gk-kop-rechts { display: inline-flex; align-items: center; gap: 12px; }
+/* Fullscreen-knop: zweeft rechts en trekt de gecentreerde titel niet scheef. */
+.gk-fs-btn { position: absolute; right: 0; top: 50%; transform: translateY(-50%); }
 .gk-fs-btn {
   padding: 6px 12px;
   border-radius: 999px;
@@ -1488,8 +1527,16 @@ button.trn-toplink {
 :root:fullscreen .gk-scherm { cursor: none; }
 /* Tafel in volledig scherm: alles op één scherm, kop compact. */
 :root:fullscreen .trn-page.sheet .trn-top { margin-bottom: 6px; }
-:root:fullscreen .gk-fs-btn { opacity: 0.35; }
-:root:fullscreen .gk-fs-btn:hover { opacity: 1; cursor: pointer; }
+.gk-fs-btn.actief {
+  opacity: 0.12;
+  border-color: rgba(255, 255, 255, 0.12);
+  padding: 6px 10px;
+}
+.gk-fs-btn.actief:hover { opacity: 1; }
+/* Op de tv (echt volledig scherm) verdwijnt de knop volledig tot je hem aanraakt. */
+:root:fullscreen .gk-fs-btn { opacity: 0; }
+:root:fullscreen .gk-fs-btn:hover,
+:root:fullscreen .gk-fs-btn:focus-visible { opacity: 1; cursor: pointer; }
 
 /* Beheerpaneel op de tornooipagina (federatie): compact, ingeklapt tot je het nodig hebt. */
 .trn-beheer-wrap { padding-bottom: 0; }
@@ -2210,4 +2257,163 @@ button.trn-toplink {
   .gk-viering.raket .gk-viering-titel,
   .gk-viering.raket .gk-viering-team,
   .gk-viering.raket .gk-viering-reeks { opacity: 1; animation: none; }
+}
+
+/* ── Actiebalk tornooidag: publiek boven, organisatie eronder ─────────────────────────────── */
+.trn-balk {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.trn-balk-rij {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.trn-balk-rij.beheer {
+  padding-top: 10px;
+  border-top: 1px dashed var(--line);
+}
+.trn-balk-lbl {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+/* ── Dagprogramma: datumkop van het evenement ─────────────────────────────────────────────── */
+.dp-datum {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0 8px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-weight: 800;
+  font-size: 0.98rem;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--txt);
+}
+.dp-datum.aankondiging {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 50%, transparent);
+  background: color-mix(in srgb, var(--accent) 10%, var(--panel));
+}
+.dp-datum.vandaag {
+  color: #6ee7a0;
+  border-color: color-mix(in srgb, #6ee7a0 55%, transparent);
+  background: color-mix(in srgb, #6ee7a0 12%, var(--panel));
+}
+.dp-datum.gesloten { color: var(--dim); }
+
+/* Dag-splitsing in de wedstrijdenlijst. */
+.dp-dagkop {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 14px 0 2px;
+  padding: 0 4px 6px;
+  border-bottom: 1px solid var(--line);
+  list-style: none;
+}
+.dp-dagkop-naam {
+  font-weight: 800;
+  font-size: 0.95rem;
+  text-transform: capitalize;
+}
+.dp-dagkop.vandaag .dp-dagkop-naam { color: #6ee7a0; }
+.dp-dagkop-telling { font-size: 0.8rem; color: var(--dim); }
+
+/* ── Pronostiek: supersimpele invoer + stand ──────────────────────────────────────────────── */
+.tp-wrap { display: inline-flex; flex-direction: column; gap: 4px; }
+.tp-rij { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.tp-stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 2px;
+}
+.tp-stepper button {
+  width: 30px;
+  height: 30px;
+  border: none;
+  background: none;
+  color: var(--txt);
+  font-size: 1.1rem;
+  font-weight: 800;
+  cursor: pointer;
+  border-radius: 50%;
+  touch-action: manipulation;
+}
+.tp-stepper button:hover { background: var(--line); }
+.tp-stepper b { min-width: 22px; text-align: center; font-variant-numeric: tabular-nums; }
+.tp-vs { color: var(--dim); font-style: normal; font-weight: 800; }
+.tp-knop {
+  border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent);
+  border-radius: 999px;
+  padding: 7px 14px;
+  font-weight: 800;
+  font-size: 0.85rem;
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+  touch-action: manipulation;
+}
+.tp-knop:hover { background: color-mix(in srgb, var(--accent) 22%, transparent); }
+.tp-knop:disabled { opacity: 0.6; cursor: wait; }
+.tp-gespeeld { font-size: 0.85rem; color: var(--dim); white-space: nowrap; }
+.tp-gespeeld b { color: var(--accent); }
+.tp-fout { font-size: 0.78rem; color: #ffb9a8; }
+
+.tp-stand { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.tp-stand li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+.tp-stand li.leider { border-color: color-mix(in srgb, var(--accent) 55%, transparent); }
+.tp-plaats {
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+.tp-stand li.leider .tp-plaats { background: color-mix(in srgb, var(--accent) 20%, transparent); color: var(--accent); }
+.tp-naam { flex: 1 1 auto; min-width: 0; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tp-detail { font-size: 0.78rem; color: var(--dim); white-space: nowrap; }
+.tp-punten { font-weight: 800; font-variant-numeric: tabular-nums; color: var(--accent); }
+
+/* Foto insturen: fotograferen of galerij — twee knoppen die op gsm naast elkaar passen. */
+.trn-foto-knoppen {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Pronostiek op de wedstrijdkaart: eigen regel onderaan zodat de kaart leesbaar blijft. */
+.trn-match-prono {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px dashed var(--line);
 }
