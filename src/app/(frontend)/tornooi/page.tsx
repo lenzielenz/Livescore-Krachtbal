@@ -5,6 +5,7 @@ import { isFederationLevel } from '@/lib/access'
 import { CATEGORY_OPTIONS } from '@/lib/categories'
 import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
+import { gestarteTornooien, tornooiBadge } from '@/lib/tornooi-status'
 import { VerwijderTornooi } from './VerwijderTornooi'
 import './tornooi.css'
 
@@ -39,6 +40,8 @@ export default async function TornooiHub() {
   }
   const live = los.filter((t) => t.status === 'live')
   const done = los.filter((t) => t.status === 'finished')
+  // "Bezig" pas wanneer er écht gespeeld wordt — anders "Nog niet gestart".
+  const gestart = await gestarteTornooien(payload, docs.map((t) => t.id))
 
   return (
     <>
@@ -64,7 +67,10 @@ export default async function TornooiHub() {
             <h2>Tornooien</h2>
             <div className="trn-hub-list">
               {[...groepen.entries()].map(([groep, reeksen]) => {
-                const bezig = reeksen.some((t) => t.status === 'live')
+                // De dag is "bezig" zodra er in één van de reeksen écht gespeeld wordt;
+                // allemaal afgesloten = afgelopen; anders komt hij er nog aan.
+                const alleKlaar = reeksen.every((t) => t.status === 'finished')
+                const b = tornooiBadge(alleKlaar ? 'finished' : 'live', reeksen.some((t) => gestart.has(t.id)))
                 const cats = [...new Set(reeksen.map((t) => catLabel(t.category)))]
                 return (
                   <Link key={groep} href={`/tornooi/groep/${encodeURIComponent(groep)}`} className="trn-hub-card groep">
@@ -72,15 +78,15 @@ export default async function TornooiHub() {
                     <span className="trn-hub-meta">
                       {reeksen.length} {reeksen.length === 1 ? 'categorie' : 'categorieën'} · {cats.join(', ')}
                     </span>
-                    <span className={`trn-hub-status ${bezig ? 'live' : 'finished'}`}>{bezig ? 'BEZIG' : 'AFGELOPEN'}</span>
+                    <span className={`trn-hub-status ${b.cls}`}>{b.label}</span>
                   </Link>
                 )
               })}
             </div>
           </section>
         )}
-        <Section title="Losse tornooien" docs={live} empty={groepen.size > 0 ? '' : 'Nog geen tornooi. Maak er een aan.'} canDelete={canCreate} />
-        {done.length > 0 && <Section title="Afgelopen" docs={done} empty="" canDelete={canCreate} />}
+        <Section title="Losse tornooien" docs={live} empty={groepen.size > 0 ? '' : 'Nog geen tornooi. Maak er een aan.'} canDelete={canCreate} gestart={gestart} />
+        {done.length > 0 && <Section title="Afgelopen" docs={done} empty="" canDelete={canCreate} gestart={gestart} />}
       </main>
       </div>
     </>
@@ -92,11 +98,13 @@ function Section({
   docs,
   empty,
   canDelete = false,
+  gestart,
 }: {
   title: string
   docs: Array<{ id: number; name: string; category: string; status: string; teamCount?: number | null }>
   empty: string
   canDelete?: boolean
+  gestart: Set<number>
 }) {
   return (
     <section className="trn-hub-sec">
@@ -111,7 +119,10 @@ function Section({
               <span className="trn-hub-meta">
                 {catLabel(t.category)} · {t.teamCount ?? '?'} ploegen
               </span>
-              <span className={`trn-hub-status ${t.status}`}>{t.status === 'live' ? 'BEZIG' : 'AFGELOPEN'}</span>
+              {(() => {
+                const b = tornooiBadge(t.status, gestart.has(t.id))
+                return <span className={`trn-hub-status ${b.cls}`}>{b.label}</span>
+              })()}
               {canDelete && <VerwijderTornooi id={t.id} naam={t.name} />}
             </Link>
           ))}

@@ -2104,3 +2104,9 @@ button.trn-toplink {
   .gk-fs-tel { animation: gk-fs-in 0.2s ease both; }
   .gk-fs-reveal { animation: gk-fs-in 0.3s ease both; }
 }
+
+/* Hub-badge voor een tornooi dat er nog aankomt (niets gespeeld): neutraal, geen groen. */
+.trn-hub-status.pending {
+  background: #1c2028;
+  color: var(--dim);
+}

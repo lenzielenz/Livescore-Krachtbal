@@ -6,6 +6,7 @@ import { isFederationLevel } from '@/lib/access'
 import { CATEGORY_OPTIONS } from '@/lib/categories'
 import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
+import { gestarteTornooien, tornooiBadge } from '@/lib/tornooi-status'
 import { VerwijderTornooi } from '../../VerwijderTornooi'
 import { FotoUpload } from './FotoUpload'
 import '../../tornooi.css'
@@ -35,6 +36,8 @@ export default async function TornooiGroepPage({ params }: { params: Promise<{ n
 
   const live = docs.filter((t) => t.status === 'live')
   const done = docs.filter((t) => t.status === 'finished')
+  // "Bezig" pas wanneer er écht gespeeld wordt — anders "Nog niet gestart".
+  const gestart = await gestarteTornooien(payload, docs.map((t) => Number(t.id)))
 
   // Ingestuurde supportersfoto's: de federatie ziet meteen hoeveel er al binnen zijn.
   const fotoRes = canManage
@@ -83,15 +86,15 @@ export default async function TornooiGroepPage({ params }: { params: Promise<{ n
         </div>
 
         <main className="trn-hub">
-          <GroepSectie titel="Categorieën" docs={live} canManage={canManage} />
-          {done.length > 0 && <GroepSectie titel="Afgelopen" docs={done} canManage={canManage} />}
+          <GroepSectie titel="Categorieën" docs={live} canManage={canManage} gestart={gestart} />
+          {done.length > 0 && <GroepSectie titel="Afgelopen" docs={done} canManage={canManage} gestart={gestart} />}
         </main>
       </div>
     </>
   )
 }
 
-function GroepSectie({ titel, docs, canManage = false }: { titel: string; docs: Record<string, unknown>[]; canManage?: boolean }) {
+function GroepSectie({ titel, docs, canManage = false, gestart }: { titel: string; docs: Record<string, unknown>[]; canManage?: boolean; gestart: Set<number> }) {
   if (docs.length === 0) return null
   return (
     <section className="trn-hub-sec">
@@ -103,9 +106,10 @@ function GroepSectie({ titel, docs, canManage = false }: { titel: string; docs: 
             <span className="trn-hub-meta">
               {catLabel(t.category)} · {(t.teamCount as number | null) ?? '?'} ploegen
             </span>
-            <span className={`trn-hub-status ${String(t.status)}`}>
-              {t.status === 'live' ? 'BEZIG' : 'AFGELOPEN'}
-            </span>
+            {(() => {
+              const b = tornooiBadge(t.status, gestart.has(Number(t.id)))
+              return <span className={`trn-hub-status ${b.cls}`}>{b.label}</span>
+            })()}
             {canManage && <VerwijderTornooi id={Number(t.id)} naam={String(t.name ?? '')} />}
           </Link>
         ))}
