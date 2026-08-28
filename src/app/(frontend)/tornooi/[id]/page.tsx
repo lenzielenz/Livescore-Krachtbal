@@ -121,9 +121,9 @@ export default async function TornooiPage({ params }: { params: Promise<{ id: st
     return bye || (m.status === 'pending' && m.score.home === 0 && m.score.away === 0)
   })
 
-  // Pronostiekstand van deze reeks. Hoort een reeks bij een tornooidag, dan staat de volledige
-  // dagstand op de groepspagina — hier tonen we ze enkel voor een los tornooi.
-  const stand = groepNaam ? [] : await reeksPronostiekStand(payload, tournamentId).catch(() => [])
+  // Pronostiekstand van déze categorie — meespelen gebeurt hier, dus hoort de stand hier ook.
+  // (De volledige dagstand over alle categorieën blijft op de tornooidagpagina staan.)
+  const stand = await reeksPronostiekStand(payload, tournamentId).catch(() => [])
 
   return (
     <>

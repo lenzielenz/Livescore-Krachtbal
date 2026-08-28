@@ -6,6 +6,7 @@ import React, { useEffect, useMemo, useState, type CSSProperties } from 'react'
 import { FieldSchema } from '@/components/FieldSchema'
 import { TeamLogo } from '@/components/TeamLogo'
 import type { GroepData, GroepMatch } from '@/lib/tornooi-groep'
+import { PRONOSTIEK_OP_DAGPROGRAMMA } from '@/lib/pronostiek-schakelaar'
 import { TornooiPronostiek } from '../TornooiPronostiek'
 import { fmtClock, useTicking } from '../../../useTournament'
 
@@ -122,7 +123,7 @@ export function Dagprogramma({
   // Eigen pronostiek-tips van deze supporter (andermans tips blijven verborgen tot na de match).
   const [picks, setPicks] = useState<Record<number, { home: number; away: number }>>({})
   useEffect(() => {
-    if (!ingelogd) return
+    if (!ingelogd || !PRONOSTIEK_OP_DAGPROGRAMMA) return
     void fetch(`/api/tornooi-pronostiek?groep=${encodeURIComponent(naam)}`, { credentials: 'include', cache: 'no-store' })
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
@@ -265,6 +266,8 @@ export function Dagprogramma({
               {(
             <li className={`dp-rij ${m.status}`}>
               <span className="dp-uur">{m.plannedAt ? tijdBE(m.plannedAt) : '—'}</span>
+              {/* Affiche: thuislogo links, uitlogo rechts, de namen ertussen. De namen mogen
+                  over twee regels lopen i.p.v. hard afgekapt te worden. */}
               <span className="dp-affiche">
                 {m.home && (
                   <TeamLogo name={m.home} logoUrl={data.logos[m.home] ?? null} logoFit={data.fits[m.home] ?? null} side="home" size="1.6em" ringColor={m.home ? data.kleuren[m.home] : undefined} />
@@ -276,22 +279,24 @@ export function Dagprogramma({
                   <TeamLogo name={m.away} logoUrl={data.logos[m.away] ?? null} logoFit={data.fits[m.away] ?? null} side="away" size="1.6em" ringColor={m.away ? data.kleuren[m.away] : undefined} />
                 )}
               </span>
-              <span className="dp-reeks">{m.reeksNaam}</span>
-              {duurPerReeks.get(m.reeksNaam) != null && (
-                <span className="dp-duur" title="Wedstrijdduur">2×{duurPerReeks.get(m.reeksNaam)}&#8242;</span>
-              )}
-              {(() => {
-                const st = rijStatus(m)
-                return <span className={`dp-status ${st.cls}`}>{st.label}</span>
-              })()}
-              {canManage && m.status !== 'finished' && (
-                <Link href={`/tornooi/${m.tournamentId}/aantekenen/${m.id}`} className="trn-mini">Aantekenen</Link>
-              )}
-              {/* Vaste veldtag: het veld wijzig je bewust op de wedstrijdkaart (reekspagina) of
-                  in de beheer-planner — niet per ongeluk vanuit dit overzicht. */}
-              {m.veld != null && <span className="dp-veldtag">Veld {m.veld}</span>}
-              {/* Supersimpel meespelen: enkel zolang de wedstrijd nog niet begonnen is. */}
-              {m.status === 'pending' && m.home && m.away && (
+              {/* Eén rustige metaregel met al de rest. */}
+              <span className="dp-meta">
+                {(() => {
+                  const st = rijStatus(m)
+                  return <span className={`dp-status ${st.cls}`}>{st.label}</span>
+                })()}
+                {m.veld != null && <span className="dp-veldtag">Veld {m.veld}</span>}
+                <span className="dp-reeks">{m.reeksNaam}</span>
+                {duurPerReeks.get(m.reeksNaam) != null && (
+                  <span className="dp-duur" title="Wedstrijdduur">2×{duurPerReeks.get(m.reeksNaam)}&#8242;</span>
+                )}
+                {canManage && m.status !== 'finished' && (
+                  <Link href={`/tornooi/${m.tournamentId}/aantekenen/${m.id}`} className="trn-mini dp-aantekenen">Aantekenen</Link>
+                )}
+              </span>
+              {/* Pronostiek staat hier uit: dit overzicht werd er te druk van. Meespelen doe je
+                  bij de categorie zelf (zie lib/pronostiek-schakelaar.ts). */}
+              {PRONOSTIEK_OP_DAGPROGRAMMA && m.status === 'pending' && m.home && m.away && (
                 <TornooiPronostiek
                   matchId={m.id}
                   home={m.home}
