@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import type { Side } from '@/lib/tournament'
 import type { TMatchState, TournamentState } from '@/lib/tournament-engine'
@@ -31,6 +31,17 @@ export function TournamentScoresheet({
   const [error, setError] = useState<string | null>(null)
   const [askWinner, setAskWinner] = useState(false)
   const busy = useRef(false)
+  // Volledig scherm: de browserbalk verdwijnt en de hele tafel past op één scherm.
+  const [fullscreen, setFullscreen] = useState(false)
+  useEffect(() => {
+    const bijwerken = () => setFullscreen(Boolean(document.fullscreenElement))
+    document.addEventListener('fullscreenchange', bijwerken)
+    return () => document.removeEventListener('fullscreenchange', bijwerken)
+  }, [])
+  const wisselFullscreen = () => {
+    if (document.fullscreenElement) void document.exitFullscreen().catch(() => undefined)
+    else void document.documentElement.requestFullscreen().catch(() => undefined)
+  }
 
   // SSE: vang wijzigingen op die elders gemaakt worden (negeer terwijl een eigen actie loopt).
   useLiveStream<TournamentState>(`/api/tournament/${id}/stream`, (data) => {
@@ -83,7 +94,13 @@ export function TournamentScoresheet({
         <Link href={`/tornooi/${id}`} className="trn-home">
           <span className="brand">Krachtbal</span> · Aantekentafel
         </Link>
-        <Link href={`/tornooi/${id}/veld/${matchId}`} className="trn-toplink">Veldscherm →</Link>
+        <nav className="trn-topnav">
+          {/* Eén tik en alles staat op één scherm (geen browserbalk meer). */}
+          <button type="button" className="trn-toplink" onClick={wisselFullscreen}>
+            {fullscreen ? '✕ Verlaten' : '⛶ Volledig scherm'}
+          </button>
+          <Link href={`/tornooi/${id}/veld/${matchId}`} className="trn-toplink">Veldscherm →</Link>
+        </nav>
       </header>
 
       <div className="ts-meta">
