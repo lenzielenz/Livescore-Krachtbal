@@ -7,7 +7,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { FieldSchema, type FieldMarker } from '@/components/FieldSchema'
 import { balgewichtLabel } from '@/lib/balgewicht'
 import { attackDirForSide, deriveOutcome } from '@/lib/krachtbal-rules'
-import { goalLineNorm, projectWerpplaats, totalLengthM, zoneOf } from '@/lib/field'
+import { goalLineNorm, isOpDoellijn, projectWerpplaats, totalLengthM, zoneOf } from '@/lib/field'
 import type { AttackDir, Point } from '@/lib/field'
 import type { MatchState } from '@/lib/match-engine'
 import { LINEUP_MIN, type Readiness } from '@/lib/match-readiness'
@@ -629,11 +629,15 @@ export function Scorekeeper({
   // Lag de bal binnen de 4 m van een doellijn, dan schuift de werpplaats terug tot op de
   // vrijeworplijn (§6.4) — exact dezelfde projectie als op de server, zodat de gele stip en de
   // berekende afstand niet uit elkaar lopen.
+  // Zet het balbezit op vanaf de doellijn (vangst in het doelgebied), dan blijft de werpplaats
+  // dáár — de doellijn is dan de beperkende lijn, niet de vrijeworplijn (§6.4).
   const lastTap = recentTaps.length ? recentTaps[recentTaps.length - 1] : null
   const werpAnchor = lastTap
     ? projectWerpplaats({ x: lastTap.x, y: lastTap.y }, state.match.goalAreaDepth ?? undefined)
     : poss
-      ? projectWerpplaats({ x: poss.setupX, y: poss.setupY }, state.match.goalAreaDepth ?? undefined)
+      ? projectWerpplaats({ x: poss.setupX, y: poss.setupY }, state.match.goalAreaDepth ?? undefined, {
+          vanuitDoelgebied: isOpDoellijn({ x: poss.setupX, y: poss.setupY }, state.match.goalAreaDepth ?? undefined),
+        })
       : null
   const showWerp = isLive && werpAnchor && !pendingCatch && !pendingTap && !pendingOut
   const werpPoint = werpAnchor ? { x: werpX ?? werpAnchor.x, y: werpAnchor.y } : null
