@@ -32,7 +32,7 @@ function sorteer(matches: GroepMatch[]): GroepMatch[] {
     })
 }
 
-function VeldKaartje({ nr, data }: { nr: number; data: GroepData }) {
+function VeldKaartje({ nr, data, nu }: { nr: number; data: GroepData; nu: number | null }) {
   // Wat toont dit veld? Een lopende wedstrijd wint; anders de eerstvolgende geplande.
   const opVeld = data.matches.filter((m) => m.veld === nr && m.home && m.away)
   const live = opVeld.find((m) => m.status === 'live')
@@ -52,7 +52,15 @@ function VeldKaartje({ nr, data }: { nr: number; data: GroepData }) {
         <span className="dp-veld-nr">Veld {nr}</span>
         {m ? (
           <>
-            <span className={`dp-veld-status ${m.status}`}>{live ? '● LIVE' : m.plannedAt ? tijdBE(m.plannedAt) : 'volgt'}</span>
+            <span className={`dp-veld-status ${m.status}${!live && nu != null && m.plannedAt && new Date(m.plannedAt).getTime() <= nu ? ' nu' : ''}`}>
+              {live
+                ? `● LIVE · H${m.currentHalf}`
+                : nu != null && m.plannedAt && new Date(m.plannedAt).getTime() <= nu
+                  ? '⏰ kan starten'
+                  : m.plannedAt
+                    ? tijdBE(m.plannedAt)
+                    : 'volgt'}
+            </span>
             <span className="dp-veld-affiche">
               {m.home && (
                 <TeamLogo name={m.home} logoUrl={data.logos[m.home] ?? null} logoFit={data.fits[m.home] ?? null} side="home" size="2em" ringColor={data.kleuren[m.home]} />
@@ -79,6 +87,13 @@ function VeldKaartje({ nr, data }: { nr: number; data: GroepData }) {
 
 export function Dagprogramma({ naam, initial, canManage }: { naam: string; initial: GroepData; canManage: boolean }) {
   const [data, setData] = useState<GroepData>(initial)
+  // "Nu" bestaat pas na het mounten (anders hydration-mismatch); per halve minuut verversen is zat.
+  const [nu, setNu] = useState<number | null>(null)
+  useEffect(() => {
+    setNu(Date.now())
+    const t = setInterval(() => setNu(Date.now()), 30000)
+    return () => clearInterval(t)
+  }, [])
   const [busy, setBusy] = useState(false)
   const [fout, setFout] = useState<string | null>(null)
   const [velden, setVelden] = useState<number>(initial.veldCount ?? 1)
@@ -98,6 +113,27 @@ export function Dagprogramma({ naam, initial, canManage }: { naam: string; initi
   }, [naam])
 
   const wedstrijden = useMemo(() => sorteer(data.matches), [data.matches])
+
+  // Voor de organisatie: wat is de EERSTVOLGENDE wedstrijd per veld? Die "gaat starten" —
+  // en zodra haar geplande uur verstreken is, mag ze effectief beginnen (⏰ kan starten).
+  const volgendePerVeld = useMemo(() => {
+    const uit = new Map<number, number>()
+    for (const m of wedstrijden) {
+      if (m.status !== 'pending' || m.veld == null) continue
+      if (!uit.has(m.veld)) uit.set(m.veld, m.id)
+    }
+    return uit
+  }, [wedstrijden])
+
+  const rijStatus = (m: GroepMatch): { label: string; cls: string } => {
+    if (m.status === 'live') return { label: `● LIVE · H${m.currentHalf} · ${m.score.home}–${m.score.away}`, cls: 'live' }
+    if (m.status === 'finished') return { label: `${m.score.home}–${m.score.away}`, cls: 'finished' }
+    const isVolgende = m.veld != null && volgendePerVeld.get(m.veld) === m.id
+    if (isVolgende && nu != null && m.plannedAt && new Date(m.plannedAt).getTime() <= nu)
+      return { label: '⏰ kan starten', cls: 'nu' }
+    if (isVolgende) return { label: 'straks', cls: 'straks' }
+    return { label: 'te spelen', cls: 'pending' }
+  }
 
   // Aantal velden bewaren op de eerste reeks van de dag (de loader leest de eerste ingestelde).
   const bewaarVelden = async () => {
@@ -174,7 +210,7 @@ export function Dagprogramma({ naam, initial, canManage }: { naam: string; initi
       {aantalVelden >= 1 && (
         <section className="dp-velden" aria-label="Veldoverzicht">
           {Array.from({ length: aantalVelden }, (_, i) => (
-            <VeldKaartje key={i + 1} nr={i + 1} data={data} />
+            <VeldKaartje key={i + 1} nr={i + 1} data={data} nu={nu} />
           ))}
         </section>
       )}
@@ -198,9 +234,13 @@ export function Dagprogramma({ naam, initial, canManage }: { naam: string; initi
                 )}
               </span>
               <span className="dp-reeks">{m.reeksNaam}</span>
-              <span className={`dp-status ${m.status}`}>
-                {m.status === 'live' ? `● ${m.score.home}–${m.score.away}` : m.status === 'finished' ? `${m.score.home}–${m.score.away}` : 'te spelen'}
-              </span>
+              {(() => {
+                const st = rijStatus(m)
+                return <span className={`dp-status ${st.cls}`}>{st.label}</span>
+              })()}
+              {canManage && m.status !== 'finished' && (
+                <Link href={`/tornooi/${m.tournamentId}/aantekenen/${m.id}`} className="trn-mini">Aantekenen</Link>
+              )}
               {canManage ? (
                 <select
                   className="dp-veldkeuze"

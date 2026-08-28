@@ -1800,3 +1800,22 @@
   .dp-rij { row-gap: 6px; }
   .dp-reeks { order: 5; }
 }
+
+/* Operationele status in het dagprogramma: de organisatie ziet in één oogopslag wat bezig is,
+   wat kan starten (uur verstreken) en wat er per veld als volgende klaarstaat. */
+.dp-status.nu,
+.dp-veld-status.nu {
+  color: #ffd166;
+  animation: dp-nu-pols 1.6s ease-in-out infinite;
+}
+@keyframes dp-nu-pols {
+  50% { opacity: 0.55; }
+}
+.dp-status.straks { color: var(--accent); }
+@media (prefers-reduced-motion: reduce) {
+  .dp-status.nu,
+  .dp-veld-status.nu { animation: none; }
+}
+
+/* In de programmarijen blijft de Aantekenen-knop compact (niet mee uitrekken met de flexrij). */
+.dp-rij .trn-mini { flex: 0 0 auto; }
