@@ -2410,3 +2410,10 @@ button.trn-toplink {
   gap: 8px;
   flex-wrap: wrap;
 }
+
+/* Pronostiek op de wedstrijdkaart: eigen regel onderaan zodat de kaart leesbaar blijft. */
+.trn-match-prono {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px dashed var(--line);
+}

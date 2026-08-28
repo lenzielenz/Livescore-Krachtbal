@@ -33,7 +33,15 @@ export async function tornooiPronostiekStand(payload: Payload, groep: string): P
     .catch(() => ({ docs: [] as { id: number }[] }))
   const ids = (tRes.docs as { id: number }[]).map((t) => Number(t.id))
   if (ids.length === 0) return []
+  return standVoorIds(payload, ids)
+}
 
+/** Klassement van één reeks/tornooi — voor een los tornooi zonder tornooidag-groep. */
+export async function reeksPronostiekStand(payload: Payload, tournamentId: number): Promise<LeaderRow[]> {
+  return standVoorIds(payload, [tournamentId])
+}
+
+async function standVoorIds(payload: Payload, ids: number[]): Promise<LeaderRow[]> {
   const mRes = await payload
     .find({
       collection: 'tournament-matches',

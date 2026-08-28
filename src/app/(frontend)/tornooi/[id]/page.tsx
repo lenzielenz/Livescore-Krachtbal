@@ -5,6 +5,7 @@ import { competitionWhere } from '@/lib/analyse-access'
 import { getAuthUser } from '@/lib/auth-user'
 import { type LogoFit, normalizeLogoFit } from '@/lib/logo-fit'
 import { getPayloadClient } from '@/lib/payload-client'
+import { reeksPronostiekStand } from '@/lib/tornooi-pronostiek'
 import { buildTournamentState } from '@/lib/tournament-engine'
 import { BracketBoard } from './BracketBoard'
 import { TornooiBeheer } from './TornooiBeheer'
@@ -120,6 +121,10 @@ export default async function TornooiPage({ params }: { params: Promise<{ id: st
     return bye || (m.status === 'pending' && m.score.home === 0 && m.score.away === 0)
   })
 
+  // Pronostiekstand van deze reeks. Hoort een reeks bij een tornooidag, dan staat de volledige
+  // dagstand op de groepspagina — hier tonen we ze enkel voor een los tornooi.
+  const stand = groepNaam ? [] : await reeksPronostiekStand(payload, tournamentId).catch(() => [])
+
   return (
     <>
       {canManage && (
@@ -144,7 +149,30 @@ export default async function TornooiPage({ params }: { params: Promise<{ id: st
           />
         </div>
       )}
-      <BracketBoard id={tournamentId} initial={state} canManage={canManage} logos={logos} fits={fits} veldCount={veldCount} />
+      <BracketBoard id={tournamentId} initial={state} canManage={canManage} logos={logos} fits={fits} veldCount={veldCount} ingelogd={Boolean(user)} />
+      {stand.length > 0 && (
+        <div className="trn-page">
+          <section className="trn-hub-sec">
+            <h2>🔮 Pronostiekstand</h2>
+            <ol className="tp-stand">
+              {stand.slice(0, 15).map((r, i) => (
+                <li key={r.userId} className={i === 0 ? 'leider' : ''}>
+                  <span className="tp-plaats">{i + 1}</span>
+                  <span className="tp-naam">{r.name}</span>
+                  <span className="tp-detail">
+                    {r.predictions} tip{r.predictions === 1 ? '' : 's'}
+                    {r.exact > 0 ? ` · ${r.exact}× exact` : ''}
+                  </span>
+                  <span className="tp-punten">{r.points}</span>
+                </li>
+              ))}
+            </ol>
+            <p className="trn-hint">
+              Exact = 10 punten · juiste winnaar én saldo = 6 · juiste winnaar = 3 · dichtst bij = 2 bonus.
+            </p>
+          </section>
+        </div>
+      )}
     </>
   )
 }
