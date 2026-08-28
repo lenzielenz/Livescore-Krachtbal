@@ -88,6 +88,14 @@ export const TournamentMatches: CollectionConfig = {
       admin: { description: 'Veldnummer op de tornooidag (leeg = nog niet toegewezen).' },
     },
     {
+      // Pronostiek van supporters: [{ userId, name, home, away, at }] — zelfde vorm als de
+      // competitie (scorePredictions op matches); gescoord met hetzelfde puntensysteem.
+      name: 'scorePredictions',
+      type: 'json',
+      defaultValue: [],
+      admin: { hidden: true },
+    },
+    {
       // Event-sourced score: lijst van { side, points (1/2), half, clock, ts }.
       name: 'goals',
       label: 'Doelpunten',

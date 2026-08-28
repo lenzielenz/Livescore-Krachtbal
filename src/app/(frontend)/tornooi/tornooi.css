@@ -2211,3 +2211,147 @@ button.trn-toplink {
   .gk-viering.raket .gk-viering-team,
   .gk-viering.raket .gk-viering-reeks { opacity: 1; animation: none; }
 }
+
+/* ── Actiebalk tornooidag: publiek boven, organisatie eronder ─────────────────────────────── */
+.trn-balk {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.trn-balk-rij {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.trn-balk-rij.beheer {
+  padding-top: 10px;
+  border-top: 1px dashed var(--line);
+}
+.trn-balk-lbl {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+/* ── Dagprogramma: datumkop van het evenement ─────────────────────────────────────────────── */
+.dp-datum {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0 8px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-weight: 800;
+  font-size: 0.98rem;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--txt);
+}
+.dp-datum.aankondiging {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 50%, transparent);
+  background: color-mix(in srgb, var(--accent) 10%, var(--panel));
+}
+.dp-datum.vandaag {
+  color: #6ee7a0;
+  border-color: color-mix(in srgb, #6ee7a0 55%, transparent);
+  background: color-mix(in srgb, #6ee7a0 12%, var(--panel));
+}
+.dp-datum.gesloten { color: var(--dim); }
+
+/* Dag-splitsing in de wedstrijdenlijst. */
+.dp-dagkop {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 14px 0 2px;
+  padding: 0 4px 6px;
+  border-bottom: 1px solid var(--line);
+  list-style: none;
+}
+.dp-dagkop-naam {
+  font-weight: 800;
+  font-size: 0.95rem;
+  text-transform: capitalize;
+}
+.dp-dagkop.vandaag .dp-dagkop-naam { color: #6ee7a0; }
+.dp-dagkop-telling { font-size: 0.8rem; color: var(--dim); }
+
+/* ── Pronostiek: supersimpele invoer + stand ──────────────────────────────────────────────── */
+.tp-wrap { display: inline-flex; flex-direction: column; gap: 4px; }
+.tp-rij { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.tp-stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 2px;
+}
+.tp-stepper button {
+  width: 30px;
+  height: 30px;
+  border: none;
+  background: none;
+  color: var(--txt);
+  font-size: 1.1rem;
+  font-weight: 800;
+  cursor: pointer;
+  border-radius: 50%;
+  touch-action: manipulation;
+}
+.tp-stepper button:hover { background: var(--line); }
+.tp-stepper b { min-width: 22px; text-align: center; font-variant-numeric: tabular-nums; }
+.tp-vs { color: var(--dim); font-style: normal; font-weight: 800; }
+.tp-knop {
+  border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent);
+  border-radius: 999px;
+  padding: 7px 14px;
+  font-weight: 800;
+  font-size: 0.85rem;
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+  touch-action: manipulation;
+}
+.tp-knop:hover { background: color-mix(in srgb, var(--accent) 22%, transparent); }
+.tp-knop:disabled { opacity: 0.6; cursor: wait; }
+.tp-gespeeld { font-size: 0.85rem; color: var(--dim); white-space: nowrap; }
+.tp-gespeeld b { color: var(--accent); }
+.tp-fout { font-size: 0.78rem; color: #ffb9a8; }
+
+.tp-stand { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.tp-stand li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+.tp-stand li.leider { border-color: color-mix(in srgb, var(--accent) 55%, transparent); }
+.tp-plaats {
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+.tp-stand li.leider .tp-plaats { background: color-mix(in srgb, var(--accent) 20%, transparent); color: var(--accent); }
+.tp-naam { flex: 1 1 auto; min-width: 0; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tp-detail { font-size: 0.78rem; color: var(--dim); white-space: nowrap; }
+.tp-punten { font-weight: 800; font-variant-numeric: tabular-nums; color: var(--accent); }
