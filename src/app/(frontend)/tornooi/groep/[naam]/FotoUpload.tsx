@@ -3,12 +3,13 @@
 import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
 
-import { opdrachtOp, startIndexVoor } from '@/lib/foto-opdrachten'
+import { opdrachtOp, willekeurigeStart } from '@/lib/foto-opdrachten'
 
 // 📷 Supporters delen hun foto's van de tornooidag. Na het insturen zien ze de foto niet terug —
 // alles komt samen op één plek bij de organisatie. Om de mensen te prikkelen hangt er een
 // foto-opdracht aan ("Foto met het scorebord", …) die doorschuift telkens ze er één volbracht
-// hebben; de voortgang leeft per toestel in localStorage. Niet ingelogd? Vriendelijk doorverwijzen.
+// hebben. Elke gsm begint op een willekeurige plek in de lijst (en onthoudt zijn voortgang in
+// localStorage) — zo jaagt niet iedereen op dezelfde foto. Niet ingelogd? Vriendelijk doorverwijzen.
 export function FotoUpload({ groep, ingelogd }: { groep: string; ingelogd: boolean }) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [busy, setBusy] = useState(false)
@@ -24,7 +25,16 @@ export function FotoUpload({ groep, ingelogd }: { groep: string; ingelogd: boole
     } catch {
       /* privémodus of geblokkeerde opslag — start gewoon vooraan */
     }
-    setStap(bewaard ?? startIndexVoor(groep))
+    // Nog geen voortgang op dit toestel → loot een eigen startopdracht en leg ze meteen vast.
+    const start = bewaard ?? willekeurigeStart()
+    if (bewaard == null) {
+      try {
+        localStorage.setItem(sleutel, String(start))
+      } catch {
+        /* geen opslag — dan loot dit toestel bij het volgende bezoek gewoon opnieuw */
+      }
+    }
+    setStap(start)
     // eslint-disable-next-line
   }, [groep])
 
@@ -52,7 +62,7 @@ export function FotoUpload({ groep, ingelogd }: { groep: string; ingelogd: boole
       if (!res.ok) throw new Error(data.error || 'Insturen mislukt.')
       const n = data.aantal ?? files.length
       // Opdracht volbracht → de volgende schuift aan (en blijft onthouden op dit toestel).
-      const volgende = (stap ?? startIndexVoor(groep)) + 1
+      const volgende = (stap ?? willekeurigeStart()) + 1
       setStap(volgende)
       try {
         localStorage.setItem(sleutel, String(volgende))

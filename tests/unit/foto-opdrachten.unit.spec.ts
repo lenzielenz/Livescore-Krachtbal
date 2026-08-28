@@ -1,18 +1,20 @@
 import { describe, expect, it } from 'vitest'
 
-import { FOTO_OPDRACHTEN, opdrachtOp, startIndexVoor } from '@/lib/foto-opdrachten'
+import { FOTO_OPDRACHTEN, opdrachtOp, willekeurigeStart } from '@/lib/foto-opdrachten'
 
-// De foto-opdrachten prikkelen supporters om in te sturen: deterministisch per tornooidag,
+// De foto-opdrachten prikkelen supporters om in te sturen: elke gsm loot een eigen start,
 // en de lijst draait netjes rond zodat er ná elke volbrachte opdracht altijd een volgende is.
 describe('foto-opdrachten', () => {
-  it('startpositie is deterministisch en valt binnen de lijst', () => {
-    const a = startIndexVoor('Beker van Brugge')
-    expect(a).toBe(startIndexVoor('Beker van Brugge'))
-    expect(a).toBeGreaterThanOrEqual(0)
-    expect(a).toBeLessThan(FOTO_OPDRACHTEN.length)
-    // Andere dag ≠ gegarandeerd andere start, maar de hash spreidt wél.
-    const verschillend = ['A', 'B', 'C', 'D', 'E'].map(startIndexVoor)
-    expect(new Set(verschillend).size).toBeGreaterThan(1)
+  it('geloot startpunt valt binnen de lijst en spreidt over de toestellen', () => {
+    // Deterministische "toestellen": elke waarde in [0,1) moet een geldige index opleveren.
+    for (const r of [0, 0.1, 0.5, 0.99, 0.999999]) {
+      const i = willekeurigeStart(() => r)
+      expect(i).toBeGreaterThanOrEqual(0)
+      expect(i).toBeLessThan(FOTO_OPDRACHTEN.length)
+    }
+    // Verschillende toestellen (verschillende loting) → verschillende startopdrachten.
+    const spreiding = new Set(Array.from({ length: FOTO_OPDRACHTEN.length }, (_, k) => willekeurigeStart(() => k / FOTO_OPDRACHTEN.length)))
+    expect(spreiding.size).toBe(FOTO_OPDRACHTEN.length)
   })
 
   it('cycelt door de hele lijst en begint dan opnieuw', () => {

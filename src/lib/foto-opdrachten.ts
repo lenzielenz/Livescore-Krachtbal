@@ -1,7 +1,7 @@
 // Foto-opdrachten voor de tornooidag: een speelse prikkel bij het insturen van foto's.
 // De opdracht wisselt telkens de supporter er één volbracht heeft (na elke geslaagde upload
-// schuift de lijst één plek door). De startpositie hangt af van de tornooidag, zodat niet
-// elk evenement met exact dezelfde opdracht begint.
+// schuift de lijst één plek door). De startpositie is willekeurig per toestel, zodat elke
+// gsm op het veld met een ándere opdracht begint — samen dekken de supporters zo de hele lijst.
 
 export const FOTO_OPDRACHTEN: readonly string[] = [
   '📸 Foto met het scorebord',
@@ -18,11 +18,9 @@ export const FOTO_OPDRACHTEN: readonly string[] = [
   '☀️ Foto van het hele veld in één beeld',
 ] as const
 
-/** Deterministische startpositie per tornooidag (zelfde dag = zelfde eerste opdracht). */
-export function startIndexVoor(groep: string): number {
-  let h = 0
-  for (const c of groep) h = (h * 31 + c.charCodeAt(0)) % 997
-  return h % FOTO_OPDRACHTEN.length
+/** Willekeurige startpositie: elke gsm/browser krijgt zo een eigen eerste opdracht. */
+export function willekeurigeStart(rnd: () => number = Math.random): number {
+  return Math.floor(rnd() * FOTO_OPDRACHTEN.length) % FOTO_OPDRACHTEN.length
 }
 
 /** De opdracht op een positie (cycled door de lijst). */
