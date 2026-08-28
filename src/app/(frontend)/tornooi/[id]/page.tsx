@@ -29,8 +29,11 @@ export default async function TornooiPage({ params }: { params: Promise<{ id: st
     notFound()
   }
 
+  // Supporters (en dus ook elk vers lid, dat standaard 'scorekeeper' krijgt) kijken alleen:
+  // schema en rangschikking. Beheer, aantekenen, plannen en het kantinescherm zijn voor de
+  // organisatie — federatie/admin en de aangestelde scheidsrechters.
   const user = await getAuthUser()
-  const canManage = isFederationLevel(user) || hasRole(user, 'scorekeeper', 'scheidsrechter')
+  const canManage = isFederationLevel(user) || hasRole(user, 'scheidsrechter')
 
   // Clublogo's: in de eerste plaats via de EXPLICIETE koppeling (teamClubs, ingegeven bij het
   // aanmaken); anders via naamherkenning als terugval.
@@ -93,6 +96,7 @@ export default async function TornooiPage({ params }: { params: Promise<{ id: st
           <TornooiBeheer
             id={tournamentId}
             naam={state.name}
+            categorie={state.category}
             teams={[...names].sort((a, b) => a.localeCompare(b, 'nl'))}
             magHerloten={magHerloten}
             format={state.format}

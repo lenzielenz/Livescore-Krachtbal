@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
+import { CATEGORY_OPTIONS } from '@/lib/categories'
 import { nextPow2, seededSlots, shuffle } from '@/lib/tournament'
 
 // ⚙️ Beheer van een bestaand tornooi (enkel federatie/admin, ingeklapt tot je het nodig hebt):
@@ -26,6 +27,7 @@ function naarLokaal(iso: string | null): string {
 export function TornooiBeheer({
   id,
   naam,
+  categorie,
   teams,
   magHerloten,
   format,
@@ -33,6 +35,8 @@ export function TornooiBeheer({
 }: {
   id: number
   naam: string
+  /** Huidige categorie — verkeerd bewaard? Hier rechtzetten (bepaalt speelduur en worpen). */
+  categorie: string
   teams: string[]
   /** Nog niets gespeeld → herloten/plannen toegestaan (de server bewaakt het sowieso ook). */
   magHerloten: boolean
@@ -45,6 +49,7 @@ export function TornooiBeheer({
   const [busy, setBusy] = useState(false)
   const [fout, setFout] = useState<string | null>(null)
   const [nieuweNaam, setNieuweNaam] = useState(naam)
+  const [nieuweCat, setNieuweCat] = useState(categorie)
   // Ploegnamen lokaal bewerkbaar; bewaren gebeurt per ploeg (oud → nieuw).
   const [namen, setNamen] = useState<string[]>(teams)
   const [volgorde, setVolgorde] = useState<string[]>(teams)
@@ -167,6 +172,25 @@ export function TornooiBeheer({
             className="trn-btn"
             disabled={busy || !nieuweNaam.trim() || nieuweNaam.trim() === naam}
             onClick={() => void patch({ actie: 'naam', naam: nieuweNaam })}
+          >
+            Bewaren
+          </button>
+        </div>
+      </label>
+
+      <label className="trn-field">
+        <span>Categorie (verkeerd bewaard? bepaalt speelduur en worpaantal)</span>
+        <div className="trn-beheer-rij">
+          <select value={nieuweCat} onChange={(e) => setNieuweCat(e.target.value)}>
+            {CATEGORY_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+          <button
+            type="button"
+            className="trn-btn"
+            disabled={busy || nieuweCat === categorie}
+            onClick={() => void patch({ actie: 'categorie', categorie: nieuweCat })}
           >
             Bewaren
           </button>

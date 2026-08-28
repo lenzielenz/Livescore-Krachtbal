@@ -6,7 +6,7 @@
 
 import type { Payload } from 'payload'
 
-import { type Category, categoryConfig } from './categories'
+import { CATEGORIES, type Category, categoryConfig } from './categories'
 import {
   type Bracket,
   type Goal,
@@ -370,6 +370,20 @@ export async function planMatch(payload: Payload, matchId: number, plannedAtIso:
   await update(payload, matchId, { plannedAt: plannedAtIso } as Partial<MatchDoc>)
 }
 
+/**
+ * Wissel de thuis- en uitploeg van plaats (scheidsrechterlijk of praktisch: wie op welk veld
+ * begint). Kan zolang de wedstrijd niet gestart is — nadien zou de score van kant wisselen.
+ */
+export async function swapSides(payload: Payload, matchId: number): Promise<void> {
+  const m = await getMatch(payload, matchId)
+  if (!m.home || !m.away) throw new Error('Beide ploegen moeten gekend zijn om te wisselen.')
+  if (m.status !== 'pending' || goalsOf(m).length > 0)
+    throw new Error('Wisselen kan enkel vóór de start van de wedstrijd.')
+  // Round-robin-labels dragen de affiche ("A – B"): draai die mee; ronde-labels blijven staan.
+  const label = m.label === `${m.home} – ${m.away}` ? `${m.away} – ${m.home}` : m.label
+  await update(payload, matchId, { home: m.away, away: m.home, label } as Partial<MatchDoc>)
+}
+
 export async function setClock(
   payload: Payload,
   matchId: number,
@@ -547,6 +561,17 @@ export async function renameTeam(payload: Payload, tournamentId: number, van: st
       overrideAccess: true,
     })
   }
+}
+
+/** Verkeerd bewaarde categorie rechtzetten — bepaalt speelduur/worpen voor nog te spelen matchen. */
+export async function changeCategory(payload: Payload, tournamentId: number, category: string): Promise<void> {
+  if (!(CATEGORIES as readonly string[]).includes(category)) throw new Error(`Onbekende categorie: ${category}`)
+  await payload.update({
+    collection: 'tournaments',
+    id: tournamentId,
+    data: { category: category as Category },
+    overrideAccess: true,
+  })
 }
 
 /**

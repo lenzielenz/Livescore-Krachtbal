@@ -1,7 +1,7 @@
 import { isFederationLevel } from '@/lib/access'
 import { authUser } from '@/lib/api-auth'
 import { getPayloadClient } from '@/lib/payload-client'
-import { planSchedule, redrawTournament, renameTeam, renameTournament } from '@/lib/tournament-engine'
+import { changeCategory, planSchedule, redrawTournament, renameTeam, renameTournament } from '@/lib/tournament-engine'
 
 // Een beker/tornooi verwijderen — enkel de federatie/admin (dezelfde rol die ze aanmaakt).
 // De beforeDelete-hook op de Tournaments-collectie ruimt het hele wedstrijdschema mee op.
@@ -49,6 +49,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         break
       case 'ploegnaam':
         await renameTeam(payload, tournamentId, String(body.van ?? ''), String(body.naar ?? ''))
+        break
+      case 'categorie':
+        await changeCategory(payload, tournamentId, String(body.categorie ?? ''))
         break
       case 'planning': {
         // Manuele planning (round-robin): [{ home, away, plannedAt? }] in speelvolgorde.

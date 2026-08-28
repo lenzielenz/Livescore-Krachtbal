@@ -1,15 +1,16 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 
 import { TeamLogo } from '@/components/TeamLogo'
 import type { TMatchState, TournamentState } from '@/lib/tournament-engine'
 import { fmtClock, useTicking, useTournamentStream } from '../useTournament'
 import { BracketZoom } from './BracketZoom'
 
-// Gepland uur van een nog te spelen wedstrijd — beheerders passen het hier meteen aan (voedt
-// het aftellen op het groep-kantinescherm). Bewaart bij het verlaten van het veldje.
+// Gepland uur/datum van een nog te spelen wedstrijd — beheerders passen het hier meteen aan (voedt
+// het aftellen op het groep-kantinescherm). Bewaart direct bij het kiezen (op gsm sluit de native
+// kiezer zonder blur, dus wachten op blur alleen is niet genoeg) en toont een ✔ als het vaststaat.
 function PlanUur({ tournamentId, m }: { tournamentId: number; m: TMatchState }) {
   const naarLokaal = (iso: string | null) => {
     if (!iso) return ''
@@ -19,13 +20,27 @@ function PlanUur({ tournamentId, m }: { tournamentId: number; m: TMatchState }) 
     return d.toISOString().slice(0, 16)
   }
   const [val, setVal] = useState(() => naarLokaal(m.plannedAt))
+  const [status, setStatus] = useState<'idle' | 'ok' | 'fout'>('idle')
+  const wacht = useRef<ReturnType<typeof setTimeout> | null>(null)
   const bewaar = async (v: string) => {
-    await fetch(`/api/tournament/${tournamentId}/match/${m.id}/action`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ action: 'plan', plannedAt: v ? new Date(v).toISOString() : null }),
-    }).catch(() => undefined)
+    try {
+      const res = await fetch(`/api/tournament/${tournamentId}/match/${m.id}/action`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ action: 'plan', plannedAt: v ? new Date(v).toISOString() : null }),
+      })
+      setStatus(res.ok ? 'ok' : 'fout')
+    } catch {
+      setStatus('fout')
+    }
+  }
+  // Kort na de laatste wijziging bewaren (typen op desktop vuurt per segment een change-event).
+  const wijzig = (v: string) => {
+    setVal(v)
+    setStatus('idle')
+    if (wacht.current) clearTimeout(wacht.current)
+    wacht.current = setTimeout(() => void bewaar(v), 600)
   }
   return (
     <label className="trn-plan" onClick={(e) => e.stopPropagation()}>
@@ -33,11 +48,40 @@ function PlanUur({ tournamentId, m }: { tournamentId: number; m: TMatchState }) 
       <input
         type="datetime-local"
         value={val}
-        onChange={(e) => setVal(e.target.value)}
-        onBlur={(e) => void bewaar(e.target.value)}
+        onChange={(e) => wijzig(e.target.value)}
+        onBlur={(e) => {
+          if (wacht.current) clearTimeout(wacht.current)
+          void bewaar(e.target.value)
+        }}
         aria-label="Gepland aanvangsuur"
       />
+      {status === 'ok' && <span className="trn-plan-ok" aria-label="Bewaard">✔</span>}
+      {status === 'fout' && <span className="trn-plan-fout" aria-label="Bewaren mislukt">✕</span>}
     </label>
+  )
+}
+
+// Thuis- en uitploeg van plaats wisselen — kan zolang de wedstrijd niet gestart is. De verse
+// state komt via de SSE-stream terug, dus het bord draait vanzelf mee.
+function WisselKnop({ tournamentId, m }: { tournamentId: number; m: TMatchState }) {
+  const [busy, setBusy] = useState(false)
+  const wissel = async () => {
+    setBusy(true)
+    try {
+      await fetch(`/api/tournament/${tournamentId}/match/${m.id}/action`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ action: 'wissel' }),
+      })
+    } finally {
+      setBusy(false)
+    }
+  }
+  return (
+    <button type="button" className="trn-mini" disabled={busy} onClick={() => void wissel()} title="Thuis- en uitploeg van plaats wisselen">
+      ⇄ Wissel
+    </button>
   )
 }
 
@@ -83,6 +127,8 @@ function MatchCard({ id, m, canManage, logos, neutral = false }: { id: number; m
         <div className="trn-match-actions">
           <Link href={`/tornooi/${id}/aantekenen/${m.id}`} className="trn-mini">Aantekenen</Link>
           <Link href={`/tornooi/${id}/veld/${m.id}`} className="trn-mini">Veld</Link>
+          {/* Thuis/uit omdraaien kan tot de eerste worp — daarna zou de score van kant wisselen. */}
+          {m.status === 'pending' && m.home && m.away && <WisselKnop tournamentId={id} m={m} />}
         </div>
       )}
       {/* Plannen kan zolang ze niet gespeeld is — het groep-kantinescherm telt hiernaar af. */}
@@ -174,7 +220,8 @@ export function BracketBoard({ id, initial, canManage = false, logos = {} }: { i
           <span className="brand">Krachtbal</span> Live · {state.name}
         </Link>
         <nav className="trn-topnav">
-          <Link href={`/tornooi/${id}/kantine`} className="trn-btn">Kantinescherm</Link>
+          {/* Het kantinescherm is de tv-link van de organisator — supporters volgen hier. */}
+          {canManage && <Link href={`/tornooi/${id}/kantine`} className="trn-btn">Kantinescherm</Link>}
           <Link href="/tornooi" className="trn-toplink">Alle bekers</Link>
         </nav>
       </header>
