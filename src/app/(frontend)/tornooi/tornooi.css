@@ -31,6 +31,15 @@
   color: var(--dim);
   font-size: 0.9rem;
 }
+/* Ook als knop (bv. Volledig scherm): geen browser-standaardvlak, gewoon een toplink. */
+button.trn-toplink {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
 .trn-toplink:hover {
   color: var(--txt);
 }
@@ -794,7 +803,8 @@
    tikken. */
 .ts-goalbtns {
   display: grid;
-  grid-template-columns: 1.5fr 1fr;
+  /* +1 (nekworp) wordt veruit het vaakst getikt → dat vlak is duidelijk groter dan +2. */
+  grid-template-columns: 1.7fr 1fr;
   gap: 10px;
   flex: 1 1 auto;
   min-height: clamp(110px, 18dvh, 240px);
@@ -819,6 +829,7 @@
 }
 .ts-goal.nek {
   background: #6ee7a0;
+  font-size: clamp(1.7rem, 7.5vw, 2.6rem);
 }
 .ts-goal.rug {
   background: var(--accent);
@@ -1096,7 +1107,7 @@
   .ts-team { padding: 10px 8px; }
   .ts-score { font-size: 2.4rem; }
   .ts-goal { padding: 12px 4px; }
-  .ts-goalbtns { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .ts-goalbtns { grid-template-columns: 1.7fr 1fr; gap: 8px; }
   /* Label boven de knoppen: zo passen de grote −/+ tikdoelen naast elkaar in het smalle vak. */
   .ts-stat { flex-direction: column; gap: 4px; }
   .ts-stat-btn { width: 46px; height: 46px; }
@@ -1475,6 +1486,8 @@
 /* In volledig scherm (aangevraagd op het document): cursor en knop vervagen zodat het scherm
    écht clean is; eroverheen bewegen brengt ze terug. */
 :root:fullscreen .gk-scherm { cursor: none; }
+/* Tafel in volledig scherm: alles op één scherm, kop compact. */
+:root:fullscreen .trn-page.sheet .trn-top { margin-bottom: 6px; }
 :root:fullscreen .gk-fs-btn { opacity: 0.35; }
 :root:fullscreen .gk-fs-btn:hover { opacity: 1; cursor: pointer; }
 
