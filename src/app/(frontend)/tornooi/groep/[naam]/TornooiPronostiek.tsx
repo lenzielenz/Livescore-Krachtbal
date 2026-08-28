@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 
-// 🔮 Supersimpele pronostiek op een tornooiwedstrijd: twee steppers, één tik op "Speel mijn tip".
+// 🎯 Supersimpele pronostiek op een tornooiwedstrijd: twee steppers, één tik op "Ik gok hierop".
 // Bewust minimaal — je staat langs het veld met één hand vrij. Eenmaal doorgegeven staat de tip
 // vast (zelfde regel als de competitie) en tonen we ze gewoon terug.
 export function TornooiPronostiek({
@@ -34,15 +34,15 @@ export function TornooiPronostiek({
   if (!ingelogd) {
     return (
       <Link href={`/inloggen?next=${encodeURIComponent(terug)}`} className="tp-knop">
-        🔮 Speel mee — log in
+        🎯 Gok mee — log in
       </Link>
     )
   }
 
   if (tip) {
     return (
-      <span className="tp-gespeeld" title="Je tip staat vast">
-        🔮 Jouw tip: <b>{tip.home}–{tip.away}</b>
+      <span className="tp-gespeeld" title="Je gok staat vast">
+        🎯 Jouw gok: <b>{tip.home}–{tip.away}</b>
       </span>
     )
   }
@@ -82,7 +82,7 @@ export function TornooiPronostiek({
           <button type="button" onClick={() => setA((v) => Math.min(99, v + 1))} aria-label={`${away} plus`}>+</button>
         </span>
         <button type="button" className="tp-knop" disabled={busy} onClick={() => void speel()}>
-          {busy ? '⏳' : '🔮 Speel mijn tip'}
+          {busy ? '⏳' : '🎯 Ik gok hierop'}
         </button>
       </span>
       {fout && <span className="tp-fout">{fout}</span>}
