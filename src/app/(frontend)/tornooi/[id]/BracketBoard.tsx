@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
 
 import { TeamLogo } from '@/components/TeamLogo'
+import { PRONOSTIEK_OP_CATEGORIE } from '@/lib/pronostiek-schakelaar'
 import { TornooiPronostiek } from '../groep/[naam]/TornooiPronostiek'
 import type { LogoFit } from '@/lib/logo-fit'
 import type { TMatchState, TournamentState } from '@/lib/tournament-engine'
@@ -177,7 +178,7 @@ function MatchCard({ id, m, canManage, logos, fits, veldCount = 0, neutral = fal
       )}
       {/* Meespelen kan tot de aftrap — óók hier, zodat een supporter zijn tip kwijt kan waar hij
           de wedstrijd ook tegenkomt. */}
-      {!bye && m.status === 'pending' && m.home && m.away && (
+      {PRONOSTIEK_OP_CATEGORIE && !bye && m.status === 'pending' && m.home && m.away && (
         <div className="trn-match-prono">
           <TornooiPronostiek
             matchId={m.id}
@@ -247,7 +248,7 @@ export function BracketBoard({ id, initial, canManage = false, logos = {}, fits 
   // Eigen pronostiek-tips van deze supporter (andermans tips blijven verborgen tot na de match).
   const [tips, setTips] = useState<Record<number, { home: number; away: number }>>({})
   useEffect(() => {
-    if (!ingelogd) return
+    if (!ingelogd || !PRONOSTIEK_OP_CATEGORIE) return
     void fetch(`/api/tornooi-pronostiek?tournament=${id}`, { credentials: 'include', cache: 'no-store' })
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
