@@ -91,16 +91,49 @@ const tijdBE = (iso: string) =>
   new Date(iso).toLocaleTimeString('nl-BE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Brussels' })
 
 // Schermvullende doelpunt-viering: clubkleur-burst + logo + hoeveel punten erbij kwamen.
-type Viering = { key: number; team: string; punten: number; kleur: string | null; logo: string | null; fit: LogoFit | null; reeks: string }
+// Bij +1 (nekworp) groeit en draait het logo van de scorende club; bij +2 (rugworp) vliegt
+// een raket naar het logo van de tegenstander en ontploft erop — dé special voor 2 punten.
+type Viering = {
+  key: number
+  team: string
+  punten: number
+  kleur: string | null
+  logo: string | null
+  fit: LogoFit | null
+  reeks: string
+  tegen: string | null
+  tegenLogo: string | null
+  tegenFit: LogoFit | null
+  tegenKleur: string | null
+}
 
 function VieringOverlay({ v }: { v: Viering }) {
+  const raket = v.punten === 2 && Boolean(v.tegen)
   return (
-    <div className="gk-viering" style={{ ...(v.kleur ? { '--vc': v.kleur } : {}) } as CSSProperties} aria-live="polite">
+    <div className={`gk-viering${raket ? ' raket' : ''}`} style={{ ...(v.kleur ? { '--vc': v.kleur } : {}) } as CSSProperties} aria-live="polite">
       <div className="gk-viering-burst" aria-hidden />
       <div className="gk-viering-inhoud">
-        <span className="gk-viering-logo">
-          <TeamLogo name={v.team} logoUrl={v.logo} logoFit={v.fit} side="home" size="clamp(140px, 34vmin, 380px)" ringColor={v.kleur ?? undefined} />
-        </span>
+        {raket ? (
+          /* +2: raket vertrekt bij de scorende club, vliegt in een boog over en ontploft op
+             het logo van de tegenstander. */
+          <div className="gk-raketbaan">
+            <span className="gk-raket-af">
+              <TeamLogo name={v.team} logoUrl={v.logo} logoFit={v.fit} side="home" size="clamp(110px, 24vmin, 260px)" ringColor={v.kleur ?? undefined} />
+            </span>
+            <span className="gk-raket" aria-hidden>🚀</span>
+            <span className="gk-raket-doel">
+              <span className="gk-boem" aria-hidden>💥</span>
+              <span className="gk-raket-doel-logo">
+                <TeamLogo name={v.tegen as string} logoUrl={v.tegenLogo} logoFit={v.tegenFit} side="away" size="clamp(110px, 24vmin, 260px)" ringColor={v.tegenKleur ?? undefined} />
+              </span>
+            </span>
+          </div>
+        ) : (
+          /* +1: het logo van de scorende club groeit én draait rond. */
+          <span className="gk-viering-logo draai">
+            <TeamLogo name={v.team} logoUrl={v.logo} logoFit={v.fit} side="home" size="clamp(140px, 34vmin, 380px)" ringColor={v.kleur ?? undefined} />
+          </span>
+        )}
         <span className="gk-viering-punten">+{v.punten}</span>
         <span className="gk-viering-titel">DOELPUNT!</span>
         <span className="gk-viering-team">{v.team}</span>
@@ -235,10 +268,23 @@ export function GroepKantine({ naam, initial }: { naam: string; initial: GroepDa
             const kant = m.score.home > oud.home ? ('home' as const) : m.score.away > oud.away ? ('away' as const) : null
             if (kant) {
               const team = kant === 'home' ? m.home : m.away
+              const tegen = kant === 'home' ? m.away : m.home
               if (team) {
                 const punten = kant === 'home' ? m.score.home - oud.home : m.score.away - oud.away
                 const key = ++vieringSeq.current
-                setViering({ key, team, punten, kleur: d.kleuren[team] ?? null, logo: d.logos[team] ?? null, fit: d.fits[team] ?? null, reeks: m.reeksNaam })
+                setViering({
+                  key,
+                  team,
+                  punten,
+                  kleur: d.kleuren[team] ?? null,
+                  logo: d.logos[team] ?? null,
+                  fit: d.fits[team] ?? null,
+                  reeks: m.reeksNaam,
+                  tegen: tegen ?? null,
+                  tegenLogo: tegen ? d.logos[tegen] ?? null : null,
+                  tegenFit: tegen ? d.fits[tegen] ?? null : null,
+                  tegenKleur: tegen ? d.kleuren[tegen] ?? null : null,
+                })
                 if (vieringTimer.current) clearTimeout(vieringTimer.current)
                 vieringTimer.current = setTimeout(() => setViering((v) => (v && v.key === key ? null : v)), VIERING_MS)
               }
