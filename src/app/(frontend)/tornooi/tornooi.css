@@ -1865,24 +1865,25 @@ button.trn-toplink {
 .dp-affiche {
   grid-area: affiche;
   display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-}
-.dp-ploeg {
-  display: flex;
   align-items: center;
   gap: 8px;
   min-width: 0;
 }
-.dp-ploegnaam {
-  font-weight: 700;
-  font-size: 0.98rem;
+/* De namen mogen over twee regels afbreken: zo lees je ze volledig i.p.v. "KBC Sint-Michiels
+   A –…". Bij extreem lange namen kapt de derde regel af. */
+.dp-namen {
+  flex: 1 1 auto;
   min-width: 0;
+  font-weight: 700;
+  font-size: 0.95rem;
+  line-height: 1.25;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
+.dp-namen em { font-style: normal; color: var(--dim); }
 /* Alle bijzaken samen op één rustige regel onder de affiche. */
 .dp-meta {
   grid-area: meta;

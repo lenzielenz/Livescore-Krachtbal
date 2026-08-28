@@ -266,21 +266,18 @@ export function Dagprogramma({
               {(
             <li className={`dp-rij ${m.status}`}>
               <span className="dp-uur">{m.plannedAt ? tijdBE(m.plannedAt) : '—'}</span>
-              {/* De twee ploegen onder elkaar, elk met hun logo: zo staan de namen er altijd
-                  volledig (naast elkaar werden ze op gsm afgekapt). */}
+              {/* Affiche: thuislogo links, uitlogo rechts, de namen ertussen. De namen mogen
+                  over twee regels lopen i.p.v. hard afgekapt te worden. */}
               <span className="dp-affiche">
-                <span className="dp-ploeg">
-                  {m.home && (
-                    <TeamLogo name={m.home} logoUrl={data.logos[m.home] ?? null} logoFit={data.fits[m.home] ?? null} side="home" size="1.5em" ringColor={m.home ? data.kleuren[m.home] : undefined} />
-                  )}
-                  <span className="dp-ploegnaam">{m.home}</span>
+                {m.home && (
+                  <TeamLogo name={m.home} logoUrl={data.logos[m.home] ?? null} logoFit={data.fits[m.home] ?? null} side="home" size="1.6em" ringColor={m.home ? data.kleuren[m.home] : undefined} />
+                )}
+                <span className="dp-namen">
+                  {m.home} <em>–</em> {m.away}
                 </span>
-                <span className="dp-ploeg">
-                  {m.away && (
-                    <TeamLogo name={m.away} logoUrl={data.logos[m.away] ?? null} logoFit={data.fits[m.away] ?? null} side="away" size="1.5em" ringColor={m.away ? data.kleuren[m.away] : undefined} />
-                  )}
-                  <span className="dp-ploegnaam">{m.away}</span>
-                </span>
+                {m.away && (
+                  <TeamLogo name={m.away} logoUrl={data.logos[m.away] ?? null} logoFit={data.fits[m.away] ?? null} side="away" size="1.6em" ringColor={m.away ? data.kleuren[m.away] : undefined} />
+                )}
               </span>
               {/* Eén rustige metaregel met al de rest. */}
               <span className="dp-meta">
