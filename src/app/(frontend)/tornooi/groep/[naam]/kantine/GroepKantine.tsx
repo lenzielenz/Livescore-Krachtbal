@@ -43,7 +43,7 @@ function LiveBord({ m, groot, logos, kleuren, fits }: { m: GroepMatch; groot: bo
       <div className="gk-bord-kop">
         <span className="gk-bord-label">{m.label}</span>
         <span className="gk-bord-reeks">{m.reeksNaam}</span>
-        <span className="gk-bord-klok">H{m.currentHalf} · {fmtClock(clock)}</span>
+        <span className="gk-bord-klok">{m.veld != null ? `Veld ${m.veld} · ` : ''}H{m.currentHalf} · {fmtClock(clock)}</span>
       </div>
       <div className="gk-bord-body">
         <span className="gk-bord-ploeg">

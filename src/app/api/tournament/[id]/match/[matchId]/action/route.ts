@@ -3,6 +3,7 @@ import { withLock } from '@/lib/async-mutex'
 import { getPayloadClient } from '@/lib/payload-client'
 import {
   advanceHalf,
+  assignVeld,
   buildTournamentState,
   finishMatch,
   planMatch,
@@ -96,6 +97,10 @@ export async function POST(
       case 'wissel':
         // Thuis- en uitploeg van plaats wisselen — kan enkel vóór de start.
         await swapSides(payload, matchId)
+        break
+      case 'veld':
+        // Wedstrijd aan een veld toewijzen (of loskoppelen met null).
+        await assignVeld(payload, matchId, body.veld == null || body.veld === '' ? null : Number(body.veld))
         break
       case 'finish':
         await finishMatch(payload, matchId, body.winner === 'home' ? 'home' : body.winner === 'away' ? 'away' : undefined)

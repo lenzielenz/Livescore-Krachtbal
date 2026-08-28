@@ -79,6 +79,15 @@ export const TournamentMatches: CollectionConfig = {
       admin: { date: { pickerAppearance: 'dayAndTime', displayFormat: 'dd/MM/yyyy HH:mm', timeFormat: 'HH:mm' } },
     },
     {
+      // Op welk veld deze wedstrijd gespeeld wordt (1..aantal velden van de tornooidag).
+      name: 'veld',
+      label: 'Veld',
+      type: 'number',
+      min: 1,
+      max: 12,
+      admin: { description: 'Veldnummer op de tornooidag (leeg = nog niet toegewezen).' },
+    },
+    {
       // Event-sourced score: lijst van { side, points (1/2), half, clock, ts }.
       name: 'goals',
       label: 'Doelpunten',

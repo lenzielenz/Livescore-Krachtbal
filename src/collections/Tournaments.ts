@@ -113,6 +113,29 @@ export const Tournaments: CollectionConfig = {
       admin: { readOnly: true, description: 'Vastgelegd bij het aanmaken.' },
     },
     {
+      // Wedstrijdduur van deze categorie: minuten per helft (2×N). Leeg = de standaard van de
+      // leeftijdscategorie (2×20 jeugd, 2×25 vanaf U18). Werkt door in klok, aantekentafel en
+      // dagprogramma voor álle wedstrijden van dit tornooi.
+      name: 'halfMinutes',
+      label: 'Minuten per helft',
+      type: 'number',
+      min: 1,
+      max: 60,
+      admin: { description: 'Bv. 10 voor 2×10 min. Leeg = standaard van de categorie.' },
+    },
+    {
+      // Aantal velden op de tornooidag: het dagprogramma toont per veld een veldoverzicht en
+      // elke wedstrijd kan aan een veld toegewezen worden. Bij een tornooidag met meerdere
+      // reeksen geldt de waarde van de éérste reeks die er een instelde (zelfde patroon als
+      // de organiserende club).
+      name: 'veldCount',
+      label: 'Aantal velden',
+      type: 'number',
+      min: 1,
+      max: 12,
+      admin: { description: 'Hoeveel velden liggen er op deze tornooidag?' },
+    },
+    {
       // Expliciete koppeling ploegnaam → club, ingegeven bij het aanmaken. Zo is het clublogo
       // betrouwbaar (i.p.v. naamherkenning) en is de club gekoppeld (basis om info te bezorgen).
       // Vorm: [{ name: string, clubId: number }].
