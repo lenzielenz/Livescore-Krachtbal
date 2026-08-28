@@ -45,6 +45,11 @@ export default async function TornooiGroepPage({ params }: { params: Promise<{ n
           </p>
         </div>
         <div className="trn-actions">
+          {/* Het dagprogramma is publiek: zo ziet iedereen wanneer welke wedstrijd op welk veld
+              gespeeld wordt. */}
+          <Link href={`/tornooi/groep/${encodeURIComponent(naam)}/programma`} className="trn-btn">
+            📋 Dagprogramma
+          </Link>
           {/* De kantinescherm-link is voor de organisatie (tv opzetten); supporters volgen hier
               gewoon de uurregeling en de rangschikking per categorie. */}
           {canManage && (

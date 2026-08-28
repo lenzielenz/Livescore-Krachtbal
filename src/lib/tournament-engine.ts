@@ -43,6 +43,8 @@ export type TMatchState = {
   clockRunning: boolean
   /** Gepland aanvangsuur (ISO) — het groep-kantinescherm telt hiernaar af. */
   plannedAt: string | null
+  /** Veldnummer op de tornooidag (null = nog niet toegewezen). */
+  veld: number | null
   /** Laatst genoteerde doelpunt — wat "undo" zou wegnemen; voedt ook de kantine-viering. */
   lastGoal: { side: Side; points: 1 | 2 } | null
 }
@@ -83,6 +85,7 @@ type MatchDoc = {
   clockRunning?: boolean | null
   clockUpdatedAt?: string | null
   plannedAt?: string | null
+  veld?: number | null
 }
 
 const COLL = 'tournament-matches' as const
@@ -124,6 +127,7 @@ function toState(m: MatchDoc): TMatchState {
     clockSeconds: Math.floor(liveClock(m)),
     clockRunning: Boolean(m.clockRunning),
     plannedAt: (m as { plannedAt?: string | null }).plannedAt ?? null,
+    veld: (m as { veld?: number | null }).veld ?? null,
     lastGoal: laatste ? { side: laatste.side, points: laatste.points === 2 ? 2 : 1 } : null,
   }
 }
@@ -382,6 +386,18 @@ export async function swapSides(payload: Payload, matchId: number): Promise<void
   // Round-robin-labels dragen de affiche ("A – B"): draai die mee; ronde-labels blijven staan.
   const label = m.label === `${m.home} – ${m.away}` ? `${m.away} – ${m.home}` : m.label
   await update(payload, matchId, { home: m.away, away: m.home, label } as Partial<MatchDoc>)
+}
+
+/** Wijs een wedstrijd toe aan een veld (1..12) of maak de toewijzing ongedaan (null). */
+export async function assignVeld(payload: Payload, matchId: number, veld: number | null): Promise<void> {
+  if (veld != null && (!Number.isInteger(veld) || veld < 1 || veld > 12)) throw new Error('Ongeldig veldnummer.')
+  await update(payload, matchId, { veld } as Partial<MatchDoc>)
+}
+
+/** Aantal velden van de tornooidag (op het tornooi zelf; de groep leest de eerste ingestelde). */
+export async function setVeldCount(payload: Payload, tournamentId: number, n: number): Promise<void> {
+  if (!Number.isInteger(n) || n < 1 || n > 12) throw new Error('Aantal velden moet tussen 1 en 12 liggen.')
+  await payload.update({ collection: 'tournaments', id: tournamentId, data: { veldCount: n }, overrideAccess: true })
 }
 
 export async function setClock(

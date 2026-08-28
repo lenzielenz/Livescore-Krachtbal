@@ -1041,6 +1041,10 @@ export interface Tournament {
    * Vastgelegd bij het aanmaken.
    */
   teamCount?: number | null;
+  /**
+   * Hoeveel velden liggen er op deze tornooidag?
+   */
+  veldCount?: number | null;
   teamClubs?:
     | {
         [k: string]: unknown;
@@ -1081,6 +1085,10 @@ export interface TournamentMatch {
   status: 'pending' | 'live' | 'finished';
   winner?: ('home' | 'away') | null;
   plannedAt?: string | null;
+  /**
+   * Veldnummer op de tornooidag (leeg = nog niet toegewezen).
+   */
+  veld?: number | null;
   goals?:
     | {
         [k: string]: unknown;
@@ -2020,6 +2028,7 @@ export interface TournamentsSelect<T extends boolean = true> {
   format?: T;
   toonOpLive?: T;
   teamCount?: T;
+  veldCount?: T;
   teamClubs?: T;
   teamTeams?: T;
   updatedAt?: T;
@@ -2040,6 +2049,7 @@ export interface TournamentMatchesSelect<T extends boolean = true> {
   status?: T;
   winner?: T;
   plannedAt?: T;
+  veld?: T;
   goals?: T;
   crosses?: T;
   timeouts?: T;

@@ -22,6 +22,8 @@ export type GroepData = {
   fits: Record<string, LogoFit>
   /** Organiserende club (eerste reeks die er een instelde) — kleurt het kantinescherm. */
   host: GroepHost | null
+  /** Aantal velden op de tornooidag (eerste reeks die het instelde; null = nog niet gezet). */
+  veldCount: number | null
 }
 
 const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]/g, '')
@@ -68,6 +70,15 @@ export async function loadGroepData(payload: Payload, naam: string): Promise<Gro
   const kleuren: Record<string, string> = {}
   const fits: Record<string, LogoFit> = {}
   let host: GroepHost | null = null
+  // Aantal velden: de eerste reeks die het instelde bepaalt het voor de hele dag.
+  let veldCount: number | null = null
+  for (const t of tornooien) {
+    const n = Number((t as { veldCount?: number | null }).veldCount)
+    if (Number.isFinite(n) && n >= 1) {
+      veldCount = n
+      break
+    }
+  }
 
   for (const t of tornooien) {
     const state = await buildTournamentState(payload, t.id).catch(() => null)
@@ -123,5 +134,5 @@ export async function loadGroepData(payload: Payload, naam: string): Promise<Gro
     }
   }
 
-  return { naam, reeksen, matches, logos, kleuren, fits, host }
+  return { naam, reeksen, matches, logos, kleuren, fits, host, veldCount }
 }

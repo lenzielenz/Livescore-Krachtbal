@@ -113,6 +113,18 @@ export const Tournaments: CollectionConfig = {
       admin: { readOnly: true, description: 'Vastgelegd bij het aanmaken.' },
     },
     {
+      // Aantal velden op de tornooidag: het dagprogramma toont per veld een veldoverzicht en
+      // elke wedstrijd kan aan een veld toegewezen worden. Bij een tornooidag met meerdere
+      // reeksen geldt de waarde van de éérste reeks die er een instelde (zelfde patroon als
+      // de organiserende club).
+      name: 'veldCount',
+      label: 'Aantal velden',
+      type: 'number',
+      min: 1,
+      max: 12,
+      admin: { description: 'Hoeveel velden liggen er op deze tornooidag?' },
+    },
+    {
       // Expliciete koppeling ploegnaam → club, ingegeven bij het aanmaken. Zo is het clublogo
       // betrouwbaar (i.p.v. naamherkenning) en is de club gekoppeld (basis om info te bezorgen).
       // Vorm: [{ name: string, clubId: number }].
