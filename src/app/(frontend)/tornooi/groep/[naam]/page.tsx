@@ -7,6 +7,7 @@ import { CATEGORY_OPTIONS } from '@/lib/categories'
 import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
 import { VerwijderTornooi } from '../../VerwijderTornooi'
+import { FotoUpload } from './FotoUpload'
 import '../../tornooi.css'
 
 export const dynamic = 'force-dynamic'
@@ -24,7 +25,8 @@ export default async function TornooiGroepPage({ params }: { params: Promise<{ n
   if (!naam) notFound()
 
   const payload = await getPayloadClient()
-  const canManage = isFederationLevel(await getAuthUser())
+  const user = await getAuthUser()
+  const canManage = isFederationLevel(user)
   const res = await payload
     .find({ collection: 'tournaments', where: { groep: { equals: naam } }, sort: 'createdAt', depth: 0, limit: 50 })
     .catch(() => ({ docs: [] }))
@@ -33,6 +35,13 @@ export default async function TornooiGroepPage({ params }: { params: Promise<{ n
 
   const live = docs.filter((t) => t.status === 'live')
   const done = docs.filter((t) => t.status === 'finished')
+
+  // Ingestuurde supportersfoto's: de federatie ziet meteen hoeveel er al binnen zijn.
+  const fotoRes = canManage
+    ? await payload
+        .find({ collection: 'tornooi-fotos', where: { groep: { equals: naam } }, limit: 0, depth: 0 })
+        .catch(() => ({ totalDocs: 0 }))
+    : { totalDocs: 0 }
 
   return (
     <>
@@ -55,6 +64,13 @@ export default async function TornooiGroepPage({ params }: { params: Promise<{ n
           {canManage && (
             <Link href={`/tornooi/groep/${encodeURIComponent(naam)}/kantine`} className="trn-btn primary">
               📺 Kantinescherm (hele dag)
+            </Link>
+          )}
+          {/* Supporters delen hun foto's van de dag — die verzamelen federatie-only. */}
+          <FotoUpload groep={naam} ingelogd={Boolean(user)} />
+          {canManage && (
+            <Link href={`/tornooi/groep/${encodeURIComponent(naam)}/fotos`} className="trn-btn">
+              📷 Foto’s ({fotoRes.totalDocs})
             </Link>
           )}
           {/* Nieuwe categorie meteen aan deze tornooidag hangen: het aanmaakformulier opent met

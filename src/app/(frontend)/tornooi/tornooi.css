@@ -1594,9 +1594,26 @@
 }
 .gk-tick {
   display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  font-size: clamp(1rem, 2.4vmin, 1.6rem);
+}
+.gk-tick-affiche {
+  display: inline-flex;
   align-items: center;
   gap: 10px;
-  font-size: clamp(1rem, 2.4vmin, 1.6rem);
+}
+.gk-tick-reeks {
+  font-size: 0.58em;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--dim);
+  max-width: 16em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .gk-tick-vs {
   color: var(--dim);
@@ -1830,4 +1847,123 @@
   border: 1px solid var(--line);
   border-radius: 999px;
   padding: 2px 9px;
+}
+
+/* Publieke uur+veld-lijn op de wedstrijdkaart: zo ziet elke supporter wanneer en waar er
+   gespeeld wordt — zonder één knop. */
+.trn-match-plan {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--dim);
+  margin: 2px 0 6px;
+}
+.trn-match-veld {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  border-radius: 999px;
+  padding: 1px 9px;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+/* Beheer-strook onder de kaart: uur-invoer en veld-keuze naast elkaar. */
+.trn-match-planning {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.trn-veldkeuze {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 6px 8px;
+  color: var(--txt);
+  font: inherit;
+  font-size: 0.82rem;
+}
+
+/* Veldkeuze in de beheer-planner: compact naast het uur. */
+.trn-planlist select.trn-planveld { flex: 0 1 110px; }
+
+/* ── Supportersfoto's van de tornooidag ───────────────────────────────────────────────────────
+   Upload-knop voor supporters (met bevestiging) + het federatie-raster waar alles samenkomt. */
+.trn-fotoupload {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.trn-foto-melding {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #6ee7a0;
+}
+.tf-raster {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+}
+.tf-kaart {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.tf-kaart img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  background: #0b0e12;
+}
+.tf-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  padding: 7px 10px;
+  font-size: 0.78rem;
+  color: var(--dim);
+}
+.tf-meta b {
+  color: var(--txt);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Foto-opdracht: het speelse kaartje naast de uploadknop + de badge in het federatie-raster. */
+.trn-foto-opdracht {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--txt);
+  background: color-mix(in srgb, var(--accent) 12%, var(--panel));
+  border: 1px dashed color-mix(in srgb, var(--accent) 55%, transparent);
+  border-radius: 999px;
+  padding: 6px 14px;
+}
+.trn-foto-opdracht em {
+  font-style: normal;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.tf-opdracht {
+  display: block;
+  padding: 0 10px 8px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--accent);
 }

@@ -8,6 +8,7 @@ import sharp from 'sharp'
 
 import { Users } from './collections/Users'
 import { Media } from './collections/Media'
+import { TornooiFotos } from './collections/TornooiFotos'
 import { Clubs } from './collections/Clubs'
 import { Teams } from './collections/Teams'
 import { Players } from './collections/Players'
@@ -105,6 +106,7 @@ export default buildConfig({
     Sanctions,
     Tournaments,
     TournamentMatches,
+    TornooiFotos,
     Trainingmetingen,
     Trainingdoelen,
     Trainingen,

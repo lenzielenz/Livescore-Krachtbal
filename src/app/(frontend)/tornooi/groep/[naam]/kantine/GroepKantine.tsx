@@ -308,10 +308,14 @@ function KomendTicker({ komend, logos, kleuren, fits }: { komend: GroepMatch[]; 
     <span className="gk-ticker-helft" aria-hidden={verborgen}>
       {komend.map((m) => (
         <span key={m.id} className="gk-tick">
-          {m.home && <TeamLogo name={m.home} logoUrl={logos[m.home] ?? null} logoFit={fits[m.home] ?? null} side="home" size="1.7em" ringColor={m.home ? kleuren[m.home] : undefined} />}
-          <span className="gk-tick-vs">–</span>
-          {m.away && <TeamLogo name={m.away} logoUrl={logos[m.away] ?? null} logoFit={fits[m.away] ?? null} side="away" size="1.7em" ringColor={m.away ? kleuren[m.away] : undefined} />}
-          {m.plannedAt && <span className="gk-tick-uur">{tijdBE(m.plannedAt)}</span>}
+          <span className="gk-tick-affiche">
+            {m.home && <TeamLogo name={m.home} logoUrl={logos[m.home] ?? null} logoFit={fits[m.home] ?? null} side="home" size="1.7em" ringColor={m.home ? kleuren[m.home] : undefined} />}
+            <span className="gk-tick-vs">–</span>
+            {m.away && <TeamLogo name={m.away} logoUrl={logos[m.away] ?? null} logoFit={fits[m.away] ?? null} side="away" size="1.7em" ringColor={m.away ? kleuren[m.away] : undefined} />}
+            {m.plannedAt && <span className="gk-tick-uur">{tijdBE(m.plannedAt)}</span>}
+          </span>
+          {/* Reeksnaam centraal onder de affiche: zo ziet de kantine meteen wélke reeks komt. */}
+          <span className="gk-tick-reeks">{m.reeksNaam}</span>
         </span>
       ))}
     </span>

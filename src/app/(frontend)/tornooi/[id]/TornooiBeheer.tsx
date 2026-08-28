@@ -13,7 +13,7 @@ import { nextPow2, seededSlots, shuffle } from '@/lib/tournament'
 //      en om welk uur ("A tegen C, daarna C tegen B") — of via Toggle opnieuw laten genereren;
 //    – knock-out: de loting herschikken (↑/↓ of Toggle) mét zicht op de resulterende paren.
 
-type Wedstrijd = { home: string; away: string; plannedAt: string | null }
+type Wedstrijd = { home: string; away: string; plannedAt: string | null; veld: number | null }
 
 // ISO → waarde voor <input type="datetime-local"> in lokale tijd (leeg als niet gepland).
 function naarLokaal(iso: string | null): string {
@@ -33,6 +33,7 @@ export function TornooiBeheer({
   magHerloten,
   format,
   schema,
+  veldCount = 0,
 }: {
   id: number
   naam: string
@@ -46,6 +47,8 @@ export function TornooiBeheer({
   format: 'knockout' | 'roundrobin'
   /** Huidig speelschema (enkel round-robin): voorinvulling van de manuele planner. */
   schema: Wedstrijd[]
+  /** Aantal velden van de tornooidag — voedt de veldkeuze per geplande wedstrijd. */
+  veldCount?: number
 }) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
@@ -58,9 +61,12 @@ export function TornooiBeheer({
   const [namen, setNamen] = useState<string[]>(teams)
   const [volgorde, setVolgorde] = useState<string[]>(teams)
   // Manuele planner (round-robin): bewerkbare rijenlijst, datetime in lokale invoerwaarde.
-  const [plan, setPlan] = useState<{ home: string; away: string; tijd: string }[]>(
-    schema.map((w) => ({ home: w.home, away: w.away, tijd: naarLokaal(w.plannedAt) })),
+  const [plan, setPlan] = useState<{ home: string; away: string; tijd: string; veld: string }[]>(
+    schema.map((w) => ({ home: w.home, away: w.away, tijd: naarLokaal(w.plannedAt), veld: w.veld != null ? String(w.veld) : '' })),
   )
+  // Veldkeuze: het ingestelde aantal velden; zonder instelling laten we tot 12 toe (de server
+  // aanvaardt 1..12) zodat toewijzen nooit geblokkeerd is.
+  const veldOpties = veldCount >= 1 ? veldCount : 12
 
   const patch = async (body: Record<string, unknown>): Promise<boolean> => {
     setBusy(true)
@@ -119,7 +125,7 @@ export function TornooiBeheer({
   }
 
   // ── Manuele planner (round-robin) ──────────────────────────────────────────
-  const zetPlan = (i: number, deel: Partial<{ home: string; away: string; tijd: string }>) =>
+  const zetPlan = (i: number, deel: Partial<{ home: string; away: string; tijd: string; veld: string }>) =>
     setPlan((p) => p.map((r, j) => (j === i ? { ...r, ...deel } : r)))
 
   const schuifPlan = (i: number, d: number) =>
@@ -134,9 +140,9 @@ export function TornooiBeheer({
   const genereerAlleDuels = () => {
     // Toggle: alle onderlinge duels opnieuw, in een vers geschudde volgorde. Bewaren doe je daarna.
     const door = shuffle(teams, Math.random)
-    const rijen: { home: string; away: string; tijd: string }[] = []
+    const rijen: { home: string; away: string; tijd: string; veld: string }[] = []
     for (let i = 0; i < door.length; i++)
-      for (let j = i + 1; j < door.length; j++) rijen.push({ home: door[i], away: door[j], tijd: '' })
+      for (let j = i + 1; j < door.length; j++) rijen.push({ home: door[i], away: door[j], tijd: '', veld: '' })
     setPlan(rijen)
   }
 
@@ -151,6 +157,7 @@ export function TornooiBeheer({
         home: r.home,
         away: r.away,
         plannedAt: r.tijd ? new Date(r.tijd).toISOString() : null,
+        veld: r.veld ? Number(r.veld) : null,
       })),
     })
   }
@@ -273,6 +280,17 @@ export function TornooiBeheer({
                   onChange={(e) => zetPlan(i, { tijd: e.target.value })}
                   aria-label="Gepland uur"
                 />
+                <select
+                  className="trn-planveld"
+                  value={r.veld}
+                  onChange={(e) => zetPlan(i, { veld: e.target.value })}
+                  aria-label="Veld"
+                >
+                  <option value="">veld —</option>
+                  {Array.from({ length: veldOpties }, (_, v) => (
+                    <option key={v + 1} value={v + 1}>Veld {v + 1}</option>
+                  ))}
+                </select>
                 <span className="trn-moves">
                   <button type="button" onClick={() => schuifPlan(i, -1)} disabled={i === 0} aria-label="Vroeger">↑</button>
                   <button type="button" onClick={() => schuifPlan(i, 1)} disabled={i === plan.length - 1} aria-label="Later">↓</button>
@@ -285,7 +303,7 @@ export function TornooiBeheer({
             <button
               type="button"
               className="trn-btn"
-              onClick={() => setPlan((p) => [...p, { home: '', away: '', tijd: '' }])}
+              onClick={() => setPlan((p) => [...p, { home: '', away: '', tijd: '', veld: '' }])}
             >
               + Wedstrijd toevoegen
             </button>

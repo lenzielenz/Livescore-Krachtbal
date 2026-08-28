@@ -23,6 +23,17 @@ function resolveMediaDir(): string {
   return path.resolve(process.cwd(), 'media')
 }
 
+/** Submap op dezelfde persistente opslag, voor andere upload-collecties (bv. tornooifoto's). */
+export function uploadDirFor(sub: string): string {
+  const dir = path.join(resolveMediaDir(), sub)
+  try {
+    fs.mkdirSync(dir, { recursive: true })
+  } catch (err) {
+    console.error(`[media] Kon opslagmap niet aanmaken: ${dir}`, err)
+  }
+  return dir
+}
+
 const mediaDir = resolveMediaDir()
 
 // Zorg dat de map bestaat zodat de allereerste upload niet faalt.

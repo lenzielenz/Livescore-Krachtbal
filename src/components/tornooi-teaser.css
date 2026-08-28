@@ -1,0 +1,32 @@
+/* Homepage-snellink naar de tornooidag: één rustige banner met aftelklok — geen wedstrijden. */
+.tteaser {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 0 0 16px;
+  padding: 14px 18px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--accent, #ffd873) 40%, var(--line, #1d3b2c));
+  background:
+    radial-gradient(120% 160% at 0% 50%, color-mix(in srgb, var(--accent, #ffd873) 14%, transparent), transparent 60%),
+    var(--panel, #10141a);
+  color: var(--txt, #e8f5ee);
+  text-decoration: none;
+}
+.tteaser:hover { border-color: var(--accent, #ffd873); }
+.tteaser.live { border-color: color-mix(in srgb, #6ee7a0 55%, var(--line, #1d3b2c)); }
+.tteaser-logo {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #fff;
+  object-fit: contain;
+  flex: 0 0 auto;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.16), 0 4px 12px rgba(0, 0, 0, 0.35);
+}
+.tteaser-tekst { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.tteaser-titel { font-weight: 800; font-size: 1.05rem; }
+.tteaser-sub { color: var(--dim, #9fb6aa); font-size: 0.9rem; }
+.tteaser-sub b { color: var(--accent, #ffd873); font-variant-numeric: tabular-nums; }
+.tteaser-sub.live { color: #6ee7a0; font-weight: 700; }
+.tteaser-pijl { font-size: 1.3rem; color: var(--accent, #ffd873); flex: 0 0 auto; }
