@@ -45,9 +45,13 @@ export default async function TornooiGroepPage({ params }: { params: Promise<{ n
           </p>
         </div>
         <div className="trn-actions">
-          <Link href={`/tornooi/groep/${encodeURIComponent(naam)}/kantine`} className="trn-btn primary">
-            📺 Kantinescherm (hele dag)
-          </Link>
+          {/* De kantinescherm-link is voor de organisatie (tv opzetten); supporters volgen hier
+              gewoon de uurregeling en de rangschikking per categorie. */}
+          {canManage && (
+            <Link href={`/tornooi/groep/${encodeURIComponent(naam)}/kantine`} className="trn-btn primary">
+              📺 Kantinescherm (hele dag)
+            </Link>
+          )}
           {/* Nieuwe categorie meteen aan deze tornooidag hangen: het aanmaakformulier opent met
               de hoofdgroep al ingevuld, dus ze verschijnt vanzelf op ditzelfde kantinescherm. */}
           {canManage && (

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 
 import { TeamLogo } from '@/components/TeamLogo'
+import type { LogoFit } from '@/lib/logo-fit'
 import type { GroepData, GroepMatch } from '@/lib/tornooi-groep'
 import { fmtClock, useTicking } from '../../../useTournament'
 
@@ -27,7 +28,7 @@ function kolommenVoor(n: number): number {
   return 4
 }
 
-function LiveBord({ m, groot, logos, kleuren }: { m: GroepMatch; groot: boolean; logos: Record<string, string>; kleuren: Record<string, string> }) {
+function LiveBord({ m, groot, logos, kleuren, fits }: { m: GroepMatch; groot: boolean; logos: Record<string, string>; kleuren: Record<string, string>; fits: Record<string, LogoFit> }) {
   const clock = useTicking(m.clockSeconds, m.clockRunning)
   const logoMaat = groot ? 'clamp(72px, 14vmin, 170px)' : 'clamp(48px, 8vmin, 110px)'
   // Clubkleuren dragen het bord (zelfde taal als de live-bordkaarten van de competitie).
@@ -46,12 +47,12 @@ function LiveBord({ m, groot, logos, kleuren }: { m: GroepMatch; groot: boolean;
       </div>
       <div className="gk-bord-body">
         <span className="gk-bord-ploeg">
-          {m.home && <TeamLogo name={m.home} logoUrl={logos[m.home] ?? null} side="home" size={logoMaat} ringColor={m.home ? kleuren[m.home] : undefined} />}
+          {m.home && <TeamLogo name={m.home} logoUrl={logos[m.home] ?? null} logoFit={fits[m.home] ?? null} side="home" size={logoMaat} ringColor={m.home ? kleuren[m.home] : undefined} />}
           <span className="gk-bord-team">{m.home ?? '—'}</span>
         </span>
         <span className="gk-bord-score">{m.score.home} – {m.score.away}</span>
         <span className="gk-bord-ploeg uit">
-          {m.away && <TeamLogo name={m.away} logoUrl={logos[m.away] ?? null} side="away" size={logoMaat} ringColor={m.away ? kleuren[m.away] : undefined} />}
+          {m.away && <TeamLogo name={m.away} logoUrl={logos[m.away] ?? null} logoFit={fits[m.away] ?? null} side="away" size={logoMaat} ringColor={m.away ? kleuren[m.away] : undefined} />}
           <span className="gk-bord-team">{m.away ?? '—'}</span>
         </span>
       </div>
@@ -87,7 +88,7 @@ const tijdBE = (iso: string) =>
   new Date(iso).toLocaleTimeString('nl-BE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Brussels' })
 
 // Schermvullende doelpunt-viering: clubkleur-burst + logo + hoeveel punten erbij kwamen.
-type Viering = { key: number; team: string; punten: number; kleur: string | null; logo: string | null; reeks: string }
+type Viering = { key: number; team: string; punten: number; kleur: string | null; logo: string | null; fit: LogoFit | null; reeks: string }
 
 function VieringOverlay({ v }: { v: Viering }) {
   return (
@@ -95,7 +96,7 @@ function VieringOverlay({ v }: { v: Viering }) {
       <div className="gk-viering-burst" aria-hidden />
       <div className="gk-viering-inhoud">
         <span className="gk-viering-logo">
-          <TeamLogo name={v.team} logoUrl={v.logo} side="home" size="clamp(140px, 34vmin, 380px)" ringColor={v.kleur ?? undefined} />
+          <TeamLogo name={v.team} logoUrl={v.logo} logoFit={v.fit} side="home" size="clamp(140px, 34vmin, 380px)" ringColor={v.kleur ?? undefined} />
         </span>
         <span className="gk-viering-punten">+{v.punten}</span>
         <span className="gk-viering-titel">DOELPUNT!</span>
@@ -170,7 +171,7 @@ export function GroepKantine({ naam, initial }: { naam: string; initial: GroepDa
               if (team) {
                 const punten = kant === 'home' ? m.score.home - oud.home : m.score.away - oud.away
                 const key = ++vieringSeq.current
-                setViering({ key, team, punten, kleur: d.kleuren[team] ?? null, logo: d.logos[team] ?? null, reeks: m.reeksNaam })
+                setViering({ key, team, punten, kleur: d.kleuren[team] ?? null, logo: d.logos[team] ?? null, fit: d.fits[team] ?? null, reeks: m.reeksNaam })
                 if (vieringTimer.current) clearTimeout(vieringTimer.current)
                 vieringTimer.current = setTimeout(() => setViering((v) => (v && v.key === key ? null : v)), VIERING_MS)
               }
@@ -237,7 +238,7 @@ export function GroepKantine({ naam, initial }: { naam: string; initial: GroepDa
       {live.length > 0 ? (
         <div className="gk-raster" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
           {live.map((m) => (
-            <LiveBord key={m.id} m={m} groot={live.length === 1} logos={data.logos} kleuren={data.kleuren} />
+            <LiveBord key={m.id} m={m} groot={live.length === 1} logos={data.logos} kleuren={data.kleuren} fits={data.fits} />
           ))}
         </div>
       ) : komend.length > 0 ? (
@@ -264,13 +265,13 @@ export function GroepKantine({ naam, initial }: { naam: string; initial: GroepDa
                 <span className="gk-komend-uur">{m.plannedAt ? tijdBE(m.plannedAt) : '—'}</span>
                 <span className="gk-komend-affiche">
                   {m.home && (
-                    <TeamLogo name={m.home} logoUrl={data.logos[m.home] ?? null} side="home" size="1.9em" ringColor={data.kleuren[m.home]} />
+                    <TeamLogo name={m.home} logoUrl={data.logos[m.home] ?? null} logoFit={data.fits[m.home] ?? null} side="home" size="1.9em" ringColor={data.kleuren[m.home]} />
                   )}
                   <span className="gk-komend-team">{m.home}</span>
                   <span className="gk-komend-vs">VS</span>
                   <span className="gk-komend-team">{m.away}</span>
                   {m.away && (
-                    <TeamLogo name={m.away} logoUrl={data.logos[m.away] ?? null} side="away" size="1.9em" ringColor={data.kleuren[m.away]} />
+                    <TeamLogo name={m.away} logoUrl={data.logos[m.away] ?? null} logoFit={data.fits[m.away] ?? null} side="away" size="1.9em" ringColor={data.kleuren[m.away]} />
                   )}
                 </span>
                 <span className="gk-komend-reeks">{m.reeksNaam}</span>
@@ -294,12 +295,12 @@ export function GroepKantine({ naam, initial }: { naam: string; initial: GroepDa
       {/* Alle nog te spelen wedstrijden schuiven in een doorlopende balk onderaan voorbij:
           gewoon de logo's tegen elkaar met het uur ernaast. Bij een handvol wedstrijden staat
           de balk stil (niets om te scrollen); daarboven loopt ze naadloos in een lus. */}
-      {komend.length > 0 && <KomendTicker komend={komend} logos={data.logos} kleuren={data.kleuren} />}
+      {komend.length > 0 && <KomendTicker komend={komend} logos={data.logos} kleuren={data.kleuren} fits={data.fits} />}
     </div>
   )
 }
 
-function KomendTicker({ komend, logos, kleuren }: { komend: GroepMatch[]; logos: Record<string, string>; kleuren: Record<string, string> }) {
+function KomendTicker({ komend, logos, kleuren, fits }: { komend: GroepMatch[]; logos: Record<string, string>; kleuren: Record<string, string>; fits: Record<string, LogoFit> }) {
   const loop = komend.length >= 4
   // Snelheid schaalt met de lengte van de lijst: elke wedstrijd krijgt ± 5 s in beeld.
   const duur = `${Math.max(20, komend.length * 5)}s`
@@ -307,9 +308,9 @@ function KomendTicker({ komend, logos, kleuren }: { komend: GroepMatch[]; logos:
     <span className="gk-ticker-helft" aria-hidden={verborgen}>
       {komend.map((m) => (
         <span key={m.id} className="gk-tick">
-          {m.home && <TeamLogo name={m.home} logoUrl={logos[m.home] ?? null} side="home" size="1.7em" ringColor={m.home ? kleuren[m.home] : undefined} />}
+          {m.home && <TeamLogo name={m.home} logoUrl={logos[m.home] ?? null} logoFit={fits[m.home] ?? null} side="home" size="1.7em" ringColor={m.home ? kleuren[m.home] : undefined} />}
           <span className="gk-tick-vs">–</span>
-          {m.away && <TeamLogo name={m.away} logoUrl={logos[m.away] ?? null} side="away" size="1.7em" ringColor={m.away ? kleuren[m.away] : undefined} />}
+          {m.away && <TeamLogo name={m.away} logoUrl={logos[m.away] ?? null} logoFit={fits[m.away] ?? null} side="away" size="1.7em" ringColor={m.away ? kleuren[m.away] : undefined} />}
           {m.plannedAt && <span className="gk-tick-uur">{tijdBE(m.plannedAt)}</span>}
         </span>
       ))}

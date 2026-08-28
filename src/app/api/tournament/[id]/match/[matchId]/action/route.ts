@@ -13,6 +13,7 @@ import {
   recordTimeout,
   setClock,
   startMatch,
+  swapSides,
   undoGoal,
 } from '@/lib/tournament-engine'
 
@@ -40,8 +41,11 @@ export async function POST(
   try {
     const payload = await getPayloadClient()
 
+    // Supporters mogen niets aanpassen aan een tornooi: enkel de organisatie (federatie/admin,
+    // via requireRole altijd toegelaten) en de aangestelde scheidsrechters tekenen aan.
+    // Let op: élk vers lid krijgt standaard de basisrol 'scorekeeper' — die volstaat hier dus niet.
     const user = await authUser(payload, req)
-    const denied = requireRole(user, 'scorekeeper', 'scheidsrechter')
+    const denied = requireRole(user, 'scheidsrechter')
     if (denied) return denied
 
     // Serialiseer mutaties op dezelfde tornooiwedstrijd (voorkomt verloren doelpunten, AUDIT §2).
@@ -88,6 +92,10 @@ export async function POST(
         break
       case 'plan':
         await planMatch(payload, matchId, typeof body.plannedAt === 'string' && body.plannedAt ? body.plannedAt : null)
+        break
+      case 'wissel':
+        // Thuis- en uitploeg van plaats wisselen — kan enkel vóór de start.
+        await swapSides(payload, matchId)
         break
       case 'finish':
         await finishMatch(payload, matchId, body.winner === 'home' ? 'home' : body.winner === 'away' ? 'away' : undefined)

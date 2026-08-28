@@ -1615,3 +1615,34 @@
 @media (prefers-reduced-motion: reduce) {
   .gk-ticker-strook.loop { animation: none; }
 }
+
+/* Categorie-select in het beheerpaneel + bevestiging bij het plan-uurveld. */
+.trn-beheer-rij select {
+  flex: 1 1 160px;
+  min-width: 0;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 10px 12px;
+  color: var(--txt);
+  font: inherit;
+  font-size: 0.95rem;
+}
+.trn-plan-ok {
+  color: #6ee7a0;
+  font-weight: 800;
+}
+.trn-plan-fout {
+  color: #ffb9a8;
+  font-weight: 800;
+}
+
+/* Kantinescherm: laat elk clublogo "shinen" — een zachte gloed in de eigen clubkleur rond de
+   badge (de ring-variabele draagt die kleur al), bovenop de bestaande glansveeg. */
+.gk-scherm .tl {
+  box-shadow:
+    0 0 0 2px var(--tl-ring),
+    0 0 26px -2px var(--tl-ring),
+    0 4px 12px rgba(0, 0, 0, 0.35),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.06);
+}
