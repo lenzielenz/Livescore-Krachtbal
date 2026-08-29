@@ -63,7 +63,9 @@ export default async function TornooiGroepPage({ params }: { params: Promise<{ n
           </p>
         </div>
         {/* Eén nette actiebalk i.p.v. losse knoppen door elkaar: eerst wat iederéén nodig heeft
-            (programma + foto's), daaronder — enkel voor de organisatie — het beheer. */}
+            (programma + pronostiek), daaronder — enkel voor de organisatie — het beheer. De
+            foto-opdracht staat er bewust náást als één eigen kaart: opdracht, uitleg en de twee
+            manieren om in te sturen horen samen, anders oogt het rommelig en doet niemand mee. */}
         <div className="trn-balk">
           <div className="trn-balk-rij">
             <Link href={`/tornooi/groep/${encodeURIComponent(naam)}/programma`} className="trn-btn primary">
@@ -73,7 +75,6 @@ export default async function TornooiGroepPage({ params }: { params: Promise<{ n
             <Link href={`/tornooi/groep/${encodeURIComponent(naam)}/pronostiek`} className="trn-btn">
               🔮 Pronostiekstand{standTop ? ` · ${standTop}` : ''}
             </Link>
-            <FotoUpload groep={naam} ingelogd={Boolean(user)} />
           </div>
           {canManage && (
             <div className="trn-balk-rij beheer">
@@ -90,6 +91,8 @@ export default async function TornooiGroepPage({ params }: { params: Promise<{ n
             </div>
           )}
         </div>
+
+        <FotoUpload groep={naam} ingelogd={Boolean(user)} />
 
         <main className="trn-hub">
           <GroepSectie titel="Categorieën" docs={live} canManage={canManage} gestart={gestart} />
