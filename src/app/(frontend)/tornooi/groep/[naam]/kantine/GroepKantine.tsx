@@ -95,6 +95,8 @@ const tijdBE = (iso: string) =>
 // een raket naar het logo van de tegenstander en ontploft erop — dé special voor 2 punten.
 type Viering = {
   key: number
+  /** Scoorde de thuis- of de uitploeg? Bepaalt de vliegrichting van de raket. */
+  kant: 'home' | 'away'
   team: string
   punten: number
   kleur: string | null
@@ -109,6 +111,22 @@ type Viering = {
 
 function VieringOverlay({ v }: { v: Viering }) {
   const raket = v.punten === 2 && Boolean(v.tegen)
+  // De thuisploeg staat links en de uitploeg rechts — exact zoals op het scorebord erboven.
+  // Scoort de uitploeg, dan vertrekt de raket dus rechts en vliegt hij naar links; anders zou
+  // hij op het verkeerde logo inslaan (de kijker ziet die twee clubs net in die volgorde staan).
+  const naarLinks = raket && v.kant === 'away'
+  const scorer = { naam: v.team, logo: v.logo, fit: v.fit, kleur: v.kleur }
+  const doel = { naam: v.tegen as string, logo: v.tegenLogo, fit: v.tegenFit, kleur: v.tegenKleur }
+  const links = naarLinks ? doel : scorer
+  const rechts = naarLinks ? scorer : doel
+  const zijde = (t: typeof scorer, isDoel: boolean, side: 'home' | 'away') => (
+    <span className={isDoel ? 'gk-raket-doel' : 'gk-raket-af'}>
+      {isDoel && <span className="gk-boem" aria-hidden>💥</span>}
+      <span className={isDoel ? 'gk-raket-doel-logo' : undefined}>
+        <TeamLogo name={t.naam} logoUrl={t.logo} logoFit={t.fit} side={side} size="clamp(110px, 24vmin, 260px)" ringColor={t.kleur ?? undefined} />
+      </span>
+    </span>
+  )
   return (
     <div className={`gk-viering${raket ? ' raket' : ''}`} style={{ ...(v.kleur ? { '--vc': v.kleur } : {}) } as CSSProperties} aria-live="polite">
       <div className="gk-viering-burst" aria-hidden />
@@ -116,17 +134,10 @@ function VieringOverlay({ v }: { v: Viering }) {
         {raket ? (
           /* +2: raket vertrekt bij de scorende club, vliegt in een boog over en ontploft op
              het logo van de tegenstander. */
-          <div className="gk-raketbaan">
-            <span className="gk-raket-af">
-              <TeamLogo name={v.team} logoUrl={v.logo} logoFit={v.fit} side="home" size="clamp(110px, 24vmin, 260px)" ringColor={v.kleur ?? undefined} />
-            </span>
+          <div className={`gk-raketbaan${naarLinks ? ' naarlinks' : ''}`}>
+            {zijde(links, naarLinks, 'home')}
             <span className="gk-raket" aria-hidden>🚀</span>
-            <span className="gk-raket-doel">
-              <span className="gk-boem" aria-hidden>💥</span>
-              <span className="gk-raket-doel-logo">
-                <TeamLogo name={v.tegen as string} logoUrl={v.tegenLogo} logoFit={v.tegenFit} side="away" size="clamp(110px, 24vmin, 260px)" ringColor={v.tegenKleur ?? undefined} />
-              </span>
-            </span>
+            {zijde(rechts, !naarLinks, 'away')}
           </div>
         ) : (
           /* +1: het logo van de scorende club groeit én draait rond. */
@@ -274,6 +285,7 @@ export function GroepKantine({ naam, initial }: { naam: string; initial: GroepDa
                 const key = ++vieringSeq.current
                 setViering({
                   key,
+                  kant,
                   team,
                   punten,
                   kleur: d.kleuren[team] ?? null,
@@ -323,6 +335,16 @@ export function GroepKantine({ naam, initial }: { naam: string; initial: GroepDa
     })
   }, [data.matches])
   const eerstGepland = komend.find((m) => m.plannedAt)
+  // Al gespeeld: enkel echte wedstrijden (een bye heeft geen tegenstander), nieuwste eerst.
+  // Dit vult de stille momenten tussen twee wedstrijden — dan hangt er nu iets te zien.
+  const gespeeld = useMemo(() => {
+    const done = data.matches.filter((m) => m.status === 'finished' && m.home && m.away)
+    return done.sort((a, b) => {
+      const ta = a.plannedAt ? new Date(a.plannedAt).getTime() : 0
+      const tb = b.plannedAt ? new Date(b.plannedAt).getTime() : 0
+      return tb - ta || b.id - a.id
+    })
+  }, [data.matches])
 
   const cols = kolommenVoor(live.length)
   const kampioenen = data.reeksen.filter((r) => r.champion)
@@ -406,17 +428,24 @@ export function GroepKantine({ naam, initial }: { naam: string; initial: GroepDa
               </li>
             ))}
           </ul>
+          {/* Wat er vandaag al gespeeld is — tussen twee wedstrijden door blijft het scherm zo
+              leven. Maximaal negen, anders wordt het op afstand onleesbaar. */}
+          <Uitslagen gespeeld={gespeeld.slice(0, 9)} logos={data.logos} kleuren={data.kleuren} fits={data.fits} titel="Al gespeeld" />
         </div>
       ) : (
-        <div className="gk-pauze">
+        <div className="gk-pauze klaar">
           <p className="gk-aftel-lbl">🏆 Alle wedstrijden zijn gespeeld</p>
           {kampioenen.length > 0 && (
             <ul className="gk-kampioenen">
               {kampioenen.map((r) => (
-                <li key={r.id}><b>{r.naam}</b>: {r.champion}</li>
+                <li key={r.id}>
+                  <span className="gk-kamp-reeks">{r.naam}</span>
+                  <span className="gk-kamp-naam">🏆 {r.champion}</span>
+                </li>
               ))}
             </ul>
           )}
+          <Uitslagen gespeeld={gespeeld.slice(0, 9)} logos={data.logos} kleuren={data.kleuren} fits={data.fits} titel="Alle uitslagen" />
         </div>
       )}
 
@@ -424,6 +453,68 @@ export function GroepKantine({ naam, initial }: { naam: string; initial: GroepDa
           gewoon de logo's tegen elkaar met het uur ernaast. Bij een handvol wedstrijden staat
           de balk stil (niets om te scrollen); daarboven loopt ze naadloos in een lus. */}
       {komend.length > 0 && <KomendTicker komend={komend} logos={data.logos} kleuren={data.kleuren} fits={data.fits} />}
+    </div>
+  )
+}
+
+// Al gespeeld: tussen twee wedstrijden door is dít wat de kantine wil zien. Nieuwste bovenaan,
+// de winnaar opgelicht, en de reeks erbij zodat je weet waar een uitslag bij hoort. Het raster
+// schaalt mee met het aantal — bij één uitslag groot, bij een volle dag compacter.
+function Uitslagen({
+  gespeeld,
+  logos,
+  kleuren,
+  fits,
+  titel,
+}: {
+  gespeeld: GroepMatch[]
+  logos: Record<string, string>
+  kleuren: Record<string, string>
+  fits: Record<string, LogoFit>
+  titel: string
+}) {
+  if (gespeeld.length === 0) return null
+  const kolommen = gespeeld.length <= 2 ? 1 : gespeeld.length <= 6 ? 2 : 3
+  return (
+    <div className={`gk-uitslagen k${kolommen}`}>
+      <p className="gk-uitslagen-lbl">{titel}</p>
+      <ul className="gk-uitslagen-lijst">
+        {gespeeld.map((m) => {
+          const winnaar = m.winner
+          // Gelijkspel zonder aangeduide winnaar: dan staan beide ploegen even fel — anders lijkt
+          // het alsof er niemand gewonnen heeft én niemand meegedaan.
+          const gelijk = winnaar == null
+          return (
+            <li
+              key={m.id}
+              className={`gk-uit${gelijk ? ' gelijk' : ''}`}
+              style={{
+                ...(m.home && kleuren[m.home] ? { '--ka': kleuren[m.home] } : {}),
+                ...(m.away && kleuren[m.away] ? { '--kb': kleuren[m.away] } : {}),
+              } as CSSProperties}
+            >
+              <span className="gk-uit-reeks">{m.reeksNaam}</span>
+              <span className="gk-uit-rij">
+                <span className={`gk-uit-ploeg${winnaar === 'home' ? ' wint' : ''}`}>
+                  {m.home && (
+                    <TeamLogo name={m.home} logoUrl={logos[m.home] ?? null} logoFit={fits[m.home] ?? null} side="home" size="1.7em" ringColor={m.home ? kleuren[m.home] : undefined} />
+                  )}
+                  <span className="gk-uit-naam">{m.home}</span>
+                </span>
+                <span className="gk-uit-score">
+                  {m.score.home}<span className="gk-uit-streep">–</span>{m.score.away}
+                </span>
+                <span className={`gk-uit-ploeg rechts${winnaar === 'away' ? ' wint' : ''}`}>
+                  <span className="gk-uit-naam">{m.away}</span>
+                  {m.away && (
+                    <TeamLogo name={m.away} logoUrl={logos[m.away] ?? null} logoFit={fits[m.away] ?? null} side="away" size="1.7em" ringColor={m.away ? kleuren[m.away] : undefined} />
+                  )}
+                </span>
+              </span>
+            </li>
+          )
+        })}
+      </ul>
     </div>
   )
 }
