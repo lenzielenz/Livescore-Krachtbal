@@ -90,12 +90,29 @@ export function isInTargetGoalArea(
  * Punten ín een doelgebied blijven ongemoeid: die zijn een doelpunt (of een vangst, waarvoor
  * §6.4 een eigen regel heeft — werpplaats naar de doellijn).
  */
-export function projectWerpplaats(p: Point, goalAreaDepthM: number = FIELD.defaultGoalAreaDepthM): Point {
+export function projectWerpplaats(
+  p: Point,
+  goalAreaDepthM: number = FIELD.defaultGoalAreaDepthM,
+  opts?: { vanuitDoelgebied?: boolean },
+): Point {
+  // §6.4: "De doellijn is enkel beperkend bij opzet uit het doelgebied." Wordt de bal ín het
+  // doelgebied gevangen (of komt de inworp van tussen doellijn en achterlijn), dan verschuift de
+  // werpplaats naar de DOELLIJN en werp je van daar — niet van de vrijeworplijn. Zonder deze
+  // uitzondering zou de opzet vier meter te ver naar voren schuiven.
+  if (opts?.vanuitDoelgebied) return p
   const g = goalLineNorm(goalAreaDepthM)
   const ft = freeThrowNorm(goalAreaDepthM)
+  // Raakte de bal de grond tussen doellijn en vrijeworplijn, dan schuift de werpplaats wél terug
+  // tot op de vrijeworplijn: van dichterbij mag je niet werpen.
   if (p.y >= g && p.y < ft) return { x: p.x, y: ft }
   if (p.y <= 1 - g && p.y > 1 - ft) return { x: p.x, y: 1 - ft }
   return p
+}
+
+/** Ligt dit (opzet)punt exact op een doellijn? Dan geldt de doellijn-uitzondering van §6.4. */
+export function isOpDoellijn(p: Point, goalAreaDepthM: number = FIELD.defaultGoalAreaDepthM): boolean {
+  const g = goalLineNorm(goalAreaDepthM)
+  return Math.abs(p.y - g) < 1e-9 || Math.abs(p.y - (1 - g)) < 1e-9
 }
 
 /** Ligt het punt in het EIGEN doelgebied? (§6.6: bal daar aan de grond = punt voor de tegenpartij) */

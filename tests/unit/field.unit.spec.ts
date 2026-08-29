@@ -3,10 +3,12 @@ import { describe, it, expect } from 'vitest'
 import {
   FIELD,
   distanceM,
+  goalLineNorm,
   isInTargetGoalArea,
   isOnOwnHalf,
   isOutBack,
   isOutSide,
+  isOpDoellijn,
   projectWerpplaats,
   reachedMidline,
   toMeters,
@@ -105,6 +107,22 @@ describe('field — werpplaats-projectie (§6.4)', () => {
     expect(projectWerpplaats({ x: 0.5, y: 0.02 }).y).toBe(0.02)
     expect(projectWerpplaats({ x: 0.5, y: 0.98 }).y).toBe(0.98)
     expect(projectWerpplaats({ x: 0.5, y: g }).y).toBeCloseTo(ft, 6) // exact op de doellijn = wél
+  })
+
+  // §6.4: "De doellijn is enkel beperkend bij opzet uit het doelgebied." Wordt de bal ín het
+  // doelgebied gevangen, dan zet de ploeg op vanaf de DOELLIJN — de werpplaats mag dan niet
+  // doorschuiven naar de vrijeworplijn (vier meter te ver).
+  it('laat een opzet vanaf de doellijn (vangst in het doelgebied) staan waar hij staat', () => {
+    expect(projectWerpplaats({ x: 0.5, y: g }, undefined, { vanuitDoelgebied: true }).y).toBeCloseTo(g, 6)
+    expect(projectWerpplaats({ x: 0.5, y: 1 - g }, undefined, { vanuitDoelgebied: true }).y).toBeCloseTo(1 - g, 6)
+  })
+
+  it('herkent een opzetpunt op de doellijn, aan beide kanten en bij elke doelgebiedsdiepte', () => {
+    expect(isOpDoellijn({ x: 0.5, y: g })).toBe(true)
+    expect(isOpDoellijn({ x: 0.5, y: 1 - g })).toBe(true)
+    expect(isOpDoellijn({ x: 0.5, y: ft })).toBe(false)
+    expect(isOpDoellijn({ x: 0.5, y: 0.5 })).toBe(false)
+    expect(isOpDoellijn({ x: 0.5, y: goalLineNorm(15) }, 15)).toBe(true)
   })
 
   it('volgt een diepere doelgebied-instelling (15 m → totaal 56 m)', () => {

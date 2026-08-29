@@ -40,8 +40,10 @@ export default async function TornooiGroepPage({ params }: { params: Promise<{ n
   // "Bezig" pas wanneer er écht gespeeld wordt — anders "Nog niet gestart".
   const gestart = await gestarteTornooien(payload, docs.map((t) => Number(t.id)))
 
-  // Pronostiekstand van de dag (zelfde puntensysteem als de competitie).
+  // Pronostiekstand van de dag (zelfde puntensysteem als de competitie). Op deze pagina tonen
+  // we enkel wie leidt; de volledige rangschikking staat op /pronostiek.
   const stand = await tornooiPronostiekStand(payload, naam).catch(() => [])
+  const standTop = stand.length > 0 ? `${stand[0].name} leidt` : ''
 
   // Ingestuurde supportersfoto's: de federatie ziet meteen hoeveel er al binnen zijn.
   const fotoRes = canManage
@@ -67,6 +69,10 @@ export default async function TornooiGroepPage({ params }: { params: Promise<{ n
             <Link href={`/tornooi/groep/${encodeURIComponent(naam)}/programma`} className="trn-btn primary">
               📋 Dagprogramma
             </Link>
+            {/* Eigen pagina met de volledige pronostiekrangschikking van de hele dag. */}
+            <Link href={`/tornooi/groep/${encodeURIComponent(naam)}/pronostiek`} className="trn-btn">
+              🔮 Pronostiekstand{standTop ? ` · ${standTop}` : ''}
+            </Link>
             <FotoUpload groep={naam} ingelogd={Boolean(user)} />
           </div>
           {canManage && (
@@ -89,29 +95,6 @@ export default async function TornooiGroepPage({ params }: { params: Promise<{ n
           <GroepSectie titel="Categorieën" docs={live} canManage={canManage} gestart={gestart} />
           {done.length > 0 && <GroepSectie titel="Afgelopen" docs={done} canManage={canManage} gestart={gestart} />}
 
-          {/* Pronostiekstand van de dag — zelfde punten als de competitie (exact 10, resultaat +
-              saldo 6, resultaat 3, nabijheid tot 3, dichtste-bij 2). */}
-          {stand.length > 0 && (
-            <section className="trn-hub-sec">
-              <h2>🔮 Pronostiekstand</h2>
-              <ol className="tp-stand">
-                {stand.slice(0, 15).map((r, i) => (
-                  <li key={r.userId} className={i === 0 ? 'leider' : ''}>
-                    <span className="tp-plaats">{i + 1}</span>
-                    <span className="tp-naam">{r.name}</span>
-                    <span className="tp-detail">
-                      {r.predictions} tip{r.predictions === 1 ? '' : 's'}
-                      {r.exact > 0 ? ` · ${r.exact}× exact` : ''}
-                    </span>
-                    <span className="tp-punten">{r.points}</span>
-                  </li>
-                ))}
-              </ol>
-              <p className="trn-hint">
-                Exact = 10 punten · juiste winnaar én saldo = 6 · juiste winnaar = 3 · dichtst bij = 2 bonus.
-              </p>
-            </section>
-          )}
         </main>
       </div>
     </>

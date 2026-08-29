@@ -9,7 +9,7 @@ import type { Payload } from 'payload'
 import type { Category } from './categories'
 import { type ClubColors, clubColorsFrom, distinguishAway } from './club-colors'
 import { type LogoFit, normalizeLogoFit } from './logo-fit'
-import { type AttackDir, type Point, FIELD, freeThrowNorm, projectWerpplaats } from './field'
+import { type AttackDir, type Point, FIELD, freeThrowNorm, isOpDoellijn, projectWerpplaats } from './field'
 import { buildPassNetwork, type PlayerPassStats } from './pass-network'
 import { isForwardPass, passGainM } from './pass-rules'
 import { reeksUsesSeniorThrows } from './reeksen'
@@ -305,7 +305,11 @@ export async function recordThrow(payload: Payload, input: RecordThrowInput) {
   // §6.4: lag de bal tussen doellijn en vrijeworplijn, dan schuift de werpplaats terug tot op de
   // vrijeworplijn — van dichterbij mag je niet werpen. Zonder deze projectie meet de statistiek
   // worpen te kort (en zou een doelworp van binnen de 4 m als geldig doorgaan).
-  const origin = projectWerpplaats(rawOrigin, depth)
+  // UITZONDERING: bij de EERSTE worp van een balbezit dat opzet vanaf de doellijn (bal gevangen
+  // in het doelgebied, of inworp tussen doellijn en achterlijn) is de dóéllijn de beperkende
+  // lijn — dan blijft de werpplaats daar staan.
+  const vanuitDoelgebied = existing.docs.length === 0 && isOpDoellijn(rawOrigin, depth)
+  const origin = projectWerpplaats(rawOrigin, depth, { vanuitDoelgebied })
   const outcome = deriveOutcome({ tapCount: input.tapCount, point: input.point, dir, goalAreaDepthM: depth })
   const geom = deriveGeometry(origin, input.point, dir, depth)
 

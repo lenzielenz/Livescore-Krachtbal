@@ -181,7 +181,7 @@ export function PronostiekWidget({
         <span className="pn-dash" aria-hidden>–</span>
         <Stepper naam={awayName} waarde={away} zet={setAway} away />
         <button type="submit" className="pn-send" disabled={busy}>
-          {busy ? '…' : '🔮 Speel mijn tip'}
+          {busy ? '…' : '🎯 Ik gok hierop'}
         </button>
       </form>
       {hasBooster && (
