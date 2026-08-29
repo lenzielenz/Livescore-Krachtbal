@@ -1915,6 +1915,10 @@ button.trn-toplink {
   font-size: 0.8rem;
 }
 .dp-aantekenen { flex: 0 0 auto; margin-left: auto; }
+/* Afgelopen wedstrijd: geen aantekenknop meer, wel een weg terug naar het scherm om te
+   heropenen als het eindsignaal te vroeg kwam. Bewust ingetogen — het is een uitzondering. */
+.dp-corrigeren { flex: 0 0 auto; margin-left: auto; border-style: dashed; color: var(--dim); }
+.dp-corrigeren:hover { color: var(--accent); border-color: var(--accent); }
 .dp-reeks { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--dim); }
 .dp-status { font-weight: 800; font-variant-numeric: tabular-nums; font-size: 0.82rem; color: var(--dim); }
 .dp-status.live { color: #6ee7a0; }

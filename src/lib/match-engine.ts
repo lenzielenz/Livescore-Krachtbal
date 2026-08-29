@@ -81,6 +81,18 @@ async function assertValidLineup(payload: Payload, playerIds: number[], label: s
   }
 }
 
+/**
+ * CLAUDE.md-invariant 3: een afgelopen wedstrijd is niet meer muteerbaar. De worp- en klokpaden
+ * bewaakten dat al; het helft- en opstellingsverkeer niet, waardoor je ná het eindsignaal nog een
+ * helft kon starten of een wissel kon doorvoeren. Eén melding voor alles, met de weg vooruit erin:
+ * heropenen is de bedoelde manier om nog iets recht te zetten.
+ */
+function assertNietAfgelopen(match: { status?: string | null }, wat: string): void {
+  if (match.status === 'finished') {
+    throw new Error(`Wedstrijd is afgelopen — heropen ze eerst om ${wat}.`)
+  }
+}
+
 async function loadMatch(payload: Payload, matchId: number) {
   const match = await payload.findByID({ collection: 'matches', id: matchId, depth: 0 })
   const homeId = typeof match.homeTeam === 'object' ? match.homeTeam.id : match.homeTeam
@@ -760,6 +772,7 @@ async function isPendingFreeThrow(payload: Payload, poss: { id: number; freeThro
  */
 export async function endHalf(payload: Payload, matchId: number) {
   const { match } = await loadMatch(payload, matchId)
+  assertNietAfgelopen(match, 'de helft af te sluiten')
   const half = match.currentHalf ?? 1
 
   // Reglement §8: na het eindsignaal mag er niet meer gescoord worden, BEHALVE met een vrije worp
@@ -794,6 +807,7 @@ export async function endHalf(payload: Payload, matchId: number) {
  */
 export async function startNextHalf(payload: Payload, matchId: number) {
   const { match, homeId, awayId } = await loadMatch(payload, matchId)
+  assertNietAfgelopen(match, 'een volgende helft te starten')
   const nextHalf = (match.currentHalf ?? 1) + 1
 
   // Bleef er nog een vrije worp openstaan uit de vorige helft (zie endHalf, §8)? Dan is ze niet
@@ -1052,6 +1066,7 @@ export async function substitute(
   inPlayerId: number,
 ) {
   const { match, homeId, awayId } = await loadMatch(payload, matchId)
+  assertNietAfgelopen(match, 'nog te wisselen')
   const teamId = side === 'home' ? homeId : awayId
   const stored = side === 'home' ? match.homeLineup : match.awayLineup
   const current = await resolveLineup(payload, stored, teamId)
@@ -1082,6 +1097,7 @@ export async function setLineup(
   playerIds: number[],
 ) {
   const { match, homeId, awayId } = await loadMatch(payload, matchId)
+  assertNietAfgelopen(match, 'de opstelling nog te wijzigen')
   const teamId = side === 'home' ? homeId : awayId
 
   const res = await payload.find({
@@ -1152,7 +1168,8 @@ export async function setLineup(
 
 /** Kapitein van een ploeg aanduiden (moet een speler van die ploeg zijn). */
 export async function setCaptain(payload: Payload, matchId: number, side: TeamSide, playerId: number) {
-  const { homeId, awayId } = await loadMatch(payload, matchId)
+  const { match, homeId, awayId } = await loadMatch(payload, matchId)
+  assertNietAfgelopen(match, 'de kapitein nog te wijzigen')
   const teamId = side === 'home' ? homeId : awayId
   const player = await payload.findByID({ collection: 'players', id: playerId, depth: 0 }).catch(() => null)
   const pTeam = player ? (typeof player.team === 'object' && player.team ? player.team.id : player.team) : null

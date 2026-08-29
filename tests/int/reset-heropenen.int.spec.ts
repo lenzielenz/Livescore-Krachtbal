@@ -2,7 +2,18 @@ import { getPayload, type Payload } from 'payload'
 import { describe, it, beforeAll, expect } from 'vitest'
 
 import config from '@/payload.config'
-import { finishMatch, recordThrow, reopenMatch, resetMatch, startMatch } from '@/lib/match-engine'
+import {
+  advanceHalf,
+  endHalf,
+  finishMatch,
+  recordThrow,
+  reopenMatch,
+  resetMatch,
+  setLineup,
+  startMatch,
+  startNextHalf,
+  substitute,
+} from '@/lib/match-engine'
 
 // Twee vergissingen die aan de aantekentafel écht gebeuren:
 //  1. iemand start een wedstrijd die nog niet bezig was → terugzetten naar 'nog niet gestart';
@@ -140,5 +151,24 @@ describe('per ongeluk gestart of beëindigd', () => {
     await expect(
       recordThrow(payload, { matchId, playerId: homePlayers[0], type: 'nek', point: { x: 0.5, y: 0.6 }, tapCount: 1 }),
     ).rejects.toThrow(/afgelopen/i)
+  })
+
+  // CLAUDE.md-invariant 3: ná het eindsignaal is de wedstrijd niet meer muteerbaar. Het worp- en
+  // klokpad bewaakte dat al; het helft- en opstellingsverkeer niet — daar kon je dus nog een helft
+  // starten of wisselen op een afgesloten wedstrijd.
+  it('weigert ook helft- en opstellingswijzigingen op een afgelopen wedstrijd', async () => {
+    const { matchId, homeId, homePlayers } = await maakWedstrijd()
+    await startMatch(payload, matchId, homeId)
+    await finishMatch(payload, matchId)
+
+    await expect(endHalf(payload, matchId)).rejects.toThrow(/afgelopen/i)
+    await expect(startNextHalf(payload, matchId)).rejects.toThrow(/afgelopen/i)
+    await expect(advanceHalf(payload, matchId)).rejects.toThrow(/afgelopen/i)
+    await expect(setLineup(payload, matchId, 'home', homePlayers.slice(0, 4))).rejects.toThrow(/afgelopen/i)
+    await expect(substitute(payload, matchId, 'home', homePlayers[0], homePlayers[3])).rejects.toThrow(/afgelopen/i)
+
+    // Na een heropening kan het allemaal weer — dát is de bedoelde weg om te corrigeren.
+    await reopenMatch(payload, matchId)
+    await expect(setLineup(payload, matchId, 'home', homePlayers.slice(0, 4))).resolves.toBeTruthy()
   })
 })

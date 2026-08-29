@@ -290,9 +290,14 @@ export function Dagprogramma({
                 {duurPerReeks.get(m.reeksNaam) != null && (
                   <span className="dp-duur" title="Wedstrijdduur">2×{duurPerReeks.get(m.reeksNaam)}&#8242;</span>
                 )}
-                {canManage && m.status !== 'finished' && (
-                  <Link href={`/tornooi/${m.tournamentId}/aantekenen/${m.id}`} className="trn-mini dp-aantekenen">Aantekenen</Link>
-                )}
+                {canManage &&
+                  (m.status !== 'finished' ? (
+                    <Link href={`/tornooi/${m.tournamentId}/aantekenen/${m.id}`} className="trn-mini dp-aantekenen">Aantekenen</Link>
+                  ) : (
+                    // Werd er te vroeg op "Einde" gedrukt, dan moet je er nog bij kunnen om te
+                    // heropenen — anders is de wedstrijd vanaf dit overzicht onbereikbaar.
+                    <Link href={`/tornooi/${m.tournamentId}/aantekenen/${m.id}`} className="trn-mini dp-corrigeren">Corrigeren</Link>
+                  ))}
               </span>
               {/* Pronostiek staat hier uit: dit overzicht werd er te druk van. Meespelen doe je
                   bij de categorie zelf (zie lib/pronostiek-schakelaar.ts). */}
