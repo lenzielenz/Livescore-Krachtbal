@@ -28,6 +28,12 @@ export function TournamentScoresheet({
   halfDurationSeconds: number
 }) {
   const [state, setState] = useState<TournamentState>(initial)
+  // Eén bevestigingsstap voor alles wat je niet per ongeluk wil doen: starten, beëindigen,
+  // heropenen en terugzetten naar niet-gestart.
+  const [bevestig, setBevestig] = useState<
+    | null
+    | { titel: string; tekst: string; knop: string; gevaar?: boolean; doe: () => void | Promise<unknown> }
+  >(null)
   const [error, setError] = useState<string | null>(null)
   const [askWinner, setAskWinner] = useState(false)
   const busy = useRef(false)
@@ -167,24 +173,86 @@ export function TournamentScoresheet({
                   : '↶ Niets te ondoen'}
               </button>
               {m.status === 'pending' ? (
-                <button type="button" className="trn-btn primary" onClick={() => act({ action: 'start' })}>▶ Start</button>
+                <button
+                  type="button"
+                  className="trn-btn primary"
+                  onClick={() =>
+                    setBevestig({
+                      titel: 'Wedstrijd nu starten?',
+                      tekst: `${m.home} – ${m.away} gaat live en de klok begint te lopen. Start dit pas wanneer er echt gespeeld wordt.`,
+                      knop: '▶ Ja, starten',
+                      doe: () => act({ action: 'start' }),
+                    })
+                  }
+                >▶ Start</button>
               ) : m.clockRunning ? (
                 <button type="button" className="trn-btn" onClick={() => act({ action: 'clock', running: false })}>⏸ Pauze</button>
               ) : (
                 <button type="button" className="trn-btn" onClick={() => act({ action: 'clock', running: true })}>▶ Klok</button>
               )}
-              {half === 1 && (
+              {half === 1 && m.status === 'live' && (
                 <button type="button" className="trn-btn" onClick={() => act({ action: 'half' })}>⏭ 2e helft</button>
               )}
               {/* Bevestiging tegen een verdwaalde tik: einde legt de uitslag vast en schuift de
                   winnaar door in het schema. */}
+              {m.status === 'live' && (
               <button
                 type="button"
                 className="trn-btn danger"
-                onClick={() => { if (window.confirm('Wedstrijd beëindigen? De eindstand wordt vastgelegd.')) void act({ action: 'finish' }) }}
+                onClick={() =>
+                  setBevestig({
+                    titel: 'Wedstrijd beëindigen?',
+                    tekst:
+                      'De eindstand wordt vastgelegd en de winnaar schuift door in het schema. Ging het per ongeluk, dan kan je nadien nog heropenen zolang de volgende ronde niet bezig is.',
+                    knop: '⏹ Ja, de wedstrijd is gedaan',
+                    gevaar: true,
+                    doe: () => act({ action: 'finish' }),
+                  })
+                }
               >
                 ⏹ Einde
               </button>
+              )}
+              {/* Te vroeg gestart terwijl deze reeks nog moest beginnen? Terug naar niet-gestart. */}
+              {m.status === 'live' && (
+                <button
+                  type="button"
+                  className="trn-btn zacht"
+                  onClick={() =>
+                    setBevestig({
+                      titel: 'Terugzetten naar niet-gestart?',
+                      tekst:
+                        'Gebruik dit als deze wedstrijd per ongeluk gestart is. De ingevoerde doelpunten, kruisjes en de klok verdwijnen; de affiche en het uur blijven staan, zodat ze later gewoon gespeeld kan worden. Dit kan niet ongedaan gemaakt worden.',
+                      knop: '↺ Ja, terugzetten',
+                      gevaar: true,
+                      doe: () => act({ action: 'reset' }),
+                    })
+                  }
+                >
+                  ↺ Nog niet bezig
+                </button>
+              )}
+            </div>
+          )}
+
+          {bevestig && (
+            <div className="ts-bevestig">
+              <h4>{bevestig.titel}</h4>
+              <p>{bevestig.tekst}</p>
+              <div className="ts-bevestig-btns">
+                <button type="button" className="trn-btn" onClick={() => setBevestig(null)}>Nee, terug</button>
+                <button
+                  type="button"
+                  className={`trn-btn ${bevestig.gevaar ? 'danger' : 'primary'}`}
+                  onClick={() => {
+                    const doe = bevestig.doe
+                    setBevestig(null)
+                    void doe()
+                  }}
+                >
+                  {bevestig.knop}
+                </button>
+              </div>
             </div>
           )}
 
@@ -209,7 +277,19 @@ export function TournamentScoresheet({
                 <Link href={`/tornooi/${id}`} className="trn-btn">Terug naar schema</Link>
                 {/* Score toch fout genoteerd? Heropen kan zolang de volgende ronde niet bezig is
                     (de server bewaakt dat en trekt de doorgeschoven winnaar terug). */}
-                <button type="button" className="trn-btn" onClick={() => act({ action: 'reopen' })}>
+                <button
+                  type="button"
+                  className="trn-btn"
+                  onClick={() =>
+                    setBevestig({
+                      titel: 'Wedstrijd heropenen?',
+                      tekst:
+                        'De wedstrijd gaat terug live zodat je de score kan aanpassen of verder aantekenen. De doorgeschoven winnaar wordt uit de volgende ronde teruggetrokken — dat lukt enkel zolang daar nog niet gespeeld is.',
+                      knop: '🔓 Ja, heropenen',
+                      doe: () => act({ action: 'reopen' }),
+                    })
+                  }
+                >
                   🔓 Score aanpassen
                 </button>
               </div>

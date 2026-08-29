@@ -294,6 +294,15 @@
 }
 .ssk-btn.primary { background: var(--accent, #0fe0a6); color: #0e1014; border-color: transparent; }
 .ssk-btn.danger { border-color: #ef476f; color: #ef476f; }
+/* "Zacht": een noodrem (terugzetten, heropenen). Moet vindbaar zijn zonder de aandacht te
+   trekken van de knoppen die je tijdens de wedstrijd de hele tijd gebruikt. */
+.ssk-btn.zacht {
+  border-style: dashed;
+  color: var(--dim, #93a3b5);
+  font-weight: 700;
+  font-size: 0.92rem;
+}
+.ssk-btn.zacht:hover { color: #ef476f; border-color: #ef476f; }
 .ssk-btn:active { transform: translateY(1px); }
 
 .ssk-done {

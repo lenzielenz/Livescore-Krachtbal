@@ -180,6 +180,12 @@ async function createPossession(
 /** Start de wedstrijd: zet live, helft 1, klok op 0, en maak het eerste balbezit. */
 export async function startMatch(payload: Payload, matchId: number, startingTeamId: number) {
   const { match, homeId, awayId } = await loadMatch(payload, matchId)
+  // Veiligheid: een tweede keer starten maakte een tweede balbezit én een tweede half_start-event
+  // aan, en zette een afgelopen wedstrijd zomaar terug op live. Eén wedstrijd start één keer.
+  if (match.status === 'live') throw new Error('Deze wedstrijd is al gestart.')
+  if (match.status === 'finished') {
+    throw new Error('Deze wedstrijd is al afgelopen — heropen ze eerst om verder te doen.')
+  }
   const side = sideOfTeam(startingTeamId, homeId)
   const dir = attackDirForSide(side, 1)
 
@@ -903,12 +909,92 @@ export async function finishMatch(payload: Payload, matchId: number) {
   return buildMatchState(payload, matchId)
 }
 
-/** Heropen een afgesloten wedstrijd (federatie/admin-correctie). Zet terug op 'live'. */
+/**
+ * Heropen een afgesloten wedstrijd: er werd per ongeluk op "Einde" gedrukt en het spel loopt nog.
+ * Dit is de exacte tegenhanger van `finishMatch`, zodat de aantekenaar gewoon verder kan:
+ *  - het `half_end`-event dat het eindsignaal schreef verdwijnt weer,
+ *  - het balbezit dat toen werd afgesloten staat terug open (anders weigert `recordThrow` met
+ *    "Geen lopend balbezit" en zit je alsnog vast),
+ *  - de status gaat terug naar live, met de klok stil op de bevroren stand — de aantekenaar
+ *    beslist zelf wanneer ze weer loopt.
+ * Alle worpen, de score en de kruisjes blijven staan: heropenen wist niets.
+ */
 export async function reopenMatch(payload: Payload, matchId: number) {
+  const { match } = await loadMatch(payload, matchId)
+  if (match.status !== 'finished') return buildMatchState(payload, matchId)
+
+  // Het laatste half_end-event is per definitie dat van het eindsignaal: ná het einde kan er niets
+  // meer bijkomen. Enkel dat ene weghalen — een eerder rust-signaal blijft in de tijdlijn staan.
+  const eind = await payload.find({
+    collection: 'match-events',
+    where: { and: [{ match: { equals: matchId } }, { type: { equals: 'half_end' } }] },
+    sort: '-id',
+    depth: 0,
+    limit: 1,
+  })
+  const eindId = eind.docs[0]?.id
+  if (eindId) await payload.delete({ collection: 'match-events', id: eindId, overrideAccess: true }).catch(() => {})
+
+  // Idem voor het balbezit: `finishMatch` sloot het lopende balbezit af en er komt er daarna geen
+  // nieuw meer bij, dus het laatste balbezit is precies datgene dat weer open moet.
+  const laatste = await payload.find({
+    collection: 'possessions',
+    where: { match: { equals: matchId } },
+    sort: '-id',
+    depth: 0,
+    limit: 1,
+  })
+  const poss = laatste.docs[0] as { id: number; endOutcome?: string | null } | undefined
+  if (poss?.endOutcome) {
+    await payload
+      .update({ collection: 'possessions', id: poss.id, data: { endOutcome: null }, overrideAccess: true })
+      .catch(() => {})
+  }
+
   await payload.update({
     collection: 'matches',
     id: matchId,
-    data: { status: 'live' },
+    data: { status: 'live', clockRunning: false, clockUpdatedAt: new Date().toISOString() },
+    overrideAccess: true,
+  })
+  return buildMatchState(payload, matchId)
+}
+
+/** Hoeveel is er al ingevoerd? Bepaalt of een reset onschuldig is of echt iets vernietigt. */
+export async function matchResetImpact(payload: Payload, matchId: number): Promise<{ worpen: number }> {
+  const res = await payload
+    .count({ collection: 'throws', where: { match: { equals: matchId } }, overrideAccess: true })
+    .catch(() => ({ totalDocs: 0 }))
+  return { worpen: res.totalDocs }
+}
+
+/**
+ * Zet een wedstrijd terug op "nog niet gestart": iemand drukte per ongeluk op start terwijl er
+ * nog niet gespeeld werd. Omdat alles afgeleid is uit de worp-events volstaat het die events weg
+ * te gooien — score, balbezit en statistiek verdwijnen dan vanzelf mee. De `processed-ops` gaan
+ * er ook uit, anders zou een herhaalde actie-id na de herstart als "al verwerkt" gelden.
+ *
+ * Het wedstrijdblad, ongevalsaangiftes en tribunefoto's blijven onaangeroerd: dat is aparte
+ * administratie die niets met de aantekening te maken heeft.
+ */
+export async function resetMatch(payload: Payload, matchId: number) {
+  const { match } = await loadMatch(payload, matchId)
+  if (match.status === 'scheduled') return buildMatchState(payload, matchId)
+
+  for (const collection of ['throws', 'possessions', 'match-events', 'processed-ops'] as const) {
+    await payload.delete({ collection, where: { match: { equals: matchId } }, overrideAccess: true }).catch(() => {})
+  }
+  await payload.update({
+    collection: 'matches',
+    id: matchId,
+    data: {
+      status: 'scheduled',
+      currentHalf: 1,
+      clockSeconds: 0,
+      clockRunning: false,
+      clockUpdatedAt: null,
+      simpleScore: null,
+    },
     overrideAccess: true,
   })
   return buildMatchState(payload, matchId)

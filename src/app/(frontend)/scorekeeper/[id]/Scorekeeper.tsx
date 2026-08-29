@@ -543,6 +543,14 @@ export function Scorekeeper({
     }
   }
 
+  // Eén bevestigingsstap voor alles wat je niet per ongeluk wil doen (starten, beëindigen,
+  // heropenen, terugzetten). Bewust een eigen kaart i.p.v. window.confirm: die is op een tablet aan
+  // de tafel makkelijk weg te tikken en toont geen uitleg over de gevolgen.
+  const [bevestig, setBevestig] = useState<
+    | null
+    | { titel: string; tekst: string; knop: string; gevaar?: boolean; doe: () => void | Promise<unknown> }
+  >(null)
+
   // Signaleert de weggelopen-klok-situatie (zie MAX_CLOCK_SECONDS): de werkelijke verstreken tijd
   // is dan toch onbetrouwbaar (dagenlang "running" vergeten) — 180:00 in een helft laten staan zou
   // even fout zijn als de oorspronkelijke gigantische waarde, dus resetten we naar 0 i.p.v. te
@@ -567,9 +575,19 @@ export function Scorekeeper({
   // Kies de ploeg die opzet → wedstrijd gaat live met een stilstaande klok,
   // zodat de timer vrij is en gestart kan worden wanneer ze willen.
   // allowUnready: enkel een admin die bewust de controle overslaat (testknop).
-  const chooseKickoff = async (teamId: number) => {
-    const res = await act({ action: 'start', startingTeamId: teamId, allowUnready: bypass })
-    if (res) setKickoffOpen(false)
+  const chooseKickoff = (teamId: number) => {
+    const naam = teamId === state.teams.home.id ? state.teams.home.name : state.teams.away.name
+    // Extra drempel: één misgetikte ploegnaam startte vroeger meteen de wedstrijd — ook wanneer
+    // die reeks nog moest beginnen. Nu zie je eerst zwart op wit wat je op het punt staat te doen.
+    setBevestig({
+      titel: 'Wedstrijd nu starten?',
+      tekst: `${naam} zet op. De wedstrijd gaat live en supporters krijgen een melding. Start dit pas wanneer er echt gespeeld wordt.`,
+      knop: '▶ Ja, starten',
+      doe: async () => {
+        const res = await act({ action: 'start', startingTeamId: teamId, allowUnready: bypass })
+        if (res) setKickoffOpen(false)
+      },
+    })
   }
 
   // Veldspelers kiezen: open het keuzescherm voorgevuld met de huidige opstelling.
@@ -713,10 +731,38 @@ export function Scorekeeper({
             ) : (
               <>
                 {isLive && state.match.currentHalf < 2 && !atHalfTime && (
-                  <button type="button" className="sk-rail-act notice" disabled={busy} onClick={() => act({ action: 'endhalf' })} title="Einde eerste helft">⏹<span>Einde 1e</span></button>
+                  <button
+                    type="button"
+                    className="sk-rail-act notice"
+                    disabled={busy}
+                    onClick={() =>
+                      setBevestig({
+                        titel: 'Einde eerste helft?',
+                        tekst: 'De klok gaat op rust. Daarna zet de andere ploeg op in de tweede helft.',
+                        knop: '⏹ Ja, het is rust',
+                        doe: () => act({ action: 'endhalf' }),
+                      })
+                    }
+                    title="Einde eerste helft"
+                  >⏹<span>Einde 1e</span></button>
                 )}
                 {isLive && (
-                  <button type="button" className="sk-rail-act danger" disabled={busy} onClick={() => { if (window.confirm('Wedstrijd beëindigen?')) act({ action: 'finish' }) }} title="Wedstrijd beëindigen">🏁<span>Einde</span></button>
+                  <button
+                    type="button"
+                    className="sk-rail-act danger"
+                    disabled={busy}
+                    onClick={() =>
+                      setBevestig({
+                        titel: 'Wedstrijd beëindigen?',
+                        tekst:
+                          'De eindstand wordt vastgelegd en het aantekenen stopt. Ging het per ongeluk, dan kan je de wedstrijd daarna nog heropenen — je verliest niets.',
+                        knop: '🏁 Ja, de wedstrijd is gedaan',
+                        gevaar: true,
+                        doe: () => act({ action: 'finish' }),
+                      })
+                    }
+                    title="Wedstrijd beëindigen"
+                  >🏁<span>Einde</span></button>
                 )}
               </>
             )}
@@ -1068,6 +1114,33 @@ export function Scorekeeper({
       })()}
 
       {/* Keuzescherm bij de aftrap: opent via de geblokkeerde timer. */}
+      {/* Bevestigingskaart: dezelfde vorm voor starten, beëindigen, heropenen en terugzetten. */}
+      {bevestig && (
+        <div className="sk-modal-overlay">
+          <div className={`sk-modal sk-bevestig${bevestig.gevaar ? ' gevaar' : ''}`}>
+            <h3>{bevestig.titel}</h3>
+            <p>{bevestig.tekst}</p>
+            <div className="sk-modal-btns">
+              <button type="button" className="sk-btn" disabled={busy} onClick={() => setBevestig(null)}>
+                Nee, terug
+              </button>
+              <button
+                type="button"
+                className={`sk-btn ${bevestig.gevaar ? 'danger' : 'primary'}`}
+                disabled={busy}
+                onClick={async () => {
+                  const doe = bevestig.doe
+                  setBevestig(null)
+                  await doe()
+                }}
+              >
+                {bevestig.knop}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {kickoffOpen && (
         <div className="sk-modal-overlay">
           <div className="sk-modal sk-kickoff-modal">
@@ -1152,6 +1225,28 @@ export function Scorekeeper({
         <Link className="sk-back" href={isAnalyseOnly ? '/analyse' : '/scorekeeper'} title="Terug naar overzicht — de wedstrijd blijft gewoon live">← Overzicht</Link>
         {isDemo && <span className="sk-demo-chip">DEMO</span>}
         {isAnalyseOnly && <span className="sk-demo-chip">ANALYSE</span>}
+        {/* Te vroeg gestart? Zet de wedstrijd terug op niet-gestart. Bewust hier, weg van de
+            aantekenknoppen: je vindt het als je het zoekt, maar je tikt het niet per ongeluk aan. */}
+        {isLive && (
+          <button
+            type="button"
+            className="sk-terug"
+            disabled={busy}
+            onClick={() =>
+              setBevestig({
+                titel: 'Terugzetten naar niet-gestart?',
+                tekst:
+                  'Gebruik dit als de wedstrijd per ongeluk gestart is. Alles wat al ingevoerd werd — worpen, score, kruisjes en de klok — verdwijnt, en de wedstrijd staat weer klaar om later gewoon te beginnen. Dit kan niet ongedaan gemaakt worden.',
+                knop: '↺ Ja, terugzetten',
+                gevaar: true,
+                doe: () => act({ action: 'reset' }),
+              })
+            }
+            title="De wedstrijd was nog niet bezig — terugzetten naar niet-gestart"
+          >
+            ↺ Niet gestart
+          </button>
+        )}
         <button type="button" className="sk-fs" onClick={toggleFullscreen} title="Volledig scherm aan/uit">
           {isFullscreen ? '⤡ Sluiten' : '⛶ Volledig scherm'}
         </button>
@@ -1484,6 +1579,23 @@ export function Scorekeeper({
               </button>
               <a className="sk-btn" href={`/aftekenen/${matchId}`}>Naar aftekenen →</a>
             </div>
+            {/* Te vroeg op "Einde" gedrukt? Hier ga je gewoon verder waar je stond. */}
+            <button
+              type="button"
+              className="sk-heropen"
+              disabled={busy}
+              onClick={() =>
+                setBevestig({
+                  titel: 'Wedstrijd heropenen?',
+                  tekst:
+                    'De wedstrijd gaat terug live en je kan verder aantekenen. De score, de worpen en de kruisjes blijven allemaal staan; de klok blijft stil tot je ze zelf weer start.',
+                  knop: '🔓 Ja, heropenen',
+                  doe: () => act({ action: 'reopen' }),
+                })
+              }
+            >
+              🔓 Toch nog niet gedaan? Wedstrijd heropenen
+            </button>
           </div>
         </div>
       ) : atHalfTime && !vrijeWorpNaRust ? (

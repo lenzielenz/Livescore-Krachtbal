@@ -1,3 +1,4 @@
+import { isFederationLevel } from '@/lib/access'
 import { authUser, requireRole } from '@/lib/api-auth'
 import { withLock } from '@/lib/async-mutex'
 import { getPayloadClient } from '@/lib/payload-client'
@@ -6,8 +7,10 @@ import {
   assignVeld,
   buildTournamentState,
   finishMatch,
+  matchResetImpact,
   planMatch,
   reopenMatch,
+  resetMatch,
   recordCross,
   recordGoal,
   recordRefereeStop,
@@ -108,6 +111,20 @@ export async function POST(
       case 'reopen':
         await reopenMatch(payload, matchId)
         break
+      case 'reset': {
+        // Terugzetten op "nog niet gestart": er werd te vroeg gestart, deze reeks moet nog beginnen.
+        // De ingevoerde doelpunten gaan mee weg, dus zolang er al iets staat blijft dit voorbehouden
+        // aan de organisatie; een lege, per ongeluk gestarte wedstrijd zet de tafel zelf recht.
+        const { doelpunten } = await matchResetImpact(payload, matchId)
+        if (doelpunten > 0 && !isFederationLevel(user)) {
+          return Response.json(
+            { error: `Er staan al ${doelpunten} doelpunten ingevoerd. Enkel de organisatie kan deze wedstrijd terugzetten.` },
+            { status: 403 },
+          )
+        }
+        await resetMatch(payload, matchId)
+        break
+      }
       default:
         return Response.json({ error: `Onbekende actie: ${action}` }, { status: 400 })
     }

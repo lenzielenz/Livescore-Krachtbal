@@ -905,6 +905,27 @@ button.trn-toplink {
 .ts-controls .trn-btn.danger {
   margin-top: 6px;
 }
+/* Noodrem-knop (terugzetten): vindbaar, maar niet in dezelfde toon als de aantekenknoppen. */
+.trn-btn.zacht {
+  border-style: dashed;
+  color: var(--dim);
+  font-weight: 700;
+}
+.trn-btn.zacht:hover { color: #ef476f; border-color: #ef476f; }
+
+/* Bevestigingskaart vóór starten, beëindigen, heropenen of terugzetten. */
+.ts-bevestig {
+  margin-top: 16px;
+  background: var(--panel);
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line));
+  border-radius: 14px;
+  padding: 16px;
+}
+.ts-bevestig h4 { margin: 0 0 6px; font-size: 1.05rem; color: var(--accent); }
+.ts-bevestig p { margin: 0 0 14px; font-size: 0.9rem; line-height: 1.45; color: var(--dim); }
+.ts-bevestig-btns { display: flex; gap: 10px; flex-wrap: wrap; }
+.ts-bevestig-btns .trn-btn { flex: 1 1 140px; }
+
 .ts-tie {
   margin-top: 16px;
   text-align: center;
