@@ -112,6 +112,32 @@ export async function mayScoreMatch(
   return false
 }
 
+/**
+ * Mag deze gebruiker een VERGISSING rechtzetten (een wedstrijd heropenen of terugzetten op
+ * niet-gestart)? Dat is zwaarder dan gewoon aantekenen: het raakt een vastgelegde eindstand.
+ * Daarom valt de losse supporters-modus hier weg — enkel wie een echte aantekenrol draagt
+ * (federatie, aantekenaar, de scheidsrechter van dienst of de staf van een betrokken club) komt
+ * erdoor. Een demo-wedstrijd blijft vrij: daar valt niets te beschermen.
+ */
+export async function mayCorrectMatch(
+  payload: Payload,
+  user: AuthedUser | null,
+  matchId: number | string,
+): Promise<boolean> {
+  if (!user) return false
+  if (isFederationLevel(user) || hasRole(user, 'scorekeeper')) return true
+  const match = await payload.findByID({ collection: 'matches', id: matchId, depth: 0 }).catch(() => null)
+  if (match && (match as { isDemo?: boolean }).isDemo) return true
+  if (hasRole(user, 'scheidsrechter')) return isAssignedReferee(payload, user, matchId)
+  if (hasRole(user, 'club-beheerder', 'club-medewerker')) {
+    const clubId = userClubId(user)
+    if (clubId == null) return false
+    const clubs = await matchClubIds(payload, matchId)
+    return clubs.some((c) => String(c) === String(clubId))
+  }
+  return false
+}
+
 /** Is deze gebruiker (niet-federatie) de toegewezen/backup-scheidsrechter van deze wedstrijd? */
 export async function isAssignedReferee(
   payload: Payload,

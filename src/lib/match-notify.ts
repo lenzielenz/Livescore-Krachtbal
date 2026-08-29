@@ -25,6 +25,9 @@ async function run({ id, status, prevStatus, analyseOnly, isDemo }: Args): Promi
   if (analyseOnly || isDemo) return // privé-analyses en demo's verwittigen niemand
   if (status === prevStatus) return
   if (status !== 'live' && status !== 'finished') return
+  // Een heropening (afgelopen → live) is een correctie, geen nieuwe aftrap: supporters die net
+  // een eindstand kregen, mogen daar geen "match begonnen" achteraan krijgen.
+  if (status === 'live' && prevStatus === 'finished') return
 
   const payload = await getPayloadClient()
   const { pushConfigured, sendPushToAll } = await import('./push')

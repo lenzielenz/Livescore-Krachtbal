@@ -41,6 +41,14 @@
   border: 1px solid var(--line); border-radius: 8px; padding: 4px 10px; white-space: nowrap;
 }
 .sk-fs:hover { color: var(--txt); border-color: var(--accent); }
+/* "Niet gestart" — de noodrem als iemand te vroeg startte. Discreet in de topbalk: vindbaar
+   wanneer je ze zoekt, maar ver genoeg van de aantekenknoppen om niet mis te tikken. */
+.sk-terug {
+  font-size: 0.75rem; color: var(--dim); background: #10141a;
+  border: 1px dashed var(--line); border-radius: 8px; padding: 4px 10px; white-space: nowrap;
+  margin-left: auto;
+}
+.sk-terug:hover { color: #ffb4a2; border-color: #ffb4a2; }
 
 /* ── Kop: scorebalk (ploeg + score + time-outs), klok in het midden ── */
 .sk-head {
@@ -411,6 +419,20 @@ a.sk-btn { display: inline-block; box-sizing: border-box; text-align: center; te
 .sk-modal-btns { display: flex; flex-direction: column; gap: 10px; }
 .sk-modal-btns .sk-btn { font-size: 1rem; font-weight: 600; }
 .sk-btn.primary { border-color: var(--accent); color: var(--accent); }
+.sk-btn.danger { border-color: #ffb4a2; color: #ffb4a2; }
+
+/* Bevestigingskaart vóór een stap die je niet per ongeluk wil zetten (starten, beëindigen,
+   heropenen, terugzetten). De uitleg staat links uitgelijnd — het is een zin om te lézen. */
+.sk-bevestig p { text-align: left; line-height: 1.45; color: var(--dim); }
+.sk-bevestig.gevaar h3 { color: #ffb4a2; }
+
+/* Heropenen ná het eindsignaal: rustig onderaan het afgelopen-scherm, niet als hoofdactie. */
+.sk-heropen {
+  margin-top: 14px; width: 100%; padding: 12px; border-radius: 10px;
+  border: 1px dashed var(--line); background: transparent; color: var(--dim);
+  font-size: 0.9rem; font-weight: 700;
+}
+.sk-heropen:hover { color: var(--accent); border-color: var(--accent); }
 .sk-modal-hint { display: block; font-size: 0.72rem; color: var(--dim); font-weight: 400; }
 
 /* Keuzescherm (wie wierp) — verschijnt na het tikken op het veld */

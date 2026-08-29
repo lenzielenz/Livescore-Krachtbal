@@ -52,6 +52,14 @@ async function writeSimpleScore(payload: Payload, matchId: number, score: Simple
 
 /** Start de wedstrijd in simpele modus: status live, helft 1, klok op 0. */
 export async function startSimpleMatch(payload: Payload, matchId: number) {
+  // Veiligheid: één tik start de wedstrijd, dus een dubbele tik mag de klok niet terug op nul
+  // zetten — en een afgelopen wedstrijd start je niet opnieuw, die heropen je.
+  const huidig = await payload.findByID({ collection: 'matches', id: matchId, depth: 0 }).catch(() => null)
+  const status = (huidig as { status?: string } | null)?.status
+  if (status === 'live') throw new Error('Deze wedstrijd is al gestart.')
+  if (status === 'finished') {
+    throw new Error('Deze wedstrijd is al afgelopen — heropen ze eerst om verder te doen.')
+  }
   // Eén tik = starten én de klok laten lopen (intuïtiever dan eerst live, dan nog starten).
   await payload.update({
     collection: 'matches',

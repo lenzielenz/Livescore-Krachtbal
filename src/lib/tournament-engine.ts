@@ -306,6 +306,8 @@ export async function startMatch(payload: Payload, matchId: number): Promise<voi
   const m = await getMatch(payload, matchId)
   if (!m.home || !m.away) throw new Error('Beide ploegen moeten gekend zijn voor de start.')
   if (m.status === 'finished') throw new Error('Deze wedstrijd is al afgelopen.')
+  // Al gestart? Dan is dit een dubbele tik — de klok mag niet terug van voren af beginnen.
+  if (m.status === 'live') throw new Error('Deze wedstrijd is al gestart.')
   await update(payload, matchId, {
     status: 'live',
     clockRunning: true,
@@ -534,6 +536,41 @@ export async function reopenMatch(payload: Payload, matchId: number): Promise<vo
   await payload
     .update({ collection: 'tournaments', id: tournamentId, data: { status: 'live' }, overrideAccess: true })
     .catch(() => undefined)
+}
+
+/** Hoeveel is er al ingevoerd? Bepaalt of een reset onschuldig is of echt iets vernietigt. */
+export async function matchResetImpact(payload: Payload, matchId: number): Promise<{ doelpunten: number }> {
+  const m = await getMatch(payload, matchId)
+  return { doelpunten: goalsOf(m).length }
+}
+
+/**
+ * Zet een wedstrijd terug op "nog niet gestart": er werd per ongeluk gestart terwijl deze reeks
+ * nog moest beginnen. Alles wat tijdens de wedstrijd werd ingevoerd (doelpunten, kruisjes,
+ * time-outs, scheidsrechtersonderbrekingen, de klok) gaat mee weg — de affiche zelf, de planning
+ * en het veld blijven staan, zodat de wedstrijd gewoon opnieuw gespeeld kan worden.
+ *
+ * Een afgelopen wedstrijd moet éérst heropend worden: dan draait `reopenMatch` de doorgeschoven
+ * winnaar netjes terug uit de volgende ronde, en die volgorde blijft zo bewaakt.
+ */
+export async function resetMatch(payload: Payload, matchId: number): Promise<void> {
+  const m = await getMatch(payload, matchId)
+  if (m.status === 'pending') return
+  if (m.status === 'finished') {
+    throw new Error('Heropen deze wedstrijd eerst — dan pas kan ze op nog-niet-gestart gezet worden.')
+  }
+  await update(payload, matchId, {
+    status: 'pending',
+    winner: null,
+    goals: [],
+    crosses: { home: 0, away: 0 },
+    timeouts: { home: 0, away: 0 },
+    refereeStops: 0,
+    currentHalf: 1,
+    clockSeconds: 0,
+    clockRunning: false,
+    clockUpdatedAt: null,
+  })
 }
 
 // ── Tornooi-beheer: schrijffouten rechtzetten en herloten ────────────────────────────────────

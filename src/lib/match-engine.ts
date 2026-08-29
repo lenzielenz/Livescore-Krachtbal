@@ -81,6 +81,18 @@ async function assertValidLineup(payload: Payload, playerIds: number[], label: s
   }
 }
 
+/**
+ * CLAUDE.md-invariant 3: een afgelopen wedstrijd is niet meer muteerbaar. De worp- en klokpaden
+ * bewaakten dat al; het helft- en opstellingsverkeer niet, waardoor je ná het eindsignaal nog een
+ * helft kon starten of een wissel kon doorvoeren. Eén melding voor alles, met de weg vooruit erin:
+ * heropenen is de bedoelde manier om nog iets recht te zetten.
+ */
+function assertNietAfgelopen(match: { status?: string | null }, wat: string): void {
+  if (match.status === 'finished') {
+    throw new Error(`Wedstrijd is afgelopen — heropen ze eerst om ${wat}.`)
+  }
+}
+
 async function loadMatch(payload: Payload, matchId: number) {
   const match = await payload.findByID({ collection: 'matches', id: matchId, depth: 0 })
   const homeId = typeof match.homeTeam === 'object' ? match.homeTeam.id : match.homeTeam
@@ -180,6 +192,12 @@ async function createPossession(
 /** Start de wedstrijd: zet live, helft 1, klok op 0, en maak het eerste balbezit. */
 export async function startMatch(payload: Payload, matchId: number, startingTeamId: number) {
   const { match, homeId, awayId } = await loadMatch(payload, matchId)
+  // Veiligheid: een tweede keer starten maakte een tweede balbezit én een tweede half_start-event
+  // aan, en zette een afgelopen wedstrijd zomaar terug op live. Eén wedstrijd start één keer.
+  if (match.status === 'live') throw new Error('Deze wedstrijd is al gestart.')
+  if (match.status === 'finished') {
+    throw new Error('Deze wedstrijd is al afgelopen — heropen ze eerst om verder te doen.')
+  }
   const side = sideOfTeam(startingTeamId, homeId)
   const dir = attackDirForSide(side, 1)
 
@@ -754,6 +772,7 @@ async function isPendingFreeThrow(payload: Payload, poss: { id: number; freeThro
  */
 export async function endHalf(payload: Payload, matchId: number) {
   const { match } = await loadMatch(payload, matchId)
+  assertNietAfgelopen(match, 'de helft af te sluiten')
   const half = match.currentHalf ?? 1
 
   // Reglement §8: na het eindsignaal mag er niet meer gescoord worden, BEHALVE met een vrije worp
@@ -788,6 +807,7 @@ export async function endHalf(payload: Payload, matchId: number) {
  */
 export async function startNextHalf(payload: Payload, matchId: number) {
   const { match, homeId, awayId } = await loadMatch(payload, matchId)
+  assertNietAfgelopen(match, 'een volgende helft te starten')
   const nextHalf = (match.currentHalf ?? 1) + 1
 
   // Bleef er nog een vrije worp openstaan uit de vorige helft (zie endHalf, §8)? Dan is ze niet
@@ -903,12 +923,92 @@ export async function finishMatch(payload: Payload, matchId: number) {
   return buildMatchState(payload, matchId)
 }
 
-/** Heropen een afgesloten wedstrijd (federatie/admin-correctie). Zet terug op 'live'. */
+/**
+ * Heropen een afgesloten wedstrijd: er werd per ongeluk op "Einde" gedrukt en het spel loopt nog.
+ * Dit is de exacte tegenhanger van `finishMatch`, zodat de aantekenaar gewoon verder kan:
+ *  - het `half_end`-event dat het eindsignaal schreef verdwijnt weer,
+ *  - het balbezit dat toen werd afgesloten staat terug open (anders weigert `recordThrow` met
+ *    "Geen lopend balbezit" en zit je alsnog vast),
+ *  - de status gaat terug naar live, met de klok stil op de bevroren stand — de aantekenaar
+ *    beslist zelf wanneer ze weer loopt.
+ * Alle worpen, de score en de kruisjes blijven staan: heropenen wist niets.
+ */
 export async function reopenMatch(payload: Payload, matchId: number) {
+  const { match } = await loadMatch(payload, matchId)
+  if (match.status !== 'finished') return buildMatchState(payload, matchId)
+
+  // Het laatste half_end-event is per definitie dat van het eindsignaal: ná het einde kan er niets
+  // meer bijkomen. Enkel dat ene weghalen — een eerder rust-signaal blijft in de tijdlijn staan.
+  const eind = await payload.find({
+    collection: 'match-events',
+    where: { and: [{ match: { equals: matchId } }, { type: { equals: 'half_end' } }] },
+    sort: '-id',
+    depth: 0,
+    limit: 1,
+  })
+  const eindId = eind.docs[0]?.id
+  if (eindId) await payload.delete({ collection: 'match-events', id: eindId, overrideAccess: true }).catch(() => {})
+
+  // Idem voor het balbezit: `finishMatch` sloot het lopende balbezit af en er komt er daarna geen
+  // nieuw meer bij, dus het laatste balbezit is precies datgene dat weer open moet.
+  const laatste = await payload.find({
+    collection: 'possessions',
+    where: { match: { equals: matchId } },
+    sort: '-id',
+    depth: 0,
+    limit: 1,
+  })
+  const poss = laatste.docs[0] as { id: number; endOutcome?: string | null } | undefined
+  if (poss?.endOutcome) {
+    await payload
+      .update({ collection: 'possessions', id: poss.id, data: { endOutcome: null }, overrideAccess: true })
+      .catch(() => {})
+  }
+
   await payload.update({
     collection: 'matches',
     id: matchId,
-    data: { status: 'live' },
+    data: { status: 'live', clockRunning: false, clockUpdatedAt: new Date().toISOString() },
+    overrideAccess: true,
+  })
+  return buildMatchState(payload, matchId)
+}
+
+/** Hoeveel is er al ingevoerd? Bepaalt of een reset onschuldig is of echt iets vernietigt. */
+export async function matchResetImpact(payload: Payload, matchId: number): Promise<{ worpen: number }> {
+  const res = await payload
+    .count({ collection: 'throws', where: { match: { equals: matchId } }, overrideAccess: true })
+    .catch(() => ({ totalDocs: 0 }))
+  return { worpen: res.totalDocs }
+}
+
+/**
+ * Zet een wedstrijd terug op "nog niet gestart": iemand drukte per ongeluk op start terwijl er
+ * nog niet gespeeld werd. Omdat alles afgeleid is uit de worp-events volstaat het die events weg
+ * te gooien — score, balbezit en statistiek verdwijnen dan vanzelf mee. De `processed-ops` gaan
+ * er ook uit, anders zou een herhaalde actie-id na de herstart als "al verwerkt" gelden.
+ *
+ * Het wedstrijdblad, ongevalsaangiftes en tribunefoto's blijven onaangeroerd: dat is aparte
+ * administratie die niets met de aantekening te maken heeft.
+ */
+export async function resetMatch(payload: Payload, matchId: number) {
+  const { match } = await loadMatch(payload, matchId)
+  if (match.status === 'scheduled') return buildMatchState(payload, matchId)
+
+  for (const collection of ['throws', 'possessions', 'match-events', 'processed-ops'] as const) {
+    await payload.delete({ collection, where: { match: { equals: matchId } }, overrideAccess: true }).catch(() => {})
+  }
+  await payload.update({
+    collection: 'matches',
+    id: matchId,
+    data: {
+      status: 'scheduled',
+      currentHalf: 1,
+      clockSeconds: 0,
+      clockRunning: false,
+      clockUpdatedAt: null,
+      simpleScore: null,
+    },
     overrideAccess: true,
   })
   return buildMatchState(payload, matchId)
@@ -966,6 +1066,7 @@ export async function substitute(
   inPlayerId: number,
 ) {
   const { match, homeId, awayId } = await loadMatch(payload, matchId)
+  assertNietAfgelopen(match, 'nog te wisselen')
   const teamId = side === 'home' ? homeId : awayId
   const stored = side === 'home' ? match.homeLineup : match.awayLineup
   const current = await resolveLineup(payload, stored, teamId)
@@ -996,6 +1097,7 @@ export async function setLineup(
   playerIds: number[],
 ) {
   const { match, homeId, awayId } = await loadMatch(payload, matchId)
+  assertNietAfgelopen(match, 'de opstelling nog te wijzigen')
   const teamId = side === 'home' ? homeId : awayId
 
   const res = await payload.find({
@@ -1066,7 +1168,8 @@ export async function setLineup(
 
 /** Kapitein van een ploeg aanduiden (moet een speler van die ploeg zijn). */
 export async function setCaptain(payload: Payload, matchId: number, side: TeamSide, playerId: number) {
-  const { homeId, awayId } = await loadMatch(payload, matchId)
+  const { match, homeId, awayId } = await loadMatch(payload, matchId)
+  assertNietAfgelopen(match, 'de kapitein nog te wijzigen')
   const teamId = side === 'home' ? homeId : awayId
   const player = await payload.findByID({ collection: 'players', id: playerId, depth: 0 }).catch(() => null)
   const pTeam = player ? (typeof player.team === 'object' && player.team ? player.team.id : player.team) : null

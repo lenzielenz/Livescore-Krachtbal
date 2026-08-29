@@ -75,6 +75,12 @@ export function SimpleScorekeeper({
   const [needCaptain, setNeedCaptain] = useState<SimpleSide | null>(null)
   // Scheidsrechter bevestigt de stand vóór de overgang naar de 2e helft.
   const [confirmHalfEnd, setConfirmHalfEnd] = useState(false)
+  // Eén bevestigingsstap voor alles wat je niet per ongeluk wil doen: starten, beëindigen,
+  // heropenen en terugzetten naar niet-gestart.
+  const [bevestig, setBevestig] = useState<
+    | null
+    | { titel: string; tekst: string; knop: string; gevaar?: boolean; doe: () => void | Promise<unknown> }
+  >(null)
 
   // Offline-bestendigheid: gedeelde wachtrij-hook (localStorage + auto-nasturen + opId-idempotentie,
   // zie use-action-queue.ts). `busy` = er loopt een eigen actie → SSE-updates even negeren.
@@ -196,7 +202,15 @@ export function SimpleScorekeeper({
           onClick={() => {
             if (finished) return
             if (!live) {
-              act({ action: 'simplestart' })
+              // Extra drempel: één tik startte vroeger meteen de wedstrijd — ook wanneer die reeks
+              // nog moest beginnen. Nu bevestig je eerst dat er echt gespeeld wordt.
+              setBevestig({
+                titel: 'Wedstrijd nu starten?',
+                tekst:
+                  'De klok begint te lopen, de wedstrijd gaat live en supporters krijgen een melding. Start dit pas wanneer er echt afgetrapt wordt.',
+                knop: '▶ Ja, starten',
+                doe: () => act({ action: 'simplestart' }),
+              })
             } else if (state.match.clockRunning) {
               // Beveiliging: een per ongeluk tikken op de lopende klok mag hem niet pauzeren.
               if (window.confirm('Klok pauzeren? De tijd stopt.')) act({ action: 'clock', running: false })
@@ -317,12 +331,38 @@ export function SimpleScorekeeper({
             <button
               type="button"
               className="ssk-btn danger"
-              onClick={() => {
-                if (window.confirm('Hele wedstrijd beëindigen? De eindstand wordt vastgelegd.')) act({ action: 'finish' })
-              }}
+              onClick={() =>
+                setBevestig({
+                  titel: 'Hele wedstrijd beëindigen?',
+                  tekst:
+                    'De eindstand wordt vastgelegd en het aantekenen stopt. Ging het per ongeluk, dan kan je de wedstrijd daarna nog heropenen — je verliest niets.',
+                  knop: '⏹ Ja, de wedstrijd is gedaan',
+                  gevaar: true,
+                  doe: () => act({ action: 'finish' }),
+                })
+              }
             >
               ⏹ Einde wedstrijd
             </button>
+          )}
+          {/* Te vroeg gestart? Terug naar niet-gestart — alles wat ingevoerd is, verdwijnt. */}
+          {live && (
+          <button
+            type="button"
+            className="ssk-btn zacht"
+            onClick={() =>
+              setBevestig({
+                titel: 'Terugzetten naar niet-gestart?',
+                tekst:
+                  'Gebruik dit als de wedstrijd per ongeluk gestart is. Alles wat al ingevoerd werd — doelpunten, kruisjes en de klok — verdwijnt, en de wedstrijd staat weer klaar om later gewoon te beginnen. Dit kan niet ongedaan gemaakt worden.',
+                knop: '↺ Ja, terugzetten',
+                gevaar: true,
+                doe: () => act({ action: 'reset' }),
+              })
+            }
+          >
+            ↺ Wedstrijd was nog niet bezig
+          </button>
           )}
         </div>
       )}
@@ -332,11 +372,50 @@ export function SimpleScorekeeper({
           ✅ Afgelopen — eindstand <strong>{state.score.home} – {state.score.away}</strong>
           <div className="ssk-after">
             <Link href={`/match/${matchId}`} className="ssk-btn">Naar wedstrijdpagina</Link>
+            {/* Te vroeg op "Einde" gedrukt? Verder doen waar je stond, zonder iets te verliezen. */}
+            <button
+              type="button"
+              className="ssk-btn zacht"
+              onClick={() =>
+                setBevestig({
+                  titel: 'Wedstrijd heropenen?',
+                  tekst:
+                    'De wedstrijd gaat terug live en je kan verder aantekenen. De score en de kruisjes blijven staan; de klok blijft stil tot je ze zelf weer start.',
+                  knop: '🔓 Ja, heropenen',
+                  doe: () => act({ action: 'reopen' }),
+                })
+              }
+            >
+              🔓 Toch nog niet gedaan?
+            </button>
           </div>
         </div>
       )}
 
       {error && <p className="ssk-error">{error}</p>}
+
+      {bevestig && (
+        <div className="ssk-modal-overlay" onClick={() => setBevestig(null)}>
+          <div className="ssk-modal" onClick={(e) => e.stopPropagation()}>
+            <h3>{bevestig.titel}</h3>
+            <p className="ssk-confirm-note">{bevestig.tekst}</p>
+            <div className="ssk-modal-btns">
+              <button type="button" className="ssk-btn" onClick={() => setBevestig(null)}>Nee, terug</button>
+              <button
+                type="button"
+                className={`ssk-btn ${bevestig.gevaar ? 'danger' : 'primary'}`}
+                onClick={() => {
+                  const doe = bevestig.doe
+                  setBevestig(null)
+                  void doe()
+                }}
+              >
+                {bevestig.knop}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {confirmHalfEnd && (
         <div className="ssk-modal-overlay" onClick={() => setConfirmHalfEnd(false)}>

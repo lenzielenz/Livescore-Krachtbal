@@ -63,6 +63,12 @@ export function TournamentScoresheetPro({
   const [pending, setPending] = useState<{ side: Side; points: 1 | 2 } | null>(null)
   const [askWinner, setAskWinner] = useState(false)
   const [confirmHalfEnd, setConfirmHalfEnd] = useState(false)
+  // Eén bevestigingsstap voor alles wat je niet per ongeluk wil doen: starten, beëindigen,
+  // heropenen en terugzetten naar niet-gestart.
+  const [bevestig, setBevestig] = useState<
+    | null
+    | { titel: string; tekst: string; knop: string; gevaar?: boolean; doe: () => void | Promise<unknown> }
+  >(null)
   const busy = useRef(false)
 
   const teamInfo = (side: Side): TeamInfo => (side === 'home' ? home : away)
@@ -170,7 +176,14 @@ export function TournamentScoresheetPro({
               onClick={() => {
                 if (finished) return
                 if (!live) {
-                  act({ action: 'start' })
+                  // Extra drempel: één tik startte vroeger meteen de wedstrijd — ook wanneer die
+                  // reeks nog moest beginnen. Nu bevestig je eerst dat er echt gespeeld wordt.
+                  setBevestig({
+                    titel: 'Wedstrijd nu starten?',
+                    tekst: `${m.home} – ${m.away} gaat live en de klok begint te lopen. Start dit pas wanneer er echt gespeeld wordt.`,
+                    knop: '▶ Ja, starten',
+                    doe: () => act({ action: 'start' }),
+                  })
                 } else if (m.clockRunning) {
                   if (window.confirm('Klok pauzeren? De tijd stopt.')) act({ action: 'clock', running: false })
                 } else {
@@ -265,19 +278,47 @@ export function TournamentScoresheetPro({
                   ? `↶ Ondoen: +${m.lastGoal.points} ${m.lastGoal.side === 'home' ? m.home : m.away}`
                   : '↶ Niets te ondoen'}
               </button>
-              {half === 1 && (
+              {half === 1 && live && (
                 <button type="button" className="ssk-btn primary" onClick={() => setConfirmHalfEnd(true)}>
                   ⏭ Einde 1e helft → 2e
                 </button>
               )}
-              {half >= 2 && (
+              {half >= 2 && live && (
                 <button
                   type="button"
                   className="ssk-btn danger"
-                  onClick={() => { if (window.confirm('Hele wedstrijd beëindigen? De eindstand wordt vastgelegd.')) act({ action: 'finish' }) }}
+                  onClick={() =>
+                    setBevestig({
+                      titel: 'Hele wedstrijd beëindigen?',
+                      tekst:
+                        'De eindstand wordt vastgelegd en de winnaar schuift door in het schema. Ging het per ongeluk, dan kan je nadien nog heropenen zolang de volgende ronde niet bezig is.',
+                      knop: '⏹ Ja, de wedstrijd is gedaan',
+                      gevaar: true,
+                      doe: () => act({ action: 'finish' }),
+                    })
+                  }
                 >
                   ⏹ Einde wedstrijd
                 </button>
+              )}
+              {/* Te vroeg gestart terwijl deze reeks nog moest beginnen? Terug naar niet-gestart. */}
+              {live && (
+              <button
+                type="button"
+                className="ssk-btn zacht"
+                onClick={() =>
+                  setBevestig({
+                    titel: 'Terugzetten naar niet-gestart?',
+                    tekst:
+                      'Gebruik dit als deze wedstrijd per ongeluk gestart is. De ingevoerde doelpunten, kruisjes en de klok verdwijnen; de affiche en het uur blijven staan, zodat ze later gewoon gespeeld kan worden. Dit kan niet ongedaan gemaakt worden.',
+                    knop: '↺ Ja, terugzetten',
+                    gevaar: true,
+                    doe: () => act({ action: 'reset' }),
+                  })
+                }
+              >
+                ↺ Wedstrijd was nog niet bezig
+              </button>
               )}
             </div>
           )}
@@ -302,7 +343,19 @@ export function TournamentScoresheetPro({
                 <Link href={`/tornooi/${id}`} className="ssk-btn">Terug naar schema</Link>
                 {/* Score toch fout genoteerd? Heropen kan zolang de volgende ronde niet bezig is
                     (de server bewaakt dat en trekt de doorgeschoven winnaar terug). */}
-                <button type="button" className="ssk-btn" onClick={() => act({ action: 'reopen' })}>
+                <button
+                  type="button"
+                  className="ssk-btn"
+                  onClick={() =>
+                    setBevestig({
+                      titel: 'Wedstrijd heropenen?',
+                      tekst:
+                        'De wedstrijd gaat terug live zodat je de score kan aanpassen of verder aantekenen. De doorgeschoven winnaar wordt uit de volgende ronde teruggetrokken — dat lukt enkel zolang daar nog niet gespeeld is.',
+                      knop: '🔓 Ja, heropenen',
+                      doe: () => act({ action: 'reopen' }),
+                    })
+                  }
+                >
                   🔓 Score aanpassen
                 </button>
               </div>
@@ -312,6 +365,29 @@ export function TournamentScoresheetPro({
       )}
 
       {error && <p className="ssk-error">{error}</p>}
+
+      {bevestig && (
+        <div className="ssk-modal-overlay" onClick={() => setBevestig(null)}>
+          <div className="ssk-modal" onClick={(e) => e.stopPropagation()}>
+            <h3>{bevestig.titel}</h3>
+            <p className="ssk-confirm-note">{bevestig.tekst}</p>
+            <div className="ssk-modal-btns">
+              <button type="button" className="ssk-btn" onClick={() => setBevestig(null)}>Nee, terug</button>
+              <button
+                type="button"
+                className={`ssk-btn ${bevestig.gevaar ? 'danger' : 'primary'}`}
+                onClick={() => {
+                  const doe = bevestig.doe
+                  setBevestig(null)
+                  void doe()
+                }}
+              >
+                {bevestig.knop}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {confirmHalfEnd && (
         <div className="ssk-modal-overlay" onClick={() => setConfirmHalfEnd(false)}>

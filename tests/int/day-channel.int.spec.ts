@@ -35,7 +35,10 @@ async function maakWedstrijd(offsetMs: number) {
   return { id: m.id as number }
 }
 
-const vandaag = () => dateStrBE()
+// De speeldag van een wedstrijd is de Brusselse dag waarop ze staat — niet blind "vandaag".
+// Draai je deze suite kort na middernacht, dan ligt "vier uur geleden" op de vórige kalenderdag
+// en zou een harde `dateStrBE()` de wedstrijd nooit vinden. Zo test dit het gedrag, niet de klok.
+const dagVan = (offsetMs: number) => dateStrBE(new Date(Date.now() + offsetMs))
 const vind = (lijst: Awaited<ReturnType<typeof loadLiveScores>>, id: number) => lijst.find((x) => x.id === id)
 
 describe('dagstroom voor het live-bord', () => {
@@ -44,12 +47,13 @@ describe('dagstroom voor het live-bord', () => {
   })
 
   it('geeft de stand van een lopende wedstrijd door', async () => {
-    const { id } = await maakWedstrijd(-10 * 60_000)
+    const offset = -10 * 60_000
+    const { id } = await maakWedstrijd(offset)
     await startSimpleMatch(payload, id)
     await recordSimpleGoal(payload, id, 'home', 2)
     await recordSimpleGoal(payload, id, 'away', 1)
 
-    const rij = vind(await loadLiveScores(payload, vandaag()), id)
+    const rij = vind(await loadLiveScores(payload, dagVan(offset)), id)
     expect(rij).toBeDefined()
     expect(rij!.status).toBe('live')
     expect(rij!.score).toEqual({ home: 2, away: 1 })
@@ -57,30 +61,34 @@ describe('dagstroom voor het live-bord', () => {
   })
 
   it('toont een wedstrijd waarvan het uur net voorbij is als live, ook zonder aantekenaar', async () => {
-    const { id } = await maakWedstrijd(-5 * 60_000)
-    const rij = vind(await loadLiveScores(payload, vandaag()), id)
+    const offset = -5 * 60_000
+    const { id } = await maakWedstrijd(offset)
+    const rij = vind(await loadLiveScores(payload, dagVan(offset)), id)
     expect(rij!.status).toBe('live')
     expect(rij!.score).toEqual({ home: 0, away: 0 })
   })
 
   it('markeert een wedstrijd van uren geleden zonder notatie als "wacht op uitslag"', async () => {
-    const { id } = await maakWedstrijd(-(MATCH_ASSUMED_DONE_MS + 60 * 60_000))
-    const rij = vind(await loadLiveScores(payload, vandaag()), id)
+    const offset = -(MATCH_ASSUMED_DONE_MS + 60 * 60_000)
+    const { id } = await maakWedstrijd(offset)
+    const rij = vind(await loadLiveScores(payload, dagVan(offset)), id)
     expect(rij!.awaitingResult).toBe(true)
     expect(rij!.status).toBe('scheduled')
   })
 
   it('stuurt enkel het veranderlijke deel mee — geen namen, logo\'s of kleuren', async () => {
-    const { id } = await maakWedstrijd(-10 * 60_000)
-    const rij = vind(await loadLiveScores(payload, vandaag()), id)
+    const offset = -10 * 60_000
+    const { id } = await maakWedstrijd(offset)
+    const rij = vind(await loadLiveScores(payload, dagVan(offset)), id)
     expect(Object.keys(rij!).sort()).toEqual(
       ['awaitingResult', 'crosses', 'id', 'refereeStops', 'score', 'status', 'timeouts'].sort(),
     )
   })
 
   it('laat analyse-opnames en demo-wedstrijden buiten het publieke bord', async () => {
-    const { id } = await maakWedstrijd(-10 * 60_000)
+    const offset = -10 * 60_000
+    const { id } = await maakWedstrijd(offset)
     await payload.update({ collection: 'matches', id, data: { isDemo: true }, overrideAccess: true })
-    expect(vind(await loadLiveScores(payload, vandaag()), id)).toBeUndefined()
+    expect(vind(await loadLiveScores(payload, dagVan(offset)), id)).toBeUndefined()
   })
 })
