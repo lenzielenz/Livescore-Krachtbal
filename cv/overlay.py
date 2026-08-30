@@ -55,6 +55,10 @@ KLEUR_LANDING = (255, 255, 255)   # landingspunt: wit
 KLEUR_SPELER = (230, 130, 255)    # spelers: roze
 KLEUR_WAARSCHUWING = (0, 0, 255)
 
+# Alle tekst die IN het beeld gebrand wordt, moet ASCII zijn: het lettertype van opencv
+# (Hershey) kent geen accenten of typografische tekens en tekent er '??' voor in de plaats.
+LEGENDE = 'groen = veldmodel | blauw = gevonden lijnen | rood = bal | roze = spelers'
+
 
 def _fout(boodschap: str, code: int = 2) -> None:
     print(f'FOUT: {boodschap}', file=sys.stderr)
@@ -186,12 +190,12 @@ def statusregel(t: float, moment: dict | None) -> str:
     """De regel linksboven: waar staan we, en hoe zeker is de stand van het veld."""
     klok = f'{int(t) // 60}:{t % 60:04.1f}'
     if moment is None:
-        return f'{klok}  GEEN VELDSTAND — hier wordt niets gemeten'
+        return f'{klok}  GEEN VELDSTAND - hier wordt niets gemeten'
     bron = {'lijnen': 'herankerd op de veldlijnen', 'flow': 'gevolgd', 'kalibratie': 'kalibratie'}.get(
         str(moment.get('bron')), str(moment.get('bron'))
     )
     fout = moment.get('fout_m')
-    staart = f' · afwijking {fout:.2f} m' if isinstance(fout, (int, float)) else ''
+    staart = f' | afwijking {fout:.2f} m' if isinstance(fout, (int, float)) else ''
     return f'{klok}  veldstand: {bron}{staart}'
 
 
@@ -248,9 +252,8 @@ def _teken_frame(cv2, frame, breedte: int, hoogte: int, gegevens: dict) -> None:
     kleur = KLEUR_WAARSCHUWING if 'GEEN VELDSTAND' in tekst else (255, 255, 255)
     cv2.rectangle(frame, (0, 0), (breedte, 34), (0, 0, 0), -1)
     cv2.putText(frame, tekst, (10, 23), cv2.FONT_HERSHEY_SIMPLEX, 0.6, kleur, 1, cv2.LINE_AA)
-    legende = 'groen = veldmodel · blauw = gevonden lijnen · rood = bal · roze = spelers'
     cv2.rectangle(frame, (0, hoogte - 26), (breedte, hoogte), (0, 0, 0), -1)
-    cv2.putText(frame, legende, (10, hoogte - 8), cv2.FONT_HERSHEY_SIMPLEX, 0.45,
+    cv2.putText(frame, LEGENDE, (10, hoogte - 8), cv2.FONT_HERSHEY_SIMPLEX, 0.45,
                 (200, 200, 200), 1, cv2.LINE_AA)
 
 

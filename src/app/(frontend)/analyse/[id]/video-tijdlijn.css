@@ -390,6 +390,24 @@
 }
 .sa-stap { margin: 0; font-size: 13px; }
 
+/* ── De analyse-omgeving eenmalig ophalen ───────────────────────────────────────────────── */
+.sa-omgeving {
+  display: grid; gap: 10px; margin: 12px 0;
+  padding: 12px; border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1); background: rgba(255, 255, 255, 0.03);
+}
+
+/* ── Controlevideo: zien wat er getrackt werd ───────────────────────────────────────────── */
+.sa-controle { margin: 14px 0; display: grid; gap: 8px; }
+.sa-h3 { margin: 0; font-size: 15px; }
+.sa-video { width: 100%; border-radius: 12px; background: #000; }
+.sa-legende { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; margin: 0; font-size: 12px; opacity: 0.85; }
+.sa-kleur { width: 12px; height: 12px; border-radius: 3px; display: inline-block; margin-right: -8px; }
+.sa-kleur.groen { background: #22c55e; }
+.sa-kleur.blauw { background: #3b82f6; }
+.sa-kleur.rood { background: #ef4444; }
+.sa-kleur.roze { background: #f472b6; }
+
 /* ── Kalibreren: het veld aanwijzen op een videobeeld ───────────────────────────────────── */
 .kal-body { padding: 4px 2px 2px; }
 .kal-video { width: 100%; max-height: 320px; border-radius: 12px; background: #000; }

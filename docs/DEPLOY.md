@@ -64,32 +64,37 @@ worden nadat het Volume is gekoppeld.
 ## Video-analyse op de server (Python + opencv)
 
 De knop **"🤖 Analyseer de video"** op de analysepagina laat de server het rekenwerk doen:
-worpen zoeken, de bal volgen, spelers herkennen, en de controlevideo maken. Daarvoor moet er
-naast Node ook Python met opencv in de image staan.
+worpen zoeken, de bal volgen, spelers herkennen, en de controlevideo maken. Daarvoor is Python
+met opencv nodig — en dat zit **niet** in het productie-image.
 
-> **Stand van zaken: dat staat er nog niet.** Twee pogingen om de build met een eigen
-> `railpack.json` uit te breiden lieten de deploy mislukken (eerst op de apt-stap, daarna al
-> na zes seconden — dus op de config zelf). Dat bestand is daarom weggehaald: de bouw van de
-> site is belangrijker dan de knop. De analyse staat op de server uitgeschakeld met de reden
-> erbij; alle andere functies werken gewoon.
+**Daarom wordt de omgeving ná de deploy binnengehaald, vanuit de app zelf.** Staat ze er niet,
+dan verschijnt bij het analyseblok de knop **"⚙️ Analyse-omgeving installeren"** (federatie/
+admin). Die haalt een zelfstandige CPython op — [python-build-standalone][pbs], één map, geen
+systeemafhankelijkheden — en installeert daarin `numpy` en `opencv-python-headless`. Alles komt
+op het **volume** in `cv-runtime/`, dus het overleeft elke nieuwe versie van de site. Kosten:
+ongeveer 320 MB en een minuut.
 
-**Wat we intussen wél zeker weten**
+[pbs]: https://github.com/astral-sh/python-build-standalone
 
-- **Er zijn geen apt-pakketten nodig.** Het manylinux-wiel van `opencv-python-headless` heeft
-  buiten glibc, libstdc++ en libz geen enkele externe bibliotheek nodig — `readelf -d
-  cv2/cv2.abi3.so` laat zien dat de rest, ffmpeg inbegrepen, in het wiel zit. De pijplijn
-  leest video's uitsluitend via `cv2.VideoCapture`, nooit via de ffmpeg-binary. (`cv/ingest.py`
-  en `cv/highlights.py` roepen ffmpeg wél aan, maar zijn lokale hulpmiddelen.)
-- Nodig is dus alleen: een Python 3 in het eindbeeld, plus `numpy` en
-  `opencv-python-headless` (gepind, zie `cv/requirements.txt`) op een pad dat de app vindt.
-- Zonder de **volledige** buildlog van de mislukte deploy is de volgende poging opnieuw
-  gokwerk. Die log is de eerste stap, niet nog een variant van dezelfde config.
+Waarom niet via de build: twee pogingen om `railpack.json` uit te breiden lieten de deploy
+mislukken (eerst op de apt-stap, daarna al na zes seconden — dus op de config zelf). Een
+runtime-installatie kan de site niet breken: mislukt ze, dan blijft de knop uit met de reden
+erbij en draait alles verder.
 
-**Wegen die openstaan**, ruwweg van klein naar groot: de buildlog lezen en `railpack.json`
-gericht repareren; de pakketten bij het eerste gebruik naar het volume installeren (geen
-buildconfig nodig, maar wel een Python 3 in het beeld); of de analyse in een eigen
-Railway-service met een eigen image zetten — meteen ook het antwoord op "de site wordt traag
-tijdens een analyse".
+Wat daarbij vastligt:
+
+- **Geen apt-pakketten nodig.** Het manylinux-wiel van `opencv-python-headless` heeft buiten
+  glibc, libstdc++ en libz geen enkele externe bibliotheek nodig — `readelf -d cv2/cv2.abi3.so`
+  laat zien dat de rest, ffmpeg inbegrepen, in het wiel zit. De pijplijn leest video's
+  uitsluitend via `cv2.VideoCapture`, nooit via de ffmpeg-binary. (`cv/ingest.py` en
+  `cv/highlights.py` roepen ffmpeg wél aan, maar zijn lokale hulpmiddelen.)
+- **De download wordt gecontroleerd**: versie én sha256 staan vast in `src/lib/cv-runtime.ts`.
+  Klopt het controlegetal niet, dan wordt er niets uitgepakt.
+- **Uitpakken gebeurt in eigen huis** (`src/lib/cv-tar.ts`), zonder het `tar`-commando — precies
+  het soort aanname over het image dat de build twee keer deed struikelen. Namen die buiten de
+  doelmap wijzen, absolute paden en ontsnappende symlinks worden geweigerd.
+- Zit je op een andere architectuur (bv. arm), zet dan `CV_PYTHON_URL` naar het juiste bestand
+  van dezelfde release; het vaste controlegetal geldt dan niet meer.
 
 **De app blijft werken zonder dat alles.** Bij het openen van de analysepagina test de server
 één keer of Python en opencv er zijn; ontbreekt er iets, dan staat de knop uitgeschakeld met
@@ -101,6 +106,8 @@ nooit een taak gestart die na tien seconden op een cryptische Python-fout stuklo
 | Variabele | Waarvoor |
 | --- | --- |
 | `CV_PYTHON` | Pad naar de Python die de analyse draait. Gezet, dan telt alleen die. Anders wordt op volgorde geprobeerd: `/opt/cv-venv/bin/python3`, dan `python3` mét `PYTHONPATH` naar de site-packages van de venv (vangnet als de venv meekomt maar zijn interpreter niet), dan het kale `python3`. |
+| `CV_RUNTIME_DIR` | Waar de opgehaalde omgeving staat. Standaard `cv-runtime/` op het volume. |
+| `CV_PYTHON_URL` | Ander Python-bestand (andere architectuur). Zonder deze variabele geldt het vastgezette controlegetal. |
 | `CV_DIR` | Waar de scripts staan. Standaard `cv/` naast de app. |
 | `MAX_MATCH_VIDEO_MB` | Maximale grootte van een geüploade wedstrijdvideo (standaard 512). |
 
