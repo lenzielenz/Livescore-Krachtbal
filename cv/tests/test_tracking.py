@@ -1,0 +1,154 @@
+"""Tests voor tracking.py en heatmap.py (fase 5) en groundtruth.py (fase 6)."""
+
+from __future__ import annotations
+
+import io
+import json
+import sys
+import unittest
+from contextlib import redirect_stdout
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+import groundtruth  # noqa: E402
+import heatmap  # noqa: E402
+import tracking  # noqa: E402
+import veld  # noqa: E402
+
+
+class TestKoppelaar(unittest.TestCase):
+    def test_twee_stilstaande_spelers_houden_hun_spoor(self):
+        k = tracking.Koppelaar()
+        stap1 = k.stap(0.0, [(2.0, 10.0), (12.0, 30.0)])
+        stap2 = k.stap(0.5, [(2.1, 10.1), (11.9, 30.2)])
+        # Zelfde volgorde van koppeling: dichtstbijzijnde buur wint, id's blijven stabiel.
+        self.assertEqual({tid for tid, _, _ in stap1}, {tid for tid, _, _ in stap2})
+        toewijzing = {(round(x), round(y)): tid for tid, x, y in stap2}
+        self.assertNotEqual(toewijzing[(2, 10)], toewijzing[(12, 30)])
+
+    def test_te_grote_sprong_start_een_nieuw_spoor(self):
+        k = tracking.Koppelaar(max_snelheid=8.0)
+        (tid1, _, _), = k.stap(0.0, [(2.0, 10.0)])
+        # 20 m in 0,5 s = 40 m/s: dat kan dezelfde speler niet zijn.
+        (tid2, _, _), = k.stap(0.5, [(2.0, 30.0)])
+        self.assertNotEqual(tid1, tid2)
+
+    def test_spoor_sluit_na_te_lang_gat(self):
+        k = tracking.Koppelaar(max_gat=2.0)
+        (tid1, _, _), = k.stap(0.0, [(2.0, 10.0)])
+        (tid2, _, _), = k.stap(5.0, [(2.0, 10.0)])  # zelfde plek, maar 5 s later
+        self.assertNotEqual(tid1, tid2)
+
+    def test_kruisende_koppeling_is_een_op_een(self):
+        k = tracking.Koppelaar()
+        k.stap(0.0, [(5.0, 10.0), (5.6, 10.0)])
+        uit = k.stap(0.5, [(5.3, 10.0)])
+        # Eén waarneming voor twee sporen: precies één koppeling, geen dubbel.
+        self.assertEqual(len(uit), 1)
+
+
+class TestDemoPosities(unittest.TestCase):
+    def test_reproduceerbaar_en_binnen_het_veld(self):
+        a = tracking.demo_posities(seed=7, duur_s=10.0, diepte_m=10.0)
+        b = tracking.demo_posities(seed=7, duur_s=10.0, diepte_m=10.0)
+        self.assertEqual(a, b)
+        lengte = veld.totale_lengte_m(10.0)
+        for rij in a:
+            self.assertTrue(0.0 <= rij['x_m'] <= veld.BREEDTE_M)
+            self.assertTrue(0.0 <= rij['y_m'] <= lengte)
+        self.assertEqual(len({r['track'] for r in a}), 8)
+
+
+class TestHeatmapRaster(unittest.TestCase):
+    def test_binning_en_normalisatie(self):
+        posities = [
+            {'track': 1, 'x_m': 0.1, 'y_m': 0.1},
+            {'track': 1, 'x_m': 0.2, 'y_m': 0.2},  # zelfde cel → piek 2
+            {'track': 2, 'x_m': 7.0, 'y_m': 23.0},
+        ]
+        raster = heatmap.bouw_raster(posities, diepte_m=10.0, cel_m=0.5)
+        self.assertEqual(raster['piek'], 2)
+        self.assertEqual(raster['raster'][0][0], 1.0)  # genormaliseerd op de piek
+        self.assertEqual(raster['posities'], 3)
+
+    def test_rand_van_het_veld_valt_in_de_laatste_cel(self):
+        raster = heatmap.bouw_raster(
+            [{'track': 1, 'x_m': veld.BREEDTE_M, 'y_m': veld.totale_lengte_m(10.0)}],
+            diepte_m=10.0, cel_m=0.5,
+        )
+        self.assertEqual(raster['posities'], 1)
+        self.assertEqual(raster['raster'][-1][-1], 1.0)
+
+    def test_buiten_het_veld_telt_niet_en_trackfilter_werkt(self):
+        posities = [
+            {'track': 1, 'x_m': -1.0, 'y_m': 5.0},
+            {'track': 2, 'x_m': 7.0, 'y_m': 23.0},
+        ]
+        raster = heatmap.bouw_raster(posities, diepte_m=10.0, track=2)
+        self.assertEqual(raster['posities'], 1)
+        raster_leeg = heatmap.bouw_raster(posities, diepte_m=10.0, track=1)
+        self.assertEqual(raster_leeg['posities'], 0)
+        self.assertEqual(raster_leeg['piek'], 0)
+
+
+class TestGroundtruthContract(unittest.TestCase):
+    """Zelfde aanpak als test_sync.py: de responsvorm gespiegeld aan de int-test."""
+
+    def _respons(self) -> dict:
+        return {
+            'match': {'id': 42},
+            'reviews': [
+                {
+                    'id': 1, 'video_time_s': 42.0, 'event_type': 'worp', 'verdict': 'bevestigd',
+                    'worp_type': 'rug', 'worp_type_origineel': 'nek', 'side': 'home', 'rugnummer': 7,
+                    'in_doelgebied': False, 'x_m': None, 'y_m': None, 'afstand_m': None,
+                    'confidence': 0.7, 'provenance': {'model': 'demo-ruis', 'model_version': '0.1.0'},
+                },
+                {
+                    'id': 2, 'video_time_s': 67.0, 'event_type': 'worp', 'verdict': 'afgewezen',
+                    'worp_type': 'nek', 'worp_type_origineel': 'nek', 'side': None, 'rugnummer': None,
+                    'in_doelgebied': False, 'x_m': None, 'y_m': None, 'afstand_m': None,
+                    'confidence': 0.4, 'provenance': {'model': 'demo-ruis', 'model_version': '0.1.0'},
+                },
+            ],
+            'rapport': {'totaal': 2, 'bevestigd': 1, 'afgewezen': 1, 'worp_type_gecorrigeerd': 1},
+        }
+
+    def _draai(self, tmp: Path, respons: dict) -> tuple[list[dict], str]:
+        uitpad = tmp / 'gt.jsonl'
+        origineel = groundtruth.haal_reviews
+        groundtruth.haal_reviews = lambda *a, **k: respons
+        try:
+            buf = io.StringIO()
+            with redirect_stdout(buf):
+                groundtruth.main(['--match', '42', '--uit', str(uitpad), '--token', 'x'])
+        finally:
+            groundtruth.haal_reviews = origineel
+        regels = [json.loads(r) for r in uitpad.read_text(encoding='utf-8').splitlines()]
+        return regels, buf.getvalue()
+
+    def test_schrijft_reviews_en_rapporteert(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as d:
+            regels, uitvoer = self._draai(Path(d), self._respons())
+        self.assertEqual(len(regels), 2)
+        self.assertEqual(regels[0]['worp_type_origineel'], 'nek')
+        self.assertEqual(regels[0]['worp_type'], 'rug')  # de menselijke correctie
+        self.assertIn('1 bevestigd · 1 afgewezen', uitvoer)
+        self.assertIn('1 worptype-correcties', uitvoer)
+
+    def test_contractbreuk_faalt_hard(self):
+        respons = self._respons()
+        respons['reviews'] = []  # rapport zegt 2, wij tellen 0
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as d:
+            with self.assertRaises(SystemExit) as ctx:
+                self._draai(Path(d), respons)
+        self.assertNotEqual(ctx.exception.code, 0)
+
+
+if __name__ == '__main__':
+    unittest.main()

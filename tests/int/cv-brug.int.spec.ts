@@ -6,6 +6,7 @@ import { advanceHalf, recordThrow, startMatch } from '@/lib/match-engine'
 import { POST as postCvEvents } from '@/app/api/cv/events/route'
 import { PATCH as patchCvEvent } from '@/app/api/cv/events/[id]/route'
 import { GET as getLabels } from '@/app/api/cv/match/[id]/labels/route'
+import { GET as getReviews } from '@/app/api/cv/match/[id]/reviews/route'
 
 // De CV-brug (fase 0): de Python-pipeline stuurt event-VOORSTELLEN in via POST /api/cv/events
 // (Bearer CV_BRIDGE_TOKEN) en haalt de bestaande manuele tags als weak labels op via
@@ -451,5 +452,34 @@ describe('CV-brug', () => {
     expect(tweedeHelft.half).toBe(2)
     expect(tweedeHelft.video_time_s).toBeNull()
     expect(tweedeHelft.speler.team).toBe('away')
+  })
+
+  it('reviews-endpoint (fase 6): enkel gereviewde voorstellen, met claim én oordeel', async () => {
+    const { matchId } = await maakWedstrijd()
+    const open = await maakVoorstel(matchId)
+    const beoordeeld = await maakVoorstel(matchId)
+    await patchReview(beoordeeld.id as number, { actie: 'bevestig', worpType: 'rug' }, TOKEN)
+
+    const zonder = await getReviews(new Request(`http://localhost/api/cv/match/${matchId}/reviews`), {
+      params: Promise.resolve({ id: String(matchId) }),
+    })
+    expect(zonder.status).toBe(401)
+
+    const res = await getReviews(
+      new Request(`http://localhost/api/cv/match/${matchId}/reviews`, {
+        headers: { authorization: `Bearer ${TOKEN}` },
+      }),
+      { params: Promise.resolve({ id: String(matchId) }) },
+    )
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      reviews: { id: number; verdict: string; worp_type: string; worp_type_origineel: string }[]
+      rapport: { totaal: number; bevestigd: number; afgewezen: number; worp_type_gecorrigeerd: number }
+    }
+    // Het open voorstel hoort er niet in — een half oordeel is geen waarheid.
+    expect(body.reviews.map((r) => r.id)).not.toContain(open.id)
+    expect(body.rapport).toEqual({ totaal: 1, bevestigd: 1, afgewezen: 0, worp_type_gecorrigeerd: 1 })
+    expect(body.reviews[0].worp_type_origineel).toBe('nek')
+    expect(body.reviews[0].worp_type).toBe('rug')
   })
 })

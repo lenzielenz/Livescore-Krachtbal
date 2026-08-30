@@ -18,7 +18,8 @@ de koppeling loopt uitsluitend via de HTTP-importbrug (`/api/cv/…`).
 | **2** | Bal-landingspunt + homografie → zone (doelgebied ja/nee), afstand en score_delta (rugworp-doelpunt telt dubbel) | deze map (`landing.py`) |
 | **3** | Spelersidentificatie: team via truitjeskleur-clustering, rugnummer via de review-lus (OCR-backend later) | deze map (`spelers.py`) |
 | **4** | Auto-highlights per speler/doelpunt (FFmpeg-clips uit bevestigde events) | deze map (`highlights.py`) |
-| 5 | Volledige speler-tracking → heatmaps | later |
+| **5** | Volledige speler-tracking → heatmaps | deze map (`tracking.py` + `heatmap.py`) |
+| **6** | Hertraining-lus: reviewcorrecties → ground truth ("model zei X, mens zei Y") | deze map (`groundtruth.py`) |
 
 ## Installatie
 
@@ -281,6 +282,44 @@ keyframe-grenzen). Elke run schrijft een `manifest.json` naast de clips.
       wordt ground truth.
 - [ ] De hele demo-lus draait zonder video: sync → detect --demo →
       landing --demo → spelers --demo → evaluate → upload → reviewen.
+
+### 11. `tracking.py` + `heatmap.py` — posities en heatmaps (fase 5)
+
+```bash
+# Posities uit de video (HOG-personen → voetpunt → veldmeters → sporen):
+python3 cv/tracking.py --video match.mp4 --kalibratie kalibratie.json --fps 2 --uit posities.jsonl
+
+# Of zonder video (8 toevalspaden, reproduceerbaar):
+python3 cv/tracking.py --demo --seed 7 --duur 600 --uit posities.jsonl
+
+# Posities → heatmap-raster (JSON altijd; PNG met veldlijnen als opencv er is):
+python3 cv/heatmap.py --posities posities.jsonl --uit heatmap.json --png heatmap.png
+```
+
+De tracker is een v0.1-baseline (dichtstbijzijnde buur met snelheidslimiet 8 m/s):
+identiteitswissels bij occlusie horen erbij — prima voor heatmaps (wáár telt,
+niet wie), nog niet voor per-speler-analyse. Het JSON-raster is genormaliseerd
+op de drukste cel zodat elke weergave dezelfde schaal hanteert.
+
+### 12. `groundtruth.py` — de hertraining-lus sluiten (fase 6)
+
+```bash
+export CV_BRIDGE_TOKEN=…
+python3 cv/groundtruth.py --base https://krachtbal.live --match 42 --uit gt_match42.jsonl
+```
+
+Haalt alle GEREVIEWDE voorstellen op via GET `/api/cv/match/{id}/reviews`: het
+menselijke oordeel (bevestigd/afgewezen) mét de bevroren modelclaim ernaast —
+"model zei X, mens zei Y". Afgewezen voorstellen zijn even waardevol als
+bevestigde: dat zijn de valse positieven die de volgende modelversie moet
+afleren. Meerdere matchen aaneenplakken = de trainingsset.
+
+## Acceptatie fase 5 en 6
+
+- [ ] Een heatmap van een echte wedstrijd (of de demo) als PNG met veldlijnen,
+      en hetzelfde raster als JSON.
+- [ ] `groundtruth.py` haalt de reviews van een match op en het rapport klopt
+      met wat er in de browser gereviewd werd.
 
 ## Acceptatie fase 4
 
