@@ -14,7 +14,7 @@ Peildatum: augustus 2026. Codebestanden: `src/lib/field.ts`, `src/lib/krachtbal-
 
 | Regel | Waar | Opmerking |
 | --- | --- | --- |
-| §2 veldmaten: 26 m speelveld, 14 m breed, vrijeworplijn op 4 m | `field.ts` `FIELD` | Doelgebiedsdiepte is per wedstrijd instelbaar (`goalAreaDepth`, min. 10 m / 15 m nieuw); doellijn én vrijeworplijn schuiven correct mee, de middellijn blijft op 0.5 |
+| §2 veldmaten: 26 m speelveld, 14 m breed, vrijeworplijn op 4 m | `field.ts` `FIELD` | Doelgebiedsdiepte is per wedstrijd instelbaar (`goalAreaDepth`, min. 10 m / 15 m nieuw); doellijn én vrijeworplijn schuiven correct mee, de middellijn blijft op 0.5. Bewuste verruiming: niet elk terrein is exact reglementair — de échte opgemeten maten zijn per wedstrijd instelbaar (`veldBreedte`/`veldSpeelveld`, leeg = reglementair 14/26) en alle geometrie (`VeldMaten`) rekent daarmee, zodat afstand en landingspunt in meters ook op afwijkende terreinen kloppen |
 | §2 afstand op schaal | `distanceM` | y-component schaalt met de échte veldlengte (26 + 2×diepte), niet met een vaste 46 m |
 | §6.3/§6.8 worpaantal per opzetplaats | `throwsAllowed` + `categoryConfig` | Eigen helft 3 (4 jeugd), tegenhelft 2 (3 jeugd) |
 | §6.8 U16-meisjes spelen met senioren-worpaantal | `matchThrowsAllowed` + `reeksUsesSeniorThrows` | Override op reeksniveau, dus niet op categorie — correct |
