@@ -357,3 +357,50 @@
   background: rgba(255, 255, 255, 0.08); word-break: break-word;
 }
 .av-uitleg-slot { margin: 10px 0 0; font-size: 12px; color: var(--muted); }
+
+/* ── Server-analyse: de video laten uitrekenen door de server ───────────────────────────── */
+.sa {
+  margin: 0 0 16px; padding: 14px 16px; border-radius: 16px;
+  background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.12);
+}
+.sa-lead { margin: 0 0 12px; font-size: 13px; line-height: 1.5; color: var(--muted); }
+.sa-hint { font-size: 12px; color: var(--muted); }
+.sa-let-op {
+  margin: 0 0 10px; padding: 9px 12px; font-size: 13px; line-height: 1.45;
+  background: rgba(248, 113, 113, 0.12); border: 1px solid rgba(248, 113, 113, 0.35); border-radius: 10px;
+}
+.sa-klaar {
+  margin: 0 0 10px; padding: 9px 12px; font-size: 13px; line-height: 1.45;
+  background: rgba(74, 222, 128, 0.12); border: 1px solid rgba(74, 222, 128, 0.35); border-radius: 10px;
+}
+.sa-opties { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin-bottom: 12px; }
+.sa-optie { display: flex; align-items: center; gap: 7px; font-size: 13px; }
+.sa-optie select {
+  padding: 7px 9px; font-size: 14px; color: inherit; border-radius: 9px;
+  background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.16);
+}
+.sa-vink { display: flex; align-items: center; gap: 7px; font-size: 13px; }
+.sa-acties { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.sa-bezig { display: grid; gap: 10px; }
+.sa-balk { height: 10px; border-radius: 999px; background: rgba(255, 255, 255, 0.09); overflow: hidden; }
+.sa-balk > span {
+  display: block; height: 100%; border-radius: 999px;
+  background: linear-gradient(90deg, var(--accent, #60a5fa), #4ade80);
+  transition: width 0.6s ease;
+}
+.sa-stap { margin: 0; font-size: 13px; }
+
+/* ── Kalibreren: het veld aanwijzen op een videobeeld ───────────────────────────────────── */
+.kal-body { padding: 4px 2px 2px; }
+.kal-video { width: 100%; max-height: 320px; border-radius: 12px; background: #000; }
+.kal-acties { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+.kal-doek { position: relative; line-height: 0; border-radius: 12px; overflow: hidden; }
+.kal-doek img { width: 100%; cursor: crosshair; }
+.kal-punt {
+  position: absolute; transform: translate(-50%, -50%);
+  min-width: 20px; height: 20px; padding: 0 4px; border-radius: 999px;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 800; line-height: 1; color: #0b1220;
+  background: #4ade80; border: 2px solid rgba(0, 0, 0, 0.5);
+}
+.kal-volgende { margin: 10px 0; font-size: 13px; line-height: 1.5; }

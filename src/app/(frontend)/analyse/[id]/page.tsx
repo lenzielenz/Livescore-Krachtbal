@@ -15,6 +15,8 @@ import { AnalyseDetailView, type FysiekSpeler } from './AnalyseDetailView'
 import type { CvVoorstel } from './CvReview'
 import { ShareCard } from './ShareCard'
 import { AnalyseVoortgang } from './AnalyseVoortgang'
+import { Kalibreren } from './Kalibreren'
+import { ServerAnalyse } from './ServerAnalyse'
 import { Terreinmaten } from './Terreinmaten'
 import { Veldkaart } from './Veldkaart'
 import { VideoAnalyse, type VideoMoment, type VideoWorp } from './VideoAnalyse'
@@ -285,6 +287,23 @@ export default async function AnalyseDetailPage({ params }: { params: Promise<{ 
             maxMb={Number(process.env.MAX_MATCH_VIDEO_MB) || 512}
           />
         </ErrorCatch>
+        )}
+
+        {/* De video door de server laten analyseren: worpen zoeken, bal volgen, spelers
+            herkennen. Kalibratie eerst — die bepaalt of de meting ook wéét waar de bal landt. */}
+        {mayEditVideo && Boolean(matchDoc?.videoUrl) && (
+          <>
+            <ErrorCatch label="De veldkalibratie">
+              <Kalibreren
+                matchId={matchId}
+                videoUrl={(matchDoc?.videoUrl as string | null) ?? null}
+                initieel={(matchDoc?.cvKalibratie ?? null) as { punten?: { label: string; x: number; y: number }[] } | null}
+              />
+            </ErrorCatch>
+            <ErrorCatch label="De automatische video-analyse">
+              <ServerAnalyse matchId={matchId} heeftVideo />
+            </ErrorCatch>
+          </>
         )}
 
         {/* De échte terreinmaten van dít veld: bepalen alle meters op deze pagina. Ingeklapt,
