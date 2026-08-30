@@ -65,6 +65,20 @@ describe('tornooiwedstrijd per ongeluk gestart', () => {
     expect((await haal(id, matchId)).status).toBe('live')
   })
 
+  // Op het kantinescherm bleef de klok op 00:00 staan terwijl er gespeeld werd: "start" zette de
+  // status wel op live, maar liet de klokvelden ongemoeid. Start betekent nu letterlijk dat de
+  // tijd vanaf nul begint te lopen.
+  it('laat de klok lopen vanaf nul zodra de wedstrijd start', async () => {
+    const { id, matchId } = await maakTornooi(`Klokbeker ${Date.now()}`)
+    await startMatch(payload, matchId)
+    const m = await haal(id, matchId)
+    expect(m.status).toBe('live')
+    expect(m.clockRunning).toBe(true)
+    expect(m.currentHalf).toBe(1)
+    // De state rekent de verstreken tijd al mee, dus vlak na de start staat ze op 0 of net erboven.
+    expect(m.clockSeconds).toBeLessThan(3)
+  })
+
   it('weigert een tweede start op dezelfde wedstrijd', async () => {
     const { matchId } = await maakTornooi(`Dubbelstart-beker ${Date.now()}`)
     await startMatch(payload, matchId)

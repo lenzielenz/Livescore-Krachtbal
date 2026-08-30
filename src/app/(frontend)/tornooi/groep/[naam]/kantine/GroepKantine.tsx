@@ -18,10 +18,17 @@ import { fmtClock, useTicking } from '../../../useTournament'
 // (--gk-a/--gk-b). Data via de publieke groep-API (poll om de 5 s).
 
 const POLL_MS = 5000
-const VIERING_MS = 6000
+// Hoe lang een doelpuntviering in beeld blijft. Bewust kort: op een drukke tornooidag lopen er
+// twee wedstrijden tegelijk, dus een viering moet klaar zijn vóór de volgende eraan komt. De
+// rugworp krijgt iets meer tijd — die heeft een raketvlucht én een inslag te vertellen.
+const VIERING_MS = 2400
+const VIERING_RAKET_MS = 3400
 // Fotoshow: 3-2-1 meetellen, dan de foto heel even in beeld en weer weg.
 const FOTO_TEL_VANAF = 3
 const FOTO_TOON_MS = 6500
+// Meer foto's samen mogen langer blijven staan, maar niet eindeloos: de wedstrijd moet weer in
+// beeld kunnen komen.
+const FOTO_TOON_MAX_MS = 11000
 
 // Rasterindeling naar aantal live borden — zelfde filosofie als het club-kantinescherm.
 function kolommenVoor(n: number): number {
@@ -44,9 +51,19 @@ function LiveBord({ m, groot, logos, kleuren, fits }: { m: GroepMatch; groot: bo
       {/* Drie vaste kolommen (label · reeks · klok): de reeks staat groot en exact gecentreerd,
           zodat iedereen in de kantine in één oogopslag ziet wélke reeks er speelt. */}
       <div className="gk-bord-kop">
-        <span className="gk-bord-label">{m.label}</span>
+        <span className="gk-bord-label">
+          {m.label}
+          {m.veld != null && <span className="gk-bord-veld">Veld {m.veld}</span>}
+        </span>
         <span className="gk-bord-reeks">{m.reeksNaam}</span>
-        <span className="gk-bord-klok">{m.veld != null ? `Veld ${m.veld} · ` : ''}H{m.currentHalf} · {fmtClock(clock)}</span>
+        {/* De speeltijd is wat de kantine het vaakst zoekt: groot, in tabulaire cijfers, met een
+            kloppend stipje zolang ze loopt. Staat ze stil, dan zegt het bord dat ook — een
+            bevroren tijd zonder uitleg laat iedereen denken dat het scherm hangt. */}
+        <span className={`gk-bord-klok${m.clockRunning ? ' loopt' : ''}`}>
+          <span className="gk-klok-half">H{m.currentHalf}</span>
+          <span className="gk-klok-tijd">{fmtClock(clock)}</span>
+          <span className="gk-klok-staat">{m.clockRunning ? <span className="gk-klok-stip" aria-hidden /> : 'pauze'}</span>
+        </span>
       </div>
       <div className="gk-bord-body">
         <span className="gk-bord-ploeg">
@@ -109,7 +126,11 @@ type Viering = {
   tegenKleur: string | null
 }
 
-function VieringOverlay({ v }: { v: Viering }) {
+/** Een rugworp (+2) toont een raketvlucht en mag daarom iets langer duren dan een nekworp. */
+const vieringDuur = (v: { punten: number; tegen: string | null }) =>
+  v.punten === 2 && v.tegen ? VIERING_RAKET_MS : VIERING_MS
+
+function VieringOverlay({ v, ms }: { v: Viering; ms: number }) {
   const raket = v.punten === 2 && Boolean(v.tegen)
   // De thuisploeg staat links en de uitploeg rechts — exact zoals op het scorebord erboven.
   // Scoort de uitploeg, dan vertrekt de raket dus rechts en vliegt hij naar links; anders zou
@@ -128,7 +149,15 @@ function VieringOverlay({ v }: { v: Viering }) {
     </span>
   )
   return (
-    <div className={`gk-viering${raket ? ' raket' : ''}`} style={{ ...(v.kleur ? { '--vc': v.kleur } : {}) } as CSSProperties} aria-live="polite">
+    <div
+      className={`gk-viering${raket ? ' raket' : ''}`}
+      style={{ ...(v.kleur ? { '--vc': v.kleur } : {}), '--vdur': `${ms}ms` } as CSSProperties}
+      aria-live="polite"
+    >
+      {/* Drie lagen die samen de klap geven: een flits op het moment zelf, een schokgolf die
+          uitdijt in de clubkleur, en stralen die er traag doorheen draaien. */}
+      <div className="gk-viering-flits" aria-hidden />
+      <div className="gk-viering-golf" aria-hidden />
       <div className="gk-viering-burst" aria-hidden />
       <div className="gk-viering-inhoud">
         {raket ? (
@@ -154,49 +183,92 @@ function VieringOverlay({ v }: { v: Viering }) {
   )
 }
 
+// Wat de kantine te horen krijgt, afhankelijk van hoeveel foto's er tegelijk binnenvallen. Eén
+// foto is al leuk; komen er meer samen binnen, dan wordt het een moment: luider aftellen, dikkere
+// woorden, en op het einde vliegen ze allemaal samen in beeld. Vanaf vijf is het gewoon feest.
+const FOTO_TEKSTEN: { titel: string; sub: string }[] = [
+  { titel: '📸 OH OHHH…', sub: 'hier komt ’m!' },
+  { titel: '📸📸 OH OH OHHH!', sub: 'DUBBELSLAG — twee foto’s tegelijk!' },
+  { titel: '🔥 OHHH DRIEDUBBEL!', sub: 'een hattrick van foto’s!' },
+  { titel: '🎉 VIERKLAPPER!!', sub: 'vier in één keer — wie doet beter?' },
+]
+const fotoTekst = (n: number) =>
+  n <= FOTO_TEKSTEN.length
+    ? FOTO_TEKSTEN[n - 1]
+    : { titel: '🌪️ FOTOSTORM!!!', sub: `${n} foto’s in één klap — de kantine ontploft!` }
+
 // ── Fotoshow: een supporter stuurde een foto in ────────────────────────────────────────────────
 // "📸 OH OHHH… hier komt 'm!" met een 3-2-1-aftelklok waar de hele kantine luidop mee aftelt,
 // dan popt de foto als polaroid in beeld en lost weer op. De foto laadt alvast tijdens het
 // aftellen; lukt het laden niet, dan slaan we de onthulling stilletjes over.
-function FotoShow({ id, naam, klaar }: { id: number; naam: string; klaar: () => void }) {
+function FotoShow({ ids, naam, klaar }: { ids: number[]; naam: string; klaar: () => void }) {
   const [tel, setTel] = useState(FOTO_TEL_VANAF)
-  const url = `/api/tornooi-groep/foto/${id}?naam=${encodeURIComponent(naam)}`
-  const [geladen, setGeladen] = useState<boolean | null>(null)
+  const urls = useMemo(
+    () => ids.map((id) => ({ id, url: `/api/tornooi-groep/foto/${id}?naam=${encodeURIComponent(naam)}` })),
+    [ids, naam],
+  )
+  // Welke foto's zijn effectief bruikbaar? Eentje die niet laadt slaan we stilletjes over — de
+  // rest van de groep hoort daar niet onder te lijden.
+  const [ok, setOk] = useState<number[] | null>(null)
+  const sleutel = ids.join(',')
 
   // Voorladen tijdens het aftellen — de onthulling mag niet haperen.
   useEffect(() => {
-    const img = new Image()
-    img.onload = () => setGeladen(true)
-    img.onerror = () => setGeladen(false)
-    img.src = url
+    let actief = true
+    let open = urls.length
+    const goed: number[] = []
+    const af = () => {
+      if (--open === 0 && actief) setOk(goed)
+    }
+    for (const { id, url } of urls) {
+      const img = new Image()
+      img.onload = () => {
+        goed.push(id)
+        af()
+      }
+      img.onerror = af
+      img.src = url
+    }
+    return () => {
+      actief = false
+    }
     // eslint-disable-next-line
-  }, [id])
+  }, [sleutel])
 
   useEffect(() => {
     setTel(FOTO_TEL_VANAF)
     // Blijft op 0 staan (niet verder de min in): zo triggert het toon-effect precies één keer.
     const iv = setInterval(() => setTel((t) => Math.max(0, t - 1)), 1000)
     return () => clearInterval(iv)
-  }, [id])
+  }, [sleutel])
 
-  // Aftellen voorbij: foto tonen (of stil overslaan als ze niet laadde) en daarna opruimen.
+  // Aftellen voorbij: tonen (of stil overslaan als er niets laadde) en daarna opruimen. Meer
+  // foto's blijven iets langer staan — je wil ze allemaal kunnen bekijken — met een plafond,
+  // want het scherm moet ook weer aan de wedstrijd toekomen.
+  const toonbaar = ok ?? ids
+  const toonMs = Math.min(FOTO_TOON_MAX_MS, FOTO_TOON_MS + Math.max(0, toonbaar.length - 1) * 900)
   useEffect(() => {
     if (tel > 0) return
-    if (geladen === false) {
+    if (ok != null && ok.length === 0) {
       klaar()
       return
     }
-    const t = setTimeout(klaar, FOTO_TOON_MS)
+    const t = setTimeout(klaar, toonMs)
     return () => clearTimeout(t)
     // eslint-disable-next-line
-  }, [tel, geladen])
+  }, [tel, ok])
+
+  const n = toonbaar.length
+  const tekst = fotoTekst(Math.max(1, n))
+  // Vanaf drie tegelijk gaat er een tandje bij: fellere aankondiging en een dikkere ring.
+  const heftig = n >= 3 ? ' heftig' : n >= 2 ? ' dubbel' : ''
 
   return (
-    <div className="gk-fotoshow" aria-live="polite">
+    <div className={`gk-fotoshow${heftig}`} aria-live="polite">
       {tel > 0 ? (
         <div className="gk-fs-tease">
-          <span className="gk-fs-titel">📸 OH OHHH…</span>
-          <span className="gk-fs-sub">hier komt ’m!</span>
+          <span className="gk-fs-titel">{tekst.titel}</span>
+          <span className="gk-fs-sub">{tekst.sub}</span>
           {/* key per cijfer: elke seconde popt het cijfer opnieuw — mee aftellen dus. */}
           <span key={tel} className="gk-fs-tel">
             <i className="gk-fs-ring" aria-hidden />
@@ -205,9 +277,21 @@ function FotoShow({ id, naam, klaar }: { id: number; naam: string; klaar: () => 
         </div>
       ) : (
         <div className="gk-fs-reveal">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={url} alt="Supportersfoto van de dag" onError={klaar} />
-          <span className="gk-fs-onder">📷 Supportersfoto van de dag</span>
+          {/* Eén foto: een polaroid recht in beeld. Meerdere: ze vliegen één voor één in als een
+              handvol foto's op tafel — elk met een eigen hoek, samen als een waaier. */}
+          <div className={`gk-fs-stapel n${Math.min(n, 6)}`} style={{ '--n': n } as CSSProperties}>
+            {urls
+              .filter(({ id }) => (ok == null ? true : ok.includes(id)))
+              .map(({ id, url }, i) => (
+                <span key={id} className="gk-fs-kaart" style={{ '--i': i } as CSSProperties}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={url} alt="Supportersfoto van de dag" />
+                </span>
+              ))}
+          </div>
+          <span className="gk-fs-onder">
+            {n > 1 ? `📷 ${n} supportersfoto’s tegelijk!` : '📷 Supportersfoto van de dag'}
+          </span>
         </div>
       )}
     </div>
@@ -248,8 +332,9 @@ export function GroepKantine({ naam, initial }: { naam: string; initial: GroepDa
     }
   }, [])
   const [viering, setViering] = useState<Viering | null>(null)
-  // Fotoshow-wachtrij: nieuwe inzendingen komen één voor één met aftelklok in beeld.
-  const [fotoRij, setFotoRij] = useState<number[]>([])
+  // Fotoshow-wachtrij. Elk item is een gróépje: foto's die in dezelfde ronde binnenkwamen, zijn
+  // samen ingestuurd en verdienen één gezamenlijke onthulling — hoe meer, hoe specialer.
+  const [fotoRij, setFotoRij] = useState<number[][]>([])
   const fotoGezien = useRef<Set<number>>(new Set())
   // Vorige standen per wedstrijd — het verschil tussen twee polls IS het doelpunt.
   const vorige = useRef<Map<number, { home: number; away: number }>>(new Map())
@@ -298,18 +383,23 @@ export function GroepKantine({ naam, initial }: { naam: string; initial: GroepDa
                   tegenKleur: tegen ? d.kleuren[tegen] ?? null : null,
                 })
                 if (vieringTimer.current) clearTimeout(vieringTimer.current)
-                vieringTimer.current = setTimeout(() => setViering((v) => (v && v.key === key ? null : v)), VIERING_MS)
+                const duur = vieringDuur({ punten, tegen: tegen ?? null })
+                vieringTimer.current = setTimeout(() => setViering((v) => (v && v.key === key ? null : v)), duur)
               }
             }
           }
           vorige.current.set(m.id, { ...m.score })
         }
-        // Nieuwe supportersfoto('s)? In de rij voor de fotoshow (oudste eerst).
+        // Nieuwe supportersfoto('s)? Alles wat in déze ronde nieuw is, hoort bij elkaar en komt
+        // als één groep in de rij (oudste eerst) — zo krijgen gelijktijdige inzendingen samen
+        // hun moment in plaats van drie losse shows achter elkaar.
+        const nieuw: number[] = []
         for (const f of [...(d.fotos ?? [])].reverse()) {
           if (fotoGezien.current.has(f.id)) continue
           fotoGezien.current.add(f.id)
-          setFotoRij((rij) => [...rij, f.id])
+          nieuw.push(f.id)
         }
+        if (nieuw.length > 0) setFotoRij((rij) => [...rij, nieuw])
         setData(d)
       } catch {
         /* netwerkfout — volgende poll probeert opnieuw */
@@ -357,9 +447,14 @@ export function GroepKantine({ naam, initial }: { naam: string; initial: GroepDa
 
   return (
     <div className="gk-scherm" style={stijl}>
-      {viering && <VieringOverlay key={viering.key} v={viering} />}
+      {viering && <VieringOverlay key={viering.key} v={viering} ms={vieringDuur(viering)} />}
       {fotoRij.length > 0 && (
-        <FotoShow key={fotoRij[0]} id={fotoRij[0]} naam={naam} klaar={() => setFotoRij((rij) => rij.slice(1))} />
+        <FotoShow
+          key={fotoRij[0].join(',')}
+          ids={fotoRij[0]}
+          naam={naam}
+          klaar={() => setFotoRij((rij) => rij.slice(1))}
+        />
       )}
       {/* De kop draait om het evenement: hostlogo en naam staan groot en exact gecentreerd,
           met de merknaam er discreet boven. Tellers horen hier niet thuis — de kantine wil de
@@ -458,10 +553,15 @@ export function GroepKantine({ naam, initial }: { naam: string; initial: GroepDa
         </div>
       )}
 
-      {/* Alle nog te spelen wedstrijden schuiven in een doorlopende balk onderaan voorbij:
-          gewoon de logo's tegen elkaar met het uur ernaast. Bij een handvol wedstrijden staat
-          de balk stil (niets om te scrollen); daarboven loopt ze naadloos in een lus. */}
-      {komend.length > 0 && <KomendTicker komend={komend} logos={data.logos} kleuren={data.kleuren} fits={data.fits} />}
+      {/* De balk onderaan draait de uitslagen van de dag voorbij — dat is wat mensen willen zien
+          terwijl er gespeeld wordt, en het leest sneller dan een programma. Zolang er nog niets
+          gespeeld is toont ze het programma, zodat de balk nooit leeg staat. Bij een handvol
+          items staat ze stil (niets om te scrollen); daarboven loopt ze naadloos in een lus. */}
+      {gespeeld.length > 0 ? (
+        <UitslagTicker gespeeld={gespeeld} logos={data.logos} kleuren={data.kleuren} fits={data.fits} />
+      ) : (
+        komend.length > 0 && <KomendTicker komend={komend} logos={data.logos} kleuren={data.kleuren} fits={data.fits} />
+      )}
     </div>
   )
 }
@@ -524,6 +624,51 @@ function Uitslagen({
           )
         })}
       </ul>
+    </div>
+  )
+}
+
+function UitslagTicker({
+  gespeeld,
+  logos,
+  kleuren,
+  fits,
+}: {
+  gespeeld: GroepMatch[]
+  logos: Record<string, string>
+  kleuren: Record<string, string>
+  fits: Record<string, LogoFit>
+}) {
+  const loop = gespeeld.length >= 4
+  const duur = `${Math.max(20, gespeeld.length * 5)}s`
+  const helft = (verborgen: boolean) => (
+    <span className="gk-ticker-helft" aria-hidden={verborgen}>
+      {gespeeld.map((m) => (
+        <span key={m.id} className="gk-tick">
+          {/* Logo – uitslag – logo, met de reeks er exact centraal onder. De winnaar staat vol,
+              de verliezer gedempt: zo lees je de uitslag zonder de cijfers te ontcijferen. */}
+          <span className="gk-tick-blok">
+            <span className="gk-tick-affiche">
+              <span className={`gk-tick-kant${m.winner === 'home' ? ' wint' : ''}`}>
+                {m.home && <TeamLogo name={m.home} logoUrl={logos[m.home] ?? null} logoFit={fits[m.home] ?? null} side="home" size="1.7em" ringColor={m.home ? kleuren[m.home] : undefined} />}
+              </span>
+              <span className="gk-tick-uitslag">{m.score.home}<span className="gk-tick-streep">–</span>{m.score.away}</span>
+              <span className={`gk-tick-kant${m.winner === 'away' ? ' wint' : ''}`}>
+                {m.away && <TeamLogo name={m.away} logoUrl={logos[m.away] ?? null} logoFit={fits[m.away] ?? null} side="away" size="1.7em" ringColor={m.away ? kleuren[m.away] : undefined} />}
+              </span>
+            </span>
+            <span className="gk-tick-reeks">{m.reeksNaam}</span>
+          </span>
+        </span>
+      ))}
+    </span>
+  )
+  return (
+    <div className="gk-ticker uitslagen">
+      <div className={`gk-ticker-strook${loop ? ' loop' : ''}`} style={{ '--dur': duur } as CSSProperties}>
+        {helft(false)}
+        {loop && helft(true)}
+      </div>
     </div>
   )
 }
