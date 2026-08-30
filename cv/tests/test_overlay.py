@@ -131,6 +131,18 @@ class TestStatusregel(unittest.TestCase):
         self.assertIn('gevolgd', regel)
         self.assertNotIn('afwijking', regel)
 
+    def test_alles_wat_in_beeld_gebrand_wordt_is_ascii(self):
+        # Het lettertype van opencv kent geen '·' of '—' en tekent er '??' voor in de plaats —
+        # dat stond zo in de eerste controlevideo. Vandaar deze grens, niet alleen een fix.
+        teksten = [
+            overlay.LEGENDE,
+            overlay.statusregel(75.5, {'bron': 'lijnen', 'fout_m': 0.04}),
+            overlay.statusregel(12.0, None),
+            overlay.statusregel(3.0, {'bron': 'flow', 'fout_m': None}),
+        ]
+        for tekst in teksten:
+            self.assertTrue(tekst.isascii(), f'niet-tekenbaar teken in: {tekst}')
+
 
 class TestStanden(unittest.TestCase):
     """De ruil rekentijd ↔ precisie moet een echte ruil zijn, geen etiket."""

@@ -5,6 +5,7 @@ import path from 'path'
 
 import type { Payload } from 'payload'
 
+import { heeftRuntime, runtimeMap, runtimePython } from './cv-runtime'
 import { resolveMediaDir } from './media-dir'
 
 // De video-analyse op de server: video erin, worpvoorstellen eruit. Wat de gebruiker in de
@@ -38,6 +39,8 @@ export type AnalyseStand = {
     metLanding?: number
     zonderHomografie?: number
     duurSeconden?: number
+    /** Is er een controlevideo gemaakt? (Zo ja: te bekijken via .../overlay.) */
+    overlay?: boolean
   }
   instellingen?: { stand: string; bewegend: boolean; tracking: boolean; overlay: boolean }
 }
@@ -79,11 +82,17 @@ export type PythonKeuze = { pad: string; pythonpath: string | null }
  */
 export function bouwKandidaten(gevonden: {
   cvPython?: string | null
+  volumePython?: string | null
+  volumePakketten?: string | null
   venvPython?: string | null
   sitePackages?: string | null
 }): PythonKeuze[] {
   if (gevonden.cvPython) return [{ pad: gevonden.cvPython, pythonpath: null }]
   const lijst: PythonKeuze[] = []
+  // De omgeving die vanuit de app op het volume geïnstalleerd is (zie cv-runtime.ts).
+  if (gevonden.volumePython) {
+    lijst.push({ pad: gevonden.volumePython, pythonpath: gevonden.volumePakketten ?? null })
+  }
   if (gevonden.venvPython) lijst.push({ pad: gevonden.venvPython, pythonpath: null })
   // Staat de venv er wel, maar wijst zijn python naar een interpreter die in het eindbeeld
   // niet meer bestaat, dan kan het systeem-python de pakketten er nog altijd uit laden.
@@ -107,6 +116,8 @@ function zoekPython(): Parameters<typeof bouwKandidaten>[0] {
   }
   return {
     cvPython: process.env.CV_PYTHON || null,
+    volumePython: heeftRuntime() ? runtimePython() : null,
+    volumePakketten: path.join(runtimeMap(), 'pakketten'),
     venvPython: existsSync(path.join(VENV, 'bin', 'python3')) ? path.join(VENV, 'bin', 'python3') : null,
     sitePackages,
   }
@@ -159,6 +170,12 @@ export function pythonPad(): string {
  * en het antwoord worden onthouden — ze veranderen niet tijdens de looptijd van het proces.
  */
 let omgevingCache: { ok: boolean; melding: string | null } | null = null
+
+/** Na het installeren van de omgeving: opnieuw kijken in plaats van het oude antwoord herhalen. */
+export function vergeetOmgeving(): void {
+  omgevingCache = null
+  gekozen = null
+}
 
 export async function analyseOmgeving(): Promise<{ ok: boolean; melding: string | null }> {
   if (omgevingCache) return omgevingCache
@@ -456,6 +473,7 @@ export async function startAnalyse(
           voorstellen: aantal,
           detecties: regels.length,
           metLanding: regels.filter((r) => r.zone && typeof r.zone === 'object').length,
+          overlay: existsSync(path.join(map, 'controle.mp4')),
           duurSeconden: Math.round((Date.now() - begin) / 1000),
         },
       })

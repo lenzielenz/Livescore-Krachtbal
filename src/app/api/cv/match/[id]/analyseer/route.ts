@@ -142,8 +142,13 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 
   const video = videoBestand(match.videoUrl as string | null)
   const omgeving = await analyseOmgeving()
+  const stand = await leesStand(payload, matchId)
   return Response.json({
-    stand: await leesStand(payload, matchId),
+    stand,
+    // Ontbreekt de omgeving, dan kan de federatie ze hieronder installeren — vandaar apart van
+    // 'reden', die ook over een ontbrekende video kan gaan.
+    omgevingOk: omgeving.ok,
+    heeftOverlay: stand?.rapport?.overlay === true,
     // Wat de gebruiker moet weten vóór hij op de knop drukt: kan deze server het, en hangt
     // er een bestand dat te analyseren valt.
     kanAnalyseren: omgeving.ok && !('fout' in video),

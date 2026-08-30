@@ -145,6 +145,17 @@ describe('bouwKandidaten', () => {
     expect(k).toEqual([{ pad: '/eigen/python', pythonpath: null }])
   })
 
+  it('neemt de omgeving van het volume vóór alle andere', () => {
+    // Die is bewust door iemand geïnstalleerd; een toevallige python3 in het PATH niet.
+    const k = bouwKandidaten({
+      volumePython: '/data/cv-runtime/python/bin/python3',
+      volumePakketten: '/data/cv-runtime/pakketten',
+      venvPython: '/opt/cv-venv/bin/python3',
+    })
+    expect(k[0]).toEqual({ pad: '/data/cv-runtime/python/bin/python3', pythonpath: '/data/cv-runtime/pakketten' })
+    expect(k[1]).toEqual({ pad: '/opt/cv-venv/bin/python3', pythonpath: null })
+  })
+
   it('probeert de venv eerst, dan het systeem-python mét de pakketten uit de venv', () => {
     // Die tweede kandidaat is de redding wanneer de venv wél meekomt in het eindbeeld maar de
     // interpreter waar hij naar wijst niet: de pakketten zijn er dan nog steeds.
