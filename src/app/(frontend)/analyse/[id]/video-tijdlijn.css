@@ -281,3 +281,20 @@
   border-color: var(--accent, #4ba3ff);
   color: var(--accent, #4ba3ff);
 }
+
+/* ── Terreinmaten: de échte afstanden van dít veld, invulbaar in de app zelf ────────────── */
+.tm > summary { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; }
+.tm-sum { font-size: 12px; color: var(--muted); font-weight: 500; }
+.tm-body { padding: 4px 2px 2px; }
+.tm-lead { margin: 0 0 12px; font-size: 13px; line-height: 1.5; color: var(--muted); }
+.tm-velden { display: flex; flex-wrap: wrap; gap: 10px; }
+.tm-veld { display: flex; flex-direction: column; gap: 4px; flex: 1 1 130px; }
+.tm-veld > span { font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+.tm-veld input {
+  width: 100%; padding: 9px 10px; font-size: 15px; color: inherit;
+  background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 10px;
+}
+.tm-veld input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.tm-acties { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 12px; }
+.tm-ok { font-size: 12px; color: #4ade80; }
+.tm-fout { font-size: 12px; color: #f87171; }

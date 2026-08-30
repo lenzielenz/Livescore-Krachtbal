@@ -14,6 +14,7 @@ import { mayEditMatchVideo } from '@/lib/video-access'
 import { AnalyseDetailView, type FysiekSpeler } from './AnalyseDetailView'
 import type { CvVoorstel } from './CvReview'
 import { ShareCard } from './ShareCard'
+import { Terreinmaten } from './Terreinmaten'
 import { Veldkaart } from './Veldkaart'
 import { VideoAnalyse, type VideoMoment, type VideoWorp } from './VideoAnalyse'
 import '../analyse.css'
@@ -234,10 +235,31 @@ export default async function AnalyseDetailPage({ params }: { params: Promise<{ 
           />
         </ErrorCatch>
 
+        {/* De échte terreinmaten van dít veld: bepalen alle meters op deze pagina. Ingeklapt,
+            maar mét de huidige maten in de samenvatting zodat je in één blik ziet waarmee er
+            gerekend wordt. Enkel voor wie de wedstrijd beheert (zelfde kring als de video). */}
+        {mayEditVideo && (
+          <ErrorCatch label="De terreinmaten">
+            <Terreinmaten
+              matchId={matchId}
+              initieel={{
+                veldBreedte: state.match.veldBreedte ?? null,
+                veldSpeelveld: state.match.veldSpeelveld ?? null,
+                goalAreaDepth: state.match.goalAreaDepth,
+              }}
+            />
+          </ErrorCatch>
+        )}
+
         {/* Verdieping, ingeklapt: de veldkaart en de video zijn het dagelijkse werk; wie meer
-            wil (grafieken, spelerstabellen, deelkaart) klapt het hieronder open. */}
-        <details className="an-fold">
-          <summary>📊 Alle statistieken &amp; grafieken</summary>
+            wil (grafieken, spelerstabellen, deelkaart) klapt het hieronder open. Zijn er fysieke
+            stats uit de videotracking, dan staat het open: die cijfers wil je meteen zien, niet
+            achter een klik die je moet raden. */}
+        <details className="an-fold" open={fysiek.length > 0}>
+          <summary>
+            📊 Alle statistieken &amp; grafieken
+            {fysiek.length > 0 && <span className="an-chart-hint"> · met loopafstand, sprintjes en topsnelheid</span>}
+          </summary>
           <ErrorCatch label="De analyse-details">
             <AnalyseDetailView
               stats={stats.stats}

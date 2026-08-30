@@ -238,11 +238,13 @@ export default async function AnalysePage({ searchParams }: { searchParams: Prom
 
         {/* Wedstrijden — openklapbaar menu (gesloten standaard) zodat de hub kort blijft: bovenaan de
             afgelopen analyses, daaronder (voor wie mag opnemen) het manueel opnemen. */}
-        <details className="an-record-menu">
+        <details className="an-record-menu" open={rows.length > 0 || openRows.length > 0}>
           <summary className="an-record-summary">
             <span className="an-record-summary-title">🎬 Wedstrijden</span>
             <span className="an-record-summary-hint">
-              afgelopen analyses bekijken{canRecord ? ' · manueel opnemen & toevoegen' : ''}
+              {/* "video koppelen" hoort in de samenvatting: dat is waarnaar gezocht wordt, en
+                  het staat één klik verderop bij elke afgelopen wedstrijd. */}
+              afgelopen analyses bekijken · 🎥 video koppelen{canRecord ? ' · manueel opnemen & toevoegen' : ''}
               {rows.length ? ` · ${rows.length} afgelopen` : ''}{canRecord && openRows.length ? ` · ${openRows.length} voorbereid` : ''}
             </span>
           </summary>
