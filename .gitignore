@@ -57,3 +57,7 @@ node_modules/
 # dev-server log
 dev.log
 stream.txt
+
+# Python (cv-pipeline)
+__pycache__/
+*.py[cod]

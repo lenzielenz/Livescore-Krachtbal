@@ -14,7 +14,7 @@ import { mayEditMatchVideo } from '@/lib/video-access'
 import { AnalyseDetailView } from './AnalyseDetailView'
 import { ShareCard } from './ShareCard'
 import { Veldkaart } from './Veldkaart'
-import { VideoAnalyse, type VideoMoment } from './VideoAnalyse'
+import { VideoAnalyse, type VideoMoment, type VideoWorp } from './VideoAnalyse'
 import '../analyse.css'
 
 export const dynamic = 'force-dynamic'
@@ -103,6 +103,33 @@ export default async function AnalyseDetailPage({ params }: { params: Promise<{ 
       label: `${g.shirtNumber} ${g.playerName.split(/\s+/)[0]} · ${g.type === 'rug' ? 'rugworp' : 'nekworp'}`,
       points: g.points,
     }))
+  // Alle worpen (immutable events, hier enkel gelezen) voor de tijdlijnbalk onder de video:
+  // elke manuele tag op zijn videotijd, zodat je ziet of de ijking klopt vóór er ooit een
+  // CV-voorstel bijkomt (fase 0).
+  const worpenRes = await payload
+    .find({ collection: 'throws', where: { match: { equals: matchId } }, sort: 'createdAt', depth: 1, limit: 2000 })
+    .catch(() => ({ docs: [] as Record<string, unknown>[] }))
+  const videoWorpen: VideoWorp[] = worpenRes.docs
+    .map((t) => {
+      const d = t as { team?: unknown; player?: unknown; period?: unknown; gameClock?: unknown; type?: unknown; outcome?: unknown }
+      const teamId = d.team && typeof d.team === 'object' ? Number((d.team as { id?: number }).id) : Number(d.team)
+      const speler = d.player && typeof d.player === 'object' ? (d.player as { shirtNumber?: number }) : null
+      const outcome = String(d.outcome ?? '')
+      return {
+        half: Number(d.period ?? 1),
+        gameClock: Number(d.gameClock ?? 0),
+        side: (teamId === homeTeamId ? 'home' : 'away') as 'home' | 'away',
+        worpType: (d.type === 'rug' ? 'rug' : 'nek') as 'nek' | 'rug',
+        uitkomst:
+          outcome === 'goal' || outcome === 'own_goal'
+            ? ('doelpunt' as const)
+            : outcome === 'caught'
+              ? ('vangst' as const)
+              : null,
+        shirtNumber: speler?.shirtNumber ?? 0,
+      }
+    })
+    .sort((a, b) => a.half - b.half || a.gameClock - b.gameClock)
   const halfSeconds = reeksHalfDurationSeconds(matchDoc?.reeks as Reeks)
   // Video koppelen/ijken mag wie de analyse beheert: de federatie, of de eigenaar van deze
   // privé-opname (dezelfde kring die ze al mag bekijken — de paginatoegang hierboven).
@@ -159,6 +186,7 @@ export default async function AnalyseDetailPage({ params }: { params: Promise<{ 
             initialOffsetH1={(matchDoc?.videoOffsetH1 as number | null) ?? null}
             initialOffsetH2={(matchDoc?.videoOffsetH2 as number | null) ?? null}
             moments={videoMoments}
+            worpen={videoWorpen}
             halfSeconds={halfSeconds}
             teams={teamNames}
             canEdit={mayEditVideo}

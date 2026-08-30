@@ -94,6 +94,7 @@ import * as migration_20260828_110000_tornooi_velden from './20260828_110000_tor
 import * as migration_20260828_130000_tornooi_fotos from './20260828_130000_tornooi_fotos';
 import * as migration_20260828_150000_tornooi_fotos_lock_rel from './20260828_150000_tornooi_fotos_lock_rel';
 import * as migration_20260828_210000_tornooi_pronostiek from './20260828_210000_tornooi_pronostiek';
+import * as migration_20260830_120000_cv_events from './20260830_120000_cv_events';
 
 export const migrations = [
   {
@@ -575,5 +576,10 @@ export const migrations = [
     up: migration_20260828_210000_tornooi_pronostiek.up,
     down: migration_20260828_210000_tornooi_pronostiek.down,
     name: '20260828_210000_tornooi_pronostiek',
+  },
+  {
+    up: migration_20260830_120000_cv_events.up,
+    down: migration_20260830_120000_cv_events.down,
+    name: '20260830_120000_cv_events',
   },
 ];

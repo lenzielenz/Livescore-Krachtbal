@@ -11,6 +11,8 @@ import {
   type VideoSync,
 } from '@/lib/video-sync'
 
+import './video-tijdlijn.css'
+
 export interface VideoMoment {
   half: number
   gameClock: number
@@ -19,6 +21,18 @@ export interface VideoMoment {
   label: string
   /** Punten van het doelpunt (voor de +1/+2-pil). */
   points?: number
+}
+
+/** Eén worp op de videotijdlijn — de manuele tag (helft + klok) die we naast het beeld leggen. */
+export interface VideoWorp {
+  half: number
+  gameClock: number
+  side: 'home' | 'away'
+  /** Nekworp of rugworp (Throws.type). */
+  worpType: 'nek' | 'rug'
+  /** Bijzondere afloop die de marker bepaalt; gewone worpen tonen hun worpsoort. */
+  uitkomst: 'doelpunt' | 'vangst' | null
+  shirtNumber: number
 }
 
 // ── Video-analyse: de opname naast de wedstrijdmomenten ───────────────────────────────────────
@@ -31,6 +45,7 @@ export function VideoAnalyse({
   initialOffsetH1,
   initialOffsetH2,
   moments,
+  worpen,
   halfSeconds,
   teams,
   canEdit,
@@ -41,6 +56,8 @@ export function VideoAnalyse({
   initialOffsetH1: number | null
   initialOffsetH2: number | null
   moments: VideoMoment[]
+  /** Alle worpen van de wedstrijd, voor de tijdlijnbalk onder de video. */
+  worpen: VideoWorp[]
   halfSeconds: number
   teams: { home: string; away: string }
   canEdit: boolean
@@ -56,6 +73,11 @@ export function VideoAnalyse({
   // Waar de video nu staat. Bij een bestand leest de speler dit zelf uit; bij YouTube weten we
   // enkel waar we laatst naartoe sprongen (de iframe vertelt zijn positie niet).
   const [pos, setPos] = useState(0)
+  // Videoduur (enkel gekend bij een bestand) — de schaal van de tijdlijnbalk.
+  const [dur, setDur] = useState<number | null>(null)
+  // Is de aftrap van de 1e helft écht geijkt? (offsetH1 valt op 0 terug zolang dat niet zo is,
+  // en dat verschil moet het sync-rapport net tonen.)
+  const [h1Geijkt, setH1Geijkt] = useState(initialOffsetH1 != null)
   // Uploadvoortgang in % (null = geen upload bezig). Via XHR, want fetch meldt geen zendvoortgang.
   const [upPct, setUpPct] = useState<number | null>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -64,6 +86,11 @@ export function VideoAnalyse({
 
   const source = useMemo(() => parseVideoSource(url), [url])
   const isFile = source?.kind === 'file'
+
+  // Andere video gekoppeld → de oude duur geldt niet meer als schaal voor de tijdlijnbalk.
+  useEffect(() => {
+    setDur(null)
+  }, [url])
 
   // ── Download & delen (gsm) ──
   // Een videobestand moet je ook op je telefoon kunnen bewaren en doorsturen. Onze eigen
@@ -133,7 +160,7 @@ export function VideoAnalyse({
   )
 
   const jumpTo = useCallback(
-    (m: VideoMoment) => {
+    (m: { half: number; gameClock: number }) => {
       const t = momentToVideo(m, sync, halfSeconds)
       // Valt het moment voorbij het einde van de video, dan zou de speler stilzwijgend op het einde
       // blijven staan ("ik klik en er gebeurt niets"). Zeg wat er scheelt: meestal staat de ijking
@@ -154,7 +181,10 @@ export function VideoAnalyse({
     const at = Math.round(isFile ? (videoRef.current?.currentTime ?? pos) : pos)
     const key = half === 1 ? 'videoOffsetH1' : 'videoOffsetH2'
     const ok = await save({ [key]: at }, `Aftrap ${half}e helft geijkt op ${fmtVideoTime(at)}.`)
-    if (ok) setSync((s) => (half === 1 ? { ...s, offsetH1: at } : { ...s, offsetH2: at }))
+    if (ok) {
+      setSync((s) => (half === 1 ? { ...s, offsetH1: at } : { ...s, offsetH2: at }))
+      if (half === 1) setH1Geijkt(true)
+    }
   }
 
   /**
@@ -230,6 +260,30 @@ export function VideoAnalyse({
 
   // Welk moment is nu in beeld? Enkel zinvol als we de positie echt kennen (videobestand).
   const activeIdx = isFile ? activeMomentIndex(moments, pos, sync, halfSeconds) : -1
+
+  // ── Tijdlijnbalk: elke worp op zijn videotijd (aftrap van zijn helft + wedstrijdklok) ──
+  const h2Geijkt = sync.offsetH2 != null
+  const startH2 = sync.offsetH2 ?? sync.offsetH1 + halfSeconds
+  const tijdlijn = useMemo(
+    () => worpen.map((w) => ({ ...w, t: momentToVideo(w, sync, halfSeconds) })),
+    [worpen, sync, halfSeconds],
+  )
+  // Schaal van de balk: de echte videoduur als we die kennen, anders het laatste moment + uitloop
+  // (YouTube meldt zijn duur niet).
+  const tlEinde = useMemo(() => {
+    if (dur != null && Number.isFinite(dur) && dur > 0) return dur
+    const max = tijdlijn.reduce((m, w) => Math.max(m, w.t), 0)
+    return max > 0 ? max + 30 : 0
+  }, [dur, tijdlijn])
+  const tlPct = useCallback(
+    (seconds: number) => `${Math.max(0, Math.min(100, (seconds / tlEinde) * 100))}%`,
+    [tlEinde],
+  )
+  // Sync-rapport: een event is pas écht gekoppeld als de aftrap van zijn helft geijkt is —
+  // precies wat je moet weten om te zien of de kalibratie compleet is.
+  const gekoppeld = worpen.filter((w) => (w.half >= 2 ? h2Geijkt : h1Geijkt)).length
+  const heeftH1 = worpen.some((w) => w.half < 2)
+  const heeftH2 = worpen.some((w) => w.half >= 2)
 
   if (!canEdit && !source) return null
 
@@ -312,6 +366,7 @@ export function VideoAnalyse({
                 playsInline
                 preload="metadata"
                 onTimeUpdate={(e) => setPos(e.currentTarget.currentTime)}
+                onDurationChange={(e) => setDur(e.currentTarget.duration)}
               />
             ) : (
               <iframe
@@ -324,6 +379,57 @@ export function VideoAnalyse({
               />
             )}
           </div>
+
+          {/* Tijdlijnbalk: alle worpen van de wedstrijd op hun videotijd. Klik = spring ernaartoe.
+              Vorm/kleur per soort — doelpunten opvallend, de rest rustig. Zolang een helft niet
+              geijkt is, staan haar markers halfdoorzichtig (positie = schatting). */}
+          {tijdlijn.length > 0 && tlEinde > 0 && (
+            <div className="va-tl">
+              <div className="va-tl-track" aria-label="Alle worpen op de videotijdlijn">
+                <span className="va-tl-half" style={{ left: tlPct(sync.offsetH1) }} aria-hidden>
+                  <span>{h1Geijkt ? 'H1' : '~H1'}</span>
+                </span>
+                <span className="va-tl-half" style={{ left: tlPct(startH2) }} aria-hidden>
+                  <span>{h2Geijkt ? 'H2' : '~H2'}</span>
+                </span>
+                {isFile && <span className="va-tl-now" style={{ left: tlPct(pos) }} aria-hidden />}
+                {tijdlijn.map((w, i) => {
+                  const worpNaam = w.worpType === 'rug' ? 'rugworp' : 'nekworp'
+                  const soort = w.uitkomst ?? worpNaam
+                  const geschat = w.half >= 2 ? !h2Geijkt : !h1Geijkt
+                  const buiten = isFile && dur != null && Number.isFinite(dur) && w.t > dur
+                  const titel = `H${w.half} ${fmtVideoTime(w.gameClock)} · #${w.shirtNumber} ${worpNaam}${w.uitkomst ? ` · ${w.uitkomst}` : ''}`
+                  return (
+                    <button
+                      key={`${w.half}-${w.gameClock}-${i}`}
+                      type="button"
+                      className={`va-tl-m ${soort}${geschat ? ' geschat' : ''}${buiten ? ' buiten' : ''}`}
+                      style={{ left: tlPct(w.t) }}
+                      title={titel}
+                      aria-label={titel}
+                      onClick={() => jumpTo(w)}
+                    />
+                  )
+                })}
+              </div>
+              <div className="va-tl-legend" aria-hidden>
+                <span><i className="va-tl-key" /> nekworp</span>
+                <span><i className="va-tl-key rugworp" /> rugworp</span>
+                <span><i className="va-tl-key vangst" /> vangst</span>
+                <span><i className="va-tl-key doelpunt" /> doelpunt</span>
+              </div>
+              <p className="va-tl-sync">
+                <strong>{gekoppeld} van de {worpen.length}</strong>{' '}
+                {worpen.length === 1 ? 'event' : 'events'} gekoppeld aan de video.
+                {heeftH1 && !h1Geijkt
+                  ? ' De 1e helft is nog niet geijkt — haar markers gaan uit van de videostart (0:00).'
+                  : ''}
+                {heeftH2 && !h2Geijkt
+                  ? ' De 2e helft is nog niet geijkt — haar markers zijn een schatting (aftrap H1 + één speelhelft).'
+                  : ''}
+              </p>
+            </div>
+          )}
 
           <div className="va-bar">
             <span className="va-pos">

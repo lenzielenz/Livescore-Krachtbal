@@ -95,6 +95,7 @@ export interface Config {
     news: News;
     'match-mvp-votes': MatchMvpVote;
     'processed-ops': ProcessedOp;
+    'cv-events': CvEvent;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -130,6 +131,7 @@ export interface Config {
     news: NewsSelect<false> | NewsSelect<true>;
     'match-mvp-votes': MatchMvpVotesSelect<false> | MatchMvpVotesSelect<true>;
     'processed-ops': ProcessedOpsSelect<false> | ProcessedOpsSelect<true>;
+    'cv-events': CvEventsSelect<false> | CvEventsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -1557,6 +1559,38 @@ export interface ProcessedOp {
   createdAt: string;
 }
 /**
+ * Voorstellen uit de computer-vision-pipeline (video-analyse). Dit is géén waarheid: het worp-event-model blijft de bron van score en statistiek. Een voorstel wacht op menselijke review.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "cv-events".
+ */
+export interface CvEvent {
+  id: number;
+  match: number | Match;
+  videoTimeS: number;
+  frame?: number | null;
+  eventType: 'worp' | 'vangst' | 'doelpunt' | 'buitenspel';
+  worpType?: ('nek' | 'rug') | null;
+  inDoelgebied?: boolean | null;
+  xM?: number | null;
+  yM?: number | null;
+  afstandM?: number | null;
+  side?: ('home' | 'away') | null;
+  rugnummer?: number | null;
+  scoreDelta?: number | null;
+  confidence: number;
+  /**
+   * Pas na menselijke review mag een voorstel iets betekenen — het schrijft nooit zelf naar throws.
+   */
+  reviewed?: boolean | null;
+  provenance: {
+    model: string;
+    modelVersion?: string | null;
+  };
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
@@ -1691,6 +1725,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'processed-ops';
         value: number | ProcessedOp;
+      } | null)
+    | ({
+        relationTo: 'cv-events';
+        value: number | CvEvent;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -2427,6 +2465,34 @@ export interface ProcessedOpsSelect<T extends boolean = true> {
   match?: T;
   opId?: T;
   response?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "cv-events_select".
+ */
+export interface CvEventsSelect<T extends boolean = true> {
+  match?: T;
+  videoTimeS?: T;
+  frame?: T;
+  eventType?: T;
+  worpType?: T;
+  inDoelgebied?: T;
+  xM?: T;
+  yM?: T;
+  afstandM?: T;
+  side?: T;
+  rugnummer?: T;
+  scoreDelta?: T;
+  confidence?: T;
+  reviewed?: T;
+  provenance?:
+    | T
+    | {
+        model?: T;
+        modelVersion?: T;
+      };
   updatedAt?: T;
   createdAt?: T;
 }

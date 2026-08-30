@@ -1,0 +1,7 @@
+# CV-pipeline fase 0 — exact gepind. Zie cv/LICENSES.md voor de licenties.
+#
+# Enkel calibrate.py (fitten + interactieve modus) heeft deze nodig;
+# veld.py, sync.py, upload.py en de tests draaien puur op stdlib.
+# ingest.py vereist daarnaast ffmpeg/ffprobe als SYSTEEM-binaries (geen pip).
+opencv-python==4.10.0.84
+numpy==1.26.4

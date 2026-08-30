@@ -1,0 +1,101 @@
+/* ── Videotijdlijn: alle worpen van de wedstrijd als markers op hun videotijd ──────────────────
+   Fase 0 van de CV-fundering: de bestaande manuele tags (helft + wedstrijdklok, via de ijkpunten
+   videoOffsetH1/H2) naast het beeld leggen. Vorm/kleur per soort — een doelpunt springt eruit,
+   de gewone worpen blijven rustig. Hoort visueel bij .va-* in analyse.css. */
+
+.va-tl { margin-top: 10px; }
+
+.va-tl-track {
+  position: relative;
+  height: 38px;
+  border-radius: 10px;
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.12));
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
+  overflow: hidden;
+}
+
+/* Aftrap-strepen: waar elke helft in de video begint (H2 met ~ zolang hij enkel geschat is). */
+.va-tl-half {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: color-mix(in srgb, var(--accent, #06d6a0) 45%, transparent);
+  pointer-events: none;
+}
+.va-tl-half > span {
+  position: absolute;
+  top: 1px;
+  left: 3px;
+  font-size: 0.62rem;
+  font-weight: 800;
+  color: var(--dim, #9aa7b4);
+  white-space: nowrap;
+}
+
+/* Meelopende positielijn (enkel bij een videobestand: daar kennen we de positie exact). */
+.va-tl-now {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--accent, #06d6a0);
+  opacity: 0.85;
+  pointer-events: none;
+}
+
+/* Elke worp is een klikbare marker: klik = spring naar dat beeld. */
+.va-tl-m {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 9px;
+  height: 9px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.4);
+  cursor: pointer;
+}
+.va-tl-m.rugworp { border-radius: 2px; background: rgba(255, 255, 255, 0.75); }
+.va-tl-m.vangst {
+  border-radius: 2px;
+  transform: translate(-50%, -50%) rotate(45deg);
+  background: var(--away, #4cc9f0);
+}
+.va-tl-m.doelpunt {
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: var(--accent, #06d6a0);
+  box-shadow:
+    0 0 0 2px rgba(0, 0, 0, 0.35),
+    0 0 10px color-mix(in srgb, var(--accent, #06d6a0) 60%, transparent);
+  z-index: 2;
+}
+.va-tl-m:hover,
+.va-tl-m:focus-visible { box-shadow: 0 0 0 2px var(--accent, #06d6a0); z-index: 3; outline: none; }
+/* Helft nog niet geijkt → de positie is een schatting; laat dat zien zonder te storen. */
+.va-tl-m.geschat { opacity: 0.45; }
+/* Moment valt voorbij het einde van de video (ijking fout of onvolledige opname). */
+.va-tl-m.buiten { opacity: 0.25; }
+
+/* Legende: dezelfde vormpjes, statisch. */
+.va-tl-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 14px;
+  margin-top: 6px;
+  font-size: 0.72rem;
+  color: var(--dim, #9aa7b4);
+}
+.va-tl-legend > span { display: inline-flex; align-items: center; gap: 5px; }
+.va-tl-key { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: rgba(255, 255, 255, 0.4); }
+.va-tl-key.rugworp { border-radius: 2px; background: rgba(255, 255, 255, 0.75); }
+.va-tl-key.vangst { border-radius: 2px; transform: rotate(45deg); background: var(--away, #4cc9f0); }
+.va-tl-key.doelpunt { width: 11px; height: 11px; background: var(--accent, #06d6a0); }
+
+/* Sync-rapport: hoeveel events echt aan de video hangen, en welk ijkpunt nog ontbreekt. */
+.va-tl-sync { margin: 6px 0 0; font-size: 0.78rem; color: var(--dim, #9aa7b4); line-height: 1.5; }
+.va-tl-sync strong { color: var(--accent, #06d6a0); font-variant-numeric: tabular-nums; }
