@@ -2422,6 +2422,21 @@ button.trn-toplink {
   60% { transform: scale(0.96); }
   100% { transform: scale(1); }
 }
+/* Twee tegelijk: de titel wiebelt sneller en de achtergrond krijgt een kleurgloed. Drie of meer:
+   alles gaat nog een tandje omhoog — de kantine moet vóélen dat er iets bijzonders komt. */
+.gk-fotoshow.dubbel .gk-fs-titel { animation-duration: 0.7s; }
+.gk-fotoshow.heftig .gk-fs-titel { animation-duration: 0.45s; font-size: clamp(2.6rem, 9.5vmin, 6rem); }
+.gk-fotoshow.dubbel { background: radial-gradient(90% 90% at 50% 45%, rgba(22, 12, 4, 0.86), rgba(3, 6, 5, 0.95)); }
+.gk-fotoshow.heftig {
+  background: radial-gradient(90% 90% at 50% 45%, rgba(34, 12, 2, 0.9), rgba(4, 3, 6, 0.96));
+  animation: gk-fs-in 0.35s ease both, gk-fs-hartslag 0.55s ease-in-out infinite;
+}
+@keyframes gk-fs-hartslag {
+  0%, 100% { box-shadow: inset 0 0 0 0 rgba(255, 190, 90, 0); }
+  50% { box-shadow: inset 0 0 22vmin 0 rgba(255, 170, 60, 0.16); }
+}
+.gk-fotoshow.heftig .gk-fs-ring { border-width: 0.85vmin; animation-duration: 0.7s; }
+
 .gk-fs-ring {
   position: absolute;
   inset: 0;
@@ -2434,7 +2449,7 @@ button.trn-toplink {
 @keyframes gk-fs-draai {
   to { transform: rotate(360deg); }
 }
-/* De onthulling: polaroid die inpopt, even blijft hangen en weer oplost. */
+/* De onthulling: polaroid(s) die inpoppen, even blijven hangen en weer oplossen. */
 .gk-fs-reveal {
   display: flex;
   flex-direction: column;
@@ -2442,7 +2457,35 @@ button.trn-toplink {
   gap: 2vmin;
   animation: gk-fs-show 6.5s cubic-bezier(0.2, 1, 0.3, 1) both;
 }
-.gk-fs-reveal img {
+/* Eén foto staat gewoon in het midden; meerdere foto's liggen als een handvol polaroids door
+   elkaar — overlappend, elk onder een eigen hoek, en ze vliegen één voor één in. Dát is het
+   verschil tussen "er is een foto" en "er is iets aan de hand". */
+.gk-fs-stapel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* De gedraaide hoeken steken buiten de layout-hoogte uit; zonder deze marge schuift het
+     bijschrift eronder over de onderste polaroid heen. */
+  padding: 2.5vmin 0;
+}
+.gk-fs-kaart {
+  display: block;
+  /* Niet laten krimpen: in een flexrij zou de polaroid anders tot een streepje worden geperst. */
+  flex: 0 0 auto;
+  /* De hoek volgt de index: de eerste kaart helt naar links, de laatste naar rechts, zodat ze
+     samen een waaier vormen. De hoogtesprong staat per kaart hieronder — bewust met nth-child
+     in plaats van een berekening met abs(), want dat kent niet elke tv-browser. */
+  --hoek: calc((var(--i) - (var(--n) - 1) / 2) * 7deg);
+  --lift: 0vmin;
+  transform: rotate(var(--hoek)) translateY(var(--lift));
+  animation: gk-fs-kaart-in 0.62s cubic-bezier(0.18, 1.3, 0.32, 1) both;
+  animation-delay: calc(var(--i) * 0.16s);
+}
+/* Om en om een tikje hoger of lager: dat maakt van een nette rij een losse handvol foto's. */
+.gk-fs-kaart:nth-child(2n) { --lift: 1.4vmin; }
+.gk-fs-kaart:nth-child(3n) { --lift: -1vmin; }
+.gk-fs-kaart img {
+  display: block;
   max-width: min(84vw, 980px);
   max-height: 68vh;
   border: 1.4vmin solid #fff;
@@ -2450,7 +2493,24 @@ button.trn-toplink {
   border-radius: 8px;
   background: #fff;
   box-shadow: 0 30px 80px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.25);
-  transform: rotate(-2.4deg);
+}
+/* Vanaf twee foto's krimpen ze en schuiven ze over elkaar, zodat ze samen in beeld passen. */
+.gk-fs-stapel.n2 .gk-fs-kaart img { max-width: min(42vw, 520px); max-height: 52vh; }
+.gk-fs-stapel.n2 .gk-fs-kaart + .gk-fs-kaart { margin-left: -4vmin; }
+.gk-fs-stapel.n3 .gk-fs-kaart img { max-width: min(30vw, 400px); max-height: 46vh; }
+.gk-fs-stapel.n3 .gk-fs-kaart + .gk-fs-kaart { margin-left: -3vmin; }
+.gk-fs-stapel.n4 .gk-fs-kaart img,
+.gk-fs-stapel.n5 .gk-fs-kaart img,
+.gk-fs-stapel.n6 .gk-fs-kaart img { max-width: min(22vw, 320px); max-height: 40vh; }
+.gk-fs-stapel.n4 .gk-fs-kaart + .gk-fs-kaart,
+.gk-fs-stapel.n5 .gk-fs-kaart + .gk-fs-kaart,
+.gk-fs-stapel.n6 .gk-fs-kaart + .gk-fs-kaart { margin-left: -2.4vmin; }
+/* Elke kaart komt van buiten beeld ingevlogen en valt op haar plek. */
+@keyframes gk-fs-kaart-in {
+  0% { transform: rotate(calc(var(--hoek) * 5)) translate(0, 60vh) scale(0.5); opacity: 0; }
+  55% { opacity: 1; }
+  78% { transform: rotate(calc(var(--hoek) * 0.7)) translateY(calc(var(--lift) - 1.6vmin)) scale(1.05); }
+  100% { transform: rotate(var(--hoek)) translateY(var(--lift)) scale(1); opacity: 1; }
 }
 .gk-fs-onder {
   font-size: clamp(0.95rem, 2.6vmin, 1.5rem);
@@ -2473,8 +2533,10 @@ button.trn-toplink {
 @media (prefers-reduced-motion: reduce) {
   .gk-fs-titel,
   .gk-fs-ring { animation: none; }
+  .gk-fotoshow.heftig { animation: gk-fs-in 0.35s ease both; }
   .gk-fs-tel { animation: gk-fs-in 0.2s ease both; }
   .gk-fs-reveal { animation: gk-fs-in 0.3s ease both; }
+  .gk-fs-kaart { animation: gk-fs-in 0.3s ease both; }
 }
 
 /* Hub-badge voor een tornooi dat er nog aankomt (niets gespeeld): neutraal, geen groen. */

@@ -26,6 +26,9 @@ const VIERING_RAKET_MS = 3400
 // Fotoshow: 3-2-1 meetellen, dan de foto heel even in beeld en weer weg.
 const FOTO_TEL_VANAF = 3
 const FOTO_TOON_MS = 6500
+// Meer foto's samen mogen langer blijven staan, maar niet eindeloos: de wedstrijd moet weer in
+// beeld kunnen komen.
+const FOTO_TOON_MAX_MS = 11000
 
 // Rasterindeling naar aantal live borden — zelfde filosofie als het club-kantinescherm.
 function kolommenVoor(n: number): number {
@@ -180,49 +183,92 @@ function VieringOverlay({ v, ms }: { v: Viering; ms: number }) {
   )
 }
 
+// Wat de kantine te horen krijgt, afhankelijk van hoeveel foto's er tegelijk binnenvallen. Eén
+// foto is al leuk; komen er meer samen binnen, dan wordt het een moment: luider aftellen, dikkere
+// woorden, en op het einde vliegen ze allemaal samen in beeld. Vanaf vijf is het gewoon feest.
+const FOTO_TEKSTEN: { titel: string; sub: string }[] = [
+  { titel: '📸 OH OHHH…', sub: 'hier komt ’m!' },
+  { titel: '📸📸 OH OH OHHH!', sub: 'DUBBELSLAG — twee foto’s tegelijk!' },
+  { titel: '🔥 OHHH DRIEDUBBEL!', sub: 'een hattrick van foto’s!' },
+  { titel: '🎉 VIERKLAPPER!!', sub: 'vier in één keer — wie doet beter?' },
+]
+const fotoTekst = (n: number) =>
+  n <= FOTO_TEKSTEN.length
+    ? FOTO_TEKSTEN[n - 1]
+    : { titel: '🌪️ FOTOSTORM!!!', sub: `${n} foto’s in één klap — de kantine ontploft!` }
+
 // ── Fotoshow: een supporter stuurde een foto in ────────────────────────────────────────────────
 // "📸 OH OHHH… hier komt 'm!" met een 3-2-1-aftelklok waar de hele kantine luidop mee aftelt,
 // dan popt de foto als polaroid in beeld en lost weer op. De foto laadt alvast tijdens het
 // aftellen; lukt het laden niet, dan slaan we de onthulling stilletjes over.
-function FotoShow({ id, naam, klaar }: { id: number; naam: string; klaar: () => void }) {
+function FotoShow({ ids, naam, klaar }: { ids: number[]; naam: string; klaar: () => void }) {
   const [tel, setTel] = useState(FOTO_TEL_VANAF)
-  const url = `/api/tornooi-groep/foto/${id}?naam=${encodeURIComponent(naam)}`
-  const [geladen, setGeladen] = useState<boolean | null>(null)
+  const urls = useMemo(
+    () => ids.map((id) => ({ id, url: `/api/tornooi-groep/foto/${id}?naam=${encodeURIComponent(naam)}` })),
+    [ids, naam],
+  )
+  // Welke foto's zijn effectief bruikbaar? Eentje die niet laadt slaan we stilletjes over — de
+  // rest van de groep hoort daar niet onder te lijden.
+  const [ok, setOk] = useState<number[] | null>(null)
+  const sleutel = ids.join(',')
 
   // Voorladen tijdens het aftellen — de onthulling mag niet haperen.
   useEffect(() => {
-    const img = new Image()
-    img.onload = () => setGeladen(true)
-    img.onerror = () => setGeladen(false)
-    img.src = url
+    let actief = true
+    let open = urls.length
+    const goed: number[] = []
+    const af = () => {
+      if (--open === 0 && actief) setOk(goed)
+    }
+    for (const { id, url } of urls) {
+      const img = new Image()
+      img.onload = () => {
+        goed.push(id)
+        af()
+      }
+      img.onerror = af
+      img.src = url
+    }
+    return () => {
+      actief = false
+    }
     // eslint-disable-next-line
-  }, [id])
+  }, [sleutel])
 
   useEffect(() => {
     setTel(FOTO_TEL_VANAF)
     // Blijft op 0 staan (niet verder de min in): zo triggert het toon-effect precies één keer.
     const iv = setInterval(() => setTel((t) => Math.max(0, t - 1)), 1000)
     return () => clearInterval(iv)
-  }, [id])
+  }, [sleutel])
 
-  // Aftellen voorbij: foto tonen (of stil overslaan als ze niet laadde) en daarna opruimen.
+  // Aftellen voorbij: tonen (of stil overslaan als er niets laadde) en daarna opruimen. Meer
+  // foto's blijven iets langer staan — je wil ze allemaal kunnen bekijken — met een plafond,
+  // want het scherm moet ook weer aan de wedstrijd toekomen.
+  const toonbaar = ok ?? ids
+  const toonMs = Math.min(FOTO_TOON_MAX_MS, FOTO_TOON_MS + Math.max(0, toonbaar.length - 1) * 900)
   useEffect(() => {
     if (tel > 0) return
-    if (geladen === false) {
+    if (ok != null && ok.length === 0) {
       klaar()
       return
     }
-    const t = setTimeout(klaar, FOTO_TOON_MS)
+    const t = setTimeout(klaar, toonMs)
     return () => clearTimeout(t)
     // eslint-disable-next-line
-  }, [tel, geladen])
+  }, [tel, ok])
+
+  const n = toonbaar.length
+  const tekst = fotoTekst(Math.max(1, n))
+  // Vanaf drie tegelijk gaat er een tandje bij: fellere aankondiging en een dikkere ring.
+  const heftig = n >= 3 ? ' heftig' : n >= 2 ? ' dubbel' : ''
 
   return (
-    <div className="gk-fotoshow" aria-live="polite">
+    <div className={`gk-fotoshow${heftig}`} aria-live="polite">
       {tel > 0 ? (
         <div className="gk-fs-tease">
-          <span className="gk-fs-titel">📸 OH OHHH…</span>
-          <span className="gk-fs-sub">hier komt ’m!</span>
+          <span className="gk-fs-titel">{tekst.titel}</span>
+          <span className="gk-fs-sub">{tekst.sub}</span>
           {/* key per cijfer: elke seconde popt het cijfer opnieuw — mee aftellen dus. */}
           <span key={tel} className="gk-fs-tel">
             <i className="gk-fs-ring" aria-hidden />
@@ -231,9 +277,21 @@ function FotoShow({ id, naam, klaar }: { id: number; naam: string; klaar: () => 
         </div>
       ) : (
         <div className="gk-fs-reveal">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={url} alt="Supportersfoto van de dag" onError={klaar} />
-          <span className="gk-fs-onder">📷 Supportersfoto van de dag</span>
+          {/* Eén foto: een polaroid recht in beeld. Meerdere: ze vliegen één voor één in als een
+              handvol foto's op tafel — elk met een eigen hoek, samen als een waaier. */}
+          <div className={`gk-fs-stapel n${Math.min(n, 6)}`} style={{ '--n': n } as CSSProperties}>
+            {urls
+              .filter(({ id }) => (ok == null ? true : ok.includes(id)))
+              .map(({ id, url }, i) => (
+                <span key={id} className="gk-fs-kaart" style={{ '--i': i } as CSSProperties}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={url} alt="Supportersfoto van de dag" />
+                </span>
+              ))}
+          </div>
+          <span className="gk-fs-onder">
+            {n > 1 ? `📷 ${n} supportersfoto’s tegelijk!` : '📷 Supportersfoto van de dag'}
+          </span>
         </div>
       )}
     </div>
@@ -274,8 +332,9 @@ export function GroepKantine({ naam, initial }: { naam: string; initial: GroepDa
     }
   }, [])
   const [viering, setViering] = useState<Viering | null>(null)
-  // Fotoshow-wachtrij: nieuwe inzendingen komen één voor één met aftelklok in beeld.
-  const [fotoRij, setFotoRij] = useState<number[]>([])
+  // Fotoshow-wachtrij. Elk item is een gróépje: foto's die in dezelfde ronde binnenkwamen, zijn
+  // samen ingestuurd en verdienen één gezamenlijke onthulling — hoe meer, hoe specialer.
+  const [fotoRij, setFotoRij] = useState<number[][]>([])
   const fotoGezien = useRef<Set<number>>(new Set())
   // Vorige standen per wedstrijd — het verschil tussen twee polls IS het doelpunt.
   const vorige = useRef<Map<number, { home: number; away: number }>>(new Map())
@@ -331,12 +390,16 @@ export function GroepKantine({ naam, initial }: { naam: string; initial: GroepDa
           }
           vorige.current.set(m.id, { ...m.score })
         }
-        // Nieuwe supportersfoto('s)? In de rij voor de fotoshow (oudste eerst).
+        // Nieuwe supportersfoto('s)? Alles wat in déze ronde nieuw is, hoort bij elkaar en komt
+        // als één groep in de rij (oudste eerst) — zo krijgen gelijktijdige inzendingen samen
+        // hun moment in plaats van drie losse shows achter elkaar.
+        const nieuw: number[] = []
         for (const f of [...(d.fotos ?? [])].reverse()) {
           if (fotoGezien.current.has(f.id)) continue
           fotoGezien.current.add(f.id)
-          setFotoRij((rij) => [...rij, f.id])
+          nieuw.push(f.id)
         }
+        if (nieuw.length > 0) setFotoRij((rij) => [...rij, nieuw])
         setData(d)
       } catch {
         /* netwerkfout — volgende poll probeert opnieuw */
@@ -386,7 +449,12 @@ export function GroepKantine({ naam, initial }: { naam: string; initial: GroepDa
     <div className="gk-scherm" style={stijl}>
       {viering && <VieringOverlay key={viering.key} v={viering} ms={vieringDuur(viering)} />}
       {fotoRij.length > 0 && (
-        <FotoShow key={fotoRij[0]} id={fotoRij[0]} naam={naam} klaar={() => setFotoRij((rij) => rij.slice(1))} />
+        <FotoShow
+          key={fotoRij[0].join(',')}
+          ids={fotoRij[0]}
+          naam={naam}
+          klaar={() => setFotoRij((rij) => rij.slice(1))}
+        />
       )}
       {/* De kop draait om het evenement: hostlogo en naam staan groot en exact gecentreerd,
           met de merknaam er discreet boven. Tellers horen hier niet thuis — de kantine wil de
