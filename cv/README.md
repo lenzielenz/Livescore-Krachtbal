@@ -9,6 +9,29 @@ bron van waarheid; een mens bevestigt (of verwerpt) elk voorstel.
 Alles in deze map is Python (3.11+) en staat los van de Next.js/Payload-app;
 de koppeling loopt uitsluitend via de HTTP-importbrug (`/api/cv/…`).
 
+## De eerste echte meting (start hier)
+
+Alles in deze map dient één moment: de eerste meting op echte beelden. Drie stappen:
+
+```bash
+# 1. Staat alles klaar? (ffmpeg, opencv, token, platform, video-offsets per helft)
+export CV_BRIDGE_TOKEN=…
+python3 cv/meet.py --controle --match 42 --base https://<jouw-domein>
+
+# 2. Kalibreer één keer voor je vaste camera-opstelling (klik ≥ 4 lijnkruisingen):
+python3 cv/calibrate.py --beeld frame.jpg --uit kalibratie.json
+
+# 3. De meting zelf — één commando, van video tot acceptatierapport:
+python3 cv/meet.py --video match.mp4 --match 42 --kalibratie kalibratie.json \
+    --base https://<jouw-domein>
+```
+
+Het rapport vertelt waar de detectie staat (doel: recall ≥ 0.8 op worpen).
+Tevreden? Draai opnieuw met `--upload` en review de voorstellen op de
+analysepagina — elke correctie wordt trainingsdata (`groundtruth.py`).
+Eerst droog oefenen kan volledig zonder video: `python3 cv/meet.py --demo
+--seed 7 --match 42`.
+
 ## Fases
 
 | Fase | Inhoud | Status |
