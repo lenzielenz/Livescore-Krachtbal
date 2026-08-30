@@ -65,22 +65,31 @@ worden nadat het Volume is gekoppeld.
 
 De knop **"🤖 Analyseer de video"** op de analysepagina laat de server het rekenwerk doen:
 worpen zoeken, de bal volgen, spelers herkennen, en de controlevideo maken. Daarvoor moet er
-naast Node ook Python met opencv in de image staan. Dat regelt `railpack.json`:
+naast Node ook Python met opencv in de image staan.
 
-- `packages.python` — Python via mise, naast de Node-provider.
-- de `cv`-stap — maakt een venv op `/opt/cv-venv` en installeert daarin
-  `opencv-python-headless` en `numpy` (gepind, zoals in `cv/requirements.txt`). De
-  **headless** variant scheelt ~200 MB aan GUI-bibliotheken die een server toch nooit gebruikt.
-- `deployOutputs` op die stap — **zonder dit staat de venv wel in de build maar niet in het
-  eindbeeld**, en vindt de app op de server niets terug.
+> **Stand van zaken: dat staat er nog niet.** Twee pogingen om de build met een eigen
+> `railpack.json` uit te breiden lieten de deploy mislukken (eerst op de apt-stap, daarna al
+> na zes seconden — dus op de config zelf). Dat bestand is daarom weggehaald: de bouw van de
+> site is belangrijker dan de knop. De analyse staat op de server uitgeschakeld met de reden
+> erbij; alle andere functies werken gewoon.
 
-**Geen apt-pakketten nodig.** De eerste versie installeerde `ffmpeg`, `libgl1` en
-`libglib2.0-0`; die stap deed de build mislukken en bleek bovendien overbodig. Het manylinux-
-wiel van `opencv-python-headless` heeft buiten glibc, libstdc++ en libz geen enkele externe
-bibliotheek nodig (`readelf -d cv2/cv2.abi3.so`: alle andere zitten in het wiel, ffmpeg
-inbegrepen), en de pijplijn leest video's uitsluitend via `cv2.VideoCapture` — nooit via de
-ffmpeg-binary. Dat laatste geldt niet voor `cv/ingest.py` en `cv/highlights.py`: die roepen
-ffmpeg wél aan, maar zijn hulpmiddelen voor lokaal gebruik en draaien niet op de server.
+**Wat we intussen wél zeker weten**
+
+- **Er zijn geen apt-pakketten nodig.** Het manylinux-wiel van `opencv-python-headless` heeft
+  buiten glibc, libstdc++ en libz geen enkele externe bibliotheek nodig — `readelf -d
+  cv2/cv2.abi3.so` laat zien dat de rest, ffmpeg inbegrepen, in het wiel zit. De pijplijn
+  leest video's uitsluitend via `cv2.VideoCapture`, nooit via de ffmpeg-binary. (`cv/ingest.py`
+  en `cv/highlights.py` roepen ffmpeg wél aan, maar zijn lokale hulpmiddelen.)
+- Nodig is dus alleen: een Python 3 in het eindbeeld, plus `numpy` en
+  `opencv-python-headless` (gepind, zie `cv/requirements.txt`) op een pad dat de app vindt.
+- Zonder de **volledige** buildlog van de mislukte deploy is de volgende poging opnieuw
+  gokwerk. Die log is de eerste stap, niet nog een variant van dezelfde config.
+
+**Wegen die openstaan**, ruwweg van klein naar groot: de buildlog lezen en `railpack.json`
+gericht repareren; de pakketten bij het eerste gebruik naar het volume installeren (geen
+buildconfig nodig, maar wel een Python 3 in het beeld); of de analyse in een eigen
+Railway-service met een eigen image zetten — meteen ook het antwoord op "de site wordt traag
+tijdens een analyse".
 
 **De app blijft werken zonder dat alles.** Bij het openen van de analysepagina test de server
 één keer of Python en opencv er zijn; ontbreekt er iets, dan staat de knop uitgeschakeld met
