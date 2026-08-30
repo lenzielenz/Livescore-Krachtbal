@@ -346,7 +346,7 @@ keyframe-grenzen). Elke run schrijft een `manifest.json` naast de clips.
 
 ```bash
 # Posities uit de video (v0.2: HOG + MOG2-beweging → voetpunt → veldmeters → sporen):
-python3 cv/tracking.py --video match.mp4 --kalibratie kalibratie.json --fps 2 --uit posities.jsonl
+python3 cv/tracking.py --video match.mp4 --kalibratie kalibratie.json --fps 4 --uit posities.jsonl
 
 # Of zonder video (8 toevalspaden, reproduceerbaar):
 python3 cv/tracking.py --demo --seed 7 --duur 600 --uit posities.jsonl
@@ -357,6 +357,13 @@ python3 cv/heatmap.py --posities posities.jsonl --uit heatmap.json --png heatmap
 # Alles in één keer meedraaien met de meting (tracking → fysiek → heatmap):
 python3 cv/meet.py --video match.mp4 --match 42 --kalibratie kalibratie.json --tracking
 ```
+
+**Bemonstering (`--fps`, standaard 4/s).** Bewust dichter dan de event-detectie: bij
+2 metingen per seconde wordt elke versnelling over een halve seconde uitgemiddeld
+en meet `fysiek.py` nul sprintjes op een wedstrijd waarin volop gesprint werd.
+Dichter bemonsteren kost evenredig meer rekentijd op video, maar maakt het
+verschil tussen een lege en een levende spelerskaart. `meet.py --tracking` gebruikt
+hiervoor `--tracking-fps` (los van de event-fps voor de framenummers).
 
 De v0.2-tracker combineert twee detectoren die elkaar aanvullen: **HOG** herkent
 mensen (ook stilstaand), **MOG2-achtergrondsubtractie** vindt alles wat beweegt
@@ -382,7 +389,7 @@ python3 cv/fysiek.py --posities posities.jsonl --sjabloon wie.json --uit fysiek.
 # Stap 3 — met de ingevulde toewijzing (het sjabloon zelf werkt direct):
 python3 cv/fysiek.py --posities posities.jsonl --toewijzing wie.json --uit fysiek.json
 
-# Oefenen op de demo-sporen (1-4 thuis, 5-8 uit):
+# Oefenen op de demo-sporen (1-4 thuis, 5-8 uit; de demo bevat ook echte sprintjes):
 python3 cv/fysiek.py --posities posities.jsonl --demo --uit fysiek.json
 
 # En naar het platform — verschijnt op de spelerskaart van de analysepagina:
@@ -394,7 +401,17 @@ python3 cv/fysiek.py --posities posities.jsonl --toewijzing wie.json \
 Per speler: **gelopen afstand**, **aantal sprintjes** (≥ 4 m/s gedurende ≥ 1 s,
 instelbaar met `--sprint-drempel`/`--sprint-duur`) en **topsnelheid**. Gaten
 (> 2 s) en teleportaties (> 8 m/s, identiteitswissels) tellen niet mee — liever
-te weinig meters dan spooksprints. De upload gaat naar POST
+te weinig meters dan spooksprints.
+
+**Waarom er eerst gladgestreken wordt** (`--glad-venster`, standaard 0,75 s): een
+positiemeting bevat ruis, en die ruis is bij elke meting een klein kronkeltje dat
+je anders als afgelegde weg optelt. Hoe dichter je bemonstert, hoe meer kronkels —
+dezelfde wedstrijd op 4 metingen/s zou dan véél verder "gelopen" lijken dan op 2/s.
+Gemeten op één demo-beweging, bemonsterd van 1/s tot 20/s: **rauw** liep de gemeten
+afstand van 303 tot 973 m uiteen (factor 3,2), **met** het venster blijft ze tussen
+303 en 385 m. Sprintjes en topsnelheid zijn in beide gevallen stabiel. Zet
+`--glad-venster 0` om rauw te tellen — dan zijn de meters niet vergelijkbaar
+tussen wedstrijden die op een andere frequentie getrackt zijn. De upload gaat naar POST
 `/api/cv/match/{id}/fysiek` en vervangt de vorige meting volledig; het platform
 toont het naast de worpstatistieken en vangsten op de spelerskaart.
 

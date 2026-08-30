@@ -69,6 +69,7 @@ def bouw_stappen(
     heatmap_png: bool = False,
     breedte: float | None = None,
     speelveld: float | None = None,
+    tracking_fps: float = 4.0,
 ) -> list[tuple[str, list[str]]]:
     """(omschrijving, argv)-lijst voor de hele pijplijn, in volgorde.
 
@@ -146,8 +147,11 @@ def bouw_stappen(
         wie = uitmap / 'wie.json'
         if demo:
             stappen.append((
+                # De tracking bemonstert dichter dan de event-detectie: bij 2/s middelt elke
+                # versnelling weg en meet fysiek.py nul sprintjes.
                 'videotracking (demo-sporen)',
-                py + [str(CV_MAP / 'tracking.py'), '--demo', '--seed', str(seed), '--uit', str(posities)]
+                py + [str(CV_MAP / 'tracking.py'), '--demo', '--seed', str(seed),
+                      '--fps', str(tracking_fps), '--uit', str(posities)]
                 + maten_argumenten(breedte, speelveld),
             ))
             stappen.append((
@@ -159,7 +163,7 @@ def bouw_stappen(
             stappen.append((
                 'videotracking (HOG + MOG2-beweging → sporen in veldmeters)',
                 py + [str(CV_MAP / 'tracking.py'), '--video', str(video), '--kalibratie', str(kalibratie),
-                      '--fps', str(fps), '--uit', str(posities)],
+                      '--fps', str(tracking_fps), '--uit', str(posities)],
             ))
             stappen.append((
                 'fysieke stats per spoor + invulsjabloon wie-is-wie',
@@ -311,6 +315,9 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument('--upload', action='store_true', help='eindvoorstellen ook naar de reviewbrug sturen')
     parser.add_argument('--tracking', action='store_true',
                         help='ook videotracking meedraaien: posities, fysieke stats per speler en een heatmap')
+    parser.add_argument('--tracking-fps', type=float, default=4.0,
+                        help='bemonstering van de tracking in metingen per seconde (standaard 4 — '
+                             'dichter dan de event-fps, anders middelen sprintjes weg)')
     parser.add_argument('--controle', action='store_true',
                         help='alleen de checklist vooraf draaien (niets meten)')
     parser.add_argument('--token', default=None,
@@ -351,7 +358,7 @@ def main(argv: list[str] | None = None) -> None:
     stappen = bouw_stappen(
         args.match, uitmap, args.base, args.demo, args.seed, args.video, args.kalibratie, args.upload, args.fps,
         tracking=args.tracking, heatmap_png=importlib.util.find_spec('cv2') is not None,
-        breedte=breedte, speelveld=speelveld,
+        breedte=breedte, speelveld=speelveld, tracking_fps=args.tracking_fps,
     )
 
     omgeving = dict(os.environ, CV_BRIDGE_TOKEN=token)

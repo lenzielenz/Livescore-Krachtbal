@@ -93,6 +93,26 @@ class TestDemoPosities(unittest.TestCase):
             self.assertTrue(0.0 <= rij['y_m'] <= lengte)
         self.assertEqual(len({r['track'] for r in a}), 8)
 
+    def test_dichter_bemonsteren_verdubbelt_de_metingen_zonder_snellere_spelers(self):
+        traag = tracking.demo_posities(seed=7, duur_s=60.0, diepte_m=10.0, stap_s=0.5)
+        dicht = tracking.demo_posities(seed=7, duur_s=60.0, diepte_m=10.0, stap_s=0.25)
+        self.assertAlmostEqual(len(dicht) / len(traag), 2.0, delta=0.05)
+        # De ruis schaalt mee met de stap: de spelers lopen niet plots twee keer zo snel.
+        import fysiek  # noqa: PLC0415
+        gem = lambda rijen: sum(  # noqa: E731
+            v['afstand_m'] for v in fysiek.fysiek_per_spoor(rijen).values()
+        ) / 8
+        self.assertLess(abs(gem(dicht) - gem(traag)) / gem(traag), 0.35)
+
+    def test_demo_bevat_echte_sprintjes(self):
+        # Zonder versnellingen in de demo zou de sprintteller van fysiek.py nooit
+        # zichtbaar zijn in de volledige lus.
+        import fysiek  # noqa: PLC0415
+        rijen = tracking.demo_posities(seed=7, duur_s=600.0, diepte_m=10.0, stap_s=0.25)
+        per = fysiek.fysiek_per_spoor(rijen)
+        self.assertGreater(sum(v['sprints'] for v in per.values()), 0)
+        self.assertGreater(max(v['topsnelheid_m_s'] for v in per.values()), 4.0)
+
     def test_demo_blijft_binnen_een_opgemeten_veld(self):
         # Met opgemeten maten (12 × 40 m) mag geen enkel spoor buiten dát veld lopen —
         # anders gooit de heatmap ze weg en klopt de demo-lus niet met de echte keten.

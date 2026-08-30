@@ -19,6 +19,17 @@ def _argv_van(stappen, omschrijving_deel: str) -> list[str]:
 
 
 class TestStappenplan(unittest.TestCase):
+    def test_tracking_bemonstert_dichter_dan_de_event_detectie(self):
+        stappen = meet.bouw_stappen(
+            match=42, uitmap=Path('m'), base='http://x', demo=True, seed=7,
+            video=None, kalibratie=None, upload=False, fps=2.0, tracking=True, tracking_fps=4.0,
+        )
+        volg = _argv_van(stappen, 'videotracking')
+        self.assertIn('--fps', volg)
+        self.assertIn('4.0', volg)
+        # De event-detectie houdt haar eigen (lagere) fps voor de framenummers.
+        self.assertIn('2.0', _argv_van(stappen, 'kandidaat-worpen'))
+
     def test_demo_lus_in_de_juiste_volgorde_met_doorgegeven_bestanden(self):
         stappen = meet.bouw_stappen(
             match=42, uitmap=Path('m'), base='http://x', demo=True, seed=7,

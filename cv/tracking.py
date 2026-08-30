@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import random
 import sys
 from pathlib import Path
@@ -42,6 +43,17 @@ from landing import _projecteer, klem_op_veld  # noqa: E402
 # grotere sprong vergen horen niet bij hetzelfde spoor.
 MAX_SNELHEID_M_S = 8.0
 MAX_GAT_S = 2.0  # een spoor zonder waarneming langer dan dit wordt afgesloten
+# Bemonsteringsfrequentie van de tracking. Bewust hoger dan de event-fps: bij 2/s wordt elke
+# snelheid over een halve seconde uitgemiddeld en verdwijnen de pieken — dan meet fysiek.py
+# nul sprintjes op een wedstrijd waarin volop gesprint werd. 4/s houdt versnellingen zichtbaar.
+STANDAARD_FPS = 4.0
+# Wandeltempo van de demo-spelers (m/s): de basis voor de ruis per stap.
+DEMO_SNELHEID_M_S = 1.2
+# En af en toe een sprint: krachtbal is start-stop, dus een demo zonder versnellingen laat de
+# sprintteller van fysiek.py nooit zien. Kans per speler per seconde, duur en tempo.
+DEMO_SPRINT_KANS_PER_S = 0.02
+DEMO_SPRINT_DUUR_S = (1.5, 3.0)
+DEMO_SPRINT_SNELHEID_M_S = (4.5, 6.5)
 
 
 def _fout(boodschap: str, code: int = 2) -> None:
@@ -152,27 +164,45 @@ def demo_posities(
     seed: int,
     duur_s: float,
     diepte_m: float,
-    stap_s: float = 0.5,
+    stap_s: float = 1.0 / STANDAARD_FPS,
     breedte_m: float = veld.BREEDTE_M,
     speelveld_m: float = veld.SPEELVELD_LENGTE_M,
 ) -> list[dict]:
-    """Acht begrensde toevalspaden (vier per helft) — voer voor heatmap.py."""
+    """Acht begrensde toevalspaden (vier per helft) — voer voor heatmap.py en fysiek.py.
+
+    De ruis per stap schaalt met de stapgrootte (σ = DEMO_SNELHEID_M_S × stap), zodat
+    dichter bemonsteren méér metingen geeft van dezelfde beweging — niet spelers die
+    plots twee keer zo snel lopen.
+    """
     rng = random.Random(seed)
+    sigma = DEMO_SNELHEID_M_S * stap_s
     lengte = veld.totale_lengte_m(diepte_m, speelveld_m)
     spelers = []
     for i in range(8):
         # Elke ploeg blijft grotendeels op de eigen helft, zoals in het echte spel.
         eigen_helft = i < 4
         y0 = rng.uniform(lengte * 0.1, lengte * 0.45) if eigen_helft else rng.uniform(lengte * 0.55, lengte * 0.9)
-        spelers.append([rng.uniform(2.0, breedte_m - 2.0), y0])
+        # [x, y, resterende sprinttijd, snelheid, richting-x, richting-y]
+        spelers.append([rng.uniform(2.0, breedte_m - 2.0), y0, 0.0, 0.0, 0.0, 0.0])
     rijen: list[dict] = []
     t = 0.0
     while t <= duur_s:
-        for track, pos in enumerate(spelers, start=1):
-            pos[0] += rng.gauss(0.0, 0.6)
-            pos[1] += rng.gauss(0.0, 0.6)
-            pos[0], pos[1] = klem_op_veld(pos[0], pos[1], diepte_m, breedte_m, speelveld_m)
-            rijen.append({'t': round(t, 2), 'track': track, 'x_m': round(pos[0], 2), 'y_m': round(pos[1], 2)})
+        for track, sp in enumerate(spelers, start=1):
+            if sp[2] > 0.0:
+                # Sprint: rechtlijnig doorlopen aan het gekozen tempo.
+                sp[0] += sp[4] * sp[3] * stap_s
+                sp[1] += sp[5] * sp[3] * stap_s
+                sp[2] -= stap_s
+            elif rng.random() < DEMO_SPRINT_KANS_PER_S * stap_s:
+                sp[2] = rng.uniform(*DEMO_SPRINT_DUUR_S)
+                sp[3] = rng.uniform(*DEMO_SPRINT_SNELHEID_M_S)
+                hoek = rng.uniform(0.0, 2.0 * math.pi)
+                sp[4], sp[5] = math.cos(hoek), math.sin(hoek)
+            else:
+                sp[0] += rng.gauss(0.0, sigma)
+                sp[1] += rng.gauss(0.0, sigma)
+            sp[0], sp[1] = klem_op_veld(sp[0], sp[1], diepte_m, breedte_m, speelveld_m)
+            rijen.append({'t': round(t, 2), 'track': track, 'x_m': round(sp[0], 2), 'y_m': round(sp[1], 2)})
         t += stap_s
     return rijen
 
@@ -270,7 +300,9 @@ def main(argv: list[str] | None = None) -> None:
     # videomodus
     parser.add_argument('--video', type=Path, default=None, help='wedstrijdvideo (videomodus)')
     parser.add_argument('--kalibratie', type=Path, default=None, help='kalibratie-JSON van calibrate.py')
-    parser.add_argument('--fps', type=float, default=2.0, help='bemonsteringsfrequentie (standaard 2/s)')
+    parser.add_argument('--fps', type=float, default=STANDAARD_FPS,
+                        help=f'bemonsteringsfrequentie in metingen per seconde (standaard {STANDAARD_FPS:g}/s; '
+                             'geldt óók voor --demo — lager middelt sprintjes weg)')
     parser.add_argument('--detector', choices=('hog', 'mog2', 'beide'), default='beide',
                         help='persoonsdetectie: HOG (stilstaand), MOG2-beweging (ver/klein) of beide (standaard)')
     parser.add_argument('--mog2-min-px', type=int, default=150,
@@ -289,20 +321,21 @@ def main(argv: list[str] | None = None) -> None:
 
     if args.demo and args.video is not None:
         parser.error('--demo gaat niet samen met --video — kies één modus')
+    if args.fps <= 0:
+        _fout('--fps moet groter zijn dan 0')
     if args.demo:
         if args.seed is None:
             _fout('--demo vereist --seed (reproduceerbaarheid is de hele bedoeling)')
         if args.duur <= 0:
             _fout('--duur moet groter zijn dan 0')
-        rijen = demo_posities(args.seed, args.duur, args.diepte,
+        rijen = demo_posities(args.seed, args.duur, args.diepte, stap_s=1.0 / args.fps,
                               breedte_m=args.breedte or veld.BREEDTE_M,
                               speelveld_m=args.speelveld or veld.SPEELVELD_LENGTE_M)
-        print(f'Demo (seed {args.seed}): 8 sporen over {args.duur:g} s → {len(rijen)} posities')
+        print(f'Demo (seed {args.seed}): 8 sporen over {args.duur:g} s bij {args.fps:g}/s '
+              f'→ {len(rijen)} posities')
     else:
         if args.video is None or args.kalibratie is None:
             _fout('videomodus vereist --video én --kalibratie (of gebruik --demo)')
-        if args.fps <= 0:
-            _fout('--fps moet groter zijn dan 0')
         rijen = video_posities(args)
         ruw = len({r['track'] for r in rijen})
         rijen = filter_korte_sporen(rijen, args.min_duur)

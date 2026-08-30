@@ -43,6 +43,12 @@ MAX_GAT_S = 2.0
 # Sneller dan dit is een meetfout of identiteitswissel, geen sprint (zelfde
 # limiet als de koppelaar in tracking.py).
 MAX_SNELHEID_M_S = 8.0
+# Glijdend gemiddelde over het spoor vóór we meters tellen. Zonder dit telt elke
+# meetruis mee als afgelegde weg: hoe dichter je bemonstert, hoe meer ruis-kronkels
+# je optelt — een wedstrijd op 4 metingen/s zou dan "verder gelopen" lijken dan
+# dezelfde wedstrijd op 2/s. Met dit venster meet je de béweging, niet de ruis, en
+# blijven de meters vergelijkbaar tussen wedstrijden. Sprints (1,5–3 s) overleven het.
+GLAD_VENSTER_S = 0.75
 
 
 def _fout(boodschap: str, code: int = 2) -> None:
@@ -65,12 +71,44 @@ def lees_posities(pad: Path) -> list[dict]:
 # ---------------------------------------------------------------------------
 
 
+def glad_spoor(
+    punten: list[tuple[float, float, float]], venster_s: float = GLAD_VENSTER_S,
+) -> list[tuple[float, float, float]]:
+    """Glijdend gemiddelde over de positie, binnen ±venster/2 seconden.
+
+    De tijdstempels blijven staan; alleen x en y worden gemiddeld. Punten aan de
+    rand van een gat middelen enkel met wat binnen het venster ligt, dus een
+    onderbroken spoor wordt niet kunstmatig aan elkaar gerekend.
+    """
+    if venster_s <= 0 or len(punten) < 3:
+        return punten
+    half = venster_s / 2.0
+    uit: list[tuple[float, float, float]] = []
+    begin = 0
+    einde = 0
+    for i, (t, _, _) in enumerate(punten):
+        while punten[begin][0] < t - half:
+            begin += 1
+        while einde + 1 < len(punten) and punten[einde + 1][0] <= t + half:
+            einde += 1
+        venster = punten[begin:einde + 1]
+        uit.append((
+            t,
+            sum(p[1] for p in venster) / len(venster),
+            sum(p[2] for p in venster) / len(venster),
+        ))
+        if i >= einde:
+            einde = i
+    return uit
+
+
 def fysiek_per_spoor(
     posities: list[dict],
     sprint_drempel: float = SPRINT_DREMPEL_M_S,
     sprint_min_duur: float = SPRINT_MIN_DUUR_S,
     max_gat: float = MAX_GAT_S,
     max_snelheid: float = MAX_SNELHEID_M_S,
+    glad_venster: float = GLAD_VENSTER_S,
 ) -> dict[int, dict]:
     """Per spoor: afstand_m, sprints, topsnelheid_m_s, actieve_s.
 
@@ -83,8 +121,10 @@ def fysiek_per_spoor(
         per_spoor.setdefault(int(r['track']), []).append((float(r['t']), float(r['x_m']), float(r['y_m'])))
 
     uit: dict[int, dict] = {}
-    for track, punten in per_spoor.items():
-        punten.sort()
+    for track, ruwe_punten in per_spoor.items():
+        ruwe_punten.sort()
+        # Eerst gladstrijken: anders is elke meting van meetruis een stukje "gelopen weg".
+        punten = glad_spoor(ruwe_punten, glad_venster)
         afstand = 0.0
         top = 0.0
         actief = 0.0
@@ -230,6 +270,9 @@ def main(argv: list[str] | None = None) -> None:
                         help='sprintdrempel in m/s (standaard 4.0)')
     parser.add_argument('--sprint-duur', type=float, default=SPRINT_MIN_DUUR_S,
                         help='minimale sprintduur in seconden (standaard 1.0)')
+    parser.add_argument('--glad-venster', type=float, default=GLAD_VENSTER_S,
+                        help=f'gladstrijkvenster in seconden vóór de meters geteld worden '
+                             f'(standaard {GLAD_VENSTER_S:g}; 0 = rauw tellen, telt meetruis mee)')
     parser.add_argument('--upload', action='store_true', help='resultaat naar het platform sturen')
     parser.add_argument('--base', default='http://localhost:3000', help='basis-URL van het platform')
     parser.add_argument('--match', type=int, default=None, help='match-id op het platform (vereist bij --upload)')
@@ -256,7 +299,8 @@ def main(argv: list[str] | None = None) -> None:
     else:
         toewijzing = {}
 
-    per_spoor = fysiek_per_spoor(posities, sprint_drempel=args.sprint_drempel, sprint_min_duur=args.sprint_duur)
+    per_spoor = fysiek_per_spoor(posities, sprint_drempel=args.sprint_drempel,
+                                 sprint_min_duur=args.sprint_duur, glad_venster=args.glad_venster)
     if args.sjabloon is not None:
         args.sjabloon.write_text(
             json.dumps(sjabloon_toewijzing(posities, per_spoor), indent=2, ensure_ascii=False) + '\n',
