@@ -4,12 +4,15 @@ import { describe, it, beforeAll, expect } from 'vitest'
 import config from '@/payload.config'
 import { advanceHalf, recordThrow, startMatch } from '@/lib/match-engine'
 import { POST as postCvEvents } from '@/app/api/cv/events/route'
+import { PATCH as patchCvEvent } from '@/app/api/cv/events/[id]/route'
 import { GET as getLabels } from '@/app/api/cv/match/[id]/labels/route'
 
 // De CV-brug (fase 0): de Python-pipeline stuurt event-VOORSTELLEN in via POST /api/cv/events
 // (Bearer CV_BRIDGE_TOKEN) en haalt de bestaande manuele tags als weak labels op via
 // GET /api/cv/match/<id>/labels. Voorstellen landen als reviewed=false in 'cv-events' —
 // het worp-event-model (throws) blijft de waarheid en wordt hier nergens aangeraakt.
+// Fase 1 (review): een mens bevestigt/wijst af via PATCH /api/cv/events/<id>; worpTypeOrigineel
+// bewaart de claim van het model, ook als de reviewer worpType corrigeert.
 
 const TOKEN = 'cv-brug-testtoken-1234567890'
 
@@ -88,6 +91,35 @@ function postRequest(body: unknown, token?: string) {
   })
 }
 
+/** Review-aanroep: PATCH /api/cv/events/<id> met het route-params-contract van Next. */
+function patchReview(id: number | string, body: unknown, token?: string) {
+  return patchCvEvent(
+    new Request(`http://localhost/api/cv/events/${id}`, {
+      method: 'PATCH',
+      headers: {
+        'content-type': 'application/json',
+        ...(token ? { authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(body),
+    }),
+    { params: Promise.resolve({ id: String(id) }) },
+  )
+}
+
+/** Schrijft één geldig voorstel weg via de brug en geeft het aangemaakte document terug. */
+async function maakVoorstel(matchId: number) {
+  const res = await postCvEvents(postRequest({ matchId, events: [geldigEvent(matchId)] }, TOKEN))
+  expect(res.status).toBe(200)
+  const docs = await payload.find({
+    collection: 'cv-events',
+    where: { match: { equals: matchId } },
+    sort: '-id',
+    depth: 0,
+    overrideAccess: true,
+  })
+  return docs.docs[0]
+}
+
 describe('CV-brug', () => {
   beforeAll(async () => {
     payload = await getPayload({ config: await config })
@@ -140,6 +172,9 @@ describe('CV-brug', () => {
     expect(doc.reviewed).toBe(false)
     expect(doc.eventType).toBe('worp')
     expect(doc.worpType).toBe('nek')
+    // De claim van het model wordt bij aanmaak bevroren; verdict staat nog open.
+    expect(doc.worpTypeOrigineel).toBe('nek')
+    expect(doc.verdict ?? null).toBeNull()
     expect(doc.videoTimeS).toBeCloseTo(123.4)
     expect(doc.xM).toBeCloseTo(7.0)
     expect(doc.yM).toBeCloseTo(20.5)
@@ -195,6 +230,114 @@ describe('CV-brug', () => {
     const { matchId } = await maakWedstrijd()
     const teVeel = Array.from({ length: 501 }, () => geldigEvent(matchId))
     expect((await postCvEvents(postRequest({ matchId, events: teVeel }, TOKEN))).status).toBe(400)
+  })
+
+  it('PATCH bevestig: reviewed=true en verdict=bevestigd, herzien mag daarna nog', async () => {
+    const { matchId } = await maakWedstrijd()
+    const voorstel = await maakVoorstel(matchId)
+
+    const res = await patchReview(voorstel.id as number, { actie: 'bevestig' }, TOKEN)
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual({
+      ok: true,
+      event: {
+        id: voorstel.id,
+        reviewed: true,
+        verdict: 'bevestigd',
+        worpType: 'nek',
+        eventType: 'worp',
+      },
+    })
+
+    // Mening herzien is toegestaan: een tweede review overschrijft het verdict gewoon.
+    const herzien = await patchReview(voorstel.id as number, { actie: 'wijsaf' }, TOKEN)
+    expect(herzien.status).toBe(200)
+    const doc = await payload.findByID({
+      collection: 'cv-events',
+      id: voorstel.id,
+      depth: 0,
+      overrideAccess: true,
+    })
+    expect(doc.reviewed).toBe(true)
+    expect(doc.verdict).toBe('afgewezen')
+  })
+
+  it('PATCH met worpType-correctie: worpType verandert, worpTypeOrigineel niet', async () => {
+    const { matchId } = await maakWedstrijd()
+    const voorstel = await maakVoorstel(matchId)
+    expect(voorstel.worpType).toBe('nek')
+
+    const res = await patchReview(
+      voorstel.id as number,
+      { actie: 'bevestig', worpType: 'rug' },
+      TOKEN,
+    )
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as { ok: boolean; event: { worpType: string } }
+    expect(body.ok).toBe(true)
+    expect(body.event.worpType).toBe('rug')
+
+    const doc = await payload.findByID({
+      collection: 'cv-events',
+      id: voorstel.id,
+      depth: 0,
+      overrideAccess: true,
+    })
+    expect(doc.worpType).toBe('rug')
+    // De claim van het model blijft bevroren — retraining wil "model zei X, mens zei Y".
+    expect(doc.worpTypeOrigineel).toBe('nek')
+    expect(doc.verdict).toBe('bevestigd')
+    expect(doc.reviewed).toBe(true)
+  })
+
+  it('PATCH wijsaf: reviewed=true en verdict=afgewezen, velden blijven staan', async () => {
+    const { matchId } = await maakWedstrijd()
+    const voorstel = await maakVoorstel(matchId)
+
+    const res = await patchReview(voorstel.id as number, { actie: 'wijsaf' }, TOKEN)
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as { ok: boolean; event: Record<string, unknown> }
+    expect(body.event.reviewed).toBe(true)
+    expect(body.event.verdict).toBe('afgewezen')
+    expect(body.event.worpType).toBe('nek')
+  })
+
+  it('PATCH weigert zonder auth (401), onbestaand id (404) en ongeldige input (400)', async () => {
+    const { matchId } = await maakWedstrijd()
+    const voorstel = await maakVoorstel(matchId)
+
+    // Zonder token blijft het voorstel onaangeroerd.
+    expect((await patchReview(voorstel.id as number, { actie: 'bevestig' })).status).toBe(401)
+    const doc = await payload.findByID({
+      collection: 'cv-events',
+      id: voorstel.id,
+      depth: 0,
+      overrideAccess: true,
+    })
+    expect(doc.reviewed).toBe(false)
+    expect(doc.verdict ?? null).toBeNull()
+
+    // Onbestaand voorstel.
+    expect((await patchReview(99999999, { actie: 'bevestig' }, TOKEN)).status).toBe(404)
+
+    // Onbekende actie en ongeldige overschrijvingen.
+    expect((await patchReview(voorstel.id as number, { actie: 'keurgoed' }, TOKEN)).status).toBe(
+      400,
+    )
+    expect((await patchReview(voorstel.id as number, {}, TOKEN)).status).toBe(400)
+    expect(
+      (
+        await patchReview(
+          voorstel.id as number,
+          { actie: 'bevestig', worpType: 'zijwaarts' },
+          TOKEN,
+        )
+      ).status,
+    ).toBe(400)
+    expect(
+      (await patchReview(voorstel.id as number, { actie: 'bevestig', eventType: 'goal' }, TOKEN))
+        .status,
+    ).toBe(400)
   })
 
   it('levert weak labels: video_time_s per helft-offset, doelpunt-mapping en het rapport', async () => {

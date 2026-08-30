@@ -1,7 +1,9 @@
-# CV-pipeline fase 0 — exact gepind. Zie cv/LICENSES.md voor de licenties.
+# CV-pipeline (basis) — exact gepind. Zie cv/LICENSES.md voor de licenties.
 #
-# Enkel calibrate.py (fitten + interactieve modus) heeft deze nodig;
-# veld.py, sync.py, upload.py en de tests draaien puur op stdlib.
+# Enkel calibrate.py (fitten + interactieve modus) en detect_worpen.py op
+# echte video hebben deze nodig; veld.py, sync.py, upload.py, evaluate.py,
+# detect_worpen.py --demo en de tests draaien puur op stdlib.
 # ingest.py vereist daarnaast ffmpeg/ffprobe als SYSTEEM-binaries (geen pip).
+# Optionele pose-verfijning (fase 1): zie requirements-pose.txt.
 opencv-python==4.10.0.84
 numpy==1.26.4

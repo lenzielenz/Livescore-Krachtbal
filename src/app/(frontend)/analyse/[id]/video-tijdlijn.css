@@ -99,3 +99,158 @@
 /* Sync-rapport: hoeveel events echt aan de video hangen, en welk ijkpunt nog ontbreekt. */
 .va-tl-sync { margin: 6px 0 0; font-size: 0.78rem; color: var(--dim, #9aa7b4); line-height: 1.5; }
 .va-tl-sync strong { color: var(--accent, #06d6a0); font-variant-numeric: tabular-nums; }
+
+/* ── CV-review (fase 1): de voorstellenlaan + het reviewpaneel (CvReview.tsx) ──────────────────
+   Voorstellen zijn géén waarheid — dus holle, gestippelde markers in een eigen laan boven de
+   manuele balk. Opacity schaalt met confidence (inline); gereviewde voorstellen dempen we:
+   bevestigd groenachtig gevuld, afgewezen doorgestreept en vaag. */
+
+.va-cv-laan {
+  position: relative;
+  height: 20px;
+  margin-bottom: 3px;
+}
+.va-cv-laan-lbl {
+  position: absolute;
+  top: 50%;
+  left: 3px;
+  transform: translateY(-50%);
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: var(--dim, #9aa7b4);
+  pointer-events: none;
+}
+
+/* Elke CV-marker: hol + gestippeld = onbevestigd voorstel. Klik = spring naar dat moment. */
+.va-cv-m {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 11px;
+  height: 11px;
+  padding: 0;
+  border: 1.5px dashed rgba(255, 255, 255, 0.85);
+  border-radius: 50%;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.85);
+  cursor: pointer;
+}
+.va-cv-m.rug { border-radius: 3px; }
+.va-cv-m.vangst { border-radius: 3px; transform: translate(-50%, -50%) rotate(45deg); border-color: var(--away, #4cc9f0); color: var(--away, #4cc9f0); }
+.va-cv-m.doelpunt { width: 14px; height: 14px; border-color: var(--accent, #06d6a0); color: var(--accent, #06d6a0); }
+.va-cv-m.buitenspel { border-radius: 3px; border-color: #ffd166; color: #ffd166; }
+.va-cv-m:hover,
+.va-cv-m:focus-visible { box-shadow: 0 0 0 2px var(--accent, #06d6a0); z-index: 3; outline: none; }
+/* Het actieve voorstel (paneel) licht op, ook zonder hover. */
+.va-cv-m.actief { box-shadow: 0 0 0 2px var(--accent, #06d6a0); z-index: 2; }
+/* Gereviewd = gedempt: bevestigd wordt een rustige groene vulling… */
+.va-cv-m.bevestigd {
+  border-style: solid;
+  border-color: color-mix(in srgb, var(--accent, #06d6a0) 70%, transparent);
+  background: color-mix(in srgb, var(--accent, #06d6a0) 30%, transparent);
+  opacity: 0.6;
+}
+/* …afgewezen wordt vaag en doorgestreept. */
+.va-cv-m.afgewezen { border-color: var(--dim, #9aa7b4); color: var(--dim, #9aa7b4); opacity: 0.35; }
+.va-cv-m.afgewezen::after {
+  content: '';
+  position: absolute;
+  left: -3px;
+  right: -3px;
+  top: 50%;
+  height: 1.5px;
+  background: currentColor;
+  transform: rotate(-45deg);
+}
+
+/* Het reviewpaneel: het actieve voorstel groot in beeld met de oordelen. */
+.va-cv-paneel {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.12));
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+}
+.va-cv-kop { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 0.85rem; }
+.va-cv-teller { color: #ffd166; font-weight: 700; font-variant-numeric: tabular-nums; }
+.va-cv-teller.klaar { color: var(--accent, #06d6a0); }
+.va-cv-nav { margin-left: auto; display: flex; gap: 6px; }
+
+.va-cv-actief {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.12));
+  border-left: 3px solid #ffd166;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+}
+.va-cv-actief.bevestigd { border-left-color: var(--accent, #06d6a0); }
+.va-cv-actief.afgewezen { border-left-color: var(--dim, #9aa7b4); opacity: 0.75; }
+.va-cv-info { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: 0.85rem; }
+.va-cv-tijd {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent, #06d6a0);
+  font: inherit;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+.va-cv-tijd:hover, .va-cv-tijd:focus-visible { text-decoration: underline; outline: none; }
+.va-cv-type { font-weight: 700; }
+.va-cv-wie { color: var(--dim, #9aa7b4); font-variant-numeric: tabular-nums; }
+.va-cv-conf {
+  padding: 1px 7px;
+  border-radius: 999px;
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.12));
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--dim, #9aa7b4);
+}
+.va-cv-pil { padding: 1px 8px; border-radius: 999px; font-size: 0.72rem; font-weight: 800; }
+.va-cv-pil.open { background: color-mix(in srgb, #ffd166 20%, transparent); color: #ffd166; }
+.va-cv-pil.bevestigd { background: color-mix(in srgb, var(--accent, #06d6a0) 20%, transparent); color: var(--accent, #06d6a0); }
+.va-cv-pil.afgewezen { background: rgba(255, 255, 255, 0.08); color: var(--dim, #9aa7b4); text-decoration: line-through; }
+
+.va-cv-acties { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.va-cv-ok:not(:disabled) { border-color: color-mix(in srgb, var(--accent, #06d6a0) 60%, transparent); }
+.va-cv-nee:not(:disabled) {
+  border-color: color-mix(in srgb, #ffd166 45%, transparent);
+  background: color-mix(in srgb, #ffd166 10%, transparent);
+  color: #ffd166;
+}
+.va-cv-nee:hover:not(:disabled) { background: color-mix(in srgb, #ffd166 20%, transparent); }
+
+/* Sneltoetsen-legende bij het paneel. */
+.va-cv-legende { margin: 8px 0 0; font-size: 0.72rem; color: var(--dim, #9aa7b4); line-height: 1.7; }
+.va-cv-legende kbd {
+  display: inline-block;
+  padding: 0 5px;
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.18));
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  font-family: inherit;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: inherit;
+}
+
+/* Soort corrigeren in het reviewpaneel: klein, in lijn met de va-knoppen. */
+.va-cv-soort {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: var(--dim, #93a3b5);
+}
+.va-cv-soort select {
+  font: inherit;
+  padding: 4px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--line, #2a3140);
+  background: var(--bg, #0c1018);
+  color: var(--txt, #e7ecf3);
+}

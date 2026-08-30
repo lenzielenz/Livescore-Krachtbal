@@ -4,7 +4,7 @@ import { notFound } from 'next/navigation'
 import { ErrorCatch } from '@/components/ErrorCatch'
 import { SiteHeader } from '@/components/SiteHeader'
 import { TeamLogo } from '@/components/TeamLogo'
-import { canAnalyse } from '@/lib/access'
+import { canAnalyse, isFederationLevel } from '@/lib/access'
 import { canViewAnalyseMatch } from '@/lib/analyse-access'
 import { getAuthUser } from '@/lib/auth-user'
 import { buildDefenseStats, buildMatchSheet, buildMatchStats, buildMatchState, buildPassStats } from '@/lib/match-engine'
@@ -12,6 +12,7 @@ import { getPayloadClient } from '@/lib/payload-client'
 import { reeksHalfDurationSeconds, reeksNaam, type Reeks } from '@/lib/reeksen'
 import { mayEditMatchVideo } from '@/lib/video-access'
 import { AnalyseDetailView } from './AnalyseDetailView'
+import type { CvVoorstel } from './CvReview'
 import { ShareCard } from './ShareCard'
 import { Veldkaart } from './Veldkaart'
 import { VideoAnalyse, type VideoMoment, type VideoWorp } from './VideoAnalyse'
@@ -131,6 +132,27 @@ export default async function AnalyseDetailPage({ params }: { params: Promise<{ 
     })
     .sort((a, b) => a.half - b.half || a.gameClock - b.gameClock)
   const halfSeconds = reeksHalfDurationSeconds(matchDoc?.reeks as Reeks)
+  // ── CV-voorstellen (fase 1): kandidaat-events uit de computer-vision-pipeline ──
+  // Enkel federatie-niveau ziet en reviewt ze — supporters en analyse-gasten krijgen géén
+  // voorstellen mee (het zijn onbevestigde modelclaims, geen wedstrijdfeiten). De review-UI
+  // muteert uitsluitend via PATCH /api/cv/events/[id] (zie CvReview.tsx).
+  let cvVoorstellen: CvVoorstel[] = []
+  if (isFederationLevel(me)) {
+    const cvRes = await payload
+      .find({ collection: 'cv-events', where: { match: { equals: matchId } }, sort: 'videoTimeS', depth: 0, limit: 2000 })
+      .catch(() => null)
+    cvVoorstellen = (cvRes?.docs ?? []).map((e) => ({
+      id: e.id,
+      videoTimeS: e.videoTimeS,
+      eventType: e.eventType,
+      worpType: e.worpType ?? null,
+      confidence: e.confidence,
+      reviewed: e.reviewed === true,
+      verdict: e.verdict ?? null,
+      side: e.side ?? null,
+      rugnummer: e.rugnummer ?? null,
+    }))
+  }
   // Video koppelen/ijken mag wie de analyse beheert: de federatie, of de eigenaar van deze
   // privé-opname (dezelfde kring die ze al mag bekijken — de paginatoegang hierboven).
   const mayEditVideo = mayEditMatchVideo(me, matchDoc as { analyseOnly?: boolean | null; analyseOwner?: unknown })
@@ -187,6 +209,7 @@ export default async function AnalyseDetailPage({ params }: { params: Promise<{ 
             initialOffsetH2={(matchDoc?.videoOffsetH2 as number | null) ?? null}
             moments={videoMoments}
             worpen={videoWorpen}
+            voorstellen={cvVoorstellen}
             halfSeconds={halfSeconds}
             teams={teamNames}
             canEdit={mayEditVideo}

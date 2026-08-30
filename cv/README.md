@@ -14,23 +14,27 @@ de koppeling loopt uitsluitend via de HTTP-importbrug (`/api/cv/…`).
 | Fase | Inhoud | Status |
 | ---- | ------ | ------ |
 | **0** | Fundering: video-ingest, veldkalibratie (homografie), importbrug, sync van bestaande manuele tags naar weak labels. **Geen detectie/ML.** | deze map |
-| 1 | Baldetectie + tracking op de gekalibreerde frames | later |
-| 2 | Eventherkenning (worp/vangst/landing) uit baltrajecten | later |
-| 3 | Worptype-classificatie (nekworp/rugworp) + spelertoewijzing | later |
+| **1** | Kandidaat-worpen automatisch vinden (bewegingsenergie, optioneel pose), als voorstellen op de review-tijdlijn, precision/recall-rapport | deze map |
+| 2 | Baldetectie + tracking op de gekalibreerde frames; eventherkenning (worp/vangst/landing) uit baltrajecten | later |
+| 3 | Worptype-classificatie (ML, getraind op de reviewcorrecties) + spelertoewijzing | later |
 | 4 | Live-inferentie langs het veld | later |
 
 ## Installatie
 
 ```bash
-# Python-dependencies (enkel nodig voor calibrate.py):
+# Python-dependencies (nodig voor calibrate.py en detect_worpen.py op video):
 pip install -r cv/requirements.txt
+
+# Optioneel (fase 1): pose-verfijning nekworp/rugworp voor detect_worpen.py --pose
+pip install -r cv/requirements-pose.txt
 
 # Systeembinaries (enkel nodig voor ingest.py):
 apt install ffmpeg   # bevat ook ffprobe
 ```
 
-`veld.py`, `sync.py`, `upload.py` en de tests draaien puur op de
-standaardbibliotheek. Licenties: zie `LICENSES.md` (permissief, geen AGPL).
+`veld.py`, `sync.py`, `upload.py`, `evaluate.py`, `detect_worpen.py --demo`
+en de tests draaien puur op de standaardbibliotheek. Licenties: zie
+`LICENSES.md` (permissief, geen AGPL).
 
 Voor `sync.py` en `upload.py` is een bridge-token nodig:
 
@@ -119,6 +123,93 @@ aanroep — het script batcht daar zelf op (`--batch`). Drukt per event
 aanvaard/geweigerd + reden af. Het platform bewaart aanvaarde events als
 voorstellen (`reviewed=false`) in een aparte collection — nooit in `throws`.
 
+### 6. `detect_worpen.py` — kandidaat-worpen vinden (fase 1)
+
+```bash
+python3 cv/detect_worpen.py wedstrijd.mp4 --match 42 --uit detecties.jsonl
+```
+
+Baseline die altijd werkt (enkel opencv): een **bewegingsenergie-spotter**.
+Per geanalyseerd frame de genormaliseerde frame-verschil-energie (grijswaarden
+→ blur → absdiff → gemiddelde), gladgestreken met een lopend gemiddelde;
+kandidaat = lokaal maximum boven een adaptieve drempel (mediaan + k×MAD) met
+een minimale afstand tussen pieken (`--min-afstand`, standaard 4 s — een
+worpbeurt duurt seconden). Confidence = genormaliseerde piekhoogte, afgekapt
+op [0.05, 0.95]. Uitvoer: events-JSONL volgens het brugcontract hieronder
+(altijd `event_type: "worp"`), klaar voor `upload.py`.
+
+Optionele verfijning `--pose` (lazy import, `requirements-pose.txt`): pose via
+**rtmlib** (Apache-2.0, ONNX, geen torch) — polsen boven de schouders +
+zwaairichting rond de piek classificeren **nekworp** (voorwaartse zwaai) vs
+**rugworp** (achterwaarts, ruggelings). Zonder rtmlib blijft `worp_type` null,
+geldt een lager confidence-plafond (0.75 i.p.v. 0.95) en meldt de CLI netjes
+dat pose uit staat. De heuristiek is v0.1.0 — valideer ze op eigen beelden met
+`evaluate.py` vóór je erop bouwt.
+
+**Demo-modus** — de hele lus zonder video (en zonder opencv):
+
+```bash
+python3 cv/detect_worpen.py --demo labels_match42.jsonl --seed 7 \
+    --jitter 0.5 --mis-fractie 0.2 --vals 3 --uit detecties_demo.jsonl
+```
+
+Leest een weak-labels-JSONL (fase 0-sync), verstoort de tijden met jitter,
+laat exact `round(mis-fractie × n)` labels vallen en voegt exact `--vals`
+valse positieven toe (provenance-model `demo-ruis`). `--seed` is verplicht:
+`random.Random(seed)` maakt elke run exact reproduceerbaar. Zo oefen je de
+review-UI en `evaluate.py` zonder wedstrijdvideo.
+
+### 7. `evaluate.py` — het acceptatierapport van fase 1
+
+```bash
+python3 cv/evaluate.py --detecties detecties.jsonl --labels labels_match42.jsonl
+python3 cv/evaluate.py --detecties … --labels … --venster 2.0 --json
+```
+
+Greedy één-op-één-matching op `video_time_s` binnen ±`--venster` (standaard
+2.0 s; dichtstbijzijnde paar eerst, elk label en elke detectie hoogstens één
+keer). Rapporteert precision/recall/F1 voor worp-detectie, gemiddelde |Δt| van
+de matches, en nekworp/rugworp-accuraatheid + 2×2-verwarringsmatrix over de
+gematchte paren waar beide kanten een `worp_type` hebben.
+
+Belangrijk: **alle** labels met event_type `worp`/`vangst`/`doelpunt`/
+`buitenspel` tellen als worp-momenten — vangst, doelpunt en buitenspel zijn
+aflopen van een worp, het zijn dus allemaal worpen (zie `sync.py`, dat het
+event_type met de outcome verfijnt). Exitcode 0 óók bij lage scores (het is
+een méting); ≠ 0 enkel bij gebruiksfouten. `--json` geeft hetzelfde rapport
+machineleesbaar.
+
+## Fase 1 — de review-lus
+
+Kandidaat-worpen automatisch vinden en als voorstellen op de review-tijdlijn
+zetten; de mens bevestigt of corrigeert in de browser (PATCH
+`/api/cv/events/[id]`, verdict `bevestigd`/`afgewezen`); de correcties zijn
+ground truth voor hertraining — `worpTypeOrigineel` bewaart wat het model
+claimde, ook na correctie.
+
+1. **Detecteren** — `detect_worpen.py` op de wedstrijdvideo (of `--demo` om
+   te oefenen zonder video).
+2. **Uploaden** — `upload.py` zet de kandidaten als voorstellen
+   (`reviewed=false`) op het platform; ze verschijnen op de review-tijdlijn
+   van de analysepagina naast de manuele worpen.
+3. **Reviewen** — de mens bevestigt/corrigeert elk voorstel in de browser.
+4. **Meten** — `sync.py` haalt de weak labels van een **held-out** wedstrijd
+   (één die niet voor afstelling/training diende), `evaluate.py` vergelijkt.
+
+Doel-metriek: **recall ≥ 0.8** voor worp-detectie op held-out wedstrijden.
+Precision mag lager: een gemiste worp verdwijnt geruisloos, een valse positief
+kost de reviewer één klik (afwijzen). In deze repo staat geen wedstrijdvideo —
+de tooling produceert het rapport, meten doe je op eigen beelden.
+
+Demo-lus van begin tot eind (geen video nodig):
+
+```bash
+python3 cv/sync.py --base https://krachtbal.live --match 42 --uit labels.jsonl
+python3 cv/detect_worpen.py --demo labels.jsonl --seed 7 --uit detecties.jsonl
+python3 cv/evaluate.py --detecties detecties.jsonl --labels labels.jsonl
+python3 cv/upload.py --bestand detecties.jsonl --base https://krachtbal.live
+```
+
 ## Event-JSON (de brug Python ↔ Payload)
 
 Eén event, exact deze veldnamen (JSONL = één zo'n object per regel):
@@ -167,18 +258,30 @@ Eén event, exact deze veldnamen (JSONL = één zo'n object per regel):
       voorstellen (`reviewed=false`) op het platform en raken `throws` niet.
 - [ ] `python3 -m unittest discover -s cv/tests` slaagt zonder cv2/numpy.
 
+## Acceptatie fase 1
+
+- [ ] `detect_worpen.py` levert op een wedstrijdvideo een events-JSONL die
+      `upload.py` zonder weigering door de brug krijgt; de kandidaten staan
+      als voorstellen op de review-tijdlijn.
+- [ ] De demo-lus (`--demo` → `evaluate.py`) draait reproduceerbaar met een
+      seed, zonder video en zonder opencv.
+- [ ] `evaluate.py` produceert het precision/recall-rapport (worp-detectie +
+      nekworp/rugworp-verwarringsmatrix) op **held-out** wedstrijden.
+- [ ] Doel: **recall ≥ 0.8** voor worp-detectie op die held-out wedstrijden
+      (gemeten door de gebruiker op eigen beelden).
+
 ## Metrieken
 
-Niet van toepassing voor fase 0 — er is nog geen detectie of classificatie om
-te meten. Vanaf fase 1 komen hier per model: precision/recall per event-type,
-lokalisatiefout (m) na homografie, en de latency van de inferentie.
+Gemeten door `evaluate.py` (fase 1); lokalisatie en latency volgen in latere
+fases.
 
-| Metriek | Fase 0 |
-| ------- | ------ |
-| Detectie precision/recall | n.v.t. |
-| Lokalisatiefout (m) | n.v.t. |
-| Worptype-accuraatheid | n.v.t. |
-| Inferentie-latency | n.v.t. |
+| Metriek | Fase 0 | Fase 1 |
+| ------- | ------ | ------ |
+| Detectie precision/recall/F1 | n.v.t. | `evaluate.py` — doel recall ≥ 0.8 |
+| Tijdsuitlijning (gem. \|Δt\|) | n.v.t. | `evaluate.py` |
+| Worptype-accuraatheid (nek/rug) | n.v.t. | `evaluate.py` (verwarringsmatrix, enkel met `--pose`) |
+| Lokalisatiefout (m) | n.v.t. | n.v.t. (fase 2) |
+| Inferentie-latency | n.v.t. | n.v.t. (fase 4) |
 
 ## Tests
 

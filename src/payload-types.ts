@@ -1583,6 +1583,14 @@ export interface CvEvent {
    * Pas na menselijke review mag een voorstel iets betekenen — het schrijft nooit zelf naar throws.
    */
   reviewed?: boolean | null;
+  /**
+   * Leeg = nog te reviewen.
+   */
+  verdict?: ('bevestigd' | 'afgewezen') | null;
+  /**
+   * De oorspronkelijke claim van het model, ongewijzigd door review.
+   */
+  worpTypeOrigineel?: ('nek' | 'rug') | null;
   provenance: {
     model: string;
     modelVersion?: string | null;
@@ -2487,6 +2495,8 @@ export interface CvEventsSelect<T extends boolean = true> {
   scoreDelta?: T;
   confidence?: T;
   reviewed?: T;
+  verdict?: T;
+  worpTypeOrigineel?: T;
   provenance?:
     | T
     | {

@@ -11,6 +11,7 @@ import {
   type VideoSync,
 } from '@/lib/video-sync'
 
+import { CvReview, type CvVoorstel } from './CvReview'
 import './video-tijdlijn.css'
 
 export interface VideoMoment {
@@ -46,6 +47,7 @@ export function VideoAnalyse({
   initialOffsetH2,
   moments,
   worpen,
+  voorstellen = [],
   halfSeconds,
   teams,
   canEdit,
@@ -58,6 +60,8 @@ export function VideoAnalyse({
   moments: VideoMoment[]
   /** Alle worpen van de wedstrijd, voor de tijdlijnbalk onder de video. */
   worpen: VideoWorp[]
+  /** CV-voorstellen (fase 1) — enkel meegegeven aan federatie-kijkers; leeg = geen review-laan. */
+  voorstellen?: CvVoorstel[]
   halfSeconds: number
   teams: { home: string; away: string }
   canEdit: boolean
@@ -158,6 +162,17 @@ export function VideoAnalyse({
     },
     [isFile],
   )
+
+  /** Eén frame verspringen voor de CV-review (,/.): pauzeer en schuif exact op — enkel bij een
+   *  videobestand, want alleen daar sturen we currentTime rechtstreeks aan. */
+  const frameStap = useCallback((deltaSeconds: number) => {
+    const v = videoRef.current
+    if (!v) return
+    v.pause()
+    const t = Math.max(0, v.currentTime + deltaSeconds)
+    v.currentTime = t
+    setPos(t)
+  }, [])
 
   const jumpTo = useCallback(
     (m: { half: number; gameClock: number }) => {
@@ -269,12 +284,16 @@ export function VideoAnalyse({
     [worpen, sync, halfSeconds],
   )
   // Schaal van de balk: de echte videoduur als we die kennen, anders het laatste moment + uitloop
-  // (YouTube meldt zijn duur niet).
+  // (YouTube meldt zijn duur niet). CV-voorstellen tellen mee in de schaal: ook een wedstrijd
+  // zonder manuele tags moet haar voorstellen op de balk kwijt kunnen.
   const tlEinde = useMemo(() => {
     if (dur != null && Number.isFinite(dur) && dur > 0) return dur
-    const max = tijdlijn.reduce((m, w) => Math.max(m, w.t), 0)
+    const max = Math.max(
+      tijdlijn.reduce((m, w) => Math.max(m, w.t), 0),
+      voorstellen.reduce((m, v) => Math.max(m, v.videoTimeS), 0),
+    )
     return max > 0 ? max + 30 : 0
-  }, [dur, tijdlijn])
+  }, [dur, tijdlijn, voorstellen])
   const tlPct = useCallback(
     (seconds: number) => `${Math.max(0, Math.min(100, (seconds / tlEinde) * 100))}%`,
     [tlEinde],
@@ -382,9 +401,18 @@ export function VideoAnalyse({
 
           {/* Tijdlijnbalk: alle worpen van de wedstrijd op hun videotijd. Klik = spring ernaartoe.
               Vorm/kleur per soort — doelpunten opvallend, de rest rustig. Zolang een helft niet
-              geijkt is, staan haar markers halfdoorzichtig (positie = schatting). */}
-          {tijdlijn.length > 0 && tlEinde > 0 && (
+              geijkt is, staan haar markers halfdoorzichtig (positie = schatting). CvReview legt
+              er de CV-voorstellenlaan boven en het reviewpaneel onder; zonder voorstellen rendert
+              die enkel zijn children en blijft dit blok exact zoals het was. */}
+          {(tijdlijn.length > 0 || voorstellen.length > 0) && tlEinde > 0 && (
             <div className="va-tl">
+              <CvReview
+                voorstellen={voorstellen}
+                tlEinde={tlEinde}
+                pos={pos}
+                onSeek={seek}
+                onFrameStap={isFile ? frameStap : undefined}
+              >
               <div className="va-tl-track" aria-label="Alle worpen op de videotijdlijn">
                 <span className="va-tl-half" style={{ left: tlPct(sync.offsetH1) }} aria-hidden>
                   <span>{h1Geijkt ? 'H1' : '~H1'}</span>
@@ -412,22 +440,27 @@ export function VideoAnalyse({
                   )
                 })}
               </div>
-              <div className="va-tl-legend" aria-hidden>
-                <span><i className="va-tl-key" /> nekworp</span>
-                <span><i className="va-tl-key rugworp" /> rugworp</span>
-                <span><i className="va-tl-key vangst" /> vangst</span>
-                <span><i className="va-tl-key doelpunt" /> doelpunt</span>
-              </div>
-              <p className="va-tl-sync">
-                <strong>{gekoppeld} van de {worpen.length}</strong>{' '}
-                {worpen.length === 1 ? 'event' : 'events'} gekoppeld aan de video.
-                {heeftH1 && !h1Geijkt
-                  ? ' De 1e helft is nog niet geijkt — haar markers gaan uit van de videostart (0:00).'
-                  : ''}
-                {heeftH2 && !h2Geijkt
-                  ? ' De 2e helft is nog niet geijkt — haar markers zijn een schatting (aftrap H1 + één speelhelft).'
-                  : ''}
-              </p>
+              {tijdlijn.length > 0 && (
+                <>
+                  <div className="va-tl-legend" aria-hidden>
+                    <span><i className="va-tl-key" /> nekworp</span>
+                    <span><i className="va-tl-key rugworp" /> rugworp</span>
+                    <span><i className="va-tl-key vangst" /> vangst</span>
+                    <span><i className="va-tl-key doelpunt" /> doelpunt</span>
+                  </div>
+                  <p className="va-tl-sync">
+                    <strong>{gekoppeld} van de {worpen.length}</strong>{' '}
+                    {worpen.length === 1 ? 'event' : 'events'} gekoppeld aan de video.
+                    {heeftH1 && !h1Geijkt
+                      ? ' De 1e helft is nog niet geijkt — haar markers gaan uit van de videostart (0:00).'
+                      : ''}
+                    {heeftH2 && !h2Geijkt
+                      ? ' De 2e helft is nog niet geijkt — haar markers zijn een schatting (aftrap H1 + één speelhelft).'
+                      : ''}
+                  </p>
+                </>
+              )}
+              </CvReview>
             </div>
           )}
 

@@ -151,6 +151,37 @@ export const CvEvents: CollectionConfig = {
       },
     },
     {
+      // Het menselijke oordeel over dit voorstel; gezet via PATCH /api/cv/events/[id].
+      name: 'verdict',
+      label: 'Oordeel',
+      type: 'select',
+      options: [
+        { label: 'Bevestigd', value: 'bevestigd' },
+        { label: 'Afgewezen', value: 'afgewezen' },
+      ],
+      index: true,
+      admin: {
+        description: 'Leeg = nog te reviewen.',
+      },
+    },
+    {
+      // Bevroren bij aanmaak: corrigeert de reviewer worpType, dan blijft dit veld staan —
+      // retraining wil "model zei X, mens zei Y".
+      name: 'worpTypeOrigineel',
+      label: 'Type worp (origineel)',
+      type: 'select',
+      options: [...THROW_TYPE_OPTIONS],
+      // Code-enforced bevroren (niet enkel admin-cosmetica): ook via Payloads eigen REST kan dit
+      // veld niet meer wijzigen. De POST-route schrijft het één keer met overrideAccess.
+      access: {
+        update: () => false,
+      },
+      admin: {
+        readOnly: true,
+        description: 'De oorspronkelijke claim van het model, ongewijzigd door review.',
+      },
+    },
+    {
       // Herkomst van het voorstel: welk model (en welke versie) dit event voorstelde.
       name: 'provenance',
       label: 'Herkomst',

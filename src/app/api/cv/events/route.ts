@@ -154,6 +154,9 @@ export async function POST(req: Request) {
           frame: (e.frame ?? null) as number | null,
           eventType: e.event_type as CvEventType,
           worpType: e.worp_type == null ? null : WORP_TYPES[String(e.worp_type)],
+          // De claim van het model, bevroren bij aanmaak: review mag worpType later corrigeren,
+          // maar retraining wil "model zei X, mens zei Y" — dit veld verandert nooit meer.
+          worpTypeOrigineel: e.worp_type == null ? null : WORP_TYPES[String(e.worp_type)],
           inDoelgebied: zone?.in_doelgebied ?? false,
           xM: zone?.x_m ?? null,
           yM: zone?.y_m ?? null,
