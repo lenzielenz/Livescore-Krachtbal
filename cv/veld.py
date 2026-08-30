@@ -156,6 +156,36 @@ def kruispunten(
     return punten
 
 
+CAMERA_POSITIES = ('zijlijn', 'achter-thuis', 'achter-uit', 'hoek')
+
+
+def aanbevolen_labels(
+    positie: str,
+    doelgebied_diepte_m: float = STANDAARD_DOELGEBIED_DIEPTE_M,
+) -> list[str]:
+    """Welke kruispunten zijn vanaf deze camerapositie betrouwbaar aan te klikken?
+
+    De veldconventie om links/rechts en thuis/uit eenduidig te houden, waar je
+    ook staat: ga (in gedachten) op de THUIS-achterlijn staan en kijk naar de
+    uit-kant — links is dan x=0, rechts x=14 m. Film je vanaf de uit-achterkant,
+    dan is wat jij links in beeld ziet dus veld-RECHTS.
+
+    - zijlijn: hoog op de middellijn (het standaardprotocol) — alle 14 punten.
+    - achter-thuis / achter-uit: achter een achterlijn — de lijnen aan jouw kant
+      plus de middellijn (8 punten). De overkant is dan geëxtrapoleerd:
+      zones/afstanden dáár zijn onbetrouwbaar; calibrate.py --test zegt dat ook.
+    - hoek: alle punten zichtbaar, maar neem er minstens één op élke helft.
+    """
+    if positie not in CAMERA_POSITIES:
+        raise ValueError(f'onbekende camerapositie: {positie} (kies uit {", ".join(CAMERA_POSITIES)})')
+    alle = [k.label for k in kruispunten(doelgebied_diepte_m)]
+    if positie == 'achter-thuis':
+        return [l for l in alle if '_thuis_' in l or l.startswith('middellijn')]
+    if positie == 'achter-uit':
+        return [l for l in alle if '_uit_' in l or l.startswith('middellijn')]
+    return alle
+
+
 def kruispunt_per_label(
     doelgebied_diepte_m: float = STANDAARD_DOELGEBIED_DIEPTE_M,
 ) -> dict[str, Kruispunt]:

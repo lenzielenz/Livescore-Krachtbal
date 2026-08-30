@@ -84,14 +84,27 @@ def parse_punt_argument(tekst: str, labels: dict[str, veld.Kruispunt]) -> dict:
     return {'label': k.label, 'beeld_px': [px, py], 'veld_m': [k.x_m, k.y_m]}
 
 
-def verzamel_interactief(beeldpad: Path, diepte: float) -> list[dict]:
-    """Interactieve modus: klik de genummerde kruispunten aan in een OpenCV-venster."""
+def verzamel_interactief(beeldpad: Path, diepte: float, positie: str | None = None) -> list[dict]:
+    """Interactieve modus: klik de genummerde kruispunten aan in een OpenCV-venster.
+
+    Met een camerapositie (--positie) beperkt de lijst zich tot de kruispunten
+    die vandaar betrouwbaar zichtbaar zijn — vanaf de achterkant zie je de
+    overkant nauwelijks, dus die punten worden dan niet eens aangeboden.
+    """
     cv2 = _laad_cv2()
     beeld = cv2.imread(str(beeldpad))
     if beeld is None:
         _fout(f'kon beeld niet lezen: {beeldpad}')
 
     doelen = veld.kruispunten(diepte)
+    if positie is not None:
+        toegestaan = set(veld.aanbevolen_labels(positie, diepte))
+        doelen = [k for k in doelen if k.label in toegestaan]
+        print(f'Camerapositie: {positie} — {len(doelen)} bruikbare kruispunten.')
+    print(
+        'Conventie: sta in gedachten op de THUIS-achterlijn en kijk naar de uit-kant — '
+        'links is dan x=0. Van achter de uit-kant is beeld-links dus veld-RECHTS.'
+    )
     print('Kruispunten (klik in deze volgorde; s = overslaan, u = ongedaan, ENTER/q = klaar):')
     for k in doelen:
         print(f'  {k.nummer:2d}. {k.label:28s} veld ({k.x_m:5.1f} m, {k.y_m:5.1f} m)')
@@ -216,7 +229,72 @@ def _projecteer(m: list[list[float]], x: float, y: float) -> tuple[float, float]
     return (xp / w, yp / w)
 
 
-def druk_reprojectierapport(matrix: list[list[float]], punten: list[dict]) -> None:
+def orientatie_det(matrix: list[list[float]], punten: list[dict]) -> float:
+    """Jacobiaan-determinant van beeld→veld in het zwaartepunt van de klikpunten.
+
+    Elke échte camera staat bóven het grondvlak en ziet het veld daardoor met
+    één vaste oriëntatie: de determinant is dan positief. Wordt hij negatief,
+    dan staat het veld in spiegelbeeld — de klassieke fout wanneer links/rechts
+    (of thuis/uit) verwisseld werden bij het aanklikken, wat elke meting stil
+    zou verzieken. Dit vangt dat op vóór er ook maar iets gemeten wordt.
+    """
+    if not punten:
+        return 1.0
+    cu = sum(p['beeld_px'][0] for p in punten) / len(punten)
+    cv_ = sum(p['beeld_px'][1] for p in punten) / len(punten)
+    x0, y0 = _projecteer(matrix, cu, cv_)
+    xu, yu = _projecteer(matrix, cu + 1.0, cv_)
+    xv, yv = _projecteer(matrix, cu, cv_ + 1.0)
+    return (xu - x0) * (yv - y0) - (xv - x0) * (yu - y0)
+
+
+def controleer_orientatie(matrix: list[list[float]], punten: list[dict]) -> None:
+    if orientatie_det(matrix, punten) < 0:
+        _fout(
+            'het veld staat in SPIEGELBEELD: links/rechts (of thuis/uit) zijn verwisseld bij het '
+            'aanklikken. De conventie: sta in gedachten op de THUIS-achterlijn en kijk naar de '
+            'uit-kant — links is dan x=0. Film je van achter de uit-kant, dan is wat jij links in '
+            'beeld ziet veld-RECHTS. Klik opnieuw met de juiste labels.'
+        )
+
+
+_DRAAI_WISSELS = (('_thuis', '\x00'), ('_uit', '_thuis'), ('\x00', '_uit'),
+                  ('_links', '\x01'), ('_rechts', '_links'), ('\x01', '_rechts'))
+
+
+def draai_label_180(label: str) -> str:
+    """thuis↔uit en links↔rechts — het label van hetzelfde punt na een 180°-draai."""
+    for oud, nieuw in _DRAAI_WISSELS:
+        label = label.replace(oud, nieuw)
+    return label
+
+
+def draai_kalibratie_180(data: dict) -> dict:
+    """Draai een kalibratie 180° in het veldvlak: (x, y) → (B−x, L−y).
+
+    Voor wanneer de verkeerde achterlijn als "thuis" (y=0) gekozen werd: de
+    matrix wordt gecomponeerd met de rotatie en elk punt krijgt zijn gedraaide
+    veldcoördinaat én label, zodat het bestand consistent blijft en het
+    reprojectierapport identiek. Puur stdlib — geen herklikken, geen cv2.
+    """
+    diepte = float(data.get('doelgebied_diepte_m') or veld.STANDAARD_DOELGEBIED_DIEPTE_M)
+    lengte = veld.totale_lengte_m(diepte)
+    b = veld.BREEDTE_M
+    r = [[-1.0, 0.0, b], [0.0, -1.0, lengte], [0.0, 0.0, 1.0]]
+    h = data['matrix_beeld_naar_veld']
+    nieuw_h = [[sum(r[i][k] * h[k][j] for k in range(3)) for j in range(3)] for i in range(3)]
+    nieuwe_punten = [
+        {
+            **p,
+            'label': draai_label_180(p['label']),
+            'veld_m': [round(b - p['veld_m'][0], 4), round(lengte - p['veld_m'][1], 4)],
+        }
+        for p in data['punten']
+    ]
+    return {**data, 'matrix_beeld_naar_veld': nieuw_h, 'punten': nieuwe_punten}
+
+
+def druk_reprojectierapport(matrix: list[list[float]], punten: list[dict], _rapport_diepte: float | None = None) -> None:
     """Rapporteer per punt de reprojectiefout in pixels (veld → beeld via H⁻¹),
     plus de fout in meters (beeld → veld via H), en het gemiddelde."""
     invers = _inverteer_3x3(matrix)
@@ -241,6 +319,22 @@ def druk_reprojectierapport(matrix: list[list[float]], punten: list[dict]) -> No
     # in het rapport zelf te staan, niet in het hoofd van de gebruiker.
     gem_m = sum(fouten_m) / len(fouten_m) if fouten_m else float('nan')
     print(f'  {"GEMIDDELDE":28s} {gem_px:10.2f} {gem_m:9.3f}')
+
+    # Vanaf de achterkant liggen alle punten op één helft: metingen op de andere helft zijn dan
+    # geëxtrapoleerd. Dat is een geldige opstelling (zones aan jouw kant blijven sterk), maar de
+    # gebruiker moet het wéten — dus zeg het hier, waar hij toch al naar de fouten kijkt.
+    diepte = _rapport_diepte if _rapport_diepte is not None else veld.STANDAARD_DOELGEBIED_DIEPTE_M
+    helft_grens = veld.totale_lengte_m(diepte) / 2.0
+    thuis = [p for p in punten if p['veld_m'][1] < helft_grens]
+    uit = [p for p in punten if p['veld_m'][1] > helft_grens]
+    if not thuis or not uit:
+        # De helft ZONDER punten is de geëxtrapoleerde.
+        kant = 'thuis' if not thuis else 'uit'
+        print(
+            f'  LET OP: alle kalibratiepunten liggen op één helft — de {kant}-helft is '
+            f'geëxtrapoleerd. Zones en afstanden dáár kunnen fors afwijken; voor een meting '
+            f'over het hele veld neem je minstens één punt op elke helft (bv. de middellijn).'
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -269,7 +363,31 @@ def main(argv: list[str] | None = None) -> None:
         metavar='KALIBRATIE.JSON',
         help='druk enkel het reprojectiefout-rapport af (van dit bestand, of van --uit)',
     )
+    parser.add_argument(
+        '--positie', choices=veld.CAMERA_POSITIES, default=None,
+        help='camerapositie: beperkt de interactieve kliklijst tot de daar zichtbare, '
+             'betrouwbare kruispunten en drukt de conventie af (zie veld.aanbevolen_labels)',
+    )
+    parser.add_argument(
+        '--draai-180', type=Path, default=None, metavar='KALIBRATIE.JSON', dest='draai_180',
+        help='draai een bestaande kalibratie 180° in het veldvlak (thuis↔uit, links↔rechts) — '
+             'voor wanneer de verkeerde achterlijn als thuis gekozen werd; schrijft naar --uit',
+    )
     args = parser.parse_args(argv)
+
+    # 180°-draai van een bestaand bestand: eigen modus, geen cv2 en geen herklikken nodig.
+    if args.draai_180 is not None:
+        if args.punt or args.beeld is not None or hasattr(args, 'test'):
+            parser.error('--draai-180 gaat niet samen met --punt/--beeld/--test — draai ze apart')
+        if not args.draai_180.is_file():
+            _fout(f'kalibratiebestand niet gevonden: {args.draai_180}')
+        data = json.loads(args.draai_180.read_text(encoding='utf-8'))
+        gedraaid = draai_kalibratie_180(data)
+        args.uit.write_text(json.dumps(gedraaid, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+        print(f'180° gedraaid (thuis↔uit, links↔rechts) → {args.uit}')
+        druk_reprojectierapport(gedraaid['matrix_beeld_naar_veld'], gedraaid['punten'],
+                                gedraaid.get('doelgebied_diepte_m'))
+        return
 
     # --test combineert niet met een nieuwe kalibratie: dat zou stilletjes fitten
     # en wegschrijven terwijl de gebruiker enkel een rapport verwachtte.
@@ -282,7 +400,9 @@ def main(argv: list[str] | None = None) -> None:
         if not pad.is_file():
             _fout(f'kalibratiebestand niet gevonden: {pad}')
         data = json.loads(pad.read_text(encoding='utf-8'))
-        druk_reprojectierapport(data['matrix_beeld_naar_veld'], data['punten'])
+        controleer_orientatie(data['matrix_beeld_naar_veld'], data['punten'])
+        druk_reprojectierapport(data['matrix_beeld_naar_veld'], data['punten'],
+                                data.get('doelgebied_diepte_m'))
         return
 
     # Punten verzamelen: headless (--punt) of interactief (--beeld)
@@ -293,7 +413,7 @@ def main(argv: list[str] | None = None) -> None:
         if dubbel:
             _fout(f'label(s) meermaals opgegeven: {", ".join(sorted(dubbel))}')
     elif args.beeld is not None:
-        punten = verzamel_interactief(args.beeld, args.diepte)
+        punten = verzamel_interactief(args.beeld, args.diepte, positie=args.positie)
     else:
         parser.error('geef --beeld (interactief) of minstens vier --punt argumenten (headless)')
 
@@ -301,8 +421,10 @@ def main(argv: list[str] | None = None) -> None:
         _fout(f'minstens 4 punten nodig voor een homografie, kreeg er {len(punten)}')
 
     matrix = fit_homografie(punten)
+    # Spiegel-detectie vóór het wegschrijven: een gespiegelde kalibratie verziekt élke meting.
+    controleer_orientatie(matrix, punten)
     schrijf_kalibratie(args.uit, matrix, punten, args.diepte, args.beeld)
-    druk_reprojectierapport(matrix, punten)
+    druk_reprojectierapport(matrix, punten, args.diepte)
 
 
 if __name__ == '__main__':

@@ -32,6 +32,39 @@ analysepagina — elke correctie wordt trainingsdata (`groundtruth.py`).
 Eerst droog oefenen kan volledig zonder video: `python3 cv/meet.py --demo
 --seed 7 --match 42`.
 
+## Filmen vanaf zijkant, achterkant of hoek
+
+De homografie werkt vanaf élke vaste positie — je hoeft niet per se hoog op de
+middellijn te staan. Wat verandert is wélke kruispunten je betrouwbaar kunt
+aanklikken, en dat regelt de kalibratie voor je:
+
+| Positie | `--positie` | Punten | Sterk | Zwak |
+| --- | --- | --- | --- | --- |
+| Hoog op de middellijn (standaard) | `zijlijn` | alle 14 | het hele veld | — |
+| Achter een achterlijn | `achter-thuis` / `achter-uit` | 8 (eigen kant + middellijn) | zones/doelpunten aan jouw kant | de overkant is **geëxtrapoleerd** — afstanden dáár onbetrouwbaar |
+| Op een hoek | `hoek` | alle 14 | goed compromis | neem minstens één punt op élke helft |
+
+```bash
+# Interactief vanaf de achterkant: de kliklijst toont enkel de 8 bruikbare punten
+python3 cv/calibrate.py --beeld frame.jpg --positie achter-uit --uit kalibratie.json
+```
+
+**De conventie** (zodat links/rechts overal hetzelfde betekent): sta in
+gedachten op de THUIS-achterlijn en kijk naar de uit-kant — links is dan x=0.
+Film je van achter de uit-kant, dan is wat jij links in beeld ziet dus
+veld-RECHTS. Twee vangnetten als het toch misgaat:
+
+- **Spiegelbeeld** (links/rechts verwisseld): de kalibratie wordt geweigerd
+  vóór ze weggeschreven wordt — een echte camera staat altijd bóven het veld
+  en kan het nooit gespiegeld zien, dus dat is wiskundig detecteerbaar.
+- **Verkeerde achterlijn als thuis gekozen** (het veld staat 180° gedraaid;
+  symptoom: landingen liggen puntgespiegeld door het veldmidden in
+  `evaluate.py`): `python3 cv/calibrate.py --draai-180 kalibratie.json --uit
+  kalibratie.json` draait matrix, punten én labels om — geen herklikken nodig.
+
+`--test` waarschuwt bovendien wanneer alle punten op één helft liggen, zodat je
+wéét dat de overkant geëxtrapoleerd is.
+
 ## Fases
 
 | Fase | Inhoud | Status |
