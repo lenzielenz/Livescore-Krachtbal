@@ -14,6 +14,7 @@ import { mayEditMatchVideo } from '@/lib/video-access'
 import { AnalyseDetailView, type FysiekSpeler } from './AnalyseDetailView'
 import type { CvVoorstel } from './CvReview'
 import { ShareCard } from './ShareCard'
+import { AnalyseVoortgang } from './AnalyseVoortgang'
 import { Terreinmaten } from './Terreinmaten'
 import { Veldkaart } from './Veldkaart'
 import { VideoAnalyse, type VideoMoment, type VideoWorp } from './VideoAnalyse'
@@ -198,6 +199,24 @@ export default async function AnalyseDetailPage({ params }: { params: Promise<{ 
           </div>
         </div>
         <p className="an-head-meta">{reeks}{datum ? ` · ${datum}` : ''}</p>
+
+        {/* Waar sta ik met deze analyse, en wat moet er nog? Bovenaan, want dat is de vraag
+            waarmee je de pagina opent — met de handleiding erin voor wie ze nog niet kent. */}
+        {mayEditVideo && (
+          <ErrorCatch label="De analyse-voortgang">
+            <AnalyseVoortgang
+              matchId={matchId}
+              worpen={worpenRes.docs.length}
+              videoGekoppeld={Boolean(matchDoc?.videoUrl)}
+              ijkH1={typeof matchDoc?.videoOffsetH1 === 'number'}
+              ijkH2={typeof matchDoc?.videoOffsetH2 === 'number'}
+              tweedeHelftGespeeld={videoWorpen.some((w) => w.half === 2) || state.match.currentHalf >= 2}
+              fysiekSpelers={fysiek.length}
+              terreinOpgemeten={state.match.veldBreedte != null || state.match.veldSpeelveld != null}
+              openVoorstellen={cvVoorstellen.filter((v) => !v.reviewed).length}
+            />
+          </ErrorCatch>
+        )}
 
         {/* Sprongbalk: deze pagina is op een telefoon acht schermen lang, en video en
             terreinmaten stonden twee tot drie schermen naar beneden — vindbaar alleen als je

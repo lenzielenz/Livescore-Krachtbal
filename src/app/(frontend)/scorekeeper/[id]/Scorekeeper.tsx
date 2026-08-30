@@ -365,8 +365,10 @@ export function Scorekeeper({
         f = { title: 'BAL BUITEN', big: '↗', color: OUT_COLOR, team: teamName }
       }
       if (f) {
+        // Bij een analyse-opname is dit geen viering maar een bevestiging: kort tonen en door.
+        // Op een echte wedstrijd (scorebord, publiek) blijft de flits staan zoals ze was.
         setFlash(f)
-        window.setTimeout(() => setFlash(null), 1600)
+        window.setTimeout(() => setFlash(null), isAnalyseOnly ? 550 : 1600)
       }
 
       // Aanval afgewerkt (balbezit gewisseld) → veld leegmaken voor de volgende ploeg.
@@ -377,7 +379,7 @@ export function Scorekeeper({
       // Klaar voor de volgende worp.
       setThrowType('nek')
     },
-    [poss, throwType, clock, act, state.teams, roster, werpX],
+    [poss, throwType, clock, act, state.teams, roster, werpX, isAnalyseOnly],
   )
 
   // Pass registreren (§6.10): geen werpbeurt, wel een nieuwe werpplaats. Een voorwaartse pass is
@@ -580,6 +582,15 @@ export function Scorekeeper({
   // allowUnready: enkel een admin die bewust de controle overslaat (testknop).
   const chooseKickoff = (teamId: number) => {
     const naam = teamId === state.teams.home.id ? state.teams.home.name : state.teams.away.name
+    // Analyse-opname: geen publiek, geen meldingen, niets dat "per ongeluk live gaat" — dus geen
+    // drempel. Tik de ploeg die opzet en je zit meteen in het spel.
+    if (isAnalyseOnly) {
+      void (async () => {
+        const res = await act({ action: 'start', startingTeamId: teamId, allowUnready: true })
+        if (res) setKickoffOpen(false)
+      })()
+      return
+    }
     // Extra drempel: één misgetikte ploegnaam startte vroeger meteen de wedstrijd — ook wanneer
     // die reeks nog moest beginnen. Nu zie je eerst zwart op wit wat je op het punt staat te doen.
     setBevestig({
@@ -1379,7 +1390,9 @@ export function Scorekeeper({
                 const bench = teamRoster.filter((p) => !state.lineup[side].includes(p.id))
                 const canPick = teamRoster.length > LINEUP_MIN
                 const captainId = state.captain[side]
-                const captainOk = captainId != null && field.some((p) => p.id === captainId)
+                // Op een analyse-opname is er geen wedstrijdblad en geen §6.6-toewijzing van een
+                // eigen doelpunt: dan is de kapitein niet van toepassing en houdt hij niets tegen.
+                const captainOk = isAnalyseOnly || (captainId != null && field.some((p) => p.id === captainId))
                 return (
                   <div key={side} className={`sk-lineup-col ${side}`}>
                     <h4>{teamName}</h4>
@@ -1390,9 +1403,9 @@ export function Scorekeeper({
                           type="button"
                           key={p.id}
                           className={`sk-lineup-chip on ${captainId === p.id ? 'captain' : ''}`}
-                          disabled={busy || lineupConfirmed[side]}
-                          onClick={() => pickCaptain(side, p.id)}
-                          title={captainId === p.id ? 'Kapitein' : 'Tik aan om kapitein te maken'}
+                          disabled={busy || lineupConfirmed[side] || isAnalyseOnly}
+                          onClick={() => { if (!isAnalyseOnly) pickCaptain(side, p.id) }}
+                          title={isAnalyseOnly ? undefined : captainId === p.id ? 'Kapitein' : 'Tik aan om kapitein te maken'}
                         >
                           {captainId === p.id && <span className="sk-cap-badge" aria-hidden>👑</span>}
                           <span className="num">{p.shirtNumber}</span>
@@ -1401,7 +1414,7 @@ export function Scorekeeper({
                       ))}
                       {field.length === 0 && <span className="sk-dim">nog niemand</span>}
                     </div>
-                    {field.length > 0 && !lineupConfirmed[side] && (
+                    {field.length > 0 && !lineupConfirmed[side] && !isAnalyseOnly && (
                       <div className={`sk-cap-status ${captainOk ? 'ok' : 'todo'}`}>
                         {captainOk ? (
                           <>
@@ -1524,17 +1537,34 @@ export function Scorekeeper({
             <div className="sk-kickoff-card">
               <div className="sk-kickoff-title">{bypass ? 'Test-modus 🔧' : isDemo ? 'Demo — klaar 🎓' : 'Klaar om te starten ✓'}</div>
               <div className="sk-kickoff-sub">
-                Beide opstellingen zijn bevestigd. Tik op de timer bovenaan om te kiezen wie opzet,
-                daarna is de timer vrij en kan je starten wanneer je wil.
+                {isAnalyseOnly
+                  ? 'Tik de ploeg die opzet — dan begint het aantekenen meteen.'
+                  : 'Beide opstellingen zijn bevestigd. Tik op de timer bovenaan om te kiezen wie opzet, daarna is de timer vrij en kan je starten wanneer je wil.'}
               </div>
               {/* Laatste materiaalcontrole vóór de aftrap: het reglement (§3) schrijft het balgewicht
                   voor per categorie en geslacht — handig net wanneer de bal op het veld komt. */}
               <div className="sk-kickoff-bal">
                 🏐 Voorgeschreven bal: <strong>{balgewichtLabel(state.match.category, state.match.reeks)}</strong>
               </div>
-              <button type="button" className="sk-kickoff-start" disabled={busy} onClick={() => setKickoffOpen(true)}>
-                Kies wie opzet
-              </button>
+              {isAnalyseOnly ? (
+                <div className="sk-kickoff-teams">
+                  {(['home', 'away'] as const).map((side) => (
+                    <button
+                      key={side}
+                      type="button"
+                      className={`sk-kickoff-team ${side}`}
+                      disabled={busy}
+                      onClick={() => chooseKickoff(side === 'home' ? state.teams.home.id : state.teams.away.id)}
+                    >
+                      {side === 'home' ? state.teams.home.name : state.teams.away.name}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <button type="button" className="sk-kickoff-start" disabled={busy} onClick={() => setKickoffOpen(true)}>
+                  Kies wie opzet
+                </button>
+              )}
               <button type="button" className="sk-btn sk-kickoff-edit" disabled={busy} onClick={() => setLineupConfirmed({ home: false, away: false })}>
                 ✏️ Opstelling aanpassen
               </button>
@@ -1544,10 +1574,13 @@ export function Scorekeeper({
       ) : isFinished ? (
         <div className="sk-kickoff">
           <div className="sk-kickoff-card sk-deelname-card">
-            <div className="sk-kickoff-title">Wie heeft gespeeld?</div>
+            <div className="sk-kickoff-title">{isAnalyseOnly ? 'Opgeslagen ✓' : 'Wie heeft gespeeld?'}</div>
             <div className="sk-kickoff-sub">
-              Duid per ploeg aan wie effectief deelnam. Dit komt op het wedstrijdblad (O-markering).
+              {isAnalyseOnly
+                ? 'Elke worp is bewaard terwijl je aantekende — er valt niets meer op te slaan. Bekijk de analyse of ga terug naar het overzicht.'
+                : 'Duid per ploeg aan wie effectief deelnam. Dit komt op het wedstrijdblad (O-markering).'}
             </div>
+            {!isAnalyseOnly && (
             <div className="sk-deelname-grid">
               {(['home', 'away'] as const).map((side) => {
                 const teamId = side === 'home' ? state.teams.home.id : state.teams.away.id
@@ -1576,12 +1609,22 @@ export function Scorekeeper({
                 )
               })}
             </div>
-            {deelnameMsg && <p className={`sk-deelname-msg ${deelnameSaved ? 'ok' : ''}`}>{deelnameMsg}</p>}
+            )}
+            {!isAnalyseOnly && deelnameMsg && <p className={`sk-deelname-msg ${deelnameSaved ? 'ok' : ''}`}>{deelnameMsg}</p>}
             <div className="sk-modal-btns">
-              <button type="button" className="sk-btn primary" disabled={busy} onClick={saveDeelname}>
-                Deelname bewaren
-              </button>
-              <a className="sk-btn" href={`/aftekenen/${matchId}`}>Naar aftekenen →</a>
+              {isAnalyseOnly ? (
+                <>
+                  <Link className="sk-btn primary" href={`/analyse/${matchId}`}>📊 Naar de analyse</Link>
+                  <Link className="sk-btn" href="/analyse">← Alle analyses</Link>
+                </>
+              ) : (
+                <>
+                  <button type="button" className="sk-btn primary" disabled={busy} onClick={saveDeelname}>
+                    Deelname bewaren
+                  </button>
+                  <a className="sk-btn" href={`/aftekenen/${matchId}`}>Naar aftekenen →</a>
+                </>
+              )}
             </div>
             {/* Te vroeg op "Einde" gedrukt? Hier ga je gewoon verder waar je stond. */}
             <button
