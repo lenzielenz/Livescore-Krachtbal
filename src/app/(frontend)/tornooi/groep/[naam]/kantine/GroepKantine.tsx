@@ -412,19 +412,28 @@ export function GroepKantine({ naam, initial }: { naam: string; initial: GroepDa
                   ...(m.away && data.kleuren[m.away] ? { '--kb': data.kleuren[m.away] } : {}),
                 } as CSSProperties}
               >
-                <span className="gk-komend-uur">{m.plannedAt ? tijdBE(m.plannedAt) : '—'}</span>
-                <span className="gk-komend-affiche">
-                  {m.home && (
-                    <TeamLogo name={m.home} logoUrl={data.logos[m.home] ?? null} logoFit={data.fits[m.home] ?? null} side="home" size="1.9em" ringColor={data.kleuren[m.home]} />
-                  )}
-                  <span className="gk-komend-team">{m.home}</span>
-                  <span className="gk-komend-vs">VS</span>
-                  <span className="gk-komend-team">{m.away}</span>
-                  {m.away && (
-                    <TeamLogo name={m.away} logoUrl={data.logos[m.away] ?? null} logoFit={data.fits[m.away] ?? null} side="away" size="1.9em" ringColor={data.kleuren[m.away]} />
-                  )}
+                {/* Zelfde opbouw als een uitslagkaart hieronder: reeks en uur centraal bovenaan,
+                    daaronder thuis links, uit rechts en het midden exact in het midden. Zo staan
+                    de logo's, de namen en het VS/de score van beide blokken op dezelfde lijnen. */}
+                <span className="gk-komend-kop">
+                  <span className="gk-komend-uur">{m.plannedAt ? tijdBE(m.plannedAt) : '—'}</span>
+                  <span className="gk-komend-reeks">{m.reeksNaam}</span>
                 </span>
-                <span className="gk-komend-reeks">{m.reeksNaam}</span>
+                <span className="gk-komend-affiche">
+                  <span className="gk-komend-ploeg">
+                    {m.home && (
+                      <TeamLogo name={m.home} logoUrl={data.logos[m.home] ?? null} logoFit={data.fits[m.home] ?? null} side="home" size="1.9em" ringColor={data.kleuren[m.home]} />
+                    )}
+                    <span className="gk-komend-team">{m.home}</span>
+                  </span>
+                  <span className="gk-komend-vs">VS</span>
+                  <span className="gk-komend-ploeg rechts">
+                    <span className="gk-komend-team">{m.away}</span>
+                    {m.away && (
+                      <TeamLogo name={m.away} logoUrl={data.logos[m.away] ?? null} logoFit={data.fits[m.away] ?? null} side="away" size="1.9em" ringColor={data.kleuren[m.away]} />
+                    )}
+                  </span>
+                </span>
               </li>
             ))}
           </ul>
