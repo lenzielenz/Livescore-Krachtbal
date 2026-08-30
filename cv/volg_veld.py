@@ -70,6 +70,15 @@ MAX_GAT_S = 1.0
 MAX_KOPPEL_AFSTAND_M = 1.8
 
 
+# Standen voor de ruil tussen rekentijd en precisie. "nauwkeurig" is de stand voor wie
+# tijd heeft en het juiste antwoord wil: vaker meten, vaker herankeren, langer doorfitten.
+STANDEN = {
+    'snel':       {'fps': 2.0,  'heranker': 4.0, 'rondes': 2, 'punten_per_segment': 3},
+    'gewoon':     {'fps': 4.0,  'heranker': 2.0, 'rondes': 3, 'punten_per_segment': 4},
+    'nauwkeurig': {'fps': 10.0, 'heranker': 0.5, 'rondes': 6, 'punten_per_segment': 8},
+}
+
+
 def _fout(boodschap: str, code: int = 2) -> None:
     print(f'FOUT: {boodschap}', file=sys.stderr)
     raise SystemExit(code)
@@ -389,6 +398,7 @@ def veranker_op_lijnen(
     rondes: int = 3,
     max_sprong_m: float = MAX_ANKERSPRONG_M,
     veldpunten: list[tuple[float, float]] | None = None,
+    punten_per_segment: int = 4,
 ) -> tuple[Matrix, float, int]:
     """Corrigeer de gevolgde matrix met de zichtbare veldlijnen.
 
@@ -403,10 +413,12 @@ def veranker_op_lijnen(
     # matrixwijziging op tot meters.
     proef = veldpunten or _standaard_veldpunten()
     huidig = m
-    beste_fout = lijnfout_m(m, koppel_lijnconstraints(gedetecteerd, m, lijnen))
+    beste_fout = lijnfout_m(m, koppel_lijnconstraints(
+        gedetecteerd, m, lijnen, punten_per_segment=punten_per_segment))
     gebruikt = 0
     for _ in range(max(1, rondes)):
-        constraints = koppel_lijnconstraints(gedetecteerd, huidig, lijnen)
+        constraints = koppel_lijnconstraints(
+            gedetecteerd, huidig, lijnen, punten_per_segment=punten_per_segment)
         if len(constraints) < 8:
             break
         # De gevolgde stand als prior: de lijnen corrigeren wat ze zien, de rest blijft.
@@ -574,6 +586,8 @@ def demo_spoor(
     ruis_px: float = 0.4,
     heranker_interval_s: float = HERANKER_INTERVAL_S,
     diepte_m: float = veld.STANDAARD_DOELGEBIED_DIEPTE_M,
+    rondes: int = 3,
+    punten_per_segment: int = 4,
 ) -> tuple[HomografieSpoor, dict]:
     """Volg een gesimuleerde bewegende camera: flow met meetruis, lijnen als anker.
 
@@ -613,12 +627,19 @@ def demo_spoor(
         # fractie verkeerd geschat, en juist díe fouten stapelen multiplicatief op. Dat is
         # waarom puur volgen na een paar minuten wegdrijft en herankeren nodig is.
         stap = maal(demo_camerabeweging(t), inverteer(demo_camerabeweging(t - stap_s)))
-        schaalfout = 1.0 + rng.gauss(0.0, ruis_px * 0.002)
-        hoekfout = rng.gauss(0.0, ruis_px * 0.001)
+        # De fout van optical flow hangt af van hoe ver het beeld tussen twee metingen
+        # opschuift: een kleine sprong volg je nauwkeuriger dan een grote. Daarom schaalt
+        # de ruis mee met de verplaatsing (plus een vaste ondergrens voor beeldruis) —
+        # zonder dat zou dichter bemonsteren in de simulatie niets opleveren, terwijl het
+        # in werkelijkheid juist de belangrijkste knop is.
+        verplaatsing = math.hypot(stap[0][2], stap[1][2])
+        sigma = ruis_px * (0.25 + verplaatsing / 60.0)
+        schaalfout = 1.0 + rng.gauss(0.0, sigma * 0.002)
+        hoekfout = rng.gauss(0.0, sigma * 0.001)
         cos, sin = math.cos(hoekfout) * schaalfout, math.sin(hoekfout) * schaalfout
         stap_met_ruis = maal([[cos, -sin, 0.0], [sin, cos, 0.0], [0.0, 0.0, 1.0]], stap)
-        stap_met_ruis[0][2] += rng.gauss(0.0, ruis_px)
-        stap_met_ruis[1][2] += rng.gauss(0.0, ruis_px)
+        stap_met_ruis[0][2] += rng.gauss(0.0, sigma)
+        stap_met_ruis[1][2] += rng.gauss(0.0, sigma)
         keten = normaliseer(maal(stap_met_ruis, keten))
         keten_ongeankerd = normaliseer(maal(stap_met_ruis, keten_ongeankerd))
         gevolgd = normaliseer(maal(kalibratie, inverteer(keten)))
@@ -631,6 +652,7 @@ def demo_spoor(
             gedetecteerd = _demo_lijnsegmenten(echt, lijnen, rng)
             gevolgd, fout, gebruikt = veranker_op_lijnen(
                 gevolgd, gedetecteerd, lijnen, veldpunten=veldpunten,
+                rondes=rondes, punten_per_segment=punten_per_segment,
             )
             if gebruikt:
                 bron = 'lijnen'
@@ -791,7 +813,11 @@ def volg_video(args: argparse.Namespace) -> tuple[HomografieSpoor, dict]:
 
         if t - laatste_anker >= args.heranker:
             segmenten = detecteer_lijnsegmenten(cv2, frame, args.min_lijn)
-            gevolgd, fout, gebruikt = veranker_op_lijnen(gevolgd, segmenten, lijnen, args.max_fout)
+            gevolgd, fout, gebruikt = veranker_op_lijnen(
+                gevolgd, segmenten, lijnen, args.max_fout,
+                rondes=getattr(args, 'rondes', 3),
+                punten_per_segment=getattr(args, 'punten_per_segment', 4),
+            )
             if gebruikt:
                 bron = 'lijnen'
                 laatste_anker = t
@@ -816,10 +842,14 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument('--video', type=Path, default=None, help='de wedstrijdvideo (videomodus)')
     parser.add_argument('--kalibratie', type=Path, default=None,
                         help='kalibratie van het eerste frame (calibrate.py) — het vertrekpunt')
-    parser.add_argument('--fps', type=float, default=4.0,
-                        help='hoe vaak per seconde de homografie bijgewerkt wordt (standaard 4)')
-    parser.add_argument('--heranker', type=float, default=HERANKER_INTERVAL_S,
-                        help=f'om de hoeveel seconden herankeren op de veldlijnen (standaard {HERANKER_INTERVAL_S:g})')
+    parser.add_argument('--stand', choices=tuple(STANDEN), default='gewoon',
+                        help='ruil tussen rekentijd en precisie: snel · gewoon · nauwkeurig '
+                             '(nauwkeurig meet 10×/s en herankert elke halve seconde — trager, '
+                             'maar dát is de stand voor een meting die moet kloppen)')
+    parser.add_argument('--fps', type=float, default=None,
+                        help='hoe vaak per seconde de homografie bijgewerkt wordt (standaard: uit --stand)')
+    parser.add_argument('--heranker', type=float, default=None,
+                        help='om de hoeveel seconden herankeren op de veldlijnen (standaard: uit --stand)')
     parser.add_argument('--max-fout', type=float, default=MAX_ANKER_FOUT_M,
                         help=f'maximale afwijking van een anker in meters (standaard {MAX_ANKER_FOUT_M:g})')
     parser.add_argument('--min-lijn', type=int, default=60,
@@ -830,6 +860,15 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument('--diepte', type=float, default=veld.STANDAARD_DOELGEBIED_DIEPTE_M,
                         help='doelgebied-diepte in meters (demo; standaard 10)')
     args = parser.parse_args(argv)
+
+    # De stand vult in wat je niet zelf opgaf; een expliciete vlag wint altijd.
+    stand = STANDEN[args.stand]
+    if args.fps is None:
+        args.fps = stand['fps']
+    if args.heranker is None:
+        args.heranker = stand['heranker']
+    args.rondes = stand['rondes']
+    args.punten_per_segment = stand['punten_per_segment']
 
     if args.demo and args.video is not None:
         parser.error('--demo gaat niet samen met --video — kies één modus')
@@ -844,8 +883,10 @@ def main(argv: list[str] | None = None) -> None:
         # Een geloofwaardige startkalibratie: 12 px per meter, veld gecentreerd in beeld.
         start = inverteer([[12.0, 0.0, 260.0], [0.0, 12.0, 60.0], [0.0, 0.0, 1.0]])
         spoor, rapport = demo_spoor(args.seed, args.duur, start, stap_s=1.0 / args.fps,
-                                    heranker_interval_s=args.heranker, diepte_m=args.diepte)
-        print(f'Demo (seed {args.seed}): bewegende camera over {args.duur:g} s bij {args.fps:g}/s')
+                                    heranker_interval_s=args.heranker, diepte_m=args.diepte,
+                                    rondes=args.rondes, punten_per_segment=args.punten_per_segment)
+        print(f'Demo (seed {args.seed}, stand {args.stand}): bewegende camera over {args.duur:g} s '
+              f'bij {args.fps:g}/s, herankeren elke {args.heranker:g} s')
     else:
         if args.video is None or args.kalibratie is None:
             _fout('videomodus vereist --video én --kalibratie (of oefen met --demo --seed)')

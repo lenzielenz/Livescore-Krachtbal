@@ -285,6 +285,7 @@ def video_landing(args: argparse.Namespace, detecties: list[dict]) -> tuple[list
         _fout(f'video kan niet geopend worden: {args.video}')
 
     verrijkt: list[dict] = []
+    balsporen: list[dict] = []
     gevonden = 0
     zonder_matrix = 0
     for det in detecties:
@@ -303,6 +304,18 @@ def video_landing(args: argparse.Namespace, detecties: list[dict]) -> tuple[list
                 continue
         spoor = volg_bal_na_worp(cap, cv2, t0 + args.venster_start, t0 + args.venster_einde, (args.bal_min_px, args.bal_max_px))
         punt = landing_uit_spoor(spoor)
+        if args.balspoor is not None and spoor:
+            # Alles wat we van deze worp zagen, in beeldpixels: het spoor zelf, welk punt we
+            # als landing kozen, en waar de bal het eerst gezien werd (bij benadering de
+            # werpplaats). Precies wat er straks over de video getekend wordt.
+            balsporen.append({
+                'video_time_s': round(t0, 3),
+                'worp_type': det.get('worp_type'),
+                'spoor': [[round(w, 2) for w in punt3] for punt3 in spoor],
+                'landing_px': [round(punt[1], 2), round(punt[2], 2)] if punt is not None else None,
+                'landing_t': round(punt[0], 3) if punt is not None else None,
+                'los_px': [round(spoor[0][1], 2), round(spoor[0][2], 2)],
+            })
         if punt is not None:
             x_m, y_m = _projecteer(matrix, punt[1], punt[2])
             if x_m == x_m and y_m == y_m:  # geen NaN
@@ -321,6 +334,11 @@ def video_landing(args: argparse.Namespace, detecties: list[dict]) -> tuple[list
         det['provenance'] = prov
         verrijkt.append(det)
     cap.release()
+    if args.balspoor is not None:
+        with args.balspoor.open('w', encoding='utf-8') as f:
+            for rij in balsporen:
+                f.write(json.dumps(rij, ensure_ascii=False) + '\n')
+        print(f'Balsporen van {len(balsporen)} worpen → {args.balspoor}')
     rapport = {'detecties': len(detecties), 'met_landing': gevonden,
                'zonder_landing': len(detecties) - gevonden}
     if spoor is not None:
@@ -348,6 +366,9 @@ def main(argv: list[str] | None = None) -> None:
     # videomodus
     parser.add_argument('--video', type=Path, default=None, help='wedstrijdvideo (videomodus)')
     parser.add_argument('--kalibratie', type=Path, default=None, help='kalibratie-JSON van calibrate.py')
+    parser.add_argument('--balspoor', type=Path, default=None,
+                        help='schrijf het gevolgde balspoor per worp weg (JSONL) — voer voor '
+                             'cv/overlay.py, zodat je in beeld ziet wat er gevolgd is')
     parser.add_argument('--homografie', type=Path, default=None,
                         help='homografie-JSONL van volg_veld.py — voor een BEWEGENDE camera: '
                              'per moment de juiste matrix in plaats van één vaste kalibratie')
