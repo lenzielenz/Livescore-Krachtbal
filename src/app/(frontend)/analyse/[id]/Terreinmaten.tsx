@@ -61,7 +61,7 @@ export function Terreinmaten({ matchId, initieel }: { matchId: number; initieel:
   }
 
   return (
-    <details className="an-fold tm">
+    <details className="an-fold tm" id="terreinmaten">
       <summary>
         📐 Terreinmaten{' '}
         <span className="tm-sum">

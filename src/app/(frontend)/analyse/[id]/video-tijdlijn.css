@@ -298,3 +298,14 @@
 .tm-acties { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 12px; }
 .tm-ok { font-size: 12px; color: #4ade80; }
 .tm-fout { font-size: 12px; color: #f87171; }
+
+/* ── Sprongbalk: de pagina is lang, dit brengt je in één tik bij wat je zoekt ───────────── */
+.an-jump { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 16px; }
+.an-jump-btn {
+  padding: 9px 14px; font-size: 13px; font-weight: 600; text-decoration: none; color: inherit;
+  background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px; white-space: nowrap;
+}
+.an-jump-btn:hover, .an-jump-btn:focus-visible { background: rgba(255, 255, 255, 0.12); }
+/* Springen zonder dat de kop van de sectie onder de rand van het scherm valt. */
+#video, #terreinmaten, #statistieken { scroll-margin-top: 12px; }

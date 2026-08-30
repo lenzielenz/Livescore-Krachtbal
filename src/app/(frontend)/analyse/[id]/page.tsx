@@ -199,6 +199,37 @@ export default async function AnalyseDetailPage({ params }: { params: Promise<{ 
         </div>
         <p className="an-head-meta">{reeks}{datum ? ` · ${datum}` : ''}</p>
 
+        {/* Sprongbalk: deze pagina is op een telefoon acht schermen lang, en video en
+            terreinmaten stonden twee tot drie schermen naar beneden — vindbaar alleen als je
+            wist dat ze er waren. Deze ankers brengen je er in één tik (werkt zonder JS). */}
+        <nav className="an-jump" aria-label="Snel naar">
+          <a href="#video" className="an-jump-btn">
+            {matchDoc?.videoUrl ? '🎥 Video' : '🎥 Video koppelen'}
+          </a>
+          {mayEditVideo && <a href="#terreinmaten" className="an-jump-btn">📐 Terreinmaten</a>}
+          <a href="#statistieken" className="an-jump-btn">📊 Statistieken</a>
+        </nav>
+
+        {/* Nog geen opname? Dan is video koppelen de hoofdtaak van deze pagina en hoort ze
+            bovenaan — niet onder een veldkaart van anderhalf scherm hoog. */}
+        {mayEditVideo && !matchDoc?.videoUrl && (
+          <ErrorCatch label="De video-analyse">
+            <VideoAnalyse
+              matchId={matchId}
+              initialUrl={null}
+              initialOffsetH1={(matchDoc?.videoOffsetH1 as number | null) ?? null}
+              initialOffsetH2={(matchDoc?.videoOffsetH2 as number | null) ?? null}
+              moments={videoMoments}
+              worpen={videoWorpen}
+              voorstellen={cvVoorstellen}
+              halfSeconds={halfSeconds}
+              teams={teamNames}
+              canEdit={mayEditVideo}
+              maxMb={Number(process.env.MAX_MATCH_VIDEO_MB) || 512}
+            />
+          </ErrorCatch>
+        )}
+
         {/* Hét scherm van de analyse: waar valt alles en waar wordt er gevangen, per worp en per
             speler. De rest van de pagina is verdieping en staat ingeklapt. */}
         {stats.shots.length > 0 && (
@@ -219,6 +250,7 @@ export default async function AnalyseDetailPage({ params }: { params: Promise<{ 
           </ErrorCatch>
         )}
 
+        {Boolean(matchDoc?.videoUrl) && (
         <ErrorCatch label="De video-analyse">
           <VideoAnalyse
             matchId={matchId}
@@ -234,6 +266,7 @@ export default async function AnalyseDetailPage({ params }: { params: Promise<{ 
             maxMb={Number(process.env.MAX_MATCH_VIDEO_MB) || 512}
           />
         </ErrorCatch>
+        )}
 
         {/* De échte terreinmaten van dít veld: bepalen alle meters op deze pagina. Ingeklapt,
             maar mét de huidige maten in de samenvatting zodat je in één blik ziet waarmee er
@@ -255,7 +288,7 @@ export default async function AnalyseDetailPage({ params }: { params: Promise<{ 
             wil (grafieken, spelerstabellen, deelkaart) klapt het hieronder open. Zijn er fysieke
             stats uit de videotracking, dan staat het open: die cijfers wil je meteen zien, niet
             achter een klik die je moet raden. */}
-        <details className="an-fold" open={fysiek.length > 0}>
+        <details className="an-fold" id="statistieken" open={fysiek.length > 0}>
           <summary>
             📊 Alle statistieken &amp; grafieken
             {fysiek.length > 0 && <span className="an-chart-hint"> · met loopafstand, sprintjes en topsnelheid</span>}
