@@ -1,7 +1,15 @@
 import { describe, it, expect } from 'vitest'
 import path from 'path'
 
-import { bouwStappen, isVerweesd, resultaatBestand, videoBestand, type AnalyseStand } from '@/lib/cv-analyse'
+import {
+  bouwKandidaten,
+  bouwStappen,
+  isVerweesd,
+  resultaatBestand,
+  spawnOmgeving,
+  videoBestand,
+  type AnalyseStand,
+} from '@/lib/cv-analyse'
 
 // De server-side video-analyse: welke Python-stappen draaien er, in welke volgorde, met welke
 // argumenten. Een verkeerde vlag hier kost een halfuur rekenwerk voor je het merkt — dus dat
@@ -128,6 +136,38 @@ describe('isVerweesd', () => {
   it('doet niets zonder stand', () => {
     expect(isVerweesd(null)).toBe(false)
     expect(isVerweesd(undefined)).toBe(false)
+  })
+})
+
+describe('bouwKandidaten', () => {
+  it('laat CV_PYTHON alleen beslissen — dat is een keuze van wie de server beheert', () => {
+    const k = bouwKandidaten({ cvPython: '/eigen/python', venvPython: '/opt/cv-venv/bin/python3' })
+    expect(k).toEqual([{ pad: '/eigen/python', pythonpath: null }])
+  })
+
+  it('probeert de venv eerst, dan het systeem-python mét de pakketten uit de venv', () => {
+    // Die tweede kandidaat is de redding wanneer de venv wél meekomt in het eindbeeld maar de
+    // interpreter waar hij naar wijst niet: de pakketten zijn er dan nog steeds.
+    const k = bouwKandidaten({
+      venvPython: '/opt/cv-venv/bin/python3',
+      sitePackages: '/opt/cv-venv/lib/python3.12/site-packages',
+    })
+    expect(k).toEqual([
+      { pad: '/opt/cv-venv/bin/python3', pythonpath: null },
+      { pad: 'python3', pythonpath: '/opt/cv-venv/lib/python3.12/site-packages' },
+      { pad: 'python3', pythonpath: null },
+    ])
+  })
+
+  it('houdt zonder venv gewoon het systeem-python over', () => {
+    expect(bouwKandidaten({})).toEqual([{ pad: 'python3', pythonpath: null }])
+  })
+})
+
+describe('spawnOmgeving', () => {
+  it('zet PYTHONPATH alleen wanneer de pakketten ergens anders staan', () => {
+    expect(spawnOmgeving({ pad: 'python3', pythonpath: null }).PYTHONPATH).toBe(process.env.PYTHONPATH)
+    expect(spawnOmgeving({ pad: 'python3', pythonpath: '/pakketten' }).PYTHONPATH).toBe('/pakketten')
   })
 })
 
