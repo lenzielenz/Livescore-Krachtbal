@@ -47,6 +47,14 @@ def _fout(boodschap: str, code: int = 2) -> None:
 # ---------------------------------------------------------------------------
 
 
+def maten_argumenten(breedte: float | None, speelveld: float | None) -> list[str]:
+    """--breedte/--speelveld, enkel voor wat écht opgemeten is (leeg = reglementair)."""
+    return (
+        (['--breedte', str(breedte)] if breedte is not None else [])
+        + (['--speelveld', str(speelveld)] if speelveld is not None else [])
+    )
+
+
 def bouw_stappen(
     match: int,
     uitmap: Path,
@@ -59,6 +67,8 @@ def bouw_stappen(
     fps: float,
     tracking: bool = False,
     heatmap_png: bool = False,
+    breedte: float | None = None,
+    speelveld: float | None = None,
 ) -> list[tuple[str, list[str]]]:
     """(omschrijving, argv)-lijst voor de hele pijplijn, in volgorde.
 
@@ -85,9 +95,12 @@ def bouw_stappen(
                       '--match', str(match), '--fps', str(fps), '--uit', str(detecties)],
             ),
             (
+                # Zonder kalibratie is het platform de enige bron van de echte terreinmaten:
+                # zonder deze vlaggen zou de zone tegen een reglementair veld gelegd worden.
                 'landing/zone (demo)',
                 py + [str(CV_MAP / 'landing.py'), '--demo', '--detecties', str(detecties), '--labels', str(labels),
-                      '--seed', str(seed), '--uit', str(met_landing)],
+                      '--seed', str(seed), '--uit', str(met_landing)]
+                + maten_argumenten(breedte, speelveld),
             ),
             (
                 'spelers (demo)',
@@ -134,7 +147,8 @@ def bouw_stappen(
         if demo:
             stappen.append((
                 'videotracking (demo-sporen)',
-                py + [str(CV_MAP / 'tracking.py'), '--demo', '--seed', str(seed), '--uit', str(posities)],
+                py + [str(CV_MAP / 'tracking.py'), '--demo', '--seed', str(seed), '--uit', str(posities)]
+                + maten_argumenten(breedte, speelveld),
             ))
             stappen.append((
                 'fysieke stats per speler (loopafstand, sprintjes, topsnelheid)',
@@ -154,11 +168,55 @@ def bouw_stappen(
             ))
         stappen.append((
             # PNG alleen vragen als opencv er is — het JSON-raster is het echte product.
+            # De kalibratie draagt de diepte én de echte veldmaten: zonder dat zou het
+            # raster op een niet-reglementair terrein posities buiten "het veld" weggooien.
             'heatmap van de posities',
             py + [str(CV_MAP / 'heatmap.py'), '--posities', str(posities), '--uit', str(uitmap / 'heatmap.json')]
+            + (maten_argumenten(breedte, speelveld) if demo else ['--kalibratie', str(kalibratie)])
             + (['--png', str(uitmap / 'heatmap.png')] if heatmap_png else []),
         ))
     return stappen
+
+
+def haal_maten(base: str, match: int, token: str) -> tuple[float | None, float | None]:
+    """De opgemeten terreinmaten van deze wedstrijd, van het platform.
+
+    Leeg = reglementair; bij een onbereikbaar platform geven we (None, None) terug —
+    de sync-stap hierna faalt dan luid genoeg.
+    """
+    sys.path.insert(0, str(CV_MAP))
+    import sync as sync_mod  # noqa: PLC0415
+
+    try:
+        m = (sync_mod.haal_labels(base, match, token) or {}).get('match') or {}
+    except SystemExit:
+        return None, None
+    breedte, speelveld = m.get('veldBreedteM'), m.get('veldSpeelveldM')
+    return (
+        float(breedte) if breedte is not None else None,
+        float(speelveld) if speelveld is not None else None,
+    )
+
+
+def waarschuw_bij_afwijkende_kalibratie(
+    kalibratie: Path | None, breedte: float | None, speelveld: float | None,
+) -> None:
+    """De homografie is gefit op de maten in de kalibratie; wijkt het platform daarvan af,
+    dan meten beide iets anders. Melden vóór de meting, niet achteraf in het rapport."""
+    if kalibratie is None or not kalibratie.is_file():
+        return
+    try:
+        info = (json.loads(kalibratie.read_text(encoding='utf-8')) or {}).get('veld') or {}
+    except (json.JSONDecodeError, OSError):
+        return
+    for naam, platform, in_kalibratie in (
+        ('breedte', breedte, info.get('breedte_m')),
+        ('speelveld', speelveld, info.get('speelveld_m')),
+    ):
+        if platform is not None and in_kalibratie is not None and abs(float(in_kalibratie) - platform) > 0.05:
+            print(f'LET OP: {naam} verschilt — platform {platform:g} m, kalibratie {float(in_kalibratie):g} m. '
+                  f'Kalibreer opnieuw met --{naam} {platform:g}, of corrigeer de wedstrijd in het platform.',
+                  file=sys.stderr)
 
 
 # ---------------------------------------------------------------------------
@@ -215,6 +273,14 @@ def controle(args: argparse.Namespace, token: str | None) -> int:
             )
             punt(m.get('videoOffsetH1') is not None, 'video-offset helft 1 gezet', 'IJk H1 op de analysepagina')
             punt(m.get('videoOffsetH2') is not None, 'video-offset helft 2 gezet', 'IJk H2 op de analysepagina')
+            breedte, speelveld = m.get('veldBreedteM'), m.get('veldSpeelveldM')
+            if breedte is not None or speelveld is not None:
+                print(f'  · terrein opgemeten: breedte {breedte or 14:g} m, speelveld {speelveld or 26:g} m')
+                waarschuw_bij_afwijkende_kalibratie(
+                    args.kalibratie,
+                    float(breedte) if breedte is not None else None,
+                    float(speelveld) if speelveld is not None else None,
+                )
         except SystemExit:
             punt(False, f'platform bereikbaar en token geldig ({args.base})',
                  'controleer --base en CV_BRIDGE_TOKEN')
@@ -273,10 +339,19 @@ def main(argv: list[str] | None = None) -> None:
 
     uitmap = args.uitmap if args.uitmap is not None else Path(f'meting_match{args.match}')
     uitmap.mkdir(parents=True, exist_ok=True)
+
+    # De echte terreinmaten van deze wedstrijd: zonder die vlaggen zou de zone-bepaling
+    # (en de heatmap) in demomodus tegen een reglementair veld gelegd worden.
+    breedte, speelveld = haal_maten(args.base, args.match, token)
+    if breedte is not None or speelveld is not None:
+        print(f'Opgemeten terrein: breedte {breedte or 14:g} m, speelveld {speelveld or 26:g} m '
+              f'(alle meters worden hierop gerekend)')
+        waarschuw_bij_afwijkende_kalibratie(args.kalibratie, breedte, speelveld)
     import importlib.util
     stappen = bouw_stappen(
         args.match, uitmap, args.base, args.demo, args.seed, args.video, args.kalibratie, args.upload, args.fps,
         tracking=args.tracking, heatmap_png=importlib.util.find_spec('cv2') is not None,
+        breedte=breedte, speelveld=speelveld,
     )
 
     omgeving = dict(os.environ, CV_BRIDGE_TOKEN=token)

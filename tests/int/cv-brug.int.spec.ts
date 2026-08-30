@@ -225,6 +225,29 @@ describe('CV-brug', () => {
     expect(tel.totalDocs).toBe(1)
   })
 
+  it('weigert een rugnummer buiten 0–99, zoals de review-PATCH en het fysiek-endpoint', async () => {
+    const { matchId } = await maakWedstrijd()
+    const res = await postCvEvents(
+      postRequest(
+        {
+          matchId,
+          events: [
+            { ...geldigEvent(matchId), speler: { team: 'home', rugnummer: 0 } },
+            { ...geldigEvent(matchId), speler: { team: 'home', rugnummer: 99 } },
+            { ...geldigEvent(matchId), speler: { team: 'home', rugnummer: -5 } },
+            { ...geldigEvent(matchId), speler: { team: 'home', rugnummer: 1000 } },
+          ],
+        },
+        TOKEN,
+      ),
+    )
+    const rapport = (await res.json()) as { aanvaard: number; geweigerd: { index: number; reden: string }[] }
+    // Anders zou de brug een nummer opslaan dat de reviewer daarna nooit meer kan bewaren.
+    expect(rapport.aanvaard).toBe(2)
+    expect(rapport.geweigerd.map((g) => g.index)).toEqual([2, 3])
+    for (const g of rapport.geweigerd) expect(g.reden).toMatch(/rugnummer/)
+  })
+
   it('weigert een onbestaande wedstrijd (404) en een te grote batch (400)', async () => {
     expect((await postCvEvents(postRequest({ matchId: 99999999, events: [] }, TOKEN))).status).toBe(
       404,

@@ -285,12 +285,9 @@ def draai_kalibratie_180(data: dict) -> dict:
     veldcoördinaat én label, zodat het bestand consistent blijft en het
     reprojectierapport identiek. Puur stdlib — geen herklikken, geen cv2.
     """
-    veld_info = data.get('veld') or {}
-    diepte = float(data.get('doelgebied_diepte_m') or veld_info.get('doelgebied_diepte_m')
-                   or veld.STANDAARD_DOELGEBIED_DIEPTE_M)
-    speelveld = float(veld_info.get('speelveld_m') or veld.SPEELVELD_LENGTE_M)
+    diepte, speelveld = veldinfo_uit(data)
     lengte = veld.totale_lengte_m(diepte, speelveld)
-    b = float(veld_info.get('breedte_m') or veld.BREEDTE_M)
+    b = float((data.get('veld') or {}).get('breedte_m') or veld.BREEDTE_M)
     r = [[-1.0, 0.0, b], [0.0, -1.0, lengte], [0.0, 0.0, 1.0]]
     h = data['matrix_beeld_naar_veld']
     nieuw_h = [[sum(r[i][k] * h[k][j] for k in range(3)) for j in range(3)] for i in range(3)]
@@ -305,7 +302,21 @@ def draai_kalibratie_180(data: dict) -> dict:
     return {**data, 'matrix_beeld_naar_veld': nieuw_h, 'punten': nieuwe_punten}
 
 
-def druk_reprojectierapport(matrix: list[list[float]], punten: list[dict], _rapport_diepte: float | None = None) -> None:
+def veldinfo_uit(data: dict) -> tuple[float, float]:
+    """(diepte, speelveld) uit een kalibratiebestand — schrijf_kalibratie zet ze onder 'veld';
+    oudere bestanden hadden 'doelgebied_diepte_m' op het hoogste niveau."""
+    info = data.get('veld') or {}
+    diepte = float(data.get('doelgebied_diepte_m') or info.get('doelgebied_diepte_m')
+                   or veld.STANDAARD_DOELGEBIED_DIEPTE_M)
+    return diepte, float(info.get('speelveld_m') or veld.SPEELVELD_LENGTE_M)
+
+
+def druk_reprojectierapport(
+    matrix: list[list[float]],
+    punten: list[dict],
+    _rapport_diepte: float | None = None,
+    _rapport_speelveld: float | None = None,
+) -> None:
     """Rapporteer per punt de reprojectiefout in pixels (veld → beeld via H⁻¹),
     plus de fout in meters (beeld → veld via H), en het gemiddelde."""
     invers = _inverteer_3x3(matrix)
@@ -335,7 +346,8 @@ def druk_reprojectierapport(matrix: list[list[float]], punten: list[dict], _rapp
     # geëxtrapoleerd. Dat is een geldige opstelling (zones aan jouw kant blijven sterk), maar de
     # gebruiker moet het wéten — dus zeg het hier, waar hij toch al naar de fouten kijkt.
     diepte = _rapport_diepte if _rapport_diepte is not None else veld.STANDAARD_DOELGEBIED_DIEPTE_M
-    helft_grens = veld.totale_lengte_m(diepte) / 2.0
+    speelveld = _rapport_speelveld if _rapport_speelveld is not None else veld.SPEELVELD_LENGTE_M
+    helft_grens = veld.totale_lengte_m(diepte, speelveld) / 2.0
     thuis = [p for p in punten if p['veld_m'][1] < helft_grens]
     uit = [p for p in punten if p['veld_m'][1] > helft_grens]
     if not thuis or not uit:
@@ -407,7 +419,7 @@ def main(argv: list[str] | None = None) -> None:
         args.uit.write_text(json.dumps(gedraaid, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
         print(f'180° gedraaid (thuis↔uit, links↔rechts) → {args.uit}')
         druk_reprojectierapport(gedraaid['matrix_beeld_naar_veld'], gedraaid['punten'],
-                                gedraaid.get('doelgebied_diepte_m'))
+                                *veldinfo_uit(gedraaid))
         return
 
     # --test combineert niet met een nieuwe kalibratie: dat zou stilletjes fitten
@@ -422,8 +434,7 @@ def main(argv: list[str] | None = None) -> None:
             _fout(f'kalibratiebestand niet gevonden: {pad}')
         data = json.loads(pad.read_text(encoding='utf-8'))
         controleer_orientatie(data['matrix_beeld_naar_veld'], data['punten'])
-        druk_reprojectierapport(data['matrix_beeld_naar_veld'], data['punten'],
-                                data.get('doelgebied_diepte_m'))
+        druk_reprojectierapport(data['matrix_beeld_naar_veld'], data['punten'], *veldinfo_uit(data))
         return
 
     # Punten verzamelen: headless (--punt) of interactief (--beeld)
@@ -447,7 +458,7 @@ def main(argv: list[str] | None = None) -> None:
     controleer_orientatie(matrix, punten)
     schrijf_kalibratie(args.uit, matrix, punten, args.diepte, args.beeld,
                        breedte=args.breedte, speelveld=args.speelveld)
-    druk_reprojectierapport(matrix, punten, args.diepte)
+    druk_reprojectierapport(matrix, punten, args.diepte, args.speelveld)
 
 
 if __name__ == '__main__':

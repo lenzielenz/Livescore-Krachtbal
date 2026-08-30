@@ -9,6 +9,7 @@
 import {
   type AttackDir,
   type Point,
+  type VeldMaten,
   FIELD,
   isInOwnGoalArea,
   totalLengthM,
@@ -30,10 +31,11 @@ export function isForwardPass(
   to: Point,
   dir: AttackDir,
   goalAreaDepthM: number = FIELD.defaultGoalAreaDepthM,
+  maten?: Partial<VeldMaten> | null,
 ): boolean {
   // In het eigen doelgebied mag wél voorwaarts gepast worden (§6.10).
-  if (isInOwnGoalArea(from, dir, goalAreaDepthM)) return false
-  const tol = PASS_TOLERANCE_M / totalLengthM(goalAreaDepthM)
+  if (isInOwnGoalArea(from, dir, goalAreaDepthM, maten)) return false
+  const tol = PASS_TOLERANCE_M / totalLengthM(goalAreaDepthM, maten)
   const gained = dir === 'up' ? to.y - from.y : from.y - to.y
   return gained > tol
 }
@@ -44,7 +46,8 @@ export function passGainM(
   to: Point,
   dir: AttackDir,
   goalAreaDepthM: number = FIELD.defaultGoalAreaDepthM,
+  maten?: Partial<VeldMaten> | null,
 ): number {
   const gained = dir === 'up' ? to.y - from.y : from.y - to.y
-  return Math.round(gained * totalLengthM(goalAreaDepthM) * 100) / 100
+  return Math.round(gained * totalLengthM(goalAreaDepthM, maten) * 100) / 100
 }

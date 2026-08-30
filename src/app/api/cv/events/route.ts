@@ -1,4 +1,4 @@
-import { FIELD, totalLengthM, veldMaten } from '@/lib/field'
+import { FIELD, matenVanMatch, totalLengthM, veldMaten } from '@/lib/field'
 import { getPayloadClient } from '@/lib/payload-client'
 
 import { cvAuthorized } from '../cv-auth'
@@ -74,8 +74,12 @@ function valideerEvent(e: RuwEvent, matchId: number, veldLengteM: number, veldBr
     if (typeof speler !== 'object') return 'speler moet een object of null zijn.'
     if (speler.team !== 'home' && speler.team !== 'away')
       return "speler.team moet 'home' of 'away' zijn."
-    if (speler.rugnummer != null && !Number.isInteger(speler.rugnummer)) {
-      return 'speler.rugnummer moet een geheel getal of null zijn.'
+    if (
+      speler.rugnummer != null &&
+      (!Number.isInteger(speler.rugnummer) || (speler.rugnummer as number) < 0 || (speler.rugnummer as number) > 99)
+    ) {
+      // Zelfde bereik als de review-PATCH en het fysiek-endpoint (0–99).
+      return 'speler.rugnummer moet een geheel getal 0–99 of null zijn.'
     }
   }
   if (e.score_delta != null && !Number.isInteger(e.score_delta)) {
@@ -131,10 +135,7 @@ export async function POST(req: Request) {
   }
   // Zone-bounds hangen af van de doelgebied-diepte van dít terrein (zie src/lib/field.ts).
   // Zone-bounds tegen de ECHTE terreinmaten van deze wedstrijd (leeg = reglementair).
-  const maten = veldMaten({
-    ...(match.veldBreedte != null ? { breedteM: match.veldBreedte } : {}),
-    ...(match.veldSpeelveld != null ? { speelveldM: match.veldSpeelveld } : {}),
-  })
+  const maten = veldMaten(matenVanMatch(match))
   const veldLengteM = totalLengthM(match.goalAreaDepth ?? FIELD.defaultGoalAreaDepthM, maten)
 
   let aanvaard = 0

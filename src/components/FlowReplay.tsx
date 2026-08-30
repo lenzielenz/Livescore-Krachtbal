@@ -248,8 +248,8 @@ export function FlowReplay({
       ctx.strokeStyle = '#e8f5ee'
       ctx.lineWidth = 2
       ctx.strokeRect(x0, y0, FW, fieldH)
-      const gl = goalLineNorm(d)
-      const ft = freeThrowNorm(d)
+      const gl = goalLineNorm(d, { speelveldM })
+      const ft = freeThrowNorm(d, { speelveldM })
       const glTop = y0 + gl * fieldH
       const glBot = y0 + (1 - gl) * fieldH
       const tickX = Math.min(PAD - 2, 12) // streepje buiten de zijlijn (binnen de marge)

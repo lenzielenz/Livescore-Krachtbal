@@ -67,7 +67,25 @@ export default async function AnalyseDetailPage({ params }: { params: Promise<{ 
     notFound()
   }
 
-  const defense = await buildDefenseStats(payload, matchId).catch(() => [])
+  // Deze zes bevragingen hangen niet van elkaar af: samen ophalen scheelt evenveel
+  // round-trips als er queries zijn (op Postgres merkbaar bij elke paginalading).
+  // De CV-voorstellen zijn enkel voor federatie-niveau — anders halen we ze niet op.
+  const [defense, passen, sheet, toRes, worpenRes, cvRes] = await Promise.all([
+    buildDefenseStats(payload, matchId).catch(() => []),
+    buildPassStats(payload, matchId).catch(() => null),
+    buildMatchSheet(payload, matchId).catch(() => null),
+    payload
+      .find({ collection: 'match-events', where: { and: [{ match: { equals: matchId } }, { type: { equals: 'timeout' } }] }, depth: 0, limit: 100 })
+      .catch(() => ({ docs: [] as Record<string, unknown>[] })),
+    payload
+      .find({ collection: 'throws', where: { match: { equals: matchId } }, sort: 'createdAt', depth: 1, limit: 2000 })
+      .catch(() => ({ docs: [] as Record<string, unknown>[] })),
+    isFederationLevel(me)
+      ? payload
+          .find({ collection: 'cv-events', where: { match: { equals: matchId } }, sort: 'videoTimeS', depth: 0, limit: 2000 })
+          .catch(() => null)
+      : Promise.resolve(null),
+  ])
   // Fysieke stats uit de videotracking (cv/fysiek.py → /api/cv/match/[id]/fysiek), indien geüpload.
   const fysiekRaw = (matchDoc.cvFysiek as { spelers?: unknown[] } | null | undefined)?.spelers
   const fysiek = Array.isArray(fysiekRaw)
@@ -76,17 +94,12 @@ export default async function AnalyseDetailPage({ params }: { params: Promise<{ 
           !!f && typeof f === 'object' && 'rugnummer' in f && 'afstand_m' in f && 'sprints' in f,
       ) as FysiekSpeler[])
     : []
-  const passen = await buildPassStats(payload, matchId).catch(() => null)
-  const sheet = await buildMatchSheet(payload, matchId).catch(() => null)
   const momentumGoals = (sheet?.goals ?? [])
     .slice()
     .sort((a, b) => a.half - b.half || a.gameClock - b.gameClock)
     .map((g) => ({ side: g.side, points: g.points, half: g.half, gameClock: g.gameClock }))
 
   // Time-outs (gevraagde minuten) voor verticale lijnen op het scoreverloop.
-  const toRes = await payload
-    .find({ collection: 'match-events', where: { and: [{ match: { equals: matchId } }, { type: { equals: 'timeout' } }] }, depth: 0, limit: 100 })
-    .catch(() => ({ docs: [] as Record<string, unknown>[] }))
   const homeTeamId = state.teams.home.id
   const momentumTimeouts = toRes.docs.map((e) => {
     const tId = (e as { team?: unknown }).team
@@ -115,9 +128,6 @@ export default async function AnalyseDetailPage({ params }: { params: Promise<{ 
   // Alle worpen (immutable events, hier enkel gelezen) voor de tijdlijnbalk onder de video:
   // elke manuele tag op zijn videotijd, zodat je ziet of de ijking klopt vóór er ooit een
   // CV-voorstel bijkomt (fase 0).
-  const worpenRes = await payload
-    .find({ collection: 'throws', where: { match: { equals: matchId } }, sort: 'createdAt', depth: 1, limit: 2000 })
-    .catch(() => ({ docs: [] as Record<string, unknown>[] }))
   const videoWorpen: VideoWorp[] = worpenRes.docs
     .map((t) => {
       const d = t as { team?: unknown; player?: unknown; period?: unknown; gameClock?: unknown; type?: unknown; outcome?: unknown }
@@ -144,27 +154,21 @@ export default async function AnalyseDetailPage({ params }: { params: Promise<{ 
   // Enkel federatie-niveau ziet en reviewt ze — supporters en analyse-gasten krijgen géén
   // voorstellen mee (het zijn onbevestigde modelclaims, geen wedstrijdfeiten). De review-UI
   // muteert uitsluitend via PATCH /api/cv/events/[id] (zie CvReview.tsx).
-  let cvVoorstellen: CvVoorstel[] = []
-  if (isFederationLevel(me)) {
-    const cvRes = await payload
-      .find({ collection: 'cv-events', where: { match: { equals: matchId } }, sort: 'videoTimeS', depth: 0, limit: 2000 })
-      .catch(() => null)
-    cvVoorstellen = (cvRes?.docs ?? []).map((e) => ({
-      id: e.id,
-      videoTimeS: e.videoTimeS,
-      eventType: e.eventType,
-      worpType: e.worpType ?? null,
-      confidence: e.confidence,
-      reviewed: e.reviewed === true,
-      verdict: e.verdict ?? null,
-      side: e.side ?? null,
-      rugnummer: e.rugnummer ?? null,
-      inDoelgebied: e.inDoelgebied === true,
-      xM: e.xM ?? null,
-      yM: e.yM ?? null,
-      afstandM: e.afstandM ?? null,
-    }))
-  }
+  const cvVoorstellen: CvVoorstel[] = (cvRes?.docs ?? []).map((e) => ({
+    id: e.id,
+    videoTimeS: e.videoTimeS,
+    eventType: e.eventType,
+    worpType: e.worpType ?? null,
+    confidence: e.confidence,
+    reviewed: e.reviewed === true,
+    verdict: e.verdict ?? null,
+    side: e.side ?? null,
+    rugnummer: e.rugnummer ?? null,
+    inDoelgebied: e.inDoelgebied === true,
+    xM: e.xM ?? null,
+    yM: e.yM ?? null,
+    afstandM: e.afstandM ?? null,
+  }))
   // Video koppelen/ijken mag wie de analyse beheert: de federatie, of de eigenaar van deze
   // privé-opname (dezelfde kring die ze al mag bekijken — de paginatoegang hierboven).
   const mayEditVideo = mayEditMatchVideo(me, matchDoc as { analyseOnly?: boolean | null; analyseOwner?: unknown })

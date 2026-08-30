@@ -9,7 +9,7 @@ import type { Payload } from 'payload'
 import type { Category } from './categories'
 import { type ClubColors, clubColorsFrom, distinguishAway } from './club-colors'
 import { type LogoFit, normalizeLogoFit } from './logo-fit'
-import { type AttackDir, type Point, type VeldMaten, FIELD, freeThrowNorm, isOpDoellijn, projectWerpplaats } from './field'
+import { type AttackDir, type Point, FIELD, freeThrowNorm, isOpDoellijn, matenVanMatch, projectWerpplaats } from './field'
 import { buildPassNetwork, type PlayerPassStats } from './pass-network'
 import { isForwardPass, passGainM } from './pass-rules'
 import { reeksUsesSeniorThrows } from './reeksen'
@@ -94,13 +94,6 @@ function assertNietAfgelopen(match: { status?: string | null }, wat: string): vo
 }
 
 /** De echte terreinmaten van deze wedstrijd (leeg = reglementair 14 m × 26 m). */
-function matenVan(match: { veldBreedte?: number | null; veldSpeelveld?: number | null }): Partial<VeldMaten> {
-  return {
-    ...(match.veldBreedte != null ? { breedteM: match.veldBreedte } : {}),
-    ...(match.veldSpeelveld != null ? { speelveldM: match.veldSpeelveld } : {}),
-  }
-}
-
 async function loadMatch(payload: Payload, matchId: number) {
   const match = await payload.findByID({ collection: 'matches', id: matchId, depth: 0 })
   const homeId = typeof match.homeTeam === 'object' ? match.homeTeam.id : match.homeTeam
@@ -239,7 +232,7 @@ export async function startMatch(payload: Payload, matchId: number, startingTeam
     overrideAccess: true,
   })
   // Opzet bij aftrap: vanaf de eigen vrijeworplijn (diepte-afhankelijk).
-  const ftNorm = freeThrowNorm(match.goalAreaDepth ?? FIELD.defaultGoalAreaDepthM, matenVan(match))
+  const ftNorm = freeThrowNorm(match.goalAreaDepth ?? FIELD.defaultGoalAreaDepthM, matenVanMatch(match))
   const ownHalfY = dir === 'up' ? ftNorm : 1 - ftNorm
   await createPossession(payload, {
     matchId,
@@ -328,7 +321,7 @@ export async function recordThrow(payload: Payload, input: RecordThrowInput) {
   const rawOrigin: Point = { x: clamp01(hasOriginX ? (input.originX as number) : base.x), y: base.y }
 
   const depth = match.goalAreaDepth ?? FIELD.defaultGoalAreaDepthM
-  const maten = matenVan(match)
+  const maten = matenVanMatch(match)
   // §6.4: lag de bal tussen doellijn en vrijeworplijn, dan schuift de werpplaats terug tot op de
   // vrijeworplijn — van dichterbij mag je niet werpen. Zonder deze projectie meet de statistiek
   // worpen te kort (en zou een doelworp van binnen de 4 m als geldig doorgaan).
@@ -509,7 +502,7 @@ export async function recordPass(payload: Payload, input: RecordPassInput) {
   const lastThrow = existing.docs[existing.docs.length - 1] ?? null
   const from = await werpplaatsIn(payload, open, lastThrow, existing.docs.length)
   const to: Point = { x: clamp01(input.point.x), y: clamp01(input.point.y) }
-  const forward = isForwardPass(from, to, dir, depth)
+  const forward = isForwardPass(from, to, dir, depth, matenVanMatch(match))
 
   await payload.create({
     collection: 'match-events',
@@ -538,7 +531,7 @@ export async function recordPass(payload: Payload, input: RecordPassInput) {
       data: { endOutcome: 'pass_fault' },
       overrideAccess: true,
     })
-    const ns = nextSetup({ outcome: 'pass_fault', landing: from, throwerTeam: side, throwerDir: dir, goalAreaDepthM: depth, maten: matenVan(match) })
+    const ns = nextSetup({ outcome: 'pass_fault', landing: from, throwerTeam: side, throwerDir: dir, goalAreaDepthM: depth, maten: matenVanMatch(match) })
     await createPossession(payload, {
       matchId: input.matchId,
       teamId: ns.team === 'home' ? homeId : awayId,
@@ -554,7 +547,7 @@ export async function recordPass(payload: Payload, input: RecordPassInput) {
 
   return {
     forward,
-    gainM: passGainM(from, to, dir, depth),
+    gainM: passGainM(from, to, dir, depth, matenVanMatch(match)),
     state: await buildMatchState(payload, input.matchId),
   }
 }
@@ -860,7 +853,7 @@ export async function startNextHalf(payload: Payload, matchId: number) {
   const startTeamId = firstTeamId === homeId ? awayId : homeId
   const startSide = sideOfTeam(startTeamId, homeId)
   const dir = attackDirForSide(startSide, nextHalf)
-  const ftNorm = freeThrowNorm(match.goalAreaDepth ?? FIELD.defaultGoalAreaDepthM, matenVan(match))
+  const ftNorm = freeThrowNorm(match.goalAreaDepth ?? FIELD.defaultGoalAreaDepthM, matenVanMatch(match))
   const ownHalfY = dir === 'up' ? ftNorm : 1 - ftNorm
   await createPossession(payload, {
     matchId,
@@ -1046,7 +1039,7 @@ export async function startFreeThrow(payload: Payload, matchId: number, teamId: 
   }
 
   // Vrijeworplijn ligt 4 m vóór de aangevallen doellijn (diepte-afhankelijk).
-  const ftNorm = freeThrowNorm(match.goalAreaDepth ?? FIELD.defaultGoalAreaDepthM, matenVan(match))
+  const ftNorm = freeThrowNorm(match.goalAreaDepth ?? FIELD.defaultGoalAreaDepthM, matenVanMatch(match))
   const setupY = dir === 'up' ? 1 - ftNorm : ftNorm
   await payload.create({
     collection: 'possessions',

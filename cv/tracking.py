@@ -104,6 +104,18 @@ class Koppelaar:
 # ---------------------------------------------------------------------------
 
 
+def bemonster_duur(frame_count: float, fps: float) -> float:
+    """Bovengrens voor de bemonsteringslus, uit de video-metadata.
+
+    Niet elke container kent zijn framecount (webm en geremuxte streams geven 0):
+    dan is er geen bruikbare bovengrens en lezen we tot cap.read() faalt — anders
+    zou de lus na één frame stoppen en bleef de tracking leeg.
+    """
+    if frame_count <= 0 or fps <= 0:
+        return float('inf')
+    return frame_count / fps
+
+
 def dedupliceer(punten: list[tuple[float, float]], min_afstand_m: float = 0.8) -> list[tuple[float, float]]:
     """Voeg waarnemingen samen die dichter bij elkaar liggen dan één speler breed is.
 
@@ -136,23 +148,30 @@ def filter_korte_sporen(rijen: list[dict], min_duur_s: float) -> list[dict]:
 # ---------------------------------------------------------------------------
 
 
-def demo_posities(seed: int, duur_s: float, diepte_m: float, stap_s: float = 0.5) -> list[dict]:
+def demo_posities(
+    seed: int,
+    duur_s: float,
+    diepte_m: float,
+    stap_s: float = 0.5,
+    breedte_m: float = veld.BREEDTE_M,
+    speelveld_m: float = veld.SPEELVELD_LENGTE_M,
+) -> list[dict]:
     """Acht begrensde toevalspaden (vier per helft) — voer voor heatmap.py."""
     rng = random.Random(seed)
-    lengte = veld.totale_lengte_m(diepte_m)
+    lengte = veld.totale_lengte_m(diepte_m, speelveld_m)
     spelers = []
     for i in range(8):
         # Elke ploeg blijft grotendeels op de eigen helft, zoals in het echte spel.
         eigen_helft = i < 4
         y0 = rng.uniform(lengte * 0.1, lengte * 0.45) if eigen_helft else rng.uniform(lengte * 0.55, lengte * 0.9)
-        spelers.append([rng.uniform(2.0, veld.BREEDTE_M - 2.0), y0])
+        spelers.append([rng.uniform(2.0, breedte_m - 2.0), y0])
     rijen: list[dict] = []
     t = 0.0
     while t <= duur_s:
         for track, pos in enumerate(spelers, start=1):
             pos[0] += rng.gauss(0.0, 0.6)
             pos[1] += rng.gauss(0.0, 0.6)
-            pos[0], pos[1] = klem_op_veld(pos[0], pos[1], diepte_m)
+            pos[0], pos[1] = klem_op_veld(pos[0], pos[1], diepte_m, breedte_m, speelveld_m)
             rijen.append({'t': round(t, 2), 'track': track, 'x_m': round(pos[0], 2), 'y_m': round(pos[1], 2)})
         t += stap_s
     return rijen
@@ -196,7 +215,9 @@ def video_posities(args: argparse.Namespace) -> list[dict]:
 
     koppelaar = Koppelaar()
     rijen: list[dict] = []
-    duur = (cap.get(cv2.CAP_PROP_FRAME_COUNT) or 0) / (cap.get(cv2.CAP_PROP_FPS) or 30.0)
+    # De échte stopvoorwaarde is cap.read(); de metadata-duur is enkel een bovengrens
+    # wanneer de container ze kent (zie bemonster_duur).
+    duur = bemonster_duur(cap.get(cv2.CAP_PROP_FRAME_COUNT) or 0.0, cap.get(cv2.CAP_PROP_FPS) or 0.0)
     t = 0.0
     while t <= duur:
         cap.set(cv2.CAP_PROP_POS_MSEC, t * 1000.0)
@@ -260,6 +281,10 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument('--demo', action='store_true', help='oefenmodus zonder video (vereist --seed)')
     parser.add_argument('--seed', type=int, default=None, help='reproduceerbare toevalspaden')
     parser.add_argument('--duur', type=float, default=600.0, help='demolengte in seconden (standaard 600)')
+    parser.add_argument('--breedte', type=float, default=None,
+                        help='opgemeten veldbreedte in meters (demo; standaard reglementair 14)')
+    parser.add_argument('--speelveld', type=float, default=None,
+                        help='opgemeten speelveldlengte in meters (demo; standaard reglementair 26)')
     args = parser.parse_args(argv)
 
     if args.demo and args.video is not None:
@@ -269,7 +294,9 @@ def main(argv: list[str] | None = None) -> None:
             _fout('--demo vereist --seed (reproduceerbaarheid is de hele bedoeling)')
         if args.duur <= 0:
             _fout('--duur moet groter zijn dan 0')
-        rijen = demo_posities(args.seed, args.duur, args.diepte)
+        rijen = demo_posities(args.seed, args.duur, args.diepte,
+                              breedte_m=args.breedte or veld.BREEDTE_M,
+                              speelveld_m=args.speelveld or veld.SPEELVELD_LENGTE_M)
         print(f'Demo (seed {args.seed}): 8 sporen over {args.duur:g} s → {len(rijen)} posities')
     else:
         if args.video is None or args.kalibratie is None:

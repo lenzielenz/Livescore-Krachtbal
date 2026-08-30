@@ -191,8 +191,12 @@ export function AnalyseDetailView({
                   .map((f) => {
                     const side = f.team === 'thuis' ? 'home' : 'away'
                     const speler = players.find((p) => p.shirtNumber === f.rugnummer && p.teamSide === side)
-                    const naam = f.naam ?? speler?.playerName ?? (f.team === 'thuis' ? teams.home : teams.away)
-                    const detail = `${f.afstand_m >= 1000 ? `${(f.afstand_m / 1000).toFixed(2)} km` : `${Math.round(f.afstand_m)} m`} · ${f.sprints} sprintjes · top ${(f.topsnelheid_m_s * 3.6).toFixed(1)} km/u`
+                    // Zonder speler klopt de spoortoewijzing niet met de opstelling: zeg dat, in
+                    // plaats van de ploegnaam als spelersnaam te tonen (dat leest als een speler).
+                    const naam = f.naam ?? speler?.playerName ?? 'niet in de opstelling'
+                    const ploeg = f.team === 'thuis' ? teams.home : teams.away
+                    const meters = f.afstand_m >= 1000 ? `${(f.afstand_m / 1000).toFixed(2)} km` : `${Math.round(f.afstand_m)} m`
+                    const detail = `${meters} · ${f.sprints} sprintjes · top ${(f.topsnelheid_m_s * 3.6).toFixed(1)} km/u${speler ? '' : ` · ${ploeg}`}`
                     return (
                       <button
                         key={`${f.team}-${f.rugnummer}`}

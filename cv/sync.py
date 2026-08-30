@@ -75,6 +75,7 @@ def haal_labels(base: str, match_id: int, token: str) -> dict:
 
 def naar_weak_label(
     event: dict, match_id: int, diepte: float, fps: float | None,
+    speelveld_m: float = veld.SPEELVELD_LENGTE_M,
 ) -> dict:
     """Zet één platform-event om naar het event-JSON-schema van de brug."""
     video_time_s = float(event['video_time_s'])
@@ -83,7 +84,8 @@ def naar_weak_label(
     if landing is not None:
         zone = {
             'in_doelgebied': veld.in_doelgebied(
-                float(landing['y_norm']), diepte, x_norm=float(landing['x_norm'])
+                float(landing['y_norm']), diepte, x_norm=float(landing['x_norm']),
+                speelveld_m=speelveld_m,
             ),
             'x_m': float(landing['x_m']),
             'y_m': float(landing['y_m']),
@@ -153,6 +155,7 @@ def main(argv: list[str] | None = None) -> None:
     match = data.get('match', {})
     events = data.get('labels', [])
     diepte = float(match.get('goalAreaDepth') or veld.STANDAARD_DOELGEBIED_DIEPTE_M)
+    speelveld = float(match.get('veldSpeelveldM') or veld.SPEELVELD_LENGTE_M)
 
     uitpad = args.uit if args.uit is not None else Path(f'labels_match{args.match}.jsonl')
     gesynct = 0
@@ -163,7 +166,7 @@ def main(argv: list[str] | None = None) -> None:
                 helft = int(event.get('half') or 0)
                 niet_syncbaar_per_helft[helft] = niet_syncbaar_per_helft.get(helft, 0) + 1
                 continue
-            label = naar_weak_label(event, args.match, diepte, args.fps)
+            label = naar_weak_label(event, args.match, diepte, args.fps, speelveld_m=speelveld)
             f.write(json.dumps(label, ensure_ascii=False) + '\n')
             gesynct += 1
 
@@ -172,10 +175,10 @@ def main(argv: list[str] | None = None) -> None:
     ploegen = match.get('ploegen') or {}
     thuis, uit = ploegen.get('home', '?'), ploegen.get('away', '?')
     print(f'Match {args.match}: {thuis} — {uit} (doelgebied {diepte:g} m)')
-    breedte, speelveld = match.get('veldBreedteM'), match.get('veldSpeelveldM')
-    if breedte is not None or speelveld is not None:
+    echte_breedte, echt_speelveld = match.get('veldBreedteM'), match.get('veldSpeelveldM')
+    if echte_breedte is not None or echt_speelveld is not None:
         # Opgemeten terrein — geef die maten door aan calibrate.py/landing.py (--breedte/--speelveld).
-        print(f'Terrein opgemeten: breedte {breedte or 14:g} m, speelveld {speelveld or 26:g} m '
+        print(f'Terrein opgemeten: breedte {echte_breedte or 14:g} m, speelveld {echt_speelveld or 26:g} m '
               f'— gebruik --breedte/--speelveld bij calibrate.py en landing.py')
     print(f'{gesynct} van {totaal} events gesynct → {uitpad}')
     for helft in sorted(niet_syncbaar_per_helft):

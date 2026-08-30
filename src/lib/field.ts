@@ -26,6 +26,17 @@ export interface VeldMaten {
   speelveldM: number
 }
 
+/** Partial<VeldMaten> uit een match-document: enkel de ingevulde echte maten (leeg = reglementair). */
+export function matenVanMatch(match: {
+  veldBreedte?: number | null
+  veldSpeelveld?: number | null
+}): Partial<VeldMaten> {
+  return {
+    ...(match.veldBreedte != null ? { breedteM: match.veldBreedte } : {}),
+    ...(match.veldSpeelveld != null ? { speelveldM: match.veldSpeelveld } : {}),
+  }
+}
+
 export function veldMaten(m?: Partial<VeldMaten> | null): VeldMaten {
   return {
     breedteM: m?.breedteM ?? FIELD.widthM,

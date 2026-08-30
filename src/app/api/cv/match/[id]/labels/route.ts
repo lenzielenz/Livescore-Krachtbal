@@ -1,5 +1,4 @@
-import { FIELD, toMeters } from '@/lib/field'
-import type { VeldMaten } from '@/lib/field'
+import { FIELD, matenVanMatch, toMeters } from '@/lib/field'
 import { getPayloadClient } from '@/lib/payload-client'
 
 import { cvAuthorized } from '../../../cv-auth'
@@ -48,10 +47,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 
   const goalAreaDepth = match.goalAreaDepth ?? FIELD.defaultGoalAreaDepthM
   // Echte terreinmaten (opgemeten, per wedstrijd): bepalen de meters van elke landing.
-  const maten: Partial<VeldMaten> = {
-    ...(match.veldBreedte != null ? { breedteM: match.veldBreedte } : {}),
-    ...(match.veldSpeelveld != null ? { speelveldM: match.veldSpeelveld } : {}),
-  }
+  const maten = matenVanMatch(match)
   const videoOffsetH1 = typeof match.videoOffsetH1 === 'number' ? match.videoOffsetH1 : null
   const videoOffsetH2 = typeof match.videoOffsetH2 === 'number' ? match.videoOffsetH2 : null
   const homeTeamId = relId(match.homeTeam)

@@ -60,6 +60,64 @@ class TestStappenplan(unittest.TestCase):
         self.assertIn('RAPPORT', stappen[-1][0])
 
 
+class TestOpgemetenTerrein(unittest.TestCase):
+    """Zonder kalibratie (demomodus) is het platform de enige bron van de echte maten."""
+
+    def test_demo_geeft_de_opgemeten_maten_door_aan_landing_en_heatmap(self):
+        stappen = meet.bouw_stappen(
+            match=42, uitmap=Path('m'), base='http://x', demo=True, seed=7,
+            video=None, kalibratie=None, upload=False, fps=2.0, tracking=True,
+            breedte=12.0, speelveld=20.0,
+        )
+        landing = _argv_van(stappen, 'landing')
+        self.assertIn('--breedte', landing)
+        self.assertIn('12.0', landing)
+        self.assertIn('--speelveld', landing)
+        self.assertIn('20.0', landing)
+        heat = _argv_van(stappen, 'heatmap')
+        self.assertIn('--speelveld', heat)
+        # Ook de demo-sporen moeten op het opgemeten veld lopen, anders valt de helft
+        # buiten het raster en klopt de demo-lus niet met de echte keten.
+        volg = _argv_van(stappen, 'videotracking')
+        self.assertIn('--breedte', volg)
+        self.assertIn('--speelveld', volg)
+
+    def test_reglementair_terrein_geeft_geen_vlaggen(self):
+        stappen = meet.bouw_stappen(
+            match=42, uitmap=Path('m'), base='http://x', demo=True, seed=7,
+            video=None, kalibratie=None, upload=False, fps=2.0, tracking=True,
+        )
+        landing = _argv_van(stappen, 'landing')
+        self.assertNotIn('--breedte', landing)
+        self.assertNotIn('--speelveld', landing)
+
+    def test_maten_argumenten_laat_lege_maten_weg(self):
+        self.assertEqual(meet.maten_argumenten(None, None), [])
+        self.assertEqual(meet.maten_argumenten(12.0, None), ['--breedte', '12.0'])
+        self.assertEqual(meet.maten_argumenten(None, 20.0), ['--speelveld', '20.0'])
+
+    def test_waarschuwt_wanneer_de_kalibratie_andere_maten_heeft(self):
+        import io
+        import json
+        import tempfile
+        from contextlib import redirect_stderr
+
+        with tempfile.TemporaryDirectory() as d:
+            kal = Path(d) / 'kal.json'
+            kal.write_text(json.dumps({'veld': {'breedte_m': 14.0, 'speelveld_m': 26.0}}), encoding='utf-8')
+            buf = io.StringIO()
+            with redirect_stderr(buf):
+                meet.waarschuw_bij_afwijkende_kalibratie(kal, 12.0, 20.0)
+            uitvoer = buf.getvalue()
+            self.assertIn('breedte verschilt', uitvoer)
+            self.assertIn('speelveld verschilt', uitvoer)
+            # Gelijke maten: geen ruis.
+            buf2 = io.StringIO()
+            with redirect_stderr(buf2):
+                meet.waarschuw_bij_afwijkende_kalibratie(kal, 14.0, 26.0)
+            self.assertEqual(buf2.getvalue(), '')
+
+
 class TestTracking(unittest.TestCase):
     def test_demo_met_tracking_en_upload_stuurt_fysiek_mee(self):
         stappen = meet.bouw_stappen(
@@ -97,6 +155,16 @@ class TestTracking(unittest.TestCase):
         self.assertIn(str(Path('m') / 'wie.json'), fysiek)
         # Wie-is-wie is nog niet ingevuld: fysiek uploaden kan pas ná de toewijzing.
         self.assertNotIn('--upload', fysiek)
+
+    def test_heatmap_krijgt_de_kalibratie_mee_op_echte_video(self):
+        stappen = meet.bouw_stappen(
+            match=42, uitmap=Path('m'), base='http://x', demo=False, seed=None,
+            video=Path('match.mp4'), kalibratie=Path('kal.json'), upload=False, fps=2.0, tracking=True,
+        )
+        heat = _argv_van(stappen, 'heatmap')
+        # Zonder de kalibratie zou het raster op een niet-reglementair terrein posities weggooien.
+        self.assertIn('--kalibratie', heat)
+        self.assertIn('kal.json', heat)
 
     def test_zonder_tracking_geen_extra_stappen(self):
         stappen = meet.bouw_stappen(

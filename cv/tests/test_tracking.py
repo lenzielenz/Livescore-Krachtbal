@@ -69,6 +69,19 @@ class TestOpschonen(unittest.TestCase):
         self.assertEqual(tracking.filter_korte_sporen(rijen, 0), rijen)
 
 
+class TestBemonsterDuur(unittest.TestCase):
+    """Containers zonder framecount-metadata (webm, geremuxte streams) geven 0 terug."""
+
+    def test_bekende_metadata_geeft_de_echte_duur(self):
+        self.assertAlmostEqual(tracking.bemonster_duur(3000, 25.0), 120.0)
+
+    def test_onbekende_framecount_of_fps_geeft_geen_bovengrens(self):
+        # Zonder vangnet zou duur 0 zijn: de lus draaide één frame en de tracking bleef leeg.
+        self.assertEqual(tracking.bemonster_duur(0, 25.0), float('inf'))
+        self.assertEqual(tracking.bemonster_duur(3000, 0.0), float('inf'))
+        self.assertEqual(tracking.bemonster_duur(-1, -1), float('inf'))
+
+
 class TestDemoPosities(unittest.TestCase):
     def test_reproduceerbaar_en_binnen_het_veld(self):
         a = tracking.demo_posities(seed=7, duur_s=10.0, diepte_m=10.0)
@@ -79,6 +92,14 @@ class TestDemoPosities(unittest.TestCase):
             self.assertTrue(0.0 <= rij['x_m'] <= veld.BREEDTE_M)
             self.assertTrue(0.0 <= rij['y_m'] <= lengte)
         self.assertEqual(len({r['track'] for r in a}), 8)
+
+    def test_demo_blijft_binnen_een_opgemeten_veld(self):
+        # Met opgemeten maten (12 × 40 m) mag geen enkel spoor buiten dát veld lopen —
+        # anders gooit de heatmap ze weg en klopt de demo-lus niet met de echte keten.
+        rijen = tracking.demo_posities(seed=7, duur_s=30.0, diepte_m=10.0, breedte_m=12.0, speelveld_m=20.0)
+        for rij in rijen:
+            self.assertTrue(0.0 <= rij['x_m'] <= 12.0)
+            self.assertTrue(0.0 <= rij['y_m'] <= 40.0)
 
 
 class TestHeatmapRaster(unittest.TestCase):

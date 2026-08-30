@@ -7,7 +7,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { FieldSchema, type FieldMarker } from '@/components/FieldSchema'
 import { balgewichtLabel } from '@/lib/balgewicht'
 import { attackDirForSide, deriveOutcome } from '@/lib/krachtbal-rules'
-import { goalLineNorm, isOpDoellijn, projectWerpplaats, totalLengthM, zoneOf } from '@/lib/field'
+import { goalLineNorm, isOpDoellijn, matenVanMatch, projectWerpplaats, totalLengthM, zoneOf } from '@/lib/field'
 import type { AttackDir, Point } from '@/lib/field'
 import type { MatchState } from '@/lib/match-engine'
 import { LINEUP_MIN, type Readiness } from '@/lib/match-readiness'
@@ -486,10 +486,7 @@ export function Scorekeeper({
   const atHalfTime = state.atHalfTime
   // Echte terreinmaten van deze wedstrijd (leeg = reglementair): bepalen de meters én de
   // lijnposities van het getekende veld, zodat tekening en berekening dezelfde waarheid delen.
-  const veldMaten = {
-    ...(state.match.veldBreedte != null ? { breedteM: state.match.veldBreedte } : {}),
-    ...(state.match.veldSpeelveld != null ? { speelveldM: state.match.veldSpeelveld } : {}),
-  }
+  const veldMaten = matenVanMatch({ veldBreedte: state.match.veldBreedte, veldSpeelveld: state.match.veldSpeelveld })
   // Reglement §8: een vrije worp die vóór het rustsignaal werd toegekend, mag nog genomen worden.
   // Zolang die openstaat blijft het veld dus zichtbaar i.p.v. meteen naar het rustscherm te springen.
   const vrijeWorpNaRust = atHalfTime && Boolean(poss?.freeThrow) && (poss?.throwsUsed ?? 0) === 0
