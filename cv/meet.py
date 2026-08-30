@@ -70,6 +70,7 @@ def bouw_stappen(
     breedte: float | None = None,
     speelveld: float | None = None,
     tracking_fps: float = 4.0,
+    bewegend: bool = False,
 ) -> list[tuple[str, list[str]]]:
     """(omschrijving, argv)-lijst voor de hele pijplijn, in volgorde.
 
@@ -77,6 +78,7 @@ def bouw_stappen(
     voegt niets inhoudelijks toe, alleen de juiste volgorde en argumenten.
     """
     labels = uitmap / 'labels.jsonl'
+    homografie = uitmap / 'homografie.jsonl'
     detecties = uitmap / 'detecties.jsonl'
     met_landing = uitmap / 'met_landing.jsonl'
     met_spelers = uitmap / 'met_spelers.jsonl'
@@ -107,6 +109,31 @@ def bouw_stappen(
                 'spelers (demo)',
                 py + [str(CV_MAP / 'spelers.py'), '--demo', '--detecties', str(met_landing), '--labels', str(labels),
                       '--seed', str(seed), '--uit', str(met_spelers)],
+            ),
+        ]
+    elif bewegend:
+        # Bewegende camera: eerst de homografie volgen (en herankeren op de veldlijnen),
+        # daarna rekenen landing en tracking per moment met de juiste matrix.
+        stappen += [
+            (
+                'het veld volgen in een bewegend beeld (homografie per moment)',
+                py + [str(CV_MAP / 'volg_veld.py'), '--video', str(video), '--kalibratie', str(kalibratie),
+                      '--fps', str(tracking_fps), '--uit', str(homografie)],
+            ),
+            (
+                'kandidaat-worpen zoeken in de video (fase 1)',
+                py + [str(CV_MAP / 'detect_worpen.py'), str(video), '--match', str(match),
+                      '--fps', str(fps), '--uit', str(detecties)],
+            ),
+            (
+                'bal-landing → zone/afstand (fase 2, bewegende camera)',
+                py + [str(CV_MAP / 'landing.py'), '--video', str(video), '--homografie', str(homografie),
+                      '--kalibratie', str(kalibratie), '--detecties', str(detecties), '--uit', str(met_landing)],
+            ),
+            (
+                'spelers herkennen (fase 3)',
+                py + [str(CV_MAP / 'spelers.py'), '--video', str(video), '--detecties', str(met_landing),
+                      '--uit', str(met_spelers)],
             ),
         ]
     else:
@@ -163,7 +190,8 @@ def bouw_stappen(
             stappen.append((
                 'videotracking (HOG + MOG2-beweging → sporen in veldmeters)',
                 py + [str(CV_MAP / 'tracking.py'), '--video', str(video), '--kalibratie', str(kalibratie),
-                      '--fps', str(tracking_fps), '--uit', str(posities)],
+                      '--fps', str(tracking_fps), '--uit', str(posities)]
+                + (['--homografie', str(homografie)] if bewegend else []),
             ))
             stappen.append((
                 'fysieke stats per spoor + invulsjabloon wie-is-wie',
@@ -315,6 +343,9 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument('--upload', action='store_true', help='eindvoorstellen ook naar de reviewbrug sturen')
     parser.add_argument('--tracking', action='store_true',
                         help='ook videotracking meedraaien: posities, fysieke stats per speler en een heatmap')
+    parser.add_argument('--bewegend', action='store_true',
+                        help='de camera staat niet stil (gsm in de hand, pannend/zoomend): volg het '
+                             'veld per moment en heranker op de veldlijnen i.p.v. één vaste kalibratie')
     parser.add_argument('--tracking-fps', type=float, default=4.0,
                         help='bemonstering van de tracking in metingen per seconde (standaard 4 — '
                              'dichter dan de event-fps, anders middelen sprintjes weg)')
@@ -336,6 +367,8 @@ def main(argv: list[str] | None = None) -> None:
             _fout('--demo vereist --seed (reproduceerbaarheid is de hele bedoeling)')
         if args.video is not None:
             parser.error('--demo gaat niet samen met --video — kies één modus')
+        if args.bewegend:
+            parser.error('--bewegend hoort bij een echte video, niet bij --demo')
     else:
         if args.video is None or args.kalibratie is None:
             _fout('een echte meting vereist --video én --kalibratie (of oefen met --demo --seed)')
@@ -359,6 +392,7 @@ def main(argv: list[str] | None = None) -> None:
         args.match, uitmap, args.base, args.demo, args.seed, args.video, args.kalibratie, args.upload, args.fps,
         tracking=args.tracking, heatmap_png=importlib.util.find_spec('cv2') is not None,
         breedte=breedte, speelveld=speelveld, tracking_fps=args.tracking_fps,
+        bewegend=args.bewegend,
     )
 
     omgeving = dict(os.environ, CV_BRIDGE_TOKEN=token)

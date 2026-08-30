@@ -129,6 +129,43 @@ class TestOpgemetenTerrein(unittest.TestCase):
             self.assertEqual(buf2.getvalue(), '')
 
 
+class TestBewegendeCamera(unittest.TestCase):
+    """Met een gsm in de hand klopt één vaste kalibratie na de eerste pan al niet meer;
+    dan hoort volg_veld.py vooraan te staan en moeten landing en tracking dat spoor lezen."""
+
+    def _stappen(self, **extra):
+        return meet.bouw_stappen(
+            match=42, uitmap=Path('m'), base='http://x', demo=False, seed=None,
+            video=Path('match.mp4'), kalibratie=Path('kal.json'), upload=False, fps=2.0,
+            **extra,
+        )
+
+    def test_het_veld_volgen_komt_voor_de_landing(self):
+        stappen = self._stappen(bewegend=True)
+        namen = [oms for oms, _ in stappen]
+        volg = next(i for i, n in enumerate(namen) if 'volgen' in n)
+        landing = next(i for i, n in enumerate(namen) if 'landing' in n)
+        self.assertLess(volg, landing)
+        argv = _argv_van(stappen, 'volgen')
+        self.assertIn('match.mp4', argv)
+        self.assertIn('kal.json', argv)
+        self.assertIn(str(Path('m') / 'homografie.jsonl'), argv)
+
+    def test_landing_rekent_met_het_spoor_in_plaats_van_een_vaste_matrix(self):
+        landing = _argv_van(self._stappen(bewegend=True), 'landing')
+        self.assertIn('--homografie', landing)
+        self.assertIn(str(Path('m') / 'homografie.jsonl'), landing)
+
+    def test_tracking_krijgt_hetzelfde_spoor_mee(self):
+        volg = _argv_van(self._stappen(bewegend=True, tracking=True), 'videotracking')
+        self.assertIn('--homografie', volg)
+
+    def test_vaste_camera_blijft_zonder_extra_stap(self):
+        namen = [oms for oms, _ in self._stappen()]
+        self.assertFalse(any('volgen' in n for n in namen))
+        self.assertNotIn('--homografie', _argv_van(self._stappen(), 'landing'))
+
+
 class TestTracking(unittest.TestCase):
     def test_demo_met_tracking_en_upload_stuurt_fysiek_mee(self):
         stappen = meet.bouw_stappen(
