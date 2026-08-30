@@ -17,7 +17,7 @@ de koppeling loopt uitsluitend via de HTTP-importbrug (`/api/cv/…`).
 | **1** | Kandidaat-worpen automatisch vinden (bewegingsenergie, optioneel pose), als voorstellen op de review-tijdlijn, precision/recall-rapport | deze map |
 | **2** | Bal-landingspunt + homografie → zone (doelgebied ja/nee), afstand en score_delta (rugworp-doelpunt telt dubbel) | deze map (`landing.py`) |
 | **3** | Spelersidentificatie: team via truitjeskleur-clustering, rugnummer via de review-lus (OCR-backend later) | deze map (`spelers.py`) |
-| 4 | Auto-highlights per speler/doelpunt (FFmpeg-clips uit bevestigde events) | later |
+| **4** | Auto-highlights per speler/doelpunt (FFmpeg-clips uit bevestigde events) | deze map (`highlights.py`) |
 | 5 | Volledige speler-tracking → heatmaps | later |
 
 ## Installatie
@@ -249,6 +249,24 @@ Rugnummers blijven in v0.1 leeg (de OCR-stap uit het plan — pose-crop + PARSeq
 is een latere, optionele backend): **een leeg rugnummer is een bewuste uitkomst**,
 de reviewer vult het in het paneel aan en dat wordt trainingsdata.
 
+### 10. `highlights.py` — deelbare clips per speler/doelpunt (fase 4)
+
+```bash
+# Alle doelpunten als losse clips (8 s voorloop, 5 s naloop):
+python3 cv/highlights.py --video match.mp4 --events labels_match42.jsonl \
+    --doelpunten --uitmap clips/
+
+# Alles van speler #7 (thuisploeg), plus één samenvattingsvideo:
+python3 cv/highlights.py --video match.mp4 --events labels_match42.jsonl \
+    --speler 7 --team home --samenvoegen hoogtepunten_7.mp4 --uitmap clips/
+```
+
+Werkt op élk event-JSONL met videotijden: de weak labels van `sync.py` (de
+manuele tags — vandaag al bruikbaar, geen CV nodig) of de gereviewde detecties.
+Clips worden standaard hergecodeerd (frame-nauwkeurig, H.264+AAC — speelt
+overal, ook via WhatsApp); `--kopie` knipt zonder hercodering (sneller, maar op
+keyframe-grenzen). Elke run schrijft een `manifest.json` naast de clips.
+
 ## Acceptatie fase 2 en 3
 
 - [ ] `evaluate.py` toont de sectie **"Zone en landing"**: zone-accuraatheid
@@ -263,6 +281,12 @@ de reviewer vult het in het paneel aan en dat wordt trainingsdata.
       wordt ground truth.
 - [ ] De hele demo-lus draait zonder video: sync → detect --demo →
       landing --demo → spelers --demo → evaluate → upload → reviewen.
+
+## Acceptatie fase 4
+
+- [ ] Doelpuntclips van een echte wedstrijd geknipt en gedeeld (WhatsApp).
+- [ ] Per-spelerselectie klopt (rugnummer + ploeg) en de samenvatting plakt
+      naadloos aaneen.
 
 ## Event-JSON (de brug Python ↔ Payload)
 
