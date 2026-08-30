@@ -1,5 +1,5 @@
 import { spawn, type ChildProcess } from 'child_process'
-import { existsSync } from 'fs'
+import { existsSync, readdirSync } from 'fs'
 import fs from 'fs/promises'
 import path from 'path'
 
@@ -59,16 +59,86 @@ export function looptErEenAnalyse(): number | null {
   return lopend ? lopend.matchId : null
 }
 
+/** Waar de productiebuild de analyse-omgeving neerzet (zie railpack.json). */
+const VENV = '/opt/cv-venv'
+
+/** Een manier om Python te starten: het commando, plus eventueel waar de pakketten staan. */
+export type PythonKeuze = { pad: string; pythonpath: string | null }
+
 /**
- * Het Python dat de analyse draait.
+ * De kandidaten om de analyse mee te draaien, in volgorde van voorkeur.
  *
- * In de productie-image staat het in een venv (zie railpack.json); CV_PYTHON kan dat
- * overschrijven. Valt terug op het systeem-python, zodat het lokaal gewoon werkt.
+ * Puur, zodat de volgorde te testen valt: welke paden er zijn wordt apart op schijf gezocht.
+ * `CV_PYTHON` is een bewuste keuze van wie de server beheert en krijgt het rijk alleen.
  */
+export function bouwKandidaten(gevonden: {
+  cvPython?: string | null
+  venvPython?: string | null
+  sitePackages?: string | null
+}): PythonKeuze[] {
+  if (gevonden.cvPython) return [{ pad: gevonden.cvPython, pythonpath: null }]
+  const lijst: PythonKeuze[] = []
+  if (gevonden.venvPython) lijst.push({ pad: gevonden.venvPython, pythonpath: null })
+  // Staat de venv er wel, maar wijst zijn python naar een interpreter die in het eindbeeld
+  // niet meer bestaat, dan kan het systeem-python de pakketten er nog altijd uit laden.
+  if (gevonden.sitePackages) lijst.push({ pad: 'python3', pythonpath: gevonden.sitePackages })
+  lijst.push({ pad: 'python3', pythonpath: null })
+  return lijst
+}
+
+function zoekPython(): Parameters<typeof bouwKandidaten>[0] {
+  let sitePackages: string | null = null
+  try {
+    for (const naam of readdirSync(path.join(VENV, 'lib'))) {
+      const kandidaat = path.join(VENV, 'lib', naam, 'site-packages')
+      if (existsSync(kandidaat)) {
+        sitePackages = kandidaat
+        break
+      }
+    }
+  } catch {
+    // Geen venv op deze machine — dan blijft het systeem-python over.
+  }
+  return {
+    cvPython: process.env.CV_PYTHON || null,
+    venvPython: existsSync(path.join(VENV, 'bin', 'python3')) ? path.join(VENV, 'bin', 'python3') : null,
+    sitePackages,
+  }
+}
+
+/** De omgeving waarin een analyse-proces draait (PYTHONPATH als de pakketten elders staan). */
+export function spawnOmgeving(keuze: PythonKeuze): NodeJS.ProcessEnv {
+  return keuze.pythonpath ? { ...process.env, PYTHONPATH: keuze.pythonpath } : process.env
+}
+
+/** Probeer één kandidaat: kan hij cv2 en numpy importeren? */
+function probeer(keuze: PythonKeuze): Promise<{ ok: boolean; ontbreekt: boolean; geenPython: boolean }> {
+  return new Promise((resolve) => {
+    const kind = spawn(keuze.pad, ['-c', 'import cv2, numpy; print(cv2.__version__)'], {
+      stdio: ['ignore', 'ignore', 'pipe'],
+      env: spawnOmgeving(keuze),
+    })
+    let err = ''
+    kind.stderr?.on('data', (d) => {
+      err += String(d)
+    })
+    kind.on('error', () => resolve({ ok: false, ontbreekt: false, geenPython: true }))
+    kind.on('close', (code) =>
+      resolve({ ok: code === 0, ontbreekt: err.includes('No module named'), geenPython: false }),
+    )
+  })
+}
+
+/** De kandidaat die het bij de controle deed; tot dan de eerste van de lijst. */
+let gekozen: PythonKeuze | null = null
+
+export function huidigePython(): PythonKeuze {
+  return gekozen ?? bouwKandidaten(zoekPython())[0]
+}
+
+/** Het pad van het Python dat de analyse draait (zonder de omgeving errond). */
 export function pythonPad(): string {
-  if (process.env.CV_PYTHON) return process.env.CV_PYTHON
-  // Het pad dat railpack.json aanmaakt; bestaat het niet, dan zoekt spawn 'python3' in PATH.
-  return existsSync('/opt/cv-venv/bin/python3') ? '/opt/cv-venv/bin/python3' : 'python3'
+  return huidigePython().pad
 }
 
 /**
@@ -77,41 +147,42 @@ export function pythonPad(): string {
  * De analyse leunt op een Python-omgeving die niet overal staat — lokaal vaak niet, en op een
  * server pas na de juiste build. Zonder deze controle zou de knop een taak starten die na
  * seconden stukloopt op een cryptische Python-fout. Nu zegt de app vooraf wat er ontbreekt.
- * Het antwoord wordt onthouden: het verandert niet tijdens de looptijd van het proces.
+ *
+ * Alle kandidaten worden geprobeerd: een venv waarvan de interpreter in het eindbeeld ontbreekt
+ * mag de analyse niet tegenhouden als het systeem-python de pakketten wél kan laden. De keuze
+ * en het antwoord worden onthouden — ze veranderen niet tijdens de looptijd van het proces.
  */
 let omgevingCache: { ok: boolean; melding: string | null } | null = null
 
 export async function analyseOmgeving(): Promise<{ ok: boolean; melding: string | null }> {
   if (omgevingCache) return omgevingCache
-  const uitkomst = await new Promise<{ ok: boolean; melding: string | null }>((resolve) => {
-    const kind = spawn(pythonPad(), ['-c', 'import cv2, numpy; print(cv2.__version__)'], {
-      stdio: ['ignore', 'ignore', 'pipe'],
-    })
-    let err = ''
-    kind.stderr?.on('data', (d) => {
-      err += String(d)
-    })
-    kind.on('error', () =>
-      resolve({
-        ok: false,
-        melding: 'Deze server heeft geen Python — de video-analyse kan hier niet draaien.',
-      }),
-    )
-    kind.on('close', (code) =>
-      resolve(
-        code === 0
-          ? { ok: true, melding: null }
-          : {
-              ok: false,
-              melding: err.includes('No module named')
-                ? 'Python staat er wel, maar opencv ontbreekt op deze server.'
-                : 'De Python-omgeving voor de video-analyse werkt niet op deze server.',
-            },
-      ),
-    )
-  })
-  omgevingCache = uitkomst
-  return uitkomst
+  let ontbreekt = false
+  let geenPython = true
+  for (const keuze of bouwKandidaten(zoekPython())) {
+    const uitkomst = await probeer(keuze)
+    if (uitkomst.ok) {
+      gekozen = keuze
+      omgevingCache = { ok: true, melding: null }
+      return omgevingCache
+    }
+    ontbreekt = ontbreekt || uitkomst.ontbreekt
+    geenPython = geenPython && uitkomst.geenPython
+  }
+  omgevingCache = {
+    ok: false,
+    melding: geenPython
+      ? 'Deze server heeft geen Python — de video-analyse kan hier niet draaien.'
+      : ontbreekt
+        ? 'Python staat er wel, maar opencv ontbreekt op deze server.'
+        : 'De Python-omgeving voor de video-analyse werkt niet op deze server.',
+  }
+  return omgevingCache
+}
+
+/** Het Python om mee te spawnen, na de controle (die de beste kandidaat kiest). */
+export async function pythonVoorSpawn(): Promise<PythonKeuze> {
+  await analyseOmgeving()
+  return huidigePython()
 }
 
 /** Waar de scripts staan (cv/ naast de app). */
@@ -284,8 +355,9 @@ export async function schrijfKalibratie(
     '--uit', pad,
     ...punten.flatMap((p) => ['--punt', `${Math.round(p.x)},${Math.round(p.y)}=${p.label}`]),
   ]
+  const python = await pythonVoorSpawn()
   const klaar = await new Promise<boolean>((resolve) => {
-    const kind = spawn(pythonPad(), argv, { stdio: ['ignore', 'ignore', 'pipe'] })
+    const kind = spawn(python.pad, argv, { stdio: ['ignore', 'ignore', 'pipe'], env: spawnOmgeving(python) })
     kind.on('error', () => resolve(false))
     kind.on('close', (code) => resolve(code === 0))
   })
@@ -398,8 +470,10 @@ export async function startAnalyse(
 }
 
 function draaiStap(matchId: number, argv: string[]): Promise<number> {
+  // De keuze staat vast: startAnalyse controleerde de omgeving voor het eerste stapje.
+  const python = huidigePython()
   return new Promise((resolve) => {
-    const kind = spawn(pythonPad(), argv, { stdio: ['ignore', 'pipe', 'pipe'] })
+    const kind = spawn(python.pad, argv, { stdio: ['ignore', 'pipe', 'pipe'], env: spawnOmgeving(python) })
     lopend = { matchId, kind }
     let laatsteFout = ''
     kind.stderr?.on('data', (d) => {

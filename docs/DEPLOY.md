@@ -68,12 +68,19 @@ worpen zoeken, de bal volgen, spelers herkennen, en de controlevideo maken. Daar
 naast Node ook Python met opencv in de image staan. Dat regelt `railpack.json`:
 
 - `packages.python` — Python via mise, naast de Node-provider.
-- `deploy.aptPackages` — `ffmpeg` plus `libgl1` en `libglib2.0-0`, de twee systeem-
-  bibliotheken die opencv-headless nog nodig heeft. De `"..."` vooraan behoudt de pakketten
-  die Railpack zelf al toevoegt.
 - de `cv`-stap — maakt een venv op `/opt/cv-venv` en installeert daarin
   `opencv-python-headless` en `numpy` (gepind, zoals in `cv/requirements.txt`). De
   **headless** variant scheelt ~200 MB aan GUI-bibliotheken die een server toch nooit gebruikt.
+- `deployOutputs` op die stap — **zonder dit staat de venv wel in de build maar niet in het
+  eindbeeld**, en vindt de app op de server niets terug.
+
+**Geen apt-pakketten nodig.** De eerste versie installeerde `ffmpeg`, `libgl1` en
+`libglib2.0-0`; die stap deed de build mislukken en bleek bovendien overbodig. Het manylinux-
+wiel van `opencv-python-headless` heeft buiten glibc, libstdc++ en libz geen enkele externe
+bibliotheek nodig (`readelf -d cv2/cv2.abi3.so`: alle andere zitten in het wiel, ffmpeg
+inbegrepen), en de pijplijn leest video's uitsluitend via `cv2.VideoCapture` — nooit via de
+ffmpeg-binary. Dat laatste geldt niet voor `cv/ingest.py` en `cv/highlights.py`: die roepen
+ffmpeg wél aan, maar zijn hulpmiddelen voor lokaal gebruik en draaien niet op de server.
 
 **De app blijft werken zonder dat alles.** Bij het openen van de analysepagina test de server
 één keer of Python en opencv er zijn; ontbreekt er iets, dan staat de knop uitgeschakeld met
@@ -84,7 +91,7 @@ nooit een taak gestart die na tien seconden op een cryptische Python-fout stuklo
 
 | Variabele | Waarvoor |
 | --- | --- |
-| `CV_PYTHON` | Pad naar de Python die de analyse draait. Standaard `/opt/cv-venv/bin/python3` als die bestaat, anders `python3` uit het PATH. |
+| `CV_PYTHON` | Pad naar de Python die de analyse draait. Gezet, dan telt alleen die. Anders wordt op volgorde geprobeerd: `/opt/cv-venv/bin/python3`, dan `python3` mét `PYTHONPATH` naar de site-packages van de venv (vangnet als de venv meekomt maar zijn interpreter niet), dan het kale `python3`. |
 | `CV_DIR` | Waar de scripts staan. Standaard `cv/` naast de app. |
 | `MAX_MATCH_VIDEO_MB` | Maximale grootte van een geüploade wedstrijdvideo (standaard 512). |
 

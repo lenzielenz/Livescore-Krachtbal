@@ -2,19 +2,14 @@
   "$schema": "https://schema.railpack.com",
   "provider": "node",
   "packages": { "python": "3.12" },
-  "deploy": {
-    "aptPackages": ["...", "ffmpeg", "libgl1", "libglib2.0-0"]
-  },
   "steps": {
     "cv": {
-      "inputs": [{ "step": "install" }],
+      "inputs": [{ "step": "packages:mise" }],
       "commands": [
         "python -m venv /opt/cv-venv",
         "/opt/cv-venv/bin/pip install --no-cache-dir numpy==1.26.4 opencv-python-headless==4.10.0.84"
-      ]
-    },
-    "build": {
-      "inputs": [{ "step": "cv" }]
+      ],
+      "deployOutputs": ["/opt/cv-venv"]
     }
   }
 }

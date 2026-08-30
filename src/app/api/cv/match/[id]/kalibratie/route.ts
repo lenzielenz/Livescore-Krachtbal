@@ -6,7 +6,7 @@ import path from 'path'
 import { authUser } from '@/lib/api-auth'
 import { getPayloadClient } from '@/lib/payload-client'
 import { mayEditMatchVideo } from '@/lib/video-access'
-import { cvMap, pythonPad } from '@/lib/cv-analyse'
+import { cvMap, pythonVoorSpawn, spawnOmgeving } from '@/lib/cv-analyse'
 
 export const dynamic = 'force-dynamic'
 
@@ -69,8 +69,9 @@ async function controleer(
     ...punten.flatMap((p) => ['--punt', `${p.x},${p.y}=${p.label}`]),
   ]
   try {
+    const python = await pythonVoorSpawn()
     const resultaat = await new Promise<{ code: number; err: string }>((resolve) => {
-      const kind = spawn(pythonPad(), argv, { stdio: ['ignore', 'ignore', 'pipe'] })
+      const kind = spawn(python.pad, argv, { stdio: ['ignore', 'ignore', 'pipe'], env: spawnOmgeving(python) })
       let err = ''
       kind.stderr?.on('data', (d) => {
         err += String(d)
