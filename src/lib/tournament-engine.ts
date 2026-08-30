@@ -308,8 +308,12 @@ export async function startMatch(payload: Payload, matchId: number): Promise<voi
   if (m.status === 'finished') throw new Error('Deze wedstrijd is al afgelopen.')
   // Al gestart? Dan is dit een dubbele tik — de klok mag niet terug van voren af beginnen.
   if (m.status === 'live') throw new Error('Deze wedstrijd is al gestart.')
+  // "Start" betekent letterlijk: de wedstrijd loopt en de tijd tikt vanaf nul. De klokvelden
+  // gaan expliciet mee, zodat een oude stand van een eerdere poging niet blijft plakken.
   await update(payload, matchId, {
     status: 'live',
+    currentHalf: 1,
+    clockSeconds: 0,
     clockRunning: true,
     clockUpdatedAt: new Date().toISOString(),
   })

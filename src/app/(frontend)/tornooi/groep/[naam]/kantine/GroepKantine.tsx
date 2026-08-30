@@ -18,7 +18,11 @@ import { fmtClock, useTicking } from '../../../useTournament'
 // (--gk-a/--gk-b). Data via de publieke groep-API (poll om de 5 s).
 
 const POLL_MS = 5000
-const VIERING_MS = 6000
+// Hoe lang een doelpuntviering in beeld blijft. Bewust kort: op een drukke tornooidag lopen er
+// twee wedstrijden tegelijk, dus een viering moet klaar zijn vóór de volgende eraan komt. De
+// rugworp krijgt iets meer tijd — die heeft een raketvlucht én een inslag te vertellen.
+const VIERING_MS = 2400
+const VIERING_RAKET_MS = 3400
 // Fotoshow: 3-2-1 meetellen, dan de foto heel even in beeld en weer weg.
 const FOTO_TEL_VANAF = 3
 const FOTO_TOON_MS = 6500
@@ -44,9 +48,19 @@ function LiveBord({ m, groot, logos, kleuren, fits }: { m: GroepMatch; groot: bo
       {/* Drie vaste kolommen (label · reeks · klok): de reeks staat groot en exact gecentreerd,
           zodat iedereen in de kantine in één oogopslag ziet wélke reeks er speelt. */}
       <div className="gk-bord-kop">
-        <span className="gk-bord-label">{m.label}</span>
+        <span className="gk-bord-label">
+          {m.label}
+          {m.veld != null && <span className="gk-bord-veld">Veld {m.veld}</span>}
+        </span>
         <span className="gk-bord-reeks">{m.reeksNaam}</span>
-        <span className="gk-bord-klok">{m.veld != null ? `Veld ${m.veld} · ` : ''}H{m.currentHalf} · {fmtClock(clock)}</span>
+        {/* De speeltijd is wat de kantine het vaakst zoekt: groot, in tabulaire cijfers, met een
+            kloppend stipje zolang ze loopt. Staat ze stil, dan zegt het bord dat ook — een
+            bevroren tijd zonder uitleg laat iedereen denken dat het scherm hangt. */}
+        <span className={`gk-bord-klok${m.clockRunning ? ' loopt' : ''}`}>
+          <span className="gk-klok-half">H{m.currentHalf}</span>
+          <span className="gk-klok-tijd">{fmtClock(clock)}</span>
+          <span className="gk-klok-staat">{m.clockRunning ? <span className="gk-klok-stip" aria-hidden /> : 'pauze'}</span>
+        </span>
       </div>
       <div className="gk-bord-body">
         <span className="gk-bord-ploeg">
@@ -109,7 +123,11 @@ type Viering = {
   tegenKleur: string | null
 }
 
-function VieringOverlay({ v }: { v: Viering }) {
+/** Een rugworp (+2) toont een raketvlucht en mag daarom iets langer duren dan een nekworp. */
+const vieringDuur = (v: { punten: number; tegen: string | null }) =>
+  v.punten === 2 && v.tegen ? VIERING_RAKET_MS : VIERING_MS
+
+function VieringOverlay({ v, ms }: { v: Viering; ms: number }) {
   const raket = v.punten === 2 && Boolean(v.tegen)
   // De thuisploeg staat links en de uitploeg rechts — exact zoals op het scorebord erboven.
   // Scoort de uitploeg, dan vertrekt de raket dus rechts en vliegt hij naar links; anders zou
@@ -128,7 +146,15 @@ function VieringOverlay({ v }: { v: Viering }) {
     </span>
   )
   return (
-    <div className={`gk-viering${raket ? ' raket' : ''}`} style={{ ...(v.kleur ? { '--vc': v.kleur } : {}) } as CSSProperties} aria-live="polite">
+    <div
+      className={`gk-viering${raket ? ' raket' : ''}`}
+      style={{ ...(v.kleur ? { '--vc': v.kleur } : {}), '--vdur': `${ms}ms` } as CSSProperties}
+      aria-live="polite"
+    >
+      {/* Drie lagen die samen de klap geven: een flits op het moment zelf, een schokgolf die
+          uitdijt in de clubkleur, en stralen die er traag doorheen draaien. */}
+      <div className="gk-viering-flits" aria-hidden />
+      <div className="gk-viering-golf" aria-hidden />
       <div className="gk-viering-burst" aria-hidden />
       <div className="gk-viering-inhoud">
         {raket ? (
@@ -298,7 +324,8 @@ export function GroepKantine({ naam, initial }: { naam: string; initial: GroepDa
                   tegenKleur: tegen ? d.kleuren[tegen] ?? null : null,
                 })
                 if (vieringTimer.current) clearTimeout(vieringTimer.current)
-                vieringTimer.current = setTimeout(() => setViering((v) => (v && v.key === key ? null : v)), VIERING_MS)
+                const duur = vieringDuur({ punten, tegen: tegen ?? null })
+                vieringTimer.current = setTimeout(() => setViering((v) => (v && v.key === key ? null : v)), duur)
               }
             }
           }
@@ -357,7 +384,7 @@ export function GroepKantine({ naam, initial }: { naam: string; initial: GroepDa
 
   return (
     <div className="gk-scherm" style={stijl}>
-      {viering && <VieringOverlay key={viering.key} v={viering} />}
+      {viering && <VieringOverlay key={viering.key} v={viering} ms={vieringDuur(viering)} />}
       {fotoRij.length > 0 && (
         <FotoShow key={fotoRij[0]} id={fotoRij[0]} naam={naam} klaar={() => setFotoRij((rij) => rij.slice(1))} />
       )}
@@ -458,10 +485,15 @@ export function GroepKantine({ naam, initial }: { naam: string; initial: GroepDa
         </div>
       )}
 
-      {/* Alle nog te spelen wedstrijden schuiven in een doorlopende balk onderaan voorbij:
-          gewoon de logo's tegen elkaar met het uur ernaast. Bij een handvol wedstrijden staat
-          de balk stil (niets om te scrollen); daarboven loopt ze naadloos in een lus. */}
-      {komend.length > 0 && <KomendTicker komend={komend} logos={data.logos} kleuren={data.kleuren} fits={data.fits} />}
+      {/* De balk onderaan draait de uitslagen van de dag voorbij — dat is wat mensen willen zien
+          terwijl er gespeeld wordt, en het leest sneller dan een programma. Zolang er nog niets
+          gespeeld is toont ze het programma, zodat de balk nooit leeg staat. Bij een handvol
+          items staat ze stil (niets om te scrollen); daarboven loopt ze naadloos in een lus. */}
+      {gespeeld.length > 0 ? (
+        <UitslagTicker gespeeld={gespeeld} logos={data.logos} kleuren={data.kleuren} fits={data.fits} />
+      ) : (
+        komend.length > 0 && <KomendTicker komend={komend} logos={data.logos} kleuren={data.kleuren} fits={data.fits} />
+      )}
     </div>
   )
 }
@@ -524,6 +556,51 @@ function Uitslagen({
           )
         })}
       </ul>
+    </div>
+  )
+}
+
+function UitslagTicker({
+  gespeeld,
+  logos,
+  kleuren,
+  fits,
+}: {
+  gespeeld: GroepMatch[]
+  logos: Record<string, string>
+  kleuren: Record<string, string>
+  fits: Record<string, LogoFit>
+}) {
+  const loop = gespeeld.length >= 4
+  const duur = `${Math.max(20, gespeeld.length * 5)}s`
+  const helft = (verborgen: boolean) => (
+    <span className="gk-ticker-helft" aria-hidden={verborgen}>
+      {gespeeld.map((m) => (
+        <span key={m.id} className="gk-tick">
+          {/* Logo – uitslag – logo, met de reeks er exact centraal onder. De winnaar staat vol,
+              de verliezer gedempt: zo lees je de uitslag zonder de cijfers te ontcijferen. */}
+          <span className="gk-tick-blok">
+            <span className="gk-tick-affiche">
+              <span className={`gk-tick-kant${m.winner === 'home' ? ' wint' : ''}`}>
+                {m.home && <TeamLogo name={m.home} logoUrl={logos[m.home] ?? null} logoFit={fits[m.home] ?? null} side="home" size="1.7em" ringColor={m.home ? kleuren[m.home] : undefined} />}
+              </span>
+              <span className="gk-tick-uitslag">{m.score.home}<span className="gk-tick-streep">–</span>{m.score.away}</span>
+              <span className={`gk-tick-kant${m.winner === 'away' ? ' wint' : ''}`}>
+                {m.away && <TeamLogo name={m.away} logoUrl={logos[m.away] ?? null} logoFit={fits[m.away] ?? null} side="away" size="1.7em" ringColor={m.away ? kleuren[m.away] : undefined} />}
+              </span>
+            </span>
+            <span className="gk-tick-reeks">{m.reeksNaam}</span>
+          </span>
+        </span>
+      ))}
+    </span>
+  )
+  return (
+    <div className="gk-ticker uitslagen">
+      <div className={`gk-ticker-strook${loop ? ' loop' : ''}`} style={{ '--dur': duur } as CSSProperties}>
+        {helft(false)}
+        {loop && helft(true)}
+      </div>
     </div>
   )
 }

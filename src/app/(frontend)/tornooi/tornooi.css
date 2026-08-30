@@ -1270,12 +1270,41 @@ button.trn-toplink {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.gk-bord-veld {
+  margin-left: 0.6em; padding: 0.15em 0.6em; border-radius: 999px;
+  background: rgba(6, 9, 14, 0.5); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
+  font-weight: 800; color: #fff;
+}
+/* De speeltijd: het cijfer dat de kantine het vaakst zoekt, dus groot en in tabulaire cijfers
+   (zo springt niets bij het tikken). Een kloppend stipje toont dat de klok écht loopt. */
 .gk-bord-klok {
   justify-self: end;
-  color: #fff; font-variant-numeric: tabular-nums;
-  padding: 0.2em 0.8em; border-radius: 999px; background: rgba(6, 9, 14, 0.55);
+  display: inline-flex; align-items: baseline; gap: 0.45em;
+  padding: 0.2em 0.85em; border-radius: 999px; background: rgba(6, 9, 14, 0.55);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+  color: #fff;
 }
+.gk-klok-half { font-size: 0.85em; font-weight: 800; color: var(--dim-strong, #cad2dc); }
+.gk-klok-tijd {
+  font-family: var(--font-display), sans-serif;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  font-size: 1.9em;
+  line-height: 1.05;
+  letter-spacing: 0.01em;
+}
+.gk-klok-staat {
+  font-size: 0.72em; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase;
+  color: #ffb4a2;
+}
+.gk-bord-klok.loopt .gk-klok-staat { color: transparent; }
+.gk-klok-stip {
+  display: inline-block; width: 0.62em; height: 0.62em; border-radius: 50%;
+  background: #6ee7a0; box-shadow: 0 0 0.8em #6ee7a0;
+  animation: gk-klok-klop 1s ease-in-out infinite;
+}
+@keyframes gk-klok-klop { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.45; transform: scale(0.82); } }
+@media (prefers-reduced-motion: reduce) { .gk-klok-stip { animation: none; } }
 .gk-bord-body { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 2vmin; }
 .gk-bord-ploeg { display: flex; flex-direction: column; align-items: center; gap: 1.2vmin; min-width: 0; }
 .gk-bord-team { max-width: 100%; font-size: clamp(1rem, 3.2vmin, 2.4rem); font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -1494,6 +1523,8 @@ button.trn-toplink {
 
 /* ── Schermvullende doelpunt-viering: clubkleur-burst + logo + punten ─────────────────────────
    Neemt het hele scherm kort over wanneer een poll een hogere stand ziet. --vc = clubkleur. */
+/* De viering leeft exact zolang als --vdur: snel in, even blijven, netjes uit. Zo hoeft er
+   nergens een tweede timer te zijn en verdwijnt ze niet meer abrupt midden in het beeld. */
 .gk-viering {
   position: fixed;
   inset: 0;
@@ -1502,24 +1533,67 @@ button.trn-toplink {
   place-items: center;
   overflow: hidden;
   background: rgba(5, 7, 10, 0.82);
-  animation: gk-v-in 0.25s ease-out;
+  animation: gk-v-leven var(--vdur, 2400ms) both;
 }
-@keyframes gk-v-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes gk-v-leven {
+  0% { opacity: 0; }
+  7% { opacity: 1; }
+  84% { opacity: 1; }
+  100% { opacity: 0; }
+}
+/* De flits: één harde tik wit op het moment van scoren — dat is wat de klap verkoopt. */
+.gk-viering-flits {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(60% 60% at 50% 50%, rgba(255, 255, 255, 0.9), transparent 70%);
+  animation: gk-v-flits 420ms cubic-bezier(0.15, 0.9, 0.3, 1) both;
+  pointer-events: none;
+}
+@keyframes gk-v-flits {
+  0% { opacity: 0; transform: scale(0.7); }
+  14% { opacity: 0.95; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.35); }
+}
+/* De schokgolf: een ring in de clubkleur die vanuit het midden uitdijt en vervaagt. */
+.gk-viering-golf {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 40vmin;
+  height: 40vmin;
+  margin: -20vmin 0 0 -20vmin;
+  border-radius: 50%;
+  border: 0.9vmin solid color-mix(in srgb, var(--vc, var(--accent)) 85%, #fff);
+  box-shadow: 0 0 6vmin color-mix(in srgb, var(--vc, var(--accent)) 60%, transparent);
+  animation: gk-v-golf 900ms cubic-bezier(0.12, 0.75, 0.3, 1) both;
+  pointer-events: none;
+}
+@keyframes gk-v-golf {
+  0% { transform: scale(0.15); opacity: 0; border-width: 1.6vmin; }
+  18% { opacity: 0.95; }
+  100% { transform: scale(4.2); opacity: 0; border-width: 0.2vmin; }
+}
 .gk-viering-burst {
   position: absolute;
   inset: -30%;
+  /* Een lichtkrans in de clubkleur in plaats van harde balken: veel dunne stralen met zachte
+     randen, feller naar het midden toe en uitdovend naar de rand. Op een tv leest dat als licht,
+     niet als blokken verf. */
   background:
-    radial-gradient(42% 42% at 50% 50%, color-mix(in srgb, var(--vc, var(--accent)) 55%, transparent), transparent 70%),
-    conic-gradient(from 0deg,
-      color-mix(in srgb, var(--vc, var(--accent)) 32%, transparent) 0deg 14deg, transparent 14deg 45deg,
-      color-mix(in srgb, var(--vc, var(--accent)) 32%, transparent) 45deg 59deg, transparent 59deg 90deg,
-      color-mix(in srgb, var(--vc, var(--accent)) 32%, transparent) 90deg 104deg, transparent 104deg 135deg,
-      color-mix(in srgb, var(--vc, var(--accent)) 32%, transparent) 135deg 149deg, transparent 149deg 180deg,
-      color-mix(in srgb, var(--vc, var(--accent)) 32%, transparent) 180deg 194deg, transparent 194deg 225deg,
-      color-mix(in srgb, var(--vc, var(--accent)) 32%, transparent) 225deg 239deg, transparent 239deg 270deg,
-      color-mix(in srgb, var(--vc, var(--accent)) 32%, transparent) 270deg 284deg, transparent 284deg 315deg,
-      color-mix(in srgb, var(--vc, var(--accent)) 32%, transparent) 315deg 329deg, transparent 329deg 360deg);
-  animation: gk-v-draai 9s linear infinite;
+    radial-gradient(38% 38% at 50% 50%, color-mix(in srgb, var(--vc, var(--accent)) 62%, transparent), transparent 72%),
+    repeating-conic-gradient(from 0deg,
+      color-mix(in srgb, var(--vc, var(--accent)) 26%, transparent) 0deg 3deg,
+      transparent 3deg 15deg);
+  -webkit-mask-image: radial-gradient(closest-side, #000 22%, rgba(0, 0, 0, 0.55) 55%, transparent 78%);
+  mask-image: radial-gradient(closest-side, #000 22%, rgba(0, 0, 0, 0.55) 55%, transparent 78%);
+  /* Draait één ruime slag binnen de viering zelf: bij 9 s stond hij vroeger zo goed als stil. */
+  animation: gk-v-draai 5s linear infinite, gk-v-burst-uit var(--vdur, 2400ms) both;
+}
+@keyframes gk-v-burst-uit {
+  0% { opacity: 0; transform: scale(0.82); }
+  10% { opacity: 1; }
+  70% { opacity: 1; }
+  100% { opacity: 0.25; }
 }
 @keyframes gk-v-draai { to { transform: rotate(360deg); } }
 .gk-viering-inhoud {
@@ -1529,19 +1603,43 @@ button.trn-toplink {
   align-items: center;
   gap: 1.4vmin;
   text-align: center;
-  animation: gk-v-pop 0.5s cubic-bezier(0.22, 1.4, 0.36, 1);
+  animation: gk-v-pop var(--vdur, 2400ms) cubic-bezier(0.18, 1.25, 0.3, 1) both;
 }
-@keyframes gk-v-pop { from { transform: scale(0.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+/* Binnenkomen met een korte overshoot, blijven staan, en op het eind mee wegschalen — één
+   keyframe over de volle duur, zodat de uitgang altijd bij de looptijd past. */
+@keyframes gk-v-pop {
+  0% { transform: scale(0.62) translateY(2vmin); opacity: 0; }
+  12% { transform: scale(1.06) translateY(0); opacity: 1; }
+  20% { transform: scale(1); }
+  86% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(1.12); opacity: 0; }
+}
 .gk-viering-logo { filter: drop-shadow(0 1.2vmin 3vmin rgba(0, 0, 0, 0.6)); animation: gk-v-zweef 2.4s ease-in-out infinite; }
 @keyframes gk-v-zweef { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-1.2vmin); } }
 .gk-viering-punten {
+  position: relative;
   font-family: var(--font-display), sans-serif;
   font-weight: 900;
   font-size: clamp(3rem, 12vmin, 9rem);
   line-height: 1;
-  color: var(--vc, var(--accent));
-  text-shadow: 0 0 4vmin color-mix(in srgb, var(--vc, var(--accent)) 70%, transparent);
+  /* Verloop + lichtveeg die er één keer doorheen trekt: geeft het cijfer glans zonder te
+     blijven flikkeren op een tv die de hele dag aanstaat. */
+  background: linear-gradient(100deg,
+    color-mix(in srgb, var(--vc, var(--accent)) 70%, #fff) 0%,
+    #fff 45%,
+    color-mix(in srgb, var(--vc, var(--accent)) 70%, #fff) 90%);
+  background-size: 250% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 3.5vmin color-mix(in srgb, var(--vc, var(--accent)) 75%, transparent));
+  animation: gk-v-veeg 1.1s cubic-bezier(0.3, 0.7, 0.3, 1) 0.12s both;
 }
+@keyframes gk-v-veeg {
+  0% { background-position: 130% 0; }
+  100% { background-position: -30% 0; }
+}
+
 .gk-viering-titel {
   font-family: var(--font-display), sans-serif;
   font-weight: 900;
@@ -1553,7 +1651,9 @@ button.trn-toplink {
 .gk-viering-team { font-size: clamp(1.2rem, 4vmin, 3rem); font-weight: 800; color: #fff; }
 .gk-viering-reeks { font-size: clamp(0.85rem, 2vmin, 1.3rem); color: var(--dim-strong, #cad2dc); font-weight: 700; }
 @media (prefers-reduced-motion: reduce) {
-  .gk-viering-burst, .gk-viering-logo { animation: none; }
+  .gk-viering-burst, .gk-viering-logo, .gk-viering-golf, .gk-viering-flits { animation: none; }
+  .gk-viering-flits, .gk-viering-golf { opacity: 0; }
+  .gk-viering-punten { animation: none; }
 }
 
 /* Loting-preview met gepland uur per wedstrijdslot. */
@@ -1779,6 +1879,20 @@ button.trn-toplink {
   color: var(--dim);
   font-weight: 800;
 }
+/* Uitslagen-balk: dezelfde vorm als het programma, maar met de eindstand in het midden. De
+   winnaar staat vol, de verliezer gedempt — je leest de uitslag zonder de cijfers te lezen. */
+.gk-ticker.uitslagen .gk-tick-blok { gap: 2px; }
+.gk-tick-kant { display: inline-flex; opacity: 0.55; }
+.gk-tick-kant.wint { opacity: 1; }
+.gk-tick-uitslag {
+  font-family: var(--font-display), sans-serif;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  font-size: 1.15em;
+  color: #fff;
+  white-space: nowrap;
+}
+.gk-tick-streep { margin: 0 0.18em; color: var(--dim); }
 .gk-tick-uur {
   font-weight: 800;
   font-variant-numeric: tabular-nums;
@@ -2374,12 +2488,12 @@ button.trn-toplink {
    +2 (rugworp): een raket vliegt in een boog naar het logo van de tegenstander en ontploft
    erop — dé special voor twee punten. */
 .gk-viering-logo.draai {
-  animation: gk-v-groeidraai 1.9s cubic-bezier(0.2, 0.9, 0.3, 1) both, gk-v-zweef 2.4s ease-in-out 2s infinite;
+  animation: gk-v-groeidraai 1.25s cubic-bezier(0.16, 0.85, 0.25, 1) both, gk-v-zweef 2s ease-in-out 1.3s infinite;
 }
 @keyframes gk-v-groeidraai {
-  0% { transform: scale(0.35) rotate(0deg); opacity: 0; }
-  12% { opacity: 1; }
-  70% { transform: scale(1.22) rotate(650deg); }
+  0% { transform: scale(0.3) rotate(0deg); opacity: 0; }
+  10% { opacity: 1; }
+  62% { transform: scale(1.24) rotate(680deg); }
   100% { transform: scale(1.12) rotate(720deg); }
 }
 
@@ -2406,7 +2520,7 @@ button.trn-toplink {
   z-index: 2;
   font-size: clamp(44px, 10vmin, 110px);
   filter: drop-shadow(0 0 2.4vmin rgba(255, 170, 70, 0.85));
-  animation: gk-raket-vlucht 1.25s cubic-bezier(0.45, 0, 0.7, 1) both;
+  animation: gk-raket-vlucht 1s cubic-bezier(0.5, 0, 0.65, 1) both;
   pointer-events: none;
 }
 @keyframes gk-raket-vlucht {
@@ -2435,7 +2549,7 @@ button.trn-toplink {
   place-items: center;
   font-size: clamp(80px, 20vmin, 220px);
   opacity: 0;
-  animation: gk-boem-knal 1s cubic-bezier(0.2, 1, 0.3, 1) 1.2s both;
+  animation: gk-boem-knal 0.85s cubic-bezier(0.2, 1, 0.3, 1) 0.95s both;
   pointer-events: none;
 }
 @keyframes gk-boem-knal {
@@ -2447,7 +2561,7 @@ button.trn-toplink {
 /* …en het getroffen logo schudt ervan na. */
 .gk-raket-doel-logo {
   display: inline-flex;
-  animation: gk-schud 0.75s cubic-bezier(0.3, 0.9, 0.4, 1) 1.25s both;
+  animation: gk-schud 0.7s cubic-bezier(0.3, 0.9, 0.4, 1) 1s both;
 }
 @keyframes gk-schud {
   0%, 100% { transform: translate(0, 0) rotate(0deg); }
@@ -2457,12 +2571,19 @@ button.trn-toplink {
   75% { transform: translate(0.7vmin, -0.3vmin) rotate(2deg); }
 }
 /* Bij de raket-special verschijnen de +2 en de tekst pas ná de inslag. */
-.gk-viering.raket .gk-viering-punten,
 .gk-viering.raket .gk-viering-titel,
 .gk-viering.raket .gk-viering-team,
 .gk-viering.raket .gk-viering-reeks {
   opacity: 0;
-  animation: gk-v-natekst 0.5s cubic-bezier(0.22, 1.4, 0.36, 1) 1.45s both;
+  animation: gk-v-natekst 0.45s cubic-bezier(0.22, 1.4, 0.36, 1) 1.15s both;
+}
+/* Het cijfer komt óók pas na de inslag, maar houdt zijn lichtveeg: beide animaties samen, want
+   een losse regel voor de vertraging zou de veeg door specificiteit wegdrukken. */
+.gk-viering.raket .gk-viering-punten {
+  opacity: 0;
+  animation:
+    gk-v-natekst 0.45s cubic-bezier(0.22, 1.4, 0.36, 1) 1.15s both,
+    gk-v-veeg 1.1s cubic-bezier(0.3, 0.7, 0.3, 1) 1.25s both;
 }
 @keyframes gk-v-natekst {
   from { transform: scale(0.7) translateY(1.4vmin); opacity: 0; }
