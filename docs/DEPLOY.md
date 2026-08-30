@@ -59,3 +59,41 @@ worden nadat het Volume is gekoppeld.
 - **Node 22 → 24**: PROJECT.md noemde Node 22, maar Next 16 + Payload 3.85 vereisen Node ≥ 24.14. Daarom Node 24.
 - SQLite + Volume betekent **één** service-instance (geen horizontale schaling); voor dit live-score-gebruik ruim voldoende.
 - DB-migraties: Payload draait in dev met `push`-modus (auto-schema). Voor productie later `payload migrate` toevoegen aan een release-stap.
+
+
+## Video-analyse op de server (Python + opencv)
+
+De knop **"🤖 Analyseer de video"** op de analysepagina laat de server het rekenwerk doen:
+worpen zoeken, de bal volgen, spelers herkennen, en de controlevideo maken. Daarvoor moet er
+naast Node ook Python met opencv in de image staan. Dat regelt `railpack.json`:
+
+- `packages.python` — Python via mise, naast de Node-provider.
+- `deploy.aptPackages` — `ffmpeg` plus `libgl1` en `libglib2.0-0`, de twee systeem-
+  bibliotheken die opencv-headless nog nodig heeft. De `"..."` vooraan behoudt de pakketten
+  die Railpack zelf al toevoegt.
+- de `cv`-stap — maakt een venv op `/opt/cv-venv` en installeert daarin
+  `opencv-python-headless` en `numpy` (gepind, zoals in `cv/requirements.txt`). De
+  **headless** variant scheelt ~200 MB aan GUI-bibliotheken die een server toch nooit gebruikt.
+
+**De app blijft werken zonder dat alles.** Bij het openen van de analysepagina test de server
+één keer of Python en opencv er zijn; ontbreekt er iets, dan staat de knop uitgeschakeld met
+de reden erbij ("Python staat er wel, maar opencv ontbreekt op deze server"). Er wordt dus
+nooit een taak gestart die na tien seconden op een cryptische Python-fout stukloopt.
+
+**Instelbaar met omgevingsvariabelen**
+
+| Variabele | Waarvoor |
+| --- | --- |
+| `CV_PYTHON` | Pad naar de Python die de analyse draait. Standaard `/opt/cv-venv/bin/python3` als die bestaat, anders `python3` uit het PATH. |
+| `CV_DIR` | Waar de scripts staan. Standaard `cv/` naast de app. |
+| `MAX_MATCH_VIDEO_MB` | Maximale grootte van een geüploade wedstrijdvideo (standaard 512). |
+
+**Wat het kost.** De analyse draait op dezelfde instantie als de site: één wedstrijd tegelijk,
+en een volledige wedstrijd kost al gauw tien minuten tot een uur rekenwerk. Merk je dat de
+site traag wordt tijdens een analyse, dan is een grotere instantie (of een aparte worker) de
+volgende stap. De tussenbestanden komen op het volume in `cv-analyse/<match-id>/` te staan;
+die map mag je gerust opruimen, alleen de voorstellen in de database tellen.
+
+**Alleen geüploade video's.** Een YouTube-link kan de server niet analyseren — daarvoor zou
+hij de video moeten downloaden. Upload het bestand (mp4/webm) als je wil laten analyseren;
+de app zegt dat ook met zoveel woorden.

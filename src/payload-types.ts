@@ -600,6 +600,30 @@ export interface Match {
    */
   videoOffsetH2?: number | null;
   /**
+   * Beheerd via de analysepagina. Niet handmatig bewerken.
+   */
+  cvKalibratie?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  /**
+   * Beheerd via /api/cv/match/[id]/analyseer. Niet handmatig bewerken.
+   */
+  cvAnalyse?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  /**
    * Geüpload via /api/cv/match/[id]/fysiek. Niet handmatig bewerken.
    */
   cvFysiek?:
@@ -1882,6 +1906,8 @@ export interface MatchesSelect<T extends boolean = true> {
   videoUrl?: T;
   videoOffsetH1?: T;
   videoOffsetH2?: T;
+  cvKalibratie?: T;
+  cvAnalyse?: T;
   cvFysiek?: T;
   reeks?: T;
   seizoen?: T;

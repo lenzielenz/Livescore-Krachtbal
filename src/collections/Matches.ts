@@ -161,6 +161,31 @@ export const Matches: CollectionConfig = {
           ],
         },
         {
+          // Kalibratie van dít terrein, aangeklikt in de app op een videoframe: welke
+          // beeldpunten horen bij welke lijnkruisingen van het veld. Zonder deze punten kan
+          // de server wel worpen hérkennen maar niet zeggen wáár ze landden.
+          // Vorm: { punten: [{label, x, y}], beeldBreedte, beeldHoogte, gezet }.
+          name: 'cvKalibratie',
+          label: 'Veldkalibratie (aangeklikt op de video)',
+          type: 'json',
+          admin: {
+            hidden: true,
+            description: 'Beheerd via de analysepagina. Niet handmatig bewerken.',
+          },
+        },
+        {
+          // Stand van de server-side video-analyse: wachtrij → bezig → klaar/mislukt, met de
+          // stap waar hij mee bezig is. Zo weet de analysepagina wat ze moet tonen, ook nadat
+          // de gebruiker wegklikte of de server tussendoor herstartte.
+          name: 'cvAnalyse',
+          label: 'Video-analyse (servertaak)',
+          type: 'json',
+          admin: {
+            hidden: true,
+            description: 'Beheerd via /api/cv/match/[id]/analyseer. Niet handmatig bewerken.',
+          },
+        },
+        {
           // Fysieke statistiek uit de videotracking (cv/fysiek.py): per speler gelopen afstand,
           // sprintjes en topsnelheid. Vorm: { spelers: [{team,rugnummer,naam?,afstand_m,sprints,
           // topsnelheid_m_s,actieve_s}], bron, bijgewerkt }. Geen afgeleide van de worp-events —
