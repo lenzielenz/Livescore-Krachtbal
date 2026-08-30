@@ -1,0 +1,8 @@
+# Optionele pose-verfijning (fase 1) voor detect_worpen.py --pose — exact gepind.
+# Zonder dit blok werkt de detector ook: worp_type blijft dan null en het
+# confidence-plafond ligt lager. Zie cv/LICENSES.md (Apache/MIT, geen AGPL).
+#
+# rtmlib vereist zelf ook opencv-python + numpy — installeer eerst
+# cv/requirements.txt, dan dit bestand.
+rtmlib==0.0.13
+onnxruntime==1.22.0

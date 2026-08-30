@@ -21,15 +21,17 @@ interface FieldPx {
   ftTopY: number
   ftBotY: number
 }
-function fieldPx(goalAreaDepthM: number): FieldPx {
+function fieldPx(goalAreaDepthM: number, speelveldM: number = PLAYING_LENGTH_M): FieldPx {
   const d = goalAreaDepthM
+  // De lijnen liggen op hun ECHTE plaats: op een terrein met een korter speelveld schuiven de
+  // doellijnen naar elkaar toe — precies zoals de aantekenaar ze op het veld ziet.
   return {
-    H: (PLAYING_LENGTH_M + 2 * d) * SCALE,
+    H: (speelveldM + 2 * d) * SCALE,
     homeGoalY: d * SCALE,
-    awayGoalY: (d + PLAYING_LENGTH_M) * SCALE,
-    midY: (d + PLAYING_LENGTH_M / 2) * SCALE,
+    awayGoalY: (d + speelveldM) * SCALE,
+    midY: (d + speelveldM / 2) * SCALE,
     ftTopY: (d + 4) * SCALE,
-    ftBotY: (d + PLAYING_LENGTH_M - 4) * SCALE,
+    ftBotY: (d + speelveldM - 4) * SCALE,
   }
 }
 
@@ -266,6 +268,7 @@ export function FieldSchema({
   ends,
   glowGoal,
   goalAreaDepthM = 10,
+  speelveldM,
   half,
   zoom,
   convMinAttempts = CONV_MIN_ATTEMPTS,
@@ -289,6 +292,8 @@ export function FieldSchema({
   glowGoal?: { end: 'top' | 'bottom'; color: string }
   /** Diepte van het doelgebied (m) — bepaalt de veldlengte/verhoudingen. */
   goalAreaDepthM?: number
+  /** Echte speelveldlengte tussen de doellijnen (m); leeg = reglementair 26 m. */
+  speelveldM?: number
   /** Toon enkel één speelhelft (van de middellijn tot het doel aan die zijde). */
   half?: 'top' | 'bottom'
   /** Zoom in op het doelgebied onderaan (bij scoren telt enkel het doelgebied). */
@@ -296,7 +301,7 @@ export function FieldSchema({
   className?: string
 }) {
   const ref = useRef<SVGSVGElement>(null)
-  const { H, homeGoalY, awayGoalY, midY, ftTopY, ftBotY } = fieldPx(goalAreaDepthM)
+  const { H, homeGoalY, awayGoalY, midY, ftTopY, ftBotY } = fieldPx(goalAreaDepthM, speelveldM ?? undefined)
   // Uitsnede: doelgebied-zoom (scoren) > halfveld > volledig veld.
   const goalTop = awayGoalY - 4 * SCALE // 4 m context boven de doellijn
   const viewY = zoom === 'goal' ? goalTop : half === 'bottom' ? midY : -M

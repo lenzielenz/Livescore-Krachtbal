@@ -40,6 +40,7 @@ export function MatchStats({
   shots,
   teams,
   goalAreaDepth = 10,
+  speelveldM,
   focusPlayerId,
   matchLabel,
   hideShotmap = false,
@@ -48,6 +49,8 @@ export function MatchStats({
   shots: ShotPoint[]
   teams: { home: string; away: string }
   goalAreaDepth?: number
+  /** Echte speelveldlengte (m); leeg = reglementair 26 m. */
+  speelveldM?: number
   /** Start gefilterd op één speler (gezet via de snelwissel-balk bovenaan). */
   focusPlayerId?: number
   /** Wedstrijd-omschrijving (reeks · datum) voor de gedownloade video. */
@@ -162,7 +165,7 @@ export function MatchStats({
                 </p>
               )}
             >
-              <FlowReplay shots={shots} teams={teams} goalAreaDepth={goalAreaDepth} matchLabel={matchLabel} />
+              <FlowReplay shots={shots} teams={teams} goalAreaDepth={goalAreaDepth} speelveldM={speelveldM} matchLabel={matchLabel} />
             </ErrorCatch>
           ) : (
             <>
@@ -172,6 +175,7 @@ export function MatchStats({
                   markers={view === 'heat' ? [] : markers}
                   heatPoints={view === 'heat' ? heatPoints : undefined}
                   goalAreaDepthM={goalAreaDepth}
+                  speelveldM={speelveldM}
                 />
               </div>
               <div className="shotmap-controls">
@@ -273,7 +277,7 @@ export function MatchStats({
                       <span className={`pl-score ${p.score < 0 ? 'neg' : ''}`}>{p.score > 0 ? `+${p.score}` : p.score}</span>
                     </div>
                     <div className="pl-card-body">
-                      <FieldSchema className="pl-map" markers={pMarkers} goalAreaDepthM={goalAreaDepth} />
+                      <FieldSchema className="pl-map" markers={pMarkers} goalAreaDepthM={goalAreaDepth} speelveldM={speelveldM} />
                       <div className="pl-metrics">
                         <div className="pl-metric">
                           <span className="pl-lbl">Doelpogingen</span>

@@ -7,7 +7,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { FieldSchema, type FieldMarker } from '@/components/FieldSchema'
 import { balgewichtLabel } from '@/lib/balgewicht'
 import { attackDirForSide, deriveOutcome } from '@/lib/krachtbal-rules'
-import { goalLineNorm, isOpDoellijn, projectWerpplaats, totalLengthM, zoneOf } from '@/lib/field'
+import { goalLineNorm, isOpDoellijn, matenVanMatch, projectWerpplaats, totalLengthM, zoneOf } from '@/lib/field'
 import type { AttackDir, Point } from '@/lib/field'
 import type { MatchState } from '@/lib/match-engine'
 import { LINEUP_MIN, type Readiness } from '@/lib/match-readiness'
@@ -484,6 +484,9 @@ export function Scorekeeper({
   const isLive = state.match.status === 'live'
   const isFinished = state.match.status === 'finished'
   const atHalfTime = state.atHalfTime
+  // Echte terreinmaten van deze wedstrijd (leeg = reglementair): bepalen de meters én de
+  // lijnposities van het getekende veld, zodat tekening en berekening dezelfde waarheid delen.
+  const veldMaten = matenVanMatch({ veldBreedte: state.match.veldBreedte, veldSpeelveld: state.match.veldSpeelveld })
   // Reglement §8: een vrije worp die vóór het rustsignaal werd toegekend, mag nog genomen worden.
   // Zolang die openstaat blijft het veld dus zichtbaar i.p.v. meteen naar het rustscherm te springen.
   const vrijeWorpNaRust = atHalfTime && Boolean(poss?.freeThrow) && (poss?.throwsUsed ?? 0) === 0
@@ -651,10 +654,11 @@ export function Scorekeeper({
   // dáár — de doellijn is dan de beperkende lijn, niet de vrijeworplijn (§6.4).
   const lastTap = recentTaps.length ? recentTaps[recentTaps.length - 1] : null
   const werpAnchor = lastTap
-    ? projectWerpplaats({ x: lastTap.x, y: lastTap.y }, state.match.goalAreaDepth ?? undefined)
+    ? projectWerpplaats({ x: lastTap.x, y: lastTap.y }, state.match.goalAreaDepth ?? undefined, { maten: veldMaten })
     : poss
       ? projectWerpplaats({ x: poss.setupX, y: poss.setupY }, state.match.goalAreaDepth ?? undefined, {
-          vanuitDoelgebied: isOpDoellijn({ x: poss.setupX, y: poss.setupY }, state.match.goalAreaDepth ?? undefined),
+          vanuitDoelgebied: isOpDoellijn({ x: poss.setupX, y: poss.setupY }, state.match.goalAreaDepth ?? undefined, veldMaten),
+          maten: veldMaten,
         })
       : null
   const showWerp = isLive && werpAnchor && !pendingCatch && !pendingTap && !pendingOut
@@ -903,8 +907,8 @@ export function Scorekeeper({
         const wing = wingPos ? catchers.find((c) => posOf(c) === wingPos) : undefined
         const back = catchers.find((c) => posOf(c) === 'achter')
         const depthM = state.match.goalAreaDepth
-        const goalY = dir === 'up' ? 1 - goalLineNorm(depthM) : goalLineNorm(depthM)
-        const distToGoalM = Math.abs(pendingCatch.p.y - goalY) * totalLengthM(depthM)
+        const goalY = dir === 'up' ? 1 - goalLineNorm(depthM, veldMaten) : goalLineNorm(depthM, veldMaten)
+        const distToGoalM = Math.abs(pendingCatch.p.y - goalY) * totalLengthM(depthM, veldMaten)
         const deep = distToGoalM <= 13
         const ordered = deep ? [back, wing] : [wing, back]
         const suggested = ordered.filter((c): c is RosterPlayer => Boolean(c))
@@ -1626,6 +1630,7 @@ export function Scorekeeper({
                 guideY={showWerp && werpPoint ? werpPoint.y : undefined}
                 ends={fieldEnds}
                 goalAreaDepthM={state.match.goalAreaDepth}
+                speelveldM={state.match.veldSpeelveld ?? undefined}
                 glowGoal={
                   poss?.freeThrow
                     ? { end: poss.dir === 'up' ? 'bottom' : 'top', color: possSide === 'home' ? HOME_COLOR : AWAY_COLOR }

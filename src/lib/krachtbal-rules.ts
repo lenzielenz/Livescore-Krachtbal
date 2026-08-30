@@ -17,6 +17,7 @@ import {
   isOutBack,
   isOutSide,
   reachedMidline,
+  type VeldMaten,
   zoneOf,
 } from './field'
 
@@ -81,13 +82,15 @@ export function deriveOutcome(input: {
   point: Point
   dir: AttackDir
   goalAreaDepthM?: number
+  /** Echte terreinmaten (breedte/speelveld) — weglaten = reglementair 14×26. */
+  maten?: Partial<VeldMaten> | null
 }): ThrowOutcome {
-  const { tapCount, point, dir, goalAreaDepthM } = input
+  const { tapCount, point, dir, goalAreaDepthM, maten } = input
   if (tapCount === 2) return 'caught'
   if (isOutBack(point, dir)) return 'out_back'
   if (isOutSide(point)) return 'out_side'
-  if (isInTargetGoalArea(point, dir, goalAreaDepthM)) return 'goal'
-  if (isInOwnGoalArea(point, dir, goalAreaDepthM)) return 'own_goal'
+  if (isInTargetGoalArea(point, dir, goalAreaDepthM, maten)) return 'goal'
+  if (isInOwnGoalArea(point, dir, goalAreaDepthM, maten)) return 'own_goal'
   return 'in_field'
 }
 
@@ -109,9 +112,12 @@ export function deriveGeometry(
   landing: Point,
   dir: AttackDir,
   goalAreaDepthM?: number,
+  maten?: Partial<VeldMaten> | null,
 ): DerivedThrowGeometry {
   return {
-    distance: Math.round(distanceM(origin, landing, goalAreaDepthM) * 100) / 100,
+    // De echte terreinmaten bepalen de meters: 1.0 genormaliseerde breedte is op een smal
+    // zaalveld nu eenmaal minder ver gooien dan op een reglementair veld.
+    distance: Math.round(distanceM(origin, landing, goalAreaDepthM, maten) * 100) / 100,
     zone: zoneOf(landing, dir),
   }
 }
@@ -171,13 +177,14 @@ export function nextSetup(input: {
   throwerTeam: TeamSide
   throwerDir: AttackDir
   goalAreaDepthM?: number
+  maten?: Partial<VeldMaten> | null
   /** Bij een out (zij/achter): aangeraakt door de tegenstander vóór buiten? */
   touchedBeforeOut?: boolean
 }): NextSetup {
-  const { outcome, landing, throwerTeam, throwerDir, goalAreaDepthM } = input
+  const { outcome, landing, throwerTeam, throwerDir, goalAreaDepthM, maten } = input
   const team: TeamSide = throwerTeam === 'home' ? 'away' : 'home'
   const dir: AttackDir = throwerDir === 'up' ? 'down' : 'up'
-  const ftLine = freeThrowNorm(goalAreaDepthM)
+  const ftLine = freeThrowNorm(goalAreaDepthM, maten)
 
   // Buitenspel (zij-/achterlijn): de inworp is voor de ploeg die het buitenspel NIET
   // veroorzaakte (reglement §6.11.1). Aangeraakt door de tegenstander vóór buiten →
@@ -203,7 +210,7 @@ export function nextSetup(input: {
   // doelgebied gevangen en gaat ze daarna de andere richting op, dan start de meting vanaf het
   // MIDDEN van die doellijn (niet diep in het doelgebied) — anders zou de afstand vertekend zijn.
   if (outcome === 'caught') {
-    const g = goalLineNorm(goalAreaDepthM)
+    const g = goalLineNorm(goalAreaDepthM, maten)
     let point: Point = landing
     if (landing.y < g) point = { x: 0.5, y: g } // gevangen in het doelgebied aan de y=0-zijde
     else if (landing.y > 1 - g) point = { x: 0.5, y: 1 - g } // … aan de y=1-zijde

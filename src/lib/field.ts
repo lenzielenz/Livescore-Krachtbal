@@ -15,6 +15,35 @@ export const FIELD = {
   defaultGoalAreaDepthM: 10,
 } as const
 
+/**
+ * De ECHTE afmetingen van een terrein. Het reglement schrijft 14 m breed en 26 m tussen de
+ * doellijnen voor, maar niet elk veld is exact reglementair (jeugd- en trainingsvelden, krappe
+ * zalen). Wie de opgemeten maten per wedstrijd invult, krijgt overal echte meters terug —
+ * hoe ver en waarheen er gegooid werd. Overal optioneel: weglaten = reglementaire maten.
+ */
+export interface VeldMaten {
+  breedteM: number
+  speelveldM: number
+}
+
+/** Partial<VeldMaten> uit een match-document: enkel de ingevulde echte maten (leeg = reglementair). */
+export function matenVanMatch(match: {
+  veldBreedte?: number | null
+  veldSpeelveld?: number | null
+}): Partial<VeldMaten> {
+  return {
+    ...(match.veldBreedte != null ? { breedteM: match.veldBreedte } : {}),
+    ...(match.veldSpeelveld != null ? { speelveldM: match.veldSpeelveld } : {}),
+  }
+}
+
+export function veldMaten(m?: Partial<VeldMaten> | null): VeldMaten {
+  return {
+    breedteM: m?.breedteM ?? FIELD.widthM,
+    speelveldM: m?.speelveldM ?? FIELD.playingLengthM,
+  }
+}
+
 export type AttackDir = 'up' | 'down'
 export type Zone = 'links' | 'midden' | 'rechts'
 
@@ -23,23 +52,36 @@ export interface Point {
   y: number
 }
 
-/** Totale veldlengte (m) = speelveld (26 m) + 2 doelgebieden van `goalAreaDepthM`. */
-export function totalLengthM(goalAreaDepthM: number = FIELD.defaultGoalAreaDepthM): number {
-  return FIELD.playingLengthM + 2 * goalAreaDepthM
+/** Totale veldlengte (m) = speelveld (standaard 26 m) + 2 doelgebieden van `goalAreaDepthM`. */
+export function totalLengthM(
+  goalAreaDepthM: number = FIELD.defaultGoalAreaDepthM,
+  maten?: Partial<VeldMaten> | null,
+): number {
+  return veldMaten(maten).speelveldM + 2 * goalAreaDepthM
 }
 
 /** Genormaliseerde y van de doellijn aan de y=0-zijde (de uit-zijde = 1 − dit). */
-export function goalLineNorm(goalAreaDepthM: number = FIELD.defaultGoalAreaDepthM): number {
-  return goalAreaDepthM / totalLengthM(goalAreaDepthM)
+export function goalLineNorm(
+  goalAreaDepthM: number = FIELD.defaultGoalAreaDepthM,
+  maten?: Partial<VeldMaten> | null,
+): number {
+  return goalAreaDepthM / totalLengthM(goalAreaDepthM, maten)
 }
 
 /** Genormaliseerde y van de vrijeworplijn aan de y=0-zijde (4 m vóór de doellijn). */
-export function freeThrowNorm(goalAreaDepthM: number = FIELD.defaultGoalAreaDepthM): number {
-  return (goalAreaDepthM + FIELD.freeThrowOffsetM) / totalLengthM(goalAreaDepthM)
+export function freeThrowNorm(
+  goalAreaDepthM: number = FIELD.defaultGoalAreaDepthM,
+  maten?: Partial<VeldMaten> | null,
+): number {
+  return (goalAreaDepthM + FIELD.freeThrowOffsetM) / totalLengthM(goalAreaDepthM, maten)
 }
 
-export function toMeters(p: Point, goalAreaDepthM: number = FIELD.defaultGoalAreaDepthM): { x: number; y: number } {
-  return { x: p.x * FIELD.widthM, y: p.y * totalLengthM(goalAreaDepthM) }
+export function toMeters(
+  p: Point,
+  goalAreaDepthM: number = FIELD.defaultGoalAreaDepthM,
+  maten?: Partial<VeldMaten> | null,
+): { x: number; y: number } {
+  return { x: p.x * veldMaten(maten).breedteM, y: p.y * totalLengthM(goalAreaDepthM, maten) }
 }
 
 /** Hemelsbrede afstand (meters) — de y-component schaalt met de werkelijke veldlengte. */
@@ -47,9 +89,10 @@ export function distanceM(
   from: Point,
   to: Point,
   goalAreaDepthM: number = FIELD.defaultGoalAreaDepthM,
+  maten?: Partial<VeldMaten> | null,
 ): number {
-  const dx = (to.x - from.x) * FIELD.widthM
-  const dy = (to.y - from.y) * totalLengthM(goalAreaDepthM)
+  const dx = (to.x - from.x) * veldMaten(maten).breedteM
+  const dy = (to.y - from.y) * totalLengthM(goalAreaDepthM, maten)
   return Math.hypot(dx, dy)
 }
 
@@ -76,9 +119,10 @@ export function isInTargetGoalArea(
   p: Point,
   dir: AttackDir,
   goalAreaDepthM: number = FIELD.defaultGoalAreaDepthM,
+  maten?: Partial<VeldMaten> | null,
 ): boolean {
   if (p.x < 0 || p.x > 1) return false
-  const g = goalLineNorm(goalAreaDepthM)
+  const g = goalLineNorm(goalAreaDepthM, maten)
   return dir === 'up' ? p.y > 1 - g : p.y < g
 }
 
@@ -93,15 +137,15 @@ export function isInTargetGoalArea(
 export function projectWerpplaats(
   p: Point,
   goalAreaDepthM: number = FIELD.defaultGoalAreaDepthM,
-  opts?: { vanuitDoelgebied?: boolean },
+  opts?: { vanuitDoelgebied?: boolean; maten?: Partial<VeldMaten> | null },
 ): Point {
   // §6.4: "De doellijn is enkel beperkend bij opzet uit het doelgebied." Wordt de bal ín het
   // doelgebied gevangen (of komt de inworp van tussen doellijn en achterlijn), dan verschuift de
   // werpplaats naar de DOELLIJN en werp je van daar — niet van de vrijeworplijn. Zonder deze
   // uitzondering zou de opzet vier meter te ver naar voren schuiven.
   if (opts?.vanuitDoelgebied) return p
-  const g = goalLineNorm(goalAreaDepthM)
-  const ft = freeThrowNorm(goalAreaDepthM)
+  const g = goalLineNorm(goalAreaDepthM, opts?.maten)
+  const ft = freeThrowNorm(goalAreaDepthM, opts?.maten)
   // Raakte de bal de grond tussen doellijn en vrijeworplijn, dan schuift de werpplaats wél terug
   // tot op de vrijeworplijn: van dichterbij mag je niet werpen.
   if (p.y >= g && p.y < ft) return { x: p.x, y: ft }
@@ -110,8 +154,12 @@ export function projectWerpplaats(
 }
 
 /** Ligt dit (opzet)punt exact op een doellijn? Dan geldt de doellijn-uitzondering van §6.4. */
-export function isOpDoellijn(p: Point, goalAreaDepthM: number = FIELD.defaultGoalAreaDepthM): boolean {
-  const g = goalLineNorm(goalAreaDepthM)
+export function isOpDoellijn(
+  p: Point,
+  goalAreaDepthM: number = FIELD.defaultGoalAreaDepthM,
+  maten?: Partial<VeldMaten> | null,
+): boolean {
+  const g = goalLineNorm(goalAreaDepthM, maten)
   return Math.abs(p.y - g) < 1e-9 || Math.abs(p.y - (1 - g)) < 1e-9
 }
 
@@ -120,9 +168,10 @@ export function isInOwnGoalArea(
   p: Point,
   dir: AttackDir,
   goalAreaDepthM: number = FIELD.defaultGoalAreaDepthM,
+  maten?: Partial<VeldMaten> | null,
 ): boolean {
   if (p.x < 0 || p.x > 1) return false
-  const g = goalLineNorm(goalAreaDepthM)
+  const g = goalLineNorm(goalAreaDepthM, maten)
   return dir === 'up' ? p.y < g : p.y > 1 - g
 }
 

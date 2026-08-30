@@ -506,6 +506,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
               shots={share.shots}
               teams={{ home: state.teams.home.name, away: state.teams.away.name }}
               goalAreaDepth={(matchDoc as { goalAreaDepth?: number } | null)?.goalAreaDepth ?? undefined}
+              speelveldM={(matchDoc as { veldSpeelveld?: number | null } | null)?.veldSpeelveld ?? undefined}
               matchLabel={`${share.reeks}${share.datum ? ` · ${share.datum}` : ''}`}
             />
           )}

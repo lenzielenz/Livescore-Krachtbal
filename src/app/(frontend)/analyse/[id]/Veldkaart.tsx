@@ -38,12 +38,15 @@ export function Veldkaart({
   spelers,
   teams,
   goalAreaDepth,
+  speelveldM,
   matchLabel,
 }: {
   shots: ShotPoint[]
   spelers: VeldkaartSpeler[]
   teams: { home: string; away: string }
   goalAreaDepth: number
+  /** Echte speelveldlengte (m); leeg = reglementair 26 m. */
+  speelveldM?: number | null
   matchLabel?: string
 }) {
   const [wat, setWat] = useState<Wat>('alles')
@@ -178,6 +181,7 @@ export function Veldkaart({
           markers={wat === 'heat' ? [] : markers}
           heatPoints={wat === 'heat' ? gefilterd.map((s) => ({ x: s.x, y: s.y })) : undefined}
           goalAreaDepthM={goalAreaDepth}
+          speelveldM={speelveldM ?? undefined}
         />
       </div>
 

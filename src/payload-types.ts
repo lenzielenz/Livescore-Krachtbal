@@ -95,6 +95,7 @@ export interface Config {
     news: News;
     'match-mvp-votes': MatchMvpVote;
     'processed-ops': ProcessedOp;
+    'cv-events': CvEvent;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -130,6 +131,7 @@ export interface Config {
     news: NewsSelect<false> | NewsSelect<true>;
     'match-mvp-votes': MatchMvpVotesSelect<false> | MatchMvpVotesSelect<true>;
     'processed-ops': ProcessedOpsSelect<false> | ProcessedOpsSelect<true>;
+    'cv-events': CvEventsSelect<false> | CvEventsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -598,6 +600,18 @@ export interface Match {
    */
   videoOffsetH2?: number | null;
   /**
+   * Geüpload via /api/cv/match/[id]/fysiek. Niet handmatig bewerken.
+   */
+  cvFysiek?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  /**
    * Kies eerst de reeks. De categorie volgt automatisch en de ploegen worden hierop gefilterd.
    */
   reeks:
@@ -641,9 +655,17 @@ export interface Match {
   date: string;
   status: 'scheduled' | 'live' | 'finished';
   /**
-   * Min. 10 m (15 m voor nieuwe terreinen). Bepaalt de veldlengte en de afstandsberekening.
+   * Min. 10 m (15 m voor nieuwe terreinen, 5 m in zalen). Bepaalt de veldlengte en de afstandsberekening.
    */
   goalAreaDepth: number;
+  /**
+   * Opgemeten breedte van dít terrein. Leeg = reglementair 14 m.
+   */
+  veldBreedte?: number | null;
+  /**
+   * Opgemeten afstand tussen de twee doellijnen. Leeg = reglementair 26 m.
+   */
+  veldSpeelveld?: number | null;
   /**
    * Aanvinken voor een oefen-/uitlegwedstrijd. Mensen kunnen die starten om de live-registratie te leren; alle startcontroles worden overgeslagen.
    */
@@ -1557,6 +1579,46 @@ export interface ProcessedOp {
   createdAt: string;
 }
 /**
+ * Voorstellen uit de computer-vision-pipeline (video-analyse). Dit is géén waarheid: het worp-event-model blijft de bron van score en statistiek. Een voorstel wacht op menselijke review.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "cv-events".
+ */
+export interface CvEvent {
+  id: number;
+  match: number | Match;
+  videoTimeS: number;
+  frame?: number | null;
+  eventType: 'worp' | 'vangst' | 'doelpunt' | 'buitenspel';
+  worpType?: ('nek' | 'rug') | null;
+  inDoelgebied?: boolean | null;
+  xM?: number | null;
+  yM?: number | null;
+  afstandM?: number | null;
+  side?: ('home' | 'away') | null;
+  rugnummer?: number | null;
+  scoreDelta?: number | null;
+  confidence: number;
+  /**
+   * Pas na menselijke review mag een voorstel iets betekenen — het schrijft nooit zelf naar throws.
+   */
+  reviewed?: boolean | null;
+  /**
+   * Leeg = nog te reviewen.
+   */
+  verdict?: ('bevestigd' | 'afgewezen') | null;
+  /**
+   * De oorspronkelijke claim van het model, ongewijzigd door review.
+   */
+  worpTypeOrigineel?: ('nek' | 'rug') | null;
+  provenance: {
+    model: string;
+    modelVersion?: string | null;
+  };
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
@@ -1691,6 +1753,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'processed-ops';
         value: number | ProcessedOp;
+      } | null)
+    | ({
+        relationTo: 'cv-events';
+        value: number | CvEvent;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -1816,6 +1882,7 @@ export interface MatchesSelect<T extends boolean = true> {
   videoUrl?: T;
   videoOffsetH1?: T;
   videoOffsetH2?: T;
+  cvFysiek?: T;
   reeks?: T;
   seizoen?: T;
   homeTeam?: T;
@@ -1823,6 +1890,8 @@ export interface MatchesSelect<T extends boolean = true> {
   date?: T;
   status?: T;
   goalAreaDepth?: T;
+  veldBreedte?: T;
+  veldSpeelveld?: T;
   isDemo?: T;
   analyseOnly?: T;
   homeCoach?: T;
@@ -2427,6 +2496,36 @@ export interface ProcessedOpsSelect<T extends boolean = true> {
   match?: T;
   opId?: T;
   response?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "cv-events_select".
+ */
+export interface CvEventsSelect<T extends boolean = true> {
+  match?: T;
+  videoTimeS?: T;
+  frame?: T;
+  eventType?: T;
+  worpType?: T;
+  inDoelgebied?: T;
+  xM?: T;
+  yM?: T;
+  afstandM?: T;
+  side?: T;
+  rugnummer?: T;
+  scoreDelta?: T;
+  confidence?: T;
+  reviewed?: T;
+  verdict?: T;
+  worpTypeOrigineel?: T;
+  provenance?:
+    | T
+    | {
+        model?: T;
+        modelVersion?: T;
+      };
   updatedAt?: T;
   createdAt?: T;
 }

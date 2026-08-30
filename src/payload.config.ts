@@ -34,6 +34,7 @@ import { Advertenties } from './collections/Advertenties'
 import { News } from './collections/News'
 import { MatchMvpVotes } from './collections/MatchMvpVotes'
 import { ProcessedOps } from './collections/ProcessedOps'
+import { CvEvents } from './collections/CvEvents'
 import { Season } from './globals/Season'
 import { Settings } from './globals/Settings'
 
@@ -123,6 +124,7 @@ export default buildConfig({
     News,
     MatchMvpVotes,
     ProcessedOps,
+    CvEvents,
   ],
   globals: [Season, Settings],
   // serverURL + cors/csrf enkel wanneer PUBLIC_SERVER_URL gezet is (zie hierboven).
