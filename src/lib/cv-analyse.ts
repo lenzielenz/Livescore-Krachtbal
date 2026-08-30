@@ -59,7 +59,13 @@ export function looptErEenAnalyse(): number | null {
   return lopend ? lopend.matchId : null
 }
 
-/** Waar de productiebuild de analyse-omgeving neerzet (zie railpack.json). */
+/**
+ * Waar een analyse-omgeving verwacht wordt als iemand er één klaarzet.
+ *
+ * De productie-image heeft die (nog) niet: twee pogingen om de Railway-build uit te breiden
+ * lieten de deploy mislukken, dus is die config weggehaald — zie docs/DEPLOY.md. Tot dat
+ * opgelost is meldt `analyseOmgeving()` gewoon dat opencv ontbreekt en blijft de knop uit.
+ */
 const VENV = '/opt/cv-venv'
 
 /** Een manier om Python te starten: het commando, plus eventueel waar de pakketten staan. */
