@@ -29,6 +29,10 @@ python3 cv/meet.py --video match.mp4 --match 42 --kalibratie kalibratie.json \
 Het rapport vertelt waar de detectie staat (doel: recall ≥ 0.8 op worpen).
 Tevreden? Draai opnieuw met `--upload` en review de voorstellen op de
 analysepagina — elke correctie wordt trainingsdata (`groundtruth.py`).
+Film je met de gsm in de hand (pannend, zoomend, meelopend)? Zet er **`--bewegend`**
+bij: dan wordt de homografie per moment gevolgd en herankerd op de veldlijnen, in
+plaats van te vertrouwen op één vaste kalibratie. Zie "Bewegende camera" hieronder.
+
 Met **`--tracking`** draait ook de videotracking mee: spelersposities, een
 heatmap en de fysieke stats (gelopen afstand, sprintjes, topsnelheid) voor de
 spelerskaart — na afloop vul je `wie.json` in en uploadt `fysiek.py` ze.
@@ -68,6 +72,126 @@ veld-RECHTS. Twee vangnetten als het toch misgaat:
 `--test` waarschuwt bovendien wanneer alle punten op één helft liggen, zodat je
 wéét dat de overkant geëxtrapoleerd is.
 
+## Bewegende camera
+
+`calibrate.py` legt het veld één keer vast — perfect voor een statief, onbruikbaar voor
+een telefoon in de hand. Zodra je pant of zoomt klopt die matrix alleen nog voor het
+frame waarop ze gefit is, en landt elke worp ergens anders dan waar hij viel.
+
+`volg_veld.py` lost dat op met twee lagen die elkaar corrigeren:
+
+1. **Volgen.** Tussen twee frames verandert het beeld weinig; uit de verplaatsing van
+   markante punten (optical flow) volgt een kleine homografie die aan de vorige geketend
+   wordt. Snel, maar elke schatting draagt een fractie fout — vooral in schaal en
+   rotatie, en díe stapelen op.
+2. **Herankeren op de veldlijnen.** Precies wat een mens doet: je ziet de lijnen liggen.
+   De witte lijnen worden gedetecteerd, gekoppeld aan de lijnen die het veldmodel
+   verwacht, en daaruit wordt de homografie opnieuw gefit — waarmee de opgelopen drift
+   verdwijnt.
+
+```bash
+# 1. Kalibreer het eerste frame zoals gewoonlijk (het vertrekpunt van het volgen):
+python3 cv/calibrate.py --beeld frame0.jpg --uit kalibratie.json
+
+# 2. Volg het veld doorheen de opname:
+python3 cv/volg_veld.py --video match.mp4 --kalibratie kalibratie.json --uit homografie.jsonl
+
+# 3. Landing en tracking rekenen met het spoor in plaats van één matrix:
+python3 cv/landing.py --video match.mp4 --homografie homografie.jsonl \
+    --detecties detecties.jsonl --uit met_landing.jsonl
+python3 cv/tracking.py --video match.mp4 --homografie homografie.jsonl --uit posities.jsonl
+
+# Of in één keer, via het meet-commando:
+python3 cv/meet.py --video match.mp4 --match 42 --kalibratie kalibratie.json \
+    --bewegend --stand nauwkeurig --overlay
+
+# Oefenen zonder video (gesimuleerde pannende camera, reproduceerbaar):
+python3 cv/volg_veld.py --demo --seed 7 --duur 300 --uit homografie.jsonl
+```
+
+**Wat het oplevert.** Gemeten op de demo — een camera die pant, zoomt en licht roteert,
+met realistische flow-ruis in verschuiving, schaal én rotatie — is de fout op het veld:
+
+| Opnameduur | Mét herankeren (mediaan / p95) | Puur volgen (mediaan / p95) |
+| --- | --- | --- |
+| 1 minuut | **0,13 m** / 0,33 m | 0,90 m / 1,25 m |
+| 5 minuten | **0,17 m** / 0,56 m | 1,37 m / 2,52 m |
+| 15 minuten (een helft) | **0,17 m** / 0,54 m | 1,63 m / 3,10 m |
+
+Het punt is niet alleen dat de fout kleiner is, maar dat ze **niet meegroeit met de
+duur**: puur volgen drijft weg, herankeren houdt de meting op zijn plaats — ook na een
+volledige helft.
+
+## Precisie boven snelheid: `--stand`
+
+Rekentijd is zelden het probleem, een verkeerde meting wel. `volg_veld.py --stand` (en
+`meet.py --stand`) regelt die ruil:
+
+| Stand | Meet | Herankert | Fit-rondes |
+| --- | --- | --- | --- |
+| `snel` | 2×/s | elke 4 s | 2 |
+| `gewoon` (standaard) | 4×/s | elke 2 s | 3 |
+| `nauwkeurig` | 10×/s | elke 0,5 s | 6 |
+
+**Wanneer het loont — eerlijk gemeten.** Bij een rustig gefilmde wedstrijd schelen de
+standen nauwelijks (0,08 · 0,09 · 0,08 m mediaan): de beperkende factor is dan hoe scherp
+de lijnen gedetecteerd worden, niet hoe vaak je rekent. Bij een **onrustige camera** (snel
+pannen, uit de hand) is het verschil er wél:
+
+| Stand | Fout (mediaan) | Ankers in 3 min |
+| --- | --- | --- |
+| `snel` | 0,21 m | 44 |
+| `gewoon` | 0,27 m | 85 |
+| `nauwkeurig` | **0,12 m** | 307 |
+
+Meer rekenkracht is dus geen wondermiddel maar wel het juiste antwoord op een bewegend
+beeld: hoe onrustiger je filmt, hoe meer `--stand nauwkeurig` oplevert.
+
+## Zien wat er getrackt wordt: `overlay.py`
+
+Cijfers zeggen niet of de meting klópt. Deze video legt eroverheen wat de pijplijn denkt
+te zien:
+
+```bash
+python3 cv/overlay.py --video match.mp4 --homografie homografie.jsonl \
+    --balspoor balspoor.jsonl --posities posities.jsonl --lijnen \
+    --tot 60 --uit controle.mp4
+```
+
+- 🟩 **groen** — het veldmodel, geprojecteerd met de homografie van dát moment. Vallen die
+  lijnen samen met het echte krijt, dan meet de pijplijn op de juiste plek; schuiven ze
+  weg, dan zie je meteen wanneer en hoeveel.
+- 🟦 **blauw** — wat de lijndetector werkelijk vond (met `--lijnen`). Het verschil met het
+  groen is de correctie die de herankering moet maken.
+- 🟥 **rood** — het balspoor, met een ring op het **loslaatpunt** en een kruis waar de bal
+  de **grond** raakt. (Vereist `landing.py --balspoor balspoor.jsonl`.)
+- 🟪 **roze** — de gevolgde spelers, met hun spoornummer.
+- Bovenaan een statusregel: tijd, of de veldstand *gevolgd* of *herankerd op de veldlijnen*
+  is, en de gemeten afwijking. Is er geen betrouwbare stand, dan staat er **GEEN
+  VELDSTAND** — daar wordt niets gemeten, en dat hoor je te zien in plaats van te raden.
+
+Met `--tot 60` render je alleen de eerste minuut: even kijken of het klopt vóór je een
+hele helft laat lopen. In één keer meedraaien kan ook: `meet.py --overlay`.
+
+**Grenzen, eerlijk gezegd.**
+
+- Herankeren werkt tot ongeveer **1,8 m drift** (`MAX_KOPPEL_AFSTAND_M`). Die grens ligt
+  in het veld zelf: doellijn en vrijeworplijn liggen 4 m uit elkaar, dus vanaf ~2 m
+  twijfel koppelt de ene zich aan de andere en zou de correctie het veld een lijn
+  verschuiven. Drijft het volgen sneller weg, dan is de remedie vaker herankeren
+  (`--heranker 1`), niet een ruimere drempel.
+- Een herankering wordt **verworpen** wanneer ze het veld meer dan 4 m verplaatst, wanneer
+  de lijnen gemiddeld verder dan 0,6 m van het model blijven, of wanneer alle zichtbare
+  lijnen evenwijdig lopen (dan ligt de stand langs die richting niet vast). In al die
+  gevallen blijft de gevolgde matrix staan: herankeren mag nooit iets slechters opdringen.
+- Ziet de camera even geen veld, dan is er op dat moment **geen** homografie. `landing.py`
+  slaat zo'n event dan over (`zonder_homografie` in het rapport) en `tracking.py` levert
+  geen posities voor dat frame — liever een gaatje dan een worp op de verkeerde plek.
+- De schatting per moment leunt óók op de vorige stand (een zwakke prior). Zonder dat
+  vervormt de fit het veld in richtingen die de zichtbare lijnen niet vastleggen: gemeten
+  ging de fout dan van 0,07 m naar 1,01 m ná een "geslaagde" herankering, mét een
+  uitstekende lijnfout. Lage lijnfout is dus geen bewijs van een goede matrix.
+
 ## Fases
 
 | Fase | Inhoud | Status |
@@ -79,6 +203,8 @@ wéét dat de overkant geëxtrapoleerd is.
 | **4** | Auto-highlights per speler/doelpunt (FFmpeg-clips uit bevestigde events) | deze map (`highlights.py`) |
 | **5** | Volledige speler-tracking → heatmaps | deze map (`tracking.py` + `heatmap.py`) |
 | **6** | Hertraining-lus: reviewcorrecties → ground truth ("model zei X, mens zei Y") | deze map (`groundtruth.py`) |
+| **7** | Bewegende camera: homografie per moment, herankerd op de veldlijnen | deze map (`volg_veld.py`) |
+| **8** | Controle-overlay: veldmodel, gevonden lijnen, bal en spelers over de video | deze map (`overlay.py`) |
 
 ## Installatie
 

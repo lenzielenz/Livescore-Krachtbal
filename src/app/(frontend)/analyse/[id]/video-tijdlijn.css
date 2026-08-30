@@ -309,3 +309,51 @@
 .an-jump-btn:hover, .an-jump-btn:focus-visible { background: rgba(255, 255, 255, 0.12); }
 /* Springen zonder dat de kop van de sectie onder de rand van het scherm valt. */
 #video, #terreinmaten, #statistieken { scroll-margin-top: 12px; }
+
+/* ── Analyse-voortgang: waar sta ik, en wat moet er nog? ────────────────────────────────── */
+.av {
+  margin: 0 0 16px; padding: 14px 16px; border-radius: 16px;
+  background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.12);
+}
+.av-klaar { border-color: rgba(74, 222, 128, 0.45); background: rgba(74, 222, 128, 0.06); }
+.av-kop { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.av-titel { margin: 0; font-size: 16px; font-weight: 800; }
+.av-pct { font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.av-klaar .av-pct { color: #4ade80; }
+.av-balk {
+  margin: 10px 0 6px; height: 10px; border-radius: 999px; overflow: hidden;
+  background: rgba(255, 255, 255, 0.09);
+}
+.av-balk > span {
+  display: block; height: 100%; border-radius: 999px;
+  background: linear-gradient(90deg, var(--accent, #60a5fa), #4ade80);
+  transition: width 0.4s ease;
+}
+.av-tel { margin: 0 0 10px; font-size: 12px; color: var(--muted); }
+.av-stappen { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.av-stappen li { display: flex; align-items: flex-start; gap: 9px; font-size: 13px; line-height: 1.45; }
+.av-stappen li.ok { color: var(--muted); }
+.av-vink { flex: 0 0 auto; width: 18px; text-align: center; font-weight: 800; }
+.av-stappen li.ok .av-vink { color: #4ade80; }
+.av-stap-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.av-stap-titel { font-weight: 600; }
+.av-stappen li.ok .av-stap-titel { font-weight: 500; text-decoration: line-through; opacity: 0.75; }
+.av-stap-hulp { color: var(--muted); }
+.av-ga {
+  flex: 0 0 auto; margin-left: auto; padding: 4px 10px; font-size: 12px; font-weight: 700;
+  text-decoration: none; color: inherit; border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.16);
+}
+.av-extra { margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(255, 255, 255, 0.09); }
+.av-extra-kop { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+.av-extra ul { margin: 6px 0 0; padding: 0; list-style: none; display: grid; gap: 4px; font-size: 12px; color: var(--muted); }
+.av-extra li.ok { color: inherit; }
+.av-extra a { color: var(--accent); }
+.av-handleiding { margin-top: 12px; }
+.av-handleiding > summary { cursor: pointer; font-size: 13px; font-weight: 700; }
+.av-uitleg { margin: 10px 0 0; padding-left: 20px; display: grid; gap: 8px; font-size: 13px; line-height: 1.5; }
+.av-uitleg code {
+  padding: 1px 5px; border-radius: 5px; font-size: 12px;
+  background: rgba(255, 255, 255, 0.08); word-break: break-word;
+}
+.av-uitleg-slot { margin: 10px 0 0; font-size: 12px; color: var(--muted); }

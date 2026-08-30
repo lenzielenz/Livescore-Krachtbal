@@ -222,10 +222,18 @@ def video_posities(args: argparse.Namespace) -> list[dict]:
         )
     if not args.video.is_file():
         _fout(f'video niet gevonden: {args.video}')
-    if not args.kalibratie.is_file():
+    if args.kalibratie is not None and not args.kalibratie.is_file():
         _fout(f'kalibratiebestand niet gevonden: {args.kalibratie} (maak het met cv/calibrate.py)')
-    kalibratie = json.loads(args.kalibratie.read_text(encoding='utf-8'))
-    matrix = kalibratie['matrix_beeld_naar_veld']
+    spoor = None
+    if args.homografie is not None:
+        if not args.homografie.is_file():
+            _fout(f'homografiebestand niet gevonden: {args.homografie} (maak het met cv/volg_veld.py)')
+        from volg_veld import HomografieSpoor  # noqa: PLC0415
+        spoor = HomografieSpoor.lees(args.homografie)
+        if not spoor.punten:
+            _fout(f'{args.homografie} bevat geen momenten')
+    kalibratie = json.loads(args.kalibratie.read_text(encoding='utf-8')) if args.kalibratie else {}
+    matrix = kalibratie.get('matrix_beeld_naar_veld')
     veld_info = kalibratie.get('veld') or {}
     diepte = float(kalibratie.get('doelgebied_diepte_m') or veld_info.get('doelgebied_diepte_m') or args.diepte)
     breedte = float(veld_info.get('breedte_m') or veld.BREEDTE_M)
@@ -254,6 +262,13 @@ def video_posities(args: argparse.Namespace) -> list[dict]:
         ok, frame = cap.read()
         if not ok:
             break
+        if spoor is not None:
+            # Bewegende camera: de matrix van dít moment. Geen betrouwbare stand → dit frame
+            # levert geen posities (beter een gaatje dan spookposities op het veld).
+            matrix = spoor.op(t)
+            if matrix is None:
+                t += 1.0 / args.fps
+                continue
         voeten: list[tuple[float, float]] = []
         if hog is not None:
             vakken, _ = hog.detectMultiScale(frame, winStride=(8, 8), padding=(8, 8), scale=1.05)
@@ -300,6 +315,8 @@ def main(argv: list[str] | None = None) -> None:
     # videomodus
     parser.add_argument('--video', type=Path, default=None, help='wedstrijdvideo (videomodus)')
     parser.add_argument('--kalibratie', type=Path, default=None, help='kalibratie-JSON van calibrate.py')
+    parser.add_argument('--homografie', type=Path, default=None,
+                        help='homografie-JSONL van volg_veld.py — voor een BEWEGENDE camera')
     parser.add_argument('--fps', type=float, default=STANDAARD_FPS,
                         help=f'bemonsteringsfrequentie in metingen per seconde (standaard {STANDAARD_FPS:g}/s; '
                              'geldt óók voor --demo — lager middelt sprintjes weg)')
@@ -334,8 +351,9 @@ def main(argv: list[str] | None = None) -> None:
         print(f'Demo (seed {args.seed}): 8 sporen over {args.duur:g} s bij {args.fps:g}/s '
               f'→ {len(rijen)} posities')
     else:
-        if args.video is None or args.kalibratie is None:
-            _fout('videomodus vereist --video én --kalibratie (of gebruik --demo)')
+        if args.video is None or (args.kalibratie is None and args.homografie is None):
+            _fout('videomodus vereist --video én --kalibratie (vaste camera) of --homografie '
+                  '(bewegende camera, van cv/volg_veld.py) — of gebruik --demo')
         rijen = video_posities(args)
         ruw = len({r['track'] for r in rijen})
         rijen = filter_korte_sporen(rijen, args.min_duur)

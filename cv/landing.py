@@ -253,10 +253,28 @@ def video_landing(args: argparse.Namespace, detecties: list[dict]) -> tuple[list
     cv2 = _laad_cv2()
     if not args.video.is_file():
         _fout(f'video niet gevonden: {args.video}')
-    if not args.kalibratie.is_file():
-        _fout(f'kalibratiebestand niet gevonden: {args.kalibratie} (maak het met cv/calibrate.py)')
-    kalibratie = json.loads(args.kalibratie.read_text(encoding='utf-8'))
-    matrix = kalibratie['matrix_beeld_naar_veld']
+
+    # Bewegende camera: het spoor van volg_veld.py geeft per moment de matrix. Er is dan
+    # geen vaste matrix — die van het startframe zou al na een pan onbruikbaar zijn.
+    spoor = None
+    if args.homografie is not None:
+        if not args.homografie.is_file():
+            _fout(f'homografiebestand niet gevonden: {args.homografie} (maak het met cv/volg_veld.py)')
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        from volg_veld import HomografieSpoor  # noqa: PLC0415
+        spoor = HomografieSpoor.lees(args.homografie)
+        if not spoor.punten:
+            _fout(f'{args.homografie} bevat geen momenten')
+
+    if args.kalibratie is None:
+        # Alleen een spoor: de veldmaten staan dan in de kalibratie die volg_veld gebruikte,
+        # dus vallen we terug op de vlaggen/het reglement.
+        kalibratie = {}
+    else:
+        if not args.kalibratie.is_file():
+            _fout(f'kalibratiebestand niet gevonden: {args.kalibratie} (maak het met cv/calibrate.py)')
+        kalibratie = json.loads(args.kalibratie.read_text(encoding='utf-8'))
+    matrix = kalibratie.get('matrix_beeld_naar_veld')
     veld_info = kalibratie.get('veld') or {}
     diepte = float(kalibratie.get('doelgebied_diepte_m') or veld_info.get('doelgebied_diepte_m') or args.diepte)
     breedte = float(args.breedte or veld_info.get('breedte_m') or veld.BREEDTE_M)
@@ -267,12 +285,37 @@ def video_landing(args: argparse.Namespace, detecties: list[dict]) -> tuple[list
         _fout(f'video kan niet geopend worden: {args.video}')
 
     verrijkt: list[dict] = []
+    balsporen: list[dict] = []
     gevonden = 0
+    zonder_matrix = 0
     for det in detecties:
         det = dict(det)
         t0 = float(det['video_time_s'])
+        if spoor is not None:
+            # De matrix zoals ze op dít moment gold. Geen betrouwbare stand (de camera keek
+            # bijvoorbeeld even weg van het veld)? Dan liever geen meting dan een foute.
+            matrix = spoor.op(t0)
+            if matrix is None:
+                zonder_matrix += 1
+                prov = dict(det.get('provenance') or {})
+                prov['model'] = f"{prov.get('model', '?')}+{MODEL_VIDEO}"
+                det['provenance'] = prov
+                verrijkt.append(det)
+                continue
         spoor = volg_bal_na_worp(cap, cv2, t0 + args.venster_start, t0 + args.venster_einde, (args.bal_min_px, args.bal_max_px))
         punt = landing_uit_spoor(spoor)
+        if args.balspoor is not None and spoor:
+            # Alles wat we van deze worp zagen, in beeldpixels: het spoor zelf, welk punt we
+            # als landing kozen, en waar de bal het eerst gezien werd (bij benadering de
+            # werpplaats). Precies wat er straks over de video getekend wordt.
+            balsporen.append({
+                'video_time_s': round(t0, 3),
+                'worp_type': det.get('worp_type'),
+                'spoor': [[round(w, 2) for w in punt3] for punt3 in spoor],
+                'landing_px': [round(punt[1], 2), round(punt[2], 2)] if punt is not None else None,
+                'landing_t': round(punt[0], 3) if punt is not None else None,
+                'los_px': [round(spoor[0][1], 2), round(spoor[0][2], 2)],
+            })
         if punt is not None:
             x_m, y_m = _projecteer(matrix, punt[1], punt[2])
             if x_m == x_m and y_m == y_m:  # geen NaN
@@ -291,7 +334,16 @@ def video_landing(args: argparse.Namespace, detecties: list[dict]) -> tuple[list
         det['provenance'] = prov
         verrijkt.append(det)
     cap.release()
-    return verrijkt, {'detecties': len(detecties), 'met_landing': gevonden, 'zonder_landing': len(detecties) - gevonden}
+    if args.balspoor is not None:
+        with args.balspoor.open('w', encoding='utf-8') as f:
+            for rij in balsporen:
+                f.write(json.dumps(rij, ensure_ascii=False) + '\n')
+        print(f'Balsporen van {len(balsporen)} worpen → {args.balspoor}')
+    rapport = {'detecties': len(detecties), 'met_landing': gevonden,
+               'zonder_landing': len(detecties) - gevonden}
+    if spoor is not None:
+        rapport['zonder_homografie'] = zonder_matrix
+    return verrijkt, rapport
 
 
 # ---------------------------------------------------------------------------
@@ -314,6 +366,12 @@ def main(argv: list[str] | None = None) -> None:
     # videomodus
     parser.add_argument('--video', type=Path, default=None, help='wedstrijdvideo (videomodus)')
     parser.add_argument('--kalibratie', type=Path, default=None, help='kalibratie-JSON van calibrate.py')
+    parser.add_argument('--balspoor', type=Path, default=None,
+                        help='schrijf het gevolgde balspoor per worp weg (JSONL) — voer voor '
+                             'cv/overlay.py, zodat je in beeld ziet wat er gevolgd is')
+    parser.add_argument('--homografie', type=Path, default=None,
+                        help='homografie-JSONL van volg_veld.py — voor een BEWEGENDE camera: '
+                             'per moment de juiste matrix in plaats van één vaste kalibratie')
     parser.add_argument('--venster-start', type=float, default=0.4, help='zoekvenster ná de worp: begin (s)')
     parser.add_argument('--venster-einde', type=float, default=6.0, help='zoekvenster ná de worp: einde (s)')
     parser.add_argument('--bal-min-px', type=int, default=6, help='minimale baldiameter in pixels')
@@ -327,6 +385,8 @@ def main(argv: list[str] | None = None) -> None:
 
     if args.demo and args.video is not None:
         parser.error('--demo gaat niet samen met --video — kies één modus')
+    if args.homografie is not None and args.demo:
+        parser.error('--homografie hoort bij de videomodus, niet bij --demo')
     if not args.detecties.is_file():
         _fout(f'detectiebestand niet gevonden: {args.detecties}')
     detecties = lees_jsonl(args.detecties)
