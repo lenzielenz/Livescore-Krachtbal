@@ -172,6 +172,11 @@ def main(argv: list[str] | None = None) -> None:
     ploegen = match.get('ploegen') or {}
     thuis, uit = ploegen.get('home', '?'), ploegen.get('away', '?')
     print(f'Match {args.match}: {thuis} — {uit} (doelgebied {diepte:g} m)')
+    breedte, speelveld = match.get('veldBreedteM'), match.get('veldSpeelveldM')
+    if breedte is not None or speelveld is not None:
+        # Opgemeten terrein — geef die maten door aan calibrate.py/landing.py (--breedte/--speelveld).
+        print(f'Terrein opgemeten: breedte {breedte or 14:g} m, speelveld {speelveld or 26:g} m '
+              f'— gebruik --breedte/--speelveld bij calibrate.py en landing.py')
     print(f'{gesynct} van {totaal} events gesynct → {uitpad}')
     for helft in sorted(niet_syncbaar_per_helft):
         aantal = niet_syncbaar_per_helft[helft]

@@ -71,25 +71,33 @@ def zone_en_score(
     y_m: float,
     worp_type: str | None,
     diepte_m: float,
+    breedte_m: float = veld.BREEDTE_M,
+    speelveld_m: float = veld.SPEELVELD_LENGTE_M,
 ) -> tuple[dict, int]:
     """Veldpunt (meters) → zone-object + score_delta volgens het reglement.
 
     Rugworp-doelpunt telt dubbel (§6.6) — dé krachtbal-specifieke regel die
     generieke sport-CV niet kent en die daarom hier expliciet leeft.
     """
-    lengte = veld.totale_lengte_m(diepte_m)
-    x_norm = x_m / veld.BREEDTE_M
+    lengte = veld.totale_lengte_m(diepte_m, speelveld_m)
+    x_norm = x_m / breedte_m
     y_norm = y_m / lengte
-    binnen = veld.in_doelgebied(y_norm, diepte_m, x_norm=x_norm)
+    binnen = veld.in_doelgebied(y_norm, diepte_m, x_norm=x_norm, speelveld_m=speelveld_m)
     zone = {'in_doelgebied': binnen, 'x_m': round(x_m, 2), 'y_m': round(y_m, 2)}
     if not binnen:
         return zone, 0
     return zone, 2 if worp_type == 'rugworp' else 1
 
 
-def klem_op_veld(x_m: float, y_m: float, diepte_m: float) -> tuple[float, float]:
-    lengte = veld.totale_lengte_m(diepte_m)
-    return max(0.0, min(veld.BREEDTE_M, x_m)), max(0.0, min(lengte, y_m))
+def klem_op_veld(
+    x_m: float,
+    y_m: float,
+    diepte_m: float,
+    breedte_m: float = veld.BREEDTE_M,
+    speelveld_m: float = veld.SPEELVELD_LENGTE_M,
+) -> tuple[float, float]:
+    lengte = veld.totale_lengte_m(diepte_m, speelveld_m)
+    return max(0.0, min(breedte_m, x_m)), max(0.0, min(lengte, y_m))
 
 
 # ---------------------------------------------------------------------------
@@ -104,6 +112,8 @@ def demo_landing(
     sigma_m: float,
     diepte_m: float,
     venster_s: float = DEMO_VENSTER_S,
+    breedte_m: float = veld.BREEDTE_M,
+    speelveld_m: float = veld.SPEELVELD_LENGTE_M,
 ) -> tuple[list[dict], dict]:
     """Verrijk detecties met de (verstoorde) gelabelde landing van hun match.
 
@@ -112,7 +122,7 @@ def demo_landing(
     willekeurig veldpunt — precies wat de zone-metriek moet kunnen bestraffen.
     """
     rng = random.Random(seed)
-    lengte = veld.totale_lengte_m(diepte_m)
+    lengte = veld.totale_lengte_m(diepte_m, speelveld_m)
     paren = match_greedy(
         [float(l['video_time_s']) for l in labels],
         [float(d['video_time_s']) for d in detecties],
@@ -131,10 +141,10 @@ def demo_landing(
             x_m = float(label_zone['x_m']) + rng.gauss(0.0, sigma_m)
             y_m = float(label_zone['y_m']) + rng.gauss(0.0, sigma_m)
         else:
-            x_m = rng.uniform(0.0, veld.BREEDTE_M)
+            x_m = rng.uniform(0.0, breedte_m)
             y_m = rng.uniform(0.0, lengte)
-        x_m, y_m = klem_op_veld(x_m, y_m, diepte_m)
-        zone, score = zone_en_score(x_m, y_m, det.get('worp_type'), diepte_m)
+        x_m, y_m = klem_op_veld(x_m, y_m, diepte_m, breedte_m, speelveld_m)
+        zone, score = zone_en_score(x_m, y_m, det.get('worp_type'), diepte_m, breedte_m, speelveld_m)
         det['zone'] = zone
         det['score_delta'] = score
         prov = dict(det.get('provenance') or {})
@@ -247,7 +257,10 @@ def video_landing(args: argparse.Namespace, detecties: list[dict]) -> tuple[list
         _fout(f'kalibratiebestand niet gevonden: {args.kalibratie} (maak het met cv/calibrate.py)')
     kalibratie = json.loads(args.kalibratie.read_text(encoding='utf-8'))
     matrix = kalibratie['matrix_beeld_naar_veld']
-    diepte = float(kalibratie.get('doelgebied_diepte_m') or args.diepte)
+    veld_info = kalibratie.get('veld') or {}
+    diepte = float(kalibratie.get('doelgebied_diepte_m') or veld_info.get('doelgebied_diepte_m') or args.diepte)
+    breedte = float(args.breedte or veld_info.get('breedte_m') or veld.BREEDTE_M)
+    speelveld = float(args.speelveld or veld_info.get('speelveld_m') or veld.SPEELVELD_LENGTE_M)
 
     cap = cv2.VideoCapture(str(args.video))
     if not cap.isOpened():
@@ -263,8 +276,8 @@ def video_landing(args: argparse.Namespace, detecties: list[dict]) -> tuple[list
         if punt is not None:
             x_m, y_m = _projecteer(matrix, punt[1], punt[2])
             if x_m == x_m and y_m == y_m:  # geen NaN
-                x_m, y_m = klem_op_veld(x_m, y_m, diepte)
-                zone, score = zone_en_score(x_m, y_m, det.get('worp_type'), diepte)
+                x_m, y_m = klem_op_veld(x_m, y_m, diepte, breedte, speelveld)
+                zone, score = zone_en_score(x_m, y_m, det.get('worp_type'), diepte, breedte, speelveld)
                 det['zone'] = zone
                 det['score_delta'] = score
                 # Afstand: eerste balpunt van het spoor als benadering van de werpplaats.
@@ -294,6 +307,10 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument('--uit', type=Path, required=True, help='uitvoerbestand (verrijkte JSONL)')
     parser.add_argument('--diepte', type=float, default=veld.STANDAARD_DOELGEBIED_DIEPTE_M,
                         help='doelgebied-diepte in meters van deze wedstrijd (standaard 10)')
+    parser.add_argument('--breedte', type=float, default=None,
+                        help='opgemeten veldbreedte in meters (standaard: uit de kalibratie, anders 14)')
+    parser.add_argument('--speelveld', type=float, default=None,
+                        help='opgemeten speelveldlengte in meters (standaard: uit de kalibratie, anders 26)')
     # videomodus
     parser.add_argument('--video', type=Path, default=None, help='wedstrijdvideo (videomodus)')
     parser.add_argument('--kalibratie', type=Path, default=None, help='kalibratie-JSON van calibrate.py')
@@ -324,7 +341,10 @@ def main(argv: list[str] | None = None) -> None:
         if args.sigma_m < 0:
             _fout('--sigma-m kan niet negatief zijn')
         labels = lees_jsonl(args.labels)
-        verrijkt, rapport = demo_landing(detecties, labels, seed=args.seed, sigma_m=args.sigma_m, diepte_m=args.diepte)
+        verrijkt, rapport = demo_landing(
+            detecties, labels, seed=args.seed, sigma_m=args.sigma_m, diepte_m=args.diepte,
+            breedte_m=args.breedte or veld.BREEDTE_M, speelveld_m=args.speelveld or veld.SPEELVELD_LENGTE_M,
+        )
         print(
             f'Demo-landing (seed {args.seed}, σ={args.sigma_m:g} m): {rapport["met_label"]} detecties kregen de '
             f'gelabelde landing met ruis, {rapport["zonder_label"]} (valse positieven) een willekeurig veldpunt'

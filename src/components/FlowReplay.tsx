@@ -28,11 +28,14 @@ export function FlowReplay({
   shots,
   teams,
   goalAreaDepth = 10,
+  speelveldM,
   matchLabel,
 }: {
   shots: ShotPoint[]
   teams: { home: string; away: string }
   goalAreaDepth?: number
+  /** Echte speelveldlengte (m); leeg = reglementair 26 m. */
+  speelveldM?: number
   /** Korte omschrijving van de wedstrijd (bv. "1ste Nationale Heren · 7 juni 2026"), wordt in de
    * gedownloade video en de bestandsnaam meegegeven zodat duidelijk is welke match het was. */
   matchLabel?: string
@@ -621,7 +624,7 @@ export function FlowReplay({
         }}
         aria-label="Tijdlijn"
       />
-      <FieldSchema className="shotmap-field" markers={markers} goalAreaDepthM={goalAreaDepth} />
+      <FieldSchema className="shotmap-field" markers={markers} goalAreaDepthM={goalAreaDepth} speelveldM={speelveldM} />
       {total === 0 && <p className="sb-dim" style={{ textAlign: 'center' }}>Geen worpen van deze ploeg.</p>}
       <div className="replay-status">
         <span className="replay-step">worp {shown}/{total}</span>

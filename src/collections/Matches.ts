@@ -254,7 +254,29 @@ export const Matches: CollectionConfig = {
           max: 25,
           required: true,
           admin: {
-            description: 'Min. 10 m (15 m voor nieuwe terreinen). Bepaalt de veldlengte en de afstandsberekening.',
+            description: 'Min. 10 m (15 m voor nieuwe terreinen, 5 m in zalen). Bepaalt de veldlengte en de afstandsberekening.',
+          },
+        },
+        {
+          // Niet elk terrein is exact reglementair: wie de échte maten opmeet en hier invult,
+          // krijgt overal echte meters terug — hoe ver en waarheen er gegooid werd.
+          name: 'veldBreedte',
+          label: 'Veldbreedte (m)',
+          type: 'number',
+          min: 6,
+          max: 20,
+          admin: {
+            description: 'Opgemeten breedte van dít terrein. Leeg = reglementair 14 m.',
+          },
+        },
+        {
+          name: 'veldSpeelveld',
+          label: 'Speelveld tussen de doellijnen (m)',
+          type: 'number',
+          min: 10,
+          max: 30,
+          admin: {
+            description: 'Opgemeten afstand tussen de twee doellijnen. Leeg = reglementair 26 m.',
           },
         },
       ],

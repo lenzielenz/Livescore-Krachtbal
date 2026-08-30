@@ -131,3 +131,40 @@ describe('field — werpplaats-projectie (§6.4)', () => {
     expect(projectWerpplaats({ x: 0.5, y: 0.5 }, 15).y).toBe(0.5)
   })
 })
+
+describe('field — echte terreinmaten (veldMaten)', () => {
+  // Opgemeten terrein: 12 m breed, speelveld 24 m, doelgebied 10 m → totaal 44 m.
+  const maten = { breedteM: 12, speelveldM: 24 }
+
+  it('rekent meters op de echte breedte en lengte', () => {
+    expect(totalLengthM(10, maten)).toBe(44)
+    const m = toMeters({ x: 1, y: 1 }, 10, maten)
+    expect(m.x).toBeCloseTo(12, 6)
+    expect(m.y).toBeCloseTo(44, 6)
+  })
+
+  it('meet worpafstand op het echte veld korter dan op een reglementair veld', () => {
+    const van = { x: 0.5, y: 0.25 }
+    const naar = { x: 0.5, y: 0.75 }
+    expect(distanceM(van, naar, 10, maten)).toBeCloseTo(22, 6)
+    expect(distanceM(van, naar, 10)).toBeCloseTo(23, 6)
+  })
+
+  it('legt doellijn en doelgebied op de echte lengte', () => {
+    expect(goalLineNorm(10, maten)).toBeCloseTo(10 / 44, 6)
+    // y = 35 m: reglementair nog spelersveld (doellijn op 36), op het korte veld doelgebied.
+    expect(isInTargetGoalArea({ x: 0.5, y: 35 / 44 }, 'up', 10, maten)).toBe(true)
+    expect(isInTargetGoalArea({ x: 0.5, y: 35 / 46 }, 'up', 10)).toBe(false)
+  })
+
+  it('projecteert de werpplaats naar de vrijeworplijn van het echte veld', () => {
+    const ft = 14 / 44
+    expect(projectWerpplaats({ x: 0.5, y: 12 / 44 }, 10, { maten }).y).toBeCloseTo(ft, 6)
+    expect(isOpDoellijn({ x: 0.5, y: 10 / 44 }, 10, maten)).toBe(true)
+  })
+
+  it('valt zonder maten terug op het reglementaire veld', () => {
+    expect(totalLengthM(10)).toBe(FIELD.playingLengthM + 20)
+    expect(distanceM({ x: 0, y: 0 }, { x: 1, y: 0 }, 10)).toBeCloseTo(FIELD.widthM, 6)
+  })
+})

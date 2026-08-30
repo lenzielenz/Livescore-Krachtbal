@@ -9,7 +9,7 @@ import type { Payload } from 'payload'
 import type { Category } from './categories'
 import { type ClubColors, clubColorsFrom, distinguishAway } from './club-colors'
 import { type LogoFit, normalizeLogoFit } from './logo-fit'
-import { type AttackDir, type Point, FIELD, freeThrowNorm, isOpDoellijn, projectWerpplaats } from './field'
+import { type AttackDir, type Point, type VeldMaten, FIELD, freeThrowNorm, isOpDoellijn, projectWerpplaats } from './field'
 import { buildPassNetwork, type PlayerPassStats } from './pass-network'
 import { isForwardPass, passGainM } from './pass-rules'
 import { reeksUsesSeniorThrows } from './reeksen'
@@ -90,6 +90,14 @@ async function assertValidLineup(payload: Payload, playerIds: number[], label: s
 function assertNietAfgelopen(match: { status?: string | null }, wat: string): void {
   if (match.status === 'finished') {
     throw new Error(`Wedstrijd is afgelopen — heropen ze eerst om ${wat}.`)
+  }
+}
+
+/** De echte terreinmaten van deze wedstrijd (leeg = reglementair 14 m × 26 m). */
+function matenVan(match: { veldBreedte?: number | null; veldSpeelveld?: number | null }): Partial<VeldMaten> {
+  return {
+    ...(match.veldBreedte != null ? { breedteM: match.veldBreedte } : {}),
+    ...(match.veldSpeelveld != null ? { speelveldM: match.veldSpeelveld } : {}),
   }
 }
 
@@ -231,7 +239,7 @@ export async function startMatch(payload: Payload, matchId: number, startingTeam
     overrideAccess: true,
   })
   // Opzet bij aftrap: vanaf de eigen vrijeworplijn (diepte-afhankelijk).
-  const ftNorm = freeThrowNorm(match.goalAreaDepth ?? FIELD.defaultGoalAreaDepthM)
+  const ftNorm = freeThrowNorm(match.goalAreaDepth ?? FIELD.defaultGoalAreaDepthM, matenVan(match))
   const ownHalfY = dir === 'up' ? ftNorm : 1 - ftNorm
   await createPossession(payload, {
     matchId,
@@ -320,16 +328,17 @@ export async function recordThrow(payload: Payload, input: RecordThrowInput) {
   const rawOrigin: Point = { x: clamp01(hasOriginX ? (input.originX as number) : base.x), y: base.y }
 
   const depth = match.goalAreaDepth ?? FIELD.defaultGoalAreaDepthM
+  const maten = matenVan(match)
   // §6.4: lag de bal tussen doellijn en vrijeworplijn, dan schuift de werpplaats terug tot op de
   // vrijeworplijn — van dichterbij mag je niet werpen. Zonder deze projectie meet de statistiek
   // worpen te kort (en zou een doelworp van binnen de 4 m als geldig doorgaan).
   // UITZONDERING: bij de EERSTE worp van een balbezit dat opzet vanaf de doellijn (bal gevangen
   // in het doelgebied, of inworp tussen doellijn en achterlijn) is de dóéllijn de beperkende
   // lijn — dan blijft de werpplaats daar staan.
-  const vanuitDoelgebied = existing.docs.length === 0 && isOpDoellijn(rawOrigin, depth)
-  const origin = projectWerpplaats(rawOrigin, depth, { vanuitDoelgebied })
-  const outcome = deriveOutcome({ tapCount: input.tapCount, point: input.point, dir, goalAreaDepthM: depth })
-  const geom = deriveGeometry(origin, input.point, dir, depth)
+  const vanuitDoelgebied = existing.docs.length === 0 && isOpDoellijn(rawOrigin, depth, maten)
+  const origin = projectWerpplaats(rawOrigin, depth, { vanuitDoelgebied, maten })
+  const outcome = deriveOutcome({ tapCount: input.tapCount, point: input.point, dir, goalAreaDepthM: depth, maten })
+  const geom = deriveGeometry(origin, input.point, dir, depth, maten)
 
   const created = await payload.create({
     collection: 'throws',
@@ -400,12 +409,13 @@ export async function recordThrow(payload: Payload, input: RecordThrowInput) {
         throwerTeam: side,
         throwerDir: dir,
         goalAreaDepthM: depth,
+        maten,
         touchedBeforeOut: input.touchedBeforeOut,
       })
       const nextTeamId = ns.team === 'home' ? homeId : awayId
       if (awardFreeThrow) {
         // 3e kruisje: de inworp wordt vervangen door een vrije worp voor de tegenstander.
-        const ftY = ns.dir === 'up' ? 1 - freeThrowNorm(depth) : freeThrowNorm(depth)
+        const ftY = ns.dir === 'up' ? 1 - freeThrowNorm(depth, maten) : freeThrowNorm(depth, maten)
         await payload.create({
           collection: 'possessions',
           data: {
@@ -528,7 +538,7 @@ export async function recordPass(payload: Payload, input: RecordPassInput) {
       data: { endOutcome: 'pass_fault' },
       overrideAccess: true,
     })
-    const ns = nextSetup({ outcome: 'pass_fault', landing: from, throwerTeam: side, throwerDir: dir, goalAreaDepthM: depth })
+    const ns = nextSetup({ outcome: 'pass_fault', landing: from, throwerTeam: side, throwerDir: dir, goalAreaDepthM: depth, maten: matenVan(match) })
     await createPossession(payload, {
       matchId: input.matchId,
       teamId: ns.team === 'home' ? homeId : awayId,
@@ -850,7 +860,7 @@ export async function startNextHalf(payload: Payload, matchId: number) {
   const startTeamId = firstTeamId === homeId ? awayId : homeId
   const startSide = sideOfTeam(startTeamId, homeId)
   const dir = attackDirForSide(startSide, nextHalf)
-  const ftNorm = freeThrowNorm(match.goalAreaDepth ?? FIELD.defaultGoalAreaDepthM)
+  const ftNorm = freeThrowNorm(match.goalAreaDepth ?? FIELD.defaultGoalAreaDepthM, matenVan(match))
   const ownHalfY = dir === 'up' ? ftNorm : 1 - ftNorm
   await createPossession(payload, {
     matchId,
@@ -1036,7 +1046,7 @@ export async function startFreeThrow(payload: Payload, matchId: number, teamId: 
   }
 
   // Vrijeworplijn ligt 4 m vóór de aangevallen doellijn (diepte-afhankelijk).
-  const ftNorm = freeThrowNorm(match.goalAreaDepth ?? FIELD.defaultGoalAreaDepthM)
+  const ftNorm = freeThrowNorm(match.goalAreaDepth ?? FIELD.defaultGoalAreaDepthM, matenVan(match))
   const setupY = dir === 'up' ? 1 - ftNorm : ftNorm
   await payload.create({
     collection: 'possessions',
@@ -1244,6 +1254,9 @@ export interface MatchState {
     clockUpdatedAt: string | null
     /** Diepte van het doelgebied (m) — bepaalt veldlengte + afstandsschaal. */
     goalAreaDepth: number
+    /** Echte terreinmaten (opgemeten); null = reglementair 14 m / 26 m. */
+    veldBreedte: number | null
+    veldSpeelveld: number | null
     /** Tijdstip waarop de wedstrijd op 'finished' ging (voor het 1u-navenster van de tribune). */
     finishedAt: string | null
     /** Aftrap (ISO) — bepaalt of de tribune al open is op de speeldag zelf, vóór de aftrap. */
@@ -1998,6 +2011,8 @@ export async function buildMatchState(payload: Payload, matchId: number): Promis
       clockRunning: match.clockRunning ?? false,
       clockUpdatedAt: match.clockUpdatedAt ?? null,
       goalAreaDepth: match.goalAreaDepth ?? FIELD.defaultGoalAreaDepthM,
+      veldBreedte: match.veldBreedte ?? null,
+      veldSpeelveld: match.veldSpeelveld ?? null,
       finishedAt: (match.finishedAt as string | null | undefined) ?? null,
       date: (match.date as string | null | undefined) ?? null,
     },

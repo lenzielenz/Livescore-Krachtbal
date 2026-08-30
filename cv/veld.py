@@ -31,43 +31,61 @@ VRIJEWORP_OFFSET_M = 4.0
 STANDAARD_DOELGEBIED_DIEPTE_M = 10.0
 
 
-def totale_lengte_m(doelgebied_diepte_m: float = STANDAARD_DOELGEBIED_DIEPTE_M) -> float:
-    """Totale veldlengte (m) = speelveld (26 m) + 2 doelgebieden. Spiegel van totalLengthM."""
-    return SPEELVELD_LENGTE_M + 2.0 * doelgebied_diepte_m
+def totale_lengte_m(
+    doelgebied_diepte_m: float = STANDAARD_DOELGEBIED_DIEPTE_M,
+    speelveld_m: float = SPEELVELD_LENGTE_M,
+) -> float:
+    """Totale veldlengte (m) = speelveld (standaard 26 m) + 2 doelgebieden.
+
+    Spiegel van totalLengthM. Niet elk terrein is reglementair: geef de
+    opgemeten speelveldlengte mee (zelfde waarde als "veldSpeelveld" op de
+    wedstrijd in het platform) en de meters kloppen ook daar.
+    """
+    return speelveld_m + 2.0 * doelgebied_diepte_m
 
 
-def doellijn_norm(doelgebied_diepte_m: float = STANDAARD_DOELGEBIED_DIEPTE_M) -> float:
+def doellijn_norm(
+    doelgebied_diepte_m: float = STANDAARD_DOELGEBIED_DIEPTE_M,
+    speelveld_m: float = SPEELVELD_LENGTE_M,
+) -> float:
     """Genormaliseerde y van de doellijn aan de y=0-zijde (uit-zijde = 1 − dit).
 
     Spiegel van goalLineNorm.
     """
-    return doelgebied_diepte_m / totale_lengte_m(doelgebied_diepte_m)
+    return doelgebied_diepte_m / totale_lengte_m(doelgebied_diepte_m, speelveld_m)
 
 
-def vrijeworplijn_norm(doelgebied_diepte_m: float = STANDAARD_DOELGEBIED_DIEPTE_M) -> float:
+def vrijeworplijn_norm(
+    doelgebied_diepte_m: float = STANDAARD_DOELGEBIED_DIEPTE_M,
+    speelveld_m: float = SPEELVELD_LENGTE_M,
+) -> float:
     """Genormaliseerde y van de vrijeworplijn aan de y=0-zijde (4 m vóór de doellijn).
 
     Spiegel van freeThrowNorm.
     """
-    return (doelgebied_diepte_m + VRIJEWORP_OFFSET_M) / totale_lengte_m(doelgebied_diepte_m)
+    return (doelgebied_diepte_m + VRIJEWORP_OFFSET_M) / totale_lengte_m(doelgebied_diepte_m, speelveld_m)
 
 
 def naar_meters(
     x_norm: float,
     y_norm: float,
     doelgebied_diepte_m: float = STANDAARD_DOELGEBIED_DIEPTE_M,
+    breedte_m: float = BREEDTE_M,
+    speelveld_m: float = SPEELVELD_LENGTE_M,
 ) -> tuple[float, float]:
-    """Genormaliseerd punt → meters. Spiegel van toMeters."""
-    return (x_norm * BREEDTE_M, y_norm * totale_lengte_m(doelgebied_diepte_m))
+    """Genormaliseerd punt → meters. Spiegel van toMeters (echte maten optioneel)."""
+    return (x_norm * breedte_m, y_norm * totale_lengte_m(doelgebied_diepte_m, speelveld_m))
 
 
 def naar_norm(
     x_m: float,
     y_m: float,
     doelgebied_diepte_m: float = STANDAARD_DOELGEBIED_DIEPTE_M,
+    breedte_m: float = BREEDTE_M,
+    speelveld_m: float = SPEELVELD_LENGTE_M,
 ) -> tuple[float, float]:
     """Meters → genormaliseerd punt. Inverse van naar_meters."""
-    return (x_m / BREEDTE_M, y_m / totale_lengte_m(doelgebied_diepte_m))
+    return (x_m / breedte_m, y_m / totale_lengte_m(doelgebied_diepte_m, speelveld_m))
 
 
 def afstand_m(
@@ -88,6 +106,7 @@ def in_doelgebied(
     y_norm: float,
     doelgebied_diepte_m: float = STANDAARD_DOELGEBIED_DIEPTE_M,
     x_norm: float | None = None,
+    speelveld_m: float = SPEELVELD_LENGTE_M,
 ) -> bool:
     """Ligt de genormaliseerde y in één van BEIDE doelgebieden?
 
@@ -100,7 +119,7 @@ def in_doelgebied(
     """
     if x_norm is not None and not 0.0 <= x_norm <= 1.0:
         return False
-    g = doellijn_norm(doelgebied_diepte_m)
+    g = doellijn_norm(doelgebied_diepte_m, speelveld_m)
     return y_norm < g or y_norm > 1.0 - g
 
 
@@ -118,6 +137,8 @@ class Kruispunt:
 
 def kruispunten(
     doelgebied_diepte_m: float = STANDAARD_DOELGEBIED_DIEPTE_M,
+    breedte_m: float = BREEDTE_M,
+    speelveld_m: float = SPEELVELD_LENGTE_M,
 ) -> list[Kruispunt]:
     """Alle gekende lijn-kruispunten voor de kalibratie.
 
@@ -126,7 +147,7 @@ def kruispunten(
     zijlijnen = 14 punten. Volgorde: van thuis (y=0) naar uit (y=1), telkens
     eerst links (x=0) dan rechts (x=14 m).
     """
-    lengte = totale_lengte_m(doelgebied_diepte_m)
+    lengte = totale_lengte_m(doelgebied_diepte_m, speelveld_m)
     dwarslijnen: list[tuple[str, float]] = [
         ('achterlijn_thuis', 0.0),
         ('doellijn_thuis', doelgebied_diepte_m),
@@ -136,7 +157,7 @@ def kruispunten(
         ('doellijn_uit', lengte - doelgebied_diepte_m),
         ('achterlijn_uit', lengte),
     ]
-    zijlijnen: list[tuple[str, float]] = [('links', 0.0), ('rechts', BREEDTE_M)]
+    zijlijnen: list[tuple[str, float]] = [('links', 0.0), ('rechts', breedte_m)]
 
     punten: list[Kruispunt] = []
     nummer = 1
@@ -148,7 +169,7 @@ def kruispunten(
                     label=f'{lijn_label}_{zijde_label}',
                     x_m=x_m,
                     y_m=y_m,
-                    x_norm=x_m / BREEDTE_M,
+                    x_norm=x_m / breedte_m,
                     y_norm=y_m / lengte,
                 )
             )
@@ -188,6 +209,8 @@ def aanbevolen_labels(
 
 def kruispunt_per_label(
     doelgebied_diepte_m: float = STANDAARD_DOELGEBIED_DIEPTE_M,
+    breedte_m: float = BREEDTE_M,
+    speelveld_m: float = SPEELVELD_LENGTE_M,
 ) -> dict[str, Kruispunt]:
     """Kruispunten geïndexeerd op label (kleine letters), voor headless kalibratie."""
-    return {k.label: k for k in kruispunten(doelgebied_diepte_m)}
+    return {k.label: k for k in kruispunten(doelgebied_diepte_m, breedte_m, speelveld_m)}

@@ -200,6 +200,7 @@ export default async function AnalyseDetailPage({ params }: { params: Promise<{ 
               }))}
               teams={teamNames}
               goalAreaDepth={state.match.goalAreaDepth}
+              speelveldM={state.match.veldSpeelveld}
               matchLabel={[reeks, datum].filter(Boolean).join(' · ')}
             />
           </ErrorCatch>
@@ -231,6 +232,7 @@ export default async function AnalyseDetailPage({ params }: { params: Promise<{ 
               shots={stats.shots}
               teams={teamNames}
               goalAreaDepth={state.match.goalAreaDepth}
+              speelveldM={state.match.veldSpeelveld}
               momentumGoals={momentumGoals}
               momentumTimeouts={momentumTimeouts}
               teamColors={teamColors}

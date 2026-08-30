@@ -1,4 +1,4 @@
-import { FIELD, totalLengthM } from '@/lib/field'
+import { FIELD, totalLengthM, veldMaten } from '@/lib/field'
 import { getPayloadClient } from '@/lib/payload-client'
 
 import { cvAuthorized } from '../cv-auth'
@@ -38,7 +38,7 @@ interface RuwEvent {
 const isFiniteNumber = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v)
 
 /** Valideer één event uit de pipeline; geeft de weiger-reden (NL) of null als het geldig is. */
-function valideerEvent(e: RuwEvent, matchId: number, veldLengteM: number): string | null {
+function valideerEvent(e: RuwEvent, matchId: number, veldLengteM: number, veldBreedteM: number): string | null {
   if (typeof e !== 'object' || e === null) return 'Event is geen object.'
   if (e.match_id != null && Number(e.match_id) !== matchId) {
     return `match_id ${String(e.match_id)} komt niet overeen met de wedstrijd (${matchId}).`
@@ -59,8 +59,8 @@ function valideerEvent(e: RuwEvent, matchId: number, veldLengteM: number): strin
     const zone = e.zone as { in_doelgebied?: unknown; x_m?: unknown; y_m?: unknown }
     if (typeof zone !== 'object') return 'zone moet een object of null zijn.'
     if (typeof zone.in_doelgebied !== 'boolean') return 'zone.in_doelgebied moet een boolean zijn.'
-    if (!isFiniteNumber(zone.x_m) || zone.x_m < 0 || zone.x_m > FIELD.widthM) {
-      return `zone.x_m valt buiten het veld (0..${FIELD.widthM} m).`
+    if (!isFiniteNumber(zone.x_m) || zone.x_m < 0 || zone.x_m > veldBreedteM) {
+      return `zone.x_m valt buiten het veld (0..${veldBreedteM} m).`
     }
     if (!isFiniteNumber(zone.y_m) || zone.y_m < 0 || zone.y_m > veldLengteM) {
       return `zone.y_m valt buiten het veld (0..${veldLengteM} m bij deze doelgebied-diepte).`
@@ -130,14 +130,19 @@ export async function POST(req: Request) {
     return Response.json({ error: 'Wedstrijd niet gevonden.' }, { status: 404 })
   }
   // Zone-bounds hangen af van de doelgebied-diepte van dít terrein (zie src/lib/field.ts).
-  const veldLengteM = totalLengthM(match.goalAreaDepth ?? FIELD.defaultGoalAreaDepthM)
+  // Zone-bounds tegen de ECHTE terreinmaten van deze wedstrijd (leeg = reglementair).
+  const maten = veldMaten({
+    ...(match.veldBreedte != null ? { breedteM: match.veldBreedte } : {}),
+    ...(match.veldSpeelveld != null ? { speelveldM: match.veldSpeelveld } : {}),
+  })
+  const veldLengteM = totalLengthM(match.goalAreaDepth ?? FIELD.defaultGoalAreaDepthM, maten)
 
   let aanvaard = 0
   const geweigerd: { index: number; reden: string }[] = []
 
   for (let index = 0; index < body.events.length; index++) {
     const e = body.events[index] as RuwEvent
-    const reden = valideerEvent(e, matchId, veldLengteM)
+    const reden = valideerEvent(e, matchId, veldLengteM, maten.breedteM)
     if (reden) {
       geweigerd.push({ index, reden })
       continue

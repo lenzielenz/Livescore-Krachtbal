@@ -55,6 +55,7 @@ export function AnalyseDetailView({
   shots,
   teams,
   goalAreaDepth,
+  speelveldM,
   momentumGoals,
   momentumTimeouts = [],
   teamColors,
@@ -64,6 +65,8 @@ export function AnalyseDetailView({
   shots: ShotPoint[]
   teams: { home: string; away: string }
   goalAreaDepth: number
+  /** Echte speelveldlengte (m); leeg = reglementair 26 m. */
+  speelveldM?: number | null
   momentumGoals: Goal[]
   momentumTimeouts?: Timeout[]
   teamColors?: { home: string | null; away: string | null }
@@ -133,13 +136,13 @@ export function AnalyseDetailView({
           <PlayerFocus p={focus} team={focus.teamSide === 'home' ? teams.home : teams.away} />
           {/* hideShotmap: de grote veldkaart bovenaan de pagina toont het veld al (met dezelfde
               spelerfilter) — hier nog eens een veld zou dubbel zijn. */}
-          <MatchStats key={`p${focus.playerId}`} stats={stats} shots={shots} teams={teams} goalAreaDepth={goalAreaDepth} focusPlayerId={focus.playerId} matchLabel={matchLabel} hideShotmap />
+          <MatchStats key={`p${focus.playerId}`} stats={stats} shots={shots} teams={teams} goalAreaDepth={goalAreaDepth} speelveldM={speelveldM ?? undefined} focusPlayerId={focus.playerId} matchLabel={matchLabel} hideShotmap />
         </>
       ) : (
         <>
           <MatchRecap stats={stats} teams={teams} />
           <AnalyseCharts stats={stats} teams={teams} />
-          <MatchStats key="match" stats={stats} shots={shots} teams={teams} goalAreaDepth={goalAreaDepth} matchLabel={matchLabel} hideShotmap />
+          <MatchStats key="match" stats={stats} shots={shots} teams={teams} goalAreaDepth={goalAreaDepth} speelveldM={speelveldM ?? undefined} matchLabel={matchLabel} hideShotmap />
         </>
       )}
     </>

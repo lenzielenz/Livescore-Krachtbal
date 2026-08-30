@@ -1,4 +1,5 @@
 import { FIELD, toMeters } from '@/lib/field'
+import type { VeldMaten } from '@/lib/field'
 import { getPayloadClient } from '@/lib/payload-client'
 
 import { cvAuthorized } from '../../../cv-auth'
@@ -46,6 +47,11 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   }
 
   const goalAreaDepth = match.goalAreaDepth ?? FIELD.defaultGoalAreaDepthM
+  // Echte terreinmaten (opgemeten, per wedstrijd): bepalen de meters van elke landing.
+  const maten: Partial<VeldMaten> = {
+    ...(match.veldBreedte != null ? { breedteM: match.veldBreedte } : {}),
+    ...(match.veldSpeelveld != null ? { speelveldM: match.veldSpeelveld } : {}),
+  }
   const videoOffsetH1 = typeof match.videoOffsetH1 === 'number' ? match.videoOffsetH1 : null
   const videoOffsetH2 = typeof match.videoOffsetH2 === 'number' ? match.videoOffsetH2 : null
   const homeTeamId = relId(match.homeTeam)
@@ -65,7 +71,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     const half = t.period ?? 1
     const offset = half === 2 ? videoOffsetH2 : videoOffsetH1
     const gameClock = t.gameClock ?? 0
-    const landing = toMeters({ x: t.landingX, y: t.landingY }, goalAreaDepth)
+    const landing = toMeters({ x: t.landingX, y: t.landingY }, goalAreaDepth, maten)
     const player =
       typeof t.player === 'object' && t.player !== null
         ? (t.player as { shirtNumber?: number | null })
@@ -93,6 +99,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       videoOffsetH1,
       videoOffsetH2,
       goalAreaDepth,
+      veldBreedteM: match.veldBreedte ?? null,
+      veldSpeelveldM: match.veldSpeelveld ?? null,
       ploegen: { home: teamNaam(match.homeTeam), away: teamNaam(match.awayTeam) },
     },
     labels,

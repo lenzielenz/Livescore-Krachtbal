@@ -84,7 +84,13 @@ def parse_punt_argument(tekst: str, labels: dict[str, veld.Kruispunt]) -> dict:
     return {'label': k.label, 'beeld_px': [px, py], 'veld_m': [k.x_m, k.y_m]}
 
 
-def verzamel_interactief(beeldpad: Path, diepte: float, positie: str | None = None) -> list[dict]:
+def verzamel_interactief(
+    beeldpad: Path,
+    diepte: float,
+    positie: str | None = None,
+    breedte: float = veld.BREEDTE_M,
+    speelveld: float = veld.SPEELVELD_LENGTE_M,
+) -> list[dict]:
     """Interactieve modus: klik de genummerde kruispunten aan in een OpenCV-venster.
 
     Met een camerapositie (--positie) beperkt de lijst zich tot de kruispunten
@@ -96,7 +102,7 @@ def verzamel_interactief(beeldpad: Path, diepte: float, positie: str | None = No
     if beeld is None:
         _fout(f'kon beeld niet lezen: {beeldpad}')
 
-    doelen = veld.kruispunten(diepte)
+    doelen = veld.kruispunten(diepte, breedte, speelveld)
     if positie is not None:
         toegestaan = set(veld.aanbevolen_labels(positie, diepte))
         doelen = [k for k in doelen if k.label in toegestaan]
@@ -183,6 +189,7 @@ def fit_homografie(punten: list[dict]) -> list[list[float]]:
 
 def schrijf_kalibratie(
     pad: Path, matrix: list[list[float]], punten: list[dict], diepte: float, beeldpad: Path | None,
+    breedte: float = veld.BREEDTE_M, speelveld: float = veld.SPEELVELD_LENGTE_M,
 ) -> None:
     data = {
         'versie': 1,
@@ -190,8 +197,9 @@ def schrijf_kalibratie(
         'beeld': {'pad': str(beeldpad) if beeldpad else None},
         'veld': {
             'doelgebied_diepte_m': diepte,
-            'breedte_m': veld.BREEDTE_M,
-            'totale_lengte_m': veld.totale_lengte_m(diepte),
+            'breedte_m': breedte,
+            'speelveld_m': speelveld,
+            'totale_lengte_m': veld.totale_lengte_m(diepte, speelveld),
         },
         'punten': punten,
         'matrix_beeld_naar_veld': matrix,
@@ -277,9 +285,12 @@ def draai_kalibratie_180(data: dict) -> dict:
     veldcoördinaat én label, zodat het bestand consistent blijft en het
     reprojectierapport identiek. Puur stdlib — geen herklikken, geen cv2.
     """
-    diepte = float(data.get('doelgebied_diepte_m') or veld.STANDAARD_DOELGEBIED_DIEPTE_M)
-    lengte = veld.totale_lengte_m(diepte)
-    b = veld.BREEDTE_M
+    veld_info = data.get('veld') or {}
+    diepte = float(data.get('doelgebied_diepte_m') or veld_info.get('doelgebied_diepte_m')
+                   or veld.STANDAARD_DOELGEBIED_DIEPTE_M)
+    speelveld = float(veld_info.get('speelveld_m') or veld.SPEELVELD_LENGTE_M)
+    lengte = veld.totale_lengte_m(diepte, speelveld)
+    b = float(veld_info.get('breedte_m') or veld.BREEDTE_M)
     r = [[-1.0, 0.0, b], [0.0, -1.0, lengte], [0.0, 0.0, 1.0]]
     h = data['matrix_beeld_naar_veld']
     nieuw_h = [[sum(r[i][k] * h[k][j] for k in range(3)) for j in range(3)] for i in range(3)]
@@ -355,6 +366,16 @@ def main(argv: list[str] | None = None) -> None:
         help='doelgebied-diepte van dit terrein in meters (standaard 10, nieuwe terreinen 15)',
     )
     parser.add_argument(
+        '--breedte', type=float, default=veld.BREEDTE_M,
+        help='opgemeten veldbreedte in meters (standaard reglementair 14) — zelfde waarde als '
+             '"veldBreedte" op de wedstrijd in het platform',
+    )
+    parser.add_argument(
+        '--speelveld', type=float, default=veld.SPEELVELD_LENGTE_M,
+        help='opgemeten speelveldlengte tussen de doellijnen (standaard reglementair 26) — '
+             'zelfde waarde als "veldSpeelveld" op de wedstrijd',
+    )
+    parser.add_argument(
         '--uit', type=Path, default=Path('kalibratie.json'),
         help='uitvoerbestand voor de kalibratie-JSON (standaard kalibratie.json)',
     )
@@ -407,13 +428,14 @@ def main(argv: list[str] | None = None) -> None:
 
     # Punten verzamelen: headless (--punt) of interactief (--beeld)
     if args.punt:
-        labels = veld.kruispunt_per_label(args.diepte)
+        labels = veld.kruispunt_per_label(args.diepte, args.breedte, args.speelveld)
         punten = [parse_punt_argument(tekst, labels) for tekst in args.punt]
         dubbel = {p['label'] for p in punten if [q['label'] for q in punten].count(p['label']) > 1}
         if dubbel:
             _fout(f'label(s) meermaals opgegeven: {", ".join(sorted(dubbel))}')
     elif args.beeld is not None:
-        punten = verzamel_interactief(args.beeld, args.diepte, positie=args.positie)
+        punten = verzamel_interactief(args.beeld, args.diepte, positie=args.positie,
+                                      breedte=args.breedte, speelveld=args.speelveld)
     else:
         parser.error('geef --beeld (interactief) of minstens vier --punt argumenten (headless)')
 
@@ -423,7 +445,8 @@ def main(argv: list[str] | None = None) -> None:
     matrix = fit_homografie(punten)
     # Spiegel-detectie vóór het wegschrijven: een gespiegelde kalibratie verziekt élke meting.
     controleer_orientatie(matrix, punten)
-    schrijf_kalibratie(args.uit, matrix, punten, args.diepte, args.beeld)
+    schrijf_kalibratie(args.uit, matrix, punten, args.diepte, args.beeld,
+                       breedte=args.breedte, speelveld=args.speelveld)
     druk_reprojectierapport(matrix, punten, args.diepte)
 
 

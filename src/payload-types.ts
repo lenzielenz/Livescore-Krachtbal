@@ -643,9 +643,17 @@ export interface Match {
   date: string;
   status: 'scheduled' | 'live' | 'finished';
   /**
-   * Min. 10 m (15 m voor nieuwe terreinen). Bepaalt de veldlengte en de afstandsberekening.
+   * Min. 10 m (15 m voor nieuwe terreinen, 5 m in zalen). Bepaalt de veldlengte en de afstandsberekening.
    */
   goalAreaDepth: number;
+  /**
+   * Opgemeten breedte van dít terrein. Leeg = reglementair 14 m.
+   */
+  veldBreedte?: number | null;
+  /**
+   * Opgemeten afstand tussen de twee doellijnen. Leeg = reglementair 26 m.
+   */
+  veldSpeelveld?: number | null;
   /**
    * Aanvinken voor een oefen-/uitlegwedstrijd. Mensen kunnen die starten om de live-registratie te leren; alle startcontroles worden overgeslagen.
    */
@@ -1869,6 +1877,8 @@ export interface MatchesSelect<T extends boolean = true> {
   date?: T;
   status?: T;
   goalAreaDepth?: T;
+  veldBreedte?: T;
+  veldSpeelveld?: T;
   isDemo?: T;
   analyseOnly?: T;
   homeCoach?: T;
