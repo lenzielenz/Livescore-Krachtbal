@@ -14,8 +14,10 @@ export const dynamic = 'force-dynamic'
 // Daarom is er géén guard op een al gereviewd voorstel.
 //
 // Auth: zelfde als de andere cv-routes — Bearer CV_BRIDGE_TOKEN of federatie-login (cv-auth.ts).
-// Contract: body { actie: 'bevestig' | 'wijsaf', worpType?, eventType? };
-// 200 { ok, event: { id, reviewed, verdict, worpType, eventType } }; 400 { error }; 401; 404.
+// Contract: body { actie: 'bevestig' | 'wijsaf', worpType?, eventType?, side?, rugnummer? }
+// (side 'home'|'away'; rugnummer 0..99 of null om leeg te maken — fase 3-speler-correcties);
+// 200 { ok, event: { id, reviewed, verdict, worpType, eventType, side, rugnummer } };
+// 400 { error }; 401; 404.
 
 const EVENT_TYPES = ['worp', 'vangst', 'doelpunt', 'buitenspel'] as const
 type CvEventType = (typeof EVENT_TYPES)[number]
@@ -35,7 +37,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     return Response.json({ error: 'Geen toegang.' }, { status: 401 })
   }
 
-  let body: { actie?: unknown; worpType?: unknown; eventType?: unknown }
+  let body: { actie?: unknown; worpType?: unknown; eventType?: unknown; side?: unknown; rugnummer?: unknown }
   try {
     body = await req.json()
   } catch {
@@ -53,6 +55,17 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       { error: 'eventType is onbekend (worp/vangst/doelpunt/buitenspel).' },
       { status: 400 },
     )
+  }
+  if (body.side != null && body.side !== 'home' && body.side !== 'away') {
+    return Response.json({ error: "side moet 'home' of 'away' zijn." }, { status: 400 })
+  }
+  const heeftRugnummer = 'rugnummer' in body
+  if (
+    heeftRugnummer &&
+    body.rugnummer !== null &&
+    (!Number.isInteger(body.rugnummer) || (body.rugnummer as number) < 0 || (body.rugnummer as number) > 99)
+  ) {
+    return Response.json({ error: 'rugnummer moet een geheel getal 0–99 zijn, of null.' }, { status: 400 })
   }
 
   const bestaand = await payload
@@ -75,6 +88,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         // Correcties overschrijven het voorstel; worpTypeOrigineel blijft de claim van het model.
         ...(body.worpType != null ? { worpType: body.worpType as WorpType } : {}),
         ...(body.eventType != null ? { eventType: body.eventType as CvEventType } : {}),
+        ...(body.side != null ? { side: body.side as 'home' | 'away' } : {}),
+        ...(heeftRugnummer ? { rugnummer: body.rugnummer as number | null } : {}),
       },
       depth: 0,
       overrideAccess: true,
@@ -91,6 +106,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       verdict: event.verdict,
       worpType: event.worpType ?? null,
       eventType: event.eventType,
+      side: event.side ?? null,
+      rugnummer: event.rugnummer ?? null,
     },
   })
 }

@@ -23,6 +23,11 @@ export interface CvVoorstel {
   verdict: 'bevestigd' | 'afgewezen' | null
   side: 'home' | 'away' | null
   rugnummer: number | null
+  /** Fase 2: landde de bal (volgens het model) in het doelgebied, en waar (veldmeters)? */
+  inDoelgebied: boolean
+  xM: number | null
+  yM: number | null
+  afstandM: number | null
 }
 
 const EVENT_NAAM: Record<CvVoorstel['eventType'], string> = {
@@ -119,7 +124,13 @@ export function CvReview({
 
   /** Het oordeel doorsturen volgens het review-contract (PATCH /api/cv/events/[id]). */
   const review = useCallback(
-    async (v: CvVoorstel, actie: 'bevestig' | 'wijsaf', worpType?: 'nek' | 'rug', eventType?: CvVoorstel['eventType']) => {
+    async (
+      v: CvVoorstel,
+      actie: 'bevestig' | 'wijsaf',
+      worpType?: 'nek' | 'rug',
+      eventType?: CvVoorstel['eventType'],
+      speler?: { side?: 'home' | 'away'; rugnummer?: number | null },
+    ) => {
       if (bezigId != null) return
       setBezigId(v.id)
       setFout(null)
@@ -135,6 +146,8 @@ export function CvReview({
                 verdict: actie === 'bevestig' ? 'bevestigd' : 'afgewezen',
                 worpType: worpType ?? x.worpType,
                 eventType: eventType ?? x.eventType,
+                side: speler?.side ?? x.side,
+                rugnummer: speler && 'rugnummer' in speler ? (speler.rugnummer ?? null) : x.rugnummer,
               }
             : x,
         ),
@@ -148,6 +161,8 @@ export function CvReview({
             actie,
             ...(worpType ? { worpType } : {}),
             ...(eventType ? { eventType } : {}),
+            ...(speler?.side ? { side: speler.side } : {}),
+            ...(speler && 'rugnummer' in speler ? { rugnummer: speler.rugnummer ?? null } : {}),
           }),
         })
         let data: { error?: string; event?: { reviewed?: boolean; verdict?: 'bevestigd' | 'afgewezen'; worpType?: 'nek' | 'rug' | null; eventType?: CvVoorstel['eventType'] } } = {}
@@ -311,7 +326,18 @@ export function CvReview({
                 {EVENT_NAAM[actief.eventType]}
                 {worpNaam(actief.worpType) ? ` · ${worpNaam(actief.worpType)}` : ''}
               </span>
-              {actief.rugnummer != null && <span className="va-cv-wie">#{actief.rugnummer}</span>}
+              {actief.side != null && (
+                <span className="va-cv-wie">
+                  {actief.side === 'home' ? 'thuis' : 'uit'}
+                  {actief.rugnummer != null ? ` #${actief.rugnummer}` : ''}
+                </span>
+              )}
+              {actief.xM != null && actief.yM != null && (
+                <span className="va-cv-zone" title="Landingspunt volgens het model (veldmeters)">
+                  {actief.inDoelgebied ? '🎯 doelgebied' : 'veld'} · {actief.xM.toFixed(1)}, {actief.yM.toFixed(1)} m
+                  {actief.afstandM != null ? ` · worp ${actief.afstandM.toFixed(1)} m` : ''}
+                </span>
+              )}
               <span className="va-cv-conf" title="Zekerheid van het model">
                 {Math.round(actief.confidence * 100)}%
               </span>
@@ -360,6 +386,47 @@ export function CvReview({
                   </button>
                 </>
               )}
+              {/* Speler corrigeren (fase 3): team omklikken of het rugnummer intikken —
+                  bevestigt meteen, net als de andere correcties. */}
+              <span className="va-cv-speler">
+                <button
+                  type="button"
+                  className={`va-btn small${actief.side === 'home' ? ' aan' : ''}`}
+                  onClick={() => void review(actief, 'bevestig', undefined, undefined, { side: 'home' })}
+                  disabled={bezigId != null}
+                  title="Werper bij de thuisploeg zetten en bevestigen"
+                >
+                  thuis
+                </button>
+                <button
+                  type="button"
+                  className={`va-btn small${actief.side === 'away' ? ' aan' : ''}`}
+                  onClick={() => void review(actief, 'bevestig', undefined, undefined, { side: 'away' })}
+                  disabled={bezigId != null}
+                  title="Werper bij de uitploeg zetten en bevestigen"
+                >
+                  uit
+                </button>
+                <input
+                  type="number"
+                  min={0}
+                  max={99}
+                  placeholder="nr"
+                  defaultValue={actief.rugnummer ?? ''}
+                  key={`nr-${actief.id}`}
+                  disabled={bezigId != null}
+                  onKeyDown={(e) => {
+                    if (e.key !== 'Enter') return
+                    e.preventDefault()
+                    e.stopPropagation()
+                    const ruw = (e.target as HTMLInputElement).value.trim()
+                    const nr = ruw === '' ? null : Number(ruw)
+                    if (nr !== null && (!Number.isInteger(nr) || nr < 0 || nr > 99)) return
+                    void review(actief, 'bevestig', undefined, undefined, { rugnummer: nr })
+                  }}
+                  title="Rugnummer intikken en met Enter bevestigen (leeg = wissen)"
+                />
+              </span>
               {/* Soort corrigeren: een als "worp" gedetecteerde vangst moet ook in de browser
                   omgezet kunnen worden — dat is precies de correctielus voor hertraining. */}
               <label className="va-cv-soort">

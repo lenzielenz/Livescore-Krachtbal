@@ -254,3 +254,30 @@
   background: var(--bg, #0c1018);
   color: var(--txt, #e7ecf3);
 }
+
+/* Fase 2/3 in het reviewpaneel: landing/afstand als infochip en de speler-correcties. */
+.va-cv-zone {
+  font-size: 0.78rem;
+  color: var(--dim, #93a3b5);
+  white-space: nowrap;
+}
+.va-cv-speler {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.va-cv-speler input {
+  width: 3.4em;
+  font: inherit;
+  font-size: 0.82rem;
+  padding: 4px 6px;
+  border-radius: 8px;
+  border: 1px solid var(--line, #2a3140);
+  background: var(--bg, #0c1018);
+  color: var(--txt, #e7ecf3);
+}
+/* De actieve teamkeuze licht op, zodat je ziet wat het model (of je correctie) al koos. */
+.va-btn.small.aan {
+  border-color: var(--accent, #4ba3ff);
+  color: var(--accent, #4ba3ff);
+}

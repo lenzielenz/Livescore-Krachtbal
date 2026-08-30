@@ -15,9 +15,10 @@ de koppeling loopt uitsluitend via de HTTP-importbrug (`/api/cv/…`).
 | ---- | ------ | ------ |
 | **0** | Fundering: video-ingest, veldkalibratie (homografie), importbrug, sync van bestaande manuele tags naar weak labels. **Geen detectie/ML.** | deze map |
 | **1** | Kandidaat-worpen automatisch vinden (bewegingsenergie, optioneel pose), als voorstellen op de review-tijdlijn, precision/recall-rapport | deze map |
-| 2 | Baldetectie + tracking op de gekalibreerde frames; eventherkenning (worp/vangst/landing) uit baltrajecten | later |
-| 3 | Worptype-classificatie (ML, getraind op de reviewcorrecties) + spelertoewijzing | later |
-| 4 | Live-inferentie langs het veld | later |
+| **2** | Bal-landingspunt + homografie → zone (doelgebied ja/nee), afstand en score_delta (rugworp-doelpunt telt dubbel) | deze map (`landing.py`) |
+| **3** | Spelersidentificatie: team via truitjeskleur-clustering, rugnummer via de review-lus (OCR-backend later) | deze map (`spelers.py`) |
+| 4 | Auto-highlights per speler/doelpunt (FFmpeg-clips uit bevestigde events) | later |
+| 5 | Volledige speler-tracking → heatmaps | later |
 
 ## Installatie
 
@@ -209,6 +210,59 @@ python3 cv/detect_worpen.py --demo labels.jsonl --seed 7 --uit detecties.jsonl
 python3 cv/evaluate.py --detecties detecties.jsonl --labels labels.jsonl
 python3 cv/upload.py --bestand detecties.jsonl --base https://krachtbal.live
 ```
+
+### 8. `landing.py` — bal-landing → zone + afstand (fase 2)
+
+Verrijkt de detecties van fase 1 met het landingspunt: zone (in het doelgebied
+of niet, veldmeters), de geschatte worpafstand en de `score_delta` volgens het
+reglement — **een rugworp-doelpunt telt dubbel** (+2, §6.6), dé regel die
+generieke sport-CV niet kent.
+
+```bash
+# Met video (vereist opencv + een kalibratie van calibrate.py):
+python3 cv/landing.py --video match.mp4 --detecties det.jsonl \
+    --kalibratie kalibratie.json --uit verrijkt.jsonl
+
+# Zonder video (oefent de lus en de metriek, reproduceerbaar):
+python3 cv/landing.py --demo --detecties det.jsonl --labels labels.jsonl \
+    --seed 7 --sigma-m 0.8 --uit verrijkt.jsonl
+```
+
+De videomodus is een v0.1-baseline (achtergrondsubtractie + balgrootte-filter,
+landing = einde van de neerwaartse beeldbeweging, homografie naar veldmeters).
+Ziet de camera de bal niet, dan blijft de zone bewust leeg — beter géén zone
+dan een verzonnen zone; de reviewer ziet het moment nog altijd op de tijdlijn.
+
+### 9. `spelers.py` — team + rugnummer (fase 3)
+
+```bash
+# Met video: HOG-persoonsdetector + truitjeskleur-clustering (2-means op de
+# torso-tint). Welke cluster "thuis" is weet de camera niet: --wissel draait om.
+python3 cv/spelers.py --video match.mp4 --detecties verrijkt.jsonl --uit met_spelers.jsonl
+
+# Zonder video:
+python3 cv/spelers.py --demo --detecties verrijkt.jsonl --labels labels.jsonl \
+    --seed 7 --uit met_spelers.jsonl
+```
+
+Rugnummers blijven in v0.1 leeg (de OCR-stap uit het plan — pose-crop + PARSeq —
+is een latere, optionele backend): **een leeg rugnummer is een bewuste uitkomst**,
+de reviewer vult het in het paneel aan en dat wordt trainingsdata.
+
+## Acceptatie fase 2 en 3
+
+- [ ] `evaluate.py` toont de sectie **"Zone en landing"**: zone-accuraatheid
+      (in/uit doelgebied) en landing-MAE in meters (richtwaarde uit het plan:
+      MAE tot ~1 m bij een goede kalibratie), plus afstand-MAE wanneer beide
+      kanten een afstand dragen.
+- [ ] `evaluate.py` toont de sectie **"Spelersidentificatie"**: team-accuraatheid
+      en rugnummer-accuraatheid óver de ingevulde nummers (leeg ≠ fout — leeg
+      betekent "reviewer vult aan").
+- [ ] In het reviewpaneel: landing/afstand zichtbaar, team omklikbaar
+      (thuis/uit) en rugnummer intikbaar — elke correctie bevestigt meteen en
+      wordt ground truth.
+- [ ] De hele demo-lus draait zonder video: sync → detect --demo →
+      landing --demo → spelers --demo → evaluate → upload → reviewen.
 
 ## Event-JSON (de brug Python ↔ Payload)
 

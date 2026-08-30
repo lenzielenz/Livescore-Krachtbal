@@ -246,6 +246,8 @@ describe('CV-brug', () => {
         verdict: 'bevestigd',
         worpType: 'nek',
         eventType: 'worp',
+        side: 'home',
+        rugnummer: 4,
       },
     })
 
@@ -288,6 +290,32 @@ describe('CV-brug', () => {
     expect(doc.worpTypeOrigineel).toBe('nek')
     expect(doc.verdict).toBe('bevestigd')
     expect(doc.reviewed).toBe(true)
+  })
+
+  it('PATCH speler-correcties (fase 3): side en rugnummer, rugnummer ook leegmaken', async () => {
+    const { matchId } = await maakWedstrijd()
+    const voorstel = await maakVoorstel(matchId)
+
+    const res = await patchReview(
+      voorstel.id as number,
+      { actie: 'bevestig', side: 'away', rugnummer: 12 },
+      TOKEN,
+    )
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as { ok: boolean; event: Record<string, unknown> }
+    expect(body.event.side).toBe('away')
+    expect(body.event.rugnummer).toBe(12)
+
+    // Expliciet null maakt het rugnummer weer leeg (laag vertrouwen hoort leeg te blijven).
+    const res2 = await patchReview(voorstel.id as number, { actie: 'bevestig', rugnummer: null }, TOKEN)
+    expect(res2.status).toBe(200)
+    const body2 = (await res2.json()) as { ok: boolean; event: Record<string, unknown> }
+    expect(body2.event.rugnummer).toBeNull()
+    expect(body2.event.side).toBe('away')
+
+    // Ongeldig: side buiten de enum en rugnummer buiten 0–99.
+    expect((await patchReview(voorstel.id as number, { actie: 'bevestig', side: 'links' }, TOKEN)).status).toBe(400)
+    expect((await patchReview(voorstel.id as number, { actie: 'bevestig', rugnummer: 150 }, TOKEN)).status).toBe(400)
   })
 
   it('PATCH wijsaf: reviewed=true en verdict=afgewezen, velden blijven staan', async () => {

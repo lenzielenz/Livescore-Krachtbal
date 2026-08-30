@@ -151,6 +151,10 @@ export default async function AnalyseDetailPage({ params }: { params: Promise<{ 
       verdict: e.verdict ?? null,
       side: e.side ?? null,
       rugnummer: e.rugnummer ?? null,
+      inDoelgebied: e.inDoelgebied === true,
+      xM: e.xM ?? null,
+      yM: e.yM ?? null,
+      afstandM: e.afstandM ?? null,
     }))
   }
   // Video koppelen/ijken mag wie de analyse beheert: de federatie, of de eigenaar van deze

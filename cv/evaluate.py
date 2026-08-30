@@ -133,6 +133,45 @@ def evalueer(labels: list[dict], detecties: list[dict], venster: float) -> dict:
             juist += int(label_type == detectie_type)
     accuraatheid = juist / paren_met_type if paren_met_type > 0 else None
 
+    # Fase 2 — zone en landing: enkel over paren waar béíde kanten een zone dragen.
+    zone_paren = 0
+    zone_juist = 0
+    landing_fouten: list[float] = []
+    afstand_fouten: list[float] = []
+    for li, di, _ in matches:
+        lz, dz = worp_labels[li].get('zone'), detecties[di].get('zone')
+        if lz and dz:
+            zone_paren += 1
+            zone_juist += int(bool(lz.get('in_doelgebied')) == bool(dz.get('in_doelgebied')))
+            try:
+                landing_fouten.append(
+                    ((float(lz['x_m']) - float(dz['x_m'])) ** 2 + (float(lz['y_m']) - float(dz['y_m'])) ** 2) ** 0.5
+                )
+            except (KeyError, TypeError, ValueError):
+                pass
+        la, da = worp_labels[li].get('afstand_m'), detecties[di].get('afstand_m')
+        if isinstance(la, (int, float)) and isinstance(da, (int, float)):
+            afstand_fouten.append(abs(float(la) - float(da)))
+
+    # Fase 3 — speler: teamtoewijzing en rugnummer. Een leeg rugnummer is géén fout
+    # (laag vertrouwen hoort leeg te blijven voor review) maar telt apart als "niet ingevuld".
+    team_paren = 0
+    team_juist = 0
+    nummer_labels = 0
+    nummer_ingevuld = 0
+    nummer_juist = 0
+    for li, di, _ in matches:
+        ls, ds = worp_labels[li].get('speler'), detecties[di].get('speler')
+        if ls and ds and ls.get('team') in ('home', 'away') and ds.get('team') in ('home', 'away'):
+            team_paren += 1
+            team_juist += int(ls['team'] == ds['team'])
+        if ls and ls.get('rugnummer') is not None:
+            nummer_labels += 1
+            dn = (ds or {}).get('rugnummer')
+            if dn is not None:
+                nummer_ingevuld += 1
+                nummer_juist += int(int(dn) == int(ls['rugnummer']))
+
     return {
         'venster_s': venster,
         'labels': len(worp_labels),
@@ -152,6 +191,19 @@ def evalueer(labels: list[dict], detecties: list[dict], venster: float) -> dict:
             'accuraatheid': accuraatheid,
             # rijen = label (waarheid), kolommen = detectie (voorspelling)
             'verwarringsmatrix': matrix,
+        },
+        'zone': {
+            'paren': zone_paren,
+            'accuraatheid': zone_juist / zone_paren if zone_paren > 0 else None,
+            'landing_mae_m': sum(landing_fouten) / len(landing_fouten) if landing_fouten else None,
+            'afstand_mae_m': sum(afstand_fouten) / len(afstand_fouten) if afstand_fouten else None,
+        },
+        'speler': {
+            'team_paren': team_paren,
+            'team_accuraatheid': team_juist / team_paren if team_paren > 0 else None,
+            'rugnummer_labels': nummer_labels,
+            'rugnummer_ingevuld': nummer_ingevuld,
+            'rugnummer_accuraatheid': nummer_juist / nummer_ingevuld if nummer_ingevuld > 0 else None,
         },
     }
 
@@ -196,6 +248,31 @@ def formatteer_rapport(m: dict) -> str:
             rij = matrix[label_type]
             regels.append(
                 f'    {label_type:9s}{rij["nekworp"]:>9d}{rij["rugworp"]:>9d}'
+            )
+
+    # Fase 2 — zone/landing: enkel tonen zodra er zone-data is (fase 1-runs blijven schoon).
+    z = m['zone']
+    if z['paren'] > 0:
+        regels.append('')
+        regels.append(f'Zone en landing (fase 2, over {z["paren"]} paren met zone aan beide kanten)')
+        regels.append(f'  Zone-accuraatheid (in/uit doelgebied): {_getal(z["accuraatheid"])}')
+        regels.append(f'  Landing-MAE: {_getal(z["landing_mae_m"], 2)} m')
+        if z['afstand_mae_m'] is not None:
+            regels.append(f'  Afstand-MAE: {_getal(z["afstand_mae_m"], 2)} m')
+
+    # Fase 3 — speler: idem, enkel tonen zodra er spelersdata is.
+    sp = m['speler']
+    if sp['team_paren'] > 0 or sp['rugnummer_labels'] > 0:
+        regels.append('')
+        regels.append('Spelersidentificatie (fase 3)')
+        if sp['team_paren'] > 0:
+            regels.append(
+                f'  Team-accuraatheid: {_getal(sp["team_accuraatheid"])} (over {sp["team_paren"]} paren)'
+            )
+        if sp['rugnummer_labels'] > 0:
+            regels.append(
+                f'  Rugnummer: {sp["rugnummer_ingevuld"]} van {sp["rugnummer_labels"]} ingevuld, '
+                f'accuraatheid over de ingevulde: {_getal(sp["rugnummer_accuraatheid"])}'
             )
     return '\n'.join(regels)
 
