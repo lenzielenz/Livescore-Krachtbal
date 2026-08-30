@@ -121,6 +121,35 @@ def fysiek_per_spoor(
     return uit
 
 
+def _mmss(t: float) -> str:
+    return f'{int(t) // 60}:{int(t) % 60:02d}'
+
+
+def sjabloon_toewijzing(posities: list[dict], per_spoor: dict[int, dict]) -> dict[str, object]:
+    """Invulklaar wie-is-wie-bestand: per spoor een lege toewijzing + een hint
+    (wanneer het leefde, waar het gemiddeld stond, hoeveel het liep) zodat je op
+    de heatmap of in de video snel ziet welke speler het is."""
+    per_track: dict[int, list[tuple[float, float, float]]] = {}
+    for r in posities:
+        per_track.setdefault(int(r['track']), []).append((float(r['t']), float(r['x_m']), float(r['y_m'])))
+    sjabloon: dict[str, object] = {
+        '_uitleg': 'Vul per spoor team ("thuis"/"uit") en rugnummer in; laat ruis-sporen op null staan. '
+                   'Meerdere sporen mogen hetzelfde rugnummer krijgen (identiteitswissels tellen op).',
+    }
+    for track in sorted(per_track):
+        punten = sorted(per_track[track])
+        gem_x = sum(x for _, x, _ in punten) / len(punten)
+        gem_y = sum(y for _, _, y in punten) / len(punten)
+        f = per_spoor.get(track, {})
+        sjabloon[str(track)] = {
+            'team': None,
+            'rugnummer': None,
+            'hint': f'{_mmss(punten[0][0])}–{_mmss(punten[-1][0])} · gemiddeld ({gem_x:.1f}, {gem_y:.1f}) m '
+                    f'· {f.get("afstand_m", 0):g} m gelopen',
+        }
+    return sjabloon
+
+
 def demo_toewijzing() -> dict[str, dict]:
     """De acht demo-sporen van tracking.py --demo: 1-4 thuis, 5-8 uit."""
     wie: dict[str, dict] = {}
@@ -136,6 +165,8 @@ def bundel_per_speler(per_spoor: dict[int, dict], toewijzing: dict[str, dict]) -
     anoniem: list[int] = []
     for track, f in sorted(per_spoor.items()):
         wie = toewijzing.get(str(track))
+        if isinstance(wie, dict):
+            wie = {k: v for k, v in wie.items() if k != 'hint'}
         team = (wie or {}).get('team')
         rugnummer = (wie or {}).get('rugnummer')
         if team not in ('thuis', 'uit') or not isinstance(rugnummer, int):
@@ -191,6 +222,8 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument('--uit', type=Path, required=True, help='uitvoerbestand (JSON)')
     parser.add_argument('--toewijzing', type=Path, default=None,
                         help='JSON spoor → speler: {"1": {"team": "thuis", "rugnummer": 7}, …}')
+    parser.add_argument('--sjabloon', type=Path, default=None,
+                        help='schrijf een invulklaar toewijzingsbestand met hints per spoor naar dit pad')
     parser.add_argument('--demo', action='store_true',
                         help='gebruik de vaste toewijzing van de demo-sporen (1-4 thuis, 5-8 uit)')
     parser.add_argument('--sprint-drempel', type=float, default=SPRINT_DREMPEL_M_S,
@@ -224,6 +257,13 @@ def main(argv: list[str] | None = None) -> None:
         toewijzing = {}
 
     per_spoor = fysiek_per_spoor(posities, sprint_drempel=args.sprint_drempel, sprint_min_duur=args.sprint_duur)
+    if args.sjabloon is not None:
+        args.sjabloon.write_text(
+            json.dumps(sjabloon_toewijzing(posities, per_spoor), indent=2, ensure_ascii=False) + '\n',
+            encoding='utf-8',
+        )
+        print(f'Toewijzingssjabloon met hints → {args.sjabloon} (vul team + rugnummer in en draai '
+              f'opnieuw met --toewijzing {args.sjabloon})')
     spelers, anoniem = bundel_per_speler(per_spoor, toewijzing)
     spelers.sort(key=lambda s: (s['team'], s['rugnummer']))
 

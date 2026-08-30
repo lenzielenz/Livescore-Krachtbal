@@ -57,6 +57,8 @@ def bouw_stappen(
     kalibratie: Path | None,
     upload: bool,
     fps: float,
+    tracking: bool = False,
+    heatmap_png: bool = False,
 ) -> list[tuple[str, list[str]]]:
     """(omschrijving, argv)-lijst voor de hele pijplijn, in volgorde.
 
@@ -120,6 +122,41 @@ def bouw_stappen(
         stappen.append((
             'voorstellen uploaden naar de reviewbrug',
             py + [str(CV_MAP / 'upload.py'), '--base', base, '--match', str(match), '--bestand', str(met_spelers)],
+        ))
+    if tracking:
+        # Videotracking: posities → fysieke stats per speler → heatmap. In demo is de
+        # spoor-toewijzing bekend (vaste 8) en kan fysiek meteen mee uploaden; op echte
+        # video schrijft fysiek.py een invulsjabloon (wie.json) — de upload volgt daarna
+        # met --toewijzing (zie de slotmelding van dit commando).
+        posities = uitmap / 'posities.jsonl'
+        fysiek = uitmap / 'fysiek.json'
+        wie = uitmap / 'wie.json'
+        if demo:
+            stappen.append((
+                'videotracking (demo-sporen)',
+                py + [str(CV_MAP / 'tracking.py'), '--demo', '--seed', str(seed), '--uit', str(posities)],
+            ))
+            stappen.append((
+                'fysieke stats per speler (loopafstand, sprintjes, topsnelheid)',
+                py + [str(CV_MAP / 'fysiek.py'), '--posities', str(posities), '--demo', '--uit', str(fysiek)]
+                + (['--upload', '--base', base, '--match', str(match)] if upload else []),
+            ))
+        else:
+            stappen.append((
+                'videotracking (HOG + MOG2-beweging → sporen in veldmeters)',
+                py + [str(CV_MAP / 'tracking.py'), '--video', str(video), '--kalibratie', str(kalibratie),
+                      '--fps', str(fps), '--uit', str(posities)],
+            ))
+            stappen.append((
+                'fysieke stats per spoor + invulsjabloon wie-is-wie',
+                py + [str(CV_MAP / 'fysiek.py'), '--posities', str(posities), '--sjabloon', str(wie),
+                      '--uit', str(fysiek)],
+            ))
+        stappen.append((
+            # PNG alleen vragen als opencv er is — het JSON-raster is het echte product.
+            'heatmap van de posities',
+            py + [str(CV_MAP / 'heatmap.py'), '--posities', str(posities), '--uit', str(uitmap / 'heatmap.json')]
+            + (['--png', str(uitmap / 'heatmap.png')] if heatmap_png else []),
         ))
     return stappen
 
@@ -206,6 +243,8 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument('--demo', action='store_true', help='hele lus zonder video (oefening, vereist --seed)')
     parser.add_argument('--seed', type=int, default=None, help='reproduceerbare demo-ruis')
     parser.add_argument('--upload', action='store_true', help='eindvoorstellen ook naar de reviewbrug sturen')
+    parser.add_argument('--tracking', action='store_true',
+                        help='ook videotracking meedraaien: posities, fysieke stats per speler en een heatmap')
     parser.add_argument('--controle', action='store_true',
                         help='alleen de checklist vooraf draaien (niets meten)')
     parser.add_argument('--token', default=None,
@@ -234,8 +273,10 @@ def main(argv: list[str] | None = None) -> None:
 
     uitmap = args.uitmap if args.uitmap is not None else Path(f'meting_match{args.match}')
     uitmap.mkdir(parents=True, exist_ok=True)
+    import importlib.util
     stappen = bouw_stappen(
         args.match, uitmap, args.base, args.demo, args.seed, args.video, args.kalibratie, args.upload, args.fps,
+        tracking=args.tracking, heatmap_png=importlib.util.find_spec('cv2') is not None,
     )
 
     omgeving = dict(os.environ, CV_BRIDGE_TOKEN=token)
@@ -249,6 +290,11 @@ def main(argv: list[str] | None = None) -> None:
     print(f'\nKlaar. Alle tussenstappen staan in {uitmap} — bewaar die map: het is je meetdossier.')
     if not args.upload:
         print('Tevreden over het rapport? Draai opnieuw met --upload om de voorstellen te reviewen in de browser.')
+    if args.tracking and not args.demo:
+        print(f'Videotracking: vul {uitmap / "wie.json"} in (team + rugnummer per spoor, hints staan erbij) '
+              f'en draai dan:\n  python3 cv/fysiek.py --posities {uitmap / "posities.jsonl"} '
+              f'--toewijzing {uitmap / "wie.json"} --uit {uitmap / "fysiek.json"} '
+              f'--upload --base {args.base} --match {args.match}')
 
 
 if __name__ == '__main__':

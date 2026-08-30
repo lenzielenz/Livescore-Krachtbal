@@ -7,11 +7,13 @@ tot sporen. Uitvoer: posities-JSONL, één regel per waarneming:
 
     {"t": 12.5, "track": 3, "x_m": 6.8, "y_m": 21.4}
 
-Die posities voeden ``heatmap.py``. Dit is bewust het sluitstuk van het plan
-("zwaarst en minst kritisch → laatst"): de tracker is een v0.1-baseline —
-HOG-persoonsdetectie + dichtstbijzijnde-buur-koppeling met een snelheidslimiet.
-Wissels van identiteit bij occlusie zíjn er; voor een heatmap (waar telt, niet
-wie exact) is dat aanvaardbaar, voor per-speler-analyse nog niet.
+Die posities voeden ``heatmap.py`` en ``fysiek.py``. v0.2: twee detectoren die
+elkaar aanvullen — HOG (herkent stilstaande mensen, maar mist kleine/verre
+figuren) en MOG2-achtergrondsubtractie (vindt álles wat beweegt, dus ook verre
+spelers, maar niets dat stilstaat). Standaard draaien ze samen (``--detector
+beide``); dubbele waarnemingen worden samengevoegd en flikker-sporen korter dan
+``--min-duur`` weggegooid. Wissels van identiteit bij occlusie blijven mogelijk;
+``fysiek.py`` vangt dat op (meerdere sporen op één rugnummer tellen op).
 
 VIDEO (vereist opencv + kalibratie van calibrate.py):
     python3 cv/tracking.py --video match.mp4 --kalibratie kalibratie.json \
@@ -98,6 +100,38 @@ class Koppelaar:
 
 
 # ---------------------------------------------------------------------------
+# Waarnemingen opschonen (puur — getest zonder video)
+# ---------------------------------------------------------------------------
+
+
+def dedupliceer(punten: list[tuple[float, float]], min_afstand_m: float = 0.8) -> list[tuple[float, float]]:
+    """Voeg waarnemingen samen die dichter bij elkaar liggen dan één speler breed is.
+
+    HOG en MOG2 zien vaak dezelfde speler allebei; twee punten op < min_afstand
+    zijn één persoon. Greedy op volgorde — goed genoeg op speler-afstanden.
+    """
+    uit: list[tuple[float, float]] = []
+    for x, y in punten:
+        if all(((x - ux) ** 2 + (y - uy) ** 2) ** 0.5 >= min_afstand_m for ux, uy in uit):
+            uit.append((x, y))
+    return uit
+
+
+def filter_korte_sporen(rijen: list[dict], min_duur_s: float) -> list[dict]:
+    """Gooi flikker-sporen weg: een spoor dat korter leeft dan min_duur is ruis
+    (een schaduw, een vlag, een dubbele detectie), geen speler."""
+    if min_duur_s <= 0:
+        return rijen
+    bereik: dict[int, tuple[float, float]] = {}
+    for r in rijen:
+        t, track = float(r['t']), int(r['track'])
+        t0, t1 = bereik.get(track, (t, t))
+        bereik[track] = (min(t0, t), max(t1, t))
+    goed = {track for track, (t0, t1) in bereik.items() if t1 - t0 >= min_duur_s}
+    return [r for r in rijen if int(r['track']) in goed]
+
+
+# ---------------------------------------------------------------------------
 # Demo: toevalspaden over het veld
 # ---------------------------------------------------------------------------
 
@@ -143,14 +177,22 @@ def video_posities(args: argparse.Namespace) -> list[dict]:
         _fout(f'kalibratiebestand niet gevonden: {args.kalibratie} (maak het met cv/calibrate.py)')
     kalibratie = json.loads(args.kalibratie.read_text(encoding='utf-8'))
     matrix = kalibratie['matrix_beeld_naar_veld']
-    diepte = float(kalibratie.get('doelgebied_diepte_m') or args.diepte)
-    lengte = veld.totale_lengte_m(diepte)
+    veld_info = kalibratie.get('veld') or {}
+    diepte = float(kalibratie.get('doelgebied_diepte_m') or veld_info.get('doelgebied_diepte_m') or args.diepte)
+    breedte = float(veld_info.get('breedte_m') or veld.BREEDTE_M)
+    speelveld = float(veld_info.get('speelveld_m') or veld.SPEELVELD_LENGTE_M)
+    lengte = veld.totale_lengte_m(diepte, speelveld)
 
     cap = cv2.VideoCapture(str(args.video))
     if not cap.isOpened():
         _fout(f'video kan niet geopend worden: {args.video}')
-    hog = cv2.HOGDescriptor()
-    hog.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())
+    hog = None
+    if args.detector in ('hog', 'beide'):
+        hog = cv2.HOGDescriptor()
+        hog.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())
+    # MOG2 leert de achtergrond al kijkend; detectShadows uit, anders worden
+    # schaduwen op het gras aparte "spelers".
+    mog2 = cv2.createBackgroundSubtractorMOG2(history=200, detectShadows=False) if args.detector in ('mog2', 'beide') else None
 
     koppelaar = Koppelaar()
     rijen: list[dict] = []
@@ -161,19 +203,31 @@ def video_posities(args: argparse.Namespace) -> list[dict]:
         ok, frame = cap.read()
         if not ok:
             break
-        vakken, _ = hog.detectMultiScale(frame, winStride=(8, 8), padding=(8, 8), scale=1.05)
-        punten: list[tuple[float, float]] = []
-        for x, y, b, h in vakken:
+        voeten: list[tuple[float, float]] = []
+        if hog is not None:
+            vakken, _ = hog.detectMultiScale(frame, winStride=(8, 8), padding=(8, 8), scale=1.05)
             # Het voetpunt (onderkant-midden van het kader) staat óp de grond: alleen dat punt
             # mag door de grondvlak-homografie — het hoofd projecteren zou meters schelen.
-            vx, vy = _projecteer(matrix, float(x + b / 2), float(y + h))
+            voeten += [(float(x + b / 2), float(y + h)) for x, y, b, h in vakken]
+        if mog2 is not None:
+            masker = mog2.apply(frame)
+            masker = cv2.morphologyEx(masker, cv2.MORPH_OPEN, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3)))
+            contouren, _ = cv2.findContours(masker, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            for c in contouren:
+                x, y, b, h = cv2.boundingRect(c)
+                # Een speler is hoger dan breed en niet minuscuul; de rest is bal, vlag of ruis.
+                if cv2.contourArea(c) >= args.mog2_min_px and h > b * 0.8:
+                    voeten.append((float(x + b / 2), float(y + h)))
+        punten: list[tuple[float, float]] = []
+        for bx, by in voeten:
+            vx, vy = _projecteer(matrix, bx, by)
             if vx != vx or vy != vy:
                 continue
             # Buiten het veld (publiek, kantine) telt niet mee.
-            if -1.0 <= vx <= veld.BREEDTE_M + 1.0 and -1.0 <= vy <= lengte + 1.0:
-                px, py = klem_op_veld(vx, vy, diepte)
+            if -1.0 <= vx <= breedte + 1.0 and -1.0 <= vy <= lengte + 1.0:
+                px, py = klem_op_veld(vx, vy, diepte, breedte, speelveld)
                 punten.append((px, py))
-        for track, x_m, y_m in koppelaar.stap(t, punten):
+        for track, x_m, y_m in koppelaar.stap(t, dedupliceer(punten)):
             rijen.append({'t': round(t, 2), 'track': track, 'x_m': round(x_m, 2), 'y_m': round(y_m, 2)})
         t += 1.0 / args.fps
     cap.release()
@@ -196,6 +250,12 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument('--video', type=Path, default=None, help='wedstrijdvideo (videomodus)')
     parser.add_argument('--kalibratie', type=Path, default=None, help='kalibratie-JSON van calibrate.py')
     parser.add_argument('--fps', type=float, default=2.0, help='bemonsteringsfrequentie (standaard 2/s)')
+    parser.add_argument('--detector', choices=('hog', 'mog2', 'beide'), default='beide',
+                        help='persoonsdetectie: HOG (stilstaand), MOG2-beweging (ver/klein) of beide (standaard)')
+    parser.add_argument('--mog2-min-px', type=int, default=150,
+                        help='minimale contourgrootte in pixels voor een MOG2-detectie (standaard 150)')
+    parser.add_argument('--min-duur', type=float, default=3.0,
+                        help='sporen korter dan dit (s) zijn ruis en worden weggegooid (standaard 3; 0 = alles houden)')
     # demomodus
     parser.add_argument('--demo', action='store_true', help='oefenmodus zonder video (vereist --seed)')
     parser.add_argument('--seed', type=int, default=None, help='reproduceerbare toevalspaden')
@@ -217,10 +277,13 @@ def main(argv: list[str] | None = None) -> None:
         if args.fps <= 0:
             _fout('--fps moet groter zijn dan 0')
         rijen = video_posities(args)
+        ruw = len({r['track'] for r in rijen})
+        rijen = filter_korte_sporen(rijen, args.min_duur)
         sporen = len({r['track'] for r in rijen})
         print(
-            f'{len(rijen)} posities in {sporen} sporen → let op: identiteitswissels bij occlusie '
-            f'horen bij deze v0.1-baseline (prima voor heatmaps, niet voor per-speler-analyse)'
+            f'{len(rijen)} posities in {sporen} sporen ({ruw - sporen} flikker-sporen < {args.min_duur:g} s '
+            f'weggefilterd) → wijs de sporen toe met fysiek.py --sjabloon; identiteitswissels bij '
+            f'occlusie tellen daar gewoon op bij dezelfde speler'
         )
 
     with args.uit.open('w', encoding='utf-8') as f:

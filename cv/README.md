@@ -29,8 +29,11 @@ python3 cv/meet.py --video match.mp4 --match 42 --kalibratie kalibratie.json \
 Het rapport vertelt waar de detectie staat (doel: recall ≥ 0.8 op worpen).
 Tevreden? Draai opnieuw met `--upload` en review de voorstellen op de
 analysepagina — elke correctie wordt trainingsdata (`groundtruth.py`).
+Met **`--tracking`** draait ook de videotracking mee: spelersposities, een
+heatmap en de fysieke stats (gelopen afstand, sprintjes, topsnelheid) voor de
+spelerskaart — na afloop vul je `wie.json` in en uploadt `fysiek.py` ze.
 Eerst droog oefenen kan volledig zonder video: `python3 cv/meet.py --demo
---seed 7 --match 42`.
+--seed 7 --match 42 --tracking`.
 
 ## Filmen vanaf zijkant, achterkant of hoek
 
@@ -342,7 +345,7 @@ keyframe-grenzen). Elke run schrijft een `manifest.json` naast de clips.
 ### 11. `tracking.py` + `heatmap.py` — posities en heatmaps (fase 5)
 
 ```bash
-# Posities uit de video (HOG-personen → voetpunt → veldmeters → sporen):
+# Posities uit de video (v0.2: HOG + MOG2-beweging → voetpunt → veldmeters → sporen):
 python3 cv/tracking.py --video match.mp4 --kalibratie kalibratie.json --fps 2 --uit posities.jsonl
 
 # Of zonder video (8 toevalspaden, reproduceerbaar):
@@ -350,23 +353,34 @@ python3 cv/tracking.py --demo --seed 7 --duur 600 --uit posities.jsonl
 
 # Posities → heatmap-raster (JSON altijd; PNG met veldlijnen als opencv er is):
 python3 cv/heatmap.py --posities posities.jsonl --uit heatmap.json --png heatmap.png
+
+# Alles in één keer meedraaien met de meting (tracking → fysiek → heatmap):
+python3 cv/meet.py --video match.mp4 --match 42 --kalibratie kalibratie.json --tracking
 ```
 
-De tracker is een v0.1-baseline (dichtstbijzijnde buur met snelheidslimiet 8 m/s):
-identiteitswissels bij occlusie horen erbij — prima voor heatmaps (wáár telt,
-niet wie), nog niet voor per-speler-analyse. Het JSON-raster is genormaliseerd
-op de drukste cel zodat elke weergave dezelfde schaal hanteert.
+De v0.2-tracker combineert twee detectoren die elkaar aanvullen: **HOG** herkent
+mensen (ook stilstaand), **MOG2-achtergrondsubtractie** vindt alles wat beweegt
+(ook verre, kleine spelers die HOG mist). Dubbele waarnemingen worden
+samengevoegd (`dedupliceer`, < 0,8 m = één persoon) en flikker-sporen korter dan
+`--min-duur` (3 s) weggegooid. Kies desnoods één detector met `--detector
+hog|mog2`. De koppeling blijft dichtstbijzijnde-buur met snelheidslimiet 8 m/s:
+identiteitswissels bij occlusie kunnen nog — `fysiek.py` vangt dat op door
+meerdere sporen op één rugnummer te laten optellen. Het JSON-raster is
+genormaliseerd op de drukste cel zodat elke weergave dezelfde schaal hanteert.
 
 ### 11b. `fysiek.py` — loopafstand, sprintjes en topsnelheid per speler
 
 ```bash
-# Posities (tracking.py) → fysieke stats per spoor, met een toewijzing wie wie is:
-python3 cv/fysiek.py --posities posities.jsonl --toewijzing wie.json --uit fysiek.json
+# Stap 1 — invulsjabloon maken (per spoor een hint: wanneer, waar, hoeveel meter):
+python3 cv/fysiek.py --posities posities.jsonl --sjabloon wie.json --uit fysiek.json
 
-# wie.json: {"1": {"team": "thuis", "rugnummer": 7, "naam": "…"}, "2": …}
-# (bekijk de posities/heatmap en zeg per spoor welke speler het is; sporen die
+# Stap 2 — wie.json invullen: {"1": {"team": "thuis", "rugnummer": 7, "naam": "…"}, …}
+# (bekijk de heatmap of de video en zeg per spoor welke speler het is; sporen die
 #  door een identiteitswissel in stukken vielen, wijs je gewoon allebei toe —
-#  meters en sprintjes van hetzelfde rugnummer tellen op)
+#  meters en sprintjes van hetzelfde rugnummer tellen op; ruis-sporen laat je op null)
+
+# Stap 3 — met de ingevulde toewijzing (het sjabloon zelf werkt direct):
+python3 cv/fysiek.py --posities posities.jsonl --toewijzing wie.json --uit fysiek.json
 
 # Oefenen op de demo-sporen (1-4 thuis, 5-8 uit):
 python3 cv/fysiek.py --posities posities.jsonl --demo --uit fysiek.json

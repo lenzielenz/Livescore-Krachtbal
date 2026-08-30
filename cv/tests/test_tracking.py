@@ -48,6 +48,27 @@ class TestKoppelaar(unittest.TestCase):
         self.assertEqual(len(uit), 1)
 
 
+class TestOpschonen(unittest.TestCase):
+    def test_dedupliceer_voegt_dubbele_detecties_samen(self):
+        # HOG en MOG2 zien dezelfde speler: twee punten op 0,3 m = één persoon.
+        punten = [(5.0, 10.0), (5.2, 10.2), (9.0, 10.0)]
+        self.assertEqual(tracking.dedupliceer(punten), [(5.0, 10.0), (9.0, 10.0)])
+
+    def test_dedupliceer_laat_echte_buren_staan(self):
+        punten = [(5.0, 10.0), (6.0, 10.0)]
+        self.assertEqual(tracking.dedupliceer(punten), punten)
+
+    def test_filter_korte_sporen_gooit_flikker_weg(self):
+        rijen = (
+            [{'t': t / 2, 'track': 1, 'x_m': 1.0, 'y_m': 1.0} for t in range(10)]  # 4,5 s: blijft
+            + [{'t': 3.0, 'track': 2, 'x_m': 2.0, 'y_m': 2.0}]                     # één flits: weg
+        )
+        uit = tracking.filter_korte_sporen(rijen, 3.0)
+        self.assertEqual({r['track'] for r in uit}, {1})
+        # min_duur 0 = alles houden.
+        self.assertEqual(tracking.filter_korte_sporen(rijen, 0), rijen)
+
+
 class TestDemoPosities(unittest.TestCase):
     def test_reproduceerbaar_en_binnen_het_veld(self):
         a = tracking.demo_posities(seed=7, duur_s=10.0, diepte_m=10.0)

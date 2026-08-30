@@ -60,5 +60,51 @@ class TestStappenplan(unittest.TestCase):
         self.assertIn('RAPPORT', stappen[-1][0])
 
 
+class TestTracking(unittest.TestCase):
+    def test_demo_met_tracking_en_upload_stuurt_fysiek_mee(self):
+        stappen = meet.bouw_stappen(
+            match=42, uitmap=Path('m'), base='http://x', demo=True, seed=7,
+            video=None, kalibratie=None, upload=True, fps=2.0, tracking=True,
+        )
+        volg = _argv_van(stappen, 'videotracking')
+        self.assertIn('--demo', volg)
+        fysiek = _argv_van(stappen, 'fysieke stats')
+        self.assertIn(str(Path('m') / 'posities.jsonl'), fysiek)
+        self.assertIn('--upload', fysiek)  # demo-toewijzing is bekend → meteen naar het platform
+        heat = _argv_van(stappen, 'heatmap')
+        self.assertIn(str(Path('m') / 'posities.jsonl'), heat)
+        self.assertNotIn('--png', heat)  # zonder opencv geen PNG vragen (het JSON-raster telt)
+        self.assertIn('heatmap', stappen[-1][0])
+
+    def test_heatmap_png_alleen_met_opencv(self):
+        stappen = meet.bouw_stappen(
+            match=42, uitmap=Path('m'), base='http://x', demo=True, seed=7,
+            video=None, kalibratie=None, upload=False, fps=2.0, tracking=True, heatmap_png=True,
+        )
+        heat = _argv_van(stappen, 'heatmap')
+        self.assertIn('--png', heat)
+
+    def test_video_met_tracking_schrijft_sjabloon_en_uploadt_fysiek_niet(self):
+        stappen = meet.bouw_stappen(
+            match=42, uitmap=Path('m'), base='http://x', demo=False, seed=None,
+            video=Path('match.mp4'), kalibratie=Path('kal.json'), upload=True, fps=2.0, tracking=True,
+        )
+        volg = _argv_van(stappen, 'videotracking')
+        self.assertIn('match.mp4', volg)
+        self.assertIn('kal.json', volg)
+        fysiek = _argv_van(stappen, 'fysieke stats')
+        self.assertIn('--sjabloon', fysiek)
+        self.assertIn(str(Path('m') / 'wie.json'), fysiek)
+        # Wie-is-wie is nog niet ingevuld: fysiek uploaden kan pas ná de toewijzing.
+        self.assertNotIn('--upload', fysiek)
+
+    def test_zonder_tracking_geen_extra_stappen(self):
+        stappen = meet.bouw_stappen(
+            match=42, uitmap=Path('m'), base='http://x', demo=True, seed=7,
+            video=None, kalibratie=None, upload=False, fps=2.0,
+        )
+        self.assertTrue(all('tracking' not in oms and 'heatmap' not in oms for oms, _ in stappen))
+
+
 if __name__ == '__main__':
     unittest.main()

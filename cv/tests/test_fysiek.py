@@ -78,6 +78,22 @@ class TestFysiekPerSpoor(unittest.TestCase):
         self.assertAlmostEqual(spelers[0]['afstand_m'], 5.0)
         self.assertEqual(anoniem, [])
 
+    def test_sjabloon_is_invulklaar_en_direct_bruikbaar(self):
+        posities = _spoor(1, [(0.0, 3.0, 5.0), (65.0, 3.0, 7.0)]) + _spoor(2, [(0.0, 10.0, 40.0), (10.0, 10.0, 41.0)])
+        per_spoor = fysiek.fysiek_per_spoor(posities)
+        sjabloon = fysiek.sjabloon_toewijzing(posities, per_spoor)
+        self.assertIn('_uitleg', sjabloon)
+        self.assertEqual(sjabloon['1']['team'], None)
+        self.assertIn('0:00–1:05', sjabloon['1']['hint'])
+        self.assertIn('(3.0, 6.0) m', sjabloon['1']['hint'])
+        # Ingevuld sjabloon (hint en _uitleg blijven staan) werkt direct als toewijzing.
+        sjabloon['1']['team'] = 'thuis'
+        sjabloon['1']['rugnummer'] = 9
+        spelers, anoniem = fysiek.bundel_per_speler(per_spoor, sjabloon)  # type: ignore[arg-type]
+        self.assertEqual(len(spelers), 1)
+        self.assertEqual(spelers[0]['rugnummer'], 9)
+        self.assertEqual(anoniem, [2])
+
     def test_spoor_zonder_toewijzing_blijft_anoniem(self):
         per_spoor = fysiek.fysiek_per_spoor(_spoor(3, [(0.0, 0.0, 0.0), (1.0, 0.0, 1.0)]))
         spelers, anoniem = fysiek.bundel_per_speler(per_spoor, {})
