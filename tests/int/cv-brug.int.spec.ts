@@ -7,6 +7,7 @@ import { POST as postCvEvents } from '@/app/api/cv/events/route'
 import { PATCH as patchCvEvent } from '@/app/api/cv/events/[id]/route'
 import { GET as getLabels } from '@/app/api/cv/match/[id]/labels/route'
 import { GET as getReviews } from '@/app/api/cv/match/[id]/reviews/route'
+import { GET as getFysiek, POST as postFysiek } from '@/app/api/cv/match/[id]/fysiek/route'
 
 // De CV-brug (fase 0): de Python-pipeline stuurt event-VOORSTELLEN in via POST /api/cv/events
 // (Bearer CV_BRIDGE_TOKEN) en haalt de bestaande manuele tags als weak labels op via
@@ -481,5 +482,74 @@ describe('CV-brug', () => {
     expect(body.rapport).toEqual({ totaal: 1, bevestigd: 1, afgewezen: 0, worp_type_gecorrigeerd: 1 })
     expect(body.reviews[0].worp_type_origineel).toBe('nek')
     expect(body.reviews[0].worp_type).toBe('rug')
+  })
+  it('fysiek-endpoint: upload per speler, GET geeft ze terug, nieuwe upload vervangt alles', async () => {
+    const { matchId } = await maakWedstrijd()
+    const spelers = [
+      { team: 'thuis', rugnummer: 7, naam: 'Loper', afstand_m: 4321.5, sprints: 12, topsnelheid_m_s: 6.1, actieve_s: 2400 },
+      { team: 'uit', rugnummer: 3, afstand_m: 3900.0, sprints: 8, topsnelheid_m_s: 5.4, actieve_s: 2350 },
+    ]
+    const maakReq = (body: unknown, token?: string) =>
+      new Request(`http://localhost/api/cv/match/${matchId}/fysiek`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', ...(token ? { authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify(body),
+      })
+    const routeParams = { params: Promise.resolve({ id: String(matchId) }) }
+
+    // Zonder token: dicht (CLAUDE.md invariant: geen ongeauthenticeerde mutatie-endpoints).
+    expect((await postFysiek(maakReq({ spelers }), routeParams)).status).toBe(401)
+    expect((await getFysiek(new Request('http://localhost'), routeParams)).status).toBe(401)
+
+    const res = await postFysiek(maakReq({ spelers }, TOKEN), routeParams)
+    expect(res.status).toBe(200)
+    expect(await res.json()).toEqual({ ok: true, match: matchId, spelers: 2 })
+
+    const gelezen = await getFysiek(
+      new Request('http://localhost', { headers: { authorization: `Bearer ${TOKEN}` } }),
+      routeParams,
+    )
+    expect(gelezen.status).toBe(200)
+    const body = (await gelezen.json()) as { spelers: typeof spelers; bijgewerkt: string | null }
+    expect(body.spelers).toEqual(spelers)
+    expect(body.bijgewerkt).toBeTruthy()
+
+    // Een nieuwe upload (betere toewijzing) vervangt de vorige volledig.
+    const beter = [{ team: 'thuis', rugnummer: 7, afstand_m: 4400.0, sprints: 13, topsnelheid_m_s: 6.2, actieve_s: 2410 }]
+    expect((await postFysiek(maakReq({ spelers: beter }, TOKEN), routeParams)).status).toBe(200)
+    const herlezen = await getFysiek(
+      new Request('http://localhost', { headers: { authorization: `Bearer ${TOKEN}` } }),
+      routeParams,
+    )
+    expect(((await herlezen.json()) as { spelers: unknown[] }).spelers).toEqual(beter)
+  })
+
+  it('fysiek-endpoint weigert rommel: fout team, negatief getal, dubbele speler, lege lijst', async () => {
+    const { matchId } = await maakWedstrijd()
+    const routeParams = { params: Promise.resolve({ id: String(matchId) }) }
+    const post = (body: unknown) =>
+      postFysiek(
+        new Request(`http://localhost/api/cv/match/${matchId}/fysiek`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', authorization: `Bearer ${TOKEN}` },
+          body: JSON.stringify(body),
+        }),
+        routeParams,
+      )
+    const basis = { rugnummer: 7, afstand_m: 100, sprints: 1, topsnelheid_m_s: 5, actieve_s: 60 }
+    expect((await post({ spelers: [] })).status).toBe(400)
+    expect((await post({ spelers: [{ ...basis, team: 'home' }] })).status).toBe(400)
+    expect((await post({ spelers: [{ ...basis, team: 'thuis', afstand_m: -1 }] })).status).toBe(400)
+    expect((await post({ spelers: [{ ...basis, team: 'thuis' }, { ...basis, team: 'thuis' }] })).status).toBe(400)
+    // Onbestaande wedstrijd: 404.
+    const weg = await postFysiek(
+      new Request('http://localhost/api/cv/match/999999/fysiek', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${TOKEN}` },
+        body: JSON.stringify({ spelers: [{ ...basis, team: 'thuis' }] }),
+      }),
+      { params: Promise.resolve({ id: '999999' }) },
+    )
+    expect(weg.status).toBe(404)
   })
 })

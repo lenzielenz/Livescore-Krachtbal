@@ -14,10 +14,26 @@ type Goal = { side: 'home' | 'away'; points: number; half: number; gameClock?: n
 type Timeout = { side: 'home' | 'away'; half: number; gameClock: number }
 type Player = Stats['players'][number]
 
+/** Verdedigende cijfers per speler (vangsten + tikken), zie buildDefenseStats. */
+export type DefenseCijfers = { playerId: number; catches: number; taps: number }
+
+/** Fysieke meting uit de videotracking (cv/fysiek.py, geüpload via de CV-brug). */
+export type FysiekSpeler = {
+  team: 'thuis' | 'uit'
+  rugnummer: number
+  naam?: string
+  afstand_m: number
+  sprints: number
+  topsnelheid_m_s: number
+  actieve_s: number
+}
+
 const first = (n: string) => n.split(/\s+/)[0]
 
 // Compacte spelerfocus: de kerncijfers van één speler, in dezelfde kaartstijl als de samenvatting.
-function PlayerFocus({ p, team }: { p: Player; team: string }) {
+// Alles op één kaart: worpen, doelpunten, vangsten — en als er videotracking is, ook het fysieke
+// luik (gelopen afstand, sprintjes, topsnelheid).
+function PlayerFocus({ p, team, defense, fysiek }: { p: Player; team: string; defense?: DefenseCijfers; fysiek?: FysiekSpeler }) {
   const cards: { icon: string; label: string; value: string }[] = [
     { icon: '🎯', label: 'Punten', value: `${p.goals.points}` },
     { icon: '🥅', label: 'Doelpunten', value: `${p.goals.total} (${p.goals.nek}/${p.goals.rug})` },
@@ -26,6 +42,16 @@ function PlayerFocus({ p, team }: { p: Player; team: string }) {
     { icon: '🏐', label: 'Worpen', value: `${p.throws} (${p.byType.nek}/${p.byType.rug})` },
     { icon: '⚠️', label: 'Geforceerd', value: `${p.lost} (${p.caught}g/${p.out}b)` },
   ]
+  if (defense && defense.catches + defense.taps > 0) {
+    cards.push({ icon: '🧤', label: 'Vangsten', value: `${defense.catches}${defense.taps > 0 ? ` (+${defense.taps} tikken)` : ''}` })
+  }
+  if (fysiek) {
+    cards.push(
+      { icon: '🏃', label: 'Gelopen', value: fysiek.afstand_m >= 1000 ? `${(fysiek.afstand_m / 1000).toFixed(2)} km` : `${Math.round(fysiek.afstand_m)} m` },
+      { icon: '⚡', label: 'Sprintjes', value: `${fysiek.sprints}` },
+      { icon: '💨', label: 'Topsnelheid', value: `${(fysiek.topsnelheid_m_s * 3.6).toFixed(1)} km/u` },
+    )
+  }
   return (
     <section className="an-recap">
       <div className={`an-mvp side-${p.teamSide}`}>
@@ -60,6 +86,8 @@ export function AnalyseDetailView({
   momentumTimeouts = [],
   teamColors,
   matchLabel,
+  defense = [],
+  fysiek = [],
 }: {
   stats: Stats
   shots: ShotPoint[]
@@ -72,10 +100,18 @@ export function AnalyseDetailView({
   teamColors?: { home: string | null; away: string | null }
   /** Wedstrijd-omschrijving (reeks · datum) voor de gedownloade video. */
   matchLabel?: string
+  /** Vangsten/tikken per speler (buildDefenseStats) — voor de spelerskaart. */
+  defense?: DefenseCijfers[]
+  /** Fysieke stats uit de videotracking (cvFysiek op de wedstrijd) — voor de spelerskaart. */
+  fysiek?: FysiekSpeler[]
 }) {
   const players = stats.players
   const [scope, setScope] = useState<'match' | number>('match')
   const focus = typeof scope === 'number' ? players.find((p) => p.playerId === scope) ?? null : null
+  // Fysiek is gemeten op team + rugnummer (de tracker kent geen speler-id's) — koppel op shirtNumber.
+  const fysiekVan = (p: Player) =>
+    fysiek.find((f) => f.rugnummer === p.shirtNumber && (f.team === 'thuis') === (p.teamSide === 'home'))
+  const defenseVan = (p: Player) => defense.find((d) => d.playerId === p.playerId)
   // Terugkerende "zelfde speler / zelfde worp"-patronen — om de naam prominent aanklikbaar te maken.
   const patterns = useMemo(() => detectMatchPatterns(stats), [stats])
 
@@ -133,7 +169,7 @@ export function AnalyseDetailView({
         <p className="empty">Deze wedstrijd heeft geen gedetailleerde worpdata (in snelscoremodus gespeeld).</p>
       ) : focus ? (
         <>
-          <PlayerFocus p={focus} team={focus.teamSide === 'home' ? teams.home : teams.away} />
+          <PlayerFocus p={focus} team={focus.teamSide === 'home' ? teams.home : teams.away} defense={defenseVan(focus)} fysiek={fysiekVan(focus)} />
           {/* hideShotmap: de grote veldkaart bovenaan de pagina toont het veld al (met dezelfde
               spelerfilter) — hier nog eens een veld zou dubbel zijn. */}
           <MatchStats key={`p${focus.playerId}`} stats={stats} shots={shots} teams={teams} goalAreaDepth={goalAreaDepth} speelveldM={speelveldM ?? undefined} focusPlayerId={focus.playerId} matchLabel={matchLabel} hideShotmap />
@@ -141,6 +177,43 @@ export function AnalyseDetailView({
       ) : (
         <>
           <MatchRecap stats={stats} teams={teams} />
+          {/* Fysiek uit de videotracking: wie liep het meest, wie sprintte het vaakst. Klik door
+              naar de spelerfocus waar deze cijfers naast de worpstatistieken staan. */}
+          {fysiek.length > 0 && (
+            <section className="an-patterns">
+              <h2 className="an-sub">
+                🏃 Fysiek uit de video <span className="an-chart-hint">gelopen afstand · sprintjes · topsnelheid</span>
+              </h2>
+              <div className="an-pat-grid">
+                {fysiek
+                  .slice()
+                  .sort((a, b) => b.afstand_m - a.afstand_m)
+                  .map((f) => {
+                    const side = f.team === 'thuis' ? 'home' : 'away'
+                    const speler = players.find((p) => p.shirtNumber === f.rugnummer && p.teamSide === side)
+                    const naam = f.naam ?? speler?.playerName ?? (f.team === 'thuis' ? teams.home : teams.away)
+                    const detail = `${f.afstand_m >= 1000 ? `${(f.afstand_m / 1000).toFixed(2)} km` : `${Math.round(f.afstand_m)} m`} · ${f.sprints} sprintjes · top ${(f.topsnelheid_m_s * 3.6).toFixed(1)} km/u`
+                    return (
+                      <button
+                        key={`${f.team}-${f.rugnummer}`}
+                        type="button"
+                        className={`an-pat side-${side}`}
+                        onClick={() => speler && setScope(speler.playerId)}
+                        disabled={!speler}
+                        aria-label={`#${f.rugnummer} ${naam} — ${detail}`}
+                      >
+                        <span className="an-pat-ico" aria-hidden>🏃</span>
+                        <span className="an-pat-body">
+                          <span className="an-pat-name">#{f.rugnummer} {naam}</span>
+                          <span className="an-pat-detail">{detail}</span>
+                        </span>
+                        {speler && <span className="an-pat-cta" aria-hidden>bekijken →</span>}
+                      </button>
+                    )
+                  })}
+              </div>
+            </section>
+          )}
           <AnalyseCharts stats={stats} teams={teams} />
           <MatchStats key="match" stats={stats} shots={shots} teams={teams} goalAreaDepth={goalAreaDepth} speelveldM={speelveldM ?? undefined} matchLabel={matchLabel} hideShotmap />
         </>

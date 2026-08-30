@@ -600,6 +600,18 @@ export interface Match {
    */
   videoOffsetH2?: number | null;
   /**
+   * Geüpload via /api/cv/match/[id]/fysiek. Niet handmatig bewerken.
+   */
+  cvFysiek?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  /**
    * Kies eerst de reeks. De categorie volgt automatisch en de ploegen worden hierop gefilterd.
    */
   reeks:
@@ -1870,6 +1882,7 @@ export interface MatchesSelect<T extends boolean = true> {
   videoUrl?: T;
   videoOffsetH1?: T;
   videoOffsetH2?: T;
+  cvFysiek?: T;
   reeks?: T;
   seizoen?: T;
   homeTeam?: T;

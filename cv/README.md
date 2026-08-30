@@ -357,6 +357,33 @@ identiteitswissels bij occlusie horen erbij — prima voor heatmaps (wáár telt
 niet wie), nog niet voor per-speler-analyse. Het JSON-raster is genormaliseerd
 op de drukste cel zodat elke weergave dezelfde schaal hanteert.
 
+### 11b. `fysiek.py` — loopafstand, sprintjes en topsnelheid per speler
+
+```bash
+# Posities (tracking.py) → fysieke stats per spoor, met een toewijzing wie wie is:
+python3 cv/fysiek.py --posities posities.jsonl --toewijzing wie.json --uit fysiek.json
+
+# wie.json: {"1": {"team": "thuis", "rugnummer": 7, "naam": "…"}, "2": …}
+# (bekijk de posities/heatmap en zeg per spoor welke speler het is; sporen die
+#  door een identiteitswissel in stukken vielen, wijs je gewoon allebei toe —
+#  meters en sprintjes van hetzelfde rugnummer tellen op)
+
+# Oefenen op de demo-sporen (1-4 thuis, 5-8 uit):
+python3 cv/fysiek.py --posities posities.jsonl --demo --uit fysiek.json
+
+# En naar het platform — verschijnt op de spelerskaart van de analysepagina:
+export CV_BRIDGE_TOKEN=…
+python3 cv/fysiek.py --posities posities.jsonl --toewijzing wie.json \
+    --uit fysiek.json --upload --base https://krachtbal.live --match 42
+```
+
+Per speler: **gelopen afstand**, **aantal sprintjes** (≥ 4 m/s gedurende ≥ 1 s,
+instelbaar met `--sprint-drempel`/`--sprint-duur`) en **topsnelheid**. Gaten
+(> 2 s) en teleportaties (> 8 m/s, identiteitswissels) tellen niet mee — liever
+te weinig meters dan spooksprints. De upload gaat naar POST
+`/api/cv/match/{id}/fysiek` en vervangt de vorige meting volledig; het platform
+toont het naast de worpstatistieken en vangsten op de spelerskaart.
+
 ### 12. `groundtruth.py` — de hertraining-lus sluiten (fase 6)
 
 ```bash

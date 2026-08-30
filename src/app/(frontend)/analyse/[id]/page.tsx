@@ -11,7 +11,7 @@ import { buildDefenseStats, buildMatchSheet, buildMatchStats, buildMatchState, b
 import { getPayloadClient } from '@/lib/payload-client'
 import { reeksHalfDurationSeconds, reeksNaam, type Reeks } from '@/lib/reeksen'
 import { mayEditMatchVideo } from '@/lib/video-access'
-import { AnalyseDetailView } from './AnalyseDetailView'
+import { AnalyseDetailView, type FysiekSpeler } from './AnalyseDetailView'
 import type { CvVoorstel } from './CvReview'
 import { ShareCard } from './ShareCard'
 import { Veldkaart } from './Veldkaart'
@@ -68,6 +68,14 @@ export default async function AnalyseDetailPage({ params }: { params: Promise<{ 
   }
 
   const defense = await buildDefenseStats(payload, matchId).catch(() => [])
+  // Fysieke stats uit de videotracking (cv/fysiek.py → /api/cv/match/[id]/fysiek), indien geüpload.
+  const fysiekRaw = (matchDoc.cvFysiek as { spelers?: unknown[] } | null | undefined)?.spelers
+  const fysiek = Array.isArray(fysiekRaw)
+    ? (fysiekRaw.filter(
+        (f): f is FysiekSpeler =>
+          !!f && typeof f === 'object' && 'rugnummer' in f && 'afstand_m' in f && 'sprints' in f,
+      ) as FysiekSpeler[])
+    : []
   const passen = await buildPassStats(payload, matchId).catch(() => null)
   const sheet = await buildMatchSheet(payload, matchId).catch(() => null)
   const momentumGoals = (sheet?.goals ?? [])
@@ -237,6 +245,8 @@ export default async function AnalyseDetailPage({ params }: { params: Promise<{ 
               momentumTimeouts={momentumTimeouts}
               teamColors={teamColors}
               matchLabel={[reeks, datum].filter(Boolean).join(' · ')}
+              defense={defense}
+              fysiek={fysiek}
             />
           </ErrorCatch>
         </details>

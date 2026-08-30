@@ -160,6 +160,19 @@ export const Matches: CollectionConfig = {
             },
           ],
         },
+        {
+          // Fysieke statistiek uit de videotracking (cv/fysiek.py): per speler gelopen afstand,
+          // sprintjes en topsnelheid. Vorm: { spelers: [{team,rugnummer,naam?,afstand_m,sprints,
+          // topsnelheid_m_s,actieve_s}], bron, bijgewerkt }. Geen afgeleide van de worp-events —
+          // dit is een eigen meting uit de video, dus mág opgeslagen worden.
+          name: 'cvFysiek',
+          label: 'Fysieke stats uit video (tracking)',
+          type: 'json',
+          admin: {
+            hidden: true,
+            description: 'Geüpload via /api/cv/match/[id]/fysiek. Niet handmatig bewerken.',
+          },
+        },
       ],
     },
     {
