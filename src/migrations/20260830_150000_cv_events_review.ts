@@ -23,8 +23,14 @@ export async function up({ db }: MigrateUpArgs): Promise<void> {
   // ongewijzigde modelclaim (de PATCH bestond nog niet en aanmaken kan enkel via de POST-route).
   // Zonder deze stap zou een latere correctie op zo'n oud voorstel "model zei X" voorgoed wissen.
   // De reviewed=false-guard maakt een her-run onschadelijk voor al gecorrigeerde rijen.
+  //
+  // De cast via text is nodig, niet cosmetisch: worp_type en worp_type_origineel zijn twee
+  // afzonderlijke enum-types (Payload maakt er één per veld), en Postgres weigert een waarde
+  // van het ene enum-type rechtstreeks in een kolom van het andere te zetten. Zonder cast
+  // faalt deze migratie — en daarmee de hele deploy. Op SQLite (lokaal) is dat onzichtbaar.
   await db.execute(sql`
-  UPDATE "cv_events" SET "worp_type_origineel" = "worp_type"
+  UPDATE "cv_events"
+  SET "worp_type_origineel" = "worp_type"::text::"public"."enum_cv_events_worp_type_origineel"
   WHERE "worp_type_origineel" IS NULL AND "reviewed" = false;`)
 }
 
