@@ -27,6 +27,9 @@ import time
 
 VOORTGANG_PREFIX = 'VOORTGANG'
 STANDAARD_INTERVAL_S = 3.0
+# Pas een resterende tijd melden als de stap al zo lang bezig is; daarvóór is elke schatting
+# een gok op basis van één beeld.
+MIN_VOOR_SCHATTING_S = 10.0
 
 
 def _tijd(seconden: float) -> str:
@@ -50,6 +53,7 @@ class Melder:
         self.stroom = stroom if stroom is not None else sys.stdout
         self.klok = klok
         self._laatst = -1e9
+        self._start = self.klok()
         self.meldingen = 0
 
     def _schrijf(self, fractie: float | None, tekst: str) -> None:
@@ -74,6 +78,11 @@ class Melder:
         if self.totaal:
             fractie = min(1.0, max(0.0, gedaan / self.totaal))
             tekst = f'{_tijd(gedaan)} van {_tijd(self.totaal)}'
+            # Hoelang nog? Pas melden als er genoeg gemeten is om iets te kunnen zeggen: een
+            # schatting uit de eerste seconde is een gok, en een verkeerde gok is erger dan geen.
+            verstreken = nu - self._start
+            if fractie > 0.02 and verstreken >= MIN_VOOR_SCHATTING_S:
+                tekst += f', nog ± {_tijd(verstreken * (1 - fractie) / fractie)}'
         else:
             fractie = None
             tekst = f'{_tijd(gedaan)} bekeken'

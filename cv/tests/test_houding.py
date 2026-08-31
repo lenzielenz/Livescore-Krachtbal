@@ -236,3 +236,15 @@ class TestVideolaag(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class TestSchatDuur(unittest.TestCase):
+    """Weten hoelang het gaat duren, vóór je een uur zit te wachten."""
+
+    def test_rekent_beelden_maal_tijd_per_beeld(self):
+        # 3000 beelden aan 0,8 s = 40 minuten.
+        self.assertAlmostEqual(houding.schat_duur(0.8, 3000), 2400.0)
+
+    def test_geen_negatieve_of_onzinnige_schatting(self):
+        self.assertEqual(houding.schat_duur(-1.0, 100), 0.0)
+        self.assertEqual(houding.schat_duur(0.5, 0), 0.0)

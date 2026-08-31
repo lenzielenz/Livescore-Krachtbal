@@ -242,7 +242,7 @@ export function ServerAnalyse({ matchId, heeftVideo }: { matchId: number; heeftV
             <span style={{ width: `${Math.max(6, pct)}%` }} />
           </div>
           <p className="sa-stap">
-            <strong>Stap {s?.stapNummer} van {s?.stappen}:</strong> {s?.stap}…
+            <strong>Stap {s?.stapNummer} van {s?.stappen} · {pct}%:</strong> {s?.stap}…
             {s?.stapDetail ? <span className="sa-detail"> {s.stapDetail}</span> : null}
           </p>
           {langStil && (

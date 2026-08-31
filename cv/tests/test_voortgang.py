@@ -92,6 +92,31 @@ class TestMelder:
         assert len(regels) == 2
 
 
+class TestSchatting:
+    def test_meldt_hoelang_het_nog_duurt(self):
+        uit, klok = io.StringIO(), NepKlok()
+        m = Melder(600.0, interval_s=0.0, stroom=uit, klok=klok)
+        klok.verder(60.0)          # een minuut bezig …
+        m.meld(60.0)               # … en een tiende van de video gezien
+        # Dan duurt de rest ongeveer negen minuten.
+        assert 'nog ± 9:00' in uit.getvalue()
+
+    def test_zwijgt_over_de_resterende_tijd_zolang_er_te_weinig_gemeten_is(self):
+        # Een schatting uit de eerste seconde is een gok, en een verkeerde gok is erger dan geen.
+        uit, klok = io.StringIO(), NepKlok()
+        m = Melder(600.0, interval_s=0.0, stroom=uit, klok=klok)
+        klok.verder(2.0)
+        m.meld(60.0)
+        assert 'nog ±' not in uit.getvalue()
+
+    def test_zwijgt_ook_wanneer_er_nog_bijna_niets_gedaan_is(self):
+        uit, klok = io.StringIO(), NepKlok()
+        m = Melder(600.0, interval_s=0.0, stroom=uit, klok=klok)
+        klok.verder(60.0)
+        m.meld(1.0)   # 0,17% — daar valt niets uit te besluiten
+        assert 'nog ±' not in uit.getvalue()
+
+
 class TestDuurVanVideo:
     class NepCv2:
         CAP_PROP_FPS = 5
