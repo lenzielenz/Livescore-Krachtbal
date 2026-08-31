@@ -142,6 +142,61 @@ def polspositie(persoon, scores) -> tuple[float, float] | None:
     return (sum(p[0] for p in polsen) / len(polsen), sum(p[1] for p in polsen) / len(polsen))
 
 
+def heuppositie(persoon, scores) -> tuple[float, float] | None:
+    """Het midden tussen de heupen — de stabielste plek om iemand aan te herkennen.
+
+    Armen en benen zwaaien; het bekken schuift mee met de speler zelf. Vandaar dat het volgen
+    van personen tussen twee metingen hierop gebeurt en niet op de polsen.
+    """
+    heupen = [p for p in (_punt(persoon, scores, L_HEUP), _punt(persoon, scores, R_HEUP)) if p]
+    if not heupen:
+        return None
+    return (sum(p[0] for p in heupen) / len(heupen), sum(p[1] for p in heupen) / len(heupen))
+
+
+def koppel_personen(
+    vorige: dict[int, dict],
+    huidige: list[dict],
+    max_sprong_rompen: float = 1.5,
+) -> dict[int, int]:
+    """Welke persoon van nu is welke van daarnet? Geeft {index nu → id}.
+
+    Waarom dit moet. Het model levert per beeld een LIJST personen, en die volgorde verandert
+    zodra er iemand bijkomt, wegvalt of gewoon anders gesorteerd wordt. Wie de lijstindex als
+    identiteit gebruikt — zoals hier eerst gebeurde — vergelijkt bij elke meting de polsen van
+    speler A met die van speler B, en meet dan een 'polssnelheid' die niemand ooit maakte. Dat
+    is niet alleen ruis in de worpscore: het maakt ook onmogelijk om achteraf te zeggen wélke
+    speler wierp.
+
+    Koppelen gebeurt op de heuppositie, greedy op de kortste afstand, en met een plafond: een
+    sprong groter dan anderhalve romphoogte is geen speler die wandelde maar een verwisseling.
+    Wie niet gekoppeld raakt, krijgt een nieuw id — liever een extra werper in de lijst dan twee
+    spelers onder één naam.
+    """
+    paren: list[tuple[float, int, int]] = []
+    for nu_i, staat in enumerate(huidige):
+        hier = staat.get('heup')
+        romp = staat.get('romp')
+        if hier is None or not romp:
+            continue
+        for oud_id, oude in vorige.items():
+            daar = oude.get('heup')
+            if daar is None:
+                continue
+            afstand = math.dist(hier, daar)
+            if afstand <= max_sprong_rompen * romp:
+                paren.append((afstand, nu_i, oud_id))
+    paren.sort()
+    koppeling: dict[int, int] = {}
+    gebruikt: set[int] = set()
+    for _afstand, nu_i, oud_id in paren:
+        if nu_i in koppeling or oud_id in gebruikt:
+            continue
+        koppeling[nu_i] = oud_id
+        gebruikt.add(oud_id)
+    return koppeling
+
+
 def worpscore(vorige: dict, huidige: dict, dt: float) -> float:
     """Hoe erg lijkt dit op het moment van loslaten? (0 = niet.)
 
@@ -283,6 +338,7 @@ def meet_video(videopad: Path, model, analyse_fps: float, tot: float | None = No
 
     reeks: list[dict] = []
     vorige: dict[int, dict] = {}
+    volgende_werper = 0
     frame_idx = 0
     while True:
         ok, frame = cap.read()
@@ -293,22 +349,45 @@ def meet_video(videopad: Path, model, analyse_fps: float, tot: float | None = No
             break
         if frame_idx % stap == 0:
             keypoints, scores = model(frame)
-            beste_score, beste_hoogte = 0.0, None
-            nu: dict[int, dict] = {}
-            for i, (persoon, zekerheid) in enumerate(zip(keypoints, scores)):
-                staat = {
+            gemeten = [
+                {
                     'polshoogte': polshoogte(persoon, zekerheid),
                     'romp': romphoogte(persoon, zekerheid),
                     'pols': polspositie(persoon, zekerheid),
+                    'heup': heuppositie(persoon, zekerheid),
                 }
-                nu[i] = staat
-                s = worpscore(vorige.get(i, {}), staat, dt)
+                for persoon, zekerheid in zip(keypoints, scores)
+            ]
+            # Wie is wie? Op de heuppositie koppelen en niet op de lijstvolgorde — die verandert
+            # zodra er iemand bijkomt of wegvalt, en dan vergelijk je de polsen van twee
+            # verschillende spelers met elkaar.
+            koppeling = koppel_personen(vorige, gemeten)
+            beste_score, beste_hoogte, beste_wie = 0.0, None, None
+            nu: dict[int, dict] = {}
+            for i, staat in enumerate(gemeten):
+                wie = koppeling.get(i)
+                if wie is None:
+                    wie = volgende_werper
+                    volgende_werper += 1
+                nu[wie] = staat
+                s = worpscore(vorige.get(wie, {}), staat, dt)
                 if s > beste_score:
                     beste_score = s
+                    beste_wie = wie
                 if staat['polshoogte'] is not None:
                     beste_hoogte = staat['polshoogte'] if beste_hoogte is None else max(beste_hoogte, staat['polshoogte'])
-            reeks.append({'t': round(t, 3), 'score': round(beste_score, 4),
-                          'polshoogte': beste_hoogte, 'personen': len(keypoints)})
+            meting = {'t': round(t, 3), 'score': round(beste_score, 4),
+                      'polshoogte': beste_hoogte, 'personen': len(keypoints)}
+            # Wie de hoogste score maakte, en waar die stond: daarmee kunnen de worpen achteraf
+            # per werper gegroepeerd worden, zodat je één keer per speler moet zeggen wie het is
+            # in plaats van één keer per worp.
+            if beste_wie is not None:
+                meting['werper'] = beste_wie
+                heup = (nu.get(beste_wie) or {}).get('heup')
+                if heup:
+                    meting['x'] = round(heup[0], 1)
+                    meting['y'] = round(heup[1], 1)
+            reeks.append(meting)
             vorige = nu
             if not geschat and len(reeks) >= METINGEN_VOOR_SCHATTING and te_bekijken:
                 geschat = True
@@ -322,6 +401,14 @@ def meet_video(videopad: Path, model, analyse_fps: float, tot: float | None = No
     cap.release()
     melder.klaar(f'{len(reeks)} metingen')
     return reeks
+
+
+def werper_op(reeks: list[dict], tijd: float) -> dict | None:
+    """Wie wierp er op dit moment, en waar stond die? (De meting op dat tijdstip.)"""
+    for r in reeks:
+        if abs(r.get('t', -1e9) - tijd) < 1e-6 and r.get('werper') is not None:
+            return r
+    return None
 
 
 def maak_events(momenten: list[tuple[float, float]], reeks: list[dict], match_id: int | None,
@@ -338,6 +425,11 @@ def maak_events(momenten: list[tuple[float, float]], reeks: list[dict], match_id
             'speler': None,
             'score_delta': 0,
             'confidence': round(vertrouwen(s, drempel), 3),
+            # Wélke werper (een volgnummer dat door de hele video hetzelfde blijft zolang de
+            # speler gevolgd kan worden) en waar die stond. Daarmee groepeert de app de worpen
+            # per werper, zodat je één keer per speler zegt wie het is.
+            **(lambda w: {'werper': w['werper'], 'werper_px': [w.get('x'), w.get('y')]}
+               if w else {})(werper_op(reeks, t)),
             'provenance': {'model': MODEL_NAAM, 'model_version': MODEL_VERSION},
         }
         for t, s in momenten

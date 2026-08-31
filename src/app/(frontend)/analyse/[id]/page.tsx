@@ -20,6 +20,7 @@ import { Kalibreren } from './Kalibreren'
 import { ModelBijstellen } from './ModelBijstellen'
 import { ModelScore } from './ModelScore'
 import { Overzetten } from './Overzetten'
+import { Werpers } from './Werpers'
 import { ServerAnalyse } from './ServerAnalyse'
 import { Terreinmaten } from './Terreinmaten'
 import { Veldkaart } from './Veldkaart'
@@ -365,6 +366,12 @@ export default async function AnalyseDetailPage({ params }: { params: Promise<{ 
                 geijkt={typeof matchDoc?.videoOffsetH1 === 'number'}
               />
             </ErrorCatch>
+            {/* Wie is wie: één keer per werper zeggen welke speler dat is. Staat bewust vóór het
+                overzetten — daarna staan de namen vast in onwijzigbare worpen. */}
+            <ErrorCatch label="Wie wierp wat">
+              <Werpers matchId={matchId} />
+            </ErrorCatch>
+
             {/* De laatste stap van de video-weg: wat je bevestigde wordt een échte worp, zodat
                 de veldkaart en de statistieken hieronder eindelijk iets tonen. Enkel zinvol
                 zolang er nog niets aangetekend is. */}

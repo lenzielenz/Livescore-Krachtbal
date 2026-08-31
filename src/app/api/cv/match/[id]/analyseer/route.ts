@@ -80,6 +80,9 @@ async function importeerVoorstellen(
           side: speler?.team === 'home' || speler?.team === 'away' ? speler.team : null,
           rugnummer: Number.isInteger(rug) && (rug as number) >= 0 && (rug as number) <= 99 ? (rug as number) : null,
           scoreDelta: Number.isFinite(Number(e.score_delta)) ? Number(e.score_delta) : 0,
+          // De werper-groep uit het houdingsmodel: geen rugnummer, wel genoeg om de worpen per
+          // speler te groeperen.
+          werper: Number.isInteger(Number(e.werper)) ? Number(e.werper) : null,
           confidence: vertrouwen,
           reviewed: false,
           provenance: {

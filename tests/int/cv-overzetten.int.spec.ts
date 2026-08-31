@@ -171,6 +171,33 @@ describe('zetVoorstellenOver', () => {
     expect(r.beperkingen.some((b) => b.toLowerCase().includes('opstelling'))).toBe(true)
   })
 
+  it('zet de worpen op de speler die jij aan die werper toewees', async () => {
+    // Het model leest geen rugnummers, maar het onderscheidt wél werpers. Wat een mens daaraan
+    // toevoegt — één keer per werper zeggen wie het is — moet vóór alles gaan.
+    const { matchId, homePlayers } = await maakAnalysewedstrijd()
+    await voorstel(matchId, 100, 7, 30, { werper: 3 })
+    await voorstel(matchId, 150, 7, 25, { werper: 3 })
+    await payload.update({
+      collection: 'matches',
+      id: matchId,
+      data: { cvWerpers: { '3': homePlayers[2] } },
+      overrideAccess: true,
+    })
+
+    const r = await zetVoorstellenOver(payload, matchId, { droog: false })
+    if (isOverzetfout(r)) throw new Error(r.fout)
+    expect(r.metRugnummer).toBeGreaterThan(0)
+
+    const worpen = await payload.find({
+      collection: 'throws', where: { match: { equals: matchId } }, sort: 'throwNumber', depth: 0, limit: 10,
+    })
+    const eerste = worpen.docs[0] as { player?: unknown }
+    const spelerId = typeof eerste.player === 'object' && eerste.player
+      ? Number((eerste.player as { id: number }).id)
+      : Number(eerste.player)
+    expect(spelerId).toBe(homePlayers[2])
+  })
+
   it('zegt het wanneer geen enkele worp een herkend rugnummer had', async () => {
     // Zo werkt de videopijplijn vandaag: ze vult het rugnummer zelden in. Dan mogen de
     // spelerskaarten niet doorgaan voor waarheid.

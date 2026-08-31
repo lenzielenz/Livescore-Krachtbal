@@ -600,6 +600,18 @@ export interface Match {
    */
   videoOffsetH2?: number | null;
   /**
+   * Beheerd via /api/cv/match/[id]/werpers.
+   */
+  cvWerpers?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  /**
    * Bepaalt welke stappen het voortgangsbord vraagt. Enkel voor analyse-opnames.
    */
   analyseModus?: ('manueel' | 'video') | null;
@@ -1633,6 +1645,10 @@ export interface CvEvent {
    */
   reviewed?: boolean | null;
   /**
+   * Volgnummer uit de videoanalyse, geen rugnummer.
+   */
+  werper?: number | null;
+  /**
    * Leeg = nog te reviewen.
    */
   verdict?: ('bevestigd' | 'afgewezen') | null;
@@ -1911,6 +1927,7 @@ export interface MatchesSelect<T extends boolean = true> {
   videoUrl?: T;
   videoOffsetH1?: T;
   videoOffsetH2?: T;
+  cvWerpers?: T;
   analyseModus?: T;
   cvKalibratie?: T;
   cvAnalyse?: T;
@@ -2551,6 +2568,7 @@ export interface CvEventsSelect<T extends boolean = true> {
   scoreDelta?: T;
   confidence?: T;
   reviewed?: T;
+  werper?: T;
   verdict?: T;
   worpTypeOrigineel?: T;
   provenance?:

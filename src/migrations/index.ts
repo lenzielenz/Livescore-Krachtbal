@@ -101,6 +101,8 @@ import * as migration_20260831_110000_cv_fysiek from './20260831_110000_cv_fysie
 import * as migration_20260831_120000_cv_analyse from './20260831_120000_cv_analyse'
 import * as migration_20260901_090000_analyse_modus from './20260901_090000_analyse_modus'
 import * as migration_20260901_120000_worp_bron from './20260901_120000_worp_bron'
+import * as migration_20260901_140000_cv_werper from './20260901_140000_cv_werper'
+import * as migration_20260901_150000_cv_werpers from './20260901_150000_cv_werpers'
 
 export const migrations = [
   {
@@ -617,5 +619,15 @@ export const migrations = [
     up: migration_20260901_120000_worp_bron.up,
     down: migration_20260901_120000_worp_bron.down,
     name: '20260901_120000_worp_bron',
+  },
+  {
+    up: migration_20260901_140000_cv_werper.up,
+    down: migration_20260901_140000_cv_werper.down,
+    name: '20260901_140000_cv_werper',
+  },
+  {
+    up: migration_20260901_150000_cv_werpers.up,
+    down: migration_20260901_150000_cv_werpers.down,
+    name: '20260901_150000_cv_werpers',
   },
 ];

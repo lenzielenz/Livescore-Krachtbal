@@ -24,6 +24,8 @@ import { FIELD, totalLengthM, veldMaten, type Point, type VeldMaten } from './fi
 /** Wat er van een cv-event nodig is om er een worp van te maken. */
 export type Voorstelworp = {
   videoTimeS: number
+  /** De werper-groep uit de videoanalyse (geen rugnummer). */
+  werper?: number | null
   eventType: 'worp' | 'vangst' | 'doelpunt' | 'buitenspel'
   worpType?: 'nek' | 'rug' | null
   side?: 'home' | 'away' | null
@@ -36,6 +38,8 @@ export type Voorstelworp = {
 /** De velden die recordThrow van ons verwacht (de rest leidt de engine zelf af). */
 export type Worpinvoer = {
   type: 'nek' | 'rug'
+  /** De werper-groep uit de video; met de toewijzing wordt dat een échte speler. */
+  werper: number | null
   point: Point
   tapCount: 1 | 2
   rugnummer: number | null
@@ -90,6 +94,7 @@ export function worpUitVoorstel(
     // uit en eigen doelgebied leidt de engine zelf af.
     tapCount: v.eventType === 'vangst' ? 2 : 1,
     rugnummer: typeof v.rugnummer === 'number' && v.rugnummer >= 0 ? v.rugnummer : null,
+    werper: typeof v.werper === 'number' && Number.isFinite(v.werper) ? v.werper : null,
     side: v.side === 'home' || v.side === 'away' ? v.side : null,
     videoTimeS: v.videoTimeS,
   }

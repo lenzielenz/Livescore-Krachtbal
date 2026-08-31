@@ -248,3 +248,43 @@ class TestSchatDuur(unittest.TestCase):
     def test_geen_negatieve_of_onzinnige_schatting(self):
         self.assertEqual(houding.schat_duur(-1.0, 100), 0.0)
         self.assertEqual(houding.schat_duur(0.5, 0), 0.0)
+
+
+class TestKoppelPersonen(unittest.TestCase):
+    """Wie is wie tussen twee metingen.
+
+    Het model levert per beeld een LIJST personen, en die volgorde verandert zodra er iemand
+    bijkomt of wegvalt. Wie de lijstindex als identiteit gebruikt, vergelijkt de polsen van
+    speler A met die van speler B en meet een polssnelheid die niemand maakte — en kan achteraf
+    niet zeggen wie er wierp.
+    """
+
+    def staat(self, x, y, romp=100.0):
+        return {'heup': (x, y), 'romp': romp, 'polshoogte': 0.3, 'pols': (x, y - 60)}
+
+    def test_volgt_dezelfde_persoon_ondanks_een_andere_volgorde(self):
+        vorige = {7: self.staat(100, 500), 9: self.staat(400, 500)}
+        # Nu staan ze omgekeerd in de lijst, en elk een stukje verschoven.
+        huidige = [self.staat(410, 505), self.staat(112, 498)]
+        koppeling = houding.koppel_personen(vorige, huidige)
+        self.assertEqual(koppeling[0], 9)
+        self.assertEqual(koppeling[1], 7)
+
+    def test_weigert_een_sprong_die_geen_speler_kan_maken(self):
+        # Anderhalve romphoogte is de grens: verder is het een verwisseling, geen wandeling.
+        vorige = {1: self.staat(100, 500)}
+        huidige = [self.staat(600, 500)]
+        self.assertEqual(houding.koppel_personen(vorige, huidige), {})
+
+    def test_koppelt_elke_persoon_hoogstens_een_keer(self):
+        # Twee spelers vlak bij elkaar mogen niet allebei aan dezelfde vorige gekoppeld worden.
+        vorige = {3: self.staat(200, 500)}
+        huidige = [self.staat(205, 500), self.staat(210, 500)]
+        koppeling = houding.koppel_personen(vorige, huidige)
+        self.assertEqual(len(koppeling), 1)
+        self.assertEqual(koppeling.get(0), 3)
+
+    def test_laat_iemand_zonder_heupen_met_rust(self):
+        vorige = {1: self.staat(100, 500)}
+        huidige = [{'heup': None, 'romp': 100.0, 'polshoogte': None, 'pols': None}]
+        self.assertEqual(houding.koppel_personen(vorige, huidige), {})

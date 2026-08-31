@@ -1,6 +1,7 @@
 import type { Payload } from 'payload'
 
 import { maakOverzetplan, type Voorstelworp } from './cv-naar-worp'
+import { leesToewijzing } from './cv-werpers'
 import { advanceHalf, buildMatchState, recordThrow, startMatch } from './match-engine'
 
 // De video-weg afmaken: bevestigde voorstellen worden échte worpen.
@@ -133,6 +134,10 @@ export async function zetVoorstellenOver(
     })
     .catch(() => ({ docs: [] as Record<string, unknown>[] }))
 
+  // Wie is wie: de toewijzing die een mens één keer per werper maakte. Daarmee komt élke worp
+  // van die werper op de juiste speler terecht, in plaats van op een rondgaande gok.
+  const toewijzing = leesToewijzing(match.cvWerpers)
+
   const plan = maakOverzetplan(
     voorstellenRes.docs as unknown as Voorstelworp[],
     match.goalAreaDepth ?? undefined,
@@ -230,7 +235,16 @@ export async function zetVoorstellenOver(
     const opstelling = await spelersVan(payload, side === 'home' ? state.teams.home.id : state.teams.away.id, state.lineup[side])
     // Wie de vorige worp van dít balbezit deed, weet de engine zelf — en zij is de enige die
     // weet wanneer het balbezit wisselde en die regel dus weer vanaf nul geldt.
-    const werper = kiesWerper(opstelling, worp.rugnummer, state.possession.lastPlayerId, beurt)
+    // Eerst de toewijzing: die is van een mens en gaat dus vóór alles. Staat de toegewezen
+    // speler niet op het veld (gewisseld, of bij de andere ploeg volgens de balbezit-keten),
+    // dan valt het terug op het rugnummer en anders op de rondgang.
+    const toegewezen = worp.werper != null ? toewijzing[String(worp.werper)] : undefined
+    const uitToewijzing = toegewezen != null
+      && opstelling.some((p) => p.id === toegewezen)
+      && toegewezen !== state.possession.lastPlayerId
+      ? toegewezen
+      : null
+    const werper = uitToewijzing ?? kiesWerper(opstelling, worp.rugnummer, state.possession.lastPlayerId, beurt)
     beurt++
     if (werper == null) {
       geweigerd.push({ videoTimeS: worp.videoTimeS, reden: 'geen speler op het veld om de worp op te zetten' })
@@ -252,7 +266,8 @@ export async function zetVoorstellenOver(
         bron: 'video',
       })
       overgezet++
-      if (worp.rugnummer != null && opstelling.some((p) => p.shirtNumber === worp.rugnummer)) {
+      if (uitToewijzing != null
+          || (worp.rugnummer != null && opstelling.some((p) => p.shirtNumber === worp.rugnummer))) {
         metRugnummer++
       }
     } catch (e) {
@@ -276,10 +291,11 @@ export async function zetVoorstellenOver(
            + 'Die tellen één punt in plaats van twee.']
         : []),
       ...(overgezet > 0 && metRugnummer === 0
-        ? ['Geen enkele worp droeg een herkend rugnummer: de worpen zijn over de opstelling '
-           + 'verdeeld. Score, veldkaart en afstanden kloppen; de spelerskaarten zeggen niets.']
+        ? ['Geen enkele worp weet wie hem maakte: de worpen zijn over de opstelling verdeeld. '
+           + 'Score, veldkaart en afstanden kloppen; de spelerskaarten zeggen niets. Wijs de '
+           + 'werpers toe (hierboven) en zet daarna pas over.']
         : metRugnummer < overgezet
-          ? [`${overgezet - metRugnummer} van de ${overgezet} worpen hadden geen herkend rugnummer `
+          ? [`${overgezet - metRugnummer} van de ${overgezet} worpen weten niet wie ze maakte `
              + '— die staan op een speler uit de opstelling, niet op wie ze echt deed.']
           : []),
     ],

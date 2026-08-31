@@ -588,3 +588,18 @@
   border: 1px solid rgba(250, 204, 21, 0.3); background: rgba(250, 204, 21, 0.07);
 }
 .ov-lijst li { margin: 3px 0; }
+
+/* ── Wie wierp wat: de werpers uit de video een naam geven ──────────────────────────────── */
+.wp-tabel { width: 100%; border-collapse: collapse; font-size: 13px; margin: 8px 0; }
+.wp-tabel th, .wp-tabel td { padding: 6px 6px; text-align: left; vertical-align: middle; }
+.wp-tabel thead th {
+  font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; opacity: 0.6; font-weight: 600;
+}
+.wp-tabel tbody tr { border-top: 1px solid rgba(255, 255, 255, 0.08); }
+.wp-tabel tbody tr.gezet { background: rgba(74, 222, 128, 0.07); }
+.wp-tabel tbody th { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.wp-tabel select {
+  width: 100%; max-width: 220px; padding: 6px 8px; border-radius: 8px; font: inherit; font-size: 13px;
+  color: inherit; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.16);
+}
+.wp-kant { color: var(--muted); font-weight: 400; }
