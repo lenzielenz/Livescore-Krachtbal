@@ -1,7 +1,14 @@
 import { describe, it, expect } from 'vitest'
 import path from 'path'
 
-import { kiesHoldout, labelRegels, trainArgv, type Trainingskandidaat } from '@/lib/cv-training'
+import {
+  bevestigdeTijden,
+  kiesHoldout,
+  labelRegels,
+  trainArgv,
+  voegSamen,
+  type Trainingskandidaat,
+} from '@/lib/cv-training'
 
 // Het model bijstellen op de eigen wedstrijden. Twee dingen moeten hier kloppen, want als ze
 // scheef staan is er niets aan te zien: de labels moeten op de júiste videoseconde staan, en de
@@ -44,7 +51,7 @@ describe('labelRegels', () => {
 describe('kiesHoldout', () => {
   const k = (matchId: number): Trainingskandidaat => ({
     matchId, reeks: `/w/${matchId}/houding-reeks.jsonl`, labels: `/w/${matchId}/labels.jsonl`,
-    worpen: 40, metingen: 3000,
+    worpen: 40, metingen: 3000, bron: 'reviews' as const,
   })
 
   it('houdt de laatste wedstrijd buiten het fitten', () => {
@@ -61,7 +68,7 @@ describe('kiesHoldout', () => {
 describe('trainArgv', () => {
   const k = (matchId: number): Trainingskandidaat => ({
     matchId, reeks: `/w/${matchId}/houding-reeks.jsonl`, labels: `/w/${matchId}/labels.jsonl`,
-    worpen: 40, metingen: 3000,
+    worpen: 40, metingen: 3000, bron: 'reviews' as const,
   })
 
   it('geeft elke wedstrijd als een paar reeks+labels mee', () => {
@@ -85,5 +92,41 @@ describe('trainArgv', () => {
   it('schrijft naar het meegegeven pad', () => {
     const argv = trainArgv([k(42)], null, '/media/cv-analyse/model-houding.json', '/cv')
     expect(argv[argv.indexOf('--uit') + 1]).toBe('/media/cv-analyse/model-houding.json')
+  })
+})
+
+describe('bevestigdeTijden', () => {
+  // De labels die géén ijking nodig hebben: wat je op de video zelf bevestigd hebt, staat al op
+  // de videotijdlijn.
+  it('neemt enkel wat je bevestigd hebt, op tijd gezet', () => {
+    expect(
+      bevestigdeTijden([
+        { videoTimeS: 300, verdict: 'bevestigd' },
+        { videoTimeS: 100, verdict: 'bevestigd' },
+        { videoTimeS: 200, verdict: 'afgewezen' },
+        { videoTimeS: 250, verdict: null },
+      ]),
+    ).toEqual([100, 300])
+  })
+
+  it('negeert een voorstel zonder bruikbare tijd', () => {
+    expect(bevestigdeTijden([{ videoTimeS: null, verdict: 'bevestigd' }])).toEqual([])
+  })
+})
+
+describe('voegSamen', () => {
+  it('labelt dezelfde worp niet twee keer', () => {
+    // Een worp die je op de video bevestigde én tijdens de wedstrijd invoerde, is één worp.
+    // Twee labels zouden er eentje als "gemist" laten tellen en de recall kunstmatig drukken.
+    expect(voegSamen([100, 200], [100.4, 350])).toEqual([100, 200, 350])
+  })
+
+  it('houdt twee echte worpen kort na elkaar wél apart', () => {
+    expect(voegSamen([100], [105])).toEqual([100, 105])
+  })
+
+  it('werkt met een lege kant', () => {
+    expect(voegSamen([], [5, 1])).toEqual([1, 5])
+    expect(voegSamen([2, 1], [])).toEqual([1, 2])
   })
 })

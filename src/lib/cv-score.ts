@@ -139,6 +139,52 @@ export function verschuiving(
   return mediaan(besteKlomp)
 }
 
+export type Voorstel = {
+  videoTimeS: number
+  reviewed?: boolean
+  verdict?: 'bevestigd' | 'afgewezen' | null
+  xM?: number | null
+  yM?: number | null
+}
+
+export type Videoscore = {
+  voorstellen: number
+  van: number | null
+  tot: number | null
+  metLanding: number
+  beoordeeld: number
+  bevestigd: number
+  afgewezen: number
+  /** Van wat je beoordeeld hebt: welk deel klopte. Null zolang je niets beoordeeld hebt. */
+  precisie: number | null
+}
+
+/**
+ * Wat het model in de vídeo vond, en wat jij daarvan bevestigde.
+ *
+ * Dit is de enige maat die niets van de ijking van de wedstrijdklok hoeft te weten: elk
+ * voorstel draagt zijn eigen tijdstip in de opname, en je oordeel hangt aan datzelfde
+ * voorstel. Klopt de ijking van helft 1 of 2 niet, dan verandert er hier niets.
+ *
+ * Wat het níét kan zeggen: hoeveel worpen het model gemist heeft. Je beoordeelt alleen wat het
+ * aandroeg — over wat het nooit aandroeg zegt geen enkele review iets.
+ */
+export function videoscore(voorstellen: Voorstel[]): Videoscore {
+  const tijden = voorstellen.map((v) => v.videoTimeS).filter((t) => Number.isFinite(t))
+  const beoordeeld = voorstellen.filter((v) => v.verdict === 'bevestigd' || v.verdict === 'afgewezen')
+  const bevestigd = beoordeeld.filter((v) => v.verdict === 'bevestigd').length
+  return {
+    voorstellen: voorstellen.length,
+    van: tijden.length ? Math.min(...tijden) : null,
+    tot: tijden.length ? Math.max(...tijden) : null,
+    metLanding: voorstellen.filter((v) => v.xM != null && v.yM != null).length,
+    beoordeeld: beoordeeld.length,
+    bevestigd,
+    afgewezen: beoordeeld.length - bevestigd,
+    precisie: beoordeeld.length ? bevestigd / beoordeeld.length : null,
+  }
+}
+
 /** De scorekaart in één zin, zoals ze in de app staat. */
 export function inWoorden(kaart: Scorekaart): string {
   if (!kaart.worpen) return 'Er zijn nog geen worpen ingevoerd om mee te vergelijken.'

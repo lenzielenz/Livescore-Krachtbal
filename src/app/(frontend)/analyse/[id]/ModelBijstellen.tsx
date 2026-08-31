@@ -26,7 +26,7 @@ type Model = {
 
 type Stand = {
   model: Model | null
-  kandidaten: { matchId: number; worpen: number; metingen: number }[]
+  kandidaten: { matchId: number; worpen: number; metingen: number; bron?: 'reviews' | 'worpen' | 'beide' }[]
   overgeslagen: { matchId: number; reden: string }[]
 }
 
@@ -90,7 +90,9 @@ export function ModelBijstellen() {
       <p className="sa-lead">
         Het houdingsmodel beslist met twee drempels wanneer iets een worp is. Die waren geschat.
         Hier worden ze geleerd uit de wedstrijden die al geanalyseerd zijn: de meting van het
-        model naast de worpen die de aantekenaar toen invoerde.
+        model naast wat er écht gebeurde — de voorstellen die jij op de video bevestigd hebt
+        (daar komt geen ijking aan te pas), aangevuld met de ingevoerde worpen wanneer de video
+        wél geijkt is.
       </p>
 
       {model ? (
@@ -118,8 +120,12 @@ export function ModelBijstellen() {
 
       <p className="sa-hint">
         {kandidaten.length
-          ? `Bruikbaar: ${kandidaten.map((k) => `wedstrijd ${k.matchId} (${k.worpen} worpen)`).join(', ')}.`
-          : 'Nog geen bruikbare wedstrijd: er is een analyse met het houdingsmodel nodig, plus een geijkte video en ingevoerde worpen.'}
+          ? `Bruikbaar: ${kandidaten
+              .map((k) => `wedstrijd ${k.matchId} (${k.worpen} worpen${
+                k.bron === 'reviews' ? ', uit je reviews' : k.bron === 'worpen' ? ', uit de ingevoerde worpen' : ''
+              })`)
+              .join(', ')}.`
+          : 'Nog geen bruikbare wedstrijd: er is een analyse met het houdingsmodel nodig, plus bevestigde voorstellen op de video (of een geijkte video met ingevoerde worpen).'}
       </p>
       {overgeslagen.length > 0 && (
         <p className="sa-hint">

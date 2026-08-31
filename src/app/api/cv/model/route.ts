@@ -28,7 +28,9 @@ export async function GET(req: Request) {
   const { kandidaten, overgeslagen } = await verzamelWedstrijden(t.payload)
   return Response.json({
     model: await leesInstellingen(),
-    kandidaten: kandidaten.map((k) => ({ matchId: k.matchId, worpen: k.worpen, metingen: k.metingen })),
+    kandidaten: kandidaten.map((k) => ({
+      matchId: k.matchId, worpen: k.worpen, metingen: k.metingen, bron: k.bron,
+    })),
     holdout: kiesHoldout(kandidaten),
     overgeslagen,
   })
@@ -46,7 +48,9 @@ export async function POST(req: Request) {
     ok: true,
     model: resultaat.rapport,
     uitvoer: resultaat.uitvoer,
-    kandidaten: resultaat.kandidaten.map((k) => ({ matchId: k.matchId, worpen: k.worpen, metingen: k.metingen })),
+    kandidaten: resultaat.kandidaten.map((k) => ({
+      matchId: k.matchId, worpen: k.worpen, metingen: k.metingen, bron: k.bron,
+    })),
     overgeslagen: resultaat.overgeslagen,
   })
 }
