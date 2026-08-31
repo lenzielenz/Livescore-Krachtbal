@@ -30,6 +30,7 @@ function leesOpties(body: Record<string, unknown>): AnalyseOpties {
     stand,
     bewegend: body.bewegend === true,
     tracking: body.tracking === true,
+    ai: body.ai === true,
     overlay: body.overlay !== false, // standaard aan: zonder controlebeeld kan je niets beoordelen
   }
 }

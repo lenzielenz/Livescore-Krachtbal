@@ -292,3 +292,26 @@ describe('argumenten van de worpdetectie', () => {
     expect(argv).not.toContain('--fps')
   })
 })
+
+describe('worpen zoeken met het houdingsmodel', () => {
+  it('gebruikt houding.py in plaats van de beeldverschil-spotter', () => {
+    const s = stappen({ opts: { ...OPTS, ai: true }, fps: 10 })
+    const namenLijst = namen(s)
+    expect(namenLijst.some((n) => n.includes('houding'))).toBe(true)
+    expect(namenLijst.some((n) => n.includes('Kandidaat-worpen'))).toBe(false)
+    const argv = argvVan(s, 'houding')
+    expect(argv[0]).toMatch(/houding\.py$/)
+    expect(argv).toContain('--analyse-fps')
+  })
+
+  it('kijkt hoogstens vijf keer per seconde — elk beeld kost het model tijd', () => {
+    const argv = argvVan(stappen({ opts: { ...OPTS, ai: true }, fps: 20 }), 'houding')
+    expect(Number(argv[argv.indexOf('--analyse-fps') + 1])).toBeLessThanOrEqual(5)
+  })
+
+  it('schrijft naar hetzelfde bestand, zodat de rest van de keten niets merkt', () => {
+    const metAi = argvVan(stappen({ opts: { ...OPTS, ai: true } }), 'houding')
+    const zonder = argvVan(stappen(), 'Kandidaat-worpen')
+    expect(metAi[metAi.indexOf('--uit') + 1]).toBe(zonder[zonder.indexOf('--uit') + 1])
+  })
+})

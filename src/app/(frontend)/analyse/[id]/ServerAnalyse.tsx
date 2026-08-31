@@ -59,6 +59,8 @@ export function ServerAnalyse({ matchId, heeftVideo }: { matchId: number; heeftV
   const [stand, setStand] = useState<'snel' | 'gewoon' | 'nauwkeurig'>('gewoon')
   const [bewegend, setBewegend] = useState(false)
   const [tracking, setTracking] = useState(false)
+  const [ai, setAi] = useState(false)
+  const [aiModel, setAiModel] = useState(false)
   const [omgeving, setOmgeving] = useState<RuntimeStand | null>(null)
   const [magInstalleren, setMagInstalleren] = useState(false)
   const timer = useRef<number | null>(null)
@@ -82,9 +84,10 @@ export function ServerAnalyse({ matchId, heeftVideo }: { matchId: number; heeftV
         setMagInstalleren(false)
         return
       }
-      const data = (await res.json()) as { stand: RuntimeStand | null }
+      const data = (await res.json()) as { stand: RuntimeStand | null; aiModel?: boolean }
       setMagInstalleren(true)
       setOmgeving(data.stand)
+      setAiModel(data.aiModel === true)
     } catch {
       /* stil */
     }
@@ -94,8 +97,9 @@ export function ServerAnalyse({ matchId, heeftVideo }: { matchId: number; heeftV
     void haal()
   }, [haal])
 
+  // Ook als de omgeving in orde is willen we weten of het houdingsmodel erbij staat.
   useEffect(() => {
-    if (info && !info.omgevingOk) void haalOmgeving()
+    if (info) void haalOmgeving()
   }, [info, haalOmgeving])
 
   // Zolang er iets draait: elke vijf seconden kijken. Niet vaker — het is rekenwerk van
@@ -121,11 +125,15 @@ export function ServerAnalyse({ matchId, heeftVideo }: { matchId: number; heeftV
     return () => window.clearInterval(t)
   }, [installeert, haalOmgeving, haal])
 
-  const installeer = async () => {
+  const installeer = async (soort: 'basis' | 'ai' = 'basis') => {
     setBusy(true)
     setFout(null)
     try {
-      const res = await fetch('/api/cv/runtime', { method: 'POST' })
+      const res = await fetch('/api/cv/runtime', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ soort }),
+      })
       const data = (await res.json()) as { error?: string }
       if (!res.ok) {
         setFout(data.error ?? 'Installeren mislukt.')
@@ -146,7 +154,7 @@ export function ServerAnalyse({ matchId, heeftVideo }: { matchId: number; heeftV
       const res = await fetch(`/api/cv/match/${matchId}/analyseer`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ stand, bewegend, tracking, overlay: true }),
+        body: JSON.stringify({ stand, bewegend, tracking, ai, overlay: true }),
       })
       const data = (await res.json()) as { error?: string }
       if (!res.ok) {
@@ -204,7 +212,7 @@ export function ServerAnalyse({ matchId, heeftVideo }: { matchId: number; heeftV
                 in een minuut. Daarna blijft ze staan, ook na een nieuwe versie van de site.
               </p>
               {omgeving?.status === 'mislukt' && <p className="sa-let-op">❌ Mislukt: {omgeving.fout}</p>}
-              <button type="button" className="va-btn primary" disabled={busy} onClick={() => void installeer()}>
+              <button type="button" className="va-btn primary" disabled={busy} onClick={() => void installeer('basis')}>
                 {busy ? 'Bezig…' : '⚙️ Analyse-omgeving installeren'}
               </button>
             </>
@@ -335,6 +343,32 @@ export function ServerAnalyse({ matchId, heeftVideo }: { matchId: number; heeftV
               <input type="checkbox" checked={tracking} onChange={(e) => setTracking(e.target.checked)} />
               <span>Ook spelers volgen (loopafstand, sprintjes)</span>
             </label>
+            {aiModel ? (
+              <label className="sa-vink">
+                <input type="checkbox" checked={ai} onChange={(e) => setAi(e.target.checked)} />
+                <span>
+                  Worpen herkennen met het houdingsmodel <em>(kijkt naar de spelers zelf —
+                  werkt ook bij een bewegende camera, maar rekent trager)</em>
+                </span>
+              </label>
+            ) : (
+              info?.omgevingOk &&
+              magInstalleren && (
+                <p className="sa-hint">
+                  Het houdingsmodel staat er nog niet bij. Dat herkent worpen aan de spelers zelf
+                  in plaats van aan beeldverschil — de enige manier die werkt bij een camera in de
+                  hand.{' '}
+                  <button
+                    type="button"
+                    className="va-btn"
+                    disabled={busy || installeert}
+                    onClick={() => void installeer('ai')}
+                  >
+                    🧠 Houdingsmodel installeren (~200 MB)
+                  </button>
+                </p>
+              )
+            )}
           </div>
 
           <div className="sa-acties">

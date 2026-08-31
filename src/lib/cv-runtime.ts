@@ -23,6 +23,14 @@ const PYTHON_RELEASE = '20250818'
 /** De sha256 van precies dat bestand — we halen een programma binnen dat we daarna uitvoeren. */
 export const PYTHON_SHA256 = 'a1fb9e8f108ab31ca72ed488e79370873721a2a4fe7e625b07964c380721a87f'
 const PAKKETTEN = ['numpy==1.26.4', 'opencv-python-headless==4.10.0.84']
+/**
+ * Het houdingsmodel: herkent spelers en hun gewrichten, en daarmee worpen.
+ *
+ * Apart van de basis omdat het er ~200 MB bij zet en niet iedereen het nodig heeft. rtmlib
+ * haalt zijn gewichten (± 100 MB) bij de eerste run zelf op; daarom is er in de app een knop
+ * die het model op één beeld probeert — dan weet je meteen of dat gelukt is.
+ */
+const AI_PAKKETTEN = ['rtmlib==0.0.13', 'onnxruntime==1.22.0', 'tqdm']
 
 export type RuntimeStand = {
   status: 'bezig' | 'klaar' | 'mislukt'
@@ -48,6 +56,11 @@ export function runtimePython(): string {
 
 export function heeftRuntime(): boolean {
   return existsSync(runtimePython())
+}
+
+/** Staat het houdingsmodel erbij? (rtmlib in de pakkettenmap.) */
+export function heeftAiModel(): boolean {
+  return existsSync(path.join(runtimeMap(), 'pakketten', 'rtmlib'))
 }
 
 /**
@@ -126,14 +139,19 @@ function draai(commando: string, argv: string[], opties: { env?: NodeJS.ProcessE
 export async function startRuntimeInstallatie(
   systeemPython: string | null,
   klaar?: () => void,
+  soort: 'basis' | 'ai' = 'basis',
 ): Promise<{ ok: true; stand: RuntimeStand } | { ok: false; fout: string; code: number }> {
   if (bezig) return { ok: false, code: 409, fout: 'De installatie loopt al.' }
+  if (soort === 'ai' && !systeemPython && !heeftRuntime()) {
+    return { ok: false, code: 400, fout: 'Installeer eerst de gewone analyse-omgeving.' }
+  }
   bezig = true
 
-  const stappen = systeemPython ? 2 : 3
+  const pakketten = soort === 'ai' ? AI_PAKKETTEN : PAKKETTEN
+  const stappen = soort === 'ai' ? 3 : systeemPython ? 2 : 3
   let stand: RuntimeStand = {
     status: 'bezig',
-    stap: systeemPython ? 'opencv en numpy installeren' : 'Python ophalen',
+    stap: soort === 'ai' ? 'het houdingsmodel installeren' : systeemPython ? 'opencv en numpy installeren' : 'Python ophalen',
     stapNummer: 1,
     stappen,
     gestart: new Date().toISOString(),
@@ -146,7 +164,7 @@ export async function startRuntimeInstallatie(
       await schrijfRuntimeStand(stand)
     }
     try {
-      let python = systeemPython
+      let python = systeemPython ?? (soort === 'ai' && heeftRuntime() ? runtimePython() : null)
       if (!python) {
         const data = await haalEnControleer(pythonUrl())
         await zet('Python uitpakken', 2)
@@ -159,13 +177,31 @@ export async function startRuntimeInstallatie(
 
       const doel = path.join(runtimeMap(), 'pakketten')
       await fs.mkdir(doel, { recursive: true })
-      const pip = await draai(python, ['-m', 'pip', 'install', '--no-cache-dir', '--target', doel, ...PAKKETTEN])
-      if (pip.code !== 0) throw new Error(`opencv installeren mislukte: ${pip.err.split('\n').pop() || pip.code}`)
+      const pip = await draai(python, ['-m', 'pip', 'install', '--no-cache-dir', '--target', doel, ...pakketten])
+      if (pip.code !== 0) throw new Error(`installeren mislukte: ${pip.err.split('\n').pop() || pip.code}`)
 
-      const controle = await draai(python, ['-c', 'import cv2, numpy'], {
-        env: { ...process.env, PYTHONPATH: doel },
-      })
+      await zet('controleren', soort === 'ai' ? 2 : stappen)
+      const proef = soort === 'ai' ? 'import rtmlib, onnxruntime' : 'import cv2, numpy'
+      const controle = await draai(python, ['-c', proef], { env: { ...process.env, PYTHONPATH: doel } })
       if (controle.code !== 0) throw new Error(`De omgeving werkt niet: ${controle.err.split('\n').pop() || ''}`)
+
+      if (soort === 'ai') {
+        // De gewichten meteen ophalen én het model één keer opbouwen. Doen we dat niet, dan
+        // gebeurt die download van ~100 MB pas midden in de eerste analyse — en loopt die vast
+        // op een server zonder internet, een halfuur nadat je op de knop drukte.
+        await zet('het model ophalen (± 100 MB)', 3)
+        const ophalen = await draai(
+          python,
+          ['-c', "from rtmlib import Body; Body(mode='balanced', backend='onnxruntime', device='cpu'); print('ok')"],
+          { env: { ...process.env, PYTHONPATH: doel } },
+        )
+        if (ophalen.code !== 0) {
+          throw new Error(
+            `Het model kon niet opgehaald worden: ${ophalen.err.split('\n').pop() || ophalen.code}. ` +
+              'rtmlib haalt zijn gewichten bij download.openmmlab.com — kan deze server daarbij?',
+          )
+        }
+      }
 
       await schrijfRuntimeStand({
         ...stand,

@@ -60,6 +60,8 @@ export type AnalyseOpties = {
   bewegend: boolean
   tracking: boolean
   overlay: boolean
+  /** Worpen zoeken met het houdingsmodel in plaats van met beeldverschil. */
+  ai?: boolean
 }
 
 /** Wanneer dit serverproces startte — om te zien of een 'bezig'-taak nog van ons is. */
@@ -297,15 +299,26 @@ export function bouwStappen(opties: {
     })
   }
 
-  // Let op welk argument wat doet: --fps vult enkel het frame-nummer in (en moet dus de
-  // beeldfrequentie van de vídeo zijn, niet iets anders), terwijl --analyse-fps bepaalt hoe
-  // fijn de detector kijkt. Die stond eerder verkeerd om: de precisiekeuze bereikte de
-  // detector nooit, en elk voorstel kreeg een frame-nummer dat nergens op sloeg.
-  stappen.push({
-    naam: 'Kandidaat-worpen zoeken in de video',
-    argv: [path.join(cv, 'detect_worpen.py'), video, '--match', String(opties.matchId),
-           '--analyse-fps', String(fps), '--uit', bestand('detecties.jsonl')],
-  })
+  // Twee manieren om worpen te zoeken. Het houdingsmodel kijkt naar de spelers zelf en werkt
+  // dus ook bij een bewegende camera; de beeldverschil-spotter is sneller maar meet bij een
+  // pannende gsm vooral de camera (gemeten: nul van de acht worpen gevonden).
+  //
+  // Let ook op welk argument wat doet: --fps vult enkel het frame-nummer in (en moet dus de
+  // beeldfrequentie van de vídeo zijn), terwijl --analyse-fps bepaalt hoe fijn er gekeken
+  // wordt. Die stond eerder verkeerd om: de precisiekeuze bereikte de detector nooit.
+  stappen.push(
+    opts.ai
+      ? {
+          naam: 'Worpen herkennen aan de houding van de spelers',
+          argv: [path.join(cv, 'houding.py'), video, '--match', String(opties.matchId),
+                 '--analyse-fps', String(Math.min(fps, 5)), '--uit', bestand('detecties.jsonl')],
+        }
+      : {
+          naam: 'Kandidaat-worpen zoeken in de video',
+          argv: [path.join(cv, 'detect_worpen.py'), video, '--match', String(opties.matchId),
+                 '--analyse-fps', String(fps), '--uit', bestand('detecties.jsonl')],
+        },
+  )
 
   // Zonder kalibratie weten we wél wannéér er geworpen wordt, maar niet waar de bal landt.
   if (kalibratie) {
