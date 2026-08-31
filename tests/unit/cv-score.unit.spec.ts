@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 
-import { inWoorden, vergelijk } from '@/lib/cv-score'
+import { inWoorden, vergelijk, verschuiving, videoscore } from '@/lib/cv-score'
 
 // De scorekaart die zegt hoe goed het model het op een échte wedstrijd doet: de voorstellen
 // naast de worpen die de aantekenaar invoerde. Hier wordt vastgelegd hoe er gekoppeld wordt,
@@ -85,5 +85,68 @@ describe('inWoorden', () => {
   it('zegt het gewoon als er nog niets te vergelijken valt', () => {
     expect(inWoorden(vergelijk([], [1, 2]))).toMatch(/nog geen worpen/i)
     expect(inWoorden(vergelijk([1, 2], []))).toMatch(/nog geen voorstellen/i)
+  })
+})
+
+describe('verschuiving', () => {
+  // Nul treffers zegt op zich niets: het model kan niets gevonden hebben, óf de ijking van de
+  // video staat scheef. Dit getal maakt het verschil zichtbaar.
+  it('vindt een stelselmatige verschuiving die het venster ver overschrijdt', () => {
+    const worpen = [100, 200, 300]
+    const voorstellen = worpen.map((w) => w + 620)
+    expect(vergelijk(worpen, voorstellen).gevonden).toBe(0)
+    expect(verschuiving(worpen, voorstellen)).toBeCloseTo(620, 5)
+  })
+
+  it('geeft ongeveer nul als de tijden gewoon kloppen', () => {
+    expect(verschuiving([10, 20, 30], [10.2, 19.9, 30.1])).toBeCloseTo(0.1, 5)
+  })
+
+  it('herkent ook een voorstel dat te vroeg ligt', () => {
+    expect(verschuiving([500, 600], [200, 300])).toBeCloseTo(-300, 5)
+  })
+
+  it('zegt niets zonder één van beide lijsten', () => {
+    expect(verschuiving([], [1, 2])).toBeNull()
+    expect(verschuiving([1, 2], [])).toBeNull()
+  })
+
+  it('zegt niets als er geen patroon in zit', () => {
+    // Willekeurige voorstellen: geen twee paren die het over hetzelfde verschil eens zijn.
+    expect(verschuiving([10, 200, 900], [57, 431, 1503])).toBeNull()
+  })
+})
+
+describe('videoscore', () => {
+  // Deze maat hoeft niets van de ijking te weten: elk voorstel draagt zijn eigen tijdstip in de
+  // opname. Dat is wat er tijdens het bekijken van de video gemeten wordt.
+  const v = (videoTimeS: number, verdict: 'bevestigd' | 'afgewezen' | null = null, landing = false) => ({
+    videoTimeS,
+    reviewed: verdict != null,
+    verdict,
+    xM: landing ? 5 : null,
+    yM: landing ? 12 : null,
+  })
+
+  it('vat samen wat het model in de video vond', () => {
+    const s = videoscore([v(30), v(600, null, true), v(120)])
+    expect(s.voorstellen).toBe(3)
+    expect(s.van).toBe(30)
+    expect(s.tot).toBe(600)
+    expect(s.metLanding).toBe(1)
+  })
+
+  it('meet de precisie op wat jij beoordeeld hebt', () => {
+    const s = videoscore([v(10, 'bevestigd'), v(20, 'bevestigd'), v(30, 'afgewezen'), v(40)])
+    expect(s.beoordeeld).toBe(3)
+    expect(s.bevestigd).toBe(2)
+    expect(s.afgewezen).toBe(1)
+    expect(s.precisie).toBeCloseTo(2 / 3, 5)
+  })
+
+  it('houdt de precisie leeg zolang je niets beoordeeld hebt', () => {
+    expect(videoscore([v(10), v(20)]).precisie).toBeNull()
+    expect(videoscore([]).precisie).toBeNull()
+    expect(videoscore([]).van).toBeNull()
   })
 })

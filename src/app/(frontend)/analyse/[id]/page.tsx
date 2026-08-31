@@ -317,6 +317,7 @@ export default async function AnalyseDetailPage({ params }: { params: Promise<{ 
                 voorstellen={cvVoorstellen}
                 sync={readSync({ offsetH1: matchDoc?.videoOffsetH1, offsetH2: matchDoc?.videoOffsetH2 })}
                 halfSeconds={halfSeconds}
+                geijkt={typeof matchDoc?.videoOffsetH1 === 'number'}
               />
             </ErrorCatch>
             {/* En de andere helft van diezelfde lus: de drempels bijstellen op alles wat er al

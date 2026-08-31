@@ -5,6 +5,7 @@ import path from 'path'
 
 import {
   bruikbareBeelden,
+  leesVoortgang,
   leesVolgrapport,
   bouwKandidaten,
   bouwStappen,
@@ -14,6 +15,7 @@ import {
   videoBestand,
   type AnalyseStand,
 } from '@/lib/cv-analyse'
+import { modelCacheMap } from '@/lib/cv-runtime'
 
 // De server-side video-analyse: welke Python-stappen draaien er, in welke volgorde, met welke
 // argumenten. Een verkeerde vlag hier kost een halfuur rekenwerk voor je het merkt — dus dat
@@ -184,6 +186,14 @@ describe('spawnOmgeving', () => {
     expect(spawnOmgeving({ pad: 'python3', pythonpath: null }).PYTHONPATH).toBe(process.env.PYTHONPATH)
     expect(spawnOmgeving({ pad: 'python3', pythonpath: '/pakketten' }).PYTHONPATH).toBe('/pakketten')
   })
+
+  it('wijst de modelcache naar het volume', () => {
+    // Zonder dit haalt het houdingsmodel na elke uitrol opnieuw 100 MB gewichten op — midden
+    // in een analyse, zonder dat iemand ziet waarom het zo lang duurt.
+    const env = spawnOmgeving({ pad: 'python3', pythonpath: null })
+    expect(env.XDG_CACHE_HOME).toBe(modelCacheMap())
+    expect(env.XDG_CACHE_HOME).toContain('cv-runtime')
+  })
 })
 
 describe('analyseOmgeving', () => {
@@ -304,9 +314,24 @@ describe('worpen zoeken met het houdingsmodel', () => {
     expect(argv).toContain('--analyse-fps')
   })
 
-  it('kijkt hoogstens vijf keer per seconde — elk beeld kost het model tijd', () => {
-    const argv = argvVan(stappen({ opts: { ...OPTS, ai: true }, fps: 20 }), 'houding')
-    expect(Number(argv[argv.indexOf('--analyse-fps') + 1])).toBeLessThanOrEqual(5)
+  it('laat de precisiekeuze echt meetellen — anders kost snel evenveel als nauwkeurig', () => {
+    // Dit is de duurste stap van de keten: het aantal beelden én de modelgrootte bepalen samen
+    // of een wedstrijdvideo tien minuten of drie uur kost. Eerder stonden ze allebei vast.
+    const van = (stand: 'snel' | 'gewoon' | 'nauwkeurig') =>
+      argvVan(stappen({ opts: { ...OPTS, ai: true, stand } }), 'houding')
+    const fpsVan = (a: string[]) => Number(a[a.indexOf('--analyse-fps') + 1])
+    const modeVan = (a: string[]) => a[a.indexOf('--mode') + 1]
+
+    expect(fpsVan(van('snel'))).toBeLessThan(fpsVan(van('gewoon')))
+    expect(fpsVan(van('gewoon'))).toBeLessThan(fpsVan(van('nauwkeurig')))
+    expect(modeVan(van('snel'))).toBe('lightweight')
+    expect(modeVan(van('gewoon'))).toBe('balanced')
+    expect(modeVan(van('nauwkeurig'))).toBe('performance')
+  })
+
+  it('kijkt ook op de hoogste stand niet vaker dan het model aankan', () => {
+    const argv = argvVan(stappen({ opts: { ...OPTS, ai: true, stand: 'nauwkeurig' }, fps: 20 }), 'houding')
+    expect(Number(argv[argv.indexOf('--analyse-fps') + 1])).toBeLessThanOrEqual(8)
   })
 
   it('schrijft naar hetzelfde bestand, zodat de rest van de keten niets merkt', () => {
@@ -342,5 +367,33 @@ describe('de bal als worpbaan', () => {
 
   it('slaat het hele balverhaal over zonder kalibratie — dan is "waar" niet te weten', () => {
     expect(namen(stappen({ kalibratie: null })).some((n) => n.includes('worpbaan'))).toBe(false)
+  })
+})
+
+describe('leesVoortgang', () => {
+  // De Python-stappen melden onderweg hoe ver ze staan (cv/voortgang.py). Herkent deze lezer
+  // die regel niet, dan staat de balk in de app weer stil zonder dat iemand weet waarom.
+  it('leest de fractie en de tekst van een melding', () => {
+    expect(leesVoortgang('VOORTGANG 0.412 4:13 van 10:14, 1250 metingen')).toEqual({
+      fractie: 0.412,
+      tekst: '4:13 van 10:14, 1250 metingen',
+    })
+  })
+
+  it('verdraagt een onbekende noemer', () => {
+    // Niet elke video draagt een betrouwbare lengte mee; dan is er geen percentage, maar de
+    // melding is nog altijd een teken van leven.
+    expect(leesVoortgang('VOORTGANG ? 0:42 bekeken')).toEqual({ fractie: null, tekst: '0:42 bekeken' })
+  })
+
+  it('houdt de fractie tussen 0 en 1', () => {
+    expect(leesVoortgang('VOORTGANG 1.7 x')?.fractie).toBe(1)
+    expect(leesVoortgang('VOORTGANG 0 x')?.fractie).toBe(0)
+  })
+
+  it('negeert gewone uitvoer van de stap', () => {
+    expect(leesVoortgang('Houdingsmodel laden (balanced) …')).toBeNull()
+    expect(leesVoortgang('')).toBeNull()
+    expect(leesVoortgang('VOORTGANGx 0.5 iets')).toBeNull()
   })
 })

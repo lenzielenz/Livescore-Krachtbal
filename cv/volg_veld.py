@@ -930,6 +930,10 @@ def volg_video(args: argparse.Namespace) -> tuple[HomografieSpoor, dict]:
     if not cap.isOpened():
         _fout(f'video kan niet geopend worden: {args.video}')
 
+    from voortgang import Melder, duur_van_video  # noqa: PLC0415
+
+    # Ook deze stap loopt de hele video door: laten horen hoe ver ze staat.
+    melder = Melder(duur_van_video(cv2, cap))
     stap = 1.0 / args.fps
     cap.set(cv2.CAP_PROP_POS_MSEC, 0.0)
     ok, vorig = cap.read()
@@ -963,6 +967,7 @@ def volg_video(args: argparse.Namespace) -> tuple[HomografieSpoor, dict]:
         ok, frame = cap.read()
         if not ok:
             break
+        melder.meld(t, f'{len(momenten)} momenten')
         grijs = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         # Markante punten volgen tussen de twee frames (Lucas-Kanade).
         p0 = cv2.goodFeaturesToTrack(vorig_grijs, maxCorners=400, qualityLevel=0.01, minDistance=12)
@@ -1044,6 +1049,7 @@ def volg_video(args: argparse.Namespace) -> tuple[HomografieSpoor, dict]:
         vorig_grijs = grijs
         t += stap
     cap.release()
+    melder.klaar(f'{len(momenten)} momenten')
     if not waarnemingen:
         _fout(f'geen enkel ijkbeeld viel binnen de video (eerste anker op {ankers[0][0]:g} s) — '
               'duid een beeld aan dat écht in deze opname zit')

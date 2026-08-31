@@ -14,6 +14,10 @@ type Stand = {
   gestart: string
   geeindigd?: string
   fout?: string
+  /** Hoe ver de huidige stap staat (0..1) en wat ze laatst meldde. */
+  stapFractie?: number
+  stapDetail?: string
+  laatsteTeken?: string
   rapport?: {
     voorstellen?: number
     detecties?: number
@@ -61,6 +65,7 @@ export function ServerAnalyse({ matchId, heeftVideo }: { matchId: number; heeftV
   const [tracking, setTracking] = useState(false)
   const [ai, setAi] = useState(false)
   const [aiModel, setAiModel] = useState(false)
+  const [modelGewichten, setModelGewichten] = useState(true)
   const [omgeving, setOmgeving] = useState<RuntimeStand | null>(null)
   const [magInstalleren, setMagInstalleren] = useState(false)
   const timer = useRef<number | null>(null)
@@ -84,10 +89,15 @@ export function ServerAnalyse({ matchId, heeftVideo }: { matchId: number; heeftV
         setMagInstalleren(false)
         return
       }
-      const data = (await res.json()) as { stand: RuntimeStand | null; aiModel?: boolean }
+      const data = (await res.json()) as {
+        stand: RuntimeStand | null
+        aiModel?: boolean
+        modelGewichten?: boolean
+      }
       setMagInstalleren(true)
       setOmgeving(data.stand)
       setAiModel(data.aiModel === true)
+      setModelGewichten(data.modelGewichten !== false)
     } catch {
       /* stil */
     }
@@ -181,7 +191,19 @@ export function ServerAnalyse({ matchId, heeftVideo }: { matchId: number; heeftV
 
   if (!heeftVideo) return null
   const s = info?.stand ?? null
-  const pct = s && s.stappen > 0 ? Math.round(((s.stapNummer - 1) / s.stappen) * 100) : 0
+  // Elke peiling (om de vijf seconden) hertekent dit blok, dus deze klok loopt vanzelf mee.
+  const nu = Date.now()
+  // De balk telt niet alleen áfgewerkte stappen mee, maar ook hoe ver de lopende staat: de
+  // zwaarste stap duurt in zijn eentje langer dan al de rest samen, en een balk die daar een
+  // halfuur stilstaat is niet te onderscheiden van een vastgelopen taak.
+  const pct =
+    s && s.stappen > 0
+      ? Math.round(((s.stapNummer - 1 + Math.min(1, Math.max(0, s.stapFractie ?? 0))) / s.stappen) * 100)
+      : 0
+  // Hoe lang geleden liet de stap iets van zich horen? Alleen tonen als het écht lang duurt —
+  // anders lijkt elke normale stap verdacht.
+  const stilS = s?.laatsteTeken ? Math.round((nu - new Date(s.laatsteTeken).getTime()) / 1000) : null
+  const langStil = stilS != null && stilS > 300
 
   return (
     <section className="sa" id="serveranalyse">
@@ -226,8 +248,16 @@ export function ServerAnalyse({ matchId, heeftVideo }: { matchId: number; heeftV
             <span style={{ width: `${Math.max(6, pct)}%` }} />
           </div>
           <p className="sa-stap">
-            <strong>Stap {s?.stapNummer} van {s?.stappen}:</strong> {s?.stap}…
+            <strong>Stap {s?.stapNummer} van {s?.stappen} · {pct}%:</strong> {s?.stap}…
+            {s?.stapDetail ? <span className="sa-detail"> {s.stapDetail}</span> : null}
           </p>
+          {langStil && (
+            <p className="sa-let-op">
+              Al {Math.round((stilS as number) / 60)} minuten niets gehoord van deze stap. Ze kan
+              nog bezig zijn met een zwaar stuk video, maar als dit blijft duren breek je ze beter
+              af en probeer je opnieuw op de stand “snel”.
+            </p>
+          )}
           <p className="sa-hint">
             Dit duurt minuten tot een uur, afhankelijk van de lengte van de video. Je mag deze
             pagina gerust sluiten — de analyse loopt door en de stand blijft hier staan.
@@ -343,6 +373,21 @@ export function ServerAnalyse({ matchId, heeftVideo }: { matchId: number; heeftV
               <input type="checkbox" checked={tracking} onChange={(e) => setTracking(e.target.checked)} />
               <span>Ook spelers volgen (loopafstand, sprintjes)</span>
             </label>
+            {aiModel && !modelGewichten && (
+              <p className="sa-let-op">
+                Het houdingsmodel staat er wél, maar zijn gewichten niet meer — die stonden in de
+                container en zijn bij de laatste uitrol verdwenen. Zonder ze haalt de eerste
+                analyse ze stilletjes opnieuw op (± 100 MB), en daar lijkt ze op vast te lopen.{' '}
+                <button
+                  type="button"
+                  className="va-btn"
+                  disabled={busy || installeert}
+                  onClick={() => void installeer('ai')}
+                >
+                  Model opnieuw ophalen
+                </button>
+              </p>
+            )}
             {aiModel ? (
               <label className="sa-vink">
                 <input type="checkbox" checked={ai} onChange={(e) => setAi(e.target.checked)} />

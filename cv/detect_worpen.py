@@ -186,10 +186,13 @@ def bereken_energie_video(
     genormaliseerd naar [0,1] (delen door 255). Geeft (tijden_s, energie,
     fps_bron) terug; er wordt gesubsampled naar ± `analyse_fps`.
     """
+    from voortgang import Melder, duur_van_video  # noqa: PLC0415
+
     cv2 = _laad_cv2()
     cap = cv2.VideoCapture(str(videopad))
     if not cap.isOpened():
         _fout(f'kan video niet openen: {videopad}', code=1)
+    melder = Melder(duur_van_video(cv2, cap))
     fps_bron = cap.get(cv2.CAP_PROP_FPS) or 0.0
     if fps_bron <= 0:
         fps_bron = 30.0  # sommige containers melden geen fps; redelijke aanname
@@ -210,9 +213,11 @@ def bereken_energie_video(
                 verschil = cv2.absdiff(grijs, vorig)
                 tijden.append(frame_idx / fps_bron)
                 energie.append(float(verschil.mean()) / 255.0)
+                melder.meld(frame_idx / fps_bron, f'{len(energie)} metingen')
             vorig = grijs
         frame_idx += 1
     cap.release()
+    melder.klaar(f'{len(energie)} metingen')
     if not energie:
         _fout(f'geen frames kunnen lezen uit {videopad}', code=1)
     return tijden, energie, fps_bron

@@ -40,9 +40,12 @@ import argparse
 import json
 import math
 import sys
+import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from voortgang import Melder  # noqa: E402
 
 MODEL_VERSION = '0.1.0'
 MODEL_NAAM = 'houding-rtmpose'
@@ -58,6 +61,8 @@ MIN_ZEKERHEID = 0.3
 DREMPEL_SCORE = 1.2
 # Twee pieken dichter dan dit horen bij dezelfde worp.
 MIN_AFSTAND_S = 3.0
+# Na zoveel gemeten beelden weten we hoe snel deze server is en kunnen we een duur schatten.
+METINGEN_VOOR_SCHATTING = 8
 # Getrainde instellingen (cv/train.py). Bestaat dit bestand, dan winnen die van de
 # schattingen hierboven — de waarden hierboven zijn een startpunt, geen waarheid.
 INSTELLINGEN_PAD = Path(__file__).resolve().parent / 'model-houding.json'
@@ -240,6 +245,16 @@ def laad_model(mode: str = 'balanced'):
               'Bij de eerste run haalt rtmlib zijn gewichten op — heeft deze server internet?')
 
 
+def schat_duur(seconden_per_meting: float, metingen: int) -> float:
+    """Hoelang gaat dit nog duren, op déze server?
+
+    Het houdingsmodel op een gedeelde processor doet er tussen een halve en enkele seconden
+    over per beeld. Dat verschil bepaalt of een wedstrijdvideo tien minuten of drie uur kost —
+    en dat hoor je te weten vóór je een uur zit te wachten, niet erna.
+    """
+    return max(0.0, seconden_per_meting) * max(0, metingen)
+
+
 def meet_video(videopad: Path, model, analyse_fps: float, tot: float | None = None) -> list[dict]:
     """Per moment de hoogste worpscore over alle spelers in beeld.
 
@@ -248,12 +263,23 @@ def meet_video(videopad: Path, model, analyse_fps: float, tot: float | None = No
     """
     import cv2  # noqa: PLC0415
 
+    from voortgang import duur_van_video  # noqa: PLC0415
+
     cap = cv2.VideoCapture(str(videopad))
     if not cap.isOpened():
         _fout(f'kan video niet openen: {videopad}')
     fps_bron = cap.get(cv2.CAP_PROP_FPS) or 25.0
     stap = max(1, round(fps_bron / analyse_fps))
     dt = stap / fps_bron
+    # Dit is de traagste stap van de hele keten: laten weten hoe ver ze staat, anders staat de
+    # balk in de app een halfuur stil en is dat niet te onderscheiden van vastgelopen.
+    duur = duur_van_video(cv2, cap)
+    te_bekijken = min(duur, tot) if (duur and tot) else (tot or duur)
+    melder = Melder(te_bekijken)
+    # De eerste beelden geven de snelheid van déze server; daarmee weet je meteen of dit tien
+    # minuten of drie uur wordt.
+    begonnen = time.monotonic()
+    geschat = False
 
     reeks: list[dict] = []
     vorige: dict[int, dict] = {}
@@ -284,8 +310,17 @@ def meet_video(videopad: Path, model, analyse_fps: float, tot: float | None = No
             reeks.append({'t': round(t, 3), 'score': round(beste_score, 4),
                           'polshoogte': beste_hoogte, 'personen': len(keypoints)})
             vorige = nu
+            if not geschat and len(reeks) >= METINGEN_VOOR_SCHATTING and te_bekijken:
+                geschat = True
+                per_meting = (time.monotonic() - begonnen) / len(reeks)
+                totaal = schat_duur(per_meting, round(te_bekijken * analyse_fps))
+                print(f'  op deze server ± {per_meting:.2f} s per beeld → naar schatting '
+                      f'{totaal / 60:.0f} minuten voor {te_bekijken / 60:.1f} minuten video')
+                melder.meld(t, f'schatting: {totaal / 60:.0f} min in totaal', forceer=True)
+            melder.meld(t, f'{len(reeks)} metingen')
         frame_idx += 1
     cap.release()
+    melder.klaar(f'{len(reeks)} metingen')
     return reeks
 
 
@@ -358,8 +393,13 @@ def main(argv: list[str] | None = None) -> None:
         print(f'Nog niet getraind — geschatte instellingen: drempel {drempel:g}, '
               f'minimale afstand {min_afstand:g}s. Zie cv/train.py.')
 
+    # Het model laden kan bij de eerste keer minuten duren (rtmlib haalt dan zijn gewichten op).
+    # Zonder deze twee meldingen lijkt de analyse in die tijd stil te staan.
     print(f'Houdingsmodel laden ({args.mode}) …')
+    laden = Melder(1.0)
+    laden.meld(0.0, 'houdingsmodel laden', forceer=True)
     model = laad_model(args.mode)
+    laden.meld(0.0, 'houdingsmodel geladen', forceer=True)
     print(f'Spelers meten in {args.video} (± {args.analyse_fps:g} beelden/s) …')
     reeks = meet_video(args.video, model, args.analyse_fps, args.tot)
     if not reeks:

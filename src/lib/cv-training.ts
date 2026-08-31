@@ -8,6 +8,7 @@ import type { Payload } from 'payload'
 import { cvMap, instellingenPad, pythonVoorSpawn, spawnOmgeving, werkmap } from './cv-analyse'
 import { resolveMediaDir } from './media-dir'
 import { reeksHalfDurationSeconds, type Reeks } from './reeksen'
+import { VENSTER_S } from './cv-score'
 import { momentToVideo, readSync } from './video-sync'
 
 // Het model bijstellen op de eigen wedstrijden — vanuit de app, niet vanaf een commandolijn.
@@ -39,8 +40,12 @@ export function labelRegels(
   sync: { offsetH1: number; offsetH2: number | null },
   halfSeconds: number,
 ): string {
-  return worpen
-    .map((w) => momentToVideo(w, sync, halfSeconds))
+  return tijdenRegels(worpen.map((w) => momentToVideo(w, sync, halfSeconds)))
+}
+
+/** Videotijdstippen als labels-JSONL, ongeacht waar ze vandaan komen. */
+export function tijdenRegels(tijden: number[]): string {
+  return [...tijden]
     .sort((a, b) => a - b)
     .map((t) => JSON.stringify({ video_time_s: Number(t.toFixed(3)), event_type: 'worp' }))
     .join('\n')
@@ -54,6 +59,25 @@ export type Trainingskandidaat = {
   labels: string
   worpen: number
   metingen: number
+  /** Waar de labels vandaan komen: van de videotijdlijn zelf, van de ijking, of van allebei. */
+  bron: 'reviews' | 'worpen' | 'beide'
+}
+
+/** Twee lijsten tijdstippen samenvoegen zonder dezelfde worp twee keer te labelen. */
+export function voegSamen(a: number[], b: number[], venster = VENSTER_S): number[] {
+  const samen = [...a]
+  for (const t of b) {
+    if (!samen.some((x) => Math.abs(x - t) <= venster)) samen.push(t)
+  }
+  return samen.sort((x, y) => x - y)
+}
+
+/** De tijdstippen die jij op de vídeo bevestigd hebt — daar komt geen ijking aan te pas. */
+export function bevestigdeTijden(voorstellen: { videoTimeS?: unknown; verdict?: unknown }[]): number[] {
+  return voorstellen
+    .filter((v) => v.verdict === 'bevestigd' && typeof v.videoTimeS === 'number')
+    .map((v) => v.videoTimeS as number)
+    .sort((a, b) => a - b)
 }
 
 export type Overgeslagen = { matchId: number; reden: string }
@@ -72,9 +96,17 @@ async function mappenMetReeks(): Promise<number[]> {
 /**
  * Alle wedstrijden waarop getraind kan worden, met de labels er meteen naast geschreven.
  *
- * Een wedstrijd valt af wanneer er geen ijking is (dan staan de worpen op de verkeerde
- * videotijd — dat is erger dan geen labels), of wanneer er geen worpen ingevoerd zijn. Wat
- * afvalt en waarom komt mee terug: stilzwijgend overslaan is precies hoe je maandenlang op
+ * Twee bronnen van waarheid, en de eerste heeft géén ijking nodig:
+ *
+ *  1. de voorstellen die jij op de vídeo bevestigd hebt — die dragen hun eigen tijdstip in de
+ *     opname, dus wat de wedstrijdklok deed doet er niet toe;
+ *  2. de worpen die tijdens de wedstrijd ingevoerd werden, mét de ijking omgerekend. Die zijn
+ *     onmisbaar om te leren wat het model MIST (over wat het nooit voorstelde, zegt geen enkele
+ *     review iets), maar zonder ijking staan ze op de verkeerde seconde en tellen ze niet mee.
+ *
+ * Beide samen, ontdubbeld: een worp die je bevestigde én invoerde, is één worp.
+ *
+ * Wat afvalt en waarom komt mee terug: stilzwijgend overslaan is precies hoe je maandenlang op
  * twee wedstrijden traint zonder het te weten.
  */
 export async function verzamelWedstrijden(
@@ -93,27 +125,55 @@ export async function verzamelWedstrijden(
       overgeslagen.push({ matchId, reden: 'wedstrijd bestaat niet meer' })
       continue
     }
-    if (typeof match.videoOffsetH1 !== 'number') {
-      overgeslagen.push({ matchId, reden: 'de video is niet geijkt — de worpen zouden op de verkeerde seconde staan' })
-      continue
-    }
-    const worpenRes = await payload
-      .find({ collection: 'throws', where: { match: { equals: matchId } }, depth: 0, limit: 2000 })
+    // Bron 1: wat je op de video zelf bevestigd hebt. Geen ijking nodig.
+    const reviewRes = await payload
+      .find({
+        collection: 'cv-events',
+        where: { and: [{ match: { equals: matchId } }, { verdict: { equals: 'bevestigd' } }] },
+        depth: 0,
+        limit: 2000,
+      })
       .catch(() => ({ docs: [] as Record<string, unknown>[] }))
-    const worpen = worpenRes.docs.map((t) => ({
-      half: Number((t as { period?: unknown }).period ?? 1),
-      gameClock: Number((t as { gameClock?: unknown }).gameClock ?? 0),
-    }))
-    if (!worpen.length) {
-      overgeslagen.push({ matchId, reden: 'geen ingevoerde worpen om mee te vergelijken' })
+    const uitReviews = bevestigdeTijden(reviewRes.docs as { videoTimeS?: unknown; verdict?: unknown }[])
+
+    // Bron 2: de ingevoerde worpen, maar enkel als de video geijkt is.
+    let uitWorpen: number[] = []
+    if (typeof match.videoOffsetH1 === 'number') {
+      const worpenRes = await payload
+        .find({ collection: 'throws', where: { match: { equals: matchId } }, depth: 0, limit: 2000 })
+        .catch(() => ({ docs: [] as Record<string, unknown>[] }))
+      const sync = readSync({ offsetH1: match.videoOffsetH1, offsetH2: match.videoOffsetH2 })
+      const halfSeconds = reeksHalfDurationSeconds(match.reeks as Reeks)
+      uitWorpen = worpenRes.docs.map((t) =>
+        momentToVideo(
+          {
+            half: Number((t as { period?: unknown }).period ?? 1),
+            gameClock: Number((t as { gameClock?: unknown }).gameClock ?? 0),
+          },
+          sync,
+          halfSeconds,
+        ),
+      )
+    }
+
+    const tijden = voegSamen(uitReviews, uitWorpen)
+    if (!tijden.length) {
+      overgeslagen.push({
+        matchId,
+        reden: typeof match.videoOffsetH1 === 'number'
+          ? 'niets om mee te vergelijken: geen bevestigde voorstellen en geen ingevoerde worpen'
+          : 'nog geen bevestigd voorstel op de video (en de video is niet geijkt, dus de '
+            + 'ingevoerde worpen zouden op de verkeerde seconde staan)',
+      })
       continue
     }
 
-    const sync = readSync({ offsetH1: match.videoOffsetH1, offsetH2: match.videoOffsetH2 })
     const labels = path.join(map, 'labels.jsonl')
-    await fs.writeFile(labels, labelRegels(worpen, sync, reeksHalfDurationSeconds(match.reeks as Reeks)) + '\n', 'utf8')
+    await fs.writeFile(labels, tijdenRegels(tijden) + '\n', 'utf8')
     const metingen = (await fs.readFile(reeks, 'utf8').catch(() => '')).split('\n').filter(Boolean).length
-    kandidaten.push({ matchId, reeks, labels, worpen: worpen.length, metingen })
+    const bron: Trainingskandidaat['bron'] =
+      uitReviews.length && uitWorpen.length ? 'beide' : uitReviews.length ? 'reviews' : 'worpen'
+    kandidaten.push({ matchId, reeks, labels, worpen: tijden.length, metingen, bron })
   }
   return { kandidaten, overgeslagen }
 }
