@@ -277,3 +277,41 @@ class TestAnkers(unittest.TestCase):
     def test_een_gewone_kalibratie_is_gewoon_een_anker_op_nul(self):
         matrix = vv.normaliseer([[3.0, 0.0, 5.0], [0.0, 3.0, 7.0], [0.0, 0.0, 1.0]])
         self.assertEqual(vv.basis_uit_anker(matrix, vv.eenheid()), matrix)
+
+
+class TestGladstrijken(unittest.TestCase):
+    """De drift tussen twee ijkpunten verdelen in plaats van hem als sprong te laten staan.
+
+    Zonder dit geldt de laatst gevonden basis tot de volgende, en springt het veld daar in
+    één keer over de hele opgelopen drift — precies op het moment dat je een worp meet.
+    """
+
+    def test_mengen_valt_op_de_uiteinden_samen_met_de_ijkpunten(self):
+        a = vv.normaliseer([[10.0, 0.0, 0.0], [0.0, 10.0, 0.0], [0.0, 0.0, 1.0]])
+        b = vv.normaliseer([[10.0, 0.0, 20.0], [0.0, 10.0, -5.0], [0.0, 0.0, 1.0]])
+        self.assertEqual(vv.meng(a, b, 0.0), a)
+        self.assertEqual(vv.meng(a, b, 1.0), b)
+
+    def test_mengen_ligt_er_halverwege_netjes_tussen(self):
+        a = vv.normaliseer([[10.0, 0.0, 0.0], [0.0, 10.0, 0.0], [0.0, 0.0, 1.0]])
+        b = vv.normaliseer([[10.0, 0.0, 20.0], [0.0, 10.0, -5.0], [0.0, 0.0, 1.0]])
+        m = vv.meng(a, b, 0.5)
+        self.assertAlmostEqual(m[0][2], 10.0, places=9)
+        self.assertAlmostEqual(m[1][2], -2.5, places=9)
+
+    def test_basis_op_verdeelt_de_correctie_over_het_tussenstuk(self):
+        a = vv.normaliseer([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]])
+        b = vv.normaliseer([[1.0, 0.0, 8.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]])
+        waarnemingen = [(10.0, a), (20.0, b)]
+        # Op de ijkpunten exact, ertussen evenredig met de tijd.
+        self.assertEqual(vv.basis_op(waarnemingen, 10.0), a)
+        self.assertEqual(vv.basis_op(waarnemingen, 20.0), b)
+        self.assertAlmostEqual(vv.basis_op(waarnemingen, 12.5)[0][2], 2.0, places=9)
+        self.assertAlmostEqual(vv.basis_op(waarnemingen, 15.0)[0][2], 4.0, places=9)
+
+    def test_buiten_de_ijkpunten_valt_er_niets_te_verdelen(self):
+        a = vv.normaliseer([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]])
+        b = vv.normaliseer([[1.0, 0.0, 8.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]])
+        waarnemingen = [(10.0, a), (20.0, b)]
+        self.assertEqual(vv.basis_op(waarnemingen, 0.0), a)      # vóór het eerste ijkpunt
+        self.assertEqual(vv.basis_op(waarnemingen, 99.0), b)     # ná het laatste

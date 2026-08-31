@@ -506,6 +506,7 @@ class HomografieSpoor:
             'ankers': len(ankers),
             'ijkbeelden': sum(1 for p in self.punten if p['bron'] == 'ijkbeeld'),
             'teruggerekend': sum(1 for p in self.punten if p['bron'] == 'teruggerekend'),
+            'gladgestreken': sum(1 for p in self.punten if p['bron'] == 'gladgestreken'),
             'gemiddelde_ankerfout_m': round(sum(fouten) / len(fouten), 2) if fouten else None,
             'duur_s': round(float(self.punten[-1]['t']) - float(self.punten[0]['t']), 1) if self.punten else 0.0,
         }
@@ -536,6 +537,44 @@ def basis_uit_anker(anker: Matrix, keten_op_ankertijd: Matrix) -> Matrix:
     invullen. Zonder dit zou een ijkbeeld op 6:27 stilzwijgend op seconde 0 geplakt worden.
     """
     return normaliseer(maal(anker, inverteer(keten_op_ankertijd)))
+
+
+def meng(a: Matrix, b: Matrix, w: float) -> Matrix:
+    """Twee basissen mengen, met gewicht w van a (0) naar b (1).
+
+    Elementsgewijs, na normalisatie. Dat is geen willekeurige keuze: schrijf de correctie als
+    C = b·a⁻¹, dan is ``a + w·(b - a)`` precies ``(I + w·(C - I))·a`` — de eerste-ordebenadering
+    van "voer een w-de deel van de correctie uit". Voor de kleine correcties waar het hier om
+    gaat (drift van centimeters tot een meter) is dat de juiste vorm; een echte matrix-macht
+    zou een eigenwaardenontbinding vragen zonder dat het meetbaar beter wordt.
+    """
+    a, b = normaliseer(a), normaliseer(b)
+    return normaliseer([[a[i][j] + w * (b[i][j] - a[i][j]) for j in range(3)] for i in range(3)])
+
+
+def basis_op(waarnemingen: list[tuple[float, Matrix]], t: float) -> Matrix:
+    """De basis op moment t, gladgestreken tussen de omliggende waarnemingen.
+
+    Elk ijkbeeld en elke geslaagde herankering levert een basis op dat moment. Zonder deze
+    functie geldt de laatst gevonden basis tot de volgende — en dán springt het veld ineens.
+    De opgelopen drift wordt hier over het tussenstuk uitgesmeerd: op beide waarnemingen
+    klopt de matrix exact, en ertussenin schuift ze geleidelijk mee. Vóór de eerste en ná de
+    laatste waarneming valt er niets te verdelen; daar geldt die ene basis.
+    """
+    if not waarnemingen:
+        raise ValueError('geen enkele basis bekend')
+    if t <= waarnemingen[0][0]:
+        return waarnemingen[0][1]
+    if t >= waarnemingen[-1][0]:
+        return waarnemingen[-1][1]
+    for i in range(1, len(waarnemingen)):
+        t1, b1 = waarnemingen[i]
+        if t <= t1:
+            t0, b0 = waarnemingen[i - 1]
+            if t1 <= t0:
+                return b1
+            return meng(b0, b1, (t - t0) / (t1 - t0))
+    return waarnemingen[-1][1]
 
 
 def _standaard_veldpunten(
@@ -814,7 +853,6 @@ def volg_video(args: argparse.Namespace) -> tuple[HomografieSpoor, dict]:
     if not cap.isOpened():
         _fout(f'video kan niet geopend worden: {args.video}')
 
-    spoor = HomografieSpoor()
     stap = 1.0 / args.fps
     cap.set(cv2.CAP_PROP_POS_MSEC, 0.0)
     ok, vorig = cap.read()
@@ -825,9 +863,14 @@ def volg_video(args: argparse.Namespace) -> tuple[HomografieSpoor, dict]:
     # K(t): het beeld van nu, uitgedrukt in het beeld van seconde 0. De keten loopt vanaf de
     # start, ook als het eerste ijkbeeld pas veel later komt — dan vullen we alles ervóór
     # achteraf in met basis_uit_anker().
+    #
+    # Twee passages: eerst de hele video doorlopen en per moment de keten plus elke gevonden
+    # basis bijhouden, daarna pas de matrices uitrekenen. Alleen zo kan de drift tussen twee
+    # waarnemingen verdeeld worden — vooruit lopend weet je nog niet waar je uitkomt.
     keten = eenheid()
+    momenten: list[tuple[float, Matrix, str, float]] = [(0.0, keten, 'flow', float('inf'))]
+    waarnemingen: list[tuple[float, Matrix]] = []
     basis: Matrix | None = None
-    wachtrij: list[tuple[float, Matrix]] = [(0.0, keten)]
     volgend_anker = 0
     laatste_anker = 0.0
     t = stap
@@ -857,35 +900,21 @@ def volg_video(args: argparse.Namespace) -> tuple[HomografieSpoor, dict]:
             verloren += 1
 
         # Zijn we voorbij een aangeduid ijkbeeld? Dat is grondwaarheid: harder dan wat de
-        # lijndetector of de flow ooit kan geven, dus die zet de stand exact terug.
+        # lijndetector of de flow ooit kan geven, dus die legt de basis exact vast.
         if volgend_anker < len(ankers) and t >= ankers[volgend_anker][0]:
-            anker_matrix = ankers[volgend_anker][1]
-            basis = basis_uit_anker(anker_matrix, keten)
+            basis = basis_uit_anker(ankers[volgend_anker][1], keten)
+            waarnemingen.append((t, basis))
             volgend_anker += 1
             laatste_anker = t
-            if wachtrij:
-                # Alles vóór het eerste ijkbeeld alsnog invullen — de camera van tóén,
-                # teruggerekend via dezelfde keten.
-                for wt, wk in wachtrij:
-                    spoor.voeg_toe(wt, maal(basis, wk), float('inf'), 'teruggerekend')
-                wachtrij = []
-            spoor.voeg_toe(t, anker_matrix, 0.0, 'ijkbeeld')
+            momenten.append((t, keten, 'ijkbeeld', 0.0))
             vorig_grijs = grijs
             t += stap
             continue
 
-        if basis is None:
-            # Nog geen enkel ijkbeeld gezien: keten bijhouden, oordeel uitstellen.
-            wachtrij.append((t, keten))
-            vorig_grijs = grijs
-            t += stap
-            continue
-
-        gevolgd = normaliseer(maal(basis, keten))
-        if t - laatste_anker >= args.heranker:
+        if basis is not None and t - laatste_anker >= args.heranker:
             segmenten = detecteer_lijnsegmenten(cv2, frame, args.min_lijn)
             gevolgd, fout, gebruikt = veranker_op_lijnen(
-                gevolgd, segmenten, lijnen, args.max_fout,
+                normaliseer(maal(basis, keten)), segmenten, lijnen, args.max_fout,
                 rondes=getattr(args, 'rondes', 3),
                 punten_per_segment=getattr(args, 'punten_per_segment', 4),
             )
@@ -895,14 +924,31 @@ def volg_video(args: argparse.Namespace) -> tuple[HomografieSpoor, dict]:
                 # De correctie geldt vanaf nu: verreken ze in de basis, anders gooit de
                 # volgende stap ze meteen weer weg.
                 basis = basis_uit_anker(gevolgd, keten)
-        spoor.voeg_toe(t, gevolgd, fout, bron)
+                waarnemingen.append((t, basis))
+
+        momenten.append((t, keten, bron, fout))
         vorig_grijs = grijs
         t += stap
     cap.release()
     if basis is None:
         _fout(f'geen enkel ijkbeeld viel binnen de video (eerste anker op {ankers[0][0]:g} s) — '
               'duid een beeld aan dat écht in deze opname zit')
-    return spoor, {**spoor.rapport(), 'frames_zonder_flow': verloren}
+
+    # Tweede passage: de drift verdelen. Tussen twee waarnemingen schuift de basis geleidelijk
+    # mee in plaats van bij de tweede ineens te springen.
+    spoor = HomografieSpoor()
+    gladgestreken = 0
+    for mt, mk, bron, fout in momenten:
+        b = basis_op(waarnemingen, mt)
+        if bron == 'flow':
+            if mt < waarnemingen[0][0]:
+                bron = 'teruggerekend'
+            elif mt < waarnemingen[-1][0] and len(waarnemingen) > 1:
+                bron = 'gladgestreken'
+                gladgestreken += 1
+        spoor.voeg_toe(mt, maal(b, mk), fout, bron)
+    return spoor, {**spoor.rapport(), 'frames_zonder_flow': verloren,
+                   'waarnemingen': len(waarnemingen), 'gladgestreken': gladgestreken}
 
 
 # ---------------------------------------------------------------------------

@@ -192,7 +192,8 @@ def statusregel(t: float, moment: dict | None) -> str:
     if moment is None:
         return f'{klok}  GEEN VELDSTAND - hier wordt niets gemeten'
     bron = {'lijnen': 'herankerd op de veldlijnen', 'flow': 'gevolgd', 'kalibratie': 'kalibratie',
-            'ijkbeeld': 'aangeduid ijkbeeld', 'teruggerekend': 'teruggerekend naar het ijkbeeld'}.get(
+            'ijkbeeld': 'aangeduid ijkbeeld', 'teruggerekend': 'teruggerekend naar het ijkbeeld',
+            'gladgestreken': 'gladgestreken tussen twee ijkpunten'}.get(
         str(moment.get('bron')), str(moment.get('bron'))
     )
     fout = moment.get('fout_m')
