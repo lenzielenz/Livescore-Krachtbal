@@ -14,7 +14,7 @@ import { zetVoorstellenOver, isOverzetfout, kiesWerper } from '@/lib/cv-overzett
 
 let payload: Payload
 
-async function maakAnalysewedstrijd(opts: { analyseOnly?: boolean } = {}) {
+async function maakAnalysewedstrijd(opts: { analyseOnly?: boolean; opstelling?: boolean } = {}) {
   // Een echte wedstrijd wil échte ploegen: de collectie laat analyse-ploegen niet in een
   // competitiewedstrijd toe (en omgekeerd). Voor de test van die grens bouwen we dus beide
   // kanten consequent op.
@@ -65,8 +65,7 @@ async function maakAnalysewedstrijd(opts: { analyseOnly?: boolean } = {}) {
       goalAreaDepth: 10,
       analyseOnly: analyse,
       analyseModus: 'video',
-      homeLineup: homePlayers,
-      awayLineup: awayPlayers,
+      ...(opts.opstelling === false ? {} : { homeLineup: homePlayers, awayLineup: awayPlayers }),
     },
     overrideAccess: true,
   })
@@ -160,6 +159,16 @@ describe('zetVoorstellenOver', () => {
     expect(r.tweedeHelftVanaf).toBeNull()
     expect(r.beperkingen.some((b) => b.includes('helft 1'))).toBe(true)
     expect(r.beperkingen.some((b) => b.toLowerCase().includes('uitbal'))).toBe(true)
+  })
+
+  it('zegt het wanneer er geen opstelling gekozen is', async () => {
+    // startMatch kiest dan stil de eerste vier op rugnummer. Geen fout, maar wel vier namen
+    // onder alle afgeleide statistiek die niemand bewust koos.
+    const { matchId } = await maakAnalysewedstrijd({ opstelling: false })
+    await voorstel(matchId, 100, 7, 30)
+    const r = await zetVoorstellenOver(payload, matchId, { droog: true })
+    if (isOverzetfout(r)) throw new Error(r.fout)
+    expect(r.beperkingen.some((b) => b.toLowerCase().includes('opstelling'))).toBe(true)
   })
 
   it('zegt het wanneer geen enkele worp een herkend rugnummer had', async () => {

@@ -55,6 +55,8 @@ export type Overzetrapport = {
   beperkingen: string[]
   /** Hoeveel overgezette worpen een herkend rugnummer hadden (0 = de namen zeggen niets). */
   metRugnummer?: number
+  /** Hoeveel worpen als vrije worp geteld zijn — daar staat geen voorstel tegenover. */
+  vrijeWorpen?: number
 }
 
 export type Overzetfout = { fout: string; code: number }
@@ -149,7 +151,14 @@ export async function zetVoorstellenOver(
   // De rust: enkel te plaatsen als de aftrap van de tweede helft geijkt is. Zonder dat weet
   // niemand waar helft 1 ophoudt, en dan is één helft eerlijker dan een gegokte grens.
   const tweedeHelftVanaf = typeof match.videoOffsetH2 === 'number' ? match.videoOffsetH2 : null
+  const opstellingGezet =
+    Array.isArray(match.homeLineup) && match.homeLineup.length > 0
+    && Array.isArray(match.awayLineup) && match.awayLineup.length > 0
   const beperkingen = [
+    ...(opstellingGezet
+      ? []
+      : ['Er is geen opstelling gekozen: de eerste vier spelers op rugnummer komen op het veld te '
+         + 'staan. Wil je kloppende spelerskaarten, zet de opstelling dan eerst.']),
     ...(tweedeHelftVanaf == null
       ? ['De aftrap van de tweede helft is niet geijkt, dus alle worpen komen in helft 1 te staan.']
       : []),
@@ -187,6 +196,7 @@ export async function zetVoorstellenOver(
   const geweigerd: { videoTimeS: number; reden: string }[] = []
   let overgezet = 0
   let metRugnummer = 0
+  let vrijeWorpen = 0
   let beurt = 0
   let inTweedeHelft = false
 
@@ -211,6 +221,11 @@ export async function zetVoorstellenOver(
       geweigerd.push({ videoTimeS: worp.videoTimeS, reden: 'geen lopend balbezit meer' })
       break
     }
+    // Na het derde kruisje kent de engine zélf een vrije worp toe aan de tegenstander. Daar
+    // staat geen voorstel tegenover: de eerstvolgende worp uit de video wordt dan als die vrije
+    // worp geteld — één punt in plaats van twee, en op naam van de ándere ploeg. De keten blijft
+    // geldig, maar ze wijkt vanaf daar af van wat er echt gebeurde. Tellen en zeggen dus.
+    if (state.possession.freeThrow) vrijeWorpen++
     const side = state.possession.side
     const opstelling = await spelersVan(payload, side === 'home' ? state.teams.home.id : state.teams.away.id, state.lineup[side])
     // Wie de vorige worp van dít balbezit deed, weet de engine zelf — en zij is de enige die
@@ -252,8 +267,14 @@ export async function zetVoorstellenOver(
     droog: false,
     tweedeHelftVanaf,
     metRugnummer,
+    vrijeWorpen,
     beperkingen: [
       ...beperkingen,
+      ...(vrijeWorpen > 0
+        ? [`${vrijeWorpen} worp(en) zijn als vrije worp geteld: na drie kruisjes kent het `
+           + 'reglement er een toe, maar in de video staat daar geen apart voorstel tegenover. '
+           + 'Die tellen één punt in plaats van twee.']
+        : []),
       ...(overgezet > 0 && metRugnummer === 0
         ? ['Geen enkele worp droeg een herkend rugnummer: de worpen zijn over de opstelling '
            + 'verdeeld. Score, veldkaart en afstanden kloppen; de spelerskaarten zeggen niets.']
