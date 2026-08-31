@@ -16,6 +16,8 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from train import (  # noqa: E402
+    benoem,
+    kies_apart,
     lees_labels,
     lees_reeks,
     main,
@@ -122,6 +124,39 @@ class TestZoekInstellingen:
         assert s['gevonden'] == 2
 
 
+class TestBenoem:
+    def test_laat_unieke_namen_met_rust(self):
+        w = [{'naam': 'match42', 'pad': Path('/a/match42.jsonl')},
+             {'naam': 'match43', 'pad': Path('/a/match43.jsonl')}]
+        assert [x['naam'] for x in benoem(w)] == ['match42', 'match43']
+
+    def test_zet_de_map_ervoor_als_de_namen_botsen(self):
+        # Zoals de server ze wegschrijft: <werkmap>/<match-id>/houding-reeks.jsonl.
+        w = [{'naam': 'houding-reeks', 'pad': Path('/werk/42/houding-reeks.jsonl')},
+             {'naam': 'houding-reeks', 'pad': Path('/werk/43/houding-reeks.jsonl')}]
+        namen = [x['naam'] for x in benoem(w)]
+        assert namen == ['42/houding-reeks', '43/houding-reeks']
+        # En daarmee werkt --holdout 43 weer.
+        assert sum('43' in n for n in namen) == 1
+
+
+class TestKiesApart:
+    def _w(self, naam, pad):
+        return {'naam': naam, 'pad': Path(pad), 'reeks': [], 'labels': []}
+
+    def test_wijst_precies_één_wedstrijd_aan(self):
+        w = [self._w('42/houding-reeks', '/werk/42/houding-reeks.jsonl'),
+             self._w('142/houding-reeks', '/werk/142/houding-reeks.jsonl')]
+        # Op tekst zou "42" ook 142 meepakken — en dan is de holdout er stiekem twee.
+        assert [x['naam'] for x in kies_apart(w, ['42'])] == ['42/houding-reeks']
+        assert [x['naam'] for x in kies_apart(w, ['142'])] == ['142/houding-reeks']
+
+    def test_valt_terug_op_tekst_als_niets_exact_past(self):
+        w = [self._w('match42-avond', '/a/match42-avond.jsonl'),
+             self._w('match43-avond', '/a/match43-avond.jsonl')]
+        assert [x['naam'] for x in kies_apart(w, ['43'])] == ['match43-avond']
+
+
 class TestLezen:
     def test_leest_een_reeks_en_sorteert_op_tijd(self, tmp_path):
         pad = tmp_path / 'reeks.jsonl'
@@ -211,6 +246,24 @@ class TestCli:
         uit = tmp_path / 'model.json'
         main(['--wedstrijd', r, l, '--uit', str(uit), '--droog'])
         assert not uit.exists()
+
+    def test_houdt_gelijknamige_reeksen_uit_elkaar(self, tmp_path):
+        # Twee wedstrijden, allebei een bestand 'houding-reeks.jsonl' in hun eigen map.
+        paden = []
+        for match, piek in (('42', 10.0), ('43', 20.0)):
+            map_ = tmp_path / match
+            map_.mkdir()
+            r = map_ / 'houding-reeks.jsonl'
+            r.write_text('\n'.join(json.dumps(x) for x in maak_reeks([(piek, 3.0)], rust=0.3)),
+                         encoding='utf-8')
+            l = map_ / 'labels.jsonl'
+            l.write_text(json.dumps({'video_time_s': piek, 'event_type': 'worp'}), encoding='utf-8')
+            paden += ['--wedstrijd', str(r), str(l)]
+        uit = tmp_path / 'model.json'
+        main([*paden, '--holdout', '43', '--uit', str(uit)])
+        gegevens = json.loads(uit.read_text(encoding='utf-8'))
+        assert gegevens['getraind_op'] == ['42/houding-reeks']
+        assert gegevens['holdout_wedstrijden'] == ['43/houding-reeks']
 
     def test_stopt_bij_labels_zonder_worpen(self, tmp_path):
         r, _ = self._wedstrijd(tmp_path, 'match42', [(10.0, 3.0)], [10.0])

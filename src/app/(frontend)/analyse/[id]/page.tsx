@@ -17,6 +17,7 @@ import type { CvVoorstel } from './CvReview'
 import { ShareCard } from './ShareCard'
 import { AnalyseVoortgang } from './AnalyseVoortgang'
 import { Kalibreren } from './Kalibreren'
+import { ModelBijstellen } from './ModelBijstellen'
 import { ModelScore } from './ModelScore'
 import { ServerAnalyse } from './ServerAnalyse'
 import { Terreinmaten } from './Terreinmaten'
@@ -318,6 +319,14 @@ export default async function AnalyseDetailPage({ params }: { params: Promise<{ 
                 halfSeconds={halfSeconds}
               />
             </ErrorCatch>
+            {/* En de andere helft van diezelfde lus: de drempels bijstellen op alles wat er al
+                geanalyseerd is. Dat bestand geldt voor élke volgende analyse op deze server —
+                vandaar enkel federatie-niveau. */}
+            {isFederationLevel(me) && (
+              <ErrorCatch label="Het model bijstellen">
+                <ModelBijstellen />
+              </ErrorCatch>
+            )}
           </>
         )}
 

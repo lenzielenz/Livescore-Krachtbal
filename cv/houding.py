@@ -323,6 +323,10 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument('--min-afstand', type=float, default=None,
                    help='minimale afstand tussen twee worpen in seconden '
                         f'(getraind indien beschikbaar, anders {MIN_AFSTAND_S})')
+    p.add_argument('--instellingen', type=Path, default=None,
+                   help='JSON met getrainde instellingen (cv/train.py). Standaard '
+                        f'{INSTELLINGEN_PAD}; op een server staat dit bestand op het volume, '
+                        'want de repo wordt bij elke uitrol opnieuw uitgepakt.')
     p.add_argument('--reeks-uit', type=Path, default=None,
                    help='de meetreeks wegschrijven (JSONL, één regel per bemonsterd beeld). '
                         'Dit is de trainingsdata voor cv/train.py: het meten is het dure deel, '
@@ -338,7 +342,9 @@ def main(argv: list[str] | None = None) -> None:
     if args.analyse_fps <= 0:
         _fout('--analyse-fps moet groter zijn dan 0')
 
-    getraind = laad_instellingen()
+    getraind = laad_instellingen(args.instellingen) if args.instellingen else None
+    if getraind is None:
+        getraind = laad_instellingen()
     drempel = args.drempel if args.drempel is not None else (
         getraind['drempel'] if getraind else DREMPEL_SCORE)
     min_afstand = args.min_afstand if args.min_afstand is not None else (

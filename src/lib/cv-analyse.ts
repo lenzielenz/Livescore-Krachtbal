@@ -262,6 +262,16 @@ export function werkmap(matchId: number): string {
   return path.join(resolveMediaDir(), 'cv-analyse', String(matchId))
 }
 
+/**
+ * Waar de getrainde instellingen van het houdingsmodel staan (cv/train.py).
+ *
+ * Op het volume, náást de werkmappen — niet in de repo: die wordt bij elke uitrol opnieuw
+ * uitgepakt, dus daar zou het bestand telkens verdwijnen.
+ */
+export function instellingenPad(): string {
+  return path.join(resolveMediaDir(), 'cv-analyse', 'model-houding.json')
+}
+
 /** Eén stap uit de keten. Zonder `commando` draait ze op de Python van deze server. */
 export type Stap = { naam: string; argv: string[]; commando?: string }
 
@@ -282,8 +292,11 @@ export function bouwStappen(opties: {
   fps: number
   /** Pad naar ffmpeg (ffmpeg-static); ontbreekt dat, dan vervalt het omzetten. */
   ffmpeg?: string | null
+  /** Getrainde drempels voor het houdingsmodel (cv/train.py); ontbreekt het bestand, dan
+   *  valt houding.py terug op zijn geschatte waarden. */
+  instellingen?: string | null
 }): Stap[] {
-  const { video, map, kalibratie, ankers, opts, fps, ffmpeg } = opties
+  const { video, map, kalibratie, ankers, opts, fps, ffmpeg, instellingen } = opties
   const cv = cvMap()
   const bestand = (naam: string) => path.join(map, naam)
   const stappen: Stap[] = []
@@ -315,7 +328,8 @@ export function bouwStappen(opties: {
           // stelt cv/train.py de drempels bij zonder de video opnieuw te bekijken.
           argv: [path.join(cv, 'houding.py'), video, '--match', String(opties.matchId),
                  '--analyse-fps', String(Math.min(fps, 5)), '--uit', bestand('detecties.jsonl'),
-                 '--reeks-uit', bestand('houding-reeks.jsonl')],
+                 '--reeks-uit', bestand('houding-reeks.jsonl'),
+                 ...(instellingen ? ['--instellingen', instellingen] : [])],
         }
       : {
           naam: 'Kandidaat-worpen zoeken in de video',
@@ -627,7 +641,7 @@ export async function startAnalyse(
   const METINGEN_PER_S = { snel: 5, gewoon: 10, nauwkeurig: 20 } as const
   const stappen = bouwStappen({
     matchId, video: video.pad, map, kalibratie, ankers, opts,
-    fps: METINGEN_PER_S[opts.stand], ffmpeg: ffmpegPad(),
+    fps: METINGEN_PER_S[opts.stand], ffmpeg: ffmpegPad(), instellingen: instellingenPad(),
   })
   const begin = Date.now()
   const stand: AnalyseStand = {

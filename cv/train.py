@@ -186,6 +186,44 @@ def scoor_samen(wedstrijden: list[dict], drempel: float, min_afstand: float,
     }
 
 
+def benoem(wedstrijden: list[dict]) -> list[dict]:
+    """Elke wedstrijd een naam die je in het rapport terugvindt — en die uniek is.
+
+    De server bewaart elke meetreeks als ``<werkmap>/<match-id>/houding-reeks.jsonl``: dan
+    heten ze állemaal 'houding-reeks' en zou --holdout ze niet uit elkaar kunnen houden. Botsen
+    de namen, dan komt de map ervoor (``42/houding-reeks``), zodat ``--holdout 42`` werkt.
+    """
+    namen = [w['naam'] for w in wedstrijden]
+    if len(set(namen)) == len(namen):
+        return wedstrijden
+    return [{**w, 'naam': f'{w["pad"].parent.name}/{w["naam"]}' if w.get('pad') else w['naam']}
+            for w in wedstrijden]
+
+
+def sleutels(w: dict) -> set[str]:
+    """Waaraan je één wedstrijd mag aanwijzen: zijn naam, zijn bestandsnaam, zijn map."""
+    namen = {w['naam']}
+    pad = w.get('pad')
+    if pad is not None:
+        namen |= {pad.stem, pad.name, pad.parent.name, str(pad)}
+    return namen
+
+
+def kies_apart(wedstrijden: list[dict], holdouts: list[str]) -> list[dict]:
+    """De wedstrijden die --holdout aanwijst, in de oorspronkelijke volgorde.
+
+    Eerst exact vergelijken, en enkel als niets exact past als los stuk tekst. Anders zou
+    ``--holdout 42`` ook wedstrijd 142 meenemen — een holdout die er stiekem twee zijn, is een
+    holdout waar je niets aan hebt.
+    """
+    gekozen: list[dict] = []
+    for h in holdouts:
+        treffers = [w for w in wedstrijden if h in sleutels(w)] or \
+                   [w for w in wedstrijden if h in w['naam']]
+        gekozen.extend(treffers)
+    return [w for w in wedstrijden if any(w is g for g in gekozen)]
+
+
 def zoek_instellingen(wedstrijden: list[dict], drempels=DREMPELS, afstanden=AFSTANDEN,
                       venster: float = VENSTER_S) -> tuple[float, float, dict]:
     """De drempel en minimale afstand met de hoogste F1 over alle wedstrijden samen.
@@ -259,10 +297,12 @@ def main(argv: list[str] | None = None) -> None:
             _fout(f'{rp}: te weinig metingen ({len(reeks)}) om iets uit te leren')
         if not labels:
             _fout(f'{lp}: geen enkele gelabelde worp — zonder labels valt er niets te trainen')
-        wedstrijden.append({'naam': rp.stem, 'reeks': reeks, 'labels': labels})
+        wedstrijden.append({'naam': rp.stem, 'pad': rp, 'reeks': reeks, 'labels': labels})
 
-    apart = [w for w in wedstrijden if any(h in w['naam'] for h in args.holdout)]
-    fit = [w for w in wedstrijden if w not in apart]
+    wedstrijden = benoem(wedstrijden)
+
+    apart = kies_apart(wedstrijden, args.holdout)
+    fit = [w for w in wedstrijden if not any(w is a for a in apart)]
     if args.holdout and not apart:
         _fout(f'geen wedstrijd komt overeen met --holdout {args.holdout} — '
               f'beschikbaar: {", ".join(w["naam"] for w in wedstrijden)}')

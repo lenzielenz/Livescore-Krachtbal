@@ -585,12 +585,24 @@ cijfer en zegt niets. `--holdout` houdt wedstrijden buiten het fitten; dát cijf
 telt. Zonder holdout draait het script door, maar zet het er luid bij dat de
 cijfers te mooi zijn.
 
-De server-analyse schrijft de meetreeks automatisch weg als
-`houding-reeks.jsonl` in de werkmap van de wedstrijd (op het volume), dus na elke
-analyse groeit de trainingsset vanzelf. In de app staat de tegenhanger: het
-paneel *"Hoe goed doet het model het hier?"* op de analysepagina legt dezelfde
-twee lijsten naast elkaar (`src/lib/cv-score.ts`) en toont recall, precisie en de
-gemiste momenten.
+### Zonder commandolijn: de knop in de app
+
+De server-analyse schrijft de meetreeks automatisch weg als `houding-reeks.jsonl`
+in de werkmap van de wedstrijd (op het volume), dus na elke analyse groeit de
+trainingsset vanzelf. Op de analysepagina staan de twee kanten van de lus:
+
+- *"Hoe goed doet het model het hier?"* — de voorstellen naast de ingevoerde
+  worpen van déze wedstrijd (`src/lib/cv-score.ts`): recall, precisie, gemiste
+  momenten.
+- *"Het model bijstellen op onze wedstrijden"* (enkel federatie-niveau) — draait
+  `train.py` over álle geanalyseerde wedstrijden. De labels worden daarbij uit de
+  ingevoerde worpen gehaald en met de video-ijking omgerekend
+  (`src/lib/cv-training.ts` → `POST /api/cv/model`); wedstrijden zonder ijking of
+  zonder worpen vallen af, met vermelding waarom.
+
+Het getrainde bestand staat daarbij op het **volume**
+(`<media>/cv-analyse/model-houding.json`), niet in de repo: die wordt bij elke
+uitrol opnieuw uitgepakt. `houding.py` krijgt dat pad mee met `--instellingen`.
 
 ## Acceptatie fase 5 en 6
 
