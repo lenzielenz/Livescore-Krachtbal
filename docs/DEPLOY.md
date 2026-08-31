@@ -101,6 +101,19 @@ Wat daarbij vastligt:
 de reden erbij ("Python staat er wel, maar opencv ontbreekt op deze server"). Er wordt dus
 nooit een taak gestart die na tien seconden op een cryptische Python-fout stukloopt.
 
+**Wat de worpdetectie wél en niet doet.** `detect_worpen.py` is een bewegingsenergie-spotter:
+per moment het gemiddelde beeldverschil met het vorige beeld, gladgestreken, en de pieken
+daarvan zijn de kandidaten. Dat werkt op een opname van een **stilstaande** camera. Bij een
+pannende gsm meet dat verschil vooral de camera, en verdrinken de worpen erin. Nagemeten op een
+proefvideo met acht gekende worpen en een pannende camera: geen enkele piek boven de drempel,
+ook niet na het wegrekenen van de camerabeweging en ook niet met een lokale maat in plaats van
+het frame-gemiddelde (verhouding worp/rust 1,00 tot 1,22 — geen scheiding).
+
+De weg vooruit is grondwaarheid, niet meer knutselen aan de heuristiek: bevestig of wijs
+voorstellen af in de reviewlaan, exporteer die als labels, en meet met `cv/evaluate.py`
+(precision/recall/F1, doel recall ≥ 0,8). Pas met echte labels van een echte wedstrijd valt te
+zien of een betere detector werkt.
+
 **Instelbaar met omgevingsvariabelen**
 
 | Variabele | Waarvoor |

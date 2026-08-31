@@ -21,6 +21,10 @@ type Stand = {
     duurSeconden?: number
     onderbrekingen?: number[]
     gaten?: [number, number][]
+    bekekenS?: number
+    duurS?: number
+    metingenPerS?: number
+    overgeslagen?: string[]
   }
   instellingen?: { stand: string; bewegend: boolean; tracking: boolean; overlay: boolean }
 }
@@ -227,11 +231,37 @@ export function ServerAnalyse({ matchId, heeftVideo }: { matchId: number; heeftV
       ) : (
         <>
           {s?.status === 'klaar' && (
-            <p className="sa-klaar">
-              ✅ Klaar in {duurTekst(s.rapport?.duurSeconden)}: <strong>{s.rapport?.voorstellen ?? 0} voorstellen</strong>
-              {s.rapport?.metLanding ? ` (${s.rapport.metLanding} met landingspunt)` : ''} — bekijk en
-              bevestig ze hierboven bij de video.
-            </p>
+            <div className="sa-klaar">
+              <p>
+                ✅ Klaar in {duurTekst(s.rapport?.duurSeconden)}:{' '}
+                <strong>{s.rapport?.voorstellen ?? 0} voorstellen</strong>
+                {s.rapport?.metLanding ? ` (${s.rapport.metLanding} met landingspunt)` : ''} — bekijk en
+                bevestig ze hierboven bij de video.
+              </p>
+              {/* Wát er precies gebeurd is. Zonder deze regel is "9 voorstellen" een getal
+                  zonder betekenis: je weet niet of de hele video bekeken is, hoe fijn er
+                  gekeken werd, of hoeveel dat per minuut is. */}
+              {s.rapport?.bekekenS != null && (
+                <p className="sa-hint">
+                  Bekeken: {klokje(s.rapport.bekekenS)}
+                  {s.rapport.duurS != null && s.rapport.duurS > 0
+                    ? ` van de ${klokje(s.rapport.duurS)}`
+                    : ''}
+                  {s.rapport.metingenPerS ? `, ${s.rapport.metingenPerS} metingen per seconde` : ''} —{' '}
+                  {((s.rapport.voorstellen ?? 0) / Math.max(1 / 60, s.rapport.bekekenS / 60)).toFixed(1)}{' '}
+                  voorstellen per minuut.
+                  {s.rapport.duurS != null && s.rapport.bekekenS < 0.9 * s.rapport.duurS && (
+                    <strong> Een deel van de opname kon niet gelezen worden.</strong>
+                  )}
+                </p>
+              )}
+              {s.rapport?.overgeslagen?.length ? (
+                <p className="sa-onderbroken">
+                  ⚠️ Zonder veldkalibratie is dit overgeslagen: {s.rapport.overgeslagen.join(', ')}.
+                  Duid het veld hieronder aan en analyseer opnieuw.
+                </p>
+              ) : null}
+            </div>
           )}
           {info?.heeftOverlay && (
             <div className="sa-controle">
@@ -275,8 +305,11 @@ export function ServerAnalyse({ matchId, heeftVideo }: { matchId: number; heeftV
           {s?.status === 'afgebroken' && <p className="sa-let-op">⏹ Afgebroken. {s.fout ?? ''}</p>}
 
           <p className="sa-lead">
-            De server zoekt zelf de worpen in de opname en zet ze klaar als voorstellen die jij
-            bevestigt of afwijst.
+            De server zoekt <strong>momenten met veel beweging</strong> en zet die klaar als
+            voorstellen die jij bevestigt of afwijst. Hij herkent nog geen worpen als zodanig:
+            het is een spotter die kandidaten aandraagt, geen scheidsrechter. Op een opname met
+            een bewegende camera vindt hij er duidelijk minder — de camerabeweging overstemt dan
+            wat de spelers doen.
             {info && !info.heeftKalibratie && (
               <>
                 {' '}Zonder veldkalibratie weet hij <em>wanneer</em> er geworpen wordt, maar niet

@@ -280,3 +280,15 @@ describe('leesVolgrapport', () => {
     }
   })
 })
+
+describe('argumenten van de worpdetectie', () => {
+  it('geeft de precisiekeuze door als metingen per seconde', () => {
+    // Dit ging mis: de app gaf '--fps 2' mee, maar dat argument vult enkel het frame-nummer
+    // in. De detector keek dus altijd op zijn standaardinstelling, en elk voorstel kreeg een
+    // frame-nummer alsof de video 2 beelden per seconde had.
+    const argv = argvVan(stappen({ fps: 10 }), 'Kandidaat-worpen')
+    expect(argv).toContain('--analyse-fps')
+    expect(argv[argv.indexOf('--analyse-fps') + 1]).toBe('10')
+    expect(argv).not.toContain('--fps')
+  })
+})

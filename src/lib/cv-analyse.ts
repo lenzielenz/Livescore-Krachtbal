@@ -45,6 +45,12 @@ export type AnalyseStand = {
     /** Onderbrekingen in de opname (seconden), en de stukken zonder ijkbeeld. */
     onderbrekingen?: number[]
     gaten?: [number, number][]
+    /** Wat de detector werkelijk bekeken heeft. */
+    bekekenS?: number
+    duurS?: number
+    metingenPerS?: number
+    /** Wat er overgeslagen is omdat de kalibratie ontbrak. */
+    overgeslagen?: string[]
   }
   instellingen?: { stand: string; bewegend: boolean; tracking: boolean; overlay: boolean }
 }
@@ -291,10 +297,14 @@ export function bouwStappen(opties: {
     })
   }
 
+  // Let op welk argument wat doet: --fps vult enkel het frame-nummer in (en moet dus de
+  // beeldfrequentie van de vídeo zijn, niet iets anders), terwijl --analyse-fps bepaalt hoe
+  // fijn de detector kijkt. Die stond eerder verkeerd om: de precisiekeuze bereikte de
+  // detector nooit, en elk voorstel kreeg een frame-nummer dat nergens op sloeg.
   stappen.push({
     naam: 'Kandidaat-worpen zoeken in de video',
     argv: [path.join(cv, 'detect_worpen.py'), video, '--match', String(opties.matchId),
-           '--fps', String(fps), '--uit', bestand('detecties.jsonl')],
+           '--analyse-fps', String(fps), '--uit', bestand('detecties.jsonl')],
   })
 
   // Zonder kalibratie weten we wél wannéér er geworpen wordt, maar niet waar de bal landt.
@@ -441,6 +451,25 @@ export async function schrijfKalibratie(
  * zonder ijkbeeld krijgt geen veldstand en wordt dus niet gemeten. Dat is precies wat de
  * gebruiker moet weten om er een beeld bij te zetten — vandaar dat het mee in de stand gaat.
  */
+export async function leesDetectierapport(
+  map: string,
+): Promise<{ bekekenS?: number; duurS?: number; metingenPerS?: number }> {
+  try {
+    const ruw = JSON.parse(await fs.readFile(path.join(map, 'detecties.jsonl.rapport.json'), 'utf8')) as {
+      bekeken_s?: number
+      duur_s?: number | null
+      analyse_fps?: number
+    }
+    return {
+      bekekenS: typeof ruw.bekeken_s === 'number' ? ruw.bekeken_s : undefined,
+      duurS: typeof ruw.duur_s === 'number' ? ruw.duur_s : undefined,
+      metingenPerS: typeof ruw.analyse_fps === 'number' ? ruw.analyse_fps : undefined,
+    }
+  } catch {
+    return {}
+  }
+}
+
 export async function leesVolgrapport(
   map: string,
 ): Promise<{ onderbrekingen?: number[]; gaten?: [number, number][] }> {
@@ -559,8 +588,21 @@ export async function startAnalyse(
   // Alleen zinvol bij een bewegende camera; anders kost het rekentijd zonder iets toe te voegen.
   const ankers = opts.bewegend ? await schrijfAnkers(map, kalibratieData, veldmaten) : null
 
+  // Wat er niet kán zonder kalibratie. Dat stilzwijgend overslaan is precies waarom een
+  // analyse "klaar" meldde terwijl de aangevinkte opties niets deden.
+  const overgeslagen: string[] = []
+  if (!kalibratie) {
+    if (opts.bewegend) overgeslagen.push('het veld volgen bij een bewegende camera')
+    if (opts.tracking) overgeslagen.push('spelers volgen')
+    if (opts.overlay) overgeslagen.push('de controlevideo')
+    overgeslagen.push('waar de bal landt (zones en afstanden)')
+  }
+
+  // Hoe fijn de detector naar de video kijkt, per precisiekeuze.
+  const METINGEN_PER_S = { snel: 5, gewoon: 10, nauwkeurig: 20 } as const
   const stappen = bouwStappen({
-    matchId, video: video.pad, map, kalibratie, ankers, opts, fps: 2, ffmpeg: ffmpegPad(),
+    matchId, video: video.pad, map, kalibratie, ankers, opts,
+    fps: METINGEN_PER_S[opts.stand], ffmpeg: ffmpegPad(),
   })
   const begin = Date.now()
   const stand: AnalyseStand = {
@@ -600,7 +642,9 @@ export async function startAnalyse(
           detecties: regels.length,
           metLanding: regels.filter((r) => r.zone && typeof r.zone === 'object').length,
           overlay: existsSync(path.join(map, 'controle.mp4')),
+          ...(await leesDetectierapport(map)),
           ...(await leesVolgrapport(map)),
+          ...(overgeslagen.length ? { overgeslagen } : {}),
           duurSeconden: Math.round((Date.now() - begin) / 1000),
         },
       })
