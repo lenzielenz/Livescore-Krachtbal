@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react'
 
-import { inWoorden, vergelijk } from '@/lib/cv-score'
+import { inWoorden, vergelijk, verschuiving } from '@/lib/cv-score'
 import { momentToVideo, type VideoSync } from '@/lib/video-sync'
 import './video-tijdlijn.css'
 
@@ -32,9 +32,10 @@ export function ModelScore({
   /** Springen naar een moment in de video (om een gemiste worp te bekijken). */
   naarTijd?: (seconden: number) => void
 }) {
-  const kaart = useMemo(() => {
+  const { kaart, scheef } = useMemo(() => {
     const tijden = worpen.map((w) => momentToVideo(w, sync, halfSeconds))
-    return vergelijk(tijden, voorstellen.map((v) => v.videoTimeS))
+    const voorgesteld = voorstellen.map((v) => v.videoTimeS)
+    return { kaart: vergelijk(tijden, voorgesteld), scheef: verschuiving(tijden, voorgesteld) }
   }, [worpen, voorstellen, sync, halfSeconds])
 
   if (!worpen.length && !voorstellen.length) return null
@@ -89,10 +90,20 @@ export function ModelScore({
             </p>
           )}
 
-          <p className="sa-hint">
-            Klopt de ijking van H1 en H2 niet, dan staan de ingevoerde worpen op de verkeerde
-            videotijd en zegt dit cijfer niets. Controleer die eerst bij de video hierboven.
-          </p>
+          {kaart.gevonden === 0 && scheef != null && Math.abs(scheef) > 3 ? (
+            <p className="sa-let-op">
+              Geen enkel voorstel valt samen met een ingevoerde worp, maar ze liggen wél
+              stelselmatig <strong>{klok(Math.abs(scheef))}</strong>{' '}
+              {scheef > 0 ? 'later' : 'vroeger'} dan je worpen. Dat wijst op een ijking die
+              zoveel verschoven staat — niet op een model dat niets vond. Zet de ijking van de
+              helft(en) hierboven goed en dit cijfer verandert mee.
+            </p>
+          ) : (
+            <p className="sa-hint">
+              Klopt de ijking van H1 en H2 niet, dan staan de ingevoerde worpen op de verkeerde
+              videotijd en zegt dit cijfer niets. Controleer die eerst bij de video hierboven.
+            </p>
+          )}
         </>
       )}
     </section>

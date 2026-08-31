@@ -44,6 +44,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+from voortgang import Melder  # noqa: E402
+
 MODEL_VERSION = '0.1.0'
 MODEL_NAAM = 'houding-rtmpose'
 
@@ -248,12 +250,18 @@ def meet_video(videopad: Path, model, analyse_fps: float, tot: float | None = No
     """
     import cv2  # noqa: PLC0415
 
+    from voortgang import duur_van_video  # noqa: PLC0415
+
     cap = cv2.VideoCapture(str(videopad))
     if not cap.isOpened():
         _fout(f'kan video niet openen: {videopad}')
     fps_bron = cap.get(cv2.CAP_PROP_FPS) or 25.0
     stap = max(1, round(fps_bron / analyse_fps))
     dt = stap / fps_bron
+    # Dit is de traagste stap van de hele keten: laten weten hoe ver ze staat, anders staat de
+    # balk in de app een halfuur stil en is dat niet te onderscheiden van vastgelopen.
+    duur = duur_van_video(cv2, cap)
+    melder = Melder(min(duur, tot) if (duur and tot) else (tot or duur))
 
     reeks: list[dict] = []
     vorige: dict[int, dict] = {}
@@ -284,8 +292,10 @@ def meet_video(videopad: Path, model, analyse_fps: float, tot: float | None = No
             reeks.append({'t': round(t, 3), 'score': round(beste_score, 4),
                           'polshoogte': beste_hoogte, 'personen': len(keypoints)})
             vorige = nu
+            melder.meld(t, f'{len(reeks)} metingen')
         frame_idx += 1
     cap.release()
+    melder.klaar(f'{len(reeks)} metingen')
     return reeks
 
 
@@ -358,8 +368,13 @@ def main(argv: list[str] | None = None) -> None:
         print(f'Nog niet getraind — geschatte instellingen: drempel {drempel:g}, '
               f'minimale afstand {min_afstand:g}s. Zie cv/train.py.')
 
+    # Het model laden kan bij de eerste keer minuten duren (rtmlib haalt dan zijn gewichten op).
+    # Zonder deze twee meldingen lijkt de analyse in die tijd stil te staan.
     print(f'Houdingsmodel laden ({args.mode}) …')
+    laden = Melder(1.0)
+    laden.meld(0.0, 'houdingsmodel laden', forceer=True)
     model = laad_model(args.mode)
+    laden.meld(0.0, 'houdingsmodel geladen', forceer=True)
     print(f'Spelers meten in {args.video} (± {args.analyse_fps:g} beelden/s) …')
     reeks = meet_video(args.video, model, args.analyse_fps, args.tot)
     if not reeks:

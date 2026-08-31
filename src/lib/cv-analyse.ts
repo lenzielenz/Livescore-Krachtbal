@@ -34,6 +34,12 @@ export type AnalyseStand = {
   pid?: number
   /** Draait deze taak in dít serverproces? Zo niet en de status is 'bezig', dan is ze verdwenen. */
   procesStart?: number
+  /** Hoe ver de huidige stap staat (0..1), als ze dat meldt (zie cv/voortgang.py). */
+  stapFractie?: number
+  /** Wat die stap laatst meldde, in mensentaal ("4:13 van 10:24, 1250 metingen"). */
+  stapDetail?: string
+  /** Wanneer er voor het laatst iets van de stap gehoord werd — zo zie je "traag" versus "vast". */
+  laatsteTeken?: string
   rapport?: {
     voorstellen?: number
     detecties?: number
@@ -63,6 +69,9 @@ export type AnalyseOpties = {
   /** Worpen zoeken met het houdingsmodel in plaats van met beeldverschil. */
   ai?: boolean
 }
+
+/** Hoogstens één keer per zoveel milliseconden de voortgang naar de database schrijven. */
+const VOORTGANG_SCHRIJF_MS = 8000
 
 /** Wanneer dit serverproces startte — om te zien of een 'bezig'-taak nog van ons is. */
 const PROCES_START = Date.now()
@@ -660,13 +669,33 @@ export async function startAnalyse(
     let huidig = { ...stand }
     try {
       for (let i = 0; i < stappen.length; i++) {
-        huidig = { ...huidig, stap: stappen[i].naam, stapNummer: i + 1 }
+        huidig = {
+          ...huidig, stap: stappen[i].naam, stapNummer: i + 1,
+          stapFractie: 0, stapDetail: undefined, laatsteTeken: new Date().toISOString(),
+        }
         await schrijfStand(payload, matchId, huidig)
-        const code = await draaiStap(matchId, stappen[i])
+        // De voortgang van de stap doorgeven aan de pagina, maar geknepen: elke melding naar de
+        // database schrijven zou tientallen schrijfacties per minuut kosten voor een balk die
+        // toch maar om de vijf seconden opgehaald wordt.
+        let laatsteSchrijf = 0
+        const code = await draaiStap(matchId, stappen[i], (v) => {
+          huidig = {
+            ...huidig,
+            ...(v.fractie != null ? { stapFractie: v.fractie } : {}),
+            stapDetail: v.tekst || undefined,
+            laatsteTeken: new Date().toISOString(),
+          }
+          if (Date.now() - laatsteSchrijf < VOORTGANG_SCHRIJF_MS) return
+          laatsteSchrijf = Date.now()
+          void schrijfStand(payload, matchId, huidig).catch(() => undefined)
+        })
         if (code !== 0) throw new Error(`${stappen[i].naam} — Python stopte met code ${code}`)
       }
 
-      huidig = { ...huidig, stap: 'Voorstellen klaarzetten voor review', stapNummer: stappen.length + 1 }
+      huidig = {
+        ...huidig, stap: 'Voorstellen klaarzetten voor review', stapNummer: stappen.length + 1,
+        stapFractie: 0, stapDetail: undefined, laatsteTeken: new Date().toISOString(),
+      }
       await schrijfStand(payload, matchId, huidig)
       const regels = await leesJsonl(resultaatBestand(map, kalibratie, opts.tracking))
       const aantal = await importeer(regels)
@@ -703,7 +732,20 @@ export async function startAnalyse(
   return { ok: true, stand }
 }
 
-function draaiStap(matchId: number, stap: Stap): Promise<number> {
+/** Eén VOORTGANG-regel van een Python-stap: `VOORTGANG 0.412 4:13 van 10:24, 1250 metingen`. */
+export function leesVoortgang(regel: string): { fractie: number | null; tekst: string } | null {
+  const m = /^VOORTGANG\s+(\d*\.?\d+|\?)\s*(.*)$/.exec(regel.trim())
+  if (!m) return null
+  const fractie = m[1] === '?' ? null : Math.min(1, Math.max(0, Number(m[1])))
+  if (fractie != null && !Number.isFinite(fractie)) return null
+  return { fractie, tekst: m[2].trim() }
+}
+
+function draaiStap(
+  matchId: number,
+  stap: Stap,
+  onVoortgang?: (v: { fractie: number | null; tekst: string }) => void,
+): Promise<number> {
   // De keuze staat vast: startAnalyse controleerde de omgeving voor het eerste stapje.
   const python = huidigePython()
   const { argv } = stap
@@ -714,6 +756,18 @@ function draaiStap(matchId: number, stap: Stap): Promise<number> {
     })
     lopend = { matchId, kind }
     let laatsteFout = ''
+    // De zware stappen melden onderweg hoe ver ze staan (cv/voortgang.py). Zonder dat stond de
+    // balk in de app een halfuur stil op "Stap 1 van 2" — niet te onderscheiden van vastgelopen.
+    let rest = ''
+    kind.stdout?.on('data', (d) => {
+      rest += String(d)
+      const regels = rest.split('\n')
+      rest = regels.pop() ?? ''
+      for (const regel of regels) {
+        const v = leesVoortgang(regel)
+        if (v && onVoortgang) onVoortgang(v)
+      }
+    })
     kind.stderr?.on('data', (d) => {
       laatsteFout = String(d).slice(-500)
     })

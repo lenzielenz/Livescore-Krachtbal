@@ -98,6 +98,47 @@ export function vergelijk(worpen: number[], voorstellen: number[], venster = VEN
   }
 }
 
+/**
+ * Hoeveel liggen de voorstellen er stelselmatig naast?
+ *
+ * Nul overlap kan twee dingen betekenen: het model vond niets, óf de ijking van de video staat
+ * scheef en de ingevoerde worpen staan op een heel ander tijdstip. Dat verschil is te zien: bij
+ * een scheve ijking liggen álle voorstellen even ver van hun worp, bij een blinde detector
+ * liggen ze willekeurig.
+ *
+ * Daarom niet "het dichtstbijzijnde voorstel per worp" (dat onderschat een grote verschuiving —
+ * aan de randen ligt de buurworp dichter dan het eigen voorstel), maar de klassieke aanpak voor
+ * een constante verschuiving: van álle paren het verschil nemen en kijken waar de meeste paren
+ * het over eens zijn. Die klomp is de verschuiving.
+ *
+ * Geeft null als er geen twee paren op hetzelfde verschil uitkomen — dan is er geen patroon en
+ * valt er niets te beweren.
+ */
+export function verschuiving(
+  worpen: number[],
+  voorstellen: number[],
+  tolerantie = VENSTER_S / 2,
+): number | null {
+  if (worpen.length < 1 || voorstellen.length < 1) return null
+  const verschillen: number[] = []
+  for (const w of worpen) for (const v of voorstellen) verschillen.push(v - w)
+
+  let besteAantal = 0
+  let besteKlomp: number[] = []
+  for (const d of verschillen) {
+    const klomp = verschillen.filter((x) => Math.abs(x - d) <= tolerantie)
+    // Bij een gelijk aantal wint de kleinste verschuiving: die verklaart hetzelfde met minder.
+    if (klomp.length > besteAantal
+        || (klomp.length === besteAantal && besteKlomp.length > 0
+            && Math.abs(d) < Math.abs(mediaan(besteKlomp) as number))) {
+      besteAantal = klomp.length
+      besteKlomp = klomp
+    }
+  }
+  if (besteAantal < 2) return null
+  return mediaan(besteKlomp)
+}
+
 /** De scorekaart in één zin, zoals ze in de app staat. */
 export function inWoorden(kaart: Scorekaart): string {
   if (!kaart.worpen) return 'Er zijn nog geen worpen ingevoerd om mee te vergelijken.'

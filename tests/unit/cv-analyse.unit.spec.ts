@@ -5,6 +5,7 @@ import path from 'path'
 
 import {
   bruikbareBeelden,
+  leesVoortgang,
   leesVolgrapport,
   bouwKandidaten,
   bouwStappen,
@@ -342,5 +343,33 @@ describe('de bal als worpbaan', () => {
 
   it('slaat het hele balverhaal over zonder kalibratie — dan is "waar" niet te weten', () => {
     expect(namen(stappen({ kalibratie: null })).some((n) => n.includes('worpbaan'))).toBe(false)
+  })
+})
+
+describe('leesVoortgang', () => {
+  // De Python-stappen melden onderweg hoe ver ze staan (cv/voortgang.py). Herkent deze lezer
+  // die regel niet, dan staat de balk in de app weer stil zonder dat iemand weet waarom.
+  it('leest de fractie en de tekst van een melding', () => {
+    expect(leesVoortgang('VOORTGANG 0.412 4:13 van 10:14, 1250 metingen')).toEqual({
+      fractie: 0.412,
+      tekst: '4:13 van 10:14, 1250 metingen',
+    })
+  })
+
+  it('verdraagt een onbekende noemer', () => {
+    // Niet elke video draagt een betrouwbare lengte mee; dan is er geen percentage, maar de
+    // melding is nog altijd een teken van leven.
+    expect(leesVoortgang('VOORTGANG ? 0:42 bekeken')).toEqual({ fractie: null, tekst: '0:42 bekeken' })
+  })
+
+  it('houdt de fractie tussen 0 en 1', () => {
+    expect(leesVoortgang('VOORTGANG 1.7 x')?.fractie).toBe(1)
+    expect(leesVoortgang('VOORTGANG 0 x')?.fractie).toBe(0)
+  })
+
+  it('negeert gewone uitvoer van de stap', () => {
+    expect(leesVoortgang('Houdingsmodel laden (balanced) …')).toBeNull()
+    expect(leesVoortgang('')).toBeNull()
+    expect(leesVoortgang('VOORTGANGx 0.5 iets')).toBeNull()
   })
 })
