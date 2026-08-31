@@ -19,6 +19,7 @@ import { AnalyseVoortgang, type VoortgangInput } from './AnalyseVoortgang'
 import { Kalibreren } from './Kalibreren'
 import { ModelBijstellen } from './ModelBijstellen'
 import { ModelScore } from './ModelScore'
+import { Overzetten } from './Overzetten'
 import { ServerAnalyse } from './ServerAnalyse'
 import { Terreinmaten } from './Terreinmaten'
 import { Veldkaart } from './Veldkaart'
@@ -364,6 +365,13 @@ export default async function AnalyseDetailPage({ params }: { params: Promise<{ 
                 geijkt={typeof matchDoc?.videoOffsetH1 === 'number'}
               />
             </ErrorCatch>
+            {/* De laatste stap van de video-weg: wat je bevestigde wordt een échte worp, zodat
+                de veldkaart en de statistieken hieronder eindelijk iets tonen. Enkel zinvol
+                zolang er nog niets aangetekend is. */}
+            <ErrorCatch label="De voorstellen in de wedstrijd zetten">
+              <Overzetten matchId={matchId} alWorpen={handWorpen.length} />
+            </ErrorCatch>
+
             {/* En de andere helft van diezelfde lus: de drempels bijstellen op alles wat er al
                 geanalyseerd is. Dat bestand geldt voor élke volgende analyse op deze server —
                 vandaar enkel federatie-niveau. */}
