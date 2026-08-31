@@ -7,6 +7,7 @@ import Link from 'next/link'
 type Team = { id: number; name: string; reeks: string }
 type Player = { id: number; name: string; shirtNumber: number; position?: string | null }
 type KalenderMatch = { id: number; wanneer: string; home: string; away: string; gespeeld: boolean }
+type Modus = 'manueel' | 'video'
 
 // Standaardwaarde voor een <input type="datetime-local">: dat veld toont/verwacht LOKALE tijd, dus
 // corrigeer voor de tijdzone vóór het ISO-knippen — anders staat de voorgestelde tijd de
@@ -161,7 +162,10 @@ export function NieuweAnalyseMatch({ teams, reeksOptions, positionOptions }: { t
   const [gekozen, setGekozen] = useState<number | null>(null)
 
   // Stap 2: na aanmaken tonen we de ploegen met hun spelers.
-  const [created, setCreated] = useState<{ id: number; homeRoster: Player[]; awayRoster: Player[]; homeName: string; awayName: string } | null>(null)
+  const [created, setCreated] = useState<{ id: number; homeRoster: Player[]; awayRoster: Player[]; homeName: string; awayName: string; modus: Modus } | null>(null)
+  // Twee wegen naar een analyse. De keuze staat vooraan omdat ze bepaalt wat je daarna moet
+  // doen: bij 'manueel' ga je opnemen, bij 'video' upload je de opname en rekent de server.
+  const [modus, setModus] = useState<Modus>('manueel')
 
   // Ploegen van de reeks, ontdubbeld op naam (dubbele records van dezelfde club tonen we maar één keer).
   const reeksTeams = useMemo(() => {
@@ -212,6 +216,7 @@ export function NieuweAnalyseMatch({ teams, reeksOptions, positionOptions }: { t
         awayRoster: data.awayRoster ?? [],
         homeName: data.homeName || teamName(home),
         awayName: data.awayName || teamName(away),
+        modus: data.modus === 'video' ? 'video' : 'manueel',
       })
     } catch (e) {
       setError((e as Error).message)
@@ -225,7 +230,7 @@ export function NieuweAnalyseMatch({ teams, reeksOptions, positionOptions }: { t
       setError('Kies een verschillende thuis- en uitploeg.')
       return
     }
-    void create({ reeks, homeTeam: Number(home), awayTeam: Number(away), date: new Date(date).toISOString() })
+    void create({ reeks, homeTeam: Number(home), awayTeam: Number(away), date: new Date(date).toISOString(), modus })
   }
 
   function reset() {
@@ -249,6 +254,11 @@ export function NieuweAnalyseMatch({ teams, reeksOptions, positionOptions }: { t
     return (
       <div className="nam-form">
         <p className="nam-ok">✓ {created.homeName} – {created.awayName} aangemaakt. Voeg de spelers toe (ze worden onthouden voor latere wedstrijden).</p>
+        <p className="nam-modus-uitleg">
+          {created.modus === 'video'
+            ? 'Je koos: alles uit de video. Je hoeft niets aan te tekenen — koppel de opname, wijs de veldlijnen aan en laat de server rekenen. De rugnummers hierboven helpen wel om spelers te herkennen.'
+            : 'Je koos: manueel aantekenen. Neem de wedstrijd op met het veldschema; de video kan je er later bij koppelen om te herbekijken.'}
+        </p>
         <div className="nam-teams">
           <RosterEditor
             matchId={created.id}
@@ -274,7 +284,15 @@ export function NieuweAnalyseMatch({ teams, reeksOptions, positionOptions }: { t
           />
         </div>
         <div className="nam-actions">
-          <button type="button" className="sk-demo-cta" onClick={() => router.push(`/scorekeeper/${created.id}`)}>▶ Opnemen</button>
+          {created.modus === 'video' ? (
+            <button type="button" className="sk-demo-cta" onClick={() => router.push(`/analyse/${created.id}`)}>
+              🎥 Video koppelen &amp; analyseren
+            </button>
+          ) : (
+            <button type="button" className="sk-demo-cta" onClick={() => router.push(`/scorekeeper/${created.id}`)}>
+              ▶ Opnemen
+            </button>
+          )}
           <button type="button" className="nam-prepare" onClick={reset}>✓ Klaar (voorbereid)</button>
         </div>
       </div>
@@ -284,6 +302,26 @@ export function NieuweAnalyseMatch({ teams, reeksOptions, positionOptions }: { t
   // Stap 1 — wie tegen wie: standaard uit de échte kalender, of zelf samenstellen.
   return (
     <div className="nam-form">
+      {/* De eerste vraag is niet "wie tegen wie" maar "hoe ga je meten": het scheelt of je
+          straks een uur zit aan te tekenen of enkel een video uploadt. */}
+      <fieldset className="nam-modus">
+        <legend>Hoe maak je deze analyse?</legend>
+        <label className={`nam-modus-optie${modus === 'manueel' ? ' aan' : ''}`}>
+          <input type="radio" name="analysemodus" checked={modus === 'manueel'} onChange={() => setModus('manueel')} />
+          <span>
+            <strong>✍️ Manueel aantekenen</strong>
+            <em>Je tikt elke worp aan op het veldschema. De video is er om te herbekijken.</em>
+          </span>
+        </label>
+        <label className={`nam-modus-optie${modus === 'video' ? ' aan' : ''}`}>
+          <input type="radio" name="analysemodus" checked={modus === 'video'} onChange={() => setModus('video')} />
+          <span>
+            <strong>🎥 Alles uit de video</strong>
+            <em>Je voert niets in. De opname wordt doorgerekend; jij bevestigt wat eruit komt.</em>
+          </span>
+        </label>
+      </fieldset>
+
       <div className="nam-bron" role="tablist" aria-label="Waar komt de wedstrijd vandaan?">
         <button type="button" role="tab" aria-selected={bron === 'kalender'} className={`nam-bron-tab${bron === 'kalender' ? ' on' : ''}`} onClick={() => { setBron('kalender'); setError(null) }}>
           📅 Uit de kalender

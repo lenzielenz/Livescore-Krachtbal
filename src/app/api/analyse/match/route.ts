@@ -169,6 +169,9 @@ export async function POST(req: Request) {
         goalAreaDepth: 10,
         analyseOnly: true,
         analyseOwner: Number(teamOwner ?? user.id),
+        // Welke weg je kiest, bepaalt wat het voortgangsbord van je vraagt: bij 'video' hoef je
+        // niets aan te tekenen en telt alleen wat er uit de opname komt.
+        analyseModus: body.modus === 'video' ? 'video' : 'manueel',
       },
     })
 
@@ -194,7 +197,16 @@ export async function POST(req: Request) {
       return String(t?.name ?? '')
     }
     const [homeName, awayName] = await Promise.all([naamVan(homeTeam), naamVan(awayTeam)])
-    return Response.json({ id: (created as { id: number }).id, homeTeam, awayTeam, homeName, awayName, homeRoster, awayRoster })
+    return Response.json({
+      id: (created as { id: number }).id,
+      homeTeam,
+      awayTeam,
+      homeName,
+      awayName,
+      homeRoster,
+      awayRoster,
+      modus: body.modus === 'video' ? 'video' : 'manueel',
+    })
   } catch (err) {
     return Response.json({ error: (err as Error).message }, { status: 400 })
   }

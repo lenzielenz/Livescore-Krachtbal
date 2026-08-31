@@ -2,6 +2,7 @@
 
 import { useMemo, useRef, useState } from 'react'
 
+import { KalibratieDoek } from './KalibratieDoek'
 import {
   ALLE_LABELS,
   CAMERA_POSITIES,
@@ -102,12 +103,15 @@ export function Kalibreren({
     if (!ctx) return
     ctx.drawImage(v, 0, 0)
     setBeelden((lijst) => {
+      // 0.95 en niet 0.85: bij sterke vergroting verschuiven JPEG-blokjes de schijnbare plek
+      // van een dunne witte lijn met een pixel of twee — precies de nauwkeurigheid die de loep
+      // moet opleveren. Het frame wordt toch nooit verstuurd, dus het kost enkel geheugen.
       const nieuw: Beeld = {
         tijd: Math.round(v.currentTime * 10) / 10,
         beeldBreedte: v.videoWidth,
         beeldHoogte: v.videoHeight,
         punten: [],
-        frame: canvas.toDataURL('image/jpeg', 0.85),
+        frame: canvas.toDataURL('image/jpeg', 0.95),
       }
       setActief(lijst.length)
       return [...lijst, nieuw]
@@ -116,13 +120,10 @@ export function Kalibreren({
     setMelding(null)
   }
 
-  const klik = (e: React.MouseEvent<HTMLImageElement>) => {
+  // Het omrekenen van scherm naar beeldpixels zit in KalibratieDoek (en in de geteste module
+  // kalibratie-zoom): hier komen alleen nog échte beeldcoördinaten binnen.
+  const zetPunt = (x: number, y: number) => {
     if (actief == null || !volgende) return
-    const beeld = beelden[actief]
-    const rect = e.currentTarget.getBoundingClientRect()
-    // Van weergavepixels naar de échte beeldpixels: de server rekent met de videoresolutie.
-    const x = Math.round(((e.clientX - rect.left) / rect.width) * beeld.beeldBreedte)
-    const y = Math.round(((e.clientY - rect.top) / rect.height) * beeld.beeldHoogte)
     setBeelden((lijst) =>
       lijst.map((b, i) =>
         i === actief
@@ -279,23 +280,16 @@ export function Kalibreren({
             {huidig && (
               <>
                 {huidig.frame ? (
-                  <div className="kal-doek">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={huidig.frame} alt={`Videobeeld op ${klok(huidig.tijd)}`} onClick={klik} />
-                    {huidig.punten.map((p) => (
-                      <span
-                        key={p.label}
-                        className="kal-punt"
-                        style={{
-                          left: `${(p.x / huidig.beeldBreedte) * 100}%`,
-                          top: `${(p.y / huidig.beeldHoogte) * 100}%`,
-                        }}
-                        title={p.label}
-                      >
-                        ✓
-                      </span>
-                    ))}
-                  </div>
+                  <KalibratieDoek
+                    frame={huidig.frame}
+                    beeldBreedte={huidig.beeldBreedte}
+                    beeldHoogte={huidig.beeldHoogte}
+                    punten={huidig.punten}
+                    volgende={volgende}
+                    meterPerPixel={precisie?.slechtste ?? null}
+                    onZet={zetPunt}
+                    beschrijf={beschrijf}
+                  />
                 ) : (
                   <p className="sa-hint">
                     Dit beeld komt uit een eerdere sessie: de punten staan er nog, het beeld zelf

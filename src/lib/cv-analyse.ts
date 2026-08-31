@@ -40,6 +40,8 @@ export type AnalyseStand = {
   stapDetail?: string
   /** Wanneer er voor het laatst iets van de stap gehoord werd — zo zie je "traag" versus "vast". */
   laatsteTeken?: string
+  /** Alle stapnamen in volgorde: dan zie je wat er nog komt in plaats van alleen "stap 1 van 2". */
+  stappenNamen?: string[]
   rapport?: {
     voorstellen?: number
     detecties?: number
@@ -62,7 +64,14 @@ export type AnalyseStand = {
 }
 
 export type AnalyseOpties = {
-  stand: 'snel' | 'gewoon' | 'nauwkeurig'
+  /**
+   * Hoeveel rekenwerk mag deze analyse kosten?
+   *
+   * 'ultra' is bewust géén vierde tandje op dezelfde schaal maar een andere afspraak: je zet
+   * ze 's avonds aan en kijkt de volgende ochtend. Alles wat kwaliteit tegen rekentijd
+   * afruilt gaat dan naar de kwaliteitskant.
+   */
+  stand: 'snel' | 'gewoon' | 'nauwkeurig' | 'ultra'
   bewegend: boolean
   tracking: boolean
   overlay: boolean
@@ -294,8 +303,16 @@ export function instellingenPad(): string {
 //
 // Ze stonden eerder allebei vast (altijd 5 metingen/s, altijd 'balanced'), waardoor de keuze
 // "snel / gewoon / nauwkeurig" voor de AI-stand geen enkel verschil maakte.
-const AI_METINGEN_PER_S = { snel: 3, gewoon: 5, nauwkeurig: 8 } as const
-const AI_MODELGROOTTE = { snel: 'lightweight', gewoon: 'balanced', nauwkeurig: 'performance' } as const
+//
+// 'ultra' meet 15 keer per seconde met het zwaarste model. Dat is geen willekeurig hoger getal:
+// een worp duurt van aanloop tot loslaten ongeveer een halve seconde, en de piek waar het om
+// draait hooguit twee tienden. Bij 5 metingen/s valt die piek soms tússen twee metingen; bij 15
+// is elke worp met minstens drie metingen gedekt. Meer dan de beeldfrequentie van de video heeft
+// geen zin — houding.py knijpt daar zelf op af.
+const AI_METINGEN_PER_S = { snel: 3, gewoon: 5, nauwkeurig: 8, ultra: 15 } as const
+const AI_MODELGROOTTE = {
+  snel: 'lightweight', gewoon: 'balanced', nauwkeurig: 'performance', ultra: 'performance',
+} as const
 
 /** Eén stap uit de keten. Zonder `commando` draait ze op de Python van deze server. */
 export type Stap = { naam: string; argv: string[]; commando?: string }
@@ -665,17 +682,19 @@ export async function startAnalyse(
   }
 
   // Hoe fijn de detector naar de video kijkt, per precisiekeuze.
-  const METINGEN_PER_S = { snel: 5, gewoon: 10, nauwkeurig: 20 } as const
+  const METINGEN_PER_S = { snel: 5, gewoon: 10, nauwkeurig: 20, ultra: 30 } as const
   const stappen = bouwStappen({
     matchId, video: video.pad, map, kalibratie, ankers, opts,
     fps: METINGEN_PER_S[opts.stand], ffmpeg: ffmpegPad(), instellingen: instellingenPad(),
   })
   const begin = Date.now()
+  const IMPORTSTAP = 'Voorstellen klaarzetten voor review'
   const stand: AnalyseStand = {
     status: 'bezig',
     stap: stappen[0]?.naam ?? 'Starten',
     stapNummer: 1,
     stappen: stappen.length + 1, // + het importeren van de voorstellen
+    stappenNamen: [...stappen.map((s) => s.naam), IMPORTSTAP],
     gestart: new Date(begin).toISOString(),
     procesStart: PROCES_START,
     instellingen: { ...opts },
@@ -711,7 +730,7 @@ export async function startAnalyse(
       }
 
       huidig = {
-        ...huidig, stap: 'Voorstellen klaarzetten voor review', stapNummer: stappen.length + 1,
+        ...huidig, stap: IMPORTSTAP, stapNummer: stappen.length + 1,
         stapFractie: 0, stapDetail: undefined, laatsteTeken: new Date().toISOString(),
       }
       await schrijfStand(payload, matchId, huidig)
