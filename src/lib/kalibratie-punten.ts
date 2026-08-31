@@ -35,3 +35,21 @@ export function omschrijving(lijn: Dwarslijn, zijde: Zijde): string {
 export function geldigLabel(label: unknown): boolean {
   return typeof label === 'string' && ALLE_LABELS.includes(label)
 }
+
+/**
+ * Hetzelfde punt met links en rechts omgewisseld.
+ *
+ * De klassieke vergissing bij het aanduiden: je klikt wat je ziet in plaats van wat de
+ * veldconventie zegt (sta op de THUIS-achterlijn, kijk naar uit — links is x=0). Dat is geen
+ * ander gezichtspunt maar een spiegeling, en die verziekt elke meting stil. De fit merkt het
+ * (de oriëntatie klapt om); met deze wissel kan de app het rechtzetten in plaats van veertien
+ * punten te laten herklikken.
+ *
+ * Let op het verschil met een 180°-draai (thuis↔uit én links↔rechts): dát is wél een geldig
+ * ander standpunt — filmen vanaf de overkant — en wordt gewoon aanvaard.
+ */
+export function spiegelLabel(label: string): string {
+  const delen = label.split('_')
+  delen[delen.length - 1] = delen[delen.length - 1] === 'links' ? 'rechts' : 'links'
+  return delen.join('_')
+}

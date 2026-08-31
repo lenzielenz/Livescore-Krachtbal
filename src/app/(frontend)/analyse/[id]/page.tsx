@@ -297,7 +297,9 @@ export default async function AnalyseDetailPage({ params }: { params: Promise<{ 
               <Kalibreren
                 matchId={matchId}
                 videoUrl={(matchDoc?.videoUrl as string | null) ?? null}
-                initieel={(matchDoc?.cvKalibratie ?? null) as { punten?: { label: string; x: number; y: number }[] } | null}
+                initieel={
+                  (matchDoc?.cvKalibratie ?? null) as React.ComponentProps<typeof Kalibreren>['initieel']
+                }
               />
             </ErrorCatch>
             <ErrorCatch label="De automatische video-analyse">

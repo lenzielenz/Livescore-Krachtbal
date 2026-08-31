@@ -15,6 +15,8 @@ import { ALLE_LABELS, DWARSLIJNEN, ZIJDEN, labelVan, omschrijving, type Zijde } 
 // Werkt enkel op een geüpload bestand: een YouTube-speler laat zijn beeld niet uitlezen.
 
 type Punt = { label: string; x: number; y: number }
+/** Meters per pixel per derde van het veld: waar meet dit standpunt scherp, en waar ruw? */
+type Precisie = { thuis?: number; midden?: number; uit?: number; slechtste?: number }
 type Beeld = {
   tijd: number
   beeldBreedte: number
@@ -33,7 +35,7 @@ export function Kalibreren({
 }: {
   matchId: number
   videoUrl: string | null
-  initieel: { punten?: Punt[]; beelden?: Beeld[] } | null
+  initieel: { punten?: Punt[]; beelden?: Beeld[]; precisie?: Precisie | null } | null
 }) {
   // Oudere kalibraties hebben één puntenlijst zonder tijdstip; die blijft gewoon werken.
   const [beelden, setBeelden] = useState<Beeld[]>(() => {
@@ -43,6 +45,7 @@ export function Kalibreren({
     }
     return []
   })
+  const [precisie, setPrecisie] = useState<Precisie | null>(initieel?.precisie ?? null)
   const [actief, setActief] = useState<number | null>(null)
   const [gekozenLabel, setGekozenLabel] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -138,15 +141,26 @@ export function Kalibreren({
             })),
         }),
       })
-      const data = (await res.json()) as { error?: string; beelden?: number; punten?: number; bruikbaar?: number }
+      const data = (await res.json()) as {
+        error?: string
+        beelden?: number
+        punten?: number
+        bruikbaar?: number
+        precisie?: Precisie | null
+        gespiegeld?: boolean
+      }
       if (!res.ok) {
         setFout(data.error ?? 'Bewaren mislukt.')
         return
       }
+      setPrecisie(data.precisie ?? null)
+      const spiegel = data.gespiegeld
+        ? ' Links en rechts stonden verwisseld — dat is rechtgezet.'
+        : ''
       setMelding(
         data.bruikbaar && data.bruikbaar < (data.beelden ?? 0)
-          ? `Bewaard: ${data.punten} punten. ${data.bruikbaar} van de ${data.beelden} beelden hebben er genoeg (4+) om als ijkbeeld te dienen.`
-          : `Bewaard: ${data.punten} punten over ${data.beelden} ${data.beelden === 1 ? 'beeld' : 'beelden'}.`,
+          ? `Bewaard: ${data.punten} punten. ${data.bruikbaar} van de ${data.beelden} beelden hebben er genoeg (4+) om als ijkbeeld te dienen.${spiegel}`
+          : `Bewaard: ${data.punten} punten over ${data.beelden} ${data.beelden === 1 ? 'beeld' : 'beelden'}.${spiegel}`,
       )
     } catch {
       setFout('Netwerkfout — probeer opnieuw.')
@@ -310,6 +324,28 @@ export function Kalibreren({
                 </tbody>
               </table>
             </div>
+
+            {precisie && (
+              <div className={`kal-precisie${(precisie.slechtste ?? 0) > 0.25 ? ' ruw' : ''}`}>
+                <strong>Scherpte van dit standpunt</strong>{' '}
+                <span>
+                  {(['thuis', 'midden', 'uit'] as const)
+                    .filter((k) => precisie[k] != null)
+                    .map((k) => `${{ thuis: 'thuiskant', midden: 'midden', uit: 'uitkant' }[k]} ${Math.round(precisie[k]! * 100)} cm`)
+                    .join(' · ')}{' '}
+                  per pixel
+                </span>
+                {(precisie.slechtste ?? 0) > 0.25 ? (
+                  <p>
+                    Achteraan is één pixel {Math.round((precisie.slechtste ?? 0) * 100)} cm waard —
+                    een landingspunt dáár is een schatting, geen meting. Dat hoort bij een camera
+                    die in de diepte kijkt: hoe hoger ze staat, hoe scherper de overkant wordt.
+                  </p>
+                ) : (
+                  <p>Over het hele veld ongeveer even scherp — goed standpunt.</p>
+                )}
+              </div>
+            )}
 
             <div className="tm-acties">
               <button
