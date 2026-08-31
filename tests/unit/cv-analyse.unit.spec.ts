@@ -350,6 +350,38 @@ describe('worpen zoeken met het houdingsmodel', () => {
   })
 })
 
+describe('de ultra-stand', () => {
+  // "Ultra" is geen vierde tandje maar een andere afspraak: je zet ze aan vóór je gaat slapen.
+  // Elke stap die kwaliteit tegen rekentijd ruilt, hoort dan naar de kwaliteitskant te gaan —
+  // een ultra die stiekem hetzelfde doet als 'gewoon' is een nacht wachten voor niets.
+  it('kijkt fijner én met het zwaarste model naar de houding', () => {
+    const argv = argvVan(stappen({ opts: { ...OPTS, ai: true, stand: 'ultra' } }), 'houding')
+    expect(Number(argv[argv.indexOf('--analyse-fps') + 1])).toBeGreaterThanOrEqual(15)
+    expect(argv[argv.indexOf('--mode') + 1]).toBe('performance')
+  })
+
+  it('volgt het veld op de fijnste stand', () => {
+    const argv = argvVan(stappen({ opts: { ...OPTS, bewegend: true, stand: 'ultra' } }), 'veld volgen')
+    expect(argv[argv.indexOf('--stand') + 1]).toBe('ultra')
+  })
+
+  it('geeft de balbaan meer kansen om de bal terug te vinden', () => {
+    const rondesVan = (stand: 'gewoon' | 'ultra') => {
+      const a = argvVan(stappen({ opts: { ...OPTS, stand } }), 'worpbaan')
+      return Number(a[a.indexOf('--rondes') + 1])
+    }
+    expect(rondesVan('ultra')).toBeGreaterThan(rondesVan('gewoon'))
+  })
+
+  it('bemonstert de spelerstracking dichter — anders zijn er geen sprintjes te zien', () => {
+    const fpsVan = (stand: 'gewoon' | 'ultra') => {
+      const a = argvVan(stappen({ opts: { ...OPTS, tracking: true, stand } }), 'Spelersposities')
+      return Number(a[a.indexOf('--fps') + 1])
+    }
+    expect(fpsVan('ultra')).toBeGreaterThan(fpsVan('gewoon'))
+  })
+})
+
 describe('de bal als worpbaan', () => {
   it('zoekt de balbanen vóór de landing berekend wordt', () => {
     const s = stappen()

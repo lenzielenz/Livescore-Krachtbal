@@ -313,6 +313,13 @@ const AI_METINGEN_PER_S = { snel: 3, gewoon: 5, nauwkeurig: 8, ultra: 15 } as co
 const AI_MODELGROOTTE = {
   snel: 'lightweight', gewoon: 'balanced', nauwkeurig: 'performance', ultra: 'performance',
 } as const
+// Hoe vaak RANSAC een balbaan probeert. Dit kost bijna niets naast het decoderen van de video,
+// maar bepaalt wel of de bal wordt teruggevonden op een druk beeld: met veertig bewegende
+// blobs is 200 keer proberen niet altijd genoeg om de juiste drie punten te treffen.
+const BAAN_RONDES = { snel: 120, gewoon: 200, nauwkeurig: 500, ultra: 2000 } as const
+// Bemonstering van de spelerstracking. Te dun meten middelt elke versnelling weg en levert nul
+// sprintjes op een wedstrijd waarin volop gesprint werd (zie cv/README.md).
+const TRACKING_PER_S = { snel: 3, gewoon: 4, nauwkeurig: 6, ultra: 10 } as const
 
 /** Eén stap uit de keten. Zonder `commando` draait ze op de Python van deze server. */
 export type Stap = { naam: string; argv: string[]; commando?: string }
@@ -390,6 +397,7 @@ export function bouwStappen(opties: {
     stappen.push({
       naam: 'De bal volgen als worpbaan',
       argv: [path.join(cv, 'bal.py'), video,
+             '--rondes', String(BAAN_RONDES[opts.stand]),
              '--detecties', bestand('detecties.jsonl'), '--uit', bestand('balbanen.jsonl')],
     })
     stappen.push({
@@ -412,7 +420,7 @@ export function bouwStappen(opties: {
       naam: 'Spelersposities volgen (voor loopafstand en sprintjes)',
       argv: [path.join(cv, 'tracking.py'), '--video', video, '--kalibratie', kalibratie,
              ...(opts.bewegend ? ['--homografie', bestand('homografie.jsonl')] : []),
-             '--fps', '4', '--uit', bestand('posities.jsonl')],
+             '--fps', String(TRACKING_PER_S[opts.stand]), '--uit', bestand('posities.jsonl')],
     })
   }
 

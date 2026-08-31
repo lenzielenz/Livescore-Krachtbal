@@ -560,3 +560,4 @@
   vertical-align: middle; color: var(--muted);
   border: 1px solid rgba(255, 255, 255, 0.16); background: rgba(255, 255, 255, 0.05);
 }
+.sa-ultra { flex-basis: 100%; margin: 0; }

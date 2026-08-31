@@ -406,6 +406,17 @@ export function ServerAnalyse({ matchId, heeftVideo }: { matchId: number; heeftV
                 <option value="ultra">Ultra — hele nacht</option>
               </select>
             </label>
+            {stand === 'ultra' && (
+              <p className="sa-let-op sa-ultra">
+                Ultra kijkt drie keer zo fijn als &quot;gewoon&quot; en gebruikt het zwaarste
+                model: reken op uren, niet op minuten. Zet ze aan vóór je gaat slapen — je ziet
+                hieronder rond welk uur ze klaar is.
+                <br />
+                <strong>Let wel:</strong> komt er ondertussen een nieuwe versie van de site
+                online, of herstart de server, dan sneuvelt de lopende analyse en moet ze
+                opnieuw. Bij een run van acht uur is dat een echte kans.
+              </p>
+            )}
             <label className="sa-vink">
               <input type="checkbox" checked={bewegend} onChange={(e) => setBewegend(e.target.checked)} />
               <span>Camera bewoog (gsm in de hand)</span>
