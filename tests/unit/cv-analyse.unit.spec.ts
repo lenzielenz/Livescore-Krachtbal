@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import path from 'path'
 
 import {
+  bruikbareBeelden,
   bouwKandidaten,
   bouwStappen,
   isVerweesd,
@@ -195,5 +196,50 @@ describe('analyseOmgeving', () => {
     } else {
       expect(uitkomst.melding).toBeNull()
     }
+  })
+})
+
+describe('bruikbareBeelden', () => {
+  it('houdt alleen beelden over die op zichzelf een veld vastleggen (4+ punten)', () => {
+    const p = (n: number) => Array.from({ length: n }, (_, i) => ({ label: `l${i}`, x: i, y: i }))
+    const uit = bruikbareBeelden({ beelden: [
+      { tijd: 12, punten: p(6) },
+      { tijd: 3, punten: p(2) },   // te weinig om een matrix uit te fitten
+      { tijd: 40, punten: p(4) },
+    ] })
+    expect(uit.map((b) => b.tijd)).toEqual([12, 40])
+  })
+
+  it('leest een oude kalibratie zonder ijkbeelden als één beeld op seconde 0', () => {
+    const punten = Array.from({ length: 5 }, (_, i) => ({ label: `l${i}`, x: i, y: i }))
+    expect(bruikbareBeelden({ punten })).toEqual([{ tijd: 0, punten }])
+  })
+
+  it('geeft niets terug wanneer er nergens genoeg punten staan', () => {
+    expect(bruikbareBeelden(null)).toEqual([])
+    expect(bruikbareBeelden({ punten: [{ label: 'a', x: 1, y: 1 }] })).toEqual([])
+  })
+})
+
+describe('bouwStappen met ijkbeelden', () => {
+  it('geeft de ankers door in plaats van één kalibratie bij een bewegende camera', () => {
+    // Dít is de bug die het oploste: een ijkbeeld op 6:27 werd stilzwijgend op seconde 0
+    // geplakt. Met --ankers hoort elke matrix bij zijn eigen moment.
+    const s = bouwStappen({
+      matchId: 42, video: '/v.mp4', map: '/werk', kalibratie: '/werk/kalibratie.json',
+      ankers: '/werk/ankers.json', opts: { ...OPTS, bewegend: true }, fps: 2,
+    })
+    const argv = argvVan(s, 'veld volgen')
+    expect(argv).toContain('--ankers')
+    expect(argv).toContain('/werk/ankers.json')
+    expect(argv).not.toContain('--kalibratie')
+  })
+
+  it('valt terug op de gewone kalibratie zonder ankers', () => {
+    const s = bouwStappen({
+      matchId: 42, video: '/v.mp4', map: '/werk', kalibratie: '/werk/kalibratie.json',
+      ankers: null, opts: { ...OPTS, bewegend: true }, fps: 2,
+    })
+    expect(argvVan(s, 'veld volgen')).toContain('--kalibratie')
   })
 })
