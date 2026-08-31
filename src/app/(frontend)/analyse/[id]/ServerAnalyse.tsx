@@ -18,6 +18,7 @@ type Stand = {
   stapFractie?: number
   stapDetail?: string
   laatsteTeken?: string
+  stappenNamen?: string[]
   rapport?: {
     voorstellen?: number
     detecties?: number
@@ -60,7 +61,7 @@ export function ServerAnalyse({ matchId, heeftVideo }: { matchId: number; heeftV
   const [info, setInfo] = useState<Antwoord | null>(null)
   const [busy, setBusy] = useState(false)
   const [fout, setFout] = useState<string | null>(null)
-  const [stand, setStand] = useState<'snel' | 'gewoon' | 'nauwkeurig'>('gewoon')
+  const [stand, setStand] = useState<'snel' | 'gewoon' | 'nauwkeurig' | 'ultra'>('gewoon')
   const [bewegend, setBewegend] = useState(false)
   const [tracking, setTracking] = useState(false)
   const [ai, setAi] = useState(false)
@@ -204,6 +205,20 @@ export function ServerAnalyse({ matchId, heeftVideo }: { matchId: number; heeftV
   // anders lijkt elke normale stap verdacht.
   const stilS = s?.laatsteTeken ? Math.round((nu - new Date(s.laatsteTeken).getTime()) / 1000) : null
   const langStil = stilS != null && stilS > 300
+  // "Leeft het nog?" — een melding van minder dan een minuut geleden telt als een hartslag.
+  const leeft = stilS == null || stilS < 60
+  const verstrekenS = s?.gestart ? Math.max(0, Math.round((nu - new Date(s.gestart).getTime()) / 1000)) : 0
+  // Verwachte klaartijd uit wat er tot nu toe gebeurd is. Bij een analyse die de hele nacht
+  // duurt is "klaar rond 05:40" het enige getal waar je iets aan hebt.
+  const klaarRond = (() => {
+    const f = s && s.stappen > 0
+      ? (s.stapNummer - 1 + Math.min(1, Math.max(0, s.stapFractie ?? 0))) / s.stappen
+      : 0
+    if (!s || f <= 0.01 || verstrekenS < 30) return null
+    const resterend = (verstrekenS * (1 - f)) / f
+    if (!Number.isFinite(resterend) || resterend <= 0) return null
+    return kloktijd(new Date(nu + resterend * 1000).toISOString())
+  })()
 
   return (
     <section className="sa" id="serveranalyse">
@@ -248,9 +263,34 @@ export function ServerAnalyse({ matchId, heeftVideo }: { matchId: number; heeftV
             <span style={{ width: `${Math.max(6, pct)}%` }} />
           </div>
           <p className="sa-stap">
+            {/* De hartslag klopt zolang er meldingen binnenkomen. Dat is het verschil tussen
+                "traag" en "vastgelopen" in één oogopslag — een percentage dat langzaam stijgt
+                ziet er hetzelfde uit als een percentage dat stilstaat. */}
+            <span className={`sa-puls${leeft ? '' : ' stil'}`} aria-hidden />
             <strong>Stap {s?.stapNummer} van {s?.stappen} · {pct}%:</strong> {s?.stap}…
             {s?.stapDetail ? <span className="sa-detail"> {s.stapDetail}</span> : null}
           </p>
+
+          <p className="sa-klok">
+            Bezig sinds {kloktijd(s?.gestart)} · {duur(verstrekenS)} onderweg
+            {klaarRond && <> · naar schatting klaar rond <strong>{klaarRond}</strong></>}
+          </p>
+
+          {/* Wat er al af is en wat er nog komt. Bij een analyse van uren wil je zien dat er
+              nog vijf stappen wachten — niet alleen dat stap 1 "bezig" is. */}
+          {s?.stappenNamen && s.stappenNamen.length > 1 && (
+            <ol className="sa-stappenlijst">
+              {s.stappenNamen.map((naam, i) => {
+                const nummer = i + 1
+                const status = nummer < (s.stapNummer ?? 1) ? 'ok' : nummer === s.stapNummer ? 'bezig' : 'todo'
+                return (
+                  <li key={naam} className={status}>
+                    <span aria-hidden>{status === 'ok' ? '✓' : status === 'bezig' ? '▸' : '○'}</span> {naam}
+                  </li>
+                )
+              })}
+            </ol>
+          )}
           {langStil && (
             <p className="sa-let-op">
               Al {Math.round((stilS as number) / 60)} minuten niets gehoord van deze stap. Ze kan
@@ -362,9 +402,21 @@ export function ServerAnalyse({ matchId, heeftVideo }: { matchId: number; heeftV
               <select value={stand} onChange={(e) => setStand(e.target.value as typeof stand)}>
                 <option value="snel">Snel</option>
                 <option value="gewoon">Gewoon</option>
-                <option value="nauwkeurig">Nauwkeurig (traagst)</option>
+                <option value="nauwkeurig">Nauwkeurig</option>
+                <option value="ultra">Ultra — hele nacht</option>
               </select>
             </label>
+            {stand === 'ultra' && (
+              <p className="sa-let-op sa-ultra">
+                Ultra kijkt drie keer zo fijn als &quot;gewoon&quot; en gebruikt het zwaarste
+                model: reken op uren, niet op minuten. Zet ze aan vóór je gaat slapen — je ziet
+                hieronder rond welk uur ze klaar is.
+                <br />
+                <strong>Let wel:</strong> komt er ondertussen een nieuwe versie van de site
+                online, of herstart de server, dan sneuvelt de lopende analyse en moet ze
+                opnieuw. Bij een run van acht uur is dat een echte kans.
+              </p>
+            )}
             <label className="sa-vink">
               <input type="checkbox" checked={bewegend} onChange={(e) => setBewegend(e.target.checked)} />
               <span>Camera bewoog (gsm in de hand)</span>
@@ -434,4 +486,20 @@ export function ServerAnalyse({ matchId, heeftVideo }: { matchId: number; heeftV
       )}
     </section>
   )
+}
+
+/** Een tijdstip als klokuur — "klaar rond 05:40" zegt meer dan "nog 7:12:00". */
+function kloktijd(iso: string | undefined): string {
+  if (!iso) return '—'
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return '—'
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+}
+
+/** Verstreken tijd in mensentaal: "3 min", "2 u 14 min". */
+function duur(seconden: number): string {
+  if (seconden < 60) return `${seconden} s`
+  const m = Math.round(seconden / 60)
+  if (m < 60) return `${m} min`
+  return `${Math.floor(m / 60)} u ${String(m % 60).padStart(2, '0')} min`
 }

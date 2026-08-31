@@ -2689,3 +2689,18 @@ select.rang-picker {
 .nam-kal-affiche { font-weight: 700; }
 .nam-kal-affiche i { color: var(--dim); font-style: normal; }
 .nam-kal-wanneer { font-size: 0.78rem; color: var(--dim); }
+
+/* ── Twee wegen naar een analyse: manueel aantekenen of alles uit de video ──────────────── */
+.nam-modus { display: grid; gap: 8px; margin: 0 0 14px; padding: 0; border: 0; }
+.nam-modus legend { padding: 0 0 6px; font-size: 13px; color: var(--muted); }
+.nam-modus-optie {
+  display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 12px;
+  cursor: pointer; border: 1px solid var(--line); background: var(--panel);
+}
+.nam-modus-optie.aan {
+  border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+.nam-modus-optie input { margin-top: 3px; }
+.nam-modus-optie span { display: grid; gap: 2px; }
+.nam-modus-optie em { font-style: normal; font-size: 12px; color: var(--dim); }
+.nam-modus-uitleg { margin: 6px 0 0; font-size: 13px; line-height: 1.5; color: var(--dim); }

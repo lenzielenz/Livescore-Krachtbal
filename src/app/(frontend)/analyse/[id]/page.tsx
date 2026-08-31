@@ -15,7 +15,7 @@ import { mayEditMatchVideo } from '@/lib/video-access'
 import { AnalyseDetailView, type FysiekSpeler } from './AnalyseDetailView'
 import type { CvVoorstel } from './CvReview'
 import { ShareCard } from './ShareCard'
-import { AnalyseVoortgang } from './AnalyseVoortgang'
+import { AnalyseVoortgang, type VoortgangInput } from './AnalyseVoortgang'
 import { Kalibreren } from './Kalibreren'
 import { ModelBijstellen } from './ModelBijstellen'
 import { ModelScore } from './ModelScore'
@@ -26,6 +26,8 @@ import { VideoAnalyse, type VideoMoment, type VideoWorp } from './VideoAnalyse'
 import '../analyse.css'
 
 export const dynamic = 'force-dynamic'
+
+type VoortgangStatus = NonNullable<VoortgangInput['analyseStatus']>
 
 export default async function AnalyseDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const me = await getAuthUser()
@@ -157,6 +159,21 @@ export default async function AnalyseDetailPage({ params }: { params: Promise<{ 
     })
     .sort((a, b) => a.half - b.half || a.gameClock - b.gameClock)
   const halfSeconds = reeksHalfDurationSeconds(matchDoc?.reeks as Reeks)
+  // Wat er al aangeduid is op het veld: het aantal kruisingen bepaalt of er überhaupt gemeten
+  // kan worden (4 is het minimum voor een homografie), en over hoeveel beelden ze verdeeld staan.
+  const kal = (matchDoc?.cvKalibratie ?? null) as
+    | { punten?: unknown[]; beelden?: { punten?: unknown[] }[] }
+    | null
+  const kalibratieBeelden = Array.isArray(kal?.beelden) ? kal.beelden.length : 0
+  const kalibratiePunten = Array.isArray(kal?.beelden)
+    ? new Set(
+        kal.beelden.flatMap((b) =>
+          (Array.isArray(b?.punten) ? b.punten : []).map((pt) => String((pt as { label?: string })?.label ?? '')),
+        ),
+      ).size
+    : Array.isArray(kal?.punten)
+      ? kal.punten.length
+      : 0
   // ── CV-voorstellen (fase 1): kandidaat-events uit de computer-vision-pipeline ──
   // Enkel federatie-niveau ziet en reviewt ze — supporters en analyse-gasten krijgen géén
   // voorstellen mee (het zijn onbevestigde modelclaims, geen wedstrijdfeiten). De review-UI
@@ -218,6 +235,15 @@ export default async function AnalyseDetailPage({ params }: { params: Promise<{ 
               tweedeHelftGespeeld={videoWorpen.some((w) => w.half === 2) || state.match.currentHalf >= 2}
               fysiekSpelers={fysiek.length}
               terreinOpgemeten={state.match.veldBreedte != null || state.match.veldSpeelveld != null}
+              modus={(matchDoc?.analyseModus as 'manueel' | 'video' | null) ?? 'manueel'}
+              kalibratiePunten={kalibratiePunten}
+              kalibratieBeelden={kalibratieBeelden}
+              analyseStatus={(matchDoc?.cvAnalyse as { status?: VoortgangStatus } | null)?.status ?? null}
+              analyseStand={
+                ((matchDoc?.cvAnalyse as { instellingen?: { stand?: string } } | null)?.instellingen?.stand) ?? null
+              }
+              voorstellen={cvVoorstellen.length}
+              beoordeeld={cvVoorstellen.filter((v) => v.reviewed).length}
               openVoorstellen={cvVoorstellen.filter((v) => !v.reviewed).length}
             />
           </ErrorCatch>

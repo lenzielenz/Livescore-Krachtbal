@@ -161,6 +161,26 @@ export const Matches: CollectionConfig = {
           ],
         },
         {
+          // Twee wegen naar een analyse, en ze sluiten elkaar niet uit maar vragen wél iets
+          // anders van je:
+          //   'manueel' — je tikt elke worp aan op het veldschema; de video is er om te
+          //               herbekijken. Dit is de weg waarmee het platform begon.
+          //   'video'   — je voert niets in. De opname wordt doorgerekend en de voorstellen
+          //               die eruit komen bevestig je. Dan is "wedstrijd aangetekend" geen
+          //               stap die nog moet gebeuren, en het voortgangsbord hoort dat te weten.
+          name: 'analyseModus',
+          label: 'Hoe wordt deze analyse gemaakt?',
+          type: 'select',
+          defaultValue: 'manueel',
+          options: [
+            { label: 'Manueel aantekenen', value: 'manueel' },
+            { label: 'Alles uit de video', value: 'video' },
+          ],
+          admin: {
+            description: 'Bepaalt welke stappen het voortgangsbord vraagt. Enkel voor analyse-opnames.',
+          },
+        },
+        {
           // Kalibratie van dít terrein, aangeklikt in de app op een videoframe: welke
           // beeldpunten horen bij welke lijnkruisingen van het veld. Zonder deze punten kan
           // de server wel worpen hérkennen maar niet zeggen wáár ze landden.

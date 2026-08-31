@@ -72,10 +72,17 @@ MAX_KOPPEL_AFSTAND_M = 1.8
 
 # Standen voor de ruil tussen rekentijd en precisie. "nauwkeurig" is de stand voor wie
 # tijd heeft en het juiste antwoord wil: vaker meten, vaker herankeren, langer doorfitten.
+#
+# "ultra" is de stand voor wie de analyse 's avonds aanzet en 's ochtends kijkt. Elke seconde
+# video wordt 25 keer bemonsterd — dat is de beeldfrequentie van een gewone opname, dus meer
+# heeft geen zin — en er wordt elke halve seconde geprobeerd te herankeren op de veldlijnen.
+# Herankeren is precies het middel tegen drift: hoe korter de keten tussen twee waarnemingen,
+# hoe minder er kan weglopen. De prijs is rekentijd, en die mag hier.
 STANDEN = {
-    'snel':       {'fps': 2.0,  'heranker': 4.0, 'rondes': 2, 'punten_per_segment': 3},
-    'gewoon':     {'fps': 4.0,  'heranker': 2.0, 'rondes': 3, 'punten_per_segment': 4},
-    'nauwkeurig': {'fps': 10.0, 'heranker': 0.5, 'rondes': 6, 'punten_per_segment': 8},
+    'snel':       {'fps': 2.0,  'heranker': 4.0,  'rondes': 2,  'punten_per_segment': 3},
+    'gewoon':     {'fps': 4.0,  'heranker': 2.0,  'rondes': 3,  'punten_per_segment': 4},
+    'nauwkeurig': {'fps': 10.0, 'heranker': 0.5,  'rondes': 6,  'punten_per_segment': 8},
+    'ultra':      {'fps': 25.0, 'heranker': 0.25, 'rondes': 12, 'punten_per_segment': 16},
 }
 
 

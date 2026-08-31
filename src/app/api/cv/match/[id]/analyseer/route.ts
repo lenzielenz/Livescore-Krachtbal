@@ -20,7 +20,7 @@ export const dynamic = 'force-dynamic'
 // Rechten: dezelfde kring die de video van deze wedstrijd beheert. Het is zwaar rekenwerk op
 // gedeelde infrastructuur, dus niet iets wat een willekeurige bezoeker mag aanzwengelen.
 
-const STANDEN = ['snel', 'gewoon', 'nauwkeurig'] as const
+const STANDEN = ['snel', 'gewoon', 'nauwkeurig', 'ultra'] as const
 
 function leesOpties(body: Record<string, unknown>): AnalyseOpties {
   const stand = STANDEN.includes(body.stand as (typeof STANDEN)[number])

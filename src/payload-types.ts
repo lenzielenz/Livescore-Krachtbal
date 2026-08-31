@@ -600,6 +600,10 @@ export interface Match {
    */
   videoOffsetH2?: number | null;
   /**
+   * Bepaalt welke stappen het voortgangsbord vraagt. Enkel voor analyse-opnames.
+   */
+  analyseModus?: ('manueel' | 'video') | null;
+  /**
    * Beheerd via de analysepagina. Niet handmatig bewerken.
    */
   cvKalibratie?:
@@ -1906,6 +1910,7 @@ export interface MatchesSelect<T extends boolean = true> {
   videoUrl?: T;
   videoOffsetH1?: T;
   videoOffsetH2?: T;
+  analyseModus?: T;
   cvKalibratie?: T;
   cvAnalyse?: T;
   cvFysiek?: T;

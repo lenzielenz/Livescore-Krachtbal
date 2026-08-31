@@ -318,11 +318,18 @@ def verzamel_kandidaten(
 
 
 def baan_rond_worp(
-    videopad: Path, worp_s: float, na_s: float = 6.0, min_px: float = 4.0, max_px: float = 40.0
+    videopad: Path, worp_s: float, na_s: float = 6.0, min_px: float = 4.0, max_px: float = 40.0,
+    rondes: int = RONDES,
 ) -> dict | None:
-    """De balbaan die bij deze worp hoort, met loslaat- en landingspunt in beeldcoördinaten."""
+    """De balbaan die bij deze worp hoort, met loslaat- en landingspunt in beeldcoördinaten.
+
+    `rondes` is hoe vaak RANSAC een baan probeert. Meer rondes kost bijna niets naast het
+    decoderen van de video, maar verkleint de kans dat de bal ondersneeuwt tussen de bewegende
+    spelers: op een druk beeld met veertig kandidaatblobs is 200 keer proberen niet altijd
+    genoeg om de juiste drie punten te treffen.
+    """
     kandidaten = verzamel_kandidaten(videopad, worp_s, worp_s + na_s, min_px, max_px)
-    gekozen = kies_baan(kandidaten)
+    gekozen = kies_baan(kandidaten, rondes=rondes)
     if gekozen is None:
         return None
     model, punten = gekozen
@@ -347,6 +354,10 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument('--na', type=float, default=6.0, help='hoeveel seconden na de worp zoeken (standaard 6)')
     p.add_argument('--min-px', type=float, default=4.0, help='minimale baldoorsnede in pixels')
     p.add_argument('--max-px', type=float, default=40.0, help='maximale baldoorsnede in pixels')
+    p.add_argument('--rondes', type=int, default=RONDES,
+                   help=f'hoe vaak RANSAC een baan probeert (standaard {RONDES}). Meer rondes '
+                        'kost weinig naast het decoderen en vindt de bal vaker terug op een '
+                        'druk beeld.')
     args = p.parse_args(argv)
 
     if not args.video.is_file():
@@ -366,7 +377,7 @@ def main(argv: list[str] | None = None) -> None:
         t = e.get('video_time_s')
         if t is None:
             continue
-        baan = baan_rond_worp(args.video, float(t), args.na, args.min_px, args.max_px)
+        baan = baan_rond_worp(args.video, float(t), args.na, args.min_px, args.max_px, args.rondes)
         if baan is not None:
             banen.append(baan)
 
