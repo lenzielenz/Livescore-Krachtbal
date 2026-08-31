@@ -597,7 +597,16 @@ export async function schrijfAnkers(
   if (beelden.length === 1 && beelden[0].tijd === 0) return null
 
   const python = await pythonVoorSpawn()
-  const ankers: { tijd_s: number; matrix_beeld_naar_veld: number[][] }[] = []
+  // De punten gaan mee, niet alleen de matrix. Staat de camera in het midden en toont beeld 1
+  // enkel de thuiskant en beeld 2 enkel de uitkant, dan is elke matrix apart gefit op punten
+  // die allemaal in één helft liggen — en die extrapoleert slecht naar de overkant. Met de
+  // punten erbij kan het volgen ze via de camerabeweging in één beeld samenbrengen en één
+  // homografie fitten over het hele veld.
+  const ankers: {
+    tijd_s: number
+    matrix_beeld_naar_veld: number[][]
+    punten: { label: string; x: number; y: number }[]
+  }[] = []
   for (const [i, beeld] of beelden.entries()) {
     const tussen = path.join(map, `anker-${i}.json`)
     const argv = [
@@ -615,7 +624,11 @@ export async function schrijfAnkers(
     })
     if (!klaar) continue // één rammelend beeld mag de rest niet meeslepen
     const data = JSON.parse(await fs.readFile(tussen, 'utf8')) as { matrix_beeld_naar_veld: number[][] }
-    ankers.push({ tijd_s: beeld.tijd, matrix_beeld_naar_veld: data.matrix_beeld_naar_veld })
+    ankers.push({
+      tijd_s: beeld.tijd,
+      matrix_beeld_naar_veld: data.matrix_beeld_naar_veld,
+      punten: beeld.punten.map((pt) => ({ label: pt.label, x: Math.round(pt.x), y: Math.round(pt.y) })),
+    })
   }
   if (ankers.length === 0) return null
 
