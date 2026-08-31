@@ -2,7 +2,15 @@
 
 import { useMemo, useRef, useState } from 'react'
 
-import { ALLE_LABELS, DWARSLIJNEN, ZIJDEN, labelVan, omschrijving, type Zijde } from '@/lib/kalibratie-punten'
+import {
+  ALLE_LABELS,
+  CAMERA_POSITIES,
+  DWARSLIJNEN,
+  ZIJDEN,
+  labelVan,
+  omschrijving,
+  type Zijde,
+} from '@/lib/kalibratie-punten'
 
 // Het veld aanwijzen op beelden uit de video: waar liggen de lijnkruisingen? Daarmee kan de
 // server elk punt in beeld omrekenen naar meters op het veld.
@@ -15,6 +23,13 @@ import { ALLE_LABELS, DWARSLIJNEN, ZIJDEN, labelVan, omschrijving, type Zijde } 
 // Werkt enkel op een geüpload bestand: een YouTube-speler laat zijn beeld niet uitlezen.
 
 type Punt = { label: string; x: number; y: number }
+/** Meters per pixel per derde van het veld: waar meet dit standpunt scherp, en waar ruw? */
+type Precisie = { thuis?: number; midden?: number; uit?: number; slechtste?: number }
+/** Wat de server uit de punten terugrekende over waar de camera stond. */
+type Standpunt = {
+  oordeel: string
+  gemeten?: { x_m: number; y_m: number; hoogte_m: number; brandpunt_px: number } | null
+}
 type Beeld = {
   tijd: number
   beeldBreedte: number
@@ -33,7 +48,13 @@ export function Kalibreren({
 }: {
   matchId: number
   videoUrl: string | null
-  initieel: { punten?: Punt[]; beelden?: Beeld[] } | null
+  initieel: {
+    punten?: Punt[]
+    beelden?: Beeld[]
+    precisie?: Precisie | null
+    positie?: string | null
+    standpunt?: Standpunt | null
+  } | null
 }) {
   // Oudere kalibraties hebben één puntenlijst zonder tijdstip; die blijft gewoon werken.
   const [beelden, setBeelden] = useState<Beeld[]>(() => {
@@ -43,6 +64,9 @@ export function Kalibreren({
     }
     return []
   })
+  const [precisie, setPrecisie] = useState<Precisie | null>(initieel?.precisie ?? null)
+  const [positie, setPositie] = useState<string>(initieel?.positie ?? '')
+  const [standpunt, setStandpunt] = useState<Standpunt | null>(initieel?.standpunt ?? null)
   const [actief, setActief] = useState<number | null>(null)
   const [gekozenLabel, setGekozenLabel] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -128,6 +152,7 @@ export function Kalibreren({
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
+          positie: positie || null,
           beelden: beelden
             .filter((b) => b.punten.length > 0)
             .map((b) => ({
@@ -138,15 +163,28 @@ export function Kalibreren({
             })),
         }),
       })
-      const data = (await res.json()) as { error?: string; beelden?: number; punten?: number; bruikbaar?: number }
+      const data = (await res.json()) as {
+        error?: string
+        beelden?: number
+        punten?: number
+        bruikbaar?: number
+        precisie?: Precisie | null
+        gespiegeld?: boolean
+        standpunt?: Standpunt | null
+      }
       if (!res.ok) {
         setFout(data.error ?? 'Bewaren mislukt.')
         return
       }
+      setPrecisie(data.precisie ?? null)
+      setStandpunt(data.standpunt ?? null)
+      const spiegel = data.gespiegeld
+        ? ' Links en rechts stonden verwisseld — dat is rechtgezet.'
+        : ''
       setMelding(
         data.bruikbaar && data.bruikbaar < (data.beelden ?? 0)
-          ? `Bewaard: ${data.punten} punten. ${data.bruikbaar} van de ${data.beelden} beelden hebben er genoeg (4+) om als ijkbeeld te dienen.`
-          : `Bewaard: ${data.punten} punten over ${data.beelden} ${data.beelden === 1 ? 'beeld' : 'beelden'}.`,
+          ? `Bewaard: ${data.punten} punten. ${data.bruikbaar} van de ${data.beelden} beelden hebben er genoeg (4+) om als ijkbeeld te dienen.${spiegel}`
+          : `Bewaard: ${data.punten} punten over ${data.beelden} ${data.beelden === 1 ? 'beeld' : 'beelden'}.${spiegel}`,
       )
     } catch {
       setFout('Netwerkfout — probeer opnieuw.')
@@ -181,6 +219,31 @@ export function Kalibreren({
               camera die pant is dat normaal — spoel dan door, neem een tweede beeld en duid daar
               de rest aan. Elk beeld telt mee op zijn eigen tijdstip.
             </p>
+            <p className="sa-hint">
+              Is de opname onderbroken (camera gestopt en opnieuw gestart)? Neem dan in élk stuk
+              een beeld. Over zo'n onderbreking kan de server de camera niet volgen, dus een stuk
+              zonder eigen ijkbeeld wordt niet gemeten — na de analyse zie je hier welk stuk dat is.
+            </p>
+
+            <label className="kal-standpunt">
+              <span>Waar stond de camera?</span>
+              <select value={positie} onChange={(e) => setPositie(e.target.value)}>
+                <option value="">— kies je standpunt —</option>
+                {[...new Set(CAMERA_POSITIES.map((p) => p.groep))].map((groep) => (
+                  <optgroup key={groep} label={groep}>
+                    {CAMERA_POSITIES.filter((p) => p.groep === groep).map((p) => (
+                      <option key={p.sleutel} value={p.sleutel}>
+                        {p.naam}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
+              <span className="sa-hint">
+                De server rekent uit je punten terug waar de camera écht stond en legt dat naast
+                deze keuze — klopt het niet, dan zit er een fout in het aanduiden.
+              </span>
+            </label>
 
             <video
               ref={videoRef}
@@ -306,6 +369,51 @@ export function Kalibreren({
               </table>
             </div>
 
+            {standpunt?.gemeten && (
+              <div className={`kal-precisie${standpunt.oordeel === 'wijkt af' ? ' ruw' : ''}`}>
+                <strong>Teruggerekend uit je punten</strong>{' '}
+                <span>
+                  camera op {Math.abs(standpunt.gemeten.hoogte_m).toFixed(1)} m hoogte,{' '}
+                  {beschrijfPlek(standpunt.gemeten)}
+                </span>
+                {standpunt.oordeel === 'wijkt af' ? (
+                  <p>
+                    Dat strookt niet met het standpunt dat je koos. Kijk je aangeduide punten na —
+                    of pas de keuze hierboven aan.
+                  </p>
+                ) : standpunt.oordeel === 'onzeker' ? (
+                  <p>
+                    Onzeker: het standpunt verschuift te veel als één punt wegvalt. Duid er meer
+                    aan, goed verspreid over het veld.
+                  </p>
+                ) : (
+                  <p>Dat klopt met wat je koos.</p>
+                )}
+              </div>
+            )}
+
+            {precisie && (
+              <div className={`kal-precisie${(precisie.slechtste ?? 0) > 0.25 ? ' ruw' : ''}`}>
+                <strong>Scherpte van dit standpunt</strong>{' '}
+                <span>
+                  {(['thuis', 'midden', 'uit'] as const)
+                    .filter((k) => precisie[k] != null)
+                    .map((k) => `${{ thuis: 'thuiskant', midden: 'midden', uit: 'uitkant' }[k]} ${Math.round(precisie[k]! * 100)} cm`)
+                    .join(' · ')}{' '}
+                  per pixel
+                </span>
+                {(precisie.slechtste ?? 0) > 0.25 ? (
+                  <p>
+                    Achteraan is één pixel {Math.round((precisie.slechtste ?? 0) * 100)} cm waard —
+                    een landingspunt dáár is een schatting, geen meting. Dat hoort bij een camera
+                    die in de diepte kijkt: hoe hoger ze staat, hoe scherper de overkant wordt.
+                  </p>
+                ) : (
+                  <p>Over het hele veld ongeveer even scherp — goed standpunt.</p>
+                )}
+              </div>
+            )}
+
             <div className="tm-acties">
               <button
                 type="button"
@@ -326,6 +434,17 @@ export function Kalibreren({
       </div>
     </details>
   )
+}
+
+/** Het teruggerekende punt in mensentaal: hoeveel meter naast of achter het veld. */
+function beschrijfPlek(g: { x_m: number; y_m: number }): string {
+  const stukken: string[] = []
+  if (g.y_m < 0) stukken.push(`${Math.abs(g.y_m).toFixed(0)} m achter de thuislijn`)
+  else if (g.y_m > 46) stukken.push(`${(g.y_m - 46).toFixed(0)} m achter de uitlijn`)
+  else stukken.push(`ter hoogte van ${g.y_m.toFixed(0)} m op het veld`)
+  if (g.x_m < 0) stukken.push(`${Math.abs(g.x_m).toFixed(0)} m links ernaast`)
+  else if (g.x_m > 14) stukken.push(`${(g.x_m - 14).toFixed(0)} m rechts ernaast`)
+  return stukken.join(', ')
 }
 
 function beschrijf(label: string): string {

@@ -315,3 +315,43 @@ class TestGladstrijken(unittest.TestCase):
         waarnemingen = [(10.0, a), (20.0, b)]
         self.assertEqual(vv.basis_op(waarnemingen, 0.0), a)      # vóór het eerste ijkpunt
         self.assertEqual(vv.basis_op(waarnemingen, 99.0), b)     # ná het laatste
+
+
+class TestOnderbrokenOpname(unittest.TestCase):
+    """Een opname die stopt en opnieuw begint (of een montage van clips).
+
+    Over zo'n knip is optical flow onzin: hangt die sprong aan de keten, dan meet de rest van
+    de wedstrijd op een veld dat er niet ligt. De knip moet dus herkend worden, en het stuk
+    erna begint opnieuw.
+    """
+
+    def test_herkent_een_knip_aan_het_verlies_van_gevolgde_punten(self):
+        # Nauwelijks een punt overleeft: dat is geen camerabeweging maar een ander beeld.
+        self.assertTrue(vv.is_breuk(volgdeel=0.05, restfout=1.0, gewone_restfout=1.2))
+
+    def test_herkent_een_knip_aan_een_beweging_die_het_beeld_niet_verklaart(self):
+        # De punten blijven "volgen", maar het teruggelegde beeld valt er niet op — precies
+        # wat een knip doet: 20 grijswaarden tegenover 1,2 bij gewone camerabeweging.
+        self.assertTrue(vv.is_breuk(volgdeel=0.95, restfout=20.0, gewone_restfout=1.2))
+
+    def test_laat_gewoon_pannen_met_rust(self):
+        self.assertFalse(vv.is_breuk(volgdeel=0.98, restfout=1.4, gewone_restfout=1.2))
+        self.assertFalse(vv.is_breuk(volgdeel=0.6, restfout=2.0, gewone_restfout=1.2))
+
+    def test_schaalt_mee_met_een_korrelige_opname(self):
+        # Bij een video waar 6 normaal is, mag 12 geen knip heten; bij een nette video wel.
+        self.assertFalse(vv.is_breuk(volgdeel=0.9, restfout=12.0, gewone_restfout=6.0))
+        self.assertTrue(vv.is_breuk(volgdeel=0.9, restfout=12.0, gewone_restfout=1.0))
+
+    def test_zonder_restfout_valt_er_niets_te_zeggen(self):
+        # Geen bruikbare overlap: dan is 'geen knip' het veilige antwoord (de flow zelf faalt
+        # dan toch al, en dat wordt apart geteld).
+        self.assertFalse(vv.is_breuk(volgdeel=0.9, restfout=None, gewone_restfout=1.2))
+
+    def test_gewone_restfout_is_de_mediaan_van_het_recente_verleden(self):
+        self.assertEqual(vv.gewone_restfout([1.0, 1.2, 1.1, 9.0, 1.3]), 1.2)
+        self.assertEqual(vv.gewone_restfout([]), 0.0)
+
+    def test_herkent_een_stilstaand_beeld(self):
+        self.assertTrue(vv.is_bevroren(0.05))
+        self.assertFalse(vv.is_bevroren(12.0))

@@ -7,7 +7,7 @@ import { authUser } from '@/lib/api-auth'
 import { getPayloadClient } from '@/lib/payload-client'
 import { mayEditMatchVideo } from '@/lib/video-access'
 import { cvMap, pythonVoorSpawn, spawnOmgeving } from '@/lib/cv-analyse'
-import { geldigLabel } from '@/lib/kalibratie-punten'
+import { geldigeCameraPositie, geldigLabel, spiegelLabel } from '@/lib/kalibratie-punten'
 
 export const dynamic = 'force-dynamic'
 
@@ -89,11 +89,22 @@ function leesBeelden(body: Record<string, unknown>): { beelden: Beeld[] } | { fo
   return { beelden: beelden.sort((a, b) => a.tijd - b.tijd) }
 }
 
+/** Hoeveel meter is één pixel waard, per derde van het veld? */
+export type Precisie = { thuis?: number; midden?: number; uit?: number; slechtste?: number }
+
+/** Wat de fit zegt over waar de camera stond, en of dat strookt met de keuze. */
+export type Standpunt = {
+  oordeel: 'klopt' | 'wijkt af' | 'onzeker' | 'onbekend' | 'onmogelijk' | 'geen keuze'
+  gemeten?: { x_m: number; y_m: number; hoogte_m: number; brandpunt_px: number } | null
+  stabiliteit_m?: number | null
+}
+
 /** Fit de punten met calibrate.py: lukt dat, dan is de kalibratie bruikbaar. */
 async function controleer(
   punten: Punt[],
   veld: { diepte: number; breedte: number | null; speelveld: number | null },
-): Promise<{ ok: true; foutPx: number | null } | { ok: false; melding: string }> {
+  beeld: { positie?: string | null; breedtePx?: number | null; hoogtePx?: number | null } = {},
+): Promise<{ ok: true; precisie: Precisie | null; standpunt: Standpunt | null } | { ok: false; melding: string }> {
   const map = await fs.mkdtemp(path.join(os.tmpdir(), 'kal-'))
   const uit = path.join(map, 'kalibratie.json')
   const argv = [
@@ -102,6 +113,10 @@ async function controleer(
     ...(veld.breedte != null ? ['--breedte', String(veld.breedte)] : []),
     ...(veld.speelveld != null ? ['--speelveld', String(veld.speelveld)] : []),
     '--uit', uit,
+    ...(beeld.positie ? ['--positie', beeld.positie] : []),
+    ...(beeld.breedtePx && beeld.hoogtePx
+      ? ['--beeldbreedte', String(beeld.breedtePx), '--beeldhoogte', String(beeld.hoogtePx)]
+      : []),
     ...punten.flatMap((p) => ['--punt', `${p.x},${p.y}=${p.label}`]),
   ]
   try {
@@ -118,15 +133,24 @@ async function controleer(
     if (resultaat.code === -1 && resultaat.err === 'python-niet-gevonden') {
       // Geen Python op deze server (bv. lokaal draaien): de punten bewaren mag, alleen
       // kunnen we ze nu niet narekenen.
-      return { ok: true, foutPx: null }
+      return { ok: true, precisie: null, standpunt: null }
     }
     if (resultaat.code !== 0) {
       const melding = resultaat.err.split('\n').find((r) => r.startsWith('FOUT:'))
       return { ok: false, melding: melding?.replace(/^FOUT:\s*/, '') ?? 'De punten vormen geen geldig veld.' }
     }
-    // De reprojectiefout staat in het bestand niet, maar de fit slaagde: dat volstaat als
-    // controle. (Het rapport per punt zit in calibrate.py --test.)
-    return { ok: true, foutPx: null }
+    // De fit slaagde. Uit hetzelfde bestand halen we hoe scherp dit standpunt meet: bij een
+    // camera achter het veld is één pixel vooraan een paar centimeter en achteraan een halve
+    // meter, en dat hoort de gebruiker te zien vóór hij een uur laat rekenen.
+    try {
+      const data = JSON.parse(await fs.readFile(uit, 'utf8')) as {
+        precisie_m_per_px?: Precisie
+        camerastandpunt?: Standpunt
+      }
+      return { ok: true, precisie: data.precisie_m_per_px ?? null, standpunt: data.camerastandpunt ?? null }
+    } catch {
+      return { ok: true, precisie: null, standpunt: null }
+    }
   } finally {
     await fs.rm(map, { recursive: true, force: true }).catch(() => undefined)
   }
@@ -156,6 +180,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const gelezen = leesBeelden(body)
   if ('fout' in gelezen) return Response.json({ error: gelezen.fout }, { status: 400 })
 
+  // Waar de camera stond. Optioneel — maar met die keuze kan de server narekenen of de
+  // aangeduide punten er ook echt bij passen.
+  if (body.positie != null && !geldigeCameraPositie(body.positie)) {
+    return Response.json({ error: 'Onbekend camerastandpunt.' }, { status: 400 })
+  }
+  const positie = (body.positie as string | undefined) ?? null
+
   const veldmaten = {
     diepte: (match.goalAreaDepth as number) ?? 10,
     breedte: (match.veldBreedte as number | null) ?? null,
@@ -164,15 +195,50 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
   // Elk beeld met vier of meer punten moet op zichzelf een geldig veld opleveren. Een beeld
   // met minder punten bewaren we wel (het vult het overzicht aan) maar dient niet als ijkbeeld.
+  // Staat het veld gespiegeld, dan zijn links en rechts verwisseld bij het aanduiden — je klikte
+  // wat je zág in plaats van wat de veldconventie zegt. Eén wissel zet dat recht, en die proberen
+  // we zelf in plaats van veertien punten te laten herklikken. Lukt het niet, dan is er echt iets
+  // anders mis en krijgt de gebruiker gewoon de uitleg.
+  let gespiegeld = false
+  const eerste = gelezen.beelden.find((b) => b.punten.length >= 4)
+  if (eerste) {
+    const proef = await controleer(eerste.punten, veldmaten, {
+      positie, breedtePx: eerste.beeldBreedte, hoogtePx: eerste.beeldHoogte,
+    })
+    if (!proef.ok && /spiegelbeeld/i.test(proef.melding)) {
+      const omgewisseld = gelezen.beelden.map((b) => ({
+        ...b,
+        punten: b.punten.map((p) => ({ ...p, label: spiegelLabel(p.label) })),
+      }))
+      const naBeeld = omgewisseld.find((b) => b.punten.length >= 4)!
+      const na = await controleer(naBeeld.punten, veldmaten, {
+        positie, breedtePx: naBeeld.beeldBreedte, hoogtePx: naBeeld.beeldHoogte,
+      })
+      if (na.ok) {
+        gelezen.beelden = omgewisseld
+        gespiegeld = true
+      }
+    }
+  }
+
   let bruikbaar = 0
+  let precisie: Precisie | null = null
+  let standpunt: Standpunt | null = null
   for (const [i, beeld] of gelezen.beelden.entries()) {
     if (beeld.punten.length < 4) continue
-    const controle = await controleer(beeld.punten, veldmaten)
+    const controle = await controleer(beeld.punten, veldmaten, {
+      positie, breedtePx: beeld.beeldBreedte, hoogtePx: beeld.beeldHoogte,
+    })
     if (!controle.ok) {
       const waar = gelezen.beelden.length > 1 ? `Beeld ${i + 1}: ` : ''
       return Response.json({ error: `${waar}${controle.melding}` }, { status: 400 })
     }
     bruikbaar++
+    // Het beeld met de meeste punten geeft het eerlijkste beeld van de scherpte.
+    if (precisie == null || beeld.punten.length >= (gelezen.beelden[0]?.punten.length ?? 0)) {
+      precisie = controle.precisie ?? precisie
+      standpunt = controle.standpunt ?? standpunt
+    }
   }
 
   // Tel de verschíllende kruispunten: hetzelfde punt op twee beelden is één punt van het veld,
@@ -188,12 +254,15 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         // kalibratie verwacht (calibrate.py, landing.py bij een stilstaande camera) hoeft
         // niets van ijkbeelden te weten.
         punten: gelezen.beelden.find((b) => b.punten.length >= 4)?.punten ?? [],
+        precisie,
+        positie,
+        standpunt,
         gezet: new Date().toISOString(),
       },
     },
     overrideAccess: true,
   })
-  return Response.json({ ok: true, beelden: gelezen.beelden.length, punten, bruikbaar })
+  return Response.json({ ok: true, beelden: gelezen.beelden.length, punten, bruikbaar, precisie, gespiegeld, standpunt })
 }
 
 export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {

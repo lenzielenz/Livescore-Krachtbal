@@ -14,7 +14,14 @@ type Stand = {
   gestart: string
   geeindigd?: string
   fout?: string
-  rapport?: { voorstellen?: number; detecties?: number; metLanding?: number; duurSeconden?: number }
+  rapport?: {
+    voorstellen?: number
+    detecties?: number
+    metLanding?: number
+    duurSeconden?: number
+    onderbrekingen?: number[]
+    gaten?: [number, number][]
+  }
   instellingen?: { stand: string; bewegend: boolean; tracking: boolean; overlay: boolean }
 }
 
@@ -35,6 +42,8 @@ type RuntimeStand = {
   stappen: number
   fout?: string
 }
+
+const klokje = (s: number) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, '0')}`
 
 const duurTekst = (s?: number) =>
   s == null ? '' : s < 90 ? `${s} s` : `${Math.round(s / 60)} min`
@@ -241,6 +250,26 @@ export function ServerAnalyse({ matchId, heeftVideo }: { matchId: number; heeftV
               </p>
             </div>
           )}
+
+          {s?.status === 'klaar' && s.rapport?.onderbrekingen?.length ? (
+            <p className="sa-onderbroken">
+              ✂️ De opname is {s.rapport.onderbrekingen.length}× onderbroken (
+              {s.rapport.onderbrekingen.slice(0, 4).map(klokje).join(', ')}
+              {s.rapport.onderbrekingen.length > 4 ? ', …' : ''}). Elk stuk wordt apart gevolgd.
+              {s.rapport.gaten?.length ? (
+                <>
+                  {' '}
+                  <strong>
+                    Zonder ijkbeeld, dus niet gemeten:{' '}
+                    {s.rapport.gaten.map(([a, b]) => `${klokje(a)}–${klokje(b)}`).join(', ')}.
+                  </strong>{' '}
+                  Neem daar hierboven een beeld en analyseer opnieuw.
+                </>
+              ) : (
+                ' Elk stuk had een ijkbeeld — alles is gemeten.'
+              )}
+            </p>
+          ) : null}
 
           {s?.status === 'mislukt' && <p className="sa-let-op">❌ Mislukt: {s.fout}</p>}
           {s?.status === 'afgebroken' && <p className="sa-let-op">⏹ Afgebroken. {s.fout ?? ''}</p>}

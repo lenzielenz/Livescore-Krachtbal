@@ -190,6 +190,7 @@ def fit_homografie(punten: list[dict]) -> list[list[float]]:
 def schrijf_kalibratie(
     pad: Path, matrix: list[list[float]], punten: list[dict], diepte: float, beeldpad: Path | None,
     breedte: float = veld.BREEDTE_M, speelveld: float = veld.SPEELVELD_LENGTE_M,
+    positie: str | None = None, beeldbreedte: float | None = None, beeldhoogte: float | None = None,
 ) -> None:
     data = {
         'versie': 1,
@@ -203,7 +204,18 @@ def schrijf_kalibratie(
         },
         'punten': punten,
         'matrix_beeld_naar_veld': matrix,
+        # Waar deze opstelling scherp meet en waar niet — de app toont het aan de gebruiker.
+        'precisie_m_per_px': precisiekaart(matrix, diepte, breedte, speelveld),
+        'camerapositie': positie,
     }
+    # Het standpunt terugrekenen kan alleen met de beeldmaat erbij (het hoofdpunt zit in het
+    # midden van het beeld). Zonder die maat slaan we het gewoon over.
+    if beeldbreedte and beeldhoogte:
+        import camera  # noqa: PLC0415  (lui: camera importeert volg_veld, dat hier niet altijd nodig is)
+        data['camerastandpunt'] = camera.beoordeel(
+            positie, matrix, beeldbreedte, beeldhoogte, breedte,
+            veld.totale_lengte_m(diepte, speelveld), punten,
+        )
     pad.write_text(json.dumps(data, indent=2, ensure_ascii=False) + '\n', encoding='utf-8')
     print(f'Kalibratie opgeslagen: {pad}')
 
@@ -240,11 +252,15 @@ def _projecteer(m: list[list[float]], x: float, y: float) -> tuple[float, float]
 def orientatie_det(matrix: list[list[float]], punten: list[dict]) -> float:
     """Jacobiaan-determinant van beeld→veld in het zwaartepunt van de klikpunten.
 
-    Elke échte camera staat bóven het grondvlak en ziet het veld daardoor met
-    één vaste oriëntatie: de determinant is dan positief. Wordt hij negatief,
-    dan staat het veld in spiegelbeeld — de klassieke fout wanneer links/rechts
-    (of thuis/uit) verwisseld werden bij het aanklikken, wat elke meting stil
-    zou verzieken. Dit vangt dat op vóór er ook maar iets gemeten wordt.
+    Elke échte camera staat bóven het grondvlak, en in een beeld loopt de y-as naar BENEDEN
+    terwijl de diepte van het veld naar boven in beeld loopt. Die omkering maakt de determinant
+    van een correct aangeduid veld **negatief** — voor élk standpunt: zijlijn links, zijlijn
+    rechts, achter de thuislijn, achter de uitlijn. Wordt hij positief, dan zijn links en rechts
+    verwisseld bij het aanklikken, en dat verziekt elke meting stil.
+
+    Nagemeten met echte perspectiefcamera's (vier standpunten, reprojectiefout 0,00 px):
+    correct −0,00196 · links/rechts verwisseld +0,00196 · 180° gedraaid −0,00196. Die laatste
+    is een geldig ander gezichtspunt (filmen vanaf de overkant) en houdt dus hetzelfde teken.
     """
     if not punten:
         return 1.0
@@ -257,12 +273,12 @@ def orientatie_det(matrix: list[list[float]], punten: list[dict]) -> float:
 
 
 def controleer_orientatie(matrix: list[list[float]], punten: list[dict]) -> None:
-    if orientatie_det(matrix, punten) < 0:
+    if orientatie_det(matrix, punten) > 0:
         _fout(
-            'het veld staat in SPIEGELBEELD: links/rechts (of thuis/uit) zijn verwisseld bij het '
-            'aanklikken. De conventie: sta in gedachten op de THUIS-achterlijn en kijk naar de '
-            'uit-kant — links is dan x=0. Film je van achter de uit-kant, dan is wat jij links in '
-            'beeld ziet veld-RECHTS. Klik opnieuw met de juiste labels.'
+            'het veld staat in SPIEGELBEELD: links en rechts zijn verwisseld bij het aanklikken. '
+            'De conventie: sta in gedachten op de THUIS-achterlijn en kijk naar de uit-kant — '
+            'links is dan x=0. Film je van achter de uit-kant, dan is wat jij links in beeld ziet '
+            'veld-RECHTS (en de lijn vlak voor je de uit-achterlijn). Wissel links en rechts om.'
         )
 
 
@@ -309,6 +325,66 @@ def veldinfo_uit(data: dict) -> tuple[float, float]:
     diepte = float(data.get('doelgebied_diepte_m') or info.get('doelgebied_diepte_m')
                    or veld.STANDAARD_DOELGEBIED_DIEPTE_M)
     return diepte, float(info.get('speelveld_m') or veld.SPEELVELD_LENGTE_M)
+
+
+def meters_per_pixel(matrix: list[list[float]], x_m: float, y_m: float) -> float | None:
+    """Hoeveel meter op het veld is één pixel waard, op deze plek?
+
+    Dé maat voor "werkt mijn camerastandpunt hier?". Bij een camera op de zijlijn is dit over
+    het hele veld ongeveer gelijk. Staat ze achter het veld en kijkt ze in de diepte, dan is
+    één pixel vooraan enkele centimeters en achteraan al gauw een halve meter — dezelfde
+    kalibratie, maar een meting die vooraan klopt en achteraan ruw is.
+
+    Berekend zoals ze telt: zoek waar dit veldpunt in beeld ligt, verschuif één pixel, en kijk
+    hoeveel meter dat op het veld scheelt. De slechtste van de twee richtingen telt.
+    """
+    # Zelf op singulariteit controleren: _inverteer_3x3 stapt uit het proces, en een
+    # precisiecijfer is nooit een reden om de hele kalibratie te laten sneuvelen.
+    (a, b, c), (d, e, f), (g, h, i) = matrix
+    if abs(a * (e * i - f * h) - b * (d * i - f * g) + c * (d * h - e * g)) < 1e-12:
+        return None
+    invers = _inverteer_3x3(matrix)
+    px, py = _projecteer(invers, x_m, y_m)
+    if px != px or py != py or abs(px) > 1e7 or abs(py) > 1e7:
+        return None  # achter de horizon of ontaard: hier valt niets te zeggen
+    hier = _projecteer(matrix, px, py)
+    afstanden = []
+    for dx, dy in ((1.0, 0.0), (0.0, 1.0)):
+        daar = _projecteer(matrix, px + dx, py + dy)
+        if daar[0] != daar[0]:
+            return None
+        afstanden.append(((daar[0] - hier[0]) ** 2 + (daar[1] - hier[1]) ** 2) ** 0.5)
+    return max(afstanden)
+
+
+def precisiekaart(
+    matrix: list[list[float]],
+    diepte: float = veld.STANDAARD_DOELGEBIED_DIEPTE_M,
+    breedte: float = veld.BREEDTE_M,
+    speelveld: float = veld.SPEELVELD_LENGTE_M,
+) -> dict:
+    """Waar op het veld is deze kalibratie scherp, en waar ruw?
+
+    Geeft per derde van de lengte (thuiskant, midden, uitkant) de mediane meters-per-pixel.
+    Zo zie je in één oogopslag of een standpunt achter het veld bruikbaar is voor de overkant.
+    """
+    lengte = veld.totale_lengte_m(diepte, speelveld)
+    derden: dict[str, list[float]] = {'thuis': [], 'midden': [], 'uit': []}
+    for i in range(9):
+        y = lengte * (i + 0.5) / 9.0
+        naam = 'thuis' if y < lengte / 3 else ('midden' if y < 2 * lengte / 3 else 'uit')
+        for j in range(3):
+            x = breedte * (j + 0.5) / 3.0
+            mpp = meters_per_pixel(matrix, x, y)
+            if mpp is not None:
+                derden[naam].append(mpp)
+    uit: dict = {}
+    for naam, waarden in derden.items():
+        if waarden:
+            uit[naam] = round(sorted(waarden)[len(waarden) // 2], 3)
+    if uit:
+        uit['slechtste'] = round(max(uit.values()), 3)
+    return uit
 
 
 def druk_reprojectierapport(
@@ -359,6 +435,41 @@ def druk_reprojectierapport(
             f'over het hele veld neem je minstens één punt op elke helft (bv. de middellijn).'
         )
 
+    # Hoe scherp meet dit standpunt, waar? Bij een camera achter het veld is dat het verschil
+    # tussen een bruikbare en een waardeloze meting op de overkant.
+    kaart = precisiekaart(matrix, diepte, _rapport_speelveld or veld.SPEELVELD_LENGTE_M)
+    if kaart:
+        stukken = ' · '.join(f'{naam} {kaart[naam]:.2f}'
+                             for naam in ('thuis', 'midden', 'uit') if naam in kaart)
+        print(f'  Meters per pixel: {stukken}')
+        if kaart.get('slechtste', 0) > 0.25:
+            print(f'  LET OP: op het slechtste punt is één pixel {kaart["slechtste"]:.2f} m waard. '
+                  f'Daar is een landingspunt hooguit een schatting — een standpunt op de zijlijn '
+                  f'(of hoger) meet die kant veel scherper.')
+
+
+def druk_standpunt(matrix: list[list[float]], punten: list[dict], args) -> None:
+    """Waar de fit zegt dat de camera stond, en of dat strookt met wat er gekozen is."""
+    if not (args.beeldbreedte and args.beeldhoogte):
+        return
+    import camera  # noqa: PLC0415
+
+    lengte = veld.totale_lengte_m(args.diepte, args.speelveld)
+    oordeel = camera.beoordeel(args.positie, matrix, args.beeldbreedte, args.beeldhoogte,
+                               args.breedte, lengte, punten)
+    gemeten = oordeel.get('gemeten')
+    if gemeten is None:
+        print('  Standpunt: niet terug te rekenen uit deze punten (te weinig perspectief).')
+        return
+    print(f'  Standpunt teruggerekend: x {gemeten["x_m"]:g} m, y {gemeten["y_m"]:g} m, '
+          f'hoogte {gemeten["hoogte_m"]:g} m (brandpunt {gemeten["brandpunt_px"]:g} px)')
+    if oordeel['oordeel'] == 'wijkt af':
+        print(f'  LET OP: dat strookt niet met het gekozen standpunt ({args.positie}). '
+              f'Kijk de aangeduide punten na.')
+    elif oordeel['oordeel'] == 'onzeker':
+        print('  (Onzeker: het standpunt schuift te veel als je één punt weglaat — '
+              'duid er meer aan, goed verspreid over het veld.)')
+
 
 # ---------------------------------------------------------------------------
 # CLI
@@ -396,11 +507,17 @@ def main(argv: list[str] | None = None) -> None:
         metavar='KALIBRATIE.JSON',
         help='druk enkel het reprojectiefout-rapport af (van dit bestand, of van --uit)',
     )
+    import camera as _camera  # noqa: PLC0415
     parser.add_argument(
-        '--positie', choices=veld.CAMERA_POSITIES, default=None,
-        help='camerapositie: beperkt de interactieve kliklijst tot de daar zichtbare, '
-             'betrouwbare kruispunten en drukt de conventie af (zie veld.aanbevolen_labels)',
+        '--positie', choices=tuple(_camera.POSITIES) + tuple(veld.CAMERA_POSITIES), default=None,
+        help='waar de camera stond. Beperkt de interactieve kliklijst tot de daar zichtbare '
+             'kruispunten, en laat het standpunt narekenen uit de fit (met --beeldbreedte/'
+             '--beeldhoogte): klopt wat je koos met wat de punten zeggen?',
     )
+    parser.add_argument('--beeldbreedte', type=float, default=None,
+                        help='breedte van het videobeeld in pixels (nodig om het standpunt terug te rekenen)')
+    parser.add_argument('--beeldhoogte', type=float, default=None,
+                        help='hoogte van het videobeeld in pixels')
     parser.add_argument(
         '--draai-180', type=Path, default=None, metavar='KALIBRATIE.JSON', dest='draai_180',
         help='draai een bestaande kalibratie 180° in het veldvlak (thuis↔uit, links↔rechts) — '
@@ -457,8 +574,11 @@ def main(argv: list[str] | None = None) -> None:
     # Spiegel-detectie vóór het wegschrijven: een gespiegelde kalibratie verziekt élke meting.
     controleer_orientatie(matrix, punten)
     schrijf_kalibratie(args.uit, matrix, punten, args.diepte, args.beeld,
-                       breedte=args.breedte, speelveld=args.speelveld)
+                       breedte=args.breedte, speelveld=args.speelveld,
+                       positie=args.positie, beeldbreedte=args.beeldbreedte,
+                       beeldhoogte=args.beeldhoogte)
     druk_reprojectierapport(matrix, punten, args.diepte, args.speelveld)
+    druk_standpunt(matrix, punten, args)
 
 
 if __name__ == '__main__':

@@ -397,6 +397,11 @@
   border: 1px solid rgba(255, 255, 255, 0.1); background: rgba(255, 255, 255, 0.03);
 }
 
+.sa-onderbroken {
+  margin: 10px 0; padding: 10px 12px; border-radius: 10px; font-size: 13px; line-height: 1.5;
+  border: 1px solid rgba(250, 204, 21, 0.35); background: rgba(250, 204, 21, 0.09);
+}
+
 /* ── Controlevideo: zien wat er getrackt werd ───────────────────────────────────────────── */
 .sa-controle { margin: 14px 0; display: grid; gap: 8px; }
 .sa-h3 { margin: 0; font-size: 15px; }
@@ -443,6 +448,13 @@
 .kal-cel.gezet { border-style: solid; border-color: rgba(74, 222, 128, 0.5); background: rgba(74, 222, 128, 0.12); opacity: 1; }
 .kal-cel.beurt { border-color: var(--accent, #60a5fa); box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.28); opacity: 1; }
 .kal-wis { margin-left: 4px; padding: 2px 5px; border: 0; background: none; color: inherit; opacity: 0.5; cursor: pointer; }
+
+.kal-precisie {
+  margin: 10px 0; padding: 10px 12px; border-radius: 10px; font-size: 13px; line-height: 1.5;
+  border: 1px solid rgba(74, 222, 128, 0.3); background: rgba(74, 222, 128, 0.08);
+}
+.kal-precisie.ruw { border-color: rgba(250, 204, 21, 0.35); background: rgba(250, 204, 21, 0.09); }
+.kal-precisie p { margin: 4px 0 0; opacity: 0.85; }
 .kal-wis:hover { opacity: 1; }
 .kal-punt {
   position: absolute; transform: translate(-50%, -50%);
@@ -452,3 +464,6 @@
   background: #4ade80; border: 2px solid rgba(0, 0, 0, 0.5);
 }
 .kal-volgende { margin: 10px 0; font-size: 13px; line-height: 1.5; }
+
+.kal-standpunt { display: grid; gap: 4px; margin: 10px 0; font-size: 13px; }
+.kal-standpunt select { padding: 7px 9px; border-radius: 8px; font: inherit; }
