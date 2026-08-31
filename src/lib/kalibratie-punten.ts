@@ -53,3 +53,34 @@ export function spiegelLabel(label: string): string {
   delen[delen.length - 1] = delen[delen.length - 1] === 'links' ? 'rechts' : 'links'
   return delen.join('_')
 }
+
+/**
+ * Waar de camera stond, rond het veld.
+ *
+ * Geen etiket: de server rekent uit de aangeduide punten terug waar de camera écht stond (in
+ * meters, met hoogte) en legt dat naast deze keuze. Klopt het niet, dan is er bij het
+ * aanduiden iets misgegaan — beter nu dan na een uur rekenen. Spiegelbeeld van `POSITIES`
+ * in cv/camera.py; de sleutels moeten gelijk blijven.
+ */
+export const CAMERA_POSITIES: { sleutel: string; naam: string; groep: string }[] = [
+  { sleutel: 'achter-thuis-links', naam: 'Links achter de thuislijn', groep: 'Achter het veld (thuiskant)' },
+  { sleutel: 'achter-thuis-midden', naam: 'Midden achter de thuislijn', groep: 'Achter het veld (thuiskant)' },
+  { sleutel: 'achter-thuis-rechts', naam: 'Rechts achter de thuislijn', groep: 'Achter het veld (thuiskant)' },
+  { sleutel: 'achter-uit-links', naam: 'Links achter de uitlijn', groep: 'Achter het veld (uitkant)' },
+  { sleutel: 'achter-uit-midden', naam: 'Midden achter de uitlijn', groep: 'Achter het veld (uitkant)' },
+  { sleutel: 'achter-uit-rechts', naam: 'Rechts achter de uitlijn', groep: 'Achter het veld (uitkant)' },
+  { sleutel: 'zijlijn-links-thuis', naam: 'Linkerzijlijn, thuiskant', groep: 'Aan de zijlijn' },
+  { sleutel: 'zijlijn-links-midden', naam: 'Midden aan de linkerzijlijn', groep: 'Aan de zijlijn' },
+  { sleutel: 'zijlijn-links-uit', naam: 'Linkerzijlijn, uitkant', groep: 'Aan de zijlijn' },
+  { sleutel: 'zijlijn-rechts-thuis', naam: 'Rechterzijlijn, thuiskant', groep: 'Aan de zijlijn' },
+  { sleutel: 'zijlijn-rechts-midden', naam: 'Midden aan de rechterzijlijn', groep: 'Aan de zijlijn' },
+  { sleutel: 'zijlijn-rechts-uit', naam: 'Rechterzijlijn, uitkant', groep: 'Aan de zijlijn' },
+  { sleutel: 'hoek-thuis-links', naam: 'Hoek thuislijn — links', groep: 'In een hoek' },
+  { sleutel: 'hoek-thuis-rechts', naam: 'Hoek thuislijn — rechts', groep: 'In een hoek' },
+  { sleutel: 'hoek-uit-links', naam: 'Hoek uitlijn — links', groep: 'In een hoek' },
+  { sleutel: 'hoek-uit-rechts', naam: 'Hoek uitlijn — rechts', groep: 'In een hoek' },
+]
+
+export function geldigeCameraPositie(waarde: unknown): boolean {
+  return typeof waarde === 'string' && CAMERA_POSITIES.some((p) => p.sleutel === waarde)
+}

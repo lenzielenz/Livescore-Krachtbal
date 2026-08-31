@@ -464,3 +464,6 @@
   background: #4ade80; border: 2px solid rgba(0, 0, 0, 0.5);
 }
 .kal-volgende { margin: 10px 0; font-size: 13px; line-height: 1.5; }
+
+.kal-standpunt { display: grid; gap: 4px; margin: 10px 0; font-size: 13px; }
+.kal-standpunt select { padding: 7px 9px; border-radius: 8px; font: inherit; }

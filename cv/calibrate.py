@@ -190,6 +190,7 @@ def fit_homografie(punten: list[dict]) -> list[list[float]]:
 def schrijf_kalibratie(
     pad: Path, matrix: list[list[float]], punten: list[dict], diepte: float, beeldpad: Path | None,
     breedte: float = veld.BREEDTE_M, speelveld: float = veld.SPEELVELD_LENGTE_M,
+    positie: str | None = None, beeldbreedte: float | None = None, beeldhoogte: float | None = None,
 ) -> None:
     data = {
         'versie': 1,
@@ -205,7 +206,16 @@ def schrijf_kalibratie(
         'matrix_beeld_naar_veld': matrix,
         # Waar deze opstelling scherp meet en waar niet — de app toont het aan de gebruiker.
         'precisie_m_per_px': precisiekaart(matrix, diepte, breedte, speelveld),
+        'camerapositie': positie,
     }
+    # Het standpunt terugrekenen kan alleen met de beeldmaat erbij (het hoofdpunt zit in het
+    # midden van het beeld). Zonder die maat slaan we het gewoon over.
+    if beeldbreedte and beeldhoogte:
+        import camera  # noqa: PLC0415  (lui: camera importeert volg_veld, dat hier niet altijd nodig is)
+        data['camerastandpunt'] = camera.beoordeel(
+            positie, matrix, beeldbreedte, beeldhoogte, breedte,
+            veld.totale_lengte_m(diepte, speelveld), punten,
+        )
     pad.write_text(json.dumps(data, indent=2, ensure_ascii=False) + '\n', encoding='utf-8')
     print(f'Kalibratie opgeslagen: {pad}')
 
@@ -438,6 +448,29 @@ def druk_reprojectierapport(
                   f'(of hoger) meet die kant veel scherper.')
 
 
+def druk_standpunt(matrix: list[list[float]], punten: list[dict], args) -> None:
+    """Waar de fit zegt dat de camera stond, en of dat strookt met wat er gekozen is."""
+    if not (args.beeldbreedte and args.beeldhoogte):
+        return
+    import camera  # noqa: PLC0415
+
+    lengte = veld.totale_lengte_m(args.diepte, args.speelveld)
+    oordeel = camera.beoordeel(args.positie, matrix, args.beeldbreedte, args.beeldhoogte,
+                               args.breedte, lengte, punten)
+    gemeten = oordeel.get('gemeten')
+    if gemeten is None:
+        print('  Standpunt: niet terug te rekenen uit deze punten (te weinig perspectief).')
+        return
+    print(f'  Standpunt teruggerekend: x {gemeten["x_m"]:g} m, y {gemeten["y_m"]:g} m, '
+          f'hoogte {gemeten["hoogte_m"]:g} m (brandpunt {gemeten["brandpunt_px"]:g} px)')
+    if oordeel['oordeel'] == 'wijkt af':
+        print(f'  LET OP: dat strookt niet met het gekozen standpunt ({args.positie}). '
+              f'Kijk de aangeduide punten na.')
+    elif oordeel['oordeel'] == 'onzeker':
+        print('  (Onzeker: het standpunt schuift te veel als je één punt weglaat — '
+              'duid er meer aan, goed verspreid over het veld.)')
+
+
 # ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
@@ -474,11 +507,17 @@ def main(argv: list[str] | None = None) -> None:
         metavar='KALIBRATIE.JSON',
         help='druk enkel het reprojectiefout-rapport af (van dit bestand, of van --uit)',
     )
+    import camera as _camera  # noqa: PLC0415
     parser.add_argument(
-        '--positie', choices=veld.CAMERA_POSITIES, default=None,
-        help='camerapositie: beperkt de interactieve kliklijst tot de daar zichtbare, '
-             'betrouwbare kruispunten en drukt de conventie af (zie veld.aanbevolen_labels)',
+        '--positie', choices=tuple(_camera.POSITIES) + tuple(veld.CAMERA_POSITIES), default=None,
+        help='waar de camera stond. Beperkt de interactieve kliklijst tot de daar zichtbare '
+             'kruispunten, en laat het standpunt narekenen uit de fit (met --beeldbreedte/'
+             '--beeldhoogte): klopt wat je koos met wat de punten zeggen?',
     )
+    parser.add_argument('--beeldbreedte', type=float, default=None,
+                        help='breedte van het videobeeld in pixels (nodig om het standpunt terug te rekenen)')
+    parser.add_argument('--beeldhoogte', type=float, default=None,
+                        help='hoogte van het videobeeld in pixels')
     parser.add_argument(
         '--draai-180', type=Path, default=None, metavar='KALIBRATIE.JSON', dest='draai_180',
         help='draai een bestaande kalibratie 180° in het veldvlak (thuis↔uit, links↔rechts) — '
@@ -535,8 +574,11 @@ def main(argv: list[str] | None = None) -> None:
     # Spiegel-detectie vóór het wegschrijven: een gespiegelde kalibratie verziekt élke meting.
     controleer_orientatie(matrix, punten)
     schrijf_kalibratie(args.uit, matrix, punten, args.diepte, args.beeld,
-                       breedte=args.breedte, speelveld=args.speelveld)
+                       breedte=args.breedte, speelveld=args.speelveld,
+                       positie=args.positie, beeldbreedte=args.beeldbreedte,
+                       beeldhoogte=args.beeldhoogte)
     druk_reprojectierapport(matrix, punten, args.diepte, args.speelveld)
+    druk_standpunt(matrix, punten, args)
 
 
 if __name__ == '__main__':
