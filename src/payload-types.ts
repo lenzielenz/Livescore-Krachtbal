@@ -1434,6 +1434,7 @@ export interface Throw {
   distance?: number | null;
   zone?: ('links' | 'midden' | 'rechts') | null;
   touchedBeforeOut?: boolean | null;
+  bron?: ('manueel' | 'video') | null;
   createdBy?: (number | null) | User;
   period: number;
   gameClock: number;
@@ -2352,6 +2353,7 @@ export interface ThrowsSelect<T extends boolean = true> {
   distance?: T;
   zone?: T;
   touchedBeforeOut?: T;
+  bron?: T;
   createdBy?: T;
   period?: T;
   gameClock?: T;

@@ -137,6 +137,10 @@ export default async function AnalyseDetailPage({ params }: { params: Promise<{ 
   // Alle worpen (immutable events, hier enkel gelezen) voor de tijdlijnbalk onder de video:
   // elke manuele tag op zijn videotijd, zodat je ziet of de ijking klopt vóór er ooit een
   // CV-voorstel bijkomt (fase 0).
+  // Worpen die uit de video zijn afgespeeld tellen NIET mee als "wat de aantekenaar invoerde".
+  // Zouden ze dat wel doen, dan vergelijkt de modelscore het model met zijn eigen voorstellen en
+  // meldt ze altijd 100% gevonden — het vleiendste cijfer dat je kunt verzinnen, en het zegt niets.
+  const handWorpen = worpenRes.docs.filter((t) => (t as { bron?: string }).bron !== 'video')
   const videoWorpen: VideoWorp[] = worpenRes.docs
     .map((t) => {
       const d = t as { team?: unknown; player?: unknown; period?: unknown; gameClock?: unknown; type?: unknown; outcome?: unknown }
@@ -350,7 +354,10 @@ export default async function AnalyseDetailPage({ params }: { params: Promise<{ 
                 reviewlaan alleen kan dat niet zeggen. */}
             <ErrorCatch label="De score van het model">
               <ModelScore
-                worpen={videoWorpen}
+                worpen={handWorpen.map((t) => ({
+                  half: Number((t as { period?: unknown }).period ?? 1),
+                  gameClock: Number((t as { gameClock?: unknown }).gameClock ?? 0),
+                }))}
                 voorstellen={cvVoorstellen}
                 sync={readSync({ offsetH1: matchDoc?.videoOffsetH1, offsetH2: matchDoc?.videoOffsetH2 })}
                 halfSeconds={halfSeconds}

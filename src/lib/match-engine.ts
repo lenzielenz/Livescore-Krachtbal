@@ -265,6 +265,13 @@ export interface RecordThrowInput {
   tappedById?: number
   /** Audit-trail: de gebruiker die de worp registreert. */
   actorId?: number
+  /**
+   * Waar deze worp vandaan komt. 'video' = afgespeeld uit bevestigde CV-voorstellen.
+   *
+   * Herkomst, geen afgeleide staat: zonder dit merk staat een uit video afgespeelde wedstrijd
+   * erbij als handwerk, en vergelijkt de modelscore het model met zijn eigen voorstellen.
+   */
+  bron?: 'manueel' | 'video'
 }
 
 /** Registreer één worp en beheer het balbezit (afsluiten + volgend opzet). */
@@ -355,6 +362,7 @@ export async function recordThrow(payload: Payload, input: RecordThrowInput) {
       // Wie tikte de bal naar de achterman vóór de vangst (optioneel).
       ...(outcome === 'caught' && input.tappedById ? { tappedBy: input.tappedById } : {}),
       ...(input.actorId ? { createdBy: input.actorId } : {}),
+      ...(input.bron ? { bron: input.bron } : {}),
     },
     overrideAccess: true,
   })

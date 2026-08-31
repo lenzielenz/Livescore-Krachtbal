@@ -100,6 +100,7 @@ import * as migration_20260831_100000_veld_maten from './20260831_100000_veld_ma
 import * as migration_20260831_110000_cv_fysiek from './20260831_110000_cv_fysiek'
 import * as migration_20260831_120000_cv_analyse from './20260831_120000_cv_analyse'
 import * as migration_20260901_090000_analyse_modus from './20260901_090000_analyse_modus'
+import * as migration_20260901_120000_worp_bron from './20260901_120000_worp_bron'
 
 export const migrations = [
   {
@@ -611,5 +612,10 @@ export const migrations = [
     up: migration_20260901_090000_analyse_modus.up,
     down: migration_20260901_090000_analyse_modus.down,
     name: '20260901_090000_analyse_modus',
+  },
+  {
+    up: migration_20260901_120000_worp_bron.up,
+    down: migration_20260901_120000_worp_bron.down,
+    name: '20260901_120000_worp_bron',
   },
 ];

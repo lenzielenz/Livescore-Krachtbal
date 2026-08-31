@@ -170,6 +170,25 @@ export const Throws: CollectionConfig = {
       defaultValue: false,
     },
     {
+      // Waar deze worp vandaan komt. 'video' = afgespeeld uit bevestigde CV-voorstellen
+      // (src/lib/cv-overzetten.ts), niet door een mens aangetikt.
+      //
+      // Dit is herkomst, geen afgeleide staat: het valt nergens uit te rekenen en het is precies
+      // wat je nodig hebt om NIET te liegen. Zonder dit merk staat een uit video afgespeelde
+      // wedstrijd er bij als handwerk — en zou de modelscore het model met zijn eigen
+      // voorstellen vergelijken en altijd 100% melden.
+      name: 'bron',
+      label: 'Herkomst',
+      type: 'select',
+      defaultValue: 'manueel',
+      options: [
+        { label: 'Met de hand aangetekend', value: 'manueel' },
+        { label: 'Afgespeeld uit de video-analyse', value: 'video' },
+      ],
+      index: true,
+      admin: { readOnly: true, position: 'sidebar' },
+    },
+    {
       // Audit-trail: welke gebruiker registreerde deze worp (accountability bij betwiste scores).
       name: 'createdBy',
       label: 'Geregistreerd door',

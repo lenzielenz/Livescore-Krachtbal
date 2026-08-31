@@ -53,25 +53,35 @@ export type Overzetrapport = {
   tweedeHelftVanaf: number | null
   /** Wat deze overzetting niet kan — eerlijk, want het staat straks in de statistieken. */
   beperkingen: string[]
+  /** Hoeveel overgezette worpen een herkend rugnummer hadden (0 = de namen zeggen niets). */
+  metRugnummer?: number
 }
 
 export type Overzetfout = { fout: string; code: number }
 
 const isFout = (r: Overzetrapport | Overzetfout): r is Overzetfout => 'fout' in r
 
-/** Welke speler werpt deze worp? Het rugnummer van het model, of anders wie er op het veld staat. */
+/**
+ * Welke speler werpt deze worp?
+ *
+ * Het rugnummer van het model als dat er is. Is het er niet — en vandaag is dat de regel, want
+ * de videopijplijn vult het rugnummer zelden in — dan is er geen werper te herkennen. Dan zou
+ * "de eerste van de opstelling" ervoor zorgen dat één speler álle worpen krijgt, en dat is geen
+ * onvolledige spelerskaart maar een verzonnen: veertig worpen op naam van iemand die er misschien
+ * twee deed. Vandaar rondgaan over de opstelling: even willekeurig, maar het liegt niet over één
+ * speler in het bijzonder. Dat de namen dan niets betekenen, staat in het rapport én in het
+ * scherm — en de worp zelf draagt `bron: 'video'`.
+ */
 export function kiesWerper(
   opstelling: { id: number; shirtNumber: number }[],
   rugnummer: number | null,
   vorigeWerperId: number | null,
+  beurt = 0,
 ): number | null {
   const bruikbaar = opstelling.filter((p) => p.id !== vorigeWerperId)
   if (!bruikbaar.length) return null
-  // Het model herkent spelers aan hun truitje; klopt dat nummer, dan is dat de beste keuze.
   const herkend = rugnummer != null ? bruikbaar.find((p) => p.shirtNumber === rugnummer) : undefined
-  // Anders: iemand die op het veld staat. De worp is dan wél geteld maar op de verkeerde naam —
-  // beter dan de worp weggooien, want de score en de veldkaart kloppen nog steeds.
-  return (herkend ?? bruikbaar[0]).id
+  return (herkend ?? bruikbaar[beurt % bruikbaar.length]).id
 }
 
 /**
@@ -176,6 +186,8 @@ export async function zetVoorstellenOver(
 
   const geweigerd: { videoTimeS: number; reden: string }[] = []
   let overgezet = 0
+  let metRugnummer = 0
+  let beurt = 0
   let inTweedeHelft = false
 
   for (const worp of plan.worpen) {
@@ -203,7 +215,8 @@ export async function zetVoorstellenOver(
     const opstelling = await spelersVan(payload, side === 'home' ? state.teams.home.id : state.teams.away.id, state.lineup[side])
     // Wie de vorige worp van dít balbezit deed, weet de engine zelf — en zij is de enige die
     // weet wanneer het balbezit wisselde en die regel dus weer vanaf nul geldt.
-    const werper = kiesWerper(opstelling, worp.rugnummer, state.possession.lastPlayerId)
+    const werper = kiesWerper(opstelling, worp.rugnummer, state.possession.lastPlayerId, beurt)
+    beurt++
     if (werper == null) {
       geweigerd.push({ videoTimeS: worp.videoTimeS, reden: 'geen speler op het veld om de worp op te zetten' })
       continue
@@ -221,14 +234,35 @@ export async function zetVoorstellenOver(
         // de enige tijdlijn die er is.
         gameClock: Math.max(0, Math.round(worp.videoTimeS - aftrapVan(match, inTweedeHelft))),
         // Bewust géén actorId: 'createdBy' zou beweren dat een mens deze worp intikte.
+        bron: 'video',
       })
       overgezet++
+      if (worp.rugnummer != null && opstelling.some((p) => p.shirtNumber === worp.rugnummer)) {
+        metRugnummer++
+      }
     } catch (e) {
       geweigerd.push({ videoTimeS: worp.videoTimeS, reden: (e as Error).message })
     }
   }
 
-  return { overgezet, overgeslagen: plan.overgeslagen, geweigerd, droog: false, tweedeHelftVanaf, beperkingen }
+  return {
+    overgezet,
+    overgeslagen: plan.overgeslagen,
+    geweigerd,
+    droog: false,
+    tweedeHelftVanaf,
+    metRugnummer,
+    beperkingen: [
+      ...beperkingen,
+      ...(overgezet > 0 && metRugnummer === 0
+        ? ['Geen enkele worp droeg een herkend rugnummer: de worpen zijn over de opstelling '
+           + 'verdeeld. Score, veldkaart en afstanden kloppen; de spelerskaarten zeggen niets.']
+        : metRugnummer < overgezet
+          ? [`${overgezet - metRugnummer} van de ${overgezet} worpen hadden geen herkend rugnummer `
+             + '— die staan op een speler uit de opstelling, niet op wie ze echt deed.']
+          : []),
+    ],
+  }
 }
 
 /** De videoseconde waarop de lopende helft begon (0 als er niet geijkt is). */

@@ -112,9 +112,18 @@ describe('kiesWerper', () => {
     expect(kiesWerper(opstelling, 7, 2)).not.toBe(2)
   })
 
-  it('valt terug op wie er op het veld staat als het rugnummer onbekend is', () => {
-    expect(kiesWerper(opstelling, null, null)).toBe(1)
-    expect(kiesWerper(opstelling, 99, null)).toBe(1)
+  it('gaat rond over de opstelling als het rugnummer onbekend is', () => {
+    // Altijd dezelfde nemen zou veertig worpen op naam van één speler zetten: geen onvolledige
+    // spelerskaart maar een verzonnen. Rondgaan liegt niet over één speler in het bijzonder.
+    expect(kiesWerper(opstelling, null, null, 0)).toBe(1)
+    expect(kiesWerper(opstelling, null, null, 1)).toBe(2)
+    expect(kiesWerper(opstelling, null, null, 2)).toBe(3)
+    expect(kiesWerper(opstelling, null, null, 3)).toBe(1)
+  })
+
+  it('houdt zich aan het herkende rugnummer, wat de beurt ook is', () => {
+    expect(kiesWerper(opstelling, 9, null, 0)).toBe(3)
+    expect(kiesWerper(opstelling, 9, null, 1)).toBe(3)
   })
 
   it('geeft niets terug als er niemand overblijft', () => {
@@ -151,6 +160,18 @@ describe('zetVoorstellenOver', () => {
     expect(r.tweedeHelftVanaf).toBeNull()
     expect(r.beperkingen.some((b) => b.includes('helft 1'))).toBe(true)
     expect(r.beperkingen.some((b) => b.toLowerCase().includes('uitbal'))).toBe(true)
+  })
+
+  it('zegt het wanneer geen enkele worp een herkend rugnummer had', async () => {
+    // Zo werkt de videopijplijn vandaag: ze vult het rugnummer zelden in. Dan mogen de
+    // spelerskaarten niet doorgaan voor waarheid.
+    const { matchId } = await maakAnalysewedstrijd()
+    await voorstel(matchId, 100, 7, 30)
+    await voorstel(matchId, 150, 7, 25)
+    const r = await zetVoorstellenOver(payload, matchId, { droog: false })
+    if (isOverzetfout(r)) throw new Error(r.fout)
+    expect(r.metRugnummer).toBe(0)
+    expect(r.beperkingen.some((b) => b.includes('spelerskaarten'))).toBe(true)
   })
 
   it('slaat voorstellen zonder landingspunt over, mét reden', async () => {
@@ -209,7 +230,12 @@ describe('zetVoorstellenOver', () => {
     })
     expect(worpen.totalDocs).toBe(r.overgezet)
     // De engine bepaalt zone en afstand zelf uit het landingspunt — die mogen niet leeg zijn.
-    const eerste = worpen.docs[0] as { zone?: unknown; distance?: unknown; gameClock?: number; period?: number }
+    const eerste = worpen.docs[0] as {
+      zone?: unknown; distance?: unknown; gameClock?: number; period?: number; bron?: string
+    }
+    // Elke afgespeelde worp draagt zijn herkomst: anders staat deze wedstrijd erbij als handwerk
+    // en vergelijkt de modelscore het model met zijn eigen voorstellen.
+    expect(eerste.bron).toBe('video')
     expect(eerste.zone).toBeTruthy()
     expect(typeof eerste.distance).toBe('number')
     expect(eerste.period).toBe(1)
