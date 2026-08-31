@@ -554,12 +554,52 @@ menselijke oordeel (bevestigd/afgewezen) mét de bevroren modelclaim ernaast —
 bevestigde: dat zijn de valse positieven die de volgende modelversie moet
 afleren. Meerdere matchen aaneenplakken = de trainingsset.
 
+### 13. `train.py` — de instellingen léren i.p.v. schatten
+
+```bash
+# 1. meten (duur, één keer per wedstrijd) — de reeks blijft bewaard
+python3 cv/houding.py match42.mp4 --uit voorstellen42.jsonl --reeks-uit reeks42.jsonl
+
+# 2. labels ophalen (goedkoop): wat de aantekenaar tijdens de match invoerde
+python3 cv/sync.py --base https://krachtbal.live --match 42 --uit labels42.jsonl
+
+# 3. trainen (goedkoop, en zo vaak je wil) — één wedstrijd blijft buiten het fitten
+python3 cv/train.py --wedstrijd reeks42.jsonl labels42.jsonl \
+                    --wedstrijd reeks43.jsonl labels43.jsonl \
+                    --holdout 43 --uit cv/model-houding.json
+```
+
+`houding.py` besliste met twee geschátte getallen wanneer iets een worp is: de
+drempel op de worpscore (1,2) en de minimale afstand tussen twee pieken (3,0 s).
+`train.py` leert ze uit gelabelde wedstrijden met een rasterzoektocht op dezelfde
+F1-koppeling die `evaluate.py` gebruikt, en schrijft ze naar
+`cv/model-houding.json`. Bestaat dat bestand, dan pikt `houding.py` het vanzelf
+op (een expliciete `--drempel` wint nog altijd); is het stuk of ontbreekt het,
+dan vallen de schattingen terug op hun plaats en zegt de uitvoer dat.
+
+Bewust klein gehouden: twéé getallen, geen duizend gewichten. Met een handvol
+gelabelde wedstrijden leert een groot model vooral de ruis van die wedstrijden.
+
+**Holdout.** Fitten en rapporteren op dezelfde wedstrijden geeft altijd een mooi
+cijfer en zegt niets. `--holdout` houdt wedstrijden buiten het fitten; dát cijfer
+telt. Zonder holdout draait het script door, maar zet het er luid bij dat de
+cijfers te mooi zijn.
+
+De server-analyse schrijft de meetreeks automatisch weg als
+`houding-reeks.jsonl` in de werkmap van de wedstrijd (op het volume), dus na elke
+analyse groeit de trainingsset vanzelf. In de app staat de tegenhanger: het
+paneel *"Hoe goed doet het model het hier?"* op de analysepagina legt dezelfde
+twee lijsten naast elkaar (`src/lib/cv-score.ts`) en toont recall, precisie en de
+gemiste momenten.
+
 ## Acceptatie fase 5 en 6
 
 - [ ] Een heatmap van een echte wedstrijd (of de demo) als PNG met veldlijnen,
       en hetzelfde raster als JSON.
 - [ ] `groundtruth.py` haalt de reviews van een match op en het rapport klopt
       met wat er in de browser gereviewd werd.
+- [ ] `train.py` draait op ≥ 2 gelabelde wedstrijden, met een holdout, en het
+      holdout-cijfer is niet slechter dan met de geschatte instellingen.
 
 ## Acceptatie fase 4
 

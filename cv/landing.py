@@ -280,6 +280,18 @@ def video_landing(args: argparse.Namespace, detecties: list[dict]) -> tuple[list
     breedte = float(args.breedte or veld_info.get('breedte_m') or veld.BREEDTE_M)
     speelveld = float(args.speelveld or veld_info.get('speelveld_m') or veld.SPEELVELD_LENGTE_M)
 
+    # Vooraf gevonden balbanen (cv/bal.py): per worptijd de baan met loslaat- en landingspunt.
+    vooraf: dict[float, dict] = {}
+    if getattr(args, 'balbanen', None) is not None:
+        if not args.balbanen.is_file():
+            _fout(f'balbanenbestand niet gevonden: {args.balbanen} (maak het met cv/bal.py)')
+        with args.balbanen.open(encoding='utf-8') as f:
+            for regel in f:
+                regel = regel.strip()
+                if regel:
+                    baan = json.loads(regel)
+                    vooraf[round(float(baan['worp_s']), 2)] = baan
+
     cap = cv2.VideoCapture(str(args.video))
     if not cap.isOpened():
         _fout(f'video kan niet geopend worden: {args.video}')
@@ -302,29 +314,49 @@ def video_landing(args: argparse.Namespace, detecties: list[dict]) -> tuple[list
                 det['provenance'] = prov
                 verrijkt.append(det)
                 continue
-        spoor = volg_bal_na_worp(cap, cv2, t0 + args.venster_start, t0 + args.venster_einde, (args.bal_min_px, args.bal_max_px))
-        punt = landing_uit_spoor(spoor)
-        if args.balspoor is not None and spoor:
+        # LET OP: dit is het BALspoor, niet de homografie-reeks hierboven. Die twee deelden
+        # eerder één variabele, waardoor `spoor.op(t0)` bij de tweede worp over een lijst
+        # struikelde — precies op het pad voor een bewegende camera.
+        klaar = vooraf.get(round(t0, 2))
+        if klaar is not None:
+            # De baan uit cv/bal.py: camerabeweging weggerekend en een balbaan gefit, dus ook
+            # bruikbaar bij een pannende camera. Landing gemeten op 0,40 m op een proefvideo.
+            balspoor = [(p[0], p[1], p[2]) for p in klaar['spoor']]
+            punt = (klaar['landing']['t'], klaar['landing']['x'], klaar['landing']['y'])
+            if balspoor:
+                balspoor[0] = (klaar['los']['t'], klaar['los']['x'], klaar['los']['y'])
+        else:
+            balspoor = volg_bal_na_worp(cap, cv2, t0 + args.venster_start, t0 + args.venster_einde,
+                                        (args.bal_min_px, args.bal_max_px))
+            punt = landing_uit_spoor(balspoor)
+        if args.balspoor is not None and balspoor:
             # Alles wat we van deze worp zagen, in beeldpixels: het spoor zelf, welk punt we
             # als landing kozen, en waar de bal het eerst gezien werd (bij benadering de
             # werpplaats). Precies wat er straks over de video getekend wordt.
             balsporen.append({
                 'video_time_s': round(t0, 3),
                 'worp_type': det.get('worp_type'),
-                'spoor': [[round(w, 2) for w in punt3] for punt3 in spoor],
+                'spoor': [[round(w, 2) for w in punt3] for punt3 in balspoor],
                 'landing_px': [round(punt[1], 2), round(punt[2], 2)] if punt is not None else None,
                 'landing_t': round(punt[0], 3) if punt is not None else None,
-                'los_px': [round(spoor[0][1], 2), round(spoor[0][2], 2)],
+                'los_px': [round(balspoor[0][1], 2), round(balspoor[0][2], 2)],
             })
         if punt is not None:
-            x_m, y_m = _projecteer(matrix, punt[1], punt[2])
+            # De camera kan tussen worp en landing meebewogen zijn: neem de matrix van het
+            # landingsmoment, niet die van de worp.
+            land_matrix = matrix
+            if spoor is not None:
+                op_landing = spoor.op(punt[0])
+                if op_landing is not None:
+                    land_matrix = op_landing
+            x_m, y_m = _projecteer(land_matrix, punt[1], punt[2])
             if x_m == x_m and y_m == y_m:  # geen NaN
                 x_m, y_m = klem_op_veld(x_m, y_m, diepte, breedte, speelveld)
                 zone, score = zone_en_score(x_m, y_m, det.get('worp_type'), diepte, breedte, speelveld)
                 det['zone'] = zone
                 det['score_delta'] = score
                 # Afstand: eerste balpunt van het spoor als benadering van de werpplaats.
-                sx, sy = _projecteer(matrix, spoor[0][1], spoor[0][2])
+                sx, sy = _projecteer(land_matrix, balspoor[0][1], balspoor[0][2])
                 if sx == sx and sy == sy:
                     det['afstand_m'] = round(((x_m - sx) ** 2 + (y_m - sy) ** 2) ** 0.5, 2)
                 gevonden += 1
@@ -366,6 +398,11 @@ def main(argv: list[str] | None = None) -> None:
     # videomodus
     parser.add_argument('--video', type=Path, default=None, help='wedstrijdvideo (videomodus)')
     parser.add_argument('--kalibratie', type=Path, default=None, help='kalibratie-JSON van calibrate.py')
+    parser.add_argument('--balbanen', type=Path, default=None,
+                        help='balbanen uit cv/bal.py: gebruikt die baan in plaats van zelf de '
+                             'bal te zoeken. Nodig bij een bewegende camera — de eigen zoeker '
+                             'hier gebruikt achtergrondsubtractie en die veronderstelt een '
+                             'stilstaande camera.')
     parser.add_argument('--balspoor', type=Path, default=None,
                         help='schrijf het gevolgde balspoor per worp weg (JSONL) — voer voor '
                              'cv/overlay.py, zodat je in beeld ziet wat er gevolgd is')

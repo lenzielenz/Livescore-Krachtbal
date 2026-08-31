@@ -467,3 +467,19 @@
 
 .kal-standpunt { display: grid; gap: 4px; margin: 10px 0; font-size: 13px; }
 .kal-standpunt select { padding: 7px 9px; border-radius: 8px; font: inherit; }
+
+/* ── Modelscore: de voorstellen naast de ingevoerde worpen ──────────────────────────────── */
+.ms {
+  margin: 0 0 16px; padding: 14px 16px; border-radius: 16px; display: grid; gap: 8px;
+  background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.12);
+}
+.ms-cijfers { display: flex; flex-wrap: wrap; gap: 10px 22px; margin: 2px 0; }
+.ms-cijfers > span { display: grid; gap: 1px; }
+.ms-cijfers strong { font-size: 20px; font-variant-numeric: tabular-nums; }
+.ms-cijfers em { font-style: normal; font-size: 12px; color: var(--muted); }
+.ms-sprong {
+  padding: 1px 6px; border-radius: 6px; font: inherit; font-variant-numeric: tabular-nums;
+  color: inherit; cursor: pointer;
+  background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.16);
+}
+.ms-sprong:hover { border-color: var(--accent, #60a5fa); }

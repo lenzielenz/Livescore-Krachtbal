@@ -310,8 +310,12 @@ export function bouwStappen(opties: {
     opts.ai
       ? {
           naam: 'Worpen herkennen aan de houding van de spelers',
+          // --reeks-uit bewaart de meting per beeld. Dat is het dure deel van de analyse, en
+          // meteen de trainingsdata: met die reeks + de worpen die de aantekenaar invoerde
+          // stelt cv/train.py de drempels bij zonder de video opnieuw te bekijken.
           argv: [path.join(cv, 'houding.py'), video, '--match', String(opties.matchId),
-                 '--analyse-fps', String(Math.min(fps, 5)), '--uit', bestand('detecties.jsonl')],
+                 '--analyse-fps', String(Math.min(fps, 5)), '--uit', bestand('detecties.jsonl'),
+                 '--reeks-uit', bestand('houding-reeks.jsonl')],
         }
       : {
           naam: 'Kandidaat-worpen zoeken in de video',
@@ -322,11 +326,19 @@ export function bouwStappen(opties: {
 
   // Zonder kalibratie weten we wél wannéér er geworpen wordt, maar niet waar de bal landt.
   if (kalibratie) {
+    // Eerst de balbanen apart zoeken: camerabeweging weggerekend en een echte worpbaan gefit,
+    // in plaats van per beeld de dichtstbijzijnde blob te grijpen. Op een proefvideo met een
+    // pannende camera gaf dat een landingspunt op 0,40 m van de echte plek.
+    stappen.push({
+      naam: 'De bal volgen als worpbaan',
+      argv: [path.join(cv, 'bal.py'), video,
+             '--detecties', bestand('detecties.jsonl'), '--uit', bestand('balbanen.jsonl')],
+    })
     stappen.push({
       naam: 'Bal volgen → landingszone en afstand',
       argv: [path.join(cv, 'landing.py'), '--video', video,
              ...(opts.bewegend ? ['--homografie', bestand('homografie.jsonl')] : []),
-             '--kalibratie', kalibratie,
+             '--kalibratie', kalibratie, '--balbanen', bestand('balbanen.jsonl'),
              '--detecties', bestand('detecties.jsonl'), '--uit', bestand('met_landing.jsonl'),
              '--balspoor', bestand('balspoor.jsonl')],
     })

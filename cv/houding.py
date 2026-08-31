@@ -58,6 +58,33 @@ MIN_ZEKERHEID = 0.3
 DREMPEL_SCORE = 1.2
 # Twee pieken dichter dan dit horen bij dezelfde worp.
 MIN_AFSTAND_S = 3.0
+# Getrainde instellingen (cv/train.py). Bestaat dit bestand, dan winnen die van de
+# schattingen hierboven — de waarden hierboven zijn een startpunt, geen waarheid.
+INSTELLINGEN_PAD = Path(__file__).resolve().parent / 'model-houding.json'
+
+
+def laad_instellingen(pad: Path = INSTELLINGEN_PAD) -> dict | None:
+    """De getrainde drempel en minimale afstand, of None als er nog niet getraind is.
+
+    Een stuk bedorven of half geschreven JSON mag de analyse niet omver halen: dan
+    vallen we terug op de schattingen en zeggen we dat.
+    """
+    if not pad.is_file():
+        return None
+    try:
+        gegevens = json.loads(pad.read_text(encoding='utf-8'))
+    except (OSError, json.JSONDecodeError):
+        return None
+    if not isinstance(gegevens, dict):
+        return None
+    drempel = gegevens.get('drempel')
+    afstand = gegevens.get('min_afstand_s')
+    if not isinstance(drempel, (int, float)) or not isinstance(afstand, (int, float)):
+        return None
+    if drempel <= 0 or afstand <= 0:
+        return None
+    return {'drempel': float(drempel), 'min_afstand_s': float(afstand),
+            'getraind_op': gegevens.get('getraind_op'), 'holdout': gegevens.get('holdout')}
 
 
 def _punt(persoon, scores, index) -> tuple[float, float] | None:
@@ -291,10 +318,15 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument('--analyse-fps', type=float, default=5.0,
                    help='hoeveel beelden per seconde door het model gaan (standaard 5). '
                         'Dit bepaalt de rekentijd: elk beeld kost het model tijd.')
-    p.add_argument('--drempel', type=float, default=DREMPEL_SCORE,
-                   help=f'minimale worpscore (standaard {DREMPEL_SCORE})')
-    p.add_argument('--min-afstand', type=float, default=MIN_AFSTAND_S,
-                   help=f'minimale afstand tussen twee worpen in seconden (standaard {MIN_AFSTAND_S})')
+    p.add_argument('--drempel', type=float, default=None,
+                   help=f'minimale worpscore (getraind indien beschikbaar, anders {DREMPEL_SCORE})')
+    p.add_argument('--min-afstand', type=float, default=None,
+                   help='minimale afstand tussen twee worpen in seconden '
+                        f'(getraind indien beschikbaar, anders {MIN_AFSTAND_S})')
+    p.add_argument('--reeks-uit', type=Path, default=None,
+                   help='de meetreeks wegschrijven (JSONL, één regel per bemonsterd beeld). '
+                        'Dit is de trainingsdata voor cv/train.py: het meten is het dure deel, '
+                        'de instellingen bijstellen daarna is gratis.')
     p.add_argument('--tot', type=float, default=None,
                    help='stop na zoveel seconden video (voor een snelle proef)')
     p.add_argument('--mode', default='balanced', choices=('performance', 'balanced', 'lightweight'),
@@ -306,6 +338,20 @@ def main(argv: list[str] | None = None) -> None:
     if args.analyse_fps <= 0:
         _fout('--analyse-fps moet groter zijn dan 0')
 
+    getraind = laad_instellingen()
+    drempel = args.drempel if args.drempel is not None else (
+        getraind['drempel'] if getraind else DREMPEL_SCORE)
+    min_afstand = args.min_afstand if args.min_afstand is not None else (
+        getraind['min_afstand_s'] if getraind else MIN_AFSTAND_S)
+    if getraind:
+        op = getraind.get('getraind_op') or []
+        print(f'Getrainde instellingen in gebruik: drempel {drempel:g}, '
+              f'minimale afstand {min_afstand:g}s'
+              + (f' (geleerd op {len(op)} wedstrijd(en))' if op else ''))
+    else:
+        print(f'Nog niet getraind — geschatte instellingen: drempel {drempel:g}, '
+              f'minimale afstand {min_afstand:g}s. Zie cv/train.py.')
+
     print(f'Houdingsmodel laden ({args.mode}) …')
     model = laad_model(args.mode)
     print(f'Spelers meten in {args.video} (± {args.analyse_fps:g} beelden/s) …')
@@ -313,8 +359,13 @@ def main(argv: list[str] | None = None) -> None:
     if not reeks:
         _fout('geen enkel beeld kon gelezen worden')
 
-    momenten = vind_worpmomenten(reeks, args.drempel, args.min_afstand)
-    events = maak_events(momenten, reeks, args.match, args.drempel)
+    if args.reeks_uit:
+        with args.reeks_uit.open('w', encoding='utf-8') as f:
+            for r in reeks:
+                f.write(json.dumps(r, ensure_ascii=False) + '\n')
+
+    momenten = vind_worpmomenten(reeks, drempel, min_afstand)
+    events = maak_events(momenten, reeks, args.match, drempel)
     with args.uit.open('w', encoding='utf-8') as f:
         for e in events:
             f.write(json.dumps(e, ensure_ascii=False) + '\n')
@@ -328,6 +379,9 @@ def main(argv: list[str] | None = None) -> None:
         'kandidaten': len(events),
         'gemiddeld_personen': round(gemiddeld_personen, 1),
         'model': MODEL_NAAM,
+        'drempel': drempel,
+        'min_afstand_s': min_afstand,
+        'getraind': bool(getraind),
     }
     args.uit.with_suffix(args.uit.suffix + '.rapport.json').write_text(
         json.dumps(rapport, ensure_ascii=False), encoding='utf-8')

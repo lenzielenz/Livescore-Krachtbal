@@ -10,12 +10,14 @@ import { getAuthUser } from '@/lib/auth-user'
 import { buildDefenseStats, buildMatchSheet, buildMatchStats, buildMatchState, buildPassStats } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
 import { reeksHalfDurationSeconds, reeksNaam, type Reeks } from '@/lib/reeksen'
+import { readSync } from '@/lib/video-sync'
 import { mayEditMatchVideo } from '@/lib/video-access'
 import { AnalyseDetailView, type FysiekSpeler } from './AnalyseDetailView'
 import type { CvVoorstel } from './CvReview'
 import { ShareCard } from './ShareCard'
 import { AnalyseVoortgang } from './AnalyseVoortgang'
 import { Kalibreren } from './Kalibreren'
+import { ModelScore } from './ModelScore'
 import { ServerAnalyse } from './ServerAnalyse'
 import { Terreinmaten } from './Terreinmaten'
 import { Veldkaart } from './Veldkaart'
@@ -304,6 +306,17 @@ export default async function AnalyseDetailPage({ params }: { params: Promise<{ 
             </ErrorCatch>
             <ErrorCatch label="De automatische video-analyse">
               <ServerAnalyse matchId={matchId} heeftVideo />
+            </ErrorCatch>
+            {/* De lus die het model beter maakt: de voorstellen naast de worpen die tijdens de
+                wedstrijd ingevoerd werden. Pas dán weet je hoeveel het model MIST — de
+                reviewlaan alleen kan dat niet zeggen. */}
+            <ErrorCatch label="De score van het model">
+              <ModelScore
+                worpen={videoWorpen}
+                voorstellen={cvVoorstellen}
+                sync={readSync({ offsetH1: matchDoc?.videoOffsetH1, offsetH2: matchDoc?.videoOffsetH2 })}
+                halfSeconds={halfSeconds}
+              />
             </ErrorCatch>
           </>
         )}
