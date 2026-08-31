@@ -161,6 +161,22 @@ def _laad_cv2():
     return cv2
 
 
+# Wat de laatste run gedaan heeft — de app leest dit uit om te tonen wat er écht gebeurd is.
+_RAPPORT: dict = {}
+
+
+def duur_van_video(videopad: Path) -> float | None:
+    """De lengte van de video in seconden, of None als de container het niet zegt."""
+    cv2 = _laad_cv2()
+    cap = cv2.VideoCapture(str(videopad))
+    if not cap.isOpened():
+        return None
+    fps = cap.get(cv2.CAP_PROP_FPS) or 0.0
+    frames = cap.get(cv2.CAP_PROP_FRAME_COUNT) or 0.0
+    cap.release()
+    return frames / fps if fps > 0 and frames > 0 else None
+
+
 def bereken_energie_video(
     videopad: Path, analyse_fps: float
 ) -> tuple[list[float], list[float], float]:
@@ -453,7 +469,18 @@ def main(argv: list[str] | None = None) -> None:
         f'detecties_match{match_id}.jsonl' if match_id is not None else 'detecties.jsonl'
     )
     schrijf_jsonl(uitpad, events)
+    # Het rapport ernaast: de app leest het uit om te tonen wat er écht gebeurd is (hoeveel
+    # video bekeken, hoe fijn gekeken, hoeveel kandidaten). Zonder dat blijft "9 voorstellen"
+    # een getal zonder betekenis.
+    if _RAPPORT:
+        _RAPPORT['kandidaten'] = len(events)
+        uitpad.with_suffix(uitpad.suffix + '.rapport.json').write_text(
+            json.dumps(_RAPPORT, ensure_ascii=False), encoding='utf-8')
     print(f'{len(events)} kandidaat-worpen → {uitpad}')
+    if _RAPPORT.get('bekeken_s'):
+        per_minuut = len(events) / max(1e-9, _RAPPORT['bekeken_s'] / 60)
+        print(f'  {_RAPPORT["bekeken_s"] / 60:.1f} minuten bekeken bij {_RAPPORT["analyse_fps"]:g} '
+              f'metingen/s → {per_minuut:.1f} kandidaten per minuut')
     if match_id is None:
         print('  let op: geen (eenduidige) match_id — geef bij upload.py --match mee')
 
@@ -501,6 +528,19 @@ def _draai_video(args: argparse.Namespace) -> list[dict]:
 
     print(f'Bewegingsenergie berekenen uit {args.video} (± {args.analyse_fps:g} fps) …')
     tijden, energie, _fps_bron = bereken_energie_video(args.video, args.analyse_fps)
+
+    # Hoeveel van de video is er écht bekeken? Een opname die halverwege niet meer te lezen is,
+    # levert een keurig ogende uitkomst over een kwart van de wedstrijd — zonder dit getal
+    # merkt niemand dat.
+    duur_bestand = duur_van_video(args.video)
+    bekeken = (tijden[-1] - tijden[0]) if len(tijden) > 1 else 0.0
+    _RAPPORT['bekeken_s'] = round(bekeken, 1)
+    _RAPPORT['duur_s'] = None if duur_bestand is None else round(duur_bestand, 1)
+    _RAPPORT['metingen'] = len(tijden)
+    _RAPPORT['analyse_fps'] = args.analyse_fps
+    if duur_bestand and bekeken < 0.9 * duur_bestand:
+        print(f'  LET OP: slechts {bekeken / 60:.1f} van de {duur_bestand / 60:.1f} minuten '
+              f'kon gelezen worden — de rest van de opname is niet bekeken.')
 
     # sample-afstand tussen de energiepunten (subsampling maakt hem ≥ 1/analyse_fps)
     stap_s = (tijden[-1] - tijden[0]) / (len(tijden) - 1) if len(tijden) > 1 else 1.0

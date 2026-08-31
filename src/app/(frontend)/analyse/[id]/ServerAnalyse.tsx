@@ -21,6 +21,10 @@ type Stand = {
     duurSeconden?: number
     onderbrekingen?: number[]
     gaten?: [number, number][]
+    bekekenS?: number
+    duurS?: number
+    metingenPerS?: number
+    overgeslagen?: string[]
   }
   instellingen?: { stand: string; bewegend: boolean; tracking: boolean; overlay: boolean }
 }
@@ -55,6 +59,8 @@ export function ServerAnalyse({ matchId, heeftVideo }: { matchId: number; heeftV
   const [stand, setStand] = useState<'snel' | 'gewoon' | 'nauwkeurig'>('gewoon')
   const [bewegend, setBewegend] = useState(false)
   const [tracking, setTracking] = useState(false)
+  const [ai, setAi] = useState(false)
+  const [aiModel, setAiModel] = useState(false)
   const [omgeving, setOmgeving] = useState<RuntimeStand | null>(null)
   const [magInstalleren, setMagInstalleren] = useState(false)
   const timer = useRef<number | null>(null)
@@ -78,9 +84,10 @@ export function ServerAnalyse({ matchId, heeftVideo }: { matchId: number; heeftV
         setMagInstalleren(false)
         return
       }
-      const data = (await res.json()) as { stand: RuntimeStand | null }
+      const data = (await res.json()) as { stand: RuntimeStand | null; aiModel?: boolean }
       setMagInstalleren(true)
       setOmgeving(data.stand)
+      setAiModel(data.aiModel === true)
     } catch {
       /* stil */
     }
@@ -90,8 +97,9 @@ export function ServerAnalyse({ matchId, heeftVideo }: { matchId: number; heeftV
     void haal()
   }, [haal])
 
+  // Ook als de omgeving in orde is willen we weten of het houdingsmodel erbij staat.
   useEffect(() => {
-    if (info && !info.omgevingOk) void haalOmgeving()
+    if (info) void haalOmgeving()
   }, [info, haalOmgeving])
 
   // Zolang er iets draait: elke vijf seconden kijken. Niet vaker — het is rekenwerk van
@@ -117,11 +125,15 @@ export function ServerAnalyse({ matchId, heeftVideo }: { matchId: number; heeftV
     return () => window.clearInterval(t)
   }, [installeert, haalOmgeving, haal])
 
-  const installeer = async () => {
+  const installeer = async (soort: 'basis' | 'ai' = 'basis') => {
     setBusy(true)
     setFout(null)
     try {
-      const res = await fetch('/api/cv/runtime', { method: 'POST' })
+      const res = await fetch('/api/cv/runtime', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ soort }),
+      })
       const data = (await res.json()) as { error?: string }
       if (!res.ok) {
         setFout(data.error ?? 'Installeren mislukt.')
@@ -142,7 +154,7 @@ export function ServerAnalyse({ matchId, heeftVideo }: { matchId: number; heeftV
       const res = await fetch(`/api/cv/match/${matchId}/analyseer`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ stand, bewegend, tracking, overlay: true }),
+        body: JSON.stringify({ stand, bewegend, tracking, ai, overlay: true }),
       })
       const data = (await res.json()) as { error?: string }
       if (!res.ok) {
@@ -200,7 +212,7 @@ export function ServerAnalyse({ matchId, heeftVideo }: { matchId: number; heeftV
                 in een minuut. Daarna blijft ze staan, ook na een nieuwe versie van de site.
               </p>
               {omgeving?.status === 'mislukt' && <p className="sa-let-op">❌ Mislukt: {omgeving.fout}</p>}
-              <button type="button" className="va-btn primary" disabled={busy} onClick={() => void installeer()}>
+              <button type="button" className="va-btn primary" disabled={busy} onClick={() => void installeer('basis')}>
                 {busy ? 'Bezig…' : '⚙️ Analyse-omgeving installeren'}
               </button>
             </>
@@ -227,11 +239,37 @@ export function ServerAnalyse({ matchId, heeftVideo }: { matchId: number; heeftV
       ) : (
         <>
           {s?.status === 'klaar' && (
-            <p className="sa-klaar">
-              ✅ Klaar in {duurTekst(s.rapport?.duurSeconden)}: <strong>{s.rapport?.voorstellen ?? 0} voorstellen</strong>
-              {s.rapport?.metLanding ? ` (${s.rapport.metLanding} met landingspunt)` : ''} — bekijk en
-              bevestig ze hierboven bij de video.
-            </p>
+            <div className="sa-klaar">
+              <p>
+                ✅ Klaar in {duurTekst(s.rapport?.duurSeconden)}:{' '}
+                <strong>{s.rapport?.voorstellen ?? 0} voorstellen</strong>
+                {s.rapport?.metLanding ? ` (${s.rapport.metLanding} met landingspunt)` : ''} — bekijk en
+                bevestig ze hierboven bij de video.
+              </p>
+              {/* Wát er precies gebeurd is. Zonder deze regel is "9 voorstellen" een getal
+                  zonder betekenis: je weet niet of de hele video bekeken is, hoe fijn er
+                  gekeken werd, of hoeveel dat per minuut is. */}
+              {s.rapport?.bekekenS != null && (
+                <p className="sa-hint">
+                  Bekeken: {klokje(s.rapport.bekekenS)}
+                  {s.rapport.duurS != null && s.rapport.duurS > 0
+                    ? ` van de ${klokje(s.rapport.duurS)}`
+                    : ''}
+                  {s.rapport.metingenPerS ? `, ${s.rapport.metingenPerS} metingen per seconde` : ''} —{' '}
+                  {((s.rapport.voorstellen ?? 0) / Math.max(1 / 60, s.rapport.bekekenS / 60)).toFixed(1)}{' '}
+                  voorstellen per minuut.
+                  {s.rapport.duurS != null && s.rapport.bekekenS < 0.9 * s.rapport.duurS && (
+                    <strong> Een deel van de opname kon niet gelezen worden.</strong>
+                  )}
+                </p>
+              )}
+              {s.rapport?.overgeslagen?.length ? (
+                <p className="sa-onderbroken">
+                  ⚠️ Zonder veldkalibratie is dit overgeslagen: {s.rapport.overgeslagen.join(', ')}.
+                  Duid het veld hieronder aan en analyseer opnieuw.
+                </p>
+              ) : null}
+            </div>
           )}
           {info?.heeftOverlay && (
             <div className="sa-controle">
@@ -275,8 +313,11 @@ export function ServerAnalyse({ matchId, heeftVideo }: { matchId: number; heeftV
           {s?.status === 'afgebroken' && <p className="sa-let-op">⏹ Afgebroken. {s.fout ?? ''}</p>}
 
           <p className="sa-lead">
-            De server zoekt zelf de worpen in de opname en zet ze klaar als voorstellen die jij
-            bevestigt of afwijst.
+            De server zoekt <strong>momenten met veel beweging</strong> en zet die klaar als
+            voorstellen die jij bevestigt of afwijst. Hij herkent nog geen worpen als zodanig:
+            het is een spotter die kandidaten aandraagt, geen scheidsrechter. Op een opname met
+            een bewegende camera vindt hij er duidelijk minder — de camerabeweging overstemt dan
+            wat de spelers doen.
             {info && !info.heeftKalibratie && (
               <>
                 {' '}Zonder veldkalibratie weet hij <em>wanneer</em> er geworpen wordt, maar niet
@@ -302,6 +343,32 @@ export function ServerAnalyse({ matchId, heeftVideo }: { matchId: number; heeftV
               <input type="checkbox" checked={tracking} onChange={(e) => setTracking(e.target.checked)} />
               <span>Ook spelers volgen (loopafstand, sprintjes)</span>
             </label>
+            {aiModel ? (
+              <label className="sa-vink">
+                <input type="checkbox" checked={ai} onChange={(e) => setAi(e.target.checked)} />
+                <span>
+                  Worpen herkennen met het houdingsmodel <em>(kijkt naar de spelers zelf —
+                  werkt ook bij een bewegende camera, maar rekent trager)</em>
+                </span>
+              </label>
+            ) : (
+              info?.omgevingOk &&
+              magInstalleren && (
+                <p className="sa-hint">
+                  Het houdingsmodel staat er nog niet bij. Dat herkent worpen aan de spelers zelf
+                  in plaats van aan beeldverschil — de enige manier die werkt bij een camera in de
+                  hand.{' '}
+                  <button
+                    type="button"
+                    className="va-btn"
+                    disabled={busy || installeert}
+                    onClick={() => void installeer('ai')}
+                  >
+                    🧠 Houdingsmodel installeren (~200 MB)
+                  </button>
+                </p>
+              )
+            )}
           </div>
 
           <div className="sa-acties">

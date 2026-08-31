@@ -330,7 +330,7 @@ export function Kalibreren({
                   <tr>
                     <th>Lijn</th>
                     {ZIJDEN.map((z) => (
-                      <th key={z}>{z}</th>
+                      <th key={z}>zijlijn {z}</th>
                     ))}
                   </tr>
                 </thead>

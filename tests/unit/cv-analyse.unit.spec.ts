@@ -72,7 +72,7 @@ describe('bouwStappen', () => {
   it('zoekt eerst de worpen en volgt daarna pas de bal', () => {
     const s = stappen()
     const worpen = namen(s).findIndex((n) => n.includes('Kandidaat-worpen'))
-    const bal = namen(s).findIndex((n) => n.includes('Bal volgen'))
+    const bal = namen(s).findIndex((n) => n.includes('landingszone'))
     expect(worpen).toBeGreaterThanOrEqual(0)
     expect(worpen).toBeLessThan(bal)
   })
@@ -80,7 +80,7 @@ describe('bouwStappen', () => {
   it('laat landing en spelers weg zonder kalibratie — dan is "waar" niet te weten', () => {
     const s = stappen({ kalibratie: null })
     expect(namen(s).some((n) => n.includes('Kandidaat-worpen'))).toBe(true)
-    expect(namen(s).some((n) => n.includes('Bal volgen'))).toBe(false)
+    expect(namen(s).some((n) => n.includes('landingszone'))).toBe(false)
     expect(namen(s).some((n) => n.includes('Spelers herkennen'))).toBe(false)
   })
 
@@ -88,13 +88,13 @@ describe('bouwStappen', () => {
     const s = stappen({ opts: { ...OPTS, bewegend: true } })
     expect(namen(s)[0]).toMatch(/veld volgen/i)
     expect(argvVan(s, 'veld volgen')).toContain('--stand')
-    const landing = argvVan(s, 'Bal volgen')
+    const landing = argvVan(s, 'landingszone')
     expect(landing).toContain('--homografie')
     expect(landing).toContain(path.join('/werk', 'homografie.jsonl'))
   })
 
   it('bewaart het balspoor, want zonder dat valt er niets te tonen in de controlevideo', () => {
-    expect(argvVan(stappen(), 'Bal volgen')).toContain('--balspoor')
+    expect(argvVan(stappen(), 'landingszone')).toContain('--balspoor')
   })
 
   it('voegt tracking en overlay alleen toe wanneer erom gevraagd is', () => {
@@ -278,5 +278,69 @@ describe('leesVolgrapport', () => {
     } finally {
       await fs.rm(map, { recursive: true, force: true })
     }
+  })
+})
+
+describe('argumenten van de worpdetectie', () => {
+  it('geeft de precisiekeuze door als metingen per seconde', () => {
+    // Dit ging mis: de app gaf '--fps 2' mee, maar dat argument vult enkel het frame-nummer
+    // in. De detector keek dus altijd op zijn standaardinstelling, en elk voorstel kreeg een
+    // frame-nummer alsof de video 2 beelden per seconde had.
+    const argv = argvVan(stappen({ fps: 10 }), 'Kandidaat-worpen')
+    expect(argv).toContain('--analyse-fps')
+    expect(argv[argv.indexOf('--analyse-fps') + 1]).toBe('10')
+    expect(argv).not.toContain('--fps')
+  })
+})
+
+describe('worpen zoeken met het houdingsmodel', () => {
+  it('gebruikt houding.py in plaats van de beeldverschil-spotter', () => {
+    const s = stappen({ opts: { ...OPTS, ai: true }, fps: 10 })
+    const namenLijst = namen(s)
+    expect(namenLijst.some((n) => n.includes('houding'))).toBe(true)
+    expect(namenLijst.some((n) => n.includes('Kandidaat-worpen'))).toBe(false)
+    const argv = argvVan(s, 'houding')
+    expect(argv[0]).toMatch(/houding\.py$/)
+    expect(argv).toContain('--analyse-fps')
+  })
+
+  it('kijkt hoogstens vijf keer per seconde — elk beeld kost het model tijd', () => {
+    const argv = argvVan(stappen({ opts: { ...OPTS, ai: true }, fps: 20 }), 'houding')
+    expect(Number(argv[argv.indexOf('--analyse-fps') + 1])).toBeLessThanOrEqual(5)
+  })
+
+  it('schrijft naar hetzelfde bestand, zodat de rest van de keten niets merkt', () => {
+    const metAi = argvVan(stappen({ opts: { ...OPTS, ai: true } }), 'houding')
+    const zonder = argvVan(stappen(), 'Kandidaat-worpen')
+    expect(metAi[metAi.indexOf('--uit') + 1]).toBe(zonder[zonder.indexOf('--uit') + 1])
+  })
+
+  it('bewaart de meetreeks — anders moet je voor elke bijstelling opnieuw uren video kijken', () => {
+    const argv = argvVan(stappen({ opts: { ...OPTS, ai: true } }), 'houding')
+    const pad = argv[argv.indexOf('--reeks-uit') + 1]
+    expect(pad).toMatch(/houding-reeks\.jsonl$/)
+    // In de werkmap van deze wedstrijd, naast de andere tussenbestanden: die map staat op het
+    // volume en overleeft dus de analyse. Trainingsdata in /tmp is trainingsdata die weg is.
+    expect(pad.startsWith('/werk/')).toBe(true)
+  })
+})
+
+describe('de bal als worpbaan', () => {
+  it('zoekt de balbanen vóór de landing berekend wordt', () => {
+    const s = stappen()
+    const baan = namen(s).findIndex((n) => n.includes('worpbaan'))
+    const landing = namen(s).findIndex((n) => n.includes('landingszone'))
+    expect(baan).toBeGreaterThanOrEqual(0)
+    expect(baan).toBeLessThan(landing)
+  })
+
+  it('geeft die banen door aan de landingsberekening', () => {
+    const argv = argvVan(stappen(), 'landingszone')
+    expect(argv).toContain('--balbanen')
+    expect(argv).toContain(path.join('/werk', 'balbanen.jsonl'))
+  })
+
+  it('slaat het hele balverhaal over zonder kalibratie — dan is "waar" niet te weten', () => {
+    expect(namen(stappen({ kalibratie: null })).some((n) => n.includes('worpbaan'))).toBe(false)
   })
 })

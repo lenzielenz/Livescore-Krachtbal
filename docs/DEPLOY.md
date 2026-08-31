@@ -101,6 +101,36 @@ Wat daarbij vastligt:
 de reden erbij ("Python staat er wel, maar opencv ontbreekt op deze server"). Er wordt dus
 nooit een taak gestart die na tien seconden op een cryptische Python-fout stukloopt.
 
+**Wat de worpdetectie wél en niet doet.** `detect_worpen.py` is een bewegingsenergie-spotter:
+per moment het gemiddelde beeldverschil met het vorige beeld, gladgestreken, en de pieken
+daarvan zijn de kandidaten. Dat werkt op een opname van een **stilstaande** camera. Bij een
+pannende gsm meet dat verschil vooral de camera, en verdrinken de worpen erin. Nagemeten op een
+proefvideo met acht gekende worpen en een pannende camera: geen enkele piek boven de drempel,
+ook niet na het wegrekenen van de camerabeweging en ook niet met een lokale maat in plaats van
+het frame-gemiddelde (verhouding worp/rust 1,00 tot 1,22 — geen scheiding).
+
+**Het houdingsmodel (`cv/houding.py`) is het antwoord daarop.** In plaats van te meten hoevéél
+er verandert, kijkt het naar wát er gebeurt: RTMPose geeft per speler de schouders, ellebogen,
+polsen en heupen, en een worp is daarin een herkenbare beweging — de polsen komen boven de
+schouders en zwiepen dan snel weg. Alles wordt gedeeld door de romphoogte van diezelfde speler,
+zodat een speler achteraan even zwaar telt als eentje vlak voor de camera, en een pannende
+camera niets uitmaakt.
+
+Installeren gebeurt met de knop **"🧠 Houdingsmodel installeren"** naast de analyse-opties
+(± 200 MB pakketten + ± 100 MB gewichten). Die installatie haalt de gewichten meteen op en
+bouwt het model één keer op: lukt dat niet, dan weet je het meteen in plaats van een halfuur
+later midden in een analyse. Daarna verschijnt het vinkje *"Worpen herkennen met het
+houdingsmodel"*.
+
+Rekentijd: het model draait op elk bemonsterd beeld, standaard 5 per seconde. Reken op enkele
+minuten per tien minuten video — trager dan de beeldverschil-spotter, maar het is het enige dat
+op een opname uit de hand iets zinnigs oplevert.
+
+En de laatste stap blijft grondwaarheid: bevestig of wijs voorstellen af in de reviewlaan,
+exporteer die als labels, en meet met `cv/evaluate.py` (precision/recall/F1, doel recall ≥ 0,8).
+Pas met echte labels van een echte wedstrijd valt te zien hoe goed het model het doet — de
+rekenkern is getest met verzonnen skeletten, het model zelf niet op krachtbalbeelden.
+
 **Instelbaar met omgevingsvariabelen**
 
 | Variabele | Waarvoor |
