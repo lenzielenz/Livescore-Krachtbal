@@ -124,6 +124,16 @@ export function ServerAnalyse({ matchId, heeftVideo }: { matchId: number; heeftV
     }
   }, [draait, haal])
 
+  // De klok, de hartslag en "nog ± zoveel" hangen aan Date.now(). Zonder een eigen tik worden ze
+  // maar om de vijf seconden herrekend en staat het scherm vier van de vijf seconden stil — net
+  // wat we wilden wegwerken. Deze tik kost de server niets.
+  const [, tik] = useState(0)
+  useEffect(() => {
+    if (!draait) return
+    const t = window.setInterval(() => tik((n) => n + 1), 1000)
+    return () => window.clearInterval(t)
+  }, [draait])
+
   // Installeren duurt een halve minuut tot enkele minuten: sneller peilen, en als het klaar is
   // meteen de analysestand opnieuw ophalen zodat de knop vanzelf aangaat.
   const installeert = omgeving?.status === 'bezig'

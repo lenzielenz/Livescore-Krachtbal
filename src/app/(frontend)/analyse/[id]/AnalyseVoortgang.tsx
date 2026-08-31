@@ -35,6 +35,16 @@ export type VoortgangInput = {
   /** Aangeduide veldkruisingen en over hoeveel ijkbeelden ze verdeeld staan. */
   kalibratiePunten: number
   kalibratieBeelden: number
+  /**
+   * Hoeveel ijkbeelden er minstens vier punten hebben.
+   *
+   * Dít is wat telt, niet het totaal. Vier punten over vier verschillende beelden geven géén
+   * homografie: die heeft vier punten in hetzelfde beeld nodig. Zonder dit onderscheid staat het
+   * bord op groen terwijl er niets te meten valt.
+   */
+  kalibratieBruikbareBeelden?: number
+  /** Wat de laatste analyse oversloeg (uit haar eigen rapport). */
+  analyseOvergeslagen?: string[]
   /** Stand van de laatste serveranalyse, en met welke precisie ze draaide. */
   analyseStatus?: 'wachtrij' | 'bezig' | 'klaar' | 'mislukt' | 'afgebroken' | null
   analyseStand?: string | null
@@ -55,8 +65,12 @@ const KRUISPUNTEN = 14
  * nooit groen worden), en moet het beoordelen er juist wél bij.
  */
 export function voortgangStappen(p: VoortgangInput): Stap[] {
-  const geanalyseerd = p.analyseStatus === 'klaar' || p.voorstellen > 0
-  const genoegKalibratie = p.kalibratiePunten >= 4
+  // Een analyse die draaide maar de halve keten oversloeg (geen kalibratie → geen landingen) is
+  // geen afgewerkte analyse. Groen zetten zou verbergen dat het belangrijkste niet gebeurd is.
+  const geanalyseerd =
+    (p.analyseStatus === 'klaar' || p.voorstellen > 0) && !(p.analyseOvergeslagen?.length)
+  const genoegKalibratie =
+    p.kalibratieBruikbareBeelden != null ? p.kalibratieBruikbareBeelden >= 1 : p.kalibratiePunten >= 4
   const viaVideo = p.modus === 'video'
 
   const stappen: Stap[] = [
@@ -83,7 +97,8 @@ export function voortgangStappen(p: VoortgangInput): Stap[] {
           })`
         : 'Veld kalibreren',
       hulp:
-        'Wijs de lijnkruisingen aan op een beeld uit de video. Zonder dat kan de analyse wél zien wannéér er '
+        'Wijs de lijnkruisingen aan op een beeld uit de video — minstens vier op hetzelfde beeld, want '
+        + 'daarmee wordt het beeld op het veld gelegd. Zonder dat kan de analyse wél zien wannéér er '
         + 'geworpen wordt, maar niet waar de bal landt — en dus geen zones, afstanden of veldkaart.',
       anker: '#kalibratie',
     },
@@ -93,7 +108,9 @@ export function voortgangStappen(p: VoortgangInput): Stap[] {
         ? `Video geanalyseerd${p.analyseStand ? ` (stand ${p.analyseStand})` : ''}${
             p.voorstellen > 0 ? ` — ${p.voorstellen} voorstellen` : ''
           }`
-        : 'Video automatisch laten analyseren',
+        : p.analyseOvergeslagen?.length
+          ? `Analyse opnieuw draaien — vorige keer overgeslagen: ${p.analyseOvergeslagen.join(', ')}`
+          : 'Video automatisch laten analyseren',
       hulp:
         'De server kijkt de opname door en stelt worpen voor, met landingspunt en afstand. Duurt minuten tot '
         + 'uren; met de stand "ultra" laat je ze een nacht doorrekenen.',

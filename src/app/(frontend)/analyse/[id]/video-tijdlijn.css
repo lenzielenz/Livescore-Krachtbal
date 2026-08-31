@@ -561,3 +561,25 @@
   border: 1px solid rgba(255, 255, 255, 0.16); background: rgba(255, 255, 255, 0.05);
 }
 .sa-ultra { flex-basis: 100%; margin: 0; }
+
+/* ── Veldkaartje: wélk punt duid je nu aan ──────────────────────────────────────────────── */
+.kk { margin: 10px 0; display: grid; gap: 6px; }
+.kk-svg { width: 100%; max-width: 420px; height: auto; touch-action: manipulation; }
+.kk-veld { fill: rgba(74, 222, 128, 0.07); stroke: rgba(255, 255, 255, 0.35); stroke-width: 1; }
+.kk-doelgebied { fill: rgba(96, 165, 250, 0.1); stroke: none; }
+.kk-lijn { stroke: rgba(255, 255, 255, 0.3); stroke-width: 1; }
+.kk-lijn.midden { stroke: rgba(255, 255, 255, 0.55); }
+.kk-punt-groep { cursor: pointer; }
+.kk-punt { stroke: rgba(0, 0, 0, 0.5); stroke-width: 1; }
+.kk-punt.leeg { fill: rgba(255, 255, 255, 0.22); }
+.kk-punt.gezet { fill: #4ade80; }
+.kk-punt.nu { fill: #f87171; }
+/* Het punt dat aan de beurt is klopt zachtjes: op een kaartje van veertien stippen vind je het
+   anders niet terug met één oogopslag. */
+.kk-halo { fill: rgba(248, 113, 113, 0.28); animation: kk-klop 1.6s ease-out infinite; }
+@keyframes kk-klop { 0% { r: 6; opacity: 0.9 } 70% { r: 12; opacity: 0 } 100% { r: 6; opacity: 0 } }
+@media (prefers-reduced-motion: reduce) { .kk-halo { animation: none; } }
+.kk-tekst { fill: var(--muted); font-size: 9px; }
+.kk-tekst.rechts { text-anchor: end; }
+.kk-tekst.midden { text-anchor: middle; }
+.kk-uitleg { margin: 0; font-size: 12px; line-height: 1.5; color: var(--muted); }

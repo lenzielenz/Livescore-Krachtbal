@@ -165,6 +165,13 @@ export default async function AnalyseDetailPage({ params }: { params: Promise<{ 
     | { punten?: unknown[]; beelden?: { punten?: unknown[] }[] }
     | null
   const kalibratieBeelden = Array.isArray(kal?.beelden) ? kal.beelden.length : 0
+  // Vier punten óp hetzelfde beeld is wat een homografie nodig heeft; vier punten verdeeld over
+  // vier beelden is niets waard. Daarom telt dit apart.
+  const kalibratieBruikbareBeelden = Array.isArray(kal?.beelden)
+    ? kal.beelden.filter((b) => (Array.isArray(b?.punten) ? b.punten.length : 0) >= 4).length
+    : Array.isArray(kal?.punten) && kal.punten.length >= 4
+      ? 1
+      : 0
   const kalibratiePunten = Array.isArray(kal?.beelden)
     ? new Set(
         kal.beelden.flatMap((b) =>
@@ -238,6 +245,10 @@ export default async function AnalyseDetailPage({ params }: { params: Promise<{ 
               modus={(matchDoc?.analyseModus as 'manueel' | 'video' | null) ?? 'manueel'}
               kalibratiePunten={kalibratiePunten}
               kalibratieBeelden={kalibratieBeelden}
+              kalibratieBruikbareBeelden={kalibratieBruikbareBeelden}
+              analyseOvergeslagen={
+                ((matchDoc?.cvAnalyse as { rapport?: { overgeslagen?: string[] } } | null)?.rapport?.overgeslagen) ?? []
+              }
               analyseStatus={(matchDoc?.cvAnalyse as { status?: VoortgangStatus } | null)?.status ?? null}
               analyseStand={
                 ((matchDoc?.cvAnalyse as { instellingen?: { stand?: string } } | null)?.instellingen?.stand) ?? null

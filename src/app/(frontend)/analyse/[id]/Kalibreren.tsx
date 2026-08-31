@@ -3,6 +3,7 @@
 import { useMemo, useRef, useState } from 'react'
 
 import { KalibratieDoek } from './KalibratieDoek'
+import { Kalibratiekaartje } from './Kalibratiekaartje'
 import {
   ALLE_LABELS,
   CAMERA_POSITIES,
@@ -276,6 +277,11 @@ export function Kalibreren({
                 ))}
               </div>
             )}
+
+            {/* Wélk punt is dit? De naam alleen laat je in je hoofd omrekenen waar dat ligt; op
+                een beeld waar je de overkant amper ziet, is dat precies hoe links en rechts
+                omgewisseld raken. */}
+            <Kalibratiekaartje gezet={gezetOp} volgende={volgende} onKies={setGekozenLabel} />
 
             {huidig && (
               <>
