@@ -181,6 +181,11 @@ export function Kalibreren({
               camera die pant is dat normaal — spoel dan door, neem een tweede beeld en duid daar
               de rest aan. Elk beeld telt mee op zijn eigen tijdstip.
             </p>
+            <p className="sa-hint">
+              Is de opname onderbroken (camera gestopt en opnieuw gestart)? Neem dan in élk stuk
+              een beeld. Over zo'n onderbreking kan de server de camera niet volgen, dus een stuk
+              zonder eigen ijkbeeld wordt niet gemeten — na de analyse zie je hier welk stuk dat is.
+            </p>
 
             <video
               ref={videoRef}

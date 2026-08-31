@@ -1,8 +1,11 @@
 import { describe, it, expect } from 'vitest'
+import fs from 'fs/promises'
+import os from 'os'
 import path from 'path'
 
 import {
   bruikbareBeelden,
+  leesVolgrapport,
   bouwKandidaten,
   bouwStappen,
   isVerweesd,
@@ -241,5 +244,39 @@ describe('bouwStappen met ijkbeelden', () => {
       ankers: null, opts: { ...OPTS, bewegend: true }, fps: 2,
     })
     expect(argvVan(s, 'veld volgen')).toContain('--kalibratie')
+  })
+})
+
+describe('leesVolgrapport', () => {
+  it('haalt de onderbrekingen en de ongemeten stukken uit het rapport van het volgen', async () => {
+    const map = await fs.mkdtemp(path.join(os.tmpdir(), 'volg-'))
+    try {
+      await fs.writeFile(
+        path.join(map, 'homografie.jsonl.rapport.json'),
+        JSON.stringify({ breuken: [723.5], gaten: [[723.5, 1040.0]], momenten: 4200 }),
+      )
+      expect(await leesVolgrapport(map)).toEqual({ onderbrekingen: [723.5], gaten: [[723.5, 1040.0]] })
+    } finally {
+      await fs.rm(map, { recursive: true, force: true })
+    }
+  })
+
+  it('zwijgt wanneer er niet gevolgd is (vaste camera) — geen rapport, geen melding', async () => {
+    const map = await fs.mkdtemp(path.join(os.tmpdir(), 'volg-'))
+    try {
+      expect(await leesVolgrapport(map)).toEqual({})
+    } finally {
+      await fs.rm(map, { recursive: true, force: true })
+    }
+  })
+
+  it('meldt niets bij een opname zonder onderbrekingen', async () => {
+    const map = await fs.mkdtemp(path.join(os.tmpdir(), 'volg-'))
+    try {
+      await fs.writeFile(path.join(map, 'homografie.jsonl.rapport.json'), JSON.stringify({ breuken: [], gaten: [] }))
+      expect(await leesVolgrapport(map)).toEqual({})
+    } finally {
+      await fs.rm(map, { recursive: true, force: true })
+    }
   })
 })

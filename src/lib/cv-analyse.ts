@@ -42,6 +42,9 @@ export type AnalyseStand = {
     duurSeconden?: number
     /** Is er een controlevideo gemaakt? (Zo ja: te bekijken via .../overlay.) */
     overlay?: boolean
+    /** Onderbrekingen in de opname (seconden), en de stukken zonder ijkbeeld. */
+    onderbrekingen?: number[]
+    gaten?: [number, number][]
   }
   instellingen?: { stand: string; bewegend: boolean; tracking: boolean; overlay: boolean }
 }
@@ -432,6 +435,30 @@ export async function schrijfKalibratie(
 }
 
 /**
+ * Wat het volgen over de opname zelf te melden had.
+ *
+ * Onderbrekingen in de video (camera gestopt en opnieuw gestart) worden apart gevolgd; een stuk
+ * zonder ijkbeeld krijgt geen veldstand en wordt dus niet gemeten. Dat is precies wat de
+ * gebruiker moet weten om er een beeld bij te zetten — vandaar dat het mee in de stand gaat.
+ */
+export async function leesVolgrapport(
+  map: string,
+): Promise<{ onderbrekingen?: number[]; gaten?: [number, number][] }> {
+  try {
+    const ruw = JSON.parse(await fs.readFile(path.join(map, 'homografie.jsonl.rapport.json'), 'utf8')) as {
+      breuken?: number[]
+      gaten?: [number, number][]
+    }
+    const uit: { onderbrekingen?: number[]; gaten?: [number, number][] } = {}
+    if (Array.isArray(ruw.breuken) && ruw.breuken.length) uit.onderbrekingen = ruw.breuken
+    if (Array.isArray(ruw.gaten) && ruw.gaten.length) uit.gaten = ruw.gaten
+    return uit
+  } catch {
+    return {} // geen bewegende camera, of het volgen draaide niet
+  }
+}
+
+/**
  * Alle ijkbeelden → één ankerbestand voor volg_veld.py.
  *
  * Elk beeld krijgt zijn eigen matrix én zijn eigen tijdstip. Dat laatste is de kern: duid je
@@ -573,6 +600,7 @@ export async function startAnalyse(
           detecties: regels.length,
           metLanding: regels.filter((r) => r.zone && typeof r.zone === 'object').length,
           overlay: existsSync(path.join(map, 'controle.mp4')),
+          ...(await leesVolgrapport(map)),
           duurSeconden: Math.round((Date.now() - begin) / 1000),
         },
       })

@@ -539,6 +539,45 @@ def basis_uit_anker(anker: Matrix, keten_op_ankertijd: Matrix) -> Matrix:
     return normaliseer(maal(anker, inverteer(keten_op_ankertijd)))
 
 
+# Een onderbroken opname (camera gestopt en opnieuw gestart, of een montage van clips) geeft
+# tussen twee beelden een sprong die geen camerabeweging kán zijn. Wie die sprong als beweging
+# aan de keten hangt, meet de rest van de wedstrijd op een veld dat er niet ligt.
+#
+# Hoe je zo'n knip NIET betrouwbaar vindt: aan het aantal gevolgde punten of aan de gevonden
+# verplaatsing. Gemeten op een opname met een sprong van 520 px bleef 95% van de punten
+# "gevolgd" en kwam er een verplaatsing van 36 px uit — de flow koppelt dan gewoon aan een
+# ander stukje gras dat er hetzelfde uitziet.
+#
+# Wat wél werkt: de gevonden beweging narekenen. Leg het huidige beeld met die beweging terug
+# op het vorige; klopt ze, dan vallen ze samen. Gemeten: restfout 1,2 grijswaarden bij gewone
+# camerabeweging (slechtste 2,0) tegenover 20 op de knip. De drempel schaalt mee met wat in
+# déze opname normaal is — een korrelige gsm-video heeft een hogere ondergrens dan een nette.
+MIN_VOLGDEEL = 0.35   # minder punten dan dit overleeft de stap: het beeld is weg
+BREUK_FACTOR = 4.0    # zoveel keer de gewone restfout
+BREUK_MINIMUM = 8.0   # maar nooit minder dan dit (grijswaarden op 0-255)
+BEVROREN_PX = 0.4     # minder beweging dan dit: het beeld staat stil
+
+
+def is_breuk(volgdeel: float, restfout: float | None, gewone_restfout: float) -> bool:
+    """Is dit geen camerabeweging maar een knip in de opname?
+
+    Puur, zodat de grens te testen valt zonder video. Twee onafhankelijke signalen: een knip
+    naar een heel ander beeld verliest al zijn punten (dan is er geen restfout te berekenen),
+    en een knip naar een gelijkaardig beeld houdt punten over maar laat zich verraden door een
+    beweging die het beeld niet verklaart.
+    """
+    if volgdeel < MIN_VOLGDEEL:
+        return True
+    if restfout is None:
+        return False
+    return restfout > max(BREUK_MINIMUM, BREUK_FACTOR * gewone_restfout)
+
+
+def is_bevroren(verplaatsing_px: float) -> bool:
+    """Staat het beeld stil? (Bevroren opname of een camera op een statief zonder beweging.)"""
+    return verplaatsing_px < BEVROREN_PX
+
+
 def meng(a: Matrix, b: Matrix, w: float) -> Matrix:
     """Twee basissen mengen, met gewicht w van a (0) naar b (1).
 
@@ -820,6 +859,44 @@ def detecteer_lijnsegmenten(cv2, frame, min_lengte_px: int = 60) -> list[tuple[t
     return [((float(x1), float(y1)), (float(x2), float(y2))) for x1, y1, x2, y2 in segmenten[:, 0]]
 
 
+def gewone_restfout(recente: list[float]) -> float:
+    """Wat in déze opname een normale restfout is: de mediaan van het recente verleden.
+
+    Een korrelige gsm-video haalt die nooit zo laag als een nette opname; door de drempel mee
+    te laten schalen geldt dezelfde regel voor allebei.
+    """
+    if not recente:
+        return 0.0
+    gesorteerd = sorted(recente)
+    return gesorteerd[len(gesorteerd) // 2]
+
+
+def _restfout(cv2, stap_m: Matrix, vorig_grijs, grijs) -> float | None:
+    """Leg het huidige beeld met de gevonden beweging terug op het vorige en meet het verschil.
+
+    Op een verkleinde versie: goedkoper, en minder gevoelig voor ruis en compressie-artefacten
+    dan de volle resolutie — het gaat om de vorm van het beeld, niet om de korrel.
+    """
+    import numpy as np  # noqa: PLC0415
+
+    hoog, breed = grijs.shape[:2]
+    schaal = 320.0 / breed if breed > 320 else 1.0
+    klein_breed, klein_hoog = int(breed * schaal), int(hoog * schaal)
+    if klein_breed < 40 or klein_hoog < 40:
+        return None
+    # De beweging geldt in volle resolutie; op de verkleinde versie is dat S·H·S⁻¹.
+    s = [[schaal, 0.0, 0.0], [0.0, schaal, 0.0], [0.0, 0.0, 1.0]]
+    klein_m = maal(maal(s, stap_m), inverteer(s))
+    a = cv2.resize(vorig_grijs, (klein_breed, klein_hoog), interpolation=cv2.INTER_AREA)
+    b = cv2.resize(grijs, (klein_breed, klein_hoog), interpolation=cv2.INTER_AREA)
+    m = np.array(klein_m, dtype='float64')
+    terug = cv2.warpPerspective(b, m, (klein_breed, klein_hoog))
+    dekking = cv2.warpPerspective(np.full_like(b, 255), m, (klein_breed, klein_hoog)) > 0
+    if int(dekking.sum()) < klein_breed * klein_hoog // 20:
+        return None  # nauwelijks overlap: daar valt niets uit af te leiden
+    return float(np.abs(terug[dekking].astype('int16') - a[dekking].astype('int16')).mean())
+
+
 def volg_video(args: argparse.Namespace) -> tuple[HomografieSpoor, dict]:
     cv2 = _laad_cv2()
 
@@ -867,14 +944,20 @@ def volg_video(args: argparse.Namespace) -> tuple[HomografieSpoor, dict]:
     # Twee passages: eerst de hele video doorlopen en per moment de keten plus elke gevonden
     # basis bijhouden, daarna pas de matrices uitrekenen. Alleen zo kan de drift tussen twee
     # waarnemingen verdeeld worden — vooruit lopend weet je nog niet waar je uitkomt.
+    restfouten: list[float] = []   # het recente verleden, als maatstaf voor "normaal"
     keten = eenheid()
-    momenten: list[tuple[float, Matrix, str, float]] = [(0.0, keten, 'flow', float('inf'))]
-    waarnemingen: list[tuple[float, Matrix]] = []
+    # Per moment: tijd, keten, herkomst, fout én in welk stuk van de opname het valt. Een knip
+    # begint een nieuw stuk: daar start de keten opnieuw en geldt de basis van ervóór niet meer.
+    stuk = 0
+    momenten: list[tuple[float, Matrix, str, float, int]] = [(0.0, keten, 'flow', float('inf'), 0)]
+    waarnemingen: list[tuple[float, Matrix, int]] = []
     basis: Matrix | None = None
     volgend_anker = 0
     laatste_anker = 0.0
     t = stap
     verloren = 0
+    breuken: list[float] = []
+    bevroren = 0
     while True:
         cap.set(cv2.CAP_PROP_POS_MSEC, t * 1000.0)
         ok, frame = cap.read()
@@ -884,33 +967,64 @@ def volg_video(args: argparse.Namespace) -> tuple[HomografieSpoor, dict]:
         # Markante punten volgen tussen de twee frames (Lucas-Kanade).
         p0 = cv2.goodFeaturesToTrack(vorig_grijs, maxCorners=400, qualityLevel=0.01, minDistance=12)
         bron, fout = 'flow', float('inf')
+        breuk = False
         if p0 is not None and len(p0) >= 8:
             p1, status, _ = cv2.calcOpticalFlowPyrLK(vorig_grijs, grijs, p0, None)
             goed_oud = p0[status.flatten() == 1].reshape(-1, 2)
             goed_nieuw = p1[status.flatten() == 1].reshape(-1, 2)
+            volgdeel = len(goed_oud) / len(p0)
+            stap_m = None
             if len(goed_oud) >= 8:
-                stap_m, _ = cv2.findHomography(goed_nieuw, goed_oud, cv2.RANSAC, 3.0)
-                if stap_m is not None:
-                    keten = normaliseer(maal(keten, [[float(w) for w in rij] for rij in stap_m]))
-                else:
-                    verloren += 1
-            else:
+                verplaatsing = float(
+                    sorted(math.hypot(float(a[0] - b[0]), float(a[1] - b[1]))
+                           for a, b in zip(goed_oud, goed_nieuw))[len(goed_oud) // 2]
+                )
+                gevonden, _ = cv2.findHomography(goed_nieuw, goed_oud, cv2.RANSAC, 3.0)
+                if gevonden is not None:
+                    stap_m = [[float(w) for w in rij] for rij in gevonden]
+            restfout = None if stap_m is None else _restfout(cv2, stap_m, vorig_grijs, grijs)
+            if is_breuk(volgdeel, restfout, gewone_restfout(restfouten)):
+                breuk = True
+            elif stap_m is None:
                 verloren += 1
+            else:
+                if restfout is not None:
+                    restfouten.append(restfout)
+                    del restfouten[:-20]  # alleen het recente verleden telt als maatstaf
+                if is_bevroren(verplaatsing):
+                    bevroren += 1
+                keten = normaliseer(maal(keten, stap_m))
         else:
             verloren += 1
+
+        if breuk:
+            # Nieuw stuk: de keten begint opnieuw. De cameraopstelling is doorgaans dezelfde,
+            # dus de laatste bekende stand is het beste vertrekpunt om op te herankeren — maar
+            # bewezen is dat niet, dus tot een ijkbeeld of een geslaagde herankering blijft
+            # dit stuk zonder veldstand en meten we er niets.
+            breuken.append(round(t, 1))
+            stuk += 1
+            keten = eenheid()
+            basis = None
+            laatste_anker = t - args.heranker  # meteen proberen te herankeren, niet wachten
 
         # Zijn we voorbij een aangeduid ijkbeeld? Dat is grondwaarheid: harder dan wat de
         # lijndetector of de flow ooit kan geven, dus die legt de basis exact vast.
         if volgend_anker < len(ankers) and t >= ankers[volgend_anker][0]:
             basis = basis_uit_anker(ankers[volgend_anker][1], keten)
-            waarnemingen.append((t, basis))
+            waarnemingen.append((t, basis, stuk))
             volgend_anker += 1
             laatste_anker = t
-            momenten.append((t, keten, 'ijkbeeld', 0.0))
+            momenten.append((t, keten, 'ijkbeeld', 0.0, stuk))
             vorig_grijs = grijs
             t += stap
             continue
 
+        # Herankeren kan alleen mét een vertrekpunt in dít stuk. De stand van vóór een knip
+        # gebruiken is verleidelijk (de camera staat er nog) maar gevaarlijk: het veld heeft
+        # zeven evenwijdige lijnen, dus een fit die van een verkeerd vertrekpunt vertrekt vindt
+        # een oplossing die er kloppend uitziet. Gemeten: 17 m ernaast, mét een lage foutwaarde.
+        # Een stuk zonder ijkbeeld blijft daarom leeg — dat is eerlijker dan een verzonnen veld.
         if basis is not None and t - laatste_anker >= args.heranker:
             segmenten = detecteer_lijnsegmenten(cv2, frame, args.min_lijn)
             gevolgd, fout, gebruikt = veranker_op_lijnen(
@@ -924,31 +1038,53 @@ def volg_video(args: argparse.Namespace) -> tuple[HomografieSpoor, dict]:
                 # De correctie geldt vanaf nu: verreken ze in de basis, anders gooit de
                 # volgende stap ze meteen weer weg.
                 basis = basis_uit_anker(gevolgd, keten)
-                waarnemingen.append((t, basis))
+                waarnemingen.append((t, basis, stuk))
 
-        momenten.append((t, keten, bron, fout))
+        momenten.append((t, keten, bron, fout, stuk))
         vorig_grijs = grijs
         t += stap
     cap.release()
-    if basis is None:
+    if not waarnemingen:
         _fout(f'geen enkel ijkbeeld viel binnen de video (eerste anker op {ankers[0][0]:g} s) — '
               'duid een beeld aan dat écht in deze opname zit')
 
     # Tweede passage: de drift verdelen. Tussen twee waarnemingen schuift de basis geleidelijk
-    # mee in plaats van bij de tweede ineens te springen.
+    # mee in plaats van bij de tweede ineens te springen — maar nooit over een knip heen: aan
+    # weerszijden daarvan hoort de basis bij een andere keten.
+    per_stuk: dict[int, list[tuple[float, Matrix]]] = {}
+    for wt, wb, ws in waarnemingen:
+        per_stuk.setdefault(ws, []).append((wt, wb))
+
+    # Welke stukken bleven zonder veldstand, en van wanneer tot wanneer? Dát is wat je moet
+    # weten om er een ijkbeeld bij te zetten.
+    spanne: dict[int, list[float]] = {}
+    for mt, _mk, _b, _f, ms in momenten:
+        spanne.setdefault(ms, [mt, mt])[1] = mt
+    gaten = [(spanne[s][0], spanne[s][1]) for s in sorted(spanne) if s not in per_stuk]
+
     spoor = HomografieSpoor()
     gladgestreken = 0
-    for mt, mk, bron, fout in momenten:
-        b = basis_op(waarnemingen, mt)
+    zonder_stand = 0
+    for mt, mk, bron, fout, ms in momenten:
+        eigen = per_stuk.get(ms)
+        if not eigen:
+            # Dit stuk kreeg nooit een veldstand: liever een gat dan een verzonnen meting.
+            zonder_stand += 1
+            continue
+        b = basis_op(eigen, mt)
         if bron == 'flow':
-            if mt < waarnemingen[0][0]:
+            if mt < eigen[0][0]:
                 bron = 'teruggerekend'
-            elif mt < waarnemingen[-1][0] and len(waarnemingen) > 1:
+            elif mt < eigen[-1][0] and len(eigen) > 1:
                 bron = 'gladgestreken'
                 gladgestreken += 1
         spoor.voeg_toe(mt, maal(b, mk), fout, bron)
     return spoor, {**spoor.rapport(), 'frames_zonder_flow': verloren,
-                   'waarnemingen': len(waarnemingen), 'gladgestreken': gladgestreken}
+                   'waarnemingen': len(waarnemingen), 'gladgestreken': gladgestreken,
+                   'breuken': breuken, 'stukken': stuk + 1,
+                   'stukken_zonder_stand': len(gaten),
+                   'gaten': [[round(a, 1), round(b, 1)] for a, b in gaten],
+                   'momenten_zonder_stand': zonder_stand, 'bevroren_momenten': bevroren}
 
 
 # ---------------------------------------------------------------------------
@@ -1020,6 +1156,10 @@ def main(argv: list[str] | None = None) -> None:
         spoor, rapport = volg_video(args)
 
     spoor.schrijf(args.uit)
+    # Het rapport ook als bestand: de app leest het uit om te tonen wat er met de opname aan
+    # de hand is (onderbrekingen, stukken zonder ijkbeeld). Stdout is daarvoor te vluchtig.
+    rapportpad = args.uit.with_suffix(args.uit.suffix + '.rapport.json')
+    rapportpad.write_text(json.dumps(rapport, ensure_ascii=False), encoding='utf-8')
     print(f'{rapport["momenten"]} momenten, {rapport["ankers"]} keer herankerd op de veldlijnen '
           f'over {rapport["duur_s"]:g} s → {args.uit}')
     if rapport.get('gemiddelde_ankerfout_m') is not None:
@@ -1032,6 +1172,18 @@ def main(argv: list[str] | None = None) -> None:
     if rapport.get('frames_zonder_flow'):
         print(f'  {rapport["frames_zonder_flow"]} frames zonder bruikbare beweging — daar leunt het '
               f'volgen volledig op de volgende herankering')
+    if rapport.get('breuken'):
+        tijden = ', '.join(f'{b:g}s' for b in rapport['breuken'][:8])
+        meer = '' if len(rapport['breuken']) <= 8 else f' (+{len(rapport["breuken"]) - 8})'
+        print(f'  {len(rapport["breuken"])} onderbreking(en) in de opname op {tijden}{meer} — elk '
+              f'stuk wordt apart gevolgd')
+    if rapport.get('stukken_zonder_stand'):
+        waar = ', '.join(f'{a:g}-{b:g}s' for a, b in rapport.get('gaten', [])[:6])
+        print(f'  LET OP: {rapport["stukken_zonder_stand"]} van de {rapport["stukken"]} stukken '
+              f'kreeg geen veldstand ({waar}). Daar is niets gemeten — duid in elk stuk een '
+              f'ijkbeeld aan.')
+    if rapport.get('bevroren_momenten'):
+        print(f'  {rapport["bevroren_momenten"]} momenten met een stilstaand beeld')
     print('Gebruik dit bestand met: landing.py --homografie … / tracking.py --homografie …')
 
 
