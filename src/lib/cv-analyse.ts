@@ -304,12 +304,16 @@ export function instellingenPad(): string {
 // Ze stonden eerder allebei vast (altijd 5 metingen/s, altijd 'balanced'), waardoor de keuze
 // "snel / gewoon / nauwkeurig" voor de AI-stand geen enkel verschil maakte.
 //
-// 'ultra' meet 15 keer per seconde met het zwaarste model. Dat is geen willekeurig hoger getal:
-// een worp duurt van aanloop tot loslaten ongeveer een halve seconde, en de piek waar het om
-// draait hooguit twee tienden. Bij 5 metingen/s valt die piek soms tússen twee metingen; bij 15
-// is elke worp met minstens drie metingen gedekt. Meer dan de beeldfrequentie van de video heeft
-// geen zin — houding.py knijpt daar zelf op af.
-const AI_METINGEN_PER_S = { snel: 3, gewoon: 5, nauwkeurig: 8, ultra: 15 } as const
+// De ondergrens is geen smaakkwestie. De loslaatfase van een worp duurt ongeveer 0,08 seconde,
+// en het houdingsmodel meet de beweging over een venster van 0,08 tot 0,22 s. Bij 3 metingen per
+// seconde liggen twee metingen 0,33 s uit elkaar: dan valt er geen enkel venster binnen die band
+// en zíé je een worp gewoon niet. Vandaar dat de laagste stand op 5 ligt.
+//
+// Meer metingen maken de meting scherper (je vindt vaker een venster dat precies om de zwiep
+// valt), maar niet ánders: sinds de score de afgelegde weg meet in plaats van de snelheid,
+// betekent dezelfde worp op elke stand ongeveer hetzelfde. Dat is de voorwaarde om rekenkracht
+// te kunnen inzetten — anders verschuif je alleen de schaal.
+const AI_METINGEN_PER_S = { snel: 5, gewoon: 8, nauwkeurig: 12, ultra: 20 } as const
 const AI_MODELGROOTTE = {
   snel: 'lightweight', gewoon: 'balanced', nauwkeurig: 'performance', ultra: 'performance',
 } as const

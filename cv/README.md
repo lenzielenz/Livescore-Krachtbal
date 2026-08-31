@@ -569,6 +569,16 @@ python3 cv/train.py --wedstrijd reeks42.jsonl labels42.jsonl \
                     --holdout 43 --uit cv/model-houding.json
 ```
 
+**De maat achter de drempel.** Sinds kort is de worpscore de afgelegde wég van de pols
+(× de polshoogte) over één loslaatfase, en niet meer de snelheid. Snelheid is weg gedeeld
+door tijd, en die tijd hing aan de precisiestand: dezelfde worp scoorde 1,7 op de grofste
+en 10,4 op de fijnste stand. Een getrainde drempel sloeg daardoor op een andere stand
+overal of nergens aan — fijner meten maakte het model niet beter maar onvergelijkbaar.
+Met de afgelegde weg is dat 31% spreiding in plaats van 85%, en pas dán levert meer
+rekenkracht ook echt een betere meting op. `model-houding.json` bewaart daarom ook het
+venster waarop getraind is; wijkt de huidige stand daar sterk van af, dan zegt `houding.py`
+dat je opnieuw moet bijstellen.
+
 `houding.py` besliste met twee geschátte getallen wanneer iets een worp is: de
 drempel op de worpscore (1,2) en de minimale afstand tussen twee pieken (3,0 s).
 `train.py` leert ze uit gelabelde wedstrijden met een rasterzoektocht op dezelfde

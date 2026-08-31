@@ -46,6 +46,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import statistics
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -91,7 +92,8 @@ def lees_reeks(pad: Path) -> list[dict]:
         if not isinstance(r.get('score'), (int, float)):
             _fout(f'{pad}:{nummer}: regel zonder numerieke "score"')
         reeks.append({'t': float(r['t']), 'score': float(r['score']),
-                      'polshoogte': r.get('polshoogte')})
+                      'polshoogte': r.get('polshoogte'),
+                      'venster': r.get('venster')})
     reeks.sort(key=lambda r: r['t'])
     return reeks
 
@@ -322,11 +324,16 @@ def main(argv: list[str] | None = None) -> None:
               'wedstrijden waarop gefit werd en zijn dus te mooi. Voeg een tweede wedstrijd '
               'toe en zet die met --holdout apart.')
 
+    # Over welk venster de scores gemeten zijn. Een drempel hoort bij een schaal: is er straks
+    # met een heel ander venster gemeten, dan betekent hetzelfde getal iets anders. Meeschrijven
+    # is het verschil tussen een drempel die overdraagbaar is en eentje die stil scheef staat.
+    vensters = [r['venster'] for w in fit for r in w['reeks'] if isinstance(r.get('venster'), (int, float))]
     uitkomst = {
         'model': MODEL_NAAM,
         'model_version': MODEL_VERSION,
         'drempel': drempel,
         'min_afstand_s': afstand,
+        'venster_mediaan_s': round(statistics.median(vensters), 3) if vensters else None,
         'venster_s': args.venster,
         'getraind_op': [w['naam'] for w in fit],
         'holdout_wedstrijden': [w['naam'] for w in apart],

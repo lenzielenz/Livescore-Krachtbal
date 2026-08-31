@@ -73,10 +73,22 @@ class TestWorpscore(unittest.TestCase):
         return {'polshoogte': houding.polshoogte(p, s), 'romp': houding.romphoogte(p, s),
                 'pols': houding.polspositie(p, s)}
 
-    def test_hoog_en_snel_scoort(self):
+    def test_hoog_en_ver_scoort(self):
+        # De maat is de afgelegde weg × de polshoogte, niet de snelheid: 0,8 romp opzij met de
+        # polsen ruim boven de schouders.
         vorige = self._staat(pols_y=40.0, pols_x=300.0)
         huidige = self._staat(pols_y=40.0, pols_x=380.0)   # 80 px = 0,8 romp opzij
-        self.assertGreater(houding.worpscore(vorige, huidige, 0.2), 1.5)
+        self.assertGreater(houding.worpscore(vorige, huidige), 0.4)
+
+    def test_dezelfde_beweging_scoort_hetzelfde_op_elke_stand(self):
+        # Dít is de reden dat de maat de weg is en niet de snelheid: hij mag niet afhangen van
+        # hoe fijn er bemonsterd wordt, anders betekent een getrainde drempel op "ultra" iets
+        # anders dan op "gewoon" en werkt meer rekenkracht tegen je.
+        vorige = self._staat(pols_y=40.0, pols_x=300.0)
+        huidige = self._staat(pols_y=40.0, pols_x=380.0)
+        traag = houding.worpscore(vorige, huidige, 0.2)
+        snel = houding.worpscore(vorige, huidige, 0.04)
+        self.assertAlmostEqual(traag, snel)
 
     def test_hoog_maar_stil_scoort_niet(self):
         staat = self._staat(pols_y=40.0, pols_x=300.0)
@@ -89,8 +101,9 @@ class TestWorpscore(unittest.TestCase):
         self.assertEqual(houding.worpscore(vorige, huidige, 0.2), 0.0)
 
     def test_zonder_meting_geen_score(self):
-        self.assertEqual(houding.worpscore({}, {}, 0.2), 0.0)
-        self.assertEqual(houding.worpscore(self._staat(40.0, 300.0), self._staat(40.0, 380.0), 0.0), 0.0)
+        self.assertEqual(houding.worpscore({}, {}), 0.0)
+        # Een ontbrekende pols of romp geeft geen score in plaats van een uitzondering.
+        self.assertEqual(houding.worpscore({'pols': (1.0, 2.0)}, {'polshoogte': 0.5, 'romp': 100.0}), 0.0)
 
 
 class TestWorpenVinden(unittest.TestCase):
@@ -288,3 +301,32 @@ class TestKoppelPersonen(unittest.TestCase):
         vorige = {1: self.staat(100, 500)}
         huidige = [{'heup': None, 'romp': 100.0, 'polshoogte': None, 'pols': None}]
         self.assertEqual(houding.koppel_personen(vorige, huidige), {})
+
+
+class TestBesteWorpscore(unittest.TestCase):
+    """De sterkste beweging over één loslaatfase, ongeacht hoe fijn er bemonsterd is."""
+
+    def _staat(self, pols_x):
+        p, s = skelet(pols_y=40.0, pols_x=pols_x)
+        return {'polshoogte': houding.polshoogte(p, s), 'romp': houding.romphoogte(p, s),
+                'pols': houding.polspositie(p, s)}
+
+    def test_neemt_de_sterkste_beweging_in_de_band(self):
+        # Een geschiedenis waarin de hand pas in de laatste 0,12 s echt versnelt.
+        geschiedenis = [(0.0, self._staat(300.0)), (0.10, self._staat(305.0)), (0.20, self._staat(310.0))]
+        score, venster = houding.beste_worpscore(geschiedenis, self._staat(400.0), 0.28)
+        self.assertGreater(score, 0.4)
+        self.assertGreaterEqual(venster, houding.VENSTER_LAAG_S)
+        self.assertLessEqual(venster, houding.VENSTER_HOOG_S)
+
+    def test_valt_terug_op_de_dichtstbijzijnde_meting_bij_een_grove_stand(self):
+        # Op 3 metingen per seconde valt er niets binnen de band; dan liever een minder scherpe
+        # meting dan helemaal geen.
+        geschiedenis = [(0.0, self._staat(300.0))]
+        score, venster = houding.beste_worpscore(geschiedenis, self._staat(400.0), 0.35)
+        self.assertGreater(score, 0.0)
+        self.assertAlmostEqual(venster, 0.35)
+
+    def test_zonder_geschiedenis_geen_score(self):
+        score, _venster = houding.beste_worpscore([], self._staat(400.0), 1.0)
+        self.assertEqual(score, 0.0)

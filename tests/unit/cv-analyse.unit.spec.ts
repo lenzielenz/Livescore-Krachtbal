@@ -329,9 +329,13 @@ describe('worpen zoeken met het houdingsmodel', () => {
     expect(modeVan(van('nauwkeurig'))).toBe('performance')
   })
 
-  it('kijkt ook op de hoogste stand niet vaker dan het model aankan', () => {
-    const argv = argvVan(stappen({ opts: { ...OPTS, ai: true, stand: 'nauwkeurig' }, fps: 20 }), 'houding')
-    expect(Number(argv[argv.indexOf('--analyse-fps') + 1])).toBeLessThanOrEqual(8)
+  it('meet nooit zo grof dat een worp onzichtbaar wordt', () => {
+    // De loslaatfase duurt ~0,08 s en wordt gemeten over een venster van 0,08-0,22 s. Onder de
+    // 5 metingen per seconde valt er geen enkel venster binnen die band en zie je de worp niet.
+    for (const stand of ['snel', 'gewoon', 'nauwkeurig', 'ultra'] as const) {
+      const argv = argvVan(stappen({ opts: { ...OPTS, ai: true, stand } }), 'houding')
+      expect(Number(argv[argv.indexOf('--analyse-fps') + 1])).toBeGreaterThanOrEqual(5)
+    }
   })
 
   it('schrijft naar hetzelfde bestand, zodat de rest van de keten niets merkt', () => {

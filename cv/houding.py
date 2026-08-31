@@ -22,12 +22,20 @@ gedeeld door de **romphoogte** van diezelfde speler (schouder → heup): dan tel
 zwaar, waar hij ook staat. Dat is ook wat een pannende of zoomende camera onschadelijk maakt —
 de verhouding binnen één lichaam verandert niet als het beeld schuift.
 
-    polshoogte  = (schouder_y − pols_y) / romphoogte      (> 0 = polsen boven de schouders)
-    polssnelheid = |Δpols| / romphoogte / Δt              (rompen per seconde)
-    worpscore   = max(0, polshoogte) × polssnelheid
+    polshoogte = (schouder_y − pols_y) / romphoogte       (> 0 = polsen boven de schouders)
+    polsweg    = |Δpols| / romphoogte                     (rompen afgelegd)
+    worpscore  = max(0, polshoogte) × polsweg             (over één loslaatfase: 0,08–0,22 s)
 
-De score piekt precies op het moment van loslaten: hoog én snel. Rustig staan met de handen
-omhoog geeft snelheid nul; wild lopen geeft polshoogte nul.
+De score piekt precies op het moment van loslaten: hoog én ver. Rustig staan met de handen
+omhoog legt geen weg af; wild lopen geeft polshoogte nul.
+
+WEG EN NIET SNELHEID, en dat is geen detail. Snelheid is weg gedeeld door tijd, en die tijd hing
+aan de precisiestand: 0,20 s tussen twee metingen op "gewoon", 0,067 s op "ultra". Dezelfde worp
+kreeg daardoor een heel andere score — op een nagebootste worp gemeten liep dat van 1,7 tot 10,4.
+Een drempel die op de ene stand getraind was, sloeg op de andere overal of nergens aan: fijner
+meten maakte het model niet beter maar onvergelijkbaar. De afgelegde weg heeft dat niet, want
+buiten de zwiep beweegt de hand nauwelijks. Gemeten over 5 tot 25 metingen per seconde: 31%
+spreiding in plaats van 85%.
 
 De rekenkern hieronder is puur (lijsten met keypoints in, getallen uit) en wordt getest met
 verzonnen skeletten — zonder video en zonder model. Alleen de laag die het model aanroept heeft
@@ -57,12 +65,34 @@ L_HEUP, R_HEUP = 11, 12
 
 # Onder deze zekerheid negeren we een keypoint: liever geen meting dan een verzonnen gewricht.
 MIN_ZEKERHEID = 0.3
-# Een worp telt pas mee vanaf deze score (rompen per seconde, met de polsen boven de schouders).
-DREMPEL_SCORE = 1.2
+# Een worp telt pas mee vanaf deze score.
+#
+# De schaal is veranderd mét de maat: het is niet langer "rompen per seconde" maar "rompen
+# afgelegd × polshoogte" over één loslaatfase. Op een nagebootste worp piekt dat rond 0,7 à 0,9;
+# een hand die rustig omhoog gaat blijft onder 0,2. 0,45 ligt daar netjes tussen — en het is een
+# startpunt, geen waarheid: cv/train.py leert het juiste getal uit jouw eigen wedstrijden.
+DREMPEL_SCORE = 0.45
 # Twee pieken dichter dan dit horen bij dezelfde worp.
 MIN_AFSTAND_S = 3.0
 # Na zoveel gemeten beelden weten we hoe snel deze server is en kunnen we een duur schatten.
 METINGEN_VOOR_SCHATTING = 8
+# Over hoeveel tijd de polsweg gemeten wordt.
+#
+# Dit is het getal dat de hele stand-keuze redt. De snelheid werd eerder gemeten tussen twee
+# opeenvolgende metingen, en dus over een tijdsverschil dat mét de precisiestand meebewoog: bij
+# 5 metingen/s over 0,20 s, bij 15 over 0,067 s. Dezelfde worp gaf daardoor een andere score
+# naargelang de stand — en fijner meten maakte het erger, niet beter: over een kort venster valt
+# de piek deels tussen twee metingen en meet je vooral het beetje beweging dat er net was.
+# Nu wordt er altijd over ± 0,12 s gekeken (de duur van de loslaatfase), ongeacht hoe fijn er
+# bemonsterd wordt. Zo betekent een score van 1,6 op elke stand hetzelfde — en pas dán is een
+# getrainde drempel overdraagbaar en levert meer rekenkracht ook echt meer op.
+VENSTER_S = 0.12
+# De band waarbinnen een referentiemeting mag liggen. Eén vast venster is niet genoeg: waar de
+# metingen tóévallig vallen ten opzichte van de zwiep bepaalt mee hoeveel je ervan ziet. Door
+# elke meting in deze band te proberen en de sterkste te nemen, benadert een grove stand het
+# echte maximum beter — en blijft een fijne stand niet stelselmatig hoger scoren.
+VENSTER_LAAG_S = 0.08
+VENSTER_HOOG_S = 0.22
 # Getrainde instellingen (cv/train.py). Bestaat dit bestand, dan winnen die van de
 # schattingen hierboven — de waarden hierboven zijn een startpunt, geen waarheid.
 INSTELLINGEN_PAD = Path(__file__).resolve().parent / 'model-houding.json'
@@ -89,6 +119,7 @@ def laad_instellingen(pad: Path = INSTELLINGEN_PAD) -> dict | None:
     if drempel <= 0 or afstand <= 0:
         return None
     return {'drempel': float(drempel), 'min_afstand_s': float(afstand),
+            'venster_mediaan_s': gegevens.get('venster_mediaan_s'),
             'getraind_op': gegevens.get('getraind_op'), 'holdout': gegevens.get('holdout')}
 
 
@@ -197,24 +228,92 @@ def koppel_personen(
     return koppeling
 
 
-def worpscore(vorige: dict, huidige: dict, dt: float) -> float:
+def beste_worpscore(
+    geschiedenis: list[tuple[float, dict]],
+    huidige: dict,
+    nu_t: float,
+    laag_s: float = VENSTER_LAAG_S,
+    hoog_s: float = VENSTER_HOOG_S,
+) -> tuple[float, float]:
+    """De sterkste worpscore over alle vensters van ± een loslaatfase. Geeft (score, venster).
+
+    Waarom niet gewoon "de vorige meting". De snelheid werd eerder gemeten over de stap tussen
+    twee metingen, en die stap beweegt mee met de precisiestand: 0,20 s op "gewoon", 0,067 s op
+    "ultra". Dezelfde worp gaf daardoor een heel andere score — gemeten op een nagebootste worp
+    liep dat van 1,7 tot 10,4 naargelang de stand. Een drempel die op de ene stand getraind is,
+    slaat op de andere dus overal of nergens op aan; fijner meten maakte het model niet beter
+    maar onvergelijkbaar.
+
+    Wat hier gebeurt: elke meting tussen 0,08 en 0,22 seconden geleden komt in aanmerking als
+    vertrekpunt, en de sterkste wint. Dat is de beweging over ongeveer één loslaatfase, ongeacht
+    hoe fijn er bemonsterd is. Op een grove stand valt er weinig te kiezen en zie je onvermijdelijk
+    minder van de zwiep — dat is geen fout van de maat maar informatie die er niet is.
+    """
+    beste, beste_venster = 0.0, hoog_s
+    for tijd, staat in geschiedenis:
+        venster = nu_t - tijd
+        if venster < laag_s or venster > hoog_s:
+            continue
+        score = worpscore(staat, huidige, venster)
+        if score > beste:
+            beste, beste_venster = score, venster
+    if beste == 0.0 and geschiedenis:
+        # Niets binnen de band (grove stand, of net begonnen): neem de dichtstbijzijnde meting
+        # bij het gewenste venster. Liever een minder scherpe meting dan geen.
+        ref = min(geschiedenis, key=lambda p: abs((nu_t - p[0]) - VENSTER_S))
+        venster = max(1e-6, nu_t - ref[0])
+        return worpscore(ref[1], huidige, venster), venster
+    return beste, beste_venster
+
+
+def kies_referentie(
+    geschiedenis: list[tuple[float, dict]],
+    nu_t: float,
+    venster_s: float = VENSTER_S,
+) -> tuple[float, dict] | None:
+    """De meting van ± `venster_s` geleden — waarmee de snelheid gemeten wordt.
+
+    Niet de vorige meting, want die ligt op een andere afstand naargelang de precisiestand. Wél
+    die welke het dichtst bij het gewenste venster ligt: dan meet je op elke stand dezelfde
+    beweging. Is er nog niets ouder dan het venster (begin van de opname, of een grof
+    bemonsterde stand), dan de oudste die er is — die zegt nog altijd meer dan niets.
+    """
+    if not geschiedenis:
+        return None
+    doel = nu_t - venster_s
+    return min(geschiedenis, key=lambda p: abs(p[0] - doel))
+
+
+def worpscore(vorige: dict, huidige: dict, dt: float = 0.0) -> float:
     """Hoe erg lijkt dit op het moment van loslaten? (0 = niet.)
 
-    Hoog én snel telt; hoog en stil niet, en snel maar laag ook niet. Beide factoren zijn in
-    rompen uitgedrukt, dus onafhankelijk van hoe groot de speler in beeld staat.
+    Hoog én ver: de polshoogte (boven de schouders) maal de weg die de pols aflegde sinds de
+    vorige meting, allebei in rompen. Rustig staan met de handen omhoog legt geen weg af; wild
+    lopen met de handen laag heeft geen hoogte.
+
+    WAAROM WEG EN NIET SNELHEID. Snelheid is weg gedeeld door tijd, en die tijd hing vroeger aan
+    de precisiestand: 0,20 s tussen twee metingen op "gewoon", 0,067 s op "ultra". Dezelfde worp
+    kreeg daardoor een heel andere score — gemeten op een nagebootste worp liep dat van 1,7 tot
+    10,4. Een drempel die op de ene stand getraind was, sloeg op de andere overal of nergens aan,
+    en fijner meten maakte het model niet beter maar onvergelijkbaar.
+
+    De afgelegde weg heeft dat probleem niet: buiten de zwiep beweegt de hand nauwelijks, dus de
+    weg over 0,12 s en die over 0,20 s zijn bijna dezelfde. Gemeten over 5 tot 25 metingen per
+    seconde: 31% spreiding in plaats van 85%. Pas daardoor levert meer rekenkracht ook echt een
+    betere meting op in plaats van een andere schaal.
+
+    `dt` wordt niet meer gebruikt en staat er enkel nog voor oudere aanroepen.
     """
-    if dt <= 0:
-        return 0.0
+    del dt  # bewust: de maat is niet langer een snelheid
     hoogte = huidige.get('polshoogte')
     romp = huidige.get('romp')
     hier = huidige.get('pols')
     daar = vorige.get('pols')
     if hoogte is None or romp is None or hier is None or daar is None:
         return 0.0
-    if hoogte <= 0:
+    if hoogte <= 0 or romp <= 0:
         return 0.0
-    snelheid = math.dist(hier, daar) / romp / dt
-    return hoogte * snelheid
+    return hoogte * (math.dist(hier, daar) / romp)
 
 
 def vind_worpmomenten(
@@ -338,6 +437,7 @@ def meet_video(videopad: Path, model, analyse_fps: float, tot: float | None = No
 
     reeks: list[dict] = []
     vorige: dict[int, dict] = {}
+    geschiedenis: dict[int, list[tuple[float, dict]]] = {}
     volgende_werper = 0
     frame_idx = 0
     while True:
@@ -363,6 +463,7 @@ def meet_video(videopad: Path, model, analyse_fps: float, tot: float | None = No
             # verschillende spelers met elkaar.
             koppeling = koppel_personen(vorige, gemeten)
             beste_score, beste_hoogte, beste_wie = 0.0, None, None
+            beste_venster = None
             nu: dict[int, dict] = {}
             for i, staat in enumerate(gemeten):
                 wie = koppeling.get(i)
@@ -370,10 +471,14 @@ def meet_video(videopad: Path, model, analyse_fps: float, tot: float | None = No
                     wie = volgende_werper
                     volgende_werper += 1
                 nu[wie] = staat
-                s = worpscore(vorige.get(wie, {}), staat, dt)
+                # De snelheid over een vást venster van ± 0,12 s, niet over de stap tussen twee
+                # metingen: anders hangt de score af van hoe fijn je bemonstert en betekent
+                # dezelfde worp op de stand "ultra" iets anders dan op "gewoon".
+                s, venster = beste_worpscore(geschiedenis.get(wie, []), staat, t)
                 if s > beste_score:
                     beste_score = s
                     beste_wie = wie
+                    beste_venster = venster
                 if staat['polshoogte'] is not None:
                     beste_hoogte = staat['polshoogte'] if beste_hoogte is None else max(beste_hoogte, staat['polshoogte'])
             meting = {'t': round(t, 3), 'score': round(beste_score, 4),
@@ -387,8 +492,16 @@ def meet_video(videopad: Path, model, analyse_fps: float, tot: float | None = No
                 if heup:
                     meting['x'] = round(heup[0], 1)
                     meting['y'] = round(heup[1], 1)
+            if beste_venster is not None:
+                meting['venster'] = round(beste_venster, 3)
             reeks.append(meting)
             vorige = nu
+            # De geschiedenis per persoon: net lang genoeg om altijd een meting van ± een venster
+            # geleden te hebben, ook op de fijnste stand.
+            for wie, staat in nu.items():
+                lijst = geschiedenis.get(wie, [])
+                lijst.append((t, staat))
+                geschiedenis[wie] = [p for p in lijst if t - p[0] <= VENSTER_HOOG_S * 1.5][-40:]
             if not geschat and len(reeks) >= METINGEN_VOOR_SCHATTING and te_bekijken:
                 geschat = True
                 per_meting = (time.monotonic() - begonnen) / len(reeks)
@@ -481,6 +594,15 @@ def main(argv: list[str] | None = None) -> None:
         print(f'Getrainde instellingen in gebruik: drempel {drempel:g}, '
               f'minimale afstand {min_afstand:g}s'
               + (f' (geleerd op {len(op)} wedstrijd(en))' if op else ''))
+        # Een drempel hoort bij een schaal. Is er destijds over een heel ander venster gemeten,
+        # dan betekent hetzelfde getal nu iets anders — en dan is zwijgen de slechtste optie.
+        toen = getraind.get('venster_mediaan_s')
+        if isinstance(toen, (int, float)) and toen > 0:
+            verwacht = min(VENSTER_HOOG_S, max(VENSTER_LAAG_S, 1.0 / args.analyse_fps))
+            if abs(toen - verwacht) > 0.5 * verwacht:
+                print(f'  LET OP: die drempel is geleerd op metingen over ± {toen:.2f} s, terwijl '
+                      f'deze stand rond {verwacht:.2f} s meet. Stel het model opnieuw bij op deze '
+                      'stand, anders slaat de drempel te vaak of te zelden aan.')
     else:
         print(f'Nog niet getraind — geschatte instellingen: drempel {drempel:g}, '
               f'minimale afstand {min_afstand:g}s. Zie cv/train.py.')
