@@ -6,7 +6,7 @@ import path from 'path'
 import ffmpegPath from 'ffmpeg-static'
 import type { Payload } from 'payload'
 
-import { heeftRuntime, runtimeMap, runtimePython } from './cv-runtime'
+import { heeftRuntime, modelOmgeving, runtimeMap, runtimePython } from './cv-runtime'
 import { resolveMediaDir } from './media-dir'
 
 // De video-analyse op de server: video erin, worpvoorstellen eruit. Wat de gebruiker in de
@@ -144,9 +144,16 @@ function zoekPython(): Parameters<typeof bouwKandidaten>[0] {
   }
 }
 
-/** De omgeving waarin een analyse-proces draait (PYTHONPATH als de pakketten elders staan). */
+/**
+ * De omgeving waarin een analyse-proces draait.
+ *
+ * PYTHONPATH als de pakketten elders staan, en altijd de modelcache op het volume: zonder dat
+ * laatste haalt het houdingsmodel zijn 100 MB gewichten opnieuw op na elke uitrol, midden in
+ * een analyse, zonder dat iemand ziet waarom het zo lang duurt.
+ */
 export function spawnOmgeving(keuze: PythonKeuze): NodeJS.ProcessEnv {
-  return keuze.pythonpath ? { ...process.env, PYTHONPATH: keuze.pythonpath } : process.env
+  const basis = keuze.pythonpath ? { ...process.env, PYTHONPATH: keuze.pythonpath } : process.env
+  return modelOmgeving(basis)
 }
 
 /** Probeer één kandidaat: kan hij cv2 en numpy importeren? */
@@ -281,6 +288,15 @@ export function instellingenPad(): string {
   return path.join(resolveMediaDir(), 'cv-analyse', 'model-houding.json')
 }
 
+// Wat de precisiekeuze betekent voor het houdingsmodel. Dit is de duurste stap van de keten:
+// elk bemonsterd beeld kost het model een halve tot enkele seconden op een gedeelde processor,
+// dus déze twee getallen bepalen of een wedstrijdvideo tien minuten of drie uur kost.
+//
+// Ze stonden eerder allebei vast (altijd 5 metingen/s, altijd 'balanced'), waardoor de keuze
+// "snel / gewoon / nauwkeurig" voor de AI-stand geen enkel verschil maakte.
+const AI_METINGEN_PER_S = { snel: 3, gewoon: 5, nauwkeurig: 8 } as const
+const AI_MODELGROOTTE = { snel: 'lightweight', gewoon: 'balanced', nauwkeurig: 'performance' } as const
+
 /** Eén stap uit de keten. Zonder `commando` draait ze op de Python van deze server. */
 export type Stap = { naam: string; argv: string[]; commando?: string }
 
@@ -336,7 +352,9 @@ export function bouwStappen(opties: {
           // meteen de trainingsdata: met die reeks + de worpen die de aantekenaar invoerde
           // stelt cv/train.py de drempels bij zonder de video opnieuw te bekijken.
           argv: [path.join(cv, 'houding.py'), video, '--match', String(opties.matchId),
-                 '--analyse-fps', String(Math.min(fps, 5)), '--uit', bestand('detecties.jsonl'),
+                 '--analyse-fps', String(AI_METINGEN_PER_S[opts.stand]),
+                 '--mode', AI_MODELGROOTTE[opts.stand],
+                 '--uit', bestand('detecties.jsonl'),
                  '--reeks-uit', bestand('houding-reeks.jsonl'),
                  ...(instellingen ? ['--instellingen', instellingen] : [])],
         }

@@ -15,6 +15,7 @@ import {
   videoBestand,
   type AnalyseStand,
 } from '@/lib/cv-analyse'
+import { modelCacheMap } from '@/lib/cv-runtime'
 
 // De server-side video-analyse: welke Python-stappen draaien er, in welke volgorde, met welke
 // argumenten. Een verkeerde vlag hier kost een halfuur rekenwerk voor je het merkt — dus dat
@@ -185,6 +186,14 @@ describe('spawnOmgeving', () => {
     expect(spawnOmgeving({ pad: 'python3', pythonpath: null }).PYTHONPATH).toBe(process.env.PYTHONPATH)
     expect(spawnOmgeving({ pad: 'python3', pythonpath: '/pakketten' }).PYTHONPATH).toBe('/pakketten')
   })
+
+  it('wijst de modelcache naar het volume', () => {
+    // Zonder dit haalt het houdingsmodel na elke uitrol opnieuw 100 MB gewichten op — midden
+    // in een analyse, zonder dat iemand ziet waarom het zo lang duurt.
+    const env = spawnOmgeving({ pad: 'python3', pythonpath: null })
+    expect(env.XDG_CACHE_HOME).toBe(modelCacheMap())
+    expect(env.XDG_CACHE_HOME).toContain('cv-runtime')
+  })
 })
 
 describe('analyseOmgeving', () => {
@@ -305,9 +314,24 @@ describe('worpen zoeken met het houdingsmodel', () => {
     expect(argv).toContain('--analyse-fps')
   })
 
-  it('kijkt hoogstens vijf keer per seconde — elk beeld kost het model tijd', () => {
-    const argv = argvVan(stappen({ opts: { ...OPTS, ai: true }, fps: 20 }), 'houding')
-    expect(Number(argv[argv.indexOf('--analyse-fps') + 1])).toBeLessThanOrEqual(5)
+  it('laat de precisiekeuze echt meetellen — anders kost snel evenveel als nauwkeurig', () => {
+    // Dit is de duurste stap van de keten: het aantal beelden én de modelgrootte bepalen samen
+    // of een wedstrijdvideo tien minuten of drie uur kost. Eerder stonden ze allebei vast.
+    const van = (stand: 'snel' | 'gewoon' | 'nauwkeurig') =>
+      argvVan(stappen({ opts: { ...OPTS, ai: true, stand } }), 'houding')
+    const fpsVan = (a: string[]) => Number(a[a.indexOf('--analyse-fps') + 1])
+    const modeVan = (a: string[]) => a[a.indexOf('--mode') + 1]
+
+    expect(fpsVan(van('snel'))).toBeLessThan(fpsVan(van('gewoon')))
+    expect(fpsVan(van('gewoon'))).toBeLessThan(fpsVan(van('nauwkeurig')))
+    expect(modeVan(van('snel'))).toBe('lightweight')
+    expect(modeVan(van('gewoon'))).toBe('balanced')
+    expect(modeVan(van('nauwkeurig'))).toBe('performance')
+  })
+
+  it('kijkt ook op de hoogste stand niet vaker dan het model aankan', () => {
+    const argv = argvVan(stappen({ opts: { ...OPTS, ai: true, stand: 'nauwkeurig' }, fps: 20 }), 'houding')
+    expect(Number(argv[argv.indexOf('--analyse-fps') + 1])).toBeLessThanOrEqual(8)
   })
 
   it('schrijft naar hetzelfde bestand, zodat de rest van de keten niets merkt', () => {

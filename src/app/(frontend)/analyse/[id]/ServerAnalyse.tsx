@@ -65,6 +65,7 @@ export function ServerAnalyse({ matchId, heeftVideo }: { matchId: number; heeftV
   const [tracking, setTracking] = useState(false)
   const [ai, setAi] = useState(false)
   const [aiModel, setAiModel] = useState(false)
+  const [modelGewichten, setModelGewichten] = useState(true)
   const [omgeving, setOmgeving] = useState<RuntimeStand | null>(null)
   const [magInstalleren, setMagInstalleren] = useState(false)
   const timer = useRef<number | null>(null)
@@ -88,10 +89,15 @@ export function ServerAnalyse({ matchId, heeftVideo }: { matchId: number; heeftV
         setMagInstalleren(false)
         return
       }
-      const data = (await res.json()) as { stand: RuntimeStand | null; aiModel?: boolean }
+      const data = (await res.json()) as {
+        stand: RuntimeStand | null
+        aiModel?: boolean
+        modelGewichten?: boolean
+      }
       setMagInstalleren(true)
       setOmgeving(data.stand)
       setAiModel(data.aiModel === true)
+      setModelGewichten(data.modelGewichten !== false)
     } catch {
       /* stil */
     }
@@ -367,6 +373,21 @@ export function ServerAnalyse({ matchId, heeftVideo }: { matchId: number; heeftV
               <input type="checkbox" checked={tracking} onChange={(e) => setTracking(e.target.checked)} />
               <span>Ook spelers volgen (loopafstand, sprintjes)</span>
             </label>
+            {aiModel && !modelGewichten && (
+              <p className="sa-let-op">
+                Het houdingsmodel staat er wél, maar zijn gewichten niet meer — die stonden in de
+                container en zijn bij de laatste uitrol verdwenen. Zonder ze haalt de eerste
+                analyse ze stilletjes opnieuw op (± 100 MB), en daar lijkt ze op vast te lopen.{' '}
+                <button
+                  type="button"
+                  className="va-btn"
+                  disabled={busy || installeert}
+                  onClick={() => void installeer('ai')}
+                >
+                  Model opnieuw ophalen
+                </button>
+              </p>
+            )}
             {aiModel ? (
               <label className="sa-vink">
                 <input type="checkbox" checked={ai} onChange={(e) => setAi(e.target.checked)} />

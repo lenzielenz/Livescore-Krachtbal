@@ -1,6 +1,6 @@
 import { spawn } from 'child_process'
 import crypto from 'crypto'
-import { existsSync } from 'fs'
+import { existsSync, readdirSync } from 'fs'
 import fs from 'fs/promises'
 import path from 'path'
 
@@ -56,6 +56,34 @@ export function runtimePython(): string {
 
 export function heeftRuntime(): boolean {
   return existsSync(runtimePython())
+}
+
+/**
+ * Waar de gewichten van het houdingsmodel staan.
+ *
+ * rtmlib legt ze standaard in `~/.cache/rtmlib` — en dat is op deze server de container, die
+ * bij elke uitrol of herstart opnieuw begint. Dan is het pakket er nog wel (dat staat op het
+ * volume) maar de 100 MB gewichten niet, en haalt de eerste analyse ze stilletjes opnieuw op:
+ * minuten wachten, of eeuwig hangen als het net niet lukt. Met XDG_CACHE_HOME op het volume
+ * gebeurt dat één keer.
+ */
+export function modelCacheMap(): string {
+  return path.join(runtimeMap(), 'model-cache')
+}
+
+/** Staan de gewichten van het houdingsmodel er echt? (Niet enkel het pakket.) */
+export function heeftModelGewichten(): boolean {
+  const map = path.join(modelCacheMap(), 'rtmlib', 'hub', 'checkpoints')
+  try {
+    return readdirSync(map).some((n) => n.endsWith('.onnx'))
+  } catch {
+    return false
+  }
+}
+
+/** De omgevingsvariabelen die elk model-proces nodig heeft (cache op het volume). */
+export function modelOmgeving(basis: NodeJS.ProcessEnv = process.env): NodeJS.ProcessEnv {
+  return { ...basis, XDG_CACHE_HOME: modelCacheMap() }
 }
 
 /** Staat het houdingsmodel erbij? (rtmlib in de pakkettenmap.) */
@@ -192,8 +220,13 @@ export async function startRuntimeInstallatie(
         await zet('het model ophalen (± 100 MB)', 3)
         const ophalen = await draai(
           python,
-          ['-c', "from rtmlib import Body; Body(mode='balanced', backend='onnxruntime', device='cpu'); print('ok')"],
-          { env: { ...process.env, PYTHONPATH: doel } },
+          // Alle drie de groottes ophalen: wie later voor 'snel' of 'nauwkeurig' kiest, mag
+          // niet alsnog midden in een analyse op een download van 100 MB stuiten.
+          ['-c', "from rtmlib import Body\n"
+            + "for m in ('lightweight', 'balanced', 'performance'):\n"
+            + "    Body(mode=m, backend='onnxruntime', device='cpu')\n"
+            + "print('ok')"],
+          { env: modelOmgeving({ ...process.env, PYTHONPATH: doel }) },
         )
         if (ophalen.code !== 0) {
           throw new Error(

@@ -3,6 +3,7 @@ import { isFederationLevel } from '@/lib/access'
 import { analyseOmgeving, vergeetOmgeving } from '@/lib/cv-analyse'
 import {
   heeftAiModel,
+  heeftModelGewichten,
   heeftRuntime,
   installatieLoopt,
   leesRuntimeStand,
@@ -39,6 +40,9 @@ export async function GET(req: Request) {
     reden: omgeving.melding,
     geinstalleerd: heeftRuntime(),
     aiModel: heeftAiModel(),
+    // Het pakket staat op het volume, de gewichten stonden vroeger in de container: die zijn
+    // na een uitrol weg. Apart melden, anders hangt de eerste analyse op een stille download.
+    modelGewichten: heeftModelGewichten(),
     loopt: installatieLoopt(),
     versie: PYTHON_VERSIE,
   })
@@ -57,7 +61,9 @@ export async function POST(req: Request) {
   }
 
   if (soort === 'ai') {
-    if (heeftAiModel()) return Response.json({ ok: true, stand: await leesRuntimeStand(), alGoed: true })
+    if (heeftAiModel() && heeftModelGewichten()) {
+      return Response.json({ ok: true, stand: await leesRuntimeStand(), alGoed: true })
+    }
     const resultaat = await startRuntimeInstallatie(null, vergeetOmgeving, 'ai')
     if (!resultaat.ok) return Response.json({ error: resultaat.fout }, { status: resultaat.code })
     return Response.json({ ok: true, stand: resultaat.stand })
