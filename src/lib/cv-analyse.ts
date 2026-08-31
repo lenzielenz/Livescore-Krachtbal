@@ -3,6 +3,7 @@ import { existsSync, readdirSync } from 'fs'
 import fs from 'fs/promises'
 import path from 'path'
 
+import ffmpegPath from 'ffmpeg-static'
 import type { Payload } from 'payload'
 
 import { heeftRuntime, runtimeMap, runtimePython } from './cv-runtime'
@@ -208,6 +209,11 @@ export async function pythonVoorSpawn(): Promise<PythonKeuze> {
   return huidigePython()
 }
 
+/** Het ffmpeg dat met de app meekomt (ffmpeg-static), of null als het er niet is. */
+export function ffmpegPad(): string | null {
+  return ffmpegPath && existsSync(ffmpegPath) ? ffmpegPath : null
+}
+
 /** Waar de scripts staan (cv/ naast de app). */
 export function cvMap(): string {
   return process.env.CV_DIR || path.resolve(process.cwd(), 'cv')
@@ -245,6 +251,9 @@ export function werkmap(matchId: number): string {
   return path.join(resolveMediaDir(), 'cv-analyse', String(matchId))
 }
 
+/** Eén stap uit de keten. Zonder `commando` draait ze op de Python van deze server. */
+export type Stap = { naam: string; argv: string[]; commando?: string }
+
 /**
  * De stappen die gedraaid worden, in volgorde.
  *
@@ -256,19 +265,25 @@ export function bouwStappen(opties: {
   video: string
   map: string
   kalibratie: string | null
+  /** Meerdere ijkbeelden met hun tijdstip; wint van `kalibratie` bij een bewegende camera. */
+  ankers?: string | null
   opts: AnalyseOpties
   fps: number
-}): { naam: string; argv: string[] }[] {
-  const { video, map, kalibratie, opts, fps } = opties
+  /** Pad naar ffmpeg (ffmpeg-static); ontbreekt dat, dan vervalt het omzetten. */
+  ffmpeg?: string | null
+}): Stap[] {
+  const { video, map, kalibratie, ankers, opts, fps, ffmpeg } = opties
   const cv = cvMap()
   const bestand = (naam: string) => path.join(map, naam)
-  const stappen: { naam: string; argv: string[] }[] = []
+  const stappen: Stap[] = []
 
   // Bewegende camera: eerst het veld volgen, daarna rekent alles met de matrix van dát moment.
-  if (opts.bewegend && kalibratie) {
+  // Zijn er meerdere ijkbeelden, dan gaan die er allemaal in — elk op hun eigen tijdstip.
+  if (opts.bewegend && (ankers || kalibratie)) {
     stappen.push({
       naam: 'Het veld volgen in het bewegende beeld',
-      argv: [path.join(cv, 'volg_veld.py'), '--video', video, '--kalibratie', kalibratie,
+      argv: [path.join(cv, 'volg_veld.py'), '--video', video,
+             ...(ankers ? ['--ankers', ankers] : ['--kalibratie', kalibratie as string]),
              '--stand', opts.stand, '--uit', bestand('homografie.jsonl')],
     })
   }
@@ -308,12 +323,24 @@ export function bouwStappen(opties: {
   if (opts.overlay && kalibratie) {
     stappen.push({
       naam: 'Controlevideo maken (veldmodel, lijnen, bal)',
-      argv: [path.join(cv, 'overlay.py'), '--video', video, '--uit', bestand('controle.mp4'),
+      argv: [path.join(cv, 'overlay.py'), '--video', video, '--uit', bestand('ruw.mp4'),
              '--balspoor', bestand('balspoor.jsonl'), '--lijnen',
              ...(opts.bewegend ? ['--homografie', bestand('homografie.jsonl')]
                                : ['--kalibratie', kalibratie]),
              ...(opts.tracking ? ['--posities', bestand('posities.jsonl')] : [])],
     })
+    // opencv-headless kan alleen mp4v schrijven (geen H.264-encoder in het wiel), en dát speelt
+    // geen enkele browser af — de controlevideo zou een zwart vlak zijn. ffmpeg-static zit al
+    // in het project voor de replay-clips; die zet ze om naar H.264.
+    if (ffmpeg) {
+      stappen.push({
+        naam: 'Controlevideo omzetten naar een formaat dat de browser speelt',
+        commando: ffmpeg,
+        argv: ['-hide_banner', '-loglevel', 'error', '-y', '-i', bestand('ruw.mp4'),
+               '-c:v', 'libx264', '-preset', 'veryfast', '-pix_fmt', 'yuv420p',
+               '-movflags', '+faststart', bestand('controle.mp4')],
+      })
+    }
   }
 
   return stappen
@@ -360,13 +387,30 @@ export async function schrijfStand(payload: Payload, matchId: number, stand: Ana
     .catch(() => undefined)
 }
 
+export type KalibratiePunt = { label: string; x: number; y: number }
+export type KalibratieBeeld = { tijd: number; punten: KalibratiePunt[] }
+export type KalibratieData = { punten?: KalibratiePunt[]; beelden?: KalibratieBeeld[] } | null
+
+/**
+ * De ijkbeelden uit de opgeslagen kalibratie, op tijd gesorteerd.
+ *
+ * Puur, zodat de keuze te testen valt: alleen beelden met vier of meer punten kunnen een
+ * homografie opleveren. Een oude kalibratie zonder `beelden` telt als één beeld op seconde 0.
+ */
+export function bruikbareBeelden(kalibratie: KalibratieData): KalibratieBeeld[] {
+  const uit = (kalibratie?.beelden ?? []).filter((b) => (b.punten?.length ?? 0) >= 4)
+  if (uit.length > 0) return [...uit].sort((a, b) => a.tijd - b.tijd)
+  const punten = kalibratie?.punten ?? []
+  return punten.length >= 4 ? [{ tijd: 0, punten }] : []
+}
+
 /** Kalibratiepunten (aangeklikt in de app) → een kalibratie-JSON die de scripts lezen. */
 export async function schrijfKalibratie(
   map: string,
-  kalibratie: { punten?: { label: string; x: number; y: number }[] } | null,
+  kalibratie: KalibratieData,
   veld: { diepte: number; breedte: number | null; speelveld: number | null },
 ): Promise<string | null> {
-  const punten = kalibratie?.punten ?? []
+  const punten = bruikbareBeelden(kalibratie)[0]?.punten ?? []
   if (punten.length < 4) return null
   const pad = path.join(map, 'kalibratie.json')
   // calibrate.py rekent de matrix uit; wij leveren enkel de aangeklikte punten aan.
@@ -385,6 +429,59 @@ export async function schrijfKalibratie(
     kind.on('close', (code) => resolve(code === 0))
   })
   return klaar ? pad : null
+}
+
+/**
+ * Alle ijkbeelden → één ankerbestand voor volg_veld.py.
+ *
+ * Elk beeld krijgt zijn eigen matrix én zijn eigen tijdstip. Dat laatste is de kern: duid je
+ * een beeld aan op 6:27, dan hoort die matrix bij 6:27 en niet bij seconde 0. Met meerdere
+ * ankers hoeft geen enkel beeld het volledige veld te tonen — samen dekken ze het.
+ *
+ * Geeft null als er maar één ijkbeeld op seconde 0 is: dan volstaat de gewone kalibratie.
+ */
+export async function schrijfAnkers(
+  map: string,
+  kalibratie: KalibratieData,
+  veld: { diepte: number; breedte: number | null; speelveld: number | null },
+): Promise<string | null> {
+  const beelden = bruikbareBeelden(kalibratie)
+  if (beelden.length === 0) return null
+  if (beelden.length === 1 && beelden[0].tijd === 0) return null
+
+  const python = await pythonVoorSpawn()
+  const ankers: { tijd_s: number; matrix_beeld_naar_veld: number[][] }[] = []
+  for (const [i, beeld] of beelden.entries()) {
+    const tussen = path.join(map, `anker-${i}.json`)
+    const argv = [
+      path.join(cvMap(), 'calibrate.py'),
+      '--diepte', String(veld.diepte),
+      ...(veld.breedte != null ? ['--breedte', String(veld.breedte)] : []),
+      ...(veld.speelveld != null ? ['--speelveld', String(veld.speelveld)] : []),
+      '--uit', tussen,
+      ...beeld.punten.flatMap((p) => ['--punt', `${Math.round(p.x)},${Math.round(p.y)}=${p.label}`]),
+    ]
+    const klaar = await new Promise<boolean>((resolve) => {
+      const kind = spawn(python.pad, argv, { stdio: ['ignore', 'ignore', 'pipe'], env: spawnOmgeving(python) })
+      kind.on('error', () => resolve(false))
+      kind.on('close', (code) => resolve(code === 0))
+    })
+    if (!klaar) continue // één rammelend beeld mag de rest niet meeslepen
+    const data = JSON.parse(await fs.readFile(tussen, 'utf8')) as { matrix_beeld_naar_veld: number[][] }
+    ankers.push({ tijd_s: beeld.tijd, matrix_beeld_naar_veld: data.matrix_beeld_naar_veld })
+  }
+  if (ankers.length === 0) return null
+
+  const pad = path.join(map, 'ankers.json')
+  await fs.writeFile(
+    pad,
+    JSON.stringify({
+      ankers,
+      veld: { breedte_m: veld.breedte, speelveld_m: veld.speelveld },
+      doelgebied_diepte_m: veld.diepte,
+    }),
+  )
+  return pad
 }
 
 /**
@@ -425,17 +522,19 @@ export async function startAnalyse(
 
   const map = werkmap(matchId)
   await fs.mkdir(map, { recursive: true })
-  const kalibratie = await schrijfKalibratie(
-    map,
-    (match.cvKalibratie ?? null) as { punten?: { label: string; x: number; y: number }[] } | null,
-    {
-      diepte: (match.goalAreaDepth as number) ?? 10,
-      breedte: (match.veldBreedte as number | null) ?? null,
-      speelveld: (match.veldSpeelveld as number | null) ?? null,
-    },
-  )
+  const kalibratieData = (match.cvKalibratie ?? null) as KalibratieData
+  const veldmaten = {
+    diepte: (match.goalAreaDepth as number) ?? 10,
+    breedte: (match.veldBreedte as number | null) ?? null,
+    speelveld: (match.veldSpeelveld as number | null) ?? null,
+  }
+  const kalibratie = await schrijfKalibratie(map, kalibratieData, veldmaten)
+  // Alleen zinvol bij een bewegende camera; anders kost het rekentijd zonder iets toe te voegen.
+  const ankers = opts.bewegend ? await schrijfAnkers(map, kalibratieData, veldmaten) : null
 
-  const stappen = bouwStappen({ matchId, video: video.pad, map, kalibratie, opts, fps: 2 })
+  const stappen = bouwStappen({
+    matchId, video: video.pad, map, kalibratie, ankers, opts, fps: 2, ffmpeg: ffmpegPad(),
+  })
   const begin = Date.now()
   const stand: AnalyseStand = {
     status: 'bezig',
@@ -455,7 +554,7 @@ export async function startAnalyse(
       for (let i = 0; i < stappen.length; i++) {
         huidig = { ...huidig, stap: stappen[i].naam, stapNummer: i + 1 }
         await schrijfStand(payload, matchId, huidig)
-        const code = await draaiStap(matchId, stappen[i].argv)
+        const code = await draaiStap(matchId, stappen[i])
         if (code !== 0) throw new Error(`${stappen[i].naam} — Python stopte met code ${code}`)
       }
 
@@ -493,11 +592,15 @@ export async function startAnalyse(
   return { ok: true, stand }
 }
 
-function draaiStap(matchId: number, argv: string[]): Promise<number> {
+function draaiStap(matchId: number, stap: Stap): Promise<number> {
   // De keuze staat vast: startAnalyse controleerde de omgeving voor het eerste stapje.
   const python = huidigePython()
+  const { argv } = stap
   return new Promise((resolve) => {
-    const kind = spawn(python.pad, argv, { stdio: ['ignore', 'pipe', 'pipe'], env: spawnOmgeving(python) })
+    const kind = spawn(stap.commando ?? python.pad, argv, {
+      stdio: ['ignore', 'pipe', 'pipe'],
+      env: spawnOmgeving(python),
+    })
     lopend = { matchId, kind }
     let laatsteFout = ''
     kind.stderr?.on('data', (d) => {

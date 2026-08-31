@@ -7,6 +7,7 @@ import { authUser } from '@/lib/api-auth'
 import { getPayloadClient } from '@/lib/payload-client'
 import { mayEditMatchVideo } from '@/lib/video-access'
 import { cvMap, pythonVoorSpawn, spawnOmgeving } from '@/lib/cv-analyse'
+import { geldigLabel } from '@/lib/kalibratie-punten'
 
 export const dynamic = 'force-dynamic'
 
@@ -18,24 +19,12 @@ export const dynamic = 'force-dynamic'
 // er überhaupt een geldige matrix uit volgt — een kalibratie die pas een halfuur later blijkt
 // te rammelen, is een kalibratie die je twee keer moet zetten.
 
-/** De labels die calibrate.py kent (zie cv/veld.py). */
-const LIJNEN = ['achterlijn', 'doellijn', 'vrijeworplijn', 'middellijn']
-const KANTEN = ['thuis', 'uit']
-const ZIJDEN = ['links', 'rechts']
-
-function geldigLabel(label: unknown): boolean {
-  if (typeof label !== 'string') return false
-  const delen = label.split('_')
-  if (delen[0] === 'middellijn') return delen.length === 2 && ZIJDEN.includes(delen[1])
-  return delen.length === 3 && LIJNEN.includes(delen[0]) && KANTEN.includes(delen[1]) && ZIJDEN.includes(delen[2])
-}
-
 type Punt = { label: string; x: number; y: number }
+type Beeld = { tijd: number; beeldBreedte: number | null; beeldHoogte: number | null; punten: Punt[] }
 
-function leesPunten(body: Record<string, unknown>): { punten: Punt[] } | { fout: string } {
-  const ruw = body.punten
-  if (!Array.isArray(ruw)) return { fout: 'punten ontbreekt.' }
-  if (ruw.length < 4) return { fout: 'Minstens vier punten nodig om het veld vast te leggen.' }
+function leesPunten(ruw: unknown, waar: string): { punten: Punt[] } | { fout: string } {
+  if (!Array.isArray(ruw)) return { fout: `${waar}: punten ontbreekt.` }
+  if (ruw.length < 1) return { fout: `${waar}: geen punten.` }
   if (ruw.length > 14) return { fout: 'Meer dan veertien punten heeft geen zin (zoveel kruispunten zijn er).' }
   const punten: Punt[] = []
   const gezien = new Set<string>()
@@ -51,6 +40,53 @@ function leesPunten(body: Record<string, unknown>): { punten: Punt[] } | { fout:
     punten.push({ label: String(p.label), x: Math.round(x), y: Math.round(y) })
   }
   return { punten }
+}
+
+/**
+ * De ijkbeelden uit het verzoek.
+ *
+ * Nieuw: `beelden` — meerdere beelden, elk met hun tijdstip in de video. Nodig zodra de camera
+ * pant: dan toont geen enkel beeld alle veertien kruispunten. De oude vorm (één losse
+ * `punten`-lijst) blijft werken en telt als één beeld op seconde 0.
+ */
+function leesBeelden(body: Record<string, unknown>): { beelden: Beeld[] } | { fout: string } {
+  const ruw = body.beelden
+  if (!Array.isArray(ruw)) {
+    const gelezen = leesPunten(body.punten, 'kalibratie')
+    if ('fout' in gelezen) return gelezen
+    if (gelezen.punten.length < 4) return { fout: 'Minstens vier punten nodig om het veld vast te leggen.' }
+    return {
+      beelden: [
+        {
+          tijd: 0,
+          beeldBreedte: Number(body.beeldBreedte) || null,
+          beeldHoogte: Number(body.beeldHoogte) || null,
+          punten: gelezen.punten,
+        },
+      ],
+    }
+  }
+  if (ruw.length === 0) return { fout: 'Geen enkel beeld aangeduid.' }
+  if (ruw.length > 12) return { fout: 'Meer dan twaalf ijkbeelden is niet nodig.' }
+
+  const beelden: Beeld[] = []
+  for (const [i, b] of (ruw as Record<string, unknown>[]).entries()) {
+    const gelezen = leesPunten(b?.punten, `beeld ${i + 1}`)
+    if ('fout' in gelezen) return gelezen
+    const tijd = Number(b?.tijd)
+    if (!Number.isFinite(tijd) || tijd < 0) return { fout: `Beeld ${i + 1} heeft geen geldig tijdstip.` }
+    beelden.push({
+      tijd: Math.round(tijd * 10) / 10,
+      beeldBreedte: Number(b?.beeldBreedte) || null,
+      beeldHoogte: Number(b?.beeldHoogte) || null,
+      punten: gelezen.punten,
+    })
+  }
+  // Eén beeld met vier punten volstaat om te kunnen meten; de rest verrijkt de dekking.
+  if (!beelden.some((b) => b.punten.length >= 4)) {
+    return { fout: 'Minstens één beeld heeft vier punten nodig om het veld vast te leggen.' }
+  }
+  return { beelden: beelden.sort((a, b) => a.tijd - b.tijd) }
 }
 
 /** Fit de punten met calibrate.py: lukt dat, dan is de kalibratie bruikbaar. */
@@ -117,30 +153,47 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     return Response.json({ error: 'Geen rechten voor deze wedstrijd.' }, { status: 403 })
   }
 
-  const gelezen = leesPunten(body)
+  const gelezen = leesBeelden(body)
   if ('fout' in gelezen) return Response.json({ error: gelezen.fout }, { status: 400 })
 
-  const controle = await controleer(gelezen.punten, {
+  const veldmaten = {
     diepte: (match.goalAreaDepth as number) ?? 10,
     breedte: (match.veldBreedte as number | null) ?? null,
     speelveld: (match.veldSpeelveld as number | null) ?? null,
-  })
-  if (!controle.ok) return Response.json({ error: controle.melding }, { status: 400 })
+  }
 
+  // Elk beeld met vier of meer punten moet op zichzelf een geldig veld opleveren. Een beeld
+  // met minder punten bewaren we wel (het vult het overzicht aan) maar dient niet als ijkbeeld.
+  let bruikbaar = 0
+  for (const [i, beeld] of gelezen.beelden.entries()) {
+    if (beeld.punten.length < 4) continue
+    const controle = await controleer(beeld.punten, veldmaten)
+    if (!controle.ok) {
+      const waar = gelezen.beelden.length > 1 ? `Beeld ${i + 1}: ` : ''
+      return Response.json({ error: `${waar}${controle.melding}` }, { status: 400 })
+    }
+    bruikbaar++
+  }
+
+  // Tel de verschíllende kruispunten: hetzelfde punt op twee beelden is één punt van het veld,
+  // en dat is ook wat het overzicht in de app toont.
+  const punten = new Set(gelezen.beelden.flatMap((b) => b.punten.map((p) => p.label))).size
   await payload.update({
     collection: 'matches',
     id: matchId,
     data: {
       cvKalibratie: {
-        punten: gelezen.punten,
-        beeldBreedte: Number(body.beeldBreedte) || null,
-        beeldHoogte: Number(body.beeldHoogte) || null,
+        beelden: gelezen.beelden,
+        // Het eerste bruikbare beeld blijft ook los staan: gereedschap dat één vaste
+        // kalibratie verwacht (calibrate.py, landing.py bij een stilstaande camera) hoeft
+        // niets van ijkbeelden te weten.
+        punten: gelezen.beelden.find((b) => b.punten.length >= 4)?.punten ?? [],
         gezet: new Date().toISOString(),
       },
     },
     overrideAccess: true,
   })
-  return Response.json({ ok: true, punten: gelezen.punten.length, fout_px: controle.foutPx })
+  return Response.json({ ok: true, beelden: gelezen.beelden.length, punten, bruikbaar })
 }
 
 export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {

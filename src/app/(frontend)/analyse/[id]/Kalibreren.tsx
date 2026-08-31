@@ -1,29 +1,30 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 
-// Het veld één keer aanwijzen op een beeld uit de video: waar liggen de lijnkruisingen?
-// Daarmee kan de server elk punt in beeld omrekenen naar meters op het veld — zonder deze
-// stap weet hij wél wanneer er geworpen wordt, maar niet waar de bal landt.
+import { ALLE_LABELS, DWARSLIJNEN, ZIJDEN, labelVan, omschrijving, type Zijde } from '@/lib/kalibratie-punten'
+
+// Het veld aanwijzen op beelden uit de video: waar liggen de lijnkruisingen? Daarmee kan de
+// server elk punt in beeld omrekenen naar meters op het veld.
 //
-// Het frame komt uit de video in de browser (canvas), dus de server hoeft er niets voor te
-// doen. Werkt enkel op een geüpload bestand: een YouTube-speler laat zijn beeld niet uitlezen.
-
-/** De kruispunten die we vragen, in de volgorde waarin ze het makkelijkst te vinden zijn. */
-const PUNTEN = [
-  { label: 'achterlijn_thuis_links', uitleg: 'Achterlijn dichtste kant — linkerhoek' },
-  { label: 'achterlijn_thuis_rechts', uitleg: 'Achterlijn dichtste kant — rechterhoek' },
-  { label: 'doellijn_thuis_links', uitleg: 'Doellijn dichtste kant — links' },
-  { label: 'doellijn_thuis_rechts', uitleg: 'Doellijn dichtste kant — rechts' },
-  { label: 'middellijn_links', uitleg: 'Middellijn — links' },
-  { label: 'middellijn_rechts', uitleg: 'Middellijn — rechts' },
-  { label: 'doellijn_uit_links', uitleg: 'Doellijn verste kant — links' },
-  { label: 'doellijn_uit_rechts', uitleg: 'Doellijn verste kant — rechts' },
-  { label: 'achterlijn_uit_links', uitleg: 'Achterlijn verste kant — linkerhoek' },
-  { label: 'achterlijn_uit_rechts', uitleg: 'Achterlijn verste kant — rechterhoek' },
-] as const
+// Meerdere beelden, en dat is geen luxe: staat de camera midden op het veld en pant ze heen
+// en weer, dan toont géén enkel beeld alle veertien kruispunten. Je duidt aan wat je nú ziet,
+// spoelt door, neemt een tweede beeld en duidt de rest aan. Elk beeld wordt bewaard mét zijn
+// tijdstip en gaat als ijkbeeld naar het volgen — dat rekent daartussen de camerabeweging uit.
+//
+// Werkt enkel op een geüpload bestand: een YouTube-speler laat zijn beeld niet uitlezen.
 
 type Punt = { label: string; x: number; y: number }
+type Beeld = {
+  tijd: number
+  beeldBreedte: number
+  beeldHoogte: number
+  punten: Punt[]
+  /** Alleen in dit scherm: het genomen frame. Wordt niet bewaard (te zwaar). */
+  frame?: string
+}
+
+const klok = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`
 
 export function Kalibreren({
   matchId,
@@ -32,20 +33,39 @@ export function Kalibreren({
 }: {
   matchId: number
   videoUrl: string | null
-  initieel: { punten?: Punt[] } | null
+  initieel: { punten?: Punt[]; beelden?: Beeld[] } | null
 }) {
-  const [punten, setPunten] = useState<Punt[]>(initieel?.punten ?? [])
-  const [frame, setFrame] = useState<string | null>(null)
-  const [afmeting, setAfmeting] = useState<{ w: number; h: number } | null>(null)
+  // Oudere kalibraties hebben één puntenlijst zonder tijdstip; die blijft gewoon werken.
+  const [beelden, setBeelden] = useState<Beeld[]>(() => {
+    if (initieel?.beelden?.length) return initieel.beelden.map((b) => ({ ...b, frame: undefined }))
+    if (initieel?.punten?.length) {
+      return [{ tijd: 0, beeldBreedte: 0, beeldHoogte: 0, punten: initieel.punten }]
+    }
+    return []
+  })
+  const [actief, setActief] = useState<number | null>(null)
+  const [gekozenLabel, setGekozenLabel] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [melding, setMelding] = useState<string | null>(null)
   const [fout, setFout] = useState<string | null>(null)
   const videoRef = useRef<HTMLVideoElement | null>(null)
 
   const isBestand = Boolean(videoUrl && !/youtu\.?be/i.test(videoUrl))
-  const volgende = PUNTEN.find((p) => !punten.some((q) => q.label === p.label)) ?? null
+  const huidig = actief != null ? beelden[actief] : null
 
-  const pakFrame = () => {
+  /** Op welk beeld staat dit punt al? (Voor het overzicht: wat is er al aangeduid.) */
+  const gezetOp = useMemo(() => {
+    const kaart = new Map<string, number>()
+    beelden.forEach((b, i) => b.punten.forEach((p) => kaart.set(p.label, i)))
+    return kaart
+  }, [beelden])
+
+  const volgende =
+    gekozenLabel ??
+    ALLE_LABELS.find((l) => !gezetOp.has(l)) ??
+    null
+
+  const pakBeeld = () => {
     const v = videoRef.current
     if (!v || !v.videoWidth) {
       setFout('De video is nog niet geladen — speel ze even af en probeer opnieuw.')
@@ -57,19 +77,46 @@ export function Kalibreren({
     const ctx = canvas.getContext('2d')
     if (!ctx) return
     ctx.drawImage(v, 0, 0)
-    setAfmeting({ w: v.videoWidth, h: v.videoHeight })
-    setFrame(canvas.toDataURL('image/jpeg', 0.85))
+    setBeelden((lijst) => {
+      const nieuw: Beeld = {
+        tijd: Math.round(v.currentTime * 10) / 10,
+        beeldBreedte: v.videoWidth,
+        beeldHoogte: v.videoHeight,
+        punten: [],
+        frame: canvas.toDataURL('image/jpeg', 0.85),
+      }
+      setActief(lijst.length)
+      return [...lijst, nieuw]
+    })
     setFout(null)
     setMelding(null)
   }
 
   const klik = (e: React.MouseEvent<HTMLImageElement>) => {
-    if (!volgende || !afmeting) return
+    if (actief == null || !volgende) return
+    const beeld = beelden[actief]
     const rect = e.currentTarget.getBoundingClientRect()
     // Van weergavepixels naar de échte beeldpixels: de server rekent met de videoresolutie.
-    const x = ((e.clientX - rect.left) / rect.width) * afmeting.w
-    const y = ((e.clientY - rect.top) / rect.height) * afmeting.h
-    setPunten((p) => [...p, { label: volgende.label, x: Math.round(x), y: Math.round(y) }])
+    const x = Math.round(((e.clientX - rect.left) / rect.width) * beeld.beeldBreedte)
+    const y = Math.round(((e.clientY - rect.top) / rect.height) * beeld.beeldHoogte)
+    setBeelden((lijst) =>
+      lijst.map((b, i) =>
+        i === actief
+          ? { ...b, punten: [...b.punten.filter((p) => p.label !== volgende), { label: volgende, x, y }] }
+          : // Hetzelfde punt op een ander beeld zetten vervangt het oude: één plek per punt.
+            { ...b, punten: b.punten.filter((p) => p.label !== volgende) },
+      ),
+    )
+    setGekozenLabel(null)
+  }
+
+  const wisPunt = (label: string) => {
+    setBeelden((lijst) => lijst.map((b) => ({ ...b, punten: b.punten.filter((p) => p.label !== label) })))
+  }
+
+  const wisBeeld = (i: number) => {
+    setBeelden((lijst) => lijst.filter((_, j) => j !== i))
+    setActief(null)
   }
 
   const bewaar = async () => {
@@ -80,17 +127,26 @@ export function Kalibreren({
       const res = await fetch(`/api/cv/match/${matchId}/kalibratie`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ punten, beeldBreedte: afmeting?.w, beeldHoogte: afmeting?.h }),
+        body: JSON.stringify({
+          beelden: beelden
+            .filter((b) => b.punten.length > 0)
+            .map((b) => ({
+              tijd: b.tijd,
+              beeldBreedte: b.beeldBreedte,
+              beeldHoogte: b.beeldHoogte,
+              punten: b.punten,
+            })),
+        }),
       })
-      const data = (await res.json()) as { error?: string; fout_px?: number }
+      const data = (await res.json()) as { error?: string; beelden?: number; punten?: number; bruikbaar?: number }
       if (!res.ok) {
         setFout(data.error ?? 'Bewaren mislukt.')
         return
       }
       setMelding(
-        data.fout_px != null
-          ? `Bewaard — de punten kloppen tot op ${data.fout_px.toFixed(1)} pixel met een echt veld.`
-          : 'Bewaard.',
+        data.bruikbaar && data.bruikbaar < (data.beelden ?? 0)
+          ? `Bewaard: ${data.punten} punten. ${data.bruikbaar} van de ${data.beelden} beelden hebben er genoeg (4+) om als ijkbeeld te dienen.`
+          : `Bewaard: ${data.punten} punten over ${data.beelden} ${data.beelden === 1 ? 'beeld' : 'beelden'}.`,
       )
     } catch {
       setFout('Netwerkfout — probeer opnieuw.')
@@ -99,13 +155,16 @@ export function Kalibreren({
     }
   }
 
+  const totaal = gezetOp.size
+  const bruikbareBeelden = beelden.filter((b) => b.punten.length >= 4).length
+
   return (
     <details className="an-fold kal" id="kalibratie">
       <summary>
         📍 Veldkalibratie{' '}
         <span className="tm-sum">
-          {punten.length >= 4
-            ? `${punten.length} punten aangeduid — de server kan afstanden berekenen`
+          {totaal >= 4
+            ? `${totaal} van de 14 punten aangeduid${beelden.length > 1 ? ` over ${beelden.length} beelden` : ''}`
             : 'nog niet gezet — nodig om te weten wáár de bal landt'}
         </span>
       </summary>
@@ -118,9 +177,9 @@ export function Kalibreren({
         ) : (
           <>
             <p className="tm-lead">
-              Wijs één keer aan waar de lijnen van dít veld liggen. Zet de video op een beeld waarop
-              je zoveel mogelijk lijnen ziet, neem het frame, en tik dan de gevraagde punten aan.
-              Vier punten volstaat; hoe meer je er aanduidt, hoe nauwkeuriger.
+              Wijs aan waar de lijnen van dít veld liggen. Zie je niet alles tegelijk — bij een
+              camera die pant is dat normaal — spoel dan door, neem een tweede beeld en duid daar
+              de rest aan. Elk beeld telt mee op zijn eigen tijdstip.
             </p>
 
             <video
@@ -133,63 +192,131 @@ export function Kalibreren({
               preload="metadata"
             />
             <div className="kal-acties">
-              <button type="button" className="va-btn" onClick={pakFrame}>
+              <button type="button" className="va-btn primary" onClick={pakBeeld}>
                 📷 Neem dit beeld
               </button>
-              {punten.length > 0 && (
-                <>
-                  <button type="button" className="va-btn" onClick={() => setPunten((p) => p.slice(0, -1))}>
-                    ↶ Laatste punt weg
-                  </button>
-                  <button type="button" className="va-btn" onClick={() => setPunten([])}>
-                    Alles wissen
-                  </button>
-                </>
-              )}
             </div>
 
-            {frame && (
-              <div className="kal-doek">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={frame} alt="Videobeeld om het veld op aan te duiden" onClick={klik} />
-                {afmeting &&
-                  punten.map((p, i) => (
-                    <span
-                      key={p.label}
-                      className="kal-punt"
-                      style={{ left: `${(p.x / afmeting.w) * 100}%`, top: `${(p.y / afmeting.h) * 100}%` }}
-                      title={p.label}
-                    >
-                      {i + 1}
-                    </span>
-                  ))}
+            {beelden.length > 0 && (
+              <div className="kal-beelden">
+                {beelden.map((b, i) => (
+                  <button
+                    key={`${b.tijd}-${i}`}
+                    type="button"
+                    className={`kal-tab${i === actief ? ' aan' : ''}`}
+                    onClick={() => setActief(i)}
+                  >
+                    Beeld {i + 1} · {klok(b.tijd)}
+                    <span className="kal-tel">{b.punten.length}</span>
+                  </button>
+                ))}
               </div>
             )}
 
-            {frame && (
-              <p className="kal-volgende">
-                {volgende ? (
-                  <>
-                    Tik nu aan: <strong>{volgende.uitleg}</strong>
-                    <span className="sa-hint"> ({punten.length} van de {PUNTEN.length} gezet)</span>
-                  </>
+            {huidig && (
+              <>
+                {huidig.frame ? (
+                  <div className="kal-doek">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={huidig.frame} alt={`Videobeeld op ${klok(huidig.tijd)}`} onClick={klik} />
+                    {huidig.punten.map((p) => (
+                      <span
+                        key={p.label}
+                        className="kal-punt"
+                        style={{
+                          left: `${(p.x / huidig.beeldBreedte) * 100}%`,
+                          top: `${(p.y / huidig.beeldHoogte) * 100}%`,
+                        }}
+                        title={p.label}
+                      >
+                        ✓
+                      </span>
+                    ))}
+                  </div>
                 ) : (
-                  <>Alle punten gezet. Bewaar hieronder.</>
+                  <p className="sa-hint">
+                    Dit beeld komt uit een eerdere sessie: de punten staan er nog, het beeld zelf
+                    niet. Wil je hier iets verplaatsen, spoel dan naar {klok(huidig.tijd)} en neem
+                    het beeld opnieuw.
+                  </p>
                 )}
-              </p>
+                <p className="kal-volgende">
+                  {volgende ? (
+                    <>
+                      Tik nu aan: <strong>{beschrijf(volgende)}</strong>
+                    </>
+                  ) : (
+                    <>Alle veertien punten staan er. Bewaar hieronder.</>
+                  )}
+                </p>
+                <div className="kal-acties">
+                  <button type="button" className="va-btn" onClick={() => wisBeeld(actief!)}>
+                    Dit beeld weg
+                  </button>
+                </div>
+              </>
             )}
+
+            <div className="kal-lijst">
+              <div className="kal-kop">
+                <span>{totaal} van de 14 punten</span>
+                <span className="sa-hint">tik een rij aan om dat punt (opnieuw) te zetten</span>
+              </div>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Lijn</th>
+                    {ZIJDEN.map((z) => (
+                      <th key={z}>{z}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {DWARSLIJNEN.map((lijn) => (
+                    <tr key={lijn.sleutel}>
+                      <th scope="row">
+                        {lijn.naam}
+                        {lijn.kant && <span className="kal-kant"> {lijn.kant}</span>}
+                      </th>
+                      {ZIJDEN.map((z) => {
+                        const label = labelVan(lijn.sleutel, z)
+                        const beeldIndex = gezetOp.get(label)
+                        const gezet = beeldIndex != null
+                        return (
+                          <td key={z}>
+                            <button
+                              type="button"
+                              className={`kal-cel${gezet ? ' gezet' : ''}${volgende === label ? ' beurt' : ''}`}
+                              onClick={() => setGekozenLabel(label)}
+                              title={omschrijving(lijn, z as Zijde)}
+                            >
+                              {gezet ? `✓ beeld ${beeldIndex + 1}` : '—'}
+                            </button>
+                            {gezet && (
+                              <button type="button" className="kal-wis" onClick={() => wisPunt(label)} title="wissen">
+                                ✕
+                              </button>
+                            )}
+                          </td>
+                        )
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
 
             <div className="tm-acties">
               <button
                 type="button"
                 className="va-btn primary"
-                disabled={busy || punten.length < 4}
+                disabled={busy || bruikbareBeelden === 0}
                 onClick={() => void bewaar()}
               >
                 {busy ? 'Bewaren…' : 'Kalibratie bewaren'}
               </button>
-              {punten.length > 0 && punten.length < 4 && (
-                <span className="sa-hint">Minstens vier punten nodig.</span>
+              {bruikbareBeelden === 0 && totaal > 0 && (
+                <span className="sa-hint">Eén beeld heeft minstens vier punten nodig.</span>
               )}
               {melding && <span className="tm-ok">{melding}</span>}
               {fout && <span className="tm-fout">{fout}</span>}
@@ -199,4 +326,10 @@ export function Kalibreren({
       </div>
     </details>
   )
+}
+
+function beschrijf(label: string): string {
+  const zijde = label.endsWith('_rechts') ? 'rechts' : 'links'
+  const lijn = DWARSLIJNEN.find((l) => label === labelVan(l.sleutel, zijde as Zijde))
+  return lijn ? omschrijving(lijn, zijde as Zijde) : label
 }

@@ -504,9 +504,38 @@ class HomografieSpoor:
         return {
             'momenten': len(self.punten),
             'ankers': len(ankers),
+            'ijkbeelden': sum(1 for p in self.punten if p['bron'] == 'ijkbeeld'),
+            'teruggerekend': sum(1 for p in self.punten if p['bron'] == 'teruggerekend'),
             'gemiddelde_ankerfout_m': round(sum(fouten) / len(fouten), 2) if fouten else None,
             'duur_s': round(float(self.punten[-1]['t']) - float(self.punten[0]['t']), 1) if self.punten else 0.0,
         }
+
+
+def lees_ankers(data: dict) -> list[tuple[float, Matrix]]:
+    """De aangeduide ijkbeelden uit een ankerbestand, op tijd gesorteerd.
+
+    Vorm: ``{"ankers": [{"tijd_s": 387.2, "matrix_beeld_naar_veld": [[...]]}, …]}``. Eén
+    ijkbeeld op t=0 is precies het oude ``--kalibratie``; meerdere beelden zijn wat je nodig
+    hebt als de camera pant en geen enkel beeld het hele veld toont.
+    """
+    ankers: list[tuple[float, Matrix]] = []
+    for a in data.get('ankers') or []:
+        matrix = a.get('matrix_beeld_naar_veld') or a.get('matrix')
+        if not matrix:
+            continue
+        ankers.append((float(a.get('tijd_s') or 0.0), normaliseer(matrix)))
+    return sorted(ankers, key=lambda p: p[0])
+
+
+def basis_uit_anker(anker: Matrix, keten_op_ankertijd: Matrix) -> Matrix:
+    """De matrix van het beginframe, afgeleid uit een anker verderop in de video.
+
+    We volgen de camera als een keten K(t): het beeld van nu, uitgedrukt in het beeld van de
+    start. Geldt op moment a de gekende matrix H_a, dan is H(t) = H_a · K(a)⁻¹ · K(t). Die
+    ``H_a · K(a)⁻¹`` is de basis — en daarmee kunnen we ook álles vóór het anker alsnog
+    invullen. Zonder dit zou een ijkbeeld op 6:27 stilzwijgend op seconde 0 geplakt worden.
+    """
+    return normaliseer(maal(anker, inverteer(keten_op_ankertijd)))
 
 
 def _standaard_veldpunten(
@@ -754,14 +783,24 @@ def detecteer_lijnsegmenten(cv2, frame, min_lengte_px: int = 60) -> list[tuple[t
 
 def volg_video(args: argparse.Namespace) -> tuple[HomografieSpoor, dict]:
     cv2 = _laad_cv2()
-    import numpy as np  # noqa: PLC0415
 
     if not args.video.is_file():
         _fout(f'video niet gevonden: {args.video}')
-    if not args.kalibratie.is_file():
-        _fout(f'kalibratiebestand niet gevonden: {args.kalibratie} (maak het met cv/calibrate.py)')
-    kal = json.loads(args.kalibratie.read_text(encoding='utf-8'))
-    start = normaliseer(kal['matrix_beeld_naar_veld'])
+
+    # Ankers: één of meer aangeduide ijkbeelden, elk op hun eigen tijdstip. Een gewone
+    # --kalibratie is daar het eenvoudigste geval van: één anker op seconde 0.
+    if getattr(args, 'ankers', None) is not None:
+        if not args.ankers.is_file():
+            _fout(f'ankerbestand niet gevonden: {args.ankers}')
+        kal = json.loads(args.ankers.read_text(encoding='utf-8'))
+        ankers = lees_ankers(kal)
+        if not ankers:
+            _fout(f'geen bruikbare ankers in {args.ankers}')
+    else:
+        if not args.kalibratie.is_file():
+            _fout(f'kalibratiebestand niet gevonden: {args.kalibratie} (maak het met cv/calibrate.py)')
+        kal = json.loads(args.kalibratie.read_text(encoding='utf-8'))
+        ankers = [(0.0, normaliseer(kal['matrix_beeld_naar_veld']))]
     info = kal.get('veld') or {}
     diepte = float(kal.get('doelgebied_diepte_m') or info.get('doelgebied_diepte_m')
                    or veld.STANDAARD_DOELGEBIED_DIEPTE_M)
@@ -776,14 +815,20 @@ def volg_video(args: argparse.Namespace) -> tuple[HomografieSpoor, dict]:
         _fout(f'video kan niet geopend worden: {args.video}')
 
     spoor = HomografieSpoor()
-    gevolgd = start
-    spoor.voeg_toe(0.0, gevolgd, 0.0, 'kalibratie')
     stap = 1.0 / args.fps
     cap.set(cv2.CAP_PROP_POS_MSEC, 0.0)
     ok, vorig = cap.read()
     if not ok:
         _fout('eerste frame kon niet gelezen worden')
     vorig_grijs = cv2.cvtColor(vorig, cv2.COLOR_BGR2GRAY)
+
+    # K(t): het beeld van nu, uitgedrukt in het beeld van seconde 0. De keten loopt vanaf de
+    # start, ook als het eerste ijkbeeld pas veel later komt — dan vullen we alles ervóór
+    # achteraf in met basis_uit_anker().
+    keten = eenheid()
+    basis: Matrix | None = None
+    wachtrij: list[tuple[float, Matrix]] = [(0.0, keten)]
+    volgend_anker = 0
     laatste_anker = 0.0
     t = stap
     verloren = 0
@@ -803,7 +848,7 @@ def volg_video(args: argparse.Namespace) -> tuple[HomografieSpoor, dict]:
             if len(goed_oud) >= 8:
                 stap_m, _ = cv2.findHomography(goed_nieuw, goed_oud, cv2.RANSAC, 3.0)
                 if stap_m is not None:
-                    gevolgd = normaliseer(maal(gevolgd, [[float(w) for w in rij] for rij in stap_m]))
+                    keten = normaliseer(maal(keten, [[float(w) for w in rij] for rij in stap_m]))
                 else:
                     verloren += 1
             else:
@@ -811,6 +856,32 @@ def volg_video(args: argparse.Namespace) -> tuple[HomografieSpoor, dict]:
         else:
             verloren += 1
 
+        # Zijn we voorbij een aangeduid ijkbeeld? Dat is grondwaarheid: harder dan wat de
+        # lijndetector of de flow ooit kan geven, dus die zet de stand exact terug.
+        if volgend_anker < len(ankers) and t >= ankers[volgend_anker][0]:
+            anker_matrix = ankers[volgend_anker][1]
+            basis = basis_uit_anker(anker_matrix, keten)
+            volgend_anker += 1
+            laatste_anker = t
+            if wachtrij:
+                # Alles vóór het eerste ijkbeeld alsnog invullen — de camera van tóén,
+                # teruggerekend via dezelfde keten.
+                for wt, wk in wachtrij:
+                    spoor.voeg_toe(wt, maal(basis, wk), float('inf'), 'teruggerekend')
+                wachtrij = []
+            spoor.voeg_toe(t, anker_matrix, 0.0, 'ijkbeeld')
+            vorig_grijs = grijs
+            t += stap
+            continue
+
+        if basis is None:
+            # Nog geen enkel ijkbeeld gezien: keten bijhouden, oordeel uitstellen.
+            wachtrij.append((t, keten))
+            vorig_grijs = grijs
+            t += stap
+            continue
+
+        gevolgd = normaliseer(maal(basis, keten))
         if t - laatste_anker >= args.heranker:
             segmenten = detecteer_lijnsegmenten(cv2, frame, args.min_lijn)
             gevolgd, fout, gebruikt = veranker_op_lijnen(
@@ -821,11 +892,16 @@ def volg_video(args: argparse.Namespace) -> tuple[HomografieSpoor, dict]:
             if gebruikt:
                 bron = 'lijnen'
                 laatste_anker = t
+                # De correctie geldt vanaf nu: verreken ze in de basis, anders gooit de
+                # volgende stap ze meteen weer weg.
+                basis = basis_uit_anker(gevolgd, keten)
         spoor.voeg_toe(t, gevolgd, fout, bron)
         vorig_grijs = grijs
         t += stap
-        del np  # numpy is enkel nodig voor de opencv-aanroepen hierboven
     cap.release()
+    if basis is None:
+        _fout(f'geen enkel ijkbeeld viel binnen de video (eerste anker op {ankers[0][0]:g} s) — '
+              'duid een beeld aan dat écht in deze opname zit')
     return spoor, {**spoor.rapport(), 'frames_zonder_flow': verloren}
 
 
@@ -842,6 +918,11 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument('--video', type=Path, default=None, help='de wedstrijdvideo (videomodus)')
     parser.add_argument('--kalibratie', type=Path, default=None,
                         help='kalibratie van het eerste frame (calibrate.py) — het vertrekpunt')
+    parser.add_argument('--ankers', type=Path, default=None,
+                        help='meerdere ijkbeelden met hun tijdstip (JSON met "ankers": '
+                             '[{tijd_s, matrix_beeld_naar_veld}]). Nodig zodra de camera pant: '
+                             'geen enkel beeld toont dan het hele veld, en een ijkbeeld hoort '
+                             'bij zijn eigen moment — niet bij seconde 0.')
     parser.add_argument('--stand', choices=tuple(STANDEN), default='gewoon',
                         help='ruil tussen rekentijd en precisie: snel · gewoon · nauwkeurig '
                              '(nauwkeurig meet 10×/s en herankert elke halve seconde — trager, '
@@ -888,8 +969,8 @@ def main(argv: list[str] | None = None) -> None:
         print(f'Demo (seed {args.seed}, stand {args.stand}): bewegende camera over {args.duur:g} s '
               f'bij {args.fps:g}/s, herankeren elke {args.heranker:g} s')
     else:
-        if args.video is None or args.kalibratie is None:
-            _fout('videomodus vereist --video én --kalibratie (of oefen met --demo --seed)')
+        if args.video is None or (args.kalibratie is None and args.ankers is None):
+            _fout('videomodus vereist --video én --kalibratie of --ankers (of oefen met --demo --seed)')
         spoor, rapport = volg_video(args)
 
     spoor.schrijf(args.uit)

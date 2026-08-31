@@ -241,3 +241,39 @@ class TestDemoLus(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class TestAnkers(unittest.TestCase):
+    """Meerdere ijkbeelden, elk op hun eigen moment.
+
+    Nodig zodra de camera midden op het veld staat en pant: geen enkel beeld toont dan alle
+    veldlijnen, dus duid je er twee of drie aan. En een ijkbeeld op 6:27 hoort bij 6:27 —
+    vroeger werd het stilzwijgend op seconde 0 geplakt.
+    """
+
+    def test_leest_en_sorteert_de_ijkbeelden(self):
+        ankers = vv.lees_ankers({'ankers': [
+            {'tijd_s': 387.0, 'matrix_beeld_naar_veld': [[2, 0, 0], [0, 2, 0], [0, 0, 1]]},
+            {'tijd_s': 12.5, 'matrix_beeld_naar_veld': [[1, 0, 0], [0, 1, 0], [0, 0, 1]]},
+        ]})
+        self.assertEqual([round(t, 1) for t, _ in ankers], [12.5, 387.0])
+
+    def test_slaat_ankers_zonder_matrix_over(self):
+        self.assertEqual(vv.lees_ankers({'ankers': [{'tijd_s': 3.0}]}), [])
+        self.assertEqual(vv.lees_ankers({}), [])
+
+    def test_rekent_het_beginbeeld_terug_uit_een_later_ijkbeeld(self):
+        # De camera schuift: op moment a is het beeld K(a) ten opzichte van de start. Kennen we
+        # daar de echte matrix, dan ligt die van de start vast — en dus die van elk moment
+        # ervóór. Zonder deze stap meet de eerste helft van de video op de verkeerde plaats.
+        start = vv.normaliseer([[10.0, 0.0, 100.0], [0.0, 10.0, 50.0], [0.0, 0.0, 1.0]])
+        keten_a = vv.normaliseer([[1.0, 0.0, 40.0], [0.0, 1.0, -8.0], [0.0, 0.0, 1.0]])
+        anker = vv.normaliseer(vv.maal(start, keten_a))          # wat je op moment a aanduidt
+        herwonnen = vv.basis_uit_anker(anker, keten_a)
+        for rij_h, rij_s in zip(herwonnen, start):
+            for w_h, w_s in zip(rij_h, rij_s):
+                self.assertAlmostEqual(w_h, w_s, places=9)
+
+    def test_een_gewone_kalibratie_is_gewoon_een_anker_op_nul(self):
+        matrix = vv.normaliseer([[3.0, 0.0, 5.0], [0.0, 3.0, 7.0], [0.0, 0.0, 1.0]])
+        self.assertEqual(vv.basis_uit_anker(matrix, vv.eenheid()), matrix)

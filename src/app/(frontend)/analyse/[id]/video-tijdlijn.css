@@ -414,6 +414,36 @@
 .kal-acties { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
 .kal-doek { position: relative; line-height: 0; border-radius: 12px; overflow: hidden; }
 .kal-doek img { width: 100%; cursor: crosshair; }
+
+/* ── Meerdere ijkbeelden: tabjes + het overzicht van wat al aangeduid is ─────────────────── */
+.kal-beelden { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+.kal-tab {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 10px; border-radius: 999px; font: inherit; font-size: 13px; cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.16); background: rgba(255, 255, 255, 0.04); color: inherit;
+}
+.kal-tab.aan { border-color: var(--accent, #60a5fa); background: rgba(96, 165, 250, 0.16); }
+.kal-tel {
+  min-width: 18px; padding: 0 5px; border-radius: 999px; font-size: 11px; text-align: center;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.kal-lijst { margin: 12px 0; }
+.kal-kop { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; margin-bottom: 6px; font-size: 13px; }
+.kal-lijst table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.kal-lijst th, .kal-lijst td { padding: 3px 4px; text-align: left; }
+.kal-lijst td { white-space: nowrap; }
+.kal-lijst thead th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; opacity: 0.6; }
+.kal-lijst tbody th { font-weight: 600; white-space: nowrap; }
+.kal-kant { opacity: 0.6; font-weight: 400; }
+.kal-cel {
+  min-width: 76px; padding: 5px 7px; border-radius: 8px; font: inherit; font-size: 12px; cursor: pointer;
+  border: 1px dashed rgba(255, 255, 255, 0.2); background: none; color: inherit; opacity: 0.7;
+}
+.kal-cel.gezet { border-style: solid; border-color: rgba(74, 222, 128, 0.5); background: rgba(74, 222, 128, 0.12); opacity: 1; }
+.kal-cel.beurt { border-color: var(--accent, #60a5fa); box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.28); opacity: 1; }
+.kal-wis { margin-left: 4px; padding: 2px 5px; border: 0; background: none; color: inherit; opacity: 0.5; cursor: pointer; }
+.kal-wis:hover { opacity: 1; }
 .kal-punt {
   position: absolute; transform: translate(-50%, -50%);
   min-width: 20px; height: 20px; padding: 0 4px; border-radius: 999px;
