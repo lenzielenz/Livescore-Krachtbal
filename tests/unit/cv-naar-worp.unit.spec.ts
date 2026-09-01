@@ -129,3 +129,36 @@ describe('maakOverzetplan', () => {
     expect(plan.overgeslagen).toHaveLength(0)
   })
 })
+
+describe('uitballen door de brug', () => {
+  // De blokkerende vondst uit de doorlichting: de landing werd op de veldrand geklemd en elke
+  // uitbal telde als doelpunt. Nu draagt een uitbal zijn echte punt buiten de lijnen, en moet
+  // dat punt ONGEKLEMD door de brug — precies daaruit leidt de engine out_side/out_back af.
+  const uitbal = (xM: number, yM: number) => ({
+    videoTimeS: 100, eventType: 'worp' as const, xM, yM, uitbal: true,
+    verdict: 'bevestigd' as const,
+  })
+
+  it('laat het punt van een uitbal buiten de lijnen staan', () => {
+    // 2 m voorbij de achterlijn van een veld van 46 m (y-norm > 1).
+    const w = worpUitVoorstel(uitbal(7, 48), 10)
+    expect(w).not.toBeNull()
+    expect(w!.point.y).toBeGreaterThan(1)
+  })
+
+  it('weigert een uitbal-punt dat te ver weg ligt om geloofwaardig te zijn', () => {
+    // 30 m naast het veld is geen uitbal maar een kapotte projectie.
+    expect(worpUitVoorstel(uitbal(44, 20), 10)).toBeNull()
+  })
+
+  it('klemt een gewone worp nog steeds op het veld', () => {
+    const w = worpUitVoorstel({ videoTimeS: 5, eventType: 'worp', xM: 7, yM: 45.9, verdict: 'bevestigd' }, 10)
+    expect(w).not.toBeNull()
+    expect(w!.point.y).toBeLessThanOrEqual(1)
+  })
+
+  it('blijft een punt buiten het veld zónder uitbal-vlag weigeren', () => {
+    // Buiten zonder vlag betekent: de meting deugt niet — geen worp van maken.
+    expect(worpUitVoorstel({ videoTimeS: 5, eventType: 'worp', xM: 7, yM: 48, verdict: 'bevestigd' }, 10)).toBeNull()
+  })
+})

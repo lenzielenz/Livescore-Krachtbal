@@ -3,6 +3,7 @@ import path from 'path'
 
 import {
   bevestigdeTijden,
+  handWorpen,
   kiesHoldout,
   labelRegels,
   trainArgv,
@@ -111,6 +112,26 @@ describe('bevestigdeTijden', () => {
 
   it('negeert een voorstel zonder bruikbare tijd', () => {
     expect(bevestigdeTijden([{ videoTimeS: null, verdict: 'bevestigd' }])).toEqual([])
+  })
+})
+
+describe('handWorpen', () => {
+  // Regressie: de labels uit de ingevoerde worpen namen élke worp mee, ook die met bron
+  // 'video' — afgespeeld uit bevestigde CV-voorstellen (cv-overzetten). Dat is modeluitvoer:
+  // als label vergelijkt hij het model met zichzelf, en de holdout lekt. Zelfde uitsluiting
+  // als de modelscore op de analysepagina.
+  it('sluit uit de video-analyse afgespeelde worpen uit als label', () => {
+    const worpen = [
+      { period: 1, gameClock: 10, bron: 'manueel' },
+      { period: 1, gameClock: 20, bron: 'video' },
+      { period: 2, gameClock: 30 }, // oude worp zonder bron-veld = handwerk
+    ]
+    expect(handWorpen(worpen).map((w) => w.gameClock)).toEqual([10, 30])
+  })
+
+  it('laat een lijst zonder video-worpen ongemoeid', () => {
+    const worpen = [{ gameClock: 5, bron: 'manueel' }]
+    expect(handWorpen(worpen)).toEqual(worpen)
   })
 })
 

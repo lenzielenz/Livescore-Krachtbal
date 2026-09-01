@@ -49,6 +49,14 @@ MAX_SNELHEID_M_S = 8.0
 # dezelfde wedstrijd op 2/s. Met dit venster meet je de béweging, niet de ruis, en
 # blijven de meters vergelijkbaar tussen wedstrijden. Sprints (1,5–3 s) overleven het.
 GLAD_VENSTER_S = 0.75
+# Dode band tegen detector-jitter: meters tellen pas wanneer het spoor zich verder
+# dan dit van zijn referentiepunt verplaatst heeft (dan schuift het referentiepunt
+# mee). Het gladstrijkvenster dempt de jitter maar met ~√3 (3 punten bij 4/s); wat
+# rest telt anders gewoon op — een speler die stilstaat "loopt" dan honderden
+# meters per wedstrijd bij een voetpunt-jitter van ~0,15 m sigma. Met de band
+# blijft stilstaan op ~nul meters, terwijl echte verplaatsing gewoon doortelt:
+# een rechte lijn wordt in koorden met exact dezelfde totale lengte gemeten.
+RUIS_DREMPEL_M = 0.4
 
 
 def _fout(boodschap: str, code: int = 2) -> None:
@@ -109,12 +117,14 @@ def fysiek_per_spoor(
     max_gat: float = MAX_GAT_S,
     max_snelheid: float = MAX_SNELHEID_M_S,
     glad_venster: float = GLAD_VENSTER_S,
+    ruis_drempel: float = RUIS_DREMPEL_M,
 ) -> dict[int, dict]:
     """Per spoor: afstand_m, sprints, topsnelheid_m_s, actieve_s.
 
     Segmenten met een gat > max_gat of een snelheid > max_snelheid worden
     overgeslagen (spoor kwijt / identiteitswissel) — beter iets te weinig
-    meters tellen dan spooksprints rapporteren.
+    meters tellen dan spooksprints rapporteren. Meters tellen via een dode
+    band van ruis_drempel meter (zie RUIS_DREMPEL_M); 0 = rauw tellen.
     """
     per_spoor: dict[int, list[tuple[float, float, float]]] = {}
     for r in posities:
@@ -131,17 +141,26 @@ def fysiek_per_spoor(
         sprints = 0
         sprint_start: float | None = None
         sprint_geteld = False  # één aaneengesloten sprint telt één keer, hoe lang die ook duurt
+        referentie: tuple[float, float] | None = None  # dode band: laatste getelde plek
         for (t0, x0, y0), (t1, x1, y1) in zip(punten, punten[1:]):
             dt = t1 - t0
             if dt <= 0 or dt > max_gat:
-                sprint_start, sprint_geteld = None, False
+                sprint_start, sprint_geteld, referentie = None, False, None
                 continue
             stap = ((x1 - x0) ** 2 + (y1 - y0) ** 2) ** 0.5
             snelheid = stap / dt
             if snelheid > max_snelheid:
-                sprint_start, sprint_geteld = None, False
+                sprint_start, sprint_geteld, referentie = None, False, None
                 continue
-            afstand += stap
+            if referentie is None:
+                referentie = (x0, y0)
+            # Meters tellen pas wanneer de verplaatsing sinds het referentiepunt
+            # boven de jitter uitkomt — jitter danst rond één plek en haalt de
+            # drempel niet, echte beweging schuift het referentiepunt gewoon mee.
+            verplaatsing = ((x1 - referentie[0]) ** 2 + (y1 - referentie[1]) ** 2) ** 0.5
+            if verplaatsing >= ruis_drempel:
+                afstand += verplaatsing
+                referentie = (x1, y1)
             actief += dt
             top = max(top, snelheid)
             if snelheid >= sprint_drempel:
@@ -273,6 +292,10 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument('--glad-venster', type=float, default=GLAD_VENSTER_S,
                         help=f'gladstrijkvenster in seconden vóór de meters geteld worden '
                              f'(standaard {GLAD_VENSTER_S:g}; 0 = rauw tellen, telt meetruis mee)')
+    parser.add_argument('--ruis-drempel', type=float, default=RUIS_DREMPEL_M,
+                        help=f'dode band in meters: meters tellen pas bij een verplaatsing groter dan '
+                             f'dit, zodat een stilstaande speler geen detector-jitter "loopt" '
+                             f'(standaard {RUIS_DREMPEL_M:g}; 0 = rauw tellen)')
     parser.add_argument('--upload', action='store_true', help='resultaat naar het platform sturen')
     parser.add_argument('--base', default='http://localhost:3000', help='basis-URL van het platform')
     parser.add_argument('--match', type=int, default=None, help='match-id op het platform (vereist bij --upload)')
@@ -300,7 +323,8 @@ def main(argv: list[str] | None = None) -> None:
         toewijzing = {}
 
     per_spoor = fysiek_per_spoor(posities, sprint_drempel=args.sprint_drempel,
-                                 sprint_min_duur=args.sprint_duur, glad_venster=args.glad_venster)
+                                 sprint_min_duur=args.sprint_duur, glad_venster=args.glad_venster,
+                                 ruis_drempel=args.ruis_drempel)
     if args.sjabloon is not None:
         args.sjabloon.write_text(
             json.dumps(sjabloon_toewijzing(posities, per_spoor), indent=2, ensure_ascii=False) + '\n',

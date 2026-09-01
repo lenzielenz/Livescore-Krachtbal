@@ -47,6 +47,23 @@ class TestKoppelaar(unittest.TestCase):
         # Eén waarneming voor twee sporen: precies één koppeling, geen dubbel.
         self.assertEqual(len(uit), 1)
 
+    def test_kruisende_spelers_wisselen_niet_van_spoor(self):
+        # Vondst uit de doorlichting: op het kruispunt slokt dedupliceer één van
+        # beide waarnemingen op, en zonder snelheidsvoorspelling hing de greedy
+        # koppelaar de sporen na het kruisen omgekeerd aan elkaar (spoor 1 werd
+        # 11×A gevolgd door 30×B). Twee spelers kruisen op 0,4 m, 2 m/s, 4/s.
+        k = tracking.Koppelaar()
+        sporen: dict[int, list[str]] = {}
+        for i in range(41):
+            t = i * 0.25
+            punten = tracking.dedupliceer([(0.5 * i, 10.0), (10.0 - 0.5 * i, 10.4)])
+            for tid, _, y in k.stap(t, punten):
+                sporen.setdefault(tid, []).append('A' if abs(y - 10.0) < 0.2 else 'B')
+        self.assertEqual(len(sporen), 2)
+        for wie in sporen.values():
+            # Elk spoor blijft één en dezelfde speler volgen.
+            self.assertEqual(len(set(wie)), 1)
+
 
 class TestOpschonen(unittest.TestCase):
     def test_dedupliceer_voegt_dubbele_detecties_samen(self):
@@ -97,7 +114,8 @@ class TestDemoPosities(unittest.TestCase):
         traag = tracking.demo_posities(seed=7, duur_s=60.0, diepte_m=10.0, stap_s=0.5)
         dicht = tracking.demo_posities(seed=7, duur_s=60.0, diepte_m=10.0, stap_s=0.25)
         self.assertAlmostEqual(len(dicht) / len(traag), 2.0, delta=0.05)
-        # De ruis schaalt mee met de stap: de spelers lopen niet plots twee keer zo snel.
+        # Richtingsbehoud in de demo: dichter bemonsteren meet dezélfde beweging,
+        # dus de gemeten meters (mét jitterfilter) blijven vergelijkbaar.
         import fysiek  # noqa: PLC0415
         gem = lambda rijen: sum(  # noqa: E731
             v['afstand_m'] for v in fysiek.fysiek_per_spoor(rijen).values()

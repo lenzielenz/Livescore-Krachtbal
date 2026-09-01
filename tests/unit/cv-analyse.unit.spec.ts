@@ -4,6 +4,7 @@ import os from 'os'
 import path from 'path'
 
 import {
+  besluitHervatten,
   bruikbareBeelden,
   leesVoortgang,
   leesVolgrapport,
@@ -468,6 +469,56 @@ describe('leesVoortgang', () => {
     expect(leesVoortgang('Houdingsmodel laden (balanced) …')).toBeNull()
     expect(leesVoortgang('')).toBeNull()
     expect(leesVoortgang('VOORTGANGx 0.5 iets')).toBeNull()
+  })
+})
+
+describe('besluitHervatten', () => {
+  // Regressie: hervatten hing enkel aan de vorige status, nooit aan de instellingen. Wie een
+  // op 'snel' gestrande analyse herstartte op 'nauwkeurig' kreeg één stilzwijgend heterogene
+  // meetreeks — dezelfde worp scoort in het oude deel tot een derde lager en valt onder de
+  // drempel — en die reeks voedde daarna ook nog de training.
+  const onderbroken = (instellingen?: AnalyseStand['instellingen']): AnalyseStand => ({
+    status: 'afgebroken', stap: 'x', stapNummer: 1, stappen: 3,
+    gestart: new Date().toISOString(),
+    instellingen: instellingen ?? { stand: 'snel', bewegend: false, tracking: false, overlay: false, ai: true },
+  })
+  const opts = { stand: 'snel' as const, bewegend: false, tracking: false, overlay: false, ai: true }
+
+  it('hervat een onderbroken poging met dezelfde instellingen', () => {
+    expect(besluitHervatten(onderbroken(), opts)).toEqual({ hervatten: true })
+    expect(besluitHervatten({ ...onderbroken(), status: 'mislukt' }, opts)).toEqual({ hervatten: true })
+  })
+
+  it('begint vers wanneer de stand veranderd is — en zegt waarom', () => {
+    const besluit = besluitHervatten(onderbroken(), { ...opts, stand: 'nauwkeurig' })
+    expect(besluit.hervatten).toBe(false)
+    expect(besluit.melding).toMatch(/instellingen verschillen/i)
+  })
+
+  it('vergelijkt ook bewegend, tracking en ai — alles wat de meting zelf verandert', () => {
+    expect(besluitHervatten(onderbroken(), { ...opts, bewegend: true }).hervatten).toBe(false)
+    expect(besluitHervatten(onderbroken(), { ...opts, tracking: true }).hervatten).toBe(false)
+    expect(besluitHervatten(onderbroken(), { ...opts, ai: false }).hervatten).toBe(false)
+    // Een oude stand zonder ai-veld is hetzelfde als ai uit — geen onnodige herstart.
+    const zonderAi = onderbroken({ stand: 'snel', bewegend: false, tracking: false, overlay: false })
+    expect(besluitHervatten(zonderAi, { ...opts, ai: undefined }).hervatten).toBe(true)
+  })
+
+  it('laat overlay buiten beschouwing — dat verandert niets aan de meting', () => {
+    expect(besluitHervatten(onderbroken(), { ...opts, overlay: true }).hervatten).toBe(true)
+  })
+
+  it('hervat nooit een voltooide of lopende analyse', () => {
+    expect(besluitHervatten({ ...onderbroken(), status: 'klaar' }, opts)).toEqual({ hervatten: false })
+    expect(besluitHervatten({ ...onderbroken(), status: 'bezig' }, opts)).toEqual({ hervatten: false })
+    expect(besluitHervatten(null, opts)).toEqual({ hervatten: false })
+  })
+
+  it('begint vers wanneer de vorige poging geen instellingen droeg', () => {
+    const zonder = { ...onderbroken(), instellingen: undefined }
+    const besluit = besluitHervatten(zonder, opts)
+    expect(besluit.hervatten).toBe(false)
+    expect(besluit.melding).toMatch(/geen instellingen/i)
   })
 })
 

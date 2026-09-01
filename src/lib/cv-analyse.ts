@@ -46,6 +46,8 @@ export type AnalyseStand = {
   hervat?: boolean
   /** Kan de onderbroken analyse verdergezet worden, en hoeveel stappen staan er al klaar? */
   hervatbaar?: { stappenKlaar: number; stappen: number }
+  /** Iets dat de gebruiker over deze start moet weten (bv. waarom er níét hervat werd). */
+  melding?: string
   rapport?: {
     voorstellen?: number
     detecties?: number
@@ -64,7 +66,7 @@ export type AnalyseStand = {
     /** Wat er overgeslagen is omdat de kalibratie ontbrak. */
     overgeslagen?: string[]
   }
-  instellingen?: { stand: string; bewegend: boolean; tracking: boolean; overlay: boolean }
+  instellingen?: { stand: string; bewegend: boolean; tracking: boolean; overlay: boolean; ai?: boolean }
 }
 
 export type AnalyseOpties = {
@@ -520,6 +522,45 @@ export function isVerweesd(stand: AnalyseStand | null | undefined): boolean {
   return stand.procesStart !== PROCES_START
 }
 
+/**
+ * Verdergaan op het werk van de vorige poging, of vers beginnen?
+ *
+ * Hervatten mag alleen als de vorige poging onderbroken of mislukt is ÉN met dezélfde meting
+ * bezig was: stand, bewegend, tracking en ai bepalen wat en hoe fijn er gemeten wordt.
+ * houding.py --hervat hergebruikt de bestaande meetreeks zonder te kunnen zien met welke
+ * analyse-fps of modelgrootte ze gemeten is (de reeksregels dragen dat niet), dus hervatten
+ * op een andere stand levert één stilzwijgend heterogene reeks op waarin dezelfde worp in
+ * het oude deel tot een derde lager scoort — gemiste worpen vooraan in de video, en daarna
+ * vergiftigt die reeks ook nog de training. Overlay telt niet mee: dat verandert niets aan
+ * de meting zelf, alleen aan wat er achteraf getoond wordt.
+ *
+ * Puur, zodat de beslissing te testen valt zonder database of Python.
+ */
+export function besluitHervatten(
+  vorige: AnalyseStand | null | undefined,
+  opts: AnalyseOpties,
+): { hervatten: boolean; melding?: string } {
+  const onderbroken = vorige?.status === 'afgebroken' || vorige?.status === 'mislukt'
+  if (!onderbroken) return { hervatten: false }
+  const v = vorige?.instellingen
+  const gelijk =
+    v != null &&
+    v.stand === opts.stand &&
+    v.bewegend === opts.bewegend &&
+    v.tracking === opts.tracking &&
+    Boolean(v.ai) === Boolean(opts.ai)
+  if (gelijk) return { hervatten: true }
+  return {
+    hervatten: false,
+    melding:
+      v == null
+        ? 'De onderbroken poging droeg geen instellingen, dus er valt niet te controleren of '
+          + 'haar werk herbruikbaar is — de analyse is opnieuw bij nul begonnen.'
+        : 'De instellingen verschillen van de onderbroken poging — verdergaan zou oude en '
+          + 'nieuwe metingen door elkaar zetten, dus de analyse is opnieuw bij nul begonnen.',
+  }
+}
+
 export async function leesStand(payload: Payload, matchId: number): Promise<AnalyseStand | null> {
   const match = await payload.findByID({ collection: 'matches', id: matchId, depth: 0 }).catch(() => null)
   const stand = (match?.cvAnalyse ?? null) as AnalyseStand | null
@@ -745,9 +786,12 @@ export async function startAnalyse(
   // Verdergaan of van voren af aan? Een analyse die onderbroken is (de server herstartte) of
   // gestruikeld is, mag verder op wat al af was — dát is waarom de merktekens bestaan. Maar een
   // analyse die klaar was en die je bewust opnieuw start, hoort écht opnieuw te draaien: anders
-  // zou "opnieuw analyseren" in enkele seconden hetzelfde resultaat teruggeven.
+  // zou "opnieuw analyseren" in enkele seconden hetzelfde resultaat teruggeven. En hervatten
+  // mag alleen met dezelfde instellingen — anders wordt de meetreeks heterogeen (zie
+  // besluitHervatten); dan gaan de merktekens eraan en begint de meting vers.
   const vorige = (match.cvAnalyse ?? null) as AnalyseStand | null
-  const hervatten = vorige?.status === 'afgebroken' || vorige?.status === 'mislukt'
+  const besluit = besluitHervatten(vorige, opts)
+  const hervatten = besluit.hervatten
   if (!hervatten) await wisMerktekens(map)
   const kalibratieData = (match.cvKalibratie ?? null) as KalibratieData
   const veldmaten = {
@@ -788,6 +832,8 @@ export async function startAnalyse(
     procesStart: PROCES_START,
     instellingen: { ...opts },
     ...(hervatten ? { hervat: true } : {}),
+    // Wie op een andere stand herstartte, moet zien dat het werk níét hervat is.
+    ...(besluit.melding ? { melding: besluit.melding } : {}),
   }
   await schrijfStand(payload, matchId, stand)
 

@@ -73,6 +73,46 @@ class TestGladstrijken(unittest.TestCase):
         self.assertGreater(f['topsnelheid_m_s'], 4.0)
 
 
+class TestDodeBand(unittest.TestCase):
+    """Vondst uit de doorlichting: loopafstand integreerde positiejitter — een
+    stilstaande speler 'liep' bij een voetpunt-jitter van 0,15 m sigma 210,8 m
+    per tien minuten. De dode band telt meters pas bij echte verplaatsing."""
+
+    def test_stilstaande_speler_loopt_vrijwel_niets_ondanks_jitter(self):
+        import random
+        rng = random.Random(42)
+        # Tien minuten stilstaan op (7, 20) bij 4 metingen/s, realistische jitter.
+        posities = [{'t': i * 0.25, 'track': 1,
+                     'x_m': 7.0 + rng.gauss(0.0, 0.15), 'y_m': 20.0 + rng.gauss(0.0, 0.15)}
+                    for i in range(2401)]
+        f = fysiek.fysiek_per_spoor(posities)[1]
+        # Minder dan enkele meters per minuut — vóór de fix was dit 210,8 m.
+        self.assertLess(f['afstand_m'], 20.0)
+        # De sprintdrempel blijft buiten bereik: stilstaan levert geen spooksprints.
+        self.assertEqual(f['sprints'], 0)
+
+    def test_echte_sprint_behoudt_zijn_afstand_ondanks_de_dode_band(self):
+        import random
+        rng = random.Random(7)
+        # Vijf seconden aan 6 m/s (30 m), met dezelfde realistische jitter erop.
+        rijen = [{'t': i * 0.25, 'track': 1,
+                  'x_m': 5.0 + rng.gauss(0.0, 0.15),
+                  'y_m': 6.0 * (i * 0.25) + rng.gauss(0.0, 0.15)} for i in range(21)]
+        f = fysiek.fysiek_per_spoor(rijen)[1]
+        self.assertGreater(f['afstand_m'], 27.0)
+        self.assertLess(f['afstand_m'], 33.0)
+        self.assertEqual(f['sprints'], 1)
+
+    def test_ruis_drempel_nul_telt_rauw(self):
+        # Het ontsnappingsluik voor wie de oude telling wil: band 0 = elke stap telt.
+        posities = _spoor(1, [(0.0, 0.0, 0.0), (0.5, 0.0, 0.15), (1.0, 0.0, 0.3)])
+        met = fysiek.fysiek_per_spoor(posities)[1]['afstand_m']
+        zonder = fysiek.fysiek_per_spoor(posities, ruis_drempel=0.0)[1]['afstand_m']
+        self.assertAlmostEqual(zonder, 0.3)
+        # Onder de dode band blijft de teller op nul staan.
+        self.assertEqual(met, 0.0)
+
+
 class TestFysiekPerSpoor(unittest.TestCase):
     def test_afstand_en_topsnelheid(self):
         # 4 stappen van 2 m per 0,5 s = 8 m gelopen aan constant 4 m/s.

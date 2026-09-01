@@ -54,7 +54,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from evaluate import WORP_EVENT_TYPES, match_greedy  # noqa: E402
-from houding import MODEL_NAAM, MODEL_VERSION, vind_worpmomenten  # noqa: E402
+from houding import MODEL_NAAM, MODEL_VERSION, ZOEK_FACTOR, vind_worpmomenten  # noqa: E402
 
 # Waar houding.py standaard zijn getrainde instellingen zoekt.
 STANDAARD_UIT = Path(__file__).resolve().parent / 'model-houding.json'
@@ -64,6 +64,12 @@ STANDAARD_UIT = Path(__file__).resolve().parent / 'model-houding.json'
 DREMPELS = tuple(round(0.2 + 0.1 * i, 2) for i in range(39))          # 0.2 … 4.0
 AFSTANDEN = (1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 5.0, 6.0)
 VENSTER_S = 2.0
+
+# Hoeveel hoger dezelfde worp fijn gemeten scoort dan grof: 0,47 tegenover 0,31 — nagemeten
+# op de nagebootste worpen van houding.py (zie de toelichting bij ZOEK_FACTOR daar). Een
+# gemeten verhouding over vele worpen, geen meting van déze worp: de naspeling hieronder
+# blijft dus een benadering.
+GROF_NAAR_FIJN = 1.5
 
 
 def _fout(boodschap: str, code: int = 2) -> None:
@@ -93,7 +99,10 @@ def lees_reeks(pad: Path) -> list[dict]:
             _fout(f'{pad}:{nummer}: regel zonder numerieke "score"')
         reeks.append({'t': float(r['t']), 'score': float(r['score']),
                       'polshoogte': r.get('polshoogte'),
-                      'venster': r.get('venster')})
+                      'venster': r.get('venster'),
+                      # Uit welke passage deze meting komt (twee-passages-run): zonder dit
+                      # merkteken kan de scoring hieronder de keten niet naspelen.
+                      'passage': r.get('passage')})
     reeks.sort(key=lambda r: r['t'])
     return reeks
 
@@ -133,10 +142,41 @@ def lees_labels(pad: Path) -> list[float]:
 # ---------------------------------------------------------------------------
 
 
+def keten_momenten(reeks: list[dict], drempel: float, min_afstand: float) -> list[float]:
+    """De worpmomenten zoals de gedeployde keten ze bij déze kandidaat-drempel zou vinden.
+
+    BEPERKING (bewust aanvaard): de meetreeks is geconditioneerd op de drempel van de
+    analyse die haar schreef. Ze is alleen fíjn (passage 2) waar díe run met háár
+    zoekdrempel (oude drempel × ZOEK_FACTOR) kandidaten vond; daarbuiten staat de grove
+    score, die voor dezelfde worp tot een derde lager ligt. Kaal hertellen op de reeks
+    onderschat dan elke kandidaat-drempel onder de oude: de keten zou zo'n grove piek wél
+    oppikken (zoekdrempel drempel × ZOEK_FACTOR) en fijn hermeten. Echt hermeten kan hier
+    niet — er is geen video — dus wordt de keten nagespeeld: grove pieken die de
+    zoekpassage bij deze drempel zou nakijken en die nooit fijn gemeten zijn, tellen mee
+    op fijne schaal (× GROF_NAAR_FIJN). Dat is een gemiddelde verhouding, geen hermeting;
+    wie het exact wil, laat de analyse opnieuw lopen met de nieuwe drempel.
+    """
+    momenten = [t for t, _ in vind_worpmomenten(reeks, drempel, min_afstand)]
+    if not any(r.get('passage') == 2 for r in reeks):
+        # Homogene reeks (één passage): niets om na te spelen.
+        return momenten
+    grof = [r for r in reeks if r.get('passage') != 2]
+    # Zelfde zoekdrempel en halve afstand als de zoekpassage van houding.py; de dedup op
+    # volle afstand hieronder speelt de beslissingsstap na.
+    for t, s in vind_worpmomenten(grof, drempel * ZOEK_FACTOR, min_afstand * 0.5):
+        if s * GROF_NAAR_FIJN >= drempel and all(abs(t - m) >= min_afstand for m in momenten):
+            momenten.append(t)
+    return sorted(momenten)
+
+
 def scoor(reeks: list[dict], labels: list[float], drempel: float, min_afstand: float,
           venster: float = VENSTER_S) -> dict:
-    """Hoe goed vindt deze instelling de gelabelde worpen in deze reeks?"""
-    momenten = [t for t, _ in vind_worpmomenten(reeks, drempel, min_afstand)]
+    """Hoe goed vindt deze instelling de gelabelde worpen in deze reeks?
+
+    Gescoord zoals de keten zou beslissen, niet zoals de reeks toevallig bewaard is —
+    zie keten_momenten voor de (bewust aanvaarde) beperking daarvan.
+    """
+    momenten = keten_momenten(reeks, drempel, min_afstand)
     paren = match_greedy(labels, momenten, venster)
     gevonden = len(paren)
     precisie = gevonden / len(momenten) if momenten else None

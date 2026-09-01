@@ -90,6 +90,16 @@ export const CvEvents: CollectionConfig = {
           type: 'checkbox',
         },
         {
+          // De bal landde buiten de lijnen — een echte uitbal, geen kapotte meting. Het
+          // landingspunt (xM/yM) ligt dan bewúst buiten het veld: daarmee leidt de engine bij
+          // het overzetten zelf 'uit' af. Vroeger werd zo'n landing op de veldrand geklemd en
+          // telde ze als doelpunt.
+          name: 'uitbal',
+          label: 'Uitbal',
+          type: 'checkbox',
+          defaultValue: false,
+        },
+        {
           name: 'xM',
           label: 'X (m)',
           type: 'number',

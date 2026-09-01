@@ -515,6 +515,17 @@ class HomografieSpoor:
             'teruggerekend': sum(1 for p in self.punten if p['bron'] == 'teruggerekend'),
             'gladgestreken': sum(1 for p in self.punten if p['bron'] == 'gladgestreken'),
             'gemiddelde_ankerfout_m': round(sum(fouten) / len(fouten), 2) if fouten else None,
+            # Eerlijk benoemen wat dat cijfer wél en niet zegt. Het is een lijnfout van
+            # gesláágde herankeringen: juist wanneer het veld een hele lijn verkeerd ligt
+            # (het gevaar uit de docstring van homografie_uit_lijnen) is de lijnfout
+            # uitstekend terwijl de echte veldfout meters bedraagt. Zonder deze uitleg
+            # leest iedereen het als meetnauwkeurigheid — en dat is het niet.
+            'toelichting_ankerfout': (
+                'lijnfout van geslaagde herankeringen: hoe strak de gedetecteerde lijnen op de '
+                'gekoppelde veldlijn vallen. Zegt níét of dat de juiste van de evenwijdige '
+                'veldlijnen is, en momenten zonder geslaagde herankering tellen niet mee — de '
+                'echte veldfout kan dus groter zijn dan dit cijfer.'
+            ),
             'duur_s': round(float(self.punten[-1]['t']) - float(self.punten[0]['t']), 1) if self.punten else 0.0,
         }
 
@@ -600,6 +611,71 @@ def samengevoegde_ankers(
     return uit
 
 
+def verbeter_ankers_per_stuk(
+    ankers: list[tuple[float, Matrix]],
+    ankerpunten: list[tuple[float, list[dict]]],
+    verwerkt: dict[int, tuple[int, Matrix, int]],
+    veldpunt_van,
+) -> dict[int, Matrix]:
+    """Samengevoegde ankers, maar alleen binnen één stuk van de opname.
+
+    Twee redenen om niet blind samen te voegen:
+
+    - **Nooit over een knip heen.** Na een breuk begint de keten opnieuw; K's uit
+      verschillende stukken staan elk t.o.v. een ánder referentieframe, en K(a)⁻¹·K(b)
+      is dan geen camerabeweging maar betekenisloze wiskunde. Blind samenvoegen zou
+      goede losse ankers vervangen door matrices die er meters naast zitten — mét een
+      trots "samengevoegd"-rapport erbij.
+    - **De keten draagt drift.** Ook binnen één stuk verhuist K(a)⁻¹·K(b) de punten met
+      de volle flow-drift tussen de twee ijkbeelden. Vandaar de acceptatietoets: wordt
+      het samengevoegde anker op zijn éigen punten wezenlijk slechter dan het losse,
+      dan is de keten niet te vertrouwen en houden we het losse anker.
+
+    ``verwerkt`` is per anker-index (positie in ``ankers``): (waarneming-index, keten
+    op het ijkbeeld-moment, stuk). Op index gesleuteld, niet op tijd — bemonsterde
+    tijden komen uit opgetelde floats en vallen zelden exact samen met het bestand.
+    Geeft per anker-index de verbeterde matrix; wat ontbreekt blijft het losse anker.
+    """
+    per_stuk: dict[int, list[tuple[int, list[dict]]]] = {}
+    for tijd, punten in ankerpunten:
+        # Ankers en ankerpunten komen uit hetzelfde bestand, dus hun tijden horen samen te
+        # vallen — de tolerantie vangt enkel afronding op, geen rasterlogica.
+        idx = next((i for i, (ta, _m) in enumerate(ankers) if math.isclose(ta, tijd, abs_tol=1e-6)), None)
+        if idx is None or idx not in verwerkt:
+            continue
+        per_stuk.setdefault(verwerkt[idx][2], []).append((idx, punten))
+
+    uit: dict[int, Matrix] = {}
+    for groep in per_stuk.values():
+        if len(groep) < 2:
+            continue  # binnen dit stuk valt er niets samen te voegen
+        index_bij_tijd = {ankers[i][0]: i for i, _p in groep}
+        punten_bij_index = dict(groep)
+        nieuw = samengevoegde_ankers(
+            [(ankers[i][0], p) for i, p in groep],
+            lambda tijd, _kaart=index_bij_tijd: (
+                verwerkt[_kaart[tijd]][1] if tijd in _kaart else None),
+            veldpunt_van,
+        )
+        if not nieuw:
+            continue
+        for tijd_a, matrix in nieuw:
+            idx = index_bij_tijd[tijd_a]
+            paren = []
+            for p in punten_bij_index[idx]:
+                veldpunt = veldpunt_van(p['label'])
+                if veldpunt is not None:
+                    paren.append(((float(p['x']), float(p['y'])), tuple(veldpunt)))
+            los = reprojectiefout_m(ankers[idx][1], paren)
+            samen = reprojectiefout_m(matrix, paren)
+            # Iets slechter op de eigen punten is de prijs voor winst op de overkant; véél
+            # slechter betekent dat de keten tussen de ijkbeelden gedreven heeft.
+            if samen > 3.0 * los + 2.0:
+                continue
+            uit[idx] = matrix
+    return uit
+
+
 def basis_uit_anker(anker: Matrix, keten_op_ankertijd: Matrix) -> Matrix:
     """De matrix van het beginframe, afgeleid uit een anker verderop in de video.
 
@@ -648,6 +724,30 @@ def is_breuk(volgdeel: float, restfout: float | None, gewone_restfout: float) ->
 def is_bevroren(verplaatsing_px: float) -> bool:
     """Staat het beeld stil? (Bevroren opname of een camera op een statief zonder beweging.)"""
     return verplaatsing_px < BEVROREN_PX
+
+
+def stap_uitkomst(punten_gevonden: bool, volgdeel: float, stap_gevonden: bool,
+                  restfout: float | None, normale_restfout: float) -> str:
+    """Wat doet deze flow-stap met de keten: 'keten', 'breuk' of 'onbetrouwbaar'?
+
+    'keten' alleen wanneer de stap gevonden én nagerekend is. Alles wat we niet kunnen
+    narekenen — te weinig markante punten, geen homografie, geen overlap om de restfout
+    op te meten — mag níét stil doorgeketend of overgeslagen worden: de camera kan in dat
+    gat bewogen hebben, en dan ligt het veld vanaf hier verschoven zonder dat iets het
+    meldt. Erger nog: bij een verschuiving van een paar meter klikt de herankering daarna
+    "geslaagd" op de verkeerde evenwijdige veldlijn, met een uitstekende lijnfout. Liever
+    de keten breken en het vervolg als onbetrouwbaar markeren tot een ijkbeeld of een
+    geslaagde herankering de stand opnieuw vastlegt.
+
+    Puur, zodat de grens te testen valt zonder video.
+    """
+    if not punten_gevonden:
+        return 'onbetrouwbaar'
+    if is_breuk(volgdeel, restfout, normale_restfout):
+        return 'breuk'
+    if not stap_gevonden or restfout is None:
+        return 'onbetrouwbaar'
+    return 'keten'
 
 
 def meng(a: Matrix, b: Matrix, w: float) -> Matrix:
@@ -736,6 +836,61 @@ def drift_m(a: Matrix, b: Matrix, punten: list[tuple[float, float]]) -> float:
             continue
         afstanden.append(math.hypot(ax - bx, ay - by))
     return max(afstanden) if afstanden else 0.0
+
+
+def bouw_spoor(
+    momenten: list[tuple[float, Matrix, str, float, int]],
+    waarnemingen: list[tuple[float, Matrix, int]],
+) -> tuple[HomografieSpoor, dict]:
+    """Tweede passage: uit de gevolgde keten en de waarnemingen het spoor bouwen.
+
+    De drift tussen twee waarnemingen wordt verdeeld (basis_op) — maar nooit over een
+    knip heen: aan weerszijden daarvan hoort de basis bij een andere keten. Momenten met
+    bron 'onbetrouwbaar' (tussen een niet-narekenbare flow-stap en de eerstvolgende
+    geslaagde (her)ankering) krijgen géén matrix: liever een gat in het spoor dan een
+    meting die stil een paar meter verschoven kan zijn — landing.py en tracking.py
+    kunnen om met een gat, niet met een foute matrix die er betrouwbaar uitziet.
+
+    Puur, zodat dit zonder video te testen valt.
+    """
+    per_stuk: dict[int, list[tuple[float, Matrix]]] = {}
+    for wt, wb, ws in waarnemingen:
+        per_stuk.setdefault(ws, []).append((wt, wb))
+
+    # Welke stukken bleven zonder veldstand, en van wanneer tot wanneer? Dát is wat je
+    # moet weten om er een ijkbeeld bij te zetten.
+    spanne: dict[int, list[float]] = {}
+    for mt, _mk, _b, _f, ms in momenten:
+        spanne.setdefault(ms, [mt, mt])[1] = mt
+    gaten = [(spanne[s][0], spanne[s][1]) for s in sorted(spanne) if s not in per_stuk]
+
+    spoor = HomografieSpoor()
+    gladgestreken = 0
+    zonder_stand = 0
+    onbetrouwbaar = 0
+    for mt, mk, bron, fout, ms in momenten:
+        if bron == 'onbetrouwbaar':
+            onbetrouwbaar += 1
+            continue
+        eigen = per_stuk.get(ms)
+        if not eigen:
+            # Dit stuk kreeg nooit een veldstand: liever een gat dan een verzonnen meting.
+            zonder_stand += 1
+            continue
+        b = basis_op(eigen, mt)
+        if bron == 'flow':
+            if mt < eigen[0][0]:
+                bron = 'teruggerekend'
+            elif mt < eigen[-1][0] and len(eigen) > 1:
+                bron = 'gladgestreken'
+                gladgestreken += 1
+        spoor.voeg_toe(mt, maal(b, mk), fout, bron)
+    return spoor, {
+        'gladgestreken': gladgestreken,
+        'momenten_zonder_stand': zonder_stand,
+        'onbetrouwbare_momenten': onbetrouwbaar,
+        'gaten': gaten,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -1031,30 +1186,55 @@ def volg_video(args: argparse.Namespace) -> tuple[HomografieSpoor, dict]:
     momenten: list[tuple[float, Matrix, str, float, int]] = [(0.0, keten, 'flow', float('inf'), 0)]
     waarnemingen: list[tuple[float, Matrix, int]] = []
     basis: Matrix | None = None
+    # Na een niet-narekenbare flow-stap: de laatst bekende stand, als vertrekpunt om in het
+    # nieuwe stuk opnieuw op de lijnen te herankeren. Ná een échte knip blijft dit None — de
+    # camera kan dan overal staan, en herankeren vanaf een gok klikt op de verkeerde lijn.
+    vertrek: Matrix | None = None
+    onbetrouwbaar = False
     volgend_anker = 0
-    keten_bij_anker: dict[float, Matrix] = {}
+    # Per verwerkt ijkbeeld (index in `ankers`): de bijbehorende waarneming, de keten op dat
+    # moment en het stuk. Op index gesleuteld, niet op tijd: de bemonsterde tijden komen uit
+    # opgetelde floats en vallen zelden exact samen met de tijd uit het ankerbestand.
+    verwerkt: dict[int, tuple[int, Matrix, int]] = {}
     laatste_anker = 0.0
-    t = stap
     verloren = 0
     breuken: list[float] = []
+    flow_gaten: list[float] = []
     bevroren = 0
+    # Hoeveel meter elke geslaagde herankering het veld terugtrok — zie het rapport.
+    verplaatsingen: list[float] = []
+    proefpunten = _standaard_veldpunten(diepte, breedte_m, speelveld_m)
+
+    # Een ijkbeeld op (of vóór) seconde 0 hoort bij het eerste frame zelf: keten = eenheid.
+    while volgend_anker < len(ankers) and ankers[volgend_anker][0] <= 0.0:
+        basis = basis_uit_anker(ankers[volgend_anker][1], keten)
+        verwerkt[volgend_anker] = (len(waarnemingen), keten, stuk)
+        waarnemingen.append((0.0, basis, stuk))
+        momenten[0] = (0.0, keten, 'ijkbeeld', 0.0, stuk)
+        volgend_anker += 1
+
+    t = stap
     while True:
-        cap.set(cv2.CAP_PROP_POS_MSEC, t * 1000.0)
+        # Een ijkbeeld is gefit op het frame op precies tijd_s; de keten moet dus ook op dát
+        # frame staan. Het aan de eerstvolgende rasterstap hangen (tot 1/fps s later) zou de
+        # camerabeweging uit dat gat als vaste fout in de "grondwaarheid" schuiven.
+        dit_is_anker = volgend_anker < len(ankers) and ankers[volgend_anker][0] <= t
+        moment_t = ankers[volgend_anker][0] if dit_is_anker else t
+        cap.set(cv2.CAP_PROP_POS_MSEC, moment_t * 1000.0)
         ok, frame = cap.read()
         if not ok:
             break
-        melder.meld(t, f'{len(momenten)} momenten')
+        melder.meld(moment_t, f'{len(momenten)} momenten')
         grijs = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         # Markante punten volgen tussen de twee frames (Lucas-Kanade).
         p0 = cv2.goodFeaturesToTrack(vorig_grijs, maxCorners=400, qualityLevel=0.01, minDistance=12)
         bron, fout = 'flow', float('inf')
-        breuk = False
+        volgdeel, stap_m, restfout, verplaatsing = 0.0, None, None, 0.0
         if p0 is not None and len(p0) >= 8:
             p1, status, _ = cv2.calcOpticalFlowPyrLK(vorig_grijs, grijs, p0, None)
             goed_oud = p0[status.flatten() == 1].reshape(-1, 2)
             goed_nieuw = p1[status.flatten() == 1].reshape(-1, 2)
             volgdeel = len(goed_oud) / len(p0)
-            stap_m = None
             if len(goed_oud) >= 8:
                 verplaatsing = float(
                     sorted(math.hypot(float(a[0] - b[0]), float(a[1] - b[1]))
@@ -1064,67 +1244,94 @@ def volg_video(args: argparse.Namespace) -> tuple[HomografieSpoor, dict]:
                 if gevonden is not None:
                     stap_m = [[float(w) for w in rij] for rij in gevonden]
             restfout = None if stap_m is None else _restfout(cv2, stap_m, vorig_grijs, grijs)
-            if is_breuk(volgdeel, restfout, gewone_restfout(restfouten)):
-                breuk = True
-            elif stap_m is None:
-                verloren += 1
-            else:
-                if restfout is not None:
-                    restfouten.append(restfout)
-                    del restfouten[:-20]  # alleen het recente verleden telt als maatstaf
-                if is_bevroren(verplaatsing):
-                    bevroren += 1
-                keten = normaliseer(maal(keten, stap_m))
-        else:
-            verloren += 1
 
-        if breuk:
-            # Nieuw stuk: de keten begint opnieuw. De cameraopstelling is doorgaans dezelfde,
-            # dus de laatste bekende stand is het beste vertrekpunt om op te herankeren — maar
-            # bewezen is dat niet, dus tot een ijkbeeld of een geslaagde herankering blijft
-            # dit stuk zonder veldstand en meten we er niets.
-            breuken.append(round(t, 1))
+        uitkomst = stap_uitkomst(p0 is not None and len(p0) >= 8, volgdeel,
+                                 stap_m is not None, restfout, gewone_restfout(restfouten))
+        if uitkomst == 'keten':
+            restfouten.append(restfout)
+            del restfouten[:-20]  # alleen het recente verleden telt als maatstaf
+            if is_bevroren(verplaatsing):
+                bevroren += 1
+            keten = normaliseer(maal(keten, stap_m))
+        elif uitkomst == 'breuk':
+            # Nieuw stuk: de keten begint opnieuw. Wat vóór de knip gold zegt niets over wat
+            # erna komt (de opname kan een montage zijn), dus tot een ijkbeeld blijft dit
+            # stuk zonder veldstand en meten we er niets.
+            breuken.append(round(moment_t, 1))
             stuk += 1
             keten = eenheid()
             basis = None
-            laatste_anker = t - args.heranker  # meteen proberen te herankeren, niet wachten
+            vertrek = None
+            onbetrouwbaar = False
+            laatste_anker = moment_t - args.heranker  # meteen proberen te herankeren, niet wachten
+        else:  # 'onbetrouwbaar'
+            # De beweging in dit gat is onbekend of niet na te rekenen. Ze tóch (of juist
+            # niét) doorketenen zou een sprong in de keten verstoppen: elke worp verderop
+            # meet dan meters ernaast terwijl de herankering "geslaagd" op de verkeerde
+            # evenwijdige lijn klikt. De opname loopt wél gewoon door (geen knip), dus de
+            # laatst bekende stand blijft bruikbaar als vertrekpunt om te herankeren — maar
+            # tot een ijkbeeld of een geslaagde herankering de stand opnieuw vastlegt, is
+            # elk moment hier onbetrouwbaar en meten we er niets.
+            verloren += 1
+            if basis is not None or vertrek is not None:
+                vertrek = normaliseer(maal(basis if basis is not None else vertrek, keten))
+            if not onbetrouwbaar:
+                flow_gaten.append(round(moment_t, 1))
+                stuk += 1
+            keten = eenheid()
+            basis = None
+            onbetrouwbaar = True
+            laatste_anker = moment_t - args.heranker  # meteen proberen te herankeren
 
-        # Zijn we voorbij een aangeduid ijkbeeld? Dat is grondwaarheid: harder dan wat de
-        # lijndetector of de flow ooit kan geven, dus die legt de basis exact vast.
-        if volgend_anker < len(ankers) and t >= ankers[volgend_anker][0]:
+        # Zijn we bij een aangeduid ijkbeeld? Dat is grondwaarheid: harder dan wat de
+        # lijndetector of de flow ooit kan geven, dus die legt de basis exact vast — en
+        # beëindigt daarmee ook elk onbetrouwbaar stuk.
+        if dit_is_anker:
             basis = basis_uit_anker(ankers[volgend_anker][1], keten)
-            waarnemingen.append((t, basis, stuk))
-            # De keten op dít moment onthouden: daarmee kunnen de punten van álle ijkbeelden
-            # straks in één beeld samengebracht worden (zie samengevoegde_ankers).
-            keten_bij_anker[ankers[volgend_anker][0]] = keten
+            vertrek = None
+            onbetrouwbaar = False
+            verwerkt[volgend_anker] = (len(waarnemingen), keten, stuk)
+            waarnemingen.append((moment_t, basis, stuk))
             volgend_anker += 1
-            laatste_anker = t
-            momenten.append((t, keten, 'ijkbeeld', 0.0, stuk))
+            laatste_anker = moment_t
+            momenten.append((moment_t, keten, 'ijkbeeld', 0.0, stuk))
             vorig_grijs = grijs
-            t += stap
+            if moment_t >= t - 1e-9:  # het ijkbeeld viel precies op het raster: die stap is gezet
+                t += stap
             continue
 
-        # Herankeren kan alleen mét een vertrekpunt in dít stuk. De stand van vóór een knip
-        # gebruiken is verleidelijk (de camera staat er nog) maar gevaarlijk: het veld heeft
-        # zeven evenwijdige lijnen, dus een fit die van een verkeerd vertrekpunt vertrekt vindt
-        # een oplossing die er kloppend uitziet. Gemeten: 17 m ernaast, mét een lage foutwaarde.
-        # Een stuk zonder ijkbeeld blijft daarom leeg — dat is eerlijker dan een verzonnen veld.
-        if basis is not None and t - laatste_anker >= args.heranker:
+        # Herankeren kan alleen mét een vertrekpunt in dít stuk: de basis, of — na een
+        # niet-narekenbare flow-stap — de laatst bekende stand. De stand van vóór een échte
+        # knip gebruiken is verleidelijk (de camera staat er nog) maar gevaarlijk: het veld
+        # heeft zeven evenwijdige lijnen, dus een fit die van een verkeerd vertrekpunt
+        # vertrekt vindt een oplossing die er kloppend uitziet. Gemeten: 17 m ernaast, mét
+        # een lage foutwaarde. Een stuk zonder ijkbeeld blijft daarom leeg — dat is
+        # eerlijker dan een verzonnen veld.
+        stand_basis = basis if basis is not None else vertrek
+        if stand_basis is not None and t - laatste_anker >= args.heranker:
             segmenten = detecteer_lijnsegmenten(cv2, frame, args.min_lijn)
+            stand = normaliseer(maal(stand_basis, keten))
             gevolgd, fout, gebruikt = veranker_op_lijnen(
-                normaliseer(maal(basis, keten)), segmenten, lijnen, args.max_fout,
+                stand, segmenten, lijnen, args.max_fout,
                 rondes=getattr(args, 'rondes', 3),
                 punten_per_segment=getattr(args, 'punten_per_segment', 4),
             )
             if gebruikt:
                 bron = 'lijnen'
                 laatste_anker = t
+                # Hoeveel meter trok deze correctie het veld terug? Dat is de drift die het
+                # volgen sinds de vorige (her)ankering opliep — de eerlijke maat voor wat de
+                # momenten ertussen aan fout meedroegen (de lijnfout hierónder zegt dat niet).
+                sprong = veldfout_m(gevolgd, stand, proefpunten)
+                verplaatsingen.append(max(sprong) if sprong else 0.0)
                 # De correctie geldt vanaf nu: verreken ze in de basis, anders gooit de
                 # volgende stap ze meteen weer weg.
                 basis = basis_uit_anker(gevolgd, keten)
+                vertrek = None
+                onbetrouwbaar = False
                 waarnemingen.append((t, basis, stuk))
 
-        momenten.append((t, keten, bron, fout, stuk))
+        momenten.append((t, keten, 'onbetrouwbaar' if onbetrouwbaar else bron, fout, stuk))
         vorig_grijs = grijs
         t += stap
     cap.release()
@@ -1135,64 +1342,51 @@ def volg_video(args: argparse.Namespace) -> tuple[HomografieSpoor, dict]:
 
     # Zijn er meerdere ijkbeelden mét punten? Dan liggen die punten waarschijnlijk elk in een
     # andere helft van het veld (camera in het midden die pant), en is elke matrix apart gefit op
-    # een half veld. Nu de camerabeweging bekend is, kunnen ze in één beeld samengebracht worden.
+    # een half veld. Nu de camerabeweging bekend is, kunnen ze in één beeld samengebracht worden
+    # — per stuk van de opname, want over een knip heen bestaat er geen camerabeweging.
     samengevoegd = 0
     if len(ankerpunten) >= 2:
-        beschikbaar = {t: k for t, k in keten_bij_anker.items()}
-        nieuw = samengevoegde_ankers(
-            [(t, punten) for t, punten in ankerpunten if t in beschikbaar],
-            lambda tijd: beschikbaar.get(tijd),
+        verbeterd = verbeter_ankers_per_stuk(
+            ankers, ankerpunten, verwerkt,
             lambda label: (lambda kp: (kp.x_m, kp.y_m) if kp else None)(labelkaart.get(label)),
         )
-        if nieuw:
-            verbeterd = {t: m for t, m in nieuw}
-            vervangen: list[tuple[float, Matrix, int]] = []
-            for wt, wb, ws in waarnemingen:
-                if wt in verbeterd and wt in beschikbaar:
-                    vervangen.append((wt, basis_uit_anker(verbeterd[wt], beschikbaar[wt]), ws))
-                    samengevoegd += 1
-                else:
-                    vervangen.append((wt, wb, ws))
-            waarnemingen = vervangen
+        for idx, matrix in verbeterd.items():
+            # Vervangen via de anker-index, niet via de tijd: de waarneming staat op de
+            # bemonsterde (opgetelde) tijd en die valt zelden exact samen met tijd_s.
+            w_idx, keten_a, _stuk_a = verwerkt[idx]
+            wt, _wb, ws = waarnemingen[w_idx]
+            waarnemingen[w_idx] = (wt, basis_uit_anker(matrix, keten_a), ws)
+            samengevoegd += 1
 
     # Tweede passage: de drift verdelen. Tussen twee waarnemingen schuift de basis geleidelijk
     # mee in plaats van bij de tweede ineens te springen — maar nooit over een knip heen: aan
     # weerszijden daarvan hoort de basis bij een andere keten.
-    per_stuk: dict[int, list[tuple[float, Matrix]]] = {}
-    for wt, wb, ws in waarnemingen:
-        per_stuk.setdefault(ws, []).append((wt, wb))
-
-    # Welke stukken bleven zonder veldstand, en van wanneer tot wanneer? Dát is wat je moet
-    # weten om er een ijkbeeld bij te zetten.
-    spanne: dict[int, list[float]] = {}
-    for mt, _mk, _b, _f, ms in momenten:
-        spanne.setdefault(ms, [mt, mt])[1] = mt
-    gaten = [(spanne[s][0], spanne[s][1]) for s in sorted(spanne) if s not in per_stuk]
-
-    spoor = HomografieSpoor()
-    gladgestreken = 0
-    zonder_stand = 0
-    for mt, mk, bron, fout, ms in momenten:
-        eigen = per_stuk.get(ms)
-        if not eigen:
-            # Dit stuk kreeg nooit een veldstand: liever een gat dan een verzonnen meting.
-            zonder_stand += 1
-            continue
-        b = basis_op(eigen, mt)
-        if bron == 'flow':
-            if mt < eigen[0][0]:
-                bron = 'teruggerekend'
-            elif mt < eigen[-1][0] and len(eigen) > 1:
-                bron = 'gladgestreken'
-                gladgestreken += 1
-        spoor.voeg_toe(mt, maal(b, mk), fout, bron)
+    spoor, tweede = bouw_spoor(momenten, waarnemingen)
+    def _p95(waarden: list[float]) -> float:
+        return sorted(waarden)[min(len(waarden) - 1, int(len(waarden) * 0.95))]
     return spoor, {**spoor.rapport(), 'frames_zonder_flow': verloren,
-                   'waarnemingen': len(waarnemingen), 'gladgestreken': gladgestreken,
+                   'waarnemingen': len(waarnemingen), 'gladgestreken': tweede['gladgestreken'],
                    'samengevoegde_ankers': samengevoegd,
                    'breuken': breuken, 'stukken': stuk + 1,
-                   'stukken_zonder_stand': len(gaten),
-                   'gaten': [[round(a, 1), round(b, 1)] for a, b in gaten],
-                   'momenten_zonder_stand': zonder_stand, 'bevroren_momenten': bevroren}
+                   'flow_gaten': flow_gaten,
+                   'stukken_zonder_stand': len(tweede['gaten']),
+                   'gaten': [[round(a, 1), round(b, 1)] for a, b in tweede['gaten']],
+                   'momenten_zonder_stand': tweede['momenten_zonder_stand'],
+                   'onbetrouwbare_momenten': tweede['onbetrouwbare_momenten'],
+                   # De drift die elke geslaagde herankering wegnam: een eerlijker beeld van de
+                   # fout onderweg dan de lijnfout — maar óók dit cijfer ziet een koppeling aan
+                   # de verkeerde evenwijdige lijn niet (zie toelichting_ankerfout).
+                   'heranker_verplaatsing_mediaan_m': (round(statistics.median(verplaatsingen), 2)
+                                                       if verplaatsingen else None),
+                   'heranker_verplaatsing_p95_m': (round(_p95(verplaatsingen), 2)
+                                                   if verplaatsingen else None),
+                   'toelichting_verplaatsing': (
+                       'grootste verschuiving die elke geslaagde herankering aanbracht: zoveel '
+                       'drift liep het volgen op sinds de vorige (her)ankering, en zoveel fout '
+                       'droegen de momenten ertussen dus ongeveer mee. Blind voor een koppeling '
+                       'aan de verkeerde (evenwijdige) veldlijn.'
+                   ),
+                   'bevroren_momenten': bevroren}
 
 
 # ---------------------------------------------------------------------------
@@ -1274,15 +1468,21 @@ def main(argv: list[str] | None = None) -> None:
         print(f'  {rapport["samengevoegde_ankers"]} ijkbeelden samengevoegd tot één veld — elke '
               'matrix steunt nu op de punten van álle beelden samen')
     if rapport.get('gemiddelde_ankerfout_m') is not None:
-        print(f'  gemiddelde ankerfout: {rapport["gemiddelde_ankerfout_m"]:g} m')
+        print(f'  gemiddelde ankerfout: {rapport["gemiddelde_ankerfout_m"]:g} m (lijnfout van '
+              f'geslaagde herankeringen — zegt niet of de júiste lijn gekoppeld is)')
+    if rapport.get('heranker_verplaatsing_mediaan_m') is not None:
+        print(f'  drift tussen twee herankeringen: {rapport["heranker_verplaatsing_mediaan_m"]:g} m '
+              f'mediaan, {rapport["heranker_verplaatsing_p95_m"]:g} m bij p95 — zoveel loopt het '
+              f'volgen weg voor de lijnen het terugtrekken')
     if 'fout_mediaan_m' in rapport:
         print(f'  fout op het veld: {rapport["fout_mediaan_m"]:g} m mediaan, '
               f'{rapport["fout_p95_m"]:g} m bij p95')
         print(f'  zónder herankeren zou dat {rapport["fout_mediaan_zonder_ankers_m"]:g} m / '
               f'{rapport["fout_p95_zonder_ankers_m"]:g} m zijn — dát is wat de veldlijnen opleveren')
     if rapport.get('frames_zonder_flow'):
-        print(f'  {rapport["frames_zonder_flow"]} frames zonder bruikbare beweging — daar leunt het '
-              f'volgen volledig op de volgende herankering')
+        print(f'  {rapport["frames_zonder_flow"]} frames zonder narekenbare beweging — de momenten '
+              f'erna zijn onbetrouwbaar tot een ijkbeeld of een geslaagde herankering '
+              f'({rapport.get("onbetrouwbare_momenten", 0)} momenten daarom zonder meting)')
     if rapport.get('breuken'):
         tijden = ', '.join(f'{b:g}s' for b in rapport['breuken'][:8])
         meer = '' if len(rapport['breuken']) <= 8 else f' (+{len(rapport["breuken"]) - 8})'

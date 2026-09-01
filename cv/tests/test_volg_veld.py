@@ -6,15 +6,28 @@ verkeerde homografie geeft geen foutmelding maar een worp die op de verkeerde pl
 
 from __future__ import annotations
 
+import argparse
+import json
 import math
+import random
 import sys
+import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import volg_veld as vv  # noqa: E402
 import veld  # noqa: E402
+
+
+def _heeft(naam: str) -> bool:
+    try:
+        __import__(naam)
+        return True
+    except ImportError:
+        return False
 
 
 def _schaal(sx: float, sy: float, tx: float = 0.0, ty: float = 0.0) -> list[list[float]]:
@@ -344,8 +357,9 @@ class TestOnderbrokenOpname(unittest.TestCase):
         self.assertTrue(vv.is_breuk(volgdeel=0.9, restfout=12.0, gewone_restfout=1.0))
 
     def test_zonder_restfout_valt_er_niets_te_zeggen(self):
-        # Geen bruikbare overlap: dan is 'geen knip' het veilige antwoord (de flow zelf faalt
-        # dan toch al, en dat wordt apart geteld).
+        # Geen bruikbare overlap: voor de kníp-vraag valt er dan niets te zeggen. De lus
+        # ketent zo'n stap dan ook niet stil door maar markeert hem als 'onbetrouwbaar'
+        # (zie stap_uitkomst hieronder).
         self.assertFalse(vv.is_breuk(volgdeel=0.9, restfout=None, gewone_restfout=1.2))
 
     def test_gewone_restfout_is_de_mediaan_van_het_recente_verleden(self):
@@ -355,3 +369,384 @@ class TestOnderbrokenOpname(unittest.TestCase):
     def test_herkent_een_stilstaand_beeld(self):
         self.assertTrue(vv.is_bevroren(0.05))
         self.assertFalse(vv.is_bevroren(12.0))
+
+
+class TestStapUitkomst(unittest.TestCase):
+    """Een flow-stap die niet na te rekenen valt mag nooit stil doorgeketend worden.
+
+    Vroeger verdween zo'n stap geruisloos uit de keten (of werd hij ongecontroleerd tóch
+    geketend): de camerabeweging in dat gat werd een stille sprong, waarna de herankering
+    "geslaagd" op de verkeerde evenwijdige veldlijn klikte — 4 m fout met een lijnfout van
+    0,01 m in het rapport.
+    """
+
+    def test_niet_narekenbare_stap_is_geen_stille_no_op(self):
+        # Te weinig markante punten in het vorige beeld: de beweging is onbekend.
+        self.assertEqual(vv.stap_uitkomst(False, 0.0, False, None, 1.2), 'onbetrouwbaar')
+        # Flow vond punten maar geen homografie.
+        self.assertEqual(vv.stap_uitkomst(True, 0.9, False, None, 1.2), 'onbetrouwbaar')
+        # Homografie gevonden maar niet na te rekenen (nauwelijks overlap): dit werd
+        # vroeger ongecontroleerd doorgeketend.
+        self.assertEqual(vv.stap_uitkomst(True, 0.9, True, None, 1.2), 'onbetrouwbaar')
+
+    def test_gewone_stap_ketent_en_een_knip_blijft_een_knip(self):
+        self.assertEqual(vv.stap_uitkomst(True, 0.95, True, 1.4, 1.2), 'keten')
+        self.assertEqual(vv.stap_uitkomst(True, 0.95, True, 20.0, 1.2), 'breuk')
+        # Bijna alle punten kwijt: dat is een knip, geen twijfelgeval.
+        self.assertEqual(vv.stap_uitkomst(True, 0.05, False, None, 1.2), 'breuk')
+
+
+class TestBouwSpoor(unittest.TestCase):
+    """De tweede passage: onbetrouwbare momenten horen géén matrix te krijgen.
+
+    Liever een gat in het spoor (daar kunnen landing.py en tracking.py om) dan een meting
+    die stil een paar meter verschoven kan zijn.
+    """
+
+    def test_onbetrouwbare_momenten_krijgen_geen_matrix(self):
+        e = vv.eenheid()
+        momenten = [
+            (0.0, e, 'ijkbeeld', 0.0, 0),
+            (0.5, e, 'flow', float('inf'), 0),
+            (1.0, e, 'onbetrouwbaar', float('inf'), 1),
+            (1.5, e, 'onbetrouwbaar', float('inf'), 1),
+            (2.0, e, 'lijnen', 0.05, 1),
+            (2.5, e, 'flow', float('inf'), 1),
+        ]
+        waarnemingen = [(0.0, e, 0), (2.0, e, 1)]
+        spoor, extra = vv.bouw_spoor(momenten, waarnemingen)
+        tijden = [p['t'] for p in spoor.punten]
+        self.assertNotIn(1.0, tijden)   # tussen het gat en de herankering: geen meting
+        self.assertNotIn(1.5, tijden)
+        self.assertIn(2.0, tijden)      # vanaf de geslaagde herankering weer wél
+        self.assertIn(2.5, tijden)
+        self.assertEqual(extra['onbetrouwbare_momenten'], 2)
+
+    def test_stuk_zonder_waarneming_blijft_een_gemeld_gat(self):
+        e = vv.eenheid()
+        momenten = [
+            (0.0, e, 'ijkbeeld', 0.0, 0),
+            (0.5, e, 'flow', float('inf'), 0),
+            (1.0, e, 'flow', float('inf'), 1),
+            (1.5, e, 'flow', float('inf'), 1),
+        ]
+        spoor, extra = vv.bouw_spoor(momenten, [(0.0, e, 0)])
+        self.assertEqual([p['t'] for p in spoor.punten], [0.0, 0.5])
+        self.assertEqual(extra['gaten'], [(1.0, 1.5)])
+        self.assertEqual(extra['momenten_zonder_stand'], 2)
+
+
+class TestRapportEerlijkheid(unittest.TestCase):
+    """Het rapport moet zelf zeggen wat de ankerfout wél en niet meet.
+
+    De 'gemiddelde ankerfout' is een lijnfout van gesláágde herankeringen: bij een
+    koppeling één evenwijdige lijn verderop is dat cijfer juist uitstekend (gemeten:
+    0,007 m lijnfout bij 4,3 m echte veldfout). Zonder toelichting leest iedereen het
+    als meetnauwkeurigheid.
+    """
+
+    def test_rapport_benoemt_wat_de_ankerfout_wel_en_niet_zegt(self):
+        r = vv.HomografieSpoor().rapport()
+        self.assertIn('toelichting_ankerfout', r)
+        self.assertIn('lijnfout', r['toelichting_ankerfout'])
+        # De kern: het cijfer zegt níét of de juiste (evenwijdige) lijn gekoppeld is.
+        self.assertIn('evenwijdige', r['toelichting_ankerfout'])
+        self.assertIn('niet', r['toelichting_ankerfout'].replace('í', 'i').replace('é', 'e'))
+
+
+@unittest.skipUnless(_heeft('cv2'), 'opencv niet geïnstalleerd')
+class TestSamenvoegenPerStuk(unittest.TestCase):
+    """Samenvoegen van ijkbeelden: nooit over een knip heen, en nooit via een keten die
+    aantoonbaar gedreven heeft.
+
+    Na een breuk begint de keten opnieuw; K(a)⁻¹·K(b) over twee stukken is dan geen
+    camerabeweging. Gemeten op de oude code (twee gepande camerastanden, keten = eenheid
+    in beide stukken): het "samengevoegde" anker zat er mediaan 4,5 m en maximaal 14,8 m
+    naast, tegenover 0,04/0,15 m voor het losse anker dat het verving.
+    """
+
+    def setUp(self):
+        self.kaart = veld.kruispunt_per_label(10.0)
+        self.kal = vv.inverteer([[12.0, 0.0, 260.0], [0.0, 12.0, 60.0], [0.0, 0.0, 1.0]])
+        # Tweede camerastand: 40 px verder gepand.
+        self.c2 = [[1.0, 0.0, 40.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]
+        self.h1 = self.kal
+        self.h2 = vv.normaliseer(vv.maal(self.kal, vv.inverteer(self.c2)))
+        thuis = [l for l in self.kaart if '_thuis_' in l or l.startswith('middellijn')]
+        uitkant = [l for l in self.kaart if '_uit_' in l or l.startswith('middellijn')]
+        self.ankers = [(2.0, self.h1), (6.0, self.h2)]
+        self.ankerpunten = [(2.0, self._punten(self.h1, thuis)), (6.0, self._punten(self.h2, uitkant))]
+
+    def _punten(self, matrix, labels):
+        naar_beeld = vv.inverteer(matrix)
+        uit = []
+        for label in labels:
+            k = self.kaart[label]
+            x, y = vv.projecteer(naar_beeld, k.x_m, k.y_m)
+            uit.append({'label': label, 'x': x, 'y': y})
+        return uit
+
+    def _veldpunt(self, label):
+        k = self.kaart.get(label)
+        return (k.x_m, k.y_m) if k else None
+
+    def test_voegt_niet_samen_over_een_knip_heen(self):
+        # Zoals volg_video het na een knip aanlevert: in elk stuk is de keten opnieuw
+        # begonnen (eenheid), dus de twee K's staan t.o.v. verschillende referentieframes.
+        verwerkt = {0: (0, vv.eenheid(), 0), 1: (1, vv.eenheid(), 1)}
+        self.assertEqual(
+            vv.verbeter_ankers_per_stuk(self.ankers, self.ankerpunten, verwerkt, self._veldpunt), {})
+
+    def test_voegt_binnen_een_stuk_wel_samen(self):
+        # Zelfde opstelling, maar nu één doorlopend stuk met de échte camerabeweging.
+        verwerkt = {0: (0, vv.eenheid(), 0), 1: (1, vv.inverteer(self.c2), 0)}
+        uit = vv.verbeter_ankers_per_stuk(self.ankers, self.ankerpunten, verwerkt, self._veldpunt)
+        self.assertEqual(set(uit), {0, 1})
+        alle = [(k.x_m, k.y_m) for k in self.kaart.values()]
+        self.assertLess(max(vv.veldfout_m(uit[0], self.h1, alle)), 0.05)
+
+    def test_acceptatietoets_weigert_een_keten_die_gedreven_heeft(self):
+        # Ook binnen één stuk draagt K(a)⁻¹·K(b) de volle flow-drift mee. Hier liegt de
+        # keten 30 px (2,5 m): het samengevoegde anker wordt op zijn éigen punten veel
+        # slechter dan het losse — dan houden we het losse.
+        drift = [[1.0, 0.0, 30.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]
+        verwerkt = {0: (0, vv.eenheid(), 0),
+                    1: (1, vv.normaliseer(vv.maal(vv.inverteer(self.c2), drift)), 0)}
+        uit = vv.verbeter_ankers_per_stuk(self.ankers, self.ankerpunten, verwerkt, self._veldpunt)
+        self.assertEqual(uit, {})
+
+
+class _NepCap:
+    """Een 'video' die alleen uit tijdstempels bestaat: elk frame is zijn eigen tijd."""
+
+    def __init__(self, duur_s):
+        self.duur_s = duur_s
+        self._t = 0.0
+
+    def isOpened(self):
+        return True
+
+    def set(self, _prop, waarde):
+        self._t = waarde / 1000.0
+
+    def read(self):
+        if self._t > self.duur_s + 1e-6:
+            return False, None
+        return True, ('frame', self._t)
+
+    def get(self, prop):
+        if prop == _NepCv2.CAP_PROP_FPS:
+            return 25.0
+        if prop == _NepCv2.CAP_PROP_FRAME_COUNT:
+            return self.duur_s * 25.0
+        return 0.0
+
+    def release(self):
+        pass
+
+
+class _NepCv2:
+    """Net genoeg opencv om volg_video te draaien met een wiskundig bekende camera.
+
+    De flow en de stap-homografie volgen exact uit de opgegeven camerabeweging
+    ``camera_op(t)`` (beeld van seconde 0 → beeld van t). Zo testen we de lús zelf —
+    welke stap geketend wordt, waar een anker aan hangt — zonder echte video, en met
+    een grondwaarheid om de veldfout tegen af te meten.
+    """
+
+    CAP_PROP_POS_MSEC = 0
+    CAP_PROP_FPS = 5
+    CAP_PROP_FRAME_COUNT = 7
+    COLOR_BGR2GRAY = 6
+    RANSAC = 8
+
+    def __init__(self, camera_op, duur_s, zonder_punten=(), flow_bias_px=(0.0, 0.0)):
+        self.camera_op = camera_op
+        self.duur_s = duur_s
+        # Frames (op hun tijd, afgerond op 3 decimalen) zonder markante punten: daar geeft
+        # goodFeaturesToTrack niets terug en valt de flow-stap erná niet te meten.
+        self.zonder_punten = set(zonder_punten)
+        # Vaste fout per gemeten stap (px): zo bouwt de keten drift op, zoals echte flow.
+        self.flow_bias_px = flow_bias_px
+        self.raster = [(100.0 + 90.0 * i, 90.0 + 110.0 * j) for i in range(5) for j in range(4)]
+
+    def VideoCapture(self, _pad):
+        return _NepCap(self.duur_s)
+
+    def cvtColor(self, frame, _code):
+        return frame
+
+    def goodFeaturesToTrack(self, grijs, **_kw):
+        import numpy as np
+        if round(grijs[1], 3) in self.zonder_punten:
+            return None
+        return np.array([[[x, y]] for x, y in self.raster])
+
+    def calcOpticalFlowPyrLK(self, vorig, huidig, p0, _geen):
+        import numpy as np
+        stap = vv.maal(self.camera_op(huidig[1]), vv.inverteer(self.camera_op(vorig[1])))
+        bx, by = self.flow_bias_px
+        p1 = []
+        for p in p0:
+            x, y = vv.projecteer(stap, float(p[0][0]), float(p[0][1]))
+            p1.append([[x + bx, y + by]])
+        return np.array(p1), np.ones((len(p0), 1), dtype=np.uint8), None
+
+    def findHomography(self, bron, doel, _methode, _drempel):
+        import numpy as np
+        paren = [((float(b[0]), float(b[1])), (float(d[0]), float(d[1]))) for b, d in zip(bron, doel)]
+        h = vv.homografie_uit_paren(paren)
+        if h is None:
+            return None, None
+        return np.array(h), np.ones((len(paren), 1))
+
+
+@unittest.skipUnless(_heeft('numpy'), 'numpy niet geïnstalleerd')
+class TestVolgVideoNep(unittest.TestCase):
+    """De volledige videolus op de nepcamera: hier liggen de gemeten defecten vast.
+
+    Elke test hieronder faalde op de oude lus — een ijkbeeld dat aan het verkeerde frame
+    hing, een stille sprong die als 'flow' bleef doormeten, samenvoegen dat op exacte
+    float-gelijkheid van tijden hing of over een knip heen combineerde.
+    """
+
+    def setUp(self):
+        self.kal = vv.inverteer([[12.0, 0.0, 260.0], [0.0, 12.0, 60.0], [0.0, 0.0, 1.0]])
+        self.kaart = veld.kruispunt_per_label(10.0)
+
+    def _echt(self, camera_op, t):
+        return vv.normaliseer(vv.maal(self.kal, vv.inverteer(camera_op(t))))
+
+    def _ankerpunten(self, matrix, labels):
+        naar_beeld = vv.inverteer(matrix)
+        uit = []
+        for label in labels:
+            k = self.kaart[label]
+            x, y = vv.projecteer(naar_beeld, k.x_m, k.y_m)
+            uit.append({'label': label, 'x': x, 'y': y})
+        return uit
+
+    def _volg(self, nep, ankers_data, fps, heranker, restfout=None):
+        with tempfile.TemporaryDirectory() as d:
+            video = Path(d) / 'wedstrijd.mp4'
+            video.write_bytes(b'nep')
+            ankerpad = Path(d) / 'ankers.json'
+            ankerpad.write_text(json.dumps(ankers_data), encoding='utf-8')
+            args = argparse.Namespace(video=video, ankers=ankerpad, kalibratie=None,
+                                      fps=fps, heranker=heranker, max_fout=vv.MAX_ANKER_FOUT_M,
+                                      min_lijn=60, rondes=3, punten_per_segment=4)
+            lijnen = vv.veldlijnen(10.0)
+
+            def segmenten(_cv2, frame, _min_lijn):
+                # De lijndetector "ziet" de lijnen zoals ze echt in dit frame liggen.
+                echt = self._echt(nep.camera_op, frame[1])
+                return vv._demo_lijnsegmenten(echt, lijnen, random.Random(int(frame[1] * 1000) + 7))
+
+            with mock.patch.object(vv, '_laad_cv2', lambda: nep), \
+                 mock.patch.object(vv, 'detecteer_lijnsegmenten', segmenten), \
+                 mock.patch.object(vv, '_restfout', restfout or (lambda _c, _m, _a, _b: 1.0)):
+                return vv.volg_video(args)
+
+    def _veldfout(self, spoor, camera_op, t):
+        m = spoor.op(t)
+        self.assertIsNotNone(m, f'geen matrix op t={t}')
+        return max(vv.veldfout_m(m, self._echt(camera_op, t), vv._standaard_veldpunten()))
+
+    def test_ijkbeeld_hangt_aan_zijn_eigen_frame_niet_aan_de_rasterstap(self):
+        # Camera pant 48 px/s; het ijkbeeld is gefit op t=3,25, tussen twee rasterstappen
+        # (fps 2) in. Aan de stap op 3,5 gehangen zou de pan uit dat kwartsecondegat
+        # (12 px = 1 m) als vaste fout in de "grondwaarheid" schuiven.
+        def pan(t):
+            return [[1.0, 0.0, 48.0 * t], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]
+
+        nep = _NepCv2(pan, duur_s=6.0)
+        anker = self._echt(pan, 3.25)
+        spoor, _rapport = self._volg(nep, {'ankers': [
+            {'tijd_s': 3.25, 'matrix_beeld_naar_veld': anker}]}, fps=2.0, heranker=100.0)
+        punt = next(p for p in spoor.punten if p['t'] == 3.25)
+        self.assertEqual(punt['bron'], 'ijkbeeld')
+        for t in (1.0, 3.25, 5.0):
+            self.assertLess(self._veldfout(spoor, pan, t), 0.02)  # was: 1,0 m overal
+
+    def test_stille_sprong_laat_het_spoor_zwijgen_in_plaats_van_fout_doormeten(self):
+        # Tussen frame 4,0 en 4,5 verspringt het beeld 24 px (2 m), maar dat frame heeft
+        # geen markante punten: de stap valt niet te meten. Vroeger ketende de lus stil
+        # door en bleef alles erna 2 m ernaast staan als bron 'flow' (gemeten: 30/30 keer,
+        # want elke herankering faalt op deze afstand). Nu hoort het spoor daar te zwijgen.
+        def sprong(t):
+            if t < 4.25:
+                return vv.eenheid()
+            return [[1.0, 0.0, 0.0], [0.0, 1.0, 24.0], [0.0, 0.0, 1.0]]
+
+        nep = _NepCv2(sprong, duur_s=8.0, zonder_punten={4.0})
+        spoor, rapport = self._volg(nep, {'ankers': [
+            {'tijd_s': 0.0, 'matrix_beeld_naar_veld': self.kal}]}, fps=2.0, heranker=1.0)
+        # Vóór het gat is er een meting en klopt ze.
+        self.assertLess(self._veldfout(spoor, sprong, 2.0), 0.5)
+        # Ná het gat: geen matrix — liever een gat dan 2 m ernaast.
+        self.assertIsNone(spoor.op(6.0))
+        self.assertIsNone(spoor.op(7.5))
+        self.assertEqual(rapport['flow_gaten'], [4.5])
+        self.assertGreater(rapport['onbetrouwbare_momenten'], 0)
+        # En het rapport benoemt het stuk zonder veldstand, zodat er een ijkbeeld bij kan.
+        self.assertIn([4.5, 8.0], rapport['gaten'])
+
+    @unittest.skipUnless(_heeft('cv2'), 'opencv niet geïnstalleerd')
+    def test_samenvoegen_hangt_niet_aan_exacte_floatgelijkheid_van_tijden(self):
+        # Bij fps 10 valt de opgetelde rastertijd nooit exact op de ankertijd (60 × 0,1 =
+        # 5,999999999999998): op float-gelijkheid gesleuteld was samenvoegen altijd een
+        # stille no-op en meldde het rapport 0 — precies in de standen die moeten kloppen.
+        def pan(t):
+            return [[1.0, 0.0, 12.0 * t], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]
+
+        nep = _NepCv2(pan, duur_s=8.0)
+        thuis = [l for l in self.kaart if '_thuis_' in l or l.startswith('middellijn')]
+        uitkant = [l for l in self.kaart if '_uit_' in l or l.startswith('middellijn')]
+        h1, h2 = self._echt(pan, 2.0), self._echt(pan, 6.0)
+        spoor, rapport = self._volg(nep, {'ankers': [
+            {'tijd_s': 2.0, 'matrix_beeld_naar_veld': h1, 'punten': self._ankerpunten(h1, thuis)},
+            {'tijd_s': 6.0, 'matrix_beeld_naar_veld': h2, 'punten': self._ankerpunten(h2, uitkant)},
+        ]}, fps=10.0, heranker=100.0)
+        self.assertEqual(rapport['samengevoegde_ankers'], 2)
+        for t in (1.0, 4.0, 7.0):
+            self.assertLess(self._veldfout(spoor, pan, t), 0.05)
+
+    @unittest.skipUnless(_heeft('cv2'), 'opencv niet geïnstalleerd')
+    def test_samenvoegen_gaat_nooit_over_een_knip_heen(self):
+        # Een montage: op 5,25 s verspringt de opname 60 px (de restfout verraadt de knip).
+        # In beide stukken is de keten opnieuw begonnen; over de knip heen samenvoegen zou
+        # de goede losse ankers vervangen door matrices die er meters naast zitten.
+        naknip = [[1.0, 0.0, 60.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]
+
+        def knipcamera(t):
+            return vv.eenheid() if t < 5.25 else naknip
+
+        def restfout(_c, _m, _a, b):
+            return 25.0 if round(b[1], 3) == 5.5 else 1.0
+
+        nep = _NepCv2(knipcamera, duur_s=10.0)
+        thuis = [l for l in self.kaart if '_thuis_' in l or l.startswith('middellijn')]
+        uitkant = [l for l in self.kaart if '_uit_' in l or l.startswith('middellijn')]
+        h1, h2 = self._echt(knipcamera, 2.0), self._echt(knipcamera, 8.0)
+        spoor, rapport = self._volg(nep, {'ankers': [
+            {'tijd_s': 2.0, 'matrix_beeld_naar_veld': h1, 'punten': self._ankerpunten(h1, thuis)},
+            {'tijd_s': 8.0, 'matrix_beeld_naar_veld': h2, 'punten': self._ankerpunten(h2, uitkant)},
+        ]}, fps=2.0, heranker=100.0, restfout=restfout)
+        self.assertEqual(rapport['breuken'], [5.5])
+        self.assertEqual(rapport['stukken'], 2)
+        self.assertEqual(rapport['samengevoegde_ankers'], 0)  # de losse ankers blijven staan
+        for t in (3.0, 6.5, 9.0):
+            self.assertLess(self._veldfout(spoor, knipcamera, t), 0.05)
+
+    def test_rapport_meet_de_drift_die_elke_herankering_wegneemt(self):
+        # De flow loopt 1 px per stap weg; de herankeringen trekken dat telkens terug. Het
+        # rapport hoort die verplaatsing te melden — een eerlijker maat voor de fout
+        # onderweg dan de lijnfout van de geslaagde herankeringen zelf.
+        nep = _NepCv2(lambda t: vv.eenheid(), duur_s=10.0, flow_bias_px=(0.0, 1.0))
+        _spoor, rapport = self._volg(nep, {'ankers': [
+            {'tijd_s': 0.0, 'matrix_beeld_naar_veld': self.kal}]}, fps=2.0, heranker=1.0)
+        self.assertGreater(rapport['ankers'], 3)
+        self.assertGreater(rapport['heranker_verplaatsing_mediaan_m'], 0.0)
+        self.assertLess(rapport['heranker_verplaatsing_p95_m'], 1.0)
+        self.assertIn('toelichting_ankerfout', rapport)
+        self.assertIn('toelichting_verplaatsing', rapport)

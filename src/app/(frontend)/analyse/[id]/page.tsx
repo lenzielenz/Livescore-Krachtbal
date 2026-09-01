@@ -202,6 +202,7 @@ export default async function AnalyseDetailPage({ params }: { params: Promise<{ 
     side: e.side ?? null,
     rugnummer: e.rugnummer ?? null,
     inDoelgebied: e.inDoelgebied === true,
+    uitbal: e.uitbal === true,
     xM: e.xM ?? null,
     yM: e.yM ?? null,
     afstandM: e.afstandM ?? null,

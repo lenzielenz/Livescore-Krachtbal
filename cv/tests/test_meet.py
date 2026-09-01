@@ -107,6 +107,74 @@ class TestOpgemetenTerrein(unittest.TestCase):
         self.assertEqual(meet.maten_argumenten(12.0, None), ['--breedte', '12.0'])
         self.assertEqual(meet.maten_argumenten(None, 20.0), ['--speelveld', '20.0'])
 
+    def test_demo_geeft_de_doelgebied_diepte_door_aan_landing_tracking_en_heatmap(self):
+        # Regressie: goalAreaDepth bereikte de rekenstappen nooit — landing.py rekende dan met
+        # de reglementaire 10 m, en op een terrein van 15 m diepte ligt de doellijn 4 m
+        # verkeerd (een landing op y=39 m werd een vals doelpunt).
+        stappen = meet.bouw_stappen(
+            match=42, uitmap=Path('m'), base='http://x', demo=True, seed=7,
+            video=None, kalibratie=None, upload=False, fps=2.0, tracking=True,
+            diepte=15.0,
+        )
+        for stapnaam in ('landing', 'videotracking', 'heatmap'):
+            argv = _argv_van(stappen, stapnaam)
+            self.assertIn('--diepte', argv, stapnaam)
+            self.assertIn('15.0', argv, stapnaam)
+
+    def test_videomodus_geeft_de_diepte_mee_als_vangnet(self):
+        # De kalibratie wint als ze zelf een diepte draagt; de vlag vangt oudere bestanden op.
+        stappen = meet.bouw_stappen(
+            match=42, uitmap=Path('m'), base='http://x', demo=False, seed=None,
+            video=Path('match.mp4'), kalibratie=Path('kal.json'), upload=False, fps=2.0,
+            tracking=True, diepte=15.0,
+        )
+        for stapnaam in ('landing', 'videotracking'):
+            self.assertIn('--diepte', _argv_van(stappen, stapnaam), stapnaam)
+
+    def test_reglementaire_diepte_geeft_geen_vlag(self):
+        stappen = meet.bouw_stappen(
+            match=42, uitmap=Path('m'), base='http://x', demo=True, seed=7,
+            video=None, kalibratie=None, upload=False, fps=2.0, tracking=True,
+        )
+        self.assertNotIn('--diepte', _argv_van(stappen, 'landing'))
+
+    def test_haal_maten_leest_ook_de_doelgebied_diepte(self):
+        # Regressie: haal_maten las alleen breedte/speelveld, nooit goalAreaDepth — terwijl
+        # het labels-endpoint dat wél meegeeft en sync.py het gebruikt.
+        import sync as sync_mod
+
+        origineel = sync_mod.haal_labels
+        sync_mod.haal_labels = lambda base, match, token: {
+            'match': {'veldBreedteM': 12, 'veldSpeelveldM': 20, 'goalAreaDepth': 15},
+        }
+        try:
+            self.assertEqual(meet.haal_maten('http://x', 42, 'tok'), (12.0, 20.0, 15.0))
+        finally:
+            sync_mod.haal_labels = origineel
+
+    def test_waarschuwt_wanneer_de_kalibratie_een_andere_diepte_heeft(self):
+        # Regressie: de diepte-controle ontbrak — in videomodus wint de kalibratie-diepte van
+        # elke vlag, dus een scheve diepte moet vóór de meting gemeld worden.
+        import io
+        import json
+        import tempfile
+        from contextlib import redirect_stderr
+
+        with tempfile.TemporaryDirectory() as d:
+            kal = Path(d) / 'kal.json'
+            kal.write_text(json.dumps({'veld': {'doelgebied_diepte_m': 10.0}}), encoding='utf-8')
+            buf = io.StringIO()
+            with redirect_stderr(buf):
+                meet.waarschuw_bij_afwijkende_kalibratie(kal, None, None, 15.0)
+            self.assertIn('diepte verschilt', buf.getvalue())
+            # Gelijke diepte: geen ruis. Ook het oude formaat (diepte op het hoogste niveau) telt.
+            oud = Path(d) / 'oud.json'
+            oud.write_text(json.dumps({'doelgebied_diepte_m': 15.0}), encoding='utf-8')
+            buf2 = io.StringIO()
+            with redirect_stderr(buf2):
+                meet.waarschuw_bij_afwijkende_kalibratie(oud, None, None, 15.0)
+            self.assertEqual(buf2.getvalue(), '')
+
     def test_waarschuwt_wanneer_de_kalibratie_andere_maten_heeft(self):
         import io
         import json

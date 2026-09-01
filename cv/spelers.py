@@ -34,6 +34,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import random
 import sys
 from pathlib import Path
@@ -115,6 +116,33 @@ def demo_spelers(
 # Video: HOG-personen + truitjeskleur-clustering
 # ---------------------------------------------------------------------------
 
+# OpenCV-hue loopt van 0 t/m 179 en is circulair: 0 en 179 zijn allebei rood.
+# Alles wat met tinten rekent moet dus op de cirkel rekenen — een lineaire
+# mediaan of afstand splijt een rood truitje in tweeën (metingen op ~3 én ~176)
+# en laat de mediaan van wrap-overspannende pixels in cyaan/groen landen.
+HUE_PERIODE = 180.0
+
+
+def circulaire_afstand(a: float, b: float) -> float:
+    """Afstand tussen twee tinten op de hue-cirkel (0 en 179 liggen vlak bij elkaar)."""
+    d = abs(a - b) % HUE_PERIODE
+    return min(d, HUE_PERIODE - d)
+
+
+def circulair_gemiddelde(tinten) -> float:
+    """Gemiddelde tint als hoek op de hue-cirkel, terug in [0, 180).
+
+    Elke tint wordt een eenheidsvector op de cirkel; het gemiddelde is de hoek
+    van de somvector. Zo blijft rood rond de wrap gewoon rood, waar een lineair
+    gemiddelde (of mediaan) midden op de schaal zou uitkomen.
+    """
+    som_cos = som_sin = 0.0
+    for t in tinten:
+        hoek = float(t) * (2.0 * math.pi / HUE_PERIODE)
+        som_cos += math.cos(hoek)
+        som_sin += math.sin(hoek)
+    return (math.atan2(som_sin, som_cos) * HUE_PERIODE / (2.0 * math.pi)) % HUE_PERIODE
+
 
 def _laad_cv2():
     try:
@@ -146,7 +174,44 @@ def torso_tint(cv2, frame, vak: tuple[int, int, int, int]) -> float | None:
     masker = hsv[:, :, 1] > 60
     if int(masker.sum()) < 20:
         return None
-    return float(np.median(hsv[:, :, 0][masker]))
+    # Circulair middelen, niet de mediaan: een rood truitje meet pixels aan
+    # beide kanten van de hue-wrap en de mediaan daarvan zou in cyaan landen.
+    return circulair_gemiddelde(hsv[:, :, 0][masker])
+
+
+def wijs_teams_toe(tinten: list[float | None], wissel: bool = False) -> list[str | None]:
+    """Pas 2 van de videomodus, puur: cluster de tinten in twee truitjeskleuren
+    en geef per meting 'home'/'away' terug (None = geen tint gemeten).
+
+    1-dimensionale 2-means, maar dan op de hue-cirkel: startcentra zijn het
+    circulair verst uiteenliggende paar (min/max is op een cirkel betekenisloos
+    — bij rood liggen 3 en 176 vlák bij elkaar), en per groep wordt circulair
+    gemiddeld. Zo blijft een rood truitje dat afhankelijk van de belichting
+    soms ~3 en soms ~176 meet één cluster, in plaats van over beide teams
+    verdeeld te raken.
+    """
+    geldig = [t for t in tinten if t is not None]
+    c1, c2 = max(
+        ((a, b) for i, a in enumerate(geldig) for b in geldig[i + 1:]),
+        key=lambda paar: circulaire_afstand(paar[0], paar[1]),
+    )
+    for _ in range(20):
+        groep1 = [t for t in geldig if circulaire_afstand(t, c1) <= circulaire_afstand(t, c2)]
+        groep2 = [t for t in geldig if circulaire_afstand(t, c1) > circulaire_afstand(t, c2)]
+        n1 = circulair_gemiddelde(groep1) if groep1 else c1
+        n2 = circulair_gemiddelde(groep2) if groep2 else c2
+        if circulaire_afstand(n1, c1) < 1e-6 and circulaire_afstand(n2, c2) < 1e-6:
+            break
+        c1, c2 = n1, n2
+    # De grootste cluster heet home; --wissel draait dat om (de camera kent de opstelling niet).
+    grootste_is_1 = len([t for t in geldig if circulaire_afstand(t, c1) <= circulaire_afstand(t, c2)]) >= len(geldig) / 2
+    home_centrum = c1 if grootste_is_1 != wissel else c2
+    away_centrum = c2 if home_centrum == c1 else c1
+    return [
+        None if t is None
+        else ('home' if circulaire_afstand(t, home_centrum) <= circulaire_afstand(t, away_centrum) else 'away')
+        for t in tinten
+    ]
 
 
 def video_spelers(args: argparse.Namespace, detecties: list[dict]) -> tuple[list[dict], dict]:
@@ -179,30 +244,16 @@ def video_spelers(args: argparse.Namespace, detecties: list[dict]) -> tuple[list
         tinten.append(tint)
     cap.release()
 
-    # Pas 2: 1-dimensionale 2-means over de gevonden tinten → twee truitjeskleuren.
-    geldig = [t for t in tinten if t is not None]
-    if len(geldig) < 2:
+    # Pas 2: 2-means op de hue-cirkel over de gevonden tinten → twee truitjeskleuren.
+    if len([t for t in tinten if t is not None]) < 2:
         _fout('te weinig personen gevonden om twee ploegen te onderscheiden — reviewen op het oog')
-    c1, c2 = min(geldig), max(geldig)
-    for _ in range(20):
-        groep1 = [t for t in geldig if abs(t - c1) <= abs(t - c2)]
-        groep2 = [t for t in geldig if abs(t - c1) > abs(t - c2)]
-        n1 = sum(groep1) / len(groep1) if groep1 else c1
-        n2 = sum(groep2) / len(groep2) if groep2 else c2
-        if abs(n1 - c1) < 1e-6 and abs(n2 - c2) < 1e-6:
-            break
-        c1, c2 = n1, n2
-    # De grootste cluster heet home; --wissel draait dat om (de camera kent de opstelling niet).
-    grootste_is_1 = len([t for t in geldig if abs(t - c1) <= abs(t - c2)]) >= len(geldig) / 2
-    home_centrum = c1 if grootste_is_1 != args.wissel else c2
-    away_centrum = c2 if home_centrum == c1 else c1
+    teams = wijs_teams_toe(tinten, wissel=args.wissel)
 
     verrijkt: list[dict] = []
     toegewezen = 0
-    for det, tint in zip(detecties, tinten):
+    for det, team in zip(detecties, teams):
         det = dict(det)
-        if tint is not None:
-            team = 'home' if abs(tint - home_centrum) <= abs(tint - away_centrum) else 'away'
+        if team is not None:
             det['speler'] = {'team': team, 'rugnummer': None}
             toegewezen += 1
         prov = dict(det.get('provenance') or {})

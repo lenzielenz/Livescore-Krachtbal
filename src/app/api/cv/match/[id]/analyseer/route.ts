@@ -74,8 +74,15 @@ async function importeerVoorstellen(
           worpType,
           worpTypeOrigineel: worpType,
           inDoelgebied: zone?.in_doelgebied === true,
-          xM: Number.isFinite(Number(zone?.x_m)) ? Number(zone?.x_m) : null,
-          yM: Number.isFinite(Number(zone?.y_m)) ? Number(zone?.y_m) : null,
+          // Een uitbal heeft geen zone maar wél een landingspunt — bewust buiten de lijnen.
+          // Dat punt gaat mee: daarmee leidt de engine bij het overzetten zelf 'uit' af.
+          uitbal: e.uitbal === true,
+          xM: Number.isFinite(Number(zone?.x_m))
+            ? Number(zone?.x_m)
+            : e.uitbal === true && Number.isFinite(Number(e.uitbal_x_m)) ? Number(e.uitbal_x_m) : null,
+          yM: Number.isFinite(Number(zone?.y_m))
+            ? Number(zone?.y_m)
+            : e.uitbal === true && Number.isFinite(Number(e.uitbal_y_m)) ? Number(e.uitbal_y_m) : null,
           afstandM: Number.isFinite(Number(e.afstand_m)) ? Number(e.afstand_m) : null,
           side: speler?.team === 'home' || speler?.team === 'away' ? speler.team : null,
           rugnummer: Number.isInteger(rug) && (rug as number) >= 0 && (rug as number) <= 99 ? (rug as number) : null,

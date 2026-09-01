@@ -26,6 +26,7 @@ export interface CvVoorstel {
   /** Fase 2: landde de bal (volgens het model) in het doelgebied, en waar (veldmeters)? */
   inDoelgebied: boolean
   xM: number | null
+  uitbal?: boolean | null
   yM: number | null
   afstandM: number | null
 }
@@ -334,7 +335,7 @@ export function CvReview({
               )}
               {actief.xM != null && actief.yM != null && (
                 <span className="va-cv-zone" title="Landingspunt volgens het model (veldmeters)">
-                  {actief.inDoelgebied ? '🎯 doelgebied' : 'veld'} · {actief.xM.toFixed(1)}, {actief.yM.toFixed(1)} m
+                  {actief.uitbal ? '↗ uitbal' : actief.inDoelgebied ? '🎯 doelgebied' : 'veld'} · {actief.xM.toFixed(1)}, {actief.yM.toFixed(1)} m
                   {actief.afstandM != null ? ` · worp ${actief.afstandM.toFixed(1)} m` : ''}
                 </span>
               )}

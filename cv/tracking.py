@@ -21,8 +21,8 @@ VIDEO (vereist opencv + kalibratie van calibrate.py):
 
 DEMO (geen video — oefent heatmap.py, reproduceerbaar):
     python3 cv/tracking.py --demo --seed 7 --duur 600 --uit posities.jsonl
-    Acht spelers (vier per helft) wandelen als begrensde toevalspaden over het
-    veld — genoeg om de heatmap-lus end-to-end te draaien.
+    Acht spelers (vier per helft) wandelen met richtingsbehoud (en sprinten af
+    en toe) over het veld — genoeg om de heatmap-lus end-to-end te draaien.
 """
 
 from __future__ import annotations
@@ -47,8 +47,12 @@ MAX_GAT_S = 2.0  # een spoor zonder waarneming langer dan dit wordt afgesloten
 # snelheid over een halve seconde uitgemiddeld en verdwijnen de pieken — dan meet fysiek.py
 # nul sprintjes op een wedstrijd waarin volop gesprint werd. 4/s houdt versnellingen zichtbaar.
 STANDAARD_FPS = 4.0
-# Wandeltempo van de demo-spelers (m/s): de basis voor de ruis per stap.
+# Wandeltempo van de demo-spelers (m/s).
 DEMO_SNELHEID_M_S = 1.2
+# Hoe vaak een wandelaar gemiddeld een nieuwe richting kiest (kans per seconde).
+# Richtingsbehoud is essentieel: witte ruis per stap zou geen beweging zijn maar
+# jitter, en die filtert fysiek.py (terecht) als stilstand weg.
+DEMO_DRAAI_KANS_PER_S = 0.5
 # En af en toe een sprint: krachtbal is start-stop, dus een demo zonder versnellingen laat de
 # sprintteller van fysiek.py nooit zien. Kans per speler per seconde, duur en tempo.
 DEMO_SPRINT_KANS_PER_S = 0.02
@@ -69,9 +73,16 @@ def _fout(boodschap: str, code: int = 2) -> None:
 class Koppelaar:
     """Rijgt losse waarnemingen aaneen tot sporen (dichtstbijzijnde buur).
 
-    Per tijdstap: koppel elke waarneming aan het dichtstbijzijnde open spoor
-    binnen de snelheidslimiet (dichtstbijzijnde paar eerst, één-op-één); wat
-    overblijft start een nieuw spoor. Sporen die te lang niets zagen, sluiten.
+    Per tijdstap: koppel elke waarneming aan het open spoor waarvan de
+    vóórspelde positie (laatste positie + laatste snelheid) het dichtst bij
+    ligt, binnen de snelheidslimiet (dichtstbijzijnde paar eerst, één-op-één);
+    wat overblijft start een nieuw spoor. Sporen die te lang niets zagen,
+    sluiten.
+
+    De snelheidsvoorspelling is de continuïteitsterm die kruisende spelers uit
+    elkaar houdt: op het kruispunt slokt dedupliceer één van beide waarnemingen
+    op, en puur "dichtstbijzijnde buur" zou de sporen na het kruisen omgekeerd
+    aan elkaar hangen — mét de voorspelling volgt elk spoor zijn eigen richting.
     """
 
     def __init__(self, max_snelheid: float = MAX_SNELHEID_M_S, max_gat: float = MAX_GAT_S) -> None:
@@ -79,18 +90,26 @@ class Koppelaar:
         self.max_gat = max_gat
         self.volgende_id = 1
         self.open: dict[int, tuple[float, float, float]] = {}  # id → (t, x, y)
+        self.snelheid: dict[int, tuple[float, float]] = {}  # id → (vx, vy) van de laatste koppeling
 
     def stap(self, t: float, punten: list[tuple[float, float]]) -> list[tuple[int, float, float]]:
         # Verlopen sporen sluiten.
         self.open = {tid: w for tid, w in self.open.items() if t - w[0] <= self.max_gat}
+        self.snelheid = {tid: v for tid, v in self.snelheid.items() if tid in self.open}
 
         paren: list[tuple[float, int, int]] = []
         for tid, (t0, x0, y0) in self.open.items():
             dt = max(1e-6, t - t0)
+            # Waar dit spoor nu zou staan als het zijn laatste snelheid aanhield
+            # (nieuwe sporen hebben nog geen snelheid: voorspelling = laatste plek).
+            vx, vy = self.snelheid.get(tid, (0.0, 0.0))
+            px, py = x0 + vx * dt, y0 + vy * dt
             for pi, (x, y) in enumerate(punten):
                 afstand = ((x - x0) ** 2 + (y - y0) ** 2) ** 0.5
+                # De fysieke limiet blijft op de échte sprong staan; alleen de
+                # rangschikking van de kandidaten gebruikt de voorspelling.
                 if afstand / dt <= self.max_snelheid:
-                    paren.append((afstand, tid, pi))
+                    paren.append((((x - px) ** 2 + (y - py) ** 2) ** 0.5, tid, pi))
         paren.sort()
         spoor_vrij = set(self.open)
         punt_vrij = set(range(len(punten)))
@@ -100,6 +119,9 @@ class Koppelaar:
                 spoor_vrij.discard(tid)
                 punt_vrij.discard(pi)
                 x, y = punten[pi]
+                t0, x0, y0 = self.open[tid]
+                dt = max(1e-6, t - t0)
+                self.snelheid[tid] = ((x - x0) / dt, (y - y0) / dt)
                 self.open[tid] = (t, x, y)
                 uit.append((tid, x, y))
         for pi in sorted(punt_vrij):
@@ -168,22 +190,24 @@ def demo_posities(
     breedte_m: float = veld.BREEDTE_M,
     speelveld_m: float = veld.SPEELVELD_LENGTE_M,
 ) -> list[dict]:
-    """Acht begrensde toevalspaden (vier per helft) — voer voor heatmap.py en fysiek.py.
+    """Acht wandelende demo-spelers (vier per helft) — voer voor heatmap.py en fysiek.py.
 
-    De ruis per stap schaalt met de stapgrootte (σ = DEMO_SNELHEID_M_S × stap), zodat
-    dichter bemonsteren méér metingen geeft van dezelfde beweging — niet spelers die
-    plots twee keer zo snel lopen.
+    De wandelaars houden hun richting vast (met af en toe een draai of een sprint):
+    echte spelers verplaatsen zich stap na stap dezelfde kant op. Witte ruis per stap
+    zou statistisch niet van detector-jitter te onderscheiden zijn — fysiek.py filtert
+    dat (terecht) als stilstand weg. Dankzij het richtingsbehoud geeft dichter
+    bemonsteren méér metingen van dezelfde beweging — niet snellere spelers.
     """
     rng = random.Random(seed)
-    sigma = DEMO_SNELHEID_M_S * stap_s
     lengte = veld.totale_lengte_m(diepte_m, speelveld_m)
     spelers = []
     for i in range(8):
         # Elke ploeg blijft grotendeels op de eigen helft, zoals in het echte spel.
         eigen_helft = i < 4
         y0 = rng.uniform(lengte * 0.1, lengte * 0.45) if eigen_helft else rng.uniform(lengte * 0.55, lengte * 0.9)
-        # [x, y, resterende sprinttijd, snelheid, richting-x, richting-y]
-        spelers.append([rng.uniform(2.0, breedte_m - 2.0), y0, 0.0, 0.0, 0.0, 0.0])
+        hoek = rng.uniform(0.0, 2.0 * math.pi)
+        # [x, y, resterende sprinttijd, sprintsnelheid, richting-x, richting-y]
+        spelers.append([rng.uniform(2.0, breedte_m - 2.0), y0, 0.0, 0.0, math.cos(hoek), math.sin(hoek)])
     rijen: list[dict] = []
     t = 0.0
     while t <= duur_s:
@@ -199,8 +223,12 @@ def demo_posities(
                 hoek = rng.uniform(0.0, 2.0 * math.pi)
                 sp[4], sp[5] = math.cos(hoek), math.sin(hoek)
             else:
-                sp[0] += rng.gauss(0.0, sigma)
-                sp[1] += rng.gauss(0.0, sigma)
+                # Wandelen met richtingsbehoud; af en toe een nieuwe koers kiezen.
+                if rng.random() < DEMO_DRAAI_KANS_PER_S * stap_s:
+                    hoek = rng.uniform(0.0, 2.0 * math.pi)
+                    sp[4], sp[5] = math.cos(hoek), math.sin(hoek)
+                sp[0] += sp[4] * DEMO_SNELHEID_M_S * stap_s
+                sp[1] += sp[5] * DEMO_SNELHEID_M_S * stap_s
             sp[0], sp[1] = klem_op_veld(sp[0], sp[1], diepte_m, breedte_m, speelveld_m)
             rijen.append({'t': round(t, 2), 'track': track, 'x_m': round(sp[0], 2), 'y_m': round(sp[1], 2)})
         t += stap_s
