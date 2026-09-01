@@ -530,6 +530,11 @@ export function VideoAnalyse({
                 pos={pos}
                 onSeek={seek}
                 onFrameStap={isFile ? frameStap : undefined}
+                // Het beeld bij elk voorstel wordt uit het bestand zelf gehaald; een
+                // YouTube-speler laat zijn beeld niet uitlezen, dus daar blijft het bij het
+                // tijdstip (zelfde grens als de kalibratie).
+                videoSrc={isFile && source ? source.src : null}
+                duurS={dur}
               >
               <div className="va-tl-track" aria-label="Alle worpen op de videotijdlijn">
                 <span className="va-tl-half" style={{ left: tlPct(sync.offsetH1) }} aria-hidden>
