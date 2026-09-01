@@ -172,6 +172,15 @@ export function PlanningImport() {
         )}
       </div>
 
+      {klaar?.wipeMislukt != null && (
+        <p className="pi-fout">
+          ⚠ Het oude speelplan is niet volledig verwijderd — er stonden nog {klaar.wipeMislukt}{' '}
+          wedstrijden. Er is daarom <strong>niets</strong> geïmporteerd: bovenop een half gelukte
+          vervanging inladen zet de kalender dubbel. Kijk hieronder wat er misging en probeer
+          opnieuw.
+        </p>
+      )}
+
       {res && (
         <section className={`pi-res ${klaar ? 'done' : ''}`} aria-live="polite">
           <h2 className="pi-res-title">
@@ -206,6 +215,9 @@ export function PlanningImport() {
             <Cijfer label="nieuwe ploegen" waarde={klaar ? (res.aangemaakt?.ploegen ?? 0) : res.nieuwePloegen.length} />
             <Cijfer label="nieuwe clubs" waarde={klaar ? (res.aangemaakt?.clubs ?? 0) : res.nieuweClubs.length} />
             <Cijfer label="rijen met een probleem" waarde={res.issues.length} waarschuwing={res.issues.length > 0} />
+            {res.dubbelInBestand != null && res.dubbelInBestand > 0 && (
+              <Cijfer label="dubbel in het bestand (één keer geteld)" waarde={res.dubbelInBestand} waarschuwing />
+            )}
           </div>
 
           {/* Het aanvangsuur houdt geen rij tegen, dus het stond nergens — en zo kon een hele

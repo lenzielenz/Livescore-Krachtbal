@@ -349,6 +349,9 @@ export function uurWaarschuwing(u: Uurstand): string | null {
  * niet meer — met een verdubbelde kalender als gevolg. Precies de kalender die door een onleesbaar
  * aanvangsuur op 00:00 stond, liep in die val.
  */
+/** De reden waarmee planSeason een rij markeert die al eerder in hetzelfde bestand stond. */
+export const DUBBEL_IN_BESTAND = 'Staat twee keer in het bestand'
+
 export function matchSleutel(reeks: string, dateIso: string, thuis: string, uit: string): string {
   const d = new Date(dateIso)
   const dag = Number.isNaN(d.getTime()) ? dateIso.slice(0, 10) : dateStrBE(d)
@@ -444,7 +447,7 @@ export function planSeason(rows: string[][]): SeasonPlan {
 
     const sleutel = matchSleutel(reeks, dateIso, thuis, uit)
     if (gezien.has(sleutel)) {
-      issues.push({ rij, reden: 'Staat twee keer in het bestand', ruw })
+      issues.push({ rij, reden: DUBBEL_IN_BESTAND, ruw })
       return
     }
     gezien.add(sleutel)
@@ -513,6 +516,13 @@ export interface ImportSamenvatting {
   teCorrigerenUren?: number
   /** Hoeveel aanvangsuren er effectief rechtgezet zijn (echte import). */
   bijgewerkteUren?: number
+  /** Alleen ingevuld als een gevraagde wipe NIET compleet was: zoveel wedstrijden stonden er
+   *  daarna nog. De import maakt dan niets aan — bovenop een half gelukte wipe importeren is
+   *  precies hoe je een dubbele kalender krijgt. */
+  wipeMislukt?: number
+  /** Hoeveel rijen uit het bestand zelf een dubbel waren van een andere rij (zelfde reeks, dag
+   *  en ploegen). Die worden één keer aangemaakt, niet twee. */
+  dubbelInBestand?: number
 }
 
 // ── Tekst (CSV / geplakt) ────────────────────────────────────────────────────────────────────

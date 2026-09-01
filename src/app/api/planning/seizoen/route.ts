@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 import { authUser, isFederationLevel } from '@/lib/api-auth'
 import { getPayloadClient } from '@/lib/payload-client'
 import { parseDelimited } from '@/lib/season-import'
-import { runSeasonImport } from '@/lib/season-import-run'
+import { ImportLooptAlError, importBezig, runSeasonImport } from '@/lib/season-import-run'
 import { readXlsx } from '@/lib/xlsx-read'
 
 export const dynamic = 'force-dynamic'
@@ -94,10 +94,20 @@ export async function POST(req: Request) {
     )
   }
 
+  // Een tweede import terwijl de eerste nog schrijft, zet de hele kalender dubbel. Dat gebeurt
+  // niet uit onwil: 2400 wedstrijden inladen duurt minuten, en wie in die tijd niets ziet
+  // gebeuren drukt opnieuw. Hier al weigeren scheelt de gebruiker de wachttijd.
+  if (commit && importBezig()) {
+    return NextResponse.json({ error: new ImportLooptAlError().message }, { status: 409 })
+  }
+
   try {
     const resultaat = await runSeasonImport(payload, gelezen.rows, { commit, wipe })
     return NextResponse.json({ ok: true, commit, wipe, bron: gelezen.bron, ...resultaat })
   } catch (e) {
+    if (e instanceof ImportLooptAlError) {
+      return NextResponse.json({ error: e.message }, { status: 409 })
+    }
     return NextResponse.json({ error: (e as Error).message }, { status: 400 })
   }
 }
