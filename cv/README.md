@@ -147,6 +147,69 @@ pannen, uit de hand) is het verschil er wél:
 Meer rekenkracht is dus geen wondermiddel maar wel het juiste antwoord op een bewegend
 beeld: hoe onrustiger je filmt, hoe meer `--stand nauwkeurig` oplevert.
 
+## Twee passages: eerst zoeken, dan nakijken
+
+Overal even fijn kijken is de duurste manier om níéts te vinden. In een wedstrijd van een
+uur wordt er ongeveer één minuut geworpen; wie de hele video op 20 metingen per seconde
+bekijkt, geeft 98% van zijn rekentijd uit aan beelden waar geen worp in zit.
+
+`houding.py --twee-passages` splitst dat:
+
+1. **Zoeken** — de hele video, grof bemonsterd, met een bewust *lage* drempel
+   (`ZOEK_FACTOR`, 0,40 × de echte drempel). Deze passage mag zich vergissen naar boven:
+   elke twijfelachtige piek is welkom. Wat ze híér mist, is voorgoed weg.
+2. **Nakijken** — alleen ± 0,8 s rond die kandidaten, maar dan **élk beeld**, desgewenst met
+   een zwaarder model (`--zoek-mode` klein, `--mode` groot). Daar valt de beslissing.
+
+```
+zonder | 20 metingen/s over 60 min                    = 72 000 metingen
+met    | 15/s zoeken + 25/s over 60 stukken van 1,6 s = 54 000 + 2 400
+```
+
+**Wat het oplevert — en wat niet.** Nagemeten op 22 nagebootste worpen in twee minuten video,
+met een loslaatfase van 0,08 s:
+
+| Opzet | Gevonden | Fout op het moment | Metingen |
+| --- | --- | --- | --- |
+| één passage, 5/s | 2 / 22 | — | 600 |
+| één passage, 12/s | 6 / 22 | 78 ms | 1 500 |
+| één passage, 20/s | 17 / 22 | 84 ms | 3 001 |
+| **twee passages, 5/s + elk beeld** | **17 / 22** | 85 ms | **1 491** |
+| twee passages, 12/s + elk beeld | 17 / 22 | 84 ms | 2 395 |
+
+De winst zit in de **stabiliteit van de score**, niet in de tijd. Dezelfde worp piekt op 0,31
+bij 5 metingen/s en op 0,47 vanaf 20/s: bij grof bemonsteren valt er zelden een meting precies
+rond de zwiep en zie je maar een deel van de afgelegde weg. Rond een drempel van 0,45 is dat
+het verschil tussen gevonden en gemist. Het **moment** wordt er niet scherper van (84 ms tegen
+85 ms) — dat is eerder beweerd en het klopte niet: de score piekt over een breed venster, dus
+fijner bemonsteren verschuift het maximum nauwelijks.
+
+De zoekdrempel van 0,40 is nagemeten, niet gekozen: op 8 metingen/s vond 0,55 er 16 van de 17
+haalbare, 0,45 en lager alle 17 — voor 13% meer nakijkwerk, en zonder één valse worp extra
+(de beslissing valt alsnog op de echte drempel). Te hoog zoeken kost wél: die worp is weg.
+
+Drie dingen die daaruit volgen:
+
+- **Dit staat op élke stand aan**, ook op `snel`. Niet als vierde tandje maar als invariant:
+  de beslissing valt altijd op metingen van volle beeldfrequentie. Pas dán betekent één
+  getrainde drempel op elke stand hetzelfde — anders heeft elke stand zijn eigen schaal en
+  slaat de drempel op de ene overal en op de andere nergens aan. De stand regelt nog wat ze
+  hoort te regelen: hoe grondig er gezócht wordt.
+- **De werper komt uit de zoekpassage.** Die volgt de spelers door de hele wedstrijd en
+  houdt hun nummer vast; de fijne passage ziet losse stukken en begint na elk gat opnieuw
+  te tellen. Het moment komt dus uit de fijne passage, de werper uit de grove.
+- **`--reeks-uit` bevat wat de detector écht zag**: grof waar er niets te zien was, fijn rond
+  de kandidaten, elk met `"passage": 1` of `2`. Dat is precies de reeks waarop `train.py`
+  moet leren. Enkel de fijne bewaren zou scheeftrekken (die dekken alleen stukken waar al
+  iets gevonden was, en juist de rest bepaalt het vals alarm); enkel de grove is even fout,
+  want daarop wordt niet beslist.
+
+**De begroting.** Een lage zoekdrempel op een rommelig beeld kan honderden kandidaten
+opleveren, en dan zou "even nakijken" uitgroeien tot de hele video op volle beeldfrequentie.
+`--na-max-deel` (standaard 25%) houdt daar een grens op: de sterkste kandidaten eerst, en wat
+afvalt wordt geteld en gemeld. In een echte wedstrijd is dat nooit nodig — zestig worpen van
+1,6 s in een uur is nog geen 3%.
+
 ## Zien wat er getrackt wordt: `overlay.py`
 
 Cijfers zeggen niet of de meting klópt. Deze video legt eroverheen wat de pijplijn denkt
@@ -568,6 +631,16 @@ python3 cv/train.py --wedstrijd reeks42.jsonl labels42.jsonl \
                     --wedstrijd reeks43.jsonl labels43.jsonl \
                     --holdout 43 --uit cv/model-houding.json
 ```
+
+**De maat achter de drempel.** Sinds kort is de worpscore de afgelegde wég van de pols
+(× de polshoogte) over één loslaatfase, en niet meer de snelheid. Snelheid is weg gedeeld
+door tijd, en die tijd hing aan de precisiestand: dezelfde worp scoorde 1,7 op de grofste
+en 10,4 op de fijnste stand. Een getrainde drempel sloeg daardoor op een andere stand
+overal of nergens aan — fijner meten maakte het model niet beter maar onvergelijkbaar.
+Met de afgelegde weg is dat 31% spreiding in plaats van 85%, en pas dán levert meer
+rekenkracht ook echt een betere meting op. `model-houding.json` bewaart daarom ook het
+venster waarop getraind is; wijkt de huidige stand daar sterk van af, dan zegt `houding.py`
+dat je opnieuw moet bijstellen.
 
 `houding.py` besliste met twee geschátte getallen wanneer iets een worp is: de
 drempel op de worpscore (1,2) en de minimale afstand tussen twee pieken (3,0 s).

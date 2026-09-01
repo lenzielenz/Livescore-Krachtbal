@@ -151,6 +151,19 @@ export const CvEvents: CollectionConfig = {
       },
     },
     {
+      // Welke wérper het houdingsmodel zag: een volgnummer dat hetzelfde blijft zolang die
+      // speler gevolgd kan worden (cv/houding.py koppelt personen tussen twee metingen op hun
+      // heuppositie). Géén rugnummer — het model kan geen nummer lezen — maar wel genoeg om de
+      // worpen te groeperen: je zegt één keer per werper welke speler dat is in plaats van één
+      // keer per worp. Een gebroken spoor levert een tweede werper op; die wijs je gewoon aan
+      // dezelfde speler toe.
+      name: 'werper',
+      label: 'Werper (groep uit de video)',
+      type: 'number',
+      index: true,
+      admin: { readOnly: true, description: 'Volgnummer uit de videoanalyse, geen rugnummer.' },
+    },
+    {
       // Het menselijke oordeel over dit voorstel; gezet via PATCH /api/cv/events/[id].
       name: 'verdict',
       label: 'Oordeel',

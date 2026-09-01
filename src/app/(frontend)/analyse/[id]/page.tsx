@@ -19,6 +19,8 @@ import { AnalyseVoortgang, type VoortgangInput } from './AnalyseVoortgang'
 import { Kalibreren } from './Kalibreren'
 import { ModelBijstellen } from './ModelBijstellen'
 import { ModelScore } from './ModelScore'
+import { Overzetten } from './Overzetten'
+import { Werpers } from './Werpers'
 import { ServerAnalyse } from './ServerAnalyse'
 import { Terreinmaten } from './Terreinmaten'
 import { Veldkaart } from './Veldkaart'
@@ -137,6 +139,10 @@ export default async function AnalyseDetailPage({ params }: { params: Promise<{ 
   // Alle worpen (immutable events, hier enkel gelezen) voor de tijdlijnbalk onder de video:
   // elke manuele tag op zijn videotijd, zodat je ziet of de ijking klopt vóór er ooit een
   // CV-voorstel bijkomt (fase 0).
+  // Worpen die uit de video zijn afgespeeld tellen NIET mee als "wat de aantekenaar invoerde".
+  // Zouden ze dat wel doen, dan vergelijkt de modelscore het model met zijn eigen voorstellen en
+  // meldt ze altijd 100% gevonden — het vleiendste cijfer dat je kunt verzinnen, en het zegt niets.
+  const handWorpen = worpenRes.docs.filter((t) => (t as { bron?: string }).bron !== 'video')
   const videoWorpen: VideoWorp[] = worpenRes.docs
     .map((t) => {
       const d = t as { team?: unknown; player?: unknown; period?: unknown; gameClock?: unknown; type?: unknown; outcome?: unknown }
@@ -165,6 +171,13 @@ export default async function AnalyseDetailPage({ params }: { params: Promise<{ 
     | { punten?: unknown[]; beelden?: { punten?: unknown[] }[] }
     | null
   const kalibratieBeelden = Array.isArray(kal?.beelden) ? kal.beelden.length : 0
+  // Vier punten óp hetzelfde beeld is wat een homografie nodig heeft; vier punten verdeeld over
+  // vier beelden is niets waard. Daarom telt dit apart.
+  const kalibratieBruikbareBeelden = Array.isArray(kal?.beelden)
+    ? kal.beelden.filter((b) => (Array.isArray(b?.punten) ? b.punten.length : 0) >= 4).length
+    : Array.isArray(kal?.punten) && kal.punten.length >= 4
+      ? 1
+      : 0
   const kalibratiePunten = Array.isArray(kal?.beelden)
     ? new Set(
         kal.beelden.flatMap((b) =>
@@ -238,6 +251,10 @@ export default async function AnalyseDetailPage({ params }: { params: Promise<{ 
               modus={(matchDoc?.analyseModus as 'manueel' | 'video' | null) ?? 'manueel'}
               kalibratiePunten={kalibratiePunten}
               kalibratieBeelden={kalibratieBeelden}
+              kalibratieBruikbareBeelden={kalibratieBruikbareBeelden}
+              analyseOvergeslagen={
+                ((matchDoc?.cvAnalyse as { rapport?: { overgeslagen?: string[] } } | null)?.rapport?.overgeslagen) ?? []
+              }
               analyseStatus={(matchDoc?.cvAnalyse as { status?: VoortgangStatus } | null)?.status ?? null}
               analyseStand={
                 ((matchDoc?.cvAnalyse as { instellingen?: { stand?: string } } | null)?.instellingen?.stand) ?? null
@@ -339,13 +356,29 @@ export default async function AnalyseDetailPage({ params }: { params: Promise<{ 
                 reviewlaan alleen kan dat niet zeggen. */}
             <ErrorCatch label="De score van het model">
               <ModelScore
-                worpen={videoWorpen}
+                worpen={handWorpen.map((t) => ({
+                  half: Number((t as { period?: unknown }).period ?? 1),
+                  gameClock: Number((t as { gameClock?: unknown }).gameClock ?? 0),
+                }))}
                 voorstellen={cvVoorstellen}
                 sync={readSync({ offsetH1: matchDoc?.videoOffsetH1, offsetH2: matchDoc?.videoOffsetH2 })}
                 halfSeconds={halfSeconds}
                 geijkt={typeof matchDoc?.videoOffsetH1 === 'number'}
               />
             </ErrorCatch>
+            {/* Wie is wie: één keer per werper zeggen welke speler dat is. Staat bewust vóór het
+                overzetten — daarna staan de namen vast in onwijzigbare worpen. */}
+            <ErrorCatch label="Wie wierp wat">
+              <Werpers matchId={matchId} />
+            </ErrorCatch>
+
+            {/* De laatste stap van de video-weg: wat je bevestigde wordt een échte worp, zodat
+                de veldkaart en de statistieken hieronder eindelijk iets tonen. Enkel zinvol
+                zolang er nog niets aangetekend is. */}
+            <ErrorCatch label="De voorstellen in de wedstrijd zetten">
+              <Overzetten matchId={matchId} alWorpen={handWorpen.length} />
+            </ErrorCatch>
+
             {/* En de andere helft van diezelfde lus: de drempels bijstellen op alles wat er al
                 geanalyseerd is. Dat bestand geldt voor élke volgende analyse op deze server —
                 vandaar enkel federatie-niveau. */}

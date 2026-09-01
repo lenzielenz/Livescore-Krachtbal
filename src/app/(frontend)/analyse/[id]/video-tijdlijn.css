@@ -373,6 +373,12 @@
   margin: 0 0 10px; padding: 9px 12px; font-size: 13px; line-height: 1.45;
   background: rgba(74, 222, 128, 0.12); border: 1px solid rgba(74, 222, 128, 0.35); border-radius: 10px;
 }
+/* Uitleg, geen waarschuwing: rood zetten wat gewoon vertelt hoe iets werkt, laat de hele
+   pagina er alarmerend uitzien en maakt de échte waarschuwingen onzichtbaar. */
+.sa-uitleg {
+  margin: 0 0 10px; padding: 9px 12px; font-size: 12.5px; line-height: 1.5; color: var(--muted);
+  background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 10px;
+}
 .sa-opties { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin-bottom: 12px; }
 .sa-optie { display: flex; align-items: center; gap: 7px; font-size: 13px; }
 .sa-optie select {
@@ -561,3 +567,45 @@
   border: 1px solid rgba(255, 255, 255, 0.16); background: rgba(255, 255, 255, 0.05);
 }
 .sa-ultra { flex-basis: 100%; margin: 0; }
+
+/* ── Veldkaartje: wélk punt duid je nu aan ──────────────────────────────────────────────── */
+.kk { margin: 10px 0; display: grid; gap: 6px; }
+.kk-svg { width: 100%; max-width: 420px; height: auto; touch-action: manipulation; }
+.kk-veld { fill: rgba(74, 222, 128, 0.07); stroke: rgba(255, 255, 255, 0.35); stroke-width: 1; }
+.kk-doelgebied { fill: rgba(96, 165, 250, 0.1); stroke: none; }
+.kk-lijn { stroke: rgba(255, 255, 255, 0.3); stroke-width: 1; }
+.kk-lijn.midden { stroke: rgba(255, 255, 255, 0.55); }
+.kk-punt-groep { cursor: pointer; }
+.kk-punt { stroke: rgba(0, 0, 0, 0.5); stroke-width: 1; }
+.kk-punt.leeg { fill: rgba(255, 255, 255, 0.22); }
+.kk-punt.gezet { fill: #4ade80; }
+.kk-punt.nu { fill: #f87171; }
+/* Het punt dat aan de beurt is klopt zachtjes: op een kaartje van veertien stippen vind je het
+   anders niet terug met één oogopslag. */
+.kk-halo { fill: rgba(248, 113, 113, 0.28); animation: kk-klop 1.6s ease-out infinite; }
+@keyframes kk-klop { 0% { r: 6; opacity: 0.9 } 70% { r: 12; opacity: 0 } 100% { r: 6; opacity: 0 } }
+@media (prefers-reduced-motion: reduce) { .kk-halo { animation: none; } }
+.kk-tekst { fill: var(--muted); font-size: 9px; }
+.kk-tekst.rechts { text-anchor: end; }
+.kk-tekst.midden { text-anchor: middle; }
+.kk-uitleg { margin: 0; font-size: 12px; line-height: 1.5; color: var(--muted); }
+.ov-lijst {
+  margin: 6px 0; padding: 8px 12px 8px 26px; border-radius: 10px; font-size: 12px; line-height: 1.55;
+  border: 1px solid rgba(250, 204, 21, 0.3); background: rgba(250, 204, 21, 0.07);
+}
+.ov-lijst li { margin: 3px 0; }
+
+/* ── Wie wierp wat: de werpers uit de video een naam geven ──────────────────────────────── */
+.wp-tabel { width: 100%; border-collapse: collapse; font-size: 13px; margin: 8px 0; }
+.wp-tabel th, .wp-tabel td { padding: 6px 6px; text-align: left; vertical-align: middle; }
+.wp-tabel thead th {
+  font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; opacity: 0.6; font-weight: 600;
+}
+.wp-tabel tbody tr { border-top: 1px solid rgba(255, 255, 255, 0.08); }
+.wp-tabel tbody tr.gezet { background: rgba(74, 222, 128, 0.07); }
+.wp-tabel tbody th { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.wp-tabel select {
+  width: 100%; max-width: 220px; padding: 6px 8px; border-radius: 8px; font: inherit; font-size: 13px;
+  color: inherit; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.16);
+}
+.wp-kant { color: var(--muted); font-weight: 400; }

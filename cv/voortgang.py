@@ -47,14 +47,24 @@ class Melder:
     """
 
     def __init__(self, totaal: float | None = None, interval_s: float = STANDAARD_INTERVAL_S,
-                 stroom=None, klok=time.monotonic) -> None:
+                 stroom=None, klok=time.monotonic, deel: tuple[float, float] | None = None) -> None:
         self.totaal = totaal if (totaal and totaal > 0) else None
         self.interval_s = max(0.0, interval_s)
         self.stroom = stroom if stroom is not None else sys.stdout
         self.klok = klok
+        # Vult deze lus maar een stuk van de balk? Dan meldt ze binnen dat stuk. Twee passages
+        # over dezelfde video die elk van 0 naar 100% lopen, laten de balk terugspringen — en
+        # een balk die terugspringt lijkt kapot, ook al klopt er niets aan.
+        self.deel = deel
         self._laatst = -1e9
         self._start = self.klok()
         self.meldingen = 0
+
+    def _in_deel(self, fractie: float) -> float:
+        if not self.deel:
+            return fractie
+        van, tot = self.deel
+        return van + (tot - van) * fractie
 
     def _schrijf(self, fractie: float | None, tekst: str) -> None:
         deel = f'{fractie:.3f}' if fractie is not None else '?'
@@ -86,13 +96,14 @@ class Melder:
         else:
             fractie = None
             tekst = f'{_tijd(gedaan)} bekeken'
-        self._schrijf(fractie, f'{tekst} {extra}'.strip())
+        self._schrijf(self._in_deel(fractie) if fractie is not None else None,
+                      f'{tekst} {extra}'.strip())
         return True
 
     def klaar(self, extra: str = '') -> None:
-        """De stap is rond: één laatste melding op 100%, wat er ook gebeurd is."""
+        """De stap is rond: één laatste melding op het einde van dit deel."""
         self._laatst = self.klok()
-        self._schrijf(1.0, extra or 'klaar')
+        self._schrijf(self._in_deel(1.0), extra or 'klaar')
 
 
 def duur_van_video(cv2, cap) -> float | None:

@@ -329,9 +329,36 @@ describe('worpen zoeken met het houdingsmodel', () => {
     expect(modeVan(van('nauwkeurig'))).toBe('performance')
   })
 
-  it('kijkt ook op de hoogste stand niet vaker dan het model aankan', () => {
-    const argv = argvVan(stappen({ opts: { ...OPTS, ai: true, stand: 'nauwkeurig' }, fps: 20 }), 'houding')
-    expect(Number(argv[argv.indexOf('--analyse-fps') + 1])).toBeLessThanOrEqual(8)
+  it('meet nooit zo grof dat een worp onzichtbaar wordt', () => {
+    // De loslaatfase duurt ~0,08 s en wordt gemeten over een venster van 0,08-0,22 s. Onder de
+    // 5 metingen per seconde valt er geen enkel venster binnen die band en zie je de worp niet.
+    for (const stand of ['snel', 'gewoon', 'nauwkeurig', 'ultra'] as const) {
+      const argv = argvVan(stappen({ opts: { ...OPTS, ai: true, stand } }), 'houding')
+      expect(Number(argv[argv.indexOf('--analyse-fps') + 1])).toBeGreaterThanOrEqual(5)
+    }
+  })
+
+  it('kijkt op élke stand elk beeld na rond de kandidaten', () => {
+    // Geen luxe voor de fijne standen maar een invariant: de beslissing valt altijd op metingen
+    // van volle beeldfrequentie. Anders heeft elke stand zijn eigen schaal — dezelfde worp
+    // piekt op 0,31 bij 5 metingen/s en op 0,47 vanaf 20/s — en betekent één getrainde drempel
+    // op de ene stand iets anders dan op de andere.
+    for (const stand of ['snel', 'gewoon', 'nauwkeurig', 'ultra'] as const) {
+      const argv = argvVan(stappen({ opts: { ...OPTS, ai: true, stand } }), 'houding')
+      expect(argv).toContain('--twee-passages')
+    }
+  })
+
+  it('zoekt met een model dat niet zwaarder is dan waarmee het nakijkt', () => {
+    // Klein zoeken en groot nakijken mag; groot zoeken en klein nakijken is het omgekeerde van
+    // wat de tweede passage moet doen — dan is nakijken een verslechtering.
+    const rang = { lightweight: 0, balanced: 1, performance: 2 } as const
+    for (const stand of ['snel', 'gewoon', 'nauwkeurig', 'ultra'] as const) {
+      const a = argvVan(stappen({ opts: { ...OPTS, ai: true, stand } }), 'houding')
+      const zoek = a[a.indexOf('--zoek-mode') + 1] as keyof typeof rang
+      const na = a[a.indexOf('--mode') + 1] as keyof typeof rang
+      expect(rang[zoek]).toBeLessThanOrEqual(rang[na])
+    }
   })
 
   it('schrijft naar hetzelfde bestand, zodat de rest van de keten niets merkt', () => {

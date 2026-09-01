@@ -535,6 +535,71 @@ def lees_ankers(data: dict) -> list[tuple[float, Matrix]]:
     return sorted(ankers, key=lambda p: p[0])
 
 
+def lees_ankerpunten(data: dict) -> list[tuple[float, list[dict]]]:
+    """De aangeduide punten per ijkbeeld: (tijd, [{label, x, y}, …]), op tijd gesorteerd.
+
+    Nodig om twee halve beelden samen te voegen; zonder punten valt er niets samen te brengen.
+    """
+    uit: list[tuple[float, list[dict]]] = []
+    for a in data.get('ankers') or []:
+        punten = [p for p in (a.get('punten') or [])
+                  if isinstance(p, dict) and 'label' in p and 'x' in p and 'y' in p]
+        if punten:
+            uit.append((float(a.get('tijd_s') or 0.0), punten))
+    return sorted(uit, key=lambda p: p[0])
+
+
+def samengevoegde_ankers(
+    ankerpunten: list[tuple[float, list[dict]]],
+    keten_op: dict,
+    veldpunt_van,
+) -> list[tuple[float, Matrix]] | None:
+    """Twee halve beelden tot één volledig veld samenvoegen.
+
+    Waarom dit uitmaakt. Staat de camera midden op het veld en pant ze heen en weer, dan toont
+    beeld 1 alleen de thuiskant en beeld 2 alleen de uitkant. Elk beeld heeft genoeg punten voor
+    een homografie (vier volstaat), maar díé punten liggen allemaal in één helft — en een
+    homografie die op één helft gefit is, extrapoleert slecht naar de overkant. De fout groeit
+    met de afstand tot de aangeduide punten, precies daar waar je meet.
+
+    Wat we hier doen: elk punt uit elk ijkbeeld verhuizen naar het beeld van één ijkbeeld, via
+    de gevolgde camerabeweging (``p_a = K(t_a)⁻¹ · K(t_b) · p_b``), en dán één homografie fitten
+    over het hele veld. Elk anker krijgt zo een matrix die op álle veertien punten steunt in
+    plaats van op de acht die toevallig in zijn eigen beeld vielen.
+
+    Geeft None als het niet kan (te weinig punten, of geen keten op die tijden bekend) — dan
+    blijven de losse ankers gewoon staan, wat nog altijd werkt.
+    """
+    if len(ankerpunten) < 2:
+        return None
+
+    from calibrate import fit_homografie  # noqa: PLC0415 — enkel hier nodig, en het trekt cv2 aan
+
+    uit: list[tuple[float, Matrix]] = []
+    for tijd_a, _punten_a in ankerpunten:
+        k_a = keten_op(tijd_a)
+        if k_a is None:
+            return None
+        k_a_inv = inverteer(k_a)
+        samen: list[dict] = []
+        for tijd_b, punten_b in ankerpunten:
+            k_b = keten_op(tijd_b)
+            if k_b is None:
+                return None
+            # Van het beeld op t_b naar het beeld op t_a, via de keten.
+            naar_a = maal(k_a_inv, k_b)
+            for p in punten_b:
+                veldpunt = veldpunt_van(p['label'])
+                if veldpunt is None:
+                    continue
+                x, y = projecteer(naar_a, float(p['x']), float(p['y']))
+                samen.append({'beeld_px': [x, y], 'veld_m': list(veldpunt)})
+        if len(samen) < 4:
+            return None
+        uit.append((tijd_a, normaliseer(fit_homografie(samen))))
+    return uit
+
+
 def basis_uit_anker(anker: Matrix, keten_op_ankertijd: Matrix) -> Matrix:
     """De matrix van het beginframe, afgeleid uit een anker verderop in de video.
 
@@ -917,6 +982,7 @@ def volg_video(args: argparse.Namespace) -> tuple[HomografieSpoor, dict]:
             _fout(f'ankerbestand niet gevonden: {args.ankers}')
         kal = json.loads(args.ankers.read_text(encoding='utf-8'))
         ankers = lees_ankers(kal)
+        ankerpunten = lees_ankerpunten(kal)
         if not ankers:
             _fout(f'geen bruikbare ankers in {args.ankers}')
     else:
@@ -924,14 +990,16 @@ def volg_video(args: argparse.Namespace) -> tuple[HomografieSpoor, dict]:
             _fout(f'kalibratiebestand niet gevonden: {args.kalibratie} (maak het met cv/calibrate.py)')
         kal = json.loads(args.kalibratie.read_text(encoding='utf-8'))
         ankers = [(0.0, normaliseer(kal['matrix_beeld_naar_veld']))]
+        ankerpunten = []
     info = kal.get('veld') or {}
     diepte = float(kal.get('doelgebied_diepte_m') or info.get('doelgebied_diepte_m')
                    or veld.STANDAARD_DOELGEBIED_DIEPTE_M)
-    lijnen = veldlijnen(
-        diepte,
-        float(info.get('breedte_m') or veld.BREEDTE_M),
-        float(info.get('speelveld_m') or veld.SPEELVELD_LENGTE_M),
-    )
+    breedte_m = float(info.get('breedte_m') or veld.BREEDTE_M)
+    speelveld_m = float(info.get('speelveld_m') or veld.SPEELVELD_LENGTE_M)
+    lijnen = veldlijnen(diepte, breedte_m, speelveld_m)
+    # Waar elk aangeduid label op het veld ligt — nodig om de punten van twee halve beelden
+    # samen door één homografie te halen.
+    labelkaart = veld.kruispunt_per_label(diepte, breedte_m, speelveld_m)
 
     cap = cv2.VideoCapture(str(args.video))
     if not cap.isOpened():
@@ -964,6 +1032,7 @@ def volg_video(args: argparse.Namespace) -> tuple[HomografieSpoor, dict]:
     waarnemingen: list[tuple[float, Matrix, int]] = []
     basis: Matrix | None = None
     volgend_anker = 0
+    keten_bij_anker: dict[float, Matrix] = {}
     laatste_anker = 0.0
     t = stap
     verloren = 0
@@ -1025,6 +1094,9 @@ def volg_video(args: argparse.Namespace) -> tuple[HomografieSpoor, dict]:
         if volgend_anker < len(ankers) and t >= ankers[volgend_anker][0]:
             basis = basis_uit_anker(ankers[volgend_anker][1], keten)
             waarnemingen.append((t, basis, stuk))
+            # De keten op dít moment onthouden: daarmee kunnen de punten van álle ijkbeelden
+            # straks in één beeld samengebracht worden (zie samengevoegde_ankers).
+            keten_bij_anker[ankers[volgend_anker][0]] = keten
             volgend_anker += 1
             laatste_anker = t
             momenten.append((t, keten, 'ijkbeeld', 0.0, stuk))
@@ -1061,6 +1133,28 @@ def volg_video(args: argparse.Namespace) -> tuple[HomografieSpoor, dict]:
         _fout(f'geen enkel ijkbeeld viel binnen de video (eerste anker op {ankers[0][0]:g} s) — '
               'duid een beeld aan dat écht in deze opname zit')
 
+    # Zijn er meerdere ijkbeelden mét punten? Dan liggen die punten waarschijnlijk elk in een
+    # andere helft van het veld (camera in het midden die pant), en is elke matrix apart gefit op
+    # een half veld. Nu de camerabeweging bekend is, kunnen ze in één beeld samengebracht worden.
+    samengevoegd = 0
+    if len(ankerpunten) >= 2:
+        beschikbaar = {t: k for t, k in keten_bij_anker.items()}
+        nieuw = samengevoegde_ankers(
+            [(t, punten) for t, punten in ankerpunten if t in beschikbaar],
+            lambda tijd: beschikbaar.get(tijd),
+            lambda label: (lambda kp: (kp.x_m, kp.y_m) if kp else None)(labelkaart.get(label)),
+        )
+        if nieuw:
+            verbeterd = {t: m for t, m in nieuw}
+            vervangen: list[tuple[float, Matrix, int]] = []
+            for wt, wb, ws in waarnemingen:
+                if wt in verbeterd and wt in beschikbaar:
+                    vervangen.append((wt, basis_uit_anker(verbeterd[wt], beschikbaar[wt]), ws))
+                    samengevoegd += 1
+                else:
+                    vervangen.append((wt, wb, ws))
+            waarnemingen = vervangen
+
     # Tweede passage: de drift verdelen. Tussen twee waarnemingen schuift de basis geleidelijk
     # mee in plaats van bij de tweede ineens te springen — maar nooit over een knip heen: aan
     # weerszijden daarvan hoort de basis bij een andere keten.
@@ -1094,6 +1188,7 @@ def volg_video(args: argparse.Namespace) -> tuple[HomografieSpoor, dict]:
         spoor.voeg_toe(mt, maal(b, mk), fout, bron)
     return spoor, {**spoor.rapport(), 'frames_zonder_flow': verloren,
                    'waarnemingen': len(waarnemingen), 'gladgestreken': gladgestreken,
+                   'samengevoegde_ankers': samengevoegd,
                    'breuken': breuken, 'stukken': stuk + 1,
                    'stukken_zonder_stand': len(gaten),
                    'gaten': [[round(a, 1), round(b, 1)] for a, b in gaten],
@@ -1175,6 +1270,9 @@ def main(argv: list[str] | None = None) -> None:
     rapportpad.write_text(json.dumps(rapport, ensure_ascii=False), encoding='utf-8')
     print(f'{rapport["momenten"]} momenten, {rapport["ankers"]} keer herankerd op de veldlijnen '
           f'over {rapport["duur_s"]:g} s → {args.uit}')
+    if rapport.get('samengevoegde_ankers'):
+        print(f'  {rapport["samengevoegde_ankers"]} ijkbeelden samengevoegd tot één veld — elke '
+              'matrix steunt nu op de punten van álle beelden samen')
     if rapport.get('gemiddelde_ankerfout_m') is not None:
         print(f'  gemiddelde ankerfout: {rapport["gemiddelde_ankerfout_m"]:g} m')
     if 'fout_mediaan_m' in rapport:

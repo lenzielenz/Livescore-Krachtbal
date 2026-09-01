@@ -304,14 +304,51 @@ export function instellingenPad(): string {
 // Ze stonden eerder allebei vast (altijd 5 metingen/s, altijd 'balanced'), waardoor de keuze
 // "snel / gewoon / nauwkeurig" voor de AI-stand geen enkel verschil maakte.
 //
-// 'ultra' meet 15 keer per seconde met het zwaarste model. Dat is geen willekeurig hoger getal:
-// een worp duurt van aanloop tot loslaten ongeveer een halve seconde, en de piek waar het om
-// draait hooguit twee tienden. Bij 5 metingen/s valt die piek soms tússen twee metingen; bij 15
-// is elke worp met minstens drie metingen gedekt. Meer dan de beeldfrequentie van de video heeft
-// geen zin — houding.py knijpt daar zelf op af.
-const AI_METINGEN_PER_S = { snel: 3, gewoon: 5, nauwkeurig: 8, ultra: 15 } as const
+// De ondergrens is geen smaakkwestie. De loslaatfase van een worp duurt ongeveer 0,08 seconde,
+// en het houdingsmodel meet de beweging over een venster van 0,08 tot 0,22 s. Bij 3 metingen per
+// seconde liggen twee metingen 0,33 s uit elkaar: dan valt er geen enkel venster binnen die band
+// en zíé je een worp gewoon niet. Vandaar dat de laagste stand op 5 ligt.
+//
+// Meer metingen maken de meting scherper (je vindt vaker een venster dat precies om de zwiep
+// valt), maar niet ánders: sinds de score de afgelegde weg meet in plaats van de snelheid,
+// betekent dezelfde worp op elke stand ongeveer hetzelfde. Dat is de voorwaarde om rekenkracht
+// te kunnen inzetten — anders verschuif je alleen de schaal.
+const AI_METINGEN_PER_S = { snel: 5, gewoon: 8, nauwkeurig: 12, ultra: 15 } as const
 const AI_MODELGROOTTE = {
   snel: 'lightweight', gewoon: 'balanced', nauwkeurig: 'performance', ultra: 'performance',
+} as const
+// Twee passages: de hele video grof afzoeken met een lage drempel, en daarna élk beeld rond de
+// kandidaten nakijken. In een wedstrijd van een uur wordt er ongeveer één minuut geworpen, dus
+// overal even fijn kijken geeft 98% van de rekentijd uit aan beelden waar niets in zit.
+//
+// Wat dat concreet doet met een uur video (± 60 worpen):
+//
+//   zonder | 20 metingen/s over 60 min                        = 72 000 metingen
+//   met    | 15/s zoeken + 25/s over 60 stukken van 1,6 s     = 54 000 + 2 400
+//
+// Minder werk, en meer gevonden. De winst is de stabiliteit van de score: dezelfde worp piekt
+// op 0,31 bij 5 metingen/s en op 0,47 vanaf 20/s, want bij grof bemonsteren valt er zelden een
+// meting precies rond de zwiep. Nagemeten op 22 nagebootste worpen:
+//
+//   één passage,   5/s                 →  2 van de 17 haalbare,    600 metingen
+//   één passage,  20/s                 → 17 van de 17,           3 001 metingen
+//   twee passages, 5/s + elk beeld     → 17 van de 17,           1 491 metingen
+//
+// Daarom staat dit op élke stand aan, ook op 'snel'. Het gaat niet om een vierde tandje maar om
+// een invariant: de beslissing valt altijd op metingen van volle beeldfrequentie, wat de stand
+// ook is. Pas dán betekent één getrainde drempel (cv/train.py) op elke stand hetzelfde — anders
+// heeft elke stand zijn eigen schaal en slaat de drempel op de ene overal en op de andere
+// nergens aan. De stand regelt nog wat ze hoort te regelen: hoe grondig er gezócht wordt.
+//
+// (Het móment wordt er niet scherper van: 84 ms tegen 85 ms. Zie cv/README.md. En de tweede
+// passage is begrensd — hoogstens een kwart van de video — zodat een rommelig beeld met
+// honderden kandidaten 'snel' geen nacht laat duren.)
+const AI_TWEE_PASSAGES = { snel: true, gewoon: true, nauwkeurig: true, ultra: true } as const
+// Met welk model er gezócht wordt. Klein zoeken en groot nakijken is de goedkoopste weg naar
+// een stabiele score. Op 'ultra' zoekt het zware model mee, want wat de zoekpassage mist kan
+// het nakijken niet meer vinden — en ultra draait toch 's nachts.
+const AI_ZOEKGROOTTE = {
+  snel: 'lightweight', gewoon: 'balanced', nauwkeurig: 'balanced', ultra: 'performance',
 } as const
 // Hoe vaak RANSAC een balbaan probeert. Dit kost bijna niets naast het decoderen van de video,
 // maar bepaalt wel of de bal wordt teruggevonden op een druk beeld: met veertig bewegende
@@ -380,6 +417,9 @@ export function bouwStappen(opties: {
                  '--mode', AI_MODELGROOTTE[opts.stand],
                  '--uit', bestand('detecties.jsonl'),
                  '--reeks-uit', bestand('houding-reeks.jsonl'),
+                 ...(AI_TWEE_PASSAGES[opts.stand]
+                   ? ['--twee-passages', '--zoek-mode', AI_ZOEKGROOTTE[opts.stand]]
+                   : []),
                  ...(instellingen ? ['--instellingen', instellingen] : [])],
         }
       : {
@@ -597,7 +637,16 @@ export async function schrijfAnkers(
   if (beelden.length === 1 && beelden[0].tijd === 0) return null
 
   const python = await pythonVoorSpawn()
-  const ankers: { tijd_s: number; matrix_beeld_naar_veld: number[][] }[] = []
+  // De punten gaan mee, niet alleen de matrix. Staat de camera in het midden en toont beeld 1
+  // enkel de thuiskant en beeld 2 enkel de uitkant, dan is elke matrix apart gefit op punten
+  // die allemaal in één helft liggen — en die extrapoleert slecht naar de overkant. Met de
+  // punten erbij kan het volgen ze via de camerabeweging in één beeld samenbrengen en één
+  // homografie fitten over het hele veld.
+  const ankers: {
+    tijd_s: number
+    matrix_beeld_naar_veld: number[][]
+    punten: { label: string; x: number; y: number }[]
+  }[] = []
   for (const [i, beeld] of beelden.entries()) {
     const tussen = path.join(map, `anker-${i}.json`)
     const argv = [
@@ -615,7 +664,11 @@ export async function schrijfAnkers(
     })
     if (!klaar) continue // één rammelend beeld mag de rest niet meeslepen
     const data = JSON.parse(await fs.readFile(tussen, 'utf8')) as { matrix_beeld_naar_veld: number[][] }
-    ankers.push({ tijd_s: beeld.tijd, matrix_beeld_naar_veld: data.matrix_beeld_naar_veld })
+    ankers.push({
+      tijd_s: beeld.tijd,
+      matrix_beeld_naar_veld: data.matrix_beeld_naar_veld,
+      punten: beeld.punten.map((pt) => ({ label: pt.label, x: Math.round(pt.x), y: Math.round(pt.y) })),
+    })
   }
   if (ankers.length === 0) return null
 

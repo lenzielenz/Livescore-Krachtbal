@@ -161,6 +161,17 @@ export const Matches: CollectionConfig = {
           ],
         },
         {
+          // Wie is wie: van werper-volgnummer (uit de videoanalyse) naar speler-id.
+          //
+          // Het model leest geen rugnummers, maar het kan dezelfde persoon volgen zolang die in
+          // beeld blijft. Deze tabel is wat een mens daaraan toevoegt: één keer per werper zeggen
+          // welke speler dat is. Vorm: { "3": 42, "7": 43 }.
+          name: 'cvWerpers',
+          label: 'Werpers uit de video → spelers',
+          type: 'json',
+          admin: { hidden: true, description: 'Beheerd via /api/cv/match/[id]/werpers.' },
+        },
+        {
           // Twee wegen naar een analyse, en ze sluiten elkaar niet uit maar vragen wél iets
           // anders van je:
           //   'manueel' — je tikt elke worp aan op het veldschema; de video is er om te
