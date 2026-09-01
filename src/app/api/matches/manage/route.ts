@@ -1,6 +1,6 @@
 import { canAnalyse, hasRole, isFederationLevel } from '@/lib/access'
 import { authUser } from '@/lib/api-auth'
-import { MATCH_DEPENDENT_COLLECTIONS, leesbareFout } from '@/lib/match-cleanup'
+import { MATCH_VERPLICHTE_COLLECTIONS, leesbareFout } from '@/lib/match-cleanup'
 import { getPayloadClient } from '@/lib/payload-client'
 
 // Een wedstrijd én alle bijhorende data verwijderen. Federatie/admin mag alles; een analist mag
@@ -38,7 +38,7 @@ export async function POST(req: Request) {
     // wedstrijd zelf gaat dan even later onderuit op een sleutel in de database, en wat de
     // gebruiker te zien kreeg was een brok SQL in plaats van wat er misliep.
     const mislukt: string[] = []
-    for (const collection of MATCH_DEPENDENT_COLLECTIONS) {
+    for (const collection of MATCH_VERPLICHTE_COLLECTIONS) {
       await payload
         .delete({ collection, where: { match: { equals: matchId } }, overrideAccess: true })
         .catch(() => mislukt.push(collection))
