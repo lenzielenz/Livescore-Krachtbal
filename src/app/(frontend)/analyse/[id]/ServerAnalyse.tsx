@@ -416,11 +416,18 @@ export function ServerAnalyse({ matchId, heeftVideo }: { matchId: number; heeftV
                 <option value="ultra">Ultra — hele nacht</option>
               </select>
             </label>
+            <p className="sa-uitleg">
+              Elke stand kijkt <strong>twee keer</strong>: eerst de hele video af op zoek naar
+              alles wat op een worp lijkt, daarna élk beeld rond die momenten opnieuw. Zo hangt
+              het niet van toeval af of er net een meting midden in de zwaai viel — en dát is wat
+              een worp gevonden of gemist maakt. De precisie hierboven bepaalt hoe grondig er
+              gezócht wordt.
+            </p>
             {stand === 'ultra' && (
               <p className="sa-let-op sa-ultra">
-                Ultra kijkt drie keer zo fijn als &quot;gewoon&quot; en gebruikt het zwaarste
-                model: reken op uren, niet op minuten. Zet ze aan vóór je gaat slapen — je ziet
-                hieronder rond welk uur ze klaar is.
+                Ultra zoekt met het zwaarste model en laat niets liggen: reken op uren, niet op
+                minuten. Zet ze aan vóór je gaat slapen — je ziet hieronder rond welk uur ze klaar
+                is.
                 <br />
                 <strong>Let wel:</strong> komt er ondertussen een nieuwe versie van de site
                 online, of herstart de server, dan sneuvelt de lopende analyse en moet ze

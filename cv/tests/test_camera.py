@@ -86,7 +86,11 @@ class TestBrandpunt(unittest.TestCase):
         m, _ = _homografie((BREED / 2, -14.0, 8.0), (BREED / 2, LENGTE / 2, 0.0), 1400.0)
         loodrecht, gelijk = camera.brandpunt_gesloten_vorm(camera._inverteer(m), B / 2, H / 2)
         self.assertAlmostEqual(gelijk, 1400.0, delta=20.0)
-        self.assertGreater(loodrecht, 2000.0)          # ver ernaast
+        # Geen bruikbaar antwoord: ófwel ver ernaast, ófwel helemaal niets. Wat het precies
+        # wordt hangt af van de laatste cijfers achter de komma — c₁ is hier 2,6e-11, en of de
+        # deling daardoor een absurd getal of een onmogelijke wortel oplevert, verschilt per
+        # numpy-versie. De uitspraak die telt is dezelfde: hier valt niets uit af te lezen.
+        self.assertTrue(loodrecht is None or loodrecht > 2000.0, loodrecht)
         # En de zoektocht laat zich er niet door meeslepen.
         self.assertAlmostEqual(camera.camerastandpunt(m, B, H)['brandpunt_px'], 1400.0, delta=20.0)
 

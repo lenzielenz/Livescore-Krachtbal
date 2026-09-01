@@ -313,9 +313,42 @@ export function instellingenPad(): string {
 // valt), maar niet ánders: sinds de score de afgelegde weg meet in plaats van de snelheid,
 // betekent dezelfde worp op elke stand ongeveer hetzelfde. Dat is de voorwaarde om rekenkracht
 // te kunnen inzetten — anders verschuif je alleen de schaal.
-const AI_METINGEN_PER_S = { snel: 5, gewoon: 8, nauwkeurig: 12, ultra: 20 } as const
+const AI_METINGEN_PER_S = { snel: 5, gewoon: 8, nauwkeurig: 12, ultra: 15 } as const
 const AI_MODELGROOTTE = {
   snel: 'lightweight', gewoon: 'balanced', nauwkeurig: 'performance', ultra: 'performance',
+} as const
+// Twee passages: de hele video grof afzoeken met een lage drempel, en daarna élk beeld rond de
+// kandidaten nakijken. In een wedstrijd van een uur wordt er ongeveer één minuut geworpen, dus
+// overal even fijn kijken geeft 98% van de rekentijd uit aan beelden waar niets in zit.
+//
+// Wat dat concreet doet met een uur video (± 60 worpen):
+//
+//   zonder | 20 metingen/s over 60 min                        = 72 000 metingen
+//   met    | 15/s zoeken + 25/s over 60 stukken van 1,6 s     = 54 000 + 2 400
+//
+// Minder werk, en meer gevonden. De winst is de stabiliteit van de score: dezelfde worp piekt
+// op 0,31 bij 5 metingen/s en op 0,47 vanaf 20/s, want bij grof bemonsteren valt er zelden een
+// meting precies rond de zwiep. Nagemeten op 22 nagebootste worpen:
+//
+//   één passage,   5/s                 →  2 van de 17 haalbare,    600 metingen
+//   één passage,  20/s                 → 17 van de 17,           3 001 metingen
+//   twee passages, 5/s + elk beeld     → 17 van de 17,           1 491 metingen
+//
+// Daarom staat dit op élke stand aan, ook op 'snel'. Het gaat niet om een vierde tandje maar om
+// een invariant: de beslissing valt altijd op metingen van volle beeldfrequentie, wat de stand
+// ook is. Pas dán betekent één getrainde drempel (cv/train.py) op elke stand hetzelfde — anders
+// heeft elke stand zijn eigen schaal en slaat de drempel op de ene overal en op de andere
+// nergens aan. De stand regelt nog wat ze hoort te regelen: hoe grondig er gezócht wordt.
+//
+// (Het móment wordt er niet scherper van: 84 ms tegen 85 ms. Zie cv/README.md. En de tweede
+// passage is begrensd — hoogstens een kwart van de video — zodat een rommelig beeld met
+// honderden kandidaten 'snel' geen nacht laat duren.)
+const AI_TWEE_PASSAGES = { snel: true, gewoon: true, nauwkeurig: true, ultra: true } as const
+// Met welk model er gezócht wordt. Klein zoeken en groot nakijken is de goedkoopste weg naar
+// een stabiele score. Op 'ultra' zoekt het zware model mee, want wat de zoekpassage mist kan
+// het nakijken niet meer vinden — en ultra draait toch 's nachts.
+const AI_ZOEKGROOTTE = {
+  snel: 'lightweight', gewoon: 'balanced', nauwkeurig: 'balanced', ultra: 'performance',
 } as const
 // Hoe vaak RANSAC een balbaan probeert. Dit kost bijna niets naast het decoderen van de video,
 // maar bepaalt wel of de bal wordt teruggevonden op een druk beeld: met veertig bewegende
@@ -384,6 +417,9 @@ export function bouwStappen(opties: {
                  '--mode', AI_MODELGROOTTE[opts.stand],
                  '--uit', bestand('detecties.jsonl'),
                  '--reeks-uit', bestand('houding-reeks.jsonl'),
+                 ...(AI_TWEE_PASSAGES[opts.stand]
+                   ? ['--twee-passages', '--zoek-mode', AI_ZOEKGROOTTE[opts.stand]]
+                   : []),
                  ...(instellingen ? ['--instellingen', instellingen] : [])],
         }
       : {

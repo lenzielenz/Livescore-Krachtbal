@@ -138,3 +138,26 @@ class TestDuurVanVideo:
         cv2 = self.NepCv2()
         assert duur_van_video(cv2, self.NepCap({cv2.CAP_PROP_FPS: 25.0})) is None
         assert duur_van_video(cv2, self.NepCap({cv2.CAP_PROP_FRAME_COUNT: 750.0})) is None
+
+
+class TestDeelVanDeBalk:
+    """Twee passages over dezelfde video vullen samen één balk.
+
+    Zonder dit liep elke passage van 0 naar 100% en sprong de balk halverwege terug — en een
+    balk die terugspringt lijkt kapot, ook al klopt er niets aan.
+    """
+
+    def test_meldt_binnen_het_toegewezen_stuk(self):
+        uit, klok = io.StringIO(), NepKlok()
+        m = Melder(100.0, interval_s=0.0, stroom=uit, klok=klok, deel=(0.75, 1.0))
+        m.meld(0.0)
+        m.meld(50.0)
+        m.klaar()
+        fracties = [float(r.split()[1]) for r in uit.getvalue().strip().splitlines()]
+        assert fracties == [0.75, 0.875, 1.0]
+
+    def test_zonder_deel_blijft_alles_zoals_het_was(self):
+        uit, klok = io.StringIO(), NepKlok()
+        m = Melder(100.0, interval_s=0.0, stroom=uit, klok=klok)
+        m.meld(25.0)
+        assert float(uit.getvalue().split()[1]) == 0.25

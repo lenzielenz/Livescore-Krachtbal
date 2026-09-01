@@ -93,6 +93,105 @@ VENSTER_S = 0.12
 # echte maximum beter — en blijft een fijne stand niet stelselmatig hoger scoren.
 VENSTER_LAAG_S = 0.08
 VENSTER_HOOG_S = 0.22
+
+# --- Twee passages -----------------------------------------------------------------------
+#
+# Overal even fijn kijken is de domste manier om rekenkracht uit te geven. In een wedstrijd van
+# een uur wordt er ongeveer één minuut geworpen; de andere negenenvijftig gaan op aan lopen,
+# rapen en wachten. Wie de hele video op 20 metingen per seconde bekijkt, betaalt dus 98% van
+# zijn rekentijd aan beelden waar niets in zit.
+#
+# Vandaar twee passages:
+#
+#   1. ZOEKEN — de hele video, grof bemonsterd, met een bewust LAGE drempel. Deze passage mag
+#      zich vergissen naar boven: elke twijfelachtige piek is welkom, want de tweede passage
+#      gooit hem er zo weer uit. Wat ze híér mist, is voorgoed weg — daarom lage drempel.
+#   2. NAKIJKEN — alleen rond die kandidaten, op élk beeld, desgewenst met het zware model.
+#      Daar valt de beslissing.
+#
+# WAT DE WINST IS, en wat níét. Nagemeten op 22 nagebootste worpen in twee minuten video, met
+# een loslaatfase van 0,08 s:
+#
+#   • De winst is de STABILITEIT van de score, niet de tijd. Dezelfde worp piekt op 0,31 bij
+#     5 metingen/s en op 0,47 vanaf 20/s — een derde lager, want bij grof bemonsteren valt er
+#     zelden een meting precies rond de zwiep en zie je maar een deel van de weg. Rond een
+#     drempel van 0,45 is dat het verschil tussen gevonden en gemist: één passage op 12/s vond
+#     6 van de 22 worpen, twee passages op diezelfde 12/s vonden er 17 — evenveel als één
+#     passage op 20/s, met een kwart minder metingen.
+#   • Het MOMENT wordt er niet nauwkeuriger van: 84 ms fout met één passage op 20/s, 85 ms met
+#     twee. De score piekt over een breed venster, dus fijner bemonsteren verschuift het
+#     maximum nauwelijks. Dat is eerder beweerd en het klopte niet.
+#
+# Een uur video op 12 metingen/s zoeken kost 43 000 metingen; zestig kandidaten van 1,6 s op
+# 25 beelden/s nakijken kost er 2 400. Samen minder dan de 72 000 van "overal op 20/s".
+#
+# De zoekdrempel is 0,40 × de echte en dat is nagemeten, niet gekozen: op 8 metingen/s vond
+# 0,55 er 16 van de 17 haalbare, 0,45 en lager alle 17 — voor 13% meer nakijkwerk. Vals alarm
+# kost niets, want de beslissing valt alsnog op de echte drempel (0 valse worpen bij élke
+# geprobeerde factor). Te hoog zoeken kost wél: die worp is voorgoed weg.
+ZOEK_FACTOR = 0.40
+# Hoeveel seconden rond een kandidaat er nagekeken wordt. Ruim genoeg voor de hele zwiep én
+# voor `worp_type` (dat 0,6 s rond het moment kijkt om nek van rug te onderscheiden).
+ZOEK_MARGE_S = 0.8
+# Hoeveel van de video de tweede passage hoogstens mag nakijken.
+#
+# In een echte wedstrijd zijn dat zestig worpen van 1,6 s in een uur: nog geen 3%. Maar een
+# lage zoekdrempel op een rommelig beeld (bewegende camera, veel spelers, schaduwen) kan
+# honderden kandidaten opleveren, en dan zou het "nakijken" stilletjes uitgroeien tot de hele
+# video op volle beeldfrequentie — precies het uur wachten dat de stand "snel" moet vermijden.
+# Boven deze grens blijven de STERKSTE kandidaten over; wat afvalt wordt geteld en gemeld,
+# want een stille grens is een leugen over wat er bekeken is.
+NA_MAX_DEEL = 0.25
+# Elk beeld meten in plaats van te bemonsteren.
+ELK_BEELD = 0.0
+
+
+def zoekvensters(momenten: list[tuple[float, float]], marge_s: float = ZOEK_MARGE_S,
+                 tot: float | None = None, max_deel: float | None = None,
+                 duur: float | None = None) -> list[tuple[float, float]]:
+    """De stukken video die de tweede passage moet nakijken, samengevoegd.
+
+    Twee kandidaten die dicht bij elkaar liggen geven overlappende vensters; die worden één
+    venster. Anders zou de tweede passage dezelfde beelden twee keer door het model duwen —
+    en net dáár zit de rekentijd.
+
+    Met `max_deel` en `duur` blijft het nakijkwerk onder een deel van de video: de sterkste
+    kandidaten eerst, tot de begroting op is.
+    """
+    def samenvoegen(tijden: list[float]) -> list[tuple[float, float]]:
+        samen: list[tuple[float, float]] = []
+        for van, tot_v in sorted((max(0.0, t - marge_s), t + marge_s) for t in tijden):
+            if samen and van <= samen[-1][1]:
+                samen[-1] = (samen[-1][0], max(samen[-1][1], tot_v))
+            else:
+                samen.append((van, tot_v))
+        if tot is not None:
+            samen = [(a, min(b, tot)) for a, b in samen if a <= tot]
+        return samen
+
+    tijden = [t for t, _ in momenten]
+    if max_deel is not None and duur and duur > 0:
+        begroting = max_deel * duur
+        gekozen: list[float] = []
+        # Sterkste eerst: moet er iets sneuvelen, dan de twijfelgevallen en niet de duidelijke.
+        # Een kandidaat naast een al gekozen kandidaat kost bijna niets (de vensters overlappen),
+        # dus telkens de échte lengte na samenvoegen afwegen in plaats van marge × aantal.
+        for t, _s in sorted(momenten, key=lambda p: -p[1]):
+            proef = [*gekozen, t]
+            if gekozen and sum(b - a for a, b in samenvoegen(proef)) > begroting:
+                continue
+            gekozen = proef
+        tijden = gekozen
+    return samenvoegen(tijden)
+
+
+def in_venster(t: float, vensters: list[tuple[float, float]] | None) -> bool:
+    """Valt dit tijdstip in een van de na te kijken stukken?"""
+    if vensters is None:
+        return True
+    return any(van <= t <= tot for van, tot in vensters)
+
+
 # Getrainde instellingen (cv/train.py). Bestaat dit bestand, dan winnen die van de
 # schattingen hierboven — de waarden hierboven zijn een startpunt, geen waarheid.
 INSTELLINGEN_PAD = Path(__file__).resolve().parent / 'model-houding.json'
@@ -409,11 +508,19 @@ def schat_duur(seconden_per_meting: float, metingen: int) -> float:
     return max(0.0, seconden_per_meting) * max(0, metingen)
 
 
-def meet_video(videopad: Path, model, analyse_fps: float, tot: float | None = None) -> list[dict]:
+def meet_video(videopad: Path, model, analyse_fps: float, tot: float | None = None,
+               vensters: list[tuple[float, float]] | None = None,
+               deel: tuple[float, float] | None = None) -> list[dict]:
     """Per moment de hoogste worpscore over alle spelers in beeld.
 
     Geeft een reeks ``{'t', 'score', 'polshoogte', 'personen'}``. Het model draait op elk
     bemonsterd beeld; dat is het dure deel, dus `analyse_fps` bepaalt de rekentijd.
+    `analyse_fps = ELK_BEELD` meet élk beeld — dat is de tweede passage.
+
+    Met `vensters` worden alleen die stukken video gemeten. De beelden ertussen worden nog wel
+    gelézen (een video is geen lijst waar je zomaar in kunt springen; springen is bij een
+    variabele beeldfrequentie bovendien onnauwkeurig), maar niet door het model geduwd — en dát
+    is het dure deel, tot honderd keer duurder dan een beeld inlezen.
     """
     import cv2  # noqa: PLC0415
 
@@ -423,20 +530,28 @@ def meet_video(videopad: Path, model, analyse_fps: float, tot: float | None = No
     if not cap.isOpened():
         _fout(f'kan video niet openen: {videopad}')
     fps_bron = cap.get(cv2.CAP_PROP_FPS) or 25.0
-    stap = max(1, round(fps_bron / analyse_fps))
+    stap = 1 if analyse_fps <= 0 else max(1, round(fps_bron / analyse_fps))
     dt = stap / fps_bron
     # Dit is de traagste stap van de hele keten: laten weten hoe ver ze staat, anders staat de
     # balk in de app een halfuur stil en is dat niet te onderscheiden van vastgelopen.
     duur = duur_van_video(cv2, cap)
     te_bekijken = min(duur, tot) if (duur and tot) else (tot or duur)
-    melder = Melder(te_bekijken)
+    melder = Melder(te_bekijken, deel=deel)
     # De eerste beelden geven de snelheid van déze server; daarmee weet je meteen of dit tien
     # minuten of drie uur wordt.
     begonnen = time.monotonic()
     geschat = False
 
+    # Hoeveel metingen dit worden: bij vensters alleen de stukken die nagekeken worden, anders
+    # de hele video. Zonder dat onderscheid zou de tweede passage een duur van uren melden voor
+    # werk van enkele minuten.
+    meetbaar = (sum(max(0.0, b - a) for a, b in vensters) if vensters is not None
+                else (te_bekijken or 0.0))
+    verwachte_metingen = round(meetbaar * fps_bron / stap)
+
     reeks: list[dict] = []
     vorige: dict[int, dict] = {}
+    vorige_t: float | None = None
     geschiedenis: dict[int, list[tuple[float, dict]]] = {}
     volgende_werper = 0
     frame_idx = 0
@@ -447,7 +562,7 @@ def meet_video(videopad: Path, model, analyse_fps: float, tot: float | None = No
         t = frame_idx / fps_bron
         if tot is not None and t > tot:
             break
-        if frame_idx % stap == 0:
+        if frame_idx % stap == 0 and in_venster(t, vensters):
             keypoints, scores = model(frame)
             gemeten = [
                 {
@@ -461,6 +576,11 @@ def meet_video(videopad: Path, model, analyse_fps: float, tot: float | None = No
             # Wie is wie? Op de heuppositie koppelen en niet op de lijstvolgorde — die verandert
             # zodra er iemand bijkomt of wegvalt, en dan vergelijk je de polsen van twee
             # verschillende spelers met elkaar.
+            # Zat er een gat tussen twee metingen (de tweede passage springt van kandidaat naar
+            # kandidaat), dan is er niets te koppelen: wie hier staat, is niet dezelfde persoon
+            # als wie daar minuten geleden op die plek stond.
+            if vorige_t is not None and t - vorige_t > VENSTER_HOOG_S * 3:
+                vorige, geschiedenis = {}, {}
             koppeling = koppel_personen(vorige, gemeten)
             beste_score, beste_hoogte, beste_wie = 0.0, None, None
             beste_venster = None
@@ -495,37 +615,50 @@ def meet_video(videopad: Path, model, analyse_fps: float, tot: float | None = No
             if beste_venster is not None:
                 meting['venster'] = round(beste_venster, 3)
             reeks.append(meting)
-            vorige = nu
+            vorige, vorige_t = nu, t
             # De geschiedenis per persoon: net lang genoeg om altijd een meting van ± een venster
             # geleden te hebben, ook op de fijnste stand.
             for wie, staat in nu.items():
                 lijst = geschiedenis.get(wie, [])
                 lijst.append((t, staat))
                 geschiedenis[wie] = [p for p in lijst if t - p[0] <= VENSTER_HOOG_S * 1.5][-40:]
-            if not geschat and len(reeks) >= METINGEN_VOOR_SCHATTING and te_bekijken:
+            if not geschat and len(reeks) >= METINGEN_VOOR_SCHATTING and verwachte_metingen:
                 geschat = True
                 per_meting = (time.monotonic() - begonnen) / len(reeks)
-                totaal = schat_duur(per_meting, round(te_bekijken * analyse_fps))
+                totaal = schat_duur(per_meting, verwachte_metingen)
                 print(f'  op deze server ± {per_meting:.2f} s per beeld → naar schatting '
-                      f'{totaal / 60:.0f} minuten voor {te_bekijken / 60:.1f} minuten video')
+                      f'{totaal / 60:.0f} minuten voor {verwachte_metingen} metingen')
                 melder.meld(t, f'schatting: {totaal / 60:.0f} min in totaal', forceer=True)
-            melder.meld(t, f'{len(reeks)} metingen')
+        # Buiten de meting om melden, niet erbinnen: de tweede passage leest minutenlang beelden
+        # in zonder er één te meten, en in die tijd hoort de balk niet stil te vallen.
+        melder.meld(t, f'{len(reeks)} metingen')
         frame_idx += 1
     cap.release()
     melder.klaar(f'{len(reeks)} metingen')
     return reeks
 
 
-def werper_op(reeks: list[dict], tijd: float) -> dict | None:
-    """Wie wierp er op dit moment, en waar stond die? (De meting op dat tijdstip.)"""
+def werper_op(reeks: list[dict], tijd: float, marge_s: float = 1e-6) -> dict | None:
+    """Wie wierp er op dit moment, en waar stond die? (De meting het dichtst bij dat tijdstip.)
+
+    `marge_s` bestaat voor de twee passages: het moment komt dan uit de fijne passage, maar de
+    werper uit de grove — die volgt de spelers dóór de hele video en houdt hun nummer vast,
+    terwijl de fijne passage alleen losse stukken rond de kandidaten ziet en dus na elk gat
+    opnieuw zou beginnen tellen.
+    """
+    beste: tuple[float, dict] | None = None
     for r in reeks:
-        if abs(r.get('t', -1e9) - tijd) < 1e-6 and r.get('werper') is not None:
-            return r
-    return None
+        if r.get('werper') is None:
+            continue
+        afstand = abs(r.get('t', 1e9) - tijd)
+        if afstand <= marge_s and (beste is None or afstand < beste[0]):
+            beste = (afstand, r)
+    return beste[1] if beste else None
 
 
 def maak_events(momenten: list[tuple[float, float]], reeks: list[dict], match_id: int | None,
-                drempel: float) -> list[dict]:
+                drempel: float, werperreeks: list[dict] | None = None,
+                werper_marge_s: float = 1e-6) -> list[dict]:
     return [
         {
             'match_id': match_id,
@@ -542,7 +675,8 @@ def maak_events(momenten: list[tuple[float, float]], reeks: list[dict], match_id
             # speler gevolgd kan worden) en waar die stond. Daarmee groepeert de app de worpen
             # per werper, zodat je één keer per speler zegt wie het is.
             **(lambda w: {'werper': w['werper'], 'werper_px': [w.get('x'), w.get('y')]}
-               if w else {})(werper_op(reeks, t)),
+               if w else {})(werper_op(werperreeks if werperreeks is not None else reeks, t,
+                                       werper_marge_s)),
             'provenance': {'model': MODEL_NAAM, 'model_version': MODEL_VERSION},
         }
         for t, s in momenten
@@ -575,6 +709,18 @@ def main(argv: list[str] | None = None) -> None:
                    help='stop na zoveel seconden video (voor een snelle proef)')
     p.add_argument('--mode', default='balanced', choices=('performance', 'balanced', 'lightweight'),
                    help='modelgrootte: lightweight is sneller, performance nauwkeuriger')
+    p.add_argument('--twee-passages', action='store_true',
+                   help='eerst de hele video grof afzoeken met een lage drempel, daarna alleen '
+                        'rond de kandidaten élk beeld nakijken. Duurder per kandidaat, veel '
+                        'goedkoper per uur video — en het loslaatmoment wordt beeldnauwkeurig.')
+    p.add_argument('--na-max-deel', type=float, default=NA_MAX_DEEL,
+                   help='hoeveel van de video de tweede passage hoogstens nakijkt '
+                        f'(standaard {NA_MAX_DEEL:.0%}). Blijft er meer over, dan winnen de '
+                        'sterkste kandidaten en wordt de rest geteld en gemeld.')
+    p.add_argument('--zoek-mode', default=None,
+                   choices=('performance', 'balanced', 'lightweight'),
+                   help='modelgrootte voor de zoekpassage (standaard dezelfde als --mode). '
+                        'Klein zoeken en groot nakijken is de goedkoopste weg naar precisie.')
     args = p.parse_args(argv)
 
     if not args.video.is_file():
@@ -609,23 +755,72 @@ def main(argv: list[str] | None = None) -> None:
 
     # Het model laden kan bij de eerste keer minuten duren (rtmlib haalt dan zijn gewichten op).
     # Zonder deze twee meldingen lijkt de analyse in die tijd stil te staan.
-    print(f'Houdingsmodel laden ({args.mode}) …')
+    zoek_mode = args.zoek_mode or args.mode
+    print(f'Houdingsmodel laden ({zoek_mode}) …')
     laden = Melder(1.0)
     laden.meld(0.0, 'houdingsmodel laden', forceer=True)
-    model = laad_model(args.mode)
+    model = laad_model(zoek_mode)
     laden.meld(0.0, 'houdingsmodel geladen', forceer=True)
+    # Twee passages delen de balk: zoeken is het leeuwendeel van de tijd, nakijken de rest.
     print(f'Spelers meten in {args.video} (± {args.analyse_fps:g} beelden/s) …')
-    reeks = meet_video(args.video, model, args.analyse_fps, args.tot)
+    reeks = meet_video(args.video, model, args.analyse_fps, args.tot,
+                       deel=(0.0, 0.75) if args.twee_passages else None)
     if not reeks:
         _fout('geen enkel beeld kon gelezen worden')
 
+    # Tweede passage: alleen rond de kandidaten, maar dan élk beeld.
+    fijn: list[dict] = []
+    vensters: list[tuple[float, float]] = []
+    if args.twee_passages:
+        # Bewust een lage drempel: wat de zoekpassage mist, kan het nakijken niet meer vinden.
+        # Vals alarm mag — dat sneuvelt straks alsnog op de echte drempel.
+        kandidaten = vind_worpmomenten(reeks, drempel * ZOEK_FACTOR, min_afstand * 0.5)
+        # De video duurt minstens tot de laatste meting; `--tot` kan ze korter maken.
+        videoduur = min(reeks[-1]['t'], args.tot) if args.tot else reeks[-1]['t']
+        vensters = zoekvensters(kandidaten, ZOEK_MARGE_S, args.tot,
+                                max_deel=args.na_max_deel, duur=videoduur)
+        # Hoeveel kandidaten er de begroting niet haalden. Niet stil laten: een analyse die
+        # zegt "20 kandidaten" en er 8 nakijkt, vertelt een ander verhaal dan wat ze deed.
+        binnen = sum(1 for t, _ in kandidaten if in_venster(t, vensters))
+        minuten = sum(b - a for a, b in vensters) / 60
+        print(f'Zoekpassage: {len(kandidaten)} kandidaten (drempel {drempel * ZOEK_FACTOR:.2f}) → '
+              f'{len(vensters)} stukken van samen {minuten:.1f} minuten op élk beeld nakijken.')
+        if binnen < len(kandidaten):
+            print(f'  LET OP: {len(kandidaten) - binnen} zwakkere kandidaten vallen buiten de '
+                  f'begroting van {args.na_max_deel:.0%} van de video en worden niet nagekeken. '
+                  'Verhoog --na-max-deel als je ze tóch wil (het kost rekentijd).')
+        if vensters:
+            if zoek_mode != args.mode:
+                print(f'Zwaarder model laden voor het nakijken ({args.mode}) …')
+                model = laad_model(args.mode)
+            fijn = meet_video(args.video, model, ELK_BEELD, args.tot,
+                              vensters=vensters, deel=(0.75, 1.0))
+        else:
+            print('  Niets gevonden om na te kijken — de uitslag komt uit de zoekpassage.')
+
+    # De reeks waarop beslist wordt: grof waar er niets te zien was, fijn rond de kandidaten.
+    # Dát is wat de detector werkelijk ziet, en dus ook precies wat cv/train.py moet leren.
+    #
+    # Enkel de fijne metingen bewaren zou de training scheeftrekken: die dekken alleen stukken
+    # waar de eerste passage al iets vond, en juist de stukken waar niets gebeurt bepalen
+    # hoeveel vals alarm een drempel oplevert. Enkel de grove bewaren is even fout: dan leert
+    # het model een drempel op metingen die het bij de beslissing niet gebruikt — en dezelfde
+    # worp scoort grof gemeten tot een derde lager. Vandaar: allebei, elk op hun eigen stuk.
+    meetreeks = ([{**r, 'passage': 1} for r in reeks if not in_venster(r['t'], vensters)]
+                 + [{**r, 'passage': 2} for r in fijn]) if fijn else reeks
+    meetreeks.sort(key=lambda r: r['t'])
+
     if args.reeks_uit:
         with args.reeks_uit.open('w', encoding='utf-8') as f:
-            for r in reeks:
+            for r in meetreeks:
                 f.write(json.dumps(r, ensure_ascii=False) + '\n')
 
-    momenten = vind_worpmomenten(reeks, drempel, min_afstand)
-    events = maak_events(momenten, reeks, args.match, drempel)
+    # De wérper komt uit de doorlopende passage: die volgt de spelers door de hele wedstrijd,
+    # terwijl de fijne passage losse stukken ziet en na elk gat opnieuw begint te tellen.
+    momenten = vind_worpmomenten(meetreeks, drempel, min_afstand)
+    events = maak_events(momenten, meetreeks, args.match, drempel,
+                         werperreeks=reeks if fijn else None,
+                         werper_marge_s=1.0 if fijn else 1e-6)
     with args.uit.open('w', encoding='utf-8') as f:
         for e in events:
             f.write(json.dumps(e, ensure_ascii=False) + '\n')
@@ -634,8 +829,19 @@ def main(argv: list[str] | None = None) -> None:
     gemiddeld_personen = sum(r['personen'] for r in reeks) / len(reeks)
     rapport = {
         'bekeken_s': round(bekeken, 1),
-        'metingen': len(reeks),
+        'metingen': len(reeks) + len(fijn),
         'analyse_fps': args.analyse_fps,
+        # Wat er precies gebeurd is: één passage of twee, en hoeveel er nagekeken werd. Zonder
+        # dit staat er straks een nauwkeurigheid in de app waarvan niemand weet waar ze vandaan
+        # komt.
+        'passages': 2 if fijn else 1,
+        **({'nagekeken_stukken': len(vensters),
+            'nagekeken_s': round(sum(b - a for a, b in vensters), 1),
+            'metingen_nakijken': len(fijn),
+            'zoek_drempel': round(drempel * ZOEK_FACTOR, 4),
+            'zoek_mode': zoek_mode,
+            'kandidaten_gezocht': len(kandidaten),
+            'kandidaten_nagekeken': binnen} if fijn else {}),
         'kandidaten': len(events),
         'gemiddeld_personen': round(gemiddeld_personen, 1),
         'model': MODEL_NAAM,

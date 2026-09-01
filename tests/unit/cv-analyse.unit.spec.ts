@@ -338,6 +338,29 @@ describe('worpen zoeken met het houdingsmodel', () => {
     }
   })
 
+  it('kijkt op élke stand elk beeld na rond de kandidaten', () => {
+    // Geen luxe voor de fijne standen maar een invariant: de beslissing valt altijd op metingen
+    // van volle beeldfrequentie. Anders heeft elke stand zijn eigen schaal — dezelfde worp
+    // piekt op 0,31 bij 5 metingen/s en op 0,47 vanaf 20/s — en betekent één getrainde drempel
+    // op de ene stand iets anders dan op de andere.
+    for (const stand of ['snel', 'gewoon', 'nauwkeurig', 'ultra'] as const) {
+      const argv = argvVan(stappen({ opts: { ...OPTS, ai: true, stand } }), 'houding')
+      expect(argv).toContain('--twee-passages')
+    }
+  })
+
+  it('zoekt met een model dat niet zwaarder is dan waarmee het nakijkt', () => {
+    // Klein zoeken en groot nakijken mag; groot zoeken en klein nakijken is het omgekeerde van
+    // wat de tweede passage moet doen — dan is nakijken een verslechtering.
+    const rang = { lightweight: 0, balanced: 1, performance: 2 } as const
+    for (const stand of ['snel', 'gewoon', 'nauwkeurig', 'ultra'] as const) {
+      const a = argvVan(stappen({ opts: { ...OPTS, ai: true, stand } }), 'houding')
+      const zoek = a[a.indexOf('--zoek-mode') + 1] as keyof typeof rang
+      const na = a[a.indexOf('--mode') + 1] as keyof typeof rang
+      expect(rang[zoek]).toBeLessThanOrEqual(rang[na])
+    }
+  })
+
   it('schrijft naar hetzelfde bestand, zodat de rest van de keten niets merkt', () => {
     const metAi = argvVan(stappen({ opts: { ...OPTS, ai: true } }), 'houding')
     const zonder = argvVan(stappen(), 'Kandidaat-worpen')

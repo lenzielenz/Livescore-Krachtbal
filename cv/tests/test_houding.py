@@ -247,6 +247,51 @@ class TestVideolaag(unittest.TestCase):
         reeks = houding.meet_video(self.video, self._model([]), analyse_fps=5.0, tot=5.0)
         self.assertLessEqual(reeks[-1]['t'], 5.1)
 
+    def _teller(self):
+        """Een model dat niets ziet, maar wél bijhoudt hoe vaak het gedraaid heeft."""
+        gedraaid = []
+
+        def model(_frame):
+            gedraaid.append(len(gedraaid))
+            punten, scores = skelet(pols_y=170.0)
+            return [punten], [scores]
+
+        return model, gedraaid
+
+    def test_tweede_passage_meet_alleen_in_de_vensters(self):
+        # Dít is de hele winst: het model — het dure deel — draait alleen nog rond de
+        # kandidaten. Draait het toch over de rest van de video, dan is de tweede passage
+        # duurder dan de eerste in plaats van goedkoper.
+        model, gedraaid = self._teller()
+        reeks = houding.meet_video(self.video, model, houding.ELK_BEELD,
+                                   vensters=[(4.0, 5.0), (12.0, 13.0)])
+        self.assertTrue(all(4.0 <= r['t'] <= 5.0 or 12.0 <= r['t'] <= 13.0 for r in reeks))
+        # 20 seconden video op 25 beelden/s = 500 beelden; twee vensters van 1 s = ± 50.
+        self.assertLessEqual(len(gedraaid), 60)
+        self.assertGreaterEqual(len(gedraaid), 40)
+
+    def test_elk_beeld_meet_fijner_dan_de_zoekpassage(self):
+        # De reden van bestaan van de tweede passage: op de bronbeeldfrequentie meten in plaats
+        # van te bemonsteren. Anders is "nakijken" hetzelfde als "nog eens hetzelfde doen".
+        model, _ = self._teller()
+        fijn = houding.meet_video(self.video, model, houding.ELK_BEELD, vensters=[(4.0, 6.0)])
+        tijden = [r['t'] for r in fijn]
+        stappen = [b - a for a, b in zip(tijden, tijden[1:])]
+        self.assertAlmostEqual(min(stappen), 1 / 25, places=2)
+
+    def test_de_werper_komt_uit_de_doorlopende_passage(self):
+        # Het moment uit de fijne passage, de werper uit de grove. De fijne passage ziet alleen
+        # losse stukken en begint na elk gat opnieuw tellen; haar werpernummers zeggen dus niets
+        # over de wedstrijd als geheel.
+        grof = [{'t': 6.0, 'score': 0.9, 'werper': 4, 'x': 120.0, 'y': 240.0, 'personen': 1}]
+        fijn = [{'t': 5.9, 'score': 0.5, 'personen': 1},
+                {'t': 6.08, 'score': 1.4, 'werper': 0, 'x': 121.0, 'y': 241.0, 'personen': 1},
+                {'t': 6.2, 'score': 0.4, 'personen': 1}]
+        events = houding.maak_events([(6.08, 1.4)], fijn, 42, 0.45,
+                                     werperreeks=grof, werper_marge_s=1.0)
+        self.assertEqual(events[0]['werper'], 4)
+        self.assertEqual(events[0]['video_time_s'], 6.08)
+
 if __name__ == '__main__':
     unittest.main()
 
@@ -330,3 +375,76 @@ class TestBesteWorpscore(unittest.TestCase):
     def test_zonder_geschiedenis_geen_score(self):
         score, _venster = houding.beste_worpscore([], self._staat(400.0), 1.0)
         self.assertEqual(score, 0.0)
+
+
+class TestZoekvensters(unittest.TestCase):
+    """Welke stukken video de tweede passage nog eens grondig bekijkt."""
+
+    def test_een_venster_rond_elke_kandidaat(self):
+        v = houding.zoekvensters([(10.0, 1.0), (30.0, 2.0)], marge_s=0.5)
+        self.assertEqual(v, [(9.5, 10.5), (29.5, 30.5)])
+
+    def test_voegt_overlappende_stukken_samen(self):
+        # Twee kandidaten vlak bij elkaar: één keer nakijken volstaat. Twee vensters zouden
+        # dezelfde beelden twee keer door het model duwen, en dáár zit de rekentijd.
+        v = houding.zoekvensters([(10.0, 1.0), (10.6, 1.0), (10.9, 1.0)], marge_s=0.5)
+        self.assertEqual(v, [(9.5, 11.4)])
+
+    def test_begint_nooit_voor_het_begin_en_stopt_op_tot(self):
+        v = houding.zoekvensters([(0.2, 1.0), (99.7, 1.0)], marge_s=0.8, tot=100.0)
+        self.assertEqual(v[0][0], 0.0)
+        self.assertEqual(v[-1][1], 100.0)
+
+    def test_houdt_het_nakijkwerk_binnen_de_begroting(self):
+        # Een lage zoekdrempel op een rommelig beeld kan honderden kandidaten opleveren. Zonder
+        # grens groeit "even nakijken" uit tot de hele video op volle beeldfrequentie — precies
+        # het uur wachten dat de stand "snel" moet vermijden.
+        kandidaten = [(float(i), 1.0 - i * 0.001) for i in range(5, 105)]
+        zonder = houding.zoekvensters(kandidaten, 0.8, 120.0)
+        met = houding.zoekvensters(kandidaten, 0.8, 120.0, max_deel=0.25, duur=120.0)
+        self.assertGreater(sum(b - a for a, b in zonder), 100.0)
+        self.assertLessEqual(sum(b - a for a, b in met), 30.0)
+
+    def test_laat_de_sterkste_kandidaten_over_als_er_gesnoeid_wordt(self):
+        # Moet er iets sneuvelen, dan de twijfelgevallen — niet de duidelijke worpen.
+        kandidaten = [(10.0, 0.2), (20.0, 0.9), (30.0, 0.3)]
+        v = houding.zoekvensters(kandidaten, 0.8, 100.0, max_deel=0.02, duur=100.0)
+        self.assertTrue(houding.in_venster(20.0, v))
+        self.assertFalse(houding.in_venster(10.0, v))
+
+    def test_kijkt_altijd_minstens_de_sterkste_kandidaat_na(self):
+        # Een begroting van nul mag niet betekenen dat er niets gebeurt: dan zou de tweede
+        # passage stilletjes uitgezet zijn zonder dat iemand het merkt.
+        v = houding.zoekvensters([(50.0, 0.9)], 0.8, 100.0, max_deel=0.0, duur=100.0)
+        self.assertTrue(houding.in_venster(50.0, v))
+
+    def test_zonder_kandidaten_valt_er_niets_na_te_kijken(self):
+        self.assertEqual(houding.zoekvensters([]), [])
+
+    def test_in_venster_laat_zonder_vensters_alles_door(self):
+        self.assertTrue(houding.in_venster(123.0, None))
+        self.assertTrue(houding.in_venster(10.0, [(9.0, 11.0)]))
+        self.assertFalse(houding.in_venster(12.0, [(9.0, 11.0)]))
+
+
+class TestWerperOp(unittest.TestCase):
+    """De werper bij een moment — desnoods van de dichtstbijzijnde meting."""
+
+    reeks = [
+        {'t': 9.0, 'werper': 3, 'x': 100.0, 'y': 200.0},
+        {'t': 10.0, 'werper': 7, 'x': 110.0, 'y': 210.0},
+        {'t': 11.0, 'werper': 9},
+    ]
+
+    def test_neemt_exact_dat_moment_zonder_marge(self):
+        self.assertEqual(houding.werper_op(self.reeks, 10.0)['werper'], 7)
+        self.assertIsNone(houding.werper_op(self.reeks, 10.4))
+
+    def test_neemt_de_dichtstbijzijnde_binnen_de_marge(self):
+        # De twee passages meten op verschillende tijdstippen: het moment komt uit de fijne
+        # passage, de werper uit de grove. Zonder marge zou er nooit één samenvallen.
+        self.assertEqual(houding.werper_op(self.reeks, 10.4, marge_s=1.0)['werper'], 7)
+        self.assertEqual(houding.werper_op(self.reeks, 10.6, marge_s=1.0)['werper'], 9)
+
+    def test_slaat_metingen_zonder_werper_over(self):
+        self.assertIsNone(houding.werper_op([{'t': 10.0, 'score': 1.0}], 10.0, marge_s=1.0))
