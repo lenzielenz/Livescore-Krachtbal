@@ -84,11 +84,11 @@ class TestCirculaireTint(unittest.TestCase):
     ~179). De lineaire mediaan en 2-means splitsten een rood truitje rond de
     wrap, waardoor het team per belichtingsmoment kon omklappen."""
 
-    def test_torso_tint_middelt_rood_rond_de_wrap_circulair(self):
+    def test_truitje_tint_middelt_rood_rond_de_wrap_circulair(self):
         import cv2
         import numpy as np
         # Rood truitje met hue-pixels aan beide kanten van de wrap; het patroon
-        # herhaalt per kolom zodat de torso-crop dezelfde verdeling bevat.
+        # herhaalt per kolom zodat de truitje-crop dezelfde verdeling bevat.
         hues = [1, 2, 3, 2, 1, 176, 177, 178, 176, 175]
         patroon = np.array(hues * 6, dtype=np.uint8)
         hsv = np.zeros((40, 60, 3), dtype=np.uint8)
@@ -96,7 +96,7 @@ class TestCirculaireTint(unittest.TestCase):
         hsv[:, :, 1] = 200
         hsv[:, :, 2] = 200
         frame = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
-        tint = spelers.torso_tint(cv2, frame, (0, 0, 60, 40))
+        tint = spelers.truitje_tint(cv2, frame, (0, 0, 60, 40))
         self.assertIsNotNone(tint)
         # Vóór de fix: mediaan ≈ 89 (cyaan/groen); circulair blijft rood rood.
         self.assertLess(spelers.circulaire_afstand(tint, 0.0), 10.0)
@@ -123,6 +123,49 @@ class TestCirculaireTint(unittest.TestCase):
         # Gemiddelde van tinten rond de wrap blijft bij de wrap, niet in het midden.
         gem = spelers.circulair_gemiddelde([1, 2, 3, 2, 1, 176, 177, 178, 176, 175])
         self.assertLess(spelers.circulaire_afstand(gem, 0.0), 5.0)
+
+
+class TestTruitjeTint(unittest.TestCase):
+    """De kleurbepaling kleurt in de bovenste helft van de detectie-bbox — daar
+    zit het truitje. De onderste helft (broek, benen, gras) mag niet meetellen:
+    dat was precies de zwakte van kleuren in een blob, die alleen dekte wat
+    toevallig bewoog."""
+
+    @staticmethod
+    def _frame(cv2, np, boven_hue: int, onder_hue: int):
+        """Frame met een bbox (20, 10, 40, 100): bovenste helft boven_hue,
+        onderste helft onder_hue, allebei verzadigd; de rest grijs."""
+        hsv = np.zeros((150, 100, 3), dtype=np.uint8)
+        hsv[:, :, 2] = 60  # dof grijs buiten de bbox (verzadiging 0)
+        hsv[10:60, 20:60] = (boven_hue, 200, 200)
+        hsv[60:110, 20:60] = (onder_hue, 200, 200)
+        return cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
+
+    def test_kleurt_in_de_bovenste_bbox_helft(self):
+        import cv2
+        import numpy as np
+        # Rood truitje boven, blauwe broek onder → de tint is rood.
+        frame = self._frame(cv2, np, boven_hue=0, onder_hue=120)
+        tint = spelers.truitje_tint(cv2, frame, (20, 10, 40, 100))
+        self.assertIsNotNone(tint)
+        self.assertLess(spelers.circulaire_afstand(tint, 0.0), 10.0)
+
+    def test_de_onderste_helft_telt_niet_mee(self):
+        import cv2
+        import numpy as np
+        # Omgekeerd: blauw truitje boven, rode broek onder → blauw, niet rood
+        # en ook geen mengsel van beide.
+        frame = self._frame(cv2, np, boven_hue=120, onder_hue=0)
+        tint = spelers.truitje_tint(cv2, frame, (20, 10, 40, 100))
+        self.assertIsNotNone(tint)
+        self.assertLess(spelers.circulaire_afstand(tint, 120.0), 10.0)
+
+    def test_ongesatureerde_crop_geeft_geen_tint(self):
+        import cv2
+        import numpy as np
+        # Grijs zegt niets over een truitjeskleur: liever geen meting dan ruis.
+        grijs = np.full((150, 100, 3), 128, dtype=np.uint8)
+        self.assertIsNone(spelers.truitje_tint(cv2, grijs, (20, 10, 40, 100)))
 
 
 class TestFase23Metrieken(unittest.TestCase):

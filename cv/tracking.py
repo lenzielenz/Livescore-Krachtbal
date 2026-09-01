@@ -7,13 +7,23 @@ tot sporen. Uitvoer: posities-JSONL, één regel per waarneming:
 
     {"t": 12.5, "track": 3, "x_m": 6.8, "y_m": 21.4}
 
-Die posities voeden ``heatmap.py`` en ``fysiek.py``. v0.2: twee detectoren die
-elkaar aanvullen — HOG (herkent stilstaande mensen, maar mist kleine/verre
-figuren) en MOG2-achtergrondsubtractie (vindt álles wat beweegt, dus ook verre
-spelers, maar niets dat stilstaat). Standaard draaien ze samen (``--detector
-beide``); dubbele waarnemingen worden samengevoegd en flikker-sporen korter dan
-``--min-duur`` weggegooid. Wissels van identiteit bij occlusie blijven mogelijk;
-``fysiek.py`` vangt dat op (meerdere sporen op één rugnummer tellen op).
+Die posities voeden ``heatmap.py`` en ``fysiek.py``. v0.3: het volgen draait
+waar mogelijk op **persoon-detecties uit het getrainde houdingsmodel**
+(``detectie.py``, hetzelfde rtmlib-model als ``houding.py``): dat vindt
+stilstaande én verre spelers, levert één detectie per persoon, en — cruciaal —
+de **enkels** als voetpunt. Alleen dat voetpunt mag door de grondvlak-
+homografie; de oude blob-weg projecteerde de onderkant van een bewegings-blob,
+en die ligt bij een deels bewegend lichaam (alleen romp of armen in beweging)
+halverwege de speler — een systematische fout van grofweg een meter op het
+veld, die met het enkel-voetpunt verdwijnt.
+
+Zonder rtmlib (en zonder geïnjecteerde detectiebron) valt de CLI terug op de
+klassieke v0.2-weg: HOG (stilstaande mensen, mist kleine figuren) + MOG2-
+achtergrondsubtractie (alles wat beweegt), met samengevoegde dubbele
+waarnemingen. De CLI kiest zelf en meldt welke bron er draait; elke uitvoerrij
+draagt ``'bron': 'model'|'blobs'``. Flikker-sporen korter dan ``--min-duur``
+gaan eruit; identiteitswissels bij occlusie blijven mogelijk en ``fysiek.py``
+vangt dat op (meerdere sporen op één rugnummer tellen op).
 
 VIDEO (vereist opencv + kalibratie van calibrate.py):
     python3 cv/tracking.py --video match.mp4 --kalibratie kalibratie.json \
@@ -36,6 +46,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+import detectie  # noqa: E402
 import veld  # noqa: E402
 from landing import _projecteer, klem_op_veld  # noqa: E402
 
@@ -163,6 +174,38 @@ def dedupliceer(punten: list[tuple[float, float]], min_afstand_m: float = 0.8) -
     return uit
 
 
+def veldpunten_uit_detecties(
+    detecties: list[dict],
+    matrix: list[list[float]],
+    diepte_m: float,
+    breedte_m: float = veld.BREEDTE_M,
+    speelveld_m: float = veld.SPEELVELD_LENGTE_M,
+) -> list[tuple[float, float]]:
+    """Voetpunten van persoon-detecties → veldmeters (puur — getest zonder video).
+
+    Het VOETpunt gaat door de homografie, niet het bbox-centrum. De homografie
+    beschrijft het grondvlak: alleen punten die óp de grond staan projecteren
+    naar hun echte veldpositie. Het centrum van een persoon-kader hangt grofweg
+    een meter boven de grond en projecteert bij een schuine camera stelselmatig
+    het veld in, van de camera weg — de systematische fout van de oude
+    blob-weg (waar de blob-onderkant bij een deels bewegend lichaam net zo goed
+    halverwege de speler lag). Punten ver buiten het veld (publiek, kantine)
+    tellen niet mee; meetruis vlak buiten de lijnen wordt op de rand geklemd.
+    """
+    lengte = veld.totale_lengte_m(diepte_m, speelveld_m)
+    punten: list[tuple[float, float]] = []
+    for det in detecties:
+        voeten = det.get('voeten')
+        if not voeten:
+            continue
+        vx, vy = _projecteer(matrix, float(voeten[0]), float(voeten[1]))
+        if vx != vx or vy != vy:  # NaN: ontaarde projectie
+            continue
+        if -1.0 <= vx <= breedte_m + 1.0 and -1.0 <= vy <= lengte + 1.0:
+            punten.append(klem_op_veld(vx, vy, diepte_m, breedte_m, speelveld_m))
+    return punten
+
+
 def filter_korte_sporen(rijen: list[dict], min_duur_s: float) -> list[dict]:
     """Gooi flikker-sporen weg: een spoor dat korter leeft dan min_duur is ruis
     (een schaduw, een vlag, een dubbele detectie), geen speler."""
@@ -236,11 +279,17 @@ def demo_posities(
 
 
 # ---------------------------------------------------------------------------
-# Video: HOG-detectie → voetpunt → veldmeters → sporen
+# Video: persoon-detecties (model of blobs) → voetpunt → veldmeters → sporen
 # ---------------------------------------------------------------------------
 
 
-def video_posities(args: argparse.Namespace) -> list[dict]:
+def video_posities(args: argparse.Namespace, detectiebron=None) -> list[dict]:
+    """Volg de spelers door de video; elke rij draagt de gebruikte bron mee.
+
+    ``detectiebron`` is een functie ``frame -> [{'bbox', 'voeten', 'zekerheid'}]``
+    (van ``detectie.laad_bron`` of geïnjecteerd door een test). Zonder bron
+    draait de klassieke blob-weg (HOG + MOG2) als terugval.
+    """
     try:
         import cv2  # noqa: PLC0415
     except ImportError:
@@ -271,13 +320,27 @@ def video_posities(args: argparse.Namespace) -> list[dict]:
     cap = cv2.VideoCapture(str(args.video))
     if not cap.isOpened():
         _fout(f'video kan niet geopend worden: {args.video}')
-    hog = None
-    if args.detector in ('hog', 'beide'):
-        hog = cv2.HOGDescriptor()
-        hog.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())
-    # MOG2 leert de achtergrond al kijkend; detectShadows uit, anders worden
-    # schaduwen op het gras aparte "spelers".
-    mog2 = cv2.createBackgroundSubtractorMOG2(history=200, detectShadows=False) if args.detector in ('mog2', 'beide') else None
+    bron = 'model' if detectiebron is not None else 'blobs'
+    hog = mog2 = None
+    if detectiebron is None:
+        # Klassieke terugval. Kwam de keuze via 'auto'/'model' hier terecht
+        # (rtmlib ontbreekt), dan draaien beide blob-detectoren samen.
+        keuze = args.detector if args.detector in ('hog', 'mog2', 'beide') else 'beide'
+        if keuze in ('hog', 'beide'):
+            # OpenCV 5 heeft de ingebouwde HOG-persoonsdetector geschrapt; op zo'n
+            # build blijft van 'beide' alleen MOG2 over — expliciet gevraagde HOG
+            # hoort dan hard te falen in plaats van stil niets te detecteren.
+            if hasattr(cv2, 'HOGDescriptor'):
+                hog = cv2.HOGDescriptor()
+                hog.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())
+            elif keuze == 'hog':
+                _fout('deze OpenCV-build heeft geen HOGDescriptor (geschrapt in OpenCV 5) — '
+                      'kies --detector mog2 of installeer rtmlib voor het houdingsmodel')
+            else:
+                print('let op: deze OpenCV-build heeft geen HOGDescriptor — alleen MOG2-beweging draait')
+        # MOG2 leert de achtergrond al kijkend; detectShadows uit, anders worden
+        # schaduwen op het gras aparte "spelers".
+        mog2 = cv2.createBackgroundSubtractorMOG2(history=200, detectShadows=False) if keuze in ('mog2', 'beide') else None
 
     koppelaar = Koppelaar()
     rijen: list[dict] = []
@@ -297,32 +360,36 @@ def video_posities(args: argparse.Namespace) -> list[dict]:
             if matrix is None:
                 t += 1.0 / args.fps
                 continue
-        voeten: list[tuple[float, float]] = []
-        if hog is not None:
-            vakken, _ = hog.detectMultiScale(frame, winStride=(8, 8), padding=(8, 8), scale=1.05)
-            # Het voetpunt (onderkant-midden van het kader) staat óp de grond: alleen dat punt
-            # mag door de grondvlak-homografie — het hoofd projecteren zou meters schelen.
-            voeten += [(float(x + b / 2), float(y + h)) for x, y, b, h in vakken]
-        if mog2 is not None:
-            masker = mog2.apply(frame)
-            masker = cv2.morphologyEx(masker, cv2.MORPH_OPEN, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3)))
-            contouren, _ = cv2.findContours(masker, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-            for c in contouren:
-                x, y, b, h = cv2.boundingRect(c)
-                # Een speler is hoger dan breed en niet minuscuul; de rest is bal, vlag of ruis.
-                if cv2.contourArea(c) >= args.mog2_min_px and h > b * 0.8:
-                    voeten.append((float(x + b / 2), float(y + h)))
-        punten: list[tuple[float, float]] = []
-        for bx, by in voeten:
-            vx, vy = _projecteer(matrix, bx, by)
-            if vx != vx or vy != vy:
-                continue
-            # Buiten het veld (publiek, kantine) telt niet mee.
-            if -1.0 <= vx <= breedte + 1.0 and -1.0 <= vy <= lengte + 1.0:
-                px, py = klem_op_veld(vx, vy, diepte, breedte, speelveld)
-                punten.append((px, py))
-        for track, x_m, y_m in koppelaar.stap(t, dedupliceer(punten)):
-            rijen.append({'t': round(t, 2), 'track': track, 'x_m': round(x_m, 2), 'y_m': round(y_m, 2)})
+        if detectiebron is not None:
+            # Het model levert per persoon een bbox én een voetpunt (enkels) —
+            # precies één detectie per speler, klaar voor de homografie.
+            detecties = detectiebron(frame)
+        else:
+            voeten: list[tuple[float, float]] = []
+            if hog is not None:
+                vakken, _ = hog.detectMultiScale(frame, winStride=(8, 8), padding=(8, 8), scale=1.05)
+                # De onderkant-midden van het kader is de beste grond-gok die HOG
+                # biedt — het hoofd projecteren zou meters schelen.
+                voeten += [(float(x + b / 2), float(y + h)) for x, y, b, h in vakken]
+            if mog2 is not None:
+                masker = mog2.apply(frame)
+                masker = cv2.morphologyEx(masker, cv2.MORPH_OPEN, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3)))
+                contouren, _ = cv2.findContours(masker, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+                for c in contouren:
+                    x, y, b, h = cv2.boundingRect(c)
+                    # Een speler is hoger dan breed en niet minuscuul; de rest is bal, vlag of ruis.
+                    if cv2.contourArea(c) >= args.mog2_min_px and h > b * 0.8:
+                        voeten.append((float(x + b / 2), float(y + h)))
+            detecties = [{'voeten': v} for v in voeten]
+        punten = veldpunten_uit_detecties(detecties, matrix, diepte, breedte, speelveld)
+        if detectiebron is None:
+            # Alleen de blob-weg dubbelt: HOG en MOG2 zien dezelfde speler vaak
+            # allebei. Het model levert al één detectie per persoon — daar zou
+            # dedupliceren juist twee spelers schouder aan schouder samenvoegen.
+            punten = dedupliceer(punten)
+        for track, x_m, y_m in koppelaar.stap(t, punten):
+            rijen.append({'t': round(t, 2), 'track': track, 'x_m': round(x_m, 2), 'y_m': round(y_m, 2),
+                          'bron': bron})
         t += 1.0 / args.fps
     cap.release()
     return rijen
@@ -348,8 +415,10 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument('--fps', type=float, default=STANDAARD_FPS,
                         help=f'bemonsteringsfrequentie in metingen per seconde (standaard {STANDAARD_FPS:g}/s; '
                              'geldt óók voor --demo — lager middelt sprintjes weg)')
-    parser.add_argument('--detector', choices=('hog', 'mog2', 'beide'), default='beide',
-                        help='persoonsdetectie: HOG (stilstaand), MOG2-beweging (ver/klein) of beide (standaard)')
+    parser.add_argument('--detector', choices=('auto', 'model', 'hog', 'mog2', 'beide'), default='auto',
+                        help='persoonsdetectie: auto (standaard: houdingsmodel waar rtmlib er is, anders blobs), '
+                             'model (eis het houdingsmodel), of klassiek: HOG (stilstaand), '
+                             'MOG2-beweging (ver/klein), beide')
     parser.add_argument('--mog2-min-px', type=int, default=150,
                         help='minimale contourgrootte in pixels voor een MOG2-detectie (standaard 150)')
     parser.add_argument('--min-duur', type=float, default=3.0,
@@ -382,7 +451,24 @@ def main(argv: list[str] | None = None) -> None:
         if args.video is None or (args.kalibratie is None and args.homografie is None):
             _fout('videomodus vereist --video én --kalibratie (vaste camera) of --homografie '
                   '(bewegende camera, van cv/volg_veld.py) — of gebruik --demo')
-        rijen = video_posities(args)
+        # De CLI kiest zelf de detectiebron en zegt welke er draait: het getrainde
+        # houdingsmodel waar dat kan (voetpunt = enkels), de klassieke blob-weg
+        # als terugval — stil terugvallen zou de gebruiker een meting van een
+        # andere kwaliteit geven zonder dat die het weet.
+        detectiebron = None
+        if args.detector in ('auto', 'model'):
+            if detectie.beschikbaar():
+                detectiebron = detectie.laad_bron()
+                print('detectiebron: houdingsmodel (rtmlib) — voetpunt uit de enkels per detectie')
+            elif args.detector == 'model':
+                _fout('rtmlib ontbreekt — installeer met: pip install -r cv/requirements-pose.txt '
+                      '(of kies --detector beide voor de klassieke blob-weg)')
+            else:
+                print('detectiebron: klassieke blobs (HOG+MOG2) — rtmlib niet gevonden, '
+                      'installeer cv/requirements-pose.txt voor het houdingsmodel')
+        else:
+            print(f'detectiebron: klassieke blobs ({args.detector}) — expliciet gekozen')
+        rijen = video_posities(args, detectiebron)
         ruw = len({r['track'] for r in rijen})
         rijen = filter_korte_sporen(rijen, args.min_duur)
         sporen = len({r['track'] for r in rijen})

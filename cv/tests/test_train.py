@@ -225,6 +225,24 @@ class TestLezen:
         pad.write_text('{"t": 2.0, "score": 1.0}\n\n{"t": 1.0, "score": 0.5}\n', encoding='utf-8')
         assert [r['t'] for r in lees_reeks(pad)] == [1.0, 2.0]
 
+    def test_reeks_met_per_speler_veld_traint_gewoon_mee(self, tmp_path):
+        # houding.py schrijft sinds de romp-relatieve meting een compact per_speler-veld per
+        # regel (werper-id → score). Trainen gebeurt (nog) op de beste score per moment; het
+        # veld mag het inlezen en scoren dus niet breken. Per speler leren is een volgende stap.
+        pad = tmp_path / 'reeks.jsonl'
+        regels = []
+        t = 0.0
+        while t <= 60.0:
+            r = {'t': round(t, 2), 'score': 0.15, 'polshoogte': 0.4}
+            if abs(t - 10.0) < 1e-9:
+                r.update(score=3.0, per_speler={'0': 3.0, '1': 0.4}, werper=0)
+            regels.append(json.dumps(r))
+            t += 0.2
+        pad.write_text('\n'.join(regels), encoding='utf-8')
+        s = scoor(lees_reeks(pad), [10.0], drempel=1.0, min_afstand=3.0)
+        assert s['gevonden'] == 1
+        assert s['vals'] == 0
+
     def test_weigert_een_reeks_zonder_score(self, tmp_path):
         pad = tmp_path / 'reeks.jsonl'
         pad.write_text('{"t": 2.0}\n', encoding='utf-8')

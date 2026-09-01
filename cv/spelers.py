@@ -11,15 +11,18 @@ Twee modi:
 VIDEO (vereist opencv):
     python3 cv/spelers.py --video match.mp4 --detecties det.jsonl \
         --uit verrijkt.jsonl [--wissel]
-    Baseline zonder modeldownload: rond elk worp-event worden personen gevonden
-    met OpenCV's ingebouwde HOG-persoonsdetector; van elke persoon-crop nemen we
-    het kleurenhistogram van de torso (tinten, HSV) en verdelen alle crops van
-    de wedstrijd met 2-means in twee truitjeskleuren. De werper = de persoon
-    het dichtst bij het beeldmidden op het worpmoment (v0.1-aanname; de
-    reviewer corrigeert). Welke cluster "home" is weet de camera niet — de
-    grootste cluster wordt home en ``--wissel`` draait de toewijzing om.
-    Rugnummers: nog niet ingevuld in v0.1 (de OCR-stap uit het plan — pose-crop
-    + PARSeq — is een latere, optionele backend); het veld blijft null.
+    Personen worden gevonden via ``detectie.py``: het getrainde houdingsmodel
+    (rtmlib, hetzelfde als houding.py) waar dat er is, anders OpenCV's
+    ingebouwde HOG-persoonsdetector als terugval — de CLI kiest zelf en meldt
+    welke bron er draait. De truitjeskleur wordt gemeten in de BOVENSTE HELFT
+    van de detectie-bbox (daar zit het truitje; kop erboven, broek en benen
+    eronder) en alle metingen van de wedstrijd worden met circulaire 2-means
+    in twee truitjeskleuren verdeeld. De werper = de persoon het dichtst bij
+    het beeldmidden op het worpmoment (v0.1-aanname; de reviewer corrigeert).
+    Welke cluster "home" is weet de camera niet — de grootste cluster wordt
+    home en ``--wissel`` draait de toewijzing om. Rugnummers: nog niet
+    ingevuld (de OCR-stap uit het plan — pose-crop + PARSeq — is een latere,
+    optionele backend); het veld blijft null.
 
 DEMO (geen video nodig — oefent de lus en de fase 3-metriek):
     python3 cv/spelers.py --demo --detecties det.jsonl --labels labels.jsonl \
@@ -41,9 +44,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+import detectie  # noqa: E402
 from evaluate import lees_jsonl, match_greedy  # noqa: E402
 
 MODEL_VIDEO = 'hog+kleurcluster'
+MODEL_VIDEO_POSE = 'pose+kleurcluster'
 MODEL_DEMO = 'demo-ruis-speler'
 MODEL_VERSIE = '0.1.0'
 DEMO_VENSTER_S = 2.0
@@ -155,15 +160,22 @@ def _laad_cv2():
     return cv2
 
 
-def torso_tint(cv2, frame, vak: tuple[int, int, int, int]) -> float | None:
-    """Gemiddelde tint (HSV-hue) van de torso-regio van een persoon-crop.
+def truitje_tint(cv2, frame, vak: tuple[float, float, float, float]) -> float | None:
+    """Gemiddelde tint (HSV-hue) van het truitje: de bovenste helft van de detectie-bbox.
 
-    De torso is grofweg het middelste derde van de bounding box — daar zit het
-    truitje, niet de broek of het gras.
+    De bbox van een persoon-detectie loopt van kruin tot voeten, dus het
+    truitje zit in de bovenste helft: het bovenste stukje (± 15%, het hoofd)
+    slaan we over, en onder de helft beginnen broek en benen — die zeggen
+    niets over de ploeg. Binnen een blob was deze regio gokken (een
+    bewegings-blob dekt alleen wat bewoog); binnen een detectie-bbox weten we
+    wáár het lichaam zit. Zijwaarts blijft er marge (20%) tegen gras en
+    achtergrond langs de armen.
     """
-    x, y, b, h = vak
-    ty0, ty1 = y + h // 5, y + h // 2
-    tx0, tx1 = x + b // 4, x + 3 * b // 4
+    x, y, b, h = (int(round(float(v))) for v in vak)
+    ty0, ty1 = y + int(h * 0.15), y + h // 2
+    tx0, tx1 = x + int(b * 0.2), x + int(b * 0.8)
+    if ty1 <= 0 or tx1 <= 0:
+        return None
     crop = frame[max(0, ty0):ty1, max(0, tx0):tx1]
     if crop.size == 0:
         return None
@@ -214,7 +226,39 @@ def wijs_teams_toe(tinten: list[float | None], wissel: bool = False) -> list[str
     ]
 
 
-def video_spelers(args: argparse.Namespace, detecties: list[dict]) -> tuple[list[dict], dict]:
+def _hog_bron(cv2):
+    """De klassieke terugval als persoon-bron, in dezelfde detectie-vorm.
+
+    HOG levert alleen een kader; het voetpunt is dan de onderkant-midden en de
+    zekerheid onbekend (1.0). Zo praten het model en de terugval door één en
+    dezelfde koker en blijft de kleurbepaling identiek.
+    """
+    if not hasattr(cv2, 'HOGDescriptor'):
+        # OpenCV 5 schrapte de ingebouwde HOG-persoonsdetector: zonder rtmlib
+        # is er op zo'n build géén persoon-bron, en zonder personen valt er
+        # geen team te clusteren — eerlijk falen met de uitweg erbij.
+        _fout('deze OpenCV-build heeft geen HOGDescriptor (geschrapt in OpenCV 5) — '
+              'installeer rtmlib (pip install -r cv/requirements-pose.txt) voor het houdingsmodel')
+    hog = cv2.HOGDescriptor()
+    hog.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())
+
+    def bron(frame) -> list[dict]:
+        vakken, _ = hog.detectMultiScale(frame, winStride=(8, 8), padding=(8, 8), scale=1.05)
+        return [{'bbox': (float(x), float(y), float(b), float(h)),
+                 'voeten': (float(x + b / 2), float(y + h)), 'zekerheid': 1.0}
+                for x, y, b, h in vakken]
+
+    return bron
+
+
+def video_spelers(args: argparse.Namespace, detecties: list[dict],
+                  detectiebron=None) -> tuple[list[dict], dict]:
+    """Verrijk de events met een team via truitjeskleur-clustering.
+
+    ``detectiebron`` is een functie ``frame -> [{'bbox', 'voeten', 'zekerheid'}]``
+    (van ``detectie.laad_bron``, of geïnjecteerd door een test). Zonder bron
+    valt dit terug op OpenCV's HOG-persoonsdetector.
+    """
     cv2 = _laad_cv2()
     if not args.video.is_file():
         _fout(f'video niet gevonden: {args.video}')
@@ -222,10 +266,12 @@ def video_spelers(args: argparse.Namespace, detecties: list[dict]) -> tuple[list
     if not cap.isOpened():
         _fout(f'video kan niet geopend worden: {args.video}')
 
-    hog = cv2.HOGDescriptor()
-    hog.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())
+    model_naam = MODEL_VIDEO_POSE if detectiebron is not None else MODEL_VIDEO
+    if detectiebron is None:
+        detectiebron = _hog_bron(cv2)
 
-    # Pas 1: per event de werper-tint bepalen (persoon dichtst bij het beeldmidden).
+    # Pas 1: per event de werper-tint bepalen (persoon dichtst bij het beeldmidden),
+    # gekleurd in de bovenste helft van de detectie-bbox — daar zit het truitje.
     tinten: list[float | None] = []
     for det in detecties:
         cap.set(cv2.CAP_PROP_POS_MSEC, float(det['video_time_s']) * 1000.0)
@@ -233,14 +279,14 @@ def video_spelers(args: argparse.Namespace, detecties: list[dict]) -> tuple[list
         tint = None
         if ok:
             hoogte, breedte = frame.shape[:2]
-            vakken, _ = hog.detectMultiScale(frame, winStride=(8, 8), padding=(8, 8), scale=1.05)
             beste = None
-            for x, y, b, h in vakken:
+            for persoon in detectiebron(frame):
+                x, y, b, h = persoon['bbox']
                 afstand = abs((x + b / 2) - breedte / 2) + abs((y + h / 2) - hoogte / 2)
                 if beste is None or afstand < beste[0]:
-                    beste = (afstand, (int(x), int(y), int(b), int(h)))
+                    beste = (afstand, persoon['bbox'])
             if beste is not None:
-                tint = torso_tint(cv2, frame, beste[1])
+                tint = truitje_tint(cv2, frame, beste[1])
         tinten.append(tint)
     cap.release()
 
@@ -257,7 +303,7 @@ def video_spelers(args: argparse.Namespace, detecties: list[dict]) -> tuple[list
             det['speler'] = {'team': team, 'rugnummer': None}
             toegewezen += 1
         prov = dict(det.get('provenance') or {})
-        prov['model'] = f"{prov.get('model', '?')}+{MODEL_VIDEO}"
+        prov['model'] = f"{prov.get('model', '?')}+{model_naam}"
         prov['model_version'] = MODEL_VERSIE
         det['provenance'] = prov
         verrijkt.append(det)
@@ -317,7 +363,17 @@ def main(argv: list[str] | None = None) -> None:
     else:
         if args.video is None:
             _fout('videomodus vereist --video (of gebruik --demo)')
-        verrijkt, rapport = video_spelers(args, detecties)
+        # Zelfde keuze en zelfde terugval als tracking.py: het getrainde
+        # houdingsmodel waar rtmlib er is, anders HOG — en altijd zeggen welke
+        # bron er draait, want de kwaliteit van de teamtoewijzing hangt eraan.
+        detectiebron = None
+        if detectie.beschikbaar():
+            detectiebron = detectie.laad_bron()
+            print('detectiebron: houdingsmodel (rtmlib) — truitjeskleur uit de bovenste bbox-helft')
+        else:
+            print('detectiebron: HOG (klassieke terugval) — rtmlib niet gevonden, '
+                  'installeer cv/requirements-pose.txt voor het houdingsmodel')
+        verrijkt, rapport = video_spelers(args, detecties, detectiebron)
         print(
             f'Team toegewezen voor {rapport["toegewezen"]} van {rapport["detecties"]} events '
             f'({rapport["zonder"]} zonder herkende werper); rugnummers blijven leeg in v0.1 — '

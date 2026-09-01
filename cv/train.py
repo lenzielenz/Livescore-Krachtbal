@@ -83,7 +83,15 @@ def _fout(boodschap: str, code: int = 2) -> None:
 
 
 def lees_reeks(pad: Path) -> list[dict]:
-    """De meetreeks van houding.py: per bemonsterd beeld ``{'t', 'score', …}``."""
+    """De meetreeks van houding.py: per bemonsterd beeld ``{'t', 'score', …}``.
+
+    Sinds de romp-relatieve meting draagt elke meting ook een compact `per_speler`-veld
+    (werper-id → score). Dat wordt hier bewust genegeerd: getraind wordt er nog op de beste
+    score per moment (`score`), zoals ``vind_worpmomenten`` beslist. Per speler leren — en
+    daarmee ook de beslislaag van train op ``vind_worpmomenten_per_speler`` laten lopen,
+    zodat twee spelers die kort na elkaar werpen als twee labels tellen — is een volgende,
+    aparte stap.
+    """
     reeks = []
     for nummer, regel in enumerate(pad.read_text(encoding='utf-8').splitlines(), start=1):
         regel = regel.strip()

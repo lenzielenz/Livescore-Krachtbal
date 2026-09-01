@@ -15,22 +15,25 @@ en een worp is daarin een herkenbare beweging. Zowel de nekworp (bal boven het h
 naar voren) als de rugworp (ruggelings over het hoofd) gaan door dezelfde doorslaggevende
 fase: **de polsen komen boven de schouders en zwiepen dan snel weg**.
 
-Schaalonafhankelijk meten
--------------------------
+Meten in het assenstelsel van de speler
+---------------------------------------
 Een speler vooraan in beeld is drie keer zo groot als eentje achteraan. Elke maat wordt daarom
 gedeeld door de **romphoogte** van diezelfde speler (schouder → heup): dan telt een worp even
-zwaar, waar hij ook staat. Dat vangt schaal (afstand, zoom) — maar níét de verschuiving van een
-pannende camera: de polshoogte is een verhouding binnen één beeld, de polsWEG loopt over twee
-beelden en krijgt de volledige pan er onverkort bij. Daarom wordt vóór het scoren de gedeelde
-beweging van alle zichtbare spelers (pant de camera, dan schuift iedereen mee) van de polsweg
-afgetrokken — zie ``gedeelde_verschuiving``.
+zwaar, waar hij ook staat. En de polsWEG — die over twee beelden loopt — wordt niet in
+beeldcoördinaten gemeten maar **relatief aan de eigen heup** van diezelfde speler: pols min
+heupcentrum, nu tegenover toen. Pant de camera, dan schuiven heup en pols exact samen mee en
+valt de pan er wiskundig uit; loopt de speler, dan loopt zijn heup mee en blijft alleen de
+armbeweging over. (Eerder werd hiervoor de mediane heupverschuiving van álle spelers van de
+polsweg afgetrokken — een pleister die niets kon middelen met één of twee spelers in beeld en
+die de loopbeweging van de werper zélf liet staan. Die machinerie is weg; dit vervangt haar.)
 
     polshoogte = (schouder_y − pols_y) / romphoogte       (> 0 = polsen boven de schouders)
-    polsweg    = |Δpols| / romphoogte                     (rompen afgelegd)
+    polsweg    = |Δ(pols − heup)| / romphoogte            (rompen afgelegd, in eigen assen)
     worpscore  = max(0, polshoogte) × polsweg             (over één loslaatfase: 0,08–0,22 s)
 
 De score piekt precies op het moment van loslaten: hoog én ver. Rustig staan met de handen
-omhoog legt geen weg af; wild lopen geeft polshoogte nul.
+omhoog legt geen weg af; wild lopen geeft polshoogte nul — en lopen mét de armen omhoog geen
+polsweg meer, want de pols beweegt dan niet ten opzichte van de eigen heup.
 
 WEG EN NIET SNELHEID, en dat is geen detail. Snelheid is weg gedeeld door tijd, en die tijd hing
 aan de precisiestand: 0,20 s tussen twee metingen op "gewoon", 0,067 s op "ultra". Dezelfde worp
@@ -70,13 +73,27 @@ L_HEUP, R_HEUP = 11, 12
 MIN_ZEKERHEID = 0.3
 # Een worp telt pas mee vanaf deze score.
 #
-# De schaal is veranderd mét de maat: het is niet langer "rompen per seconde" maar "rompen
-# afgelegd × polshoogte" over één loslaatfase. Op een nagebootste worp piekt dat rond 0,7 à 0,9;
-# een hand die rustig omhoog gaat blijft onder 0,2. 0,45 ligt daar netjes tussen — en het is een
-# startpunt, geen waarheid: cv/train.py leert het juiste getal uit jouw eigen wedstrijden.
+# De maat is romp-relatief geworden, maar de schaal van een échte worp niet — en dat is
+# nagemeten, niet aangenomen: op de synthetische skeletten (zwiep van 90 px bij een romp van
+# 100 px) piekt een nagebootste worp op 0,78–0,95, in beeldcoördinaten én romp-relatief
+# hetzelfde getal, want de heup van de werper staat tijdens de zwiep nagenoeg stil. Wat wél
+# verandert is de ruis erónder: een camerapan van 80 px scoorde zonder correctie 0,48 (een
+# spookworp boven de drempel) en is nu exact 0; een speler die met de armen omhoog 400 px/s
+# loopt — wat de vroegere mediaan-aftrek liet staan — zakt van 0,48 naar 0, terwijl dezelfde
+# zwiep mét dat lopen erbovenop gewoon boven de drempel blijft. 0,45 ligt dus nog altijd
+# netjes tussen ruis en worp — en het blijft een startpunt, geen waarheid: cv/train.py leert
+# het juiste getal uit jouw eigen wedstrijden.
 DREMPEL_SCORE = 0.45
-# Twee pieken dichter dan dit horen bij dezelfde worp.
+# Twee pieken dichter dan dit horen bij dezelfde worp — van dezélfde speler. Twee verschillende
+# spelers die binnen deze afstand van elkaar werpen (werper en vanger die terugwerpt, of twee
+# velden naast elkaar in beeld) zijn twee worpen; zie ``vind_worpmomenten_per_speler``.
 MIN_AFSTAND_S = 3.0
+# Onder deze score komt een speler niet in het compacte `per_speler`-veld van de meetreeks.
+# De vloer bestaat om de reeks niet op te blazen: in rust scoort bijna iedereen bijna 0, en
+# tien spelers × tienduizenden metingen aan nullen wegschrijven dient niemand. Ruim onder elke
+# realistische zoekdrempel (kleinste trainbare drempel 0,2 × ZOEK_FACTOR 0,40 = 0,08), zodat de
+# zoekpassage nooit een kandidaat verliest aan de compactheid.
+PER_SPELER_VLOER = 0.05
 # Na zoveel gemeten beelden weten we hoe snel deze server is en kunnen we een duur schatten.
 METINGEN_VOOR_SCHATTING = 8
 # Over hoeveel tijd de polsweg gemeten wordt.
@@ -132,6 +149,9 @@ VENSTER_HOOG_S = 0.22
 # 0,55 er 16 van de 17 haalbare, 0,45 en lager alle 17 — voor 13% meer nakijkwerk. Vals alarm
 # kost niets, want de beslissing valt alsnog op de echte drempel (0 valse worpen bij élke
 # geprobeerde factor). Te hoog zoeken kost wél: die worp is voorgoed weg.
+# De romp-relatieve maat verandert hier niets aan: de worp-piek zelf bleef op dezelfde schaal
+# (0,78–0,95 op de synthetische skeletten, identiek aan de oude meting omdat de heup van de
+# werper stilstaat tijdens de zwiep), dus de nagemeten factor blijft geldig.
 ZOEK_FACTOR = 0.40
 # Hoeveel seconden rond een kandidaat er nagekeken wordt. Ruim genoeg voor de hele zwiep én
 # voor `worp_type` (dat 0,6 s rond het moment kijkt om nek van rug te onderscheiden).
@@ -279,7 +299,9 @@ def heuppositie(persoon, scores) -> tuple[float, float] | None:
     """Het midden tussen de heupen — de stabielste plek om iemand aan te herkennen.
 
     Armen en benen zwaaien; het bekken schuift mee met de speler zelf. Vandaar dat het volgen
-    van personen tussen twee metingen hierop gebeurt en niet op de polsen.
+    van personen tussen twee metingen hierop gebeurt en niet op de polsen — én dat de polsweg
+    ten opzichte van dít punt gemeten wordt: het is de oorsprong van het assenstelsel van de
+    speler, waarin camerapan en loopbeweging wegvallen.
     """
     heupen = [p for p in (_punt(persoon, scores, L_HEUP), _punt(persoon, scores, R_HEUP)) if p]
     if not heupen:
@@ -336,7 +358,6 @@ def beste_worpscore(
     nu_t: float,
     laag_s: float = VENSTER_LAAG_S,
     hoog_s: float = VENSTER_HOOG_S,
-    pan_bij: dict[float, tuple[float, float]] | None = None,
 ) -> tuple[float, float]:
     """De sterkste worpscore over alle vensters van ± een loslaatfase. Geeft (score, venster).
 
@@ -352,18 +373,15 @@ def beste_worpscore(
     hoe fijn er bemonsterd is. Op een grove stand valt er weinig te kiezen en zie je onvermijdelijk
     minder van de zwiep — dat is geen fout van de maat maar informatie die er niet is.
 
-    `pan_bij` (van ``camerapan_bij``) geeft per referentietijd hoeveel het beeld zelf schoof;
-    die verschuiving gaat van elke polsweg af, zodat een pannende camera niet meetelt.
+    Camerabeweging hoeft hier niet meer gecompenseerd te worden: ``worpscore`` meet de polsweg
+    in het assenstelsel van de speler zelf, en daar staat een pannende camera per definitie stil.
     """
-    def pan(tijd: float) -> tuple[float, float] | None:
-        return pan_bij.get(tijd) if pan_bij else None
-
     beste, beste_venster = 0.0, hoog_s
     for tijd, staat in geschiedenis:
         venster = nu_t - tijd
         if venster < laag_s or venster > hoog_s:
             continue
-        score = worpscore(staat, huidige, venster, pan=pan(tijd))
+        score = worpscore(staat, huidige, venster)
         if score > beste:
             beste, beste_venster = score, venster
     if beste == 0.0 and geschiedenis:
@@ -371,7 +389,7 @@ def beste_worpscore(
         # bij het gewenste venster. Liever een minder scherpe meting dan geen.
         ref = min(geschiedenis, key=lambda p: abs((nu_t - p[0]) - VENSTER_S))
         venster = max(1e-6, nu_t - ref[0])
-        return worpscore(ref[1], huidige, venster, pan=pan(ref[0])), venster
+        return worpscore(ref[1], huidige, venster), venster
     return beste, beste_venster
 
 
@@ -393,69 +411,24 @@ def kies_referentie(
     return min(geschiedenis, key=lambda p: abs(p[0] - doel))
 
 
-def gedeelde_verschuiving(verplaatsingen: list[tuple[float, float]]) -> tuple[float, float]:
-    """Wat álle zichtbare spelers samen bewogen — dat is de camera, niet de worp.
-
-    Pant de camera, dan schuift iedereen in beeld dezelfde kant op; die gedeelde component
-    hoort niet in de polsweg. Met drie of meer spelers is de mediaan per as een robuuste
-    schatting: de werper (wiens heup wél echt beweegt) wordt weggestemd door de omstanders.
-
-    Met één of twee spelers zegt een mediaan niets over "gedeeld" — bij twee is het het
-    gemiddelde, en één wandelende speler zou dan de helft van zijn eigen beweging bij de
-    ander aftrekken. Daarom telt dan alleen wat iederéén minstens deed: bewegen niet alle
-    heupen dezelfde kant op, dan is er niets gedeeld en wordt er niets afgetrokken. Voor een
-    enkele speler betekent dat: zijn eigen heupverschuiving — wie stilstaat terwijl de camera
-    pant, schuift precies mee met de camera; wie werpt, houdt zijn heup nagenoeg stil en
-    behoudt zijn score.
-    """
-    if not verplaatsingen:
-        return (0.0, 0.0)
-
-    def per_as(waarden: list[float]) -> float:
-        if len(waarden) >= 3:
-            w = sorted(waarden)
-            midden = len(w) // 2
-            return w[midden] if len(w) % 2 else (w[midden - 1] + w[midden]) / 2
-        # Eén of twee spelers: alleen aftrekken wat aantoonbaar gedeeld is.
-        if min(waarden) > 0:
-            return min(waarden)
-        if max(waarden) < 0:
-            return max(waarden)
-        return 0.0
-
-    return (per_as([v[0] for v in verplaatsingen]), per_as([v[1] for v in verplaatsingen]))
-
-
-def camerapan_bij(
-    geschiedenis: dict[int, list[tuple[float, dict]]],
-    nu: dict[int, dict],
-) -> dict[float, tuple[float, float]]:
-    """Per referentietijd: hoeveel het beeld zelf verschoven is tussen toen en nu.
-
-    Gemeten aan de heupen (de stabielste plek van een speler), over alle spelers die op beide
-    momenten gezien zijn, en samengevat met ``gedeelde_verschuiving``. De sleutels zijn de
-    tijdstippen uit ``geschiedenis`` — precies de referenties waar ``beste_worpscore`` uit kiest.
-    """
-    per_tijd: dict[float, list[tuple[float, float]]] = {}
-    for wie, lijst in geschiedenis.items():
-        hier = (nu.get(wie) or {}).get('heup')
-        if hier is None:
-            continue
-        for tijd, staat in lijst:
-            daar = staat.get('heup')
-            if daar is None:
-                continue
-            per_tijd.setdefault(tijd, []).append((hier[0] - daar[0], hier[1] - daar[1]))
-    return {tijd: gedeelde_verschuiving(v) for tijd, v in per_tijd.items()}
-
-
-def worpscore(vorige: dict, huidige: dict, dt: float = 0.0,
-              pan: tuple[float, float] | None = None) -> float:
+def worpscore(vorige: dict, huidige: dict, dt: float = 0.0) -> float:
     """Hoe erg lijkt dit op het moment van loslaten? (0 = niet.)
 
     Hoog én ver: de polshoogte (boven de schouders) maal de weg die de pols aflegde sinds de
     vorige meting, allebei in rompen. Rustig staan met de handen omhoog legt geen weg af; wild
     lopen met de handen laag heeft geen hoogte.
+
+    IN HET ASSENSTELSEL VAN DE SPELER. De polsweg is niet |Δpols| in beeldcoördinaten maar
+    |Δ(pols − heup)| van diezelfde speler: waar de hand naartoe ging ten opzichte van het eigen
+    bekken. Pant de camera, dan schuiven heup en pols exact samen mee en valt de pan er
+    wiskundig uit — ook met één speler in beeld, en ook als de camera de zwaai méévolgt (dan
+    staat de pols in beeld stil maar schuift de heup, en komt de zwaai er juist bij). Loopt de
+    speler terwijl hij werpt, dan loopt zijn heup mee en blijft alleen de armbeweging over.
+    De vroegere mediaan-aftrek van de gedeelde heupverschuiving van alle spelers is hiermee
+    vervallen: die kon niets middelen met één of twee spelers in beeld en liet de loopbeweging
+    van de werper zélf in de score staan — twee halve oplossingen zijn hier één hele geworden.
+    Ontbreekt een heup (het model twijfelt juist bij de romprotatie van een worp), dan valt de
+    meting terug op beeldcoördinaten: liever een minder zuivere meting dan geen.
 
     WAAROM WEG EN NIET SNELHEID. Snelheid is weg gedeeld door tijd, en die tijd hing vroeger aan
     de precisiestand: 0,20 s tussen twee metingen op "gewoon", 0,067 s op "ultra". Dezelfde worp
@@ -468,11 +441,6 @@ def worpscore(vorige: dict, huidige: dict, dt: float = 0.0,
     seconde: 31% spreiding in plaats van 85%. Pas daardoor levert meer rekenkracht ook echt een
     betere meting op in plaats van een andere schaal.
 
-    `pan` is de verschuiving van het bééld tussen de twee metingen (zie ``camerapan_bij``); die
-    gaat van de polsweg af vóór het scoren. Zonder dat telt een pannende camera als worp voor
-    iedereen die met de armen omhoog staat — de wachtende vanger! — en veegt een camera die de
-    zwaai meevolgt de echte worp juist weg.
-
     `dt` wordt niet meer gebruikt en staat er enkel nog voor oudere aanroepen.
     """
     del dt  # bewust: de maat is niet langer een snelheid
@@ -484,11 +452,19 @@ def worpscore(vorige: dict, huidige: dict, dt: float = 0.0,
         return 0.0
     if hoogte <= 0 or romp <= 0:
         return 0.0
+    heup_hier = huidige.get('heup')
+    heup_daar = vorige.get('heup')
+    if heup_hier is not None and heup_daar is not None:
+        # Elke meting in de eigen rompen van dát moment: zoomt de camera tussen de twee
+        # metingen, dan is de verhouding pols-tot-heup nog altijd vergelijkbaar.
+        romp_daar = vorige.get('romp') or romp
+        weg_x = (hier[0] - heup_hier[0]) / romp - (daar[0] - heup_daar[0]) / romp_daar
+        weg_y = (hier[1] - heup_hier[1]) / romp - (daar[1] - heup_daar[1]) / romp_daar
+        return hoogte * math.hypot(weg_x, weg_y)
+    # Zonder heup geen assenstelsel: beeldcoördinaten als noodgreep, zodat één onzeker
+    # heup-frame de worp niet wist.
     weg_x = hier[0] - daar[0]
     weg_y = hier[1] - daar[1]
-    if pan is not None:
-        weg_x -= pan[0]
-        weg_y -= pan[1]
     return hoogte * (math.hypot(weg_x, weg_y) / romp)
 
 
@@ -508,6 +484,11 @@ def vind_worpmomenten(
     én ver — hoger dan de werper. De sterkste nemen schoof het moment dan naar de vángst
     (0,2–2 s te laat), mét de werper-id en positie van de vanger. Het loslaten is per definitie
     de eerste beweging van de groep; wat erna komt, is gevolg.
+
+    Deze functie kijkt alleen naar het frame-maximum en blijft daarmee blind voor twee spelers
+    die kort na elkaar werpen — dat lost ``vind_worpmomenten_per_speler`` op. Ze blijft hier
+    staan omdat cv/train.py (en oudere meetreeksen zonder `per_speler`-veld) haar contract
+    gebruiken; zodra train per speler leert, kan ze weg.
     """
     kandidaten = []
     for i in range(1, len(reeks) - 1):
@@ -522,7 +503,83 @@ def vind_worpmomenten(
     return gekozen
 
 
-def worp_type(reeks: list[dict], tijd: float, venster_s: float = 0.6) -> str | None:
+def _per_speler_reeksen(reeks: list[dict]) -> dict[str, list[tuple[float, float]]]:
+    """Per werper-id de eigen (t, score)-reeks, uit de compacte `per_speler`-velden.
+
+    De sleutels worden tekst: na een JSON-rondgang (--reeks-uit, --hervat) zíjn ze dat al,
+    en één sleuteltype betekent dat dezelfde speler niet in twee reeksen uiteenvalt.
+    """
+    per: dict[str, list[tuple[float, float]]] = {}
+    for r in reeks:
+        scores = r.get('per_speler')
+        if not isinstance(scores, dict):
+            continue
+        for wie, s in scores.items():
+            if isinstance(s, (int, float)):
+                per.setdefault(str(wie), []).append((r['t'], float(s)))
+    for lijst in per.values():
+        lijst.sort()
+    return per
+
+
+def vind_worpmomenten_per_speler(
+    reeks: list[dict],
+    drempel: float = DREMPEL_SCORE,
+    min_afstand_s: float = MIN_AFSTAND_S,
+) -> list[tuple[float, float, int | str | None]]:
+    """De worpmomenten pér speler: (tijd, score, werper-id), op tijd gesorteerd.
+
+    Waarom niet gewoon ``vind_worpmomenten``. Die ziet per moment alleen de beste score over
+    álle spelers, en `min_afstand_s` voegt dan alles binnen die afstand samen tot één worp —
+    ook als het twee verschíllende spelers waren: de werper en de vanger die meteen terugwerpt,
+    of twee velden naast elkaar in beeld. Dat zijn twee gebeurtenissen, geen één. Hier krijgt
+    elke speler zijn eigen reeks (het `per_speler`-veld van de meting) en zoekt de piekzoektocht
+    per reeks; `min_afstand_s` groepeert alleen nog pieken van dezélfde speler (zijn aanloop en
+    zwaai), en binnen zo'n groep wint zijn éérste piek — het loslaten is de eerste beweging.
+
+    De vangst overschrijft de worp dus nooit meer: het loslaatmoment, de werper en het worptype
+    komen uit de reeks van de wérper. Heft de vanger de armen snel genoeg om zélf boven de
+    drempel te komen, dan wordt dat een éigen, apart voorstel op zijn eigen moment — de
+    reviewlaan wijst het af, en cv/train.py kan het later per speler leren wegdrempelen.
+
+    Een reeks zónder `per_speler`-velden (gemeten vóór deze upgrade) valt terug op de oude
+    frame-maximum-zoektocht, met werper None; zo blijft --hervat op oude reeksen werken.
+    """
+    per = _per_speler_reeksen(reeks)
+    if not per:
+        return [(t, s, None) for t, s in vind_worpmomenten(reeks, drempel, min_afstand_s)]
+    # De eigen reeks van een speler is schaars: alleen zijn scores boven de ruisvloer staan
+    # erin. Een "buurmeting" die verder weg ligt dan ± anderhalve meetstap is dus geen buur
+    # maar een vólgende uitbarsting, met stilte (onder de vloer) ertussen — die telt in de
+    # piektoets als 0, anders leest een tweede zwaai als de stijgende flank van de eerste.
+    tijden = [r['t'] for r in reeks]
+    stappen = sorted(b - a for a, b in zip(tijden, tijden[1:]) if b > a)
+    buurgrens = max(0.06, 1.5 * (stappen[len(stappen) // 2] if stappen else 0.2))
+    gekozen: list[tuple[float, float, int | str | None]] = []
+    for wie, lijst in per.items():
+        kandidaten = []
+        for i, (t, s) in enumerate(lijst):
+            if s < drempel:
+                continue
+            vorig = lijst[i - 1][1] if i > 0 and t - lijst[i - 1][0] <= buurgrens else 0.0
+            volgend = (lijst[i + 1][1]
+                       if i + 1 < len(lijst) and lijst[i + 1][0] - t <= buurgrens else 0.0)
+            if s >= vorig and s > volgend:
+                kandidaten.append((t, s))
+        eigen: list[tuple[float, float]] = []
+        for t, s in kandidaten:                       # al op tijd gesorteerd: eerste piek wint
+            if all(abs(t - g) >= min_afstand_s for g, _ in eigen):
+                eigen.append((t, s))
+        # Werper-ids zijn in het geheugen ints; na een JSON-rondgang tekst. Terug naar int
+        # waar dat kan, zodat events uit beide rondes hetzelfde type dragen.
+        nummer: int | str = int(wie) if wie.lstrip('-').isdigit() else wie
+        gekozen.extend((t, s, nummer) for t, s in eigen)
+    gekozen.sort(key=lambda m: (m[0], -m[1]))
+    return gekozen
+
+
+def worp_type(reeks: list[dict], tijd: float, venster_s: float = 0.6,
+              wie: int | str | None = None) -> str | None:
     """Nekworp of rugworp, aan de richting van de zwaai.
 
     Bij een **nekworp** komt de bal van boven het hoofd naar voren: de polsen zijn vóór het
@@ -535,9 +592,16 @@ def worp_type(reeks: list[dict], tijd: float, venster_s: float = 0.6) -> str | N
     "na" hoog hangen en wordt een zuivere nekworp None. Staat er per meting bijgehouden wie
     welke polshoogte had (``hoogtes``), dan telt hier alleen de reeks van de werper van dit
     moment; oudere reeksen zonder dat veld vallen terug op het frame-maximum.
+
+    `wie` benoemt de werper rechtstreeks (de per-speler-zoektocht wéét wie er piekte); zonder
+    `wie` wordt hij uit de meting op dit tijdstip gelezen. Dat verschil telt bij twee worpen
+    kort na elkaar: de meting kan dan de piek van de ándere speler dragen.
     """
-    piek = werper_op(reeks, tijd, marge_s=0.05)
-    werper = piek.get('werper') if piek else None
+    if wie is not None:
+        werper = wie
+    else:
+        piek = werper_op(reeks, tijd, marge_s=0.05)
+        werper = piek.get('werper') if piek else None
 
     def hoogte_van_de_werper(r: dict) -> float | None:
         hoogtes = r.get('hoogtes')
@@ -685,10 +749,14 @@ def meet_video(videopad: Path, model, analyse_fps: float, tot: float | None = No
                vanaf: float = 0.0,
                schrijf=None,
                eerste_werper: int = 0) -> list[dict]:
-    """Per moment de hoogste worpscore over alle spelers in beeld.
+    """Per moment de worpscore per speler, plus de beste ervan als frame-score.
 
-    Geeft een reeks ``{'t', 'score', 'polshoogte', 'personen'}``. Het model draait op elk
-    bemonsterd beeld; dat is het dure deel, dus `analyse_fps` bepaalt de rekentijd.
+    Geeft een reeks ``{'t', 'score', 'polshoogte', 'personen'}``, waarbij `score` de beste
+    per-speler-score van dat moment is en `werper` daar consistent bij hoort. Het compacte
+    veld `per_speler` (werper-id → score, alleen boven ``PER_SPELER_VLOER``) draagt de
+    scorereeks per speler, zodat ``vind_worpmomenten_per_speler`` twee spelers die kort na
+    elkaar werpen als twee worpen kan zien. Het model draait op elk bemonsterd beeld; dat is
+    het dure deel, dus `analyse_fps` bepaalt de rekentijd.
     `analyse_fps = ELK_BEELD` meet élk beeld — dat is de tweede passage.
 
     Met `vensters` worden alleen die stukken video gemeten. De beelden ertussen worden nog wel
@@ -786,17 +854,19 @@ def meet_video(videopad: Path, model, analyse_fps: float, tot: float | None = No
                     wie = volgende_werper
                     volgende_werper += 1
                 nu[wie] = staat
-            # Hoeveel het beeld zelf schoof sinds elke referentiemeting: pant de camera, dan
-            # beweegt iedereen mee, en dat stuk hoort niet in de polsweg. Anders "werpt" elke
-            # wachtende vanger met de armen omhoog zodra de camera de bal volgt.
-            pan_bij = camerapan_bij(geschiedenis, nu)
             beste_score, beste_hoogte, beste_wie = 0.0, None, None
             beste_venster = None
+            # De score pér speler, in zijn eigen assenstelsel (camerapan en lopen vallen daar
+            # vanzelf uit — zie worpscore). Alleen scores boven de ruisvloer worden bewaard,
+            # anders groeit de reeks met tienduizenden nullen.
+            per_speler: dict[int, float] = {}
             for wie, staat in nu.items():
-                # De snelheid over een vást venster van ± 0,12 s, niet over de stap tussen twee
+                # De weg over een vást venster van ± 0,12 s, niet over de stap tussen twee
                 # metingen: anders hangt de score af van hoe fijn je bemonstert en betekent
                 # dezelfde worp op de stand "ultra" iets anders dan op "gewoon".
-                s, venster = beste_worpscore(geschiedenis.get(wie, []), staat, t, pan_bij=pan_bij)
+                s, venster = beste_worpscore(geschiedenis.get(wie, []), staat, t)
+                if s >= PER_SPELER_VLOER:
+                    per_speler[wie] = round(s, 4)
                 if s > beste_score:
                     beste_score = s
                     beste_wie = wie
@@ -805,6 +875,8 @@ def meet_video(videopad: Path, model, analyse_fps: float, tot: float | None = No
                     beste_hoogte = staat['polshoogte'] if beste_hoogte is None else max(beste_hoogte, staat['polshoogte'])
             meting = {'t': round(t, 3), 'score': round(beste_score, 4),
                       'polshoogte': beste_hoogte, 'personen': len(keypoints)}
+            if per_speler:
+                meting['per_speler'] = per_speler
             # De polshoogte pér speler, niet alleen het frame-maximum: `worp_type` moet de zwaai
             # van de wérper kunnen lezen, en het maximum is vlak na een worp vaak de vanger.
             hoogtes = {wie: round(staat['polshoogte'], 3) for wie, staat in nu.items()
@@ -861,17 +933,23 @@ def meet_video(videopad: Path, model, analyse_fps: float, tot: float | None = No
     return reeks
 
 
-def werper_op(reeks: list[dict], tijd: float, marge_s: float = 1e-6) -> dict | None:
+def werper_op(reeks: list[dict], tijd: float, marge_s: float = 1e-6,
+              wie: int | str | None = None) -> dict | None:
     """Wie wierp er op dit moment, en waar stond die? (De meting het dichtst bij dat tijdstip.)
 
     `marge_s` bestaat voor de twee passages: het moment komt dan uit de fijne passage, maar de
     werper uit de grove — die volgt de spelers dóór de hele video en houdt hun nummer vast,
     terwijl de fijne passage alleen losse stukken rond de kandidaten ziet en dus na elk gat
     opnieuw zou beginnen tellen.
+
+    Met `wie` telt alleen een meting waar díe speler de piek-werper was: bij twee worpen kort
+    na elkaar mag de positie van speler A niet aan de worp van speler B hangen.
     """
     beste: tuple[float, dict] | None = None
     for r in reeks:
         if r.get('werper') is None:
+            continue
+        if wie is not None and str(r['werper']) != str(wie):
             continue
         afstand = abs(r.get('t', 1e9) - tijd)
         if afstand <= marge_s and (beste is None or afstand < beste[0]):
@@ -879,31 +957,46 @@ def werper_op(reeks: list[dict], tijd: float, marge_s: float = 1e-6) -> dict | N
     return beste[1] if beste else None
 
 
-def maak_events(momenten: list[tuple[float, float]], reeks: list[dict], match_id: int | None,
+def maak_events(momenten: list[tuple], reeks: list[dict], match_id: int | None,
                 drempel: float, werperreeks: list[dict] | None = None,
                 werper_marge_s: float = 1e-6) -> list[dict]:
-    return [
-        {
+    """`momenten` mag (t, score) zijn, of (t, score, werper-id) uit de per-speler-zoektocht.
+
+    Weet het moment zélf al wie er wierp, dan wint dat: de dichtstbijzijnde meting kan bij twee
+    worpen kort na elkaar de piek van de ándere speler dragen. De positie komt dan van een
+    meting waar diezélfde speler de piek was — of blijft weg, want een verkeerde plek is erger
+    dan geen.
+    """
+    events = []
+    for m in momenten:
+        t, s = m[0], m[1]
+        wie = m[2] if len(m) > 2 else None
+        bron = werperreeks if werperreeks is not None else reeks
+        w = werper_op(bron, t, werper_marge_s, wie=wie)
+        if w is not None:
+            # Wélke werper (een volgnummer dat door de hele video hetzelfde blijft zolang de
+            # speler gevolgd kan worden) en waar die stond. Daarmee groepeert de app de worpen
+            # per werper, zodat je één keer per speler zegt wie het is.
+            werper_velden = {'werper': w['werper'], 'werper_px': [w.get('x'), w.get('y')]}
+        elif wie is not None:
+            werper_velden = {'werper': wie, 'werper_px': [None, None]}
+        else:
+            werper_velden = {}
+        events.append({
             'match_id': match_id,
             'video_time_s': round(t, 3),
             'frame': None,
             'event_type': 'worp',
-            'worp_type': worp_type(reeks, t),
+            'worp_type': worp_type(reeks, t, wie=wie),
             'zone': None,
             'afstand_m': None,
             'speler': None,
             'score_delta': 0,
             'confidence': round(vertrouwen(s, drempel), 3),
-            # Wélke werper (een volgnummer dat door de hele video hetzelfde blijft zolang de
-            # speler gevolgd kan worden) en waar die stond. Daarmee groepeert de app de worpen
-            # per werper, zodat je één keer per speler zegt wie het is.
-            **(lambda w: {'werper': w['werper'], 'werper_px': [w.get('x'), w.get('y')]}
-               if w else {})(werper_op(werperreeks if werperreeks is not None else reeks, t,
-                                       werper_marge_s)),
+            **werper_velden,
             'provenance': {'model': MODEL_NAAM, 'model_version': MODEL_VERSION},
-        }
-        for t, s in momenten
-    ]
+        })
+    return events
 
 
 def _lever_afgeronde_reeks(meetreeks: list[dict], uit: Path, match_id: int | None,
@@ -920,9 +1013,14 @@ def _lever_afgeronde_reeks(meetreeks: list[dict], uit: Path, match_id: int | Non
     de bewaarde reeks geeft dezelfde worpen als de oorspronkelijke run — dat verrast de keten
     het minst, en het spaart ook nog het model laden uit.
     """
-    momenten = vind_worpmomenten(meetreeks, drempel, min_afstand)
+    # Per speler beslissen, net als de oorspronkelijke run; een oude reeks zonder
+    # `per_speler`-veld valt daarbinnen vanzelf terug op de frame-maximum-zoektocht.
+    momenten = [(t, s) for t, s, _wie in
+                vind_worpmomenten_per_speler(meetreeks, drempel, min_afstand)]
     # De werper komt uit de doorlopende (grove) passage; binnen de nakijkvensters bestaan die
-    # regels niet meer, dus de dichtstbijzijnde ernaast moet volstaan.
+    # regels niet meer, dus de dichtstbijzijnde ernaast moet volstaan. De werper-ids van de
+    # fijne passage zeggen niets over de wedstrijd als geheel, dus het per-speler-id van het
+    # moment zelf gaat hier bewust niet mee.
     grof = [r for r in meetreeks if r.get('passage') != 2]
     events = maak_events(momenten, meetreeks, match_id, drempel,
                          werperreeks=grof or None, werper_marge_s=1.0)
@@ -1083,8 +1181,11 @@ def main(argv: list[str] | None = None) -> None:
     vensters: list[tuple[float, float]] = []
     if args.twee_passages:
         # Bewust een lage drempel: wat de zoekpassage mist, kan het nakijken niet meer vinden.
-        # Vals alarm mag — dat sneuvelt straks alsnog op de echte drempel.
-        kandidaten = vind_worpmomenten(reeks, drempel * ZOEK_FACTOR, min_afstand * 0.5)
+        # Vals alarm mag — dat sneuvelt straks alsnog op de echte drempel. Per speler gezocht:
+        # werpen twee spelers kort na elkaar, dan verdient elk zijn eigen nakijkvenster.
+        kandidaten = [(t, s) for t, s, _wie in
+                      vind_worpmomenten_per_speler(reeks, drempel * ZOEK_FACTOR,
+                                                   min_afstand * 0.5)]
         # De video duurt minstens tot de laatste meting; `--tot` kan ze korter maken.
         videoduur = min(reeks[-1]['t'], args.tot) if args.tot else reeks[-1]['t']
         vensters = zoekvensters(kandidaten, ZOEK_MARGE_S, args.tot,
@@ -1134,9 +1235,15 @@ def main(argv: list[str] | None = None) -> None:
             for r in meetreeks:
                 f.write(json.dumps(r, ensure_ascii=False) + '\n')
 
+    # Per speler beslissen: twee spelers die binnen de minimale afstand van elkáár werpen
+    # (werper en vanger die terugwerpt, twee velden naast elkaar) zijn twee worpen.
+    momenten_per_speler = vind_worpmomenten_per_speler(meetreeks, drempel, min_afstand)
     # De wérper komt uit de doorlopende passage: die volgt de spelers door de hele wedstrijd,
-    # terwijl de fijne passage losse stukken ziet en na elk gat opnieuw begint te tellen.
-    momenten = vind_worpmomenten(meetreeks, drempel, min_afstand)
+    # terwijl de fijne passage losse stukken ziet en na elk gat opnieuw begint te tellen. Bij
+    # twee passages zijn de per-speler-ids van het moment dus lokale (fijne) nummers en gaan
+    # ze niet mee naar de events; in één passage zijn ze wél de doorlopende nummers.
+    momenten = ([(t, s) for t, s, _wie in momenten_per_speler] if fijn
+                else momenten_per_speler)
     events = maak_events(momenten, meetreeks, args.match, drempel,
                          werperreeks=reeks if fijn else None,
                          werper_marge_s=1.0 if fijn else 1e-6)

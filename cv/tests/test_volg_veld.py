@@ -738,6 +738,19 @@ class TestVolgVideoNep(unittest.TestCase):
         for t in (3.0, 6.5, 9.0):
             self.assertLess(self._veldfout(spoor, knipcamera, t), 0.05)
 
+    def test_rapport_meldt_absolute_fixes_en_retro_correcties(self):
+        # Óók in de videolus horen de nieuwe cijfers in het rapport: hoeveel fixes
+        # absoluut waren, en hoeveel ketenfout er retroactief verdeeld is.
+        nep = _NepCv2(lambda t: vv.eenheid(), duur_s=10.0, flow_bias_px=(0.0, 1.0))
+        _spoor, rapport = self._volg(nep, {'ankers': [
+            {'tijd_s': 0.0, 'matrix_beeld_naar_veld': self.kal}]}, fps=2.0, heranker=1.0)
+        self.assertGreater(rapport['absolute_fixes'], 0)
+        self.assertLessEqual(rapport['absolute_fixes'], rapport['ankers'])
+        self.assertGreater(rapport['retro_correcties'], 0)
+        self.assertIsNotNone(rapport['retro_correctie_mediaan_m'])
+        self.assertGreaterEqual(rapport['retro_correctie_max_m'], rapport['retro_correctie_mediaan_m'])
+        self.assertIn('toelichting_retro', rapport)
+
     def test_rapport_meet_de_drift_die_elke_herankering_wegneemt(self):
         # De flow loopt 1 px per stap weg; de herankeringen trekken dat telkens terug. Het
         # rapport hoort die verplaatsing te melden — een eerlijker maat voor de fout
@@ -750,3 +763,168 @@ class TestVolgVideoNep(unittest.TestCase):
         self.assertLess(rapport['heranker_verplaatsing_p95_m'], 1.0)
         self.assertIn('toelichting_ankerfout', rapport)
         self.assertIn('toelichting_verplaatsing', rapport)
+
+class TestAbsoluteFixes(unittest.TestCase):
+    """Herlokalisatie: op elk herankermoment een ABSOLUTE fix uit de lijnen zelf, en de
+    opgestapelde ketenfout retroactief over het tussenstuk verdeeld.
+
+    Vroeger was elke herankering een prior-getetherde correctie van de geketende stand
+    (gewicht 0,1 naar de gedrifte matrix): een fractie van de drift bleef in elke
+    "geslaagde" fix plakken en ketende van daaruit verder. Gemeten: bij 0,8 m drift
+    hield de tether er 0,18 m van vast; de absolute fix nog 0,001 m.
+    """
+
+    def setUp(self):
+        self.kal = vv.inverteer([[12.0, 0.0, 260.0], [0.0, 12.0, 60.0], [0.0, 0.0, 1.0]])
+        self.lijnen = vv.veldlijnen(10.0)
+        self.veldpunten = [(x, y) for x in (2.0, 7.0, 12.0) for y in (5.0, 23.0, 41.0)]
+        self.midden = (7.0, 23.0)  # het veldmidden: 14 m breed, 46 m lang
+
+    def _segmenten(self, matrix, namen=None):
+        # De veldlijnen zoals een (perfecte) detector ze in dit beeld zou zien.
+        naar_beeld = vv.inverteer(matrix)
+        return [(vv.projecteer(naar_beeld, *a), vv.projecteer(naar_beeld, *b))
+                for naam, a, b in self.lijnen if namen is None or naam in namen]
+
+    def _gedrift(self, meter):
+        return vv.normaliseer(vv.maal([[1.0, 0.0, 0.0], [0.0, 1.0, meter], [0.0, 0.0, 1.0]], self.kal))
+
+    def test_absolute_fix_laat_de_tether_naar_de_gedrifte_stand_los(self):
+        # De keten is 0,8 m weggedreven; alle lijnen zijn zichtbaar. De klassieke
+        # herankering houdt via de prior een deel van die drift vast; de absolute fix
+        # meet dit frame rechtstreeks tegen het veldmodel en haalt hem er (bijna)
+        # volledig uit. Zonder veranker_absoluut faalt deze test.
+        gedrift = self._gedrift(0.8)
+        segmenten = self._segmenten(self.kal)
+        getetherd, _f1, _g1 = vv.veranker_op_lijnen(
+            gedrift, segmenten, self.lijnen, veldpunten=self.veldpunten)
+        absoluut_m, fout, gebruikt, absoluut = vv.veranker_absoluut(
+            gedrift, segmenten, self.lijnen, veldpunten=self.veldpunten)
+        self.assertTrue(absoluut)
+        self.assertGreater(gebruikt, 0)
+        rest_tether = max(vv.veldfout_m(getetherd, self.kal, self.veldpunten))
+        rest_absoluut = max(vv.veldfout_m(absoluut_m, self.kal, self.veldpunten))
+        self.assertGreater(rest_tether, 0.1)          # de tether houdt drift vast (gemeten: 0,18 m)
+        self.assertLess(rest_absoluut, 0.02)          # de absolute fix niet (gemeten: 0,001 m)
+        self.assertLess(rest_absoluut, rest_tether / 5)
+        self.assertLess(fout, 0.01)
+
+    def test_zonder_volledige_waarneming_gedraagt_de_herankering_zich_als_vroeger(self):
+        # Drie lijnen (twee dwars + één zijlijn) leggen maar zes van de acht
+        # vrijheidsgraden vast: geen absolute fix, en de uitkomst is exact die van de
+        # klassieke, prior-getetherde herankering — daar is de prior geen bug maar de
+        # enige rem op een veld dat vrij uitrekt.
+        gedrift = self._gedrift(0.5)
+        segmenten = self._segmenten(self.kal, {'doellijn_thuis', 'middellijn', 'zijlijn_links'})
+        klassiek = vv.veranker_op_lijnen(gedrift, segmenten, self.lijnen, veldpunten=self.veldpunten)
+        matrix, fout, gebruikt, absoluut = vv.veranker_absoluut(
+            gedrift, segmenten, self.lijnen, veldpunten=self.veldpunten)
+        self.assertFalse(absoluut)
+        self.assertEqual((matrix, fout, gebruikt), klassiek)
+
+    def test_alleen_evenwijdige_lijnen_geeft_geen_fix_en_raakt_niets_aan(self):
+        gedrift = self._gedrift(0.5)
+        dwars = {n for n, _a, _b in self.lijnen if not n.startswith('zijlijn')}
+        segmenten = self._segmenten(self.kal, dwars)
+        matrix, fout, gebruikt, absoluut = vv.veranker_absoluut(
+            gedrift, segmenten, self.lijnen, veldpunten=self.veldpunten)
+        self.assertEqual(gebruikt, 0)
+        self.assertFalse(absoluut)
+        self.assertEqual(matrix, gedrift)
+        self.assertEqual(fout, float('inf'))
+
+    def _mini_spoor(self, stap_s=0.5, duur=16.0, fix_elke=4.0, drift_px=1.2):
+        """Een keten met gekende, deterministische drift (1,2 px = 0,1 m per stap) bij een
+        stilstaande camera, met om de `fix_elke` seconden een absolute fix op de lijnen.
+        De grondwaarheid is dan overal gewoon de kalibratie."""
+        segmenten = self._segmenten(self.kal)
+        keten = vv.eenheid()
+        basis = self.kal
+        momenten = [(0.0, vv.eenheid(), 'kalibratie', 0.0, 0)]
+        waarnemingen = [(0.0, self.kal, 0)]
+        laatste = 0.0
+        t = stap_s
+        while t <= duur + 1e-9:
+            stap_fout = [[1.0, 0.0, 0.0], [0.0, 1.0, drift_px], [0.0, 0.0, 1.0]]
+            keten = vv.normaliseer(vv.maal(keten, stap_fout))
+            bron, fout = 'flow', float('inf')
+            if t - laatste >= fix_elke - 1e-9:
+                stand = vv.normaliseer(vv.maal(basis, keten))
+                fix, fout, gebruikt, absoluut = vv.veranker_absoluut(
+                    stand, segmenten, self.lijnen, veldpunten=self.veldpunten)
+                self.assertGreater(gebruikt, 0)
+                self.assertTrue(absoluut)
+                basis = vv.basis_uit_anker(fix, keten)
+                waarnemingen.append((t, basis, 0))
+                bron, laatste = 'lijnen', t
+            momenten.append((t, keten, bron, fout, 0))
+            t += stap_s
+        spoor, extra = vv.bouw_spoor(momenten, waarnemingen, veldmidden=self.midden)
+        return spoor, extra, momenten, waarnemingen
+
+    def _vooruit_geketend(self, momenten, waarnemingen, t):
+        """Het oude gedrag: de laatst gezette fix vooruit doorketenen tot de volgende."""
+        basis = [wb for wt, wb, _ws in waarnemingen if wt <= t + 1e-9][-1][:]
+        mk = next(m[1] for m in momenten if abs(m[0] - t) < 1e-9)
+        return vv.maal(basis, mk)
+
+    def test_ketendrift_wordt_door_absolute_fixes_retroactief_weggecorrigeerd(self):
+        # Fixes op 4, 8, 12 en 16 s; drift 0,1 m per halve seconde. Halverwege een
+        # tussenstuk (t=6) staat de vooruit geketende meting er 0,4 m naast — precies de
+        # opgestapelde ketenfout. Na de retroactieve verdeling is de fout op het
+        # veldmidden begrensd door de afstand tot de dichtstbijzijnde fix, en hier
+        # (lineaire drift, lineaire verdeling) vrijwel nul. Zonder de wijziging faalt
+        # deze test: vroeger bestond er geen absolute fix en bleef de fout vooruit staan.
+        spoor, extra, momenten, waarnemingen = self._mini_spoor()
+        voor = vv.veldfout_m(self._vooruit_geketend(momenten, waarnemingen, 6.0),
+                             self.kal, [self.midden])[0]
+        na = vv.veldfout_m(spoor.op(6.0), self.kal, [self.midden])[0]
+        self.assertGreater(voor, 0.3)     # de keten was echt weggedreven (gemeten: 0,40 m)
+        self.assertLess(na, 0.05)         # en de retro-correctie haalt dat eruit (gemeten: 0,0004 m)
+        self.assertLess(na, voor / 4)
+        # Het rapport meldt eerlijk wat er verdeeld is: per tussenstuk ~0,8 m ketenfout.
+        self.assertEqual(extra['retro_correcties'], 4)
+        self.assertGreater(extra['retro_correctie_mediaan_m'], 0.6)
+        self.assertLessEqual(extra['retro_correctie_mediaan_m'], extra['retro_correctie_max_m'])
+        self.assertLess(extra['retro_correctie_max_m'], 1.0)
+
+    def test_retro_correctie_verspreidt_glad_zonder_sprong_op_de_naad(self):
+        # De correctie hoort over het tussenstuk uitgesmeerd te zijn: tussen twee
+        # opeenvolgende momenten mag het veldmidden nooit verspringen met iets in de
+        # buurt van de volle ketenfout (0,8 m) — dat was precies de naad die het oude
+        # vooruit-ketenen op elk fixmoment liet vallen.
+        spoor, _extra, momenten, waarnemingen = self._mini_spoor()
+        sprongen = [vv.veldfout_m(p1['H'], p0['H'], [self.midden])[0]
+                    for p0, p1 in zip(spoor.punten, spoor.punten[1:])]
+        self.assertLess(max(sprongen), 0.1)
+        # Ter contrast: vooruit geketend springt het veld op de naad bij t=8 wél.
+        naad = vv.veldfout_m(self._vooruit_geketend(momenten, waarnemingen, 7.5),
+                             self._vooruit_geketend(momenten, waarnemingen, 8.0), [self.midden])[0]
+        self.assertGreater(naad, 0.5)
+
+    def test_demo_meet_de_winst_van_de_retro_correctie(self):
+        # De volledige demolus: het rapport moet melden hoeveel fixes absoluut waren en
+        # hoe groot de retro-correcties waren, en de fout op het veldmidden mag mét
+        # retro-correctie niet groter zijn dan zonder.
+        start = vv.inverteer([[12.0, 0.0, 260.0], [0.0, 12.0, 60.0], [0.0, 0.0, 1.0]])
+        _spoor, rapport = vv.demo_spoor(seed=7, duur_s=120.0, kalibratie=start, stap_s=0.25)
+        self.assertGreater(rapport['absolute_fixes'], 10)
+        self.assertLessEqual(rapport['absolute_fixes'], rapport['ankers'])
+        self.assertIsNotNone(rapport['retro_correctie_mediaan_m'])
+        self.assertGreater(rapport['retro_correctie_max_m'], 0.0)
+        self.assertLessEqual(rapport['fout_veldmidden_m'], rapport['fout_veldmidden_zonder_retro_m'])
+        self.assertLessEqual(rapport['fout_mediaan_m'], rapport['fout_mediaan_zonder_retro_m'] + 0.01)
+
+    def test_demo_zonder_enkele_fix_gedraagt_zich_als_vroeger(self):
+        # Geen enkele geslaagde fix (herankeren staat feitelijk uit): dan is er niets te
+        # verdelen en volgt het spoor gewoon de keten vanaf de kalibratie — het oude
+        # gedrag, inclusief de eerlijke melding dat er niets gecorrigeerd is.
+        start = vv.inverteer([[12.0, 0.0, 260.0], [0.0, 12.0, 60.0], [0.0, 0.0, 1.0]])
+        _spoor, rapport = vv.demo_spoor(seed=5, duur_s=20.0, kalibratie=start,
+                                        heranker_interval_s=999.0)
+        self.assertEqual(rapport['ankers'], 0)
+        self.assertEqual(rapport['absolute_fixes'], 0)
+        self.assertIsNone(rapport['retro_correctie_mediaan_m'])
+        # Zonder fixes ís het spoor de ongecorrigeerde keten: beide cijfers vallen samen.
+        self.assertAlmostEqual(rapport['fout_mediaan_m'],
+                               rapport['fout_mediaan_zonder_ankers_m'], delta=0.02)
