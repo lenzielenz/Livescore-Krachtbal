@@ -35,9 +35,11 @@ import { advanceHalf, buildMatchState, recordThrow, startMatch } from './match-e
 //    wedstrijd waarin alles in helft 1 staat en het wedstrijdblad geen tweede helft kent. Is de
 //    aftrap van de tweede helft geijkt, dan wisselen we op dát videomoment van helft; is ze dat
 //    niet, dan staat álles in helft 1 — en dat zegt het rapport er dan ook bij.
-//  • UIT kan niet uit de video komen. De engine noemt een worp pas 'uit' als het landingspunt
-//    buiten het veld ligt, maar de importbrug weigert net zulke punten. Een buitenspel-voorstel
-//    wordt dus een gewone worp in het veld. Eerlijk vermelden is het enige wat we kunnen doen.
+//  • UIT komt wél uit de video, sinds de landing niet meer op de veldrand geklemd wordt: een
+//    voorstel met de uitbal-vlag draagt zijn échte landingspunt (buiten de lijnen), en precies
+//    daaruit leidt de engine zelf out_side/out_back af. Alleen een uitbal-punt dat te ver
+//    buiten het veld ligt om geloofwaardig te zijn, valt nog af — dat staat dan bij
+//    'overgeslagen', niet stilzwijgend weg.
 //  • De AUDIT-TRAIL blijft leeg: we zetten géén 'createdBy'. Anders zou er in het wedstrijdblad
 //    staan dat een mens deze zestig worpen intikte, terwijl een model ze aandroeg.
 
@@ -169,8 +171,6 @@ export async function zetVoorstellenOver(
       : []),
     'Een worp die het model miste, schuift de balbezit-keten op: vanaf daar kan de ploeg die aan '
       + 'bal is verschillen van wat er echt gebeurde.',
-    'Uitballen kunnen niet uit de video komen: een landingspunt ligt altijd binnen het veld, dus '
-      + 'ze worden als een gewone worp geteld.',
   ]
 
   if (droog) {

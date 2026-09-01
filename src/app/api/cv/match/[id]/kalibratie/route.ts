@@ -89,6 +89,70 @@ function leesBeelden(body: Record<string, unknown>): { beelden: Beeld[] } | { fo
   return { beelden: beelden.sort((a, b) => a.tijd - b.tijd) }
 }
 
+type Veldmaten = { diepte: number; breedte: number | null; speelveld: number | null }
+
+// Spiegel van VRIJEWORP_OFFSET_M in cv/veld.py (en freeThrowOffsetM in src/lib/field.ts).
+const VRIJEWORP_OFFSET_M = 4
+
+/** Veldcoördinaat (meters) van een kruispunt-label — spiegel van veld.kruispunten() in cv/veld.py. */
+function veldpunt(label: string, veld: Veldmaten): { x: number; y: number } {
+  const breedte = veld.breedte ?? 14
+  const lengte = (veld.speelveld ?? 26) + 2 * veld.diepte
+  const dwars: Record<string, number> = {
+    achterlijn_thuis: 0,
+    doellijn_thuis: veld.diepte,
+    vrijeworplijn_thuis: veld.diepte + VRIJEWORP_OFFSET_M,
+    middellijn: lengte / 2,
+    vrijeworplijn_uit: lengte - veld.diepte - VRIJEWORP_OFFSET_M,
+    doellijn_uit: lengte - veld.diepte,
+    achterlijn_uit: lengte,
+  }
+  const lijn = label.replace(/_(links|rechts)$/, '')
+  return { x: label.endsWith('_links') ? 0 : breedte, y: dwars[lijn] ?? 0 }
+}
+
+/** Liggen al deze veldpunten op één rechte? De lijn door de twee verst uiteenliggende punten telt. */
+function collineair(pts: { x: number; y: number }[]): boolean {
+  if (pts.length < 3) return true
+  let a = pts[0]
+  let b = pts[0]
+  let verste = -1
+  for (const p of pts) {
+    for (const q of pts) {
+      const d = (p.x - q.x) ** 2 + (p.y - q.y) ** 2
+      if (d > verste) {
+        verste = d
+        a = p
+        b = q
+      }
+    }
+  }
+  const lengte = Math.sqrt(verste)
+  if (lengte < 1e-9) return true // alle punten vallen samen
+  return pts.every((p) => Math.abs((b.x - a.x) * (p.y - a.y) - (b.y - a.y) * (p.x - a.x)) / lengte < 1e-3)
+}
+
+/**
+ * Legt deze puntenset het veld wél vast? Een set waarvan alle punten op één na op één rechte
+ * liggen (bv. drie punten op de linkerzijlijn en één rechts — één zijlijn afgedekt door
+ * spelers) heeft oneindig veel exact passende oplossingen: de fit slaagt, het rapport oogt
+ * perfect, en de metingen aan de andere kant van het veld zitten er meters naast. Dezelfde
+ * toets zit in calibrate.py (controleer_ontaarding); hier gespiegeld zodat de gebruiker het
+ * al bij het aanduiden hoort — ook op een server zonder Python.
+ */
+function ontaardeMelding(punten: Punt[], veld: Veldmaten): string | null {
+  const veldpunten = punten.map((p) => veldpunt(p.label, veld))
+  for (let i = 0; i < veldpunten.length; i++) {
+    if (collineair(veldpunten.filter((_, j) => j !== i))) {
+      return (
+        'De aangeduide punten liggen op één na allemaal op één rechte — zo ligt het veld ' +
+        'niet vast. Duid minstens twee punten op élke zijlijn aan, goed uit elkaar.'
+      )
+    }
+  }
+  return null
+}
+
 /** Hoeveel meter is één pixel waard, per derde van het veld? */
 export type Precisie = { thuis?: number; midden?: number; uit?: number; slechtste?: number }
 
@@ -102,7 +166,7 @@ export type Standpunt = {
 /** Fit de punten met calibrate.py: lukt dat, dan is de kalibratie bruikbaar. */
 async function controleer(
   punten: Punt[],
-  veld: { diepte: number; breedte: number | null; speelveld: number | null },
+  veld: Veldmaten,
   beeld: { positie?: string | null; breedtePx?: number | null; hoogtePx?: number | null } = {},
 ): Promise<{ ok: true; precisie: Precisie | null; standpunt: Standpunt | null } | { ok: false; melding: string }> {
   const map = await fs.mkdtemp(path.join(os.tmpdir(), 'kal-'))
@@ -191,6 +255,18 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     diepte: (match.goalAreaDepth as number) ?? 10,
     breedte: (match.veldBreedte as number | null) ?? null,
     speelveld: (match.veldSpeelveld as number | null) ?? null,
+  }
+
+  // Eerst de ontaardingscontrole, vóór er iets gefit wordt: een set die het veld wiskundig
+  // niet vastlegt hoort de gebruiker meteen bij het aanduiden te horen — ook een spiegelwissel
+  // maakt zo'n set niet goed, en zonder Python op de server zou ze anders stil doorglippen.
+  for (const [i, beeld] of gelezen.beelden.entries()) {
+    if (beeld.punten.length < 4) continue
+    const melding = ontaardeMelding(beeld.punten, veldmaten)
+    if (melding != null) {
+      const waar = gelezen.beelden.length > 1 ? `Beeld ${i + 1}: ` : ''
+      return Response.json({ error: `${waar}${melding}` }, { status: 400 })
+    }
   }
 
   // Elk beeld met vier of meer punten moet op zichzelf een geldig veld opleveren. Een beeld

@@ -17,6 +17,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from train import (  # noqa: E402
     benoem,
+    keten_momenten,
     kies_apart,
     lees_labels,
     lees_reeks,
@@ -71,6 +72,67 @@ class TestScoor:
         reeks = maak_reeks([(10.0, 3.0)])
         assert scoor(reeks, [15.0], 1.0, 3.0, venster=2.0)['gevonden'] == 0
         assert scoor(reeks, [15.0], 1.0, 3.0, venster=6.0)['gevonden'] == 1
+
+
+def maak_twee_passages_reeks() -> list[dict]:
+    """Een reeks zoals houding.py ze na een voltooide twee-passages-run herschrijft.
+
+    Grof (8/s, passage 1) waar de zoekpassage van díe run niets zag; fijn (25/s, passage 2)
+    alleen rond haar kandidaat op t=30 (fijne piek 0,47). De worp op t=80 lag met zijn grove
+    piek 0,31 onder de zoekdrempel van die oude run en is dus nooit fijn gemeten.
+    """
+    reeks = []
+    for i in range(801):
+        t = i * 0.125
+        if 29.2 <= t <= 30.8:
+            continue  # binnen het oude nakijkvenster zijn de grove regels vervangen
+        reeks.append({'t': round(t, 3), 'score': 0.31 if abs(t - 80.0) < 1e-9 else 0.15,
+                      'passage': 1})
+    for i in range(41):
+        t = 29.2 + i * 0.04
+        reeks.append({'t': round(t, 3), 'score': 0.47 if abs(t - 30.0) < 0.02 else 0.15,
+                      'passage': 2})
+    reeks.sort(key=lambda r: r['t'])
+    return reeks
+
+
+class TestKetenNaspel:
+    """De meetreeks is geconditioneerd op de drempel van de run die haar schreef: alleen fíjn
+    waar díe run kandidaten zag. De scoring moet daarom de keten naspelen — anders lijkt een
+    kandidaat-drempel worpen te missen die de gedeployde keten wél vindt (zoekdrempel × 0,40
+    vangt de grove piek, het nakijken tilt hem naar fijne schaal)."""
+
+    def test_alleen_grof_gemeten_worp_telt_op_fijne_schaal(self):
+        # Regressie (het recept van de doorlichting): kaal hertellen gaf 1/2 bij drempel 0,45,
+        # terwijl de keten 2/2 vindt: 0,45 × 0,40 = 0,18 ≤ 0,31 → venster → fijn 0,47 ≥ 0,45.
+        s = scoor(maak_twee_passages_reeks(), [30.0, 80.0], drempel=0.45, min_afstand=3.0)
+        assert s['gevonden'] == 2
+        assert s['vals'] == 0
+        assert s['recall'] == 1.0
+
+    def test_de_naspeling_verzint_geen_worpen_boven_de_fijne_schaal(self):
+        # 0,31 × GROF_NAAR_FIJN = 0,465 < 0,7: ook de echte keten zou deze worp missen.
+        s = scoor(maak_twee_passages_reeks(), [30.0, 80.0], drempel=0.7, min_afstand=3.0)
+        assert s['gevonden'] == 0
+
+    def test_naspeling_dedupliceert_met_de_kale_telling(self):
+        # De fijne piek op t=30 mag niet nóg eens als nagespeelde grove piek meetellen.
+        momenten = keten_momenten(maak_twee_passages_reeks(), 0.45, 3.0)
+        assert momenten == [30.0, 80.0]
+
+    def test_homogene_reeks_blijft_kaal_geteld(self):
+        # Zonder passage-merktekens (één passage) ís wat er staat wat de keten zag: daar
+        # zou de naspeling worpen verzinnen die de keten nooit fijn hermeten heeft.
+        reeks = maak_reeks([(80.0, 0.31)], duur=100.0, rust=0.15)
+        assert scoor(reeks, [80.0], drempel=0.45, min_afstand=3.0)['gevonden'] == 0
+
+    def test_lees_reeks_bewaart_het_passage_merkteken(self, tmp_path):
+        # Zonder het merkteken op schijf valt de naspeling stil weg na een JSON-rondgang.
+        pad = tmp_path / 'reeks.jsonl'
+        pad.write_text('\n'.join(json.dumps(r) for r in maak_twee_passages_reeks()),
+                       encoding='utf-8')
+        s = scoor(lees_reeks(pad), [30.0, 80.0], drempel=0.45, min_afstand=3.0)
+        assert s['gevonden'] == 2
 
 
 class TestScoorSamen:
@@ -162,6 +224,24 @@ class TestLezen:
         pad = tmp_path / 'reeks.jsonl'
         pad.write_text('{"t": 2.0, "score": 1.0}\n\n{"t": 1.0, "score": 0.5}\n', encoding='utf-8')
         assert [r['t'] for r in lees_reeks(pad)] == [1.0, 2.0]
+
+    def test_reeks_met_per_speler_veld_traint_gewoon_mee(self, tmp_path):
+        # houding.py schrijft sinds de romp-relatieve meting een compact per_speler-veld per
+        # regel (werper-id → score). Trainen gebeurt (nog) op de beste score per moment; het
+        # veld mag het inlezen en scoren dus niet breken. Per speler leren is een volgende stap.
+        pad = tmp_path / 'reeks.jsonl'
+        regels = []
+        t = 0.0
+        while t <= 60.0:
+            r = {'t': round(t, 2), 'score': 0.15, 'polshoogte': 0.4}
+            if abs(t - 10.0) < 1e-9:
+                r.update(score=3.0, per_speler={'0': 3.0, '1': 0.4}, werper=0)
+            regels.append(json.dumps(r))
+            t += 0.2
+        pad.write_text('\n'.join(regels), encoding='utf-8')
+        s = scoor(lees_reeks(pad), [10.0], drempel=1.0, min_afstand=3.0)
+        assert s['gevonden'] == 1
+        assert s['vals'] == 0
 
     def test_weigert_een_reeks_zonder_score(self, tmp_path):
         pad = tmp_path / 'reeks.jsonl'

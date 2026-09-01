@@ -10,8 +10,10 @@ detector die het event-JSON van de brug schrijft) met de weak labels van
   worp-momenten: vangst, doelpunt en buitenspel zijn aflopen van een worp —
   het zijn dus allemaal worpen, enkel de afloop verschilt (zie cv/README.md,
   sync.py verfijnt het event_type met de outcome). Labels met een ander
-  event_type worden genegeerd (en apart geteld). Elke detectieregel telt als
-  één worp-kandidaat.
+  event_type worden genegeerd (en apart geteld), net als labels met verdict
+  ``afgewezen`` (ground truth van groundtruth.py: een door een mens afgewezen
+  voorstel is géén worp — dezelfde regel als train.lees_labels). Elke
+  detectieregel telt als één worp-kandidaat.
 - gemiddelde **|Δt|** van de gematchte paren (tijdsuitlijning van de detector);
 - **nekworp/rugworp-accuraatheid** over de gematchte paren waar zowel label
   als detectie een worp_type hebben, plus de 2×2-verwarringsmatrix.
@@ -97,9 +99,18 @@ def match_greedy(
 
 
 def evalueer(labels: list[dict], detecties: list[dict], venster: float) -> dict:
-    """Bereken alle fase 1-metrieken; None waar een metriek niet gedefinieerd is."""
-    worp_labels = [l for l in labels if l.get('event_type') in WORP_EVENT_TYPES]
-    genegeerd = len(labels) - len(worp_labels)
+    """Bereken alle fase 1-metrieken; None waar een metriek niet gedefinieerd is.
+
+    Ground truth uit de reviewlaan (groundtruth.py) draagt een verdict mee; een door een
+    mens afgewezen voorstel is per definitie géén worp — dezelfde regel als train.lees_labels.
+    Zonder die filter zou een detector die zijn eigen valse positieven herhaalt beloond
+    worden: het afgewezen voorstel telde als label, en de herhaalde detectie als treffer.
+    """
+    afgewezen = sum(1 for l in labels
+                    if l.get('event_type') in WORP_EVENT_TYPES and l.get('verdict') == 'afgewezen')
+    worp_labels = [l for l in labels
+                   if l.get('event_type') in WORP_EVENT_TYPES and l.get('verdict') != 'afgewezen']
+    genegeerd = len(labels) - len(worp_labels) - afgewezen
 
     matches = match_greedy(
         [float(l['video_time_s']) for l in worp_labels],
@@ -176,6 +187,7 @@ def evalueer(labels: list[dict], detecties: list[dict], venster: float) -> dict:
         'venster_s': venster,
         'labels': len(worp_labels),
         'labels_genegeerd': genegeerd,
+        'labels_afgewezen': afgewezen,
         'detecties': len(detecties),
         'tp': tp,
         'fp': fp,
@@ -230,6 +242,10 @@ def formatteer_rapport(m: dict) -> str:
     if m['labels_genegeerd']:
         regels.append(
             f'  ({m["labels_genegeerd"]} labels met een ander event_type genegeerd)'
+        )
+    if m.get('labels_afgewezen'):
+        regels.append(
+            f'  ({m["labels_afgewezen"]} door een mens afgewezen voorstellen niet als worp geteld)'
         )
 
     wt = m['worp_type']

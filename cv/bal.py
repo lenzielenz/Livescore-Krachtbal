@@ -31,10 +31,24 @@ een gat van een paar beelden (occlusie, motion blur) loopt de baan gewoon door.
 Het landingspunt volgt dan uit het model in plaats van uit de laatste toevallige blob, en dát
 is het punt dat door de homografie naar veldmeters gaat. Belangrijk: de homografie geldt alleen
 voor punten óp de grond, dus enkel op het moment dat de bal neerkomt — een bal in de lucht zou
-er "verder weg" uit zien dan hij is.
+er "verder weg" uit zien dan hij is. Verdwijnt de bal vlak vóór de grond achter een speler,
+dan wordt de parabool daarom doorgetrokken tot zijn grondpunt in plaats van te stoppen op de
+laatste blob (die hangt nog in de lucht); de uitvoer zegt erbij of de landing gezien is.
 
-De rekenkern (fitten, kiezen, landing bepalen) is puur en wordt getest met verzonnen banen,
-inclusief ruis, ontbrekende beelden en rondlopende spelers als stoorzenders.
+Eén stelsel om in te rekenen
+----------------------------
+De blobs komen per frame in de pixels van dát frame. Beweegt de camera, dan is "dezelfde
+plek" elk frame een ander pixelpunt — één parabool door die mengelmoes fitten verlegt de
+landing of drukt de kromming weg. Daarom gaan alle kandidaten éérst naar één
+referentiestelsel: via het homografiespoor van ``volg_veld.py`` (``--homografie``) als dat
+er is, anders door de frame-op-frame-stappen die de cameracompensatie toch al schat aan
+elkaar te ketenen. Valt zo'n stap weg (te weinig volgpunten), dan is dat een mogelijke
+camerasprong: het spoor breekt in stukken, en stukken worden nooit gemengd — een baan door
+twee stelsels bestaat in geen enkel frame.
+
+De rekenkern (fitten, kiezen, registreren, landing bepalen) is puur en wordt getest met
+verzonnen banen, inclusief ruis, ontbrekende beelden, camerabeweging en rondlopende spelers
+als stoorzenders.
 """
 
 from __future__ import annotations
@@ -47,6 +61,12 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+# Het matrixrekenen (puur stdlib) staat al in volg_veld.py — hier hergebruikt in plaats van
+# herschreven, zodat beide modules dezelfde homografie-conventies delen.
+from volg_veld import (  # noqa: E402
+    HomografieSpoor, Matrix, eenheid, inverteer, maal, normaliseer, projecteer,
+)
 
 # Een baan telt pas als baan vanaf zoveel punten die erop passen.
 MIN_PUNTEN = 5
@@ -211,25 +231,158 @@ def valt_echt(model: dict, punten: list[tuple[float, float, float]]) -> bool:
     return model['ey'] * duur * duur >= MIN_KROMMING_PX
 
 
-def landingsmoment(model: dict, punten: list[tuple[float, float, float]]) -> tuple[float, float, float]:
-    """Waar en wanneer de bal neerkomt: het laatste moment van de dalende tak.
+def landingsmoment(
+    model: dict, punten: list[tuple[float, float, float]], grond_y: float | None = None,
+) -> tuple[float, float, float, bool]:
+    """Waar en wanneer de bal neerkomt — en of dat grondpunt ook echt gezien is.
 
-    Uit het model in plaats van uit de laatste gemeten blob — dat scheelt de sprong die één
-    verkeerde detectie anders veroorzaakt, en werkt ook als de bal net vóór de grond achter
-    een speler verdwijnt.
+    De laatste blob is niet per se de grond: verdwijnt de bal vlak vóór de landing achter
+    een speler, dan hangt dat laatste punt nog in de lucht, en de grondhomografie zet een
+    luchtpunt systematisch te ver van de camera (meters fout op het veld). Daarom wordt de
+    parabool doorgetrokken tot zijn grondpunt: tot ``grond_y`` (de beeld-y van het veldvlak)
+    als de aanroeper die kent, anders tot de baan per symmetrie terug op loslaathoogte hangt
+    — de hand is niet de grond, maar het scheelt het gros van de occlusiefout. ``gezien``
+    zegt of de bal op het gekozen moment nog gemeten is (False = doorgetrokken), zodat de
+    keten een geschatte landing als minder zeker kan tonen.
     """
     t_eind = max(p[0] for p in punten)
+    t_begin = min(p[0] for p in punten)
     top = -model['dy'] / (2 * model['ey']) if model['ey'] > 0 else t_eind
-    t = max(t_eind, top)  # nooit vóór het hoogste punt landen
+    # Symmetrie: een parabool daalt even lang als hij steeg, dus op 2·top − begin hangt de
+    # bal weer op de hoogte waar hij losgelaten werd. Zagen we de stijgende tak niet
+    # (top ≤ begin), dan zegt symmetrie niets en blijft het laatste meetpunt over.
+    t_grond = max(top, 2 * top - t_begin)
+    if grond_y is not None and model['ey'] > 0:
+        # De grondlijn is bekend: neem het snijpunt van de dalende tak daarmee (grootste
+        # wortel). Haalt de gefitte boog de grondlijn niet, dan valt hij terug op symmetrie.
+        disc = model['dy'] ** 2 - 4 * model['ey'] * (model['cy'] - grond_y)
+        if disc >= 0:
+            t_grond = (-model['dy'] + math.sqrt(disc)) / (2 * model['ey'])
+    t = max(t_eind, top, t_grond)  # nooit vóór het hoogste punt landen
     x = model['ax'] + model['bx'] * t
     y = model['cy'] + model['dy'] * t + model['ey'] * t * t
-    return t, x, y
+    return t, x, y, t <= t_eind + 1e-9
 
 
 def loslaatmoment(model: dict, punten: list[tuple[float, float, float]]) -> tuple[float, float, float]:
     """Het begin van de baan: waar de bal de hand verlaat."""
     t = min(p[0] for p in punten)
     return t, model['ax'] + model['bx'] * t, model['cy'] + model['dy'] * t + model['ey'] * t * t
+
+
+# ---------------------------------------------------------------------------
+# Registreren: alle kandidaten naar één referentiestelsel (puur)
+# ---------------------------------------------------------------------------
+
+# Eén bemonsterd frame: (tijd, blobs op balgrootte, camerastap). De stap is de matrix die
+# pixels van het vórige frame op dit frame legt — de cameracompensatie schat hem toch al —
+# of None wanneer die schatting er niet was: dan is de stap onbekend.
+Waarneming = tuple[float, list[tuple[float, float]], Matrix | None]
+# Eén stuk zonder camerasprong: de kandidaten in referentiepixels, plus per frametijd de
+# matrix die dat frame naar de referentie bracht (nodig om er ook weer uit te komen).
+Stuk = tuple[list[tuple[float, float, float]], dict[float, Matrix]]
+
+
+def registreer_ketenend(waarnemingen: list[Waarneming]) -> list[Stuk]:
+    """Breng elk frame naar het stelsel van het eerste frame van zijn stuk.
+
+    De camerastappen worden aan elkaar geketend: wat de camera sinds het referentieframe
+    deed, wordt uit elke blobpositie teruggedraaid, zodat de baanfit één stelsel ziet. Een
+    frame zónder (bruikbare) stap is een mogelijke camerasprong: daar breekt de keten en
+    begint een nieuw stuk met een eigen referentie. Stukken onderling verhouden zich op een
+    onbekende manier — precies wat er ontbrak — dus die worden nooit gemengd.
+    """
+    stukken: list[Stuk] = []
+    kandidaten: list[tuple[float, float, float]] = []
+    registratie: dict[float, Matrix] = {}
+    keten = eenheid()
+    for i, (t, blobs, stap) in enumerate(waarnemingen):
+        volgende: Matrix | None = None
+        if i > 0 and stap is not None:
+            try:
+                # De stap legt het vórige frame op dít frame; naar de referentie is dus de
+                # inverse, geketend aan wat er al stond.
+                volgende = normaliseer(maal(keten, inverteer(stap)))
+            except ValueError:
+                volgende = None  # een ontaarde stap is even onbruikbaar als geen stap
+        if i > 0 and volgende is None:
+            if registratie:
+                stukken.append((kandidaten, registratie))
+            kandidaten, registratie = [], {}
+            keten = eenheid()
+        elif i > 0:
+            keten = volgende
+        registratie[t] = keten
+        for x, y in blobs:
+            rx, ry = projecteer(keten, x, y)
+            kandidaten.append((t, rx, ry))
+    if registratie:
+        stukken.append((kandidaten, registratie))
+    return stukken
+
+
+def registreer_met_veldspoor(waarnemingen: list[Waarneming], matrix_op) -> list[Stuk]:
+    """Breng alle frames via het veldvlak naar het stelsel van het eerste frame mét veldstand.
+
+    ``matrix_op`` (bv. ``HomografieSpoor.op`` uit volg_veld.py) geeft per moment de
+    beeld→veld-matrix. Beeld_t → veld → beeld_referentie registreert dan elk frame in
+    hetzelfde stelsel — óók over een camerasprong heen, want beide kanten kennen hun eigen
+    veldstand. Exact voor grondpunten, en voor een draaiende camera (pannen, kantelen) ook
+    voor de bal in de lucht. Frames zonder veldstand vallen weg: liever een gat in de baan
+    dan kandidaten in een zwevend stelsel.
+    """
+    kandidaten: list[tuple[float, float, float]] = []
+    registratie: dict[float, Matrix] = {}
+    ref_inv: Matrix | None = None
+    for t, blobs, _stap in waarnemingen:
+        h = matrix_op(t)
+        if h is None:
+            continue
+        try:
+            if ref_inv is None:
+                ref_inv = inverteer(h)
+            k = normaliseer(maal(ref_inv, h))
+        except ValueError:
+            continue  # een ontaarde veldstand kan geen registratie dragen
+        registratie[t] = k
+        for x, y in blobs:
+            rx, ry = projecteer(k, x, y)
+            kandidaten.append((t, rx, ry))
+    return [(kandidaten, registratie)] if registratie else []
+
+
+def beste_baan_uit_stukken(
+    stukken: list[Stuk],
+    min_punten: int = MIN_PUNTEN,
+    tolerantie: float = TOLERANTIE_PX,
+    rondes: int = RONDES,
+    seed: int = 7,
+) -> tuple[dict, list[tuple[float, float, float]], dict[float, Matrix]] | None:
+    """Zoek in elk stuk apart de baan en hou de beste (meeste passende punten).
+
+    Over een camerasprong heen fitten zou punten uit verschillende stelsels mengen — een
+    "baan" die in geen enkel frame bestaat — dus elk stuk staat op zichzelf.
+    """
+    beste = None
+    for kandidaten, registratie in stukken:
+        gekozen = kies_baan(kandidaten, min_punten, tolerantie, rondes, seed)
+        if gekozen is not None and (beste is None or len(gekozen[1]) > len(beste[1])):
+            beste = (gekozen[0], gekozen[1], registratie)
+    return beste
+
+
+def naar_framepixels(registratie: dict[float, Matrix], t: float, x: float, y: float) -> tuple[float, float]:
+    """Referentiestelsel → de pixels van het frame dat het dichtst bij ``t`` ligt.
+
+    De uitvoer van de baan hoort in de pixels van het frame van elk moment, want dáár geldt
+    de grondhomografie van de rest van de keten. Een geëxtrapoleerde landing valt ná het
+    laatste geziene frame; de camerastand van het dichtstbijzijnde bekende frame is dan de
+    best beschikbare benadering.
+    """
+    if not registratie:
+        return x, y
+    t_frame = min(registratie, key=lambda ft: abs(ft - t))
+    return projecteer(inverteer(registratie[t_frame]), x, y)
 
 
 # ---------------------------------------------------------------------------
@@ -250,16 +403,21 @@ def _laad_cv2():
         _fout('opencv ontbreekt — installeer met: pip install -r cv/requirements.txt')
 
 
-def bewegende_blobs(cv2, vorig_grijs, grijs, min_px: float, max_px: float) -> list[tuple[float, float]]:
-    """Wat er beweegt ná het wegrekenen van de camerabeweging, op balgrootte gefilterd.
+def bewegende_blobs(
+    cv2, vorig_grijs, grijs, min_px: float, max_px: float,
+) -> tuple[list[tuple[float, float]], Matrix | None]:
+    """Wat er beweegt ná het wegrekenen van de camerabeweging, plus die camerastap zelf.
 
     Zonder die compensatie is bij een pannende camera het hele beeld "beweging" en houd je
     niets bruikbaars over. Met compensatie blijven alleen de spelers en de bal over — en de
-    grootte zeeft daar de bal uit.
+    grootte zeeft daar de bal uit. De geschatte stap (vorig frame → dit frame) gaat mee
+    terug: daarmee worden de blobs later naar één referentiestelsel geketend in plaats van
+    per frame in een ander stelsel te blijven staan. Lukt de schatting niet, dan is de stap
+    None — de aanroeper weet dan dat dit frame niet aan het vorige te verbinden is.
     """
     import numpy as np  # noqa: PLC0415
 
-    uitgelijnd, masker = vorig_grijs, None
+    uitgelijnd, masker, stap = vorig_grijs, None, None
     p0 = cv2.goodFeaturesToTrack(vorig_grijs, maxCorners=300, qualityLevel=0.01, minDistance=12)
     if p0 is not None and len(p0) >= 8:
         p1, status, _ = cv2.calcOpticalFlowPyrLK(vorig_grijs, grijs, p0, None)
@@ -268,6 +426,7 @@ def bewegende_blobs(cv2, vorig_grijs, grijs, min_px: float, max_px: float) -> li
         if len(goed_oud) >= 8:
             m, _ = cv2.findHomography(goed_oud, goed_nieuw, cv2.RANSAC, 3.0)
             if m is not None:
+                stap = [[float(w) for w in rij] for rij in m]
                 uitgelijnd = cv2.warpPerspective(vorig_grijs, m, (grijs.shape[1], grijs.shape[0]))
                 masker = cv2.warpPerspective(np.full_like(vorig_grijs, 255), m,
                                              (grijs.shape[1], grijs.shape[0])) > 0
@@ -283,13 +442,13 @@ def bewegende_blobs(cv2, vorig_grijs, grijs, min_px: float, max_px: float) -> li
         (cx, cy), straal = cv2.minEnclosingCircle(c)
         if min_px <= 2 * straal <= max_px:
             uit.append((float(cx), float(cy)))
-    return uit
+    return uit, stap
 
 
-def verzamel_kandidaten(
+def verzamel_waarnemingen(
     videopad: Path, van_s: float, tot_s: float, min_px: float, max_px: float
-) -> list[tuple[float, float, float]]:
-    """Alle balgrote bewegende blobs in dit tijdvenster, als (t, x, y)."""
+) -> list[Waarneming]:
+    """Per frame in dit tijdvenster: (t, balgrote bewegende blobs, camerastap)."""
     cv2 = _laad_cv2()
     cap = cv2.VideoCapture(str(videopad))
     if not cap.isOpened():
@@ -301,7 +460,7 @@ def verzamel_kandidaten(
         cap.release()
         return []
     vorig_grijs = cv2.cvtColor(vorig, cv2.COLOR_BGR2GRAY)
-    uit: list[tuple[float, float, float]] = []
+    uit: list[Waarneming] = []
     while True:
         t = cap.get(cv2.CAP_PROP_POS_MSEC) / 1000.0
         if t > tot_s:
@@ -310,8 +469,8 @@ def verzamel_kandidaten(
         if not ok:
             break
         grijs = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        for x, y in bewegende_blobs(cv2, vorig_grijs, grijs, min_px, max_px):
-            uit.append((round(t, 3), x, y))
+        blobs, stap = bewegende_blobs(cv2, vorig_grijs, grijs, min_px, max_px)
+        uit.append((round(t, 3), blobs, stap))
         vorig_grijs = grijs
     cap.release()
     return uit
@@ -319,7 +478,7 @@ def verzamel_kandidaten(
 
 def baan_rond_worp(
     videopad: Path, worp_s: float, na_s: float = 6.0, min_px: float = 4.0, max_px: float = 40.0,
-    rondes: int = RONDES,
+    rondes: int = RONDES, matrix_op=None,
 ) -> dict | None:
     """De balbaan die bij deze worp hoort, met loslaat- en landingspunt in beeldcoördinaten.
 
@@ -327,21 +486,36 @@ def baan_rond_worp(
     decoderen van de video, maar verkleint de kans dat de bal ondersneeuwt tussen de bewegende
     spelers: op een druk beeld met veertig kandidaatblobs is 200 keer proberen niet altijd
     genoeg om de juiste drie punten te treffen.
+
+    `matrix_op` is de beeld→veld-matrix per moment (het volg_veld-spoor): daarmee worden de
+    kandidaten via het veldvlak in één stelsel gezet, ook over een camerasprong heen. Zonder
+    spoor worden de geschatte camerastappen geketend en wordt per aaneengesloten stuk gefit.
     """
-    kandidaten = verzamel_kandidaten(videopad, worp_s, worp_s + na_s, min_px, max_px)
-    gekozen = kies_baan(kandidaten, rondes=rondes)
-    if gekozen is None:
+    waarnemingen = verzamel_waarnemingen(videopad, worp_s, worp_s + na_s, min_px, max_px)
+    if matrix_op is not None:
+        stukken = registreer_met_veldspoor(waarnemingen, matrix_op)
+    else:
+        stukken = registreer_ketenend(waarnemingen)
+    beste = beste_baan_uit_stukken(stukken, rondes=rondes)
+    if beste is None:
         return None
-    model, punten = gekozen
-    los_t, los_x, los_y = loslaatmoment(model, punten)
-    land_t, land_x, land_y = landingsmoment(model, punten)
+    model, punten, registratie = beste
+    los_t, los_xr, los_yr = loslaatmoment(model, punten)
+    land_t, land_xr, land_yr, gezien = landingsmoment(model, punten)
+    # De fit leeft in het referentiestelsel; de uitvoer hoort in de pixels van het frame van
+    # elk moment zelf — dáár geldt de grondhomografie van de rest van de keten.
+    los_x, los_y = naar_framepixels(registratie, los_t, los_xr, los_yr)
+    land_x, land_y = naar_framepixels(registratie, land_t, land_xr, land_yr)
     return {
         'worp_s': round(worp_s, 3),
         'punten': len(punten),
-        'kandidaten': len(kandidaten),
+        'kandidaten': sum(len(k) for k, _ in stukken),
+        'stukken': len(stukken),
         'los': {'t': round(los_t, 3), 'x': round(los_x, 1), 'y': round(los_y, 1)},
-        'landing': {'t': round(land_t, 3), 'x': round(land_x, 1), 'y': round(land_y, 1)},
-        'spoor': [[round(t, 3), round(x, 1), round(y, 1)] for t, x, y in punten],
+        'landing': {'t': round(land_t, 3), 'x': round(land_x, 1), 'y': round(land_y, 1),
+                    'gezien': gezien},
+        'spoor': [[round(t, 3), *(round(w, 1) for w in naar_framepixels(registratie, t, x, y))]
+                  for t, x, y in punten],
     }
 
 
@@ -358,12 +532,24 @@ def main(argv: list[str] | None = None) -> None:
                    help=f'hoe vaak RANSAC een baan probeert (standaard {RONDES}). Meer rondes '
                         'kost weinig naast het decoderen en vindt de bal vaker terug op een '
                         'druk beeld.')
+    p.add_argument('--homografie', type=Path, default=None,
+                   help='homografie-JSONL van volg_veld.py — zet bij een bewegende camera de '
+                        'balkandidaten via het veldvlak eerst in één stelsel, ook over een '
+                        'camerasprong heen')
     args = p.parse_args(argv)
 
     if not args.video.is_file():
         _fout(f'video niet gevonden: {args.video}')
     if not args.detecties.is_file():
         _fout(f'detecties niet gevonden: {args.detecties}')
+    matrix_op = None
+    if args.homografie is not None:
+        if not args.homografie.is_file():
+            _fout(f'homografiebestand niet gevonden: {args.homografie} (maak het met cv/volg_veld.py)')
+        spoor = HomografieSpoor.lees(args.homografie)
+        if not spoor.punten:
+            _fout(f'{args.homografie} bevat geen momenten')
+        matrix_op = spoor.op
 
     worpen = []
     with args.detecties.open(encoding='utf-8') as f:
@@ -377,7 +563,8 @@ def main(argv: list[str] | None = None) -> None:
         t = e.get('video_time_s')
         if t is None:
             continue
-        baan = baan_rond_worp(args.video, float(t), args.na, args.min_px, args.max_px, args.rondes)
+        baan = baan_rond_worp(args.video, float(t), args.na, args.min_px, args.max_px,
+                              args.rondes, matrix_op)
         if baan is not None:
             banen.append(baan)
 

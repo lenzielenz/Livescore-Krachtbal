@@ -16,7 +16,10 @@ VIDEO (vereist opencv + een kalibratie-JSON van calibrate.py):
     moment waarop de neerwaartse beeldbeweging van de bal eindigt. Dat punt gaat
     door de homografie naar veldmeters. Dit is een v0.1-baseline: bij occlusie
     of een slecht zichtbare bal blijft de zone leeg (het voorstel behoudt dan
-    enkel zijn tijdstip) — beter géén zone dan een verzonnen zone.
+    enkel zijn tijdstip) — beter géén zone dan een verzonnen zone. Landt de bal
+    buiten de lijnen (meer dan aanduidruis), dan is dat een uitbal: het event
+    krijgt ``uitbal: true`` en de zone blijft leeg — vroeger klemde deze stap
+    zo'n punt op de veldrand en werd elke overgooide bal een doelpunt.
 
 DEMO (geen video nodig — oefent de hele lus en de metriek):
     python3 cv/landing.py --demo --detecties det.jsonl --labels labels.jsonl \
@@ -28,7 +31,19 @@ DEMO (geen video nodig — oefent de hele lus en de metriek):
 
 De afstand: het reglement meet van werpplaats tot landing. De werpplaats is
 voor de camera lastig; in videomodus schatten we ze als het eerste balpunt van
-het gevolgde traject (vlak na de worp), in demomodus blijft afstand_m leeg.
+het gevolgde traject (vlak na de worp), geprojecteerd met de matrix van het
+wórpmoment (de camera pant tussen worp en landing doorgaans mee met de bal).
+De bal hangt daar op loslaathoogte, dus de grondvlak-homografie projecteert hem
+voorbij de werper: met het camerastandpunt uit de kalibratie rekenen we die
+parallax weg, en §6.4 (nooit werpen van tussen doellijn en vrijeworplijn)
+schuift de werpplaats terug tot de vrijeworplijn — zoals de engine dat doet.
+Die (geprojecteerde, gecorrigeerde) werpplaats gaat als ``werpplaats`` mee in
+het event: in de app berekent het platform de afstand daar zélf uit met
+src/lib/field.ts (projectWerpplaats + distanceM, met de echte veldmaten van de
+wedstrijd) — één bron van waarheid. Het ``afstand_m`` hier blijft bestaan voor
+het CLI-rapport en de overlay (handig bij het los draaien van de keten), maar
+is enkel die benadering; in de app telt het niet mee. In demomodus blijven
+werpplaats en afstand_m leeg.
 """
 
 from __future__ import annotations
@@ -96,8 +111,88 @@ def klem_op_veld(
     breedte_m: float = veld.BREEDTE_M,
     speelveld_m: float = veld.SPEELVELD_LENGTE_M,
 ) -> tuple[float, float]:
+    """Klem een veldpunt hard op de veldranden — voor SPELERSposities (tracking.py).
+
+    Voor een LANDING is hard klemmen fout: een bal buiten de lijnen is een uitbal,
+    en op de rand geklemd zou hij als doelpunt tellen. De landing-paden gebruiken
+    daarom klem_of_uitbal hieronder.
+    """
     lengte = veld.totale_lengte_m(diepte_m, speelveld_m)
     return max(0.0, min(breedte_m, x_m)), max(0.0, min(lengte, y_m))
+
+
+# Tot zover buiten de lijnen is een geprojecteerde landing aanduid-/meetruis en mag ze
+# op de rand geklemd worden; verder erbuiten is het een echte uitbal.
+KLEM_TOLERANTIE_M = 0.3
+
+
+def klem_of_uitbal(
+    x_m: float,
+    y_m: float,
+    diepte_m: float,
+    breedte_m: float = veld.BREEDTE_M,
+    speelveld_m: float = veld.SPEELVELD_LENGTE_M,
+) -> tuple[float, float, bool]:
+    """Landing naast de lijn? Alleen aanduidruis wordt geklemd; verder is het uitbal.
+
+    Meer dan KLEM_TOLERANTIE_M buiten de lijnen geven we het échte (ongeklemde) punt
+    terug met uitbal=True: het reglement telt zo'n bal als uit (0 punten), en de oude
+    veldrand-klem maakte er stilzwijgend een doelpunt op de lijn van.
+    """
+    lengte = veld.totale_lengte_m(diepte_m, speelveld_m)
+    buiten = max(-x_m, x_m - breedte_m, -y_m, y_m - lengte, 0.0)
+    if buiten > KLEM_TOLERANTIE_M:
+        return x_m, y_m, True
+    x_klem, y_klem = klem_op_veld(x_m, y_m, diepte_m, breedte_m, speelveld_m)
+    return x_klem, y_klem, False
+
+
+# De bal verlaat de hand boven het hoofd; 2 m is een redelijke loslaathoogte voor de
+# parallax-correctie hieronder (de exacte waarde weegt licht: de fout schaalt met h/H).
+WERP_HOOGTE_M = 2.0
+
+
+def corrigeer_werphoogte(
+    x_m: float,
+    y_m: float,
+    standpunt: dict,
+    werp_hoogte_m: float = WERP_HOOGTE_M,
+) -> tuple[float, float]:
+    """Parallax van het loslaatpunt wegrekenen met het camerastandpunt.
+
+    De grondvlak-homografie projecteert een punt op hoogte h op de plek waar de
+    zíchtlijn de grond raakt — d·h/(H−h) voorbij de werper, van de camera af. Met
+    het teruggerekende standpunt (x, y, hoogte H uit calibrate.py) schuift het punt
+    met factor (H−h)/H terug richting camera: exact de gelijkvormige driehoeken van
+    die projectie. Camera op of onder loslaathoogte → niet corrigeerbaar, punt
+    blijft staan (beter ongecorrigeerd dan de verkeerde kant op geschoven).
+    """
+    hoogte = float(standpunt.get('hoogte_m') or 0.0)
+    if hoogte <= werp_hoogte_m:
+        return x_m, y_m
+    factor = (hoogte - werp_hoogte_m) / hoogte
+    cx, cy = float(standpunt['x_m']), float(standpunt['y_m'])
+    return cx + factor * (x_m - cx), cy + factor * (y_m - cy)
+
+
+def projecteer_vrijeworplijn(
+    y_m: float,
+    diepte_m: float,
+    speelveld_m: float = veld.SPEELVELD_LENGTE_M,
+) -> float:
+    """Reglement §6.4, spiegel van projectWerpplaats in field.ts.
+
+    Van tussen doellijn en vrijeworplijn wordt nooit geworpen: de werpplaats schuift
+    terug tot óp de vrijeworplijn. Punten ín een doelgebied blijven staan (daar geldt
+    de doellijn-uitzondering van §6.4; de opzetcontext kent de CV toch niet).
+    """
+    lengte = veld.totale_lengte_m(diepte_m, speelveld_m)
+    vrijeworp = diepte_m + veld.VRIJEWORP_OFFSET_M
+    if diepte_m <= y_m < vrijeworp:
+        return vrijeworp
+    if lengte - vrijeworp < y_m <= lengte - diepte_m:
+        return lengte - vrijeworp
+    return y_m
 
 
 # ---------------------------------------------------------------------------
@@ -143,10 +238,21 @@ def demo_landing(
         else:
             x_m = rng.uniform(0.0, breedte_m)
             y_m = rng.uniform(0.0, lengte)
-        x_m, y_m = klem_op_veld(x_m, y_m, diepte_m, breedte_m, speelveld_m)
-        zone, score = zone_en_score(x_m, y_m, det.get('worp_type'), diepte_m, breedte_m, speelveld_m)
-        det['zone'] = zone
-        det['score_delta'] = score
+        x_m, y_m, uitbal = klem_of_uitbal(x_m, y_m, diepte_m, breedte_m, speelveld_m)
+        if uitbal:
+            # De ruis duwde het label over de lijn: rapporteer een uitbal en laat de
+            # zone leeg — zo oefent de demo ook het uitbal-pad van de echte meting.
+            # De échte coördinaten gaan wél mee: daarmee kan de overzetting de engine
+            # een 'uit' laten afleiden, en toont de kaart wáár hij buiten ging.
+            det['uitbal'] = True
+            det['uitbal_x_m'] = round(x_m, 2)
+            det['uitbal_y_m'] = round(y_m, 2)
+            det['zone'] = None
+            det['score_delta'] = 0
+        else:
+            zone, score = zone_en_score(x_m, y_m, det.get('worp_type'), diepte_m, breedte_m, speelveld_m)
+            det['zone'] = zone
+            det['score_delta'] = score
         prov = dict(det.get('provenance') or {})
         prov['model'] = f"{prov.get('model', '?')}+{MODEL_DEMO}"
         det['provenance'] = prov
@@ -230,23 +336,31 @@ def landing_uit_spoor(spoor: list[tuple[float, float, float]]) -> tuple[float, f
     """Het landingsmoment: waar de neerwaartse beeldbeweging (y neemt toe) eindigt.
 
     In beeldcoördinaten wijst y omlaag, dus een vallende bal heeft stijgende y.
-    De landing is het laatste punt van de langste dalende reeks — of het
-    laatste spoorpunt wanneer de bal uit beeld/opgeraapt verdwijnt.
+    De landing is het einde van de EERSTE dalende reeks — het eerste grondcontact,
+    want dát telt het reglement (en dat tagt het platform ook). Een stuit (bal
+    weer omhoog) sluit die reeks af; wat de bal daarna nog doet (tweede val,
+    uitrol) mag het meetpunt niet meer opschuiven. Loopt de reeks door tot het
+    einde van het spoor (bal uit beeld/opgeraapt), dan is het laatste reekspunt
+    de landing.
     """
     if len(spoor) < 3:
         return None
-    beste_einde = None
+    einde = None
     reeks = 0
     for i in range(1, len(spoor)):
         if spoor[i][2] >= spoor[i - 1][2] - 1.0:
             reeks += 1
             if reeks >= 2:
-                beste_einde = i
+                einde = i
+        elif einde is not None:
+            # De bal ging weer omhoog ná een voltooide daalreeks: dat is de stuit,
+            # en het eerste grondcontact ligt vast — niet verder zoeken.
+            break
         else:
             reeks = 0
-    if beste_einde is None:
+    if einde is None:
         return None
-    return spoor[beste_einde]
+    return spoor[einde]
 
 
 def video_landing(args: argparse.Namespace, detecties: list[dict]) -> tuple[list[dict], dict]:
@@ -279,6 +393,11 @@ def video_landing(args: argparse.Namespace, detecties: list[dict]) -> tuple[list
     diepte = float(kalibratie.get('doelgebied_diepte_m') or veld_info.get('doelgebied_diepte_m') or args.diepte)
     breedte = float(args.breedte or veld_info.get('breedte_m') or veld.BREEDTE_M)
     speelveld = float(args.speelveld or veld_info.get('speelveld_m') or veld.SPEELVELD_LENGTE_M)
+    # Het teruggerekende camerastandpunt (x, y, hoogte) uit de kalibratie — daarmee rekenen
+    # we de loslaathoogte-parallax van de werpplaats weg. Een 'onmogelijk' standpunt (de fit
+    # hoort niet bij een echte camera) is erger dan geen: dan corrigeren we liever niet.
+    standpunt_info = kalibratie.get('camerastandpunt') or {}
+    standpunt = standpunt_info.get('gemeten') if standpunt_info.get('oordeel') != 'onmogelijk' else None
 
     # Vooraf gevonden balbanen (cv/bal.py): per worptijd de baan met loslaat- en landingspunt.
     vooraf: dict[float, dict] = {}
@@ -299,6 +418,7 @@ def video_landing(args: argparse.Namespace, detecties: list[dict]) -> tuple[list
     verrijkt: list[dict] = []
     balsporen: list[dict] = []
     gevonden = 0
+    uitballen = 0
     zonder_matrix = 0
     for det in detecties:
         det = dict(det)
@@ -351,14 +471,43 @@ def video_landing(args: argparse.Namespace, detecties: list[dict]) -> tuple[list
                     land_matrix = op_landing
             x_m, y_m = _projecteer(land_matrix, punt[1], punt[2])
             if x_m == x_m and y_m == y_m:  # geen NaN
-                x_m, y_m = klem_op_veld(x_m, y_m, diepte, breedte, speelveld)
-                zone, score = zone_en_score(x_m, y_m, det.get('worp_type'), diepte, breedte, speelveld)
-                det['zone'] = zone
-                det['score_delta'] = score
-                # Afstand: eerste balpunt van het spoor als benadering van de werpplaats.
-                sx, sy = _projecteer(land_matrix, balspoor[0][1], balspoor[0][2])
-                if sx == sx and sy == sy:
-                    det['afstand_m'] = round(((x_m - sx) ** 2 + (y_m - sy) ** 2) ** 0.5, 2)
+                x_m, y_m, uitbal = klem_of_uitbal(x_m, y_m, diepte, breedte, speelveld)
+                if uitbal:
+                    # Meer dan aanduidruis buiten de lijnen: een uitbal (0 punten). De
+                    # zone blijft leeg — de veldrand-klem van vroeger maakte hier een
+                    # doelpunt op de lijn van. De échte coördinaten gaan wél mee: zo kan
+                    # de overzetting de engine een 'uit' laten afleiden, en toont de
+                    # kaart wáár hij buiten ging.
+                    det['uitbal'] = True
+                    det['uitbal_x_m'] = round(x_m, 2)
+                    det['uitbal_y_m'] = round(y_m, 2)
+                    uitballen += 1
+                else:
+                    zone, score = zone_en_score(x_m, y_m, det.get('worp_type'), diepte, breedte, speelveld)
+                    det['zone'] = zone
+                    det['score_delta'] = score
+                    # Werpplaats: eerste balpunt van het spoor als benadering. Dat pixel is
+                    # op het wórpmoment gezien: projecteer het met de matrix van dát moment
+                    # — tussen worp en landing pant de camera doorgaans mee met de bal, en
+                    # onder de landingsmatrix wijst hetzelfde pixel meters ernaast. Geen
+                    # betrouwbare matrix op het worpmoment → geen werpplaats en geen afstand.
+                    worp_matrix = matrix if spoor is None else spoor.op(balspoor[0][0])
+                    if worp_matrix is not None:
+                        sx, sy = _projecteer(worp_matrix, balspoor[0][1], balspoor[0][2])
+                        if sx == sx and sy == sy:
+                            if standpunt is not None:
+                                # De bal hangt bij het loslaten boven het hoofd; de
+                                # grondvlak-homografie projecteert hem voorbij de werper.
+                                sx, sy = corrigeer_werphoogte(sx, sy, standpunt)
+                            # §6.4: de werpplaats ligt nooit tussen doellijn en
+                            # vrijeworplijn — zelfde projectie als de engine.
+                            sy = projecteer_vrijeworplijn(sy, diepte, speelveld)
+                            # De werpplaats gaat mee in het event: het platform berekent de
+                            # afstand daaruit zélf met field.ts (één bron van waarheid). Het
+                            # afstand_m hieronder is enkel de CLI-benadering voor rapport en
+                            # overlay; in de app wordt het genegeerd.
+                            det['werpplaats'] = {'x_m': round(sx, 2), 'y_m': round(sy, 2)}
+                            det['afstand_m'] = round(((x_m - sx) ** 2 + (y_m - sy) ** 2) ** 0.5, 2)
                 gevonden += 1
         prov = dict(det.get('provenance') or {})
         prov['model'] = f"{prov.get('model', '?')}+{MODEL_VIDEO}"
@@ -372,7 +521,7 @@ def video_landing(args: argparse.Namespace, detecties: list[dict]) -> tuple[list
                 f.write(json.dumps(rij, ensure_ascii=False) + '\n')
         print(f'Balsporen van {len(balsporen)} worpen → {args.balspoor}')
     rapport = {'detecties': len(detecties), 'met_landing': gevonden,
-               'zonder_landing': len(detecties) - gevonden}
+               'zonder_landing': len(detecties) - gevonden, 'uitbal': uitballen}
     if spoor is not None:
         rapport['zonder_homografie'] = zonder_matrix
     return verrijkt, rapport
@@ -454,6 +603,8 @@ def main(argv: list[str] | None = None) -> None:
             f'Landing gevonden voor {rapport["met_landing"]} van {rapport["detecties"]} events; '
             f'{rapport["zonder_landing"]} zonder zichtbare bal (zone blijft leeg — reviewen op het oog)'
         )
+        if rapport.get('uitbal'):
+            print(f'  waarvan {rapport["uitbal"]} buiten de lijnen: uitbal — zone leeg, 0 punten')
 
     schrijf_jsonl(args.uit, verrijkt)
     print(f'{len(verrijkt)} events → {args.uit}')

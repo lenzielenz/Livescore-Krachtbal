@@ -2,14 +2,14 @@ import { getPayload, type Payload } from 'payload'
 import { describe, it, beforeAll, expect } from 'vitest'
 
 import config from '@/payload.config'
-import { MATCH_DEPENDENT_COLLECTIONS, MATCH_VERPLICHTE_COLLECTIONS } from '@/lib/match-cleanup'
+import { MATCH_VERPLICHTE_COLLECTIONS } from '@/lib/match-cleanup'
 
 // Een wedstrijd verwijderen — en alles wat eraan hangt.
 //
 // Waarom dit een eigen test verdient. In Postgres staat elke `match_id` als NOT NULL, mét een
 // sleutel die bij het verwijderen van de wedstrijd op NULL wil zetten. Die twee spreken elkaar
 // tegen: de database weigert dan de hele verwijdering. Dat gaat goed zolang de afhankelijke rijen
-// eerst weg zijn — en dus zolang MATCH_DEPENDENT_COLLECTIONS volledig is.
+// eerst weg zijn — en dus zolang MATCH_VERPLICHTE_COLLECTIONS volledig is.
 //
 // Toen `cv-events` erbij kwam is die lijst niet mee aangevuld, en werd elke video-analyse
 // onverwijderbaar: wie op het prullenbakje drukte kreeg `Failed query: delete from "matches"` in
@@ -17,26 +17,32 @@ import { MATCH_DEPENDENT_COLLECTIONS, MATCH_VERPLICHTE_COLLECTIONS } from '@/lib
 
 let payload: Payload
 
-describe('MATCH_DEPENDENT_COLLECTIONS', () => {
+describe('MATCH_VERPLICHTE_COLLECTIONS', () => {
   beforeAll(async () => {
     payload = await getPayload({ config: await config })
   })
 
-  it('bevat élke collection die naar een wedstrijd verwijst', () => {
+  it('bevat élke collection die verplícht naar een wedstrijd verwijst, en geen enkele optionele', () => {
     // Niet mijn lijst tegen mijn lijst, maar tegen de échte collections: een nieuwe collection met
-    // een match-relatie laat deze test vallen, en dát is precies het moment om te beslissen of ze
-    // mee moet verdwijnen met de wedstrijd.
-    const verwijzend = payload.config.collections
-      .filter((c) =>
-        (c.fields as { name?: string; relationTo?: unknown }[]).some(
-          (f) => f.name === 'match' && f.relationTo === 'matches',
-        ),
-      )
+    // een verplichte match-relatie laat deze test vallen, en dát is precies het moment om te
+    // beslissen of ze mee moet verdwijnen. Een optionele relatie (accidents: het
+    // verzekeringsdossier) hoort er juist NIET in — de database koppelt die los en het document
+    // overleeft zijn wedstrijd, op elk pad.
+    const velden = (c: (typeof payload.config.collections)[number]) =>
+      c.fields as { name?: string; relationTo?: unknown; required?: boolean }[]
+    const verplicht = payload.config.collections
+      .filter((c) => velden(c).some((f) => f.name === 'match' && f.relationTo === 'matches' && f.required === true))
+      .map((c) => c.slug)
+    const optioneel = payload.config.collections
+      .filter((c) => velden(c).some((f) => f.name === 'match' && f.relationTo === 'matches' && f.required !== true))
       .map((c) => c.slug)
 
-    expect(verwijzend.length).toBeGreaterThan(0)
-    const ontbreekt = verwijzend.filter((s) => !(MATCH_DEPENDENT_COLLECTIONS as readonly string[]).includes(s))
-    expect(ontbreekt, `deze collections verwijzen naar een wedstrijd maar worden niet opgeruimd: ${ontbreekt.join(', ')}`).toEqual([])
+    expect(verplicht.length).toBeGreaterThan(0)
+    const ontbreekt = verplicht.filter((s) => !(MATCH_VERPLICHTE_COLLECTIONS as readonly string[]).includes(s))
+    expect(ontbreekt, `deze collections verwijzen verplicht naar een wedstrijd maar worden niet opgeruimd: ${ontbreekt.join(', ')}`).toEqual([])
+    // En het spiegelbeeld: wat optioneel verwijst, mag niet stilletjes mee de vuilbak in.
+    const teVeel = (MATCH_VERPLICHTE_COLLECTIONS as readonly string[]).filter((s) => (optioneel as string[]).includes(s))
+    expect(teVeel, `deze collections verwijzen optioneel en overleven hun wedstrijd; ze horen niet in de opruimlijst: ${teVeel.join(', ')}`).toEqual([])
   })
 
   it('ruimt de worpen op vóór het balbezit waar ze in zitten', () => {
@@ -52,7 +58,7 @@ describe('MATCH_DEPENDENT_COLLECTIONS', () => {
     // Een tikfout in de lijst is even erg als een gat: `payload.delete` op een onbekende slug
     // gooit, en die fout werd stil weggevangen.
     const bestaande = new Set(payload.config.collections.map((c) => c.slug))
-    for (const slug of MATCH_DEPENDENT_COLLECTIONS) expect(bestaande.has(slug)).toBe(true)
+    for (const slug of MATCH_VERPLICHTE_COLLECTIONS) expect(bestaande.has(slug)).toBe(true)
   })
 })
 

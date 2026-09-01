@@ -26,16 +26,10 @@ export const MATCH_VERPLICHTE_COLLECTIONS = [
   'cv-events',
 ] as const satisfies readonly CollectionSlug[]
 
-// Alles wat bij een wedstrijd hoort, inclusief wat de database zélf zou kunnen loskoppelen.
-// `accidents.match` is als enige wél nullable — een verzekeringsdossier overleeft zijn wedstrijd
-// met opzet. De verwijderknop in de app ruimt het toch mee op (wie een wedstrijd wist, wil ze
-// helemaal weg), maar de collection-hook laat het staan en laat de database de verwijzing
-// loskoppelen. Dat verschil is bewust: een medisch dossier verdwijnt niet als neveneffect van een
-// opruimactie in het beheerpaneel.
-export const MATCH_DEPENDENT_COLLECTIONS = [
-  ...MATCH_VERPLICHTE_COLLECTIONS,
-  'accidents',
-] as const satisfies readonly CollectionSlug[]
+// Wat hier bewust NIET in staat: `accidents`. Dat is als enige nullable — een
+// verzekeringsdossier overleeft zijn wedstrijd met opzet, op élk pad (beheerpaneel, de knop in
+// de app én de seizoensvervanging): de database koppelt de verwijzing los en het dossier blijft.
+// Een medisch dossier verdwijnt nooit als neveneffect van een opruimactie.
 
 /**
  * De kinderen van één wedstrijd verwijderen, in de juiste volgorde.
@@ -88,7 +82,7 @@ export async function deleteMatchesCascade(payload: Payload, where: Where): Prom
   const CHUNK = 500
   for (let i = 0; i < ids.length; i += CHUNK) {
     const chunk = ids.slice(i, i + CHUNK)
-    for (const collection of MATCH_DEPENDENT_COLLECTIONS) {
+    for (const collection of MATCH_VERPLICHTE_COLLECTIONS) {
       await payload.delete({ collection, where: { match: { in: chunk } }, overrideAccess: true }).catch(() => {})
     }
     await payload.delete({ collection: 'matches', where: { id: { in: chunk } }, overrideAccess: true }).catch(() => {})

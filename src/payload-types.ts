@@ -1633,6 +1633,7 @@ export interface CvEvent {
   eventType: 'worp' | 'vangst' | 'doelpunt' | 'buitenspel';
   worpType?: ('nek' | 'rug') | null;
   inDoelgebied?: boolean | null;
+  uitbal?: boolean | null;
   xM?: number | null;
   yM?: number | null;
   afstandM?: number | null;
@@ -2560,6 +2561,7 @@ export interface CvEventsSelect<T extends boolean = true> {
   eventType?: T;
   worpType?: T;
   inDoelgebied?: T;
+  uitbal?: T;
   xM?: T;
   yM?: T;
   afstandM?: T;

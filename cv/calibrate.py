@@ -34,6 +34,7 @@ from __future__ import annotations
 import argparse
 import datetime
 import json
+import math
 import sys
 from pathlib import Path
 
@@ -174,8 +175,60 @@ def verzamel_interactief(
 # Homografie fitten en opslaan
 # ---------------------------------------------------------------------------
 
+def _alle_collineair(punten_m: list[tuple[float, float]]) -> bool:
+    """Liggen al deze veldpunten (in meters) op één rechte?
+
+    De lijn wordt gelegd door de twee verst uiteenliggende punten, zodat dubbele of dicht
+    opeenliggende punten de toets niet vertekenen. Kruispunten die níét op de lijn horen
+    liggen er meters naast, dus de millimeter-tolerantie is ruim én ongevoelig.
+    """
+    if len(punten_m) < 3:
+        return True
+    a, b = max(((p, q) for p in punten_m for q in punten_m),
+               key=lambda pq: (pq[0][0] - pq[1][0]) ** 2 + (pq[0][1] - pq[1][1]) ** 2)
+    lengte = math.hypot(b[0] - a[0], b[1] - a[1])
+    if lengte < 1e-9:
+        return True  # alle punten vallen samen
+    return all(
+        abs((b[0] - a[0]) * (p[1] - a[1]) - (b[1] - a[1]) * (p[0] - a[0])) / lengte < 1e-3
+        for p in punten_m
+    )
+
+
+def controleer_ontaarding(punten: list[dict]) -> None:
+    """Weiger puntensets die het veld wiskundig niet vastleggen.
+
+    Vier punten zijn pas genoeg in algemene positie. Liggen alle punten op één na op
+    dezelfde rechte (bv. drie kruispunten op de linkerzijlijn en één rechts — precies wat
+    je krijgt als één zijlijn door spelers afgedekt is), dan bestaat er een hele familie
+    van exact passende homografieën en kiest de fit er stil één: het reprojectierapport
+    toont 0,00 px terwijl metingen op de rest van het veld er tientallen meters naast
+    zitten. cv2.findHomography merkt alleen een VOLLEDIG collineaire set op; deze controle
+    vangt de rest, vóór er iets gefit of weggeschreven wordt. Dezelfde toets zit in de app
+    (src/app/api/cv/match/[id]/kalibratie/route.ts), zodat de gebruiker het al bij het
+    aanduiden hoort.
+    """
+    veldpunten = [(float(p['veld_m'][0]), float(p['veld_m'][1])) for p in punten]
+    for i in range(len(veldpunten)):
+        if _alle_collineair(veldpunten[:i] + veldpunten[i + 1:]):
+            _fout(
+                'de aangeduide punten liggen op één na allemaal op één rechte — zo ligt het '
+                'veld niet vast: er zijn oneindig veel passende oplossingen en de fit kiest '
+                'er stil één (het rapport oogt dan perfect terwijl de rest van het veld er '
+                'meters naast zit). Duid minstens twee punten op élke zijlijn aan, goed uit '
+                'elkaar.',
+                code=1,
+            )
+
+
 def fit_homografie(punten: list[dict]) -> list[list[float]]:
-    """Fit de homografie beeld(px) → veld(m) op ≥4 puntenparen."""
+    """Fit de homografie beeld(px) → veld(m) op ≥4 puntenparen.
+
+    Enkel de wiskunde: wie hiermee een kalibratie bóúwt roept eerst controleer_ontaarding()
+    aan (main doet dat vóór elke fit). Hier niet onvoorwaardelijk, want het camera-oordeel
+    (camera.beoordeel) fit bewust ook wankele sets om ze daarna met de
+    laat-één-punt-weg-proef als onzeker te bestempelen.
+    """
     cv2 = _laad_cv2()
     import numpy as np  # noqa: PLC0415 — komt mee met opencv-python
 
@@ -293,17 +346,28 @@ def draai_label_180(label: str) -> str:
     return label
 
 
+_DRAAI_POSITIE = {'thuis': 'uit', 'uit': 'thuis', 'links': 'rechts', 'rechts': 'links'}
+
+
+def draai_positie_180(positie: str) -> str:
+    """Camerapositie na de 180°-draai: de camera zelf blijft staan, maar in de gedraaide
+    veldcoördinaten staat ze aan de overkant — thuis↔uit én links↔rechts, per naamdeel."""
+    return '-'.join(_DRAAI_POSITIE.get(deel, deel) for deel in positie.split('-'))
+
+
 def draai_kalibratie_180(data: dict) -> dict:
     """Draai een kalibratie 180° in het veldvlak: (x, y) → (B−x, L−y).
 
     Voor wanneer de verkeerde achterlijn als "thuis" (y=0) gekozen werd: de
     matrix wordt gecomponeerd met de rotatie en elk punt krijgt zijn gedraaide
     veldcoördinaat én label, zodat het bestand consistent blijft en het
-    reprojectierapport identiek. Puur stdlib — geen herklikken, geen cv2.
+    reprojectierapport identiek. Ook de kwaliteitsmetadata draait mee — anders
+    beweert het bestand het spiegelbeeld van waar de opstelling scherp meet.
+    Puur stdlib — geen herklikken, geen cv2.
     """
     diepte, speelveld = veldinfo_uit(data)
     lengte = veld.totale_lengte_m(diepte, speelveld)
-    b = float((data.get('veld') or {}).get('breedte_m') or veld.BREEDTE_M)
+    b = breedte_uit(data)
     r = [[-1.0, 0.0, b], [0.0, -1.0, lengte], [0.0, 0.0, 1.0]]
     h = data['matrix_beeld_naar_veld']
     nieuw_h = [[sum(r[i][k] * h[k][j] for k in range(3)) for j in range(3)] for i in range(3)]
@@ -315,7 +379,24 @@ def draai_kalibratie_180(data: dict) -> dict:
         }
         for p in data['punten']
     ]
-    return {**data, 'matrix_beeld_naar_veld': nieuw_h, 'punten': nieuwe_punten}
+    uit = {**data, 'matrix_beeld_naar_veld': nieuw_h, 'punten': nieuwe_punten}
+    # Waar de opstelling scherp meet wisselt van kant: herbereken met de gedraaide matrix
+    # in plaats van thuis/uit letterlijk te laten staan uit het oorspronkelijke bestand.
+    if 'precisie_m_per_px' in data:
+        uit['precisie_m_per_px'] = precisiekaart(nieuw_h, diepte, b, speelveld)
+    if data.get('camerapositie'):
+        uit['camerapositie'] = draai_positie_180(data['camerapositie'])
+    # Het teruggerekende standpunt verhuist mee naar de gedraaide coördinaten; hoogte,
+    # brandpunt en het oordeel (keuze én meting draaien samen) blijven wat ze waren.
+    standpunt = data.get('camerastandpunt')
+    if standpunt and standpunt.get('gemeten'):
+        gemeten = standpunt['gemeten']
+        uit['camerastandpunt'] = {
+            **standpunt,
+            'gemeten': {**gemeten, 'x_m': round(b - gemeten['x_m'], 2),
+                        'y_m': round(lengte - gemeten['y_m'], 2)},
+        }
+    return uit
 
 
 def veldinfo_uit(data: dict) -> tuple[float, float]:
@@ -325,6 +406,11 @@ def veldinfo_uit(data: dict) -> tuple[float, float]:
     diepte = float(data.get('doelgebied_diepte_m') or info.get('doelgebied_diepte_m')
                    or veld.STANDAARD_DOELGEBIED_DIEPTE_M)
     return diepte, float(info.get('speelveld_m') or veld.SPEELVELD_LENGTE_M)
+
+
+def breedte_uit(data: dict) -> float:
+    """Opgemeten veldbreedte uit een kalibratiebestand, met het reglement als terugval."""
+    return float((data.get('veld') or {}).get('breedte_m') or veld.BREEDTE_M)
 
 
 def meters_per_pixel(matrix: list[list[float]], x_m: float, y_m: float) -> float | None:
@@ -392,6 +478,7 @@ def druk_reprojectierapport(
     punten: list[dict],
     _rapport_diepte: float | None = None,
     _rapport_speelveld: float | None = None,
+    _rapport_breedte: float | None = None,
 ) -> None:
     """Rapporteer per punt de reprojectiefout in pixels (veld → beeld via H⁻¹),
     plus de fout in meters (beeld → veld via H), en het gemiddelde."""
@@ -436,8 +523,12 @@ def druk_reprojectierapport(
         )
 
     # Hoe scherp meet dit standpunt, waar? Bij een camera achter het veld is dat het verschil
-    # tussen een bruikbare en een waardeloze meting op de overkant.
-    kaart = precisiekaart(matrix, diepte, _rapport_speelveld or veld.SPEELVELD_LENGTE_M)
+    # tussen een bruikbare en een waardeloze meting op de overkant. De breedte hoort er
+    # expliciet bij: positioneel schoof hier ooit de speelveldlengte in de breedte-parameter,
+    # waardoor de kaart naast het veld bemonsterde en het rapport een andere scherpte meldde
+    # dan de precisie_m_per_px in de JSON van hetzelfde bestand.
+    breedte = _rapport_breedte if _rapport_breedte is not None else veld.BREEDTE_M
+    kaart = precisiekaart(matrix, diepte, breedte, speelveld)
     if kaart:
         stukken = ' · '.join(f'{naam} {kaart[naam]:.2f}'
                              for naam in ('thuis', 'midden', 'uit') if naam in kaart)
@@ -536,7 +627,7 @@ def main(argv: list[str] | None = None) -> None:
         args.uit.write_text(json.dumps(gedraaid, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
         print(f'180° gedraaid (thuis↔uit, links↔rechts) → {args.uit}')
         druk_reprojectierapport(gedraaid['matrix_beeld_naar_veld'], gedraaid['punten'],
-                                *veldinfo_uit(gedraaid))
+                                *veldinfo_uit(gedraaid), breedte_uit(gedraaid))
         return
 
     # --test combineert niet met een nieuwe kalibratie: dat zou stilletjes fitten
@@ -551,7 +642,8 @@ def main(argv: list[str] | None = None) -> None:
             _fout(f'kalibratiebestand niet gevonden: {pad}')
         data = json.loads(pad.read_text(encoding='utf-8'))
         controleer_orientatie(data['matrix_beeld_naar_veld'], data['punten'])
-        druk_reprojectierapport(data['matrix_beeld_naar_veld'], data['punten'], *veldinfo_uit(data))
+        druk_reprojectierapport(data['matrix_beeld_naar_veld'], data['punten'],
+                                *veldinfo_uit(data), breedte_uit(data))
         return
 
     # Punten verzamelen: headless (--punt) of interactief (--beeld)
@@ -569,6 +661,10 @@ def main(argv: list[str] | None = None) -> None:
 
     if len(punten) < 4:
         _fout(f'minstens 4 punten nodig voor een homografie, kreeg er {len(punten)}')
+    # Vier punten zijn pas genoeg als ze het veld ook echt vastleggen: een set met alle
+    # punten op één na op dezelfde rechte (één zijlijn overgeslagen) glipt door cv2 heen
+    # met een perfect ogend rapport, terwijl de andere veldhelft er meters naast zit.
+    controleer_ontaarding(punten)
 
     matrix = fit_homografie(punten)
     # Spiegel-detectie vóór het wegschrijven: een gespiegelde kalibratie verziekt élke meting.
@@ -577,7 +673,7 @@ def main(argv: list[str] | None = None) -> None:
                        breedte=args.breedte, speelveld=args.speelveld,
                        positie=args.positie, beeldbreedte=args.beeldbreedte,
                        beeldhoogte=args.beeldhoogte)
-    druk_reprojectierapport(matrix, punten, args.diepte, args.speelveld)
+    druk_reprojectierapport(matrix, punten, args.diepte, args.speelveld, args.breedte)
     druk_standpunt(matrix, punten, args)
 
 

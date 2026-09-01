@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 
-import { leesbareFout, MATCH_DEPENDENT_COLLECTIONS } from '@/lib/match-cleanup'
+import { leesbareFout, MATCH_VERPLICHTE_COLLECTIONS } from '@/lib/match-cleanup'
 
 // Wat de gebruiker te lezen krijgt als het verwijderen misgaat.
 //
@@ -39,15 +39,21 @@ describe('leesbareFout', () => {
   })
 })
 
-describe('MATCH_DEPENDENT_COLLECTIONS', () => {
+describe('MATCH_VERPLICHTE_COLLECTIONS', () => {
   it('noemt elke collection één keer', () => {
     // Een dubbele naam is onschuldig maar verraadt dat er twee keer iets is bijgeplakt zonder te
     // kijken; de volledigheid zelf wordt tegen de échte collections gecontroleerd in de int-test.
-    expect(new Set(MATCH_DEPENDENT_COLLECTIONS).size).toBe(MATCH_DEPENDENT_COLLECTIONS.length)
+    expect(new Set(MATCH_VERPLICHTE_COLLECTIONS).size).toBe(MATCH_VERPLICHTE_COLLECTIONS.length)
   })
 
   it('ruimt de videovoorstellen mee op', () => {
     // Deze ontbrak, en daardoor was elke video-analyse onverwijderbaar.
-    expect(MATCH_DEPENDENT_COLLECTIONS).toContain('cv-events')
+    expect(MATCH_VERPLICHTE_COLLECTIONS).toContain('cv-events')
+  })
+
+  it('spaart het verzekeringsdossier op elk pad', () => {
+    // accidents.match is optioneel mét opzet: het dossier overleeft zijn wedstrijd. Vroeger
+    // ruimde de knop in de app het wél mee op terwijl /admin het spaarde — dat verschil is weg.
+    expect(MATCH_VERPLICHTE_COLLECTIONS).not.toContain('accidents')
   })
 })

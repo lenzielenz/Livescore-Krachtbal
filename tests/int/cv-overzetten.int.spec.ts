@@ -158,7 +158,30 @@ describe('zetVoorstellenOver', () => {
     // Zonder geijkte tweede helft komt alles in helft 1 — dat hoort er luid bij te staan.
     expect(r.tweedeHelftVanaf).toBeNull()
     expect(r.beperkingen.some((b) => b.includes('helft 1'))).toBe(true)
-    expect(r.beperkingen.some((b) => b.toLowerCase().includes('uitbal'))).toBe(true)
+    // De uitbal-beperking is opgeheven: sinds de landing niet meer op de veldrand geklemd wordt,
+    // komt een uitbal met zijn echte punt binnen en leidt de engine er zelf 'uit' uit af.
+    expect(r.beperkingen.some((b) => b.toLowerCase().includes('uitbal'))).toBe(false)
+  })
+
+  it('zet een uitbal over als échte uit — de engine leidt out_back af uit het punt', async () => {
+    // Dít was de blokkerende vondst uit de doorlichting: de landing werd op de veldrand geklemd
+    // en elke uitbal telde als doelpunt. Nu draagt het voorstel zijn echte punt buiten de
+    // lijnen, en hoort daar een worp met uitkomst out_back uit te komen — géén doelpunt.
+    const { matchId } = await maakAnalysewedstrijd()
+    await voorstel(matchId, 100, 7, 30)
+    // 2 m voorbij de achterlijn van een veld van 46 m: een uitworp die doorschoot.
+    await voorstel(matchId, 160, 7, 48, { uitbal: true, inDoelgebied: false })
+
+    const r = await zetVoorstellenOver(payload, matchId, { droog: false })
+    if (isOverzetfout(r)) throw new Error(r.fout)
+    expect(r.overgezet).toBe(2)
+
+    const worpen = await payload.find({
+      collection: 'throws', where: { match: { equals: matchId } }, sort: 'createdAt', depth: 0, limit: 10,
+    })
+    const uitkomsten = worpen.docs.map((w) => (w as { outcome?: string }).outcome)
+    expect(uitkomsten).toContain('out_back')
+    expect(uitkomsten).not.toContain('goal')
   })
 
   it('zegt het wanneer er geen opstelling gekozen is', async () => {

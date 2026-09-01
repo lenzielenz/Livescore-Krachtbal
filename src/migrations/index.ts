@@ -103,6 +103,7 @@ import * as migration_20260901_090000_analyse_modus from './20260901_090000_anal
 import * as migration_20260901_120000_worp_bron from './20260901_120000_worp_bron'
 import * as migration_20260901_140000_cv_werper from './20260901_140000_cv_werper'
 import * as migration_20260901_150000_cv_werpers from './20260901_150000_cv_werpers'
+import * as migration_20260901_170000_cv_uitbal from './20260901_170000_cv_uitbal'
 
 export const migrations = [
   {
@@ -629,5 +630,10 @@ export const migrations = [
     up: migration_20260901_150000_cv_werpers.up,
     down: migration_20260901_150000_cv_werpers.down,
     name: '20260901_150000_cv_werpers',
+  },
+  {
+    up: migration_20260901_170000_cv_uitbal.up,
+    down: migration_20260901_170000_cv_uitbal.down,
+    name: '20260901_170000_cv_uitbal',
   },
 ];

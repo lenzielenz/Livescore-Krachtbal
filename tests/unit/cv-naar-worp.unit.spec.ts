@@ -1,6 +1,16 @@
+import { execFileSync } from 'node:child_process'
+
 import { describe, it, expect } from 'vitest'
 
-import { maakOverzetplan, naarNorm, opHetVeld, worpUitVoorstel, type Voorstelworp } from '@/lib/cv-naar-worp'
+import {
+  afstandUitEvent,
+  afstandVanWorp,
+  maakOverzetplan,
+  naarNorm,
+  opHetVeld,
+  worpUitVoorstel,
+  type Voorstelworp,
+} from '@/lib/cv-naar-worp'
 import { toMeters } from '@/lib/field'
 
 // De vertaling van "wat het model in de video zag" naar "een worp in de wedstrijd". Hier zit de
@@ -127,5 +137,140 @@ describe('maakOverzetplan', () => {
     const plan = maakOverzetplan([voorstel({ verdict: 'afgewezen' })], 10)
     expect(plan.worpen).toHaveLength(0)
     expect(plan.overgeslagen).toHaveLength(0)
+  })
+})
+
+describe('afstandUitEvent — de engine is de baas over de afstand', () => {
+  // De doorlichting-upgrade: er waren twéé afstandsberekeningen (landing.py in Python, field.ts
+  // in de app) en twee bronnen van waarheid drijven onvermijdelijk uiteen. Voortaan levert de
+  // CV enkel werpplaats + landingspunt; de import rekent de afstand met de field.ts-machinerie.
+
+  it('berekent de afstand uit werpplaats + landingspunt en negeert het Python-getal', () => {
+    // Regressiewacht: het event draagt een bewust FOUT afstand_m mee. Zou de import dat getal
+    // nog overnemen, dan kwam hier 99.9 uit in plaats van de 10 m die field.ts berekent.
+    const e = {
+      werpplaats: { x_m: 7, y_m: 20 },
+      zone: { in_doelgebied: false, x_m: 7, y_m: 30 },
+      afstand_m: 99.9,
+    }
+    expect(afstandUitEvent(e, 10)).toBeCloseTo(10, 9)
+  })
+
+  it('geeft zonder werpplaats geen afstand', () => {
+    // Zonder werpplaats valt er niets reglementairs te meten — zoals voorheen zonder afstand_m.
+    expect(afstandUitEvent({ zone: { x_m: 7, y_m: 30 }, afstand_m: 12.3 }, 10)).toBeNull()
+    expect(afstandUitEvent({ werpplaats: { x_m: 7 }, zone: { x_m: 7, y_m: 30 } }, 10)).toBeNull()
+  })
+
+  it('geeft een uitbal geen afstand — het reglement kent geen afstand voor een uitworp', () => {
+    // Een uitbal heeft geen zone maar wél uitbal_x_m/uitbal_y_m; ook mét werpplaats en zelfs
+    // een meegestuurd afstand_m blijft de afstand leeg.
+    const e = {
+      uitbal: true,
+      uitbal_x_m: 7,
+      uitbal_y_m: 48,
+      werpplaats: { x_m: 7, y_m: 20 },
+      afstand_m: 28,
+    }
+    expect(afstandUitEvent(e, 10)).toBeNull()
+  })
+
+  it('past §6.4 zelf toe op de werpplaats — ook als de CV-kant dat zou vergeten', () => {
+    // Werpplaats (7, 12) ligt in de band doellijn–vrijeworplijn (10–14): de engine schuift
+    // hem naar 14 en meet 16 m naar (7, 30). Voor een al geprojecteerde werpplaats is de
+    // projectie idempotent, dus de gewone route rekent identiek.
+    expect(afstandUitEvent({ werpplaats: { x_m: 7, y_m: 12 }, zone: { x_m: 7, y_m: 30 } }, 10)).toBeCloseTo(16, 9)
+  })
+
+  it('rekent met de diepte van de wedstrijd', () => {
+    // Bij diepte 15 loopt de band tot 19 m: werpplaats (6, 16) schuift naar 19 → 12 m naar
+    // (6, 31). Bij diepte 10 ligt (6, 16) vrij en blijft het 15 m.
+    const e = { werpplaats: { x_m: 6, y_m: 16 }, zone: { x_m: 6, y_m: 31 } }
+    expect(afstandUitEvent(e, 15)).toBeCloseTo(12, 9)
+    expect(afstandUitEvent(e, 10)).toBeCloseTo(15, 9)
+  })
+})
+
+describe('pariteit Python ↔ TypeScript op de afstand', () => {
+  // Dé regressietest tegen de divergentie: dezelfde invoer door béide paden. De Python-kant
+  // (landing.py: projecteer_vrijeworplijn + euclidische afstand — wat afstand_m in het
+  // CLI-rapport oplevert) moet exact hetzelfde geven als de TS-kant (projectWerpplaats +
+  // distanceM — wat in de app opgeslagen wordt). Drijven ze uiteen, dan is dit rood.
+  it('geeft op dezelfde punten hetzelfde getal als landing.py', () => {
+    const punten = [
+      // midden veld, diepte 10
+      { werp: [7, 20], land: [7, 30], diepte: 10, breedte: 14, speelveld: 26 },
+      // landing in het doelgebied
+      { werp: [4, 18], land: [6.5, 40.2], diepte: 10, breedte: 14, speelveld: 26 },
+      // §6.4: werpplaats in de band aan de thuis-kant (10–14) → vrijeworplijn
+      { werp: [7, 12], land: [7, 33], diepte: 10, breedte: 14, speelveld: 26 },
+      // §6.4: band aan de uit-kant (32–36 op een veld van 46) → terug tot 32
+      { werp: [10, 33.5], land: [10, 12], diepte: 10, breedte: 14, speelveld: 26 },
+      // vanuit het eigen doelgebied (y < diepte): §6.4 laat de plaats staan
+      { werp: [7, 8], land: [10, 24], diepte: 10, breedte: 14, speelveld: 26 },
+      // niet-reglementair terrein: diepte 15, breedte 13, speelveld 25
+      { werp: [6, 17], land: [6, 40], diepte: 15, breedte: 13, speelveld: 25 },
+    ]
+    const script = [
+      'import json, math, sys',
+      "sys.path.insert(0, 'cv')",
+      'import landing',
+      'uit = []',
+      'for p in json.loads(sys.argv[1]):',
+      "    sx, sy = p['werp']",
+      "    lx, ly = p['land']",
+      "    sy = landing.projecteer_vrijeworplijn(sy, p['diepte'], p['speelveld'])",
+      '    uit.append(math.hypot(lx - sx, ly - sy))',
+      'print(json.dumps(uit))',
+    ].join('\n')
+    const py = JSON.parse(
+      execFileSync('python3', ['-c', script, JSON.stringify(punten)], {
+        cwd: process.cwd(),
+        encoding: 'utf-8',
+      }),
+    ) as number[]
+    expect(py).toHaveLength(punten.length)
+    punten.forEach((p, i) => {
+      const ts = afstandVanWorp(
+        { xM: p.werp[0], yM: p.werp[1] },
+        { xM: p.land[0], yM: p.land[1] },
+        p.diepte,
+        { breedteM: p.breedte, speelveldM: p.speelveld },
+      )
+      expect(ts).toBeCloseTo(py[i], 9)
+    })
+  })
+})
+
+describe('uitballen door de brug', () => {
+  // De blokkerende vondst uit de doorlichting: de landing werd op de veldrand geklemd en elke
+  // uitbal telde als doelpunt. Nu draagt een uitbal zijn echte punt buiten de lijnen, en moet
+  // dat punt ONGEKLEMD door de brug — precies daaruit leidt de engine out_side/out_back af.
+  const uitbal = (xM: number, yM: number) => ({
+    videoTimeS: 100, eventType: 'worp' as const, xM, yM, uitbal: true,
+    verdict: 'bevestigd' as const,
+  })
+
+  it('laat het punt van een uitbal buiten de lijnen staan', () => {
+    // 2 m voorbij de achterlijn van een veld van 46 m (y-norm > 1).
+    const w = worpUitVoorstel(uitbal(7, 48), 10)
+    expect(w).not.toBeNull()
+    expect(w!.point.y).toBeGreaterThan(1)
+  })
+
+  it('weigert een uitbal-punt dat te ver weg ligt om geloofwaardig te zijn', () => {
+    // 30 m naast het veld is geen uitbal maar een kapotte projectie.
+    expect(worpUitVoorstel(uitbal(44, 20), 10)).toBeNull()
+  })
+
+  it('klemt een gewone worp nog steeds op het veld', () => {
+    const w = worpUitVoorstel({ videoTimeS: 5, eventType: 'worp', xM: 7, yM: 45.9, verdict: 'bevestigd' }, 10)
+    expect(w).not.toBeNull()
+    expect(w!.point.y).toBeLessThanOrEqual(1)
+  })
+
+  it('blijft een punt buiten het veld zónder uitbal-vlag weigeren', () => {
+    // Buiten zonder vlag betekent: de meting deugt niet — geen worp van maken.
+    expect(worpUitVoorstel({ videoTimeS: 5, eventType: 'worp', xM: 7, yM: 48, verdict: 'bevestigd' }, 10)).toBeNull()
   })
 })

@@ -72,6 +72,20 @@ export function voegSamen(a: number[], b: number[], venster = VENSTER_S): number
   return samen.sort((x, y) => x - y)
 }
 
+/**
+ * Alleen de met de hand aangetekende worpen mogen label zijn.
+ *
+ * Een worp met bron 'video' is afgespeeld uit bevestigde CV-voorstellen (cv-overzetten.ts) —
+ * dat is de uitvoer van het model zelf, geen onafhankelijke waarheid. Als label zou hij het
+ * model met zijn eigen voorstellen vergelijken: de drempel schuift dan naar wat het model al
+ * vond en echte maar nooit voorgestelde worpen worden weggeleerd — en de holdout, die
+ * dezelfde labels gebruikt, meldt intussen een cijfer dat te mooi is om iets te betekenen.
+ * Zelfde uitsluiting als de modelscore op de analysepagina (analyse/[id]/page.tsx).
+ */
+export function handWorpen<T extends { bron?: unknown }>(worpen: T[]): T[] {
+  return worpen.filter((w) => w.bron !== 'video')
+}
+
 /** De tijdstippen die jij op de vídeo bevestigd hebt — daar komt geen ijking aan te pas. */
 export function bevestigdeTijden(voorstellen: { videoTimeS?: unknown; verdict?: unknown }[]): number[] {
   return voorstellen
@@ -136,7 +150,9 @@ export async function verzamelWedstrijden(
       .catch(() => ({ docs: [] as Record<string, unknown>[] }))
     const uitReviews = bevestigdeTijden(reviewRes.docs as { videoTimeS?: unknown; verdict?: unknown }[])
 
-    // Bron 2: de ingevoerde worpen, maar enkel als de video geijkt is.
+    // Bron 2: de ingevoerde worpen, maar enkel als de video geijkt is — en enkel de worpen
+    // die een méns aantekende: een uit de video-analyse afgespeelde worp (bron 'video') is
+    // modeluitvoer en zou als label het model met zichzelf vergelijken.
     let uitWorpen: number[] = []
     if (typeof match.videoOffsetH1 === 'number') {
       const worpenRes = await payload
@@ -144,7 +160,7 @@ export async function verzamelWedstrijden(
         .catch(() => ({ docs: [] as Record<string, unknown>[] }))
       const sync = readSync({ offsetH1: match.videoOffsetH1, offsetH2: match.videoOffsetH2 })
       const halfSeconds = reeksHalfDurationSeconds(match.reeks as Reeks)
-      uitWorpen = worpenRes.docs.map((t) =>
+      uitWorpen = handWorpen(worpenRes.docs as { bron?: unknown }[]).map((t) =>
         momentToVideo(
           {
             half: Number((t as { period?: unknown }).period ?? 1),

@@ -55,6 +55,18 @@ def maten_argumenten(breedte: float | None, speelveld: float | None) -> list[str
     )
 
 
+def diepte_argument(diepte: float | None) -> list[str]:
+    """--diepte, enkel wanneer het platform een echte doelgebied-diepte kent.
+
+    Zonder deze vlag rekenen landing, tracking en heatmap met de reglementaire 10 m; op een
+    terrein met een doelgebied van 15 m ligt de doellijn dan 4 m verkeerd en wordt een
+    landing op y=39 m een vals doelpunt (terwijl de labels van het platform wél in het frame
+    van de echte diepte staan). In videomodus wint een kalibratie die zelf een diepte draagt
+    — daar is de vlag het vangnet voor oudere kalibratiebestanden zonder dat veld.
+    """
+    return ['--diepte', str(diepte)] if diepte is not None else []
+
+
 def bouw_stappen(
     match: int,
     uitmap: Path,
@@ -73,6 +85,7 @@ def bouw_stappen(
     bewegend: bool = False,
     stand: str = 'gewoon',
     overlay: bool = False,
+    diepte: float | None = None,
 ) -> list[tuple[str, list[str]]]:
     """(omschrijving, argv)-lijst voor de hele pijplijn, in volgorde.
 
@@ -105,7 +118,7 @@ def bouw_stappen(
                 'landing/zone (demo)',
                 py + [str(CV_MAP / 'landing.py'), '--demo', '--detecties', str(detecties), '--labels', str(labels),
                       '--seed', str(seed), '--uit', str(met_landing)]
-                + maten_argumenten(breedte, speelveld),
+                + maten_argumenten(breedte, speelveld) + diepte_argument(diepte),
             ),
             (
                 'spelers (demo)',
@@ -131,7 +144,7 @@ def bouw_stappen(
                 'bal-landing → zone/afstand (fase 2, bewegende camera)',
                 py + [str(CV_MAP / 'landing.py'), '--video', str(video), '--homografie', str(homografie),
                       '--kalibratie', str(kalibratie), '--detecties', str(detecties), '--uit', str(met_landing),
-                      '--balspoor', str(uitmap / 'balspoor.jsonl')],
+                      '--balspoor', str(uitmap / 'balspoor.jsonl')] + diepte_argument(diepte),
             ),
             (
                 'spelers herkennen (fase 3)',
@@ -151,7 +164,7 @@ def bouw_stappen(
                 'bal-landing → zone/afstand (fase 2)',
                 py + [str(CV_MAP / 'landing.py'), '--video', str(video), '--kalibratie', str(kalibratie),
                       '--detecties', str(detecties), '--uit', str(met_landing),
-                      '--balspoor', str(uitmap / 'balspoor.jsonl')],
+                      '--balspoor', str(uitmap / 'balspoor.jsonl')] + diepte_argument(diepte),
             ),
             (
                 'spelers herkennen (fase 3)',
@@ -191,7 +204,7 @@ def bouw_stappen(
                 'videotracking (demo-sporen)',
                 py + [str(CV_MAP / 'tracking.py'), '--demo', '--seed', str(seed),
                       '--fps', str(tracking_fps), '--uit', str(posities)]
-                + maten_argumenten(breedte, speelveld),
+                + maten_argumenten(breedte, speelveld) + diepte_argument(diepte),
             ))
             stappen.append((
                 'fysieke stats per speler (loopafstand, sprintjes, topsnelheid)',
@@ -203,7 +216,7 @@ def bouw_stappen(
                 'videotracking (HOG + MOG2-beweging → sporen in veldmeters)',
                 py + [str(CV_MAP / 'tracking.py'), '--video', str(video), '--kalibratie', str(kalibratie),
                       '--fps', str(tracking_fps), '--uit', str(posities)]
-                + (['--homografie', str(homografie)] if bewegend else []),
+                + (['--homografie', str(homografie)] if bewegend else []) + diepte_argument(diepte),
             ))
             stappen.append((
                 'fysieke stats per spoor + invulsjabloon wie-is-wie',
@@ -217,15 +230,18 @@ def bouw_stappen(
             'heatmap van de posities',
             py + [str(CV_MAP / 'heatmap.py'), '--posities', str(posities), '--uit', str(uitmap / 'heatmap.json')]
             + (maten_argumenten(breedte, speelveld) if demo else ['--kalibratie', str(kalibratie)])
+            + diepte_argument(diepte)
             + (['--png', str(uitmap / 'heatmap.png')] if heatmap_png else []),
         ))
     return stappen
 
 
-def haal_maten(base: str, match: int, token: str) -> tuple[float | None, float | None]:
-    """De opgemeten terreinmaten van deze wedstrijd, van het platform.
+def haal_maten(base: str, match: int, token: str) -> tuple[float | None, float | None, float | None]:
+    """De opgemeten terreinmaten van deze wedstrijd, van het platform: (breedte, speelveld, diepte).
 
-    Leeg = reglementair; bij een onbereikbaar platform geven we (None, None) terug —
+    De doelgebied-diepte hoort erbij: de labels van het platform staan in het frame van de
+    échte diepte, dus zonder haar rekent de zone-bepaling tegen een ander veld dan de labels.
+    Leeg = reglementair; bij een onbereikbaar platform geven we (None, None, None) terug —
     de sync-stap hierna faalt dan luid genoeg.
     """
     sys.path.insert(0, str(CV_MAP))
@@ -234,28 +250,35 @@ def haal_maten(base: str, match: int, token: str) -> tuple[float | None, float |
     try:
         m = (sync_mod.haal_labels(base, match, token) or {}).get('match') or {}
     except SystemExit:
-        return None, None
-    breedte, speelveld = m.get('veldBreedteM'), m.get('veldSpeelveldM')
+        return None, None, None
+    breedte, speelveld, diepte = m.get('veldBreedteM'), m.get('veldSpeelveldM'), m.get('goalAreaDepth')
     return (
         float(breedte) if breedte is not None else None,
         float(speelveld) if speelveld is not None else None,
+        float(diepte) if diepte is not None else None,
     )
 
 
 def waarschuw_bij_afwijkende_kalibratie(
     kalibratie: Path | None, breedte: float | None, speelveld: float | None,
+    diepte: float | None = None,
 ) -> None:
     """De homografie is gefit op de maten in de kalibratie; wijkt het platform daarvan af,
     dan meten beide iets anders. Melden vóór de meting, niet achteraf in het rapport."""
     if kalibratie is None or not kalibratie.is_file():
         return
     try:
-        info = (json.loads(kalibratie.read_text(encoding='utf-8')) or {}).get('veld') or {}
+        data = json.loads(kalibratie.read_text(encoding='utf-8')) or {}
     except (json.JSONDecodeError, OSError):
         return
+    info = data.get('veld') or {}
     for naam, platform, in_kalibratie in (
         ('breedte', breedte, info.get('breedte_m')),
         ('speelveld', speelveld, info.get('speelveld_m')),
+        # In videomodus wint de diepte uit de kalibratie van elke vlag (landing/tracking lezen
+        # haar dáár), dus een afwijking hier is een echte meetfout — niet alleen cosmetisch.
+        # Oudere bestanden droegen het veld op het hoogste niveau (zie calibrate.veldinfo_uit).
+        ('diepte', diepte, data.get('doelgebied_diepte_m') or info.get('doelgebied_diepte_m')),
     ):
         if platform is not None and in_kalibratie is not None and abs(float(in_kalibratie) - platform) > 0.05:
             print(f'LET OP: {naam} verschilt — platform {platform:g} m, kalibratie {float(in_kalibratie):g} m. '
@@ -318,12 +341,15 @@ def controle(args: argparse.Namespace, token: str | None) -> int:
             punt(m.get('videoOffsetH1') is not None, 'video-offset helft 1 gezet', 'IJk H1 op de analysepagina')
             punt(m.get('videoOffsetH2') is not None, 'video-offset helft 2 gezet', 'IJk H2 op de analysepagina')
             breedte, speelveld = m.get('veldBreedteM'), m.get('veldSpeelveldM')
-            if breedte is not None or speelveld is not None:
-                print(f'  · terrein opgemeten: breedte {breedte or 14:g} m, speelveld {speelveld or 26:g} m')
+            diepte = m.get('goalAreaDepth')
+            if breedte is not None or speelveld is not None or diepte is not None:
+                print(f'  · terrein opgemeten: breedte {breedte or 14:g} m, speelveld {speelveld or 26:g} m, '
+                      f'doelgebied {diepte or 10:g} m')
                 waarschuw_bij_afwijkende_kalibratie(
                     args.kalibratie,
                     float(breedte) if breedte is not None else None,
                     float(speelveld) if speelveld is not None else None,
+                    float(diepte) if diepte is not None else None,
                 )
         except SystemExit:
             punt(False, f'platform bereikbaar en token geldig ({args.base})',
@@ -404,17 +430,17 @@ def main(argv: list[str] | None = None) -> None:
 
     # De echte terreinmaten van deze wedstrijd: zonder die vlaggen zou de zone-bepaling
     # (en de heatmap) in demomodus tegen een reglementair veld gelegd worden.
-    breedte, speelveld = haal_maten(args.base, args.match, token)
-    if breedte is not None or speelveld is not None:
-        print(f'Opgemeten terrein: breedte {breedte or 14:g} m, speelveld {speelveld or 26:g} m '
-              f'(alle meters worden hierop gerekend)')
-        waarschuw_bij_afwijkende_kalibratie(args.kalibratie, breedte, speelveld)
+    breedte, speelveld, diepte = haal_maten(args.base, args.match, token)
+    if breedte is not None or speelveld is not None or diepte is not None:
+        print(f'Opgemeten terrein: breedte {breedte or 14:g} m, speelveld {speelveld or 26:g} m, '
+              f'doelgebied {diepte or 10:g} m (alle meters worden hierop gerekend)')
+        waarschuw_bij_afwijkende_kalibratie(args.kalibratie, breedte, speelveld, diepte)
     import importlib.util
     stappen = bouw_stappen(
         args.match, uitmap, args.base, args.demo, args.seed, args.video, args.kalibratie, args.upload, args.fps,
         tracking=args.tracking, heatmap_png=importlib.util.find_spec('cv2') is not None,
         breedte=breedte, speelveld=speelveld, tracking_fps=args.tracking_fps,
-        bewegend=args.bewegend, stand=args.stand, overlay=args.overlay,
+        bewegend=args.bewegend, stand=args.stand, overlay=args.overlay, diepte=diepte,
     )
 
     omgeving = dict(os.environ, CV_BRIDGE_TOKEN=token)

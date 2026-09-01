@@ -1,4 +1,4 @@
-import { FIELD, totalLengthM, veldMaten, type Point, type VeldMaten } from './field'
+import { FIELD, distanceM, projectWerpplaats, totalLengthM, veldMaten, type Point, type VeldMaten } from './field'
 
 // Van een bevestigd videovoorstel naar de invoer van één worp.
 //
@@ -32,6 +32,8 @@ export type Voorstelworp = {
   rugnummer?: number | null
   xM?: number | null
   yM?: number | null
+  /** De bal landde buiten de lijnen: het punt ligt dan bewúst buiten het veld. */
+  uitbal?: boolean | null
   verdict?: 'bevestigd' | 'afgewezen' | null
 }
 
@@ -62,9 +64,75 @@ export function naarNorm(
   }
 }
 
-/** Ligt dit punt binnen het veld? Buiten betekent: de meting deugt niet, niet "uitbal". */
+/**
+ * Reglementaire worpafstand (meters) uit werpplaats + landingspunt, met de field.ts-machinerie.
+ *
+ * Dít is de ene bron van waarheid voor "hoe ver was die worp": dezelfde §6.4-projectie
+ * (projectWerpplaats) en dezelfde metriek (distanceM, met de echte veldmaten en diepte van de
+ * wedstrijd) als voor handmatig aangetekende worpen. landing.py rekent voor het losse
+ * CLI-rapport en de overlay een eigen benadering uit, maar dat getal komt de app niet in —
+ * twee afstandsberekeningen drijven onvermijdelijk uiteen.
+ */
+export function afstandVanWorp(
+  werpplaats: { xM: number; yM: number },
+  landing: { xM: number; yM: number },
+  goalAreaDepthM: number = FIELD.defaultGoalAreaDepthM,
+  maten?: Partial<VeldMaten> | null,
+): number {
+  // De CV levert de werpplaats al §6.4-geprojecteerd aan, maar de engine blijft de baas over
+  // die regel: hier nogmaals projecteren is idempotent én vangt een CV-kant die het ooit
+  // vergeet. De opzetcontext (vangst ín het doelgebied) kent de CV niet, dus geen
+  // vanuitDoelgebied — exact dezelfde aanname als projecteer_vrijeworplijn in landing.py.
+  const van = projectWerpplaats(naarNorm(werpplaats.xM, werpplaats.yM, goalAreaDepthM, maten), goalAreaDepthM, {
+    maten,
+  })
+  const naar = naarNorm(landing.xM, landing.yM, goalAreaDepthM, maten)
+  return distanceM(van, naar, goalAreaDepthM, maten)
+}
+
+/**
+ * De afstand voor één ruw CV-event (JSONL-rij uit landing.py), of null als er geen hoort.
+ *
+ * Leest bewúst nooit het Python-veld `afstand_m`: dat is enkel de CLI-benadering. Regels:
+ *  - een uitbal krijgt géén afstand — het reglement kent geen worpafstand voor een worp
+ *    die buiten de lijnen eindigt;
+ *  - zonder werpplaats (het event draagt 'werpplaats' uit landing.py) geen afstand;
+ *  - zonder landingspunt (zone) valt er niets te meten.
+ */
+export function afstandUitEvent(
+  e: Record<string, unknown>,
+  goalAreaDepthM: number = FIELD.defaultGoalAreaDepthM,
+  maten?: Partial<VeldMaten> | null,
+): number | null {
+  if (e.uitbal === true) return null
+  const getal = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) ? v : null)
+  const punt = (v: unknown): { xM: number; yM: number } | null => {
+    if (v == null || typeof v !== 'object') return null
+    const xM = getal((v as { x_m?: unknown }).x_m)
+    const yM = getal((v as { y_m?: unknown }).y_m)
+    return xM != null && yM != null ? { xM, yM } : null
+  }
+  const werpplaats = punt(e.werpplaats)
+  const landing = punt(e.zone)
+  if (!werpplaats || !landing) return null
+  // Zelfde granulariteit als de rest van de meterswaarden in cv-events (2 decimalen).
+  return Math.round(afstandVanWorp(werpplaats, landing, goalAreaDepthM, maten) * 100) / 100
+}
+
+/** Ligt dit punt binnen het veld? Buiten zónder uitbal-vlag betekent: de meting deugt niet. */
 export function opHetVeld(p: Point, marge = 0.02): boolean {
   return p.x >= -marge && p.x <= 1 + marge && p.y >= -marge && p.y <= 1 + marge
+}
+
+/**
+ * Is dit een geloofwaardig uitbal-punt?
+ *
+ * Een uitbal ligt buiten de lijnen, maar niet in een ander dorp: tot een halve veldmaat
+ * erbuiten is een gemiste bal, verder is het een kapotte projectie. De grens is ruim genomen —
+ * een verre uitworp over de achterlijn kan best tien meter doorschieten.
+ */
+export function geloofwaardigeUitbal(p: Point): boolean {
+  return p.x >= -0.5 && p.x <= 1.5 && p.y >= -0.5 && p.y <= 1.5 && !opHetVeld(p, 0)
 }
 
 /**
@@ -83,13 +151,17 @@ export function worpUitVoorstel(
   if (!Number.isFinite(v.xM) || !Number.isFinite(v.yM)) return null
 
   const point = naarNorm(v.xM, v.yM, goalAreaDepthM, maten)
-  if (!opHetVeld(point)) return null
+  // Een uitbal ligt bewúst buiten de lijnen: dat punt moet ONGEKLEMD naar de engine, want
+  // precies daaruit leidt die 'uit' af (out_side/out_back). Alles daarbuiten blijft de oude
+  // regel: buiten het veld zonder uitbal-vlag is een kapotte meting, geen worp.
+  const uitbal = v.uitbal === true && geloofwaardigeUitbal(point)
+  if (!uitbal && !opHetVeld(point)) return null
 
   return {
     // Weet het model het worptype niet, dan is 'nek' de gewone worp — en de reviewlaan laat
     // je dat per voorstel corrigeren vóór je overzet.
     type: v.worpType === 'rug' ? 'rug' : 'nek',
-    point: { x: Math.min(1, Math.max(0, point.x)), y: Math.min(1, Math.max(0, point.y)) },
+    point: uitbal ? point : { x: Math.min(1, Math.max(0, point.x)), y: Math.min(1, Math.max(0, point.y)) },
     // Twee tikken = gevangen. Dat is het enige dat je niet aan de landingsplek kunt zien; doel,
     // uit en eigen doelgebied leidt de engine zelf af.
     tapCount: v.eventType === 'vangst' ? 2 : 1,
@@ -133,7 +205,9 @@ export function maakOverzetplan(
         videoTimeS: v.videoTimeS,
         reden:
           typeof v.xM === 'number' && typeof v.yM === 'number'
-            ? 'landingspunt valt buiten het veld'
+            ? v.uitbal === true
+              ? 'uitbal-punt te ver buiten het veld om geloofwaardig te zijn'
+              : 'landingspunt valt buiten het veld'
             : 'geen landingspunt (zonder veldkalibratie weet niets waar de bal viel)',
       })
       continue

@@ -1,3 +1,4 @@
+import { afstandUitEvent } from '@/lib/cv-naar-worp'
 import { FIELD, matenVanMatch, totalLengthM, veldMaten } from '@/lib/field'
 import { getPayloadClient } from '@/lib/payload-client'
 
@@ -166,7 +167,15 @@ export async function POST(req: Request) {
           inDoelgebied: zone?.in_doelgebied ?? false,
           xM: zone?.x_m ?? null,
           yM: zone?.y_m ?? null,
-          afstandM: (e.afstand_m ?? null) as number | null,
+          // Eén bron van waarheid voor de worpafstand: field.ts rekent ze zelf uit
+          // werpplaats + landingspunt, met de maten van déze wedstrijd. Het meegestuurde
+          // afstand_m is de CLI-benadering en wordt bewust genegeerd — dezelfde regel als
+          // de server-analyse (analyseer/route.ts).
+          afstandM: afstandUitEvent(
+            e as Record<string, unknown>,
+            match.goalAreaDepth ?? FIELD.defaultGoalAreaDepthM,
+            maten,
+          ),
           side: speler?.team ?? null,
           rugnummer: speler?.rugnummer ?? null,
           scoreDelta: (e.score_delta ?? 0) as number,

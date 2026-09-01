@@ -8,6 +8,7 @@ maar één gewicht gedownload is.
 
 from __future__ import annotations
 
+import json
 import sys
 import unittest
 from pathlib import Path
@@ -71,7 +72,7 @@ class TestWorpscore(unittest.TestCase):
     def _staat(self, pols_y, pols_x):
         p, s = skelet(pols_y=pols_y, pols_x=pols_x)
         return {'polshoogte': houding.polshoogte(p, s), 'romp': houding.romphoogte(p, s),
-                'pols': houding.polspositie(p, s)}
+                'pols': houding.polspositie(p, s), 'heup': houding.heuppositie(p, s)}
 
     def test_hoog_en_ver_scoort(self):
         # De maat is de afgelegde weg × de polshoogte, niet de snelheid: 0,8 romp opzij met de
@@ -135,6 +136,23 @@ class TestWorpenVinden(unittest.TestCase):
         gevonden = houding.vind_worpmomenten(self._reeks([20.0, 21.0]), min_afstand_s=3.0)
         self.assertEqual(len(gevonden), 1)
 
+    def test_de_eerste_piek_boven_de_drempel_wint_van_een_sterkere_vlak_erna(self):
+        # De vangst — de vanger die vlak ná de worp snel de armen heft — scoort vaak hóger dan
+        # de worp zelf. Won de sterkste piek, dan schoof het moment naar de vangst en kreeg het
+        # event de werper en positie van de vánger. Het loslaten is de eerste piek van de groep.
+        reeks = []
+        t = 0.0
+        while t < 40.0:
+            score = 0.2
+            if abs(t - 20.0) < 0.01:
+                score = 0.9      # de worp
+            if abs(t - 21.4) < 0.01:
+                score = 1.4      # de vangst, sterker
+            reeks.append({'t': round(t, 2), 'score': score, 'polshoogte': 0.1})
+            t += 0.2
+        gevonden = houding.vind_worpmomenten(reeks, drempel=0.45, min_afstand_s=3.0)
+        self.assertEqual(gevonden, [(20.0, 0.9)])
+
 
 class TestWorpType(unittest.TestCase):
     def _reeks(self, hoogtes, rond=10.0, stap=0.2):
@@ -156,6 +174,25 @@ class TestWorpType(unittest.TestCase):
         self.assertIsNone(houding.worp_type(reeks, 10.0))
         self.assertIsNone(houding.worp_type([], 10.0))
 
+    def test_leest_de_hoogtes_van_de_werper_niet_die_van_de_vanger(self):
+        # De vanger (speler 2) heft ná de worp zelf de armen: het frame-maximum blijft dan hoog
+        # hangen en een zuivere nekworp wordt "geen van beide". Per speler bijgehouden hoogtes
+        # laten het type over de reeks van de wérper (speler 1) beslissen.
+        reeks = []
+        for i, h in enumerate([0.5, 0.6, 0.7]):        # de werper vóór het loslaten: hoog
+            reeks.append({'t': 9.4 + 0.2 * i, 'score': 0.2, 'polshoogte': h,
+                          'hoogtes': {1: h, 2: -0.5}})
+        reeks.append({'t': 10.0, 'score': 0.9, 'polshoogte': 0.7, 'werper': 1,
+                      'hoogtes': {1: 0.7, 2: -0.5}})
+        for i, h in enumerate([0.1, 0.0, -0.1]):       # de werper erna laag, de vanger hoog
+            reeks.append({'t': 10.2 + 0.2 * i, 'score': 0.2, 'polshoogte': 0.8,
+                          'hoogtes': {1: h, 2: 0.8}})
+        self.assertEqual(houding.worp_type(reeks, 10.0), 'nek')
+        # Na een JSON-rondgang (--reeks-uit, --hervat) zijn de sleutels tekst geworden.
+        for r in reeks:
+            r['hoogtes'] = {str(k): v for k, v in r['hoogtes'].items()}
+        self.assertEqual(houding.worp_type(reeks, 10.0), 'nek')
+
 
 class TestVertrouwen(unittest.TestCase):
     def test_blijft_onder_de_een(self):
@@ -166,6 +203,151 @@ class TestVertrouwen(unittest.TestCase):
 
     def test_stijgt_met_de_score(self):
         self.assertLess(houding.vertrouwen(1.3), houding.vertrouwen(3.0))
+
+
+class TestAssenstelsel(unittest.TestCase):
+    """De polsweg wordt in het assenstelsel van de speler gemeten: pols min eigen heup.
+
+    Camerapan valt er dan wiskundig uit (heup en pols schuiven exact samen mee) en lopen
+    grotendeels ook — de heup loopt mee. De vroegere mediaan-aftrek van de gedeelde
+    heupverschuiving is daarmee vervallen: die kon niets middelen met één of twee spelers in
+    beeld en liet de loopbeweging van de werper zélf in de score staan.
+    """
+
+    def _staat(self, pols=(300.0, 40.0), heup=(300.0, 200.0), romp=100.0):
+        return {'polshoogte': 0.6, 'romp': romp, 'pols': pols, 'heup': heup}
+
+    def test_camerapan_valt_wiskundig_uit_de_polsweg(self):
+        # Het recept uit de doorlichting: niets bewoog behalve de camera (80 px). In
+        # beeldcoördinaten scoorde dat 0,48 — boven de drempel van 0,45, een spookworp.
+        # Pols én heup schuiven mee, dus in de eigen assen bewoog er niets: exact 0.
+        vorige = self._staat(pols=(300.0, 40.0), heup=(300.0, 200.0))
+        huidige = self._staat(pols=(380.0, 40.0), heup=(380.0, 200.0))
+        self.assertEqual(houding.worpscore(vorige, huidige), 0.0)
+
+    def test_meegepande_camera_geeft_de_zwiep_terug(self):
+        # De camera volgt de zwaai: in beeld staat de pols stil, maar de heup schoof −80 px
+        # mee met het beeld. Relatief aan de heup bewoog de pols dus wél — de worp die de
+        # oude maat in beeldcoördinaten voorgoed kwijt was.
+        toen = self._staat(pols=(300.0, 40.0), heup=(300.0, 200.0))
+        nu = self._staat(pols=(300.0, 40.0), heup=(220.0, 200.0))
+        self.assertAlmostEqual(houding.worpscore(toen, nu), 0.48, places=6)
+
+    def test_lopen_met_de_armen_omhoog_scoort_niet(self):
+        # De loper draagt zijn armen mee: pols en heup verschuiven samen. De mediaan-aftrek
+        # liet deze eigen beweging in de score staan (er valt niets te middelen met de
+        # omstanders); in de eigen assen is ze per definitie nul.
+        toen = self._staat(pols=(300.0, 40.0), heup=(300.0, 200.0))
+        nu = self._staat(pols=(400.0, 40.0), heup=(400.0, 200.0))
+        self.assertEqual(houding.worpscore(toen, nu), 0.0)
+
+    def test_zwiep_boven_op_het_lopen_blijft_scoren(self):
+        # Dezelfde zwiep van 80 px, maar nu mét 100 px loopbeweging eronder: alleen de
+        # armbeweging telt, dus dezelfde score als stilstaand werpen.
+        stilstaand = houding.worpscore(self._staat(pols=(300.0, 40.0)),
+                                       self._staat(pols=(380.0, 40.0)))
+        lopend = houding.worpscore(self._staat(pols=(300.0, 40.0), heup=(300.0, 200.0)),
+                                   self._staat(pols=(480.0, 40.0), heup=(400.0, 200.0)))
+        self.assertAlmostEqual(stilstaand, 0.48, places=6)
+        self.assertAlmostEqual(lopend, stilstaand, places=6)
+
+    def test_zoomen_tussen_twee_metingen_verzint_geen_beweging(self):
+        # Elke meting in de eigen rompen van dát moment: zoomt de camera 2×, dan verdubbelen
+        # pols-afstand én romp en blijft de verhouding gelijk — geen beweging, geen score.
+        toen = self._staat(pols=(380.0, 40.0), heup=(300.0, 200.0), romp=100.0)
+        nu = self._staat(pols=(760.0, 80.0), heup=(600.0, 400.0), romp=200.0)
+        self.assertAlmostEqual(houding.worpscore(toen, nu), 0.0, places=6)
+
+    def test_zonder_heup_valt_terug_op_beeldcoordinaten(self):
+        # De heup-zekerheid dipt juist bij de romprotatie van een worp; dan liever een
+        # minder zuivere meting (beeldcoördinaten) dan helemaal geen.
+        toen = self._staat(pols=(300.0, 40.0), heup=None)
+        nu = self._staat(pols=(380.0, 40.0), heup=(380.0, 200.0))
+        self.assertAlmostEqual(houding.worpscore(toen, nu), 0.48, places=6)
+
+
+class TestVindWorpmomentenPerSpeler(unittest.TestCase):
+    """Pieken zoeken per speler: twee spelers binnen min_afstand zijn twee worpen."""
+
+    def _reeks(self, per_speler_per_t, stap=0.2, duur=30.0):
+        """`per_speler_per_t`: {tijd: {werper: score}}; de rest is rust zonder per_speler."""
+        reeks = []
+        t = 0.0
+        while t < duur:
+            tr = round(t, 2)
+            scores = per_speler_per_t.get(tr)
+            meting = {'t': tr, 'score': max(scores.values()) if scores else 0.0,
+                      'polshoogte': 0.1, 'personen': 2}
+            if scores:
+                meting['per_speler'] = dict(scores)
+                meting['werper'] = max(scores, key=scores.get)
+            reeks.append(meting)
+            t += stap
+        return reeks
+
+    def test_twee_spelers_binnen_min_afstand_zijn_twee_worpen(self):
+        # De frame-maximum-zoektocht voegt dit samen tot één worp; per speler zijn het er twee.
+        reeks = self._reeks({10.0: {0: 0.9}, 11.4: {1: 1.2}})
+        oud = houding.vind_worpmomenten(reeks, drempel=0.45, min_afstand_s=3.0)
+        self.assertEqual(len(oud), 1)
+        nieuw = houding.vind_worpmomenten_per_speler(reeks, drempel=0.45, min_afstand_s=3.0)
+        self.assertEqual(nieuw, [(10.0, 0.9, 0), (11.4, 1.2, 1)])
+
+    def test_twee_pieken_van_dezelfde_speler_blijven_een_worp(self):
+        # Aanloop en zwaai van één speler: de éérste piek boven de drempel wint, niet de
+        # sterkere nazwaai — het loslaten is de eerste beweging van de groep.
+        reeks = self._reeks({10.0: {0: 0.9}, 11.4: {0: 1.2}})
+        nieuw = houding.vind_worpmomenten_per_speler(reeks, drempel=0.45, min_afstand_s=3.0)
+        self.assertEqual(nieuw, [(10.0, 0.9, 0)])
+
+    def test_json_rondgang_maakt_van_de_ids_weer_getallen(self):
+        # Na --reeks-uit/--hervat zijn de per_speler-sleutels tekst; de zoektocht geeft ze
+        # als int terug, zodat events uit beide rondes hetzelfde type dragen.
+        reeks = self._reeks({10.0: {0: 0.9}})
+        for r in reeks:
+            if 'per_speler' in r:
+                r['per_speler'] = {str(k): v for k, v in r['per_speler'].items()}
+        self.assertEqual(houding.vind_worpmomenten_per_speler(reeks, 0.45, 3.0),
+                         [(10.0, 0.9, 0)])
+
+    def test_zonder_per_speler_veld_valt_terug_op_de_oude_zoektocht(self):
+        # Een reeks van vóór deze upgrade (--hervat!) heeft geen per_speler-velden; dan moet
+        # de beslissing exact die van de oude functie zijn, met werper None.
+        reeks = [{'t': round(0.2 * i, 2), 'score': 0.2, 'polshoogte': 0.1} for i in range(100)]
+        reeks[50]['score'] = 0.9
+        oud = houding.vind_worpmomenten(reeks, drempel=0.45, min_afstand_s=3.0)
+        self.assertEqual(houding.vind_worpmomenten_per_speler(reeks, 0.45, 3.0),
+                         [(t, s, None) for t, s in oud])
+        self.assertEqual(len(oud), 1)
+
+
+class TestHervatpunt(unittest.TestCase):
+    """De naad van een onderbroken meting: geen dubbel tijdstip, geen koud venster, geen
+    botsende werper-nummers."""
+
+    def test_gooit_de_overlap_weg_en_hervat_een_venster_eerder(self):
+        eerder = [{'t': round(0.2 * i, 3), 'score': 0.1, 'werper': i % 3} for i in range(1, 51)]
+        behouden, vanaf, eerste = houding.hervatpunt(eerder)
+        # De laatste meting (mogelijk afgekapt) gaat eraf; daarna een vol venster terug.
+        self.assertAlmostEqual(vanaf, 9.8 - houding.VENSTER_HOOG_S, places=9)
+        # De overlap wordt opnieuw gemeten en mag dus niet óók bewaard blijven: anders staat
+        # het naadtijdstip er straks twee keer in, de oude score naast een verse 0,0.
+        self.assertTrue(all(r['t'] < vanaf for r in behouden))
+        self.assertTrue(behouden)
+        # De werper-nummering telt verder boven wat al vergeven was (0, 1 en 2).
+        self.assertEqual(eerste, 3)
+
+    def test_telt_ook_de_ids_uit_hoogtes_mee(self):
+        # Na een JSON-rondgang zijn de hoogtes-sleutels tekst; ook die nummers zijn vergeven.
+        eerder = [{'t': 1.0, 'score': 0.1, 'hoogtes': {'7': 0.5}},
+                  {'t': 2.0, 'score': 0.1, 'werper': 1},
+                  {'t': 3.0, 'score': 0.1}]
+        _behouden, _vanaf, eerste = houding.hervatpunt(eerder)
+        self.assertEqual(eerste, 8)
+
+    def test_lege_of_te_korte_reeks_begint_gewoon_opnieuw(self):
+        self.assertEqual(houding.hervatpunt([]), ([], 0.0, 0))
+        self.assertEqual(houding.hervatpunt([{'t': 0.1, 'score': 0.0}]), ([], 0.0, 0))
 
 
 
@@ -291,6 +473,233 @@ class TestVideolaag(unittest.TestCase):
                                      werperreeks=grof, werper_marge_s=1.0)
         self.assertEqual(events[0]['werper'], 4)
         self.assertEqual(events[0]['video_time_s'], 6.08)
+
+    def test_een_camerapan_telt_niet_als_worp(self):
+        # Het beoogde gebruik is een gsm in de hand: de camera volgt de bal. Iedereen die dan
+        # stil staat met de armen omhoog — de wachtende vanger! — kreeg in beeldcoördinaten de
+        # volledige pan als polsweg en scoorde 0,48: een spookworp boven de drempel. In het
+        # assenstelsel van de speler schuiven heup en pols exact samen mee: score ~0, ook met
+        # één speler in beeld — daar viel er voor een gedeelde-bewegings-schatting per
+        # definitie niets te middelen.
+        for personen in (2, 1):
+            teller = {'n': 0}
+
+            def model(_frame, _personen=personen, _teller=teller):
+                t = _teller['n'] / 5.0
+                _teller['n'] += 1
+                dx = 80.0 if t >= 9.0 else 0.0     # de camera pant 80 px op t=9,0
+                alle_p, alle_s = [], []
+                for i in range(_personen):
+                    p, s = skelet(pols_y=40.0)     # armen omhoog, verder roerloos
+                    alle_p.append([[x + dx + 400.0 * i, y] for x, y in p])
+                    alle_s.append(s)
+                return alle_p, alle_s
+
+            reeks = houding.meet_video(self.video, model, analyse_fps=5.0)
+            self.assertLess(max(r['score'] for r in reeks), 0.01,
+                            f'camerapan liet een score staan bij {personen} speler(s)')
+            self.assertEqual(houding.vind_worpmomenten(reeks), [],
+                             f'camerapan werd een worp bij {personen} speler(s) in beeld')
+            self.assertEqual(houding.vind_worpmomenten_per_speler(reeks), [])
+
+    def test_een_zwiep_die_de_camera_meevolgt_telt_wel(self):
+        # De keerzijde: de werper staat klaar met de bal boven het hoofd en zwiept op t=9,0;
+        # de camera pant exact mee. In beeld staat zijn pols dan stil — de oude maat zag nul
+        # en de worp was voorgoed weg uit de zoekpassage. De heup (die wél meeschoof) is de
+        # oorsprong van zijn assenstelsel: relatief daaraan bewoog de pols wel degelijk.
+        teller = {'n': 0}
+
+        def model(_frame):
+            t = teller['n'] / 5.0
+            teller['n'] += 1
+            p, s = skelet(pols_y=40.0)
+            if t >= 9.0:
+                p = [[x - 80.0, y] for x, y in p]
+                p[houding.L_POLS] = [300.0, 40.0]
+                p[houding.R_POLS] = [310.0, 40.0]
+            return [p], [s]
+
+        reeks = houding.meet_video(self.video, model, analyse_fps=5.0)
+        gevonden = houding.vind_worpmomenten(reeks)
+        self.assertEqual(len(gevonden), 1)
+        self.assertAlmostEqual(gevonden[0][0], 9.0, delta=0.05)
+
+    def test_een_onzekere_heup_wist_de_worp_niet(self):
+        # De heup-zekerheid dipt juist bij de romprotatie van een worp. Eén onzeker heupframe
+        # op t=9,0 gaf de speler vroeger een nieuw nummer met lege geschiedenis — alle scores
+        # rond het loslaten exact 0, de worp voorgoed weg. De laatst bekende heup blijft nu
+        # even staan, zodat de volgende meting hem gewoon terugvindt.
+        teller = {'n': 0}
+
+        def model(_frame):
+            t = teller['n'] / 5.0
+            teller['n'] += 1
+            werpt = 0.0 <= t - 9.0 < 0.3
+            pols_y, pols_x = (40.0, 300.0 + 90.0 * ((t * 5.0) % 2)) if werpt else (170.0, 300.0)
+            punten, scores = skelet(pols_y=pols_y, pols_x=pols_x)
+            if abs(t - 9.0) < 1e-9:
+                scores[houding.L_HEUP] = scores[houding.R_HEUP] = 0.1
+            return [punten], [scores]
+
+        reeks = houding.meet_video(self.video, model, analyse_fps=5.0)
+        gevonden = houding.vind_worpmomenten(reeks)
+        self.assertEqual(len(gevonden), 1)
+        self.assertAlmostEqual(gevonden[0][0], 9.2, delta=0.05)
+
+    def test_de_vanger_neemt_werper_moment_en_type_niet_over(self):
+        # Speler A werpt (nekworp) op t=9,0; speler B heft op t=9,4 snel de armen om te
+        # vangen en scoort daarbij hóger dan de worp zelf. Vroeger won de sterkste piek:
+        # het event schoof naar de vangst, met werper-id en positie van de vánger, en het
+        # frame-maximum van de polshoogtes maakte van de nekworp None.
+        teller = {'n': 0}
+
+        def model(_frame):
+            t = teller['n'] / 5.0
+            teller['n'] += 1
+            # A: armen geleidelijk omhoog vanaf 8,4, de zwiep op 9,0, daarna laag.
+            if t < 8.4:
+                a_y, a_x = 170.0, 300.0
+            elif t < 8.6:
+                a_y, a_x = 130.0, 300.0
+            elif t < 8.8:
+                a_y, a_x = 90.0, 300.0
+            elif t < 9.0:
+                a_y, a_x = 40.0, 300.0
+            elif t < 9.2:
+                a_y, a_x = 40.0, 380.0             # het loslaten: hoog én ver
+            else:
+                a_y, a_x = 170.0, 300.0
+            # B (400 px verder): heft op 9,4 in één keer de armen — hoog én ver — en houdt ze zo.
+            b_y, b_x = (40.0, 430.0) if t >= 9.4 else (170.0, 300.0)
+            pa, sa = skelet(pols_y=a_y, pols_x=a_x)
+            pb, sb = skelet(pols_y=b_y, pols_x=b_x)
+            pb = [[x + 400.0, y] for x, y in pb]
+            return [pa, pb], [sa, sb]
+
+        reeks = houding.meet_video(self.video, model, analyse_fps=5.0)
+        momenten = houding.vind_worpmomenten(reeks)
+        self.assertEqual(len(momenten), 1)
+        self.assertAlmostEqual(momenten[0][0], 9.0, delta=0.05)   # de worp, niet de vangst
+        events = houding.maak_events(momenten, reeks, 42, houding.DREMPEL_SCORE)
+        self.assertEqual(events[0]['werper'], 0)                  # speler A, niet de vanger
+        self.assertEqual(events[0]['worp_type'], 'nek')           # aan Á's polshoogtes gelezen
+        # Ook per speler blijft de worp van A onaangetast op zíjn moment staan; komt de
+        # vangbeweging van B boven de drempel, dan is dat hoogstens een éigen, apart voorstel
+        # onder B's nummer (dat de reviewlaan afwijst) — nooit een verschoven worp van A.
+        per = houding.vind_worpmomenten_per_speler(reeks)
+        van_a = [m for m in per if m[2] == 0]
+        self.assertEqual(len(van_a), 1)
+        self.assertAlmostEqual(van_a[0][0], 9.0, delta=0.05)
+        self.assertTrue(all(m[2] == 1 for m in per if m is not van_a[0]))
+
+    def test_een_lopende_speler_zonder_worp_scoort_onder_de_drempel(self):
+        # Een speler die met de armen omhoog terugjogt naar zijn veld (400 px/s) naast een
+        # stilstaande omstander: de mediaan-aftrek kon hier niets middelen en liet zijn eigen
+        # loopbeweging in de polsweg staan — 0,48, een spookworp boven de drempel. In zijn
+        # eigen assenstelsel loopt zijn heup mee en beweegt de pols niet: score ~0.
+        teller = {'n': 0}
+
+        def model(_frame):
+            t = teller['n'] / 5.0
+            teller['n'] += 1
+            p0, s0 = skelet(pols_y=40.0)               # armen omhoog, lopend
+            p0 = [[x + 400.0 * t, y] for x, y in p0]
+            p1, s1 = skelet(pols_y=170.0)              # omstander, stilstaand
+            p1 = [[x + 900.0, y] for x, y in p1]
+            return [p0, p1], [s0, s1]
+
+        reeks = houding.meet_video(self.video, model, analyse_fps=5.0)
+        self.assertLess(max(r['score'] for r in reeks), houding.DREMPEL_SCORE)
+        self.assertEqual(houding.vind_worpmomenten_per_speler(reeks), [])
+
+    def test_dezelfde_zwiep_met_lopen_erbovenop_blijft_scoren(self):
+        # De keerzijde van de vorige test: wérpt de lopende speler wel (zwiep van 90 px
+        # bovenop de 400 px/s loopbeweging), dan blijft alleen de armbeweging over en piekt
+        # de score gewoon boven de drempel — lopen maskeert de worp niet.
+        teller = {'n': 0}
+
+        def model(_frame):
+            t = teller['n'] / 5.0
+            teller['n'] += 1
+            werpt = 0.0 <= t - 9.0 < 0.45
+            pols_y, pols_x = (40.0, 300.0 + 90.0 * ((t * 5.0) % 2)) if werpt else (170.0, 300.0)
+            p0, s0 = skelet(pols_y=pols_y, pols_x=pols_x)
+            p0 = [[x + 400.0 * t, y] for x, y in p0]   # dezelfde loper als hierboven
+            p1, s1 = skelet(pols_y=170.0)
+            p1 = [[x + 900.0, y] for x, y in p1]
+            return [p0, p1], [s0, s1]
+
+        reeks = houding.meet_video(self.video, model, analyse_fps=5.0)
+        momenten = houding.vind_worpmomenten_per_speler(reeks)
+        self.assertEqual(len(momenten), 1)
+        self.assertAlmostEqual(momenten[0][0], 9.0, delta=0.05)
+        self.assertGreater(momenten[0][1], houding.DREMPEL_SCORE)
+
+    def test_twee_spelers_die_kort_na_elkaar_werpen_zijn_twee_worpen(self):
+        # Werper en vanger die meteen terugwerpt, of twee velden naast elkaar in beeld: twee
+        # volwaardige worpen binnen de minimale afstand van 3 s. De frame-maximum-zoektocht
+        # voegt die samen tot één; de per-speler-reeks houdt ze uit elkaar.
+        teller = {'n': 0}
+
+        def model(_frame):
+            t = teller['n'] / 5.0
+            teller['n'] += 1
+            alle_p, alle_s = [], []
+            for offset, worp_t in ((0.0, 9.0), (400.0, 10.4)):
+                werpt = 0.0 <= t - worp_t < 0.45
+                pols_y, pols_x = (40.0, 300.0 + 90.0 * ((t * 5.0) % 2)) if werpt else (170.0, 300.0)
+                p, s = skelet(pols_y=pols_y, pols_x=pols_x)
+                alle_p.append([[x + offset, y] for x, y in p])
+                alle_s.append(s)
+            return alle_p, alle_s
+
+        reeks = houding.meet_video(self.video, model, analyse_fps=5.0)
+        # De oude zoektocht ziet er hoogstens één — dáárom bestaat de per-speler-variant.
+        self.assertLessEqual(len(houding.vind_worpmomenten(reeks)), 1)
+        momenten = houding.vind_worpmomenten_per_speler(reeks)
+        self.assertEqual(len(momenten), 2)
+        self.assertAlmostEqual(momenten[0][0], 9.0, delta=0.05)
+        self.assertAlmostEqual(momenten[1][0], 10.4, delta=0.05)
+        self.assertNotEqual(momenten[0][2], momenten[1][2])       # twee verschillende werpers
+        # En de events dragen elk hun eigen werper mee.
+        events = houding.maak_events(momenten, reeks, 42, houding.DREMPEL_SCORE)
+        self.assertEqual([e['werper'] for e in events], [momenten[0][2], momenten[1][2]])
+
+    def test_reeks_contract_blijft_staan_en_per_speler_is_compact(self):
+        # Het contract met cv/train.py en cv-analyse.ts: de bestaande sleutels blijven, en
+        # 'score' is de beste per-speler-score met 'werper' daar consistent bij. Het nieuwe
+        # per_speler-veld is compact: alleen op metingen met een score boven de ruisvloer,
+        # zodat een uur rust de reeks niet opblaast.
+        reeks = houding.meet_video(self.video, self._model([9.0]), analyse_fps=5.0)
+        for r in reeks:
+            for sleutel in ('t', 'score', 'polshoogte', 'personen'):
+                self.assertIn(sleutel, r)
+        met = [r for r in reeks if 'per_speler' in r]
+        stil = [r for r in reeks if 'per_speler' not in r]
+        self.assertTrue(met)
+        self.assertTrue(stil)                                     # rust draagt het veld niet
+        for r in stil:
+            self.assertLess(r['score'], houding.PER_SPELER_VLOER)
+        for r in met:
+            self.assertEqual(r['score'], max(r['per_speler'].values()))
+            self.assertIn(r['werper'], r['per_speler'])           # 'werper' hoort bij 'score'
+            for s in r['per_speler'].values():
+                self.assertGreaterEqual(s, houding.PER_SPELER_VLOER)
+        # En het veld overleeft de JSON-rondgang van --reeks-uit/--hervat.
+        rond = [json.loads(json.dumps(r)) for r in reeks]
+        self.assertEqual([(t, s) for t, s, _ in houding.vind_worpmomenten_per_speler(rond)],
+                         [(t, s) for t, s, _ in houding.vind_worpmomenten_per_speler(reeks)])
+
+    def test_een_grove_analysestand_vindt_de_worpen_nog(self):
+        # Op analyse-fps 1 is de meetstap (1,0 s) groter dan de oude vaste gat-grens van
+        # 0,66 s: de geschiedenis werd bij élke meting gewist en elke score was exact 0 —
+        # stil nul worpen, juist op de trage servers waarvoor die stand bestaat.
+        worpen = [4.0, 9.0, 15.0]
+        reeks = houding.meet_video(self.video, self._model(worpen, fps=1.0), analyse_fps=1.0)
+        gevonden = houding.vind_worpmomenten(reeks)
+        self.assertEqual(len(gevonden), len(worpen))
+        for w, (t, _s) in zip(worpen, gevonden):
+            self.assertAlmostEqual(t, w, delta=0.1)
 
 if __name__ == '__main__':
     unittest.main()
@@ -498,6 +907,48 @@ class TestHervatten(unittest.TestCase):
     def test_zonder_bestand_gewoon_niets(self):
         self.assertEqual(houding.lees_reeks(self.map / 'bestaat-niet.jsonl'), [])
 
+    def test_hervat_na_een_voltooide_run_hergebruikt_de_uitkomst(self):
+        # Een reeks mét passage-2-regels is de definitieve, herschreven vorm van een voltooide
+        # twee-passages-run: binnen de nakijkvensters bestaan alleen nog fijne metingen. De
+        # oude hervat-filter gooide juist die weg en mat verder met gaten van ± 1,6 s rond
+        # elke gevonden worp — alle worpen stil kwijt (2/2 → 0/2). En dit is geen randgeval:
+        # de server zet --hervat óók als een látere stap struikelde, waarna deze voltooide
+        # stap gewoon opnieuw draait. Zo'n reeks wordt nu herkend en de bestaande uitkomst
+        # geleverd, zonder iets te meten (en dus ook zonder model of video nodig te hebben).
+        vensters = [(29.2, 30.8), (79.2, 80.8)]
+        regels = []
+        t = 0.125
+        while t < 120.0:
+            tr = round(t, 3)
+            if not any(a <= tr <= b for a, b in vensters):
+                regels.append({'t': tr, 'score': 0.2, 'polshoogte': 0.1, 'personen': 2,
+                               'werper': 2, 'passage': 1})
+            t += 0.125
+        for midden in (30.0, 80.0):
+            tt = midden - 0.8
+            while tt <= midden + 0.8 + 1e-9:
+                tr = round(tt, 3)
+                regels.append({'t': tr, 'score': round(max(0.0, 0.9 - abs(tr - midden)), 4),
+                               'polshoogte': 0.1, 'personen': 2, 'passage': 2})
+                tt += 0.04
+        regels.sort(key=lambda r: r['t'])
+        reeks_pad = self._schrijf([json.dumps(r) + '\n' for r in regels])
+        inhoud_voor = reeks_pad.read_text(encoding='utf-8')
+        video = self.map / 'wedstrijd.mp4'
+        video.write_bytes(b'niet nodig: er wordt niets gemeten')
+        uit = self.map / 'detecties.jsonl'
+        houding.main([str(video), '--uit', str(uit), '--reeks-uit', str(reeks_pad), '--hervat',
+                      '--twee-passages', '--drempel', '0.45', '--min-afstand', '3.0'])
+        events = [json.loads(r) for r in uit.read_text(encoding='utf-8').splitlines()]
+        self.assertEqual([round(e['video_time_s'], 1) for e in events], [30.0, 80.0])
+        self.assertEqual(events[0]['werper'], 2)   # uit de doorlopende passage
+        # De definitieve reeks blijft onaangeroerd, en het rapport zegt wat er gebeurd is.
+        self.assertEqual(reeks_pad.read_text(encoding='utf-8'), inhoud_voor)
+        rapport = json.loads(uit.with_suffix(uit.suffix + '.rapport.json')
+                             .read_text(encoding='utf-8'))
+        self.assertTrue(rapport.get('hergebruikt'))
+        self.assertEqual(rapport.get('kandidaten'), 2)
+
 
 @unittest.skipUnless(_cv2_of_niets(), 'opencv niet geïnstalleerd')
 class TestHervattenInDeVideo(unittest.TestCase):
@@ -548,3 +999,49 @@ class TestHervattenInDeVideo(unittest.TestCase):
                                    schrijf=weggeschreven.append)
         self.assertEqual(len(weggeschreven), len(reeks))
         self.assertEqual(weggeschreven[0]['t'], reeks[0]['t'])
+
+    def _worpmodel(self, worpen, fps=5.0):
+        """Als in TestVideolaag: één speler die op de opgegeven momenten (modeltijd!) werpt."""
+        teller = {'n': 0}
+
+        def model(_frame):
+            t = teller['n'] / fps
+            teller['n'] += 1
+            werpt = any(0.0 <= t - w < 0.45 for w in worpen)
+            pols_y, pols_x = (40.0, 300.0 + 90.0 * ((t * fps) % 2)) if werpt else (170.0, 300.0)
+            punten, scores = skelet(schouder_y=100.0, heup_y=200.0, pols_y=pols_y, pols_x=pols_x)
+            return [punten], [scores]
+
+        return model
+
+    def test_hervatten_meet_de_naad_opnieuw_zonder_dubbel_tijdstip(self):
+        # De oude naad: t==vanaf werd opnieuw gemeten met lege geschiedenis, zodat dat
+        # tijdstip twee keer in de reeks stond — de oude score naast een verse 0,0 (een vals
+        # lokaal maximum op elke stijgende flank) — en de eerste ± 0,22 s na de naad te laag
+        # scoorden. Nu vervalt de overlap en wordt de naad warm opnieuw gemeten.
+        vol = houding.meet_video(self.video, self._worpmodel([]), analyse_fps=5.0)
+        eerder = [r for r in vol if r['t'] <= 10.0]   # tot hier stond de onderbroken poging
+        behouden, vanaf, eerste = houding.hervatpunt(eerder)
+        self.assertAlmostEqual(vanaf, 9.8 - houding.VENSTER_HOOG_S, places=6)
+        tweede = houding.meet_video(self.video, self._worpmodel([]), analyse_fps=5.0,
+                                    vanaf=vanaf, eerste_werper=eerste)
+        tijden = [r['t'] for r in behouden] + [r['t'] for r in tweede]
+        self.assertEqual(len(tijden), len(set(tijden)))   # elk tijdstip precies één keer
+        self.assertLess(tweede[0]['t'], 9.8)              # de naad zelf wordt hermeten
+
+    def test_hervatten_nummert_de_werpers_verder(self):
+        # Het nieuwe proces begon vroeger opnieuw bij werper 0, terwijl de eerdere metingen
+        # dat nummer al aan iemand gaven: verschillende spelers onder één naam, en de
+        # groepering "één keer per speler zeggen wie het is" voegt dan vreemden samen.
+        vol = houding.meet_video(self.video, self._worpmodel([5.0]), analyse_fps=5.0)
+        eerder = [r for r in vol if r['t'] <= 10.0]
+        _behouden, vanaf, eerste = houding.hervatpunt(eerder)
+        ids_eerder = {r['werper'] for r in eerder if 'werper' in r}
+        self.assertIn(0, ids_eerder)
+        # De tweede poging ziet (in haar eigen klok, die pas op `vanaf` begint te lopen)
+        # een worp op 15,0 s echte tijd.
+        tweede = houding.meet_video(self.video, self._worpmodel([15.0 - 9.6]), analyse_fps=5.0,
+                                    vanaf=vanaf, eerste_werper=eerste)
+        ids_tweede = {r['werper'] for r in tweede if 'werper' in r}
+        self.assertTrue(ids_tweede)
+        self.assertFalse(ids_eerder & ids_tweede)

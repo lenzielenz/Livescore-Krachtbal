@@ -1,4 +1,6 @@
 import { authUser } from '@/lib/api-auth'
+import { afstandUitEvent } from '@/lib/cv-naar-worp'
+import { FIELD, matenVanMatch, type VeldMaten } from '@/lib/field'
 import { getPayloadClient } from '@/lib/payload-client'
 import { mayEditMatchVideo } from '@/lib/video-access'
 import {
@@ -46,6 +48,7 @@ function leesOpties(body: Record<string, unknown>): AnalyseOpties {
 async function importeerVoorstellen(
   payload: Awaited<ReturnType<typeof getPayloadClient>>,
   matchId: number,
+  veld: { goalAreaDepthM: number; maten: Partial<VeldMaten> },
   regels: Record<string, unknown>[],
 ): Promise<number> {
   const WORP: Record<string, 'nek' | 'rug'> = { nekworp: 'nek', rugworp: 'rug', nek: 'nek', rug: 'rug' }
@@ -74,9 +77,20 @@ async function importeerVoorstellen(
           worpType,
           worpTypeOrigineel: worpType,
           inDoelgebied: zone?.in_doelgebied === true,
-          xM: Number.isFinite(Number(zone?.x_m)) ? Number(zone?.x_m) : null,
-          yM: Number.isFinite(Number(zone?.y_m)) ? Number(zone?.y_m) : null,
-          afstandM: Number.isFinite(Number(e.afstand_m)) ? Number(e.afstand_m) : null,
+          // Een uitbal heeft geen zone maar wél een landingspunt — bewust buiten de lijnen.
+          // Dat punt gaat mee: daarmee leidt de engine bij het overzetten zelf 'uit' af.
+          uitbal: e.uitbal === true,
+          xM: Number.isFinite(Number(zone?.x_m))
+            ? Number(zone?.x_m)
+            : e.uitbal === true && Number.isFinite(Number(e.uitbal_x_m)) ? Number(e.uitbal_x_m) : null,
+          yM: Number.isFinite(Number(zone?.y_m))
+            ? Number(zone?.y_m)
+            : e.uitbal === true && Number.isFinite(Number(e.uitbal_y_m)) ? Number(e.uitbal_y_m) : null,
+          // Eén bron van waarheid voor de worpafstand: de engine (field.ts) berekent ze hier
+          // zelf uit werpplaats + landingspunt, met de diepte en echte veldmaten van déze
+          // wedstrijd. Het Python-getal (e.afstand_m) is enkel de CLI-benadering en wordt
+          // bewust genegeerd; een uitbal of een event zonder werpplaats krijgt geen afstand.
+          afstandM: afstandUitEvent(e, veld.goalAreaDepthM, veld.maten),
           side: speler?.team === 'home' || speler?.team === 'away' ? speler.team : null,
           rugnummer: Number.isInteger(rug) && (rug as number) >= 0 && (rug as number) <= 99 ? (rug as number) : null,
           scoreDelta: Number.isFinite(Number(e.score_delta)) ? Number(e.score_delta) : 0,
@@ -119,7 +133,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
   const t = await toegang(req, matchId)
   if ('fout' in t) return t.fout
-  const { payload } = t
+  const { payload, match } = t
 
   let body: Record<string, unknown> = {}
   try {
@@ -128,8 +142,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     body = {}
   }
 
+  // De veldgeometrie van deze wedstrijd, voor de afstandsberekening bij het importeren.
+  const diepte = Number(match.goalAreaDepth)
+  const veld = {
+    goalAreaDepthM: Number.isFinite(diepte) && diepte > 0 ? diepte : FIELD.defaultGoalAreaDepthM,
+    maten: matenVanMatch(match as { veldBreedte?: number | null; veldSpeelveld?: number | null }),
+  }
   const resultaat = await startAnalyse(payload, matchId, leesOpties(body), (regels) =>
-    importeerVoorstellen(payload, matchId, regels),
+    importeerVoorstellen(payload, matchId, veld, regels),
   )
   if (!resultaat.ok) return Response.json({ error: resultaat.fout }, { status: resultaat.code })
   return Response.json({ ok: true, stand: resultaat.stand })

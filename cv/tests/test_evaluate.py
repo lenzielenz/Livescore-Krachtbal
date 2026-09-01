@@ -98,6 +98,28 @@ class TestWorpMomenten(unittest.TestCase):
         self.assertEqual(m['labels_genegeerd'], 1)
         self.assertEqual(m['recall'], 1.0)
 
+    def test_een_afgewezen_voorstel_telt_niet_als_worp(self):
+        # Regressie: evalueer() negeerde het verdict-veld van groundtruth.py, waardoor een
+        # detector die zijn eigen valse positieven herhaalt beloond werd — 1 bevestigd + 1
+        # afgewezen label met detecties op beide meldde precision 1.00 waar 0.50 hoort.
+        labels = [
+            {'video_time_s': 10.0, 'event_type': 'worp', 'verdict': 'bevestigd'},
+            {'video_time_s': 50.0, 'event_type': 'worp', 'verdict': 'afgewezen'},
+        ]
+        m = evaluate.evalueer(labels, [_detectie(10.1), _detectie(50.2)], venster=2.0)
+        self.assertEqual(m['labels'], 1)
+        self.assertEqual(m['labels_afgewezen'], 1)
+        self.assertEqual(m['labels_genegeerd'], 0)
+        self.assertEqual((m['tp'], m['fp'], m['fn']), (1, 1, 0))
+        self.assertEqual(m['precision'], 0.5)
+        self.assertEqual(m['recall'], 1.0)
+
+    def test_labels_zonder_verdict_blijven_gewoon_meetellen(self):
+        # Weak labels van sync.py dragen geen verdict — die mogen niet sneuvelen.
+        m = evaluate.evalueer([_label(10.0)], [_detectie(10.0)], venster=2.0)
+        self.assertEqual(m['labels'], 1)
+        self.assertEqual(m['labels_afgewezen'], 0)
+
 
 class TestVerwarringsmatrix(unittest.TestCase):
     def test_matrix_en_accuraatheid(self):
