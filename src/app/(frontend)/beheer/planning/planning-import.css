@@ -117,3 +117,16 @@
 .pi-kleuren-lijst { list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .pi-kleuren-lijst li { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; }
 .pi-kleuren-swatch { width: 16px; height: 16px; border-radius: 50%; border: 1px solid var(--line); flex: none; }
+
+/* Een vervanging die halverwege bleef steken: er is dan bewust niets geïmporteerd, en dat hoort
+   bovenaan te staan in plaats van als één regel in de foutenlijst te verdwijnen. */
+.pi-fout {
+  margin: 10px 0;
+  padding: 10px 12px;
+  border: 1px solid #ef476f;
+  border-radius: 10px;
+  background: rgba(239, 71, 111, 0.1);
+  color: #ffd9e2;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}

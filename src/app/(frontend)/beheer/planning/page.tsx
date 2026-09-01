@@ -5,6 +5,7 @@ import { isFederationLevel } from '@/lib/access'
 import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
 import { ClubKleurenImport } from './ClubKleurenImport'
+import { Ontdubbelen } from './Ontdubbelen'
 import { PlanningImport } from './PlanningImport'
 
 export const dynamic = 'force-dynamic'
@@ -28,6 +29,7 @@ export default async function PlanningPage() {
         ) : (
           <>
             <PlanningImport />
+            <Ontdubbelen />
             <ClubKleurenImport />
           </>
         )}

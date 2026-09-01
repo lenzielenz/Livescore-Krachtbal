@@ -4,6 +4,7 @@ import { competitionWhere } from './analyse-access'
 import { countMatches, deleteMatchesCascade } from './match-cleanup'
 import { reeksCategorie, type Reeks } from './reeksen'
 import {
+  DUBBEL_IN_BESTAND,
   matchSleutel,
   naamSleutel,
   planSeason,
@@ -31,6 +32,30 @@ export type { ImportSamenvatting }
 // (vluchtig, ruimt zichzelf al op). Clubs/ploegen blijven altijd staan — enkel wedstrijden wissen.
 const WIPE_WHERE: Where = { and: [competitionWhere(), { isDemo: { not_equals: true } }] }
 
+// ── Eén import tegelijk ──────────────────────────────────────────────────────────────────────
+//
+// Een kalender van 2400 wedstrijden inladen duurt minuten. Wie in die tijd denkt dat er niets
+// gebeurt en nog eens op importeren drukt — of wiens telefoon het antwoord niet ziet aankomen en
+// de aanvraag herhaalt — start een tweede import naast de eerste. Beide schrijven dan hetzelfde
+// bestand weg en de kalender staat dubbel. Dat is precies wat er gebeurd is: het bestand zelf
+// bevatte geen enkele dubbele rij.
+//
+// Een vinkje in de UI helpt daar niet tegen: die kent de eerste aanvraag niet. Dus staat de
+// grendel hier, in het proces dat schrijft. Alleen commit-runs grendelen — een proefronde
+// schrijft niets en mag altijd.
+let importLoopt = false
+export class ImportLooptAlError extends Error {
+  constructor() {
+    super('Er loopt al een import van het speelplan. Wacht tot die klaar is — een tweede tegelijk '
+      + 'zet de hele kalender dubbel in de agenda.')
+    this.name = 'ImportLooptAlError'
+  }
+}
+/** Loopt er nu een import? (Voor de route, om een tweede aanvraag netjes te weigeren.) */
+export function importBezig(): boolean {
+  return importLoopt
+}
+
 /**
  * Bepaal wat er moet gebeuren en (optioneel) voer het uit.
  * `commit: false` schrijft niets — dat is de proefronde die de gebruiker eerst te zien krijgt.
@@ -38,6 +63,22 @@ const WIPE_WHERE: Where = { and: [competitionWhere(), { isDemo: { not_equals: tr
  * WIPE_WHERE hierboven) — onomkeerbaar, enkel voor een volledige seizoensvervanging.
  */
 export async function runSeasonImport(
+  payload: Payload,
+  rows: string[][],
+  opts: { commit: boolean; wipe?: boolean },
+): Promise<ImportSamenvatting> {
+  // De proefronde schrijft niets en mag dus altijd, ook naast een lopende import.
+  if (!opts.commit) return voerImportUit(payload, rows, opts)
+  if (importLoopt) throw new ImportLooptAlError()
+  importLoopt = true
+  try {
+    return await voerImportUit(payload, rows, opts)
+  } finally {
+    importLoopt = false
+  }
+}
+
+async function voerImportUit(
   payload: Payload,
   rows: string[][],
   opts: { commit: boolean; wipe?: boolean },
@@ -69,8 +110,26 @@ export async function runSeasonImport(
   // Proefronde: enkel tellen. Commit: eerst effectief verwijderen, vóórdat we hieronder bepalen
   // welke wedstrijden "nieuw" zijn — na een wipe is dat altijd het complete bestand.
   if (opts.wipe) {
-    if (opts.commit) samenvatting.verwijderd = await deleteMatchesCascade(payload, WIPE_WHERE)
-    else samenvatting.teVerwijderen = await countMatches(payload, WIPE_WHERE)
+    if (opts.commit) {
+      samenvatting.verwijderd = await deleteMatchesCascade(payload, WIPE_WHERE)
+      // Natellen en bij twijfel stóppen. Een wipe kan onvolledig zijn (een wedstrijd die de
+      // database weigert los te laten), en dan zou het complete bestand er bovenop komen — de
+      // kalender staat dan dubbel, en dát is niet meer met een knop terug te draaien. Liever
+      // niets aanmaken en het zeggen.
+      const rest = await countMatches(payload, WIPE_WHERE)
+      if (rest > 0) {
+        samenvatting.wipeMislukt = rest
+        samenvatting.issues.push({
+          rij: 0,
+          reden: `Het oude speelplan is niet volledig verwijderd: er staan nog ${rest} wedstrijden. `
+            + 'Er is niets geïmporteerd — anders zou de kalender dubbel komen te staan.',
+          ruw: 'vervang volledig speelplan',
+        })
+        return samenvatting
+      }
+    } else {
+      samenvatting.teVerwijderen = await countMatches(payload, WIPE_WHERE)
+    }
   }
 
   // ── Bestaande clubs en ploegen inlezen ──
@@ -128,6 +187,13 @@ export async function runSeasonImport(
       })
     }
   }
+
+  // Twee rijen die dezelfde wedstrijd beschrijven, worden door planSeason al tot één herleid
+  // (de tweede komt als issue terug). Hier enkel het aantal doorgeven: een bestand waarin dertig
+  // wedstrijden dubbel staan, hoort dat te zeggen in plaats van het in de foutenlijst te
+  // verstoppen.
+  const dubbelInBestand = plan.issues.filter((i) => i.reden === DUBBEL_IN_BESTAND).length
+  if (dubbelInBestand > 0) samenvatting.dubbelInBestand = dubbelInBestand
 
   const teDoen = plan.matches.filter((m) => !bestaandeSleutels.has(m.sleutel))
   samenvatting.nieuweWedstrijden = teDoen.length
