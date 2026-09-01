@@ -14,8 +14,10 @@ import {
   resultaatBestand,
   markeerStapKlaar,
   merktekenPad,
+  pythonFout,
   spawnOmgeving,
   stapAlKlaar,
+  stapFoutTekst,
   stapHandtekening,
   telMerktekens,
   videoBestand,
@@ -571,5 +573,71 @@ describe('hervatten na een herstart', () => {
     // De werkmap wordt pas bij de eerste analyse aangemaakt; dat mag geen uitzondering geven.
     expect(await stapAlKlaar('/bestaat/niet', 1, stap)).toBe(false)
     expect(await telMerktekens('/bestaat/niet')).toBe(0)
+  })
+})
+
+// Wat er op het scherm komt als een stap onderuitgaat.
+//
+// Aanleiding: `❌ Mislukt: Worpen herkennen aan de houding van de spelers — Python stopte met
+// code -1`. Die −1 bestaat niet in Python; het was ónze verzamelbak voor "geen afsluitcode",
+// en precies de twee dingen die het wél zeggen — het signaal dat het proces velde en de
+// FOUT-regel op stderr — gooiden we weg.
+describe('stapFoutTekst', () => {
+  const naam = 'Worpen herkennen aan de houding van de spelers'
+
+  it('noemt het geheugen bij een proces dat door de kernel geveld is', () => {
+    // SIGKILL komt van buiten: Python krijgt geen kans om iets te zeggen, dus het scherm bleef
+    // leeg op een getal na. Dit is het geval dat in productie stond.
+    const t = stapFoutTekst(naam, { code: null, signaal: 'SIGKILL' })
+    expect(t).toContain(naam)
+    expect(t).toMatch(/geheugen/i)
+    expect(t).not.toMatch(/code -1|code null/)
+    // En een uitweg: het al gemeten werk blijft staan.
+    expect(t).toMatch(/opnieuw/i)
+  })
+
+  it('geeft de eigen foutregel van het script door', () => {
+    const t = stapFoutTekst(naam, {
+      code: 2,
+      signaal: null,
+      stderr: 'Traceback (most recent call last):\n  …\nFOUT: rtmlib ontbreekt — installeer met: pip install -r cv/requirements-pose.txt\n',
+    })
+    expect(t).toContain('rtmlib ontbreekt')
+    expect(t).not.toContain('Traceback')
+  })
+
+  it('zegt het wanneer Python zelf niet startte', () => {
+    const t = stapFoutTekst(naam, { code: null, signaal: null, startFout: 'spawn python3 ENOENT' })
+    expect(t).toMatch(/niet gestart/i)
+    expect(t).toContain('ENOENT')
+  })
+
+  it('valt terug op de code, maar zegt er dan bij dat er geen uitleg is', () => {
+    const t = stapFoutTekst(naam, { code: 1, signaal: null })
+    expect(t).toContain('code 1')
+    expect(t).toMatch(/serverlogs/i)
+  })
+})
+
+describe('pythonFout', () => {
+  it('kiest de FOUT-regel, ook als er nog stacktrace achter komt', () => {
+    // De scripts schrijven hun uitleg als `FOUT: …`; die is voor de gebruiker geschreven en
+    // staat lang niet altijd als laatste regel.
+    expect(pythonFout('FOUT: het houdingsmodel kon niet geladen worden\nSystemExit: 2\n'))
+      .toBe('het houdingsmodel kon niet geladen worden')
+  })
+
+  it('neemt anders de laatste zinvolle regel', () => {
+    expect(pythonFout('  \nMemoryError: unable to allocate array\n\n'))
+      .toBe('MemoryError: unable to allocate array')
+  })
+
+  it('geeft niets terug bij lege stderr', () => {
+    expect(pythonFout('')).toBeNull()
+    expect(pythonFout(undefined)).toBeNull()
+  })
+
+  it('kapt een eindeloze regel af', () => {
+    expect((pythonFout('x'.repeat(5000)) ?? '').length).toBe(300)
   })
 })

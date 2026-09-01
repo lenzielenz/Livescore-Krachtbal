@@ -757,6 +757,51 @@ class TestKoppelPersonen(unittest.TestCase):
         self.assertEqual(houding.koppel_personen(vorige, huidige), {})
 
 
+class TestSnoeiGevolgden(unittest.TestCase):
+    """De boekhouding van gevolgde spelers moet begrensd blijven.
+
+    Aanleiding: de analyse van een wedstrijdvideo ging onderuit met `Python stopte met code -1`
+    — geen foutmelding, want er was er geen: de kernel had het proces neergelegd omdat het
+    geheugen op raakte. Elke persoon die niet aan een vorige meting te koppelen is, krijgt een
+    nieuw nummer, en van élk nummer bleef hier een sleutel achter. Op een uur video met een
+    camera in de hand loopt dat in de tienduizenden.
+    """
+
+    def staat(self, x=100.0, y=500.0):
+        return {'heup': (x, y), 'romp': 100.0, 'polshoogte': 0.3, 'pols': (x, y - 60)}
+
+    def test_ruimt_een_speler_op_die_niemand_meer_kan_koppelen(self):
+        geschiedenis = {1: [], 2: [(9.0, self.staat())]}
+        laatst_gezien = {1: 3.0, 2: 9.0}
+        # 1 staat niet meer in `vorige` en zijn geschiedenis is leeggelopen: onbereikbaar.
+        weg = houding.snoei_gevolgden(geschiedenis, laatst_gezien, {2: self.staat()}, 9.5, 1.0)
+        self.assertEqual(weg, 1)
+        self.assertEqual(set(geschiedenis), {2})
+        self.assertEqual(set(laatst_gezien), {2})
+
+    def test_laat_iemand_staan_die_nog_gekoppeld_kan_worden(self):
+        # In `vorige` = de volgende meting kan er nog aan hangen. Afblijven, ook al is zijn
+        # geschiedenis net leeggelopen — anders krijgt een speler die één meting onzichtbaar was
+        # een nieuw nummer en is zijn worp niet meer aan hem toe te schrijven.
+        geschiedenis = {5: []}
+        laatst_gezien = {5: 8.0}
+        weg = houding.snoei_gevolgden(geschiedenis, laatst_gezien, {5: self.staat()}, 9.0, 1.0)
+        self.assertEqual(weg, 0)
+        self.assertEqual(set(geschiedenis), {5})
+
+    def test_houdt_de_boekhouding_begrensd_bij_almaar_nieuwe_nummers(self):
+        # De situatie die het geheugen opat: duizend personen die elk één keer voorbijkomen.
+        geschiedenis, laatst_gezien = {}, {}
+        for n in range(1000):
+            t = n * 0.1
+            geschiedenis[n] = [(t, self.staat())]
+            laatst_gezien[n] = t
+            houding.snoei_gevolgden(geschiedenis, laatst_gezien, {n: self.staat()}, t, 1.0)
+        # Alleen wie recent gezien is (of nog in `vorige` staat) blijft over — geen duizend.
+        self.assertLess(len(geschiedenis), 20)
+        self.assertLessEqual(len(laatst_gezien), len(geschiedenis))
+
+
 class TestBesteWorpscore(unittest.TestCase):
     """De sterkste beweging over één loslaatfase, ongeacht hoe fijn er bemonsterd is."""
 

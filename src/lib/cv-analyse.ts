@@ -862,7 +862,7 @@ export async function startAnalyse(
         // database schrijven zou tientallen schrijfacties per minuut kosten voor een balk die
         // toch maar om de vijf seconden opgehaald wordt.
         let laatsteSchrijf = 0
-        const code = await draaiStap(matchId, stappen[i], (v) => {
+        const uitkomst = await draaiStap(matchId, stappen[i], (v) => {
           huidig = {
             ...huidig,
             ...(v.fractie != null ? { stapFractie: v.fractie } : {}),
@@ -873,7 +873,7 @@ export async function startAnalyse(
           laatsteSchrijf = Date.now()
           void schrijfStand(payload, matchId, huidig).catch(() => undefined)
         })
-        if (code !== 0) throw new Error(`${stappen[i].naam} — Python stopte met code ${code}`)
+        if (uitkomst.code !== 0) throw new Error(stapFoutTekst(stappen[i].naam, uitkomst))
         // Pas nú het merkteken: een stap die halverwege afgebroken werd, laat een half
         // uitvoerbestand achter, en daar mag een volgende poging nooit op verderrekenen.
         await markeerStapKlaar(map, i + 1, stappen[i])
@@ -904,11 +904,15 @@ export async function startAnalyse(
         },
       })
     } catch (err) {
+      // Wat er al af was, telt: na een mislukking gaat een nieuwe poging verder op de merktekens.
+      // Zonder dit stond er enkel "mislukt" en leek elke herstart weer bij nul te beginnen.
+      const klaar = await telMerktekens(map).catch(() => 0)
       await schrijfStand(payload, matchId, {
         ...huidig,
         status: 'mislukt',
         fout: err instanceof Error ? err.message : 'Onbekende fout',
         geeindigd: new Date().toISOString(),
+        ...(klaar > 0 ? { hervatbaar: { stappenKlaar: klaar, stappen: stappen.length + 1 } } : {}),
         rapport: { duurSeconden: Math.round((Date.now() - begin) / 1000) },
       })
     } finally {
@@ -985,11 +989,76 @@ export function leesVoortgang(regel: string): { fractie: number | null; tekst: s
   return { fractie, tekst: m[2].trim() }
 }
 
+/**
+ * Hoe een stap geëindigd is. Niet zomaar een getal, want dan verdwijnt precies wat je moet
+ * weten: een proces dat door het geheugen heen ging, is niet hetzelfde als een script dat een
+ * fout meldt — en allebei kwamen ze als "code -1" op het scherm.
+ */
+export type StapUitkomst = {
+  /** Afsluitcode van Python (null als het proces door een signaal gestopt is). */
+  code: number | null
+  /** Het signaal dat het proces velde: SIGKILL = door het systeem uit het geheugen gezet. */
+  signaal: NodeJS.Signals | null
+  /** Het laatste stuk stderr — hier staat de `FOUT: …`-regel van de cv-scripts in. */
+  stderr?: string
+  /** De spawn zelf lukte niet (Python niet te starten). */
+  startFout?: string
+}
+
+/**
+ * De uitleg bij een mislukte stap, in mensentaal.
+ *
+ * Aanleiding: op het scherm stond `Mislukt: Worpen herkennen aan de houding van de spelers —
+ * Python stopte met code -1`. Die −1 bestaat niet in Python: hij was ónze verzamelbak voor
+ * "geen afsluitcode". Wat er wél gebeurd was — het proces werd gedood, of het script schreef
+ * een nette FOUT-regel naar stderr — gooiden we weg. Dus stond er een getal waar niemand,
+ * ikzelf inbegrepen, iets mee kon.
+ *
+ * Puur, zodat elk geval te testen valt zonder een proces te starten.
+ */
+export function stapFoutTekst(naam: string, u: StapUitkomst): string {
+  if (u.startFout) {
+    return `${naam} — Python kon niet gestart worden (${u.startFout}). `
+      + 'Meld dit: de analyse-omgeving van de server klopt niet.'
+  }
+  if (u.signaal === 'SIGKILL' || u.signaal === 'SIGSEGV' || u.signaal === 'SIGBUS') {
+    // Het klassieke geval: het houdingsmodel plus de video passen niet in het geheugen van de
+    // container, en de kernel kiest het grootste proces. Er komt géén foutmelding van Python —
+    // het proces is er gewoon niet meer, en dat is exact hoe dit eruitzag.
+    return `${naam} — de server heeft deze stap afgebroken omdat het geheugen op raakte `
+      + `(signaal ${u.signaal}). Wat al gemeten was, blijft bewaard: start de analyse opnieuw `
+      + 'en ze gaat verder waar ze stond. Blijft het gebeuren, kies dan een lagere precisie '
+      + '("Snel" gebruikt het kleinste model) of analyseer een korter stuk video.'
+  }
+  if (u.signaal) {
+    return `${naam} — de stap is gestopt door signaal ${u.signaal}. Wat al af was, blijft `
+      + 'bewaard: start opnieuw om verder te gaan.'
+  }
+  const uitleg = pythonFout(u.stderr)
+  if (uitleg) return `${naam} — ${uitleg}`
+  return `${naam} — Python stopte met code ${u.code}, zonder uitleg. Kijk de serverlogs na.`
+}
+
+/**
+ * De leesbare regel uit een brok stderr vissen.
+ *
+ * De cv-scripts schrijven hun eigen problemen als `FOUT: …` (zie `_fout` in de Python-modules);
+ * die regel is voor de gebruiker geschreven en verdient voorrang op de laatste regel van een
+ * stacktrace. Staat er geen, dan is de laatste niet-lege regel nog altijd beter dan niets.
+ */
+export function pythonFout(stderr?: string): string | null {
+  const regels = (stderr ?? '').split('\n').map((r) => r.trim()).filter(Boolean)
+  if (!regels.length) return null
+  const netjes = [...regels].reverse().find((r) => r.startsWith('FOUT:'))
+  const gekozen = netjes ? netjes.replace(/^FOUT:\s*/, '') : regels[regels.length - 1]
+  return gekozen.slice(0, 300)
+}
+
 function draaiStap(
   matchId: number,
   stap: Stap,
   onVoortgang?: (v: { fractie: number | null; tekst: string }) => void,
-): Promise<number> {
+): Promise<StapUitkomst> {
   // De keuze staat vast: startAnalyse controleerde de omgeving voor het eerste stapje.
   const python = huidigePython()
   const { argv } = stap
@@ -1013,12 +1082,14 @@ function draaiStap(
       }
     })
     kind.stderr?.on('data', (d) => {
-      laatsteFout = String(d).slice(-500)
+      // Aanvullen in plaats van vervangen: een Python-stacktrace komt in meerdere brokken
+      // binnen, en de FOUT-regel die de gebruiker moet zien zat vaak in de vórige brok.
+      laatsteFout = (laatsteFout + String(d)).slice(-2000)
     })
-    kind.on('error', () => resolve(-1))
-    kind.on('close', (code) => {
+    kind.on('error', (err) => resolve({ code: null, signaal: null, startFout: err.message }))
+    kind.on('close', (code, signaal) => {
       if (code !== 0 && laatsteFout) console.warn(`[cv-analyse] ${laatsteFout.trim()}`)
-      resolve(code ?? -1)
+      resolve({ code, signaal, stderr: laatsteFout || undefined })
     })
   })
 }
