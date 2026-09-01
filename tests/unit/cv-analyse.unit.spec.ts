@@ -11,8 +11,14 @@ import {
   bouwStappen,
   isVerweesd,
   resultaatBestand,
+  markeerStapKlaar,
+  merktekenPad,
   spawnOmgeving,
+  stapAlKlaar,
+  stapHandtekening,
+  telMerktekens,
   videoBestand,
+  wisMerktekens,
   type AnalyseStand,
 } from '@/lib/cv-analyse'
 import { modelCacheMap } from '@/lib/cv-runtime'
@@ -367,6 +373,14 @@ describe('worpen zoeken met het houdingsmodel', () => {
     expect(metAi[metAi.indexOf('--uit') + 1]).toBe(zonder[zonder.indexOf('--uit') + 1])
   })
 
+  it('gaat verder waar een onderbroken poging gebleven was', () => {
+    // Dit is de langste stap van de keten — uren op een wedstrijdvideo. Zonder dit kost elke
+    // herstart van de server precies die uren opnieuw.
+    expect(argvVan(stappen({ opts: { ...OPTS, ai: true }, hervat: true }), 'houding')).toContain('--hervat')
+    // En niet bij een gewone, verse start: dan hoort de video écht opnieuw bekeken te worden.
+    expect(argvVan(stappen({ opts: { ...OPTS, ai: true } }), 'houding')).not.toContain('--hervat')
+  })
+
   it('bewaart de meetreeks — anders moet je voor elke bijstelling opnieuw uren video kijken', () => {
     const argv = argvVan(stappen({ opts: { ...OPTS, ai: true } }), 'houding')
     const pad = argv[argv.indexOf('--reeks-uit') + 1]
@@ -454,5 +468,57 @@ describe('leesVoortgang', () => {
     expect(leesVoortgang('Houdingsmodel laden (balanced) …')).toBeNull()
     expect(leesVoortgang('')).toBeNull()
     expect(leesVoortgang('VOORTGANGx 0.5 iets')).toBeNull()
+  })
+})
+
+describe('hervatten na een herstart', () => {
+  // Een analyse van drie uur overleeft geen herstart van de server: het Python-proces is een kind
+  // van de webserver en verdwijnt mét de container. Bij een bewuste uitrol is dat te aanvaarden —
+  // maar dan opnieuw beginnen niet. De tussenresultaten staan op het volume; wat ontbrak was
+  // weten wélke stappen af waren, want een half geschreven uitvoerbestand ziet er hetzelfde uit
+  // als een volledig.
+
+  const stap = { naam: 'Worpen herkennen aan de houding', argv: ['/cv/houding.py', '--analyse-fps', '8'] }
+
+  async function tijdelijkeMap() {
+    return fs.mkdtemp(path.join(os.tmpdir(), 'cv-hervat-'))
+  }
+
+  it('herkent een stap pas als af nadat ze afgewerkt is', async () => {
+    const map = await tijdelijkeMap()
+    expect(await stapAlKlaar(map, 1, stap)).toBe(false)
+    await markeerStapKlaar(map, 1, stap)
+    expect(await stapAlKlaar(map, 1, stap)).toBe(true)
+  })
+
+  it('draait een stap opnieuw zodra de instellingen veranderen', () => {
+    // Anders zou een fijnere precisiestand het grove resultaat van gisteren overslaan en
+    // hergebruiken — een analyse die zegt dat ze op "ultra" draaide maar dat niet deed.
+    const fijner = { ...stap, argv: ['/cv/houding.py', '--analyse-fps', '15'] }
+    expect(stapHandtekening(fijner)).not.toBe(stapHandtekening(stap))
+  })
+
+  it('houdt de stappen uit elkaar', () => {
+    const a = merktekenPad('/werk', 1, 'Het veld volgen')
+    const b = merktekenPad('/werk', 2, 'Het veld volgen')
+    expect(a).not.toBe(b)
+    // Geen schuine strepen of spaties in een bestandsnaam.
+    expect(path.basename(a)).toMatch(/^\.stap-01-[a-z0-9-]+\.klaar$/)
+  })
+
+  it('telt hoeveel er klaarstaat en kan alles wissen', async () => {
+    const map = await tijdelijkeMap()
+    await markeerStapKlaar(map, 1, stap)
+    await markeerStapKlaar(map, 2, { ...stap, naam: 'De bal volgen' })
+    expect(await telMerktekens(map)).toBe(2)
+    await wisMerktekens(map)
+    expect(await telMerktekens(map)).toBe(0)
+    expect(await stapAlKlaar(map, 1, stap)).toBe(false)
+  })
+
+  it('valt terug op "nog niet gedaan" bij een map die niet bestaat', async () => {
+    // De werkmap wordt pas bij de eerste analyse aangemaakt; dat mag geen uitzondering geven.
+    expect(await stapAlKlaar('/bestaat/niet', 1, stap)).toBe(false)
+    expect(await telMerktekens('/bestaat/niet')).toBe(0)
   })
 })

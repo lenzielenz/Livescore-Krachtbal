@@ -210,6 +210,32 @@ opleveren, en dan zou "even nakijken" uitgroeien tot de hele video op volle beel
 afvalt wordt geteld en gemeld. In een echte wedstrijd is dat nooit nodig — zestig worpen van
 1,6 s in een uur is nog geen 3%.
 
+## Onderbroken? Verdergaan waar ze stond
+
+Een analyse van een wedstrijdvideo duurt uren, en ze draait als kind van de webserver: bij een
+herstart — een uitrol, een container die opnieuw opstart — verdwijnt ze. Dat opnieuw laten
+beginnen betekent dat élke uitrol je die uren opnieuw kost.
+
+Twee dingen zorgen ervoor dat dat niet gebeurt:
+
+- **Per stap een merkteken.** Zodra een stap met code 0 stopt, komt er een `.stap-NN-….klaar` in
+  de werkmap, mét de argumenten waarmee ze draaide. Een volgende poging slaat die stap over.
+  Verandert er een instelling (andere precisiestand, andere kalibratie), dan klopt het merkteken
+  niet meer en draait ze gewoon opnieuw. Het merkteken komt er pás na afloop: een halfgeschreven
+  uitvoerbestand ziet er hetzelfde uit als een volledig, en daarop verderrekenen is erger dan
+  opnieuw beginnen.
+- **Binnen de zwaarste stap: `houding.py --hervat`.** Die stap duurt in zijn eentje langer dan al
+  de rest samen, dus merktekens alleen zouden weinig helpen. De meetreeks wordt daarom regel voor
+  regel weggeschreven terwijl er gemeten wordt (`--reeks-uit`), en met `--hervat` leest ze zichzelf
+  terug: de video wordt vanaf de laatste meting verder bekeken. De beelden ervóór worden nog wel
+  ingelezen — in een video kun je niet betrouwbaar springen — maar het model blijft eraf, en dát
+  is het dure deel. Een afgekapte laatste regel (de stroom viel er middenin uit) wordt weggegooid.
+
+Een onderbroken analyse blijft dus staan als *afgebroken*, met erbij hoeveel stappen er al klaar
+zijn; opnieuw starten gaat verder. Een analyse die **klaar** was en die je bewust opnieuw start,
+begint wél van voren af aan — anders zou "opnieuw analyseren" in enkele seconden hetzelfde
+resultaat teruggeven.
+
 ## Zien wat er getrackt wordt: `overlay.py`
 
 Cijfers zeggen niet of de meting klópt. Deze video legt eroverheen wat de pijplijn denkt
