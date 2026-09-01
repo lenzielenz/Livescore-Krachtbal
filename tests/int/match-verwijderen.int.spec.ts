@@ -2,7 +2,7 @@ import { getPayload, type Payload } from 'payload'
 import { describe, it, beforeAll, expect } from 'vitest'
 
 import config from '@/payload.config'
-import { MATCH_DEPENDENT_COLLECTIONS } from '@/lib/match-cleanup'
+import { MATCH_DEPENDENT_COLLECTIONS, MATCH_VERPLICHTE_COLLECTIONS } from '@/lib/match-cleanup'
 
 // Een wedstrijd verwijderen — en alles wat eraan hangt.
 //
@@ -37,6 +37,15 @@ describe('MATCH_DEPENDENT_COLLECTIONS', () => {
     expect(verwijzend.length).toBeGreaterThan(0)
     const ontbreekt = verwijzend.filter((s) => !(MATCH_DEPENDENT_COLLECTIONS as readonly string[]).includes(s))
     expect(ontbreekt, `deze collections verwijzen naar een wedstrijd maar worden niet opgeruimd: ${ontbreekt.join(', ')}`).toEqual([])
+  })
+
+  it('ruimt de worpen op vóór het balbezit waar ze in zitten', () => {
+    // `throws.possession_id` is óók NOT NULL met een sleutel die op NULL wil zetten: balbezit
+    // eerst weghalen weigert de database net zo goed. De hook deed dit ooit met een Promise.all
+    // — dan hangt het van het toeval af of het goed gaat, en dat gaat maar bij sómmige
+    // wedstrijden mis.
+    const lijst = MATCH_VERPLICHTE_COLLECTIONS as readonly string[]
+    expect(lijst.indexOf('throws')).toBeLessThan(lijst.indexOf('possessions'))
   })
 
   it('noemt geen collection die niet bestaat', () => {
@@ -86,9 +95,9 @@ describe('een analysewedstrijd met videovoorstellen verwijderen', () => {
       overrideAccess: true,
     })
 
-    for (const collection of MATCH_DEPENDENT_COLLECTIONS) {
-      await payload.delete({ collection, where: { match: { equals: matchId } }, overrideAccess: true })
-    }
+    // Rechtstreeks verwijderen, zónder eerst zelf op te ruimen: dit is de weg van het
+    // beheerpaneel en van de REST-API. Werkt dit, dan doet de hook op de collection haar werk —
+    // en dát is de weg die tot nu toe niet gedekt was.
     await payload.delete({ collection: 'matches', id: matchId, overrideAccess: true })
 
     // Weg is weg: geen wedstrijd, en geen voorstel dat naar een verdwenen wedstrijd wijst.

@@ -2,6 +2,7 @@ import type { CollectionConfig, FieldHook, Where } from 'payload'
 
 import { isFederationLevel } from '../lib/access'
 import { CATEGORY_OPTIONS } from '../lib/categories'
+import { verwijderMatchKinderen } from '../lib/match-cleanup'
 import { notifyMatchStatusChange } from '../lib/match-notify'
 import { REEKS_OPTIONS, reeksCategorie, type Reeks } from '../lib/reeksen'
 import { seasonFromDate } from '../lib/seasons'
@@ -58,21 +59,19 @@ export const Matches: CollectionConfig = {
         })
       },
     ],
-    // Een wedstrijd verwijderen moet ook de eraan vastgekoppelde live-data opruimen.
-    // Noodzakelijk omdat het wedstrijdblad (matchsheets.match) verplicht is: de
-    // Postgres-FK staat op ON DELETE SET NULL, wat botst met de NOT NULL-kolom en
-    // anders een 500/400 geeft. We ruimen daarom expliciet op vóór het verwijderen.
-    // Ongevallen (verzekeringsdossiers) laten we bewust staan (match wordt losgekoppeld).
+    // Een wedstrijd verwijderen moet ook de eraan vastgekoppelde data opruimen. Noodzakelijk
+    // omdat elke `match_id` verplicht is: de Postgres-sleutel staat op ON DELETE SET NULL, wat
+    // botst met die NOT NULL-kolom en anders een onleesbare databasefout geeft.
+    //
+    // De lijst staat in match-cleanup.ts en niet hier. Ze stond hier ooit wél, met vier
+    // collections, terwijl de verwijderknop in de app er negen kende — verwijderen via /admin
+    // faalde dus op alles wat later was bijgekomen. Eén lijst, één volgorde, alle wegen.
+    //
+    // Ongevallen (verzekeringsdossiers) laten we bewust staan: `accidents.match` is nullable, dus
+    // de database koppelt de verwijzing los en het dossier overleeft.
     beforeDelete: [
       async ({ req, id }) => {
-        const where = { match: { equals: id } }
-        await Promise.all(
-          (['matchsheets', 'match-events', 'throws', 'possessions'] as const).map((collection) =>
-            req.payload
-              .delete({ collection, where, req, overrideAccess: true })
-              .catch(() => undefined),
-          ),
-        )
+        await verwijderMatchKinderen(req.payload, id, req)
       },
     ],
   },

@@ -1,26 +1,63 @@
-import type { Payload, Where } from 'payload'
+import type { CollectionSlug, Payload, PayloadRequest, Where } from 'payload'
 
-// Een wedstrijd verwijderen raakt meer dan de `matches`-rij zelf: negen collections hebben een
-// `match`-relatie. Eén bron van waarheid, gebruikt door zowel de losse verwijderknop
-// (api/matches/manage) als de volledige-seizoensvervanging (season-import-run).
+// Wat er mee moet als een wedstrijd verdwijnt.
 //
 // Deze lijst is niet vrijblijvend, en dat is niet vanzelfsprekend. In Postgres staat elke
-// `match_id` als NOT NULL mét een sleutel die bij het verwijderen op NULL wil zetten. Vergeet je
-// hier één collection, dan botst de database op haar eigen NOT NULL en weigert ze de wedstrijd —
-// met een onleesbare `Failed query: delete from "matches"` in het scherm van wie op het
-// prullenbakje drukte. Precies dat gebeurde toen `cv-events` erbij kwam en hier niet: elke
-// video-analyse werd onverwijderbaar. `tests/unit/match-cleanup` bewaakt dat nu.
-export const MATCH_DEPENDENT_COLLECTIONS = [
+// `match_id` hieronder als NOT NULL mét een sleutel die bij het verwijderen op NULL wil zetten.
+// Die twee spreken elkaar tegen: vergeet je hier één collection, dan botst de database op haar
+// eigen NOT NULL en weigert ze de héle verwijdering — met een onleesbare
+// `Failed query: delete from "matches"` in het scherm van wie op het prullenbakje drukte.
+// Precies dat gebeurde toen `cv-events` erbij kwam en hier niet: elke video-analyse werd
+// onverwijderbaar. `tests/int/match-verwijderen` bewaakt de volledigheid nu tegen de échte
+// collections, niet tegen deze lijst zelf.
+//
+// DE VOLGORDE IS ECHT. `throws.possession_id` is óók NOT NULL met dezelfde sleutel, dus balbezit
+// verwijderen vóór de worpen erin, weigert de database net zo goed. Worpen dus eerst — en één
+// voor één, niet parallel: wie deze lijst in een `Promise.all` gooit, laat de volgorde aan het
+// toeval over en krijgt een fout die zich maar bij sommige wedstrijden voordoet.
+export const MATCH_VERPLICHTE_COLLECTIONS = [
   'throws',
   'possessions',
   'match-events',
   'matchsheets',
-  'accidents',
   'processed-ops',
   'match-instants',
   'match-mvp-votes',
   'cv-events',
-] as const
+] as const satisfies readonly CollectionSlug[]
+
+// Alles wat bij een wedstrijd hoort, inclusief wat de database zélf zou kunnen loskoppelen.
+// `accidents.match` is als enige wél nullable — een verzekeringsdossier overleeft zijn wedstrijd
+// met opzet. De verwijderknop in de app ruimt het toch mee op (wie een wedstrijd wist, wil ze
+// helemaal weg), maar de collection-hook laat het staan en laat de database de verwijzing
+// loskoppelen. Dat verschil is bewust: een medisch dossier verdwijnt niet als neveneffect van een
+// opruimactie in het beheerpaneel.
+export const MATCH_DEPENDENT_COLLECTIONS = [
+  ...MATCH_VERPLICHTE_COLLECTIONS,
+  'accidents',
+] as const satisfies readonly CollectionSlug[]
+
+/**
+ * De kinderen van één wedstrijd verwijderen, in de juiste volgorde.
+ *
+ * Gebruikt door de `beforeDelete`-hook op Matches, zodat élke weg naar het verwijderen hier
+ * langskomt: het beheerpaneel, de REST-API en de knop in de app. Eén lijst op één plek is het
+ * verschil tussen "werkt overal" en "werkt in de app maar niet in /admin" — precies de val waar
+ * dit project al in getrapt is.
+ *
+ * Fouten worden hier niet weggeslikt: gaat er iets mis, dan hoort de verwijdering te mislukken
+ * mét die fout, in plaats van door te lopen tot de database iets onleesbaars zegt.
+ */
+export async function verwijderMatchKinderen(
+  payload: Payload,
+  matchId: number | string,
+  req?: PayloadRequest,
+): Promise<void> {
+  const where = { match: { equals: matchId } }
+  for (const collection of MATCH_VERPLICHTE_COLLECTIONS) {
+    await payload.delete({ collection, where, req, overrideAccess: true })
+  }
+}
 
 /** Hoeveel wedstrijden voldoen aan `where`? Voor de proefronde vóór een bulk-verwijdering. */
 export async function countMatches(payload: Payload, where: Where): Promise<number> {

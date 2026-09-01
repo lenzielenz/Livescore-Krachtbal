@@ -3,6 +3,7 @@ import type { Access, CollectionConfig, FieldAccess } from 'payload'
 import { fieldIsFederation, hasRole, isFederationLevel, userClubId } from '../lib/access'
 import { analyseEntityFields } from '../lib/analyse-fields'
 import { POSITION_OPTIONS } from '../lib/positions'
+import { bewaakSpelerVerwijderen } from '../lib/speler-verwijderen'
 
 export { POSITION_OPTIONS }
 
@@ -39,6 +40,17 @@ export const Players: CollectionConfig = {
     group: 'Beheer',
   },
   hooks: {
+    // Een speler verwijderen mag het wedstrijdverslag niet herschrijven. Zie
+    // lib/speler-verwijderen.ts: worpen, sancties en wedstrijdbladen houden het tegen (met
+    // uitleg), zijn trainingsmetingen en de stemmen op hem gaan mee.
+    beforeDelete: [
+      async ({ req, id }) => {
+        const speler = await req.payload
+          .findByID({ collection: 'players', id, depth: 0, req })
+          .catch(() => null)
+        await bewaakSpelerVerwijderen(req.payload, id, String(speler?.name ?? ''), req)
+      },
+    ],
     // De club is enkel een hulpfilter voor de ploegkeuze; de PLOEG is de bron van waarheid.
     // Sync de club daarom altijd met de club van de gekozen ploeg. Zonder dit weigert de
     // filterOptions-validatie van het team-veld élke save zodra club ≠ club-van-de-ploeg
