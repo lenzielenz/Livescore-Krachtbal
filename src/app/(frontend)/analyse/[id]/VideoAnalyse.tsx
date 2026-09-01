@@ -10,6 +10,15 @@ import {
   youtubeEmbedAt,
   type VideoSync,
 } from '@/lib/video-sync'
+import {
+  aantalStukken,
+  bestandsSleutel,
+  hervatVanafStuk,
+  stukBereik,
+  uploadFout,
+  wachtNaPoging,
+  POGINGEN_PER_STUK,
+} from '@/lib/video-upload'
 
 import { CvReview, type CvVoorstel } from './CvReview'
 import './video-tijdlijn.css'
@@ -228,27 +237,91 @@ export function VideoAnalyse({
     }
     setMsg(null)
     setUpPct(0)
-    const xhr = new XMLHttpRequest()
-    xhr.open('POST', `/api/match/${matchId}/video/upload`)
-    xhr.setRequestHeader('Content-Type', f.type || 'video/mp4')
-    xhr.withCredentials = true
-    xhr.upload.onprogress = (e) => {
-      if (e.lengthComputable) setUpPct(Math.round((e.loaded / e.total) * 100))
+    void uploadInStukken(f)
+  }
+
+  /**
+   * Het bestand in stukken naar de server duwen.
+   *
+   * Vroeger ging alles in één verzoek. Een wedstrijdvideo is honderden megabytes, dus dat is één
+   * verbinding die minutenlang moet houden vanaf een telefoon — en viel die weg, dan was álles
+   * weg met de melding "Uploaden mislukt (verbinding)", zonder dat je wist hoever je stond.
+   *
+   * Nu kost een hapering hoogstens één stuk: dat wordt een paar keer opnieuw geprobeerd, en wat
+   * al aankwam blijft op de server staan. Kies je later hetzelfde bestand opnieuw, dan begint de
+   * upload waar hij gebleven was in plaats van vooraan.
+   */
+  const uploadInStukken = async (f: File) => {
+    const type = f.type || 'video/mp4'
+    // Eén id per bestand (naam + grootte + wijzigingsdatum), zodat hetzelfde bestand opnieuw
+    // kiezen dezelfde upload voortzet en een ánder bestand een verse begint.
+    const uploadId = await bestandsSleutel(f, matchId)
+
+    // Staat er al iets van een vorige poging?
+    let gedaan = 0
+    try {
+      const res = await fetch(`/api/match/${matchId}/video/upload?uploadId=${uploadId}`, { credentials: 'include' })
+      if (res.ok) gedaan = Number((await res.json()).bytes) || 0
+    } catch {
+      /* geen antwoord: gewoon vooraan beginnen */
     }
-    xhr.onload = () => {
-      setUpPct(null)
-      let data: { url?: string; error?: string } = {}
-      try { data = JSON.parse(xhr.responseText) } catch {}
-      if (xhr.status >= 200 && xhr.status < 300 && data.url) {
-        setUrl(data.url)
-        setDraftUrl(data.url)
-        setMsg('Video geüpload en gekoppeld. IJk nu de aftrap van elke helft.')
-      } else {
-        setMsg(data.error ?? 'Uploaden mislukt.')
+    if (gedaan > f.size) gedaan = 0
+    if (gedaan > 0) setMsg(`Verdergaan waar de vorige poging stopte (${Math.round(gedaan / (1024 * 1024))} MB stond er al).`)
+
+    const stukken = aantalStukken(f.size)
+    for (let i = hervatVanafStuk(gedaan); i < stukken; i++) {
+      const { van, tot } = stukBereik(i, f.size)
+      const laatste = i === stukken - 1
+      let gelukt = false
+      for (let poging = 0; poging < POGINGEN_PER_STUK && !gelukt; poging++) {
+        if (poging > 0) await new Promise((r) => setTimeout(r, wachtNaPoging(poging - 1)))
+        try {
+          const res = await fetch(`/api/match/${matchId}/video/upload`, {
+            method: 'POST',
+            credentials: 'include',
+            headers: {
+              'Content-Type': type,
+              'x-upload-id': uploadId,
+              'x-offset': String(van),
+              ...(laatste ? { 'x-laatste-stuk': '1' } : {}),
+            },
+            body: f.slice(van, tot),
+          })
+          const data = (await res.json().catch(() => ({}))) as { url?: string; error?: string; bytes?: number }
+          if (res.status === 409 && typeof data.bytes === 'number') {
+            // De server staat ergens anders dan wij dachten (een stuk kwam tóch aan, of net niet).
+            // Meegaan met de server in plaats van blijven duwen.
+            gedaan = data.bytes
+            i = hervatVanafStuk(gedaan) - 1
+            gelukt = true
+            break
+          }
+          if (!res.ok) {
+            // Een échte weigering (te groot, geen rechten) heeft geen zin om te herhalen.
+            setUpPct(null)
+            setMsg(data.error ?? 'Uploaden mislukt.')
+            return
+          }
+          gedaan = typeof data.bytes === 'number' ? data.bytes : tot
+          setUpPct(Math.round((gedaan / f.size) * 100))
+          gelukt = true
+          if (laatste && data.url) {
+            setUpPct(null)
+            setUrl(data.url)
+            setDraftUrl(data.url)
+            setMsg('Video geüpload en gekoppeld. IJk nu de aftrap van elke helft.')
+            return
+          }
+        } catch {
+          /* verbinding weg: zo dadelijk opnieuw, hetzelfde stuk */
+        }
+      }
+      if (!gelukt) {
+        setUpPct(null)
+        setMsg(uploadFout(gedaan, f.size))
+        return
       }
     }
-    xhr.onerror = () => { setUpPct(null); setMsg('Uploaden mislukt (verbinding).') }
-    xhr.send(f)
   }
 
   const saveUrl = async () => {
