@@ -122,18 +122,23 @@ export function Kalibreren({
   }
 
   // Het omrekenen van scherm naar beeldpixels zit in KalibratieDoek (en in de geteste module
-  // kalibratie-zoom): hier komen alleen nog échte beeldcoördinaten binnen.
-  const zetPunt = (x: number, y: number) => {
-    if (actief == null || !volgende) return
+  // kalibratie-zoom): hier komen alleen nog échte beeldcoördinaten binnen. Het label komt mee
+  // van het doek: zo kan het naast "het punt dat aan de beurt is" ook een bestaand punt zijn
+  // dat je vastpakte of met de pijltjes bijstelt — voorheen kreeg elke aanraking het label van
+  // de beurt, en zette een pijltjestik dus stilletjes het vólgende punt vlak naast het vorige.
+  const zetPunt = (label: string, x: number, y: number) => {
+    if (actief == null) return
     setBeelden((lijst) =>
       lijst.map((b, i) =>
         i === actief
-          ? { ...b, punten: [...b.punten.filter((p) => p.label !== volgende), { label: volgende, x, y }] }
+          ? { ...b, punten: [...b.punten.filter((p) => p.label !== label), { label, x, y }] }
           : // Hetzelfde punt op een ander beeld zetten vervangt het oude: één plek per punt.
-            { ...b, punten: b.punten.filter((p) => p.label !== volgende) },
+            { ...b, punten: b.punten.filter((p) => p.label !== label) },
       ),
     )
-    setGekozenLabel(null)
+    // Was dit het punt dat aan de beurt was, dan schuift de beurt door; een bestaand punt
+    // verplaatsen of bijstellen laat de beurt met rust.
+    if (label === volgende) setGekozenLabel(null)
   }
 
   const wisPunt = (label: string) => {

@@ -42,6 +42,10 @@ type Punt = { label: string; x: number; y: number }
 
 const LOEP_ZOOM = 8
 
+/** Binnen hoeveel schermpixels een vinger een al gezet punt vastpakt i.p.v. het volgende te
+ *  mikken. Ongeveer de grootte van het haarkruis: raak je het kruis, dan pak je het punt. */
+const GRIJP_STRAAL = 16
+
 export function KalibratieDoek({
   frame,
   beeldBreedte,
@@ -60,7 +64,7 @@ export function KalibratieDoek({
   volgende: string | null
   /** Meter per beeldpixel op het slechtste deel van het veld, uit de vorige kalibratie. */
   meterPerPixel?: number | null
-  onZet: (x: number, y: number) => void
+  onZet: (label: string, x: number, y: number) => void
   beschrijf: (label: string) => string
 }) {
   const doekRef = useRef<HTMLDivElement | null>(null)
@@ -71,6 +75,10 @@ export function KalibratieDoek({
   const [richt, setRicht] = useState<Beeldpunt | null>(null)
   const [pannen, setPannen] = useState<{ x: number; y: number; midden: Beeldpunt } | null>(null)
   const [laatste, setLaatste] = useState<Punt | null>(null)
+  /** Het label van een al gezet punt dat je vastpakte om het te verplaatsen (null = je mikt
+   *  het punt dat aan de beurt is). Zonder dit zette élke nieuwe aanraking het volgende punt —
+   *  "ik wil het huidige punt verplaatsen" kon dus alleen via wissen en opnieuw beginnen. */
+  const [vastgepakt, setVastgepakt] = useState<string | null>(null)
 
   const beeld = { breedte: beeldBreedte, hoogte: beeldHoogte }
   // De afmeting van het doek wordt één keer gemeten en bij elke verandering bijgehouden. Ze bij
@@ -112,6 +120,19 @@ export function KalibratieDoek({
     if (!s) return
     e.currentTarget.setPointerCapture(e.pointerId)
     vorigeVinger.current = { x: e.clientX, y: e.clientY }
+    // Landt je vinger op een al gezet haarkruis, dan pak je dát punt vast: het kruis start op
+    // het punt zelf (niet op je vinger) en slepen verplaatst het. Zo kan je een net gezet punt
+    // meteen rechtzetten in plaats van ongewild het volgende te zetten.
+    const beet = punten
+      .map((p) => ({ p, s: naarScherm(p, vak, beeld, zoom, midden) }))
+      .filter(({ s: q }) => Math.hypot(q.x - s.x, q.y - s.y) <= GRIJP_STRAAL)
+      .sort((a, b) => Math.hypot(a.s.x - s.x, a.s.y - s.y) - Math.hypot(b.s.x - s.x, b.s.y - s.y))[0]
+    if (beet) {
+      setVastgepakt(beet.p.label)
+      setRicht({ x: beet.p.x, y: beet.p.y })
+      return
+    }
+    setVastgepakt(null)
     // Bij het neerzetten springt het kruis absoluut naar je vinger: de fijnregeling bouwt pas
     // op tijdens het slepen, zodat het kruis nooit onverwacht ergens anders begint.
     setRicht(naarBeeld(s, vak, beeld, zoom, midden))
@@ -145,15 +166,18 @@ export function KalibratieDoek({
       setPannen(null)
       return
     }
-    if (!richt || !volgende) {
+    // Een vastgepakt punt houdt zijn eigen label; anders is dit het punt dat aan de beurt is.
+    const label = vastgepakt ?? volgende
+    setVastgepakt(null)
+    if (!richt || !label) {
       setRicht(null)
       return
     }
     const x = Math.round(richt.x)
     const y = Math.round(richt.y)
     setRicht(null)
-    setLaatste({ label: volgende, x, y })
-    onZet(x, y)
+    setLaatste({ label, x, y })
+    onZet(label, x, y)
   }
 
   /** Bijstellen met de pijltjes: telkens één beeldpixel, dus fijner dan je ooit kunt tikken. */
@@ -162,7 +186,7 @@ export function KalibratieDoek({
     const x = klem(laatste.x + dx, 0, beeldBreedte)
     const y = klem(laatste.y + dy, 0, beeldHoogte)
     setLaatste({ ...laatste, x, y })
-    onZet(x, y)
+    onZet(laatste.label, x, y)
   }
 
   const zoomNaar = (nieuw: number) => {
@@ -193,7 +217,11 @@ export function KalibratieDoek({
         <span className="kd-loeptekst">
           {richt ? (
             <>
-              Nu: <strong>{Math.round(richt.x)}, {Math.round(richt.y)}</strong>
+              {vastgepakt ? (
+                <>Verplaatsen: <strong>{beschrijf(vastgepakt)}</strong></>
+              ) : (
+                <>Nu: <strong>{Math.round(richt.x)}, {Math.round(richt.y)}</strong></>
+              )}
               <em>laat los om te zetten · traag slepen = fijn mikken</em>
             </>
           ) : laatste ? (
@@ -242,10 +270,11 @@ export function KalibratieDoek({
         onPointerUp={omhoog}
         onPointerCancel={() => {
           // Onderbroken gebaar (telefoontje, systeemveeg): liever géén punt dan een punt op de
-          // verkeerde plek.
+          // verkeerde plek. Een vastgepakt punt blijft dan gewoon waar het stond.
           vorigeVinger.current = null
           setRicht(null)
           setPannen(null)
+          setVastgepakt(null)
         }}
         onContextMenu={(e) => e.preventDefault()}
         role="application"
@@ -281,10 +310,11 @@ export function KalibratieDoek({
         {volgende ? (
           <>
             Zet je vinger op het beeld en sleep tot het rode kruis op{' '}
-            <strong>{beschrijf(volgende)}</strong> ligt. Loslaten zet het punt.
+            <strong>{beschrijf(volgende)}</strong> ligt. Loslaten zet het punt. Een punt dat er
+            al staat verplaats je door het haarkruis zelf vast te pakken en te slepen.
           </>
         ) : (
-          <>Alle veertien punten staan er.</>
+          <>Alle veertien punten staan er. Verplaatsen kan: pak een haarkruis vast en sleep.</>
         )}
       </p>
 
