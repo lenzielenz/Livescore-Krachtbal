@@ -172,6 +172,196 @@ def verzamel_interactief(
 
 
 # ---------------------------------------------------------------------------
+# Radiale lensvervorming: divisiemodel met één parameter (λ)
+# ---------------------------------------------------------------------------
+#
+# Gsm- en actiecamlenzen buigen rechte lijnen aan de beeldrand; een homografie kan
+# dat per constructie niet beschrijven, dus zonder correctie zit die kromming als
+# systematische meetfout in elke projectie — het grootst aan de beeldranden, waar
+# de achterlijnen liggen. Het éénparameter-divisiemodel vangt het gros daarvan:
+#
+#     ontkromd = centrum + (p − centrum) / (1 + λ·r²)
+#
+# CONVENTIE (exact — ook voor andere lezers van het kalibratiebestand):
+#   - p is het VERVORMDE (ruwe) pixel zoals het uit de camera komt;
+#   - centrum = het beeldcentrum in pixels: (beeldbreedte/2, beeldhoogte/2);
+#   - r = |p − centrum| / diagonaal, met diagonaal = √(breedte² + hoogte²) in
+#     pixels — r is dimensieloos, dus λ is schaalonafhankelijk: dezelfde lens
+#     geeft dezelfde λ op 4K als op 720p;
+#   - λ > 0 is tonvervorming (barrel — de gsm-groothoek), λ < 0 kussenvorm.
+#
+# In het kalibratiebestand: 'lens' = {'lambda', 'centrum': [cx, cy], 'diagonaal'}.
+# Ontbreekt het veld (oude bestanden), dan geldt λ = 0 en verandert er niets.
+
+# Fysiek plausibel zoekbereik voor λ: ±0,3 dekt van kussenvorm tot de zwaarste
+# ongecorrigeerde actiecam-groothoek (op de veldrand ~8% radiale verschuiving).
+LENS_LAMBDA_BEREIK = 0.3
+# Onder dit aantal punten wordt λ niet geschat: één extra parameter op vier
+# punten is overfitten — de fit wordt dan exact voor élke λ en het zoeken kiest
+# ruis. Vanaf zes punten laat de kleinste-kwadraten-rest de kromming echt zien.
+LENS_MIN_PUNTEN = 6
+
+
+def ontkrom(
+    punt: tuple[float, float] | list[float],
+    lam: float,
+    centrum: tuple[float, float] | list[float],
+    diagonaal: float,
+) -> tuple[float, float]:
+    """Vervormd (ruw) pixel → ontkromd pixel volgens het divisiemodel hierboven."""
+    if lam == 0.0:
+        return (float(punt[0]), float(punt[1]))
+    dx, dy = punt[0] - centrum[0], punt[1] - centrum[1]
+    r2 = (dx * dx + dy * dy) / (diagonaal * diagonaal)
+    factor = 1.0 + lam * r2
+    if factor <= 1e-9:
+        # λ·r² ≤ −1 kan alleen ver buiten het geldigheidsgebied van het model:
+        # dan liever het punt laten staan dan het naar oneindig klappen.
+        return (float(punt[0]), float(punt[1]))
+    return (centrum[0] + dx / factor, centrum[1] + dy / factor)
+
+
+def verkrom(
+    punt: tuple[float, float] | list[float],
+    lam: float,
+    centrum: tuple[float, float] | list[float],
+    diagonaal: float,
+) -> tuple[float, float]:
+    """Ontkromd pixel → vervormd pixel: de exacte inverse van ontkrom (voor
+    overlay en terugprojectie naar het echte beeld).
+
+    GESLOTEN opgelost, geen iteratie: met r_u = |q − centrum| / diagonaal zoekt de
+    inverse de vervormde straal r_d waarvoor r_d / (1 + λ·r_d²) = r_u — de
+    kwadratische vergelijking λ·r_u·r_d² − r_d + r_u = 0. De wortel die voor λ→0
+    naar r_u gaat is, in de numeriek stabiele vorm zonder verlies van significantie,
+    r_d = 2·r_u / (1 + √(1 − 4·λ·r_u²)); de vector schaalt dus met 2/(1 + √(…)).
+    """
+    if lam == 0.0:
+        return (float(punt[0]), float(punt[1]))
+    dx, dy = punt[0] - centrum[0], punt[1] - centrum[1]
+    ru2 = (dx * dx + dy * dy) / (diagonaal * diagonaal)
+    discriminant = 1.0 - 4.0 * lam * ru2
+    if discriminant < 0.0:
+        # Zo sterk positieve λ op zo grote straal ligt buiten het model (de
+        # vervorming zou niet meer omkeerbaar zijn): klem op de grens.
+        discriminant = 0.0
+    schaal = 2.0 / (1.0 + math.sqrt(discriminant))
+    return (centrum[0] + dx * schaal, centrum[1] + dy * schaal)
+
+
+def lens_uit(data: dict) -> tuple[float, tuple[float, float], float] | None:
+    """(λ, centrum, diagonaal) uit een kalibratiebestand, of None als er niets te
+    ontkrommen valt — het λ=0-pad zonder rekenkost van betekenis.
+
+    Oude bestanden hebben géén 'lens'-veld: dan geldt λ = 0 (volledige
+    achterwaartse compatibiliteit). Ook een expliciete λ = 0 geeft None terug,
+    want ontkrommen is dan de identiteit.
+    """
+    lens = (data or {}).get('lens') or {}
+    lam = float(lens.get('lambda') or 0.0)
+    centrum = lens.get('centrum')
+    diagonaal = lens.get('diagonaal')
+    if lam == 0.0 or not centrum or not diagonaal:
+        return None
+    return lam, (float(centrum[0]), float(centrum[1])), float(diagonaal)
+
+
+def ontkromde_punten(
+    punten: list[dict],
+    lam: float,
+    centrum: tuple[float, float] | list[float],
+    diagonaal: float,
+) -> list[dict]:
+    """Puntrecords met ontkromde beeld_px; de ruwe klikken bewaart de aanroeper zelf
+    (het kalibratiebestand houdt altijd de échte klikcoördinaten vast)."""
+    if lam == 0.0:
+        return punten
+    return [{**p, 'beeld_px': list(ontkrom(p['beeld_px'], lam, centrum, diagonaal))}
+            for p in punten]
+
+
+def _inverteer_of_niets(m: list[list[float]]) -> list[list[float]] | None:
+    """Als _inverteer_3x3, maar zonder het proces te verlaten — voor de λ-zoektocht,
+    waar één ontaarde kandidaat gewoon een slechte kandidaat is."""
+    (a, b, c), (d, e, f), (g, h, i) = m
+    if abs(a * (e * i - f * h) - b * (d * i - f * g) + c * (d * h - e * g)) < 1e-12:
+        return None
+    return _inverteer_3x3(m)
+
+
+def _herprojectiefout_px(matrix: list[list[float]], punten: list[dict]) -> float:
+    """Gemiddelde afstand (px) tussen elk (ontkromd) klikpunt en waar de matrix het
+    veldpunt terug in beeld legt — het criterium van de λ-zoektocht.
+
+    Bewust in píxels en niet in meters: de klikruis is per pixel gelijk verdeeld,
+    terwijl een meterfout de punten aan de verre kant (grof: veel meter per pixel)
+    zwaar laat wegen en juist de punten dichtbij — waar de kromming zichtbaar is —
+    verwaarloost. In meters gemeten was de λ-schatting op de proefopstellingen 2 à
+    5 keer ruisgevoeliger.
+    """
+    invers = _inverteer_of_niets(matrix)
+    if invers is None:
+        return float('inf')
+    som = 0.0
+    for p in punten:
+        tx, ty = _projecteer(invers, p['veld_m'][0], p['veld_m'][1])
+        if tx != tx or abs(tx) > 1e9:
+            return float('inf')
+        som += math.hypot(tx - p['beeld_px'][0], ty - p['beeld_px'][1])
+    return som / len(punten)
+
+
+def schat_lens(
+    punten: list[dict],
+    centrum: tuple[float, float],
+    diagonaal: float,
+    bereik: float = LENS_LAMBDA_BEREIK,
+) -> tuple[float, list[list[float]], float, float] | None:
+    """Schat λ mee met de homografie: (λ, matrix, fout_met_px, fout_zonder_px).
+
+    1-D zoektocht over λ — grof raster over ±bereik plus twee verfijningsrondes
+    (stap ÷10, ÷100) rond het beste punt; robuuster dan gulden snede, want de
+    foutkromme is bij weinig punten niet gegarandeerd unimodaal, en met ~70
+    homografie-fits op ≤ 14 punten kost het niets. Per kandidaat-λ worden de
+    punten ontkromd, wordt de bestaande homografie-fit gedraaid en telt de
+    herprojectiefout in pixels (zie _herprojectiefout_px). λ = 0 zit in het
+    raster, dus de uitkomst is nooit slechter dan géén lensmodel.
+
+    Geeft None wanneer zelfs λ = 0 geen fit oplevert — dan meldt de gewone
+    fit_homografie-weg het probleem luid.
+    """
+    cv2 = _laad_cv2()  # noqa: F841 — de fit hieronder heeft cv2 nodig; laad hem één keer luid
+
+    def fout_bij(lam: float) -> tuple[list[list[float]] | None, float]:
+        onk = ontkromde_punten(punten, lam, centrum, diagonaal)
+        matrix = _fit_homografie_of_niets(onk)
+        if matrix is None:
+            return None, float('inf')
+        return matrix, _herprojectiefout_px(matrix, onk)
+
+    matrix_nul, fout_nul = fout_bij(0.0)
+    if matrix_nul is None:
+        return None
+    beste_lam, beste_matrix, beste_fout = 0.0, matrix_nul, fout_nul
+    stap = bereik / 15.0
+    for i in range(-15, 16):
+        lam = i * stap
+        matrix, fout = fout_bij(lam)
+        if fout < beste_fout:
+            beste_lam, beste_matrix, beste_fout = lam, matrix, fout
+    for verfijn in (stap / 10.0, stap / 100.0):
+        rond = beste_lam
+        for k in range(-9, 10):
+            lam = rond + k * verfijn
+            if abs(lam) > bereik or k == 0:
+                continue
+            matrix, fout = fout_bij(lam)
+            if fout < beste_fout:
+                beste_lam, beste_matrix, beste_fout = lam, matrix, fout
+    return beste_lam, beste_matrix, beste_fout, fout_nul
+
+
+# ---------------------------------------------------------------------------
 # Homografie fitten en opslaan
 # ---------------------------------------------------------------------------
 
@@ -221,6 +411,19 @@ def controleer_ontaarding(punten: list[dict]) -> None:
             )
 
 
+def _fit_homografie_of_niets(punten: list[dict]) -> list[list[float]] | None:
+    """De kale fit: matrix of None. Voor de λ-zoektocht, die per kandidaat mag falen."""
+    cv2 = _laad_cv2()
+    import numpy as np  # noqa: PLC0415 — komt mee met opencv-python
+
+    bron = np.array([p['beeld_px'] for p in punten], dtype=np.float64)
+    doel = np.array([p['veld_m'] for p in punten], dtype=np.float64)
+    matrix, _masker = cv2.findHomography(bron, doel, method=0)
+    if matrix is None:
+        return None
+    return [[float(w) for w in rij] for rij in matrix]
+
+
 def fit_homografie(punten: list[dict]) -> list[list[float]]:
     """Fit de homografie beeld(px) → veld(m) op ≥4 puntenparen.
 
@@ -229,21 +432,17 @@ def fit_homografie(punten: list[dict]) -> list[list[float]]:
     (camera.beoordeel) fit bewust ook wankele sets om ze daarna met de
     laat-één-punt-weg-proef als onzeker te bestempelen.
     """
-    cv2 = _laad_cv2()
-    import numpy as np  # noqa: PLC0415 — komt mee met opencv-python
-
-    bron = np.array([p['beeld_px'] for p in punten], dtype=np.float64)
-    doel = np.array([p['veld_m'] for p in punten], dtype=np.float64)
-    matrix, _masker = cv2.findHomography(bron, doel, method=0)
+    matrix = _fit_homografie_of_niets(punten)
     if matrix is None:
         _fout('cv2.findHomography vond geen oplossing — liggen de punten niet op één lijn?', code=1)
-    return [[float(w) for w in rij] for rij in matrix]
+    return matrix
 
 
 def schrijf_kalibratie(
     pad: Path, matrix: list[list[float]], punten: list[dict], diepte: float, beeldpad: Path | None,
     breedte: float = veld.BREEDTE_M, speelveld: float = veld.SPEELVELD_LENGTE_M,
     positie: str | None = None, beeldbreedte: float | None = None, beeldhoogte: float | None = None,
+    lens: dict | None = None,
 ) -> None:
     data = {
         'versie': 1,
@@ -261,13 +460,21 @@ def schrijf_kalibratie(
         'precisie_m_per_px': precisiekaart(matrix, diepte, breedte, speelveld),
         'camerapositie': positie,
     }
+    # De meegeschatte lensvervorming (divisiemodel). De punten hierboven blijven de RUWE
+    # klikken — wie de matrix gebruikt ontkromt eerst (landing.py, volg_veld.py, --test).
+    # Zonder dit veld geldt λ = 0: oude bestanden blijven letterlijk werken.
+    if lens is not None:
+        data['lens'] = lens
     # Het standpunt terugrekenen kan alleen met de beeldmaat erbij (het hoofdpunt zit in het
     # midden van het beeld). Zonder die maat slaan we het gewoon over.
     if beeldbreedte and beeldhoogte:
         import camera  # noqa: PLC0415  (lui: camera importeert volg_veld, dat hier niet altijd nodig is)
+        # De matrix hoort bij de ONTKROMDE punten: geef het oordeel dezelfde coördinaten.
+        lt = lens_uit(data)
         data['camerastandpunt'] = camera.beoordeel(
             positie, matrix, beeldbreedte, beeldhoogte, breedte,
-            veld.totale_lengte_m(diepte, speelveld), punten,
+            veld.totale_lengte_m(diepte, speelveld),
+            ontkromde_punten(punten, *lt) if lt else punten,
         )
     pad.write_text(json.dumps(data, indent=2, ensure_ascii=False) + '\n', encoding='utf-8')
     print(f'Kalibratie opgeslagen: {pad}')
@@ -479,22 +686,33 @@ def druk_reprojectierapport(
     _rapport_diepte: float | None = None,
     _rapport_speelveld: float | None = None,
     _rapport_breedte: float | None = None,
+    lens: tuple[float, tuple[float, float], float] | None = None,
 ) -> None:
     """Rapporteer per punt de reprojectiefout in pixels (veld → beeld via H⁻¹),
-    plus de fout in meters (beeld → veld via H), en het gemiddelde."""
+    plus de fout in meters (beeld → veld via H), en het gemiddelde.
+
+    Met een lens (het (λ, centrum, diagonaal)-drietal van lens_uit) hoort de matrix bij
+    ONTKROMDE pixels: beeld → veld gaat dan via ontkrom, en veld → beeld via verkrom
+    terug naar de ruwe klik — de pixelfout blijft zo een fout in échte beeldpixels.
+    """
     invers = _inverteer_3x3(matrix)
     print('Reprojectierapport:')
+    if lens is not None:
+        print(f'  lens: λ = {lens[0]:g} (divisiemodel) — pixels worden ontkromd vóór de projectie')
     print(f'  {"kruispunt":28s} {"fout (px)":>10s} {"fout (m)":>9s}')
     fouten_px: list[float] = []
     fouten_m: list[float] = []
     for p in punten:
         px, py = p['beeld_px']
         vx, vy = p['veld_m']
+        ox, oy = ontkrom((px, py), *lens) if lens is not None else (px, py)
         # veld → beeld: hoe ver ligt de terugprojectie van het aangeklikte pixel?
         tx, ty = _projecteer(invers, vx, vy)
+        if lens is not None:
+            tx, ty = verkrom((tx, ty), *lens)
         fout_px = ((tx - px) ** 2 + (ty - py) ** 2) ** 0.5
         # beeld → veld: fout op het veld, in meters
-        mx, my = _projecteer(matrix, px, py)
+        mx, my = _projecteer(matrix, ox, oy)
         fout_m = ((mx - vx) ** 2 + (my - vy) ** 2) ** 0.5
         fouten_px.append(fout_px)
         fouten_m.append(fout_m)
@@ -626,8 +844,10 @@ def main(argv: list[str] | None = None) -> None:
         gedraaid = draai_kalibratie_180(data)
         args.uit.write_text(json.dumps(gedraaid, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
         print(f'180° gedraaid (thuis↔uit, links↔rechts) → {args.uit}')
+        # De lens leeft in beeldcoördinaten en draait dus niet mee — {**data} nam ze al over.
         druk_reprojectierapport(gedraaid['matrix_beeld_naar_veld'], gedraaid['punten'],
-                                *veldinfo_uit(gedraaid), breedte_uit(gedraaid))
+                                *veldinfo_uit(gedraaid), breedte_uit(gedraaid),
+                                lens=lens_uit(gedraaid))
         return
 
     # --test combineert niet met een nieuwe kalibratie: dat zou stilletjes fitten
@@ -641,9 +861,12 @@ def main(argv: list[str] | None = None) -> None:
         if not pad.is_file():
             _fout(f'kalibratiebestand niet gevonden: {pad}')
         data = json.loads(pad.read_text(encoding='utf-8'))
-        controleer_orientatie(data['matrix_beeld_naar_veld'], data['punten'])
+        lt = lens_uit(data)
+        # De matrix hoort bij de ONTKROMDE punten — de controle en het rapport dus ook.
+        controleer_orientatie(data['matrix_beeld_naar_veld'],
+                              ontkromde_punten(data['punten'], *lt) if lt else data['punten'])
         druk_reprojectierapport(data['matrix_beeld_naar_veld'], data['punten'],
-                                *veldinfo_uit(data), breedte_uit(data))
+                                *veldinfo_uit(data), breedte_uit(data), lens=lt)
         return
 
     # Punten verzamelen: headless (--punt) of interactief (--beeld)
@@ -664,17 +887,58 @@ def main(argv: list[str] | None = None) -> None:
     # Vier punten zijn pas genoeg als ze het veld ook echt vastleggen: een set met alle
     # punten op één na op dezelfde rechte (één zijlijn overgeslagen) glipt door cv2 heen
     # met een perfect ogend rapport, terwijl de andere veldhelft er meters naast zit.
+    # (De toets kijkt naar de VELDcoördinaten en is dus lens-onafhankelijk; de
+    # orientatie-toets hieronder krijgt wél de ontkromde punten.)
     controleer_ontaarding(punten)
 
-    matrix = fit_homografie(punten)
+    # Het lensmodel heeft het beeldcentrum en de diagonaal nodig. Zonder vlaggen halen
+    # we de maat uit het beeld zelf (interactieve modus) — dat laat meteen ook het
+    # camerastandpunt narekenen, wat vroeger alleen met expliciete vlaggen kon.
+    if args.beeld is not None and not (args.beeldbreedte and args.beeldhoogte):
+        beeld = _laad_cv2().imread(str(args.beeld))
+        if beeld is not None:
+            args.beeldhoogte, args.beeldbreedte = float(beeld.shape[0]), float(beeld.shape[1])
+
+    # Radiale lensvervorming meeschatten (divisiemodel, zie boven). λ = 0 wanneer dat
+    # niet verantwoord kan; dat staat dan expliciet in het rapport — stilte zou
+    # suggereren dat de lens recht is terwijl we het gewoon niet weten.
+    lens: dict | None = None
+    fitpunten = punten
+    if not (args.beeldbreedte and args.beeldhoogte):
+        print('Lensvervorming niet geschat (λ = 0): de beeldmaat is onbekend — geef '
+              '--beeldbreedte en --beeldhoogte mee om ze mee te fitten.')
+    else:
+        centrum = (args.beeldbreedte / 2.0, args.beeldhoogte / 2.0)
+        diagonaal = math.hypot(args.beeldbreedte, args.beeldhoogte)
+        lens = {'lambda': 0.0, 'centrum': [centrum[0], centrum[1]],
+                'diagonaal': round(diagonaal, 2)}
+        if len(punten) < LENS_MIN_PUNTEN:
+            print(f'Lensvervorming niet geschat (λ = 0): {len(punten)} punten is te weinig — '
+                  f'één extra parameter op zo weinig punten is overfitten. Duid er minstens '
+                  f'{LENS_MIN_PUNTEN} aan om de lens mee te schatten.')
+        else:
+            geschat = schat_lens(punten, centrum, diagonaal)
+            if geschat is not None:
+                lam, _matrix_lens, fout_met, fout_zonder = geschat
+                lens['lambda'] = round(lam, 6)
+                if lens['lambda']:
+                    print(f'Lensvervorming meegeschat: λ = {lens["lambda"]:g} (divisiemodel) — '
+                          f'herprojectiefout {fout_zonder:.2f} px → {fout_met:.2f} px gemiddeld')
+                else:
+                    print('Lensvervorming meegeschat: λ = 0 — deze opname is al recht')
+        fitpunten = ontkromde_punten(punten, lens['lambda'], centrum, diagonaal)
+
+    matrix = fit_homografie(fitpunten)
     # Spiegel-detectie vóór het wegschrijven: een gespiegelde kalibratie verziekt élke meting.
-    controleer_orientatie(matrix, punten)
+    controleer_orientatie(matrix, fitpunten)
+    # De RUWE klikpunten gaan het bestand in; de lens erbij zegt hoe je ze ontkromt.
     schrijf_kalibratie(args.uit, matrix, punten, args.diepte, args.beeld,
                        breedte=args.breedte, speelveld=args.speelveld,
                        positie=args.positie, beeldbreedte=args.beeldbreedte,
-                       beeldhoogte=args.beeldhoogte)
-    druk_reprojectierapport(matrix, punten, args.diepte, args.speelveld, args.breedte)
-    druk_standpunt(matrix, punten, args)
+                       beeldhoogte=args.beeldhoogte, lens=lens)
+    druk_reprojectierapport(matrix, punten, args.diepte, args.speelveld, args.breedte,
+                            lens=lens_uit({'lens': lens}) if lens else None)
+    druk_standpunt(matrix, fitpunten, args)
 
 
 if __name__ == '__main__':

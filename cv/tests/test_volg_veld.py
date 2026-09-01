@@ -626,7 +626,7 @@ class TestVolgVideoNep(unittest.TestCase):
             uit.append({'label': label, 'x': x, 'y': y})
         return uit
 
-    def _volg(self, nep, ankers_data, fps, heranker, restfout=None):
+    def _volg(self, nep, ankers_data, fps, heranker, restfout=None, segmenten=None):
         with tempfile.TemporaryDirectory() as d:
             video = Path(d) / 'wedstrijd.mp4'
             video.write_bytes(b'nep')
@@ -637,13 +637,13 @@ class TestVolgVideoNep(unittest.TestCase):
                                       min_lijn=60, rondes=3, punten_per_segment=4)
             lijnen = vv.veldlijnen(10.0)
 
-            def segmenten(_cv2, frame, _min_lijn):
+            def standaard_segmenten(_cv2, frame, _min_lijn):
                 # De lijndetector "ziet" de lijnen zoals ze echt in dit frame liggen.
                 echt = self._echt(nep.camera_op, frame[1])
                 return vv._demo_lijnsegmenten(echt, lijnen, random.Random(int(frame[1] * 1000) + 7))
 
             with mock.patch.object(vv, '_laad_cv2', lambda: nep), \
-                 mock.patch.object(vv, 'detecteer_lijnsegmenten', segmenten), \
+                 mock.patch.object(vv, 'detecteer_lijnsegmenten', segmenten or standaard_segmenten), \
                  mock.patch.object(vv, '_restfout', restfout or (lambda _c, _m, _a, _b: 1.0)):
                 return vv.volg_video(args)
 
@@ -750,6 +750,44 @@ class TestVolgVideoNep(unittest.TestCase):
         self.assertIsNotNone(rapport['retro_correctie_mediaan_m'])
         self.assertGreaterEqual(rapport['retro_correctie_max_m'], rapport['retro_correctie_mediaan_m'])
         self.assertIn('toelichting_retro', rapport)
+
+    def test_lens_uit_de_kalibratie_ontkromt_de_lijndetectie(self):
+        # De detector ziet het VERVORMDE beeld (gsm-groothoek, λ = 0,2): zonder
+        # ontkromming klikt de herankering "geslaagd" (lijnfout ~0,02 m) op lijnen die
+        # het veld ruim een meter verplaatsen — zie TestLensOntkromming hieronder voor
+        # het kale mechanisme. Draagt de kalibratie het lens-veld, dan ontkromt
+        # volg_video de segmenten en blijft het spoor op het echte veld staan.
+        import calibrate  # noqa: PLC0415
+        lens_veld = {'lambda': 0.2, 'centrum': [640.0, 360.0], 'diagonaal': 1468.6}
+        lens = calibrate.lens_uit({'lens': lens_veld})
+        nep = _NepCv2(lambda t: vv.eenheid(), duur_s=6.0)
+        lijnen = vv.veldlijnen(10.0)
+
+        def verkromde_segmenten(_cv2, frame, _min_lijn):
+            # Wat de detector écht ziet: de veldlijnen van dit frame, verkromd. Zonder
+            # meetruis — deze test isoleert de lens-doorvoer, niet de ruisgevoeligheid.
+            segs = vv._demo_lijnsegmenten(self._echt(nep.camera_op, frame[1]), lijnen,
+                                          random.Random(int(frame[1] * 1000) + 7), ruis_px=0.0)
+            return [(calibrate.verkrom(a, *lens), calibrate.verkrom(b, *lens)) for a, b in segs]
+
+        def volg(met_lens: bool):
+            data = {'ankers': [{'tijd_s': 0.0, 'matrix_beeld_naar_veld': self.kal}]}
+            if met_lens:
+                data['lens'] = lens_veld
+            return self._volg(nep, data, fps=2.0, heranker=1.0, segmenten=verkromde_segmenten)
+
+        spoor, rapport = volg(met_lens=True)
+        self.assertEqual(rapport['lens_lambda'], 0.2)
+        self.assertGreater(rapport['ankers'], 0)
+        fout_met = max(self._veldfout(spoor, nep.camera_op, t) for t in (2.0, 4.0, 5.5))
+        self.assertLess(fout_met, 0.05)
+
+        # Zonder lens-veld (oud bestand): zelfde vervormde beeld, geen ontkromming — de
+        # herankeringen trekken het veld dan zichtbaar weg. Dat verschil ís de upgrade.
+        spoor_oud, rapport_oud = volg(met_lens=False)
+        self.assertIsNone(rapport_oud['lens_lambda'])
+        fout_zonder = max(self._veldfout(spoor_oud, nep.camera_op, t) for t in (2.0, 4.0, 5.5))
+        self.assertGreater(fout_zonder, 5.0 * fout_met)
 
     def test_rapport_meet_de_drift_die_elke_herankering_wegneemt(self):
         # De flow loopt 1 px per stap weg; de herankeringen trekken dat telkens terug. Het
@@ -928,3 +966,85 @@ class TestAbsoluteFixes(unittest.TestCase):
         # Zonder fixes ís het spoor de ongecorrigeerde keten: beide cijfers vallen samen.
         self.assertAlmostEqual(rapport['fout_mediaan_m'],
                                rapport['fout_mediaan_zonder_ankers_m'], delta=0.02)
+
+
+class TestLensOntkromming(unittest.TestCase):
+    """Het lensmodel (divisiemodel uit calibrate.py) in de volg-keten: de pure helpers,
+    en het kale mechanisme waarom ontkrommen vóór het herankeren moet gebeuren."""
+
+    LENS_VELD = {'lambda': 0.2, 'centrum': [640.0, 360.0], 'diagonaal': 1468.6}
+
+    def _lens(self):
+        import calibrate  # noqa: PLC0415
+        return calibrate.lens_uit({'lens': self.LENS_VELD})
+
+    def test_zonder_lens_zijn_de_helpers_de_identiteit(self):
+        # λ = 0 (oude bestanden): exact dezelfde objecten terug, geen rekenwerk.
+        punten = [(10.0, 20.0), (630.0, 350.0)]
+        segmenten = [((0.0, 0.0), (100.0, 50.0))]
+        self.assertIs(vv.ontkrom_punten(punten, None), punten)
+        self.assertIs(vv.ontkrom_segmenten(segmenten, None), segmenten)
+
+    def test_helpers_volgen_calibrate_ontkrom_exact(self):
+        import calibrate  # noqa: PLC0415
+        lens = self._lens()
+        punten = [(100.0, 700.0), (1200.0, 40.0)]
+        verwacht = [calibrate.ontkrom(p, *lens) for p in punten]
+        self.assertEqual(vv.ontkrom_punten(punten, lens), verwacht)
+        self.assertEqual(vv.ontkrom_segmenten([(punten[0], punten[1])], lens),
+                         [(verwacht[0], verwacht[1])])
+
+    def test_ontkrommen_is_de_inverse_van_de_lensvervorming(self):
+        import calibrate  # noqa: PLC0415
+        lens = self._lens()
+        origineel = [((260.0, 60.0), (428.0, 60.0)), ((260.0, 612.0), (428.0, 300.0))]
+        verkromd = [(calibrate.verkrom(a, *lens), calibrate.verkrom(b, *lens))
+                    for a, b in origineel]
+        terug = vv.ontkrom_segmenten(verkromd, lens)
+        for (ta, tb), (oa, ob) in zip(terug, origineel):
+            self.assertAlmostEqual(ta[0], oa[0], places=6)
+            self.assertAlmostEqual(tb[1], ob[1], places=6)
+
+    @unittest.skipUnless(_heeft('numpy'), 'numpy niet geïnstalleerd')
+    def test_numpy_variant_geeft_dezelfde_ontkromming(self):
+        # De flow gebruikt de vectorvorm (honderden punten per stap); die moet exact
+        # hetzelfde rekenen als de scalaire ontkrom uit calibrate.
+        import numpy as np
+        lens = self._lens()
+        punten = [(100.0, 700.0), (1200.0, 40.0), (640.0, 360.0)]
+        vector = vv._ontkrom_np(np.array(punten, dtype=np.float32), lens)
+        for rij, verwacht in zip(vector, vv.ontkrom_punten(punten, lens)):
+            self.assertAlmostEqual(float(rij[0]), verwacht[0], places=2)
+            self.assertAlmostEqual(float(rij[1]), verwacht[1], places=2)
+
+    def test_verkromde_segmenten_verplaatsen_het_veld_stil_ontkromde_niet(self):
+        # HET mechanisme achter deze upgrade, kaal gemeten. De detector ziet de
+        # veldlijnen verkromd (λ = 0,2, gsm-groothoek). Herankeren op die ruwe
+        # segmenten "slaagt" met een uitstekende lijnfout (0,02 m) maar trekt het veld
+        # ruim een meter weg — stille corruptie, precies het patroon dat de eigen
+        # docstrings vrezen. Dezelfde segmenten eerst ontkrommen: vanaf een gedrifte
+        # stand komt de herankering binnen een centimeter op het échte veld terug.
+        import calibrate  # noqa: PLC0415
+        kal = vv.inverteer([[12.0, 0.0, 260.0], [0.0, 12.0, 60.0], [0.0, 0.0, 1.0]])
+        lijnen = vv.veldlijnen(10.0)
+        lens = self._lens()
+        segs = vv._demo_lijnsegmenten(kal, lijnen, random.Random(3), ruis_px=0.0)
+        ruw = [(calibrate.verkrom(a, *lens), calibrate.verkrom(b, *lens)) for a, b in segs]
+
+        # De ruwe (verkromde) segmenten liggen decimeters naast de echte lijnen…
+        fout_ruw = vv.lijnfout_m(kal, vv.koppel_lijnconstraints(ruw, kal, lijnen))
+        self.assertGreater(fout_ruw, 0.15)
+        # …en tóch rapporteert herankeren erop een prima lijnfout, terwijl het veld
+        # meer dan een meter verschuift (gemeten: lijnfout 0,022 m, veldfout 1,25 m).
+        hersteld, fout, gebruikt, _ = vv.veranker_absoluut(kal, ruw, lijnen)
+        self.assertGreater(gebruikt, 0)
+        self.assertLess(fout, 0.1)
+        self.assertGreater(max(vv.veldfout_m(hersteld, kal, vv._standaard_veldpunten())), 1.0)
+
+        # Ontkromd vallen ze exact op de lijnen, en herstelt een gedrifte stand zich.
+        onk = vv.ontkrom_segmenten(ruw, lens)
+        self.assertLess(vv.lijnfout_m(kal, vv.koppel_lijnconstraints(onk, kal, lijnen)), 0.001)
+        gedrift = vv.maal([[1.0, 0.0, 0.0], [0.0, 1.0, 1.0], [0.0, 0.0, 1.0]], kal)
+        hersteld2, _fout2, gebruikt2, _ = vv.veranker_absoluut(gedrift, onk, lijnen)
+        self.assertGreater(gebruikt2, 0)
+        self.assertLess(max(vv.veldfout_m(hersteld2, kal, vv._standaard_veldpunten())), 0.05)

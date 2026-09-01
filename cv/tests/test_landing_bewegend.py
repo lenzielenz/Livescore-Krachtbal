@@ -209,5 +209,110 @@ class TestWerpplaatsEnUitbal(unittest.TestCase):
         self.assertEqual(verrijkt[0]['werpplaats'], {'x_m': 7.0, 'y_m': 6.0})
 
 
+@unittest.skipUnless(_cv2_of_niets(), 'opencv niet geïnstalleerd')
+class TestLensOntkromming(unittest.TestCase):
+    """Lensvervorming uit de kalibratie: elk pixel dat de homografie ingaat (landing én
+    werpplaats) wordt eerst ontkromd — en zonder 'lens'-veld verandert er letterlijk niets.
+
+    Deterministisch via het --balbanen-pad: de baanpixels zijn de VERKROMDE (ruwe)
+    beelden van gekende veldpunten, dus alleen een correcte ontkromming projecteert ze
+    exact terug op die veldpunten.
+    """
+
+    LENS = {'lambda': 0.15, 'centrum': [960.0, 540.0], 'diagonaal': 2202.91}
+
+    @classmethod
+    def setUpClass(cls):
+        import numpy as np
+        cv2 = _cv2_of_niets()
+        cls.map = Path(tempfile.mkdtemp())
+        cls.video = cls.map / 'proef.mp4'
+        schrijver = cv2.VideoWriter(str(cls.video), cv2.VideoWriter_fourcc(*'mp4v'), 25.0, (320, 180))
+        for _ in range(25):
+            schrijver.write(np.full((180, 320, 3), 30, np.uint8))
+        schrijver.release()
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(cls.map, ignore_errors=True)
+
+    def _verkrom(self, punt):
+        sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+        import calibrate  # noqa: PLC0415
+        lam, centrum, diag = self.LENS['lambda'], self.LENS['centrum'], self.LENS['diagonaal']
+        return calibrate.verkrom(punt, lam, centrum, diag)
+
+    def _kalibratie(self, met_lens: bool, matrix) -> Path:
+        pad = self.map / f'kalibratie_{met_lens}_{id(matrix)}.json'
+        data = {'matrix_beeld_naar_veld': matrix, 'doelgebied_diepte_m': 10.0,
+                'veld': {'breedte_m': 14.0, 'speelveld_m': 26.0}}
+        if met_lens:
+            data['lens'] = self.LENS
+        pad.write_text(json.dumps(data), encoding='utf-8')
+        return pad
+
+    def _baan(self, los_px, landing_px) -> Path:
+        pad = self.map / f'banen_{id(los_px)}.jsonl'
+        pad.write_text(json.dumps({
+            'worp_s': 3.0,
+            'los': {'t': 3.1, 'x': los_px[0], 'y': los_px[1]},
+            'landing': {'t': 4.5, 'x': landing_px[0], 'y': landing_px[1]},
+            'spoor': [[3.1, los_px[0], los_px[1]], [4.5, landing_px[0], landing_px[1]]],
+        }) + '\n', encoding='utf-8')
+        return pad
+
+    def _args(self, balbanen, kalibratie, homografie=None):
+        return SimpleNamespace(
+            video=self.video, homografie=homografie, kalibratie=kalibratie,
+            balbanen=balbanen, balspoor=None,
+            diepte=10.0, breedte=14.0, speelveld=26.0,
+            venster_start=0.4, venster_einde=2.0, bal_min_px=3, bal_max_px=30,
+        )
+
+    DETECTIES = [{'match_id': 1, 'video_time_s': 3.0, 'event_type': 'worp',
+                  'worp_type': None, 'confidence': 0.5}]
+
+    def test_vaste_camera_ontkromt_landing_en_werpplaats(self):
+        # De matrix (0,02 m/px) hoort bij ONTKROMDE pixels: loslaat (350, 300) → (7, 6)
+        # en landing (350, 1900) → (7, 38). De baan bevat de verkromde (ruwe) pixels —
+        # de landing staat 110 px (2,2 m) van zijn ontkromde plek. Alleen mét
+        # ontkromming komen de gekende veldpunten er exact uit.
+        matrix = [[0.02, 0.0, 0.0], [0.0, 0.02, 0.0], [0.0, 0.0, 1.0]]
+        banen = self._baan(self._verkrom((350.0, 300.0)), self._verkrom((350.0, 1900.0)))
+        verrijkt, _ = landing.video_landing(
+            self._args(banen, self._kalibratie(True, matrix)), [dict(self.DETECTIES[0])])
+        self.assertEqual(verrijkt[0]['zone'], {'in_doelgebied': True, 'x_m': 7.0, 'y_m': 38.0})
+        self.assertEqual(verrijkt[0]['werpplaats'], {'x_m': 7.0, 'y_m': 6.0})
+        self.assertEqual(verrijkt[0]['afstand_m'], 32.0)
+
+    def test_zonder_lens_veld_verandert_er_niets(self):
+        # Achterwaartse compatibiliteit: hetzelfde bestand zónder 'lens' projecteert de
+        # ruwe pixels ongewijzigd — de landing schuift dan ruim 2 m op. Dat verschil is
+        # precies wat de upgrade wegneemt, en bewijst dat het λ=0-pad het oude gedrag is.
+        matrix = [[0.02, 0.0, 0.0], [0.0, 0.02, 0.0], [0.0, 0.0, 1.0]]
+        banen = self._baan(self._verkrom((350.0, 300.0)), self._verkrom((350.0, 1900.0)))
+        verrijkt, _ = landing.video_landing(
+            self._args(banen, self._kalibratie(False, matrix)), [dict(self.DETECTIES[0])])
+        self.assertIsNotNone(verrijkt[0].get('zone'))
+        self.assertGreater(verrijkt[0]['zone']['y_m'], 39.5)  # 2+ m voorbij de echte landing
+
+    def test_bewegende_camera_ontkromt_voor_het_spoor(self):
+        # Het volg_veld-spoor houdt zijn keten in ontkromde coördinaten (zelfde
+        # kalibratie): landing.py moet dus óók vóór spoor.op(t)-matrices ontkrommen.
+        # Loslaat ontkromd (300, 400) → onder H_WORP (8, 6); landing ontkromd
+        # (1800, 400) → onder H_LAND (8, 40). Ongecorrigeerd lag de landing 0,39 m te ver.
+        homografie = self.map / 'homografie_lens.jsonl'
+        with homografie.open('w') as f:
+            for t, h in ((3.0, H_WORP), (3.1, H_WORP), (4.5, H_LAND)):
+                f.write(json.dumps({'t': t, 'bron': 'lijnen', 'fout_m': 0.0, 'H': h}) + '\n')
+        banen = self._baan(self._verkrom((300.0, 400.0)), self._verkrom((1800.0, 400.0)))
+        verrijkt, _ = landing.video_landing(
+            self._args(banen, self._kalibratie(True, H_WORP), homografie=homografie),
+            [dict(self.DETECTIES[0])])
+        self.assertEqual(verrijkt[0]['zone'], {'in_doelgebied': True, 'x_m': 8.0, 'y_m': 40.0})
+        self.assertEqual(verrijkt[0]['werpplaats'], {'x_m': 8.0, 'y_m': 6.0})
+        self.assertEqual(verrijkt[0]['afstand_m'], 34.0)
+
+
 if __name__ == '__main__':
     unittest.main()
