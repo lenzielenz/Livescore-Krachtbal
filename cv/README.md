@@ -89,6 +89,15 @@ frame waarop ze gefit is, en landt elke worp ergens anders dan waar hij viel.
    verwacht, en daaruit wordt de homografie opnieuw gefit — waarmee de opgelopen drift
    verdwijnt.
 
+Ziet een herankering genoeg lijnen om álle vrijheidsgraden vast te leggen (minstens vier
+verschillende lijnen in twee richtingen), dan wordt ze een **absolute fix**: een meting van
+dít frame tegen het veldmodel, los van de gedrifte keten. De keten overbrugt dan alleen nog
+de stukken tússen twee fixes, en de opgestapelde fout in zo'n tussenstuk wordt achteraf
+gladjes wegverdeeld. Nagemeten op een gekende drift: de fout halverwege een tussenstuk ging
+van 0,40 m naar 0,0004 m, en de sprong op de naad van 0,8 m naar 0,0001 m. Het rapport telt
+de absolute fixes en de grootte van de retro-correcties — dát getal zegt of het volgen op
+deze video te vertrouwen is.
+
 ```bash
 # 1. Kalibreer het eerste frame zoals gewoonlijk (het vertrekpunt van het volgen):
 python3 cv/calibrate.py --beeld frame0.jpg --uit kalibratie.json
@@ -580,14 +589,22 @@ Dichter bemonsteren kost evenredig meer rekentijd op video, maar maakt het
 verschil tussen een lege en een levende spelerskaart. `meet.py --tracking` gebruikt
 hiervoor `--tracking-fps` (los van de event-fps voor de framenummers).
 
-De v0.2-tracker combineert twee detectoren die elkaar aanvullen: **HOG** herkent
-mensen (ook stilstaand), **MOG2-achtergrondsubtractie** vindt alles wat beweegt
-(ook verre, kleine spelers die HOG mist). Dubbele waarnemingen worden
-samengevoegd (`dedupliceer`, < 0,8 m = één persoon) en flikker-sporen korter dan
-`--min-duur` (3 s) weggegooid. Kies desnoods één detector met `--detector
-hog|mog2`. De koppeling blijft dichtstbijzijnde-buur met snelheidslimiet 8 m/s:
-identiteitswissels bij occlusie kunnen nog — `fysiek.py` vangt dat op door
-meerdere sporen op één rugnummer te laten optellen. Het JSON-raster is
+**Het detectiefundament.** Sinds `cv/detectie.py` volgt de tracker spelers bij voorkeur
+op persoon-detecties uit het houdingsmodel (`--detector model`, of `auto` dat zelf
+kiest): het model levert één detectie per persoon, en het **voetpunt** (de enkels) is het
+projectiepunt. Dat laatste is geen detail — het centrum van een bewegingsblob ligt
+halverwege het lichaam, en dat projecteerde op een schuine camera 1,93 m verderop het
+veld dan waar de speler stond. Elke posities-rij zegt met `bron: 'model'|'blobs'` welke
+weg er draaide.
+
+Zonder model valt alles terug op de klassieke combinatie: **HOG** herkent mensen (ook
+stilstaand), **MOG2-achtergrondsubtractie** vindt alles wat beweegt (ook verre, kleine
+spelers die HOG mist). Dubbele waarnemingen worden daar samengevoegd (`dedupliceer`,
+< 0,8 m = één persoon — het model heeft dat niet nodig en zou er twee spelers schouder
+aan schouder mee samenvoegen) en flikker-sporen korter dan `--min-duur` (3 s) weggegooid.
+De koppeling gebruikt een continuïteitsterm (voorspelde positie uit de vorige snelheid)
+met snelheidslimiet 8 m/s; identiteitswissels bij occlusie kunnen nog — `fysiek.py`
+vangt dat op door meerdere sporen op één rugnummer te laten optellen. Het JSON-raster is
 genormaliseerd op de drukste cel zodat elke weergave dezelfde schaal hanteert.
 
 ### 11b. `fysiek.py` — loopafstand, sprintjes en topsnelheid per speler
@@ -658,15 +675,21 @@ python3 cv/train.py --wedstrijd reeks42.jsonl labels42.jsonl \
                     --holdout 43 --uit cv/model-houding.json
 ```
 
-**De maat achter de drempel.** Sinds kort is de worpscore de afgelegde wég van de pols
-(× de polshoogte) over één loslaatfase, en niet meer de snelheid. Snelheid is weg gedeeld
-door tijd, en die tijd hing aan de precisiestand: dezelfde worp scoorde 1,7 op de grofste
-en 10,4 op de fijnste stand. Een getrainde drempel sloeg daardoor op een andere stand
-overal of nergens aan — fijner meten maakte het model niet beter maar onvergelijkbaar.
-Met de afgelegde weg is dat 31% spreiding in plaats van 85%, en pas dán levert meer
-rekenkracht ook echt een betere meting op. `model-houding.json` bewaart daarom ook het
-venster waarop getraind is; wijkt de huidige stand daar sterk van af, dan zegt `houding.py`
-dat je opnieuw moet bijstellen.
+**De maat achter de drempel.** De worpscore is de afgelegde wég van de pols
+(× de polshoogte) over één loslaatfase — niet de snelheid, en sinds de
+spelersassenstelsel-upgrade gemeten **relatief aan de eigen heup** van diezelfde speler,
+genormaliseerd op de eigen romphoogte. Dat lost twee dingen tegelijk op. Snelheid hing aan
+de precisiestand (dezelfde worp scoorde 1,7 grof en 10,4 fijn; met de weg is dat 31%
+spreiding in plaats van 85%). En beeldcoördinaten hingen aan de camera: 80 px pan scoorde
+0,48 — een spookworp boven de drempel — en een lopende speler nam zijn loopbeweging mee in
+de score. Relatief aan de eigen heup is beide exact nul: heup en pols pannen mee, en de
+worp-piek zelf bleef identiek (de heup staat tijdens de zwiep nagenoeg stil), dus de
+getrainde drempel blijft geldig. Elke meting draagt daarnaast een compacte score pér
+speler (`per_speler`), en de beslissing zoekt pieken per speler: twee spelers die kort na
+elkaar werpen zijn twee worpen, elk met hun eigen werper, moment en type — de vanger kan
+de werper nooit meer overschrijven. `model-houding.json` bewaart ook het venster waarop
+getraind is; wijkt de huidige stand daar sterk van af, dan zegt `houding.py` dat je
+opnieuw moet bijstellen.
 
 `houding.py` besliste met twee geschátte getallen wanneer iets een worp is: de
 drempel op de worpscore (1,2) en de minimale afstand tussen twee pieken (3,0 s).
@@ -683,6 +706,33 @@ gelabelde wedstrijden leert een groot model vooral de ruis van die wedstrijden.
 cijfer en zegt niets. `--holdout` houdt wedstrijden buiten het fitten; dát cijfer
 telt. Zonder holdout draait het script door, maar zet het er luid bij dat de
 cijfers te mooi zijn.
+
+### 14. `goud.py` — de gouden referentiewedstrijd
+
+```bash
+# De hele keten afrekenen tegen ground truth, per as:
+python3 cv/goud.py --video wedstrijd.mp4 --labels labels42.jsonl \
+                   --kalibratie kalibratie.json --uit rapport.json
+
+# Of eerst een synthetische gouden wedstrijd maken (geen echte beelden nodig):
+python3 cv/goud.py --maak-synthetisch goud-map/ [--pan]
+```
+
+Eén commando dat een video mét ground truth door de échte keten haalt (houding → bal →
+landing, dezelfde Python-API's als de server) en élke as afrekent: worpen
+(precisie/recall/F1), moment (mediaan |Δt|), landing (mediaan en p90 in meters), worptype,
+en de verwarring uitbal↔doelpunt — plus elke worp afzonderlijk. Assen die niet gemeten
+kunnen worden (geen rtmlib, geen kalibratie) staan mét reden in het rapport in plaats van
+stil te ontbreken.
+
+De synthetische wedstrijd is de zelftest: een gerenderd veld met echte lijnen, een gekende
+homografie en kalibratie, zeven parabool-worpen waarvan twee uitbal —
+byte-voor-byte deterministisch, dus geschikt voor CI. Dít is de maatlat waartegen elke
+volgende ketenwijziging in méters wordt afgerekend: wordt het rapport beter, dan was de
+wijziging het waard; wordt het slechter, dan weet je het vóór de gebruikers het merken.
+Voor de échte gouden referentie is nodig: één continue opname, de kalibratie van een
+frame (minstens 2 punten per zijlijn), en de labels van een volledig aangetekende
+wedstrijd (`sync.py --match <id>`, met de video-offsets van beide helften gezet).
 
 ### Zonder commandolijn: de knop in de app
 
