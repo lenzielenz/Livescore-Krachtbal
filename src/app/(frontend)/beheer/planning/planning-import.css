@@ -60,6 +60,13 @@
 .pi-tabel th, .pi-tabel td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); }
 .pi-tabel th { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--dim); }
 
+/* Het aanvangsuur: een waarschuwing, geen fout. Rijen worden er niet door overgeslagen, maar
+   een kalender waarin alles op 00:00 staat is wel het vermelden waard vóór je op de knop drukt. */
+.pi-uur-waarschuwing {
+  margin: 12px 0 0; padding: 10px 12px; font-size: 0.85rem; line-height: 1.45; border-radius: 10px;
+  background: rgba(250, 204, 21, 0.12); border: 1px solid rgba(250, 204, 21, 0.35);
+}
+
 .pi-hint { margin: 8px 0 0; font-size: 0.78rem; color: var(--dim); font-style: italic; }
 
 /* "Vervang volledig speelplan" — bewust alarmerend, geen gewoon vinkje. */

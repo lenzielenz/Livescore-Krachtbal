@@ -19,6 +19,10 @@ type Stand = {
   stapDetail?: string
   laatsteTeken?: string
   stappenNamen?: string[]
+  /** Gaat deze poging verder op het werk van een onderbroken analyse? */
+  hervat?: boolean
+  /** Wat er van een onderbroken analyse bewaard bleef. */
+  hervatbaar?: { stappenKlaar: number; stappen: number }
   rapport?: {
     voorstellen?: number
     detecties?: number
@@ -391,6 +395,15 @@ export function ServerAnalyse({ matchId, heeftVideo }: { matchId: number; heeftV
 
           {s?.status === 'mislukt' && <p className="sa-let-op">❌ Mislukt: {s.fout}</p>}
           {s?.status === 'afgebroken' && <p className="sa-let-op">⏹ Afgebroken. {s.fout ?? ''}</p>}
+          {/* Onderbroken is niet hetzelfde als weg: wat af was staat op het volume en wordt
+              overgeslagen. Dat hoort er te staan, anders begint iemand van nul aan drie uur. */}
+          {(s?.hervatbaar?.stappenKlaar ?? 0) > 0 && s?.status !== 'bezig' && (
+            <p className="sa-uitleg">
+              ↻ {s?.hervatbaar?.stappenKlaar} van de {s?.hervatbaar?.stappen} stappen staan al klaar
+              en worden overgeslagen. Starten gaat verder waar ze stond — je verliest hoogstens de
+              stap die net bezig was.
+            </p>
+          )}
 
           <p className="sa-lead">
             De server zoekt <strong>momenten met veel beweging</strong> en zet die klaar als
@@ -492,7 +505,13 @@ export function ServerAnalyse({ matchId, heeftVideo }: { matchId: number; heeftV
               disabled={busy || !info?.kanAnalyseren || info?.andereLoopt}
               onClick={() => void start()}
             >
-              {busy ? 'Starten…' : s?.status === 'klaar' ? '🤖 Opnieuw analyseren' : '🤖 Analyseer de video'}
+              {busy
+                ? 'Starten…'
+                : s?.status === 'klaar'
+                  ? '🤖 Opnieuw analyseren'
+                  : (s?.hervatbaar?.stappenKlaar ?? 0) > 0
+                    ? '↻ Verdergaan waar ze stond'
+                    : '🤖 Analyseer de video'}
             </button>
             {info?.andereLoopt && (
               <span className="sa-hint">Er loopt al een analyse van een andere wedstrijd — even wachten.</span>

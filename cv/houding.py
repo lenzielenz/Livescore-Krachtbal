@@ -508,9 +508,34 @@ def schat_duur(seconden_per_meting: float, metingen: int) -> float:
     return max(0.0, seconden_per_meting) * max(0, metingen)
 
 
+def lees_reeks(pad: Path) -> list[dict]:
+    """Een eerder weggeschreven meetreeks terug inlezen (voor `--hervat`).
+
+    Onvolledige laatste regel weggooien: als de stroom halverwege een regel afgebroken werd,
+    staat daar geen geldige JSON. Beter één meting kwijt dan de hele reeks weigeren.
+    """
+    if not pad.is_file():
+        return []
+    uit: list[dict] = []
+    for regel in pad.read_text(encoding='utf-8', errors='replace').splitlines():
+        regel = regel.strip()
+        if not regel:
+            continue
+        try:
+            r = json.loads(regel)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(r, dict) and isinstance(r.get('t'), (int, float)):
+            uit.append(r)
+    uit.sort(key=lambda r: r['t'])
+    return uit
+
+
 def meet_video(videopad: Path, model, analyse_fps: float, tot: float | None = None,
                vensters: list[tuple[float, float]] | None = None,
-               deel: tuple[float, float] | None = None) -> list[dict]:
+               deel: tuple[float, float] | None = None,
+               vanaf: float = 0.0,
+               schrijf=None) -> list[dict]:
     """Per moment de hoogste worpscore over alle spelers in beeld.
 
     Geeft een reeks ``{'t', 'score', 'polshoogte', 'personen'}``. Het model draait op elk
@@ -521,6 +546,12 @@ def meet_video(videopad: Path, model, analyse_fps: float, tot: float | None = No
     gelézen (een video is geen lijst waar je zomaar in kunt springen; springen is bij een
     variabele beeldfrequentie bovendien onnauwkeurig), maar niet door het model geduwd — en dát
     is het dure deel, tot honderd keer duurder dan een beeld inlezen.
+
+    `vanaf` slaat alles vóór dat tijdstip over, en `schrijf` (een functie die één meting
+    wegschrijft) laat de reeks meteen op schijf belanden in plaats van pas op het einde. Samen
+    maken die twee het HERVATTEN mogelijk: een analyse van drie uur die halverwege onderbroken
+    wordt door een herstart van de server, pikt de draad op bij de laatste meting die op schijf
+    stond in plaats van van voren af aan te beginnen. Zonder dat kost elke uitrol drie uur.
     """
     import cv2  # noqa: PLC0415
 
@@ -562,6 +593,12 @@ def meet_video(videopad: Path, model, analyse_fps: float, tot: float | None = No
         t = frame_idx / fps_bron
         if tot is not None and t > tot:
             break
+        if t < vanaf:
+            # Al gemeten in een eerdere poging. Het beeld moet nog wel ingelezen worden (in een
+            # video kun je niet betrouwbaar springen), maar het model blijft ervan af — en dát is
+            # het dure deel.
+            frame_idx += 1
+            continue
         if frame_idx % stap == 0 and in_venster(t, vensters):
             keypoints, scores = model(frame)
             gemeten = [
@@ -615,6 +652,10 @@ def meet_video(videopad: Path, model, analyse_fps: float, tot: float | None = No
             if beste_venster is not None:
                 meting['venster'] = round(beste_venster, 3)
             reeks.append(meting)
+            # Meteen wegschrijven, niet pas op het einde: wat op schijf staat overleeft een
+            # herstart, wat in het geheugen zit niet.
+            if schrijf is not None:
+                schrijf(meting)
             vorige, vorige_t = nu, t
             # De geschiedenis per persoon: net lang genoeg om altijd een meting van ± een venster
             # geleden te hebben, ook op de fijnste stand.
@@ -713,6 +754,10 @@ def main(argv: list[str] | None = None) -> None:
                    help='eerst de hele video grof afzoeken met een lage drempel, daarna alleen '
                         'rond de kandidaten élk beeld nakijken. Duurder per kandidaat, veel '
                         'goedkoper per uur video — en het loslaatmoment wordt beeldnauwkeurig.')
+    p.add_argument('--hervat', action='store_true',
+                   help='verdergaan waar een vorige poging gebleven was: de metingen die al in '
+                        '--reeks-uit staan worden hergebruikt en de video wordt vanaf dáár '
+                        'gemeten. Bedoeld voor een analyse die door een herstart onderbroken werd.')
     p.add_argument('--na-max-deel', type=float, default=NA_MAX_DEEL,
                    help='hoeveel van de video de tweede passage hoogstens nakijkt '
                         f'(standaard {NA_MAX_DEEL:.0%}). Blijft er meer over, dan winnen de '
@@ -761,10 +806,38 @@ def main(argv: list[str] | None = None) -> None:
     laden.meld(0.0, 'houdingsmodel laden', forceer=True)
     model = laad_model(zoek_mode)
     laden.meld(0.0, 'houdingsmodel geladen', forceer=True)
+    # Hervatten: wat er al gemeten was, staat in --reeks-uit. Alleen de metingen van de eerste
+    # passage tellen mee — de tweede passage hangt af van waar de eerste kandidaten vond, en die
+    # zijn er pas als de eerste helemaal rond is.
+    eerder: list[dict] = []
+    vanaf = 0.0
+    if args.hervat and args.reeks_uit:
+        eerder = [r for r in lees_reeks(args.reeks_uit) if r.get('passage') != 2]
+        if eerder:
+            # Eén meting terug: de laatste regel kan halverwege afgebroken zijn, en de maat kijkt
+            # sowieso naar een venster erachter.
+            eerder = eerder[:-1]
+        if eerder:
+            vanaf = eerder[-1]['t']
+            print(f'Hervatten: {len(eerder)} metingen tot {vanaf / 60:.1f} min stonden al op '
+                  'schijf; de video wordt vanaf daar gemeten.')
+
+    # Meteen wegschrijven terwijl er gemeten wordt: wat op schijf staat, overleeft een herstart.
+    schrijver = None
+    reeksbestand = None
+    if args.reeks_uit:
+        reeksbestand = args.reeks_uit.open('a' if eerder else 'w', encoding='utf-8')
+
+        def schrijver(meting, _f=reeksbestand):  # noqa: F811
+            _f.write(json.dumps(meting, ensure_ascii=False) + '\n')
+            _f.flush()
+
     # Twee passages delen de balk: zoeken is het leeuwendeel van de tijd, nakijken de rest.
     print(f'Spelers meten in {args.video} (± {args.analyse_fps:g} beelden/s) …')
-    reeks = meet_video(args.video, model, args.analyse_fps, args.tot,
-                       deel=(0.0, 0.75) if args.twee_passages else None)
+    gemeten = meet_video(args.video, model, args.analyse_fps, args.tot,
+                         deel=(0.0, 0.75) if args.twee_passages else None,
+                         vanaf=vanaf, schrijf=schrijver)
+    reeks = eerder + gemeten
     if not reeks:
         _fout('geen enkel beeld kon gelezen worden')
 
@@ -811,6 +884,11 @@ def main(argv: list[str] | None = None) -> None:
     meetreeks.sort(key=lambda r: r['t'])
 
     if args.reeks_uit:
+        # Tijdens het meten stond de reeks er al regel voor regel op (dat is het vangnet bij een
+        # herstart). Nu ze compleet is, wordt ze in haar definitieve vorm herschreven: mét de
+        # passage-merktekens, en zonder de grove metingen die door een fijne vervangen zijn.
+        if reeksbestand is not None:
+            reeksbestand.close()
         with args.reeks_uit.open('w', encoding='utf-8') as f:
             for r in meetreeks:
                 f.write(json.dumps(r, ensure_ascii=False) + '\n')

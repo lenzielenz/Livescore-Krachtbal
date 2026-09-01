@@ -448,3 +448,103 @@ class TestWerperOp(unittest.TestCase):
 
     def test_slaat_metingen_zonder_werper_over(self):
         self.assertIsNone(houding.werper_op([{'t': 10.0, 'score': 1.0}], 10.0, marge_s=1.0))
+
+
+class TestHervatten(unittest.TestCase):
+    """Verdergaan waar een onderbroken analyse gebleven was.
+
+    Een analyse van drie uur is een kind van de webserver: bij een herstart verdwijnt ze. Dat is
+    bij een bewuste uitrol te aanvaarden — maar dan opnieuw beginnen niet, want dan kost elke
+    uitrol drie uur. Wat al gemeten was, staat regel voor regel op schijf.
+    """
+
+    def setUp(self):
+        import tempfile
+        self.map = Path(tempfile.mkdtemp())
+
+    def tearDown(self):
+        import shutil
+        shutil.rmtree(self.map, ignore_errors=True)
+
+    def _schrijf(self, regels):
+        pad = self.map / 'reeks.jsonl'
+        pad.write_text(''.join(regels), encoding='utf-8')
+        return pad
+
+    def test_leest_een_eerdere_reeks_terug(self):
+        pad = self._schrijf([
+            '{"t": 1.0, "score": 0.1, "personen": 1}\n',
+            '{"t": 2.0, "score": 0.2, "personen": 1}\n',
+        ])
+        r = houding.lees_reeks(pad)
+        self.assertEqual([x['t'] for x in r], [1.0, 2.0])
+
+    def test_gooit_een_halve_laatste_regel_weg(self):
+        # Precies wat er gebeurt als de stroom er middenin uitvalt: de laatste regel is
+        # afgekapt. Eén meting kwijt is beter dan de hele reeks weigeren.
+        pad = self._schrijf([
+            '{"t": 1.0, "score": 0.1, "personen": 1}\n',
+            '{"t": 2.0, "score": 0.2, "pers',
+        ])
+        r = houding.lees_reeks(pad)
+        self.assertEqual([x['t'] for x in r], [1.0])
+
+    def test_sorteert_op_tijd_en_negeert_lege_regels(self):
+        pad = self._schrijf([
+            '{"t": 2.0, "score": 0.2}\n', '\n', '{"t": 1.0, "score": 0.1}\n',
+        ])
+        self.assertEqual([x['t'] for x in houding.lees_reeks(pad)], [1.0, 2.0])
+
+    def test_zonder_bestand_gewoon_niets(self):
+        self.assertEqual(houding.lees_reeks(self.map / 'bestaat-niet.jsonl'), [])
+
+
+@unittest.skipUnless(_cv2_of_niets(), 'opencv niet geïnstalleerd')
+class TestHervattenInDeVideo(unittest.TestCase):
+    """Het meten zelf: overslaan wat al gemeten was, en meteen wegschrijven."""
+
+    @classmethod
+    def setUpClass(cls):
+        import tempfile
+        import numpy as np
+        cv2 = _cv2_of_niets()
+        cls.map = tempfile.mkdtemp()
+        cls.video = Path(cls.map) / 'proef.mp4'
+        schrijver = cv2.VideoWriter(str(cls.video), cv2.VideoWriter_fourcc(*'mp4v'), 25.0, (320, 180))
+        for _ in range(25 * 20):
+            schrijver.write(np.zeros((180, 320, 3), np.uint8))
+        schrijver.release()
+
+    @classmethod
+    def tearDownClass(cls):
+        import shutil
+        shutil.rmtree(cls.map, ignore_errors=True)
+
+    def _model(self):
+        gedraaid = []
+
+        def model(_frame):
+            gedraaid.append(len(gedraaid))
+            punten, scores = skelet(pols_y=170.0)
+            return [punten], [scores]
+
+        return model, gedraaid
+
+    def test_meet_niets_voor_het_hervatpunt(self):
+        # Dít is de winst: het model — het dure deel — draait alleen nog over het stuk dat nog
+        # niet gemeten was. De beelden ervoor worden wel ingelezen (in een video kun je niet
+        # betrouwbaar springen), maar dat kost een fractie.
+        model, gedraaid = self._model()
+        reeks = houding.meet_video(self.video, model, analyse_fps=5.0, vanaf=15.0)
+        self.assertTrue(all(r['t'] >= 15.0 for r in reeks))
+        # 5 seconden aan 5 metingen/s = ± 25, niet de 100 van de hele video.
+        self.assertLess(len(gedraaid), 40)
+
+    def test_schrijft_elke_meting_meteen_weg(self):
+        # Wat in het geheugen zit overleeft geen herstart; wat op schijf staat wel.
+        model, _ = self._model()
+        weggeschreven = []
+        reeks = houding.meet_video(self.video, model, analyse_fps=5.0, tot=3.0,
+                                   schrijf=weggeschreven.append)
+        self.assertEqual(len(weggeschreven), len(reeks))
+        self.assertEqual(weggeschreven[0]['t'], reeks[0]['t'])

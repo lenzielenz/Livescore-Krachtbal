@@ -42,6 +42,10 @@ export type AnalyseStand = {
   laatsteTeken?: string
   /** Alle stapnamen in volgorde: dan zie je wat er nog komt in plaats van alleen "stap 1 van 2". */
   stappenNamen?: string[]
+  /** Gaat deze poging verder op het werk van een onderbroken analyse? */
+  hervat?: boolean
+  /** Kan de onderbroken analyse verdergezet worden, en hoeveel stappen staan er al klaar? */
+  hervatbaar?: { stappenKlaar: number; stappen: number }
   rapport?: {
     voorstellen?: number
     detecties?: number
@@ -381,8 +385,11 @@ export function bouwStappen(opties: {
   /** Getrainde drempels voor het houdingsmodel (cv/train.py); ontbreekt het bestand, dan
    *  valt houding.py terug op zijn geschatte waarden. */
   instellingen?: string | null
+  /** Gaat deze poging verder op een onderbroken analyse? Dan pikt het houdingsmodel de reeks
+   *  op waar ze stond in plaats van de video opnieuw af te gaan. */
+  hervat?: boolean
 }): Stap[] {
-  const { video, map, kalibratie, ankers, opts, fps, ffmpeg, instellingen } = opties
+  const { video, map, kalibratie, ankers, opts, fps, ffmpeg, instellingen, hervat } = opties
   const cv = cvMap()
   const bestand = (naam: string) => path.join(map, naam)
   const stappen: Stap[] = []
@@ -420,6 +427,10 @@ export function bouwStappen(opties: {
                  ...(AI_TWEE_PASSAGES[opts.stand]
                    ? ['--twee-passages', '--zoek-mode', AI_ZOEKGROOTTE[opts.stand]]
                    : []),
+                 // Verdergaan waar een onderbroken poging gebleven was. Dit is de langste stap
+                 // van de keten — uren op een wedstrijdvideo — dus zonder dit kost elke herstart
+                 // van de server precies die uren opnieuw.
+                 ...(hervat ? ['--hervat'] : []),
                  ...(instellingen ? ['--instellingen', instellingen] : [])],
         }
       : {
@@ -513,11 +524,19 @@ export async function leesStand(payload: Payload, matchId: number): Promise<Anal
   const match = await payload.findByID({ collection: 'matches', id: matchId, depth: 0 }).catch(() => null)
   const stand = (match?.cvAnalyse ?? null) as AnalyseStand | null
   if (isVerweesd(stand)) {
+    // Onderbroken door een herstart — maar niet weg. Wat af was, staat op het volume en wordt
+    // bij een volgende poging overgeslagen; alleen de stap die net bezig was, moet opnieuw.
+    const klaar = await telMerktekens(werkmap(matchId))
     const afgebroken: AnalyseStand = {
       ...(stand as AnalyseStand),
       status: 'afgebroken',
-      fout: 'De server is herstart terwijl de analyse liep. Start ze opnieuw.',
+      fout:
+        klaar > 0
+          ? `De server is herstart terwijl de analyse liep. ${klaar === 1 ? 'De eerste stap was' : `De eerste ${klaar} stappen waren`} `
+            + 'al af en blijven bewaard — start ze opnieuw en ze gaat verder waar ze stond.'
+          : 'De server is herstart terwijl de analyse liep. Start ze opnieuw.',
       geeindigd: new Date().toISOString(),
+      hervatbaar: { stappenKlaar: klaar, stappen: (stand as AnalyseStand).stappen },
     }
     await schrijfStand(payload, matchId, afgebroken)
     return afgebroken
@@ -722,6 +741,14 @@ export async function startAnalyse(
 
   const map = werkmap(matchId)
   await fs.mkdir(map, { recursive: true })
+
+  // Verdergaan of van voren af aan? Een analyse die onderbroken is (de server herstartte) of
+  // gestruikeld is, mag verder op wat al af was — dát is waarom de merktekens bestaan. Maar een
+  // analyse die klaar was en die je bewust opnieuw start, hoort écht opnieuw te draaien: anders
+  // zou "opnieuw analyseren" in enkele seconden hetzelfde resultaat teruggeven.
+  const vorige = (match.cvAnalyse ?? null) as AnalyseStand | null
+  const hervatten = vorige?.status === 'afgebroken' || vorige?.status === 'mislukt'
+  if (!hervatten) await wisMerktekens(map)
   const kalibratieData = (match.cvKalibratie ?? null) as KalibratieData
   const veldmaten = {
     diepte: (match.goalAreaDepth as number) ?? 10,
@@ -747,6 +774,7 @@ export async function startAnalyse(
   const stappen = bouwStappen({
     matchId, video: video.pad, map, kalibratie, ankers, opts,
     fps: METINGEN_PER_S[opts.stand], ffmpeg: ffmpegPad(), instellingen: instellingenPad(),
+    hervat: hervatten,
   })
   const begin = Date.now()
   const IMPORTSTAP = 'Voorstellen klaarzetten voor review'
@@ -759,6 +787,7 @@ export async function startAnalyse(
     gestart: new Date(begin).toISOString(),
     procesStart: PROCES_START,
     instellingen: { ...opts },
+    ...(hervatten ? { hervat: true } : {}),
   }
   await schrijfStand(payload, matchId, stand)
 
@@ -767,6 +796,17 @@ export async function startAnalyse(
     let huidig = { ...stand }
     try {
       for (let i = 0; i < stappen.length; i++) {
+        // Al afgewerkt in een eerdere poging (mét dezelfde instellingen)? Dan overslaan. Zo kost
+        // een herstart van de server hoogstens de stap die net bezig was, niet de hele analyse.
+        if (await stapAlKlaar(map, i + 1, stappen[i])) {
+          huidig = {
+            ...huidig, stap: stappen[i].naam, stapNummer: i + 1, stapFractie: 1,
+            stapDetail: 'al gedaan in een eerdere poging — overgeslagen',
+            laatsteTeken: new Date().toISOString(),
+          }
+          await schrijfStand(payload, matchId, huidig)
+          continue
+        }
         huidig = {
           ...huidig, stap: stappen[i].naam, stapNummer: i + 1,
           stapFractie: 0, stapDetail: undefined, laatsteTeken: new Date().toISOString(),
@@ -788,6 +828,9 @@ export async function startAnalyse(
           void schrijfStand(payload, matchId, huidig).catch(() => undefined)
         })
         if (code !== 0) throw new Error(`${stappen[i].naam} — Python stopte met code ${code}`)
+        // Pas nú het merkteken: een stap die halverwege afgebroken werd, laat een half
+        // uitvoerbestand achter, en daar mag een volgende poging nooit op verderrekenen.
+        await markeerStapKlaar(map, i + 1, stappen[i])
       }
 
       huidig = {
@@ -828,6 +871,63 @@ export async function startAnalyse(
   })()
 
   return { ok: true, stand }
+}
+
+// ── Hervatten na een herstart ────────────────────────────────────────────────────────────────
+//
+// Een analyse van drie uur overleeft geen herstart van de server: het Python-proces is een kind
+// van de webserver en verdwijnt mét de container. Dat is bij een bewuste uitrol te aanvaarden —
+// maar dan opnieuw beginnen niet: dan kost elke uitrol drie uur.
+//
+// De tussenresultaten staan al op het volume (de werkmap van deze wedstrijd), dus een stap die
+// af was, hoeft niet opnieuw. Ontbrak alleen: weten wélke stappen af waren. Een half geschreven
+// uitvoerbestand ziet er immers hetzelfde uit als een volledig — en op zulke data verder rekenen
+// is erger dan opnieuw beginnen.
+//
+// Vandaar een merkteken per stap, pas geschreven nadat Python met code 0 stopte. Er staat in
+// waarmee de stap gedraaid heeft: verandert er een instelling (een andere precisiestand, een
+// andere kalibratie), dan klopt het merkteken niet meer en draait de stap gewoon opnieuw.
+
+/** De naam van het merkteken van een stap, uniek per stap-nummer én -naam. */
+export function merktekenPad(map: string, nummer: number, naam: string): string {
+  const veilig = naam.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40)
+  return path.join(map, `.stap-${String(nummer).padStart(2, '0')}-${veilig}.klaar`)
+}
+
+/** Waarmee deze stap gedraaid heeft — de argumenten, zodat een gewijzigde instelling opvalt. */
+export function stapHandtekening(stap: Stap): string {
+  return JSON.stringify([stap.commando ?? '', ...stap.argv])
+}
+
+/** Is deze stap al afgewerkt mét dezelfde argumenten? */
+export async function stapAlKlaar(map: string, nummer: number, stap: Stap): Promise<boolean> {
+  try {
+    const inhoud = await fs.readFile(merktekenPad(map, nummer, stap.naam), 'utf8')
+    return inhoud.trim() === stapHandtekening(stap)
+  } catch {
+    return false
+  }
+}
+
+/** Leg vast dat deze stap af is. Faalt dit, dan draait de stap later gewoon opnieuw. */
+export async function markeerStapKlaar(map: string, nummer: number, stap: Stap): Promise<void> {
+  await fs.writeFile(merktekenPad(map, nummer, stap.naam), stapHandtekening(stap), 'utf8').catch(() => undefined)
+}
+
+/** Hoeveel stappen er al afgewerkt klaarstaan in deze werkmap. */
+export async function telMerktekens(map: string): Promise<number> {
+  const bestanden = await fs.readdir(map).catch(() => [] as string[])
+  return bestanden.filter((b) => b.startsWith('.stap-') && b.endsWith('.klaar')).length
+}
+
+/** Alle merktekens weg: de volgende analyse begint weer bij nul. */
+export async function wisMerktekens(map: string): Promise<void> {
+  const bestanden = await fs.readdir(map).catch(() => [] as string[])
+  await Promise.all(
+    bestanden
+      .filter((b) => b.startsWith('.stap-') && b.endsWith('.klaar'))
+      .map((b) => fs.unlink(path.join(map, b)).catch(() => undefined)),
+  )
 }
 
 /** Eén VOORTGANG-regel van een Python-stap: `VOORTGANG 0.412 4:13 van 10:24, 1250 metingen`. */
