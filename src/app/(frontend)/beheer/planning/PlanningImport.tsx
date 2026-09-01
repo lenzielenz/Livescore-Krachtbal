@@ -193,10 +193,27 @@ export function PlanningImport() {
             <Cijfer label="wedstrijden in het bestand" waarde={res.gelezen.wedstrijden} />
             <Cijfer label={klaar ? 'aangemaakt' : 'nieuw'} waarde={klaar ? (res.aangemaakt?.wedstrijden ?? 0) : res.nieuweWedstrijden} sterk />
             <Cijfer label="stonden er al in" waarde={res.bestaandeWedstrijden} />
+            {/* Een wedstrijd die al bestaat wordt overgeslagen — maar een fóut aanvangsuur wordt
+                wél rechtgezet. Dat is de weg terug voor een kalender die ooit op 00:00 binnenkwam:
+                hetzelfde bestand nog eens doorsturen zet de uren goed. */}
+            {((klaar ? res.bijgewerkteUren : res.teCorrigerenUren) ?? 0) > 0 && (
+              <Cijfer
+                label={klaar ? 'aanvangsuren rechtgezet' : 'aanvangsuren worden rechtgezet'}
+                waarde={(klaar ? res.bijgewerkteUren : res.teCorrigerenUren) ?? 0}
+                sterk
+              />
+            )}
             <Cijfer label="nieuwe ploegen" waarde={klaar ? (res.aangemaakt?.ploegen ?? 0) : res.nieuwePloegen.length} />
             <Cijfer label="nieuwe clubs" waarde={klaar ? (res.aangemaakt?.clubs ?? 0) : res.nieuweClubs.length} />
             <Cijfer label="rijen met een probleem" waarde={res.issues.length} waarschuwing={res.issues.length > 0} />
           </div>
+
+          {/* Het aanvangsuur houdt geen rij tegen, dus het stond nergens — en zo kon een hele
+              kalender op 00:00 belanden terwijl datums, ploegen en reeksen klopten en het er dus
+              geslaagd uitzag. Nu staat het er, vóór de knop. */}
+          {res.uurWaarschuwing && (
+            <p className="pi-uur-waarschuwing">🕑 {res.uurWaarschuwing}</p>
+          )}
 
           {!klaar && res.voorbeeld.length > 0 && (
             <div className="pi-blok">

@@ -7,6 +7,7 @@ import {
   matchSleutel,
   naamSleutel,
   planSeason,
+  uurWaarschuwing,
   type ImportSamenvatting,
   type SeasonPlan,
 } from './season-import'
@@ -57,6 +58,10 @@ export async function runSeasonImport(
       uit: m.uit,
     })),
     header: plan.header,
+    // Het aanvangsuur is geen rijfout maar hoort wel gezegd te worden: een speelkalender waarin
+    // élke wedstrijd op 00:00 belandt, ziet er verder geslaagd uit.
+    uren: plan.uren,
+    uurWaarschuwing: uurWaarschuwing(plan.uren),
   }
   if (plan.matches.length === 0) return samenvatting
 
@@ -91,7 +96,11 @@ export async function runSeasonImport(
   // ── Bestaande wedstrijden van de betrokken seizoenen inlezen ──
   // Bij een volledige vervanging slaan we dit bewust over: na de wipe hierboven bestaat er
   // sowieso niets meer, dus telt straks élke wedstrijd uit het bestand als nieuw.
-  const bestaandeSleutels = new Set<string>()
+  // Per bestaande wedstrijd ook onthouden wélke het is en hoe laat ze nu staat: dan kan een
+  // tweede import een verkeerd ingelezen aanvangsuur rechtzetten in plaats van de rij over te
+  // slaan. Zonder dat blijft een kalender die ooit op 00:00 binnenkwam, voorgoed op 00:00 staan —
+  // de dedupe-sleutel kijkt bewust enkel naar de dág, dus opnieuw importeren verandert niets.
+  const bestaandeSleutels = new Map<string, { id: number; date: string; status: string }>()
   if (!opts.wipe) {
     const seizoenen = [...new Set(plan.matches.map((m) => m.seizoen))]
     const bestaandeRes = await payload
@@ -112,7 +121,11 @@ export async function runSeasonImport(
       const thuis = naamVanTeam((m as { homeTeam?: unknown }).homeTeam)
       const uit = naamVanTeam((m as { awayTeam?: unknown }).awayTeam)
       if (!reeks || !datum || !thuis || !uit) continue
-      bestaandeSleutels.add(matchSleutel(reeks, datum, thuis, uit))
+      bestaandeSleutels.set(matchSleutel(reeks, datum, thuis, uit), {
+        id: m.id as number,
+        date: datum,
+        status: String((m as { status?: unknown }).status ?? ''),
+      })
     }
   }
 
@@ -120,7 +133,42 @@ export async function runSeasonImport(
   samenvatting.nieuweWedstrijden = teDoen.length
   samenvatting.bestaandeWedstrijden = plan.matches.length - teDoen.length
 
+  // Bestaande wedstrijden waarvan het aanvangsuur niet klopt met het bestand. Enkel wedstrijden
+  // die nog moeten gespeeld worden: het uur van een gespeelde wedstrijd is geschiedenis en hoort
+  // niet achteraf verschoven te worden door een importbestand.
+  const teCorrigeren = plan.matches
+    .map((m) => ({ m, bestaand: bestaandeSleutels.get(m.sleutel) }))
+    .filter(
+      (p): p is { m: (typeof plan.matches)[number]; bestaand: { id: number; date: string; status: string } } =>
+        p.bestaand != null
+        && p.bestaand.status === 'scheduled'
+        && new Date(p.bestaand.date).getTime() !== new Date(p.m.dateIso).getTime(),
+    )
+  samenvatting.teCorrigerenUren = teCorrigeren.length
+
   if (!opts.commit) return samenvatting
+
+  // Eerst de rechtzettingen: dit is de weg terug voor een kalender die ooit met een onleesbaar
+  // aanvangsuur is ingeladen. Hetzelfde bestand nog eens doorsturen zet de uren goed.
+  let bijgewerkt = 0
+  for (const { m, bestaand } of teCorrigeren) {
+    try {
+      await payload.update({
+        collection: 'matches',
+        id: bestaand.id,
+        data: { date: m.dateIso },
+        overrideAccess: true,
+      })
+      bijgewerkt += 1
+    } catch (e) {
+      plan.issues.push({
+        rij: m.rij,
+        reden: `Aanvangsuur bijwerken mislukte: ${(e as Error).message}`,
+        ruw: `${m.thuis} – ${m.uit}`,
+      })
+    }
+  }
+  samenvatting.bijgewerkteUren = bijgewerkt
 
   // ── Uitvoeren ──
   const aangemaakt = { clubs: 0, ploegen: 0, wedstrijden: 0 }

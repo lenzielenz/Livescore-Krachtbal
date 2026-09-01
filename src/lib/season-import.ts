@@ -8,7 +8,7 @@
 // te herschikken vóór het importeren.
 
 import type { Category } from './categories'
-import { brusselsWallUtc } from './datetime'
+import { brusselsWallUtc, dateStrBE } from './datetime'
 import { REEKS_OPTIONS, reeksCategorie, type Reeks } from './reeksen'
 import { cleanTeamName, mapReeks } from './results-import'
 import { seasonFromDate } from './seasons'
@@ -33,7 +33,10 @@ const norm = (s: string) =>
 // namen ("thuisploeg") vóór algemene ("ploeg").
 const SYNONIEMEN: Record<keyof ColumnMap, string[]> = {
   datum: ['datum', 'speeldatum', 'wedstrijddatum', 'dag', 'date'],
-  uur: ['uur', 'aanvangsuur', 'startuur', 'beginuur', 'aanvang', 'tijd', 'tijdstip', 'time'],
+  // "wedstrijduur" en "speeluur" moeten er apart in: de zoeker kijkt naar het BEGIN van een
+  // kolomnaam, dus een kop die op "uur" eindigt wordt niet vanzelf gevonden.
+  uur: ['uur', 'aanvangsuur', 'startuur', 'beginuur', 'aanvang', 'tijd', 'tijdstip', 'time',
+        'start', 'wedstrijduur', 'speeluur', 'aanvangstijdstip'],
   reeks: ['reeks', 'afdeling', 'divisie', 'competitie', 'niveau', 'poule'],
   thuis: ['thuisploeg', 'thuis', 'thuisclub', 'ontvanger', 'home', 'hometeam', 'ploeg1'],
   uit: ['uitploeg', 'bezoekers', 'bezoeker', 'uit', 'tegenstander', 'away', 'awayteam', 'ploeg2'],
@@ -139,15 +142,49 @@ export function detectFromData(rijen: string[][]): ColumnMap | null {
 
 // ── Datum en uur ─────────────────────────────────────────────────────────────────────────────
 
-/** Uur uit een cel: "14:00", "14.00", "14u00", "14u" of "14". Null als er geen uur in staat. */
+/**
+ * Uur uit een cel. Null als er geen uur in staat.
+ *
+ * Aanvaardt wat er in de praktijk in zo'n bestand staat:
+ *
+ *   "14:00"  "14.00"  "14u00"  "14 u 00"  "14u"  "14"  "9:30"     de gewone schrijfwijzen
+ *   "14:00:00"                                                     Excel schrijft seconden mee
+ *   "om 14:00"  "14:00 uur"  "14u00 stipt"                         zoals een mens het typt
+ *   "2:00 PM"                                                      een engelstalig bestand
+ *   "0,5833333333"                                                 een uurcel als kaal getal
+ *
+ * Die seconden zijn geen muggenzifterij: het is precies wat er misging. Een volledige
+ * speelkalender kwam binnen met "14:00:00" in de uurkolom, elke cel werd afgekeurd, en élke
+ * wedstrijd kwam op 00:00 te staan — zonder dat er iets over gezegd werd.
+ *
+ * Die laatste vorm is een Excel-uurcel die als kaal getal in een CSV belandt: 14:00 is 14/24 =
+ * 0,58333 van een dag. Enkel een getal tussen 0 en 1 telt als zo'n uur — "14" blijft gewoon
+ * twee uur 's middags en wordt nooit als fractie gelezen.
+ */
 export function parseUur(raw: string): { uur: number; minuut: number } | null {
-  const t = String(raw ?? '').trim()
+  let t = String(raw ?? '').trim().toLowerCase()
   if (!t) return null
-  // De minuten mogen ontbreken ("9u" is een gangbare schrijfwijze), het scheidingsteken ook ("16").
-  const m = /^(\d{1,2})\s*(?:[:.hu]\s*(\d{1,2})?)?\s*$/i.exec(t)
+
+  // Beleefdheden eromheen: "om 14:00", "14:00 uur", "14u00 stipt".
+  t = t.replace(/^(?:om|vanaf|start|aanvang)\s+/i, '').replace(/\s*(?:uur|stipt|h)\s*$/i, '').trim()
+
+  // Een kale dagfractie uit Excel. Komma of punt als decimaalteken; alles boven 1 is een gewoon
+  // uurgetal en hoort hier niet thuis.
+  const fractie = /^0[.,](\d+)$/.exec(t)
+  if (fractie) {
+    const deel = Number(`0.${fractie[1]}`)
+    const totaal = Math.round(deel * 24 * 60)
+    return { uur: Math.floor(totaal / 60) % 24, minuut: totaal % 60 }
+  }
+
+  // De minuten mogen ontbreken ("9u" is een gangbare schrijfwijze), het scheidingsteken ook
+  // ("16"), en de seconden mogen erbij staan ("14:00:00") — die doen er niet toe.
+  const m = /^(\d{1,2})\s*(?:[:.hu]\s*(\d{1,2})?(?:\s*[:.]\s*\d{1,2})?)?\s*(am|pm)?\s*$/i.exec(t)
   if (!m) return null
-  const uur = Number(m[1])
+  let uur = Number(m[1])
   const minuut = m[2] ? Number(m[2]) : 0
+  if (m[3] === 'pm' && uur < 12) uur += 12
+  if (m[3] === 'am' && uur === 12) uur = 0
   if (uur > 23 || minuut > 59) return null
   return { uur, minuut }
 }
@@ -262,11 +299,60 @@ export interface SeasonPlan {
   teams: { naam: string; club: string; reeks: Reeks }[]
   /** Aantal rijen dat als koprij is overgeslagen. */
   header: string[] | null
+  /** Wat er van de aanvangsuren terechtkwam — zie `Uurstand`. */
+  uren: Uurstand
 }
 
-/** Dedupe-sleutel: zelfde reeks, zelfde dag, zelfde ploegen — een gewijzigd aanvangsuur telt niet. */
+/**
+ * Hoe het met de aanvangsuren gesteld is.
+ *
+ * Dit bestaat omdat een hele speelkalender ooit binnenkwam met élke wedstrijd op 00:00, en de
+ * import daar niets over zei: datums, ploegen en reeksen klopten, dus zag het er geslaagd uit.
+ * Een uur dat ontbreekt is geen fout die een rij tegenhoudt — maar het is wél iets wat je wil
+ * weten vóór driehonderd wedstrijden op middernacht in de agenda staan.
+ */
+export interface Uurstand {
+  /** Is er een kolom met het aanvangsuur gevonden? */
+  kolom: boolean
+  /** Hoeveel wedstrijden een echt uur kregen. */
+  metUur: number
+  /** Hoeveel er op middernacht terechtkomen. */
+  zonderUur: number
+  /** Waarden die er wél stonden maar niet gelezen konden worden (hoogstens een handvol). */
+  onleesbaar: string[]
+}
+
+/** Eén zin over de aanvangsuren, of null als er niets te melden valt. */
+export function uurWaarschuwing(u: Uurstand): string | null {
+  if (u.zonderUur === 0) return null
+  const alles = u.metUur === 0
+  const hoeveel = alles ? 'alle' : `${u.zonderUur} van de ${u.metUur + u.zonderUur}`
+  if (u.onleesbaar.length) {
+    const voorbeelden = [...new Set(u.onleesbaar)].slice(0, 3).map((v) => `"${v}"`).join(', ')
+    return `Het aanvangsuur werd bij ${hoeveel} wedstrijden niet begrepen (${voorbeelden}) — `
+      + 'die komen op 00:00 te staan.'
+  }
+  if (!u.kolom) {
+    return `Er is geen kolom met het aanvangsuur gevonden, dus ${hoeveel} wedstrijden komen op `
+      + '00:00 te staan. Zet het uur in een kolom "Uur" naast de datum.'
+  }
+  return `Bij ${hoeveel} wedstrijden stond er geen uur — die komen op 00:00 te staan.`
+}
+
+/**
+ * Dedupe-sleutel: zelfde reeks, zelfde dag, zelfde ploegen — een gewijzigd aanvangsuur telt niet.
+ *
+ * De dag is de BELGISCHE kalenderdag, niet de eerste tien tekens van de ISO-tekst. Dat verschil
+ * is geen haarkloverij: een wedstrijd om 00:00 wordt bewaard als 22:00 UTC de dág ervoor, dus de
+ * afgeknipte tekst zou "12 september" zeggen voor een wedstrijd van de 13de. Dezelfde wedstrijd
+ * kreeg zo twee verschillende sleutels naargelang het uur, en dan herkent een tweede import ze
+ * niet meer — met een verdubbelde kalender als gevolg. Precies de kalender die door een onleesbaar
+ * aanvangsuur op 00:00 stond, liep in die val.
+ */
 export function matchSleutel(reeks: string, dateIso: string, thuis: string, uit: string): string {
-  return `${reeks}|${dateIso.slice(0, 10)}|${naamSleutel(thuis)}|${naamSleutel(uit)}`
+  const d = new Date(dateIso)
+  const dag = Number.isNaN(d.getTime()) ? dateIso.slice(0, 10) : dateStrBE(d)
+  return `${reeks}|${dag}|${naamSleutel(thuis)}|${naamSleutel(uit)}`
 }
 
 /**
@@ -281,7 +367,8 @@ export function planSeason(rows: string[][]): SeasonPlan {
   const gezien = new Set<string>()
 
   const nietLeeg = rows.filter((r) => r.some((c) => String(c ?? '').trim() !== ''))
-  if (nietLeeg.length === 0) return { matches, issues, clubs: [], teams: [], header: null }
+  const uren: Uurstand = { kolom: false, metUur: 0, zonderUur: 0, onleesbaar: [] }
+  if (nietLeeg.length === 0) return { matches, issues, clubs: [], teams: [], header: null, uren }
 
   const eerste = nietLeeg[0]
   const heeftHeader = looksLikeHeader(eerste)
@@ -302,10 +389,12 @@ export function planSeason(rows: string[][]): SeasonPlan {
       clubs: [],
       teams: [],
       header: eerste,
+      uren,
     }
   }
 
   const map = detectie.map
+  uren.kolom = map.uur != null
   const dataRijen = heeftHeader ? nietLeeg.slice(1) : nietLeeg
   const offset = heeftHeader ? 2 : 1 // rijnummer zoals de gebruiker het in Excel ziet
 
@@ -324,10 +413,22 @@ export function planSeason(rows: string[][]): SeasonPlan {
       issues.push({ rij, reden: `Onbekende reeks: "${cel(map.reeks)}"`, ruw })
       return
     }
-    const dateIso = parseDatum(cel(map.datum), cel(map.uur))
+    const uurRuw = cel(map.uur)
+    const dateIso = parseDatum(cel(map.datum), uurRuw)
     if (!dateIso) {
       issues.push({ rij, reden: `Onbruikbare datum: "${cel(map.datum)}"`, ruw })
       return
+    }
+    // Bijhouden wat er van het aanvangsuur terechtkwam. Een ontbrekend uur houdt de rij niet
+    // tegen — maar het hoort wel gezegd te worden vóór er driehonderd wedstrijden op middernacht
+    // in de agenda staan. Het uur komt ofwel uit de eigen kolom, ofwel uit de datumcel zelf.
+    if (parseUur(uurRuw) || /[ T]\d{1,2}\s*[:.hu]\s*\d{1,2}/.test(cel(map.datum))) {
+      uren.metUur += 1
+    } else {
+      uren.zonderUur += 1
+      // Stond er wél iets in de uurkolom, dan is die waarde niet begrepen — dan willen we ze
+      // kunnen laten zien, want dát is wat de gebruiker moet aanpassen.
+      if (uurRuw && uren.onleesbaar.length < 5) uren.onleesbaar.push(uurRuw)
     }
     if (!thuisRuw || !uitRuw) {
       issues.push({ rij, reden: 'Thuis- of uitploeg ontbreekt', ruw })
@@ -378,6 +479,7 @@ export function planSeason(rows: string[][]): SeasonPlan {
     clubs: [...clubs.values()].sort((a, b) => a.localeCompare(b)),
     teams: [...teams.values()].sort((a, b) => a.naam.localeCompare(b.naam)),
     header: heeftHeader ? eerste : null,
+    uren,
   }
 }
 
@@ -404,6 +506,13 @@ export interface ImportSamenvatting {
   teVerwijderen?: number
   /** Alleen bij een echte wipe-commit ingevuld: hoeveel wedstrijden er effectief verwijderd zijn. */
   verwijderd?: number
+  /** Wat er van de aanvangsuren terechtkwam, en één zin daarover als er iets te melden valt. */
+  uren: Uurstand
+  uurWaarschuwing: string | null
+  /** Bestaande wedstrijden waarvan het aanvangsuur afwijkt van het bestand (proefronde). */
+  teCorrigerenUren?: number
+  /** Hoeveel aanvangsuren er effectief rechtgezet zijn (echte import). */
+  bijgewerkteUren?: number
 }
 
 // ── Tekst (CSV / geplakt) ────────────────────────────────────────────────────────────────────

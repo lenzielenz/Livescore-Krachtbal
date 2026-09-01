@@ -10,6 +10,7 @@ import {
   parseUur,
   planSeason,
   resolveReeks,
+  uurWaarschuwing,
 } from '@/lib/season-import'
 
 describe('looksLikeHeader / detectColumns', () => {
@@ -44,10 +45,38 @@ describe('parseUur', () => {
     expect(parseUur('9u')).toEqual({ uur: 9, minuut: 0 })
     expect(parseUur('16')).toEqual({ uur: 16, minuut: 0 })
   })
+  it('leest een uur met seconden erbij', () => {
+    // Dít liet een volledige speelkalender stranden: Excel schrijft een uurcel als "14:00:00"
+    // weg, elke cel werd afgekeurd, en élke wedstrijd kwam op 00:00 te staan.
+    expect(parseUur('14:00:00')).toEqual({ uur: 14, minuut: 0 })
+    expect(parseUur('09:30:00')).toEqual({ uur: 9, minuut: 30 })
+  })
+
+  it('leest een uur zoals een mens het typt', () => {
+    expect(parseUur('om 14:00')).toEqual({ uur: 14, minuut: 0 })
+    expect(parseUur('14:00 uur')).toEqual({ uur: 14, minuut: 0 })
+    expect(parseUur('14u00 stipt')).toEqual({ uur: 14, minuut: 0 })
+    expect(parseUur('14h00')).toEqual({ uur: 14, minuut: 0 })
+  })
+
+  it('leest een uurcel die als kaal getal in een CSV belandt', () => {
+    // 14:00 is 14/24 = 0,58333 van een dag. Zo ziet een Excel-uurcel eruit zonder opmaak.
+    expect(parseUur('0.5833333333333334')).toEqual({ uur: 14, minuut: 0 })
+    expect(parseUur('0,5')).toEqual({ uur: 12, minuut: 0 })
+  })
+
+  it('leest een engelstalig uur met am/pm', () => {
+    expect(parseUur('2:00 PM')).toEqual({ uur: 14, minuut: 0 })
+    expect(parseUur('12:15 AM')).toEqual({ uur: 0, minuut: 15 })
+  })
+
   it('weigert onzin', () => {
     expect(parseUur('')).toBeNull()
     expect(parseUur('namiddag')).toBeNull()
     expect(parseUur('25:00')).toBeNull()
+    // Een getal groter dan 1 is een gewoon uur en nooit een dagfractie: 14 blijft 14 uur.
+    expect(parseUur('14')).toEqual({ uur: 14, minuut: 0 })
+    expect(parseUur('1.75')).toBeNull()
   })
 })
 
@@ -254,5 +283,63 @@ describe('matchSleutel', () => {
     const a = matchSleutel('1NAH', '2026-09-13T12:00:00.000Z', 'A', 'B')
     expect(a).not.toBe(matchSleutel('1NAH', '2026-09-20T12:00:00.000Z', 'A', 'B'))
     expect(a).not.toBe(matchSleutel('2NAH', '2026-09-13T12:00:00.000Z', 'A', 'B'))
+  })
+})
+
+describe('het aanvangsuur van een hele kalender', () => {
+  // De aanleiding: een volledige speelkalender kwam binnen met kloppende datums, ploegen en
+  // reeksen — maar élke wedstrijd op 00:00. Er werd niets over gezegd, dus zag het er geslaagd
+  // uit tot iemand de kalender opendeed.
+  const kalender = (uur: string) => [
+    ['Datum', 'Uur', 'Reeks', 'Thuisploeg', 'Bezoekers'],
+    ['13/09/2026', uur, '1NAH', 'KBC St. Michiels', 'KBC Male'],
+    ['20/09/2026', uur, '1NAH', 'KBC Male', 'KBC St. Michiels'],
+  ]
+
+  it('leest het uur dat Excel met seconden wegschrijft', () => {
+    const plan = planSeason(kalender('14:00:00'))
+    expect(plan.matches).toHaveLength(2)
+    // September is zomertijd: 14:00 Belgische tijd = 12:00 UTC.
+    expect(plan.matches[0].dateIso).toBe('2026-09-13T12:00:00.000Z')
+    expect(plan.uren).toMatchObject({ kolom: true, metUur: 2, zonderUur: 0 })
+    expect(uurWaarschuwing(plan.uren)).toBeNull()
+  })
+
+  it('zegt het wanneer er geen enkel uur gelezen kon worden', () => {
+    const plan = planSeason(kalender('namiddag'))
+    expect(plan.matches).toHaveLength(2)
+    expect(plan.uren).toMatchObject({ kolom: true, metUur: 0, zonderUur: 2 })
+    const zin = uurWaarschuwing(plan.uren)
+    expect(zin).toMatch(/00:00/)
+    // Mét het voorbeeld erbij, want dát is wat de gebruiker moet aanpassen.
+    expect(zin).toMatch(/namiddag/)
+  })
+
+  it('zegt het wanneer er helemaal geen uurkolom is', () => {
+    const plan = planSeason([
+      ['Datum', 'Reeks', 'Thuisploeg', 'Bezoekers'],
+      ['13/09/2026', '1NAH', 'KBC St. Michiels', 'KBC Male'],
+    ])
+    expect(plan.uren).toMatchObject({ kolom: false, metUur: 0, zonderUur: 1 })
+    expect(uurWaarschuwing(plan.uren)).toMatch(/geen kolom/i)
+  })
+
+  it('zwijgt wanneer het uur al in de datumkolom zit', () => {
+    const plan = planSeason([
+      ['Datum', 'Reeks', 'Thuisploeg', 'Bezoekers'],
+      ['13/09/2026 14:00', '1NAH', 'KBC St. Michiels', 'KBC Male'],
+    ])
+    expect(plan.matches[0].dateIso).toBe('2026-09-13T12:00:00.000Z')
+    expect(uurWaarschuwing(plan.uren)).toBeNull()
+  })
+
+  it('telt eerlijk wanneer maar een deel van de uren ontbreekt', () => {
+    const plan = planSeason([
+      ['Datum', 'Uur', 'Reeks', 'Thuisploeg', 'Bezoekers'],
+      ['13/09/2026', '14:00:00', '1NAH', 'KBC St. Michiels', 'KBC Male'],
+      ['20/09/2026', '', '1NAH', 'KBC Male', 'KBC St. Michiels'],
+    ])
+    expect(plan.uren).toMatchObject({ metUur: 1, zonderUur: 1 })
+    expect(uurWaarschuwing(plan.uren)).toMatch(/1 van de 2/)
   })
 })
