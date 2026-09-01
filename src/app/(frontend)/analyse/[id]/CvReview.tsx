@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 
+import { richtingTekst } from '@/lib/cv-naar-worp'
 import { fmtVideoTime } from '@/lib/video-sync'
 
 // ── CV-review: de voorstellen van de computer-vision-pipeline naast de manuele tijdlijn ────────
@@ -29,6 +30,8 @@ export interface CvVoorstel {
   uitbal?: boolean | null
   yM: number | null
   afstandM: number | null
+  /** Richting in veldassen: 0° recht naar de uitkant, +90° naar de rechterzijlijn. */
+  richtingGraden?: number | null
 }
 
 const EVENT_NAAM: Record<CvVoorstel['eventType'], string> = {
@@ -337,6 +340,9 @@ export function CvReview({
                 <span className="va-cv-zone" title="Landingspunt volgens het model (veldmeters)">
                   {actief.uitbal ? '↗ uitbal' : actief.inDoelgebied ? '🎯 doelgebied' : 'veld'} · {actief.xM.toFixed(1)}, {actief.yM.toFixed(1)} m
                   {actief.afstandM != null ? ` · worp ${actief.afstandM.toFixed(1)} m` : ''}
+                  {richtingTekst(actief.richtingGraden) != null
+                    ? ` · ${richtingTekst(actief.richtingGraden)}`
+                    : ''}
                 </span>
               )}
               <span className="va-cv-conf" title="Zekerheid van het model">

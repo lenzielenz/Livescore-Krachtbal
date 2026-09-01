@@ -119,6 +119,91 @@ export function afstandUitEvent(
   return Math.round(afstandVanWorp(werpplaats, landing, goalAreaDepthM, maten) * 100) / 100
 }
 
+/**
+ * De richting van een worp, in graden.
+ *
+ * Nul is recht naar de UITKANT, positief naar rechts — met links en rechts zoals de hele app
+ * ze afspreekt: sta op de achterlijn aan de thuiskant en kijk naar de uitkant, dan is links
+ * x=0 (zie `kalibratie-punten.ts`). Dus:
+ *
+ *     0°  recht over de lengte-as naar de uitkant
+ *   +90°  dwars naar de rechterzijlijn
+ *   −90°  dwars naar de linkerzijlijn
+ *  ±180°  terug naar de thuiskant
+ *
+ * Bewust in het assenstelsel van het VELD en niet in dat van de aanvallende ploeg: de video
+ * weet niet welke kant een ploeg aanvalt (dat hangt van de helft af, en dat weet de engine).
+ * Wie het per ploeg wil lezen, draait het teken om voor de bezoekers — één keer, op de plek
+ * die de helft kent, in plaats van hier een aanname te maken die er in de tweede helft naast zit.
+ *
+ * Zelfde beginpunt als de afstand: de §6.4-geprojecteerde werpplaats. Anders beschrijven het
+ * getal "hoe ver" en het getal "welke kant op" niet dezelfde worp.
+ */
+export function richtingVanWorp(
+  werpplaats: { xM: number; yM: number },
+  landing: { xM: number; yM: number },
+  goalAreaDepthM: number = FIELD.defaultGoalAreaDepthM,
+  maten?: Partial<VeldMaten> | null,
+): number | null {
+  const norm = veldMaten(maten)
+  const lengte = totalLengthM(goalAreaDepthM, maten)
+  const van = projectWerpplaats(naarNorm(werpplaats.xM, werpplaats.yM, goalAreaDepthM, maten), goalAreaDepthM, {
+    maten,
+  })
+  const dx = landing.xM - van.x * norm.breedteM
+  const dy = landing.yM - van.y * lengte
+  // Een worp die op zijn vertrekpunt landt heeft geen richting. Onder een centimeter is dat
+  // geen worp maar meetruis, en atan2 zou er een willekeurige hoek van maken.
+  if (Math.hypot(dx, dy) < 0.01) return null
+  const graden = (Math.atan2(dx, dy) * 180) / Math.PI
+  return Math.round(graden * 10) / 10
+}
+
+/**
+ * De richting voor één ruw CV-event (JSONL-rij uit landing.py), of null als er geen hoort.
+ *
+ * Anders dan de afstand telt een uitbal hier wél mee: het reglement kent geen worpafstand voor
+ * een bal die buiten eindigt, maar "welke kant ging hij uit" is juist dán het interessante —
+ * en het landingspunt van een uitbal staat bewust ónbeknot in het event.
+ */
+export function richtingUitEvent(
+  e: Record<string, unknown>,
+  goalAreaDepthM: number = FIELD.defaultGoalAreaDepthM,
+  maten?: Partial<VeldMaten> | null,
+): number | null {
+  const getal = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) ? v : null)
+  const punt = (v: unknown): { xM: number; yM: number } | null => {
+    if (v == null || typeof v !== 'object') return null
+    const xM = getal((v as { x_m?: unknown }).x_m)
+    const yM = getal((v as { y_m?: unknown }).y_m)
+    return xM != null && yM != null ? { xM, yM } : null
+  }
+  const werpplaats = punt(e.werpplaats)
+  if (!werpplaats) return null
+  const uitbalX = getal(e.uitbal_x_m)
+  const uitbalY = getal(e.uitbal_y_m)
+  const landing =
+    punt(e.zone) ?? (e.uitbal === true && uitbalX != null && uitbalY != null ? { xM: uitbalX, yM: uitbalY } : null)
+  if (!landing) return null
+  return richtingVanWorp(werpplaats, landing, goalAreaDepthM, maten)
+}
+
+/**
+ * De richting in mensentaal. Voor het scherm: "-3,4°" zegt een aantekenaar niets, "recht
+ * vooruit" wel.
+ */
+export function richtingTekst(graden: number | null | undefined): string | null {
+  if (graden == null || !Number.isFinite(graden)) return null
+  const g = ((graden + 180) % 360) - 180
+  const a = Math.abs(g)
+  const kant = g < 0 ? 'links' : 'rechts'
+  if (a <= 15) return 'recht vooruit'
+  if (a >= 165) return 'terug naar achter'
+  if (a >= 115) return `schuin achteruit ${kant}`
+  if (a >= 65) return `dwars naar ${kant}`
+  return `schuin naar ${kant}`
+}
+
 /** Ligt dit punt binnen het veld? Buiten zónder uitbal-vlag betekent: de meting deugt niet. */
 export function opHetVeld(p: Point, marge = 0.02): boolean {
   return p.x >= -marge && p.x <= 1 + marge && p.y >= -marge && p.y <= 1 + marge

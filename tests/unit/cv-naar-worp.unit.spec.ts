@@ -8,6 +8,9 @@ import {
   maakOverzetplan,
   naarNorm,
   opHetVeld,
+  richtingTekst,
+  richtingUitEvent,
+  richtingVanWorp,
   worpUitVoorstel,
   type Voorstelworp,
 } from '@/lib/cv-naar-worp'
@@ -272,5 +275,101 @@ describe('uitballen door de brug', () => {
   it('blijft een punt buiten het veld zónder uitbal-vlag weigeren', () => {
     // Buiten zonder vlag betekent: de meting deugt niet — geen worp van maken.
     expect(worpUitVoorstel({ videoTimeS: 5, eventType: 'worp', xM: 7, yM: 48, verdict: 'bevestigd' }, 10)).toBeNull()
+  })
+})
+
+// De richting van een worp.
+//
+// "Ook de afstand en de richting" — de afstand stond er al, de richting nergens. Ze komt uit
+// hetzelfde paar punten (werpplaats en landing) en moet dus ook langs dezelfde §6.4-projectie
+// lopen: anders beschrijven "hoe ver" en "welke kant op" niet dezelfde worp.
+//
+// De assen zijn die van het VELD, niet die van de aanvallende ploeg: 0° recht naar de uitkant,
+// +90° naar de rechterzijlijn (links is x=0 — sta op de thuis-achterlijn en kijk naar uit).
+describe('richtingVanWorp', () => {
+  // Een veld van 14 m breed; y loopt van de thuis-achterlijn (0) naar de uitkant.
+  const van = { xM: 7, yM: 20 }
+
+  it('noemt recht naar de uitkant nul graden', () => {
+    expect(richtingVanWorp(van, { xM: 7, yM: 35 })).toBe(0)
+  })
+
+  it('telt naar rechts positief en naar links negatief', () => {
+    expect(richtingVanWorp(van, { xM: 12, yM: 25 })).toBeGreaterThan(0)
+    expect(richtingVanWorp(van, { xM: 2, yM: 25 })).toBeLessThan(0)
+    // Symmetrisch: even ver naar links is exact het spiegelbeeld van even ver naar rechts.
+    expect(richtingVanWorp(van, { xM: 12, yM: 25 })).toBeCloseTo(
+      -(richtingVanWorp(van, { xM: 2, yM: 25 }) as number), 6,
+    )
+  })
+
+  it('legt dwars op de lengte-as op ±90°', () => {
+    expect(richtingVanWorp(van, { xM: 13, yM: 20 })).toBeCloseTo(90, 6)
+    expect(richtingVanWorp(van, { xM: 1, yM: 20 })).toBeCloseTo(-90, 6)
+  })
+
+  it('geeft ±180° voor een bal die terug naar de thuiskant gaat', () => {
+    expect(Math.abs(richtingVanWorp(van, { xM: 7, yM: 5 }) as number)).toBeCloseTo(180, 6)
+  })
+
+  it('geeft niets terug wanneer er geen richting ís', () => {
+    // Landen op je eigen vertrekpunt is meetruis, geen worp; atan2 zou er een willekeurige
+    // hoek van maken.
+    expect(richtingVanWorp({ xM: 7, yM: 20 }, { xM: 7, yM: 20 })).toBeNull()
+  })
+
+  it('vertrekt van dezelfde geprojecteerde werpplaats als de afstand', () => {
+    // Een werpplaats ín het eigen doelgebied wordt door §6.4 naar de vrijeworplijn geschoven.
+    // Als de richting die projectie zou overslaan, wijzen afstand en richting naar twee
+    // verschillende worpen — precies het soort stille tegenspraak dat niemand opmerkt.
+    const diep = { xM: 7, yM: 2 }
+    const naar = { xM: 7, yM: 30 }
+    const richting = richtingVanWorp(diep, naar)
+    expect(richting).toBe(0) // recht vooruit blijft recht vooruit
+    // En een schuine worp uit datzelfde punt: het teken moet de kant volgen, niet het ruwe punt.
+    expect(richtingVanWorp(diep, { xM: 12, yM: 30 })).toBeGreaterThan(0)
+  })
+})
+
+describe('richtingUitEvent', () => {
+  const veld = { werpplaats: { x_m: 7, y_m: 20 } }
+
+  it('leest de landing uit de zone', () => {
+    expect(richtingUitEvent({ ...veld, zone: { x_m: 7, y_m: 30 } })).toBe(0)
+  })
+
+  it('geeft een uitbal wél een richting, ook al krijgt hij geen afstand', () => {
+    // Het reglement kent geen worpafstand voor een bal die buiten eindigt — maar "welke kant
+    // ging hij uit" is juist dán het interessante.
+    const uit = { ...veld, uitbal: true, uitbal_x_m: 16, uitbal_y_m: 24 }
+    expect(afstandUitEvent(uit)).toBeNull()
+    expect(richtingUitEvent(uit)).toBeGreaterThan(0)
+  })
+
+  it('geeft niets zonder werpplaats of zonder landing', () => {
+    expect(richtingUitEvent({ zone: { x_m: 7, y_m: 30 } })).toBeNull()
+    expect(richtingUitEvent(veld)).toBeNull()
+  })
+
+  it('negeert een landing met onvolledige coördinaten', () => {
+    expect(richtingUitEvent({ ...veld, zone: { x_m: 7 } })).toBeNull()
+  })
+})
+
+describe('richtingTekst', () => {
+  it('zet graden om in iets wat een aantekenaar leest', () => {
+    expect(richtingTekst(0)).toBe('recht vooruit')
+    expect(richtingTekst(-8)).toBe('recht vooruit')
+    expect(richtingTekst(40)).toBe('schuin naar rechts')
+    expect(richtingTekst(-40)).toBe('schuin naar links')
+    expect(richtingTekst(90)).toBe('dwars naar rechts')
+    expect(richtingTekst(-130)).toBe('schuin achteruit links')
+    expect(richtingTekst(180)).toBe('terug naar achter')
+  })
+
+  it('zwijgt wanneer er geen richting is', () => {
+    expect(richtingTekst(null)).toBeNull()
+    expect(richtingTekst(undefined)).toBeNull()
+    expect(richtingTekst(Number.NaN)).toBeNull()
   })
 })

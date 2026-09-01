@@ -1637,6 +1637,10 @@ export interface CvEvent {
   xM?: number | null;
   yM?: number | null;
   afstandM?: number | null;
+  /**
+   * 0° = recht naar de uitkant, +90° = naar de rechterzijlijn, −90° = naar links (veldassen, niet die van de aanvallende ploeg).
+   */
+  richtingGraden?: number | null;
   side?: ('home' | 'away') | null;
   rugnummer?: number | null;
   scoreDelta?: number | null;
@@ -2565,6 +2569,7 @@ export interface CvEventsSelect<T extends boolean = true> {
   xM?: T;
   yM?: T;
   afstandM?: T;
+  richtingGraden?: T;
   side?: T;
   rugnummer?: T;
   scoreDelta?: T;

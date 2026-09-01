@@ -1,5 +1,5 @@
 import { authUser } from '@/lib/api-auth'
-import { afstandUitEvent } from '@/lib/cv-naar-worp'
+import { afstandUitEvent, richtingUitEvent } from '@/lib/cv-naar-worp'
 import { FIELD, matenVanMatch, type VeldMaten } from '@/lib/field'
 import { getPayloadClient } from '@/lib/payload-client'
 import { mayEditMatchVideo } from '@/lib/video-access'
@@ -91,6 +91,10 @@ async function importeerVoorstellen(
           // wedstrijd. Het Python-getal (e.afstand_m) is enkel de CLI-benadering en wordt
           // bewust genegeerd; een uitbal of een event zonder werpplaats krijgt geen afstand.
           afstandM: afstandUitEvent(e, veld.goalAreaDepthM, veld.maten),
+          // Welke kant ging hij op — dezelfde twee punten als de afstand, in de veldassen.
+          // Een uitbal krijgt géén afstand (reglement) maar wél een richting: dán wil je juist
+          // weten waar hij uitging.
+          richtingGraden: richtingUitEvent(e, veld.goalAreaDepthM, veld.maten),
           side: speler?.team === 'home' || speler?.team === 'away' ? speler.team : null,
           rugnummer: Number.isInteger(rug) && (rug as number) >= 0 && (rug as number) <= 99 ? (rug as number) : null,
           scoreDelta: Number.isFinite(Number(e.score_delta)) ? Number(e.score_delta) : 0,

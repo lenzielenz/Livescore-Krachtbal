@@ -114,6 +114,16 @@ export const CvEvents: CollectionConfig = {
           label: 'Afstand (m)',
           type: 'number',
         },
+        {
+          name: 'richtingGraden',
+          label: 'Richting (°)',
+          type: 'number',
+          admin: {
+            description:
+              '0° = recht naar de uitkant, +90° = naar de rechterzijlijn, −90° = naar links '
+              + '(veldassen, niet die van de aanvallende ploeg).',
+          },
+        },
       ],
     },
     {
