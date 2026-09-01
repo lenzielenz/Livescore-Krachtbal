@@ -48,6 +48,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import detectie  # noqa: E402
 import veld  # noqa: E402
+from calibrate import lens_uit, ontkrom  # noqa: E402
 from landing import _projecteer, klem_op_veld  # noqa: E402
 
 # Sneller dan dit loopt niemand met een krachtbal in de handen: waarnemingen die een
@@ -180,6 +181,7 @@ def veldpunten_uit_detecties(
     diepte_m: float,
     breedte_m: float = veld.BREEDTE_M,
     speelveld_m: float = veld.SPEELVELD_LENGTE_M,
+    lens: tuple[float, tuple[float, float], float] | None = None,
 ) -> list[tuple[float, float]]:
     """Voetpunten van persoon-detecties → veldmeters (puur — getest zonder video).
 
@@ -198,7 +200,14 @@ def veldpunten_uit_detecties(
         voeten = det.get('voeten')
         if not voeten:
             continue
-        vx, vy = _projecteer(matrix, float(voeten[0]), float(voeten[1]))
+        px, py = float(voeten[0]), float(voeten[1])
+        if lens is not None:
+            # De kalibratie is op ontkromde punten gefit (zie calibrate.py): elk pixel dat
+            # de homografie ingaat moet dus eerst door dezelfde ontkromming — anders staat
+            # een speler aan de beeldrand tot decimeters verkeerd op de heatmap.
+            lam, centrum, diagonaal = lens
+            px, py = ontkrom((px, py), lam, centrum, diagonaal)
+        vx, vy = _projecteer(matrix, px, py)
         if vx != vx or vy != vy:  # NaN: ontaarde projectie
             continue
         if -1.0 <= vx <= breedte_m + 1.0 and -1.0 <= vy <= lengte + 1.0:
@@ -310,6 +319,9 @@ def video_posities(args: argparse.Namespace, detectiebron=None) -> list[dict]:
         if not spoor.punten:
             _fout(f'{args.homografie} bevat geen momenten')
     kalibratie = json.loads(args.kalibratie.read_text(encoding='utf-8')) if args.kalibratie else {}
+    # De lensontkromming van deze kalibratie (None bij oude bestanden of lambda 0): de matrix is
+    # op ontkromde punten gefit, dus de voetpunten moeten door dezelfde ontkromming.
+    lens = lens_uit(kalibratie)
     matrix = kalibratie.get('matrix_beeld_naar_veld')
     veld_info = kalibratie.get('veld') or {}
     diepte = float(kalibratie.get('doelgebied_diepte_m') or veld_info.get('doelgebied_diepte_m') or args.diepte)
@@ -381,7 +393,7 @@ def video_posities(args: argparse.Namespace, detectiebron=None) -> list[dict]:
                     if cv2.contourArea(c) >= args.mog2_min_px and h > b * 0.8:
                         voeten.append((float(x + b / 2), float(y + h)))
             detecties = [{'voeten': v} for v in voeten]
-        punten = veldpunten_uit_detecties(detecties, matrix, diepte, breedte, speelveld)
+        punten = veldpunten_uit_detecties(detecties, matrix, diepte, breedte, speelveld, lens=lens)
         if detectiebron is None:
             # Alleen de blob-weg dubbelt: HOG en MOG2 zien dezelfde speler vaak
             # allebei. Het model levert al één detectie per persoon — daar zou

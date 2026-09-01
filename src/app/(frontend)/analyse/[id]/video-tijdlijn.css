@@ -609,3 +609,50 @@
   color: inherit; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.16);
 }
 .wp-kant { color: var(--muted); font-weight: 400; }
+
+/* ── Het beeld bij het voorstel ─────────────────────────────────────────────────────────────
+   Een voorstel was enkel een tijdstip; om te zien waarover de vraag ging moest je zelf in de
+   video zoeken. Nu staat het moment als kort lusje boven de knoppen. De bron-video is een
+   tweede, onzichtbare speler: `display:none` zou het decoderen stilleggen, dus hij wordt
+   weggeschoven in plaats van verborgen. */
+.cvb-bron {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+.cvb { position: relative; }
+.cvb-doos {
+  position: relative;
+  margin-bottom: 8px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #000;
+  aspect-ratio: 16 / 9;
+}
+.cvb-beeld { display: block; width: 100%; height: 100%; object-fit: contain; }
+.cvb-leeg {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 0 12px;
+  color: var(--dim, #9aa7b4);
+  font-size: 0.85rem;
+  text-align: center;
+}
+.cvb-spring {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  padding: 4px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+.cvb-spring:hover { background: rgba(0, 0, 0, 0.75); }

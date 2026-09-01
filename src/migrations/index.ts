@@ -104,6 +104,7 @@ import * as migration_20260901_120000_worp_bron from './20260901_120000_worp_bro
 import * as migration_20260901_140000_cv_werper from './20260901_140000_cv_werper'
 import * as migration_20260901_150000_cv_werpers from './20260901_150000_cv_werpers'
 import * as migration_20260901_170000_cv_uitbal from './20260901_170000_cv_uitbal'
+import * as migration_20260901_200000_cv_richting from './20260901_200000_cv_richting'
 
 export const migrations = [
   {
@@ -635,5 +636,10 @@ export const migrations = [
     up: migration_20260901_170000_cv_uitbal.up,
     down: migration_20260901_170000_cv_uitbal.down,
     name: '20260901_170000_cv_uitbal',
+  },
+  {
+    up: migration_20260901_200000_cv_richting.up,
+    down: migration_20260901_200000_cv_richting.down,
+    name: '20260901_200000_cv_richting',
   },
 ];

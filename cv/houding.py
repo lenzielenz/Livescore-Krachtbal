@@ -51,6 +51,7 @@ rtmlib nodig; die ontbreekt gerust, dan zegt de CLI netjes wat er te installeren
 from __future__ import annotations
 
 import argparse
+import gc
 import json
 import math
 import sys
@@ -350,6 +351,40 @@ def koppel_personen(
         koppeling[nu_i] = oud_id
         gebruikt.add(oud_id)
     return koppeling
+
+
+def snoei_gevolgden(
+    geschiedenis: dict[int, list[tuple[float, dict]]],
+    laatst_gezien: dict[int, float],
+    vorige: dict[int, dict],
+    nu_t: float,
+    gat_s: float,
+) -> int:
+    """Spelers die niemand meer kan koppelen uit de boekhouding gooien. Geeft het aantal terug.
+
+    Waarom dit moet, en waarom het geen luxe is. Elke persoon die `koppel_personen` niet aan een
+    vorige meting kan hangen, krijgt een NIEUW nummer — en op een wedstrijdvideo van een uur met
+    een camera in de hand gebeurt dat voortdurend. De metingen zelf worden weggeschreven en
+    afgekapt, maar deze twee mappen groeiden de hele analyse door: één sleutel per nummer dat
+    ooit bestond, tienduizenden na een uur, elk met een (leeggelopen) lijst eraan.
+
+    Dat is precies de vorm van een fout die je nooit als foutmelding ziet: het proces wordt
+    langzaam groter tot de kernel het neerlegt (SIGKILL), midden in de langste stap van de
+    keten, zonder dat Python nog iets kan zeggen. Op het scherm stond dan enkel "Python stopte
+    met code -1".
+
+    Wat weg mag: een nummer dat niet meer in `vorige` staat (daar kan de volgende meting nog aan
+    koppelen) én waarvan de geschiedenis leeg of ouder dan één gat is. Zo'n nummer kan per
+    definitie niet meer terugkomen — het opruimen verandert dus niets aan de meting.
+    """
+    weg = [
+        wie for wie, lijst in geschiedenis.items()
+        if wie not in vorige and (not lijst or nu_t - lijst[-1][0] > gat_s)
+    ]
+    for wie in weg:
+        geschiedenis.pop(wie, None)
+        laatst_gezien.pop(wie, None)
+    return len(weg)
 
 
 def beste_worpscore(
@@ -917,6 +952,10 @@ def meet_video(videopad: Path, model, analyse_fps: float, tot: float | None = No
                 lijst = geschiedenis.get(wie, [])
                 lijst.append((t, staat))
                 geschiedenis[wie] = [p for p in lijst if t - p[0] <= VENSTER_HOOG_S * 1.5][-40:]
+            # En de nummers die niemand meer kan koppelen eruit. Zonder dit blijft er van élke
+            # speler die ooit even in beeld liep een sleutel staan — de enige onbegrensd
+            # groeiende boekhouding in deze lus (zie snoei_gevolgden).
+            snoei_gevolgden(geschiedenis, laatst_gezien, vorige, t, gat_s)
             if not geschat and len(reeks) >= METINGEN_VOOR_SCHATTING and verwachte_metingen:
                 geschat = True
                 per_meting = (time.monotonic() - begonnen) / len(reeks)
@@ -1203,6 +1242,11 @@ def main(argv: list[str] | None = None) -> None:
         if vensters:
             if zoek_mode != args.mode:
                 print(f'Zwaarder model laden voor het nakijken ({args.mode}) …')
+                # Eerst het zoekmodel écht loslaten. Zonder dit staan er even twee ONNX-sessies
+                # in het geheugen, en op een krappe container is dat precies het moment waarop
+                # de kernel het proces neerlegt (SIGKILL, geen foutmelding).
+                model = None
+                gc.collect()
                 model = laad_model(args.mode)
             # De nakijkpassage nummert haar spelers boven die van de zoekpassage: anders kan
             # `worp_type` aan de rand van een venster de hoogtes van een grove meting lezen

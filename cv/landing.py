@@ -56,6 +56,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+import calibrate  # noqa: E402 — voor het lensmodel (ontkrom/lens_uit); trekt géén cv2 aan
 import veld  # noqa: E402
 from evaluate import lees_jsonl, match_greedy  # noqa: E402
 
@@ -399,6 +400,16 @@ def video_landing(args: argparse.Namespace, detecties: list[dict]) -> tuple[list
     standpunt_info = kalibratie.get('camerastandpunt') or {}
     standpunt = standpunt_info.get('gemeten') if standpunt_info.get('oordeel') != 'onmogelijk' else None
 
+    # Radiale lensvervorming uit de kalibratie: de matrix (én het volg_veld-spoor, dat met
+    # dezelfde kalibratie gemaakt is en zijn hele keten in ontkromde coördinaten houdt)
+    # hoort bij ONTKROMDE pixels. Elk pixel dat hier een homografie ingaat — het
+    # landingspixel en het loslaatpixel (werpplaats) — gaat dus eerst door ontkrom.
+    # Oude bestanden zonder 'lens'-veld geven None: λ = 0, gedrag exact als vroeger.
+    lens = calibrate.lens_uit(kalibratie)
+
+    def _pixel(x: float, y: float) -> tuple[float, float]:
+        return calibrate.ontkrom((x, y), *lens) if lens is not None else (x, y)
+
     # Vooraf gevonden balbanen (cv/bal.py): per worptijd de baan met loslaat- en landingspunt.
     vooraf: dict[float, dict] = {}
     if getattr(args, 'balbanen', None) is not None:
@@ -469,7 +480,7 @@ def video_landing(args: argparse.Namespace, detecties: list[dict]) -> tuple[list
                 op_landing = spoor.op(punt[0])
                 if op_landing is not None:
                     land_matrix = op_landing
-            x_m, y_m = _projecteer(land_matrix, punt[1], punt[2])
+            x_m, y_m = _projecteer(land_matrix, *_pixel(punt[1], punt[2]))
             if x_m == x_m and y_m == y_m:  # geen NaN
                 x_m, y_m, uitbal = klem_of_uitbal(x_m, y_m, diepte, breedte, speelveld)
                 if uitbal:
@@ -493,7 +504,7 @@ def video_landing(args: argparse.Namespace, detecties: list[dict]) -> tuple[list
                     # betrouwbare matrix op het worpmoment → geen werpplaats en geen afstand.
                     worp_matrix = matrix if spoor is None else spoor.op(balspoor[0][0])
                     if worp_matrix is not None:
-                        sx, sy = _projecteer(worp_matrix, balspoor[0][1], balspoor[0][2])
+                        sx, sy = _projecteer(worp_matrix, *_pixel(balspoor[0][1], balspoor[0][2]))
                         if sx == sx and sy == sy:
                             if standpunt is not None:
                                 # De bal hangt bij het loslaten boven het hoofd; de

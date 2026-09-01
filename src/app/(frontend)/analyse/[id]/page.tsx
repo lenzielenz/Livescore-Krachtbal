@@ -206,6 +206,7 @@ export default async function AnalyseDetailPage({ params }: { params: Promise<{ 
     xM: e.xM ?? null,
     yM: e.yM ?? null,
     afstandM: e.afstandM ?? null,
+    richtingGraden: e.richtingGraden ?? null,
   }))
   // Video koppelen/ijken mag wie de analyse beheert: de federatie, of de eigenaar van deze
   // privé-opname (dezelfde kring die ze al mag bekijken — de paginatoegang hierboven).

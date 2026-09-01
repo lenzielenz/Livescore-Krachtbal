@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 
 import {
   activeMomentIndex,
@@ -78,6 +79,7 @@ export function VideoAnalyse({
    *  bestand vóór we een half uur zitten uploaden. */
   maxMb: number
 }) {
+  const router = useRouter()
   const [url, setUrl] = useState(initialUrl ?? '')
   const [draftUrl, setDraftUrl] = useState(initialUrl ?? '')
   const [sync, setSync] = useState<VideoSync>({ offsetH1: initialOffsetH1 ?? 0, offsetH2: initialOffsetH2 })
@@ -104,6 +106,32 @@ export function VideoAnalyse({
   useEffect(() => {
     setDur(null)
   }, [url])
+
+  // Een melding over de refresh heen tillen. Was dit de éérste video, dan staat dit blok
+  // bovenaan de pagina en verhuist het na router.refresh() naar zijn vaste plek — een nieuw
+  // exemplaar, dat zijn state (en dus de melding) anders kwijt is. Met een tijdstip erbij,
+  // zodat een oude melding nooit bij een later bezoek opduikt.
+  const parkeerMelding = useCallback(
+    (melding: string) => {
+      try {
+        sessionStorage.setItem(`va-melding-${matchId}`, JSON.stringify({ m: melding, t: Date.now() }))
+      } catch { /* privémodus zonder opslag: dan enkel de gewone melding in dít exemplaar */ }
+    },
+    [matchId],
+  )
+
+  // De geparkeerde melding ophalen (zie hierboven): dit exemplaar is dan net gemount
+  // op de vaste plek, terwijl het exemplaar dat de upload deed met het lege-staat-blok verdween.
+  // Enkel een vérse melding tonen — een oude wordt stil opgeruimd.
+  useEffect(() => {
+    try {
+      const ruw = sessionStorage.getItem(`va-melding-${matchId}`)
+      if (!ruw) return
+      sessionStorage.removeItem(`va-melding-${matchId}`)
+      const { m, t } = JSON.parse(ruw) as { m?: string; t?: number }
+      if (typeof m === 'string' && typeof t === 'number' && Date.now() - t < 15_000) setMsg(m)
+    } catch { /* geen opslag of onleesbare inhoud: geen melding, geen drama */ }
+  }, [matchId])
 
   // ── Download & delen (gsm) ──
   // Een videobestand moet je ook op je telefoon kunnen bewaren en doorsturen. Onze eigen
@@ -146,6 +174,12 @@ export function VideoAnalyse({
         const data = (await res.json()) as { error?: string }
         if (!res.ok) throw new Error(data.error ?? 'Bewaren mislukt.')
         setMsg(okMsg)
+        // De vervolgstappen (kalibratie, server-analyse, de voortgangskaart bovenaan) zijn
+        // server-gerenderde blokken die op de video en de ijking van de wedstrijd afhangen.
+        // Zonder dit zag je ze pas na een handmatige herlading — "ik moet refreshen om de
+        // volgende stap te zien". Dit rendert enkel de serverkant opnieuw; de speler en zijn
+        // positie blijven gewoon staan.
+        router.refresh()
         return true
       } catch (e) {
         setMsg((e as Error).message)
@@ -154,7 +188,7 @@ export function VideoAnalyse({
         setBusy(false)
       }
     },
-    [matchId],
+    [matchId, router],
   )
 
   /** Spring naar een videopositie (exact bij een bestand, herstart bij YouTube). */
@@ -309,7 +343,12 @@ export function VideoAnalyse({
             setUpPct(null)
             setUrl(data.url)
             setDraftUrl(data.url)
-            setMsg('Video geüpload en gekoppeld. IJk nu de aftrap van elke helft.')
+            const melding = 'Video geüpload en gekoppeld. IJk nu de aftrap van elke helft.'
+            setMsg(melding)
+            parkeerMelding(melding)
+            // Zelfde reden als in save(): de vervolgstappen (kalibratie, server-analyse) zijn
+            // serverblokken die er pas zijn als de server wéét dat er een video hangt.
+            router.refresh()
             return
           }
         } catch {
@@ -326,8 +365,14 @@ export function VideoAnalyse({
 
   const saveUrl = async () => {
     const next = draftUrl.trim()
-    const ok = await save({ videoUrl: next }, next ? 'Video gekoppeld.' : 'Video losgekoppeld.')
-    if (ok) setUrl(next)
+    const melding = next ? 'Video gekoppeld.' : 'Video losgekoppeld.'
+    const ok = await save({ videoUrl: next }, melding)
+    if (ok) {
+      setUrl(next)
+      // Ook hier: was dit de éérste video (bv. een YouTube-link), dan verhuist het blok na de
+      // refresh en moet de melding mee.
+      if (next && !url) parkeerMelding(melding)
+    }
   }
 
   // Sneltoetsen bij een videobestand: ←/→ 5 s, spatie speel/pauze. Niet wanneer je in een veld typt.
@@ -485,6 +530,11 @@ export function VideoAnalyse({
                 pos={pos}
                 onSeek={seek}
                 onFrameStap={isFile ? frameStap : undefined}
+                // Het beeld bij elk voorstel wordt uit het bestand zelf gehaald; een
+                // YouTube-speler laat zijn beeld niet uitlezen, dus daar blijft het bij het
+                // tijdstip (zelfde grens als de kalibratie).
+                videoSrc={isFile && source ? source.src : null}
+                duurS={dur}
               >
               <div className="va-tl-track" aria-label="Alle worpen op de videotijdlijn">
                 <span className="va-tl-half" style={{ left: tlPct(sync.offsetH1) }} aria-hidden>

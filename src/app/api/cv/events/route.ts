@@ -1,4 +1,4 @@
-import { afstandUitEvent } from '@/lib/cv-naar-worp'
+import { afstandUitEvent, richtingUitEvent } from '@/lib/cv-naar-worp'
 import { FIELD, matenVanMatch, totalLengthM, veldMaten } from '@/lib/field'
 import { getPayloadClient } from '@/lib/payload-client'
 
@@ -172,6 +172,12 @@ export async function POST(req: Request) {
           // afstand_m is de CLI-benadering en wordt bewust genegeerd — dezelfde regel als
           // de server-analyse (analyseer/route.ts).
           afstandM: afstandUitEvent(
+            e as Record<string, unknown>,
+            match.goalAreaDepth ?? FIELD.defaultGoalAreaDepthM,
+            maten,
+          ),
+          // En welke kant hij op ging: dezelfde twee punten, in de veldassen.
+          richtingGraden: richtingUitEvent(
             e as Record<string, unknown>,
             match.goalAreaDepth ?? FIELD.defaultGoalAreaDepthM,
             maten,

@@ -2,7 +2,12 @@
 
 from __future__ import annotations
 
+import argparse
+import contextlib
+import io
+import json
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -288,6 +293,39 @@ class TestTracking(unittest.TestCase):
             video=None, kalibratie=None, upload=False, fps=2.0,
         )
         self.assertTrue(all('tracking' not in oms and 'heatmap' not in oms for oms, _ in stappen))
+
+
+class TestControleLens(unittest.TestCase):
+    """De lenscorrectie reist in het kalibratiebestand zelf mee (landing.py en
+    volg_veld.py lezen ze daar); de controle vooraf hoort dat te melden, zodat de
+    gebruiker wéét dat er ontkromd wordt — of dat een oude kalibratie λ = 0 draagt."""
+
+    def _controle_uitvoer(self, extra: dict) -> str:
+        with tempfile.TemporaryDirectory() as d:
+            pad = Path(d) / 'kalibratie.json'
+            pad.write_text(json.dumps({
+                'matrix_beeld_naar_veld': [[0.02, 0.0, 0.0], [0.0, 0.02, 0.0], [0.0, 0.0, 1.0]],
+                'punten': [{'label': f'p{i}', 'beeld_px': [0, 0], 'veld_m': [0, 0]} for i in range(4)],
+                **extra,
+            }), encoding='utf-8')
+            args = argparse.Namespace(video=None, kalibratie=pad, base='http://x', match=1)
+            uit = io.StringIO()
+            with contextlib.redirect_stdout(uit):
+                meet.controle(args, token=None)  # geen token: het platform-deel slaat over
+            return uit.getvalue()
+
+    def test_controle_meldt_de_lenscorrectie_uit_de_kalibratie(self):
+        uitvoer = self._controle_uitvoer(
+            {'lens': {'lambda': 0.08, 'centrum': [960.0, 540.0], 'diagonaal': 2202.91}})
+        self.assertIn('lenscorrectie', uitvoer)
+        self.assertIn('0.08', uitvoer)
+
+    def test_oude_kalibratie_zonder_lens_meldt_niets(self):
+        # Achterwaartse compatibiliteit: geen lens-veld (of λ = 0) → geen melding,
+        # en de controle draait er verder exact hetzelfde door.
+        self.assertNotIn('lenscorrectie', self._controle_uitvoer({}))
+        self.assertNotIn('lenscorrectie', self._controle_uitvoer(
+            {'lens': {'lambda': 0.0, 'centrum': [960.0, 540.0], 'diagonaal': 2202.91}}))
 
 
 if __name__ == '__main__':

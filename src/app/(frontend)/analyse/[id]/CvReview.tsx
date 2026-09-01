@@ -2,7 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 
+import { richtingTekst } from '@/lib/cv-naar-worp'
+import { volgendOpen } from '@/lib/cv-review'
 import { fmtVideoTime } from '@/lib/video-sync'
+
+import { CvBeeld } from './CvBeeld'
 
 // ── CV-review: de voorstellen van de computer-vision-pipeline naast de manuele tijdlijn ────────
 // Fase 1: het model vindt kandidaat-worpen (cv-events, videoTimeS = rechtstreeks videoseconden);
@@ -29,6 +33,8 @@ export interface CvVoorstel {
   uitbal?: boolean | null
   yM: number | null
   afstandM: number | null
+  /** Richting in veldassen: 0° recht naar de uitkant, +90° naar de rechterzijlijn. */
+  richtingGraden?: number | null
 }
 
 const EVENT_NAAM: Record<CvVoorstel['eventType'], string> = {
@@ -58,6 +64,8 @@ export function CvReview({
   pos,
   onSeek,
   onFrameStap,
+  videoSrc = null,
+  duurS = null,
   children,
 }: {
   voorstellen: CvVoorstel[]
@@ -69,6 +77,10 @@ export function CvReview({
   onSeek: (seconds: number) => void
   /** Eén frame verspringen (pauzeert de video); enkel beschikbaar bij een videobestand. */
   onFrameStap?: (deltaSeconds: number) => void
+  /** Bronbestand van de video, voor het beeld bij het voorstel (null bij YouTube). */
+  videoSrc?: string | null
+  /** Duur van de video als de speler die al kent — houdt het beeldlusje binnen de video. */
+  duurS?: number | null
   children?: ReactNode
 }) {
   // Lokale kopie voor optimistische updates: een klik toont meteen het oordeel, de PATCH volgt;
@@ -193,6 +205,11 @@ export function CvReview({
             ),
           )
         }
+        // Doorschuiven naar de volgende vraag. Dít maakt er een diavoorstelling van in plaats
+        // van een lijst: je antwoordt, en het volgende beeld staat er. Pas ná een geslaagde
+        // PATCH — anders schuift het paneel door terwijl je antwoord niet aankwam.
+        const volgende = volgendOpen(lijst, v.id, v.id)
+        if (volgende) kies(volgende)
       } catch (e) {
         setLijst((l) => l.map((x) => (x.id === vorige.id ? vorige : x)))
         setFout((e as Error).message)
@@ -200,7 +217,7 @@ export function CvReview({
         setBezigId(null)
       }
     },
-    [bezigId],
+    [bezigId, lijst, kies],
   )
 
   // ── Sneltoetsen: alleen wanneer er voorstellen zijn en er geen invoerveld focus heeft ──
@@ -319,6 +336,16 @@ export function CvReview({
 
         {actief && (
           <div className={`va-cv-actief ${actief.verdict ?? 'open'}`}>
+            {/* Het beeld bij de vraag. Zonder dit is een voorstel enkel een tijdstip en moet je
+                zelf in de video gaan zoeken wat het model bedoelde — 21 keer, vóór je iets
+                beoordeeld hebt. */}
+            <CvBeeld
+              key={actief.id}
+              videoSrc={videoSrc}
+              tijd={actief.videoTimeS}
+              duurS={duurS}
+              onSpring={() => kies(actief)}
+            />
             <div className="va-cv-info">
               <button type="button" className="va-cv-tijd" onClick={() => kies(actief)} title="Spring naar dit moment in de video">
                 ⏱ {fmtVideoTime(actief.videoTimeS)}
@@ -337,6 +364,9 @@ export function CvReview({
                 <span className="va-cv-zone" title="Landingspunt volgens het model (veldmeters)">
                   {actief.uitbal ? '↗ uitbal' : actief.inDoelgebied ? '🎯 doelgebied' : 'veld'} · {actief.xM.toFixed(1)}, {actief.yM.toFixed(1)} m
                   {actief.afstandM != null ? ` · worp ${actief.afstandM.toFixed(1)} m` : ''}
+                  {richtingTekst(actief.richtingGraden) != null
+                    ? ` · ${richtingTekst(actief.richtingGraden)}`
+                    : ''}
                 </span>
               )}
               <span className="va-cv-conf" title="Zekerheid van het model">

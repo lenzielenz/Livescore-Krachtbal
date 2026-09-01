@@ -52,6 +52,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+import calibrate  # noqa: E402 — lensmodel (ontkrom/lens_uit); trekt bij import géén cv2 aan
 import veld  # noqa: E402
 
 # Herankeren op de veldlijnen: standaard elke 2 seconden. Vaker kost rekentijd, minder
@@ -95,6 +96,44 @@ STANDEN = {
 def _fout(boodschap: str, code: int = 2) -> None:
     print(f'FOUT: {boodschap}', file=sys.stderr)
     raise SystemExit(code)
+
+
+# ---------------------------------------------------------------------------
+# Radiale lensvervorming (divisiemodel uit calibrate.py)
+# ---------------------------------------------------------------------------
+#
+# De KEUZE, gedocumenteerd omdat ze niet vanzelfsprekend is: het ankerbestand (de
+# kalibratie) is gefit op ONTKROMDE pixels, dus de hele keten hier leeft in ontkromde
+# coördinaten. Concreet: de flow-puntparen worden ontkromd vóórdat de stap-homografie
+# erop gefit wordt, de gedetecteerde lijnsegmenten vóór het herankeren, en de
+# ankerpunten bij het inlezen. Zo zijn begin- en eindpunt van elke geketende
+# homografie consistent ontkromd, en beeldt élke matrix in het weggeschreven spoor
+# ontkromde pixels op veldmeters af — precies wat landing.py verwacht, dat met
+# dezelfde kalibratie (en dus dezelfde lens) ontkromt vóór spoor.op(t).
+# Zonder 'lens'-veld in de kalibratie is lens None en verandert er letterlijk niets.
+
+
+def ontkrom_punten(
+    punten: list[tuple[float, float]],
+    lens: tuple[float, tuple[float, float], float] | None,
+) -> list[tuple[float, float]]:
+    """(x, y)-punten ontkrommen met de lens uit de kalibratie (calibrate.lens_uit);
+    lens None (oude bestanden, λ = 0) geeft de invoer ongewijzigd terug."""
+    if lens is None:
+        return punten
+    return [calibrate.ontkrom(p, *lens) for p in punten]
+
+
+def ontkrom_segmenten(
+    segmenten: list[tuple[tuple[float, float], tuple[float, float]]],
+    lens: tuple[float, tuple[float, float], float] | None,
+) -> list[tuple[tuple[float, float], tuple[float, float]]]:
+    """Lijnsegmenten (eindpunt-paren) ontkrommen. De eindpunten volstaan: de
+    Hough-detector breekt een gekromde (vervormde) veldlijn toch al in korte, lokaal
+    rechte stukken, dus per stuk is de kromming tussen de eindpunten verwaarloosbaar."""
+    if lens is None:
+        return segmenten
+    return [(calibrate.ontkrom(a, *lens), calibrate.ontkrom(b, *lens)) for a, b in segmenten]
 
 
 # ---------------------------------------------------------------------------
@@ -1269,6 +1308,18 @@ def detecteer_lijnsegmenten(cv2, frame, min_lengte_px: int = 60) -> list[tuple[t
     return [((float(x1), float(y1)), (float(x2), float(y2))) for x1, y1, x2, y2 in segmenten[:, 0]]
 
 
+def _ontkrom_np(punten, lens: tuple[float, tuple[float, float], float]):
+    """ontkrom voor een (N, 2)-numpy-array in één keer — de flow levert er honderden per
+    stap, dus de vectorvorm houdt de stand 'ultra' (25 metingen/s) betaalbaar."""
+    import numpy as np  # noqa: PLC0415
+
+    lam, (cx, cy), diagonaal = lens
+    p = np.asarray(punten, dtype=np.float64).reshape(-1, 2)
+    d = p - (cx, cy)
+    factor = 1.0 + lam * (d * d).sum(axis=1) / (diagonaal * diagonaal)
+    return ((cx, cy) + d / factor[:, None]).astype(np.float32)
+
+
 def gewone_restfout(recente: list[float]) -> float:
     """Wat in déze opname een normale restfout is: de mediaan van het recente verleden.
 
@@ -1329,6 +1380,17 @@ def volg_video(args: argparse.Namespace) -> tuple[HomografieSpoor, dict]:
         kal = json.loads(args.kalibratie.read_text(encoding='utf-8'))
         ankers = [(0.0, normaliseer(kal['matrix_beeld_naar_veld']))]
         ankerpunten = []
+    # Lensvervorming uit hetzelfde bestand: de ankermatrices zijn op ontkromde pixels
+    # gefit, dus de hele keten hieronder werkt in ontkromde coördinaten (zie het blok
+    # bij ontkrom_punten bovenaan). Ruwe klikken in de ankerpunten gaan er nu al doorheen.
+    lens = calibrate.lens_uit(kal)
+    if lens is not None and ankerpunten:
+        ankerpunten = [
+            (tijd, [{**p, 'x': ox, 'y': oy}
+                    for p in punten
+                    for ox, oy in (calibrate.ontkrom((float(p['x']), float(p['y'])), *lens),)])
+            for tijd, punten in ankerpunten
+        ]
     info = kal.get('veld') or {}
     diepte = float(kal.get('doelgebied_diepte_m') or info.get('doelgebied_diepte_m')
                    or veld.STANDAARD_DOELGEBIED_DIEPTE_M)
@@ -1428,9 +1490,21 @@ def volg_video(args: argparse.Namespace) -> tuple[HomografieSpoor, dict]:
                            for a, b in zip(goed_oud, goed_nieuw))[len(goed_oud) // 2]
                 )
                 gevonden, _ = cv2.findHomography(goed_nieuw, goed_oud, cv2.RANSAC, 3.0)
-                if gevonden is not None:
-                    stap_m = [[float(w) for w in rij] for rij in gevonden]
-            restfout = None if stap_m is None else _restfout(cv2, stap_m, vorig_grijs, grijs)
+                stap_ruw = None if gevonden is None else [[float(w) for w in rij] for rij in gevonden]
+                if lens is None:
+                    stap_m = stap_ruw
+                elif stap_ruw is not None:
+                    # De keten leeft in ONTKROMDE coördinaten: de stap wordt op de
+                    # ontkromde puntparen gefit. De narekentoets (restfout) hieronder
+                    # warpt daarentegen het échte, vervormde beeld en krijgt daarom de
+                    # ruwe stap — dezelfde camerabeweging, elk in zijn eigen coördinaten.
+                    gevonden, _ = cv2.findHomography(
+                        _ontkrom_np(goed_nieuw, lens), _ontkrom_np(goed_oud, lens),
+                        cv2.RANSAC, 3.0)
+                    if gevonden is not None:
+                        stap_m = [[float(w) for w in rij] for rij in gevonden]
+                if stap_m is not None:
+                    restfout = _restfout(cv2, stap_ruw, vorig_grijs, grijs)
 
         uitkomst = stap_uitkomst(p0 is not None and len(p0) >= 8, volgdeel,
                                  stap_m is not None, restfout, gewone_restfout(restfouten))
@@ -1496,7 +1570,9 @@ def volg_video(args: argparse.Namespace) -> tuple[HomografieSpoor, dict]:
         # eerlijker dan een verzonnen veld.
         stand_basis = basis if basis is not None else vertrek
         if stand_basis is not None and t - laatste_anker >= args.heranker:
-            segmenten = detecteer_lijnsegmenten(cv2, frame, args.min_lijn)
+            # De detector ziet het vervormde beeld; ontkrommen brengt de segmenten in
+            # dezelfde coördinaten als de matrix waartegen ze gekoppeld worden.
+            segmenten = ontkrom_segmenten(detecteer_lijnsegmenten(cv2, frame, args.min_lijn), lens)
             stand = normaliseer(maal(stand_basis, keten))
             gevolgd, fout, gebruikt, absoluut = veranker_absoluut(
                 stand, segmenten, lijnen, args.max_fout,
@@ -1559,6 +1635,9 @@ def volg_video(args: argparse.Namespace) -> tuple[HomografieSpoor, dict]:
     return spoor, {**spoor.rapport(), 'frames_zonder_flow': verloren,
                    'waarnemingen': len(waarnemingen), 'gladgestreken': tweede['gladgestreken'],
                    'samengevoegde_ankers': samengevoegd,
+                   # Werd er ontkromd? Dan moet de verbruiker (landing/tracking) dat óók
+                   # doen — die leest dezelfde kalibratie, maar het hoort in het rapport.
+                   'lens_lambda': lens[0] if lens is not None else None,
                    'absolute_fixes': absolute_fixes,
                    # De ketenfout die per tussenstuk retroactief over de momenten verdeeld
                    # is — het cijfer dat zegt of de fixes hun werk doen: klein betekent dat

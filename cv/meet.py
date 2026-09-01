@@ -320,6 +320,13 @@ def controle(args: argparse.Namespace, token: str | None) -> int:
                 data = json.loads(args.kalibratie.read_text(encoding='utf-8'))
                 punt('matrix_beeld_naar_veld' in data and len(data.get('punten', [])) >= 4,
                      'kalibratie bevat een matrix en ≥ 4 punten')
+                # De lenscorrectie reist mee in het kalibratiebestand zelf: landing.py en
+                # volg_veld.py lezen ze daar en ontkrommen elk pixel vóór de projectie —
+                # meet.py hoeft er geen vlaggen voor door te geven, alleen melden.
+                lens = data.get('lens') or {}
+                if lens.get('lambda'):
+                    print(f'  · lenscorrectie in de kalibratie: λ = {float(lens["lambda"]):g} '
+                          f'(divisiemodel) — pixels worden ontkromd vóór de projectie')
             except (json.JSONDecodeError, OSError):
                 punt(False, 'kalibratie is leesbare JSON')
 

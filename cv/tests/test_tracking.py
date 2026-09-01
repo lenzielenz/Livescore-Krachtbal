@@ -347,3 +347,34 @@ class TestGroundtruthContract(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class TestLensInTracking(unittest.TestCase):
+    """De voetpunten door dezelfde ontkromming als de kalibratie.
+
+    De matrix is op ontkromde punten gefit (calibrate.py); een ruw pixel erdoorheen sturen
+    zet een speler aan de beeldrand decimeters verkeerd op de heatmap. Zonder lens in het
+    kalibratiebestand verandert er niets — dat is de achterwaartse compatibiliteit.
+    """
+
+    # Een simpele schaal-homografie: 100 px = 1 m.
+    MATRIX = [[0.01, 0.0, 0.0], [0.0, 0.01, 0.0], [0.0, 0.0, 1.0]]
+
+    def test_zonder_lens_ongewijzigd(self):
+        punten = tracking.veldpunten_uit_detecties(
+            [{'voeten': (700.0, 2300.0)}], self.MATRIX, 10.0)
+        self.assertEqual(punten, [(7.0, 23.0)])
+
+    def test_met_lens_gaat_het_voetpunt_eerst_door_de_ontkromming(self):
+        from calibrate import verkrom
+        lens = (0.08, (960.0, 540.0), 2202.9)
+        # Het pixel zoals de camera het ziet: de verkromde versie van het echte punt.
+        ruw = verkrom((700.0, 2300.0), lens[0], lens[1], lens[2])
+        met = tracking.veldpunten_uit_detecties([{'voeten': ruw}], self.MATRIX, 10.0, lens=lens)
+        self.assertEqual(len(met), 1)
+        self.assertAlmostEqual(met[0][0], 7.0, places=2)
+        self.assertAlmostEqual(met[0][1], 23.0, places=2)
+        # En zonder de ontkromming zit hetzelfde ruwe pixel er meetbaar naast.
+        zonder = tracking.veldpunten_uit_detecties([{'voeten': ruw}], self.MATRIX, 10.0)
+        afwijking = abs(zonder[0][1] - 23.0) if zonder else 99.0
+        self.assertGreater(afwijking, 0.05)
