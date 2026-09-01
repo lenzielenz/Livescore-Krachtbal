@@ -107,6 +107,16 @@ class TestWerpplaats(unittest.TestCase):
         self.assertEqual(landing.projecteer_vrijeworplijn(20.0, 10.0), 20.0)
         self.assertEqual(landing.projecteer_vrijeworplijn(8.0, 10.0), 8.0)
 
+    def test_vrijeworplijn_projectie_met_andere_maten(self):
+        # Niet-reglementair terrein: diepte 15, speelveld 25 → lengte 55, doellijnen op
+        # 15 en 40, vrijeworplijnen op 19 en 36. De band schuift mee met de maten.
+        # De pariteit met field.ts (dat in de app de afstand uit deze werpplaats
+        # berekent) wordt cross-language bewaakt in tests/unit/cv-naar-worp.unit.spec.ts.
+        self.assertEqual(landing.projecteer_vrijeworplijn(16.0, 15.0, 25.0), 19.0)
+        self.assertEqual(landing.projecteer_vrijeworplijn(38.0, 15.0, 25.0), 36.0)
+        self.assertEqual(landing.projecteer_vrijeworplijn(20.0, 15.0, 25.0), 20.0)
+        self.assertEqual(landing.projecteer_vrijeworplijn(14.0, 15.0, 25.0), 14.0)
+
 
 class TestDemoLanding(unittest.TestCase):
     def test_gematchte_detectie_krijgt_gelabelde_landing_met_ruis(self):

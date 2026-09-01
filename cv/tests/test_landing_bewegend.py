@@ -149,6 +149,10 @@ class TestWerpplaatsEnUitbal(unittest.TestCase):
         verrijkt, _ = landing.video_landing(self._args(banen, homografie=self.homografie), detecties)
         self.assertEqual(verrijkt[0]['zone'], {'in_doelgebied': False, 'x_m': 8.0, 'y_m': 22.0})
         self.assertEqual(verrijkt[0]['afstand_m'], 16.0)
+        # De werpplaats gaat mee in het event: dáármee (niet met afstand_m) berekent het
+        # platform de afstand zelf via field.ts. Hier (8, 6): in het doelgebied, waar
+        # §6.4 de plaats laat staan (de band 10–14 m zou wél naar 14 schuiven).
+        self.assertEqual(verrijkt[0]['werpplaats'], {'x_m': 8.0, 'y_m': 6.0})
 
     def test_landing_buiten_de_lijnen_wordt_uitbal(self):
         # Regressie (doorlichting, ~r100): de landing projecteert op (8, 48) — 2 m
@@ -168,6 +172,11 @@ class TestWerpplaatsEnUitbal(unittest.TestCase):
         self.assertEqual(verrijkt[0].get('score_delta', 0), 0)
         self.assertEqual(rapport['uitbal'], 1)
         self.assertEqual(rapport['met_landing'], 1)
+        # Een uitbal krijgt géén werpplaats en géén afstand: het reglement kent geen
+        # worpafstand voor een worp die buiten de lijnen eindigt — en het platform mag
+        # er dus ook nooit één uit dit event afleiden.
+        self.assertNotIn('werpplaats', verrijkt[0])
+        self.assertIsNone(verrijkt[0].get('afstand_m'))
 
     def test_vaste_camera_corrigeert_de_loslaathoogte_parallax(self):
         # Regressie (doorlichting, ~r361): camera op (7, −9) en 6 m hoog. Het
@@ -195,6 +204,9 @@ class TestWerpplaatsEnUitbal(unittest.TestCase):
         verrijkt, _ = landing.video_landing(self._args(banen, kalibratie=kalibratie), detecties)
         self.assertTrue(verrijkt[0]['zone']['in_doelgebied'])
         self.assertEqual(verrijkt[0]['afstand_m'], 32.0)
+        # De gecorrigeerde werpplaats (7, 6) gaat mee: het platform rekent er met field.ts
+        # zijn eigen — reglementaire — afstand uit, afstand_m is enkel de CLI-echo.
+        self.assertEqual(verrijkt[0]['werpplaats'], {'x_m': 7.0, 'y_m': 6.0})
 
 
 if __name__ == '__main__':

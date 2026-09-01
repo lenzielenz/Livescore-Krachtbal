@@ -37,7 +37,13 @@ De bal hangt daar op loslaathoogte, dus de grondvlak-homografie projecteert hem
 voorbij de werper: met het camerastandpunt uit de kalibratie rekenen we die
 parallax weg, en §6.4 (nooit werpen van tussen doellijn en vrijeworplijn)
 schuift de werpplaats terug tot de vrijeworplijn — zoals de engine dat doet.
-In demomodus blijft afstand_m leeg.
+Die (geprojecteerde, gecorrigeerde) werpplaats gaat als ``werpplaats`` mee in
+het event: in de app berekent het platform de afstand daar zélf uit met
+src/lib/field.ts (projectWerpplaats + distanceM, met de echte veldmaten van de
+wedstrijd) — één bron van waarheid. Het ``afstand_m`` hier blijft bestaan voor
+het CLI-rapport en de overlay (handig bij het los draaien van de keten), maar
+is enkel die benadering; in de app telt het niet mee. In demomodus blijven
+werpplaats en afstand_m leeg.
 """
 
 from __future__ import annotations
@@ -480,11 +486,11 @@ def video_landing(args: argparse.Namespace, detecties: list[dict]) -> tuple[list
                     zone, score = zone_en_score(x_m, y_m, det.get('worp_type'), diepte, breedte, speelveld)
                     det['zone'] = zone
                     det['score_delta'] = score
-                    # Afstand: eerste balpunt van het spoor als benadering van de werpplaats.
-                    # Dat pixel is op het wórpmoment gezien: projecteer het met de matrix
-                    # van dát moment — tussen worp en landing pant de camera doorgaans mee
-                    # met de bal, en onder de landingsmatrix wijst hetzelfde pixel meters
-                    # ernaast. Geen betrouwbare matrix op het worpmoment → geen afstand.
+                    # Werpplaats: eerste balpunt van het spoor als benadering. Dat pixel is
+                    # op het wórpmoment gezien: projecteer het met de matrix van dát moment
+                    # — tussen worp en landing pant de camera doorgaans mee met de bal, en
+                    # onder de landingsmatrix wijst hetzelfde pixel meters ernaast. Geen
+                    # betrouwbare matrix op het worpmoment → geen werpplaats en geen afstand.
                     worp_matrix = matrix if spoor is None else spoor.op(balspoor[0][0])
                     if worp_matrix is not None:
                         sx, sy = _projecteer(worp_matrix, balspoor[0][1], balspoor[0][2])
@@ -496,6 +502,11 @@ def video_landing(args: argparse.Namespace, detecties: list[dict]) -> tuple[list
                             # §6.4: de werpplaats ligt nooit tussen doellijn en
                             # vrijeworplijn — zelfde projectie als de engine.
                             sy = projecteer_vrijeworplijn(sy, diepte, speelveld)
+                            # De werpplaats gaat mee in het event: het platform berekent de
+                            # afstand daaruit zélf met field.ts (één bron van waarheid). Het
+                            # afstand_m hieronder is enkel de CLI-benadering voor rapport en
+                            # overlay; in de app wordt het genegeerd.
+                            det['werpplaats'] = {'x_m': round(sx, 2), 'y_m': round(sy, 2)}
                             det['afstand_m'] = round(((x_m - sx) ** 2 + (y_m - sy) ** 2) ** 0.5, 2)
                 gevonden += 1
         prov = dict(det.get('provenance') or {})
