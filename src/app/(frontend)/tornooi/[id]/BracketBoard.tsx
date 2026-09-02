@@ -8,6 +8,7 @@ import { PRONOSTIEK_OP_CATEGORIE } from '@/lib/pronostiek-schakelaar'
 import { TornooiPronostiek } from '../groep/[naam]/TornooiPronostiek'
 import type { LogoFit } from '@/lib/logo-fit'
 import type { TMatchState, TournamentState } from '@/lib/tournament-engine'
+import { UITLEG_PAD } from '@/lib/aantekenen-uitleg'
 import { fmtClock, useTicking, useTournamentStream } from '../useTournament'
 import { BracketZoom } from './BracketZoom'
 
@@ -296,6 +297,9 @@ export function BracketBoard({ id, initial, canManage = false, logos = {}, fits 
           <span className="brand">Krachtbal</span> Live · {state.name}
         </Link>
         <nav className="trn-topnav">
+          {/* Uitleg vóór de andere links: aan een tornooitafel zit vaak iemand die dit voor het
+              eerst doet, en die moet niet eerst door het schema hoeven te zoeken. */}
+          <Link href={UITLEG_PAD} className="trn-btn">📖 Hoe aantekenen?</Link>
           {/* Het kantinescherm is de tv-link van de organisator — supporters volgen hier. */}
           {canManage && <Link href={`/tornooi/${id}/kantine`} className="trn-btn">Kantinescherm</Link>}
           <Link href="/tornooi" className="trn-toplink">Alle bekers</Link>
