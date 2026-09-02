@@ -345,6 +345,8 @@ export default async function AnalyseDetailPage({ params }: { params: Promise<{ 
               <Kalibreren
                 matchId={matchId}
                 videoUrl={(matchDoc?.videoUrl as string | null) ?? null}
+                veldBreedte={state.match.veldBreedte ?? 14}
+                veldLengte={(state.match.veldSpeelveld ?? 26) + 2 * (state.match.goalAreaDepth ?? 10)}
                 initieel={
                   (matchDoc?.cvKalibratie ?? null) as React.ComponentProps<typeof Kalibreren>['initieel']
                 }

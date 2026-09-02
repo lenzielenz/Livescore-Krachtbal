@@ -2,6 +2,7 @@
 
 import { useMemo, useRef, useState } from 'react'
 
+import { Luchtfoto, type Anker } from './Luchtfoto'
 import { KalibratieDoek } from './KalibratieDoek'
 import { Kalibratiekaartje } from './Kalibratiekaartje'
 import {
@@ -24,7 +25,7 @@ import {
 //
 // Werkt enkel op een geüpload bestand: een YouTube-speler laat zijn beeld niet uitlezen.
 
-type Punt = { label: string; x: number; y: number }
+type Punt = { label: string; x: number; y: number; veldM?: [number, number] | null }
 /** Meters per pixel per derde van het veld: waar meet dit standpunt scherp, en waar ruw? */
 type Precisie = { thuis?: number; midden?: number; uit?: number; slechtste?: number }
 /** Wat de server uit de punten terugrekende over waar de camera stond. */
@@ -47,9 +48,14 @@ export function Kalibreren({
   matchId,
   videoUrl,
   initieel,
+  veldBreedte = 14,
+  veldLengte = 46,
 }: {
   matchId: number
   videoUrl: string | null
+  /** Echte terreinmaten — de luchtfoto rekent ermee om (hoek-op-hoek is de rechthoek). */
+  veldBreedte?: number
+  veldLengte?: number
   initieel: {
     punten?: Punt[]
     beelden?: Beeld[]
@@ -71,6 +77,8 @@ export function Kalibreren({
   const [standpunt, setStandpunt] = useState<Standpunt | null>(initieel?.standpunt ?? null)
   const [actief, setActief] = useState<number | null>(null)
   const [gekozenLabel, setGekozenLabel] = useState<string | null>(null)
+  // Vaste punten buiten het veldmodel, met hun coördinaten van een luchtfoto (zie Luchtfoto.tsx).
+  const [ankers, setAnkers] = useState<Anker[]>([])
   const [busy, setBusy] = useState(false)
   const [melding, setMelding] = useState<string | null>(null)
   const [fout, setFout] = useState<string | null>(null)
@@ -166,7 +174,12 @@ export function Kalibreren({
               tijd: b.tijd,
               beeldBreedte: b.beeldBreedte,
               beeldHoogte: b.beeldHoogte,
-              punten: b.punten,
+              // Een punt dat de naam van een ankerpunt draagt, krijgt zijn veldcoördinaten mee:
+              // de server kent die naam niet uit het veldmodel en heeft ze nodig om te fitten.
+              punten: b.punten.map((p) => {
+                const a = ankers.find((k) => k.naam === p.label)
+                return a ? { ...p, veldM: [a.x_m, a.y_m] as [number, number] } : p
+              }),
             })),
         }),
       })
@@ -267,6 +280,13 @@ export function Kalibreren({
               </button>
             </div>
 
+            {/* Optioneel, en enkel nuttig als de veldlijnen tekortschieten: vaste punten búiten
+                het veld vastleggen met een luchtfoto. */}
+            <details className="kal-luchtfoto">
+              <summary>🛰️ Ankerpunten buiten het veld (luchtfoto)</summary>
+              <Luchtfoto breedte={veldBreedte} lengte={veldLengte} ankers={ankers} onAnkers={setAnkers} />
+            </details>
+
             {beelden.length > 0 && (
               <div className="kal-beelden">
                 {beelden.map((b, i) => (
@@ -287,6 +307,25 @@ export function Kalibreren({
                 een beeld waar je de overkant amper ziet, is dat precies hoe links en rechts
                 omgewisseld raken. */}
             <Kalibratiekaartje gezet={gezetOp} volgende={volgende} onKies={setGekozenLabel} />
+
+            {/* De ankerpunten van de luchtfoto staan naast de kruispunten: je kiest er één en
+                tikt hem daarna op het videobeeld aan, precies zoals een lijnkruising. */}
+            {ankers.length > 0 && (
+              <div className="kal-ankers">
+                <span className="kal-ankers-lbl">🛰️ Ankerpunten</span>
+                {ankers.map((a) => (
+                  <button
+                    key={a.naam}
+                    type="button"
+                    className={`kal-anker${volgende === a.naam ? ' aan' : ''}${gezetOp.has(a.naam) ? ' gezet' : ''}`}
+                    onClick={() => setGekozenLabel(a.naam)}
+                  >
+                    {a.naam}
+                    <em>{a.x_m.toFixed(1)} · {a.y_m.toFixed(1)} m</em>
+                  </button>
+                ))}
+              </div>
+            )}
 
             {huidig && (
               <>

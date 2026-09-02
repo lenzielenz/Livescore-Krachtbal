@@ -1,5 +1,6 @@
 import { canAnalyse } from '@/lib/access'
 import { competitionWhere } from '@/lib/analyse-access'
+import { dichtstBijEerst } from '@/lib/analyse-kalender'
 import { authUser } from '@/lib/api-auth'
 import { formatDateTimeBE } from '@/lib/datetime'
 import { getPayloadClient } from '@/lib/payload-client'
@@ -11,7 +12,11 @@ export const dynamic = 'force-dynamic'
 // De echte competitiekalender voor de analyse-kiezer: recent gespeelde en komende wedstrijden
 // van één reeks. Alleen-lezen — wie een wedstrijd kiest, krijgt een eigen analyse-kopie
 // (zie /api/analyse/match met fromMatch); het live-platform wordt nooit aangeraakt.
-const DAGEN_TERUG = 14
+// Hoe ver terug de lijst kijkt. Ruim, en met opzet: een analyse maak je ná de wedstrijd, vaak
+// pas weken later als de video eindelijk doorgestuurd is. Met veertien dagen stond de wedstrijd
+// die je wou analyseren er simpelweg niet meer bij, en dan lijkt "toevoegen uit de agenda"
+// kapot terwijl er enkel niets te kiezen viel. Een half jaar dekt een volledig seizoen.
+const DAGEN_TERUG = 180
 const DAGEN_VOORUIT = 90
 const MAX = 60
 
@@ -36,16 +41,19 @@ export async function GET(req: Request) {
       { date: { greater_than_equal: van } },
       { date: { less_than: tot } },
     ]
+    // Ruim ophalen en pas daarna afkappen: met een venster van een half jaar zou een harde
+    // limiet op een chronologische lijst juist de recente wedstrijden wegsnijden — en dat zijn
+    // net degene die iemand komt zoeken.
     const res = await payload.find({
       collection: 'matches',
       where: { and: clauses },
       sort: 'date',
       depth: 1,
-      limit: MAX,
+      limit: 400,
     })
 
     const naam = (v: unknown) => (v && typeof v === 'object' ? String((v as { name?: unknown }).name ?? '—') : '—')
-    const matches = res.docs
+    const alle = res.docs
       .filter((m) => !(m as { isDemo?: boolean }).isDemo)
       .map((m) => ({
         id: m.id,
@@ -55,6 +63,8 @@ export async function GET(req: Request) {
         away: naam(m.awayTeam),
         gespeeld: m.status === 'finished',
       }))
+    // Dichtst bij vandaag eerst: dát is de wedstrijd die je komt zoeken (zie lib/analyse-kalender.ts).
+    const matches = dichtstBijEerst(alle).slice(0, MAX)
     return Response.json({ matches })
   } catch (err) {
     return Response.json({ error: (err as Error).message }, { status: 500 })

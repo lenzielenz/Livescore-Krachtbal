@@ -2940,3 +2940,26 @@ button.trn-toplink {
   padding-top: 6px;
   border-top: 1px dashed var(--line);
 }
+
+/* ── Alle rangschikkingen van een tornooidag onder elkaar ─────────────────────────────────────
+   Elke categorie een eigen blok, met de reeksnaam als kop die naar die categorie linkt. */
+.tg-stand {
+  margin-bottom: 22px;
+}
+.tg-stand .trn-col-title {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.tg-stand-link {
+  color: var(--txt);
+}
+.tg-stand-link:hover {
+  color: var(--accent);
+}
+.tg-stand-kamp {
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: var(--accent);
+}

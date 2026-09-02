@@ -1,5 +1,6 @@
 import type { Payload } from 'payload'
 
+import { loadAds } from '@/lib/ads'
 import { authUser } from '@/lib/api-auth'
 import { formatTimeBE } from '@/lib/datetime'
 import { buildMatchState } from '@/lib/match-engine'
@@ -35,6 +36,8 @@ export async function GET() {
           id,
           reeks: reeksLabel(m.reeks),
           time: formatTimeBE(m.date as string),
+          // Het aftellen naar de volgende wedstrijd heeft de échte datum nodig, niet "20:00".
+          date: typeof m.date === 'string' ? m.date : null,
           status: s.match.status,
           home: { name: s.teams.home.name, logoUrl: s.teams.home.logoUrl, logoFit: s.teams.home.logoFit, colors: s.teams.home.colors },
           away: { name: s.teams.away.name, logoUrl: s.teams.away.logoUrl, logoFit: s.teams.away.logoFit, colors: s.teams.away.colors },
@@ -44,7 +47,10 @@ export async function GET() {
         // Verwijderde/kapotte wedstrijd overslaan.
       }
     }
-    return Response.json({ ids, matches })
+    // De sponsors van het kantinescherm komen mee in hetzelfde antwoord: het scherm pollt toch
+    // al, en zo verschijnt een nieuwe reclame vanzelf zonder de tv aan te raken.
+    const ads = await loadAds(payload, 'kantine')
+    return Response.json({ ids, matches, ads })
   } catch (err) {
     return Response.json({ error: (err as Error).message }, { status: 500 })
   }

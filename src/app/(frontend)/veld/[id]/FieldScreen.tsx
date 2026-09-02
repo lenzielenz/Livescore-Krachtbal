@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { ClubColorBlast } from '@/components/ClubColorBlast'
 import { TeamLogo } from '@/components/TeamLogo'
 import { DEFAULT_AWAY_COLOR, DEFAULT_HOME_COLOR, inkOn, readableOnDark } from '@/lib/club-colors'
+import { DEFAULT_UITSNEDE } from '@/lib/reclame'
 import type { MatchState, TimelineItem } from '@/lib/match-engine'
 import { buildMomentum, type MomentumPoint } from '@/lib/match-momentum'
 import { goalPointsFromLabel, goalScorerFromLabel, useLiveStream } from '@/lib/use-live-stream'
@@ -36,12 +37,19 @@ const demoTile = (label: string, bg: string): string =>
   encodeURIComponent(
     `<svg xmlns='http://www.w3.org/2000/svg' width='240' height='84'><rect width='100%' height='100%' rx='10' fill='${bg}'/><text x='50%' y='50%' font-family='Arial,sans-serif' font-size='22' font-weight='800' fill='#fff' text-anchor='middle' dominant-baseline='central'>${label}</text></svg>`,
   )
+const demoAd = (id: number, label: string, bg: string): Ad => ({
+  id,
+  url: demoTile(label, bg),
+  naam: 'Demo',
+  uitsnede: DEFAULT_UITSNEDE,
+  achtergrond: 'donker',
+})
 const DEMO_ADS: Ad[] = [
-  { id: -1, url: demoTile('JOUW LOGO HIER', '#1d4ed8'), naam: 'Demo' },
-  { id: -2, url: demoTile('SPONSOR', '#db2777'), naam: 'Demo' },
-  { id: -3, url: demoTile('CAFÉ DE KANTINE', '#059669'), naam: 'Demo' },
-  { id: -4, url: demoTile('BOUWWERKEN BV', '#d97706'), naam: 'Demo' },
-  { id: -5, url: demoTile('JOUW LOGO HIER', '#7c3aed'), naam: 'Demo' },
+  demoAd(-1, 'JOUW LOGO HIER', '#1d4ed8'),
+  demoAd(-2, 'SPONSOR', '#db2777'),
+  demoAd(-3, 'CAFÉ DE KANTINE', '#059669'),
+  demoAd(-4, 'BOUWWERKEN BV', '#d97706'),
+  demoAd(-5, 'JOUW LOGO HIER', '#7c3aed'),
 ]
 
 // Voorbeeld-foto's voor de pauze-slideshow als er nog geen echte wedstrijdfoto's zijn.
