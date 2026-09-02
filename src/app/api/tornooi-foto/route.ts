@@ -1,5 +1,7 @@
 import { authUser } from '@/lib/api-auth'
+import { opdrachtVoor, zaadVoor } from '@/lib/foto-opdrachten'
 import { getPayloadClient } from '@/lib/payload-client'
+import { volbrachtVoor } from '@/lib/foto-voortgang'
 
 const MAX_FOTOS = 10
 const MAX_BYTES = 15 * 1024 * 1024 // 15 MB per foto (gsm-foto's zijn groot)
@@ -7,6 +9,11 @@ const MAX_BYTES = 15 * 1024 * 1024 // 15 MB per foto (gsm-foto's zijn groot)
 // Supporters sturen foto's van een tornooidag in. Bewust géén publieke galerij: de foto is na
 // het insturen "weg" voor de inzender — alles verzamelt federatie-only in de tornooi-fotos-
 // collectie. Inloggen is vereist (spam-rem + je weet van wie de foto komt).
+//
+// Welke opdracht de foto beantwoordt, rekent de SERVER uit — niet de browser. Zolang het maar
+// een tekstje naast de foto was, kon dat de client zijn; nu elke deelnemer zijn eigen geschudde
+// reeks van vijftig heeft, is het een regel, en een regel die de inzender zelf mag invullen is
+// geen regel. Meegestuurde opdrachtteksten worden genegeerd.
 export async function POST(req: Request) {
   try {
     const payload = await getPayloadClient()
@@ -17,8 +24,6 @@ export async function POST(req: Request) {
     if (!form) return Response.json({ error: 'Ongeldige upload.' }, { status: 400 })
     const groep = String(form.get('groep') ?? '').trim()
     if (!groep) return Response.json({ error: 'Tornooidag ontbreekt.' }, { status: 400 })
-    // De actieve foto-opdracht (optioneel) — puur informatief voor de organisatie.
-    const opdracht = String(form.get('opdracht') ?? '').trim().slice(0, 120)
 
     // Enkel voor échte tornooidagen — geen vrije opslagbak.
     const bestaat = await payload.find({ collection: 'tournaments', where: { groep: { equals: groep } }, limit: 1, depth: 0 })
@@ -28,6 +33,13 @@ export async function POST(req: Request) {
     if (files.length === 0) return Response.json({ error: 'Geen foto’s gevonden.' }, { status: 400 })
     if (files.length > MAX_FOTOS) return Response.json({ error: `Maximaal ${MAX_FOTOS} foto’s per keer.` }, { status: 400 })
 
+    // Welke opdracht is deze inzending? Die van de deelnemer op dit moment, uit zijn eigen
+    // geschudde reeks. Meerdere foto's in één keer horen bij DEZELFDE opdracht — je hebt er één
+    // volbracht, niet drie — dus ze krijgen allemaal hetzelfde nummer.
+    const deelnemerId = (user as { id: number }).id
+    const volbracht = await volbrachtVoor(payload, groep, deelnemerId)
+    const opdracht = opdrachtVoor(zaadVoor(deelnemerId, groep), volbracht)
+
     let aantal = 0
     for (const f of files) {
       if (!f.type.startsWith('image/')) return Response.json({ error: `"${f.name}" is geen afbeelding.` }, { status: 400 })
@@ -36,8 +48,9 @@ export async function POST(req: Request) {
         collection: 'tornooi-fotos',
         data: {
           groep,
-          ...(opdracht ? { opdracht } : {}),
-          uploader: (user as { id: number }).id,
+          opdracht: opdracht.tekst,
+          opdrachtNr: volbracht,
+          uploader: deelnemerId,
           uploaderName: String((user as { name?: string; email?: string }).name ?? (user as { email?: string }).email ?? ''),
         },
         file: {
@@ -50,7 +63,10 @@ export async function POST(req: Request) {
       })
       aantal += 1
     }
-    return Response.json({ ok: true, aantal })
+    // De volgende opdracht meteen meegeven: dan schuift de kaart aan zonder de pagina te
+    // herladen, en zonder dat de browser zelf hoeft te raden wat er nu aan de beurt is.
+    const volgende = opdrachtVoor(zaadVoor(deelnemerId, groep), volbracht + 1)
+    return Response.json({ ok: true, aantal, opdracht: opdracht.tekst, volgende })
   } catch (err) {
     return Response.json({ error: (err as Error).message }, { status: 400 })
   }

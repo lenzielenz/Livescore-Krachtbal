@@ -2665,6 +2665,8 @@ button.trn-toplink {
 }
 .gk-fs-kaart {
   display: block;
+  /* Anker voor het bijschrift in de witte onderrand. */
+  position: relative;
   /* Niet laten krimpen: in een flexrij zou de polaroid anders tot een streepje worden geperst. */
   flex: 0 0 auto;
   /* De hoek volgt de index: de eerste kaart helt naar links, de laatste naar rechts, zodat ze
@@ -2689,6 +2691,37 @@ button.trn-toplink {
   background: #fff;
   box-shadow: 0 30px 80px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.25);
 }
+/* De opdracht in de witte onderrand van de polaroid — daar waar op een echte polaroid het
+   bijschrift met balpen staat. De kantine ziet zo niet alleen dát er een foto is, maar ook wat
+   er gevraagd werd ("📸 Foto met de tegenstander"), en dat is precies wat de grap doet werken.
+   De rand is 4.6vmin hoog, dus dit blijft één regel; een lange opdracht loopt netjes af in
+   puntjes in plaats van over de foto heen. */
+.gk-fs-opdracht {
+  position: absolute;
+  left: 1.4vmin;
+  right: 1.4vmin;
+  bottom: 0;
+  height: 4.6vmin;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0.8vmin;
+  color: #14181f;
+  font-family: var(--font-display), system-ui, sans-serif;
+  font-size: 2vmin;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Meerdere foto's tegelijk zijn kleiner; het bijschrift zakt mee zodat het niet uit de rand
+   puilt. */
+.gk-fs-stapel.n3 .gk-fs-opdracht { font-size: 1.6vmin; }
+.gk-fs-stapel.n4 .gk-fs-opdracht,
+.gk-fs-stapel.n5 .gk-fs-opdracht,
+.gk-fs-stapel.n6 .gk-fs-opdracht { font-size: 1.3vmin; }
+
 /* Vanaf twee foto's krimpen ze en schuiven ze over elkaar, zodat ze samen in beeld passen. */
 .gk-fs-stapel.n2 .gk-fs-kaart img { max-width: min(42vw, 520px); max-height: 52vh; }
 .gk-fs-stapel.n2 .gk-fs-kaart + .gk-fs-kaart { margin-left: -4vmin; }

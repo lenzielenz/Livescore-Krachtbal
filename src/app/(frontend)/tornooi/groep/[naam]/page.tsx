@@ -9,6 +9,8 @@ import { getPayloadClient } from '@/lib/payload-client'
 import { gestarteTornooien, tornooiBadge } from '@/lib/tornooi-status'
 import { tornooiPronostiekStand } from '@/lib/tornooi-pronostiek'
 import { VerwijderTornooi } from '../../VerwijderTornooi'
+import { huidigeOpdracht } from '@/lib/foto-voortgang'
+
 import { FotoUpload } from './FotoUpload'
 import '../../tornooi.css'
 
@@ -44,6 +46,14 @@ export default async function TornooiGroepPage({ params }: { params: Promise<{ n
   // we enkel wie leidt; de volledige rangschikking staat op /pronostiek.
   const stand = await tornooiPronostiekStand(payload, naam).catch(() => [])
   const standTop = stand.length > 0 ? `${stand[0].name} leidt` : ''
+
+  // De foto-opdracht die déze deelnemer nu aan de beurt heeft. Server-side, want elke deelnemer
+  // heeft zijn eigen geschudde reeks en zijn voortgang volgt uit zijn ingestuurde foto's — niet
+  // uit iets in zijn browser. Wie niet ingelogd is krijgt geen opdracht: meedoen kan enkel
+  // ingelogd.
+  const opdracht = user
+    ? await huidigeOpdracht(payload, naam, (user as { id: number }).id).catch(() => null)
+    : null
 
   // Ingestuurde supportersfoto's: de federatie ziet meteen hoeveel er al binnen zijn.
   const fotoRes = canManage
@@ -97,7 +107,7 @@ export default async function TornooiGroepPage({ params }: { params: Promise<{ n
           )}
         </div>
 
-        <FotoUpload groep={naam} ingelogd={Boolean(user)} />
+        <FotoUpload groep={naam} opdracht={opdracht} />
 
         <main className="trn-hub">
           <GroepSectie titel="Categorieën" docs={live} canManage={canManage} gestart={gestart} />

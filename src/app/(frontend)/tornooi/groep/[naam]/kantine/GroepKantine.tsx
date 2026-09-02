@@ -206,19 +206,26 @@ const fotoTekst = (n: number) =>
     : { titel: '🌪️ FOTOSTORM!!!', sub: `${n} foto’s in één klap — de kantine ontploft!` }
 
 // ── Fotoshow: een supporter stuurde een foto in ────────────────────────────────────────────────
+/** Een foto zoals het scherm ze toont: het beeld zelf plus de opdracht die ze beantwoordt. */
+type KantineFoto = { id: number; opdracht: string | null }
+
 // "📸 OH OHHH… hier komt 'm!" met een 3-2-1-aftelklok waar de hele kantine luidop mee aftelt,
 // dan popt de foto als polaroid in beeld en lost weer op. De foto laadt alvast tijdens het
 // aftellen; lukt het laden niet, dan slaan we de onthulling stilletjes over.
-function FotoShow({ ids, naam, klaar }: { ids: number[]; naam: string; klaar: () => void }) {
+function FotoShow({ fotos, naam, klaar }: { fotos: KantineFoto[]; naam: string; klaar: () => void }) {
   const [tel, setTel] = useState(FOTO_TEL_VANAF)
   const urls = useMemo(
-    () => ids.map((id) => ({ id, url: `/api/tornooi-groep/foto/${id}?naam=${encodeURIComponent(naam)}` })),
-    [ids, naam],
+    () =>
+      fotos.map((f) => ({
+        ...f,
+        url: `/api/tornooi-groep/foto/${f.id}?naam=${encodeURIComponent(naam)}`,
+      })),
+    [fotos, naam],
   )
   // Welke foto's zijn effectief bruikbaar? Eentje die niet laadt slaan we stilletjes over — de
   // rest van de groep hoort daar niet onder te lijden.
   const [ok, setOk] = useState<number[] | null>(null)
-  const sleutel = ids.join(',')
+  const sleutel = fotos.map((f) => f.id).join(',')
 
   // Voorladen tijdens het aftellen — de onthulling mag niet haperen.
   useEffect(() => {
@@ -253,7 +260,7 @@ function FotoShow({ ids, naam, klaar }: { ids: number[]; naam: string; klaar: ()
   // Aftellen voorbij: tonen (of stil overslaan als er niets laadde) en daarna opruimen. Meer
   // foto's blijven iets langer staan — je wil ze allemaal kunnen bekijken — met een plafond,
   // want het scherm moet ook weer aan de wedstrijd toekomen.
-  const toonbaar = ok ?? ids
+  const toonbaar = ok ?? fotos.map((f) => f.id)
   const toonMs = Math.min(FOTO_TOON_MAX_MS, FOTO_TOON_MS + Math.max(0, toonbaar.length - 1) * 900)
   useEffect(() => {
     if (tel > 0) return
@@ -290,10 +297,14 @@ function FotoShow({ ids, naam, klaar }: { ids: number[]; naam: string; klaar: ()
           <div className={`gk-fs-stapel n${Math.min(n, 6)}`} style={{ '--n': n } as CSSProperties}>
             {urls
               .filter(({ id }) => (ok == null ? true : ok.includes(id)))
-              .map(({ id, url }, i) => (
+              .map(({ id, url, opdracht }, i) => (
                 <span key={id} className="gk-fs-kaart" style={{ '--i': i } as CSSProperties}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={url} alt="Supportersfoto van de dag" />
+                  <img src={url} alt={opdracht || 'Supportersfoto van de dag'} />
+                  {/* De opdracht in de witte onderrand van de polaroid — precies waar op een
+                      echte polaroid het bijschrift staat. Zo weet de kantine niet alleen dát er
+                      een foto is, maar ook wat er gevraagd was: "📸 Foto met de tegenstander". */}
+                  {opdracht && <span className="gk-fs-opdracht">{opdracht}</span>}
                 </span>
               ))}
           </div>
@@ -400,7 +411,7 @@ export function GroepKantine({ naam, initial }: { naam: string; initial: GroepDa
   const [viering, setViering] = useState<Viering | null>(null)
   // Fotoshow-wachtrij. Elk item is een gróépje: foto's die in dezelfde ronde binnenkwamen, zijn
   // samen ingestuurd en verdienen één gezamenlijke onthulling — hoe meer, hoe specialer.
-  const [fotoRij, setFotoRij] = useState<number[][]>([])
+  const [fotoRij, setFotoRij] = useState<KantineFoto[][]>([])
   const fotoGezien = useRef<Set<number>>(new Set())
   // Vorige standen per wedstrijd — het verschil tussen twee polls IS het doelpunt.
   const vorige = useRef<Map<number, { home: number; away: number }>>(new Map())
@@ -459,11 +470,11 @@ export function GroepKantine({ naam, initial }: { naam: string; initial: GroepDa
         // Nieuwe supportersfoto('s)? Alles wat in déze ronde nieuw is, hoort bij elkaar en komt
         // als één groep in de rij (oudste eerst) — zo krijgen gelijktijdige inzendingen samen
         // hun moment in plaats van drie losse shows achter elkaar.
-        const nieuw: number[] = []
+        const nieuw: KantineFoto[] = []
         for (const f of [...(d.fotos ?? [])].reverse()) {
           if (fotoGezien.current.has(f.id)) continue
           fotoGezien.current.add(f.id)
-          nieuw.push(f.id)
+          nieuw.push({ id: f.id, opdracht: f.opdracht ?? null })
         }
         if (nieuw.length > 0) setFotoRij((rij) => [...rij, nieuw])
         setData(d)
@@ -525,8 +536,8 @@ export function GroepKantine({ naam, initial }: { naam: string; initial: GroepDa
       {viering && <VieringOverlay key={viering.key} v={viering} ms={vieringDuur(viering)} />}
       {fotoRij.length > 0 && (
         <FotoShow
-          key={fotoRij[0].join(',')}
-          ids={fotoRij[0]}
+          key={fotoRij[0].map((f) => f.id).join(',')}
+          fotos={fotoRij[0]}
           naam={naam}
           klaar={() => setFotoRij((rij) => rij.slice(1))}
         />

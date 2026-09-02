@@ -36,10 +36,22 @@ export const TornooiFotos: CollectionConfig = {
     { name: 'uploaderName', label: 'Naam inzender', type: 'text' },
     {
       // De foto-opdracht die actief was bij het insturen ("📸 Foto met het scorebord", …) —
-      // zo ziet de organisatie meteen welke opdracht de foto beantwoordt.
+      // zo ziet de organisatie meteen welke opdracht de foto beantwoordt, en het kantinescherm
+      // zet ze onder de foto. De server berekent ze zelf; de browser mag ze niet meesturen.
       name: 'opdracht',
       label: 'Opdracht',
       type: 'text',
+    },
+    {
+      // Het hoeveelste van de vijftig dit was voor déze inzender (0-based). Hierop staat of valt
+      // de voortgang: de volgende opdracht is die van het hoogste nummer + 1. Dat is een feit
+      // over de foto, geen afgeleide staat — en het is meteen de reden dat een deelnemer op zijn
+      // tablet verderdoet waar zijn gsm stopte, zonder dat er iets in de browser bewaard wordt.
+      name: 'opdrachtNr',
+      label: 'Opdrachtnummer',
+      type: 'number',
+      index: true,
+      admin: { description: 'Het hoeveelste van de vijftig, voor deze inzender op deze dag.' },
     },
   ],
   upload: {
