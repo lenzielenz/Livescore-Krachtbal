@@ -36,6 +36,32 @@ export default function manifest(): MetadataRoute.Manifest {
       { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
       { src: '/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
     ],
+    // Snelkoppelingen: lang drukken op het app-icoon springt meteen naar het scherm dat je op een
+    // wedstrijddag nodig hebt, zonder eerst door de app te navigeren. Android en desktop tonen
+    // deze lijst; iOS negeert ze (daar kost het niets).
+    shortcuts: [
+      {
+        name: 'Live-scores',
+        short_name: 'Live',
+        description: 'De wedstrijden van vandaag, live.',
+        url: '/live',
+        icons: [{ src: '/icon-192.png', sizes: '192x192', type: 'image/png' }],
+      },
+      {
+        name: 'Rangschikking',
+        short_name: 'Stand',
+        description: 'De stand in alle reeksen.',
+        url: '/rangschikking',
+        icons: [{ src: '/icon-192.png', sizes: '192x192', type: 'image/png' }],
+      },
+      {
+        name: 'Pronostiek',
+        short_name: 'Pronostiek',
+        description: 'Voorspel de uitslagen van de komende speeldag.',
+        url: '/pronostiek',
+        icons: [{ src: '/icon-192.png', sizes: '192x192', type: 'image/png' }],
+      },
+    ],
     ...(pkg
       ? {
           prefer_related_applications: false,

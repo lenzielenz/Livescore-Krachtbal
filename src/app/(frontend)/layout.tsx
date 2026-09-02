@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import { Inter, Sora } from 'next/font/google'
 import React from 'react'
 
+import { Installeren } from '@/components/Installeren'
 import { ServiceWorker } from '@/components/ServiceWorker'
 import { SessieVerlengen } from '@/components/SessieVerlengen'
 import { Toaster } from '@/components/Toaster'
@@ -45,6 +46,7 @@ export default function RootLayout(props: { children: React.ReactNode }) {
         <Toaster />
         <ServiceWorker />
         <SessieVerlengen />
+        <Installeren />
       </body>
     </html>
   )

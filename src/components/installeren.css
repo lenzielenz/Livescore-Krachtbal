@@ -1,0 +1,124 @@
+/* De installatiebalk. Onderaan vastgezet, want daar zit de duim, en bewust laag van toon: het is
+   een aanbod, geen alarm. Wie ze wegklikt is er een maand van af. */
+.kb-install {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  /* Boven de systeembalk van een iPhone; op toestellen zonder inkeping is env() gewoon 0. */
+  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-card, 14px);
+  background: var(--panel-grad, var(--panel));
+  box-shadow: var(--card-shadow);
+  /* Een lange uitleg mag de balk niet over het halve scherm laten groeien. */
+  max-width: 560px;
+  margin: 0 auto;
+  animation: kb-install-op 0.4s var(--ease-out, ease) both;
+}
+@keyframes kb-install-op {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kb-install {
+    animation: none;
+  }
+}
+
+/* Op een tv-scherm (kantine, cast) heeft installeren geen enkele zin: niemand tikt daar iets aan,
+   en de balk zou een half bord bedekken. `SchermModus` zet de klasse op de <body>. */
+body.kb-scherm .kb-install {
+  display: none;
+}
+
+.kb-install-icoon {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.kb-install-tekst {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  /* Zonder dit duwt een lange regel de knoppen uit de balk: flex-items mogen standaard niet
+     kleiner worden dan hun inhoud. */
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.kb-install-tekst strong {
+  font-family: var(--font-display), system-ui, sans-serif;
+  font-size: 0.95rem;
+}
+.kb-install-tekst > span {
+  font-size: 0.78rem;
+  color: var(--dim);
+  line-height: 1.35;
+}
+
+.kb-install-stappen {
+  margin: 8px 0 0;
+  padding-left: 20px;
+  font-size: 0.78rem;
+  color: var(--dim-strong);
+  line-height: 1.5;
+}
+
+.kb-install-knop {
+  flex: 0 0 auto;
+  padding: 9px 16px;
+  border: 0;
+  border-radius: var(--r-pill, 999px);
+  background: var(--grad-accent, var(--accent));
+  color: #06140d;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 800;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.kb-install-knop:hover {
+  filter: brightness(1.08);
+}
+
+.kb-install-weg {
+  flex: 0 0 auto;
+  /* Ruim genoeg om te raken met een duim, zonder visueel een tweede hoofdknop te worden. */
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: var(--r-pill, 999px);
+  background: transparent;
+  color: var(--dim);
+  font: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+.kb-install-weg:hover {
+  background: color-mix(in srgb, var(--txt) 10%, transparent);
+  color: var(--txt);
+}
+
+/* Smalle gsm: de tekst krijgt de volle breedte en de knoppen schuiven eronder, anders blijft er
+   van de uitleg één woord per regel over. */
+@media (max-width: 420px) {
+  .kb-install {
+    flex-wrap: wrap;
+  }
+  /* Icoon + tekst vullen samen de eerste regel — de basis is de balkbreedte min het icoon en de
+     tussenruimte — waardoor de twee knoppen sámen naar de tweede regel zakken. Zonder die
+     berekening blijft het icoon eenzaam op een eigen regel achter. */
+  .kb-install-tekst {
+    flex: 1 1 calc(100% - 44px);
+  }
+  .kb-install-knop {
+    flex: 1 1 auto;
+    text-align: center;
+  }
+}
