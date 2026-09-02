@@ -14,6 +14,11 @@ Twee modi:
    s = dit kruispunt overslaan, u = laatste klik ongedaan maken,
    ENTER/q = klaar, ESC = afbreken zonder opslaan.
 
+2b. Vrije ankerpunten (--anker "px,py=x_m,y_m[:naam]"): vaste punten BUITEN het veldmodel,
+   met hun veldcoördinaten afgelezen van een luchtfoto. Bedoeld voor een terrein dat geen nette
+   rechthoek is, voor lijnen die half onbruikbaar zijn, en om de kalibratie vast te houden waar
+   de witte lijnen tekortschieten. Combineerbaar met --punt.
+
 2. Headless (herhaalbare --punt argumenten, formaat "px,py=LABEL"):
        python3 cv/calibrate.py --diepte 10 --uit kalibratie.json \
            --punt "812,1013=doellijn_thuis_links" \
@@ -83,6 +88,52 @@ def parse_punt_argument(tekst: str, labels: dict[str, veld.Kruispunt]) -> dict:
         _fout(f'--punt "{tekst}": pixelcoördinaat is geen getal')
     k = labels[label]
     return {'label': k.label, 'beeld_px': [px, py], 'veld_m': [k.x_m, k.y_m]}
+
+
+def parse_anker_argument(tekst: str, nummer: int) -> dict:
+    """Parse één ``--anker`` argument: ``"px,py=x_m,y_m[:naam]"`` → puntrecord.
+
+    Een ANKER is een vast punt dat níét op het veldmodel staat: de hoek van de omheining, een
+    verlichtingspaal, de hoek van de kantine. Je leest zijn veldcoördinaten af op een luchtfoto
+    (voor Vlaanderen: de open orthofoto's van Geopunt) en tikt ze hier in.
+
+    Waarom dat de moeite is. De kalibratie hangt aan de witte lijnen, en die zijn niet altijd de
+    waarheid: een terrein dat geen nette rechthoek is, lijnen die half onder spelers of sneeuw
+    liggen, of een camera die zo pant dat de lijnen uit beeld gaan. Een ankerpunt buiten het veld
+    blijft dan wél staan, en houdt de homografie op zijn plaats.
+
+    Het record heeft dezelfde vorm als dat van een lijnkruising, zodat alles erna — de fit, het
+    reprojectierapport, het lensmodel, het camerastandpunt — er niets van hoeft te weten.
+    """
+    if '=' not in tekst:
+        _fout(f'--anker "{tekst}" mist "=x_m,y_m" (verwacht: "px,py=x_m,y_m[:naam]")')
+    beeld_deel, veld_deel = tekst.split('=', 1)
+    naam = None
+    if ':' in veld_deel:
+        veld_deel, naam = veld_deel.split(':', 1)
+        naam = naam.strip() or None
+
+    def _paar(stuk: str, wat: str) -> tuple[float, float]:
+        delen = stuk.split(',')
+        if len(delen) != 2:
+            _fout(f'--anker "{tekst}": {wat} moet "a,b" zijn')
+        try:
+            return float(delen[0]), float(delen[1])
+        except ValueError:
+            _fout(f'--anker "{tekst}": {wat} is geen getal')
+        raise AssertionError  # _fout stopt het programma; enkel voor de typechecker
+
+    px, py = _paar(beeld_deel, 'pixelcoördinaat')
+    x_m, y_m = _paar(veld_deel, 'veldcoördinaat')
+    return {
+        'label': naam or f'anker-{nummer}',
+        'beeld_px': [px, py],
+        'veld_m': [x_m, y_m],
+        # Zo blijft in het bestand zichtbaar dat dit géén lijnkruising uit het veldmodel is maar
+        # een punt dat iemand zelf heeft aangewezen — dat scheelt bij het nakijken van een
+        # kalibratie die er vreemd uitziet.
+        'anker': True,
+    }
 
 
 def verzamel_interactief(
@@ -828,6 +879,12 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument('--beeldhoogte', type=float, default=None,
                         help='hoogte van het videobeeld in pixels')
     parser.add_argument(
+        '--anker', action='append', default=[], metavar='"px,py=x_m,y_m[:naam]"',
+        help='vast punt buiten het veldmodel (hoek van de omheining, een paal, de kantine) met '
+             'zijn veldcoördinaten van een luchtfoto — houdt de kalibratie op haar plaats waar '
+             'de witte lijnen tekortschieten; herhaalbaar, combineerbaar met --punt',
+    )
+    parser.add_argument(
         '--draai-180', type=Path, default=None, metavar='KALIBRATIE.JSON', dest='draai_180',
         help='draai een bestaande kalibratie 180° in het veldvlak (thuis↔uit, links↔rechts) — '
              'voor wanneer de verkeerde achterlijn als thuis gekozen werd; schrijft naar --uit',
@@ -836,8 +893,8 @@ def main(argv: list[str] | None = None) -> None:
 
     # 180°-draai van een bestaand bestand: eigen modus, geen cv2 en geen herklikken nodig.
     if args.draai_180 is not None:
-        if args.punt or args.beeld is not None or hasattr(args, 'test'):
-            parser.error('--draai-180 gaat niet samen met --punt/--beeld/--test — draai ze apart')
+        if args.punt or args.anker or args.beeld is not None or hasattr(args, 'test'):
+            parser.error('--draai-180 gaat niet samen met --punt/--anker/--beeld/--test — draai ze apart')
         if not args.draai_180.is_file():
             _fout(f'kalibratiebestand niet gevonden: {args.draai_180}')
         data = json.loads(args.draai_180.read_text(encoding='utf-8'))
@@ -852,10 +909,10 @@ def main(argv: list[str] | None = None) -> None:
 
     # --test combineert niet met een nieuwe kalibratie: dat zou stilletjes fitten
     # en wegschrijven terwijl de gebruiker enkel een rapport verwachtte.
-    if hasattr(args, 'test') and (args.punt or args.beeld is not None):
-        parser.error('--test gaat niet samen met --punt/--beeld — draai ze apart')
+    if hasattr(args, 'test') and (args.punt or args.anker or args.beeld is not None):
+        parser.error('--test gaat niet samen met --punt/--anker/--beeld — draai ze apart')
     # --test zonder nieuwe punten: rapport van een bestaande kalibratie (geen cv2 nodig)
-    alleen_test = hasattr(args, 'test') and not args.punt and args.beeld is None
+    alleen_test = hasattr(args, 'test') and not args.punt and not args.anker and args.beeld is None
     if alleen_test:
         pad = args.test if args.test is not None else args.uit
         if not pad.is_file():
@@ -870,6 +927,9 @@ def main(argv: list[str] | None = None) -> None:
         return
 
     # Punten verzamelen: headless (--punt) of interactief (--beeld)
+    # Startwaarde: de ankers-alleen-tak (een terrein zonder bruikbare lijnen) zet geen punten,
+    # en zonder deze regel bestaat de variabele daar niet.
+    punten: list[dict] = []
     if args.punt:
         labels = veld.kruispunt_per_label(args.diepte, args.breedte, args.speelveld)
         punten = [parse_punt_argument(tekst, labels) for tekst in args.punt]
@@ -879,8 +939,13 @@ def main(argv: list[str] | None = None) -> None:
     elif args.beeld is not None:
         punten = verzamel_interactief(args.beeld, args.diepte, positie=args.positie,
                                       breedte=args.breedte, speelveld=args.speelveld)
-    else:
-        parser.error('geef --beeld (interactief) of minstens vier --punt argumenten (headless)')
+    elif not args.anker:
+        parser.error('geef --beeld (interactief) of minstens vier --punt/--anker argumenten (headless)')
+
+    # Vrije ankerpunten sluiten aan bij de lijnkruisingen: samen vormen ze de puntenset waarop
+    # gefit wordt. Ze mogen dus ook de enige bron zijn (een terrein zonder bruikbare lijnen).
+    if args.anker:
+        punten = punten + [parse_anker_argument(t, i + 1) for i, t in enumerate(args.anker)]
 
     if len(punten) < 4:
         _fout(f'minstens 4 punten nodig voor een homografie, kreeg er {len(punten)}')

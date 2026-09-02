@@ -432,5 +432,81 @@ class TestLensSchatting(unittest.TestCase):
         self.assertEqual(calibrate.draai_kalibratie_180(data)['lens'], lens)
 
 
+class AnkerpuntenTest(unittest.TestCase):
+    """Vrije ankerpunten: vaste punten búiten het veldmodel, met coördinaten van een luchtfoto.
+
+    Waarvoor ze bestaan: de kalibratie hangt aan de witte lijnen, en die zijn niet altijd de
+    waarheid — een terrein dat geen nette rechthoek is, lijnen die half onder spelers liggen, of
+    een camera die zo pant dat ze uit beeld gaan. Een hoek van de omheining blijft dan wél staan.
+    """
+
+    def test_parse_geeft_hetzelfde_recordformaat_als_een_kruispunt(self):
+        # Precies het punt: alles ná de kalibratie (fit, rapport, lens, standpunt) hoeft niets
+        # van ankers te weten omdat het record dezelfde vorm heeft.
+        a = calibrate.parse_anker_argument('812,1013=5.5,-3.25', 1)
+        self.assertEqual(a['beeld_px'], [812.0, 1013.0])
+        self.assertEqual(a['veld_m'], [5.5, -3.25])
+        self.assertEqual(a['label'], 'anker-1')
+        self.assertTrue(a['anker'])
+
+    def test_eigen_naam_blijft_staan(self):
+        a = calibrate.parse_anker_argument('10,20=1,2:hoek omheining', 3)
+        self.assertEqual(a['label'], 'hoek omheining')
+
+    def test_onzin_wordt_geweigerd_met_uitleg(self):
+        for tekst in ['812,1013', '812=5,5', '812,1013=5', 'a,b=1,2', '812,1013=x,y']:
+            with self.subTest(tekst=tekst):
+                with self.assertRaises(SystemExit):
+                    with contextlib.redirect_stderr(io.StringIO()):
+                        calibrate.parse_anker_argument(tekst, 1)
+
+    def test_ankers_doen_mee_in_de_fit_en_staan_in_het_bestand(self):
+        # Een kalibratie die enkel op ankerpunten steunt: het geval van een terrein waarvan de
+        # lijnen onbruikbaar zijn, maar waarvan je de hoeken wél op een luchtfoto ziet.
+        nb = _camera(*ACHTER_THUIS)
+        hoeken = [(0.0, 0.0), (BREED, 0.0), (0.0, LENGTE), (BREED, LENGTE)]
+        argv = ['--diepte', str(int(DIEPTE)), '--breedte', str(BREED), '--speelveld', str(SPEEL)]
+        for i, (x, y) in enumerate(hoeken):
+            px, py = nb(x, y)
+            argv += ['--anker', f'{px},{py}={x},{y}:hoek{i}']
+
+        with tempfile.TemporaryDirectory() as d:
+            uitpad = Path(d) / 'kalibratie.json'
+            uit = io.StringIO()
+            with contextlib.redirect_stdout(uit):
+                calibrate.main(argv + ['--uit', str(uitpad)])
+            data = json.loads(uitpad.read_text(encoding='utf-8'))
+
+        self.assertEqual(len(data['punten']), 4)
+        self.assertTrue(all(p.get('anker') for p in data['punten']))
+        # De matrix moet de hoeken terugvinden — anders deden de ankers niet mee in de fit.
+        h = data['matrix_beeld_naar_veld']
+        for x, y in hoeken:
+            px, py = nb(x, y)
+            w = h[2][0] * px + h[2][1] * py + h[2][2]
+            self.assertAlmostEqual((h[0][0] * px + h[0][1] * py + h[0][2]) / w, x, places=3)
+            self.assertAlmostEqual((h[1][0] * px + h[1][1] * py + h[1][2]) / w, y, places=3)
+
+    def test_ankers_vullen_lijnkruisingen_aan(self):
+        # De gewone weg: de lijnen die je wél ziet, plus een paar vaste punten eromheen.
+        nb = _camera(*ACHTER_THUIS)
+        argv = ['--diepte', str(int(DIEPTE))] + _punt_args(GEZOND)
+        px, py = nb(-2.0, -2.0)  # een punt búiten het veld: hoek van de omheining
+        argv += ['--anker', f'{px},{py}=-2,-2:omheining']
+        with tempfile.TemporaryDirectory() as d:
+            uitpad = Path(d) / 'kalibratie.json'
+            with contextlib.redirect_stdout(io.StringIO()):
+                calibrate.main(argv + ['--uit', str(uitpad)])
+            data = json.loads(uitpad.read_text(encoding='utf-8'))
+        self.assertEqual(len(data['punten']), 5)
+        self.assertEqual([p['label'] for p in data['punten']].count('omheining'), 1)
+
+    def test_ankers_gaan_niet_samen_met_draai_180(self):
+        # Anders zou de draai stilletjes ook fitten — twee dingen tegelijk, geen van beide zichtbaar.
+        with self.assertRaises(SystemExit):
+            with contextlib.redirect_stderr(io.StringIO()):
+                calibrate.main(['--draai-180', 'x.json', '--anker', '1,2=3,4', '--uit', 'y.json'])
+
+
 if __name__ == '__main__':
     unittest.main()

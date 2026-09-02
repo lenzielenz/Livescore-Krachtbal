@@ -69,6 +69,37 @@ veld-RECHTS. Twee vangnetten als het toch misgaat:
   `evaluate.py`): `python3 cv/calibrate.py --draai-180 kalibratie.json --uit
   kalibratie.json` draait matrix, punten én labels om — geen herklikken nodig.
 
+### Vrije ankerpunten (van een luchtfoto)
+
+De kalibratie hangt aan de witte lijnen, en die zijn niet altijd de waarheid: een
+terrein dat geen nette rechthoek is, lijnen die half onder spelers of modder
+liggen, of een camera die zo pant dat ze uit beeld gaan. Voor die gevallen kan je
+punten meegeven die **niet** op het veldmodel staan — de hoek van de omheining,
+een verlichtingspaal, de hoek van de kantine — met hun veldcoördinaten afgelezen
+van een luchtfoto:
+
+```bash
+python3 cv/calibrate.py --diepte 10 --uit kalibratie.json \
+    --punt "812,1013=doellijn_thuis_links" \
+    --anker "410,980=-2.0,-1.5:hoek omheining" \
+    --anker "1720,960=16.0,-1.5:paal" \
+    --anker "300,1400=-2.0,30.0:hoek kantine"
+```
+
+Ankers en lijnkruisingen doen samen mee in dezelfde fit; ze mogen ook de énige
+bron zijn. In het bestand staan ze als gewone punten met `"anker": true`, zodat
+je later ziet welke coördinaten iemand zelf heeft aangewezen.
+
+**Waar haal je die coördinaten?** Voor Vlaanderen: de orthofoto's van Geopunt /
+Digitaal Vlaanderen — open data, hoge resolutie, en met échte coördinaten. Doe
+dit **niet** met beeldmateriaal van Google Maps: hun voorwaarden staan niet toe
+dat je er coördinaten uit overtrekt voor een eigen dataset.
+
+**Wat het niet doet:** hoogte. Eén camera plus een grondvlak blijft plat, en een
+bovenaanzicht is datzelfde grondvlak van de andere kant bekeken. De hoogte van de
+bal blijft dus onmeetbaar (zie `bal.py`); daarvoor is een tweede camera nodig of
+een vluchtmodel.
+
 `--test` waarschuwt bovendien wanneer alle punten op één helft liggen, zodat je
 wéét dat de overkant geëxtrapoleerd is.
 
