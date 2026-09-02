@@ -4,10 +4,12 @@ import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
+import { nieuweAnalyseBody, type AnalyseModus } from '@/lib/analyse-nieuw'
+
 type Team = { id: number; name: string; reeks: string }
 type Player = { id: number; name: string; shirtNumber: number; position?: string | null }
 type KalenderMatch = { id: number; wanneer: string; home: string; away: string; gespeeld: boolean }
-type Modus = 'manueel' | 'video'
+type Modus = AnalyseModus
 
 // Standaardwaarde voor een <input type="datetime-local">: dat veld toont/verwacht LOKALE tijd, dus
 // corrigeer voor de tijdzone vóór het ISO-knippen — anders staat de voorgestelde tijd de
@@ -230,7 +232,16 @@ export function NieuweAnalyseMatch({ teams, reeksOptions, positionOptions }: { t
       setError('Kies een verschillende thuis- en uitploeg.')
       return
     }
-    void create({ reeks, homeTeam: Number(home), awayTeam: Number(away), date: new Date(date).toISOString(), modus })
+    void create(
+      nieuweAnalyseBody({
+        bron: 'zelf',
+        reeks,
+        homeTeam: Number(home),
+        awayTeam: Number(away),
+        date: new Date(date).toISOString(),
+        modus,
+      }),
+    )
   }
 
   function reset() {
@@ -375,7 +386,7 @@ export function NieuweAnalyseMatch({ teams, reeksOptions, positionOptions }: { t
           </p>
           {error && <p className="nam-error">{error}</p>}
           <div className="nam-actions">
-            <button type="button" className="sk-demo-cta" disabled={busy || gekozen == null} onClick={() => gekozen != null && void create({ fromMatch: gekozen })}>
+            <button type="button" className="sk-demo-cta" disabled={busy || gekozen == null} onClick={() => gekozen != null && void create(nieuweAnalyseBody({ bron: 'kalender', fromMatch: gekozen, modus }))}>
               {busy ? 'Bezig…' : '➕ Aanmaken & spelers toevoegen'}
             </button>
             <button type="button" className="nam-cancel" onClick={() => setOpen(false)}>Sluiten</button>

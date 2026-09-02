@@ -5,6 +5,7 @@ import { TeamLogo } from '@/components/TeamLogo'
 import { POSITION_OPTIONS } from '@/collections/Players'
 import { canAnalyse, hasRole, isFederationLevel, userClubId } from '@/lib/access'
 import { analyseOwnWhere } from '@/lib/analyse-access'
+import { analyseIngang } from '@/lib/analyse-ingang'
 import { getSelectedSeason, reeksenMetData } from '@/lib/analyse-season'
 import { getAuthUser } from '@/lib/auth-user'
 import { buildScoreboards, clubLogoUrl } from '@/lib/match-engine'
@@ -161,6 +162,10 @@ export default async function AnalysePage({ searchParams }: { searchParams: Prom
       // Hangt er al een opname aan? Daarmee toont het archief per wedstrijd of er video is,
       // en anders een rechtstreekse "video toevoegen"-ingang.
       hasVideo: Boolean((m as { videoUrl?: unknown }).videoUrl),
+      // Hoe deze analyse gemaakt wordt ('video' of 'manueel'): bepaalt waar de kaart naartoe
+      // linkt. Zonder dit veld belandde iemand die "alles uit de video" koos telkens weer op de
+      // manuele aantekentafel (zie lib/analyse-ingang.ts).
+      analyseModus: String((m as { analyseModus?: unknown }).analyseModus ?? ''),
       canAddVideo: mayEditMatchVideo(me, m as { analyseOnly?: boolean | null; analyseOwner?: unknown }),
       home: c.teams.home,
       away: c.teams.away,
@@ -258,10 +263,12 @@ export default async function AnalysePage({ searchParams }: { searchParams: Prom
                   <p className="empty">Nog geen voorbereide analysewedstrijden. Maak er een aan met de knop hierboven.</p>
                 ) : (
                   <div className="an-list">
-                    {openRows.map((r) => (
-                      <Link key={r.id} href={`/scorekeeper/${r.id}`} className="an-card">
+                    {openRows.map((r) => {
+                      const ingang = analyseIngang(r.id, r.analyseModus, r.status)
+                      return (
+                      <Link key={r.id} href={ingang.pad} className="an-card">
                         <span className={`an-card-reeks ${r.status === 'live' ? 'an-live' : ''}`}>
-                          {r.status === 'live' ? '● LIVE — aantekenen' : '🎬 Analyse · ▶ Activeren'}
+                          {ingang.label}
                         </span>
                         <span className="an-card-row">
                           <span className="an-team">
@@ -279,7 +286,8 @@ export default async function AnalysePage({ searchParams }: { searchParams: Prom
                         </span>
                         <DeleteMatchButton matchId={r.id} label={`${r.home.name} – ${r.away.name}`} />
                       </Link>
-                    ))}
+                      )
+                    })}
                   </div>
                 )}
               </>
