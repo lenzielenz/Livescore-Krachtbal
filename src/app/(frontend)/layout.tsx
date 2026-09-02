@@ -3,6 +3,7 @@ import { Inter, Sora } from 'next/font/google'
 import React from 'react'
 
 import { ServiceWorker } from '@/components/ServiceWorker'
+import { SessieVerlengen } from '@/components/SessieVerlengen'
 import { Toaster } from '@/components/Toaster'
 import './styles.css'
 
@@ -43,6 +44,7 @@ export default function RootLayout(props: { children: React.ReactNode }) {
         </footer>
         <Toaster />
         <ServiceWorker />
+        <SessieVerlengen />
       </body>
     </html>
   )

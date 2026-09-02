@@ -6,6 +6,7 @@ import { CATEGORY_OPTIONS } from '@/lib/categories'
 import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
 import { gestarteTornooien, tornooiBadge } from '@/lib/tornooi-status'
+import { UITLEG_PAD } from '@/lib/aantekenen-uitleg'
 import { VerwijderTornooi } from './VerwijderTornooi'
 import './tornooi.css'
 
@@ -54,11 +55,15 @@ export default async function TornooiHub() {
           schema — van de eerste ronde tot de finale, live te volgen.
         </p>
       </div>
-      {canCreate && (
-        <div className="trn-actions">
+      <div className="trn-actions">
+        {/* Voor wie straks achter de tafel zit: stappenplan, oefenversie en een handleiding om
+            af te drukken. Bewust ook zichtbaar zonder rechten — de aantekenaar is meestal geen
+            beheerder. */}
+        <Link href={UITLEG_PAD} className="trn-btn">📖 Hoe teken ik een wedstrijd aan?</Link>
+        {canCreate && (
           <Link href="/tornooi/nieuw" className="trn-btn primary">+ Nieuw tornooi / categorie</Link>
-        </div>
-      )}
+        )}
+      </div>
 
       <main className="trn-hub">
         {/* Tornooi-eerst: één kaart per tornooidag. Openen = de categorieën zien (groepspagina). */}
