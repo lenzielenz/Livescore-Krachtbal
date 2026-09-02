@@ -1517,6 +1517,8 @@ export interface PushSubscription {
   createdAt: string;
 }
 /**
+ * Sponsors voor de schermen. Snijd het beeld bij zodat het recht en vol in de balk staat.
+ *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "advertenties".
  */
@@ -1530,6 +1532,14 @@ export interface Advertenty {
    * Het logo of de banner die getoond wordt (PNG/JPG/WEBP).
    */
   afbeelding: number | Media;
+  zoom?: number | null;
+  offsetX?: number | null;
+  offsetY?: number | null;
+  rotatie?: number | null;
+  /**
+   * Kies wit voor een logo dat op een witte achtergrond hoort.
+   */
+  achtergrond?: ('donker' | 'wit' | 'geen') | null;
   /**
    * Website van de sponsor — voor later gebruik (klikbare reclame).
    */
@@ -2507,6 +2517,11 @@ export interface PushSubscriptionsSelect<T extends boolean = true> {
 export interface AdvertentiesSelect<T extends boolean = true> {
   naam?: T;
   afbeelding?: T;
+  zoom?: T;
+  offsetX?: T;
+  offsetY?: T;
+  rotatie?: T;
+  achtergrond?: T;
   link?: T;
   plaatsing?: T;
   volgorde?: T;

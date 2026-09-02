@@ -23,6 +23,7 @@ export const Advertenties: CollectionConfig = {
   admin: {
     useAsTitle: 'naam',
     defaultColumns: ['naam', 'plaatsing', 'actief', 'volgorde'],
+    description: 'Sponsors voor de schermen. Snijd het beeld bij zodat het recht en vol in de balk staat.',
     group: 'Beheer',
   },
   access: {
@@ -40,6 +41,40 @@ export const Advertenties: CollectionConfig = {
       relationTo: 'media',
       required: true,
       admin: { description: 'Het logo of de banner die getoond wordt (PNG/JPG/WEBP).' },
+    },
+    // Bijsnijden: reclame komt binnen zoals ze binnenkomt — een liggende banner, een vierkant
+    // logo, of een foto van een affiche die scheef genomen is. De Field-component hieronder toont
+    // een live voorvertoning van de bannertegel met zoom, draaiing en slepen, zodat "wat je
+    // opslaat is wat de kantine ziet" (zie lib/reclame.ts).
+    {
+      name: 'zoom',
+      label: 'Beeld bijsnijden',
+      type: 'number',
+      defaultValue: 1,
+      min: 1,
+      max: 4,
+      admin: {
+        components: {
+          Field: '/components/admin/ReclameFitEditor#ReclameFitEditor',
+        },
+      },
+    },
+    { name: 'offsetX', type: 'number', defaultValue: 0, admin: { hidden: true } },
+    { name: 'offsetY', type: 'number', defaultValue: 0, admin: { hidden: true } },
+    { name: 'rotatie', type: 'number', defaultValue: 0, admin: { hidden: true } },
+    {
+      // Een logo dat op wit hóórt te staan, valt weg op een donkere balk. Eén kleur per reclame
+      // lost dat op zonder dat de rest van de balk eronder lijdt.
+      name: 'achtergrond',
+      label: 'Achtergrond van de tegel',
+      type: 'select',
+      defaultValue: 'donker',
+      options: [
+        { label: 'Donker (standaard)', value: 'donker' },
+        { label: 'Wit', value: 'wit' },
+        { label: 'Doorzichtig', value: 'geen' },
+      ],
+      admin: { description: 'Kies wit voor een logo dat op een witte achtergrond hoort.' },
     },
     { name: 'link', label: 'Link (optioneel)', type: 'text', admin: { description: 'Website van de sponsor — voor later gebruik (klikbare reclame).' } },
     {

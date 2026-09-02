@@ -3,6 +3,9 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 
+import { ReclameBalk } from '@/components/ReclameBalk'
+import { ReclameOverlay } from '@/components/ReclameOverlay'
+import type { Ad } from '@/lib/ads'
 import { Tile, type KantineMatch } from './KantineBoard'
 
 // Layout die meeschaalt met het aantal getoonde borden: weinig wedstrijden = grote vakken die
@@ -42,6 +45,7 @@ export function KantineScreen({
   title?: string
 } = {}) {
   const [matches, setMatches] = useState<KantineMatch[]>([])
+  const [ads, setAds] = useState<Ad[]>([])
   const [loaded, setLoaded] = useState(false)
   // Viewport-breedte volgen zodat het raster niet 5 kolommen op een tablet propt (AUDIT §1).
   const [vw, setVw] = useState(1920)
@@ -59,9 +63,10 @@ export function KantineScreen({
       try {
         const r = await fetch(endpoint, { cache: 'no-store' })
         if (!r.ok) return
-        const d = (await r.json()) as { matches?: KantineMatch[] }
+        const d = (await r.json()) as { matches?: KantineMatch[]; ads?: Ad[] }
         if (active) {
           setMatches(d.matches ?? [])
+          setAds(d.ads ?? [])
           setLoaded(true)
         }
       } catch {
@@ -87,10 +92,31 @@ export function KantineScreen({
   const fontSize = cols < layout.cols ? Math.round(layout.fontSize * 1.12) : layout.fontSize
   const logoSize = layout.logoSize
 
+  // Aftellen naar de eerstvolgende wedstrijd zolang er niets bezig is — anders staat er een
+  // scherm vol geplande borden zonder dat iemand weet hoelang het nog duurt.
+  const volgende = played.length === 0
+    ? matches
+        .filter((m) => m.status === 'scheduled' && m.date)
+        .map((m) => ({ m, t: new Date(String(m.date)).getTime() }))
+        .filter((x) => Number.isFinite(x.t) && x.t > Date.now())
+        .sort((a, b) => a.t - b.t)[0]
+    : undefined
+
   return (
     <div className="kt-screen">
       {editable && <Link href="/kantine" className="kt-screen-edit">‹ Aanpassen</Link>}
       {title && <span className="kt-screen-title">{title}</span>}
+      {/* Af en toe neemt een sponsor het scherm over; de score blijft er doorheen leesbaar. */}
+      <ReclameOverlay ads={ads} />
+      {volgende && (
+        <div className="kt-aftel">
+          <span className="kt-aftel-lbl">Volgende wedstrijd</span>
+          <KantineAftel naar={volgende.t} />
+          <span className="kt-aftel-affiche">
+            {volgende.m.home.name} – {volgende.m.away.name}
+          </span>
+        </div>
+      )}
       {loaded && matches.length === 0 ? (
         <div className="kt-screen-empty">
           {editable ? (
@@ -109,6 +135,27 @@ export function KantineScreen({
           ))}
         </div>
       )}
+      {/* De sponsorbalk onderaan: past zich aan het aantal, het formaat en de kleur van de
+          reclames aan (zie components/ReclameBalk.tsx). */}
+      <ReclameBalk ads={ads} />
     </div>
   )
+}
+
+/** Aftellen naar een tijdstip. Start pas ná het mounten — op de server bestaat "nu" niet. */
+function KantineAftel({ naar }: { naar: number }) {
+  const [nu, setNu] = useState<number | null>(null)
+  useEffect(() => {
+    setNu(Date.now())
+    const t = setInterval(() => setNu(Date.now()), 1000)
+    return () => clearInterval(t)
+  }, [])
+  if (nu == null) return <span className="kt-aftel-tijd">–:––</span>
+  const rest = Math.floor((naar - nu) / 1000)
+  if (rest <= 0) return <span className="kt-aftel-tijd">zo meteen</span>
+  const u = Math.floor(rest / 3600)
+  const m = Math.floor((rest % 3600) / 60)
+  const s = rest % 60
+  const p = (n: number) => String(n).padStart(2, '0')
+  return <span className="kt-aftel-tijd">{u > 0 ? `${u}:${p(m)}:${p(s)}` : `${m}:${p(s)}`}</span>
 }

@@ -14,6 +14,8 @@ export type KantineMatch = {
   id: number
   reeks: string
   time: string
+  /** Het échte aanvangsuur (ISO) — het aftellen op het kantinescherm heeft dat nodig. */
+  date?: string | null
   status: string
   home: { name: string; logoUrl: string | null; logoFit?: LogoFit | null; colors?: ClubColors | null }
   away: { name: string; logoUrl: string | null; logoFit?: LogoFit | null; colors?: ClubColors | null }

@@ -227,13 +227,54 @@
 
 /* ── Kantinescherm (kantine-tv) ── */
 .kt-screen {
-  min-height: 100dvh;
+  height: 100dvh;
+  overflow: hidden;
+  /* Kolom, zodat de sponsorbalk onderaan blijft plakken en het bordenraster de rest vult. */
+  display: flex;
+  flex-direction: column;
   /* Zelfde aurora-sfeer als de site zelf — een kantine-tv verdient geen vlak zwart. */
   background:
     radial-gradient(1150px 660px at 50% -10%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 60%),
     radial-gradient(900px 560px at 92% 100%, color-mix(in srgb, var(--pop, #ff5d6c) 12%, transparent), transparent 60%),
     linear-gradient(180deg, #0c0e12 0%, #070809 100%);
-  padding: 20px;
+  padding: 20px 20px 0;
+}
+/* Het bordenraster krijgt wat overblijft, de sponsorbalk houdt haar plek onderaan. `min-height: 0`
+   is hier geen detail: zonder dat weigert een flex-item te krimpen en duwt het raster de balk
+   onder de vouw — precies wat er gebeurde. */
+.kt-screen .kt-grid-screen {
+  flex: 1 1 auto;
+  min-height: 0;
+  /* De hoogte komt nu van de flexbox; een vaste 100dvh laat geen ruimte voor de balk. */
+  height: auto;
+}
+
+/* Aftellen naar de eerstvolgende wedstrijd, zolang er niets bezig is. */
+.kt-aftel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 0 14px;
+}
+.kt-aftel-lbl {
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+.kt-aftel-tijd {
+  font-size: clamp(2rem, 7vmin, 4.4rem);
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  color: var(--txt);
+}
+.kt-aftel-affiche {
+  font-size: clamp(0.9rem, 2.2vmin, 1.4rem);
+  font-weight: 700;
+  color: var(--dim-strong, #cad2dc);
 }
 .kt-screen-edit {
   position: fixed;
