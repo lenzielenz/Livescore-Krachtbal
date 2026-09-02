@@ -40,6 +40,10 @@ describe('elke stap is te voltooien', () => {
     // een eerste helft voor zich krijgen.
     expect(beginstandVoor(7).helft).toBe(1)
     expect(beginstandVoor(8).helft).toBe(2)
+    // Stap 8 is de rust: tweede helft, klok op nul en stil. Precies de toestand waarin je
+    // "Start 2e helft" moet vinden.
+    expect(beginstandVoor(8).klok).toBe(0)
+    expect(beginstandVoor(8).klokLoopt).toBe(false)
     expect(beginstandVoor(4).gestart).toBe(false)
     expect(beginstandVoor(5).gestart).toBe(true)
   })
@@ -77,6 +81,25 @@ describe('naTik', () => {
 
   it('laat tellers niet onder nul zakken', () => {
     expect(naTik(live, 'kruisje-thuis-min').kruisjes).toEqual([0, 0])
+  })
+
+  it('gaat bij einde eerste helft naar de rust: klok op nul en stil', () => {
+    // De melding: "einde 1ste helft is vreemd dat je 2de helft moet aanklikken, want als je drukt
+    // 2de helft dan start de tijd opnieuw." De klok hóórt op nul te springen — dat is de rust —
+    // maar het oefenscherm bleef gewoon doortellen alsof de wedstrijd verder liep, en dat leert
+    // iets aan wat aan de echte tafel niet gebeurt.
+    const eindeH1 = { ...live, klok: 583 }
+    const rust = naTik(eindeH1, 'einde-helft')
+    expect(rust.helft).toBe(2)
+    expect(rust.klok).toBe(0)
+    expect(rust.klokLoopt).toBe(false)
+    // En dan staat er geen kale "Klok" maar een knop die zegt wát je start.
+    expect(knopBeschikbaar(rust, 'start-helft')).toBe(true)
+    expect(knopBeschikbaar(rust, 'klok')).toBe(false)
+    // De stand blijft staan — dat is precies wat de handleiding belooft.
+    expect(rust.score).toEqual(eindeH1.score)
+    // Starten laat de tijd weer lopen.
+    expect(naTik(rust, 'start-helft').klokLoopt).toBe(true)
   })
 
   it('negeert een knop die nu niet op het scherm staat', () => {

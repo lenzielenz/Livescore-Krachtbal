@@ -6,6 +6,7 @@ import { useCallback, useRef, useState } from 'react'
 import { TeamLogo } from '@/components/TeamLogo'
 import type { ClubColors } from '@/lib/club-colors'
 import { DEFAULT_AWAY_COLOR, DEFAULT_HOME_COLOR, readableOnDark } from '@/lib/club-colors'
+import { EINDE_HELFT_KNOP, inRust, magHelftAfsluiten, type HelftStand } from '@/lib/helft-overgang'
 import type { LogoFit } from '@/lib/logo-fit'
 import type { Side } from '@/lib/tournament'
 import type { TMatchState, TournamentState } from '@/lib/tournament-engine'
@@ -134,6 +135,14 @@ export function TournamentScoresheetPro({
   const status = m.status
   const finished = status === 'finished'
   const live = status === 'live'
+  // Dezelfde bron als de tornooitafel en het oefenscherm (lib/helft-overgang.ts).
+  const helftStand: HelftStand = {
+    status,
+    helft: half,
+    klokLoopt: Boolean(m.clockRunning),
+    klokSeconden: m.clockSeconds ?? 0,
+  }
+  const rust = inRust(helftStand)
   const ready = Boolean(m.home && m.away)
   const overtime = live && clock >= halfDurationSeconds
 
@@ -192,14 +201,21 @@ export function TournamentScoresheetPro({
               }}
             >
               <span className="ssk-clock-time">{fmtClock(clock)}</span>
-              <span className="ssk-clock-half">Helft {half} · doel {Math.round(halfDurationSeconds / 60)} min</span>
+              <span className="ssk-clock-half">
+                Helft {half} · doel {Math.round(halfDurationSeconds / 60)} min
+                {/* In de rust staat de klok op nul en stil. Zonder dit woord is dat niet van een
+                    vastgelopen tafel te onderscheiden. */}
+                {rust && <> · <b>rust</b></>}
+              </span>
               {!finished && (
                 <span className="ssk-clock-action">
-                  {!live || (!m.clockRunning && clock < 1)
-                    ? '▶ Tik om te starten'
-                    : m.clockRunning
-                      ? '⏸ Tik om te pauzeren'
-                      : '▶ Tik om verder te gaan'}
+                  {rust
+                    ? `▶ Tik om de ${half}e helft te starten`
+                    : !live || (!m.clockRunning && clock < 1)
+                      ? '▶ Tik om te starten'
+                      : m.clockRunning
+                        ? '⏸ Tik om te pauzeren'
+                        : '▶ Tik om verder te gaan'}
                 </span>
               )}
             </button>
@@ -278,9 +294,9 @@ export function TournamentScoresheetPro({
                   ? `↶ Ondoen: +${m.lastGoal.points} ${m.lastGoal.side === 'home' ? m.home : m.away}`
                   : '↶ Niets te ondoen'}
               </button>
-              {half === 1 && live && (
+              {magHelftAfsluiten(helftStand) && (
                 <button type="button" className="ssk-btn primary" onClick={() => setConfirmHalfEnd(true)}>
-                  ⏭ Einde 1e helft → 2e
+                  {EINDE_HELFT_KNOP}
                 </button>
               )}
               {half >= 2 && live && (

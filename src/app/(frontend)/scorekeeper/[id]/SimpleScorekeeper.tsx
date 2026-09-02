@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { TeamLogo } from '@/components/TeamLogo'
 import { categoryConfig } from '@/lib/categories'
+import { EINDE_HELFT_KNOP, inRust, magHelftAfsluiten, type HelftStand } from '@/lib/helft-overgang'
 import { DEFAULT_AWAY_COLOR, DEFAULT_HOME_COLOR, readableOnDark } from '@/lib/club-colors'
 import type { MatchState } from '@/lib/match-engine'
 import { genOpId } from '@/lib/op-id'
@@ -91,6 +92,14 @@ export function SimpleScorekeeper({
   const finished = status === 'finished'
   const live = status === 'live'
   const targetSec = categoryConfig(state.match.category).halfDurationSeconds
+  // Dezelfde bron als de tornooitafels en het oefenscherm (lib/helft-overgang.ts).
+  const helftStand: HelftStand = {
+    status: status as HelftStand['status'],
+    helft: half,
+    klokLoopt: Boolean(state.match.clockRunning),
+    klokSeconden: state.match.clockSeconds ?? 0,
+  }
+  const rust = inRust(helftStand)
 
   // Lopende klok: reken vanaf clockUpdatedAt (server) zodat een refresh de tijd behoudt.
   const [clock, setClockVal] = useState(initialState.match.clockSeconds)
@@ -220,14 +229,21 @@ export function SimpleScorekeeper({
           }}
         >
           <span className="ssk-clock-time">{fmtClock(clock)}</span>
-          <span className="ssk-clock-half">Helft {half} · doel {Math.round(targetSec / 60)} min</span>
+          <span className="ssk-clock-half">
+            Helft {half} · doel {Math.round(targetSec / 60)} min
+            {/* In de rust staat de klok op nul en stil. Zonder dit woord is dat niet van een
+                vastgelopen tafel te onderscheiden. */}
+            {rust && <> · <b>rust</b></>}
+          </span>
           {!finished && (
             <span className="ssk-clock-action">
-              {!live || (!state.match.clockRunning && clock < 1)
-                ? '▶ Tik om te starten'
-                : state.match.clockRunning
-                  ? '⏸ Tik om te pauzeren'
-                  : '▶ Tik om verder te gaan'}
+              {rust
+                ? `▶ Tik om de ${half}e helft te starten`
+                : !live || (!state.match.clockRunning && clock < 1)
+                  ? '▶ Tik om te starten'
+                  : state.match.clockRunning
+                    ? '⏸ Tik om te pauzeren'
+                    : '▶ Tik om verder te gaan'}
             </span>
           )}
         </button>
@@ -322,9 +338,9 @@ export function SimpleScorekeeper({
               ? `↶ Ondoen: +${state.lastSimpleGoal.points} ${state.teams[state.lastSimpleGoal.side].name}`
               : '↶ Niets te ondoen'}
           </button>
-          {half === 1 && (
+          {magHelftAfsluiten(helftStand) && (
             <button type="button" className="ssk-btn primary" onClick={() => setConfirmHalfEnd(true)}>
-              ⏭ Einde 1e helft → 2e
+              {EINDE_HELFT_KNOP}
             </button>
           )}
           {half >= 2 && (

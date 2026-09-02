@@ -35,7 +35,9 @@ const STEPS: Step[] = [
   {
     titel: '6 · Einde helft & einde wedstrijd',
     tekst:
-      'Met "Einde 1e helft" ga je naar de rust; in de 2e helft zet de andere ploeg op. "Einde" sluit de wedstrijd af.',
+      'Met "Einde 1e helft" ga je naar de rust: de klok springt terug op nul en blijft stil staan — '
+      + 'de stand blijft. Pas als je op "Start 2e helft" drukt, loopt de tijd weer; in de 2e helft zet '
+      + 'de andere ploeg op. "Einde" sluit de wedstrijd af.',
   },
   {
     titel: '7 · Wie heeft gespeeld?',

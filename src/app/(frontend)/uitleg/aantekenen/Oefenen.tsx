@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 
 import {
   beginstandVoor,
+  inRust,
   knopBeschikbaar,
   naTik,
   type OefenStand,
@@ -123,6 +124,10 @@ export function Oefenen() {
   )
 }
 
+/** Klok als mm:ss, zoals op de echte tafel. */
+const mmss = (sec: number) =>
+  `${String(Math.floor(sec / 60)).padStart(2, '0')}:${String(Math.floor(sec % 60)).padStart(2, '0')}`
+
 /** De nagebouwde schermen — zelfde volgorde, kleuren en teksten als de echte tornooitafel. */
 function Namaak({
   scherm,
@@ -139,6 +144,7 @@ function Namaak({
    *  altijd zelf herkennen. */
   const wijs = (doel: string, extra = '') =>
     `nm-knop${extra ? ` ${extra}` : ''}${verwacht === doel ? ' gevraagd' : ''}`
+  const rust = inRust(stand)
 
   if (scherm === 'inloggen') {
     return (
@@ -154,23 +160,32 @@ function Namaak({
   }
 
   if (scherm === 'dagprogramma') {
+    // Nagebouwd naar de échte rij op het dagprogramma (Dagprogramma.tsx): uur, de affiche, en
+    // daaronder één rustige metaregel met de status, het veld, de reeks en de speelduur. Stond
+    // hier minder, dan beloofde de uitleg iets ("met het uur, het veld, de categorie en de
+    // speelduur") wat het plaatje niet liet zien.
     return (
       <div className="nm nm-dag">
         {[
-          { t: '18:00', h: 'Avanti Lissewege', u: 'Sporting Brugge', veld: 'Veld 1', jouw: false },
-          { t: '18:10', h: PLOEGEN[0], u: PLOEGEN[1], veld: 'Veld 2', jouw: true },
+          { t: '18:00', h: 'Avanti Lissewege', u: 'Sporting Brugge', veld: 'Veld 1', reeks: 'U14', duur: 10, st: 'Te spelen', jouw: false },
+          { t: '18:10', h: PLOEGEN[0], u: PLOEGEN[1], veld: 'Veld 2', reeks: 'U14', duur: 10, st: 'Te spelen', jouw: true },
         ].map((m) => (
           <div key={m.t} className={`nm-rij${m.jouw ? ' jouw' : ''}`}>
             <span className="nm-uur">{m.t}</span>
             <span className="nm-ploegen">{m.h} – {m.u}</span>
-            <span className="nm-veld">{m.veld}</span>
-            <button
-              type="button"
-              className={m.jouw ? wijs('aantekenen') : 'nm-knop'}
-              onClick={() => onTik(m.jouw ? 'aantekenen' : 'andere-wedstrijd')}
-            >
-              Aantekenen
-            </button>
+            <span className="nm-metarij">
+              <span className="nm-tag">{m.st}</span>
+              <span className="nm-tag veld">{m.veld}</span>
+              <span className="nm-tag reeks">{m.reeks}</span>
+              <span className="nm-tag">2×{m.duur}&#8242;</span>
+              <button
+                type="button"
+                className={m.jouw ? wijs('aantekenen') : 'nm-knop'}
+                onClick={() => onTik(m.jouw ? 'aantekenen' : 'andere-wedstrijd')}
+              >
+                Aantekenen
+              </button>
+            </span>
           </div>
         ))}
         <p className="nm-hint">De onderste is jouw wedstrijd.</p>
@@ -187,12 +202,21 @@ function Namaak({
         <span className={`nm-status${stand.gestart && !stand.gedaan ? ' live' : ''}`}>{status}</span>
       </div>
 
-      <div className="nm-klok">
-        <b>{stand.gestart ? '03:12' : '00:00'}</b>
+      <div className={`nm-klok${rust ? ' rust' : ''}`}>
+        <b>{mmss(stand.klok)}</b>
         <small>
           Helft {stand.helft} · doel 10 min
-          {stand.gestart && !stand.gedaan ? (stand.klokLoopt ? ' · loopt' : ' · gepauzeerd') : ''}
+          {stand.gestart && !stand.gedaan
+            ? rust
+              ? ' · rust'
+              : stand.klokLoopt
+                ? ' · loopt'
+                : ' · gepauzeerd'
+            : ''}
         </small>
+        {/* De rust uitleggen, precies zoals de echte tafel het doet: een klok op nul die niet
+            loopt, ziet er anders uit als een fout. */}
+        {rust && <em className="nm-rustlijn">Eerste helft afgesloten — de tweede moet nog beginnen.</em>}
       </div>
 
       <div className="nm-ploegvakken">
@@ -266,9 +290,16 @@ function Namaak({
               {knopBeschikbaar(stand, 'klok') && (
                 <button type="button" className={wijs('klok')} onClick={() => onTik('klok')}>▶ Klok</button>
               )}
+              {/* In de rust heet de klokknop naar wát je start. Zo staat er nooit een kale
+                  "Klok" op een scherm waar de tweede helft nog moet beginnen. */}
+              {knopBeschikbaar(stand, 'start-helft') && (
+                <button type="button" className={wijs('start-helft', 'nm-blauw')} onClick={() => onTik('start-helft')}>
+                  ▶ Start 2e helft
+                </button>
+              )}
               {knopBeschikbaar(stand, 'einde-helft') && (
                 <button type="button" className={wijs('einde-helft')} onClick={() => onTik('einde-helft')}>
-                  ⏭ 2e helft
+                  ⏭ Einde 1e helft
                 </button>
               )}
             </span>

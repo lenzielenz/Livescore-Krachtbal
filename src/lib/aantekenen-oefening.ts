@@ -17,6 +17,10 @@ export type OefenStand = {
   gedaan: boolean
   helft: 1 | 2
   klokLoopt: boolean
+  /** Stand van de klok in seconden. Hoort erbij omdat de rust er juist aan te herkennen valt:
+   *  helft 2, nul op de klok, klok stil. Stond die tijd hier niet, dan bleef het oefenscherm na
+   *  "einde 1e helft" gewoon 03:12 tonen — en dan leert de oefening iets aan wat niet klopt. */
+  klok: number
   score: [number, number]
   kruisjes: [number, number]
   minuten: [number, number]
@@ -29,6 +33,7 @@ const LEEG: OefenStand = {
   gedaan: false,
   helft: 1,
   klokLoopt: false,
+  klok: 0,
   score: [0, 0],
   kruisjes: [0, 0],
   minuten: [0, 0],
@@ -45,20 +50,28 @@ const LEEG: OefenStand = {
  */
 export function beginstandVoor(stapNr: number): OefenStand {
   if (stapNr <= 4) return { ...LEEG }
-  if (stapNr === 5) return { ...LEEG, gestart: true, klokLoopt: true }
+  if (stapNr === 5) return { ...LEEG, gestart: true, klokLoopt: true, klok: 192 }
   if (stapNr === 6) {
-    return { ...LEEG, gestart: true, klokLoopt: true, score: [1, 0], laatste: { ploeg: 0, punten: 1 } }
+    return { ...LEEG, gestart: true, klokLoopt: true, klok: 296, score: [1, 0], laatste: { ploeg: 0, punten: 1 } }
   }
   if (stapNr === 7) {
-    return { ...LEEG, gestart: true, klokLoopt: true, score: [3, 1], kruisjes: [1, 0], laatste: { ploeg: 0, punten: 2 } }
+    // De eerste helft, bijna om: precies de toestand waarin je haar afsluit.
+    return {
+      ...LEEG, gestart: true, klokLoopt: true, klok: 583, score: [3, 1], kruisjes: [1, 0],
+      laatste: { ploeg: 0, punten: 2 },
+    }
   }
   if (stapNr === 8) {
+    // De rust: tweede helft aangebroken, klok op nul en stil.
+    return { ...LEEG, gestart: true, helft: 2, klok: 0, score: [3, 1], kruisjes: [1, 0] }
+  }
+  if (stapNr === 9) {
     return {
-      ...LEEG, gestart: true, klokLoopt: true, helft: 2, score: [5, 3], kruisjes: [1, 2],
+      ...LEEG, gestart: true, klokLoopt: true, helft: 2, klok: 561, score: [5, 3], kruisjes: [1, 2],
       laatste: { ploeg: 1, punten: 1 },
     }
   }
-  return { ...LEEG, gestart: true, gedaan: true, helft: 2, score: [5, 4], kruisjes: [1, 2] }
+  return { ...LEEG, gestart: true, gedaan: true, helft: 2, klok: 600, score: [5, 4], kruisjes: [1, 2] }
 }
 
 /**
@@ -75,13 +88,23 @@ export function knoppenVoor(stand: OefenStand): string[] {
     'score-thuis-nek', 'score-thuis-rug', 'score-uit-nek', 'score-uit-rug',
     'kruisje-thuis-min', 'kruisje-thuis-plus', 'kruisje-uit-min', 'kruisje-uit-plus',
     'minuut-thuis-min', 'minuut-thuis-plus', 'minuut-uit-min', 'minuut-uit-plus',
-    stand.klokLoopt ? 'pauze' : 'klok',
+    stand.klokLoopt ? 'pauze' : inRust(stand) ? 'start-helft' : 'klok',
     'ondoen',
     'einde-wedstrijd',
     'terugzetten',
   ]
   if (stand.helft === 1) knoppen.push('einde-helft')
   return knoppen
+}
+
+/**
+ * Staat het oefenscherm in de rust?
+ *
+ * Dezelfde regel als de echte tafels (`lib/helft-overgang.ts`): tweede helft, klok op nul, klok
+ * stil. Dan heet de klokknop "Start 2e helft" in plaats van een kale "Klok".
+ */
+export function inRust(stand: OefenStand): boolean {
+  return stand.gestart && !stand.gedaan && stand.helft === 2 && !stand.klokLoopt && stand.klok === 0
 }
 
 /** Staat deze knop nu op het scherm? */
@@ -134,13 +157,15 @@ export function naTik(stand: OefenStand, doel: string): OefenStand {
     case 'pauze':
       return { ...stand, klokLoopt: false }
     case 'klok':
+    case 'start-helft':
       return { ...stand, klokLoopt: true }
     case 'ondoen':
       return stand.laatste
         ? { ...stand, score: bij(stand.score, stand.laatste.ploeg, -stand.laatste.punten), laatste: null }
         : stand
     case 'einde-helft':
-      return { ...stand, helft: 2 }
+      // Precies wat de echte tafels doen: helft 2, klok terug op nul, klok stil. Dát is de rust.
+      return { ...stand, helft: 2, klok: 0, klokLoopt: false }
     case 'einde-wedstrijd':
       return { ...stand, gedaan: true, klokLoopt: false }
     case 'terugzetten':

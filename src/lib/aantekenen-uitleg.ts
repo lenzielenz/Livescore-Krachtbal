@@ -125,16 +125,31 @@ export const AANTEKEN_STAPPEN: UitlegStap[] = [
     nr: 7,
     titel: 'Einde eerste helft',
     icoon: '⏭',
-    kort: 'Rust? Druk op 2e helft.',
+    kort: 'Rust? Druk op Einde 1e helft.',
     tekst:
-      'Is de eerste helft gedaan, druk dan op 2e helft. De klok gaat naar de tweede helft; de stand '
-      + 'blijft gewoon staan.',
-    knop: '⏭ 2e helft',
+      'Is de eerste helft gedaan, druk dan op Einde 1e helft en bevestig. De klok springt terug op '
+      + 'nul en blijft stil staan: dat is de rust. De stand blijft gewoon staan.',
+    letOp:
+      'De klok op nul is geen fout — de tweede helft begint opnieuw bij nul. De tijd van de eerste '
+      + 'helft is bewaard in de wedstrijd.',
+    knop: '\u23ed Einde 1e helft',
     scherm: 'helft',
     oefening: { soort: 'knop', doel: 'einde-helft' },
   },
   {
     nr: 8,
+    titel: 'Start de tweede helft',
+    icoon: '\u25b6',
+    kort: 'Ploegen op het veld? Start de 2e helft.',
+    tekst:
+      'Tijdens de rust staat de klok stil. Staan de ploegen weer klaar, druk dan op Start 2e helft — '
+      + 'pas dan begint de tijd te lopen. Zo telt de rust niet mee als speeltijd.',
+    knop: '\u25b6 Start 2e helft',
+    scherm: 'helft',
+    oefening: { soort: 'knop', doel: 'start-helft' },
+  },
+  {
+    nr: 9,
     titel: 'Einde wedstrijd',
     icoon: '⏹',
     kort: 'Gedaan? Druk op Einde en bevestig.',
@@ -148,7 +163,7 @@ export const AANTEKEN_STAPPEN: UitlegStap[] = [
     oefening: { soort: 'knop', doel: 'einde-wedstrijd' },
   },
   {
-    nr: 9,
+    nr: 10,
     titel: 'Klaar — en dan?',
     icoon: '✅',
     kort: 'De uitslag staat er meteen. Terug naar het dagprogramma.',

@@ -224,21 +224,28 @@ async function main() {
     // 6 · Kruisjes, time-outs en de klok
     await leg(page, 6, '.ts-stat')
 
-    // 7 · Naar de tweede helft
-    const helft = page.getByRole('button', { name: /2e helft/i }).first()
-    await leg(page, 7, 'button:has-text("2e helft")')
-    await helft.click()
+    // 7 · Einde eerste helft (de knop heet naar wát hij doet, niet naar wat erna komt)
+    const eindeHelft = page.getByRole('button', { name: /einde 1e helft/i }).first()
+    await leg(page, 7, 'button:has-text("Einde 1e helft")')
+    await eindeHelft.click()
+    await page.waitForTimeout(900)
+    await page.getByRole('button', { name: /ja, einde eerste helft/i }).first().click()
     await page.waitForTimeout(2500)
 
-    // 8 · Einde wedstrijd
-    await leg(page, 8, '.trn-btn.danger')
+    // 8 · Start de tweede helft — de rust: klok op nul en stil.
+    await leg(page, 8, 'button:has-text("Start 2e helft")')
+    await page.getByRole('button', { name: /start 2e helft/i }).first().click()
+    await page.waitForTimeout(2500)
+
+    // 9 · Einde wedstrijd
+    await leg(page, 9, '.trn-btn.danger')
     await page.locator('.trn-btn.danger').first().click()
     await page.waitForTimeout(900)
     await page.getByRole('button', { name: /gedaan/i }).first().click()
     await page.waitForTimeout(3000)
 
-    // 9 · Klaar
-    await leg(page, 9, null)
+    // 10 · Klaar
+    await leg(page, 10, null)
 
     await fs.writeFile(MANIFEST, `${JSON.stringify({ scherm: SCHERM, beelden }, null, 2)}\n`)
     console.log(`\n${beelden.length} beelden in public/uitleg + ${path.relative(process.cwd(), MANIFEST)}`)
