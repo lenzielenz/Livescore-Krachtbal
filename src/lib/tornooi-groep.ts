@@ -27,6 +27,10 @@ export type GroepData = {
   /** Recent ingestuurde supportersfoto's (enkel id + tijdstip, max 15 min oud): het
    *  kantinescherm gebruikt dit om een nieuwe inzending even feestelijk te tonen. */
   fotos: { id: number; ts: string }[]
+  /** Alle foto's van de dag, oudste eerst — de nabeschouwing op het kantinescherm.
+   *  Enkel gevuld voor de federatie (zie `opties.archief`); voor iedereen anders leeg, want het
+   *  foto-archief is bewust niet publiek. */
+  fotoArchief: { id: number; wie: string; opdracht: string | null }[]
 }
 
 const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]/g, '')
@@ -37,7 +41,17 @@ function clubLogoUrlOf(c: Club): string | null {
   return typeof c.logoUrl === 'string' && c.logoUrl ? c.logoUrl : null
 }
 
-export async function loadGroepData(payload: Payload, naam: string): Promise<GroepData | null> {
+/** Opties voor {@link loadGroepData}. */
+export type GroepOpties = {
+  /** Mag de vrager het volledige foto-archief van de dag zien? Enkel de federatie. */
+  archief?: boolean
+}
+
+export async function loadGroepData(
+  payload: Payload,
+  naam: string,
+  opties: GroepOpties = {},
+): Promise<GroepData | null> {
   const res = await payload
     .find({ collection: 'tournaments', where: { groep: { equals: naam } }, sort: 'createdAt', depth: 1, limit: 50 })
     .catch(() => ({ docs: [] as Tournament[] }))
@@ -154,5 +168,27 @@ export async function loadGroepData(payload: Payload, naam: string): Promise<Gro
     .catch(() => ({ docs: [] as { id: number; createdAt: string }[] }))
   const fotos = (fotosRes.docs as { id: number; createdAt: string }[]).map((f) => ({ id: f.id, ts: f.createdAt }))
 
-  return { naam, reeksen, matches, logos, kleuren, fits, host, veldCount, fotos }
+  // Het volledige archief van de dag — enkel voor de federatie, en enkel als erom gevraagd wordt.
+  // Het kantinescherm draait daar na afloop een fotoshow mee; een publieke vrager krijgt hier
+  // niets, precies zoals bij de foto-route zelf.
+  let fotoArchief: GroepData['fotoArchief'] = []
+  if (opties.archief) {
+    const alle = await payload
+      .find({
+        collection: 'tornooi-fotos',
+        where: { groep: { equals: naam } },
+        sort: 'createdAt',
+        depth: 0,
+        limit: 500,
+        overrideAccess: true,
+      })
+      .catch(() => ({ docs: [] as { id: number; uploaderName?: string | null; opdracht?: string | null }[] }))
+    fotoArchief = (alle.docs as { id: number; uploaderName?: string | null; opdracht?: string | null }[]).map((f) => ({
+      id: f.id,
+      wie: f.uploaderName || '',
+      opdracht: f.opdracht || null,
+    }))
+  }
+
+  return { naam, reeksen, matches, logos, kleuren, fits, host, veldCount, fotos, fotoArchief }
 }
