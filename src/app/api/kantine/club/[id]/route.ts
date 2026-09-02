@@ -1,6 +1,7 @@
 import type { Payload, Where } from 'payload'
 
 import { competitionWhere } from '@/lib/analyse-access'
+import { loadAds } from '@/lib/ads'
 import { brusselsDayBoundsUtc, dateStrBE, formatTimeBE } from '@/lib/datetime'
 import { buildMatchState } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
@@ -61,6 +62,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
           id: m.id,
           reeks: reeksLabel(m.reeks),
           time: formatTimeBE(m.date as string),
+          // Het aftellen naar de volgende wedstrijd heeft de échte datum nodig, niet "20:00".
+          date: typeof m.date === 'string' ? m.date : null,
           status: s.match.status,
           home: { name: s.teams.home.name, logoUrl: s.teams.home.logoUrl, logoFit: s.teams.home.logoFit, colors: s.teams.home.colors },
           away: { name: s.teams.away.name, logoUrl: s.teams.away.logoUrl, logoFit: s.teams.away.logoFit, colors: s.teams.away.colors },
@@ -70,7 +73,10 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
         // ontbrekende ploeg → overslaan
       }
     }
-    return Response.json({ matches })
+    // De sponsors horen ook op dít scherm: een clubkantine draait vaak op de automatische
+    // clublink, niet op de handmatige selectie.
+    const ads = await loadAds(payload, 'kantine')
+    return Response.json({ matches, ads })
   } catch (err) {
     return Response.json({ error: (err as Error).message }, { status: 500 })
   }

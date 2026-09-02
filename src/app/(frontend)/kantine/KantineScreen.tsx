@@ -102,12 +102,18 @@ export function KantineScreen({
         .sort((a, b) => a.t - b.t)[0]
     : undefined
 
+  // Alles gespeeld: dan blijven de borden staan als uitslagenbord, met één regel erboven die
+  // zegt dat de dag erop zit. Zonder die regel staat er een scherm vol eindstanden zonder dat
+  // iemand weet of er nog iets komt.
+  const dagGedaan = visible.length > 0 && visible.every((m) => m.status === 'finished')
+
   return (
     <div className="kt-screen">
       {editable && <Link href="/kantine" className="kt-screen-edit">‹ Aanpassen</Link>}
       {title && <span className="kt-screen-title">{title}</span>}
       {/* Af en toe neemt een sponsor het scherm over; de score blijft er doorheen leesbaar. */}
       <ReclameOverlay ads={ads} />
+      {dagGedaan && <p className="kt-gedaan">🏁 Alle wedstrijden van vandaag zijn gespeeld</p>}
       {volgende && (
         <div className="kt-aftel">
           <span className="kt-aftel-lbl">Volgende wedstrijd</span>
