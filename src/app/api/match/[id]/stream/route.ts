@@ -1,5 +1,6 @@
 import { joinMatch } from '@/lib/match-channel'
 import { getPayloadClient } from '@/lib/payload-client'
+import { HARTSLAG_MS } from '@/lib/sse-leven'
 import { SSE_HEADERS, acquireConnection, clientIp, releaseConnection } from '@/lib/sse-hub'
 
 export const dynamic = 'force-dynamic'
@@ -72,7 +73,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
         viewerKey,
       )
 
-      heartbeat = setInterval(() => safeEnqueue(`: ping\n\n`), 15000)
+      heartbeat = setInterval(() => safeEnqueue(`event: ping\ndata: {}\n\n`), HARTSLAG_MS)
       req.signal.addEventListener('abort', cleanup)
     },
     cancel() {

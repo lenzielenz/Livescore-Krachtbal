@@ -298,8 +298,9 @@ export function BracketBoard({ id, initial, canManage = false, logos = {}, fits 
         </Link>
         <nav className="trn-topnav">
           {/* Uitleg vóór de andere links: aan een tornooitafel zit vaak iemand die dit voor het
-              eerst doet, en die moet niet eerst door het schema hoeven te zoeken. */}
-          <Link href={UITLEG_PAD} className="trn-btn">📖 Hoe aantekenen?</Link>
+              eerst doet, en die moet niet eerst door het schema hoeven te zoeken. Enkel voor wie
+              ook echt mag aantekenen — een supporter volgt hier gewoon het schema. */}
+          {canManage && <Link href={UITLEG_PAD} className="trn-btn">📖 Hoe aantekenen?</Link>}
           {/* Het kantinescherm is de tv-link van de organisator — supporters volgen hier. */}
           {canManage && <Link href={`/tornooi/${id}/kantine`} className="trn-btn">Kantinescherm</Link>}
           <Link href="/tornooi" className="trn-toplink">Alle bekers</Link>

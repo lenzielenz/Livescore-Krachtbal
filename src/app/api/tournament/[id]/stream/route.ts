@@ -1,4 +1,5 @@
 import { getPayloadClient } from '@/lib/payload-client'
+import { HARTSLAG_MS } from '@/lib/sse-leven'
 import { SSE_HEADERS, acquireConnection, clientIp, releaseConnection, subscribe } from '@/lib/sse-hub'
 import { buildTournamentState } from '@/lib/tournament-engine'
 
@@ -56,7 +57,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
         (frame) => safeEnqueue(`id: ${frame.id}\nevent: update\ndata: ${JSON.stringify(frame.data)}\n\n`),
       )
 
-      heartbeat = setInterval(() => safeEnqueue(`: ping\n\n`), 15000)
+      heartbeat = setInterval(() => safeEnqueue(`event: ping\ndata: {}\n\n`), HARTSLAG_MS)
       req.signal.addEventListener('abort', cleanup)
     },
     cancel() {

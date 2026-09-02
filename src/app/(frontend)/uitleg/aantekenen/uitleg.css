@@ -105,8 +105,27 @@
 .nm-veld { color: var(--dim, #9aa7b4); font-size: 0.82rem; }
 .nm-hint { margin: 2px 0 0; color: var(--dim, #9aa7b4); font-size: 0.8rem; }
 
-.nm-stand { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px; }
-.nm-stand > span { font-size: 2rem; font-weight: 800; text-align: center; font-variant-numeric: tabular-nums; }
+/* Het nagebouwde tafelscherm. Zelfde volgorde en kleuren als de echte tornooitafel: groen voor
+   de nekworp, blauw voor de rugworp, rood voor het einde. Wie hier oefent, herkent aan de tafel
+   niet alleen de woorden maar ook het beeld. */
+.nm-meta { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 0.8rem; }
+.nm-status {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  font-weight: 700;
+  font-size: 0.72rem;
+}
+.nm-status.live { background: rgba(6, 214, 160, 0.18); color: var(--accent, #06d6a0); }
+
+.nm-klok {
+  padding: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  text-align: center;
+}
+.nm-klok b { display: block; font-size: 1.6rem; font-variant-numeric: tabular-nums; }
+.nm-klok small { color: var(--dim, #9aa7b4); font-size: 0.72rem; }
 
 .nm-ploegvakken { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .nm-vak {
@@ -116,12 +135,27 @@
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 10px;
 }
-.nm-vaknaam { font-weight: 700; font-size: 0.85rem; }
-.nm-tellerrij { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; color: var(--dim, #9aa7b4); }
-.nm-tellerrij button { padding: 2px 9px; }
-.nm-tellerrij b { color: #fff; font-variant-numeric: tabular-nums; }
+.nm-vaknaam { font-weight: 700; font-size: 0.85rem; text-align: center; }
+.nm-score { font-size: 1.8rem; font-weight: 800; text-align: center; font-variant-numeric: tabular-nums; }
+.nm-goalrij { display: flex; gap: 6px; }
+.nm-goalrij .nm-knop { flex: 1; text-align: center; padding: 10px 6px; font-weight: 800; }
+.nm-nek { background: #7ee7a8; border-color: #7ee7a8; color: #08210f; }
+.nm-rug { background: #7fb2ff; border-color: #7fb2ff; color: #071427; }
+.nm-nek:hover { background: #93ecb6; }
+.nm-rug:hover { background: #96c1ff; }
 
-.nm-onder { display: flex; flex-wrap: wrap; gap: 8px; }
+.nm-tellerrij { display: flex; align-items: center; gap: 6px; font-size: 0.78rem; color: var(--dim, #9aa7b4); }
+.nm-tellerrij i { flex: 1; font-style: normal; }
+.nm-tellerrij button { padding: 2px 9px; }
+.nm-tellerrij b { color: #fff; font-variant-numeric: tabular-nums; min-width: 1ch; text-align: center; }
+
+.nm-onder { display: grid; gap: 8px; }
+.nm-rij2 { display: flex; gap: 8px; }
+.nm-rij2 .nm-knop { flex: 1; text-align: center; }
+.nm-breed { width: 100%; text-align: center; }
+.nm-blauw { background: #7fb2ff; border-color: #7fb2ff; color: #071427; font-weight: 800; }
+.nm-rood { border-color: rgba(239, 71, 111, 0.7); color: #ff9db4; }
+.nm-knop:disabled { opacity: 0.5; cursor: default; }
 .nm-klaar { margin: 6px 0 0; color: var(--accent, #06d6a0); font-size: 0.85rem; }
 
 @media (max-width: 560px) {
