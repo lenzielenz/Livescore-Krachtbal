@@ -29,7 +29,10 @@ describe('de stappenlijst', () => {
     // deze lijst mee te veranderen — anders wijst de handleiding iets aan wat er niet staat.
     const knoppen = AANTEKEN_STAPPEN.map((s) => s.knop ?? '').join(' ')
     expect(knoppen).toContain('Start')
-    expect(knoppen).toContain('2e helft')
+    // De knop heet naar wát hij doet. Hij heette "2e helft" terwijl hij de eerste helft afsluit,
+    // en dan lijkt een klok die op nul springt op een fout in plaats van op de rust.
+    expect(knoppen).toContain('Einde 1e helft')
+    expect(knoppen).toContain('Start 2e helft')
     expect(knoppen).toContain('Einde')
     expect(knoppen).toContain('nekworp')
     expect(knoppen).toContain('Pauze')

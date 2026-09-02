@@ -3,6 +3,14 @@
 import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
+import {
+  EINDE_HELFT_BEVESTIGING,
+  EINDE_HELFT_KNOP,
+  inRust,
+  klokKnopLabel,
+  magHelftAfsluiten,
+  type HelftStand,
+} from '@/lib/helft-overgang'
 import type { Side } from '@/lib/tournament'
 import type { TMatchState, TournamentState } from '@/lib/tournament-engine'
 import { useLiveStream } from '@/lib/use-live-stream'
@@ -93,6 +101,15 @@ export function TournamentScoresheet({
 
   const ready = Boolean(m.home && m.away)
   const finished = m.status === 'finished'
+  // Wat de tafel over de helften toont, komt uit één gedeelde module — zodat de tornooitafel,
+  // de competitietafel en het oefenscherm precies hetzelfde zeggen (lib/helft-overgang.ts).
+  const helftStand: HelftStand = {
+    status: m.status,
+    helft: half,
+    klokLoopt: Boolean(m.clockRunning),
+    klokSeconden: m.clockSeconds ?? 0,
+  }
+  const rust = inRust(helftStand)
 
   return (
     <div className="trn-page sheet">
@@ -116,9 +133,12 @@ export function TournamentScoresheet({
         </span>
       </div>
 
-      <div className={`ts-clock ${overtime ? 'over' : ''}`}>
+      <div className={`ts-clock ${overtime ? 'over' : ''}${rust ? ' rust' : ''}`}>
         <span className="ts-clock-time">{fmtClock(clock)}</span>
         <span className="ts-clock-half">Helft {half} · doel {Math.round(halfDurationSeconds / 60)} min</span>
+        {/* Zonder deze regel is de rust niet van een storing te onderscheiden: een klok die op
+            nul staat en niet loopt, terwijl er niets uitlegt waarom. */}
+        {rust && <span className="ts-clock-rust">⏸ Rust · eerste helft afgesloten, de tweede moet nog beginnen</span>}
       </div>
 
       {!ready ? (
@@ -185,13 +205,25 @@ export function TournamentScoresheet({
                     })
                   }
                 >▶ Start</button>
-              ) : m.clockRunning ? (
-                <button type="button" className="trn-btn" onClick={() => act({ action: 'clock', running: false })}>⏸ Pauze</button>
               ) : (
-                <button type="button" className="trn-btn" onClick={() => act({ action: 'clock', running: true })}>▶ Klok</button>
+                <button
+                  type="button"
+                  className={`trn-btn${rust ? ' primary' : ''}`}
+                  onClick={() => act({ action: 'clock', running: !m.clockRunning })}
+                >
+                  {klokKnopLabel(helftStand)}
+                </button>
               )}
-              {half === 1 && m.status === 'live' && (
-                <button type="button" className="trn-btn" onClick={() => act({ action: 'half' })}>⏭ 2e helft</button>
+              {/* De knop heet naar wát hij doet: hij sluit de eerste helft af. Hij heette
+                  "2e helft", en dan lijkt een klok die op nul springt op een fout in plaats van
+                  op de rust. De bevestiging zegt dat vooraf, want die nul is niet terug te
+                  draaien. */}
+              {magHelftAfsluiten(helftStand) && (
+                <button
+                  type="button"
+                  className="trn-btn"
+                  onClick={() => setBevestig({ ...EINDE_HELFT_BEVESTIGING, doe: () => act({ action: 'half' }) })}
+                >{EINDE_HELFT_KNOP}</button>
               )}
               {/* Bevestiging tegen een verdwaalde tik: einde legt de uitslag vast en schuift de
                   winnaar door in het schema. */}

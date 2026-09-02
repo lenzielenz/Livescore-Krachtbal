@@ -99,6 +99,18 @@
       "nr": 9,
       "bestand": "stap-09.png",
       "breedte": 430,
+      "hoogte": 258,
+      "doel": {
+        "x": 16,
+        "y": 120,
+        "b": 398,
+        "h": 58
+      }
+    },
+    {
+      "nr": 10,
+      "bestand": "stap-10.png",
+      "breedte": 430,
       "hoogte": 900,
       "doel": null
     }

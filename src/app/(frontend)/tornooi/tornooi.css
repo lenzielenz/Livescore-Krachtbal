@@ -781,6 +781,18 @@ button.trn-toplink {
   color: var(--dim);
   font-size: 0.82rem;
 }
+/* De rust: een klok op nul die niet loopt, mét de reden erbij. Zonder die regel lijkt hetzelfde
+   beeld op een tafel die vastgelopen is. */
+.ts-clock.rust {
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+}
+.ts-clock-rust {
+  display: block;
+  margin-top: 6px;
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: var(--accent);
+}
 .ts-board {
   display: grid;
   grid-template-columns: 1fr 1fr;

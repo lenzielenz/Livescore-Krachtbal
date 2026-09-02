@@ -90,11 +90,17 @@
 }
 
 .nm-dag { gap: 6px; }
+/* De rij van het dagprogramma, nagebouwd naar de echte (Dagprogramma.tsx): uur en affiche op de
+   eerste regel, daaronder één metaregel met status, veld, reeks en speelduur.
+
+   De vorige versie was één grid van vier kolommen, en op een gsm werd het veld gewoon verbórgen.
+   Dan beloofde de uitleg "met het uur, het veld, de categorie en de speelduur" terwijl het plaatje
+   enkel een uur en twee ploegnamen liet zien. Een metaregel die afbreekt, toont alles. */
 .nm-rij {
   display: grid;
-  grid-template-columns: auto 1fr auto auto;
+  grid-template-columns: auto 1fr;
   align-items: center;
-  gap: 8px;
+  gap: 4px 8px;
   padding: 8px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 10px;
@@ -103,6 +109,25 @@
 .nm-uur { font-weight: 700; font-variant-numeric: tabular-nums; }
 .nm-ploegen { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .nm-veld { color: var(--dim, #9aa7b4); font-size: 0.82rem; }
+.nm-metarij {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.nm-tag {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  color: var(--dim, #9aa7b4);
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+.nm-tag.reeks { color: #cfe0ff; }
+.nm-tag.veld { color: #9fd6b4; }
+.nm-metarij .nm-knop { margin-left: auto; }
 .nm-hint { margin: 2px 0 0; color: var(--dim, #9aa7b4); font-size: 0.8rem; }
 
 /* Het nagebouwde tafelscherm. Zelfde volgorde en kleuren als de echte tornooitafel: groen voor
@@ -126,6 +151,16 @@
 }
 .nm-klok b { display: block; font-size: 1.6rem; font-variant-numeric: tabular-nums; }
 .nm-klok small { color: var(--dim, #9aa7b4); font-size: 0.72rem; }
+/* De rust: klok op nul, stil, mét de reden erbij — net als op de echte tafel. */
+.nm-klok.rust { border-color: rgba(93, 169, 255, 0.55); }
+.nm-rustlijn {
+  display: block;
+  margin-top: 4px;
+  font-style: normal;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #9fc7ff;
+}
 
 .nm-ploegvakken { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .nm-vak {
@@ -161,7 +196,6 @@
 @media (max-width: 560px) {
   .nm-ploegvakken { grid-template-columns: 1fr; }
   .nm-rij { grid-template-columns: auto 1fr; }
-  .nm-rij .nm-veld { display: none; }
 }
 
 .uit-alles { margin-top: 16px; }
