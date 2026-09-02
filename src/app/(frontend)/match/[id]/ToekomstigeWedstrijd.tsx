@@ -56,15 +56,20 @@ export function ToekomstigeWedstrijd({
         >
           {geladen && bewaard ? '★ Bewaard' : '☆ Bewaar deze wedstrijd'}
         </button>
-        {googleUrl && (
-          <a className="match-toekomst-btn" href={googleUrl} target="_blank" rel="noopener noreferrer">
-            📅 Google Agenda
-          </a>
-        )}
-        <a className="match-toekomst-btn zacht" href={`/api/match/${wedstrijd.id}/ics`}>
-          ⬇ Met melding (.ics)
-        </a>
       </div>
+      {/* De agenda-links zijn bijzaak: één rustige regel onder de hoofdknop in plaats van twee
+          knoppen die evenveel gewicht opeisen als "bewaar deze wedstrijd". */}
+      <p className="match-toekomst-agenda">
+        In je agenda:
+        {googleUrl && (
+          <>
+            {' '}
+            <a href={googleUrl} target="_blank" rel="noopener noreferrer">Google</a>
+          </>
+        )}
+        {googleUrl && ' · '}
+        <a href={`/api/match/${wedstrijd.id}/ics`}>met melding (.ics)</a>
+      </p>
       {geladen && bewaard && (
         <p className="match-toekomst-hint">
           Staat in je lijstje. Je vindt het terug bij <a href="/zoeken">Wanneer spelen we?</a>

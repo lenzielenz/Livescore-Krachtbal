@@ -349,21 +349,6 @@ export function LiveBoard({
             <span>★ Clubs</span>
             {favClubs.size > 0 && <span className="lb-reeks-n">{favClubs.size}</span>}
           </button>
-          {/* Combinatie van al je gevolgde ploegen + clubs in één download — verschijnt pas
-              zodra je er minstens één volgt (anders is er niets om te combineren). */}
-          {(favTeams.size > 0 || favClubs.size > 0) && (
-            <a
-              className="lb-reeks fav"
-              href={`/api/agenda/ics?${[
-                favTeams.size > 0 ? `teams=${[...favTeams].join(',')}` : '',
-                favClubs.size > 0 ? `clubs=${[...favClubs].join(',')}` : '',
-                `name=${encodeURIComponent('Mijn agenda')}`,
-              ].filter(Boolean).join('&')}`}
-              title="Al je gevolgde ploegen en clubs samen downloaden (Google/Apple/Outlook)"
-            >
-              <span>📅 Mijn agenda</span>
-            </a>
-          )}
         </div>
         <PushOptIn />
       </aside>

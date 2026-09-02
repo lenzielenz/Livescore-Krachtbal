@@ -185,3 +185,80 @@
   }
   .mw-hour-ico { font-size: 0.95rem; }
 }
+
+/* ── Ingeklapte samenvatting ──────────────────────────────────────────────────────────────────
+   Deze regel werd toegevoegd zonder stijl, en dan tekent de browser haar als wat ze is: een kale
+   knop. Wit vlak, tekst tegen elkaar geplakt, midden in een gekleurd paneel. Vandaar hier alsnog
+   de opmaak — en meteen als volwaardige regel: icoon, temperatuur, oordeel, regenkans, plaats. */
+.mw-sum {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 2px 0;
+  border: 0;
+  background: transparent;
+  color: var(--txt);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.mw-sum-ico {
+  font-size: 1.35rem;
+  line-height: 1;
+}
+.mw-sum-temp {
+  font-size: 1.25rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.mw-sum-txt {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--txt);
+  /* Een lange conclusie ("Stevige wind — let op hoge worpen") mag de regel niet openbreken. */
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mw-sum-rain {
+  flex: 0 0 auto;
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: var(--dim-strong, #cad2dc);
+  background: rgba(255, 255, 255, 0.07);
+  border-radius: 999px;
+  padding: 3px 9px;
+}
+.mw-sum-place {
+  flex: 0 0 auto;
+  margin-left: auto;
+  font-size: 0.76rem;
+  color: var(--dim);
+  /* Op een smal scherm is de plaatsnaam het eerste wat gemist mag worden. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 40%;
+}
+.mw-sum-chev {
+  flex: 0 0 auto;
+  color: var(--dim);
+  font-size: 0.8rem;
+}
+.mw-sum-place + .mw-sum-chev { margin-left: 0; }
+.mw-sum-txt + .mw-sum-chev,
+.mw-sum-rain + .mw-sum-chev { margin-left: auto; }
+.mw-sum:hover .mw-sum-chev { color: var(--txt); }
+
+@media (max-width: 420px) {
+  /* Op een gsm wint de conclusie het van de plaatsnaam. */
+  .mw-sum-place { display: none; }
+}
+
+.mw-detail {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
