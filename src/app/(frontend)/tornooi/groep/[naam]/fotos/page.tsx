@@ -5,6 +5,7 @@ import { SiteHeader } from '@/components/SiteHeader'
 import { isFederationLevel } from '@/lib/access'
 import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
+import { FotoBeheer } from './FotoBeheer'
 import '../../../tornooi.css'
 
 export const dynamic = 'force-dynamic'
@@ -41,28 +42,18 @@ export default async function TornooiFotosPage({ params }: { params: Promise<{ n
         <div className="trn-actions">
           <Link href={`/tornooi/groep/${encodeURIComponent(naam)}`} className="trn-btn">← Terug naar de tornooidag</Link>
         </div>
-        {fotos.length === 0 ? (
-          <p className="trn-empty">Nog geen foto’s ingestuurd.</p>
-        ) : (
-          <ul className="tf-raster">
-            {fotos.map((f) => {
-              const src = f.url || `/api/tornooi-fotos/file/${encodeURIComponent(f.filename ?? '')}`
-              return (
-                <li key={f.id} className="tf-kaart">
-                  <a href={src} target="_blank" rel="noreferrer">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={src} alt={`Foto van ${f.uploaderName || 'supporter'}`} loading="lazy" />
-                  </a>
-                  <span className="tf-meta">
-                    <b>{f.uploaderName || 'Onbekend'}</b>
-                    <span>{wanneer(f.createdAt)}</span>
-                  </span>
-                  {f.opdracht && <span className="tf-opdracht">{f.opdracht}</span>}
-                </li>
-              )
-            })}
-          </ul>
-        )}
+        <FotoBeheer
+          naam={naam}
+          fotos={fotos.map((f) => ({
+            id: f.id,
+            // Via de eigen route: die kent het onderscheid tussen het kantinescherm (enkel verse
+            // foto's) en de federatie (het hele archief), en kan ook als download geleverd worden.
+            src: `/api/tornooi-groep/foto/${f.id}?naam=${encodeURIComponent(naam)}`,
+            uploaderName: f.uploaderName || '',
+            wanneer: wanneer(f.createdAt),
+            opdracht: f.opdracht || null,
+          }))}
+        />
       </div>
     </>
   )
