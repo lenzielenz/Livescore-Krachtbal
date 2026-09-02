@@ -19,6 +19,7 @@ import './uitleg.css'
 /** De stand van het nagemaakte scherm; enkel om de oefening iets te laten doen. */
 type Doos = { score: [number, number]; kruisjes: number; gestart: boolean; helft: number; gedaan: boolean }
 
+
 const BEGIN: Doos = { score: [0, 0], kruisjes: 0, gestart: false, helft: 1, gedaan: false }
 
 export function Oefenen() {
@@ -42,7 +43,7 @@ export function Oefenen() {
     // Het scherm reageert altijd — ook op een knop die nu niet gevraagd is. Anders voelt het
     // nagebouwde scherm dood aan en denk je dat er iets kapot is.
     setDoos((d) => {
-      if (doel === 'klok-start') return { ...d, gestart: true }
+      if (doel === 'start') return { ...d, gestart: true }
       if (doel === 'score-nek') return { ...d, score: [d.score[0] + 1, d.score[1]] }
       if (doel === 'score-rug') return { ...d, score: [d.score[0] + 2, d.score[1]] }
       if (doel === 'score-uit-nek') return { ...d, score: [d.score[0], d.score[1] + 1] }
@@ -173,43 +174,54 @@ function Namaak({
     <div className="nm nm-tafel">
       <div className="nm-stand">
         <span>{doos.score[0]}</span>
-        <button
-          type="button"
-          className={`${wijs('klok-start')} nm-klok`}
-          onClick={() => onTik('klok-start')}
-        >
+        <span className="nm-klok">
           <b>{doos.gestart ? '00:07' : '00:00'}</b>
-          <small>{doos.gedaan ? 'afgelopen' : doos.gestart ? `helft ${doos.helft} · tik om te pauzeren` : '▶ Tik om te starten'}</small>
-        </button>
+          <small>{doos.gedaan ? 'afgelopen' : `Helft ${doos.helft} · doel 10 min`}</small>
+        </span>
         <span>{doos.score[1]}</span>
       </div>
 
       <div className="nm-ploegvakken">
         <div className="nm-vak">
           <span className="nm-vaknaam">KBC Male</span>
-          <button type="button" className={wijs('score-nek')} onClick={() => onTik('score-nek')}>+1 <small>nekworp</small></button>
-          <button type="button" className={wijs('score-rug')} onClick={() => onTik('score-rug')}>+2 <small>rugworp</small></button>
+          <span className="nm-goalrij">
+            <button type="button" className={wijs('score-nek')} onClick={() => onTik('score-nek')}>+1 <small>nekworp</small></button>
+            <button type="button" className={wijs('score-rug')} onClick={() => onTik('score-rug')}>+2 <small>rugworp</small></button>
+          </span>
           <span className="nm-tellerrij">
             ✖ Kruisjes
             <button type="button" className={wijs('kruisje-min')} onClick={() => onTik('kruisje-min')}>−</button>
             <b>{doos.kruisjes}</b>
             <button type="button" className={wijs('kruisje-plus')} onClick={() => onTik('kruisje-plus')}>+</button>
           </span>
+          <span className="nm-tellerrij">
+            ⏱ Minuten
+            <button type="button" className="nm-knop" onClick={() => onTik('minuut-min')}>−</button>
+            <b>0</b>
+            <button type="button" className="nm-knop" onClick={() => onTik('minuut-plus')}>+</button>
+          </span>
         </div>
         <div className="nm-vak">
           <span className="nm-vaknaam">Avanti Lissewege</span>
-          <button type="button" className={wijs('score-uit-nek')} onClick={() => onTik('score-uit-nek')}>+1 <small>nekworp</small></button>
-          <button type="button" className="nm-knop" onClick={() => onTik('score-uit-rug')}>+2 <small>rugworp</small></button>
+          <span className="nm-goalrij">
+            <button type="button" className="nm-knop" onClick={() => onTik('score-uit-nek')}>+1 <small>nekworp</small></button>
+            <button type="button" className="nm-knop" onClick={() => onTik('score-uit-rug')}>+2 <small>rugworp</small></button>
+          </span>
         </div>
       </div>
 
       <div className="nm-onder">
-        <button type="button" className="nm-knop" onClick={() => onTik('ondoen')}>↶ Ondoen</button>
-        {doos.helft === 1 ? (
-          <button type="button" className={wijs('einde-helft')} onClick={() => onTik('einde-helft')}>⏭ Einde 1e helft → 2e</button>
+        {!doos.gestart ? (
+          <button type="button" className={wijs('start')} onClick={() => onTik('start')}>▶ Start</button>
         ) : (
-          <button type="button" className={wijs('einde-wedstrijd')} onClick={() => onTik('einde-wedstrijd')}>⏹ Einde wedstrijd</button>
+          <button type="button" className="nm-knop" onClick={() => onTik('pauze')}>⏸ Pauze</button>
         )}
+        {doos.helft === 1 ? (
+          <button type="button" className={wijs('einde-helft')} onClick={() => onTik('einde-helft')}>⏭ 2e helft</button>
+        ) : (
+          <button type="button" className={wijs('einde-wedstrijd')} onClick={() => onTik('einde-wedstrijd')}>⏹ Einde</button>
+        )}
+        <button type="button" className="nm-knop" onClick={() => onTik('ondoen')}>↶ Ondoen</button>
       </div>
       {doos.gedaan && <p className="nm-klaar">Eindstand vastgelegd. (In het echt kan je nog heropenen.)</p>}
     </div>

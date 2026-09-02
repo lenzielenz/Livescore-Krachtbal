@@ -107,8 +107,6 @@
 
 .nm-stand { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px; }
 .nm-stand > span { font-size: 2rem; font-weight: 800; text-align: center; font-variant-numeric: tabular-nums; }
-.nm-klok { text-align: center; min-width: 140px; }
-.nm-klok b { display: block; font-size: 1.4rem; font-variant-numeric: tabular-nums; }
 
 .nm-ploegvakken { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .nm-vak {
@@ -137,3 +135,10 @@
 .uit-lijst { padding-left: 20px; }
 .uit-lijst li { margin: 12px 0; }
 .uit-lijst p { margin: 4px 0; max-width: 62ch; line-height: 1.55; }
+
+/* De score-knoppen naast elkaar, zoals aan de tornooitafel. */
+.nm-goalrij { display: flex; gap: 6px; }
+.nm-goalrij .nm-knop { flex: 1; text-align: center; }
+.nm-klok { text-align: center; }
+.nm-klok b { display: block; font-size: 1.4rem; font-variant-numeric: tabular-nums; }
+.nm-klok small { color: var(--dim, #9aa7b4); font-size: 0.72rem; }
