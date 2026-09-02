@@ -9,6 +9,7 @@ import { TornooiPronostiek } from '../groep/[naam]/TornooiPronostiek'
 import type { LogoFit } from '@/lib/logo-fit'
 import type { TMatchState, TournamentState } from '@/lib/tournament-engine'
 import { UITLEG_PAD } from '@/lib/aantekenen-uitleg'
+import { opSpeeltijd } from '@/lib/tornooi-volgorde'
 import { fmtClock, useTicking, useTournamentStream } from '../useTournament'
 import { BracketZoom } from './BracketZoom'
 
@@ -204,7 +205,8 @@ function MatchCard({ id, m, canManage, logos, fits, veldCount = 0, neutral = fal
 
 // Round-robin: live rangschikking (4/3/2 punten) + alle wedstrijden.
 function RoundRobin({ id, state, canManage, logos, fits, veldCount = 0, onState, ingelogd = false, tips = {} }: { id: number; state: TournamentState; canManage: boolean; logos: Record<string, string>; fits: Record<string, LogoFit>; veldCount?: number; onState?: (s: TournamentState) => void; ingelogd?: boolean; tips?: Record<number, { home: number; away: number }> }) {
-  const matches = state.rounds.flatMap((r) => r.matches)
+  // Op speeltijd, niet op schemavolgorde: aan een tornooi zoek je een wedstrijd op haar uur.
+  const matches = opSpeeltijd(state.rounds.flatMap((r) => r.matches))
   const standings = state.standings ?? []
   return (
     <div className="trn-rr">
