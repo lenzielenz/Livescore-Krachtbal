@@ -5,6 +5,7 @@ import { competitionWhere } from '@/lib/analyse-access'
 import { getAuthUser } from '@/lib/auth-user'
 import { type LogoFit, normalizeLogoFit } from '@/lib/logo-fit'
 import { getPayloadClient } from '@/lib/payload-client'
+import { kantinePadVoor } from '@/lib/tornooi-paden'
 import { reeksPronostiekStand } from '@/lib/tornooi-pronostiek'
 import { buildTournamentState } from '@/lib/tournament-engine'
 import { BracketBoard } from './BracketBoard'
@@ -149,7 +150,7 @@ export default async function TornooiPage({ params }: { params: Promise<{ id: st
           />
         </div>
       )}
-      <BracketBoard id={tournamentId} initial={state} canManage={canManage} logos={logos} fits={fits} veldCount={veldCount} ingelogd={Boolean(user)} />
+      <BracketBoard id={tournamentId} initial={state} canManage={canManage} logos={logos} fits={fits} veldCount={veldCount} ingelogd={Boolean(user)} kantinePad={kantinePadVoor(tournamentId, groepNaam)} groep={groepNaam} />
       {stand.length > 0 && (
         <div className="trn-page">
           <section className="trn-hub-sec">

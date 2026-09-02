@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 
 import { TeamLogo } from '@/components/TeamLogo'
 import { PRONOSTIEK_OP_CATEGORIE } from '@/lib/pronostiek-schakelaar'
+import { tornooiBasisPad } from '@/lib/tornooi-paden'
 import { TornooiPronostiek } from '../groep/[naam]/TornooiPronostiek'
 import type { LogoFit } from '@/lib/logo-fit'
 import type { TMatchState, TournamentState } from '@/lib/tournament-engine'
@@ -245,7 +246,7 @@ function RoundRobin({ id, state, canManage, logos, fits, veldCount = 0, onState,
   )
 }
 
-export function BracketBoard({ id, initial, canManage = false, logos = {}, fits = {}, veldCount = 0, ingelogd = false }: { id: number; initial: TournamentState; canManage?: boolean; logos?: Record<string, string>; fits?: Record<string, LogoFit>; veldCount?: number; ingelogd?: boolean }) {
+export function BracketBoard({ id, initial, canManage = false, logos = {}, fits = {}, veldCount = 0, ingelogd = false, kantinePad, groep = '' }: { id: number; initial: TournamentState; canManage?: boolean; logos?: Record<string, string>; fits?: Record<string, LogoFit>; veldCount?: number; ingelogd?: boolean; kantinePad: string; groep?: string }) {
   const [stream, setStream] = useTournamentStream(id, initial)
   const state = stream ?? initial
   // Eigen pronostiek-tips van deze supporter (andermans tips blijven verborgen tot na de match).
@@ -295,7 +296,15 @@ export function BracketBoard({ id, initial, canManage = false, logos = {}, fits 
   return (
     <div className="trn-page">
       <header className="trn-top">
-        <Link href="/tornooi" className="trn-home">
+        {/* Het vertrekpunt van de dag, altijd binnen handbereik. Wie hier zit, koos een
+            tornooidag en daarna één categorie; de weg terug ging naar álle bekers van het
+            seizoen — een heel eind om de rest van je eigen tornooi terug te vinden. */}
+        {groep && (
+          <Link href={tornooiBasisPad(groep)} className="trn-basis">
+            ← <span className="trn-basis-naam">{groep}</span>
+          </Link>
+        )}
+        <Link href={tornooiBasisPad(groep)} className="trn-home">
           <span className="brand">Krachtbal</span> Live · {state.name}
         </Link>
         <nav className="trn-topnav">
@@ -303,8 +312,10 @@ export function BracketBoard({ id, initial, canManage = false, logos = {}, fits 
               eerst doet, en die moet niet eerst door het schema hoeven te zoeken. Enkel voor wie
               ook echt mag aantekenen — een supporter volgt hier gewoon het schema. */}
           {canManage && <Link href={UITLEG_PAD} className="trn-btn">📖 Hoe aantekenen?</Link>}
-          {/* Het kantinescherm is de tv-link van de organisator — supporters volgen hier. */}
-          {canManage && <Link href={`/tornooi/${id}/kantine`} className="trn-btn">Kantinescherm</Link>}
+          {/* Het kantinescherm is de tv-link van de organisator — supporters volgen hier. Hoort
+              deze reeks bij een tornooidag, dan wijst hij naar het scherm van de héle dag; een
+              losse beker houdt zijn eigen scherm (zie lib/tornooi-paden.ts). */}
+          {canManage && <Link href={kantinePad} className="trn-btn">Kantinescherm</Link>}
           <Link href="/tornooi" className="trn-toplink">Alle bekers</Link>
         </nav>
       </header>

@@ -14,6 +14,30 @@
   flex-wrap: wrap;
   margin-bottom: 18px;
 }
+/* Het vertrekpunt van de tornooidag. Staat op een eigen regel bóven de titel (flex-basis 100%),
+   want dat is waar een terugweg hoort: het eerste wat je leest, niet iets dat je tussen de
+   knoppen moet zoeken. */
+.trn-basis {
+  flex: 0 0 100%;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: var(--dim);
+  margin-bottom: -4px;
+}
+.trn-basis:hover {
+  color: var(--txt);
+}
+.trn-basis-naam {
+  /* Een lange dagnaam mag de kop niet uit elkaar duwen op een gsm. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: min(70vw, 460px);
+}
 .trn-home {
   font-size: 1.4rem;
   font-weight: 800;
