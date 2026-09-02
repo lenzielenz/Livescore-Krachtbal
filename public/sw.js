@@ -5,7 +5,7 @@
 //  - API (/api/*) en externe oorsprong: nooit cachen (dynamisch; de aantekentafel heeft een eigen
 //    offline-wachtrij voor mutaties).
 
-const CACHE = 'kb-cache-v2'
+const CACHE = 'kb-cache-v3'
 const OFFLINE_URL = '/offline'
 const PRECACHE = ['/', OFFLINE_URL, '/manifest.webmanifest', '/icon.svg']
 
@@ -38,16 +38,28 @@ self.addEventListener('fetch', (event) => {
   if (url.pathname.startsWith('/admin')) return // Payload-admin: door de browser laten afhandelen
 
   // Navigaties: vers proberen, anders uit de cache, anders de offline-pagina.
+  //
+  // Persoonlijke pagina's (voor een ingelogde bezoeker gerenderd) gaan NIET in de cache, en
+  // worden er ook nooit uit geserveerd. Anders gebeurt dit: tijdens een uitrol is de server een
+  // halve minuut weg, de fetch mislukt, en je krijgt een oude kopie te zien waarop je uitgelogd
+  // staat — terwijl je sessie gewoon nog geldig is. Dat is wat "een update logt me af" bleek te
+  // zijn. De server markeert zulke pagina's met een kopje (zie src/middleware.ts); de worker kan
+  // de sessiecookie zelf niet lezen, want die is httpOnly.
   if (req.mode === 'navigate') {
     event.respondWith(
       (async () => {
+        const cache = await caches.open(CACHE)
         try {
           const fresh = await fetch(req)
-          const cache = await caches.open(CACHE)
-          cache.put(req, fresh.clone()).catch(() => {})
+          if (fresh.headers.get('x-kb-prive') === '1') {
+            // Ooit als openbare pagina bewaard, nu persoonlijk: die oude kopie mag niet blijven
+            // rondslingeren om straks als "de" pagina geserveerd te worden.
+            cache.delete(req).catch(() => {})
+          } else {
+            cache.put(req, fresh.clone()).catch(() => {})
+          }
           return fresh
         } catch {
-          const cache = await caches.open(CACHE)
           return (await cache.match(req)) || (await cache.match(OFFLINE_URL)) || Response.error()
         }
       })(),

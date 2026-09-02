@@ -20,7 +20,20 @@ export const Users: CollectionConfig = {
     defaultColumns: ['email', 'name', 'roles', 'club'],
     group: 'Beheer',
   },
-  auth: true,
+  // De sessie moet een kantineavond overleven — en een uitrol.
+  //
+  // Payload's standaard is 7200 seconden: twee uur. Wie het kantinescherm 's middags klaarzet,
+  // is tegen de tweede helft uitgelogd, en dat merk je pas wanneer je de pagina herlaadt — bv.
+  // net na een update. Vandaar dat het lang leek alsof de uitrol je uitlogde; de uitrol doet
+  // dat niet, de klok deed het.
+  //
+  // Dertig dagen kan hier veilig omdat Payload de sessies in de database bijhoudt
+  // (`useSessions` staat standaard aan): uitloggen verwijdert de sessie écht, en een gestolen
+  // cookie is met één uitlog-actie waardeloos. Zou de token alleen op zijn handtekening
+  // vertrouwen, dan was dertig dagen wél roekeloos.
+  auth: {
+    tokenExpiration: 60 * 60 * 24 * 30,
+  },
   hooks: {
     // Een verwijderde gebruiker mag geen verweesde analyse-entiteiten achterlaten. Clubs/ploegen/
     // spelers hebben bewust geen DB-FK op analyse_owner_id (zie migratie 20260609_260000 — vermijdt
