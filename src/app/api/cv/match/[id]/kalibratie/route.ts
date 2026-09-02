@@ -7,7 +7,8 @@ import { authUser } from '@/lib/api-auth'
 import { getPayloadClient } from '@/lib/payload-client'
 import { mayEditMatchVideo } from '@/lib/video-access'
 import { cvMap, pythonVoorSpawn, spawnOmgeving } from '@/lib/cv-analyse'
-import { geldigeCameraPositie, geldigLabel, spiegelLabel } from '@/lib/kalibratie-punten'
+import { geldigeCameraPositie, spiegelLabel } from '@/lib/kalibratie-punten'
+import { leesPunten, type KalibratiePunt as Punt } from '@/lib/kalibratie-lezen'
 
 export const dynamic = 'force-dynamic'
 
@@ -19,28 +20,7 @@ export const dynamic = 'force-dynamic'
 // er überhaupt een geldige matrix uit volgt — een kalibratie die pas een halfuur later blijkt
 // te rammelen, is een kalibratie die je twee keer moet zetten.
 
-type Punt = { label: string; x: number; y: number }
 type Beeld = { tijd: number; beeldBreedte: number | null; beeldHoogte: number | null; punten: Punt[] }
-
-function leesPunten(ruw: unknown, waar: string): { punten: Punt[] } | { fout: string } {
-  if (!Array.isArray(ruw)) return { fout: `${waar}: punten ontbreekt.` }
-  if (ruw.length < 1) return { fout: `${waar}: geen punten.` }
-  if (ruw.length > 14) return { fout: 'Meer dan veertien punten heeft geen zin (zoveel kruispunten zijn er).' }
-  const punten: Punt[] = []
-  const gezien = new Set<string>()
-  for (const p of ruw as Record<string, unknown>[]) {
-    if (!geldigLabel(p?.label)) return { fout: `Onbekend punt: ${String(p?.label)}` }
-    const x = Number(p.x)
-    const y = Number(p.y)
-    if (!Number.isFinite(x) || !Number.isFinite(y) || x < 0 || y < 0) {
-      return { fout: `Punt ${String(p.label)} heeft geen geldige beeldcoördinaten.` }
-    }
-    if (gezien.has(String(p.label))) return { fout: `Punt ${String(p.label)} staat er twee keer in.` }
-    gezien.add(String(p.label))
-    punten.push({ label: String(p.label), x: Math.round(x), y: Math.round(y) })
-  }
-  return { punten }
-}
 
 /**
  * De ijkbeelden uit het verzoek.
@@ -95,6 +75,12 @@ type Veldmaten = { diepte: number; breedte: number | null; speelveld: number | n
 const VRIJEWORP_OFFSET_M = 4
 
 /** Veldcoördinaat (meters) van een kruispunt-label — spiegel van veld.kruispunten() in cv/veld.py. */
+function veldpuntVan(p: Punt, veld: Veldmaten): { x: number; y: number } {
+  // Een ankerpunt staat niet in het veldmodel; zijn coördinaten kwamen van een luchtfoto mee.
+  if (p.veldM) return { x: p.veldM[0], y: p.veldM[1] }
+  return veldpunt(p.label, veld)
+}
+
 function veldpunt(label: string, veld: Veldmaten): { x: number; y: number } {
   const breedte = veld.breedte ?? 14
   const lengte = (veld.speelveld ?? 26) + 2 * veld.diepte
@@ -141,7 +127,7 @@ function collineair(pts: { x: number; y: number }[]): boolean {
  * al bij het aanduiden hoort — ook op een server zonder Python.
  */
 function ontaardeMelding(punten: Punt[], veld: Veldmaten): string | null {
-  const veldpunten = punten.map((p) => veldpunt(p.label, veld))
+  const veldpunten = punten.map((p) => veldpuntVan(p, veld))
   for (let i = 0; i < veldpunten.length; i++) {
     if (collineair(veldpunten.filter((_, j) => j !== i))) {
       return (

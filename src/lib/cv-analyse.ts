@@ -1,4 +1,6 @@
 import { spawn, type ChildProcess } from 'child_process'
+
+import { puntArgumenten } from './kalibratie-argv'
 import { existsSync, readdirSync } from 'fs'
 import fs from 'fs/promises'
 import path from 'path'
@@ -624,7 +626,8 @@ export async function schrijfKalibratie(
     ...(veld.breedte != null ? ['--breedte', String(veld.breedte)] : []),
     ...(veld.speelveld != null ? ['--speelveld', String(veld.speelveld)] : []),
     '--uit', pad,
-    ...punten.flatMap((p) => ['--punt', `${Math.round(p.x)},${Math.round(p.y)}=${p.label}`]),
+    // Lijnkruisingen gaan als --punt, vrije ankerpunten als --anker (zie lib/kalibratie-argv.ts).
+    ...puntArgumenten(punten),
   ]
   const python = await pythonVoorSpawn()
   const klaar = await new Promise<boolean>((resolve) => {
@@ -715,7 +718,7 @@ export async function schrijfAnkers(
       ...(veld.breedte != null ? ['--breedte', String(veld.breedte)] : []),
       ...(veld.speelveld != null ? ['--speelveld', String(veld.speelveld)] : []),
       '--uit', tussen,
-      ...beeld.punten.flatMap((p) => ['--punt', `${Math.round(p.x)},${Math.round(p.y)}=${p.label}`]),
+      ...puntArgumenten(beeld.punten),
     ]
     const klaar = await new Promise<boolean>((resolve) => {
       const kind = spawn(python.pad, argv, { stdio: ['ignore', 'ignore', 'pipe'], env: spawnOmgeving(python) })
