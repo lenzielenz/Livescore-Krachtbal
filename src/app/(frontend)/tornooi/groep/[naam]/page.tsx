@@ -71,6 +71,11 @@ export default async function TornooiGroepPage({ params }: { params: Promise<{ n
             <Link href={`/tornooi/groep/${encodeURIComponent(naam)}/programma`} className="trn-btn primary">
               📋 Dagprogramma
             </Link>
+            {/* Alle standen van de dag op één pagina: anders moet je elke categorie apart
+                opzoeken om te zien hoe jouw ploeg ervoor staat. */}
+            <Link href={`/tornooi/groep/${encodeURIComponent(naam)}/rangschikking`} className="trn-btn">
+              📊 Rangschikking
+            </Link>
             {/* Eigen pagina met de volledige pronostiekrangschikking van de hele dag. */}
             <Link href={`/tornooi/groep/${encodeURIComponent(naam)}/pronostiek`} className="trn-btn">
               🔮 Pronostiekstand{standTop ? ` · ${standTop}` : ''}

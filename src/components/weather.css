@@ -71,7 +71,32 @@
 .wx-mini:hover { border-color: var(--accent); }
 .wx-mini-caret { font-size: 0.62rem; color: var(--dim); }
 /* Uren-voorspelling popover onder de chip. */
-.wx-pop-backdrop { position: fixed; inset: 0; z-index: 50; }
+/* De laag die het wegklikken opvangt. Vaagt mee weg met de popover zelf, zodat het sluiten
+   één beweging is in plaats van een sprong. */
+.wx-pop-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgba(4, 7, 11, 0.35);
+  animation: wx-in 140ms ease;
+}
+.wx-pop-backdrop.dicht { animation: wx-uit 160ms ease forwards; }
+@keyframes wx-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes wx-uit {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+@keyframes wx-pop-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(-6px) scale(0.98); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+}
+@keyframes wx-pop-uit {
+  from { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+  to { opacity: 0; transform: translateX(-50%) translateY(-6px) scale(0.98); }
+}
 .wx-pop {
   /* Vast t.o.v. het scherm + gecentreerd, zodat de popover nooit buiten de schermrand valt
      (de weerchip staat midden-rechts in de balk; absoluut-rechts liep links van het scherm af). */
@@ -89,12 +114,83 @@
   box-shadow: var(--card-shadow, 0 12px 34px rgba(0, 0, 0, 0.45));
   padding: 8px;
 }
-.wx-pop-head { font-size: 0.72rem; font-weight: 700; color: var(--dim); text-transform: uppercase; letter-spacing: 0.04em; padding: 2px 6px 8px; }
+.wx-pop { animation: wx-pop-in 160ms cubic-bezier(0.2, 0.9, 0.3, 1); }
+.wx-pop.dicht { animation: wx-pop-uit 160ms ease forwards; }
+/* Wie liever geen beweging ziet, krijgt ze niet. */
+@media (prefers-reduced-motion: reduce) {
+  .wx-pop, .wx-pop.dicht, .wx-pop-backdrop, .wx-pop-backdrop.dicht { animation: none; }
+}
+.wx-pop-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--dim);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 6px 8px;
+}
+.wx-pop-titel { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wx-pop-sluit {
+  margin-left: auto;
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--dim);
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.wx-pop-sluit:hover { color: var(--txt); border-color: var(--dim); }
+
+/* Het eerstvolgende uur groot bovenaan: dát is het weer dat nu op het veld staat. */
+.wx-pop-nu {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, transparent);
+}
+.wx-pop-nu-ico { font-size: 1.5rem; line-height: 1; }
+.wx-pop-nu-temp { font-size: 1.35rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.wx-pop-nu-wind {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--dim-strong, #cad2dc);
+  text-align: right;
+}
+.wx-pop-nu-pijl { font-size: 1.05rem; color: var(--accent); }
+
+.wx-pop-wind {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--dim-strong, #cad2dc);
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+}
+.wx-pop-voet {
+  padding: 8px 6px 2px;
+  font-size: 0.7rem;
+  color: var(--dim);
+  border-top: 1px solid var(--line);
+  margin-top: 6px;
+}
 .wx-pop-empty { font-size: 0.85rem; color: var(--dim); padding: 8px; text-align: center; }
 .wx-pop-hours { display: flex; flex-direction: column; }
 .wx-pop-hour {
   display: grid;
-  grid-template-columns: 2.4em 1.6em 1fr auto;
+  grid-template-columns: 2.4em 1.6em 2.6em 1fr auto;
   align-items: center;
   gap: 8px;
   padding: 5px 6px;
