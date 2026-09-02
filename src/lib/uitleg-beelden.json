@@ -8,10 +8,10 @@
       "nr": 1,
       "bestand": "stap-01.png",
       "breedte": 430,
-      "hoogte": 307,
+      "hoogte": 416,
       "doel": {
         "x": 43,
-        "y": 150,
+        "y": 282,
         "b": 344,
         "h": 47
       }
@@ -20,17 +20,17 @@
       "nr": 2,
       "bestand": "stap-02.png",
       "breedte": 430,
-      "hoogte": 900,
+      "hoogte": 666,
       "doel": null
     },
     {
       "nr": 3,
       "bestand": "stap-03.png",
       "breedte": 430,
-      "hoogte": 291,
+      "hoogte": 231,
       "doel": {
         "x": 313,
-        "y": 150,
+        "y": 120,
         "b": 88,
         "h": 31
       }
@@ -39,10 +39,10 @@
       "nr": 4,
       "bestand": "stap-04.png",
       "breedte": 430,
-      "hoogte": 224,
+      "hoogte": 194,
       "doel": {
         "x": 16,
-        "y": 150,
+        "y": 120,
         "b": 398,
         "h": 58
       }
@@ -51,10 +51,10 @@
       "nr": 5,
       "bestand": "stap-05.png",
       "breedte": 430,
-      "hoogte": 422,
+      "hoogte": 362,
       "doel": {
         "x": 25,
-        "y": 150,
+        "y": 120,
         "b": 106,
         "h": 162
       }
@@ -63,10 +63,10 @@
       "nr": 6,
       "bestand": "stap-06.png",
       "breedte": 430,
-      "hoogte": 329,
+      "hoogte": 269,
       "doel": {
         "x": 25,
-        "y": 150,
+        "y": 120,
         "b": 177,
         "h": 69
       }
@@ -75,10 +75,10 @@
       "nr": 7,
       "bestand": "stap-07.png",
       "breedte": 430,
-      "hoogte": 318,
+      "hoogte": 258,
       "doel": {
         "x": 220,
-        "y": 150,
+        "y": 120,
         "b": 194,
         "h": 58
       }
@@ -87,10 +87,10 @@
       "nr": 8,
       "bestand": "stap-08.png",
       "breedte": 430,
-      "hoogte": 305,
+      "hoogte": 258,
       "doel": {
         "x": 16,
-        "y": 150,
+        "y": 120,
         "b": 398,
         "h": 58
       }

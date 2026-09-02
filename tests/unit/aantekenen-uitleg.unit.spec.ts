@@ -114,7 +114,15 @@ describe('pijlPad', () => {
     // scherm lopen — en dan wijst hij onderweg de verkeerde knoppen aan.
     const p = pijlPad({ x: 40, y: 100, b: 80, h: 30 }, beeld, 1)
     expect(p.vanX).toBeLessThan(p.naarX)
-    expect(p.naarX).toBeCloseTo(100 + 40 - 3, 5)
+    expect(p.naarX).toBeCloseTo(100 + 40 - 4, 5)
+  })
+
+  it('wijst van rechts naar een knop in de rechterhelft', () => {
+    // Anders loopt de pijl dwars over de knop ernaast — en dan wijst hij onderweg precies aan
+    // wat je NIET moet indrukken.
+    const p = pijlPad({ x: 200, y: 100, b: 80, h: 30 }, beeld, 1)
+    expect(p.vanX).toBeGreaterThan(p.naarX)
+    expect(p.naarX).toBeCloseTo(100 + 280 + 4, 5)
   })
 
   it('wijst van rechts wanneer de knop tegen de linkerrand ligt', () => {
@@ -131,7 +139,7 @@ describe('pijlPad', () => {
 
   it('schaalt mee met de foto', () => {
     const p = pijlPad({ x: 40, y: 100, b: 80, h: 30 }, beeld, 0.5)
-    expect(p.naarX).toBeCloseTo(100 + 20 - 3, 5)
+    expect(p.naarX).toBeCloseTo(100 + 20 - 4, 5)
   })
 })
 
