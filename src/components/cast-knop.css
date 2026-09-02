@@ -1,0 +1,37 @@
+/* De cast-knop. Bewust klein en rustig: het is een hulpmiddel, geen hoofdactie — behalve op het
+   kantinescherm zelf, waar hij naast de fullscreen-knop staat en dezelfde toon aanhoudt. */
+.cast-knop {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--txt);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.cast-knop:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+/* Actief aan het casten: de knop draagt de accentkleur, zodat je in één oogopslag ziet dat er
+   een tv meekijkt. */
+.cast-knop.aan {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  color: var(--accent);
+}
+.cast-knop-tv {
+  font-weight: 700;
+  font-size: 0.78rem;
+  color: var(--dim-strong, #cad2dc);
+  /* Een lange toestelnaam ("Chromecast van de kantine boven") mag de knop niet openbreken. */
+  max-width: 12ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

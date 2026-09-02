@@ -3,6 +3,8 @@
 import Link from 'next/link'
 import { useState } from 'react'
 
+import { CastKnop } from '@/components/CastKnop'
+
 import { type KantineMatch } from './KantineBoard'
 
 // Kiezer: vink wedstrijden aan die op het kantinescherm moeten verschijnen. De selectie wordt
@@ -40,6 +42,9 @@ export function KantineControl({ matches, initialSelected }: { matches: KantineM
     <div className="kt-control">
       <div className="kt-control-bar">
         <p className="kt-control-help">Vink aan wat op het kantinescherm komt.</p>
+        {/* Rechtstreeks casten vanaf de bediening: hier sta je toch al te kiezen wát er op de
+            tv komt, dus hoort de knop om hem érop te krijgen hier ook. */}
+        <CastKnop pad="/kantine/scherm" sleutel="kantine" label="📺 Cast naar tv" />
         <Link href="/kantine/scherm" className="kt-screen-btn">📺 Open kantinescherm →</Link>
       </div>
 

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 
+import { CastKnop } from '@/components/CastKnop'
 import { TeamLogo } from '@/components/TeamLogo'
 import { duurVan, naStap, volgendeFoto, type NaStap } from '@/lib/kantine-fotoshow'
 import type { LogoFit } from '@/lib/logo-fit'
@@ -537,14 +538,23 @@ export function GroepKantine({ naam, initial }: { naam: string; initial: GroepDa
             <span className="gk-evenement">{data.naam}</span>
           </span>
         </span>
-        <button
-          type="button"
-          className={`gk-fs-btn${fullscreen ? ' actief' : ''}`}
-          onClick={wisselFullscreen}
-          title={fullscreen ? 'Volledig scherm verlaten' : 'Volledig scherm'}
-        >
-          {fullscreen ? '✕' : '⛶ Volledig scherm'}
-        </button>
+        <span className={`gk-kop-knoppen${fullscreen ? ' actief' : ''}`}>
+          {/* Rechtstreeks naar de tv: de Chromecast laadt dít scherm zelf, dus het blijft
+              draaien wanneer je je telefoon wegsteekt. */}
+          <CastKnop
+            pad={`/tornooi/groep/${encodeURIComponent(naam)}/kantine`}
+            sleutel="tornooi-kantine"
+            klasse="cast-knop gk-cast"
+          />
+          <button
+            type="button"
+            className={`gk-fs-btn${fullscreen ? ' actief' : ''}`}
+            onClick={wisselFullscreen}
+            title={fullscreen ? 'Volledig scherm verlaten' : 'Volledig scherm'}
+          >
+            {fullscreen ? '✕' : '⛶ Volledig scherm'}
+          </button>
+        </span>
       </header>
 
       {live.length > 0 ? (

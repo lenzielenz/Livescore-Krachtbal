@@ -2963,3 +2963,22 @@ button.trn-toplink {
   font-weight: 800;
   color: var(--accent);
 }
+
+/* De knoppen rechtsboven op het tornooi-kantinescherm: casten en volledig scherm. In volledig
+   scherm vagen ze weg tot je de muis beweegt — op een tv hoort er geen bediening in beeld. */
+.gk-kop-knoppen {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.gk-kop-knoppen.actief {
+  opacity: 0.12;
+  transition: opacity 200ms ease;
+}
+.gk-kop-knoppen.actief:hover {
+  opacity: 1;
+}
+.gk-cast {
+  font-size: 0.8rem;
+  padding: 6px 12px;
+}
