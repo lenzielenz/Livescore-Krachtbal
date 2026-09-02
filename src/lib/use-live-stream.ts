@@ -2,11 +2,26 @@
 
 import { useEffect, useRef, useState } from 'react'
 
+import { HARTSLAG_MS, moetHerverbindenNaWake, verbindingDood } from './sse-leven'
+
 // Gedeelde SSE-client met reconnect-backoff (AUDIT §2). De ingebouwde EventSource-reconnect
 // kent geen plafond en geen jitter → bij een Railway-recycle herverbinden alle schermen tegelijk
 // (thundering herd) en tonen ze ondertussen een bevroren stand. Deze hook beheert de reconnect
 // zelf (capped exponential backoff + jitter) en geeft een `connected`-vlag terug zodat passieve
 // borden zichtbaar "verbinding verbroken" kunnen tonen.
+//
+// En hij overleeft een slapende gsm. Dat is geen luxe aan een aantekentafel: wie de telefoon
+// even wegsteekt, verbreekt zijn verbinding — maar vaak zónder dat de browser een fout meldt.
+// De socket blijft dan "open" terwijl er niets meer door komt, en het scherm toont een stand
+// die niet meer klopt. Twee bewakers daartegen:
+//
+//   1. een WAAKHOND op de hartslag die de server elke 15 seconden stuurt: blijft het te lang
+//      stil, dan is de verbinding dood en verbinden we opnieuw;
+//   2. bij het TERUGKOMEN van een scherm (of wanneer het netwerk terug is) meteen opnieuw
+//      verbinden in plaats van op de backoff te wachten.
+//
+// Opnieuw verbinden is meteen ook de herstelactie: de server stuurt bij het aansluiten de
+// huidige stand mee (zie match-channel.ts), dus na het ontwaken staat het scherm weer juist.
 export function useLiveStream<T>(
   url: string,
   onUpdate: (data: T) => void,
@@ -25,12 +40,27 @@ export function useLiveStream<T>(
     let stopped = false
     let delay = 1000
     let retry: ReturnType<typeof setTimeout> | null = null
+    // Wanneer hoorden we voor het laatst iets? Elk bericht telt, ook de hartslag.
+    let laatste = Date.now()
+
+    const gehoord = () => {
+      laatste = Date.now()
+      delay = 1000
+      setConnected(true)
+    }
 
     const connect = () => {
+      if (stopped) return
+      if (retry) {
+        clearTimeout(retry)
+        retry = null
+      }
+      es?.close()
       es = new EventSource(url)
+      // De hartslag draagt geen inhoud; hij bewijst enkel dat de lijn nog leeft.
+      es.addEventListener('ping', gehoord)
       es.addEventListener('update', (e) => {
-        delay = 1000
-        setConnected(true)
+        gehoord()
         try {
           cbRef.current(JSON.parse((e as MessageEvent).data) as T)
         } catch {
@@ -39,6 +69,7 @@ export function useLiveStream<T>(
       })
       for (const name of extraNames ? extraNames.split(',') : []) {
         es.addEventListener(name, (e) => {
+          gehoord()
           try {
             extraRef.current?.[name]?.(JSON.parse((e as MessageEvent).data))
           } catch {
@@ -46,10 +77,7 @@ export function useLiveStream<T>(
           }
         })
       }
-      es.onopen = () => {
-        delay = 1000
-        setConnected(true)
-      }
+      es.onopen = gehoord
       es.onerror = () => {
         setConnected(false)
         es?.close()
@@ -60,10 +88,32 @@ export function useLiveStream<T>(
     }
 
     connect()
+
+    // De waakhond: een verbinding die stil valt zónder foutmelding is precies wat een slapende
+    // gsm achterlaat.
+    const waakhond = setInterval(() => {
+      if (stopped || document.visibilityState !== 'visible') return
+      if (verbindingDood(laatste, Date.now())) {
+        setConnected(false)
+        connect()
+      }
+    }, HARTSLAG_MS)
+
+    const opWakker = () => {
+      if (document.visibilityState !== 'visible') return
+      if (moetHerverbindenNaWake(laatste, Date.now())) connect()
+    }
+    const opNetwerk = () => connect()
+    document.addEventListener('visibilitychange', opWakker)
+    window.addEventListener('online', opNetwerk)
+
     return () => {
       stopped = true
       es?.close()
       if (retry) clearTimeout(retry)
+      clearInterval(waakhond)
+      document.removeEventListener('visibilitychange', opWakker)
+      window.removeEventListener('online', opNetwerk)
     }
   }, [url, extraNames])
 

@@ -106,7 +106,7 @@ export const AANTEKEN_STAPPEN: UitlegStap[] = [
       'Verkeerd getikt? Gebruik Ondoen onderaan; die knop zegt er ook bij wat ze wegneemt.',
     knop: '+1 nekworp · +2 rugworp',
     scherm: 'score',
-    oefening: { soort: 'knop', doel: 'score-nek' },
+    oefening: { soort: 'knop', doel: 'score-thuis-nek' },
   },
   {
     nr: 6,
@@ -119,7 +119,7 @@ export const AANTEKEN_STAPPEN: UitlegStap[] = [
       + 'druk dan op Pauze; met Klok loopt hij weer verder.',
     knop: '⏸ Pauze · ▶ Klok',
     scherm: 'tellers',
-    oefening: { soort: 'knop', doel: 'kruisje-plus' },
+    oefening: { soort: 'knop', doel: 'kruisje-thuis-plus' },
   },
   {
     nr: 7,

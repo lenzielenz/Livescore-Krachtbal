@@ -1,0 +1,72 @@
+/* De slideshow voor het kantinescherm. Zwart, groot en zonder afleiding: dit hangt aan een tv
+   die uren draait terwijl niemand ernaar omkijkt. */
+.ss {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 100svh;
+  background: #05070a;
+}
+.ss.vol { min-height: 100vh; }
+
+.ss-beeld {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  cursor: pointer;
+}
+.ss-beeld img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  /* Zacht invloeien: een harde wissel op een groot scherm oogt als een storing. */
+  animation: ss-in 600ms ease;
+}
+@keyframes ss-in {
+  from { opacity: 0; transform: scale(1.01); }
+  to { opacity: 1; transform: none; }
+}
+/* De vooraf ingeladen volgende foto: onzichtbaar, maar wél opgehaald. */
+.ss-vooraf {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.ss-onder {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.75), transparent);
+  color: #fff;
+}
+.ss-wie { font-weight: 800; font-size: clamp(1rem, 2.6vw, 1.6rem); }
+.ss-opdracht { color: #cfe0ff; font-size: clamp(0.8rem, 1.8vw, 1.1rem); }
+.ss-teller { margin-left: auto; color: #9aa7b4; font-variant-numeric: tabular-nums; }
+
+.ss-balk {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 12px 16px;
+}
+.ss-duur { display: flex; gap: 4px; }
+.ss-duur .aan { border-color: #ef476f; color: #ff9db4; }
+/* In volledig scherm hoort de bediening weg te vallen tot je de muis beweegt. */
+.ss.vol .ss-balk { opacity: 0.15; transition: opacity 200ms ease; }
+.ss.vol:hover .ss-balk { opacity: 1; }
+
+.ss-leeg { padding: 40px 20px; text-align: center; color: #9aa7b4; display: grid; gap: 14px; justify-items: center; }

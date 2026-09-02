@@ -78,17 +78,39 @@ export function useActionQueue(matchId: number, onResponse: (data: unknown) => v
     void flush()
     const onOnline = () => void flush()
     const onOffline = () => setOffline(true)
+    // Terug uit de slaapstand: niet tot de volgende ronde van acht seconden wachten. Wie zijn
+    // telefoon bovenhaalt om de volgende worp aan te tikken, hoort niet eerst naar een teller
+    // met wachtende tikken te kijken.
+    const onZichtbaar = () => {
+      if (document.visibilityState === 'visible' && queueRef.current.length) void flush()
+    }
     window.addEventListener('online', onOnline)
     window.addEventListener('offline', onOffline)
+    document.addEventListener('visibilitychange', onZichtbaar)
     const t = setInterval(() => {
       if (queueRef.current.length) void flush()
     }, 8000)
     return () => {
       window.removeEventListener('online', onOnline)
       window.removeEventListener('offline', onOffline)
+      document.removeEventListener('visibilitychange', onZichtbaar)
       clearInterval(t)
     }
   }, [QKEY, flush])
+
+  // Wegklikken met tikken die nog niet verstuurd zijn: dan waarschuwen. De wachtrij zelf
+  // overleeft het (ze staat in localStorage en wordt bij het volgende bezoek van déze wedstrijd
+  // nagestuurd), maar wie het tabblad sluit en niet terugkomt, weet anders niet dat er nog iets
+  // openstond. Een refresh is dus veilig; helemaal weggaan verdient een vraag.
+  useEffect(() => {
+    if (pendingCount === 0) return
+    const vraag = (e: BeforeUnloadEvent) => {
+      e.preventDefault()
+      e.returnValue = ''
+    }
+    window.addEventListener('beforeunload', vraag)
+    return () => window.removeEventListener('beforeunload', vraag)
+  }, [pendingCount])
 
   /** Verstuur één actie (met opId). Wachtrij actief, offline of al een actie onderweg → achteraan
    *  aansluiten (volgorde behouden) i.p.v. de tik te verliezen. Een netwerkfout tijdens het

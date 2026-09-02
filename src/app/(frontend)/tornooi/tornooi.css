@@ -2360,6 +2360,20 @@ button.trn-toplink {
   color: var(--accent);
 }
 
+/* Beheerknoppen onder elke foto in het archief (bewaren / verwijderen). */
+.tf-acties {
+  display: flex;
+  gap: 6px;
+  padding: 0 10px 10px;
+}
+.tf-weg {
+  border-color: rgba(239, 71, 111, 0.6);
+  color: #ff9db4;
+}
+.tf-weg:disabled {
+  opacity: 0.5;
+}
+
 /* ── Fotoshow op het kantinescherm ────────────────────────────────────────────────────────────
    Een supporter stuurde een foto in: "OH OHHH… hier komt 'm!" met een 3-2-1-aftelklok om
    luidop mee af te tellen, dan popt de foto als polaroid in beeld en lost weer op. */

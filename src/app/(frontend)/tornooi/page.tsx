@@ -1,7 +1,7 @@
 import Link from 'next/link'
 
 import { SiteHeader } from '@/components/SiteHeader'
-import { isFederationLevel } from '@/lib/access'
+import { hasRole, isFederationLevel } from '@/lib/access'
 import { CATEGORY_OPTIONS } from '@/lib/categories'
 import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
@@ -20,6 +20,10 @@ export default async function TornooiHub() {
   const payload = await getPayloadClient()
   const user = await getAuthUser()
   const canCreate = isFederationLevel(user)
+  // De uitleg over aantekenen is voor wie het ook mág doen — dezelfde kring die op het
+  // dagprogramma een Aantekenen-knop ziet (zie tornooi/[id]/page.tsx). Een supporter komt hier
+  // om het schema te volgen; die heeft niets aan een handleiding voor de tafel.
+  const magAantekenen = isFederationLevel(user) || hasRole(user, 'scheidsrechter')
   const res = await payload
     .find({ collection: 'tournaments', sort: '-createdAt', depth: 0, limit: 100 })
     .catch(() => ({ docs: [] as Array<{ id: number; name: string; category: string; status: string; teamCount?: number | null }> }))
@@ -55,15 +59,18 @@ export default async function TornooiHub() {
           schema — van de eerste ronde tot de finale, live te volgen.
         </p>
       </div>
-      <div className="trn-actions">
-        {/* Voor wie straks achter de tafel zit: stappenplan, oefenversie en een handleiding om
-            af te drukken. Bewust ook zichtbaar zonder rechten — de aantekenaar is meestal geen
-            beheerder. */}
-        <Link href={UITLEG_PAD} className="trn-btn">📖 Hoe teken ik een wedstrijd aan?</Link>
-        {canCreate && (
-          <Link href="/tornooi/nieuw" className="trn-btn primary">+ Nieuw tornooi / categorie</Link>
-        )}
-      </div>
+      {(magAantekenen || canCreate) && (
+        <div className="trn-actions">
+          {/* Voor wie straks achter de tafel zit: stappenplan, oefenversie en een handleiding om
+              af te drukken. */}
+          {magAantekenen && (
+            <Link href={UITLEG_PAD} className="trn-btn">📖 Hoe teken ik een wedstrijd aan?</Link>
+          )}
+          {canCreate && (
+            <Link href="/tornooi/nieuw" className="trn-btn primary">+ Nieuw tornooi / categorie</Link>
+          )}
+        </div>
+      )}
 
       <main className="trn-hub">
         {/* Tornooi-eerst: één kaart per tornooidag. Openen = de categorieën zien (groepspagina). */}
