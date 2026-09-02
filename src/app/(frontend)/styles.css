@@ -211,6 +211,10 @@ h3,
   font-size: 0.78rem;
   color: var(--dim);
 }
+/* Op een scherm (kantine-tv, veldscherm) valt de voettekst weg: die staat ónder een scherm dat
+   exact één schermhoogte hoog is, en duwde zo de onderrand van het bord uit beeld — op een tv kan
+   niemand daarnaartoe scrollen. Zie components/SchermModus.tsx. */
+body.kb-scherm .site-foot { display: none; }
 .site-foot a { color: var(--dim); text-decoration: none; }
 .site-foot a:hover { color: var(--txt); text-decoration: underline; }
 

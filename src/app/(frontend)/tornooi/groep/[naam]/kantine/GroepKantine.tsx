@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 
 import { CastKnop } from '@/components/CastKnop'
+import { SchermModus } from '@/components/SchermModus'
 import { TeamLogo } from '@/components/TeamLogo'
 import { duurVan, naStap, volgendeFoto, type NaStap } from '@/lib/kantine-fotoshow'
 import type { LogoFit } from '@/lib/logo-fit'
@@ -52,23 +53,16 @@ function LiveBord({ m, groot, logos, kleuren, fits }: { m: GroepMatch; groot: bo
   } as CSSProperties
   return (
     <div className={`gk-bord${groot ? ' groot' : ''}`} style={stijl}>
-      {/* Drie vaste kolommen (label · reeks · klok): de reeks staat groot en exact gecentreerd,
-          zodat iedereen in de kantine in één oogopslag ziet wélke reeks er speelt. */}
+      {/* De kop draagt enkel wat kort is: de affiche links, het veld rechts. Alles op één regel
+          proppen — affiche, reeks, veld én klok — liep over elkaar heen zodra een ploegnaam wat
+          langer werd. */}
       <div className="gk-bord-kop">
-        <span className="gk-bord-label">
-          {m.label}
-          {m.veld != null && <span className="gk-bord-veld">Veld {m.veld}</span>}
-        </span>
-        <span className="gk-bord-reeks">{m.reeksNaam}</span>
-        {/* De speeltijd is wat de kantine het vaakst zoekt: groot, in tabulaire cijfers, met een
-            kloppend stipje zolang ze loopt. Staat ze stil, dan zegt het bord dat ook — een
-            bevroren tijd zonder uitleg laat iedereen denken dat het scherm hangt. */}
-        <span className={`gk-bord-klok${m.clockRunning ? ' loopt' : ''}`}>
-          <span className="gk-klok-half">H{m.currentHalf}</span>
-          <span className="gk-klok-tijd">{fmtClock(clock)}</span>
-          <span className="gk-klok-staat">{m.clockRunning ? <span className="gk-klok-stip" aria-hidden /> : 'pauze'}</span>
-        </span>
+        <span className="gk-bord-label">{m.label}</span>
+        {m.veld != null && <span className="gk-bord-veld">Veld {m.veld}</span>}
       </div>
+      {/* De reeks zakt naar een eigen regel: gecentreerd, onder de affiche, zodat ze de
+          ploegnamen niet meer overlapt. */}
+      <span className="gk-bord-reeks">{m.reeksNaam}</span>
       <div className="gk-bord-body">
         <span className="gk-bord-ploeg">
           {m.home && <TeamLogo name={m.home} logoUrl={logos[m.home] ?? null} logoFit={fits[m.home] ?? null} side="home" size={logoMaat} ringColor={m.home ? kleuren[m.home] : undefined} />}
@@ -81,8 +75,18 @@ function LiveBord({ m, groot, logos, kleuren, fits }: { m: GroepMatch; groot: bo
         </span>
       </div>
       <div className="gk-bord-voet">
-        <span title="Kruisjes">✖ {m.crosses.home}–{m.crosses.away}</span>
-        <span title="Time-outs">⏱ {m.timeouts.home}–{m.timeouts.away}</span>
+        <span className="gk-bord-tellers">
+          <span title="Kruisjes">✖ {m.crosses.home}–{m.crosses.away}</span>
+          <span title="Time-outs">⏱ {m.timeouts.home}–{m.timeouts.away}</span>
+        </span>
+        {/* De speeltijd rechtsonder in het bord: rustig, maar met tabulaire cijfers zodat er
+            niets springt bij het tikken. Staat de klok stil, dan zegt het bord dat ook — een
+            bevroren tijd zonder uitleg laat iedereen denken dat het scherm hangt. */}
+        <span className={`gk-bord-klok${m.clockRunning ? ' loopt' : ''}`}>
+          <span className="gk-klok-half">H{m.currentHalf}</span>
+          <span className="gk-klok-tijd">{fmtClock(clock)}</span>
+          <span className="gk-klok-staat">{m.clockRunning ? <span className="gk-klok-stip" aria-hidden /> : 'pauze'}</span>
+        </span>
       </div>
     </div>
   )
@@ -515,6 +519,9 @@ export function GroepKantine({ naam, initial }: { naam: string; initial: GroepDa
 
   return (
     <div className="gk-scherm" style={stijl}>
+      {/* Dit is een tv-scherm: de voettekst van de site hoort er niet op (en duwt anders de
+          onderrand uit beeld). */}
+      <SchermModus />
       {viering && <VieringOverlay key={viering.key} v={viering} ms={vieringDuur(viering)} />}
       {fotoRij.length > 0 && (
         <FotoShow
