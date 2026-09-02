@@ -1,0 +1,106 @@
+{
+  "scherm": {
+    "width": 430,
+    "height": 900
+  },
+  "beelden": [
+    {
+      "nr": 1,
+      "bestand": "stap-01.png",
+      "breedte": 430,
+      "hoogte": 307,
+      "doel": {
+        "x": 43,
+        "y": 150,
+        "b": 344,
+        "h": 47
+      }
+    },
+    {
+      "nr": 2,
+      "bestand": "stap-02.png",
+      "breedte": 430,
+      "hoogte": 900,
+      "doel": null
+    },
+    {
+      "nr": 3,
+      "bestand": "stap-03.png",
+      "breedte": 430,
+      "hoogte": 291,
+      "doel": {
+        "x": 313,
+        "y": 150,
+        "b": 88,
+        "h": 31
+      }
+    },
+    {
+      "nr": 4,
+      "bestand": "stap-04.png",
+      "breedte": 430,
+      "hoogte": 224,
+      "doel": {
+        "x": 16,
+        "y": 150,
+        "b": 398,
+        "h": 58
+      }
+    },
+    {
+      "nr": 5,
+      "bestand": "stap-05.png",
+      "breedte": 430,
+      "hoogte": 422,
+      "doel": {
+        "x": 25,
+        "y": 150,
+        "b": 106,
+        "h": 162
+      }
+    },
+    {
+      "nr": 6,
+      "bestand": "stap-06.png",
+      "breedte": 430,
+      "hoogte": 329,
+      "doel": {
+        "x": 25,
+        "y": 150,
+        "b": 177,
+        "h": 69
+      }
+    },
+    {
+      "nr": 7,
+      "bestand": "stap-07.png",
+      "breedte": 430,
+      "hoogte": 318,
+      "doel": {
+        "x": 220,
+        "y": 150,
+        "b": 194,
+        "h": 58
+      }
+    },
+    {
+      "nr": 8,
+      "bestand": "stap-08.png",
+      "breedte": 430,
+      "hoogte": 305,
+      "doel": {
+        "x": 16,
+        "y": 150,
+        "b": 398,
+        "h": 58
+      }
+    },
+    {
+      "nr": 9,
+      "bestand": "stap-09.png",
+      "breedte": 430,
+      "hoogte": 900,
+      "doel": null
+    }
+  ]
+}
