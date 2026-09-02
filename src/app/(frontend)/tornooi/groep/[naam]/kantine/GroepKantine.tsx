@@ -1,8 +1,9 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 
 import { TeamLogo } from '@/components/TeamLogo'
+import { duurVan, naStap, volgendeFoto, type NaStap } from '@/lib/kantine-fotoshow'
 import type { LogoFit } from '@/lib/logo-fit'
 import type { GroepData, GroepMatch } from '@/lib/tornooi-groep'
 import { fmtClock, useTicking } from '../../../useTournament'
@@ -12,7 +13,9 @@ import { fmtClock, useTicking } from '../../../useTournament'
 //  • niets bezig → groot aftellen naar de volgende geplande wedstrijd(en);
 //  • één wedstrijd bezig → die staat schermvullend;
 //  • meerdere bezig → het raster verdeelt zichzelf netjes (2, 3, 4 … naast/onder elkaar);
-//  • wordt er één afgesloten, dan past het scherm zich vanzelf weer aan.
+//  • wordt er één afgesloten, dan past het scherm zich vanzelf weer aan;
+//  • alles gespeeld → de nabeschouwing: kampioenen en uitslagen wisselen af met de foto's die de
+//    supporters die dag instuurden, op herhaling zolang de tv aanstaat.
 // Elk bord draagt de kleuren van de twee clubs; scoort er iemand, dan neemt een schermvullende
 // viering met het clublogo even het hele scherm over. De organiserende club kleurt de rest
 // (--gk-a/--gk-b). Data via de publieke groep-API (poll om de 5 s).
@@ -298,6 +301,64 @@ function FotoShow({ ids, naam, klaar }: { ids: number[]; naam: string; klaar: ()
   )
 }
 
+// ── Nabeschouwing: de beurtrol ná de laatste wedstrijd ────────────────────────────────────────
+// De teller loopt op; wélk beeld daarbij hoort, beslist `kantine-fotoshow.ts`. Een foto die niet
+// laadt (verlopen sessie, bestand weg) schuift meteen door in plaats van als leeg vlak te blijven
+// hangen — op een tv waar niemand naar omkijkt is dat het verschil tussen sfeer en een storing.
+function useNabeschouwing(aantalFotos: number, actief: boolean) {
+  const [n, setN] = useState(0)
+  const verder = useCallback(() => setN((x) => x + 1), [])
+
+  // Terug naar het begin zodra de nabeschouwing (opnieuw) start — bijvoorbeeld nadat een
+  // heropende wedstrijd weer is afgefloten. Dan opent ze netjes op de kampioenen.
+  useEffect(() => {
+    if (!actief) setN(0)
+  }, [actief])
+
+  useEffect(() => {
+    if (!actief || aantalFotos === 0) return
+    const t = setTimeout(verder, duurVan(naStap(n, aantalFotos)))
+    return () => clearTimeout(t)
+  }, [n, aantalFotos, actief, verder])
+
+  const stap: NaStap = actief && aantalFotos > 0 ? naStap(n, aantalFotos) : { soort: 'ereplaats' }
+  return { stap, vooraf: actief ? volgendeFoto(n, aantalFotos) : null, verder }
+}
+
+/** Eén sfeerbeeld schermvullend, met de inzender eronder. */
+function NaFoto({
+  naam,
+  foto,
+  voorafId,
+  opFout,
+}: {
+  naam: string
+  foto: { id: number; wie: string; opdracht: string | null }
+  voorafId: number | null
+  opFout: () => void
+}) {
+  const url = (id: number) => `/api/tornooi-groep/foto/${id}?naam=${encodeURIComponent(naam)}`
+  return (
+    <div className="gk-nafoto">
+      <p className="gk-aftel-lbl">📷 Sfeerbeelden van de dag</p>
+      <div className="gk-nafoto-kader">
+        {/* eslint-disable-next-line @next/next/no-img-element -- eigen route achter dezelfde
+            leestoegang als het archief; next/image kan die niet optimaliseren. */}
+        <img key={foto.id} src={url(foto.id)} alt={`Foto van ${foto.wie || 'een supporter'}`} onError={opFout} />
+      </div>
+      <p className="gk-nafoto-onder">
+        <span className="gk-nafoto-wie">{foto.wie || 'Supporter'}</span>
+        {foto.opdracht && <span className="gk-nafoto-opdracht">{foto.opdracht}</span>}
+      </p>
+      {/* De volgende alvast ophalen: zonder dit zie je bij elke wissel eerst een leeg vlak. */}
+      {voorafId != null && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img className="gk-nafoto-vooraf" src={url(voorafId)} alt="" aria-hidden />
+      )}
+    </div>
+  )
+}
+
 export function GroepKantine({ naam, initial }: { naam: string; initial: GroepData }) {
   const [data, setData] = useState<GroepData>(initial)
   // Volledig scherm voor de kantine-tv: geen browserbalk, alleen het bord.
@@ -439,6 +500,12 @@ export function GroepKantine({ naam, initial }: { naam: string; initial: GroepDa
   const cols = kolommenVoor(live.length)
   const kampioenen = data.reeksen.filter((r) => r.champion)
 
+  // De dag zit erop: geen enkele wedstrijd loopt nog en er staat er ook geen meer te wachten.
+  // Dan neemt de nabeschouwing het scherm over — voor de rest van de avond.
+  const afgelopen = live.length === 0 && komend.length === 0
+  const archief = data.fotoArchief ?? []
+  const { stap, vooraf, verder } = useNabeschouwing(archief.length, afgelopen)
+
   // Look van de organiserende club: haar kleuren dragen het scherm (val terug op de huisstijl).
   const stijl = {
     ...(data.host?.colorPrimary ? { '--gk-a': data.host.colorPrimary } : {}),
@@ -535,6 +602,15 @@ export function GroepKantine({ naam, initial }: { naam: string; initial: GroepDa
           {/* Wat er vandaag al gespeeld is — tussen twee wedstrijden door blijft het scherm zo
               leven. Maximaal negen, anders wordt het op afstand onleesbaar. */}
           <Uitslagen gespeeld={gespeeld.slice(0, 9)} logos={data.logos} kleuren={data.kleuren} fits={data.fits} titel="Al gespeeld" />
+        </div>
+      ) : stap.soort === 'foto' && archief[stap.index] ? (
+        <div className="gk-pauze klaar">
+          <NaFoto
+            naam={naam}
+            foto={archief[stap.index]}
+            voorafId={vooraf != null ? archief[vooraf]?.id ?? null : null}
+            opFout={verder}
+          />
         </div>
       ) : (
         <div className="gk-pauze klaar">

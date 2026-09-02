@@ -60,6 +60,10 @@ export function FotoBeheer({ naam, fotos }: { naam: string; fotos: BeheerFoto[] 
           ▶ Slideshow op het scherm
         </a>
       </div>
+      <p className="trn-hint">
+        Zodra alle wedstrijden gespeeld zijn, wisselt het kantinescherm zelf af tussen de
+        kampioenen, de uitslagen en deze foto’s — zolang de tv ingelogd blijft staan.
+      </p>
 
       <ul className="tf-raster">
         {zichtbaar.map((f) => (

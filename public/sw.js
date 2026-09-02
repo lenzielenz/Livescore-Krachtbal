@@ -5,9 +5,27 @@
 //  - API (/api/*) en externe oorsprong: nooit cachen (dynamisch; de aantekentafel heeft een eigen
 //    offline-wachtrij voor mutaties).
 
-const CACHE = 'kb-cache-v3'
+// v4: de vorige versie kon een bewaarde ÓPENBARE kopie tonen aan iemand die intussen ingelogd
+// was — dan sta je na een uitrol plots op een scherm met "Inloggen". Het versienummer ophogen
+// gooit die oude kopieën in één keer weg.
+const CACHE = 'kb-cache-v4'
 const OFFLINE_URL = '/offline'
 const PRECACHE = ['/', OFFLINE_URL, '/manifest.webmanifest', '/icon.svg']
+// Hier onthoudt de worker of deze bezoeker ingelogd is. Niet uit nieuwsgierigheid: de
+// sessiecookie is httpOnly en dus onleesbaar voor de worker, terwijl hij die kennis wél nodig
+// heeft om te weten of een bewaarde kopie nog klopt. De server zegt het bij elke paginalading
+// met een kopje (zie src/middleware.ts); hier blijft het antwoord staan tot het volgende bezoek.
+const SESSIE_SLEUTEL = '/__kb-sessie'
+
+async function onthoudSessie(cache, ingelogd) {
+  await cache.put(SESSIE_SLEUTEL, new Response(ingelogd ? '1' : '0')).catch(() => {})
+}
+
+async function wasIngelogd(cache) {
+  const r = await cache.match(SESSIE_SLEUTEL).catch(() => null)
+  if (!r) return false
+  return (await r.text().catch(() => '')) === '1'
+}
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -51,7 +69,11 @@ self.addEventListener('fetch', (event) => {
         const cache = await caches.open(CACHE)
         try {
           const fresh = await fetch(req)
-          if (fresh.headers.get('x-kb-prive') === '1') {
+          const prive = fresh.headers.get('x-kb-prive') === '1'
+          // Elke paginalading vertelt opnieuw of deze bezoeker een sessie heeft. Zo weet de
+          // worker het ook straks nog, wanneer de server even weg is.
+          onthoudSessie(cache, prive).catch(() => {})
+          if (prive) {
             // Ooit als openbare pagina bewaard, nu persoonlijk: die oude kopie mag niet blijven
             // rondslingeren om straks als "de" pagina geserveerd te worden.
             cache.delete(req).catch(() => {})
@@ -60,6 +82,13 @@ self.addEventListener('fetch', (event) => {
           }
           return fresh
         } catch {
+          // De server is even weg (een uitrol duurt een halve minuut). Voor een ingelogde
+          // bezoeker is een bewaarde kopie hier altijd een ópenbare kopie — met "Inloggen"
+          // erop. Die tonen is de fout die "een update logt me af" heet: je sessie is nog
+          // perfect geldig, maar het scherm zegt iets anders. Dan liever eerlijk zijn.
+          if (await wasIngelogd(cache)) {
+            return (await cache.match(OFFLINE_URL)) || Response.error()
+          }
           return (await cache.match(req)) || (await cache.match(OFFLINE_URL)) || Response.error()
         }
       })(),
