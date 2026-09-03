@@ -1,6 +1,7 @@
 import { hasRole, isFederationLevel } from '@/lib/access'
 import { authUser } from '@/lib/api-auth'
 import { getPayloadClient } from '@/lib/payload-client'
+import { ploegRechtzetten } from '@/lib/ploeg-rechtzetten'
 import { naarInvoervelden, naarIso, nieuwSeizoen } from '@/lib/wedstrijd-beheer'
 
 // Een wedstrijd rechtzetten vanaf de wedstrijdpagina zelf (enkel federatie/admin):
@@ -24,7 +25,15 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const matchId = Number(id)
   if (!Number.isFinite(matchId)) return Response.json({ error: 'Ongeldige wedstrijd.' }, { status: 400 })
 
-  let body: { action?: string; datum?: unknown; uur?: unknown; kant?: unknown; naam?: unknown; clubId?: unknown }
+  let body: {
+    action?: string
+    datum?: unknown
+    uur?: unknown
+    kant?: unknown
+    naam?: unknown
+    clubId?: unknown
+    reeks?: unknown
+  }
   try {
     body = await req.json()
   } catch {
@@ -68,34 +77,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       const teamId = rel(kant === 'home' ? (match as { homeTeam?: unknown }).homeTeam : (match as { awayTeam?: unknown }).awayTeam)
       if (teamId == null) return Response.json({ error: 'Die ploeg staat niet bij deze wedstrijd.' }, { status: 404 })
 
-      const data: { name?: string; club?: number } = {}
-      if (body.naam !== undefined) {
-        const naam = String(body.naam ?? '').trim()
-        if (!naam) return Response.json({ error: 'Geef een ploegnaam in.' }, { status: 400 })
-        data.name = naam
-      }
-      if (body.clubId !== undefined && body.clubId !== null && body.clubId !== '') {
-        const clubId = Number(body.clubId)
-        if (!Number.isFinite(clubId)) return Response.json({ error: 'Ongeldige club.' }, { status: 400 })
-        const club = await payload.findByID({ collection: 'clubs', id: clubId, depth: 0 }).catch(() => null)
-        if (!club) return Response.json({ error: 'Die club bestaat niet.' }, { status: 404 })
-        if ((club as { analyseOnly?: boolean }).analyseOnly) {
-          return Response.json({ error: 'Dat is een analyse-club; kies een competitieclub.' }, { status: 400 })
-        }
-        data.club = clubId
-      }
-      if (!('name' in data) && !('club' in data)) {
-        return Response.json({ error: 'Niets om te wijzigen.' }, { status: 400 })
-      }
-
-      await payload.update({ collection: 'teams', id: teamId, data, overrideAccess: true })
-      const na = await payload.findByID({ collection: 'teams', id: teamId, depth: 0 }).catch(() => null)
-      return Response.json({
-        ok: true,
-        teamId,
-        naam: String((na as { name?: unknown } | null)?.name ?? ''),
-        clubId: rel((na as { club?: unknown } | null)?.club),
-      })
+      // Dezelfde controles als op de ploegpagina zelf — gedeeld, zodat de twee ingangen niet uit
+      // elkaar kunnen lopen.
+      const uit = await ploegRechtzetten(payload, teamId, { naam: body.naam, clubId: body.clubId, reeks: body.reeks })
+      if (!uit.ok) return Response.json({ error: uit.fout }, { status: uit.status })
+      return Response.json(uit)
     }
 
     return Response.json({ error: 'Onbekende actie.' }, { status: 400 })

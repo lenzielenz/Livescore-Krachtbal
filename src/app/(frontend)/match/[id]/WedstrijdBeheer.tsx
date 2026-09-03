@@ -1,23 +1,18 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
-import { clubVanPloeg, naamSleutel } from '@/lib/season-import'
+import { PloegVelden, type BeheerClub, type BeheerPloeg } from '@/components/PloegVelden'
 import { naarInvoervelden } from '@/lib/wedstrijd-beheer'
 
-import './wedstrijd-beheer.css'
-
-export type BeheerClub = { id: number; naam: string }
-export type BeheerPloeg = { id: number; naam: string; clubId: number | null }
+export type { BeheerClub, BeheerPloeg }
 
 // Beheerblok onderaan de wedstrijdpagina (enkel federatie/admin): het tijdstip rechtzetten en de
 // ploegnaam/club corrigeren, zonder langs de Payload-admin te moeten.
 //
-// De club staat er bewust bij. De aanleiding was niet de naam op zich maar wat eraan hangt: het
-// logo en de kleuren komen van de CLUB, dus een ploeg onder de verkeerde club toont het verkeerde
-// (of geen) logo. Zodra je de naam aanpast, stelt het formulier de club voor die uit die naam
-// volgt — dezelfde regel als de import ("KBC St. Michiels A-1" → "KBC St. Michiels").
+// De ploegvelden zelf staan in PloegVelden, want ze horen ook op de ploegpagina — daar bereik je
+// een ploeg die (nog) geen wedstrijd heeft.
 
 export function WedstrijdBeheer({
   matchId,
@@ -30,6 +25,7 @@ export function WedstrijdBeheer({
   datumIso: string | null
   thuis: BeheerPloeg
   uit: BeheerPloeg
+  /** De clubs die deze twee ploegen NU hebben, met hun naam — enkel om te tonen; kiezen gaat via zoeken. */
   clubs: BeheerClub[]
 }) {
   const router = useRouter()
@@ -39,8 +35,7 @@ export function WedstrijdBeheer({
   const [busy, setBusy] = useState<string | null>(null)
   const [melding, setMelding] = useState<{ tekst: string; ok: boolean } | null>(null)
 
-  // Clubnaam → id, om bij een ploegnaam de bijhorende club te kunnen voorstellen.
-  const clubOpNaam = useMemo(() => new Map(clubs.map((c) => [naamSleutel(c.naam), c.id])), [clubs])
+  const clubVan = (ploeg: BeheerPloeg) => clubs.find((c) => c.id === ploeg.clubId) ?? null
 
   const stuur = async (sleutel: string, body: Record<string, unknown>) => {
     setBusy(sleutel)
@@ -67,6 +62,20 @@ export function WedstrijdBeheer({
       setBusy(null)
     }
   }
+
+  const ploegRij = (titel: string, ploeg: BeheerPloeg, kant: 'home' | 'away') => (
+    <PloegVelden
+      titel={titel}
+      ploeg={ploeg}
+      club={clubVan(ploeg)}
+      busy={busy}
+      sleutel={`ploeg-${kant}`}
+      bewaar={({ naam, clubId, reeks }) =>
+        stuur(`ploeg-${kant}`, { action: 'ploeg', kant, naam, clubId, reeks })
+      }
+      voetnoot="De ploegnaam geldt overal — ook op haar andere wedstrijden en in de rangschikking."
+    />
+  )
 
   return (
     <section className="wb-beheer" aria-label="Wedstrijd beheren">
@@ -96,89 +105,10 @@ export function WedstrijdBeheer({
         </div>
       </div>
 
-      <PloegRij
-        titel="Thuisploeg"
-        ploeg={thuis}
-        kant="home"
-        clubs={clubs}
-        clubOpNaam={clubOpNaam}
-        busy={busy}
-        stuur={stuur}
-      />
-      <PloegRij
-        titel="Uitploeg"
-        ploeg={uit}
-        kant="away"
-        clubs={clubs}
-        clubOpNaam={clubOpNaam}
-        busy={busy}
-        stuur={stuur}
-      />
+      {ploegRij('Thuisploeg', thuis, 'home')}
+      {ploegRij('Uitploeg', uit, 'away')}
 
       {melding && <p className={`wb-beheer-melding ${melding.ok ? 'ok' : 'fout'}`} role="status">{melding.ok ? '✅' : '⚠️'} {melding.tekst}</p>}
     </section>
-  )
-}
-
-function PloegRij({
-  titel,
-  ploeg,
-  kant,
-  clubs,
-  clubOpNaam,
-  busy,
-  stuur,
-}: {
-  titel: string
-  ploeg: BeheerPloeg
-  kant: 'home' | 'away'
-  clubs: BeheerClub[]
-  clubOpNaam: Map<string, number>
-  busy: string | null
-  stuur: (sleutel: string, body: Record<string, unknown>) => Promise<boolean>
-}) {
-  const [naam, setNaam] = useState(ploeg.naam)
-  const [clubId, setClubId] = useState<string>(ploeg.clubId != null ? String(ploeg.clubId) : '')
-  const sleutel = `ploeg-${kant}`
-
-  // De club die uit de ingetypte naam volgt. Bestaat ze, dan stellen we ze voor; anders zwijgen we
-  // liever dan een club te noemen die er niet is.
-  const voorstel = clubOpNaam.get(naamSleutel(clubVanPloeg(naam))) ?? null
-  const toonVoorstel = voorstel != null && String(voorstel) !== clubId
-
-  return (
-    <div className="wb-beheer-rij">
-      <span className="wb-beheer-lbl">{titel}</span>
-      <div className="wb-beheer-velden">
-        <label className="wb-beheer-veld breed">
-          <span>Ploegnaam</span>
-          <input type="text" value={naam} onChange={(e) => setNaam(e.target.value)} />
-        </label>
-        <label className="wb-beheer-veld breed">
-          <span>Club (logo &amp; kleuren)</span>
-          <select value={clubId} onChange={(e) => setClubId(e.target.value)}>
-            <option value="">— Geen club —</option>
-            {clubs.map((c) => (
-              <option key={c.id} value={c.id}>{c.naam}</option>
-            ))}
-          </select>
-        </label>
-        <button
-          type="button"
-          className="wb-beheer-btn primair"
-          disabled={busy !== null || !naam.trim() || (naam === ploeg.naam && clubId === (ploeg.clubId != null ? String(ploeg.clubId) : ''))}
-          onClick={() => void stuur(sleutel, { action: 'ploeg', kant, naam, ...(clubId ? { clubId: Number(clubId) } : {}) })}
-        >
-          {busy === sleutel ? 'Bezig…' : 'Opslaan'}
-        </button>
-      </div>
-      {toonVoorstel && (
-        <p className="wb-beheer-tip">
-          Bij deze naam hoort <strong>{clubs.find((c) => c.id === voorstel)?.naam}</strong>.{' '}
-          <button type="button" className="wb-beheer-link" onClick={() => setClubId(String(voorstel))}>Die club kiezen</button>
-        </p>
-      )}
-      <p className="wb-beheer-tip dim">De ploegnaam geldt overal — ook op haar andere wedstrijden en in de rangschikking.</p>
-    </div>
   )
 }

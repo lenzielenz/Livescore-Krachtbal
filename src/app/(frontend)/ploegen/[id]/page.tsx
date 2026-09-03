@@ -4,14 +4,18 @@ import type { ReactNode } from 'react'
 
 import { BewaarWedstrijd } from '@/components/BewaarWedstrijd'
 import { SiteHeader } from '@/components/SiteHeader'
+import { hasRole, isFederationLevel } from '@/lib/access'
 import { competitionWhere } from '@/lib/analyse-access'
+import { getAuthUser } from '@/lib/auth-user'
 
 import { buildScoreboards } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
+import { clubsOpId } from '@/lib/ploeg-rechtzetten'
 import { reeksNaam } from '@/lib/reeksen'
 import { buildTeamSeasonTrend } from '@/lib/season-trend'
 import { buildTeamReport } from '@/lib/team-report'
 import type { Match } from '@/payload-types'
+import { PloegBeheer } from './PloegBeheer'
 import { TeamForm } from '../../analyse/ploeg/TeamForm'
 import { TeamProfile } from '../../analyse/ploeg/TeamProfile'
 import '../../analyse/analyse.css'
@@ -100,6 +104,17 @@ export default async function PloegProfiel({ params }: Params) {
   const club = (team.club && typeof team.club === 'object' ? team.club : null) as
     | { id: number; name?: string }
     | null
+
+  // De federatie kan de ploegnaam en haar club hier rechtzetten. Analyseploegen komen nooit tot
+  // hier (die vallen hierboven al op notFound), dus de rol volstaat als voorwaarde.
+  //
+  // clubId apart van `club`: staat de club er wél maar is ze niet mee opgehaald (of net verwijderd),
+  // dan is het veld een kaal id. Dat moet de keuzelijst nog altijd op de juiste club zetten.
+  const clubId = club?.id ?? (typeof team.club === 'number' ? team.club : null)
+  const me = await getAuthUser()
+  const magBeheren = isFederationLevel(me) || hasRole(me, 'federatie')
+  // Enkel de club die ze nú heeft, met haar naam — een andere club kies je door te zoeken.
+  const huidigeClub = magBeheren ? ((await clubsOpId(payload, [clubId]))[0] ?? null) : null
 
   return (
     <>
@@ -249,6 +264,13 @@ export default async function PloegProfiel({ params }: Params) {
               </section>
             ) : null}
           </>
+        )}
+
+        {magBeheren && (
+          <PloegBeheer
+            ploeg={{ id: teamId, naam: team.name ?? '', clubId, reeks: team.reeks ?? null }}
+            club={huidigeClub}
+          />
         )}
       </main>
     </>
