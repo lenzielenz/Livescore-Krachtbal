@@ -55,6 +55,15 @@ zou het scherm meesterven met je browser. De knop verschijnt alleen wanneer
 casten ook echt kan (App ID ingesteld én een browser met Cast); anders blijft hij
 weg in plaats van niets te doen.
 
+**In de geïnstalleerde app** (Krachtbal op je beginscherm) is het net anders.
+Android zet zo'n app in een eigen venster, los van Chrome, en laat `chrome.cast`
+daar niet toe — de knop verdween daardoor precies wanneer je de app netjes
+geïnstalleerd had. Nu krijg je in dat geval de weg die wél bestaat: één tik die
+dit scherm in Chrome opent (zet het dáár op de tv en sluit daarna gerust de app,
+de tv draait op zichzelf), plus de link om te kopiëren. Op een iPhone-app blijft
+die Chrome-knop weg — Google Cast bestaat op iOS in geen enkele browser, dus daar
+zou hij dezelfde doodlopende straat openen.
+
 ### Eenmalige opzet
 
 1. Ga naar de **Google Cast SDK Developer Console**:
@@ -83,3 +92,5 @@ Zonder deze variabele blijft de Chromecast-knop verborgen; de eenvoudige manier
 
 - Werkt enkel in **Chrome** of **Edge** (desktop of Android). iPhone/iPad
   ondersteunen geen Chromecast in de browser — gebruik daar de eenvoudige manier.
+- Ook niet in de **geïnstalleerde app**: die draait buiten Chrome. Het scherm
+  biedt daar zelf aan om in Chrome te openen (zie hierboven).

@@ -111,8 +111,17 @@ export function KantineScreen({
 
   return (
     <div className="kt-screen">
-      {/* Tv-scherm: geen voettekst, anders valt de onderrand weg. */}
-      {!editable && <SchermModus />}
+      {/* Dit component ÍS het kantinescherm — beide plekken waar het gebruikt wordt (/kantine/scherm
+          en de vaste clublink) hangen aan een tv. Dus altijd de schermmarkering, die onderaan de
+          voettekst van de site weghaalt.
+
+          Dit hing eerst aan `!editable`, en dat was fout: /kantine/scherm gebruikt de standaard
+          (editable = true, voor het "‹ Aanpassen"-linkje) en kreeg de voettekst dus wél. Die staat
+          ónder een scherm van exact één schermhoogte en duwt er de onderste rand uit — op een tv
+          kan niemand daarnaartoe scrollen, dus de uitslagenbalk was er altijd half af. Precies
+          dezelfde fout als op het tornooischerm, alleen langs de andere kant binnengekomen: het
+          linkje en het tv-zijn hebben niets met elkaar te maken. */}
+      <SchermModus />
       {editable && <Link href="/kantine" className="kt-screen-edit">‹ Aanpassen</Link>}
       {/* Rechtstreeks naar de tv. Niet spiegelen: de Chromecast laadt dít scherm zelf en houdt
           zijn eigen live verbinding, zodat het blijft draaien als je je telefoon wegsteekt. */}
