@@ -546,7 +546,9 @@
   gap: 8px;
   margin: 0 10px 10px 40px;
   padding: 10px 14px;
-  border-radius: 12px;
+  /* Volgt de afronding van de kaart erboven; met 12px naast een kaart van 18px oogde de knop
+     als een los stuk dat er niet bij hoort. */
+  border-radius: 14px;
   border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line));
   background: color-mix(in srgb, var(--accent) 12%, transparent);
   color: var(--txt);
@@ -1061,9 +1063,18 @@
   cursor: pointer;
   /* Elke kaart zweeft los, met een haarscherpe lichtrand en een gloed in de clubkleuren —
      de kleuren van de affiche zelf zetten de kaart in de verf. */
-  border-radius: 14px;
+  border-radius: 18px;
   overflow: hidden;
-  background: #0b0f15;
+  /* De ondergrond draagt een zweem van de clubkleuren, in dezelfde richting als de kop erboven.
+     Dat is wat kop en namenstrook één ding maakt: de strook is niet langer een zwarte balk die
+     tegen de kaart geplakt is, maar een donkerder band over hetzelfde kleurveld. */
+  background: linear-gradient(
+    115deg,
+    color-mix(in srgb, var(--hc) 40%, #0b0f15) 0%,
+    color-mix(in srgb, var(--hc) 12%, #0b0f15) 44%,
+    color-mix(in srgb, var(--ac) 12%, #0b0f15) 56%,
+    color-mix(in srgb, var(--ac) 40%, #0b0f15) 100%
+  );
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.12),
     0 0 0 1px rgba(255, 255, 255, 0.07),
@@ -1134,6 +1145,20 @@
   pointer-events: none;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.13), rgba(255, 255, 255, 0));
 }
+/* De onderrand van de kop verloopt naar het donker van de namenstrook, zodat de twee in elkaar
+   overgaan in plaats van elkaar met een snee te raken. Onder de logo's (z-index 2) en de
+   glans (3), boven het kleurveld (0). */
+.lbl-head::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 38px;
+  z-index: 1;
+  pointer-events: none;
+  /* Eindigt op exact dezelfde donkerte als waarmee de namenstrook begint (0.3): zit daar een
+     sprong tussen, dan tekent de kaart een randje dat niemand gevraagd heeft. */
+  background: linear-gradient(180deg, transparent, rgba(9, 13, 20, 0.3));
+}
 .lbl-gl {
   position: absolute;
   top: -50%;
@@ -1172,18 +1197,45 @@
 }
 .lbl-center .lb-stats { color: rgba(255, 255, 255, 0.82); }
 .lbl-names {
+  position: relative;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
-  padding: 9px 16px 11px 34px;
-  background: rgba(9, 13, 20, 0.72);
-  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 9px 16px 13px 34px;
+  /* Doorzichtig donker in plaats van een dichte zwarte balk: de clubkleuren van de kaart-
+     ondergrond schemeren erdoor, en bovenaan iets lichter zodat de strook uit de kop groeit. */
+  /* Zacht aangezet bovenaan (0.3, gelijk aan waar de kop eindigt) maar snel donker genoeg: op de
+     hoogte van de tekst zit de strook al op 0.72. Nagemeten met felgeel en wit als clubkleuren —
+     de gevaarlijkste voor witte tekst — en daar blijven de namen goed leesbaar. */
+  background: linear-gradient(
+    180deg,
+    rgba(9, 13, 20, 0.3) 0%,
+    rgba(9, 13, 20, 0.72) 42%,
+    rgba(9, 13, 20, 0.84) 100%
+  );
+}
+/* De scheiding was een lijn van rand tot rand, en die botste hard op de ronde hoeken. Nu een
+   haarlijn die aan beide uiteinden wegsterft: je ziet de naad in het midden, waar de tekst
+   begint, en niet in de hoeken waar ze de afronding zou doorsnijden. */
+.lbl-names::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 1px;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.16) 18%,
+    rgba(255, 255, 255, 0.16) 82%,
+    transparent
+  );
 }
 /* Matglas-effect (backdrop-blur) enkel op écht-lopende rijen — met tientallen rijen tegelijk is
    backdrop-filter een gekende scroll-jank-bron; de gewone rijen krijgen een iets dekkendere
    effen achtergrond in de plaats (zelfde ogende strook, geen doorlopende herblur bij het scrollen). */
 .lb-row.now .lbl-names {
-  background: rgba(9, 13, 20, 0.5);
+  background: linear-gradient(180deg, rgba(9, 13, 20, 0.34), rgba(9, 13, 20, 0.72));
   -webkit-backdrop-filter: blur(7px);
   backdrop-filter: blur(7px);
 }

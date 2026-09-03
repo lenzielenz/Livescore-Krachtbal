@@ -218,7 +218,11 @@ describe('analyseOmgeving', () => {
     } else {
       expect(uitkomst.melding).toBeNull()
     }
-  })
+    // Ruime tijdslimiet, want dit is de enige test in dit bestand die een écht Python-proces
+    // start (en er soms meerdere kandidaten voor aftast). Met de standaard vijf seconden viel
+    // hij op een drukke machine willekeurig om, terwijl hij alleen bij het starten traag is —
+    // een fout in de meting, niet in de code.
+  }, 30_000)
 })
 
 describe('bruikbareBeelden', () => {
