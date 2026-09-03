@@ -4,6 +4,7 @@ import { authUser } from '@/lib/api-auth'
 import { getPayloadClient } from '@/lib/payload-client'
 import { reeksCategorie, type Reeks } from '@/lib/reeksen'
 import { cleanTeamName, isPlayed, norm, parseResultsHtml } from '@/lib/results-import'
+import { clubVanPloeg } from '@/lib/season-import'
 import { buildFixedSimpleScore } from '@/lib/simple-score'
 
 // Importeer officiële uitslagen (HTML-tabel-export). Maakt/voltooit wedstrijden met eindstand.
@@ -71,8 +72,9 @@ export async function POST(req: Request) {
       clubByName.set(k, id)
       return id
     }
-    // Naam → club: strip een eventuele A/B-poule-suffix ("KBC St. Michiels A" → "KBC St. Michiels").
-    const clubNameOf = (teamName: string) => teamName.replace(/\s+[AB]$/, '').trim()
+    // Naam → club: dezelfde regel als de seizoensimport (poule-letter én "A-1"/"B-2" eraf). Dit was
+    // een eigen kopie die enkel " A"/" B" kende, en maakte zo van "KBC St. Michiels A-1" een club.
+    const clubNameOf = (teamName: string) => clubVanPloeg(teamName)
     let teamsCreated = 0
     const wouldCreate = new Set<string>()
     const fakeId = new Map<string, number>()

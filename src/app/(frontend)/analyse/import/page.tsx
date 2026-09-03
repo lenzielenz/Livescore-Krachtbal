@@ -7,6 +7,7 @@ import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
 import { reeksNaam } from '@/lib/reeksen'
 import { AnalyseNav } from '../AnalyseNav'
+import { ClubKoppelen } from './ClubKoppelen'
 import { ClubMerge, type MergeClub } from './ClubMerge'
 import { DedupeTool } from './DedupeTool'
 import { EmptyCleanup } from './EmptyCleanup'
@@ -108,6 +109,10 @@ export default async function ResultsImportPage() {
         <h2 className="an-sub">🧹 Dubbele ploegen opkuisen</h2>
         <p className="an-intro">Voegt ploegen/clubs samen die dezelfde zijn maar net anders geschreven (per reeks). Eerst <em>Voorbeeld</em>.</p>
         <DedupeTool />
+
+        <h2 className="an-sub">🏷️ Ploegen bij hun club</h2>
+        <p className="an-intro">Koppelt elke ploeg aan de club waarvan haar naam het ploegkenmerk laat vallen ("KBC St. Michiels A-1" en "… B-2" → "KBC St. Michiels"), zodat al haar ploegen hetzelfde logo en dezelfde kleuren dragen. Leeg geraakte clubs-per-ploeg verdwijnen. Eerst <em>Voorbeeld</em>.</p>
+        <ClubKoppelen />
 
         <h2 className="an-sub">🔗 Clubs samenvoegen</h2>
         <p className="an-intro">Twee clubrecords die dezelfde club zijn (bv. "KBC St. Michiels" en "Sint-Michiels") handmatig samenvoegen. Ploegen, trainingen en accounts verhuizen naar de behouden club.</p>
