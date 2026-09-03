@@ -32,7 +32,9 @@
 }
 .ssk-home { font-weight: 700; text-decoration: none; }
 .ssk-home .brand { color: var(--accent, #0fe0a6); }
-.ssk-toplinks { display: inline-flex; align-items: center; gap: 14px; }
+/* Knoppen krimpen niet mee met de kop: zodra de merknaam links plaats opeist, braken
+   '⛶ Volledig scherm' en 'Veldscherm →' op de spatie, met icoon/pijl op een eigen lijn. */
+.ssk-toplinks { display: inline-flex; align-items: center; gap: 14px; flex: 0 0 auto; }
 .ssk-toplink {
   text-decoration: none;
   opacity: 0.8;
@@ -42,8 +44,14 @@
   font: inherit;
   cursor: pointer;
   padding: 0;
+  white-space: nowrap;
 }
 .ssk-toplink:hover { opacity: 1; }
+/* Vangnet voor smalle gsm's (360px): links als geheel naar een tweede regel i.p.v. buiten beeld. */
+@media (max-width: 380px) {
+  .ssk-top { flex-wrap: wrap; row-gap: 4px; }
+  .ssk-toplinks { margin-left: auto; }
+}
 
 .ssk-meta {
   display: flex;
@@ -55,7 +63,7 @@
   font-weight: 700;
   color: var(--accent, #0fe0a6);
 }
-.ssk-reeks { color: #ffd873; }
+.ssk-reeks { color: var(--accent, #6fb2ff); }
 .ssk-status {
   font-size: 12px;
   font-weight: 700;
@@ -65,7 +73,7 @@
   background: var(--panel);
   border: 1px solid var(--line);
 }
-.ssk-status.live { color: #ef476f; border-color: #ef476f; }
+.ssk-status.live { color: var(--pop, #ff5d6c); border-color: var(--pop, #ff5d6c); }
 .ssk-status.finished { opacity: 0.7; }
 
 /* Klok geflankeerd door de clublogo's (thuis links, uit rechts). */
@@ -220,7 +228,10 @@
 .ssk-goal.nek { background: var(--accent); }
 .ssk-goal.rug { background: color-mix(in srgb, var(--accent) 16%, var(--panel)); color: var(--accent); border: 1px solid color-mix(in srgb, var(--accent) 42%, var(--line)); box-shadow: none; }
 .ssk-goal.rug small { opacity: 0.75; }
-.ssk-goal:active { transform: translateY(1px); }
+/* Voelbare 'indruk' op de meest getikte knop: 1px verschuiving zie je niet op een vlak van
+   ±165px, en de railknoppen elders op de tafel schalen ook. `:not(:disabled)` is nodig om
+   de globale `button:not(:disabled):active` in styles.css te overtreffen. */
+.ssk-goal:not(:disabled):active { transform: scale(0.96); }
 
 .ssk-stats {
   display: flex;

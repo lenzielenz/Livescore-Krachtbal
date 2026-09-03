@@ -1,14 +1,18 @@
 /* Mijn Krachtbal — persoonlijk startscherm. */
 .hub-sec { margin: 0 0 24px; }
+/* .page-title rekent op een .page-sub eronder voor zijn bodemmarge; de hub heeft die niet, waardoor
+   'LIVE NU' als ondertitel tegen de h1 kleefde terwijl de andere secties 24px ademruimte krijgen. */
+.page-title + .hub-sec { margin-top: 16px; }
 .hub-h2 {
   display: flex; align-items: center; gap: 9px;
   font-size: 0.82rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em;
   color: var(--dim-strong); margin: 0 0 12px;
 }
 .hub-h2::before { content: ''; width: 3px; height: 0.95em; border-radius: 2px; background: var(--grad-accent, var(--accent)); box-shadow: 0 0 8px color-mix(in srgb, var(--accent) 60%, transparent); }
-.hub-live-dot { width: 9px; height: 9px; border-radius: 50%; background: #ef476f; box-shadow: 0 0 10px #ef476f; animation: hub-blink 1.4s ease-in-out infinite; }
+/* Zelfde kleur (--pop) en tempo (1.6s, badge-live-pulse uit styles.css) als alle andere live-pulsen:
+   een eigen #ef476f-stip op 1.4s knipperde net uit fase met de LIVE-badges eronder. */
+.hub-live-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--pop); box-shadow: 0 0 10px var(--pop); animation: badge-live-pulse 1.6s ease-in-out infinite; }
 .hub-h2 .hub-live-dot + :where(*) { margin: 0; }
-@keyframes hub-blink { 50% { opacity: 0.4; } }
 .hub-empty { color: var(--dim); margin: 0; font-size: 0.92rem; }
 .hub-empty a { color: var(--accent); font-weight: 700; }
 
@@ -16,10 +20,14 @@
 .hub-live-card {
   position: relative; display: flex; flex-direction: column; gap: 6px;
   padding: 14px; border-radius: 14px; text-decoration: none; color: inherit;
-  border: 1px solid color-mix(in srgb, #ef476f 30%, var(--line));
-  background: radial-gradient(120% 100% at 0% 0%, rgba(239, 71, 111, 0.12), transparent 60%), var(--panel-grad, var(--panel));
+  border: 1px solid color-mix(in srgb, var(--pop) 30%, var(--line));
+  background: radial-gradient(120% 100% at 0% 0%, color-mix(in srgb, var(--pop) 12%, transparent), transparent 60%), var(--panel-grad, var(--panel));
+  /* Was het enige interactieve blok op de hub zonder hover-feedback (tegels, clubrijen en nieuws
+     liften wél); volgt nu het bestaande .hub-livecard:hover-patroon uit styles.css. */
+  transition: transform var(--dur-2) var(--ease-out), border-color var(--dur-2) var(--ease-soft), box-shadow var(--dur-2) var(--ease-soft);
 }
-.hub-live-badge { font-size: 0.66rem; font-weight: 900; letter-spacing: 0.1em; color: #fff; background: #ef476f; padding: 2px 8px; border-radius: 999px; align-self: flex-start; }
+.hub-live-card:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--pop) 58%, var(--line)); box-shadow: var(--glow-pop); }
+.hub-live-badge { font-size: 0.68rem; font-weight: 900; letter-spacing: 0.06em; color: #fff; background: var(--pop); padding: 3px 9px; border-radius: 999px; align-self: flex-start; }
 .hub-live-teams { font-weight: 800; }
 .hub-live-teams i { color: var(--dim); font-style: normal; }
 .hub-live-score { font-weight: 900; font-size: 1.3rem; font-variant-numeric: tabular-nums; color: var(--accent); }

@@ -409,7 +409,7 @@
 .wb-select {
   width: 100%;
   padding: 9px 10px;
-  border-radius: 8px;
+  border-radius: var(--r-control);
   border: 1px solid var(--line);
   background: #10141a;
   color: var(--txt);

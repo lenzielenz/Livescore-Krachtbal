@@ -55,13 +55,14 @@
 /* Reeks-keuzemenu — schaalt naar veel reeksen zonder een wolk knoppen. */
 .lb-reeks-select {
   width: 100%;
-  padding: 11px 12px;
+  padding: 12px 12px;
   border: 1px solid color-mix(in srgb, #fff 9%, var(--line));
   background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 88%, #fff 12%), var(--panel));
   color: var(--txt);
   border-radius: 12px;
   font: inherit;
-  font-size: 0.9rem;
+  /* Minstens 16px: Safari iOS zoomt de pagina in zodra een select met kleinere tekst focus krijgt. */
+  font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 1px 2px rgba(0, 0, 0, 0.25);
@@ -186,7 +187,9 @@
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  padding: 7px 16px;
+  /* Was 31px hoog — het kleinste doel in dit blok; met de duim landde een mis-tik op de pijlknoppen eronder. */
+  padding: 10px 18px;
+  min-height: 40px;
   border: none;
   background: transparent;
   color: var(--dim);
@@ -1013,7 +1016,8 @@
   box-shadow: 0 10px 24px color-mix(in srgb, var(--accent) 42%, transparent);
 }
 .home-cta-login {
-  color: var(--dim);
+  /* --dim las als uitgeschakelde tekst naast de primaire knop; dit is de tweede actie, geen bijzin. */
+  color: var(--dim-strong);
   font-size: 0.82rem;
   font-weight: 600;
   text-decoration: none;

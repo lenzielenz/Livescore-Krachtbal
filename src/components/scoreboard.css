@@ -113,14 +113,18 @@
 .sb-main > .sb-side-team:last-child .sb-name { color: color-mix(in srgb, var(--away) 55%, #fff); text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5), 0 0 20px color-mix(in srgb, var(--away) 35%, transparent); }
 
 .sb-status { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
-.sb-badge { font-size: 0.72rem; font-weight: 900; letter-spacing: 0.12em; padding: 4px 12px; border-radius: 999px; }
+/* Transparante rand op de basis: de neutrale varianten kleuren die enkel in, zodat alle drie de
+   pillen (live/afgelopen/gepland) exact even hoog blijven. */
+.sb-badge { font-size: 0.72rem; font-weight: 900; letter-spacing: 0.12em; padding: 4px 12px; border-radius: 999px; border: 1px solid transparent; }
 .sb-badge.live {
   background: linear-gradient(180deg, color-mix(in srgb, var(--pop) 88%, #fff), var(--pop));
   color: #fff;
   box-shadow: 0 0 18px -3px color-mix(in srgb, var(--pop) 80%, transparent), inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
-.sb-badge.finished { background: #2a3f33; color: var(--dim); }
-.sb-badge.scheduled { background: #1c3a2a; color: var(--dim); }
+/* Neutrale status-pillen in de huisstijl-grijzen (zoals .kt-pick-badge en de tornooi-statuspil):
+   de oude mosgroene tinten (#2a3f33/#1c3a2a) stonden buiten het antraciet/ijsblauwe palet. */
+.sb-badge.finished { background: var(--panel-2); border-color: var(--line); color: var(--dim); }
+.sb-badge.scheduled { background: color-mix(in srgb, var(--accent) 12%, var(--panel-2)); border-color: var(--line); color: var(--dim); }
 .sb-conn { font-size: 0.72rem; color: #5a7a68; }
 .sb-conn.on { color: var(--pop); }
 .sb-conn.off { color: var(--accent); }

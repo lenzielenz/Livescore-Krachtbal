@@ -61,7 +61,7 @@
 }
 .login-input {
   padding: 13px 14px;
-  border-radius: 11px;
+  border-radius: var(--r-control);
   border: 1px solid var(--line);
   background: var(--bg);
   color: var(--txt);
@@ -76,14 +76,16 @@
 .login-btn {
   margin-top: 6px;
   padding: 14px;
-  border-radius: 12px;
+  /* Zelfde radius als .login-input: knop en velden staan in één kolom uitgelijnd,
+     dus 12px vs. 11px viel daar juist op. */
+  border-radius: var(--r-control);
   border: none;
   background: var(--grad-accent);
   color: #06140d;
   font-weight: 800;
   font-size: 1.02rem;
   cursor: pointer;
-  transition: transform 0.14s ease, box-shadow 0.14s ease;
+  transition: transform var(--dur-1) var(--ease-soft), box-shadow var(--dur-1) var(--ease-soft);
 }
 .login-btn:hover {
   transform: translateY(-1px);

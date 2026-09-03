@@ -116,6 +116,25 @@
 }
 .wx-pop { animation: wx-pop-in 160ms cubic-bezier(0.2, 0.9, 0.3, 1); }
 .wx-pop.dicht { animation: wx-pop-uit 160ms ease forwards; }
+/* Desktop: onder de chip hangen zoals het Meer-menu; op gsm blijft de gecentreerde fixed-variant.
+   Gecentreerd-fixed zweefde op een breed scherm midden in beeld, ver van de chip waarop je klikte.
+   .wx-mini-wrap is position: relative en .sh/.sh-inner hebben geen overflow, dus niets knipt af. */
+@keyframes wx-pop-in-vast {
+  from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+@media (min-width: 721px) {
+  .wx-pop {
+    position: absolute;
+    top: calc(100% + 14px);
+    left: auto;
+    right: 0;
+    transform: none;
+    transform-origin: top right;
+    animation-name: wx-pop-in-vast;
+  }
+  .wx-pop.dicht { animation-name: wx-uit; }
+}
 /* Wie liever geen beweging ziet, krijgt ze niet. */
 @media (prefers-reduced-motion: reduce) {
   .wx-pop, .wx-pop.dicht, .wx-pop-backdrop, .wx-pop-backdrop.dicht { animation: none; }

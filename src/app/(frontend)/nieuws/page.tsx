@@ -31,7 +31,7 @@ export default async function NieuwsPage() {
       <div className="site">
         <h1 className="page-title">📰 <span className="brand">Nieuws</span></h1>
         {res.docs.length === 0 ? (
-          <p className="nw-empty">Nog geen nieuws. Kom snel terug! 👀</p>
+          <p className="empty">Nog geen nieuws. Kom snel terug! 👀</p>
         ) : (
           <div className="nw-grid">
             {res.docs.map((n) => {
