@@ -334,6 +334,30 @@ hele helft laat lopen. In één keer meedraaien kan ook: `meet.py --overlay`.
 | **6** | Hertraining-lus: reviewcorrecties → ground truth ("model zei X, mens zei Y") | deze map (`groundtruth.py`) |
 | **7** | Bewegende camera: homografie per moment, herankerd op de veldlijnen | deze map (`volg_veld.py`) |
 | **8** | Controle-overlay: veldmodel, gevonden lijnen, bal en spelers over de video | deze map (`overlay.py`) |
+| **9** | Twee camera's (één per kant van het veld): analyse per camera, detecties samengevoegd en ontdubbeld op de gedeelde tijdlijn; vanger-attributie in de reviewlaan; fysieke stats server-side met spoor-toewijzing in de app | server-kant (`src/lib/cv-samenvoegen.ts`, `cv-fysiek.ts`) |
+
+## Twee camera's (fase 9)
+
+Een veld van 46 m past zelden in één beeld: wie beide kanten wil meten, filmt met twee
+toestellen — elk op één kant, liefst met wat overlap rond de middellijn. De pijplijn zelf
+verandert daar niets aan: elke opname draait dezelfde keten met haar éigen kalibratie, en
+alles projecteert naar hetzelfde veld-assenstelsel (`veld.py` ↔ `field.ts`). Het samenvoegen
+gebeurt daarná, in TypeScript (`src/lib/cv-samenvoegen.ts`):
+
+- de tijden van camera 2 gaan via het geijkte tijdsverschil (`matches.video2OffsetS`, in de
+  app te ijken op één gedeeld moment) naar de tijdlijn van camera 1 — dé tijdlijn van alle
+  voorstellen en markers;
+- een worp die beide camera's zagen (binnen 2 s én, als beide een landingspunt hebben,
+  binnen 8 m) telt één keer: de kant mét landingspunt wint, daarna de hoogste confidence;
+- werper- en spoornummers van camera 2 krijgen +1000 (`CAMERA2_BASIS`): "werper 3" van
+  camera 1 en van camera 2 zijn twee verschillende mensen. Een mens wijst ze desnoods
+  allebei aan dezelfde speler toe;
+- trainingshygiëne: een worp die alléén camera 2 zag mag geen label zijn voor de meetreeks
+  van camera 1 (`houding-reeks.jsonl` is per camera; de training gebruikt enkel die van
+  camera 1) — vandaar de `beideCameras`-vlag op samengevoegde voorstellen.
+
+De hoogte van de bal blijft ook met twee camera's onmeetbaar zolang ze niet gesynchroniseerd
+gestereo-kalibreerd zijn — dit is samenvoegen van detecties, geen stereovisie.
 
 ## Installatie
 
@@ -677,6 +701,13 @@ afstand van 303 tot 973 m uiteen (factor 3,2), **met** het venster blijft ze tus
 tussen wedstrijden die op een andere frequentie getrackt zijn. De upload gaat naar POST
 `/api/cv/match/{id}/fysiek` en vervangt de vorige meting volledig; het platform
 toont het naast de worpstatistieken en vangsten op de spelerskaart.
+
+**Server-spiegel**: dezelfde telling bestaat in TypeScript (`src/lib/cv-fysiek.ts`) —
+de server-analyse herrekent de fysieke stats zelf zodra de sporen in de app aan spelers
+toegewezen zijn (`/api/cv/match/{id}/sporen`, sectie "Wie liep waar?" op de analysepagina),
+met exact dezelfde parameters. Wijzig je hier een drempel of het venster, wijzig hem dan
+óók daar: de pariteitstest (`tests/unit/cv-fysiek.unit.spec.ts`) draait dit script echt
+en wordt rood zodra de spiegels uiteendrijven.
 
 ### 12. `groundtruth.py` — de hertraining-lus sluiten (fase 6)
 
