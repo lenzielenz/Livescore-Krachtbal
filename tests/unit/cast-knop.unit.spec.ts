@@ -51,6 +51,17 @@ async function laadKnop() {
   return mod.CastKnop
 }
 
+/** Doet alsof dit een geïnstalleerde app is op het gegeven toestel. */
+function zetAlsApp(ua: string) {
+  vi.stubGlobal('matchMedia', (q: string) => ({
+    matches: q.includes('standalone'),
+    media: q,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+  }))
+  Object.defineProperty(navigator, 'userAgent', { configurable: true, value: ua })
+}
+
 beforeEach(() => {
   verstuurd = []
   sessieCallback = null
@@ -61,15 +72,61 @@ afterEach(() => {
   cleanup()
   vi.useRealTimers()
   vi.unstubAllEnvs()
+  vi.unstubAllGlobals()
   delete (globalThis as unknown as { chrome?: unknown }).chrome
 })
 
 describe('cast-knop', () => {
   it('blijft weg wanneer casten hier niet kan', async () => {
-    // Geen Cast in de browser (iPhone, Firefox): dan tonen we geen knop die niets doet.
+    // Geen Cast in de browser (Firefox op een laptop): dan tonen we geen knop die niets doet —
+    // ook niet nadat we het opgegeven hebben op de SDK. Dit is meteen de bewaker voor de tv
+    // zelf: daar draait dit scherm in de ontvanger, en daar hoort geen enkele knop op.
     const CastKnop = await laadKnop()
     const { container } = render(createElement(CastKnop, { pad: '/kantine/scherm' }))
     expect(container.querySelector('button')).toBeNull()
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(6000)
+    })
+    expect(container.querySelector('button')).toBeNull()
+  })
+
+  it('biedt in de geïnstalleerde app de weg via Chrome aan, in plaats van te verdwijnen', async () => {
+    // Dit is de aanleiding: Android laat `chrome.cast` niet toe in een geïnstalleerde app, dus wie
+    // de app netjes installeerde zag de knop weggaan. Verdwijnen is hier het slechtste antwoord —
+    // de kantine wil dat scherm nog steeds op de tv, en die weg bestaat wél.
+    zetAlsApp('Mozilla/5.0 (Linux; Android 14; Pixel 8) Chrome/120 Mobile Safari/537.36')
+    const CastKnop = await laadKnop()
+    const { container } = render(createElement(CastKnop, { pad: '/kantine/scherm' }))
+
+    // Zolang de SDK nog kán komen, tonen we niets — anders knippert er een knop weg.
+    expect(container.querySelector('button')).toBeNull()
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(6000)
+    })
+
+    const knop = container.querySelector('button')!
+    expect(knop.textContent).toContain('Naar de tv')
+    act(() => {
+      knop.click()
+    })
+    const link = container.querySelector('a')!
+    expect(link.getAttribute('href')).toContain('package=com.android.chrome')
+    expect(link.getAttribute('href')).toContain('/kantine/scherm')
+  })
+
+  it('belooft op een iPhone-app geen Chrome-knop die niets oplevert', async () => {
+    zetAlsApp('Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) Safari/604.1')
+    const CastKnop = await laadKnop()
+    const { container } = render(createElement(CastKnop, { pad: '/kantine/scherm' }))
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(6000)
+    })
+    act(() => {
+      container.querySelector('button')!.click()
+    })
+    expect(container.querySelector('a')).toBeNull()
+    // De link staat er wél voluit, zodat je ze op een ander toestel kan overnemen.
+    expect(container.textContent).toContain('/kantine/scherm')
   })
 
   it('verschijnt zodra de Cast-SDK klaar is', async () => {

@@ -26,6 +26,57 @@
   background: color-mix(in srgb, var(--accent) 16%, transparent);
   color: var(--accent);
 }
+/* De uitwijk: wat je te zien krijgt in de geïnstalleerde app, waar Android de castknop niet
+   toelaat. Een paneeltje onder de knop, dus het schuift niets in de layout weg. */
+.cast-uitwijk-hoek {
+  position: relative;
+  display: inline-flex;
+}
+.cast-uitwijk {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 40;
+  width: min(92vw, 340px);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-card, 14px);
+  background: var(--panel-grad, var(--panel));
+  box-shadow: var(--card-shadow);
+  text-align: left;
+  /* Dit paneel hangt op een scherm dat verder geen tekst op ware grootte toont; zonder deze
+     regel erft het de reuzenletters van het kantinebord. */
+  font-size: 0.85rem;
+}
+.cast-uitwijk-titel {
+  font-family: var(--font-display), system-ui, sans-serif;
+  font-size: 0.95rem;
+}
+.cast-uitwijk-uitleg {
+  margin: 0;
+  color: var(--dim);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+/* De link voluit, zodat ze ook zonder klembord over te typen valt. */
+.cast-uitwijk-link {
+  font-size: 0.72rem;
+  color: var(--dim-strong, #cad2dc);
+  word-break: break-all;
+  user-select: all;
+}
+.cast-uitwijk-knoppen {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.cast-uitwijk-knoppen .cast-knop {
+  text-decoration: none;
+}
+
 .cast-knop-tv {
   font-weight: 700;
   font-size: 0.78rem;
