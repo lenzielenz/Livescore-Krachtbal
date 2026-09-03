@@ -36,6 +36,53 @@ export default function manifest(): MetadataRoute.Manifest {
       { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
       { src: '/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
     ],
+    // Schermafbeeldingen. Zonder deze toont Chrome bij het installeren een kaal balkje; mét deze
+    // een echt installatievenster waarin je de app eerst ziet. `form_factor: 'narrow'` is wat
+    // Android daarvoor vereist — een telefoonformaat, want zo gebruikt bijna iedereen dit.
+    // Opnieuw te maken met `pnpm pwa:demo && pnpm pwa:shots` (zie scripts/pwa-screenshots.ts):
+    // knoppen verhuizen, en een etalage die stilletjes veroudert is erger dan geen etalage.
+    screenshots: [
+      {
+        src: '/screenshots/dagprogramma.png',
+        sizes: '412x892',
+        type: 'image/png',
+        form_factor: 'narrow',
+        label: 'Het dagprogramma van een tornooidag, met veld en aanvangsuur per wedstrijd.',
+      },
+      {
+        src: '/screenshots/tornooidag.png',
+        sizes: '412x892',
+        type: 'image/png',
+        form_factor: 'narrow',
+        label: 'De tornooidag: schema, rangschikking, pronostiek en de foto-opdracht.',
+      },
+    ],
+    // Snelkoppelingen: lang drukken op het app-icoon springt meteen naar het scherm dat je op een
+    // wedstrijddag nodig hebt, zonder eerst door de app te navigeren. Android en desktop tonen
+    // deze lijst; iOS negeert ze (daar kost het niets).
+    shortcuts: [
+      {
+        name: 'Live-scores',
+        short_name: 'Live',
+        description: 'De wedstrijden van vandaag, live.',
+        url: '/live',
+        icons: [{ src: '/icon-192.png', sizes: '192x192', type: 'image/png' }],
+      },
+      {
+        name: 'Rangschikking',
+        short_name: 'Stand',
+        description: 'De stand in alle reeksen.',
+        url: '/rangschikking',
+        icons: [{ src: '/icon-192.png', sizes: '192x192', type: 'image/png' }],
+      },
+      {
+        name: 'Pronostiek',
+        short_name: 'Pronostiek',
+        description: 'Voorspel de uitslagen van de komende speeldag.',
+        url: '/pronostiek',
+        icons: [{ src: '/icon-192.png', sizes: '192x192', type: 'image/png' }],
+      },
+    ],
     ...(pkg
       ? {
           prefer_related_applications: false,

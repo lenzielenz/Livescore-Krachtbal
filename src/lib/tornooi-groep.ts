@@ -26,7 +26,7 @@ export type GroepData = {
   veldCount: number | null
   /** Recent ingestuurde supportersfoto's (enkel id + tijdstip, max 15 min oud): het
    *  kantinescherm gebruikt dit om een nieuwe inzending even feestelijk te tonen. */
-  fotos: { id: number; ts: string }[]
+  fotos: { id: number; ts: string; opdracht: string | null }[]
   /** Alle foto's van de dag, oudste eerst — de nabeschouwing op het kantinescherm.
    *  Enkel gevuld voor de federatie (zie `opties.archief`); voor iedereen anders leeg, want het
    *  foto-archief is bewust niet publiek. */
@@ -165,8 +165,14 @@ export async function loadGroepData(
       limit: 5,
       overrideAccess: true,
     })
-    .catch(() => ({ docs: [] as { id: number; createdAt: string }[] }))
-  const fotos = (fotosRes.docs as { id: number; createdAt: string }[]).map((f) => ({ id: f.id, ts: f.createdAt }))
+    .catch(() => ({ docs: [] as { id: number; createdAt: string; opdracht?: string | null }[] }))
+  // De opdracht mag mee: ze staat onder de foto op het kantinescherm ("📸 Foto met de
+  // tegenstander") en verraadt niets over wie ze instuurde — de naam zit hier bewust níét bij.
+  const fotos = (fotosRes.docs as { id: number; createdAt: string; opdracht?: string | null }[]).map((f) => ({
+    id: f.id,
+    ts: f.createdAt,
+    opdracht: f.opdracht || null,
+  }))
 
   // Het volledige archief van de dag — enkel voor de federatie, en enkel als erom gevraagd wordt.
   // Het kantinescherm draait daar na afloop een fotoshow mee; een publieke vrager krijgt hier

@@ -1218,11 +1218,19 @@ button.trn-toplink {
 
 /* ── Groep-kantinescherm (tornooidag): zelfaanpassend, hele dag open ─────────────────────────── */
 .gk-scherm {
-  min-height: 100dvh;
+  /* Exact één schermhoogte, niet "minstens": op een tv moet alles ín beeld passen zonder te
+     scrollen — er is niemand die daar scrolt. Het raster krijgt wat overblijft en de borden
+     verdelen dat onder elkaar, dus een groter scherm levert grotere borden op in plaats van
+     dezelfde borden met meer leegte eromheen.
+     `100dvh` en niet `100vh`: op een tablet of gsm in een browser met een verdwijnende
+     adresbalk zou 100vh net te hoog zijn en de onderste rij afkappen. */
+  height: 100dvh;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
-  padding: 16px;
-  gap: 14px;
+  /* De marge schaalt mee met het scherm: op een 4K-tv is 16 px een haarlijn, op een gsm te veel. */
+  padding: clamp(10px, 1.2vmin, 28px);
+  gap: clamp(8px, 1.2vmin, 20px);
   /* --gk-a/--gk-b: kleuren van de organiserende club (gezet via inline-stijl); zonder host
      vallen ze terug op de huisstijl. */
   background:
@@ -1234,23 +1242,46 @@ button.trn-toplink {
 /* Kop van het kantinescherm: de evenementsnaam is de ster — groot en exact gecentreerd,
    met het hostlogo ernaast. De fullscreen-knop zweeft rechts en telt niet mee voor de
    centrering. */
+/* De kop houdt zich klein: elke pixel die zij inneemt, gaat af van de borden. */
 .gk-kop {
   position: relative;
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 3.2rem;
-  padding: 0 clamp(90px, 12vw, 190px);
+  min-height: clamp(2.4rem, 5vmin, 4rem);
+  padding: 0 clamp(90px, 12vw, 230px);
 }
 .gk-titel { font-weight: 800; }
 
-.gk-raster { flex: 1 1 auto; display: grid; gap: 14px; grid-auto-rows: 1fr; }
+/* Het raster vult wat de kop overlaat. `min-height: 0` is hier geen detail: zonder dat weigert
+   een flex-item te krimpen en groeit het raster buiten het scherm — precies wat een tv niet kan
+   tonen. `grid-auto-rows: 1fr` verdeelt de hoogte gelijk over de rijen, dus elk bord wordt
+   automatisch groter op een groter scherm. */
+.gk-raster {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  gap: clamp(8px, 1.2vmin, 20px);
+  /* `minmax(0, 1fr)` en niet `1fr`: een rasterrij heeft standaard een ondergrens van haar inhoud,
+     dus met `1fr` weigert de rij te krimpen en duwt ze de uitslagenbalk onderaan uit beeld. */
+  grid-auto-rows: minmax(0, 1fr);
+}
 .gk-bord {
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  gap: 3vmin;
-  padding: 3vmin;
+  /* Kop bovenaan, voet onderaan, en het scorebord ertussen dat de rest opvult. Met
+     `justify-content: center` klitte alles in het midden samen en hing de klok halverwege het
+     bord in plaats van in de hoek — en bleef de onderste helft van de kaart leeg. */
+  justify-content: flex-start;
+  /* In vmin, zodat een bord op een 4K-tv evenredig meegroeit met het scherm. Met een plafond:
+     op een extreem breed scherm zou 3vmin anders een halve marge worden. */
+  gap: clamp(6px, 1.6vmin, 22px);
+  padding: clamp(8px, 2vmin, 30px);
+  /* Het bord mag nooit hoger worden dan zijn rasterrij; anders duwt het de rij open en valt de
+     onderste rand van het scherm. */
+  min-height: 0;
+  overflow: hidden;
   border-radius: 18px;
   /* De twee clubkleuren van het bord zelf (--bc-a/--bc-b, met de host-kleur als terugval)
      ontmoeten elkaar in een lichtere naad — zelfde taal als de live-bordkaarten. */
@@ -1278,20 +1309,31 @@ button.trn-toplink {
   pointer-events: none;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0));
 }
+/* De kop draagt enkel de affiche (links) en het veld (rechts).
+   Vroeger stond hier één grid van drie kolommen met affiche, reeks én klok. Dat liep over elkaar
+   heen zodra een ploegnaam wat langer werd: een grid-item krijgt standaard `min-width: auto`, dus
+   de kolom met de affiche wéigerde te krimpen en duwde de rest eroverheen. Vandaar minder in de
+   kop, en `min-width: 0` op wat wél mag afkappen. */
 .gk-bord-kop {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 1em;
   font-size: clamp(0.8rem, 1.6vmin, 1.1rem);
   color: var(--dim-strong, #cad2dc);
   font-weight: 700;
 }
-.gk-bord-label { justify-self: start; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gk-bord-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 /* De reeks als blikvanger: groot, exact gecentreerd, in een glas-chip — zo weet iedereen in de
    kantine meteen wélke reeks er bezig is. */
 .gk-bord-reeks {
-  justify-self: center;
+  /* Op een eigen regel onder de affiche: zo overlapt ze de ploegnamen niet meer. */
+  align-self: center;
   font-size: clamp(0.9rem, 2.4vmin, 1.7rem);
   font-weight: 800;
   letter-spacing: 0.08em;
@@ -1307,17 +1349,20 @@ button.trn-toplink {
   text-overflow: ellipsis;
 }
 .gk-bord-veld {
-  margin-left: 0.6em; padding: 0.15em 0.6em; border-radius: 999px;
+  flex: 0 0 auto;
+  padding: 0.15em 0.6em; border-radius: 999px;
   background: rgba(6, 9, 14, 0.5); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
   font-weight: 800; color: #fff;
 }
 /* De speeltijd: het cijfer dat de kantine het vaakst zoekt, dus groot en in tabulaire cijfers
    (zo springt niets bij het tikken). Een kloppend stipje toont dat de klok écht loopt. */
+/* De speeltijd staat rechtsonder in het bord: rustig aanwezig in plaats van bovenaan te
+   concurreren met de reeks en de affiche. */
 .gk-bord-klok {
   justify-self: end;
-  display: inline-flex; align-items: baseline; gap: 0.45em;
-  padding: 0.2em 0.85em; border-radius: 999px; background: rgba(6, 9, 14, 0.55);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+  display: inline-flex; align-items: baseline; gap: 0.4em;
+  padding: 0.15em 0.7em; border-radius: 999px; background: rgba(6, 9, 14, 0.55);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
   color: #fff;
 }
 .gk-klok-half { font-size: 0.85em; font-weight: 800; color: var(--dim-strong, #cad2dc); }
@@ -1325,7 +1370,8 @@ button.trn-toplink {
   font-family: var(--font-display), sans-serif;
   font-weight: 900;
   font-variant-numeric: tabular-nums;
-  font-size: 1.9em;
+  /* Kleiner dan vroeger: hij staat nu in de voetregel, niet als blikvanger bovenaan. */
+  font-size: 1.45em;
   line-height: 1.05;
   letter-spacing: 0.01em;
 }
@@ -1341,7 +1387,16 @@ button.trn-toplink {
 }
 @keyframes gk-klok-klop { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.45; transform: scale(0.82); } }
 @media (prefers-reduced-motion: reduce) { .gk-klok-stip { animation: none; } }
-.gk-bord-body { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 2vmin; }
+.gk-bord-body {
+  /* Neemt de ruimte tussen kop en voet; zo staat de score groot in het midden van de kaart en
+     zit de klok écht in de rechteronderhoek. */
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 2vmin;
+}
 .gk-bord-ploeg { display: flex; flex-direction: column; align-items: center; gap: 1.2vmin; min-width: 0; }
 .gk-bord-team { max-width: 100%; font-size: clamp(1rem, 3.2vmin, 2.4rem); font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .gk-bord-score {
@@ -1353,7 +1408,28 @@ button.trn-toplink {
 }
 .gk-bord.groot .gk-bord-team { font-size: clamp(1.4rem, 5vmin, 3.6rem); }
 .gk-bord.groot .gk-bord-score { font-size: clamp(3rem, 13vmin, 11rem); }
-.gk-bord-voet { display: flex; justify-content: center; gap: 2em; font-size: clamp(0.78rem, 1.6vmin, 1.05rem); color: var(--dim-strong, #cad2dc); font-variant-numeric: tabular-nums; }
+/* De voet: kruisjes en minuten gecentreerd, de klok rechts. De lege spanwijdte links houdt die
+   twee écht in het midden in plaats van ze door de klok naar links te laten duwen. */
+.gk-bord-voet {
+  /* Drie kolommen met een lege eerste: zo staan de kruisjes en minuten écht in het midden en de
+     klok tegen de rechterrand. Met een auto-marge lukte dat niet — die slokt de vrije ruimte op
+     vóór een flex-spacer aan bod komt, en dan schuift het midden naar links. */
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 1em;
+  font-size: clamp(0.78rem, 1.6vmin, 1.05rem);
+  color: var(--dim-strong, #cad2dc);
+  font-variant-numeric: tabular-nums;
+}
+.gk-bord-voet::before {
+  content: '';
+}
+.gk-bord-tellers {
+  display: inline-flex;
+  gap: 2em;
+  white-space: nowrap;
+}
 
 /* Pauzestand: aftellen + wat er komt. */
 .gk-pauze { flex: 1 1 auto; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3vmin; text-align: center; }
@@ -2589,6 +2665,8 @@ button.trn-toplink {
 }
 .gk-fs-kaart {
   display: block;
+  /* Anker voor het bijschrift in de witte onderrand. */
+  position: relative;
   /* Niet laten krimpen: in een flexrij zou de polaroid anders tot een streepje worden geperst. */
   flex: 0 0 auto;
   /* De hoek volgt de index: de eerste kaart helt naar links, de laatste naar rechts, zodat ze
@@ -2613,6 +2691,37 @@ button.trn-toplink {
   background: #fff;
   box-shadow: 0 30px 80px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.25);
 }
+/* De opdracht in de witte onderrand van de polaroid — daar waar op een echte polaroid het
+   bijschrift met balpen staat. De kantine ziet zo niet alleen dát er een foto is, maar ook wat
+   er gevraagd werd ("📸 Foto met de tegenstander"), en dat is precies wat de grap doet werken.
+   De rand is 4.6vmin hoog, dus dit blijft één regel; een lange opdracht loopt netjes af in
+   puntjes in plaats van over de foto heen. */
+.gk-fs-opdracht {
+  position: absolute;
+  left: 1.4vmin;
+  right: 1.4vmin;
+  bottom: 0;
+  height: 4.6vmin;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0.8vmin;
+  color: #14181f;
+  font-family: var(--font-display), system-ui, sans-serif;
+  font-size: 2vmin;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Meerdere foto's tegelijk zijn kleiner; het bijschrift zakt mee zodat het niet uit de rand
+   puilt. */
+.gk-fs-stapel.n3 .gk-fs-opdracht { font-size: 1.6vmin; }
+.gk-fs-stapel.n4 .gk-fs-opdracht,
+.gk-fs-stapel.n5 .gk-fs-opdracht,
+.gk-fs-stapel.n6 .gk-fs-opdracht { font-size: 1.3vmin; }
+
 /* Vanaf twee foto's krimpen ze en schuiven ze over elkaar, zodat ze samen in beeld passen. */
 .gk-fs-stapel.n2 .gk-fs-kaart img { max-width: min(42vw, 520px); max-height: 52vh; }
 .gk-fs-stapel.n2 .gk-fs-kaart + .gk-fs-kaart { margin-left: -4vmin; }
@@ -2962,4 +3071,23 @@ button.trn-toplink {
   font-size: 0.8rem;
   font-weight: 800;
   color: var(--accent);
+}
+
+/* De knoppen rechtsboven op het tornooi-kantinescherm: casten en volledig scherm. In volledig
+   scherm vagen ze weg tot je de muis beweegt — op een tv hoort er geen bediening in beeld. */
+.gk-kop-knoppen {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.gk-kop-knoppen.actief {
+  opacity: 0.12;
+  transition: opacity 200ms ease;
+}
+.gk-kop-knoppen.actief:hover {
+  opacity: 1;
+}
+.gk-cast {
+  font-size: 0.8rem;
+  padding: 6px 12px;
 }

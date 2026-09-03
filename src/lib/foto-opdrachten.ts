@@ -1,7 +1,19 @@
 // Foto-opdrachten voor de tornooidag: een speelse prikkel bij het insturen van foto's.
-// De opdracht wisselt telkens de supporter er één volbracht heeft (na elke geslaagde upload
-// schuift de lijst één plek door). De startpositie is willekeurig per toestel, zodat elke
-// gsm op het veld met een ándere opdracht begint — samen dekken de supporters zo de hele lijst.
+//
+// Elke deelnemer krijgt álle vijftig opdrachten, maar in een EIGEN volgorde. Die volgorde wordt
+// geschud met de deelnemer zelf als zaad, en dat heeft drie gevolgen die je alle drie wil:
+//
+//   • Twee supporters naast elkaar jagen zelden op dezelfde foto — de opdrachten lopen door
+//     elkaar over het hele veld.
+//   • Dezelfde deelnemer krijgt op zijn tablet exact dezelfde reeks als op zijn gsm, want er
+//     wordt niets bewaard: dezelfde deelnemer + hetzelfde tornooi geeft altijd dezelfde volgorde.
+//   • Een ander tornooi geeft een andere volgorde, dus wie vaker meedoet krijgt niet elke keer
+//     hetzelfde rijtje.
+//
+// De vorige aanpak lootte enkel een STARTPOSITIE per toestel en liep daarna de vaste lijst af.
+// Twee supporters die toevallig gelijk begonnen, bleven de hele dag dezelfde opdracht houden, en
+// wie zijn browsergeschiedenis wiste begon opnieuw vooraan.
+//
 // Vijftig opdrachten: genoeg voor een hele tornooidag, doorspekt met wat krachtbal eigen maakt
 // (de balgewichten van 800 g tot 4 kg, kegeltjes, scheidsrechters, kunstgras, jeugd, water).
 
@@ -58,13 +70,77 @@ export const FOTO_OPDRACHTEN: readonly string[] = [
   '🏆 Foto waarop je doet alsof je de beker al gewonnen hebt',
 ] as const
 
-/** Willekeurige startpositie: elke gsm/browser krijgt zo een eigen eerste opdracht. */
-export function willekeurigeStart(rnd: () => number = Math.random): number {
-  return Math.floor(rnd() * FOTO_OPDRACHTEN.length) % FOTO_OPDRACHTEN.length
-}
-
-/** De opdracht op een positie (cycled door de lijst). */
+/** De opdracht op een positie in de ongeschudde lijst (cycled). */
 export function opdrachtOp(index: number): string {
   const n = FOTO_OPDRACHTEN.length
   return FOTO_OPDRACHTEN[((index % n) + n) % n]
+}
+
+/** Het zaad van een deelnemer op een tornooidag: dezelfde persoon, ander tornooi = andere reeks. */
+export function zaadVoor(deelnemerId: number | string, groep: string): string {
+  return `${deelnemerId}·${groep}`
+}
+
+/**
+ * Tekst → getal. Een gewone FNV-1a: we hebben geen cryptografie nodig, wel dat twee zaden die
+ * één teken schelen ("gebruiker 11" en "gebruiker 12") volstrekt verschillende volgordes geven.
+ */
+function hash(tekst: string): number {
+  let h = 0x811c9dc5
+  for (let i = 0; i < tekst.length; i++) {
+    h ^= tekst.charCodeAt(i)
+    h = Math.imul(h, 0x01000193)
+  }
+  return h >>> 0
+}
+
+/** mulberry32: klein, snel en — het enige wat hier telt — overal exact hetzelfde. */
+function generator(zaad: number): () => number {
+  let s = zaad >>> 0
+  return () => {
+    s = (s + 0x6d2b79f5) >>> 0
+    let t = Math.imul(s ^ (s >>> 15), 1 | s)
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+}
+
+/**
+ * De volgorde waarin één deelnemer de vijftig opdrachten krijgt: een schudbeurt van 0…49.
+ *
+ * `ronde` telt mee in het zaad, zodat iemand die alle vijftig volbracht heeft aan een nieuw
+ * geschud rijtje begint in plaats van exact hetzelfde nog eens te krijgen.
+ */
+export function volgordeVoor(zaad: string, ronde = 0): number[] {
+  const rnd = generator(hash(`${zaad}#${ronde}`))
+  const uit = FOTO_OPDRACHTEN.map((_, i) => i)
+  // Fisher-Yates, van achter naar voor: elke volgorde is even waarschijnlijk.
+  for (let i = uit.length - 1; i > 0; i--) {
+    const j = Math.floor(rnd() * (i + 1))
+    ;[uit[i], uit[j]] = [uit[j], uit[i]]
+  }
+  return uit
+}
+
+export type Opdracht = {
+  /** De opdrachttekst zoals de deelnemer ze te zien krijgt. */
+  tekst: string
+  /** Het hoeveelste van de vijftig (1-based) — puur om te tonen. */
+  nummer: number
+  totaal: number
+}
+
+/**
+ * De opdracht die nu aan de beurt is.
+ *
+ * `volbracht` is het aantal opdrachten dat deze deelnemer op deze tornooidag al ingestuurd heeft.
+ * Voorbij de vijftig begint een volgende ronde, opnieuw geschud.
+ */
+export function opdrachtVoor(zaad: string, volbracht: number): Opdracht {
+  const totaal = FOTO_OPDRACHTEN.length
+  const n = Math.max(0, Math.floor(volbracht))
+  const ronde = Math.floor(n / totaal)
+  const positie = n % totaal
+  const index = volgordeVoor(zaad, ronde)[positie]
+  return { tekst: FOTO_OPDRACHTEN[index], nummer: positie + 1, totaal }
 }

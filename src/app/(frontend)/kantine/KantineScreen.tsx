@@ -3,7 +3,9 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 
+import { CastKnop } from '@/components/CastKnop'
 import { ReclameBalk } from '@/components/ReclameBalk'
+import { SchermModus } from '@/components/SchermModus'
 import { ReclameOverlay } from '@/components/ReclameOverlay'
 import type { Ad } from '@/lib/ads'
 import { Tile, type KantineMatch } from './KantineBoard'
@@ -109,7 +111,14 @@ export function KantineScreen({
 
   return (
     <div className="kt-screen">
+      {/* Tv-scherm: geen voettekst, anders valt de onderrand weg. */}
+      {!editable && <SchermModus />}
       {editable && <Link href="/kantine" className="kt-screen-edit">‹ Aanpassen</Link>}
+      {/* Rechtstreeks naar de tv. Niet spiegelen: de Chromecast laadt dít scherm zelf en houdt
+          zijn eigen live verbinding, zodat het blijft draaien als je je telefoon wegsteekt. */}
+      <span className="kt-screen-cast">
+        <CastKnop pad="/kantine/scherm" sleutel="kantine" />
+      </span>
       {title && <span className="kt-screen-title">{title}</span>}
       {/* Af en toe neemt een sponsor het scherm over; de score blijft er doorheen leesbaar. */}
       <ReclameOverlay ads={ads} />

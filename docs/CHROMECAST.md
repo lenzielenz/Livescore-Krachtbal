@@ -42,6 +42,18 @@ van je eigen scherm, dan kan dat via een geregistreerde Custom Receiver. Dit is
 - `/cast-tv` is de **Custom Receiver** die elke Chromecast laadt; ze toont het
   juiste scherm in een schermvullend iframe.
 - Op `/cast` verschijnt dan per scherm een knop _Of: cast via Chromecast_.
+- **Rechtstreeks vanaf het scherm zelf**: op `/kantine`, op het kantinescherm
+  (`/kantine/scherm`) en op het tornooi-kantinescherm staat een knop
+  **📺 Naar de tv**. Zo hoef je niet eerst naar de bedienpagina; je opent het
+  scherm dat je wil tonen en cast het van dáár.
+
+Belangrijk om te weten: we casten **geen tabblad**. Wat er over de lijn gaat is
+het *pad* van het scherm (bv. `/kantine/scherm`); de Chromecast laadt dat zelf.
+Daardoor houdt de tv zijn eigen live verbinding en blijft hij doorlopen wanneer
+je je telefoon wegsteekt, de app sluit of naar huis rijdt — bij tabblad-spiegelen
+zou het scherm meesterven met je browser. De knop verschijnt alleen wanneer
+casten ook echt kan (App ID ingesteld én een browser met Cast); anders blijft hij
+weg in plaats van niets te doen.
 
 ### Eenmalige opzet
 

@@ -1234,6 +1234,10 @@ export interface TornooiFoto {
   uploader?: (number | null) | User;
   uploaderName?: string | null;
   opdracht?: string | null;
+  /**
+   * Het hoeveelste van de vijftig, voor deze inzender op deze dag.
+   */
+  opdrachtNr?: number | null;
   updatedAt: string;
   createdAt: string;
   url?: string | null;
@@ -2253,6 +2257,7 @@ export interface TornooiFotosSelect<T extends boolean = true> {
   uploader?: T;
   uploaderName?: T;
   opdracht?: T;
+  opdrachtNr?: T;
   updatedAt?: T;
   createdAt?: T;
   url?: T;

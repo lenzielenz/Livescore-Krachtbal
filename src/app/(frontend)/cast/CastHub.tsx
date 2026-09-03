@@ -1,12 +1,10 @@
 'use client'
 
-// Brug naar de externe Google Cast Sender-SDK, die geen TypeScript-types meelevert.
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 import Link from 'next/link'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 
-import { CAST_APP_ID, CAST_NAMESPACE } from '@/lib/cast'
+import { useCast } from '@/components/use-cast'
+import { CAST_APP_ID } from '@/lib/cast'
 import { QrCode } from './QrCode'
 
 export type CastMatch = {
@@ -17,8 +15,6 @@ export type CastMatch = {
   home: string
   away: string
 }
-
-const SENDER_SDK = 'https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1'
 
 type Slot = 'veld' | 'kantine'
 
@@ -60,72 +56,15 @@ export function CastHub({ matches, initialVeldId }: { matches: CastMatch[]; init
   }
 
   // ── Optioneel: Google Cast (Chromecast) als App ID is ingesteld ──
-  const [castReady, setCastReady] = useState(false)
-  const sessions = useRef<Record<Slot, any | null>>({ veld: null, kantine: null })
-  const [device, setDevice] = useState<Record<Slot, string | null>>({ veld: null, kantine: null })
-
-  useEffect(() => {
-    if (!CAST_APP_ID) return
-    let cancelled = false
-    const initApi = () => {
-      const chrome = (window as any).chrome
-      if (!chrome?.cast) return
-      const sessionRequest = new chrome.cast.SessionRequest(CAST_APP_ID)
-      const apiConfig = new chrome.cast.ApiConfig(
-        sessionRequest,
-        () => {},
-        () => {},
-        chrome.cast.AutoJoinPolicy.PAGE_SCOPED,
-      )
-      chrome.cast.initialize(apiConfig, () => !cancelled && setCastReady(true), () => {})
-    }
-    ;(window as any).__onGCastApiAvailable = (ok: boolean) => ok && initApi()
-    if ((window as any).chrome?.cast) initApi()
-    else if (!document.querySelector(`script[src="${SENDER_SDK}"]`)) {
-      const s = document.createElement('script')
-      s.src = SENDER_SDK
-      document.head.appendChild(s)
-    }
-    return () => {
-      cancelled = true
-    }
-  }, [])
-
-  const castTo = (slot: Slot, path: string) => {
-    const chrome = (window as any).chrome
-    const existing = sessions.current[slot]
-    const sendPath = (session: any) => {
-      const send = () => session.sendMessage(CAST_NAMESPACE, { path }, () => {}, () => {})
-      send()
-      setTimeout(send, 1200)
-      setTimeout(send, 3000)
-    }
-    if (existing) {
-      sendPath(existing)
-      return
-    }
-    chrome.cast.requestSession((session: any) => {
-      sessions.current[slot] = session
-      setDevice((d) => ({ ...d, [slot]: session.receiver?.friendlyName ?? 'Chromecast' }))
-      session.addUpdateListener((isAlive: boolean) => {
-        const stopped = session.status === chrome.cast.SessionStatus.STOPPED
-        if (!isAlive || stopped) {
-          if (sessions.current[slot] === session) {
-            sessions.current[slot] = null
-            setDevice((d) => ({ ...d, [slot]: null }))
-          }
-        }
-      })
-      sendPath(session)
-    }, () => {})
-  }
-
-  const stopCast = (slot: Slot) => {
-    const session = sessions.current[slot]
-    if (session) session.stop(() => {}, () => {})
-    sessions.current[slot] = null
-    setDevice((d) => ({ ...d, [slot]: null }))
-  }
+  // Twee losse sessies: het veldscherm en het kantinescherm kunnen naar verschillende tv's.
+  // De SDK-afhandeling zelf staat in components/use-cast.ts, zodat ze niet in twee bestanden
+  // apart uit elkaar kan groeien — de kantinepagina cast met dezelfde haak.
+  const veldCast = useCast('veld')
+  const kantineCast = useCast('kantine')
+  const castReady = veldCast.klaar || kantineCast.klaar
+  const device = { veld: veldCast.apparaat, kantine: kantineCast.apparaat }
+  const castTo = (slot: Slot, pad: string) => (slot === 'veld' ? veldCast : kantineCast).cast(pad)
+  const stopCast = (slot: Slot) => (slot === 'veld' ? veldCast : kantineCast).stop()
 
   return (
     <div className="cast-hub">

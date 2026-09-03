@@ -285,6 +285,13 @@
   font-weight: 700;
   color: var(--dim-strong, #cad2dc);
 }
+/* De cast-knop rechtsboven op het kantinescherm, tegenover de "Aanpassen"-link. */
+.kt-screen-cast {
+  position: fixed;
+  top: 10px;
+  right: 12px;
+  z-index: 20;
+}
 .kt-screen-edit {
   position: fixed;
   top: 10px;

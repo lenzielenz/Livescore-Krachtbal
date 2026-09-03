@@ -106,6 +106,7 @@ import * as migration_20260901_150000_cv_werpers from './20260901_150000_cv_werp
 import * as migration_20260901_170000_cv_uitbal from './20260901_170000_cv_uitbal'
 import * as migration_20260901_200000_cv_richting from './20260901_200000_cv_richting'
 import * as migration_20260902_180000_reclame_uitsnede from './20260902_180000_reclame_uitsnede'
+import * as migration_20260902_224000_foto_opdracht_nr from './20260902_224000_foto_opdracht_nr'
 
 export const migrations = [
   {
@@ -647,5 +648,10 @@ export const migrations = [
     up: migration_20260902_180000_reclame_uitsnede.up,
     down: migration_20260902_180000_reclame_uitsnede.down,
     name: '20260902_180000_reclame_uitsnede',
+  },
+  {
+    up: migration_20260902_224000_foto_opdracht_nr.up,
+    down: migration_20260902_224000_foto_opdracht_nr.down,
+    name: '20260902_224000_foto_opdracht_nr',
   },
 ];
