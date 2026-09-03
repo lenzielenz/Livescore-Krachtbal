@@ -1,4 +1,5 @@
 import { authUser } from '@/lib/api-auth'
+import { herrekenFysiek } from '@/lib/cv-fysiek'
 import { afstandUitEvent, richtingUitEvent } from '@/lib/cv-naar-worp'
 import { FIELD, matenVanMatch, type VeldMaten } from '@/lib/field'
 import { getPayloadClient } from '@/lib/payload-client'
@@ -101,6 +102,10 @@ async function importeerVoorstellen(
           // De werper-groep uit het houdingsmodel: geen rugnummer, wel genoeg om de worpen per
           // speler te groeperen.
           werper: Number.isInteger(Number(e.werper)) ? Number(e.werper) : null,
+          // Uit welke opname dit voorstel komt (cv-samenvoegen.ts zet camera: 2 op de regels van
+          // de tweede camera). De videotijd staat dan al op de tijdlijn van camera 1.
+          camera: Number(e.camera) === 2 ? 2 : 1,
+          beideCameras: e.beide_cameras === true,
           confidence: vertrouwen,
           reviewed: false,
           provenance: {
@@ -152,9 +157,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     goalAreaDepthM: Number.isFinite(diepte) && diepte > 0 ? diepte : FIELD.defaultGoalAreaDepthM,
     maten: matenVanMatch(match as { veldBreedte?: number | null; veldSpeelveld?: number | null }),
   }
-  const resultaat = await startAnalyse(payload, matchId, leesOpties(body), (regels) =>
-    importeerVoorstellen(payload, matchId, veld, regels),
-  )
+  const resultaat = await startAnalyse(payload, matchId, leesOpties(body), async (regels) => {
+    const aantal = await importeerVoorstellen(payload, matchId, veld, regels)
+    // Verse tracking-posities → de fysieke stats meteen herrekenen. Doet niets zolang er geen
+    // spoor-toewijzing is (matches.cvSporen, via /sporen) — anonieme cijfers betekenen niets.
+    await herrekenFysiek(payload, matchId).catch(() => null)
+    return aantal
+  })
   if (!resultaat.ok) return Response.json({ error: resultaat.fout }, { status: resultaat.code })
   return Response.json({ ok: true, stand: resultaat.stand })
 }

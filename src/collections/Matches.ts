@@ -160,6 +160,34 @@ export const Matches: CollectionConfig = {
           ],
         },
         {
+          // Tweede camera: een veld van 46 m past zelden in één beeld, dus wordt er vaak met twee
+          // toestellen gefilmd — elk op één kant van het veld. Beide opnames projecteren via hun
+          // éigen kalibratie naar hetzelfde veld-assenstelsel; de analyse draait per camera en
+          // voegt de detecties daarna samen op veldcoördinaat + tijd (zie src/lib/cv-samenvoegen.ts).
+          type: 'row',
+          fields: [
+            {
+              name: 'video2Url',
+              label: 'Tweede camera (andere kant van het veld)',
+              type: 'text',
+              admin: {
+                description: 'Geüpload bestand van de tweede camera. Enkel zinvol náást de eerste video.',
+              },
+            },
+            {
+              // Alle tijden in de app (voorstellen, ijkpunten, tijdlijn) staan in de tijdlijn van
+              // camera 1. Dit ene getal vertaalt: seconde 0 van camera 1 = deze seconde in camera 2.
+              // Negatief mag — camera 2 kan later gestart zijn.
+              name: 'video2OffsetS',
+              label: 'Tijdsverschil camera 2 (sec)',
+              type: 'number',
+              admin: {
+                description: 'Op welke seconde in camera 2 valt seconde 0 van camera 1? IJk dit via de analysepagina.',
+              },
+            },
+          ],
+        },
+        {
           // Wie is wie: van werper-volgnummer (uit de videoanalyse) naar speler-id.
           //
           // Het model leest geen rugnummers, maar het kan dezelfde persoon volgen zolang die in
@@ -202,6 +230,27 @@ export const Matches: CollectionConfig = {
             hidden: true,
             description: 'Beheerd via de analysepagina. Niet handmatig bewerken.',
           },
+        },
+        {
+          // Eigen kalibratie voor de tweede camera: die staat op een andere plek en ziet dus
+          // andere lijnkruisingen. Zelfde vorm als cvKalibratie.
+          name: 'cvKalibratie2',
+          label: 'Veldkalibratie camera 2',
+          type: 'json',
+          admin: {
+            hidden: true,
+            description: 'Beheerd via de analysepagina (camera 2). Niet handmatig bewerken.',
+          },
+        },
+        {
+          // Wie is wie in de spelerstracking: van tracking-spoor naar speler-id. Een ánder
+          // nummerbereik dan cvWerpers (de sporen komen uit cv/tracking.py, de werpers uit
+          // cv/houding.py — twee id-ruimtes die niets met elkaar te maken hebben).
+          // Vorm: { "3": 42, "1005": 43 } — sporen van camera 2 dragen +1000 (CAMERA2_BASIS).
+          name: 'cvSporen',
+          label: 'Tracking-sporen → spelers',
+          type: 'json',
+          admin: { hidden: true, description: 'Beheerd via /api/cv/match/[id]/sporen.' },
         },
         {
           // Stand van de server-side video-analyse: wachtrij → bezig → klaar/mislukt, met de

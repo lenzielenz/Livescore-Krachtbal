@@ -60,6 +60,9 @@ export type Overzetrapport = {
   metRugnummer?: number
   /** Hoeveel worpen als vrije worp geteld zijn — daar staat geen voorstel tegenover. */
   vrijeWorpen?: number
+  /** Hoeveel vangsten een vánger op naam kregen (uit de reviewlaan), en hoeveel er totaal waren. */
+  metVanger?: number
+  vangsten?: number
 }
 
 export type Overzetfout = { fout: string; code: number }
@@ -87,6 +90,23 @@ export function kiesWerper(
   if (!bruikbaar.length) return null
   const herkend = rugnummer != null ? bruikbaar.find((p) => p.shirtNumber === rugnummer) : undefined
   return (herkend ?? bruikbaar[beurt % bruikbaar.length]).id
+}
+
+/**
+ * Welke verdediger ving de bal?
+ *
+ * Anders dan bij de werper wordt hier NIET rondgegaan: een vangst zonder herkende vanger blijft
+ * gewoon zonder naam (caughtBy leeg — precies wat de manuele aantekenaar ook mag doen). Een
+ * gegokte vanger zou op de spelerskaart "vangsten" bijschrijven bij iemand die er niets mee te
+ * maken had, en dat is erger dan een leeg veld. De ploeg staat vast: het reglement kent de
+ * vangst aan de tégenploeg toe, en welke dat is weet de balbezit-keten — niet het voorstel.
+ */
+export function kiesVanger(
+  verdedigers: { id: number; shirtNumber: number }[],
+  rugnummer: number | null,
+): number | null {
+  if (rugnummer == null) return null
+  return verdedigers.find((p) => p.shirtNumber === rugnummer)?.id ?? null
 }
 
 /**
@@ -202,6 +222,8 @@ export async function zetVoorstellenOver(
   let overgezet = 0
   let metRugnummer = 0
   let vrijeWorpen = 0
+  let vangsten = 0
+  let metVanger = 0
   let beurt = 0
   let inTweedeHelft = false
 
@@ -251,6 +273,24 @@ export async function zetVoorstellenOver(
       continue
     }
 
+    // De vanger: bij twee tikken (gevangen) zoeken we het rugnummer uit de reviewlaan op in de
+    // ploeg die volgens de kéten verdedigde. Niet gevonden of niet ingevuld = geen naam — de
+    // vangst zelf telt gewoon (de engine leidt 'caught' af uit tapCount).
+    let vangerId: number | null = null
+    if (worp.tapCount === 2) {
+      vangsten++
+      if (worp.vangerRugnummer != null) {
+        const verdedigendeKant = side === 'home' ? 'away' : 'home'
+        const verdedigers = await spelersVan(
+          payload,
+          verdedigendeKant === 'home' ? state.teams.home.id : state.teams.away.id,
+          state.lineup[verdedigendeKant],
+        )
+        vangerId = kiesVanger(verdedigers, worp.vangerRugnummer)
+        if (vangerId != null) metVanger++
+      }
+    }
+
     try {
       await recordThrow(payload, {
         matchId,
@@ -258,6 +298,7 @@ export async function zetVoorstellenOver(
         type: worp.type,
         point: worp.point,
         tapCount: worp.tapCount,
+        ...(vangerId != null ? { caughtById: vangerId } : {}),
         // De wedstrijdklok: de videotijd min de aftrap van deze helft. Is er niet geijkt, dan ís
         // de videotijd de klok — bij de video-weg tikt niemand een klok aan, en dan is de opname
         // de enige tijdlijn die er is.
@@ -283,8 +324,14 @@ export async function zetVoorstellenOver(
     tweedeHelftVanaf,
     metRugnummer,
     vrijeWorpen,
+    vangsten,
+    metVanger,
     beperkingen: [
       ...beperkingen,
+      ...(vangsten > metVanger
+        ? [`${vangsten - metVanger} van de ${vangsten} vangst(en) weten niet wie ving: vul de `
+           + 'vanger in bij het reviewen (of laat het zo — de vangst zelf telt gewoon mee).']
+        : []),
       ...(vrijeWorpen > 0
         ? [`${vrijeWorpen} worp(en) zijn als vrije worp geteld: na drie kruisjes kent het `
            + 'reglement er een toe, maar in de video staat daar geen apart voorstel tegenover. '

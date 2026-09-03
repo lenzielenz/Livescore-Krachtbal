@@ -108,6 +108,7 @@ import * as migration_20260901_200000_cv_richting from './20260901_200000_cv_ric
 import * as migration_20260902_180000_reclame_uitsnede from './20260902_180000_reclame_uitsnede'
 import * as migration_20260902_224000_foto_opdracht_nr from './20260902_224000_foto_opdracht_nr'
 import * as migration_20260903_200000_user_aanteken_rechten from './20260903_200000_user_aanteken_rechten'
+import * as migration_20260903_210000_tweede_camera from './20260903_210000_tweede_camera'
 
 export const migrations = [
   {
@@ -659,5 +660,10 @@ export const migrations = [
     up: migration_20260903_200000_user_aanteken_rechten.up,
     down: migration_20260903_200000_user_aanteken_rechten.down,
     name: '20260903_200000_user_aanteken_rechten',
+  },
+  {
+    up: migration_20260903_210000_tweede_camera.up,
+    down: migration_20260903_210000_tweede_camera.down,
+    name: '20260903_210000_tweede_camera',
   },
 ];

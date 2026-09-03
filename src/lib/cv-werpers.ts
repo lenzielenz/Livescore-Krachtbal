@@ -12,6 +12,8 @@
 //
 // Puur: geen database, geen React. Zo ligt de groepering vast zonder een video te draaien.
 
+import { CAMERA2_BASIS } from './cv-samenvoegen'
+
 export type Voorstelwerper = {
   videoTimeS: number
   werper?: number | null
@@ -71,6 +73,17 @@ export function groepeerWerpers(voorstellen: Voorstelwerper[]): Werpergroep[] {
     })
   }
   return groepen.sort((a, b) => b.worpen - a.worpen || a.eerste - b.eerste)
+}
+
+/**
+ * De naam van een werper-volgnummer op het scherm.
+ *
+ * Nummers vanaf CAMERA2_BASIS (cv-samenvoegen.ts) komen uit de tweede camera; "werper 1003"
+ * zegt niemand iets, "camera 2 · werper 3" wel — en het verklapt meteen in welk beeld je moet
+ * kijken om te zien wie het is.
+ */
+export function werperLabel(werper: number): string {
+  return werper >= CAMERA2_BASIS ? `camera 2 · werper ${werper - CAMERA2_BASIS}` : `werper ${werper}`
 }
 
 /** De toewijzing zoals ze op de wedstrijd bewaard wordt: werper-volgnummer → speler-id. */

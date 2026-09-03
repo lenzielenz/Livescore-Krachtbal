@@ -90,6 +90,13 @@ describe('worpUitVoorstel', () => {
     expect(worpUitVoorstel(voorstel({ eventType: 'doelpunt' }), 10)?.tapCount).toBe(1)
   })
 
+  it('laat de vanger enkel meereizen op een échte vangst', () => {
+    // De reviewlaan kan zeggen wíe ving (rugnummer); op een gewone worp is dat stille rommel.
+    expect(worpUitVoorstel(voorstel({ eventType: 'vangst', vangerRugnummer: 8 }), 10)?.vangerRugnummer).toBe(8)
+    expect(worpUitVoorstel(voorstel({ eventType: 'worp', vangerRugnummer: 8 }), 10)?.vangerRugnummer).toBeNull()
+    expect(worpUitVoorstel(voorstel({ eventType: 'vangst' }), 10)?.vangerRugnummer).toBeNull()
+  })
+
   it('laat een niet-bevestigd voorstel liggen', () => {
     expect(worpUitVoorstel(voorstel({ verdict: null }), 10)).toBeNull()
     expect(worpUitVoorstel(voorstel({ verdict: 'afgewezen' }), 10)).toBeNull()

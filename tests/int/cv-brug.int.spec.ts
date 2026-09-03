@@ -273,6 +273,9 @@ describe('CV-brug', () => {
         eventType: 'worp',
         side: 'home',
         rugnummer: 4,
+        // De vanger (wie ving de bal) reist mee in het antwoord; hier niet ingevuld.
+        vangerSide: null,
+        vangerRugnummer: null,
       },
     })
 
@@ -287,6 +290,36 @@ describe('CV-brug', () => {
     })
     expect(doc.reviewed).toBe(true)
     expect(doc.verdict).toBe('afgewezen')
+  })
+
+  it('PATCH met vanger: wie ving krijgt eigen velden, naast (niet in plaats van) de werper', async () => {
+    const { matchId } = await maakWedstrijd()
+    const voorstel = await maakVoorstel(matchId)
+
+    const res = await patchReview(
+      voorstel.id as number,
+      { actie: 'bevestig', eventType: 'vangst', vangerSide: 'away', vangerRugnummer: 8 },
+      TOKEN,
+    )
+    expect(res.status).toBe(200)
+    const doc = await payload.findByID({ collection: 'cv-events', id: voorstel.id, depth: 0, overrideAccess: true })
+    expect(doc.eventType).toBe('vangst')
+    expect(doc.vangerSide).toBe('away')
+    expect(doc.vangerRugnummer).toBe(8)
+    // De werper-velden blijven onaangeroerd: side/rugnummer zijn van wie wíérp.
+    expect(doc.side).toBe('home')
+    expect(doc.rugnummer).toBe(4)
+
+    // vangerSide wissen wist het rugnummer mee — een nummer zonder ploeg wijst niemand aan.
+    await patchReview(voorstel.id as number, { actie: 'bevestig', vangerSide: null }, TOKEN)
+    const na = await payload.findByID({ collection: 'cv-events', id: voorstel.id, depth: 0, overrideAccess: true })
+    expect(na.vangerSide).toBeNull()
+    expect(na.vangerRugnummer).toBeNull()
+
+    // Rommel wordt geweigerd, net als bij het werper-rugnummer.
+    expect(
+      (await patchReview(voorstel.id as number, { actie: 'bevestig', vangerRugnummer: 120 }, TOKEN)).status,
+    ).toBe(400)
   })
 
   it('PATCH met worpType-correctie: worpType verandert, worpTypeOrigineel niet', async () => {

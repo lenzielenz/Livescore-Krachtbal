@@ -110,6 +110,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if ('fout' in t) return t.fout
   const { payload } = t
 
+  // Voor welke camera dit bestand is: ?camera=2 zet de URL straks op video2Url (de tweede
+  // camera, de andere kant van het veld) in plaats van op de hoofdopname.
+  const camera = new URL(req.url).searchParams.get('camera')
+  if (camera != null && camera !== '1' && camera !== '2') {
+    return Response.json({ error: 'camera moet 1 of 2 zijn.' }, { status: 400 })
+  }
+  const urlVeld = camera === '2' ? 'video2Url' : 'videoUrl'
+
   const dir = path.join(resolveMediaDir(), 'clips')
   // In stukken groeit één verzamelbestand; ineens gaat het rechtstreeks naar zijn eindnaam.
   const file = `${randomBytes(9).toString('hex')}.${ext}`
@@ -166,11 +174,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         return Response.json({ error: 'Lege video.' }, { status: 400 })
       }
       await fs.rename(dst, path.join(dir, file))
-      await payload.update({ collection: 'matches', id: matchId, data: { videoUrl: `/api/clip/${file}` }, overrideAccess: true })
+      await payload.update({ collection: 'matches', id: matchId, data: { [urlVeld]: `/api/clip/${file}` }, overrideAccess: true })
       return Response.json({ ok: true, url: `/api/clip/${file}`, bytes: totaal })
     }
 
-    await payload.update({ collection: 'matches', id: matchId, data: { videoUrl: `/api/clip/${file}` }, overrideAccess: true })
+    await payload.update({ collection: 'matches', id: matchId, data: { [urlVeld]: `/api/clip/${file}` }, overrideAccess: true })
     return Response.json({ ok: true, url: `/api/clip/${file}`, bytes: written })
   } catch (err) {
     // Een half aangekomen stuk mag blijven staan: de GET hierboven kapt het straks af op een heel
