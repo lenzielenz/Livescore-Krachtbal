@@ -5,7 +5,12 @@
 // "Custom Receiver" die wijst naar https://<jouw-domein>/cast-tv en plak de
 // gegenereerde App ID in de env-variabele NEXT_PUBLIC_CAST_APP_ID.
 // Zie docs/CHROMECAST.md voor de volledige opzet.
-export const CAST_APP_ID = process.env.NEXT_PUBLIC_CAST_APP_ID ?? ''
+//
+// `.trim()` is geen sierlijkheid: een lege variabele betekent "casten bestaat hier niet" en dan
+// blijft de knop weg — precies goed. Maar een variabele die per ongeluk een spatie bevat, zou
+// wél als ingesteld tellen, en dan staat er een knop die om een toestel vraagt en faalt. Niets
+// tonen is beter dan een knop die niet werkt.
+export const CAST_APP_ID = (process.env.NEXT_PUBLIC_CAST_APP_ID ?? '').trim()
 
 // Eigen berichtkanaal tussen controle-toestel en Chromecast. Via dit kanaal
 // stuurt de bediening welk scherm (welk pad) de Chromecast moet tonen.
