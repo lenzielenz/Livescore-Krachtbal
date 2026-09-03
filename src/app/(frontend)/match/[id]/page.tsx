@@ -10,6 +10,8 @@ import { MatchWeather } from '@/components/MatchWeather'
 import { Scoreboard } from '@/components/Scoreboard'
 import { SiteHeader } from '@/components/SiteHeader'
 import { TeamLogo } from '@/components/TeamLogo'
+import { hasRole, isFederationLevel } from '@/lib/access'
+import { competitionWhere } from '@/lib/analyse-access'
 import { getAuthUser } from '@/lib/auth-user'
 import { mayEditMatchVideo } from '@/lib/video-access'
 import { isCheckedIn, sanitizeCheckins } from '@/lib/checkins'
@@ -34,6 +36,7 @@ import { PronostiekWidget } from './PronostiekWidget'
 import { ReportResult } from './ReportResult'
 import { ScoreTrust } from './ScoreTrust'
 import { ToekomstigeWedstrijd } from './ToekomstigeWedstrijd'
+import { WedstrijdBeheer, type BeheerClub, type BeheerPloeg } from './WedstrijdBeheer'
 import '../../analyse/analyse.css'
 
 export const dynamic = 'force-dynamic'
@@ -109,6 +112,49 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   // Video koppelen/uploaden mag de federatie (competitiewedstrijden) — zie mayEditMatchVideo.
   const mayVideo = mayEditMatchVideo(me, matchDoc as { analyseOnly?: boolean | null; analyseOwner?: unknown } | null)
   const datum = matchDoc?.date ? formatDateTimeBE(matchDoc.date as string) : null
+  // Wie de wedstrijd mag rechtzetten (tijdstip + ploegnaam/club): de federatie, en nooit op een
+  // analysewedstrijd — die is privé en wordt onder /analyse/beheer beheerd.
+  const magBeheren =
+    (isFederationLevel(me) || hasRole(me, 'federatie')) && !(matchDoc as { analyseOnly?: boolean } | null)?.analyseOnly
+  const alsPloeg = (t: unknown): BeheerPloeg | null => {
+    if (!t || typeof t !== 'object') return null
+    const d = t as { id?: number; name?: unknown; club?: unknown }
+    if (typeof d.id !== 'number') return null
+    const club = d.club
+    const clubId = club && typeof club === 'object' ? ((club as { id?: number }).id ?? null) : typeof club === 'number' ? club : null
+    return { id: d.id, naam: String(d.name ?? ''), clubId }
+  }
+  const beheerThuis = magBeheren ? alsPloeg(matchDoc?.homeTeam) : null
+  const beheerUit = magBeheren ? alsPloeg(matchDoc?.awayTeam) : null
+  // De clubs om uit te kiezen; enkel competitieclubs, want een analyse-club hoort hier niet.
+  //
+  // De clubs die deze twee ploegen NU hebben, worden er apart bijgehaald. Zonder dat toont de
+  // keuzelijst "— Geen club —" zodra de eigen club buiten de opgehaalde lijst valt, en dan lijkt
+  // het alsof een ploeg geen club heeft terwijl ze er wel een heeft.
+  const beheerClubs: BeheerClub[] = magBeheren
+    ? await (async () => {
+        const alsClub = (c: unknown): BeheerClub => ({
+          id: (c as { id: number }).id,
+          naam: String((c as { name?: unknown }).name ?? ''),
+        })
+        const huidige = [beheerThuis?.clubId, beheerUit?.clubId].filter((v): v is number => typeof v === 'number')
+        const [lijst, eigen] = await Promise.all([
+          payload
+            .find({ collection: 'clubs', where: competitionWhere(), sort: 'name', depth: 0, limit: 1000, select: { name: true } })
+            .then((r) => r.docs.map(alsClub))
+            .catch(() => [] as BeheerClub[]),
+          huidige.length
+            ? payload
+                .find({ collection: 'clubs', where: { id: { in: huidige } }, depth: 0, limit: 10, select: { name: true } })
+                .then((r) => r.docs.map(alsClub))
+                .catch(() => [] as BeheerClub[])
+            : Promise.resolve([] as BeheerClub[]),
+        ])
+        const perId = new Map<number, BeheerClub>()
+        for (const c of [...lijst, ...eigen]) if (c.naam) perId.set(c.id, c)
+        return [...perId.values()].sort((a, b) => a.naam.localeCompare(b.naam, 'nl-BE'))
+      })()
+    : []
   // Een wedstrijd die pas later gespeeld wordt, heeft geen scorebord nodig: er valt niets te volgen
   // en niets door te geven. Alles wat met "live" te maken heeft (bord, aantekenen, tribune, cast,
   // vertrouwenslaag) blijft dan weg; je krijgt de aankondiging met agenda-knoppen.
@@ -511,6 +557,19 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
             />
           )}
         </>
+      )}
+
+      {/* Rechtzetten van wat de import fout had: het aanvangsuur en de ploegnaam/club. Enkel voor
+          de federatie, en enkel op een competitiewedstrijd (analysewedstrijden hebben hun eigen
+          beheer). Staat onderaan: het is gereedschap, geen deel van de wedstrijd zelf. */}
+      {magBeheren && beheerThuis && beheerUit && (
+        <WedstrijdBeheer
+          matchId={matchId}
+          datumIso={matchDatum}
+          thuis={beheerThuis}
+          uit={beheerUit}
+          clubs={beheerClubs}
+        />
       )}
       </div>
     </>

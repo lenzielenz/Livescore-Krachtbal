@@ -81,6 +81,25 @@ export function canTraining(user: unknown): boolean {
   return Boolean((user as { trainingAccess?: unknown } | null)?.trainingAccess)
 }
 
+/**
+ * Mag deze gebruiker een TORNOOIwedstrijd aantekenen?
+ *
+ * Op een tornooidag zit er iemand achter de tafel die geen scheidsrechter en geen federatielid is:
+ * een ouder, een ploegverantwoordelijke, een vrijwilliger. Daarvoor bestaat dit recht — de admin
+ * kent het per account toe (users.aantekenRechten), zoals hij dat ook voor analyse en training doet.
+ *
+ * Bewust géén bestaande rol hergebruikt: élk vers account krijgt standaard de rol 'scorekeeper',
+ * dus die zou het recht aan iedereen geven — precies wat het niet mag zijn.
+ *
+ * Dit gaat enkel over AANTEKENEN. Een tornooi aanmaken, herloten of verwijderen blijft bij de
+ * federatie; één bron van waarheid voor de knoppen én voor de API, zodat er nooit een knop staat
+ * die de server daarna weigert.
+ */
+export function magTornooiAantekenen(user: unknown): boolean {
+  if (isFederationLevel(user) || hasRole(user, 'scheidsrechter')) return true
+  return Boolean((user as { aantekenRechten?: unknown } | null)?.aantekenRechten)
+}
+
 /** De club waaraan een club-beheerder gekoppeld is (id), indien aanwezig. */
 export function userClubId(user: unknown): number | string | null {
   const club = (user as WithRoles | null)?.club

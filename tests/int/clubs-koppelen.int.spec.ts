@@ -14,6 +14,7 @@ vi.mock('@/lib/api-auth', async (origineel) => ({
 
 import config from '@/payload.config'
 import { POST as koppelen } from '@/app/api/clubs/koppelen/route'
+import type { Reeks } from '@/lib/reeksen'
 
 // Ploegen aan hun echte club koppelen, door de echte route en de echte database.
 //
@@ -34,7 +35,7 @@ const alsFederatie = (commit: boolean) =>
 
 const club = async (naam: string) =>
   (await payload.create({ collection: 'clubs', data: { name: naam }, overrideAccess: true })).id as number
-const ploeg = async (naam: string, clubId: number, reeks: string) =>
+const ploeg = async (naam: string, clubId: number, reeks: Reeks) =>
   (await payload.create({ collection: 'teams', data: { name: naam, club: clubId, reeks, category: 'senioren' }, overrideAccess: true })).id as number
 
 describe('ploegen aan hun club koppelen', () => {

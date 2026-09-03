@@ -403,6 +403,10 @@ export interface User {
    */
   trainingAccess?: boolean | null;
   /**
+   * Dit account mag tornooiwedstrijden aantekenen (starten, scoren, beëindigen). Een tornooi aanmaken of loten blijft bij de federatie.
+   */
+  aantekenRechten?: boolean | null;
+  /**
    * Enkel relevant voor de rol "Scheidsrechter". Beperkt de toegang tot de eigen kwitantie.
    */
   official?: (number | null) | Official;
@@ -2462,6 +2466,7 @@ export interface UsersSelect<T extends boolean = true> {
   scoreTrust?: T;
   analyseAccess?: T;
   trainingAccess?: T;
+  aantekenRechten?: T;
   official?: T;
   analyseDeeltMet?: T;
   analyseDeeltBewerkMet?: T;

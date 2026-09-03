@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
 
-import { hasRole, isFederationLevel } from '@/lib/access'
+import { hasRole, isFederationLevel, magTornooiAantekenen } from '@/lib/access'
 import { competitionWhere } from '@/lib/analyse-access'
 import { getAuthUser } from '@/lib/auth-user'
 import { type LogoFit, normalizeLogoFit } from '@/lib/logo-fit'
@@ -36,6 +36,10 @@ export default async function TornooiPage({ params }: { params: Promise<{ id: st
   // schema en rangschikking. Beheer, aantekenen, plannen en het kantinescherm zijn voor de
   // organisatie — federatie/admin en de aangestelde scheidsrechters.
   const user = await getAuthUser()
+  // Twee verschillende rechten, en die liepen hier door elkaar. Aantekenen (starten, scoren,
+  // beëindigen) mag ook een vrijwilliger met aantekenrechten; het tornooi zelf herloten, hernoemen
+  // of verwijderen blijft bij de organisatie.
+  const magAantekenen = magTornooiAantekenen(user)
   const canManage = isFederationLevel(user) || hasRole(user, 'scheidsrechter')
 
   // Clublogo's: in de eerste plaats via de EXPLICIETE koppeling (teamClubs, ingegeven bij het
@@ -150,7 +154,7 @@ export default async function TornooiPage({ params }: { params: Promise<{ id: st
           />
         </div>
       )}
-      <BracketBoard id={tournamentId} initial={state} canManage={canManage} logos={logos} fits={fits} veldCount={veldCount} ingelogd={Boolean(user)} kantinePad={kantinePadVoor(tournamentId, groepNaam)} groep={groepNaam} />
+      <BracketBoard id={tournamentId} initial={state} canManage={magAantekenen} logos={logos} fits={fits} veldCount={veldCount} ingelogd={Boolean(user)} kantinePad={kantinePadVoor(tournamentId, groepNaam)} groep={groepNaam} />
       {stand.length > 0 && (
         <div className="trn-page">
           <section className="trn-hub-sec">

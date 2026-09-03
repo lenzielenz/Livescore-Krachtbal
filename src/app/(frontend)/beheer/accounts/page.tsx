@@ -57,6 +57,7 @@ export default async function AccountsPage() {
     clubId: rel((u as { club?: unknown }).club),
     analyseAccess: Boolean((u as { analyseAccess?: unknown }).analyseAccess),
     trainingAccess: Boolean((u as { trainingAccess?: unknown }).trainingAccess),
+    aantekenRechten: Boolean((u as { aantekenRechten?: unknown }).aantekenRechten),
     officialId: rel((u as { official?: unknown }).official),
     analyseCount: analyseCounts[u.id as number] ?? 0,
   }))

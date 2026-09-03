@@ -1,6 +1,6 @@
 import { notFound, redirect } from 'next/navigation'
 
-import { hasRole, isFederationLevel } from '@/lib/access'
+import { magTornooiAantekenen } from '@/lib/access'
 import { getAuthUser } from '@/lib/auth-user'
 import { clubColors, clubLogoFit, clubLogoUrl } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
@@ -23,7 +23,7 @@ export default async function AantekenenPage({ params }: { params: Promise<{ id:
   // Aantekenen is voor de organisatie (federatie/admin + scheidsrechters). Een supporter die de
   // URL raadt, krijgt geen tafel vol knoppen die toch 403 geven — die volgt op de tornooipagina.
   const user = await getAuthUser()
-  if (!isFederationLevel(user) && !hasRole(user, 'scheidsrechter')) redirect(`/tornooi/${tournamentId}`)
+  if (!magTornooiAantekenen(user)) redirect(`/tornooi/${tournamentId}`)
 
   const payload = await getPayloadClient()
   let state

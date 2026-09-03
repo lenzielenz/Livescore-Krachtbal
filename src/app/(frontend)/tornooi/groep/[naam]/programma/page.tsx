@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
 
-import { hasRole, isFederationLevel } from '@/lib/access'
+import { magTornooiAantekenen } from '@/lib/access'
 import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
 import { loadGroepData } from '@/lib/tornooi-groep'
@@ -23,7 +23,9 @@ export default async function DagprogrammaPage({ params }: { params: Promise<{ n
   if (!data) notFound()
 
   const user = await getAuthUser()
-  const canManage = isFederationLevel(user) || hasRole(user, 'scheidsrechter')
+  // Dit stuurt enkel de knoppen "Aantekenen"/"Corrigeren" per wedstrijd — dus het aantekenrecht,
+  // niet het tornooibeheer.
+  const canManage = magTornooiAantekenen(user)
 
   return <Dagprogramma naam={naam} initial={data} canManage={canManage} ingelogd={Boolean(user)} />
 }
