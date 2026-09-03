@@ -15,7 +15,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const teamId = Number(id)
   if (!Number.isFinite(teamId)) return Response.json({ error: 'Ongeldige ploeg.' }, { status: 400 })
 
-  let body: { naam?: unknown; clubId?: unknown }
+  let body: { naam?: unknown; clubId?: unknown; reeks?: unknown }
   try {
     body = await req.json()
   } catch {
@@ -30,7 +30,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       return Response.json({ error: 'Enkel federatie/admin.' }, { status: 403 })
     }
 
-    const uit = await ploegRechtzetten(payload, teamId, { naam: body.naam, clubId: body.clubId })
+    const uit = await ploegRechtzetten(payload, teamId, { naam: body.naam, clubId: body.clubId, reeks: body.reeks })
     if (!uit.ok) return Response.json({ error: uit.fout }, { status: uit.status })
     return Response.json(uit)
   } catch (err) {

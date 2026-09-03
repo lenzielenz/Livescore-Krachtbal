@@ -94,13 +94,52 @@ describe('ploeg rechtzetten', () => {
     expect(Number((na as { club: unknown }).club)).toBe(ids.clubB)
   }, 60_000)
 
-  it('laat de reeks en de categorie ongemoeid', async () => {
-    // De route schrijft uitsluitend name en club; de indeling van de ploeg komt van de import en
-    // hoort hier niet stilzwijgend mee te veranderen.
+  it('laat de reeks staan wanneer er geen meegestuurd wordt', async () => {
     const na = await payload.findByID({ collection: 'teams', id: ids.ploeg, depth: 0, overrideAccess: true })
     expect((na as { reeks: string }).reeks).toBe('2NAH')
     expect((na as { category: string }).category).toBe('senioren')
   }, 30_000)
+
+  it('trekt de categorie mee met de reeks', async () => {
+    // Dit is de kern van het reeksveld. De import leidt de categorie af uit de reeks
+    // (`category: reeksCategorie(reeks)`); zou het formulier enkel de reeks schrijven, dan hield
+    // een ploeg die van 2NAH naar U14J verhuist de categorie 'senioren'. Daar hangt meer aan dan
+    // een label: de balkleur, de worpregels, de duur van een helft en de leeftijdsgrens van de
+    // fototribune (isAdultReeks).
+    const res = await post(ids.ploeg, { reeks: 'U14J' })
+    expect(res.status).toBe(200)
+    expect(await res.json()).toMatchObject({ ok: true, reeks: 'U14J', categorie: 'U14' })
+
+    const na = await payload.findByID({ collection: 'teams', id: ids.ploeg, depth: 0, overrideAccess: true })
+    expect((na as { reeks: string }).reeks).toBe('U14J')
+    expect((na as { category: string }).category).toBe('U14')
+
+    // En terug: van jeugd naar senioren moet de categorie evengoed volgen.
+    await post(ids.ploeg, { reeks: '2NAH' })
+    const terug = await payload.findByID({ collection: 'teams', id: ids.ploeg, depth: 0, overrideAccess: true })
+    expect((terug as { reeks: string }).reeks).toBe('2NAH')
+    expect((terug as { category: string }).category).toBe('senioren')
+  }, 90_000)
+
+  it('weigert een reeks die niet bestaat', async () => {
+    const res = await post(ids.ploeg, { reeks: '3NAH' })
+    expect(res.status).toBe(400)
+    expect(((await res.json()) as { error: string }).error).toContain('reeks')
+
+    // En de ploeg staat nog op haar oude reeks — geen halve wijziging.
+    const na = await payload.findByID({ collection: 'teams', id: ids.ploeg, depth: 0, overrideAccess: true })
+    expect((na as { reeks: string }).reeks).toBe('2NAH')
+  }, 60_000)
+
+  it('wijzigt naam, club en reeks in één keer', async () => {
+    const res = await post(ids.verse, { naam: `Ploegbeheer vers ${STAMP} C-1`, clubId: ids.clubA, reeks: 'U12' })
+    expect(res.status).toBe(200)
+    const na = await payload.findByID({ collection: 'teams', id: ids.verse, depth: 0, overrideAccess: true })
+    expect((na as { name: string }).name).toBe(`Ploegbeheer vers ${STAMP} C-1`)
+    expect(Number((na as { club: unknown }).club)).toBe(ids.clubA)
+    expect((na as { reeks: string }).reeks).toBe('U12')
+    expect((na as { category: string }).category).toBe('U12')
+  }, 60_000)
 
   it('weigert een lege naam, een onbekende club en een leeg verzoek', async () => {
     expect((await post(ids.ploeg, { naam: '   ' })).status).toBe(400)

@@ -25,7 +25,15 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const matchId = Number(id)
   if (!Number.isFinite(matchId)) return Response.json({ error: 'Ongeldige wedstrijd.' }, { status: 400 })
 
-  let body: { action?: string; datum?: unknown; uur?: unknown; kant?: unknown; naam?: unknown; clubId?: unknown }
+  let body: {
+    action?: string
+    datum?: unknown
+    uur?: unknown
+    kant?: unknown
+    naam?: unknown
+    clubId?: unknown
+    reeks?: unknown
+  }
   try {
     body = await req.json()
   } catch {
@@ -71,7 +79,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
       // Dezelfde controles als op de ploegpagina zelf — gedeeld, zodat de twee ingangen niet uit
       // elkaar kunnen lopen.
-      const uit = await ploegRechtzetten(payload, teamId, { naam: body.naam, clubId: body.clubId })
+      const uit = await ploegRechtzetten(payload, teamId, { naam: body.naam, clubId: body.clubId, reeks: body.reeks })
       if (!uit.ok) return Response.json({ error: uit.fout }, { status: uit.status })
       return Response.json(uit)
     }

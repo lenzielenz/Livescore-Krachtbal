@@ -120,11 +120,11 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
     (isFederationLevel(me) || hasRole(me, 'federatie')) && !(matchDoc as { analyseOnly?: boolean } | null)?.analyseOnly
   const alsPloeg = (t: unknown): BeheerPloeg | null => {
     if (!t || typeof t !== 'object') return null
-    const d = t as { id?: number; name?: unknown; club?: unknown }
+    const d = t as { id?: number; name?: unknown; club?: unknown; reeks?: unknown }
     if (typeof d.id !== 'number') return null
     const club = d.club
     const clubId = club && typeof club === 'object' ? ((club as { id?: number }).id ?? null) : typeof club === 'number' ? club : null
-    return { id: d.id, naam: String(d.name ?? ''), clubId }
+    return { id: d.id, naam: String(d.name ?? ''), clubId, reeks: typeof d.reeks === 'string' ? d.reeks : null }
   }
   const beheerThuis = magBeheren ? alsPloeg(matchDoc?.homeTeam) : null
   const beheerUit = magBeheren ? alsPloeg(matchDoc?.awayTeam) : null

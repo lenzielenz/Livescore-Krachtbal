@@ -267,7 +267,10 @@ export default async function PloegProfiel({ params }: Params) {
         )}
 
         {magBeheren && (
-          <PloegBeheer ploeg={{ id: teamId, naam: team.name ?? '', clubId }} club={huidigeClub} />
+          <PloegBeheer
+            ploeg={{ id: teamId, naam: team.name ?? '', clubId, reeks: team.reeks ?? null }}
+            club={huidigeClub}
+          />
         )}
       </main>
     </>

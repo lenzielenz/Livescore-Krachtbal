@@ -17,7 +17,7 @@ export function PloegBeheer({ ploeg, club }: { ploeg: BeheerPloeg; club: BeheerC
   const [busy, setBusy] = useState<string | null>(null)
   const [melding, setMelding] = useState<{ tekst: string; ok: boolean } | null>(null)
 
-  const bewaar = async ({ naam, clubId }: { naam: string; clubId: number | null }) => {
+  const bewaar = async ({ naam, clubId, reeks }: { naam: string; clubId: number | null; reeks: string }) => {
     setBusy('ploeg')
     setMelding(null)
     try {
@@ -27,7 +27,7 @@ export function PloegBeheer({ ploeg, club }: { ploeg: BeheerPloeg; club: BeheerC
         credentials: 'include',
         // clubId gaat altijd mee, ook als null: dat is het verschil tussen "laat de club met rust"
         // en "koppel ze los".
-        body: JSON.stringify({ naam, clubId }),
+        body: JSON.stringify({ naam, clubId, reeks }),
       })
       const json = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string }
       if (!res.ok || !json.ok) {

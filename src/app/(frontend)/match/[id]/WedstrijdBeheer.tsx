@@ -70,10 +70,8 @@ export function WedstrijdBeheer({
       club={clubVan(ploeg)}
       busy={busy}
       sleutel={`ploeg-${kant}`}
-      bewaar={({ naam, clubId }) =>
-        // clubId gaat altijd mee, ook als null: dat is het verschil tussen "laat de club met rust"
-        // en "koppel ze los".
-        stuur(`ploeg-${kant}`, { action: 'ploeg', kant, naam, clubId })
+      bewaar={({ naam, clubId, reeks }) =>
+        stuur(`ploeg-${kant}`, { action: 'ploeg', kant, naam, clubId, reeks })
       }
       voetnoot="De ploegnaam geldt overal — ook op haar andere wedstrijden en in de rangschikking."
     />

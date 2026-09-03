@@ -1,5 +1,8 @@
 import type { Payload } from 'payload'
 
+import type { Category } from './categories'
+import { REEKS_OPTIONS, reeksCategorie, type Reeks } from './reeksen'
+
 // De ploegnaam en haar club rechtzetten — één plaats, twee ingangen.
 //
 // Dit kan vanaf de wedstrijdpagina (/api/match/[id]/beheer) en vanaf de ploegpagina zelf
@@ -10,16 +13,18 @@ import type { Payload } from 'payload'
 // Wat er op het spel staat: het logo en de kleuren hangen aan de CLUB, niet aan de ploeg. Een ploeg
 // onder de verkeerde club toont het verkeerde logo op het live-bord, het kantinescherm en de cast.
 
-export type Rechtzetting = { naam?: unknown; clubId?: unknown }
+export type Rechtzetting = { naam?: unknown; clubId?: unknown; reeks?: unknown }
 
 /** Een club zoals ze in de keuzelijst staat. */
 export type BeheerClub = { id: number; naam: string }
-/** Een ploeg zoals het beheerformulier ze kent: naam, en de club waar ze nu onder hangt. */
-export type BeheerPloeg = { id: number; naam: string; clubId: number | null }
+/** Een ploeg zoals het beheerformulier ze kent: naam, de club waar ze nu onder hangt, en haar reeks. */
+export type BeheerPloeg = { id: number; naam: string; clubId: number | null; reeks: string | null }
 
 export type Uitkomst =
-  | { ok: true; teamId: number; naam: string; clubId: number | null }
+  | { ok: true; teamId: number; naam: string; clubId: number | null; reeks: string | null; categorie: string | null }
   | { ok: false; fout: string; status: number }
+
+const isReeks = (v: unknown): v is Reeks => REEKS_OPTIONS.some((o) => o.value === v)
 
 const rel = (v: unknown): number | null =>
   v && typeof v === 'object' ? ((v as { id?: number }).id ?? null) : typeof v === 'number' ? v : null
@@ -36,7 +41,7 @@ export async function ploegRechtzetten(
     return { ok: false, fout: 'Analyseploegen beheer je onder /analyse/beheer.', status: 400 }
   }
 
-  const data: { name?: string; club?: number } = {}
+  const data: { name?: string; club?: number; reeks?: Reeks; category?: Category } = {}
 
   if (velden.naam !== undefined) {
     const naam = String(velden.naam ?? '').trim()
@@ -58,17 +63,30 @@ export async function ploegRechtzetten(
     data.club = clubId
   }
 
-  if (!('name' in data) && !('club' in data)) {
+  // De reeks bepaalt de categorie, dus die twee schrijven we altijd samen. De import doet het al zo
+  // (`category: reeksCategorie(reeks)`), en laat je ze hier uit elkaar lopen, dan houdt een ploeg
+  // die van U14J naar 2NAH verhuist de categorie U14 — en daar hangt meer aan dan een label: de
+  // balkleur, de worpregels, de duur van een helft, en de leeftijdsgrens van de fototribune.
+  if (velden.reeks !== undefined && velden.reeks !== null && velden.reeks !== '') {
+    if (!isReeks(velden.reeks)) return { ok: false, fout: 'Die reeks bestaat niet.', status: 400 }
+    data.reeks = velden.reeks
+    data.category = reeksCategorie(velden.reeks)
+  }
+
+  if (!('name' in data) && !('club' in data) && !('reeks' in data)) {
     return { ok: false, fout: 'Niets om te wijzigen.', status: 400 }
   }
 
   await payload.update({ collection: 'teams', id: teamId, data, overrideAccess: true })
   const na = await payload.findByID({ collection: 'teams', id: teamId, depth: 0 }).catch(() => null)
+  const tekst = (v: unknown): string | null => (typeof v === 'string' && v ? v : null)
   return {
     ok: true,
     teamId,
     naam: String((na as { name?: unknown } | null)?.name ?? ''),
     clubId: rel((na as { club?: unknown } | null)?.club),
+    reeks: tekst((na as { reeks?: unknown } | null)?.reeks),
+    categorie: tekst((na as { category?: unknown } | null)?.category),
   }
 }
 
