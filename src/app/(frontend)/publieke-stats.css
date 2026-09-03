@@ -240,6 +240,19 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* Op een gsm blijft er naast datum, THUIS/UIT-chip en uur zo'n 130px over voor de tegenstander —
+   te weinig voor "KV Izegem Senioren", en die naam is nét waarvoor je de rij bekijkt. Dan liever
+   twee regels dan "KV Izegem S…"; met een plafond van twee, zodat een uitzonderlijk lange naam
+   de rij niet opblaast. */
+@media (max-width: 520px) {
+  .ps-opp-naam {
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-height: 1.2;
+  }
+}
 /* Thuis (groen) of uit (blauw) — in één oogopslag te scannen door de hele lijst. */
 .ps-thuisuit {
   flex: 0 0 auto;
