@@ -47,7 +47,16 @@
 .cl-match-teams { flex: 1; font-weight: 700; min-width: 0; }
 .cl-match-teams i { color: var(--dim); font-style: normal; margin: 0 4px; }
 .cl-score { font-weight: 900; font-variant-numeric: tabular-nums; color: color-mix(in srgb, var(--club) 60%, #fff); }
-.cl-live { font-size: 0.7rem; font-weight: 900; color: #fff; background: #ef476f; padding: 3px 9px; border-radius: 999px; }
+/* Hetzelfde koraalrood als elke andere LIVE-badge op de site; het oude #ef476f was een fractie
+   donkerder en viel naast de rest op als "net niet". */
+.cl-live { font-size: 0.7rem; font-weight: 900; color: #fff; background: var(--pop); padding: 3px 9px; border-radius: 999px; }
+/* Op gsm nam de datum "25 augustus 2026 om 21:35" de halve kaart, waardoor de ploegnamen ernaast op
+   drie à vier regels braken en per kaart op een andere x begonnen. Dan liever de datum als eigen
+   regel bovenaan en de namen op de volle breedte. */
+@media (max-width: 520px) {
+  .cl-match { flex-wrap: wrap; row-gap: 4px; }
+  .cl-match-date { flex-basis: 100%; min-width: 0; }
+}
 
 .cl-news { display: flex; flex-direction: column; gap: 8px; }
 .cl-news-item {

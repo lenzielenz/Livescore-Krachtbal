@@ -1,5 +1,21 @@
 /* Publieke statistiekpagina's (speler-/ploegprofiel). Bouwt voort op analyse.css voor de ingebedde
    grafieken (gevaarzone, vorm, radar, banden); hier enkel de hero + kerncijfers + spelerslijst. */
+
+/* De omhulling van het ploeg- en spelersprofiel. Die klasse stond wél in de pagina's maar nergens
+   in de CSS, waardoor precies deze twee schermen als enige geen leesmarge hadden: de hero, de
+   Seizoensagenda en de lopende tekst begonnen op x=0, tegen de schermrand. Een spiegel van .site
+   (styles.css), zodat ze exact als de rest van de site op 880px centreren. */
+.an-wrap {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 24px 16px 64px;
+}
+/* De sectiekop stond in dezelfde Sora 700 op bijna dezelfde grootte als de ploegnaam (h1) er vlak
+   boven; ze hoort eronder te hangen, niet ermee te concurreren. */
+.an-wrap .an-h2 {
+  font-size: 1.05rem;
+  margin: 0 0 0.4rem;
+}
 .ps-hero {
   display: flex;
   align-items: center;
@@ -182,7 +198,8 @@
   top: -0.55rem;
   right: 0.7rem;
   font-style: normal;
-  font-size: 0.58rem;
+  /* Kapitalen met letterafstand worden onder ~0.65rem op een gsm een streepje. */
+  font-size: 0.66rem;
   font-weight: 800;
   letter-spacing: 0.06em;
   color: var(--accent, #06d6a0);
@@ -227,7 +244,8 @@
 .ps-thuisuit {
   flex: 0 0 auto;
   font-style: normal;
-  font-size: 0.62rem;
+  /* Thuis of uit is precies waarvoor je deze agenda opent; dat mag geen 10px-spikkel zijn. */
+  font-size: 0.7rem;
   font-weight: 800;
   letter-spacing: 0.06em;
   border-radius: 999px;
