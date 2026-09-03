@@ -183,6 +183,13 @@
   .rang-table td:not(.rang-team):not(.rang-rank) {
     width: 30px;
   }
+  /* De laatste kolom (PTN) vulde met 2px padding zijn 30px precies, zodat de kop tegen de
+     kaartrand plakte. Een tikje breder met wat ademruimte rechts; de ploegnaam levert die in. */
+  .rang-table th:last-child,
+  .rang-table td:last-child {
+    width: 38px;
+    padding-right: 8px;
+  }
 }
 
 /* Positie-verschil t.o.v. vorige week + highlight van de eigen club. */
