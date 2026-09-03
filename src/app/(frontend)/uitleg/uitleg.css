@@ -1,11 +1,16 @@
 /* Tutorial-/uitlegpagina: een premium tijdlijn die de volledige flow van een wedstrijd toont,
-   van registreren tot aftekenen. Alles op één scrollbare, mobielvriendelijke pagina. */
+   van registreren tot aftekenen. Alles op één scrollbare, mobielvriendelijke pagina.
+
+   Lopende tekst staat in --dim-strong. Het stond eerst in --muted, maar dat token bestaat nergens,
+   dus viel alle tekst terug op het erfelijke wit van --txt — even wit als de koppen, met enkel
+   vet/niet-vet als verschil. Bewust --dim-strong en niet --dim: de kleinste teksten hier (0.76rem)
+   zakken met --dim onder WCAG AA (zie styles.css bij --dim-strong). */
 
 .tut-intro {
   max-width: 720px;
   margin: 0 auto 20px;
   text-align: center;
-  color: var(--muted);
+  color: var(--dim-strong);
   font-size: 1.02rem;
   line-height: 1.6;
 }
@@ -47,7 +52,7 @@
 }
 .tut-role-desc {
   font-size: 0.76rem;
-  color: var(--muted);
+  color: var(--dim-strong);
   line-height: 1.35;
 }
 
@@ -138,7 +143,7 @@
   color: var(--accent);
 }
 .tut-body {
-  color: var(--muted);
+  color: var(--dim-strong);
   font-size: 0.95rem;
   line-height: 1.6;
   margin: 0 0 10px;
@@ -160,7 +165,7 @@
   position: relative;
   padding-left: 22px;
   font-size: 0.9rem;
-  color: var(--muted);
+  color: var(--dim-strong);
   line-height: 1.5;
 }
 .tut-list li::before {
@@ -224,7 +229,7 @@
 }
 .tut-outro p {
   margin: 0 0 12px;
-  color: var(--muted);
+  color: var(--dim-strong);
   line-height: 1.6;
 }
 
@@ -265,7 +270,7 @@
   text-transform: uppercase; color: var(--accent); margin-bottom: 8px;
 }
 .tut-hero-title { margin: 0 0 10px; font-size: clamp(1.5rem, 5vw, 2.2rem); font-weight: 900; line-height: 1.1; }
-.tut-hero-sub { max-width: 640px; margin: 0 auto; color: var(--muted); font-size: 1rem; line-height: 1.6; }
+.tut-hero-sub { max-width: 640px; margin: 0 auto; color: var(--dim-strong); font-size: 1rem; line-height: 1.6; }
 .tut-hero-sub strong { color: var(--text, #eaf6ee); }
 
 .tut-section-h {
@@ -303,7 +308,7 @@
 }
 .tut-feat-txt { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .tut-feat-name { font-weight: 900; font-size: 0.98rem; color: var(--text, #eaf6ee); }
-.tut-feat-desc { font-size: 0.82rem; color: var(--muted); line-height: 1.4; }
+.tut-feat-desc { font-size: 0.82rem; color: var(--dim-strong); line-height: 1.4; }
 
 /* Glasglans + fijnere rand op de bestaande kaarten (rol, stap, slot). */
 .tut-role, .tut-card, .tut-outro {

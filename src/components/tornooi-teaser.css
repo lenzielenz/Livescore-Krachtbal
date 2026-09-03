@@ -14,7 +14,9 @@
   text-decoration: none;
 }
 .tteaser:hover { border-color: var(--accent, #ffd873); }
-.tteaser.live { border-color: color-mix(in srgb, #6ee7a0 55%, var(--line, #1d3b2c)); }
+/* Live = --pop (koraalrood), zoals de LIVE-badges en live-dot op dezelfde startpagina; het
+   mintgroen (#6ee7a0) was een overblijfsel van het oude groene thema. */
+.tteaser.live { border-color: color-mix(in srgb, var(--pop, #ff5d6c) 55%, var(--line, #2e333d)); }
 .tteaser-logo {
   width: 44px;
   height: 44px;
@@ -28,5 +30,5 @@
 .tteaser-titel { font-weight: 800; font-size: 1.05rem; }
 .tteaser-sub { color: var(--dim, #9fb6aa); font-size: 0.9rem; }
 .tteaser-sub b { color: var(--accent, #ffd873); font-variant-numeric: tabular-nums; }
-.tteaser-sub.live { color: #6ee7a0; font-weight: 700; }
+.tteaser-sub.live { color: var(--pop, #ff5d6c); font-weight: 700; }
 .tteaser-pijl { font-size: 1.3rem; color: var(--accent, #ffd873); flex: 0 0 auto; }

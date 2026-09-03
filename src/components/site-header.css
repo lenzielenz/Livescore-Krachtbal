@@ -3,6 +3,18 @@
   position: sticky;
   top: 0;
   z-index: 40;
+  border-bottom: 1px solid color-mix(in srgb, var(--accent) 14%, var(--line));
+  box-shadow: 0 6px 26px rgba(0, 0, 0, 0.28);
+}
+/* Achtergrond + blur in een pseudo-element: backdrop-filter op .sh zelf zou de header het
+   containing block maken voor de fixed backdrops van het Meer-menu en de weerpopover, waardoor
+   die "wegklik-laag" maar zo groot is als de balk en een tik op de pagina het menu niet sluit.
+   Zet daarom op .sh geen transform, filter, backdrop-filter, perspective of contain. */
+.sh::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
   background: linear-gradient(
     180deg,
     color-mix(in srgb, var(--panel) 78%, transparent),
@@ -10,8 +22,6 @@
   );
   -webkit-backdrop-filter: blur(14px) saturate(1.25);
   backdrop-filter: blur(14px) saturate(1.25);
-  border-bottom: 1px solid color-mix(in srgb, var(--accent) 14%, var(--line));
-  box-shadow: 0 6px 26px rgba(0, 0, 0, 0.28);
 }
 .sh-inner {
   max-width: 880px;
@@ -85,10 +95,18 @@
 .sh-more-menu {
   position: absolute;
   right: 0;
-  top: calc(100% + 6px);
+  /* Landt op dezelfde lijn als de weerpopover (.wx-pop, 56px), net onder de balk; met 6px sneed
+     de afgeronde bovenrand de border-bottom van de header. */
+  top: calc(100% + 14px);
   z-index: 42;
   /* Breed genoeg zodat labels als "Wanneer spelen we?" niet over twee regels breken. */
   min-width: 15rem;
+  /* Het menu hangt absoluut in de sticky header, dus pagina-scroll brengt niets in beeld: op een
+     kleine gsm of in landscape vielen de "Account"-items (Uitloggen) anders onbereikbaar onder de
+     vouw. 80px dekt header + menu-offset + wat lucht. */
+  max-height: calc(100dvh - 80px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 12px;
@@ -205,7 +223,9 @@
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 60;
+  /* Net boven de installatiebalk (z-index 60, zelfde onderrand): anders bedekt die de knop
+     "Terug naar beheer". Niets anders zit tussen 60 en 70. */
+  z-index: 61;
   display: flex;
   align-items: center;
   justify-content: center;

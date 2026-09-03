@@ -1,5 +1,5 @@
-/* Clubnieuws — lijst + artikel. */
-.nw-empty { color: var(--dim); margin: 16px 0; }
+/* Clubnieuws — lijst + artikel. De lege staat gebruikt de gedeelde .empty uit styles.css
+   (gecentreerd, met lucht) i.p.v. een eigen kale variant die van de rest van de site afweek. */
 .nw-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));

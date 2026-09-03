@@ -215,7 +215,9 @@ h3,
    exact één schermhoogte hoog is, en duwde zo de onderrand van het bord uit beeld — op een tv kan
    niemand daarnaartoe scrollen. Zie components/SchermModus.tsx. */
 body.kb-scherm .site-foot { display: none; }
-.site-foot a { color: var(--dim); text-decoration: none; }
+/* De links zijn maar 15px hoog en staan onderaan in de duimzone; de padding vergroot het raakvlak
+   en de negatieve marge compenseert die weer, zodat het uitzicht (gap 8px) identiek blijft. */
+.site-foot a { color: var(--dim); text-decoration: none; padding: 10px 4px; margin: -10px -4px; }
 .site-foot a:hover { color: var(--txt); text-decoration: underline; }
 
 /* ── Hub-dashboard (startpagina) ── */
@@ -462,15 +464,23 @@ body.kb-scherm .site-foot { display: none; }
   flex-wrap: wrap;
   gap: 8px;
 }
+/* Wordt enkel nog als CTA in lege staten gebruikt (/offline «Opnieuw proberen», /beheer/planning
+   «Inloggen →»): vet en hoog genoeg als aanraakdoel, anders leest de enige actie als een filterchip. */
 .hub-pill {
-  padding: 8px 14px;
-  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  /* Met 0.88rem + 10px padding komt de knop op 40px; de 44px-richtlijn voor aanraakdoelen
+     haalt hij pas met deze ondergrens. */
+  min-height: 44px;
+  border-radius: var(--r-pill);
   border: 1px solid var(--line);
   background: var(--panel);
   color: var(--txt);
   font-size: 0.88rem;
-}
-.hub-pill {
+  font-weight: 700;
+  text-decoration: none;
   transition: border-color 0.14s ease, color 0.14s ease, transform 0.14s ease, box-shadow 0.14s ease;
 }
 .hub-pill:hover {
@@ -825,11 +835,14 @@ body.kb-scherm .site-foot { display: none; }
 @keyframes badge-live-pulse {
   50% { opacity: 0.35; }
 }
+/* Zit meestal op een <p>: zonder margin-reset kwam er bij de padding nog 1em bij, en gaapte de lege
+   staat ±45px boven én onder — ver buiten het 12/16/24-ritme van de secties eromheen. */
 .empty {
   color: var(--dim);
   font-size: 0.95rem;
   text-align: center;
-  padding: 28px 18px;
+  margin: 0;
+  padding: 24px 18px;
 }
 
 /* ── Gedeeld premium knop-systeem ── */
@@ -887,7 +900,7 @@ body.kb-scherm .site-foot { display: none; }
   overflow: hidden;
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: var(--r-card);
 }
 .skel::after {
   content: '';
@@ -1334,6 +1347,15 @@ body.kb-scherm .site-foot { display: none; }
     width: 100%;
     justify-content: center;
   }
+  /* De pil is hier volle breedte en gecentreerd; «Hoe?» wrapte naar een eigen regel en hing links
+     tegen de kantlijn als een wees. Centreren en een ruimer raakvlak houden het bij de pil. */
+  .cast-tv-main {
+    justify-content: center;
+  }
+  .cast-tv-how {
+    padding: 6px 10px;
+    min-height: 36px;
+  }
 }
 
 .match-info {
@@ -1455,7 +1477,7 @@ body.kb-scherm .site-foot { display: none; }
   background: var(--accent); color: #06121f;
 }
 .match-meedoen-btn:hover { filter: brightness(1.08); }
-.match-meedoen-link { font-size: 0.84rem; color: var(--dim); text-decoration: none; }
+.match-meedoen-link { font-size: 0.84rem; color: var(--dim-strong); text-decoration: none; }
 .match-meedoen-link:hover { color: var(--txt); text-decoration: underline; }
 
 /* ── Wedstrijd die nog moet komen ────────────────────────────────────────────────────────────

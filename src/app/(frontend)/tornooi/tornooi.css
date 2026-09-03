@@ -38,8 +38,12 @@
   white-space: nowrap;
   max-width: min(70vw, 460px);
 }
+/* De merkregel boven de tornooipagina's. In het display-lettertype zoals het merk overal, en een
+   maat kleiner: op 1.4rem Inter brak "Krachtbal · Krachtbaltornooi Sint-Michiels" op gsm over twee
+   titelgrote regels, met daar meteen onder de échte paginatitel — die sprong er niet meer uit. */
 .trn-home {
-  font-size: 1.4rem;
+  font-family: var(--font-display), var(--font-body), sans-serif;
+  font-size: 1.18rem;
   font-weight: 800;
   color: var(--txt);
 }
@@ -48,6 +52,7 @@
 }
 .trn-topnav {
   display: inline-flex;
+  flex-wrap: wrap;
   gap: 10px;
   align-items: center;
 }
@@ -74,21 +79,26 @@ button.trn-toplink {
   align-items: center;
   gap: 6px;
   padding: 8px 14px;
-  border-radius: 10px;
+  border-radius: var(--r-control);
   border: 1px solid var(--line);
   background: var(--panel);
   color: var(--txt);
-  font-weight: 600;
+  font-weight: 700;
   font-size: 0.92rem;
   cursor: pointer;
+  /* Zelfde overgang en lift als elke andere knop op de site; zonder deze regel knipte de rand
+     bij hover in één keer naar ijsblauw. */
+  transition: border-color var(--dur-1) var(--ease-soft), transform var(--dur-1) var(--ease-out), background-color var(--dur-1) var(--ease-soft);
 }
-.trn-btn:hover {
+.trn-btn:not(:disabled):hover {
   border-color: var(--accent);
+  transform: translateY(-1px);
 }
 .trn-btn.primary {
   background: var(--accent);
   border-color: var(--accent);
-  color: #1a1205;
+  /* Het diepe donker dat elke accentknop op de site gebruikt — niet het bruinzwart van vroeger. */
+  color: #06140d;
 }
 .trn-btn.danger {
   border-color: #b9523f;
@@ -424,6 +434,13 @@ button.trn-toplink {
   letter-spacing: 0.06em;
   color: var(--dim);
   margin: 0 0 10px;
+}
+/* Op het dagprogramma wordt deze kolomkop hergebruikt als sectiekop "Alle wedstrijden" boven de
+   lijst. Gecentreerd en zonder bovenmarge stond hij als een verdwaalde regel tussen intro en
+   kaarten, terwijl al de rest daar links uitgelijnd is. */
+.dp-lijst > .trn-col-title {
+  text-align: left;
+  margin: 18px 0 10px;
 }
 .trn-col-body {
   flex: 1 1 auto;
@@ -1439,7 +1456,8 @@ button.trn-toplink {
   font-size: clamp(3.4rem, 15vmin, 12rem);
   background: linear-gradient(180deg, #ffffff, color-mix(in srgb, var(--txt) 70%, #9fb4ab));
   -webkit-background-clip: text; background-clip: text; color: transparent;
-  filter: drop-shadow(0 0.05em 0.3em rgba(0, 0, 0, 0.5));
+  /* Geen drop-shadow op tekst met background-clip: Chrome tekent dan de schaduw van de hele
+     (ongeclipte) verloopdoos, wat op een donkere tv als een vage rechthoek rond het woord staat. */
 }
 .gk-aftel-nu { font-size: clamp(2rem, 8vmin, 6rem); }
 /* Zelfde breedte als het uitslagenraster eronder: anders lopen de randen van de affiche en de
@@ -1451,6 +1469,9 @@ button.trn-toplink {
 .gk-komend-rij {
   position: relative;
   overflow: hidden;
+  /* Op een tv is deze affiche zo'n 1180px breed; op 2.2vmin bleven de ploegnamen ±24px, met
+     400px lege kaart tussen naam en "VS". Iets groter, en een hoger plafond voor 4K. */
+  font-size: clamp(1rem, 2.7vmin, 1.6rem);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -2046,12 +2067,14 @@ button.trn-toplink {
   gap: 10px;
 }
 .gk-tick-reeks {
-  font-size: 0.58em;
+  /* Op 0.58em werd elke reeks op de tv afgekapt tot "KRACHTBALTORNOOI SINT…" — net het stuk dat
+     de reeksen uit elkaar houdt (U14, U16, …) kwam nooit in beeld. */
+  font-size: 0.68em;
   font-weight: 800;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--dim);
-  max-width: 16em;
+  max-width: 26em;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

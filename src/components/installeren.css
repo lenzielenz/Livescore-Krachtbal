@@ -38,6 +38,14 @@ body.kb-scherm .kb-install {
   display: none;
 }
 
+/* In kijkmodus (beheerder bekijkt de site als supporter) ligt de vaste kijkmodus-banner op dezelfde
+   onderrand met dezelfde z-index; die banner is de enige weg terug naar beheer en moet bereikbaar
+   blijven. Een installatie-aanbod heeft daar geen waarde. Browsers zonder :has() negeren enkel
+   deze regel (kijkmodus komt nooit op een Chromecast voor). */
+body:has(.sh-kijkmodus) .kb-install {
+  display: none;
+}
+
 .kb-install-icoon {
   font-size: 1.5rem;
   line-height: 1;

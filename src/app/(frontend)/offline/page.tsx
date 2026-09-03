@@ -20,9 +20,11 @@ export default function OfflinePage() {
             iedereen zich stelt. Zonder dat zinnetje lijkt een halve minuut onderhoud op een
             afmelding, en gaan mensen onnodig opnieuw inloggen. */}
         <p className="empty">
-          🔐 <strong>Je blijft ingelogd.</strong> Word je dit tijdens een update van de site
-          getoond, tik dan zo meteen gewoon op &laquo;Opnieuw proberen&raquo; — je sessie blijft
-          staan.
+          {/* De {' '} is nodig: JSX knipt de spatie aan het begin van een tekstblok dat over
+              meerdere regels loopt, en dan stond er "ingelogd.Word". */}
+          🔐 <strong>Je blijft ingelogd.</strong>{' '}
+          Word je dit tijdens een update van de site getoond, tik dan zo meteen gewoon op
+          &laquo;Opnieuw proberen&raquo; — je sessie blijft staan.
         </p>
         <p style={{ marginTop: 12 }}>
           <Link href="/" className="hub-pill">↻ Opnieuw proberen</Link>
