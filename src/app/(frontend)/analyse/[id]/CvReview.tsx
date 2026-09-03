@@ -35,6 +35,14 @@ export interface CvVoorstel {
   afstandM: number | null
   /** Richting in veldassen: 0° recht naar de uitkant, +90° naar de rechterzijlijn. */
   richtingGraden?: number | null
+  /** Uit welke opname het voorstel komt (2 = tweede camera; videoTimeS staat al op de
+   *  tijdlijn van camera 1). */
+  camera?: number | null
+  /** Wie de bal ving — door een mens ingevuld, enkel zinvol bij eventType 'vangst'. */
+  vangerSide?: 'home' | 'away' | null
+  vangerRugnummer?: number | null
+  /** De werper-groep uit de videoanalyse (voor de landingskaart; geen rugnummer). */
+  werper?: number | null
 }
 
 const EVENT_NAAM: Record<CvVoorstel['eventType'], string> = {
@@ -66,6 +74,8 @@ export function CvReview({
   onFrameStap,
   videoSrc = null,
   duurS = null,
+  video2Src = null,
+  video2OffsetS = null,
   children,
 }: {
   voorstellen: CvVoorstel[]
@@ -81,6 +91,10 @@ export function CvReview({
   videoSrc?: string | null
   /** Duur van de video als de speler die al kent — houdt het beeldlusje binnen de video. */
   duurS?: number | null
+  /** Tweede camera: haar bestand en het geijkte tijdsverschil, zodat een voorstel dat alleen
+   *  díé camera zag zijn beeld uit de juiste opname haalt. */
+  video2Src?: string | null
+  video2OffsetS?: number | null
   children?: ReactNode
 }) {
   // Lokale kopie voor optimistische updates: een klik toont meteen het oordeel, de PATCH volgt;
@@ -143,6 +157,7 @@ export function CvReview({
       worpType?: 'nek' | 'rug',
       eventType?: CvVoorstel['eventType'],
       speler?: { side?: 'home' | 'away'; rugnummer?: number | null },
+      vanger?: { side?: 'home' | 'away'; rugnummer?: number | null },
     ) => {
       if (bezigId != null) return
       setBezigId(v.id)
@@ -161,6 +176,9 @@ export function CvReview({
                 eventType: eventType ?? x.eventType,
                 side: speler?.side ?? x.side,
                 rugnummer: speler && 'rugnummer' in speler ? (speler.rugnummer ?? null) : x.rugnummer,
+                vangerSide: vanger?.side ?? x.vangerSide,
+                vangerRugnummer:
+                  vanger && 'rugnummer' in vanger ? (vanger.rugnummer ?? null) : x.vangerRugnummer,
               }
             : x,
         ),
@@ -176,6 +194,8 @@ export function CvReview({
             ...(eventType ? { eventType } : {}),
             ...(speler?.side ? { side: speler.side } : {}),
             ...(speler && 'rugnummer' in speler ? { rugnummer: speler.rugnummer ?? null } : {}),
+            ...(vanger?.side ? { vangerSide: vanger.side } : {}),
+            ...(vanger && 'rugnummer' in vanger ? { vangerRugnummer: vanger.rugnummer ?? null } : {}),
           }),
         })
         let data: { error?: string; event?: { reviewed?: boolean; verdict?: 'bevestigd' | 'afgewezen'; worpType?: 'nek' | 'rug' | null; eventType?: CvVoorstel['eventType'] } } = {}
@@ -338,12 +358,17 @@ export function CvReview({
           <div className={`va-cv-actief ${actief.verdict ?? 'open'}`}>
             {/* Het beeld bij de vraag. Zonder dit is een voorstel enkel een tijdstip en moet je
                 zelf in de video gaan zoeken wat het model bedoelde — 21 keer, vóór je iets
-                beoordeeld hebt. */}
+                beoordeeld hebt. Een voorstel van de tweede camera haalt zijn beeld uit díé
+                opname (op haar eigen tijdlijn, via het geijkte tijdsverschil). */}
             <CvBeeld
               key={actief.id}
-              videoSrc={videoSrc}
-              tijd={actief.videoTimeS}
-              duurS={duurS}
+              videoSrc={actief.camera === 2 && video2Src && video2OffsetS != null ? video2Src : videoSrc}
+              tijd={
+                actief.camera === 2 && video2Src && video2OffsetS != null
+                  ? Math.max(0, actief.videoTimeS + video2OffsetS)
+                  : actief.videoTimeS
+              }
+              duurS={actief.camera === 2 && video2Src && video2OffsetS != null ? null : duurS}
               onSpring={() => kies(actief)}
             />
             <div className="va-cv-info">
@@ -354,6 +379,11 @@ export function CvReview({
                 {EVENT_NAAM[actief.eventType]}
                 {worpNaam(actief.worpType) ? ` · ${worpNaam(actief.worpType)}` : ''}
               </span>
+              {actief.camera === 2 && (
+                <span className="va-cv-wie" title="Gezien door de tweede camera (andere kant van het veld)">
+                  🎥 cam 2
+                </span>
+              )}
               {actief.side != null && (
                 <span className="va-cv-wie">
                   {actief.side === 'home' ? 'thuis' : 'uit'}
@@ -458,6 +488,51 @@ export function CvReview({
                   title="Rugnummer intikken en met Enter bevestigen (leeg = wissen)"
                 />
               </span>
+              {/* De vanger (enkel bij een vangst): wie ving de bal? De pipeline detecteert dat
+                  niet; hier vul je het in en bij het overzetten wordt het caughtBy op de worp —
+                  zonder deze invoer telt de vangst wel, maar weet niemand op wiens naam. */}
+              {actief.eventType === 'vangst' && (
+                <span className="va-cv-speler" title="Wie ving de bal (ploeg + rugnummer)?">
+                  🧤 vanger:
+                  <button
+                    type="button"
+                    className={`va-btn small${actief.vangerSide === 'home' ? ' aan' : ''}`}
+                    onClick={() => void review(actief, 'bevestig', undefined, undefined, undefined, { side: 'home' })}
+                    disabled={bezigId != null}
+                    title="Vanger bij de thuisploeg zetten en bevestigen"
+                  >
+                    thuis
+                  </button>
+                  <button
+                    type="button"
+                    className={`va-btn small${actief.vangerSide === 'away' ? ' aan' : ''}`}
+                    onClick={() => void review(actief, 'bevestig', undefined, undefined, undefined, { side: 'away' })}
+                    disabled={bezigId != null}
+                    title="Vanger bij de uitploeg zetten en bevestigen"
+                  >
+                    uit
+                  </button>
+                  <input
+                    type="number"
+                    min={0}
+                    max={99}
+                    placeholder="nr"
+                    defaultValue={actief.vangerRugnummer ?? ''}
+                    key={`vanger-${actief.id}`}
+                    disabled={bezigId != null}
+                    onKeyDown={(e) => {
+                      if (e.key !== 'Enter') return
+                      e.preventDefault()
+                      e.stopPropagation()
+                      const ruw = (e.target as HTMLInputElement).value.trim()
+                      const nr = ruw === '' ? null : Number(ruw)
+                      if (nr !== null && (!Number.isInteger(nr) || nr < 0 || nr > 99)) return
+                      void review(actief, 'bevestig', undefined, undefined, undefined, { rugnummer: nr })
+                    }}
+                    title="Rugnummer van de vanger — Enter bevestigt (leeg = wissen)"
+                  />
+                </span>
+              )}
               {/* Soort corrigeren: een als "worp" gedetecteerde vangst moet ook in de browser
                   omgezet kunnen worden — dat is precies de correctielus voor hertraining. */}
               <label className="va-cv-soort">

@@ -50,12 +50,15 @@ export function Kalibreren({
   initieel,
   veldBreedte = 14,
   veldLengte = 46,
+  camera = 1,
 }: {
   matchId: number
   videoUrl: string | null
   /** Echte terreinmaten — de luchtfoto rekent ermee om (hoek-op-hoek is de rechthoek). */
   veldBreedte?: number
   veldLengte?: number
+  /** Voor welke opname deze kalibratie is: camera 2 staat elders en krijgt zijn eigen punten. */
+  camera?: 1 | 2
   initieel: {
     punten?: Punt[]
     beelden?: Beeld[]
@@ -168,6 +171,7 @@ export function Kalibreren({
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
           positie: positie || null,
+          camera,
           beelden: beelden
             .filter((b) => b.punten.length > 0)
             .map((b) => ({
@@ -217,13 +221,15 @@ export function Kalibreren({
   const bruikbareBeelden = beelden.filter((b) => b.punten.length >= 4).length
 
   return (
-    <details className="an-fold kal" id="kalibratie">
+    <details className="an-fold kal" id={camera === 2 ? 'kalibratie2' : 'kalibratie'}>
       <summary>
-        📍 Veldkalibratie{' '}
+        📍 Veldkalibratie{camera === 2 ? ' — camera 2' : ''}{' '}
         <span className="tm-sum">
           {totaal >= 4
             ? `${totaal} van de 14 punten aangeduid${beelden.length > 1 ? ` over ${beelden.length} beelden` : ''}`
-            : 'nog niet gezet — nodig om te weten wáár de bal landt'}
+            : camera === 2
+              ? 'nog niet gezet — zonder weet camera 2 wél wanneer, maar niet wáár'
+              : 'nog niet gezet — nodig om te weten wáár de bal landt'}
         </span>
       </summary>
       <div className="kal-body">

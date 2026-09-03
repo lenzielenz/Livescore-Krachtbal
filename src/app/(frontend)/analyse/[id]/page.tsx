@@ -7,6 +7,7 @@ import { TeamLogo } from '@/components/TeamLogo'
 import { canAnalyse, isFederationLevel } from '@/lib/access'
 import { canViewAnalyseMatch } from '@/lib/analyse-access'
 import { getAuthUser } from '@/lib/auth-user'
+import { leesToewijzing } from '@/lib/cv-werpers'
 import { buildDefenseStats, buildMatchSheet, buildMatchStats, buildMatchState, buildPassStats } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
 import { reeksHalfDurationSeconds, reeksNaam, type Reeks } from '@/lib/reeksen'
@@ -14,12 +15,14 @@ import { readSync } from '@/lib/video-sync'
 import { mayEditMatchVideo } from '@/lib/video-access'
 import { AnalyseDetailView, type FysiekSpeler } from './AnalyseDetailView'
 import type { CvVoorstel } from './CvReview'
+import { CvVeldkaart } from './CvVeldkaart'
 import { ShareCard } from './ShareCard'
 import { AnalyseVoortgang, type VoortgangInput } from './AnalyseVoortgang'
 import { Kalibreren } from './Kalibreren'
 import { ModelBijstellen } from './ModelBijstellen'
 import { ModelScore } from './ModelScore'
 import { Overzetten } from './Overzetten'
+import { Sporen } from './Sporen'
 import { Werpers } from './Werpers'
 import { ServerAnalyse } from './ServerAnalyse'
 import { Terreinmaten } from './Terreinmaten'
@@ -207,7 +210,34 @@ export default async function AnalyseDetailPage({ params }: { params: Promise<{ 
     yM: e.yM ?? null,
     afstandM: e.afstandM ?? null,
     richtingGraden: e.richtingGraden ?? null,
+    camera: e.camera ?? null,
+    vangerSide: e.vangerSide ?? null,
+    vangerRugnummer: e.vangerRugnummer ?? null,
+    werper: e.werper ?? null,
   }))
+  // Spelers van beide ploegen, voor de landingskaart (per werper filteren op naam). Vóór het
+  // overzetten heeft stats.players nog niemand — de opstelling komt dus uit de ploegen zelf.
+  const cvKaartSpelers =
+    cvVoorstellen.length > 0
+      ? (
+          await payload
+            .find({
+              collection: 'players',
+              where: { team: { in: [state.teams.home.id, state.teams.away.id] } },
+              depth: 0,
+              limit: 400,
+            })
+            .catch(() => ({ docs: [] as Record<string, unknown>[] }))
+        ).docs.map((p) => {
+          const teamId = p.team && typeof p.team === 'object' ? Number((p.team as { id: number }).id) : Number(p.team)
+          return {
+            playerId: Number((p as { id: number }).id),
+            playerName: String((p as { name?: unknown }).name ?? ''),
+            shirtNumber: Number((p as { shirtNumber?: unknown }).shirtNumber ?? 0),
+            teamSide: (teamId === state.teams.away.id ? 'away' : 'home') as 'home' | 'away',
+          }
+        })
+      : []
   // Video koppelen/ijken mag wie de analyse beheert: de federatie, of de eigenaar van deze
   // privé-opname (dezelfde kring die ze al mag bekijken — de paginatoegang hierboven).
   const mayEditVideo = mayEditMatchVideo(me, matchDoc as { analyseOnly?: boolean | null; analyseOwner?: unknown })
@@ -286,6 +316,8 @@ export default async function AnalyseDetailPage({ params }: { params: Promise<{ 
             <VideoAnalyse
               matchId={matchId}
               initialUrl={null}
+              initialUrl2={(matchDoc?.video2Url as string | null) ?? null}
+              initialOffset2={(matchDoc?.video2OffsetS as number | null) ?? null}
               initialOffsetH1={(matchDoc?.videoOffsetH1 as number | null) ?? null}
               initialOffsetH2={(matchDoc?.videoOffsetH2 as number | null) ?? null}
               moments={videoMoments}
@@ -324,6 +356,8 @@ export default async function AnalyseDetailPage({ params }: { params: Promise<{ 
           <VideoAnalyse
             matchId={matchId}
             initialUrl={(matchDoc?.videoUrl as string | null) ?? null}
+            initialUrl2={(matchDoc?.video2Url as string | null) ?? null}
+            initialOffset2={(matchDoc?.video2OffsetS as number | null) ?? null}
             initialOffsetH1={(matchDoc?.videoOffsetH1 as number | null) ?? null}
             initialOffsetH2={(matchDoc?.videoOffsetH2 as number | null) ?? null}
             moments={videoMoments}
@@ -335,6 +369,33 @@ export default async function AnalyseDetailPage({ params }: { params: Promise<{ 
             maxMb={Number(process.env.MAX_MATCH_VIDEO_MB) || 512}
           />
         </ErrorCatch>
+        )}
+
+        {/* Waar landen de worpen volgens de video zelf — nog vóór het overzetten. Enkel voor wie
+            de voorstellen ziet (federatie): het zijn onbevestigde modelclaims. */}
+        {cvVoorstellen.some((v) => v.xM != null && v.yM != null) && (
+          <ErrorCatch label="De landingskaart uit de video">
+            <CvVeldkaart
+              voorstellen={cvVoorstellen.map((v) => ({
+                id: v.id,
+                videoTimeS: v.videoTimeS,
+                eventType: v.eventType,
+                verdict: v.verdict,
+                xM: v.xM,
+                yM: v.yM,
+                inDoelgebied: v.inDoelgebied,
+                uitbal: v.uitbal,
+                afstandM: v.afstandM,
+                richtingGraden: v.richtingGraden,
+                werper: v.werper,
+              }))}
+              toewijzing={leesToewijzing(matchDoc?.cvWerpers)}
+              spelers={cvKaartSpelers}
+              goalAreaDepth={state.match.goalAreaDepth}
+              veldBreedte={state.match.veldBreedte}
+              speelveldM={state.match.veldSpeelveld}
+            />
+          </ErrorCatch>
         )}
 
         {/* De video door de server laten analyseren: worpen zoeken, bal volgen, spelers
@@ -352,6 +413,23 @@ export default async function AnalyseDetailPage({ params }: { params: Promise<{ 
                 }
               />
             </ErrorCatch>
+            {/* De tweede camera staat op een andere plek en ziet dus andere kruispunten: eigen
+                kalibratie, zelfde flow. Zonder deze punten weet camera 2 wél wanneer er
+                geworpen wordt, maar niet wáár de bal landt. */}
+            {Boolean(matchDoc?.video2Url) && (
+              <ErrorCatch label="De veldkalibratie van camera 2">
+                <Kalibreren
+                  matchId={matchId}
+                  camera={2}
+                  videoUrl={(matchDoc?.video2Url as string | null) ?? null}
+                  veldBreedte={state.match.veldBreedte ?? 14}
+                  veldLengte={(state.match.veldSpeelveld ?? 26) + 2 * (state.match.goalAreaDepth ?? 10)}
+                  initieel={
+                    (matchDoc?.cvKalibratie2 ?? null) as React.ComponentProps<typeof Kalibreren>['initieel']
+                  }
+                />
+              </ErrorCatch>
+            )}
             <ErrorCatch label="De automatische video-analyse">
               <ServerAnalyse matchId={matchId} heeftVideo />
             </ErrorCatch>
@@ -374,6 +452,12 @@ export default async function AnalyseDetailPage({ params }: { params: Promise<{ 
                 overzetten — daarna staan de namen vast in onwijzigbare worpen. */}
             <ErrorCatch label="Wie wierp wat">
               <Werpers matchId={matchId} />
+            </ErrorCatch>
+
+            {/* En hetzelfde voor de tracking-sporen: wie liep waar? Dit voedt de fysieke stats
+                (loopafstand, sprintjes, topsnelheid) — de server herrekent ze bij elke wijziging. */}
+            <ErrorCatch label="Wie liep waar">
+              <Sporen matchId={matchId} />
             </ErrorCatch>
 
             {/* De laatste stap van de video-weg: wat je bevestigde wordt een échte worp, zodat

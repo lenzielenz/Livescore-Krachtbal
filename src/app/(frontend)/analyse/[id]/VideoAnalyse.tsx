@@ -53,6 +53,8 @@ export interface VideoWorp {
 export function VideoAnalyse({
   matchId,
   initialUrl,
+  initialUrl2 = null,
+  initialOffset2 = null,
   initialOffsetH1,
   initialOffsetH2,
   moments,
@@ -65,6 +67,9 @@ export function VideoAnalyse({
 }: {
   matchId: number
   initialUrl: string | null
+  /** Tweede camera (andere kant van het veld) en haar geijkte tijdsverschil met camera 1. */
+  initialUrl2?: string | null
+  initialOffset2?: number | null
   initialOffsetH1: number | null
   initialOffsetH2: number | null
   moments: VideoMoment[]
@@ -85,22 +90,50 @@ export function VideoAnalyse({
   const [sync, setSync] = useState<VideoSync>({ offsetH1: initialOffsetH1 ?? 0, offsetH2: initialOffsetH2 })
   const [msg, setMsg] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
-  // Waar de video nu staat. Bij een bestand leest de speler dit zelf uit; bij YouTube weten we
-  // enkel waar we laatst naartoe sprongen (de iframe vertelt zijn positie niet).
+  // Waar de video nu staat, in de TIJDLIJN VAN CAMERA 1 (de gedeelde tijdlijn van alle markers).
+  // Kijk je naar camera 2, dan is dit de eigen positie min het geijkte tijdsverschil.
   const [pos, setPos] = useState(0)
-  // Videoduur (enkel gekend bij een bestand) — de schaal van de tijdlijnbalk.
+  // Duur van camera 1 (enkel gekend bij een bestand) — de schaal van de tijdlijnbalk. De duur
+  // van camera 2 is bewust géén schaal: de tijdlijn blijft die van de hoofdopname.
   const [dur, setDur] = useState<number | null>(null)
   // Is de aftrap van de 1e helft écht geijkt? (offsetH1 valt op 0 terug zolang dat niet zo is,
   // en dat verschil moet het sync-rapport net tonen.)
   const [h1Geijkt, setH1Geijkt] = useState(initialOffsetH1 != null)
-  // Uploadvoortgang in % (null = geen upload bezig). Via XHR, want fetch meldt geen zendvoortgang.
+  // Uploadvoortgang in % (null = geen upload bezig), plus voor welke camera die loopt.
   const [upPct, setUpPct] = useState<number | null>(null)
+  const [upCam, setUpCam] = useState<1 | 2>(1)
   const videoRef = useRef<HTMLVideoElement>(null)
   // Herlaad-sleutel voor de YouTube-iframe: bij elke sprong een nieuwe waarde → nieuwe start.
   const [ytSeek, setYtSeek] = useState(0)
 
+  // ── Tweede camera ──
+  const [url2, setUrl2] = useState(initialUrl2 ?? '')
+  const [offset2, setOffset2] = useState<number | null>(initialOffset2)
+  // Welke opname er in de speler staat. De tijdlijn en de voorstellen blijven op camera 1.
+  const [cam, setCam] = useState<1 | 2>(1)
+  // De ijk-flow voor het tijdsverschil: het moment (camera 1-tijd) dat we in camera 2 zoeken.
+  const [ijk2Start, setIjk2Start] = useState<number | null>(null)
+  // Na een camerawissel wil de speler op het overeenkomstige moment verder — pas te zetten
+  // zodra de nieuwe bron geladen is.
+  const wilNative = useRef<number | null>(null)
+
   const source = useMemo(() => parseVideoSource(url), [url])
   const isFile = source?.kind === 'file'
+  const source2 = useMemo(() => parseVideoSource(url2), [url2])
+  const isFile2 = source2?.kind === 'file'
+  // De bron die nú in de speler staat.
+  const kijkCam2 = cam === 2 && isFile2
+  const actieveSrc = kijkCam2 && source2 ? source2.src : isFile && source ? source.src : null
+  /** Eigen tijd van de actieve opname → camera 1-tijdlijn. */
+  const naarTijdlijn = useCallback(
+    (native: number) => (kijkCam2 ? native - (offset2 ?? 0) : native),
+    [kijkCam2, offset2],
+  )
+  /** Camera 1-tijdlijn → eigen tijd van de actieve opname. */
+  const naarNative = useCallback(
+    (t: number) => (kijkCam2 ? t + (offset2 ?? 0) : t),
+    [kijkCam2, offset2],
+  )
 
   // Andere video gekoppeld → de oude duur geldt niet meer als schaal voor de tijdlijnbalk.
   useEffect(() => {
@@ -191,31 +224,49 @@ export function VideoAnalyse({
     [matchId, router],
   )
 
-  /** Spring naar een videopositie (exact bij een bestand, herstart bij YouTube). */
+  /** Spring naar een positie op de camera 1-tijdlijn (exact bij een bestand, herstart bij
+   *  YouTube). Staat camera 2 in de speler, dan wordt er naar háár eigen tijd omgerekend. */
   const seek = useCallback(
     (seconds: number) => {
       const t = Math.max(0, seconds)
       setPos(t)
-      if (isFile && videoRef.current) {
-        videoRef.current.currentTime = t
+      if (actieveSrc && videoRef.current) {
+        videoRef.current.currentTime = Math.max(0, naarNative(t))
         void videoRef.current.play().catch(() => {})
       } else {
         setYtSeek((n) => n + 1)
       }
     },
-    [isFile],
+    [actieveSrc, naarNative],
   )
 
   /** Eén frame verspringen voor de CV-review (,/.): pauzeer en schuif exact op — enkel bij een
    *  videobestand, want alleen daar sturen we currentTime rechtstreeks aan. */
-  const frameStap = useCallback((deltaSeconds: number) => {
-    const v = videoRef.current
-    if (!v) return
-    v.pause()
-    const t = Math.max(0, v.currentTime + deltaSeconds)
-    v.currentTime = t
-    setPos(t)
-  }, [])
+  const frameStap = useCallback(
+    (deltaSeconds: number) => {
+      const v = videoRef.current
+      if (!v) return
+      v.pause()
+      const t = Math.max(0, v.currentTime + deltaSeconds)
+      v.currentTime = t
+      setPos(naarTijdlijn(t))
+    },
+    [naarTijdlijn],
+  )
+
+  /** Van opname wisselen, en op hetzelfde móment verdergaan (voor zover het verschil geijkt is). */
+  const wisselCamera = useCallback(
+    (naar: 1 | 2) => {
+      if (naar === cam) return
+      const v = videoRef.current
+      const huidigNative = v?.currentTime ?? 0
+      // Het gedeelde moment: eerst naar de tijdlijn van camera 1, dan naar de nieuwe opname.
+      const t = cam === 2 ? huidigNative - (offset2 ?? 0) : huidigNative
+      wilNative.current = Math.max(0, naar === 2 ? t + (offset2 ?? 0) : t)
+      setCam(naar)
+    },
+    [cam, offset2],
+  )
 
   const jumpTo = useCallback(
     (m: { half: number; gameClock: number }) => {
@@ -224,19 +275,23 @@ export function VideoAnalyse({
       // blijven staan ("ik klik en er gebeurt niets"). Zeg wat er scheelt: meestal staat de ijking
       // verkeerd, of is dit een fragment i.p.v. de volledige wedstrijd.
       const dur = videoRef.current?.duration
-      if (isFile && dur && Number.isFinite(dur) && t > dur) {
+      if (isFile && !kijkCam2 && dur && Number.isFinite(dur) && t > dur) {
         setMsg(`Dit moment valt op ${fmtVideoTime(t)}, voorbij het einde van de video (${fmtVideoTime(dur)}). Klopt de ijking van de aftrap?`)
         return
       }
       setMsg(null)
       seek(t)
     },
-    [seek, sync, halfSeconds, isFile],
+    [seek, sync, halfSeconds, isFile, kijkCam2],
   )
 
-  /** IJk: "de video staat nu precies op de aftrap van deze helft". */
+  /** IJk: "de video staat nu precies op de aftrap van deze helft" — altijd op de tijdlijn van
+   *  camera 1, ook als camera 2 in de speler staat (dan telt het geijkte verschil mee). */
   const calibrate = async (half: 1 | 2) => {
-    const at = Math.round(isFile ? (videoRef.current?.currentTime ?? pos) : pos)
+    const at = Math.round(
+      actieveSrc ? naarTijdlijn(videoRef.current?.currentTime ?? naarNative(pos)) : pos,
+    )
+    if (at < 0) return
     const key = half === 1 ? 'videoOffsetH1' : 'videoOffsetH2'
     const ok = await save({ [key]: at }, `Aftrap ${half}e helft geijkt op ${fmtVideoTime(at)}.`)
     if (ok) {
@@ -245,12 +300,35 @@ export function VideoAnalyse({
     }
   }
 
+  /** De ijk-flow voor camera 2, stap 1: dít moment (camera 1) gaan we in camera 2 zoeken. */
+  const startIjk2 = () => {
+    const t = videoRef.current?.currentTime ?? pos
+    setIjk2Start(cam === 2 ? naarTijdlijn(t) : t)
+    wisselCamera(2)
+    setMsg('Zoek nu hetzélfde moment in camera 2 (bv. de aftrap) en klik "Zelfde moment hier".')
+  }
+
+  /** Stap 2: de speler staat in camera 2 op datzelfde moment → het verschil ligt vast. */
+  const bevestigIjk2 = async () => {
+    if (ijk2Start == null) return
+    const t2 = videoRef.current?.currentTime ?? 0
+    const verschil = Math.round((t2 - ijk2Start) * 10) / 10
+    const ok = await save(
+      { video2OffsetS: verschil },
+      `Camera 2 geijkt: hetzelfde moment staat er ${Math.abs(verschil).toFixed(1)} s ${verschil >= 0 ? 'later' : 'vroeger'} op de band dan in camera 1.`,
+    )
+    if (ok) {
+      setOffset2(verschil)
+      setIjk2Start(null)
+    }
+  }
+
   /**
    * De volledige matchvideo uploaden naar de server (streamt daar meteen naar schijf).
    * Op een gsm is dit de gevoeligste stap: een wedstrijd van een uur is al snel honderden MB.
    * Daarom eerst controleren wat we hier al weten, i.p.v. na tien minuten een foutmelding.
    */
-  const upload = (f: File) => {
+  const upload = (f: File, camera: 1 | 2 = 1) => {
     const mb = f.size / (1024 * 1024)
     // Android's camera levert mp4; de server aanvaardt mp4 en webm. Andere formaten (bv. .mkv of
     // een .mov uit een iPhone-back-up) worden geweigerd — dat zeggen we meteen.
@@ -271,7 +349,8 @@ export function VideoAnalyse({
     }
     setMsg(null)
     setUpPct(0)
-    void uploadInStukken(f)
+    setUpCam(camera)
+    void uploadInStukken(f, camera)
   }
 
   /**
@@ -285,16 +364,17 @@ export function VideoAnalyse({
    * al aankwam blijft op de server staan. Kies je later hetzelfde bestand opnieuw, dan begint de
    * upload waar hij gebleven was in plaats van vooraan.
    */
-  const uploadInStukken = async (f: File) => {
+  const uploadInStukken = async (f: File, camera: 1 | 2 = 1) => {
     const type = f.type || 'video/mp4'
-    // Eén id per bestand (naam + grootte + wijzigingsdatum), zodat hetzelfde bestand opnieuw
-    // kiezen dezelfde upload voortzet en een ánder bestand een verse begint.
-    const uploadId = await bestandsSleutel(f, matchId)
+    // Eén id per bestand (naam + grootte + wijzigingsdatum + camera), zodat hetzelfde bestand
+    // opnieuw kiezen dezelfde upload voortzet en een ánder bestand een verse begint.
+    const uploadId = await bestandsSleutel(f, matchId, camera)
+    const camQ = camera === 2 ? '&camera=2' : ''
 
     // Staat er al iets van een vorige poging?
     let gedaan = 0
     try {
-      const res = await fetch(`/api/match/${matchId}/video/upload?uploadId=${uploadId}`, { credentials: 'include' })
+      const res = await fetch(`/api/match/${matchId}/video/upload?uploadId=${uploadId}${camQ}`, { credentials: 'include' })
       if (res.ok) gedaan = Number((await res.json()).bytes) || 0
     } catch {
       /* geen antwoord: gewoon vooraan beginnen */
@@ -310,7 +390,7 @@ export function VideoAnalyse({
       for (let poging = 0; poging < POGINGEN_PER_STUK && !gelukt; poging++) {
         if (poging > 0) await new Promise((r) => setTimeout(r, wachtNaPoging(poging - 1)))
         try {
-          const res = await fetch(`/api/match/${matchId}/video/upload`, {
+          const res = await fetch(`/api/match/${matchId}/video/upload?stuk=1${camQ}`, {
             method: 'POST',
             credentials: 'include',
             headers: {
@@ -341,11 +421,16 @@ export function VideoAnalyse({
           gelukt = true
           if (laatste && data.url) {
             setUpPct(null)
-            setUrl(data.url)
-            setDraftUrl(data.url)
-            const melding = 'Video geüpload en gekoppeld. IJk nu de aftrap van elke helft.'
-            setMsg(melding)
-            parkeerMelding(melding)
+            if (camera === 2) {
+              setUrl2(data.url)
+              setMsg('Tweede camera geüpload. IJk nu het tijdsverschil met camera 1 ("IJk camera 2") en zet haar eigen veldkalibratie.')
+            } else {
+              setUrl(data.url)
+              setDraftUrl(data.url)
+              const melding = 'Video geüpload en gekoppeld. IJk nu de aftrap van elke helft.'
+              setMsg(melding)
+              parkeerMelding(melding)
+            }
             // Zelfde reden als in save(): de vervolgstappen (kalibratie, server-analyse) zijn
             // serverblokken die er pas zijn als de server wéét dat er een video hangt.
             router.refresh()
@@ -443,7 +528,7 @@ export function VideoAnalyse({
           )}
           <div className="va-setup">
             <label className={`va-btn va-upload${leeg ? ' primary' : ''}`}>
-              {upPct === null ? '⬆ Video uploaden' : `Uploaden… ${upPct}%`}
+              {upPct === null ? '⬆ Video uploaden' : `Uploaden… ${upPct}%${upCam === 2 ? ' (camera 2)' : ''}`}
               <input
                 type="file"
                 accept="video/mp4,video/webm,video/*"
@@ -469,6 +554,44 @@ export function VideoAnalyse({
               {url ? 'Bijwerken' : 'Koppelen'}
             </button>
           </div>
+          {/* De tweede camera: pas zinvol als de hoofdopname er als bestand staat. Eén veld van
+              46 m past zelden in één beeld — wie beide kanten filmt, hangt de tweede opname hier
+              en ijkt daarna het tijdsverschil (knop bij de speler). */}
+          {isFile && (
+            <div className="va-setup">
+              <label className="va-btn va-upload">
+                {url2 ? '⬆ Tweede camera vervangen' : '⬆ Tweede camera (andere kant van het veld)'}
+                <input
+                  type="file"
+                  accept="video/mp4,video/webm,video/*"
+                  disabled={upPct !== null}
+                  onChange={(e) => {
+                    const f = e.target.files?.[0]
+                    e.target.value = ''
+                    if (f) upload(f, 2)
+                  }}
+                />
+              </label>
+              {url2 && (
+                <button
+                  type="button"
+                  className="va-btn"
+                  disabled={busy}
+                  onClick={() => {
+                    void save({ video2Url: null, video2OffsetS: null }, 'Tweede camera losgekoppeld.').then((ok) => {
+                      if (ok) {
+                        setUrl2('')
+                        setOffset2(null)
+                        setCam(1)
+                      }
+                    })
+                  }}
+                >
+                  ✕ Loskoppelen
+                </button>
+              )}
+            </div>
+          )}
         </>
       )}
 
@@ -493,17 +616,43 @@ export function VideoAnalyse({
         </p>
       ) : (
         <>
+          {/* Camerawissel: de tijdlijn en de markers blijven op camera 1; de speler toont wat
+              jij wil zien. Springen werkt in beide — via het geijkte tijdsverschil. */}
+          {isFile && isFile2 && (
+            <div className="va-cams" role="tablist" aria-label="Welke camera">
+              <button type="button" className={`va-btn small${cam === 1 ? ' aan' : ''}`} onClick={() => wisselCamera(1)}>
+                🎥 Camera 1
+              </button>
+              <button type="button" className={`va-btn small${cam === 2 ? ' aan' : ''}`} onClick={() => wisselCamera(2)}>
+                🎥 Camera 2
+              </button>
+              {offset2 == null && (
+                <span className="va-hint va-hint-sm">tijdsverschil nog niet geijkt — springen tussen camera's is dan een gok</span>
+              )}
+            </div>
+          )}
           <div className="va-player">
             {source.kind === 'file' ? (
               <video
                 ref={videoRef}
+                key={actieveSrc ?? 'geen'}
                 className="va-video"
-                src={source.src}
+                src={actieveSrc ?? undefined}
                 controls
                 playsInline
                 preload="metadata"
-                onTimeUpdate={(e) => setPos(e.currentTarget.currentTime)}
-                onDurationChange={(e) => setDur(e.currentTarget.duration)}
+                onTimeUpdate={(e) => setPos(naarTijdlijn(e.currentTarget.currentTime))}
+                onDurationChange={(e) => {
+                  // Enkel camera 1 bepaalt de schaal van de tijdlijnbalk.
+                  if (!kijkCam2) setDur(e.currentTarget.duration)
+                }}
+                onLoadedMetadata={(e) => {
+                  // Na een camerawissel: op het overeenkomstige moment verdergaan.
+                  if (wilNative.current != null) {
+                    e.currentTarget.currentTime = wilNative.current
+                    wilNative.current = null
+                  }
+                }}
               />
             ) : (
               <iframe
@@ -535,6 +684,8 @@ export function VideoAnalyse({
                 // tijdstip (zelfde grens als de kalibratie).
                 videoSrc={isFile && source ? source.src : null}
                 duurS={dur}
+                video2Src={isFile2 && source2 ? source2.src : null}
+                video2OffsetS={offset2}
               >
               <div className="va-tl-track" aria-label="Alle worpen op de videotijdlijn">
                 <span className="va-tl-half" style={{ left: tlPct(sync.offsetH1) }} aria-hidden>
@@ -593,16 +744,56 @@ export function VideoAnalyse({
             </span>
             {canEdit && (
               <span className="va-cal">
-                <button type="button" className="va-btn small" onClick={() => void calibrate(1)} disabled={busy} title="De video staat nu op de aftrap van de 1e helft">
+                <button
+                  type="button"
+                  className="va-btn small"
+                  onClick={() => void calibrate(1)}
+                  disabled={busy || (kijkCam2 && offset2 == null)}
+                  title={kijkCam2 && offset2 == null ? 'IJk eerst het tijdsverschil van camera 2' : 'De video staat nu op de aftrap van de 1e helft'}
+                >
                   IJk H1 hier
                 </button>
-                <button type="button" className="va-btn small" onClick={() => void calibrate(2)} disabled={busy} title="De video staat nu op de aftrap van de 2e helft">
+                <button
+                  type="button"
+                  className="va-btn small"
+                  onClick={() => void calibrate(2)}
+                  disabled={busy || (kijkCam2 && offset2 == null)}
+                  title={kijkCam2 && offset2 == null ? 'IJk eerst het tijdsverschil van camera 2' : 'De video staat nu op de aftrap van de 2e helft'}
+                >
                   IJk H2 hier
                 </button>
+                {isFile2 && ijk2Start == null && (
+                  <button
+                    type="button"
+                    className="va-btn small"
+                    onClick={startIjk2}
+                    disabled={busy}
+                    title="Zet de speler op een herkenbaar moment (bv. de aftrap), klik hier, en zoek datzelfde moment daarna in camera 2"
+                  >
+                    IJk camera 2
+                  </button>
+                )}
+                {isFile2 && ijk2Start != null && (
+                  <>
+                    <button
+                      type="button"
+                      className="va-btn small primary"
+                      onClick={() => void bevestigIjk2()}
+                      disabled={busy || cam !== 2}
+                      title="Camera 2 staat nu op hetzelfde moment als waar je in camera 1 klikte"
+                    >
+                      Zelfde moment hier
+                    </button>
+                    <button type="button" className="va-btn small" onClick={() => setIjk2Start(null)} disabled={busy}>
+                      annuleer
+                    </button>
+                  </>
+                )}
               </span>
             )}
             <span className="va-synced">
               H1 {fmtVideoTime(sync.offsetH1)} · H2 {sync.offsetH2 == null ? 'geschat' : fmtVideoTime(sync.offsetH2)}
+              {url2 ? ` · cam 2 ${offset2 == null ? 'niet geijkt' : `Δ ${offset2.toFixed(1)} s`}` : ''}
             </span>
           </div>
 

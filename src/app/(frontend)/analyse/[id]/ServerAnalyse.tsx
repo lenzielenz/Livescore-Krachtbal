@@ -34,6 +34,10 @@ type Stand = {
     duurS?: number
     metingenPerS?: number
     overgeslagen?: string[]
+    /** Bij twee camera's: wat de tweede kant zag en hoeveel er als dezelfde worp herkend is. */
+    detectiesCamera2?: number
+    ontdubbeld?: number
+    buitenTijdlijn?: number
   }
   instellingen?: { stand: string; bewegend: boolean; tracking: boolean; overlay: boolean }
 }
@@ -345,6 +349,19 @@ export function ServerAnalyse({ matchId, heeftVideo }: { matchId: number; heeftV
                   {s.rapport.duurS != null && s.rapport.bekekenS < 0.9 * s.rapport.duurS && (
                     <strong> Een deel van de opname kon niet gelezen worden.</strong>
                   )}
+                </p>
+              )}
+              {s.rapport?.detectiesCamera2 != null && (
+                <p className="sa-hint">
+                  🎥 Twee camera&apos;s samengevoegd: camera 2 zag {s.rapport.detectiesCamera2}{' '}
+                  {s.rapport.detectiesCamera2 === 1 ? 'detectie' : 'detecties'}
+                  {s.rapport.ontdubbeld
+                    ? `, ${s.rapport.ontdubbeld} ${s.rapport.ontdubbeld === 1 ? 'worp die' : 'worpen die'} beide camera's zagen ${s.rapport.ontdubbeld === 1 ? 'telt' : 'tellen'} één keer`
+                    : ''}
+                  {s.rapport.buitenTijdlijn
+                    ? `; ${s.rapport.buitenTijdlijn} viel(en) vóór het begin van camera 1`
+                    : ''}
+                  .
                 </p>
               )}
               {s.rapport?.overgeslagen?.length ? (
