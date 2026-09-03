@@ -471,6 +471,9 @@ body.kb-scherm .site-foot { display: none; }
   align-items: center;
   gap: 6px;
   padding: 10px 16px;
+  /* Met 0.88rem + 10px padding komt de knop op 40px; de 44px-richtlijn voor aanraakdoelen
+     haalt hij pas met deze ondergrens. */
+  min-height: 44px;
   border-radius: var(--r-pill);
   border: 1px solid var(--line);
   background: var(--panel);
