@@ -295,6 +295,22 @@ export const Users: CollectionConfig = {
       },
     },
     {
+      // Aantekenrechten voor tornooien: op een tornooidag zit er iemand achter de tafel die geen
+      // scheidsrechter en geen federatielid is (een ouder, een ploegverantwoordelijke). Bewust
+      // géén bestaande rol: élk vers account krijgt standaard 'scorekeeper', dus die zou het
+      // recht aan iedereen geven. Zie magTornooiAantekenen in lib/access.ts.
+      name: 'aantekenRechten',
+      label: 'Tornooi-aantekenrechten',
+      type: 'checkbox',
+      defaultValue: false,
+      admin: {
+        description: 'Dit account mag tornooiwedstrijden aantekenen (starten, scoren, beëindigen). Een tornooi aanmaken of loten blijft bij de federatie.',
+      },
+      access: {
+        update: ({ req }) => hasRole(req.user, 'admin'),
+      },
+    },
+    {
       // Koppelt een scheidsrechter-account aan zijn/haar official-dossier, zodat hij enkel z'n
       // EIGEN kwitantie/forfaitblad kan ophalen en enkel toegewezen wedstrijden kan tekenen
       // (voorkomt IDOR op financiële PII — zie AUDIT-2026-06.md §4/§5).

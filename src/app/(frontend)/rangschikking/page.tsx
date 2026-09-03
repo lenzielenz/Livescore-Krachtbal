@@ -7,7 +7,8 @@ import { getAuthUser } from '@/lib/auth-user'
 import { clinchStatus, titelBoodschap } from '@/lib/championship'
 import { buildScoreboards, clubColors, clubLogoFit, clubLogoUrl } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
-import { COMPETITIE_REEKSEN, isAdultReeks, reeksNaam, type Reeks } from '@/lib/reeksen'
+import { reeksenMetData } from '@/lib/analyse-season'
+import { isAdultReeks, reeksNaam, type Reeks } from '@/lib/reeksen'
 import { buildSuperstars } from '@/lib/superstars'
 import { computeStandings, forfaitFromUitslag, type StandingsMatch } from '@/lib/standings'
 import { RangTable, type RangRow } from './RangTable'
@@ -27,18 +28,24 @@ export default async function RangschikkingPage({ searchParams }: { searchParams
   const { reeks: reeksParam } = await searchParams
   const payload = await getPayloadClient()
 
+  // Enkel reeksen waarin effectief een ploeg speelt. De federatie-indeling telt 27 reeksen; wie
+  // door een keuzelijst vol lege reeksen moet, vindt zijn eigen reeks niet. Zonder ploegen valt
+  // de lijst terug op de volledige indeling, zodat de keuze nooit leeg staat.
+  const reeksen = await reeksenMetData(payload, competitionWhere())
+  const bekend = (x: unknown): x is string => typeof x === 'string' && reeksen.some((o) => o.value === x)
+
   // Ingelogd? Onthoud de eigen club (voor de standaardreeks + de highlight).
   const myClub = userClubId(await getAuthUser())
   const myClubNum = myClub == null ? null : Number(myClub)
 
   // Standaardreeks: gevraagde reeks → anders de reeks van je eigen club → anders de
   // reeks van de recentste afgelopen wedstrijd → anders de hoogste reeks.
-  let reeks = typeof reeksParam === 'string' && COMPETITIE_REEKSEN.some((o) => o.value === reeksParam) ? reeksParam : null
+  let reeks: string | null = bekend(reeksParam) ? reeksParam : null
   if (!reeks && myClubNum != null) {
     const myTeam = await payload
       .find({ collection: 'teams', where: { and: [{ club: { equals: myClubNum } }, competitionWhere()] }, depth: 0, limit: 50 })
       .catch(() => ({ docs: [] as { reeks?: unknown }[] }))
-    const r = myTeam.docs.map((t) => t.reeks).find((x) => COMPETITIE_REEKSEN.some((o) => o.value === x))
+    const r = myTeam.docs.map((t) => t.reeks).find(bekend)
     if (typeof r === 'string') reeks = r
   }
   if (!reeks) {
@@ -46,7 +53,7 @@ export default async function RangschikkingPage({ searchParams }: { searchParams
       .find({ collection: 'matches', where: { and: [{ status: { equals: 'finished' } }, competitionWhere()] }, sort: '-date', depth: 0, limit: 1 })
       .catch(() => ({ docs: [] as { reeks?: unknown }[] }))
     const r = latest.docs[0]?.reeks
-    reeks = typeof r === 'string' && COMPETITIE_REEKSEN.some((o) => o.value === r) ? r : COMPETITIE_REEKSEN[0].value
+    reeks = bekend(r) ? r : reeksen[0].value
   }
 
   // Ploegen van de reeks: namen/logo's + zorgt dat ploegen zonder wedstrijden ook in de tabel staan.
@@ -167,9 +174,9 @@ export default async function RangschikkingPage({ searchParams }: { searchParams
   const topscorers = (await buildSuperstars(payload, reeks).catch(() => [])).slice(0, 5)
 
   // Snel bladeren door de reeksen-rangschikkingen (prev/next).
-  const idx = COMPETITIE_REEKSEN.findIndex((o) => o.value === reeks)
-  const prevReeks = idx > 0 ? COMPETITIE_REEKSEN[idx - 1].value : null
-  const nextReeks = idx >= 0 && idx < COMPETITIE_REEKSEN.length - 1 ? COMPETITIE_REEKSEN[idx + 1].value : null
+  const idx = reeksen.findIndex((o) => o.value === reeks)
+  const prevReeks = idx > 0 ? reeksen[idx - 1].value : null
+  const nextReeks = idx >= 0 && idx < reeksen.length - 1 ? reeksen[idx + 1].value : null
 
   return (
     <>
@@ -182,7 +189,7 @@ export default async function RangschikkingPage({ searchParams }: { searchParams
           ) : (
             <span className="rang-arrow disabled" aria-hidden>‹</span>
           )}
-          <ReeksPicker reeks={reeks} options={[...COMPETITIE_REEKSEN]} />
+          <ReeksPicker reeks={reeks} options={reeksen} />
           {nextReeks ? (
             <Link href={`/rangschikking?reeks=${nextReeks}`} className="rang-arrow" aria-label="Volgende reeks">›</Link>
           ) : (

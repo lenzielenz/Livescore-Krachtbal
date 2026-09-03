@@ -1,5 +1,5 @@
-import { isFederationLevel } from '@/lib/access'
-import { authUser, requireRole } from '@/lib/api-auth'
+import { isFederationLevel, magTornooiAantekenen } from '@/lib/access'
+import { authUser } from '@/lib/api-auth'
 import { withLock } from '@/lib/async-mutex'
 import { getPayloadClient } from '@/lib/payload-client'
 import {
@@ -45,12 +45,15 @@ export async function POST(
   try {
     const payload = await getPayloadClient()
 
-    // Supporters mogen niets aanpassen aan een tornooi: enkel de organisatie (federatie/admin,
-    // via requireRole altijd toegelaten) en de aangestelde scheidsrechters tekenen aan.
+    // Supporters mogen niets aanpassen aan een tornooi: enkel de organisatie (federatie/admin), de
+    // aangestelde scheidsrechters, en wie van de admin uitdrukkelijk aantekenrechten kreeg —
+    // op een tornooidag zit er vaak een vrijwilliger achter de tafel. Zie magTornooiAantekenen.
     // Let op: élk vers lid krijgt standaard de basisrol 'scorekeeper' — die volstaat hier dus niet.
     const user = await authUser(payload, req)
-    const denied = requireRole(user, 'scheidsrechter')
-    if (denied) return denied
+    if (!user) return Response.json({ error: 'Niet ingelogd.' }, { status: 401 })
+    if (!magTornooiAantekenen(user)) {
+      return Response.json({ error: 'Geen aantekenrechten voor tornooien.' }, { status: 403 })
+    }
 
     // Serialiseer mutaties op dezelfde tornooiwedstrijd (voorkomt verloren doelpunten, AUDIT §2).
     return await withLock(`tmatch:${matchId}`, async () => {

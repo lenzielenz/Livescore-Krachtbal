@@ -11,6 +11,7 @@ type Account = {
   clubId: number | null
   analyseAccess: boolean
   trainingAccess: boolean
+  aantekenRechten: boolean
   officialId: number | null
   analyseCount: number
 }
@@ -54,6 +55,7 @@ function AccountRow({ acc, clubs, officials, roleOptions }: { acc: Account; club
   const [officialId, setOfficialId] = useState<string>(acc.officialId != null ? String(acc.officialId) : '')
   const [analyse, setAnalyse] = useState<boolean>(acc.analyseAccess)
   const [training, setTraining] = useState<boolean>(acc.trainingAccess)
+  const [aantekenen, setAantekenen] = useState<boolean>(acc.aantekenRechten)
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
 
@@ -63,7 +65,8 @@ function AccountRow({ acc, clubs, officials, roleOptions }: { acc: Account; club
     clubId !== (acc.clubId != null ? String(acc.clubId) : '') ||
     officialId !== (acc.officialId != null ? String(acc.officialId) : '') ||
     analyse !== acc.analyseAccess ||
-    training !== acc.trainingAccess
+    training !== acc.trainingAccess ||
+    aantekenen !== acc.aantekenRechten
 
   const toggle = (r: string) => {
     setMsg(null)
@@ -79,7 +82,7 @@ function AccountRow({ acc, clubs, officials, roleOptions }: { acc: Account; club
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ userId: acc.id, roles, clubId: clubId || null, officialId: officialId || null, analyseAccess: analyse, trainingAccess: training }),
+        body: JSON.stringify({ userId: acc.id, roles, clubId: clubId || null, officialId: officialId || null, analyseAccess: analyse, trainingAccess: training, aantekenRechten: aantekenen }),
       })
       const data = (await res.json().catch(() => ({}))) as { error?: string }
       if (!res.ok) setMsg(data.error ?? 'Bewaren mislukt.')
@@ -89,6 +92,7 @@ function AccountRow({ acc, clubs, officials, roleOptions }: { acc: Account; club
         acc.officialId = officialId ? Number(officialId) : null
         acc.analyseAccess = analyse
         acc.trainingAccess = training
+        acc.aantekenRechten = aantekenen
         setMsg('✓ Bewaard')
       }
     } catch {
@@ -138,6 +142,16 @@ function AccountRow({ acc, clubs, officials, roleOptions }: { acc: Account; club
           title="Toegang tot het trainingsluik (progressie + aanwezigheid)"
         >
           🏋️ Training
+        </button>
+        {/* Tornooiwedstrijden mogen aantekenen zonder scheidsrechter of federatielid te zijn —
+            voor de vrijwilliger die op een tornooidag achter de tafel zit. */}
+        <button
+          type="button"
+          className={`acc-chip ${aantekenen ? 'on' : ''}`}
+          onClick={() => { setMsg(null); setAantekenen((v) => !v) }}
+          title="Mag tornooiwedstrijden aantekenen (starten, scoren, beëindigen). Een tornooi aanmaken of loten blijft bij de federatie."
+        >
+          ✏️ Aantekenen
         </button>
         <select className="acc-club" value={clubId} onChange={(e) => { setMsg(null); setClubId(e.target.value) }} aria-label="Club">
           <option value="">— Geen club —</option>

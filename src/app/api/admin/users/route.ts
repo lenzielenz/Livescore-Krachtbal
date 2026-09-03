@@ -50,9 +50,12 @@ export async function POST(req: Request) {
 
   const analyseAccess = Boolean(body.analyseAccess)
   const trainingAccess = Boolean(body.trainingAccess)
+  // Aantekenrechten voor tornooien: bewust een eigen recht en geen rol — élk vers account krijgt
+  // standaard de rol 'scorekeeper', dus die zou het aan iedereen geven.
+  const aantekenRechten = Boolean(body.aantekenRechten)
 
   // Scheidsrechtersdossier (official) koppelen — enkel meesturen als het veld aanwezig is.
-  const data: Record<string, unknown> = { roles: roles as UserRole[], club, analyseAccess, trainingAccess }
+  const data: Record<string, unknown> = { roles: roles as UserRole[], club, analyseAccess, trainingAccess, aantekenRechten }
   if ('officialId' in body) {
     let official: number | null = null
     if (body.officialId != null && body.officialId !== '') {

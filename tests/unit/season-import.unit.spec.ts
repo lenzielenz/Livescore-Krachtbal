@@ -134,8 +134,24 @@ describe('clubVanPloeg', () => {
     expect(clubVanPloeg('KV Roeselare A')).toBe('KV Roeselare')
     expect(clubVanPloeg('KBK Temse B')).toBe('KBK Temse')
   })
+  it('haalt ook letter-plus-nummer eraf (eerste ploeg / beloften)', () => {
+    // De indeling van de federatie: "A-1" is de eerste ploeg, "B-2" de beloften. Zonder deze regel
+    // werden dat drie clubs voor één vereniging — elk met een eigen, leeg logo.
+    expect(clubVanPloeg('KBC St. Michiels A-1')).toBe('KBC St. Michiels')
+    expect(clubVanPloeg('KBC St. Michiels B-2')).toBe('KBC St. Michiels')
+    expect(clubVanPloeg('KBC St. Michiels B')).toBe('KBC St. Michiels')
+    expect(clubVanPloeg('KV Roeselare A1')).toBe('KV Roeselare')
+    expect(clubVanPloeg('KBC Male C - 3')).toBe('KBC Male')
+  })
   it('laat een gewone naam met rust', () => {
     expect(clubVanPloeg('KBC St. Michiels')).toBe('KBC St. Michiels')
+    expect(clubVanPloeg('Atlas Varsenare')).toBe('Atlas Varsenare')
+    expect(clubVanPloeg('D&W Koekelare')).toBe('D&W Koekelare')
+    expect(clubVanPloeg('T Botterken Baasrode')).toBe('T Botterken Baasrode')
+  })
+  it('ziet een categorie niet aan voor een ploegkenmerk', () => {
+    // "U14"/"U16" is een leeftijdscategorie, geen poule-letter; die hoort bij de reeks.
+    expect(clubVanPloeg('KBC Heist U16')).toBe('KBC Heist U16')
   })
 })
 

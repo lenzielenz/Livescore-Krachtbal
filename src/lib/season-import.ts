@@ -258,9 +258,19 @@ export function resolveReeks(raw: string): Reeks | null {
 /** Vergelijkingssleutel voor namen: hoofdletters, spaties en leestekens doen er niet toe. */
 export const naamSleutel = (s: string) => String(s ?? '').toLowerCase().replace(/[^a-z0-9]/g, '')
 
-/** De club achter een ploegnaam: het poule-achtervoegsel (" A", " B" …) hoort bij de ploeg. */
+/**
+ * De club achter een ploegnaam: het ploegkenmerk aan het einde hoort bij de ploeg, niet bij de club.
+ *
+ * De federatie schrijft dat kenmerk op twee manieren: een poule-letter (" A", " B") en — sinds de
+ * indeling met eerste ploegen en beloften — letter-plus-nummer (" A-1", " B-2", soms " A1"). Wie
+ * enkel de losse letter afhaalt, maakt van "KBC St. Michiels A-1" en "KBC St. Michiels B-2" twee
+ * clubs náást "KBC St. Michiels": drie clubs voor één vereniging, elk met een eigen (leeg) logo.
+ * Precies dat gebeurde. Enkel A–F als letter: "U14"/"U16" is een categorie en blijft staan.
+ */
+export const PLOEGKENMERK = /\s+[A-F](?:\s?-\s?\d{1,2}|\d{1,2})?$/i
+
 export function clubVanPloeg(ploeg: string): string {
-  return cleanTeamName(String(ploeg ?? '').replace(/\s+[A-D]$/i, '').trim())
+  return cleanTeamName(String(ploeg ?? '').replace(PLOEGKENMERK, '').trim())
 }
 
 // Vrije weekends staan als "vrij"/"bye" in het schema, soms met een poule-letter erbij

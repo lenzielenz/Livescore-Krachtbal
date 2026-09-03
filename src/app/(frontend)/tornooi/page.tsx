@@ -1,7 +1,7 @@
 import Link from 'next/link'
 
 import { SiteHeader } from '@/components/SiteHeader'
-import { hasRole, isFederationLevel } from '@/lib/access'
+import { isFederationLevel, magTornooiAantekenen } from '@/lib/access'
 import { CATEGORY_OPTIONS } from '@/lib/categories'
 import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
@@ -23,7 +23,7 @@ export default async function TornooiHub() {
   // De uitleg over aantekenen is voor wie het ook mág doen — dezelfde kring die op het
   // dagprogramma een Aantekenen-knop ziet (zie tornooi/[id]/page.tsx). Een supporter komt hier
   // om het schema te volgen; die heeft niets aan een handleiding voor de tafel.
-  const magAantekenen = isFederationLevel(user) || hasRole(user, 'scheidsrechter')
+  const magAantekenen = magTornooiAantekenen(user)
   const res = await payload
     .find({ collection: 'tournaments', sort: '-createdAt', depth: 0, limit: 100 })
     .catch(() => ({ docs: [] as Array<{ id: number; name: string; category: string; status: string; teamCount?: number | null }> }))

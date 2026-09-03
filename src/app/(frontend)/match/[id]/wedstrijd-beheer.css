@@ -1,0 +1,132 @@
+/* Beheerblok onderaan de wedstrijdpagina: tijdstip en ploegnaam/club rechtzetten. Bewust rustig
+   en niet in het accent — het is gereedschap voor één persoon, geen deel van het scorebord. */
+.wb-beheer {
+  margin: 28px 0 0;
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  background: var(--panel-grad, var(--panel));
+  box-shadow: var(--card-shadow);
+}
+.wb-beheer-h {
+  margin: 0 0 4px;
+  font-family: var(--font-display), system-ui, sans-serif;
+  font-size: 1.02rem;
+  font-weight: 800;
+}
+.wb-beheer-sub {
+  margin: 0 0 14px;
+  color: var(--dim);
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+.wb-beheer-rij + .wb-beheer-rij {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+.wb-beheer-lbl {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--dim-strong, #cad2dc);
+}
+.wb-beheer-velden {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+}
+.wb-beheer-veld {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  /* Zonder dit duwt een lang veld de knop van de regel: flex-items mogen standaard niet kleiner
+     worden dan hun inhoud. */
+  min-width: 0;
+  flex: 0 1 auto;
+}
+.wb-beheer-veld.breed {
+  flex: 1 1 12rem;
+}
+.wb-beheer-veld > span {
+  font-size: 0.76rem;
+  color: var(--dim);
+}
+.wb-beheer-veld input,
+.wb-beheer-veld select {
+  padding: 10px 12px;
+  border-radius: var(--r-control);
+  border: 1px solid color-mix(in srgb, #fff 8%, var(--line));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 88%, #fff 12%), var(--panel));
+  color: var(--txt);
+  font: inherit;
+  /* Minstens 16px: Safari op iOS zoomt de pagina in zodra een veld met kleinere tekst focus krijgt. */
+  font-size: 1rem;
+  min-width: 0;
+}
+.wb-beheer-veld input:focus,
+.wb-beheer-veld select:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--accent) 60%, var(--line));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+.wb-beheer-btn {
+  flex: 0 0 auto;
+  padding: 10px 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-control);
+  background: var(--panel);
+  color: var(--txt);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color var(--dur-1) var(--ease-soft), transform var(--dur-1) var(--ease-out);
+}
+.wb-beheer-btn.primair {
+  background: var(--grad-accent, var(--accent));
+  border-color: transparent;
+  color: #06140d;
+}
+.wb-beheer-btn:not(:disabled):hover {
+  transform: translateY(-1px);
+}
+.wb-beheer-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.wb-beheer-tip {
+  margin: 8px 0 0;
+  font-size: 0.8rem;
+  color: var(--dim-strong, #cad2dc);
+  line-height: 1.45;
+}
+.wb-beheer-tip.dim {
+  color: var(--dim);
+  font-size: 0.76rem;
+}
+/* Een knop die als link leest: hij verandert enkel de keuze in het formulier, hij slaat niets op. */
+.wb-beheer-link {
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-weight: 700;
+  color: var(--accent);
+  cursor: pointer;
+  text-decoration: underline;
+}
+.wb-beheer-melding {
+  margin: 14px 0 0;
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+.wb-beheer-melding.ok {
+  color: var(--home);
+}
+.wb-beheer-melding.fout {
+  color: var(--pop);
+}
