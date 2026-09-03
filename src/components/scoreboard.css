@@ -510,6 +510,12 @@
 /* Afgelopen wedstrijd: de klok toont de vastgezette eindtijd, met een duidelijk eind-label. */
 .sb-clock.done { color: var(--dim-strong); border-color: var(--line); background: color-mix(in srgb, #fff 4%, transparent); }
 .sb-final { font-size: 0.8rem; font-weight: 800; color: var(--accent); text-transform: uppercase; letter-spacing: 0.06em; }
+/* Op gsm dwong "AFGELOPEN · EINDSTAND" (179px op één regel) de middenkolom breed, waardoor de
+   ploegnamen ernaast op 68px over vier regels braken. Twee regels voor het label geeft de namen
+   hun ruimte terug. */
+@media (max-width: 480px) {
+  .sb-final { white-space: normal; max-width: 7.5rem; line-height: 1.25; }
+}
 
 .sb-dots { display: inline-flex; gap: 5px; }
 .sb-dot { width: 9px; height: 9px; border-radius: 50%; border: 1px solid var(--line); background: transparent; }

@@ -240,7 +240,9 @@
     radial-gradient(1150px 660px at 50% -10%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 60%),
     radial-gradient(900px 560px at 92% 100%, color-mix(in srgb, var(--pop, #ff5d6c) 12%, transparent), transparent 60%),
     linear-gradient(180deg, #0c0e12 0%, #070809 100%);
-  padding: 20px 20px 0;
+  /* Bovenaan ruimte voor de vaste knoppen ("‹ Aanpassen" links, casten rechts): met 20px lag
+     het eerste bord er half onder en liep de kaderlijn door de knop. */
+  padding: 46px 20px 0;
 }
 /* Het bordenraster krijgt wat overblijft, de sponsorbalk houdt haar plek onderaan. `min-height: 0`
    is hier geen detail: zonder dat weigert een flex-item te krimpen en duwt het raster de balk

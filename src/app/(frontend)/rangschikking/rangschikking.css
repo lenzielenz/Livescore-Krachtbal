@@ -102,7 +102,9 @@
 .rang-rank {
   width: 34px;
 }
-.rang-teamh {
+/* Met `.rang-table th` als element+klasse-selector won die op specificiteit, en stond "PLOEG"
+   gecentreerd boven een kolom vol links uitgelijnde namen. */
+.rang-table th.rang-teamh {
   text-align: left;
 }
 .rang-team {
@@ -184,9 +186,11 @@
     width: 30px;
   }
   /* De laatste kolom (PTN) vulde met 2px padding zijn 30px precies, zodat de kop tegen de
-     kaartrand plakte. Een tikje breder met wat ademruimte rechts; de ploegnaam levert die in. */
-  .rang-table th:last-child,
-  .rang-table td:last-child {
+     kaartrand plakte. Een tikje breder met wat ademruimte rechts; de ploegnaam levert die in.
+     Dezelfde :not()-ketting als de regel erboven, anders wint die op specificiteit en landt
+     enkel de padding — die de tekst dan juist verder kneep. */
+  .rang-table th:not(.rang-teamh):not(.rang-rank):last-child,
+  .rang-table td:not(.rang-team):not(.rang-rank):last-child {
     width: 38px;
     padding-right: 8px;
   }

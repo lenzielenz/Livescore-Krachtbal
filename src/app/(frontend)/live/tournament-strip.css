@@ -14,7 +14,10 @@
 .tstrip-name { display: inline-flex; align-items: center; gap: 4px; font-weight: 800; font-size: 0.9rem; color: var(--accent); text-decoration: none; }
 .tstrip-name:hover { text-decoration: underline; }
 .tstrip-arrow { color: var(--dim); }
-.tstrip-matches { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 6px; margin-top: 6px; }
+/* auto-fit i.p.v. auto-fill: met twee wedstrijden op een breed scherm maakte auto-fill lege sporen
+   aan, bleef elke chip ±230px en werden de clubnamen afgekapt naast 1200px vrije ruimte. Sporen
+   groeien nu tot 360px — ruim voor een clubnaam, niet zo breed dat een chip een balk wordt. */
+.tstrip-matches { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 360px)); gap: 6px; margin-top: 6px; }
 .tstrip-m {
   display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px;
   padding: 8px 11px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel);

@@ -435,6 +435,13 @@ button.trn-toplink {
   color: var(--dim);
   margin: 0 0 10px;
 }
+/* Op het dagprogramma wordt deze kolomkop hergebruikt als sectiekop "Alle wedstrijden" boven de
+   lijst. Gecentreerd en zonder bovenmarge stond hij als een verdwaalde regel tussen intro en
+   kaarten, terwijl al de rest daar links uitgelijnd is. */
+.dp-lijst > .trn-col-title {
+  text-align: left;
+  margin: 18px 0 10px;
+}
 .trn-col-body {
   flex: 1 1 auto;
   display: flex;
@@ -1449,7 +1456,8 @@ button.trn-toplink {
   font-size: clamp(3.4rem, 15vmin, 12rem);
   background: linear-gradient(180deg, #ffffff, color-mix(in srgb, var(--txt) 70%, #9fb4ab));
   -webkit-background-clip: text; background-clip: text; color: transparent;
-  filter: drop-shadow(0 0.05em 0.3em rgba(0, 0, 0, 0.5));
+  /* Geen drop-shadow op tekst met background-clip: Chrome tekent dan de schaduw van de hele
+     (ongeclipte) verloopdoos, wat op een donkere tv als een vage rechthoek rond het woord staat. */
 }
 .gk-aftel-nu { font-size: clamp(2rem, 8vmin, 6rem); }
 /* Zelfde breedte als het uitslagenraster eronder: anders lopen de randen van de affiche en de

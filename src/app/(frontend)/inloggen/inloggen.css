@@ -1,6 +1,8 @@
 .login-wrap {
   position: relative;
-  min-height: calc(100dvh - 56px);
+  /* Header (56px) én voettekst (±40px) aftrekken: met enkel de header was de pagina op gsm
+     39px hoger dan het scherm en viel de voettekst half onder de vouw. */
+  min-height: calc(100dvh - 96px);
   display: grid;
   place-items: center;
   padding: 28px 16px 72px;
