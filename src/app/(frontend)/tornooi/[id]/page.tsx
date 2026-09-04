@@ -5,6 +5,7 @@ import { competitionWhere } from '@/lib/analyse-access'
 import { getAuthUser } from '@/lib/auth-user'
 import { type LogoFit, normalizeLogoFit } from '@/lib/logo-fit'
 import { getPayloadClient } from '@/lib/payload-client'
+import { isSupportersMode } from '@/lib/score-mode'
 import { kantinePadVoor } from '@/lib/tornooi-paden'
 import { reeksPronostiekStand } from '@/lib/tornooi-pronostiek'
 import { buildTournamentState } from '@/lib/tournament-engine'
@@ -39,7 +40,13 @@ export default async function TornooiPage({ params }: { params: Promise<{ id: st
   // Twee verschillende rechten, en die liepen hier door elkaar. Aantekenen (starten, scoren,
   // beëindigen) mag ook een vrijwilliger met aantekenrechten; het tornooi zelf herloten, hernoemen
   // of verwijderen blijft bij de organisatie.
+  // Derde recht sinds de supporters-modus: staat het platform op vrije livescore, dan mag élke
+  // ingelogde bezoeker de stand meetellen — op een tornooidag zijn er tien velden tegelijk bezig
+  // en zit er lang niet achter elk veld iemand van de organisatie. Plannen, velden toewijzen en
+  // wisselen blijft wél bij wie aantekenrechten heeft.
+  const supportersModus = await isSupportersMode(payload)
   const magAantekenen = magTornooiAantekenen(user)
+  const magScoren = magTornooiAantekenen(user, supportersModus)
   const canManage = isFederationLevel(user) || hasRole(user, 'scheidsrechter')
 
   // Clublogo's: in de eerste plaats via de EXPLICIETE koppeling (teamClubs, ingegeven bij het
@@ -154,7 +161,7 @@ export default async function TornooiPage({ params }: { params: Promise<{ id: st
           />
         </div>
       )}
-      <BracketBoard id={tournamentId} initial={state} canManage={magAantekenen} logos={logos} fits={fits} veldCount={veldCount} ingelogd={Boolean(user)} kantinePad={kantinePadVoor(tournamentId, groepNaam)} groep={groepNaam} />
+      <BracketBoard id={tournamentId} initial={state} canManage={magAantekenen} magScoren={magScoren} supportersModus={supportersModus} gebruikerId={Number((user as { id?: unknown } | null)?.id) || null} logos={logos} fits={fits} veldCount={veldCount} ingelogd={Boolean(user)} kantinePad={kantinePadVoor(tournamentId, groepNaam)} groep={groepNaam} />
       {stand.length > 0 && (
         <div className="trn-page">
           <section className="trn-hub-sec">

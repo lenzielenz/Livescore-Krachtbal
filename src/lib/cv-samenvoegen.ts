@@ -19,8 +19,13 @@
  * tracking.py beginnen per video opnieuw, dus "werper 3" van camera 1 en "werper 3" van
  * camera 2 zijn twee verschillende mensen. Met de basis erbij blijven het aparte groepen;
  * een mens wijst ze gewoon allebei aan dezelfde speler toe als het er één blijkt te zijn.
+ *
+ * De basis staat bewust hóóg: de tellers van de trackers hernummeren nooit, dus op een lange
+ * of rommelige opname deelt de tracker makkelijk meer dan duizend spoornummers uit
+ * (flikker-sporen tellen mee). Een camera 1-spoor dat de basis raakt zou met een écht camera
+ * 2-spoor op dezelfde sleutel vallen — twee mensen op één spelerskaart.
  */
-export const CAMERA2_BASIS = 1000
+export const CAMERA2_BASIS = 100000
 
 /** Binnen dit venster is een worp van camera 1 en één van camera 2 dezelfde worp. */
 export const SAMENVOEG_VENSTER_S = 2.0

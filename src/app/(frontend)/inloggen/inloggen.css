@@ -116,3 +116,30 @@
 .login-foot a:hover {
   text-decoration: underline;
 }
+
+/* ── Wachtwoord vergeten / herstellen ────────────────────────────────────────────────────── */
+.pw-stappen {
+  margin: 4px 0 12px;
+  padding-left: 20px;
+  display: grid;
+  gap: 10px;
+  font-size: 0.94rem;
+  line-height: 1.5;
+  color: var(--fg, #e8f0ea);
+}
+.pw-stappen strong { color: var(--accent, #60a5fa); }
+.pw-hint {
+  margin: 10px 0 0;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  color: var(--dim, #9fb3a6);
+}
+.pw-klaar {
+  margin: 6px 0 0;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: rgba(6, 214, 160, 0.12);
+  border: 1px solid rgba(6, 214, 160, 0.35);
+  color: #06d6a0;
+  font-size: 0.95rem;
+}

@@ -49,6 +49,73 @@ function sortByRole(list: Account[]): Account[] {
   })
 }
 
+// Wachtwoord vergeten: de beheerder maakt een eenmalige herstellink en geeft ze zelf door.
+//
+// Bewust geen mail en bewust geen "zet even een wachtwoord voor hem": de gebruiker kiest het
+// zelf via de link, de beheerder ziet het nooit. De link staat één keer op het scherm — daarna
+// is ze weg (ze staat nergens bewaard), dus de kopieerknop staat er meteen naast.
+function Herstellink({ acc }: { acc: Account }) {
+  const [link, setLink] = useState<string | null>(null)
+  const [vervalt, setVervalt] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [msg, setMsg] = useState<string | null>(null)
+
+  const maak = async () => {
+    if (!window.confirm(`Een herstellink maken voor ${acc.email}?\n\nDe vorige link (als die er was) vervalt daarmee. Geef de nieuwe link zelf door — bv. via WhatsApp.`)) return
+    setBusy(true)
+    setMsg(null)
+    try {
+      const res = await fetch('/api/admin/users/herstellink', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ userId: acc.id }),
+      })
+      const data = (await res.json().catch(() => ({}))) as { error?: string; link?: string; vervalt?: string }
+      if (!res.ok || !data.link) {
+        setMsg(data.error ?? 'Aanmaken mislukt.')
+        return
+      }
+      setLink(data.link)
+      setVervalt(data.vervalt ?? null)
+    } catch {
+      setMsg('Er ging iets mis.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const kopieer = async () => {
+    if (!link) return
+    try {
+      await navigator.clipboard.writeText(link)
+      setMsg('✓ Gekopieerd')
+    } catch {
+      setMsg('Kopiëren lukte niet — selecteer de link hierboven.')
+    }
+  }
+
+  return (
+    <div className="acc-herstel">
+      <button type="button" className="acc-chip" onClick={maak} disabled={busy} title="Maak een eenmalige link waarmee deze persoon zelf een nieuw wachtwoord kiest">
+        {busy ? 'Bezig…' : '🔑 Herstellink'}
+      </button>
+      {link && (
+        <div className="acc-herstel-uit">
+          <code className="acc-herstel-link">{link}</code>
+          <button type="button" className="acc-chip" onClick={kopieer}>
+            Kopieer
+          </button>
+          <span className="acc-herstel-info">
+            Geldig tot {vervalt ? new Date(vervalt).toLocaleString('nl-BE', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }) : 'morgen'} · werkt één keer
+          </span>
+        </div>
+      )}
+      {msg && <span className="acc-msg">{msg}</span>}
+    </div>
+  )
+}
+
 function AccountRow({ acc, clubs, officials, roleOptions }: { acc: Account; clubs: { id: number; name: string }[]; officials: Official[]; roleOptions: RoleOption[] }) {
   const [roles, setRoles] = useState<string[]>(acc.roles)
   const [clubId, setClubId] = useState<string>(acc.clubId != null ? String(acc.clubId) : '')
@@ -171,6 +238,7 @@ function AccountRow({ acc, clubs, officials, roleOptions }: { acc: Account; club
           {saving ? 'Bezig…' : 'Bewaren'}
         </button>
         {msg && <span className="acc-msg">{msg}</span>}
+        <Herstellink acc={acc} />
       </div>
     </div>
   )

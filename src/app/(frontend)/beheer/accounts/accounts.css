@@ -266,3 +266,36 @@
 .acc-group-toggle.is-open .acc-chevron {
   transform: rotate(90deg);
 }
+
+/* ── Herstellink (wachtwoord vergeten) ───────────────────────────────────────────────────── */
+.acc-herstel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.acc-herstel-uit {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  flex: 1 1 100%;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(96, 165, 250, 0.1);
+  border: 1px solid rgba(96, 165, 250, 0.3);
+}
+.acc-herstel-link {
+  flex: 1 1 260px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 0.8rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--fg, #e8f0ea);
+  user-select: all;
+}
+.acc-herstel-info {
+  flex: 1 1 100%;
+  font-size: 0.78rem;
+  color: var(--dim, #9fb3a6);
+}

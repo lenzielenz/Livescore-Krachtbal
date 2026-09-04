@@ -808,7 +808,12 @@ export async function startAnalyse(
   const vorige = (match.cvAnalyse ?? null) as AnalyseStand | null
   const besluit = besluitHervatten(vorige, opts)
   const hervatten = besluit.hervatten
-  if (!hervatten) await wisMerktekens(map)
+  // Ook de cam2-submap altijd mee wissen: is camera 2 intussen losgekoppeld, dan zouden haar
+  // oude merktekens blijven staan en de hervatbaar-telling (die beide mappen telt) laten liegen.
+  if (!hervatten) {
+    await wisMerktekens(map)
+    await wisMerktekens(werkmapCamera2(matchId))
+  }
   const kalibratieData = (match.cvKalibratie ?? null) as KalibratieData
   const veldmaten = {
     diepte: (match.goalAreaDepth as number) ?? 10,
@@ -861,7 +866,6 @@ export async function startAnalyse(
       overgeslagen.push('camera 2 (het videobestand staat niet meer op de server — upload het opnieuw)')
     } else {
       await fs.mkdir(map2, { recursive: true })
-      if (!hervatten) await wisMerktekens(map2)
       const kalibratieData2 = (match.cvKalibratie2 ?? null) as KalibratieData
       kalibratie2 = await schrijfKalibratie(map2, kalibratieData2, veldmaten)
       const ankers2 = opts.bewegend ? await schrijfAnkers(map2, kalibratieData2, veldmaten) : null

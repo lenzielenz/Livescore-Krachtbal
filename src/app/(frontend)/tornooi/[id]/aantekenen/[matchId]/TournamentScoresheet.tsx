@@ -29,11 +29,18 @@ export function TournamentScoresheet({
   matchId,
   initial,
   halfDurationSeconds,
+  viaSupporters = false,
 }: {
   id: number
   matchId: number
   initial: TournamentState
   halfDurationSeconds: number
+  /**
+   * Telt hier een supporter mee (supporters-modus) in plaats van de organisatie? Dan blijven de
+   * correctieknoppen weg: terugzetten en heropenen zijn ingrepen op andermans wedstrijd, en de
+   * server weigert ze ook. Meetellen zelf — starten, scoren, helft, einde — kan gewoon.
+   */
+  viaSupporters?: boolean
 }) {
   const [state, setState] = useState<TournamentState>(initial)
   // Eén bevestigingsstap voor alles wat je niet per ongeluk wil doen: starten, beëindigen,
@@ -125,6 +132,16 @@ export function TournamentScoresheet({
           <Link href={`/tornooi/${id}/veld/${matchId}`} className="trn-toplink">Veldscherm →</Link>
         </nav>
       </header>
+
+      {/* Een supporter die meetelt, moet weten wat dat betekent: jouw naam staat bij de stand en
+          andere kijkers kunnen ze bevestigen of betwisten. Zonder die regel erbij lijkt dit scherm
+          een officiële tafel, en dat is het niet. */}
+      {viaSupporters && (
+        <p className="ts-supporter">
+          👋 Je telt deze wedstrijd mee als supporter. Je naam komt bij de stand te staan en andere
+          kijkers kunnen ze bevestigen. Tel enkel mee wat je zelf ziet gebeuren.
+        </p>
+      )}
 
       <div className="ts-meta">
         <span className="ts-round">{m.label}</span>
@@ -246,7 +263,7 @@ export function TournamentScoresheet({
               </button>
               )}
               {/* Te vroeg gestart terwijl deze reeks nog moest beginnen? Terug naar niet-gestart. */}
-              {m.status === 'live' && (
+              {m.status === 'live' && !viaSupporters && (
                 <button
                   type="button"
                   className="trn-btn zacht"
@@ -309,6 +326,7 @@ export function TournamentScoresheet({
                 <Link href={`/tornooi/${id}`} className="trn-btn">Terug naar schema</Link>
                 {/* Score toch fout genoteerd? Heropen kan zolang de volgende ronde niet bezig is
                     (de server bewaakt dat en trekt de doorgeschoven winnaar terug). */}
+                {!viaSupporters && (
                 <button
                   type="button"
                   className="trn-btn"
@@ -324,6 +342,7 @@ export function TournamentScoresheet({
                 >
                   🔓 Score aanpassen
                 </button>
+                )}
               </div>
             </div>
           )}

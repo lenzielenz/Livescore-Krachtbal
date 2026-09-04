@@ -4,6 +4,7 @@ import { magTornooiAantekenen } from '@/lib/access'
 import { getAuthUser } from '@/lib/auth-user'
 import { clubColors, clubLogoFit, clubLogoUrl } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
+import { isSupportersMode } from '@/lib/score-mode'
 import { buildTournamentState } from '@/lib/tournament-engine'
 import { TournamentScoresheet } from './TournamentScoresheet'
 import { TournamentScoresheetPro } from './TournamentScoresheetPro'
@@ -20,12 +21,21 @@ export default async function AantekenenPage({ params }: { params: Promise<{ id:
   const mId = Number(matchId)
   if (!Number.isFinite(tournamentId) || !Number.isFinite(mId)) notFound()
 
-  // Aantekenen is voor de organisatie (federatie/admin + scheidsrechters). Een supporter die de
-  // URL raadt, krijgt geen tafel vol knoppen die toch 403 geven — die volgt op de tornooipagina.
+  // Aantekenen is voor de organisatie (federatie/admin + scheidsrechters) en voor wie uitdrukkelijk
+  // aantekenrechten kreeg. Wie er niet bij hoort krijgt geen tafel vol knoppen die toch 403 geven —
+  // die volgt gewoon het schema op de tornooipagina.
   const user = await getAuthUser()
-  if (!magTornooiAantekenen(user)) redirect(`/tornooi/${tournamentId}`)
-
   const payload = await getPayloadClient()
+  // In supporters-modus mag ook een gewone ingelogde bezoeker meetellen (zelfde regel als de
+  // server hanteert in de actie-route). Wie al meetelt en of jij aan de beurt bent, beslist de
+  // vertrouwenslaag dáár — hier gaat het enkel over: mag dit scherm open.
+  const supportersModus = await isSupportersMode(payload)
+  if (!magTornooiAantekenen(user, supportersModus)) redirect(`/tornooi/${tournamentId}`)
+  // Komt iemand hier enkel binnen dankzij de supporters-modus, dan blijft het bij "doel is doel":
+  // +1 of +2 en verder kijken. Het volledige blad met scorerkeuze en wissels is werk voor achter de
+  // tafel — een supporter op de zijlijn ziet zelden welk rugnummer scoorde.
+  const viaSupporters = supportersModus && !magTornooiAantekenen(user, false)
+
   let state
   try {
     state = await buildTournamentState(payload, tournamentId)
@@ -48,7 +58,7 @@ export default async function AantekenenPage({ params }: { params: Promise<{ id:
   const homeTeamId = idForName(m.home)
   const awayTeamId = idForName(m.away)
 
-  if (m.home && m.away && homeTeamId && awayTeamId) {
+  if (!viaSupporters && m.home && m.away && homeTeamId && awayTeamId) {
     const [homeTeam, awayTeam] = await Promise.all([
       payload.findByID({ collection: 'teams', id: homeTeamId, depth: 2 }).catch(() => null),
       payload.findByID({ collection: 'teams', id: awayTeamId, depth: 2 }).catch(() => null),
@@ -91,5 +101,5 @@ export default async function AantekenenPage({ params }: { params: Promise<{ id:
     }
   }
 
-  return <TournamentScoresheet id={tournamentId} matchId={mId} initial={state} halfDurationSeconds={state.halfDurationSeconds} />
+  return <TournamentScoresheet id={tournamentId} matchId={mId} initial={state} halfDurationSeconds={state.halfDurationSeconds} viaSupporters={viaSupporters} />
 }

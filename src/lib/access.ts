@@ -95,9 +95,18 @@ export function canTraining(user: unknown): boolean {
  * federatie; één bron van waarheid voor de knoppen én voor de API, zodat er nooit een knop staat
  * die de server daarna weigert.
  */
-export function magTornooiAantekenen(user: unknown): boolean {
+export function magTornooiAantekenen(user: unknown, supportersModus = false): boolean {
   if (isFederationLevel(user) || hasRole(user, 'scheidsrechter')) return true
-  return Boolean((user as { aantekenRechten?: unknown } | null)?.aantekenRechten)
+  if (Boolean((user as { aantekenRechten?: unknown } | null)?.aantekenRechten)) return true
+  // Supporters-modus: staat het platform op vrije livescore, dan mag élke INGELOGDE bezoeker ook
+  // een tornooiwedstrijd meetellen — dezelfde afspraak als bij gewone wedstrijden (mayScoreMatch).
+  // Op een tornooidag zijn er tien velden tegelijk bezig en zit er lang niet achter elk veld
+  // iemand van de organisatie; zonder dit blijft de helft van de standen leeg.
+  //
+  // Aanmelden blijft verplicht: een naam achter elke melding is wat de vertrouwenslaag
+  // (score-trust) nodig heeft om een stand als bevestigd te kunnen tonen. Wie aan bod komt
+  // wanneer er al iemand meetelt, beslist die laag — niet deze functie.
+  return supportersModus && Boolean((user as { id?: unknown } | null)?.id)
 }
 
 /** De club waaraan een club-beheerder gekoppeld is (id), indien aanwezig. */

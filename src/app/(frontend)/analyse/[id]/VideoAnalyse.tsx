@@ -259,7 +259,9 @@ export function VideoAnalyse({
     (naar: 1 | 2) => {
       if (naar === cam) return
       const v = videoRef.current
-      const huidigNative = v?.currentTime ?? 0
+      // Wisselt iemand terug vóór de metadata van de vorige wissel geladen is, dan staat het
+      // verse element nog op 0:00 — de échte positie zit dan nog geparkeerd in wilNative.
+      const huidigNative = wilNative.current ?? v?.currentTime ?? 0
       // Het gedeelde moment: eerst naar de tijdlijn van camera 1, dan naar de nieuwe opname.
       const t = cam === 2 ? huidigNative - (offset2 ?? 0) : huidigNative
       wilNative.current = Math.max(0, naar === 2 ? t + (offset2 ?? 0) : t)
@@ -300,10 +302,17 @@ export function VideoAnalyse({
     }
   }
 
-  /** De ijk-flow voor camera 2, stap 1: dít moment (camera 1) gaan we in camera 2 zoeken. */
+  /**
+   * De ijk-flow voor camera 2, stap 1: dít moment (camera 1) gaan we in camera 2 zoeken.
+   *
+   * Verplicht vanaf camera 1. Omrekenen vanaf camera 2 kán niet: zonder geijkt verschil is de
+   * "camera 1-tijd" van een camera 2-positie een gok, en mét een oud verschil is het anker
+   * t − oudeOffset — bevestigen op hetzelfde moment geeft dan algebraïsch altijd exact de oude
+   * offset terug, dus een foute ijking viel vanuit camera 2 nooit te corrigeren.
+   */
   const startIjk2 = () => {
-    const t = videoRef.current?.currentTime ?? pos
-    setIjk2Start(cam === 2 ? naarTijdlijn(t) : t)
+    if (cam !== 1) return // de knop staat dan uit; dit is de gordel bij de bretellen
+    setIjk2Start(videoRef.current?.currentTime ?? pos)
     wisselCamera(2)
     setMsg('Zoek nu hetzélfde moment in camera 2 (bv. de aftrap) en klik "Zelfde moment hier".')
   }
@@ -767,8 +776,12 @@ export function VideoAnalyse({
                     type="button"
                     className="va-btn small"
                     onClick={startIjk2}
-                    disabled={busy}
-                    title="Zet de speler op een herkenbaar moment (bv. de aftrap), klik hier, en zoek datzelfde moment daarna in camera 2"
+                    disabled={busy || cam !== 1}
+                    title={
+                      cam !== 1
+                        ? 'Wissel eerst naar camera 1: het ijkmoment wordt dáár gekozen'
+                        : 'Zet de speler op een herkenbaar moment (bv. de aftrap), klik hier, en zoek datzelfde moment daarna in camera 2'
+                    }
                   >
                     IJk camera 2
                   </button>

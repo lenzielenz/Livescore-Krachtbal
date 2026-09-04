@@ -1211,6 +1211,15 @@ export interface TournamentMatch {
     | number
     | boolean
     | null;
+  scoreTrust?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
   crosses?:
     | {
         [k: string]: unknown;
@@ -2283,6 +2292,7 @@ export interface TournamentMatchesSelect<T extends boolean = true> {
   veld?: T;
   scorePredictions?: T;
   goals?: T;
+  scoreTrust?: T;
   crosses?: T;
   timeouts?: T;
   refereeStops?: T;

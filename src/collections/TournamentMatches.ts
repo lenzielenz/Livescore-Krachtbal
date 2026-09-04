@@ -102,6 +102,16 @@ export const TournamentMatches: CollectionConfig = {
       type: 'json',
       defaultValue: [],
     },
+    {
+      // Vertrouwenslaag op supporters-scores, zelfde vorm en zelfde regels als op een gewone
+      // wedstrijd (src/lib/score-trust.ts): wie deze wedstrijd meetelt, wie meetekende, en de
+      // bevestigingen/betwistingen van andere kijkers. Bepaalt het 🟢/🟡-label bij de stand.
+      // Automatisch beheerd door de aanteken-actie; nooit met de hand invullen.
+      name: 'scoreTrust',
+      label: 'Vertrouwen op de score',
+      type: 'json',
+      admin: { hidden: true },
+    },
     // Tellers per ploeg: kruisjes (rechtstreeks buiten) en aangevraagde minuten (time-outs).
     { name: 'crosses', label: 'Kruisjes', type: 'json', defaultValue: { home: 0, away: 0 } },
     { name: 'timeouts', label: 'Time-outs', type: 'json', defaultValue: { home: 0, away: 0 } },

@@ -1,5 +1,11 @@
 import { authUser } from '@/lib/api-auth'
-import { herrekenFysiek, leesMatchPosities, spoorOverzicht } from '@/lib/cv-fysiek'
+import {
+  herrekenFysiek,
+  leesMatchPosities,
+  leesSporenVingerafdruk,
+  positiesVingerafdruk,
+  spoorOverzicht,
+} from '@/lib/cv-fysiek'
 import { leesToewijzing } from '@/lib/cv-werpers'
 import { getPayloadClient } from '@/lib/payload-client'
 import { mayEditMatchVideo } from '@/lib/video-access'
@@ -40,12 +46,17 @@ async function opstelling(
     const res = await payload
       .find({ collection: 'players', where: { team: { equals: id } }, sort: 'shirtNumber', depth: 0, limit: 200 })
       .catch(() => ({ docs: [] as Record<string, unknown>[] }))
-    return res.docs.map((p) => ({
-      id: Number((p as { id: number }).id),
-      naam: String((p as { name?: unknown }).name ?? ''),
-      rugnummer: Number((p as { shirtNumber?: unknown }).shirtNumber ?? 0),
-      kant,
-    }))
+    return res.docs
+      .map((p) => ({
+        id: Number((p as { id: number }).id),
+        naam: String((p as { name?: unknown }).name ?? ''),
+        rugnummer: Number((p as { shirtNumber?: unknown }).shirtNumber ?? 0),
+        kant,
+      }))
+      // Enkel spelers met een rugnummer dat het fysiek-contract aankan (0–99, zelfde grens als
+      // fysiek.py): anders wordt een toewijzing wél bewaard maar valt de speler bij het
+      // herrekenen stilzwijgend weg — een rij die "gezet" kleurt zonder ooit cijfers te tonen.
+      .filter((p) => Number.isInteger(p.rugnummer) && p.rugnummer >= 0 && p.rugnummer <= 99)
   }
   const [thuis, uit] = await Promise.all([
     laad(teamId(match.homeTeam), 'home'),
@@ -63,10 +74,16 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   if ('fout' in t) return t.fout
 
   const posities = await leesMatchPosities(matchId)
+  // Een toewijzing die bij een vórige tracking-run hoort, is waardeloos: de spoornummers zijn
+  // intussen opnieuw uitgedeeld. Dan tonen we lege selectors plus de reden — niet de oude
+  // nummers alsof ze nog iets betekenen.
+  const bewaard = leesSporenVingerafdruk(t.match.cvSporen)
+  const verouderd = bewaard != null && posities.length > 0 && bewaard !== positiesVingerafdruk(posities)
   return Response.json({
     sporen: spoorOverzicht(posities),
-    toewijzing: leesToewijzing(t.match.cvSporen),
+    toewijzing: verouderd ? {} : leesToewijzing(t.match.cvSporen),
     spelers: await opstelling(t.payload, t.match),
+    verouderd,
   })
 }
 
@@ -94,10 +111,16 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     if (geldig.has(speler)) toewijzing[spoor] = speler
   }
 
+  // De vingerafdruk van de huidige tracking-run gaat mee de bewaring in: zo weet elke latere
+  // herrekening (ook de automatische na een her-analyse) of deze toewijzing nog bij de
+  // posities hoort — spoornummers zijn een artefact van één run.
+  const posities = await leesMatchPosities(matchId)
   await t.payload.update({
     collection: 'matches',
     id: matchId,
-    data: { cvSporen: toewijzing },
+    data: {
+      cvSporen: posities.length ? { ...toewijzing, _posities: positiesVingerafdruk(posities) } : toewijzing,
+    },
     overrideAccess: true,
   })
 

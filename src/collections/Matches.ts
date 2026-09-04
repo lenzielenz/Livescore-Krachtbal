@@ -246,7 +246,10 @@ export const Matches: CollectionConfig = {
           // Wie is wie in de spelerstracking: van tracking-spoor naar speler-id. Een ánder
           // nummerbereik dan cvWerpers (de sporen komen uit cv/tracking.py, de werpers uit
           // cv/houding.py — twee id-ruimtes die niets met elkaar te maken hebben).
-          // Vorm: { "3": 42, "1005": 43 } — sporen van camera 2 dragen +1000 (CAMERA2_BASIS).
+          // Vorm: { "3": 42, "100005": 43 } — sporen van camera 2 dragen CAMERA2_BASIS erbij
+          // (cv-samenvoegen.ts). De gereserveerde sleutel "_posities" (geen getal) draagt de
+          // vingerafdruk van de tracking-run waar deze toewijzing bij hoort: draait de tracking
+          // opnieuw, dan zijn de spoornummers nieuw en is de toewijzing waardeloos.
           name: 'cvSporen',
           label: 'Tracking-sporen → spelers',
           type: 'json',

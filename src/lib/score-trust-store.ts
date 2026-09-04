@@ -23,17 +23,36 @@ import {
 // heen-en-weer met Payload. Alles draait overrideAccess: `users.scoreTrust` is voor de gebruiker
 // zelf afgeschermd (onzichtbare trust-score), de server moet er wél bij kunnen.
 
-export async function readMatchTrust(payload: Payload, matchId: number): Promise<MatchTrust> {
+/**
+ * Waar een vertrouwensstaat staat: op een gewone wedstrijd of op een tornooiwedstrijd.
+ *
+ * De regels zijn identiek (score-trust.ts weet van geen collecties), enkel de rij verschilt.
+ * Tornooiwedstrijden leven in een eigen collectie omdat hun ploegen vrije namen zijn en hun
+ * score event-sourced in `goals` staat — maar "wie telde mee en klopt de stand" is precies
+ * dezelfde vraag, dus dezelfde laag.
+ */
+export type TrustCollectie = 'matches' | 'tournament-matches'
+
+export async function readMatchTrust(
+  payload: Payload,
+  matchId: number,
+  collection: TrustCollectie = 'matches',
+): Promise<MatchTrust> {
   const match = await payload
-    .findByID({ collection: 'matches', id: matchId, depth: 0, overrideAccess: true })
+    .findByID({ collection, id: matchId, depth: 0, overrideAccess: true })
     .catch(() => null)
   if (!match) return emptyTrust()
   return sanitizeTrust((match as { scoreTrust?: unknown }).scoreTrust)
 }
 
-export async function writeMatchTrust(payload: Payload, matchId: number, trust: MatchTrust): Promise<void> {
+export async function writeMatchTrust(
+  payload: Payload,
+  matchId: number,
+  trust: MatchTrust,
+  collection: TrustCollectie = 'matches',
+): Promise<void> {
   await payload.update({
-    collection: 'matches',
+    collection,
     id: matchId,
     data: { scoreTrust: trust as unknown as Record<string, unknown> },
     overrideAccess: true,

@@ -13,6 +13,7 @@ import { UITLEG_PAD } from '@/lib/aantekenen-uitleg'
 import { opSpeeltijd } from '@/lib/tornooi-volgorde'
 import { fmtClock, useTicking, useTournamentStream } from '../useTournament'
 import { BracketZoom } from './BracketZoom'
+import { MatchTrust } from './MatchTrust'
 
 // Gepland uur/datum van een nog te spelen wedstrijd — beheerders passen het hier meteen aan (voedt
 // het aftellen op het groep-kantinescherm). Bewaart direct bij het kiezen (op gsm sluit de native
@@ -134,7 +135,7 @@ function pairUp(matches: TMatchState[]): TMatchState[][] {
   return out
 }
 
-function MatchCard({ id, m, canManage, logos, fits, veldCount = 0, neutral = false, onState, ingelogd = false, tip }: { id: number; m: TMatchState; canManage: boolean; logos: Record<string, string>; fits: Record<string, LogoFit>; veldCount?: number; neutral?: boolean; onState?: (s: TournamentState) => void; ingelogd?: boolean; tip?: { home: number; away: number } | null }) {
+function MatchCard({ id, m, canManage, magScoren = false, supportersModus = false, gebruikerId = null, logos, fits, veldCount = 0, neutral = false, onState, ingelogd = false, tip }: { id: number; m: TMatchState; canManage: boolean; magScoren?: boolean; supportersModus?: boolean; gebruikerId?: number | null; logos: Record<string, string>; fits: Record<string, LogoFit>; veldCount?: number; neutral?: boolean; onState?: (s: TournamentState) => void; ingelogd?: boolean; tip?: { home: number; away: number } | null }) {
   const clock = useTicking(m.clockSeconds, m.clockRunning)
   const bye = m.status === 'finished' && (!m.home || !m.away)
   const live = m.status === 'live'
@@ -171,13 +172,29 @@ function MatchCard({ id, m, canManage, logos, fits, veldCount = 0, neutral = fal
       )}
       <Row side="home" />
       <Row side="away" />
-      {!bye && canManage && (
+      {/* Meetellen mag ruimer dan beheren: in supporters-modus komt élke ingelogde bezoeker aan de
+          aantekentafel, maar het veldscherm, het wisselen van kanten en het plannen blijven bij wie
+          aantekenrechten heeft. Vandaar twee vlaggen op één strookje. */}
+      {!bye && (canManage || magScoren) && (
         <div className="trn-match-actions">
           <Link href={`/tornooi/${id}/aantekenen/${m.id}`} className="trn-mini">Aantekenen</Link>
-          <Link href={`/tornooi/${id}/veld/${m.id}`} className="trn-mini">Veld</Link>
+          {canManage && <Link href={`/tornooi/${id}/veld/${m.id}`} className="trn-mini">Veld</Link>}
           {/* Thuis/uit omdraaien kan tot de eerste worp — daarna zou de score van kant wisselen. */}
-          {m.status === 'pending' && m.home && m.away && <WisselKnop tournamentId={id} m={m} onState={onState} />}
+          {canManage && m.status === 'pending' && m.home && m.away && <WisselKnop tournamentId={id} m={m} onState={onState} />}
         </div>
+      )}
+      {/* Telt een supporter deze wedstrijd mee, dan hoort erbij te staan wie dat is en of andere
+          kijkers het beeld bevestigen. Bij een wedstrijd die de organisatie zelf aantekent staat
+          hier niets — die stand komt van de tafel. */}
+      {m.trust && (
+        <MatchTrust
+          tournamentId={id}
+          m={m}
+          ingelogd={ingelogd}
+          supportersModus={supportersModus}
+          gebruikerId={gebruikerId}
+          onState={onState}
+        />
       )}
       {/* Meespelen kan tot de aftrap — óók hier, zodat een supporter zijn tip kwijt kan waar hij
           de wedstrijd ook tegenkomt. */}
@@ -205,7 +222,7 @@ function MatchCard({ id, m, canManage, logos, fits, veldCount = 0, neutral = fal
 }
 
 // Round-robin: live rangschikking (4/3/2 punten) + alle wedstrijden.
-function RoundRobin({ id, state, canManage, logos, fits, veldCount = 0, onState, ingelogd = false, tips = {} }: { id: number; state: TournamentState; canManage: boolean; logos: Record<string, string>; fits: Record<string, LogoFit>; veldCount?: number; onState?: (s: TournamentState) => void; ingelogd?: boolean; tips?: Record<number, { home: number; away: number }> }) {
+function RoundRobin({ id, state, canManage, magScoren = false, supportersModus = false, gebruikerId = null, logos, fits, veldCount = 0, onState, ingelogd = false, tips = {} }: { id: number; state: TournamentState; canManage: boolean; magScoren?: boolean; supportersModus?: boolean; gebruikerId?: number | null; logos: Record<string, string>; fits: Record<string, LogoFit>; veldCount?: number; onState?: (s: TournamentState) => void; ingelogd?: boolean; tips?: Record<number, { home: number; away: number }> }) {
   // Op speeltijd, niet op schemavolgorde: aan een tornooi zoek je een wedstrijd op haar uur.
   const matches = opSpeeltijd(state.rounds.flatMap((r) => r.matches))
   const standings = state.standings ?? []
@@ -238,7 +255,7 @@ function RoundRobin({ id, state, canManage, logos, fits, veldCount = 0, onState,
         <h2 className="trn-col-title">Wedstrijden</h2>
         <div className="trn-rr-grid">
           {matches.map((m) => (
-            <MatchCard key={m.id} id={id} m={m} canManage={canManage} logos={logos} fits={fits} veldCount={veldCount} onState={onState} ingelogd={ingelogd} tip={tips[m.id] ?? null} />
+            <MatchCard key={m.id} id={id} m={m} canManage={canManage} magScoren={magScoren} supportersModus={supportersModus} gebruikerId={gebruikerId} logos={logos} fits={fits} veldCount={veldCount} onState={onState} ingelogd={ingelogd} tip={tips[m.id] ?? null} />
           ))}
         </div>
       </section>
@@ -246,7 +263,7 @@ function RoundRobin({ id, state, canManage, logos, fits, veldCount = 0, onState,
   )
 }
 
-export function BracketBoard({ id, initial, canManage = false, logos = {}, fits = {}, veldCount = 0, ingelogd = false, kantinePad, groep = '' }: { id: number; initial: TournamentState; canManage?: boolean; logos?: Record<string, string>; fits?: Record<string, LogoFit>; veldCount?: number; ingelogd?: boolean; kantinePad: string; groep?: string }) {
+export function BracketBoard({ id, initial, canManage = false, magScoren = false, supportersModus = false, gebruikerId = null, logos = {}, fits = {}, veldCount = 0, ingelogd = false, kantinePad, groep = '' }: { id: number; initial: TournamentState; canManage?: boolean; magScoren?: boolean; supportersModus?: boolean; gebruikerId?: number | null; logos?: Record<string, string>; fits?: Record<string, LogoFit>; veldCount?: number; ingelogd?: boolean; kantinePad: string; groep?: string }) {
   const [stream, setStream] = useTournamentStream(id, initial)
   const state = stream ?? initial
   // Eigen pronostiek-tips van deze supporter (andermans tips blijven verborgen tot na de match).
@@ -285,7 +302,7 @@ export function BracketBoard({ id, initial, canManage = false, logos = {}, fits 
         {pairUp(c.matches).map((pair, pi) => (
           <div className="trn-pair" key={pi}>
             {pair.map((m) => (
-              <MatchCard key={m.id} id={id} m={m} canManage={canManage} logos={logos} fits={fits} veldCount={veldCount} neutral={isNeutralRound(c.round)} onState={setStream} ingelogd={ingelogd} tip={tips[m.id] ?? null} />
+              <MatchCard key={m.id} id={id} m={m} canManage={canManage} magScoren={magScoren} supportersModus={supportersModus} gebruikerId={gebruikerId} logos={logos} fits={fits} veldCount={veldCount} neutral={isNeutralRound(c.round)} onState={setStream} ingelogd={ingelogd} tip={tips[m.id] ?? null} />
             ))}
           </div>
         ))}
@@ -311,7 +328,7 @@ export function BracketBoard({ id, initial, canManage = false, logos = {}, fits 
           {/* Uitleg vóór de andere links: aan een tornooitafel zit vaak iemand die dit voor het
               eerst doet, en die moet niet eerst door het schema hoeven te zoeken. Enkel voor wie
               ook echt mag aantekenen — een supporter volgt hier gewoon het schema. */}
-          {canManage && <Link href={UITLEG_PAD} className="trn-btn">📖 Hoe aantekenen?</Link>}
+          {(canManage || magScoren) && <Link href={UITLEG_PAD} className="trn-btn">📖 Hoe aantekenen?</Link>}
           {/* Het kantinescherm is de tv-link van de organisator — supporters volgen hier. Hoort
               deze reeks bij een tornooidag, dan wijst hij naar het scherm van de héle dag; een
               losse beker houdt zijn eigen scherm (zie lib/tornooi-paden.ts). */}
@@ -325,7 +342,7 @@ export function BracketBoard({ id, initial, canManage = false, logos = {}, fits 
       )}
 
       {state.format === 'roundrobin' ? (
-        <RoundRobin id={id} state={state} canManage={canManage} logos={logos} fits={fits} veldCount={veldCount} onState={setStream} ingelogd={ingelogd} tips={tips} />
+        <RoundRobin id={id} state={state} canManage={canManage} magScoren={magScoren} supportersModus={supportersModus} gebruikerId={gebruikerId} logos={logos} fits={fits} veldCount={veldCount} onState={setStream} ingelogd={ingelogd} tips={tips} />
       ) : (
         <BracketZoom>
           <main className="trn-bracket2">
@@ -335,7 +352,7 @@ export function BracketBoard({ id, initial, canManage = false, logos = {}, fits 
                 <h2 className="trn-col-title trn-final-title">{finalRound.label}</h2>
                 <div className="trn-center-body">
                   {finalRound.matches.map((m) => (
-                    <MatchCard key={m.id} id={id} m={m} canManage={canManage} logos={logos} fits={fits} veldCount={veldCount} neutral onState={setStream} ingelogd={ingelogd} tip={tips[m.id] ?? null} />
+                    <MatchCard key={m.id} id={id} m={m} canManage={canManage} magScoren={magScoren} supportersModus={supportersModus} gebruikerId={gebruikerId} logos={logos} fits={fits} veldCount={veldCount} neutral onState={setStream} ingelogd={ingelogd} tip={tips[m.id] ?? null} />
                   ))}
                 </div>
               </div>
@@ -349,7 +366,7 @@ export function BracketBoard({ id, initial, canManage = false, logos = {}, fits 
         <section className="trn-third">
           <h2 className="trn-col-title">Kleine finale (3e plaats)</h2>
           <div className="trn-third-card">
-            <MatchCard id={id} m={state.thirdPlace} canManage={canManage} logos={logos} fits={fits} veldCount={veldCount} neutral onState={setStream} ingelogd={ingelogd} tip={tips[state.thirdPlace.id] ?? null} />
+            <MatchCard id={id} m={state.thirdPlace} canManage={canManage} magScoren={magScoren} supportersModus={supportersModus} gebruikerId={gebruikerId} logos={logos} fits={fits} veldCount={veldCount} neutral onState={setStream} ingelogd={ingelogd} tip={tips[state.thirdPlace.id] ?? null} />
           </div>
         </section>
       )}

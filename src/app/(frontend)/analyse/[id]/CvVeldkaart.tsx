@@ -139,9 +139,20 @@ export function CvVeldkaart({
     [gefilterd, goalAreaDepth, maten],
   )
 
+  // Het veld van FieldSchema tekent 22 px (2,2 m) buitenmarge; een uitbal mag reglementair tot
+  // een halve veldmaat buiten liggen en zou daar geruisloos uit beeld vallen — terwijl de
+  // telstrook hem wél meldt. Voor de wéérgave klemmen we zo'n punt net binnen de rand (de
+  // statistiek rekent met het echte, ongeklemde punt). 140 px breed, hoogte = veldlengte × 10.
+  const hoogtePx = ((speelveldM ?? 26) + 2 * goalAreaDepth) * 10
+  const randX = 14 / 140
+  const randY = 14 / hoogtePx
+  const inBeeld = (punt: { x: number; y: number }) => ({
+    x: Math.min(1 + randX, Math.max(-randX, punt.x)),
+    y: Math.min(1 + randY, Math.max(-randY, punt.y)),
+  })
+
   const markers: FieldMarker[] = punten.map(({ v, punt }) => ({
-    x: punt.x,
-    y: punt.y,
+    ...inBeeld(punt),
     color:
       v.uitbal === true
         ? KLEUR.uitbal
