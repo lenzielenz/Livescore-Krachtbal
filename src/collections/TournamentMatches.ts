@@ -9,12 +9,22 @@ export const TournamentMatches: CollectionConfig = {
   labels: { singular: 'Tornooiwedstrijd', plural: 'Tornooiwedstrijden' },
   admin: {
     useAsTitle: 'label',
-    defaultColumns: ['label', 'tournament', 'home', 'away', 'status'],
+    // `aantekenaars` staat erbij zodat een beheerder in de lijst meteen ziet wie welke wedstrijd
+    // invulde — dat is de vraag waarmee je hier binnenkomt na een betwiste uitslag.
+    defaultColumns: ['label', 'tournament', 'home', 'away', 'status', 'aantekenaars'],
     group: 'Wedstrijden',
-    hidden: true, // beheerd via het /tornooi-scherm, niet handmatig in de admin
+    description:
+      'Alleen inkijken. Tornooiwedstrijden worden beheerd via het /tornooi-scherm — de stand is event-sourced en met de hand aanpassen zou het schema uit balans brengen.',
   },
   access: {
     read: () => true,
+    // Zichtbaar maken in de admin mag niet betekenen dat het ook bewerkbaar wordt. Zonder deze
+    // regels valt Payload terug op "elke ingelogde gebruiker mag schrijven", en de admin staat voor
+    // iedereen met een account open. De tornooi-engine schrijft overal met overrideAccess, dus zij
+    // gaat hier gewoon langs; dit sluit enkel de handmatige weg af.
+    create: () => false,
+    update: () => false,
+    delete: () => false,
   },
   fields: [
     { name: 'tournament', label: 'Tornooi', type: 'relationship', relationTo: 'tournaments', required: true, index: true },
@@ -122,16 +132,31 @@ export const TournamentMatches: CollectionConfig = {
       label: 'Aangetekend door',
       type: 'json',
       defaultValue: [],
-      admin: { readOnly: true, description: 'Wie deze wedstrijd aantekende — automatisch bijgehouden.' },
+      admin: {
+        readOnly: true,
+        description: 'Wie deze wedstrijd aantekende — automatisch bijgehouden.',
+        // Ruwe json zegt een beheerder niets; deze twee maken er een leesbare regel en een tabelletje
+        // van, met dezelfde regels als de publieke vermelding op het tornooibord.
+        components: {
+          Cell: '/components/admin/AantekenaarInfo#AantekenaarCel',
+          Field: '/components/admin/AantekenaarInfo#AantekenaarVeld',
+        },
+      },
     },
     {
       // Wie het eindsignaal gaf: { id, naam, op }. Apart van de lijst hierboven, want het afsluiten
       // legt de uitslag vast en schuift de winnaar door in het schema — dat is de zwaarste handeling
-      // van de dag en verdient een eigen naam.
+      // van de dag en verdient een eigen naam. Blijft een zichtbaar veld — het veld hierboven leest
+      // de waarde uit dezelfde formulierstaat, en een verborgen veld is daar geen betrouwbare bron
+      // voor.
       name: 'afgeslotenDoor',
       label: 'Afgesloten door',
       type: 'json',
-      admin: { readOnly: true, description: 'Wie de wedstrijd beëindigde — automatisch bijgehouden.' },
+      admin: {
+        readOnly: true,
+        disableListColumn: true,
+        components: { Field: '/components/admin/AantekenaarInfo#AfsluiterVeld' },
+      },
     },
     // Tellers per ploeg: kruisjes (rechtstreeks buiten) en aangevraagde minuten (time-outs).
     { name: 'crosses', label: 'Kruisjes', type: 'json', defaultValue: { home: 0, away: 0 } },

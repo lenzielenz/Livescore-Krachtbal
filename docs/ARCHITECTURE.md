@@ -212,7 +212,16 @@ puur en getest in `src/lib/aantekenaars.ts`; de opslag zit in `aantekenaars-stor
   tornooibord zet die als voetnoot onder de wedstrijdkaart. Het vertrouwensstrookje toont daarom
   zelf geen naam meer — anders stond dezelfde naam er twee keer.
 - **Beheer**: `/beheer/aantekenaars` (federatieniveau) bundelt het per persoon en per wedstrijd.
-  De collectie `tournament-matches` blijft `admin.hidden` in de Payload-admin; dit scherm is de weg.
+  Daarnaast staat `tournament-matches` nu zichtbaar in de Payload-admin, met `aantekenaars` als
+  kolom en twee kleine componenten (`AantekenaarInfo.tsx`) die er een leesbare regel en een
+  tabelletje van maken in plaats van ruwe json.
+- **Zichtbaar ≠ bewerkbaar.** Diezelfde collectie kreeg `create/update/delete: () => false`. Zonder
+  die regels valt Payload terug op "elke ingelogde gebruiker mag schrijven", en de admin staat voor
+  iedereen met een account open — terwijl de stand event-sourced is en een handmatige wijziging het
+  schema uit balans zou brengen. De tornooi-engine schrijft overal met `overrideAccess: true` en
+  gaat er dus gewoon langs. Let op bij het testen hiervan: de **Local API draait standaard mét**
+  `overrideAccess`, dus een access-test moet expliciet `overrideAccess: false` meegeven, anders
+  bewijst ze niets.
 
 ## Wachtwoord vergeten (reset via de beheerder)
 

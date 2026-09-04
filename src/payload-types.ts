@@ -1171,6 +1171,8 @@ export interface Tournament {
   createdAt: string;
 }
 /**
+ * Alleen inkijken. Tornooiwedstrijden worden beheerd via het /tornooi-scherm — de stand is event-sourced en met de hand aanpassen zou het schema uit balans brengen.
+ *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "tournament-matches".
  */
@@ -1232,9 +1234,6 @@ export interface TournamentMatch {
     | number
     | boolean
     | null;
-  /**
-   * Wie de wedstrijd beëindigde — automatisch bijgehouden.
-   */
   afgeslotenDoor?:
     | {
         [k: string]: unknown;

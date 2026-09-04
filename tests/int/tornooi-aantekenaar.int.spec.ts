@@ -140,6 +140,32 @@ describe('wie tekende de tornooiwedstrijd aan', () => {
     expect(lijst.find((a) => a.id === 8203)?.rol).toBe('organisatie')
   }, 60_000)
 
+  it('laat de admin kijken maar niet bewerken', async () => {
+    // De collectie staat nu zichtbaar in /admin zodat een beheerder het spoor kan opzoeken. Dat mag
+    // niet betekenen dat ze ook met de hand aan te passen is: de stand is event-sourced en een
+    // handmatige wijziging zou het schema uit balans brengen. Zonder deze access-regels valt Payload
+    // terug op "elke ingelogde gebruiker mag schrijven".
+    //
+    // `overrideAccess: false` is wat de adminpanelen en de REST-API doen; de Local API laat het
+    // standaard op true staan, en dán zou deze test niets bewijzen.
+    const alsIngelogde = { overrideAccess: false, user: { id: 1, roles: ['scorekeeper'] } } as never
+    await expect(
+      payload.update({ collection: 'tournament-matches', id: ids.match, data: { home: 'Vervalst' }, ...alsIngelogde }),
+    ).rejects.toThrow()
+    await expect(
+      payload.delete({ collection: 'tournament-matches', id: ids.match, ...alsIngelogde }),
+    ).rejects.toThrow()
+
+    // Lezen blijft wél gewoon werken — anders zou het overzicht leeg zijn.
+    const doc = await payload.findByID({ collection: 'tournament-matches', id: ids.match, ...alsIngelogde })
+    expect((doc as { home?: unknown }).home).not.toBe('Vervalst')
+
+    // En de engine gaat er nog altijd langs (die schrijft met overrideAccess).
+    alsWie = TAFEL
+    expect((await roep({ action: 'reopen' })).status).toBe(200)
+    expect((await roep({ action: 'finish' })).status).toBe(200)
+  }, 60_000)
+
   it('laat een geweigerde actie geen spoor na', async () => {
     await zetModus('federatie')
     alsWie = { id: 8205, roles: ['scorekeeper'], name: 'Passant' }
