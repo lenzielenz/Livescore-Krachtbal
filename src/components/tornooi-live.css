@@ -1,0 +1,142 @@
+/* De tornooiwedstrijden die nú bezig zijn, op de startpagina — direct onder de tornooi-snellink.
+   Bewust compacter dan het live-bord van de competitie: dit is een venster op de tornooidag, geen
+   volledig overzicht. Wie meer wil, klikt door. */
+
+.tlive {
+  display: grid;
+  gap: 10px;
+  margin: 0 0 16px;
+}
+
+.tlive-kop {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.tlive-kop h2 {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--dim);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+/* Kloppend rood puntje: hetzelfde teken als overal waar iets live is. */
+.tlive-punt {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--pop, #ff5d6c);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--pop, #ff5d6c) 22%, transparent);
+  animation: tlive-klop 1.6s ease-in-out infinite;
+}
+@keyframes tlive-klop {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.8); }
+}
+.tlive-alles {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+.tlive-lijst {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 10px;
+}
+
+.tlive-kaart {
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--pop, #ff5d6c) 26%, var(--line));
+  background: linear-gradient(160deg, color-mix(in srgb, var(--pop, #ff5d6c) 7%, var(--panel)), var(--panel) 70%);
+}
+
+.tlive-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 0.72rem;
+  color: var(--dim);
+}
+.tlive-reeks {
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.tlive-veld,
+.tlive-klok {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 1px 8px;
+  font-variant-numeric: tabular-nums;
+}
+.tlive-klok {
+  margin-left: auto;
+  font-weight: 800;
+  color: var(--txt);
+}
+
+.tlive-body {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 8px;
+}
+.tlive-ploeg {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+.tlive-naam {
+  max-width: 100%;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tlive-score {
+  font-weight: 900;
+  font-size: 1.6rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+/* Zelfde uitnodiging als op het live-bord van de competitie. */
+.tlive-cta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--txt);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+.tlive-cta:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.tlive-cta-txt {
+  flex: 1 1 auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tlive-punt { animation: none; }
+}
