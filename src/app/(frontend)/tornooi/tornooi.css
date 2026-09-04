@@ -3290,3 +3290,31 @@ button.trn-toplink {
 @media (prefers-reduced-motion: reduce) {
   .trn-match.ingeklapt { transition: none; }
 }
+
+/* ── Dagprogramma: gespeelde wedstrijden dichtgeklapt ──────────────────────────
+   Zelfde gedachte als op het tornooibord. Uur, affiche en uitslag blijven staan; veld, reeks,
+   duur en de correctieknop verschijnen pas als je de rij aantikt. Zo leest een dag met dertig
+   wedstrijden als "dit moet nog" en "dit is gebeurd" in plaats van als één lange muur. */
+.dp-rij.klapbaar {
+  cursor: pointer;
+}
+.dp-rij.ingeklapt {
+  opacity: 0.5;
+  filter: saturate(0.5);
+  transition: opacity 140ms ease, filter 140ms ease;
+}
+.dp-rij.ingeklapt:hover,
+.dp-rij.ingeklapt:focus-visible {
+  opacity: 1;
+  filter: none;
+}
+/* Het pijltje staat helemaal rechts op de metaregel, waar anders de knop stond. */
+.dp-klap {
+  margin-left: auto;
+  font-size: 0.7rem;
+  color: var(--dim);
+  flex: 0 0 auto;
+}
+@media (prefers-reduced-motion: reduce) {
+  .dp-rij.ingeklapt { transition: none; }
+}
