@@ -644,7 +644,7 @@ export function GroepKantine({ naam, initial }: { naam: string; initial: GroepDa
           </ul>
           {/* Wat er vandaag al gespeeld is — tussen twee wedstrijden door blijft het scherm zo
               leven. Maximaal negen, anders wordt het op afstand onleesbaar. */}
-          <Uitslagen gespeeld={gespeeld.slice(0, 9)} logos={data.logos} kleuren={data.kleuren} fits={data.fits} titel="Al gespeeld" />
+          <Uitslagen gespeeld={gespeeld.slice(0, 18)} logos={data.logos} kleuren={data.kleuren} fits={data.fits} titel="Al gespeeld" />
         </div>
       ) : stap.soort === 'foto' && archief[stap.index] ? (
         <div className="gk-pauze klaar">
@@ -668,7 +668,7 @@ export function GroepKantine({ naam, initial }: { naam: string; initial: GroepDa
               ))}
             </ul>
           )}
-          <Uitslagen gespeeld={gespeeld.slice(0, 9)} logos={data.logos} kleuren={data.kleuren} fits={data.fits} titel="Alle uitslagen" />
+          <Uitslagen gespeeld={gespeeld} logos={data.logos} kleuren={data.kleuren} fits={data.fits} titel="Alle uitslagen" />
         </div>
       )}
 
@@ -685,9 +685,19 @@ export function GroepKantine({ naam, initial }: { naam: string; initial: GroepDa
   )
 }
 
-// Al gespeeld: tussen twee wedstrijden door is dít wat de kantine wil zien. Nieuwste bovenaan,
-// de winnaar opgelicht, en de reeks erbij zodat je weet waar een uitslag bij hoort. Het raster
-// schaalt mee met het aantal — bij één uitslag groot, bij een volle dag compacter.
+/** Hoeveel uitslagen er tegelijk op het scherm passen zonder dat er iets afgekapt wordt. */
+const UITSLAGEN_PER_BLAD = 3
+/** Hoe lang één blad blijft staan. Lang genoeg om drie uitslagen rustig te lezen van op afstand. */
+const BLAD_MS = 7000
+
+// Al gespeeld: tussen twee wedstrijden door is dít wat de kantine wil zien. Nieuwste eerst, de
+// winnaar opgelicht, en de reeks erbij zodat je weet waar een uitslag bij hoort.
+//
+// Ze stonden eerder met negen tegelijk in een raster van drie kolommen. Op een telefoon las dat
+// prima, maar op de kantine-tv — waar je vanaf vijf meter kijkt — werd elke ploegnaam afgekapt tot
+// "KB…" en werd de score klein. Daarom nu bladeren: drie per keer, groot en voluit, en om de zeven
+// seconden het volgende blad. Zo komt elke uitslag echt aan bod in plaats van dat ze allemaal
+// samen om plaats vechten.
 function Uitslagen({
   gespeeld,
   logos,
@@ -701,13 +711,37 @@ function Uitslagen({
   fits: Record<string, LogoFit>
   titel: string
 }) {
+  const [blad, setBlad] = useState(0)
+  const bladen = Math.max(1, Math.ceil(gespeeld.length / UITSLAGEN_PER_BLAD))
+
+  // Doorbladeren zolang er meer dan één blad is. Komt er tijdens de dag een uitslag bij, dan
+  // verandert het aantal bladen en begint de teller gewoon opnieuw te lopen.
+  useEffect(() => {
+    if (bladen <= 1) {
+      setBlad(0)
+      return
+    }
+    const t = setInterval(() => setBlad((v) => (v + 1) % bladen), BLAD_MS)
+    return () => clearInterval(t)
+  }, [bladen])
+
   if (gespeeld.length === 0) return null
-  const kolommen = gespeeld.length <= 2 ? 1 : gespeeld.length <= 6 ? 2 : 3
+  // Na een herberekening kan het huidige blad buiten bereik vallen; dan tonen we het laatste.
+  const huidig = Math.min(blad, bladen - 1)
+  const zichtbaar = gespeeld.slice(huidig * UITSLAGEN_PER_BLAD, huidig * UITSLAGEN_PER_BLAD + UITSLAGEN_PER_BLAD)
+  // Wordt er gebladerd, dan blijft het raster op drie kolommen staan — ook als het laatste blad er
+  // maar één draagt. Anders springt de hele indeling bij elke wissel, en dat leest op een tv als
+  // een storing. Passen alle uitslagen op één blad, dan mogen ze de breedte gewoon verdelen.
+  const kolommen = bladen > 1 ? UITSLAGEN_PER_BLAD : Math.min(gespeeld.length, UITSLAGEN_PER_BLAD)
   return (
     <div className={`gk-uitslagen k${kolommen}`}>
-      <p className="gk-uitslagen-lbl">{titel}</p>
-      <ul className="gk-uitslagen-lijst">
-        {gespeeld.map((m) => {
+      <p className="gk-uitslagen-lbl">
+        {titel}
+        {bladen > 1 && <span className="gk-uitslagen-tel"> · {huidig + 1}/{bladen}</span>}
+      </p>
+      {/* De sleutel op het blad laat React de lijst echt vervangen, zodat de fade opnieuw speelt. */}
+      <ul className="gk-uitslagen-lijst" key={huidig}>
+        {zichtbaar.map((m) => {
           const winnaar = m.winner
           // Gelijkspel zonder aangeduide winnaar: dan staan beide ploegen even fel — anders lijkt
           // het alsof er niemand gewonnen heeft én niemand meegedaan.
@@ -743,6 +777,14 @@ function Uitslagen({
           )
         })}
       </ul>
+      {/* Bolletjes: van op afstand zie je zo dat er nog uitslagen volgen, en hoeveel. */}
+      {bladen > 1 && (
+        <div className="gk-uitslagen-bolletjes" aria-hidden>
+          {Array.from({ length: bladen }, (_, i) => (
+            <span key={i} className={i === huidig ? 'aan' : ''} />
+          ))}
+        </div>
+      )}
     </div>
   )
 }
