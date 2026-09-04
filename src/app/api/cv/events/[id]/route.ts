@@ -14,10 +14,12 @@ export const dynamic = 'force-dynamic'
 // Daarom is er géén guard op een al gereviewd voorstel.
 //
 // Auth: zelfde als de andere cv-routes — Bearer CV_BRIDGE_TOKEN of federatie-login (cv-auth.ts).
-// Contract: body { actie: 'bevestig' | 'wijsaf', worpType?, eventType?, side?, rugnummer? }
-// (side 'home'|'away'; rugnummer 0..99 of null om leeg te maken — fase 3-speler-correcties);
-// 200 { ok, event: { id, reviewed, verdict, worpType, eventType, side, rugnummer } };
-// 400 { error }; 401; 404.
+// Contract: body { actie: 'bevestig' | 'wijsaf', worpType?, eventType?, side?, rugnummer?,
+// vangerSide?, vangerRugnummer? } (side 'home'|'away'; rugnummers 0..99 of null om leeg te
+// maken; vanger* is wie de bal víng — enkel zinvol bij eventType 'vangst', en eigen velden
+// omdat side/rugnummer van de wérper zijn);
+// 200 { ok, event: { id, reviewed, verdict, worpType, eventType, side, rugnummer,
+// vangerSide, vangerRugnummer } }; 400 { error }; 401; 404.
 
 const EVENT_TYPES = ['worp', 'vangst', 'doelpunt', 'buitenspel'] as const
 type CvEventType = (typeof EVENT_TYPES)[number]
@@ -37,7 +39,15 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     return Response.json({ error: 'Geen toegang.' }, { status: 401 })
   }
 
-  let body: { actie?: unknown; worpType?: unknown; eventType?: unknown; side?: unknown; rugnummer?: unknown }
+  let body: {
+    actie?: unknown
+    worpType?: unknown
+    eventType?: unknown
+    side?: unknown
+    rugnummer?: unknown
+    vangerSide?: unknown
+    vangerRugnummer?: unknown
+  }
   try {
     body = await req.json()
   } catch {
@@ -67,6 +77,20 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   ) {
     return Response.json({ error: 'rugnummer moet een geheel getal 0–99 zijn, of null.' }, { status: 400 })
   }
+  if (body.vangerSide != null && body.vangerSide !== 'home' && body.vangerSide !== 'away') {
+    return Response.json({ error: "vangerSide moet 'home' of 'away' zijn." }, { status: 400 })
+  }
+  const heeftVangerSide = 'vangerSide' in body
+  const heeftVangerRugnummer = 'vangerRugnummer' in body
+  if (
+    heeftVangerRugnummer &&
+    body.vangerRugnummer !== null &&
+    (!Number.isInteger(body.vangerRugnummer) ||
+      (body.vangerRugnummer as number) < 0 ||
+      (body.vangerRugnummer as number) > 99)
+  ) {
+    return Response.json({ error: 'vangerRugnummer moet een geheel getal 0–99 zijn, of null.' }, { status: 400 })
+  }
 
   const bestaand = await payload
     .findByID({ collection: 'cv-events', id: eventId, depth: 0, overrideAccess: true })
@@ -90,6 +114,15 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         ...(body.eventType != null ? { eventType: body.eventType as CvEventType } : {}),
         ...(body.side != null ? { side: body.side as 'home' | 'away' } : {}),
         ...(heeftRugnummer ? { rugnummer: body.rugnummer as number | null } : {}),
+        // De vanger: null wist (vangerSide: null wist ook meteen het rugnummer — een nummer
+        // zonder ploeg wijst niemand aan).
+        ...(heeftVangerSide
+          ? {
+              vangerSide: body.vangerSide as 'home' | 'away' | null,
+              ...(body.vangerSide === null && !heeftVangerRugnummer ? { vangerRugnummer: null } : {}),
+            }
+          : {}),
+        ...(heeftVangerRugnummer ? { vangerRugnummer: body.vangerRugnummer as number | null } : {}),
       },
       depth: 0,
       overrideAccess: true,
@@ -108,6 +141,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       eventType: event.eventType,
       side: event.side ?? null,
       rugnummer: event.rugnummer ?? null,
+      vangerSide: event.vangerSide ?? null,
+      vangerRugnummer: event.vangerRugnummer ?? null,
     },
   })
 }

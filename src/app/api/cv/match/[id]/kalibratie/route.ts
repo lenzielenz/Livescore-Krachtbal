@@ -230,6 +230,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const gelezen = leesBeelden(body)
   if ('fout' in gelezen) return Response.json({ error: gelezen.fout }, { status: 400 })
 
+  // Voor welke opname deze kalibratie geldt: camera 2 staat op een andere plek en ziet dus
+  // andere kruispunten — ze krijgt haar eigen puntenset (cvKalibratie2).
+  if (body.camera != null && body.camera !== 1 && body.camera !== 2) {
+    return Response.json({ error: 'camera moet 1 of 2 zijn.' }, { status: 400 })
+  }
+  const kalibratieVeld = body.camera === 2 ? 'cvKalibratie2' : 'cvKalibratie'
+
   // Waar de camera stond. Optioneel — maar met die keuze kan de server narekenen of de
   // aangeduide punten er ook echt bij passen.
   if (body.positie != null && !geldigeCameraPositie(body.positie)) {
@@ -310,7 +317,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     collection: 'matches',
     id: matchId,
     data: {
-      cvKalibratie: {
+      [kalibratieVeld]: {
         beelden: gelezen.beelden,
         // Het eerste bruikbare beeld blijft ook los staan: gereedschap dat één vaste
         // kalibratie verwacht (calibrate.py, landing.py bij een stilstaande camera) hoeft
@@ -340,6 +347,8 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
   if (!mayEditMatchVideo(user, match as { analyseOnly?: boolean | null; analyseOwner?: unknown })) {
     return Response.json({ error: 'Geen rechten voor deze wedstrijd.' }, { status: 403 })
   }
-  await payload.update({ collection: 'matches', id: matchId, data: { cvKalibratie: null }, overrideAccess: true })
+  const camera = new URL(req.url).searchParams.get('camera')
+  const veld = camera === '2' ? 'cvKalibratie2' : 'cvKalibratie'
+  await payload.update({ collection: 'matches', id: matchId, data: { [veld]: null }, overrideAccess: true })
   return Response.json({ ok: true })
 }

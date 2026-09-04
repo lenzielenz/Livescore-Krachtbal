@@ -37,12 +37,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     // URL: leeg = video loskoppelen. Anders moet ze herkenbaar zijn (bestand, YouTube of uitlink).
     const data: Record<string, unknown> = {}
-    if (body.videoUrl !== undefined) {
-      const raw = String(body.videoUrl ?? '').trim()
+    for (const key of ['videoUrl', 'video2Url'] as const) {
+      if (body[key] === undefined) continue
+      const raw = String(body[key] ?? '').trim()
       if (raw && !parseVideoSource(raw)) {
         return Response.json({ error: 'Onbruikbare video-URL. Gebruik een YouTube-link of een .mp4/.webm-bestand.' }, { status: 400 })
       }
-      data.videoUrl = raw || null
+      data[key] = raw || null
     }
 
     // IJkpunten (seconden). null = wissen; een getal moet eindig en niet-negatief zijn.
@@ -57,12 +58,29 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       data[key] = Math.round(n)
     }
 
+    // Het tijdsverschil met camera 2 mag negatief zijn (camera 2 kan later gestart zijn) en
+    // vraagt méér precisie dan hele seconden: de ontdubbeling van dubbele detecties werkt met
+    // een venster van twee seconden, dus op een tiende ijken houdt daar ruimte over.
+    if (body.video2OffsetS !== undefined) {
+      if (body.video2OffsetS === null) {
+        data.video2OffsetS = null
+      } else {
+        const n = Number(body.video2OffsetS)
+        if (!Number.isFinite(n)) {
+          return Response.json({ error: 'Het tijdsverschil van camera 2 moet een aantal seconden zijn.' }, { status: 400 })
+        }
+        data.video2OffsetS = Math.round(n * 10) / 10
+      }
+    }
+
     if (Object.keys(data).length === 0) return Response.json({ error: 'Niets om te bewaren.' }, { status: 400 })
 
     const saved = await payload.update({ collection: 'matches', id: matchId, data, overrideAccess: true })
     return Response.json({
       ok: true,
       videoUrl: (saved as { videoUrl?: string | null }).videoUrl ?? null,
+      video2Url: (saved as { video2Url?: string | null }).video2Url ?? null,
+      video2OffsetS: (saved as { video2OffsetS?: number | null }).video2OffsetS ?? null,
       videoOffsetH1: (saved as { videoOffsetH1?: number | null }).videoOffsetH1 ?? null,
       videoOffsetH2: (saved as { videoOffsetH2?: number | null }).videoOffsetH2 ?? null,
     })

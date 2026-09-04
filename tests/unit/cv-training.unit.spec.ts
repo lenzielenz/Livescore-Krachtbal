@@ -113,6 +113,20 @@ describe('bevestigdeTijden', () => {
   it('negeert een voorstel zonder bruikbare tijd', () => {
     expect(bevestigdeTijden([{ videoTimeS: null, verdict: 'bevestigd' }])).toEqual([])
   })
+
+  it('laat worpen die alléén camera 2 zag buiten de labels', () => {
+    // De trainer fit op de meetreeks van camera 1; een worp die enkel de tweede camera zag staat
+    // daar niet in — zo'n label is met geen enkele drempel te vinden en trekt de drempel naar
+    // ruis toe. Zagen béide camera's hem (beideCameras), dan heeft camera 1 wél een meting.
+    expect(
+      bevestigdeTijden([
+        { videoTimeS: 100, verdict: 'bevestigd', camera: 1 },
+        { videoTimeS: 200, verdict: 'bevestigd', camera: 2 },
+        { videoTimeS: 300, verdict: 'bevestigd', camera: 2, beideCameras: true },
+        { videoTimeS: 400, verdict: 'bevestigd' },
+      ]),
+    ).toEqual([100, 300, 400])
+  })
 })
 
 describe('handWorpen', () => {

@@ -77,13 +77,15 @@ export function wachtNaPoging(poging: number): number {
  * van achter de vorige geplakt te worden — dat zou een onspeelbare video geven.
  *
  * Het match-id zit er ook in: twee mensen die toevallig hetzelfde bestand naar een verschillende
- * wedstrijd sturen, mogen elkaars halve upload niet erven.
+ * wedstrijd sturen, mogen elkaars halve upload niet erven. En de camera: hetzelfde bestand als
+ * hoofdopname én als tweede camera zijn twee verschillende uploads.
  */
 export async function bestandsSleutel(
   bestand: { name: string; size: number; lastModified?: number },
   matchId: number,
+  camera: 1 | 2 = 1,
 ): Promise<string> {
-  const bron = `${matchId}|${bestand.name}|${bestand.size}|${bestand.lastModified ?? 0}`
+  const bron = `${matchId}${camera === 2 ? '#2' : ''}|${bestand.name}|${bestand.size}|${bestand.lastModified ?? 0}`
   const subtle = globalThis.crypto?.subtle
   if (subtle) {
     const hash = await subtle.digest('SHA-256', new TextEncoder().encode(bron))

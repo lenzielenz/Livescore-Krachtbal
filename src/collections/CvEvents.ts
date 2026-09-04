@@ -60,6 +60,27 @@ export const CvEvents: CollectionConfig = {
           type: 'number',
           min: 0,
         },
+        {
+          // Welke opname dit voorstel zag. De videotijd staat áltijd in de tijdlijn van camera 1
+          // (bij camera 2 al omgerekend via video2OffsetS); dit veld zegt enkel uit welk beeld
+          // de review-frames moeten komen.
+          name: 'camera',
+          label: 'Camera',
+          type: 'number',
+          defaultValue: 1,
+          min: 1,
+          max: 2,
+          admin: { description: '1 = hoofdopname, 2 = tweede camera (andere kant van het veld).' },
+        },
+        {
+          // Zagen béide camera's deze worp (en won camera 2 enkel de meting)? Het verschil met
+          // "alleen camera 2 zag hem" telt voor de training: een worp die camera 1 nooit zag mag
+          // geen label zijn voor camera 1's meetreeks (cv-training.ts).
+          name: 'beideCameras',
+          label: 'Door beide camera\'s gezien',
+          type: 'checkbox',
+          defaultValue: false,
+        },
       ],
     },
     {
@@ -148,6 +169,31 @@ export const CvEvents: CollectionConfig = {
           label: 'Score-delta',
           type: 'number',
           defaultValue: 0,
+        },
+      ],
+    },
+    {
+      // Wie de bal ving — enkel zinvol bij eventType 'vangst'. Bewust éigen velden en niet de
+      // bestaande side/rugnummer herinterpreteren: die zijn van de wérper. De pipeline detecteert
+      // de vanger (nog) niet; dit wordt in de reviewlaan door een mens ingevuld en bij het
+      // overzetten als caughtBy aan de worp gehangen (zie cv-overzetten.ts).
+      type: 'row',
+      fields: [
+        {
+          name: 'vangerSide',
+          label: 'Vanger: ploeg',
+          type: 'select',
+          options: [
+            { label: 'Thuis', value: 'home' },
+            { label: 'Uit', value: 'away' },
+          ],
+        },
+        {
+          name: 'vangerRugnummer',
+          label: 'Vanger: rugnummer',
+          type: 'number',
+          min: 0,
+          max: 99,
         },
       ],
     },

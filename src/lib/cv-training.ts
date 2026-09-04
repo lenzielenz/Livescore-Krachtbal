@@ -86,10 +86,21 @@ export function handWorpen<T extends { bron?: unknown }>(worpen: T[]): T[] {
   return worpen.filter((w) => w.bron !== 'video')
 }
 
-/** De tijdstippen die jij op de vídeo bevestigd hebt — daar komt geen ijking aan te pas. */
-export function bevestigdeTijden(voorstellen: { videoTimeS?: unknown; verdict?: unknown }[]): number[] {
+/**
+ * De tijdstippen die jij op de vídeo bevestigd hebt — daar komt geen ijking aan te pas.
+ *
+ * Voorstellen die alléén camera 2 zag, tellen niet mee: de meetreeks waar de trainer op fit
+ * (houding-reeks.jsonl) is die van camera 1, en op zo'n tijdstip staat daar niets. Zo'n label
+ * is voor de trainer een "gemiste" worp die met geen enkele drempel te vinden valt — de
+ * drempel zakt dan naar ruis toe. Een worp die beide camera's zagen (beideCameras) telt wél:
+ * camera 1 heeft daar een echte meting, ook al won camera 2 de landing.
+ */
+export function bevestigdeTijden(
+  voorstellen: { videoTimeS?: unknown; verdict?: unknown; camera?: unknown; beideCameras?: unknown }[],
+): number[] {
   return voorstellen
     .filter((v) => v.verdict === 'bevestigd' && typeof v.videoTimeS === 'number')
+    .filter((v) => v.camera !== 2 || v.beideCameras === true)
     .map((v) => v.videoTimeS as number)
     .sort((a, b) => a - b)
 }

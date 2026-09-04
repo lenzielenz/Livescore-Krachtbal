@@ -3,7 +3,7 @@ import { describe, it, beforeAll, expect } from 'vitest'
 
 import config from '@/payload.config'
 import { buildMatchState } from '@/lib/match-engine'
-import { zetVoorstellenOver, isOverzetfout, kiesWerper } from '@/lib/cv-overzetten'
+import { zetVoorstellenOver, isOverzetfout, kiesVanger, kiesWerper } from '@/lib/cv-overzetten'
 
 // De video-weg tot het einde: bevestigde voorstellen worden échte worpen, en de engine leidt
 // daar zelf score, balbezit en kruisjes uit af.
@@ -127,6 +127,25 @@ describe('kiesWerper', () => {
 
   it('geeft niets terug als er niemand overblijft', () => {
     expect(kiesWerper([{ id: 1, shirtNumber: 4 }], null, 1)).toBeNull()
+  })
+})
+
+describe('kiesVanger', () => {
+  const verdedigers = [
+    { id: 11, shirtNumber: 3 },
+    { id: 12, shirtNumber: 8 },
+  ]
+
+  it('vindt de vanger op zijn rugnummer binnen de verdedigende ploeg', () => {
+    expect(kiesVanger(verdedigers, 8)).toBe(12)
+  })
+
+  it('gokt nooit: geen rugnummer of niet gevonden = geen naam', () => {
+    // Een gegokte vanger schrijft vangsten bij op de spelerskaart van iemand die er niets mee
+    // te maken had — een leeg caughtBy is eerlijker (dat mag de manuele aantekenaar ook).
+    expect(kiesVanger(verdedigers, null)).toBeNull()
+    expect(kiesVanger(verdedigers, 99)).toBeNull()
+    expect(kiesVanger([], 8)).toBeNull()
   })
 })
 

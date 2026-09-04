@@ -604,6 +604,14 @@ export interface Match {
    */
   videoOffsetH2?: number | null;
   /**
+   * Geüpload bestand van de tweede camera. Enkel zinvol náást de eerste video.
+   */
+  video2Url?: string | null;
+  /**
+   * Op welke seconde in camera 2 valt seconde 0 van camera 1? IJk dit via de analysepagina.
+   */
+  video2OffsetS?: number | null;
+  /**
    * Beheerd via /api/cv/match/[id]/werpers.
    */
   cvWerpers?:
@@ -623,6 +631,30 @@ export interface Match {
    * Beheerd via de analysepagina. Niet handmatig bewerken.
    */
   cvKalibratie?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  /**
+   * Beheerd via de analysepagina (camera 2). Niet handmatig bewerken.
+   */
+  cvKalibratie2?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  /**
+   * Beheerd via /api/cv/match/[id]/sporen.
+   */
+  cvSporen?:
     | {
         [k: string]: unknown;
       }
@@ -1648,6 +1680,11 @@ export interface CvEvent {
   match: number | Match;
   videoTimeS: number;
   frame?: number | null;
+  /**
+   * 1 = hoofdopname, 2 = tweede camera (andere kant van het veld).
+   */
+  camera?: number | null;
+  beideCameras?: boolean | null;
   eventType: 'worp' | 'vangst' | 'doelpunt' | 'buitenspel';
   worpType?: ('nek' | 'rug') | null;
   inDoelgebied?: boolean | null;
@@ -1662,6 +1699,8 @@ export interface CvEvent {
   side?: ('home' | 'away') | null;
   rugnummer?: number | null;
   scoreDelta?: number | null;
+  vangerSide?: ('home' | 'away') | null;
+  vangerRugnummer?: number | null;
   confidence: number;
   /**
    * Pas na menselijke review mag een voorstel iets betekenen — het schrijft nooit zelf naar throws.
@@ -1950,9 +1989,13 @@ export interface MatchesSelect<T extends boolean = true> {
   videoUrl?: T;
   videoOffsetH1?: T;
   videoOffsetH2?: T;
+  video2Url?: T;
+  video2OffsetS?: T;
   cvWerpers?: T;
   analyseModus?: T;
   cvKalibratie?: T;
+  cvKalibratie2?: T;
+  cvSporen?: T;
   cvAnalyse?: T;
   cvFysiek?: T;
   reeks?: T;
@@ -2587,6 +2630,8 @@ export interface CvEventsSelect<T extends boolean = true> {
   match?: T;
   videoTimeS?: T;
   frame?: T;
+  camera?: T;
+  beideCameras?: T;
   eventType?: T;
   worpType?: T;
   inDoelgebied?: T;
@@ -2598,6 +2643,8 @@ export interface CvEventsSelect<T extends boolean = true> {
   side?: T;
   rugnummer?: T;
   scoreDelta?: T;
+  vangerSide?: T;
+  vangerRugnummer?: T;
   confidence?: T;
   reviewed?: T;
   werper?: T;

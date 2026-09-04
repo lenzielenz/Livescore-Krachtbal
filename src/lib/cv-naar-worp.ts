@@ -34,6 +34,9 @@ export type Voorstelworp = {
   yM?: number | null
   /** De bal landde buiten de lijnen: het punt ligt dan bewúst buiten het veld. */
   uitbal?: boolean | null
+  /** Wie de bal ving (reviewlaan): ploeg + rugnummer. Enkel zinvol bij eventType 'vangst'. */
+  vangerSide?: 'home' | 'away' | null
+  vangerRugnummer?: number | null
   verdict?: 'bevestigd' | 'afgewezen' | null
 }
 
@@ -46,6 +49,9 @@ export type Worpinvoer = {
   tapCount: 1 | 2
   rugnummer: number | null
   side: 'home' | 'away' | null
+  /** Het rugnummer van de vanger (enkel bij tapCount 2) — de overzetting zoekt de speler op
+   *  binnen de ploeg die volgens de balbezit-keten verdedigde. */
+  vangerRugnummer: number | null
   videoTimeS: number
 }
 
@@ -253,6 +259,12 @@ export function worpUitVoorstel(
     rugnummer: typeof v.rugnummer === 'number' && v.rugnummer >= 0 ? v.rugnummer : null,
     werper: typeof v.werper === 'number' && Number.isFinite(v.werper) ? v.werper : null,
     side: v.side === 'home' || v.side === 'away' ? v.side : null,
+    // De vanger reist enkel mee als dit ook echt een vangst is: op een gewone worp zou het
+    // rugnummer stille rommel zijn die niemand nog thuisbrengt.
+    vangerRugnummer:
+      v.eventType === 'vangst' && typeof v.vangerRugnummer === 'number' && v.vangerRugnummer >= 0
+        ? v.vangerRugnummer
+        : null,
     videoTimeS: v.videoTimeS,
   }
 }

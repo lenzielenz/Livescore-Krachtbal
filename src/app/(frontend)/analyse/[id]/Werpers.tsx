@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 
-import { dekking, type Werpergroep } from '@/lib/cv-werpers'
+import { dekking, werperLabel, type Werpergroep } from '@/lib/cv-werpers'
 import './video-tijdlijn.css'
 
 // Wie is wie: de werpers die de analyse onderscheidde een naam geven.
@@ -118,7 +118,9 @@ export function Werpers({ matchId, naarTijd }: { matchId: number; naarTijd?: (s:
           {groepen.map((g) => (
             <tr key={g.werper} className={toewijzing[String(g.werper)] ? 'gezet' : ''}>
               <th scope="row">
-                #{g.werper}
+                {/* Nummers ≥ 1000 komen uit de tweede camera — dan weet je in welk beeld je moet
+                    kijken om te zien wie het is. */}
+                {werperLabel(g.werper)}
                 {g.side && <span className="wp-kant"> {g.side === 'home' ? 'thuis' : 'uit'}</span>}
               </th>
               <td>

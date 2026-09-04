@@ -834,3 +834,12 @@
 }
 .kal-anker.aan { border-color: var(--accent); color: var(--accent); }
 .kal-anker.gezet { opacity: 0.6; }
+
+/* ── Twee camera's: de wisselknoppen boven de speler ─────────────────────────────────────── */
+.va-cams {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 8px 0 6px;
+}

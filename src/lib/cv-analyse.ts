@@ -9,6 +9,7 @@ import ffmpegPath from 'ffmpeg-static'
 import type { Payload } from 'payload'
 
 import { heeftRuntime, modelOmgeving, runtimeMap, runtimePython } from './cv-runtime'
+import { samenvoegen, tweedeCameraKlaar, type Samenvoegrapport } from './cv-samenvoegen'
 import { resolveMediaDir } from './media-dir'
 
 // De video-analyse op de server: video erin, worpvoorstellen eruit. Wat de gebruiker in de
@@ -67,6 +68,10 @@ export type AnalyseStand = {
     metingenPerS?: number
     /** Wat er overgeslagen is omdat de kalibratie ontbrak. */
     overgeslagen?: string[]
+    /** Bij twee camera's: wat elke kant zag en hoeveel er als dezelfde worp herkend is. */
+    detectiesCamera2?: number
+    ontdubbeld?: number
+    buitenTijdlijn?: number
   }
   instellingen?: { stand: string; bewegend: boolean; tracking: boolean; overlay: boolean; ai?: boolean }
 }
@@ -293,6 +298,14 @@ export function videoBestand(videoUrl: string | null | undefined): { pad: string
 /** De werkmap voor deze analyse: alle tussenbestanden bij elkaar, per wedstrijd. */
 export function werkmap(matchId: number): string {
   return path.join(resolveMediaDir(), 'cv-analyse', String(matchId))
+}
+
+/**
+ * De submap voor de tweede camera: eigen tussenbestanden en merktekens naast die van camera 1.
+ * Camera 1 blijft in de wortel — zo blijven de merktekens van bestaande analyses geldig.
+ */
+export function werkmapCamera2(matchId: number): string {
+  return path.join(werkmap(matchId), 'cam2')
 }
 
 /**
@@ -569,7 +582,7 @@ export async function leesStand(payload: Payload, matchId: number): Promise<Anal
   if (isVerweesd(stand)) {
     // Onderbroken door een herstart — maar niet weg. Wat af was, staat op het volume en wordt
     // bij een volgende poging overgeslagen; alleen de stap die net bezig was, moet opnieuw.
-    const klaar = await telMerktekens(werkmap(matchId))
+    const klaar = (await telMerktekens(werkmap(matchId))) + (await telMerktekens(werkmapCamera2(matchId)))
     const afgebroken: AnalyseStand = {
       ...(stand as AnalyseStand),
       status: 'afgebroken',
@@ -823,14 +836,64 @@ export async function startAnalyse(
     fps: METINGEN_PER_S[opts.stand], ffmpeg: ffmpegPad(), instellingen: instellingenPad(),
     hervat: hervatten,
   })
+
+  // Tweede camera: eigen video, eigen kalibratie, eigen werkmap — dezelfde keten. De detecties
+  // gaan ná afloop op de tijdlijn van camera 1 en worden ontdubbeld (cv-samenvoegen.ts), want
+  // een worp over de middellijn zien beide camera's en die mag maar één keer tellen.
+  const map2 = werkmapCamera2(matchId)
+  const video2Offset = typeof match.video2OffsetS === 'number' && Number.isFinite(match.video2OffsetS)
+    ? match.video2OffsetS
+    : null
+  let stappen2: Stap[] = []
+  let kalibratie2: string | null = null
+  const tweede = tweedeCameraKlaar(match as { video2Url?: string | null; video2OffsetS?: number | null })
+  if (String(match.video2Url ?? '').trim() && !tweede.klaar) {
+    // Er hángt een tweede camera maar ze kan niet mee — dat mag nooit stil gebeuren, anders
+    // "klopt" de analyse terwijl de halve overkant van het veld ontbreekt.
+    overgeslagen.push(`camera 2 (${tweede.reden})`)
+  }
+  if (tweede.klaar) {
+    const video2 = videoBestand(match.video2Url as string | null)
+    const bestaat = 'pad' in video2 && (await fs.access(video2.pad).then(() => true).catch(() => false))
+    if ('fout' in video2) {
+      overgeslagen.push(`camera 2 (${video2.fout})`)
+    } else if (!bestaat) {
+      overgeslagen.push('camera 2 (het videobestand staat niet meer op de server — upload het opnieuw)')
+    } else {
+      await fs.mkdir(map2, { recursive: true })
+      if (!hervatten) await wisMerktekens(map2)
+      const kalibratieData2 = (match.cvKalibratie2 ?? null) as KalibratieData
+      kalibratie2 = await schrijfKalibratie(map2, kalibratieData2, veldmaten)
+      const ankers2 = opts.bewegend ? await schrijfAnkers(map2, kalibratieData2, veldmaten) : null
+      if (!kalibratie2) {
+        overgeslagen.push('camera 2: waar de bal landt (geen eigen kalibratie voor die camera)')
+      }
+      stappen2 = bouwStappen({
+        matchId, video: video2.pad, map: map2, kalibratie: kalibratie2, ankers: ankers2,
+        // Geen eigen controlevideo voor camera 2: de overlay dient om het veldmodel te
+        // beoordelen, en daarvoor volstaat de hoofdopname.
+        opts: { ...opts, overlay: false },
+        fps: METINGEN_PER_S[opts.stand], ffmpeg: null, instellingen: instellingenPad(),
+        hervat: hervatten,
+      }).map((s) => ({ ...s, naam: `Camera 2: ${s.naam}` }))
+    }
+  }
+
+  // De volledige keten: camera 1 eerst (zelfde nummers als vroeger, dus oude merktekens blijven
+  // geldig), dan camera 2 in haar eigen submap.
+  const keten: { stap: Stap; map: string }[] = [
+    ...stappen.map((stap) => ({ stap, map })),
+    ...stappen2.map((stap) => ({ stap, map: map2 })),
+  ]
+
   const begin = Date.now()
   const IMPORTSTAP = 'Voorstellen klaarzetten voor review'
   const stand: AnalyseStand = {
     status: 'bezig',
-    stap: stappen[0]?.naam ?? 'Starten',
+    stap: keten[0]?.stap.naam ?? 'Starten',
     stapNummer: 1,
-    stappen: stappen.length + 1, // + het importeren van de voorstellen
-    stappenNamen: [...stappen.map((s) => s.naam), IMPORTSTAP],
+    stappen: keten.length + 1, // + het importeren van de voorstellen
+    stappenNamen: [...keten.map((k) => k.stap.naam), IMPORTSTAP],
     gestart: new Date(begin).toISOString(),
     procesStart: PROCES_START,
     instellingen: { ...opts },
@@ -844,12 +907,13 @@ export async function startAnalyse(
   void (async () => {
     let huidig = { ...stand }
     try {
-      for (let i = 0; i < stappen.length; i++) {
+      for (let i = 0; i < keten.length; i++) {
+        const { stap, map: stapMap } = keten[i]
         // Al afgewerkt in een eerdere poging (mét dezelfde instellingen)? Dan overslaan. Zo kost
         // een herstart van de server hoogstens de stap die net bezig was, niet de hele analyse.
-        if (await stapAlKlaar(map, i + 1, stappen[i])) {
+        if (await stapAlKlaar(stapMap, i + 1, stap)) {
           huidig = {
-            ...huidig, stap: stappen[i].naam, stapNummer: i + 1, stapFractie: 1,
+            ...huidig, stap: stap.naam, stapNummer: i + 1, stapFractie: 1,
             stapDetail: 'al gedaan in een eerdere poging — overgeslagen',
             laatsteTeken: new Date().toISOString(),
           }
@@ -857,7 +921,7 @@ export async function startAnalyse(
           continue
         }
         huidig = {
-          ...huidig, stap: stappen[i].naam, stapNummer: i + 1,
+          ...huidig, stap: stap.naam, stapNummer: i + 1,
           stapFractie: 0, stapDetail: undefined, laatsteTeken: new Date().toISOString(),
         }
         await schrijfStand(payload, matchId, huidig)
@@ -865,7 +929,7 @@ export async function startAnalyse(
         // database schrijven zou tientallen schrijfacties per minuut kosten voor een balk die
         // toch maar om de vijf seconden opgehaald wordt.
         let laatsteSchrijf = 0
-        const uitkomst = await draaiStap(matchId, stappen[i], (v) => {
+        const uitkomst = await draaiStap(matchId, stap, (v) => {
           huidig = {
             ...huidig,
             ...(v.fractie != null ? { stapFractie: v.fractie } : {}),
@@ -876,18 +940,28 @@ export async function startAnalyse(
           laatsteSchrijf = Date.now()
           void schrijfStand(payload, matchId, huidig).catch(() => undefined)
         })
-        if (uitkomst.code !== 0) throw new Error(stapFoutTekst(stappen[i].naam, uitkomst))
+        if (uitkomst.code !== 0) throw new Error(stapFoutTekst(stap.naam, uitkomst))
         // Pas nú het merkteken: een stap die halverwege afgebroken werd, laat een half
         // uitvoerbestand achter, en daar mag een volgende poging nooit op verderrekenen.
-        await markeerStapKlaar(map, i + 1, stappen[i])
+        await markeerStapKlaar(stapMap, i + 1, stap)
       }
 
       huidig = {
-        ...huidig, stap: IMPORTSTAP, stapNummer: stappen.length + 1,
+        ...huidig, stap: IMPORTSTAP, stapNummer: keten.length + 1,
         stapFractie: 0, stapDetail: undefined, laatsteTeken: new Date().toISOString(),
       }
       await schrijfStand(payload, matchId, huidig)
-      const regels = await leesJsonl(resultaatBestand(map, kalibratie, opts.tracking))
+      const regelsCam1 = await leesJsonl(resultaatBestand(map, kalibratie, opts.tracking))
+      // Camera 2 erbij: op de gedeelde tijdlijn zetten en ontdubbelen. Zonder dat telt elke
+      // worp die beide camera's zagen dubbel in de voorstellen én in de modelscore.
+      let regels = regelsCam1
+      let samenvoeg: Samenvoegrapport | null = null
+      if (stappen2.length && video2Offset != null) {
+        const regelsCam2 = await leesJsonl(resultaatBestand(map2, kalibratie2, opts.tracking))
+        const uit = samenvoegen(regelsCam1, regelsCam2, video2Offset)
+        regels = uit.regels
+        samenvoeg = uit.rapport
+      }
       const aantal = await importeer(regels)
 
       await schrijfStand(payload, matchId, {
@@ -903,19 +977,27 @@ export async function startAnalyse(
           ...(await leesDetectierapport(map)),
           ...(await leesVolgrapport(map)),
           ...(overgeslagen.length ? { overgeslagen } : {}),
+          ...(samenvoeg
+            ? {
+                detectiesCamera2: samenvoeg.camera2,
+                ontdubbeld: samenvoeg.ontdubbeld,
+                ...(samenvoeg.buitenTijdlijn ? { buitenTijdlijn: samenvoeg.buitenTijdlijn } : {}),
+              }
+            : {}),
           duurSeconden: Math.round((Date.now() - begin) / 1000),
         },
       })
     } catch (err) {
       // Wat er al af was, telt: na een mislukking gaat een nieuwe poging verder op de merktekens.
       // Zonder dit stond er enkel "mislukt" en leek elke herstart weer bij nul te beginnen.
-      const klaar = await telMerktekens(map).catch(() => 0)
+      const klaar =
+        (await telMerktekens(map).catch(() => 0)) + (await telMerktekens(map2).catch(() => 0))
       await schrijfStand(payload, matchId, {
         ...huidig,
         status: 'mislukt',
         fout: err instanceof Error ? err.message : 'Onbekende fout',
         geeindigd: new Date().toISOString(),
-        ...(klaar > 0 ? { hervatbaar: { stappenKlaar: klaar, stappen: stappen.length + 1 } } : {}),
+        ...(klaar > 0 ? { hervatbaar: { stappenKlaar: klaar, stappen: keten.length + 1 } } : {}),
         rapport: { duurSeconden: Math.round((Date.now() - begin) / 1000) },
       })
     } finally {
