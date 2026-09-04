@@ -193,9 +193,10 @@ export function TournamentScoresheetPro({
                     knop: '▶ Ja, starten',
                     doe: () => act({ action: 'start' }),
                   })
-                } else if (m.clockRunning) {
-                  if (window.confirm('Klok pauzeren? De tijd stopt.')) act({ action: 'clock', running: false })
-                } else {
+                } else if (!m.clockRunning) {
+                  // Geen pauze meer: aan een tornooitafel wordt de klok niet stilgezet, en een
+                  // hele klok die als pauzeknop werkt is te makkelijk per ongeluk aan te tikken.
+                  // Een stilstaande klok (rust) weer op gang trekken kan wél.
                   act({ action: 'clock', running: true })
                 }
               }}
@@ -214,7 +215,7 @@ export function TournamentScoresheetPro({
                     : !live || (!m.clockRunning && clock < 1)
                       ? '▶ Tik om te starten'
                       : m.clockRunning
-                        ? '⏸ Tik om te pauzeren'
+                        ? 'de klok loopt'
                         : '▶ Tik om verder te gaan'}
                 </span>
               )}

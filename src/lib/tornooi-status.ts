@@ -25,8 +25,17 @@ export async function gestarteTornooien(payload: Payload, ids: number[]): Promis
   return uit
 }
 
-/** Badge voor de kaarten: AFGELOPEN · BEZIG (er wordt gespeeld) · NOG NIET GESTART. */
-export function tornooiBadge(status: unknown, gestart: boolean): { label: string; cls: string } {
-  if (status === 'finished') return { label: 'AFGELOPEN', cls: 'finished' }
-  return gestart ? { label: 'BEZIG', cls: 'live' } : { label: 'NOG NIET GESTART', cls: 'pending' }
+/**
+ * Badge voor de kaarten: AFGELOPEN · LIVE (er wordt gespeeld) · NOG NIET GESTART.
+ *
+ * "LIVE" en niet "BEZIG": dat is het woord dat de rest van het platform gebruikt voor een
+ * wedstrijd die nú loopt (scorebord, dagprogramma, kantinescherm), en het is het woord waar een
+ * supporter naar zoekt. `live` staat er apart bij zodat een kaart er een kloppend bolletje naast
+ * kan zetten zonder de klasse te moeten uitpluizen.
+ */
+export function tornooiBadge(status: unknown, gestart: boolean): { label: string; cls: string; live: boolean } {
+  if (status === 'finished') return { label: 'AFGELOPEN', cls: 'finished', live: false }
+  return gestart
+    ? { label: 'LIVE', cls: 'live', live: true }
+    : { label: 'NOG NIET GESTART', cls: 'pending', live: false }
 }

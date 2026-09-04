@@ -141,6 +141,12 @@ function MatchCard({ id, m, canManage, magScoren = false, supportersModus = fals
   const live = m.status === 'live'
   const done = m.status === 'finished'
 
+  // Een gespeelde wedstrijd klapt dicht: uitslag en winnaar blijven staan, de rest (aantekenknop,
+  // vertrouwensstrookje, bronvermelding) gaat weg. Zo zie je in één blik welke wedstrijden nog
+  // moeten en welke verleden tijd zijn, zonder dat het schema iets verbergt — één tik opent ze.
+  const [open, setOpen] = useState(false)
+  const ingeklapt = done && !bye && !open
+
   const Row = ({ side }: { side: 'home' | 'away' }) => {
     const name = side === 'home' ? m.home : m.away
     const won = m.winner === side
@@ -155,14 +161,37 @@ function MatchCard({ id, m, canManage, magScoren = false, supportersModus = fals
   }
 
   return (
-    <div className={`trn-match ${m.status}`}>
-      <div className="trn-match-head">
+    <div
+      className={`trn-match ${m.status}${ingeklapt ? ' ingeklapt' : ''}${done && !bye ? ' klapbaar' : ''}`}
+      // Ingeklapt is de héle kaart de knop — dat is wat je aantikt. Staat ze open, dan blijft enkel
+      // de kopregel klikbaar: anders zou een tik op "Aantekenen" de kaart onder je vinger dichtslaan.
+      onClick={ingeklapt ? () => setOpen(true) : undefined}
+      role={ingeklapt ? 'button' : undefined}
+      tabIndex={ingeklapt ? 0 : undefined}
+      aria-expanded={done && !bye ? open : undefined}
+      onKeyDown={
+        ingeklapt
+          ? (e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                setOpen(true)
+              }
+            }
+          : undefined
+      }
+    >
+      <div
+        className="trn-match-head"
+        onClick={done && !bye && open ? () => setOpen(false) : undefined}
+      >
         <span className="trn-match-label">{m.label}</span>
         <span className={`trn-match-badge ${m.status}`}>
           {live ? `LIVE · H${m.currentHalf} ${fmtClock(clock)}` : bye ? 'BYE' : done ? 'EINDE' : 'TE SPELEN'}
         </span>
+        {/* Klein pijltje: zonder aanwijzing raadt niemand dat een afgelopen kaart open kan. */}
+        {done && !bye && <span className="trn-match-klap" aria-hidden>{open ? '▴' : '▾'}</span>}
       </div>
-      {neutral && <div className="trn-match-neutral">⚖️ neutraal terrein</div>}
+      {neutral && !ingeklapt && <div className="trn-match-neutral">⚖️ neutraal terrein</div>}
       {/* Supporters zien hier wanneer én waar de wedstrijd gespeeld wordt. */}
       {!bye && !done && (m.plannedAt || m.veld != null) && (
         <div className="trn-match-plan">
@@ -175,7 +204,7 @@ function MatchCard({ id, m, canManage, magScoren = false, supportersModus = fals
       {/* Meetellen mag ruimer dan beheren: in supporters-modus komt élke ingelogde bezoeker aan de
           aantekentafel, maar het veldscherm, het wisselen van kanten en het plannen blijven bij wie
           aantekenrechten heeft. Vandaar twee vlaggen op één strookje. */}
-      {!bye && (canManage || magScoren) && (
+      {!bye && !ingeklapt && (canManage || magScoren) && (
         <div className="trn-match-actions">
           <Link href={`/tornooi/${id}/aantekenen/${m.id}`} className="trn-mini">Aantekenen</Link>
           {canManage && <Link href={`/tornooi/${id}/veld/${m.id}`} className="trn-mini">Veld</Link>}
@@ -186,7 +215,7 @@ function MatchCard({ id, m, canManage, magScoren = false, supportersModus = fals
       {/* Telt een supporter deze wedstrijd mee, dan hoort erbij te staan wie dat is en of andere
           kijkers het beeld bevestigen. Bij een wedstrijd die de organisatie zelf aantekent staat
           hier niets — die stand komt van de tafel. */}
-      {m.trust && (
+      {m.trust && !ingeklapt && (
         <MatchTrust
           tournamentId={id}
           m={m}
@@ -196,6 +225,10 @@ function MatchCard({ id, m, canManage, magScoren = false, supportersModus = fals
           onState={onState}
         />
       )}
+      {/* Bij elke uitslag hoort te staan waar ze vandaan komt. Geldt óók voor een wedstrijd die de
+          organisatie aantekende — juist dié moet de federatie kunnen natrekken als er achteraf
+          discussie over de stand ontstaat. */}
+      {m.aantekenaar && !ingeklapt && <p className="trn-aantekenaar">✏️ {m.aantekenaar.tekst}</p>}
       {/* Meespelen kan tot de aftrap — óók hier, zodat een supporter zijn tip kwijt kan waar hij
           de wedstrijd ook tegenkomt. */}
       {PRONOSTIEK_OP_CATEGORIE && !bye && m.status === 'pending' && m.home && m.away && (

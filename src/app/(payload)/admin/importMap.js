@@ -4,6 +4,9 @@ import { BerekendeCategorie as BerekendeCategorie_8a94421400cdd3a8f585ec45228302
 import { VergunningBol as VergunningBol_90578ef66c5e558ba8dcc222ea4e1687 } from '../../../components/admin/VergunningBol'
 import { ScorekeeperLink as ScorekeeperLink_c2ef7d98549fea3336212ff94c5412bc } from '../../../components/admin/ScorekeeperLink'
 import { LineupSelector as LineupSelector_9cc1c38f8222a7f2d273cfd780658699 } from '../../../components/admin/LineupSelector'
+import { AantekenaarCel as AantekenaarCel_820c5090e63671084e21d8bf037378d1 } from '../../../components/admin/AantekenaarInfo'
+import { AantekenaarVeld as AantekenaarVeld_820c5090e63671084e21d8bf037378d1 } from '../../../components/admin/AantekenaarInfo'
+import { AfsluiterVeld as AfsluiterVeld_820c5090e63671084e21d8bf037378d1 } from '../../../components/admin/AantekenaarInfo'
 import { ReclameFitEditor as ReclameFitEditor_cd7e037bca5e8ab899c24be1692b50df } from '../../../components/admin/ReclameFitEditor'
 import { BackToSite as BackToSite_3849dd43f003c13998debe4d496fcdba } from '../../../components/admin/BackToSite'
 import { CollectionCards as CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1 } from '@payloadcms/next/rsc'
@@ -16,6 +19,9 @@ export const importMap = {
   "/components/admin/VergunningBol#VergunningBol": VergunningBol_90578ef66c5e558ba8dcc222ea4e1687,
   "/components/admin/ScorekeeperLink#ScorekeeperLink": ScorekeeperLink_c2ef7d98549fea3336212ff94c5412bc,
   "/components/admin/LineupSelector#LineupSelector": LineupSelector_9cc1c38f8222a7f2d273cfd780658699,
+  "/components/admin/AantekenaarInfo#AantekenaarCel": AantekenaarCel_820c5090e63671084e21d8bf037378d1,
+  "/components/admin/AantekenaarInfo#AantekenaarVeld": AantekenaarVeld_820c5090e63671084e21d8bf037378d1,
+  "/components/admin/AantekenaarInfo#AfsluiterVeld": AfsluiterVeld_820c5090e63671084e21d8bf037378d1,
   "/components/admin/ReclameFitEditor#ReclameFitEditor": ReclameFitEditor_cd7e037bca5e8ab899c24be1692b50df,
   "/components/admin/BackToSite#BackToSite": BackToSite_3849dd43f003c13998debe4d496fcdba,
   "@payloadcms/next/rsc#CollectionCards": CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1

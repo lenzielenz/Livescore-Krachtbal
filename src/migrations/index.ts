@@ -110,6 +110,7 @@ import * as migration_20260902_224000_foto_opdracht_nr from './20260902_224000_f
 import * as migration_20260903_200000_user_aanteken_rechten from './20260903_200000_user_aanteken_rechten'
 import * as migration_20260903_210000_tweede_camera from './20260903_210000_tweede_camera'
 import * as migration_20260904_120000_tornooi_score_trust from './20260904_120000_tornooi_score_trust'
+import * as migration_20260904_150000_tornooi_aantekenaars from './20260904_150000_tornooi_aantekenaars'
 
 export const migrations = [
   {
@@ -671,5 +672,10 @@ export const migrations = [
     up: migration_20260904_120000_tornooi_score_trust.up,
     down: migration_20260904_120000_tornooi_score_trust.down,
     name: '20260904_120000_tornooi_score_trust',
+  },
+  {
+    up: migration_20260904_150000_tornooi_aantekenaars.up,
+    down: migration_20260904_150000_tornooi_aantekenaars.down,
+    name: '20260904_150000_tornooi_aantekenaars',
   },
 ];

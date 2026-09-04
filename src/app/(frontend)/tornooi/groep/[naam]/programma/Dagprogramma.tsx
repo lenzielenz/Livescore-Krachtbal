@@ -103,11 +103,17 @@ export function Dagprogramma({
   naam,
   initial,
   canManage,
+  magScoren = false,
   ingelogd,
 }: {
   naam: string
   initial: GroepData
   canManage: boolean
+  /**
+   * Mag deze bezoeker de stand meetellen? In supporters-modus geldt dat voor élke ingelogde
+   * bezoeker. Ruimer dan canManage: corrigeren (heropenen) blijft bij wie aantekenrechten heeft.
+   */
+  magScoren?: boolean
   /** Ingelogd? Dan mag je meespelen met de pronostiek (anders een nette inloglink). */
   ingelogd: boolean
 }) {
@@ -120,6 +126,18 @@ export function Dagprogramma({
     return () => clearInterval(t)
   }, [])
   const [fout, setFout] = useState<string | null>(null)
+  // Gespeelde wedstrijden staan dichtgeklapt: uur, affiche en uitslag blijven, de rest (veld,
+  // reeks, duur, de correctieknop) gaat weg tot je erop tikt. Op een tornooidag met tientallen
+  // wedstrijden scheelt dat het verschil tussen "wat moet er nog" en "wat is al gebeurd".
+  // Per rij bijhouden in de ouder — een lijstitem heeft hier geen eigen component.
+  const [opengeklapt, setOpengeklapt] = useState<Set<string>>(() => new Set())
+  const klapOpen = (sleutel: string) =>
+    setOpengeklapt((vorig) => {
+      const volgend = new Set(vorig)
+      if (volgend.has(sleutel)) volgend.delete(sleutel)
+      else volgend.add(sleutel)
+      return volgend
+    })
   // Eigen pronostiek-tips van deze supporter (andermans tips blijven verborgen tot na de match).
   const [picks, setPicks] = useState<Record<number, { home: number; away: number }>>({})
   useEffect(() => {
@@ -252,6 +270,9 @@ export function Dagprogramma({
             const vanDag = wedstrijden.filter((x) => (x.plannedAt ? dagSleutel(x.plannedAt) : '') === dag)
             const gedaan = vanDag.filter((x) => x.status === 'finished').length
             const isVandaag = nu != null && dag === new Date(nu).toLocaleDateString('sv-SE', { timeZone: 'Europe/Brussels' })
+            const sleutel = `${m.tournamentId}-${m.id}`
+            const gespeeld = m.status === 'finished'
+            const ingeklapt = gespeeld && !opengeklapt.has(sleutel)
             return (
             <React.Fragment key={`${m.tournamentId}-${m.id}`}>
               {nieuweDag && (
@@ -264,7 +285,25 @@ export function Dagprogramma({
                 </li>
               )}
               {(
-            <li className={`dp-rij ${m.status}`}>
+            <li
+              className={`dp-rij ${m.status}${gespeeld ? ' klapbaar' : ''}${ingeklapt ? ' ingeklapt' : ''}`}
+              // De hele rij is de knop; de link en de pronostiek eronder houden hun eigen tik tegen
+              // (stopPropagation), zodat "Corrigeren" de rij niet onder je vinger dichtslaat.
+              onClick={gespeeld ? () => klapOpen(sleutel) : undefined}
+              role={gespeeld ? 'button' : undefined}
+              tabIndex={gespeeld ? 0 : undefined}
+              aria-expanded={gespeeld ? !ingeklapt : undefined}
+              onKeyDown={
+                gespeeld
+                  ? (e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        klapOpen(sleutel)
+                      }
+                    }
+                  : undefined
+              }
+            >
               <span className="dp-uur">{m.plannedAt ? tijdBE(m.plannedAt) : '—'}</span>
               {/* Affiche: thuislogo links, uitlogo rechts, de namen ertussen. De namen mogen
                   over twee regels lopen i.p.v. hard afgekapt te worden. */}
@@ -285,19 +324,30 @@ export function Dagprogramma({
                   const st = rijStatus(m)
                   return <span className={`dp-status ${st.cls}`}>{st.label}</span>
                 })()}
-                {m.veld != null && <span className="dp-veldtag">Veld {m.veld}</span>}
-                <span className="dp-reeks">{m.reeksNaam}</span>
-                {duurPerReeks.get(m.reeksNaam) != null && (
+                {!ingeklapt && m.veld != null && <span className="dp-veldtag">Veld {m.veld}</span>}
+                {!ingeklapt && <span className="dp-reeks">{m.reeksNaam}</span>}
+                {!ingeklapt && duurPerReeks.get(m.reeksNaam) != null && (
                   <span className="dp-duur" title="Wedstrijdduur">2×{duurPerReeks.get(m.reeksNaam)}&#8242;</span>
                 )}
-                {canManage &&
-                  (m.status !== 'finished' ? (
-                    <Link href={`/tornooi/${m.tournamentId}/aantekenen/${m.id}`} className="trn-mini dp-aantekenen">Aantekenen</Link>
-                  ) : (
-                    // Werd er te vroeg op "Einde" gedrukt, dan moet je er nog bij kunnen om te
-                    // heropenen — anders is de wedstrijd vanaf dit overzicht onbereikbaar.
-                    <Link href={`/tornooi/${m.tournamentId}/aantekenen/${m.id}`} className="trn-mini dp-corrigeren">Corrigeren</Link>
-                  ))}
+                {/* Pijltje als aanwijzing dat er meer onder zit — zonder dat raadt niemand het. */}
+                {gespeeld && <span className="dp-klap" aria-hidden>{ingeklapt ? '▾' : '▴'}</span>}
+                {/* Aantekenen mag ruimer dan corrigeren: in supporters-modus komt élke ingelogde
+                    bezoeker hier aan de tafel, zodat hij vanaf dit overzicht van veld naar veld
+                    kan springen. Heropenen blijft bij wie aantekenrechten heeft — de server
+                    weigert 'reopen' voor een supporter, dus die knop hoort er niet te staan. */}
+                {m.status !== 'finished'
+                  ? (canManage || magScoren) && (
+                      <Link href={`/tornooi/${m.tournamentId}/aantekenen/${m.id}`} className="trn-mini dp-aantekenen">Aantekenen</Link>
+                    )
+                  : canManage && !ingeklapt && (
+                      // Werd er te vroeg op "Einde" gedrukt, dan moet je er nog bij kunnen om te
+                      // heropenen — anders is de wedstrijd vanaf dit overzicht onbereikbaar.
+                      <Link
+                        href={`/tornooi/${m.tournamentId}/aantekenen/${m.id}`}
+                        className="trn-mini dp-corrigeren"
+                        onClick={(e) => e.stopPropagation()}
+                      >Corrigeren</Link>
+                    )}
               </span>
               {/* Pronostiek staat hier uit: dit overzicht werd er te druk van. Meespelen doe je
                   bij de categorie zelf (zie lib/pronostiek-schakelaar.ts). */}

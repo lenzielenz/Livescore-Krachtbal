@@ -59,6 +59,7 @@ export const PROFILES: Profile[] = [
       { href: '/admin', label: '⚙️ Beheer (admin)', adminOnly: true },
       { href: '/beheer/accounts', label: '👤 Accounts', adminOnly: true },
       { href: '/beheer/leden', label: '🩺 Ledenkeuring' },
+      { href: '/beheer/aantekenaars', label: '✏️ Aantekenaars' },
       { href: '/beheer/planning', label: '📅 Seizoensplanning' },
       { href: '/reglement', label: '📖 Reglement' },
       { href: '/knipjes', label: '✂️ Knipjes' },

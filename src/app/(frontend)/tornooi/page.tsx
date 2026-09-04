@@ -85,12 +85,15 @@ export default async function TornooiHub() {
                 const b = tornooiBadge(alleKlaar ? 'finished' : 'live', reeksen.some((t) => gestart.has(t.id)))
                 const cats = [...new Set(reeksen.map((t) => catLabel(t.category)))]
                 return (
-                  <Link key={groep} href={`/tornooi/groep/${encodeURIComponent(groep)}`} className="trn-hub-card groep">
+                  <Link key={groep} href={`/tornooi/groep/${encodeURIComponent(groep)}`} className={`trn-hub-card groep ${b.cls}`}>
                     <span className="trn-hub-name">🏆 {groep}</span>
                     <span className="trn-hub-meta">
                       {reeksen.length} {reeksen.length === 1 ? 'categorie' : 'categorieën'} · {cats.join(', ')}
                     </span>
-                    <span className={`trn-hub-status ${b.cls}`}>{b.label}</span>
+                    <span className={`trn-hub-status ${b.cls}`}>
+                      {b.live && <span className="trn-hub-dot" aria-hidden />}
+                      {b.label}
+                    </span>
                   </Link>
                 )
               })}
@@ -125,19 +128,23 @@ function Section({
         <p className="trn-empty">{empty}</p>
       ) : (
         <div className="trn-hub-list">
-          {docs.map((t) => (
-            <Link key={t.id} href={`/tornooi/${t.id}`} className="trn-hub-card">
-              <span className="trn-hub-name">{t.name}</span>
-              <span className="trn-hub-meta">
-                {catLabel(t.category)} · {t.teamCount ?? '?'} ploegen
-              </span>
-              {(() => {
-                const b = tornooiBadge(t.status, gestart.has(t.id))
-                return <span className={`trn-hub-status ${b.cls}`}>{b.label}</span>
-              })()}
-              {canDelete && <VerwijderTornooi id={t.id} naam={t.name} />}
-            </Link>
-          ))}
+          {docs.map((t) => {
+            const b = tornooiBadge(t.status, gestart.has(t.id))
+            return (
+              <Link key={t.id} href={`/tornooi/${t.id}`} className={`trn-hub-card ${b.cls}`}>
+                <span className="trn-hub-watermerk" aria-hidden>{catLabel(t.category)}</span>
+                <span className="trn-hub-name">{t.name}</span>
+                <span className="trn-hub-meta">
+                  {catLabel(t.category)} · {t.teamCount ?? '?'} ploegen
+                </span>
+                <span className={`trn-hub-status ${b.cls}`}>
+                  {b.live && <span className="trn-hub-dot" aria-hidden />}
+                  {b.label}
+                </span>
+                {canDelete && <VerwijderTornooi id={t.id} naam={t.name} />}
+              </Link>
+            )
+          })}
         </div>
       )}
     </section>

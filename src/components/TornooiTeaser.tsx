@@ -1,8 +1,15 @@
 import Link from 'next/link'
 
+import { magTornooiAantekenen } from '@/lib/access'
+import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
+import { isSupportersMode } from '@/lib/score-mode'
+import { loadGroepData } from '@/lib/tornooi-groep'
 import { TornooiAftel } from './TornooiAftel'
+import { TornooiLive, type TornooiLiveData } from './TornooiLive'
 import './tornooi-teaser.css'
+
+type LiveBlok = { data: TornooiLiveData; magScoren: boolean }
 
 // Homepage-teaser voor de eerstvolgende (of lopende) tornooidag: géén wedstrijden — enkel een
 // snellink met aftelklok, zodat nieuwe mensen in één tik hun weg vinden naar het tornooi.
@@ -15,7 +22,7 @@ export async function TornooiTeaser() {
   if (res.docs.length === 0) return null
 
   // Groepeer per tornooidag (groep); losse tornooien staan op zichzelf.
-  type Doel = { titel: string; href: string; logoUrl: string | null; ids: number[] }
+  type Doel = { titel: string; href: string; logoUrl: string | null; ids: number[]; groep: string | null }
   const doelen = new Map<string, Doel>()
   for (const t of res.docs as { id: number; name?: string; groep?: string | null; hostClub?: unknown }[]) {
     const groep = typeof t.groep === 'string' && t.groep.trim() ? t.groep.trim() : ''
@@ -32,6 +39,7 @@ export async function TornooiTeaser() {
         href: groep ? `/tornooi/groep/${encodeURIComponent(groep)}` : `/tornooi/${t.id}`,
         logoUrl,
         ids: [t.id],
+        groep: groep || null,
       })
     }
   }
@@ -62,7 +70,27 @@ export async function TornooiTeaser() {
   }
   if (!beste) return null
 
+  // Is er iets bezig, dan halen we de wedstrijden van die dag erbij zodat ze meteen onder de
+  // snellink staan — zelfde idee als het live-bord van de competitie. Enkel dán: op een dag zonder
+  // lopende wedstrijd zou dit een extra query zijn die niets oplevert.
+  let live: LiveBlok | null = null
+  if (beste.bezig && beste.d.groep) {
+    const dag = await loadGroepData(payload, beste.d.groep).catch(() => null)
+    const bezig = (dag?.matches ?? []).filter((m) => m.status === 'live')
+    if (dag && bezig.length > 0) {
+      // Wie mag meetellen? Dezelfde regel als aan de tafel zelf, zodat er nooit een knop staat die
+      // de server daarna weigert.
+      const gebruiker = await getAuthUser()
+      const magScoren = magTornooiAantekenen(gebruiker, await isSupportersMode(payload))
+      live = {
+        data: { groep: beste.d.groep, matches: bezig, logos: dag.logos, fits: dag.fits },
+        magScoren,
+      }
+    }
+  }
+
   return (
+    <>
     <Link href={beste.d.href} className={`tteaser${beste.bezig ? ' live' : ''}`}>
       {beste.d.logoUrl && (
         // eslint-disable-next-line @next/next/no-img-element
@@ -80,5 +108,7 @@ export async function TornooiTeaser() {
       </span>
       <span className="tteaser-pijl" aria-hidden>→</span>
     </Link>
+    {live && <TornooiLive initieel={live.data} magScoren={live.magScoren} href={beste.d.href} />}
+    </>
   )
 }

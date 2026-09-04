@@ -59,6 +59,17 @@ export function TournamentScoresheet({
     document.addEventListener('fullscreenchange', bijwerken)
     return () => document.removeEventListener('fullscreenchange', bijwerken)
   }, [])
+  // Escape sluit de bevestiging — een pop-up die je alleen met een knop kwijtraakt, voelt als een
+  // val. Staat hier los van de render zodat er nooit meer dan één luisteraar hangt.
+  useEffect(() => {
+    if (!bevestig) return
+    const opToets = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setBevestig(null)
+    }
+    window.addEventListener('keydown', opToets)
+    return () => window.removeEventListener('keydown', opToets)
+  }, [bevestig])
+
   const wisselFullscreen = () => {
     if (document.fullscreenElement) void document.exitFullscreen().catch(() => undefined)
     else void document.documentElement.requestFullscreen().catch(() => undefined)
@@ -132,16 +143,6 @@ export function TournamentScoresheet({
           <Link href={`/tornooi/${id}/veld/${matchId}`} className="trn-toplink">Veldscherm →</Link>
         </nav>
       </header>
-
-      {/* Een supporter die meetelt, moet weten wat dat betekent: jouw naam staat bij de stand en
-          andere kijkers kunnen ze bevestigen of betwisten. Zonder die regel erbij lijkt dit scherm
-          een officiële tafel, en dat is het niet. */}
-      {viaSupporters && (
-        <p className="ts-supporter">
-          👋 Je telt deze wedstrijd mee als supporter. Je naam komt bij de stand te staan en andere
-          kijkers kunnen ze bevestigen. Tel enkel mee wat je zelf ziet gebeuren.
-        </p>
-      )}
 
       <div className="ts-meta">
         <span className="ts-round">{m.label}</span>
@@ -223,13 +224,19 @@ export function TournamentScoresheet({
                   }
                 >▶ Start</button>
               ) : (
-                <button
-                  type="button"
-                  className={`trn-btn${rust ? ' primary' : ''}`}
-                  onClick={() => act({ action: 'clock', running: !m.clockRunning })}
-                >
-                  {klokKnopLabel(helftStand)}
-                </button>
+                // Geen pauzeknop: aan een tornooitafel wordt de klok nooit stilgezet, en een knop
+                // die niemand gebruikt staat alleen maar in de weg van de knoppen die wél tellen.
+                // Staat de klok tóch stil (rust, of een wedstrijd van vóór deze wijziging), dan
+                // blijft de knop om ze weer op gang te trekken — anders zit je vast.
+                !m.clockRunning && (
+                  <button
+                    type="button"
+                    className={`trn-btn${rust ? ' primary' : ''}`}
+                    onClick={() => act({ action: 'clock', running: true })}
+                  >
+                    {klokKnopLabel(helftStand)}
+                  </button>
+                )
               )}
               {/* De knop heet naar wát hij doet: hij sluit de eerste helft af. Hij heette
                   "2e helft", en dan lijkt een klok die op nul springt op een fout in plaats van
@@ -284,23 +291,36 @@ export function TournamentScoresheet({
             </div>
           )}
 
+          {/* Bevestiging als pop-up midden op het scherm. Ze stond eerder onderaan de tafel, en
+              op een gsm viel ze dan buiten beeld: je drukte op "Einde" en er leek niets te
+              gebeuren, tot je naar beneden scrolde. Nu staat de vraag waar je kijkt, en de rest
+              van het scherm verdwijnt eronder. Klikken naast de pop-up of Escape = annuleren. */}
           {bevestig && (
-            <div className="ts-bevestig">
-              <h4>{bevestig.titel}</h4>
-              <p>{bevestig.tekst}</p>
-              <div className="ts-bevestig-btns">
-                <button type="button" className="trn-btn" onClick={() => setBevestig(null)}>Nee, terug</button>
-                <button
-                  type="button"
-                  className={`trn-btn ${bevestig.gevaar ? 'danger' : 'primary'}`}
-                  onClick={() => {
-                    const doe = bevestig.doe
-                    setBevestig(null)
-                    void doe()
-                  }}
-                >
-                  {bevestig.knop}
-                </button>
+            <div
+              className="ts-modal-overlay"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="ts-bevestig-titel"
+              onClick={() => setBevestig(null)}
+            >
+              <div className="ts-bevestig" onClick={(e) => e.stopPropagation()}>
+                <h4 id="ts-bevestig-titel">{bevestig.titel}</h4>
+                <p>{bevestig.tekst}</p>
+                <div className="ts-bevestig-btns">
+                  <button type="button" className="trn-btn" onClick={() => setBevestig(null)}>Nee, terug</button>
+                  <button
+                    type="button"
+                    className={`trn-btn ${bevestig.gevaar ? 'danger' : 'primary'}`}
+                    autoFocus
+                    onClick={() => {
+                      const doe = bevestig.doe
+                      setBevestig(null)
+                      void doe()
+                    }}
+                  >
+                    {bevestig.knop}
+                  </button>
+                </div>
               </div>
             </div>
           )}

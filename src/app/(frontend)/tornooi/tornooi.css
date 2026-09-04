@@ -145,29 +145,98 @@ button.trn-toplink {
   gap: 12px;
 }
 .trn-hub-card {
+  position: relative;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   gap: 4px;
-  padding: 14px 16px;
+  padding: 16px 18px;
+  min-height: 108px;
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: 14px;
   color: var(--txt);
+  transition: border-color 140ms ease, transform 140ms ease, box-shadow 140ms ease;
 }
+/* Een streep in de staatskleur langs de linkerrand: van op afstand zie je zo meteen welke reeks
+   loopt, welke nog moet en welke gedaan is — zonder het etiketje te moeten lezen. */
+.trn-hub-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--line);
+}
+.trn-hub-card.live::before { background: #6ee7a0; }
+.trn-hub-card.finished::before { background: var(--accent); }
 .trn-hub-card:hover {
   border-color: var(--accent);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.32);
+}
+/* Een lopende reeks mag opvallen: groene rand en een zachte gloed. */
+.trn-hub-card.live {
+  border-color: color-mix(in srgb, #6ee7a0 45%, var(--line));
+  box-shadow: 0 0 0 1px rgba(110, 231, 160, 0.08), 0 6px 22px rgba(110, 231, 160, 0.1);
+}
+/* Afgelopen reeksen zakken naar de achtergrond — ze blijven leesbaar, maar vragen niets. */
+.trn-hub-card.finished { opacity: 0.82; }
+.trn-hub-card.finished:hover { opacity: 1; }
+
+/* De categorie groot en doorschijnend rechtsonder: vult de kale kaart zonder iets te verbergen. */
+.trn-hub-watermerk {
+  position: absolute;
+  right: -2px;
+  bottom: -14px;
+  font-size: 3.4rem;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  color: var(--txt);
+  opacity: 0.055;
+  pointer-events: none;
+  user-select: none;
+}
+.trn-hub-card.live .trn-hub-watermerk { color: #6ee7a0; opacity: 0.1; }
+
+/* Het kloppende bolletje naast LIVE — hetzelfde teken als op het scorebord. */
+.trn-hub-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  margin-right: 5px;
+  display: inline-block;
+  vertical-align: middle;
+  animation: trn-hub-klop 1.6s ease-in-out infinite;
+}
+@keyframes trn-hub-klop {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.45; transform: scale(0.82); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .trn-hub-card { transition: none; }
+  .trn-hub-card:hover { transform: none; }
+  .trn-hub-dot { animation: none; }
 }
 .trn-hub-name {
-  font-weight: 700;
-  font-size: 1.05rem;
+  position: relative;
+  font-weight: 800;
+  font-size: 1.15rem;
+  letter-spacing: -0.01em;
 }
 .trn-hub-meta {
+  position: relative;
   color: var(--dim);
   font-size: 0.85rem;
 }
 .trn-hub-status {
+  position: relative;
   align-self: flex-start;
-  margin-top: 4px;
+  margin-top: auto;
+  padding-top: 8px;
   font-size: 0.7rem;
   font-weight: 800;
   letter-spacing: 0.05em;
@@ -392,14 +461,55 @@ button.trn-toplink {
 }
 
 /* Champion-banner */
+/* De winnaar van een reeks mag gezien worden. Een gouden rand, een zachte gloed en een glans die
+   er traag overheen schuift — feestelijk zonder te knipperen. De trofee zit in de tekst zelf. */
 .trn-champion {
-  background: linear-gradient(90deg, #2a2416, var(--panel));
-  border: 1px solid var(--accent);
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(90deg, #3a2f10, #2a2416 55%, var(--panel));
+  border: 1px solid #e0b64a;
   border-radius: 12px;
   padding: 12px 16px;
   margin-bottom: 16px;
   font-size: 1.1rem;
-  color: var(--accent);
+  color: #f4d489;
+  box-shadow: 0 0 0 1px rgba(224, 182, 74, 0.12), 0 8px 30px rgba(224, 182, 74, 0.16);
+  animation: trn-goud-adem 3.2s ease-in-out infinite;
+}
+/* De glans: een schuine lichtstreep die om de paar seconden overtrekt. */
+.trn-champion::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    115deg,
+    transparent 35%,
+    rgba(255, 240, 200, 0.28) 48%,
+    rgba(255, 255, 255, 0.42) 51%,
+    rgba(255, 240, 200, 0.28) 54%,
+    transparent 67%
+  );
+  transform: translateX(-120%);
+  animation: trn-glans 4.5s ease-in-out infinite;
+  pointer-events: none;
+}
+.trn-champion strong,
+.trn-champion .tl {
+  position: relative;
+  z-index: 1;
+}
+@keyframes trn-goud-adem {
+  0%, 100% { box-shadow: 0 0 0 1px rgba(224, 182, 74, 0.12), 0 8px 30px rgba(224, 182, 74, 0.16); }
+  50% { box-shadow: 0 0 0 1px rgba(224, 182, 74, 0.3), 0 10px 40px rgba(224, 182, 74, 0.34); }
+}
+@keyframes trn-glans {
+  0%, 62% { transform: translateX(-120%); }
+  92%, 100% { transform: translateX(120%); }
+}
+/* Wie beweging liever kwijt is, houdt de gouden rand — enkel het bewegen valt weg. */
+@media (prefers-reduced-motion: reduce) {
+  .trn-champion { animation: none; }
+  .trn-champion::after { display: none; }
 }
 .trn-champion.small {
   font-size: 1rem;
@@ -761,17 +871,6 @@ button.trn-toplink {
   align-items: center;
   margin-bottom: 10px;
 }
-/* Uitleg bovenaan de tafel wanneer een supporter meetelt in plaats van de organisatie. */
-.ts-supporter {
-  margin: 0 0 10px;
-  padding: 9px 12px;
-  border-radius: 10px;
-  border: 1px solid var(--line);
-  border-left: 3px solid #d97706;
-  background: var(--bg);
-  font-size: 0.85rem;
-  line-height: 1.45;
-}
 .ts-round {
   color: var(--dim);
 }
@@ -978,12 +1077,42 @@ button.trn-toplink {
 .trn-btn.zacht:hover { color: #ef476f; border-color: #ef476f; }
 
 /* Bevestigingskaart vóór starten, beëindigen, heropenen of terugzetten. */
+/* De bevestiging is een pop-up midden op het scherm: op een gsm viel ze onderaan de tafel
+   buiten beeld, waardoor een tik op "Einde" leek te mislukken. */
+.ts-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.66);
+  backdrop-filter: blur(2px);
+  animation: ts-modal-in 140ms ease-out;
+}
 .ts-bevestig {
-  margin-top: 16px;
+  width: min(440px, 100%);
+  max-height: 90vh;
+  overflow-y: auto;
   background: var(--panel);
   border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line));
   border-radius: 14px;
-  padding: 16px;
+  padding: 20px;
+  box-shadow: var(--card-shadow);
+  animation: ts-bevestig-in 160ms ease-out;
+}
+@keyframes ts-modal-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes ts-bevestig-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ts-modal-overlay,
+  .ts-bevestig { animation: none; }
 }
 .ts-bevestig h4 { margin: 0 0 6px; font-size: 1.05rem; color: var(--accent); }
 .ts-bevestig p { margin: 0 0 14px; font-size: 0.9rem; line-height: 1.45; color: var(--dim); }
@@ -1436,6 +1565,13 @@ button.trn-toplink {
 }
 .gk-bord.groot .gk-bord-team { font-size: clamp(1.4rem, 5vmin, 3.6rem); }
 .gk-bord.groot .gk-bord-score { font-size: clamp(3rem, 13vmin, 11rem); }
+/* Twee en drie borden naast elkaar kregen dezelfde kleine maten als een vol scherm met zestien.
+   Daardoor stond een logo verloren naast een score die wél groot bleef. Deze twee tussenstappen
+   houden logo, naam en score in verhouding naarmate de dag voller wordt (zie logoMaatVoor). */
+.gk-bord[data-cols='2'] .gk-bord-team { font-size: clamp(1.15rem, 3.9vmin, 2.9rem); }
+.gk-bord[data-cols='2'] .gk-bord-score { font-size: clamp(2.4rem, 8.6vmin, 7.2rem); }
+.gk-bord[data-cols='3'] .gk-bord-team { font-size: clamp(1.05rem, 3.4vmin, 2.5rem); }
+.gk-bord[data-cols='3'] .gk-bord-score { font-size: clamp(2.1rem, 7.4vmin, 6.2rem); }
 /* De voet: kruisjes en minuten gecentreerd, de klok rechts. De lege spanwijdte links houdt die
    twee écht in het midden in plaats van ze door de klok naar links te laten duwen. */
 .gk-bord-voet {
@@ -1678,17 +1814,38 @@ button.trn-toplink {
    Zelfde glas-en-clubkleur-taal als de komende affiches, maar rustiger: dit is naslag, geen
    aankondiging. Het raster wordt breder naarmate er meer uitslagen zijn, zodat één uitslag
    groot in beeld staat en een volle dag toch leesbaar blijft op afstand. */
-.gk-uitslagen { width: min(1180px, 96vw); display: flex; flex-direction: column; align-items: center; gap: 1.4vmin; }
+/* Bladert per drie (zie Uitslagen in GroepKantine.tsx). Breder dan vroeger: dit scherm hangt in
+   een kantine en wordt van vijf meter gelezen, dus mag een uitslag de volle breedte gebruiken. */
+.gk-uitslagen { width: min(1720px, 96vw); display: flex; flex-direction: column; align-items: center; gap: 1.6vmin; }
 .gk-uitslagen-lbl {
   margin: 0; font-size: clamp(0.85rem, 2vmin, 1.15rem); font-weight: 800;
   letter-spacing: 0.1em; text-transform: uppercase; color: var(--dim-strong, #cad2dc);
 }
-.gk-uitslagen-lijst { list-style: none; margin: 0; padding: 0; width: 100%; display: grid; gap: 10px; }
+.gk-uitslagen-lijst {
+  list-style: none; margin: 0; padding: 0; width: 100%; display: grid; gap: 1.4vmin;
+  animation: gk-blad-in 420ms ease-out;
+}
 .gk-uitslagen.k2 .gk-uitslagen-lijst { grid-template-columns: repeat(2, 1fr); }
 .gk-uitslagen.k3 .gk-uitslagen-lijst { grid-template-columns: repeat(3, 1fr); }
+/* Elk nieuw blad komt zacht in beeld — abrupt wisselen leest op een tv als een storing. */
+@keyframes gk-blad-in {
+  from { opacity: 0; transform: translateY(1.4vmin); }
+  to { opacity: 1; transform: none; }
+}
+/* Hoeveelste blad je ziet, en de bolletjes eronder. */
+.gk-uitslagen-tel { color: var(--dim, #93a3b5); font-weight: 700; }
+.gk-uitslagen-bolletjes { display: flex; gap: 8px; margin-top: 0.4vmin; }
+.gk-uitslagen-bolletjes span {
+  width: clamp(6px, 0.9vmin, 11px); height: clamp(6px, 0.9vmin, 11px);
+  border-radius: 50%; background: var(--dim, #93a3b5); opacity: 0.3;
+  transition: opacity 240ms ease, transform 240ms ease;
+}
+.gk-uitslagen-bolletjes span.aan { opacity: 1; transform: scale(1.25); }
 .gk-uit {
-  display: flex; flex-direction: column; align-items: center; gap: 6px;
-  padding: 12px 16px; border-radius: 14px;
+  display: flex; flex-direction: column; align-items: center; gap: 1vmin;
+  padding: clamp(14px, 2.2vmin, 34px) clamp(16px, 2.6vmin, 40px); border-radius: 18px;
+  /* Meegroeien met het scherm: alles binnen de kaart is in em, dus dit zet in één keer de maat. */
+  font-size: clamp(0.95rem, 2.1vmin, 2rem);
   /* Dezelfde clubkleur-verloop als de komende affiches, maar zachter: een uitslag mag het
      scherm dragen zonder de aankondiging van de volgende wedstrijd te overstemmen. */
   background: linear-gradient(
@@ -1705,17 +1862,23 @@ button.trn-toplink {
   font-size: 0.72em; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase;
   color: var(--dim, #93a3b5);
 }
-.gk-uit-rij { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; width: 100%; }
+.gk-uit-rij { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 0.8em; width: 100%; }
 .gk-uit-ploeg { display: inline-flex; align-items: center; gap: 8px; min-width: 0; opacity: 0.65; }
 .gk-uit-ploeg.rechts { justify-content: flex-end; }
 /* De winnaar springt eruit — dat is het eerste wat je van op afstand wil zien. */
 .gk-uit-ploeg.wint { opacity: 1; font-weight: 800; }
 /* Gelijkspel: geen winnaar om op te lichten, dus staan beide ploegen gewoon vol in beeld. */
 .gk-uit.gelijk .gk-uit-ploeg { opacity: 1; }
-.gk-uit-naam { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Niet meer afkappen. Een uitslag met "KB…" tegen "N…" zegt niets tegen wie in de kantine staat;
+   liever twee regels dan een raadsel. Drie regels wordt het nooit — daarvoor zijn de kaarten breed
+   genoeg sinds ze per drie bladeren. */
+.gk-uit-naam {
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden; overflow-wrap: anywhere; line-height: 1.15;
+}
 .gk-uit-score {
   font-family: var(--font-display), sans-serif; font-weight: 900; font-variant-numeric: tabular-nums;
-  font-size: 1.5em; color: #fff; white-space: nowrap;
+  font-size: 2em; line-height: 1; color: #fff; white-space: nowrap;
 }
 .gk-uit-streep { margin: 0 0.15em; color: var(--dim, #93a3b5); }
 
@@ -1725,6 +1888,10 @@ button.trn-toplink {
 @media (max-width: 720px) {
   .gk-uitslagen.k2 .gk-uitslagen-lijst,
   .gk-uitslagen.k3 .gk-uitslagen-lijst { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gk-uitslagen-lijst { animation: none; }
+  .gk-uitslagen-bolletjes span { transition: none; }
 }
 
 /* Kleine hint bij het veld in het nieuw-formulier. */
@@ -3159,18 +3326,11 @@ button.trn-toplink {
 .trn-trust-label {
   font-weight: 700;
 }
-.trn-trust-scorer {
-  color: var(--muted);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 60%;
-}
 .trn-trust-tel {
   margin: 4px 0 0;
   display: flex;
   gap: 10px;
-  color: var(--muted);
+  color: var(--dim);
 }
 .trn-trust-tel .ok {
   color: #16a34a;
@@ -3191,4 +3351,77 @@ button.trn-toplink {
 .trn-trust-fout {
   margin: 6px 0 0;
   color: #dc2626;
+}
+
+/* Bronvermelding onderaan een wedstrijdkaart: wie tekende deze wedstrijd aan. Bewust klein en
+   grijs — het is een voetnoot bij de uitslag, niet de uitslag zelf. */
+.trn-aantekenaar {
+  margin: 8px 0 0;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+  font-size: 0.72rem;
+  color: var(--dim);
+  line-height: 1.35;
+}
+
+/* ── Gespeelde wedstrijd: dichtgeklapt en grijs ────────────────────────────────
+   Een tornooidag loopt vol met kaarten. Wat gespeeld is hoort zichtbaar te blijven — de uitslag
+   telt voor de rangschikking — maar het mag niet even hard om aandacht vragen als wat nog moet
+   komen. Dus: gedempt, compact, en met één tik weer helemaal open. */
+.trn-match.klapbaar .trn-match-head {
+  cursor: pointer;
+}
+.trn-match.ingeklapt {
+  cursor: pointer;
+  opacity: 0.62;
+  filter: saturate(0.55);
+  transition: opacity 140ms ease, filter 140ms ease;
+}
+.trn-match.ingeklapt:hover,
+.trn-match.ingeklapt:focus-visible {
+  opacity: 1;
+  filter: none;
+}
+/* De rijen mogen krimpen: bij een gespeelde wedstrijd draait alles om de cijfers. */
+.trn-match.ingeklapt .trn-row {
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+/* Het pijltje dat zegt dat er meer onder zit. */
+.trn-match-klap {
+  margin-left: 6px;
+  font-size: 0.7rem;
+  color: var(--dim);
+  flex: 0 0 auto;
+}
+@media (prefers-reduced-motion: reduce) {
+  .trn-match.ingeklapt { transition: none; }
+}
+
+/* ── Dagprogramma: gespeelde wedstrijden dichtgeklapt ──────────────────────────
+   Zelfde gedachte als op het tornooibord. Uur, affiche en uitslag blijven staan; veld, reeks,
+   duur en de correctieknop verschijnen pas als je de rij aantikt. Zo leest een dag met dertig
+   wedstrijden als "dit moet nog" en "dit is gebeurd" in plaats van als één lange muur. */
+.dp-rij.klapbaar {
+  cursor: pointer;
+}
+.dp-rij.ingeklapt {
+  opacity: 0.5;
+  filter: saturate(0.5);
+  transition: opacity 140ms ease, filter 140ms ease;
+}
+.dp-rij.ingeklapt:hover,
+.dp-rij.ingeklapt:focus-visible {
+  opacity: 1;
+  filter: none;
+}
+/* Het pijltje staat helemaal rechts op de metaregel, waar anders de knop stond. */
+.dp-klap {
+  margin-left: auto;
+  font-size: 0.7rem;
+  color: var(--dim);
+  flex: 0 0 auto;
+}
+@media (prefers-reduced-motion: reduce) {
+  .dp-rij.ingeklapt { transition: none; }
 }

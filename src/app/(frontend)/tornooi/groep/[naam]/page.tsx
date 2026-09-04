@@ -125,19 +125,31 @@ function GroepSectie({ titel, docs, canManage = false, gestart }: { titel: strin
     <section className="trn-hub-sec">
       <h2>{titel}</h2>
       <div className="trn-hub-list">
-        {docs.map((t) => (
-          <Link key={String(t.id)} href={`/tornooi/${t.id}`} className="trn-hub-card">
-            <span className="trn-hub-name">{String(t.name ?? '')}</span>
-            <span className="trn-hub-meta">
-              {catLabel(t.category)} · {(t.teamCount as number | null) ?? '?'} ploegen
-            </span>
-            {(() => {
-              const b = tornooiBadge(t.status, gestart.has(Number(t.id)))
-              return <span className={`trn-hub-status ${b.cls}`}>{b.label}</span>
-            })()}
-            {canManage && <VerwijderTornooi id={Number(t.id)} naam={String(t.name ?? '')} />}
-          </Link>
-        ))}
+        {docs.map((t) => {
+          const b = tornooiBadge(t.status, gestart.has(Number(t.id)))
+          const ploegen = (t.teamCount as number | null) ?? null
+          return (
+            // De staat kleurt de hele kaart, niet enkel het etiketje: een reeks die bezig is hoort
+            // er anders uit te zien dan een die nog moet beginnen. Zo zie je van op afstand waar
+            // er iets te beleven valt.
+            <Link key={String(t.id)} href={`/tornooi/${t.id}`} className={`trn-hub-card ${b.cls}`}>
+              {/* De categorie groot en doorschijnend in de achtergrond: vult de lege kaart zonder
+                  iets te verbergen, en maakt in één blik duidelijk om welke leeftijd het gaat. */}
+              <span className="trn-hub-watermerk" aria-hidden>{catLabel(t.category)}</span>
+              <span className="trn-hub-name">{String(t.name ?? '')}</span>
+              <span className="trn-hub-meta">
+                {catLabel(t.category)}
+                {ploegen != null && <> · {ploegen} ploeg{ploegen === 1 ? '' : 'en'}</>}
+              </span>
+              <span className={`trn-hub-status ${b.cls}`}>
+                {/* Een kloppend bolletje bij LIVE — hetzelfde teken als op het scorebord. */}
+                {b.live && <span className="trn-hub-dot" aria-hidden />}
+                {b.label}
+              </span>
+              {canManage && <VerwijderTornooi id={Number(t.id)} naam={String(t.name ?? '')} />}
+            </Link>
+          )
+        })}
       </div>
     </section>
   )
