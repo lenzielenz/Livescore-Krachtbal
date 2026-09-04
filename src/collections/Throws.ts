@@ -39,6 +39,18 @@ export const Throws: CollectionConfig = {
     read: () => true,
     // Immutability code-enforced: bestaande worpen mogen nooit gewijzigd worden.
     update: () => false,
+    /**
+     * Zonder deze regels valt Payload terug op "elke ingelogde gebruiker mag schrijven" — en de
+     * Payload-admin staat open voor iedereen met een account. Dat betekende dat een gewoon lid
+     * met één REST-oproep een worp kon toevoegen of wegnemen: buiten de match-engine om, dus
+     * zonder de advisory lock (CLAUDE.md invariant 1) en zonder enige aantekenaars-autorisatie
+     * (invariant 2), en met een score die daarna niet meer klopt.
+     *
+     * Alle echte schrijfwegen lopen via lib/match-engine.ts met overrideAccess, dus die merken
+     * hier niets van. Corrigeren gebeurt met de undo-flow, niet met de hand in de admin.
+     */
+    create: () => false,
+    delete: () => false,
   },
   fields: [
     {

@@ -1,5 +1,7 @@
 import type { CollectionConfig } from 'payload'
 
+import { isFederationLevel } from '../lib/access'
+
 import { CATEGORY_OPTIONS } from '../lib/categories'
 
 export const TOURNAMENT_STATUS_OPTIONS = [
@@ -30,6 +32,17 @@ export const Tournaments: CollectionConfig = {
   },
   access: {
     read: () => true,
+    /**
+     * Zonder deze drie regels valt Payload terug op "elke ingelogde gebruiker mag schrijven", en
+     * de admin staat open voor iedereen met een account. Bij deze collectie is dat bijzonder
+     * zwaar: de beforeDelete-hook hieronder wist het VOLLEDIGE wedstrijdschema mee, dus één
+     * DELETE door een willekeurig lid vaagt midden op een tornooidag alle standen, doelpunten én
+     * het aantekenspoor weg. Elke server-weg naar deze collectie draait met overrideAccess (zie
+     * lib/tournament-engine.ts), dus dit sluit enkel de handmatige deur.
+     */
+    create: ({ req }) => isFederationLevel(req.user),
+    update: ({ req }) => isFederationLevel(req.user),
+    delete: ({ req }) => isFederationLevel(req.user),
   },
   hooks: {
     // Het hele schema mee opruimen wanneer een tornooi verwijderd wordt.

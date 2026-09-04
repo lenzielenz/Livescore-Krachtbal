@@ -228,7 +228,9 @@ function MatchCard({ id, m, canManage, magScoren = false, supportersModus = fals
       {/* Bij elke uitslag hoort te staan waar ze vandaan komt. Geldt óók voor een wedstrijd die de
           organisatie aantekende — juist dié moet de federatie kunnen natrekken als er achteraf
           discussie over de stand ontstaat. */}
-      {m.aantekenaar && !ingeklapt && <p className="trn-aantekenaar">✏️ {m.aantekenaar.tekst}</p>}
+      {m.aantekenaar && !ingeklapt && m.status !== 'pending' && (
+        <p className="trn-aantekenaar">✏️ {m.aantekenaar.tekst}</p>
+      )}
       {/* Meespelen kan tot de aftrap — óók hier, zodat een supporter zijn tip kwijt kan waar hij
           de wedstrijd ook tegenkomt. */}
       {PRONOSTIEK_OP_CATEGORIE && !bye && m.status === 'pending' && m.home && m.away && (

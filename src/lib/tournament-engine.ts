@@ -8,7 +8,7 @@ import type { Payload } from 'payload'
 
 import { CATEGORIES, type Category, categoryConfig } from './categories'
 import { aantekenaarTekst, sanitizeAantekenaars, sanitizeAfsluiter } from './aantekenaars'
-import { sanitizeTrust, trustLabel, type TrustLabel } from './score-trust'
+import { sanitizeTrust, trustLabel, voteWindowOpen, type TrustLabel } from './score-trust'
 import {
   type Bracket,
   type Goal,
@@ -63,6 +63,17 @@ export type TMatchState = {
     label: TrustLabel
     confirms: number
     disputes: number
+    /**
+     * Staat het bevestig-/betwistvenster nog open? De server weigert stemmen zodra het dicht is
+     * (24 u na het afsluiten), maar dat kon de client niet weten — dus stonden er knoppen die
+     * gegarandeerd een 400 gaven, voor élke afgelopen wedstrijd, voorgoed.
+     */
+    stemVensterOpen: boolean
+    /**
+     * Wie al meetekende. Ook zij mogen niet stemmen (mayVote) — een handtekening onder je eigen
+     * werk is geen onafhankelijke controle. Enkel de ids: de namen staan al elders op de kaart.
+     */
+    contributorIds: number[]
   } | null
   /**
    * Wie deze wedstrijd aantekende — de regel die onder een afgelopen wedstrijd komt te staan.
@@ -184,12 +195,17 @@ function trustVan(m: MatchDoc): TMatchState['trust'] {
   if (ruw == null) return null
   const t = sanitizeTrust(ruw)
   if (t.scorerId == null) return null
+  // Zelfde eindmoment als de actieroute hanteert: het echte afsluitmoment, met de laatste
+  // aantekenactie als terugval voor wedstrijden van vóór dat spoor bestond.
+  const geeindigdOp = sanitizeAfsluiter((m as { afgeslotenDoor?: unknown }).afgeslotenDoor)?.op ?? t.lastActiveAt
   return {
     scorerId: t.scorerId,
     scorerName: t.scorerName,
     label: trustLabel(t, { official: false }),
     confirms: t.confirms.length,
     disputes: t.disputes.length,
+    stemVensterOpen: voteWindowOpen(m.status, geeindigdOp != null ? new Date(geeindigdOp).toISOString() : null),
+    contributorIds: t.contributors.map((c) => c.userId),
   }
 }
 
@@ -362,6 +378,22 @@ async function update(payload: Payload, matchId: number, data: Partial<MatchDoc>
   await payload.update({ collection: COLL, id: matchId, data: data as Record<string, unknown>, overrideAccess: true })
 }
 
+/**
+ * Een afgelopen wedstrijd is niet meer muteerbaar (CLAUDE.md, invariant 3).
+ *
+ * Stond hier niet: `undoGoal`, de tellers, de klok en het helft-verzetten muteerden een wedstrijd
+ * met status 'finished' gewoon. Zolang alleen de organisatie aan deze route kwam viel dat niet op,
+ * maar sinds supporters in supporters-modus mogen meetellen komt élke ingelogde bezoeker erbij —
+ * en dan is "het laatste doelpunt van de gespeelde finale terugnemen" één POST ver. Wie een
+ * afgesloten wedstrijd wil aanpassen, heropent ze eerst (reopenMatch, met zijn eigen waarborg dat
+ * de volgende ronde nog niet bezig is).
+ */
+function eisNietAfgelopen(m: MatchDoc): void {
+  if (m.status === 'finished') {
+    throw new Error('Deze wedstrijd is afgelopen. Heropen ze eerst om er nog iets aan te wijzigen.')
+  }
+}
+
 /** Start (of hervat) een wedstrijd: beide ploegen moeten gekend zijn. */
 export async function startMatch(payload: Payload, matchId: number): Promise<void> {
   const m = await getMatch(payload, matchId)
@@ -408,6 +440,7 @@ export async function recordGoal(
 /** Pas de scheidsrechter-minuten (gestopte tijd) aan (+1 / −1). */
 export async function recordRefereeStop(payload: Payload, matchId: number, delta: number): Promise<void> {
   const m = await getMatch(payload, matchId)
+  eisNietAfgelopen(m)
   const next = Math.max(0, (Number(m.refereeStops) || 0) + (delta < 0 ? -1 : 1))
   await update(payload, matchId, { refereeStops: next })
 }
@@ -415,6 +448,7 @@ export async function recordRefereeStop(payload: Payload, matchId: number, delta
 /** Neem het laatste doelpunt terug (vangnet). */
 export async function undoGoal(payload: Payload, matchId: number): Promise<void> {
   const m = await getMatch(payload, matchId)
+  eisNietAfgelopen(m)
   const goals = goalsOf(m)
   goals.pop()
   await update(payload, matchId, { goals })
@@ -423,6 +457,7 @@ export async function undoGoal(payload: Payload, matchId: number): Promise<void>
 /** Pas de kruisjes-teller van een ploeg aan (+1 / −1). */
 export async function recordCross(payload: Payload, matchId: number, side: Side, delta: number): Promise<void> {
   const m = await getMatch(payload, matchId)
+  eisNietAfgelopen(m)
   const c = countsOf(m.crosses)
   c[side] = Math.max(0, c[side] + (delta < 0 ? -1 : 1))
   await update(payload, matchId, { crosses: c })
@@ -431,6 +466,7 @@ export async function recordCross(payload: Payload, matchId: number, side: Side,
 /** Pas de time-out-teller (aangevraagde minuten) van een ploeg aan (+1 / −1). */
 export async function recordTimeout(payload: Payload, matchId: number, side: Side, delta: number): Promise<void> {
   const m = await getMatch(payload, matchId)
+  eisNietAfgelopen(m)
   const t = countsOf(m.timeouts)
   t[side] = Math.max(0, t[side] + (delta < 0 ? -1 : 1))
   await update(payload, matchId, { timeouts: t })
@@ -484,6 +520,7 @@ export async function setClock(
   opts: { running?: boolean; seconds?: number },
 ): Promise<void> {
   const m = await getMatch(payload, matchId)
+  eisNietAfgelopen(m)
   const data: Partial<MatchDoc> = {}
   const base = opts.seconds !== undefined ? Math.max(0, opts.seconds) : Math.floor(liveClock(m))
   data.clockSeconds = base
@@ -499,6 +536,7 @@ export async function setClock(
 
 /** Naar de tweede helft: klok terug op 0, gepauzeerd. */
 export async function advanceHalf(payload: Payload, matchId: number): Promise<void> {
+  eisNietAfgelopen(await getMatch(payload, matchId))
   await update(payload, matchId, {
     currentHalf: 2,
     clockSeconds: 0,
@@ -513,6 +551,12 @@ export async function advanceHalf(payload: Payload, matchId: number): Promise<vo
  */
 export async function finishMatch(payload: Payload, matchId: number, explicitWinner?: Side | null): Promise<void> {
   const m = await getMatch(payload, matchId)
+  // Enkel een lopende wedstrijd kan eindigen. Zonder deze regel kon een wedstrijd die nog moest
+  // beginnen op 0-0 "beëindigd" worden mét een expliciete winnaar — en die schoof dan via
+  // applyToSlot gewoon door in het schema. Opnieuw beëindigen van een afgelopen wedstrijd deed
+  // applyToSlot een tweede keer draaien en kon zo de doorgeschoven ploeg overschrijven.
+  if (m.status === 'finished') throw new Error('Deze wedstrijd is al afgelopen.')
+  if (m.status !== 'live') throw new Error('Start de wedstrijd eerst — een wedstrijd die niet loopt, kan niet eindigen.')
   const score = deriveScore(goalsOf(m))
   const tournamentId = await tournamentIdOf(payload, m)
   const t = await payload.findByID({ collection: 'tournaments', id: tournamentId, depth: 0 }).catch(() => null)

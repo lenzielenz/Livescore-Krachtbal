@@ -211,6 +211,12 @@ puur en getest in `src/lib/aantekenaars.ts`; de opslag zit in `aantekenaars-stor
 - **Weergave**: `buildTournamentState` levert `TMatchState.aantekenaar` (kant-en-klare zin), en het
   tornooibord zet die als voetnoot onder de wedstrijdkaart. Het vertrouwensstrookje toont daarom
   zelf geen naam meer — anders stond dezelfde naam er twee keer.
+- **Finished-guard.** `eisNietAfgelopen` in `tournament-engine.ts` weigert undo, kruisjes,
+  minuten, scheidsrechter-minuten, klok en helft op een afgelopen wedstrijd; `finishMatch` eist
+  bovendien dat de wedstrijd lóópt. Zonder die twee kon een afgesloten finale teruggedraaid worden
+  terwijl de winnaar bleef staan, en kon een nog niet gespeelde wedstrijd "beëindigd" worden mét
+  winnaar — die dan via `applyToSlot` in de volgende ronde geschreven werd. Sinds supporters mogen
+  meetellen was dat pad voor élk ingelogd account bereikbaar (CLAUDE.md, invariant 3).
 - **Beheer**: `/beheer/aantekenaars` (federatieniveau) bundelt het per persoon en per wedstrijd.
   Daarnaast staat `tournament-matches` nu zichtbaar in de Payload-admin, met `aantekenaars` als
   kolom en twee kleine componenten (`AantekenaarInfo.tsx`) die er een leesbare regel en een
@@ -222,6 +228,13 @@ puur en getest in `src/lib/aantekenaars.ts`; de opslag zit in `aantekenaars-stor
   gaat er dus gewoon langs. Let op bij het testen hiervan: de **Local API draait standaard mét**
   `overrideAccess`, dus een access-test moet expliciet `overrideAccess: false` meegeven, anders
   bewijst ze niets.
+- **Dezelfde terugval gold breder.** `tournaments`, `throws`, `possessions` en `match-events`
+  hadden enkel een `read`-regel; voor de rest viel Payload terug op "elke ingelogde gebruiker mag
+  schrijven". Bij `tournaments` was dat het zwaarst: de `beforeDelete`-hook wist het volledige
+  wedstrijdschema mee, dus één DELETE door een willekeurig lid vaagde een tornooidag leeg. Bij
+  `throws` betekende het dat een worp buiten `match-engine.ts` om aangemaakt of verwijderd kon
+  worden — zonder lock (invariant 1) en zonder aantekenaars-autorisatie (invariant 2). Alle vier
+  staan nu dicht; elke echte schrijfweg draait met `overrideAccess`.
 
 ## Wachtwoord vergeten (reset via de beheerder)
 
@@ -243,6 +256,16 @@ wie er belt.
   `/api/users/reset-password` af: die staan publiek en zonder rate-limit open, schrijven
   het token naar de serverlog (console-adapter) en omzeilen zowel de minimumlengte als het
   intrekken van sessies. `/admin/forgot` gaat mee door naar `/wachtwoord-vergeten`.
+- **Een blokkade op een pad moet het pad eerst normaliseren.** De eerste versie vergeleek de
+  rauwe `pathname` met twee letterlijke strings, en `/api/users/forgot%2Dpassword` glipte er
+  gewoon door: Next decodeert de segmenten pas bij het routeren en Payload bouwt zijn endpoint
+  daarna opnieuw op uit die gedecodeerde delen. `lib/pad-normaliseren.ts` decodeert (herhaald),
+  verkleint en trekt schuine strepen glad; getest in `tests/unit/pad-normaliseren.unit.spec.ts`.
+- **GraphQL staat uit** (`graphQL: { disable: true }` in `payload.config.ts`, plus de route-
+  bestanden onder `(payload)/api/graphql*` verwijderd). Niets in dit project bevraagt het, en
+  Payload mount voor een auth-collectie onvoorwaardelijk de ongeauthenticeerde mutaties
+  `forgotPasswordUser` en `resetPasswordUser` — een tweede deur, buiten de middleware om, naar
+  precies dezelfde operaties. Wie hier ooit GraphQL wil aanzetten, moet die twee eerst dichtzetten.
 
 ## Seizoensimport
 
