@@ -103,11 +103,17 @@ export function Dagprogramma({
   naam,
   initial,
   canManage,
+  magScoren = false,
   ingelogd,
 }: {
   naam: string
   initial: GroepData
   canManage: boolean
+  /**
+   * Mag deze bezoeker de stand meetellen? In supporters-modus geldt dat voor élke ingelogde
+   * bezoeker. Ruimer dan canManage: corrigeren (heropenen) blijft bij wie aantekenrechten heeft.
+   */
+  magScoren?: boolean
   /** Ingelogd? Dan mag je meespelen met de pronostiek (anders een nette inloglink). */
   ingelogd: boolean
 }) {
@@ -290,14 +296,19 @@ export function Dagprogramma({
                 {duurPerReeks.get(m.reeksNaam) != null && (
                   <span className="dp-duur" title="Wedstrijdduur">2×{duurPerReeks.get(m.reeksNaam)}&#8242;</span>
                 )}
-                {canManage &&
-                  (m.status !== 'finished' ? (
-                    <Link href={`/tornooi/${m.tournamentId}/aantekenen/${m.id}`} className="trn-mini dp-aantekenen">Aantekenen</Link>
-                  ) : (
-                    // Werd er te vroeg op "Einde" gedrukt, dan moet je er nog bij kunnen om te
-                    // heropenen — anders is de wedstrijd vanaf dit overzicht onbereikbaar.
-                    <Link href={`/tornooi/${m.tournamentId}/aantekenen/${m.id}`} className="trn-mini dp-corrigeren">Corrigeren</Link>
-                  ))}
+                {/* Aantekenen mag ruimer dan corrigeren: in supporters-modus komt élke ingelogde
+                    bezoeker hier aan de tafel, zodat hij vanaf dit overzicht van veld naar veld
+                    kan springen. Heropenen blijft bij wie aantekenrechten heeft — de server
+                    weigert 'reopen' voor een supporter, dus die knop hoort er niet te staan. */}
+                {m.status !== 'finished'
+                  ? (canManage || magScoren) && (
+                      <Link href={`/tornooi/${m.tournamentId}/aantekenen/${m.id}`} className="trn-mini dp-aantekenen">Aantekenen</Link>
+                    )
+                  : canManage && (
+                      // Werd er te vroeg op "Einde" gedrukt, dan moet je er nog bij kunnen om te
+                      // heropenen — anders is de wedstrijd vanaf dit overzicht onbereikbaar.
+                      <Link href={`/tornooi/${m.tournamentId}/aantekenen/${m.id}`} className="trn-mini dp-corrigeren">Corrigeren</Link>
+                    )}
               </span>
               {/* Pronostiek staat hier uit: dit overzicht werd er te druk van. Meespelen doe je
                   bij de categorie zelf (zie lib/pronostiek-schakelaar.ts). */}

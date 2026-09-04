@@ -392,14 +392,55 @@ button.trn-toplink {
 }
 
 /* Champion-banner */
+/* De winnaar van een reeks mag gezien worden. Een gouden rand, een zachte gloed en een glans die
+   er traag overheen schuift — feestelijk zonder te knipperen. De trofee zit in de tekst zelf. */
 .trn-champion {
-  background: linear-gradient(90deg, #2a2416, var(--panel));
-  border: 1px solid var(--accent);
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(90deg, #3a2f10, #2a2416 55%, var(--panel));
+  border: 1px solid #e0b64a;
   border-radius: 12px;
   padding: 12px 16px;
   margin-bottom: 16px;
   font-size: 1.1rem;
-  color: var(--accent);
+  color: #f4d489;
+  box-shadow: 0 0 0 1px rgba(224, 182, 74, 0.12), 0 8px 30px rgba(224, 182, 74, 0.16);
+  animation: trn-goud-adem 3.2s ease-in-out infinite;
+}
+/* De glans: een schuine lichtstreep die om de paar seconden overtrekt. */
+.trn-champion::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    115deg,
+    transparent 35%,
+    rgba(255, 240, 200, 0.28) 48%,
+    rgba(255, 255, 255, 0.42) 51%,
+    rgba(255, 240, 200, 0.28) 54%,
+    transparent 67%
+  );
+  transform: translateX(-120%);
+  animation: trn-glans 4.5s ease-in-out infinite;
+  pointer-events: none;
+}
+.trn-champion strong,
+.trn-champion .tl {
+  position: relative;
+  z-index: 1;
+}
+@keyframes trn-goud-adem {
+  0%, 100% { box-shadow: 0 0 0 1px rgba(224, 182, 74, 0.12), 0 8px 30px rgba(224, 182, 74, 0.16); }
+  50% { box-shadow: 0 0 0 1px rgba(224, 182, 74, 0.3), 0 10px 40px rgba(224, 182, 74, 0.34); }
+}
+@keyframes trn-glans {
+  0%, 62% { transform: translateX(-120%); }
+  92%, 100% { transform: translateX(120%); }
+}
+/* Wie beweging liever kwijt is, houdt de gouden rand — enkel het bewegen valt weg. */
+@media (prefers-reduced-motion: reduce) {
+  .trn-champion { animation: none; }
+  .trn-champion::after { display: none; }
 }
 .trn-champion.small {
   font-size: 1rem;
@@ -761,17 +802,6 @@ button.trn-toplink {
   align-items: center;
   margin-bottom: 10px;
 }
-/* Uitleg bovenaan de tafel wanneer een supporter meetelt in plaats van de organisatie. */
-.ts-supporter {
-  margin: 0 0 10px;
-  padding: 9px 12px;
-  border-radius: 10px;
-  border: 1px solid var(--line);
-  border-left: 3px solid #d97706;
-  background: var(--bg);
-  font-size: 0.85rem;
-  line-height: 1.45;
-}
 .ts-round {
   color: var(--dim);
 }
@@ -978,12 +1008,42 @@ button.trn-toplink {
 .trn-btn.zacht:hover { color: #ef476f; border-color: #ef476f; }
 
 /* Bevestigingskaart vóór starten, beëindigen, heropenen of terugzetten. */
+/* De bevestiging is een pop-up midden op het scherm: op een gsm viel ze onderaan de tafel
+   buiten beeld, waardoor een tik op "Einde" leek te mislukken. */
+.ts-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.66);
+  backdrop-filter: blur(2px);
+  animation: ts-modal-in 140ms ease-out;
+}
 .ts-bevestig {
-  margin-top: 16px;
+  width: min(440px, 100%);
+  max-height: 90vh;
+  overflow-y: auto;
   background: var(--panel);
   border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line));
   border-radius: 14px;
-  padding: 16px;
+  padding: 20px;
+  box-shadow: var(--card-shadow);
+  animation: ts-bevestig-in 160ms ease-out;
+}
+@keyframes ts-modal-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes ts-bevestig-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ts-modal-overlay,
+  .ts-bevestig { animation: none; }
 }
 .ts-bevestig h4 { margin: 0 0 6px; font-size: 1.05rem; color: var(--accent); }
 .ts-bevestig p { margin: 0 0 14px; font-size: 0.9rem; line-height: 1.45; color: var(--dim); }
@@ -3195,4 +3255,38 @@ button.trn-toplink {
   font-size: 0.72rem;
   color: var(--dim);
   line-height: 1.35;
+}
+
+/* ── Gespeelde wedstrijd: dichtgeklapt en grijs ────────────────────────────────
+   Een tornooidag loopt vol met kaarten. Wat gespeeld is hoort zichtbaar te blijven — de uitslag
+   telt voor de rangschikking — maar het mag niet even hard om aandacht vragen als wat nog moet
+   komen. Dus: gedempt, compact, en met één tik weer helemaal open. */
+.trn-match.klapbaar .trn-match-head {
+  cursor: pointer;
+}
+.trn-match.ingeklapt {
+  cursor: pointer;
+  opacity: 0.62;
+  filter: saturate(0.55);
+  transition: opacity 140ms ease, filter 140ms ease;
+}
+.trn-match.ingeklapt:hover,
+.trn-match.ingeklapt:focus-visible {
+  opacity: 1;
+  filter: none;
+}
+/* De rijen mogen krimpen: bij een gespeelde wedstrijd draait alles om de cijfers. */
+.trn-match.ingeklapt .trn-row {
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+/* Het pijltje dat zegt dat er meer onder zit. */
+.trn-match-klap {
+  margin-left: 6px;
+  font-size: 0.7rem;
+  color: var(--dim);
+  flex: 0 0 auto;
+}
+@media (prefers-reduced-motion: reduce) {
+  .trn-match.ingeklapt { transition: none; }
 }

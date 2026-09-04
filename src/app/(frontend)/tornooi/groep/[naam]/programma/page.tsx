@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { magTornooiAantekenen } from '@/lib/access'
 import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
+import { isSupportersMode } from '@/lib/score-mode'
 import { loadGroepData } from '@/lib/tornooi-groep'
 import { Dagprogramma } from './Dagprogramma'
 import '../../../tornooi.css'
@@ -26,6 +27,10 @@ export default async function DagprogrammaPage({ params }: { params: Promise<{ n
   // Dit stuurt enkel de knoppen "Aantekenen"/"Corrigeren" per wedstrijd — dus het aantekenrecht,
   // niet het tornooibeheer.
   const canManage = magTornooiAantekenen(user)
+  // In supporters-modus mag ook een gewone ingelogde bezoeker meetellen. Dit overzicht is de plek
+  // waar je op een tornooidag van veld naar veld springt, dus hoort de knop hier ook voor hem te
+  // staan — anders moet hij eerst de juiste reeks opzoeken om aan dezelfde wedstrijd te geraken.
+  const magScoren = magTornooiAantekenen(user, await isSupportersMode(payload))
 
-  return <Dagprogramma naam={naam} initial={data} canManage={canManage} ingelogd={Boolean(user)} />
+  return <Dagprogramma naam={naam} initial={data} canManage={canManage} magScoren={magScoren} ingelogd={Boolean(user)} />
 }
