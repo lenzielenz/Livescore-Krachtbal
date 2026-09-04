@@ -1,0 +1,158 @@
+/* Beheerscherm "wie tekende welke tornooiwedstrijd aan". Sober en compact: dit is een naslagwerk
+   dat je opent met een vraag, niet een scherm waar je op blijft kijken. */
+
+.ant-wrap {
+  display: grid;
+  gap: 22px;
+  margin-top: 14px;
+}
+
+.ant-zoek {
+  width: 100%;
+  max-width: 420px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--txt);
+  font-size: 0.9rem;
+}
+
+.ant-sec {
+  display: grid;
+  gap: 10px;
+}
+
+.ant-titel {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--dim);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* ── Per persoon ─────────────────────────────────────────────────────────────── */
+.ant-personen {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 8px;
+}
+.ant-persoon {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--card);
+}
+.ant-naam {
+  font-weight: 700;
+}
+.ant-tel {
+  width: 100%;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+/* Rol-etiket: een supporter-invoer weegt anders dan die van de organisatie, en dat hoor je te zien. */
+.ant-rol {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  white-space: nowrap;
+}
+.ant-rol.supporter {
+  border-color: #d97706;
+  color: #d97706;
+}
+
+/* ── Per wedstrijd ───────────────────────────────────────────────────────────── */
+.ant-tabel-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.ant-tabel {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+  min-width: 640px;
+}
+.ant-tabel th,
+.ant-tabel td {
+  padding: 9px 12px;
+  text-align: center;
+  border-bottom: 1px solid var(--line);
+}
+.ant-tabel th {
+  background: var(--bg);
+  color: var(--dim);
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.ant-tabel th.l,
+.ant-tabel td.l {
+  text-align: left;
+}
+.ant-tabel tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.ant-tornooi {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+.ant-affiche a {
+  color: var(--txt);
+}
+.ant-affiche a:hover {
+  color: var(--accent);
+}
+
+/* Hoeveel mensen er nog aan meetekenden — de namen zelf staan in de tooltip. */
+.ant-mede {
+  margin-left: 6px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--muted);
+  cursor: help;
+}
+
+.ant-status {
+  font-size: 0.72rem;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  white-space: nowrap;
+}
+.ant-status.live {
+  border-color: #dc2626;
+  color: #dc2626;
+  font-weight: 700;
+}
+.ant-status.finished {
+  border-color: #16a34a;
+  color: #16a34a;
+}
+
+.ant-datum {
+  color: var(--muted);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.ant-leeg,
+.ant-hint {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}

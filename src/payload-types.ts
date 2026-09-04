@@ -1220,6 +1220,30 @@ export interface TournamentMatch {
     | number
     | boolean
     | null;
+  /**
+   * Wie deze wedstrijd aantekende — automatisch bijgehouden.
+   */
+  aantekenaars?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  /**
+   * Wie de wedstrijd beëindigde — automatisch bijgehouden.
+   */
+  afgeslotenDoor?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
   crosses?:
     | {
         [k: string]: unknown;
@@ -2293,6 +2317,8 @@ export interface TournamentMatchesSelect<T extends boolean = true> {
   scorePredictions?: T;
   goals?: T;
   scoreTrust?: T;
+  aantekenaars?: T;
+  afgeslotenDoor?: T;
   crosses?: T;
   timeouts?: T;
   refereeStops?: T;

@@ -69,11 +69,12 @@ export function MatchTrust({
 
   return (
     <div className={`trn-trust ${trust.label}`} onClick={(e) => e.stopPropagation()}>
+      {/* Enkel het oordeel over de stand. Wie ze doorgaf staat één regel lager, in de vermelding
+          die bij élke wedstrijd hoort — anders zou dezelfde naam hier twee keer staan. */}
       <div className="trn-trust-kop">
         <span className="trn-trust-label">
           <span aria-hidden>{tekst.emoji}</span> {tekst.short}
         </span>
-        {trust.scorerName && <span className="trn-trust-scorer">✏️ {trust.scorerName}</span>}
       </div>
       {(trust.confirms > 0 || trust.disputes > 0) && (
         <p className="trn-trust-tel">

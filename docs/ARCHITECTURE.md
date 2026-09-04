@@ -191,6 +191,29 @@ daarom élke ingelogde bezoeker meetellen. Verschillen met een gewone wedstrijd:
   strookje per wedstrijdkaart (`MatchTrust.tsx`), en `null` betekent: de organisatie
   tekent zelf aan, er valt niets te bevestigen.
 
+## Wie tekende deze wedstrijd aan? (tornooien)
+
+Bij een betwiste uitslag is de eerste vraag altijd dezelfde. Voor tornooiwedstrijden staat het
+antwoord vast in twee json-kolommen op `tournament-matches`: `aantekenaars` (lijst van
+`{id, naam, rol, eerste, laatste, acties}`) en `afgeslotenDoor` (`{id, naam, op}`). De regels zijn
+puur en getest in `src/lib/aantekenaars.ts`; de opslag zit in `aantekenaars-store.ts`.
+
+- **Dit is géén afgeleide staat.** Uit de doelpunten valt niet te herleiden wie ze intikte, dus
+  wordt het geboekt — binnen dezelfde lock als de mutatie, want het is een lees-wijzig-schrijf op
+  één json-kolom.
+- **Voor iederéén die aantekent**, niet alleen supporters. De vertrouwenslaag (`scoreTrust`) raakt
+  enkel wedstrijden waar een supporter meetelt; precies de wedstrijden die de organisatie invulde
+  bleven daardoor anoniem.
+- **De naam is een momentopname naast de id**, zoals `MatchInstants.authorName`: `users.read` is
+  federatie-only, dus een publieke pagina kan de naam later niet meer via een join ophalen.
+- **Nooit een e-mailadres.** `veiligeNaam()` valt terug op "Aantekenaar" bij een leeg veld en
+  weigert alles met een `@` — het privacybeleid zegt dat namen publiek zijn en adressen niet.
+- **Weergave**: `buildTournamentState` levert `TMatchState.aantekenaar` (kant-en-klare zin), en het
+  tornooibord zet die als voetnoot onder de wedstrijdkaart. Het vertrouwensstrookje toont daarom
+  zelf geen naam meer — anders stond dezelfde naam er twee keer.
+- **Beheer**: `/beheer/aantekenaars` (federatieniveau) bundelt het per persoon en per wedstrijd.
+  De collectie `tournament-matches` blijft `admin.hidden` in de Payload-admin; dit scherm is de weg.
+
 ## Wachtwoord vergeten (reset via de beheerder)
 
 Er gaat **geen mail** de deur uit: de federatie kiest bewust voor een herstellink die een

@@ -112,6 +112,27 @@ export const TournamentMatches: CollectionConfig = {
       type: 'json',
       admin: { hidden: true },
     },
+    {
+      // Auditspoor: wie tekende deze wedstrijd aan. Lijst van
+      // { id, naam, rol: 'organisatie'|'supporter', eerste, laatste, acties } — zie
+      // src/lib/aantekenaars.ts. De naam is een momentopname naast de id, want `users.read` is
+      // federatie-only en een publieke pagina kan de naam later niet meer ophalen.
+      // Automatisch geboekt bij elke aantekenactie; nooit met de hand invullen.
+      name: 'aantekenaars',
+      label: 'Aangetekend door',
+      type: 'json',
+      defaultValue: [],
+      admin: { readOnly: true, description: 'Wie deze wedstrijd aantekende — automatisch bijgehouden.' },
+    },
+    {
+      // Wie het eindsignaal gaf: { id, naam, op }. Apart van de lijst hierboven, want het afsluiten
+      // legt de uitslag vast en schuift de winnaar door in het schema — dat is de zwaarste handeling
+      // van de dag en verdient een eigen naam.
+      name: 'afgeslotenDoor',
+      label: 'Afgesloten door',
+      type: 'json',
+      admin: { readOnly: true, description: 'Wie de wedstrijd beëindigde — automatisch bijgehouden.' },
+    },
     // Tellers per ploeg: kruisjes (rechtstreeks buiten) en aangevraagde minuten (time-outs).
     { name: 'crosses', label: 'Kruisjes', type: 'json', defaultValue: { home: 0, away: 0 } },
     { name: 'timeouts', label: 'Time-outs', type: 'json', defaultValue: { home: 0, away: 0 } },

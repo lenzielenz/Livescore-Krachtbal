@@ -2,6 +2,8 @@ import { isFederationLevel, magTornooiAantekenen } from '@/lib/access'
 import { authUser } from '@/lib/api-auth'
 import { withLock } from '@/lib/async-mutex'
 import { getPayloadClient } from '@/lib/payload-client'
+import { sanitizeAfsluiter, veiligeNaam, type AantekenaarRol } from '@/lib/aantekenaars'
+import { boekAantekening } from '@/lib/aantekenaars-store'
 import { isSupportersMode } from '@/lib/score-mode'
 import { castVote, claimScorer, mayClaim, mayVote, recordContribution, voteWindowOpen } from '@/lib/score-trust'
 import { readMatchTrust, userTrustScore, writeMatchTrust } from '@/lib/score-trust-store'
@@ -88,7 +90,11 @@ export async function POST(
       return Response.json({ error: 'Enkel de organisatie kan dit aanpassen.' }, { status: 403 })
     }
     const userId = Number(user.id)
-    const userNaam = String((user as { name?: unknown }).name ?? (user as { email?: unknown }).email ?? 'Supporter')
+    // De naam gaat naar een PUBLIEK veld (het vertrouwensstrookje en de vermelding onder een
+    // afgelopen wedstrijd). Uitdrukkelijk geen terugval op het e-mailadres: uitslagen en namen zijn
+    // publiek op dit platform, adressen niet — zie het privacybeleid. veiligeNaam bewaakt dat.
+    const userNaam = veiligeNaam((user as { name?: unknown }).name)
+    const rol: AantekenaarRol = viaSupporters ? 'supporter' : 'organisatie'
 
     // Bevestigen of betwisten van de stand: enkel in supporters-modus, en enkel door wie niet
     // zelf aan het meetellen is (dat zou een handtekening onder je eigen werk zijn).
@@ -113,11 +119,13 @@ export async function POST(
         }
         // Stemmen kan tijdens de wedstrijd en nog een dag erna; daarna staat de stand vast.
         //
-        // Een tornooiwedstrijd heeft geen 'beëindigd op'-veld, dus nemen we de laatste
-        // aantekenactie van wie meetelde als eindmoment. Bewust níét `updatedAt`: elke stem is
-        // zelf een update, dus daarmee zou het venster bij elke stem opnieuw beginnen te lopen.
+        // Eindmoment is wanneer de wedstrijd afgesloten werd; is dat onbekend (afgesloten vóór dit
+        // spoor bestond), dan valt het terug op de laatste aantekenactie. Bewust níét `updatedAt`:
+        // elke stem is zelf een update, dus daarmee zou het venster bij elke stem opnieuw beginnen.
         const status = String((wedstrijd as { status?: unknown }).status ?? '')
-        const laatste = trust.lastActiveAt != null ? new Date(trust.lastActiveAt).toISOString() : null
+        const geeindigdOp =
+          sanitizeAfsluiter((wedstrijd as { afgeslotenDoor?: unknown }).afgeslotenDoor)?.op ?? trust.lastActiveAt
+        const laatste = geeindigdOp != null ? new Date(geeindigdOp).toISOString() : null
         if (!voteWindowOpen(status, laatste)) {
           return Response.json({ error: 'De stand van deze wedstrijd staat al vast.' }, { status: 400 })
         }
@@ -235,6 +243,11 @@ export async function POST(
         'tournament-matches',
       )
     }
+    // Auditspoor, voor iederéén die aantekent — niet alleen voor supporters. Zonder dit blijft
+    // precies de wedstrijd die de organisatie invulde anoniem, en dat is nu net de wedstrijd die
+    // de federatie bij betwisting moet kunnen natrekken. Staat binnen de lock: lees-wijzig-schrijf
+    // op één json-kolom.
+    await boekAantekening(payload, matchId, { id: userId, naam: userNaam, rol }, { sluitAf: action === 'finish' })
     const state = await buildTournamentState(payload, tournamentId)
     return Response.json({ state })
     })

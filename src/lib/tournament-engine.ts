@@ -7,6 +7,7 @@
 import type { Payload } from 'payload'
 
 import { CATEGORIES, type Category, categoryConfig } from './categories'
+import { aantekenaarTekst, sanitizeAantekenaars, sanitizeAfsluiter } from './aantekenaars'
 import { sanitizeTrust, trustLabel, type TrustLabel } from './score-trust'
 import {
   type Bracket,
@@ -62,6 +63,16 @@ export type TMatchState = {
     label: TrustLabel
     confirms: number
     disputes: number
+  } | null
+  /**
+   * Wie deze wedstrijd aantekende — de regel die onder een afgelopen wedstrijd komt te staan.
+   * Null zolang er niemand aantekende (of bij een wedstrijd van vóór dit spoor bestond).
+   */
+  aantekenaar: {
+    /** Kant-en-klare zin: "Aangetekend door Jan Peeters · afgesloten door Rita Claes". */
+    tekst: string
+    /** Hoeveel mensen er in totaal aan meetekenden — voedt de uitleg in het beheerscherm. */
+    aantal: number
   } | null
 }
 
@@ -146,7 +157,19 @@ function toState(m: MatchDoc): TMatchState {
     veld: (m as { veld?: number | null }).veld ?? null,
     lastGoal: laatste ? { side: laatste.side, points: laatste.points === 2 ? 2 : 1 } : null,
     trust: trustVan(m),
+    aantekenaar: aantekenaarVan(m),
   }
+}
+
+/**
+ * De publieke vermelding "aangetekend door …". Anders dan het vertrouwenslabel geldt die voor élke
+ * wedstrijd — ook die de organisatie zelf aantekende. Zo staat bij elke uitslag wie de bron is.
+ */
+function aantekenaarVan(m: MatchDoc): TMatchState['aantekenaar'] {
+  const lijst = sanitizeAantekenaars((m as { aantekenaars?: unknown }).aantekenaars)
+  if (lijst.length === 0) return null
+  const tekst = aantekenaarTekst(lijst, sanitizeAfsluiter((m as { afgeslotenDoor?: unknown }).afgeslotenDoor))
+  return tekst ? { tekst, aantal: lijst.length } : null
 }
 
 /**
