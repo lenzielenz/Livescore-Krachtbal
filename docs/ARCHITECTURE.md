@@ -172,6 +172,25 @@ doorgeven. Om dat betrouwbaar te houden zonder de drempel te verhogen:
   na het bevestigingsvenster (24 u) boekt `/api/cron/recap` het oordeel; wie
   herhaaldelijk bevestigd wordt, gaat meteen als bevestigd door de deur.
 
+Dezelfde laag ligt op **tornooiwedstrijden** (`tournament-matches.scoreTrust`, zelfde
+vorm — `readMatchTrust`/`writeMatchTrust` nemen de collectie als argument). Op een
+tornooidag spelen tien velden tegelijk en zit er lang niet achter elk veld iemand van
+de organisatie; in supporters-modus laat `magTornooiAantekenen(user, supportersModus)`
+daarom élke ingelogde bezoeker meetellen. Verschillen met een gewone wedstrijd:
+
+- Claimen, bevestigen en betwisten lopen over hetzelfde actie-endpoint
+  (`/api/tournament/[id]/match/[matchId]/action`, acties `bevestig`/`betwist`) —
+  tornooien hebben geen aparte trust-route.
+- Een supporter krijgt de **basis**-aantekentafel (+1 nekworp / +2 rugworp), niet het
+  volledige blad met scorerkeuze: vanaf de zijlijn zie je zelden welk rugnummer scoorde.
+- `SUPPORTER_ACTIES` in die route zet de grens: meetellen mag (start, goal, undo, klok,
+  helft, kruisjes, minuten, einde), dagorganisatie en correcties niet (`plan`, `veld`,
+  `wissel`, `reset`, `reopen`) — dezelfde grens als `mayCorrectMatch` bij een gewone
+  wedstrijd.
+- `buildTournamentState` geeft het label mee als `TMatchState.trust`; het bord toont het
+  strookje per wedstrijdkaart (`MatchTrust.tsx`), en `null` betekent: de organisatie
+  tekent zelf aan, er valt niets te bevestigen.
+
 ## Wachtwoord vergeten (reset via de beheerder)
 
 Er gaat **geen mail** de deur uit: de federatie kiest bewust voor een herstellink die een

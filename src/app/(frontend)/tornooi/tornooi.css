@@ -761,6 +761,17 @@ button.trn-toplink {
   align-items: center;
   margin-bottom: 10px;
 }
+/* Uitleg bovenaan de tafel wanneer een supporter meetelt in plaats van de organisatie. */
+.ts-supporter {
+  margin: 0 0 10px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  border-left: 3px solid #d97706;
+  background: var(--bg);
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
 .ts-round {
   color: var(--dim);
 }
@@ -3113,4 +3124,71 @@ button.trn-toplink {
 .gk-cast {
   font-size: 0.8rem;
   padding: 6px 12px;
+}
+
+/* ── Vertrouwensstrookje op een wedstrijdkaart ──────────────────────────────────
+   Verschijnt enkel wanneer een supporter deze wedstrijd meetelt (supporters-modus). De rand
+   links draagt de kleur van het oordeel: groen bevestigd, oranje nog onbevestigd, rood betwist —
+   zo zie je in één blik over het hele bord welke standen zeker zijn. */
+.trn-trust {
+  margin-top: 9px;
+  padding: 8px 9px;
+  border-top: 1px solid var(--line);
+  border-left: 3px solid var(--line);
+  border-radius: 0 8px 8px 0;
+  background: var(--bg);
+  font-size: 0.76rem;
+}
+.trn-trust.confirmed,
+.trn-trust.official {
+  border-left-color: #16a34a;
+}
+.trn-trust.unconfirmed {
+  border-left-color: #d97706;
+}
+.trn-trust.disputed {
+  border-left-color: #dc2626;
+}
+.trn-trust-kop {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+.trn-trust-label {
+  font-weight: 700;
+}
+.trn-trust-scorer {
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 60%;
+}
+.trn-trust-tel {
+  margin: 4px 0 0;
+  display: flex;
+  gap: 10px;
+  color: var(--muted);
+}
+.trn-trust-tel .ok {
+  color: #16a34a;
+}
+.trn-trust-tel .nok {
+  color: #dc2626;
+}
+.trn-trust-knoppen {
+  display: flex;
+  gap: 8px;
+  margin-top: 7px;
+}
+.trn-trust-knoppen .trn-mini.aan {
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 700;
+}
+.trn-trust-fout {
+  margin: 6px 0 0;
+  color: #dc2626;
 }

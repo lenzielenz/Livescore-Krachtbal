@@ -7,6 +7,7 @@
 import type { Payload } from 'payload'
 
 import { CATEGORIES, type Category, categoryConfig } from './categories'
+import { sanitizeTrust, trustLabel, type TrustLabel } from './score-trust'
 import {
   type Bracket,
   type Goal,
@@ -47,6 +48,21 @@ export type TMatchState = {
   veld: number | null
   /** Laatst genoteerde doelpunt — wat "undo" zou wegnemen; voedt ook de kantine-viering. */
   lastGoal: { side: Side; points: 1 | 2 } | null
+  /**
+   * Wie deze stand doorgeeft, als het een supporter is (supporters-modus). Null bij een
+   * wedstrijd die de organisatie zelf aantekent — dan is de stand per definitie officieel en
+   * hoeft er niets bevestigd te worden.
+   */
+  trust: {
+    /** Wie meetelt — zodat het scherm de bevestigingsknoppen weglaat bij je eigen werk. */
+    scorerId: number | null
+    /** Naam van wie meetelt, om te tonen wie de stand doorgeeft. */
+    scorerName: string | null
+    /** Hoe de stand getoond wordt: officieel, bevestigd, nog onbevestigd of betwist. */
+    label: TrustLabel
+    confirms: number
+    disputes: number
+  } | null
 }
 
 export type TournamentState = {
@@ -129,6 +145,28 @@ function toState(m: MatchDoc): TMatchState {
     plannedAt: (m as { plannedAt?: string | null }).plannedAt ?? null,
     veld: (m as { veld?: number | null }).veld ?? null,
     lastGoal: laatste ? { side: laatste.side, points: laatste.points === 2 ? 2 : 1 } : null,
+    trust: trustVan(m),
+  }
+}
+
+/**
+ * Het vertrouwenslabel bij de stand — enkel wanneer een supporter deze wedstrijd meetelt.
+ *
+ * Tekent de organisatie zelf aan (of staat er nog niets), dan is er geen scorer geclaimd en
+ * blijft dit null: de stand komt dan van de tafel en hoeft niet bevestigd te worden. Precies
+ * dezelfde regels als bij een gewone wedstrijd (score-trust.ts), enkel gelezen van een andere rij.
+ */
+function trustVan(m: MatchDoc): TMatchState['trust'] {
+  const ruw = (m as { scoreTrust?: unknown }).scoreTrust
+  if (ruw == null) return null
+  const t = sanitizeTrust(ruw)
+  if (t.scorerId == null) return null
+  return {
+    scorerId: t.scorerId,
+    scorerName: t.scorerName,
+    label: trustLabel(t, { official: false }),
+    confirms: t.confirms.length,
+    disputes: t.disputes.length,
   }
 }
 

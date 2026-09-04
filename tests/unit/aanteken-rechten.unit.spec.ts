@@ -40,6 +40,26 @@ describe('magTornooiAantekenen', () => {
     expect(magTornooiAantekenen(met({ roles: ['viewer'], aantekenRechten: null }))).toBe(false)
   })
 
+  it('laat in supporters-modus élke ingelogde bezoeker meetellen', () => {
+    // Vrije livescore: op een tornooidag spelen tien velden tegelijk en zit er lang niet achter elk
+    // veld iemand van de organisatie. Dan telt een supporter mee — mét naam bij de stand.
+    expect(magTornooiAantekenen(met({ id: 7, roles: ['scorekeeper'] }), true)).toBe(true)
+    expect(magTornooiAantekenen(met({ id: 7, roles: ['viewer'] }), true)).toBe(true)
+    expect(magTornooiAantekenen(met({ id: 7, roles: [] }), true)).toBe(true)
+  })
+
+  it('vraagt ook in supporters-modus een login', () => {
+    // De keuze van de federatie: er hoort een naam achter elke doorgegeven stand te staan.
+    expect(magTornooiAantekenen(null, true)).toBe(false)
+    expect(magTornooiAantekenen(undefined, true)).toBe(false)
+    expect(magTornooiAantekenen(met({ roles: ['viewer'] }), true)).toBe(false)
+  })
+
+  it('verandert niets zolang de supporters-modus uit staat', () => {
+    expect(magTornooiAantekenen(met({ id: 7, roles: ['scorekeeper'] }), false)).toBe(false)
+    expect(magTornooiAantekenen(met({ id: 7, roles: ['scorekeeper'] }))).toBe(false)
+  })
+
   it('geeft geen clubstaf of kapitein stilzwijgend het recht', () => {
     // Clubstaf tekent competitiewedstrijden van de eigen club aan; een tornooi is van de
     // organisatie. Wie het toch moet kunnen, krijgt het recht expliciet.
