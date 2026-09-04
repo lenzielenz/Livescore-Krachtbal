@@ -145,29 +145,98 @@ button.trn-toplink {
   gap: 12px;
 }
 .trn-hub-card {
+  position: relative;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   gap: 4px;
-  padding: 14px 16px;
+  padding: 16px 18px;
+  min-height: 108px;
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: 14px;
   color: var(--txt);
+  transition: border-color 140ms ease, transform 140ms ease, box-shadow 140ms ease;
 }
+/* Een streep in de staatskleur langs de linkerrand: van op afstand zie je zo meteen welke reeks
+   loopt, welke nog moet en welke gedaan is — zonder het etiketje te moeten lezen. */
+.trn-hub-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--line);
+}
+.trn-hub-card.live::before { background: #6ee7a0; }
+.trn-hub-card.finished::before { background: var(--accent); }
 .trn-hub-card:hover {
   border-color: var(--accent);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.32);
+}
+/* Een lopende reeks mag opvallen: groene rand en een zachte gloed. */
+.trn-hub-card.live {
+  border-color: color-mix(in srgb, #6ee7a0 45%, var(--line));
+  box-shadow: 0 0 0 1px rgba(110, 231, 160, 0.08), 0 6px 22px rgba(110, 231, 160, 0.1);
+}
+/* Afgelopen reeksen zakken naar de achtergrond — ze blijven leesbaar, maar vragen niets. */
+.trn-hub-card.finished { opacity: 0.82; }
+.trn-hub-card.finished:hover { opacity: 1; }
+
+/* De categorie groot en doorschijnend rechtsonder: vult de kale kaart zonder iets te verbergen. */
+.trn-hub-watermerk {
+  position: absolute;
+  right: -2px;
+  bottom: -14px;
+  font-size: 3.4rem;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  color: var(--txt);
+  opacity: 0.055;
+  pointer-events: none;
+  user-select: none;
+}
+.trn-hub-card.live .trn-hub-watermerk { color: #6ee7a0; opacity: 0.1; }
+
+/* Het kloppende bolletje naast LIVE — hetzelfde teken als op het scorebord. */
+.trn-hub-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  margin-right: 5px;
+  display: inline-block;
+  vertical-align: middle;
+  animation: trn-hub-klop 1.6s ease-in-out infinite;
+}
+@keyframes trn-hub-klop {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.45; transform: scale(0.82); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .trn-hub-card { transition: none; }
+  .trn-hub-card:hover { transform: none; }
+  .trn-hub-dot { animation: none; }
 }
 .trn-hub-name {
-  font-weight: 700;
-  font-size: 1.05rem;
+  position: relative;
+  font-weight: 800;
+  font-size: 1.15rem;
+  letter-spacing: -0.01em;
 }
 .trn-hub-meta {
+  position: relative;
   color: var(--dim);
   font-size: 0.85rem;
 }
 .trn-hub-status {
+  position: relative;
   align-self: flex-start;
-  margin-top: 4px;
+  margin-top: auto;
+  padding-top: 8px;
   font-size: 0.7rem;
   font-weight: 800;
   letter-spacing: 0.05em;
@@ -1496,6 +1565,13 @@ button.trn-toplink {
 }
 .gk-bord.groot .gk-bord-team { font-size: clamp(1.4rem, 5vmin, 3.6rem); }
 .gk-bord.groot .gk-bord-score { font-size: clamp(3rem, 13vmin, 11rem); }
+/* Twee en drie borden naast elkaar kregen dezelfde kleine maten als een vol scherm met zestien.
+   Daardoor stond een logo verloren naast een score die wél groot bleef. Deze twee tussenstappen
+   houden logo, naam en score in verhouding naarmate de dag voller wordt (zie logoMaatVoor). */
+.gk-bord[data-cols='2'] .gk-bord-team { font-size: clamp(1.15rem, 3.9vmin, 2.9rem); }
+.gk-bord[data-cols='2'] .gk-bord-score { font-size: clamp(2.4rem, 8.6vmin, 7.2rem); }
+.gk-bord[data-cols='3'] .gk-bord-team { font-size: clamp(1.05rem, 3.4vmin, 2.5rem); }
+.gk-bord[data-cols='3'] .gk-bord-score { font-size: clamp(2.1rem, 7.4vmin, 6.2rem); }
 /* De voet: kruisjes en minuten gecentreerd, de klok rechts. De lege spanwijdte links houdt die
    twee écht in het midden in plaats van ze door de klok naar links te laten duwen. */
 .gk-bord-voet {

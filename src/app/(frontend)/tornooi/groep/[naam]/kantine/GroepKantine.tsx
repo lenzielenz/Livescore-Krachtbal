@@ -43,16 +43,31 @@ function kolommenVoor(n: number): number {
   return 4
 }
 
-function LiveBord({ m, groot, logos, kleuren, fits }: { m: GroepMatch; groot: boolean; logos: Record<string, string>; kleuren: Record<string, string>; fits: Record<string, LogoFit> }) {
+/**
+ * Hoe groot het clublogo op een live bord mag zijn.
+ *
+ * Het hing eerder aan één ja/nee-vraag ("is dit het enige bord?"), en daardoor stond een logo bij
+ * twee velden even klein als bij zestien — verloren naast een score van 13vmin. Nu schaalt het mee
+ * met het aantal kolommen: hoe minder borden, hoe meer plaats, hoe groter het logo. Op een
+ * tornooidag die van twee naar acht velden groeit, blijft de verhouding zo staan.
+ */
+function logoMaatVoor(cols: number): string {
+  if (cols <= 1) return 'clamp(96px, 18vmin, 240px)'
+  if (cols === 2) return 'clamp(78px, 12.5vmin, 176px)'
+  if (cols === 3) return 'clamp(58px, 9vmin, 124px)'
+  return 'clamp(44px, 6.5vmin, 92px)'
+}
+
+function LiveBord({ m, groot, cols, logos, kleuren, fits }: { m: GroepMatch; groot: boolean; cols: number; logos: Record<string, string>; kleuren: Record<string, string>; fits: Record<string, LogoFit> }) {
   const clock = useTicking(m.clockSeconds, m.clockRunning)
-  const logoMaat = groot ? 'clamp(72px, 14vmin, 170px)' : 'clamp(48px, 8vmin, 110px)'
+  const logoMaat = logoMaatVoor(cols)
   // Clubkleuren dragen het bord (zelfde taal als de live-bordkaarten van de competitie).
   const stijl = {
     ...(m.home && kleuren[m.home] ? { '--bc-a': kleuren[m.home] } : {}),
     ...(m.away && kleuren[m.away] ? { '--bc-b': kleuren[m.away] } : {}),
   } as CSSProperties
   return (
-    <div className={`gk-bord${groot ? ' groot' : ''}`} style={stijl}>
+    <div className={`gk-bord${groot ? ' groot' : ''}`} data-cols={cols} style={stijl}>
       {/* De kop draagt enkel wat kort is: de affiche links, het veld rechts. Alles op één regel
           proppen — affiche, reeks, veld én klok — liep over elkaar heen zodra een ploegnaam wat
           langer werd. */}
@@ -578,7 +593,7 @@ export function GroepKantine({ naam, initial }: { naam: string; initial: GroepDa
       {live.length > 0 ? (
         <div className="gk-raster" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
           {live.map((m) => (
-            <LiveBord key={m.id} m={m} groot={live.length === 1} logos={data.logos} kleuren={data.kleuren} fits={data.fits} />
+            <LiveBord key={m.id} m={m} groot={live.length === 1} cols={cols} logos={data.logos} kleuren={data.kleuren} fits={data.fits} />
           ))}
         </div>
       ) : komend.length > 0 ? (
