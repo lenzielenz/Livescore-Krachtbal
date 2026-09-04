@@ -247,7 +247,12 @@ export async function POST(
     // precies de wedstrijd die de organisatie invulde anoniem, en dat is nu net de wedstrijd die
     // de federatie bij betwisting moet kunnen natrekken. Staat binnen de lock: lees-wijzig-schrijf
     // op één json-kolom.
+    //
+    // Faalt het boeken, dan mag dat de actie niet alsnog laten stranden: het doelpunt staat op dat
+    // moment al vast. Een foutmelding zou de aantekenaar doen denken dat de tik niet aankwam, en de
+    // tweede tik telt dan dubbel. Liever een gat in het spoor dan een verkeerde stand.
     await boekAantekening(payload, matchId, { id: userId, naam: userNaam, rol }, { sluitAf: action === 'finish' })
+      .catch(() => undefined)
     const state = await buildTournamentState(payload, tournamentId)
     return Response.json({ state })
     })

@@ -148,16 +148,20 @@ describe('wie tekende de tornooiwedstrijd aan', () => {
     //
     // `overrideAccess: false` is wat de adminpanelen en de REST-API doen; de Local API laat het
     // standaard op true staan, en dán zou deze test niets bewijzen.
-    const alsIngelogde = { overrideAccess: false, user: { id: 1, roles: ['scorekeeper'] } } as never
     await expect(
-      payload.update({ collection: 'tournament-matches', id: ids.match, data: { home: 'Vervalst' }, ...alsIngelogde }),
+      payload.update({
+        collection: 'tournament-matches',
+        id: ids.match,
+        data: { home: 'Vervalst' },
+        overrideAccess: false,
+      }),
     ).rejects.toThrow()
     await expect(
-      payload.delete({ collection: 'tournament-matches', id: ids.match, ...alsIngelogde }),
+      payload.delete({ collection: 'tournament-matches', id: ids.match, overrideAccess: false }),
     ).rejects.toThrow()
 
     // Lezen blijft wél gewoon werken — anders zou het overzicht leeg zijn.
-    const doc = await payload.findByID({ collection: 'tournament-matches', id: ids.match, ...alsIngelogde })
+    const doc = await payload.findByID({ collection: 'tournament-matches', id: ids.match, overrideAccess: false })
     expect((doc as { home?: unknown }).home).not.toBe('Vervalst')
 
     // En de engine gaat er nog altijd langs (die schrijft met overrideAccess).

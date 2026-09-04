@@ -3163,7 +3163,7 @@ button.trn-toplink {
   margin: 4px 0 0;
   display: flex;
   gap: 10px;
-  color: var(--muted);
+  color: var(--dim);
 }
 .trn-trust-tel .ok {
   color: #16a34a;
@@ -3193,6 +3193,6 @@ button.trn-toplink {
   padding-top: 8px;
   border-top: 1px solid var(--line);
   font-size: 0.72rem;
-  color: var(--muted);
+  color: var(--dim);
   line-height: 1.35;
 }

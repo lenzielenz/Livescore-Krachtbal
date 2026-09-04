@@ -13,7 +13,7 @@
   padding: 10px 12px;
   border-radius: 10px;
   border: 1px solid var(--line);
-  background: var(--card);
+  background: var(--panel);
   color: var(--txt);
   font-size: 0.9rem;
 }
@@ -46,7 +46,7 @@
   padding: 10px 12px;
   border: 1px solid var(--line);
   border-radius: 10px;
-  background: var(--card);
+  background: var(--panel);
 }
 .ant-naam {
   font-weight: 700;
@@ -54,7 +54,7 @@
 .ant-tel {
   width: 100%;
   font-size: 0.78rem;
-  color: var(--muted);
+  color: var(--dim);
 }
 
 /* Rol-etiket: een supporter-invoer weegt anders dan die van de organisatie, en dat hoor je te zien. */
@@ -64,7 +64,7 @@
   padding: 1px 7px;
   border-radius: 999px;
   border: 1px solid var(--line);
-  color: var(--muted);
+  color: var(--dim);
   white-space: nowrap;
 }
 .ant-rol.supporter {
@@ -108,7 +108,7 @@
 .ant-tornooi {
   display: block;
   font-size: 0.72rem;
-  color: var(--muted);
+  color: var(--dim);
 }
 .ant-affiche a {
   color: var(--txt);
@@ -122,7 +122,7 @@
   margin-left: 6px;
   font-size: 0.7rem;
   font-weight: 700;
-  color: var(--muted);
+  color: var(--dim);
   cursor: help;
 }
 
@@ -131,7 +131,7 @@
   padding: 2px 8px;
   border-radius: 999px;
   border: 1px solid var(--line);
-  color: var(--muted);
+  color: var(--dim);
   white-space: nowrap;
 }
 .ant-status.live {
@@ -145,7 +145,7 @@
 }
 
 .ant-datum {
-  color: var(--muted);
+  color: var(--dim);
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
@@ -154,5 +154,5 @@
 .ant-hint {
   margin: 0;
   font-size: 0.8rem;
-  color: var(--muted);
+  color: var(--dim);
 }
