@@ -349,9 +349,10 @@ gebeurt daarná, in TypeScript (`src/lib/cv-samenvoegen.ts`):
   voorstellen en markers;
 - een worp die beide camera's zagen (binnen 2 s én, als beide een landingspunt hebben,
   binnen 8 m) telt één keer: de kant mét landingspunt wint, daarna de hoogste confidence;
-- werper- en spoornummers van camera 2 krijgen +1000 (`CAMERA2_BASIS`): "werper 3" van
-  camera 1 en van camera 2 zijn twee verschillende mensen. Een mens wijst ze desnoods
-  allebei aan dezelfde speler toe;
+- werper- en spoornummers van camera 2 krijgen `CAMERA2_BASIS` (100000) erbij: "werper 3"
+  van camera 1 en van camera 2 zijn twee verschillende mensen. De basis staat hoog omdat
+  de trackers nooit hernummeren — op een lange opname passeren de tellers makkelijk de
+  duizend. Een mens wijst twee nummers desnoods allebei aan dezelfde speler toe;
 - trainingshygiëne: een worp die alléén camera 2 zag mag geen label zijn voor de meetreeks
   van camera 1 (`houding-reeks.jsonl` is per camera; de training gebruikt enkel die van
   camera 1) — vandaar de `beideCameras`-vlag op samengevoegde voorstellen.

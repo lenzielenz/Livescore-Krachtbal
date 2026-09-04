@@ -28,6 +28,7 @@ export function Sporen({ matchId }: { matchId: number }) {
   const [sporen, setSporen] = useState<SpoorInfo[] | null>(null)
   const [spelers, setSpelers] = useState<Speler[]>([])
   const [toewijzing, setToewijzing] = useState<Record<string, number>>({})
+  const [verouderd, setVerouderd] = useState(false)
   const [bezig, setBezig] = useState(false)
   const [melding, setMelding] = useState<string | null>(null)
 
@@ -39,10 +40,12 @@ export function Sporen({ matchId }: { matchId: number }) {
         sporen: SpoorInfo[]
         toewijzing: Record<string, number>
         spelers: Speler[]
+        verouderd?: boolean
       }
       setSporen(d.sporen ?? [])
       setToewijzing(d.toewijzing ?? {})
       setSpelers(d.spelers ?? [])
+      setVerouderd(d.verouderd === true)
     } catch {
       /* stil: dit blok is niet de hoofdzaak van de pagina */
     }
@@ -67,6 +70,7 @@ export function Sporen({ matchId }: { matchId: number }) {
       })
       if (res.ok) {
         const d = (await res.json()) as { fysiek?: { spelers: number; anoniem: number[] } | null }
+        setVerouderd(false)
         setMelding(
           d.fysiek && d.fysiek.spelers > 0
             ? `Bewaard — fysieke stats herrekend voor ${d.fysiek.spelers} speler(s).`
@@ -93,6 +97,13 @@ export function Sporen({ matchId }: { matchId: number }) {
         spoor van identiteit (dat gebeurt bij drukte), wijs de stukken dan gewoon allebei toe;
         ze tellen op.
       </p>
+
+      {verouderd && (
+        <p className="sa-let-op">
+          De tracking is opnieuw gedraaid sinds de vorige toewijzing — de sporen zijn nieuw
+          genummerd, dus die toewijzing telt niet meer. Wijs de sporen hieronder opnieuw toe.
+        </p>
+      )}
 
       <div className="ms-cijfers">
         <span>

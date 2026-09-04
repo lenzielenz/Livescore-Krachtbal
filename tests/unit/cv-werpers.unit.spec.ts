@@ -91,6 +91,12 @@ describe('leesToewijzing', () => {
     expect(leesToewijzing({ '1': 0, '4': 42 })).toEqual({ '4': 42 })
   })
 
+  it('negeert de gereserveerde vingerafdruk-sleutel van cvSporen', () => {
+    // cvSporen bewaart naast de toewijzing ook "_posities" (bij welke tracking-run ze hoort);
+    // die sleutel mag nooit als werper/spoor gelezen worden.
+    expect(leesToewijzing({ '3': 42, _posities: '2|3000|7|15000' })).toEqual({ '3': 42 })
+  })
+
   it('geeft een lege toewijzing terug bij niets', () => {
     expect(leesToewijzing(null)).toEqual({})
     expect(leesToewijzing('nee')).toEqual({})

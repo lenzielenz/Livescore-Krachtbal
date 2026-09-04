@@ -8,6 +8,8 @@ import {
   fysiekPerSpoor,
   gladSpoor,
   leesPosities,
+  leesSporenVingerafdruk,
+  positiesVingerafdruk,
   spoorOverzicht,
   type Positie,
 } from '@/lib/cv-fysiek'
@@ -35,6 +37,40 @@ describe('leesPosities', () => {
     ]
     expect(leesPosities(regels, 1)).toEqual([{ t: 1.5, spoor: 3, xM: 7, yM: 20 }])
     expect(leesPosities(regels, 2)[0].spoor).toBe(3 + CAMERA2_BASIS)
+  })
+
+  it('laat een spoornummer vallen dat de camera 2-basis raakt', () => {
+    // Zo'n nummer kan niet meer eenduidig genamespacet worden: meenemen zou een camera 1-spoor
+    // met een echt camera 2-spoor op dezelfde sleutel zetten — twee mensen op één spelerskaart.
+    const regels = [{ t: 1, track: CAMERA2_BASIS + 2, x_m: 7, y_m: 20 }]
+    expect(leesPosities(regels, 1)).toEqual([])
+    expect(leesPosities(regels, 2)).toEqual([])
+  })
+})
+
+describe('positiesVingerafdruk', () => {
+  const posities: Positie[] = [
+    { t: 1, spoor: 3, xM: 7, yM: 20 },
+    { t: 2, spoor: 4, xM: 8, yM: 21 },
+  ]
+
+  it('verandert mee met de tracking-run, niet met de leesvolgorde', () => {
+    // De spoornummers zijn een artefact van één run: een her-analyse geeft andere posities en
+    // dus een andere vingerafdruk — precies waar de herrekening een oude toewijzing aan herkent.
+    expect(positiesVingerafdruk([...posities].reverse())).toBe(positiesVingerafdruk(posities))
+    expect(positiesVingerafdruk(posities)).not.toBe(
+      positiesVingerafdruk([posities[0], { ...posities[1], spoor: 5 }]),
+    )
+    expect(positiesVingerafdruk(posities)).not.toBe(positiesVingerafdruk(posities.slice(0, 1)))
+  })
+})
+
+describe('leesSporenVingerafdruk', () => {
+  it('leest de gereserveerde sleutel en negeert al de rest', () => {
+    expect(leesSporenVingerafdruk({ '3': 42, _posities: '2|3000|7|15000' })).toBe('2|3000|7|15000')
+    expect(leesSporenVingerafdruk({ '3': 42 })).toBeNull()
+    expect(leesSporenVingerafdruk(null)).toBeNull()
+    expect(leesSporenVingerafdruk({ _posities: 17 })).toBeNull()
   })
 })
 
@@ -142,7 +178,7 @@ describe('bundelPerSpeler', () => {
 
 describe('spoorOverzicht', () => {
   it('zet het spoor met de meeste meters bovenaan, met camera en leefperiode als hint', () => {
-    const posities = [...lijn(3, 10, 20, 1.5), ...lijn(1000 + 5, 0, 5, 1)]
+    const posities = [...lijn(3, 10, 20, 1.5), ...lijn(CAMERA2_BASIS + 5, 0, 5, 1)]
     const overzicht = spoorOverzicht(posities)
     expect(overzicht[0].spoor).toBe(3)
     expect(overzicht[0].camera).toBe(1)

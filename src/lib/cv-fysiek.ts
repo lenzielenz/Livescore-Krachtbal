@@ -49,6 +49,10 @@ export function leesPosities(regels: Record<string, unknown>[], camera: 1 | 2 = 
     const xM = Number(r.x_m)
     const yM = Number(r.y_m)
     if (!Number.isFinite(t) || !Number.isInteger(spoor) || !Number.isFinite(xM) || !Number.isFinite(yM)) continue
+    // Een spoornummer dat de camera 2-basis raakt kan niet meer eenduidig genamespacet worden:
+    // meenemen zou twee mensen op één sleutel zetten, en dat is erger dan dit (pathologische)
+    // spoor laten vallen.
+    if (spoor < 0 || spoor >= CAMERA2_BASIS) continue
     uit.push({ t, spoor: camera === 2 ? spoor + CAMERA2_BASIS : spoor, xM, yM })
   }
   return uit
@@ -260,11 +264,42 @@ export async function leesMatchPosities(matchId: number): Promise<Positie[]> {
   return [...cam1, ...cam2]
 }
 
+/**
+ * Een vingerafdruk van déze tracking-run.
+ *
+ * De spoornummers zijn een artefact van één run: draait de tracking opnieuw (andere stand,
+ * andere bemonstering), dan is "spoor 3" een ándere persoon. De toewijzing spoor → speler
+ * bewaart daarom de vingerafdruk van de run waar ze bij hoort (sleutel "_posities" in
+ * cvSporen), en de herrekening weigert een toewijzing die bij andere posities hoort — anders
+ * krijgen de verkeerde spelers stilzwijgend elkaars meters. Volgorde-onafhankelijk (sommen),
+ * zodat de leesvolgorde van de twee camerabestanden er niet toe doet.
+ */
+export function positiesVingerafdruk(posities: Positie[]): string {
+  let somT = 0
+  let somSpoor = 0
+  let somX = 0
+  for (const p of posities) {
+    somT += p.t
+    somSpoor += p.spoor
+    somX += p.xM
+  }
+  return `${posities.length}|${Math.round(somT * 1000)}|${somSpoor}|${Math.round(somX * 1000)}`
+}
+
+/** De bewaarde vingerafdruk uit matches.cvSporen (sleutel "_posities"), of null. */
+export function leesSporenVingerafdruk(ruw: unknown): string | null {
+  if (!ruw || typeof ruw !== 'object') return null
+  const v = (ruw as Record<string, unknown>)._posities
+  return typeof v === 'string' && v ? v : null
+}
+
 export type Fysiekrapport = {
   sporen: number
   spelers: number
   /** Sporen zonder toewijzing — die tellen nergens in mee. */
   anoniem: number[]
+  /** De bewaarde toewijzing hoort bij een vórige tracking-run: niets herrekend. */
+  verouderd?: boolean
 }
 
 /**
@@ -284,6 +319,18 @@ export async function herrekenFysiek(payload: Payload, matchId: number): Promise
   const perSpoor = fysiekPerSpoor(posities)
   if (!Object.keys(toewijzing).length) {
     return { sporen: perSpoor.size, spelers: 0, anoniem: [...perSpoor.keys()].sort((a, b) => a - b) }
+  }
+  // Hoort de toewijzing wel bij déze posities? Na een her-analyse nummert de tracker de sporen
+  // opnieuw; de oude toewijzing toepassen zou de verkeerde spelers elkaars meters geven — en
+  // een eerdere, correcte meting stil overschrijven. Dan liever niets doen en het zeggen.
+  const bewaard = leesSporenVingerafdruk(match.cvSporen)
+  if (bewaard != null && bewaard !== positiesVingerafdruk(posities)) {
+    return {
+      sporen: perSpoor.size,
+      spelers: 0,
+      anoniem: [...perSpoor.keys()].sort((a, b) => a - b),
+      verouderd: true,
+    }
   }
 
   // Wie is wie: spelers van beide ploegen, met hun kant volgens déze wedstrijd.
