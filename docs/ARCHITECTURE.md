@@ -172,6 +172,27 @@ doorgeven. Om dat betrouwbaar te houden zonder de drempel te verhogen:
   na het bevestigingsvenster (24 u) boekt `/api/cron/recap` het oordeel; wie
   herhaaldelijk bevestigd wordt, gaat meteen als bevestigd door de deur.
 
+## Wachtwoord vergeten (reset via de beheerder)
+
+Er gaat **geen mail** de deur uit: de federatie kiest bewust voor een herstellink die een
+beheerder zelf doorgeeft (WhatsApp, telefoon). Zo hangt het herstel niet aan een
+mailadres dat de helft van de leden niet meer leest, en is er altijd een mens die weet
+wie er belt.
+
+- `/beheer/accounts` → knop **Herstellink** per account. Die roept
+  `POST /api/admin/users/herstellink` (admin-only) aan, dat via
+  `payload.forgotPassword({ disableEmail: true })` een token maakt en de link teruggeeft.
+  Payload's eigen token-machinerie, dus er bestaat maar één soort herstel-token.
+- De gebruiker opent `/wachtwoord-herstellen?token=…`, kiest zelf een wachtwoord en post
+  naar `POST /api/wachtwoord-herstellen` (rate-limited per IP). Die route trekt daarna
+  **alle sessies** van het account in — `payload.resetPassword` doet dat zelf niet.
+- Regels (lengte, geldigheidsduur van één dag, tokenvorm, linkopbouw) staan puur en
+  getest in `src/lib/wachtwoord-reset.ts`; `/wachtwoord-vergeten` legt de drie stappen uit.
+- `src/middleware.ts` sluit Payload's eigen `/api/users/forgot-password` en
+  `/api/users/reset-password` af: die staan publiek en zonder rate-limit open, schrijven
+  het token naar de serverlog (console-adapter) en omzeilen zowel de minimumlengte als het
+  intrekken van sessies. `/admin/forgot` gaat mee door naar `/wachtwoord-vergeten`.
+
 ## Seizoensimport
 
 De federatie levert het speelplan als één bestand met álle reeksen. `/beheer/planning` neemt een

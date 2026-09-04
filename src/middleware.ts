@@ -2,13 +2,47 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 import { PRIVE_HEADER, heeftSessie } from './lib/prive-pagina'
 
-// Markeert pagina's die voor een ingelogde bezoeker gerenderd zijn.
+/**
+ * Payload's eigen wachtwoord-endpoints, die met de REST-API meegemount worden.
+ *
+ * Ze staan publiek open en doen géén access-check — dat is Payload's ontwerp, maar het botst
+ * met de weg die dit platform kiest:
+ *
+ *  • /api/users/forgot-password zou voor elk opgegeven adres een herstel-token aanmaken en de
+ *    mail door de console-adapter laten schrijven: de token belandt dan in de serverlogs, en
+ *    iedereen kan die lus ongelimiteerd aanroepen. Hier maakt een beheerder de herstellink
+ *    (POST /api/admin/users/herstellink), niemand anders.
+ *  • /api/users/reset-password werkt wél met een geldige token, maar mist wat onze eigen route
+ *    er omheen zet: rate limiting, de minimumlengte van acht tekens (Payload eist er drie) en
+ *    het intrekken van bestaande sessies. Eén achterdeur zonder die drie dingen maakt de
+ *    voordeur zinloos.
+ *
+ * Vandaar dat ze hier dichtgaan. De vervanger staat in het antwoord, zodat wie ze toch
+ * aanroept niet tegen een raadselachtige 404 loopt.
+ */
+const DICHT: Record<string, string> = {
+  '/api/users/forgot-password': 'Een herstellink vraag je aan bij je beheerder (zie /wachtwoord-vergeten).',
+  '/api/users/reset-password': 'Gebruik de herstellink die je van je beheerder kreeg (/wachtwoord-herstellen).',
+}
+
+// Markeert pagina's die voor een ingelogde bezoeker gerenderd zijn, en sluit de twee
+// wachtwoord-endpoints van Payload af (zie hierboven).
 //
-// Meer doet deze middleware niet: één kopje op het antwoord, geen omleidingen, geen
+// Verder doet deze middleware niets: één kopje op het antwoord, geen omleidingen, geen
 // database. De service worker gebruikt het om zo'n pagina níét te bewaren — anders krijg je
 // tijdens een uitrol (server even weg) een oude kopie te zien waarop je uitgelogd lijkt,
 // terwijl je sessie gewoon nog geldig is. Zie `public/sw.js` en `lib/prive-pagina.ts`.
 export function middleware(req: NextRequest) {
+  const dicht = DICHT[req.nextUrl.pathname]
+  if (dicht && req.method === 'POST') {
+    return NextResponse.json({ error: dicht }, { status: 404 })
+  }
+  // Payload's admin heeft een eigen "Wachtwoord vergeten"-scherm dat op datzelfde endpoint post.
+  // Dat scherm laten staan zou een formulier zijn dat gegarandeerd faalt; stuur wie erop klikt
+  // naar de uitleg die wél klopt.
+  if (req.nextUrl.pathname === '/admin/forgot') {
+    return NextResponse.redirect(new URL('/wachtwoord-vergeten', req.url))
+  }
   const res = NextResponse.next()
   if (heeftSessie(req.headers.get('cookie'))) res.headers.set(PRIVE_HEADER, '1')
   return res

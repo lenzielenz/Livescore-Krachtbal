@@ -61,6 +61,9 @@ export function LoginForm() {
       </button>
       {error && <p className="login-error">{error}</p>}
       <p className="login-foot">
+        <Link href="/wachtwoord-vergeten">Wachtwoord vergeten?</Link>
+      </p>
+      <p className="login-foot">
         Nog geen account? <Link href="/registreren">Registreren</Link>
       </p>
     </form>
