@@ -6,16 +6,27 @@ import { useEffect, useMemo, useState } from 'react'
 import { CastKnop } from '@/components/CastKnop'
 
 import type { KantineMatch } from './KantineBoard'
-import { type KantineSelectie } from '@/lib/kantine-selectie'
+import {
+  MAX_PROFIELEN,
+  nieuwProfiel,
+  veiligeProfielnaam,
+  type KantineProfiel,
+} from '@/lib/kantine-profielen'
+import { selectieIsLeeg, type KantineSelectie } from '@/lib/kantine-selectie'
 
-// Jouw eigen kantinescherm samenstellen. Het tornooischerm sloeg aan, dus nu hetzelfde voor de
-// competitie — maar per ingelogde gebruiker in plaats van één centrale lijst voor iedereen.
+// Jouw eigen kantineschermen samenstellen. Het tornooischerm sloeg aan, dus nu hetzelfde voor de
+// competitie — maar per ingelogde gebruiker in plaats van één centrale lijst.
+//
+// En niet één scherm, maar zoveel als je er hangen hebt: een club heeft vlot een tv in de kantine,
+// één in de bestuurszaal en één bij de jeugdterreinen, en die willen elk iets anders zien. Elk
+// profiel krijgt een naam en een eigen vaste link.
 //
 // Elke wijziging bewaart meteen (geen "opslaan"-knop): je staat hier vaak met je gsm naast de tv,
 // en dan wil je de tv zien meebewegen terwijl je aanvinkt.
 
 type Club = { id: number; name: string }
-type Ploeg = { id: number; name: string; clubId: number | null }
+/** `sub` = de reeks (of anders de categorie). Zonder dat label lijken alle ploegen van een club op elkaar. */
+type Ploeg = { id: number; name: string; clubId: number | null; sub?: string }
 
 export function MijnKantineScherm({
   userId,
@@ -28,26 +39,35 @@ export function MijnKantineScherm({
   clubs: Club[]
   ploegen: Ploeg[]
   matches: KantineMatch[]
-  initieel: KantineSelectie
+  initieel: KantineProfiel[]
 }) {
-  const [sel, setSel] = useState<KantineSelectie>(initieel)
+  // Nog geen profiel? Dan begint iedereen met één leeg scherm — anders staat deze pagina er
+  // zonder aanknopingspunt bij.
+  const [profielen, setProfielen] = useState<KantineProfiel[]>(() => (initieel.length ? initieel : [nieuwProfiel([])]))
+  const [actiefId, setActiefId] = useState(() => (initieel[0]?.id ?? profielen[0].id))
   const [bezig, setBezig] = useState(false)
   const [gekopieerd, setGekopieerd] = useState(false)
+  const [hernoemt, setHernoemt] = useState(false)
+
+  const actief = profielen.find((p) => p.id === actiefId) ?? profielen[0]
+  const sel: KantineSelectie = actief
 
   // De volledige link heeft het domein nodig; dat kent de server niet. Pas ná de eerste render
   // invullen, anders wijkt de server-HTML af van wat de browser maakt (hydratatiefout).
   const [origin, setOrigin] = useState('')
   useEffect(() => setOrigin(window.location.origin), [])
-  const pad = `/kantine/scherm/${userId}`
+  // Elk profiel heeft zijn eigen pad. Het eerste profiel is óók bereikbaar via het korte pad
+  // zonder profiel — dat is de link die vóór de profielen bestond en op een tv kan hangen.
+  const pad = `/kantine/scherm/${userId}/${actief.id}`
   const url = origin ? `${origin}${pad}` : ''
 
-  const bewaar = async (next: KantineSelectie) => {
+  const bewaar = async (next: KantineProfiel[]) => {
     setBezig(true)
     try {
       await fetch('/api/kantine/mijn', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(next),
+        body: JSON.stringify({ profielen: next }),
       })
     } catch {
       /* stil — de volgende wijziging probeert opnieuw */
@@ -56,16 +76,47 @@ export function MijnKantineScherm({
     }
   }
 
-  const wissel = (veld: keyof KantineSelectie, id: number) => {
-    setSel((vorige) => {
-      const lijst = new Set(vorige[veld])
-      if (lijst.has(id)) lijst.delete(id)
-      else lijst.add(id)
-      const next = { ...vorige, [veld]: [...lijst] }
+  /** Werk het actieve profiel bij en bewaar de hele lijst. */
+  const pasAan = (maak: (p: KantineProfiel) => KantineProfiel) => {
+    setProfielen((vorige) => {
+      const next = vorige.map((p) => (p.id === actief.id ? maak(p) : p))
       void bewaar(next)
       return next
     })
   }
+
+  const wissel = (veld: keyof KantineSelectie, id: number) => {
+    pasAan((p) => {
+      const lijst = new Set(p[veld])
+      if (lijst.has(id)) lijst.delete(id)
+      else lijst.add(id)
+      return { ...p, [veld]: [...lijst] }
+    })
+  }
+
+  const voegToe = () => {
+    setProfielen((vorige) => {
+      if (vorige.length >= MAX_PROFIELEN) return vorige
+      const vers = nieuwProfiel(vorige)
+      const next = [...vorige, vers]
+      setActiefId(vers.id)
+      void bewaar(next)
+      return next
+    })
+  }
+
+  const verwijder = () => {
+    if (profielen.length <= 1) return
+    if (!confirm(`Scherm "${actief.naam}" verwijderen? De link ernaartoe werkt daarna niet meer.`)) return
+    setProfielen((vorige) => {
+      const next = vorige.filter((p) => p.id !== actief.id)
+      setActiefId(next[0].id)
+      void bewaar(next)
+      return next
+    })
+  }
+
+  const hernoem = (ruw: string) => pasAan((p) => ({ ...p, naam: veiligeProfielnaam(ruw, p.naam) }))
 
   // Ploegen tonen we van de clubs die je koos — dat is de lijst waarin je wil verfijnen. Koos je
   // nog geen club, dan alle ploegen, zodat je er ook eentje van een andere club bij kan nemen.
@@ -75,15 +126,16 @@ export function MijnKantineScherm({
     return ploegen.filter((p) => (p.clubId != null && gekozen.has(p.clubId)) || sel.teamIds.includes(p.id))
   }, [ploegen, sel.clubIds, sel.teamIds])
 
-  const leeg = sel.clubIds.length === 0 && sel.teamIds.length === 0 && sel.matchIds.length === 0
+  const leeg = selectieIsLeeg(sel)
 
   return (
     <div className="kt-mijn">
       <section className="kt-uitleg">
-        <h2 className="kt-uitleg-title">📺 Jouw kantinescherm</h2>
+        <h2 className="kt-uitleg-title">📺 Jouw kantineschermen</h2>
         <p className="kt-uitleg-lead">
-          Iedereen die inlogt maakt hier zijn eigen kantinescherm. Je kiest één keer wat je wil
-          volgen, zet de vaste link op de tv, en verder heb je er geen werk meer aan.
+          Iedereen die inlogt maakt hier zijn eigen kantinescherm — of meerdere, als je er meer dan
+          één hangen hebt. Je kiest één keer wat elk scherm toont, zet de vaste link op de tv, en
+          verder heb je er geen werk meer aan.
         </p>
         <ol className="kt-uitleg-lijst">
           <li>
@@ -101,10 +153,66 @@ export function MijnKantineScherm({
             een andere club. Die komen er gewoon bij in de lijst, naast wat je club al aanbrengt.
           </li>
           <li>
-            <strong>Zet de link op de tv.</strong> Hij verandert nooit meer, dus één keer instellen
-            volstaat voor het hele seizoen.
+            <strong>Meerdere tv&apos;s?</strong> Maak een tweede scherm aan met een eigen naam en een
+            eigen link — bijvoorbeeld één voor de kantine en één bij de jeugdterreinen.
           </li>
         </ol>
+      </section>
+
+      {/* ── Welk scherm ben je aan het instellen? ───────────────────────────────────────────── */}
+      <section className="kt-blok kt-profielen">
+        <h3 className="kt-blok-title">Welk scherm?</h3>
+        <p className="kt-blok-sub">
+          Elk scherm heeft een eigen naam en een eigen link. Handig als er meer dan één tv hangt.
+        </p>
+        <div className="kt-prof-rij">
+          {profielen.map((p) => (
+            <button
+              key={p.id}
+              type="button"
+              className={`kt-prof-tab ${p.id === actief.id ? 'on' : ''}`}
+              onClick={() => {
+                setActiefId(p.id)
+                setHernoemt(false)
+              }}
+              aria-pressed={p.id === actief.id}
+            >
+              📺 {p.naam}
+            </button>
+          ))}
+          {profielen.length < MAX_PROFIELEN && (
+            <button type="button" className="kt-prof-tab nieuw" onClick={voegToe}>
+              + Scherm erbij
+            </button>
+          )}
+        </div>
+        <div className="kt-prof-acties">
+          {hernoemt ? (
+            <input
+              className="kt-prof-naam"
+              autoFocus
+              defaultValue={actief.naam}
+              onBlur={(e) => {
+                hernoem(e.currentTarget.value)
+                setHernoemt(false)
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') e.currentTarget.blur()
+                if (e.key === 'Escape') setHernoemt(false)
+              }}
+              aria-label="Naam van dit scherm"
+            />
+          ) : (
+            <button type="button" className="kt-prof-knop" onClick={() => setHernoemt(true)}>
+              ✏️ Naam wijzigen
+            </button>
+          )}
+          {profielen.length > 1 && (
+            <button type="button" className="kt-prof-knop gevaar" onClick={verwijder}>
+              🗑 Dit scherm verwijderen
+            </button>
+          )}
+        </div>
       </section>
 
       <section className="kt-blok">
@@ -139,11 +247,13 @@ export function MijnKantineScherm({
               <button
                 key={p.id}
                 type="button"
-                className={`kt-chip ${sel.teamIds.includes(p.id) ? 'on' : ''}`}
+                className={`kt-chip ${p.sub ? 'met-sub' : ''} ${sel.teamIds.includes(p.id) ? 'on' : ''}`}
                 onClick={() => wissel('teamIds', p.id)}
                 aria-pressed={sel.teamIds.includes(p.id)}
               >
-                {p.name}
+                <span className="kt-chip-naam">{p.name}</span>
+                {/* De reeks erbij: een club heeft vlot een dozijn gelijknamige ploegen. */}
+                {p.sub && <span className="kt-chip-sub">{p.sub}</span>}
               </button>
             ))
           )}
@@ -190,7 +300,7 @@ export function MijnKantineScherm({
       </section>
 
       <section className="kt-blok kt-blok-link">
-        <h3 className="kt-blok-title">4 · Zet hem op de tv</h3>
+        <h3 className="kt-blok-title">4 · Zet &laquo;{actief.naam}&raquo; op de tv</h3>
         {leeg ? (
           <p className="kt-blok-sub">
             Kies eerst hierboven je club — daarna verschijnt hier de vaste link voor je kantine-tv.
@@ -198,7 +308,8 @@ export function MijnKantineScherm({
         ) : (
           <>
             <p className="kt-blok-sub">
-              Deze link is van jou en verandert nooit. Open hem op de tv, of cast hem rechtstreeks.
+              Deze link hoort bij dit scherm en verandert nooit. Open hem op de tv, of cast hem
+              rechtstreeks.
             </p>
             <div className="kt-clublink-row">
               <input className="kt-clublink-url" value={url} readOnly onFocus={(e) => e.currentTarget.select()} />
@@ -213,8 +324,8 @@ export function MijnKantineScherm({
               >
                 {gekopieerd ? '✓ Gekopieerd' : '🔗 Kopieer'}
               </button>
-              <CastKnop pad={pad} sleutel={`kantine-${userId}`} label="📺 Cast naar tv" />
-              <Link href={pad} className="kt-screen-btn">📺 Open mijn kantinescherm →</Link>
+              <CastKnop pad={pad} sleutel={`kantine-${userId}-${actief.id}`} label="📺 Cast naar tv" />
+              <Link href={pad} className="kt-screen-btn">📺 Open dit scherm →</Link>
             </div>
           </>
         )}

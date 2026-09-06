@@ -10,6 +10,7 @@ import { DEFAULT_AWAY_COLOR, DEFAULT_HOME_COLOR, readableOnDark } from '@/lib/cl
 import type { MatchState } from '@/lib/match-engine'
 import { genOpId } from '@/lib/op-id'
 import type { SimpleSide } from '@/lib/simple-score'
+import { doelSeconden, extraMinuten, speeltTotMinuut } from '@/lib/speeltijd'
 import { useActionQueue } from '@/lib/use-action-queue'
 import { useLiveStream } from '@/lib/use-live-stream'
 import './simple-scorekeeper.css'
@@ -91,7 +92,15 @@ export function SimpleScorekeeper({
   const status = state.match.status
   const finished = status === 'finished'
   const live = status === 'live'
-  const targetSec = categoryConfig(state.match.category).halfDurationSeconds
+  // Doeltijd van DEZE helft: de basisduur plus één minuut per gevraagde onderbreking (time-outs
+  // van beide ploegen + scheidsrechter-minuten). De klok loopt hier gewoon door, dus die minuten
+  // zeggen tot wanneer er nog gespeeld wordt — precies zoals het publieke scorebord het al
+  // rekende. De tellers zijn per helft, dus na de rust staat de doeltijd weer op de basisduur.
+  const basisSec = categoryConfig(state.match.category).halfDurationSeconds
+  const onderbrekingen = { timeouts: state.timeouts, refereeStops: state.refereeStops }
+  const targetSec = doelSeconden(basisSec, onderbrekingen)
+  const extraMin = extraMinuten(onderbrekingen)
+  const totMinuut = speeltTotMinuut(basisSec, onderbrekingen)
   // Dezelfde bron als de tornooitafels en het oefenscherm (lib/helft-overgang.ts).
   const helftStand: HelftStand = {
     status: status as HelftStand['status'],
@@ -135,10 +144,52 @@ export function SimpleScorekeeper({
       const r = await send(op)
       // Gequeued (offline) is géén fout: de optimistische stand blijft staan en de banner meldt
       // dat er nagestuurd wordt. Enkel een echte server-weigering tonen we.
-      if (r.status === 'error') setError(r.message)
+      //
+      // Uitzondering: "al gestart". Een stopwatch lokt een dubbeltik uit, en dan is de wedstrijd
+      // gewoon bezig — precies wat de aantekenaar wilde. Een rode foutbalk daarvoor is erger dan
+      // de bevestigingspop-up die we net weghaalden.
+      if (r.status === 'error') setError(/al gestart/i.test(r.message) ? null : r.message)
     },
     [send],
   )
+
+  // De klok werkt als een stopwatch: tik = starten, tik = pauzeren, tik = verder. Geen
+  // tussenschermen — iedereen weet hoe een stopwatch werkt, en aan de tafel is elke extra tik er
+  // één te veel. Ging het per ongeluk, dan zet "↺ Wedstrijd was nog niet bezig" alles terug.
+  //
+  // De ref houdt een dubbeltik tegen: die zou een tweede start-request sturen (de wachtrij geeft
+  // elke tik een eigen opId, dus dedup helpt hier niet).
+  const startBezig = useRef(false)
+  const tikOpKlok = () => {
+    if (finished) return
+    if (!live) {
+      if (startBezig.current) return
+      startBezig.current = true
+      void act(
+        { action: 'simplestart' },
+        // Optimistisch: de cijfers lopen meteen, ook op een trage lijn bij het veld.
+        (s) => ({
+          ...s,
+          match: {
+            ...s.match,
+            status: 'live',
+            currentHalf: 1,
+            clockSeconds: 0,
+            clockRunning: true,
+            clockUpdatedAt: new Date().toISOString(),
+          },
+        }),
+      ).finally(() => {
+        startBezig.current = false
+      })
+      return
+    }
+    const loopt = Boolean(state.match.clockRunning)
+    void act({ action: 'clock', running: !loopt }, (s) => ({
+      ...s,
+      match: { ...s.match, clockRunning: !loopt, clockUpdatedAt: new Date().toISOString() },
+    }))
+  }
 
   // Supporters-modus: doel is doel — noteer het doelpunt meteen, zonder een scorer te kiezen.
   const scoreAnon = (side: SimpleSide, points: 1 | 2) =>
@@ -208,29 +259,13 @@ export function SimpleScorekeeper({
           type="button"
           className={`ssk-clock ${overtime ? 'over' : ''} ${state.match.clockRunning ? 'running' : ''} ${!finished && (!live || (!state.match.clockRunning && clock < 1)) ? 'tostart' : ''}`}
           disabled={finished}
-          onClick={() => {
-            if (finished) return
-            if (!live) {
-              // Extra drempel: één tik startte vroeger meteen de wedstrijd — ook wanneer die reeks
-              // nog moest beginnen. Nu bevestig je eerst dat er echt gespeeld wordt.
-              setBevestig({
-                titel: 'Wedstrijd nu starten?',
-                tekst:
-                  'De klok begint te lopen, de wedstrijd gaat live en supporters krijgen een melding. Start dit pas wanneer er echt afgetrapt wordt.',
-                knop: '▶ Ja, starten',
-                doe: () => act({ action: 'simplestart' }),
-              })
-            } else if (state.match.clockRunning) {
-              // Beveiliging: een per ongeluk tikken op de lopende klok mag hem niet pauzeren.
-              if (window.confirm('Klok pauzeren? De tijd stopt.')) act({ action: 'clock', running: false })
-            } else {
-              act({ action: 'clock', running: true })
-            }
-          }}
+          onClick={tikOpKlok}
         >
           <span className="ssk-clock-time">{fmtClock(clock)}</span>
           <span className="ssk-clock-half">
-            Helft {half} · doel {Math.round(targetSec / 60)} min
+            Helft {half} · {extraMin > 0 ? <>speelt tot <b>{totMinuut}</b> min</> : <>doel {totMinuut} min</>}
+            {/* De onderbrekingen erbij: zo zie je meteen waarom deze helft langer loopt. */}
+            {extraMin > 0 && <> <span className="ssk-clock-extra">({Math.round(basisSec / 60)} + {extraMin})</span></>}
             {/* In de rust staat de klok op nul en stil. Zonder dit woord is dat niet van een
                 vastgelopen tafel te onderscheiden. */}
             {rust && <> · <b>rust</b></>}
@@ -257,12 +292,39 @@ export function SimpleScorekeeper({
           const team = state.teams[side]
           const teamColor = team.colors?.primary ?? (side === 'home' ? DEFAULT_HOME_COLOR : DEFAULT_AWAY_COLOR)
           const teamInk = readableOnDark(teamColor)
+          // Het laatste doelpunt van DEZE ploeg in de lopende helft — wat de ondoen-pijl wegneemt.
+          const terug = state.lastSimpleGoalBySide?.[side] ?? null
           return (
             <div
               key={side}
               className={`ssk-team side-${side}`}
               style={{ ['--team-color' as string]: teamColor, ['--team-ink' as string]: teamInk }}
             >
+              {/* Ondoen per ploeg, linksboven in de kaart: een misklik bij de ene ploeg zet je
+                  recht zonder de andere aan te raken. Uit zodra deze ploeg in deze helft niets
+                  meer heeft staan — een afgesloten helft is vergrendeld. */}
+              {!finished && (
+                <button
+                  type="button"
+                  className="ssk-undo"
+                  disabled={!terug}
+                  title={
+                    terug
+                      ? `Neem +${terug.points} van ${team.name} terug${terug.scorer ? ` (${terug.scorer})` : ''}`
+                      : `Niets van ${team.name} om terug te nemen in deze helft`
+                  }
+                  aria-label={`Laatste doelpunt van ${team.name} terugnemen`}
+                  onClick={() =>
+                    terug &&
+                    act({ action: 'simpleundo', side }, (s) => ({
+                      ...s,
+                      score: { ...s.score, [side]: Math.max(0, s.score[side] - terug.points) },
+                    }))
+                  }
+                >
+                  ↩
+                </button>
+              )}
               <div className="ssk-team-name">{team.name}</div>
               <div className="ssk-score">{state.score[side]}</div>
               {!finished && (
@@ -326,18 +388,8 @@ export function SimpleScorekeeper({
 
       {live && (
         <div className="ssk-controls">
-          {/* Undo zegt WAT het wegneemt. Je tikt op een telefoon, vlak naast de knoppen van de
-              andere ploeg; zonder die context is terugdraaien een gok. Niets te ondoen → uit. */}
-          <button
-            type="button"
-            className="ssk-btn"
-            disabled={!state.lastSimpleGoal}
-            onClick={() => act({ action: 'simpleundo' })}
-          >
-            {state.lastSimpleGoal
-              ? `↶ Ondoen: +${state.lastSimpleGoal.points} ${state.teams[state.lastSimpleGoal.side].name}`
-              : '↶ Niets te ondoen'}
-          </button>
+          {/* Ondoen staat nu per ploeg, als pijl linksboven in de ploegkaart — daar hoort het,
+              want je wil één ploeg rechtzetten en niet gokken welke de laatste was. */}
           {magHelftAfsluiten(helftStand) && (
             <button type="button" className="ssk-btn primary" onClick={() => setConfirmHalfEnd(true)}>
               {EINDE_HELFT_KNOP}

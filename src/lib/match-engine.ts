@@ -1258,6 +1258,15 @@ export async function recordRefereeStop(payload: Payload, matchId: number, actor
 
 // ── Afgeleide match-state (voor scorekeeper, scorebord, SSE) ──────────────────
 
+/** Eén doelpunt uit de snelscoremodus, zoals de aantekentafel het toont bij "ondoen". */
+export interface SimpleGoalView {
+  side: TeamSide
+  points: number
+  half: number
+  clock: number
+  scorer: string | null
+}
+
 export interface MatchState {
   match: {
     id: number
@@ -1294,11 +1303,17 @@ export interface MatchState {
   /** Scheidsrechter-minuten (onderbrekingen) in de huidige helft. */
   refereeStops: number
   /**
-   * Het laatst doorgegeven doelpunt in de snelscoremodus — wat "undo" zou wegnemen. De
+   * Het laatst doorgegeven doelpunt in de snelscoremodus — wat "ondoen" zou wegnemen. De
    * aantekenaar tikt op een telefoon, naast de knoppen van de ándere ploeg; door te tonen wát er
-   * verdwijnt, is undo een gerust gebaar i.p.v. een gok. Null zodra er niets (meer) weg te nemen is.
+   * verdwijnt, is ondoen een gerust gebaar i.p.v. een gok. Null zodra er niets (meer) weg te
+   * nemen is in de LOPENDE helft — een afgesloten helft is vergrendeld.
    */
-  lastSimpleGoal: { side: TeamSide; points: number; half: number; clock: number; scorer: string | null } | null
+  lastSimpleGoal: SimpleGoalView | null
+  /**
+   * Hetzelfde, maar per ploeg: elke ploegkaart heeft een eigen ondoen-pijl, zodat je een misklik
+   * bij één ploeg rechtzet zonder de andere aan te raken.
+   */
+  lastSimpleGoalBySide: { home: SimpleGoalView | null; away: SimpleGoalView | null }
   /** Rust: de huidige helft is beëindigd, de volgende nog niet gestart. */
   atHalfTime: boolean
   /** Hoe betrouwbaar deze stand is: 🟢 officieel/bevestigd, 🟡 nog niet bevestigd, 🔴 betwist. */
@@ -1930,22 +1945,34 @@ export async function buildMatchState(payload: Payload, matchId: number): Promis
   totals.crosses.home += simple.crosses.home
   totals.crosses.away += simple.crosses.away
 
-  // Wat "undo" in de snelscoremodus zou wegnemen: het laatst toegevoegde doelpunt (op ts, want zo
-  // ordent de snelscoremodus ze ook bij het terugdraaien).
-  const laatste = simple.goals.length
-    ? simple.goals.reduce((a, b) => (b.ts >= a.ts ? b : a))
-    : null
-  const lastSimpleGoal = laatste
-    ? {
-        side: laatste.side as TeamSide,
-        points: laatste.points,
-        half: laatste.half,
-        clock: laatste.clock,
-        scorer: laatste.scorerName ?? null,
-      }
-    : null
-
   const half = match.currentHalf ?? 1
+
+  // Wat "ondoen" in de snelscoremodus wegneemt — PER PLOEG, want elke ploegkaart heeft een eigen
+  // ondoen-knop. Twee dingen zijn hier belangrijk:
+  //  1. Enkel de LOPENDE helft telt mee. undoSimpleGoal raakt een afgesloten helft niet aan, dus
+  //     een ploeg die alleen vóór de rust scoorde mag geen knop krijgen die niets wegneemt.
+  //  2. Kiezen op `ts`, hetzelfde criterium als undoSimpleGoal. Stond een tik in de offline-
+  //     wachtrij, dan wijkt de volgorde in de lijst af van de volgorde waarin er gescoord werd —
+  //     dan nam de knop iets anders weg dan hij beloofde.
+  const laatsteVan: Record<TeamSide, (typeof simple.goals)[number] | null> = { home: null, away: null }
+  for (const g of simple.goals) {
+    if ((Number(g.half) || 1) !== half) continue
+    const kant = (g.side === 'away' ? 'away' : 'home') as TeamSide
+    const huidig = laatsteVan[kant]
+    if (!huidig || g.ts >= huidig.ts) laatsteVan[kant] = g
+  }
+  const zicht = (g: (typeof simple.goals)[number] | null): SimpleGoalView | null =>
+    g ? { side: g.side as TeamSide, points: g.points, half: g.half, clock: g.clock, scorer: g.scorerName ?? null } : null
+  const lastSimpleGoalBySide = { home: zicht(laatsteVan.home), away: zicht(laatsteVan.away) }
+  // De gedeelde ondoen-knop neemt het jongste van de twee.
+  const jongste =
+    laatsteVan.home && laatsteVan.away
+      ? laatsteVan.home.ts >= laatsteVan.away.ts
+        ? laatsteVan.home
+        : laatsteVan.away
+      : (laatsteVan.home ?? laatsteVan.away)
+  const lastSimpleGoal = zicht(jongste)
+
   const timeoutRes = await payload.find({
     collection: 'match-events',
     where: {
@@ -2051,6 +2078,7 @@ export async function buildMatchState(payload: Payload, matchId: number): Promis
     timeouts,
     refereeStops,
     lastSimpleGoal,
+    lastSimpleGoalBySide,
     atHalfTime,
     trust: trustView(sanitizeTrust((match as { scoreTrust?: unknown }).scoreTrust), { official }),
     possession,

@@ -11,6 +11,7 @@ import { PhotoTribune, type Instant } from '@/components/PhotoTribune'
 import { TeamLogo } from '@/components/TeamLogo'
 import { WinProbability } from '@/components/WinProbability'
 import { DEFAULT_AWAY_COLOR, DEFAULT_HOME_COLOR, inkOn, readableOnDark } from '@/lib/club-colors'
+import { extraMinuten, speeltTotMinuut } from '@/lib/speeltijd'
 import { goalPointsFromLabel, goalScorerFromLabel, useLiveStream, useViewerId } from '@/lib/use-live-stream'
 import { isTribuneOpen, TRIBUNE_GRACE_MS } from '@/lib/tribune'
 import './scoreboard.css'
@@ -432,10 +433,12 @@ export function Scoreboard({
   // Gevraagde extra minuten in DEZE helft (time-outs van beide ploegen + SR-minuten). We spreken
   // steeds over één helft. De helftduur volgt het reglement per leeftijd (reeksHalfDurationSeconds:
   // U12/U14/U16 = 20 min, U18/landelijk/nationaal = 25 min).
-  const requestedMin = state.timeouts.home + state.timeouts.away + state.refereeStops
-  const halfMin = Math.round(halfSeconds / 60)
+  // Dezelfde formule als de aantekentafel (lib/speeltijd.ts), zodat het bord en de tafel nooit
+  // een andere eindminuut noemen.
+  const onderbrekingen = { timeouts: state.timeouts, refereeStops: state.refereeStops }
+  const requestedMin = extraMinuten(onderbrekingen)
   // Tot welke minuut deze helft loopt als er minuten bijkomen (anders zeggen we niets).
-  const playsUntilMin = halfMin + requestedMin
+  const playsUntilMin = speeltTotMinuut(halfSeconds, onderbrekingen)
 
   // Accenten in de clubkleuren (ringen, tijdlijn, doelpunt-gloed). Valt terug op groen/blauw.
   // De rauwe kleur dient voor de ring/logo; voor TEKST/cijfers op het donkere paneel klemmen we

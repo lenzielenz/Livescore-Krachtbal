@@ -28,6 +28,17 @@ export function liveClockSeconds(m: { clockRunning?: boolean | null; clockUpdate
   return base + Math.max(0, elapsed)
 }
 
+/**
+ * Finished-guard (CLAUDE.md, invariant 3). De aantekentafel verbergt de knoppen bij een afgelopen
+ * wedstrijd, maar het endpoint zelf stond open — en sinds supporters mogen meetellen is dat voor
+ * élk ingelogd account bereikbaar. Heropenen is de weg terug.
+ */
+function eisNietAfgelopen(match: { status?: unknown }): void {
+  if (match.status === 'finished') {
+    throw new Error('Deze wedstrijd is afgelopen — heropen ze eerst om er nog iets aan te wijzigen.')
+  }
+}
+
 async function loadSimpleMatch(payload: Payload, matchId: number) {
   const match = await payload.findByID({ collection: 'matches', id: matchId, depth: 0 })
   return {
@@ -132,30 +143,46 @@ export async function recordSimpleGoal(
   return writeSimpleScore(payload, matchId, score)
 }
 
-/** Neem het laatst geregistreerde doelpunt van de HUIDIGE helft terug.
- * Een afgelopen, door de scheidsrechter bevestigde helft is vergrendeld en kan
- * dus niet meer aangepast worden. */
-export async function undoSimpleGoal(payload: Payload, matchId: number) {
-  const { score, half } = await loadSimpleMatch(payload, matchId)
-  for (let i = score.goals.length - 1; i >= 0; i--) {
-    if ((Number(score.goals[i].half) || 1) === half) {
-      score.goals.splice(i, 1)
-      break
-    }
+/**
+ * Neem het laatst geregistreerde doelpunt van de HUIDIGE helft terug. Een afgelopen, door de
+ * scheidsrechter bevestigde helft is vergrendeld en kan dus niet meer aangepast worden.
+ *
+ * Met `side` neem je enkel het laatste doelpunt van díé ploeg weg — dat is wat de ondoen-pijl op
+ * elke ploegkaart doet. Zonder `side` valt de keuze op het jongste doelpunt van beide ploegen.
+ *
+ * We kiezen op `ts`, niet op de volgorde in de lijst: een tik die in de offline-wachtrij bleef
+ * staan wordt later toegevoegd dan hij gebeurde, en dan nam de knop iets anders weg dan hij
+ * aankondigde. buildMatchState (dat het label maakt) gebruikt hetzelfde criterium.
+ */
+export async function undoSimpleGoal(payload: Payload, matchId: number, side?: SimpleSide) {
+  const { match, score, half } = await loadSimpleMatch(payload, matchId)
+  // Finished-guard (CLAUDE.md, invariant 3): een afgelopen wedstrijd muteer je niet meer — die
+  // heropen je eerst. Deze weg stond open terwijl de UI de knop enkel verbergt.
+  eisNietAfgelopen(match)
+  let index = -1
+  for (let i = 0; i < score.goals.length; i += 1) {
+    const g = score.goals[i]
+    if ((Number(g.half) || 1) !== half) continue
+    if (side && g.side !== side) continue
+    if (index < 0 || g.ts >= score.goals[index].ts) index = i
   }
+  if (index < 0) return buildMatchState(payload, matchId)
+  score.goals.splice(index, 1)
   return writeSimpleScore(payload, matchId, score)
 }
 
 /** Pas het aantal kruisjes aan (+1 / −1, niet onder 0). */
 export async function adjustSimpleCross(payload: Payload, matchId: number, side: SimpleSide, delta: number) {
-  const { score } = await loadSimpleMatch(payload, matchId)
+  const { match, score } = await loadSimpleMatch(payload, matchId)
+  eisNietAfgelopen(match)
   score.crosses[side] = Math.max(0, score.crosses[side] + (delta < 0 ? -1 : 1))
   return writeSimpleScore(payload, matchId, score)
 }
 
 /** Pas een time-out aan: +1 (binnen het limiet) of −1 (laatste verwijderen). */
 export async function adjustSimpleTimeout(payload: Payload, matchId: number, side: SimpleSide, delta: number) {
-  const { homeId, awayId, half } = await loadSimpleMatch(payload, matchId)
+  const { match, homeId, awayId, half } = await loadSimpleMatch(payload, matchId)
+  eisNietAfgelopen(match)
   const teamId = side === 'home' ? homeId : awayId
   if (delta < 0) {
     const last = await payload.find({
@@ -183,7 +210,8 @@ export async function adjustSimpleTimeout(payload: Payload, matchId: number, sid
 
 /** Scheidsrechter-minuut (onderbreking) aanpassen: +1 toevoegen of −1 (laatste verwijderen). */
 export async function adjustRefereeStop(payload: Payload, matchId: number, delta: number) {
-  const { half } = await loadSimpleMatch(payload, matchId)
+  const { match, half } = await loadSimpleMatch(payload, matchId)
+  eisNietAfgelopen(match)
   if (delta < 0) {
     const last = await payload.find({
       collection: 'match-events',

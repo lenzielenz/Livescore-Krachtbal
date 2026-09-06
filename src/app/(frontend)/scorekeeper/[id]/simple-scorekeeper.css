@@ -145,6 +145,11 @@
   font-size: 13px;
   opacity: 0.75;
 }
+/* De rekensom achter een verlengde helft (basis + onderbrekingen) — nevenzaak, dus kleiner. */
+.ssk-clock-extra {
+  font-size: 11px;
+  opacity: 0.8;
+}
 
 .ssk-board {
   display: grid;
@@ -172,6 +177,39 @@
   /* Glow in de clubkleur van de ploeg. */
   box-shadow: 0 0 26px -6px color-mix(in srgb, var(--team-color) 55%, transparent), var(--card-shadow, 0 12px 34px rgba(0, 0, 0, 0.38));
 }
+/* Ondoen-pijl linksboven in de ploegkaart. Buiten de gewone kolomstroom (absoluut), zodat de naam
+   en de score gecentreerd blijven staan. Ruim genoeg voor een duim aan het veld. */
+.ssk-team {
+  position: relative;
+}
+.ssk-undo {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--team-color) 45%, var(--line));
+  background: color-mix(in srgb, var(--team-color) 14%, var(--panel));
+  color: var(--txt);
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 0.14s ease, border-color 0.14s ease, opacity 0.14s ease;
+}
+.ssk-undo:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--team-color) 30%, var(--panel));
+}
+.ssk-undo:active:not(:disabled) {
+  transform: translateY(1px);
+}
+.ssk-undo:disabled {
+  opacity: 0.28;
+  cursor: default;
+}
+
 .ssk-team-head {
   display: flex;
   flex-direction: column;

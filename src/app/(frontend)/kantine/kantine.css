@@ -153,6 +153,94 @@
   color: #06140d;
 }
 
+/* ── Profielkiezer: welk van je schermen ben je aan het instellen? ───────────────────────────── */
+.kt-profielen {
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--line));
+}
+.kt-prof-rij {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.kt-prof-tab {
+  padding: 9px 15px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--txt);
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.14s ease, background-color 0.14s ease, color 0.14s ease;
+}
+.kt-prof-tab:hover {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+}
+.kt-prof-tab.on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #06140d;
+}
+.kt-prof-tab.nieuw {
+  border-style: dashed;
+  color: var(--dim);
+}
+.kt-prof-acties {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+.kt-prof-knop {
+  padding: 7px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--dim);
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.kt-prof-knop:hover {
+  color: var(--txt);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+}
+.kt-prof-knop.gevaar:hover {
+  color: #ef476f;
+  border-color: #ef476f;
+}
+.kt-prof-naam {
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--accent);
+  background: var(--panel);
+  color: var(--txt);
+  font-size: 0.9rem;
+  font-weight: 700;
+  min-width: 220px;
+}
+
+/* Ploegchip met reeks eronder: de naam alleen is niet onderscheidend genoeg — een club heeft vlot
+   een dozijn ploegen die identiek heten. De reeks staat kleiner, als tweede regel. */
+.kt-chip.met-sub {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  padding: 6px 14px 7px;
+  line-height: 1.2;
+  text-align: left;
+}
+.kt-chip-sub {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--dim);
+}
+.kt-chip.on .kt-chip-sub {
+  color: color-mix(in srgb, #06140d 72%, transparent);
+}
+
 /* ── Kiezer (control-pagina) ── */
 .kt-control-bar {
   display: flex;
@@ -383,6 +471,127 @@
   top: 10px;
   right: 12px;
   z-index: 20;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: opacity 0.25s ease;
+}
+/* Eenmaal op volledig scherm hoort er niets meer op het bord te plakken — de knoppen vervagen en
+   komen terug zodra je de muis beweegt of het scherm aanraakt. */
+.kt-screen-cast.actief {
+  opacity: 0.12;
+}
+.kt-screen-cast.actief:hover,
+.kt-screen-cast.actief:focus-within {
+  opacity: 1;
+}
+.kt-fs-btn {
+  padding: 7px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(6, 9, 14, 0.55);
+  color: var(--txt);
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  white-space: nowrap;
+}
+.kt-fs-btn:hover {
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+}
+
+/* ── Clubstijl: de tv van de club ziet eruit als de club ─────────────────────────────────────
+   Twee brede vegen in de clubkleuren over de gewone aurora. Ruim doorschijnend gehouden: van vijf
+   meter moet de score leesbaar blijven, dus de kleur mag sfeer geven en niets meer. */
+.kt-screen.clubstijl {
+  background:
+    radial-gradient(1100px 620px at 8% -8%, color-mix(in srgb, var(--kt-club-1) 30%, transparent), transparent 62%),
+    radial-gradient(950px 560px at 94% 104%, color-mix(in srgb, var(--kt-club-2) 24%, transparent), transparent 62%),
+    linear-gradient(180deg, #0c0e12 0%, #070809 100%);
+}
+
+/* ── Rollende balk onderaan: wat er nog komt ───────────────────────────────────────────────── */
+.kt-ticker {
+  flex: none;
+  overflow: hidden;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(6, 9, 14, 0.55);
+  backdrop-filter: blur(8px);
+  padding: 8px 0;
+}
+.kt-ticker-strook {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  will-change: transform;
+  /* Niet in lus: rustig gecentreerd over de volle breedte. */
+  width: 100%;
+  justify-content: center;
+}
+.kt-ticker-strook.loop {
+  width: max-content;
+  justify-content: flex-start;
+  animation: kt-tick-loop var(--dur, 40s) linear infinite;
+}
+@keyframes kt-tick-loop {
+  to {
+    transform: translateX(-50%);
+  }
+}
+.kt-tickerhelft {
+  display: inline-flex;
+  align-items: center;
+  gap: clamp(24px, 3.5vw, 64px);
+  padding: 0 clamp(14px, 2vw, 36px);
+}
+.kt-tick {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: clamp(0.95rem, 2.1vmin, 1.45rem);
+}
+.kt-tick-blok {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+.kt-tick-affiche {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.kt-tick-reeks {
+  font-size: 0.66em;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--dim);
+  max-width: 24em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.kt-tick-vs {
+  color: var(--dim);
+  font-weight: 800;
+}
+.kt-tick-uur {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  padding: 2px 9px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.05);
+  white-space: nowrap;
+}
+
+/* Bewegingsvoorkeur respecteren: wie animaties uitzet, krijgt een stilstaande balk. */
+@media (prefers-reduced-motion: reduce) {
+  .kt-ticker-strook.loop {
+    animation: none;
+  }
 }
 .kt-screen-edit {
   position: fixed;

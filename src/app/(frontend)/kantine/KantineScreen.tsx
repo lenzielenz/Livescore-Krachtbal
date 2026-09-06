@@ -6,9 +6,14 @@ import { useEffect, useState } from 'react'
 import { CastKnop } from '@/components/CastKnop'
 import { ReclameBalk } from '@/components/ReclameBalk'
 import { SchermModus } from '@/components/SchermModus'
+import { TeamLogo } from '@/components/TeamLogo'
 import { ReclameOverlay } from '@/components/ReclameOverlay'
 import type { Ad } from '@/lib/ads'
+import type { ClubColors } from '@/lib/club-colors'
 import { Tile, type KantineMatch } from './KantineBoard'
+
+/** Clubstijl van de eigenaar van dit scherm: de tv van de club hoort eruit te zien als de club. */
+export type KantineStijl = { club: string; kleuren: ClubColors | null } | null
 
 // Layout die meeschaalt met het aantal getoonde borden: weinig wedstrijden = grote vakken die
 // het scherm vullen, meer wedstrijden = meer kolommen en kleinere vakken.
@@ -52,6 +57,7 @@ export function KantineScreen({
 } = {}) {
   const [matches, setMatches] = useState<KantineMatch[]>([])
   const [ads, setAds] = useState<Ad[]>([])
+  const [stijl, setStijl] = useState<KantineStijl>(null)
   const [loaded, setLoaded] = useState(false)
   // Viewport-breedte volgen zodat het raster niet 5 kolommen op een tablet propt (AUDIT §1).
   const [vw, setVw] = useState(1920)
@@ -63,16 +69,30 @@ export function KantineScreen({
     return () => window.removeEventListener('resize', onResize)
   }, [])
 
+  // Volledig scherm voor de kantine-tv: geen browserbalk, alleen het bord. Zelfde knop als op het
+  // tornooischerm, zodat wie beide bedient niet hoeft te zoeken.
+  const [fullscreen, setFullscreen] = useState(false)
+  useEffect(() => {
+    const bijwerken = () => setFullscreen(Boolean(document.fullscreenElement))
+    document.addEventListener('fullscreenchange', bijwerken)
+    return () => document.removeEventListener('fullscreenchange', bijwerken)
+  }, [])
+  const wisselFullscreen = () => {
+    if (document.fullscreenElement) void document.exitFullscreen().catch(() => undefined)
+    else void document.documentElement.requestFullscreen().catch(() => undefined)
+  }
+
   useEffect(() => {
     let active = true
     const load = async () => {
       try {
         const r = await fetch(endpoint, { cache: 'no-store' })
         if (!r.ok) return
-        const d = (await r.json()) as { matches?: KantineMatch[]; ads?: Ad[] }
+        const d = (await r.json()) as { matches?: KantineMatch[]; ads?: Ad[]; stijl?: KantineStijl }
         if (active) {
           setMatches(d.matches ?? [])
           setAds(d.ads ?? [])
+          setStijl(d.stijl ?? null)
           setLoaded(true)
         }
       } catch {
@@ -113,8 +133,24 @@ export function KantineScreen({
   // iemand weet of er nog iets komt.
   const dagGedaan = visible.length > 0 && visible.every((m) => m.status === 'finished')
 
+  // De balk onderaan: wat er nog komt. Alles wat vandaag of deze week nog gepland staat en niet
+  // al als bord op het scherm hangt — anders rolt dezelfde wedstrijd twee keer voorbij.
+  const opBord = new Set(visible.map((m) => m.id))
+  const komend = matches
+    .filter((m) => m.status === 'scheduled' && !opBord.has(m.id))
+    .sort((a, b) => String(a.date ?? '').localeCompare(String(b.date ?? '')))
+
+  // Achtergrond in de clubkleuren van de eigenaar. Twee brede vegen bovenaan links en rechts,
+  // ruim doorschijnend: het bord moet leesbaar blijven van vijf meter.
+  const kleurStijl = stijl?.kleuren
+    ? ({
+        ['--kt-club-1' as string]: stijl.kleuren.primary,
+        ['--kt-club-2' as string]: stijl.kleuren.secondary || stijl.kleuren.primary,
+      } as React.CSSProperties)
+    : undefined
+
   return (
-    <div className="kt-screen">
+    <div className={`kt-screen${stijl?.kleuren ? ' clubstijl' : ''}`} style={kleurStijl}>
       {/* Dit component ÍS het kantinescherm — beide plekken waar het gebruikt wordt (/kantine/scherm
           en de vaste clublink) hangen aan een tv. Dus altijd de schermmarkering, die onderaan de
           voettekst van de site weghaalt.
@@ -129,10 +165,20 @@ export function KantineScreen({
       {editable && <Link href="/kantine" className="kt-screen-edit">‹ Aanpassen</Link>}
       {/* Rechtstreeks naar de tv. Niet spiegelen: de Chromecast laadt dít scherm zelf en houdt
           zijn eigen live verbinding, zodat het blijft draaien als je je telefoon wegsteekt. */}
-      <span className="kt-screen-cast">
+      <span className={`kt-screen-cast${fullscreen ? ' actief' : ''}`}>
+        {/* Volledig scherm hoort naast de castknop: de twee dingen die je doet zodra de tv aan de
+            muur hangt. Vaagt weg zodra hij actief is, zodat er niets op het bord blijft plakken. */}
+        <button
+          type="button"
+          className={`kt-fs-btn${fullscreen ? ' actief' : ''}`}
+          onClick={wisselFullscreen}
+          title={fullscreen ? 'Volledig scherm verlaten' : 'Volledig scherm'}
+        >
+          {fullscreen ? '✕' : '⛶ Volledig scherm'}
+        </button>
         <CastKnop pad={castPad} sleutel={castPad} />
       </span>
-      {title && <span className="kt-screen-title">{title}</span>}
+      {(title || stijl?.club) && <span className="kt-screen-title">{title || stijl?.club}</span>}
       {/* Af en toe neemt een sponsor het scherm over; de score blijft er doorheen leesbaar. */}
       <ReclameOverlay ads={ads} />
       {dagGedaan && <p className="kt-gedaan">🏁 Alle wedstrijden van vandaag zijn gespeeld</p>}
@@ -166,6 +212,45 @@ export function KantineScreen({
       {/* De sponsorbalk onderaan: past zich aan het aantal, het formaat en de kleur van de
           reclames aan (zie components/ReclameBalk.tsx). */}
       <ReclameBalk ads={ads} />
+      {/* Helemaal onderaan: wat er nog komt. In de kantine is dat de vraag die het vaakst gesteld
+          wordt terwijl er gespeeld wordt — en een rollende balk leest sneller dan een programma. */}
+      {komend.length > 0 && <KomendBalk komend={komend} />}
+    </div>
+  )
+}
+
+/**
+ * Rollende balk met de komende wedstrijden. Bij een handvol staat ze stil (er valt niets te
+ * scrollen); vanaf vier loopt ze naadloos in een lus — dezelfde aanpak als het tornooischerm, met
+ * een tweede identieke helft zodat -50% verschuiven exact één ronde is.
+ */
+function KomendBalk({ komend }: { komend: KantineMatch[] }) {
+  const loop = komend.length >= 4
+  // Snelheid schaalt met de lengte: elke wedstrijd krijgt ± 5 s in beeld.
+  const duur = `${Math.max(20, komend.length * 5)}s`
+  const helft = (verborgen: boolean) => (
+    <span className="kt-tickerhelft" aria-hidden={verborgen}>
+      {komend.map((m) => (
+        <span key={m.id} className="kt-tick">
+          <span className="kt-tick-blok">
+            <span className="kt-tick-affiche">
+              <TeamLogo name={m.home.name} logoUrl={m.home.logoUrl} logoFit={m.home.logoFit} side="home" size="1.7em" ringColor={m.home.colors?.primary} />
+              <span className="kt-tick-vs">–</span>
+              <TeamLogo name={m.away.name} logoUrl={m.away.logoUrl} logoFit={m.away.logoFit} side="away" size="1.7em" ringColor={m.away.colors?.primary} />
+            </span>
+            <span className="kt-tick-reeks">{m.reeks}</span>
+          </span>
+          <span className="kt-tick-uur">{m.time}</span>
+        </span>
+      ))}
+    </span>
+  )
+  return (
+    <div className="kt-ticker">
+      <div className={`kt-ticker-strook${loop ? ' loop' : ''}`} style={{ ['--dur' as string]: duur } as React.CSSProperties}>
+        {helft(false)}
+        {loop && helft(true)}
+      </div>
     </div>
   )
 }
