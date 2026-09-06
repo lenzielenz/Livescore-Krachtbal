@@ -4,6 +4,7 @@ import type { DangerShot, TeamDanger } from '../player-danger'
 import { reeksNaam } from '../reeksen'
 import { hasSpeelstijl, parseSpeelstijl, speelstijlSamenvatting } from '../speelstijl'
 import type { TeamReport } from '../team-report'
+import { formatDateBE } from '../datetime'
 
 // Volledig scoutingdossier van één ploeg als PDF (pdf-lib): sterktes & zwaktes, automatische
 // analyse, analysetekeningen op het veld (aanvals- en verdedigingskaart met kleuren/zones),
@@ -140,7 +141,7 @@ export async function generateTeamReportPdf(
   txt('SCOUTINGRAPPORT', MARGIN, A4[1] - 28, 10, bold, rgb(0.7, 0.9, 0.82))
   txt(r.teamName, MARGIN, A4[1] - 52, 20, bold, WHITE)
   txt(`${reeksNaam(r.reeks)}  ·  ${r.matchesAnalyzed} wedstrijden geanalyseerd`, MARGIN, A4[1] - 70, 10, font, rgb(0.78, 0.88, 0.83))
-  const gen = `Gegenereerd ${new Date(r.generatedAt).toLocaleDateString('nl-BE')}`
+  const gen = `Gegenereerd ${formatDateBE(new Date(r.generatedAt))}`
   txt(gen, A4[0] - MARGIN - txtW(gen, 8), A4[1] - 70, 8, font, rgb(0.7, 0.82, 0.77))
   y = A4[1] - headH - 6
 

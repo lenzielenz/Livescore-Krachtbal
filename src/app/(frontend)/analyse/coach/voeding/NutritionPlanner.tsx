@@ -23,6 +23,7 @@ import { buildShoppingList, buildWeekPlan, spreadTrainingDays } from '@/lib/nutr
 import type { TrackerStore } from '@/lib/calorie-tracker'
 import { CalorieTracker } from './CalorieTracker'
 import './voeding.css'
+import { formatDateBE } from '@/lib/datetime'
 
 const DAY_ABBR = ['Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za', 'Zo']
 
@@ -79,7 +80,7 @@ const changeText = (kg: number): string => {
 const etaText = (weeks: number): string => {
   const d = new Date()
   d.setDate(d.getDate() + weeks * 7)
-  return d.toLocaleDateString('nl-BE', { day: 'numeric', month: 'long', year: 'numeric' })
+  return formatDateBE(d, { day: 'numeric', month: 'long', year: 'numeric' })
 }
 
 // Macrodonut: drie segmenten (eiwit/koolhydraten/vet) naar kcal-aandeel.

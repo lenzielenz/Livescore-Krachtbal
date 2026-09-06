@@ -1,5 +1,6 @@
 'use client'
 
+import { formatDateBE } from '@/lib/datetime'
 // Eenvoudige progressie-lijngrafiek voor één metriek: waarde over de tijd.
 // Toont de lijn + punten, de laatste waarde en het verschil t.o.v. de eerste meting.
 type Point = { datum: string; value: number }
@@ -15,7 +16,7 @@ function fmt(n: number): string {
 
 function fmtDate(s: string): string {
   const d = new Date(s)
-  return Number.isNaN(d.getTime()) ? '' : d.toLocaleDateString('nl-BE', { day: '2-digit', month: '2-digit' })
+  return Number.isNaN(d.getTime()) ? '' : formatDateBE(d, { day: '2-digit', month: '2-digit' })
 }
 
 export function ProgressieChart({ label, unit, points }: { label: string; unit: string; points: Point[] }) {

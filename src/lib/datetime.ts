@@ -11,6 +11,20 @@ export function formatTimeBE(d: Date | string | number): string {
   return date.toLocaleTimeString(LOCALE, { hour: '2-digit', minute: '2-digit', timeZone: TZ })
 }
 
+/**
+ * Datum (zonder uur) in Belgische tijd. Zonder opties dezelfde notatie als
+ * `toLocaleDateString('nl-BE')`, maar mét tijdzone.
+ *
+ * Bestaat omdat een kale `toLocaleDateString` op de server (Railway draait UTC) de UTC-dag toont
+ * en in de browser die van de bezoeker. Een avondwedstrijd stond zo op de ene pagina op zaterdag
+ * en op de andere op zondag.
+ */
+export function formatDateBE(d: Date | string | number, opts: Intl.DateTimeFormatOptions = {}): string {
+  const date = d instanceof Date ? d : new Date(d)
+  if (Number.isNaN(date.getTime())) return ''
+  return date.toLocaleDateString(LOCALE, { ...opts, timeZone: TZ })
+}
+
 /** Datum + uur in Belgische tijd, met instelbare stijl (default kort). */
 export function formatDateTimeBE(
   d: Date | string | number,
@@ -76,6 +90,37 @@ export function brusselsWallUtc(year: number, month: number, day: number, hour =
 export function brusselsMidnightUtc(dateStr: string): Date {
   const utcMidnight = new Date(`${dateStr}T00:00:00Z`)
   return new Date(utcMidnight.getTime() - brusselsOffsetMs(utcMidnight))
+}
+
+/**
+ * Een kalenderdatum "YYYY-MM-DD" een aantal dagen verschuiven.
+ *
+ * Zuiver datum-rekenwerk, zonder tijdzone: een kalenderdag heeft er geen nodig. De vorige aanpak
+ * (`new Date(datum + 'T12:00:00')`, een dag optellen, dan `toISOString().slice(0, 10)`) ging langs
+ * de zone van de bezoeker en kwam voor wie ver genoeg oostelijk zat een dag verkeerd uit — de
+ * dagnavigatie op de kalender sprong dan naar de verkeerde speeldag.
+ */
+export function shiftDateStr(dateStr: string, days: number): string {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  if (!y || !m || !d) return dateStr
+  const at = new Date(Date.UTC(y, m - 1, d))
+  at.setUTCDate(at.getUTCDate() + days)
+  return at.toISOString().slice(0, 10)
+}
+
+/**
+ * Het moment "middag, Belgische tijd" van een kalenderdatum "YYYY-MM-DD".
+ *
+ * Voor alles wat een kále datum moet omzetten naar een tijdstip: een dagnaam tonen, of vragen of
+ * de pronostiek voor die speeldag al open is. De vorige aanpak was `new Date(datum + 'T12:00:00')`,
+ * en zo'n string zónder zone parseert JavaScript in de lokale tijd — op de server de UTC-middag,
+ * in de browser de middag van de bezoeker. Middag ligt ver genoeg van middernacht om er meestal
+ * mee weg te komen, maar "meestal" is precies hoe twee schermen uit elkaar gaan lopen.
+ */
+export function brusselsNoonUtc(dateStr: string): Date {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  if (!y || !m || !d) return new Date(NaN)
+  return brusselsWallUtc(y, m, d, 12)
 }
 
 /** [start, end) van één Belgische kalenderdag, als ISO-instants — voor dag-queries. */

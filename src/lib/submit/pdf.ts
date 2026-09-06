@@ -1,4 +1,5 @@
 import { PDFDocument, type PDFFont, type PDFPage, StandardFonts, rgb } from 'pdf-lib'
+import { formatDateTimeBE } from '../datetime'
 
 // Genereert het officiële wedstrijdblad als professionele PDF (reglement Deel III).
 // Bevat alles wat de aantekenaar volgens het reglement noteert (§5): de doelpunten mét nummer en
@@ -373,7 +374,7 @@ export async function generateMatchSheetPdf(data: MatchSheetPdfData): Promise<Ui
 
   // ── Voettekst met paginanummers (na-bewerking over alle pagina's) ────────
   const pages = doc.getPages()
-  const stamp = `Digitaal wedstrijdblad — gegenereerd ${new Date().toLocaleString('nl-BE')}`
+  const stamp = `Digitaal wedstrijdblad — gegenereerd ${formatDateTimeBE(new Date())}`
   pages.forEach((p, i) => {
     p.drawLine({ start: { x: LEFT, y: BOTTOM - 14 }, end: { x: RIGHT, y: BOTTOM - 14 }, thickness: 0.5, color: RULE })
     p.drawText(safe(stamp), { x: LEFT, y: BOTTOM - 26, size: 7.5, font, color: DIM })

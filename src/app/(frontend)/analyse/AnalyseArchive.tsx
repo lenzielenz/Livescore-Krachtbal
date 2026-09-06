@@ -8,6 +8,7 @@ import type { LogoFit } from '@/lib/logo-fit'
 import { seasonFromDate } from '@/lib/seasons'
 import { DeleteMatchButton } from './DeleteMatchButton'
 import './analyse-archive.css'
+import { formatDateBE } from '@/lib/datetime'
 
 type ArchiveTeam = { name: string; logoUrl: string | null; logoFit?: LogoFit | null; primary: string | null }
 export type ArchiveRow = {
@@ -125,7 +126,7 @@ export function AnalyseArchive({ rows, canDelete }: { rows: ArchiveRow[]; canDel
                     </span>
                   )}
                   <span className="an-card-date">
-                    {r.date ? new Date(r.date).toLocaleDateString('nl-BE', { day: '2-digit', month: 'short', year: 'numeric' }) : ''}
+                    {r.date ? formatDateBE(new Date(r.date), { day: '2-digit', month: 'short', year: 'numeric' }) : ''}
                   </span>
                   {canDelete && <DeleteMatchButton matchId={r.id} label={`${r.home.name} – ${r.away.name}`} />}
                 </Link>

@@ -12,6 +12,7 @@ import { getPayloadClient } from '@/lib/payload-client'
 import { vereisteOfficialsTekst, type Reeks } from '@/lib/reeksen'
 import { RefereePanel } from './RefereePanel'
 import '../../wedstrijdblad.css'
+import { formatDateTimeBE } from '@/lib/datetime'
 
 export const dynamic = 'force-dynamic'
 
@@ -80,7 +81,7 @@ export default async function ScheidsrechterPage({ params }: { params: Promise<{
       {!released ? (
         <p className="wb-intro">
           De opstellingen worden zichtbaar vanaf{' '}
-          {releaseAt.toLocaleString('nl-BE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}{' '}
+          {formatDateTimeBE(releaseAt, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}{' '}
           ({releaseMinutes} min vóór aanvang).
         </p>
       ) : (

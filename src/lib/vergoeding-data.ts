@@ -6,6 +6,7 @@ import type { Payload } from 'payload'
 import { REEKS_OPTIONS } from './reeksen'
 import { FORFAIT_MAX_AUTOS, berekenForfait, berekenKwitantie } from './vergoeding'
 import type { ForfaitData, KwitantieData, KwitantieRegel } from './submit/pdf-vergoeding'
+import { formatDateBE, formatTimeBE } from './datetime'
 
 function reeksLabel(code: unknown): string {
   const found = REEKS_OPTIONS.find((o) => o.value === code)
@@ -15,13 +16,13 @@ function reeksLabel(code: unknown): string {
 function dmy(date: string | null | undefined): string {
   if (!date) return '—'
   const d = new Date(date)
-  return Number.isNaN(d.getTime()) ? '—' : d.toLocaleDateString('nl-BE')
+  return Number.isNaN(d.getTime()) ? '—' : formatDateBE(d)
 }
 
 function hm(date: string | null | undefined): string {
   if (!date) return '—'
   const d = new Date(date)
-  return Number.isNaN(d.getTime()) ? '—' : d.toLocaleTimeString('nl-BE', { hour: '2-digit', minute: '2-digit' })
+  return Number.isNaN(d.getTime()) ? '—' : formatTimeBE(d)
 }
 
 const teamName = (t: unknown): string =>

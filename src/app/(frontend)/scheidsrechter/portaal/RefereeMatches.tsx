@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { useMemo, useState } from 'react'
+import { formatDateTimeBE } from '@/lib/datetime'
 
 export type RefMatch = {
   id: number
@@ -86,7 +87,7 @@ export function RefereeMatches({
   }
 
   const fmtDate = (d: string | null) =>
-    d ? new Date(d).toLocaleString('nl-BE', { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—'
+    d ? formatDateTimeBE(new Date(d), { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—'
   const statusLabel = (s: string) => (s === 'live' ? 'LIVE' : s === 'finished' ? 'Afgelopen' : 'Gepland')
 
   return (

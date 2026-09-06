@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { windPijl, windTekst } from '@/lib/wind'
 
 import './weather.css'
+import { dateStrBE } from '@/lib/datetime'
 
 // Compacte weersverwachting voor de gekozen dag — krachtbal is een buitensport, dus temperatuur
 // én wind tellen. Data via Open-Meteo (gratis, geen sleutel, client-side). Locatie: ingelogd met
@@ -150,7 +151,8 @@ function WeatherHours({ onClose, loc }: { onClose: () => void; loc: Loc }) {
 }
 
 export function WeatherWidget({ date, variant = 'full' }: { date?: string; variant?: 'full' | 'compact' }) {
-  const day = date ?? new Date().toISOString().slice(0, 10)
+  // Belgische dag: het weerbericht hoort bij de dag zoals die hier geldt, niet bij de UTC-dag.
+  const day = date ?? dateStrBE()
   const [w, setW] = useState<Weather | null>(null)
   const [state, setState] = useState<'loading' | 'ok' | 'none'>('loading')
   const [open, setOpen] = useState(false)

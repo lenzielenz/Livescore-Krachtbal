@@ -1,3 +1,4 @@
+import { formatDateBE } from '@/lib/datetime'
 // Vorm/trend: punten per wedstrijd (balken) + conversie% (lijn), chronologisch. Gedeeld door het
 // ploegrapport (team-vorm) en het spelerdossier (speler-vorm) — één consistente visual.
 export interface FormPoint {
@@ -13,7 +14,7 @@ function fmtDate(d: string | null, i: number): string {
   if (!d) return `M${i + 1}`
   const dt = new Date(d)
   if (Number.isNaN(dt.getTime())) return `M${i + 1}`
-  return dt.toLocaleDateString('nl-BE', { day: '2-digit', month: 'short' })
+  return formatDateBE(dt, { day: '2-digit', month: 'short' })
 }
 
 export function TeamForm({

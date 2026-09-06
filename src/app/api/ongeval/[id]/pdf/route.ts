@@ -1,6 +1,7 @@
 import { authUser, hasRole, isFederationLevel } from '@/lib/api-auth'
 import { getPayloadClient } from '@/lib/payload-client'
 import { generateAccidentPdf, type AccidentPdfData } from '@/lib/submit/pdf-ongeval'
+import { formatDateTimeBE } from '@/lib/datetime'
 
 // Aangifte lichamelijk ongeval (formulier_14) als PDF.
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -21,7 +22,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     const fmtDate = (d: unknown) => {
       if (!d || typeof d !== 'string') return undefined
       const dt = new Date(d)
-      return Number.isNaN(dt.getTime()) ? undefined : dt.toLocaleString('nl-BE')
+      return Number.isNaN(dt.getTime()) ? undefined : formatDateTimeBE(dt)
     }
 
     const data: AccidentPdfData = {

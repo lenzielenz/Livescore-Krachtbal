@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { formatTimeBE } from '@/lib/datetime'
 
 // De video-analyse laten draaien op de server: één knop, en de voortgang blijft staan ook al
 // klap je de pagina dicht. Het rekenwerk (worpen zoeken, bal volgen, spelers herkennen) duurt
@@ -546,7 +547,9 @@ function kloktijd(iso: string | undefined): string {
   if (!iso) return '—'
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return '—'
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+  // Belgische tijd: getHours() leest de kalender van de machine, en dat is UTC op Railway —
+  // een wedstrijd van 20:00 stond zo op 18:00 in het verslag.
+  return formatTimeBE(d)
 }
 
 /** Verstreken tijd in mensentaal: "3 min", "2 u 14 min". */

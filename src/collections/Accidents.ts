@@ -1,6 +1,7 @@
 import type { CollectionConfig } from 'payload'
 
 import { hasRole, isFederationLevel } from '../lib/access'
+import { formatDateBE } from '@/lib/datetime'
 
 // Aangifte lichamelijk ongeval (formulier_14 — DVV/OKRA-SPORT). Verzekeringsaangifte bij blessure,
 // gekoppeld aan een wedstrijd en (optioneel) een speler. Het geneeskundig getuigschrift is een
@@ -31,7 +32,7 @@ export const Accidents: CollectionConfig = {
           ({ siblingData }) => {
             const naam = (siblingData as { slachtofferNaam?: string }).slachtofferNaam
             const datum = (siblingData as { ongevalDatum?: string }).ongevalDatum
-            const d = datum ? new Date(datum).toLocaleDateString('nl-BE') : ''
+            const d = datum ? formatDateBE(new Date(datum)) : ''
             return `Ongeval — ${naam || 'onbekend'}${d ? ` (${d})` : ''}`
           },
         ],

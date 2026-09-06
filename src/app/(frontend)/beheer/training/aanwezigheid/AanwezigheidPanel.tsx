@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { seasonFromDate } from '@/lib/seasons'
 import { trainingGroupOf } from '@/lib/training-groups'
 import '../training.css'
+import { formatDateTimeBE } from '@/lib/datetime'
 
 export type AwPlayer = { id: number; name: string; reeks: string; reeksNaam: string }
 export type AwReeksTeam = { reeks: string; reeksNaam: string; teamId: number }
@@ -52,7 +53,7 @@ function nowLocal(): string {
 
 function fmtDatum(s: string): string {
   const d = new Date(s)
-  return Number.isNaN(d.getTime()) ? '' : d.toLocaleString('nl-BE', { dateStyle: 'medium', timeStyle: 'short' })
+  return Number.isNaN(d.getTime()) ? '' : formatDateTimeBE(d, { dateStyle: 'medium', timeStyle: 'short' })
 }
 
 export function AanwezigheidPanel({

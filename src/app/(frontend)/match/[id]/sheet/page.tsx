@@ -5,6 +5,7 @@ import { buildMatchSheet } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
 import { SheetActions } from './SheetActions'
 import './sheet.css'
+import { formatDateTimeBE } from '@/lib/datetime'
 
 export const dynamic = 'force-dynamic'
 
@@ -26,7 +27,7 @@ export default async function SheetPage({ params }: { params: Promise<{ id: stri
     notFound()
   }
 
-  const dateStr = new Date(sheet.match.date).toLocaleString('nl-BE', {
+  const dateStr = formatDateTimeBE(new Date(sheet.match.date), {
     dateStyle: 'full',
     timeStyle: 'short',
   })

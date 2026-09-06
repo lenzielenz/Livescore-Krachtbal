@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 import type { TeamMatchResult, TeamRadar } from '@/lib/team-radar'
+import { formatDateBE } from '@/lib/datetime'
 
 type Metric = { key: string; label: string; full: string; fmt: (v: number) => string; get: (t: TeamRadar) => number; perf?: boolean }
 
@@ -290,7 +291,7 @@ export function TeamRadarView({ reeks, options, teams, results }: { reeks: strin
                   <ul className="an-h2h-list">
                     {h2h.map((r, i) => (
                       <li key={i} className="an-h2h-row">
-                        <span className="an-h2h-date">{r.date ? new Date(r.date).toLocaleDateString('nl-BE', { day: '2-digit', month: 'short' }) : '—'}</span>
+                        <span className="an-h2h-date">{r.date ? formatDateBE(new Date(r.date), { day: '2-digit', month: 'short' }) : '—'}</span>
                         <span className="an-h2h-loc">{r.aHome ? 'thuis' : 'uit'}</span>
                         <span className={`an-h2h-score ${r.aPts > r.bPts ? 'win-a' : r.bPts > r.aPts ? 'win-b' : ''}`}>{r.aPts}<span className="an-dash">–</span>{r.bPts}</span>
                       </li>

@@ -6,6 +6,7 @@ import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
 import { VERANTWOORDELIJKE_OPTIONS, type Verantwoordelijke } from '@/lib/bekerfinale-checklist'
 import '../wedstrijdblad.css'
+import { formatDateBE } from '@/lib/datetime'
 
 export const dynamic = 'force-dynamic'
 
@@ -56,7 +57,7 @@ export default async function BekerfinalePage() {
             <section key={String(f.id)} className="wb-card" style={{ marginBottom: 16 }}>
               <h2>{String(f.titel)}</h2>
               <p className="wb-sub">
-                {f.datum ? new Date(f.datum as string).toLocaleDateString('nl-BE') : 'datum n.t.b.'}
+                {f.datum ? formatDateBE(new Date(f.datum as string)) : 'datum n.t.b.'}
                 {f.locatie ? ` · ${f.locatie}` : ''} · {klaar}/{taken.length} taken klaar
               </p>
               {groepen.map((g) => {

@@ -5,6 +5,8 @@ import { useState } from 'react'
 
 import { clearNavAuth } from '@/lib/nav-auth-cache'
 import { QrCode } from '../../cast/QrCode'
+import { formatDateBE } from '@/lib/datetime'
+import { dateStrBE } from '@/lib/datetime'
 
 type Delegation = { qr: string; validUntil: string }
 
@@ -12,7 +14,9 @@ type Delegation = { qr: string; validUntil: string }
 // aan te maken die een vervanger kan gebruiken tot een gekozen datum.
 export function RefereePortal({ naam, qrValue, code }: { naam: string; qrValue: string; code: string }) {
   const router = useRouter()
-  const today = new Date().toISOString().slice(0, 10)
+  // Belgische dag, niet de UTC-dag: na 22:00 (zomertijd) sprong de standaardkeuze anders al
+  // naar morgen.
+  const today = dateStrBE()
   const [validUntil, setValidUntil] = useState(today)
   const [busy, setBusy] = useState(false)
   const [delegation, setDelegation] = useState<Delegation | null>(null)
@@ -105,7 +109,7 @@ export function RefereePortal({ naam, qrValue, code }: { naam: string; qrValue: 
               </div>
               <p className="wb-sub" style={{ marginTop: 10 }}>
                 Geldig tot en met{' '}
-                {new Date(delegation.validUntil).toLocaleDateString('nl-BE', { day: '2-digit', month: 'long', year: 'numeric' })}.
+                {formatDateBE(new Date(delegation.validUntil), { day: '2-digit', month: 'long', year: 'numeric' })}.
                 Backup-code:
               </p>
               <p className="qr-code-text" style={{ fontSize: '0.85rem', wordBreak: 'break-all' }}>{delegation.qr}</p>
