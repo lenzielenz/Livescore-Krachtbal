@@ -5,13 +5,14 @@ import { SiteHeader } from '@/components/SiteHeader'
 import { hasRole, userClubId } from '@/lib/access'
 import { competitionWhere } from '@/lib/analyse-access'
 import { clinchStatus } from '@/lib/championship'
+import { clubWedstrijdActies } from '@/lib/club-acties'
 import { getMatchReadiness } from '@/lib/matchsheet-data'
-import { sheetOpenForScoring } from '@/lib/matchsheet-workflow'
 import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
 import { getProfile } from '@/lib/profiles'
 import { buildReeksStandings } from '@/lib/reeks-standings'
 import { reeksNaam, REEKS_OPTIONS } from '@/lib/reeksen'
+import { isSupportersMode } from '@/lib/score-mode'
 import { ClaimButton } from './ClaimButton'
 import { MyTeamsPicker } from './MyTeamsPicker'
 import { formatDateBE } from '@/lib/datetime'
@@ -59,6 +60,8 @@ type Row = {
   refereeName: string | null
   // Status van het wedstrijdblad: bepaalt of de scheidsrechter het aantekenen al heeft opengezet.
   sheetStatus: string | null
+  // Vrije livescore voor het hele platform: geen opstelling, geen scheidsrechtersakkoord.
+  supportersMode: boolean
 }
 
 function Shell({ children }: { children: React.ReactNode }) {
@@ -97,6 +100,9 @@ export default async function ClubPage({ searchParams }: { searchParams: Promise
     )
   }
 
+  // Eén knop voor het hele platform: staat het in supporters-modus (vrije livescore)?
+  const supportersMode = await isSupportersMode(payload)
+
   const club = await payload.findByID({ collection: 'clubs', id: clubId, depth: 0 }).catch(() => null)
   const teams = await payload.find({ collection: 'teams', where: { and: [{ club: { equals: clubId } }, competitionWhere()] }, depth: 0, limit: 200 })
   const teamIds = teams.docs.map((t) => t.id)
@@ -124,8 +130,9 @@ export default async function ClubPage({ searchParams }: { searchParams: Promise
     limit: 200,
   })
 
-  // Toegewezen scheidsrechter per wedstrijd (uit het wedstrijdblad) — zodat het in de planning zichtbaar is.
-  const planMatchIds = matches.docs.map((m) => m.id)
+  // Toegewezen scheidsrechter per wedstrijd (uit het wedstrijdblad) — zodat het in de planning
+  // zichtbaar is. In supporters-modus is er geen scheidsrechtersflow: dan hoeft die query niet.
+  const planMatchIds = supportersMode ? [] : matches.docs.map((m) => m.id)
   const planSheets = planMatchIds.length
     ? await payload.find({ collection: 'matchsheets', where: { match: { in: planMatchIds } }, depth: 1, pagination: false }).catch(() => ({ docs: [] as Record<string, unknown>[] }))
     : { docs: [] as Record<string, unknown>[] }
@@ -148,7 +155,9 @@ export default async function ClubPage({ searchParams }: { searchParams: Promise
     const awayTeam = m.awayTeam as { id?: number; name?: string; club?: unknown } | null
     const side: 'home' | 'away' = homeTeam?.id != null && teamIdSet.has(Number(homeTeam.id)) ? 'home' : 'away'
     try {
-      const r = await getMatchReadiness(payload, m.id)
+      // In supporters-modus bestaat de klaar-check niet: er is geen opstelling en geen
+      // scheidsrechtersakkoord om te controleren, dus die query per wedstrijd valt weg.
+      const r = supportersMode ? null : await getMatchReadiness(payload, m.id)
       const homeClub = homeTeam?.club as { name?: string; accommodatie?: string } | null
       const coach = (side === 'home' ? m.homeCoach : m.awayCoach) as { id?: number; name?: string; email?: string } | null
       const takeover = (side === 'home' ? m.homeTakeover : m.awayTakeover) as { id?: number; name?: string; email?: string } | null
@@ -162,7 +171,7 @@ export default async function ClubPage({ searchParams }: { searchParams: Promise
         myTeamId: Number((side === 'home' ? homeTeam?.id : awayTeam?.id) ?? 0),
         home: nameOf(homeTeam),
         away: nameOf(awayTeam),
-        ownReady: side === 'home' ? r.homeOk : r.awayOk,
+        ownReady: r ? (side === 'home' ? r.homeOk : r.awayOk) : true,
         // Locatie = terrein van de thuisclub (waar je moet zijn).
         location: (homeClub?.accommodatie || homeClub?.name || nameOf(homeTeam)).trim(),
         coachName: coach ? (coach.name || coach.email || 'Geclaimd') : null,
@@ -171,6 +180,7 @@ export default async function ClubPage({ searchParams }: { searchParams: Promise
         takeoverMine: takeover?.id != null && Number(takeover.id) === myUserId,
         refereeName: refByMatch.get(m.id) ?? null,
         sheetStatus: sheetStatusByMatch.get(m.id) ?? null,
+        supportersMode,
       })
     } catch {
       // Wedstrijd met ontbrekende ploeg overslaan.
@@ -290,6 +300,9 @@ export default async function ClubPage({ searchParams }: { searchParams: Promise
                   <span className="club-match-reeks">{m.reeks}</span>
                   {m.status === 'live' ? (
                     <span className="club-badge live">● LIVE</span>
+                  ) : m.supportersMode ? (
+                    // Vrije livescore: er valt niets voor te bereiden, dus geen "Voor te bereiden".
+                    <span className="club-badge ready">🎉 Vrije livescore</span>
                   ) : m.ownReady ? (
                     <span className="club-badge ready">✓ Klaar</span>
                   ) : (
@@ -307,28 +320,35 @@ export default async function ClubPage({ searchParams }: { searchParams: Promise
                 </span>
               </div>
               <div className="club-match-actions">
-                <Link href={`/opstelling/${m.id}`} className="btn btn-primary">Opstelling</Link>
-                {(() => {
-                  // Aantekenen kan zodra de scheidsrechter het blad opende (wedstrijdklaar/bezig).
-                  // Een wedstrijd die al LOOPT is altijd open: de aantekentafel moet er terug in
-                  // kunnen (na een refresh of vanaf een ander toestel) — thuis én uit.
-                  const open = m.status === 'live' || sheetOpenForScoring(m.sheetStatus)
-                  if (m.side === 'home') {
-                    return open ? (
-                      <Link href={`/scorekeeper/${m.id}`} className="btn btn-ghost">Aantekenen</Link>
-                    ) : (
-                      <span className="btn btn-ghost is-disabled" title="De scheidsrechter heeft het wedstrijdblad nog niet opengezet om aan te tekenen.">
-                        ⏳ Wacht op scheidsrechter
-                      </span>
-                    )
+                {clubWedstrijdActies({
+                  supportersMode: m.supportersMode,
+                  side: m.side,
+                  status: m.status,
+                  sheetStatus: m.sheetStatus,
+                }).map((actie) => {
+                  switch (actie) {
+                    case 'opstelling':
+                      return <Link key={actie} href={`/opstelling/${m.id}`} className="btn btn-primary">Opstelling</Link>
+                    case 'aantekenen':
+                      return (
+                        <Link
+                          key={actie}
+                          href={`/scorekeeper/${m.id}`}
+                          className={m.supportersMode ? 'btn btn-primary' : 'btn btn-ghost'}
+                        >
+                          Aantekenen
+                        </Link>
+                      )
+                    case 'wacht-op-scheidsrechter':
+                      return (
+                        <span key={actie} className="btn btn-ghost is-disabled" title="De scheidsrechter heeft het wedstrijdblad nog niet opengezet om aan te tekenen.">
+                          ⏳ Wacht op scheidsrechter
+                        </span>
+                      )
+                    case 'bekijk':
+                      return <Link key={actie} href={`/match/${m.id}`} className="btn btn-ghost">Bekijk</Link>
                   }
-                  return (
-                    <>
-                      {open && <Link href={`/scorekeeper/${m.id}`} className="btn btn-ghost">Aantekenen</Link>}
-                      <Link href={`/match/${m.id}`} className="btn btn-ghost">Bekijk</Link>
-                    </>
-                  )
-                })()}
+                })}
               </div>
             </div>
           ))}
