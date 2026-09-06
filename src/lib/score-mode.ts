@@ -3,8 +3,11 @@ import type { Payload } from 'payload'
 // Globale aantekenmodus: één knop voor ALLE wedstrijden (staat op de settings-global).
 //  - 'federatie' (standaard): de volledige flow — opstelling + scheidsrechtersakkoord vóór de
 //    start, en aftekenen achteraf. Enkel gemachtigde aantekenaars muteren.
-//  - 'supporters': vrije livescore voor alle wedstrijden. De hele scheidsrechter-/aftekenflow
-//    valt weg; iedereen kan een wedstrijd openen en gewoon de score doorgeven, ook zonder login.
+//  - 'supporters': vrije livescore voor alle wedstrijden. De hele keten opstelling →
+//    scheidsrechter → aftekenen valt weg; élke INGELOGDE gebruiker opent een wedstrijd en geeft
+//    gewoon de score door. Aanmelden blijft dus vereist (api-auth.ts weigert een anonieme
+//    mutatie) — hier stond eerder "ook zonder login", en dat klopt niet.
+//    Welke knoppen dat per scherm oplevert, staat in wedstrijddag-acties.ts.
 export const SCORE_MODES = ['federatie', 'supporters'] as const
 export type ScoreMode = (typeof SCORE_MODES)[number]
 

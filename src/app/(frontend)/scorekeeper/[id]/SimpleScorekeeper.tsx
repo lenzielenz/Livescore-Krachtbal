@@ -443,8 +443,11 @@ export function SimpleScorekeeper({
               <span>{state.teams.away.name}</span>
             </div>
             <p className="ssk-confirm-note">
-              De scheidsrechter bevestigt deze stand. Daarna kan de score van de 1e helft niet meer
-              aangepast worden.
+              {/* In supportersmodus zit er geen scheidsrechter aan de tafel — hem hier noemen laat
+                  de supporter op iemand wachten die niet komt. */}
+              {supportersMode
+                ? 'Klopt de ruststand? Daarna kan de score van de 1e helft niet meer aangepast worden.'
+                : 'De scheidsrechter bevestigt deze stand. Daarna kan de score van de 1e helft niet meer aangepast worden.'}
             </p>
             <div className="ssk-modal-btns">
               <button type="button" className="ssk-btn" onClick={() => setConfirmHalfEnd(false)}>Annuleren</button>

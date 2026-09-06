@@ -24,7 +24,7 @@ const UITLEG: Record<ScoreMode, { titel: string; emoji: string; kort: string; pu
     kort: 'Vrije livescore — iedereen kan meehelpen.',
     punten: [
       'Elke ingelogde supporter kan een wedstrijd openen en de score doorgeven',
-      'Geen scheidsrechter of wedstrijdblad nodig',
+      'Geen opstelling, geen scheidsrechter, geen aftekenen — je tikt op aantekenen en begint',
       'Wie als eerste aantekent, houdt de wedstrijd; anderen bevestigen of betwisten',
       'De stand toont 🟡 tot ze bevestigd is',
     ],

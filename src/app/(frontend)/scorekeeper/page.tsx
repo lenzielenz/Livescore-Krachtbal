@@ -75,7 +75,12 @@ export default async function ScorekeeperHub() {
       <p className="empty">Kies een wedstrijd om te starten of bij te werken. Open dit scherm op een tablet bij het veld.</p>
 
       <Section title="Live — nu aan het aantekenen" rows={live} empty="Geen lopende wedstrijden." />
-      <Section title="Gepland — eerst klaarzetten, dan starten" rows={scheduled} empty="Geen geplande wedstrijden. Maak er een aan via Beheer." />
+      {/* In supportersmodus valt er niets klaar te zetten: tik en begin. */}
+      <Section
+        title={supportersMode ? 'Gepland — tik om te starten' : 'Gepland — eerst klaarzetten, dan starten'}
+        rows={scheduled}
+        empty="Geen geplande wedstrijden. Maak er een aan via Beheer."
+      />
       </div>
     </>
   )

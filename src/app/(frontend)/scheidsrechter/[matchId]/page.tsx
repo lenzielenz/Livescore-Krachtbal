@@ -1,5 +1,6 @@
 import Link from 'next/link'
 
+import { FlowNietNodig } from '@/components/FlowNietNodig'
 import { MatchDayNav } from '@/components/MatchDayNav'
 import { SiteHeader } from '@/components/SiteHeader'
 import { isFederationLevel } from '@/lib/access'
@@ -10,6 +11,7 @@ import { isReleaseTime } from '@/lib/matchsheet-workflow'
 import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
 import { vereisteOfficialsTekst, type Reeks } from '@/lib/reeksen'
+import { isSupportersMode } from '@/lib/score-mode'
 import { RefereePanel } from './RefereePanel'
 import '../../wedstrijdblad.css'
 import { formatDateTimeBE } from '@/lib/datetime'
@@ -42,6 +44,23 @@ export default async function ScheidsrechterPage({ params }: { params: Promise<{
           <Link href="/">← Terug</Link>
         </div>
       </>
+    )
+  }
+
+  // Supportersmodus: er is geen akkoord te geven. Dit paneel liep daar zelfs vast — de startknop
+  // wachtte op opstellingen en een keuring die nooit komen, en de doorlink naar het aantekenen
+  // hing achter een wedstrijdbladstatus die op 'concept' bleef staan. Stop hier, vóór
+  // getOrCreateMatchSheet: anders maakt het openen van deze pagina een blad aan voor een
+  // wedstrijd die er geen hoort te hebben.
+  if (await isSupportersMode(payload)) {
+    return (
+      <FlowNietNodig
+        stap="Scheidsrechter"
+        matchId={matchId}
+        wedstrijd={String(match.title ?? '')}
+        uitleg="Het platform staat op vrije livescore: er is geen wedstrijdblad vrij te geven en geen akkoord nodig om te starten."
+        sectie="scheidsrechters"
+      />
     )
   }
 

@@ -172,6 +172,35 @@ doorgeven. Om dat betrouwbaar te houden zonder de drempel te verhogen:
   na het bevestigingsvenster (24 u) boekt `/api/cron/recap` het oordeel; wie
   herhaaldelijk bevestigd wordt, gaat meteen als bevestigd door de deur.
 
+### De wedstrijddagflow valt weg in supporters-modus
+
+In federatie-modus is de wedstrijddag een keten: **opstelling → scheidsrechter →
+aantekenen → aftekenen**, en elke schakel bewaakt de volgende (`match-readiness.ts`,
+`matchsheet-workflow.ts`). In supporters-modus valt die keten weg — dat is wat de
+schakelaar op `/federatie` belooft. De regel voor de knoppen staat op één plek,
+puur en getest: **`lib/wedstrijddag-acties.ts`** (`clubActies` + `primaireActie`).
+
+Concreet:
+
+- `/club` toont dan enkel *Aantekenen* (primair) + *Bekijk*, geen *Opstelling* en geen
+  «⏳ Wacht op scheidsrechter». Die laatste was een **doodlopende straat**: het
+  wedstrijdblad blijft in supporters-modus op `concept` staan, dus
+  `sheetOpenForScoring()` werd nooit waar en een geplande thuiswedstrijd viel er niet
+  te starten.
+- `/opstelling/[matchId]`, `/scheidsrechter/[matchId]` en `/aftekenen/[matchId]` tonen
+  een korte «niet nodig in supporters-modus»-pagina met één knop naar het aantekenen
+  (`components/FlowNietNodig.tsx`). Ze stoppen **vóór** `getOrCreateMatchSheet()`, want
+  anders maakte het louter openen van zo'n pagina een wedstrijdblad aan voor een
+  wedstrijd die er geen hoort te hebben.
+- `MatchDayNav` (de vier genummerde stappen) heeft daardoor geen eigen uitzondering
+  nodig: die drie pagina's zijn de enige rendersites ervan.
+- Analyse-opnames (`match.analyseOnly`) houden hun opstellingscontrole altijd — zonder
+  opstelling kan een worp niet aan een speler gekoppeld worden.
+- Wat **niet** wegvalt: de scheidsrechter-*aanduiding*. `/api/scheidsrechter/wedstrijd/[matchId]`
+  kent geen modus, dus een scheidsrechter kan ook in supporters-modus een wedstrijd claimen —
+  het blad ontstaat dan alsnog. `/club`, `/match/[id]` en het portaal blijven die naam dus
+  tonen; enkel de bladstatus verliest haar poortfunctie.
+
 Dezelfde laag ligt op **tornooiwedstrijden** (`tournament-matches.scoreTrust`, zelfde
 vorm — `readMatchTrust`/`writeMatchTrust` nemen de collectie als argument). Op een
 tornooidag spelen tien velden tegelijk en zit er lang niet achter elk veld iemand van

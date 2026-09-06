@@ -7,6 +7,7 @@ import { getPayloadClient } from '@/lib/payload-client'
 import { getProfile } from '@/lib/profiles'
 import { reeksNaam } from '@/lib/reeksen'
 import { personalCode, personalQrValue } from '@/lib/referee-credentials'
+import { isSupportersMode } from '@/lib/score-mode'
 import { RefereeLogin } from './RefereeLogin'
 import { RefereeMatches, type RefMatch, type RefOfficial } from './RefereeMatches'
 import { RefereePortal } from './RefereePortal'
@@ -75,6 +76,7 @@ export default async function RefereePortaalPage() {
 
   const isReferee = hasRole(user, 'scheidsrechter') || isFederationLevel(user)
   const loggedIn = Boolean(user && isReferee)
+  const supportersMode = await isSupportersMode(payload)
 
   let body
   let matchesBlock = null
@@ -124,6 +126,15 @@ export default async function RefereePortaalPage() {
             <span className="brand">Scheidsrechter</span>
           )}
         </h1>
+        {/* Staat het platform op vrije livescore, dan geeft niemand nog een wedstrijd vrij. Zeg dat
+            hier: de aanduiding en de vergoedingen blijven, het akkoord en de QR-code niet. */}
+        {loggedIn && supportersMode && (
+          <p className="wb-intro">
+            <strong>Supportersmodus staat aan.</strong> Alle wedstrijden worden vrij aangetekend — je
+            akkoord en je QR-code zijn niet nodig om te starten. Je aanduidingen en je vergoedingen
+            blijven gewoon hier staan.
+          </p>
+        )}
         {/* De extra opties (QR, vergoedingen) horen pas ná het inloggen. */}
         {loggedIn && <ProfileTools profile={getProfile('scheidsrechters')} currentHref="/scheidsrechter/portaal" />}
         {matchesBlock}

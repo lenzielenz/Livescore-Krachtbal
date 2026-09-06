@@ -1,8 +1,10 @@
 import Link from 'next/link'
 
+import { FlowNietNodig } from '@/components/FlowNietNodig'
 import { MatchDayNav } from '@/components/MatchDayNav'
 import { SiteHeader } from '@/components/SiteHeader'
 import { getPayloadClient } from '@/lib/payload-client'
+import { isSupportersMode } from '@/lib/score-mode'
 import { OpstellingPanes } from './OpstellingPanes'
 import '../../wedstrijdblad.css'
 
@@ -25,6 +27,19 @@ export default async function OpstellingPage({ params }: { params: Promise<{ mat
           <Link href="/">← Terug</Link>
         </div>
       </>
+    )
+  }
+
+  // Supportersmodus: vrije livescore, dus geen opstelling. Wie hier toch belandt (oude link,
+  // bladwijzer), krijgt geen leeg selectiescherm maar de weg naar het aantekenen.
+  if (await isSupportersMode(payload)) {
+    return (
+      <FlowNietNodig
+        stap="Opstelling"
+        matchId={matchId}
+        wedstrijd={String(match.title ?? '')}
+        uitleg="Het platform staat op vrije livescore: je hoeft geen spelers te selecteren om te kunnen aantekenen."
+      />
     )
   }
 

@@ -12,6 +12,8 @@ import { getPayloadClient } from '@/lib/payload-client'
 import { getProfile } from '@/lib/profiles'
 import { buildReeksStandings } from '@/lib/reeks-standings'
 import { reeksNaam, REEKS_OPTIONS } from '@/lib/reeksen'
+import { isSupportersMode } from '@/lib/score-mode'
+import { clubActies, primaireActie } from '@/lib/wedstrijddag-acties'
 import { ClaimButton } from './ClaimButton'
 import { MyTeamsPicker } from './MyTeamsPicker'
 import { formatDateBE } from '@/lib/datetime'
@@ -74,7 +76,9 @@ function Shell({ children }: { children: React.ReactNode }) {
   )
 }
 
-// Club-dashboard: een club-beheerder ziet zijn komende wedstrijden en vult vlot de opstelling in.
+// Club-dashboard: een club-beheerder ziet zijn komende wedstrijden en bereidt ze vlot voor. Wát
+// die voorbereiding is, hangt van de aantekenmodus af: in federatiemodus de opstelling, in
+// supportersmodus niets — daar tik je meteen op aantekenen (zie wedstrijddag-acties.ts).
 export default async function ClubPage({ searchParams }: { searchParams: Promise<{ alle?: string }> }) {
   const { alle } = await searchParams
   const showAll = alle === '1'
@@ -83,7 +87,7 @@ export default async function ClubPage({ searchParams }: { searchParams: Promise
   if (!user) {
     return (
       <Shell>
-        <p className="empty">Log in als club-beheerder om je komende wedstrijden en opstellingen te beheren. <Link href="/inloggen" className="hub-pill">Inloggen →</Link></p>
+        <p className="empty">Log in als club-beheerder om je komende wedstrijden te beheren. <Link href="/inloggen" className="hub-pill">Inloggen →</Link></p>
       </Shell>
     )
   }
@@ -96,6 +100,10 @@ export default async function ClubPage({ searchParams }: { searchParams: Promise
       </Shell>
     )
   }
+
+  // Vrije livescore voor alle wedstrijden? Dan bestaat de opstelling-/scheidsrechterflow niet en
+  // hoeft dit scherm er ook niet meer naar te verwijzen.
+  const supportersMode = await isSupportersMode(payload)
 
   const club = await payload.findByID({ collection: 'clubs', id: clubId, depth: 0 }).catch(() => null)
   const teams = await payload.find({ collection: 'teams', where: { and: [{ club: { equals: clubId } }, competitionWhere()] }, depth: 0, limit: 200 })
@@ -124,7 +132,11 @@ export default async function ClubPage({ searchParams }: { searchParams: Promise
     limit: 200,
   })
 
-  // Toegewezen scheidsrechter per wedstrijd (uit het wedstrijdblad) — zodat het in de planning zichtbaar is.
+  // Toegewezen scheidsrechter per wedstrijd (uit het wedstrijdblad) — zodat het in de planning
+  // zichtbaar is. Ook in supportersmodus: de aanduiding blijft daar gewoon bestaan (het portaal
+  // schrijft ze via /api/scheidsrechter/wedstrijd/[matchId], dat geen modus kent), en /match/[id]
+  // toont ze ook. Wat er in supportersmodus wél niet meer mee doet, is de bladstatus: die bepaalt
+  // dan niet langer of je mag aantekenen — zie wedstrijddag-acties.ts.
   const planMatchIds = matches.docs.map((m) => m.id)
   const planSheets = planMatchIds.length
     ? await payload.find({ collection: 'matchsheets', where: { match: { in: planMatchIds } }, depth: 1, pagination: false }).catch(() => ({ docs: [] as Record<string, unknown>[] }))
@@ -148,7 +160,9 @@ export default async function ClubPage({ searchParams }: { searchParams: Promise
     const awayTeam = m.awayTeam as { id?: number; name?: string; club?: unknown } | null
     const side: 'home' | 'away' = homeTeam?.id != null && teamIdSet.has(Number(homeTeam.id)) ? 'home' : 'away'
     try {
-      const r = await getMatchReadiness(payload, m.id)
+      // De klaar-controle leest per wedstrijd het blad; in supportersmodus zegt ze sowieso "klaar"
+      // en tonen we die badge niet meer, dus dan slaan we ze over.
+      const r = supportersMode ? null : await getMatchReadiness(payload, m.id)
       const homeClub = homeTeam?.club as { name?: string; accommodatie?: string } | null
       const coach = (side === 'home' ? m.homeCoach : m.awayCoach) as { id?: number; name?: string; email?: string } | null
       const takeover = (side === 'home' ? m.homeTakeover : m.awayTakeover) as { id?: number; name?: string; email?: string } | null
@@ -162,7 +176,7 @@ export default async function ClubPage({ searchParams }: { searchParams: Promise
         myTeamId: Number((side === 'home' ? homeTeam?.id : awayTeam?.id) ?? 0),
         home: nameOf(homeTeam),
         away: nameOf(awayTeam),
-        ownReady: side === 'home' ? r.homeOk : r.awayOk,
+        ownReady: r ? (side === 'home' ? r.homeOk : r.awayOk) : true,
         // Locatie = terrein van de thuisclub (waar je moet zijn).
         location: (homeClub?.accommodatie || homeClub?.name || nameOf(homeTeam)).trim(),
         coachName: coach ? (coach.name || coach.email || 'Geclaimd') : null,
@@ -290,6 +304,9 @@ export default async function ClubPage({ searchParams }: { searchParams: Promise
                   <span className="club-match-reeks">{m.reeks}</span>
                   {m.status === 'live' ? (
                     <span className="club-badge live">● LIVE</span>
+                  ) : supportersMode ? (
+                    // Er valt niets voor te bereiden: dezelfde woorden als de aantekenhub.
+                    <span className="club-badge ready">🎉 Vrije livescore</span>
                   ) : m.ownReady ? (
                     <span className="club-badge ready">✓ Klaar</span>
                   ) : (
@@ -307,27 +324,34 @@ export default async function ClubPage({ searchParams }: { searchParams: Promise
                 </span>
               </div>
               <div className="club-match-actions">
-                <Link href={`/opstelling/${m.id}`} className="btn btn-primary">Opstelling</Link>
                 {(() => {
-                  // Aantekenen kan zodra de scheidsrechter het blad opende (wedstrijdklaar/bezig).
-                  // Een wedstrijd die al LOOPT is altijd open: de aantekentafel moet er terug in
-                  // kunnen (na een refresh of vanaf een ander toestel) — thuis én uit.
-                  const open = m.status === 'live' || sheetOpenForScoring(m.sheetStatus)
-                  if (m.side === 'home') {
-                    return open ? (
-                      <Link href={`/scorekeeper/${m.id}`} className="btn btn-ghost">Aantekenen</Link>
-                    ) : (
-                      <span className="btn btn-ghost is-disabled" title="De scheidsrechter heeft het wedstrijdblad nog niet opengezet om aan te tekenen.">
+                  // Welke knoppen hier horen, hangt van de aantekenmodus af — die regel staat in
+                  // wedstrijddag-acties.ts. In supportersmodus is dat er maar één die telt:
+                  // aantekenen, zonder opstelling en zonder op een scheidsrechter te wachten.
+                  const acties = clubActies({
+                    supportersMode,
+                    side: m.side,
+                    live: m.status === 'live',
+                    bladOpen: sheetOpenForScoring(m.sheetStatus),
+                  })
+                  const primair = primaireActie(acties)
+                  const cls = (a: string) => `btn ${a === primair ? 'btn-primary' : 'btn-ghost'}`
+                  return acties.map((a) => {
+                    if (a === 'opstelling') {
+                      return <Link key={a} href={`/opstelling/${m.id}`} className={cls(a)}>Opstelling</Link>
+                    }
+                    if (a === 'aantekenen') {
+                      return <Link key={a} href={`/scorekeeper/${m.id}`} className={cls(a)}>Aantekenen</Link>
+                    }
+                    if (a === 'bekijk') {
+                      return <Link key={a} href={`/match/${m.id}`} className={cls(a)}>Bekijk</Link>
+                    }
+                    return (
+                      <span key={a} className="btn btn-ghost is-disabled" title="De scheidsrechter heeft het wedstrijdblad nog niet opengezet om aan te tekenen.">
                         ⏳ Wacht op scheidsrechter
                       </span>
                     )
-                  }
-                  return (
-                    <>
-                      {open && <Link href={`/scorekeeper/${m.id}`} className="btn btn-ghost">Aantekenen</Link>}
-                      <Link href={`/match/${m.id}`} className="btn btn-ghost">Bekijk</Link>
-                    </>
-                  )
+                  })
                 })()}
               </div>
             </div>
