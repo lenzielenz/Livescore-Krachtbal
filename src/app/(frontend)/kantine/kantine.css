@@ -66,6 +66,93 @@
   cursor: pointer;
 }
 
+/* ── Jouw eigen kantinescherm samenstellen (2026-09-06) ── */
+/* Uitlegblok bovenaan: mensen zetten dit één keer op en komen er een seizoen niet meer aan, dus
+   het moet in één lezing duidelijk zijn wat er straks vanzelf gebeurt. */
+.kt-uitleg {
+  background: var(--panel-grad, var(--panel));
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--line));
+  border-radius: 14px;
+  padding: 16px 18px;
+  margin: 4px 0 18px;
+}
+.kt-uitleg-title {
+  margin: 0 0 8px;
+  font-size: 1.05rem;
+  color: var(--accent);
+}
+.kt-uitleg-lead {
+  margin: 0 0 10px;
+  max-width: 68ch;
+  color: var(--dim-strong, var(--dim));
+  font-size: 0.92rem;
+  line-height: 1.55;
+}
+.kt-uitleg-lijst {
+  margin: 0;
+  padding-left: 20px;
+  max-width: 68ch;
+  color: var(--dim);
+  font-size: 0.88rem;
+  line-height: 1.6;
+}
+.kt-uitleg-lijst li + li {
+  margin-top: 7px;
+}
+.kt-uitleg-lijst strong {
+  color: var(--txt);
+}
+
+.kt-blok {
+  margin: 0 0 22px;
+}
+.kt-blok-title {
+  margin: 0 0 4px;
+  font-size: 0.98rem;
+  color: var(--txt);
+}
+.kt-blok-opt {
+  font-weight: 500;
+  font-size: 0.8rem;
+  color: var(--dim);
+}
+.kt-blok-sub {
+  margin: 0 0 10px;
+  max-width: 64ch;
+  color: var(--dim);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+.kt-blok-link .kt-clublink-row {
+  margin-top: 4px;
+}
+
+/* Club- en ploegkeuze: veel korte namen, dus chips i.p.v. kaarten. */
+.kt-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.kt-chip {
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--txt);
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.14s ease, background-color 0.14s ease, color 0.14s ease;
+}
+.kt-chip:hover {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+}
+.kt-chip.on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #06140d;
+}
+
 /* ── Kiezer (control-pagina) ── */
 .kt-control-bar {
   display: flex;

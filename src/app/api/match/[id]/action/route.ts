@@ -1,5 +1,6 @@
 import { isFederationLevel } from '@/lib/access'
-import { authUser, mayCorrectMatch, mayScoreMatch } from '@/lib/api-auth'
+import { authUser, correctionBlockedReason, mayCorrectMatch, mayScoreMatch } from '@/lib/api-auth'
+import { beoordeelReset } from '@/lib/match-reset-policy'
 import { withLock } from '@/lib/async-mutex'
 import { withDbLock } from '@/lib/db-lock'
 import {
@@ -157,35 +158,29 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       case 'finish':
         result = await finishMatch(payload, matchId)
         break
-      case 'reopen':
+      case 'reopen': {
         // Per ongeluk op "Einde" gedrukt terwijl er nog gespeeld wordt. Heropenen wist niets, maar
         // het raakt wel een vastgelegde eindstand: enkel wie een echte aantekenrol draagt.
-        if (!(await mayCorrectMatch(payload, user, matchId))) {
-          return Response.json(
-            { error: 'Enkel de aantekenaar, de scheidsrechter of de federatie kan een wedstrijd heropenen.' },
-            { status: 403 },
-          )
-        }
+        const blokkade = await correctionBlockedReason(payload, user, matchId, 'heropenen')
+        if (blokkade) return Response.json({ error: blokkade }, { status: 403 })
         result = await reopenMatch(payload, matchId)
         break
+      }
       case 'reset': {
-        // Terugzetten op "nog niet gestart" nadat iemand te vroeg op start drukte. Dit gooit de
-        // ingevoerde worpen wél weg, dus de lat ligt hoger naarmate er al gespeeld is: zolang er
-        // niets ingevoerd staat mag de aantekenaar het zelf, daarna enkel de federatie.
-        if (!(await mayCorrectMatch(payload, user, matchId))) {
-          return Response.json(
-            { error: 'Enkel de aantekenaar, de scheidsrechter of de federatie kan een wedstrijd terugzetten.' },
-            { status: 403 },
-          )
-        }
-        const { worpen } = await matchResetImpact(payload, matchId)
-        if (worpen > 0 && !isFederationLevel(user)) {
-          return Response.json(
-            {
-              error: `Er staan al ${worpen} worpen ingevoerd. Enkel de federatie kan deze wedstrijd nog terugzetten.`,
-            },
-            { status: 403 },
-          )
+        // Terugzetten op "nog niet gestart" nadat iemand te vroeg op start drukte. De lat hangt
+        // af van wat er al vastligt: staat er niets, dan volstaat het recht om aan te tekenen;
+        // staat er wél iets, dan kan enkel de federatie nog leegmaken. De regel zelf staat in
+        // match-reset-policy.ts, zodat ze zonder database te testen valt.
+        const impact = await matchResetImpact(payload, matchId)
+        const magRechtzetten = await mayCorrectMatch(payload, user, matchId)
+        const oordeel = beoordeelReset({
+          magRechtzetten,
+          magAantekenen: magRechtzetten || (await mayScoreMatch(payload, user, matchId)),
+          isFederatie: isFederationLevel(user),
+          impact,
+        })
+        if (!oordeel.ok) {
+          return Response.json({ error: user ? oordeel.reden : 'Meld je eerst aan.' }, { status: user ? 403 : 401 })
         }
         result = await resetMatch(payload, matchId)
         break

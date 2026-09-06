@@ -38,6 +38,7 @@ export function KantineScreen({
   endpoint = '/api/kantine',
   editable = true,
   title,
+  castPad = '/kantine/scherm',
 }: {
   /** Bron van de wedstrijden (default: de centrale selectie). */
   endpoint?: string
@@ -45,6 +46,9 @@ export function KantineScreen({
   editable?: boolean
   /** Titel/onderschrift, bv. de clubnaam op een vaste club-link. */
   title?: string
+  /** Welk pad de Chromecast moet laden. Default: het gedeelde scherm. Een persoonlijk scherm
+      geeft hier zijn eigen pad mee, anders cast de knop iemand anders zijn wedstrijden. */
+  castPad?: string
 } = {}) {
   const [matches, setMatches] = useState<KantineMatch[]>([])
   const [ads, setAds] = useState<Ad[]>([])
@@ -126,7 +130,7 @@ export function KantineScreen({
       {/* Rechtstreeks naar de tv. Niet spiegelen: de Chromecast laadt dít scherm zelf en houdt
           zijn eigen live verbinding, zodat het blijft draaien als je je telefoon wegsteekt. */}
       <span className="kt-screen-cast">
-        <CastKnop pad="/kantine/scherm" sleutel="kantine" />
+        <CastKnop pad={castPad} sleutel={castPad} />
       </span>
       {title && <span className="kt-screen-title">{title}</span>}
       {/* Af en toe neemt een sponsor het scherm over; de score blijft er doorheen leesbaar. */}

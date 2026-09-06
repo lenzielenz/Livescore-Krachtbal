@@ -16,6 +16,7 @@ import { reeksUsesSeniorThrows } from './reeksen'
 import { sanitizeTrust, trustView, type TrustView } from './score-trust'
 import { isOfficialScore } from './score-trust-store'
 import { readSimpleScore } from './simple-score'
+import type { ResetImpact } from './match-reset-policy'
 import { TRIBUNE_GRACE_MS } from './tribune'
 import {
   type SetupSide,
@@ -986,11 +987,27 @@ export async function reopenMatch(payload: Payload, matchId: number) {
 }
 
 /** Hoeveel is er al ingevoerd? Bepaalt of een reset onschuldig is of echt iets vernietigt. */
-export async function matchResetImpact(payload: Payload, matchId: number): Promise<{ worpen: number }> {
+export async function matchResetImpact(payload: Payload, matchId: number): Promise<ResetImpact> {
   const res = await payload
     .count({ collection: 'throws', where: { match: { equals: matchId } }, overrideAccess: true })
     .catch(() => ({ totalDocs: 0 }))
-  return { worpen: res.totalDocs }
+  // Snelscore-wedstrijden leggen niets in `throws` vast: hun doelpunten en kruisjes staan in
+  // matches.simpleScore, en `resetMatch` hieronder zet dat veld op null. Tot 2026-09-06 telde
+  // deze functie enkel de worpen, waardoor een snelscore-wedstrijd met tien doelpunten als
+  // "er staat nog niets in" gold — precies de vraag waarop de beveiliging rond terugzetten
+  // steunt. De teller moet meten wat een reset écht weggooit.
+  const match = await payload
+    .findByID({ collection: 'matches', id: matchId, depth: 0, overrideAccess: true })
+    .catch(() => null)
+  const simpel = readSimpleScore(match)
+  const doelpunten = simpel.goals.length
+  const kruisjes = (simpel.crosses?.home ?? 0) + (simpel.crosses?.away ?? 0)
+  return {
+    worpen: res.totalDocs,
+    doelpunten,
+    kruisjes,
+    leeg: res.totalDocs === 0 && doelpunten === 0 && kruisjes === 0,
+  }
 }
 
 /**

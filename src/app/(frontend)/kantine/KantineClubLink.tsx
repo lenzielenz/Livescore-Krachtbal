@@ -4,6 +4,12 @@ import { useEffect, useMemo, useState } from 'react'
 
 // Vaste, openbare kantine-link per club: kies je club en deel/plak de link op de kantine-tv. Hij
 // blijft heel het seizoen geldig en toont automatisch al jullie wedstrijden van die dag.
+//
+// DECISION 2026-09-06: de kop zegt nu expliciet "automatisch" en de tekst dat je hieronder niets
+// hoeft aan te vinken. Deze pagina toont twee schermen onder elkaar — deze clublink én de
+// handmatige selectie eronder — en dat verschil stond nergens. Een clubverantwoordelijke vroeg
+// daardoor of de vaste link alle live wedstrijden van zijn club toont, en of de zelfgekozen lijst
+// eronder daar dan bij hoort. Twee schermen die op elkaar lijken moeten zichzelf uitleggen.
 export function KantineClubLink({ clubs, myClubId }: { clubs: { id: number; name: string }[]; myClubId?: number | null }) {
   const [clubId, setClubId] = useState<number | null>(myClubId ?? (clubs.length === 1 ? clubs[0].id : null))
   const [copied, setCopied] = useState(false)
@@ -20,8 +26,12 @@ export function KantineClubLink({ clubs, myClubId }: { clubs: { id: number; name
 
   return (
     <section className="kt-clublink">
-      <h2 className="kt-clublink-title">📺 Vaste link voor jouw kantinescherm</h2>
-      <p className="kt-clublink-sub">Eén keer op de kantine-tv zetten — werkt heel het seizoen.</p>
+      <h2 className="kt-clublink-title">📺 Of: het kale clubscherm, zonder aanmelden</h2>
+      <p className="kt-clublink-sub">
+        Wil je niets instellen? Deze vaste link toont <strong>alle wedstrijden van één club van
+        vandaag</strong> en werkt ook zonder account. Hij kan niets extra's tonen — geen ploegen of
+        wedstrijden van andere clubs. Voor dat laatste maak je hierboven je eigen scherm.
+      </p>
       <div className="kt-clublink-row">
         <select
           className="kt-clublink-select"

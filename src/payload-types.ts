@@ -335,6 +335,18 @@ export interface User {
     | boolean
     | null;
   /**
+   * Eigen keuze: welke clubs, ploegen en losse wedstrijden op het kantinescherm van deze gebruiker komen. De gebruiker stelt dit zelf in via /kantine.
+   */
+  kantineScherm?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  /**
    * Eigen voorkeur: de bewaarde gegevens van de voedingsplanner. De gebruiker beheert dit zelf.
    */
   nutritionProfile?:
@@ -2537,6 +2549,7 @@ export interface UsersSelect<T extends boolean = true> {
   player?: T;
   scorecardSkills?: T;
   myTeams?: T;
+  kantineScherm?: T;
   nutritionProfile?: T;
   nutritionTracker?: T;
   checkins?: T;

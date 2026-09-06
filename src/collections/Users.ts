@@ -211,6 +211,22 @@ export const Users: CollectionConfig = {
       },
     },
     {
+      // Persoonlijk kantinescherm: welke club(s), ploeg(en) en losse wedstrijden op de tv van
+      // deze gebruiker komen. Vorm: { clubIds: number[], teamIds: number[], matchIds: number[] }
+      // — zie src/lib/kantine-selectie.ts, dat alles wat hier staat eerst opschoont.
+      //
+      // Bewust json en niet drie relationships: dit is een persoonlijke voorkeur die de gebruiker
+      // zelf beheert (zelfde patroon als myTeams hierboven), geen redactionele data waar de admin
+      // op filtert.
+      name: 'kantineScherm',
+      label: 'Kantinescherm',
+      type: 'json',
+      admin: {
+        description:
+          'Eigen keuze: welke clubs, ploegen en losse wedstrijden op het kantinescherm van deze gebruiker komen. De gebruiker stelt dit zelf in via /kantine.',
+      },
+    },
+    {
       // Persoonlijk voedingsprofiel: de gegevens die de gebruiker in de voedingsplanner invult
       // (geslacht, leeftijd, lengte, gewicht, activiteit, doel, tempo, macro-stijl, dieet,
       // streefgewicht). De gebruiker bewaart dit zelf zodat hij het niet telkens opnieuw invult.
