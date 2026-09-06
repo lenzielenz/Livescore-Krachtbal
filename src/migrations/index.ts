@@ -111,6 +111,7 @@ import * as migration_20260903_200000_user_aanteken_rechten from './20260903_200
 import * as migration_20260903_210000_tweede_camera from './20260903_210000_tweede_camera'
 import * as migration_20260904_120000_tornooi_score_trust from './20260904_120000_tornooi_score_trust'
 import * as migration_20260904_150000_tornooi_aantekenaars from './20260904_150000_tornooi_aantekenaars'
+import * as migration_20260906_140000_kantine_scherm_per_gebruiker from './20260906_140000_kantine_scherm_per_gebruiker'
 
 export const migrations = [
   {
@@ -677,5 +678,10 @@ export const migrations = [
     up: migration_20260904_150000_tornooi_aantekenaars.up,
     down: migration_20260904_150000_tornooi_aantekenaars.down,
     name: '20260904_150000_tornooi_aantekenaars',
+  },
+  {
+    up: migration_20260906_140000_kantine_scherm_per_gebruiker.up,
+    down: migration_20260906_140000_kantine_scherm_per_gebruiker.down,
+    name: '20260906_140000_kantine_scherm_per_gebruiker',
   },
 ];

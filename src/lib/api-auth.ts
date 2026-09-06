@@ -91,18 +91,7 @@ export async function mayScoreMatch(
     const ownerId = relId((match as { analyseOwner?: unknown }).analyseOwner)
     if (ownerId != null && analyseEditOwners(user).some((x) => String(x) === String(ownerId))) return true
   }
-  if (hasRole(user, 'scheidsrechter')) {
-    const sheets = await payload
-      .find({ collection: 'matchsheets', where: { match: { equals: matchId } }, depth: 0, limit: 1 })
-      .catch(() => null)
-    const sheet = sheets?.docs?.[0]
-    const assigned = [sheet?.assignedReferee, sheet?.backupReferee]
-      .map((r) => (typeof r === 'object' && r ? (r as { id: number }).id : r))
-      .filter((x) => x != null)
-    if (assigned.length === 0) return true // geen toewijzing → elke SR mag
-    const own = userOfficialId(user)
-    return own != null && assigned.some((id) => String(id) === String(own))
-  }
+  if (hasRole(user, 'scheidsrechter')) return refereeMayHandleMatch(payload, user, matchId)
   if (hasRole(user, 'club-beheerder', 'club-medewerker')) {
     const clubId = userClubId(user)
     if (clubId == null) return false
@@ -128,7 +117,15 @@ export async function mayCorrectMatch(
   if (isFederationLevel(user) || hasRole(user, 'scorekeeper')) return true
   const match = await payload.findByID({ collection: 'matches', id: matchId, depth: 0 }).catch(() => null)
   if (match && (match as { isDemo?: boolean }).isDemo) return true
-  if (hasRole(user, 'scheidsrechter')) return isAssignedReferee(payload, user, matchId)
+  if (hasRole(user, 'scheidsrechter')) {
+    // Zelfde regel als bij aantekenen: staat er niemand op het blad, dan mag elke
+    // scheidsrechter. Vóór 2026-09-06 stond hier `isAssignedReferee`, die bij een
+    // wedstrijd zónder toewijzing (of zonder wedstrijdblad) false gaf. Gevolg: een
+    // scheidsrechter kon zo'n wedstrijd wél aantekenen maar niet terugzetten, en las
+    // dan een foutmelding die zei dat hij aantekenaar moest zijn — terwijl hij dat
+    // was. Twee vragen die hetzelfde blad lezen horen hetzelfde antwoord te geven.
+    return refereeMayHandleMatch(payload, user, matchId)
+  }
   if (hasRole(user, 'club-beheerder', 'club-medewerker')) {
     const clubId = userClubId(user)
     if (clubId == null) return false
@@ -136,6 +133,61 @@ export async function mayCorrectMatch(
     return clubs.some((c) => String(c) === String(clubId))
   }
   return false
+}
+
+/**
+ * Waarom mag deze gebruiker de wedstrijd niet rechtzetten? Geeft null wanneer het wél mag.
+ *
+ * Bestaat omdat de oude melding ("Enkel de aantekenaar, de scheidsrechter of de federatie
+ * kan …") een rollijst opsomde in plaats van te zeggen wat er in dít geval scheelt. Wie de
+ * wedstrijd op dat moment zat aan te tekenen las daarin een tegenspraak: hij ís aantekenaar,
+ * en toch mag het niet. Nu benoemt de melding de eigen situatie en de weg vooruit.
+ */
+export async function correctionBlockedReason(
+  payload: Payload,
+  user: AuthedUser | null,
+  matchId: number | string,
+  werkwoord: 'heropenen' | 'terugzetten',
+): Promise<string | null> {
+  if (await mayCorrectMatch(payload, user, matchId)) return null
+  if (!user) return 'Meld je eerst aan.'
+  // Kan hij de wedstrijd wél aantekenen? Dan komt dat recht uit de open livescore-modus (of uit
+  // een analyse-opname), en niet uit een aantekenrol. Precies dat verschil moet de melding zeggen.
+  if (await mayScoreMatch(payload, user, matchId)) {
+    return (
+      `Je tekent deze wedstrijd aan via de open livescore, en dat is niet hetzelfde als de ` +
+      `aantekenaar van dienst zijn. ${werkwoord === 'terugzetten' ? 'Terugzetten wist alles wat al ingevoerd is' : 'Heropenen raakt een vastgelegde eindstand'}, ` +
+      `dus dat mag alleen de scheidsrechter van dienst, iemand van de clubstaf of de federatie. ` +
+      `Vraag het aan hen — of geef hier door wat er moet wijzigen.`
+    )
+  }
+  return `Je hebt geen rechten om deze wedstrijd te ${werkwoord}.`
+}
+
+/**
+ * Mag deze scheidsrechter deze wedstrijd bedienen? Staat er een (backup-)SR op het wedstrijdblad,
+ * dan enkel die; staat er niemand, dan elke scheidsrechter (backwards compatible — veel
+ * jeugdwedstrijden krijgen nooit een toewijzing).
+ *
+ * Eén functie voor aantekenen én rechtzetten: dat die twee ooit uit elkaar liepen was de oorzaak
+ * van "ik mag wel aantekenen maar niet terugzetten".
+ */
+export async function refereeMayHandleMatch(
+  payload: Payload,
+  user: AuthedUser | null,
+  matchId: number | string,
+): Promise<boolean> {
+  if (!user) return false
+  const sheets = await payload
+    .find({ collection: 'matchsheets', where: { match: { equals: matchId } }, depth: 0, limit: 1 })
+    .catch(() => null)
+  const sheet = sheets?.docs?.[0]
+  const assigned = [sheet?.assignedReferee, sheet?.backupReferee]
+    .map((r) => (typeof r === 'object' && r ? (r as { id: number }).id : r))
+    .filter((x) => x != null)
+  if (assigned.length === 0) return true // geen toewijzing → elke SR mag
+  const own = userOfficialId(user)
+  return own != null && assigned.some((id) => String(id) === String(own))
 }
 
 /** Is deze gebruiker (niet-federatie) de toegewezen/backup-scheidsrechter van deze wedstrijd? */
