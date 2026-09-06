@@ -12,6 +12,7 @@ import type { Reeks } from '../reeksen'
 import { federationUpload } from './federation'
 import { mailMatchSheet } from './mail'
 import { generateMatchSheetPdf, type MatchSheetPdfData, type PdfLineupRow } from './pdf'
+import { formatDateTimeBE } from '../datetime'
 
 export type SubmitResult = {
   ok: boolean
@@ -30,7 +31,7 @@ const sigOf = (group: unknown) => {
 const fmtDate = (v?: string): string | undefined => {
   if (!v) return undefined
   const d = new Date(v)
-  return Number.isNaN(d.getTime()) ? v : d.toLocaleString('nl-BE')
+  return Number.isNaN(d.getTime()) ? v : formatDateTimeBE(d)
 }
 
 const lineupRows = (rows: unknown): PdfLineupRow[] =>
@@ -63,7 +64,7 @@ export async function buildMatchSheetPdfData(
   const eind = (sheet?.wedstrijdeinde ?? {}) as { akkoord?: boolean; naam?: string; tijdstip?: string }
   return {
     titel: String(sheet?.titel ?? built.match.title ?? `Wedstrijd ${matchId}`),
-    datum: new Date(built.match.date).toLocaleString('nl-BE'),
+    datum: formatDateTimeBE(new Date(built.match.date)),
     categorie: built.match.category ?? '',
     reeks: reeks ?? undefined,
     scheidsrechter: refSig.naam || undefined,

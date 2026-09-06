@@ -5,6 +5,7 @@ import { buildMatchState } from '@/lib/match-engine'
 import { getMatchReadiness } from '@/lib/matchsheet-data'
 import { getPayloadClient } from '@/lib/payload-client'
 import { isSupportersMode } from '@/lib/score-mode'
+import { formatDateBE } from '@/lib/datetime'
 
 export const dynamic = 'force-dynamic'
 
@@ -100,7 +101,7 @@ function Section({ title, rows, empty }: { title: string; rows: Row[]; empty: st
                     </>
                   ) : (
                     <span className="mc-meta">
-                      {new Date(m.date).toLocaleDateString('nl-BE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                      {formatDateBE(new Date(m.date), { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
                       <br />
                       {m.ready ? (
                         <strong className="mc-ready">✓ klaar — tik om te starten ▶</strong>

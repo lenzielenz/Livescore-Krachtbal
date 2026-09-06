@@ -5,6 +5,7 @@ import { readableOnDark, DEFAULT_AWAY_COLOR, DEFAULT_HOME_COLOR } from '@/lib/cl
 import { buildMatchState } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
 import { reeksNaam } from '@/lib/reeksen'
+import { formatDateBE } from '@/lib/datetime'
 
 // Auto-gegenereerde social-preview voor een wedstrijd: wie de matchlink in WhatsApp/Insta plakt,
 // krijgt meteen een verzorgde deelkaart (score, logo's, reeks) i.p.v. een grijze placeholder.
@@ -72,7 +73,7 @@ export default async function Image({ params }: { params: Promise<{ id: string }
 
   const reeks = matchDoc?.reeks ? reeksNaam(matchDoc.reeks) : 'Krachtbal'
   const datum = matchDoc?.date
-    ? new Date(matchDoc.date as string).toLocaleDateString('nl-BE', { weekday: 'long', day: '2-digit', month: 'long' })
+    ? formatDateBE(new Date(matchDoc.date as string), { weekday: 'long', day: '2-digit', month: 'long' })
     : null
 
   const homeColor = readableOnDark(state.teams.home.colors?.primary ?? DEFAULT_HOME_COLOR)

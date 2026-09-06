@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { formatDateTimeBE } from '@/lib/datetime'
 
 type Account = {
   id: number
@@ -107,7 +108,7 @@ function Herstellink({ acc }: { acc: Account }) {
             Kopieer
           </button>
           <span className="acc-herstel-info">
-            Geldig tot {vervalt ? new Date(vervalt).toLocaleString('nl-BE', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }) : 'morgen'} · werkt één keer
+            Geldig tot {vervalt ? formatDateTimeBE(new Date(vervalt), { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }) : 'morgen'} · werkt één keer
           </span>
         </div>
       )}

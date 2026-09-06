@@ -4,6 +4,7 @@ import { authUser } from '@/lib/api-auth'
 import { buildMatchSheet, buildMatchState } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
 import { generateMatchAnalysisPdf } from '@/lib/submit/pdf-match-analysis'
+import { formatDateBE } from '@/lib/datetime'
 
 // PDF-export van de wedstrijd-analyse (samenvatting + analyse). Analyse-only, privé per persoon.
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -28,7 +29,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     ])
     const teams = { home: state.teams.home.name, away: state.teams.away.name }
     const datum = matchDoc.date
-      ? new Date(matchDoc.date as string).toLocaleDateString('nl-BE', { dateStyle: 'long' })
+      ? formatDateBE(new Date(matchDoc.date as string), { dateStyle: 'long' })
       : null
 
     // Doelpunten (voor het scoreverloop + man van de match), emoji-reacties en supporter-shoutouts

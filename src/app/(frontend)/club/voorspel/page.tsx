@@ -15,6 +15,7 @@ import { PredictForm } from './PredictForm'
 import { InviteCopy, PoolCreate, PoolJoin, PoolLeave } from './PoolManager'
 import { ScopePicker } from './ScopePicker'
 import './voorspel.css'
+import { formatDateBE } from '@/lib/datetime'
 
 export const dynamic = 'force-dynamic'
 
@@ -145,7 +146,7 @@ export default async function VoorspelPage({ searchParams }: { searchParams: Pro
   const lockedCount = scopedMatches.filter((m) => m.status === 'scheduled' && myEntryOf(m)).length
   const scored = finished.filter((m) => finals.has(m.id)).map((m) => ({ ...m, actual: finals.get(m.id)!, groupPreds: m.preds.filter(keep) }))
 
-  const dt = (d: string) => new Date(d).toLocaleDateString('nl-BE', { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+  const dt = (d: string) => formatDateBE(new Date(d), { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
   const scopeLabel = (s: string): string => {
     if (s.startsWith('team:')) {
       const tid = Number(s.slice(5))

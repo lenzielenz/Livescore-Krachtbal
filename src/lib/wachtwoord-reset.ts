@@ -1,3 +1,4 @@
+import { formatDateTimeBE } from './datetime'
 // Wachtwoord vergeten: de regels rond een eenmalige herstellink.
 //
 // Er gaat bewust géén mail de deur uit. Een beheerder maakt de link aan in het accountbeheer
@@ -72,7 +73,7 @@ export function vervaltOp(nu: number, geldigMs: number = HERSTEL_GELDIG_MS): Dat
  * doorgeeft ("dit is morgenvroeg nog geldig"), geen contract op de seconde.
  */
 export function vervalTekst(vervalt: Date): string {
-  return vervalt.toLocaleString('nl-BE', {
+  return formatDateTimeBE(vervalt, {
     weekday: 'long',
     day: 'numeric',
     month: 'long',

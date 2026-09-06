@@ -11,6 +11,7 @@ import { type LogoFit } from '@/lib/logo-fit'
 import { pronostiekOpen } from '@/lib/pronostiek-weekend'
 import { speeldagenRond, volgendeSpeeldag, vorigeSpeeldag, type Speeldag } from '@/lib/speeldagen'
 import { pastBijZoekterm } from '@/lib/team-search'
+import { brusselsNoonUtc, formatDateBE, shiftDateStr } from '@/lib/datetime'
 
 type TeamRef = {
   teamId: number
@@ -44,17 +45,13 @@ export type DayMatch = {
 const FAV_TEAMS_KEY = 'kb-fav-ploegen'
 const FAV_CLUBS_KEY = 'kb-fav-clubs'
 
-function shiftDate(dateStr: string, days: number): string {
-  const d = new Date(`${dateStr}T12:00:00`)
-  d.setDate(d.getDate() + days)
-  return d.toISOString().slice(0, 10)
-}
+const shiftDate = shiftDateStr
 
 
 /** Korte dagnaam voor de speeldagenlijst: "Vandaag", anders "za 12 sep". */
 function dagLabel(datum: string, today: string): string {
   if (datum === today) return 'Vandaag'
-  return new Date(`${datum}T12:00:00`).toLocaleDateString('nl-BE', {
+  return formatDateBE(brusselsNoonUtc(datum), {
     weekday: 'short',
     day: '2-digit',
     month: 'short',
@@ -287,13 +284,13 @@ export function LiveBoard({
     return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]))
   }, [visible])
 
-  const dateLabel = new Date(`${date}T12:00:00`).toLocaleDateString('nl-BE', {
+  const dateLabel = formatDateBE(brusselsNoonUtc(date), {
     weekday: 'long',
     day: '2-digit',
     month: 'long',
   })
   // Mag er voor deze speeldag al gepronostikeerd worden? (open vanaf zondagmiddernacht ervoor)
-  const kanVoorspellen = useMemo(() => pronostiekOpen(`${date}T12:00:00`), [date])
+  const kanVoorspellen = useMemo(() => pronostiekOpen(brusselsNoonUtc(date).toISOString()), [date])
 
   // Datumnavigatie op basis van de échte speeldagen (zie speeldagen.ts). Zonder die lijst (bv. een
   // lege kalender) valt alles terug op één dag opschuiven.

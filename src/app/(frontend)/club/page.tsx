@@ -14,6 +14,7 @@ import { buildReeksStandings } from '@/lib/reeks-standings'
 import { reeksNaam, REEKS_OPTIONS } from '@/lib/reeksen'
 import { ClaimButton } from './ClaimButton'
 import { MyTeamsPicker } from './MyTeamsPicker'
+import { formatDateBE } from '@/lib/datetime'
 
 export const dynamic = 'force-dynamic'
 
@@ -297,7 +298,7 @@ export default async function ClubPage({ searchParams }: { searchParams: Promise
                 </span>
                 <span className="club-match-teams">{m.home} <span className="club-vs">–</span> {m.away}</span>
                 <span className="club-match-meta">
-                  {new Date(m.date).toLocaleDateString('nl-BE', { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                  {formatDateBE(new Date(m.date), { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
                   {m.location ? <> · 📍 {m.location}</> : null}
                   {m.refereeName ? <> · 🟡 SR: {m.refereeName}</> : null}
                 </span>

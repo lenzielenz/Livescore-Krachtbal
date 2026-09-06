@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 
 import './match-weather.css'
+import { dateStrBE } from '@/lib/datetime'
 
 // Weerbericht aan het veld voor één wedstrijd: de uren rond de aftrap op de thuislocatie, met
 // een klare conclusie (droog / mogelijk een bui / regen), temperatuur, gevoelstemperatuur, wind
@@ -103,7 +104,10 @@ export function MatchWeather({
         setState('none')
         return
       }
-      const day = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+      // Belgische dag: de weer-API krijgt hieronder `timezone=Europe/Brussels` mee, dus de
+      // gevraagde dagen moeten in diezelfde kalender staan. Met de browserzone vroeg een
+      // bezoeker buiten België het verkeerde etmaal op.
+      const day = (d: Date) => dateStrBE(d)
       const windowStart = start.getTime() - PRE_H * 3600_000
       const url =
         `https://api.open-meteo.com/v1/forecast?latitude=${coords.lat}&longitude=${coords.lon}` +

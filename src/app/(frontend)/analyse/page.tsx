@@ -20,6 +20,7 @@ import { DeleteMatchButton } from './DeleteMatchButton'
 import { HubReeksPicker } from './HubReeksPicker'
 import { NieuweAnalyseMatch } from './NieuweAnalyseMatch'
 import './analyse.css'
+import { formatDateBE } from '@/lib/datetime'
 
 // De analyse-tools, gebundeld in twee groepen zodat het overzicht rustig blijft.
 const PLOEG_TOOLS = [
@@ -282,7 +283,7 @@ export default async function AnalysePage({ searchParams }: { searchParams: Prom
                           </span>
                         </span>
                         <span className="an-card-date">
-                          {r.date ? new Date(r.date).toLocaleDateString('nl-BE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''}
+                          {r.date ? formatDateBE(new Date(r.date), { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''}
                         </span>
                         <DeleteMatchButton matchId={r.id} label={`${r.home.name} – ${r.away.name}`} />
                       </Link>

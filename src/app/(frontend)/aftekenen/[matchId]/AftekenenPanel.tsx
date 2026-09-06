@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { formatDateTimeBE } from '@/lib/datetime'
 
 type Who = 'kapiteinThuis' | 'kapiteinUit' | 'scheidsrechter'
 type Side = 'home' | 'away' | null
@@ -16,7 +17,7 @@ function formatTijdstip(value?: string | null): string | null {
   if (!value) return null
   const d = new Date(value)
   if (Number.isNaN(d.getTime())) return null
-  return d.toLocaleString('nl-BE', { dateStyle: 'short', timeStyle: 'short' })
+  return formatDateTimeBE(d, { dateStyle: 'short', timeStyle: 'short' })
 }
 
 function SignaturePad({

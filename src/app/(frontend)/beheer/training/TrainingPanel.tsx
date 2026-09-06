@@ -7,13 +7,15 @@ import { TRAINING_METRICS, metricAttempts, type TrainingMeting, type TrainingMet
 import { trainingGroupOf } from '@/lib/training-groups'
 import { ProgressieChart } from './ProgressieChart'
 import './training.css'
+import { dateStrBE, formatDateBE } from '@/lib/datetime'
 
 export type TrainingPlayer = { id: number; name: string; team: string; club: string; reeks: string; reeksNaam: string }
 export type TrainingDoel = { id: number; speler: number; metriek: string; doel: number }
 
 const ALL = '__all__' // token: alle reeksen samen
 
-const todayISO = () => new Date().toISOString().slice(0, 10)
+// Belgische dag: toISOString geeft de UTC-dag, en die springt 's avonds al naar morgen.
+const todayISO = () => dateStrBE()
 
 // Lege invoer: per metriek een rij pogingen (worpen: 3 kansen, de rest: 1).
 const emptyVals = (): Record<TrainingMetricKey, string[]> => {
@@ -413,7 +415,7 @@ export function TrainingPanel({
                   .reverse()
                   .map((mt, i) => (
                     <tr key={i}>
-                      <td>{new Date(mt.datum).toLocaleDateString('nl-BE')}</td>
+                      <td>{formatDateBE(new Date(mt.datum))}</td>
                       {TRAINING_METRICS.map((m) => (
                         <td key={m.key}>{mt[m.key] == null ? '—' : mt[m.key]}</td>
                       ))}

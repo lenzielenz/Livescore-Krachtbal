@@ -10,6 +10,7 @@ import { reeksNaam } from '@/lib/reeksen'
 import { seasonFromDate } from '@/lib/seasons'
 import { TrainingHero } from '../TrainingHero'
 import './kalender.css'
+import { formatDateBE, formatTimeBE } from '@/lib/datetime'
 
 // Trainingskalender + jaarplan (CoachBox-geïnspireerd, zonder AI): één kalender met de trainingen
 // én de wedstrijden van je club over een seizoen, plus een jaarplan-strip (12 maanden) voor het
@@ -196,14 +197,14 @@ export default async function TrainingKalenderPage({ searchParams }: { searchPar
                     <>
                       <span className="kal-ev-date">
                         <b>{d.getDate()}</b>
-                        <small>{d.toLocaleDateString('nl-BE', { weekday: 'short' })}</small>
+                        <small>{formatDateBE(d, { weekday: 'short' })}</small>
                       </span>
                       <span className="kal-ev-ico" aria-hidden>{e.kind === 'training' ? '🏋️' : '🏆'}</span>
                       <span className="kal-ev-body">
                         <span className="kal-ev-title">{e.title}</span>
                         <span className="kal-ev-sub">{e.sub}</span>
                       </span>
-                      <span className="kal-ev-time">{d.toLocaleTimeString('nl-BE', { hour: '2-digit', minute: '2-digit' })}</span>
+                      <span className="kal-ev-time">{formatTimeBE(d)}</span>
                     </>
                   )
                   return e.href ? (

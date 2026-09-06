@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { SiteHeader } from '@/components/SiteHeader'
 import { getPayloadClient } from '@/lib/payload-client'
 import './nieuws.css'
+import { formatDateBE } from '@/lib/datetime'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,7 +15,7 @@ export const metadata = {
 const fmt = (v: unknown): string => {
   if (!v) return ''
   const d = new Date(String(v))
-  return Number.isNaN(d.getTime()) ? '' : d.toLocaleDateString('nl-BE', { day: '2-digit', month: 'long', year: 'numeric' })
+  return Number.isNaN(d.getTime()) ? '' : formatDateBE(d, { day: '2-digit', month: 'long', year: 'numeric' })
 }
 const imgUrl = (v: unknown): string | null => (v && typeof v === 'object' ? ((v as { url?: string }).url ?? null) : null)
 const clubName = (v: unknown): string | null => (v && typeof v === 'object' ? ((v as { name?: string }).name ?? null) : null)

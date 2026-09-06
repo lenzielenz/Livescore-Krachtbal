@@ -29,6 +29,7 @@ import { Terreinmaten } from './Terreinmaten'
 import { Veldkaart } from './Veldkaart'
 import { VideoAnalyse, type VideoMoment, type VideoWorp } from './VideoAnalyse'
 import '../analyse.css'
+import { formatDateBE } from '@/lib/datetime'
 
 export const dynamic = 'force-dynamic'
 
@@ -244,7 +245,7 @@ export default async function AnalyseDetailPage({ params }: { params: Promise<{ 
 
   const reeks = reeksNaam(matchDoc?.reeks)
   const datum = matchDoc?.date
-    ? new Date(matchDoc.date as string).toLocaleDateString('nl-BE', { dateStyle: 'long' })
+    ? formatDateBE(new Date(matchDoc.date as string), { dateStyle: 'long' })
     : null
   const teamNames = { home: state.teams.home.name, away: state.teams.away.name }
 
