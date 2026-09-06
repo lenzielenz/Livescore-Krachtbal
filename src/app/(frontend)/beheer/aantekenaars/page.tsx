@@ -98,8 +98,9 @@ export default async function AantekenaarsPage() {
 
     // Per persoon optellen: hoeveel wedstrijden raakte hij aan, hoeveel sloot hij af.
     for (const a of lijst) {
+      // De lijst staat op -updatedAt, dus de EERSTE keer dat we iemand tegenkomen is zijn meest
+      // recente wedstrijd. Die naam houden we; overschrijven zou telkens een oudere naam zetten.
       const t = totalen.get(a.id) ?? { id: a.id, naam: a.naam, rol: a.rol, wedstrijden: 0, afgesloten: 0, acties: 0 }
-      t.naam = a.naam // laatst gekende naam wint
       t.wedstrijden += 1
       t.acties += a.acties
       if (afsluiter && afsluiter.id === a.id) t.afgesloten += 1

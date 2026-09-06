@@ -78,7 +78,12 @@ export default async function TornooiGroepPage({ params }: { params: Promise<{ n
             manieren om in te sturen horen samen, anders oogt het rommelig en doet niemand mee. */}
         <div className="trn-balk">
           <div className="trn-balk-rij">
-            <Link href={`/tornooi/groep/${encodeURIComponent(naam)}/programma`} className="trn-btn primary">
+            {/* Bovenaan, want dit is wat een supporter op de dag zelf wil: wat speelt er nú.
+                Het kantinescherm doet hetzelfde voor de tv in de zaal; dit is de zakversie. */}
+            <Link href={`/tornooi/groep/${encodeURIComponent(naam)}/volg`} className="trn-btn primary">
+              📱 Volg live
+            </Link>
+            <Link href={`/tornooi/groep/${encodeURIComponent(naam)}/programma`} className="trn-btn">
               📋 Dagprogramma
             </Link>
             {/* Alle standen van de dag op één pagina: anders moet je elke categorie apart

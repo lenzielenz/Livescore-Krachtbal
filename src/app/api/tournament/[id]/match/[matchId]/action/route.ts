@@ -27,6 +27,27 @@ import {
 } from '@/lib/tournament-engine'
 
 /**
+ * Acties die op het aantekenspoor geboekt worden.
+ *
+ * Bewust NIET 'plan', 'veld' en 'wissel': dat is dagorganisatie, geen aantekenwerk. Wie 's ochtends
+ * de uren en velden invult, hoort daarna niet onder elke nog te spelen wedstrijd te staan als
+ * "aangetekend door".
+ */
+const SPOOR_ACTIES = new Set([
+  'start',
+  'goal',
+  'undo',
+  'refstop',
+  'cross',
+  'timeout',
+  'clock',
+  'half',
+  'finish',
+  'reopen',
+  'reset',
+])
+
+/**
  * Wat een supporter in supporters-modus mag: de wedstrijd meetellen. Dus starten, scoren,
  * terugnemen, klok, helft, kruisjes, minuten en beëindigen — plus bevestigen of betwisten.
  *
@@ -251,8 +272,10 @@ export async function POST(
     // Faalt het boeken, dan mag dat de actie niet alsnog laten stranden: het doelpunt staat op dat
     // moment al vast. Een foutmelding zou de aantekenaar doen denken dat de tik niet aankwam, en de
     // tweede tik telt dan dubbel. Liever een gat in het spoor dan een verkeerde stand.
-    await boekAantekening(payload, matchId, { id: userId, naam: userNaam, rol }, { sluitAf: action === 'finish' })
-      .catch(() => undefined)
+    if (SPOOR_ACTIES.has(action)) {
+      await boekAantekening(payload, matchId, { id: userId, naam: userNaam, rol }, { sluitAf: action === 'finish' })
+        .catch(() => undefined)
+    }
     const state = await buildTournamentState(payload, tournamentId)
     return Response.json({ state })
     })

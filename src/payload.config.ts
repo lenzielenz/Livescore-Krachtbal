@@ -127,6 +127,21 @@ export default buildConfig({
     CvEvents,
   ],
   globals: [Season, Settings],
+  /**
+   * GraphQL staat uit.
+   *
+   * Niets in dit project bevraagt het — de app praat met Payload via de Local API en met de eigen
+   * routes onder /api. Wat er wél stond, was een tweede publieke deur naar élke operatie: Payload
+   * genereert voor een auth-collectie onder meer de ongeauthenticeerde mutaties
+   * `forgotPasswordUser` en `resetPasswordUser`. Die omzeilden de afscherming in src/middleware.ts
+   * volledig — dus zonder rate limit, zonder de minimumlengte van acht tekens en zonder het
+   * intrekken van sessies. Eén ongeauthenticeerde POST volstond om de herstellink die een beheerder
+   * net had doorgestuurd ongeldig te maken, eindeloos herhaalbaar.
+   *
+   * De routebestanden onder src/app/(payload)/api/graphql* zijn mee verwijderd: die vlag hier is de
+   * gordel, de verwijderde route de bretellen.
+   */
+  graphQL: { disable: true },
   // serverURL + cors/csrf enkel wanneer PUBLIC_SERVER_URL gezet is (zie hierboven).
   ...originConfig,
   editor: lexicalEditor(),
