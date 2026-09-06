@@ -1,10 +1,12 @@
 import Link from 'next/link'
 
+import { FlowNietNodig } from '@/components/FlowNietNodig'
 import { MatchDayNav } from '@/components/MatchDayNav'
 import { SiteHeader } from '@/components/SiteHeader'
 import { buildMatchSheet } from '@/lib/match-engine'
 import { getOrCreateMatchSheet } from '@/lib/matchsheet-data'
 import { getPayloadClient } from '@/lib/payload-client'
+import { isSupportersMode } from '@/lib/score-mode'
 import { AftekenenPanel, type SignatureData } from './AftekenenPanel'
 import '../../wedstrijdblad.css'
 
@@ -25,6 +27,19 @@ export default async function AftekenenPage({ params }: { params: Promise<{ matc
           <Link href="/">← Terug</Link>
         </div>
       </>
+    )
+  }
+
+  // Supportersmodus: er is geen wedstrijdblad om af te tekenen en niets in te dienen. Stop hier,
+  // vóór getOrCreateMatchSheet — anders maakt het openen van deze pagina alsnog een blad aan.
+  if (await isSupportersMode(payload)) {
+    return (
+      <FlowNietNodig
+        stap="Aftekenen"
+        matchId={matchId}
+        wedstrijd={String(match.title ?? '')}
+        uitleg="Het platform staat op vrije livescore: er is geen wedstrijdblad om af te tekenen. De eindstand staat vast zodra de wedstrijd afgelopen is; andere supporters bevestigen of betwisten ze op de wedstrijdpagina."
+      />
     )
   }
 
