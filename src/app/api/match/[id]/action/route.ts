@@ -224,7 +224,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         break
       }
       case 'simpleundo':
-        result = await undoSimpleGoal(payload, matchId)
+        // Zonder `side` neemt hij het jongste doelpunt weg; mét `side` enkel dat van die ploeg —
+        // de ondoen-pijl op elke ploegkaart.
+        result = await undoSimpleGoal(
+          payload,
+          matchId,
+          body.side === 'home' || body.side === 'away' ? body.side : undefined,
+        )
         break
       case 'simplecross':
         result = await adjustSimpleCross(payload, matchId, body.side === 'away' ? 'away' : 'home', Number(body.delta) || 1)

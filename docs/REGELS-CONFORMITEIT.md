@@ -5,8 +5,9 @@
 > of ontbreekt. Bedoeld als checklist vóór we op de afgeleide statistiek (analyse) gaan bouwen:
 > een analysemodule is maar zo betrouwbaar als de regel eronder.
 
-Peildatum: augustus 2026. Codebestanden: `src/lib/field.ts`, `src/lib/krachtbal-rules.ts`,
-`src/lib/categories.ts`, `src/lib/match-engine.ts`.
+Peildatum: september 2026. Codebestanden: `src/lib/field.ts`, `src/lib/krachtbal-rules.ts`,
+`src/lib/categories.ts`, `src/lib/match-engine.ts`, `src/lib/simple-match-engine.ts`,
+`src/lib/speeltijd.ts`.
 
 ---
 
@@ -30,9 +31,9 @@ Peildatum: augustus 2026. Codebestanden: `src/lib/field.ts`, `src/lib/krachtbal-
 | §6.8 worpaantal ná inworp volgt de helft waar de bal buiten ging | `nextSetup` (`isOnOwnHalf(landing)`) | |
 | §6.12 + §6.4 vangst | `nextSetup` (`caught`) | Balbezit draait om, vangplaats wordt werpplaats; vangst ín het doelgebied verschuift naar de doellijn |
 | §6.3 opzet vanaf de vrijeworplijn bij aftrap en na een doelpunt | `startMatch`, `nextSetup` (`goal`) | |
-| §8 speelduur 2×20 (U12/U14/U16) en 2×25 (U18+) | `categoryConfig` | |
-| §8.1 time-outs: 2 per ploeg per helft | `recordTimeout` (`TIMEOUTS_PER_HALF`) | Wordt afgedwongen, niet enkel geteld |
-| §8.1 scheidsrechtersonderbreking telt niet in het quotum | `recordRefereeStop` | |
+| §8 speelduur 2×20 (U12/U14/U16) en 2×25 (U18+) | `categoryConfig` | Basisduur; de aantekentafel toont de doeltijd inclusief de onderbrekingen van de lopende helft — zie §2.6 |
+| §8.1 time-outs: 2 per ploeg per helft | `recordTimeout` (`TIMEOUTS_PER_HALF`) | Wordt afgedwongen, niet enkel geteld; de teller staat bij een nieuwe helft weer op 0 |
+| §8.1 scheidsrechtersonderbreking telt niet in het quotum | `recordRefereeStop` | Geen bovengrens (reglementair juist), telt per helft, en verlengt de doeltijd — zie §2.6 |
 | §12 "alleen de scheidsrechter oordeelt" → undo verplicht | `undoLastThrow` | Ook een toegekende maar nog niet genomen vrije worp kan ongedaan gemaakt worden |
 | §12/§19 uitslag definitief na afloop | finished-guard in `recordThrow` | |
 | §8 vrije worp toegekend vóór het rustsignaal mag nog genomen worden | `endHalf` + `isPendingFreeThrow` | Een toegekende, nog niet genomen vrije worp blijft openstaan; het scorekeeper-scherm toont het veld tot ze geregistreerd is. `startNextHalf` ruimt ze op als ze niet meer genomen werd |
@@ -78,6 +79,29 @@ tegenpartij (of aan de werpende ploeg bij `touchedBeforeOut`).
 
 De teller reset enkel bij het 3e kruisje, niet bij de rust. Het reglement zegt hier niets over;
 we leggen de keuze hier expliciet vast zodat ze niet per ongeluk verandert.
+
+### 2.6 Doeltijd i.p.v. klokstop bij onderbrekingen (§7, §8, §8.1)
+
+Het reglement laat de klok **stilvallen** bij elke time-out en bij een scheidsrechter­onderbreking
+(§7 "spel ligt stil", §8.1 "2× één minuut per ploeg per helft"). De **aantekentafel**
+(`SimpleScorekeeper`, snelscoremodus) laat de klok gewoon doorlopen en compenseert aan de andere
+kant: de **doeltijd van de lopende helft groeit met één minuut per gevraagde onderbreking**
+(`src/lib/speeltijd.ts`). Het scherm zegt dan "speelt tot 28 min (25 + 3)".
+
+Waarom: aan de tafel staat één persoon met een telefoon. Elke klokbediening tijdens een onderbreking
+is een handeling die vergeten wordt, en een vergeten hervatting kost échte speeltijd zonder dat
+iemand het merkt. Netto komt het op hetzelfde neer — de helft duurt even lang — maar er valt niets
+te bedienen. Het publieke scorebord (`Scoreboard.tsx`) rekende al zo; beide gebruiken nu dezelfde
+functie zodat ze niet uit elkaar groeien.
+
+De onderbrekingen tellen **per helft**: `buildMatchState` filtert time-outs en
+scheidsrechter-minuten op `currentHalf`, dus na de rust staat de doeltijd weer op de kale
+basisduur. Let op het verschil met §2.5 hierboven: kruisjes doen dat bewust níét.
+
+Twee grenzen: het quotum van 2 time-outs per ploeg per helft wordt wél afgedwongen
+(`TIMEOUTS_PER_HALF`), scheidsrechter-minuten hebben — zoals het reglement zegt — geen bovengrens,
+dus de doeltijd kan in principe onbeperkt opschuiven. De **tornooitafels** houden hun tellers
+(nog) niet per helft bij en gebruiken deze formule daarom niet.
 
 ---
 

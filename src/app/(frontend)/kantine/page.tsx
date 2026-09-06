@@ -6,7 +6,8 @@ import { userClubId } from '@/lib/access'
 import { competitionWhere } from '@/lib/analyse-access'
 import { getAuthUser } from '@/lib/auth-user'
 import { formatTimeBE } from '@/lib/datetime'
-import { sanitizeKantineSelectie, schermVenster } from '@/lib/kantine-selectie'
+import { nieuwProfiel, sanitizeProfielen } from '@/lib/kantine-profielen'
+import { schermVenster } from '@/lib/kantine-selectie'
 import { buildMatchState } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
 import { reeksNaam } from '@/lib/reeksen'
@@ -97,13 +98,23 @@ export default async function KantinePage() {
     const n = Number(raw)
     return Number.isFinite(n) ? n : null
   }
+  // De reeks (of anders de categorie) hoort bij de naam: een club heeft vlot een dozijn ploegen
+  // die állemaal "KBC St. Michiels" heten, en zonder dat label is een chiplijst een muur van
+  // dezelfde tekst. Zelfde oplossing als de ploegkiezer op /club (MyTeamsPicker).
   const ploegen = teamsRes.docs
-    .map((t) => ({
-      id: t.id as number,
-      name: String((t as { name?: unknown }).name ?? ''),
-      clubId: relId((t as { club?: unknown }).club),
-    }))
+    .map((t) => {
+      const code = String((t as { reeks?: unknown }).reeks ?? '')
+      const cat = String((t as { category?: unknown }).category ?? '')
+      return {
+        id: t.id as number,
+        name: String((t as { name?: unknown }).name ?? ''),
+        clubId: relId((t as { club?: unknown }).club),
+        sub: code ? reeksNaam(code as Parameters<typeof reeksNaam>[0]) : cat,
+      }
+    })
     .filter((t) => t.name)
+    // Op reeks sorteren zet gelijknamige ploegen netjes op volgorde in plaats van willekeurig.
+    .sort((a, b) => a.name.localeCompare(b.name) || a.sub.localeCompare(b.sub))
 
   // Niet ingelogd: er valt niets te bewaren. Toon wél de uitleg en de vaste clublink — die werkt
   // ook zonder account — en wijs naar het aanmeldscherm.
@@ -132,14 +143,18 @@ export default async function KantinePage() {
   }
 
   const matches = await weekWedstrijden(payload)
-  const bewaard = sanitizeKantineSelectie((me as { kantineScherm?: unknown }).kantineScherm)
+  // Wat er al bewaard was: één of meerdere schermen. Een keuze van vóór de profielen bestonden
+  // komt er als één profiel uit (zie kantine-profielen.ts) — de tv die eraan hangt blijft dus
+  // gewoon draaien.
+  const bewaard = sanitizeProfielen((me as { kantineScherm?: unknown }).kantineScherm)
   // Nog niets gekozen? Zet de eigen club alvast klaar — voor bijna iedereen de juiste keuze, en
   // één tik minder om het scherm werkend te krijgen. Bewaren gebeurt pas bij de eerste wijziging.
   const eigenClub = Number(userClubId(me))
   const heeftEigenClub = Number.isFinite(eigenClub) && eigenClub > 0
-  const leegBewaard =
-    bewaard.clubIds.length === 0 && bewaard.teamIds.length === 0 && bewaard.matchIds.length === 0
-  const initieel = leegBewaard && heeftEigenClub ? { ...bewaard, clubIds: [eigenClub] } : bewaard
+  const initieel =
+    bewaard.length === 0 && heeftEigenClub
+      ? [{ ...nieuwProfiel([]), clubIds: [eigenClub] }]
+      : bewaard
 
   return (
     <>

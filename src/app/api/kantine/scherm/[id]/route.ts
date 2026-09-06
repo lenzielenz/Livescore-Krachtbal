@@ -2,10 +2,11 @@ import type { Payload, Where } from 'payload'
 
 import { loadAds } from '@/lib/ads'
 import { competitionWhere } from '@/lib/analyse-access'
+import { clubColorsFrom } from '@/lib/club-colors'
 import { formatTimeBE } from '@/lib/datetime'
+import { kiesProfiel, sanitizeProfielen } from '@/lib/kantine-profielen'
 import {
   ontdubbel,
-  sanitizeKantineSelectie,
   schermVenster,
   selectieIsLeeg,
   sorteerSchermWedstrijden,
@@ -42,10 +43,13 @@ async function teamIdsVoor(payload: Payload, clubIds: number[], teamIds: number[
   return [...uit]
 }
 
-export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const userId = Number(id)
   if (!Number.isFinite(userId)) return Response.json({ error: 'Ongeldig id' }, { status: 400 })
+  // Welk van je schermen? Zonder ?p= het eerste — een tv die nog op de oude link staat blijft zo
+  // gewoon draaien.
+  const profielId = new URL(req.url).searchParams.get('p')
 
   try {
     const payload = await getPayloadClient()
@@ -54,9 +58,30 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       .catch(() => null)
     if (!user) return Response.json({ error: 'Scherm niet gevonden' }, { status: 404 })
 
-    const keuze = sanitizeKantineSelectie((user as { kantineScherm?: unknown }).kantineScherm)
-    const titel = String((user as { name?: unknown }).name ?? '')
-    if (selectieIsLeeg(keuze)) return Response.json({ matches: [], ads: [], leeg: true, titel })
+    const profiel = kiesProfiel(sanitizeProfielen((user as { kantineScherm?: unknown }).kantineScherm), profielId)
+    const keuze = profiel ?? { clubIds: [], teamIds: [], matchIds: [] }
+    // De titel op de tv is de naam van het scherm zelf; die zegt meer dan de accountnaam.
+    const titel = profiel?.naam || String((user as { name?: unknown }).name ?? '')
+
+    // Achtergrond in de clubstijl van de eigenaar: dezelfde sfeer als het tornooischerm, zodat de
+    // kantine-tv van de club eruitziet als de club. Valt terug op de eerste gekozen club wanneer
+    // het account zelf nog niet aan een club hangt.
+    const clubId = Number((user as { club?: unknown }).club ?? NaN)
+    const stijlClubId = Number.isFinite(clubId) && clubId > 0 ? clubId : keuze.clubIds[0]
+    const stijlClub = stijlClubId
+      ? await payload.findByID({ collection: 'clubs', id: stijlClubId, depth: 0, overrideAccess: true }).catch(() => null)
+      : null
+    const stijl = stijlClub
+      ? {
+          club: String((stijlClub as { name?: unknown }).name ?? ''),
+          kleuren: clubColorsFrom(
+            (stijlClub as { colorPrimary?: unknown }).colorPrimary,
+            (stijlClub as { colorSecondary?: unknown }).colorSecondary,
+          ),
+        }
+      : null
+
+    if (selectieIsLeeg(keuze)) return Response.json({ matches: [], ads: [], leeg: true, titel, stijl })
 
     const { dagStart, dagEinde, geplandTot } = schermVenster()
     const teamIds = await teamIdsVoor(payload, keuze.clubIds, keuze.teamIds)
@@ -131,7 +156,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     }
 
     const ads = await loadAds(payload, 'kantine')
-    return Response.json({ matches: sorteerSchermWedstrijden(matches, dagEinde), ads, leeg: false, titel })
+    return Response.json({ matches: sorteerSchermWedstrijden(matches, dagEinde), ads, leeg: false, titel, stijl })
   } catch (err) {
     return Response.json({ error: (err as Error).message }, { status: 500 })
   }
