@@ -68,21 +68,22 @@ describe('mayCorrectMatch — scheidsrechter', () => {
 describe('correctionBlockedReason', () => {
   it('zwijgt wanneer het gewoon mag', async () => {
     const payload = fakePayload({ sheet: null })
-    expect(await correctionBlockedReason(payload, scheidsrechter, 1, 'terugzetten')).toBeNull()
+    expect(await correctionBlockedReason(payload, scheidsrechter, 1, 'heropenen')).toBeNull()
   })
 
   it('vraagt een uitgelogde bezoeker om aan te melden', async () => {
     const payload = fakePayload({})
-    expect(await correctionBlockedReason(payload, null, 1, 'terugzetten')).toMatch(/meld je .*aan/i)
+    expect(await correctionBlockedReason(payload, null, 1, 'heropenen')).toMatch(/meld je .*aan/i)
   })
 
   it('legt aan een supporter-aantekenaar uit waaróm het niet mag', async () => {
-    // Precies het geval uit de melding: aantekenen mag (open livescore), terugzetten niet. De
+    // Precies het geval uit de melding: aantekenen mag (open livescore), heropenen niet. De
     // oude tekst somde rollen op en las als een tegenspraak; deze moet het verschil benoemen
-    // en zeggen bij wie hij moet zijn.
+    // en zeggen bij wie hij moet zijn. (Terugzetten heeft sinds Robins beslissing van
+    // 2026-09-06 een eigen regel — zie match-reset-policy.unit.spec.ts.)
     const payload = fakePayload({ scoreMode: 'supporters' })
     expect(await mayScoreMatch(payload, supporter, 1)).toBe(true)
-    const reden = await correctionBlockedReason(payload, supporter, 1, 'terugzetten')
+    const reden = await correctionBlockedReason(payload, supporter, 1, 'heropenen')
     expect(reden).toBeTruthy()
     expect(reden).toMatch(/open livescore/i)
     expect(reden).toMatch(/scheidsrechter|clubstaf|federatie/i)

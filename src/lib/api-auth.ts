@@ -147,7 +147,7 @@ export async function correctionBlockedReason(
   payload: Payload,
   user: AuthedUser | null,
   matchId: number | string,
-  werkwoord: 'heropenen' | 'terugzetten',
+  werkwoord: 'heropenen',
 ): Promise<string | null> {
   if (await mayCorrectMatch(payload, user, matchId)) return null
   if (!user) return 'Meld je eerst aan.'
@@ -156,9 +156,9 @@ export async function correctionBlockedReason(
   if (await mayScoreMatch(payload, user, matchId)) {
     return (
       `Je tekent deze wedstrijd aan via de open livescore, en dat is niet hetzelfde als de ` +
-      `aantekenaar van dienst zijn. ${werkwoord === 'terugzetten' ? 'Terugzetten wist alles wat al ingevoerd is' : 'Heropenen raakt een vastgelegde eindstand'}, ` +
-      `dus dat mag alleen de scheidsrechter van dienst, iemand van de clubstaf of de federatie. ` +
-      `Vraag het aan hen — of geef hier door wat er moet wijzigen.`
+      `aantekenaar van dienst zijn. Heropenen raakt een vastgelegde eindstand, dus dat mag alleen ` +
+      `de scheidsrechter van dienst, iemand van de clubstaf of de federatie. Vraag het aan hen — ` +
+      `of geef hier door wat er moet wijzigen.`
     )
   }
   return `Je hebt geen rechten om deze wedstrijd te ${werkwoord}.`
