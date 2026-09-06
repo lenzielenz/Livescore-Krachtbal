@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { CastKnop } from '@/components/CastKnop'
 import { ReclameBalk } from '@/components/ReclameBalk'
@@ -113,10 +113,55 @@ export function KantineScreen({
   const played = matches.filter((m) => m.status !== 'scheduled')
   const visible = played.length > 0 ? played : matches
   const layout = layoutFor(visible.length)
-  // Begrens de kolommen op wat de schermbreedte aankan; bij minder kolommen iets groter lettertype.
+  // Begrens de kolommen op wat de schermbreedte aankan.
   const cols = Math.min(layout.cols, maxColsForWidth(vw))
-  const fontSize = cols < layout.cols ? Math.round(layout.fontSize * 1.12) : layout.fontSize
-  const logoSize = layout.logoSize
+
+  // ── Bladeren in plaats van proppen ────────────────────────────────────────────────────────
+  // Het raster stond op `grid-auto-rows: 1fr` in een venster met overflow:hidden. Een rij kan
+  // niet kleiner dan haar inhoud, dus zodra er veel wedstrijden op de dag staan werd het raster
+  // hoger dan het scherm en viel de onderste rij er half af — en omdat het lettertype met het
+  // TOTAAL meeschaalde, stonden de kaarten die je wél zag ook nog eens te klein.
+  //
+  // Nu meten we het venster, bepalen we hoeveel rijen er écht in passen, en schuiven we per blad
+  // door. Elke rij krijgt een exacte hoogte, dus er wordt nooit meer iets afgekapt.
+  const vensterRef = useRef<HTMLDivElement>(null)
+  const [vensterH, setVensterH] = useState(0)
+  useEffect(() => {
+    const el = vensterRef.current
+    if (!el) return
+    const meet = () => setVensterH(el.clientHeight)
+    meet()
+    const ro = new ResizeObserver(meet)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+
+  // Onder deze hoogte is een bord van vijf meter niet meer te lezen — dan liever bladeren.
+  const MIN_BORD_H = 168
+  const GAT = 14
+  const rijenPerBlad = Math.max(1, Math.floor((vensterH + GAT) / (MIN_BORD_H + GAT)) || 1)
+  const perBlad = Math.max(1, cols * rijenPerBlad)
+  const bladen = Math.max(1, Math.ceil(visible.length / perBlad))
+  // Exacte rijhoogte: `rijenPerBlad` rijen plus hun tussenruimtes vullen het venster precies.
+  const rijH = vensterH > 0 ? (vensterH - (rijenPerBlad - 1) * GAT) / rijenPerBlad : 0
+
+  const [blad, setBlad] = useState(0)
+  useEffect(() => {
+    if (bladen <= 1) {
+      setBlad(0)
+      return
+    }
+    // Lang genoeg om een blad rustig te lezen van op afstand.
+    const t = setInterval(() => setBlad((b) => (b + 1) % bladen), 9000)
+    return () => clearInterval(t)
+  }, [bladen])
+  // Na een herberekening (nieuwe wedstrijd, ander formaat) kan het huidige blad wegvallen.
+  const huidigBlad = Math.min(blad, bladen - 1)
+
+  // Het lettertype volgt wat er op ÉÉN blad staat, niet het totaal van de dag.
+  const bladLayout = layoutFor(Math.min(visible.length, perBlad))
+  const fontSize = cols < bladLayout.cols ? Math.round(bladLayout.fontSize * 1.12) : bladLayout.fontSize
+  const logoSize = bladLayout.logoSize
 
   // Aftellen naar de eerstvolgende wedstrijd zolang er niets bezig is — anders staat er een
   // scherm vol geplande borden zonder dat iemand weet hoelang het nog duurt.
@@ -165,7 +210,10 @@ export function KantineScreen({
       {editable && <Link href="/kantine" className="kt-screen-edit">‹ Aanpassen</Link>}
       {/* Rechtstreeks naar de tv. Niet spiegelen: de Chromecast laadt dít scherm zelf en houdt
           zijn eigen live verbinding, zodat het blijft draaien als je je telefoon wegsteekt. */}
+      {/* Naam van het scherm en de twee knoppen in één hoek. Ze stonden los van elkaar allebei
+          rechtsboven vastgezet en lagen dus over elkaar zodra er een naam was. */}
       <span className={`kt-screen-cast${fullscreen ? ' actief' : ''}`}>
+        {(title || stijl?.club) && <span className="kt-screen-title">{title || stijl?.club}</span>}
         {/* Volledig scherm hoort naast de castknop: de twee dingen die je doet zodra de tv aan de
             muur hangt. Vaagt weg zodra hij actief is, zodat er niets op het bord blijft plakken. */}
         <button
@@ -178,7 +226,6 @@ export function KantineScreen({
         </button>
         <CastKnop pad={castPad} sleutel={castPad} />
       </span>
-      {(title || stijl?.club) && <span className="kt-screen-title">{title || stijl?.club}</span>}
       {/* Af en toe neemt een sponsor het scherm over; de score blijft er doorheen leesbaar. */}
       <ReclameOverlay ads={ads} />
       {dagGedaan && <p className="kt-gedaan">🏁 Alle wedstrijden van vandaag zijn gespeeld</p>}
@@ -203,11 +250,35 @@ export function KantineScreen({
           )}
         </div>
       ) : (
-        <div className="kt-grid-screen" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
-          {visible.map((m) => (
-            <Tile key={m.id} match={m} fontSize={fontSize} logoSize={logoSize} />
-          ))}
-        </div>
+        <>
+          <div className="kt-grid-venster" ref={vensterRef}>
+            <div
+              className="kt-grid-screen"
+              style={{
+                gridTemplateColumns: `repeat(${cols}, 1fr)`,
+                // Exacte rijhoogte zolang we gemeten hebben; daarvóór de oude 1fr-verdeling, zodat
+                // het eerste frame niet leeg is.
+                ...(rijH > 0 ? { gridAutoRows: `${rijH}px` } : {}),
+                // Eén blad opzij schuiven = de vensterhoogte plus de tussenruimte eronder.
+                transform: rijH > 0 ? `translateY(-${huidigBlad * (vensterH + GAT)}px)` : undefined,
+              }}
+            >
+              {visible.map((m) => (
+                <Tile key={m.id} match={m} fontSize={fontSize} logoSize={logoSize} />
+              ))}
+            </div>
+          </div>
+          {/* Bolletjes: zonder die hint lijkt een blad met acht borden gewoon álles wat er is.
+              Ze staan ONDER het venster, niet erin — anders liggen ze op de onderste rij én
+              vervalsen ze de gemeten hoogte waarmee de rijen berekend worden. */}
+          {bladen > 1 && (
+            <div className="kt-bladen" aria-hidden>
+              {Array.from({ length: bladen }, (_, i) => (
+                <span key={i} className={`kt-blad-punt${i === huidigBlad ? ' on' : ''}`} />
+              ))}
+            </div>
+          )}
+        </>
       )}
       {/* De sponsorbalk onderaan: past zich aan het aantal, het formaat en de kleur van de
           reclames aan (zie components/ReclameBalk.tsx). */}

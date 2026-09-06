@@ -422,11 +422,45 @@
 /* Het bordenraster krijgt wat overblijft, de sponsorbalk houdt haar plek onderaan. `min-height: 0`
    is hier geen detail: zonder dat weigert een flex-item te krimpen en duwt het raster de balk
    onder de vouw — precies wat er gebeurde. */
-.kt-screen .kt-grid-screen {
+/* Het venster waarin de borden bladeren: het neemt de resterende hoogte, en wat er niet in past
+   schuift straks in beeld in plaats van eronder weg te vallen. */
+.kt-grid-venster {
+  position: relative;
   flex: 1 1 auto;
   min-height: 0;
-  /* De hoogte komt nu van de flexbox; een vaste 100dvh laat geen ruimte voor de balk. */
+  overflow: hidden;
+}
+.kt-screen .kt-grid-screen {
+  /* De hoogte komt van de inhoud: het venster hierboven knipt, en de transform schuift. */
   height: auto;
+  transition: transform 0.85s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Hoeveelste blad je ziet. Klein en rustig — het bord is de hoofdzaak. Een eigen rij onder het
+   venster, zodat ze nooit op een bord liggen. */
+.kt-bladen {
+  flex: none;
+  display: flex;
+  justify-content: center;
+  gap: 7px;
+  padding: 8px 0 2px;
+  pointer-events: none;
+}
+.kt-blad-punt {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.22);
+  transition: background-color 0.3s ease;
+}
+.kt-blad-punt.on {
+  background: var(--accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kt-screen .kt-grid-screen {
+    transition: none;
+  }
 }
 
 /* De dag zit erop: één rustige regel boven de eindstanden. */
@@ -609,12 +643,9 @@
   color: var(--txt);
   border-color: var(--accent);
 }
-/* Clubnaam-onderschrift op een vaste club-link (rechtsboven, discreet). */
+/* Naam van dit scherm (clubnaam of profielnaam), links van de knoppen in dezelfde hoek. Stond
+   eerder zelf op position:fixed rechtsboven en lag dan bovenop de knoppen. */
 .kt-screen-title {
-  position: fixed;
-  top: 10px;
-  right: 12px;
-  z-index: 20;
   font-size: 0.8rem;
   font-weight: 700;
   color: var(--dim);
@@ -622,6 +653,10 @@
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 5px 10px;
+  white-space: nowrap;
+  max-width: 28vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .kt-screen-empty {
   min-height: 100dvh;
@@ -637,6 +672,8 @@
    gridTemplateColumns. De vakken schalen mee via de font-size die per layout wordt meegegeven. */
 .kt-grid-screen {
   display: grid;
+  /* Deze 14px is de GAT-constante in KantineScreen.tsx — daar wordt de rijhoogte en de
+     schuifafstand mee berekend. Verander ze samen. */
   gap: 14px;
   grid-auto-rows: 1fr;
   height: calc(100dvh - 40px);
