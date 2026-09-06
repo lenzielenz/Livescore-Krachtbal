@@ -32,3 +32,31 @@ export function heeftSessie(cookieHeader: string | null | undefined): boolean {
   }
   return false
 }
+
+/**
+ * Is dit een schermpagina — een tv die ergens aan de muur hangt?
+ *
+ * Zulke pagina's tonen nooit iets persoonlijks: ze halen hun wedstrijden uit een openbare feed
+ * met een id in de URL. Ze mogen dus NIET als persoonlijk gemarkeerd worden, ook niet wanneer de
+ * browser toevallig een sessiecookie draagt — en dat is precies wat er misging. Wie zijn scherm
+ * op de kantine-tv instelt, doet dat ingelogd, dus die tv draagt een sessie. Gevolg: de pagina
+ * kreeg het privé-kopje, de service worker weigerde ze te bewaren, en bij elke uitrol (de server
+ * is dan een halve minuut weg) viel de tv terug op de offline-pagina in plaats van op de stand.
+ *
+ * Robin, 2026-09-06: "ik wil dat de link van het kantinescherm actief blijft, zelfs nadat ik een
+ * nieuwe merge heb doorgevoerd."
+ *
+ * Let op bij uitbreiden: enkel paden waar écht niets persoonlijks op staat. Een pagina die wél
+ * per bezoeker verschilt en hier zou belanden, wordt bewaard en straks aan iemand anders getoond.
+ * De kiespagina /kantine hoort er daarom NIET bij: die toont jouw eigen keuze.
+ */
+export function isSchermPagina(pathname: string): boolean {
+  if (pathname === '/kantine/scherm' || pathname.startsWith('/kantine/scherm/')) return true
+  if (pathname.startsWith('/kantine/club/')) return true
+  // Tornooi-kantineschermen: dezelfde tv, andere dag.
+  if (/^\/tornooi\/[^/]+\/kantine\/?$/.test(pathname)) return true
+  if (/^\/tornooi\/groep\/[^/]+\/kantine\/?$/.test(pathname)) return true
+  // De Chromecast-ontvanger laadt zélf een scherm; die is per definitie onpersoonlijk.
+  if (pathname === '/cast-tv' || pathname.startsWith('/cast-tv/')) return true
+  return false
+}

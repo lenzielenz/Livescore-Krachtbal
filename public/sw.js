@@ -8,7 +8,14 @@
 // v4: de vorige versie kon een bewaarde ÓPENBARE kopie tonen aan iemand die intussen ingelogd
 // was — dan sta je na een uitrol plots op een scherm met "Inloggen". Het versienummer ophogen
 // gooit die oude kopieën in één keer weg.
-const CACHE = 'kb-cache-v4'
+//
+// v5 (2026-09-06): kantine- en tornooischermen kregen die behandeling ten onrechte óók. Wie zijn
+// scherm instelt op de kantine-tv, doet dat ingelogd, dus die tv droeg een sessie — en dus werd
+// de schermpagina nooit bewaard én bij een uitrol vervangen door de offline-pagina. Voor een tv
+// aan de muur die niemand bedient is dat het verschil tussen "de stand hangt er" en "er hangt
+// een foutmelding". Zulke pagina's zijn openbaar (de feed hangt aan een id in de URL, niet aan
+// een sessie) en horen gewoon bewaard te worden.
+const CACHE = 'kb-cache-v5'
 const OFFLINE_URL = '/offline'
 const PRECACHE = ['/', OFFLINE_URL, '/manifest.webmanifest', '/icon.svg']
 // Hier onthoudt de worker of deze bezoeker ingelogd is. Niet uit nieuwsgierigheid: de
@@ -16,6 +23,18 @@ const PRECACHE = ['/', OFFLINE_URL, '/manifest.webmanifest', '/icon.svg']
 // heeft om te weten of een bewaarde kopie nog klopt. De server zegt het bij elke paginalading
 // met een kopje (zie src/middleware.ts); hier blijft het antwoord staan tot het volgende bezoek.
 const SESSIE_SLEUTEL = '/__kb-sessie'
+
+// Schermpagina's: een tv aan de muur, nooit iets persoonlijks. Spiegelt `isSchermPagina` in
+// src/lib/prive-pagina.ts — wijzig je de ene, wijzig dan de andere (schermpagina.unit.spec.ts
+// bewaakt dat ze gelijk blijven).
+function isSchermPagina(pathname) {
+  if (pathname === '/kantine/scherm' || pathname.startsWith('/kantine/scherm/')) return true
+  if (pathname.startsWith('/kantine/club/')) return true
+  if (/^\/tornooi\/[^/]+\/kantine\/?$/.test(pathname)) return true
+  if (/^\/tornooi\/groep\/[^/]+\/kantine\/?$/.test(pathname)) return true
+  if (pathname === '/cast-tv' || pathname.startsWith('/cast-tv/')) return true
+  return false
+}
 
 async function onthoudSessie(cache, ingelogd) {
   await cache.put(SESSIE_SLEUTEL, new Response(ingelogd ? '1' : '0')).catch(() => {})
@@ -73,7 +92,7 @@ self.addEventListener('fetch', (event) => {
           // Elke paginalading vertelt opnieuw of deze bezoeker een sessie heeft. Zo weet de
           // worker het ook straks nog, wanneer de server even weg is.
           onthoudSessie(cache, prive).catch(() => {})
-          if (prive) {
+          if (prive && !isSchermPagina(url.pathname)) {
             // Ooit als openbare pagina bewaard, nu persoonlijk: die oude kopie mag niet blijven
             // rondslingeren om straks als "de" pagina geserveerd te worden.
             cache.delete(req).catch(() => {})
@@ -86,7 +105,11 @@ self.addEventListener('fetch', (event) => {
           // bezoeker is een bewaarde kopie hier altijd een ópenbare kopie — met "Inloggen"
           // erop. Die tonen is de fout die "een update logt me af" heet: je sessie is nog
           // perfect geldig, maar het scherm zegt iets anders. Dan liever eerlijk zijn.
-          if (await wasIngelogd(cache)) {
+          // Een schermpagina is openbaar: de bewaarde kopie hoort bij niemand in het
+          // bijzonder, dus die mag hier wél getoond worden. Dat is precies het geval waar het
+          // om draait — de tv in de kantine moet een uitrol doorstaan zonder dat iemand er
+          // naartoe loopt.
+          if ((await wasIngelogd(cache)) && !isSchermPagina(url.pathname)) {
             return (await cache.match(OFFLINE_URL)) || Response.error()
           }
           return (await cache.match(req)) || (await cache.match(OFFLINE_URL)) || Response.error()

@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 
-import { PRIVE_HEADER, heeftSessie } from './lib/prive-pagina'
+import { PRIVE_HEADER, heeftSessie, isSchermPagina } from './lib/prive-pagina'
 
 /**
  * Payload's eigen wachtwoord-endpoints, die met de REST-API meegemount worden.
@@ -44,7 +44,13 @@ export function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL('/wachtwoord-vergeten', req.url))
   }
   const res = NextResponse.next()
-  if (heeftSessie(req.headers.get('cookie'))) res.headers.set(PRIVE_HEADER, '1')
+  // Een kantine- of tornooischerm blijft openbaar, ook wanneer de tv een sessiecookie draagt:
+  // er staat niets persoonlijks op, en zó blijft de bewaarde kopie beschikbaar tijdens een
+  // uitrol. Zonder deze uitzondering viel elke tv die ooit ingelogd was bij een merge terug op
+  // de offline-pagina (zie isSchermPagina).
+  if (!isSchermPagina(req.nextUrl.pathname) && heeftSessie(req.headers.get('cookie'))) {
+    res.headers.set(PRIVE_HEADER, '1')
+  }
   return res
 }
 
