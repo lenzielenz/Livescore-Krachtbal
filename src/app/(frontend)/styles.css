@@ -66,8 +66,36 @@
   --panel: #11141a;
 }
 
+/* De browser vertellen dát dit een donker thema is.
+   Zonder deze regel kleuren we alleen ónze eigen elementen donker, terwijl de browser het
+   document nog altijd als licht beschouwt. Alles wat de browser zélf tekent bleef dus wit: het
+   uitklapmenu van een <select>, scrollbars, datum- en tijdkiezers, en het autofill-vlak. Op de
+   rangschikking gaf dat een wit vlak met witte tekst erin — de opties waren onleesbaar (gemeld
+   2026-09-06). Eén regel, want dit is precies waarvoor color-scheme bestaat. */
+:root {
+  color-scheme: dark;
+}
+
+/* Afdrukken gebeurt op wit papier: het wedstrijdblad en de scheidsrechters-QR zetten hun eigen
+   zwart-op-wit al, en met een donker schema erbovenop gaat de browser die opnieuw bijkleuren. */
+@media print {
+  :root {
+    color-scheme: light;
+  }
+}
+
 * {
   box-sizing: border-box;
+}
+
+/* Vangnet voor het uitklapmenu van een select. `color-scheme` regelt dit in alle moderne
+   browsers; een aantal Chrome-builds op Windows/Linux tekent de lijst nog met het systeemthema.
+   Deze twee regels maken de opties dan alsnog leesbaar in plaats van wit-op-wit. */
+select,
+option,
+optgroup {
+  background-color: var(--panel);
+  color: var(--txt);
 }
 
 html,
