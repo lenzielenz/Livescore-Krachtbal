@@ -49,6 +49,9 @@ export function heeftSessie(cookieHeader: string | null | undefined): boolean {
  * Let op bij uitbreiden: enkel paden waar écht niets persoonlijks op staat. Een pagina die wél
  * per bezoeker verschilt en hier zou belanden, wordt bewaard en straks aan iemand anders getoond.
  * De kiespagina /kantine hoort er daarom NIET bij: die toont jouw eigen keuze.
+ *
+ * Verwacht een genormaliseerd pad (klein geschreven, gedecodeerd — zie lib/pad-normaliseren.ts).
+ * De middleware geeft dat zo door; wie deze functie elders gebruikt, normaliseert eerst.
  */
 export function isSchermPagina(pathname: string): boolean {
   if (pathname === '/kantine/scherm' || pathname.startsWith('/kantine/scherm/')) return true

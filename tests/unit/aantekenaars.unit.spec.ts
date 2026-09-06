@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import {
   MAX_AANTEKENAARS,
+  MAX_NAAM,
   NAAMLOOS,
   aantekenaarTekst,
   boekAantekenaar,
@@ -200,5 +201,31 @@ describe('aantekenaarTekst', () => {
   it('zwijgt wanneer er niets bekend is', () => {
     expect(aantekenaarTekst([])).toBeNull()
     expect(aantekenaarTekst([], { id: 1, naam: 'Jan', op: 1 })).toBeNull()
+  })
+})
+
+describe('veiligeNaam en Unicode', () => {
+  it('knipt nooit midden in een emoji', () => {
+    // Afkappen op UTF-16-eenheden liet een losse surrogate achter. Dat is geen geldige Unicode
+    // meer, en Postgres weigert zo'n string in een jsonb-kolom — de aantekenactie strandde dan
+    // op een naam. Gereproduceerd met een emoji net over de grens van 80 tekens.
+    const naam = 'a'.repeat(78) + '😀' + 'b'.repeat(20)
+    const uit = veiligeNaam(naam)
+    const losseSurrogate = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/
+    expect(losseSurrogate.test(uit)).toBe(false)
+    expect(JSON.stringify(uit)).not.toMatch(/\\ud[89ab]/i)
+  })
+
+  it('telt in lettertekens, niet in code units', () => {
+    // 60 emoji's zijn 120 UTF-16-eenheden maar 60 lettertekens: die naam past gewoon.
+    const emoji = '😀'.repeat(60)
+    expect(veiligeNaam(emoji)).toBe(emoji)
+  })
+
+  it('kapt een te lange naam met emoji doorgaans wél af, en netjes', () => {
+    const lang = '😀'.repeat(200)
+    const uit = veiligeNaam(lang)
+    expect([...uit].length).toBeLessThanOrEqual(MAX_NAAM)
+    expect(uit.endsWith('…')).toBe(true)
   })
 })

@@ -148,6 +148,69 @@ describe('supporters tellen een tornooiwedstrijd mee', () => {
     expect((await wedstrijd()).veld).toBe(3)
   }, 60_000)
 
+  it('laat een AFGELOPEN wedstrijd niet meer muteren — ook niet door de organisatie', async () => {
+    // CLAUDE.md, invariant 3. Dit gat stond open: undo/cross/timeout/refstop/clock/half en finish
+    // hadden geen statuscontrole. Sinds supporters mogen meetellen kwam élk ingelogd account erbij,
+    // en bij een wedstrijd die de organisatie aantekende is er geen claim die hen tegenhoudt.
+    //
+    // We testen met de organisatie: die gaat langs de vertrouwenslaag, dus wat hier weigert, weigert
+    // door de guard zelf en niet toevallig door een claim.
+    alsWie = { id: 9104, roles: ['federatie'], name: 'Tafel' }
+    expect((await roep({ action: 'finish' })).status).toBe(200)
+    expect((await wedstrijd()).status).toBe('finished')
+
+    for (const body of [
+      { action: 'undo' },
+      { action: 'cross', side: 'home', delta: 1 },
+      { action: 'timeout', side: 'home', delta: 1 },
+      { action: 'refstop', delta: 1 },
+      { action: 'clock', running: true },
+      { action: 'half' },
+      { action: 'finish' },
+      { action: 'start' },
+    ]) {
+      const res = await roep(body)
+      expect(res.status, `${body.action} zou geweigerd moeten worden`).toBe(400)
+      expect(((await res.json()) as { error: string }).error).toMatch(/afgelopen/i)
+    }
+
+    // Een supporter komt er evenmin bij (de claim weigert hem al eerder — ook goed).
+    alsWie = KIJKER
+    expect([400, 403]).toContain((await roep({ action: 'undo' })).status)
+
+    // En de eindstand staat er nog precies zoals ze was.
+    const na = await wedstrijd()
+    expect(na.status).toBe('finished')
+    expect(na.score).toEqual({ home: 2, away: 1 })
+    expect(na.crosses).toEqual({ home: 0, away: 0 })
+  }, 90_000)
+
+  it('laat een wedstrijd die nog niet loopt niet beëindigen', async () => {
+    // Zonder deze regel kon een wedstrijd op 0-0 "afgesloten" worden mét een expliciete winnaar,
+    // en die schoof gewoon door in het schema.
+    const rest = await payload.find({
+      collection: 'tournament-matches',
+      where: { and: [{ tournament: { equals: ids.tournament } }, { status: { equals: 'pending' } }] },
+      depth: 0,
+      limit: 1,
+      overrideAccess: true,
+    })
+    if (rest.docs.length === 0) return
+    const pendingId = rest.docs[0].id as number
+    alsWie = KIJKER
+    const res = await actie(
+      new Request(`http://localhost/api/tournament/${ids.tournament}/match/${pendingId}/action`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'finish', winner: 'home' }),
+      }),
+      { params: Promise.resolve({ id: String(ids.tournament), matchId: String(pendingId) }) },
+    )
+    expect(res.status).toBe(400)
+    const na = await payload.findByID({ collection: 'tournament-matches', id: pendingId, depth: 0, overrideAccess: true })
+    expect((na as { status?: unknown }).status).toBe('pending')
+  }, 60_000)
+
   it('sluit de supporter weer buiten zodra de federatiemodus terug aan staat', async () => {
     await zetModus('federatie')
     alsWie = KIJKER

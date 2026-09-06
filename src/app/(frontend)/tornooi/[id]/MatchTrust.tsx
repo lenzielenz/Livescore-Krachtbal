@@ -38,9 +38,17 @@ export function MatchTrust({
   if (!trust) return null
   const tekst = TRUST_TEXT[trust.label]
 
-  // Wie zelf meetelt, bevestigt zijn eigen werk niet — die knoppen blijven dan weg (de server
-  // weigert het ook, maar een knop die altijd een fout geeft hoort er niet te staan).
-  const magStemmen = supportersModus && ingelogd && gebruikerId != null && trust.scorerId !== gebruikerId
+  // Een knop die altijd een fout geeft hoort er niet te staan — dus toetsen we hier exact wat de
+  // server toetst: supporters-modus, ingelogd, niet je eigen werk, niet eerder meegetekend
+  // (mayVote), en het stemvenster nog open (24 u na afsluiten). Die laatste twee kon de client
+  // vroeger niet weten; ze reizen nu mee in het trust-blok.
+  const magStemmen =
+    supportersModus &&
+    ingelogd &&
+    gebruikerId != null &&
+    trust.scorerId !== gebruikerId &&
+    !trust.contributorIds.includes(gebruikerId) &&
+    trust.stemVensterOpen
 
   const stuur = async (actie: Stem) => {
     if (bezig) return

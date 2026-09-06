@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 
+import { normaliseerPad } from './lib/pad-normaliseren'
 import { PRIVE_HEADER, heeftSessie, isSchermPagina } from './lib/prive-pagina'
 
 /**
@@ -19,28 +20,29 @@ import { PRIVE_HEADER, heeftSessie, isSchermPagina } from './lib/prive-pagina'
  *
  * Vandaar dat ze hier dichtgaan. De vervanger staat in het antwoord, zodat wie ze toch
  * aanroept niet tegen een raadselachtige 404 loopt.
+ *
+ * LET OP bij het vergelijken: `nextUrl.pathname` is het RAUWE pad. Next decodeert de segmenten pas
+ * bij het routeren en Payload bouwt het endpoint daarna opnieuw op uit die gedecodeerde delen, dus
+ * `/api/users/forgot%2Dpassword` komt gewoon bij hetzelfde endpoint uit. Een vergelijking op de
+ * letterlijke string laat dat door. Daarom normaliseren we eerst — zie lib/pad-normaliseren.ts.
  */
 const DICHT: Record<string, string> = {
   '/api/users/forgot-password': 'Een herstellink vraag je aan bij je beheerder (zie /wachtwoord-vergeten).',
   '/api/users/reset-password': 'Gebruik de herstellink die je van je beheerder kreeg (/wachtwoord-herstellen).',
 }
 
-// Markeert pagina's die voor een ingelogde bezoeker gerenderd zijn, en sluit de twee
-// wachtwoord-endpoints van Payload af (zie hierboven).
-//
-// Verder doet deze middleware niets: één kopje op het antwoord, geen omleidingen, geen
-// database. De service worker gebruikt het om zo'n pagina níét te bewaren — anders krijg je
-// tijdens een uitrol (server even weg) een oude kopie te zien waarop je uitgelogd lijkt,
-// terwijl je sessie gewoon nog geldig is. Zie `public/sw.js` en `lib/prive-pagina.ts`.
 export function middleware(req: NextRequest) {
-  const dicht = DICHT[req.nextUrl.pathname]
-  if (dicht && req.method === 'POST') {
+  const pad = normaliseerPad(req.nextUrl.pathname)
+  const dicht = DICHT[pad]
+  // Elke methode, niet enkel POST: een endpoint dat hier niet hoort te bestaan, bestaat ook niet
+  // voor GET of PUT.
+  if (dicht) {
     return NextResponse.json({ error: dicht }, { status: 404 })
   }
   // Payload's admin heeft een eigen "Wachtwoord vergeten"-scherm dat op datzelfde endpoint post.
   // Dat scherm laten staan zou een formulier zijn dat gegarandeerd faalt; stuur wie erop klikt
   // naar de uitleg die wél klopt.
-  if (req.nextUrl.pathname === '/admin/forgot') {
+  if (pad === '/admin/forgot') {
     return NextResponse.redirect(new URL('/wachtwoord-vergeten', req.url))
   }
   const res = NextResponse.next()
@@ -48,7 +50,10 @@ export function middleware(req: NextRequest) {
   // er staat niets persoonlijks op, en zó blijft de bewaarde kopie beschikbaar tijdens een
   // uitrol. Zonder deze uitzondering viel elke tv die ooit ingelogd was bij een merge terug op
   // de offline-pagina (zie isSchermPagina).
-  if (!isSchermPagina(req.nextUrl.pathname) && heeftSessie(req.headers.get('cookie'))) {
+  //
+  // Op `pad` en niet op de rauwe pathname, om dezelfde reden als hierboven: dat is de vorm
+  // waarin de router de pagina uiteindelijk ziet.
+  if (!isSchermPagina(pad) && heeftSessie(req.headers.get('cookie'))) {
     res.headers.set(PRIVE_HEADER, '1')
   }
   return res

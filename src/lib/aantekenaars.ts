@@ -68,7 +68,14 @@ export function veiligeNaam(ruw: unknown): string {
   if (typeof ruw !== 'string') return NAAMLOOS
   const naam = ruw.trim()
   if (!naam || naam.includes('@')) return NAAMLOOS
-  return naam.length > MAX_NAAM ? `${naam.slice(0, MAX_NAAM - 1).trimEnd()}…` : naam
+  if (naam.length <= MAX_NAAM) return naam
+  // Afkappen op UTF-16-eenheden kan een surrogaatpaar (emoji, niet-BMP-teken) doormidden knippen.
+  // Wat er dan uitkomt is geen geldige Unicode meer, en Postgres weigert zo'n string in een
+  // jsonb-kolom — de aantekenactie zou stranden op een naam. Met [...naam] knippen we per échte
+  // letterteken, dus dat kan niet meer gebeuren.
+  const letters = [...naam]
+  if (letters.length <= MAX_NAAM) return naam
+  return `${letters.slice(0, MAX_NAAM - 1).join('').trimEnd()}…`
 }
 
 const isRol = (v: unknown): v is AantekenaarRol => v === 'organisatie' || v === 'supporter'
