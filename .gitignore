@@ -61,3 +61,6 @@ stream.txt
 # Python (cv-pipeline)
 __pycache__/
 *.py[cod]
+
+# Persoonlijke Claude Code-instellingen (permissies e.d.) — niet delen
+.claude/settings.local.json
