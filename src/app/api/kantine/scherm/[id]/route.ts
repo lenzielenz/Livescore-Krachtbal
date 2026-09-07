@@ -61,13 +61,19 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     const profiel = kiesProfiel(sanitizeProfielen((user as { kantineScherm?: unknown }).kantineScherm), profielId)
     const keuze = profiel ?? { clubIds: [], teamIds: [], matchIds: [] }
     // De titel op de tv is de naam van het scherm zelf; die zegt meer dan de accountnaam.
-    const titel = profiel?.naam || String((user as { name?: unknown }).name ?? '')
+    //
+    // Alles wat we hier prijsgeven, hoort bij een scherm dat iemand zélf heeft ingesteld. Deze
+    // route is openbaar (de tv logt niet in) en leest met overrideAccess, terwijl de Users-
+    // collection lezen net bewust dichtzet. Zonder deze voorwaarde beantwoordt
+    // /api/kantine/scherm/<willekeurig id> élk bestaand account met zijn naam én zijn club, en dan
+    // is één keer 1..N aflopen genoeg om het ledenbestand af te leiden.
+    const titel = profiel ? profiel.naam || String((user as { name?: unknown }).name ?? '') : ''
 
     // Achtergrond in de clubstijl van de eigenaar: dezelfde sfeer als het tornooischerm, zodat de
     // kantine-tv van de club eruitziet als de club. Valt terug op de eerste gekozen club wanneer
     // het account zelf nog niet aan een club hangt.
     const clubId = Number((user as { club?: unknown }).club ?? NaN)
-    const stijlClubId = Number.isFinite(clubId) && clubId > 0 ? clubId : keuze.clubIds[0]
+    const stijlClubId = !profiel ? null : Number.isFinite(clubId) && clubId > 0 ? clubId : keuze.clubIds[0]
     const stijlClub = stijlClubId
       ? await payload.findByID({ collection: 'clubs', id: stijlClubId, depth: 0, overrideAccess: true }).catch(() => null)
       : null

@@ -9,6 +9,7 @@ import { SchermModus } from '@/components/SchermModus'
 import { TeamLogo } from '@/components/TeamLogo'
 import { ReclameOverlay } from '@/components/ReclameOverlay'
 import type { Ad } from '@/lib/ads'
+import { bladIndeling, BLAD_GAT } from '@/lib/kantine-bladeren'
 import type { ClubColors } from '@/lib/club-colors'
 import { Tile, type KantineMatch } from './KantineBoard'
 
@@ -126,6 +127,12 @@ export function KantineScreen({
   // door. Elke rij krijgt een exacte hoogte, dus er wordt nooit meer iets afgekapt.
   const vensterRef = useRef<HTMLDivElement>(null)
   const [vensterH, setVensterH] = useState(0)
+  // Zonder wedstrijden staat er een tekst in de plaats van het raster. Het venster verdwijnt dan
+  // uit de boom, dus de meting moet opnieuw opgezet worden zodra het terugkomt — een tv die dagen
+  // aan één stuk draait gaat bij middernacht door die lege staat, en met een observer die op de
+  // losgekoppelde node blijft hangen zou vensterH daarna op 0 blijven staan (en knipt het raster
+  // weer af, precies wat we hier oplossen).
+  const leegScherm = loaded && matches.length === 0
   useEffect(() => {
     const el = vensterRef.current
     if (!el) return
@@ -134,16 +141,9 @@ export function KantineScreen({
     const ro = new ResizeObserver(meet)
     ro.observe(el)
     return () => ro.disconnect()
-  }, [])
+  }, [leegScherm])
 
-  // Onder deze hoogte is een bord van vijf meter niet meer te lezen — dan liever bladeren.
-  const MIN_BORD_H = 168
-  const GAT = 14
-  const rijenPerBlad = Math.max(1, Math.floor((vensterH + GAT) / (MIN_BORD_H + GAT)) || 1)
-  const perBlad = Math.max(1, cols * rijenPerBlad)
-  const bladen = Math.max(1, Math.ceil(visible.length / perBlad))
-  // Exacte rijhoogte: `rijenPerBlad` rijen plus hun tussenruimtes vullen het venster precies.
-  const rijH = vensterH > 0 ? (vensterH - (rijenPerBlad - 1) * GAT) / rijenPerBlad : 0
+  const { perBlad, bladen, rijH } = bladIndeling({ aantal: visible.length, cols, vensterH })
 
   const [blad, setBlad] = useState(0)
   useEffect(() => {
@@ -238,7 +238,7 @@ export function KantineScreen({
           </span>
         </div>
       )}
-      {loaded && matches.length === 0 ? (
+      {leegScherm ? (
         <div className="kt-screen-empty">
           {editable ? (
             <>
@@ -260,7 +260,7 @@ export function KantineScreen({
                 // het eerste frame niet leeg is.
                 ...(rijH > 0 ? { gridAutoRows: `${rijH}px` } : {}),
                 // Eén blad opzij schuiven = de vensterhoogte plus de tussenruimte eronder.
-                transform: rijH > 0 ? `translateY(-${huidigBlad * (vensterH + GAT)}px)` : undefined,
+                transform: rijH > 0 ? `translateY(-${huidigBlad * (vensterH + BLAD_GAT)}px)` : undefined,
               }}
             >
               {visible.map((m) => (

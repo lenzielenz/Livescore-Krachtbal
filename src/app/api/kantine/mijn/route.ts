@@ -1,5 +1,11 @@
 import { authUser } from '@/lib/api-auth'
-import { bewaarVorm, sanitizeProfielen, veiligeProfielnaam, nieuwProfielId } from '@/lib/kantine-profielen'
+import {
+  bewaarVorm,
+  MAX_PROFIELEN,
+  nieuwProfielId,
+  sanitizeProfielen,
+  veiligeProfielnaam,
+} from '@/lib/kantine-profielen'
 import { sanitizeKantineSelectie } from '@/lib/kantine-selectie'
 import { getPayloadClient } from '@/lib/payload-client'
 
@@ -44,11 +50,16 @@ export async function POST(req: Request) {
     // De browser stuurt de volledige lijst — bewaren gebeurt bij elke wijziging, dus een deel
     // opsturen zou een half bewaarde toestand kunnen achterlaten.
     const ruw = (body ?? {}) as { profielen?: unknown }
-    const lijst = Array.isArray(ruw.profielen) ? ruw.profielen : []
+    // Eerst afkappen, dán opschonen. Opschonen kost per profiel werk dat over de al verwerkte
+    // profielen loopt (een uniek id zoeken), dus over een lijst van tienduizend zou dat kwadratisch
+    // uitdraaien — synchroon werk dat de hele server stilzet, inclusief elke live-stream. Er worden
+    // er hoe dan ook maar MAX_PROFIELEN bewaard, dus de rest hoeft niet eens bekeken te worden.
+    const lijst = (Array.isArray(ruw.profielen) ? ruw.profielen : [])
+      .filter((p): p is Record<string, unknown> => Boolean(p) && typeof p === 'object')
+      .slice(0, MAX_PROFIELEN)
     // Ids opnieuw vaststellen zodat een browser geen twee schermen op dezelfde link kan zetten.
     const genormaliseerd: { id: string; naam: string }[] = []
     const profielen = lijst
-      .filter((p): p is Record<string, unknown> => Boolean(p) && typeof p === 'object')
       .map((p) => {
         const naam = veiligeProfielnaam(p.naam)
         const ruweId = p.id
