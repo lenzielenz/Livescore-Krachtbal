@@ -58,6 +58,9 @@ node_modules/
 dev.log
 stream.txt
 
+# Wegwerpscripts om lokaal te meten of testdata te zaaien (tmp-perf.mjs, scripts/tmp-*.ts)
+tmp-*
+
 # Python (cv-pipeline)
 __pycache__/
 *.py[cod]

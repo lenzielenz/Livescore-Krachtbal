@@ -10,7 +10,9 @@ import { TeamLogo } from '@/components/TeamLogo'
 import { ReclameOverlay } from '@/components/ReclameOverlay'
 import type { Ad } from '@/lib/ads'
 import { bladIndeling, BLAD_GAT } from '@/lib/kantine-bladeren'
+import type { KantineLive } from '@/lib/kantine-channel'
 import type { ClubColors } from '@/lib/club-colors'
+import { useLiveStream } from '@/lib/use-live-stream'
 import { Tile, type KantineMatch } from './KantineBoard'
 
 /** Clubstijl van de eigenaar van dit scherm: de tv van de club hoort eruit te zien als de club. */
@@ -85,19 +87,30 @@ export function KantineScreen({
 
   useEffect(() => {
     let active = true
+    // Loopt de vorige ophaling nog? Dan deze overslaan. Zonder deze rem stapelen trage verzoeken
+    // op en vuren ze later samen een rebuild af — precies wanneer het al moeizaam ging.
+    let bezig = false
     const load = async () => {
+      if (bezig) return
+      bezig = true
       try {
         const r = await fetch(endpoint, { cache: 'no-store' })
         if (!r.ok) return
         const d = (await r.json()) as { matches?: KantineMatch[]; ads?: Ad[]; stijl?: KantineStijl }
         if (active) {
           setMatches(d.matches ?? [])
-          setAds(d.ads ?? [])
+          // Enkel vervangen als de reclame écht veranderde. Elke ophaling geeft een verse array,
+          // en die nieuwe identiteit alleen al herstartte de planning in ReclameOverlay — waar de
+          // wachttijd tot de volgende reclame acht à twaalf minuten is. Om de twaalf seconden
+          // opnieuw plannen betekende: nooit één te zien krijgen.
+          setAds((vorig) => (JSON.stringify(vorig) === JSON.stringify(d.ads ?? []) ? vorig : (d.ads ?? [])))
           setStijl(d.stijl ?? null)
           setLoaded(true)
         }
       } catch {
         /* netwerkfout — volgende poll probeert opnieuw */
+      } finally {
+        bezig = false
       }
     }
     void load()
@@ -116,6 +129,22 @@ export function KantineScreen({
   const layout = layoutFor(visible.length)
   // Begrens de kolommen op wat de schermbreedte aankan.
   const cols = Math.min(layout.cols, maxColsForWidth(vw))
+
+  // ── Eén live-verbinding voor álle borden ──────────────────────────────────────────────────
+  // Elk bord opende vroeger zijn eigen /api/match/<id>/stream. Bij een dozijn wedstrijden waren
+  // dat een dozijn permanent open verbindingen uit deze ene browser, terwijl er maar een handvol
+  // tegelijk mogen per server: al het overige verkeer belandde in een wachtrij die nooit
+  // leegliep — ook de ophaling hierboven, waardoor de tv na één keer laden bevroor.
+  const [live, setLive] = useState<Record<number, KantineLive>>({})
+  const idsSleutel = visible.map((m) => m.id).sort((a, b) => a - b).join(',')
+  useLiveStream<KantineLive[]>(
+    idsSleutel ? `/api/kantine/live/stream?ids=${idsSleutel}` : null,
+    (frame) => {
+      const kaart: Record<number, KantineLive> = {}
+      for (const r of frame) kaart[r.id] = r
+      setLive(kaart)
+    },
+  )
 
   // ── Bladeren in plaats van proppen ────────────────────────────────────────────────────────
   // Het raster stond op `grid-auto-rows: 1fr` in een venster met overflow:hidden. Een rij kan
@@ -264,7 +293,7 @@ export function KantineScreen({
               }}
             >
               {visible.map((m) => (
-                <Tile key={m.id} match={m} fontSize={fontSize} logoSize={logoSize} />
+                <Tile key={m.id} match={m} live={live[m.id] ?? null} fontSize={fontSize} logoSize={logoSize} />
               ))}
             </div>
           </div>

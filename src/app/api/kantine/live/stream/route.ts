@@ -1,0 +1,79 @@
+import { joinKantine, kantineIds } from '@/lib/kantine-channel'
+import { getPayloadClient } from '@/lib/payload-client'
+import { HARTSLAG_MS } from '@/lib/sse-leven'
+import { SSE_HEADERS, acquireConnection, clientIp, releaseConnection } from '@/lib/sse-hub'
+
+export const dynamic = 'force-dynamic'
+
+// Live-stand voor álle borden van één kantinescherm, over ÉÉN verbinding. Eén gedeelde poller per
+// wedstrijdenlijst (zie kantine-channel.ts) doet het databankwerk; deze route doet enkel het
+// fan-out naar deze tv.
+//
+// Openbaar leesbaar, net als /api/kantine/scherm/<id>: de tv in de kantine logt niet in, en er
+// gaat niets over de lijn dat niet al op het publieke scorebord staat.
+export async function GET(req: Request) {
+  const url = new URL(req.url)
+  const ids = kantineIds(url.searchParams.get('ids'))
+  if (ids.length === 0) return new Response('Geen wedstrijden', { status: 400 })
+
+  const ip = clientIp(req)
+  if (!acquireConnection(ip)) {
+    return new Response('Te veel gelijktijdige verbindingen.', { status: 429 })
+  }
+
+  const encoder = new TextEncoder()
+  // Het slot is al geclaimd: gaat hier iets mis (databank even weg tijdens een deploy), dan moet
+  // het terug, anders lekt de teller van dit IP omhoog tot een hele kantine 429 krijgt.
+  let payload
+  try {
+    payload = await getPayloadClient()
+  } catch (err) {
+    releaseConnection(ip)
+    throw err
+  }
+
+  let cleanedUp = false
+  let unsubscribe: (() => void) | null = null
+  let heartbeat: ReturnType<typeof setInterval> | null = null
+  let cleanup: () => void = () => {}
+
+  const stream = new ReadableStream({
+    start(controller) {
+      const safeEnqueue = (chunk: string) => {
+        if (cleanedUp) return
+        try {
+          controller.enqueue(encoder.encode(chunk))
+        } catch {
+          cleanup()
+        }
+      }
+
+      cleanup = () => {
+        if (cleanedUp) return
+        cleanedUp = true
+        unsubscribe?.()
+        if (heartbeat) clearInterval(heartbeat)
+        try {
+          controller.close()
+        } catch {
+          /* al gesloten */
+        }
+        releaseConnection(ip)
+      }
+
+      unsubscribe = joinKantine(payload, ids, (event, data, id) => {
+        const idLine = id !== undefined ? `id: ${id}\n` : ''
+        safeEnqueue(`${idLine}event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)
+      })
+
+      // Heartbeat houdt de verbinding open achter proxies die stille sockets sluiten.
+      heartbeat = setInterval(() => safeEnqueue(`event: ping\ndata: {}\n\n`), HARTSLAG_MS)
+      req.signal.addEventListener('abort', cleanup)
+    },
+    cancel() {
+      cleanup()
+    },
+  })
+
+  return new Response(stream, { headers: SSE_HEADERS })
+}

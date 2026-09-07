@@ -11,7 +11,7 @@ import {
   selectieIsLeeg,
   sorteerSchermWedstrijden,
 } from '@/lib/kantine-selectie'
-import { buildMatchState } from '@/lib/match-engine'
+import { buildScoreboards } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
 import { REEKS_OPTIONS } from '@/lib/reeksen'
 
@@ -140,25 +140,34 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       id: number
       reeks?: unknown
       date?: unknown
+      homeTeam: unknown
+      awayTeam: unknown
+      currentHalf?: number | null
+      status?: string | null
+      simpleScore?: unknown
+      scoreTrust?: unknown
     }[])
 
+    // Gebatcht: buildScoreboards haalt ploegen, worpen, balbezit en events in vier queries op voor
+    // de héle lijst. Dit stond hier als een lus met buildMatchState per wedstrijd — bij een dozijn
+    // wedstrijden zo'n 170 queries en een kwart seconde, voor gegevens die een bord niet eens
+    // toont (worpteller, statistieken, tijdlijn).
+    const kaarten = await buildScoreboards(payload, docs)
     const matches = []
     for (const m of docs) {
-      try {
-        const s = await buildMatchState(payload, m.id)
-        matches.push({
-          id: m.id,
-          reeks: reeksLabel(m.reeks),
-          time: formatTimeBE(m.date as string),
-          date: typeof m.date === 'string' ? m.date : null,
-          status: s.match.status,
-          home: { name: s.teams.home.name, logoUrl: s.teams.home.logoUrl, logoFit: s.teams.home.logoFit, colors: s.teams.home.colors },
-          away: { name: s.teams.away.name, logoUrl: s.teams.away.logoUrl, logoFit: s.teams.away.logoFit, colors: s.teams.away.colors },
-          score: s.score,
-        })
-      } catch {
-        // Wedstrijd met een ontbrekende ploeg overslaan — één kapotte rij mag het scherm niet leegmaken.
-      }
+      // Wedstrijd met een ontbrekende ploeg overslaan — één kapotte rij mag het scherm niet leegmaken.
+      const k = kaarten.get(m.id)
+      if (!k) continue
+      matches.push({
+        id: m.id,
+        reeks: reeksLabel(m.reeks),
+        time: formatTimeBE(m.date as string),
+        date: typeof m.date === 'string' ? m.date : null,
+        status: k.status,
+        home: { name: k.teams.home.name, logoUrl: k.teams.home.logoUrl, logoFit: k.teams.home.logoFit, colors: k.teams.home.colors },
+        away: { name: k.teams.away.name, logoUrl: k.teams.away.logoUrl, logoFit: k.teams.away.logoFit, colors: k.teams.away.colors },
+        score: k.score,
+      })
     }
 
     const ads = await loadAds(payload, 'kantine')

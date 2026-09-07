@@ -93,6 +93,8 @@ een throw bewerken, per-connectie pollen): zie [`CLAUDE.md`](../CLAUDE.md).
 | `src/lib/krachtbal-rules.ts` | Pure regellogica (afstand, zone, worpteller, score, balbezit, kruisjes). Geen DB. Regels wijzig je hier. |
 | `src/lib/sse-hub.ts` | Gedeelde SSE-infra: één poller per sleutel → fan-out, per-IP-cap, rate-limit, `SSE_HEADERS`. |
 | `src/lib/match-channel.ts` | Match-specifieke kanaallaag (reacties, viewer-count) bovenop de hub. |
+| `src/lib/day-channel.ts` | Eén kanaal voor álle wedstrijden van één dag (de borden op `/` en `/live`). |
+| `src/lib/kantine-channel.ts` | Eén kanaal voor álle borden van één kantinescherm. **Een verzamelbord opent nooit een verbinding per wedstrijd**: een dozijn borden zou een dozijn open verbindingen uit dezelfde browser betekenen, en daar loopt een browser op vast. |
 | `src/lib/db-lock.ts` | Postgres advisory lock per match (cross-instance). No-op op SQLite. |
 | `src/lib/score-trust.ts` | Pure vertrouwensregels op een supporters-score: official scorer per wedstrijd, gewogen consensus, trust-score per gebruiker. Opslag in `score-trust-store.ts`. |
 | `src/payload.config.ts` | Payload-config: collections, globals, DB-adapter-keuze (Postgres/SQLite), CORS/CSRF. |

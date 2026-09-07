@@ -2090,6 +2090,24 @@ export async function buildMatchState(payload: Payload, matchId: number): Promis
 // wedstrijden, sequentieel) wordt dat onwerkbaar traag. Het publieke overzicht
 // heeft enkel stand, kruisjes, time-outs en ploeg-info nodig. Deze functie haalt
 // dat voor ALLE wedstrijden samen op in vier queries en rekent in-memory uit.
+/**
+ * Het laatste doelpunt van een wedstrijd, afgeleid uit wat `buildScoreboards` tóch al inlaadt.
+ *
+ * Een scherm dat een doelpunt wil vieren, had daarvoor een volledige tijdlijn per wedstrijd nodig
+ * (en dus een eigen verbinding per bord). Met dit veld kan een verzamelbord dat met één frame
+ * voor álle wedstrijden — zonder ook maar één extra query.
+ */
+export interface ScoreboardGoal {
+  /** Stabiel per doelpunt: verandert enkel wanneer er écht eentje bij komt. */
+  id: string
+  side: TeamSide
+  points: number
+  /** Speler-id van de scorer; namen staan hier niet (deze bouwer leest worpen op depth 0). */
+  playerId: number | null
+  /** Bij een snelscore-doelpunt staat de naam al mee bewaard. */
+  scorerName: string | null
+}
+
 export interface ScoreboardData {
   status: string
   score: { home: number; away: number }
@@ -2098,6 +2116,8 @@ export interface ScoreboardData {
   refereeStops: number
   /** Vertrouwenslabel op de stand — zodat het live-bord fan-scores als zodanig toont. */
   trust: TrustView
+  /** Het laatste doelpunt, of null als er nog niet gescoord is. */
+  lastGoal: ScoreboardGoal | null
   teams: {
     home: ScoreboardTeam
     away: ScoreboardTeam
@@ -2248,6 +2268,39 @@ export async function buildScoreboards(
       }
     }
 
+    // Het laatste doelpunt — enkel uit wat hierboven al geladen is, dus geen extra query. De
+    // worpen staan op createdAt gesorteerd, dus de laatste treffer die we tegenkomen wint.
+    let lastGoal: ScoreboardGoal | null = null
+    for (const t of throwsByMatch.get(m.id) ?? []) {
+      if (t.outcome !== 'goal' && t.outcome !== 'own_goal') continue
+      const possId = relId(t.possession)
+      const poss = possId != null ? possById.get(possId) : undefined
+      const kant = sideOfTeam(relId(t.team) ?? homeId, homeId)
+      lastGoal = {
+        id: `t${t.id}`,
+        // Een eigen doelpunt telt voor de tegenpartij (§6.6) — dus ook de viering.
+        side: t.outcome === 'own_goal' ? (kant === 'home' ? 'away' : 'home') : kant,
+        points:
+          t.outcome === 'own_goal'
+            ? 1
+            : pointsForThrow({ type: t.type, outcome: t.outcome, freeThrow: Boolean(poss?.freeThrow) }),
+        playerId: relId(t.player),
+        scorerName: null,
+      }
+    }
+    // Een wedstrijd wordt in één modus aangetekend, niet in twee. Staan er snelscore-doelpunten,
+    // dan komt de stand daarvandaan en dus ook de viering; daar zit de naam al bij.
+    if (simple.goals.length > 0) {
+      const g = simple.goals.reduce((a, b) => (b.ts >= a.ts ? b : a))
+      lastGoal = {
+        id: `s${g.ts}`,
+        side: g.side,
+        points: g.points,
+        playerId: g.scorerId ?? null,
+        scorerName: g.scorerName ? `#${g.scorerNumber ?? '?'} ${g.scorerName}`.trim() : null,
+      }
+    }
+
     out.set(m.id, {
       status: m.status ?? 'scheduled',
       score: totals.score,
@@ -2255,6 +2308,7 @@ export async function buildScoreboards(
       timeouts,
       refereeStops,
       trust: trustView(sanitizeTrust(m.scoreTrust), { official }),
+      lastGoal,
       teams: {
         home: { id: homeId, name: home.name, logoUrl: clubLogoUrl(home), logoFit: clubLogoFit(home), colors: clubColors(home), clubId: clubIdOf(home), clubName: clubNameOf(home), ...clubLocationOf(home) },
         away: { id: awayId, name: away.name, logoUrl: clubLogoUrl(away), logoFit: clubLogoFit(away), colors: distinguishAway(clubColors(home), clubColors(away)), clubId: clubIdOf(away), clubName: clubNameOf(away), ...clubLocationOf(away) },
