@@ -3,7 +3,7 @@ import type { Payload, Where } from 'payload'
 import { loadAds } from '@/lib/ads'
 import { competitionWhere } from '@/lib/analyse-access'
 import { clubColorsFrom } from '@/lib/club-colors'
-import { formatTimeBE } from '@/lib/datetime'
+import { bouwKantineBorden } from '@/lib/kantine-borden'
 import { kiesProfiel, sanitizeProfielen } from '@/lib/kantine-profielen'
 import {
   ontdubbel,
@@ -11,17 +11,13 @@ import {
   selectieIsLeeg,
   sorteerSchermWedstrijden,
 } from '@/lib/kantine-selectie'
-import { buildScoreboards } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
-import { REEKS_OPTIONS } from '@/lib/reeksen'
 
 export const dynamic = 'force-dynamic'
 
 // Persoonlijk kantinescherm. Openbaar leesbaar: de tv in de kantine logt niet in, en er staat
 // niets gevoeligs op — enkel welke publieke wedstrijden iemand op zijn scherm wil. Samenstellen
 // vraagt wél een login (zie /api/kantine/mijn).
-const reeksLabel = (v: unknown) =>
-  REEKS_OPTIONS.find((o) => o.value === v)?.label ?? (typeof v === 'string' ? v : 'Overig')
 
 /** Alle ploeg-ids van de gekozen clubs, samen met de los gekozen ploegen. */
 async function teamIdsVoor(payload: Payload, clubIds: number[], teamIds: number[]): Promise<number[]> {
@@ -136,39 +132,12 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
         : Promise.resolve({ docs: [] as { id: number }[] }),
     ])
 
-    const docs = ontdubbel([...liveRes.docs, ...losRes.docs, ...weekRes.docs] as {
-      id: number
-      reeks?: unknown
-      date?: unknown
-      homeTeam: unknown
-      awayTeam: unknown
-      currentHalf?: number | null
-      status?: string | null
-      simpleScore?: unknown
-      scoreTrust?: unknown
-    }[])
+    const docs = ontdubbel([...liveRes.docs, ...losRes.docs, ...weekRes.docs])
 
-    // Gebatcht: buildScoreboards haalt ploegen, worpen, balbezit en events in vier queries op voor
-    // de héle lijst. Dit stond hier als een lus met buildMatchState per wedstrijd — bij een dozijn
-    // wedstrijden zo'n 170 queries en een kwart seconde, voor gegevens die een bord niet eens
-    // toont (worpteller, statistieken, tijdlijn).
-    const kaarten = await buildScoreboards(payload, docs)
-    const matches = []
-    for (const m of docs) {
-      // Wedstrijd met een ontbrekende ploeg overslaan — één kapotte rij mag het scherm niet leegmaken.
-      const k = kaarten.get(m.id)
-      if (!k) continue
-      matches.push({
-        id: m.id,
-        reeks: reeksLabel(m.reeks),
-        time: formatTimeBE(m.date as string),
-        date: typeof m.date === 'string' ? m.date : null,
-        status: k.status,
-        home: { name: k.teams.home.name, logoUrl: k.teams.home.logoUrl, logoFit: k.teams.home.logoFit, colors: k.teams.home.colors },
-        away: { name: k.teams.away.name, logoUrl: k.teams.away.logoUrl, logoFit: k.teams.away.logoFit, colors: k.teams.away.colors },
-        score: k.score,
-      })
-    }
+    // Gebatcht: enkele query's voor álle borden samen. Dit bouwde vroeger per wedstrijd de
+    // volledige matchstate op (~10 query's, sequentieel) — bij een club met een dozijn ploegen
+    // stond de tv daardoor minutenlang wit te wachten. Zie kantine-borden.ts.
+    const matches = await bouwKantineBorden(payload, docs)
 
     const ads = await loadAds(payload, 'kantine')
     return Response.json({ matches: sorteerSchermWedstrijden(matches, dagEinde), ads, leeg: false, titel, stijl })

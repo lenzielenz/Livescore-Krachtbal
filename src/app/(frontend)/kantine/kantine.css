@@ -668,6 +668,27 @@
   color: var(--dim);
   text-align: center;
 }
+/* "Laden…" op de tv: groot genoeg om van op afstand te zien dát er iets gebeurt, en pulserend
+   zodat een scherm dat aan het wachten is niet op een bevroren scherm lijkt. */
+.kt-laden {
+  font-size: clamp(18px, 2.4vmin, 30px);
+  letter-spacing: 0.02em;
+  animation: kt-pols 1.6s ease-in-out infinite;
+}
+@keyframes kt-pols {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kt-laden {
+    animation: none;
+  }
+}
 /* Schermraster (kantine-tv): vult de hele viewport; even grote vakken, kolommen via inline
    gridTemplateColumns. De vakken schalen mee via de font-size die per layout wordt meegegeven. */
 .kt-grid-screen {

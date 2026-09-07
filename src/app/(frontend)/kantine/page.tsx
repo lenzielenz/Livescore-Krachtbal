@@ -8,12 +8,10 @@ import { getAuthUser } from '@/lib/auth-user'
 import { formatTimeBE } from '@/lib/datetime'
 import { nieuwProfiel, sanitizeProfielen } from '@/lib/kantine-profielen'
 import { schermVenster } from '@/lib/kantine-selectie'
-import { buildMatchState } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
 import { reeksNaam } from '@/lib/reeksen'
 import { KantineClubLink } from './KantineClubLink'
-import { MijnKantineScherm } from './MijnKantineScherm'
-import { type KantineMatch } from './KantineBoard'
+import { MijnKantineScherm, type KantineKeuze } from './MijnKantineScherm'
 import './kantine.css'
 
 export const dynamic = 'force-dynamic'
@@ -28,8 +26,23 @@ const reeksLabel = (v: unknown) => reeksNaam(v)
 // losse ploegen of wedstrijden), zet je vaste link op de kantine-tv, klaar voor het seizoen. Het
 // scherm zelf staat op /kantine/scherm/<jouw id> en heeft op de tv geen login nodig.
 
-/** De wedstrijden waaruit je "losse wedstrijden" kan kiezen: vandaag + de komende week. */
-async function weekWedstrijden(payload: Payload): Promise<KantineMatch[]> {
+const teamId = (rel: unknown): number | null => {
+  const raw = rel && typeof rel === 'object' ? (rel as { id?: unknown }).id : rel
+  const n = Number(raw)
+  return Number.isFinite(n) ? n : null
+}
+
+/**
+ * De wedstrijden waaruit je "losse wedstrijden" kan kiezen: vandaag + de komende week.
+ *
+ * Bewust MAGER. Dit haalde vroeger per wedstrijd de volledige matchstate op (buildMatchState,
+ * ~10 query's elk, sequentieel) terwijl de kiezer hieronder enkel het uur, de reeks, de status en
+ * de twee ploegnamen toont — geen stand, geen logo's. Bij een volle speelweek (het venster is een
+ * week vooruit, over álle clubs) waren dat duizenden round-trips naar de database, en omdat deze
+ * pagina op de server rendert kreeg je ondertussen een wit scherm te zien. Nu: twee query's voor
+ * de wedstrijden en één voor alle ploegnamen samen.
+ */
+async function weekWedstrijden(payload: Payload): Promise<KantineKeuze[]> {
   const { dagStart, geplandTot } = schermVenster()
   const [weekRes, liveRes] = await Promise.all([
     payload.find({
@@ -54,23 +67,30 @@ async function weekWedstrijden(payload: Payload): Promise<KantineMatch[]> {
     return true
   })
 
-  const lijst: KantineMatch[] = []
+  const ploegIds = [
+    ...new Set(docs.flatMap((m) => [teamId(m.homeTeam), teamId(m.awayTeam)]).filter((n): n is number => n != null)),
+  ]
+  const ploegRes = ploegIds.length
+    ? await payload
+        .find({ collection: 'teams', where: { id: { in: ploegIds } }, depth: 0, pagination: false, select: { name: true } })
+        .catch(() => ({ docs: [] as { id: number; name?: unknown }[] }))
+    : { docs: [] as { id: number; name?: unknown }[] }
+  const ploegNaam = new Map(ploegRes.docs.map((t) => [Number(t.id), String((t as { name?: unknown }).name ?? '')]))
+
+  const lijst: KantineKeuze[] = []
   for (const m of docs) {
-    try {
-      const s = await buildMatchState(payload, m.id)
-      lijst.push({
-        id: m.id,
-        reeks: reeksLabel(m.reeks),
-        time: formatTimeBE(m.date),
-        date: typeof m.date === 'string' ? m.date : null,
-        status: s.match.status,
-        home: { name: s.teams.home.name, logoUrl: s.teams.home.logoUrl, logoFit: s.teams.home.logoFit, colors: s.teams.home.colors },
-        away: { name: s.teams.away.name, logoUrl: s.teams.away.logoUrl, logoFit: s.teams.away.logoFit, colors: s.teams.away.colors },
-        score: s.score,
-      })
-    } catch {
-      // Wedstrijd met ontbrekende ploeg overslaan.
-    }
+    const thuis = ploegNaam.get(teamId(m.homeTeam) ?? -1)
+    const uit = ploegNaam.get(teamId(m.awayTeam) ?? -1)
+    // Wedstrijd met een ontbrekende ploeg overslaan — je kan er toch niets zinnigs mee kiezen.
+    if (!thuis || !uit) continue
+    lijst.push({
+      id: m.id,
+      reeks: reeksLabel(m.reeks),
+      time: formatTimeBE(m.date),
+      status: m.status ?? 'scheduled',
+      home: { name: thuis },
+      away: { name: uit },
+    })
   }
   return lijst
 }
