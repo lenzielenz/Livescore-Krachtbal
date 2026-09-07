@@ -3,7 +3,7 @@ import type { Payload, Where } from 'payload'
 import { loadAds } from '@/lib/ads'
 import { competitionWhere } from '@/lib/analyse-access'
 import { clubColorsFrom } from '@/lib/club-colors'
-import { formatTimeBE } from '@/lib/datetime'
+import { bouwKantineBorden } from '@/lib/kantine-borden'
 import { kiesProfiel, sanitizeProfielen } from '@/lib/kantine-profielen'
 import {
   ontdubbel,
@@ -11,17 +11,13 @@ import {
   selectieIsLeeg,
   sorteerSchermWedstrijden,
 } from '@/lib/kantine-selectie'
-import { buildMatchState } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
-import { REEKS_OPTIONS } from '@/lib/reeksen'
 
 export const dynamic = 'force-dynamic'
 
 // Persoonlijk kantinescherm. Openbaar leesbaar: de tv in de kantine logt niet in, en er staat
 // niets gevoeligs op — enkel welke publieke wedstrijden iemand op zijn scherm wil. Samenstellen
 // vraagt wél een login (zie /api/kantine/mijn).
-const reeksLabel = (v: unknown) =>
-  REEKS_OPTIONS.find((o) => o.value === v)?.label ?? (typeof v === 'string' ? v : 'Overig')
 
 /** Alle ploeg-ids van de gekozen clubs, samen met de los gekozen ploegen. */
 async function teamIdsVoor(payload: Payload, clubIds: number[], teamIds: number[]): Promise<number[]> {
@@ -136,30 +132,12 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
         : Promise.resolve({ docs: [] as { id: number }[] }),
     ])
 
-    const docs = ontdubbel([...liveRes.docs, ...losRes.docs, ...weekRes.docs] as {
-      id: number
-      reeks?: unknown
-      date?: unknown
-    }[])
+    const docs = ontdubbel([...liveRes.docs, ...losRes.docs, ...weekRes.docs])
 
-    const matches = []
-    for (const m of docs) {
-      try {
-        const s = await buildMatchState(payload, m.id)
-        matches.push({
-          id: m.id,
-          reeks: reeksLabel(m.reeks),
-          time: formatTimeBE(m.date as string),
-          date: typeof m.date === 'string' ? m.date : null,
-          status: s.match.status,
-          home: { name: s.teams.home.name, logoUrl: s.teams.home.logoUrl, logoFit: s.teams.home.logoFit, colors: s.teams.home.colors },
-          away: { name: s.teams.away.name, logoUrl: s.teams.away.logoUrl, logoFit: s.teams.away.logoFit, colors: s.teams.away.colors },
-          score: s.score,
-        })
-      } catch {
-        // Wedstrijd met een ontbrekende ploeg overslaan — één kapotte rij mag het scherm niet leegmaken.
-      }
-    }
+    // Gebatcht: enkele query's voor álle borden samen. Dit bouwde vroeger per wedstrijd de
+    // volledige matchstate op (~10 query's, sequentieel) — bij een club met een dozijn ploegen
+    // stond de tv daardoor minutenlang wit te wachten. Zie kantine-borden.ts.
+    const matches = await bouwKantineBorden(payload, docs)
 
     const ads = await loadAds(payload, 'kantine')
     return Response.json({ matches: sorteerSchermWedstrijden(matches, dagEinde), ads, leeg: false, titel, stijl })

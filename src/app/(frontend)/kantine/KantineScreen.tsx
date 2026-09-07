@@ -59,7 +59,11 @@ export function KantineScreen({
   const [matches, setMatches] = useState<KantineMatch[]>([])
   const [ads, setAds] = useState<Ad[]>([])
   const [stijl, setStijl] = useState<KantineStijl>(null)
-  const [loaded, setLoaded] = useState(false)
+  // Drie standen i.p.v. één "loaded"-vlag. Zolang het antwoord er niet is, stond hier een leeg
+  // raster: een volledig wit scherm, zonder dat iemand aan de tv kon zien of er iets aan het
+  // gebeuren was. En mislukte de oproep (de route antwoordt bij eender welke fout met een 500),
+  // dan bleef het daar voorgoed staan — de poll draaide door, maar het scherm zei niets.
+  const [stand, setStand] = useState<'laden' | 'klaar' | 'fout'>('laden')
   // Viewport-breedte volgen zodat het raster niet 5 kolommen op een tablet propt (AUDIT §1).
   const [vw, setVw] = useState(1920)
 
@@ -85,19 +89,25 @@ export function KantineScreen({
 
   useEffect(() => {
     let active = true
+    // Een hapering tijdens een latere poll mag een werkend scherm niet leegvegen: enkel wanneer we
+    // nog nooit iets binnenkregen, tonen we de foutmelding. De poll blijft hoe dan ook draaien.
+    const noteerFout = () => {
+      if (active) setStand((s) => (s === 'klaar' ? s : 'fout'))
+    }
     const load = async () => {
       try {
         const r = await fetch(endpoint, { cache: 'no-store' })
-        if (!r.ok) return
+        if (!r.ok) return noteerFout()
         const d = (await r.json()) as { matches?: KantineMatch[]; ads?: Ad[]; stijl?: KantineStijl }
         if (active) {
           setMatches(d.matches ?? [])
           setAds(d.ads ?? [])
           setStijl(d.stijl ?? null)
-          setLoaded(true)
+          setStand('klaar')
         }
       } catch {
-        /* netwerkfout — volgende poll probeert opnieuw */
+        // netwerkfout — volgende poll probeert opnieuw
+        noteerFout()
       }
     }
     void load()
@@ -131,8 +141,11 @@ export function KantineScreen({
   // uit de boom, dus de meting moet opnieuw opgezet worden zodra het terugkomt — een tv die dagen
   // aan één stuk draait gaat bij middernacht door die lege staat, en met een observer die op de
   // losgekoppelde node blijft hangen zou vensterH daarna op 0 blijven staan (en knipt het raster
-  // weer af, precies wat we hier oplossen).
-  const leegScherm = loaded && matches.length === 0
+  // weer af, precies wat we hier oplossen). Hetzelfde geldt voor de laad- en foutmelding.
+  const leegScherm = stand === 'klaar' && matches.length === 0
+  const laadScherm = stand === 'laden'
+  const foutScherm = stand === 'fout' && matches.length === 0
+  const toonRaster = !leegScherm && !laadScherm && !foutScherm
   useEffect(() => {
     const el = vensterRef.current
     if (!el) return
@@ -141,7 +154,7 @@ export function KantineScreen({
     const ro = new ResizeObserver(meet)
     ro.observe(el)
     return () => ro.disconnect()
-  }, [leegScherm])
+  }, [toonRaster])
 
   const { perBlad, bladen, rijH } = bladIndeling({ aantal: visible.length, cols, vensterH })
 
@@ -238,7 +251,18 @@ export function KantineScreen({
           </span>
         </div>
       )}
-      {leegScherm ? (
+      {laadScherm ? (
+        // Zonder deze melding is een tv die staat te wachten niet te onderscheiden van een tv die
+        // stuk is: allebei een wit scherm.
+        <div className="kt-screen-empty">
+          <p className="kt-laden">Wedstrijden laden…</p>
+        </div>
+      ) : foutScherm ? (
+        <div className="kt-screen-empty">
+          <p>Het scherm kan de wedstrijden even niet ophalen.</p>
+          <p className="kt-laden">Nieuwe poging binnen enkele seconden…</p>
+        </div>
+      ) : leegScherm ? (
         <div className="kt-screen-empty">
           {editable ? (
             <>

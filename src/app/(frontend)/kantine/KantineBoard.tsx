@@ -6,21 +6,15 @@ import { useEffect, useRef, useState } from 'react'
 import { ClubColorBlast } from '@/components/ClubColorBlast'
 import { TeamLogo } from '@/components/TeamLogo'
 import { type ClubColors, DEFAULT_AWAY_COLOR, DEFAULT_HOME_COLOR, inkOn, readableOnDark } from '@/lib/club-colors'
+import type { KantineBord } from '@/lib/kantine-borden'
 import type { MatchState, TimelineItem } from '@/lib/match-engine'
-import { type LogoFit } from '@/lib/logo-fit'
 import { goalPointsFromLabel, goalScorerFromLabel, useLiveStream } from '@/lib/use-live-stream'
 
-export type KantineMatch = {
-  id: number
-  reeks: string
-  time: string
-  /** Het échte aanvangsuur (ISO) — het aftellen op het kantinescherm heeft dat nodig. */
-  date?: string | null
-  status: string
-  home: { name: string; logoUrl: string | null; logoFit?: LogoFit | null; colors?: ClubColors | null }
-  away: { name: string; logoUrl: string | null; logoFit?: LogoFit | null; colors?: ClubColors | null }
-  score: { home: number; away: number }
-}
+/**
+ * Eén bord op het kantinescherm. Zelfde vorm als wat de kantine-API's teruggeven — die bouwen hem
+ * met `bouwKantineBorden`, dus één definitie voor de server- én de browserkant.
+ */
+export type KantineMatch = KantineBord
 
 function fmtClock(total: number): string {
   const s = Math.max(0, Math.floor(total))

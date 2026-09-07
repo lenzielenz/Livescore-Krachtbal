@@ -5,7 +5,6 @@ import { useEffect, useMemo, useState } from 'react'
 
 import { CastKnop } from '@/components/CastKnop'
 
-import type { KantineMatch } from './KantineBoard'
 import {
   MAX_PROFIELEN,
   nieuwProfiel,
@@ -27,6 +26,20 @@ import { selectieIsLeeg, type KantineSelectie } from '@/lib/kantine-selectie'
 type Club = { id: number; name: string }
 /** `sub` = de reeks (of anders de categorie). Zonder dat label lijken alle ploegen van een club op elkaar. */
 type Ploeg = { id: number; name: string; clubId: number | null; sub?: string }
+/**
+ * Eén regel in de lijst "losse wedstrijden". Bewust smaller dan een bord op het scherm: hier
+ * staan enkel het uur, de reeks, de status en de twee ploegnamen. De stand en de logo's horen bij
+ * het scherm zelf — ze hier óók opbouwen kostte een volledige matchstate per wedstrijd en maakte
+ * deze pagina onbruikbaar traag.
+ */
+export type KantineKeuze = {
+  id: number
+  reeks: string
+  time: string
+  status: string
+  home: { name: string }
+  away: { name: string }
+}
 
 export function MijnKantineScherm({
   userId,
@@ -38,7 +51,7 @@ export function MijnKantineScherm({
   userId: number
   clubs: Club[]
   ploegen: Ploeg[]
-  matches: KantineMatch[]
+  matches: KantineKeuze[]
   initieel: KantineProfiel[]
 }) {
   // Nog geen profiel? Dan begint iedereen met één leeg scherm — anders staat deze pagina er
