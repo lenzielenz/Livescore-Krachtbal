@@ -157,14 +157,20 @@ export function SimpleScorekeeper({
   // tussenschermen — iedereen weet hoe een stopwatch werkt, en aan de tafel is elke extra tik er
   // één te veel. Ging het per ongeluk, dan zet "↺ Wedstrijd was nog niet bezig" alles terug.
   //
-  // De ref houdt een dubbeltik tegen: die zou een tweede start-request sturen (de wachtrij geeft
-  // elke tik een eigen opId, dus dedup helpt hier niet).
-  const startBezig = useRef(false)
+  // Een stopwatch lokt een dubbeltik uit, en die moet volledig genegeerd worden. Enkel een tweede
+  // start tegenhouden volstaat niet: de optimistische update zet `live` meteen op true, dus de
+  // tweede tik valt in de pauze-tak en zet de klok stil op 00:00 — waarna de knop weer "▶ Tik om
+  // te starten" toont, alsof er niets gebeurd is, terwijl de wedstrijd wél live staat en elk
+  // doelpunt op minuut 0 belandt. We onthouden dus het moment van de starttik en negeren álles wat
+  // daar vlak achteraan komt.
+  const NA_START_DOOF_MS = 1200
+  const startTik = useRef(0)
   const tikOpKlok = () => {
     if (finished) return
+    const nu = Date.now()
+    if (nu - startTik.current < NA_START_DOOF_MS) return
     if (!live) {
-      if (startBezig.current) return
-      startBezig.current = true
+      startTik.current = nu
       void act(
         { action: 'simplestart' },
         // Optimistisch: de cijfers lopen meteen, ook op een trage lijn bij het veld.
@@ -179,15 +185,24 @@ export function SimpleScorekeeper({
             clockUpdatedAt: new Date().toISOString(),
           },
         }),
-      ).finally(() => {
-        startBezig.current = false
-      })
+      )
       return
     }
     const loopt = Boolean(state.match.clockRunning)
-    void act({ action: 'clock', running: !loopt }, (s) => ({
+    // Stuur de verstreken seconden mee. Een stilstaande klok toont exact `clockSeconds`, en die
+    // staat pas juist ná het serverantwoord: zonder dit springt het scherm bij het pauzeren terug
+    // naar de laatst bewaarde stand (bij een helft die nog niet gepauzeerd werd: 00:00) en blijft
+    // het daar offline staan tot de lijn terug is. Meesturen houdt de waarde bovendien juist als
+    // de tik pas veel later uit de wachtrij vertrekt. Zelfde aanpak als de veldschema-tafel.
+    const seconden = Math.floor(clock)
+    void act({ action: 'clock', running: !loopt, seconds: seconden }, (s) => ({
       ...s,
-      match: { ...s.match, clockRunning: !loopt, clockUpdatedAt: new Date().toISOString() },
+      match: {
+        ...s.match,
+        clockRunning: !loopt,
+        clockSeconds: seconden,
+        clockUpdatedAt: new Date().toISOString(),
+      },
     }))
   }
 
