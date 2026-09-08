@@ -20,7 +20,15 @@ export async function GET(req: Request) {
   }
 
   const encoder = new TextEncoder()
-  const payload = await getPayloadClient()
+  // Het slot is al geclaimd: gaat hier iets mis (databank even weg tijdens een deploy), dan moet
+  // het terug, anders lekt de teller van dit IP omhoog tot een hele kantine of zaal 429 krijgt.
+  let payload
+  try {
+    payload = await getPayloadClient()
+  } catch (err) {
+    releaseConnection(ip)
+    throw err
+  }
 
   let cleanedUp = false
   let unsubscribe: (() => void) | null = null

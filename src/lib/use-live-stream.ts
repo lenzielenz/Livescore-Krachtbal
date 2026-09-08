@@ -23,7 +23,8 @@ import { HARTSLAG_MS, moetHerverbindenNaWake, verbindingDood } from './sse-leven
 // Opnieuw verbinden is meteen ook de herstelactie: de server stuurt bij het aansluiten de
 // huidige stand mee (zie match-channel.ts), dus na het ontwaken staat het scherm weer juist.
 export function useLiveStream<T>(
-  url: string,
+  // null = nog niets om op te volgen (bv. een verzamelbord dat zijn lijst nog moet ophalen).
+  url: string | null,
   onUpdate: (data: T) => void,
   // Extra named SSE-events op DEZELFDE verbinding (bv. 'viewers', 'reactions') — geen 2e socket.
   extraEvents?: Record<string, (data: unknown) => void>,
@@ -36,6 +37,7 @@ export function useLiveStream<T>(
   const extraNames = extraEvents ? Object.keys(extraEvents).sort().join(',') : ''
 
   useEffect(() => {
+    if (!url) return
     let es: EventSource | null = null
     let stopped = false
     let delay = 1000
@@ -55,6 +57,12 @@ export function useLiveStream<T>(
         clearTimeout(retry)
         retry = null
       }
+      // De teller opnieuw op nul. Zonder dit blijft `laatste` staan op het moment vóór deze poging
+      // wanneer de verbinding niet eens opengaat: een EventSource die in de wachtrij van de
+      // browser blijft steken, meldt géén fout en geen enkel event. De waakhond verklaarde hem
+      // dan om de vijftien seconden dood en zette een nieuwe achteraan diezelfde wachtrij — een
+      // molen die het probleem alleen maar erger maakte.
+      laatste = Date.now()
       es?.close()
       es = new EventSource(url)
       // De hartslag draagt geen inhoud; hij bewijst enkel dat de lijn nog leeft.

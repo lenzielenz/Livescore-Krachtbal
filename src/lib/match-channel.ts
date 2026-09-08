@@ -393,6 +393,23 @@ export function removeInstant(matchId: number, instantId: number): boolean {
 
 export const REACTION_EMOJI = ['clap', 'fire', 'heart', 'goal', 'wow', 'rocket'] as const
 
+// De laatste viering per wedstrijd. Een verzamelbord zoals de kantine-tv heeft geen eigen
+// verbinding per wedstrijd meer (dat waren er een dozijn tegelijk, zie kantine-channel.ts) en kan
+// een gebroadcast event dus niet opvangen. Het pikt de viering hier op in zijn eerstvolgende
+// frame — hooguit een paar seconden later, wat op een kijkscherm niemand merkt.
+const laatsteBlast = new Map<number, { side: 'home' | 'away'; ts: number }>()
+const BLAST_BEWAARD_MS = 60_000
+
+/** De recentste viering van deze wedstrijd, of null als er geen is binnen `maxLeeftijdMs`. */
+export function recenteBlast(
+  matchId: number,
+  maxLeeftijdMs: number,
+): { side: 'home' | 'away'; ts: number } | null {
+  const b = laatsteBlast.get(matchId)
+  if (!b) return null
+  return Date.now() - b.ts <= maxLeeftijdMs ? b : null
+}
+
 /** Vuur een clubkleuren-viering af op ALLE schermen van deze wedstrijd. Null/false als niemand
  * kijkt of de tribune gesloten is. Dit is wat de vieringsknop bijzonder maakt: iedereen ziet ze. */
 export function addBlast(matchId: number, side: 'home' | 'away'): boolean {
@@ -400,6 +417,10 @@ export function addBlast(matchId: number, side: 'home' | 'away'): boolean {
   const ch = channels.get(matchId)
   if (!ch) return false
   if (!isTribuneOpen(ch.status, ch.finishedAt)) return false
+  const nu = Date.now()
+  // Oude vieringen opruimen, anders groeit deze map een heel seizoen door.
+  for (const [id, b] of laatsteBlast) if (nu - b.ts > BLAST_BEWAARD_MS) laatsteBlast.delete(id)
+  laatsteBlast.set(matchId, { side, ts: nu })
   broadcast(ch, 'blast', { side })
   return true
 }

@@ -7,8 +7,7 @@ import { ClubColorBlast } from '@/components/ClubColorBlast'
 import { TeamLogo } from '@/components/TeamLogo'
 import { type ClubColors, DEFAULT_AWAY_COLOR, DEFAULT_HOME_COLOR, inkOn, readableOnDark } from '@/lib/club-colors'
 import type { KantineBord } from '@/lib/kantine-borden'
-import type { MatchState, TimelineItem } from '@/lib/match-engine'
-import { goalPointsFromLabel, goalScorerFromLabel, useLiveStream } from '@/lib/use-live-stream'
+import type { KantineLive } from '@/lib/kantine-channel'
 
 /**
  * Eén bord op het kantinescherm. Zelfde vorm als wat de kantine-API's teruggeven — die bouwen hem
@@ -21,72 +20,80 @@ function fmtClock(total: number): string {
   return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
 }
 
-// Eén live vak in het raster: abonneert zich op de SSE-stream en toont een doelpunt-melding
-// over het vak wanneer er gescoord wordt. `onRemove` is optioneel (enkel op de kiezer).
-// `fontSize`/`logoSize` schalen het vak mee met de dynamische schermlayout.
+// Eén live vak in het raster. De live gegevens komen NIET uit een eigen verbinding: het scherm
+// houdt er één voor al zijn borden samen (zie kantine-channel.ts) en geeft elk vak zijn stuk door.
+// Een dozijn borden was vroeger een dozijn open verbindingen uit dezelfde browser, en daar loopt
+// een browser op vast. `onRemove` is optioneel (enkel op de kiezer); `fontSize`/`logoSize` schalen
+// het vak mee met de dynamische schermlayout.
 export function Tile({
   match,
+  live,
   onRemove,
   fontSize,
   logoSize = 'md',
 }: {
   match: KantineMatch
+  live?: KantineLive | null
   onRemove?: (id: number) => void
   fontSize?: number
   logoSize?: string
 }) {
-  const [state, setState] = useState<MatchState | null>(null)
   const [clock, setClock] = useState(0)
   const [flash, setFlash] = useState<{ key: number; side: 'home' | 'away'; team: string; points: number; scorer: string | null } | null>(null)
   const base = useRef({ seconds: 0, at: Date.now() })
-  const seenGoals = useRef<Set<string>>(new Set())
+  // Het doelpunt dat we al gezien hebben. Het eerste frame "leert" de stand zonder te vieren —
+  // anders knalt er een viering op het scherm zodra de tv 's ochtends aangaat.
+  const gezienGoal = useRef<string | null>(null)
+  const eersteFrame = useRef(true)
   const seq = useRef(0)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
   // Clubkleuren-viering (afgevuurd vanaf een supporter-scherm) ook hier over dit vak tonen.
   const [blast, setBlast] = useState<{ key: number; colors: ClubColors; name: string } | null>(null)
+  const gezienBlast = useRef<number | null>(null)
   const blastSeq = useRef(0)
   const blastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const stateRef = useRef<MatchState | null>(null)
-  stateRef.current = state
 
-  // display=1: het kantinescherm is een passief scherm en telt niet mee in de kijkersteller.
-  useLiveStream<{ state: MatchState; timeline: TimelineItem[] }>(
-    `/api/match/${match.id}/stream?display=1`,
-    (data) => {
-      // Eerste frame "leert" de bestaande doelpunten zonder te vieren; daarna enkel nieuwe id's.
-      const first = seenGoals.current.size === 0 && !state
-      const fresh = data.timeline.filter((i) => i.kind === 'goal' && !seenGoals.current.has(i.id))
-      fresh.forEach((i) => seenGoals.current.add(i.id))
-      setState(data.state)
-      const last = fresh[fresh.length - 1]
-      if (!first && last && last.side) {
-        seq.current += 1
-        setFlash({
-          key: seq.current,
-          side: last.side,
-          team: data.state.teams[last.side].name,
-          points: goalPointsFromLabel(last.label),
-          scorer: goalScorerFromLabel(last.label),
-        })
-        if (timer.current) clearTimeout(timer.current)
-        timer.current = setTimeout(() => setFlash(null), 5000)
-      }
-    },
-    {
-      blast: (d) => {
-        const side = (d as { side?: string }).side
-        if (side !== 'home' && side !== 'away') return
-        const teams = stateRef.current?.teams
-        const fallback = side === 'home' ? DEFAULT_HOME_COLOR : DEFAULT_AWAY_COLOR
-        const colors = (teams?.[side].colors ?? match[side].colors ?? { primary: fallback, secondary: fallback }) as ClubColors
-        const name = teams?.[side].name ?? match[side].name
-        const key = ++blastSeq.current
-        setBlast({ key, colors, name })
-        if (blastTimer.current) clearTimeout(blastTimer.current)
-        blastTimer.current = setTimeout(() => setBlast((b) => (b && b.key === key ? null : b)), 2800)
-      },
-    },
-  )
+  const home = match.home.name
+  const away = match.away.name
+  const naamVan = { home, away }
+
+  const goalId = live?.goal?.id ?? null
+  useEffect(() => {
+    if (!live) return
+    const g = live.goal
+    const eerste = eersteFrame.current
+    eersteFrame.current = false
+    if (eerste) {
+      gezienGoal.current = g?.id ?? null
+      return
+    }
+    if (!g || g.id === gezienGoal.current) return
+    gezienGoal.current = g.id
+    seq.current += 1
+    const key = seq.current
+    setFlash({ key, side: g.side, team: naamVan[g.side], points: g.points, scorer: g.scorer })
+    if (timer.current) clearTimeout(timer.current)
+    timer.current = setTimeout(() => setFlash((f) => (f && f.key === key ? null : f)), 5000)
+    // De viering hangt aan het doelpunt-id; de rest van het frame verandert elke paar seconden.
+  }, [goalId, Boolean(live)])
+
+  const blastTs = live?.blast?.ts ?? null
+  useEffect(() => {
+    const b = live?.blast
+    if (!b || b.ts === gezienBlast.current) return
+    // Bij het openen van het scherm geen oude viering opnieuw afspelen.
+    if (gezienBlast.current === null && eersteFrame.current) {
+      gezienBlast.current = b.ts
+      return
+    }
+    gezienBlast.current = b.ts
+    const fallback = b.side === 'home' ? DEFAULT_HOME_COLOR : DEFAULT_AWAY_COLOR
+    const colors = (match[b.side].colors ?? { primary: fallback, secondary: fallback }) as ClubColors
+    const key = ++blastSeq.current
+    setBlast({ key, colors, name: naamVan[b.side] })
+    if (blastTimer.current) clearTimeout(blastTimer.current)
+    blastTimer.current = setTimeout(() => setBlast((v) => (v && v.key === key ? null : v)), 2800)
+  }, [blastTs])
 
   useEffect(() => {
     return () => {
@@ -97,30 +104,35 @@ export function Tile({
 
   // Ticking klok — reken vanaf clockUpdatedAt (server) zodat de tijd klopt en niet reset.
   useEffect(() => {
-    if (!state) return
-    const m = state.match
-    const at = m.clockUpdatedAt ? new Date(m.clockUpdatedAt).getTime() : Date.now()
-    base.current = { seconds: m.clockSeconds, at }
-    setClock(m.clockRunning ? m.clockSeconds + Math.max(0, (Date.now() - at) / 1000) : m.clockSeconds)
-  }, [state?.match.clockSeconds, state?.match.clockRunning, state?.match.clockUpdatedAt])
+    if (!live) return
+    const at = live.clockUpdatedAt ? new Date(live.clockUpdatedAt).getTime() : Date.now()
+    base.current = { seconds: live.clockSeconds, at }
+    setClock(Math.floor(live.clockRunning ? live.clockSeconds + Math.max(0, (Date.now() - at) / 1000) : live.clockSeconds))
+  }, [live?.clockSeconds, live?.clockRunning, live?.clockUpdatedAt, live])
 
   useEffect(() => {
-    if (!state?.match.clockRunning) return
-    const t = setInterval(() => setClock(base.current.seconds + Math.max(0, (Date.now() - base.current.at) / 1000)), 250)
+    if (!live?.clockRunning) return
+    // Hele seconden: het vak toont mm:ss, dus een float zou vier keer per seconde een render
+    // uitlokken die er niet anders uitziet. Met een geheel getal slaat React de meeste over —
+    // en op een kantinescherm staan er een dozijn van deze klokken naast elkaar.
+    const t = setInterval(
+      () => setClock(Math.floor(base.current.seconds + Math.max(0, (Date.now() - base.current.at) / 1000))),
+      250,
+    )
     return () => clearInterval(t)
-  }, [state?.match.clockRunning])
+  }, [live?.clockRunning])
 
-  // Tot de eerste SSE-update tonen we de server-gerenderde momentopname.
-  const home = state?.teams.home.name ?? match.home.name
-  const away = state?.teams.away.name ?? match.away.name
-  const homeLogo = state?.teams.home.logoUrl ?? match.home.logoUrl
-  const awayLogo = state?.teams.away.logoUrl ?? match.away.logoUrl
-  const homeLogoFit = state?.teams.home.logoFit ?? match.home.logoFit
-  const awayLogoFit = state?.teams.away.logoFit ?? match.away.logoFit
-  const homeColor = (state?.teams.home.colors ?? match.home.colors)?.primary
-  const awayColor = (state?.teams.away.colors ?? match.away.colors)?.primary
-  const score = state?.score ?? match.score
-  const status = state?.match.status ?? match.status
+  // Tot het eerste live-frame tonen we de server-gerenderde momentopname. Namen, logo's en kleuren
+  // komen sowieso daarvandaan: die veranderen niet tijdens een wedstrijd en horen niet elke drie
+  // seconden over de lijn.
+  const homeLogo = match.home.logoUrl
+  const awayLogo = match.away.logoUrl
+  const homeLogoFit = match.home.logoFit
+  const awayLogoFit = match.away.logoFit
+  const homeColor = match.home.colors?.primary
+  const awayColor = match.away.colors?.primary
+  const score = live?.score ?? match.score
+  const status = live?.status ?? match.status
   const played = status !== 'scheduled'
 
   // Leesbare varianten voor tekst/stat-cijfers op het donkere vak; rauwe kleur blijft voor de ring.
@@ -139,7 +151,7 @@ export function Tile({
       <div className="kt-tile-head">
         <span className="kt-tile-reeks">{match.reeks}</span>
         <span className={`kt-tile-status ${status}`}>
-          {status === 'live' ? (state?.atHalfTime ? 'RUST' : 'LIVE') : status === 'finished' ? 'EINDE' : match.time}
+          {status === 'live' ? (live?.atHalfTime ? 'RUST' : 'LIVE') : status === 'finished' ? 'EINDE' : match.time}
         </span>
         {onRemove && (
           <button type="button" className="kt-tile-x" onClick={() => onRemove(match.id)} aria-label="Verwijderen" title="Uit selectie">
@@ -148,40 +160,42 @@ export function Tile({
         )}
       </div>
 
-      <Link href={`/match/${match.id}`} className="kt-tile-body">
+      {/* prefetch uit: op een tv klikt niemand ooit door, en elke tegel zou anders de volledige
+          wedstrijdpagina ophalen. De link zelf blijft, voor het scherm op /kantine. */}
+      <Link href={`/match/${match.id}`} prefetch={false} className="kt-tile-body">
         <div className="kt-tile-team">
           <TeamLogo name={home} logoUrl={homeLogo} logoFit={homeLogoFit} side="home" size={logoSize} ringColor={homeColor} />
           <span className="kt-tile-name">{home}</span>
-          {played && state && (
+          {played && live && (
             <span className="kt-tile-teamstats home">
-              <span title="Kruisjes">✖ {state.crosses.home}</span>
-              <span title="Time-outs">⏱ {state.timeouts.home}</span>
+              <span title="Kruisjes">✖ {live.crosses.home}</span>
+              <span title="Time-outs">⏱ {live.timeouts.home}</span>
             </span>
           )}
         </div>
         <div className="kt-tile-mid">
           <div className="kt-tile-score">{played ? `${score.home} – ${score.away}` : 'vs'}</div>
-          {status === 'live' && state ? (
+          {status === 'live' && live ? (
             <span className="kt-tile-clock live">
-              <span className="kt-clock-half">H{state.match.currentHalf}</span>
-              <span className="kt-clock-time">{state.atHalfTime ? 'RUST' : fmtClock(clock)}</span>
+              <span className="kt-clock-half">H{live.half}</span>
+              <span className="kt-clock-time">{live.atHalfTime ? 'RUST' : fmtClock(clock)}</span>
             </span>
           ) : status === 'finished' ? (
             <span className="kt-tile-clock dim">Afgelopen</span>
           ) : (
             <span className="kt-tile-clock dim">{match.time}</span>
           )}
-          {played && state && state.refereeStops > 0 && (
-            <span className="kt-tile-sr" title="Time-outs scheidsrechter">🧑‍⚖️ ⏱ {state.refereeStops}</span>
+          {played && live && live.refereeStops > 0 && (
+            <span className="kt-tile-sr" title="Time-outs scheidsrechter">🧑‍⚖️ ⏱ {live.refereeStops}</span>
           )}
         </div>
         <div className="kt-tile-team">
           <TeamLogo name={away} logoUrl={awayLogo} logoFit={awayLogoFit} side="away" size={logoSize} ringColor={awayColor} />
           <span className="kt-tile-name">{away}</span>
-          {played && state && (
+          {played && live && (
             <span className="kt-tile-teamstats away">
-              <span title="Kruisjes">✖ {state.crosses.away}</span>
-              <span title="Time-outs">⏱ {state.timeouts.away}</span>
+              <span title="Kruisjes">✖ {live.crosses.away}</span>
+              <span title="Time-outs">⏱ {live.timeouts.away}</span>
             </span>
           )}
         </div>
