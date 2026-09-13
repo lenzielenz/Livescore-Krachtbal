@@ -34,7 +34,7 @@ type Channel = {
   date: string | null // aftrap (voor het "al open op de speeldag zelf"-venster)
   reactions: Record<string, number> // delta sinds de laatste flush (zwevende emoji's)
   totals: Record<string, number> // cumulatief deze wedstrijd (zichtbare tellers)
-  shoutouts: Shout[] // ringbuffer van recente berichten
+  shoutouts: Shout[] // volledige blijvende wedstrijdtribune
   shoutSeq: number
   pollVotes: Record<string, number> // voorspel-poll: cumulatieve stemmen per optie (home/draw/away)
   pollSaveTimer: ReturnType<typeof setTimeout> | null
@@ -56,7 +56,6 @@ const REACTION_SAVE_MS = 5000
 // een simpele page-refresh de tribune niet wist. Pas na deze grace-periode wordt het opgeruimd.
 const IDLE_GRACE_MS = 60_000
 const ALLOWED_EMOJI = new Set(['clap', 'fire', 'heart', 'goal', 'wow', 'rocket'])
-const MAX_SHOUTS = 40 // hou enkel de recentste berichten bij
 export const POLL_OPTIONS = ['home', 'draw', 'away'] as const
 const POLL_SET = new Set<string>(POLL_OPTIONS)
 
@@ -190,7 +189,7 @@ async function hydrateChannel(ch: Channel, matchId: number) {
       const restored = dbShouts.filter(
         (s): s is Shout => Boolean(s) && typeof s.id === 'number' && typeof s.text === 'string' && !seen.has(s.id),
       )
-      ch.shoutouts = [...restored, ...ch.shoutouts].slice(-MAX_SHOUTS)
+      ch.shoutouts = [...restored, ...ch.shoutouts]
       ch.shoutSeq = Math.max(ch.shoutSeq, ...ch.shoutouts.map((s) => s.id), 0)
       changed = true
     }
@@ -364,7 +363,6 @@ export function addShoutout(matchId: number, name: string, text: string): Shout 
   ch.shoutSeq += 1
   const shout: Shout = { id: ch.shoutSeq, name, text, at: Date.now() }
   ch.shoutouts.push(shout)
-  if (ch.shoutouts.length > MAX_SHOUTS) ch.shoutouts.splice(0, ch.shoutouts.length - MAX_SHOUTS)
   broadcast(ch, 'shoutout', shout)
   void saveShoutouts(ch, matchId) // meteen persisteren zodat het bericht blijft staan
   return shout
