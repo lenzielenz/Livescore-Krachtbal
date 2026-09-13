@@ -38,6 +38,7 @@ import { ReportResult } from './ReportResult'
 import { ScoreTrust } from './ScoreTrust'
 import { ToekomstigeWedstrijd } from './ToekomstigeWedstrijd'
 import { WedstrijdBeheer } from './WedstrijdBeheer'
+import { WinfieCard } from './WinfieCard'
 import { clubsOpId, type BeheerClub } from '@/lib/ploeg-rechtzetten'
 import type { BeheerPloeg } from '@/components/PloegVelden'
 import '../../analyse/analyse.css'
@@ -522,6 +523,8 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
           <p className="match-report-note">Automatisch samengesteld uit de geregistreerde wedstrijddata.</p>
         </section>
       )}
+
+      {state.match.status === 'finished' && <WinfieCard matchId={matchId} />}
 
       {share && (
         <>
