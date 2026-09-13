@@ -49,6 +49,7 @@ const VOLGEN: { href: string; label: string }[] = [
 const ONTDEKKEN: { href: string; label: string }[] = [
   { href: '/recap', label: '🗞️ Weekoverzicht' },
   { href: '/nieuws', label: '📣 Nieuws' },
+  { href: '/ideeenbus', label: '💡 Ideeënbus' },
   { href: '/uitleg', label: '🎓 Zo werkt het' },
 ]
 

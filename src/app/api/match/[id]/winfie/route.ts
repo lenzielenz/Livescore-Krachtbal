@@ -118,7 +118,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   if (!state || !match || match.analyseOnly) return Response.json({ error: 'Wedstrijd niet gevonden.' }, { status: 404 })
   if (state.match.status !== 'finished') return Response.json({ error: 'De Winfie verschijnt na de eindstand.' }, { status: 409 })
 
-  let photoDoc: { id?: number; filename?: string | null; url?: string | null } | null = null
+  type PhotoDoc = { id: number; filename?: string | null; url?: string | null }
+  let photoDoc: PhotoDoc | null = null
   if (user) {
     const photos = await payload.find({
       collection: 'match-instants',
@@ -127,7 +128,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       depth: 0,
       limit: 1,
     }).catch(() => null)
-    photoDoc = (photos?.docs?.[0] as typeof photoDoc) ?? null
+    photoDoc = (photos?.docs?.[0] as unknown as PhotoDoc | undefined) ?? null
   }
 
   const origin = new URL(request.url).origin
