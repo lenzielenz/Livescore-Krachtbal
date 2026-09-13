@@ -17,7 +17,6 @@ import { sanitizeTrust, trustView, type TrustView } from './score-trust'
 import { isOfficialScore } from './score-trust-store'
 import { readSimpleScore } from './simple-score'
 import type { ResetImpact } from './match-reset-policy'
-import { TRIBUNE_GRACE_MS } from './tribune'
 import {
   type SetupSide,
   type TeamSide,
@@ -922,16 +921,7 @@ export async function finishMatch(payload: Payload, matchId: number) {
     data: { status: 'finished', clockRunning: false, clockSeconds: frozen, clockUpdatedAt: new Date().toISOString() },
     overrideAccess: true,
   })
-  // Tribunefoto's verdwijnen exact één uur ná het einde: zet de vervaldatum van alle foto's van
-  // deze wedstrijd op nu + 1u (de upload gebruikte tijdens de match nog een schatting).
-  await payload
-    .update({
-      collection: 'match-instants',
-      where: { match: { equals: matchId } },
-      data: { expiresAt: new Date(Date.now() + TRIBUNE_GRACE_MS).toISOString() },
-      overrideAccess: true,
-    })
-    .catch(() => {})
+
   return buildMatchState(payload, matchId)
 }
 
