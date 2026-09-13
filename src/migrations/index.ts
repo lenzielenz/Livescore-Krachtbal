@@ -113,6 +113,8 @@ import * as migration_20260904_120000_tornooi_score_trust from './20260904_12000
 import * as migration_20260904_150000_tornooi_aantekenaars from './20260904_150000_tornooi_aantekenaars'
 import * as migration_20260906_140000_kantine_scherm_per_gebruiker from './20260906_140000_kantine_scherm_per_gebruiker'
 
+import * as migration_20260913_210000_ideas from './20260913_210000_ideas'
+
 export const migrations = [
   {
     up: migration_20260531_233344_initial.up,
@@ -683,5 +685,10 @@ export const migrations = [
     up: migration_20260906_140000_kantine_scherm_per_gebruiker.up,
     down: migration_20260906_140000_kantine_scherm_per_gebruiker.down,
     name: '20260906_140000_kantine_scherm_per_gebruiker',
+  },
+  {
+    up: migration_20260913_210000_ideas.up,
+    down: migration_20260913_210000_ideas.down,
+    name: '20260913_210000_ideas',
   },
 ];
