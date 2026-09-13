@@ -1,0 +1,48 @@
+name: Controleer wijziging
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: controle-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  controle:
+    name: Typecheck en productiebuild
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PAYLOAD_SECRET: github-controle-geen-productiegeheim-123456789
+      DATABASE_URL: file:./krachtbal-ci.db
+      NEXT_TELEMETRY_DISABLED: 1
+
+    steps:
+      - name: Code ophalen
+        uses: actions/checkout@v4
+
+      - name: pnpm installeren
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.5.0
+
+      - name: Node.js installeren
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.14.0
+          cache: pnpm
+
+      - name: Dependencies installeren
+        run: pnpm install --frozen-lockfile
+
+      - name: TypeScript controleren
+        run: pnpm typecheck
+
+      - name: Productiebuild controleren
+        run: pnpm build
