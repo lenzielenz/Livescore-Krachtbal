@@ -32,6 +32,7 @@ import { BASE_RATE_PER_MIN } from '@/lib/win-probability'
 import { MatchRecap } from '../../analyse/[id]/MatchRecap'
 import { LiveStream } from './LiveStream'
 import { MatchScorers } from './MatchScorers'
+import { MatchActivitySummary } from './MatchActivitySummary'
 import { PronostiekWidget } from './PronostiekWidget'
 import { ReportResult } from './ReportResult'
 import { ScoreTrust } from './ScoreTrust'
@@ -215,8 +216,8 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
     }
   }
 
-  // Vluchtige foto-tribune: ENKEL op volwassen reeksen (safeguarding, geen jeugd). Laad de recente,
-  // niet-verlopen foto's; posten mag enkel ingelogd terwijl de wedstrijd bezig is/pas voorbij —
+  // Blijvende foto-tribune: ENKEL op volwassen reeksen (safeguarding, geen jeugd). Laad alle
+  // bewaarde foto's; posten mag enkel ingelogd terwijl de wedstrijd bezig is/pas voorbij —
   // bewust NIET verruimd naar "matchday vóór de aftrap" (in tegenstelling tot reacties/chat): een
   // foto van een wedstrijd die nog niet begonnen is, bestaat niet.
   const adultMatch = isAdultReeks(reeksRaw)
@@ -226,10 +227,10 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
     const res = await payload
       .find({
         collection: 'match-instants',
-        where: { and: [{ match: { equals: matchId } }, { expiresAt: { greater_than: new Date().toISOString() } }] },
+        where: { match: { equals: matchId } },
         sort: '-createdAt',
         depth: 0,
-        limit: 30,
+        pagination: false,
       })
       .catch(() => null)
     initialInstants = (res?.docs ?? []).map((d) => {
@@ -448,6 +449,13 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
         momentumGoals={share?.goals}
         momentumTimeouts={share?.timeouts}
       />
+      {me && state.match.status === 'finished' && (
+        <MatchActivitySummary
+          reactions={(matchDoc?.liveReactions as Record<string, number> | null) ?? {}}
+          shouts={Array.isArray(matchDoc?.liveShoutouts) ? (matchDoc.liveShoutouts as { id: number; name: string; text: string; at: number }[]) : []}
+          photos={initialInstants}
+        />
+      )}
       {/* Vertrouwenslaag onder het scorebord: wie tekent aan, en klopt deze stand? Alleen bij een
           vrije supporters-score — in de federatieflow is de uitslag per definitie officieel. */}
       {trust.label !== 'official' && state.match.status !== 'scheduled' && (

@@ -4,8 +4,8 @@ import path from 'path'
 
 import { isFederationLevel } from '../lib/access'
 
-// Vluchtige foto-tribune: spontane supporterfoto's bij een wedstrijd, die automatisch verdwijnen
-// (expiresAt). ENKEL op volwassen wedstrijden (de safeguarding-grens wordt server-side in de
+// Blijvende foto-tribune: spontane supporterfoto's blijven bij de wedstrijd bewaard.
+// ENKEL op volwassen wedstrijden (de safeguarding-grens wordt server-side in de
 // upload-route afgedwongen, niet hier). Foto's worden client-side verkleind vóór upload, dus we
 // hebben hier geen server-side beeldverwerking (sharp) nodig.
 
@@ -29,8 +29,8 @@ export const MatchInstants: CollectionConfig = {
   labels: { singular: 'Foto-instant', plural: 'Foto-instants' },
   admin: {
     useAsTitle: 'authorName',
-    defaultColumns: ['authorName', 'match', 'expiresAt'],
-    description: 'Vluchtige supporterfoto’s bij een wedstrijd. Verdwijnen automatisch na expiresAt.',
+    defaultColumns: ['authorName', 'match', 'createdAt'],
+    description: 'Blijvende supporterfoto’s bij een wedstrijd. Alleen moderatie verwijdert ze.',
   },
   access: {
     // Publiek leesbaar; de verlopen exemplaren worden in de query's weggefilterd en gepurged.
@@ -54,7 +54,7 @@ export const MatchInstants: CollectionConfig = {
       type: 'date',
       required: true,
       index: true,
-      admin: { description: 'Wanneer deze foto automatisch verdwijnt.' },
+      admin: { hidden: true, description: 'Legacy veld; nieuwe foto’s blijven bewaard.' },
     },
   ],
   upload: {
