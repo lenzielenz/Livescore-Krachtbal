@@ -43,7 +43,7 @@ export default async function NieuwsPage() {
             supporterfoto’s blijven bewaard en worden gebundeld in een wedstrijdsamenvatting.
           </p>
           <p className="nw-update-soon">
-            Binnenkort: de <strong>Winfie</strong> — een deelbare eindscore met scoreverloop en winnaarskleuren.
+            Ook nieuw: de <strong>Winfie</strong> — een deelbare eindscore met scoreverloop en winnaarskleuren.
           </p>
         </article>
         {res.docs.length === 0 ? (
