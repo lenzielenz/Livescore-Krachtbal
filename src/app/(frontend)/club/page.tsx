@@ -16,6 +16,7 @@ import { isSupportersMode } from '@/lib/score-mode'
 import { clubActies, primaireActie } from '@/lib/wedstrijddag-acties'
 import { ClaimButton } from './ClaimButton'
 import { MyTeamsPicker } from './MyTeamsPicker'
+import { InstagramWeekendCard } from './InstagramWeekendCard'
 import { formatDateBE } from '@/lib/datetime'
 
 export const dynamic = 'force-dynamic'
@@ -246,6 +247,7 @@ export default async function ClubPage({ searchParams }: { searchParams: Promise
   return (
     <Shell>
       <MyTeamsPicker teams={allTeams} initial={myTeams} />
+      <InstagramWeekendCard />
 
       {isBeheerder && (
         <p className="myteams-focusbar">
