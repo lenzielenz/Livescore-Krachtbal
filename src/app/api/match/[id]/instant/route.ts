@@ -1,9 +1,9 @@
 import { getAuthUser } from '@/lib/auth-user'
 import { addInstant } from '@/lib/match-channel'
 import { getPayloadClient } from '@/lib/payload-client'
-import { isAdultReeks, reeksHalfDurationSeconds, type Reeks } from '@/lib/reeksen'
+import { isAdultReeks, type Reeks } from '@/lib/reeksen'
 import { rateLimit } from '@/lib/sse-hub'
-import { isTribuneOpen, tribuneExpiresAt } from '@/lib/tribune'
+import { isTribuneOpen } from '@/lib/tribune'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,9 +17,9 @@ function displayName(user: { name?: string | null; email?: string | null }): str
   return local || 'Supporter'
 }
 
-// Upload van een vluchtige supporterfoto. Vereist login; ENKEL op volwassen wedstrijden
-// (safeguarding-grens: geen foto's op jeugdreeksen U12–U20); enkel zolang de tribune open is.
-// Foto's verdwijnen automatisch na 24u (expiresAt) en verlopen exemplaren worden meteen gepurged.
+// Upload van een blijvende supporterfoto. Vereist login; ENKEL op volwassen wedstrijden
+// (safeguarding-grens: geen foto's op jeugdreeksen U12–U20); plaatsen kan enkel zolang de tribune open is.
+// Na afloop blijft de foto als deel van de wedstrijdbeleving zichtbaar.
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const matchId = Number(id)
@@ -60,14 +60,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
   const buf = Buffer.from(await file.arrayBuffer())
   const authorName = displayName(user)
-  // Foto's verdwijnen één uur ná de wedstrijd (exact zodra de eindtijd bekend is; anders geschat).
-  const halfSeconds = reeksHalfDurationSeconds(match.reeks as Reeks)
-  const expiresAt = new Date(
-    tribuneExpiresAt(
-      { status: match.status as string, finishedAt: (match.finishedAt as string | null | undefined) ?? null, date: (match.date as string | null | undefined) ?? null },
-      halfSeconds,
-    ),
-  ).toISOString()
+  // Legacy schema-veld: bewaar ver in de toekomst. Nieuwe code filtert foto's niet meer op verval.\n  const expiresAt = '2999-12-31T23:59:59.999Z'
 
   let created
   try {
@@ -80,15 +73,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   } catch {
     return Response.json({ error: 'Foto opslaan mislukt.' }, { status: 500 })
   }
-
-  // Verlopen foto's van deze wedstrijd meteen opruimen (bestand + record verdwijnen).
-  payload
-    .delete({
-      collection: 'match-instants',
-      where: { and: [{ match: { equals: matchId } }, { expiresAt: { less_than: new Date().toISOString() } }] },
-      overrideAccess: true,
-    })
-    .catch(() => {})
 
   // Altijd een RELATIEVE same-origin URL: zo kan een (verkeerd ingestelde of http-)serverURL nooit
   // een absolute/mixed-content link maken die de browser blokkeert → anders blijft de foto onzichtbaar.
