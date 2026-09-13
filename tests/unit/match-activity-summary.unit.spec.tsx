@@ -13,14 +13,14 @@ describe('MatchActivitySummary', () => {
       />,
     )
 
-    expect(screen.getByText('18')).toBeInTheDocument()
-    expect(screen.getByText('16')).toBeInTheDocument()
-    expect(screen.getByText('Sterke wedstrijd!')).toBeInTheDocument()
-    expect(screen.getByAltText('Supporterfoto van Supporter')).toBeInTheDocument()
+    expect(screen.queryByText('18')).not.toBeNull()
+    expect(screen.queryByText('16')).not.toBeNull()
+    expect(screen.queryByText('Sterke wedstrijd!')).not.toBeNull()
+    expect(screen.queryByAltText('Supporterfoto van Supporter')).not.toBeNull()
   })
 
   it('toont geen leeg samenvattingsblok', () => {
     const { container } = render(<MatchActivitySummary reactions={{}} shouts={[]} photos={[]} />)
-    expect(container).toBeEmptyDOMElement()
+    expect(container.innerHTML).toBe('')
   })
 })
