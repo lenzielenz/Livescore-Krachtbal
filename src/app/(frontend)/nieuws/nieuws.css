@@ -34,3 +34,21 @@
 .nw-article-title { margin: 6px 0 10px; font-size: clamp(1.6rem, 5vw, 2.4rem); font-weight: 900; line-height: 1.1; }
 .nw-article-lead { margin: 0 0 16px; font-size: 1.1rem; font-weight: 600; color: var(--dim-strong); line-height: 1.5; }
 .nw-article-body { font-size: 1.02rem; line-height: 1.7; white-space: pre-line; color: var(--txt); }
+
+
+.nw-update {
+  max-width: 760px;
+  margin: 8px 0 26px;
+  padding: clamp(18px, 4vw, 26px);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--line));
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 100% 0, color-mix(in srgb, var(--accent) 18%, transparent), transparent 38%),
+    var(--panel-grad, var(--panel));
+  box-shadow: var(--card-shadow);
+}
+.nw-update-meta { color: var(--accent); font-size: .7rem; font-weight: 900; letter-spacing: .11em; text-transform: uppercase; }
+.nw-update h2 { margin: 7px 0 12px; font: 800 clamp(1.25rem, 4vw, 1.7rem)/1.15 var(--font-display); }
+.nw-update p { margin: 8px 0 0; color: var(--dim-strong); line-height: 1.55; }
+.nw-update strong { color: var(--txt); }
+.nw-update-soon { padding-top: 9px; border-top: 1px solid color-mix(in srgb, #fff 8%, transparent); }
