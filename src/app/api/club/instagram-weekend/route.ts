@@ -148,7 +148,7 @@ async function fetchLogo(value: unknown, origin: string): Promise<Buffer | null>
   }
 }
 
-export async function GET(request: Request) {
+async function renderWeekendPost(request: Request) {
   const user = await getAuthUser()
   if (!user) return Response.json({ error: 'Log eerst in.' }, { status: 401 })
   const clubId = userClubId(user)
@@ -162,8 +162,8 @@ export async function GET(request: Request) {
     collection: 'teams',
     where: { and: [{ club: { equals: clubId } }, competitionWhere()] },
     depth: 0,
-    pagination: false,
-  })
+    limit: 500,
+  }).catch(() => ({ docs: [] as Record<string, unknown>[] }))
   const teamIds = teams.docs.map((team) => Number(team.id))
   const ownTeams = new Map(teams.docs.map((team) => [Number(team.id), String(team.name ?? 'Ploeg')]))
   const window = weekendWindow()
@@ -181,8 +181,8 @@ export async function GET(request: Request) {
         },
         sort: 'date',
         depth: 2,
-        pagination: false,
-      })
+        limit: 500,
+      }).catch(() => ({ docs: [] as Record<string, unknown>[] }))
     : { docs: [] as Record<string, unknown>[] }
 
   const rows: WeekendMatch[] = []
@@ -237,4 +237,31 @@ export async function GET(request: Request) {
       'X-Content-Type-Options': 'nosniff',
     },
   })
+}
+
+
+async function fallbackPng(): Promise<Response> {
+  const fallback = `<svg width="1080" height="1920" xmlns="http://www.w3.org/2000/svg">
+    <defs><linearGradient id="b" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#06140d"/><stop offset="1" stop-color="#123a2a"/></linearGradient></defs>
+    <rect width="1080" height="1920" fill="url(#b)"/>
+    <rect x="0" width="18" height="1920" fill="#4cc9f0"/>
+    <text x="72" y="140" fill="#ffffff" font-size="34" font-family="sans-serif" font-weight="800">KRACHTBAL LIVE</text>
+    <text x="72" y="430" fill="#4cc9f0" font-size="76" font-family="sans-serif" font-weight="900">WEEKENDPLAN</text>
+    <text x="72" y="520" fill="#ffffff" font-size="35" font-family="sans-serif" font-weight="700">De voorvertoning wordt opnieuw opgebouwd.</text>
+    <text x="72" y="580" fill="#ffffff" fill-opacity=".65" font-size="27" font-family="sans-serif">Probeer de downloadknop zo meteen opnieuw.</text>
+  </svg>`
+  const png = await sharp(Buffer.from(fallback)).png().toBuffer()
+  return new Response(new Uint8Array(png), {
+    status: 200,
+    headers: { 'Content-Type': 'image/png', 'Cache-Control': 'private, no-store', 'X-Weekendplan-Fallback': '1' },
+  })
+}
+
+export async function GET(request: Request) {
+  try {
+    return await renderWeekendPost(request)
+  } catch (error) {
+    console.error('[instagram-weekend] Genereren mislukt', error)
+    return fallbackPng()
+  }
 }

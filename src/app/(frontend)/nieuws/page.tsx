@@ -31,6 +31,21 @@ export default async function NieuwsPage() {
       <SiteHeader />
       <div className="site">
         <h1 className="page-title">📰 <span className="brand">Nieuws</span></h1>
+        <article className="nw-update">
+          <div className="nw-update-meta">Nieuw op Krachtbal Live · 13 september 2026</div>
+          <h2>Van wedstrijdweekend tot blijvende herinnering</h2>
+          <p>
+            Clubs kunnen voortaan onder <strong>Mijn Krachtbal</strong> automatisch een Instagram-weekendplan
+            met al hun wedstrijden downloaden, volledig in hun eigen clubkleuren.
+          </p>
+          <p>
+            Ook na het laatste fluitsignaal blijft de wedstrijd leven: likes, tribuneteksten en
+            supporterfoto’s blijven bewaard en worden gebundeld in een wedstrijdsamenvatting.
+          </p>
+          <p className="nw-update-soon">
+            Ook nieuw: de <strong>Winfie</strong> — een deelbare eindscore met scoreverloop en winnaarskleuren.
+          </p>
+        </article>
         {res.docs.length === 0 ? (
           <p className="empty">Nog geen nieuws. Kom snel terug! 👀</p>
         ) : (
