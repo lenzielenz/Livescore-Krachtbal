@@ -60,7 +60,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
   const buf = Buffer.from(await file.arrayBuffer())
   const authorName = displayName(user)
-  // Legacy schema-veld: bewaar ver in de toekomst. Nieuwe code filtert foto's niet meer op verval.\n  const expiresAt = '2999-12-31T23:59:59.999Z'
+  // Legacy schema-veld: bewaar ver in de toekomst. Nieuwe code filtert foto's niet meer op verval.
+  const expiresAt = '2999-12-31T23:59:59.999Z'
 
   let created
   try {
