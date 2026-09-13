@@ -147,6 +147,12 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const date = match.date ? formatDateBE(new Date(String(match.date)), { day: '2-digit', month: 'long', year: 'numeric' }) : ''
   const series = match.reeks ? reeksNaam(match.reeks) : 'Krachtbal'
   const progress = winfieProgress(timeline)
+  const last = progress.at(-1)
+  // Ook een geïmporteerde/handmatig bevestigde eindstand zonder volledige doelpuntentijdlijn
+  // eindigt correct in de grafiek.
+  if (!last || last.home !== state.score.home || last.away !== state.score.away) {
+    progress.push({ home: state.score.home, away: state.score.away, half: 2, gameClock: 0 })
+  }
   const svg = overlaySvg({
     home: state.teams.home.name,
     away: state.teams.away.name,
