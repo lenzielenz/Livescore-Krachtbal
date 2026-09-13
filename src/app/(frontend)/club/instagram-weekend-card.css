@@ -1,0 +1,31 @@
+.ig-weekend {
+  --ig-club: var(--accent);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(150px, 230px);
+  gap: clamp(18px, 4vw, 36px);
+  align-items: center;
+  margin: 18px 0 28px;
+  padding: clamp(18px, 4vw, 30px);
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--ig-club) 28%, var(--line));
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 88% 10%, color-mix(in srgb, var(--ig-club) 24%, transparent), transparent 34%),
+    var(--panel-grad, var(--panel));
+  box-shadow: var(--card-shadow);
+}
+.ig-weekend-copy h2 { margin: 4px 0 8px; font: 800 clamp(1.35rem, 4vw, 2rem)/1.05 var(--font-display); }
+.ig-weekend-copy p { max-width: 42rem; margin: 0 0 18px; color: var(--dim); line-height: 1.55; }
+.ig-weekend-kicker { color: var(--accent); font-size: .72rem; font-weight: 900; letter-spacing: .15em; }
+.ig-weekend-download { display: inline-flex; margin-right: 12px; }
+.ig-weekend-copy small { display: block; margin-top: 9px; color: var(--dim); }
+.ig-weekend-preview { display: block; border-radius: 14px; overflow: hidden; transform: rotate(2deg); box-shadow: 0 18px 45px rgba(0,0,0,.42); transition: transform .18s ease; }
+.ig-weekend-preview:hover { transform: rotate(0deg) scale(1.02); }
+.ig-weekend-preview img { display: block; width: 100%; aspect-ratio: 9 / 16; object-fit: cover; background: #07120d; }
+@media (max-width: 620px) {
+  .ig-weekend { grid-template-columns: 1fr 112px; align-items: start; }
+}
+@media (max-width: 430px) {
+  .ig-weekend { grid-template-columns: 1fr; }
+  .ig-weekend-preview { width: min(210px, 72%); margin: 4px auto 0; transform: rotate(1deg); }
+}
