@@ -130,7 +130,9 @@ function makeSvg(clubName: string, primary: string, secondary: string, rows: Wee
 }
 
 async function fetchLogo(value: unknown, origin: string): Promise<Buffer | null> {
-  const raw = value && typeof value === 'object' ? String((value as { url?: unknown }).url ?? '') : ''
+  const raw = value && typeof value === 'object'
+    ? String((value as { url?: unknown }).url ?? '')
+    : typeof value === 'string' ? value : ''
   if (!raw) return null
   try {
     const url = new URL(raw, origin)
@@ -210,7 +212,9 @@ export async function GET(request: Request) {
   const primary = color((club as { colorPrimary?: unknown }).colorPrimary, '#0f8a5f')
   const secondary = color((club as { colorSecondary?: unknown }).colorSecondary, '#f4c542')
   const clubName = String((club as { name?: unknown }).name ?? 'Krachtbalclub')
-  const logo = await fetchLogo((club as { logo?: unknown }).logo, new URL(request.url).origin)
+  const storedLogo = (club as { logo?: unknown }).logo
+  const logoSource = storedLogo || (club as { logoUrl?: unknown }).logoUrl
+  const logo = await fetchLogo(logoSource, new URL(request.url).origin)
   const svg = makeSvg(clubName, primary, secondary, rows, window.saturdayKey, Boolean(logo))
 
   let image = sharp(Buffer.from(svg)).png({ compressionLevel: 9 })
