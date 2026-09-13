@@ -44,5 +44,8 @@ jobs:
       - name: TypeScript controleren
         run: pnpm typecheck
 
+      - name: Unit-tests uitvoeren
+        run: pnpm test:unit
+
       - name: Productiebuild controleren
         run: pnpm build
