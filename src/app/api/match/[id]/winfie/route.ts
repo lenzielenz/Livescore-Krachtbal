@@ -131,13 +131,19 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     photoDoc = (photos?.docs?.[0] as unknown as PhotoDoc | undefined) ?? null
   }
 
-  const origin = new URL(request.url).origin
+  const requestUrl = new URL(request.url)
+  const preview = requestUrl.searchParams.get('preview') === '1'
+  const origin = requestUrl.origin
   const photoUrl = photoDoc?.filename ? `/api/match-instants/file/${encodeURIComponent(photoDoc.filename)}` : (photoDoc?.url ?? null)
-  const [photo, homeLogo, awayLogo] = await Promise.all([
-    imageBuffer(photoUrl, origin),
-    imageBuffer(state.teams.home.logoUrl, origin, 2_000_000),
-    imageBuffer(state.teams.away.logoUrl, origin, 2_000_000),
-  ])
+  // De pagina-preview blijft bewust licht. Alleen de download haalt de foto's/logo's op en
+  // rendert de grote PNG; zo kan het bekijken van een wedstrijd de server niet overbelasten.
+  const [photo, homeLogo, awayLogo] = preview
+    ? [null, null, null]
+    : await Promise.all([
+        imageBuffer(photoUrl, origin),
+        imageBuffer(state.teams.home.logoUrl, origin, 2_000_000),
+        imageBuffer(state.teams.away.logoUrl, origin, 2_000_000),
+      ])
 
   const winner = state.score.home > state.score.away ? 'home' : state.score.away > state.score.home ? 'away' : 'draw'
   const winningColors = winner === 'home' ? state.teams.home.colors : winner === 'away' ? state.teams.away.colors : null
@@ -173,6 +179,16 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     awayLogo: Boolean(awayLogo),
   })
 
+  if (preview) {
+    return new Response(svg, {
+      headers: {
+        'Content-Type': 'image/svg+xml; charset=utf-8',
+        'Cache-Control': 'private, no-store',
+        'X-Content-Type-Options': 'nosniff',
+      },
+    })
+  }
+
   let canvas = photo
     ? sharp(photo).resize(W, H, { fit: 'cover', position: sharp.strategy.attention }).modulate({ saturation: 0.82, brightness: 0.72 })
     : sharp({ create: { width: W, height: H, channels: 4, background: primary } })
@@ -188,9 +204,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   }
 
   canvas = canvas.composite(composites)
-  const png = await canvas.png({ compressionLevel: 9 }).toBuffer()
+  const png = await canvas.png({ compressionLevel: 7 }).toBuffer()
   const slug = `${state.teams.home.name}-${state.teams.away.name}`.toLowerCase().replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '')
-  const download = new URL(request.url).searchParams.get('download') === '1'
+  const download = requestUrl.searchParams.get('download') === '1'
   return new Response(new Uint8Array(png), {
     headers: {
       'Content-Type': 'image/png',
