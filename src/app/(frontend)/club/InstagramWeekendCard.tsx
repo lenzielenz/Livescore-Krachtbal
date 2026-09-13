@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 
+import { DownloadImageButton } from '@/components/DownloadImageButton'
 import './instagram-weekend-card.css'
 
 export function InstagramWeekendCard() {
@@ -16,9 +17,13 @@ export function InstagramWeekendCard() {
         <span className="ig-weekend-kicker">SOCIAL MEDIA</span>
         <h2 id="ig-weekend-title">Jouw weekendplan</h2>
         <p>Elke week automatisch gevuld met alle wedstrijden van je club, in jullie eigen kleuren.</p>
-        <a className="btn btn-primary ig-weekend-download" href={downloadSrc}>
+        <DownloadImageButton
+          className="btn btn-primary ig-weekend-download"
+          href={downloadSrc}
+          filename="mijn-club-weekendplan.png"
+        >
           ↓ Download Instagram Story
-        </a>
+        </DownloadImageButton>
         <small>1080 × 1920 px · klaar om te delen</small>
       </div>
       {previewFailed ? (
