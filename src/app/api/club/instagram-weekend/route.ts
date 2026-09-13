@@ -212,12 +212,25 @@ async function renderWeekendPost(request: Request) {
   const primary = color((club as { colorPrimary?: unknown }).colorPrimary, '#0f8a5f')
   const secondary = color((club as { colorSecondary?: unknown }).colorSecondary, '#f4c542')
   const clubName = String((club as { name?: unknown }).name ?? 'Krachtbalclub')
+  const requestUrl = new URL(request.url)
+  const preview = requestUrl.searchParams.get('preview') === '1'
   const storedLogo = (club as { logo?: unknown }).logo
   const logoSource = storedLogo || (club as { logoUrl?: unknown }).logoUrl
-  const logo = await fetchLogo(logoSource, new URL(request.url).origin)
+  // De inline voorvertoning blijft bewust SVG: geen zware PNG-compressie tijdens elke paginalaad.
+  // Voor de download halen we het clublogo op en maken we wel de gevraagde 1080 × 1920 PNG.
+  const logo = preview ? null : await fetchLogo(logoSource, requestUrl.origin)
   const svg = makeSvg(clubName, primary, secondary, rows, window.saturdayKey, Boolean(logo))
+  if (preview) {
+    return new Response(svg, {
+      headers: {
+        'Content-Type': 'image/svg+xml; charset=utf-8',
+        'Cache-Control': 'private, no-store',
+        'X-Content-Type-Options': 'nosniff',
+      },
+    })
+  }
 
-  let image = sharp(Buffer.from(svg)).png({ compressionLevel: 9 })
+  let image = sharp(Buffer.from(svg)).png({ compressionLevel: 7 })
   if (logo) {
     try {
       const badge = await sharp(logo).resize(132, 132, { fit: 'contain', background: { r: 255, g: 255, b: 255, alpha: 0 } }).png().toBuffer()
@@ -227,7 +240,7 @@ async function renderWeekendPost(request: Request) {
     }
   }
   const png = await image.toBuffer()
-  const disposition = new URL(request.url).searchParams.get('download') === '1' ? 'attachment' : 'inline'
+  const disposition = requestUrl.searchParams.get('download') === '1' ? 'attachment' : 'inline'
   const filename = `weekendplan-${clubName.toLowerCase().replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '') || 'club'}.png`
   return new Response(new Uint8Array(png), {
     headers: {
@@ -262,6 +275,14 @@ export async function GET(request: Request) {
     return await renderWeekendPost(request)
   } catch (error) {
     console.error('[instagram-weekend] Genereren mislukt', error)
-    return fallbackPng()
+    if (new URL(request.url).searchParams.get('preview') === '1') {
+      return Response.json({ error: 'Voorvertoning kon niet worden opgebouwd.' }, { status: 500 })
+    }
+    try {
+      return await fallbackPng()
+    } catch (fallbackError) {
+      console.error('[instagram-weekend] Noodafbeelding mislukt', fallbackError)
+      return Response.json({ error: 'Weekendplan kon niet worden opgebouwd.' }, { status: 500 })
+    }
   }
 }

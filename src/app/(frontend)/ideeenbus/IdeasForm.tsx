@@ -12,9 +12,10 @@ export function IdeasForm() {
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    const formElement = event.currentTarget
     setBusy(true)
     setError('')
-    const form = new FormData(event.currentTarget)
+    const form = new FormData(formElement)
     const body = {
       category,
       subject: form.get('subject'),
@@ -33,7 +34,7 @@ export function IdeasForm() {
       })
       const data = (await response.json().catch(() => ({}))) as { error?: string }
       if (!response.ok) throw new Error(data.error || 'Versturen is niet gelukt.')
-      event.currentTarget.reset()
+      formElement.reset()
       setCategory('idea')
       setDone(true)
     } catch (err) {

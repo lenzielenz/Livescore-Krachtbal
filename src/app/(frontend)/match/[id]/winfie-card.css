@@ -26,3 +26,20 @@
   .winfie-card { grid-template-columns: 1fr; }
   .winfie-preview { width: min(210px, 72%); margin: 5px auto 0; transform: rotate(1deg); }
 }
+
+.winfie-preview-error {
+  display: grid;
+  width: 100%;
+  aspect-ratio: 9 / 16;
+  place-content: center;
+  gap: 12px;
+  padding: 16px;
+  text-align: center;
+  color: var(--dim);
+  border: 1px dashed var(--line);
+  border-radius: 14px;
+  background: #07120d;
+}
+.winfie-preview-error > span { font-size: 2rem; }
+.winfie-preview-error strong { color: var(--text); font-size: .9rem; }
+.winfie-preview-error .btn { padding: 9px 12px; font-size: .8rem; }
