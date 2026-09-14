@@ -20,6 +20,8 @@ export function renderWeekendDesign(o: {
 }) {
   const fit = normalizeLogoFit(o.logoFit)
   const logoSize = 148 * fit.zoom
+  const spacious = o.rows.length > 0 && o.rows.length <= 4
+  const cardHeight = spacious ? 260 : 120
   let y = 510
   let day = ''
   const rows = o.rows.map(m => {
@@ -30,17 +32,17 @@ export function renderWeekendDesign(o: {
       y += 44
     }
     const top = y
-    y += 132
+    y += cardHeight + 12
     return `${heading}<g data-match="${m.id}">
-      <rect x="64" y="${top + 5}" width="952" height="120" rx="22" fill="#000" opacity=".22"/>
-      <rect x="64" y="${top}" width="952" height="120" rx="22" fill="url(#card)" stroke="#fff" stroke-opacity=".16"/>
-      <rect x="64" y="${top + 26}" width="5" height="68" rx="2" fill="${m.side === 'home' ? o.primary : o.secondary}"/>
-      ${label(m.time, 92, top + 49, 32, 125)}
-      ${label(m.side === 'home' ? 'THUIS' : 'UIT', 94, top + 85, 16, 120, '#a9c9f5')}
-      <line x1="238" y1="${top + 24}" x2="238" y2="${top + 96}" stroke="#fff" stroke-opacity=".12"/>
-      ${label(m.team, 266, top + 33, 23, 710, '#9ecaff')}
-      ${label(`tegen ${m.opponent}`, 266, top + 67, 26, 710)}
-      ${label(m.series, 266, top + 98, 19, 710, '#b2bfd2')}
+      <rect x="64" y="${top + 5}" width="952" height="${cardHeight}" rx="22" fill="#000" opacity=".22"/>
+      <rect x="64" y="${top}" width="952" height="${cardHeight}" rx="22" fill="url(#card)" stroke="#fff" stroke-opacity=".16"/>
+      <rect x="64" y="${top + 26}" width="5" height="${cardHeight - 52}" rx="2" fill="${m.side === 'home' ? o.primary : o.secondary}"/>
+      ${label(m.time, 92, top + (spacious ? 121 : 49), spacious ? 38 : 32, 125)}
+      ${label(m.side === 'home' ? 'THUIS' : 'UIT', 94, top + (spacious ? 162 : 85), spacious ? 21 : 16, 120, '#a9c9f5')}
+      <line x1="238" y1="${top + 24}" x2="238" y2="${top + cardHeight - 24}" stroke="#fff" stroke-opacity=".12"/>
+      ${label(m.team, 266, top + (spacious ? 83 : 33), spacious ? 32 : 23, 710, '#9ecaff')}
+      ${label(`tegen ${m.opponent}`, 266, top + (spacious ? 139 : 67), spacious ? 34 : 26, 710)}
+      ${label(m.series, 266, top + (spacious ? 193 : 98), spacious ? 25 : 19, 710, '#b2bfd2')}
     </g>`
   }).join('')
   const initials = o.club.split(/\s+/).map(w => w[0]).join('').slice(0, 3)
