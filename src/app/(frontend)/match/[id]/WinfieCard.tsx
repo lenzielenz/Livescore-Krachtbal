@@ -46,7 +46,7 @@ export function WinfieCard({ matchId }: { matchId: number }) {
         </div>
       ) : (
         <a className="winfie-preview" href={previewSrc} target="_blank" rel="noreferrer" aria-label="Bekijk de Winfie op ware grootte">
-          {/* De preview blijft lichte SVG; alleen de download verwerkt foto's en maakt PNG. */}
+          {/* De preview gebruikt dezelfde PNG-compositie als de download, op halve resolutie. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={previewSrc} alt="Voorvertoning van de Winfie van deze wedstrijd" loading="lazy" onError={() => setPreviewFailed(true)} />
         </a>
