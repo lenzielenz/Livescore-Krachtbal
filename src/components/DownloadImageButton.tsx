@@ -23,8 +23,6 @@ export function DownloadImageButton({
     <a
       href={href}
       download={filename}
-      target="_blank"
-      rel="noreferrer"
       className={className}
     >
       {children}
