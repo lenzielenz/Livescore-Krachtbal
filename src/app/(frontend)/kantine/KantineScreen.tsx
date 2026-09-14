@@ -13,7 +13,7 @@ import { bladIndeling, BLAD_GAT } from '@/lib/kantine-bladeren'
 import type { KantineLive } from '@/lib/kantine-channel'
 import type { ClubColors } from '@/lib/club-colors'
 import { useLiveStream } from '@/lib/use-live-stream'
-import { Tile, type KantineMatch } from './KantineBoard'
+import { ResultTile, Tile, type KantineMatch } from './KantineBoard'
 
 /** Clubstijl van de eigenaar van dit scherm: de tv van de club hoort eruit te zien als de club. */
 export type KantineStijl = { club: string; kleuren: ClubColors | null } | null
@@ -131,22 +131,13 @@ export function KantineScreen({
     }
   }, [endpoint])
 
-  // Toon de gespeelde wedstrijden (live + afgelopen): een afgelopen wedstrijd blijft staan, en
-  // zodra een geplande wedstrijd start komt ze er vanzelf bij. Zolang er nog niets begonnen is,
-  // tonen we de geplande wedstrijden (anders zou het scherm leeg zijn vóór de aftrap).
-  const played = matches.filter((m) => m.status !== 'scheduled')
-  const visible = played.length > 0 ? played : matches
-  const layout = layoutFor(visible.length)
-  // Begrens de kolommen op wat de schermbreedte aankan.
-  const cols = Math.min(layout.cols, maxColsForWidth(vw))
-
-  // ── Eén live-verbinding voor álle borden ──────────────────────────────────────────────────
-  // Elk bord opende vroeger zijn eigen /api/match/<id>/stream. Bij een dozijn wedstrijden waren
-  // dat een dozijn permanent open verbindingen uit deze ene browser, terwijl er maar een handvol
-  // tegelijk mogen per server: al het overige verkeer belandde in een wachtrij die nooit
-  // leegliep — ook de ophaling hierboven, waardoor de tv na één keer laden bevroor.
+  // Eén liveverbinding voor de relevante borden. Voor de aftrap volgen we de geplande
+  // wedstrijden; zodra de dag begonnen is volstaan live- en eindstanden.
   const [live, setLive] = useState<Record<number, KantineLive>>({})
-  const idsSleutel = visible.map((m) => m.id).sort((a, b) => a - b).join(',')
+  const streamMatches = matches.some((m) => m.status !== 'scheduled')
+    ? matches.filter((m) => m.status !== 'scheduled')
+    : matches
+  const idsSleutel = streamMatches.map((m) => m.id).sort((a, b) => a - b).join(',')
   useLiveStream<KantineLive[]>(
     idsSleutel ? `/api/kantine/live/stream?ids=${idsSleutel}` : null,
     (frame) => {
@@ -155,6 +146,17 @@ export function KantineScreen({
       setLive(kaart)
     },
   )
+
+  const statusVan = (m: KantineMatch) => live[m.id]?.status ?? m.status
+  const liveMatches = matches.filter((m) => statusVan(m) === 'live')
+  const finishedMatches = matches.filter((m) => statusVan(m) === 'finished')
+  const played = [...liveMatches, ...finishedMatches]
+  // Livewedstrijden zijn de hoofdinhoud. Voor de eerste aftrap tonen we het programma; na de
+  // laatste wedstrijd blijft alleen de compacte uitslagenwand over.
+  const visible = liveMatches.length > 0 ? liveMatches : played.length === 0 ? matches : []
+  const layout = layoutFor(visible.length)
+  const cols = Math.min(layout.cols, maxColsForWidth(vw))
+  const resultsPerPage = vw < 700 ? 2 : vw < 1300 ? 3 : 4
 
   // ── Bladeren in plaats van proppen ────────────────────────────────────────────────────────
   // Het raster stond op `grid-auto-rows: 1fr` in een venster met overflow:hidden. Een rij kan
@@ -183,7 +185,7 @@ export function KantineScreen({
     const ro = new ResizeObserver(meet)
     ro.observe(el)
     return () => ro.disconnect()
-  }, [toonRaster])
+  }, [toonRaster, visible.length])
 
   const { perBlad, bladen, rijH } = bladIndeling({ aantal: visible.length, cols, vensterH })
 
@@ -218,11 +220,11 @@ export function KantineScreen({
   // Alles gespeeld: dan blijven de borden staan als uitslagenbord, met één regel erboven die
   // zegt dat de dag erop zit. Zonder die regel staat er een scherm vol eindstanden zonder dat
   // iemand weet of er nog iets komt.
-  const dagGedaan = visible.length > 0 && visible.every((m) => m.status === 'finished')
+  const dagGedaan = matches.length > 0 && finishedMatches.length === matches.length
 
   // De balk onderaan: wat er nog komt. Alles wat vandaag of deze week nog gepland staat en niet
   // al als bord op het scherm hangt — anders rolt dezelfde wedstrijd twee keer voorbij.
-  const opBord = new Set(visible.map((m) => m.id))
+  const opBord = new Set(played.map((m) => m.id))
   const komend = matches
     .filter((m) => m.status === 'scheduled' && !opBord.has(m.id))
     .sort((a, b) => String(a.date ?? '').localeCompare(String(b.date ?? '')))
@@ -303,35 +305,42 @@ export function KantineScreen({
           )}
         </div>
       ) : (
-        <>
-          <div className="kt-grid-venster" ref={vensterRef}>
-            <div
-              className="kt-grid-screen"
-              style={{
-                gridTemplateColumns: `repeat(${cols}, 1fr)`,
-                // Exacte rijhoogte zolang we gemeten hebben; daarvóór de oude 1fr-verdeling, zodat
-                // het eerste frame niet leeg is.
-                ...(rijH > 0 ? { gridAutoRows: `${rijH}px` } : {}),
-                // Eén blad opzij schuiven = de vensterhoogte plus de tussenruimte eronder.
-                transform: rijH > 0 ? `translateY(-${huidigBlad * (vensterH + BLAD_GAT)}px)` : undefined,
-              }}
-            >
-              {visible.map((m) => (
-                <Tile key={m.id} match={m} live={live[m.id] ?? null} fontSize={fontSize} logoSize={logoSize} />
-              ))}
-            </div>
-          </div>
-          {/* Bolletjes: zonder die hint lijkt een blad met acht borden gewoon álles wat er is.
-              Ze staan ONDER het venster, niet erin — anders liggen ze op de onderste rij én
-              vervalsen ze de gemeten hoogte waarmee de rijen berekend worden. */}
-          {bladen > 1 && (
-            <div className="kt-bladen" aria-hidden>
-              {Array.from({ length: bladen }, (_, i) => (
-                <span key={i} className={`kt-blad-punt${i === huidigBlad ? ' on' : ''}`} />
-              ))}
-            </div>
+        <div className={`kt-stage${liveMatches.length ? ' met-live' : ''}`}>
+          {liveMatches.length > 0 && <div className="kt-live-kop"><span /> NU LIVE <b>{liveMatches.length}</b></div>}
+          {visible.length > 0 && (
+            <>
+              <div className="kt-grid-venster" ref={vensterRef}>
+                <div
+                  className="kt-grid-screen"
+                  style={{
+                    gridTemplateColumns: `repeat(${cols}, 1fr)`,
+                    ...(rijH > 0 ? { gridAutoRows: `${rijH}px` } : {}),
+                    transform: rijH > 0 ? `translateY(-${huidigBlad * (vensterH + BLAD_GAT)}px)` : undefined,
+                  }}
+                >
+                  {visible.map((m) => (
+                    <Tile key={m.id} match={m} live={live[m.id] ?? null} fontSize={fontSize} logoSize={logoSize} />
+                  ))}
+                </div>
+              </div>
+              {bladen > 1 && (
+                <div className="kt-bladen" aria-hidden>
+                  {Array.from({ length: bladen }, (_, i) => (
+                    <span key={i} className={`kt-blad-punt${i === huidigBlad ? ' on' : ''}`} />
+                  ))}
+                </div>
+              )}
+            </>
           )}
-        </>
+          {finishedMatches.length > 0 && (
+            <UitslagenCarrousel
+              matches={finishedMatches}
+              live={live}
+              perPage={resultsPerPage}
+              only={!liveMatches.length}
+            />
+          )}
+        </div>
       )}
       {/* De sponsorbalk onderaan: past zich aan het aantal, het formaat en de kleur van de
           reclames aan (zie components/ReclameBalk.tsx). */}
@@ -395,4 +404,53 @@ function KantineAftel({ naar }: { naar: number }) {
   const s = rest % 60
   const p = (n: number) => String(n).padStart(2, '0')
   return <span className="kt-aftel-tijd">{u > 0 ? `${u}:${p(m)}:${p(s)}` : `${m}:${p(s)}`}</span>
+}
+
+
+function UitslagenCarrousel({
+  matches,
+  live,
+  perPage,
+  only,
+}: {
+  matches: KantineMatch[]
+  live: Record<number, KantineLive>
+  perPage: number
+  only: boolean
+}) {
+  const pages = Math.max(1, Math.ceil(matches.length / perPage))
+  const [page, setPage] = useState(0)
+  const [leaving, setLeaving] = useState(false)
+
+  useEffect(() => {
+    setPage(0)
+    setLeaving(false)
+    if (pages <= 1) return
+    let swap: ReturnType<typeof setTimeout> | null = null
+    const timer = setInterval(() => {
+      setLeaving(true)
+      swap = setTimeout(() => {
+        setPage((current) => (current + 1) % pages)
+        setLeaving(false)
+      }, 600)
+    }, 8000)
+    return () => {
+      clearInterval(timer)
+      if (swap) clearTimeout(swap)
+    }
+  }, [pages])
+
+  const safePage = Math.min(page, pages - 1)
+  const shown = matches.slice(safePage * perPage, safePage * perPage + perPage)
+  return (
+    <section className={`kt-results${only ? ' only' : ''}`} aria-label="Afgelopen wedstrijden">
+      <header>
+        <span>Eindstanden vandaag</span>
+        {pages > 1 && <small>{safePage + 1} / {pages}</small>}
+      </header>
+      <div key={safePage} className={`kt-results-grid${leaving ? ' leaving' : ''}`}>
+        {shown.map((match) => <ResultTile key={match.id} match={match} live={live[match.id] ?? null} />)}
+      </div>
+    </section>
+  )
 }
