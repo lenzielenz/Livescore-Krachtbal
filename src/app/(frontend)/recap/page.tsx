@@ -32,8 +32,17 @@ export default async function RecapPage() {
         </Link>
 
         <header className="recap-head">
-          <span className="recap-period">{periode}</span>
+          <div className="recap-head-top">
+            <span className="recap-edition"><i aria-hidden /> WEEKEND RECAP</span>
+            <span className="recap-period">{periode}</span>
+          </div>
           <h1 className="recap-title">{recap.headline}</h1>
+          {recap.matches > 0 && (
+            <div className="recap-head-foot">
+              <span>DE WEEK IN CIJFERS</span>
+              <i aria-hidden />
+            </div>
+          )}
         </header>
 
         {recap.matches === 0 ? (
@@ -44,17 +53,20 @@ export default async function RecapPage() {
         ) : (
           <>
             <section className="recap-stats" aria-label="Het weekend in cijfers">
-              <div className="recap-stat"><span>🏟️</span><b>{recap.matches}</b><small>wedstrijden</small></div>
-              <div className="recap-stat"><span>👥</span><b>{recap.stats.visitors}</b><small>bezoekers</small></div>
-              <div className="recap-stat"><span>🛡️</span><b>{recap.stats.clubs}</b><small>clubs</small></div>
-              <div className="recap-stat"><span>🎯</span><b>{recap.stats.goalThrows}</b><small>doelworpen</small></div>
-              <div className="recap-stat"><span>💥</span><b>{recap.stats.backThrows}</b><small>rugworpen</small></div>
-              <div className="recap-stat"><span>🔢</span><b>{recap.goals}</b><small>punten</small></div>
+              <div className="recap-stat recap-stat--blue"><span aria-hidden>🏟️</span><b>{recap.matches}</b><small>wedstrijden</small></div>
+              <div className="recap-stat recap-stat--cyan"><span aria-hidden>👥</span><b>{recap.stats.visitors}</b><small>bezoekers</small></div>
+              <div className="recap-stat recap-stat--violet"><span aria-hidden>🛡️</span><b>{recap.stats.clubs}</b><small>clubs</small></div>
+              <div className="recap-stat recap-stat--red"><span aria-hidden>🎯</span><b>{recap.stats.goalThrows}</b><small>doelworpen</small></div>
+              <div className="recap-stat recap-stat--orange"><span aria-hidden>💥</span><b>{recap.stats.backThrows}</b><small>rugworpen</small></div>
+              <div className="recap-stat recap-stat--gold"><span aria-hidden>Σ</span><b>{recap.goals}</b><small>punten</small></div>
             </section>
 
             {recap.highlights.length > 0 && (
-              <section className="recap-block" aria-label="Opvallend">
-                <h2 className="recap-h2">Opvallend</h2>
+              <section className="recap-block recap-block--highlights" aria-label="Opvallend">
+                <div className="recap-section-head">
+                  <span>TOPPRESTATIES</span>
+                  <h2 className="recap-h2">Dit viel op</h2>
+                </div>
                 <ul className="recap-highlights">
                   {recap.highlights.map((h) => (
                     <li key={h.key} className="recap-highlight">
@@ -72,12 +84,16 @@ export default async function RecapPage() {
             )}
 
             {recap.team && (
-              <section className="recap-block" aria-label="Ploeg van de week">
-                <h2 className="recap-h2">Ploeg van de week</h2>
-                <p className="recap-team">
-                  <b>{recap.team.teamName}</b> won met {recap.team.goalsFor}–{recap.team.goalsAgainst}
-                  {recap.team.reeks ? ` in ${recap.team.reeks}` : ''} — een doelsaldo van +{recap.team.diff}.
-                </p>
+              <section className="recap-block recap-block--team" aria-label="Ploeg van de week">
+                <div className="recap-team-trophy" aria-hidden>🏆</div>
+                <div>
+                  <span className="recap-eyebrow">PERFORMANCE VAN DE WEEK</span>
+                  <h2 className="recap-h2">Ploeg van de week</h2>
+                  <p className="recap-team">
+                    <b>{recap.team.teamName}</b> won met <strong>{recap.team.goalsFor}–{recap.team.goalsAgainst}</strong>
+                    {recap.team.reeks ? ` in ${recap.team.reeks}` : ''} — een doelsaldo van <em>+{recap.team.diff}</em>.
+                  </p>
+                </div>
               </section>
             )}
 
