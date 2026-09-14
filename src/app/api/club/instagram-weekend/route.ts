@@ -56,6 +56,7 @@ function weekendTitle(rows: WeekendMatch[], saturdayKey: string): string {
   if (rows.length) {
     const first = new Date(rows[0].date)
     const last = new Date(rows[rows.length - 1].date)
+    if (brusselsDateKey(first) === brusselsDateKey(last)) return dateLabel(first)
     const a = new Intl.DateTimeFormat('nl-BE', { timeZone: TZ, day: 'numeric' }).format(first)
     return `${a} – ${dateLabel(last)}`
   }
