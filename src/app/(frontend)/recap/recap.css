@@ -1,101 +1,278 @@
-/* Maandag-recap: het weekoverzicht. Rustige leeslay-out, één kolom. */
-.recap-head { margin: 6px 0 20px; }
-.recap-period {
-  display: block;
-  font-size: 0.78rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--dim);
-  margin-bottom: 4px;
+/* Premium weekoverzicht: sportredactie, heldere cijfers en tastbare diepte. */
+.recap-head {
+  position: relative;
+  isolation: isolate;
+  margin: 10px 0 22px;
+  padding: clamp(20px, 5vw, 34px);
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--accent) 34%, var(--line));
+  border-radius: 26px;
+  background:
+    linear-gradient(130deg, color-mix(in srgb, var(--accent) 18%, transparent), transparent 44%),
+    radial-gradient(circle at 90% -20%, color-mix(in srgb, var(--accent) 38%, transparent), transparent 45%),
+    linear-gradient(160deg, #172132f2, #0a0f18f5 64%, #080b11);
+  box-shadow: 0 28px 70px -34px #000, inset 0 1px 0 #ffffff18;
 }
-.recap-title { margin: 0; font-size: 1.5rem; font-weight: 900; line-height: 1.2; text-wrap: balance; }
+.recap-head::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  width: 270px;
+  height: 270px;
+  right: -78px;
+  top: -96px;
+  border: 34px solid #ffffff09;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 22px #ffffff05;
+}
+.recap-head::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  width: 46%;
+  height: 150%;
+  right: 12%;
+  top: -28%;
+  background: linear-gradient(90deg, transparent, #ffffff05, transparent);
+  transform: rotate(22deg);
+}
+.recap-head-top,
+.recap-head-foot { display: flex; align-items: center; gap: 12px; }
+.recap-head-top { justify-content: space-between; margin-bottom: 16px; }
+.recap-edition,
+.recap-period,
+.recap-eyebrow,
+.recap-section-head > span {
+  font-size: .68rem;
+  font-weight: 900;
+  letter-spacing: .13em;
+  text-transform: uppercase;
+}
+.recap-edition { display: inline-flex; align-items: center; color: #f5f8ff; }
+.recap-edition i {
+  width: 8px;
+  height: 8px;
+  margin-right: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--accent) 80%, transparent);
+}
+.recap-period { color: #aeb9cb; text-align: right; }
+.recap-title {
+  max-width: 22ch;
+  margin: 0;
+  color: #fff;
+  font: 900 clamp(1.75rem, 6vw, 3rem)/1.06 var(--font-display), sans-serif;
+  letter-spacing: -.035em;
+  text-wrap: balance;
+  text-shadow: 0 8px 34px #0009;
+}
+.recap-head-foot { margin-top: 24px; color: var(--accent); font-size: .68rem; font-weight: 900; letter-spacing: .13em; }
+.recap-head-foot i { flex: 1; height: 1px; background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 70%, transparent), transparent); }
 
 .recap-empty { color: var(--dim); max-width: 60ch; line-height: 1.6; }
 .recap-empty a { color: var(--accent); font-weight: 700; }
 
-.recap-block {
-  margin: 0 0 16px;
-  padding: 16px 18px;
-  border-radius: 18px;
-  border: 1px solid var(--line);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0) 60%), var(--panel-grad, var(--panel));
-  box-shadow: var(--card-shadow, 0 16px 36px -26px rgba(0, 0, 0, 0.55));
+.recap-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0 0 18px;
 }
-.recap-h2 { margin: 0 0 12px; font-size: 1rem; font-weight: 900; letter-spacing: 0.02em; }
+.recap-stat {
+  --stat-color: var(--accent);
+  position: relative;
+  display: grid;
+  grid-template-columns: 48px 1fr;
+  grid-template-rows: auto auto;
+  align-items: center;
+  column-gap: 12px;
+  min-width: 0;
+  min-height: 96px;
+  padding: 15px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--stat-color) 30%, var(--line));
+  border-radius: 19px;
+  background:
+    radial-gradient(circle at 8% 15%, color-mix(in srgb, var(--stat-color) 18%, transparent), transparent 42%),
+    linear-gradient(145deg, #1a2331ed, #101620f5);
+  box-shadow: 0 18px 42px -30px #000, inset 0 1px 0 #ffffff12;
+}
+.recap-stat::after {
+  content: "";
+  position: absolute;
+  width: 66px;
+  height: 66px;
+  right: -30px;
+  bottom: -38px;
+  border: 14px solid color-mix(in srgb, var(--stat-color) 14%, transparent);
+  border-radius: 50%;
+}
+.recap-stat > span {
+  grid-row: 1 / 3;
+  display: grid;
+  width: 46px;
+  height: 46px;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--stat-color) 36%, transparent);
+  border-radius: 14px;
+  color: #fff;
+  background: color-mix(in srgb, var(--stat-color) 17%, #0c111a);
+  box-shadow: inset 0 1px 0 #ffffff15, 0 10px 24px -15px var(--stat-color);
+  font-size: 1.25rem;
+  font-style: normal;
+  font-weight: 950;
+}
+.recap-stat b { color: #fff; font-size: 1.55rem; line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: -.03em; }
+.recap-stat small { overflow: hidden; color: #aeb9ca; font-size: .7rem; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
+.recap-stat--blue { --stat-color: #62a8ff; }
+.recap-stat--cyan { --stat-color: #33d1db; }
+.recap-stat--violet { --stat-color: #a88cff; }
+.recap-stat--red { --stat-color: #ff5269; }
+.recap-stat--orange { --stat-color: #ff9d42; }
+.recap-stat--gold { --stat-color: #f4ca58; }
+
+.recap-block {
+  position: relative;
+  margin: 0 0 18px;
+  padding: clamp(18px, 4vw, 24px);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  background: linear-gradient(155deg, #1a222eed, #10151df2 66%, #0c1118);
+  box-shadow: 0 24px 54px -38px #000, inset 0 1px 0 #ffffff12;
+}
+.recap-block::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: linear-gradient(180deg, var(--accent), transparent 82%);
+}
+.recap-section-head { margin-bottom: 16px; }
+.recap-section-head > span,
+.recap-eyebrow { display: block; margin-bottom: 4px; color: var(--accent); }
+.recap-h2 { margin: 0 0 14px; color: #fff; font: 900 1.16rem/1.15 var(--font-display), sans-serif; letter-spacing: -.01em; }
+.recap-section-head .recap-h2 { margin-bottom: 0; }
 .recap-count { color: var(--dim); font-weight: 700; }
 
 .recap-highlights,
 .recap-climbers,
 .recap-results,
 .recap-players { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
-
-.recap-highlight { display: flex; gap: 12px; align-items: flex-start; }
-.recap-highlight-emoji { font-size: 1.3rem; line-height: 1.2; }
-.recap-highlight-txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.recap-highlight-txt b { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--dim); }
-.recap-highlight-txt a { color: inherit; text-decoration: none; font-weight: 700; }
+.recap-highlight {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  gap: 13px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid #ffffff0d;
+  border-radius: 15px;
+  background: #070b1170;
+}
+.recap-highlight-emoji {
+  display: grid;
+  width: 46px;
+  height: 46px;
+  place-items: center;
+  border-radius: 14px;
+  background: linear-gradient(145deg, #263245, #111722);
+  box-shadow: inset 0 1px 0 #ffffff12;
+  font-size: 1.35rem;
+}
+.recap-highlight-txt { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.recap-highlight-txt b { color: #9da9ba; font-size: .66rem; text-transform: uppercase; letter-spacing: .1em; }
+.recap-highlight-txt a { color: #f6f8fc; text-decoration: none; font-weight: 780; line-height: 1.35; }
 .recap-highlight-txt a:hover { color: var(--accent); }
 
-.recap-team { margin: 0; line-height: 1.6; }
+.recap-block--team {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 18px;
+  align-items: center;
+  border-color: color-mix(in srgb, #f4ca58 32%, var(--line));
+  background:
+    radial-gradient(circle at 6% 20%, #f4ca5826, transparent 33%),
+    linear-gradient(145deg, #202737, #111720 70%);
+}
+.recap-block--team::before { background: linear-gradient(180deg, #f4ca58, #ff8d3a, transparent); }
+.recap-team-trophy {
+  display: grid;
+  width: 70px;
+  height: 70px;
+  place-items: center;
+  border: 1px solid #f4ca5847;
+  border-radius: 21px;
+  background: linear-gradient(145deg, #f4ca582d, #10151d);
+  box-shadow: 0 18px 42px -20px #f4ca58;
+  font-size: 2rem;
+}
+.recap-block--team .recap-eyebrow { color: #f4ca58; }
+.recap-block--team .recap-h2 { margin-bottom: 8px; }
+.recap-team { margin: 0; color: #cbd3df; line-height: 1.55; }
+.recap-team b { color: #fff; }
+.recap-team strong { color: #fff; font-size: 1.08em; font-variant-numeric: tabular-nums; }
+.recap-team em { color: #f4ca58; font-style: normal; font-weight: 900; }
 
-.recap-player { display: flex; align-items: center; gap: 12px; }
+.recap-player { display: flex; align-items: center; gap: 12px; padding: 7px 4px; }
 .recap-player-rank {
   flex: none;
-  width: 26px; height: 26px;
-  display: grid; place-items: center;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--accent) 34%, transparent);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent) 15%, #0c1119);
   color: var(--accent);
-  font-size: 0.8rem; font-weight: 900;
+  font-size: .8rem;
+  font-weight: 900;
 }
 .recap-player-txt { flex: 1; display: flex; flex-direction: column; line-height: 1.25; min-width: 0; }
-.recap-player-txt i { font-style: normal; font-size: 0.76rem; color: var(--dim); }
-.recap-player-stat { flex: none; font-weight: 900; font-variant-numeric: tabular-nums; }
+.recap-player-txt i { color: var(--dim); font-size: .76rem; font-style: normal; }
+.recap-player-stat { flex: none; color: #fff; font-weight: 900; font-variant-numeric: tabular-nums; }
 
-.recap-climber { display: flex; align-items: baseline; gap: 10px; line-height: 1.5; }
+.recap-climber { display: flex; align-items: baseline; gap: 10px; padding: 8px 4px; line-height: 1.45; }
 .recap-climber-delta { flex: none; color: var(--pop); font-weight: 900; font-variant-numeric: tabular-nums; }
 
 .recap-result-link {
-  display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
-  color: inherit; text-decoration: none;
-  padding: 8px 10px; border-radius: 12px;
-  border: 1px solid transparent;
-}
-.recap-result-link:hover { border-color: var(--line); background: color-mix(in srgb, var(--panel) 60%, transparent); }
-.recap-result-teams { font-variant-numeric: tabular-nums; }
-.recap-result-reeks { flex: none; font-size: 0.74rem; color: var(--dim); }
-
-
-.recap-stats {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
   gap: 10px;
-  margin: 0 0 16px;
+  padding: 11px 12px;
+  border: 1px solid #ffffff0d;
+  border-radius: 13px;
+  color: inherit;
+  background: #070b115c;
+  text-decoration: none;
+  transition: border-color .18s ease, background .18s ease, transform .18s ease;
 }
-.recap-stat {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  align-items: center;
-  column-gap: 9px;
-  padding: 13px 14px;
-  min-width: 0;
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  background:
-    radial-gradient(circle at 90% 10%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 55%),
-    var(--panel-grad, var(--panel));
-  box-shadow: var(--card-shadow, 0 16px 36px -26px rgba(0, 0, 0, .55));
-}
-.recap-stat > span { grid-row: 1 / 3; font-size: 1.35rem; }
-.recap-stat b { font-size: 1.35rem; line-height: 1; font-variant-numeric: tabular-nums; }
-.recap-stat small {
-  overflow: hidden;
-  color: var(--dim);
-  font-size: .7rem;
-  font-weight: 750;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
+.recap-result-link:hover { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); background: color-mix(in srgb, var(--accent) 8%, #0a0f17); transform: translateX(2px); }
+.recap-result-teams { font-variant-numeric: tabular-nums; }
+.recap-result-teams b { color: #fff; }
+.recap-result-reeks { flex: none; color: var(--dim); font-size: .7rem; font-weight: 700; }
+
 @media (max-width: 620px) {
   .recap-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .recap-stat { grid-template-columns: 42px 1fr; min-height: 88px; padding: 13px; }
+  .recap-stat > span { width: 40px; height: 40px; border-radius: 12px; font-size: 1.05rem; }
+  .recap-stat b { font-size: 1.42rem; }
+}
+@media (max-width: 430px) {
+  .recap-head { padding: 20px 18px; border-radius: 22px; }
+  .recap-head-top { align-items: flex-start; }
+  .recap-edition, .recap-period { font-size: .6rem; }
+  .recap-title { font-size: clamp(1.65rem, 8.4vw, 2.2rem); }
+  .recap-stats { gap: 9px; }
+  .recap-stat { grid-template-columns: 38px 1fr; column-gap: 9px; min-height: 82px; padding: 11px; border-radius: 16px; }
+  .recap-stat > span { width: 36px; height: 36px; font-size: .95rem; }
+  .recap-stat b { font-size: 1.28rem; }
+  .recap-stat small { font-size: .63rem; }
+  .recap-block--team { grid-template-columns: 54px minmax(0, 1fr); gap: 13px; }
+  .recap-team-trophy { width: 54px; height: 54px; border-radius: 16px; font-size: 1.5rem; }
+  .recap-result-link { align-items: flex-start; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .recap-result-link { transition: none; }
 }
