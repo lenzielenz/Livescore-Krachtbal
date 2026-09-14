@@ -373,28 +373,34 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
             } as React.CSSProperties}
           >
             <span className="match-affiche-kleur" aria-hidden />
-            <div className="match-affiche-kop">
-              <TeamLogo
-                name={state.teams.home.name}
-                logoUrl={state.teams.home.logoUrl}
-                logoFit={state.teams.home.logoFit}
-                side="home"
-                size={64}
-                ringColor={state.teams.home.colors?.primary}
-              />
+            <div className="match-affiche-teams">
+              <div className="match-affiche-team">
+                <span className="match-affiche-logo">
+                  <TeamLogo
+                    name={state.teams.home.name}
+                    logoUrl={state.teams.home.logoUrl}
+                    logoFit={state.teams.home.logoFit}
+                    side="home"
+                    size={64}
+                    ringColor={state.teams.home.colors?.primary}
+                  />
+                </span>
+                <span className="match-affiche-naam">{state.teams.home.name}</span>
+              </div>
               <span className="match-affiche-vs">VS</span>
-              <TeamLogo
-                name={state.teams.away.name}
-                logoUrl={state.teams.away.logoUrl}
-                logoFit={state.teams.away.logoFit}
-                side="away"
-                size={64}
-                ringColor={state.teams.away.colors?.primary}
-              />
-            </div>
-            <div className="match-affiche-namen">
-              <span className="match-affiche-naam">{state.teams.home.name}</span>
-              <span className="match-affiche-naam away">{state.teams.away.name}</span>
+              <div className="match-affiche-team">
+                <span className="match-affiche-logo">
+                  <TeamLogo
+                    name={state.teams.away.name}
+                    logoUrl={state.teams.away.logoUrl}
+                    logoFit={state.teams.away.logoFit}
+                    side="away"
+                    size={64}
+                    ringColor={state.teams.away.colors?.primary}
+                  />
+                </span>
+                <span className="match-affiche-naam">{state.teams.away.name}</span>
+              </div>
             </div>
             {datum && <p className="match-affiche-wanneer">{datum}</p>}
           </section>
