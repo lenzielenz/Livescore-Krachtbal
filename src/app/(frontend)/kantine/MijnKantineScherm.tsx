@@ -61,6 +61,8 @@ export function MijnKantineScherm({
   const [bezig, setBezig] = useState(false)
   const [gekopieerd, setGekopieerd] = useState(false)
   const [hernoemt, setHernoemt] = useState(false)
+  const [ploegZoek, setPloegZoek] = useState('')
+  const [wedstrijdZoek, setWedstrijdZoek] = useState('')
 
   const actief = profielen.find((p) => p.id === actiefId) ?? profielen[0]
   const sel: KantineSelectie = actief
@@ -138,6 +140,23 @@ export function MijnKantineScherm({
     const gekozen = new Set(sel.clubIds)
     return ploegen.filter((p) => (p.clubId != null && gekozen.has(p.clubId)) || sel.teamIds.includes(p.id))
   }, [ploegen, sel.clubIds, sel.teamIds])
+
+  const gefilterdePloegen = useMemo(() => {
+    const zoek = ploegZoek.trim().toLocaleLowerCase('nl-BE')
+    return zichtbarePloegen
+      .filter((p) => !zoek || `${p.name} ${p.sub ?? ''}`.toLocaleLowerCase('nl-BE').includes(zoek))
+      .toSorted((a, b) => {
+        const gekozenVerschil = Number(sel.teamIds.includes(b.id)) - Number(sel.teamIds.includes(a.id))
+        return gekozenVerschil || a.name.localeCompare(b.name, 'nl-BE')
+      })
+  }, [zichtbarePloegen, ploegZoek, sel.teamIds])
+
+  const gefilterdeWedstrijden = useMemo(() => {
+    const zoek = wedstrijdZoek.trim().toLocaleLowerCase('nl-BE')
+    return matches
+      .filter((m) => !zoek || `${m.home.name} ${m.away.name} ${m.reeks} ${m.time}`.toLocaleLowerCase('nl-BE').includes(zoek))
+      .toSorted((a, b) => Number(sel.matchIds.includes(b.id)) - Number(sel.matchIds.includes(a.id)))
+  }, [matches, wedstrijdZoek, sel.matchIds])
 
   const leeg = selectieIsLeeg(sel)
 
@@ -246,71 +265,118 @@ export function MijnKantineScherm({
         </div>
       </section>
 
-      <section className="kt-blok">
-        <h3 className="kt-blok-title">2 · Losse ploegen <span className="kt-blok-opt">(optioneel)</span></h3>
-        <p className="kt-blok-sub">
-          Eén ploeg volgen zonder heel de club? Of net een ploeg van een andere club erbij? Vink ze
-          hier aan.
-        </p>
-        <div className="kt-chips">
-          {zichtbarePloegen.length === 0 ? (
-            <p className="kt-empty">Geen ploegen gevonden.</p>
-          ) : (
-            zichtbarePloegen.map((p) => (
-              <button
-                key={p.id}
-                type="button"
-                className={`kt-chip ${p.sub ? 'met-sub' : ''} ${sel.teamIds.includes(p.id) ? 'on' : ''}`}
-                onClick={() => wissel('teamIds', p.id)}
-                aria-pressed={sel.teamIds.includes(p.id)}
-              >
-                <span className="kt-chip-naam">{p.name}</span>
-                {/* De reeks erbij: een club heeft vlot een dozijn gelijknamige ploegen. */}
-                {p.sub && <span className="kt-chip-sub">{p.sub}</span>}
-              </button>
-            ))
-          )}
-        </div>
-      </section>
-
-      <section className="kt-blok">
-        <h3 className="kt-blok-title">3 · Losse wedstrijden <span className="kt-blok-opt">(optioneel)</span></h3>
-        <p className="kt-blok-sub">
-          Een affiche die je deze week sowieso wil meepikken. Deze blijven op je scherm staan zolang
-          ze bezig of gepland zijn.
-        </p>
-        {matches.length === 0 ? (
-          <p className="kt-empty">Deze week staan er geen wedstrijden gepland.</p>
-        ) : (
-          <div className="kt-pick-list">
-            {matches.map((m) => {
-              const aan = sel.matchIds.includes(m.id)
-              return (
-                <button
-                  type="button"
-                  key={m.id}
-                  className={`kt-pick ${aan ? 'on' : ''} ${m.status === 'live' ? 'live' : ''}`}
-                  onClick={() => wissel('matchIds', m.id)}
-                  aria-pressed={aan}
-                >
-                  <span className="kt-pick-top">
-                    <span className={`kt-pick-badge ${m.status}`}>
-                      {m.status === 'live' ? '● LIVE' : m.status === 'finished' ? 'Einde' : m.time}
-                    </span>
-                    <span className="kt-pick-reeks">{m.reeks}</span>
-                  </span>
-                  <span className="kt-pick-match">
-                    <span className="kt-pick-team">{m.home.name}</span>
-                    <span className="kt-pick-vs">vs</span>
-                    <span className="kt-pick-team">{m.away.name}</span>
-                  </span>
-                  <span className="kt-pick-check" aria-hidden>{aan ? '✓' : '+'}</span>
-                </button>
-              )
-            })}
+      <details className="kt-blok kt-keuze-details">
+        <summary className="kt-keuze-summary">
+          <span>
+            <strong>2 · Losse ploegen</strong>
+            <small>Optioneel · kies één ploeg zonder de volledige club</small>
+          </span>
+          <span className="kt-keuze-aantal">
+            {sel.teamIds.length ? `${sel.teamIds.length} gekozen` : 'Open selectie'}
+            <span className="kt-keuze-pijl" aria-hidden>⌄</span>
+          </span>
+        </summary>
+        <div className="kt-keuze-inhoud">
+          <p className="kt-blok-sub">
+            Eén ploeg volgen zonder heel de club? Zoek op ploeg of reeks. Gekozen ploegen staan
+            automatisch bovenaan.
+          </p>
+          <label className="kt-keuze-zoek">
+            <span aria-hidden>⌕</span>
+            <input
+              type="search"
+              value={ploegZoek}
+              onChange={(e) => setPloegZoek(e.currentTarget.value)}
+              placeholder="Zoek ploeg of reeks…"
+              aria-label="Zoek een losse ploeg"
+            />
+          </label>
+          <div className="kt-keuze-scroll">
+            <div className="kt-chips">
+              {gefilterdePloegen.length === 0 ? (
+                <p className="kt-empty">Geen ploegen gevonden.</p>
+              ) : (
+                gefilterdePloegen.map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    className={`kt-chip ${p.sub ? 'met-sub' : ''} ${sel.teamIds.includes(p.id) ? 'on' : ''}`}
+                    onClick={() => wissel('teamIds', p.id)}
+                    aria-pressed={sel.teamIds.includes(p.id)}
+                  >
+                    <span className="kt-chip-naam">{p.name}</span>
+                    {p.sub && <span className="kt-chip-sub">{p.sub}</span>}
+                  </button>
+                ))
+              )}
+            </div>
           </div>
-        )}
-      </section>
+        </div>
+      </details>
+
+      <details className="kt-blok kt-keuze-details">
+        <summary className="kt-keuze-summary">
+          <span>
+            <strong>3 · Losse wedstrijden</strong>
+            <small>Optioneel · voeg één specifieke affiche toe</small>
+          </span>
+          <span className="kt-keuze-aantal">
+            {sel.matchIds.length ? `${sel.matchIds.length} gekozen` : 'Open selectie'}
+            <span className="kt-keuze-pijl" aria-hidden>⌄</span>
+          </span>
+        </summary>
+        <div className="kt-keuze-inhoud">
+          <p className="kt-blok-sub">
+            Zoek op ploeg, reeks of uur. Gekozen wedstrijden staan bovenaan en blijven zichtbaar
+            zolang ze bezig of gepland zijn.
+          </p>
+          <label className="kt-keuze-zoek">
+            <span aria-hidden>⌕</span>
+            <input
+              type="search"
+              value={wedstrijdZoek}
+              onChange={(e) => setWedstrijdZoek(e.currentTarget.value)}
+              placeholder="Zoek wedstrijd, reeks of uur…"
+              aria-label="Zoek een losse wedstrijd"
+            />
+          </label>
+          <div className="kt-keuze-scroll wedstrijden">
+            {matches.length === 0 ? (
+              <p className="kt-empty">Deze week staan er geen wedstrijden gepland.</p>
+            ) : gefilterdeWedstrijden.length === 0 ? (
+              <p className="kt-empty">Geen wedstrijden gevonden voor deze zoekopdracht.</p>
+            ) : (
+              <div className="kt-pick-list">
+                {gefilterdeWedstrijden.map((m) => {
+                  const aan = sel.matchIds.includes(m.id)
+                  return (
+                    <button
+                      type="button"
+                      key={m.id}
+                      className={`kt-pick ${aan ? 'on' : ''} ${m.status === 'live' ? 'live' : ''}`}
+                      onClick={() => wissel('matchIds', m.id)}
+                      aria-pressed={aan}
+                    >
+                      <span className="kt-pick-top">
+                        <span className={`kt-pick-badge ${m.status}`}>
+                          {m.status === 'live' ? '● LIVE' : m.status === 'finished' ? 'Einde' : m.time}
+                        </span>
+                        <span className="kt-pick-reeks">{m.reeks}</span>
+                      </span>
+                      <span className="kt-pick-match">
+                        <span className="kt-pick-team">{m.home.name}</span>
+                        <span className="kt-pick-vs">vs</span>
+                        <span className="kt-pick-team">{m.away.name}</span>
+                      </span>
+                      <span className="kt-pick-check" aria-hidden>{aan ? '✓' : '+'}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      </details>
 
       <section className="kt-blok kt-blok-link">
         <h3 className="kt-blok-title">4 · Zet &laquo;{actief.naam}&raquo; op de tv</h3>
