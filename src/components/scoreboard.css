@@ -848,3 +848,57 @@
   color: var(--accent); font: inherit; font-size: 0.82rem; font-weight: 800;
 }
 .sb-chat-new:hover { background: color-mix(in srgb, var(--accent) 22%, transparent); }
+
+
+/* Compacte sectiebalk: na de eindstand komt de samenvatting sneller in beeld, terwijl de
+   volledige tijdlijn met één tik bereikbaar blijft. */
+.sb-section-toggle {
+  width: 100%;
+  min-height: 52px;
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  border-radius: 14px;
+  color: var(--text);
+  background: color-mix(in srgb, var(--panel) 88%, transparent);
+  cursor: pointer;
+  text-align: left;
+}
+.sb-section-toggle-title {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: .8rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: .12em;
+}
+.sb-section-toggle-title::before {
+  content: '';
+  width: 3px;
+  height: 1em;
+  border-radius: 2px;
+  background: var(--grad-accent, var(--accent));
+  box-shadow: 0 0 8px color-mix(in srgb, var(--accent) 60%, transparent);
+}
+.sb-section-toggle-meta {
+  color: var(--dim);
+  font-size: .78rem;
+  font-weight: 700;
+}
+.sb-section-toggle-chevron {
+  color: var(--accent);
+  font-size: 1.25rem;
+  line-height: 1;
+  transition: transform .18s ease;
+}
+.sb-timeline.open .sb-section-toggle-chevron { transform: rotate(180deg); }
+.sb-timeline-content { padding-top: 2px; }
+.sb-timeline.collapsed { margin-bottom: 10px; }
+@media (max-width: 520px) {
+  .sb-section-toggle { min-height: 48px; padding: 10px 12px; }
+  .sb-section-toggle-meta { font-size: .72rem; }
+}
