@@ -223,3 +223,30 @@ export function Tile({
     </div>
   )
 }
+
+
+/** Compacte eindstand voor de rustige uitslagenstrook onder de livewedstrijden. */
+export function ResultTile({ match, live }: { match: KantineMatch; live?: KantineLive | null }) {
+  const score = live?.score ?? match.score
+  const homeColor = match.home.colors?.primary ?? DEFAULT_HOME_COLOR
+  const awayColor = match.away.colors?.primary ?? DEFAULT_AWAY_COLOR
+  return (
+    <Link
+      href={`/match/${match.id}`}
+      prefetch={false}
+      className="kt-result"
+      style={{ '--home': readableOnDark(homeColor), '--away': readableOnDark(awayColor) } as React.CSSProperties}
+    >
+      <span className="kt-result-meta"><b>EINDSTAND</b><small>{match.reeks}</small></span>
+      <span className="kt-result-team home">
+        <TeamLogo name={match.home.name} logoUrl={match.home.logoUrl} logoFit={match.home.logoFit} side="home" size="clamp(34px, 4.4vmin, 54px)" ringColor={homeColor} />
+        <span>{match.home.name}</span>
+      </span>
+      <strong className="kt-result-score">{score.home} – {score.away}</strong>
+      <span className="kt-result-team away">
+        <TeamLogo name={match.away.name} logoUrl={match.away.logoUrl} logoFit={match.away.logoFit} side="away" size="clamp(34px, 4.4vmin, 54px)" ringColor={awayColor} />
+        <span>{match.away.name}</span>
+      </span>
+    </Link>
+  )
+}
