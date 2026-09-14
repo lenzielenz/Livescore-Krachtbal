@@ -33,7 +33,7 @@ export default async function LivePage({ searchParams }: { searchParams: Promise
       <SiteHeader active="wedstrijden" />
       <div className="lb-page">
         <TournamentLiveStrip />
-        <LiveBoard date={selected} today={today} matches={days} speeldagen={speeldagen} myClubId={myClubId} supportersMode={supportersMode} />
+        <LiveBoard date={selected} today={today} matches={days} speeldagen={speeldagen} myClubId={myClubId} supportersMode={supportersMode} userId={user?.id ?? null} />
       </div>
     </>
   )
