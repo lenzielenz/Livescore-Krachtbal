@@ -2,7 +2,7 @@ import type { CollectionConfig } from 'payload'
 
 import { isFederationLevel } from '../lib/access'
 
-import { CATEGORY_OPTIONS } from '../lib/categories'
+import { TOURNAMENT_CATEGORY_OPTIONS } from '../lib/categories'
 
 export const TOURNAMENT_STATUS_OPTIONS = [
   { label: 'Bezig', value: 'live' },
@@ -82,9 +82,9 @@ export const Tournaments: CollectionConfig = {
           name: 'category',
           label: 'Leeftijdscategorie',
           type: 'select',
-          options: CATEGORY_OPTIONS,
+          options: TOURNAMENT_CATEGORY_OPTIONS,
           required: true,
-          admin: { description: 'Bepaalt de spelregels (helftduur). U12/U14/U16 = 2×20 min, rest 2×25 min.' },
+          admin: { description: 'Bepaalt de spelregels (helftduur). U8/U10/U12/U14/U16 = 2×20 min, rest 2×25 min.' },
         },
         {
           name: 'status',
