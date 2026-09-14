@@ -21,6 +21,11 @@ const match = (over: Partial<RecapMatch> & { matchId: number; homeGoals: number;
 })
 
 describe('previousWeekRange', () => {
+  it('toont op maandagochtend vóór 08:00 het net afgelopen weekend', () => {
+    const prev = previousWeekRange(new Date('2026-09-14T05:53:00.000Z')) // 07:53 in België
+    expect(prev.startIso).toBe('2026-09-07T06:00:00.000Z')
+    expect(prev.endIso).toBe('2026-09-14T06:00:00.000Z')
+  })
   it('levert precies de speelweek vóór de huidige', () => {
     const now = new Date('2026-08-10T09:00:00.000Z') // een maandagochtend
     const prev = previousWeekRange(now)
