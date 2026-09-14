@@ -6,7 +6,7 @@
 
 import type { Payload } from 'payload'
 
-import { CATEGORIES, type Category, categoryConfig } from './categories'
+import { TOURNAMENT_CATEGORIES, type TournamentCategory, categoryConfig } from './categories'
 import { aantekenaarTekst, sanitizeAantekenaars, sanitizeAfsluiter } from './aantekenaars'
 import { sanitizeTrust, trustLabel, voteWindowOpen, type TrustLabel } from './score-trust'
 import {
@@ -90,7 +90,7 @@ export type TMatchState = {
 export type TournamentState = {
   id: number
   name: string
-  category: Category
+  category: TournamentCategory
   status: 'live' | 'finished'
   method: string
   format: TournamentFormat
@@ -228,7 +228,7 @@ export async function createTournament(
   payload: Payload,
   args: {
     name: string
-    category: Category
+    category: TournamentCategory
     method: 'manual' | 'auto'
     slots: (string | null)[]
     format?: TournamentFormat
@@ -354,7 +354,7 @@ export async function buildTournamentState(payload: Payload, tournamentId: numbe
   return {
     id: t.id,
     name: t.name as string,
-    category: t.category as Category,
+    category: t.category as TournamentCategory,
     status: t.status as 'live' | 'finished',
     method: (t.method as string) ?? 'auto',
     format,
@@ -362,7 +362,7 @@ export async function buildTournamentState(payload: Payload, tournamentId: numbe
     halfDurationSeconds:
       Number((t as { halfMinutes?: number | null }).halfMinutes) >= 1
         ? Number((t as { halfMinutes?: number | null }).halfMinutes) * 60
-        : categoryConfig(t.category as Category).halfDurationSeconds,
+        : categoryConfig(t.category as TournamentCategory).halfDurationSeconds,
     rounds,
     thirdPlace,
     champion,
@@ -737,12 +737,12 @@ export async function renameTeam(payload: Payload, tournamentId: number, van: st
 }
 
 /** Verkeerd bewaarde categorie rechtzetten — bepaalt speelduur/worpen voor nog te spelen matchen. */
-export async function changeCategory(payload: Payload, tournamentId: number, category: string): Promise<void> {
-  if (!(CATEGORIES as readonly string[]).includes(category)) throw new Error(`Onbekende categorie: ${category}`)
+export async function changeTournamentCategory(payload: Payload, tournamentId: number, category: string): Promise<void> {
+  if (!(TOURNAMENT_CATEGORIES as readonly string[]).includes(category)) throw new Error(`Onbekende categorie: ${category}`)
   await payload.update({
     collection: 'tournaments',
     id: tournamentId,
-    data: { category: category as Category },
+    data: { category: category as TournamentCategory },
     overrideAccess: true,
   })
 }
