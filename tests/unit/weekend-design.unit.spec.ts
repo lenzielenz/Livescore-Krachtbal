@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import sharp from 'sharp'
-import { renderWeekendDesign, weekendPages } from '@/lib/weekend-design'
+import { orderWeekendRows, renderWeekendDesign, weekendPages } from '@/lib/weekend-design'
 import type { WeekendMatch } from '@/lib/instagram-weekend'
 
 const matches = (n: number): WeekendMatch[] => Array.from({ length: n }, (_, i) => ({
@@ -19,6 +19,16 @@ describe('Weekendplan design', () => {
     expect(pages.map(p => p.length)).toEqual([8, 8, 3])
     expect(pages.flat()).toEqual(rows)
   })
+  it('groups every day into home matches followed by away matches', () => {
+    const rows = matches(6).map((row, i) => ({
+      ...row,
+      date: `2026-09-19T${String(10 + i).padStart(2, '0')}:00:00Z`,
+      side: (i % 2 ? 'away' : 'home') as 'home' | 'away',
+      time: `${10 + i}:00`,
+    }))
+    expect(orderWeekendRows(rows).map(row => row.side)).toEqual(['home', 'home', 'home', 'away', 'away', 'away'])
+    expect(orderWeekendRows(rows).filter(row => row.side === 'home').map(row => row.time)).toEqual(['10:00', '12:00', '14:00'])
+  })
   it('provides an empty state and exact page boundaries', () => {
     expect(weekendPages([])).toEqual([[]])
     expect(weekendPages(matches(8))).toHaveLength(1)
@@ -26,10 +36,10 @@ describe('Weekendplan design', () => {
     expect(renderWeekendDesign({ ...options, rows: [], total: 0 })).toContain('Even geen wedstrijden.')
   })
   it('renders eight matches and two day headings above the footer', () => {
-    const svg = renderWeekendDesign(options)
+    const svg = renderWeekendDesign({ ...options, rows: orderWeekendRows(options.rows) })
     expect((svg.match(/data-match=/g) ?? [])).toHaveLength(8)
-    expect(svg).toContain('ZATERDAG 19 SEPTEMBER')
-    expect(svg).toContain('ZONDAG 20 SEPTEMBER')
+    expect(svg).toContain('ZATERDAG 19 SEPTEMBER · THUIS')
+    expect(svg).toContain('ZONDAG 20 SEPTEMBER · THUIS')
     const rowTops = [...svg.matchAll(/<rect x="64" y="(\d+)" width="952" height="120"/g)].map(m => Number(m[1]))
     expect(Math.max(...rowTops) + 120).toBeLessThan(1764)
   })
@@ -38,6 +48,8 @@ describe('Weekendplan design', () => {
     const svg = renderWeekendDesign({ ...options, club })
     expect(svg).toContain('Een zeer lange clubnaam met &amp; &lt;speciale&gt; tekens')
     expect(svg).not.toContain('…')
+    expect(svg).not.toContain('KBC St. Michiels B</text>')
+    expect(svg).toContain('T Botterken Baasrode A')
   })
   it('rasterizes the same embedded-logo design to a full-size PNG', async () => {
     const logo = await sharp({ create: { width: 20, height: 20, channels: 4, background: '#ffffff' } }).png().toBuffer()
