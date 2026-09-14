@@ -27,3 +27,13 @@ export function isCheckedIn(list: Checkin[], matchId: number): boolean {
 export function toggleCheckin(list: Checkin[], matchId: number, dateISO: string = new Date().toISOString()): Checkin[] {
   return isCheckedIn(list, matchId) ? list.filter((c) => c.m !== matchId) : [...list, { m: matchId, d: dateISO }]
 }
+
+/** Aantal unieke accounts dat bij minstens één van deze wedstrijden "ik ben erbij" aanduidde. */
+export function countUniqueVisitors(rawCheckins: unknown[], matchIds: Iterable<number>): number {
+  const wanted = new Set(matchIds)
+  if (wanted.size === 0) return 0
+  return rawCheckins.reduce<number>(
+    (total, raw) => total + (sanitizeCheckins(raw).some((checkin) => wanted.has(checkin.m)) ? 1 : 0),
+    0,
+  )
+}

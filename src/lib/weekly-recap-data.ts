@@ -1,6 +1,7 @@
 import type { Payload } from 'payload'
 
 import { competitionWhere } from './analyse-access'
+import { countUniqueVisitors } from './checkins'
 import { buildMatchStats, buildScoreboards } from './match-engine'
 import { reeksNaam } from './reeksen'
 import { seasonClause, seasonFromDate } from './seasons'
@@ -126,16 +127,12 @@ export async function buildWeeklyRecapData(
 }
 
 async function collectWeekendStats(payload: Payload, weekDocs: Record<string, unknown>[]) {
-  const playerIds = new Set<number>()
   const clubKeys = new Set<string>()
   const matchIds = weekDocs.map((match) => Number((match as { id?: unknown }).id)).filter(Number.isFinite)
+  const weekendMatchIds = new Set(matchIds)
   let goalThrows = 0
   let backThrows = 0
 
-  const rememberRelation = (set: Set<number>, value: unknown) => {
-    const id = rel(value)
-    if (id != null && Number.isFinite(id)) set.add(id)
-  }
   const rememberClub = (team: unknown) => {
     if (!team || typeof team !== 'object') return
     const club = (team as { club?: unknown }).club
@@ -150,18 +147,24 @@ async function collectWeekendStats(payload: Payload, weekDocs: Record<string, un
   for (const match of weekDocs) {
     rememberClub((match as { homeTeam?: unknown }).homeTeam)
     rememberClub((match as { awayTeam?: unknown }).awayTeam)
-    for (const value of [
-      ...(((match as { homeLineup?: unknown }).homeLineup as unknown[]) ?? []),
-      ...(((match as { awayLineup?: unknown }).awayLineup as unknown[]) ?? []),
-    ]) rememberRelation(playerIds, value)
-
     const simple = readSimpleScore(match as { simpleScore?: unknown })
     for (const goal of simple.goals) {
-      if (goal.scorerId != null) rememberRelation(playerIds, goal.scorerId)
       goalThrows += 1
       if (goal.points === 2) backThrows += 1
     }
   }
+
+  // Een bezoeker is een uniek account dat bij minstens één wedstrijd uit dit weekoverzicht
+  // "Ik ben erbij" aanduidde. Meerdere bezochte wedstrijden tellen dus niet dubbel.
+  const users = matchIds.length
+    ? await payload.find({
+        collection: 'users', depth: 0, pagination: false, select: { checkins: true }, overrideAccess: true,
+      }).catch(() => ({ docs: [] as Record<string, unknown>[] }))
+    : { docs: [] as Record<string, unknown>[] }
+  const visitors = countUniqueVisitors(
+    users.docs.map((user) => (user as { checkins?: unknown }).checkins),
+    weekendMatchIds,
+  )
 
   if (matchIds.length) {
     const throws = await payload.find({
@@ -172,15 +175,15 @@ async function collectWeekendStats(payload: Payload, weekDocs: Record<string, un
       overrideAccess: true,
     }).catch(() => ({ docs: [] as Record<string, unknown>[] }))
     for (const throwDoc of throws.docs) {
-      rememberRelation(playerIds, (throwDoc as { player?: unknown }).player)
       const outcome = String((throwDoc as { outcome?: unknown }).outcome ?? '')
-      const scored = outcome === 'goal' || outcome === 'own_goal'
+      // Een own goal levert de werper zelf geen geslaagde doel- of rugworp op.
+      const scored = outcome === 'goal'
       if (scored) goalThrows += 1
       if (scored && (throwDoc as { type?: unknown }).type === 'rug') backThrows += 1
     }
   }
 
-  return { participants: playerIds.size, clubs: clubKeys.size, goalThrows, backThrows }
+  return { visitors, clubs: clubKeys.size, goalThrows, backThrows }
 }
 
 /** Spelersprestaties van de week: uit de worpstatistiek én uit de snelscoremodus. */

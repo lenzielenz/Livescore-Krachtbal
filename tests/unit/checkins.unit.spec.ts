@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 
-import { sanitizeCheckins, isCheckedIn, toggleCheckin } from '@/lib/checkins'
+import { sanitizeCheckins, isCheckedIn, toggleCheckin, countUniqueVisitors } from '@/lib/checkins'
 
 describe('sanitizeCheckins', () => {
   it('weert rommel en dedupliceert op match-id', () => {
@@ -25,5 +25,21 @@ describe('toggleCheckin', () => {
   })
   it('verwijdert als al aanwezig', () => {
     expect(toggleCheckin([{ m: 7, d: 'x' }], 7)).toEqual([])
+  })
+})
+
+describe('countUniqueVisitors', () => {
+  it('telt één bezoeker slechts één keer, ook bij meerdere wedstrijden', () => {
+    const visitors = countUniqueVisitors([
+      [{ m: 12, d: 'x' }, { m: 13, d: 'x' }],
+      [{ m: 13, d: 'x' }],
+      [{ m: 99, d: 'x' }],
+      null,
+    ], [12, 13])
+    expect(visitors).toBe(2)
+  })
+
+  it('telt check-ins van andere weekends niet mee', () => {
+    expect(countUniqueVisitors([[{ m: 8, d: 'x' }]], [12, 13])).toBe(0)
   })
 })
