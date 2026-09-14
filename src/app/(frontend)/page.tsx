@@ -84,7 +84,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         {/* Geen tornooi-wedstrijden op de homepage — wél de snellink met aftelklok naar de
             tornooidag, zodat nieuwe mensen meteen hun weg vinden. */}
         <TornooiTeaser />
-        <LiveBoard date={selected} today={today} matches={days} speeldagen={speeldagen} myClubId={myClubId} supportersMode={supportersMode} />
+        <LiveBoard date={selected} today={today} matches={days} speeldagen={speeldagen} myClubId={myClubId} supportersMode={supportersMode} userId={me?.id ?? null} />
       </div>
     </>
   )
