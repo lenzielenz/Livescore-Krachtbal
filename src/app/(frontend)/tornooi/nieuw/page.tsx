@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { SiteHeader } from '@/components/SiteHeader'
 import { isFederationLevel } from '@/lib/access'
 import { competitionWhere } from '@/lib/analyse-access'
-import { CATEGORY_OPTIONS } from '@/lib/categories'
+import { TOURNAMENT_CATEGORY_OPTIONS } from '@/lib/categories'
 import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
 import { NewTournament } from './NewTournament'
@@ -63,7 +63,7 @@ export default async function NieuwTornooiPage({ searchParams }: { searchParams:
     <>
       <SiteHeader active="tornooi" />
       <div className="trn-page">
-        <NewTournament categories={CATEGORY_OPTIONS} clubs={clubs} teams={teams} initialGroep={typeof groep === 'string' ? groep : ''} />
+        <NewTournament categories={TOURNAMENT_CATEGORY_OPTIONS} clubs={clubs} teams={teams} initialGroep={typeof groep === 'string' ? groep : ''} />
       </div>
     </>
   )
