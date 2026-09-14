@@ -52,7 +52,16 @@ export async function resolveDefaultDay(today: string): Promise<string> {
   const eerstvolgende = await payload
     .find({
       collection: 'matches',
-      where: { and: [{ analyseOnly: { not_equals: true } }, { isDemo: { not_equals: true } }] },
+      // Zoek strikt vanaf het begin van vandaag. Zonder deze grens gaf de oplopende sortering
+      // altijd de oudste wedstrijd van het seizoen terug, waardoor maandag het voorbije weekend
+      // opnieuw op de homepage verscheen.
+      where: {
+        and: [
+          { date: { greater_than_equal: todayStart } },
+          { analyseOnly: { not_equals: true } },
+          { isDemo: { not_equals: true } },
+        ],
+      },
       sort: 'date',
       depth: 0,
       limit: 1,
