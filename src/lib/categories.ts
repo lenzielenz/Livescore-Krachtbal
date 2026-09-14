@@ -5,13 +5,23 @@ export const CATEGORIES = ['U12', 'U14', 'U16', 'U18', 'U20', 'senioren'] as con
 
 export type Category = (typeof CATEGORIES)[number]
 
+// Tornooien hebben ook instapreeksen die niet in de gewone competitiekalender voorkomen.
+// Hou deze lijst apart, zodat U8/U10 enkel in de tornooisectie verschijnen.
+export const TOURNAMENT_CATEGORIES = ['U8', 'U10', ...CATEGORIES] as const
+export type TournamentCategory = (typeof TOURNAMENT_CATEGORIES)[number]
+
 export const CATEGORY_OPTIONS = CATEGORIES.map((c) => ({
   label: c === 'senioren' ? 'Senioren' : c,
   value: c,
 }))
 
-// Jeugd = U12/U14/U16 (kortere helften, één worp extra per opzet).
-const YOUTH: ReadonlySet<Category> = new Set<Category>(['U12', 'U14', 'U16'])
+export const TOURNAMENT_CATEGORY_OPTIONS = TOURNAMENT_CATEGORIES.map((c) => ({
+  label: c === 'senioren' ? 'Senioren' : c,
+  value: c,
+}))
+
+// Jeugd = U8 t/m U16 (kortere helften, één worp extra per opzet).
+const YOUTH: ReadonlySet<TournamentCategory> = new Set<TournamentCategory>(['U8', 'U10', 'U12', 'U14', 'U16'])
 
 export type CategoryConfig = {
   /** Lengte van één helft in seconden. */
@@ -23,7 +33,7 @@ export type CategoryConfig = {
   isYouth: boolean
 }
 
-export function categoryConfig(category: Category): CategoryConfig {
+export function categoryConfig(category: TournamentCategory): CategoryConfig {
   const isYouth = YOUTH.has(category)
   return {
     // 2×20 min jeugd, 2×25 min U18/U20/senioren.

@@ -1,6 +1,6 @@
 import { isFederationLevel } from '@/lib/access'
 import { authUser } from '@/lib/api-auth'
-import { CATEGORIES, type Category } from '@/lib/categories'
+import { TOURNAMENT_CATEGORIES, type TournamentCategory } from '@/lib/categories'
 import { getPayloadClient } from '@/lib/payload-client'
 import { createTournament } from '@/lib/tournament-engine'
 
@@ -16,7 +16,7 @@ export async function POST(req: Request) {
   }
 
   const name = String(body.name ?? '').trim()
-  const category = String(body.category ?? '') as Category
+  const category = String(body.category ?? '') as TournamentCategory
   const method = body.method === 'manual' ? 'manual' : 'auto'
   const format = body.format === 'roundrobin' ? 'roundrobin' : 'knockout'
   const slots = Array.isArray(body.slots)
@@ -47,7 +47,7 @@ export async function POST(req: Request) {
     : []
 
   if (!name) return Response.json({ error: 'Geef het tornooi een naam.' }, { status: 400 })
-  if (!CATEGORIES.includes(category)) return Response.json({ error: 'Ongeldige categorie.' }, { status: 400 })
+  if (!TOURNAMENT_CATEGORIES.includes(category)) return Response.json({ error: 'Ongeldige categorie.' }, { status: 400 })
 
   try {
     const payload = await getPayloadClient()

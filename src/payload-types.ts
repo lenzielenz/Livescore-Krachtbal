@@ -1136,9 +1136,9 @@ export interface Tournament {
    */
   hostClub?: (number | null) | Club;
   /**
-   * Bepaalt de spelregels (helftduur). U12/U14/U16 = 2×20 min, rest 2×25 min.
+   * Bepaalt de spelregels (helftduur). U8/U10/U12/U14/U16 = 2×20 min, rest 2×25 min.
    */
-  category: 'U12' | 'U14' | 'U16' | 'U18' | 'U20' | 'senioren';
+  category: 'U8' | 'U10' | 'U12' | 'U14' | 'U16' | 'U18' | 'U20' | 'senioren';
   status: 'live' | 'finished';
   method?: ('manual' | 'auto') | null;
   /**

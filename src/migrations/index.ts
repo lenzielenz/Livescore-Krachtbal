@@ -114,6 +114,7 @@ import * as migration_20260904_150000_tornooi_aantekenaars from './20260904_1500
 import * as migration_20260906_140000_kantine_scherm_per_gebruiker from './20260906_140000_kantine_scherm_per_gebruiker'
 
 import * as migration_20260913_210000_ideas from './20260913_210000_ideas'
+import * as migration_20260914_221500_tornooi_u8_u10 from './20260914_221500_tornooi_u8_u10'
 
 export const migrations = [
   {
@@ -690,5 +691,10 @@ export const migrations = [
     up: migration_20260913_210000_ideas.up,
     down: migration_20260913_210000_ideas.down,
     name: '20260913_210000_ideas',
+  },
+  {
+    up: migration_20260914_221500_tornooi_u8_u10.up,
+    down: migration_20260914_221500_tornooi_u8_u10.down,
+    name: '20260914_221500_tornooi_u8_u10',
   },
 ];

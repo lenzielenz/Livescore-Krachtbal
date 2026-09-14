@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
-import { CATEGORY_OPTIONS } from '@/lib/categories'
+import { TOURNAMENT_CATEGORY_OPTIONS } from '@/lib/categories'
 import { nextPow2, seededSlots, shuffle } from '@/lib/tournament'
 
 // ⚙️ Beheer van een bestaand tornooi (enkel federatie/admin, ingeklapt tot je het nodig hebt):
@@ -194,7 +194,7 @@ export function TornooiBeheer({
         <span>Categorie (verkeerd bewaard? bepaalt speelduur en worpaantal)</span>
         <div className="trn-beheer-rij">
           <select value={nieuweCat} onChange={(e) => setNieuweCat(e.target.value)}>
-            {CATEGORY_OPTIONS.map((o) => (
+            {TOURNAMENT_CATEGORY_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>{o.label}</option>
             ))}
           </select>
