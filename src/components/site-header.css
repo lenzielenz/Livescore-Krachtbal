@@ -195,17 +195,26 @@
 }
 
 @media (max-width: 560px) {
+  .sh-inner {
+    padding: 8px 10px;
+    flex-wrap: nowrap;
+    gap: 6px;
+  }
   .sh-brand {
     font-size: 1rem;
   }
-  /* Op gsm: "Wedstrijden" verbergen (de titel linkt al naar de wedstrijden) zodat titel,
-     navigatie en het weer samen op één nette regel passen. */
-  .sh-link-wedstrijden {
+  /* Op een staande smartphone is de terugweg naar het wedstrijdoverzicht belangrijker dan het
+     weer. Laat daarom "Wedstrijden" altijd staan en win de nodige ruimte met het weerblokje. */
+  .sh-inner .wx-mini {
     display: none;
+  }
+  .sh-right {
+    flex-wrap: nowrap;
+    gap: 3px;
   }
   .sh-link {
     padding: 6px 7px;
-    font-size: 0.84rem;
+    font-size: 0.82rem;
   }
   /* Op gsm enkel het slot-icoon om plaats te sparen. */
   .sh-login-lbl {
