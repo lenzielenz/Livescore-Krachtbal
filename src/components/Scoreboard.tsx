@@ -90,6 +90,9 @@ export function Scoreboard({
 }) {
   const [state, setState] = useState<MatchState>(initial.state)
   const [timeline, setTimeline] = useState<TimelineItem[]>(initial.timeline)
+  // Na de eindstand staat de samenvatting centraal. De volledige tijdlijn blijft met één tik
+  // bereikbaar; tijdens een lopende wedstrijd blijft ze vanzelf open.
+  const [timelineOpen, setTimelineOpen] = useState(initial.state.match.status !== 'finished')
   const [clock, setClock] = useState(initial.state.match.clockSeconds)
   const [goal, setGoal] = useState<Goal | null>(null)
   const base = useRef({ seconds: initial.state.match.clockSeconds, running: initial.state.match.clockRunning, at: Date.now() })
@@ -579,8 +582,21 @@ export function Scoreboard({
       />
 
 
-      <div className="sb-timeline">
-        <h3>Tijdlijn</h3>
+      <section className={`sb-timeline ${timelineOpen ? 'open' : 'collapsed'}`}>
+        <button
+          type="button"
+          className="sb-section-toggle"
+          aria-expanded={timelineOpen}
+          aria-controls={`match-${matchId}-timeline`}
+          onClick={() => setTimelineOpen((open) => !open)}
+        >
+          <span className="sb-section-toggle-title">Tijdlijn</span>
+          <span className="sb-section-toggle-meta">
+            {timeline.length === 1 ? '1 moment' : `${timeline.length} momenten`}
+          </span>
+          <span className="sb-section-toggle-chevron" aria-hidden>⌄</span>
+        </button>
+        <div id={`match-${matchId}-timeline`} className="sb-timeline-content" hidden={!timelineOpen}>
         {timeline.length === 0 && <p className="sb-dim">Nog geen gebeurtenissen.</p>}
         <ul>
           {(() => {
@@ -651,7 +667,8 @@ export function Scoreboard({
             return out
           })()}
         </ul>
-      </div>
+        </div>
+      </section>
 
       {/* Vluchtige foto-tribune (enkel volwassen wedstrijden; verdwijnt na 24u). Verbergt zichzelf
           als er niets te tonen valt en de bezoeker niet mag posten. */}
