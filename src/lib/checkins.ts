@@ -32,7 +32,7 @@ export function toggleCheckin(list: Checkin[], matchId: number, dateISO: string 
 export function countUniqueVisitors(rawCheckins: unknown[], matchIds: Iterable<number>): number {
   const wanted = new Set(matchIds)
   if (wanted.size === 0) return 0
-  return rawCheckins.reduce(
+  return rawCheckins.reduce<number>(
     (total, raw) => total + (sanitizeCheckins(raw).some((checkin) => wanted.has(checkin.m)) ? 1 : 0),
     0,
   )
