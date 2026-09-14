@@ -163,39 +163,32 @@ export function MijnKantineScherm({
   return (
     <div className="kt-mijn">
       <section className="kt-uitleg">
-        <h2 className="kt-uitleg-title">📺 Jouw kantineschermen</h2>
+        <span className="kt-uitleg-eyebrow">Eén keer instellen</span>
+        <h2 className="kt-uitleg-title">📺 Jouw kantinescherm in vier stappen</h2>
         <p className="kt-uitleg-lead">
-          Iedereen die inlogt maakt hier zijn eigen kantinescherm — of meerdere, als je er meer dan
-          één hangen hebt. Je kiest één keer wat elk scherm toont, zet de vaste link op de tv, en
-          verder heb je er geen werk meer aan.
+          Kies wat je wil tonen en open daarna de vaste link op de tv. Wedstrijden, live standen en
+          de volgende speeldag worden automatisch bijgewerkt.
         </p>
-        <ol className="kt-uitleg-lijst">
-          <li>
-            <strong>Kies je club.</strong> Vanaf dan komen <em>alle</em> wedstrijden van die club
-            automatisch op het scherm, heel het jaar door — zodra een wedstrijd start, verschijnt ze
-            vanzelf met de live stand erbij.
-          </li>
-          <li>
-            <strong>Doordeweeks zie je wat eraan komt.</strong> Is er niets bezig, dan toont het
-            scherm de geplande wedstrijden van de komende week, met een aftelling naar de
-            eerstvolgende.
-          </li>
-          <li>
-            <strong>Wil je er nog iets bij?</strong> Vink losse ploegen of wedstrijden aan — ook van
-            een andere club. Die komen er gewoon bij in de lijst, naast wat je club al aanbrengt.
-          </li>
-          <li>
-            <strong>Meerdere tv&apos;s?</strong> Maak een tweede scherm aan met een eigen naam en een
-            eigen link — bijvoorbeeld één voor de kantine en één bij de jeugdterreinen.
-          </li>
-        </ol>
+        <div className="kt-uitleg-stappen" aria-label="Zo werkt het">
+          <span><b>1</b>Kies je scherm</span>
+          <span><b>2</b>Kies je club</span>
+          <span><b>3</b>Voeg extra&apos;s toe</span>
+          <span><b>4</b>Open op de tv</span>
+        </div>
       </section>
 
+      <nav className="kt-stapnav" aria-label="Ga naar een stap">
+        <a href="#kantine-scherm"><b>1</b><span>Scherm</span></a>
+        <a href="#kantine-club"><b>2</b><span>Club</span></a>
+        <a href="#kantine-extra"><b>3</b><span>Extra&apos;s</span></a>
+        <a href="#kantine-tv"><b>4</b><span>Open tv</span></a>
+      </nav>
+
       {/* ── Welk scherm ben je aan het instellen? ───────────────────────────────────────────── */}
-      <section className="kt-blok kt-profielen">
-        <h3 className="kt-blok-title">Welk scherm?</h3>
+      <section id="kantine-scherm" className="kt-blok kt-profielen kt-stapblok">
+        <h3 className="kt-blok-title"><span className="kt-stapnummer">1</span> Kies je scherm</h3>
         <p className="kt-blok-sub">
-          Elk scherm heeft een eigen naam en een eigen link. Handig als er meer dan één tv hangt.
+          Gebruik één scherm of maak aparte schermen voor bijvoorbeeld de kantine en jeugdterreinen.
         </p>
         <div className="kt-prof-rij">
           {profielen.map((p) => (
@@ -247,9 +240,9 @@ export function MijnKantineScherm({
         </div>
       </section>
 
-      <section className="kt-blok">
-        <h3 className="kt-blok-title">1 · Je club{clubs.length > 1 ? '(s)' : ''}</h3>
-        <p className="kt-blok-sub">Alles van deze club komt automatisch op het scherm.</p>
+      <section id="kantine-club" className="kt-blok kt-stapblok">
+        <h3 className="kt-blok-title"><span className="kt-stapnummer">2</span> Kies je club</h3>
+        <p className="kt-blok-sub">Alle wedstrijden van je gekozen club verschijnen automatisch.</p>
         <div className="kt-chips">
           {clubs.map((c) => (
             <button
@@ -265,11 +258,11 @@ export function MijnKantineScherm({
         </div>
       </section>
 
-      <details className="kt-blok kt-keuze-details">
+      <details id="kantine-extra" className="kt-blok kt-keuze-details">
         <summary className="kt-keuze-summary">
           <span>
-            <strong>2 · Losse ploegen</strong>
-            <small>Optioneel · kies één ploeg zonder de volledige club</small>
+            <strong>3A · Extra ploegen</strong>
+            <small>Optioneel · voeg één ploeg apart toe</small>
           </span>
           <span className="kt-keuze-aantal">
             {sel.teamIds.length ? `${sel.teamIds.length} gekozen` : 'Open selectie'}
@@ -317,8 +310,8 @@ export function MijnKantineScherm({
       <details className="kt-blok kt-keuze-details">
         <summary className="kt-keuze-summary">
           <span>
-            <strong>3 · Losse wedstrijden</strong>
-            <small>Optioneel · voeg één specifieke affiche toe</small>
+            <strong>3B · Extra wedstrijden</strong>
+            <small>Optioneel · voeg één specifieke wedstrijd toe</small>
           </span>
           <span className="kt-keuze-aantal">
             {sel.matchIds.length ? `${sel.matchIds.length} gekozen` : 'Open selectie'}
@@ -378,8 +371,8 @@ export function MijnKantineScherm({
         </div>
       </details>
 
-      <section className="kt-blok kt-blok-link">
-        <h3 className="kt-blok-title">4 · Zet &laquo;{actief.naam}&raquo; op de tv</h3>
+      <section id="kantine-tv" className="kt-blok kt-blok-link kt-stapblok">
+        <h3 className="kt-blok-title"><span className="kt-stapnummer">4</span> Open &laquo;{actief.naam}&raquo; op de tv</h3>
         {leeg ? (
           <p className="kt-blok-sub">
             Kies eerst hierboven je club — daarna verschijnt hier de vaste link voor je kantine-tv.
@@ -387,11 +380,11 @@ export function MijnKantineScherm({
         ) : (
           <>
             <p className="kt-blok-sub">
-              Deze link hoort bij dit scherm en verandert nooit. Open hem op de tv, of cast hem
-              rechtstreeks.
+              Klaar. Open het scherm rechtstreeks, cast het of kopieer de vaste link naar je tv.
             </p>
-            <div className="kt-clublink-row">
-              <input className="kt-clublink-url" value={url} readOnly onFocus={(e) => e.currentTarget.select()} />
+            <div className="kt-tv-acties">
+              <Link href={pad} className="kt-screen-btn">📺 Open dit scherm →</Link>
+              <CastKnop pad={pad} sleutel={`kantine-${userId}-${actief.id}`} label="📡 Cast naar tv" />
               <button
                 type="button"
                 className="kt-clublink-btn"
@@ -401,11 +394,13 @@ export function MijnKantineScherm({
                   setTimeout(() => setGekopieerd(false), 2000)
                 }}
               >
-                {gekopieerd ? '✓ Gekopieerd' : '🔗 Kopieer'}
+                {gekopieerd ? '✓ Link gekopieerd' : '🔗 Kopieer link'}
               </button>
-              <CastKnop pad={pad} sleutel={`kantine-${userId}-${actief.id}`} label="📺 Cast naar tv" />
-              <Link href={pad} className="kt-screen-btn">📺 Open dit scherm →</Link>
             </div>
+            <details className="kt-url-details">
+              <summary>Vaste link bekijken</summary>
+              <input className="kt-clublink-url" value={url} readOnly onFocus={(e) => e.currentTarget.select()} />
+            </details>
           </>
         )}
         <p className="kt-control-status">
