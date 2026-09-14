@@ -6,7 +6,8 @@
 // Waarom een ritueel en niet nog een feature: terugkomen wordt een gewoonte door een vast moment
 // (voorspellen vóór het weekend → live volgen → maandag de recap), niet door meer knoppen.
 
-import { weekendRange } from './pronostiek-weekend'
+import { brusselsParts } from './datetime'
+import { WEEKEND_RESET_HOUR, weekendRange } from './pronostiek-weekend'
 import type { WeekSelection, WeekTeamRow } from './team-of-the-week'
 
 export interface RecapMatch {
@@ -71,6 +72,13 @@ export interface WeeklyRecap {
  */
 export function previousWeekRange(now: Date = new Date()): { startIso: string; endIso: string } {
   const current = weekendRange(now.toISOString())
+  const local = brusselsParts(now)
+
+  // Tussen maandag 00:00 en de pronostiek-reset om 08:00 wijst weekendRange bewust nog naar de
+  // speelweek die nét afgelopen is. Voor de recap is dat precies het gewenste weekend; nogmaals
+  // een week teruggaan zou op maandagochtend foutief twee weekends geleden tonen.
+  if (local.weekdayMon0 === 0 && local.hour < WEEKEND_RESET_HOUR) return current
+
   // Eén dag vóór de start van de huidige week valt zeker in de vorige week (DST-veilig: de
   // weekgrenzen worden op wandkloktijd berekend, niet met een vaste offset).
   const dayBefore = new Date(new Date(current.startIso).getTime() - 86_400_000)
