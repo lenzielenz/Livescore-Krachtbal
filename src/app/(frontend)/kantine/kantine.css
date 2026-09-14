@@ -127,6 +127,109 @@
   margin-top: 4px;
 }
 
+/* Compacte optionele selecties. Dichtgeklapt nemen beide lijsten samen maar twee regels in;
+   open scrollt alleen de inhoud, zodat de tv-link onderaan bereikbaar blijft. */
+.kt-keuze-details {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--panel) 78%, transparent);
+  overflow: hidden;
+}
+.kt-keuze-summary {
+  min-height: 68px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 15px;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+.kt-keuze-summary::-webkit-details-marker {
+  display: none;
+}
+.kt-keuze-summary > span:first-child {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.kt-keuze-summary strong {
+  font-size: 0.94rem;
+  color: var(--txt);
+}
+.kt-keuze-summary small {
+  color: var(--dim);
+  font-size: 0.76rem;
+  line-height: 1.3;
+}
+.kt-keuze-aantal {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 9px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--line));
+  color: var(--accent);
+  font-size: 0.76rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.kt-keuze-pijl {
+  display: inline-block;
+  font-size: 1rem;
+  line-height: 1;
+  transition: transform 0.18s ease;
+}
+.kt-keuze-details[open] .kt-keuze-pijl {
+  transform: rotate(180deg);
+}
+.kt-keuze-details[open] .kt-keuze-summary {
+  background: color-mix(in srgb, var(--accent) 7%, transparent);
+}
+.kt-keuze-inhoud {
+  padding: 13px 15px 15px;
+  border-top: 1px solid var(--line);
+}
+.kt-keuze-zoek {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 11px;
+  padding: 0 11px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--dim);
+}
+.kt-keuze-zoek:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 16%, transparent);
+}
+.kt-keuze-zoek input {
+  width: 100%;
+  min-width: 0;
+  padding: 10px 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--txt);
+  font: inherit;
+  font-size: 1rem;
+}
+.kt-keuze-scroll {
+  max-height: min(42dvh, 420px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 2px 5px 3px 2px;
+  scrollbar-gutter: stable;
+}
+.kt-keuze-scroll.wedstrijden {
+  max-height: min(50dvh, 520px);
+}
+
 /* Club- en ploegkeuze: veel korte namen, dus chips i.p.v. kaarten. */
 .kt-chips {
   display: flex;
@@ -1214,4 +1317,29 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .kt-results-grid, .kt-live-kop > span { animation: none; transition: none; }
+}
+
+@media (max-width: 560px) {
+  .kt-keuze-summary {
+    min-height: 62px;
+    padding: 10px 12px;
+  }
+  .kt-keuze-summary small {
+    max-width: 24ch;
+  }
+  .kt-keuze-aantal {
+    padding: 5px 7px;
+    font-size: 0.7rem;
+  }
+  .kt-keuze-inhoud {
+    padding: 12px;
+  }
+  .kt-keuze-scroll,
+  .kt-keuze-scroll.wedstrijden {
+    max-height: 52dvh;
+  }
+  .kt-keuze-scroll .kt-pick-list {
+    grid-template-columns: 1fr;
+    gap: 9px;
+  }
 }
