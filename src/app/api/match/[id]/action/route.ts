@@ -26,6 +26,7 @@ import {
 import { getMatchReadiness } from '@/lib/matchsheet-data'
 import { notifyGoalScored } from '@/lib/match-notify'
 import { missingSteps } from '@/lib/match-readiness'
+import { matchStartBlockedReason } from '@/lib/match-start-window'
 import { getPayloadClient } from '@/lib/payload-client'
 import { noteContribution } from '@/lib/score-trust-store'
 import {
@@ -93,6 +94,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     let result: unknown
     switch (action) {
       case 'start': {
+        const match = await payload.findByID({ collection: 'matches', id: matchId, depth: 0, overrideAccess: true })
+        const teVroeg = matchStartBlockedReason(match)
+        if (teVroeg) return Response.json({ error: teVroeg }, { status: 409 })
         // Startcontrole: opstellingen + scheidsrechtersakkoord (of demo). Een admin/federatie
         // mag de controle bewust overslaan via een testknop (allowUnready).
         const readiness = await getMatchReadiness(payload, matchId)
@@ -209,9 +213,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         result = await setCaptain(payload, matchId, body.side === 'away' ? 'away' : 'home', Number(body.playerId))
         break
       // ── Simpele aantekenmodus (snelscoremodus): +1/+2 zonder veldschema ──
-      case 'simplestart':
+      case 'simplestart': {
+        const match = await payload.findByID({ collection: 'matches', id: matchId, depth: 0, overrideAccess: true })
+        const teVroeg = matchStartBlockedReason(match)
+        if (teVroeg) return Response.json({ error: teVroeg }, { status: 409 })
         result = await startSimpleMatch(payload, matchId)
         break
+      }
       case 'simplegoal': {
         const goalSide = body.side === 'away' ? 'away' : 'home'
         const res = await recordSimpleGoal(payload, matchId, goalSide, body.points === 2 ? 2 : 1, {
@@ -254,7 +262,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     // Vertrouwenslaag: onthoud wie deze wedstrijd aantekent. De eerste die scoort wordt official
     // scorer; elke volgende actie houdt die claim levend (zie score-trust.ts). Fire-and-forget.
-    if (actorId != null) {
+    if (actorId != null && action !== 'reset') {
       noteContribution(matchId, { id: actorId, name: String((user as { name?: unknown })?.name ?? '').trim() || 'Supporter' })
     }
 
