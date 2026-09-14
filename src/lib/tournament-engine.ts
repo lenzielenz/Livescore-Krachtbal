@@ -737,7 +737,7 @@ export async function renameTeam(payload: Payload, tournamentId: number, van: st
 }
 
 /** Verkeerd bewaarde categorie rechtzetten — bepaalt speelduur/worpen voor nog te spelen matchen. */
-export async function changeTournamentCategory(payload: Payload, tournamentId: number, category: string): Promise<void> {
+export async function changeCategory(payload: Payload, tournamentId: number, category: string): Promise<void> {
   if (!(TOURNAMENT_CATEGORIES as readonly string[]).includes(category)) throw new Error(`Onbekende categorie: ${category}`)
   await payload.update({
     collection: 'tournaments',
