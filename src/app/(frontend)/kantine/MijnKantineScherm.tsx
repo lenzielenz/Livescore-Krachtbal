@@ -145,7 +145,7 @@ export function MijnKantineScherm({
     const zoek = ploegZoek.trim().toLocaleLowerCase('nl-BE')
     return zichtbarePloegen
       .filter((p) => !zoek || `${p.name} ${p.sub ?? ''}`.toLocaleLowerCase('nl-BE').includes(zoek))
-      .toSorted((a, b) => {
+      .slice().sort((a, b) => {
         const gekozenVerschil = Number(sel.teamIds.includes(b.id)) - Number(sel.teamIds.includes(a.id))
         return gekozenVerschil || a.name.localeCompare(b.name, 'nl-BE')
       })
@@ -155,7 +155,7 @@ export function MijnKantineScherm({
     const zoek = wedstrijdZoek.trim().toLocaleLowerCase('nl-BE')
     return matches
       .filter((m) => !zoek || `${m.home.name} ${m.away.name} ${m.reeks} ${m.time}`.toLocaleLowerCase('nl-BE').includes(zoek))
-      .toSorted((a, b) => Number(sel.matchIds.includes(b.id)) - Number(sel.matchIds.includes(a.id)))
+      .slice().sort((a, b) => Number(sel.matchIds.includes(b.id)) - Number(sel.matchIds.includes(a.id)))
   }, [matches, wedstrijdZoek, sel.matchIds])
 
   const leeg = selectieIsLeeg(sel)
