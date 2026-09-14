@@ -226,3 +226,48 @@
 .wb-beheer-melding.fout {
   color: var(--pop);
 }
+
+
+/* Wedstrijdbeheer staat bewust dicht: het is uitzonderlijk gereedschap onderaan de pagina. */
+.wb-beheer-inklapbaar { padding: 0; overflow: hidden; }
+.wb-beheer-summary {
+  min-height: 58px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 15px 18px;
+  cursor: pointer;
+  list-style: none;
+  font-weight: 900;
+  color: var(--text);
+}
+.wb-beheer-summary::-webkit-details-marker { display: none; }
+.wb-beheer-summary::after {
+  content: '⌄';
+  grid-column: 2;
+  grid-row: 1;
+  color: var(--accent);
+  font-size: 1.25rem;
+  line-height: 1;
+  margin-left: 8px;
+  transition: transform .18s ease;
+}
+.wb-beheer-summary small {
+  grid-column: 2;
+  grid-row: 1;
+  color: var(--dim);
+  font-size: .72rem;
+  font-weight: 700;
+  margin-right: 24px;
+}
+.wb-beheer-inklapbaar[open] .wb-beheer-summary::after { transform: rotate(180deg); }
+.wb-beheer-inklapbaar[open] .wb-beheer-summary {
+  border-bottom: 1px solid color-mix(in srgb, var(--accent) 22%, transparent);
+}
+.wb-beheer-inhoud { padding: 16px 18px 18px; }
+@media (max-width: 520px) {
+  .wb-beheer-summary { padding: 13px 14px; }
+  .wb-beheer-summary small { display: none; }
+  .wb-beheer-inhoud { padding: 14px; }
+}
