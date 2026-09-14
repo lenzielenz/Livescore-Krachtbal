@@ -78,10 +78,13 @@ export function WedstrijdBeheer({
   )
 
   return (
-    <section className="wb-beheer" aria-label="Wedstrijd beheren">
-      {/* Met variatieteken (️): zonder rendert dit teken als een leeg blokje i.p.v. een emoji. */}
-      <h2 className="wb-beheer-h">🛠️ Wedstrijd rechtzetten</h2>
-      <p className="wb-beheer-sub">Enkel zichtbaar voor de federatie. Wijzigingen zijn meteen zichtbaar voor iedereen.</p>
+    <details className="wb-beheer wb-beheer-inklapbaar">
+      <summary className="wb-beheer-summary">
+        <span>🛠️ Wedstrijd aanpassen</span>
+        <small>Federatiebeheer</small>
+      </summary>
+      <div className="wb-beheer-inhoud">
+        <p className="wb-beheer-sub">Enkel zichtbaar voor de federatie. Wijzigingen zijn meteen zichtbaar voor iedereen.</p>
 
       <div className="wb-beheer-rij">
         <span className="wb-beheer-lbl">Wanneer</span>
@@ -109,6 +112,7 @@ export function WedstrijdBeheer({
       {ploegRij('Uitploeg', uit, 'away')}
 
       {melding && <p className={`wb-beheer-melding ${melding.ok ? 'ok' : 'fout'}`} role="status">{melding.ok ? '✅' : '⚠️'} {melding.tekst}</p>}
-    </section>
+      </div>
+    </details>
   )
 }
