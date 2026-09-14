@@ -1,6 +1,7 @@
 import type { Payload } from 'payload'
 
 import { buildMatchState, recordRefereeStop, recordTimeout } from './match-engine'
+import { elapsedSinceScheduledStart } from './match-start-window'
 import { isSupportersMode } from './score-mode'
 import {
   buildFixedSimpleScore,
@@ -61,7 +62,7 @@ async function writeSimpleScore(payload: Payload, matchId: number, score: Simple
   return buildMatchState(payload, matchId)
 }
 
-/** Start de wedstrijd in simpele modus: status live, helft 1, klok op 0. */
+/** Start de wedstrijd in simpele modus en sluit de klok aan op het geplande aanvangsuur. */
 export async function startSimpleMatch(payload: Payload, matchId: number) {
   // Veiligheid: één tik start de wedstrijd, dus een dubbele tik mag de klok niet terug op nul
   // zetten — en een afgelopen wedstrijd start je niet opnieuw, die heropen je.
@@ -71,16 +72,25 @@ export async function startSimpleMatch(payload: Payload, matchId: number) {
   if (status === 'finished') {
     throw new Error('Deze wedstrijd is al afgelopen — heropen ze eerst om verder te doen.')
   }
-  // Eén tik = starten én de klok laten lopen (intuïtiever dan eerst live, dan nog starten).
+  // Wie pas na de geplande aftrap begint aan te tekenen, start niet meer op 00:00. De verstreken
+  // tijd wordt de klokbasis; vanaf dit ogenblik loopt de klok gewoon verder.
+  const now = new Date()
+  const startSeconds = elapsedSinceScheduledStart(huidig ?? {}, now)
   await payload.update({
     collection: 'matches',
     id: matchId,
-    data: { status: 'live', currentHalf: 1, clockSeconds: 0, clockRunning: true, clockUpdatedAt: new Date().toISOString() },
+    data: {
+      status: 'live',
+      currentHalf: 1,
+      clockSeconds: startSeconds,
+      clockRunning: true,
+      clockUpdatedAt: now.toISOString(),
+    },
     overrideAccess: true,
   })
   await payload.create({
     collection: 'match-events',
-    data: { match: matchId, type: 'half_start', half: 1, gameClock: 0 },
+    data: { match: matchId, type: 'half_start', half: 1, gameClock: startSeconds },
     overrideAccess: true,
   })
   return buildMatchState(payload, matchId)
@@ -102,6 +112,7 @@ export async function recordSimpleGoal(
   scorer?: SimpleScorer,
 ) {
   const { match, score, half, clock } = await loadSimpleMatch(payload, matchId)
+  let goalClock = clock
   const teamId = side === 'home' ? relId(match.homeTeam) : relId(match.awayTeam)
 
   let player: { id: number; shirtNumber?: number | null; name?: string | null; team?: unknown } | null = null
@@ -122,15 +133,28 @@ export async function recordSimpleGoal(
     }
   }
 
-  // Eerste doelpunt zet een nog niet gestarte wedstrijd meteen op 'live'.
-  if (match.status !== 'live') {
-    await payload.update({ collection: 'matches', id: matchId, data: { status: 'live' }, overrideAccess: true })
+  // Een eerste doelpunt mag de wedstrijd automatisch starten. Is de wedstrijd al live gezet maar
+  // staat de klok nog op nul, dan geldt dezelfde regel: aansluiten op het geplande startuur.
+  if (match.status !== 'live' || (!match.clockRunning && clock <= 0)) {
+    const now = new Date()
+    goalClock = elapsedSinceScheduledStart(match, now)
+    await payload.update({
+      collection: 'matches',
+      id: matchId,
+      data: {
+        status: 'live',
+        clockSeconds: goalClock,
+        clockRunning: true,
+        clockUpdatedAt: now.toISOString(),
+      },
+      overrideAccess: true,
+    })
   }
   score.goals.push({
     side,
     points,
     half,
-    clock,
+    clock: goalClock,
     ts: Date.now(),
     ...(player ? { scorerId: player.id } : {}),
     ...(player
