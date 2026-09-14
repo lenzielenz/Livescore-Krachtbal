@@ -1010,8 +1010,7 @@ export async function matchResetImpact(payload: Payload, matchId: number): Promi
  * administratie die niets met de aantekening te maken heeft.
  */
 export async function resetMatch(payload: Payload, matchId: number) {
-  const { match } = await loadMatch(payload, matchId)
-  if (match.status === 'scheduled') return buildMatchState(payload, matchId)
+  await loadMatch(payload, matchId)
 
   for (const collection of ['throws', 'possessions', 'match-events', 'processed-ops'] as const) {
     await payload.delete({ collection, where: { match: { equals: matchId } }, overrideAccess: true }).catch(() => {})
@@ -1026,6 +1025,8 @@ export async function resetMatch(payload: Payload, matchId: number) {
       clockRunning: false,
       clockUpdatedAt: null,
       simpleScore: null,
+      // Een volledige reset maakt ook de aantekenaarclaim en alle bijdragen/stemmen leeg.
+      scoreTrust: null,
     },
     overrideAccess: true,
   })

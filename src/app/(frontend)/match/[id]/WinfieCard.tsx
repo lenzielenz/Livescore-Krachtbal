@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 
+import { DownloadImageButton } from '@/components/DownloadImageButton'
 import './winfie-card.css'
 
 export function WinfieCard({ matchId }: { matchId: number }) {
@@ -19,9 +20,13 @@ export function WinfieCard({ matchId }: { matchId: number }) {
           Eindscore, scoreverloop en de kleuren van de winnaar in één herkenbare Story.
           Heb je zelf een tribunefoto geplaatst? Dan verwerken we die automatisch.
         </p>
-        <a className="btn btn-primary winfie-download" href={downloadSrc}>
+        <DownloadImageButton
+          className="btn btn-primary winfie-download"
+          href={downloadSrc}
+          filename={`winfie-wedstrijd-${matchId}.png`}
+        >
           ↓ Download Winfie
-        </a>
+        </DownloadImageButton>
         <small>1080 × 1920 px · uniek voor deze wedstrijd</small>
       </div>
       {previewFailed ? (

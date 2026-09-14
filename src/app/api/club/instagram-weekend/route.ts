@@ -62,18 +62,23 @@ function weekendTitle(rows: WeekendMatch[], saturdayKey: string): string {
   return dateLabel(new Date(`${saturdayKey}T12:00:00Z`))
 }
 
-function makeSvg(clubName: string, primary: string, secondary: string, rows: WeekendMatch[], saturdayKey: string, hasLogo: boolean) {
+function makeSvg(clubName: string, primary: string, secondary: string, rows: WeekendMatch[], saturdayKey: string, hasLogo: boolean, logoHref = '') {
   const groups = new Map<string, WeekendMatch[]>()
   for (const row of rows) {
     const key = row.day
     groups.set(key, [...(groups.get(key) ?? []), row])
   }
 
+  const dense = rows.length > 16
   const compact = rows.length > 11
-  const rowHeight = compact ? 88 : 105
-  const groupGap = compact ? 38 : 50
-  const titleSize = compact ? 30 : 34
-  let y = 555
+  const rowHeight = dense ? 58 : compact ? 78 : 105
+  const groupGap = dense ? 18 : compact ? 30 : 50
+  const titleSize = dense ? 24 : compact ? 29 : 34
+  const timeSize = dense ? 25 : compact ? 31 : 39
+  const matchSize = dense ? 21 : compact ? 25 : 31
+  const seriesSize = dense ? 15 : compact ? 19 : 22
+  const badgeWidth = dense ? 98 : 118
+  let y = dense ? 520 : 555
   const sections: string[] = []
 
   if (!rows.length) {
@@ -85,18 +90,21 @@ function makeSvg(clubName: string, primary: string, secondary: string, rows: Wee
   } else {
     for (const [day, matches] of groups) {
       sections.push(`<text x="76" y="${y}" fill="#ffffff" fill-opacity=".72" font-size="${titleSize}" font-weight="700" letter-spacing="1">${xml(day.toUpperCase())}</text>`)
-      y += 34
+      y += dense ? 28 : 34
       for (const match of matches) {
         const ownFirst = match.side === 'home'
         const line = ownFirst ? `${match.team} — ${match.opponent}` : `${match.opponent} — ${match.team}`
         const badge = match.side === 'home' ? 'THUIS' : 'UIT'
+        const centerY = y + (rowHeight - 8) / 2
+        const badgeX = dense ? 220 : 245
+        const textX = dense ? 342 : 392
         sections.push(`
-          <rect x="72" y="${y}" width="936" height="${rowHeight - 8}" rx="24" fill="#06140d" fill-opacity=".60" stroke="#ffffff" stroke-opacity=".10"/>
-          <text x="102" y="${y + (compact ? 55 : 65)}" fill="#ffffff" font-size="${compact ? 33 : 39}" font-weight="800">${xml(match.time)}</text>
-          <rect x="245" y="${y + (compact ? 19 : 25)}" width="118" height="43" rx="21.5" fill="${match.side === 'home' ? primary : secondary}"/>
-          <text x="304" y="${y + (compact ? 49 : 55)}" text-anchor="middle" fill="#ffffff" font-size="19" font-weight="900" letter-spacing="1">${badge}</text>
-          <text x="392" y="${y + (compact ? 41 : 48)}" fill="#ffffff" font-size="${compact ? 27 : 31}" font-weight="700">${xml(short(line, compact ? 34 : 31))}</text>
-          <text x="392" y="${y + (compact ? 69 : 79)}" fill="#ffffff" fill-opacity=".58" font-size="${compact ? 20 : 22}" font-weight="600">${xml(short(match.series, 36))}</text>
+          <rect x="72" y="${y}" width="936" height="${rowHeight - 8}" rx="${dense ? 18 : 24}" fill="#050d09" fill-opacity=".72" stroke="#ffffff" stroke-opacity=".13"/>
+          <text x="102" y="${centerY + timeSize * .35}" fill="#ffffff" font-size="${timeSize}" font-weight="850" font-variant-numeric="tabular-nums">${xml(match.time)}</text>
+          <rect x="${badgeX}" y="${centerY - (dense ? 17 : 21.5)}" width="${badgeWidth}" height="${dense ? 34 : 43}" rx="${dense ? 17 : 21.5}" fill="${match.side === 'home' ? primary : secondary}"/>
+          <text x="${badgeX + badgeWidth / 2}" y="${centerY + (dense ? 6 : 7)}" text-anchor="middle" fill="#ffffff" font-size="${dense ? 15 : 19}" font-weight="900" letter-spacing="1">${badge}</text>
+          <text x="${textX}" y="${centerY - (dense ? 2 : 7)}" fill="#ffffff" font-size="${matchSize}" font-weight="750">${xml(short(line, dense ? 46 : compact ? 38 : 31))}</text>
+          <text x="${textX}" y="${centerY + (dense ? 17 : 22)}" fill="#ffffff" fill-opacity=".62" font-size="${seriesSize}" font-weight="600">${xml(short(match.series, 42))}</text>
         `)
         y += rowHeight
       }
@@ -104,7 +112,7 @@ function makeSvg(clubName: string, primary: string, secondary: string, rows: Wee
     }
   }
 
-  return `<svg width="${WIDTH}" height="${HEIGHT}" viewBox="0 0 ${WIDTH} ${HEIGHT}" xmlns="http://www.w3.org/2000/svg">
+  return `<svg width="${WIDTH}" height="${HEIGHT}" viewBox="0 0 ${WIDTH} ${HEIGHT}" xmlns="http://www.w3.org/2000/svg" font-family="Arial, Helvetica, sans-serif">
     <defs>
       <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#06140d"/><stop offset=".52" stop-color="${primary}"/><stop offset="1" stop-color="#07120d"/></linearGradient>
       <radialGradient id="glow"><stop stop-color="${secondary}" stop-opacity=".78"/><stop offset="1" stop-color="${secondary}" stop-opacity="0"/></radialGradient>
@@ -116,7 +124,7 @@ function makeSvg(clubName: string, primary: string, secondary: string, rows: Wee
     <path d="M770 55 Q930 215 1085 75 M725 238 Q920 330 1080 242 M880 -5 Q820 205 915 430" fill="none" stroke="#ffffff" stroke-opacity=".08" stroke-width="21"/>
     <rect x="0" y="0" width="18" height="1920" fill="${secondary}"/>
     <rect x="72" y="70" width="936" height="5" rx="3" fill="#ffffff" fill-opacity=".74"/>
-    ${hasLogo ? '' : `<circle cx="139" cy="168" r="66" fill="#ffffff" fill-opacity=".12" stroke="#ffffff" stroke-opacity=".3" stroke-width="3"/><text x="139" y="181" text-anchor="middle" fill="#ffffff" font-size="35" font-weight="900">${xml(initials(clubName))}</text>`}
+    ${logoHref ? `<circle cx="139" cy="168" r="72" fill="#ffffff" fill-opacity=".96"/><image href="${xml(logoHref)}" x="75" y="104" width="128" height="128" preserveAspectRatio="xMidYMid meet"/>` : hasLogo ? '' : `<circle cx="139" cy="168" r="66" fill="#ffffff" fill-opacity=".12" stroke="#ffffff" stroke-opacity=".3" stroke-width="3"/><text x="139" y="181" text-anchor="middle" fill="#ffffff" font-size="35" font-weight="900">${xml(initials(clubName))}</text>`}
     <text x="230" y="153" fill="#ffffff" fill-opacity=".70" font-size="25" font-weight="700" letter-spacing="3">MIJN KRACHTBAL</text>
     <text x="230" y="202" fill="#ffffff" font-size="39" font-weight="900">${xml(short(clubName, 28))}</text>
     <text x="72" y="350" fill="${secondary}" font-size="76" font-weight="900" letter-spacing="-2">WEEKENDPLAN</text>
@@ -218,10 +226,17 @@ async function renderWeekendPost(request: Request) {
   const logoSource = storedLogo || (club as { logoUrl?: unknown }).logoUrl
   // De inline voorvertoning blijft bewust SVG: geen zware PNG-compressie tijdens elke paginalaad.
   // Voor de download halen we het clublogo op en maken we wel de gevraagde 1080 × 1920 PNG.
+  const logoHref = logoSource && typeof logoSource === 'object'
+    ? String((logoSource as { url?: unknown }).url ?? '')
+    : typeof logoSource === 'string' ? logoSource : ''
   const logo = preview ? null : await fetchLogo(logoSource, requestUrl.origin)
-  const svg = makeSvg(clubName, primary, secondary, rows, window.saturdayKey, Boolean(logo))
+  const svg = makeSvg(clubName, primary, secondary, rows, window.saturdayKey, Boolean(logo), preview ? logoHref : '')
   if (preview) {
-    return new Response(svg, {
+    const previewSvg = svg.replace(
+      `<svg width="${WIDTH}" height="${HEIGHT}"`,
+      `<svg width="100%" height="100%" style="background:${primary}" preserveAspectRatio="xMidYMin meet"`,
+    )
+    return new Response(previewSvg, {
       headers: {
         'Content-Type': 'image/svg+xml; charset=utf-8',
         'Cache-Control': 'private, no-store',

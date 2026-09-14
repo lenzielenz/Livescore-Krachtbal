@@ -60,12 +60,12 @@ function overlaySvg(opts: {
   home: string; away: string; score: { home: number; away: number }; winner: 'home' | 'away' | 'draw'
   primary: string; secondary: string; homeColor: string; awayColor: string; headline: string
   date: string; reeks: string; progress: ReturnType<typeof winfieProgress>; variant: number; hasPhoto: boolean
-  homeLogo: boolean; awayLogo: boolean
+  homeLogo: boolean; awayLogo: boolean; homeLogoHref?: string; awayLogoHref?: string
 }) {
   const { home, away, score, winner, primary, secondary, homeColor, awayColor, headline, date, reeks, progress, variant, hasPhoto } = opts
   const tilt = [-14, 12, -8, 16][variant]
   const winnerName = winner === 'home' ? home : winner === 'away' ? away : 'Gelijkspel'
-  return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
+  return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" font-family="Arial, Helvetica, sans-serif">
     <defs>
       <linearGradient id="base" x1="0" y1="0" x2="1" y2="1"><stop stop-color="${primary}"/><stop offset=".55" stop-color="#07120d"/><stop offset="1" stop-color="${secondary}"/></linearGradient>
       <linearGradient id="shade" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#020604" stop-opacity=".28"/><stop offset=".45" stop-color="#020604" stop-opacity=".62"/><stop offset="1" stop-color="#020604" stop-opacity=".96"/></linearGradient>
@@ -85,8 +85,8 @@ function overlaySvg(opts: {
 
     <rect x="72" y="410" width="936" height="560" rx="48" fill="#06100b" fill-opacity=".72" stroke="#ffffff" stroke-opacity=".14"/>
     <text x="540" y="505" text-anchor="middle" fill="#ffffff" fill-opacity=".62" font-size="25" font-weight="750">EINDSTAND</text>
-    ${opts.homeLogo ? '' : `<circle cx="250" cy="650" r="92" fill="${homeColor}" fill-opacity=".25" stroke="${homeColor}" stroke-width="5"/><text x="250" y="668" text-anchor="middle" fill="#ffffff" font-size="49" font-weight="900">${esc(initials(home))}</text>`}
-    ${opts.awayLogo ? '' : `<circle cx="830" cy="650" r="92" fill="${awayColor}" fill-opacity=".25" stroke="${awayColor}" stroke-width="5"/><text x="830" y="668" text-anchor="middle" fill="#ffffff" font-size="49" font-weight="900">${esc(initials(away))}</text>`}
+    ${opts.homeLogoHref ? `<circle cx="250" cy="650" r="102" fill="#ffffff" fill-opacity=".96"/><image href="${esc(opts.homeLogoHref)}" x="164" y="564" width="172" height="172" preserveAspectRatio="xMidYMid meet"/>` : opts.homeLogo ? '' : `<circle cx="250" cy="650" r="92" fill="${homeColor}" fill-opacity=".25" stroke="${homeColor}" stroke-width="5"/><text x="250" y="668" text-anchor="middle" fill="#ffffff" font-size="49" font-weight="900">${esc(initials(home))}</text>`}
+    ${opts.awayLogoHref ? `<circle cx="830" cy="650" r="102" fill="#ffffff" fill-opacity=".96"/><image href="${esc(opts.awayLogoHref)}" x="744" y="564" width="172" height="172" preserveAspectRatio="xMidYMid meet"/>` : opts.awayLogo ? '' : `<circle cx="830" cy="650" r="92" fill="${awayColor}" fill-opacity=".25" stroke="${awayColor}" stroke-width="5"/><text x="830" y="668" text-anchor="middle" fill="#ffffff" font-size="49" font-weight="900">${esc(initials(away))}</text>`}
     <text x="540" y="675" text-anchor="middle" fill="#ffffff" font-size="145" font-weight="950" letter-spacing="-5">${score.home}<tspan fill="#ffffff" fill-opacity=".38" font-weight="500"> – </tspan>${score.away}</text>
     <text x="250" y="805" text-anchor="middle" fill="${winner === 'home' ? secondary : '#ffffff'}" font-size="30" font-weight="850">${esc(short(home, 20))}</text>
     <text x="830" y="805" text-anchor="middle" fill="${winner === 'away' ? secondary : '#ffffff'}" font-size="30" font-weight="850">${esc(short(away, 20))}</text>
@@ -177,10 +177,16 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     hasPhoto: Boolean(photo),
     homeLogo: Boolean(homeLogo),
     awayLogo: Boolean(awayLogo),
+    homeLogoHref: preview ? state.teams.home.logoUrl ?? undefined : undefined,
+    awayLogoHref: preview ? state.teams.away.logoUrl ?? undefined : undefined,
   })
 
   if (preview) {
-    return new Response(svg, {
+    const previewSvg = svg.replace(
+      `<svg width="${W}" height="${H}"`,
+      `<svg width="100%" height="100%" style="background:${primary}" preserveAspectRatio="xMidYMin meet"`,
+    )
+    return new Response(previewSvg, {
       headers: {
         'Content-Type': 'image/svg+xml; charset=utf-8',
         'Cache-Control': 'private, no-store',

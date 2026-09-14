@@ -43,3 +43,5 @@
 .winfie-preview-error > span { font-size: 2rem; }
 .winfie-preview-error strong { color: var(--text); font-size: .9rem; }
 .winfie-preview-error .btn { padding: 9px 12px; font-size: .8rem; }
+
+.download-image-error { display: block; margin-top: 9px; color: #ff9aa8; font-size: .82rem; font-weight: 700; }
