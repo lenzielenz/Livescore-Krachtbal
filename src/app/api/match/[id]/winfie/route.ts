@@ -1,5 +1,5 @@
 import sharp from 'sharp'
-import { renderWinfieDesign } from '@/lib/winfie-design'
+import { renderWinfieDesign, type WinfieDesign } from '@/lib/winfie-design'
 
 import { getAuthUser } from '@/lib/auth-user'
 import { DEFAULT_HOME_COLOR, readableOnDark } from '@/lib/club-colors'
@@ -101,7 +101,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   if (!last || last.home !== state.score.home || last.away !== state.score.away) {
     progress.push({ home: state.score.home, away: state.score.away, half: 2, gameClock: 0 })
   }
-  const design = {
+  const design: WinfieDesign = {
     home: state.teams.home.name,
     away: state.teams.away.name,
     score: state.score,
