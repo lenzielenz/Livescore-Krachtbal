@@ -58,21 +58,26 @@ function dagLabel(datum: string, today: string): string {
   })
 }
 
-function useFavSet(key: string): [Set<number>, (id: number) => void] {
+function useFavSet(key: string, userId: number | string | null = null): [Set<number>, (id: number) => void] {
+  // Favorieten zijn persoonsgebonden. Zonder account behouden we de oude gastlijst;
+  // ingelogde accounts krijgen elk een eigen localStorage-bucket, ook op dezelfde pc.
+  const storageKey = userId == null ? key : `${key}:${userId}`
   const [set, setSet] = useState<Set<number>>(new Set())
   useEffect(() => {
     try {
-      const raw = localStorage.getItem(key)
-      if (raw) setSet(new Set(JSON.parse(raw) as number[]))
-    } catch {}
-  }, [key])
+      const raw = localStorage.getItem(storageKey)
+      setSet(raw ? new Set(JSON.parse(raw) as number[]) : new Set())
+    } catch {
+      setSet(new Set())
+    }
+  }, [storageKey])
   const toggle = (id: number) =>
     setSet((prev) => {
       const next = new Set(prev)
       if (next.has(id)) next.delete(id)
       else next.add(id)
       try {
-        localStorage.setItem(key, JSON.stringify([...next]))
+        localStorage.setItem(storageKey, JSON.stringify([...next]))
       } catch {}
       return next
     })
@@ -166,6 +171,7 @@ export function LiveBoard({
   speeldagen = [],
   myClubId = null,
   supportersMode = false,
+  userId = null,
 }: {
   date: string
   today: string
@@ -177,12 +183,14 @@ export function LiveBoard({
   /** Globale supporters-modus: dan krijgt elke wedstrijd een "Aantekenen"-knop zodat iedereen
    *  meteen vanaf het live-bord de score kan beginnen doorgeven. */
   supportersMode?: boolean
+  /** Authenticated account identity used to isolate favorites on shared devices. */
+  userId?: number | string | null
 }) {
   const router = useRouter()
   // Het bord werkt zichzelf bij zolang er iets te volgen valt (zie useLiveScores hierboven).
   const [matches, netGescoord] = useLiveScores(initialMatches, date, today)
-  const [favTeams, toggleTeam] = useFavSet(FAV_TEAMS_KEY)
-  const [favClubs, toggleClub] = useFavSet(FAV_CLUBS_KEY)
+  const [favTeams, toggleTeam] = useFavSet(FAV_TEAMS_KEY, userId)
+  const [favClubs, toggleClub] = useFavSet(FAV_CLUBS_KEY, userId)
   const [reeksFilter, setReeksFilter] = useState<string | null>(null)
   const [onlyFavTeams, setOnlyFavTeams] = useState(false)
   const [onlyFavClubs, setOnlyFavClubs] = useState(false)
