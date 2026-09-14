@@ -53,11 +53,11 @@ export default async function RecapPage() {
         ) : (
           <>
             <section className="recap-stats" aria-label="Het weekend in cijfers">
-              <div className="recap-stat recap-stat--blue"><span aria-hidden>🏟️</span><b>{recap.matches}</b><small>wedstrijden</small></div>
-              <div className="recap-stat recap-stat--cyan"><span aria-hidden>👥</span><b>{recap.stats.visitors}</b><small>bezoekers</small></div>
-              <div className="recap-stat recap-stat--violet"><span aria-hidden>🛡️</span><b>{recap.stats.clubs}</b><small>clubs</small></div>
-              <div className="recap-stat recap-stat--red"><span aria-hidden>🎯</span><b>{recap.stats.goalThrows}</b><small>doelworpen</small></div>
-              <div className="recap-stat recap-stat--orange"><span aria-hidden>💥</span><b>{recap.stats.backThrows}</b><small>rugworpen</small></div>
+              <div className="recap-stat recap-stat--blue"><span aria-hidden>W</span><b>{recap.matches}</b><small>wedstrijden</small></div>
+              <div className="recap-stat recap-stat--cyan"><span aria-hidden>B</span><b>{recap.stats.visitors}</b><small>bezoekers</small></div>
+              <div className="recap-stat recap-stat--violet"><span aria-hidden>C</span><b>{recap.stats.clubs}</b><small>clubs</small></div>
+              <div className="recap-stat recap-stat--red"><span aria-hidden>+1</span><b>{recap.stats.goalThrows}</b><small>doelworpen</small></div>
+              <div className="recap-stat recap-stat--orange"><span aria-hidden>+2</span><b>{recap.stats.backThrows}</b><small>rugworpen</small></div>
               <div className="recap-stat recap-stat--gold"><span aria-hidden>Σ</span><b>{recap.goals}</b><small>punten</small></div>
             </section>
 
@@ -68,10 +68,10 @@ export default async function RecapPage() {
                   <h2 className="recap-h2">Dit viel op</h2>
                 </div>
                 <ul className="recap-highlights">
-                  {recap.highlights.map((h) => (
+                  {recap.highlights.map((h, index) => (
                     <li key={h.key} className="recap-highlight">
                       <span className="recap-highlight-emoji" aria-hidden>
-                        {h.emoji}
+                        {String(index + 1).padStart(2, '0')}
                       </span>
                       <span className="recap-highlight-txt">
                         <b>{h.title}</b>
@@ -85,7 +85,7 @@ export default async function RecapPage() {
 
             {recap.team && (
               <section className="recap-block recap-block--team" aria-label="Ploeg van de week">
-                <div className="recap-team-trophy" aria-hidden>🏆</div>
+                <div className="recap-team-trophy" aria-hidden>#1</div>
                 <div>
                   <span className="recap-eyebrow">PERFORMANCE VAN DE WEEK</span>
                   <h2 className="recap-h2">Ploeg van de week</h2>
@@ -140,10 +140,14 @@ export default async function RecapPage() {
               </section>
             )}
 
-            <section className="recap-block" aria-label="Alle uitslagen">
-              <h2 className="recap-h2">
-                Alle uitslagen <span className="recap-count">({recap.matches})</span>
-              </h2>
+            <details className="recap-block recap-results-fold">
+              <summary>
+                <span>
+                  <small>WEDSTRIJDARCHIEF</small>
+                  <b>Alle uitslagen <i>({recap.matches})</i></b>
+                </span>
+                <span className="recap-fold-action">Bekijken <i aria-hidden>⌄</i></span>
+              </summary>
               <ul className="recap-results">
                 {recap.results.map((m) => (
                   <li key={m.matchId} className="recap-result">
@@ -156,7 +160,7 @@ export default async function RecapPage() {
                   </li>
                 ))}
               </ul>
-            </section>
+            </details>
           </>
         )}
       </div>
