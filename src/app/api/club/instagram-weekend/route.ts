@@ -3,7 +3,7 @@ import sharp from 'sharp'
 import { userClubId } from '@/lib/access'
 import { competitionWhere } from '@/lib/analyse-access'
 import { getAuthUser } from '@/lib/auth-user'
-import { isInWeekend, weekendWindow, type WeekendMatch } from '@/lib/instagram-weekend'
+import { brusselsDateKey, nextPlayDayKeys, planningSearchWindow, type WeekendMatch } from '@/lib/instagram-weekend'
 import { getPayloadClient } from '@/lib/payload-client'
 import { reeksNaam } from '@/lib/reeksen'
 
@@ -56,6 +56,7 @@ function weekendTitle(rows: WeekendMatch[], saturdayKey: string): string {
   if (rows.length) {
     const first = new Date(rows[0].date)
     const last = new Date(rows[rows.length - 1].date)
+    if (brusselsDateKey(first) === brusselsDateKey(last)) return dateLabel(first)
     const a = new Intl.DateTimeFormat('nl-BE', { timeZone: TZ, day: 'numeric' }).format(first)
     return `${a} – ${dateLabel(last)}`
   }
@@ -174,15 +175,15 @@ async function renderWeekendPost(request: Request) {
   }).catch(() => ({ docs: [] as Record<string, unknown>[] }))
   const teamIds = teams.docs.map((team) => Number(team.id))
   const ownTeams = new Map(teams.docs.map((team) => [Number(team.id), String(team.name ?? 'Ploeg')]))
-  const window = weekendWindow()
+  const searchWindow = planningSearchWindow()
 
   const matches = teamIds.length
     ? await payload.find({
         collection: 'matches',
         where: {
           and: [
-            { date: { greater_than_equal: window.queryStart.toISOString() } },
-            { date: { less_than: window.queryEnd.toISOString() } },
+            { date: { greater_than_equal: searchWindow.queryStart.toISOString() } },
+            { date: { less_than: searchWindow.queryEnd.toISOString() } },
             { or: [{ homeTeam: { in: teamIds } }, { awayTeam: { in: teamIds } }] },
             competitionWhere(),
           ],
@@ -197,7 +198,7 @@ async function renderWeekendPost(request: Request) {
   for (const match of matches.docs) {
     if ((match as { isDemo?: boolean }).isDemo || (match as { analyseOnly?: boolean }).analyseOnly) continue
     const date = new Date(String((match as { date?: unknown }).date ?? ''))
-    if (!Number.isFinite(date.getTime()) || !isInWeekend(date, window)) continue
+    if (!Number.isFinite(date.getTime())) continue
     const home = (match as { homeTeam?: unknown }).homeTeam
     const away = (match as { awayTeam?: unknown }).awayTeam
     const homeId = home && typeof home === 'object' ? Number((home as { id?: unknown }).id) : Number(home)
@@ -217,6 +218,8 @@ async function renderWeekendPost(request: Request) {
   }
 
   rows.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+  const playDayKeys = nextPlayDayKeys(rows.map((row) => row.date))
+  const selectedRows = rows.filter((row) => playDayKeys.includes(brusselsDateKey(row.date)))
   const primary = color((club as { colorPrimary?: unknown }).colorPrimary, '#0f8a5f')
   const secondary = color((club as { colorSecondary?: unknown }).colorSecondary, '#f4c542')
   const clubName = String((club as { name?: unknown }).name ?? 'Krachtbalclub')
@@ -230,7 +233,15 @@ async function renderWeekendPost(request: Request) {
     ? String((logoSource as { url?: unknown }).url ?? '')
     : typeof logoSource === 'string' ? logoSource : ''
   const logo = preview ? null : await fetchLogo(logoSource, requestUrl.origin)
-  const svg = makeSvg(clubName, primary, secondary, rows, window.saturdayKey, Boolean(logo), preview ? logoHref : '')
+  const svg = makeSvg(
+    clubName,
+    primary,
+    secondary,
+    selectedRows,
+    playDayKeys[0] ?? brusselsDateKey(new Date()),
+    Boolean(logo),
+    preview ? logoHref : '',
+  )
   if (preview) {
     const previewSvg = svg.replace(
       `<svg width="${WIDTH}" height="${HEIGHT}"`,

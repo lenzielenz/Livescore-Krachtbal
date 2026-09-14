@@ -43,6 +43,15 @@ export default async function RecapPage() {
           </p>
         ) : (
           <>
+            <section className="recap-stats" aria-label="Het weekend in cijfers">
+              <div className="recap-stat"><span>🏟️</span><b>{recap.matches}</b><small>wedstrijden</small></div>
+              <div className="recap-stat"><span>👥</span><b>{recap.stats.participants}</b><small>deelnemers</small></div>
+              <div className="recap-stat"><span>🛡️</span><b>{recap.stats.clubs}</b><small>clubs</small></div>
+              <div className="recap-stat"><span>🎯</span><b>{recap.stats.goalThrows}</b><small>doelworpen</small></div>
+              <div className="recap-stat"><span>💥</span><b>{recap.stats.backThrows}</b><small>rugworpen</small></div>
+              <div className="recap-stat"><span>🔢</span><b>{recap.goals}</b><small>punten</small></div>
+            </section>
+
             {recap.highlights.length > 0 && (
               <section className="recap-block" aria-label="Opvallend">
                 <h2 className="recap-h2">Opvallend</h2>

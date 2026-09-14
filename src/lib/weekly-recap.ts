@@ -40,12 +40,20 @@ export interface Climber {
   delta: number
 }
 
+export interface WeekendStats {
+  participants: number
+  clubs: number
+  goalThrows: number
+  backThrows: number
+}
+
 export interface WeeklyRecap {
   startIso: string
   endIso: string
   /** Aantal gespeelde (afgelopen) wedstrijden in het venster. */
   matches: number
   goals: number
+  stats: WeekendStats
   headline: string
   highlights: RecapHighlight[]
   results: RecapMatch[]
@@ -165,6 +173,7 @@ export interface RecapInput {
   team: WeekTeamRow | null
   players: WeekSelection[]
   climbers: Climber[]
+  stats?: WeekendStats
 }
 
 /** Stelt de volledige recap samen. Een lege week levert een nette "niets gespeeld"-recap op. */
@@ -179,6 +188,7 @@ export function buildWeeklyRecap(input: RecapInput): WeeklyRecap {
     endIso: input.endIso,
     matches: results.length,
     goals,
+    stats: input.stats ?? { participants: 0, clubs: 0, goalThrows: 0, backThrows: 0 },
     headline: headlineFor(results.length, goals, input.team),
     highlights: buildHighlights(results),
     results,

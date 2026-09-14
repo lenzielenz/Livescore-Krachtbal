@@ -110,6 +110,7 @@ export async function buildWeeklyRecapData(
     })
   }
 
+  const stats = await collectWeekendStats(payload, weekDocs)
   const players = await collectWeekPlayers(payload, weekDocs, cards)
   const climbers = await collectClimbers(payload, weekDocs, startIso, endIso)
 
@@ -120,7 +121,66 @@ export async function buildWeeklyRecapData(
     team: teamOfTheWeek(teamResults),
     players: buildTeamOfTheWeek(players),
     climbers,
+    stats,
   })
+}
+
+async function collectWeekendStats(payload: Payload, weekDocs: Record<string, unknown>[]) {
+  const playerIds = new Set<number>()
+  const clubKeys = new Set<string>()
+  const matchIds = weekDocs.map((match) => Number((match as { id?: unknown }).id)).filter(Number.isFinite)
+  let goalThrows = 0
+  let backThrows = 0
+
+  const rememberRelation = (set: Set<number>, value: unknown) => {
+    const id = rel(value)
+    if (id != null && Number.isFinite(id)) set.add(id)
+  }
+  const rememberClub = (team: unknown) => {
+    if (!team || typeof team !== 'object') return
+    const club = (team as { club?: unknown }).club
+    const id = rel(club)
+    if (id != null) clubKeys.add(`id:${id}`)
+    else if (club && typeof club === 'object') {
+      const name = String((club as { name?: unknown }).name ?? '').trim()
+      if (name) clubKeys.add(`name:${name}`)
+    }
+  }
+
+  for (const match of weekDocs) {
+    rememberClub((match as { homeTeam?: unknown }).homeTeam)
+    rememberClub((match as { awayTeam?: unknown }).awayTeam)
+    for (const value of [
+      ...(((match as { homeLineup?: unknown }).homeLineup as unknown[]) ?? []),
+      ...(((match as { awayLineup?: unknown }).awayLineup as unknown[]) ?? []),
+    ]) rememberRelation(playerIds, value)
+
+    const simple = readSimpleScore(match as { simpleScore?: unknown })
+    for (const goal of simple.goals) {
+      if (goal.scorerId != null) rememberRelation(playerIds, goal.scorerId)
+      goalThrows += 1
+      if (goal.points === 2) backThrows += 1
+    }
+  }
+
+  if (matchIds.length) {
+    const throws = await payload.find({
+      collection: 'throws',
+      where: { match: { in: matchIds } },
+      depth: 0,
+      limit: 10_000,
+      overrideAccess: true,
+    }).catch(() => ({ docs: [] as Record<string, unknown>[] }))
+    for (const throwDoc of throws.docs) {
+      rememberRelation(playerIds, (throwDoc as { player?: unknown }).player)
+      const outcome = String((throwDoc as { outcome?: unknown }).outcome ?? '')
+      const scored = outcome === 'goal' || outcome === 'own_goal'
+      if (scored) goalThrows += 1
+      if (scored && (throwDoc as { type?: unknown }).type === 'rug') backThrows += 1
+    }
+  }
+
+  return { participants: playerIds.size, clubs: clubKeys.size, goalThrows, backThrows }
 }
 
 /** Spelersprestaties van de week: uit de worpstatistiek én uit de snelscoremodus. */
