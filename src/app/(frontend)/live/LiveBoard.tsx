@@ -44,6 +44,7 @@ export type DayMatch = {
 
 const FAV_TEAMS_KEY = 'kb-fav-ploegen'
 const FAV_CLUBS_KEY = 'kb-fav-clubs'
+const FAV_REEKS_KEY = 'kb-fav-reeksen'
 
 const shiftDate = shiftDateStr
 
@@ -58,20 +59,20 @@ function dagLabel(datum: string, today: string): string {
   })
 }
 
-function useFavSet(key: string, userId: number | string | null = null): [Set<number>, (id: number) => void] {
+function useFavSet<T extends number | string>(key: string, userId: number | string | null = null): [Set<T>, (id: T) => void] {
   // Favorieten zijn persoonsgebonden. Zonder account behouden we de oude gastlijst;
   // ingelogde accounts krijgen elk een eigen localStorage-bucket, ook op dezelfde pc.
   const storageKey = userId == null ? key : `${key}:${userId}`
-  const [set, setSet] = useState<Set<number>>(new Set())
+  const [set, setSet] = useState<Set<T>>(new Set())
   useEffect(() => {
     try {
       const raw = localStorage.getItem(storageKey)
-      setSet(raw ? new Set(JSON.parse(raw) as number[]) : new Set())
+      setSet(raw ? new Set(JSON.parse(raw) as T[]) : new Set())
     } catch {
       setSet(new Set())
     }
   }, [storageKey])
-  const toggle = (id: number) =>
+  const toggle = (id: T) =>
     setSet((prev) => {
       const next = new Set(prev)
       if (next.has(id)) next.delete(id)
@@ -191,9 +192,11 @@ export function LiveBoard({
   const [matches, netGescoord] = useLiveScores(initialMatches, date, today)
   const [favTeams, toggleTeam] = useFavSet(FAV_TEAMS_KEY, userId)
   const [favClubs, toggleClub] = useFavSet(FAV_CLUBS_KEY, userId)
+  const [favReeksen, toggleReeks] = useFavSet<string>(FAV_REEKS_KEY, userId)
   const [reeksFilter, setReeksFilter] = useState<string | null>(null)
   const [onlyFavTeams, setOnlyFavTeams] = useState(false)
   const [onlyFavClubs, setOnlyFavClubs] = useState(false)
+  const [onlyFavReeksen, setOnlyFavReeksen] = useState(false)
   // Ingelogde supporter met een club ziet standaard meteen z'n EIGEN club (zolang die vandaag
   // speelt). Hij kan de "Mijn club"-filter zelf uitzetten om andere wedstrijden te zien.
   const [onlyMyClub, setOnlyMyClub] = useState(
@@ -234,6 +237,7 @@ export function LiveBoard({
   const teamFav = (m: DayMatch) => favTeams.has(m.home.teamId) || favTeams.has(m.away.teamId)
   const clubFav = (m: DayMatch) =>
     (m.home.clubId != null && favClubs.has(m.home.clubId)) || (m.away.clubId != null && favClubs.has(m.away.clubId))
+  const reeksFav = (m: DayMatch) => favReeksen.has(m.reeks)
   // Wedstrijden van de eigen club (uit het login-account): thuis óf uit.
   const myClubMatch = (m: DayMatch) => myClubId != null && (m.home.clubId === myClubId || m.away.clubId === myClubId)
   const myClubCount = useMemo(() => (myClubId == null ? 0 : matches.filter(myClubMatch).length), [matches, myClubId])
@@ -248,13 +252,13 @@ export function LiveBoard({
         // "Mijn club" beperkt tot de wedstrijden van de eigen club.
         if (onlyMyClub && !myClubMatch(m)) return false
         // Favorieten-filters combineren met OF: toon wat een favoriete ploeg óf club bevat.
-        if (onlyFavTeams || onlyFavClubs) {
-          const hit = (onlyFavTeams && teamFav(m)) || (onlyFavClubs && clubFav(m))
+        if (onlyFavTeams || onlyFavClubs || onlyFavReeksen) {
+          const hit = (onlyFavTeams && teamFav(m)) || (onlyFavClubs && clubFav(m)) || (onlyFavReeksen && reeksFav(m))
           if (!hit) return false
         }
         return true
       }),
-    [matches, onlyLive, onlyFavTeams, onlyFavClubs, onlyMyClub, myClubId, favTeams, favClubs, query],
+    [matches, onlyLive, onlyFavTeams, onlyFavClubs, onlyFavReeksen, onlyMyClub, myClubId, favTeams, favClubs, favReeksen, query],
   )
 
   // Reeksen + tellingen op basis van de actieve filters (slim navigeren).
@@ -269,12 +273,13 @@ export function LiveBoard({
   // Staat er een filter aan? Dan is een lege lijst gevolg van de keuze van de supporter —
   // we bieden één knop om alles weer vrij te geven i.p.v. een doodlopend zinnetje.
   const anyFilterActive =
-    Boolean(query.trim()) || showLiveOnly || onlyFavTeams || onlyFavClubs || onlyMyClub || reeksFilter != null
+    Boolean(query.trim()) || showLiveOnly || onlyFavTeams || onlyFavClubs || onlyFavReeksen || onlyMyClub || reeksFilter != null
   const clearFilters = () => {
     setQuery('')
     setOnlyLive(false)
     setOnlyFavTeams(false)
     setOnlyFavClubs(false)
+    setOnlyFavReeksen(false)
     setOnlyMyClub(false)
     setReeksFilter(null)
   }
@@ -320,7 +325,9 @@ export function LiveBoard({
       ? ' live'
       : onlyFavTeams || onlyFavClubs
         ? ' bij je favorieten'
-        : ''
+        : onlyFavReeksen
+          ? ' bij je favoriete reeksen'
+          : ''
 
   return (
     <div className="lb">
@@ -353,6 +360,10 @@ export function LiveBoard({
           <button type="button" className={`lb-reeks fav ${onlyFavClubs ? 'on' : ''}`} onClick={() => setOnlyFavClubs((v) => !v)}>
             <span>★ Clubs</span>
             {favClubs.size > 0 && <span className="lb-reeks-n">{favClubs.size}</span>}
+          </button>
+          <button type="button" className={`lb-reeks fav ${onlyFavReeksen ? 'on' : ''}`} onClick={() => setOnlyFavReeksen((v) => !v)}>
+            <span>★ Reeksen</span>
+            {favReeksen.size > 0 && <span className="lb-reeks-n">{favReeksen.size}</span>}
           </button>
         </div>
         <PushOptIn />
@@ -500,18 +511,29 @@ export function LiveBoard({
             const liveInGroup = list.filter((m) => m.status === 'live').length
             return (
             <section key={reeks} className={`lb-group ${isCollapsed ? 'collapsed' : ''}`}>
-              <button
-                type="button"
-                className="lb-group-head"
-                onClick={() => toggleCollapsed(reeks)}
-                aria-expanded={!isCollapsed}
-                title={isCollapsed ? 'Reeks openklappen' : 'Reeks dichtklappen'}
-              >
-                <span className="lb-group-chevron" aria-hidden="true">▾</span>
-                <span className="lb-group-name">{reeks}</span>
-                {liveInGroup > 0 && <span className="lb-group-live"><span className="lb-livedot" />{liveInGroup}</span>}
-                <span className="lb-group-n">{list.length}</span>
-              </button>
+              <div className="lb-group-head-row">
+                <button
+                  type="button"
+                  className="lb-group-head"
+                  onClick={() => toggleCollapsed(reeks)}
+                  aria-expanded={!isCollapsed}
+                  title={isCollapsed ? 'Reeks openklappen' : 'Reeks dichtklappen'}
+                >
+                  <span className="lb-group-chevron" aria-hidden="true">▾</span>
+                  <span className="lb-group-name">{reeks}</span>
+                  {liveInGroup > 0 && <span className="lb-group-live"><span className="lb-livedot" />{liveInGroup}</span>}
+                  <span className="lb-group-n">{list.length}</span>
+                </button>
+                <button
+                  type="button"
+                  className={`lb-group-star ${favReeksen.has(reeks) ? 'on' : ''}`}
+                  onClick={() => toggleReeks(reeks)}
+                  aria-label={favReeksen.has(reeks) ? `Verwijder ${reeks} als favoriete reeks` : `Volg ${reeks} als favoriete reeks`}
+                  title={favReeksen.has(reeks) ? 'Verwijder reeksfavoriet' : 'Maak reeks favoriet'}
+                >
+                  {favReeksen.has(reeks) ? '★' : '☆'}
+                </button>
+              </div>
               {!isCollapsed && list.map((m) => {
                 const played = m.status !== 'scheduled'
                 const live = m.status === 'live'
