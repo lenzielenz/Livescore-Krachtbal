@@ -100,7 +100,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       heeftPloegen
         ? payload.find({
             collection: 'matches',
-            where: { and: [ploegFilter, { status: { equals: 'live' } }, ...verborgen] },
+            where: { and: [ploegFilter, { status: { equals: 'live' } }, { date: { greater_than_equal: dagStart, less_than: dagEinde } }, ...verborgen] },
             depth: 0,
             limit: 50,
           })
@@ -125,7 +125,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       keuze.matchIds.length > 0
         ? payload.find({
             collection: 'matches',
-            where: { and: [{ id: { in: keuze.matchIds } }, ...verborgen] },
+            where: { and: [{ id: { in: keuze.matchIds } }, { date: { greater_than_equal: dagStart } }, ...verborgen] },
             depth: 0,
             limit: 50,
           })
