@@ -8,6 +8,21 @@ export function weekendPages(rows: WeekendMatch[]): WeekendMatch[][] {
   for (let i = 0; i < rows.length; i += WEEKEND_PAGE_SIZE) pages.push(rows.slice(i, i + WEEKEND_PAGE_SIZE))
   return pages.length ? pages : [[]]
 }
+/** Within every day, home fixtures come first, followed by away fixtures. */
+export function orderWeekendRows(rows: WeekendMatch[]): WeekendMatch[] {
+  const dayOrder = new Map<string, number>()
+  for (const row of [...rows].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())) {
+    if (!dayOrder.has(row.day)) dayOrder.set(row.day, dayOrder.size)
+  }
+  return rows.map((row, index) => ({ row, index })).sort((a, b) => {
+    const day = (dayOrder.get(a.row.day) ?? 0) - (dayOrder.get(b.row.day) ?? 0)
+    if (day) return day
+    if (a.row.side !== b.row.side) return a.row.side === 'home' ? -1 : 1
+    const date = new Date(a.row.date).getTime() - new Date(b.row.date).getTime()
+    if (date) return date
+    return a.index - b.index
+  }).map(({ row }) => row)
+}
 function label(value: string, x: number, y: number, size: number, width: number, fill = '#f5f7fb') {
   // Conservative width estimate keeps long names inside their own column, without truncation.
   const fitted = Math.min(size, width / Math.max(1, Array.from(value).length * .66))
@@ -23,12 +38,14 @@ export function renderWeekendDesign(o: {
   const spacious = o.rows.length > 0 && o.rows.length <= 4
   const cardHeight = spacious ? 260 : 120
   let y = 510
-  let day = ''
+  let group = ''
   const rows = o.rows.map(m => {
     let heading = ''
-    if (day !== m.day) {
-      day = m.day
-      heading = `<rect x="64" y="${y}" width="5" height="23" rx="2" fill="#80baff"/>${label(day.toUpperCase(), 84, y + 20, 22, 870, '#c6d4e8')}`
+    const nextGroup = `${m.day}:${m.side}`
+    if (group !== nextGroup) {
+      group = nextGroup
+      const side = m.side === 'home' ? 'THUIS' : 'UIT'
+      heading = `<rect x="64" y="${y}" width="5" height="23" rx="2" fill="${m.side === 'home' ? o.primary : o.secondary}"/>${label(`${m.day.toUpperCase()} · ${side}`, 84, y + 20, 22, 870, '#c6d4e8')}`
       y += 44
     }
     const top = y
@@ -37,12 +54,10 @@ export function renderWeekendDesign(o: {
       <rect x="64" y="${top + 5}" width="952" height="${cardHeight}" rx="22" fill="#000" opacity=".22"/>
       <rect x="64" y="${top}" width="952" height="${cardHeight}" rx="22" fill="url(#card)" stroke="#fff" stroke-opacity=".16"/>
       <rect x="64" y="${top + 26}" width="5" height="${cardHeight - 52}" rx="2" fill="${m.side === 'home' ? o.primary : o.secondary}"/>
-      ${label(m.time, 92, top + (spacious ? 121 : 49), spacious ? 38 : 32, 125)}
-      ${label(m.side === 'home' ? 'THUIS' : 'UIT', 94, top + (spacious ? 162 : 85), spacious ? 21 : 16, 120, '#a9c9f5')}
+      ${label(m.time, 92, top + (spacious ? 143 : 70), spacious ? 38 : 32, 125)}
       <line x1="238" y1="${top + 24}" x2="238" y2="${top + cardHeight - 24}" stroke="#fff" stroke-opacity=".12"/>
-      ${label(m.team, 266, top + (spacious ? 83 : 33), spacious ? 32 : 23, 710, '#9ecaff')}
-      ${label(`tegen ${m.opponent}`, 266, top + (spacious ? 139 : 67), spacious ? 34 : 26, 710)}
-      ${label(m.series, 266, top + (spacious ? 193 : 98), spacious ? 25 : 19, 710, '#b2bfd2')}
+      ${label(m.opponent, 266, top + (spacious ? 117 : 52), spacious ? 38 : 29, 710)}
+      ${label(m.series, 266, top + (spacious ? 177 : 91), spacious ? 25 : 19, 710, '#b2bfd2')}
     </g>`
   }).join('')
   const initials = o.club.split(/\s+/).map(w => w[0]).join('').slice(0, 3)
