@@ -1343,3 +1343,233 @@
     gap: 9px;
   }
 }
+
+
+/* ── Instellingenflow: korte uitleg, vaste stapnavigatie en één duidelijke hoofdactie ── */
+.kt-uitleg-eyebrow {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--accent);
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+.kt-uitleg-stappen {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 14px;
+}
+.kt-uitleg-stappen > span {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--bg) 58%, transparent);
+  color: var(--dim-strong, var(--dim));
+  font-size: 0.76rem;
+  font-weight: 750;
+  line-height: 1.2;
+}
+.kt-uitleg-stappen b,
+.kt-stapnav b,
+.kt-stapnummer {
+  flex: 0 0 auto;
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--accent);
+  font-size: 0.7rem;
+  font-weight: 900;
+}
+.kt-stapnav {
+  position: sticky;
+  top: 72px;
+  z-index: 8;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0 0 18px;
+  padding: 7px;
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--line));
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  box-shadow: 0 10px 28px -18px #000;
+  backdrop-filter: blur(14px);
+}
+.kt-stapnav a {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 8px 6px;
+  border-radius: 9px;
+  color: var(--dim-strong, var(--dim));
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+.kt-stapnav a:hover,
+.kt-stapnav a:focus-visible {
+  background: color-mix(in srgb, var(--accent) 11%, transparent);
+  color: var(--txt);
+}
+.kt-stapblok,
+.kt-keuze-details {
+  scroll-margin-top: 148px;
+}
+.kt-profielen,
+.kt-blok-link {
+  padding: 16px;
+  border: 1px solid color-mix(in srgb, var(--accent) 24%, var(--line));
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--panel) 76%, transparent);
+}
+.kt-blok-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.kt-tv-acties {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 9px;
+}
+.kt-tv-acties .kt-screen-btn {
+  order: -1;
+}
+.kt-url-details {
+  margin-top: 11px;
+}
+.kt-url-details summary {
+  width: fit-content;
+  cursor: pointer;
+  color: var(--dim);
+  font-size: 0.78rem;
+  font-weight: 750;
+}
+.kt-url-details[open] summary {
+  margin-bottom: 8px;
+  color: var(--accent);
+}
+.kt-url-details .kt-clublink-url {
+  width: 100%;
+}
+
+/* Het eenvoudige openbare clubscherm is een alternatief, geen tweede hoofdflow. */
+.kt-clublink {
+  padding: 0;
+  overflow: hidden;
+}
+.kt-clublink-summary {
+  min-height: 68px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 16px;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+.kt-clublink-summary::-webkit-details-marker {
+  display: none;
+}
+.kt-clublink-summary > span:first-child {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.kt-clublink-summary strong {
+  color: var(--accent);
+  font-size: 0.92rem;
+}
+.kt-clublink-summary small {
+  color: var(--dim);
+  font-size: 0.76rem;
+  line-height: 1.3;
+}
+.kt-clublink-chevron {
+  color: var(--accent);
+  transition: transform 0.18s ease;
+}
+.kt-clublink[open] .kt-clublink-chevron {
+  transform: rotate(180deg);
+}
+.kt-clublink-content {
+  padding: 14px 16px 16px;
+  border-top: 1px solid var(--line);
+}
+.kt-clublink-field {
+  flex: 1 1 220px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  color: var(--dim);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+.kt-clublink-field .kt-clublink-select {
+  width: 100%;
+  flex-basis: auto;
+}
+.kt-clublink-content .kt-clublink-url {
+  flex-basis: 100%;
+}
+
+@media (max-width: 700px) {
+  .kt-page {
+    padding: 12px;
+  }
+  .kt-uitleg {
+    padding: 14px;
+  }
+  .kt-uitleg-stappen {
+    grid-template-columns: 1fr 1fr;
+  }
+  .kt-stapnav {
+    top: 68px;
+  }
+  .kt-stapnav a {
+    flex-direction: column;
+    gap: 3px;
+    padding: 6px 3px;
+    font-size: 0.67rem;
+  }
+  .kt-profielen,
+  .kt-blok-link {
+    padding: 14px;
+  }
+  .kt-tv-acties {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  .kt-tv-acties .kt-screen-btn {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: center;
+  }
+  .kt-tv-acties > button,
+  .kt-tv-acties > a {
+    min-width: 0;
+    justify-content: center;
+    text-align: center;
+  }
+  .kt-clublink-row {
+    align-items: stretch;
+  }
+  .kt-clublink-field,
+  .kt-clublink-content .kt-clublink-url {
+    flex-basis: 100%;
+  }
+}
