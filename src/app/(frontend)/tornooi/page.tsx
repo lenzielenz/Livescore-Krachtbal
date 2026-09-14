@@ -2,7 +2,7 @@ import Link from 'next/link'
 
 import { SiteHeader } from '@/components/SiteHeader'
 import { isFederationLevel, magTornooiAantekenen } from '@/lib/access'
-import { CATEGORY_OPTIONS } from '@/lib/categories'
+import { TOURNAMENT_CATEGORY_OPTIONS } from '@/lib/categories'
 import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
 import { gestarteTornooien, tornooiBadge } from '@/lib/tornooi-status'
@@ -12,7 +12,7 @@ import './tornooi.css'
 
 export const dynamic = 'force-dynamic'
 
-const catLabel = (v: unknown) => CATEGORY_OPTIONS.find((o) => o.value === v)?.label ?? String(v ?? '')
+const catLabel = (v: unknown) => TOURNAMENT_CATEGORY_OPTIONS.find((o) => o.value === v)?.label ?? String(v ?? '')
 
 // Bekerwedstrijden-hub: lijst van bekers/tornooien. Enkel de federatie maakt er aan; supporters
 // kijken mee.
