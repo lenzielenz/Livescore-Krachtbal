@@ -1554,14 +1554,32 @@ body.kb-scherm .site-foot { display: none; }
   pointer-events: none;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.13), rgba(255, 255, 255, 0));
 }
-.match-affiche-kop {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 22px;
+/* Logo en ploegnaam vormen één ondeelbare kolom. Zo delen thuis en uit exact dezelfde
+   rasterlijnen, ook wanneer één ploegnaam over twee regels loopt of logo's anders zijn uitgesneden. */
+.match-affiche-teams {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: start;
+  column-gap: 14px;
 }
-.match-affiche-kop > * { filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.5)); }
+.match-affiche-team {
+  display: grid;
+  grid-template-rows: 76px minmax(2.4em, auto);
+  justify-items: center;
+  align-items: start;
+  width: 100%;
+  min-width: 0;
+}
+.match-affiche-logo {
+  display: grid;
+  place-items: center;
+  width: 76px;
+  height: 76px;
+  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.5));
+}
 .match-affiche-vs {
+  align-self: start;
+  margin-top: 23px;
   font-size: 0.72rem;
   font-weight: 800;
   letter-spacing: 0.32em;
@@ -1572,25 +1590,25 @@ body.kb-scherm .site-foot { display: none; }
   border: 1px solid rgba(255, 255, 255, 0.3);
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.05));
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 2px 8px rgba(0, 0, 0, 0.35);
-}
-.match-affiche-namen {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin-top: 14px;
+  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.5));
 }
 .match-affiche-naam {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  width: 100%;
   min-width: 0;
+  min-height: 2.4em;
+  margin-top: 10px;
   font-weight: 800;
   font-size: 1.02rem;
+  line-height: 1.2;
   color: #fff;
+  text-align: center;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
   text-shadow: 0 1px 6px rgba(0, 0, 0, 0.5);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  text-align: left;
 }
-.match-affiche-naam.away { text-align: right; }
 .match-affiche-wanneer {
   display: inline-block;
   margin: 12px 0 0;
