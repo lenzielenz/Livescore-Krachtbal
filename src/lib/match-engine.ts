@@ -16,6 +16,7 @@ import { reeksUsesSeniorThrows } from './reeksen'
 import { sanitizeTrust, trustView, type TrustView } from './score-trust'
 import { isOfficialScore } from './score-trust-store'
 import { readSimpleScore } from './simple-score'
+import { elapsedSinceScheduledStart } from './match-start-window'
 import type { ResetImpact } from './match-reset-policy'
 import {
   type SetupSide,
@@ -190,7 +191,7 @@ async function createPossession(
   })
 }
 
-/** Start de wedstrijd: zet live, helft 1, klok op 0, en maak het eerste balbezit. */
+/** Start de wedstrijd: zet live, helft 1, en sluit een laattijdige start aan op het geplande uur. */
 export async function startMatch(payload: Payload, matchId: number, startingTeamId: number) {
   const { match, homeId, awayId } = await loadMatch(payload, matchId)
   // Veiligheid: een tweede keer starten maakte een tweede balbezit én een tweede half_start-event
@@ -213,14 +214,18 @@ export async function startMatch(payload: Payload, matchId: number, startingTeam
     await assertValidLineup(payload, awayLineup, 'uitploeg')
   }
 
+  const now = new Date()
+  const startSeconds = elapsedSinceScheduledStart(match, now)
+  const startRunning = startSeconds > 0
   await payload.update({
     collection: 'matches',
     id: matchId,
     data: {
       status: 'live',
       currentHalf: 1,
-      clockSeconds: 0,
-      clockRunning: false,
+      clockSeconds: startSeconds,
+      clockRunning: startRunning,
+      clockUpdatedAt: startRunning ? now.toISOString() : null,
       homeLineup,
       awayLineup,
     },
@@ -228,7 +233,7 @@ export async function startMatch(payload: Payload, matchId: number, startingTeam
   })
   await payload.create({
     collection: 'match-events',
-    data: { match: matchId, type: 'half_start', half: 1, gameClock: 0 },
+    data: { match: matchId, type: 'half_start', half: 1, gameClock: startSeconds },
     overrideAccess: true,
   })
   // Opzet bij aftrap: vanaf de eigen vrijeworplijn (diepte-afhankelijk).
@@ -243,7 +248,7 @@ export async function startMatch(payload: Payload, matchId: number, startingTeam
     dir,
     point: { x: 0.5, y: ownHalfY },
     half: 1,
-    clock: 0,
+    clock: startSeconds,
   })
   return buildMatchState(payload, matchId)
 }
@@ -286,7 +291,23 @@ export async function recordThrow(payload: Payload, input: RecordThrowInput) {
   const side = sideOfTeam(teamId, homeId)
   const dir = (open.dir as AttackDir | null) ?? attackDirForSide(side, match.currentHalf ?? 1)
   const half = match.currentHalf ?? 1
-  const clock = input.gameClock ?? match.clockSeconds ?? 0
+  let clock = input.gameClock ?? match.clockSeconds ?? 0
+
+  // Werd de wedstrijd vóór de aftrap klaargezet, maar begint de eerste invoer pas later, dan mag
+  // de klok niet op 00:00 blijven staan. Vanaf de eerste worp loopt ze verder vanaf het geplande uur.
+  if (!match.clockRunning && (match.clockSeconds ?? 0) <= 0) {
+    const now = new Date()
+    const elapsed = elapsedSinceScheduledStart(match, now)
+    if (elapsed > 0) {
+      clock = Math.max(clock, elapsed)
+      await payload.update({
+        collection: 'matches',
+        id: input.matchId,
+        data: { clockSeconds: clock, clockRunning: true, clockUpdatedAt: now.toISOString() },
+        overrideAccess: true,
+      })
+    }
+  }
 
   const existing = await payload.find({
     collection: 'throws',
