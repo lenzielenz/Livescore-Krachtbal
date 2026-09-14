@@ -1,3 +1,6 @@
+import { TeamLogo } from '@/components/TeamLogo'
+import type { LogoFit } from '@/lib/logo-fit'
+import './match-recap.css'
 import type { MatchStats } from '@/lib/stats'
 
 type Player = MatchStats['players'][number]
@@ -25,7 +28,11 @@ function Highlight({ icon, label, value, who, side }: { icon: string; label: str
   )
 }
 
-export function MatchRecap({ stats, teams }: { stats: MatchStats; teams: { home: string; away: string } }) {
+type ClubBrand = { logoUrl: string | null; logoFit?: LogoFit | null; colors?: { primary?: string | null } | null }
+export function MatchRecap({ stats, teams, branding }: {
+  stats: MatchStats; teams: { home: string; away: string }
+  branding?: { home: ClubBrand; away: ClubBrand }
+}) {
   const active = stats.players.filter((p) => p.throws > 0)
   if (active.length === 0) return null
 
@@ -42,8 +49,16 @@ export function MatchRecap({ stats, teams }: { stats: MatchStats; teams: { home:
   const teamOf = (p: Player) => (p.teamSide === 'home' ? teams.home : teams.away)
 
   return (
-    <section className="an-recap">
-      <h2 className="section-title">Samenvatting</h2>
+    <section className="an-recap an-recap-aurora" style={{
+      '--home': branding?.home.colors?.primary ?? '#80baff',
+      '--away': branding?.away.colors?.primary ?? '#a6bbdc',
+    } as React.CSSProperties}>
+      <div className="an-recap-header"><div><span className="an-recap-kicker">HET VERHAAL ACHTER DE SCORE</span>
+      <h2 className="section-title">Samenvatting</h2></div>
+      {branding && <div className="an-recap-logos">
+        <TeamLogo name={teams.home} {...branding.home} ringColor={branding.home.colors?.primary} size={44} />
+        <TeamLogo name={teams.away} {...branding.away} ringColor={branding.away.colors?.primary} size={44} />
+      </div>}</div>
       {mvp && (
         <div className={`an-mvp side-${mvp.teamSide}`}>
           <span className="an-mvp-badge">★ Speler van de wedstrijd</span>
