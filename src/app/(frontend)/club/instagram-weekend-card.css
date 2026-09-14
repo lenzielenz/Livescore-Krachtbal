@@ -1,7 +1,7 @@
 .ig-weekend {
   --ig-club: var(--accent);
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(150px, 230px);
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 340px);
   gap: clamp(18px, 4vw, 36px);
   align-items: center;
   margin: 18px 0 28px;
@@ -19,15 +19,15 @@
 .ig-weekend-kicker { color: var(--accent); font-size: .72rem; font-weight: 900; letter-spacing: .15em; }
 .ig-weekend-download { display: inline-flex; margin-right: 12px; }
 .ig-weekend-copy small { display: block; margin-top: 9px; color: var(--dim); }
-.ig-weekend-preview { display: block; border-radius: 14px; overflow: hidden; transform: rotate(2deg); box-shadow: 0 18px 45px rgba(0,0,0,.42); transition: transform .18s ease; }
-.ig-weekend-preview:hover { transform: rotate(0deg) scale(1.02); }
-.ig-weekend-preview img { display: block; width: 100%; aspect-ratio: 9 / 16; object-fit: cover; background: #07120d; }
+.ig-weekend-preview { display: block; border-radius: 14px; overflow: hidden; transform: none; box-shadow: 0 18px 45px rgba(0,0,0,.42); transition: transform .18s ease; }
+.ig-weekend-preview:hover { transform: translateY(-3px); }
+.ig-weekend-preview img { display: block; width: 100%; aspect-ratio: 9 / 16; object-fit: cover; background: #111722; }
 @media (max-width: 620px) {
-  .ig-weekend { grid-template-columns: 1fr 112px; align-items: start; }
+  .ig-weekend { grid-template-columns: 1fr; align-items: start; }
 }
 @media (max-width: 430px) {
   .ig-weekend { grid-template-columns: 1fr; }
-  .ig-weekend-preview { width: min(210px, 72%); margin: 4px auto 0; transform: rotate(1deg); }
+  .ig-weekend-preview { width: 100%; margin: 4px auto 0; transform: none; }
 }
 
 .ig-weekend-preview-error {
@@ -48,3 +48,12 @@
 .ig-weekend-preview-error .btn { padding: 9px 12px; font-size: .8rem; }
 
 .download-image-error { display: block; margin-top: 9px; color: #ff9aa8; font-size: .82rem; font-weight: 700; }
+
+.ig-weekend-pages { margin-top: 22px; border-top: 1px solid var(--line); padding-top: 16px; }
+.ig-weekend-pages p { font-size: .9rem; margin-bottom: 12px; }
+.ig-weekend-pages > div { display: flex; flex-wrap: wrap; gap: 8px; }
+.ig-weekend-pages button { min-height: 44px; padding: 8px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); color: var(--text); cursor: pointer; font: inherit; font-weight: 700; }
+.ig-weekend-pages button[aria-pressed="true"] { background: #80baff; color: #101826; border-color: #80baff; }
+.ig-weekend-pages button:focus-visible, .ig-weekend-preview:focus-visible { outline: 3px solid var(--accent); outline-offset: 4px; }
+@media (max-width: 620px) { .ig-weekend-preview { max-width: 360px; width: 100%; margin-inline: auto; } }
+@media (prefers-reduced-motion: reduce) { .ig-weekend-preview { transition: none; } .ig-weekend-preview:hover { transform: none; } }
