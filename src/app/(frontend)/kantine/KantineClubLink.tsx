@@ -25,39 +25,49 @@ export function KantineClubLink({ clubs, myClubId }: { clubs: { id: number; name
   if (clubs.length === 0) return null
 
   return (
-    <section className="kt-clublink">
-      <h2 className="kt-clublink-title">📺 Of: het kale clubscherm, zonder aanmelden</h2>
-      <p className="kt-clublink-sub">
-        Wil je niets instellen? Deze vaste link toont <strong>alle wedstrijden van één club van
-        vandaag</strong> en werkt ook zonder account. Hij kan niets extra's tonen — geen ploegen of
-        wedstrijden van andere clubs. Voor dat laatste maak je hierboven je eigen scherm.
-      </p>
-      <div className="kt-clublink-row">
-        <select
-          className="kt-clublink-select"
-          value={clubId ?? ''}
-          onChange={(e) => { setClubId(e.target.value ? Number(e.target.value) : null); setCopied(false) }}
-          aria-label="Club"
-        >
-          <option value="">— kies een club —</option>
-          {clubs.map((c) => (
-            <option key={c.id} value={c.id}>{c.name}</option>
-          ))}
-        </select>
-        {url && (
-          <>
-            <input className="kt-clublink-url" value={url} readOnly onFocus={(e) => e.currentTarget.select()} />
-            <button
-              type="button"
-              className="kt-clublink-btn"
-              onClick={() => { void navigator.clipboard?.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 2000) }}
+    <details className="kt-clublink">
+      <summary className="kt-clublink-summary">
+        <span>
+          <strong>Alleen snel één club tonen?</strong>
+          <small>Gebruik het eenvoudige clubscherm zonder instellingen</small>
+        </span>
+        <span className="kt-clublink-chevron" aria-hidden>⌄</span>
+      </summary>
+      <div className="kt-clublink-content">
+        <p className="kt-clublink-sub">
+          Kies een club en krijg meteen een openbaar scherm met alle wedstrijden van vandaag.
+          Extra ploegen of wedstrijden toevoegen kan alleen via je persoonlijke scherm hierboven.
+        </p>
+        <div className="kt-clublink-row">
+          <label className="kt-clublink-field">
+            <span>Club</span>
+            <select
+              className="kt-clublink-select"
+              value={clubId ?? ''}
+              onChange={(e) => { setClubId(e.target.value ? Number(e.target.value) : null); setCopied(false) }}
+              aria-label="Club"
             >
-              {copied ? '✓ Gekopieerd' : '🔗 Kopieer'}
-            </button>
-            <a className="kt-clublink-btn open" href={url} target="_blank" rel="noopener noreferrer">Openen ↗</a>
-          </>
-        )}
+              <option value="">— kies een club —</option>
+              {clubs.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+          </label>
+          {url && (
+            <>
+              <button
+                type="button"
+                className="kt-clublink-btn"
+                onClick={() => { void navigator.clipboard?.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 2000) }}
+              >
+                {copied ? '✓ Link gekopieerd' : '🔗 Kopieer link'}
+              </button>
+              <a className="kt-clublink-btn open" href={url} target="_blank" rel="noopener noreferrer">Open scherm ↗</a>
+              <input className="kt-clublink-url" value={url} readOnly onFocus={(e) => e.currentTarget.select()} aria-label="Vaste link" />
+            </>
+          )}
+        </div>
       </div>
-    </section>
+    </details>
   )
 }
