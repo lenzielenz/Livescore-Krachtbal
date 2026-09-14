@@ -528,7 +528,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
 
       {share && (
         <>
-          <MatchRecap stats={share.stats} teams={{ home: state.teams.home.name, away: state.teams.away.name }} />
+          <MatchRecap stats={share.stats} teams={{ home: state.teams.home.name, away: state.teams.away.name }} branding={state.teams} />
           <MatchScorers
             players={share.stats.players}
             teams={{ home: state.teams.home.name, away: state.teams.away.name }}
