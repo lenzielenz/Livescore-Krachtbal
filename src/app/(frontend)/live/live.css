@@ -1305,3 +1305,42 @@
 }
 .lb-wanneer:hover { background: color-mix(in srgb, var(--accent) 14%, transparent); }
 .lb-wanneer b { color: var(--accent); }
+
+
+/* Reeksfavoriet: de uitklapknop en het sterretje staan naast elkaar zonder
+   interactieve knoppen in elkaar te nesten. */
+.lb-group-head-row {
+  display: flex;
+  align-items: stretch;
+  border-bottom: 1px solid var(--line);
+}
+.lb-group-head-row .lb-group-head {
+  flex: 1 1 auto;
+  width: auto;
+  border-bottom: none;
+}
+.lb-group-star {
+  flex: 0 0 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-left: 1px solid color-mix(in srgb, #fff 7%, var(--line));
+  background: transparent;
+  color: var(--dim);
+  font-size: 1.05rem;
+  cursor: pointer;
+  transition: color var(--dur-1, 0.15s) ease, background-color var(--dur-1, 0.15s) ease;
+}
+.lb-group-star:hover {
+  color: #ffd873;
+  background: color-mix(in srgb, #ffd873 8%, transparent);
+}
+.lb-group-star.on {
+  color: #ffd873;
+  text-shadow: 0 0 12px color-mix(in srgb, #ffd873 45%, transparent);
+  background: color-mix(in srgb, #ffd873 10%, transparent);
+}
+.lb-group.collapsed .lb-group-head-row {
+  border-bottom-color: transparent;
+}
