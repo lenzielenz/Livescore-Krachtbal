@@ -42,7 +42,8 @@ export function renderWinfieDesign(o: WinfieDesign): string {
   const sameColors = o.homeColor.toLowerCase() === o.awayColor.toLowerCase()
   return `<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1920" viewBox="0 0 1080 1920">
   <defs>
-    <linearGradient id="base" x2="1" y2="1"><stop stop-color="#1c2534"/><stop offset="1" stop-color="#090c12"/></linearGradient>
+    <linearGradient id="base" x2="1" y2="1"><stop stop-color="#151f30"/><stop offset=".55" stop-color="#0a0f18"/><stop offset="1" stop-color="#05070c"/></linearGradient>
+    <linearGradient id="win" x2="1"><stop stop-color="${o.primary}"/><stop offset="1" stop-color="${o.secondary}"/></linearGradient>
     <radialGradient id="glow"><stop stop-color="${o.primary}" stop-opacity=".6"/><stop offset="1" stop-color="${o.primary}" stop-opacity="0"/></radialGradient>
     <linearGradient id="teams"><stop stop-color="${o.homeColor}" stop-opacity=".64"/><stop offset=".48" stop-color="#18202d"/><stop offset="1" stop-color="${o.awayColor}" stop-opacity=".64"/></linearGradient>
     <linearGradient id="glass" x2="0" y2="1"><stop stop-color="#fff" stop-opacity=".14"/><stop offset=".5" stop-color="#fff" stop-opacity=".02"/><stop offset="1" stop-color="#050910" stop-opacity=".7"/></linearGradient>
@@ -50,26 +51,35 @@ export function renderWinfieDesign(o: WinfieDesign): string {
   </defs>
   <rect width="1080" height="1920" fill="url(#base)"/>
   <ellipse cx="${[120, 900, 300, 780][o.variant % 4]}" cy="460" rx="820" ry="850" fill="url(#glow)"/>
+  <path d="M-120 1260 L1120 120 M250 1940 L1140 1050" stroke="#fff" stroke-opacity=".035" stroke-width="180"/>
+  <circle cx="930" cy="210" r="250" fill="none" stroke="#fff" stroke-opacity=".035" stroke-width="40"/>
+  <circle cx="930" cy="210" r="118" fill="none" stroke="#fff" stroke-opacity=".035" stroke-width="22"/>
   <g font-family="DejaVu Sans, Arial, sans-serif">
-  <text x="64" y="115" fill="#f5f7fb" font-size="35" font-weight="700">Krachtbal <tspan fill="#80baff">Live</tspan></text>
-  <text x="1016" y="111" text-anchor="end" fill="#aab7cb" font-size="20" letter-spacing="4">WINFIE</text>
+  <rect x="64" y="70" width="310" height="68" rx="34" fill="#050912" fill-opacity=".72" stroke="#fff" stroke-opacity=".16"/>
+  <circle cx="103" cy="104" r="13" fill="url(#win)"/>
+  <text x="132" y="116" fill="#f5f7fb" font-size="27" font-weight="700">Krachtbal <tspan fill="#80baff">Live</tspan></text>
+  <text x="1016" y="111" text-anchor="end" fill="#d7e2f2" font-size="20" font-weight="700" letter-spacing="4">WINFIE · FINALE</text>
   <rect x="64" y="160" width="54" height="5" rx="2" fill="#80baff"/>
   <text x="136" y="170" fill="#aab7cb" font-size="23">${esc(o.date)}</text>
-  <text x="64" y="256" fill="#80baff" font-size="22" font-weight="700" letter-spacing="3">${winner}</text>
+  <text x="64" y="256" fill="url(#win)" font-size="22" font-weight="700" letter-spacing="3">${winner}</text>
   ${textLines(o.headline, 64, 324, 28, headlineRows.length > 2 ? 32 : 44, 'start')}
   <rect x="64" y="450" width="952" height="458" rx="38" fill="#000" opacity=".26" transform="translate(0 12)"/>
   <rect x="64" y="438" width="952" height="470" rx="38" fill="url(#teams)" stroke="#fff" stroke-opacity=".23"/>
   <rect x="64" y="438" width="952" height="470" rx="38" fill="url(#glass)"/>
+  <rect x="100" y="438" width="880" height="7" rx="4" fill="url(#win)"/>
   ${badge(o.home, o.homeLogoHref, o.homeLogoFit, 226, o.homeColor, 'home')}
   ${badge(o.away, o.awayLogoHref, o.awayLogoFit, 854, o.awayColor, 'away')}
   <text x="540" y="517" text-anchor="middle" fill="#d2dbea" font-size="19" font-weight="700" letter-spacing="3">EINDSTAND</text>
-  <text x="460" y="627" text-anchor="middle" fill="#fff" font-size="88" font-weight="700">${o.score.home}</text>
-  <text x="540" y="616" text-anchor="middle" fill="#aab7cb" font-size="48">–</text>
-  <text x="620" y="627" text-anchor="middle" fill="#fff" font-size="88" font-weight="700">${o.score.away}</text>
+  <text x="448" y="638" text-anchor="middle" fill="#fff" font-size="112" font-weight="800">${o.score.home}</text>
+  <rect x="506" y="566" width="68" height="50" rx="25" fill="#050912" fill-opacity=".64" stroke="#fff" stroke-opacity=".18"/>
+  <text x="540" y="602" text-anchor="middle" fill="#dbe5f3" font-size="23" font-weight="700">VS</text>
+  <text x="632" y="638" text-anchor="middle" fill="#fff" font-size="112" font-weight="800">${o.score.away}</text>
   ${textLines(o.home, 294, 764, 25, 27)}
   ${textLines(o.away, 786, 764, 25, 27)}
   <text x="540" y="874" text-anchor="middle" fill="#b8c6da" font-size="21">${esc(o.reeks)}</text>
-  ${o.photoHref ? `<image href="${esc(o.photoHref)}" x="64" y="948" width="952" height="296" clip-path="url(#photo)" preserveAspectRatio="xMidYMid slice"/>` : `<rect x="64" y="948" width="952" height="296" rx="28" fill="#151d29" stroke="#ffffff" stroke-opacity=".12"/>
+  ${o.photoHref ? `<image href="${esc(o.photoHref)}" x="64" y="948" width="952" height="296" clip-path="url(#photo)" preserveAspectRatio="xMidYMid slice"/>
+  <rect x="64" y="1135" width="952" height="109" fill="#050912" fill-opacity=".72" clip-path="url(#photo)"/>
+  <text x="104" y="1204" fill="#fff" font-size="22" font-weight="700" letter-spacing="3">MOMENT VAN DE WEDSTRIJD</text>` : `<rect x="64" y="948" width="952" height="296" rx="28" fill="#151d29" stroke="#ffffff" stroke-opacity=".12"/>
   <text x="108" y="1010" fill="#80baff" font-size="21" letter-spacing="3">DE WEDSTRIJD IN CIJFERS</text>
   <text x="108" y="1110" fill="#fff" font-size="72" font-weight="700">${o.score.home + o.score.away}</text>
   <text x="108" y="1160" fill="#aab7cb" font-size="24">punten op het bord</text>
@@ -85,7 +95,8 @@ export function renderWinfieDesign(o: WinfieDesign): string {
   <circle cx="110" cy="1640" r="6" fill="${o.homeColor}"/><text x="128" y="1648" fill="#b8c6da" font-size="19">Thuis${sameColors ? ' · volle lijn' : ''}</text>
   <circle cx="594" cy="1640" r="6" fill="${o.awayColor}"/><text x="612" y="1648" fill="#b8c6da" font-size="19">Uit${sameColors ? ' · stippellijn' : ''}</text>
   <line x1="64" y1="1792" x2="1016" y2="1792" stroke="#fff" stroke-opacity=".16"/>
-  <text x="64" y="1840" fill="#f5f7fb" font-size="23" font-weight="700">${o.winner === 'draw' ? 'SAMEN BELEEFD.' : 'DIT MOMENT IS VAN ONS.'}</text>
+  <rect x="64" y="1812" width="12" height="38" rx="6" fill="url(#win)"/>
+  <text x="94" y="1840" fill="#f5f7fb" font-size="23" font-weight="700">${o.winner === 'draw' ? 'SAMEN BELEEFD.' : 'DIT MOMENT IS VAN ONS.'}</text>
   <text x="1016" y="1840" text-anchor="end" fill="#80baff" font-size="20">livescore.roodgries.be</text>
   </g></svg>`
 }
