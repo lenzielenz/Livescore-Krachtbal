@@ -39,7 +39,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       }),
       payload.find({
         collection: 'matches',
-        where: { and: [teamFilter, { status: { equals: 'live' } }, ...notHidden] },
+        where: { and: [teamFilter, { status: { equals: 'live' } }, { date: { greater_than_equal: start, less_than: end } }, ...notHidden] },
         depth: 0,
         limit: 50,
       }),
