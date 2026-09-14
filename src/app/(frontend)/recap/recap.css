@@ -64,3 +64,38 @@
 .recap-result-link:hover { border-color: var(--line); background: color-mix(in srgb, var(--panel) 60%, transparent); }
 .recap-result-teams { font-variant-numeric: tabular-nums; }
 .recap-result-reeks { flex: none; font-size: 0.74rem; color: var(--dim); }
+
+
+.recap-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0 0 16px;
+}
+.recap-stat {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  column-gap: 9px;
+  padding: 13px 14px;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at 90% 10%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 55%),
+    var(--panel-grad, var(--panel));
+  box-shadow: var(--card-shadow, 0 16px 36px -26px rgba(0, 0, 0, .55));
+}
+.recap-stat > span { grid-row: 1 / 3; font-size: 1.35rem; }
+.recap-stat b { font-size: 1.35rem; line-height: 1; font-variant-numeric: tabular-nums; }
+.recap-stat small {
+  overflow: hidden;
+  color: var(--dim);
+  font-size: .7rem;
+  font-weight: 750;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+@media (max-width: 620px) {
+  .recap-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
