@@ -1,5 +1,5 @@
 import sharp from 'sharp'
-import { renderWeekendDesign, weekendPages } from '@/lib/weekend-design'
+import { orderWeekendRows, renderWeekendDesign, weekendPages } from '@/lib/weekend-design'
 
 import { userClubId } from '@/lib/access'
 import { competitionWhere } from '@/lib/analyse-access'
@@ -132,7 +132,8 @@ async function renderWeekendPost(request: Request) {
   const clubName = String((club as { name?: unknown }).name ?? 'Krachtbalclub')
   const requestUrl = new URL(request.url)
   const preview = requestUrl.searchParams.get('preview') === '1'
-  const pages = weekendPages(selectedRows)
+  const orderedRows = orderWeekendRows(selectedRows)
+  const pages = weekendPages(orderedRows)
   const rawPage = Number(requestUrl.searchParams.get('page') ?? 0)
   const page = Number.isInteger(rawPage) ? Math.max(0, Math.min(pages.length - 1, rawPage)) : 0
   if (requestUrl.searchParams.get('meta') === '1') {
