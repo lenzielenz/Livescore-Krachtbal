@@ -101,7 +101,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   if (!last || last.home !== state.score.home || last.away !== state.score.away) {
     progress.push({ home: state.score.home, away: state.score.away, half: 2, gameClock: 0 })
   }
-  const svg = renderWinfieDesign({
+  const design = {
     home: state.teams.home.name,
     away: state.teams.away.name,
     score: state.score,
@@ -120,11 +120,29 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     awayLogoHref,
     homeLogoFit: state.teams.home.logoFit,
     awayLogoFit: state.teams.away.logoFit,
-  })
+  }
 
-  // Fixed pixel dimensions, no white browser margin and no separate preview layout.
-  const png = await sharp(Buffer.from(svg)).resize(preview ? 540 : W, preview ? 960 : H)
-    .png({ compressionLevel: 7 }).toBuffer()
+  const renderPng = (artwork: string) => sharp(Buffer.from(artwork))
+    .resize(preview ? 540 : W, preview ? 960 : H)
+    .flatten({ background: '#080d15' })
+    .png({ compressionLevel: 7 })
+    .toBuffer()
+
+  // Eén vreemd of beschadigd uploadbestand mag nooit de hele Winfie blokkeren.
+  // Als een eigen foto of clublogo niet kan worden verwerkt, wordt dezelfde
+  // compositie opnieuw gemaakt met veilige initialen en wedstrijdcijfers.
+  let png: Buffer
+  try {
+    png = await renderPng(renderWinfieDesign(design))
+  } catch (error) {
+    console.error('[winfie] render with assets failed, using safe artwork', error)
+    png = await renderPng(renderWinfieDesign({
+      ...design,
+      photoHref: undefined,
+      homeLogoHref: undefined,
+      awayLogoHref: undefined,
+    }))
+  }
   const slug = `${state.teams.home.name}-${state.teams.away.name}`.toLowerCase().replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '')
   const download = requestUrl.searchParams.get('download') === '1'
   return new Response(new Uint8Array(png), {
