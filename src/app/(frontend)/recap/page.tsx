@@ -4,6 +4,7 @@ import { SiteHeader } from '@/components/SiteHeader'
 import { formatDateTimeBE } from '@/lib/datetime'
 import { getPayloadClient } from '@/lib/payload-client'
 import { buildWeeklyRecapData } from '@/lib/weekly-recap-data'
+import { InstagramRecapCard } from './InstagramRecapCard'
 import './recap.css'
 
 export const dynamic = 'force-dynamic'
@@ -52,6 +53,7 @@ export default async function RecapPage() {
           </p>
         ) : (
           <>
+            <InstagramRecapCard period={periode} />
             <section className="recap-stats" aria-label="Het weekend in cijfers">
               <div className="recap-stat recap-stat--blue"><span aria-hidden>W</span><b>{recap.matches}</b><small>wedstrijden</small></div>
               <div className="recap-stat recap-stat--cyan"><span aria-hidden>B</span><b>{recap.stats.visitors}</b><small>bezoekers</small></div>
@@ -70,13 +72,8 @@ export default async function RecapPage() {
                 <ul className="recap-highlights">
                   {recap.highlights.map((h, index) => (
                     <li key={h.key} className="recap-highlight">
-                      <span className="recap-highlight-emoji" aria-hidden>
-                        {String(index + 1).padStart(2, '0')}
-                      </span>
-                      <span className="recap-highlight-txt">
-                        <b>{h.title}</b>
-                        <Link href={`/match/${h.matchId}`}>{h.text}</Link>
-                      </span>
+                      <span className="recap-highlight-emoji" aria-hidden>{String(index + 1).padStart(2, '0')}</span>
+                      <span className="recap-highlight-txt"><b>{h.title}</b><Link href={`/match/${h.matchId}`}>{h.text}</Link></span>
                     </li>
                   ))}
                 </ul>
@@ -89,10 +86,7 @@ export default async function RecapPage() {
                 <div>
                   <span className="recap-eyebrow">PERFORMANCE VAN DE WEEK</span>
                   <h2 className="recap-h2">Ploeg van de week</h2>
-                  <p className="recap-team">
-                    <b>{recap.team.teamName}</b> won met <strong>{recap.team.goalsFor}–{recap.team.goalsAgainst}</strong>
-                    {recap.team.reeks ? ` in ${recap.team.reeks}` : ''} — een doelsaldo van <em>+{recap.team.diff}</em>.
-                  </p>
+                  <p className="recap-team"><b>{recap.team.teamName}</b> won met <strong>{recap.team.goalsFor}–{recap.team.goalsAgainst}</strong>{recap.team.reeks ? ` in ${recap.team.reeks}` : ''} — een doelsaldo van <em>+{recap.team.diff}</em>.</p>
                 </div>
               </section>
             )}
@@ -100,67 +94,18 @@ export default async function RecapPage() {
             {recap.players.length > 0 && (
               <section className="recap-block" aria-label="Selectie van de week">
                 <h2 className="recap-h2">Selectie van de week</h2>
-                <ol className="recap-players">
-                  {recap.players.map((p, i) => (
-                    <li key={p.playerId} className="recap-player">
-                      <span className="recap-player-rank">{i + 1}</span>
-                      <span className="recap-player-txt">
-                        <b>
-                          {p.shirtNumber != null ? `#${p.shirtNumber} ` : ''}
-                          {p.name}
-                        </b>
-                        <i>
-                          {p.teamName}
-                          {p.reeks ? ` · ${p.reeks}` : ''}
-                        </i>
-                      </span>
-                      <span className="recap-player-stat">
-                        {p.points} {p.points === 1 ? 'punt' : 'punten'}
-                      </span>
-                    </li>
-                  ))}
-                </ol>
+                <ol className="recap-players">{recap.players.map((p, i) => <li key={p.playerId} className="recap-player"><span className="recap-player-rank">{i + 1}</span><span className="recap-player-txt"><b>{p.shirtNumber != null ? `#${p.shirtNumber} ` : ''}{p.name}</b><i>{p.teamName}{p.reeks ? ` · ${p.reeks}` : ''}</i></span><span className="recap-player-stat">{p.points} {p.points === 1 ? 'punt' : 'punten'}</span></li>)}</ol>
               </section>
             )}
 
             {recap.climbers.length > 0 && (
               <section className="recap-block" aria-label="Klimmers">
                 <h2 className="recap-h2">Wie klom</h2>
-                <ul className="recap-climbers">
-                  {recap.climbers.slice(0, 8).map((c) => (
-                    <li key={`${c.teamId}-${c.reeks}`} className="recap-climber">
-                      <span className="recap-climber-delta">▲ {c.delta}</span>
-                      <span>
-                        <b>{c.teamName}</b> — van plaats {c.from} naar {c.to}
-                        {c.reeks ? ` in ${c.reeks}` : ''}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
+                <ul className="recap-climbers">{recap.climbers.slice(0, 8).map((c) => <li key={`${c.teamId}-${c.reeks}`} className="recap-climber"><span className="recap-climber-delta">▲ {c.delta}</span><span><b>{c.teamName}</b> — van plaats {c.from} naar {c.to}{c.reeks ? ` in ${c.reeks}` : ''}</span></li>)}</ul>
               </section>
             )}
 
-            <details className="recap-block recap-results-fold">
-              <summary>
-                <span>
-                  <small>WEDSTRIJDARCHIEF</small>
-                  <b>Alle uitslagen <i>({recap.matches})</i></b>
-                </span>
-                <span className="recap-fold-action">Bekijken <i aria-hidden>⌄</i></span>
-              </summary>
-              <ul className="recap-results">
-                {recap.results.map((m) => (
-                  <li key={m.matchId} className="recap-result">
-                    <Link href={`/match/${m.matchId}`} className="recap-result-link">
-                      <span className="recap-result-teams">
-                        {m.home} <b>{m.homeGoals}</b>–<b>{m.awayGoals}</b> {m.away}
-                      </span>
-                      {m.reeks && <span className="recap-result-reeks">{m.reeks}</span>}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </details>
+            <details className="recap-block recap-results-fold"><summary><span><small>WEDSTRIJDARCHIEF</small><b>Alle uitslagen <i>({recap.matches})</i></b></span><span className="recap-fold-action">Bekijken <i aria-hidden>⌄</i></span></summary><ul className="recap-results">{recap.results.map((m) => <li key={m.matchId} className="recap-result"><Link href={`/match/${m.matchId}`} className="recap-result-link"><span className="recap-result-teams">{m.home} <b>{m.homeGoals}</b>–<b>{m.awayGoals}</b> {m.away}</span>{m.reeks && <span className="recap-result-reeks">{m.reeks}</span>}</Link></li>)}</ul></details>
           </>
         )}
       </div>
