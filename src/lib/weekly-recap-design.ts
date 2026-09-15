@@ -20,7 +20,7 @@ export function renderWeeklyRecapDesign(recap: WeeklyRecap): string {
   const period = `${fmtDate(recap.startIso)} — ${fmtDate(recap.endIso)}`
   const titleLines = lines(recap.headline, 25).slice(0, 3)
   const colors = ['#63a9ff', '#36d8ba', '#a78bfa', '#ff6b78', '#f5b94c', '#5ed0ff']
-  const stats = [
+  const stats: [label: string, value: number, glyph: string][] = [
     ['MATCHES', recap.matches, 'W'], ['BEZOEKERS', recap.stats.visitors, 'V'], ['CLUBS', recap.stats.clubs, 'C'],
     ['DOELWORPEN', recap.stats.goalThrows, 'D'], ['RUGWORPEN', recap.stats.backThrows, 'R'], ['PUNTEN', recap.goals, 'Σ'],
   ]
