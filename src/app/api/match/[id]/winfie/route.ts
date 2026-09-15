@@ -2,6 +2,7 @@ import sharp from 'sharp'
 import { renderWinfieDesign, type WinfieDesign } from '@/lib/winfie-design'
 
 import { getAuthUser } from '@/lib/auth-user'
+import { isCheckedIn, sanitizeCheckins } from '@/lib/checkins'
 import { DEFAULT_HOME_COLOR, readableOnDark } from '@/lib/club-colors'
 import { formatDateBE } from '@/lib/datetime'
 import { buildMatchState, buildTimeline } from '@/lib/match-engine'
@@ -116,6 +117,7 @@ async function renderWinfie(request: Request, matchId: number) {
     awayLogoHref,
     homeLogoFit: state.teams.home.logoFit,
     awayLogoFit: state.teams.away.logoFit,
+    iWasThere: isCheckedIn(sanitizeCheckins((user as { checkins?: unknown } | null)?.checkins), matchId),
   }
 
   const renderPng = (artwork: string) => sharp(Buffer.from(artwork))

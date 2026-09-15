@@ -1,28 +1,73 @@
-/* "Ik ben erbij"-knop + rij. */
-.match-checkin { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 12px 0; }
+/* "Ik ben erbij" — kleurrijk uitgelicht kaartje i.p.v. een kale knop: de badge-ladder maakt
+   meteen duidelijk waarom aanklikken loont, en dit levert precies het cijfer dat later in het
+   weekoverzicht pronkt. */
+.match-checkin {
+  position: relative;
+  margin: 18px 0;
+  padding: 14px 16px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--pop, var(--accent)) 34%, var(--line));
+  border-radius: 16px;
+  background:
+    radial-gradient(140% 160% at 0% 0%, color-mix(in srgb, var(--pop, var(--accent)) 16%, transparent), transparent 55%),
+    var(--panel);
+  transition: border-color .2s ease, background .2s ease;
+}
+.match-checkin.is-on { border-color: color-mix(in srgb, var(--home) 40%, var(--line)); }
+.match-checkin.is-on {
+  background:
+    radial-gradient(140% 160% at 0% 0%, color-mix(in srgb, var(--home) 14%, transparent), transparent 55%),
+    var(--panel);
+}
+.match-checkin-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.match-checkin-hint {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0 0;
+  color: var(--dim-strong);
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+.match-checkin-badges { font-size: 0.95rem; letter-spacing: 2px; opacity: .9; }
+
 .checkin-btn {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 11px 18px;
+  padding: 12px 20px;
   border-radius: 999px;
   font: inherit;
-  font-weight: 800;
-  font-size: 0.95rem;
+  font-weight: 850;
+  font-size: 0.98rem;
   cursor: pointer;
   color: var(--txt);
-  background: color-mix(in srgb, var(--accent) 10%, transparent);
-  border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--line));
-  transition: transform 0.1s ease, background 0.15s ease, border-color 0.15s ease;
+  background: color-mix(in srgb, var(--pop, var(--accent)) 16%, transparent);
+  border: 1px solid color-mix(in srgb, var(--pop, var(--accent)) 55%, var(--line));
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--pop, var(--accent)) 55%, transparent);
+  animation: checkin-pulse 2.6s ease-in-out infinite;
+  transition: transform 0.1s ease, background 0.15s ease, border-color 0.15s ease, box-shadow .15s ease;
 }
-.checkin-btn:hover:not(:disabled) { background: color-mix(in srgb, var(--accent) 18%, transparent); }
+.checkin-btn:hover:not(:disabled) { background: color-mix(in srgb, var(--pop, var(--accent)) 26%, transparent); }
 .checkin-btn:active:not(:disabled) { transform: scale(0.96); }
 .checkin-btn:disabled { opacity: 0.7; cursor: default; }
 .checkin-btn.on {
   color: #06140d;
-  background: var(--grad-accent, var(--accent));
+  background: var(--grad-cool, var(--home));
   border-color: transparent;
-  box-shadow: var(--glow-accent, 0 10px 24px -12px var(--accent));
+  box-shadow: var(--glow-home, 0 10px 24px -12px var(--home));
+  animation: none;
 }
 .match-checkin-link { color: var(--accent); font-weight: 700; font-size: 0.88rem; text-decoration: none; }
 .match-checkin-link:hover { text-decoration: underline; }
+
+/* Zachte, herhalende gloed rond de knop zolang er nog niet is aangeklikt — trekt de blik zonder
+   te schreeuwen. Stopt zodra de knop "aan" staat (zie .on hierboven). */
+@keyframes checkin-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--pop, var(--accent)) 45%, transparent); }
+  50% { box-shadow: 0 0 0 8px color-mix(in srgb, var(--pop, var(--accent)) 0%, transparent); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .checkin-btn { animation: none; }
+}

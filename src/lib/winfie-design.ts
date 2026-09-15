@@ -8,6 +8,9 @@ export type WinfieDesign = {
   progress: { home: number; away: number; half?: number }[]; variant: number
   homeLogoHref?: string; awayLogoHref?: string
   homeLogoFit?: LogoFit | null; awayLogoFit?: LogoFit | null; photoHref?: string
+  /** De aanmaker van deze Winfie duidde zelf "ik was erbij" aan voor deze wedstrijd —
+   * dan krijgt haar/zijn eigen Story een kleine, persoonlijke stempel. */
+  iWasThere?: boolean
 }
 function lines(value: string, max = 24): string[] {
   const words = value.split(/\s+/)
@@ -115,6 +118,10 @@ export function renderWinfieDesign(o: WinfieDesign): string {
   <text x="1016" y="111" text-anchor="end" fill="#d7e2f2" font-size="20" font-weight="700" letter-spacing="4">WINFIE · FINALE</text>
   <rect x="64" y="160" width="54" height="5" rx="2" fill="#80baff"/>
   <text x="136" y="170" fill="#aab7cb" font-size="23">${esc(o.date)}</text>
+  ${o.iWasThere ? `<g transform="rotate(-4 890 161)">
+    <rect x="742" y="140" width="296" height="42" rx="21" fill="#0fe0a6" fill-opacity=".2" stroke="#0fe0a6" stroke-width="2"/>
+    <text x="890" y="167" text-anchor="middle" fill="#0fe0a6" font-size="19" font-weight="800" letter-spacing="1">🎟️ JIJ WAS ERBIJ</text>
+  </g>` : ''}
   <text x="64" y="256" fill="url(#win)" font-size="22" font-weight="700" letter-spacing="3">${winner}</text>
   ${textLines(o.headline, 64, 324, 28, headlineRows.length > 2 ? 32 : 44, 'start')}
   <rect x="64" y="450" width="952" height="458" rx="38" fill="#000" opacity=".26" transform="translate(0 12)"/>

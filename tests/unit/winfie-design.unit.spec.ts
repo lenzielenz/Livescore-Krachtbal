@@ -48,4 +48,8 @@ describe('Winfie platformstijl', () => {
     expect(svg).toContain('clip-path="url(#photo)"')
     expect(svg).not.toContain('DE WEDSTRIJD IN CIJFERS')
   })
+  it('toont een persoonlijke stempel enkel als de aanmaker zelf erbij was', () => {
+    expect(renderWinfieDesign(base)).not.toContain('JIJ WAS ERBIJ')
+    expect(renderWinfieDesign({ ...base, iWasThere: true })).toContain('JIJ WAS ERBIJ')
+  })
 })

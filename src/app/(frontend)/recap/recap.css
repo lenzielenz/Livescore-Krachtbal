@@ -258,18 +258,24 @@
 }
 .recap-highlight:first-child { padding-top: 2px; border-top: 0; }
 .recap-highlight-emoji {
+  --hl: var(--accent);
   display: grid;
   width: 27px;
   height: 27px;
   place-items: center;
-  border: 1px solid color-mix(in srgb, var(--accent) 24%, var(--line));
+  border: 1px solid color-mix(in srgb, var(--hl) 34%, var(--line));
   border-radius: 8px;
-  color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 7%, #0b1018);
+  color: var(--hl);
+  background: color-mix(in srgb, var(--hl) 14%, #0b1018);
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--hl) 0%, transparent);
   font-size: .58rem;
   font-weight: 900;
   font-variant-numeric: tabular-nums;
 }
+/* Topprestaties krijgen een medaillekleur: goud/zilver/brons i.p.v. één egale accentkleur. */
+.recap-highlight:nth-child(1) .recap-highlight-emoji { --hl: #ffd166; }
+.recap-highlight:nth-child(2) .recap-highlight-emoji { --hl: #c9d3e0; }
+.recap-highlight:nth-child(3) .recap-highlight-emoji { --hl: #ff9f43; }
 .recap-highlight-txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .recap-highlight-txt b { color: var(--dim); font-size: .6rem; text-transform: uppercase; letter-spacing: .08em; }
 .recap-highlight-txt a { color: inherit; text-decoration: none; font-size: .88rem; font-weight: 750; line-height: 1.35; }
@@ -280,16 +286,21 @@
   grid-template-columns: 42px minmax(0, 1fr);
   gap: 12px;
   align-items: center;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, #ffd166 10%, transparent), transparent 60%),
+    var(--panel-grad, var(--panel));
 }
+.recap-block--team::before { background: #ffd166; }
 .recap-team-trophy {
   display: grid;
   width: 40px;
   height: 40px;
   place-items: center;
-  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--line));
+  border: 1px solid color-mix(in srgb, #ffd166 40%, var(--line));
   border-radius: 11px;
-  color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 8%, #0d121a);
+  color: #ffd166;
+  background: color-mix(in srgb, #ffd166 14%, #0d121a);
+  box-shadow: 0 0 22px -10px color-mix(in srgb, #ffd166 65%, transparent);
   font-size: .7rem;
   font-weight: 950;
 }
