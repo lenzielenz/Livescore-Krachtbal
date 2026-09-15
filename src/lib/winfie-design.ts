@@ -11,6 +11,77 @@ export type WinfieDesign = {
   /** De aanmaker van deze Winfie duidde zelf "ik was erbij" aan voor deze wedstrijd —
    * dan krijgt haar/zijn eigen Story een kleine, persoonlijke stempel. */
   iWasThere?: boolean
+  /** matches.liveReactions — de emoji-tellers die tijdens de wedstrijd verzameld werden. Dit is
+   * het sociale bewijs ("er gebeurde hier iets") dat mensen prikkelt om zelf ook te delen. */
+  reactions?: Record<string, number>
+  /** Overige activiteit (tribuneberichten + -foto's) die niet als losse reactie meetelt. */
+  momentsExtra?: number
+}
+
+const REACTION_GLYPHS: Record<string, string> = { clap: '👏', fire: '🔥', heart: '❤️', goal: '⚽', wow: '😮', rocket: '🚀' }
+const REACTION_ORDER = ['clap', 'fire', 'heart', 'goal', 'wow', 'rocket'] as const
+
+/** Tot vier chips: de reactietypes met de meeste tikken, aangevuld met een "en meer"-chip voor
+ * overige activiteit (berichten/foto's) als er nog plaats is. Leeg als er niets te vieren viel. */
+function activityChips(reactions: Record<string, number> | undefined, momentsExtra: number | undefined) {
+  const chips = REACTION_ORDER
+    .map((key) => ({ glyph: REACTION_GLYPHS[key], count: Math.max(0, Math.round(Number(reactions?.[key]) || 0)) }))
+    .filter((c) => c.count > 0)
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 4)
+  const extra = Math.max(0, Math.round(momentsExtra ?? 0))
+  if (chips.length < 4 && extra > 0) chips.push({ glyph: '✨', count: extra })
+  return chips
+}
+
+// Kleine, deterministische PRNG (mulberry32) — dezelfde wedstrijd geeft altijd dezelfde
+// confetti-spreiding (geen flikkering tussen server-renders, en reproduceerbaar in tests).
+function mulberry32(seed: number) {
+  let a = seed
+  return () => {
+    a |= 0
+    a = (a + 0x6d2b79f5) | 0
+    let t = Math.imul(a ^ (a >>> 15), 1 | a)
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+}
+function seedFrom(o: WinfieDesign): number {
+  let h = (o.variant * 7919 + o.score.home * 131 + o.score.away * 197) | 0
+  const text = o.home + o.away
+  for (let i = 0; i < text.length; i++) h = (Math.imul(h, 31) + text.charCodeAt(i)) | 0
+  return Math.abs(h) || 1
+}
+
+/** Confetti in de zijmarges (x < 64 en x > 1016) — daar staat nooit tekst of de kaart, dus geen
+ * risico op overlap, en het geeft de volle canvashoogte een gevoel van beweging/feest. */
+function confetti(o: WinfieDesign): string {
+  const rand = mulberry32(seedFrom(o))
+  const colors = [o.primary, o.secondary, o.homeColor, o.awayColor, '#ffd166', '#ffffff']
+  const bands = [30, 1050]
+  const out: string[] = []
+  for (let i = 0; i < 22; i++) {
+    const x = bands[i % 2] + (rand() - 0.5) * 44
+    const y = 40 + rand() * 1800
+    const color = colors[Math.floor(rand() * colors.length)]
+    const kind = Math.floor(rand() * 3)
+    const delay = (rand() * 3).toFixed(2)
+    const op = (0.4 + rand() * 0.45).toFixed(2)
+    if (kind === 0) {
+      const r = 4 + rand() * 5
+      out.push(`<circle class="wf-confetti" style="animation-delay:${delay}s" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r.toFixed(1)}" fill="${color}" opacity="${op}"/>`)
+    } else if (kind === 1) {
+      // De CSS-animatie zet .wf-confetti's eigen `transform` (scale); die staat daarom op de
+      // buitenste <g>, anders overschrijft ze de rotate()-plaatsing van het rechthoekje zelf.
+      const s = 9 + rand() * 8
+      const rot = Math.floor(rand() * 360)
+      out.push(`<g class="wf-confetti" style="animation-delay:${delay}s"><rect x="${(x - s / 2).toFixed(1)}" y="${(y - s * 0.28).toFixed(1)}" width="${s.toFixed(1)}" height="${(s * 0.56).toFixed(1)}" rx="2" fill="${color}" opacity="${op}" transform="rotate(${rot} ${x.toFixed(1)} ${y.toFixed(1)})"/></g>`)
+    } else {
+      const r = 6 + rand() * 4
+      out.push(`<polygon class="wf-confetti" style="animation-delay:${delay}s" points="${starPoints(x, y, r)}" fill="${color}" opacity="${op}"/>`)
+    }
+  }
+  return out.join('')
 }
 function lines(value: string, max = 24): string[] {
   const words = value.split(/\s+/)
@@ -58,12 +129,14 @@ function starPoints(cx: number, cy: number, outer: number): string {
   return pts.join(' ')
 }
 
-function badge(name: string, href: string | undefined, fit: LogoFit | null | undefined, x: number, color: string, id: string) {
+function badge(name: string, href: string | undefined, fit: LogoFit | null | undefined, x: number, color: string, id: string, isWinner: boolean) {
   const f = normalizeLogoFit(fit)
   const size = 188 * f.zoom
   return `<defs><clipPath id="${id}"><circle cx="${x}" cy="590" r="100"/></clipPath></defs>
+    ${isWinner ? `<circle class="wf-glow" cx="${x}" cy="590" r="152" fill="${color}" opacity=".4" filter="url(#softBlur)"/>` : ''}
     <circle cx="${x}" cy="600" r="109" fill="#000" opacity=".3"/>
-    <circle cx="${x}" cy="590" r="106" fill="#fff" stroke="${color}" stroke-width="5"/>
+    <circle cx="${x}" cy="590" r="106" fill="#fff" stroke="${color}" stroke-width="${isWinner ? 8 : 5}"/>
+    ${isWinner ? `<circle cx="${x}" cy="590" r="113" fill="none" stroke="${color}" stroke-opacity=".55" stroke-width="3"/>` : ''}
     <g clip-path="url(#${id})">
     ${href ? `<image href="${esc(href)}" x="${x - size / 2 + f.offsetX * 2}" y="${590 - size / 2 + f.offsetY * 2}" width="${size}" height="${size}" preserveAspectRatio="xMidYMid meet"/>` : `<text x="${x}" y="608" text-anchor="middle" font-size="48" font-weight="700" fill="#15352a">${esc(name.split(/\s+/).map(s => s[0]).join('').slice(0, 3))}</text>`}
     </g>`
@@ -91,11 +164,17 @@ export function renderWinfieDesign(o: WinfieDesign): string {
   }
   const finalDiff = steps.at(-1)?.diff ?? 0
   const leiderTekst = finalDiff === 0 ? 'gelijk' : finalDiff > 0 ? o.home : o.away
+  const chips = activityChips(o.reactions, o.momentsExtra)
+  const homeScoreFill = o.winner === 'home' ? 'url(#win)' : '#fff'
+  const awayScoreFill = o.winner === 'away' ? 'url(#win)' : '#fff'
+  const homeScoreOp = o.winner === 'away' ? '.55' : '1'
+  const awayScoreOp = o.winner === 'home' ? '.55' : '1'
   return `<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1920" viewBox="0 0 1080 1920">
   <defs>
     <linearGradient id="base" x2="1" y2="1"><stop stop-color="#151f30"/><stop offset=".55" stop-color="#0a0f18"/><stop offset="1" stop-color="#05070c"/></linearGradient>
     <linearGradient id="win" x2="1"><stop stop-color="${o.primary}"/><stop offset="1" stop-color="${o.secondary}"/></linearGradient>
-    <radialGradient id="glow"><stop stop-color="${o.primary}" stop-opacity=".6"/><stop offset="1" stop-color="${o.primary}" stop-opacity="0"/></radialGradient>
+    <radialGradient id="glow"><stop stop-color="${o.primary}" stop-opacity=".72"/><stop offset="1" stop-color="${o.primary}" stop-opacity="0"/></radialGradient>
+    <radialGradient id="glow2"><stop stop-color="${o.secondary}" stop-opacity=".5"/><stop offset="1" stop-color="${o.secondary}" stop-opacity="0"/></radialGradient>
     <linearGradient id="teams"><stop stop-color="${o.homeColor}" stop-opacity=".64"/><stop offset=".48" stop-color="#18202d"/><stop offset="1" stop-color="${o.awayColor}" stop-opacity=".64"/></linearGradient>
     <linearGradient id="glass" x2="0" y2="1"><stop stop-color="#fff" stop-opacity=".14"/><stop offset=".5" stop-color="#fff" stop-opacity=".02"/><stop offset="1" stop-color="#050910" stop-opacity=".7"/></linearGradient>
     <linearGradient id="momFill" x1="0" y1="0" x2="0" y2="1">
@@ -104,13 +183,34 @@ export function renderWinfieDesign(o: WinfieDesign): string {
       <stop offset="50%" stop-color="${o.awayColor}" stop-opacity=".06"/>
       <stop offset="100%" stop-color="${o.awayColor}" stop-opacity=".55"/>
     </linearGradient>
+    <linearGradient id="sheenGrad" x2="1" y2="0"><stop stop-color="#fff" stop-opacity="0"/><stop offset=".5" stop-color="#fff" stop-opacity=".16"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
     <clipPath id="photo"><rect x="64" y="948" width="952" height="296" rx="28"/></clipPath>
+    <clipPath id="cardClip"><rect x="64" y="438" width="952" height="470" rx="38"/></clipPath>
+    <filter id="softBlur" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="20"/></filter>
+    <filter id="scoreGlow" x="-60%" y="-60%" width="220%" height="220%"><feDropShadow dx="0" dy="0" stdDeviation="11" flood-color="${o.primary}" flood-opacity=".85"/></filter>
   </defs>
+  <style>
+    .wf-glow { animation: wfPulse 3.4s ease-in-out infinite; transform-origin: center; }
+    .wf-confetti { animation: wfTwinkle 2.6s ease-in-out infinite; transform-origin: center; }
+    .wf-chip { animation: wfRise .5s ease-out both; }
+    .wf-sheen { animation: wfSheen 6s ease-in-out 1s infinite; }
+    @keyframes wfPulse { 0%, 100% { opacity: .3; } 50% { opacity: .55; } }
+    @keyframes wfTwinkle { 0%, 100% { opacity: .4; transform: scale(.85); } 50% { opacity: 1; transform: scale(1.1); } }
+    @keyframes wfRise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+    @keyframes wfSheen { 0%, 55% { transform: translateX(0); } 100% { transform: translateX(1500px); } }
+    @media (prefers-reduced-motion: reduce) {
+      .wf-glow, .wf-confetti, .wf-chip, .wf-sheen { animation: none; }
+    }
+  </style>
   <rect width="1080" height="1920" fill="url(#base)"/>
   <ellipse cx="${[120, 900, 300, 780][o.variant % 4]}" cy="460" rx="820" ry="850" fill="url(#glow)"/>
-  <path d="M-120 1260 L1120 120 M250 1940 L1140 1050" stroke="#fff" stroke-opacity=".035" stroke-width="180"/>
-  <circle cx="930" cy="210" r="250" fill="none" stroke="#fff" stroke-opacity=".035" stroke-width="40"/>
-  <circle cx="930" cy="210" r="118" fill="none" stroke="#fff" stroke-opacity=".035" stroke-width="22"/>
+  <ellipse class="wf-glow" cx="540" cy="680" rx="560" ry="420" fill="url(#glow2)"/>
+  <path d="M-120 1260 L1120 120 M250 1940 L1140 1050" stroke="#fff" stroke-opacity=".05" stroke-width="180"/>
+  <path d="M-60 1720 L900 60" stroke="${o.primary}" stroke-opacity=".07" stroke-width="90"/>
+  <path d="M180 1920 L1180 700" stroke="${o.secondary}" stroke-opacity=".06" stroke-width="70"/>
+  <circle cx="930" cy="210" r="250" fill="none" stroke="#fff" stroke-opacity=".05" stroke-width="40"/>
+  <circle cx="930" cy="210" r="118" fill="none" stroke="#fff" stroke-opacity=".05" stroke-width="22"/>
+  ${confetti(o)}
   <g font-family="DejaVu Sans, Arial, sans-serif">
   <rect x="64" y="70" width="310" height="68" rx="34" fill="#050912" fill-opacity=".72" stroke="#fff" stroke-opacity=".16"/>
   <circle cx="103" cy="104" r="13" fill="url(#win)"/>
@@ -122,21 +222,33 @@ export function renderWinfieDesign(o: WinfieDesign): string {
     <rect x="742" y="140" width="296" height="42" rx="21" fill="#0fe0a6" fill-opacity=".2" stroke="#0fe0a6" stroke-width="2"/>
     <text x="890" y="167" text-anchor="middle" fill="#0fe0a6" font-size="19" font-weight="800" letter-spacing="1">🎟️ JIJ WAS ERBIJ</text>
   </g>` : ''}
-  <text x="64" y="256" fill="url(#win)" font-size="22" font-weight="700" letter-spacing="3">${winner}</text>
+  ${chips.length > 0 ? chips.map((c, i) => {
+    // Positie zit op de buitenste <g> en blijft dus ongemoeid door de animatie: de inro-animatie
+    // (CSS transform) zit op de BINNENSTE <g>, anders overschrijft de eind-keyframe ("transform:
+    // none") de plaatsingstransform en springt de chip naar (0,0).
+    const w = 220, gap = 14, x = 64 + i * (w + gap)
+    return `<g transform="translate(${x} 188)"><g class="wf-chip" style="animation-delay:${(i * 0.12).toFixed(2)}s">
+    <rect width="${w}" height="46" rx="23" fill="#050912" fill-opacity=".64" stroke="#fff" stroke-opacity=".18"/>
+    <text x="24" y="31" font-size="24">${c.glyph}</text>
+    <text x="62" y="31" fill="#f5f7fb" font-size="22" font-weight="800">${c.count}</text>
+  </g></g>`
+  }).join('') : ''}
+  <text x="64" y="${chips.length > 0 ? 272 : 256}" fill="url(#win)" font-size="22" font-weight="700" letter-spacing="3">${winner}</text>
   ${textLines(o.headline, 64, 324, 28, headlineRows.length > 2 ? 32 : 44, 'start')}
   <rect x="64" y="450" width="952" height="458" rx="38" fill="#000" opacity=".26" transform="translate(0 12)"/>
   <rect x="64" y="438" width="952" height="470" rx="38" fill="url(#teams)" stroke="#fff" stroke-opacity=".23"/>
   <rect x="64" y="438" width="952" height="470" rx="38" fill="url(#glass)"/>
   <rect x="100" y="438" width="880" height="7" rx="4" fill="url(#win)"/>
-  ${badge(o.home, o.homeLogoHref, o.homeLogoFit, 226, o.homeColor, 'home')}
-  ${badge(o.away, o.awayLogoHref, o.awayLogoFit, 854, o.awayColor, 'away')}
+  <g clip-path="url(#cardClip)"><g class="wf-sheen"><rect x="-320" y="428" width="260" height="490" fill="url(#sheenGrad)" transform="skewX(-18)"/></g></g>
+  ${badge(o.home, o.homeLogoHref, o.homeLogoFit, 226, o.homeColor, 'home', o.winner === 'home')}
+  ${badge(o.away, o.awayLogoHref, o.awayLogoFit, 854, o.awayColor, 'away', o.winner === 'away')}
   <text x="540" y="517" text-anchor="middle" fill="#d2dbea" font-size="19" font-weight="700" letter-spacing="3">EINDSTAND</text>
-  <text x="448" y="638" text-anchor="middle" fill="#fff" font-size="112" font-weight="800">${o.score.home}</text>
+  <text x="448" y="638" text-anchor="middle" fill="${homeScoreFill}" fill-opacity="${homeScoreOp}" font-size="112" font-weight="800" ${o.winner === 'home' ? 'filter="url(#scoreGlow)"' : ''}>${o.score.home}</text>
   <rect x="506" y="566" width="68" height="50" rx="25" fill="#050912" fill-opacity=".64" stroke="#fff" stroke-opacity=".18"/>
   <text x="540" y="602" text-anchor="middle" fill="#dbe5f3" font-size="23" font-weight="700">VS</text>
-  <text x="632" y="638" text-anchor="middle" fill="#fff" font-size="112" font-weight="800">${o.score.away}</text>
-  ${textLines(o.home, 294, 764, 25, 27)}
-  ${textLines(o.away, 786, 764, 25, 27)}
+  <text x="632" y="638" text-anchor="middle" fill="${awayScoreFill}" fill-opacity="${awayScoreOp}" font-size="112" font-weight="800" ${o.winner === 'away' ? 'filter="url(#scoreGlow)"' : ''}>${o.score.away}</text>
+  ${textLines(o.home, 226, 764, 25, 27)}
+  ${textLines(o.away, 854, 764, 25, 27)}
   <text x="540" y="874" text-anchor="middle" fill="#b8c6da" font-size="21">${esc(o.reeks)}</text>
   ${o.photoHref ? `<image href="${esc(o.photoHref)}" x="64" y="948" width="952" height="296" clip-path="url(#photo)" preserveAspectRatio="xMidYMid slice"/>
   <rect x="64" y="1135" width="952" height="109" fill="#050912" fill-opacity=".72" clip-path="url(#photo)"/>

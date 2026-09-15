@@ -52,4 +52,40 @@ describe('Winfie platformstijl', () => {
     expect(renderWinfieDesign(base)).not.toContain('JIJ WAS ERBIJ')
     expect(renderWinfieDesign({ ...base, iWasThere: true })).toContain('JIJ WAS ERBIJ')
   })
+  it('lijnt de ploegnaam recht onder haar eigen logo uit', () => {
+    const svg = renderWinfieDesign(base)
+    // Logo's staan op x=226 (thuis) en x=854 (uit) — de naam eronder hoort op dezelfde x te centreren.
+    expect(svg).toContain('cx="226" cy="590"')
+    expect(svg).toContain('cx="854" cy="590"')
+    expect(svg).toContain('x="226" y="764" text-anchor="middle"')
+    expect(svg).toContain('x="854" y="764" text-anchor="middle"')
+  })
+  it('toont tot vier reactiechips, gesorteerd op aantal, plus een "meer"-chip als er ruimte is', () => {
+    const svg = renderWinfieDesign({ ...base, reactions: { clap: 3, fire: 47, heart: 0, wow: 9 }, momentsExtra: 5 })
+    const claps = svg.indexOf('👏')
+    const fires = svg.indexOf('🔥')
+    const wows = svg.indexOf('😮')
+    expect(fires).toBeGreaterThan(-1)
+    // Meeste reacties (fire) komt vóór minder populaire reacties in de opmaak.
+    expect(fires).toBeLessThan(wows)
+    expect(wows).toBeLessThan(claps)
+    expect(svg).toContain('✨')
+    expect(svg).toContain('>5<')
+  })
+  it('toont geen reactierij zonder activiteit', () => {
+    const svg = renderWinfieDesign(base)
+    expect(svg).not.toContain('<g class="wf-chip"')
+  })
+  it('geeft de winnende score een gloed en dooft de verliezende score', () => {
+    const svg = renderWinfieDesign({ ...base, winner: 'away' })
+    expect(svg).toContain('filter="url(#scoreGlow)"')
+    expect(svg).toContain('fill-opacity=".55"')
+  })
+  it('houdt beide scores neutraal bij een gelijkspel', () => {
+    const svg = renderWinfieDesign({ ...base, winner: 'draw' })
+    expect(svg).not.toContain('filter="url(#scoreGlow)"')
+  })
+  it('is deterministisch: dezelfde wedstrijd geeft dezelfde confetti-opmaak', () => {
+    expect(renderWinfieDesign(base)).toBe(renderWinfieDesign(base))
+  })
 })
