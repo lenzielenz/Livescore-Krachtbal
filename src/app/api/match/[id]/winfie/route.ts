@@ -33,17 +33,13 @@ async function imageBuffer(url: string | null, origin: string, max = 6_000_000):
   }
 }
 
-export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params
-  const matchId = Number(id)
-  if (!Number.isFinite(matchId)) return Response.json({ error: 'Ongeldige wedstrijd.' }, { status: 400 })
-
+async function renderWinfie(request: Request, matchId: number) {
   const payload = await getPayloadClient()
   const [state, timeline, match, user] = await Promise.all([
     buildMatchState(payload, matchId).catch(() => null),
     buildTimeline(payload, matchId).catch(() => []),
     payload.findByID({ collection: 'matches', id: matchId, depth: 0 }).catch(() => null),
-    getAuthUser(),
+    getAuthUser().catch(() => null),
   ])
   if (!state || !match || match.analyseOnly) return Response.json({ error: 'Wedstrijd niet gevonden.' }, { status: 404 })
   if (state.match.status !== 'finished') return Response.json({ error: 'De Winfie verschijnt na de eindstand.' }, { status: 409 })
@@ -153,4 +149,43 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       'X-Content-Type-Options': 'nosniff',
     },
   })
+}
+
+/** Noodafbeelding wanneer de Winfie helemaal niet kon worden opgebouwd (bv. een tijdelijke
+ * databasehapering) — zelfde vangnet als het weekendplan, zodat delen/downloaden nooit met
+ * niets eindigt en de aantekenaar het straks gewoon opnieuw kan proberen. */
+async function fallbackPng(preview: boolean): Promise<Response> {
+  const fallback = `<svg width="1080" height="1920" xmlns="http://www.w3.org/2000/svg">
+    <defs><linearGradient id="b" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#151f30"/><stop offset="1" stop-color="#05070c"/></linearGradient></defs>
+    <rect width="1080" height="1920" fill="url(#b)"/>
+    <rect x="0" width="18" height="1920" fill="#80baff"/>
+    <text x="72" y="140" fill="#ffffff" font-size="34" font-family="sans-serif" font-weight="800">KRACHTBAL LIVE</text>
+    <text x="72" y="430" fill="#80baff" font-size="70" font-family="sans-serif" font-weight="900">WINFIE</text>
+    <text x="72" y="520" fill="#ffffff" font-size="33" font-family="sans-serif" font-weight="700">De voorvertoning wordt opnieuw opgebouwd.</text>
+    <text x="72" y="578" fill="#ffffff" fill-opacity=".65" font-size="26" font-family="sans-serif">Probeer het zo meteen opnieuw.</text>
+  </svg>`
+  const png = await sharp(Buffer.from(fallback)).resize(preview ? 540 : W, preview ? 960 : H).png().toBuffer()
+  return new Response(new Uint8Array(png), {
+    status: 200,
+    headers: { 'Content-Type': 'image/png', 'Cache-Control': 'private, no-store', 'X-Winfie-Fallback': '1' },
+  })
+}
+
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const matchId = Number(id)
+  if (!Number.isFinite(matchId)) return Response.json({ error: 'Ongeldige wedstrijd.' }, { status: 400 })
+
+  try {
+    return await renderWinfie(request, matchId)
+  } catch (error) {
+    console.error('[winfie] Genereren mislukt', error)
+    const preview = new URL(request.url).searchParams.get('preview') === '1'
+    try {
+      return await fallbackPng(preview)
+    } catch (fallbackError) {
+      console.error('[winfie] Noodafbeelding mislukt', fallbackError)
+      return Response.json({ error: 'De Winfie kon niet worden gemaakt.' }, { status: 500 })
+    }
+  }
 }

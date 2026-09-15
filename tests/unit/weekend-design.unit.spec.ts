@@ -10,7 +10,7 @@ const matches = (n: number): WeekendMatch[] => Array.from({ length: n }, (_, i) 
 }))
 const options = {
   club: 'KBC St. Michiels', primary: '#ed1515', secondary: '#ffffff', title: '19 – 20 september',
-  rows: matches(8), total: 19, page: 0, pages: 3,
+  rows: matches(8), total: 19, page: 0, pages: 3, homeCount: 10, awayCount: 9,
 }
 describe('Weekendplan design', () => {
   it('keeps all 19 matches in order across three readable Stories', () => {

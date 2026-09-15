@@ -5,7 +5,7 @@ export type WinfieDesign = {
   home: string; away: string; score: { home: number; away: number }
   winner: 'home' | 'away' | 'draw'; primary: string; secondary: string
   homeColor: string; awayColor: string; headline: string; date: string; reeks: string
-  progress: { home: number; away: number }[]; variant: number
+  progress: { home: number; away: number; half?: number }[]; variant: number
   homeLogoHref?: string; awayLogoHref?: string
   homeLogoFit?: LogoFit | null; awayLogoFit?: LogoFit | null; photoHref?: string
 }
@@ -23,6 +23,38 @@ function textLines(value: string, x: number, y: number, max: number, size: numbe
   const fontSize = Math.min(size, 780 / Math.max(...rows.map(row => row.length), 1))
   return rows.map((row, i) => `<text x="${x}" y="${y + i * (size + 8)}" text-anchor="${anchor}" font-size="${fontSize}" font-weight="700" fill="#f5f7fb">${esc(row)}</text>`).join('')
 }
+type MomentumStep = { side: 'home' | 'away'; value: number; half: number; diff: number }
+
+/** Elke stap = het puntenverschil (thuis − uit) na één doelpunt — dezelfde opbouw als het
+ * "Momentum"-scoreverloop op de analysepagina, zodat de Winfie er visueel bij aansluit. */
+function momentumSteps(progress: WinfieDesign['progress']): MomentumStep[] {
+  const steps: MomentumStep[] = []
+  let diff = 0
+  for (let i = 1; i < progress.length; i++) {
+    const prev = progress[i - 1]
+    const cur = progress[i]
+    // Normaal wijzigt maar één kant per stap (één doelpunt). Een geïmporteerde eindstand zonder
+    // volledige tijdlijn kan in één sprong komen: dan tellen we het netto-effect op het verschil.
+    const net = (cur.home - prev.home) - (cur.away - prev.away)
+    if (net === 0) continue
+    diff += net
+    steps.push({ side: net > 0 ? 'home' : 'away', value: Math.abs(net), half: cur.half ?? 1, diff })
+  }
+  return steps
+}
+
+/** Vijfpuntige ster voor de rugworp-markering (zelfde vorm als het analyse-scoreverloop). */
+function starPoints(cx: number, cy: number, outer: number): string {
+  const inner = outer * 0.44
+  const pts: string[] = []
+  for (let i = 0; i < 10; i++) {
+    const r = i % 2 === 0 ? outer : inner
+    const a = (-90 + i * 36) * (Math.PI / 180)
+    pts.push(`${(cx + r * Math.cos(a)).toFixed(1)},${(cy + r * Math.sin(a)).toFixed(1)}`)
+  }
+  return pts.join(' ')
+}
+
 function badge(name: string, href: string | undefined, fit: LogoFit | null | undefined, x: number, color: string, id: string) {
   const f = normalizeLogoFit(fit)
   const size = 188 * f.zoom
@@ -35,11 +67,27 @@ function badge(name: string, href: string | undefined, fit: LogoFit | null | und
 }
 /** Shared composition for preview and PNG: no remote SVG images or browser-only CSS. */
 export function renderWinfieDesign(o: WinfieDesign): string {
-  const max = Math.max(1, o.score.home, o.score.away, ...o.progress.flatMap(p => [p.home, p.away]))
-  const points = (side: 'home' | 'away') => o.progress.map((p, i) => `${120 + i / Math.max(1, o.progress.length - 1) * 840},${1580 - p[side] / max * 195}`).join(' ')
   const winner = o.winner === 'draw' ? 'GELIJKSPEL' : 'DE OVERWINNING IS BINNEN'
   const headlineRows = lines(o.headline, 28)
   const sameColors = o.homeColor.toLowerCase() === o.awayColor.toLowerCase()
+
+  // Momentum-scoreverloop: cumulatief puntenverschil na elk doelpunt, zelfde taal als de
+  // "Momentum"-grafiek op de analysepagina (gradiëntvlak + rugworp-sterren + helft-lijn).
+  const PX0 = 120, PX1 = 960, PY0 = 1372, PY1 = 1580
+  const MIDY = (PY0 + PY1) / 2
+  const steps = momentumSteps(o.progress)
+  const n = steps.length
+  const maxAbs = Math.max(1, ...steps.map((s) => Math.abs(s.diff)))
+  const stepX = (i: number) => (n <= 0 ? (PX0 + PX1) / 2 : PX0 + ((i + 1) / n) * (PX1 - PX0))
+  const stepY = (d: number) => MIDY - (d / maxAbs) * ((PY1 - PY0) / 2 - 12)
+  const linePts = [`${PX0},${MIDY}`, ...steps.map((s, i) => `${stepX(i).toFixed(1)},${stepY(s.diff).toFixed(1)}`)]
+  const areaPath = n > 0 ? `M ${linePts.join(' L ')} L ${stepX(n - 1).toFixed(1)},${MIDY} L ${PX0},${MIDY} Z` : ''
+  const halfMarks: { x: number; half: number }[] = []
+  for (let i = 1; i < steps.length; i++) {
+    if (steps[i].half > steps[i - 1].half) halfMarks.push({ x: (stepX(i - 1) + stepX(i)) / 2, half: steps[i].half })
+  }
+  const finalDiff = steps.at(-1)?.diff ?? 0
+  const leiderTekst = finalDiff === 0 ? 'gelijk' : finalDiff > 0 ? o.home : o.away
   return `<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1920" viewBox="0 0 1080 1920">
   <defs>
     <linearGradient id="base" x2="1" y2="1"><stop stop-color="#151f30"/><stop offset=".55" stop-color="#0a0f18"/><stop offset="1" stop-color="#05070c"/></linearGradient>
@@ -47,6 +95,12 @@ export function renderWinfieDesign(o: WinfieDesign): string {
     <radialGradient id="glow"><stop stop-color="${o.primary}" stop-opacity=".6"/><stop offset="1" stop-color="${o.primary}" stop-opacity="0"/></radialGradient>
     <linearGradient id="teams"><stop stop-color="${o.homeColor}" stop-opacity=".64"/><stop offset=".48" stop-color="#18202d"/><stop offset="1" stop-color="${o.awayColor}" stop-opacity=".64"/></linearGradient>
     <linearGradient id="glass" x2="0" y2="1"><stop stop-color="#fff" stop-opacity=".14"/><stop offset=".5" stop-color="#fff" stop-opacity=".02"/><stop offset="1" stop-color="#050910" stop-opacity=".7"/></linearGradient>
+    <linearGradient id="momFill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="${o.homeColor}" stop-opacity=".55"/>
+      <stop offset="50%" stop-color="${o.homeColor}" stop-opacity=".06"/>
+      <stop offset="50%" stop-color="${o.awayColor}" stop-opacity=".06"/>
+      <stop offset="100%" stop-color="${o.awayColor}" stop-opacity=".55"/>
+    </linearGradient>
     <clipPath id="photo"><rect x="64" y="948" width="952" height="296" rx="28"/></clipPath>
   </defs>
   <rect width="1080" height="1920" fill="url(#base)"/>
@@ -88,12 +142,18 @@ export function renderWinfieDesign(o: WinfieDesign): string {
   <text x="596" y="1160" fill="#aab7cb" font-size="24">punten verschil</text>`}
   <rect x="64" y="1284" width="952" height="442" rx="28" fill="#111722" stroke="#fff" stroke-opacity=".16"/>
   <rect x="104" y="1320" width="5" height="28" rx="2" fill="#80baff"/>
-  <text x="128" y="1344" fill="#f5f7fb" font-size="25" font-weight="700">Scoreverloop</text>
-  ${[0, .5, 1].map(v => `<line x1="120" y1="${1580-v*195}" x2="960" y2="${1580-v*195}" stroke="#fff" stroke-opacity=".09"/>`).join('')}
-  <polyline points="${points('home')}" fill="none" stroke="${o.homeColor}" stroke-width="8" stroke-linejoin="round" stroke-linecap="round"/>
-  <polyline points="${points('away')}" fill="none" stroke="${o.awayColor}" stroke-width="8" stroke-linejoin="round" stroke-linecap="round" ${sameColors ? 'stroke-dasharray="16 12"' : ''}/>
-  <circle cx="110" cy="1640" r="6" fill="${o.homeColor}"/><text x="128" y="1648" fill="#b8c6da" font-size="19">Thuis${sameColors ? ' · volle lijn' : ''}</text>
-  <circle cx="594" cy="1640" r="6" fill="${o.awayColor}"/><text x="612" y="1648" fill="#b8c6da" font-size="19">Uit${sameColors ? ' · stippellijn' : ''}</text>
+  <text x="128" y="1344" fill="#f5f7fb" font-size="25" font-weight="700">Momentum · scoreverloop</text>
+  ${n > 1 ? `<text x="960" y="1344" text-anchor="end" fill="#8ea0bd" font-size="18">${n} doelpunten</text>` : ''}
+  <line x1="${PX0}" y1="${MIDY}" x2="${PX1}" y2="${MIDY}" stroke="#fff" stroke-opacity=".16"/>
+  ${halfMarks.map((h) => `<line x1="${h.x.toFixed(1)}" y1="${PY0}" x2="${h.x.toFixed(1)}" y2="${PY1}" stroke="#fff" stroke-opacity=".16" stroke-dasharray="4 5"/><text x="${h.x.toFixed(1)}" y="${PY1 + 22}" text-anchor="middle" fill="#8ea0bd" font-size="16">${h.half}e helft</text>`).join('')}
+  ${areaPath ? `<path d="${areaPath}" fill="url(#momFill)"/>` : ''}
+  <polyline points="${linePts.join(' ')}" fill="none" stroke="#f5f7fb" stroke-opacity=".85" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/>
+  ${steps.map((s, i) => s.value === 2 ? '' : `<circle cx="${stepX(i).toFixed(1)}" cy="${stepY(s.diff).toFixed(1)}" r="7" fill="${s.side === 'home' ? o.homeColor : o.awayColor}" ${sameColors && s.side === 'away' ? 'stroke="#fff" stroke-width="2.5"' : ''}/>`).join('')}
+  ${steps.map((s, i) => s.value === 2 ? `<polygon points="${starPoints(stepX(i), stepY(s.diff), 15)}" fill="${s.side === 'home' ? o.homeColor : o.awayColor}" stroke="#f4c430" stroke-width="2.5" stroke-linejoin="round" paint-order="stroke"/>` : '').join('')}
+  <circle cx="110" cy="1640" r="6" fill="${o.homeColor}"/><text x="128" y="1648" fill="#b8c6da" font-size="19">${o.home} leidt</text>
+  <circle cx="594" cy="1640" r="6" fill="${o.awayColor}" ${sameColors ? 'stroke="#fff" stroke-width="2"' : ''}/><text x="612" y="1648" fill="#b8c6da" font-size="19">${o.away} leidt</text>
+  <polygon points="${starPoints(866, 1640, 9)}" fill="#f4c430"/><text x="884" y="1648" fill="#b8c6da" font-size="19">Rugworp</text>
+  <text x="120" y="1680" fill="#8ea0bd" font-size="17">Eindstand in het voordeel van ${esc(leiderTekst)}</text>
   <line x1="64" y1="1792" x2="1016" y2="1792" stroke="#fff" stroke-opacity=".16"/>
   <rect x="64" y="1812" width="12" height="38" rx="6" fill="url(#win)"/>
   <text x="94" y="1840" fill="#f5f7fb" font-size="23" font-weight="700">${o.winner === 'draw' ? 'SAMEN BELEEFD.' : 'DIT MOMENT IS VAN ONS.'}</text>
