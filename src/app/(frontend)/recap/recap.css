@@ -54,27 +54,38 @@
   margin-top: 12px;
 }
 
-/* De grote, trotse hoofdcijfer: hoeveel wedstrijden er deze week gespeeld werden. */
+/* De grote, trotse hoofdcijfer: hoeveel wedstrijden er deze week gespeeld werden, met het
+   krachtbalveld (herkleurd naar de sitestijl) als achtergrond i.p.v. een willekeurige bal. */
 .recap-feature {
   position: relative;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+  justify-content: flex-end;
   gap: 6px;
+  min-height: 200px;
   padding: 16px 18px;
   overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--accent) 46%, var(--line));
   border-radius: 18px;
-  background:
-    radial-gradient(140% 140% at 0% 0%, color-mix(in srgb, var(--accent) 30%, transparent), transparent 60%),
-    var(--panel-grad, var(--panel));
+  background: var(--panel-grad, var(--panel));
   box-shadow: inset 0 1px 0 #ffffff14, 0 14px 30px -22px #000;
   animation: recap-pop .5s var(--ease-out, ease) both;
+}
+.recap-field-bg { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; }
+.recap-feature::before {
+  /* Donkere scrim over het veld, zodat de cijfers erbovenop leesbaar blijven. */
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(0deg, #060c18 12%, color-mix(in srgb, #060c18 55%, transparent) 55%, color-mix(in srgb, #060c18 15%, transparent));
 }
 .recap-feature::after {
   content: "";
   position: absolute;
   inset: -40% -40% auto auto;
+  z-index: 1;
   width: 60%;
   aspect-ratio: 1;
   border-radius: 50%;
@@ -82,7 +93,8 @@
   filter: blur(2px);
   animation: recap-breathe 4.5s ease-in-out infinite;
 }
-.recap-feature-icon { font-size: 1.9rem; line-height: 1; filter: drop-shadow(0 4px 10px color-mix(in srgb, var(--accent) 55%, transparent)); }
+.recap-feature-body,
+.recap-trend { position: relative; z-index: 2; }
 .recap-feature-body { display: flex; flex-direction: column; }
 .recap-feature-num {
   color: var(--text, #f4f6fa);
@@ -93,8 +105,9 @@
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 2px 14px rgba(0,0,0,.55));
 }
-.recap-feature-body small { color: var(--dim); font-size: .78rem; font-weight: 750; }
+.recap-feature-body small { color: #dce8fb; font-size: .78rem; font-weight: 750; text-shadow: 0 1px 6px rgba(0,0,0,.65); }
 .recap-trend {
   display: inline-flex;
   align-items: center;
@@ -183,7 +196,7 @@
 }
 @media (max-width: 620px) {
   .recap-figures { grid-template-columns: 1fr; }
-  .recap-feature { flex-direction: row; align-items: center; flex-wrap: wrap; }
+  .recap-feature { min-height: 170px; }
 }
 
 .recap-block {
@@ -340,7 +353,6 @@
   .recap-stat > span { width: 30px; height: 30px; border-radius: 8px; font-size: 1rem; }
   .recap-stat b { font-size: 1rem; }
   .recap-stat small { font-size: .58rem; }
-  .recap-feature-icon { font-size: 1.5rem; }
   .recap-feature-num { font-size: 2.6rem; }
   .recap-block { padding: 13px 14px; border-radius: 14px; }
   .recap-highlight-txt a { font-size: .82rem; }

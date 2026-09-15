@@ -4,6 +4,7 @@ import { SiteHeader } from '@/components/SiteHeader'
 import { formatDateTimeBE } from '@/lib/datetime'
 import { getPayloadClient } from '@/lib/payload-client'
 import { buildWeeklyRecapData } from '@/lib/weekly-recap-data'
+import { RecapFieldBackdrop } from './RecapFieldBackdrop'
 import './recap.css'
 
 export const dynamic = 'force-dynamic'
@@ -53,7 +54,7 @@ export default async function RecapPage() {
               </div>
               <div className="recap-figures">
                 <div className="recap-feature">
-                  <span className="recap-feature-icon" aria-hidden>🏐</span>
+                  <RecapFieldBackdrop />
                   <div className="recap-feature-body">
                     <b className="recap-feature-num">{recap.matches}</b>
                     <small>{recap.matches === 1 ? 'wedstrijd gespeeld' : 'wedstrijden gespeeld'}</small>
