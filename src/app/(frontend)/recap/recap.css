@@ -43,6 +43,42 @@
 }
 .recap-head-foot { margin-top: 20px; color: var(--dim); font-size: .62rem; font-weight: 800; letter-spacing: .09em; }
 .recap-head-foot i { flex: 1; height: 1px; background: linear-gradient(90deg, var(--line), transparent); }
+.recap-latest-link {
+  display: inline-flex;
+  margin-top: 10px;
+  color: var(--accent);
+  font-size: .78rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+.recap-latest-link:hover { text-decoration: underline; }
+
+/* Zwerm van licht dat traag over de hero glijdt — een subtiele, premium finishing touch (respecteert
+   verminderde beweging). */
+.recap-hero,
+.recap-season-hero {
+  isolation: isolate;
+}
+.recap-hero::after,
+.recap-season-hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  background: linear-gradient(115deg, transparent 40%, #ffffff10 48%, #ffffff1c 50%, #ffffff10 52%, transparent 60%);
+  background-size: 260% 260%;
+  background-position: 120% -20%;
+  animation: recap-sheen 9s ease-in-out 1.2s infinite;
+}
+@keyframes recap-sheen {
+  0%, 55% { background-position: 120% -20%; }
+  85%, 100% { background-position: -20% 120%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .recap-hero::after,
+  .recap-season-hero::after { display: none; }
+}
 
 .recap-empty { max-width: 60ch; color: var(--dim); line-height: 1.6; }
 .recap-empty a { color: var(--accent); font-weight: 700; }
@@ -389,4 +425,71 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .recap-fold-action i { transition: none; }
+}
+
+/* ── Seizoenstotaal ────────────────────────────────────────────────────────────────────────────
+   Zelfde grammatica als de wekelijkse recap (herkenbaar, "samen"), maar in goud/warm i.p.v.
+   ijsblauw ("apart") — je weet in één oogopslag of je het weekend of het hele seizoen bekijkt. */
+.recap-season { margin-top: 28px; }
+.recap-season-hero {
+  position: relative;
+  margin: 0 0 16px;
+  padding: clamp(18px, 4vw, 28px);
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, #ffd166 32%, var(--line));
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 90% -10%, color-mix(in srgb, #ffd166 20%, transparent), transparent 45%),
+    linear-gradient(135deg, #3a2c14, #17130c 55%, #201117);
+  box-shadow: inset 0 1px 0 #ffffff14, 0 22px 45px -30px #000;
+}
+.recap-edition--gold { color: #ffd166; }
+.recap-edition--gold i { background: #ffd166; box-shadow: 0 0 14px color-mix(in srgb, #ffd166 44%, transparent); }
+.recap-title--season { max-width: 46ch; margin-top: 4px; font-size: clamp(1.15rem, 3.4vw, 1.5rem); }
+.recap-feature--gold { border-color: color-mix(in srgb, #ffd166 46%, var(--line)); }
+.recap-feature--gold .recap-feature-num { background: linear-gradient(135deg, #fff, #ffd166 120%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+.recap-feature--gold::after { background: radial-gradient(circle, color-mix(in srgb, #ffd166 55%, transparent), transparent 70%); }
+.recap-block--season::before { background: #ffd166; }
+.recap-block--season .recap-section-head > span { color: #ffd166; }
+
+.recap-archive-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 7px; }
+.recap-archive-item {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 4px 12px;
+  padding: 11px 14px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: var(--panel-grad, var(--panel));
+  color: inherit;
+  text-decoration: none;
+  transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+}
+.recap-archive-item:hover { transform: translateY(-1px); border-color: color-mix(in srgb, #ffd166 40%, var(--line)); box-shadow: 0 14px 28px -22px #000; }
+.recap-archive-item--active { border-color: color-mix(in srgb, #ffd166 55%, var(--line)); background: linear-gradient(135deg, color-mix(in srgb, #ffd166 12%, transparent), transparent 60%), var(--panel-grad, var(--panel)); }
+.recap-archive-period { grid-column: 1; color: var(--text, #f4f6fa); font-size: .84rem; font-weight: 800; }
+.recap-archive-figures { grid-column: 2; color: var(--dim); font-size: .78rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.recap-archive-figures b { color: var(--text, #f4f6fa); }
+.recap-archive-team { grid-column: 1 / -1; display: inline-flex; align-items: center; gap: 5px; margin-top: 2px; color: #ffd166; font-size: .76rem; font-weight: 700; }
+.recap-archive-badge {
+  grid-column: 1 / -1;
+  justify-self: start;
+  margin-top: 4px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: color-mix(in srgb, #ffd166 18%, transparent);
+  color: #ffd166;
+  font-size: .6rem;
+  font-weight: 850;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 430px) {
+  .recap-season-hero { padding: 16px; }
+  .recap-title--season { font-size: 1.08rem; }
+  .recap-archive-item { grid-template-columns: 1fr; }
+  .recap-archive-figures { grid-column: 1; white-space: normal; }
 }

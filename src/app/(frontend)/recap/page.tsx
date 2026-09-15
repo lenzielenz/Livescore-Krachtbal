@@ -3,6 +3,9 @@ import Link from 'next/link'
 import { SiteHeader } from '@/components/SiteHeader'
 import { formatDateTimeBE } from '@/lib/datetime'
 import { getPayloadClient } from '@/lib/payload-client'
+import { weekendRange } from '@/lib/pronostiek-weekend'
+import { buildSeasonRecapData } from '@/lib/season-recap-data'
+import { previousWeekRange } from '@/lib/weekly-recap'
 import { buildWeeklyRecapData } from '@/lib/weekly-recap-data'
 import { RecapFieldBackdrop } from './RecapFieldBackdrop'
 import './recap.css'
@@ -14,15 +17,29 @@ export const metadata = {
   description: 'De voorbije speelweek in het kort: uitslagen, ploeg van de week, opvallende cijfers en wie klom.',
 }
 
-// De maandag-recap: het wekelijkse ritueel. Alles wordt live afgeleid uit de wedstrijddata, dus
-// een gecorrigeerde uitslag verschijnt hier meteen mee.
-export default async function RecapPage() {
-  const payload = await getPayloadClient()
-  const recap = await buildWeeklyRecapData(payload)
+const dag = (iso: string) => formatDateTimeBE(iso, { day: 'numeric', month: 'long' })
+// Het venster loopt tot maandagochtend; als periode toont dat beter als "tot en met zondag".
+const periodeVan = (startIso: string, endIso: string) =>
+  `${dag(startIso)} — ${dag(new Date(new Date(endIso).getTime() - 86_400_000).toISOString())}`
 
-  const dag = (iso: string) => formatDateTimeBE(iso, { day: 'numeric', month: 'long' })
-  // Het venster loopt tot maandagochtend; als periode toont dat beter als "tot en met zondag".
-  const periode = `${dag(recap.startIso)} — ${dag(new Date(new Date(recap.endIso).getTime() - 86_400_000).toISOString())}`
+// De maandag-recap: het wekelijkse ritueel. Alles wordt live afgeleid uit de wedstrijddata, dus
+// een gecorrigeerde uitslag verschijnt hier meteen mee. Een `week`-parameter (de starttijd van een
+// speelweek) laat toe om via het archief onderaan naar een voorbije speelweek terug te keren —
+// zonder parameter toont de pagina gewoon de meest recente.
+export default async function RecapPage({ searchParams }: { searchParams: Promise<{ week?: string }> }) {
+  const { week: weekParam } = await searchParams
+  const payload = await getPayloadClient()
+  const now = new Date()
+  const latest = previousWeekRange(now)
+  const range = weekParam ? weekendRange(weekParam) : latest
+  const bekijktLatest = range.startIso === latest.startIso
+
+  const [recap, season] = await Promise.all([
+    buildWeeklyRecapData(payload, { range }),
+    buildSeasonRecapData(payload, now),
+  ])
+
+  const periode = periodeVan(recap.startIso, recap.endIso)
 
   const trend = (() => {
     if (recap.previousMatches == null) return null
@@ -42,10 +59,13 @@ export default async function RecapPage() {
 
         <header className="recap-hero">
           <div className="recap-head-top">
-            <span className="recap-edition"><i aria-hidden /> WEEKEND RECAP</span>
+            <span className="recap-edition"><i aria-hidden /> {bekijktLatest ? 'WEEKEND RECAP' : 'UIT HET ARCHIEF'}</span>
             <span className="recap-period">{periode}</span>
           </div>
           <h1 className="recap-title">{recap.headline}</h1>
+          {!bekijktLatest && (
+            <Link href="/recap" className="recap-latest-link">← Terug naar het huidige weekend</Link>
+          )}
           {recap.matches > 0 && (
             <>
               <div className="recap-head-foot">
@@ -128,6 +148,82 @@ export default async function RecapPage() {
 
             <details className="recap-block recap-results-fold"><summary><span><small>WEDSTRIJDARCHIEF</small><b>Alle uitslagen <i>({recap.matches})</i></b></span><span className="recap-fold-action">Bekijken <i aria-hidden>⌄</i></span></summary><ul className="recap-results">{recap.results.map((m) => <li key={m.matchId} className="recap-result"><Link href={`/match/${m.matchId}`} className="recap-result-link"><span className="recap-result-teams">{m.home} <b>{m.homeGoals}</b>–<b>{m.awayGoals}</b> {m.away}</span>{m.reeks && <span className="recap-result-reeks">{m.reeks}</span>}</Link></li>)}</ul></details>
           </>
+        )}
+
+        {season && (
+          <section className="recap-season" aria-label="Seizoenstotaal">
+            <header className="recap-season-hero">
+              <div className="recap-head-top">
+                <span className="recap-edition recap-edition--gold"><i aria-hidden /> SEIZOEN {season.seizoen}</span>
+              </div>
+              <h2 className="recap-title recap-title--season">{season.headline}</h2>
+              <div className="recap-figures">
+                <div className="recap-feature recap-feature--gold">
+                  <RecapFieldBackdrop variant="gold" />
+                  <div className="recap-feature-body">
+                    <b className="recap-feature-num">{season.matches}</b>
+                    <small>{season.matches === 1 ? 'wedstrijd dit seizoen' : 'wedstrijden dit seizoen'}</small>
+                  </div>
+                  <span className="recap-trend recap-trend--flat">🗓 {season.weekends} {season.weekends === 1 ? 'speelweek' : 'speelweken'}</span>
+                </div>
+                <section className="recap-stats" aria-label="Het seizoen in cijfers">
+                  <div className="recap-stat recap-stat--cyan"><span aria-hidden>🎟️</span><b>{season.stats.visitors}</b><small>&ldquo;ik was erbij&rdquo;</small></div>
+                  <div className="recap-stat recap-stat--violet"><span aria-hidden>🤝</span><b>{season.stats.clubs}</b><small>clubs</small></div>
+                  <div className="recap-stat recap-stat--red"><span aria-hidden>🎯</span><b>{season.stats.goalThrows}</b><small>doelworpen</small></div>
+                  <div className="recap-stat recap-stat--orange"><span aria-hidden>💪</span><b>{season.stats.backThrows}</b><small>rugworpen</small></div>
+                  <div className="recap-stat recap-stat--gold"><span aria-hidden>🏆</span><b>{season.goals}</b><small>punten</small></div>
+                </section>
+              </div>
+            </header>
+
+            {season.highlights.length > 0 && (
+              <section className="recap-block recap-block--highlights recap-block--season" aria-label="Seizoenstoppers">
+                <div className="recap-section-head">
+                  <span>SEIZOENSTOPPERS</span>
+                  <h2 className="recap-h2">Het beste van {season.seizoen}</h2>
+                </div>
+                <ul className="recap-highlights">
+                  {season.highlights.map((h, index) => (
+                    <li key={h.key} className="recap-highlight">
+                      <span className="recap-highlight-emoji" aria-hidden>{String(index + 1).padStart(2, '0')}</span>
+                      <span className="recap-highlight-txt"><b>{h.title}</b><Link href={`/match/${h.matchId}`}>{h.text}</Link></span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+
+            {season.archive.length > 0 && (
+              <section className="recap-block recap-archive" aria-label="Archief van voorbije speelweken">
+                <div className="recap-section-head">
+                  <span>ARCHIEF</span>
+                  <h2 className="recap-h2">Elke speelweek van {season.seizoen}</h2>
+                </div>
+                <ul className="recap-archive-list">
+                  {season.archive.map((w) => {
+                    const active = w.startIso === recap.startIso
+                    return (
+                      <li key={w.startIso}>
+                        <Link
+                          href={active ? '/recap' : `/recap?week=${encodeURIComponent(w.startIso)}`}
+                          className={`recap-archive-item${active ? ' recap-archive-item--active' : ''}`}
+                        >
+                          <span className="recap-archive-period">{periodeVan(w.startIso, w.endIso)}</span>
+                          <span className="recap-archive-figures">
+                            <b>{w.matches}</b> {w.matches === 1 ? 'wedstrijd' : 'wedstrijden'} · <b>{w.goals}</b> punten
+                          </span>
+                          {w.team && (
+                            <span className="recap-archive-team"><span aria-hidden>🏆</span> {w.team.teamName} won met {w.team.goalsFor}–{w.team.goalsAgainst}</span>
+                          )}
+                          {active && <span className="recap-archive-badge">Nu bekeken</span>}
+                        </Link>
+                      </li>
+                    )
+                  })}
+                </ul>
+              </section>
+            )}
+          </section>
         )}
       </div>
     </>
