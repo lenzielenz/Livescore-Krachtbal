@@ -28,6 +28,7 @@ import { isSupportersMode } from '@/lib/score-mode'
 import { mayClaim, mayVote, sanitizeTrust, voteWindowOpen } from '@/lib/score-trust'
 import { MATCH_ASSUMED_DONE_MS } from '@/lib/simple-score'
 import { isTribuneOpen } from '@/lib/tribune'
+import { buildWinfieDesign } from '@/lib/winfie'
 import { BASE_RATE_PER_MIN } from '@/lib/win-probability'
 import { MatchRecap } from '../../analyse/[id]/MatchRecap'
 import { LiveStream } from './LiveStream'
@@ -251,6 +252,38 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
         authorName: (d as { authorName?: string | null }).authorName || 'Supporter',
         at: d.createdAt ? new Date(d.createdAt as string).getTime() : Date.now(),
       }
+    })
+  }
+
+  // Winfie: de deelbare Story, rechtstreeks als SVG in de pagina i.p.v. via een aparte
+  // server-gerenderde PNG. Logo's/foto laadt de browser gewoon als gewone afbeelding — er is dus
+  // geen eigen beeldbewerking meer die traag kan zijn of kan mislukken. Enkel na afloop, en de
+  // eigen tribunefoto (indien die er is) is de enige extra, kleine opzoeking.
+  let winfieDesign = null
+  if (state.match.status === 'finished') {
+    let myPhoto: { href: string; id: number } | null = null
+    if (me) {
+      const mine = await payload
+        .find({
+          collection: 'match-instants',
+          where: { and: [{ match: { equals: matchId } }, { author: { equals: (me as { id: number }).id } }] },
+          sort: '-createdAt',
+          depth: 0,
+          limit: 1,
+        })
+        .catch(() => null)
+      const doc = mine?.docs?.[0] as { id: number; filename?: string | null; url?: string | null } | undefined
+      if (doc) {
+        myPhoto = {
+          id: doc.id,
+          href: doc.filename ? `/api/match-instants/file/${encodeURIComponent(doc.filename)}` : (doc.url ?? ''),
+        }
+      }
+    }
+    winfieDesign = buildWinfieDesign(state, timeline, {
+      photoHref: myPhoto?.href || undefined,
+      photoId: myPhoto?.id,
+      iWasThere: me ? isCheckedIn(sanitizeCheckins((me as { checkins?: unknown }).checkins), matchId) : false,
     })
   }
 
@@ -551,7 +584,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
         </section>
       )}
 
-      {state.match.status === 'finished' && <WinfieCard matchId={matchId} />}
+      {winfieDesign && <WinfieCard design={winfieDesign} />}
 
       {share && (
         <>
