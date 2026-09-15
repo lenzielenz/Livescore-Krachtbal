@@ -1,6 +1,6 @@
 .winfie-card {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(170px, 230px);
+  grid-template-columns: minmax(0, 1fr) minmax(200px, 280px);
   gap: clamp(20px, 5vw, 42px);
   align-items: center;
   margin: 26px 0;
@@ -16,63 +16,22 @@
 }
 .winfie-kicker { color: var(--accent); font-size: .7rem; font-weight: 900; letter-spacing: .16em; }
 .winfie-copy h2 { margin: 6px 0 10px; font: 850 clamp(1.45rem, 4vw, 2.15rem)/1.08 var(--font-display), sans-serif; }
-.winfie-copy p { max-width: 42rem; margin: 0 0 18px; color: var(--dim); line-height: 1.55; }
-.winfie-actions { display: flex; flex-wrap: wrap; gap: 10px; }
-.winfie-actions .btn { min-height: 46px; justify-content: center; }
-.winfie-share { box-shadow: 0 10px 30px color-mix(in srgb, var(--accent) 24%, transparent); }
-.winfie-download { display: inline-flex; }
-.winfie-copy small { display: block; margin-top: 10px; color: var(--dim); }
+.winfie-copy p { max-width: 42rem; margin: 0 0 10px; color: var(--dim); line-height: 1.55; }
+.winfie-copy small { display: block; color: var(--dim); }
 .winfie-preview {
-  position: relative;
   display: block;
   overflow: hidden;
   border: 1px solid #ffffff30;
   border-radius: 16px;
   background: #0a101a;
   box-shadow: 0 22px 48px rgba(0,0,0,.5);
-  transition: transform .18s ease, box-shadow .18s ease;
 }
-.winfie-preview:hover { transform: translateY(-3px); box-shadow: 0 26px 54px rgba(0,0,0,.56); }
-.winfie-preview img { display: block; width: 100%; aspect-ratio: 9/16; object-fit: cover; background: #0a101a; }
-.winfie-preview > span {
-  position: absolute;
-  right: 8px;
-  bottom: 8px;
-  padding: 6px 9px;
-  border: 1px solid #ffffff26;
-  border-radius: 999px;
-  color: #fff;
-  background: #050912c9;
-  font-size: .68rem;
-  font-weight: 800;
-}
-.winfie-preview:focus-visible { outline: 3px solid var(--accent); outline-offset: 4px; }
-.winfie-preview-error {
-  display: grid;
-  width: 100%;
-  min-height: 260px;
-  place-content: center;
-  gap: 12px;
-  padding: 18px;
-  text-align: center;
-  color: var(--dim);
-  border: 1px dashed var(--line);
-  border-radius: 16px;
-  background: #0b111c;
-}
-.winfie-preview-error > span { font-size: 2rem; }
-.winfie-preview-error strong { color: var(--text); font-size: .9rem; }
-.winfie-preview-error .btn { padding: 9px 12px; font-size: .8rem; }
-.download-image-error { display: block; margin-top: 9px; color: #ff9aa8; font-size: .82rem; font-weight: 700; }
+.winfie-preview svg { display: block; width: 100%; height: auto; aspect-ratio: 9/16; }
 
 @media (max-width: 620px) {
-  .winfie-card { grid-template-columns: minmax(0, 1fr) 128px; align-items: start; }
+  .winfie-card { grid-template-columns: minmax(0, 1fr) 150px; align-items: start; }
 }
 @media (max-width: 430px) {
-  .winfie-card { grid-template-columns: minmax(0, 1fr) 104px; gap: 14px; padding: 18px; }
+  .winfie-card { grid-template-columns: minmax(0, 1fr) 120px; gap: 14px; padding: 18px; }
   .winfie-copy p { font-size: .92rem; }
-  .winfie-actions { display: grid; }
-  .winfie-actions .btn { width: 100%; }
-  .winfie-preview-error { min-height: 190px; padding: 10px; }
-  .winfie-preview-error .btn { font-size: .72rem; }
 }

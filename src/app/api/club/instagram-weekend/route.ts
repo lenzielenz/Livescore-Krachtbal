@@ -131,7 +131,6 @@ async function renderWeekendPost(request: Request) {
   const secondary = color((club as { colorSecondary?: unknown }).colorSecondary, '#f4c542')
   const clubName = String((club as { name?: unknown }).name ?? 'Krachtbalclub')
   const requestUrl = new URL(request.url)
-  const preview = requestUrl.searchParams.get('preview') === '1'
   const orderedRows = orderWeekendRows(selectedRows)
   const pages = weekendPages(orderedRows)
   const homeCount = selectedRows.filter((row) => row.side === 'home').length
@@ -162,40 +161,30 @@ async function renderWeekendPost(request: Request) {
     logoHref,
     logoFit: { zoom: fit.logoZoom, offsetX: fit.logoOffsetX, offsetY: fit.logoOffsetY },
   })
-  if (preview) {
-    return new Response(svg, { headers: {
-      'Content-Type': 'image/svg+xml; charset=utf-8',
-      'Cache-Control': 'private, no-store', 'X-Content-Type-Options': 'nosniff',
-    } })
-  }
-  const png = await sharp(Buffer.from(svg)).png({ compressionLevel: 7 }).toBuffer()
-  const disposition = requestUrl.searchParams.get('download') === '1' ? 'attachment' : 'inline'
-  const filename = `weekendplan-${clubName.toLowerCase().replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '') || 'club'}-${page + 1}.png`
-  return new Response(new Uint8Array(png), {
-    headers: {
-      'Content-Type': 'image/png',
-      'Content-Disposition': `${disposition}; filename="${filename}"`,
-      'Cache-Control': 'private, no-store',
-      'X-Content-Type-Options': 'nosniff',
-    },
-  })
+  return new Response(svg, { headers: {
+    'Content-Type': 'image/svg+xml; charset=utf-8',
+    'Cache-Control': 'private, no-store', 'X-Content-Type-Options': 'nosniff',
+  } })
 }
 
-
-async function fallbackPng(): Promise<Response> {
-  const fallback = `<svg width="1080" height="1920" xmlns="http://www.w3.org/2000/svg">
+// Nooit een SVG-met-tekst server-side naar PNG rasteren (sharp/librsvg heeft daarvoor fontconfig
+// nodig; ontbreekt dat op de container, dan is het geen gewone fout maar een NATIVE crash die het
+// hele Node-proces meesleurt — precies wat op 15/09 de site plat legde via de Winfie-route). De
+// PNG die de gebruiker downloadt, tekent de browser zelf op een canvas (zie svg-to-png.ts) —
+// enkel deze SVG-preview komt van de server.
+async function fallbackSvg(): Promise<Response> {
+  const svg = `<svg width="1080" height="1920" xmlns="http://www.w3.org/2000/svg">
     <defs><linearGradient id="b" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#06140d"/><stop offset="1" stop-color="#123a2a"/></linearGradient></defs>
     <rect width="1080" height="1920" fill="url(#b)"/>
     <rect x="0" width="18" height="1920" fill="#4cc9f0"/>
     <text x="72" y="140" fill="#ffffff" font-size="34" font-family="sans-serif" font-weight="800">KRACHTBAL LIVE</text>
     <text x="72" y="430" fill="#4cc9f0" font-size="76" font-family="sans-serif" font-weight="900">WEEKENDPLAN</text>
     <text x="72" y="520" fill="#ffffff" font-size="35" font-family="sans-serif" font-weight="700">De voorvertoning wordt opnieuw opgebouwd.</text>
-    <text x="72" y="580" fill="#ffffff" fill-opacity=".65" font-size="27" font-family="sans-serif">Probeer de downloadknop zo meteen opnieuw.</text>
+    <text x="72" y="580" fill="#ffffff" fill-opacity=".65" font-size="27" font-family="sans-serif">Probeer het zo meteen opnieuw.</text>
   </svg>`
-  const png = await sharp(Buffer.from(fallback)).png().toBuffer()
-  return new Response(new Uint8Array(png), {
+  return new Response(svg, {
     status: 200,
-    headers: { 'Content-Type': 'image/png', 'Cache-Control': 'private, no-store', 'X-Weekendplan-Fallback': '1' },
+    headers: { 'Content-Type': 'image/svg+xml; charset=utf-8', 'Cache-Control': 'private, no-store', 'X-Weekendplan-Fallback': '1' },
   })
 }
 
@@ -204,14 +193,9 @@ export async function GET(request: Request) {
     return await renderWeekendPost(request)
   } catch (error) {
     console.error('[instagram-weekend] Genereren mislukt', error)
-    if (new URL(request.url).searchParams.get('preview') === '1') {
-      return Response.json({ error: 'Voorvertoning kon niet worden opgebouwd.' }, { status: 500 })
+    if (new URL(request.url).searchParams.get('meta') === '1') {
+      return Response.json({ error: 'Kon niet worden opgebouwd.' }, { status: 500 })
     }
-    try {
-      return await fallbackPng()
-    } catch (fallbackError) {
-      console.error('[instagram-weekend] Noodafbeelding mislukt', fallbackError)
-      return Response.json({ error: 'Weekendplan kon niet worden opgebouwd.' }, { status: 500 })
-    }
+    return fallbackSvg()
   }
 }
