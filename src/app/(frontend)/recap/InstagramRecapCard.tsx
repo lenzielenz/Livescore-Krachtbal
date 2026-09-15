@@ -2,8 +2,9 @@
 
 import { useState } from 'react'
 
-export function InstagramRecapCard() {
+export function InstagramRecapCard({ period }: { period: string }) {
   const [retry, setRetry] = useState(0)
+  const [previewFailed, setPreviewFailed] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const src = `/api/recap/instagram?preview=1&v=${retry}`
@@ -33,14 +34,23 @@ export function InstagramRecapCard() {
       <p>Een professionele 9:16-samenvatting met scores, statistieken en topprestaties. Gemaakt om meteen als screenshot of Instagram Story te delen.</p>
       <div className="recap-story-actions">
         <button type="button" className="recap-primary-action" onClick={downloadOrShare} disabled={busy}>{busy ? 'Bezig…' : '↗ Deel Story'}</button>
-        <a className="recap-secondary-action" href="/api/recap/instagram?download=1">↓ Download PNG</a>
+        <a className="recap-secondary-action" href="/api/recap/instagram?download=1" download="weekend-recap.png">↓ Download PNG</a>
       </div>
       {error && <p className="recap-story-error" role="alert">{error}</p>}
       <small>Instagram Story · 1080 × 1920 px · één beeld</small>
     </div>
     <div className="recap-story-preview">
-      <img src={src} alt="Voorvertoning van de weekendrecap in Instagram Story-formaat" onError={() => setRetry((value) => value + 1)} />
-      <button type="button" className="recap-preview-retry" onClick={() => setRetry((value) => value + 1)}>Opnieuw laden</button>
+      {previewFailed ? (
+        <>
+          <p className="recap-story-error" role="status">De voorvertoning kon niet laden. Probeer het opnieuw.</p>
+          <button type="button" className="recap-preview-retry" onClick={() => {
+            setPreviewFailed(false)
+            setRetry((value) => value + 1)
+          }}>Opnieuw laden</button>
+        </>
+      ) : (
+        <img src={src} alt={`Voorvertoning van de weekendrecap: ${period}`} onError={() => setPreviewFailed(true)} />
+      )}
     </div>
   </section>
 }
