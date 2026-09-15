@@ -57,7 +57,7 @@ export default async function RecapPage() {
                   <RecapFieldBackdrop />
                   <div className="recap-feature-body">
                     <b className="recap-feature-num">{recap.matches}</b>
-                    <small>{recap.matches === 1 ? 'wedstrijd gespeeld' : 'wedstrijden gespeeld'}</small>
+                    <small>{recap.matches === 1 ? 'wedstrijd ingevuld door de supporters' : 'wedstrijden ingevuld door de supporters'}</small>
                   </div>
                   {trend && (
                     <span className={`recap-trend recap-trend--${trend.dir}`}>
