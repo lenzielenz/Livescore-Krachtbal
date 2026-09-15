@@ -46,7 +46,16 @@ const safeColor = (v: unknown, fallback: string) => (/^#[0-9a-f]{6}$/i.test(Stri
 export function buildWinfieDesign(
   state: MatchState,
   timeline: TimelineItem[],
-  opts: { photoHref?: string; photoId?: number; iWasThere?: boolean } = {},
+  opts: {
+    photoHref?: string
+    photoId?: number
+    iWasThere?: boolean
+    /** matches.liveReactions — de emoji-tellers die tijdens de wedstrijd verzameld werden. */
+    reactions?: Record<string, number>
+    /** Overige activiteit (tribuneberichten + -foto's) die niet als losse reactie meetelt, maar
+     * wel bewijst dat er wat leefde. */
+    momentsExtra?: number
+  } = {},
 ): WinfieDesign {
   const { score, teams } = state
   const winner = score.home > score.away ? 'home' : score.away > score.home ? 'away' : 'draw'
@@ -86,5 +95,7 @@ export function buildWinfieDesign(
     homeLogoFit: teams.home.logoFit,
     awayLogoFit: teams.away.logoFit,
     iWasThere: opts.iWasThere,
+    reactions: opts.reactions,
+    momentsExtra: opts.momentsExtra,
   }
 }

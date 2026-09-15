@@ -280,10 +280,13 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
         }
       }
     }
+    const shoutCount = Array.isArray(matchDoc?.liveShoutouts) ? matchDoc.liveShoutouts.length : 0
     winfieDesign = buildWinfieDesign(state, timeline, {
       photoHref: myPhoto?.href || undefined,
       photoId: myPhoto?.id,
       iWasThere: me ? isCheckedIn(sanitizeCheckins((me as { checkins?: unknown }).checkins), matchId) : false,
+      reactions: (matchDoc?.liveReactions as Record<string, number> | null) ?? undefined,
+      momentsExtra: shoutCount + initialInstants.length,
     })
   }
 

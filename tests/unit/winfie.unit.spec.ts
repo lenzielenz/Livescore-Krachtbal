@@ -70,4 +70,10 @@ describe('buildWinfieDesign', () => {
     expect(design.photoHref).toBeUndefined()
     expect(design.iWasThere).toBeUndefined()
   })
+
+  it('geeft reacties en overige activiteit door', () => {
+    const design = buildWinfieDesign(state, timeline, { reactions: { fire: 12 }, momentsExtra: 3 })
+    expect(design.reactions).toEqual({ fire: 12 })
+    expect(design.momentsExtra).toBe(3)
+  })
 })
