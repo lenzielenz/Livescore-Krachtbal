@@ -44,8 +44,8 @@ export function renderWeeklyRecapDesign(recap: WeeklyRecap): string {
     y += 174
   })
   if (recap.team) {
-    body += `<rect x="72" y="${y + 10}" width="936" height="150" rx="26" fill="#111827" stroke="#63a9ff" stroke-opacity=".38"/>` + text('PLOEG VAN HET WEEKEND', 104, y + 52, 15, 850, '#79b6ff') + text(recap.team.teamName, 104, y + 97, 30, 800) + text(`Doelsaldo ${recap.team.goalDifference >= 0 ? '+' : ''}${recap.team.goalDifference}`, 104, y + 128, 17, 600, '#b9c4d6')
+    body += `<rect x="72" y="${y + 10}" width="936" height="150" rx="26" fill="#111827" stroke="#63a9ff" stroke-opacity=".38"/>` + text('PLOEG VAN HET WEEKEND', 104, y + 52, 15, 850, '#79b6ff') + text(recap.team.teamName, 104, y + 97, 30, 800) + text(`Doelsaldo ${recap.team.diff >= 0 ? '+' : ''}${recap.team.diff}`, 104, y + 128, 17, 600, '#b9c4d6')
   }
-  body += `<line x1="72" y1="1784" x2="1008" y2="1784" stroke="#5d8ec8" stroke-opacity=".35"/>` + text('DEEL HET WEEKEND', 72, 1842, 17, 850, '#79b6ff') + text('krachbal.live', 1008, 1842, 17, 700, '#b9c4d6', 'end') + text('Eén verticale Story · 1080 × 1920', 72, 1880, 17, 550, '#8e9bb0')
+  body += `<line x1="72" y1="1784" x2="1008" y2="1784" stroke="#5d8ec8" stroke-opacity=".35"/>` + text('DEEL HET WEEKEND', 72, 1842, 17, 850, '#79b6ff') + text('krachtbal.live', 1008, 1842, 17, 700, '#b9c4d6', 'end') + text('Eén verticale Story · 1080 × 1920', 72, 1880, 17, 550, '#8e9bb0')
   return `<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1920" viewBox="0 0 1080 1920"><defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#0b1722"/><stop offset=".52" stop-color="#121927"/><stop offset="1" stop-color="#1b0d17"/></linearGradient></defs>${body}</svg>`
 }
