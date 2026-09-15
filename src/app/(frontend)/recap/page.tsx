@@ -4,7 +4,6 @@ import { SiteHeader } from '@/components/SiteHeader'
 import { formatDateTimeBE } from '@/lib/datetime'
 import { getPayloadClient } from '@/lib/payload-client'
 import { buildWeeklyRecapData } from '@/lib/weekly-recap-data'
-import { InstagramRecapCard } from './InstagramRecapCard'
 import './recap.css'
 
 export const dynamic = 'force-dynamic'
@@ -32,17 +31,27 @@ export default async function RecapPage() {
           ← Alle wedstrijden
         </Link>
 
-        <header className="recap-head">
+        <header className="recap-hero">
           <div className="recap-head-top">
             <span className="recap-edition"><i aria-hidden /> WEEKEND RECAP</span>
             <span className="recap-period">{periode}</span>
           </div>
           <h1 className="recap-title">{recap.headline}</h1>
           {recap.matches > 0 && (
-            <div className="recap-head-foot">
-              <span>DE WEEK IN CIJFERS</span>
-              <i aria-hidden />
-            </div>
+            <>
+              <div className="recap-head-foot">
+                <span>DE WEEK IN CIJFERS</span>
+                <i aria-hidden />
+              </div>
+              <section className="recap-stats" aria-label="Het weekend in cijfers">
+                <div className="recap-stat recap-stat--blue"><span aria-hidden>W</span><b>{recap.matches}</b><small>wedstrijden</small></div>
+                <div className="recap-stat recap-stat--cyan"><span aria-hidden>B</span><b>{recap.stats.visitors}</b><small>bezoekers</small></div>
+                <div className="recap-stat recap-stat--violet"><span aria-hidden>C</span><b>{recap.stats.clubs}</b><small>clubs</small></div>
+                <div className="recap-stat recap-stat--red"><span aria-hidden>+1</span><b>{recap.stats.goalThrows}</b><small>doelworpen</small></div>
+                <div className="recap-stat recap-stat--orange"><span aria-hidden>+2</span><b>{recap.stats.backThrows}</b><small>rugworpen</small></div>
+                <div className="recap-stat recap-stat--gold"><span aria-hidden>Σ</span><b>{recap.goals}</b><small>punten</small></div>
+              </section>
+            </>
           )}
         </header>
 
@@ -53,16 +62,6 @@ export default async function RecapPage() {
           </p>
         ) : (
           <>
-            <InstagramRecapCard period={periode} />
-            <section className="recap-stats" aria-label="Het weekend in cijfers">
-              <div className="recap-stat recap-stat--blue"><span aria-hidden>W</span><b>{recap.matches}</b><small>wedstrijden</small></div>
-              <div className="recap-stat recap-stat--cyan"><span aria-hidden>B</span><b>{recap.stats.visitors}</b><small>bezoekers</small></div>
-              <div className="recap-stat recap-stat--violet"><span aria-hidden>C</span><b>{recap.stats.clubs}</b><small>clubs</small></div>
-              <div className="recap-stat recap-stat--red"><span aria-hidden>+1</span><b>{recap.stats.goalThrows}</b><small>doelworpen</small></div>
-              <div className="recap-stat recap-stat--orange"><span aria-hidden>+2</span><b>{recap.stats.backThrows}</b><small>rugworpen</small></div>
-              <div className="recap-stat recap-stat--gold"><span aria-hidden>Σ</span><b>{recap.goals}</b><small>punten</small></div>
-            </section>
-
             {recap.highlights.length > 0 && (
               <section className="recap-block recap-block--highlights" aria-label="Opvallend">
                 <div className="recap-section-head">

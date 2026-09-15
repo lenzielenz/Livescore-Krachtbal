@@ -1,8 +1,15 @@
 /* Compact weekoverzicht in dezelfde rustige richting als de homepage. */
-.recap-head {
+.recap-hero {
+  position: relative;
   margin: 8px 0 16px;
-  padding: 0 0 16px;
-  border-bottom: 1px solid var(--line);
+  padding: clamp(18px, 4vw, 28px);
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--line));
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 10% -10%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 42%),
+    linear-gradient(135deg, #1b2a41, #111722 55%, #201117);
+  box-shadow: inset 0 1px 0 #ffffff14, 0 22px 45px -30px #000;
 }
 .recap-head-top,
 .recap-head-foot { display: flex; align-items: center; gap: 10px; }
@@ -27,14 +34,14 @@
 }
 .recap-period { margin-left: auto; color: var(--dim); text-align: right; }
 .recap-title {
-  max-width: 35ch;
+  max-width: 42ch;
   margin: 0;
   color: var(--text, #f4f6fa);
-  font: 900 clamp(1.28rem, 4vw, 1.75rem)/1.16 var(--font-display), sans-serif;
+  font: 900 clamp(1.4rem, 4.4vw, 2rem)/1.16 var(--font-display), sans-serif;
   letter-spacing: -.025em;
   text-wrap: balance;
 }
-.recap-head-foot { margin-top: 12px; color: var(--dim); font-size: .62rem; font-weight: 800; letter-spacing: .09em; }
+.recap-head-foot { margin-top: 20px; color: var(--dim); font-size: .62rem; font-weight: 800; letter-spacing: .09em; }
 .recap-head-foot i { flex: 1; height: 1px; background: linear-gradient(90deg, var(--line), transparent); }
 
 .recap-empty { max-width: 60ch; color: var(--dim); line-height: 1.6; }
@@ -44,7 +51,7 @@
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
-  margin: 0 0 14px;
+  margin: 10px 0 0;
 }
 .recap-stat {
   position: relative;
@@ -223,13 +230,13 @@
   .recap-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 430px) {
-  .recap-head { margin-top: 4px; padding-bottom: 13px; }
+  .recap-hero { margin-top: 4px; padding: 16px; }
   .recap-head-top { align-items: flex-start; }
   .recap-edition,
   .recap-period { font-size: .57rem; }
   .recap-title { font-size: 1.3rem; line-height: 1.18; }
-  .recap-head-foot { margin-top: 9px; }
-  .recap-stats { gap: 7px; margin-bottom: 12px; }
+  .recap-head-foot { margin-top: 14px; }
+  .recap-stats { gap: 7px; }
   .recap-stat { grid-template-columns: 30px 1fr; min-height: 58px; padding: 8px 9px; border-radius: 12px; }
   .recap-stat > span { width: 28px; height: 28px; border-radius: 8px; font-size: .6rem; }
   .recap-stat b { font-size: 1rem; }
@@ -240,76 +247,4 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .recap-fold-action i { transition: none; }
-}
-
-.recap-story-card {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(200px, 340px);
-  gap: 18px;
-  margin: 0 0 20px;
-  padding: 20px;
-  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--line));
-  border-radius: 24px;
-  background:
-    radial-gradient(circle at 12% 0%, color-mix(in srgb, var(--accent) 17%, transparent), transparent 38%),
-    linear-gradient(135deg, #1b2a41, #111722 55%, #201117);
-  box-shadow: inset 0 1px 0 #ffffff12, 0 22px 45px -30px #000;
-}
-.recap-story-copy { align-self: center; }
-.recap-story-copy .recap-eyebrow { margin-bottom: 6px; }
-.recap-story-title {
-  margin: 0;
-  color: var(--text, #f4f6fa);
-  font: 850 clamp(1.2rem, 3vw, 1.6rem)/1.15 var(--font-display), sans-serif;
-  letter-spacing: -.02em;
-}
-.recap-story-description { margin: 8px 0 0; color: var(--dim); font-size: .86rem; line-height: 1.45; }
-.recap-story-actions { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 16px; }
-.recap-primary-action,
-.recap-secondary-action {
-  min-height: 40px;
-  padding: 9px 13px;
-  border-radius: 11px;
-  font: 800 .76rem/1 var(--font-display), sans-serif;
-  cursor: pointer;
-}
-.recap-primary-action {
-  border: 1px solid color-mix(in srgb, var(--accent) 60%, transparent);
-  color: #08111b;
-  background: linear-gradient(135deg, #a9d4ff, var(--accent));
-  box-shadow: 0 12px 22px -16px var(--accent);
-}
-.recap-secondary-action { border: 1px solid var(--line); color: var(--text, #f4f6fa); background: #0f1621; }
-.recap-primary-action:disabled,
-.recap-secondary-action:disabled { opacity: .6; cursor: wait; }
-.recap-story-preview {
-  width: min(100%, 340px);
-  aspect-ratio: 9 / 16;
-  margin-left: auto;
-  overflow: hidden;
-  position: relative;
-  border: 1px solid #ffffff18;
-  border-radius: 18px;
-  background: #0a111b;
-  box-shadow: 0 18px 36px -26px #000;
-}
-.recap-story-preview img { width: 100%; height: 100%; display: block; object-fit: cover; }
-.recap-preview-retry {
-  position: absolute;
-  left: 50%;
-  bottom: 14px;
-  transform: translateX(-50%);
-  border: 1px solid #ffffff26;
-  border-radius: 9px;
-  padding: 8px 10px;
-  color: var(--text, #fff);
-  background: #0c1420ee;
-  font: 750 .7rem/1 var(--font-display), sans-serif;
-  cursor: pointer;
-  white-space: nowrap;
-}
-.recap-story-error { margin: 8px 0 0; color: #ff9baa; font-size: .72rem; line-height: 1.35; }
-@media (max-width: 620px) {
-  .recap-story-card { grid-template-columns: 1fr; gap: 14px; padding: 15px; border-radius: 18px; }
-  .recap-story-preview { width: min(100%, 280px); margin: 0 auto; }
 }
