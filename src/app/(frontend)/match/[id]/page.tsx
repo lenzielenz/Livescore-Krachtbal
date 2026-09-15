@@ -120,6 +120,14 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   // analysewedstrijd — die is privé en wordt onder /analyse/beheer beheerd.
   const magBeheren =
     (isFederationLevel(me) || hasRole(me, 'federatie')) && !(matchDoc as { analyseOnly?: boolean } | null)?.analyseOnly
+  // Huidige forfait-uitslag (indien al aangeduid) — enkel opzoeken voor wie mag beheren, en zonder
+  // een wedstrijdblad aan te maken: dat gebeurt pas als er écht een forfait wordt toegepast.
+  const forfaitUitslag = magBeheren
+    ? await payload
+        .find({ collection: 'matchsheets', where: { match: { equals: matchId } }, depth: 0, limit: 1 })
+        .then((r) => ((r.docs[0] as { forfait?: { uitslag?: string } } | undefined)?.forfait?.uitslag ?? 'geen'))
+        .catch(() => 'geen')
+    : 'geen'
   const alsPloeg = (t: unknown): BeheerPloeg | null => {
     if (!t || typeof t !== 'object') return null
     const d = t as { id?: number; name?: unknown; club?: unknown; reeks?: unknown }
@@ -577,6 +585,9 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
           thuis={beheerThuis}
           uit={beheerUit}
           clubs={clubKeuze}
+          thuisNaam={beheerThuis.naam}
+          uitNaam={beheerUit.naam}
+          initialForfaitUitslag={forfaitUitslag}
         />
       )}
       </div>

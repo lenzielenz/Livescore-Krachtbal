@@ -215,6 +215,37 @@
 .wb-club-zoek > .wb-beheer-link {
   margin-top: 12px;
 }
+/* Forfait: een rij korte keuzeknoppen i.p.v. een dropdown — op het moment dat de melding "ploeg
+   X geeft forfait" binnenkomt, moet dit in twee tikken klaar zijn. */
+.wb-beheer-opties { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.wb-beheer-optie {
+  padding: 8px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill, 999px);
+  background: var(--panel);
+  color: var(--txt);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color var(--dur-1) var(--ease-soft), background var(--dur-1) var(--ease-soft);
+}
+.wb-beheer-optie:hover { border-color: color-mix(in srgb, var(--pop) 45%, var(--line)); }
+.wb-beheer-optie.actief {
+  background: color-mix(in srgb, var(--pop) 20%, var(--panel));
+  border-color: var(--pop);
+  color: var(--txt);
+}
+.wb-beheer-rij-ff {
+  margin-inline: -18px;
+  padding: 16px 18px;
+  border-radius: var(--r-card);
+  background: color-mix(in srgb, var(--pop) 8%, transparent);
+}
+@media (max-width: 520px) {
+  .wb-beheer-rij-ff { margin-inline: -14px; }
+}
+
 .wb-beheer-melding {
   margin: 14px 0 0;
   font-size: 0.86rem;
