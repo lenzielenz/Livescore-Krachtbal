@@ -61,6 +61,9 @@ export interface WeeklyRecap {
   team: WeekTeamRow | null
   players: WeekSelection[]
   climbers: Climber[]
+  /** Aantal wedstrijden in de week ervoor — voor het "t.o.v. vorige week"-verschil. Null als dat
+   * (nog) niet kon worden opgehaald. */
+  previousMatches: number | null
   /** Klaar-om-te-versturen pushtekst. */
   push: { title: string; body: string }
 }
@@ -182,6 +185,7 @@ export interface RecapInput {
   players: WeekSelection[]
   climbers: Climber[]
   stats?: WeekendStats
+  previousMatches?: number | null
 }
 
 /** Stelt de volledige recap samen. Een lege week levert een nette "niets gespeeld"-recap op. */
@@ -203,6 +207,7 @@ export function buildWeeklyRecap(input: RecapInput): WeeklyRecap {
     team: input.team,
     players: input.players,
     climbers,
+    previousMatches: input.previousMatches ?? null,
     push: pushFor(results.length, results, input.players),
   }
 }

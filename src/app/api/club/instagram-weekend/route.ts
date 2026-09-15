@@ -134,6 +134,8 @@ async function renderWeekendPost(request: Request) {
   const preview = requestUrl.searchParams.get('preview') === '1'
   const orderedRows = orderWeekendRows(selectedRows)
   const pages = weekendPages(orderedRows)
+  const homeCount = selectedRows.filter((row) => row.side === 'home').length
+  const awayCount = selectedRows.filter((row) => row.side === 'away').length
   const rawPage = Number(requestUrl.searchParams.get('page') ?? 0)
   const page = Number.isInteger(rawPage) ? Math.max(0, Math.min(pages.length - 1, rawPage)) : 0
   if (requestUrl.searchParams.get('meta') === '1') {
@@ -156,6 +158,7 @@ async function renderWeekendPost(request: Request) {
     club: clubName, primary, secondary,
     title: weekendTitle(selectedRows, playDayKeys[0] ?? brusselsDateKey(new Date())),
     rows: pages[page], total: selectedRows.length, page, pages: pages.length,
+    homeCount, awayCount,
     logoHref,
     logoFit: { zoom: fit.logoZoom, offsetX: fit.logoOffsetX, offsetY: fit.logoOffsetY },
   })

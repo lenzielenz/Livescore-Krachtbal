@@ -65,8 +65,9 @@ export async function buildWeeklyRecapData(
     .catch(() => ({ docs: [] as Record<string, unknown>[] }))
 
   const weekDocs = weekRes.docs as unknown as Record<string, unknown>[]
+  const previousMatches = await previousWeekMatchCount(payload, startIso, endIso)
   if (weekDocs.length === 0) {
-    return buildWeeklyRecap({ startIso, endIso, results: [], team: null, players: [], climbers: [] })
+    return buildWeeklyRecap({ startIso, endIso, results: [], team: null, players: [], climbers: [], previousMatches })
   }
 
   const cards = await buildScoreboards(payload, weekDocs as Parameters<typeof buildScoreboards>[1])
@@ -123,7 +124,33 @@ export async function buildWeeklyRecapData(
     players: buildTeamOfTheWeek(players),
     climbers,
     stats,
+    previousMatches,
   })
+}
+
+/** Aantal afgelopen wedstrijden in de week ervóór — enkel voor het "t.o.v. vorige week"-verschil,
+ * dus een lichte telling zonder relaties op te halen. */
+async function previousWeekMatchCount(payload: Payload, startIso: string, endIso: string): Promise<number | null> {
+  const weekMs = new Date(endIso).getTime() - new Date(startIso).getTime()
+  const previousStart = new Date(new Date(startIso).getTime() - weekMs).toISOString()
+  const res = await payload
+    .find({
+      collection: 'matches',
+      where: {
+        and: [
+          { status: { equals: 'finished' } },
+          { date: { greater_than_equal: previousStart } },
+          { date: { less_than: startIso } },
+          { isDemo: { not_equals: true } },
+          competitionWhere(),
+        ],
+      },
+      depth: 0,
+      limit: 500,
+      select: { status: true },
+    })
+    .catch(() => null)
+  return res ? res.docs.length : null
 }
 
 async function collectWeekendStats(payload: Payload, weekDocs: Record<string, unknown>[]) {

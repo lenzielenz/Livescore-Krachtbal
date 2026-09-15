@@ -118,4 +118,12 @@ describe('buildWeeklyRecap', () => {
     expect(r.headline).toContain('zonder wedstrijden')
     expect(r.push.body).toContain('Geen wedstrijden')
   })
+  it('geeft het aantal wedstrijden van de vorige week door voor het verschil', () => {
+    const r = buildWeeklyRecap({ startIso: 'a', endIso: 'b', results: [], team: null, players: [], climbers: [], previousMatches: 50 })
+    expect(r.previousMatches).toBe(50)
+  })
+  it('valt terug op null als de vorige week niet kon worden opgehaald', () => {
+    const r = buildWeeklyRecap({ startIso: 'a', endIso: 'b', results: [], team: null, players: [], climbers: [] })
+    expect(r.previousMatches).toBeNull()
+  })
 })

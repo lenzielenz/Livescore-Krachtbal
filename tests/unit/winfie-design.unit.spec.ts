@@ -25,13 +25,31 @@ describe('Winfie platformstijl', () => {
   })
   it('maakt gelijke clubkleuren onderscheidbaar en gebruikt passende gelijkspeltekst', () => {
     const svg = renderWinfieDesign({ ...base, winner: 'draw', homeColor: '#ffffff', awayColor: '#ffffff' })
-    expect(svg).toContain('stroke-dasharray="16 12"')
+    expect(svg).toContain('stroke="#fff" stroke-width="2.5"')
     expect(svg).toContain('SAMEN BELEEFD.')
     expect(svg).not.toContain('DE OVERWINNING IS BINNEN')
+  })
+  it('tekent het momentum-scoreverloop met een rugworp-ster', () => {
+    const svg = renderWinfieDesign({
+      ...base,
+      progress: [
+        { home: 0, away: 0, half: 1 },
+        { home: 1, away: 0, half: 1 },
+        { home: 1, away: 2, half: 2 },
+      ],
+    })
+    expect(svg).toContain('Momentum · scoreverloop')
+    expect(svg).toContain('2 doelpunten')
+    expect(svg).toContain('2e helft')
+    expect((svg.match(/<polygon points="[0-9.,\s]+" fill="#ee2233" stroke="#f4c430"/g) ?? []).length).toBe(1)
   })
   it('plaatst een foto in een eigen geknipt vlak', () => {
     const svg = renderWinfieDesign({ ...base, photoHref: 'data:image/png;base64,AA==' })
     expect(svg).toContain('clip-path="url(#photo)"')
     expect(svg).not.toContain('DE WEDSTRIJD IN CIJFERS')
+  })
+  it('toont een persoonlijke stempel enkel als de aanmaker zelf erbij was', () => {
+    expect(renderWinfieDesign(base)).not.toContain('JIJ WAS ERBIJ')
+    expect(renderWinfieDesign({ ...base, iWasThere: true })).toContain('JIJ WAS ERBIJ')
   })
 })

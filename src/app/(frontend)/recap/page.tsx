@@ -4,7 +4,7 @@ import { SiteHeader } from '@/components/SiteHeader'
 import { formatDateTimeBE } from '@/lib/datetime'
 import { getPayloadClient } from '@/lib/payload-client'
 import { buildWeeklyRecapData } from '@/lib/weekly-recap-data'
-import { InstagramRecapCard } from './InstagramRecapCard'
+import { RecapFieldBackdrop } from './RecapFieldBackdrop'
 import './recap.css'
 
 export const dynamic = 'force-dynamic'
@@ -24,6 +24,14 @@ export default async function RecapPage() {
   // Het venster loopt tot maandagochtend; als periode toont dat beter als "tot en met zondag".
   const periode = `${dag(recap.startIso)} — ${dag(new Date(new Date(recap.endIso).getTime() - 86_400_000).toISOString())}`
 
+  const trend = (() => {
+    if (recap.previousMatches == null) return null
+    const delta = recap.matches - recap.previousMatches
+    if (delta > 0) return { dir: 'up', text: `${delta} meer dan vorige week` }
+    if (delta < 0) return { dir: 'down', text: `${Math.abs(delta)} minder dan vorige week` }
+    return { dir: 'flat', text: 'evenveel als vorige week' }
+  })()
+
   return (
     <>
       <SiteHeader active="wedstrijden" />
@@ -32,17 +40,40 @@ export default async function RecapPage() {
           ← Alle wedstrijden
         </Link>
 
-        <header className="recap-head">
+        <header className="recap-hero">
           <div className="recap-head-top">
             <span className="recap-edition"><i aria-hidden /> WEEKEND RECAP</span>
             <span className="recap-period">{periode}</span>
           </div>
           <h1 className="recap-title">{recap.headline}</h1>
           {recap.matches > 0 && (
-            <div className="recap-head-foot">
-              <span>DE WEEK IN CIJFERS</span>
-              <i aria-hidden />
-            </div>
+            <>
+              <div className="recap-head-foot">
+                <span>DE WEEK IN CIJFERS</span>
+                <i aria-hidden />
+              </div>
+              <div className="recap-figures">
+                <div className="recap-feature">
+                  <RecapFieldBackdrop />
+                  <div className="recap-feature-body">
+                    <b className="recap-feature-num">{recap.matches}</b>
+                    <small>{recap.matches === 1 ? 'wedstrijd ingevuld door de supporters' : 'wedstrijden ingevuld door de supporters'}</small>
+                  </div>
+                  {trend && (
+                    <span className={`recap-trend recap-trend--${trend.dir}`}>
+                      {trend.dir === 'up' ? '▲' : trend.dir === 'down' ? '▼' : '●'} {trend.text}
+                    </span>
+                  )}
+                </div>
+                <section className="recap-stats" aria-label="Het weekend in cijfers">
+                  <div className="recap-stat recap-stat--cyan"><span aria-hidden>🎟️</span><b>{recap.stats.visitors}</b><small>&ldquo;ik was erbij&rdquo;</small></div>
+                  <div className="recap-stat recap-stat--violet"><span aria-hidden>🤝</span><b>{recap.stats.clubs}</b><small>clubs</small></div>
+                  <div className="recap-stat recap-stat--red"><span aria-hidden>🎯</span><b>{recap.stats.goalThrows}</b><small>doelworpen</small></div>
+                  <div className="recap-stat recap-stat--orange"><span aria-hidden>💪</span><b>{recap.stats.backThrows}</b><small>rugworpen</small></div>
+                  <div className="recap-stat recap-stat--gold"><span aria-hidden>🏆</span><b>{recap.goals}</b><small>punten</small></div>
+                </section>
+              </div>
+            </>
           )}
         </header>
 
@@ -53,16 +84,6 @@ export default async function RecapPage() {
           </p>
         ) : (
           <>
-            <InstagramRecapCard period={periode} />
-            <section className="recap-stats" aria-label="Het weekend in cijfers">
-              <div className="recap-stat recap-stat--blue"><span aria-hidden>W</span><b>{recap.matches}</b><small>wedstrijden</small></div>
-              <div className="recap-stat recap-stat--cyan"><span aria-hidden>B</span><b>{recap.stats.visitors}</b><small>bezoekers</small></div>
-              <div className="recap-stat recap-stat--violet"><span aria-hidden>C</span><b>{recap.stats.clubs}</b><small>clubs</small></div>
-              <div className="recap-stat recap-stat--red"><span aria-hidden>+1</span><b>{recap.stats.goalThrows}</b><small>doelworpen</small></div>
-              <div className="recap-stat recap-stat--orange"><span aria-hidden>+2</span><b>{recap.stats.backThrows}</b><small>rugworpen</small></div>
-              <div className="recap-stat recap-stat--gold"><span aria-hidden>Σ</span><b>{recap.goals}</b><small>punten</small></div>
-            </section>
-
             {recap.highlights.length > 0 && (
               <section className="recap-block recap-block--highlights" aria-label="Opvallend">
                 <div className="recap-section-head">

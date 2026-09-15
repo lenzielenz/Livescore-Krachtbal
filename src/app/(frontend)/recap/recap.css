@@ -1,8 +1,15 @@
 /* Compact weekoverzicht in dezelfde rustige richting als de homepage. */
-.recap-head {
+.recap-hero {
+  position: relative;
   margin: 8px 0 16px;
-  padding: 0 0 16px;
-  border-bottom: 1px solid var(--line);
+  padding: clamp(18px, 4vw, 28px);
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--line));
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 10% -10%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 42%),
+    linear-gradient(135deg, #1b2a41, #111722 55%, #201117);
+  box-shadow: inset 0 1px 0 #ffffff14, 0 22px 45px -30px #000;
 }
 .recap-head-top,
 .recap-head-foot { display: flex; align-items: center; gap: 10px; }
@@ -27,58 +34,188 @@
 }
 .recap-period { margin-left: auto; color: var(--dim); text-align: right; }
 .recap-title {
-  max-width: 35ch;
+  max-width: 42ch;
   margin: 0;
   color: var(--text, #f4f6fa);
-  font: 900 clamp(1.28rem, 4vw, 1.75rem)/1.16 var(--font-display), sans-serif;
+  font: 900 clamp(1.4rem, 4.4vw, 2rem)/1.16 var(--font-display), sans-serif;
   letter-spacing: -.025em;
   text-wrap: balance;
 }
-.recap-head-foot { margin-top: 12px; color: var(--dim); font-size: .62rem; font-weight: 800; letter-spacing: .09em; }
+.recap-head-foot { margin-top: 20px; color: var(--dim); font-size: .62rem; font-weight: 800; letter-spacing: .09em; }
 .recap-head-foot i { flex: 1; height: 1px; background: linear-gradient(90deg, var(--line), transparent); }
 
 .recap-empty { max-width: 60ch; color: var(--dim); line-height: 1.6; }
 .recap-empty a { color: var(--accent); font-weight: 700; }
 
+.recap-figures {
+  display: grid;
+  grid-template-columns: minmax(180px, 260px) 1fr;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+/* De grote, trotse hoofdcijfer: hoeveel wedstrijden er deze week gespeeld werden, met het
+   krachtbalveld (herkleurd naar de sitestijl) als achtergrond i.p.v. een willekeurige bal. */
+.recap-feature {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: 6px;
+  min-height: 200px;
+  padding: 16px 18px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--accent) 46%, var(--line));
+  border-radius: 18px;
+  background: var(--panel-grad, var(--panel));
+  box-shadow: inset 0 1px 0 #ffffff14, 0 14px 30px -22px #000;
+  animation: recap-pop .5s var(--ease-out, ease) both;
+}
+.recap-field-bg { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; }
+.recap-feature::before {
+  /* Donkere scrim over het veld, zodat de cijfers erbovenop leesbaar blijven. */
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(0deg, #060c18 12%, color-mix(in srgb, #060c18 55%, transparent) 55%, color-mix(in srgb, #060c18 15%, transparent));
+}
+.recap-feature::after {
+  content: "";
+  position: absolute;
+  inset: -40% -40% auto auto;
+  z-index: 1;
+  width: 60%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--accent) 55%, transparent), transparent 70%);
+  filter: blur(2px);
+  animation: recap-breathe 4.5s ease-in-out infinite;
+}
+.recap-feature-body,
+.recap-trend { position: relative; z-index: 2; }
+.recap-feature-body { display: flex; flex-direction: column; }
+.recap-feature-num {
+  color: var(--text, #f4f6fa);
+  font: 900 clamp(2.6rem, 11vw, 3.4rem)/1 var(--font-display), sans-serif;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.03em;
+  background: linear-gradient(135deg, #fff, var(--accent) 120%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 2px 14px rgba(0,0,0,.55));
+}
+.recap-feature-body small { color: #dce8fb; font-size: .78rem; font-weight: 750; text-shadow: 0 1px 6px rgba(0,0,0,.65); }
+.recap-trend {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 4px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: .68rem;
+  font-weight: 850;
+  letter-spacing: .01em;
+}
+.recap-trend--up { color: #0fe0a6; background: color-mix(in srgb, #0fe0a6 16%, transparent); border: 1px solid color-mix(in srgb, #0fe0a6 40%, transparent); }
+.recap-trend--down { color: #ff8f9c; background: color-mix(in srgb, #ff5d6c 16%, transparent); border: 1px solid color-mix(in srgb, #ff5d6c 40%, transparent); }
+.recap-trend--flat { color: var(--dim); background: color-mix(in srgb, var(--dim) 12%, transparent); border: 1px solid var(--line); }
+
 .recap-stats {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
-  margin: 0 0 14px;
 }
 .recap-stat {
+  --stat: var(--accent);
   position: relative;
   display: grid;
-  grid-template-columns: 34px 1fr;
+  grid-template-columns: 48px 1fr;
   grid-template-rows: auto auto;
   align-items: center;
-  column-gap: 9px;
+  column-gap: 12px;
   min-width: 0;
-  min-height: 64px;
-  padding: 10px 11px;
-  border: 1px solid var(--line);
+  min-height: 68px;
+  padding: 10px 12px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--stat) 32%, var(--line));
   border-radius: 14px;
   background:
-    linear-gradient(135deg, color-mix(in srgb, var(--accent) 7%, transparent), transparent 48%),
+    linear-gradient(135deg, color-mix(in srgb, var(--stat) 18%, transparent), transparent 60%),
     var(--panel-grad, var(--panel));
-  box-shadow: inset 0 1px 0 #ffffff0b, 0 12px 28px -26px #000;
+  box-shadow: inset 0 1px 0 #ffffff0b, 0 14px 26px -20px color-mix(in srgb, var(--stat) 45%, transparent), 0 12px 28px -26px #000;
+  opacity: 0;
+  animation: recap-rise .45s var(--ease-out, ease) both;
+  animation-delay: calc(var(--i, 0) * 70ms + 120ms);
+  transition: transform .18s ease, box-shadow .18s ease;
 }
+.recap-stat:hover { transform: translateY(-2px); box-shadow: inset 0 1px 0 #ffffff14, 0 18px 32px -16px color-mix(in srgb, var(--stat) 65%, transparent); }
+.recap-stat:nth-child(1) { --i: 0; }
+.recap-stat:nth-child(2) { --i: 1; }
+.recap-stat:nth-child(3) { --i: 2; }
+.recap-stat:nth-child(4) { --i: 3; }
+.recap-stat:nth-child(5) { --i: 4; }
+.recap-stat--cyan { --stat: #36d8ba; }
+.recap-stat--violet { --stat: #a78bfa; }
+.recap-stat--red { --stat: #ff6b78; }
+.recap-stat--orange { --stat: #ff9f43; }
+.recap-stat--gold { --stat: #ffd166; }
+/* Zachte, zwevende gloed-vlek achter elke tegel — geeft de kleur wat leven zonder de cijfers te
+   storen (elke tegel ademt op haar eigen ritme via --i). */
+.recap-stat::before {
+  content: "";
+  position: absolute;
+  inset: auto -35% -45% auto;
+  z-index: 0;
+  width: 70%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--stat) 60%, transparent), transparent 72%);
+  filter: blur(1px);
+  animation: recap-breathe 5s ease-in-out infinite;
+  animation-delay: calc(var(--i, 0) * .5s);
+}
+.recap-stat > * { position: relative; z-index: 1; }
 .recap-stat > span {
   grid-row: 1 / 3;
   display: grid;
-  width: 32px;
-  height: 32px;
+  width: 48px;
+  height: 48px;
   place-items: center;
-  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--line));
-  border-radius: 9px;
-  color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 9%, #0c1119);
-  font-size: .68rem;
-  font-weight: 950;
-  letter-spacing: -.02em;
+  border: 1px solid color-mix(in srgb, var(--stat) 42%, var(--line));
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--stat) 20%, #0c1119);
+  box-shadow: inset 0 1px 0 #ffffff1c;
+  font-size: 1.7rem;
+  line-height: 1;
 }
-.recap-stat b { color: var(--text, #f4f6fa); font-size: 1.12rem; line-height: 1; font-variant-numeric: tabular-nums; }
-.recap-stat small { overflow: hidden; color: var(--dim); font-size: .62rem; font-weight: 750; text-overflow: ellipsis; white-space: nowrap; }
+.recap-stat b { color: var(--text, #f4f6fa); font-size: 1.3rem; line-height: 1; font-variant-numeric: tabular-nums; }
+.recap-stat small { overflow: hidden; color: var(--dim); font-size: .65rem; font-weight: 750; text-overflow: ellipsis; white-space: nowrap; }
+
+@keyframes recap-pop {
+  from { opacity: 0; transform: scale(.94) translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes recap-rise {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes recap-breathe {
+  0%, 100% { opacity: .55; transform: scale(1); }
+  50% { opacity: .85; transform: scale(1.12); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .recap-feature,
+  .recap-stat { animation: none; opacity: 1; }
+  .recap-feature::after { animation: none; }
+  .recap-stat:hover { transform: none; }
+}
+@media (max-width: 620px) {
+  .recap-figures { grid-template-columns: 1fr; }
+  .recap-feature { min-height: 230px; }
+}
 
 .recap-block {
   position: relative;
@@ -121,18 +258,24 @@
 }
 .recap-highlight:first-child { padding-top: 2px; border-top: 0; }
 .recap-highlight-emoji {
+  --hl: var(--accent);
   display: grid;
   width: 27px;
   height: 27px;
   place-items: center;
-  border: 1px solid color-mix(in srgb, var(--accent) 24%, var(--line));
+  border: 1px solid color-mix(in srgb, var(--hl) 34%, var(--line));
   border-radius: 8px;
-  color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 7%, #0b1018);
+  color: var(--hl);
+  background: color-mix(in srgb, var(--hl) 14%, #0b1018);
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--hl) 0%, transparent);
   font-size: .58rem;
   font-weight: 900;
   font-variant-numeric: tabular-nums;
 }
+/* Topprestaties krijgen een medaillekleur: goud/zilver/brons i.p.v. één egale accentkleur. */
+.recap-highlight:nth-child(1) .recap-highlight-emoji { --hl: #ffd166; }
+.recap-highlight:nth-child(2) .recap-highlight-emoji { --hl: #c9d3e0; }
+.recap-highlight:nth-child(3) .recap-highlight-emoji { --hl: #ff9f43; }
 .recap-highlight-txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .recap-highlight-txt b { color: var(--dim); font-size: .6rem; text-transform: uppercase; letter-spacing: .08em; }
 .recap-highlight-txt a { color: inherit; text-decoration: none; font-size: .88rem; font-weight: 750; line-height: 1.35; }
@@ -143,16 +286,21 @@
   grid-template-columns: 42px minmax(0, 1fr);
   gap: 12px;
   align-items: center;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, #ffd166 10%, transparent), transparent 60%),
+    var(--panel-grad, var(--panel));
 }
+.recap-block--team::before { background: #ffd166; }
 .recap-team-trophy {
   display: grid;
   width: 40px;
   height: 40px;
   place-items: center;
-  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--line));
+  border: 1px solid color-mix(in srgb, #ffd166 40%, var(--line));
   border-radius: 11px;
-  color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 8%, #0d121a);
+  color: #ffd166;
+  background: color-mix(in srgb, #ffd166 14%, #0d121a);
+  box-shadow: 0 0 22px -10px color-mix(in srgb, #ffd166 65%, transparent);
   font-size: .7rem;
   font-weight: 950;
 }
@@ -223,93 +371,22 @@
   .recap-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 430px) {
-  .recap-head { margin-top: 4px; padding-bottom: 13px; }
+  .recap-hero { margin-top: 4px; padding: 16px; }
   .recap-head-top { align-items: flex-start; }
   .recap-edition,
   .recap-period { font-size: .57rem; }
   .recap-title { font-size: 1.3rem; line-height: 1.18; }
-  .recap-head-foot { margin-top: 9px; }
-  .recap-stats { gap: 7px; margin-bottom: 12px; }
-  .recap-stat { grid-template-columns: 30px 1fr; min-height: 58px; padding: 8px 9px; border-radius: 12px; }
-  .recap-stat > span { width: 28px; height: 28px; border-radius: 8px; font-size: .6rem; }
-  .recap-stat b { font-size: 1rem; }
-  .recap-stat small { font-size: .58rem; }
+  .recap-head-foot { margin-top: 14px; }
+  .recap-stats { gap: 7px; }
+  .recap-stat { grid-template-columns: 40px 1fr; min-height: 60px; padding: 8px 9px; border-radius: 12px; }
+  .recap-stat > span { width: 40px; height: 40px; border-radius: 10px; font-size: 1.4rem; }
+  .recap-stat b { font-size: 1.1rem; }
+  .recap-stat small { font-size: .6rem; }
+  .recap-feature-num { font-size: 2.6rem; }
   .recap-block { padding: 13px 14px; border-radius: 14px; }
   .recap-highlight-txt a { font-size: .82rem; }
   .recap-result-link { align-items: flex-start; }
 }
 @media (prefers-reduced-motion: reduce) {
   .recap-fold-action i { transition: none; }
-}
-
-.recap-story-card {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(200px, 340px);
-  gap: 18px;
-  margin: 0 0 20px;
-  padding: 20px;
-  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--line));
-  border-radius: 24px;
-  background:
-    radial-gradient(circle at 12% 0%, color-mix(in srgb, var(--accent) 17%, transparent), transparent 38%),
-    linear-gradient(135deg, #1b2a41, #111722 55%, #201117);
-  box-shadow: inset 0 1px 0 #ffffff12, 0 22px 45px -30px #000;
-}
-.recap-story-copy { align-self: center; }
-.recap-story-copy .recap-eyebrow { margin-bottom: 6px; }
-.recap-story-title {
-  margin: 0;
-  color: var(--text, #f4f6fa);
-  font: 850 clamp(1.2rem, 3vw, 1.6rem)/1.15 var(--font-display), sans-serif;
-  letter-spacing: -.02em;
-}
-.recap-story-description { margin: 8px 0 0; color: var(--dim); font-size: .86rem; line-height: 1.45; }
-.recap-story-actions { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 16px; }
-.recap-primary-action,
-.recap-secondary-action {
-  min-height: 40px;
-  padding: 9px 13px;
-  border-radius: 11px;
-  font: 800 .76rem/1 var(--font-display), sans-serif;
-  cursor: pointer;
-}
-.recap-primary-action {
-  border: 1px solid color-mix(in srgb, var(--accent) 60%, transparent);
-  color: #08111b;
-  background: linear-gradient(135deg, #a9d4ff, var(--accent));
-  box-shadow: 0 12px 22px -16px var(--accent);
-}
-.recap-secondary-action { border: 1px solid var(--line); color: var(--text, #f4f6fa); background: #0f1621; }
-.recap-primary-action:disabled,
-.recap-secondary-action:disabled { opacity: .6; cursor: wait; }
-.recap-story-preview {
-  width: min(100%, 340px);
-  aspect-ratio: 9 / 16;
-  margin-left: auto;
-  overflow: hidden;
-  position: relative;
-  border: 1px solid #ffffff18;
-  border-radius: 18px;
-  background: #0a111b;
-  box-shadow: 0 18px 36px -26px #000;
-}
-.recap-story-preview img { width: 100%; height: 100%; display: block; object-fit: cover; }
-.recap-preview-retry {
-  position: absolute;
-  left: 50%;
-  bottom: 14px;
-  transform: translateX(-50%);
-  border: 1px solid #ffffff26;
-  border-radius: 9px;
-  padding: 8px 10px;
-  color: var(--text, #fff);
-  background: #0c1420ee;
-  font: 750 .7rem/1 var(--font-display), sans-serif;
-  cursor: pointer;
-  white-space: nowrap;
-}
-.recap-story-error { margin: 8px 0 0; color: #ff9baa; font-size: .72rem; line-height: 1.35; }
-@media (max-width: 620px) {
-  .recap-story-card { grid-template-columns: 1fr; gap: 14px; padding: 15px; border-radius: 18px; }
-  .recap-story-preview { width: min(100%, 280px); margin: 0 auto; }
 }

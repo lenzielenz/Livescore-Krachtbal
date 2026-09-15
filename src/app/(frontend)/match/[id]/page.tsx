@@ -120,6 +120,14 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   // analysewedstrijd — die is privé en wordt onder /analyse/beheer beheerd.
   const magBeheren =
     (isFederationLevel(me) || hasRole(me, 'federatie')) && !(matchDoc as { analyseOnly?: boolean } | null)?.analyseOnly
+  // Huidige forfait-uitslag (indien al aangeduid) — enkel opzoeken voor wie mag beheren, en zonder
+  // een wedstrijdblad aan te maken: dat gebeurt pas als er écht een forfait wordt toegepast.
+  const forfaitUitslag = magBeheren
+    ? await payload
+        .find({ collection: 'matchsheets', where: { match: { equals: matchId } }, depth: 0, limit: 1 })
+        .then((r) => ((r.docs[0] as { forfait?: { uitslag?: string } } | undefined)?.forfait?.uitslag ?? 'geen'))
+        .catch(() => 'geen')
+    : 'geen'
   const alsPloeg = (t: unknown): BeheerPloeg | null => {
     if (!t || typeof t !== 'object') return null
     const d = t as { id?: number; name?: unknown; club?: unknown; reeks?: unknown }
@@ -503,13 +511,26 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
       )}
 
       {/* "Ik ben erbij" — supporters bouwen zo hun seizoenspaspoort op. Pas op de dag zelf: je
-          bent er niet bij op een wedstrijd die nog drie weken weg is. */}
-      {me && !toekomstig && (
-        <div className="match-checkin">
-          <CheckInButton matchId={matchId} initial={isCheckedIn(sanitizeCheckins((me as { checkins?: unknown }).checkins), matchId)} />
-          <Link href="/profiel/paspoort" className="match-checkin-link">Mijn paspoort →</Link>
-        </div>
-      )}
+          bent er niet bij op een wedstrijd die nog drie weken weg is. Een opvallend, kleurrijk
+          blok i.p.v. een kale knop: de badge-ladder maakt meteen duidelijk waarom aanklikken
+          loont, en dit is exact het cijfer dat later in het weekoverzicht pronkt. */}
+      {me && !toekomstig && (() => {
+        const checkedIn = isCheckedIn(sanitizeCheckins((me as { checkins?: unknown }).checkins), matchId)
+        return (
+          <section className={`match-checkin ${checkedIn ? 'is-on' : ''}`} aria-label="Ik ben erbij">
+            <div className="match-checkin-row">
+              <CheckInButton matchId={matchId} initial={checkedIn} />
+              <Link href="/profiel/paspoort" className="match-checkin-link">Mijn paspoort →</Link>
+            </div>
+            <p className="match-checkin-hint">
+              {checkedIn
+                ? 'Dit telt mee in het weekoverzicht en voor je badges.'
+                : 'Duid aan dat je erbij bent: het telt mee voor je badges en verschijnt in het weekoverzicht.'}
+              <span className="match-checkin-badges" aria-hidden>🎟️ 🔥 🏟️ 👑 🦁</span>
+            </p>
+          </section>
+        )
+      })()}
 
       {/* Supporters duidelijk tonen dat ze de wedstrijd op hun tv kunnen volgen. */}
       {!toekomstig && <CastToTv matchId={matchId} />}
@@ -564,6 +585,9 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
           thuis={beheerThuis}
           uit={beheerUit}
           clubs={clubKeuze}
+          thuisNaam={beheerThuis.naam}
+          uitNaam={beheerUit.naam}
+          initialForfaitUitslag={forfaitUitslag}
         />
       )}
       </div>
