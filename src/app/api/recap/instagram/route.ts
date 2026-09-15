@@ -1,5 +1,5 @@
 import sharp from 'sharp'
-import { getPayloadClient } from '@/lib/payload'
+import { getPayloadClient } from '@/lib/payload-client'
 import { buildWeeklyRecapData } from '@/lib/weekly-recap-data'
 import { renderWeeklyRecapDesign } from '@/lib/weekly-recap-design'
 
