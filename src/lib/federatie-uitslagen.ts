@@ -5,11 +5,14 @@
 // iemand eerst downloadt en plakt. Tijdens het seizoen wil je dat automatisch: de server haalt de
 // kalenderpagina op en neemt de eindstanden over.
 //
-// De kalenderpagina heeft niet noodzakelijk dezelfde kolommen als de export. Daarom parseren we
-// hier op HERKENNING in plaats van op vaste posities: per tabelrij zoeken we de score (twee losse
-// getallen naast elkaar, óf één cel als "12 - 8"), en de twee namen die eraan voorafgaan zijn thuis
-// en bezoeker. De datum mag ergens in de rij staan, de reeks in de rij zelf of in een tussentitel
-// erboven. Zo overleeft de import een layoutwijziging die vaste kolomnummers zou breken.
+// De kalenderpagina heeft niet noodzakelijk dezelfde structuur als de export, en verandert soms
+// helemaal (van een HTML-tabel naar een kaart-lay-out zonder één <table> — precies wat er tussen
+// het schrijven van deze module en nu gebeurde). Daarom parseren we op HERKENNING in twee smaken:
+// een tabelgerichte lezing (parseUitslagenHtml, voor als de site ooit weer tabellen gebruikt) en
+// een kaartgerichte lezing (parseKalenderGrid, voor de huidige lay-out: elke wedstrijd is een
+// <ul class="kb-nhadateholder"> (reekscode/datum/uur) gevolgd door een <ul class="kb-natlogoarea">
+// (thuisploeg/score/bezoeker), telkens één <span> per waarde). parseUitslagen() combineert alle
+// lezingen; wat niets vindt, draagt gewoon niets bij.
 
 import { mapReeks, type RawResult } from './results-import'
 
@@ -159,6 +162,46 @@ export function parseUitslagenHtml(html: string): RawResult[] {
   return out
 }
 
+const SPAN = /<span[^>]*>([\s\S]*?)<\/span>/gi
+/** Eén wedstrijd-kaart: reeks/datum/uur gevolgd door thuis/score/uit, elk hun eigen <span>. */
+const GRID_ITEM = /<ul class="kb-nhadateholder">([\s\S]*?)<\/ul>\s*<ul class="kb-natlogoarea">([\s\S]*?)<\/ul>/gi
+
+function spans(html: string): string[] {
+  const out: string[] = []
+  for (const m of html.matchAll(SPAN)) out.push(decode(m[1]))
+  return out
+}
+
+/**
+ * Leest wedstrijden uit de kaart-lay-out van de huidige kalenderpagina (geen tabellen: elke
+ * wedstrijd is een <ul class="kb-nhadateholder">reeks/datum/uur</ul> gevolgd door een
+ * <ul class="kb-natlogoarea">thuis/score/uit</ul>). Kaarten zonder herkenbare score (nog te
+ * spelen, uitgesteld) worden overgeslagen.
+ */
+export function parseKalenderGrid(html: string): RawResult[] {
+  const out: RawResult[] = []
+  for (const m of html.matchAll(GRID_ITEM)) {
+    const [reeksCode, dateText, timeText] = spans(m[1])
+    const [home, scoreText, away] = spans(m[2])
+    if (!reeksCode || !home || !away || !scoreText) continue
+    const pair = SCORE_PAIR.exec(scoreText)
+    if (!pair) continue
+    out.push({
+      number: '',
+      reeksCode,
+      reeks: mapReeks(reeksCode),
+      date: toISO(dateText ?? ''),
+      time: timeText ?? '',
+      home,
+      away,
+      homeScore: Number(pair[1]),
+      awayScore: Number(pair[2]),
+      referee: '',
+    })
+  }
+  return out
+}
+
 /** Dedup-sleutel: dezelfde wedstrijd mag maar één keer in de lijst staan. */
 const sleutel = (r: RawResult) =>
   r.number ? `#${r.number}` : `${r.reeks ?? '?'}|${r.date}|${r.home.toLowerCase()}|${r.away.toLowerCase()}`
@@ -172,5 +215,6 @@ export function parseUitslagen(html: string, strict: (t: string) => RawResult[])
   const uit = new Map<string, RawResult>()
   for (const r of strict(html)) uit.set(sleutel(r), r)
   for (const r of parseUitslagenHtml(html)) if (!uit.has(sleutel(r))) uit.set(sleutel(r), r)
+  for (const r of parseKalenderGrid(html)) if (!uit.has(sleutel(r))) uit.set(sleutel(r), r)
   return [...uit.values()]
 }
