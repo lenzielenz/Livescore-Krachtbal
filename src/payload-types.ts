@@ -93,6 +93,8 @@ export interface Config {
     'push-subscriptions': PushSubscription;
     advertenties: Advertenty;
     news: News;
+    ideas: Idea;
+    'idea-screenshots': IdeaScreenshot;
     'match-mvp-votes': MatchMvpVote;
     'processed-ops': ProcessedOp;
     'cv-events': CvEvent;
@@ -129,6 +131,8 @@ export interface Config {
     'push-subscriptions': PushSubscriptionsSelect<false> | PushSubscriptionsSelect<true>;
     advertenties: AdvertentiesSelect<false> | AdvertentiesSelect<true>;
     news: NewsSelect<false> | NewsSelect<true>;
+    ideas: IdeasSelect<false> | IdeasSelect<true>;
+    'idea-screenshots': IdeaScreenshotsSelect<false> | IdeaScreenshotsSelect<true>;
     'match-mvp-votes': MatchMvpVotesSelect<false> | MatchMvpVotesSelect<true>;
     'processed-ops': ProcessedOpsSelect<false> | ProcessedOpsSelect<true>;
     'cv-events': CvEventsSelect<false> | CvEventsSelect<true>;
@@ -1560,7 +1564,7 @@ export interface MatchEvent {
   createdAt: string;
 }
 /**
- * Vluchtige supporterfoto’s bij een wedstrijd. Verdwijnen automatisch na expiresAt.
+ * Blijvende supporterfoto’s bij een wedstrijd. Alleen moderatie verwijdert ze.
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "match-instants".
@@ -1571,7 +1575,7 @@ export interface MatchInstant {
   author?: (number | null) | User;
   authorName?: string | null;
   /**
-   * Wanneer deze foto automatisch verdwijnt.
+   * Legacy veld; nieuwe foto’s blijven bewaard.
    */
   expiresAt: string;
   updatedAt: string;
@@ -1673,6 +1677,53 @@ export interface News {
   published?: boolean | null;
   updatedAt: string;
   createdAt: string;
+}
+/**
+ * Ideeën, aanpassingen en problemen die bezoekers via de site doorgeven.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "ideas".
+ */
+export interface Idea {
+  id: number;
+  category: 'idea' | 'change' | 'problem';
+  subject: string;
+  message: string;
+  /**
+   * Optioneel bijgevoegd door de indiener, bv. bij een probleemmelding.
+   */
+  screenshot?: (number | null) | IdeaScreenshot;
+  name?: string | null;
+  email?: string | null;
+  submittedBy?: (number | null) | User;
+  pageUrl?: string | null;
+  status: 'new' | 'reviewing' | 'planned' | 'done' | 'declined';
+  /**
+   * Alleen zichtbaar voor de beheerder.
+   */
+  adminNotes?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Bijlages bij ideeënbus-inzendingen — zichtbaar via het screenshot-veld op het idee zelf.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "idea-screenshots".
+ */
+export interface IdeaScreenshot {
+  id: number;
+  updatedAt: string;
+  createdAt: string;
+  url?: string | null;
+  thumbnailURL?: string | null;
+  filename?: string | null;
+  mimeType?: string | null;
+  filesize?: number | null;
+  width?: number | null;
+  height?: number | null;
+  focalX?: number | null;
+  focalY?: number | null;
 }
 /**
  * Supporterstemmen voor de held van de match. Eén per supporter per wedstrijd.
@@ -1896,6 +1947,14 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'news';
         value: number | News;
+      } | null)
+    | ({
+        relationTo: 'ideas';
+        value: number | Idea;
+      } | null)
+    | ({
+        relationTo: 'idea-screenshots';
+        value: number | IdeaScreenshot;
       } | null)
     | ({
         relationTo: 'match-mvp-votes';
@@ -2644,6 +2703,41 @@ export interface NewsSelect<T extends boolean = true> {
   published?: T;
   updatedAt?: T;
   createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "ideas_select".
+ */
+export interface IdeasSelect<T extends boolean = true> {
+  category?: T;
+  subject?: T;
+  message?: T;
+  screenshot?: T;
+  name?: T;
+  email?: T;
+  submittedBy?: T;
+  pageUrl?: T;
+  status?: T;
+  adminNotes?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "idea-screenshots_select".
+ */
+export interface IdeaScreenshotsSelect<T extends boolean = true> {
+  updatedAt?: T;
+  createdAt?: T;
+  url?: T;
+  thumbnailURL?: T;
+  filename?: T;
+  mimeType?: T;
+  filesize?: T;
+  width?: T;
+  height?: T;
+  focalX?: T;
+  focalY?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

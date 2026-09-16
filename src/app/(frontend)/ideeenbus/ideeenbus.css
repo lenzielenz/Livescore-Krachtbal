@@ -25,6 +25,17 @@
 }
 .ideas-form textarea { resize: vertical; line-height: 1.5; }
 .ideas-form input:focus, .ideas-form textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 14%, transparent); }
+.ideas-screenshot-picker input {
+  padding: 9px 12px; font-size: .84rem; color: var(--dim);
+}
+.ideas-screenshot-picker input::file-selector-button {
+  padding: 7px 12px; margin-right: 10px; border: 1px solid var(--line); border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--txt); font: inherit; font-weight: 700; cursor: pointer;
+}
+.ideas-screenshot-preview { display: flex; align-items: center; gap: 12px; margin: -6px 0 17px; }
+.ideas-screenshot-preview img {
+  width: 84px; height: 84px; object-fit: cover; border: 1px solid var(--line); border-radius: 10px;
+}
 .ideas-contact { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .ideas-contact small { color: var(--dim); font-weight: 500; }
 .ideas-honey { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }

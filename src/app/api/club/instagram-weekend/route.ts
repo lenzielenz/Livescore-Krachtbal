@@ -112,6 +112,7 @@ async function renderWeekendPost(request: Request) {
     const awayId = away && typeof away === 'object' ? Number((away as { id?: unknown }).id) : Number(away)
     const side = ownTeams.has(homeId) ? 'home' : 'away'
     const ownId = side === 'home' ? homeId : awayId
+    const reeksRaw = String((match as { reeks?: unknown }).reeks ?? '')
     rows.push({
       id: Number((match as { id?: unknown }).id),
       date: date.toISOString(),
@@ -120,7 +121,8 @@ async function renderWeekendPost(request: Request) {
       side,
       team: ownTeams.get(ownId) ?? (side === 'home' ? nameOf(home) : nameOf(away)),
       opponent: side === 'home' ? nameOf(away) : nameOf(home),
-      series: reeksNaam(String((match as { reeks?: unknown }).reeks ?? '') as Parameters<typeof reeksNaam>[0]),
+      series: reeksNaam(reeksRaw as Parameters<typeof reeksNaam>[0]),
+      seriesCode: reeksRaw || '—',
     })
   }
 

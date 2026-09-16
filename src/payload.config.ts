@@ -33,6 +33,7 @@ import { PushSubscriptions } from './collections/PushSubscriptions'
 import { Advertenties } from './collections/Advertenties'
 import { News } from './collections/News'
 import { Ideas } from './collections/Ideas'
+import { IdeaScreenshots } from './collections/IdeaScreenshots'
 import { MatchMvpVotes } from './collections/MatchMvpVotes'
 import { ProcessedOps } from './collections/ProcessedOps'
 import { CvEvents } from './collections/CvEvents'
@@ -124,6 +125,7 @@ export default buildConfig({
     Advertenties,
     News,
     Ideas,
+    IdeaScreenshots,
     MatchMvpVotes,
     ProcessedOps,
     CvEvents,

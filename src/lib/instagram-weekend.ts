@@ -7,6 +7,9 @@ export type WeekendMatch = {
   team: string
   opponent: string
   series: string
+  /** Korte reekscode (bv. "1NAH") — vervangt de volle naam in het compacte weekendoverzicht,
+   * zodat veel wedstrijden op één Story passen zonder lange woorden. */
+  seriesCode: string
 }
 
 const BRUSSELS = new Intl.DateTimeFormat('en-CA', {
