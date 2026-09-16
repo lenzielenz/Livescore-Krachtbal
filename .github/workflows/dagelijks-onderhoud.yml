@@ -1,0 +1,37 @@
+name: Dagelijks onderhoud
+
+# Roept /api/cron/recap elke dag aan: sluit de vertrouwenslaag af voor wedstrijden waarvan het
+# bevestigingsvenster dicht is, en stuurt op maandag de wekelijkse recap-pushmelding. Zie
+# src/app/api/cron/recap/route.ts. Geen login nodig: enkel CRON_SECRET (dezelfde als bij de
+# uitslagen-sync).
+
+on:
+  schedule:
+    # Elke dag 's ochtends vroeg (UTC) — ruim voor iemand de site opent.
+    - cron: '0 5 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dagelijks-onderhoud
+  cancel-in-progress: false
+
+jobs:
+  onderhoud:
+    name: Vertrouwenslaag afsluiten + weekrecap
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Cron-endpoint aanroepen
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "CRON_SECRET-repository-secret ontbreekt — zie docs/UITSLAGEN-SYNC.md." >&2
+            exit 1
+          fi
+          curl --fail-with-body -sS \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            https://livescore.roodgries.be/api/cron/recap
