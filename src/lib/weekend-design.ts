@@ -187,29 +187,33 @@ export function renderWeekendDesign(o: {
       <linearGradient id="card" x2="1" y2="1"><stop stop-color="#2b3546"/><stop offset="1" stop-color="#141922"/></linearGradient>
       <linearGradient id="hero" x2="1" y2="0"><stop stop-color="${o.primary}" stop-opacity=".22"/><stop offset="1" stop-color="${o.secondary}" stop-opacity=".22"/></linearGradient>
       <clipPath id="badge"><circle cx="902" cy="272" r="78"/></clipPath>
-      <!-- Krachtbalveld als achtergrond: grasmat-tint + maaibanen + vignette, zelfde grammatica
-           als RecapFieldBackdrop.tsx — herkenbaar als "van het veld", niet zomaar een vlak. -->
+      <!-- Krachtbalveld als achtergrond: grasmat-tint in de CLUBKLEUR + maaibanen + vignette,
+           zelfde grammatica als RecapFieldBackdrop.tsx — herkenbaar als "van het veld" én meteen
+           herkenbaar als HAAR veld, niet een generiek grasgroen. -->
       <linearGradient id="turf" x1="0" y1="0" x2="0.25" y2="1">
-        <stop offset="0" stop-color="#1d6b45" stop-opacity=".6"/>
-        <stop offset=".5" stop-color="#134a30" stop-opacity=".4"/>
-        <stop offset="1" stop-color="#0c4028" stop-opacity=".18"/>
+        <stop offset="0" stop-color="${o.primary}" stop-opacity=".62"/>
+        <stop offset=".5" stop-color="${o.primary}" stop-opacity=".34"/>
+        <stop offset="1" stop-color="${o.secondary}" stop-opacity=".16"/>
       </linearGradient>
-      <pattern id="mow" patternUnits="userSpaceOnUse" width="1080" height="26"><rect width="1080" height="13" fill="#ffffff" opacity=".04"/></pattern>
+      <pattern id="mow" patternUnits="userSpaceOnUse" width="1080" height="26"><rect width="1080" height="13" fill="#ffffff" opacity=".045"/></pattern>
       <radialGradient id="turfvig" cx=".5" cy=".22" r=".85"><stop offset=".5" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".5"/></radialGradient>
     </defs>
     <rect width="1080" height="1920" fill="url(#base)"/>
     <rect width="1080" height="1920" fill="url(#turf)"/>
     <rect width="1080" height="1920" fill="url(#mow)"/>
     <!-- Doelgebied bovenaan, doellijn + vrijeworplijn, en de zone-derden die het hele veld in
-         lengte doorlopen — dezelfde lijnentaal als het echte terrein (FieldSchema.tsx). -->
-    <rect x="0" y="0" width="1080" height="148" fill="${o.secondary}" opacity=".1"/>
-    <line x1="0" y1="148" x2="1080" y2="148" stroke="#e8f5ee" stroke-opacity=".35" stroke-width="3"/>
-    <line x1="0" y1="230" x2="1080" y2="230" stroke="#e8f5ee" stroke-opacity=".18" stroke-width="1.5"/>
-    <line x1="360" y1="0" x2="360" y2="1920" stroke="#e8f5ee" stroke-opacity=".1" stroke-width="1" stroke-dasharray="3 9"/>
-    <line x1="720" y1="0" x2="720" y2="1920" stroke="#e8f5ee" stroke-opacity=".1" stroke-width="1" stroke-dasharray="3 9"/>
-    <!-- Buiten-zone: de koraalrand langs de zijlijnen, net als op het echte terrein. -->
-    <rect x="0" y="0" width="18" height="1920" fill="#ff5d6c" opacity=".16"/>
-    <rect x="1062" y="0" width="18" height="1920" fill="#ff5d6c" opacity=".16"/>
+         lengte doorlopen — dezelfde lijnentaal als het echte terrein (FieldSchema.tsx). Duidelijk
+         wit/crème (net als de echte lijnen op het veld) zodat ze bij elke clubkleur goed
+         afsteken, maar dun en transparant genoeg om de kaarten niet te storen. -->
+    <rect x="0" y="0" width="1080" height="148" fill="${o.secondary}" opacity=".14"/>
+    <line x1="0" y1="148" x2="1080" y2="148" stroke="#f3f9f5" stroke-opacity=".6" stroke-width="3.5"/>
+    <line x1="0" y1="230" x2="1080" y2="230" stroke="#f3f9f5" stroke-opacity=".34" stroke-width="1.5"/>
+    <line x1="360" y1="0" x2="360" y2="1920" stroke="#f3f9f5" stroke-opacity=".22" stroke-width="1" stroke-dasharray="3 9"/>
+    <line x1="720" y1="0" x2="720" y2="1920" stroke="#f3f9f5" stroke-opacity=".22" stroke-width="1" stroke-dasharray="3 9"/>
+    <!-- Buiten-zone: de koraalrand langs de zijlijnen, net als op het echte terrein (een vaste
+         waarschuwingskleur op de mat, dus bewust los van de clubkleur). -->
+    <rect x="0" y="0" width="18" height="1920" fill="#ff5d6c" opacity=".2"/>
+    <rect x="1062" y="0" width="18" height="1920" fill="#ff5d6c" opacity=".2"/>
     <rect width="1080" height="1920" fill="url(#turfvig)"/>
     <ellipse cx="950" cy="320" rx="750" ry="700" fill="url(#glow)"/>
     <path d="M760 0 L360 1920" stroke="#fff" stroke-opacity=".025" stroke-width="180"/>
