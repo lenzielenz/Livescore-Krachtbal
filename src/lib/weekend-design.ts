@@ -32,6 +32,26 @@ function label(value: string, x: number, y: number, size: number, width: number,
   const fitted = Math.min(size, width / Math.max(1, Array.from(value).length * .66))
   return `<text x="${x}" y="${y}" fill="${fill}" font-size="${fitted}" font-weight="700">${esc(value)}</text>`
 }
+/** ÉÉN gedeelde lettergrootte voor een hele kolom tekst (bv. alle tegenstander-namen op een
+ * pagina), afgeleid van de LANGSTE waarde. Elke rij gebruikt daarna diezelfde grootte i.p.v. dat
+ * `label()` per rij apart naar de eigen lengte krimpt — dat laatste geeft precies het "niet mooi
+ * uitgelijnd"-effect zodra de namen in lengte verschillen (een korte naam staat dan opeens groter
+ * dan een lange op de rij eronder). */
+function fitSize(values: string[], maxSize: number, width: number): number {
+  const longest = values.reduce((m, v) => Math.max(m, Array.from(v).length), 1)
+  const raw = width / (longest * .66)
+  // Nooit kleiner dan 60% van de max: anders trekt één uitzonderlijk lange naam de hele kolom
+  // onleesbaar klein. Die ene naam krimpt in plaats daarvan verder op haar eigen rij (zie
+  // alignedText) — de rest blijft mooi gelijk aan elkaar.
+  return Math.max(maxSize * .6, Math.min(maxSize, raw))
+}
+/** Tekst op de gedeelde kolomgrootte (zie fitSize) — met een val-terug naar een kleinere eigen
+ * pasgrootte voor de zeldzame uitzonderlijk lange naam, zodat die nooit buiten haar rij loopt. */
+function alignedText(value: string, x: number, y: number, sharedSize: number, width: number, fill = '#f5f7fb') {
+  const ownFit = width / Math.max(1, Array.from(value).length * .66)
+  const size = Math.min(sharedSize, ownFit)
+  return `<text x="${x}" y="${y}" fill="${fill}" font-size="${size}" font-weight="700">${esc(value)}</text>`
+}
 /** Kleine statistiekpil ("● 6 wedstrijden") — dezelfde beknopte taal als de weekrecap-Story,
  * zodat de clubkleuren en cijfers meteen opvallen in het overzicht van de eigen speeldag. */
 function statChip(x: number, y: number, value: number, text: string, color: string) {
@@ -45,6 +65,10 @@ const ROWS_TOP = 520
 function renderSpaciousRows(rows: WeekendMatch[], primary: string, secondary: string): string {
   const spacious = rows.length > 0 && rows.length <= 4
   const cardHeight = spacious ? 260 : 120
+  // Gedeelde grootte voor de hele pagina — elke tegenstander en elke reeksnaam oogt daardoor even
+  // groot, ook al lopen de tekstlengtes uiteen.
+  const opponentSize = fitSize(rows.map(m => m.opponent), spacious ? 38 : 29, spacious ? 710 : 590)
+  const seriesSize = fitSize(rows.map(m => m.series), spacious ? 25 : 19, 710)
   let y = ROWS_TOP
   let group = ''
   return rows.map(m => {
@@ -70,8 +94,8 @@ function renderSpaciousRows(rows: WeekendMatch[], primary: string, secondary: st
       <text x="${984 - pillW / 2}" y="${top + 39}" text-anchor="middle" fill="${sideColor}" font-size="15" font-weight="800" letter-spacing="1">${sideLabel}</text>
       ${label(m.time, 92, top + (spacious ? 143 : 70), spacious ? 38 : 32, 125)}
       <line x1="238" y1="${top + 24}" x2="238" y2="${top + cardHeight - 24}" stroke="#fff" stroke-opacity=".12"/>
-      ${label(m.opponent, 266, top + (spacious ? 117 : 52), spacious ? 38 : 29, spacious ? 710 : 590)}
-      ${label(m.series, 266, top + (spacious ? 177 : 91), spacious ? 25 : 19, 710, '#b2bfd2')}
+      ${alignedText(m.opponent, 266, top + (spacious ? 117 : 52), opponentSize, spacious ? 710 : 590)}
+      ${alignedText(m.series, 266, top + (spacious ? 177 : 91), seriesSize, 710, '#b2bfd2')}
     </g>`
   }).join('')
 }
@@ -95,7 +119,7 @@ const ROWS_BOTTOM = 1740
  * reekscode (bv. "1NAH") i.p.v. de volle reeksnaam — zo blijft een rij één regel, ook op drukke
  * speeldagen met veel ploegen. `scale` rekt de rij (en haar lettergrootte naar rato) op wanneer
  * er ruimte over is, zodat een rustige speeldag niet bovenaan verdwaald oogt. */
-function compactRow(m: WeekendMatch, colX: number, top: number, rowH: number, scale: number, primary: string, secondary: string): string {
+function compactRow(m: WeekendMatch, colX: number, top: number, rowH: number, scale: number, opponentSize: number, primary: string, secondary: string): string {
   const sideColor = m.side === 'home' ? primary : secondary
   const symbol = m.side === 'home' ? 'T' : 'U'
   const midY = top + rowH / 2
@@ -107,7 +131,7 @@ function compactRow(m: WeekendMatch, colX: number, top: number, rowH: number, sc
       <circle cx="${badgeX}" cy="${midY}" r="${badgeR}" fill="${sideColor}" fill-opacity=".2" stroke="${sideColor}" stroke-width="1.5"/>
       <text x="${badgeX}" y="${midY + 5 * scale}" text-anchor="middle" fill="${sideColor}" font-size="${15 * scale}" font-weight="800">${symbol}</text>
       ${label(m.time, colX + 60 * scale, midY + 6 * scale, 17 * scale, 56 * scale, '#aab7cb')}
-      ${label(m.opponent, colX + 120 * scale, midY + 6 * scale, 21 * scale, COL_WIDTH - 120 * scale - 66 * scale)}
+      ${alignedText(m.opponent, colX + 120 * scale, midY + 6 * scale, opponentSize, COL_WIDTH - 120 * scale - 66 * scale)}
       <rect x="${colX + COL_WIDTH - 62}" y="${midY - 12 * scale}" width="58" height="${24 * scale}" rx="8" fill="#000" fill-opacity=".3" stroke="#fff" stroke-opacity=".14"/>
       <text x="${colX + COL_WIDTH - 33}" y="${midY + 5 * scale}" text-anchor="middle" fill="#c6d4e8" font-size="${12 * scale}" font-weight="700">${esc(m.seriesCode)}</text>
     </g>`
@@ -146,6 +170,9 @@ function renderCompactColumns(rows: WeekendMatch[], primary: string, secondary: 
   const rowH = COMPACT_ROW_H * scale
   const rowGap = COMPACT_ROW_GAP * scale
   const headH = COMPACT_HEAD_H * scale
+  // Eén gedeelde grootte voor de tegenstander-naam over BEIDE kolommen heen — anders oogt de ene
+  // kolom net iets anders dan de andere zodra de namen daar gemiddeld langer/korter zijn.
+  const opponentSize = fitSize(rows.map(m => m.opponent), 21 * scale, COL_WIDTH - 120 * scale - 66 * scale)
 
   return columns.map((colRows, ci) => {
     let y = ROWS_TOP
@@ -163,7 +190,7 @@ function renderCompactColumns(rows: WeekendMatch[], primary: string, secondary: 
       }
       const top = y
       y += rowH + rowGap
-      return heading + compactRow(m, colX, top, rowH, scale, primary, secondary)
+      return heading + compactRow(m, colX, top, rowH, scale, opponentSize, primary, secondary)
     }).join('')
   }).join('')
 }
@@ -187,6 +214,21 @@ export function renderWeekendDesign(o: {
       <linearGradient id="card" x2="1" y2="1"><stop stop-color="#2b3546"/><stop offset="1" stop-color="#141922"/></linearGradient>
       <linearGradient id="hero" x2="1" y2="0"><stop stop-color="${o.primary}" stop-opacity=".22"/><stop offset="1" stop-color="${o.secondary}" stop-opacity=".22"/></linearGradient>
       <clipPath id="badge"><circle cx="902" cy="272" r="78"/></clipPath>
+      <!-- Shine voor het clublogo: een gloed in de clubkleur erachter + een glazen sphere-shading
+           erbovenop, zodat het logo als een gepolijste medaille oogt i.p.v. plat op de kaart. Een
+           witte highlight op een wit rondje is zelf onzichtbaar (wit-op-wit) — daarom werkt de
+           shine via SELECTIEF DONKERDER maken (linksboven ongemoeid = lijkt het felst, rechtsonder
+           gedimd), wat wél zichtbaar is boven zowel een wit rondje als een echt logo. -->
+      <filter id="badgeGlow" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="16"/></filter>
+      <radialGradient id="shine" cx=".32" cy=".26" r=".95">
+        <stop offset="0" stop-color="#000" stop-opacity="0"/>
+        <stop offset=".4" stop-color="#000" stop-opacity="0"/>
+        <stop offset="1" stop-color="#000" stop-opacity=".32"/>
+      </radialGradient>
+      <radialGradient id="shineSpot" cx=".5" cy=".5" r=".5">
+        <stop offset="0" stop-color="#fff" stop-opacity=".9"/>
+        <stop offset="1" stop-color="#fff" stop-opacity="0"/>
+      </radialGradient>
       <!-- Krachtbalveld als achtergrond: grasmat-tint in de CLUBKLEUR + maaibanen + vignette,
            zelfde grammatica als RecapFieldBackdrop.tsx — herkenbaar als "van het veld" én meteen
            herkenbaar als HAAR veld, niet een generiek grasgroen. -->
@@ -230,9 +272,13 @@ export function renderWeekendDesign(o: {
       ${statChip(96, 396, o.total, o.total === 1 ? 'wedstrijd' : 'wedstrijden', '#f5f7fb')}
       ${statChip(320, 396, o.homeCount, 'thuis', o.primary)}
       ${statChip(500, 396, o.awayCount, 'uit', o.secondary)}
+      <circle cx="902" cy="272" r="104" fill="${o.primary}" opacity=".45" filter="url(#badgeGlow)"/>
       <circle cx="902" cy="280" r="85" fill="#000" opacity=".3"/>
       <circle cx="902" cy="272" r="84" fill="#fff" stroke="${o.primary}" stroke-width="5"/>
-      <g clip-path="url(#badge)">${o.logoHref ? `<image href="${esc(o.logoHref)}" x="${902 - logoSize / 2 + fit.offsetX * 1.48}" y="${272 - logoSize / 2 + fit.offsetY * 1.48}" width="${logoSize}" height="${logoSize}" preserveAspectRatio="xMidYMid meet"/>` : `<text x="902" y="286" text-anchor="middle" fill="#1c2534" font-size="34" font-weight="700">${esc(initials)}</text>`}</g>
+      <g clip-path="url(#badge)">${o.logoHref ? `<image href="${esc(o.logoHref)}" x="${902 - logoSize / 2 + fit.offsetX * 1.48}" y="${272 - logoSize / 2 + fit.offsetY * 1.48}" width="${logoSize}" height="${logoSize}" preserveAspectRatio="xMidYMid meet"/>` : `<text x="902" y="286" text-anchor="middle" fill="#1c2534" font-size="34" font-weight="700">${esc(initials)}</text>`}
+      <circle cx="902" cy="272" r="84" fill="url(#shine)"/>
+      <ellipse cx="874" cy="232" rx="30" ry="16" fill="url(#shineSpot)" transform="rotate(-30 874 232)"/></g>
+      <circle cx="902" cy="272" r="88" fill="none" stroke="#fff" stroke-opacity=".28" stroke-width="2"/>
       <text x="64" y="470" fill="#fff" font-size="48" font-weight="700" letter-spacing="-1">Het weekend van ons.</text>
       ${rows || `<rect x="64" y="${ROWS_TOP + 34}" width="952" height="260" rx="28" fill="url(#card)"/>${label('Even geen wedstrijden.', 104, ROWS_TOP + 140, 38, 860)}${label('Tot langs de zijlijn bij de volgende speeldag!', 104, ROWS_TOP + 204, 25, 860, '#b2bfd2')}`}
       <line x1="64" y1="1764" x2="1016" y2="1764" stroke="#fff" stroke-opacity=".16"/>
