@@ -27,6 +27,9 @@ export function BackToSite() {
       <Link href="/beheer/spelers" style={linkStyle}>
         + Spelers snel toevoegen
       </Link>
+      <Link href="/analyse/import#uitslagen-federatie" style={linkStyle}>
+        🔄 Uitslagen ophalen bij de federatie
+      </Link>
     </div>
   )
 }

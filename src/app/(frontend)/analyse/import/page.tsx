@@ -85,7 +85,7 @@ export default async function ResultsImportPage() {
 
         <ResultsImport />
 
-        <h2 className="an-sub">🔄 Uitslagen ophalen bij de federatie</h2>
+        <h2 className="an-sub" id="uitslagen-federatie">🔄 Uitslagen ophalen bij de federatie</h2>
         <p className="an-intro">
           Haalt de kalenderpagina van krachtbal.be op en neemt de eindstanden over. Wedstrijden die
           wij zélf aantekenden (worpen of een ingediend wedstrijdblad) blijven onaangeroerd. Eerst
