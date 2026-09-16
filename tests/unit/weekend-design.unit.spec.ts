@@ -1,23 +1,26 @@
 import { describe, expect, it } from 'vitest'
 import sharp from 'sharp'
-import { orderWeekendRows, renderWeekendDesign, weekendPages } from '@/lib/weekend-design'
+import { COLUMN_THRESHOLD, orderWeekendRows, renderWeekendDesign, weekendPages } from '@/lib/weekend-design'
 import type { WeekendMatch } from '@/lib/instagram-weekend'
 
 const matches = (n: number): WeekendMatch[] => Array.from({ length: n }, (_, i) => ({
   id: i, date: '2026-09-19T10:00:00Z', day: i < 6 ? 'zaterdag 19 september' : 'zondag 20 september',
   time: '12:00', side: i % 2 ? 'away' : 'home', team: 'KBC St. Michiels B',
-  opponent: 'T Botterken Baasrode A', series: 'Regionale Heren B',
+  opponent: 'T Botterken Baasrode A', series: 'Regionale Heren B', seriesCode: 'RHB',
 }))
 const options = {
   club: 'KBC St. Michiels', primary: '#ed1515', secondary: '#ffffff', title: '19 – 20 september',
   rows: matches(8), total: 19, page: 0, pages: 3, homeCount: 10, awayCount: 9,
 }
 describe('Weekendplan design', () => {
-  it('keeps all 19 matches in order across three readable Stories', () => {
+  it('past 19 wedstrijden op één Story i.p.v. te moeten bladeren', () => {
     const rows = matches(19)
     const pages = weekendPages(rows)
-    expect(pages.map(p => p.length)).toEqual([8, 8, 3])
-    expect(pages.flat()).toEqual(rows)
+    expect(pages).toEqual([rows])
+  })
+  it('bladert pas boven de nieuwe, ruimere paginagrens', () => {
+    expect(weekendPages(matches(24))).toHaveLength(1)
+    expect(weekendPages(matches(25)).map(p => p.length)).toEqual([24, 1])
   })
   it('groups every day into home matches followed by away matches', () => {
     const rows = matches(6).map((row, i) => ({
@@ -29,10 +32,8 @@ describe('Weekendplan design', () => {
     expect(orderWeekendRows(rows).map(row => row.side)).toEqual(['home', 'home', 'home', 'away', 'away', 'away'])
     expect(orderWeekendRows(rows).filter(row => row.side === 'home').map(row => row.time)).toEqual(['10:00', '12:00', '14:00'])
   })
-  it('provides an empty state and exact page boundaries', () => {
+  it('provides an empty state', () => {
     expect(weekendPages([])).toEqual([[]])
-    expect(weekendPages(matches(8))).toHaveLength(1)
-    expect(weekendPages(matches(9))).toHaveLength(2)
     expect(renderWeekendDesign({ ...options, rows: [], total: 0 })).toContain('Even geen wedstrijden.')
   })
   it('renders eight matches and two day headings above the footer', () => {
@@ -59,5 +60,49 @@ describe('Weekendplan design', () => {
     expect(meta.width).toBe(1080)
     expect(meta.height).toBe(1920)
     expect(meta.format).toBe('png')
+  })
+
+  describe('compacte tweekolommenweergave (drukke speeldag)', () => {
+    it('schakelt pas over boven COLUMN_THRESHOLD wedstrijden', () => {
+      // De compacte rij is herkenbaar aan haar afgeronde hoek (rx="14"; de ruime kaart gebruikt
+      // rx="22") en het T/U-lettersymbool i.p.v. het volle woord.
+      const atThreshold = renderWeekendDesign({ ...options, rows: orderWeekendRows(matches(COLUMN_THRESHOLD)) })
+      expect(atThreshold).not.toContain('rx="14"')
+      expect(atThreshold).not.toMatch(/font-weight="800">T<\/text>/)
+      const overThreshold = renderWeekendDesign({ ...options, rows: orderWeekendRows(matches(COLUMN_THRESHOLD + 1)) })
+      expect(overThreshold).toContain('rx="14"')
+      expect(overThreshold).toMatch(/font-weight="800">T<\/text>/)
+    })
+    it('toont alle 20 wedstrijden, verdeeld over twee kolommen', () => {
+      const rows = orderWeekendRows(matches(20))
+      const svg = renderWeekendDesign({ ...options, rows, total: 20, pages: 1 })
+      expect((svg.match(/data-match=/g) ?? [])).toHaveLength(20)
+      // Tweede kolom start rechts van de eerste (COL_WIDTH + COL_GAP na x=64).
+      expect(svg).toContain('x="64"')
+      expect(svg).toContain('x="552"')
+    })
+    it('gebruikt een letter-symbool i.p.v. de volle woorden THUIS/UIT, en de korte reekscode', () => {
+      const rows = orderWeekendRows(matches(COLUMN_THRESHOLD + 2))
+      const svg = renderWeekendDesign({ ...options, rows })
+      // De letterbadge in de rij zelf (niet de dag/kant-kop, die blijft "THUIS"/"UIT").
+      expect(svg).toMatch(/font-weight="800">T<\/text>/)
+      expect(svg).toMatch(/font-weight="800">U<\/text>/)
+      expect(svg).toContain('>RHB<')
+      expect(svg).not.toContain('Regionale Heren B')
+    })
+    it('blijft ruim vóór de voettekstlijn (y=1764) voor 24 wedstrijden op twee kolommen', () => {
+      const rows = orderWeekendRows(matches(24))
+      const svg = renderWeekendDesign({ ...options, rows, total: 24, pages: 1 })
+      const compactRows = [...svg.matchAll(/<rect x="(?:64|552)" y="([\d.]+)" width="464" height="([\d.]+)" rx="14"/g)]
+        .map(m => ({ top: Number(m[1]), height: Number(m[2]) }))
+      expect(compactRows.length).toBeGreaterThan(0)
+      expect(Math.max(...compactRows.map(r => r.top + r.height))).toBeLessThan(1764)
+    })
+    it('rekt rijen op om de kolom te vullen bij een rustigere speeldag', () => {
+      const rows = orderWeekendRows(matches(COLUMN_THRESHOLD + 1))
+      const svg = renderWeekendDesign({ ...options, rows })
+      const heights = [...svg.matchAll(/width="464" height="([\d.]+)" rx="14"/g)].map(m => Number(m[1]))
+      expect(heights[0]).toBeGreaterThan(56)
+    })
   })
 })
