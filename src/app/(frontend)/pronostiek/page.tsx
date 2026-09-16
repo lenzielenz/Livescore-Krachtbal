@@ -1,15 +1,20 @@
 import Link from 'next/link'
 
+import { isFederationLevel } from '@/lib/access'
 import { SiteHeader } from '@/components/SiteHeader'
 import { competitionWhere } from '@/lib/analyse-access'
 import { getAuthUser } from '@/lib/auth-user'
 import { buildMatchState } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
 import { buildPredictionLeaderboard, MAX_POINTS_PER_MATCH, PRED_POINTS, type PredEntry } from '@/lib/prediction-score'
+import { activeTokens, radWinnerCount, SPINS_PER_WEEK, type RadToken } from '@/lib/pronostiek-rad'
+import { loadRadState } from '@/lib/pronostiek-rad-server'
 import { LIVE_PRONOSTIEK_MAX_PER_WEEKEND } from '@/lib/pronostiek-weekend'
 import { seasonFromDate } from '@/lib/seasons'
 import { PronostiekBoard } from './PronostiekBoard'
+import { RadTeaser } from './RadTeaser'
 import '../club/voorspel/voorspel.css'
+import './pronostiek.css'
 
 export const dynamic = 'force-dynamic'
 
@@ -51,12 +56,32 @@ export default async function PronostiekStandPage() {
   const leaderboard = buildPredictionLeaderboard(scored)
   const totalPlayers = leaderboard.length
 
+  // Status voor de bonusrad-teaser — zelfde logica als /pronostiek/rad, zodat de kaart hier al toont
+  // of je mag draaien, boosters klaar hebt liggen, of nog moet knokken voor de top.
+  const canTest = isFederationLevel(me)
+  const radState = await loadRadState(payload)
+  type Power = { tokens?: RadToken[]; spinWeek?: string; spinsUsed?: number }
+  const power = ((me as { pronostiekPower?: Power | null } | null)?.pronostiekPower ?? {}) as Power
+  const heldTokensCount = activeTokens(power.tokens).length
+  const myRank = radState.winners.find((w) => w.userId === myUserId)?.rank ?? null
+  const eligible = canTest || myRank != null
+  const usedThisWeek = power.spinWeek === radState.weekendStartIso ? Number(power.spinsUsed) || 0 : 0
+  const spinsLeft = canTest ? 99 : eligible ? Math.max(0, SPINS_PER_WEEK - usedThisWeek) : 0
+  const winnerCount = radWinnerCount(radState.participants)
+
   return (
     <>
       <SiteHeader active="stand" />
       <div className="site">
         <h1 className="page-title"><span className="brand">Pronostiekstand</span></h1>
-        <p className="vs-intro">Seizoen {seizoen} · <Link href="/" style={{ color: 'var(--accent)' }}>voorspel mee op een livewedstrijd</Link> · <Link href="/pronostiek/rad" style={{ color: 'var(--accent)' }}>🎡 Bonusrad</Link>.</p>
+        <RadTeaser
+          loggedIn={Boolean(me)}
+          eligible={eligible}
+          spinsLeft={spinsLeft}
+          heldTokensCount={heldTokensCount}
+          winnerCount={winnerCount}
+        />
+        <p className="vs-intro">Seizoen {seizoen} · <Link href="/" style={{ color: 'var(--accent)' }}>voorspel mee op een livewedstrijd</Link>.</p>
         <details className="vs-rules">
           <summary>Hoe werken de punten?</summary>
           <ul>

@@ -1,0 +1,96 @@
+/* Bonusrad-teaser op de pronostiekstand: een kleine, levendige poort naar het rad (rad.css) —
+   dezelfde goud/Vegas-taal, maar rustig genoeg voor tussen de gewone kaarten op deze pagina. */
+.radteaser {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  position: relative;
+  overflow: hidden;
+  margin: 4px 0 20px;
+  padding: 18px 20px;
+  border: 1px solid color-mix(in srgb, #ffd166 35%, var(--line));
+  border-radius: 20px;
+  background:
+    radial-gradient(120% 160% at 100% 0%, color-mix(in srgb, #ffd166 16%, transparent), transparent 55%),
+    radial-gradient(90% 140% at 0% 100%, color-mix(in srgb, #a3161f 22%, transparent), transparent 60%),
+    var(--panel-grad, var(--panel));
+  box-shadow: var(--card-shadow);
+  color: inherit;
+  text-decoration: none;
+  animation: radteaser-pulse 2.6s ease-in-out infinite;
+  transition: transform .18s var(--ease-out, ease), border-color .18s ease;
+}
+.radteaser:hover { transform: translateY(-2px); border-color: #ffd166; }
+@keyframes radteaser-pulse {
+  0%, 100% { box-shadow: var(--card-shadow), 0 0 0 0 transparent; }
+  50% { box-shadow: var(--card-shadow), 0 0 32px -6px color-mix(in srgb, #ffd166 55%, transparent); }
+}
+/* Glans-sweep, zelfde grammatica als de recap-hero (recap.css). */
+.radteaser::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: linear-gradient(115deg, transparent 40%, #ffffff10 48%, #ffffff22 50%, #ffffff10 52%, transparent 60%);
+  background-size: 260% 260%;
+  background-position: 120% -20%;
+  animation: radteaser-sheen 7s ease-in-out 1s infinite;
+}
+@keyframes radteaser-sheen {
+  0%, 55% { background-position: 120% -20%; }
+  85%, 100% { background-position: -20% 120%; }
+}
+
+.radteaser-wheel { position: relative; z-index: 1; flex: none; width: 76px; height: 76px; display: grid; place-items: center; }
+.radteaser-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: conic-gradient(from 0deg, #7c1118, #ffd166, #a3161f, #ffe39a, #7c1118, #f4a300, #7c1118, #ffd166, #7c1118);
+  box-shadow: 0 0 0 2px #14100a, inset 0 0 10px rgba(0, 0, 0, .5), 0 8px 20px -8px #000;
+  animation: radteaser-spin 10s linear infinite;
+}
+@keyframes radteaser-spin { to { transform: rotate(360deg); } }
+.radteaser-hub {
+  position: relative;
+  z-index: 1;
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at 35% 30%, #fdfbf5, #ddd6c6 88%);
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, .8), inset 0 -2px 4px rgba(0, 0, 0, .2), 0 4px 10px -4px #000;
+  font-size: 1.15rem;
+}
+.radteaser-spark {
+  position: absolute;
+  z-index: 2;
+  color: #fff;
+  font-size: .6rem;
+  text-shadow: 0 0 6px #ffd166, 0 0 12px #ffd166;
+  animation: radteaser-spark-tw 2.2s ease-in-out infinite;
+}
+.radteaser-spark.s1 { top: -6px; left: 8px; animation-delay: 0s; }
+.radteaser-spark.s2 { bottom: -2px; right: -6px; animation-delay: .6s; }
+.radteaser-spark.s3 { top: 30%; right: -10px; animation-delay: 1.2s; }
+@keyframes radteaser-spark-tw {
+  0%, 100% { opacity: .15; transform: scale(.7); }
+  50% { opacity: 1; transform: scale(1); }
+}
+
+.radteaser-copy { position: relative; z-index: 1; flex: 1; min-width: 0; }
+.radteaser-kicker { display: block; margin-bottom: 3px; color: #ffd166; font-size: .66rem; font-weight: 900; letter-spacing: .12em; }
+.radteaser-copy h2 { margin: 0 0 4px; font-size: 1.12rem; font-weight: 900; color: var(--txt); }
+.radteaser-copy p { margin: 0 0 8px; color: var(--dim); font-size: .86rem; line-height: 1.45; }
+.radteaser-cta { display: inline-flex; color: #ffd166; font-weight: 800; font-size: .88rem; }
+
+@media (max-width: 480px) {
+  .radteaser { gap: 14px; padding: 15px 16px; }
+  .radteaser-wheel { width: 60px; height: 60px; }
+  .radteaser-hub { width: 32px; height: 32px; font-size: .95rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .radteaser, .radteaser-ring, .radteaser-spark, .radteaser::after { animation: none; }
+}
