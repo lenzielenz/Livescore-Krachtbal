@@ -96,14 +96,12 @@ export default async function PronostiekStandPage() {
         {leaderboard.length === 0 ? (
           <p className="empty">Nog geen punten — voorspel de uitslag op een wedstrijdpagina en kom later terug.</p>
         ) : (
-          <>
-            <p className="vs-locked" style={{ color: 'var(--dim)' }}>{totalPlayers} {totalPlayers === 1 ? 'deelnemer' : 'deelnemers'}</p>
-            <PronostiekBoard
-              rows={leaderboard}
-              myUserId={myUserId}
-              swingPerWeekend={LIVE_PRONOSTIEK_MAX_PER_WEEKEND * 5}
-            />
-          </>
+          <PronostiekBoard
+            rows={leaderboard}
+            myUserId={myUserId}
+            swingPerWeekend={LIVE_PRONOSTIEK_MAX_PER_WEEKEND * 5}
+            totalPlayers={totalPlayers}
+          />
         )}
       </div>
     </>
