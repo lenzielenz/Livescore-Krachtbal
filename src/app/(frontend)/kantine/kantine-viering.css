@@ -1,0 +1,422 @@
+/* Schermvullende doelpunt-viering en fotoshow voor het kantinescherm (competitie) — dezelfde
+   spektakel-overlays als op het tornooischerm (zie tornooi.css, klassen .gk-viering en .gk-fotoshow), maar
+   als eigen bestand: dit scherm draait al langer stabiel en een gedeelde stylesheet zou een
+   wijziging voor de ene tv meteen op de andere laten meespelen. Klassen dragen daarom een eigen
+   voorvoegsel (ktc- = "kantine celebration") in plaats van gk-.
+
+   ── Schermvullende doelpunt-viering: clubkleur-burst + logo + punten ─────────────────────────
+   Neemt het hele scherm kort over wanneer een doelpunt valt. --vc = clubkleur, --vdur = looptijd. */
+.ktc-viering {
+  position: fixed;
+  inset: 0;
+  z-index: 150; /* boven de fotoshow (130): een doelpunt wint altijd */
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: rgba(5, 7, 10, 0.82);
+  animation: ktc-v-leven var(--vdur, 2400ms) both;
+}
+@keyframes ktc-v-leven {
+  0% { opacity: 0; }
+  7% { opacity: 1; }
+  84% { opacity: 1; }
+  100% { opacity: 0; }
+}
+.ktc-viering-flits {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(60% 60% at 50% 50%, rgba(255, 255, 255, 0.9), transparent 70%);
+  animation: ktc-v-flits 420ms cubic-bezier(0.15, 0.9, 0.3, 1) both;
+  pointer-events: none;
+}
+@keyframes ktc-v-flits {
+  0% { opacity: 0; transform: scale(0.7); }
+  14% { opacity: 0.95; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.35); }
+}
+.ktc-viering-golf {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 40vmin;
+  height: 40vmin;
+  margin: -20vmin 0 0 -20vmin;
+  border-radius: 50%;
+  border: 0.9vmin solid color-mix(in srgb, var(--vc, var(--accent)) 85%, #fff);
+  box-shadow: 0 0 6vmin color-mix(in srgb, var(--vc, var(--accent)) 60%, transparent);
+  animation: ktc-v-golf 900ms cubic-bezier(0.12, 0.75, 0.3, 1) both;
+  pointer-events: none;
+}
+@keyframes ktc-v-golf {
+  0% { transform: scale(0.15); opacity: 0; border-width: 1.6vmin; }
+  18% { opacity: 0.95; }
+  100% { transform: scale(4.2); opacity: 0; border-width: 0.2vmin; }
+}
+.ktc-viering-burst {
+  position: absolute;
+  inset: -30%;
+  background:
+    radial-gradient(38% 38% at 50% 50%, color-mix(in srgb, var(--vc, var(--accent)) 62%, transparent), transparent 72%),
+    repeating-conic-gradient(from 0deg,
+      color-mix(in srgb, var(--vc, var(--accent)) 26%, transparent) 0deg 3deg,
+      transparent 3deg 15deg);
+  -webkit-mask-image: radial-gradient(closest-side, #000 22%, rgba(0, 0, 0, 0.55) 55%, transparent 78%);
+  mask-image: radial-gradient(closest-side, #000 22%, rgba(0, 0, 0, 0.55) 55%, transparent 78%);
+  animation: ktc-v-draai 5s linear infinite, ktc-v-burst-uit var(--vdur, 2400ms) both;
+}
+@keyframes ktc-v-burst-uit {
+  0% { opacity: 0; transform: scale(0.82); }
+  10% { opacity: 1; }
+  70% { opacity: 1; }
+  100% { opacity: 0.25; }
+}
+@keyframes ktc-v-draai { to { transform: rotate(360deg); } }
+.ktc-viering-inhoud {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.4vmin;
+  text-align: center;
+  animation: ktc-v-pop var(--vdur, 2400ms) cubic-bezier(0.18, 1.25, 0.3, 1) both;
+}
+@keyframes ktc-v-pop {
+  0% { transform: scale(0.62) translateY(2vmin); opacity: 0; }
+  12% { transform: scale(1.06) translateY(0); opacity: 1; }
+  20% { transform: scale(1); }
+  86% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(1.12); opacity: 0; }
+}
+.ktc-viering-logo { filter: drop-shadow(0 1.2vmin 3vmin rgba(0, 0, 0, 0.6)); animation: ktc-v-zweef 2.4s ease-in-out infinite; }
+@keyframes ktc-v-zweef { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-1.2vmin); } }
+.ktc-viering-punten {
+  position: relative;
+  font-family: var(--font-display), sans-serif;
+  font-weight: 900;
+  font-size: clamp(3rem, 12vmin, 9rem);
+  line-height: 1;
+  background: linear-gradient(100deg,
+    color-mix(in srgb, var(--vc, var(--accent)) 70%, #fff) 0%,
+    #fff 45%,
+    color-mix(in srgb, var(--vc, var(--accent)) 70%, #fff) 90%);
+  background-size: 250% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 3.5vmin color-mix(in srgb, var(--vc, var(--accent)) 75%, transparent));
+  animation: ktc-v-veeg 1.1s cubic-bezier(0.3, 0.7, 0.3, 1) 0.12s both;
+}
+@keyframes ktc-v-veeg {
+  0% { background-position: 130% 0; }
+  100% { background-position: -30% 0; }
+}
+.ktc-viering-titel {
+  font-family: var(--font-display), sans-serif;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  text-indent: 0.18em;
+  font-size: clamp(1.6rem, 6vmin, 4.4rem);
+  color: #fff;
+}
+.ktc-viering-team { font-size: clamp(1.2rem, 4vmin, 3rem); font-weight: 800; color: #fff; }
+.ktc-viering-reeks { font-size: clamp(0.85rem, 2vmin, 1.3rem); color: var(--dim-strong, #cad2dc); font-weight: 700; }
+@media (prefers-reduced-motion: reduce) {
+  .ktc-viering-burst, .ktc-viering-logo, .ktc-viering-golf, .ktc-viering-flits { animation: none; }
+  .ktc-viering-flits, .ktc-viering-golf { opacity: 0; }
+  .ktc-viering-punten { animation: none; }
+}
+
+/* ── Doelpunt-specials: +1 laat het logo groeien en draaien, +2 stuurt een raket naar de
+   tegenstander en laat hem ontploffen — zelfde grap als op het tornooischerm. */
+.ktc-viering-logo.draai {
+  animation: ktc-v-groeidraai 1.25s cubic-bezier(0.16, 0.85, 0.25, 1) both, ktc-v-zweef 2s ease-in-out 1.3s infinite;
+}
+@keyframes ktc-v-groeidraai {
+  0% { transform: scale(0.3) rotate(0deg); opacity: 0; }
+  10% { opacity: 1; }
+  62% { transform: scale(1.24) rotate(680deg); }
+  100% { transform: scale(1.12) rotate(720deg); }
+}
+.ktc-raketbaan {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: min(86vw, 1100px);
+  padding: 2vmin 0;
+}
+.ktc-raket-af,
+.ktc-raket-doel {
+  position: relative;
+  display: inline-flex;
+  filter: drop-shadow(0 1vmin 2.6vmin rgba(0, 0, 0, 0.55));
+}
+.ktc-raket {
+  position: absolute;
+  left: 10%;
+  top: 50%;
+  z-index: 2;
+  font-size: clamp(44px, 10vmin, 110px);
+  filter: drop-shadow(0 0 2.4vmin rgba(255, 170, 70, 0.85));
+  animation: ktc-raket-vlucht 1s cubic-bezier(0.5, 0, 0.65, 1) both;
+  pointer-events: none;
+}
+@keyframes ktc-raket-vlucht {
+  0% { left: 10%; transform: translate(-50%, -50%) rotate(45deg) scale(0.55); opacity: 0; }
+  10% { opacity: 1; }
+  50% { transform: translate(-50%, -160%) rotate(45deg) scale(1.05); }
+  92% { opacity: 1; }
+  100% { left: 90%; transform: translate(-50%, -50%) rotate(45deg) scale(1); opacity: 0; }
+}
+.ktc-raketbaan.naarlinks .ktc-raket { left: 90%; animation-name: ktc-raket-vlucht-links; }
+@keyframes ktc-raket-vlucht-links {
+  0% { left: 90%; transform: translate(-50%, -50%) scaleX(-1) rotate(45deg) scale(0.55); opacity: 0; }
+  10% { opacity: 1; }
+  50% { transform: translate(-50%, -160%) scaleX(-1) rotate(45deg) scale(1.05); }
+  92% { opacity: 1; }
+  100% { left: 10%; transform: translate(-50%, -50%) scaleX(-1) rotate(45deg) scale(1); opacity: 0; }
+}
+.ktc-boem {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  font-size: clamp(80px, 20vmin, 220px);
+  opacity: 0;
+  animation: ktc-boem-knal 0.85s cubic-bezier(0.2, 1, 0.3, 1) 0.95s both;
+  pointer-events: none;
+}
+@keyframes ktc-boem-knal {
+  0% { transform: scale(0.2); opacity: 0; }
+  12% { transform: scale(1.5); opacity: 1; }
+  55% { transform: scale(1.1); opacity: 1; }
+  100% { transform: scale(1.9); opacity: 0; }
+}
+.ktc-raket-doel-logo {
+  display: inline-flex;
+  animation: ktc-schud 0.7s cubic-bezier(0.3, 0.9, 0.4, 1) 1s both;
+}
+@keyframes ktc-schud {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  15% { transform: translate(-2.2vmin, 0.6vmin) rotate(-7deg); }
+  35% { transform: translate(1.8vmin, -0.7vmin) rotate(5deg); }
+  55% { transform: translate(-1.2vmin, 0.4vmin) rotate(-3deg); }
+  75% { transform: translate(0.7vmin, -0.3vmin) rotate(2deg); }
+}
+.ktc-viering.raket .ktc-viering-titel,
+.ktc-viering.raket .ktc-viering-team,
+.ktc-viering.raket .ktc-viering-reeks {
+  opacity: 0;
+  animation: ktc-v-natekst 0.45s cubic-bezier(0.22, 1.4, 0.36, 1) 1.15s both;
+}
+.ktc-viering.raket .ktc-viering-punten {
+  opacity: 0;
+  animation:
+    ktc-v-natekst 0.45s cubic-bezier(0.22, 1.4, 0.36, 1) 1.15s both,
+    ktc-v-veeg 1.1s cubic-bezier(0.3, 0.7, 0.3, 1) 1.25s both;
+}
+@keyframes ktc-v-natekst {
+  from { transform: scale(0.7) translateY(1.4vmin); opacity: 0; }
+  to { transform: scale(1) translateY(0); opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ktc-viering-logo.draai,
+  .ktc-raket,
+  .ktc-boem,
+  .ktc-raket-doel-logo { animation: none; }
+  .ktc-raket { display: none; }
+  .ktc-viering.raket .ktc-viering-punten,
+  .ktc-viering.raket .ktc-viering-titel,
+  .ktc-viering.raket .ktc-viering-team,
+  .ktc-viering.raket .ktc-viering-reeks { opacity: 1; animation: none; }
+}
+
+/* ── Fotoshow: een supporter stuurde tijdens de wedstrijd een foto in ─────────────────────────
+   "OH OHHH… hier komt 'm!" met een 3-2-1-aftelklok, dan popt de foto als polaroid in beeld en
+   lost weer op. De foto blijft daarna gewoon bij de wedstrijd staan (foto-tribune); dit is enkel
+   de korte schermvullende aankondiging. */
+.ktc-fotoshow {
+  position: fixed;
+  inset: 0;
+  z-index: 130;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(90% 90% at 50% 45%, rgba(8, 14, 11, 0.82), rgba(3, 6, 5, 0.94));
+  backdrop-filter: blur(7px);
+  animation: ktc-fs-in 0.35s ease both;
+}
+@keyframes ktc-fs-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.ktc-fs-tease {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2.4vmin;
+  text-align: center;
+}
+.ktc-fs-titel {
+  font-size: clamp(2.2rem, 8vmin, 5rem);
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  color: #fff;
+  text-shadow: 0 2px 18px rgba(0, 0, 0, 0.6);
+  animation: ktc-fs-wiebel 1s ease-in-out infinite;
+}
+@keyframes ktc-fs-wiebel {
+  0%, 100% { transform: rotate(-1.6deg) scale(1); }
+  50% { transform: rotate(1.6deg) scale(1.04); }
+}
+.ktc-fs-sub {
+  font-size: clamp(1.1rem, 3.4vmin, 2rem);
+  font-weight: 700;
+  color: var(--dim);
+  letter-spacing: 0.04em;
+}
+.ktc-fs-tel {
+  position: relative;
+  width: clamp(130px, 26vmin, 260px);
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  font-size: clamp(72px, 16vmin, 160px);
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent, #ffd873);
+  text-shadow: 0 0 34px color-mix(in srgb, var(--accent, #ffd873) 65%, transparent);
+  animation: ktc-fs-telpop 0.95s cubic-bezier(0.2, 1.2, 0.3, 1) both;
+}
+@keyframes ktc-fs-telpop {
+  0% { transform: scale(1.7); opacity: 0; }
+  25% { opacity: 1; }
+  60% { transform: scale(0.96); }
+  100% { transform: scale(1); }
+}
+.ktc-fotoshow.dubbel .ktc-fs-titel { animation-duration: 0.7s; }
+.ktc-fotoshow.heftig .ktc-fs-titel { animation-duration: 0.45s; font-size: clamp(2.6rem, 9.5vmin, 6rem); }
+.ktc-fotoshow.dubbel { background: radial-gradient(90% 90% at 50% 45%, rgba(22, 12, 4, 0.86), rgba(3, 6, 5, 0.95)); }
+.ktc-fotoshow.heftig {
+  background: radial-gradient(90% 90% at 50% 45%, rgba(34, 12, 2, 0.9), rgba(4, 3, 6, 0.96));
+  animation: ktc-fs-in 0.35s ease both, ktc-fs-hartslag 0.55s ease-in-out infinite;
+}
+@keyframes ktc-fs-hartslag {
+  0%, 100% { box-shadow: inset 0 0 0 0 rgba(255, 190, 90, 0); }
+  50% { box-shadow: inset 0 0 22vmin 0 rgba(255, 170, 60, 0.16); }
+}
+.ktc-fotoshow.heftig .ktc-fs-ring { border-width: 0.85vmin; animation-duration: 0.7s; }
+.ktc-fs-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 0.55vmin solid color-mix(in srgb, var(--accent, #ffd873) 22%, transparent);
+  border-top-color: var(--accent, #ffd873);
+  box-shadow: 0 0 28px -6px color-mix(in srgb, var(--accent, #ffd873) 60%, transparent);
+  animation: ktc-fs-draai 1s linear infinite;
+}
+@keyframes ktc-fs-draai {
+  to { transform: rotate(360deg); }
+}
+.ktc-fs-reveal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2vmin;
+  animation: ktc-fs-show 6.5s cubic-bezier(0.2, 1, 0.3, 1) both;
+}
+.ktc-fs-stapel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2.5vmin 0;
+}
+.ktc-fs-kaart {
+  display: block;
+  position: relative;
+  flex: 0 0 auto;
+  --hoek: calc((var(--i) - (var(--n) - 1) / 2) * 7deg);
+  --lift: 0vmin;
+  transform: rotate(var(--hoek)) translateY(var(--lift));
+  animation: ktc-fs-kaart-in 0.62s cubic-bezier(0.18, 1.3, 0.32, 1) both;
+  animation-delay: calc(var(--i) * 0.16s);
+}
+.ktc-fs-kaart:nth-child(2n) { --lift: 1.4vmin; }
+.ktc-fs-kaart:nth-child(3n) { --lift: -1vmin; }
+.ktc-fs-kaart img {
+  display: block;
+  max-width: min(84vw, 980px);
+  max-height: 68vh;
+  border: 1.4vmin solid #fff;
+  border-bottom-width: 4.6vmin;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.25);
+}
+/* Wie de foto stuurde, in de witte onderrand — precies waar op een echte polaroid het
+   bijschrift met balpen staat. */
+.ktc-fs-wie {
+  position: absolute;
+  left: 1.4vmin;
+  right: 1.4vmin;
+  bottom: 0;
+  height: 4.6vmin;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0.8vmin;
+  color: #14181f;
+  font-family: var(--font-display), system-ui, sans-serif;
+  font-size: 2vmin;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ktc-fs-stapel.n3 .ktc-fs-wie { font-size: 1.6vmin; }
+.ktc-fs-stapel.n4 .ktc-fs-wie,
+.ktc-fs-stapel.n5 .ktc-fs-wie,
+.ktc-fs-stapel.n6 .ktc-fs-wie { font-size: 1.3vmin; }
+.ktc-fs-stapel.n2 .ktc-fs-kaart img { max-width: min(42vw, 520px); max-height: 52vh; }
+.ktc-fs-stapel.n2 .ktc-fs-kaart + .ktc-fs-kaart { margin-left: -4vmin; }
+.ktc-fs-stapel.n3 .ktc-fs-kaart img { max-width: min(30vw, 400px); max-height: 46vh; }
+.ktc-fs-stapel.n3 .ktc-fs-kaart + .ktc-fs-kaart { margin-left: -3vmin; }
+.ktc-fs-stapel.n4 .ktc-fs-kaart img,
+.ktc-fs-stapel.n5 .ktc-fs-kaart img,
+.ktc-fs-stapel.n6 .ktc-fs-kaart img { max-width: min(22vw, 320px); max-height: 40vh; }
+.ktc-fs-stapel.n4 .ktc-fs-kaart + .ktc-fs-kaart,
+.ktc-fs-stapel.n5 .ktc-fs-kaart + .ktc-fs-kaart,
+.ktc-fs-stapel.n6 .ktc-fs-kaart + .ktc-fs-kaart { margin-left: -2.4vmin; }
+@keyframes ktc-fs-kaart-in {
+  0% { transform: rotate(calc(var(--hoek) * 5)) translate(0, 60vh) scale(0.5); opacity: 0; }
+  55% { opacity: 1; }
+  78% { transform: rotate(calc(var(--hoek) * 0.7)) translateY(calc(var(--lift) - 1.6vmin)) scale(1.05); }
+  100% { transform: rotate(var(--hoek)) translateY(var(--lift)) scale(1); opacity: 1; }
+}
+.ktc-fs-onder {
+  font-size: clamp(0.95rem, 2.6vmin, 1.5rem);
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--txt);
+  background: rgba(6, 9, 14, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  padding: 6px 18px;
+}
+@keyframes ktc-fs-show {
+  0% { transform: scale(0.55) rotate(5deg); opacity: 0; }
+  6% { transform: scale(1.05) rotate(-1deg); opacity: 1; }
+  10% { transform: scale(1) rotate(0deg); }
+  88% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(0.94); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ktc-fs-titel,
+  .ktc-fs-ring { animation: none; }
+  .ktc-fotoshow.heftig { animation: ktc-fs-in 0.35s ease both; }
+  .ktc-fs-tel { animation: ktc-fs-in 0.2s ease both; }
+  .ktc-fs-reveal { animation: ktc-fs-in 0.3s ease both; }
+  .ktc-fs-kaart { animation: ktc-fs-in 0.3s ease both; }
+}

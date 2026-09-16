@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import type { Payload } from 'payload'
 
-import { joinMatch } from '@/lib/match-channel'
+import { addInstant, joinMatch, recenteInstants } from '@/lib/match-channel'
 
 // Stub volstaat: pollScore/hydrate vangen elke fout zelf op (best-effort), en de teller-logica
 // die we hier testen raakt de database nooit aan.
@@ -52,5 +52,28 @@ describe('match-channel kijkersteller (het oogje)', () => {
     expect(y.lastViewers()).toBe(2)
     leaveX()
     leaveY()
+  })
+})
+
+describe('match-channel recente foto-instants (voor de kantine-tv)', () => {
+  it('blijft opgepikt zonder actief kanaal — de kantine-tv heeft er zelf geen', () => {
+    // Geen joinMatch: er is geen viewer/kanaal voor deze wedstrijd, precies de situatie waarin
+    // een kantine-tv een foto toch moet kunnen oppikken (zie kantine-channel.ts loadKantineLive).
+    const matchId = 990101
+    expect(recenteInstants(matchId, 60_000)).toEqual([])
+
+    const instant = { id: 1, url: '/api/match-instants/file/x.jpg', authorName: 'Jan', at: Date.now() }
+    const kanaalActief = addInstant(matchId, instant)
+    expect(kanaalActief).toBe(false) // geen broadcast: niemand kijkt
+
+    const recent = recenteInstants(matchId, 60_000)
+    expect(recent).toEqual([instant])
+  })
+
+  it('valt weg zodra ze ouder zijn dan de gevraagde leeftijd', () => {
+    const matchId = 990102
+    const oud = { id: 2, url: '/x.jpg', authorName: 'Marie', at: Date.now() - 120_000 }
+    addInstant(matchId, oud)
+    expect(recenteInstants(matchId, 60_000)).toEqual([])
   })
 })

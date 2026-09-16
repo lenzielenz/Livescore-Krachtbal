@@ -14,6 +14,7 @@ import type { KantineLive } from '@/lib/kantine-channel'
 import type { ClubColors } from '@/lib/club-colors'
 import { useLiveStream } from '@/lib/use-live-stream'
 import { Tile, type KantineMatch } from './KantineBoard'
+import { GoalCelebrationOverlay, PhotoCelebration, vieringDuur, type KantineFotoInstant, type Viering } from './KantineCelebration'
 
 /** Clubstijl van de eigenaar van dit scherm: de tv van de club hoort eruit te zien als de club. */
 export type KantineStijl = { club: string; kleuren: ClubColors | null } | null
@@ -138,12 +139,75 @@ export function KantineScreen({
     ? matches.filter((m) => m.status !== 'scheduled')
     : matches
   const idsSleutel = streamMatches.map((m) => m.id).sort((a, b) => a - b).join(',')
+
+  // Schermvullende doelpunt-viering + fotoshow — zelfde spektakel als op het tornooischerm, maar
+  // hier gedetecteerd op het volledige scherm (niet per tegel) zodat elk bord dat scoort of een
+  // foto krijgt kort het hele scherm overneemt. Het eerste frame "leert" enkel de stand/foto's die
+  // er al waren, anders barst het scherm los zodra de tv 's ochtends aangaat.
+  const eersteFrame = useRef(true)
+  const gezienGoal = useRef<Map<number, string>>(new Map())
+  const gezienFoto = useRef<Set<number>>(new Set())
+  const vieringSeq = useRef(0)
+  const vieringTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [viering, setViering] = useState<Viering | null>(null)
+  const [fotoRij, setFotoRij] = useState<KantineFotoInstant[][]>([])
+  useEffect(() => {
+    return () => {
+      if (vieringTimer.current) clearTimeout(vieringTimer.current)
+    }
+  }, [])
+
   useLiveStream<KantineLive[]>(
     idsSleutel ? `/api/kantine/live/stream?ids=${idsSleutel}` : null,
     (frame) => {
       const kaart: Record<number, KantineLive> = {}
       for (const r of frame) kaart[r.id] = r
       setLive(kaart)
+
+      const eerste = eersteFrame.current
+      eersteFrame.current = false
+      const nieuweFotos: KantineFotoInstant[] = []
+      for (const r of frame) {
+        const m = matches.find((x) => x.id === r.id)
+        if (!m) continue
+        if (r.goal) {
+          const vorigId = gezienGoal.current.get(r.id)
+          if (eerste) {
+            gezienGoal.current.set(r.id, r.goal.id)
+          } else if (r.goal.id !== vorigId) {
+            gezienGoal.current.set(r.id, r.goal.id)
+            const kant = r.goal.side
+            const tegenKant = kant === 'home' ? 'away' : 'home'
+            const team = m[kant]
+            const tegen = m[tegenKant]
+            const key = ++vieringSeq.current
+            const v: Viering = {
+              key,
+              kant,
+              team: team.name,
+              punten: r.goal.points,
+              kleur: team.colors?.primary ?? null,
+              logo: team.logoUrl,
+              fit: team.logoFit ?? null,
+              reeks: m.reeks,
+              tegen: tegen.name,
+              tegenLogo: tegen.logoUrl,
+              tegenFit: tegen.logoFit ?? null,
+              tegenKleur: tegen.colors?.primary ?? null,
+            }
+            setViering(v)
+            if (vieringTimer.current) clearTimeout(vieringTimer.current)
+            const duur = vieringDuur(v)
+            vieringTimer.current = setTimeout(() => setViering((cur) => (cur && cur.key === key ? null : cur)), duur)
+          }
+        }
+        for (const inst of r.instants) {
+          if (gezienFoto.current.has(inst.id)) continue
+          gezienFoto.current.add(inst.id)
+          if (!eerste) nieuweFotos.push({ id: inst.id, url: inst.url, authorName: inst.authorName })
+        }
+      }
+      if (nieuweFotos.length > 0) setFotoRij((rij) => [...rij, nieuweFotos])
     },
   )
 
@@ -255,6 +319,14 @@ export function KantineScreen({
           dezelfde fout als op het tornooischerm, alleen langs de andere kant binnengekomen: het
           linkje en het tv-zijn hebben niets met elkaar te maken. */}
       <SchermModus />
+      {viering && <GoalCelebrationOverlay key={viering.key} v={viering} ms={vieringDuur(viering)} />}
+      {fotoRij.length > 0 && (
+        <PhotoCelebration
+          key={fotoRij[0].map((f) => f.id).join(',')}
+          fotos={fotoRij[0]}
+          klaar={() => setFotoRij((rij) => rij.slice(1))}
+        />
+      )}
       {editable && <Link href="/kantine" className="kt-screen-edit">‹ Aanpassen</Link>}
       {/* Rechtstreeks naar de tv. Niet spiegelen: de Chromecast laadt dít scherm zelf en houdt
           zijn eigen live verbinding, zodat het blijft draaien als je je telefoon wegsteekt. */}
