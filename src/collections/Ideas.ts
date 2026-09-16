@@ -31,6 +31,13 @@ export const Ideas: CollectionConfig = {
     },
     { name: 'subject', label: 'Onderwerp', type: 'text', required: true },
     { name: 'message', label: 'Uitleg', type: 'textarea', required: true },
+    {
+      name: 'screenshot',
+      label: 'Screenshot',
+      type: 'upload',
+      relationTo: 'idea-screenshots',
+      admin: { description: 'Optioneel bijgevoegd door de indiener, bv. bij een probleemmelding.' },
+    },
     { name: 'name', label: 'Naam indiener', type: 'text' },
     { name: 'email', label: 'E-mail indiener', type: 'email' },
     { name: 'submittedBy', label: 'Ingelogde gebruiker', type: 'relationship', relationTo: 'users' },
