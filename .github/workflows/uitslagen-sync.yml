@@ -1,0 +1,39 @@
+name: Uitslagen synchroniseren
+
+# Roept /api/cron/uitslagen aan op de live site: haalt de uitslagen van de federatie
+# (krachtbal.be) op en vult ze aan bij wedstrijden die wij zelf niet aantekenden — zie
+# docs/UITSLAGEN-SYNC.md. Geen login nodig: het endpoint controleert enkel CRON_SECRET
+# (moet zowel hier als op Railway ingesteld zijn).
+
+on:
+  schedule:
+    # Elk uur op zaterdag en zondag (UTC) — de speeldagen.
+    - cron: '0 * * * 6,0'
+    # Maandagochtend, voor late correcties.
+    - cron: '0 7 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: uitslagen-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: Federatie-uitslagen ophalen en toepassen
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Cron-endpoint aanroepen
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "CRON_SECRET-repository-secret ontbreekt — zie docs/UITSLAGEN-SYNC.md." >&2
+            exit 1
+          fi
+          curl --fail-with-body -sS \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            https://livescore.roodgries.be/api/cron/uitslagen

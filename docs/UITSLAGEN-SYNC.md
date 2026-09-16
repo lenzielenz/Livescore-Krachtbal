@@ -48,17 +48,25 @@ door; daarmee is de lezing bij te stellen.
 
 ## Automatisch
 
-Zet een scheduler op het cron-endpoint, met hetzelfde geheim als de weekrecap:
+Dit draait al: `.github/workflows/uitslagen-sync.yml` roept het cron-endpoint zelf aan, elk uur op
+zaterdag en zondag plus maandagochtend voor late correcties — zonder dat iemand ooit moet
+inloggen:
 
 ```bash
-curl -H "Authorization: Bearer $CRON_SECRET" https://<domein>/api/cron/uitslagen
+curl -H "Authorization: Bearer $CRON_SECRET" https://livescore.roodgries.be/api/cron/uitslagen
 ```
 
-Een zinnig ritme is **elk uur op zaterdag en zondag** (en eventueel maandagochtend voor late
-correcties). Vaker heeft weinig zin: de federatie zet de uitslagen er zelf ook niet meteen op.
+Daarvoor moet **hetzelfde geheim** op twee plekken staan:
 
-Test het één keer met `?preview=1` erachter — dan schrijft het niets weg maar krijg je wel het
-volledige rapport terug.
+1. **Railway** — omgevingsvariabele `CRON_SECRET` op de `Livescore-Krachtbal`-service.
+2. **GitHub** — repository-secret `CRON_SECRET` (Settings → Secrets and variables → Actions →
+   New repository secret). Zonder deze stap draait de workflow wel, maar faalt de aanroep.
+
+Handmatig een keer laten lopen (bv. om te testen) kan via het Actions-tabblad → *Uitslagen
+synchroniseren* → *Run workflow*.
+
+Test lokaal/eenmalig met `?preview=1` achter de URL — dan schrijft het niets weg maar krijg je wel
+het volledige rapport terug.
 
 Zonder `CRON_SECRET` doet het endpoint niets (401). Elke run logt één regel in Railway met wat ze
 deed, zodat je achteraf kan zien of er iets binnenkwam.

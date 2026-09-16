@@ -21,8 +21,8 @@ export function RadTeaser({
         kicker: 'MAAK KANS',
         title: 'Speel mee voor het bonusrad',
         body: 'Voorspel mee op een livewedstrijd en knok je naar de top — de besten van het weekend mogen aan het rad draaien.',
-        cta: 'Voorspel mee →',
-        href: '/',
+        cta: 'Bekijk het rad →',
+        href: '/pronostiek/rad',
       }
     : spinsLeft > 0
       ? {
@@ -52,8 +52,8 @@ export function RadTeaser({
               kicker: 'MAAK KANS',
               title: 'Speel mee voor het bonusrad',
               body: `Enkel de top ${winnerCount || ''} van het weekend mag draaien. Voorspel mee en knok je naar boven!`,
-              cta: 'Voorspel mee →',
-              href: '/',
+              cta: 'Bekijk het rad →',
+              href: '/pronostiek/rad',
             }
 
   return (

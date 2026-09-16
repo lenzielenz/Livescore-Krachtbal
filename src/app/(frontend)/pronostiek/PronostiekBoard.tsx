@@ -13,11 +13,13 @@ export function PronostiekBoard({
   rows,
   myUserId,
   swingPerWeekend,
+  totalPlayers,
 }: {
   rows: LeaderRow[]
   myUserId: number | null
   /** Realistische voorsprong die je per weekend op een rivaal kan pakken. */
   swingPerWeekend: number
+  totalPlayers: number
 }) {
   const [q, setQ] = useState('')
   const [flash, setFlash] = useState(false)
@@ -43,37 +45,40 @@ export function PronostiekBoard({
 
   return (
     <>
-      {me && (
-        <div className="vs-hope">
-          {me.rank === 1 ? (
-            <span>🥇 Je staat op kop — knap! Verdedig je plek dit weekend.</span>
-          ) : (
-            <span>
-              Je staat <b>#{me.rank}</b> · <b>{deficit}</b> ptn achter de leider — ongeveer{' '}
-              <b>{weekends}</b> sterk{weekends === 1 ? '' : 'e'} weekend{weekends === 1 ? '' : 's'} en je knokt terug naar de top. 💪
-            </span>
+      <div className="vs-panel">
+        <div className="vs-panel-meta">{totalPlayers} {totalPlayers === 1 ? 'deelnemer' : 'deelnemers'}</div>
+        {me && (
+          <div className="vs-hope">
+            {me.rank === 1 ? (
+              <span>🥇 Je staat op kop — knap! Verdedig je plek dit weekend.</span>
+            ) : (
+              <span>
+                Je staat <b>#{me.rank}</b> · <b>{deficit}</b> ptn achter de leider — ongeveer{' '}
+                <b>{weekends}</b> sterk{weekends === 1 ? '' : 'e'} weekend{weekends === 1 ? '' : 's'} en je knokt terug naar de top. 💪
+              </span>
+            )}
+          </div>
+        )}
+
+        <div className="vs-search">
+          <input
+            type="search"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Zoek een naam… (waar sta ik?)"
+            aria-label="Zoek een naam in het klassement"
+          />
+          {q && (
+            <button type="button" className="vs-search-clear" onClick={() => setQ('')} aria-label="Wis zoekopdracht">
+              ✕
+            </button>
+          )}
+          {me && (
+            <button type="button" className="vs-jump" onClick={jumpToMe}>
+              📍 Spring naar mij
+            </button>
           )}
         </div>
-      )}
-
-      <div className="vs-search">
-        <input
-          type="search"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Zoek een naam… (waar sta ik?)"
-          aria-label="Zoek een naam in het klassement"
-        />
-        {q && (
-          <button type="button" className="vs-search-clear" onClick={() => setQ('')} aria-label="Wis zoekopdracht">
-            ✕
-          </button>
-        )}
-        {me && (
-          <button type="button" className="vs-jump" onClick={jumpToMe}>
-            📍 Spring naar mij
-          </button>
-        )}
       </div>
 
       {filtered.length === 0 ? (

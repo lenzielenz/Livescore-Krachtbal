@@ -94,3 +94,18 @@
 @media (prefers-reduced-motion: reduce) {
   .radteaser, .radteaser-ring, .radteaser-spark, .radteaser::after { animation: none; }
 }
+
+/* Klassement-paneel: bundelt "N deelnemers", "waar sta ik" en de zoekbalk in één kaart i.p.v.
+   drie losse tekstregels — sluit visueel aan bij de bonusrad-teaser erboven in plaats van als
+   een reeks aparte fragmenten te ogen. De genest .vs-hope/.vs-search (uit voorspel.css, gedeeld
+   met de club-pronostiek) verliezen hier hun eigen rand/achtergrond: het paneel is nu de ene kaart. */
+.vs-panel {
+  margin: 0 0 16px;
+  padding: 14px 16px 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel-grad, var(--panel));
+}
+.vs-panel-meta { margin: 0 0 8px; font-size: .78rem; font-weight: 700; color: var(--dim); letter-spacing: .02em; }
+.vs-panel .vs-hope { margin: 0 0 12px; padding: 0; border: none; background: none; }
+.vs-panel .vs-search { margin: 0; padding-top: 12px; border-top: 1px solid var(--line); }
