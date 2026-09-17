@@ -100,7 +100,7 @@ export function RangTable({ rows, showMove = true }: { rows: RangRow[]; showMove
                   <td>{r.lost}</td>
                   <td>{r.forfaits}</td>
                   <td className="rang-dv rang-goals">{r.goalsFor}–{r.goalsAgainst}</td>
-                  <td className="rang-pts">{r.points}</td>
+                  <td className="rang-pts"><span className="rang-pts-chip">{r.points}</span></td>
                 </tr>
                 {isOpen && (
                   <tr className="rang-detailrow">

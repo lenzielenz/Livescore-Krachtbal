@@ -127,9 +127,9 @@ export default async function RangschikkingPage({ searchParams }: { searchParams
     teamsInTable: table.length,
   })
 
-  // Degradatie-/gevarenzone: enkel bij volwassen reeksen (jeugd kan niet stijgen/dalen). De laatste
-  // RELEGATION ploegen vallen in de zone — enkel tonen als de reeks groot genoeg is.
-  const RELEGATION = 2
+  // Degradatie-/gevarenzone: enkel bij volwassen reeksen (jeugd kan niet stijgen/dalen). Bij
+  // krachtbal zakt enkel de allerlaatste van de reeks — de zone is dus altijd één ploeg groot.
+  const RELEGATION = 1
   const adult = isAdultReeks(reeks as Reeks)
   const dangerFrom = adult && table.length >= 6 ? table.length - RELEGATION : -1
 

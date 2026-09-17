@@ -65,7 +65,12 @@
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0) 30%),
     var(--panel-grad, var(--panel));
-  box-shadow: 0 18px 44px -16px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  box-shadow:
+    0 30px 60px -24px color-mix(in srgb, var(--accent) 16%, rgba(0, 0, 0, 0.7)),
+    0 22px 50px -18px rgba(0, 0, 0, 0.68),
+    0 2px 10px -4px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.03),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07);
 }
 .rang-table {
   width: 100%;
@@ -86,19 +91,25 @@
   letter-spacing: 0.04em;
   font-weight: 800;
   color: var(--dim);
-  background: linear-gradient(180deg, #161b22, #0f131a);
-  /* Kolomkoppen blijven staan bij het scrollen van een lange rangschikking. */
+  background: linear-gradient(180deg, color-mix(in srgb, #1c222c 92%, transparent) 0%, color-mix(in srgb, #161b22 94%, transparent) 55%, color-mix(in srgb, #0f131a 96%, transparent) 100%);
+  /* Kolomkoppen blijven staan bij het scrollen van een lange rangschikking — een vleugje matglas
+     geeft dat meteen een premium gevoel i.p.v. een platte balk. */
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   position: sticky;
   top: 0;
   z-index: 2;
-  box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--accent) 45%, transparent), 0 2px 6px rgba(0, 0, 0, 0.4);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 -2px 0 color-mix(in srgb, var(--accent) 45%, transparent),
+    0 4px 12px -2px rgba(0, 0, 0, 0.5);
 }
 .rang-table tbody tr:last-child td {
   border-bottom: none;
 }
 /* Zebra + zachte rij-overgang voor een verzorgde tabel. */
-.rang-table tbody tr.rang-row:nth-child(4n + 1) { background: rgba(255, 255, 255, 0.018); }
-.rang-table tbody tr.rang-row { transition: background-color 0.14s ease; }
+.rang-table tbody tr.rang-row:nth-child(4n + 1) { background: rgba(255, 255, 255, 0.03); }
+.rang-table tbody tr.rang-row { transition: background 0.16s ease, box-shadow 0.16s ease; }
 .rang-rank {
   width: 34px;
 }
@@ -126,9 +137,28 @@
   color: var(--dim);
 }
 .rang-pts {
+  padding-left: 4px;
+  padding-right: 4px;
+}
+/* Puntjes als chip i.p.v. platte tekst — geeft de belangrijkste kolom wat gewicht en diepte.
+   Een dubbele inset (lichte rand boven, donkere onder) maakt er een klein bolletje glas van
+   i.p.v. een platte gekleurde vlek — het detail dat een chip "premium" laat aanvoelen. */
+.rang-pts-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 30px;
+  padding: 3px 10px;
+  border-radius: 999px;
   font-weight: 900;
+  font-size: 0.95rem;
   color: var(--accent);
-  font-size: 1.05rem;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 26%, transparent), color-mix(in srgb, var(--accent) 6%, transparent));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    inset 0 -1px 2px color-mix(in srgb, var(--accent) 30%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--accent) 25%, transparent),
+    0 3px 8px -3px color-mix(in srgb, var(--accent) 60%, transparent);
 }
 
 /* Op gsm moet de volledige stand passen zonder horizontaal te scrollen:
@@ -194,6 +224,12 @@
     width: 38px;
     padding-right: 8px;
   }
+  /* De chip is op volle breedte iets te breed voor de smalle mobiele PTN-kolom — compacter. */
+  .rang-pts-chip {
+    min-width: 0;
+    padding: 2px 7px;
+    font-size: 0.88rem;
+  }
 }
 
 /* Positie-verschil t.o.v. vorige week + highlight van de eigen club. */
@@ -218,9 +254,9 @@
 
 /* Klikbare rij: tik om de extra cijfers uit te klappen. */
 .rang-row { cursor: pointer; }
-.rang-row:hover { background: color-mix(in srgb, var(--accent) 7%, transparent); }
+.rang-row:hover { background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 11%, transparent), transparent 70%); }
 .rang-row:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
-.rang-row.open { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+.rang-row.open { background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 15%, transparent), transparent 75%); }
 .rang-caret {
   margin-left: auto;
   padding-left: 8px;
@@ -239,7 +275,8 @@
   flex-wrap: wrap;
   gap: 8px 18px;
   padding: 11px 14px;
-  background: color-mix(in srgb, var(--accent) 6%, #10141a);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 9%, #10141a), color-mix(in srgb, var(--accent) 3%, #10141a));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
   font-size: 0.84rem;
   color: var(--dim);
   white-space: normal;
@@ -249,14 +286,80 @@
 .rang-detail-item b.pos { color: #0fe0a6; }
 .rang-detail-item b.neg { color: #ef476f; }
 
-/* Zones zoals de professionele standen: enkel een dun kleurbalkje links van de rij — geen
-   medailles, geen getint cijfer, geen gloed. Het cijfer blijft overal identiek en uitgelijnd. */
-.rang-leader td:first-child { box-shadow: inset 4px 0 0 0 #ffd166; }
+/* Zones: een kleurbalkje links van de rij, plus een zachte kleurwas die van de rand naar rechts
+   uitdooft — geeft de zone meer body dan een streepje alleen, zonder de rij te laten schreeuwen.
+   Het rangcijfer blijft overal exact op dezelfde plek; enkel het badge-rondje erachter (hieronder)
+   geeft podium/gevarenzone hun eigen kleur. */
+/* De was + een trage lichtstreep die er zachtjes overheen glijdt (twee achtergrondlagen: de
+   was staat stil, alleen de streep beweegt) — het detail dat de leider "premium" laat aanvoelen
+   zonder er een animatie-feestje van te maken. */
+.rang-leader {
+  background-image:
+    linear-gradient(90deg, color-mix(in srgb, #ffd166 12%, transparent), color-mix(in srgb, #ffd166 3%, transparent) 45%, transparent 75%),
+    linear-gradient(100deg, transparent 30%, color-mix(in srgb, #ffd166 16%, transparent) 45%, transparent 60%);
+  background-repeat: no-repeat, no-repeat;
+  background-size: 100% 100%, 220% 100%;
+  background-position: 0 0, 120% 0;
+  animation: rang-sheen 6s ease-in-out infinite;
+}
+@keyframes rang-sheen {
+  0%, 100% { background-position: 0 0, 120% 0; }
+  50% { background-position: 0 0, -20% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rang-leader { animation: none; background-position: 0 0, 999% 0; }
+}
+.rang-leader td:first-child { box-shadow: inset 4px 0 0 0 #ffd166, inset 0 0 16px -11px color-mix(in srgb, #ffd166 80%, transparent); }
 .rang-leader .rang-name { font-weight: 800; }
+.rang-silver { background: linear-gradient(90deg, color-mix(in srgb, #cfd6de 9%, transparent), transparent 70%); }
 .rang-silver td:first-child { box-shadow: inset 4px 0 0 0 #cfd6de; }
+.rang-bronze { background: linear-gradient(90deg, color-mix(in srgb, #cd7f32 10%, transparent), transparent 70%); }
 .rang-bronze td:first-child { box-shadow: inset 4px 0 0 0 #cd7f32; }
-/* Degradatie-/gevarenzone (enkel volwassen reeksen): rood balkje. */
+/* Degradatie-/gevarenzone (enkel volwassen reeksen): rode was + balkje. */
+.rang-danger { background: linear-gradient(90deg, color-mix(in srgb, #ef476f 9%, transparent), transparent 70%); }
 .rang-danger td:first-child { box-shadow: inset 4px 0 0 0 #ef476f; }
+/* Zacht badge-rondje achter het rangcijfer van podium/gevarenzone — het cijfer zelf verschuift
+   niet, er komt enkel een gekleurde gloed achter te staan. */
+.rang-leader .rang-pos,
+.rang-silver .rang-pos,
+.rang-bronze .rang-pos,
+.rang-danger .rang-pos {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+}
+/* Een lichte rand bovenaan + donkere schaduw onderaan geven het rondje body — een muntje i.p.v.
+   een platte gekleurde stip. Zelfde bevel-truc als de puntjes-chip hierboven. */
+.rang-leader .rang-pos {
+  background: radial-gradient(circle at 35% 28%, color-mix(in srgb, #ffd166 65%, #fff 10%), color-mix(in srgb, #ffd166 32%, transparent) 60%, color-mix(in srgb, #ffd166 8%, transparent) 85%);
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.5),
+    inset 0 -2px 3px color-mix(in srgb, #8a6512 60%, transparent),
+    0 0 0 1px color-mix(in srgb, #ffd166 60%, transparent),
+    0 2px 6px -1px color-mix(in srgb, #ffd166 55%, transparent);
+}
+.rang-silver .rang-pos {
+  background: radial-gradient(circle at 35% 28%, color-mix(in srgb, #cfd6de 60%, #fff 10%), color-mix(in srgb, #cfd6de 26%, transparent) 60%, color-mix(in srgb, #cfd6de 6%, transparent) 85%);
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.4),
+    inset 0 -2px 3px color-mix(in srgb, #6b7480 55%, transparent),
+    0 0 0 1px color-mix(in srgb, #cfd6de 50%, transparent);
+}
+.rang-bronze .rang-pos {
+  background: radial-gradient(circle at 35% 28%, color-mix(in srgb, #cd7f32 60%, #fff 10%), color-mix(in srgb, #cd7f32 26%, transparent) 60%, color-mix(in srgb, #cd7f32 6%, transparent) 85%);
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.35),
+    inset 0 -2px 3px color-mix(in srgb, #6b3d17 55%, transparent),
+    0 0 0 1px color-mix(in srgb, #cd7f32 50%, transparent);
+}
+.rang-danger .rang-pos {
+  background: radial-gradient(circle at 35% 28%, color-mix(in srgb, #ef476f 45%, transparent), transparent 75%);
+  box-shadow: inset 0 -1px 2px color-mix(in srgb, #7a0f27 45%, transparent), 0 0 0 1px color-mix(in srgb, #ef476f 42%, transparent);
+}
+
 /* Kampioensbadge naast de naam (enkel wanneer de titel wiskundig binnen is). */
 .rang-champ { font-size: 0.9em; }
 /* Kleursleutels in de legende. */
@@ -272,8 +375,8 @@
 .rang-key.rood { background: #ef476f; }
 /* Eigen club (ingelogd) springt eruit — wint van de podium-styling wanneer ze samenvallen. */
 .rang-mine {
-  background: color-mix(in srgb, var(--accent) 14%, transparent);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 20%, transparent), color-mix(in srgb, var(--accent) 6%, transparent) 55%, transparent 85%);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 25%, transparent);
 }
 /* Enkel de naam kleurt mee — het positiecijfer blijft neutraal, net als bij elke andere rij. */
 .rang-mine .rang-name { color: var(--accent); }
@@ -290,13 +393,15 @@
   padding: 8px 12px;
   border: 1px solid var(--line);
   border-radius: 10px;
-  background: var(--panel);
+  background: linear-gradient(180deg, color-mix(in srgb, #fff 4%, var(--panel)), var(--panel));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 4px 14px -9px rgba(0, 0, 0, 0.55);
   font-size: 0.9rem;
   text-align: center;
 }
 .rang-titel.clinched {
   border-color: color-mix(in srgb, #f5c542 60%, var(--line));
-  background: color-mix(in srgb, #f5c542 12%, var(--panel));
+  background: linear-gradient(135deg, color-mix(in srgb, #f5c542 18%, var(--panel)), color-mix(in srgb, #f5c542 6%, var(--panel)));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 6px 18px -10px color-mix(in srgb, #f5c542 55%, transparent);
   font-weight: 700;
 }
 
@@ -312,7 +417,13 @@
   padding: 8px 10px;
   border: 1px solid var(--line);
   border-radius: 10px;
-  background: var(--panel);
+  background: linear-gradient(180deg, color-mix(in srgb, #fff 3%, var(--panel)), var(--panel));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 3px 10px -7px rgba(0, 0, 0, 0.5);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.rang-top-row:hover {
+  transform: translateY(-1px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 8px 18px -10px rgba(0, 0, 0, 0.55);
 }
 .rang-top-rank { font-weight: 800; color: var(--dim); text-align: center; }
 .rang-top-naam { display: flex; align-items: baseline; gap: 7px; min-width: 0; color: inherit; text-decoration: none; font-weight: 600; }
