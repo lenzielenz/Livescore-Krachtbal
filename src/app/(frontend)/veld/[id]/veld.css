@@ -33,6 +33,10 @@
 .fs.fs-light .fs-pulse {
   color: #0e1a12;
 }
+.fs.fs-light .fs-clock {
+  background: rgba(255, 255, 255, 0.75);
+  border-color: rgba(14, 26, 18, 0.22);
+}
 .fs.fs-light .fs-fsbtn,
 .fs.fs-light .fs-ctrlbtn {
   background: rgba(255, 255, 255, 0.7);
@@ -251,7 +255,7 @@
   align-items: center;
   justify-content: center;
   gap: clamp(10px, 2.5vw, 40px);
-  font-size: clamp(4rem, 18vw, 16rem);
+  font-size: clamp(4.5rem, 21vw, 19rem);
   font-weight: 900;
   line-height: 1;
   font-variant-numeric: tabular-nums;
@@ -278,12 +282,24 @@
     transform: scale(1);
   }
 }
+/* De klok is de kortste weg naar "hoe lang nog?" — moet dus net zo onmiddellijk leesbaar zijn
+   als de score. Een eigen pil (donkere achtergrond + kleurrand) geeft ze houvast tegen elke
+   achtergrond, zon of geen zon, i.p.v. los tegen de gradient te zweven. */
 .fs-clock {
-  font-size: clamp(1.8rem, 6vw, 5rem);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: clamp(2.6rem, 10vw, 8rem);
   font-weight: 800;
   color: var(--theme-2);
   font-variant-numeric: tabular-nums;
-  margin-top: clamp(4px, 1.5vh, 18px);
+  margin-top: clamp(8px, 2vh, 22px);
+  padding: 0.05em 0.5em;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.32);
+  border: 2px solid color-mix(in srgb, var(--theme-2) 45%, transparent);
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
 }
 .fs-half {
   font-size: clamp(0.9rem, 2.5vw, 1.8rem);

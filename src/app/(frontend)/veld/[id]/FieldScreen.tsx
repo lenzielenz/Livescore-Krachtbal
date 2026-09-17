@@ -28,8 +28,9 @@ type Goal = {
   scorer: string | null
 }
 
-// Responsieve logomaat voor het grote veldscherm.
-const FS_LOGO_SIZE = 'clamp(84px, 14vw, 200px)'
+// Responsieve logomaat voor het grote veldscherm — zo groot mogelijk zonder de score/klok te
+// verdringen (van ver op het veld moet het clublogo meteen herkenbaar zijn).
+const FS_LOGO_SIZE = 'clamp(110px, 17vw, 260px)'
 
 // Voorbeeld-reclames voor de testknop (als er nog geen echte reclame is ingesteld): gekleurde
 // tegels als data-URI zodat de scrollende balk meteen iets toont. Eén keer opgebouwd.
