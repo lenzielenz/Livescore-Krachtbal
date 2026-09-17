@@ -8,17 +8,13 @@ import { TeamLogo } from '@/components/TeamLogo'
 import { type ClubColors, DEFAULT_AWAY_COLOR, DEFAULT_HOME_COLOR, inkOn, readableOnDark } from '@/lib/club-colors'
 import type { KantineBord } from '@/lib/kantine-borden'
 import type { KantineLive } from '@/lib/kantine-channel'
+import { fmtClock, useLiveClock } from '@/lib/use-live-clock'
 
 /**
  * Eén bord op het kantinescherm. Zelfde vorm als wat de kantine-API's teruggeven — die bouwen hem
  * met `bouwKantineBorden`, dus één definitie voor de server- én de browserkant.
  */
 export type KantineMatch = KantineBord
-
-function fmtClock(total: number): string {
-  const s = Math.max(0, Math.floor(total))
-  return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
-}
 
 // Eén live vak in het raster. De live gegevens komen NIET uit een eigen verbinding: het scherm
 // houdt er één voor al zijn borden samen (zie kantine-channel.ts) en geeft elk vak zijn stuk door.
@@ -38,9 +34,7 @@ export function Tile({
   fontSize?: number
   logoSize?: string
 }) {
-  const [clock, setClock] = useState(0)
   const [flash, setFlash] = useState<{ key: number; side: 'home' | 'away'; team: string; points: number; scorer: string | null } | null>(null)
-  const base = useRef({ seconds: 0, at: Date.now() })
   // Het doelpunt dat we al gezien hebben. Het eerste frame "leert" de stand zonder te vieren —
   // anders knalt er een viering op het scherm zodra de tv 's ochtends aangaat.
   const gezienGoal = useRef<string | null>(null)
@@ -102,25 +96,14 @@ export function Tile({
     }
   }, [])
 
-  // Ticking klok — reken vanaf clockUpdatedAt (server) zodat de tijd klopt en niet reset.
-  useEffect(() => {
-    if (!live) return
-    const at = live.clockUpdatedAt ? new Date(live.clockUpdatedAt).getTime() : Date.now()
-    base.current = { seconds: live.clockSeconds, at }
-    setClock(Math.floor(live.clockRunning ? live.clockSeconds + Math.max(0, (Date.now() - at) / 1000) : live.clockSeconds))
-  }, [live?.clockSeconds, live?.clockRunning, live?.clockUpdatedAt, live])
-
-  useEffect(() => {
-    if (!live?.clockRunning) return
-    // Hele seconden: het vak toont mm:ss, dus een float zou vier keer per seconde een render
-    // uitlokken die er niet anders uitziet. Met een geheel getal slaat React de meeste over —
-    // en op een kantinescherm staan er een dozijn van deze klokken naast elkaar.
-    const t = setInterval(
-      () => setClock(Math.floor(base.current.seconds + Math.max(0, (Date.now() - base.current.at) / 1000))),
-      250,
-    )
-    return () => clearInterval(t)
-  }, [live?.clockRunning])
+  // Ticking klok — reken vanaf clockUpdatedAt (server) zodat de tijd klopt en niet reset. De hook
+  // zelf tikt maar één keer per hele seconde (niet meer om de 250ms), dus geen extra optimalisatie
+  // hier nodig ondanks het dozijn klokken naast elkaar op een kantinescherm.
+  const clock = useLiveClock({
+    seconds: live?.clockSeconds ?? 0,
+    running: Boolean(live?.clockRunning),
+    updatedAt: live?.clockUpdatedAt ?? null,
+  })
 
   // Tot het eerste live-frame tonen we de server-gerenderde momentopname. Namen, logo's en kleuren
   // komen sowieso daarvandaan: die veranderen niet tijdens een wedstrijd en horen niet elke drie

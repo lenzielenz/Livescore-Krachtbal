@@ -13,6 +13,7 @@ import type { MatchState } from '@/lib/match-engine'
 import { LINEUP_MIN, type Readiness } from '@/lib/match-readiness'
 import { genOpId } from '@/lib/op-id'
 import { useActionQueue } from '@/lib/use-action-queue'
+import { fmtClock, useLiveClock } from '@/lib/use-live-clock'
 import { useLiveStream } from '@/lib/use-live-stream'
 import { DemoTutorial } from './DemoTutorial'
 
@@ -33,11 +34,6 @@ const OUT_COLOR = '#ef476f'
 // duizenden minuten tonen ("H1 96748:50"). Geen enkele helft duurt realistisch langer dan dit; erna
 // clampen we de weergave en tonen we een waarschuwing zodat de aantekenaar pauzeert en corrigeert.
 const MAX_CLOCK_SECONDS = 3 * 60 * 60
-
-function fmtClock(total: number): string {
-  const s = Math.max(0, Math.min(MAX_CLOCK_SECONDS, Math.floor(total)))
-  return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
-}
 
 // Voornaam = eerste woord van de naam (compact tonen naast het rugnummer).
 function firstName(name: string): string {
@@ -152,18 +148,6 @@ export function Scorekeeper({
   // Kapitein aanduiden = tik een veldspeler aan. Verplicht vóór het bevestigen.
   const pickCaptain = (side: 'home' | 'away', playerId: number) => act({ action: 'setcaptain', side, playerId })
 
-  // Basistijdstip voor de lopende klok: als de klok loopt, reken vanaf clockUpdatedAt (server),
-  // zodat de verstreken tijd na een refresh behouden blijft — niet terug naar nul.
-  const clockBaseAt = (m: MatchState['match']) =>
-    m.clockRunning && m.clockUpdatedAt ? new Date(m.clockUpdatedAt).getTime() : Date.now()
-
-  const [clock, setClock] = useState(initialState.match.clockSeconds)
-  const baseRef = useRef({
-    seconds: initialState.match.clockSeconds,
-    running: initialState.match.clockRunning,
-    at: clockBaseAt(initialState.match),
-  })
-
   // Volledig scherm (handig op tablet/laptop bij het veld). We zetten de scorekeeper-container
   // zelf op fullscreen (niet het hele document), zodat het veld netjes in beeld blijft passen.
   const rootRef = useRef<HTMLDivElement>(null)
@@ -230,26 +214,12 @@ export function Scorekeeper({
   // Clamp tegen de weggelopen-klok-bug (zie MAX_CLOCK_SECONDS hierboven): nooit een groter getal
   // in de state zetten dan de grens, anders zou "pauzeren" dat foute getal alsnog naar de server
   // wegschrijven (de pauzeknop stuurt Math.floor(clock) mee als nieuwe clockSeconds).
-  const clampClock = (s: number) => Math.max(0, Math.min(MAX_CLOCK_SECONDS, s))
-
-  useEffect(() => {
-    baseRef.current = {
-      seconds: state.match.clockSeconds,
-      running: state.match.clockRunning,
-      at: clockBaseAt(state.match),
-    }
-    const b = baseRef.current
-    setClock(clampClock(b.running ? b.seconds + (Date.now() - b.at) / 1000 : b.seconds))
-  }, [state.match.clockSeconds, state.match.clockRunning, state.match.clockUpdatedAt])
-
-  useEffect(() => {
-    if (!state.match.clockRunning) return
-    const t = setInterval(() => {
-      const b = baseRef.current
-      setClock(clampClock(b.seconds + (Date.now() - b.at) / 1000))
-    }, 250)
-    return () => clearInterval(t)
-  }, [state.match.clockRunning])
+  const clock = useLiveClock({
+    seconds: state.match.clockSeconds,
+    running: state.match.clockRunning,
+    updatedAt: state.match.clockUpdatedAt,
+    max: MAX_CLOCK_SECONDS,
+  })
 
   // Offline-bestendigheid (ROADMAP 1b): dezelfde wachtrij als de snelscoremodus. Valt het netwerk
   // weg, dan gaat een worp niet meer verloren met een foutmelding — hij wordt bewaard (localStorage)

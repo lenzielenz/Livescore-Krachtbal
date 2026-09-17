@@ -10,13 +10,9 @@ import { DEFAULT_UITSNEDE } from '@/lib/reclame'
 import type { MatchState, TimelineItem } from '@/lib/match-engine'
 import { buildMomentum, type MomentumPoint } from '@/lib/match-momentum'
 import { goalPointsFromLabel, goalScorerFromLabel, useLiveStream } from '@/lib/use-live-stream'
+import { fmtClock, useLiveClock } from '@/lib/use-live-clock'
 import { QrCode } from '@/components/QrCode'
 import { AdMarquee, type Ad } from './AdMarquee'
-
-function fmtClock(total: number): string {
-  const s = Math.max(0, Math.floor(total))
-  return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
-}
 
 type Side = 'home' | 'away'
 
@@ -176,7 +172,6 @@ export function FieldScreen({
 }) {
   const [state, setState] = useState<MatchState>(initial.state)
   const [timeline, setTimeline] = useState<TimelineItem[]>(initial.timeline)
-  const [clock, setClock] = useState(initial.state.match.clockSeconds)
   const [goal, setGoal] = useState<Goal | null>(null)
   // Wedstrijdverloop-grafiek: rond het midden van de eerste helft ±1 min tonen (de score blijft staan).
   const [showFlow, setShowFlow] = useState(false)
@@ -191,7 +186,6 @@ export function FieldScreen({
   // Volledig scherm voor de zaal-tv: zet het veldscherm over het hele scherm (verbergt browser-UI).
   const rootRef = useRef<HTMLDivElement>(null)
   const [isFullscreen, setIsFullscreen] = useState(false)
-  const base = useRef({ seconds: initial.state.match.clockSeconds, at: Date.now() })
   const seenGoals = useRef<Set<string>>(new Set(initial.timeline.filter((i) => i.kind === 'goal').map((i) => i.id)))
   const goalSeq = useRef(0)
   const goalTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -299,21 +293,11 @@ export function FieldScreen({
     return () => clearInterval(t)
   }, [photos])
 
-  // Klok-basis bijwerken — reken vanaf clockUpdatedAt (server) zodat de tijd klopt en niet reset.
-  useEffect(() => {
-    const m = state.match
-    const at = m.clockUpdatedAt ? new Date(m.clockUpdatedAt).getTime() : Date.now()
-    base.current = { seconds: m.clockSeconds, at }
-    setClock(m.clockRunning ? m.clockSeconds + Math.max(0, (Date.now() - at) / 1000) : m.clockSeconds)
-  }, [state.match.clockSeconds, state.match.clockRunning, state.match.clockUpdatedAt])
-
-  useEffect(() => {
-    if (!state.match.clockRunning) return
-    const t = setInterval(() => {
-      setClock(base.current.seconds + Math.max(0, (Date.now() - base.current.at) / 1000))
-    }, 250)
-    return () => clearInterval(t)
-  }, [state.match.clockRunning, state.match.clockUpdatedAt])
+  const clock = useLiveClock({
+    seconds: state.match.clockSeconds,
+    running: state.match.clockRunning,
+    updatedAt: state.match.clockUpdatedAt,
+  })
 
   const momentum = useMemo(() => buildMomentum(timeline, halfSeconds), [timeline, halfSeconds])
   const nowT = (Math.max(1, state.match.currentHalf) - 1) * halfSeconds + clock

@@ -1,8 +1,9 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 
 import type { TournamentState } from '@/lib/tournament-engine'
+import { fmtClock as fmtClockShared, useLiveClock } from '@/lib/use-live-clock'
 import { useLiveStream } from '@/lib/use-live-stream'
 
 /** Abonneer op de SSE-stream van een tornooi; start met de server-snapshot (met reconnect-backoff).
@@ -17,23 +18,11 @@ export function useTournamentStream(
   return [state, setState]
 }
 
-/** Laat de klok lokaal doortikken tussen de SSE-updates. */
+/** Laat de klok lokaal doortikken tussen de SSE-updates. Tornooi-matches houden geen
+ * `clockUpdatedAt` bij (enkel `seconds`/`running` per SSE-tik) — de gedeelde hook rekent dan vanaf
+ * het moment waarop die waarden hier binnenkwamen, wat voor dit gebruik hetzelfde is. */
 export function useTicking(seconds: number, running: boolean): number {
-  const [now, setNow] = useState(seconds)
-  const base = useRef({ s: seconds, at: Date.now() })
-  useEffect(() => {
-    base.current = { s: seconds, at: Date.now() }
-    setNow(seconds)
-  }, [seconds, running])
-  useEffect(() => {
-    if (!running) return
-    const t = setInterval(() => setNow(base.current.s + (Date.now() - base.current.at) / 1000), 250)
-    return () => clearInterval(t)
-  }, [running])
-  return now
+  return useLiveClock({ seconds, running })
 }
 
-export function fmtClock(total: number): string {
-  const s = Math.max(0, Math.floor(total))
-  return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
-}
+export const fmtClock = fmtClockShared
