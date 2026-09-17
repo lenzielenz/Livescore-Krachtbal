@@ -2,6 +2,7 @@ import type { CollectionConfig, FieldHook, Where } from 'payload'
 
 import { isFederationLevel } from '../lib/access'
 import { CATEGORY_OPTIONS } from '../lib/categories'
+import { unpairFieldScreensForMatch } from '../lib/field-screens-data'
 import { verwijderMatchKinderen } from '../lib/match-cleanup'
 import { notifyMatchStatusChange } from '../lib/match-notify'
 import { REEKS_OPTIONS, reeksCategorie, type Reeks } from '../lib/reeksen'
@@ -57,6 +58,17 @@ export const Matches: CollectionConfig = {
           analyseOnly: Boolean((doc as { analyseOnly?: boolean }).analyseOnly),
           isDemo: Boolean((doc as { isDemo?: boolean }).isDemo),
         })
+      },
+      // Een veldscherm dat aan deze wedstrijd gekoppeld stond, ontkoppelt zodra ze afloopt — via
+      // welk pad dan ook (aantekenscherm, forfait, .xls-import, federatie-sync): één plek voor
+      // "de wedstrijd is voorbij" i.p.v. dat elk finish-pad dit apart zou moeten onthouden. Zie
+      // lib/field-screens-data.ts.
+      async ({ doc, previousDoc, operation, req }) => {
+        const status = (doc as { status?: string }).status
+        const prevStatus = operation === 'update' ? (previousDoc as { status?: string } | undefined)?.status : null
+        if (status === 'finished' && prevStatus !== 'finished') {
+          await unpairFieldScreensForMatch(req.payload, (doc as { id: number }).id)
+        }
       },
     ],
     // Een wedstrijd verwijderen moet ook de eraan vastgekoppelde data opruimen. Noodzakelijk

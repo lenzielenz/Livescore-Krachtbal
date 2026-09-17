@@ -3,9 +3,9 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 
+import { QrCode } from '@/components/QrCode'
 import { useCast } from '@/components/use-cast'
 import { CAST_APP_ID } from '@/lib/cast'
-import { QrCode } from './QrCode'
 
 export type CastMatch = {
   id: number

@@ -56,6 +56,13 @@ export function SimpleScorekeeper({
   const [error, setError] = useState<string | null>(null)
   // Openstaand doelpunt dat wacht op een spelerkeuze (snel-scoren vereist een scorer).
   const [pending, setPending] = useState<{ side: SimpleSide; points: 1 | 2 } | null>(null)
+  // Veldscherm koppelen: de code die op de veld-tv staat invoeren, zodat dat scherm naar het
+  // scorebord van DEZE wedstrijd springt (zie /club/veldscherm + api/veldscherm/koppel). Puur
+  // cosmetisch voor de tv — nooit kritiek pad, dus geen offline-wachtrij, gewoon een losse fetch.
+  const [veldOpen, setVeldOpen] = useState(false)
+  const [veldCode, setVeldCode] = useState('')
+  const [veldBusy, setVeldBusy] = useState(false)
+  const [veldMsg, setVeldMsg] = useState<{ ok: boolean; text: string } | null>(null)
   // Veldspelers (max. 4 per ploeg) — enkel zij verschijnen in de scorerkeuze. Begint bij de
   // voorbereide opstelling (of de eerste 4) en kan tijdens de match gewisseld worden.
   const teamRosterOf = (side: SimpleSide) =>
@@ -228,6 +235,34 @@ export function SimpleScorekeeper({
     else rootRef.current?.requestFullscreen().catch(() => {})
   }
 
+  const koppelVeldscherm = async () => {
+    if (!/^\d{6}$/.test(veldCode.trim())) {
+      setVeldMsg({ ok: false, text: 'Voer de 6-cijferige code van het veldscherm in.' })
+      return
+    }
+    setVeldBusy(true)
+    setVeldMsg(null)
+    try {
+      const r = await fetch('/api/veldscherm/koppel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: veldCode.trim(), matchId }),
+      })
+      const data = (await r.json().catch(() => ({}))) as { error?: string }
+      if (!r.ok) {
+        setVeldMsg({ ok: false, text: data.error ?? 'Koppelen mislukt.' })
+        return
+      }
+      setVeldMsg({ ok: true, text: 'Veldscherm gekoppeld!' })
+      setVeldCode('')
+      setTimeout(() => setVeldOpen(false), 1500)
+    } catch {
+      setVeldMsg({ ok: false, text: 'Koppelen mislukt — probeer opnieuw.' })
+    } finally {
+      setVeldBusy(false)
+    }
+  }
+
   const homeC = state.teams.home.colors?.primary ?? DEFAULT_HOME_COLOR
   const awayC = state.teams.away.colors?.primary ?? DEFAULT_AWAY_COLOR
 
@@ -249,9 +284,31 @@ export function SimpleScorekeeper({
           <button type="button" className="ssk-toplink" onClick={toggleFullscreen}>
             {isFullscreen ? '⛶ Verlaten' : '⛶ Volledig scherm'}
           </button>
+          {live && (
+            <button type="button" className="ssk-toplink" onClick={() => setVeldOpen((v) => !v)}>
+              📡 Veldscherm koppelen
+            </button>
+          )}
           <Link href={`/veld/${matchId}`} className="ssk-toplink">Veldscherm →</Link>
         </span>
       </header>
+
+      {veldOpen && live && (
+        <div className="ssk-veldkoppel" role="group" aria-label="Veldscherm koppelen">
+          <input
+            className="ssk-veldkoppel-input"
+            inputMode="numeric"
+            maxLength={6}
+            placeholder="123456"
+            value={veldCode}
+            onChange={(e) => setVeldCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+          />
+          <button type="button" className="ssk-veldkoppel-btn" disabled={veldBusy} onClick={() => void koppelVeldscherm()}>
+            {veldBusy ? 'Bezig…' : 'Koppel'}
+          </button>
+          {veldMsg && <span className={`ssk-veldkoppel-msg ${veldMsg.ok ? 'ok' : 'err'}`}>{veldMsg.text}</span>}
+        </div>
+      )}
 
       {(offline || pendingCount > 0) && (
         <div className="ssk-offline" role="status">

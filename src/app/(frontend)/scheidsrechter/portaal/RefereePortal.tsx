@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
 import { clearNavAuth } from '@/lib/nav-auth-cache'
-import { QrCode } from '../../cast/QrCode'
+import { QrCode } from '@/components/QrCode'
 import { formatDateBE } from '@/lib/datetime'
 import { dateStrBE } from '@/lib/datetime'
 

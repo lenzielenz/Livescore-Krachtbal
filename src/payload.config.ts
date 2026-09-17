@@ -13,6 +13,7 @@ import { Clubs } from './collections/Clubs'
 import { Teams } from './collections/Teams'
 import { Players } from './collections/Players'
 import { Matches } from './collections/Matches'
+import { FieldScreens } from './collections/FieldScreens'
 import { Possessions } from './collections/Possessions'
 import { Throws } from './collections/Throws'
 import { MatchEvents } from './collections/MatchEvents'
@@ -102,6 +103,7 @@ export default buildConfig({
     Teams,
     Players,
     Matches,
+    FieldScreens,
     MatchSheets,
     Officials,
     Accidents,

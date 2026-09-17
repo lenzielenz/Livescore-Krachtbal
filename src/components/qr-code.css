@@ -1,0 +1,10 @@
+.qr-img {
+  border-radius: 12px;
+  background: #fff;
+  padding: 8px;
+  box-shadow: var(--card-shadow);
+}
+.qr-skel {
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--txt) 6%, transparent);
+}

@@ -9,7 +9,7 @@ import { DEFAULT_UITSNEDE } from '@/lib/reclame'
 import type { MatchState, TimelineItem } from '@/lib/match-engine'
 import { buildMomentum, type MomentumPoint } from '@/lib/match-momentum'
 import { goalPointsFromLabel, goalScorerFromLabel, useLiveStream } from '@/lib/use-live-stream'
-import { QrCode } from '../../cast/QrCode'
+import { QrCode } from '@/components/QrCode'
 import { AdMarquee, type Ad } from './AdMarquee'
 
 function fmtClock(total: number): string {

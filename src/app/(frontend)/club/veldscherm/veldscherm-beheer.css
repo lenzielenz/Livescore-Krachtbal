@@ -1,0 +1,159 @@
+/* Zelfde visuele taal als /cast (schermen-naar-tv), maar met eigen klassen — dit is een aparte
+   pagina, geen gedeelde stylesheet, om cast.css niet ongewild aan andere schermlogica te koppelen. */
+
+.vb-count {
+  background: var(--panel-grad);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: var(--card-shadow);
+  padding: 16px 18px;
+  margin-bottom: 18px;
+}
+.vb-count-label {
+  display: block;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--dim);
+  margin-bottom: 8px;
+}
+.vb-count-row {
+  display: flex;
+  gap: 10px;
+}
+.vb-count-input {
+  width: 90px;
+  background: var(--bg-2);
+  color: var(--txt);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 11px 12px;
+  font-size: 15px;
+  font-weight: 700;
+}
+.vb-count-input:focus {
+  outline: 2px solid color-mix(in srgb, var(--accent) 60%, transparent);
+  border-color: var(--accent);
+}
+.vb-error {
+  color: #ff9b9b;
+  font-size: 13px;
+  margin: 8px 0 0;
+}
+
+.vb-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+@media (max-width: 640px) {
+  .vb-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.vb-card {
+  min-width: 0;
+  background: var(--panel-grad);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: var(--card-shadow);
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.vb-card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.vb-card-icon {
+  font-size: 24px;
+}
+.vb-card-title {
+  font-family: var(--font-display), system-ui, sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0;
+}
+.vb-card-status {
+  font-size: 13.5px;
+  color: var(--dim);
+  margin: 0;
+}
+.vb-card-status strong {
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+}
+
+.vb-btn {
+  appearance: none;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: var(--bg);
+  font-weight: 700;
+  font-size: 15px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: filter 0.15s ease, opacity 0.15s ease;
+}
+.vb-btn:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+.vb-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.vb-btn.ghost {
+  background: transparent;
+  color: var(--txt);
+  border-color: var(--line);
+}
+.vb-btn-sm {
+  padding: 8px 12px;
+  font-size: 13px;
+}
+
+.vb-url-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.vb-url {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: ui-monospace, 'Cascadia Code', monospace;
+  font-size: 13px;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 24%, var(--line));
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+.vb-link-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.vb-link-actions .vb-btn {
+  flex: 1 1 auto;
+  text-align: center;
+  text-decoration: none;
+}
+.vb-qr {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 0 4px;
+}
+.vb-qr-cap {
+  font-size: 12px;
+  color: var(--dim);
+}

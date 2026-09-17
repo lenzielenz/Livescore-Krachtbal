@@ -32,6 +32,7 @@ export const PROFILES: Profile[] = [
       { href: '/club/voorspel', label: '🔮 Pronostiek' },
       { href: '/kantine', label: '🍻 Kantinescherm' },
       { href: '/cast', label: '📺 Schermen naar tv' },
+      { href: '/club/veldscherm', label: '🏟️ Veldscherm' },
       { href: '/beheer/spelers', label: '➕ Spelers toevoegen' },
       { href: '/beheer/training/aanwezigheid', label: '✅ Aanwezigheidslijst' },
     ],
