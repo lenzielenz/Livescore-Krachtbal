@@ -49,11 +49,32 @@ export async function POST(req: Request) {
     if (club) clubId = rawClub
   }
 
+  // "Alleen supporter" (geen eigen club): welke club(s) wil hij toch volgen? Enkel relevant zonder
+  // eigen club — met een club gekozen negeren we dit gewoon (die club leidt dan de weergave).
+  // Bestaan checken met één query i.p.v. per id, en begrensd tegen misbruik (niemand volgt 50 clubs).
+  let followedClubIds: number[] = []
+  if (!clubId && Array.isArray(body.followedClubIds)) {
+    const raw = [...new Set(body.followedClubIds.map((v) => Number(v)).filter((n) => Number.isFinite(n) && n > 0))].slice(0, 20)
+    if (raw.length > 0) {
+      const found = await payload
+        .find({ collection: 'clubs', where: { id: { in: raw } }, depth: 0, limit: raw.length, pagination: false })
+        .catch(() => ({ docs: [] as { id: number }[] }))
+      followedClubIds = found.docs.map((c) => c.id)
+    }
+  }
+
   try {
     await payload.create({
       collection: 'users',
       // Rol ALTIJD 'viewer' — body.roles wordt bewust genegeerd (geen privilege-escalatie).
-      data: { name: name || undefined, email, password, roles: ['viewer'], ...(clubId ? { club: clubId } : {}) },
+      data: {
+        name: name || undefined,
+        email,
+        password,
+        roles: ['viewer'],
+        ...(clubId ? { club: clubId } : {}),
+        ...(followedClubIds.length > 0 ? { followedClubs: followedClubIds } : {}),
+      },
       overrideAccess: true,
     })
   } catch (err) {

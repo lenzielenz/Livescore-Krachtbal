@@ -60,10 +60,15 @@ export default async function ProfielPage() {
   }
   const clubs = [...byKey.values()].sort((a, b) => a.name.localeCompare(b.name))
 
+  const followedClubIds = (Array.isArray(u.followedClubs) ? u.followedClubs : [])
+    .map((c) => Number(idOf(c)))
+    .filter((n) => Number.isFinite(n))
+
   const initial: ProfileInitial = {
     email: String(u.email ?? ''),
     name: String(u.name ?? ''),
     clubId: idOf(u.club),
+    followedClubIds,
     position: typeof u.position === 'string' ? u.position : '',
     photoUrl,
     zoom: fit.zoom,

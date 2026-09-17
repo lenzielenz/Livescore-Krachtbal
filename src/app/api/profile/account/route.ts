@@ -42,6 +42,25 @@ export async function POST(req: Request) {
     }
   }
 
+  if ('followedClubIds' in body) {
+    // Enkel zinvol zonder eigen club — mét een club gekozen negeren we dit gewoon (die club leidt
+    // dan de weergave). Bestaan checken met één query, begrensd tegen misbruik.
+    const hasOwnClub = 'clubId' in body ? Boolean(body.clubId) : Boolean((user as { club?: unknown }).club)
+    if (hasOwnClub || !Array.isArray(body.followedClubIds)) {
+      data.followedClubs = []
+    } else {
+      const raw = [...new Set((body.followedClubIds as unknown[]).map((v) => Number(v)).filter((n) => Number.isFinite(n) && n > 0))].slice(0, 20)
+      if (raw.length === 0) {
+        data.followedClubs = []
+      } else {
+        const found = await payload
+          .find({ collection: 'clubs', where: { id: { in: raw } }, depth: 0, limit: raw.length, pagination: false })
+          .catch(() => ({ docs: [] as { id: number }[] }))
+        data.followedClubs = found.docs.map((c) => c.id)
+      }
+    }
+  }
+
   if ('position' in body) {
     const pos = body.position
     if (pos === null || pos === '' || pos === undefined) {

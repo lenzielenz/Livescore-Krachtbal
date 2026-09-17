@@ -599,3 +599,32 @@
   .ref-print-code { font-size: 14px; font-family: monospace; margin: 16px 0 4px; word-break: break-all; }
   .ref-print-note { font-size: 12px; color: #333; max-width: 360px; margin: 8px auto 0; }
 }
+
+/* Registreren — "alleen supporter": clubs volgen zonder een eigen club te kiezen. */
+.rf-follow {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border-radius: var(--r-control);
+  border: 1px solid var(--line);
+  background: #10141a;
+}
+.rf-follow-lbl { margin: 0; font-size: 0.82rem; color: var(--dim); }
+.rf-follow-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 220px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.rf-follow-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.88rem;
+  color: var(--txt);
+  padding: 3px 0;
+}
+.rf-follow-item input { accent-color: var(--accent); }

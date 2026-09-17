@@ -297,6 +297,10 @@ export interface User {
    */
   club?: (number | null) | Club;
   /**
+   * Clubs die deze supporter volgt i.p.v. een eigen club te kiezen. De gebruiker beheert dit zelf.
+   */
+  followedClubs?: (number | Club)[] | null;
+  /**
    * Eigen profielfoto (de gebruiker beheert dit zelf via "Mijn profiel").
    */
   photo?: (number | null) | Media;
@@ -2600,6 +2604,7 @@ export interface UsersSelect<T extends boolean = true> {
   name?: T;
   roles?: T;
   club?: T;
+  followedClubs?: T;
   photo?: T;
   photoZoom?: T;
   photoOffsetX?: T;

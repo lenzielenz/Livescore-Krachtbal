@@ -30,6 +30,7 @@ type WithRoles = {
   roles?: UserRole[] | null
   club?: number | string | { id: number | string } | null
   official?: number | string | { id: number | string } | null
+  followedClubs?: (number | string | { id: number | string })[] | null
 }
 
 export function userRoles(user: unknown): UserRole[] {
@@ -115,6 +116,13 @@ export function userClubId(user: unknown): number | string | null {
   if (club == null) return null
   if (typeof club === 'object') return club.id
   return club
+}
+
+/** Clubs die een supporter zonder eigen club toch volgt (id's), voor wie geen `club` heeft. */
+export function userFollowedClubIds(user: unknown): (number | string)[] {
+  const list = (user as WithRoles | null)?.followedClubs
+  if (!Array.isArray(list)) return []
+  return list.map((c) => (c != null && typeof c === 'object' ? c.id : c)).filter((id): id is number | string => id != null)
 }
 
 /** Het official-dossier (scheidsrechter/grensrechter) gekoppeld aan deze gebruiker, indien aanwezig. */

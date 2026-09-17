@@ -1,7 +1,7 @@
 import Link from 'next/link'
 
 import { SiteHeader } from '@/components/SiteHeader'
-import { userClubId, userPlayerId } from '@/lib/access'
+import { userClubId, userFollowedClubIds, userPlayerId } from '@/lib/access'
 import { competitionWhere } from '@/lib/analyse-access'
 import { getAuthUser } from '@/lib/auth-user'
 import { formatDateTimeBE } from '@/lib/datetime'
@@ -53,6 +53,19 @@ export default async function HubPage() {
       if (up) nextMatch = { id: (up as { id: number }).id, date: (up as { date?: string }).date, home: teamName((up as { homeTeam?: unknown }).homeTeam), away: teamName((up as { awayTeam?: unknown }).awayTeam) }
       const fin = ms.docs.filter((m) => (m as { status?: string }).status === 'finished').sort((a, b) => new Date(String((b as { date?: string }).date ?? 0)).getTime() - new Date(String((a as { date?: string }).date ?? 0)).getTime())[0]
       if (fin) lastMatch = { id: (fin as { id: number }).id, home: teamName((fin as { homeTeam?: unknown }).homeTeam), away: teamName((fin as { awayTeam?: unknown }).awayTeam), score: await scoreOf(payload, (fin as { id: number }).id) }
+    }
+  }
+
+  // Geen eigen club? Dan tonen we de club(s) die deze supporter koos te volgen (zie /registreren
+  // "Alleen supporter" en /profiel) — snelle links i.p.v. de kale "stel je club in"-melding.
+  let followedClubs: { id: number; name: string }[] = []
+  if (clubId == null) {
+    const followedIds = userFollowedClubIds(me)
+    if (followedIds.length > 0) {
+      const res = await payload
+        .find({ collection: 'clubs', where: { id: { in: followedIds } }, depth: 0, sort: 'name', limit: followedIds.length, pagination: false })
+        .catch(() => ({ docs: [] as { id: number; name: string }[] }))
+      followedClubs = res.docs.map((c) => ({ id: c.id as number, name: String(c.name) }))
     }
   }
 
@@ -114,11 +127,21 @@ export default async function HubPage() {
               </div>
             </div>
           </section>
+        ) : followedClubs.length > 0 ? (
+          <section className="hub-sec">
+            <h2 className="hub-h2">Gevolgde clubs</h2>
+            <div className="hub-tiles">
+              {followedClubs.map((c) => (
+                <Link key={c.id} href={`/clubs/${c.id}`} className="hub-tile">🛡️<span>{c.name}</span></Link>
+              ))}
+            </div>
+            <p className="hub-empty">Geen eigen club? Pas je gevolgde clubs aan op <Link href="/profiel">je profiel</Link>.</p>
+          </section>
         ) : (
           <section className="hub-sec">
             <h2 className="hub-h2">Mijn club</h2>
             <p className="hub-empty">
-              {me ? <>Stel je club in op <Link href="/profiel">je profiel</Link> om hier je ploeg te volgen.</> : <><Link href="/inloggen">Log in</Link> en kies je club om alles op maat te zien.</>}
+              {me ? <>Stel je club in — of volg er een paar zonder lid te zijn — op <Link href="/profiel">je profiel</Link>.</> : <><Link href="/inloggen">Log in</Link> en kies je club om alles op maat te zien.</>}
             </p>
           </section>
         )}
