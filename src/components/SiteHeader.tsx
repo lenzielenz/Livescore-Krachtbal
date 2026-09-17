@@ -42,6 +42,7 @@ const VOLGEN: { href: string; label: string }[] = [
   { href: '/rangschikking', label: '📊 Klassement' },
   { href: '/tornooi', label: '🏆 Tornooien' },
   { href: '/pronostiek', label: '🔮 Pronostiek' },
+  { href: '/superster', label: '🌟 Superster (jeugd)' },
 ]
 
 // Leesvoer en uitleg. Elk item een eigen icoon (geen twee keer 📰) zodat ze uit elkaar te

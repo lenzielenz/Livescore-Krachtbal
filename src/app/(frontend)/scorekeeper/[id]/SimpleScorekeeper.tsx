@@ -12,13 +12,9 @@ import { genOpId } from '@/lib/op-id'
 import type { SimpleSide } from '@/lib/simple-score'
 import { doelSeconden, extraMinuten, speeltTotMinuut } from '@/lib/speeltijd'
 import { useActionQueue } from '@/lib/use-action-queue'
+import { fmtClock, useLiveClock } from '@/lib/use-live-clock'
 import { useLiveStream } from '@/lib/use-live-stream'
 import './simple-scorekeeper.css'
-
-function fmtClock(total: number): string {
-  const s = Math.max(0, Math.floor(total))
-  return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
-}
 
 // Voornaam = eerste woord van de naam (compact tonen naast het rugnummer).
 function firstName(name: string): string {
@@ -118,20 +114,11 @@ export function SimpleScorekeeper({
   const rust = inRust(helftStand)
 
   // Lopende klok: reken vanaf clockUpdatedAt (server) zodat een refresh de tijd behoudt.
-  const [clock, setClockVal] = useState(initialState.match.clockSeconds)
-  useEffect(() => {
-    const m = state.match
-    const base = m.clockSeconds
-    if (!m.clockRunning) {
-      setClockVal(base)
-      return
-    }
-    const at = m.clockUpdatedAt ? new Date(m.clockUpdatedAt).getTime() : Date.now()
-    const update = () => setClockVal(base + Math.max(0, (Date.now() - at) / 1000))
-    update()
-    const t = setInterval(update, 250)
-    return () => clearInterval(t)
-  }, [state.match])
+  const clock = useLiveClock({
+    seconds: state.match.clockSeconds,
+    running: state.match.clockRunning,
+    updatedAt: state.match.clockUpdatedAt,
+  })
 
   // SSE: vang wijzigingen op die op een ander toestel gemaakt worden (met reconnect-backoff).
   // Negeer updates terwijl een eigen actie loopt, zodat we geen optimistische schrijf overschrijven.

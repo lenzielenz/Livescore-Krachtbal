@@ -14,12 +14,8 @@ import { DEFAULT_AWAY_COLOR, DEFAULT_HOME_COLOR, inkOn, readableOnDark } from '@
 import { extraMinuten, speeltTotMinuut } from '@/lib/speeltijd'
 import { goalPointsFromLabel, goalScorerFromLabel, useLiveStream, useViewerId } from '@/lib/use-live-stream'
 import { isTribuneOpen, TRIBUNE_GRACE_MS } from '@/lib/tribune'
+import { fmtClock, useLiveClock } from '@/lib/use-live-clock'
 import './scoreboard.css'
-
-function fmtClock(total: number): string {
-  const s = Math.max(0, Math.floor(total))
-  return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
-}
 
 type Side = 'home' | 'away'
 
@@ -93,9 +89,7 @@ export function Scoreboard({
   // Na de eindstand staat de samenvatting centraal. De volledige tijdlijn blijft met één tik
   // bereikbaar; tijdens een lopende wedstrijd blijft ze vanzelf open.
   const [timelineOpen, setTimelineOpen] = useState(initial.state.match.status !== 'finished')
-  const [clock, setClock] = useState(initial.state.match.clockSeconds)
   const [goal, setGoal] = useState<Goal | null>(null)
-  const base = useRef({ seconds: initial.state.match.clockSeconds, running: initial.state.match.clockRunning, at: Date.now() })
   // Reeds geziene doelpunt-events (op stabiel timeline-id), zodat de viering NIET op een numerieke
   // score-diff steunt (die mist gelijktijdige doelpunten en mis-attribueert na een catch-up tick).
   const seenGoals = useRef<Set<string>>(new Set(initial.timeline.filter((i) => i.kind === 'goal').map((i) => i.id)))
@@ -396,23 +390,11 @@ export function Scoreboard({
     setUnread(0)
   }
 
-  // Klok-basis bijwerken bij elke state-update — reken vanaf clockUpdatedAt (server), zodat de tijd
-  // klopt voor wie later instapt en NIET telkens terug naar 0 "reset".
-  useEffect(() => {
-    const m = state.match
-    const at = m.clockUpdatedAt ? new Date(m.clockUpdatedAt).getTime() : Date.now()
-    base.current = { seconds: m.clockSeconds, running: m.clockRunning, at }
-    setClock(m.clockRunning ? m.clockSeconds + Math.max(0, (Date.now() - at) / 1000) : m.clockSeconds)
-  }, [state.match.clockSeconds, state.match.clockRunning, state.match.clockUpdatedAt])
-
-  useEffect(() => {
-    if (!state.match.clockRunning) return
-    const t = setInterval(() => {
-      const b = base.current
-      setClock(b.seconds + Math.max(0, (Date.now() - b.at) / 1000))
-    }, 250)
-    return () => clearInterval(t)
-  }, [state.match.clockRunning, state.match.clockUpdatedAt])
+  const clock = useLiveClock({
+    seconds: state.match.clockSeconds,
+    running: state.match.clockRunning,
+    updatedAt: state.match.clockUpdatedAt,
+  })
 
   const statusLabel =
     state.match.status === 'live' ? 'LIVE' : state.match.status === 'finished' ? 'AFGELOPEN' : 'GEPLAND'
