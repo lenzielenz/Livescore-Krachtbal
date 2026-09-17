@@ -193,11 +193,13 @@
 .recap-stat:nth-child(3) { --i: 2; }
 .recap-stat:nth-child(4) { --i: 3; }
 .recap-stat:nth-child(5) { --i: 4; }
+.recap-stat:nth-child(6) { --i: 5; }
 .recap-stat--cyan { --stat: #36d8ba; }
 .recap-stat--violet { --stat: #a78bfa; }
 .recap-stat--red { --stat: #ff6b78; }
 .recap-stat--orange { --stat: #ff9f43; }
 .recap-stat--gold { --stat: #ffd166; }
+.recap-stat--pink { --stat: #f472b6; }
 /* Zachte, zwevende gloed-vlek achter elke tegel — geeft de kleur wat leven zonder de cijfers te
    storen (elke tegel ademt op haar eigen ritme via --i). */
 .recap-stat::before {

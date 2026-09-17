@@ -155,6 +155,21 @@ export const Users: CollectionConfig = {
       },
     },
     {
+      // Voor een supporter zonder eigen club (bv. "gewoon fan" of nog geen lid ergens): welke
+      // club(s) hij toch wil volgen. Zo toont "Mijn club" op de hub en elders alsnog iets zinvols
+      // i.p.v. de lege "stel je club in"-melding. Bewust apart van `club` (dat blijft de ÉÉN eigen
+      // club voor leden/beheerders) en bewust hasMany: een supporter mag meerdere clubs volgen.
+      // Zelfbeheerd via de registratie ("Alleen supporter") of nadien via "Mijn profiel".
+      name: 'followedClubs',
+      label: 'Gevolgde clubs (supporter zonder eigen club)',
+      type: 'relationship',
+      relationTo: 'clubs',
+      hasMany: true,
+      admin: {
+        description: 'Clubs die deze supporter volgt i.p.v. een eigen club te kiezen. De gebruiker beheert dit zelf.',
+      },
+    },
+    {
       // Eigen profielfoto: elk lid kan een foto uploaden en die op zijn profiel/scorecard tonen.
       // De foto zelf staat in de media-collectie; bijsnijden gebeurt — net als bij clublogo's —
       // met zoom + verschuiving (geen serverbewerking, de weergave gebruikt dezelfde CSS-transform).

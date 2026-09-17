@@ -35,8 +35,10 @@ export default async function RegistrerenPage() {
         </h1>
         <p className="wb-intro">
           Maak een gratis account aan om krachtbalwedstrijden mee te volgen. Kies (optioneel) je club —
-          dan word je overal meteen naar je eigen club gestuurd. Ben je clubmedewerker, scheidsrechter
-          of van de federatie? Registreer je gerust ook — een beheerder kent je daarna de juiste rol toe.
+          dan word je overal meteen naar je eigen club gestuurd. Nog bij geen enkele club aangesloten?
+          Kies dan &quot;alleen supporter&quot; en volg de club(s) die je interesseren — ook dan zie je
+          meteen de juiste info als je inlogt. Ben je clubmedewerker, scheidsrechter of van de federatie?
+          Registreer je gerust ook — een beheerder kent je daarna de juiste rol toe.
         </p>
         <RegisterForm clubs={clubs} />
       </div>

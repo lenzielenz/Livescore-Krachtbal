@@ -144,7 +144,12 @@ export async function buildSeasonRecapData(payload: Payload, now: Date = new Dat
     : { docs: [] as Record<string, unknown>[] }
   const visitors = countUniqueVisitors(users.docs.map((u) => (u as { checkins?: unknown }).checkins), matchIds)
 
-  const stats: WeekendStats = { visitors, clubs: clubKeys.size, goalThrows, backThrows }
+  // Supportersfoto's uit de foto-tribune, over heel het seizoen.
+  const photosRes = matchIds.length
+    ? await payload.count({ collection: 'match-instants', where: { match: { in: matchIds } }, overrideAccess: true }).catch(() => ({ totalDocs: 0 }))
+    : { totalDocs: 0 }
+
+  const stats: WeekendStats = { visitors, clubs: clubKeys.size, goalThrows, backThrows, photos: photosRes.totalDocs }
 
   return buildSeasonRecap({ seizoen, results, weeks: [...weekBuckets.values()], stats })
 }

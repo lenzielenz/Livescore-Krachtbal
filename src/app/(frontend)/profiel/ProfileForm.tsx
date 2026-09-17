@@ -10,6 +10,7 @@ export type ProfileInitial = {
   email: string
   name: string
   clubId: string
+  followedClubIds: number[]
   position: string
   photoUrl: string | null
   zoom: number
@@ -23,6 +24,12 @@ export function ProfileForm({ initial, clubs }: { initial: ProfileInitial; clubs
   // Account-gegevens
   const [name, setName] = useState(initial.name)
   const [clubId, setClubId] = useState(initial.clubId)
+  // Gevolgde clubs: enkel relevant zonder eigen club (zie RegisterForm — zelfde idee, hier voor wie
+  // zich al registreerde en dit nadien wil instellen of aanpassen).
+  const [followedClubIds, setFollowedClubIds] = useState<number[]>(initial.followedClubIds)
+  const toggleFollowed = (id: number) => {
+    setFollowedClubIds((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]))
+  }
   const [position, setPosition] = useState(initial.position)
   const [photoUrl, setPhotoUrl] = useState(initial.photoUrl)
   const [zoom, setZoom] = useState(initial.zoom)
@@ -46,7 +53,15 @@ export function ProfileForm({ initial, clubs }: { initial: ProfileInitial; clubs
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ name, clubId: clubId || null, position: position || null, photoZoom: zoom, photoOffsetX: offsetX, photoOffsetY: offsetY }),
+        body: JSON.stringify({
+          name,
+          clubId: clubId || null,
+          followedClubIds: clubId ? [] : followedClubIds,
+          position: position || null,
+          photoZoom: zoom,
+          photoOffsetX: offsetX,
+          photoOffsetY: offsetY,
+        }),
       })
       const data = (await res.json().catch(() => ({}))) as { error?: string }
       if (!res.ok) {
@@ -123,6 +138,20 @@ export function ProfileForm({ initial, clubs }: { initial: ProfileInitial; clubs
             ))}
           </select>
         </label>
+
+        {!clubId && (
+          <div className="rf-follow">
+            <p className="rf-follow-lbl">Geen eigen club? Volg gerust club(s) — dan zie je die overal als je ingelogd bent.</p>
+            <div className="rf-follow-list">
+              {clubs.map((c) => (
+                <label key={c.id} className="rf-follow-item">
+                  <input type="checkbox" checked={followedClubIds.includes(c.id)} onChange={() => toggleFollowed(c.id)} />
+                  {c.name}
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
 
         <label style={labelStyle}>
           Positie in het spel

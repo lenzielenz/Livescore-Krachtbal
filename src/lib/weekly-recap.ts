@@ -46,6 +46,8 @@ export interface WeekendStats {
   clubs: number
   goalThrows: number
   backThrows: number
+  /** Aantal supportersfoto's gepost bij wedstrijden uit dit venster (foto-tribune). */
+  photos: number
 }
 
 export interface WeeklyRecap {
@@ -200,7 +202,7 @@ export function buildWeeklyRecap(input: RecapInput): WeeklyRecap {
     endIso: input.endIso,
     matches: results.length,
     goals,
-    stats: input.stats ?? { visitors: 0, clubs: 0, goalThrows: 0, backThrows: 0 },
+    stats: input.stats ?? { visitors: 0, clubs: 0, goalThrows: 0, backThrows: 0, photos: 0 },
     headline: headlineFor(results.length, goals, input.team),
     highlights: buildHighlights(results),
     results,

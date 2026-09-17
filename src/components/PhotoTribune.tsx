@@ -27,6 +27,7 @@ export function PhotoTribune({
   matchId,
   instants,
   canPost,
+  live = false,
   mineIds,
   onLocalAdd,
   onLocalRemove,
@@ -34,6 +35,9 @@ export function PhotoTribune({
   matchId: number
   instants: Instant[]
   canPost: boolean
+  /** De wedstrijd is nu live — dan mag de foto-knop opvallen i.p.v. rustig te wachten tot iemand
+      'm toevallig opmerkt. */
+  live?: boolean
   mineIds: Set<number>
   onLocalAdd: (i: Instant) => void
   onLocalRemove: (id: number) => void
@@ -81,14 +85,25 @@ export function PhotoTribune({
           Zodra er foto's zijn → horizontale strip met compacte knop + kleine thumbnails. */}
       {instants.length === 0 ? (
         canPost && (
-          <button type="button" className="ptr-fullbtn" onClick={() => inputRef.current?.click()} disabled={busy}>
-            {busy ? '⏳ Bezig…' : '📸 Foto toevoegen'}
+          <button
+            type="button"
+            className={`ptr-fullbtn${live ? ' live' : ''}`}
+            onClick={() => inputRef.current?.click()}
+            disabled={busy}
+          >
+            {busy ? '⏳ Bezig…' : live ? '📸 Jij was erbij — deel een foto!' : '📸 Foto toevoegen'}
           </button>
         )
       ) : (
         <div className="ptr-strip">
           {canPost && (
-            <button type="button" className="ptr-add" onClick={() => inputRef.current?.click()} disabled={busy} aria-label="Foto toevoegen">
+            <button
+              type="button"
+              className={`ptr-add${live ? ' live' : ''}`}
+              onClick={() => inputRef.current?.click()}
+              disabled={busy}
+              aria-label="Foto toevoegen"
+            >
               <span className="ptr-add-ico" aria-hidden>{busy ? '⏳' : '📸'}</span>
               <span className="ptr-add-lbl">{busy ? 'Bezig…' : 'Foto'}</span>
             </button>

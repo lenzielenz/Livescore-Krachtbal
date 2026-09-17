@@ -58,18 +58,21 @@ export default async function RadPage() {
       <SiteHeader active="stand" />
       <div className="site rad-page">
         <h1 className="page-title rad-title">🎰 <span className="brand">Bonusrad</span></h1>
-        <p className="vs-intro">
-          De <strong>beste {state.winners.length || ''} deelnemers</strong> van vorig weekend draaien <strong>3×</strong> aan het rad
-          {state.participants > 0 && <> (van de {state.participants} die meededen)</>}. Je wint <strong>vermenigvuldigers</strong> die je op je
-          voorspellingen kan zetten — jij kiest welke wedstrijd. Boosters zijn <strong>4 weken</strong> geldig.{' '}
-          <Link href="/pronostiek" style={{ color: '#ffd166' }}>Naar de stand</Link>.
-        </p>
+        <p className="rad-hook">Draai voor <strong>vermenigvuldigers</strong> op je voorspellingen — jij kiest de wedstrijd.</p>
+        <details className="rad-info">
+          <summary>Hoe werkt dit? ⓘ</summary>
+          <p>
+            De <strong>beste {state.winners.length || ''} deelnemers</strong> van vorig weekend draaien <strong>3×</strong> aan het rad
+            {state.participants > 0 && <> (van de {state.participants} die meededen)</>}. Boosters zijn <strong>4 weken</strong> geldig.{' '}
+            <Link href="/pronostiek" style={{ color: '#ffd166' }}>Naar de stand</Link>.
+          </p>
+        </details>
 
         {canTest && (
-          <>
-            <p className="rad-test">🧪 Testmodus (beheerder): jij mag onbeperkt draaien om te testen.</p>
+          <div className="rad-admin-row">
+            <span className="rad-test-badge" title="Jij mag onbeperkt draaien om te testen.">🧪 Testmodus</span>
             <RadAdminBar />
-          </>
+          </div>
         )}
 
         {state.winners.length > 0 && (

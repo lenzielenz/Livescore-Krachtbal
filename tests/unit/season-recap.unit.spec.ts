@@ -88,6 +88,6 @@ describe('buildSeasonRecap', () => {
 
   it('geeft standaardstats mee als er geen zijn opgegeven', () => {
     const r = buildSeasonRecap({ seizoen: '2025-2026', results: [match({ matchId: 1, homeGoals: 1, awayGoals: 0 })], weeks: [] })
-    expect(r?.stats).toEqual({ visitors: 0, clubs: 0, goalThrows: 0, backThrows: 0 })
+    expect(r?.stats).toEqual({ visitors: 0, clubs: 0, goalThrows: 0, backThrows: 0, photos: 0 })
   })
 })

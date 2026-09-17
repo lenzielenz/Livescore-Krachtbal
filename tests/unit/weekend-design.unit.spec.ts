@@ -104,5 +104,20 @@ describe('Weekendplan design', () => {
       const heights = [...svg.matchAll(/width="464" height="([\d.]+)" rx="14"/g)].map(m => Number(m[1]))
       expect(heights[0]).toBeGreaterThan(56)
     })
+    it('houdt elke tegenstander-naam even groot en kapt een te lange naam af i.p.v. te verkleinen', () => {
+      // Vroeger kreeg elke rij haar EIGEN pasgrootte (Math.min(gedeelde grootte, eigen fit)) —
+      // daardoor stond een lange naam kleiner dan een korte op de rij eronder, precies het
+      // "niet mooi gelijk"-effect. Nu is de grootte vast en kapt een te lange naam af.
+      const rows = orderWeekendRows(matches(COLUMN_THRESHOLD + 4)).map((row, i) => ({
+        ...row,
+        opponent: i === 0 ? 'Een extreem lange tegenstandersnaam die nooit op één rij past' : 'HO Beitem',
+      }))
+      const svg = renderWeekendDesign({ ...options, rows })
+      const textEls = [...svg.matchAll(/<text[^>]*font-size="([\d.]+)"[^>]*>([^<]*)<\/text>/g)].map((m) => ({ size: Number(m[1]), text: m[2] }))
+      const opponentEls = textEls.filter((t) => t.text === 'HO Beitem' || t.text.endsWith('…'))
+      expect(opponentEls.length).toBeGreaterThan(1)
+      expect(opponentEls.some((t) => t.text.endsWith('…'))).toBe(true)
+      expect(new Set(opponentEls.map((t) => t.size)).size).toBe(1)
+    })
   })
 })

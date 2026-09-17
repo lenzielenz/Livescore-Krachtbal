@@ -13,9 +13,17 @@ export function RegisterForm({ clubs }: { clubs: { id: number; name: string }[] 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [clubId, setClubId] = useState('')
+  // "Alleen supporter": wie geen eigen club heeft/kiest, mag toch snel clubs volgen zodat hij
+  // ingelogd meteen de juiste clubs te zien krijgt (i.p.v. helemaal niets, of alles door elkaar).
+  const [supporterOnly, setSupporterOnly] = useState(false)
+  const [followedClubIds, setFollowedClubIds] = useState<number[]>([])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [done, setDone] = useState(false)
+
+  const toggleFollowed = (id: number) => {
+    setFollowedClubIds((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]))
+  }
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -25,7 +33,13 @@ export function RegisterForm({ clubs }: { clubs: { id: number; name: string }[] 
       const res = await fetch('/api/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password, clubId: clubId || undefined }),
+        body: JSON.stringify({
+          name,
+          email,
+          password,
+          clubId: clubId || undefined,
+          followedClubIds: supporterOnly && followedClubIds.length > 0 ? followedClubIds : undefined,
+        }),
       })
       const data = (await res.json().catch(() => ({}))) as { error?: string }
       if (!res.ok) {
@@ -81,7 +95,18 @@ export function RegisterForm({ clubs }: { clubs: { id: number; name: string }[] 
         {clubs.length > 0 && (
           <label style={{ display: 'flex', flexDirection: 'column', gap: 2, fontSize: '0.8rem', color: 'var(--dim)' }}>
             Mijn club (optioneel)
-            <select className="wb-input" value={clubId} onChange={(e) => setClubId(e.target.value)}>
+            <select
+              className="wb-input"
+              value={clubId}
+              onChange={(e) => {
+                setClubId(e.target.value)
+                // Een club gekozen? Dan leidt die de weergave — het volg-lijstje is dan overbodig.
+                if (e.target.value) {
+                  setSupporterOnly(false)
+                  setFollowedClubIds([])
+                }
+              }}
+            >
               <option value="">— Geen / kies later —</option>
               {clubs.map((c) => (
                 <option key={c.id} value={c.id}>{c.name}</option>
@@ -89,6 +114,27 @@ export function RegisterForm({ clubs }: { clubs: { id: number; name: string }[] 
             </select>
           </label>
         )}
+
+        {clubs.length > 0 && !clubId && !supporterOnly && (
+          <button type="button" className="wb-btn" onClick={() => setSupporterOnly(true)}>
+            🙋 Ik ben enkel supporter, geen lid van een club
+          </button>
+        )}
+
+        {clubs.length > 0 && !clubId && supporterOnly && (
+          <div className="rf-follow">
+            <p className="rf-follow-lbl">Geen probleem! Welke club(s) wil je toch volgen? Dan zie je die meteen als je inlogt.</p>
+            <div className="rf-follow-list">
+              {clubs.map((c) => (
+                <label key={c.id} className="rf-follow-item">
+                  <input type="checkbox" checked={followedClubIds.includes(c.id)} onChange={() => toggleFollowed(c.id)} />
+                  {c.name}
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
+
         <button type="submit" disabled={busy} className="wb-btn wb-btn-primary">
           {busy ? 'Bezig…' : 'Account aanmaken'}
         </button>
