@@ -120,6 +120,7 @@ import * as migration_20260917_060000_users_rels_clubs from './20260917_060000_u
 import * as migration_20260917_070000_match_auto_imported from './20260917_070000_match_auto_imported'
 import * as migration_20260917_140000_field_screens from './20260917_140000_field_screens'
 import * as migration_20260917_140500_field_screens_theme from './20260917_140500_field_screens_theme'
+import * as migration_20260917_170000_field_screens_demo from './20260917_170000_field_screens_demo'
 
 export const migrations = [
   {
@@ -726,5 +727,10 @@ export const migrations = [
     up: migration_20260917_140500_field_screens_theme.up,
     down: migration_20260917_140500_field_screens_theme.down,
     name: '20260917_140500_field_screens_theme',
+  },
+  {
+    up: migration_20260917_170000_field_screens_demo.up,
+    down: migration_20260917_170000_field_screens_demo.down,
+    name: '20260917_170000_field_screens_demo',
   },
 ];

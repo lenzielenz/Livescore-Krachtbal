@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { SiteHeader } from '@/components/SiteHeader'
 import { isClubStaff, isFederationLevel, userClubId } from '@/lib/access'
 import { getAuthUser } from '@/lib/auth-user'
-import { getClubFieldScreens } from '@/lib/field-screens-data'
+import { ensureClubDemoScreens, getClubDemoScreens, getClubFieldScreens } from '@/lib/field-screens-data'
 import { getPayloadClient } from '@/lib/payload-client'
 import { VeldschermManager } from './VeldschermManager'
 import './veldscherm-beheer.css'
@@ -48,8 +48,9 @@ export default async function VeldschermBeheerPage() {
   }
 
   const payload = await getPayloadClient()
-  const clubDoc = await payload.findByID({ collection: 'clubs', id: Number(myClub), depth: 0 }).catch(() => null)
   const screens = await getClubFieldScreens(payload, Number(myClub))
+  await ensureClubDemoScreens(payload, Number(myClub))
+  const demoScreens = await getClubDemoScreens(payload, Number(myClub))
 
   return (
     <>
@@ -57,12 +58,10 @@ export default async function VeldschermBeheerPage() {
       <div className="site">
         <h1 className="page-title"><span className="brand">Veldscherm</span></h1>
         <p className="empty" style={{ marginBottom: 16 }}>
-          Elk veld krijgt een eigen tv-link. Open die op de tv — zolang er niets gekoppeld is, toont
-          ze de dagplanning van <strong>{clubDoc?.name ?? 'je club'}</strong> plus een koppelcode.
-          Start iemand een wedstrijd, dan voert die de code van het juiste veld in en springt dat
-          scherm vanzelf naar het scorebord. Loopt de wedstrijd af, dan verschijnt een nieuwe code.
+          Elk veld krijgt een eigen tv-link: wachtscherm + koppelcode, tot iemand een wedstrijd
+          start — dan springt ze vanzelf naar het scorebord, en weer terug zodra die afloopt.
         </p>
-        <VeldschermManager clubId={Number(myClub)} screens={screens} />
+        <VeldschermManager clubId={Number(myClub)} screens={screens} demoScreens={demoScreens} />
       </div>
     </>
   )

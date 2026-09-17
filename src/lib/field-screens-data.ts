@@ -1,7 +1,8 @@
 import type { Payload } from 'payload'
 
 import { brusselsDayBoundsUtc, dateStrBE } from './datetime'
-import { planVeldenSync, randomPairingCode, veldNaam, type FieldScreenTheme, type VeldRow } from './field-screens'
+import { buildFixedSimpleScore } from './simple-score'
+import { planVeldenSync, randomPairingCode, veldNaam, type DagWedstrijd, type FieldScreenTheme, type VeldRow } from './field-screens'
 
 // DB-laag voor veldschermen — het datamodel en de motivatie staan in collections/FieldScreens.ts,
 // de pure planning-/codelogica in field-screens.ts. Alle functies hier draaien met
@@ -34,19 +35,46 @@ export type FieldScreenRow = {
   theme: FieldScreenTheme
 }
 
-/** Veldschermen van een club, in aanmaakvolgorde. */
+const toFieldScreenRow = (d: Record<string, unknown>): FieldScreenRow => ({
+  id: d.id as number,
+  naam: String((d as { naam?: unknown }).naam ?? ''),
+  pairingCode: ((d as { pairingCode?: unknown }).pairingCode as string | null) ?? null,
+  pairedMatchId: rel((d as { pairedMatch?: unknown }).pairedMatch),
+  pairedAt: ((d as { pairedAt?: unknown }).pairedAt as string | null) ?? null,
+  theme: (d as { theme?: unknown }).theme === 'light' ? 'light' : 'dark',
+})
+
+/** Echte velden van een club, in aanmaakvolgorde — de vaste demo-schermen (zie
+ * ensureClubDemoScreens) tellen hier bewust niet mee: geen echt veld, dus niet onderhevig aan
+ * "aantal velden" (planVeldenSync mag ze nooit aanmaken/verwijderen). */
 export async function getClubFieldScreens(payload: Payload, clubId: number): Promise<FieldScreenRow[]> {
   const res = await payload
-    .find({ collection: 'field-screens', where: { club: { equals: clubId } }, sort: 'createdAt', depth: 0, limit: 100, overrideAccess: true })
+    .find({
+      collection: 'field-screens',
+      where: { and: [{ club: { equals: clubId } }, { isDemo: { not_equals: true } }] },
+      sort: 'createdAt',
+      depth: 0,
+      limit: 100,
+      overrideAccess: true,
+    })
     .catch(() => ({ docs: [] as Record<string, unknown>[] }))
-  return res.docs.map((d) => ({
-    id: d.id as number,
-    naam: String((d as { naam?: unknown }).naam ?? ''),
-    pairingCode: ((d as { pairingCode?: unknown }).pairingCode as string | null) ?? null,
-    pairedMatchId: rel((d as { pairedMatch?: unknown }).pairedMatch),
-    pairedAt: ((d as { pairedAt?: unknown }).pairedAt as string | null) ?? null,
-    theme: (d as { theme?: unknown }).theme === 'light' ? 'light' : 'dark',
-  }))
+  return res.docs.map((d) => toFieldScreenRow(d as unknown as Record<string, unknown>))
+}
+
+/** De twee vaste demo-schermen van een club (wachtscherm + scorebord) als rijen, in dezelfde vorm
+ * als getClubFieldScreens — voor weergave op /club/veldscherm naast de echte velden. */
+export async function getClubDemoScreens(payload: Payload, clubId: number): Promise<FieldScreenRow[]> {
+  const res = await payload
+    .find({
+      collection: 'field-screens',
+      where: { and: [{ club: { equals: clubId } }, { isDemo: { equals: true } }] },
+      sort: 'createdAt',
+      depth: 0,
+      limit: 5,
+      overrideAccess: true,
+    })
+    .catch(() => ({ docs: [] as Record<string, unknown>[] }))
+  return res.docs.map((d) => toFieldScreenRow(d as unknown as Record<string, unknown>))
 }
 
 /** Kleurthema van één veld wijzigen — enkel dat, geen andere velden aangeraakt. De caller
@@ -88,7 +116,13 @@ export type PairResult = { ok: true; fieldScreenId: number } | { ok: false; erro
  * codebotsing, niet de eigenlijke toegangscontrole. */
 export async function pairMatchToCode(payload: Payload, code: string, matchId: number): Promise<PairResult> {
   const screenRes = await payload
-    .find({ collection: 'field-screens', where: { and: [{ pairingCode: { equals: code } }, { pairedMatch: { exists: false } }] }, limit: 1, depth: 0, overrideAccess: true })
+    .find({
+      collection: 'field-screens',
+      where: { and: [{ pairingCode: { equals: code } }, { pairedMatch: { exists: false } }, { isDemo: { not_equals: true } }] },
+      limit: 1,
+      depth: 0,
+      overrideAccess: true,
+    })
     .catch(() => ({ docs: [] as Record<string, unknown>[] }))
   const screen = screenRes.docs[0]
   if (!screen) return { ok: false, error: 'Onbekende of al gebruikte koppelcode.' }
@@ -137,6 +171,7 @@ export type PublicFieldScreenState = {
   pairingCode: string | null
   pairedMatchId: number | null
   theme: FieldScreenTheme
+  isDemo: boolean
 }
 
 /** Publieke, minimale staat van één veldscherm — wat de tv-pagina en de pollende sync nodig
@@ -154,10 +189,9 @@ export async function getPublicFieldScreenState(payload: Payload, fieldScreenId:
     pairingCode: ((doc as { pairingCode?: unknown }).pairingCode as string | null) ?? null,
     pairedMatchId: rel((doc as { pairedMatch?: unknown }).pairedMatch),
     theme: (doc as { theme?: unknown }).theme === 'light' ? 'light' : 'dark',
+    isDemo: Boolean((doc as { isDemo?: unknown }).isDemo),
   }
 }
-
-export type DagWedstrijd = { id: number; time: string; opponent: string; reeks: string | null; status: string }
 
 /** Alle thuiswedstrijden van vandaag voor een club — het wachtscherm toont deze zolang er niets
  * gekoppeld is. */
@@ -190,4 +224,74 @@ export async function todaysHomeMatches(payload: Payload, clubId: number, now: D
       status: String((m as { status?: unknown }).status ?? 'scheduled'),
     }
   })
+}
+
+const DEMO_WACHT_NAAM = 'Demo — wachtscherm'
+const DEMO_SCORE_NAAM = 'Demo — scorebord'
+
+export type ClubDemoScreens = { wachtId: number; scoreId: number }
+
+/**
+ * Zorgt dat een club twee vaste demo-veldschermen heeft: een permanent wachtscherm (met een
+ * fictieve dagplanning — zie fictionalDagplanning) en een scherm dat permanent gekoppeld blijft
+ * aan een fictieve, altijd-live demo-wedstrijd. Die wedstrijd is isDemo: true en dus onzichtbaar
+ * op elke publieke lijst/stand/recap (zie o.a. loadLiveDay.ts, match-notify.ts) — en blijft
+ * gekoppeld omdat Matches.ts's afterChange-hook enkel ontkoppelt bij de overgang náár 'finished',
+ * wat hier nooit gebeurt. Bedoeld om het uiterlijk van beide schermtoestanden te kunnen
+ * testen/tunen zonder ooit een echte wedstrijd nodig te hebben. Idempotent.
+ *
+ * Geeft null terug als de club nog geen eigen team heeft, of als er nog geen ander team in de
+ * competitie zit om als fictieve tegenstander te tonen.
+ */
+export async function ensureClubDemoScreens(payload: Payload, clubId: number): Promise<ClubDemoScreens | null> {
+  const existing = await payload
+    .find({ collection: 'field-screens', where: { and: [{ club: { equals: clubId } }, { isDemo: { equals: true } }] }, depth: 0, limit: 5, overrideAccess: true })
+    .catch(() => ({ docs: [] as Record<string, unknown>[] }))
+  let wachtId = (existing.docs.find((d) => (d as { naam?: unknown }).naam === DEMO_WACHT_NAAM)?.id as number | undefined) ?? undefined
+  let scoreId = (existing.docs.find((d) => (d as { naam?: unknown }).naam === DEMO_SCORE_NAAM)?.id as number | undefined) ?? undefined
+  if (wachtId && scoreId) return { wachtId, scoreId }
+
+  const homeTeam = (await payload.find({ collection: 'teams', where: { club: { equals: clubId } }, limit: 1, depth: 0, overrideAccess: true }).catch(() => ({ docs: [] as Record<string, unknown>[] }))).docs[0]
+  const awayTeam = (await payload.find({ collection: 'teams', where: { club: { not_equals: clubId } }, limit: 1, depth: 0, overrideAccess: true }).catch(() => ({ docs: [] as Record<string, unknown>[] }))).docs[0]
+  if (!homeTeam || !awayTeam) return null
+
+  if (!wachtId) {
+    const created = await payload.create({
+      collection: 'field-screens',
+      data: { club: clubId, naam: DEMO_WACHT_NAAM, isDemo: true, pairingCode: randomPairingCode() },
+      overrideAccess: true,
+    })
+    wachtId = created.id
+  }
+
+  if (!scoreId) {
+    const now = new Date()
+    const demoMatch = await payload.create({
+      collection: 'matches',
+      data: {
+        homeTeam: homeTeam.id as number,
+        awayTeam: awayTeam.id as number,
+        date: now.toISOString(),
+        status: 'live',
+        reeks: ((homeTeam as { reeks?: string | null }).reeks ?? undefined) as never,
+        isDemo: true,
+        analyseOnly: false,
+        goalAreaDepth: 10,
+        currentHalf: 1,
+        clockRunning: true,
+        clockSeconds: 420,
+        clockUpdatedAt: now.toISOString(),
+        simpleScore: buildFixedSimpleScore(6, 4) as unknown as Record<string, unknown>,
+      },
+      overrideAccess: true,
+    })
+    const created = await payload.create({
+      collection: 'field-screens',
+      data: { club: clubId, naam: DEMO_SCORE_NAAM, isDemo: true, pairedMatch: demoMatch.id, pairedAt: now.toISOString() },
+      overrideAccess: true,
+    })
+    scoreId = created.id
+  }
+
+  return { wachtId, scoreId }
 }

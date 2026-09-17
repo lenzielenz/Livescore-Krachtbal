@@ -88,6 +88,35 @@
   letter-spacing: 0.04em;
 }
 
+.vb-demo {
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px dashed var(--line);
+}
+.vb-demo-title {
+  font-family: var(--font-display), system-ui, sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0 0 4px;
+}
+.vb-demo-hint {
+  font-size: 13px;
+  color: var(--dim);
+  margin: 0 0 14px;
+  max-width: 60ch;
+}
+.vb-demo-badge {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--bg);
+  background: #f5c542;
+  border-radius: 999px;
+  padding: 3px 9px;
+  margin-left: auto;
+}
+
 .vb-btn {
   appearance: none;
   border: 1px solid var(--accent);

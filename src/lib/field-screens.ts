@@ -34,6 +34,23 @@ export function veldNaam(volgnummer: number): string {
 
 export type VeldRow = { id: number; naam: string; paired: boolean }
 
+export type DagWedstrijd = { id: number; time: string; opponent: string; reeks: string | null; status: string }
+
+/** Fictieve "dagplanning" voor het demo-wachtscherm: laat zien hoe een echte matchday-lijst
+ * eruitziet (afgelopen/live/gepland door elkaar) zonder ooit echte wedstrijddata aan te raken —
+ * puur voor visueel testen/tunen (zie ensureClubDemoScreens in field-screens-data.ts). Tijden zijn
+ * relatief t.o.v. `now`, zodat de demo altijd actueel oogt in plaats van een vaste datum in het
+ * verleden te tonen. */
+export function fictionalDagplanning(now: Date, reeks: string | null): DagWedstrijd[] {
+  const at = (hoursOffset: number) => new Date(now.getTime() + hoursOffset * 60 * 60 * 1000).toISOString()
+  return [
+    { id: -1, time: at(-2), opponent: 'KBC Sportief', reeks, status: 'finished' },
+    { id: -2, time: at(0), opponent: 'RC Vriendschap', reeks, status: 'live' },
+    { id: -3, time: at(2), opponent: 'SK Toekomst', reeks, status: 'scheduled' },
+    { id: -4, time: at(4), opponent: 'KVK Fictief', reeks, status: 'scheduled' },
+  ]
+}
+
 export type VeldenPlan = {
   /** Hoeveel nieuwe veldschermen aanmaken (genummerd vanaf het huidige aantal + 1). */
   toCreate: number

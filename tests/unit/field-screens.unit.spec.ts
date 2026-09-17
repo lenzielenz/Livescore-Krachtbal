@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest'
 
-import { MAX_VELDEN, MIN_VELDEN, isPairingCode, planVeldenSync, randomPairingCode, veldNaam, type VeldRow } from '@/lib/field-screens'
+import {
+  MAX_VELDEN,
+  MIN_VELDEN,
+  fictionalDagplanning,
+  isPairingCode,
+  planVeldenSync,
+  randomPairingCode,
+  veldNaam,
+  type VeldRow,
+} from '@/lib/field-screens'
 
 // Veldschermen: één per fysiek veld bij een club, met een roterende koppelcode. Puur en getest —
 // de DB-laag (field-screens-data.ts) en het datamodel (collections/FieldScreens.ts) leunen hierop.
@@ -68,5 +77,31 @@ describe('planVeldenSync', () => {
   it('klemt het doel tussen MIN_VELDEN en MAX_VELDEN', () => {
     expect(planVeldenSync([], 0).toCreate).toBe(MIN_VELDEN)
     expect(planVeldenSync([], 999).toCreate).toBe(MAX_VELDEN)
+  })
+})
+
+describe('fictionalDagplanning', () => {
+  const now = new Date('2026-09-17T12:00:00.000Z')
+
+  it('geeft een mix van afgelopen, live en geplande fictieve wedstrijden', () => {
+    const plan = fictionalDagplanning(now, 'A')
+    expect(plan).toHaveLength(4)
+    expect(plan.map((m) => m.status)).toEqual(['finished', 'live', 'scheduled', 'scheduled'])
+  })
+
+  it('gebruikt uitsluitend negatieve id\'s, zodat ze nooit met een echte wedstrijd botsen', () => {
+    const plan = fictionalDagplanning(now, 'A')
+    for (const m of plan) expect(m.id).toBeLessThan(0)
+  })
+
+  it('zet tijden relatief t.o.v. `now`, in oplopende volgorde', () => {
+    const plan = fictionalDagplanning(now, 'A')
+    const times = plan.map((m) => new Date(m.time).getTime())
+    for (let i = 1; i < times.length; i++) expect(times[i]).toBeGreaterThan(times[i - 1])
+  })
+
+  it('geeft elke wedstrijd dezelfde reeks mee, ook null', () => {
+    expect(fictionalDagplanning(now, 'B').every((m) => m.reeks === 'B')).toBe(true)
+    expect(fictionalDagplanning(now, null).every((m) => m.reeks === null)).toBe(true)
   })
 })

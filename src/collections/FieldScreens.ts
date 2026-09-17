@@ -77,5 +77,21 @@ export const FieldScreens: CollectionConfig = {
       ],
       admin: { description: 'Instelbaar per veld via "Mijn club" → Veldscherm.' },
     },
+    {
+      // Twee vaste demo-schermen per club (wachtscherm + scorebord), automatisch aangemaakt zodra
+      // iemand "Mijn club" → Veldscherm bezoekt — zie ensureClubDemoScreens in field-screens-data.ts.
+      // Puur om visueel te testen/tunen; tellen bewust niet mee bij "aantal velden" (planVeldenSync
+      // filtert ze eruit) en de gekoppelde demo-wedstrijd is isDemo, dus onzichtbaar op elke
+      // publieke lijst/stand/recap.
+      name: 'isDemo',
+      label: 'Demo-scherm',
+      type: 'checkbox',
+      defaultValue: false,
+      admin: {
+        readOnly: true,
+        position: 'sidebar',
+        description: 'Vast demo-scherm voor visueel testen — geen echt veld, telt niet mee bij "aantal velden".',
+      },
+    },
   ],
 }

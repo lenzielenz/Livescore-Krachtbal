@@ -10,7 +10,15 @@ import type { FieldScreenRow } from '@/lib/field-screens-data'
 // aantal (POST /api/veldscherm/velden) synct meteen — nieuwe velden komen erbij met een verse
 // koppelcode, een verkleining verwijdert enkel velden die nu niet gekoppeld zijn (zie
 // planVeldenSync in lib/field-screens.ts).
-export function VeldschermManager({ clubId, screens }: { clubId: number; screens: FieldScreenRow[] }) {
+export function VeldschermManager({
+  clubId,
+  screens,
+  demoScreens,
+}: {
+  clubId: number
+  screens: FieldScreenRow[]
+  demoScreens: FieldScreenRow[]
+}) {
   const [rows, setRows] = useState(screens)
   const [count, setCount] = useState(Math.max(MIN_VELDEN, screens.length || MIN_VELDEN))
   const [saving, setSaving] = useState(false)
@@ -77,11 +85,26 @@ export function VeldschermManager({ clubId, screens }: { clubId: number; screens
           ))}
         </div>
       )}
+
+      {demoScreens.length > 0 && (
+        <div className="vb-demo">
+          <h2 className="vb-demo-title">Demo — visueel testen</h2>
+          <p className="vb-demo-hint">
+            Twee vaste testschermen, los van je echte velden: een wachtscherm en een scorebord met een
+            fictieve wedstrijd. Handig om het uiterlijk te tunen zonder een echte wedstrijd te starten.
+          </p>
+          <div className="vb-grid">
+            {demoScreens.map((s) => (
+              <VeldCard key={s.id} screen={s} clubId={clubId} url={origin ? `${origin}/veld/club/${s.id}` : `/veld/club/${s.id}`} demo />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
 
-function VeldCard({ screen, url }: { screen: FieldScreenRow; clubId: number; url: string }) {
+function VeldCard({ screen, url, demo = false }: { screen: FieldScreenRow; clubId: number; url: string; demo?: boolean }) {
   const [copied, setCopied] = useState(false)
   const [showQr, setShowQr] = useState(false)
   const [theme, setTheme] = useState<FieldScreenTheme>(screen.theme)
@@ -119,12 +142,13 @@ function VeldCard({ screen, url }: { screen: FieldScreenRow; clubId: number; url
   return (
     <div className="vb-card">
       <div className="vb-card-head">
-        <span className="vb-card-icon">🏟️</span>
+        <span className="vb-card-icon">{demo ? '🧪' : '🏟️'}</span>
         <h2 className="vb-card-title">{screen.naam}</h2>
+        {demo && <span className="vb-demo-badge">Demo</span>}
       </div>
       <p className="vb-card-status">
         {screen.pairedMatchId ? (
-          <>⚡ Nu gekoppeld aan een lopende wedstrijd</>
+          <>⚡ {demo ? 'Fictieve wedstrijd — altijd live' : 'Nu gekoppeld aan een lopende wedstrijd'}</>
         ) : (
           <>Wachtscherm — koppelcode <strong>{screen.pairingCode ?? '—'}</strong></>
         )}

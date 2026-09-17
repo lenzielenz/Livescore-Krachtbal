@@ -914,6 +914,10 @@ export interface FieldScreen {
    * Instelbaar per veld via "Mijn club" → Veldscherm.
    */
   theme?: ('dark' | 'light') | null;
+  /**
+   * Vast demo-scherm voor visueel testen — geen echt veld, telt niet mee bij "aantal velden".
+   */
+  isDemo?: boolean | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -2192,6 +2196,7 @@ export interface FieldScreensSelect<T extends boolean = true> {
   pairedMatch?: T;
   pairedAt?: T;
   theme?: T;
+  isDemo?: T;
   updatedAt?: T;
   createdAt?: T;
 }
