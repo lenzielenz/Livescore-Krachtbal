@@ -210,7 +210,13 @@ async function collectWeekendStats(payload: Payload, weekDocs: Record<string, un
     }
   }
 
-  return { visitors, clubs: clubKeys.size, goalThrows, backThrows }
+  // Supportersfoto's uit de foto-tribune bij de wedstrijden van dit weekend — puur tellen, geen
+  // relaties nodig.
+  const photosRes = matchIds.length
+    ? await payload.count({ collection: 'match-instants', where: { match: { in: matchIds } }, overrideAccess: true }).catch(() => ({ totalDocs: 0 }))
+    : { totalDocs: 0 }
+
+  return { visitors, clubs: clubKeys.size, goalThrows, backThrows, photos: photosRes.totalDocs }
 }
 
 /** Spelersprestaties van de week: uit de worpstatistiek én uit de snelscoremodus. */

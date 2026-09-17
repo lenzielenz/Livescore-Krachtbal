@@ -676,6 +676,7 @@ export function Scoreboard({
         matchId={matchId}
         instants={instants}
         canPost={canPostInstant}
+        live={state.match.status === 'live'}
         mineIds={mineIds}
         onLocalAdd={onLocalAdd}
         onLocalRemove={removeInstantLocal}

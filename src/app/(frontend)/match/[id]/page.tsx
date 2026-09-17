@@ -395,11 +395,11 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
           {state.match.status === 'scheduled' && matchDoc?.date && !toekomstig && (
             <a className="match-meta-bit match-meta-cal" href={`/api/match/${matchId}/ics`}>📅 In agenda</a>
           )}
-          {/* Wie de video van deze wedstrijd mag beheren, ziet hier meteen wáár dat gebeurt —
-              anders is de video-analyse alleen te vinden als je de analysepagina al kent. */}
-          {mayVideo && (
+          {/* Enkel een link tonen als er al een video is — een uitnodiging om er ÉÉN toe te voegen
+              hoort hier niet meer: de tribune moet naar foto's leiden, niet naar video-onderhoud. */}
+          {mayVideo && matchDoc?.videoUrl && (
             <Link className="match-meta-bit match-meta-video" href={`/analyse/${matchId}#video`}>
-              🎥 {matchDoc?.videoUrl ? 'Video bekijken' : 'Video toevoegen'}
+              🎥 Video bekijken
             </Link>
           )}
         </div>

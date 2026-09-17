@@ -91,6 +91,7 @@ export default async function RecapPage({ searchParams }: { searchParams: Promis
                   <div className="recap-stat recap-stat--red"><span aria-hidden>🎯</span><b>{recap.stats.goalThrows}</b><small>doelworpen</small></div>
                   <div className="recap-stat recap-stat--orange"><span aria-hidden>💪</span><b>{recap.stats.backThrows}</b><small>rugworpen</small></div>
                   <div className="recap-stat recap-stat--gold"><span aria-hidden>🏆</span><b>{recap.goals}</b><small>punten</small></div>
+                  <div className="recap-stat recap-stat--pink"><span aria-hidden>📸</span><b>{recap.stats.photos}</b><small>supportersfoto&rsquo;s</small></div>
                 </section>
               </div>
             </>
@@ -172,6 +173,7 @@ export default async function RecapPage({ searchParams }: { searchParams: Promis
                   <div className="recap-stat recap-stat--red"><span aria-hidden>🎯</span><b>{season.stats.goalThrows}</b><small>doelworpen</small></div>
                   <div className="recap-stat recap-stat--orange"><span aria-hidden>💪</span><b>{season.stats.backThrows}</b><small>rugworpen</small></div>
                   <div className="recap-stat recap-stat--gold"><span aria-hidden>🏆</span><b>{season.goals}</b><small>punten</small></div>
+                  <div className="recap-stat recap-stat--pink"><span aria-hidden>📸</span><b>{season.stats.photos}</b><small>supportersfoto&rsquo;s</small></div>
                 </section>
               </div>
             </header>
