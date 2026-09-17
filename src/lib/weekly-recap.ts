@@ -20,6 +20,10 @@ export interface RecapMatch {
   awayTeamId: number
   homeGoals: number
   awayGoals: number
+  /** Kwam de eindstand automatisch binnen (federatie-sync/officiële export) i.p.v. dat iemand ze
+   * zelf via de app registreerde (veldschema, wedstrijdblad, of een supporter die de eindstand
+   * doorgaf)? Bepaalt het "manueel vs automatisch"-onderscheid in de recap. */
+  autoImported?: boolean
 }
 
 export interface RecapHighlight {
@@ -53,8 +57,12 @@ export interface WeekendStats {
 export interface WeeklyRecap {
   startIso: string
   endIso: string
-  /** Aantal gespeelde (afgelopen) wedstrijden in het venster. */
+  /** Aantal gespeelde (afgelopen) wedstrijden in het venster — dit is de DEKKING (manueel +
+   * automatisch samen), niet "door supporters ingevuld". */
   matches: number
+  /** Subset van `matches` die iemand zelf via de app registreerde (veldschema, wedstrijdblad, of
+   * een supporter die de eindstand doorgaf) — dát is het aantal om supporters mee te prikkelen. */
+  matchesManual: number
   goals: number
   stats: WeekendStats
   headline: string
@@ -201,6 +209,7 @@ export function buildWeeklyRecap(input: RecapInput): WeeklyRecap {
     startIso: input.startIso,
     endIso: input.endIso,
     matches: results.length,
+    matchesManual: results.filter((m) => !m.autoImported).length,
     goals,
     stats: input.stats ?? { visitors: 0, clubs: 0, goalThrows: 0, backThrows: 0, photos: 0 },
     headline: headlineFor(results.length, goals, input.team),

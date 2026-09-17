@@ -97,6 +97,7 @@ export async function buildSeasonRecapData(payload: Payload, now: Date = new Dat
       awayTeamId: awayId,
       homeGoals: card.score.home,
       awayGoals: card.score.away,
+      autoImported: Boolean((m as { autoImported?: unknown }).autoImported),
     }
     results.push(rm)
 

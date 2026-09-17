@@ -16,7 +16,10 @@ export interface SeasonRecapWeek {
 
 export interface SeasonRecap {
   seizoen: string
+  /** Totale dekking (manueel + automatisch samen) — zie WeeklyRecap.matches. */
   matches: number
+  /** Subset die iemand zelf via de app registreerde. */
+  matchesManual: number
   goals: number
   weekends: number
   stats: WeekendStats
@@ -68,6 +71,7 @@ export function buildSeasonRecap(input: SeasonRecapInput): SeasonRecap | null {
   return {
     seizoen: input.seizoen,
     matches: input.results.length,
+    matchesManual: input.results.filter((m) => !m.autoImported).length,
     goals,
     weekends: archive.length,
     stats: input.stats ?? { visitors: 0, clubs: 0, goalThrows: 0, backThrows: 0, photos: 0 },

@@ -126,4 +126,20 @@ describe('buildWeeklyRecap', () => {
     const r = buildWeeklyRecap({ startIso: 'a', endIso: 'b', results: [], team: null, players: [], climbers: [] })
     expect(r.previousMatches).toBeNull()
   })
+  it('telt automatisch geïmporteerde wedstrijden niet mee bij "manueel"', () => {
+    const r = buildWeeklyRecap({
+      startIso: 'a',
+      endIso: 'b',
+      results: [
+        match({ matchId: 1, homeGoals: 20, awayGoals: 18 }),
+        match({ matchId: 2, homeGoals: 10, awayGoals: 9, autoImported: true }),
+        match({ matchId: 3, homeGoals: 5, awayGoals: 5, autoImported: true }),
+      ],
+      team: null,
+      players: [],
+      climbers: [],
+    })
+    expect(r.matches).toBe(3)
+    expect(r.matchesManual).toBe(1)
+  })
 })

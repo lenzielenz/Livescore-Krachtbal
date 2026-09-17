@@ -428,6 +428,22 @@ export const Matches: CollectionConfig = {
       },
     },
     {
+      // Kwam de eindstand automatisch binnen (federatie-sync of de officiële .xls-export) i.p.v.
+      // dat iemand ze zelf via de app registreerde (veldschema, wedstrijdblad, of een supporter die
+      // de eindstand doorgaf)? Puur herkomst-metadata — telt niet mee in de score/stand-berekening,
+      // maar laat de weekrecap onderscheid maken tussen "door supporters ingevuld" en "automatisch
+      // aangevuld" (zie weekly-recap-data.ts / uitslagen-toepassen.ts / results/import route).
+      name: 'autoImported',
+      label: 'Automatisch geïmporteerd (federatie/export)',
+      type: 'checkbox',
+      defaultValue: false,
+      admin: {
+        description: 'Automatisch gezet bij de federatie-sync of de officiële .xls-import. Nooit door een mens aangevinkt.',
+        position: 'sidebar',
+        readOnly: true,
+      },
+    },
+    {
       // Aangeduide verantwoordelijke per club (coach/aantekenaar) die deze wedstrijd "claimt"
       // via Mijn club, zodat iedereen in de club ziet wie waar staat. Thuis en bezoek apart.
       type: 'row',

@@ -771,6 +771,10 @@ export interface Match {
    */
   analyseOnly?: boolean | null;
   /**
+   * Automatisch gezet bij de federatie-sync of de officiële .xls-import. Nooit door een mens aangevinkt.
+   */
+  autoImported?: boolean | null;
+  /**
    * Geclaimd via Mijn club.
    */
   homeCoach?: (number | null) | User;
@@ -2116,6 +2120,7 @@ export interface MatchesSelect<T extends boolean = true> {
   veldSpeelveld?: T;
   isDemo?: T;
   analyseOnly?: T;
+  autoImported?: T;
   homeCoach?: T;
   awayCoach?: T;
   homeTakeover?: T;

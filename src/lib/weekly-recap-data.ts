@@ -93,6 +93,7 @@ export async function buildWeeklyRecapData(
       awayTeamId: awayId,
       homeGoals: card.score.home,
       awayGoals: card.score.away,
+      autoImported: Boolean((m as { autoImported?: unknown }).autoImported),
     })
     teamResults.push({
       teamId: homeId,

@@ -77,7 +77,16 @@ export default async function RecapPage({ searchParams }: { searchParams: Promis
                   <RecapFieldBackdrop />
                   <div className="recap-feature-body">
                     <b className="recap-feature-num">{recap.matches}</b>
-                    <small>{recap.matches === 1 ? 'wedstrijd ingevuld door de supporters' : 'wedstrijden ingevuld door de supporters'}</small>
+                    <small>{recap.matches === 1 ? 'wedstrijd gedekt deze week' : 'wedstrijden gedekt deze week'}</small>
+                    {/* Onderscheid tonen i.p.v. alles op naam van de supporters te schrijven: wat
+                        zij zelf invulden (veldschema, wedstrijdblad, of een doorgegeven eindstand)
+                        blijft het pronkstuk; de rest kwam automatisch binnen via de federatie. */}
+                    <span className="recap-coverage">
+                      💪 <b>{recap.matchesManual}</b> {recap.matchesManual === 1 ? 'wedstrijd' : 'wedstrijden'} zelf ingevoerd door supporters
+                      {recap.matches > recap.matchesManual && (
+                        <> · <b>{recap.matches - recap.matchesManual}</b> aangevuld via de federatie — samen zo goed als de volledige competitie gedekt</>
+                      )}
+                    </span>
                   </div>
                   {trend && (
                     <span className={`recap-trend recap-trend--${trend.dir}`}>
@@ -164,6 +173,12 @@ export default async function RecapPage({ searchParams }: { searchParams: Promis
                   <div className="recap-feature-body">
                     <b className="recap-feature-num">{season.matches}</b>
                     <small>{season.matches === 1 ? 'wedstrijd dit seizoen' : 'wedstrijden dit seizoen'}</small>
+                    <span className="recap-coverage">
+                      💪 <b>{season.matchesManual}</b> {season.matchesManual === 1 ? 'wedstrijd' : 'wedstrijden'} zelf ingevoerd door supporters
+                      {season.matches > season.matchesManual && (
+                        <> · <b>{season.matches - season.matchesManual}</b> aangevuld via de federatie</>
+                      )}
+                    </span>
                   </div>
                   <span className="recap-trend recap-trend--flat">🗓 {season.weekends} {season.weekends === 1 ? 'speelweek' : 'speelweken'}</span>
                 </div>
