@@ -117,6 +117,49 @@
   font-size: 13px;
 }
 
+.vb-theme {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.vb-theme-label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--dim);
+}
+.vb-theme-row {
+  display: flex;
+  gap: 8px;
+}
+.vb-theme-btn {
+  flex: 1 1 auto;
+  appearance: none;
+  cursor: pointer;
+  border: 1px solid var(--line);
+  background: var(--bg-2);
+  color: var(--txt);
+  font-weight: 700;
+  font-size: 13px;
+  padding: 9px 10px;
+  border-radius: 10px;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.vb-theme-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.vb-theme-btn.on {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 16%, var(--bg-2));
+  color: var(--accent);
+}
+.vb-theme-btn.light.on {
+  border-color: #f5c542;
+  background: color-mix(in srgb, #f5c542 20%, var(--bg-2));
+  color: #f5c542;
+}
+
 .vb-url-row {
   display: flex;
   align-items: center;

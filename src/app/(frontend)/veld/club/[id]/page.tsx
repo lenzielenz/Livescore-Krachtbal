@@ -43,7 +43,7 @@ export default async function VeldClubSchermPage({ params }: { params: Promise<{
         const ads = await loadAds(payload, 'veldscherm')
         return (
           <>
-            <FieldScreen matchId={screen.pairedMatchId} reeks={reeks} halfSeconds={halfSeconds} ads={ads} initial={{ state, timeline }} />
+            <FieldScreen matchId={screen.pairedMatchId} reeks={reeks} halfSeconds={halfSeconds} ads={ads} theme={screen.theme} initial={{ state, timeline }} />
             <FieldScreenSync fieldScreenId={fieldScreenId} pairedMatchId={screen.pairedMatchId} />
           </>
         )
@@ -56,7 +56,7 @@ export default async function VeldClubSchermPage({ params }: { params: Promise<{
   const matches = screen.clubId != null ? await todaysHomeMatches(payload, screen.clubId) : []
   return (
     <>
-      <VeldWachtscherm clubName={screen.clubName} veldNaam={screen.naam} code={screen.pairingCode} matches={matches} statusLabel={statusLabel} />
+      <VeldWachtscherm clubName={screen.clubName} veldNaam={screen.naam} code={screen.pairingCode} matches={matches} statusLabel={statusLabel} theme={screen.theme} />
       <FieldScreenSync fieldScreenId={fieldScreenId} pairedMatchId={null} />
     </>
   )

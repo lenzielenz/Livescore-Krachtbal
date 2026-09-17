@@ -1,7 +1,7 @@
 import type { Payload } from 'payload'
 
 import { brusselsDayBoundsUtc, dateStrBE } from './datetime'
-import { planVeldenSync, randomPairingCode, veldNaam, type VeldRow } from './field-screens'
+import { planVeldenSync, randomPairingCode, veldNaam, type FieldScreenTheme, type VeldRow } from './field-screens'
 
 // DB-laag voor veldschermen — het datamodel en de motivatie staan in collections/FieldScreens.ts,
 // de pure planning-/codelogica in field-screens.ts. Alle functies hier draaien met
@@ -25,7 +25,14 @@ async function uniquePairingCode(payload: Payload): Promise<string> {
   return randomPairingCode()
 }
 
-export type FieldScreenRow = { id: number; naam: string; pairingCode: string | null; pairedMatchId: number | null; pairedAt: string | null }
+export type FieldScreenRow = {
+  id: number
+  naam: string
+  pairingCode: string | null
+  pairedMatchId: number | null
+  pairedAt: string | null
+  theme: FieldScreenTheme
+}
 
 /** Veldschermen van een club, in aanmaakvolgorde. */
 export async function getClubFieldScreens(payload: Payload, clubId: number): Promise<FieldScreenRow[]> {
@@ -38,7 +45,14 @@ export async function getClubFieldScreens(payload: Payload, clubId: number): Pro
     pairingCode: ((d as { pairingCode?: unknown }).pairingCode as string | null) ?? null,
     pairedMatchId: rel((d as { pairedMatch?: unknown }).pairedMatch),
     pairedAt: ((d as { pairedAt?: unknown }).pairedAt as string | null) ?? null,
+    theme: (d as { theme?: unknown }).theme === 'light' ? 'light' : 'dark',
   }))
+}
+
+/** Kleurthema van één veld wijzigen — enkel dat, geen andere velden aangeraakt. De caller
+ * (api/veldscherm/thema) controleerde al dat het veld bij de club van de aanroeper hoort. */
+export async function setFieldScreenTheme(payload: Payload, fieldScreenId: number, theme: FieldScreenTheme): Promise<void> {
+  await payload.update({ collection: 'field-screens', id: fieldScreenId, data: { theme }, overrideAccess: true })
 }
 
 export type VeldenSyncResult = { screens: FieldScreenRow[]; blockedByLive: string[] }
@@ -122,6 +136,7 @@ export type PublicFieldScreenState = {
   naam: string
   pairingCode: string | null
   pairedMatchId: number | null
+  theme: FieldScreenTheme
 }
 
 /** Publieke, minimale staat van één veldscherm — wat de tv-pagina en de pollende sync nodig
@@ -138,6 +153,7 @@ export async function getPublicFieldScreenState(payload: Payload, fieldScreenId:
     naam: String((doc as { naam?: unknown }).naam ?? ''),
     pairingCode: ((doc as { pairingCode?: unknown }).pairingCode as string | null) ?? null,
     pairedMatchId: rel((doc as { pairedMatch?: unknown }).pairedMatch),
+    theme: (doc as { theme?: unknown }).theme === 'light' ? 'light' : 'dark',
   }
 }
 

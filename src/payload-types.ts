@@ -910,6 +910,10 @@ export interface FieldScreen {
    */
   pairedMatch?: (number | null) | Match;
   pairedAt?: string | null;
+  /**
+   * Instelbaar per veld via "Mijn club" → Veldscherm.
+   */
+  theme?: ('dark' | 'light') | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -2187,6 +2191,7 @@ export interface FieldScreensSelect<T extends boolean = true> {
   pairingCode?: T;
   pairedMatch?: T;
   pairedAt?: T;
+  theme?: T;
   updatedAt?: T;
   createdAt?: T;
 }

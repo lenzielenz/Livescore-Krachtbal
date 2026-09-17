@@ -1,17 +1,39 @@
 /* Wachtscherm van een club-veld: fullscreen, tv-leesbaar op afstand (vmin-eenheden). Gedeelde
-   .fs-*-klassen (het scorebord zelf) staan in ../../[id]/veld.css. */
+   .fs-*-klassen (het scorebord zelf) staan in ../../[id]/veld.css.
+
+   Kleurthema via CSS-variabelen: .vc = donker (standaard), .vc.vc-light = licht — voor een veld
+   in de volle zon, waar een donker scherm nauwelijks af te lezen is. */
 
 .vc {
+  --vc-bg: radial-gradient(ellipse at 50% -10%, #123023 0%, #06140d 55%, #040c08 100%);
+  --vc-text: #ecf7f0;
+  --vc-accent: #ffd873;
+  --vc-card-bg: rgba(255, 255, 255, 0.04);
+  --vc-card-border: #224a33;
+  --vc-row-bg: rgba(255, 255, 255, 0.05);
+  --vc-row-border: rgba(255, 255, 255, 0.08);
+
   position: fixed;
   inset: 0;
   display: flex;
   flex-direction: column;
   gap: 3vmin;
   padding: 4vmin 5vmin;
-  background: radial-gradient(ellipse at 50% -10%, #123023 0%, #06140d 55%, #040c08 100%);
-  color: #ecf7f0;
+  background: var(--vc-bg);
+  color: var(--vc-text);
   font-family: system-ui, sans-serif;
   overflow: hidden;
+}
+
+/* Licht thema: witte achtergrond, donkere cijfers/tekst — leesbaar in fel zonlicht. */
+.vc.vc-light {
+  --vc-bg: radial-gradient(ellipse at 50% -10%, #ffffff 0%, #f3f5f2 55%, #e9ece7 100%);
+  --vc-text: #0e1a12;
+  --vc-accent: #a8620a;
+  --vc-card-bg: rgba(14, 26, 18, 0.04);
+  --vc-card-border: #cdd6cd;
+  --vc-row-bg: rgba(14, 26, 18, 0.045);
+  --vc-row-border: rgba(14, 26, 18, 0.1);
 }
 
 .vc-head {
@@ -26,7 +48,7 @@
   font-weight: 800;
 }
 .vc-brand-accent {
-  color: #ffd873;
+  color: var(--vc-accent);
 }
 .vc-veld {
   font-size: 2.4vmin;
@@ -39,8 +61,8 @@
   text-align: center;
   padding: 3vmin 6vmin;
   border-radius: 2vmin;
-  border: 1px solid #224a33;
-  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--vc-card-border);
+  background: var(--vc-card-bg);
 }
 .vc-code-label {
   font-size: 2vmin;
@@ -54,7 +76,7 @@
   font-weight: 900;
   letter-spacing: 0.12em;
   font-variant-numeric: tabular-nums;
-  color: #ffd873;
+  color: var(--vc-accent);
   line-height: 1;
 }
 .vc-code-hint {
@@ -97,13 +119,13 @@
   gap: 2vmin;
   padding: 1.6vmin 2vmin;
   border-radius: 1.2vmin;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--vc-row-bg);
+  border: 1px solid var(--vc-row-border);
   font-size: 2.1vmin;
 }
 .vc-plan-row.status-live {
-  border-color: color-mix(in srgb, #ffd873 55%, transparent);
-  background: color-mix(in srgb, #ffd873 10%, rgba(255, 255, 255, 0.05));
+  border-color: color-mix(in srgb, var(--vc-accent) 55%, transparent);
+  background: color-mix(in srgb, var(--vc-accent) 10%, var(--vc-row-bg));
 }
 .vc-plan-time {
   font-weight: 800;
@@ -130,6 +152,6 @@
   white-space: nowrap;
 }
 .vc-plan-row.status-live .vc-plan-status {
-  color: #ffd873;
+  color: var(--vc-accent);
   opacity: 1;
 }

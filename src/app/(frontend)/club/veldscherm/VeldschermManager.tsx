@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 
 import { QrCode } from '@/components/QrCode'
-import { MAX_VELDEN, MIN_VELDEN } from '@/lib/field-screens'
+import { MAX_VELDEN, MIN_VELDEN, type FieldScreenTheme } from '@/lib/field-screens'
 import type { FieldScreenRow } from '@/lib/field-screens-data'
 
 // Aantal velden instellen + per veld de scherm-URL delen (kopiëren/openen/QR). Wijzigen van het
@@ -84,6 +84,8 @@ export function VeldschermManager({ clubId, screens }: { clubId: number; screens
 function VeldCard({ screen, url }: { screen: FieldScreenRow; clubId: number; url: string }) {
   const [copied, setCopied] = useState(false)
   const [showQr, setShowQr] = useState(false)
+  const [theme, setTheme] = useState<FieldScreenTheme>(screen.theme)
+  const [themeSaving, setThemeSaving] = useState(false)
 
   const copy = async () => {
     try {
@@ -92,6 +94,25 @@ function VeldCard({ screen, url }: { screen: FieldScreenRow; clubId: number; url
       setTimeout(() => setCopied(false), 1800)
     } catch {
       /* klembord geweigerd — url staat gewoon op het scherm om manueel te kopiëren */
+    }
+  }
+
+  const chooseTheme = async (next: FieldScreenTheme) => {
+    if (next === theme || themeSaving) return
+    const prev = theme
+    setTheme(next)
+    setThemeSaving(true)
+    try {
+      const res = await fetch('/api/veldscherm/thema', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fieldScreenId: screen.id, theme: next }),
+      })
+      if (!res.ok) setTheme(prev)
+    } catch {
+      setTheme(prev)
+    } finally {
+      setThemeSaving(false)
     }
   }
 
@@ -108,6 +129,27 @@ function VeldCard({ screen, url }: { screen: FieldScreenRow; clubId: number; url
           <>Wachtscherm — koppelcode <strong>{screen.pairingCode ?? '—'}</strong></>
         )}
       </p>
+      <div className="vb-theme">
+        <span className="vb-theme-label">Kleurthema</span>
+        <div className="vb-theme-row" role="group" aria-label="Kleurthema voor dit veld">
+          <button
+            type="button"
+            className={`vb-theme-btn${theme === 'dark' ? ' on' : ''}`}
+            disabled={themeSaving}
+            onClick={() => void chooseTheme('dark')}
+          >
+            🌙 Donker
+          </button>
+          <button
+            type="button"
+            className={`vb-theme-btn light${theme === 'light' ? ' on' : ''}`}
+            disabled={themeSaving}
+            onClick={() => void chooseTheme('light')}
+          >
+            ☀️ Licht
+          </button>
+        </div>
+      </div>
       <div className="vb-url-row">
         <code className="vb-url">{url}</code>
         <button type="button" className="vb-btn vb-btn-sm" onClick={() => void copy()}>

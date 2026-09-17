@@ -7,6 +7,14 @@
 export const MIN_VELDEN = 1
 export const MAX_VELDEN = 8
 
+export type FieldScreenTheme = 'dark' | 'light'
+const THEMES: readonly FieldScreenTheme[] = ['dark', 'light']
+
+/** Geldig kleurthema? Enkel 'dark' (standaard) of 'light' (leesbaar in fel zonlicht). */
+export function isFieldScreenTheme(raw: unknown): raw is FieldScreenTheme {
+  return typeof raw === 'string' && (THEMES as readonly string[]).includes(raw)
+}
+
 const CODE_RE = /^\d{6}$/
 
 /** Geldige koppelcode: exact 6 cijfers (spaties rondom worden genegeerd). */

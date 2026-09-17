@@ -63,5 +63,19 @@ export const FieldScreens: CollectionConfig = {
       },
     },
     { name: 'pairedAt', label: 'Gekoppeld sinds', type: 'date', admin: { readOnly: true } },
+    {
+      // Buiten in fel zonlicht is een donker scherm nauwelijks af te lezen — een club met een
+      // veld in de volle zon kiest hier de lichte variant (witte achtergrond, donkere cijfers).
+      // Geldt voor het wachtscherm én het scorebord zodra er gekoppeld is (zie FieldScreen.tsx).
+      name: 'theme',
+      label: 'Kleurthema',
+      type: 'select',
+      defaultValue: 'dark',
+      options: [
+        { label: 'Donker (standaard) — donkere achtergrond, witte cijfers', value: 'dark' },
+        { label: 'Licht — witte achtergrond, donkere cijfers (leesbaar in fel zonlicht)', value: 'light' },
+      ],
+      admin: { description: 'Instelbaar per veld via "Mijn club" → Veldscherm.' },
+    },
   ],
 }
