@@ -1,12 +1,13 @@
 import Link from 'next/link'
 
 import { SiteHeader } from '@/components/SiteHeader'
-import { userClubId, userFollowedClubIds, userPlayerId } from '@/lib/access'
+import { hasRole, isClubStaff, isFederationLevel, userClubId, userFollowedClubIds, userPlayerId } from '@/lib/access'
 import { competitionWhere } from '@/lib/analyse-access'
 import { getAuthUser } from '@/lib/auth-user'
 import { formatDateTimeBE } from '@/lib/datetime'
 import { buildMatchState } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
+import { getProfile } from '@/lib/profiles'
 import './hub.css'
 
 export const dynamic = 'force-dynamic'
@@ -29,12 +30,12 @@ export default async function HubPage() {
   const clubId = userClubId(me)
   // Account gekoppeld aan een speler-dossier? Dan tonen we de eigen ontwikkeling.
   const myPlayerId = userPlayerId(me)
-
-  // Live nu (alle wedstrijden).
-  const liveRes = await payload
-    .find({ collection: 'matches', where: { and: [{ status: { equals: 'live' } }, competitionWhere()] }, sort: 'date', depth: 1, limit: 6 })
-    .catch(() => ({ docs: [] as Record<string, unknown>[] }))
-  const liveScores = await Promise.all(liveRes.docs.map((m) => scoreOf(payload, (m as { id: number }).id)))
+  // Rol-gebonden werkschermen (los van "Mijn club" hieronder, dat elk clublid al ziet): een
+  // scheidsrechter of federatielid heeft hier geen club nodig om toch meteen bij zijn eigen
+  // portaal te raken.
+  const isStaff = isClubStaff(me)
+  const isReferee = hasRole(me, 'scheidsrechter')
+  const isFed = isFederationLevel(me)
 
   // Mijn club: naam + volgende wedstrijd + laatste uitslag.
   let club: { id: number; name: string } | null = null
@@ -80,34 +81,15 @@ export default async function HubPage() {
       <div className="site hub">
         <h1 className="page-title">🏠 <span className="brand">Mijn Krachtbal</span></h1>
 
-        {/* Live nu */}
-        <section className="hub-sec">
-          <h2 className="hub-h2"><span className="hub-live-dot" aria-hidden /> Live nu</h2>
-          {liveRes.docs.length === 0 ? (
-            <p className="hub-empty">Geen wedstrijd live op dit moment. <Link href="/">Bekijk alle wedstrijden →</Link></p>
-          ) : (
-            <div className="hub-live-grid">
-              {liveRes.docs.map((m, i) => {
-                const id = (m as { id: number }).id
-                const sc = liveScores[i]
-                return (
-                  <Link key={id} href={`/match/${id}`} className="hub-live-card">
-                    <span className="hub-live-badge">LIVE</span>
-                    <span className="hub-live-teams">{teamName((m as { homeTeam?: unknown }).homeTeam)} <i>—</i> {teamName((m as { awayTeam?: unknown }).awayTeam)}</span>
-                    {sc && <span className="hub-live-score">{sc.home}–{sc.away}</span>}
-                  </Link>
-                )
-              })}
-            </div>
-          )}
-        </section>
-
         {/* Mijn club */}
         {club ? (
           <section className="hub-sec">
             <h2 className="hub-h2">Mijn club</h2>
             <div className="hub-club">
-              <Link href={`/clubs/${club.id}`} className="hub-club-name">{club.name} →</Link>
+              <div className="hub-club-head">
+                <Link href={`/clubs/${club.id}`} className="hub-club-name">{club.name}</Link>
+                {isStaff && <Link href="/club" className="hub-club-manage">🛠️ Clubbeheer →</Link>}
+              </div>
               <div className="hub-club-rows">
                 {nextMatch && (
                   <Link href={`/match/${nextMatch.id}`} className="hub-club-row">
@@ -146,6 +128,31 @@ export default async function HubPage() {
           </section>
         )}
 
+        {/* Beheer — rol-gebonden werkschermen. Club-staf heeft al "Clubbeheer" hierboven bij "Mijn
+            club"; scheidsrechter/federatie hebben geen eigen club nodig om hier meteen bij hun
+            portaal te raken (voorheen enkel bereikbaar via het "Meer"-menu). */}
+        {(isReferee || isFed) && (
+          <section className="hub-sec">
+            <h2 className="hub-h2">Beheer</h2>
+            <div className="hub-role-grid">
+              {isReferee && (
+                <Link href={getProfile('scheidsrechters').hubHref} className="hub-role-card">
+                  <span className="hub-role-badge" aria-hidden>{getProfile('scheidsrechters').badge}</span>
+                  <span className="hub-role-title">{getProfile('scheidsrechters').title}</span>
+                  <span className="hub-role-intro">{getProfile('scheidsrechters').intro}</span>
+                </Link>
+              )}
+              {isFed && (
+                <Link href={getProfile('federatie').hubHref} className="hub-role-card">
+                  <span className="hub-role-badge" aria-hidden>{getProfile('federatie').badge}</span>
+                  <span className="hub-role-title">{getProfile('federatie').title}</span>
+                  <span className="hub-role-intro">{getProfile('federatie').intro}</span>
+                </Link>
+              )}
+            </div>
+          </section>
+        )}
+
         {/* Mijn ontwikkeling — enkel als het account aan een speler gekoppeld is. */}
         {myPlayerId != null && (
           <section className="hub-sec">
@@ -153,28 +160,28 @@ export default async function HubPage() {
             <div className="hub-tiles">
               <Link href="/ontwikkeling" className="hub-tile">📈<span>Skill &amp; Fame</span></Link>
               <Link href="/beheer/training/progressie" className="hub-tile">🏋️<span>Mijn training</span></Link>
-              <Link href="/profiel/scorecard" className="hub-tile">🃏<span>Scorecard</span></Link>
             </div>
           </section>
         )}
 
-        {/* Snelkoppelingen */}
-        <section className="hub-sec">
-          <h2 className="hub-h2">Snel naar</h2>
-          <div className="hub-tiles">
-            <Link href="/rangschikking" className="hub-tile">📊<span>Stand</span></Link>
-            <Link href="/club/voorspel" className="hub-tile">🔮<span>Pronostiek</span></Link>
-            <Link href="/profiel" className="hub-tile">👤<span>Mijn profiel</span></Link>
-            <Link href="/profiel/paspoort" className="hub-tile">🎟️<span>Paspoort</span></Link>
-            <Link href="/profiel/badges" className="hub-tile">🏅<span>Badges</span></Link>
-            <Link href="/fans" className="hub-tile">📣<span>Supporters</span></Link>
-            <Link href="/wrapped" className="hub-tile">🎁<span>Wrapped</span></Link>
-            <Link href="/weekendplan" className="hub-tile">📲<span>Weekendplan</span></Link>
-            <Link href="/nieuws" className="hub-tile">📰<span>Nieuws</span></Link>
-            <Link href="/superster" className="hub-tile">⭐<span>Superster</span></Link>
-            <Link href="/tornooi" className="hub-tile">🏆<span>Beker</span></Link>
-          </div>
-        </section>
+        {/* Mijn profiel & seizoen — alles wat persoonlijk aan dit account hangt: instellingen,
+            gamification en de eigen seizoensverhalen. Wat al via de hoofdnavigatie bereikbaar is
+            (stand, tornooien, nieuws, ...) staat daar en wordt hier niet gedupliceerd. */}
+        {me && (
+          <section className="hub-sec">
+            <h2 className="hub-h2">Mijn profiel &amp; seizoen</h2>
+            <div className="hub-tiles">
+              <Link href="/profiel" className="hub-tile">👤<span>Mijn profiel</span></Link>
+              <Link href="/profiel/paspoort" className="hub-tile">🎟️<span>Paspoort</span></Link>
+              <Link href="/profiel/badges" className="hub-tile">🏅<span>Badges</span></Link>
+              <Link href="/profiel/scorecard" className="hub-tile">🃏<span>Scorecard</span></Link>
+              <Link href="/pronostiek" className="hub-tile">🔮<span>Pronostiek</span></Link>
+              <Link href="/fans" className="hub-tile">📣<span>Supporters</span></Link>
+              <Link href="/wrapped" className="hub-tile">🎁<span>Wrapped</span></Link>
+              <Link href="/weekendplan" className="hub-tile">📲<span>Weekendplan</span></Link>
+            </div>
+          </section>
+        )}
 
         {/* Laatste nieuws */}
         {news.docs.length > 0 && (
