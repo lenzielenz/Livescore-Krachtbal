@@ -66,6 +66,7 @@
     linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0) 30%),
     var(--panel-grad, var(--panel));
   box-shadow:
+    0 30px 60px -24px color-mix(in srgb, var(--accent) 16%, rgba(0, 0, 0, 0.7)),
     0 22px 50px -18px rgba(0, 0, 0, 0.68),
     0 2px 10px -4px rgba(0, 0, 0, 0.5),
     0 0 0 1px rgba(255, 255, 255, 0.03),
@@ -90,8 +91,11 @@
   letter-spacing: 0.04em;
   font-weight: 800;
   color: var(--dim);
-  background: linear-gradient(180deg, #1c222c 0%, #161b22 55%, #0f131a 100%);
-  /* Kolomkoppen blijven staan bij het scrollen van een lange rangschikking. */
+  background: linear-gradient(180deg, color-mix(in srgb, #1c222c 92%, transparent) 0%, color-mix(in srgb, #161b22 94%, transparent) 55%, color-mix(in srgb, #0f131a 96%, transparent) 100%);
+  /* Kolomkoppen blijven staan bij het scrollen van een lange rangschikking — een vleugje matglas
+     geeft dat meteen een premium gevoel i.p.v. een platte balk. */
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   position: sticky;
   top: 0;
   z-index: 2;
@@ -136,7 +140,9 @@
   padding-left: 4px;
   padding-right: 4px;
 }
-/* Puntjes als chip i.p.v. platte tekst — geeft de belangrijkste kolom wat gewicht en diepte. */
+/* Puntjes als chip i.p.v. platte tekst — geeft de belangrijkste kolom wat gewicht en diepte.
+   Een dubbele inset (lichte rand boven, donkere onder) maakt er een klein bolletje glas van
+   i.p.v. een platte gekleurde vlek — het detail dat een chip "premium" laat aanvoelen. */
 .rang-pts-chip {
   display: inline-flex;
   align-items: center;
@@ -147,8 +153,12 @@
   font-weight: 900;
   font-size: 0.95rem;
   color: var(--accent);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 22%, transparent), color-mix(in srgb, var(--accent) 8%, transparent));
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 2px 6px -2px color-mix(in srgb, var(--accent) 55%, transparent);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 26%, transparent), color-mix(in srgb, var(--accent) 6%, transparent));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    inset 0 -1px 2px color-mix(in srgb, var(--accent) 30%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--accent) 25%, transparent),
+    0 3px 8px -3px color-mix(in srgb, var(--accent) 60%, transparent);
 }
 
 /* Op gsm moet de volledige stand passen zonder horizontaal te scrollen:
@@ -280,7 +290,25 @@
    uitdooft — geeft de zone meer body dan een streepje alleen, zonder de rij te laten schreeuwen.
    Het rangcijfer blijft overal exact op dezelfde plek; enkel het badge-rondje erachter (hieronder)
    geeft podium/gevarenzone hun eigen kleur. */
-.rang-leader { background: linear-gradient(90deg, color-mix(in srgb, #ffd166 12%, transparent), color-mix(in srgb, #ffd166 3%, transparent) 45%, transparent 75%); }
+/* De was + een trage lichtstreep die er zachtjes overheen glijdt (twee achtergrondlagen: de
+   was staat stil, alleen de streep beweegt) — het detail dat de leider "premium" laat aanvoelen
+   zonder er een animatie-feestje van te maken. */
+.rang-leader {
+  background-image:
+    linear-gradient(90deg, color-mix(in srgb, #ffd166 12%, transparent), color-mix(in srgb, #ffd166 3%, transparent) 45%, transparent 75%),
+    linear-gradient(100deg, transparent 30%, color-mix(in srgb, #ffd166 16%, transparent) 45%, transparent 60%);
+  background-repeat: no-repeat, no-repeat;
+  background-size: 100% 100%, 220% 100%;
+  background-position: 0 0, 120% 0;
+  animation: rang-sheen 6s ease-in-out infinite;
+}
+@keyframes rang-sheen {
+  0%, 100% { background-position: 0 0, 120% 0; }
+  50% { background-position: 0 0, -20% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rang-leader { animation: none; background-position: 0 0, 999% 0; }
+}
 .rang-leader td:first-child { box-shadow: inset 4px 0 0 0 #ffd166, inset 0 0 16px -11px color-mix(in srgb, #ffd166 80%, transparent); }
 .rang-leader .rang-name { font-weight: 800; }
 .rang-silver { background: linear-gradient(90deg, color-mix(in srgb, #cfd6de 9%, transparent), transparent 70%); }
@@ -303,22 +331,35 @@
   height: 24px;
   border-radius: 50%;
 }
+/* Een lichte rand bovenaan + donkere schaduw onderaan geven het rondje body — een muntje i.p.v.
+   een platte gekleurde stip. Zelfde bevel-truc als de puntjes-chip hierboven. */
 .rang-leader .rang-pos {
-  background: radial-gradient(circle, color-mix(in srgb, #ffd166 40%, transparent), color-mix(in srgb, #ffd166 10%, transparent) 70%, transparent);
-  box-shadow: 0 0 0 1px color-mix(in srgb, #ffd166 55%, transparent);
+  background: radial-gradient(circle at 35% 28%, color-mix(in srgb, #ffd166 65%, #fff 10%), color-mix(in srgb, #ffd166 32%, transparent) 60%, color-mix(in srgb, #ffd166 8%, transparent) 85%);
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.5),
+    inset 0 -2px 3px color-mix(in srgb, #8a6512 60%, transparent),
+    0 0 0 1px color-mix(in srgb, #ffd166 60%, transparent),
+    0 2px 6px -1px color-mix(in srgb, #ffd166 55%, transparent);
 }
 .rang-silver .rang-pos {
-  background: radial-gradient(circle, color-mix(in srgb, #cfd6de 32%, transparent), color-mix(in srgb, #cfd6de 8%, transparent) 70%, transparent);
-  box-shadow: 0 0 0 1px color-mix(in srgb, #cfd6de 45%, transparent);
+  background: radial-gradient(circle at 35% 28%, color-mix(in srgb, #cfd6de 60%, #fff 10%), color-mix(in srgb, #cfd6de 26%, transparent) 60%, color-mix(in srgb, #cfd6de 6%, transparent) 85%);
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.4),
+    inset 0 -2px 3px color-mix(in srgb, #6b7480 55%, transparent),
+    0 0 0 1px color-mix(in srgb, #cfd6de 50%, transparent);
 }
 .rang-bronze .rang-pos {
-  background: radial-gradient(circle, color-mix(in srgb, #cd7f32 32%, transparent), color-mix(in srgb, #cd7f32 8%, transparent) 70%, transparent);
-  box-shadow: 0 0 0 1px color-mix(in srgb, #cd7f32 45%, transparent);
+  background: radial-gradient(circle at 35% 28%, color-mix(in srgb, #cd7f32 60%, #fff 10%), color-mix(in srgb, #cd7f32 26%, transparent) 60%, color-mix(in srgb, #cd7f32 6%, transparent) 85%);
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.35),
+    inset 0 -2px 3px color-mix(in srgb, #6b3d17 55%, transparent),
+    0 0 0 1px color-mix(in srgb, #cd7f32 50%, transparent);
 }
 .rang-danger .rang-pos {
-  background: radial-gradient(circle, color-mix(in srgb, #ef476f 28%, transparent), transparent 70%);
-  box-shadow: 0 0 0 1px color-mix(in srgb, #ef476f 42%, transparent);
+  background: radial-gradient(circle at 35% 28%, color-mix(in srgb, #ef476f 45%, transparent), transparent 75%);
+  box-shadow: inset 0 -1px 2px color-mix(in srgb, #7a0f27 45%, transparent), 0 0 0 1px color-mix(in srgb, #ef476f 42%, transparent);
 }
+
 /* Kampioensbadge naast de naam (enkel wanneer de titel wiskundig binnen is). */
 .rang-champ { font-size: 0.9em; }
 /* Kleursleutels in de legende. */
