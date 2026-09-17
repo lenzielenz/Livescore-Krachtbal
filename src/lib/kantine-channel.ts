@@ -1,6 +1,6 @@
 import type { Payload } from 'payload'
 
-import { recenteBlast } from './match-channel'
+import { recenteBlast, recenteInstants, type Instant } from './match-channel'
 import { buildScoreboards } from './match-engine'
 import { subscribe } from './sse-hub'
 
@@ -55,6 +55,8 @@ export interface KantineLive {
   goal: KantineGoal | null
   /** Een clubkleuren-viering die een supporter net afvuurde (zie match-channel.ts). */
   blast: { side: 'home' | 'away'; ts: number } | null
+  /** Foto's die net gepost zijn bij deze wedstrijd (zie recenteInstants in match-channel.ts). */
+  instants: Instant[]
 }
 
 /**
@@ -168,6 +170,7 @@ export async function loadKantineLive(payload: Payload, ids: number[]): Promise<
         : null,
       // Ruim genomen: de viering moet minstens één frame overleven om het scherm te halen.
       blast: recenteBlast(m.id, KANTINE_POLL_MS * 3),
+      instants: recenteInstants(m.id, KANTINE_POLL_MS * 3),
     })
   }
   return uit

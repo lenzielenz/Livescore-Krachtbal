@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 
-import { parseUitslagen, parseUitslagenHtml } from '@/lib/federatie-uitslagen'
+import { parseKalenderGrid, parseUitslagen, parseUitslagenHtml } from '@/lib/federatie-uitslagen'
 import { parseResultsHtml } from '@/lib/results-import'
 
 // De federatiesite is van hier niet bereikbaar, dus de parser is bewust HERKENNEND geschreven
@@ -119,6 +119,69 @@ describe('parseUitslagen — beide leeswijzen samen', () => {
   it('telt dezelfde wedstrijd niet dubbel wanneer beide parsers ze zien', () => {
     const html = tabel(rij(['101234', 'LH', '06/09/2025', '15:00', 'Sint-Michiels', 'Beveren', '12', '8', 'Janssens']))
     expect(parseUitslagen(html, parseResultsHtml)).toHaveLength(1)
+  })
+})
+
+// De federatiesite verving haar tabel-lay-out op een gegeven moment door kaarten (geen enkele
+// <table> meer): elke wedstrijd is een <ul class="kb-nhadateholder"> (reeks/datum/uur) gevolgd
+// door een <ul class="kb-natlogoarea"> (thuis/score/uit), telkens één <span> per waarde. Deze
+// fixture is een ingekorte, getrouwe kopie van de échte pagina (via een debug-fetch opgehaald).
+const griditem = (reeks: string, datum: string, uur: string, thuis: string, score: string, uit: string) => `
+  <div class="kb-griditem">
+    <ul class="kb-nhadateholder">
+      <li><span>${reeks}</span></li>
+      <li><span>${datum}</span></li>
+      <li><span>${uur}</span></li>
+    </ul>
+    <ul class="kb-natlogoarea">
+      <li><figure><a href='club.php?club=35'><img src="images/logo_29.jpg" alt="" width=64 height=64></a></figure><span>${thuis}</span></li>
+      <li><span>${score}</span></li>
+      <li><figure><a href='club.php?club=34'><img src="images/logo_32.png" alt="" width=64 height=64></a></figure><span>${uit}</span></li>
+    </ul>
+    <div class="kb-locationarea"><i class="icon-location2"></i><span>ergens</span></div>
+  </div>`
+
+describe('parseKalenderGrid — de kaart-lay-out (geen tabellen)', () => {
+  it('leest reeks, datum, uur, ploegen en score uit een wedstrijdkaart', () => {
+    const html = `<div class="kb-natdatagrid">${griditem('1NHA', '12/09/2026', '17:15', 'Krachtbal Snellegem', '7 - 29', 'KBC St. Michiels')}</div>`
+    const [r] = parseKalenderGrid(html)
+    expect(r).toMatchObject({
+      reeks: '1NAH',
+      date: '2026-09-12',
+      time: '17:15',
+      home: 'Krachtbal Snellegem',
+      away: 'KBC St. Michiels',
+      homeScore: 7,
+      awayScore: 29,
+    })
+  })
+
+  it('leest meerdere kaarten na elkaar', () => {
+    const html = `<div class="kb-natdatagrid">${griditem('1NHA', '12/09/2026', '11:30', 'KBK Ichtegem', '27 - 14', 'Osiris Aalst')}${griditem('1NHA', '12/09/2026', '20:00', 'Sporting Brugge', '29 - 15', "t Botterken Baasrode")}</div>`
+    const rows = parseKalenderGrid(html)
+    expect(rows).toHaveLength(2)
+    expect(rows.map((r) => r.home)).toEqual(['KBK Ichtegem', 'Sporting Brugge'])
+  })
+
+  it('slaat een kaart zonder score over (nog te spelen)', () => {
+    const html = `<div class="kb-natdatagrid">${griditem('1NHA', '19/09/2026', '17:15', 'Krachtbal Snellegem', '-', 'KBC St. Michiels')}</div>`
+    expect(parseKalenderGrid(html)).toEqual([])
+  })
+
+  it('geeft reeks null voor een onbekende code, maar leest de wedstrijd wel', () => {
+    const html = `<div class="kb-natdatagrid">${griditem('XYZ', '12/09/2026', '17:15', 'A ploeg', '10 - 5', 'B ploeg')}</div>`
+    const [r] = parseKalenderGrid(html)
+    expect(r.reeks).toBeNull()
+    expect(r.home).toBe('A ploeg')
+  })
+})
+
+describe('parseUitslagen — combineert tabel- én kaart-lezing', () => {
+  it('vindt een kaart-wedstrijd ook al is er geen tabel op de pagina', () => {
+    const html = `<html><body>${griditem('1NHA', '12/09/2026', '17:15', 'Krachtbal Snellegem', '7 - 29', 'KBC St. Michiels')}</body></html>`
+    const rows = parseUitslagen(html, parseResultsHtml)
+    expect(rows).toHaveLength(1)
+    expect(rows[0]).toMatchObject({ home: 'Krachtbal Snellegem', homeScore: 7, awayScore: 29 })
   })
 })
 

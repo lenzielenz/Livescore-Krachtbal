@@ -369,11 +369,35 @@ export function addShoutout(matchId: number, name: string, text: string): Shout 
 }
 
 // Eén live foto-instant (vluchtige supporterfoto). De bron is de match-instants-collectie; het
-// kanaal broadcast enkel nieuwe/verwijderde foto's naar de huidige kijkers (geen persistentie hier).
+// kanaal broadcast nieuwe/verwijderde foto's naar de huidige kijkers van de matchpagina, en
+// houdt bovendien de recentste foto's per wedstrijd bij (zoals laatsteBlast hieronder) zodat de
+// kantine-tv — die geen eigen verbinding per wedstrijd heeft, enkel het verzamelbord — ze op haar
+// eerstvolgende poll kan oppikken, ook als niemand de matchpagina zelf open heeft staan.
 export type Instant = { id: number; url: string; authorName: string; at: number }
+
+const laatsteInstants = new Map<number, Instant[]>()
+const INSTANT_BEWAARD_MS = 60_000
+
+/** De foto's van deze wedstrijd die binnen `maxLeeftijdMs` gepost zijn, oudste eerst. */
+export function recenteInstants(matchId: number, maxLeeftijdMs: number): Instant[] {
+  const lijst = laatsteInstants.get(matchId)
+  if (!lijst) return []
+  const nu = Date.now()
+  return lijst.filter((i) => nu - i.at <= maxLeeftijdMs)
+}
 
 /** Broadcast een nieuwe foto-instant naar alle kijkers van deze wedstrijd. */
 export function addInstant(matchId: number, instant: Instant): boolean {
+  const nu = Date.now()
+  for (const [id, lijst] of laatsteInstants) {
+    const overgebleven = lijst.filter((i) => nu - i.at <= INSTANT_BEWAARD_MS)
+    if (overgebleven.length > 0) laatsteInstants.set(id, overgebleven)
+    else laatsteInstants.delete(id)
+  }
+  const lijst = laatsteInstants.get(matchId) ?? []
+  lijst.push(instant)
+  laatsteInstants.set(matchId, lijst)
+
   const ch = channels.get(matchId)
   if (!ch) return false
   if (!isTribuneOpen(ch.status, ch.finishedAt)) return false
