@@ -565,3 +565,44 @@
   font-weight: 600;
   text-align: center;
 }
+
+/* Inline vakje om de koppelcode van het veldscherm in te voeren — verschijnt onder de header
+   zodra je op "Veldscherm koppelen" tikt. */
+.ssk-veldkoppel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 12px 0;
+  padding: 9px 13px;
+  border-radius: 10px;
+  background: var(--panel, #14161a);
+  border: 1px solid var(--line, #1d3b2c);
+}
+.ssk-veldkoppel-input {
+  width: 110px;
+  background: var(--bg, #0c0f10);
+  color: var(--txt, #e8f5ee);
+  border: 1px solid var(--line, #1d3b2c);
+  border-radius: 8px;
+  padding: 7px 10px;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-align: center;
+}
+.ssk-veldkoppel-btn {
+  appearance: none;
+  border: 1px solid var(--accent, #ffd873);
+  background: var(--accent, #ffd873);
+  color: var(--bg, #0c0f10);
+  font-weight: 700;
+  font-size: 0.9rem;
+  padding: 7px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.ssk-veldkoppel-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.ssk-veldkoppel-msg { font-size: 0.84rem; font-weight: 600; }
+.ssk-veldkoppel-msg.ok { color: #0fe0a6; }
+.ssk-veldkoppel-msg.err { color: #ef476f; }

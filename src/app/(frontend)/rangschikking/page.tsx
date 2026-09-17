@@ -182,7 +182,7 @@ export default async function RangschikkingPage({ searchParams }: { searchParams
     <>
       <SiteHeader active="stand" />
       <div className="site">
-        <h1 className="page-title"><span className="brand">Rangschikking</span></h1>
+        <h1 className="page-title rang-title"><span className="brand">Rangschikking</span></h1>
         <div className="rang-nav">
           {prevReeks ? (
             <Link href={`/rangschikking?reeks=${prevReeks}`} className="rang-arrow" aria-label="Vorige reeks">‹</Link>

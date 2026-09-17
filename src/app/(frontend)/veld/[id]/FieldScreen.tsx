@@ -5,11 +5,12 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { ClubColorBlast } from '@/components/ClubColorBlast'
 import { TeamLogo } from '@/components/TeamLogo'
 import { DEFAULT_AWAY_COLOR, DEFAULT_HOME_COLOR, inkOn, readableOnDark } from '@/lib/club-colors'
+import type { FieldScreenTheme } from '@/lib/field-screens'
 import { DEFAULT_UITSNEDE } from '@/lib/reclame'
 import type { MatchState, TimelineItem } from '@/lib/match-engine'
 import { buildMomentum, type MomentumPoint } from '@/lib/match-momentum'
 import { goalPointsFromLabel, goalScorerFromLabel, useLiveStream } from '@/lib/use-live-stream'
-import { QrCode } from '../../cast/QrCode'
+import { QrCode } from '@/components/QrCode'
 import { AdMarquee, type Ad } from './AdMarquee'
 
 function fmtClock(total: number): string {
@@ -161,12 +162,15 @@ export function FieldScreen({
   reeks,
   halfSeconds,
   ads = [],
+  theme = 'dark',
   initial,
 }: {
   matchId: number
   reeks: string | null
   halfSeconds: number
   ads?: Ad[]
+  /** 'light' voor een veld in de volle zon — een donker scherm is dan nauwelijks af te lezen. */
+  theme?: FieldScreenTheme
   initial: { state: MatchState; timeline: TimelineItem[] }
 }) {
   const [state, setState] = useState<MatchState>(initial.state)
@@ -374,7 +378,7 @@ export function FieldScreen({
   } as React.CSSProperties
 
   return (
-    <div className="fs" style={fsStyle} ref={rootRef}>
+    <div className={`fs${theme === 'light' ? ' fs-light' : ''}`} style={fsStyle} ref={rootRef}>
       {blast && <ClubColorBlast key={blast.key} colors={blast.colors} teamName={blast.name} />}
       <div className="fs-controls">
         <button

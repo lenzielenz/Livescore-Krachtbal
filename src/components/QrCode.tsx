@@ -2,8 +2,11 @@
 
 import { useEffect, useState } from 'react'
 
+import './qr-code.css'
+
 // QR-code voor een scherm-URL, volledig client-side gegenereerd (geen externe dienst).
-// Scan met het toestel dat de tv aanstuurt om het scherm in één tik te openen.
+// Scan met het toestel dat de tv aanstuurt om het scherm in één tik te openen. Gedeeld tussen
+// /cast en /club/veldscherm — elke plek waar iemand een scherm-URL naar een tv wil brengen.
 export function QrCode({ value, size = 168 }: { value: string; size?: number }) {
   const [dataUrl, setDataUrl] = useState<string | null>(null)
 
@@ -27,7 +30,7 @@ export function QrCode({ value, size = 168 }: { value: string; size?: number }) 
     }
   }, [value, size])
 
-  if (!dataUrl) return <div className="cast-qr-skel" style={{ width: size, height: size }} />
+  if (!dataUrl) return <div className="qr-skel" style={{ width: size, height: size }} />
   // eslint-disable-next-line @next/next/no-img-element
-  return <img className="cast-qr-img" src={dataUrl} alt="QR-code" width={size} height={size} />
+  return <img className="qr-img" src={dataUrl} alt="QR-code" width={size} height={size} />
 }

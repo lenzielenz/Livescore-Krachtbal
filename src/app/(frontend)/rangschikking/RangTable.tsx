@@ -1,6 +1,6 @@
 'use client'
 
-import { Fragment, useState } from 'react'
+import { Fragment, useLayoutEffect, useRef, useState } from 'react'
 
 import { TeamLogo } from '@/components/TeamLogo'
 import type { LogoFit } from '@/lib/logo-fit'
@@ -29,16 +29,46 @@ export type RangRow = {
   champion?: boolean
 }
 
+// Verder inkrimpen dan dit maakt de rangschikking niet meer leesbaar — daarna wint de (nog
+// steeds beschikbare) interne scroll van .rang-scroll het van nog compactere rijen.
+const MIN_DENSITY = 0.55
+
 // Klikbare rangschikking: tik op een ploeg om de extra cijfers (doelpunten voor/tegen,
 // saldo, positieverloop) uit te klappen — handig op gsm, waar die kolommen wegvallen.
 // `showMove`: stijgen/dalen tonen — uit voor jeugdreeksen (daar is geen promotie/degradatie).
 export function RangTable({ rows, showMove = true }: { rows: RangRow[]; showMove?: boolean }) {
   const [open, setOpen] = useState<number | null>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
   const hasDanger = rows.some((r) => r.danger)
+
+  // De volledige rangschikking moet in één oogopslag passen, zonder te scrollen — elke reeks
+  // heeft een ander aantal ploegen. Meet na elke render hoeveel ruimte er nog rest tot de
+  // onderkant van het venster en verdicht de rijpadding (--rang-density) net genoeg om alles te
+  // laten passen. Ver genoeg gevuld (veel ploegen) blijft de interne scroll de noodrem.
+  useLayoutEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+
+    const fit = () => {
+      el.style.setProperty('--rang-density', '1')
+      const naturalHeight = el.scrollHeight
+      const top = el.getBoundingClientRect().top + window.scrollY
+      const available = window.innerHeight - top - 12
+      const density =
+        naturalHeight > 0 && naturalHeight > available
+          ? Math.max(MIN_DENSITY, Math.min(1, available / naturalHeight))
+          : 1
+      el.style.setProperty('--rang-density', String(density))
+    }
+
+    fit()
+    window.addEventListener('resize', fit)
+    return () => window.removeEventListener('resize', fit)
+  }, [rows.length, showMove])
 
   return (
     <>
-    <div className="rang-scroll">
+    <div className="rang-scroll" ref={scrollRef}>
       <table className="rang-table">
         <thead>
           <tr>
@@ -78,12 +108,14 @@ export function RangTable({ rows, showMove = true }: { rows: RangRow[]; showMove
                   {/* Enkel het cijfer, altijd op exact dezelfde plek — de zone (leider/podium/
                       degradatie) zit in het kleurbalkje links van de rij, niet in het cijfer. */}
                   <td className="rang-rank">
-                    <span className="rang-pos">{r.rank}</span>
-                    {showMove && (
-                      <span className={`rang-move ${r.moveCls}`} title="T.o.v. vorige week">
-                        {moveArrow}{r.delta !== 0 ? Math.abs(r.delta) : ''}
-                      </span>
-                    )}
+                    <span className="rang-rankline">
+                      <span className="rang-pos">{r.rank}</span>
+                      {showMove && (
+                        <span className={`rang-move ${r.moveCls}`} title="T.o.v. vorige week">
+                          {moveArrow}{r.delta !== 0 ? Math.abs(r.delta) : ''}
+                        </span>
+                      )}
+                    </span>
                   </td>
                   <td className="rang-team">
                     <div className="rang-team-inner">

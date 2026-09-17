@@ -3,7 +3,13 @@
   display: flex;
   align-items: stretch;
   gap: 8px;
-  margin: 6px 0 18px;
+  margin: 6px 0 12px;
+}
+
+/* Iets minder lucht boven/onder de titel dan de gedeelde .page-title — geeft de rangschikking
+   zelf meer ruimte, essentieel om zonder scrollen te passen (RangTable.tsx meet de rest). */
+.rang-title {
+  margin: 10px 0 2px;
 }
 .rang-picker {
   flex: 1 1 auto;
@@ -55,10 +61,13 @@
 }
 
 .rang-scroll {
+  /* 1 = volle rijhoogte; RangTable.tsx meet hoeveel ruimte er nog rest tot de onderkant van het
+     venster en verkleint dit tot alle ploegen zonder scrollen passen (nooit onder MIN_DENSITY). */
+  --rang-density: 1;
   overflow: auto;
-  /* Begrensde scroll-zone: bij een heel lange rangschikking blijft de pagina hanteerbaar en
-     blijven de kolomkoppen in beeld (sticky thead hieronder). */
-  max-height: min(78vh, 900px);
+  /* Noodrem voor een ongewoon lange reeks (meer ploegen dan zelfs op MIN_DENSITY passen) of
+     wanneer JS nog niet gedraaid heeft — de rijverdichting hierboven doet het echte werk. */
+  max-height: 100dvh;
   overscroll-behavior: contain;
   border: 1px solid color-mix(in srgb, #fff 8%, var(--line));
   border-radius: 16px;
@@ -80,7 +89,8 @@
 }
 .rang-table th,
 .rang-table td {
-  padding: 10px 8px;
+  /* Bij density 1 exact de oorspronkelijke 10px; nooit onder de 4px, hoe klein --rang-density ook wordt. */
+  padding: calc(4px + 6px * var(--rang-density)) 8px;
   text-align: center;
   vertical-align: middle;
   border-bottom: 1px solid var(--line);
@@ -173,7 +183,8 @@
   }
   .rang-table th,
   .rang-table td {
-    padding: 9px 2px;
+    /* Zelfde density-formule, maar met de bestaande mobiele bodem van 9px als startpunt. */
+    padding: calc(3px + 6px * var(--rang-density)) 2px;
     font-size: 0.86rem;
   }
   /* DV–DT-kolom verbergen, maar als 0-breedte kolom BEHOUDEN (niet display:none): zo blijft de
@@ -232,17 +243,23 @@
   }
 }
 
-/* Positie-verschil t.o.v. vorige week + highlight van de eigen club. */
+/* Positie-verschil t.o.v. vorige week + highlight van de eigen club. Rangnummer en pijltje op
+   één lijn i.p.v. gestapeld — scheelt elke rij een volledige tekstregel in hoogte, essentieel om
+   de hele rangschikking zonder scrollen te laten passen. */
+.rang-rankline {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+}
 .rang-rank .rang-pos {
-  display: block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
-  text-align: center;
 }
 .rang-move {
-  display: block;
-  margin-top: 2px;
-  /* "▲2" onder het rangnummer was op gsm een spikkeltje van 10px. */
   font-size: 0.72rem;
   font-weight: 800;
   line-height: 1;

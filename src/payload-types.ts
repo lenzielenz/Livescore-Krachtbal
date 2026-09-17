@@ -71,6 +71,7 @@ export interface Config {
     teams: Team;
     players: Player;
     matches: Match;
+    'field-screens': FieldScreen;
     matchsheets: Matchsheet;
     officials: Official;
     accidents: Accident;
@@ -109,6 +110,7 @@ export interface Config {
     teams: TeamsSelect<false> | TeamsSelect<true>;
     players: PlayersSelect<false> | PlayersSelect<true>;
     matches: MatchesSelect<false> | MatchesSelect<true>;
+    'field-screens': FieldScreensSelect<false> | FieldScreensSelect<true>;
     matchsheets: MatchsheetsSelect<false> | MatchsheetsSelect<true>;
     officials: OfficialsSelect<false> | OfficialsSelect<true>;
     accidents: AccidentsSelect<false> | AccidentsSelect<true>;
@@ -883,6 +885,35 @@ export interface Match {
    * Automatisch gezet bij het beëindigen. Bepaalt het 1u-navenster van de live tribune.
    */
   finishedAt?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Eén per fysiek veld/scherm bij een club. Beheer het aantal velden via "Mijn club" → Veldscherm, niet hier.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "field-screens".
+ */
+export interface FieldScreen {
+  id: number;
+  club: number | Club;
+  /**
+   * Bv. "Veld 1" — zichtbaar op het scherm zelf en in de bediening.
+   */
+  naam: string;
+  /**
+   * Automatisch gezet. Verschijnt op het wachtscherm; een aantekenaar voert ze in om een wedstrijd te koppelen.
+   */
+  pairingCode?: string | null;
+  /**
+   * Automatisch gezet zodra iemand de koppelcode invoert; verdwijnt weer zodra de wedstrijd afloopt.
+   */
+  pairedMatch?: (number | null) | Match;
+  pairedAt?: string | null;
+  /**
+   * Instelbaar per veld via "Mijn club" → Veldscherm.
+   */
+  theme?: ('dark' | 'light') | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -1869,6 +1900,10 @@ export interface PayloadLockedDocument {
         value: number | Match;
       } | null)
     | ({
+        relationTo: 'field-screens';
+        value: number | FieldScreen;
+      } | null)
+    | ({
         relationTo: 'matchsheets';
         value: number | Matchsheet;
       } | null)
@@ -2143,6 +2178,20 @@ export interface MatchesSelect<T extends boolean = true> {
   pronostiekBonus?: T;
   analyseOwner?: T;
   finishedAt?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "field-screens_select".
+ */
+export interface FieldScreensSelect<T extends boolean = true> {
+  club?: T;
+  naam?: T;
+  pairingCode?: T;
+  pairedMatch?: T;
+  pairedAt?: T;
+  theme?: T;
   updatedAt?: T;
   createdAt?: T;
 }
