@@ -11,6 +11,13 @@
 .rad-stage { position: relative; z-index: 1; width: min(344px, 92vw); aspect-ratio: 1; display: grid; place-items: center; }
 /* Alle decoratieve lagen laten klikken doorgaan; enkel de naaf (logo) is klikbaar. */
 .rad-stage > *:not(.rad-hub) { pointer-events: none; }
+/* Vloerschaduw: grondt het rad op de pagina i.p.v. te laten zweven — een zachte donkere ellips
+   net onder het rad, zoals een spot op een podium. */
+.rad-stage::before {
+  content: ''; position: absolute; z-index: -1; bottom: -4%; left: 50%; width: 76%; height: 13%;
+  transform: translateX(-50%); filter: blur(3px);
+  background: radial-gradient(closest-side, rgba(0, 0, 0, 0.55), transparent 78%);
+}
 
 /* Metalen gouden behuizing (bezel) rond het rad — geborsteld goud met diepte, draait niet mee. */
 .rad-casing {
@@ -24,6 +31,19 @@
     inset 0 2px 5px rgba(255, 255, 255, 0.4),
     inset 0 -6px 14px rgba(0, 0, 0, 0.5);
 }
+/* Extra donkere groef net buiten de behuizing — een tweede, subtielere rand die het geheel meer
+   diepte/gewicht geeft (dubbele bezel, zoals bij duur horlogewerk). */
+.rad-casing::before {
+  content: ''; position: absolute; inset: -7px; border-radius: 999px; z-index: -1;
+  background: radial-gradient(circle, transparent 63%, rgba(0, 0, 0, 0.55) 71%, transparent 80%);
+}
+/* Traag over het goud glijdende glans — het rad oogt "levend" en gepolijst, ook in rust. */
+.rad-casing::after {
+  content: ''; position: absolute; inset: 0; border-radius: 999px; mix-blend-mode: overlay;
+  background: conic-gradient(from 0deg, transparent 0deg, rgba(255, 255, 255, 0.55) 7deg, transparent 18deg, transparent 360deg);
+  animation: rad-glint 8s linear infinite;
+}
+@keyframes rad-glint { to { transform: rotate(360deg); } }
 
 /* Marquee-lampjes rond de rand. */
 .rad-bulbs { position: absolute; inset: 0; }
@@ -111,11 +131,13 @@
 /* Neon-achterglow: grote kleurenkrans die meedraait en fel oplicht tijdens het spinnen. */
 .rad-aura {
   position: absolute; width: 470px; height: 470px; max-width: 128vw; max-height: 128vw; border-radius: 999px; z-index: 0;
-  filter: blur(48px); opacity: 0.5; transition: opacity 0.4s ease;
-  animation: rad-aura-spin 9s linear infinite;
+  filter: blur(48px); transition: opacity 0.4s ease;
+  animation: rad-aura-spin 9s linear infinite, rad-aura-breathe 3.4s ease-in-out infinite;
 }
-.rad-stage.spinning .rad-aura { opacity: 0.95; animation: rad-aura-spin 2.6s linear infinite; }
+.rad-stage.spinning .rad-aura { animation: rad-aura-spin 2.6s linear infinite; opacity: 0.95; }
 @keyframes rad-aura-spin { to { transform: rotate(360deg); } }
+/* Rustig "ademende" gloed in rust — het rad voelt levend aan zonder dat er iets draait. */
+@keyframes rad-aura-breathe { 0%, 100% { opacity: 0.4; } 50% { opacity: 0.62; } }
 
 /* Theatrale opening: rode fluwelen gordijnen die opengaan (eerste keer per sessie). */
 .rad-curtains { position: absolute; inset: -14px; z-index: 9; pointer-events: none; overflow: hidden; border-radius: 16px; }
@@ -159,6 +181,12 @@
   box-shadow: 0 11px 22px -6px rgba(0, 0, 0, 0.9), 0 3px 6px rgba(0, 0, 0, 0.5), inset 0 1px 2px rgba(255, 255, 255, 0.6);
 }
 .rad-hub:disabled { cursor: default; }
+/* Dun accentringetje net buiten de naaf — scheidt hem netjes af van het rad eronder. */
+.rad-hub::after {
+  content: ''; position: absolute; inset: -4px; border-radius: 999px; pointer-events: none;
+  border: 1px solid rgba(255, 230, 160, 0.4);
+  box-shadow: 0 0 10px -2px rgba(255, 209, 102, 0.5);
+}
 /* Klikbaar logo: rustige goud-gloed die uitnodigt om te draaien. */
 .rad-hub.live { animation: rad-hub-pulse 1.7s ease-in-out infinite; }
 @keyframes rad-hub-pulse {
@@ -242,7 +270,7 @@
 .rad-token.big { background: linear-gradient(135deg, #fff1b8, #ffd166); box-shadow: 0 0 14px -2px #ffd166; }
 
 /* Podium top 3. */
-.rad-podium { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 4px 0 16px; }
+.rad-podium { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 0 0 10px; }
 .rad-pod {
   display: inline-flex; align-items: center; gap: 7px; padding: 8px 14px; border-radius: 999px;
   border: 1px solid color-mix(in srgb, #ffd166 30%, var(--line)); background: var(--panel); font-size: 0.9rem; color: var(--txt);
@@ -295,12 +323,25 @@
   50% { text-shadow: 0 0 11px #fff3c4, 0 0 26px #ffd166, 0 0 48px #f4a300, 0 2px 2px rgba(0, 0, 0, 0.6); }
 }
 
-/* Intro + meldingen in casino-stijl (gecentreerd, warm). */
-.rad-page .vs-intro { text-align: center; max-width: 48ch; margin: 0 auto 14px; color: #efe2cb; }
-.rad-page .vs-intro strong { color: #ffd166; }
-.rad-page .rad-test {
-  text-align: center; max-width: 52ch; margin: 0 auto 16px;
-  border-color: rgba(255, 209, 102, 0.4); background: rgba(255, 209, 102, 0.07); color: #efe2cb;
+/* Korte haak boven het rad — één regel, geen alinea die het rad naar beneden duwt. De volledige
+   uitleg zit in het inklapbare .rad-info eronder, dicht standaard. */
+.rad-page .rad-hook { text-align: center; max-width: 44ch; margin: 0 auto 6px; color: #efe2cb; font-size: 0.95rem; }
+.rad-page .rad-hook strong { color: #ffd166; }
+.rad-info { text-align: center; max-width: 48ch; margin: 0 auto 12px; color: #d9ccb8; font-size: 0.86rem; }
+.rad-info summary {
+  cursor: pointer; list-style: none; display: inline-flex; color: #ffd166; font-weight: 700;
+  opacity: 0.85; transition: opacity 0.15s ease;
+}
+.rad-info summary:hover { opacity: 1; }
+.rad-info summary::-webkit-details-marker { display: none; }
+.rad-info p { margin: 8px auto 0; line-height: 1.5; }
+.rad-info strong { color: #ffd166; }
+
+/* Compacte beheerder-rij: badge + knoppen op één lijn i.p.v. een aparte alinea + knoppenrij. */
+.rad-admin-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; margin: 0 0 12px; }
+.rad-test-badge {
+  padding: 5px 11px; border-radius: 999px; font-size: 0.78rem; font-weight: 700; color: #efe2cb; cursor: help;
+  border: 1px dashed color-mix(in srgb, #ffd166 45%, var(--line)); background: rgba(255, 209, 102, 0.09);
 }
 .rad-page .rad-card {
   border-color: rgba(255, 209, 102, 0.3);
@@ -314,14 +355,9 @@
 .rad-podium .rad-pod:nth-child(2) { border-color: color-mix(in srgb, #c0c8d0 55%, var(--line)); }
 .rad-podium .rad-pod:nth-child(3) { border-color: color-mix(in srgb, #cd7f32 55%, var(--line)); }
 
-/* Testmodus-melding (beheerder). */
-.rad-test {
-  margin: 0 0 10px; padding: 9px 13px; border-radius: 10px; font-size: 0.84rem; color: var(--txt);
-  border: 1px dashed color-mix(in srgb, var(--accent) 40%, var(--line));
-  background: color-mix(in srgb, var(--accent) 7%, transparent);
-}
-/* Beheerder-bediening (wis testboosters / vernieuwen). */
-.rad-admin { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 16px; }
+/* Beheerder-bediening (wis testboosters / vernieuwen) — zit al in .rad-admin-row, dus geen eigen
+   marge meer nodig hier. */
+.rad-admin { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; }
 .rad-admin-btn {
   padding: 8px 14px; border-radius: 999px; cursor: pointer; font-weight: 700; font-size: 0.85rem; color: var(--txt);
   border: 1px solid color-mix(in srgb, #fff 8%, var(--line));
