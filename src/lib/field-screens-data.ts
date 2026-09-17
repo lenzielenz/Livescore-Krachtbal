@@ -252,7 +252,17 @@ export async function ensureClubDemoScreens(payload: Payload, clubId: number): P
   if (wachtId && scoreId) return { wachtId, scoreId }
 
   const homeTeam = (await payload.find({ collection: 'teams', where: { club: { equals: clubId } }, limit: 1, depth: 0, overrideAccess: true }).catch(() => ({ docs: [] as Record<string, unknown>[] }))).docs[0]
-  const awayTeam = (await payload.find({ collection: 'teams', where: { club: { not_equals: clubId } }, limit: 1, depth: 0, overrideAccess: true }).catch(() => ({ docs: [] as Record<string, unknown>[] }))).docs[0]
+  const homeReeks = (homeTeam as { reeks?: string | null } | undefined)?.reeks
+  // De wedstrijd MOET een tegenstander in dezelfde reeks krijgen: Matches.ts's awayTeam-veld
+  // (filterOptions) weigert anders elke andere ploeg, en die validatie geldt ook server-side bij
+  // overrideAccess — een mismatch laat deze create mislukken en zou de hele pagina platleggen.
+  const awayTeam = homeReeks
+    ? (
+        await payload
+          .find({ collection: 'teams', where: { and: [{ club: { not_equals: clubId } }, { reeks: { equals: homeReeks } }] }, limit: 1, depth: 0, overrideAccess: true })
+          .catch(() => ({ docs: [] as Record<string, unknown>[] }))
+      ).docs[0]
+    : undefined
   if (!homeTeam || !awayTeam) return null
 
   if (!wachtId) {
@@ -265,33 +275,39 @@ export async function ensureClubDemoScreens(payload: Payload, clubId: number): P
   }
 
   if (!scoreId) {
-    const now = new Date()
-    const demoMatch = await payload.create({
-      collection: 'matches',
-      data: {
-        homeTeam: homeTeam.id as number,
-        awayTeam: awayTeam.id as number,
-        date: now.toISOString(),
-        status: 'live',
-        reeks: ((homeTeam as { reeks?: string | null }).reeks ?? undefined) as never,
-        isDemo: true,
-        analyseOnly: false,
-        goalAreaDepth: 10,
-        currentHalf: 1,
-        clockRunning: true,
-        clockSeconds: 420,
-        clockUpdatedAt: now.toISOString(),
-        simpleScore: buildFixedSimpleScore(6, 4) as unknown as Record<string, unknown>,
-      },
-      overrideAccess: true,
-    })
-    const created = await payload.create({
-      collection: 'field-screens',
-      data: { club: clubId, naam: DEMO_SCORE_NAAM, isDemo: true, pairedMatch: demoMatch.id, pairedAt: now.toISOString() },
-      overrideAccess: true,
-    })
-    scoreId = created.id
+    // Nooit de hele pagina laten crashen op een onverwachte validatiefout hier (bv. een
+    // reglementswijziging op Matches.ts die deze fictieve combinatie alsnog afwijst) — zonder
+    // scorebord toont de admin-pagina dan gewoon enkel het wachtscherm-demo.
+    scoreId = await (async () => {
+      const now = new Date()
+      const demoMatch = await payload.create({
+        collection: 'matches',
+        data: {
+          homeTeam: homeTeam.id as number,
+          awayTeam: awayTeam.id as number,
+          date: now.toISOString(),
+          status: 'live',
+          reeks: ((homeTeam as { reeks?: string | null }).reeks ?? undefined) as never,
+          isDemo: true,
+          analyseOnly: false,
+          goalAreaDepth: 10,
+          currentHalf: 1,
+          clockRunning: true,
+          clockSeconds: 420,
+          clockUpdatedAt: now.toISOString(),
+          simpleScore: buildFixedSimpleScore(6, 4) as unknown as Record<string, unknown>,
+        },
+        overrideAccess: true,
+      })
+      const created = await payload.create({
+        collection: 'field-screens',
+        data: { club: clubId, naam: DEMO_SCORE_NAAM, isDemo: true, pairedMatch: demoMatch.id, pairedAt: now.toISOString() },
+        overrideAccess: true,
+      })
+      return created.id
+    })().catch(() => undefined)
   }
 
+  if (!scoreId) return null
   return { wachtId, scoreId }
 }
