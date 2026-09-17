@@ -1,7 +1,6 @@
 import { formatTimeBE } from '@/lib/datetime'
-import type { FieldScreenTheme } from '@/lib/field-screens'
+import type { DagWedstrijd, FieldScreenTheme } from '@/lib/field-screens'
 import { reeksNaam } from '@/lib/reeksen'
-import type { DagWedstrijd } from '@/lib/field-screens-data'
 
 // Wachtscherm voor een veld zonder gekoppelde wedstrijd: de dagplanning van de club (alle
 // thuiswedstrijden van vandaag) + een grote koppelcode. Een aantekenaar leest die code van de tv

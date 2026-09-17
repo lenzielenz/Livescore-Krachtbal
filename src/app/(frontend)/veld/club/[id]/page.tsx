@@ -4,6 +4,7 @@ import { loadAds } from '@/lib/ads'
 import { buildMatchState, buildTimeline } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
 import { reeksHalfDurationSeconds, reeksNaam, type Reeks } from '@/lib/reeksen'
+import { fictionalDagplanning } from '@/lib/field-screens'
 import { getPublicFieldScreenState, todaysHomeMatches } from '@/lib/field-screens-data'
 import { FieldScreen } from '../../[id]/FieldScreen'
 import { FieldScreenSync } from './FieldScreenSync'
@@ -53,7 +54,15 @@ export default async function VeldClubSchermPage({ params }: { params: Promise<{
     }
   }
 
-  const matches = screen.clubId != null ? await todaysHomeMatches(payload, screen.clubId) : []
+  let matches
+  if (screen.isDemo) {
+    const homeTeam = screen.clubId != null
+      ? (await payload.find({ collection: 'teams', where: { club: { equals: screen.clubId } }, limit: 1, depth: 0 }).catch(() => ({ docs: [] as Record<string, unknown>[] }))).docs[0]
+      : null
+    matches = fictionalDagplanning(new Date(), ((homeTeam as { reeks?: string | null } | null)?.reeks) ?? null)
+  } else {
+    matches = screen.clubId != null ? await todaysHomeMatches(payload, screen.clubId) : []
+  }
   return (
     <>
       <VeldWachtscherm clubName={screen.clubName} veldNaam={screen.naam} code={screen.pairingCode} matches={matches} statusLabel={statusLabel} theme={screen.theme} />
