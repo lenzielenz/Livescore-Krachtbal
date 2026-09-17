@@ -144,6 +144,16 @@
   filter: drop-shadow(0 2px 14px rgba(0,0,0,.55));
 }
 .recap-feature-body small { color: #dce8fb; font-size: .78rem; font-weight: 750; text-shadow: 0 1px 6px rgba(0,0,0,.65); }
+/* Onderscheid manueel/automatisch: het totaal blijft de dekking, maar wat supporters zelf
+   invoerden is het pronkstuk — dat mag er zelfverzekerd bij staan, niet als kleine bijzin. */
+.recap-coverage {
+  margin-top: 4px;
+  font-size: .74rem;
+  font-weight: 650;
+  color: #c3d3ec;
+  text-shadow: 0 1px 6px rgba(0,0,0,.65);
+}
+.recap-coverage b { color: #fff; }
 .recap-trend {
   display: inline-flex;
   align-items: center;

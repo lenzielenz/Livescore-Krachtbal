@@ -156,7 +156,7 @@ export async function POST(req: Request) {
             await payload.update({
               collection: 'matches',
               id: op.id,
-              data: { status: 'finished', simpleScore: buildFixedSimpleScore(op.home, op.away) as unknown as Record<string, unknown> },
+              data: { status: 'finished', simpleScore: buildFixedSimpleScore(op.home, op.away) as unknown as Record<string, unknown>, autoImported: true },
               overrideAccess: true,
             })
           } else {
@@ -172,6 +172,7 @@ export async function POST(req: Request) {
                 goalAreaDepth: 10,
                 analyseOnly: false,
                 simpleScore: buildFixedSimpleScore(op.home, op.away) as unknown as Record<string, unknown>,
+                autoImported: true,
               },
               overrideAccess: true,
             })

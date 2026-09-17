@@ -205,6 +205,7 @@ export async function pasUitslagenToe(
         data: {
           status: 'finished',
           simpleScore: buildFixedSimpleScore(r.homeScore, r.awayScore) as unknown as Record<string, unknown>,
+          autoImported: true,
         },
         overrideAccess: true,
       })

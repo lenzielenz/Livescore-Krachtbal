@@ -117,6 +117,7 @@ import * as migration_20260913_210000_ideas from './20260913_210000_ideas'
 import * as migration_20260914_221500_tornooi_u8_u10 from './20260914_221500_tornooi_u8_u10'
 import * as migration_20260916_193000_idea_screenshots from './20260916_193000_idea_screenshots'
 import * as migration_20260917_060000_users_rels_clubs from './20260917_060000_users_rels_clubs'
+import * as migration_20260917_070000_match_auto_imported from './20260917_070000_match_auto_imported'
 
 export const migrations = [
   {
@@ -708,5 +709,10 @@ export const migrations = [
     up: migration_20260917_060000_users_rels_clubs.up,
     down: migration_20260917_060000_users_rels_clubs.down,
     name: '20260917_060000_users_rels_clubs',
+  },
+  {
+    up: migration_20260917_070000_match_auto_imported.up,
+    down: migration_20260917_070000_match_auto_imported.down,
+    name: '20260917_070000_match_auto_imported',
   },
 ];
