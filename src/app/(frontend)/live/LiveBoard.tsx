@@ -213,7 +213,7 @@ export function LiveBoard({
   const [query, setQuery] = useState('')
   const [openRow, setOpenRow] = useState<number | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
-  const [sortBy, setSortBy] = useState<'reeks' | 'tijd'>('reeks')
+  const [sortBy, setSortBy] = useState<'reeks' | 'tijd' | 'thuisuit'>('reeks')
   // Reeksen die de supporter zelf dichtklapte — zo veegt hij weg wat hem niet boeit
   // zonder iets te verliezen (de telling blijft op de kop staan). Standaard alles open.
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
@@ -328,13 +328,25 @@ export function LiveBoard({
   // en sturen we de bezoeker naar een andere dag of de rest van het platform.
   const dayEmpty = matches.length === 0
 
-  // Op tijdstip: één doorlopende lijst chronologisch, geen reeks-secties — handig om te zien wat
-  // er nu/zo dadelijk speelt, ongeacht de reeks. Op reeks (standaard): gegroepeerd zoals voorheen,
-  // elke groep zelf al chronologisch (de matches komen al gesorteerd op datum uit de databank).
-  const chronologisch = sortBy === 'tijd'
+  // Op tijdstip of thuis/uit: één doorlopende lijst, geen reeks-secties — handig om te zien wat er
+  // nu/zo dadelijk speelt (tijdstip), of om eerst je eigen thuiswedstrijden en dan je uitwedstrijden
+  // af te lopen (thuis/uit, enkel mogelijk mét een gekende eigen club). Op reeks (standaard):
+  // gegroepeerd zoals voorheen, elke groep zelf al chronologisch (de matches komen al gesorteerd op
+  // datum uit de databank).
+  const flatSort = sortBy === 'tijd' || (sortBy === 'thuisuit' && myClubId != null)
+  const byKickoff = (a: DayMatch, b: DayMatch) => a.kickoff.localeCompare(b.kickoff)
   const groups = useMemo(() => {
-    if (chronologisch) {
-      const sorted = [...visible].sort((a, b) => a.kickoff.localeCompare(b.kickoff))
+    if (sortBy === 'thuisuit' && myClubId != null) {
+      // Thuis (mijn club speelt thuis) eerst, dan uit, dan de rest — elke groep chronologisch.
+      // Die derde groep komt in de praktijk enkel voor als "Mijn club" niet ook aanstaat.
+      const thuis = visible.filter((m) => m.home.clubId === myClubId).sort(byKickoff)
+      const uit = visible.filter((m) => m.away.clubId === myClubId && m.home.clubId !== myClubId).sort(byKickoff)
+      const overige = visible.filter((m) => m.home.clubId !== myClubId && m.away.clubId !== myClubId).sort(byKickoff)
+      const flat = [...thuis, ...uit, ...overige]
+      return flat.length ? ([['', flat]] as [string, DayMatch[]][]) : []
+    }
+    if (sortBy === 'tijd') {
+      const sorted = [...visible].sort(byKickoff)
       return sorted.length ? ([['', sorted]] as [string, DayMatch[]][]) : []
     }
     const map = new Map<string, DayMatch[]>()
@@ -344,7 +356,7 @@ export function LiveBoard({
       map.set(m.reeks, arr)
     }
     return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]))
-  }, [visible, chronologisch])
+  }, [visible, sortBy, myClubId])
 
   const dateLabel = formatDateBE(brusselsNoonUtc(date), {
     weekday: 'long',
@@ -501,6 +513,11 @@ export function LiveBoard({
             <button type="button" className={`lb-sort-btn ${sortBy === 'tijd' ? 'on' : ''}`} onClick={() => setSortBy('tijd')}>
               ⏱ Tijdstip
             </button>
+            {myClubId != null && (
+              <button type="button" className={`lb-sort-btn ${sortBy === 'thuisuit' ? 'on' : ''}`} onClick={() => setSortBy('thuisuit')}>
+                🏠 Thuis/Uit
+              </button>
+            )}
           </div>
         )}
 
@@ -536,11 +553,11 @@ export function LiveBoard({
           </div>
         ) : (
           groups.map(([reeks, list]) => {
-            const isCollapsed = !chronologisch && collapsed.has(reeks)
+            const isCollapsed = !flatSort && collapsed.has(reeks)
             const liveInGroup = list.filter((m) => m.status === 'live').length
             return (
-            <section key={reeks || '__tijd__'} className={`lb-group ${isCollapsed ? 'collapsed' : ''}`}>
-              {!chronologisch && (
+            <section key={reeks || '__flat__'} className={`lb-group ${isCollapsed ? 'collapsed' : ''}`}>
+              {!flatSort && (
                 <div className="lb-group-head-row">
                   <button
                     type="button"
@@ -571,10 +588,17 @@ export function LiveBoard({
                 const hasStats = played && (m.crosses || m.timeouts)
                 const rowFav = teamFav(m) || clubFav(m)
                 const open = openRow === m.id
-                // Bij chronologisch sorteren en/of een actieve zoekopdracht over meerdere dagen
-                // (searchSeizoen) vervangt dit tagje de reeks-kop van de groep.
+                // Bij tijdstip/thuis-uit sorteren en/of een actieve zoekopdracht over meerdere
+                // dagen (searchSeizoen) vervangt dit tagje de reeks-kop van de groep.
                 const tags = [
-                  chronologisch ? m.reeks : null,
+                  sortBy === 'thuisuit' && myClubId != null
+                    ? m.home.clubId === myClubId
+                      ? '🏠 Thuis'
+                      : m.away.clubId === myClubId
+                        ? '✈ Uit'
+                        : null
+                    : null,
+                  flatSort ? m.reeks : null,
                   query.trim().length >= 2 ? dagLabel(dateStrBE(new Date(m.kickoff)), today) : null,
                 ].filter((t): t is string => Boolean(t))
                 return (
