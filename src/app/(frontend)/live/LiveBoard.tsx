@@ -11,7 +11,7 @@ import { type LogoFit } from '@/lib/logo-fit'
 import { pronostiekOpen } from '@/lib/pronostiek-weekend'
 import { alleSpeeldagen, volgendeSpeeldag, vorigeSpeeldag, type Speeldag } from '@/lib/speeldagen'
 import { pastBijZoekterm } from '@/lib/team-search'
-import { brusselsNoonUtc, formatDateBE, shiftDateStr } from '@/lib/datetime'
+import { brusselsNoonUtc, dateStrBE, formatDateBE, shiftDateStr } from '@/lib/datetime'
 
 type TeamRef = {
   teamId: number
@@ -48,7 +48,6 @@ const FAV_REEKS_KEY = 'kb-fav-reeksen'
 
 const shiftDate = shiftDateStr
 
-
 /** Korte dagnaam voor de speeldagenlijst: "Vandaag", anders "za 12 sep". */
 function dagLabel(datum: string, today: string): string {
   if (datum === today) return 'Vandaag'
@@ -84,7 +83,6 @@ function useFavSet<T extends number | string>(key: string, userId: number | stri
     })
   return [set, toggle]
 }
-
 
 /**
  * Houdt het bord vanzelf actueel. Eén gedeelde verbinding per dag (zie day-channel.ts) stuurt
@@ -202,9 +200,10 @@ export function LiveBoard({
   const [onlyMyClub, setOnlyMyClub] = useState(
     () => myClubId != null && matches.some((m) => m.home.clubId === myClubId || m.away.clubId === myClubId),
   )
-  // Open standaard op "Nu live" zodra er live wedstrijden zijn — tot de supporter naar "Hele dag"
-  // wisselt. Voor een ingelogde supporter wiens club vandaag speelt: toon z'n club live als die
-  // live is, anders z'n hele dag (i.p.v. een lege live-lijst). Lazy initializer → enkel bij opbouw.
+  // Staat standaard aan zodra er live wedstrijden zijn — tot de supporter zelf "Nu live" uitzet
+  // in de filterlade. Voor een ingelogde supporter wiens club vandaag speelt: toon z'n club live
+  // als die live is, anders z'n hele dag (i.p.v. een lege live-lijst). Lazy initializer → enkel
+  // bij opbouw.
   const [onlyLive, setOnlyLive] = useState(() => {
     const anyLive = matches.some((m) => m.status === 'live')
     const isMine = (m: DayMatch) => myClubId != null && (m.home.clubId === myClubId || m.away.clubId === myClubId)
@@ -213,6 +212,8 @@ export function LiveBoard({
   })
   const [query, setQuery] = useState('')
   const [openRow, setOpenRow] = useState<number | null>(null)
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [sortBy, setSortBy] = useState<'reeks' | 'tijd'>('reeks')
   // Reeksen die de supporter zelf dichtklapte — zo veegt hij weg wat hem niet boeit
   // zonder iets te verliezen (de telling blijft op de kop staan). Standaard alles open.
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
@@ -223,6 +224,38 @@ export function LiveBoard({
       else next.add(reeks)
       return next
     })
+
+  // Vul de dag-gebonden lijst aan met treffers van andere dagen zodra er iets getypt wordt (2+
+  // tekens) — zo blijft "waarom vind ik niets?" uit als je ploeg vandaag niet speelt. Gedebouncet
+  // en met een eigen abort per toets zodat een trage/oude respons een nieuwere niet overschrijft.
+  const [extra, setExtra] = useState<DayMatch[]>([])
+  useEffect(() => {
+    const q = query.trim()
+    if (q.length < 2) {
+      setExtra([])
+      return
+    }
+    const ctrl = new AbortController()
+    const timer = setTimeout(() => {
+      fetch(`/api/live/search?q=${encodeURIComponent(q)}`, { signal: ctrl.signal })
+        .then((r) => (r.ok ? r.json() : { matches: [] }))
+        .then((data: { matches?: DayMatch[] }) => setExtra(Array.isArray(data.matches) ? data.matches : []))
+        .catch(() => {})
+    }, 300)
+    return () => {
+      clearTimeout(timer)
+      ctrl.abort()
+    }
+  }, [query])
+
+  // Combinatie van de dag-lijst + de extra seizoenstreffers, ontdubbeld op id. Zonder actieve
+  // zoekopdracht is dit gewoon `matches` — niets verandert dan aan het bestaande gedrag.
+  const combined = useMemo(() => {
+    if (extra.length === 0) return matches
+    const seen = new Set(matches.map((m) => m.id))
+    const extraMatches = extra.filter((m) => !seen.has(m.id))
+    return extraMatches.length ? [...matches, ...extraMatches] : matches
+  }, [matches, extra])
 
   const liveCount = useMemo(() => matches.filter((m) => m.status === 'live').length, [matches])
   // "Enkel live" geldt alléén als er ook echt live wedstrijden zijn: op een dag zonder live
@@ -246,7 +279,7 @@ export function LiveBoard({
   // tonen hoeveel er ná zoeken/live/favorieten overblijft.
   const base = useMemo(
     () =>
-      matches.filter((m) => {
+      combined.filter((m) => {
         if (showLiveOnly && m.status !== 'live') return false
         if (query.trim() && !matchesQuery(m, query)) return false
         // "Mijn club" beperkt tot de wedstrijden van de eigen club.
@@ -258,7 +291,7 @@ export function LiveBoard({
         }
         return true
       }),
-    [matches, onlyLive, onlyFavTeams, onlyFavClubs, onlyFavReeksen, onlyMyClub, myClubId, favTeams, favClubs, favReeksen, query],
+    [combined, showLiveOnly, onlyFavTeams, onlyFavClubs, onlyFavReeksen, onlyMyClub, myClubId, favTeams, favClubs, favReeksen, query],
   )
 
   // Reeksen + tellingen op basis van de actieve filters (slim navigeren).
@@ -274,6 +307,14 @@ export function LiveBoard({
   // we bieden één knop om alles weer vrij te geven i.p.v. een doodlopend zinnetje.
   const anyFilterActive =
     Boolean(query.trim()) || showLiveOnly || onlyFavTeams || onlyFavClubs || onlyFavReeksen || onlyMyClub || reeksFilter != null
+  const activeCount =
+    (query.trim() ? 1 : 0) +
+    (showLiveOnly ? 1 : 0) +
+    (onlyMyClub ? 1 : 0) +
+    (onlyFavTeams ? 1 : 0) +
+    (onlyFavClubs ? 1 : 0) +
+    (onlyFavReeksen ? 1 : 0) +
+    (reeksFilter ? 1 : 0)
   const clearFilters = () => {
     setQuery('')
     setOnlyLive(false)
@@ -287,7 +328,15 @@ export function LiveBoard({
   // en sturen we de bezoeker naar een andere dag of de rest van het platform.
   const dayEmpty = matches.length === 0
 
+  // Op tijdstip: één doorlopende lijst chronologisch, geen reeks-secties — handig om te zien wat
+  // er nu/zo dadelijk speelt, ongeacht de reeks. Op reeks (standaard): gegroepeerd zoals voorheen,
+  // elke groep zelf al chronologisch (de matches komen al gesorteerd op datum uit de databank).
+  const chronologisch = sortBy === 'tijd'
   const groups = useMemo(() => {
+    if (chronologisch) {
+      const sorted = [...visible].sort((a, b) => a.kickoff.localeCompare(b.kickoff))
+      return sorted.length ? ([['', sorted]] as [string, DayMatch[]][]) : []
+    }
     const map = new Map<string, DayMatch[]>()
     for (const m of visible) {
       const arr = map.get(m.reeks) ?? []
@@ -295,7 +344,7 @@ export function LiveBoard({
       map.set(m.reeks, arr)
     }
     return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]))
-  }, [visible])
+  }, [visible, chronologisch])
 
   const dateLabel = formatDateBE(brusselsNoonUtc(date), {
     weekday: 'long',
@@ -331,73 +380,17 @@ export function LiveBoard({
           ? ' bij je favoriete reeksen'
           : ''
 
+  // Filterlade sluit ook met Escape — een lade is een modaal blok, dat hoort erbij.
+  useEffect(() => {
+    if (!drawerOpen) return
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setDrawerOpen(false)
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [drawerOpen])
+
   return (
     <div className="lb">
-      <aside className="lb-side">
-        <h3>Reeksen</h3>
-        {/* Eén keuzemenu i.p.v. een wolk knoppen — blijft overzichtelijk bij veel reeksen. */}
-        <select
-          className="lb-reeks-select"
-          value={reeksFilter ?? ''}
-          onChange={(e) => setReeksFilter(e.target.value || null)}
-          aria-label="Kies een reeks"
-        >
-          <option value="">Alle reeksen ({base.length})</option>
-          {reeksen.map(([r, n]) => (
-            <option key={r} value={r}>{r} ({n})</option>
-          ))}
-        </select>
-        {/* Snelfilters apart — favorieten. Live staat als eigen schakelaar bovenaan het bord. */}
-        <div className="lb-quick">
-          {myClubId != null && (
-            <button type="button" className={`lb-reeks fav ${onlyMyClub ? 'on' : ''}`} onClick={() => setOnlyMyClub((v) => !v)}>
-              <span>🏠 Mijn club</span>
-              {myClubCount > 0 && <span className="lb-reeks-n">{myClubCount}</span>}
-            </button>
-          )}
-          <button type="button" className={`lb-reeks fav ${onlyFavTeams ? 'on' : ''}`} onClick={() => setOnlyFavTeams((v) => !v)}>
-            <span>★ Ploegen</span>
-            {favTeams.size > 0 && <span className="lb-reeks-n">{favTeams.size}</span>}
-          </button>
-          <button type="button" className={`lb-reeks fav ${onlyFavClubs ? 'on' : ''}`} onClick={() => setOnlyFavClubs((v) => !v)}>
-            <span>★ Clubs</span>
-            {favClubs.size > 0 && <span className="lb-reeks-n">{favClubs.size}</span>}
-          </button>
-          <button type="button" className={`lb-reeks fav ${onlyFavReeksen ? 'on' : ''}`} onClick={() => setOnlyFavReeksen((v) => !v)}>
-            <span>★ Reeksen</span>
-            {favReeksen.size > 0 && <span className="lb-reeks-n">{favReeksen.size}</span>}
-          </button>
-        </div>
-        <PushOptIn />
-      </aside>
-
       <main className="lb-main">
-        {/* Hoofdschakelaar: "Nu live" (standaard aan zodra er live wedstrijden zijn) ↔ "Hele dag".
-            Eén rustige plek om te kiezen wat je ziet, i.p.v. een filter in de zijbalk. */}
-        {liveCount > 0 && (
-          <div className="lb-livetabs" role="tablist" aria-label="Toon live of de hele dag">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={showLiveOnly}
-              className={`lb-livetab ${showLiveOnly ? 'on' : ''}`}
-              onClick={() => setOnlyLive(true)}
-            >
-              <span className="lb-livedot" /> Nu live
-              <span className="lb-livetab-n">{liveCount}</span>
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={!showLiveOnly}
-              className={`lb-livetab ${!showLiveOnly ? 'on' : ''}`}
-              onClick={() => setOnlyLive(false)}
-            >
-              Hele dag
-            </button>
-          </div>
-        )}
-
         <div className="lb-datenav">
           {/* De pijltjes springen naar de vorige/volgende dag waar écht gespeeld wordt. In een
               competitie die enkel in het weekend speelt, scheelt dat vier tikken op leegte.
@@ -464,28 +457,51 @@ export function LiveBoard({
           )}
         </div>
 
-        <div className="lb-search">
-          <input
-            type="search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Zoek een ploeg of reeks…"
-            aria-label="Zoek een ploeg of reeks"
-          />
-          {query && (
-            <button type="button" className="lb-search-clear" onClick={() => setQuery('')} aria-label="Wis zoekopdracht">
-              ✕
-            </button>
-          )}
+        {/* Enkel de zoekbalk blijft vast in beeld (het meest gebruikte pad — je eigen ploeg
+            typen); reeks/live/mijn club/favorieten zitten achter één "Filters"-knop die een lade
+            opent. Wint de meeste ruimte voor de wedstrijden zelf. */}
+        <div className="lb-searchrow">
+          <div className="lb-search">
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Zoek een ploeg of reeks…"
+              aria-label="Zoek een ploeg of reeks"
+            />
+            {query && (
+              <button type="button" className="lb-search-clear" onClick={() => setQuery('')} aria-label="Wis zoekopdracht">
+                ✕
+              </button>
+            )}
+          </div>
+          <button type="button" className="lb-filterbtn" onClick={() => setDrawerOpen(true)}>
+            🔎 Filters
+            {activeCount > 0 && <span className="lb-filterbadge">{activeCount}</span>}
+          </button>
         </div>
 
-        {/* Je zoekt hier meestal je eigen ploeg. Speelt die vandaag niet, dan is het bord een
-            doodlopend straatje — daarom een rechtstreekse doorstap naar de volledige agenda van
-            die ploeg. Staat er wél iets vandaag, dan blijft de link discreet onderaan de zoekbalk. */}
+        <PushOptIn />
+
+        {/* Je zoekt hier meestal je eigen ploeg. De zoekbalk toont nu ook wat er elders in het
+            seizoen speelt (zie searchSeizoen/extra hierboven, met een datumtag per kaart), maar
+            voor de volledige agenda (met kalender-export) blijft deze link de diepere route. */}
         {query.trim().length >= 2 && (
           <Link href={`/zoeken?ploeg=${encodeURIComponent(query.trim())}`} className="lb-wanneer">
             📅 Wanneer speelt <b>{query.trim()}</b> nog? Bekijk de hele agenda →
           </Link>
+        )}
+
+        {!dayEmpty && groups.length > 0 && (
+          <div className="lb-sort">
+            <span className="lb-sort-lbl">Sorteer</span>
+            <button type="button" className={`lb-sort-btn ${sortBy === 'reeks' ? 'on' : ''}`} onClick={() => setSortBy('reeks')}>
+              🏷 Reeks
+            </button>
+            <button type="button" className={`lb-sort-btn ${sortBy === 'tijd' ? 'on' : ''}`} onClick={() => setSortBy('tijd')}>
+              ⏱ Tijdstip
+            </button>
+          </div>
         )}
 
         {groups.length === 0 ? (
@@ -520,41 +536,50 @@ export function LiveBoard({
           </div>
         ) : (
           groups.map(([reeks, list]) => {
-            const isCollapsed = collapsed.has(reeks)
+            const isCollapsed = !chronologisch && collapsed.has(reeks)
             const liveInGroup = list.filter((m) => m.status === 'live').length
             return (
-            <section key={reeks} className={`lb-group ${isCollapsed ? 'collapsed' : ''}`}>
-              <div className="lb-group-head-row">
-                <button
-                  type="button"
-                  className="lb-group-head"
-                  onClick={() => toggleCollapsed(reeks)}
-                  aria-expanded={!isCollapsed}
-                  title={isCollapsed ? 'Reeks openklappen' : 'Reeks dichtklappen'}
-                >
-                  <span className="lb-group-chevron" aria-hidden="true">▾</span>
-                  <span className="lb-group-name">{reeks}</span>
-                  {liveInGroup > 0 && <span className="lb-group-live"><span className="lb-livedot" />{liveInGroup}</span>}
-                  <span className="lb-group-n">{list.length}</span>
-                </button>
-                <button
-                  type="button"
-                  className={`lb-group-star ${favReeksen.has(reeks) ? 'on' : ''}`}
-                  onClick={() => toggleReeks(reeks)}
-                  aria-label={favReeksen.has(reeks) ? `Verwijder ${reeks} als favoriete reeks` : `Volg ${reeks} als favoriete reeks`}
-                  title={favReeksen.has(reeks) ? 'Verwijder reeksfavoriet' : 'Maak reeks favoriet'}
-                >
-                  {favReeksen.has(reeks) ? '★' : '☆'}
-                </button>
-              </div>
+            <section key={reeks || '__tijd__'} className={`lb-group ${isCollapsed ? 'collapsed' : ''}`}>
+              {!chronologisch && (
+                <div className="lb-group-head-row">
+                  <button
+                    type="button"
+                    className="lb-group-head"
+                    onClick={() => toggleCollapsed(reeks)}
+                    aria-expanded={!isCollapsed}
+                    title={isCollapsed ? 'Reeks openklappen' : 'Reeks dichtklappen'}
+                  >
+                    <span className="lb-group-chevron" aria-hidden="true">▾</span>
+                    <span className="lb-group-name">{reeks}</span>
+                    {liveInGroup > 0 && <span className="lb-group-live"><span className="lb-livedot" />{liveInGroup}</span>}
+                    <span className="lb-group-n">{list.length}</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`lb-group-star ${favReeksen.has(reeks) ? 'on' : ''}`}
+                    onClick={() => toggleReeks(reeks)}
+                    aria-label={favReeksen.has(reeks) ? `Verwijder ${reeks} als favoriete reeks` : `Volg ${reeks} als favoriete reeks`}
+                    title={favReeksen.has(reeks) ? 'Verwijder reeksfavoriet' : 'Maak reeks favoriet'}
+                  >
+                    {favReeksen.has(reeks) ? '★' : '☆'}
+                  </button>
+                </div>
+              )}
               {!isCollapsed && list.map((m) => {
                 const played = m.status !== 'scheduled'
                 const live = m.status === 'live'
                 const hasStats = played && (m.crosses || m.timeouts)
                 const rowFav = teamFav(m) || clubFav(m)
                 const open = openRow === m.id
+                // Bij chronologisch sorteren en/of een actieve zoekopdracht over meerdere dagen
+                // (searchSeizoen) vervangt dit tagje de reeks-kop van de groep.
+                const tags = [
+                  chronologisch ? m.reeks : null,
+                  query.trim().length >= 2 ? dagLabel(dateStrBE(new Date(m.kickoff)), today) : null,
+                ].filter((t): t is string => Boolean(t))
                 return (
                   <div key={m.id} className="lb-rowwrap">
+                    {tags.length > 0 && <span className="lb-row-reeks">{tags.join(' · ')}</span>}
                     {/* "live" hier = de kaart-look (zie hierboven), niet de wedstrijdstatus. "now"
                         schakelt de dure bewegende/blur-effecten (aurora, glans, matglas) in — enkel
                         voor de paar écht-lopende wedstrijden, anders hapert het scrollen door
@@ -700,6 +725,85 @@ export function LiveBoard({
           })
         )}
       </main>
+
+      {drawerOpen && (
+        <div className="lb-overlay" onClick={() => setDrawerOpen(false)}>
+          <div className="lb-sheet" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Filters">
+            <div className="lb-sheet-head">
+              <h3>Filters</h3>
+              <button type="button" className="lb-sheet-close" onClick={() => setDrawerOpen(false)} aria-label="Sluit">✕</button>
+            </div>
+
+            <div className="lb-sheet-body">
+              {(liveCount > 0 || myClubId != null) && (
+                <section className="lb-sheet-section">
+                  <h4>Snelfilters</h4>
+                  <div className="lb-sheet-row">
+                    {liveCount > 0 && (
+                      <button type="button" className={`lb-reeks fav live ${showLiveOnly ? 'on' : ''}`} onClick={() => setOnlyLive((v) => !v)}>
+                        <span className="lb-livedot" /> Nu live
+                        <span className="lb-reeks-n">{liveCount}</span>
+                      </button>
+                    )}
+                    {myClubId != null && (
+                      <button type="button" className={`lb-reeks fav ${onlyMyClub ? 'on' : ''}`} onClick={() => setOnlyMyClub((v) => !v)}>
+                        <span>🏠 Mijn club</span>
+                        {myClubCount > 0 && <span className="lb-reeks-n">{myClubCount}</span>}
+                      </button>
+                    )}
+                  </div>
+                </section>
+              )}
+
+              <section className="lb-sheet-section">
+                <h4>Reeks</h4>
+                <div className="lb-reekslist">
+                  <button type="button" className={`lb-reeksrow ${reeksFilter == null ? 'on' : ''}`} onClick={() => setReeksFilter(null)}>
+                    <span>Alle reeksen</span>
+                    <span className="lb-reeks-n">{base.length}</span>
+                  </button>
+                  {reeksen.map(([r, n]) => (
+                    <button
+                      key={r}
+                      type="button"
+                      className={`lb-reeksrow ${reeksFilter === r ? 'on' : ''}`}
+                      onClick={() => setReeksFilter(reeksFilter === r ? null : r)}
+                    >
+                      <span>{r}</span>
+                      <span className="lb-reeks-n">{n}</span>
+                    </button>
+                  ))}
+                </div>
+              </section>
+
+              <section className="lb-sheet-section">
+                <h4>Favorieten</h4>
+                <div className="lb-sheet-row">
+                  <button type="button" className={`lb-reeks fav ${onlyFavTeams ? 'on' : ''}`} onClick={() => setOnlyFavTeams((v) => !v)}>
+                    <span>★ Ploegen</span>
+                    {favTeams.size > 0 && <span className="lb-reeks-n">{favTeams.size}</span>}
+                  </button>
+                  <button type="button" className={`lb-reeks fav ${onlyFavClubs ? 'on' : ''}`} onClick={() => setOnlyFavClubs((v) => !v)}>
+                    <span>★ Clubs</span>
+                    {favClubs.size > 0 && <span className="lb-reeks-n">{favClubs.size}</span>}
+                  </button>
+                  <button type="button" className={`lb-reeks fav ${onlyFavReeksen ? 'on' : ''}`} onClick={() => setOnlyFavReeksen((v) => !v)}>
+                    <span>★ Reeksen</span>
+                    {favReeksen.size > 0 && <span className="lb-reeks-n">{favReeksen.size}</span>}
+                  </button>
+                </div>
+              </section>
+            </div>
+
+            <div className="lb-sheet-foot">
+              <button type="button" className="lb-empty-btn" onClick={clearFilters}>↺ Wis filters</button>
+              <button type="button" className="lb-empty-btn primary" onClick={() => setDrawerOpen(false)}>
+                Toon {visible.length} wedstrijden
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
