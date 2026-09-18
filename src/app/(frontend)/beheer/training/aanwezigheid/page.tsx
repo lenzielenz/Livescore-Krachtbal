@@ -5,6 +5,7 @@ import { SiteHeader } from '@/components/SiteHeader'
 import { canTraining, hasRole, isFederationLevel, userClubId, userPlayerId } from '@/lib/access'
 import { competitionWhere } from '@/lib/analyse-access'
 import { getAuthUser } from '@/lib/auth-user'
+import { hasFunctionGrant } from '@/lib/function-grants'
 import { getPayloadClient } from '@/lib/payload-client'
 import { reeksNaam } from '@/lib/reeksen'
 import { seasonFromDate } from '@/lib/seasons'
@@ -24,7 +25,6 @@ export default async function AanwezigheidPage() {
   const fed = isFederationLevel(me)
   const isClubBeheerder = hasRole(me, 'club-beheerder', 'club-medewerker')
   const canView = canTraining(me)
-  const canWrite = fed || isClubBeheerder
 
   if (!canView) {
     return (
@@ -44,6 +44,12 @@ export default async function AanwezigheidPage() {
   const payload = await getPayloadClient()
   const rawClubId = userClubId(me)
   const myClubId: number | null = rawClubId != null && Number.isFinite(Number(rawClubId)) ? Number(rawClubId) : null
+  // Club-beheerder mag hier altijd invoeren; club-medewerker enkel met een expliciete toekenning
+  // voor 'beheer/training/aanwezigheid' op /beheer/rechten — zie lib/function-grants.ts.
+  const medewerkerGrant = hasRole(me, 'club-medewerker')
+    ? await hasFunctionGrant(payload, (me as { id?: number } | null)?.id, 'beheer/training/aanwezigheid', myClubId)
+    : false
+  const canWrite = fed || hasRole(me, 'club-beheerder') || medewerkerGrant
   // De club volgt uit het account. Enkel een (federatie/admin-)account zónder eigen club mag nog
   // kiezen; iedereen met een club zit er vast aan en ziet géén clubkeuze.
   const fixedClubId = myClubId

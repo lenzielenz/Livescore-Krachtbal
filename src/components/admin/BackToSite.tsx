@@ -30,6 +30,9 @@ export function BackToSite() {
       <Link href="/analyse/import#uitslagen-federatie" style={linkStyle}>
         🔄 Uitslagen ophalen bij de federatie
       </Link>
+      <Link href="/beheer/rechten" style={linkStyle}>
+        🔑 Functies toekennen
+      </Link>
     </div>
   )
 }

@@ -121,6 +121,7 @@ import * as migration_20260917_070000_match_auto_imported from './20260917_07000
 import * as migration_20260917_140000_field_screens from './20260917_140000_field_screens'
 import * as migration_20260917_140500_field_screens_theme from './20260917_140500_field_screens_theme'
 import * as migration_20260917_170000_field_screens_demo from './20260917_170000_field_screens_demo'
+import * as migration_20260918_090000_function_grants from './20260918_090000_function_grants'
 
 export const migrations = [
   {
@@ -732,5 +733,10 @@ export const migrations = [
     up: migration_20260917_170000_field_screens_demo.up,
     down: migration_20260917_170000_field_screens_demo.down,
     name: '20260917_170000_field_screens_demo',
+  },
+  {
+    up: migration_20260918_090000_function_grants.up,
+    down: migration_20260918_090000_function_grants.down,
+    name: '20260918_090000_function_grants',
   },
 ];

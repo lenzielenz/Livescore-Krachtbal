@@ -1,0 +1,16 @@
+/* Hergebruikt de klassen uit leden.css (led-*, acc-chip/club/search/msg/count/group-head, danger-on)
+   — visueel dezelfde taal als /beheer/leden, geen eigen ontwerp nodig. Deze paar klassen ontbreken
+   daar en horen bij deze pagina specifiek. */
+.acc-page-intro {
+  color: var(--dim);
+  font-size: 0.9rem;
+  margin: 0 0 16px;
+  max-width: 70ch;
+}
+.acc-add {
+  background: var(--panel-grad, var(--panel));
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-bottom: 8px;
+}

@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { SiteHeader } from '@/components/SiteHeader'
 import { isFederationLevel } from '@/lib/access'
 import { getAuthUser } from '@/lib/auth-user'
+import { hasFunctionGrant } from '@/lib/function-grants'
 import { getPayloadClient } from '@/lib/payload-client'
 import { VERANTWOORDELIJKE_OPTIONS, type Verantwoordelijke } from '@/lib/bekerfinale-checklist'
 import '../wedstrijdblad.css'
@@ -15,10 +16,13 @@ type Taak = { taak?: string; verantwoordelijke?: string | null; gedaan?: boolean
 const verantwLabel = (v: string | null | undefined) =>
   VERANTWOORDELIJKE_OPTIONS.find((o) => o.value === v)?.label ?? 'Overig'
 
-// Federatie/admin-only: de organisatie-/takenlijst van de bekerfinale.
+// Federatie/admin, of een expliciete toekenning voor 'bekerfinale' (zie lib/function-grants.ts): de
+// organisatie-/takenlijst van de bekerfinale.
 export default async function BekerfinalePage() {
   const me = await getAuthUser()
-  if (!isFederationLevel(me)) {
+  const payload = await getPayloadClient()
+  const granted = await hasFunctionGrant(payload, (me as { id?: number } | null)?.id, 'bekerfinale')
+  if (!isFederationLevel(me) && !granted) {
     return (
       <>
         <SiteHeader active="federatie" />
@@ -32,7 +36,6 @@ export default async function BekerfinalePage() {
       </>
     )
   }
-  const payload = await getPayloadClient()
   const finals = await payload
     .find({ collection: 'cupfinals', sort: '-datum', limit: 50, depth: 0 })
     .catch(() => ({ docs: [] as Record<string, unknown>[] }))

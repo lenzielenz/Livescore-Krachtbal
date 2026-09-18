@@ -1,5 +1,6 @@
 import { hasRole, isFederationLevel } from '@/lib/access'
 import { competitionWhere } from '@/lib/analyse-access'
+import { hasFunctionGrant } from '@/lib/function-grants'
 import { getPayloadClient } from '@/lib/payload-client'
 import { REEKS_OPTIONS, reeksCategorie, type Reeks } from '@/lib/reeksen'
 
@@ -40,7 +41,8 @@ export async function POST(req: Request) {
     const payload = await getPayloadClient()
     const { user } = await payload.auth({ headers: req.headers })
     if (!user) return Response.json({ error: 'Niet ingelogd.' }, { status: 401 })
-    if (!isFederationLevel(user) && !hasRole(user, 'federatie')) {
+    const granted = await hasFunctionGrant(payload, user.id, 'beheer/planning')
+    if (!isFederationLevel(user) && !hasRole(user, 'federatie') && !granted) {
       return Response.json({ error: 'Enkel federatie/admin.' }, { status: 403 })
     }
 

@@ -1,16 +1,19 @@
 import { isFederationLevel } from '@/lib/access'
 import { authUser } from '@/lib/api-auth'
+import { hasFunctionGrant } from '@/lib/function-grants'
 import { getPayloadClient } from '@/lib/payload-client'
 
 const VERGUNNING = new Set(['geen', 'aangevraagd', 'geldig'])
 
-// Federatie/admin: zet de vergunning (paspoort), het medisch attest en het doktersverbod van een
-// lid. Bepaalt mee of een speler speelgerechtigd is (de opstelling/scheidsrechter zien dat meteen).
+// Federatie/admin, of een expliciete toekenning voor 'beheer/leden' (zie lib/function-grants.ts):
+// zet de vergunning (paspoort), het medisch attest en het doktersverbod van een lid. Bepaalt mee of
+// een speler speelgerechtigd is (de opstelling/scheidsrechter zien dat meteen).
 export async function POST(req: Request) {
   const payload = await getPayloadClient()
   const user = await authUser(payload, req)
-  if (!isFederationLevel(user)) {
-    return Response.json({ error: 'Enkel de federatie/admin kan de keuring beheren.' }, { status: user ? 403 : 401 })
+  if (!user) return Response.json({ error: 'Niet ingelogd.' }, { status: 401 })
+  if (!isFederationLevel(user) && !(await hasFunctionGrant(payload, user.id, 'beheer/leden'))) {
+    return Response.json({ error: 'Enkel de federatie/admin kan de keuring beheren.' }, { status: 403 })
   }
 
   let body: { playerId?: number; vergunningsstatus?: string; medischAttest?: boolean; hogerSpelenVerbod?: boolean }

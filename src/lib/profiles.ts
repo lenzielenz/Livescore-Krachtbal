@@ -62,6 +62,7 @@ export const PROFILES: Profile[] = [
       { href: '/beheer/leden', label: '🩺 Ledenkeuring' },
       { href: '/beheer/aantekenaars', label: '✏️ Aantekenaars' },
       { href: '/beheer/planning', label: '📅 Seizoensplanning' },
+      { href: '/beheer/rechten', label: '🔑 Functies toekennen' },
       { href: '/reglement', label: '📖 Reglement' },
       { href: '/knipjes', label: '✂️ Knipjes' },
       { href: '/bekerfinale', label: '🏆 Bekerfinale' },

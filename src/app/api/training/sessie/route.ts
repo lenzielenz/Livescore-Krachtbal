@@ -1,4 +1,5 @@
 import { authUser, hasRole, isFederationLevel, userClubId } from '@/lib/api-auth'
+import { hasFunctionGrant } from '@/lib/function-grants'
 import { getPayloadClient } from '@/lib/payload-client'
 import { REEKS_OPTIONS, type Reeks } from '@/lib/reeksen'
 
@@ -53,12 +54,18 @@ export async function POST(req: Request) {
     const payload = await getPayloadClient()
     const user = await authUser(payload, req)
     if (!user) return Response.json({ error: 'Niet ingelogd.' }, { status: 401 })
-    if (!isFederationLevel(user) && !hasRole(user, 'club-beheerder', 'club-medewerker')) {
-      return Response.json({ error: 'Enkel club-beheerder/federatie.' }, { status: 403 })
-    }
     // De club komt uit het account (club-beheerder); federatie/admin mag een club meegeven.
     const rawClub = isFederationLevel(user) ? bodyClubId : userClubId(user)
     const clubId: number | null = rawClub != null && Number.isFinite(Number(rawClub)) ? Number(rawClub) : null
+    // Club-beheerder mag altijd; club-medewerker enkel met een expliciete toekenning voor
+    // 'beheer/training/aanwezigheid' (zie lib/function-grants.ts) — vervangt de vroegere blanco
+    // toegang voor élke club-medewerker.
+    const medewerkerGrant = hasRole(user, 'club-medewerker')
+      ? await hasFunctionGrant(payload, (user as { id?: number }).id, 'beheer/training/aanwezigheid', clubId)
+      : false
+    if (!isFederationLevel(user) && !hasRole(user, 'club-beheerder') && !medewerkerGrant) {
+      return Response.json({ error: 'Enkel club-beheerder/federatie, of een toegekende functie.' }, { status: 403 })
+    }
 
     const doc = await payload.create({
       collection: 'trainingen',

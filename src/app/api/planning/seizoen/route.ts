@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 
 import { authUser, isFederationLevel } from '@/lib/api-auth'
+import { hasFunctionGrant } from '@/lib/function-grants'
 import { getPayloadClient } from '@/lib/payload-client'
 import { parseDelimited } from '@/lib/season-import'
 import { ImportLooptAlError, importBezig, runSeasonImport } from '@/lib/season-import-run'
@@ -73,13 +74,21 @@ export async function POST(req: Request) {
   const payload = await getPayloadClient()
   const user = await authUser(payload, req)
   if (!user) return NextResponse.json({ error: 'Niet ingelogd.' }, { status: 401 })
-  if (!isFederationLevel(user)) {
-    return NextResponse.json({ error: 'Enkel de federatie kan het speelplan importeren.' }, { status: 403 })
-  }
 
   const url = new URL(req.url)
   const commit = url.searchParams.get('commit') === '1'
   const wipe = url.searchParams.get('wipe') === '1'
+
+  // Een toekenning voor 'beheer/planning' (zie lib/function-grants.ts) mag importeren, maar NOOIT
+  // het volledige speelplan wissen — die destructieve stap blijft altijd federatie-only, zonder
+  // uitzondering.
+  if (wipe) {
+    if (!isFederationLevel(user)) {
+      return NextResponse.json({ error: 'Enkel de federatie kan het speelplan wissen.' }, { status: 403 })
+    }
+  } else if (!isFederationLevel(user) && !(await hasFunctionGrant(payload, user.id, 'beheer/planning'))) {
+    return NextResponse.json({ error: 'Enkel de federatie kan het speelplan importeren.' }, { status: 403 })
+  }
 
   const gelezen = await leesTabel(req).catch((e) => ({ error: (e as Error).message }))
   if ('error' in gelezen) return NextResponse.json({ error: gelezen.error }, { status: 400 })

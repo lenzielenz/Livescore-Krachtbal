@@ -38,6 +38,7 @@ import { IdeaScreenshots } from './collections/IdeaScreenshots'
 import { MatchMvpVotes } from './collections/MatchMvpVotes'
 import { ProcessedOps } from './collections/ProcessedOps'
 import { CvEvents } from './collections/CvEvents'
+import { FunctionGrants } from './collections/FunctionGrants'
 import { Season } from './globals/Season'
 import { Settings } from './globals/Settings'
 
@@ -131,6 +132,7 @@ export default buildConfig({
     MatchMvpVotes,
     ProcessedOps,
     CvEvents,
+    FunctionGrants,
   ],
   globals: [Season, Settings],
   /**
