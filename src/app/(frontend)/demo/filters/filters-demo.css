@@ -1,0 +1,388 @@
+/* Testpagina voor de 3 selectie-UI-voorstellen. Hergebruikt de kaart-/knopstijlen uit live.css
+   (lb-*) — hier staat enkel wat elk voorstel EIGEN maakt. */
+
+.fpd-intro {
+  margin: 4px 0 18px;
+  max-width: 68ch;
+}
+.fpd-intro h1 {
+  font-size: 1.3rem;
+  font-weight: 900;
+  margin: 0 0 4px;
+}
+.fpd-intro .brand {
+  color: var(--accent);
+}
+.fpd-intro p {
+  margin: 0;
+  font-size: 0.86rem;
+  line-height: 1.4;
+  color: var(--dim);
+}
+
+/* Tabbladen om tussen de 3 voorstellen te wisselen */
+.fpd-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 18px;
+}
+.fpd-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: flex-start;
+  text-align: left;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+  color: var(--txt);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.15s ease;
+}
+.fpd-tab:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+}
+.fpd-tab.on {
+  border-color: var(--accent);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 16%, var(--panel)), var(--panel));
+  box-shadow: 0 4px 14px -6px color-mix(in srgb, var(--accent) 50%, transparent);
+}
+.fpd-tab-label {
+  font-weight: 800;
+  font-size: 0.92rem;
+}
+.fpd-tab.on .fpd-tab-label {
+  color: var(--accent);
+}
+.fpd-tab-sub {
+  font-size: 0.74rem;
+  color: var(--dim);
+  line-height: 1.3;
+}
+
+.fpd-body {
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+}
+
+/* ── Gedeeld: "★ Favorieten"-popover (voorstel 1 + 2) ─────────────────────────── */
+.fp-wrap {
+  position: relative;
+}
+.fp-btn {
+  display: inline-flex;
+}
+.fp-caret {
+  font-size: 0.7rem;
+  color: var(--dim);
+}
+.fp-menu {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 6px);
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 170px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.5);
+}
+.fp-menu .lb-reeks {
+  width: 100%;
+}
+
+/* ── Voorstel 1: omnibox ────────────────────────────────────────────────────── */
+.fp1-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.fp1-search-ico {
+  position: absolute;
+  left: 14px;
+  font-size: 0.95rem;
+  color: var(--dim);
+  pointer-events: none;
+}
+.fp1-search input {
+  width: 100%;
+  padding: 14px 40px 14px 40px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--line));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 90%, #000 10%), var(--panel));
+  color: var(--txt);
+  font-size: 1.02rem;
+  font-weight: 600;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+.fp1-search input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.35), 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+.fp1-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.fp1-chips .fp-select {
+  width: auto;
+  min-width: 160px;
+  flex: 0 1 220px;
+  padding: 9px 12px;
+  font-size: 0.86rem;
+}
+
+/* ── Voorstel 2: werkbalk ──────────────────────────────────────────────────── */
+.fp2-toolbar {
+  position: sticky;
+  top: 8px;
+  z-index: 10;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel);
+  box-shadow: 0 6px 18px -10px rgba(0, 0, 0, 0.5);
+}
+.fp2-toolbar .fp-select {
+  width: auto;
+  min-width: 150px;
+  flex: 0 1 200px;
+  padding: 9px 12px;
+  font-size: 0.86rem;
+}
+.fp2-search {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+}
+.fp2-search-btn {
+  width: 38px;
+  height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--txt);
+  font-size: 1rem;
+  cursor: pointer;
+}
+.fp2-search-btn:hover {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+}
+.fp2-search.open {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: min(260px, 60vw);
+  padding: 0 4px 0 10px;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line));
+  border-radius: 10px;
+  background: var(--bg);
+}
+.fp2-search.open input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: var(--txt);
+  font: inherit;
+  font-size: 0.88rem;
+  padding: 8px 0;
+}
+.fp2-search.open input:focus {
+  outline: none;
+}
+
+/* ── Voorstel 3: filterlade ────────────────────────────────────────────────── */
+.fp3-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.fp3-search {
+  position: relative;
+  flex: 1 1 auto;
+}
+.fp3-search input {
+  width: 100%;
+  padding: 12px 40px 12px 16px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, #fff 8%, var(--line));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 90%, #000 10%), var(--panel));
+  color: var(--txt);
+  font-size: 0.95rem;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+.fp3-search input:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--accent) 60%, var(--line));
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.35), 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+.fp3-filter-btn {
+  position: relative;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+  color: var(--txt);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.fp3-filter-btn:hover {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+}
+.fp3-filter-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #06140d;
+  font-size: 0.7rem;
+  font-weight: 900;
+}
+
+.fp3-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+}
+.fp3-sheet {
+  width: min(480px, 100%);
+  max-height: 82vh;
+  display: flex;
+  flex-direction: column;
+  border-radius: 18px 18px 0 0;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-bottom: none;
+  box-shadow: 0 -18px 48px rgba(0, 0, 0, 0.55);
+}
+.fp3-sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--line);
+}
+.fp3-sheet-head h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 800;
+}
+.fp3-sheet-close {
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--dim);
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+.fp3-sheet-close:hover {
+  color: var(--txt);
+  background: var(--bg);
+}
+.fp3-sheet-body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: 14px 16px;
+}
+.fp3-section + .fp3-section {
+  margin-top: 16px;
+}
+.fp3-section h4 {
+  margin: 0 0 8px;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--dim);
+}
+.fp3-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.fp3-reekslist {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+.fp3-reeksrow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 9px 10px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--txt);
+  font: inherit;
+  font-size: 0.86rem;
+  text-align: left;
+  cursor: pointer;
+}
+.fp3-reeksrow:hover {
+  background: var(--bg);
+}
+.fp3-reeksrow.on {
+  border-color: color-mix(in srgb, var(--accent) 60%, var(--line));
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent);
+  font-weight: 700;
+}
+.fp3-sheet-foot {
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--line);
+}
+.fp3-sheet-foot .lb-empty-btn {
+  flex: 1;
+  justify-content: center;
+}
+
+@media (max-width: 720px) {
+  .fpd-tabs {
+    grid-template-columns: 1fr;
+  }
+  .fp2-toolbar {
+    position: static;
+  }
+}
