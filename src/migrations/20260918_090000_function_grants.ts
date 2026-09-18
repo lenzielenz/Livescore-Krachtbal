@@ -38,8 +38,11 @@ export async function up({ db }: MigrateUpArgs): Promise<void> {
   ALTER TABLE "payload_locked_documents_rels" ADD CONSTRAINT "payload_locked_documents_rels_function_grants_fk" FOREIGN KEY ("function_grants_id") REFERENCES "public"."function_grants"("id") ON DELETE cascade ON UPDATE no action;
   CREATE INDEX "payload_locked_documents_rels_function_grants_id_idx" ON "payload_locked_documents_rels" USING btree ("function_grants_id");
 
+  -- f."functie" komt uit een VALUES-afgeleide tabel en is dus van het type text, niet het
+  -- letterlijke type van een losse string-literal — zonder expliciete cast wijst Postgres de
+  -- INSERT af ("column is of type enum_function_grants_functie but expression is of type text").
   INSERT INTO "function_grants" ("user_id", "functie", "club_id")
-  SELECT u."id", f."functie", u."club_id"
+  SELECT u."id", f."functie"::"public"."enum_function_grants_functie", u."club_id"
   FROM "users" u
   CROSS JOIN (VALUES ('club/voorspel'), ('kantine'), ('cast'), ('club/veldscherm'), ('beheer/spelers'), ('beheer/training/aanwezigheid')) AS f("functie")
   WHERE u."club_id" IS NOT NULL
