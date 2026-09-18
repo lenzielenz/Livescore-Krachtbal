@@ -4,11 +4,18 @@ import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 
 import { TeamLogo } from '@/components/TeamLogo'
-import { brusselsNoonUtc, formatDateBE, shiftDateStr } from '@/lib/datetime'
+import { brusselsNoonUtc, dateStrBE, formatDateBE, shiftDateStr } from '@/lib/datetime'
 import { alleSpeeldagen, volgendeSpeeldag, vorigeSpeeldag, type Speeldag } from '@/lib/speeldagen'
 import { pastBijZoekterm } from '@/lib/team-search'
 
 import type { DayMatch } from '../../live/LiveBoard'
+
+/** Korte datumlabel: "Vandaag" op de huidige dag, anders "za 12 dec". Gedeeld door de
+ * datumkiezer en de datum-tags op de kaarten (bij een uitgebreide zoekopdracht). */
+function dagKort(datum: string, today: string): string {
+  if (datum === today) return 'Vandaag'
+  return formatDateBE(brusselsNoonUtc(datum), { weekday: 'short', day: '2-digit', month: 'short' })
+}
 
 // Testpagina voor 3 voorstellen van de selectie-/filter-UI (reeksen, ploegen, clubs, live).
 // Alle drie hergebruiken dezelfde data + dezelfde wedstrijdkaart (MatchGroups hieronder) — enkel
@@ -62,6 +69,38 @@ export function useDemoFilters(matches: DayMatch[], myClubId: number | null, use
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [sortBy, setSortBy] = useState<'reeks' | 'tijd'>('reeks')
 
+  // Vul de dag-gebonden lijst aan met treffers van andere dagen zodra er iets getypt wordt (2+
+  // tekens) — zo blijft "waarom vind ik niets?" uit als je ploeg vandaag niet speelt. Gedebouncet
+  // en met een eigen abort per toets zodat een trage/oude respons een nieuwere niet overschrijft.
+  const [extra, setExtra] = useState<DayMatch[]>([])
+  useEffect(() => {
+    const q = query.trim()
+    if (q.length < 2) {
+      setExtra([])
+      return
+    }
+    const ctrl = new AbortController()
+    const timer = setTimeout(() => {
+      fetch(`/api/demo/filters/search?q=${encodeURIComponent(q)}`, { signal: ctrl.signal })
+        .then((r) => (r.ok ? r.json() : { matches: [] }))
+        .then((data: { matches?: DayMatch[] }) => setExtra(Array.isArray(data.matches) ? data.matches : []))
+        .catch(() => {})
+    }, 300)
+    return () => {
+      clearTimeout(timer)
+      ctrl.abort()
+    }
+  }, [query])
+
+  // Combinatie van de dag-lijst + de extra seizoenstreffers, ontdubbeld op id. Zonder actieve
+  // zoekopdracht is dit gewoon `matches` — niets verandert dan aan het bestaande gedrag.
+  const combined = useMemo(() => {
+    if (extra.length === 0) return matches
+    const seen = new Set(matches.map((m) => m.id))
+    const extraMatches = extra.filter((m) => !seen.has(m.id))
+    return extraMatches.length ? [...matches, ...extraMatches] : matches
+  }, [matches, extra])
+
   const liveCount = useMemo(() => matches.filter((m) => m.status === 'live').length, [matches])
   const showLiveOnly = onlyLive && liveCount > 0
 
@@ -77,7 +116,7 @@ export function useDemoFilters(matches: DayMatch[], myClubId: number | null, use
 
   const base = useMemo(
     () =>
-      matches.filter((m) => {
+      combined.filter((m) => {
         if (showLiveOnly && m.status !== 'live') return false
         if (query.trim() && !matchesQuery(m, query)) return false
         if (onlyMyClub && !myClubMatch(m)) return false
@@ -87,7 +126,7 @@ export function useDemoFilters(matches: DayMatch[], myClubId: number | null, use
         }
         return true
       }),
-    [matches, showLiveOnly, onlyFavTeams, onlyFavClubs, onlyFavReeksen, onlyMyClub, myClubId, favTeams, favClubs, favReeksen, query],
+    [combined, showLiveOnly, onlyFavTeams, onlyFavClubs, onlyFavReeksen, onlyMyClub, myClubId, favTeams, favClubs, favReeksen, query],
   )
 
   const reeksen = useMemo(() => {
@@ -176,8 +215,7 @@ export function DateNav({
   const volgendeDag = useMemo(() => (speeldagen.length ? volgendeSpeeldag(speeldagen, date) : shiftDateStr(date, 1)), [speeldagen, date])
   const venster = useMemo(() => (speeldagen.length ? alleSpeeldagen(speeldagen, date) : []), [speeldagen, date])
   const aantalVandaag = useMemo(() => speeldagen.find((d) => d.datum === date)?.aantal ?? 0, [speeldagen, date])
-  const dagLabel = (datum: string) =>
-    datum === today ? 'Vandaag' : formatDateBE(brusselsNoonUtc(datum), { weekday: 'short', day: '2-digit', month: 'short' })
+  const dagLabel = (datum: string) => dagKort(datum, today)
 
   return (
     <div className="lb-datenav">
@@ -293,7 +331,7 @@ export function FavPopover({ filters }: { filters: DemoFilters }) {
  * "aantekenen"/pronostiek-CTA's, weer): dit is een vergelijking van de vind-mechaniek, niet van de
  * wedstrijdkaart.
  */
-export function MatchGroups({ filters }: { filters: DemoFilters }) {
+export function MatchGroups({ filters, today }: { filters: DemoFilters; today: string }) {
   const [openRow, setOpenRow] = useState<number | null>(null)
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
   const toggleCollapsed = (reeks: string) =>
@@ -304,10 +342,13 @@ export function MatchGroups({ filters }: { filters: DemoFilters }) {
       return next
     })
 
-  const { groups, sortBy, setSortBy, favTeams, toggleTeam, favClubs, toggleClub, favReeksen, toggleReeks, anyFilterActive, clearFilters, dayEmpty } = filters
+  const { groups, sortBy, setSortBy, query, favTeams, toggleTeam, favClubs, toggleClub, favReeksen, toggleReeks, anyFilterActive, clearFilters, dayEmpty } = filters
   // Sortering op tijd geeft één doorlopende lijst terug onder de sleutel '' (zie useDemoFilters) —
   // dan tonen we geen reeks-kop/ster, enkel een klein tagje per kaart.
   const chronologisch = sortBy === 'tijd'
+  // Bij een actieve zoekopdracht kunnen de treffers over meerdere dagen verspreid zitten (zie
+  // searchSeizoen/extra in useDemoFilters) — dan moet élke kaart tonen op welke dag ze staat.
+  const zoekActief = query.trim().length >= 2
 
   const sortToggle = !dayEmpty && (
     <div className="lb-sort">
@@ -380,9 +421,13 @@ export function MatchGroups({ filters }: { filters: DemoFilters }) {
               const hasStats = played && (m.crosses || m.timeouts)
               const rowFav = favTeams.has(m.home.teamId) || favTeams.has(m.away.teamId) || (m.home.clubId != null && favClubs.has(m.home.clubId)) || (m.away.clubId != null && favClubs.has(m.away.clubId))
               const open = openRow === m.id
+              const tags = [
+                chronologisch ? m.reeks : null,
+                zoekActief ? dagKort(dateStrBE(new Date(m.kickoff)), today) : null,
+              ].filter((t): t is string => Boolean(t))
               return (
                 <div key={m.id} className="lb-rowwrap">
-                  {chronologisch && <span className="lb-row-reeks">{m.reeks}</span>}
+                  {tags.length > 0 && <span className="lb-row-reeks">{tags.join(' · ')}</span>}
                   <div className={`lb-row live ${live ? 'now' : ''}`}>
                     <button
                       type="button"

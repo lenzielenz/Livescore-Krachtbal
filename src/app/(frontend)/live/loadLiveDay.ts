@@ -1,10 +1,11 @@
 import { brusselsDayBoundsUtc, dateStrBE, formatTimeBE } from '@/lib/datetime'
 import { purgeExpiredDemos } from '@/lib/demo'
-import { buildScoreboards } from '@/lib/match-engine'
+import { buildScoreboards, type ScoreboardData } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
 import { reeksNaam } from '@/lib/reeksen'
 import { MATCH_ASSUMED_DONE_MS } from '@/lib/simple-score'
 import type { Speeldag } from '@/lib/speeldagen'
+import { pastBijZoekterm } from '@/lib/team-search'
 
 import type { DayMatch } from './LiveBoard'
 
@@ -121,7 +122,15 @@ export async function loadLiveDay(selected: string, today: string): Promise<DayM
   })
 
   const cards = await buildScoreboards(payload, docs)
+  return cardsToDayMatches(docs, cards)
+}
 
+/**
+ * Zet ruwe match-docs + hun opgebouwde stand (buildScoreboards) om naar het DayMatch-formaat dat
+ * het bord tekent. Gedeeld door loadLiveDay hierboven en searchSeizoen hieronder, zodat een
+ * wedstrijd er hetzelfde uitziet ongeacht via welk pad ze geladen werd.
+ */
+function cardsToDayMatches(docs: { id: number; date?: unknown; reeks?: unknown }[], cards: Map<number, ScoreboardData>): DayMatch[] {
   // Auto-live: een geplande wedstrijd waarvan het ingestelde uur al voorbij is, tonen we als "live"
   // (ook al heeft nog niemand ze gestart). Instant-vergelijking → tijdzone-onafhankelijk.
   // MAAR: dat venster is begrensd. Een match die uren geleden begon en nooit genoteerd werd, is
@@ -141,7 +150,7 @@ export async function loadLiveDay(selected: string, today: string): Promise<DayM
     days.push({
       id: m.id,
       reeks: reeksLabel(m.reeks),
-      time: formatTimeBE(m.date),
+      time: formatTimeBE(m.date as string),
       kickoff: String(m.date),
       status: autoLive ? 'live' : c.status,
       awaitingResult,
@@ -155,6 +164,33 @@ export async function loadLiveDay(selected: string, today: string): Promise<DayM
     })
   }
   return days
+}
+
+/**
+ * Zoekt "ploeg of reeks" over het HELE seizoen (niet enkel de geselecteerde dag) — voedt de
+ * uitgebreide zoekresultaten op /demo/filters: typ je een ploeg/reeks in, dan zie je niet enkel de
+ * treffers van vandaag maar ook wat er nog komt en al gespeeld is, elders in de kalender.
+ * Zelfde vind-regels als het bord zelf (team-search.ts), enkel niet beperkt tot één dag.
+ */
+export async function searchSeizoen(query: string, limit = 60): Promise<DayMatch[]> {
+  const q = query.trim()
+  if (q.length < 2) return []
+  const payload = await getPayloadClient()
+  const res = await payload
+    .find({
+      collection: 'matches',
+      where: { and: [{ analyseOnly: { not_equals: true } }, { isDemo: { not_equals: true } }] },
+      sort: 'date',
+      depth: 0,
+      limit: 3000,
+    })
+    .catch(() => ({ docs: [] as { id: number; date?: unknown; reeks?: unknown; homeTeam: unknown; awayTeam: unknown }[] }))
+  if (res.docs.length === 0) return []
+
+  const cards = await buildScoreboards(payload, res.docs)
+  const all = cardsToDayMatches(res.docs, cards)
+  const matched = all.filter((m) => pastBijZoekterm(q, m.home.name, m.away.name, m.home.clubName, m.away.clubName, m.reeks))
+  return matched.slice(0, limit)
 }
 
 /**

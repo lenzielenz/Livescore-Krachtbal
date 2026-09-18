@@ -57,7 +57,7 @@ export function Proposal1Omnibox({
         <FavPopover filters={filters} />
       </div>
 
-      <MatchGroups filters={filters} />
+      <MatchGroups filters={filters} today={today} />
     </div>
   )
 }
