@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 
-import { aantalOp, speeldagenRond, volgendeSpeeldag, vorigeSpeeldag, type Speeldag } from '@/lib/speeldagen'
+import { aantalOp, alleSpeeldagen, speeldagenRond, volgendeSpeeldag, vorigeSpeeldag, type Speeldag } from '@/lib/speeldagen'
 
 // Een krachtbalcompetitie speelt in het weekend: tussen twee speeldagen zitten vier lege dagen.
 const DAGEN: Speeldag[] = [
@@ -60,5 +60,21 @@ describe('speeldagenRond', () => {
       '2026-09-06',
     ])
     expect(speeldagenRond([], '2026-09-05').map((d) => d.datum)).toEqual(['2026-09-05'])
+  })
+})
+
+describe('alleSpeeldagen', () => {
+  it('geeft de volledige kalender terug, ongeacht de gekozen dag', () => {
+    expect(alleSpeeldagen(DAGEN, '2026-09-12').map((d) => d.datum)).toEqual(DAGEN.map((d) => d.datum))
+  })
+
+  it('houdt de gekozen dag erbij, ook zonder wedstrijden', () => {
+    const uit = alleSpeeldagen(DAGEN, '2026-09-09')
+    expect(uit.map((d) => d.datum)).toEqual(['2026-09-05', '2026-09-06', '2026-09-09', '2026-09-12', '2026-09-13', '2026-09-19'])
+    expect(uit.find((d) => d.datum === '2026-09-09')?.aantal).toBe(0)
+  })
+
+  it('werkt met een lege kalender', () => {
+    expect(alleSpeeldagen([], '2026-09-05').map((d) => d.datum)).toEqual(['2026-09-05'])
   })
 })

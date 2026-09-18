@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 
 import { TeamLogo } from '@/components/TeamLogo'
 import { brusselsNoonUtc, formatDateBE, shiftDateStr } from '@/lib/datetime'
-import { speeldagenRond, volgendeSpeeldag, vorigeSpeeldag, type Speeldag } from '@/lib/speeldagen'
+import { alleSpeeldagen, volgendeSpeeldag, vorigeSpeeldag, type Speeldag } from '@/lib/speeldagen'
 import { pastBijZoekterm } from '@/lib/team-search'
 
 import type { DayMatch } from '../../live/LiveBoard'
@@ -60,6 +60,7 @@ export function useDemoFilters(matches: DayMatch[], myClubId: number | null, use
   const [onlyLive, setOnlyLive] = useState(() => matches.some((m) => m.status === 'live'))
   const [query, setQuery] = useState('')
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const [sortBy, setSortBy] = useState<'reeks' | 'tijd'>('reeks')
 
   const liveCount = useMemo(() => matches.filter((m) => m.status === 'live').length, [matches])
   const showLiveOnly = onlyLive && liveCount > 0
@@ -118,7 +119,14 @@ export function useDemoFilters(matches: DayMatch[], myClubId: number | null, use
   }
   const dayEmpty = matches.length === 0
 
+  // Op tijdstip: één doorlopende lijst chronologisch, geen reeks-secties — handig om te zien wat
+  // er nu/zo dadelijk speelt, ongeacht de reeks. Op reeks (standaard): gegroepeerd zoals vandaag,
+  // elke groep zelf al chronologisch (de matches komen al gesorteerd op datum uit de databank).
   const groups = useMemo(() => {
+    if (sortBy === 'tijd') {
+      const chronologisch = [...visible].sort((a, b) => a.kickoff.localeCompare(b.kickoff))
+      return chronologisch.length ? ([['', chronologisch]] as [string, DayMatch[]][]) : []
+    }
     const map = new Map<string, DayMatch[]>()
     for (const m of visible) {
       const arr = map.get(m.reeks) ?? []
@@ -126,7 +134,7 @@ export function useDemoFilters(matches: DayMatch[], myClubId: number | null, use
       map.set(m.reeks, arr)
     }
     return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]))
-  }, [visible])
+  }, [visible, sortBy])
 
   return {
     query, setQuery,
@@ -137,6 +145,7 @@ export function useDemoFilters(matches: DayMatch[], myClubId: number | null, use
     onlyFavReeksen, setOnlyFavReeksen,
     onlyLive, setOnlyLive,
     drawerOpen, setDrawerOpen,
+    sortBy, setSortBy,
     favTeams, toggleTeam,
     favClubs, toggleClub,
     favReeksen, toggleReeks,
@@ -165,7 +174,7 @@ export function DateNav({
   const dateLabel = formatDateBE(brusselsNoonUtc(date), { weekday: 'long', day: '2-digit', month: 'long' })
   const vorigeDag = useMemo(() => (speeldagen.length ? vorigeSpeeldag(speeldagen, date) : shiftDateStr(date, -1)), [speeldagen, date])
   const volgendeDag = useMemo(() => (speeldagen.length ? volgendeSpeeldag(speeldagen, date) : shiftDateStr(date, 1)), [speeldagen, date])
-  const venster = useMemo(() => (speeldagen.length ? speeldagenRond(speeldagen, date) : []), [speeldagen, date])
+  const venster = useMemo(() => (speeldagen.length ? alleSpeeldagen(speeldagen, date) : []), [speeldagen, date])
   const aantalVandaag = useMemo(() => speeldagen.find((d) => d.datum === date)?.aantal ?? 0, [speeldagen, date])
   const dagLabel = (datum: string) =>
     datum === today ? 'Vandaag' : formatDateBE(brusselsNoonUtc(datum), { weekday: 'short', day: '2-digit', month: 'short' })
@@ -177,7 +186,16 @@ export function DateNav({
       ) : (
         <span className="lb-datebtn uit" aria-hidden>‹</span>
       )}
-      <details className="lb-date" ref={dagenRef}>
+      <details
+        className="lb-date"
+        ref={dagenRef}
+        onToggle={(e) => {
+          if (!(e.target as HTMLDetailsElement).open) return
+          requestAnimationFrame(() => {
+            dagenRef.current?.querySelector('.lb-dag.nu')?.scrollIntoView({ block: 'center' })
+          })
+        }}
+      >
         <summary className="lb-datesum">
           <span className="lb-datelabel">{date === today ? 'Vandaag' : dateLabel}</span>
           <span className="lb-datesub">
@@ -286,55 +304,76 @@ export function MatchGroups({ filters }: { filters: DemoFilters }) {
       return next
     })
 
-  const { groups, favTeams, toggleTeam, favClubs, toggleClub, favReeksen, toggleReeks, anyFilterActive, clearFilters, dayEmpty } = filters
+  const { groups, sortBy, setSortBy, favTeams, toggleTeam, favClubs, toggleClub, favReeksen, toggleReeks, anyFilterActive, clearFilters, dayEmpty } = filters
+  // Sortering op tijd geeft één doorlopende lijst terug onder de sleutel '' (zie useDemoFilters) —
+  // dan tonen we geen reeks-kop/ster, enkel een klein tagje per kaart.
+  const chronologisch = sortBy === 'tijd'
+
+  const sortToggle = !dayEmpty && (
+    <div className="lb-sort">
+      <span className="lb-sort-lbl">Sorteer</span>
+      <button type="button" className={`lb-sort-btn ${sortBy === 'reeks' ? 'on' : ''}`} onClick={() => setSortBy('reeks')}>
+        🏷 Reeks
+      </button>
+      <button type="button" className={`lb-sort-btn ${sortBy === 'tijd' ? 'on' : ''}`} onClick={() => setSortBy('tijd')}>
+        ⏱ Tijdstip
+      </button>
+    </div>
+  )
 
   if (groups.length === 0) {
     return (
-      <div className="lb-empty">
-        {!dayEmpty && anyFilterActive ? (
-          <>
-            <p className="lb-empty-title">Niets gevonden.</p>
-            <p className="lb-empty-sub">Pas je filters aan of toon weer alle wedstrijden van deze dag.</p>
-            <div className="lb-empty-actions">
-              <button type="button" className="lb-empty-btn primary" onClick={clearFilters}>↺ Wis filters</button>
-            </div>
-          </>
-        ) : (
-          <p className="lb-empty-title">Geen wedstrijden op deze dag.</p>
-        )}
-      </div>
+      <>
+        {sortToggle}
+        <div className="lb-empty">
+          {!dayEmpty && anyFilterActive ? (
+            <>
+              <p className="lb-empty-title">Niets gevonden.</p>
+              <p className="lb-empty-sub">Pas je filters aan of toon weer alle wedstrijden van deze dag.</p>
+              <div className="lb-empty-actions">
+                <button type="button" className="lb-empty-btn primary" onClick={clearFilters}>↺ Wis filters</button>
+              </div>
+            </>
+          ) : (
+            <p className="lb-empty-title">Geen wedstrijden op deze dag.</p>
+          )}
+        </div>
+      </>
     )
   }
 
   return (
     <>
+      {sortToggle}
       {groups.map(([reeks, list]) => {
-        const isCollapsed = collapsed.has(reeks)
+        const isCollapsed = !chronologisch && collapsed.has(reeks)
         const liveInGroup = list.filter((m) => m.status === 'live').length
         return (
-          <section key={reeks} className={`lb-group ${isCollapsed ? 'collapsed' : ''}`}>
-            <div className="lb-group-head-row">
-              <button
-                type="button"
-                className="lb-group-head"
-                onClick={() => toggleCollapsed(reeks)}
-                aria-expanded={!isCollapsed}
-                title={isCollapsed ? 'Reeks openklappen' : 'Reeks dichtklappen'}
-              >
-                <span className="lb-group-chevron" aria-hidden="true">▾</span>
-                <span className="lb-group-name">{reeks}</span>
-                {liveInGroup > 0 && <span className="lb-group-live"><span className="lb-livedot" />{liveInGroup}</span>}
-                <span className="lb-group-n">{list.length}</span>
-              </button>
-              <button
-                type="button"
-                className={`lb-group-star ${favReeksen.has(reeks) ? 'on' : ''}`}
-                onClick={() => toggleReeks(reeks)}
-                aria-label={favReeksen.has(reeks) ? `Verwijder ${reeks} als favoriete reeks` : `Volg ${reeks} als favoriete reeks`}
-              >
-                {favReeksen.has(reeks) ? '★' : '☆'}
-              </button>
-            </div>
+          <section key={reeks || '__tijd__'} className={`lb-group ${isCollapsed ? 'collapsed' : ''}`}>
+            {!chronologisch && (
+              <div className="lb-group-head-row">
+                <button
+                  type="button"
+                  className="lb-group-head"
+                  onClick={() => toggleCollapsed(reeks)}
+                  aria-expanded={!isCollapsed}
+                  title={isCollapsed ? 'Reeks openklappen' : 'Reeks dichtklappen'}
+                >
+                  <span className="lb-group-chevron" aria-hidden="true">▾</span>
+                  <span className="lb-group-name">{reeks}</span>
+                  {liveInGroup > 0 && <span className="lb-group-live"><span className="lb-livedot" />{liveInGroup}</span>}
+                  <span className="lb-group-n">{list.length}</span>
+                </button>
+                <button
+                  type="button"
+                  className={`lb-group-star ${favReeksen.has(reeks) ? 'on' : ''}`}
+                  onClick={() => toggleReeks(reeks)}
+                  aria-label={favReeksen.has(reeks) ? `Verwijder ${reeks} als favoriete reeks` : `Volg ${reeks} als favoriete reeks`}
+                >
+                  {favReeksen.has(reeks) ? '★' : '☆'}
+                </button>
+              </div>
+            )}
             {!isCollapsed && list.map((m) => {
               const played = m.status !== 'scheduled'
               const live = m.status === 'live'
@@ -343,6 +382,7 @@ export function MatchGroups({ filters }: { filters: DemoFilters }) {
               const open = openRow === m.id
               return (
                 <div key={m.id} className="lb-rowwrap">
+                  {chronologisch && <span className="lb-row-reeks">{m.reeks}</span>}
                   <div className={`lb-row live ${live ? 'now' : ''}`}>
                     <button
                       type="button"

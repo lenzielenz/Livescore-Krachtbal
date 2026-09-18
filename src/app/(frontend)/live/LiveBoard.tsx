@@ -9,7 +9,7 @@ import { TeamLogo } from '@/components/TeamLogo'
 import { type ClubColors } from '@/lib/club-colors'
 import { type LogoFit } from '@/lib/logo-fit'
 import { pronostiekOpen } from '@/lib/pronostiek-weekend'
-import { speeldagenRond, volgendeSpeeldag, vorigeSpeeldag, type Speeldag } from '@/lib/speeldagen'
+import { alleSpeeldagen, volgendeSpeeldag, vorigeSpeeldag, type Speeldag } from '@/lib/speeldagen'
 import { pastBijZoekterm } from '@/lib/team-search'
 import { brusselsNoonUtc, formatDateBE, shiftDateStr } from '@/lib/datetime'
 
@@ -316,7 +316,9 @@ export function LiveBoard({
     () => (speeldagen.length ? volgendeSpeeldag(speeldagen, date) : shiftDate(date, 1)),
     [speeldagen, date],
   )
-  const venster = useMemo(() => (speeldagen.length ? speeldagenRond(speeldagen, date) : []), [speeldagen, date])
+  // Het hele seizoen, niet enkel een venster van een paar weken — de kiezer scrolt toch al
+  // binnen z'n eigen vak (zie .lb-dagen), en anders leek de agenda na een paar weken op te houden.
+  const venster = useMemo(() => (speeldagen.length ? alleSpeeldagen(speeldagen, date) : []), [speeldagen, date])
   const aantalVandaag = useMemo(() => speeldagen.find((d) => d.datum === date)?.aantal ?? 0, [speeldagen, date])
 
   const emptyReason = query.trim()
@@ -407,7 +409,18 @@ export function LiveBoard({
           ) : (
             <span className="lb-datebtn uit" aria-hidden>‹</span>
           )}
-          <details className="lb-date" ref={dagenRef}>
+          <details
+            className="lb-date"
+            ref={dagenRef}
+            onToggle={(e) => {
+              // Bij het hele seizoen in de lijst (i.p.v. een klein venster) moet de kiezer bij
+              // openen meteen naar de huidige dag springen — anders begin je bovenaan in augustus.
+              if (!(e.target as HTMLDetailsElement).open) return
+              requestAnimationFrame(() => {
+                dagenRef.current?.querySelector('.lb-dag.nu')?.scrollIntoView({ block: 'center' })
+              })
+            }}
+          >
             <summary className="lb-datesum">
               <span className="lb-datelabel">{date === today ? 'Vandaag' : dateLabel}</span>
               <span className="lb-datesub">
