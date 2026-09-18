@@ -133,7 +133,7 @@ export function Proposal3Drawer({
         </div>
       )}
 
-      <MatchGroups filters={filters} />
+      <MatchGroups filters={filters} today={today} />
     </div>
   )
 }

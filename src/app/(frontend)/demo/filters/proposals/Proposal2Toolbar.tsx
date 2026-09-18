@@ -71,7 +71,7 @@ export function Proposal2Toolbar({
         </div>
       </div>
 
-      <MatchGroups filters={filters} />
+      <MatchGroups filters={filters} today={today} />
     </div>
   )
 }
