@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 
 import { TeamLogo } from '@/components/TeamLogo'
 import { brusselsNoonUtc, formatDateBE, shiftDateStr } from '@/lib/datetime'
-import { speeldagenRond, volgendeSpeeldag, vorigeSpeeldag, type Speeldag } from '@/lib/speeldagen'
+import { alleSpeeldagen, volgendeSpeeldag, vorigeSpeeldag, type Speeldag } from '@/lib/speeldagen'
 import { pastBijZoekterm } from '@/lib/team-search'
 
 import type { DayMatch } from '../../live/LiveBoard'
@@ -165,7 +165,7 @@ export function DateNav({
   const dateLabel = formatDateBE(brusselsNoonUtc(date), { weekday: 'long', day: '2-digit', month: 'long' })
   const vorigeDag = useMemo(() => (speeldagen.length ? vorigeSpeeldag(speeldagen, date) : shiftDateStr(date, -1)), [speeldagen, date])
   const volgendeDag = useMemo(() => (speeldagen.length ? volgendeSpeeldag(speeldagen, date) : shiftDateStr(date, 1)), [speeldagen, date])
-  const venster = useMemo(() => (speeldagen.length ? speeldagenRond(speeldagen, date) : []), [speeldagen, date])
+  const venster = useMemo(() => (speeldagen.length ? alleSpeeldagen(speeldagen, date) : []), [speeldagen, date])
   const aantalVandaag = useMemo(() => speeldagen.find((d) => d.datum === date)?.aantal ?? 0, [speeldagen, date])
   const dagLabel = (datum: string) =>
     datum === today ? 'Vandaag' : formatDateBE(brusselsNoonUtc(datum), { weekday: 'short', day: '2-digit', month: 'short' })
@@ -177,7 +177,16 @@ export function DateNav({
       ) : (
         <span className="lb-datebtn uit" aria-hidden>‹</span>
       )}
-      <details className="lb-date" ref={dagenRef}>
+      <details
+        className="lb-date"
+        ref={dagenRef}
+        onToggle={(e) => {
+          if (!(e.target as HTMLDetailsElement).open) return
+          requestAnimationFrame(() => {
+            dagenRef.current?.querySelector('.lb-dag.nu')?.scrollIntoView({ block: 'center' })
+          })
+        }}
+      >
         <summary className="lb-datesum">
           <span className="lb-datelabel">{date === today ? 'Vandaag' : dateLabel}</span>
           <span className="lb-datesub">

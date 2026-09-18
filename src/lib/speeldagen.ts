@@ -48,3 +48,15 @@ export function speeldagenRond(dagen: Speeldag[], datum: string, ervoor = 4, ern
   met.sort((a, b) => a.datum.localeCompare(b.datum))
   return met
 }
+
+/**
+ * Alle speeldagen van het hele seizoen — voor een datumkiezer die niet na een paar weken afkapt
+ * (de kiezer scrollt toch al binnen z'n eigen vak). Zelfde "houd de huidige dag erbij"-garantie als
+ * speeldagenRond hierboven.
+ */
+export function alleSpeeldagen(dagen: Speeldag[], datum: string): Speeldag[] {
+  if (dagen.some((d) => d.datum === datum)) return dagen
+  const met = [...dagen, { datum, aantal: 0 }]
+  met.sort((a, b) => a.datum.localeCompare(b.datum))
+  return met
+}
