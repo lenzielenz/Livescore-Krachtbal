@@ -1,11 +1,13 @@
 import { authUser } from '@/lib/api-auth'
-import { isClubStaff, isFederationLevel, userClubId } from '@/lib/access'
+import { hasRole, isFederationLevel, userClubId } from '@/lib/access'
 import { isFieldScreenTheme } from '@/lib/field-screens'
 import { getPublicFieldScreenState, setFieldScreenTheme } from '@/lib/field-screens-data'
+import { hasFunctionGrant } from '@/lib/function-grants'
 import { getPayloadClient } from '@/lib/payload-client'
 
-// Kleurthema van één veld wijzigen (donker/licht — zie collections/FieldScreens.ts). Club-staf
-// van de EIGEN club, of federatie/admin.
+// Kleurthema van één veld wijzigen (donker/licht — zie collections/FieldScreens.ts). Club-beheerder
+// van de EIGEN club altijd; club-medewerker enkel met een expliciete toekenning voor
+// 'club/veldscherm' (zie lib/function-grants.ts); of federatie/admin.
 export async function POST(req: Request) {
   let body: { fieldScreenId?: unknown; theme?: unknown }
   try {
@@ -20,9 +22,6 @@ export async function POST(req: Request) {
   const payload = await getPayloadClient()
   const user = await authUser(payload, req)
   if (!user) return Response.json({ error: 'Niet ingelogd.' }, { status: 401 })
-  if (!isFederationLevel(user) && !isClubStaff(user)) {
-    return Response.json({ error: 'Geen rechten.' }, { status: 403 })
-  }
 
   const screen = await getPublicFieldScreenState(payload, fieldScreenId)
   if (!screen) return Response.json({ error: 'Veldscherm niet gevonden.' }, { status: 404 })
@@ -30,6 +29,12 @@ export async function POST(req: Request) {
     const clubId = userClubId(user)
     if (clubId == null || Number(clubId) !== screen.clubId) {
       return Response.json({ error: 'Dit veldscherm hoort niet bij jouw club.' }, { status: 403 })
+    }
+    const medewerkerGrant = hasRole(user, 'club-medewerker')
+      ? await hasFunctionGrant(payload, user.id, 'club/veldscherm', clubId)
+      : false
+    if (!hasRole(user, 'club-beheerder') && !medewerkerGrant) {
+      return Response.json({ error: 'Geen rechten.' }, { status: 403 })
     }
   }
 

@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { SiteHeader } from '@/components/SiteHeader'
 import { isFederationLevel } from '@/lib/access'
 import { getAuthUser } from '@/lib/auth-user'
+import { hasFunctionGrant } from '@/lib/function-grants'
 import { getPayloadClient } from '@/lib/payload-client'
 import { ClubKleurenImport } from './ClubKleurenImport'
 import { Ontdubbelen } from './Ontdubbelen'
@@ -10,11 +11,13 @@ import { PlanningImport } from './PlanningImport'
 
 export const dynamic = 'force-dynamic'
 
-// Federatie: het volledige seizoensplan in één keer importeren (plak/CSV).
+// Federatie, of een expliciete toekenning voor 'beheer/planning' (zie lib/function-grants.ts): het
+// volledige seizoensplan in één keer importeren (plak/CSV).
 export default async function PlanningPage() {
   const payload = await getPayloadClient()
   const user = await getAuthUser()
-  const allowed = isFederationLevel(user)
+  const granted = await hasFunctionGrant(payload, (user as { id?: number } | null)?.id, 'beheer/planning')
+  const allowed = isFederationLevel(user) || granted
 
   return (
     <>

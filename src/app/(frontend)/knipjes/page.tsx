@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { SiteHeader } from '@/components/SiteHeader'
 import { isFederationLevel } from '@/lib/access'
 import { getAuthUser } from '@/lib/auth-user'
+import { hasFunctionGrant } from '@/lib/function-grants'
 import { getPayloadClient } from '@/lib/payload-client'
 import { openKnipjes } from '@/lib/sanctions'
 import '../wedstrijdblad.css'
@@ -12,10 +13,13 @@ export const dynamic = 'force-dynamic'
 type Row = { club: string; team: string; player: string; knipjes: number }
 
 // Knipjes-dashboard per club / team / speler (WEDSTRIJDBLAD-PROMPT §Knipjes B — expliciet gevraagd).
-// Federatie/admin-only: dit is selectie-/sanctiedata, geen publieke info.
+// Federatie/admin, of een expliciete toekenning voor 'knipjes' (zie lib/function-grants.ts): dit is
+// selectie-/sanctiedata, geen publieke info.
 export default async function KnipjesDashboard() {
   const me = await getAuthUser()
-  if (!isFederationLevel(me)) {
+  const payload = await getPayloadClient()
+  const granted = await hasFunctionGrant(payload, (me as { id?: number } | null)?.id, 'knipjes')
+  if (!isFederationLevel(me) && !granted) {
     return (
       <>
         <SiteHeader active="federatie" />
@@ -29,7 +33,6 @@ export default async function KnipjesDashboard() {
       </>
     )
   }
-  const payload = await getPayloadClient()
   const [sanctions, settings] = await Promise.all([
     payload.find({ collection: 'sanctions', depth: 2, limit: 2000 }),
     payload.findGlobal({ slug: 'settings', depth: 0 }).catch(() => null),

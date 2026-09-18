@@ -99,6 +99,7 @@ export interface Config {
     'match-mvp-votes': MatchMvpVote;
     'processed-ops': ProcessedOp;
     'cv-events': CvEvent;
+    'function-grants': FunctionGrant;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -138,6 +139,7 @@ export interface Config {
     'match-mvp-votes': MatchMvpVotesSelect<false> | MatchMvpVotesSelect<true>;
     'processed-ops': ProcessedOpsSelect<false> | ProcessedOpsSelect<true>;
     'cv-events': CvEventsSelect<false> | CvEventsSelect<true>;
+    'function-grants': FunctionGrantsSelect<false> | FunctionGrantsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -1864,6 +1866,34 @@ export interface CvEvent {
   createdAt: string;
 }
 /**
+ * Geef één functie (veldscherm, kantinescherm, ...) aan één gebruiker, los van zijn rol. Beheer via "Mijn club" → Rechten (federatie) op /beheer/rechten.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "function-grants".
+ */
+export interface FunctionGrant {
+  id: number;
+  user: number | User;
+  functie:
+    | 'club/voorspel'
+    | 'kantine'
+    | 'cast'
+    | 'club/veldscherm'
+    | 'beheer/spelers'
+    | 'beheer/training/aanwezigheid'
+    | 'beheer/leden'
+    | 'beheer/aantekenaars'
+    | 'beheer/planning'
+    | 'knipjes'
+    | 'bekerfinale';
+  /**
+   * Verplicht voor clubgebonden functies (veldscherm, kantinescherm, ...) — leeg voor scheidsrechter-/federatiefuncties.
+   */
+  club?: (number | null) | Club;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
@@ -2014,6 +2044,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'cv-events';
         value: number | CvEvent;
+      } | null)
+    | ({
+        relationTo: 'function-grants';
+        value: number | FunctionGrant;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -2862,6 +2896,17 @@ export interface CvEventsSelect<T extends boolean = true> {
         model?: T;
         modelVersion?: T;
       };
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "function-grants_select".
+ */
+export interface FunctionGrantsSelect<T extends boolean = true> {
+  user?: T;
+  functie?: T;
+  club?: T;
   updatedAt?: T;
   createdAt?: T;
 }

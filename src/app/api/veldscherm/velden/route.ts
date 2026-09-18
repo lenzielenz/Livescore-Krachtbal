@@ -1,10 +1,12 @@
 import { authUser } from '@/lib/api-auth'
-import { isClubStaff, isFederationLevel, userClubId } from '@/lib/access'
+import { hasRole, isFederationLevel, userClubId } from '@/lib/access'
 import { MAX_VELDEN, MIN_VELDEN } from '@/lib/field-screens'
 import { syncVeldenCount } from '@/lib/field-screens-data'
+import { hasFunctionGrant } from '@/lib/function-grants'
 import { getPayloadClient } from '@/lib/payload-client'
 
-// Aantal velden van de EIGEN club instellen. Club-staf (beheerder + medewerker) van die club, of
+// Aantal velden van de EIGEN club instellen. Club-beheerder van die club altijd; club-medewerker
+// enkel met een expliciete toekenning voor 'club/veldscherm' (zie lib/function-grants.ts); of
 // federatie/admin. Zie /club/veldscherm en lib/field-screens.ts (planVeldenSync) voor de regels.
 export async function POST(req: Request) {
   let body: { count?: unknown }
@@ -19,10 +21,13 @@ export async function POST(req: Request) {
   const payload = await getPayloadClient()
   const user = await authUser(payload, req)
   if (!user) return Response.json({ error: 'Niet ingelogd.' }, { status: 401 })
-  if (!isFederationLevel(user) && !isClubStaff(user)) {
+  const clubId = userClubId(user)
+  const medewerkerGrant = hasRole(user, 'club-medewerker')
+    ? await hasFunctionGrant(payload, user.id, 'club/veldscherm', clubId)
+    : false
+  if (!isFederationLevel(user) && !hasRole(user, 'club-beheerder') && !medewerkerGrant) {
     return Response.json({ error: 'Geen rechten.' }, { status: 403 })
   }
-  const clubId = userClubId(user)
   if (clubId == null) return Response.json({ error: 'Je account is niet aan een club gekoppeld.' }, { status: 400 })
 
   try {

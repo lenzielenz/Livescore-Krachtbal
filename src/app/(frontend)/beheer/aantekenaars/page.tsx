@@ -4,6 +4,7 @@ import { SiteHeader } from '@/components/SiteHeader'
 import { isFederationLevel } from '@/lib/access'
 import { hoofdAantekenaar, sanitizeAantekenaars, sanitizeAfsluiter } from '@/lib/aantekenaars'
 import { getAuthUser } from '@/lib/auth-user'
+import { hasFunctionGrant } from '@/lib/function-grants'
 import { getPayloadClient } from '@/lib/payload-client'
 import { AantekenaarsOverzicht, type Regel, type PersoonTotaal } from './AantekenaarsOverzicht'
 import './aantekenaars.css'
@@ -26,7 +27,9 @@ const MAX = 500
  */
 export default async function AantekenaarsPage() {
   const me = await getAuthUser()
-  if (!isFederationLevel(me)) {
+  const payload = await getPayloadClient()
+  const granted = await hasFunctionGrant(payload, (me as { id?: number } | null)?.id, 'beheer/aantekenaars')
+  if (!isFederationLevel(me) && !granted) {
     return (
       <>
         <SiteHeader active="federatie" />
@@ -41,7 +44,6 @@ export default async function AantekenaarsPage() {
     )
   }
 
-  const payload = await getPayloadClient()
   const res = await payload
     .find({
       collection: 'tournament-matches',

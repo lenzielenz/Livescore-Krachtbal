@@ -4,6 +4,7 @@ import { SiteHeader } from '@/components/SiteHeader'
 import { isFederationLevel } from '@/lib/access'
 import { competitionWhere } from '@/lib/analyse-access'
 import { getAuthUser } from '@/lib/auth-user'
+import { hasFunctionGrant } from '@/lib/function-grants'
 import { getPayloadClient } from '@/lib/payload-client'
 import { LedenManager, type Lid } from './LedenManager'
 import './leden.css'
@@ -15,11 +16,14 @@ const rel = (v: unknown): { id: number | null; name: string } => {
   return { id: typeof v === 'number' ? v : null, name: '—' }
 }
 
-// Federatie/admin: ledenlijst met de medische keuring + vergunning (paspoort). Markeer wie medisch
-// gekeurd is en mag spelen; dat werkt meteen door in de opstelling en bij de scheidsrechter.
+// Federatie/admin, of een expliciete toekenning voor 'beheer/leden' (zie lib/function-grants.ts):
+// ledenlijst met de medische keuring + vergunning (paspoort). Markeer wie medisch gekeurd is en mag
+// spelen; dat werkt meteen door in de opstelling en bij de scheidsrechter.
 export default async function LedenPage() {
   const me = await getAuthUser()
-  if (!isFederationLevel(me)) {
+  const payload = await getPayloadClient()
+  const granted = await hasFunctionGrant(payload, (me as { id?: number } | null)?.id, 'beheer/leden')
+  if (!isFederationLevel(me) && !granted) {
     return (
       <>
         <SiteHeader active="federatie" />
@@ -34,7 +38,6 @@ export default async function LedenPage() {
     )
   }
 
-  const payload = await getPayloadClient()
   const playersRes = await payload
     .find({ collection: 'players', where: competitionWhere(), sort: 'name', depth: 2, limit: 5000, pagination: false, overrideAccess: true })
     .catch(() => ({ docs: [] as Record<string, unknown>[] }))

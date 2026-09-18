@@ -10,8 +10,13 @@ import '../wedstrijdblad.css'
 export const dynamic = 'force-dynamic'
 
 // Scheidsrechter/federatie-only: vergoedingen bundelen officials-gegevens, geen publieke info.
+// (Bewust GEEN functietoekenning hier — de onderliggende kwitantie-route beschermt tegen IDOR op
+// financiële PII door enkel de scheidsrechter zélf zijn eigen kwitantie te laten ophalen; een lichte
+// toekenning zou die controle moeten verzwakken om iets te betekenen, en dat is deze functie niet
+// waard. Zie api/scheidsrechter/[officialId]/kwitantie/route.ts.)
 export default async function VergoedingenPage() {
   const me = await getAuthUser()
+  const payload = await getPayloadClient()
   if (!hasRole(me, 'scheidsrechter') && !isFederationLevel(me)) {
     return (
       <>
@@ -26,7 +31,6 @@ export default async function VergoedingenPage() {
       </>
     )
   }
-  const payload = await getPayloadClient()
   const officials = await payload
     .find({ collection: 'officials', where: { type: { equals: 'scheidsrechter' } }, limit: 200, depth: 0 })
     .catch(() => ({ docs: [] as { id: number; name: string }[] }))

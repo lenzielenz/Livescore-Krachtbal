@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import { authUser, isFederationLevel } from '@/lib/api-auth'
 import { colorsToHex, matchClubColors, parseReeksenKleuren } from '@/lib/club-colors-import'
 import { normalizeHex } from '@/lib/club-colors'
+import { hasFunctionGrant } from '@/lib/function-grants'
 import { getPayloadClient } from '@/lib/payload-client'
 import { extractPdfText } from '@/lib/reeksindeling-import'
 
@@ -19,7 +20,7 @@ export async function POST(req: Request) {
   const payload = await getPayloadClient()
   const user = await authUser(payload, req)
   if (!user) return NextResponse.json({ error: 'Niet ingelogd.' }, { status: 401 })
-  if (!isFederationLevel(user)) {
+  if (!isFederationLevel(user) && !(await hasFunctionGrant(payload, user.id, 'beheer/planning'))) {
     return NextResponse.json({ error: 'Enkel de federatie kan clubkleuren aanvullen.' }, { status: 403 })
   }
 
