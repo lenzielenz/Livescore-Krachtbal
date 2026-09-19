@@ -40,6 +40,12 @@
 @media (prefers-reduced-motion: reduce) {
   .ptr-fullbtn.live, .ptr-add.live { animation: none; }
 }
+.ptr-count {
+  margin: 0 0 6px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--dim, #9fb3a6);
+}
 .ptr-strip {
   display: flex;
   gap: 8px;

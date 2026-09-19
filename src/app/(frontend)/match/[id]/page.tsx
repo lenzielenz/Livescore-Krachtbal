@@ -10,7 +10,7 @@ import { Scoreboard } from '@/components/Scoreboard'
 import { SiteHeader } from '@/components/SiteHeader'
 import { TeamLogo } from '@/components/TeamLogo'
 import { VeldschermKoppelen } from '@/components/VeldschermKoppelen'
-import { hasRole, isFederationLevel } from '@/lib/access'
+import { hasRole, isFederationLevel, userClubId, userFollowedClubIds } from '@/lib/access'
 import { competitionWhere } from '@/lib/analyse-access'
 import { mayScoreMatch, type AuthedUser } from '@/lib/api-auth'
 import { getAuthUser } from '@/lib/auth-user'
@@ -99,7 +99,8 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   if (matchDoc?.analyseOnly) notFound()
   // Globale supporters-modus: iedereen mag de score doorgeven → toon een "Aantekenen"-knop.
   const supportersMode = await isSupportersMode(payload)
-  const homeClub = (matchDoc?.homeTeam as { club?: { accommodatie?: string; plaats?: string; lat?: number; lng?: number } } | null)?.club
+  const homeClub = (matchDoc?.homeTeam as { club?: { id?: number; accommodatie?: string; plaats?: string; lat?: number; lng?: number } } | null)?.club
+  const awayClub = (matchDoc?.awayTeam as { club?: { id?: number } } | null)?.club
   const accommodatie = homeClub?.accommodatie?.trim() || null
   // Locatie voor het weerbericht aan het veld (thuislocatie).
   const weatherPlace = homeClub?.plaats?.trim() || null
@@ -117,9 +118,16 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   const me = await getAuthUser()
   // Video koppelen/uploaden mag de federatie (competitiewedstrijden) — zie mayEditMatchVideo.
   const mayVideo = mayEditMatchVideo(me, matchDoc as { analyseOnly?: boolean | null; analyseOwner?: unknown } | null)
-  // Veldscherm koppelen: enkel zinvol op een gestarte wedstrijd, en enkel voor wie ze mag
-  // aantekenen (dezelfde toegang als het scoreformulier zelf — de code is de eigenlijke grendel).
-  const magKoppelen = state.match.status === 'live' && (await mayScoreMatch(payload, me as AuthedUser | null, matchId))
+  // Veldscherm koppelen: enkel zinvol op een gestarte wedstrijd. Mag wie de wedstrijd aantekent
+  // (dezelfde toegang als het scoreformulier), maar ook een gewone supporter van een van beide
+  // clubs — die staat evengoed fysiek bij dat veldscherm en kan de code aflezen; de code zelf is
+  // de eigenlijke grendel (zie /api/veldscherm/koppel), dit is enkel wie de knop te zien krijgt.
+  const betrokkenClubIds = [homeClub?.id, awayClub?.id].filter((c): c is number => typeof c === 'number')
+  const eigenClubIds = [userClubId(me), ...userFollowedClubIds(me)].filter((c) => c != null).map(String)
+  const isSupporterVanBetrokkenClub = betrokkenClubIds.some((c) => eigenClubIds.includes(String(c)))
+  const magKoppelen =
+    state.match.status === 'live' &&
+    (isSupporterVanBetrokkenClub || (await mayScoreMatch(payload, me as AuthedUser | null, matchId)))
   const datum = matchDoc?.date ? formatDateTimeBE(matchDoc.date as string) : null
   // Wie de wedstrijd mag rechtzetten (tijdstip + ploegnaam/club): de federatie, en nooit op een
   // analysewedstrijd — die is privé en wordt onder /analyse/beheer beheerd.
