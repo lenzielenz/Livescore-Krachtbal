@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 
-import { isTribuneOpen, TRIBUNE_GRACE_MS } from '@/lib/tribune'
+import { isPreMatchLead, isTribuneOpen, PRE_MATCH_LEAD_MS, TRIBUNE_GRACE_MS } from '@/lib/tribune'
 
 describe('isTribuneOpen', () => {
   const now = Date.parse('2026-06-07T12:00:00.000Z')
@@ -33,5 +33,26 @@ describe('isTribuneOpen', () => {
 
   it('is gesloten als de eindtijd onbekend is', () => {
     expect(isTribuneOpen('finished', null, null, now)).toBe(false)
+  })
+})
+
+describe('isPreMatchLead', () => {
+  const now = Date.parse('2026-06-07T12:00:00.000Z')
+
+  it('is gesloten zonder datum', () => {
+    expect(isPreMatchLead(null, now)).toBe(false)
+  })
+
+  it('is gesloten ruim vóór het venster', () => {
+    expect(isPreMatchLead('2026-06-07T18:00:00.000Z', now)).toBe(false)
+  })
+
+  it('opent exact een uur vóór de aftrap', () => {
+    const kickoff = now + PRE_MATCH_LEAD_MS
+    expect(isPreMatchLead(new Date(kickoff).toISOString(), now)).toBe(true)
+  })
+
+  it('blijft open na de aftrap', () => {
+    expect(isPreMatchLead('2026-06-07T11:00:00.000Z', now)).toBe(true)
   })
 })

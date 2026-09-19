@@ -20,11 +20,12 @@ const ROLES = [
 // Meer dan kijken — wat een supporter allemaal kan op het platform (de nieuwe dingen).
 const FEATURES = [
   { ico: '💬', tone: 'accent', name: 'Live tribune', desc: 'Reageer met emoji’s en moedig je ploeg aan terwijl de match loopt.' },
-  { ico: '📸', tone: 'pop', name: 'Foto-tribune', desc: 'Deel sfeerbeelden bij volwassen wedstrijden — ze verdwijnen vanzelf na 24 u.' },
-  { ico: '🔮', tone: 'accent', name: 'Pronostiek', desc: 'Voorspel de exacte eindstand en strijd mee in het globale klassement.' },
-  { ico: '🎰', tone: 'pop', name: 'Bonusrad', desc: 'De besten van het weekend (aantal schaalt met het deelnemersveld) draaien aan het rad en winnen vermenigvuldigers.' },
-  { ico: '📺', tone: 'accent', name: 'Op tv', desc: 'Cast de live stand naar je televisie of het kantinescherm.' },
-  { ico: '📈', tone: 'pop', name: 'Analyse (clubs)', desc: 'Worp-voor-worp-analyse, gevaarzones en een video-replay op het veld.' },
+  { ico: '📸', tone: 'pop', name: 'Foto-tribune', desc: 'Deel sfeerbeelden op volwassen wedstrijden, al vanaf een uur vóór de aftrap. Je foto’s blijven bewaard en duiken na afloop terug op bij de samenvatting.' },
+  { ico: '📡', tone: 'accent', name: 'Veldscherm koppelen', desc: 'Sta je aan het veld? Koppel de wedstrijd aan het scherm met de code — al vanaf een uur vóór de aftrap, door een supporter van thuis óf uit.' },
+  { ico: '🔮', tone: 'pop', name: 'Pronostiek', desc: 'Voorspel de exacte eindstand en strijd mee in het globale klassement.' },
+  { ico: '🎰', tone: 'accent', name: 'Bonusrad', desc: 'De besten van het weekend (aantal schaalt met het deelnemersveld) draaien aan het rad en winnen vermenigvuldigers.' },
+  { ico: '📺', tone: 'pop', name: 'Kantinescherm', desc: 'Toon de live stand van je club groot op de tv in de kantine.' },
+  { ico: '📈', tone: 'accent', name: 'Analyse (clubs)', desc: 'Worp-voor-worp-analyse, gevaarzones en een video-replay op het veld.' },
 ] as const
 
 type Step = {
@@ -44,14 +45,17 @@ const STEPS: Step[] = [
     body: (
       <>
         Maak een <strong>gratis account</strong> aan. Kies je een club, dan word je overal meteen
-        naar je eigen club gestuurd. Ben je clubmedewerker, scheidsrechter of van de federatie? Een
+        naar je eigen club gestuurd. Nog bij geen enkele club aangesloten? Kies dan{' '}
+        <strong>"alleen supporter"</strong> en volg meteen de club(s) die je interesseren — ook dan
+        zie je overal de juiste info. Ben je clubmedewerker, scheidsrechter of van de federatie? Een
         beheerder kent je nadien de juiste rol toe — een scheidsrechter wordt gekoppeld aan z'n
         dossier en krijgt zo een persoonlijke QR-code.
       </>
     ),
     list: [
       'Naam, e-mail, wachtwoord — klaar.',
-      'Standaard ben je supporter (volgen).',
+      'Standaard ben je supporter (volgen); geen eigen club? Volg er dan een paar.',
+      'Wachtwoord vergeten? Je clubverantwoordelijke of de federatie maakt ter plaatse een herstellink.',
       'Beheerder geeft clubmedewerker / scheidsrechter / federatie de juiste rechten.',
     ],
     actions: [
@@ -127,14 +131,16 @@ const STEPS: Step[] = [
         Tijdens de wedstrijd houdt de club aan het veld <strong>elke worp en het balbezit</strong>{' '}
         bij. De stand loopt live mee — supporters volgen ze op de startpagina, reageren in de{' '}
         <strong>live tribune</strong>, delen foto’s, en geven hun <strong>pronostiek</strong> door.
-        Casten naar het kantinescherm of de tv kan ook.
+        Staat er een tv aan het veld, dan koppelt een supporter of aantekenaar de wedstrijd er
+        gewoon aan met de code op het scherm.
       </>
     ),
     list: [
       'Worpen en balbezit live aantekenen (groot veld, automatisch volledig scherm).',
       'Supporters volgen live, reageren met emoji’s en delen sfeerfoto’s.',
       'Voorspel mee de uitslag — pronostiek-klassement + bonusrad.',
-      'Toon de stand groot op het kantinescherm of de tv.',
+      'Veldscherm koppelen met de code — al vanaf een uur vóór de aftrap.',
+      'Toon de stand groot op het kantinescherm.',
     ],
     actions: [
       { href: '/scorekeeper', label: '📝 Aantekenen' },

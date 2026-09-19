@@ -28,7 +28,7 @@ import { isAdultReeks, krachtbalKleur, reeksHalfDurationSeconds, reeksNaam, reek
 import { isSupportersMode } from '@/lib/score-mode'
 import { mayClaim, mayVote, sanitizeTrust, voteWindowOpen } from '@/lib/score-trust'
 import { MATCH_ASSUMED_DONE_MS } from '@/lib/simple-score'
-import { isTribuneOpen } from '@/lib/tribune'
+import { isPreMatchLead, isTribuneOpen } from '@/lib/tribune'
 import { buildWinfieDesign } from '@/lib/winfie'
 import { BASE_RATE_PER_MIN } from '@/lib/win-probability'
 import { MatchRecap } from '../../analyse/[id]/MatchRecap'
@@ -118,15 +118,17 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   const me = await getAuthUser()
   // Video koppelen/uploaden mag de federatie (competitiewedstrijden) — zie mayEditMatchVideo.
   const mayVideo = mayEditMatchVideo(me, matchDoc as { analyseOnly?: boolean | null; analyseOwner?: unknown } | null)
-  // Veldscherm koppelen: enkel zinvol op een gestarte wedstrijd. Mag wie de wedstrijd aantekent
-  // (dezelfde toegang als het scoreformulier), maar ook een gewone supporter van een van beide
-  // clubs — die staat evengoed fysiek bij dat veldscherm en kan de code aflezen; de code zelf is
-  // de eigenlijke grendel (zie /api/veldscherm/koppel), dit is enkel wie de knop te zien krijgt.
+  // Veldscherm koppelen: zinvol vanaf een uur vóór de aftrap (al klaarzetten) tot de wedstrijd
+  // live is. Mag wie de wedstrijd aantekent (dezelfde toegang als het scoreformulier), maar ook
+  // een gewone supporter van een van beide clubs — die staat evengoed fysiek bij dat veldscherm
+  // en kan de code aflezen; de code zelf is de eigenlijke grendel (zie /api/veldscherm/koppel),
+  // dit is enkel wie de knop te zien krijgt.
   const betrokkenClubIds = [homeClub?.id, awayClub?.id].filter((c): c is number => typeof c === 'number')
   const eigenClubIds = [userClubId(me), ...userFollowedClubIds(me)].filter((c) => c != null).map(String)
   const isSupporterVanBetrokkenClub = betrokkenClubIds.some((c) => eigenClubIds.includes(String(c)))
+  const magVoorAftrap = state.match.status === 'scheduled' && isPreMatchLead(matchDoc?.date as string | undefined)
   const magKoppelen =
-    state.match.status === 'live' &&
+    (state.match.status === 'live' || magVoorAftrap) &&
     (isSupporterVanBetrokkenClub || (await mayScoreMatch(payload, me as AuthedUser | null, matchId)))
   const datum = matchDoc?.date ? formatDateTimeBE(matchDoc.date as string) : null
   // Wie de wedstrijd mag rechtzetten (tijdstip + ploegnaam/club): de federatie, en nooit op een
@@ -239,11 +241,10 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   }
 
   // Blijvende foto-tribune: ENKEL op volwassen reeksen (safeguarding, geen jeugd). Laad alle
-  // bewaarde foto's; posten mag enkel ingelogd terwijl de wedstrijd bezig is/pas voorbij —
-  // bewust NIET verruimd naar "matchday vóór de aftrap" (in tegenstelling tot reacties/chat): een
-  // foto van een wedstrijd die nog niet begonnen is, bestaat niet.
+  // bewaarde foto's; posten mag ingelogd vanaf een uur vóór de aftrap (bv. een foto van het volle
+  // terrein vóór de wedstrijd) tot de wedstrijd bezig is/pas voorbij.
   const adultMatch = isAdultReeks(reeksRaw)
-  const canPostInstant = Boolean(me) && adultMatch && isTribuneOpen(state.match.status, state.match.finishedAt)
+  const canPostInstant = Boolean(me) && adultMatch && (isTribuneOpen(state.match.status, state.match.finishedAt) || magVoorAftrap)
   let initialInstants: { id: number; url: string; authorName: string; at: number }[] = []
   if (adultMatch) {
     const res = await payload
