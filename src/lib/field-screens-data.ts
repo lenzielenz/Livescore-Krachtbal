@@ -3,6 +3,7 @@ import type { Payload } from 'payload'
 import { brusselsDayBoundsUtc, dateStrBE } from './datetime'
 import { buildFixedSimpleScore } from './simple-score'
 import { planVeldenSync, randomPairingCode, veldNaam, type DagWedstrijd, type FieldScreenTheme, type VeldRow } from './field-screens'
+import { isPreMatchLead } from './tribune'
 
 // DB-laag voor veldschermen — het datamodel en de motivatie staan in collections/FieldScreens.ts,
 // de pure planning-/codelogica in field-screens.ts. Alle functies hier draaien met
@@ -129,7 +130,12 @@ export async function pairMatchToCode(payload: Payload, code: string, matchId: n
 
   const match = await payload.findByID({ collection: 'matches', id: matchId, depth: 1 }).catch(() => null)
   if (!match) return { ok: false, error: 'Wedstrijd niet gevonden.' }
-  if (match.status !== 'live') return { ok: false, error: 'Enkel een gestarte (live) wedstrijd kan je koppelen.' }
+  // Live mag altijd; een geplande wedstrijd mag al vanaf een uur vóór de aftrap — zo staat het
+  // scherm al klaar wanneer de aantekenaar effectief start.
+  const magAlKoppelen = match.status === 'live' || (match.status === 'scheduled' && isPreMatchLead(match.date as string | null))
+  if (!magAlKoppelen) {
+    return { ok: false, error: 'Koppelen kan enkel vanaf een uur vóór de aftrap tot de wedstrijd live is.' }
+  }
 
   const screenClubId = rel((screen as { club?: unknown }).club)
   const homeTeam = match.homeTeam as { club?: unknown } | number | null | undefined

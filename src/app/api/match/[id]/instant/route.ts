@@ -3,7 +3,7 @@ import { addInstant } from '@/lib/match-channel'
 import { getPayloadClient } from '@/lib/payload-client'
 import { isAdultReeks, type Reeks } from '@/lib/reeksen'
 import { rateLimit } from '@/lib/sse-hub'
-import { isTribuneOpen } from '@/lib/tribune'
+import { isPreMatchLead, isTribuneOpen } from '@/lib/tribune'
 
 export const dynamic = 'force-dynamic'
 
@@ -41,8 +41,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (!isAdultReeks(match.reeks as Reeks)) {
     return Response.json({ error: 'De foto-tribune staat enkel aan op volwassen wedstrijden.' }, { status: 403 })
   }
-  // Enkel zolang de tribune open is (tijdens de match en tot 1u erna).
-  if (!isTribuneOpen(match.status as string, (match.finishedAt as string | null | undefined) ?? null)) {
+  // Mag vanaf een uur vóór de aftrap (al klaarzetten) tot de tribune sluit (tijdens de match en
+  // tot 1u erna).
+  const magAlPosten =
+    isTribuneOpen(match.status as string, (match.finishedAt as string | null | undefined) ?? null) ||
+    (match.status === 'scheduled' && isPreMatchLead(match.date as string | null))
+  if (!magAlPosten) {
     return Response.json({ error: 'De tribune is gesloten.' }, { status: 403 })
   }
 

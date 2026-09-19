@@ -7,6 +7,19 @@ import { dateStrBE } from './datetime'
 // gelijklopen.
 export const TRIBUNE_GRACE_MS = 60 * 60 * 1000 // 1 uur na de wedstrijd
 
+// Een uur vóór de aftrap: vanaf dan mag je al klaarzetten wat aan de wedstrijd hangt, ook al is
+// ze nog niet gestart — het veldscherm koppelen en een eerste foto plaatsen (bv. van het volle
+// terrein vóór de aftrap). Bewust losstaand van isTribuneOpen hierboven (dat blijft de hele
+// speeldag open voor reacties/chat): dit venster is korter en geldt specifiek voor deze twee.
+export const PRE_MATCH_LEAD_MS = 60 * 60 * 1000 // 1 uur vóór de aftrap
+
+export function isPreMatchLead(date: string | null | undefined, now: number = Date.now()): boolean {
+  if (!date) return false
+  const kickoff = new Date(date).getTime()
+  if (Number.isNaN(kickoff)) return false
+  return now >= kickoff - PRE_MATCH_LEAD_MS
+}
+
 export function isTribuneOpen(
   status: string | null | undefined,
   finishedAt: string | null | undefined,

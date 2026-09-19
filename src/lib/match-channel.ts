@@ -1,7 +1,7 @@
 import type { Payload } from 'payload'
 
 import { buildMatchState, buildTimeline } from './match-engine'
-import { isTribuneOpen } from './tribune'
+import { isPreMatchLead, isTribuneOpen } from './tribune'
 
 // Live match-kanaal: één gedeelde bron per wedstrijd die NAAR ALLE verbonden clients fan-out doet,
 // over één en dezelfde SSE-stream. Drie soorten events:
@@ -400,7 +400,7 @@ export function addInstant(matchId: number, instant: Instant): boolean {
 
   const ch = channels.get(matchId)
   if (!ch) return false
-  if (!isTribuneOpen(ch.status, ch.finishedAt)) return false
+  if (!isTribuneOpen(ch.status, ch.finishedAt) && !(ch.status === 'scheduled' && isPreMatchLead(ch.date))) return false
   broadcast(ch, 'instant', instant)
   return true
 }
