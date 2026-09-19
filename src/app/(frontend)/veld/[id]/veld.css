@@ -5,6 +5,13 @@
   --away: #4cc9f0;
   --theme-1: var(--home);
   --theme-2: var(--away);
+  /* Donker (standaard) thema zelf gedefinieerd i.p.v. enkel te vertrouwen op de globale :root uit
+     styles.css: dit scherm draait ook op kiosk-tv's/dongles met een eigen embedded browser, waar
+     een ontbrekende of niet-cascaderende variabele de score/klok-labels onzichtbaar-zwart op
+     zwart zou maken. Zelfde waarden als de globale --txt/--dim/--dim-strong (styles.css). */
+  --txt: #f7f9fc;
+  --dim: #9aa4b2;
+  --dim-strong: #cad2dc;
   position: fixed;
   inset: 0;
   display: flex;
