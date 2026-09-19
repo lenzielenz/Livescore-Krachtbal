@@ -508,6 +508,14 @@
 
 /* ── Kantinescherm (kantine-tv) ── */
 .kt-screen {
+  /* Zelf gedefinieerd i.p.v. enkel te vertrouwen op de globale :root uit styles.css: dit scherm
+     hangt aan een tv (kiosk-app, HDMI-dongle, Chromecast, …) met een eigen embedded browser. Een
+     supporter meldde dat de live score er niet meer op verscheen terwijl klok/namen wel zichtbaar
+     bleven — exact wat gebeurt als var(--txt)/var(--dim) om welke reden dan ook niet cascadeert
+     (zie dezelfde fix op het veldscherm, veld.css). Zelfde waarden als de globale variabelen. */
+  --txt: #f7f9fc;
+  --dim: #9aa4b2;
+  --dim-strong: #cad2dc;
   height: 100dvh;
   overflow: hidden;
   /* Kolom, zodat de sponsorbalk onderaan blijft plakken en het bordenraster de rest vult. */
