@@ -95,27 +95,30 @@ export function PhotoTribune({
           </button>
         )
       ) : (
-        <div className="ptr-strip">
-          {canPost && (
-            <button
-              type="button"
-              className={`ptr-add${live ? ' live' : ''}`}
-              onClick={() => inputRef.current?.click()}
-              disabled={busy}
-              aria-label="Foto toevoegen"
-            >
-              <span className="ptr-add-ico" aria-hidden>{busy ? '⏳' : '📸'}</span>
-              <span className="ptr-add-lbl">{busy ? 'Bezig…' : 'Foto'}</span>
-            </button>
-          )}
-          {instants.map((i) => (
-            <button type="button" key={i.id} className="ptr-thumb" onClick={() => setZoom(i)} aria-label={`Foto van ${i.authorName}`}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={i.url} alt={`Foto van ${i.authorName}`} loading="lazy" />
-              <span className="ptr-thumb-name">{i.authorName}</span>
-            </button>
-          ))}
-        </div>
+        <>
+          <p className="ptr-count">📷 {instants.length} {instants.length === 1 ? 'foto' : "foto's"} van deze wedstrijd</p>
+          <div className="ptr-strip">
+            {canPost && (
+              <button
+                type="button"
+                className={`ptr-add${live ? ' live' : ''}`}
+                onClick={() => inputRef.current?.click()}
+                disabled={busy}
+                aria-label="Foto toevoegen"
+              >
+                <span className="ptr-add-ico" aria-hidden>{busy ? '⏳' : '📸'}</span>
+                <span className="ptr-add-lbl">{busy ? 'Bezig…' : 'Foto'}</span>
+              </button>
+            )}
+            {instants.map((i) => (
+              <button type="button" key={i.id} className="ptr-thumb" onClick={() => setZoom(i)} aria-label={`Foto van ${i.authorName}`}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={i.url} alt={`Foto van ${i.authorName}`} loading="lazy" />
+                <span className="ptr-thumb-name">{i.authorName}</span>
+              </button>
+            ))}
+          </div>
+        </>
       )}
       {err && <p className="ptr-err">{err}</p>}
       <input
