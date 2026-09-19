@@ -46,12 +46,16 @@ describe('sanitizeKantineSelectie', () => {
 })
 
 describe('schermVenster', () => {
-  it('loopt van vandaag tot een week vooruit', () => {
+  it('start gisteren (eindstand blijft staan) en loopt tot een week vooruit', () => {
     const { dagStart, dagEinde, geplandTot } = schermVenster(new Date('2026-09-06T14:00:00Z'))
     expect(dagStart < dagEinde).toBe(true)
     expect(geplandTot > dagEinde).toBe(true)
-    const dagen = (new Date(geplandTot).getTime() - new Date(dagStart).getTime()) / 86_400_000
-    expect(Math.round(dagen)).toBe(GEPLAND_DAGEN)
+    // dagStart is exact één dag vóór het einde van vandaag min de speeldag zelf: gisteren 00:00.
+    const dagenTerug = (new Date(dagEinde).getTime() - new Date(dagStart).getTime()) / 86_400_000
+    expect(Math.round(dagenTerug)).toBe(2)
+    // Vanaf het einde van vandaag telt het nog steeds de volledige GEPLAND_DAGEN vooruit.
+    const dagenVooruit = (new Date(geplandTot).getTime() - new Date(dagEinde).getTime()) / 86_400_000 + 1
+    expect(Math.round(dagenVooruit)).toBe(GEPLAND_DAGEN)
   })
 })
 

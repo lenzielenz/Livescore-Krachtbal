@@ -214,10 +214,21 @@ export function KantineScreen({
   const statusVan = (m: KantineMatch) => live[m.id]?.status ?? m.status
   const liveMatches = matches.filter((m) => statusVan(m) === 'live')
   const finishedMatches = matches.filter((m) => statusVan(m) === 'finished')
+  const scheduledMatches = matches.filter((m) => statusVan(m) === 'scheduled')
   const played = [...liveMatches, ...finishedMatches]
-  // Livewedstrijden zijn de hoofdinhoud. Voor de eerste aftrap tonen we het programma; na de
-  // laatste wedstrijd blijft alleen de compacte uitslagenwand over.
-  const visible = liveMatches.length > 0 ? liveMatches : played.length === 0 ? matches : []
+  // Livewedstrijden zijn de hoofdinhoud. Voor de eerste aftrap tonen we het programma. Ná de
+  // laatste wedstrijd van dit moment vult het grote vlak zich met wat nog komt (vandaag verder,
+  // of de rest van de week — het venster haalt intussen ook gisteren en een week vooruit op, zie
+  // kantine-selectie.ts) — en pas als er écht niets meer aankomt, met de gespeelde wedstrijden
+  // zelf, zodat het scherm nooit leegvalt tot enkel de smalle ticker onderaan.
+  const visible =
+    liveMatches.length > 0
+      ? liveMatches
+      : played.length === 0
+        ? matches
+        : scheduledMatches.length > 0
+          ? scheduledMatches
+          : played
   const layout = layoutFor(visible.length)
   const cols = Math.min(layout.cols, maxColsForWidth(vw))
 

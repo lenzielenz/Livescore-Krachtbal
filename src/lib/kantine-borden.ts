@@ -1,7 +1,7 @@
 import type { Payload } from 'payload'
 
 import type { ClubColors } from './club-colors'
-import { formatTimeBE } from './datetime'
+import { dateStrBE, formatDateBE, formatTimeBE } from './datetime'
 import type { LogoFit } from './logo-fit'
 import { buildScoreboards } from './match-engine'
 import { reeksNaam } from './reeksen'
@@ -53,6 +53,20 @@ export type KantineBordBron = {
 }
 
 /**
+ * Tijd op het kantinebord: "14:30" op de dag zelf, "za 14:30" op een andere dag. Een kantinescherm
+ * combineert vaak zaterdag- en zondagwedstrijden (of gisterens eindstand met de planning van
+ * morgen) — zonder dagnaam is dan niet te zien bij welke dag een wedstrijd hoort.
+ */
+export function kantineTijdLabel(iso: string): string {
+  const tijd = formatTimeBE(iso)
+  if (!tijd) return ''
+  const wedstrijdDatum = new Date(iso)
+  if (Number.isNaN(wedstrijdDatum.getTime())) return tijd
+  if (dateStrBE(wedstrijdDatum) === dateStrBE()) return tijd
+  return `${formatDateBE(wedstrijdDatum, { weekday: 'short' })} ${tijd}`
+}
+
+/**
  * Bouw de borden voor het kantinescherm uit een lijst wedstrijddocumenten. De volgorde van `docs`
  * blijft behouden; een wedstrijd met een ontbrekende ploeg valt weg (één kapotte rij mag het scherm
  * niet leegmaken).
@@ -68,7 +82,7 @@ export async function bouwKantineBorden(payload: Payload, docs: KantineBordBron[
     borden.push({
       id: m.id,
       reeks: reeksNaam(m.reeks),
-      time: typeof m.date === 'string' ? formatTimeBE(m.date) : '',
+      time: typeof m.date === 'string' ? kantineTijdLabel(m.date) : '',
       date: typeof m.date === 'string' ? m.date : null,
       status: c.status,
       home: {
