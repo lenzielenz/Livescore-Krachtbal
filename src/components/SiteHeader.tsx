@@ -38,7 +38,6 @@ const PRIMARY: { href: string; label: string; key: NavSection }[] = [
 // waar hij moet zijn: eerst álles rond wedstrijden volgen en meespelen, daarna het leesvoer.
 // "Mijn Krachtbal" staat er los bovenaan als uitgelichte hoofdingang (enkel ingelogd).
 const VOLGEN: { href: string; label: string }[] = [
-  { href: '/zoeken', label: '🔎 Wanneer spelen we?' },
   { href: '/rangschikking', label: '📊 Klassement' },
   { href: '/tornooi', label: '🏆 Tornooien' },
   { href: '/pronostiek', label: '🔮 Pronostiek' },
