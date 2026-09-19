@@ -1,13 +1,24 @@
-import { hasRole } from '@/lib/access'
+import { hasRole, isFederationLevel, userClubId } from '@/lib/access'
 import { authUser } from '@/lib/api-auth'
 import { getPayloadClient } from '@/lib/payload-client'
 import { HERSTEL_GELDIG_MS, herstelLink, vervaltOp } from '@/lib/wachtwoord-reset'
 
+// Staf/admins beheert de federatie — een club-beheerder raakt die accounts hier niet aan.
+// Zelfde lijst als ClubTeamPage's PROTECTED (beheer/club-team/page.tsx).
+const PROTECTED_ROLES = ['admin', 'federatie', 'scheidsrechter', 'club-beheerder']
+
+const relId = (v: unknown): number | string | null =>
+  v && typeof v === 'object' ? ((v as { id?: number | string }).id ?? null) : (v as number | string | null)
+
 // Een eenmalige herstellink aanmaken voor iemand die zijn wachtwoord vergeten is.
 //
-// Admin-only, en bewust GEEN mail: de beheerder krijgt de link op het scherm en geeft ze zelf
-// door. Wat hij níét kan, is een wachtwoord voor die persoon kiezen — de gebruiker zet het zelf
-// via de link, en de beheerder ziet het nooit.
+// Bewust GEEN mail: de beheerder krijgt de link op het scherm en geeft ze zelf door (bv. via
+// WhatsApp, ter plaatse). Wat hij níét kan, is een wachtwoord voor die persoon kiezen — de
+// gebruiker zet het zelf via de link, en de beheerder ziet het nooit.
+//
+// Toegang: federatie/admin voor eender wie; een club-beheerder enkel voor een gewoon lid van de
+// EIGEN club (geen staf/admin-account — /wachtwoord-vergeten belooft precies dit: "vraag een
+// herstellink aan bij je clubverantwoordelijke of bij de federatie").
 //
 // De token komt van Payload's eigen machinerie (forgotPassword met disableEmail): dezelfde
 // resetPasswordToken/-Expiration die /wachtwoord-herstellen straks controleert. Zo bestaat er
@@ -17,9 +28,11 @@ import { HERSTEL_GELDIG_MS, herstelLink, vervaltOp } from '@/lib/wachtwoord-rese
 export async function POST(req: Request) {
   const payload = await getPayloadClient()
   const beheerder = await authUser(payload, req)
-  if (!hasRole(beheerder, 'admin')) {
+  const federatie = isFederationLevel(beheerder)
+  const clubBeheerder = hasRole(beheerder, 'club-beheerder')
+  if (!federatie && !clubBeheerder) {
     return Response.json(
-      { error: 'Enkel een admin kan een herstellink aanmaken.' },
+      { error: 'Enkel je clubverantwoordelijke of de federatie kan een herstellink aanmaken.' },
       { status: beheerder ? 403 : 401 },
     )
   }
@@ -40,6 +53,16 @@ export async function POST(req: Request) {
     .findByID({ collection: 'users', id: userId, depth: 0, overrideAccess: true })
     .catch(() => null)
   if (!doel) return Response.json({ error: 'Account niet gevonden.' }, { status: 404 })
+
+  if (!federatie) {
+    // Club-beheerder: enkel voor een lid van de eigen club, en nooit voor staf/admin-rollen.
+    const doelClub = relId((doel as { club?: unknown }).club)
+    const doelRoles = Array.isArray((doel as { roles?: unknown }).roles) ? ((doel as { roles: string[] }).roles) : []
+    if (doelClub == null || doelClub !== userClubId(beheerder) || doelRoles.some((r) => PROTECTED_ROLES.includes(r))) {
+      return Response.json({ error: 'Enkel voor een lid van je eigen club.' }, { status: 403 })
+    }
+  }
+
   const email = String((doel as { email?: unknown }).email ?? '')
   if (!email) return Response.json({ error: 'Dit account heeft geen e-mailadres.' }, { status: 400 })
 

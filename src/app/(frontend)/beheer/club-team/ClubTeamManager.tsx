@@ -3,6 +3,8 @@
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
+import { Herstellink } from '@/components/Herstellink'
+
 import './club-team.css'
 
 export type TeamRole = 'none' | 'club-lid' | 'club-medewerker'
@@ -126,6 +128,7 @@ function MemberRow({ m, players }: { m: Member; players: PlayerOption[] }) {
               </select>
             </label>
           )}
+          <Herstellink userId={m.id} email={m.email} chipClassName="ct-chip" />
           <button type="button" className="ct-remove" disabled={busy} onClick={remove} title="Dit lid uit de club halen">
             × Uit club
           </button>
