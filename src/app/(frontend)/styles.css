@@ -1299,17 +1299,18 @@ body.kb-scherm .site-foot { display: none; }
   gap: 8px 18px;
 }
 
-/* "Bekijk op je tv"-kaart — opvallend, supporter-vriendelijk. */
-.cast-tv {
+/* Veldscherm koppelen — pil-knop die uitklapt naar een code-invoer, zelfde idee als de
+   "bekijk op tv"-kaart die deze plek vroeger innam. */
+.veld-koppel {
   margin-top: 12px;
 }
-.cast-tv-main {
+.veld-koppel-main {
   display: flex;
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
 }
-.cast-tv-btn {
+.veld-koppel-btn {
   flex: none;
   display: inline-flex;
   align-items: center;
@@ -1321,68 +1322,68 @@ body.kb-scherm .site-foot { display: none; }
   color: var(--accent);
   font-weight: 800;
   font-size: 0.86rem;
-  text-decoration: none;
-  transition: background 0.15s ease;
-}
-.cast-tv-btn:hover {
-  background: color-mix(in srgb, var(--accent) 20%, transparent);
-}
-.cast-tv-how {
-  background: none;
-  border: none;
-  color: var(--dim);
-  font-size: 0.82rem;
-  font-weight: 700;
   font-family: inherit;
   cursor: pointer;
-  padding: 2px 4px;
+  transition: background 0.15s ease;
 }
-.cast-tv-how:hover {
-  color: var(--accent);
+.veld-koppel-btn:hover {
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
 }
-.cast-tv-steps {
-  margin: 8px 0 2px;
-  padding: 0 0 0 2px;
-  list-style: none;
+.veld-koppel-form {
+  margin-top: 8px;
   display: flex;
-  flex-direction: column;
-  gap: 7px;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
-.cast-tv-steps li {
+.veld-koppel-input {
+  width: 110px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--bg2, #10161a);
+  color: var(--txt);
+  font-size: 0.9rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 2px;
+  text-align: center;
+}
+.veld-koppel-submit {
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--line));
+  background: var(--accent);
+  color: #06110c;
+  font-weight: 800;
   font-size: 0.86rem;
-  color: var(--txt);
-  line-height: 1.45;
-  padding-left: 14px;
-  position: relative;
+  font-family: inherit;
+  cursor: pointer;
 }
-.cast-tv-steps li::before {
-  content: '📍';
-  position: absolute;
-  left: -4px;
-  top: 0;
-  font-size: 0.72rem;
+.veld-koppel-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
-.cast-tv-steps strong {
-  color: var(--accent);
+.veld-koppel-msg {
+  font-size: 0.84rem;
+  font-weight: 600;
 }
-.cast-tv-steps em {
-  font-style: normal;
-  font-weight: 700;
-  color: var(--txt);
+.veld-koppel-msg.ok {
+  color: #0fe0a6;
+}
+.veld-koppel-msg.err {
+  color: #ef476f;
 }
 @media (max-width: 460px) {
-  .cast-tv-btn {
+  .veld-koppel-btn {
     width: 100%;
     justify-content: center;
   }
-  /* De pil is hier volle breedte en gecentreerd; «Hoe?» wrapte naar een eigen regel en hing links
-     tegen de kantlijn als een wees. Centreren en een ruimer raakvlak houden het bij de pil. */
-  .cast-tv-main {
+  .veld-koppel-main {
     justify-content: center;
   }
-  .cast-tv-how {
-    padding: 6px 10px;
-    min-height: 36px;
+  .veld-koppel-form {
+    justify-content: center;
+    width: 100%;
   }
 }
 

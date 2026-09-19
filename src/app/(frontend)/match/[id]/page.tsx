@@ -3,15 +3,16 @@ import { headers } from 'next/headers'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
-import { CastToTv } from '@/components/CastToTv'
 import { CheckInButton } from '@/components/CheckInButton'
 import { MatchStats } from '@/components/MatchStats'
 import { MatchWeather } from '@/components/MatchWeather'
 import { Scoreboard } from '@/components/Scoreboard'
 import { SiteHeader } from '@/components/SiteHeader'
 import { TeamLogo } from '@/components/TeamLogo'
+import { VeldschermKoppelen } from '@/components/VeldschermKoppelen'
 import { hasRole, isFederationLevel } from '@/lib/access'
 import { competitionWhere } from '@/lib/analyse-access'
+import { mayScoreMatch, type AuthedUser } from '@/lib/api-auth'
 import { getAuthUser } from '@/lib/auth-user'
 import { mayEditMatchVideo } from '@/lib/video-access'
 import { isCheckedIn, sanitizeCheckins } from '@/lib/checkins'
@@ -116,6 +117,9 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   const me = await getAuthUser()
   // Video koppelen/uploaden mag de federatie (competitiewedstrijden) — zie mayEditMatchVideo.
   const mayVideo = mayEditMatchVideo(me, matchDoc as { analyseOnly?: boolean | null; analyseOwner?: unknown } | null)
+  // Veldscherm koppelen: enkel zinvol op een gestarte wedstrijd, en enkel voor wie ze mag
+  // aantekenen (dezelfde toegang als het scoreformulier zelf — de code is de eigenlijke grendel).
+  const magKoppelen = state.match.status === 'live' && (await mayScoreMatch(payload, me as AuthedUser | null, matchId))
   const datum = matchDoc?.date ? formatDateTimeBE(matchDoc.date as string) : null
   // Wie de wedstrijd mag rechtzetten (tijdstip + ploegnaam/club): de federatie, en nooit op een
   // analysewedstrijd — die is privé en wordt onder /analyse/beheer beheerd.
@@ -568,8 +572,9 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
         )
       })()}
 
-      {/* Supporters duidelijk tonen dat ze de wedstrijd op hun tv kunnen volgen. */}
-      {!toekomstig && <CastToTv matchId={matchId} />}
+      {/* Wie de wedstrijd start en mag aantekenen, koppelt ze hier meteen aan het veldscherm bij
+          het veld — geen aparte stap in het aantekenscherm nodig. */}
+      {magKoppelen && <VeldschermKoppelen matchId={matchId} />}
 
       {/* Na afloop, publiek: samenvatting (speler van de wedstrijd) + de doelpuntenmakers.
           Het scoreverloop staat vlak onder het scorebord, in de Scoreboard zelf. */}
