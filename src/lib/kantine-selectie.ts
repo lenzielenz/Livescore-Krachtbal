@@ -55,14 +55,18 @@ export function selectieIsLeeg(s: KantineSelectie): boolean {
 /**
  * Het tijdvenster van het scherm, in UTC-grenzen op de Belgische kalender.
  *
- * `dagStart`/`dagEinde` = vandaag (alles van vandaag hoort erop, ook wat al gedaan is — in de
- * kantine wil je de uitslag van de match die net gespeeld is blijven zien). `geplandTot` = een
- * week vooruit, zodat je doordeweeks ziet wat eraan komt.
+ * `dagStart` = GISTEREN (niet vandaag): de eindstand van de vorige speeldag mag op het scherm
+ * blijven staan tot er iets nieuws is, in plaats van een leeg scherm te tonen zodra alle
+ * wedstrijden van vandaag nog moeten beginnen of de laatste van gisteren pas net voorbij is.
+ * `dagEinde` = het einde van vandaag (voor de sortering: "vandaag" vs "later deze week", zie
+ * `rang` hieronder). `geplandTot` = een week vooruit, zodat je doordeweeks ziet wat eraan komt.
  */
 export function schermVenster(nu: Date = new Date()): { dagStart: string; dagEinde: string; geplandTot: string } {
-  const { start, end } = brusselsDayBoundsUtc(dateStrBE(nu))
+  const gisteren = new Date(nu.getTime() - 24 * 60 * 60 * 1000)
+  const { start: dagStart } = brusselsDayBoundsUtc(dateStrBE(gisteren))
+  const { end } = brusselsDayBoundsUtc(dateStrBE(nu))
   const geplandTot = new Date(new Date(end).getTime() + (GEPLAND_DAGEN - 1) * 24 * 60 * 60 * 1000)
-  return { dagStart: start, dagEinde: end, geplandTot: geplandTot.toISOString() }
+  return { dagStart, dagEinde: end, geplandTot: geplandTot.toISOString() }
 }
 
 export type SchermWedstrijd = { id: number; status: string; date?: string | null }

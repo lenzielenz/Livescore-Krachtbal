@@ -45,6 +45,25 @@ export type DayMatch = {
 const FAV_TEAMS_KEY = 'kb-fav-ploegen'
 const FAV_CLUBS_KEY = 'kb-fav-clubs'
 const FAV_REEKS_KEY = 'kb-fav-reeksen'
+const FILTER_STATE_KEY = 'kb-live-filters'
+const SCROLL_STATE_KEY = 'kb-live-scroll'
+
+/** Wat er van het filterbord bewaard blijft bij het verlaten van de pagina (zie de restore/persist-
+ *  effecten in LiveBoard) — enkel voor dezelfde dag, anders zou een reeksfilter van vandaag raar
+ *  staan op een compleet andere speeldag. Scroll zit in een eigen sleutel (zie SCROLL_STATE_KEY):
+ *  die wijzigt continu tijdens het scrollen, de filters enkel bij een echte filterwijziging. */
+type StoredFilterState = {
+  date: string
+  query: string
+  sortBy: 'reeks' | 'tijd' | 'thuisuit'
+  reeksFilter: string | null
+  onlyFavTeams: boolean
+  onlyFavClubs: boolean
+  onlyFavReeksen: boolean
+  onlyMyClub: boolean
+  onlyLive: boolean
+}
+type StoredScrollState = { date: string; scrollY: number }
 
 const shiftDate = shiftDateStr
 
@@ -213,7 +232,10 @@ export function LiveBoard({
   const [query, setQuery] = useState('')
   const [openRow, setOpenRow] = useState<number | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
-  const [sortBy, setSortBy] = useState<'reeks' | 'tijd' | 'thuisuit'>('reeks')
+  // Wie een eigen club heeft, wil in de eerste plaats weten wanneer ZIJN ploeg thuis/uit speelt —
+  // "Reeks" (alle wedstrijden van de dag, gegroepeerd) is dan pas de tweede vraag. Zonder gekende
+  // club (of de restore hieronder) blijft "Reeks" de standaard.
+  const [sortBy, setSortBy] = useState<'reeks' | 'tijd' | 'thuisuit'>(() => (myClubId != null ? 'thuisuit' : 'reeks'))
   // Reeksen die de supporter zelf dichtklapte — zo veegt hij weg wat hem niet boeit
   // zonder iets te verliezen (de telling blijft op de kop staan). Standaard alles open.
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
@@ -224,6 +246,73 @@ export function LiveBoard({
       else next.add(reeks)
       return next
     })
+
+  // Filters, sortering en scrollpositie overleven een bezoek aan een wedstrijdpagina en terug: zonder
+  // dit begint elke terugkeer weer bovenaan met alle filters gewist ("als je terug gaat moet het zijn
+  // waar je gebleven was"). `hydrated` bewaakt dat de persist-effect hieronder pas ná de restore in
+  // dezelfde render meeloopt: zonder die gate schrijft persist bij het opbouwen éérst de (nog niet
+  // herstelde) defaults weg, en leest de restore die zelf weer terug bij Reacts StrictMode-dubbele
+  // mount-cyclus (mount → cleanup → mount) in ontwikkeling — waardoor de zonet herstelde waarden
+  // alsnog overschreven raken.
+  const [hydrated, setHydrated] = useState(false)
+  const pendingScrollRef = useRef<number | null>(null)
+  useEffect(() => {
+    // Enkel bij het opbouwen van dit bordexemplaar — dus ook wanneer je terugkeert van een
+    // wedstrijdpagina, want die had het vorige exemplaar afgebroken.
+    try {
+      const raw = sessionStorage.getItem(FILTER_STATE_KEY)
+      const saved = raw ? (JSON.parse(raw) as StoredFilterState) : null
+      if (saved && saved.date === date) {
+        setQuery(saved.query)
+        setSortBy(saved.sortBy)
+        setReeksFilter(saved.reeksFilter)
+        setOnlyFavTeams(saved.onlyFavTeams)
+        setOnlyFavClubs(saved.onlyFavClubs)
+        setOnlyFavReeksen(saved.onlyFavReeksen)
+        setOnlyMyClub(saved.onlyMyClub)
+        setOnlyLive(saved.onlyLive)
+      }
+      const rawScroll = sessionStorage.getItem(SCROLL_STATE_KEY)
+      const savedScroll = rawScroll ? (JSON.parse(rawScroll) as StoredScrollState) : null
+      if (savedScroll && savedScroll.date === date) {
+        // Pas echt scrollen zodra de (herstelde) lijst haar uiteindelijke vorm heeft — zie het
+        // effect verderop dat naar `groups` luistert.
+        pendingScrollRef.current = savedScroll.scrollY
+      }
+    } catch {}
+    setHydrated(true)
+  }, [])
+
+  useEffect(() => {
+    if (!hydrated) return
+    try {
+      sessionStorage.setItem(
+        FILTER_STATE_KEY,
+        JSON.stringify({ date, query, sortBy, reeksFilter, onlyFavTeams, onlyFavClubs, onlyFavReeksen, onlyMyClub, onlyLive }),
+      )
+    } catch {}
+  }, [hydrated, date, query, sortBy, reeksFilter, onlyFavTeams, onlyFavClubs, onlyFavReeksen, onlyMyClub, onlyLive])
+
+  // Scrollpositie wijzigt continu (i.p.v. bij een discrete filterwijziging) — een eigen, gethrottelde
+  // listener i.p.v. wachten tot het verlaten van de pagina, want dat moment is in de praktijk niet
+  // betrouwbaar te vangen (geen paginaverlating in de browserzin bij een SPA-navigatie).
+  useEffect(() => {
+    let raf = 0
+    const onScroll = () => {
+      if (raf) return
+      raf = requestAnimationFrame(() => {
+        raf = 0
+        try {
+          sessionStorage.setItem(SCROLL_STATE_KEY, JSON.stringify({ date, scrollY: window.scrollY } satisfies StoredScrollState))
+        } catch {}
+      })
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => {
+      window.removeEventListener('scroll', onScroll)
+      if (raf) cancelAnimationFrame(raf)
+    }
+  }, [date])
 
   // Vul de dag-gebonden lijst aan met treffers van andere dagen zodra er iets getypt wordt (2+
   // tekens) — zo blijft "waarom vind ik niets?" uit als je ploeg vandaag niet speelt. Gedebouncet
@@ -357,6 +446,15 @@ export function LiveBoard({
     }
     return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]))
   }, [visible, sortBy, myClubId])
+
+  // Pas terugscrollen nadat de herstelde filters de lijst hun uiteindelijke hoogte gegeven hebben —
+  // anders mikt scrollTo op een hoogte die vlak daarna nog verandert.
+  useEffect(() => {
+    if (pendingScrollRef.current == null) return
+    const y = pendingScrollRef.current
+    pendingScrollRef.current = null
+    requestAnimationFrame(() => window.scrollTo(0, y))
+  }, [groups])
 
   const dateLabel = formatDateBE(brusselsNoonUtc(date), {
     weekday: 'long',
