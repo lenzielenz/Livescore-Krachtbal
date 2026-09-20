@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   GEPLAND_DAGEN,
   ontdubbel,
+  rang,
   sanitizeKantineSelectie,
   schermVenster,
   selectieIsLeeg,
@@ -90,6 +91,30 @@ describe('sorteerSchermWedstrijden', () => {
     const invoer = [{ id: 2, status: 'live' }, { id: 1, status: 'live' }]
     sorteerSchermWedstrijden(invoer, dagEinde)
     expect(invoer.map((m) => m.id)).toEqual([2, 1])
+  })
+})
+
+describe('rang', () => {
+  // KantineScreen.tsx groepeert hierop wat er NU op het grote scherm hoort: rang 0-2 ("vandaag",
+  // ook gisterens eindstand telt daarin mee) versus rang 3 ("later deze week"). Zie de `visible`-
+  // berekening daar — een eerdere versie koos telkens ÉÉN statusgroep exclusief en verstopte zo
+  // net de andere wedstrijden van dezelfde dag zodra er een mix van live/gespeeld/gepland was.
+  const dagEinde = '2026-09-06T22:00:00.000Z'
+
+  it('telt live als rang 0, ongeacht de datum', () => {
+    expect(rang({ id: 1, status: 'live', date: '2026-09-01T10:00:00.000Z' }, dagEinde)).toBe(0)
+  })
+
+  it('telt een afgelopen wedstrijd als rang 2, ook van gisteren', () => {
+    expect(rang({ id: 1, status: 'finished', date: '2026-09-05T10:00:00.000Z' }, dagEinde)).toBe(2)
+  })
+
+  it('telt een geplande wedstrijd van vandaag als rang 1', () => {
+    expect(rang({ id: 1, status: 'scheduled', date: '2026-09-06T19:00:00.000Z' }, dagEinde)).toBe(1)
+  })
+
+  it('telt een geplande wedstrijd later deze week als rang 3', () => {
+    expect(rang({ id: 1, status: 'scheduled', date: '2026-09-09T18:00:00.000Z' }, dagEinde)).toBe(3)
   })
 })
 

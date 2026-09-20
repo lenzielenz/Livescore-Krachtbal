@@ -71,8 +71,12 @@ export function schermVenster(nu: Date = new Date()): { dagStart: string; dagEin
 
 export type SchermWedstrijd = { id: number; status: string; date?: string | null }
 
-/** Rang van een wedstrijd op het scherm: bezig eerst, dan wat vandaag nog komt, dan de rest. */
-function rang(m: SchermWedstrijd, dagEinde: string): number {
+/**
+ * Rang van een wedstrijd op het scherm: bezig eerst, dan wat vandaag nog komt, dan de rest.
+ * Ook gebruikt door KantineScreen.tsx om te bepalen wat er NU op het grote scherm hoort (rang 0-2 =
+ * "vandaag", rang 3 = later deze week) — zie de `visible`-berekening daar.
+ */
+export function rang(m: SchermWedstrijd, dagEinde: string): number {
   if (m.status === 'live') return 0
   if (m.status === 'finished') return 2
   // Gepland: vandaag vóór later deze week.

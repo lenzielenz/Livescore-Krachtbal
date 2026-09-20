@@ -11,6 +11,7 @@ import { ReclameOverlay } from '@/components/ReclameOverlay'
 import type { Ad } from '@/lib/ads'
 import { bladIndeling, BLAD_GAT } from '@/lib/kantine-bladeren'
 import type { KantineLive } from '@/lib/kantine-channel'
+import { rang, schermVenster } from '@/lib/kantine-selectie'
 import type { ClubColors } from '@/lib/club-colors'
 import { useLiveStream } from '@/lib/use-live-stream'
 import { Tile, type KantineMatch } from './KantineBoard'
@@ -214,21 +215,21 @@ export function KantineScreen({
   const statusVan = (m: KantineMatch) => live[m.id]?.status ?? m.status
   const liveMatches = matches.filter((m) => statusVan(m) === 'live')
   const finishedMatches = matches.filter((m) => statusVan(m) === 'finished')
-  const scheduledMatches = matches.filter((m) => statusVan(m) === 'scheduled')
   const played = [...liveMatches, ...finishedMatches]
-  // Livewedstrijden zijn de hoofdinhoud. Voor de eerste aftrap tonen we het programma. Ná de
-  // laatste wedstrijd van dit moment vult het grote vlak zich met wat nog komt (vandaag verder,
-  // of de rest van de week — het venster haalt intussen ook gisteren en een week vooruit op, zie
-  // kantine-selectie.ts) — en pas als er écht niets meer aankomt, met de gespeelde wedstrijden
-  // zelf, zodat het scherm nooit leegvalt tot enkel de smalle ticker onderaan.
-  const visible =
-    liveMatches.length > 0
-      ? liveMatches
-      : played.length === 0
-        ? matches
-        : scheduledMatches.length > 0
-          ? scheduledMatches
-          : played
+  // Toon altijd de volledige dag samen — live, nog te spelen én al gespeelde wedstrijden door
+  // elkaar — en pas als er voor VANDAAG écht niets (meer) is, val terug op wat later deze week
+  // gepland staat (het venster haalt intussen ook gisteren en een week vooruit op, zie
+  // kantine-selectie.ts). Een eerdere versie koos telkens ÉÉN status-groep exclusief (enkel live,
+  // of enkel wat nog moet starten) en verstopte daarmee net de andere wedstrijden van diezelfde
+  // dag zodra er een mix van live/gespeeld/gepland was: "bij start van de wedstrijd verlies je de
+  // info van de andere wedstrijden die dag", en op zondag verdween zaterdags eindstand zodra er
+  // een nog te spelen zondagwedstrijd bijstond. `rang` (uit kantine-selectie.ts, dezelfde die de
+  // sortering bepaalt) telt gisteren-tot-nu als "vandaag" (rang 0-2); enkel rang 3 is puur later
+  // deze week.
+  const dagEinde = schermVenster().dagEinde
+  const vandaag = matches.filter((m) => rang({ id: m.id, status: statusVan(m), date: m.date }, dagEinde) <= 2)
+  const laterDezeWeek = matches.filter((m) => rang({ id: m.id, status: statusVan(m), date: m.date }, dagEinde) === 3)
+  const visible = vandaag.length > 0 ? vandaag : laterDezeWeek
   const layout = layoutFor(visible.length)
   const cols = Math.min(layout.cols, maxColsForWidth(vw))
 
