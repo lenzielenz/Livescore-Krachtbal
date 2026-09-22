@@ -884,6 +884,10 @@ export interface Match {
     | boolean
     | null;
   /**
+   * Hoogste aantal gelijktijdige live-kijkers tijdens deze wedstrijd. Automatisch beheerd.
+   */
+  peakViewers?: number | null;
+  /**
    * Puntenmultiplier voor de pronostiek (1 = normaal, 2 = bonus via het rad). Automatisch beheerd.
    */
   pronostiekBonus?: number | null;
@@ -2221,6 +2225,7 @@ export interface MatchesSelect<T extends boolean = true> {
   liveShoutouts?: T;
   livePoll?: T;
   scorePredictions?: T;
+  peakViewers?: T;
   pronostiekBonus?: T;
   analyseOwner?: T;
   finishedAt?: T;

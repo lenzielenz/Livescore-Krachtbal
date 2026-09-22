@@ -29,12 +29,18 @@ function Highlight({ icon, label, value, who, side }: { icon: string; label: str
 }
 
 type ClubBrand = { logoUrl: string | null; logoFit?: LogoFit | null; colors?: { primary?: string | null } | null }
-export function MatchRecap({ stats, teams, branding }: {
+export function MatchRecap({ stats, teams, branding, peakViewers }: {
   stats: MatchStats; teams: { home: string; away: string }
   branding?: { home: ClubBrand; away: ClubBrand }
+  /** Hoogste live-kijkersaantal tijdens de wedstrijd (match-channel.ts, "oogje" op het live-bord).
+   *  Enkel vermeld als het de moeite waard is — zie de >3-check bij het renderen. */
+  peakViewers?: number | null
 }) {
   const active = stats.players.filter((p) => p.throws > 0)
   if (active.length === 0) return null
+
+  // Enkel de moeite waard vanaf een handvol kijkers — "1 kijker" oogt eerder leeg dan leuk.
+  const toonKijkers = typeof peakViewers === 'number' && peakViewers > 3
 
   const mvp = pick(
     active,
@@ -54,7 +60,8 @@ export function MatchRecap({ stats, teams, branding }: {
       '--away': branding?.away.colors?.primary ?? '#a6bbdc',
     } as React.CSSProperties}>
       <div className="an-recap-header"><div><span className="an-recap-kicker">HET VERHAAL ACHTER DE SCORE</span>
-      <h2 className="section-title">Samenvatting</h2></div>
+      <h2 className="section-title">Samenvatting</h2>
+      {toonKijkers && <p className="an-recap-viewers">👁 {peakViewers} kijkers volgden live mee</p>}</div>
       {branding && <div className="an-recap-logos">
         <TeamLogo name={teams.home} {...branding.home} ringColor={branding.home.colors?.primary} size={44} />
         <TeamLogo name={teams.away} {...branding.away} ringColor={branding.away.colors?.primary} size={44} />
