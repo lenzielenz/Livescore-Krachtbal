@@ -106,6 +106,13 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   const weatherPlace = homeClub?.plaats?.trim() || null
   const weatherLat = typeof homeClub?.lat === 'number' ? homeClub.lat : null
   const weatherLng = typeof homeClub?.lng === 'number' ? homeClub.lng : null
+  // Locatie-chip in de kop: accommodatie (adres/terreinnaam) als de club die invulde, anders
+  // gewoon de gemeente — zelfde terugval als de agenda-locatie verderop. Met coördinaten wijst
+  // de link naar de exacte pin, anders laat Google Maps zelf op de tekst zoeken.
+  const terreinLabel = accommodatie || weatherPlace
+  const mapsUrl = terreinLabel
+    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(weatherLat != null && weatherLng != null ? `${weatherLat},${weatherLng}` : terreinLabel)}`
+    : null
   // Toon de leesbare reeksnaam zonder de code-prefix ("1ste Nationale Dames" i.p.v. "1NAD — …").
   const reeks = matchDoc?.reeks ? reeksNaam(matchDoc.reeks) : null
   // Live winstkans: helftduur + verwacht scoretempo strikt uit de reeks (veilige defaults binnen reeksen.ts).
@@ -397,11 +404,15 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
       {/* Match-context als kop bovenaan (reeks · datum · locatie · scheidsrechter), zodat
           duidelijk is over welke wedstrijd dit gaat. Kapiteins horen hier bewust níet bij —
           die staan op het wedstrijdblad, niet op de publieke pagina. */}
-      {(reeks || datum || accommodatie || referee) && (
+      {(reeks || datum || terreinLabel || referee) && (
         <div className="match-meta">
           {reeks && <span className="match-meta-reeks">{reeks}</span>}
           {datum && <span className="match-meta-bit">{datum}</span>}
-          {accommodatie && <span className="match-meta-bit">📍 {accommodatie}</span>}
+          {terreinLabel && mapsUrl && (
+            <a className="match-meta-bit match-meta-loc" href={mapsUrl} target="_blank" rel="noopener noreferrer" title="Route via Google Maps">
+              📍 {terreinLabel}
+            </a>
+          )}
           {referee && <span className="match-meta-bit">🟡 {referee}</span>}
           {/* Bij een wedstrijd die nog moet komen staan de agenda-knoppen groot in het blok
               hieronder — dan hoeft dit chipje er niet nóg eens bij. */}
