@@ -104,6 +104,50 @@
   font-weight: 700;
 }
 
+/* Ploeg-toewijzing: per niet-herkende ploeg uit het bestand kiezen tussen "écht nieuw" en "koppel
+   aan bestaande ploeg" — de fix voor stille dubbele-ploeg-aanmaak bij een licht andere schrijfwijze. */
+.pi-toewijzing-lijst { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.pi-toewijzing-rij {
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--panel) 70%, transparent);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.pi-toewijzing-bron { display: flex; flex-direction: column; gap: 2px; }
+.pi-toewijzing-bron strong { font-size: 0.9rem; }
+.pi-toewijzing-keuze { display: flex; flex-direction: column; gap: 6px; }
+.pi-toewijzing-optie {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 0.84rem;
+  cursor: pointer;
+}
+.pi-toewijzing-optie input[type='radio'] { flex: none; }
+.pi-toewijzing-naam,
+.pi-toewijzing-select {
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--txt);
+  font-size: 0.84rem;
+  min-width: 200px;
+}
+.pi-toewijzing-naam:disabled,
+.pi-toewijzing-select:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* "Wat er gaat veranderen" — het voorstel dat de gebruiker ziet vóór ze definitief importeert. */
+.pi-impact { border: 1px solid color-mix(in srgb, var(--pop) 40%, var(--line)); border-radius: 12px; padding: 12px 14px; }
+.pi-impact h3 { margin-top: 0; }
+.pi-impact-lijst { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.pi-impact-lijst li { font-size: 0.84rem; line-height: 1.5; color: var(--txt); }
+.pi-impact-lijst em { font-style: normal; color: var(--dim); }
+
 /* Clubkleuren aanvullen — compact, ingeklapt onder de seizoensimport. */
 .pi-kleuren { margin-top: 20px; border: 1px solid var(--line); border-radius: 14px; }
 .pi-kleuren > summary {

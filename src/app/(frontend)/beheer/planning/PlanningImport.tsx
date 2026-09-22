@@ -1,13 +1,21 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 
 import { toast } from '@/components/Toaster'
 import { formatDateTimeBE } from '@/lib/datetime'
-import type { ImportSamenvatting } from '@/lib/season-import'
+import type { ImportSamenvatting, TeamMappingActie, TeamMappings } from '@/lib/season-import'
 import './planning-import.css'
 
 type Antwoord = ImportSamenvatting & { ok: true; commit: boolean; bron: string }
+
+export interface PlanningTeam {
+  id: number
+  naam: string
+  reeks: string
+  reeksNaam: string
+  club: string
+}
 
 /**
  * Seizoensimport in twee stappen: eerst controleren (er wordt níets weggeschreven), dan pas
@@ -18,7 +26,7 @@ type Antwoord = ImportSamenvatting & { ok: true; commit: boolean; bron: string }
 // frase als de server verwacht (api/planning/seizoen/route.ts, WIPE_CONFIRM_PHRASE).
 const WIPE_CONFIRM_PHRASE = 'VERWIJDER ALLES'
 
-export function PlanningImport() {
+export function PlanningImport({ teams }: { teams: PlanningTeam[] }) {
   const [bestand, setBestand] = useState<File | null>(null)
   const [tekst, setTekst] = useState('')
   const [proef, setProef] = useState<Antwoord | null>(null)
@@ -30,9 +38,23 @@ export function PlanningImport() {
   // aparte, uitgeklapte keuze met een letterlijke bevestigingsfrase — niet zomaar een vinkje.
   const [wipe, setWipe] = useState(false)
   const [wipeConfirm, setWipeConfirm] = useState('')
+  // Ploeg-toewijzing: per niet-herkende ploeg uit het bestand (sleutel = naamSleutel|reeks) kiest
+  // de gebruiker "écht nieuw" (default) of "koppel aan bestaande ploeg". Blijft bewaard tussen een
+  // herhaalde "Controleren"-klik, zodat een keuze niet verloren gaat als je de proefronde herhaalt.
+  const [toewijzingen, setToewijzingen] = useState<TeamMappings>({})
 
   const heeftInvoer = Boolean(bestand) || tekst.trim().length > 0
   const wipeBevestigd = !wipe || wipeConfirm.trim() === WIPE_CONFIRM_PHRASE
+
+  const teamsPerReeks = useMemo(() => {
+    const m = new Map<string, PlanningTeam[]>()
+    for (const t of teams) {
+      const lijst = m.get(t.reeks)
+      if (lijst) lijst.push(t)
+      else m.set(t.reeks, [t])
+    }
+    return m
+  }, [teams])
 
   const verstuur = async (commit: boolean) => {
     if (busy || !heeftInvoer) return
@@ -43,6 +65,7 @@ export function PlanningImport() {
       if (bestand) body.append('file', bestand)
       else body.append('text', tekst)
       if (wipe && commit) body.append('confirm', wipeConfirm.trim())
+      if (Object.keys(toewijzingen).length > 0) body.append('teamMappings', JSON.stringify(toewijzingen))
 
       const params = new URLSearchParams()
       if (commit) params.set('commit', '1')
@@ -76,7 +99,15 @@ export function PlanningImport() {
     setKlaar(null)
     setWipe(false)
     setWipeConfirm('')
+    setToewijzingen({})
     if (fileRef.current) fileRef.current.value = ''
+  }
+
+  const setToewijzing = (sleutel: string, actie: TeamMappingActie) => {
+    setToewijzingen((prev) => ({ ...prev, [sleutel]: actie }))
+    // Een gewijzigde toewijzing verandert wat er zou gebeuren — de vorige proefronde klopt dan
+    // niet meer. Opnieuw op "1. Controleren" drukken herberekent met de nieuwe keuze.
+    setProef(null)
   }
 
   const res = klaar ?? proef
@@ -257,11 +288,44 @@ export function PlanningImport() {
           {!klaar && res.nieuweClubs.length > 0 && (
             <Lijst titel={`${res.nieuweClubs.length} nieuwe club(s)`} items={res.nieuweClubs} />
           )}
+
           {!klaar && res.nieuwePloegen.length > 0 && (
-            <Lijst
-              titel={`${res.nieuwePloegen.length} nieuwe ploeg(en)`}
-              items={res.nieuwePloegen.map((p) => `${p.naam} — ${p.reeks}`)}
-            />
+            <div className="pi-blok pi-toewijzing">
+              <h3>{res.nieuwePloegen.length} ploeg(en) niet herkend — wat moet ermee gebeuren?</h3>
+              <p className="pi-hint">
+                Een naam die niet exact overeenkomt met een bestaande ploeg in dezelfde reeks wordt
+                hieronder standaard als <strong>nieuwe ploeg</strong> voorgesteld. Is het eigenlijk
+                een ploeg die al bestaat (net iets anders geschreven)? Koppel ze dan hier — anders
+                ontstaat er een dubbele ploeg met een lege rangschikking.
+              </p>
+              <ul className="pi-toewijzing-lijst">
+                {res.nieuwePloegen.map((p) => (
+                  <PloegToewijzingRij
+                    key={p.sleutel}
+                    ploeg={p}
+                    keuze={toewijzingen[p.sleutel]}
+                    opties={teamsPerReeks.get(p.reeks) ?? []}
+                    onWijzig={(actie) => setToewijzing(p.sleutel, actie)}
+                  />
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {!klaar && res.gekoppeldePloegen.length > 0 && (
+            <div className="pi-blok pi-impact">
+              <h3>Wat er gaat veranderen</h3>
+              <ul className="pi-impact-lijst">
+                {res.gekoppeldePloegen.map((g) => (
+                  <li key={g.sleutel}>
+                    <strong>{g.wedstrijden}</strong> wedstrijd{g.wedstrijden === 1 ? '' : 'en'} van{' '}
+                    <em>{g.bestandNaam}</em> {g.wedstrijden === 1 ? 'wordt' : 'worden'} toegevoegd aan{' '}
+                    <strong>{g.teamNaam}</strong> ({g.reeks}) — ze verschijnen op het live-bord en
+                    tellen mee in de rangschikking van {g.reeks}.
+                  </li>
+                ))}
+              </ul>
+            </div>
           )}
 
           {res.issues.length > 0 && (
@@ -306,5 +370,80 @@ function Lijst({ titel, items }: { titel: string; items: string[] }) {
         ))}
       </ul>
     </details>
+  )
+}
+
+/** Eén niet-herkende ploeg: "écht nieuw" (met eventueel eigen naam) of koppel aan een bestaande
+ *  ploeg. De optielijst toont eerst ploegen uit dezelfde reeks (verreweg het gebruikelijkste
+ *  geval), met de rest van de competitie als extra keuze eronder. */
+function PloegToewijzingRij({
+  ploeg,
+  keuze,
+  opties,
+  onWijzig,
+}: {
+  ploeg: { naam: string; club: string; reeks: string; sleutel: string; wedstrijden: number }
+  keuze: TeamMappingActie | undefined
+  opties: PlanningTeam[]
+  onWijzig: (actie: TeamMappingActie) => void
+}) {
+  const isBestaand = keuze?.actie === 'bestaand'
+  const nieuweNaam = keuze?.actie === 'nieuw' ? (keuze.naam ?? '') : ''
+
+  return (
+    <li className="pi-toewijzing-rij">
+      <div className="pi-toewijzing-bron">
+        <strong>{ploeg.naam}</strong>
+        <span className="pi-hint">
+          {ploeg.club} · {ploeg.reeks} · {ploeg.wedstrijden} wedstrijd{ploeg.wedstrijden === 1 ? '' : 'en'}
+        </span>
+      </div>
+      <div className="pi-toewijzing-keuze">
+        <label className="pi-toewijzing-optie">
+          <input
+            type="radio"
+            name={`tw-${ploeg.sleutel}`}
+            checked={!isBestaand}
+            onChange={() => onWijzig({ actie: 'nieuw', naam: undefined })}
+          />
+          Nieuwe ploeg aanmaken als
+          <input
+            type="text"
+            className="pi-toewijzing-naam"
+            value={!isBestaand ? nieuweNaam : ''}
+            placeholder={ploeg.naam}
+            disabled={isBestaand}
+            onChange={(e) => onWijzig({ actie: 'nieuw', naam: e.target.value })}
+          />
+        </label>
+        <label className="pi-toewijzing-optie">
+          <input
+            type="radio"
+            name={`tw-${ploeg.sleutel}`}
+            checked={isBestaand}
+            onChange={() => {
+              const eerste = opties[0]
+              if (eerste) onWijzig({ actie: 'bestaand', teamId: eerste.id })
+            }}
+            disabled={opties.length === 0}
+          />
+          Koppel aan bestaande ploeg
+          <select
+            className="pi-toewijzing-select"
+            value={isBestaand ? String(keuze.teamId) : ''}
+            disabled={!isBestaand || opties.length === 0}
+            onChange={(e) => onWijzig({ actie: 'bestaand', teamId: Number(e.target.value) })}
+          >
+            {!isBestaand && <option value="" disabled>Kies een ploeg…</option>}
+            {opties.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.naam} ({t.club})
+              </option>
+            ))}
+          </select>
+          {opties.length === 0 && <span className="pi-hint">geen bestaande ploegen in {ploeg.reeks}</span>}
+        </label>
+      </div>
+    </li>
   )
 }

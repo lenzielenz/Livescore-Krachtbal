@@ -496,6 +496,18 @@ export function planSeason(rows: string[][]): SeasonPlan {
   }
 }
 
+// ── Ploeg-toewijzing ─────────────────────────────────────────────────────────────────────────
+// Een ploegnaam uit het bestand die niet exact overeenkomt met een bestaande ploeg (zelfde naam
+// + reeks) wordt standaard als "nieuwe ploeg" voorgesteld. Dat is precies hoe de KBC St.
+// Michiels-duplicaten ontstonden: een latere/deel-import met een net iets andere schrijfwijze
+// maakte in stilte een tweede ploeg aan i.p.v. de bestaande te hergebruiken. Deze toewijzing laat
+// de gebruiker vóór het importeren expliciet kiezen: écht nieuw (met zelf gekozen naam) of koppel
+// aan een bestaande ploeg — zodat twee wedstrijdenbestanden voor dezelfde ploeg nooit meer een
+// duplicaat opleveren, ongeacht hoe de naam in het bestand geschreven staat.
+export type TeamMappingActie = { actie: 'bestaand'; teamId: number } | { actie: 'nieuw'; naam?: string }
+/** Sleutel: `${naamSleutel(naam)}|${reeks}` — dezelfde sleutel als nieuwePloegen[].sleutel. */
+export type TeamMappings = Record<string, TeamMappingActie>
+
 // ── Antwoord van de import ───────────────────────────────────────────────────────────────────
 // Staat hier (en niet bij de uitvoering) omdat het importscherm een client-component is: die mag
 // geen module aanraken die Payload binnentrekt.
@@ -504,7 +516,14 @@ export interface ImportSamenvatting {
   /** Wat er in het bestand stond. */
   gelezen: { rijen: number; wedstrijden: number }
   nieuweClubs: string[]
-  nieuwePloegen: { naam: string; club: string; reeks: Reeks }[]
+  /** Ploegen die (nog) niet aan een bestaande ploeg gekoppeld zijn — worden aangemaakt, tenzij de
+   *  gebruiker via teamMappings alsnog een bestaande ploeg kiest. `sleutel` voedt precies die
+   *  toewijzing; `wedstrijden` toont meteen hoeveel wedstrijden het aangaat. */
+  nieuwePloegen: { naam: string; club: string; reeks: Reeks; sleutel: string; wedstrijden: number }[]
+  /** Ploegen die de gebruiker via teamMappings expliciet aan een bestaande ploeg koppelde — het
+   *  "wat gaat er veranderen"-voorstel: deze wedstrijden komen bij een ploeg die al meespeelt, en
+   *  verschijnen dus meteen op het live-bord en in de rangschikking van haar reeks. */
+  gekoppeldePloegen: { sleutel: string; bestandNaam: string; teamId: number; teamNaam: string; reeks: Reeks; wedstrijden: number }[]
   nieuweWedstrijden: number
   bestaandeWedstrijden: number
   issues: RowIssue[]
