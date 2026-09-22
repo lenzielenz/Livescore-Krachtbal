@@ -603,6 +603,11 @@
   cursor: pointer;
 }
 .ssk-veldkoppel-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.ssk-veldkoppel-btn.ontkoppel {
+  background: transparent;
+  color: #ef476f;
+  border-color: color-mix(in srgb, #ef476f 45%, var(--line, #1d3b2c));
+}
 .ssk-veldkoppel-msg { font-size: 0.84rem; font-weight: 600; }
 .ssk-veldkoppel-msg.ok { color: #0fe0a6; }
 .ssk-veldkoppel-msg.err { color: #ef476f; }

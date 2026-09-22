@@ -169,6 +169,21 @@ export async function unpairFieldScreensForMatch(payload: Payload, matchId: numb
   }
 }
 
+/** Ontkoppel dit ene veldscherm handmatig — bv. wanneer de aantekenaar per ongeluk de verkeerde
+ * wedstrijd koppelde. Zelfde effect als unpairFieldScreensForMatch hierboven (terug naar het
+ * wachtscherm met een verse koppelcode), maar gericht op één scherm i.p.v. "elk scherm met deze
+ * wedstrijd" — voor de "Ontkoppelen"-knop op /club/veldscherm. */
+export async function unpairFieldScreen(payload: Payload, fieldScreenId: number): Promise<string> {
+  const code = await uniquePairingCode(payload)
+  await payload.update({
+    collection: 'field-screens',
+    id: fieldScreenId,
+    data: { pairedMatch: null, pairedAt: null, pairingCode: code },
+    overrideAccess: true,
+  })
+  return code
+}
+
 export type PublicFieldScreenState = {
   fieldScreenId: number
   clubId: number | null
