@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 import { authUser, isFederationLevel } from '@/lib/api-auth'
 import { hasFunctionGrant } from '@/lib/function-grants'
 import { getPayloadClient } from '@/lib/payload-client'
-import { parseDelimited } from '@/lib/season-import'
+import { parseDelimited, type TeamMappings } from '@/lib/season-import'
 import { ImportLooptAlError, importBezig, runSeasonImport } from '@/lib/season-import-run'
 import { readXlsx } from '@/lib/xlsx-read'
 
@@ -20,15 +20,44 @@ const MAX_BYTES = 5 * 1024 * 1024
 // request). Wie écht alles wil wissen, moet deze frase letterlijk meesturen.
 export const WIPE_CONFIRM_PHRASE = 'VERWIJDER ALLES'
 
-/** Haalt de tabel (+ eventuele wipe-bevestiging) uit de aanvraag: een Excel-bestand, of tekst. */
+/** Ontleedt de JSON-tekst met ploeg-toewijzingen (zie season-import.ts TeamMappings) en houdt
+ *  enkel rijen over die de verwachte vorm hebben — een kapotte/gemanipuleerde waarde mag de
+ *  import niet laten crashen, hooguit die ene toewijzing negeren. */
+function parseTeamMappings(raw: string | null): TeamMappings | undefined {
+  if (!raw) return undefined
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(raw)
+  } catch {
+    return undefined
+  }
+  if (!parsed || typeof parsed !== 'object') return undefined
+  const out: TeamMappings = {}
+  for (const [sleutel, v] of Object.entries(parsed as Record<string, unknown>)) {
+    if (!v || typeof v !== 'object') continue
+    const actie = (v as { actie?: unknown }).actie
+    if (actie === 'bestaand') {
+      const teamId = Number((v as { teamId?: unknown }).teamId)
+      if (Number.isFinite(teamId) && teamId > 0) out[sleutel] = { actie: 'bestaand', teamId }
+    } else if (actie === 'nieuw') {
+      const naam = (v as { naam?: unknown }).naam
+      out[sleutel] = { actie: 'nieuw', naam: typeof naam === 'string' && naam.trim() ? naam.trim() : undefined }
+    }
+  }
+  return out
+}
+
+/** Haalt de tabel (+ eventuele wipe-bevestiging + ploeg-toewijzingen) uit de aanvraag: een
+ *  Excel-bestand, of tekst. */
 async function leesTabel(
   req: Request,
-): Promise<{ rows: string[][]; bron: string; confirm: string } | { error: string }> {
+): Promise<{ rows: string[][]; bron: string; confirm: string; teamMappings?: TeamMappings } | { error: string }> {
   const type = req.headers.get('content-type') ?? ''
 
   if (type.includes('multipart/form-data')) {
     const form = await req.formData()
     const confirm = String(form.get('confirm') ?? '')
+    const teamMappings = parseTeamMappings(form.get('teamMappings') as string | null)
     const file = form.get('file')
     if (file && typeof file === 'object' && 'arrayBuffer' in file) {
       const blob = file as File
@@ -40,7 +69,7 @@ async function leesTabel(
           const sheets = readXlsx(buf)
           const gevraagd = String(form.get('sheet') ?? '').trim()
           const blad = gevraagd ? (sheets.find((s) => s.name === gevraagd) ?? sheets[0]) : sheets[0]
-          return { rows: blad.rows, bron: `${blob.name} · blad "${blad.name}"`, confirm }
+          return { rows: blad.rows, bron: `${blob.name} · blad "${blad.name}"`, confirm, teamMappings }
         } catch (e) {
           return { error: `Excel-bestand kon niet gelezen worden: ${(e as Error).message}` }
         }
@@ -52,14 +81,14 @@ async function leesTabel(
         }
       }
       // CSV en andere tekstbestanden.
-      return { rows: parseDelimited(buf.toString('utf8')), bron: blob.name, confirm }
+      return { rows: parseDelimited(buf.toString('utf8')), bron: blob.name, confirm, teamMappings }
     }
     const tekst = String(form.get('text') ?? '')
-    if (tekst.trim()) return { rows: parseDelimited(tekst), bron: 'geplakte tekst', confirm }
+    if (tekst.trim()) return { rows: parseDelimited(tekst), bron: 'geplakte tekst', confirm, teamMappings }
     return { error: 'Geen bestand of tekst meegestuurd.' }
   }
 
-  let body: { text?: unknown; confirm?: unknown }
+  let body: { text?: unknown; confirm?: unknown; teamMappings?: unknown }
   try {
     body = await req.json()
   } catch {
@@ -67,7 +96,12 @@ async function leesTabel(
   }
   const tekst = String(body.text ?? '')
   if (!tekst.trim()) return { error: 'Geen tekst meegestuurd.' }
-  return { rows: parseDelimited(tekst), bron: 'geplakte tekst', confirm: String(body.confirm ?? '') }
+  return {
+    rows: parseDelimited(tekst),
+    bron: 'geplakte tekst',
+    confirm: String(body.confirm ?? ''),
+    teamMappings: parseTeamMappings(typeof body.teamMappings === 'string' ? body.teamMappings : null),
+  }
 }
 
 export async function POST(req: Request) {
@@ -111,7 +145,7 @@ export async function POST(req: Request) {
   }
 
   try {
-    const resultaat = await runSeasonImport(payload, gelezen.rows, { commit, wipe })
+    const resultaat = await runSeasonImport(payload, gelezen.rows, { commit, wipe, teamMappings: gelezen.teamMappings })
     return NextResponse.json({ ok: true, commit, wipe, bron: gelezen.bron, ...resultaat })
   } catch (e) {
     if (e instanceof ImportLooptAlError) {

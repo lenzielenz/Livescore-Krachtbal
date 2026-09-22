@@ -11,6 +11,7 @@ import {
   uurWaarschuwing,
   type ImportSamenvatting,
   type SeasonPlan,
+  type TeamMappings,
 } from './season-import'
 
 // Voert een seizoensplan uit tegen de database. Twee standen:
@@ -65,7 +66,7 @@ export function importBezig(): boolean {
 export async function runSeasonImport(
   payload: Payload,
   rows: string[][],
-  opts: { commit: boolean; wipe?: boolean },
+  opts: { commit: boolean; wipe?: boolean; teamMappings?: TeamMappings },
 ): Promise<ImportSamenvatting> {
   // De proefronde schrijft niets en mag dus altijd, ook naast een lopende import.
   if (!opts.commit) return voerImportUit(payload, rows, opts)
@@ -81,7 +82,7 @@ export async function runSeasonImport(
 async function voerImportUit(
   payload: Payload,
   rows: string[][],
-  opts: { commit: boolean; wipe?: boolean },
+  opts: { commit: boolean; wipe?: boolean; teamMappings?: TeamMappings },
 ): Promise<ImportSamenvatting> {
   const plan: SeasonPlan = planSeason(rows)
 
@@ -89,6 +90,7 @@ async function voerImportUit(
     gelezen: { rijen: rows.length, wedstrijden: plan.matches.length },
     nieuweClubs: [],
     nieuwePloegen: [],
+    gekoppeldePloegen: [],
     nieuweWedstrijden: 0,
     bestaandeWedstrijden: 0,
     issues: plan.issues,
@@ -143,14 +145,51 @@ async function voerImportUit(
     .find({ collection: 'teams', where: competitionWhere(), depth: 0, limit: 5000, overrideAccess: true })
     .catch(() => ({ docs: [] as Record<string, unknown>[] }))
   const teamIdPerSleutel = new Map<string, number>()
+  const teamNaamPerId = new Map<number, string>()
   for (const t of teamsRes.docs) {
     const naam = String((t as { name?: unknown }).name ?? '')
     const reeks = String((t as { reeks?: unknown }).reeks ?? '')
     teamIdPerSleutel.set(`${naamSleutel(naam)}|${reeks}`, t.id as number)
+    teamNaamPerId.set(t.id as number, naam)
   }
 
   samenvatting.nieuweClubs = plan.clubs.filter((c) => !clubIdPerNaam.has(naamSleutel(c)))
-  samenvatting.nieuwePloegen = plan.teams.filter((t) => !teamIdPerSleutel.has(`${naamSleutel(t.naam)}|${t.reeks}`))
+
+  // Hoeveel wedstrijden elke ploeg in dit bestand heeft — voedt zowel de ploeg-toewijzing in de UI
+  // ("N wedstrijden") als het "wat verandert er"-voorstel voor een gekoppelde bestaande ploeg.
+  const wedstrijdenPerPlanSleutel = new Map<string, number>()
+  for (const m of plan.matches) {
+    for (const naam of [m.thuis, m.uit]) {
+      const k = `${naamSleutel(naam)}|${m.reeks}`
+      wedstrijdenPerPlanSleutel.set(k, (wedstrijdenPerPlanSleutel.get(k) ?? 0) + 1)
+    }
+  }
+
+  // Elke ploeg uit het bestand die niet exact op een bestaande ploeg matcht: standaard "nieuw",
+  // tenzij de gebruiker haar via teamMappings expliciet aan een bestaande ploeg koppelde (of een
+  // eigen naam koos voor de nieuwe ploeg). Een koppeling wijst teamIdPerSleutel meteen naar de
+  // bestaande ploeg — de wedstrijden hieronder vinden haar dan vanzelf, zonder ooit een dubbele
+  // ploeg aan te maken.
+  for (const t of plan.teams) {
+    const planSleutel = `${naamSleutel(t.naam)}|${t.reeks}`
+    if (teamIdPerSleutel.has(planSleutel)) continue // exacte match: niets te doen
+    const wedstrijden = wedstrijdenPerPlanSleutel.get(planSleutel) ?? 0
+    const mapping = opts.teamMappings?.[planSleutel]
+    if (mapping?.actie === 'bestaand') {
+      teamIdPerSleutel.set(planSleutel, mapping.teamId)
+      samenvatting.gekoppeldePloegen.push({
+        sleutel: planSleutel,
+        bestandNaam: t.naam,
+        teamId: mapping.teamId,
+        teamNaam: teamNaamPerId.get(mapping.teamId) ?? `#${mapping.teamId}`,
+        reeks: t.reeks,
+        wedstrijden,
+      })
+      continue
+    }
+    const naam = mapping?.actie === 'nieuw' && mapping.naam?.trim() ? mapping.naam.trim() : t.naam
+    samenvatting.nieuwePloegen.push({ naam, club: t.club, reeks: t.reeks, sleutel: planSleutel, wedstrijden })
+  }
 
   // ── Bestaande wedstrijden van de betrokken seizoenen inlezen ──
   // Bij een volledige vervanging slaan we dit bewust over: na de wipe hierboven bestaat er
@@ -261,7 +300,10 @@ async function voerImportUit(
         data: { name: ploeg.naam, club: clubId, reeks: ploeg.reeks, category: reeksCategorie(ploeg.reeks) },
         overrideAccess: true,
       })
-      teamIdPerSleutel.set(`${naamSleutel(ploeg.naam)}|${ploeg.reeks}`, doc.id as number)
+      // Sleutel = de ORIGINELE naam uit het bestand (ploeg.sleutel), niet naamSleutel(ploeg.naam):
+      // bij een handmatig gekozen weergavenaam voor deze nieuwe ploeg moet de wedstrijd-matching
+      // hieronder haar nog steeds vinden via de naam zoals ze in het bestand staat.
+      teamIdPerSleutel.set(ploeg.sleutel, doc.id as number)
       aangemaakt.ploegen += 1
     } catch (e) {
       plan.issues.push({ rij: 0, reden: `Ploeg "${ploeg.naam}" aanmaken mislukte: ${(e as Error).message}`, ruw: ploeg.naam })
