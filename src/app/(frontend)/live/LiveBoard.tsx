@@ -623,29 +623,6 @@ export function LiveBoard({
           )}
         </div>
 
-        {/* Dag/weekend-keuze + persoonlijke voorkeur bewaren. Enkel de datumbalk hierboven blijft
-            plakken tijdens het scrollen (zie .lb-datenav in live.css) — deze rij hoort er wel
-            logisch bij maar hoeft zelf niet mee te scrollen. */}
-        <div className="lb-viewrow">
-          <div className="lb-viewtoggle" role="group" aria-label="Dag of weekend bekijken">
-            <Link href={`/?date=${date}&view=dag`} className={`lb-view-btn ${view === 'dag' ? 'on' : ''}`}>
-              📅 Dag
-            </Link>
-            <Link href={`/?date=${date}&view=weekend`} className={`lb-view-btn ${view === 'weekend' ? 'on' : ''}`}>
-              🗓 Weekend
-            </Link>
-          </div>
-          <button
-            type="button"
-            className={`lb-view-save ${viewIsSaved && !viewSaveFlash ? 'saved' : ''}`}
-            onClick={saveView}
-            disabled={viewIsSaved && !viewSaveFlash}
-            title="Onthoud deze keuze (dag/weekend) voor je volgende bezoek"
-          >
-            {viewSaveFlash ? '✓ Bewaard' : viewIsSaved ? '✓ Jouw standaard' : '💾 Bewaar als standaard'}
-          </button>
-        </div>
-
         {/* Enkel de zoekbalk blijft vast in beeld (het meest gebruikte pad — je eigen ploeg
             typen); reeks/live/mijn club/favorieten zitten achter één "Filters"-knop die een lade
             opent. Wint de meeste ruimte voor de wedstrijden zelf. */}
@@ -681,22 +658,34 @@ export function LiveBoard({
           </Link>
         )}
 
-        {!dayEmpty && groups.length > 0 && (
-          <div className="lb-sort">
-            <span className="lb-sort-lbl">Sorteer</span>
-            <button type="button" className={`lb-sort-btn ${sortBy === 'reeks' ? 'on' : ''}`} onClick={() => setSortBy('reeks')}>
-              🏷 Reeks
-            </button>
-            <button type="button" className={`lb-sort-btn ${sortBy === 'tijd' ? 'on' : ''}`} onClick={() => setSortBy('tijd')}>
-              ⏱ Tijdstip
-            </button>
-            {myClubId != null && (
-              <button type="button" className={`lb-sort-btn ${sortBy === 'thuisuit' ? 'on' : ''}`} onClick={() => setSortBy('thuisuit')}>
-                🏠 Thuis/Uit
+        {/* De Dag/Weekend-knop leefde eerst in een eigen rij erboven — dat liet het hele bord
+            verspringen bij elke klik (de rij eronder kreeg opeens een heel andere hoogte). Hier,
+            in de vertrouwde Sorteer-rij, blijft het design exact hetzelfde: gewoon één knop meer
+            die (i.t.t. Tijdstip/Thuis-Uit) onafhankelijk combineert — dag/weekend blijft aanstaan
+            terwijl je vrij van sortering wisselt. "Reeks" verhuisde naar de filterlade (zie
+            "Weergave" daar), samen met "bewaar als standaard". Altijd zichtbaar, ook op een lege
+            dag: net als de datumnavigatie is dit basisnavigatie, geen sorteeroptie. */}
+        <div className="lb-sort">
+          <span className="lb-sort-lbl">Sorteer</span>
+          <Link
+            href={`/?date=${date}&view=${view === 'weekend' ? 'dag' : 'weekend'}`}
+            className={`lb-sort-btn ${view === 'weekend' ? 'on' : ''}`}
+          >
+            {view === 'weekend' ? '🗓 Weekend' : '📅 Dag'}
+          </Link>
+          {!dayEmpty && groups.length > 0 && (
+            <>
+              <button type="button" className={`lb-sort-btn ${sortBy === 'tijd' ? 'on' : ''}`} onClick={() => setSortBy('tijd')}>
+                ⏱ Tijdstip
               </button>
-            )}
-          </div>
-        )}
+              {myClubId != null && (
+                <button type="button" className={`lb-sort-btn ${sortBy === 'thuisuit' ? 'on' : ''}`} onClick={() => setSortBy('thuisuit')}>
+                  🏠 Thuis/Uit
+                </button>
+              )}
+            </>
+          )}
+        </div>
 
         {groups.length === 0 ? (
           <div className="lb-empty">
@@ -941,6 +930,24 @@ export function LiveBoard({
             </div>
 
             <div className="lb-sheet-body">
+              <section className="lb-sheet-section">
+                <h4>Weergave</h4>
+                <div className="lb-sheet-row">
+                  <button type="button" className={`lb-reeks fav ${sortBy === 'reeks' ? 'on' : ''}`} onClick={() => setSortBy('reeks')}>
+                    <span>🏷 Per reeks gegroepeerd</span>
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  className={`lb-view-save ${viewIsSaved && !viewSaveFlash ? 'saved' : ''}`}
+                  onClick={saveView}
+                  disabled={viewIsSaved && !viewSaveFlash}
+                  title="Onthoud je dag/weekend-keuze voor je volgende bezoek"
+                >
+                  {viewSaveFlash ? '✓ Bewaard' : viewIsSaved ? '✓ Jouw standaard' : `💾 Bewaar ${view === 'weekend' ? 'weekend' : 'dag'}weergave als standaard`}
+                </button>
+              </section>
+
               {(liveCount > 0 || myClubId != null) && (
                 <section className="lb-sheet-section">
                   <h4>Snelfilters</h4>

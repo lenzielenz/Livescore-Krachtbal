@@ -213,51 +213,22 @@
 .lb-datebtn.uit { opacity: 0.28; cursor: default; }
 .lb-datebtn.uit:hover { transform: none; border-color: color-mix(in srgb, #fff 8%, var(--line)); }
 
-/* Dag/weekend-keuze + "bewaar als standaard". Niet-plakkend (i.t.t. .lb-datenav erboven) — hoort
-   er logisch bij maar hoeft niet mee te scrollen. */
-.lb-viewrow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  margin: 0 0 14px;
-}
-.lb-viewtoggle {
-  display: inline-flex;
-  gap: 6px;
-}
-.lb-view-btn {
-  padding: 6px 12px;
-  border: 1px solid color-mix(in srgb, #fff 8%, var(--line));
-  border-radius: 999px;
-  background: transparent;
-  color: var(--dim);
-  font-size: 0.8rem;
-  font-weight: 600;
-  text-decoration: none;
-  transition: border-color 0.14s ease, color 0.14s ease, background-color 0.14s ease;
-}
-.lb-view-btn:hover {
-  color: var(--txt);
-  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
-}
-.lb-view-btn.on {
-  color: var(--accent);
-  border-color: color-mix(in srgb, var(--accent) 60%, var(--line));
-  background: color-mix(in srgb, var(--accent) 14%, transparent);
-  font-weight: 700;
-}
+/* "Bewaar als standaard" — in de filterlade, onder de "Weergave"-sectie (zie .lb-sheet-section
+   hieronder). Het dag/weekend-keuzeknopje zelf zit intussen gewoon in .lb-sort-btn (de Sorteer-
+   rij) — geen eigen stijl meer nodig. */
 .lb-view-save {
-  padding: 6px 12px;
+  width: 100%;
+  margin-top: 8px;
+  padding: 9px 12px;
   border: 1px solid color-mix(in srgb, #fff 8%, var(--line));
-  border-radius: 999px;
+  border-radius: 8px;
   background: transparent;
   color: var(--dim);
   font: inherit;
-  font-size: 0.76rem;
+  font-size: 0.82rem;
   font-weight: 600;
   cursor: pointer;
-  white-space: nowrap;
+  text-align: center;
   transition: border-color 0.14s ease, color 0.14s ease, background-color 0.14s ease;
 }
 .lb-view-save:hover:not(:disabled) {
