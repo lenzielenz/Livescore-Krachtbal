@@ -1,5 +1,6 @@
 import { getAuthUser } from '@/lib/auth-user'
 import { addShoutout } from '@/lib/match-channel'
+import { getPayloadClient } from '@/lib/payload-client'
 import { rateLimit } from '@/lib/sse-hub'
 
 export const dynamic = 'force-dynamic'
@@ -13,6 +14,23 @@ function displayName(user: { name?: string | null; email?: string | null }): str
   if (n) return n
   const local = user.email?.split('@')[0]?.trim()
   return local || 'Supporter'
+}
+
+// Profielfoto's staan op de scorebord/live-tribune — zelfde reden als displayName hierboven: uit
+// het account zelf, nooit door de client meegegeven. `payload.auth()` geeft het gebruikersobject
+// zonder gepopulariseerde relaties terug (photo = een kaal media-id), dus die zoeken we hier apart
+// op. Geen profielfoto? Dan valt de tribune terug op initialen (zie components/Avatar.tsx).
+async function photoUrlFor(payload: Awaited<ReturnType<typeof getPayloadClient>>, user: { photo?: unknown }): Promise<string | null> {
+  const raw = user.photo
+  if (raw && typeof raw === 'object') {
+    const url = (raw as { url?: unknown }).url
+    return typeof url === 'string' ? url : null
+  }
+  const id = typeof raw === 'number' ? raw : null
+  if (id == null) return null
+  const media = await payload.findByID({ collection: 'media', id, depth: 0 }).catch(() => null)
+  const url = media && typeof media === 'object' ? (media as { url?: unknown }).url : null
+  return typeof url === 'string' ? url : null
 }
 
 // Live shoutout (ingelogde supporter). Vereist login (i.t.t. de publieke emoji-reacties), met
@@ -45,6 +63,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     .slice(0, MAX_LEN)
   if (!text) return Response.json({ error: 'Leeg bericht' }, { status: 400 })
 
-  const shout = addShoutout(matchId, displayName(user), text)
+  const payload = await getPayloadClient()
+  const photoUrl = await photoUrlFor(payload, user)
+  const shout = addShoutout(matchId, displayName(user), text, photoUrl)
   return Response.json({ ok: Boolean(shout) })
 }

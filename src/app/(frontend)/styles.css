@@ -1363,6 +1363,11 @@ body.kb-scherm .site-foot { display: none; }
   opacity: 0.5;
   cursor: not-allowed;
 }
+.veld-koppel-submit.ontkoppel {
+  background: transparent;
+  color: #ef476f;
+  border-color: color-mix(in srgb, #ef476f 45%, var(--line));
+}
 .veld-koppel-msg {
   font-size: 0.84rem;
   font-weight: 600;

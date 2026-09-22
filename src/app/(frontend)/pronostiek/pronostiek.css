@@ -109,3 +109,95 @@
 .vs-panel-meta { margin: 0 0 8px; font-size: .78rem; font-weight: 700; color: var(--dim); letter-spacing: .02em; }
 .vs-panel .vs-hope { margin: 0 0 12px; padding: 0; border: none; background: none; }
 .vs-panel .vs-search { margin: 0; padding-top: 12px; border-top: 1px solid var(--line); }
+
+/* ── "Leuker om naar te kijken" ────────────────────────────────────────────────────────────
+   Alles hieronder is bewust onder `.vs-board-search` genest (enkel deze pagina, niet de
+   club-interne /club/voorspel-stand die dezelfde .vs-row/.vs-board basisklassen uit
+   voorspel.css hergebruikt) — zo blijft die andere pagina ongemoeid. Zelfde "gouden munt"- en
+   "chip"-techniek als de rangschikking (rangschikking.css: .rang-pos / .rang-pts-chip). */
+
+/* Podium-medaille i.p.v. kale kleur op het cijfer: rank blijft altijd het echte getal (ook bij
+   een gedeelde 1e plaats, zie rankLeaderboard) — enkel het muntje erachter kleurt goud/zilver/
+   brons. Bij een gedeelde toppositie krijgt iedereen op die rang dezelfde munt. */
+.vs-board-search .vs-row.leader .vs-rank,
+.vs-board-search .vs-row.silver .vs-rank,
+.vs-board-search .vs-row.bronze .vs-rank {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  margin: 0 auto;
+  border-radius: 999px;
+  font-size: 0.82rem;
+}
+.vs-board-search .vs-row.leader .vs-rank {
+  color: #3a2a00;
+  background: radial-gradient(circle at 35% 28%, color-mix(in srgb, #ffd166 65%, #fff 10%), color-mix(in srgb, #ffd166 32%, transparent) 60%, color-mix(in srgb, #ffd166 8%, transparent) 85%);
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.5),
+    inset 0 -2px 3px color-mix(in srgb, #7c5900 55%, transparent),
+    0 0 0 1px color-mix(in srgb, #ffd166 45%, transparent),
+    0 0 10px -3px color-mix(in srgb, #ffd166 70%, transparent);
+}
+.vs-board-search .vs-row.silver .vs-rank {
+  color: #2c333b;
+  background: radial-gradient(circle at 35% 28%, color-mix(in srgb, #cfd6de 60%, #fff 10%), color-mix(in srgb, #cfd6de 26%, transparent) 60%, color-mix(in srgb, #cfd6de 6%, transparent) 85%);
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.4),
+    inset 0 -2px 3px color-mix(in srgb, #5b626b 45%, transparent),
+    0 0 0 1px color-mix(in srgb, #cfd6de 40%, transparent);
+}
+.vs-board-search .vs-row.bronze .vs-rank {
+  color: #3a2312;
+  background: radial-gradient(circle at 35% 28%, color-mix(in srgb, #cd7f32 60%, #fff 10%), color-mix(in srgb, #cd7f32 26%, transparent) 60%, color-mix(in srgb, #cd7f32 6%, transparent) 85%);
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.35),
+    inset 0 -2px 3px color-mix(in srgb, #6b3f16 45%, transparent),
+    0 0 0 1px color-mix(in srgb, #cd7f32 40%, transparent);
+}
+
+/* Puntjes als chip i.p.v. platte tekst — zelfde detail als de rangschikking: een dubbele inset
+   (lichte rand boven, donkere onder) maakt er een klein bolletje glas van. */
+.vs-board-search .vs-pts {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 26%, transparent), color-mix(in srgb, var(--accent) 6%, transparent));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    inset 0 -1px 2px color-mix(in srgb, var(--accent) 30%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--accent) 25%, transparent);
+}
+
+/* Zachte kleurwas voor het podium, plus een trage lichtstreep over de leider (restrained, geen
+   feestje) — zelfde grammatica als .rang-leader in rangschikking.css. */
+.vs-board-search .vs-row.leader {
+  border-color: color-mix(in srgb, #ffd166 45%, var(--line));
+  background-color: var(--panel);
+  background-image:
+    linear-gradient(90deg, color-mix(in srgb, #ffd166 12%, transparent), color-mix(in srgb, #ffd166 3%, transparent) 45%, transparent 75%),
+    linear-gradient(100deg, transparent 30%, color-mix(in srgb, #ffd166 16%, transparent) 45%, transparent 60%);
+  background-repeat: no-repeat, no-repeat;
+  background-size: 100% 100%, 60% 100%;
+  background-position: 0 0, 120% 0;
+  animation: pn-sheen 6s ease-in-out infinite;
+}
+@keyframes pn-sheen {
+  0%, 100% { background-position: 0 0, 120% 0; }
+  50% { background-position: 0 0, -20% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .vs-board-search .vs-row.leader { animation: none; background-position: 0 0, 999% 0; }
+}
+.vs-board-search .vs-row.silver { border-color: color-mix(in srgb, #cfd6de 40%, var(--line)); background: linear-gradient(90deg, color-mix(in srgb, #cfd6de 9%, transparent), var(--panel) 70%); }
+.vs-board-search .vs-row.bronze { border-color: color-mix(in srgb, #cd7f32 40%, var(--line)); background: linear-gradient(90deg, color-mix(in srgb, #cd7f32 10%, transparent), var(--panel) 70%); }
+
+/* "Ik" blijft herkenbaar bovenop een medaille — de accentrand van .vs-row.me (voorspel.css) wint
+   dankzij bronvolgorde (dit bestand laadt na voorspel.css), maar de medaillekleur op het cijfer
+   zelf mag gewoon blijven staan. */
+
+.vs-legend { margin: 10px 2px 0; font-size: 0.76rem; color: var(--dim); }

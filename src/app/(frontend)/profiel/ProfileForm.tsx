@@ -11,6 +11,7 @@ export type ProfileInitial = {
   name: string
   clubId: string
   followedClubIds: number[]
+  teamId: string
   position: string
   photoUrl: string | null
   zoom: number
@@ -20,7 +21,16 @@ export type ProfileInitial = {
 
 const labelStyle: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: 2, fontSize: '0.8rem', color: 'var(--dim)' }
 
-export function ProfileForm({ initial, clubs }: { initial: ProfileInitial; clubs: { id: number; name: string }[] }) {
+export function ProfileForm({
+  initial,
+  clubs,
+  teams,
+}: {
+  initial: ProfileInitial
+  clubs: { id: number; name: string }[]
+  /** Ploegen van alle clubs — de select toont enkel die van de gekozen club (zie teamOptions). */
+  teams: { id: number; name: string; clubId: number }[]
+}) {
   // Account-gegevens
   const [name, setName] = useState(initial.name)
   const [clubId, setClubId] = useState(initial.clubId)
@@ -29,6 +39,15 @@ export function ProfileForm({ initial, clubs }: { initial: ProfileInitial; clubs
   const [followedClubIds, setFollowedClubIds] = useState<number[]>(initial.followedClubIds)
   const toggleFollowed = (id: number) => {
     setFollowedClubIds((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]))
+  }
+  // Mijn ploeg: enkel zinvol binnen de gekozen club — highlight haar wedstrijden op het live-bord
+  // (zie LiveBoard.tsx). Een wissel van club maakt een niet meer bijhorende ploegkeuze leeg i.p.v.
+  // hem onzichtbaar bewaard te laten staan.
+  const [teamId, setTeamId] = useState(initial.teamId)
+  const teamOptions = teams.filter((t) => String(t.clubId) === clubId)
+  const onClubChange = (next: string) => {
+    setClubId(next)
+    if (!teams.some((t) => String(t.id) === teamId && String(t.clubId) === next)) setTeamId('')
   }
   const [position, setPosition] = useState(initial.position)
   const [photoUrl, setPhotoUrl] = useState(initial.photoUrl)
@@ -57,6 +76,7 @@ export function ProfileForm({ initial, clubs }: { initial: ProfileInitial; clubs
           name,
           clubId: clubId || null,
           followedClubIds: clubId ? [] : followedClubIds,
+          teamId: teamId || null,
           position: position || null,
           photoZoom: zoom,
           photoOffsetX: offsetX,
@@ -131,13 +151,26 @@ export function ProfileForm({ initial, clubs }: { initial: ProfileInitial; clubs
 
         <label style={labelStyle}>
           Mijn club
-          <select className="wb-input" value={clubId} onChange={(e) => setClubId(e.target.value)}>
+          <select className="wb-input" value={clubId} onChange={(e) => onClubChange(e.target.value)}>
             <option value="">— Geen / kies later —</option>
             {clubs.map((c) => (
               <option key={c.id} value={c.id}>{c.name}</option>
             ))}
           </select>
         </label>
+
+        {clubId && (
+          <label style={labelStyle}>
+            Mijn ploeg
+            <select className="wb-input" value={teamId} onChange={(e) => setTeamId(e.target.value)}>
+              <option value="">— Geen / kies later —</option>
+              {teamOptions.map((t) => (
+                <option key={t.id} value={t.id}>{t.name}</option>
+              ))}
+            </select>
+            <span className="pf-hint">Haar wedstrijden krijgen een lichte highlight op het live-bord.</span>
+          </label>
+        )}
 
         {!clubId && (
           <div className="rf-follow">

@@ -139,14 +139,26 @@
 
 /* Datumnavigatie */
 /* Vaste 3-koloms layout: de pijlen staan altijd op dezelfde plek, ongeacht de breedte van
-   het datumlabel (anders "verspringen" ze bij elke dagwissel). */
+   het datumlabel (anders "verspringen" ze bij elke dagwissel). Blijft plakken net onder de
+   sitekop (--sh-h, zie site-header.css) tijdens het scrollen: op een lange speeldag hoef je niet
+   terug naar boven te scrollen om naar de vorige/volgende dag te springen — dat was precies het
+   probleem. Eigen matglas-achtergrond, want eronder blijft de wedstrijdenlijst doorscrollen. */
 .lb-datenav {
+  position: sticky;
+  top: var(--sh-h, 61px);
+  z-index: 15;
   display: grid;
   grid-template-columns: 38px 210px 38px;
   align-items: center;
   justify-content: center;
   gap: 10px;
-  margin-bottom: 14px;
+  margin: 0 auto 14px;
+  padding: 6px 10px;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--bg, #0b0e12) 90%, transparent);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 10px 24px -12px rgba(0, 0, 0, 0.55);
 }
 .lb-datebtn {
   width: 38px;
@@ -200,6 +212,64 @@
 /* Pijl uit: er is geen vorige/volgende speeldag meer in die richting. */
 .lb-datebtn.uit { opacity: 0.28; cursor: default; }
 .lb-datebtn.uit:hover { transform: none; border-color: color-mix(in srgb, #fff 8%, var(--line)); }
+
+/* Dag/weekend-keuze + "bewaar als standaard". Niet-plakkend (i.t.t. .lb-datenav erboven) — hoort
+   er logisch bij maar hoeft niet mee te scrollen. */
+.lb-viewrow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0 0 14px;
+}
+.lb-viewtoggle {
+  display: inline-flex;
+  gap: 6px;
+}
+.lb-view-btn {
+  padding: 6px 12px;
+  border: 1px solid color-mix(in srgb, #fff 8%, var(--line));
+  border-radius: 999px;
+  background: transparent;
+  color: var(--dim);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: border-color 0.14s ease, color 0.14s ease, background-color 0.14s ease;
+}
+.lb-view-btn:hover {
+  color: var(--txt);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+}
+.lb-view-btn.on {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 60%, var(--line));
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  font-weight: 700;
+}
+.lb-view-save {
+  padding: 6px 12px;
+  border: 1px solid color-mix(in srgb, #fff 8%, var(--line));
+  border-radius: 999px;
+  background: transparent;
+  color: var(--dim);
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color 0.14s ease, color 0.14s ease, background-color 0.14s ease;
+}
+.lb-view-save:hover:not(:disabled) {
+  color: var(--txt);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+}
+.lb-view-save.saved,
+.lb-view-save:disabled {
+  color: var(--pop);
+  border-color: color-mix(in srgb, var(--pop) 45%, var(--line));
+  cursor: default;
+}
 
 /* Datumkiezer: enkel dagen waarop er gespeeld wordt, met hun aantal wedstrijden. */
 .lb-date { position: relative; }
@@ -996,6 +1066,14 @@
     0 16px 38px -14px color-mix(in srgb, var(--ac) 70%, transparent),
     0 18px 40px -18px rgba(0, 0, 0, 0.85);
 }
+/* Eigen ploeg (zie "Mijn profiel"): een lichte, blijvende gouden ring — geen filter, enkel een
+   accent tussen de andere kaarten. Outline i.p.v. box-shadow zodat de bestaande glans/gloed van
+   de kaart (hierboven) intact blijft; zelfde techniek als de korte "scored"-flash verderop, maar
+   een andere kleur zodat "zonet gescoord" en "dit is jouw ploeg" niet door elkaar lopen. */
+.lb-match.mine {
+  outline: 2px solid color-mix(in srgb, #ffd166 60%, transparent);
+  outline-offset: 1px;
+}
 /* Logo/naam zijn nu eigen linkjes naar het ploegprofiel (stopPropagation tegen de kaart-tik) —
    geen onderstreping/kleurwissel, wél een duidelijke hover zodat je voelt dat het een eigen tik is. */
 .lbl-logo, .lbl-name {
@@ -1441,7 +1519,11 @@
    meerdere dagen (zie searchSeizoen) — dan vervangt dit de reeks-kop van de groep. */
 .lb-row-reeks {
   display: block;
-  margin: 2px 0 2px 40px;
+  /* Boven het tagje staat al ruimte (de padding van .lb-rowwrap, top+bottom van twee
+     aangrenzende kaarten samen) — zonder een eigen ondermarge plakte de tekst bijna tegen de
+     kaart eronder. Deze marge laat het tagje netjes tussen de vorige en de volgende kaart
+     hangen i.p.v. tegen de onderste te kleven. */
+  margin: 2px 0 7px 40px;
   font-size: 0.68rem;
   font-weight: 700;
   text-transform: uppercase;

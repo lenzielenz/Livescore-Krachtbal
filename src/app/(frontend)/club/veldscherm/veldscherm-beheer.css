@@ -141,9 +141,25 @@
   color: var(--txt);
   border-color: var(--line);
 }
+.vb-btn.danger {
+  background: transparent;
+  color: #ef476f;
+  border-color: color-mix(in srgb, #ef476f 45%, var(--line));
+}
+.vb-btn.danger:hover:not(:disabled) {
+  background: color-mix(in srgb, #ef476f 12%, transparent);
+}
 .vb-btn-sm {
   padding: 8px 12px;
   font-size: 13px;
+}
+
+/* "Verkeerde wedstrijd gekoppeld" rechtzetten — meteen onder de status, niet weggestopt. */
+.vb-unpair {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
 }
 
 .vb-theme {

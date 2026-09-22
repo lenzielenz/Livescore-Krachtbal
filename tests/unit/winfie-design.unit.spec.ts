@@ -48,6 +48,27 @@ describe('Winfie platformstijl', () => {
     expect(svg).toContain('clip-path="url(#photo)"')
     expect(svg).not.toContain('DE WEDSTRIJD IN CIJFERS')
   })
+  it('toont de grootste voorsprong en de ruststand als er echte helft-per-helft data is', () => {
+    const svg = renderWinfieDesign({
+      ...base,
+      progress: [
+        { home: 0, away: 0, half: 1 },
+        { home: 4, away: 0, half: 1 },
+        { home: 4, away: 13, half: 2 },
+      ],
+    })
+    expect(svg).toContain('grootste voorsprong')
+    expect(svg).toContain('>9<') // grootste puntenverschil ooit: 13 - 4 = 9 (na de tweede worp)
+    expect(svg).toContain('bij de rust')
+    expect(svg).toContain('4-0') // stand bij het ingaan van de tweede helft
+  })
+  it('valt terug op het totaal aantal doelpunten zonder echte helft-data (bv. een geïmporteerde eindstand)', () => {
+    // buildWinfieDesign duwt zo'n eindstand als één sprong naar helft 2 (zie winfie.ts) — geen
+    // eigen helft-1-cijfer, dus geen "bij de rust" tonen dat er niet echt is.
+    const svg = renderWinfieDesign({ ...base, progress: [{ home: 0, away: 0, half: 1 }, { home: 4, away: 13, half: 2 }] })
+    expect(svg).not.toContain('bij de rust')
+    expect(svg).toContain('doelpunten totaal')
+  })
   it('toont een persoonlijke stempel enkel als de aanmaker zelf erbij was', () => {
     expect(renderWinfieDesign(base)).not.toContain('JIJ WAS ERBIJ')
     expect(renderWinfieDesign({ ...base, iWasThere: true })).toContain('JIJ WAS ERBIJ')

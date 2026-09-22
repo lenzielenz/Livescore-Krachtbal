@@ -1,30 +1,37 @@
+import { cookies } from 'next/headers'
 import Link from 'next/link'
 
 import { SiteHeader } from '@/components/SiteHeader'
-import { userClubId } from '@/lib/access'
+import { userClubId, userTeamId } from '@/lib/access'
 import { getAuthUser } from '@/lib/auth-user'
 import { dateStrBE } from '@/lib/datetime'
 import { quoteForDay } from '@/lib/krachtbal-quotes'
+import { LIVE_VIEW_COOKIE, type LiveView } from '@/lib/live-view'
 import { getPayloadClient } from '@/lib/payload-client'
 import { isSupportersMode } from '@/lib/score-mode'
 import { TornooiTeaser } from '@/components/TornooiTeaser'
 import { LiveBoard } from './live/LiveBoard'
-import { loadLiveDay, loadSpeeldagen, resolveDefaultDay } from './live/loadLiveDay'
+import { loadLiveDay, loadLiveWeekend, loadSpeeldagen, resolveDefaultDay, weekendZaterdag } from './live/loadLiveDay'
 import './live/live.css'
 
 export const dynamic = 'force-dynamic'
 
 // Profiel 1 — supporters — komt op de startpagina en volgt enkel de wedstrijden.
 // De tools voor de andere profielen leven in het "Meer"-menu, niet hier.
-export default async function HomePage({ searchParams }: { searchParams: Promise<{ date?: string }> }) {
-  const { date } = await searchParams
+export default async function HomePage({ searchParams }: { searchParams: Promise<{ date?: string; view?: string }> }) {
+  const { date, view: viewParam } = await searchParams
   const today = dateStrBE()
+  // Zonder expliciete ?view= valt terug op de bewaarde voorkeur (zie de "Bewaar als
+  // standaard"-knop in LiveBoard) — zo onthoudt elke gebruiker zijn eigen dag/weekend-keuze.
+  const savedView = (await cookies()).get(LIVE_VIEW_COOKIE)?.value === 'weekend' ? 'weekend' : 'dag'
+  const view: LiveView = viewParam === 'dag' || viewParam === 'weekend' ? viewParam : savedView
   // Geen expliciete datum in de URL? Dan nooit blanco openen: spring naar de eerstvolgende dag
   // mét een wedstrijd (bv. in augustus, vóór de seizoensstart in september) i.p.v. "vandaag" te
   // tonen met niets erop. Staat er wél al iets vandaag (of bezig), dan blijft dat "vandaag".
-  const selected = date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : await resolveDefaultDay(today)
+  const gekozenDag = date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : await resolveDefaultDay(today)
+  const selected = view === 'weekend' ? weekendZaterdag(gekozenDag) : gekozenDag
 
-  const days = await loadLiveDay(selected, today)
+  const days = view === 'weekend' ? await loadLiveWeekend(selected, today) : await loadLiveDay(selected, today)
   // Alle dagen mét wedstrijden, zodat de pijltjes de lege dagen overslaan en de kiezer per dag
   // toont hoeveel er gepland staat.
   const speeldagen = await loadSpeeldagen()
@@ -34,6 +41,8 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   const me = await getAuthUser()
   const cid = userClubId(me)
   const myClubId = cid != null && Number.isFinite(Number(cid)) ? Number(cid) : null
+  const tid = userTeamId(me)
+  const myTeamId = tid != null && Number.isFinite(Number(tid)) ? Number(tid) : null
   const supportersMode = await isSupportersMode(await getPayloadClient())
 
   return (
@@ -84,7 +93,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         {/* Geen tornooi-wedstrijden op de homepage — wél de snellink met aftelklok naar de
             tornooidag, zodat nieuwe mensen meteen hun weg vinden. */}
         <TornooiTeaser />
-        <LiveBoard date={selected} today={today} matches={days} speeldagen={speeldagen} myClubId={myClubId} supportersMode={supportersMode} userId={me?.id ?? null} />
+        <LiveBoard date={selected} today={today} matches={days} speeldagen={speeldagen} view={view} myClubId={myClubId} myTeamId={myTeamId} supportersMode={supportersMode} userId={me?.id ?? null} />
       </div>
     </>
   )

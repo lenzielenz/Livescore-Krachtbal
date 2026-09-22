@@ -1,4 +1,15 @@
-/* Gedeelde site-navigatie (SiteHeader). Plakt bovenaan; donker, in de huisstijl. */
+/* Gedeelde site-navigatie (SiteHeader). Plakt bovenaan; donker, in de huisstijl.
+   --sh-h = de (benaderde) hoogte van deze balk, zodat andere plaknavigatie eronder (bv. de
+   datumbalk op het live-bord, .lb-datenav in live.css) weet hoever ze onder de header moet
+   blijven steken i.p.v. eronder te verdwijnen. */
+:root {
+  --sh-h: 61px;
+}
+@media (max-width: 560px) {
+  :root {
+    --sh-h: 53px;
+  }
+}
 .sh {
   position: sticky;
   top: 0;

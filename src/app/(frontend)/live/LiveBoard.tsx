@@ -8,8 +8,9 @@ import { PushOptIn } from '@/components/PushOptIn'
 import { TeamLogo } from '@/components/TeamLogo'
 import { type ClubColors } from '@/lib/club-colors'
 import { type LogoFit } from '@/lib/logo-fit'
+import { LIVE_VIEW_COOKIE, type LiveView } from '@/lib/live-view'
 import { pronostiekOpen } from '@/lib/pronostiek-weekend'
-import { alleSpeeldagen, volgendeSpeeldag, vorigeSpeeldag, type Speeldag } from '@/lib/speeldagen'
+import { aantalOp, alleSpeeldagen, volgendeSpeeldag, vorigeSpeeldag, type Speeldag } from '@/lib/speeldagen'
 import { pastBijZoekterm } from '@/lib/team-search'
 import { brusselsNoonUtc, dateStrBE, formatDateBE, shiftDateStr } from '@/lib/datetime'
 
@@ -112,12 +113,14 @@ function useFavSet<T extends number | string>(key: string, userId: number | stri
  *
  * Geeft ook terug welke wedstrijden NET gescoord hebben, zodat de rij even kan oplichten.
  */
-function useLiveScores(initial: DayMatch[], date: string, today: string): [DayMatch[], Set<number>] {
+function useLiveScores(initial: DayMatch[], date: string, today: string, view: LiveView): [DayMatch[], Set<number>] {
   const [scores, setScores] = useState<Record<number, Partial<DayMatch>>>({})
   const [flash, setFlash] = useState<Set<number>>(new Set())
   const vorige = useRef<Record<number, string>>({})
 
-  const nodig = date === today || initial.some((m) => m.status === 'live' || m.awaitingResult)
+  // In weekend-weergave is `date` de zaterdag — vandaag valt "in bereik" zodra het za óf zo is.
+  const rangeIncludesToday = view === 'weekend' ? today >= date && today <= shiftDate(date, 1) : date === today
+  const nodig = rangeIncludesToday || initial.some((m) => m.status === 'live' || m.awaitingResult)
 
   useEffect(() => {
     if (!nodig || typeof window === 'undefined') return
@@ -126,7 +129,7 @@ function useLiveScores(initial: DayMatch[], date: string, today: string): [DayMa
 
     const open = () => {
       if (es) return
-      es = new EventSource(`/api/live/stream?date=${date}`)
+      es = new EventSource(`/api/live/stream?date=${date}${view === 'weekend' ? '&view=weekend' : ''}`)
       es.addEventListener('scores', (e) => {
         let lijst: (Partial<DayMatch> & { id: number })[] = []
         try {
@@ -173,7 +176,7 @@ function useLiveScores(initial: DayMatch[], date: string, today: string): [DayMa
       for (const t of timers) clearTimeout(t)
       close()
     }
-  }, [date, nodig])
+  }, [date, view, nodig])
 
   const samen = useMemo(
     () => initial.map((m) => (scores[m.id] ? { ...m, ...scores[m.id] } : m)),
@@ -187,7 +190,9 @@ export function LiveBoard({
   today,
   matches: initialMatches,
   speeldagen = [],
+  view,
   myClubId = null,
+  myTeamId = null,
   supportersMode = false,
   userId = null,
 }: {
@@ -196,8 +201,14 @@ export function LiveBoard({
   matches: DayMatch[]
   /** Dagen waarop er gespeeld wordt, met hun aantal — voedt de pijltjes en de datumkiezer. */
   speeldagen?: Speeldag[]
+  /** Per dag of per volledig weekend bekijken. In 'weekend' is `date` steeds de zaterdag van
+   *  dat weekend (zie loadLiveDay.weekendZaterdag). */
+  view: LiveView
   /** De club van de ingelogde gebruiker (ingesteld in de admin) — voedt de "Mijn club"-filter. */
   myClubId?: number | null
+  /** De eigen ploeg (ingesteld via "Mijn profiel") — geeft haar wedstrijd een lichte highlight op
+   *  het bord, ongeacht filters/sortering (géén filter, enkel een visueel accent). */
+  myTeamId?: number | null
   /** Globale supporters-modus: dan krijgt elke wedstrijd een "Aantekenen"-knop zodat iedereen
    *  meteen vanaf het live-bord de score kan beginnen doorgeven. */
   supportersMode?: boolean
@@ -206,7 +217,7 @@ export function LiveBoard({
 }) {
   const router = useRouter()
   // Het bord werkt zichzelf bij zolang er iets te volgen valt (zie useLiveScores hierboven).
-  const [matches, netGescoord] = useLiveScores(initialMatches, date, today)
+  const [matches, netGescoord] = useLiveScores(initialMatches, date, today, view)
   const [favTeams, toggleTeam] = useFavSet(FAV_TEAMS_KEY, userId)
   const [favClubs, toggleClub] = useFavSet(FAV_CLUBS_KEY, userId)
   const [favReeksen, toggleReeks] = useFavSet<string>(FAV_REEKS_KEY, userId)
@@ -362,6 +373,9 @@ export function LiveBoard({
   const reeksFav = (m: DayMatch) => favReeksen.has(m.reeks)
   // Wedstrijden van de eigen club (uit het login-account): thuis óf uit.
   const myClubMatch = (m: DayMatch) => myClubId != null && (m.home.clubId === myClubId || m.away.clubId === myClubId)
+  // Eigen ploeg: enkel een visueel accent (zie .lb-match.mine), geen filter — blijft dus ook
+  // gelden binnen "Mijn club" (een club heeft meestal meerdere ploegen) of eender welke sortering.
+  const myTeamMatch = (m: DayMatch) => myTeamId != null && (m.home.teamId === myTeamId || m.away.teamId === myTeamId)
   const myClubCount = useMemo(() => (myClubId == null ? 0 : matches.filter(myClubMatch).length), [matches, myClubId])
 
   // Basis: alles behalve het reeks-filter toegepast, zodat de reeks-tellingen
@@ -464,21 +478,58 @@ export function LiveBoard({
   // Mag er voor deze speeldag al gepronostikeerd worden? (open vanaf zondagmiddernacht ervoor)
   const kanVoorspellen = useMemo(() => pronostiekOpen(brusselsNoonUtc(date).toISOString()), [date])
 
+  // In weekend-weergave is `date` steeds de zaterdag (zie weekendZaterdag) — de zondag erbij voor
+  // het label en de tellingen.
+  const zondag = useMemo(() => shiftDate(date, 1), [date])
+  const weekendLabel = useMemo(() => {
+    const za = formatDateBE(brusselsNoonUtc(date), { day: '2-digit', month: 'short' })
+    const zo = formatDateBE(brusselsNoonUtc(zondag), { day: '2-digit', month: 'short' })
+    return `${za} – ${zo}`
+  }, [date, zondag])
+
   // Datumnavigatie op basis van de échte speeldagen (zie speeldagen.ts). Zonder die lijst (bv. een
-  // lege kalender) valt alles terug op één dag opschuiven.
+  // lege kalender) valt alles terug op één dag opschuiven. In weekend-weergave springen de pijltjes
+  // gewoon een vol weekend (7 dagen) door — eenvoudiger en voorspelbaarder dan content-bewust naar
+  // het eerstvolgende weekend mét wedstrijden zoeken.
   const dagenRef = useRef<HTMLDetailsElement>(null)
   const vorigeDag = useMemo(
-    () => (speeldagen.length ? vorigeSpeeldag(speeldagen, date) : shiftDate(date, -1)),
-    [speeldagen, date],
+    () => (view === 'weekend' ? shiftDate(date, -7) : speeldagen.length ? vorigeSpeeldag(speeldagen, date) : shiftDate(date, -1)),
+    [speeldagen, date, view],
   )
   const volgendeDag = useMemo(
-    () => (speeldagen.length ? volgendeSpeeldag(speeldagen, date) : shiftDate(date, 1)),
-    [speeldagen, date],
+    () => (view === 'weekend' ? shiftDate(date, 7) : speeldagen.length ? volgendeSpeeldag(speeldagen, date) : shiftDate(date, 1)),
+    [speeldagen, date, view],
   )
+  const viewQS = view === 'weekend' ? '&view=weekend' : ''
   // Het hele seizoen, niet enkel een venster van een paar weken — de kiezer scrolt toch al
   // binnen z'n eigen vak (zie .lb-dagen), en anders leek de agenda na een paar weken op te houden.
   const venster = useMemo(() => (speeldagen.length ? alleSpeeldagen(speeldagen, date) : []), [speeldagen, date])
   const aantalVandaag = useMemo(() => speeldagen.find((d) => d.datum === date)?.aantal ?? 0, [speeldagen, date])
+  const aantalWeekend = useMemo(() => aantalOp(speeldagen, date) + aantalOp(speeldagen, zondag), [speeldagen, date, zondag])
+
+  // "Bewaar als standaard": schrijft de dag/weekend-keuze weg in een cookie (1 jaar geldig), zodat
+  // elke gebruiker zijn eigen voorkeur terugkrijgt bij een volgend bezoek zonder ?view= in de URL
+  // (zie de server-side cookie-lezing in page.tsx/live/page.tsx). Geen router.refresh() nodig: de
+  // huidige weergave verandert niet, enkel wat een VOLGEND bezoek standaard toont.
+  const [savedView, setSavedView] = useState<LiveView | null>(null)
+  const [viewSaveFlash, setViewSaveFlash] = useState(false)
+  useEffect(() => {
+    try {
+      const m = document.cookie.match(new RegExp(`(?:^|; )${LIVE_VIEW_COOKIE}=([^;]*)`))
+      setSavedView(m?.[1] === 'weekend' ? 'weekend' : 'dag')
+    } catch {
+      setSavedView('dag')
+    }
+  }, [])
+  const saveView = () => {
+    try {
+      document.cookie = `${LIVE_VIEW_COOKIE}=${view}; path=/; max-age=${60 * 60 * 24 * 365}; samesite=lax`
+    } catch {}
+    setSavedView(view)
+    setViewSaveFlash(true)
+    window.setTimeout(() => setViewSaveFlash(false), 1800)
+  }
+  const viewIsSaved = savedView === view
 
   const emptyReason = query.trim()
     ? ` voor “${query.trim()}”`
@@ -508,7 +559,7 @@ export function LiveBoard({
               leiden. Zijn er (nog) geen speeldagen bekend, dan valt alles terug op één dag
               opschuiven — beter dan een dood bord. */}
           {vorigeDag ? (
-            <Link href={`/?date=${vorigeDag}`} className="lb-datebtn" aria-label="Vorige speeldag">‹</Link>
+            <Link href={`/?date=${vorigeDag}${viewQS}`} className="lb-datebtn" aria-label={view === 'weekend' ? 'Vorig weekend' : 'Vorige speeldag'}>‹</Link>
           ) : (
             <span className="lb-datebtn uit" aria-hidden>‹</span>
           )}
@@ -525,10 +576,12 @@ export function LiveBoard({
             }}
           >
             <summary className="lb-datesum">
-              <span className="lb-datelabel">{date === today ? 'Vandaag' : dateLabel}</span>
+              <span className="lb-datelabel">{view === 'weekend' ? 'Weekend' : date === today ? 'Vandaag' : dateLabel}</span>
               <span className="lb-datesub">
-                {date.split('-').reverse().join('-')}
-                {aantalVandaag > 0 && <span className="lb-datecount">{aantalVandaag}</span>}
+                {view === 'weekend' ? weekendLabel : date.split('-').reverse().join('-')}
+                {(view === 'weekend' ? aantalWeekend : aantalVandaag) > 0 && (
+                  <span className="lb-datecount">{view === 'weekend' ? aantalWeekend : aantalVandaag}</span>
+                )}
                 <span aria-hidden> ⌄</span>
               </span>
             </summary>
@@ -537,9 +590,12 @@ export function LiveBoard({
                 <p className="lb-dagen-leeg">Nog geen wedstrijden ingepland.</p>
               ) : (
                 venster.map((d) => (
+                  // Een specifieke dag kiezen betekent altijd "toon MIJ die ene dag" — ook vanuit
+                  // weekend-weergave, dus expliciet &view=dag i.p.v. terugvallen op de bewaarde
+                  // voorkeur (die zou de gekozen dag anders meteen terug naar haar weekend trekken).
                   <Link
                     key={d.datum}
-                    href={`/?date=${d.datum}`}
+                    href={`/?date=${d.datum}&view=dag`}
                     className={`lb-dag${d.datum === date ? ' nu' : ''}${d.aantal === 0 ? ' leeg' : ''}`}
                     onClick={() => dagenRef.current?.removeAttribute('open')}
                   >
@@ -554,17 +610,40 @@ export function LiveBoard({
                 <input
                   type="date"
                   value={date}
-                  onChange={(e) => e.target.value && router.push(`/?date=${e.target.value}`)}
+                  onChange={(e) => e.target.value && router.push(`/?date=${e.target.value}&view=dag`)}
                   aria-label="Kies datum"
                 />
               </label>
             </div>
           </details>
           {volgendeDag ? (
-            <Link href={`/?date=${volgendeDag}`} className="lb-datebtn" aria-label="Volgende speeldag">›</Link>
+            <Link href={`/?date=${volgendeDag}${viewQS}`} className="lb-datebtn" aria-label={view === 'weekend' ? 'Volgend weekend' : 'Volgende speeldag'}>›</Link>
           ) : (
             <span className="lb-datebtn uit" aria-hidden>›</span>
           )}
+        </div>
+
+        {/* Dag/weekend-keuze + persoonlijke voorkeur bewaren. Enkel de datumbalk hierboven blijft
+            plakken tijdens het scrollen (zie .lb-datenav in live.css) — deze rij hoort er wel
+            logisch bij maar hoeft zelf niet mee te scrollen. */}
+        <div className="lb-viewrow">
+          <div className="lb-viewtoggle" role="group" aria-label="Dag of weekend bekijken">
+            <Link href={`/?date=${date}&view=dag`} className={`lb-view-btn ${view === 'dag' ? 'on' : ''}`}>
+              📅 Dag
+            </Link>
+            <Link href={`/?date=${date}&view=weekend`} className={`lb-view-btn ${view === 'weekend' ? 'on' : ''}`}>
+              🗓 Weekend
+            </Link>
+          </div>
+          <button
+            type="button"
+            className={`lb-view-save ${viewIsSaved && !viewSaveFlash ? 'saved' : ''}`}
+            onClick={saveView}
+            disabled={viewIsSaved && !viewSaveFlash}
+            title="Onthoud deze keuze (dag/weekend) voor je volgende bezoek"
+          >
+            {viewSaveFlash ? '✓ Bewaard' : viewIsSaved ? '✓ Jouw standaard' : '💾 Bewaar als standaard'}
+          </button>
         </div>
 
         {/* Enkel de zoekbalk blijft vast in beeld (het meest gebruikte pad — je eigen ploeg
@@ -633,11 +712,13 @@ export function LiveBoard({
               </>
             ) : (
               <>
-                <p className="lb-empty-title">Geen wedstrijden op {date === today ? 'vandaag' : 'deze dag'}.</p>
+                <p className="lb-empty-title">
+                  Geen wedstrijden {view === 'weekend' ? 'dit weekend' : date === today ? 'vandaag' : 'op deze dag'}.
+                </p>
                 <p className="lb-empty-sub">Spring naar een andere dag of ontdek de rest van het platform.</p>
                 <div className="lb-empty-actions">
-                  <Link href={`/?date=${shiftDate(date, 1)}`} className="lb-empty-btn primary">
-                    Volgende dag ›
+                  <Link href={`/?date=${shiftDate(date, view === 'weekend' ? 7 : 1)}${viewQS}`} className="lb-empty-btn primary">
+                    {view === 'weekend' ? 'Volgend weekend ›' : 'Volgende dag ›'}
                   </Link>
                   <Link href="/rangschikking" className="lb-empty-btn">
                     📊 Bekijk de stand
@@ -686,6 +767,7 @@ export function LiveBoard({
                 const hasStats = played && (m.crosses || m.timeouts)
                 const rowFav = teamFav(m) || clubFav(m)
                 const open = openRow === m.id
+                const mine = myTeamMatch(m)
                 // Bij tijdstip/thuis-uit sorteren en/of een actieve zoekopdracht over meerdere
                 // dagen (searchSeizoen) vervangt dit tagje de reeks-kop van de groep.
                 const tags = [
@@ -697,7 +779,9 @@ export function LiveBoard({
                         : null
                     : null,
                   flatSort ? m.reeks : null,
-                  query.trim().length >= 2 ? dagLabel(dateStrBE(new Date(m.kickoff)), today) : null,
+                  // In weekend-weergave (za+zo door elkaar) én bij een zoekopdracht over meerdere
+                  // dagen (searchSeizoen): toon per kaart op welke dag ze precies valt.
+                  view === 'weekend' || query.trim().length >= 2 ? dagLabel(dateStrBE(new Date(m.kickoff)), today) : null,
                 ].filter((t): t is string => Boolean(t))
                 return (
                   <div key={m.id} className="lb-rowwrap">
@@ -727,7 +811,7 @@ export function LiveBoard({
                           seizoensagenda van je ploeg). stopPropagation op die linkjes voorkomt dat
                           de tik ook de kaart (match) opent. */}
                       <div
-                        className="lb-match lb-match-live"
+                        className={`lb-match lb-match-live${mine ? ' mine' : ''}`}
                         style={{ '--hc': m.home.colors?.primary ?? 'var(--accent)', '--ac': m.away.colors?.primary ?? 'var(--accent)' } as CSSProperties}
                         role="link"
                         tabIndex={0}

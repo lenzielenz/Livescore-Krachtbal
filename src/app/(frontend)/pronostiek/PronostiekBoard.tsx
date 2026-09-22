@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 
-import { catchUpWeekends, type LeaderRow } from '@/lib/prediction-score'
+import { catchUpWeekends, rankLeaderboard, type LeaderRow } from '@/lib/prediction-score'
 
 const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
 
@@ -25,7 +25,9 @@ export function PronostiekBoard({
   const [flash, setFlash] = useState(false)
 
   // Vaste rang op basis van het volledige (gesorteerde) klassement — zoeken hernummert dus niet.
-  const ranked = useMemo(() => rows.map((r, i) => ({ ...r, rank: i + 1 })), [rows])
+  // Gelijke punten delen dezelfde rang (sportranking, zie rankLeaderboard) — anders leek een
+  // gedeelde stand toch willekeurig anders genummerd.
+  const ranked = useMemo(() => rankLeaderboard(rows), [rows])
   const me = myUserId != null ? ranked.find((r) => r.userId === myUserId) : undefined
   const leaderPoints = ranked[0]?.points ?? 0
   const deficit = me ? leaderPoints - me.points : 0
@@ -85,20 +87,28 @@ export function PronostiekBoard({
         <p className="empty">Geen deelnemer gevonden voor “{q.trim()}”.</p>
       ) : (
         <div className="vs-board vs-board-search">
-          {filtered.map((r) => (
-            <div
-              key={r.userId}
-              id={`vs-${r.userId}`}
-              className={`vs-row${r.userId === myUserId ? ' me' : ''}${r.rank === 1 ? ' leader' : ''}${flash && r.userId === myUserId ? ' flash' : ''}`}
-            >
-              <span className="vs-rank">{r.rank === 1 ? '🥇' : r.rank}</span>
-              <span className="vs-who">{r.name}{r.userId === myUserId ? ' (jij)' : ''}</span>
-              <span className="vs-stat" title="Exacte uitslagen">🎯 {r.exact}</span>
-              <span className="vs-stat" title="Wedstrijden voorspeld">{r.predictions}×</span>
-              <span className="vs-pts">{r.points}</span>
-            </div>
-          ))}
+          {filtered.map((r) => {
+            const medal = r.rank === 1 ? ' leader' : r.rank === 2 ? ' silver' : r.rank === 3 ? ' bronze' : ''
+            return (
+              <div
+                key={r.userId}
+                id={`vs-${r.userId}`}
+                className={`vs-row${r.userId === myUserId ? ' me' : ''}${medal}${flash && r.userId === myUserId ? ' flash' : ''}`}
+              >
+                <span className="vs-rank">{r.rank}</span>
+                <span className="vs-who">{r.name}{r.userId === myUserId ? ' (jij)' : ''}</span>
+                <span className="vs-stat" title="Exacte uitslagen · dichtst bij">
+                  🎯 {r.exact}{r.closest > 0 ? ` · 🔥 ${r.closest}` : ''}
+                </span>
+                <span className="vs-stat" title="Wedstrijden voorspeld">{r.predictions}×</span>
+                <span className="vs-pts">{r.points}</span>
+              </div>
+            )
+          })}
         </div>
+      )}
+      {filtered.length > 0 && (
+        <p className="vs-legend">🥇🥈🥉 podium · 🎯 exacte uitslagen · 🔥 vaakst dichtst bij</p>
       )}
     </>
   )

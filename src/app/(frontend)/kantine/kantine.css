@@ -1266,6 +1266,13 @@
   color: #fff; background: #ef476f33; border: 1px solid #ef476f66;
 }
 .kt-stage.met-live .kt-grid-venster { flex: 1 1 auto; }
+/* Live is de ster van het scherm: een eigen, groot vak boven het raster met de rest van vandaag —
+   anders staat een lopende wedstrijd even klein als een tegel tussen vier andere, wat de vorige
+   klacht was ("blijft klein staan"). De hoogte is een vaste bandbreedte (geen flex:1 zoals het
+   raster): groot genoeg om echt op te vallen, maar begrensd zodat het raster eronder nog ruimte
+   overhoudt voor de rest van de dag. */
+.kt-featured { flex: none; display: flex; flex-direction: column; gap: 8px; }
+.kt-featured-grid { display: grid; gap: 14px; height: clamp(220px, 42vh, 480px); }
 .kt-stage.met-live .kt-tile.live {
   border-radius: 22px;
   box-shadow: inset 0 1px 0 #ffffff24, 0 0 0 2px #ef476f80,

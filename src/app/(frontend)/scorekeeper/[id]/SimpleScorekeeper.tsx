@@ -56,6 +56,7 @@ export function SimpleScorekeeper({
   // scorebord van DEZE wedstrijd springt (zie /club/veldscherm + api/veldscherm/koppel). Puur
   // cosmetisch voor de tv — nooit kritiek pad, dus geen offline-wachtrij, gewoon een losse fetch.
   const [veldOpen, setVeldOpen] = useState(false)
+  const [veldPaired, setVeldPaired] = useState(false)
   const [veldCode, setVeldCode] = useState('')
   const [veldBusy, setVeldBusy] = useState(false)
   const [veldMsg, setVeldMsg] = useState<{ ok: boolean; text: string } | null>(null)
@@ -240,11 +241,35 @@ export function SimpleScorekeeper({
         setVeldMsg({ ok: false, text: data.error ?? 'Koppelen mislukt.' })
         return
       }
-      setVeldMsg({ ok: true, text: 'Veldscherm gekoppeld!' })
+      setVeldPaired(true)
       setVeldCode('')
-      setTimeout(() => setVeldOpen(false), 1500)
+      setVeldMsg(null)
     } catch {
       setVeldMsg({ ok: false, text: 'Koppelen mislukt — probeer opnieuw.' })
+    } finally {
+      setVeldBusy(false)
+    }
+  }
+
+  // Verkeerde code getikt (of het verkeerde veld geraakt)? Meteen kunnen rechtzetten zonder eerst
+  // naar "Mijn club" → Veldscherm te moeten — zie /api/veldscherm/ontkoppel.
+  const ontkoppelVeldscherm = async () => {
+    setVeldBusy(true)
+    setVeldMsg(null)
+    try {
+      const r = await fetch('/api/veldscherm/ontkoppel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ matchId }),
+      })
+      if (!r.ok) {
+        const data = (await r.json().catch(() => ({}))) as { error?: string }
+        setVeldMsg({ ok: false, text: data.error ?? 'Ontkoppelen mislukt.' })
+        return
+      }
+      setVeldPaired(false)
+    } catch {
+      setVeldMsg({ ok: false, text: 'Ontkoppelen mislukt — probeer opnieuw.' })
     } finally {
       setVeldBusy(false)
     }
@@ -273,14 +298,23 @@ export function SimpleScorekeeper({
           </button>
           {live && (
             <button type="button" className="ssk-toplink" onClick={() => setVeldOpen((v) => !v)}>
-              📡 Veldscherm koppelen
+              📡 {veldPaired ? 'Veldscherm gekoppeld' : 'Veldscherm koppelen'}
             </button>
           )}
           <Link href={`/veld/${matchId}`} className="ssk-toplink">Veldscherm →</Link>
         </span>
       </header>
 
-      {veldOpen && live && (
+      {veldOpen && live && veldPaired && (
+        <div className="ssk-veldkoppel" role="group" aria-label="Veldscherm ontkoppelen">
+          <span className="ssk-veldkoppel-msg ok">✓ Veldscherm gekoppeld!</span>
+          <button type="button" className="ssk-veldkoppel-btn ontkoppel" disabled={veldBusy} onClick={() => void ontkoppelVeldscherm()}>
+            {veldBusy ? 'Bezig…' : '✕ Ontkoppelen'}
+          </button>
+          {veldMsg && !veldMsg.ok && <span className="ssk-veldkoppel-msg err">{veldMsg.text}</span>}
+        </div>
+      )}
+      {veldOpen && live && !veldPaired && (
         <div className="ssk-veldkoppel" role="group" aria-label="Veldscherm koppelen">
           <input
             className="ssk-veldkoppel-input"

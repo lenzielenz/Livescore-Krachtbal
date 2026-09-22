@@ -216,22 +216,26 @@ export function KantineScreen({
   const liveMatches = matches.filter((m) => statusVan(m) === 'live')
   const finishedMatches = matches.filter((m) => statusVan(m) === 'finished')
   const played = [...liveMatches, ...finishedMatches]
-  // Toon altijd de volledige dag samen — live, nog te spelen én al gespeelde wedstrijden door
-  // elkaar — en pas als er voor VANDAAG écht niets (meer) is, val terug op wat later deze week
-  // gepland staat (het venster haalt intussen ook gisteren en een week vooruit op, zie
-  // kantine-selectie.ts). Een eerdere versie koos telkens ÉÉN status-groep exclusief (enkel live,
-  // of enkel wat nog moet starten) en verstopte daarmee net de andere wedstrijden van diezelfde
-  // dag zodra er een mix van live/gespeeld/gepland was: "bij start van de wedstrijd verlies je de
-  // info van de andere wedstrijden die dag", en op zondag verdween zaterdags eindstand zodra er
-  // een nog te spelen zondagwedstrijd bijstond. `rang` (uit kantine-selectie.ts, dezelfde die de
+  // "Vandaag" = live, nog te spelen én al gespeelde wedstrijden (ook gisterens, zie kantine-
+  // selectie.ts) — nooit één status-groep exclusief, want dat verstopte net de andere wedstrijden
+  // van dezelfde dag zodra er een mix van live/gespeeld/gepland was ("bij start van de wedstrijd
+  // verlies je de info van de andere wedstrijden die dag", en op zondag verdween zaterdags
+  // eindstand zodra er een nog te spelen zondagwedstrijd bijstond). `rang` (dezelfde die de
   // sortering bepaalt) telt gisteren-tot-nu als "vandaag" (rang 0-2); enkel rang 3 is puur later
   // deze week.
   const dagEinde = schermVenster().dagEinde
   const vandaag = matches.filter((m) => rang({ id: m.id, status: statusVan(m), date: m.date }, dagEinde) <= 2)
   const laterDezeWeek = matches.filter((m) => rang({ id: m.id, status: statusVan(m), date: m.date }, dagEinde) === 3)
-  const visible = vandaag.length > 0 ? vandaag : laterDezeWeek
+  // Live wedstrijden krijgen een eigen, groot vak (zie `kt-featured` verderop) — anders staat een
+  // lopende wedstrijd even klein als een tegel in een raster van vijf, wat op zijn beurt de vorige
+  // klacht was. Het raster hieronder toont de REST van vandaag ernaast (niet erboven verdrongen),
+  // en valt terug op later deze week als er voor vandaag verder niets is.
+  const overigVandaag = vandaag.filter((m) => statusVan(m) !== 'live')
+  const visible = overigVandaag.length > 0 ? overigVandaag : laterDezeWeek
   const layout = layoutFor(visible.length)
   const cols = Math.min(layout.cols, maxColsForWidth(vw))
+  const featuredLayout = layoutFor(liveMatches.length)
+  const featuredCols = Math.min(featuredLayout.cols, maxColsForWidth(vw))
 
   // ── Bladeren in plaats van proppen ────────────────────────────────────────────────────────
   // Het raster stond op `grid-auto-rows: 1fr` in een venster met overflow:hidden. Een rij kan
@@ -394,7 +398,16 @@ export function KantineScreen({
         </div>
       ) : (
         <div className={`kt-stage${liveMatches.length ? ' met-live' : ''}`}>
-          {liveMatches.length > 0 && <div className="kt-live-kop"><span /> NU LIVE <b>{liveMatches.length}</b></div>}
+          {liveMatches.length > 0 && (
+            <div className="kt-featured">
+              <div className="kt-live-kop"><span /> NU LIVE <b>{liveMatches.length}</b></div>
+              <div className="kt-featured-grid" style={{ gridTemplateColumns: `repeat(${featuredCols}, 1fr)` }}>
+                {liveMatches.map((m) => (
+                  <Tile key={m.id} match={m} live={live[m.id] ?? null} fontSize={featuredLayout.fontSize} logoSize={featuredLayout.logoSize} />
+                ))}
+              </div>
+            </div>
+          )}
           {visible.length > 0 && (
             <>
               <div className="kt-grid-venster" ref={vensterRef}>

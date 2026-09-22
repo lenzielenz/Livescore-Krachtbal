@@ -29,6 +29,7 @@ export const ROLE_OPTIONS: { label: string; value: UserRole }[] = [
 type WithRoles = {
   roles?: UserRole[] | null
   club?: number | string | { id: number | string } | null
+  team?: number | string | { id: number | string } | null
   official?: number | string | { id: number | string } | null
   followedClubs?: (number | string | { id: number | string })[] | null
 }
@@ -116,6 +117,15 @@ export function userClubId(user: unknown): number | string | null {
   if (club == null) return null
   if (typeof club === 'object') return club.id
   return club
+}
+
+/** De eigen ploeg (id) van deze gebruiker, ingesteld via "Mijn profiel" — voedt de highlight van
+ *  haar wedstrijd op het live-bord (zie LiveBoard.tsx). */
+export function userTeamId(user: unknown): number | string | null {
+  const team = (user as WithRoles | null)?.team
+  if (team == null) return null
+  if (typeof team === 'object') return team.id
+  return team
 }
 
 /** Clubs die een supporter zonder eigen club toch volgt (id's), voor wie geen `club` heeft. */

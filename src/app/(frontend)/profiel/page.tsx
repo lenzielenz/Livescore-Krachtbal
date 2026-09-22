@@ -60,6 +60,14 @@ export default async function ProfielPage() {
   }
   const clubs = [...byKey.values()].sort((a, b) => a.name.localeCompare(b.name))
 
+  // Ploegen van alle clubs, minimaal — de client filtert zelf op de gekozen club (zie
+  // ProfileForm). Voedt "Mijn ploeg": de wedstrijden van die ene ploeg krijgen een lichte
+  // highlight op het live-bord (zie LiveBoard.tsx).
+  const teamsRes = await payload
+    .find({ collection: 'teams', where: competitionWhere(), sort: 'displayTitle', depth: 0, limit: 3000, select: { displayTitle: true, club: true } })
+    .catch(() => ({ docs: [] as { id: number; displayTitle?: string | null; club?: unknown }[] }))
+  const teams = teamsRes.docs.map((t) => ({ id: t.id as number, name: String(t.displayTitle ?? 'Ploeg'), clubId: Number(idOf(t.club)) }))
+
   const followedClubIds = (Array.isArray(u.followedClubs) ? u.followedClubs : [])
     .map((c) => Number(idOf(c)))
     .filter((n) => Number.isFinite(n))
@@ -69,6 +77,7 @@ export default async function ProfielPage() {
     name: String(u.name ?? ''),
     clubId: idOf(u.club),
     followedClubIds,
+    teamId: idOf(u.team),
     position: typeof u.position === 'string' ? u.position : '',
     photoUrl,
     zoom: fit.zoom,
@@ -83,9 +92,9 @@ export default async function ProfielPage() {
         <h1 className="page-title"><span className="brand">Mijn profiel</span></h1>
         <p className="wb-intro">
           Stel hier je eigen profiel samen: je naam, je club, je positie in het spel en je profielfoto
-          (uploaden, inzoomen en verschuiven). Klaar? <Link href="/profiel/scorecard" style={{ color: 'var(--accent)', fontWeight: 700 }}>Bekijk je scorecard →</Link> · <Link href="/profiel/paspoort" style={{ color: 'var(--accent)', fontWeight: 700 }}>Supporterpaspoort →</Link> · <Link href="/profiel/badges" style={{ color: 'var(--accent)', fontWeight: 700 }}>Badges →</Link>
+          (uploaden, inzoomen en verschuiven). Klaar? <Link href="/profiel/scorecard" style={{ color: 'var(--accent)', fontWeight: 700 }}>Bekijk je scorecard →</Link> · <Link href="/profiel/paspoort" style={{ color: 'var(--accent)', fontWeight: 700 }}>Supporterpaspoort →</Link> · <Link href="/profiel/badges" style={{ color: 'var(--accent)', fontWeight: 700 }}>Badges →</Link> · <Link href="/profiel/ideeen" style={{ color: 'var(--accent)', fontWeight: 700 }}>Mijn ideeën →</Link>
         </p>
-        <ProfileForm initial={initial} clubs={clubs} />
+        <ProfileForm initial={initial} clubs={clubs} teams={teams} />
         <AccountVerwijderen />
       </div>
     </>

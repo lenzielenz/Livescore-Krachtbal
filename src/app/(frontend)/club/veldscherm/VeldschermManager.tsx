@@ -109,6 +109,35 @@ function VeldCard({ screen, url, demo = false }: { screen: FieldScreenRow; clubI
   const [showQr, setShowQr] = useState(false)
   const [theme, setTheme] = useState<FieldScreenTheme>(screen.theme)
   const [themeSaving, setThemeSaving] = useState(false)
+  const [paired, setPaired] = useState(screen.pairedMatchId != null)
+  const [pairingCode, setPairingCode] = useState(screen.pairingCode)
+  const [unpairing, setUnpairing] = useState(false)
+  const [unpairError, setUnpairError] = useState<string | null>(null)
+
+  // Verkeerde wedstrijd gekoppeld (of een test die niet meer nodig is)? Terug naar het
+  // wachtscherm, met een verse koppelcode — zie /api/veldscherm/ontkoppel.
+  const ontkoppel = async () => {
+    setUnpairing(true)
+    setUnpairError(null)
+    try {
+      const res = await fetch('/api/veldscherm/ontkoppel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fieldScreenId: screen.id }),
+      })
+      const data = (await res.json().catch(() => ({}))) as { error?: string; pairingCode?: string }
+      if (!res.ok) {
+        setUnpairError(data.error ?? 'Ontkoppelen mislukt.')
+        return
+      }
+      setPaired(false)
+      if (data.pairingCode) setPairingCode(data.pairingCode)
+    } catch {
+      setUnpairError('Ontkoppelen mislukt — probeer opnieuw.')
+    } finally {
+      setUnpairing(false)
+    }
+  }
 
   const copy = async () => {
     try {
@@ -147,12 +176,20 @@ function VeldCard({ screen, url, demo = false }: { screen: FieldScreenRow; clubI
         {demo && <span className="vb-demo-badge">Demo</span>}
       </div>
       <p className="vb-card-status">
-        {screen.pairedMatchId ? (
+        {paired ? (
           <>⚡ {demo ? 'Fictieve wedstrijd — altijd live' : 'Nu gekoppeld aan een lopende wedstrijd'}</>
         ) : (
-          <>Wachtscherm — koppelcode <strong>{screen.pairingCode ?? '—'}</strong></>
+          <>Wachtscherm — koppelcode <strong>{pairingCode ?? '—'}</strong></>
         )}
       </p>
+      {paired && !demo && (
+        <div className="vb-unpair">
+          <button type="button" className="vb-btn danger vb-btn-sm" disabled={unpairing} onClick={() => void ontkoppel()}>
+            {unpairing ? 'Bezig…' : '✕ Ontkoppelen'}
+          </button>
+          {unpairError && <p className="vb-error">{unpairError}</p>}
+        </div>
+      )}
       <div className="vb-theme">
         <span className="vb-theme-label">Kleurthema</span>
         <div className="vb-theme-row" role="group" aria-label="Kleurthema voor dit veld">
