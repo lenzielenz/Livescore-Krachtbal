@@ -1,4 +1,4 @@
-import { brusselsDayBoundsUtc, dateStrBE, formatTimeBE } from '@/lib/datetime'
+import { brusselsDayBoundsUtc, brusselsNoonUtc, brusselsParts, dateStrBE, formatTimeBE, shiftDateStr } from '@/lib/datetime'
 import { purgeExpiredDemos } from '@/lib/demo'
 import { buildScoreboards, type ScoreboardData } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
@@ -75,17 +75,18 @@ export async function resolveDefaultDay(today: string): Promise<string> {
   return Number.isNaN(d.getTime()) ? today : dateStrBE(d)
 }
 
-// Laadt alle wedstrijden voor één dag + de actueel-live wedstrijden (wanneer je
-// naar vandaag kijkt) en berekent voor elk de afgeleide stand. De stand wordt
-// GEBATCHT opgebouwd (buildScoreboards: enkele queries voor alle wedstrijden
-// samen) i.p.v. per wedstrijd — schaalt naar een vol weekend (100+ wedstrijden).
-// Gedeeld door /live en de startpagina.
-export async function loadLiveDay(selected: string, today: string): Promise<DayMatch[]> {
+/**
+ * Laadt alle wedstrijden voor een [start, end)-venster (ISO-instants) + de actueel-live
+ * wedstrijden (wanneer dat venster vandaag bevat) en berekent voor elk de afgeleide stand. De
+ * stand wordt GEBATCHT opgebouwd (buildScoreboards: enkele queries voor alle wedstrijden samen)
+ * i.p.v. per wedstrijd — schaalt naar een vol weekend (100+ wedstrijden). Gedeeld door
+ * loadLiveDay (één dag) en loadLiveWeekend (za+zo) hieronder.
+ */
+async function loadRange(start: string, end: string, includeLive: boolean): Promise<DayMatch[]> {
   const payload = await getPayloadClient()
   // Ruim meteen vervallen demo's op (best-effort) — zo verdwijnen ze ~binnen het uur,
   // ook zonder dat iemand de demo opent.
   await purgeExpiredDemos(payload).catch(() => undefined)
-  const { start, end } = dayBounds(selected)
   // Analyse-only én demo-wedstrijden zijn nooit publiek/live zichtbaar.
   const dayRes = await payload.find({
     collection: 'matches',
@@ -101,18 +102,17 @@ export async function loadLiveDay(selected: string, today: string): Promise<DayM
     limit: 500,
   })
 
-  // Live wedstrijden altijd tonen wanneer je naar vandaag kijkt — ook al staat hun datum anders.
-  const liveRes =
-    selected === today
-      ? await payload.find({
-          collection: 'matches',
-          where: {
-            and: [{ status: { equals: 'live' } }, { analyseOnly: { not_equals: true } }, { isDemo: { not_equals: true } }],
-          },
-          depth: 0,
-          limit: 100,
-        })
-      : { docs: [] as (typeof dayRes)['docs'] }
+  // Live wedstrijden altijd tonen wanneer het venster vandaag bevat — ook al staat hun datum anders.
+  const liveRes = includeLive
+    ? await payload.find({
+        collection: 'matches',
+        where: {
+          and: [{ status: { equals: 'live' } }, { analyseOnly: { not_equals: true } }, { isDemo: { not_equals: true } }],
+        },
+        depth: 0,
+        limit: 100,
+      })
+    : { docs: [] as (typeof dayRes)['docs'] }
 
   const seen = new Set<number>()
   const docs = [...liveRes.docs, ...dayRes.docs].filter((m) => {
@@ -123,6 +123,27 @@ export async function loadLiveDay(selected: string, today: string): Promise<DayM
 
   const cards = await buildScoreboards(payload, docs)
   return cardsToDayMatches(docs, cards)
+}
+
+// Gedeeld door /live en de startpagina.
+export async function loadLiveDay(selected: string, today: string): Promise<DayMatch[]> {
+  const { start, end } = dayBounds(selected)
+  return loadRange(start, end, selected === today)
+}
+
+/** De zaterdag van het weekend waarin `dateStr` valt: za/zo blijft op hetzelfde weekend, een
+ *  weekdag springt vooruit naar het eerstvolgende weekend. */
+export function weekendZaterdag(dateStr: string): string {
+  const wd = brusselsParts(brusselsNoonUtc(dateStr)).weekdayMon0 // 0=ma … 6=zo
+  return wd === 6 ? shiftDateStr(dateStr, -1) : shiftDateStr(dateStr, 5 - wd)
+}
+
+/** Laadt een heel weekend (zaterdag + zondag) in één keer — de weekend-weergave van het bord. */
+export async function loadLiveWeekend(zaterdag: string, today: string): Promise<DayMatch[]> {
+  const zondag = shiftDateStr(zaterdag, 1)
+  const { start } = dayBounds(zaterdag)
+  const { end } = dayBounds(zondag)
+  return loadRange(start, end, today >= zaterdag && today <= zondag)
 }
 
 /**

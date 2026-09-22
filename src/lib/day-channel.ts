@@ -1,6 +1,6 @@
 import type { Payload } from 'payload'
 
-import { brusselsDayBoundsUtc, dateStrBE } from './datetime'
+import { brusselsDayBoundsUtc, dateStrBE, shiftDateStr } from './datetime'
 import { buildScoreboards } from './match-engine'
 import { MATCH_ASSUMED_DONE_MS } from './simple-score'
 import { subscribe } from './sse-hub'
@@ -31,10 +31,10 @@ export interface LiveScore {
  *  wedstrijden tegelijk is elke paar seconden ruim snel genoeg, en het scheelt databankwerk. */
 export const DAY_POLL_MS = 5000
 
-/** De veranderlijke stand van alle wedstrijden op één dag (plus wat elders live is). */
-export async function loadLiveScores(payload: Payload, selected: string): Promise<LiveScore[]> {
-  const today = dateStrBE()
-  const { start, end } = brusselsDayBoundsUtc(selected)
+/** De veranderlijke stand van alle wedstrijden in een [start, end)-venster (plus wat elders live
+ *  is, wanneer `includeLive`). Gedeeld door loadLiveScores (één dag) en loadLiveScoresWeekend
+ *  (za+zo) hieronder. */
+async function scoresForRange(payload: Payload, start: string, end: string, includeLive: boolean): Promise<LiveScore[]> {
   const dayRes = await payload.find({
     collection: 'matches',
     where: {
@@ -50,20 +50,19 @@ export async function loadLiveScores(payload: Payload, selected: string): Promis
     overrideAccess: true,
   })
 
-  // Kijk je naar vandaag, dan horen ook wedstrijden erbij die nú live zijn met een andere datum
-  // (een avondmatch die over middernacht loopt) — net als op het bord zelf.
-  const liveRes =
-    selected === today
-      ? await payload.find({
-          collection: 'matches',
-          where: {
-            and: [{ status: { equals: 'live' } }, { analyseOnly: { not_equals: true } }, { isDemo: { not_equals: true } }],
-          },
-          depth: 0,
-          limit: 100,
-          overrideAccess: true,
-        })
-      : { docs: [] as (typeof dayRes)['docs'] }
+  // Horen ook wedstrijden bij die NÚ live zijn met een andere datum (een avondmatch die over
+  // middernacht loopt) — net als op het bord zelf.
+  const liveRes = includeLive
+    ? await payload.find({
+        collection: 'matches',
+        where: {
+          and: [{ status: { equals: 'live' } }, { analyseOnly: { not_equals: true } }, { isDemo: { not_equals: true } }],
+        },
+        depth: 0,
+        limit: 100,
+        overrideAccess: true,
+      })
+    : { docs: [] as (typeof dayRes)['docs'] }
 
   const seen = new Set<number>()
   const docs = [...liveRes.docs, ...dayRes.docs].filter((m) => (seen.has(m.id) ? false : (seen.add(m.id), true)))
@@ -89,6 +88,23 @@ export async function loadLiveScores(payload: Payload, selected: string): Promis
   return uit
 }
 
+/** De veranderlijke stand van alle wedstrijden op één dag (plus wat elders live is). */
+export async function loadLiveScores(payload: Payload, selected: string): Promise<LiveScore[]> {
+  const today = dateStrBE()
+  const { start, end } = brusselsDayBoundsUtc(selected)
+  return scoresForRange(payload, start, end, selected === today)
+}
+
+/** Zelfde als loadLiveScores, maar voor een heel weekend (zaterdag + zondag) ineens — voedt de
+ *  weekend-weergave van het bord, die anders geen live-updates zou krijgen voor de zondag. */
+export async function loadLiveScoresWeekend(payload: Payload, zaterdag: string): Promise<LiveScore[]> {
+  const today = dateStrBE()
+  const zondag = shiftDateStr(zaterdag, 1)
+  const { start } = brusselsDayBoundsUtc(zaterdag)
+  const { end } = brusselsDayBoundsUtc(zondag)
+  return scoresForRange(payload, start, end, today >= zaterdag && today <= zondag)
+}
+
 /**
  * Sluit aan op het gedeelde dagkanaal. Geeft een unsubscribe-functie terug; die stopt de poller
  * zodra de laatste kijker weg is.
@@ -101,6 +117,20 @@ export function joinDay(
   return subscribe(
     `day:${selected}`,
     () => loadLiveScores(payload, selected),
+    (frame) => send('scores', frame.data, frame.id),
+    DAY_POLL_MS,
+  )
+}
+
+/** Zelfde als joinDay, maar op het gedeelde weekendkanaal (za+zo) — voor de weekend-weergave. */
+export function joinWeekend(
+  payload: Payload,
+  zaterdag: string,
+  send: (event: string, data: unknown, id?: number) => void,
+): () => void {
+  return subscribe(
+    `weekend:${zaterdag}`,
+    () => loadLiveScoresWeekend(payload, zaterdag),
     (frame) => send('scores', frame.data, frame.id),
     DAY_POLL_MS,
   )
