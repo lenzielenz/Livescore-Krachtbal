@@ -1435,6 +1435,10 @@ body.kb-scherm .site-foot { display: none; }
 .match-meta-bit::before { content: "·"; margin: 0 8px; color: var(--line); }
 .match-meta-cal { color: var(--accent); font-weight: 700; text-decoration: none; }
 .match-meta-cal:hover { text-decoration: underline; }
+/* Locatie → Google Maps: zelfde chip als de agenda-/videolink hierboven, geen apart uiterlijk —
+   gewoon één extra tekstlink in de meta-regel, niet bulky, opent navigatie in een nieuw tabblad. */
+.match-meta-loc { color: var(--accent); font-weight: 700; text-decoration: none; }
+.match-meta-loc:hover { text-decoration: underline; }
 /* Ingang naar de video-analyse voor wie ze mag beheren (zelfde stijl als de agenda-link). */
 .match-meta-video { color: var(--accent); font-weight: 700; text-decoration: none; }
 .match-meta-video:hover { text-decoration: underline; }
