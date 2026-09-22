@@ -1511,7 +1511,11 @@
    meerdere dagen (zie searchSeizoen) — dan vervangt dit de reeks-kop van de groep. */
 .lb-row-reeks {
   display: block;
-  margin: 2px 0 2px 40px;
+  /* Boven het tagje staat al ruimte (de padding van .lb-rowwrap, top+bottom van twee
+     aangrenzende kaarten samen) — zonder een eigen ondermarge plakte de tekst bijna tegen de
+     kaart eronder. Deze marge laat het tagje netjes tussen de vorige en de volgende kaart
+     hangen i.p.v. tegen de onderste te kleven. */
+  margin: 2px 0 7px 40px;
   font-size: 0.68rem;
   font-weight: 700;
   text-transform: uppercase;
