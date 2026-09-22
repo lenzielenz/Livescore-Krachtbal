@@ -1,0 +1,60 @@
+/* "Mijn ideeën" op het profiel: wat je doorgaf via de ideeënbus, met de status erbij. */
+.mi-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-width: 640px;
+}
+.mi-item {
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel-grad, var(--panel));
+  box-shadow: var(--card-shadow, 0 10px 30px rgba(0, 0, 0, 0.3));
+}
+.mi-item-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.mi-subject {
+  font-weight: 750;
+}
+.mi-status {
+  flex: none;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  color: var(--dim);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.mi-status-reviewing,
+.mi-status-planned {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+.mi-status-done {
+  color: #0fe0a6;
+  border-color: color-mix(in srgb, #0fe0a6 45%, var(--line));
+  background: color-mix(in srgb, #0fe0a6 14%, transparent);
+}
+.mi-status-declined {
+  color: #ff8d91;
+  border-color: color-mix(in srgb, #ff8d91 40%, var(--line));
+  background: color-mix(in srgb, #ff8d91 12%, transparent);
+}
+.mi-meta {
+  margin-top: 6px;
+  display: flex;
+  gap: 6px;
+  color: var(--dim);
+  font-size: 0.8rem;
+}
