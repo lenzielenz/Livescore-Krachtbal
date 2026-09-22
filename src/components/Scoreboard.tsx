@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 
 import type { MatchState, TimelineItem } from '@/lib/match-engine'
 import type { KrachtbalKleur } from '@/lib/reeksen'
+import { Avatar } from '@/components/Avatar'
 import { ClubColorBlast } from '@/components/ClubColorBlast'
 import { KrachtbalIcon } from '@/components/KrachtbalIcon'
 import { MomentumChart } from '@/app/(frontend)/analyse/[id]/MomentumChart'
@@ -20,7 +21,7 @@ import './scoreboard.css'
 type Side = 'home' | 'away'
 
 type Goal = { key: number; side: Side; team: string; points: number; scorer: string | null }
-type Shout = { id: number; name: string; text: string; at: number }
+type Shout = { id: number; name: string; text: string; at: number; photoUrl?: string | null }
 // Eén "deeltje" van een emoji-uitbarsting: start (ox/oy) op de ingedrukte knop, spat dan uiteen
 // (tx/ty) en dwarrelt al draaiend omhoog. Eigen schaal/duur per deeltje voor een levendige zwerm.
 type FloatItem = {
@@ -780,8 +781,11 @@ export function Scoreboard({
             ) : (
               shouts.map((s) => (
                 <div key={s.id} className="sb-shout">
-                  <span className="sb-shout-name">{s.name}</span>
-                  <span className="sb-shout-text">{s.text}</span>
+                  <Avatar name={s.name} photoUrl={s.photoUrl} size={24} />
+                  <span className="sb-shout-body">
+                    <span className="sb-shout-name">{s.name}</span>
+                    <span className="sb-shout-text">{s.text}</span>
+                  </span>
                 </div>
               ))
             )}

@@ -19,7 +19,7 @@ type Send = (event: string, data: unknown, id?: number) => void
 // Eén live shoutout (ingelogde supporter). Wordt nu ook PERSISTENT bewaard op de wedstrijd
 // (matches.liveShoutouts), zodat berichten en tellers niet verdwijnen wanneer (even) niemand
 // kijkt of de server herstart. Het kanaal hydrateert hieruit en schrijft terug.
-export type Shout = { id: number; name: string; text: string; at: number }
+export type Shout = { id: number; name: string; text: string; at: number; photoUrl: string | null }
 
 type Channel = {
   payload: Payload
@@ -356,12 +356,12 @@ export function setMvpTotals(matchId: number, totals: Record<string | number, nu
 }
 
 /** Voeg een live shoutout toe en broadcast hem meteen. Null als niemand kijkt (geen kanaal). */
-export function addShoutout(matchId: number, name: string, text: string): Shout | null {
+export function addShoutout(matchId: number, name: string, text: string, photoUrl: string | null = null): Shout | null {
   const ch = channels.get(matchId)
   if (!ch) return null
   if (!isTribuneOpen(ch.status, ch.finishedAt, ch.date)) return null // gesloten (>1u na de match)
   ch.shoutSeq += 1
-  const shout: Shout = { id: ch.shoutSeq, name, text, at: Date.now() }
+  const shout: Shout = { id: ch.shoutSeq, name, text, at: Date.now(), photoUrl }
   ch.shoutouts.push(shout)
   broadcast(ch, 'shoutout', shout)
   void saveShoutouts(ch, matchId) // meteen persisteren zodat het bericht blijft staan

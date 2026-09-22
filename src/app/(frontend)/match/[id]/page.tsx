@@ -507,7 +507,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
         ballKleur={ballKleur}
         canChat={Boolean(me)}
         initialReactions={(matchDoc?.liveReactions as Record<string, number> | null) ?? undefined}
-        initialShouts={Array.isArray(matchDoc?.liveShoutouts) ? (matchDoc.liveShoutouts as { id: number; name: string; text: string; at: number }[]) : undefined}
+        initialShouts={Array.isArray(matchDoc?.liveShoutouts) ? (matchDoc.liveShoutouts as { id: number; name: string; text: string; at: number; photoUrl?: string | null }[]) : undefined}
         canPostInstant={canPostInstant}
         initialInstants={initialInstants}
         momentumGoals={share?.goals}
@@ -516,7 +516,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
       {me && state.match.status === 'finished' && (
         <MatchActivitySummary
           reactions={(matchDoc?.liveReactions as Record<string, number> | null) ?? {}}
-          shouts={Array.isArray(matchDoc?.liveShoutouts) ? (matchDoc.liveShoutouts as { id: number; name: string; text: string; at: number }[]) : []}
+          shouts={Array.isArray(matchDoc?.liveShoutouts) ? (matchDoc.liveShoutouts as { id: number; name: string; text: string; at: number; photoUrl?: string | null }[]) : []}
           photos={initialInstants}
         />
       )}

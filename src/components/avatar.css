@@ -1,0 +1,29 @@
+/* Kleine profielavatar — foto of initialen. Zelfde "glazen munt"-taal als elders in de app
+   (TeamLogo, de medaillekleuren op rangschikking/pronostiek): een subtiele ring + zachte
+   binnenschaduw geven zelfs een kale letter-avatar een verzorgd, premium gevoel. */
+.av {
+  --av-bg: #5b6472;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  overflow: hidden;
+  background: linear-gradient(160deg, color-mix(in srgb, var(--av-bg) 90%, #fff 10%), var(--av-bg));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    inset 0 -2px 3px rgba(0, 0, 0, 0.28),
+    0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+.av img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.av-init {
+  color: #fff;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  user-select: none;
+}

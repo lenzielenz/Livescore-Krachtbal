@@ -320,13 +320,20 @@
 }
 .sb-shout {
   display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 6px;
+  align-items: flex-start;
+  gap: 8px;
   padding: 7px 10px;
   border-radius: 8px;
   background: #10141a;
   font-size: 0.9rem;
+}
+.sb-shout-body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  padding-top: 1px;
 }
 .sb-shout-name {
   font-weight: 700;

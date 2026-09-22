@@ -1,6 +1,7 @@
+import { Avatar } from '@/components/Avatar'
 import './match-activity-summary.css'
 
-type Shout = { id: number; name: string; text: string; at: number }
+type Shout = { id: number; name: string; text: string; at: number; photoUrl?: string | null }
 type Photo = { id: number; url: string; authorName: string; at: number }
 
 const REACTIONS = [
@@ -73,7 +74,10 @@ export function MatchActivitySummary({
             {[...shouts].sort((a, b) => a.at - b.at).map((shout) => (
               <blockquote key={shout.id}>
                 <p>{shout.text}</p>
-                <footer>— {shout.name}</footer>
+                <footer>
+                  <Avatar name={shout.name} photoUrl={shout.photoUrl} size={22} />
+                  <span>{shout.name}</span>
+                </footer>
               </blockquote>
             ))}
           </div>
