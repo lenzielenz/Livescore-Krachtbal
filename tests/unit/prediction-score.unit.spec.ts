@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 
-import { basePoints, buildPredictionLeaderboard, catchUpWeekends, MAX_POINTS_PER_MATCH, scoreMatchPredictions, type PredEntry } from '@/lib/prediction-score'
+import { basePoints, buildPredictionLeaderboard, catchUpWeekends, MAX_POINTS_PER_MATCH, rankLeaderboard, scoreMatchPredictions, type LeaderRow, type PredEntry } from '@/lib/prediction-score'
 
 const pred = (userId: number, home: number, away: number, clubId = 1, name = `U${userId}`): PredEntry => ({ userId, name, clubId, home, away })
 
@@ -94,6 +94,29 @@ describe('balans van het puntensysteem', () => {
     expect(MAX_POINTS_PER_MATCH).toBe(15)
     const top = scoreMatchPredictions({ home: 11, away: 15 }, [pred(1, 11, 15)])[0].points
     expect(top).toBe(MAX_POINTS_PER_MATCH)
+  })
+})
+
+describe('rankLeaderboard', () => {
+  const row = (userId: number, points: number): LeaderRow => ({ userId, name: `U${userId}`, points, predictions: 1, exact: 0, closest: 0 })
+
+  it('geeft opeenvolgende spelers gewoon opeenvolgende rangen', () => {
+    const ranked = rankLeaderboard([row(1, 30), row(2, 20), row(3, 10)])
+    expect(ranked.map((r) => r.rank)).toEqual([1, 2, 3])
+  })
+
+  it('deelt dezelfde rang bij gelijke punten en springt nadien door (sportranking: 1,1,3)', () => {
+    const ranked = rankLeaderboard([row(1, 30), row(2, 30), row(3, 10)])
+    expect(ranked.map((r) => r.rank)).toEqual([1, 1, 3])
+  })
+
+  it('werkt ook met een drievoudige gelijke stand vooraan (1,1,1,4)', () => {
+    const ranked = rankLeaderboard([row(1, 15), row(2, 15), row(3, 15), row(4, 5)])
+    expect(ranked.map((r) => r.rank)).toEqual([1, 1, 1, 4])
+  })
+
+  it('laat een lege lijst met rust', () => {
+    expect(rankLeaderboard([])).toEqual([])
   })
 })
 

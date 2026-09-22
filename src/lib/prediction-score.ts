@@ -134,3 +134,23 @@ export function buildPredictionLeaderboard(matches: { actual: ScoreGuess; preds:
   }
   return [...agg.values()].sort((a, b) => b.points - a.points || b.exact - a.exact || a.predictions - b.predictions)
 }
+
+export interface RankedRow extends LeaderRow {
+  rank: number
+}
+
+/**
+ * Rangnummers op basis van punten alleen (sportranking: 1, 1, 1, 4 i.p.v. 1, 2, 3, 4). De
+ * volgorde binnen gelijke punten (exact/predictions) is enkel een stabiele tiebreak voor de
+ * SORTERING — geen echt rangverschil dat de kijker mag zien. Zonder dit toonde een gedeelde
+ * stand toch verschillende plaatsnummers, wat willekeurig aanvoelt.
+ */
+export function rankLeaderboard(rows: LeaderRow[]): RankedRow[] {
+  let rank = 0
+  let prevPoints: number | null = null
+  return rows.map((r, i) => {
+    if (prevPoints === null || r.points !== prevPoints) rank = i + 1
+    prevPoints = r.points
+    return { ...r, rank }
+  })
+}
