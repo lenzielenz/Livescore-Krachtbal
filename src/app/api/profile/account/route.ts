@@ -6,6 +6,7 @@ import { LOGO_OFFSET_RANGE, LOGO_ZOOM_MAX, LOGO_ZOOM_MIN } from '@/lib/logo-fit'
 import { POSITION_VALUES } from '@/lib/positions'
 
 const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v))
+const FUNCTIE_VALUES = ['speler', 'coach', 'supporter', 'bestuur']
 
 // Bewaar de eigen profielgegevens van de ingelogde gebruiker: naam, club, speelpositie en de
 // bijsnij-instelling van de profielfoto (zoom + verschuiving). De foto zelf gaat via /api/profile/photo.
@@ -42,6 +43,23 @@ export async function POST(req: Request) {
     }
   }
 
+  if ('functie' in body) {
+    const f = body.functie
+    if (f === null || f === '' || f === undefined) {
+      data.functie = null
+    } else if (typeof f === 'string' && FUNCTIE_VALUES.includes(f)) {
+      data.functie = f
+    } else {
+      return NextResponse.json({ error: 'Ongeldige functie.' }, { status: 400 })
+    }
+  }
+
+  // De eigen club, ná een eventuele wissel in dezelfde aanvraag — gedeeld door teamId en
+  // myTeamIds hieronder: beide mogen enkel ploegen van die club bevatten, anders zou de highlight
+  // op het live-bord een wedstrijd van een compleet andere club oplichten.
+  const ownClubIdRaw = 'clubId' in body ? body.clubId : (user as { club?: unknown }).club
+  const ownClubId = ownClubIdRaw && typeof ownClubIdRaw === 'object' ? (ownClubIdRaw as { id?: unknown }).id : ownClubIdRaw
+
   if ('teamId' in body) {
     const raw = body.teamId
     if (raw === null || raw === '' || raw === undefined) {
@@ -51,15 +69,27 @@ export async function POST(req: Request) {
       if (!Number.isFinite(teamId) || teamId <= 0) return NextResponse.json({ error: 'Ongeldige ploeg.' }, { status: 400 })
       const team = await payload.findByID({ collection: 'teams', id: teamId, depth: 0 }).catch(() => null)
       if (!team) return NextResponse.json({ error: 'Ploeg niet gevonden.' }, { status: 400 })
-      // Enkel ploegen van de (nieuwe) eigen club — anders zou de highlight op het live-bord een
-      // wedstrijd van een compleet andere club oplichten.
       const clubOfTeam = team.club && typeof team.club === 'object' ? (team.club as { id?: unknown }).id : team.club
-      const ownClubId = 'clubId' in body ? body.clubId : (user as { club?: unknown }).club
-      const ownClubRel = ownClubId && typeof ownClubId === 'object' ? (ownClubId as { id?: unknown }).id : ownClubId
-      if (ownClubRel == null || String(clubOfTeam) !== String(ownClubRel)) {
+      if (ownClubId == null || String(clubOfTeam) !== String(ownClubId)) {
         return NextResponse.json({ error: 'Die ploeg hoort niet bij je club.' }, { status: 400 })
       }
       data.team = teamId
+    }
+  }
+
+  if ('myTeamIds' in body) {
+    if (!Array.isArray(body.myTeamIds) || body.myTeamIds.length === 0) {
+      data.myTeams = []
+    } else {
+      const raw = [...new Set(body.myTeamIds.map((v) => Number(v)).filter((n) => Number.isFinite(n) && n > 0))]
+      if (ownClubId == null) {
+        data.myTeams = []
+      } else {
+        const found = await payload
+          .find({ collection: 'teams', where: { and: [{ id: { in: raw } }, { club: { equals: ownClubId } }] }, depth: 0, limit: raw.length || 1 })
+          .catch(() => ({ docs: [] as { id: number }[] }))
+        data.myTeams = found.docs.map((t) => t.id)
+      }
     }
   }
 

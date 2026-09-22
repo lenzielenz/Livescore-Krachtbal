@@ -193,6 +193,7 @@ export function LiveBoard({
   view,
   myClubId = null,
   myTeamId = null,
+  myTeamIds = [],
   supportersMode = false,
   userId = null,
 }: {
@@ -209,6 +210,9 @@ export function LiveBoard({
   /** De eigen ploeg (ingesteld via "Mijn profiel") — geeft haar wedstrijd een lichte highlight op
    *  het bord, ongeacht filters/sortering (géén filter, enkel een visueel accent). */
   myTeamId?: number | null
+  /** Bij functie 'coach': meerdere eigen ploegen (myTeams) — al hun wedstrijden krijgen dezelfde
+   *  highlight, naast (niet i.p.v.) myTeamId hierboven. */
+  myTeamIds?: number[]
   /** Globale supporters-modus: dan krijgt elke wedstrijd een "Aantekenen"-knop zodat iedereen
    *  meteen vanaf het live-bord de score kan beginnen doorgeven. */
   supportersMode?: boolean
@@ -375,7 +379,11 @@ export function LiveBoard({
   const myClubMatch = (m: DayMatch) => myClubId != null && (m.home.clubId === myClubId || m.away.clubId === myClubId)
   // Eigen ploeg: enkel een visueel accent (zie .lb-match.mine), geen filter — blijft dus ook
   // gelden binnen "Mijn club" (een club heeft meestal meerdere ploegen) of eender welke sortering.
-  const myTeamMatch = (m: DayMatch) => myTeamId != null && (m.home.teamId === myTeamId || m.away.teamId === myTeamId)
+  const myTeamIdSet = useMemo(() => new Set(myTeamIds), [myTeamIds])
+  const myTeamMatch = (m: DayMatch) =>
+    (myTeamId != null && (m.home.teamId === myTeamId || m.away.teamId === myTeamId)) ||
+    myTeamIdSet.has(m.home.teamId) ||
+    myTeamIdSet.has(m.away.teamId)
   const myClubCount = useMemo(() => (myClubId == null ? 0 : matches.filter(myClubMatch).length), [matches, myClubId])
 
   // Basis: alles behalve het reeks-filter toegepast, zodat de reeks-tellingen

@@ -2,7 +2,7 @@ import { cookies } from 'next/headers'
 import Link from 'next/link'
 
 import { SiteHeader } from '@/components/SiteHeader'
-import { userClubId, userTeamId } from '@/lib/access'
+import { userClubId, userTeamId, userTeamIds } from '@/lib/access'
 import { getAuthUser } from '@/lib/auth-user'
 import { dateStrBE } from '@/lib/datetime'
 import { quoteForDay } from '@/lib/krachtbal-quotes'
@@ -43,6 +43,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   const myClubId = cid != null && Number.isFinite(Number(cid)) ? Number(cid) : null
   const tid = userTeamId(me)
   const myTeamId = tid != null && Number.isFinite(Number(tid)) ? Number(tid) : null
+  const myTeamIds = userTeamIds(me)
   const supportersMode = await isSupportersMode(await getPayloadClient())
 
   return (

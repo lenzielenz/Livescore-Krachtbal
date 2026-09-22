@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers'
 
 import { SiteHeader } from '@/components/SiteHeader'
-import { userClubId, userTeamId } from '@/lib/access'
+import { userClubId, userTeamId, userTeamIds } from '@/lib/access'
 import { getAuthUser } from '@/lib/auth-user'
 import { dateStrBE } from '@/lib/datetime'
 import { LIVE_VIEW_COOKIE, type LiveView } from '@/lib/live-view'
@@ -29,6 +29,7 @@ export default async function LivePage({ searchParams }: { searchParams: Promise
   const myClubId = cid != null && Number.isFinite(Number(cid)) ? Number(cid) : null
   const tid = userTeamId(user)
   const myTeamId = tid != null && Number.isFinite(Number(tid)) ? Number(tid) : null
+  const myTeamIds = userTeamIds(user)
 
   const days = view === 'weekend' ? await loadLiveWeekend(selected, today) : await loadLiveDay(selected, today)
   // Alle dagen mét wedstrijden, zodat de pijltjes de lege dagen overslaan en de kiezer per dag
@@ -41,7 +42,7 @@ export default async function LivePage({ searchParams }: { searchParams: Promise
       <SiteHeader active="wedstrijden" />
       <div className="lb-page">
         <TournamentLiveStrip />
-        <LiveBoard date={selected} today={today} matches={days} speeldagen={speeldagen} view={view} myClubId={myClubId} myTeamId={myTeamId} supportersMode={supportersMode} userId={user?.id ?? null} />
+        <LiveBoard date={selected} today={today} matches={days} speeldagen={speeldagen} view={view} myClubId={myClubId} myTeamId={myTeamId} myTeamIds={myTeamIds} supportersMode={supportersMode} userId={user?.id ?? null} />
       </div>
     </>
   )

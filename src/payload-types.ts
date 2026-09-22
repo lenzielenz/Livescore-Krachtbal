@@ -301,6 +301,10 @@ export interface User {
    */
   club?: (number | null) | Club;
   /**
+   * Je rol binnen je club. Als coach duid je meteen meerdere ploegen aan — al hun wedstrijden krijgen dan de highlight op het live-bord.
+   */
+  functie?: ('speler' | 'coach' | 'supporter' | 'bestuur') | null;
+  /**
    * Eigen ploeg binnen de gekozen club — highlight haar wedstrijden op het live-bord. De gebruiker stelt dit zelf in via "Mijn profiel".
    */
   team?: (number | null) | Team;
@@ -2701,6 +2705,7 @@ export interface UsersSelect<T extends boolean = true> {
   name?: T;
   roles?: T;
   club?: T;
+  functie?: T;
   team?: T;
   followedClubs?: T;
   photo?: T;
