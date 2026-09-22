@@ -143,7 +143,7 @@ function badge(name: string, href: string | undefined, fit: LogoFit | null | und
 }
 /** Shared composition for preview and PNG: no remote SVG images or browser-only CSS. */
 export function renderWinfieDesign(o: WinfieDesign): string {
-  const winner = o.winner === 'draw' ? 'GELIJKSPEL' : 'DE OVERWINNING IS BINNEN'
+  const winner = o.winner === 'draw' ? '🤝 GELIJKSPEL' : '🏆 DE OVERWINNING IS BINNEN'
   const headlineRows = lines(o.headline, 28)
   const sameColors = o.homeColor.toLowerCase() === o.awayColor.toLowerCase()
 
@@ -164,6 +164,12 @@ export function renderWinfieDesign(o: WinfieDesign): string {
   }
   const finalDiff = steps.at(-1)?.diff ?? 0
   const leiderTekst = finalDiff === 0 ? 'gelijk' : finalDiff > 0 ? o.home : o.away
+  // Extra verhaal-cijfers voor het geen-foto-vak: hoe groot werd het gat ooit, en hoe stond het
+  // bij de rust? Enkel tonen als er écht helft-per-helft data is (niet de synthetische
+  // eindstand-zonder-tijdlijn-sprong uit buildWinfieDesign, die alles op "helft 2" plakt).
+  const grootsteVoorsprong = n > 0 ? Math.max(...steps.map((s) => Math.abs(s.diff))) : 0
+  const heeftEchteHelften = steps.some((s) => s.half === 1) && steps.some((s) => s.half === 2)
+  const ruststand = heeftEchteHelften ? [...o.progress].reverse().find((p) => (p.half ?? 1) === 1) : undefined
   const chips = activityChips(o.reactions, o.momentsExtra)
   const homeScoreFill = o.winner === 'home' ? 'url(#win)' : '#fff'
   const awayScoreFill = o.winner === 'away' ? 'url(#win)' : '#fff'
@@ -234,7 +240,7 @@ export function renderWinfieDesign(o: WinfieDesign): string {
   </g></g>`
   }).join('') : ''}
   <text x="64" y="${chips.length > 0 ? 272 : 256}" fill="url(#win)" font-size="22" font-weight="700" letter-spacing="3">${winner}</text>
-  ${textLines(o.headline, 64, 324, 28, headlineRows.length > 2 ? 32 : 44, 'start')}
+  ${textLines(o.headline, 64, 324, 28, headlineRows.length > 2 ? 34 : 48, 'start')}
   <rect x="64" y="450" width="952" height="458" rx="38" fill="#000" opacity=".26" transform="translate(0 12)"/>
   <rect x="64" y="438" width="952" height="470" rx="38" fill="url(#teams)" stroke="#fff" stroke-opacity=".23"/>
   <rect x="64" y="438" width="952" height="470" rx="38" fill="url(#glass)"/>
@@ -242,7 +248,7 @@ export function renderWinfieDesign(o: WinfieDesign): string {
   <g clip-path="url(#cardClip)"><g class="wf-sheen"><rect x="-320" y="428" width="260" height="490" fill="url(#sheenGrad)" transform="skewX(-18)"/></g></g>
   ${badge(o.home, o.homeLogoHref, o.homeLogoFit, 226, o.homeColor, 'home', o.winner === 'home')}
   ${badge(o.away, o.awayLogoHref, o.awayLogoFit, 854, o.awayColor, 'away', o.winner === 'away')}
-  <text x="540" y="517" text-anchor="middle" fill="#d2dbea" font-size="19" font-weight="700" letter-spacing="3">EINDSTAND</text>
+  <text x="540" y="517" text-anchor="middle" fill="#d2dbea" font-size="20" font-weight="700" letter-spacing="3">🏆 EINDSTAND</text>
   <text x="448" y="638" text-anchor="middle" fill="${homeScoreFill}" fill-opacity="${homeScoreOp}" font-size="112" font-weight="800" ${o.winner === 'home' ? 'filter="url(#scoreGlow)"' : ''}>${o.score.home}</text>
   <rect x="506" y="566" width="68" height="50" rx="25" fill="#050912" fill-opacity=".64" stroke="#fff" stroke-opacity=".18"/>
   <text x="540" y="602" text-anchor="middle" fill="#dbe5f3" font-size="23" font-weight="700">VS</text>
@@ -253,26 +259,30 @@ export function renderWinfieDesign(o: WinfieDesign): string {
   ${o.photoHref ? `<image href="${esc(o.photoHref)}" x="64" y="948" width="952" height="296" clip-path="url(#photo)" preserveAspectRatio="xMidYMid slice"/>
   <rect x="64" y="1135" width="952" height="109" fill="#050912" fill-opacity=".72" clip-path="url(#photo)"/>
   <text x="104" y="1204" fill="#fff" font-size="22" font-weight="700" letter-spacing="3">MOMENT VAN DE WEDSTRIJD</text>` : `<rect x="64" y="948" width="952" height="296" rx="28" fill="#151d29" stroke="#ffffff" stroke-opacity=".12"/>
-  <text x="108" y="1010" fill="#80baff" font-size="21" letter-spacing="3">DE WEDSTRIJD IN CIJFERS</text>
-  <text x="108" y="1110" fill="#fff" font-size="72" font-weight="700">${o.score.home + o.score.away}</text>
-  <text x="108" y="1160" fill="#aab7cb" font-size="24">punten op het bord</text>
-  <line x1="540" y1="1040" x2="540" y2="1176" stroke="#fff" stroke-opacity=".14"/>
-  <text x="596" y="1110" fill="#fff" font-size="72" font-weight="700">${Math.abs(o.score.home - o.score.away)}</text>
-  <text x="596" y="1160" fill="#aab7cb" font-size="24">punten verschil</text>`}
+  <text x="108" y="998" fill="#80baff" font-size="21" letter-spacing="3">📊 DE WEDSTRIJD IN CIJFERS</text>
+  <text x="108" y="1094" fill="#fff" font-size="72" font-weight="700">${o.score.home + o.score.away}</text>
+  <text x="108" y="1132" fill="#aab7cb" font-size="24">⚽ punten op het bord</text>
+  <line x1="540" y1="1012" x2="540" y2="1146" stroke="#fff" stroke-opacity=".14"/>
+  <text x="596" y="1094" fill="#fff" font-size="72" font-weight="700">${Math.abs(o.score.home - o.score.away)}</text>
+  <text x="596" y="1132" fill="#aab7cb" font-size="24">↔ punten verschil</text>
+  <line x1="108" y1="1164" x2="972" y2="1164" stroke="#fff" stroke-opacity=".1"/>
+  <text x="108" y="1212" fill="#fff" font-size="28" font-weight="700">📈 ${grootsteVoorsprong}<tspan fill="#aab7cb" font-size="19" font-weight="400" dx="6">grootste voorsprong</tspan></text>
+  ${ruststand ? `<text x="596" y="1212" fill="#fff" font-size="28" font-weight="700">⏱ ${ruststand.home}-${ruststand.away}<tspan fill="#aab7cb" font-size="19" font-weight="400" dx="6">bij de rust</tspan></text>`
+    : `<text x="596" y="1212" fill="#fff" font-size="28" font-weight="700">🎯 ${n}<tspan fill="#aab7cb" font-size="19" font-weight="400" dx="6">doelpunten totaal</tspan></text>`}`}
   <rect x="64" y="1284" width="952" height="442" rx="28" fill="#111722" stroke="#fff" stroke-opacity=".16"/>
   <rect x="104" y="1320" width="5" height="28" rx="2" fill="#80baff"/>
-  <text x="128" y="1344" fill="#f5f7fb" font-size="25" font-weight="700">Momentum · scoreverloop</text>
-  ${n > 1 ? `<text x="960" y="1344" text-anchor="end" fill="#8ea0bd" font-size="18">${n} doelpunten</text>` : ''}
+  <text x="128" y="1344" fill="#f5f7fb" font-size="26" font-weight="700">📈 Momentum · scoreverloop</text>
+  ${n > 1 ? `<text x="960" y="1344" text-anchor="end" fill="#8ea0bd" font-size="19">${n} doelpunten</text>` : ''}
   <line x1="${PX0}" y1="${MIDY}" x2="${PX1}" y2="${MIDY}" stroke="#fff" stroke-opacity=".16"/>
-  ${halfMarks.map((h) => `<line x1="${h.x.toFixed(1)}" y1="${PY0}" x2="${h.x.toFixed(1)}" y2="${PY1}" stroke="#fff" stroke-opacity=".16" stroke-dasharray="4 5"/><text x="${h.x.toFixed(1)}" y="${PY1 + 22}" text-anchor="middle" fill="#8ea0bd" font-size="16">${h.half}e helft</text>`).join('')}
+  ${halfMarks.map((h) => `<line x1="${h.x.toFixed(1)}" y1="${PY0}" x2="${h.x.toFixed(1)}" y2="${PY1}" stroke="#fff" stroke-opacity=".16" stroke-dasharray="4 5"/><text x="${h.x.toFixed(1)}" y="${PY1 + 22}" text-anchor="middle" fill="#8ea0bd" font-size="17">${h.half}e helft</text>`).join('')}
   ${areaPath ? `<path d="${areaPath}" fill="url(#momFill)"/>` : ''}
   <polyline points="${linePts.join(' ')}" fill="none" stroke="#f5f7fb" stroke-opacity=".85" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/>
   ${steps.map((s, i) => s.value === 2 ? '' : `<circle cx="${stepX(i).toFixed(1)}" cy="${stepY(s.diff).toFixed(1)}" r="7" fill="${s.side === 'home' ? o.homeColor : o.awayColor}" ${sameColors && s.side === 'away' ? 'stroke="#fff" stroke-width="2.5"' : ''}/>`).join('')}
   ${steps.map((s, i) => s.value === 2 ? `<polygon points="${starPoints(stepX(i), stepY(s.diff), 15)}" fill="${s.side === 'home' ? o.homeColor : o.awayColor}" stroke="#f4c430" stroke-width="2.5" stroke-linejoin="round" paint-order="stroke"/>` : '').join('')}
-  <circle cx="110" cy="1640" r="6" fill="${o.homeColor}"/><text x="128" y="1648" fill="#b8c6da" font-size="19">${o.home} leidt</text>
-  <circle cx="594" cy="1640" r="6" fill="${o.awayColor}" ${sameColors ? 'stroke="#fff" stroke-width="2"' : ''}/><text x="612" y="1648" fill="#b8c6da" font-size="19">${o.away} leidt</text>
-  <polygon points="${starPoints(866, 1640, 9)}" fill="#f4c430"/><text x="884" y="1648" fill="#b8c6da" font-size="19">Rugworp</text>
-  <text x="120" y="1680" fill="#8ea0bd" font-size="17">Eindstand in het voordeel van ${esc(leiderTekst)}</text>
+  <circle cx="110" cy="1640" r="6" fill="${o.homeColor}"/><text x="128" y="1648" fill="#b8c6da" font-size="20">${o.home} leidt</text>
+  <circle cx="594" cy="1640" r="6" fill="${o.awayColor}" ${sameColors ? 'stroke="#fff" stroke-width="2"' : ''}/><text x="612" y="1648" fill="#b8c6da" font-size="20">${o.away} leidt</text>
+  <polygon points="${starPoints(866, 1640, 9)}" fill="#f4c430"/><text x="884" y="1648" fill="#b8c6da" font-size="20">Rugworp</text>
+  <text x="120" y="1680" fill="#8ea0bd" font-size="18">Eindstand in het voordeel van ${esc(leiderTekst)}</text>
   <line x1="64" y1="1792" x2="1016" y2="1792" stroke="#fff" stroke-opacity=".16"/>
   <rect x="64" y="1812" width="12" height="38" rx="6" fill="url(#win)"/>
   <text x="94" y="1840" fill="#f5f7fb" font-size="23" font-weight="700">${o.winner === 'draw' ? 'SAMEN BELEEFD.' : 'DIT MOMENT IS VAN ONS.'}</text>
