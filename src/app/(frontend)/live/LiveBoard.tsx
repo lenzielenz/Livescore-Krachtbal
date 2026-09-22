@@ -41,6 +41,9 @@ export type DayMatch = {
   refereeStops?: number
   /** Locatie van het thuisterrein → weer per wedstrijd. */
   weather?: { plaats: string | null; lat: number | null; lng: number | null } | null
+  /** Kijkers nu op de wedstrijdpagina — hetzelfde "oogje" als op het scorebord, hier als klein
+   *  badge in de hoek van de kaart (zie day-channel.ts). Enkel gezet tijdens een live wedstrijd. */
+  viewers?: number
 }
 
 const FAV_TEAMS_KEY = 'kb-fav-ploegen'
@@ -798,6 +801,15 @@ export function LiveBoard({
                       >
                         {rowFav ? '★' : '☆'}
                       </button>
+                      {/* Kijkersaantal ("oogje") — hetzelfde als op het scorebord van de wedstrijd
+                          zelf (Scoreboard.tsx), hier als klein badge in de hoek van de kaart. Enkel
+                          zichtbaar zolang de wedstrijd live is én er écht iemand op de
+                          wedstrijdpagina zit (day-channel.ts zet m.viewers pas > 0 dan). */}
+                      {live && Boolean(m.viewers) && (
+                        <span className="lb-viewers" title="Kijkers nu op deze wedstrijd">
+                          👁 {m.viewers}
+                        </span>
+                      )}
                       {/* Elke rij krijgt dezelfde "Glas"-kaart (logo's + bewegende clubkleuren +
                           glans), ongeacht status — enkel het middenbadge en de score/'vs' wisselen.
                           De CSS-klassen heten nog "live"/"lb-match-live" (historisch: dit was ooit

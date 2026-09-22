@@ -81,6 +81,15 @@ function broadcastViewers(ch: Channel) {
   broadcast(ch, 'viewers', { count: viewerCount(ch) })
 }
 
+/** Het huidige kijkersaantal van een wedstrijd, of 0 zonder actief kanaal (niemand op de
+ *  wedstrijdpagina). Gebruikt door het live-bord (day-channel.ts) om hetzelfde oogje te tonen
+ *  op de kaart zelf, zonder daar een eigen per-wedstrijd verbinding voor te openen — gewoon een
+ *  goedkope lookup in dit al-bestaande, in-memory kanaal. */
+export function viewerCountFor(matchId: number): number {
+  const ch = channels.get(matchId)
+  return ch ? viewerCount(ch) : 0
+}
+
 async function pollScore(payload: Payload, matchId: number) {
   const ch = channels.get(matchId)
   if (!ch) return
