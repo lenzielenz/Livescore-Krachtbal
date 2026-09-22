@@ -22,6 +22,10 @@ export type TeamLogoProps = {
   ringColor?: string | null
   /** Bij een tik verschijnt een groot, metallic-glanzend medaillon dat eventjes ronddraait. */
   medallion?: boolean
+  /** Laadt het logo pas als het (bijna) in beeld komt i.p.v. meteen — voor lange lijsten met
+   *  tientallen badges tegelijk (bv. het live-bord), waar anders alles in één keer gedownload en
+   *  gedecodeerd wordt. Op een gewone wedstrijdpagina met 1-2 logo's blijft dit standaard uit. */
+  lazy?: boolean
 }
 
 const NAMED: NamedSize[] = ['xs', 'sm', 'md', 'lg']
@@ -38,7 +42,7 @@ function initialsFor(name: string): string {
 // Gedeelde clublogo-badge. Overal identiek opgebouwd zodat een logo er op elk scherm
 // (home, live-lijst, scorebord, kantine, veld) exact hetzelfde en verzorgd uitziet.
 // Valt terug op de initialen van de ploeg als er geen logo is of het laden mislukt.
-export function TeamLogo({ name, logoUrl, logoFit, side, size = 'md', float, ringColor, medallion }: TeamLogoProps) {
+export function TeamLogo({ name, logoUrl, logoFit, side, size = 'md', float, ringColor, medallion, lazy }: TeamLogoProps) {
   const [failed, setFailed] = useState(false)
   // Medaillon-onthulling: tik op de badge → groot glanzend medaillon dat eventjes draait.
   const [coin, setCoin] = useState(false)
@@ -73,7 +77,14 @@ export function TeamLogo({ name, logoUrl, logoFit, side, size = 'md', float, rin
   const inner =
     logoUrl && !failed ? (
       // eslint-disable-next-line @next/next/no-img-element
-      <img src={logoUrl} alt="" style={logoFitStyle(logoFit)} onError={() => setFailed(true)} />
+      <img
+        src={logoUrl}
+        alt=""
+        style={logoFitStyle(logoFit)}
+        onError={() => setFailed(true)}
+        loading={lazy ? 'lazy' : undefined}
+        decoding={lazy ? 'async' : undefined}
+      />
     ) : (
       <span className="tl-init">{initialsFor(name)}</span>
     )

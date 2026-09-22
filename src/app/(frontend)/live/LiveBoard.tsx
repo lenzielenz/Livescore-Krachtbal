@@ -824,7 +824,7 @@ export function LiveBoard({
                           <span className="lbl-color" aria-hidden />
                           <span className="lbl-gl" aria-hidden />
                           <Link href={`/ploegen/${m.home.teamId}`} className="lbl-logo" onClick={(e) => e.stopPropagation()} aria-label={`${m.home.name} — seizoensagenda`}>
-                            <TeamLogo name={m.home.name} logoUrl={m.home.logoUrl} logoFit={m.home.logoFit} side="home" size={44} ringColor={m.home.colors?.primary} />
+                            <TeamLogo name={m.home.name} logoUrl={m.home.logoUrl} logoFit={m.home.logoFit} side="home" size={44} ringColor={m.home.colors?.primary} lazy />
                           </Link>
                           <span className="lbl-center">
                             {live ? (
@@ -853,7 +853,7 @@ export function LiveBoard({
                             )}
                           </span>
                           <Link href={`/ploegen/${m.away.teamId}`} className="lbl-logo" onClick={(e) => e.stopPropagation()} aria-label={`${m.away.name} — seizoensagenda`}>
-                            <TeamLogo name={m.away.name} logoUrl={m.away.logoUrl} logoFit={m.away.logoFit} side="away" size={44} ringColor={m.away.colors?.primary} />
+                            <TeamLogo name={m.away.name} logoUrl={m.away.logoUrl} logoFit={m.away.logoFit} side="away" size={44} ringColor={m.away.colors?.primary} lazy />
                           </Link>
                         </span>
                         <span className="lbl-names">
