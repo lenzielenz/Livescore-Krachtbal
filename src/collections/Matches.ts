@@ -688,6 +688,20 @@ export const Matches: CollectionConfig = {
       },
     },
     {
+      // Hoogste stand van het live kijkersoogje (match-channel.ts) tijdens deze wedstrijd — het
+      // kanaal zelf leeft maar even na afloop, dus zonder deze opslag zou de samenvatting nooit
+      // meer weten hoeveel mensen live meekeken. Voedt de "X kijkers"-vermelding in MatchRecap
+      // (enkel getoond bij >3, zie daar) en op termijn eventueel de live-bord-badge als niemand
+      // meer aan het kijken is.
+      name: 'peakViewers',
+      label: 'Piek live-kijkers',
+      type: 'number',
+      admin: {
+        hidden: true,
+        description: 'Hoogste aantal gelijktijdige live-kijkers tijdens deze wedstrijd. Automatisch beheerd.',
+      },
+    },
+    {
       // Bonusrad: puntenmultiplier voor de pronostiek van deze wedstrijd (1 = normaal, 2 = bonus).
       // De weekendwinnaar draait aan het rad en kiest zo 3 bonuswedstrijden voor het komende weekend.
       name: 'pronostiekBonus',

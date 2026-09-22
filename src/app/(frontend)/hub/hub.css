@@ -25,13 +25,49 @@
   transition: filter 0.12s ease;
 }
 .hub-club-manage:hover { filter: brightness(1.08); }
-.hub-club-rows { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
-.hub-club-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; text-decoration: none; color: inherit; background: color-mix(in srgb, #fff 3%, transparent); border: 1px solid color-mix(in srgb, #fff 6%, var(--line)); }
-.hub-club-row:hover { border-color: color-mix(in srgb, var(--accent) 40%, var(--line)); }
-.hub-club-lbl { font-size: 0.68rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; color: var(--accent); min-width: 4.5em; }
-.hub-club-teams { flex: 1; font-weight: 700; min-width: 0; }
-.hub-club-date { font-size: 0.8rem; color: var(--dim); }
-.hub-club-score { font-weight: 900; font-variant-numeric: tabular-nums; color: var(--accent); }
+.hub-club-rows { display: flex; flex-direction: column; gap: 8px; }
+.hub-club > .hub-club-rows { margin-top: 12px; }
+
+/* Meerdere ploegen (coach met myTeams): één sub-groep per ploeg, met haar naam als kopje —
+   voorkomt dat de wedstrijden van verschillende ploegen door elkaar lopen. */
+.hub-team-groups { display: flex; flex-direction: column; gap: 16px; margin-top: 12px; }
+.hub-team-group { display: flex; flex-direction: column; gap: 8px; }
+.hub-team-label { font-size: 0.8rem; font-weight: 800; color: var(--txt); }
+
+/* Rij als kaart, gestapeld i.p.v. alles-op-één-lijn: op smalle schermen duwde het vaste label
+   (bv. "VOLGENDE") lange ploegnamen anders in een té smalle kolom, waardoor de naam in losse
+   letters/woorden onder elkaar uiteenviel. Label + datum/score bovenaan als context, de ploegnamen
+   daaronder als volwaardige, normaal wrappende tekstregel. */
+.hub-club-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  text-decoration: none;
+  color: inherit;
+  background: color-mix(in srgb, #fff 3%, transparent);
+  border: 1px solid color-mix(in srgb, #fff 6%, var(--line));
+  transition: border-color 0.12s ease, background 0.12s ease;
+}
+.hub-club-row:hover { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); background: color-mix(in srgb, var(--accent) 6%, transparent); }
+.hub-club-row:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
+.hub-club-row-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.hub-club-lbl {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.66rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  padding: 3px 9px;
+  border-radius: 999px;
+}
+.hub-club-teams { font-weight: 700; font-size: 0.98rem; line-height: 1.35; word-break: break-word; }
+.hub-club-date { font-size: 0.78rem; color: var(--dim); white-space: nowrap; flex-shrink: 0; }
+.hub-club-score { font-weight: 900; font-variant-numeric: tabular-nums; color: var(--accent); font-size: 0.95rem; white-space: nowrap; flex-shrink: 0; }
 
 .hub-role-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
 .hub-role-card {

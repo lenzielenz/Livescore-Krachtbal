@@ -301,6 +301,10 @@ export interface User {
    */
   club?: (number | null) | Club;
   /**
+   * Je rol binnen je club. Als coach duid je meteen meerdere ploegen aan — al hun wedstrijden krijgen dan de highlight op het live-bord.
+   */
+  functie?: ('speler' | 'coach' | 'supporter' | 'bestuur') | null;
+  /**
    * Eigen ploeg binnen de gekozen club — highlight haar wedstrijden op het live-bord. De gebruiker stelt dit zelf in via "Mijn profiel".
    */
   team?: (number | null) | Team;
@@ -879,6 +883,10 @@ export interface Match {
     | number
     | boolean
     | null;
+  /**
+   * Hoogste aantal gelijktijdige live-kijkers tijdens deze wedstrijd. Automatisch beheerd.
+   */
+  peakViewers?: number | null;
   /**
    * Puntenmultiplier voor de pronostiek (1 = normaal, 2 = bonus via het rad). Automatisch beheerd.
    */
@@ -2217,6 +2225,7 @@ export interface MatchesSelect<T extends boolean = true> {
   liveShoutouts?: T;
   livePoll?: T;
   scorePredictions?: T;
+  peakViewers?: T;
   pronostiekBonus?: T;
   analyseOwner?: T;
   finishedAt?: T;
@@ -2701,6 +2710,7 @@ export interface UsersSelect<T extends boolean = true> {
   name?: T;
   roles?: T;
   club?: T;
+  functie?: T;
   team?: T;
   followedClubs?: T;
   photo?: T;

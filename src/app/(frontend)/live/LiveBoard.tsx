@@ -41,6 +41,9 @@ export type DayMatch = {
   refereeStops?: number
   /** Locatie van het thuisterrein → weer per wedstrijd. */
   weather?: { plaats: string | null; lat: number | null; lng: number | null } | null
+  /** Kijkers nu op de wedstrijdpagina — hetzelfde "oogje" als op het scorebord, hier als klein
+   *  badge in de hoek van de kaart (zie day-channel.ts). Enkel gezet tijdens een live wedstrijd. */
+  viewers?: number
 }
 
 const FAV_TEAMS_KEY = 'kb-fav-ploegen'
@@ -193,6 +196,7 @@ export function LiveBoard({
   view,
   myClubId = null,
   myTeamId = null,
+  myTeamIds = [],
   supportersMode = false,
   userId = null,
 }: {
@@ -209,6 +213,9 @@ export function LiveBoard({
   /** De eigen ploeg (ingesteld via "Mijn profiel") — geeft haar wedstrijd een lichte highlight op
    *  het bord, ongeacht filters/sortering (géén filter, enkel een visueel accent). */
   myTeamId?: number | null
+  /** Bij functie 'coach': meerdere eigen ploegen (myTeams) — al hun wedstrijden krijgen dezelfde
+   *  highlight, naast (niet i.p.v.) myTeamId hierboven. */
+  myTeamIds?: number[]
   /** Globale supporters-modus: dan krijgt elke wedstrijd een "Aantekenen"-knop zodat iedereen
    *  meteen vanaf het live-bord de score kan beginnen doorgeven. */
   supportersMode?: boolean
@@ -375,7 +382,11 @@ export function LiveBoard({
   const myClubMatch = (m: DayMatch) => myClubId != null && (m.home.clubId === myClubId || m.away.clubId === myClubId)
   // Eigen ploeg: enkel een visueel accent (zie .lb-match.mine), geen filter — blijft dus ook
   // gelden binnen "Mijn club" (een club heeft meestal meerdere ploegen) of eender welke sortering.
-  const myTeamMatch = (m: DayMatch) => myTeamId != null && (m.home.teamId === myTeamId || m.away.teamId === myTeamId)
+  const myTeamIdSet = useMemo(() => new Set(myTeamIds), [myTeamIds])
+  const myTeamMatch = (m: DayMatch) =>
+    (myTeamId != null && (m.home.teamId === myTeamId || m.away.teamId === myTeamId)) ||
+    myTeamIdSet.has(m.home.teamId) ||
+    myTeamIdSet.has(m.away.teamId)
   const myClubCount = useMemo(() => (myClubId == null ? 0 : matches.filter(myClubMatch).length), [matches, myClubId])
 
   // Basis: alles behalve het reeks-filter toegepast, zodat de reeks-tellingen
@@ -790,6 +801,15 @@ export function LiveBoard({
                       >
                         {rowFav ? '★' : '☆'}
                       </button>
+                      {/* Kijkersaantal ("oogje") — hetzelfde als op het scorebord van de wedstrijd
+                          zelf (Scoreboard.tsx), hier als klein badge in de hoek van de kaart. Enkel
+                          zichtbaar zolang de wedstrijd live is én er écht iemand op de
+                          wedstrijdpagina zit (day-channel.ts zet m.viewers pas > 0 dan). */}
+                      {live && Boolean(m.viewers) && (
+                        <span className="lb-viewers" title="Kijkers nu op deze wedstrijd">
+                          👁 {m.viewers}
+                        </span>
+                      )}
                       {/* Elke rij krijgt dezelfde "Glas"-kaart (logo's + bewegende clubkleuren +
                           glans), ongeacht status — enkel het middenbadge en de score/'vs' wisselen.
                           De CSS-klassen heten nog "live"/"lb-match-live" (historisch: dit was ooit
@@ -816,7 +836,7 @@ export function LiveBoard({
                           <span className="lbl-color" aria-hidden />
                           <span className="lbl-gl" aria-hidden />
                           <Link href={`/ploegen/${m.home.teamId}`} className="lbl-logo" onClick={(e) => e.stopPropagation()} aria-label={`${m.home.name} — seizoensagenda`}>
-                            <TeamLogo name={m.home.name} logoUrl={m.home.logoUrl} logoFit={m.home.logoFit} side="home" size={44} ringColor={m.home.colors?.primary} />
+                            <TeamLogo name={m.home.name} logoUrl={m.home.logoUrl} logoFit={m.home.logoFit} side="home" size={44} ringColor={m.home.colors?.primary} lazy />
                           </Link>
                           <span className="lbl-center">
                             {live ? (
@@ -845,7 +865,7 @@ export function LiveBoard({
                             )}
                           </span>
                           <Link href={`/ploegen/${m.away.teamId}`} className="lbl-logo" onClick={(e) => e.stopPropagation()} aria-label={`${m.away.name} — seizoensagenda`}>
-                            <TeamLogo name={m.away.name} logoUrl={m.away.logoUrl} logoFit={m.away.logoFit} side="away" size={44} ringColor={m.away.colors?.primary} />
+                            <TeamLogo name={m.away.name} logoUrl={m.away.logoUrl} logoFit={m.away.logoFit} side="away" size={44} ringColor={m.away.colors?.primary} lazy />
                           </Link>
                         </span>
                         <span className="lbl-names">

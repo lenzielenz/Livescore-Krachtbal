@@ -123,6 +123,8 @@ import * as migration_20260917_140500_field_screens_theme from './20260917_14050
 import * as migration_20260917_170000_field_screens_demo from './20260917_170000_field_screens_demo'
 import * as migration_20260918_090000_function_grants from './20260918_090000_function_grants'
 import * as migration_20260922_090000_user_team from './20260922_090000_user_team'
+import * as migration_20260922_100000_user_functie from './20260922_100000_user_functie'
+import * as migration_20260922_110000_match_peak_viewers from './20260922_110000_match_peak_viewers'
 
 export const migrations = [
   {
@@ -744,5 +746,15 @@ export const migrations = [
     up: migration_20260922_090000_user_team.up,
     down: migration_20260922_090000_user_team.down,
     name: '20260922_090000_user_team',
+  },
+  {
+    up: migration_20260922_100000_user_functie.up,
+    down: migration_20260922_100000_user_functie.down,
+    name: '20260922_100000_user_functie',
+  },
+  {
+    up: migration_20260922_110000_match_peak_viewers.up,
+    down: migration_20260922_110000_match_peak_viewers.down,
+    name: '20260922_110000_match_peak_viewers',
   },
 ];

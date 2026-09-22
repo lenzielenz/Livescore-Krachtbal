@@ -155,10 +155,28 @@ export const Users: CollectionConfig = {
       },
     },
     {
+      // Eigen rol binnen de club: puur informatief voor speler/supporter/bestuur, maar bepalend
+      // voor "coach" — die duidt op "Mijn profiel" niet één ploeg aan (het veld `team` hieronder)
+      // maar meteen meerdere (myTeams verderop, hergebruikt van de bestaande "Mijn club"-focus),
+      // en al die wedstrijden krijgen dan samen de highlight op het live-bord.
+      name: 'functie',
+      label: 'Mijn functie',
+      type: 'select',
+      options: [
+        { label: 'Speler', value: 'speler' },
+        { label: 'Coach / trainer', value: 'coach' },
+        { label: 'Supporter / ouder', value: 'supporter' },
+        { label: 'Bestuur', value: 'bestuur' },
+      ],
+      admin: {
+        description: 'Je rol binnen je club. Als coach duid je meteen meerdere ploegen aan — al hun wedstrijden krijgen dan de highlight op het live-bord.',
+      },
+    },
+    {
       // Eigen ploeg binnen de gekozen club (optioneel): voedt de lichte highlight op het live-bord
-      // (LiveBoard) zodat je eigen wedstrijd meteen opvalt tussen alle andere. Bewust apart van
-      // `myTeams` verderop (dat is een COACH-voorkeur, een lijst waarop "Mijn club" focust) — dit
-      // is de ene persoonlijke ploeg van een supporter/speler/ouder. Zelfbeheerd via "Mijn profiel".
+      // (LiveBoard) zodat je eigen wedstrijd meteen opvalt tussen alle andere. Enkel relevant als
+      // `functie` niet 'coach' is — een coach kiest via `myTeams` hieronder in de plaats (meerdere
+      // ploegen ineens). Zelfbeheerd via "Mijn profiel".
       name: 'team',
       label: 'Mijn ploeg',
       type: 'relationship',
@@ -229,8 +247,10 @@ export const Users: CollectionConfig = {
     },
     {
       // "Mijn ploegen": een trainer/coach duidt aan welke ploeg(en) van zijn club hij volgt,
-      // zodat "Mijn club" meteen op die ploeg(en) focust (de selectie is al gebeurd). Een lijst
-      // van team-ids (json) — de gebruiker beheert dit zelf via "Mijn club".
+      // zodat "Mijn club" meteen op die ploeg(en) focust (de selectie is al gebeurd) — en, sinds
+      // `functie` hierboven, ook al hun wedstrijden een highlight geeft op het live-bord (zie
+      // LiveBoard.tsx). Een lijst van team-ids (json) — zelfbeheerd via "Mijn club" (coach-focus)
+      // of "Mijn profiel" (bij functie 'coach').
       name: 'myTeams',
       label: 'Mijn ploegen',
       type: 'json',

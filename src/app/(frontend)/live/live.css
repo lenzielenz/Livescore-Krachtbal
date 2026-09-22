@@ -155,9 +155,14 @@
   margin: 0 auto 14px;
   padding: 6px 10px;
   border-radius: 16px;
-  background: color-mix(in srgb, var(--bg, #0b0e12) 90%, transparent);
-  -webkit-backdrop-filter: blur(10px);
-  backdrop-filter: blur(10px);
+  /* Bijna-ondoorzichtige achtergrond i.p.v. backdrop-filter: een sticky balk die blijft plakken
+     terwijl een lange wedstrijdenlijst eronder doorscrolt, laat de browser bij élk scrollframe
+     opnieuw een blur van alles erachter berekenen — samen met de sitekop erboven (die om andere
+     redenen wél een backdrop-filter houdt, zie site-header.css) was dat de grootste oorzaak van
+     het zware scrollgevoel op het live-bord. Op 90% dekking was er toch al amper iets van de
+     wedstrijdenlijst door de blur heen te zien, dus het verschil met bijna-solid is visueel
+     verwaarloosbaar. */
+  background: color-mix(in srgb, var(--bg, #0b0e12) 97%, transparent);
   box-shadow: 0 10px 24px -12px rgba(0, 0, 0, 0.55);
 }
 .lb-datebtn {
@@ -493,6 +498,28 @@
 }
 .lb-row.live .lb-star.on {
   color: #ffd873;
+}
+/* Kijkersaantal ("oogje"): klein badge in de rechterbovenhoek van de kaart — zelfde plek en
+   opzet als de ster links (positie t.o.v. .lb-row.live), maar dan als glazen pilletje i.p.v.
+   een pictogram, want een kale "👁 3" zonder ondergrond viel weg tegen een lichte clubkleur. */
+.lb-row.live .lb-viewers {
+  position: absolute;
+  right: 8px;
+  top: 8px;
+  z-index: 4;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(6, 9, 14, 0.55);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
 }
 
 /* Supporters-modus: "Aantekenen"-knop onder een wedstrijd. Duidelijke, brede call-to-action
@@ -1124,6 +1151,12 @@
   background: linear-gradient(100deg, transparent 28%, rgba(255, 255, 255, 0.13) 50%, transparent 72%);
 }
 .lbl-logo { position: relative; z-index: 2; display: inline-flex; filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.45)); }
+/* De logo-badge (.tl, team-logo.css) heeft normaal een continue glansveeg (tl-sheen, 7s infinite) —
+   op een gewone wedstrijdpagina met 1-2 logo's is dat onschuldig, maar hier kunnen tientallen
+   kaarten tegelijk gerenderd zijn (content-visibility beperkt enkel wat NIET in beeld is), en dan
+   is dat evenveel continu-animerende, gecomposite lagen als er logo's in beeld staan — dezelfde
+   soort compositor-belasting waarom de aurora/glans hierboven al beperkt is tot ".now". */
+.lb-match .tl::after { animation: none; opacity: 0; }
 .lbl-center { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 0; }
 .lbl-score { font-weight: 900; font-size: 1.5rem; color: #fff; line-height: 1; font-variant-numeric: tabular-nums; text-shadow: 0 2px 12px rgba(0, 0, 0, 0.5); }
 /* "VS" bij een nog te spelen affiche: klein, gespatieerd chipje op glas i.p.v. een kale tekst. */

@@ -128,6 +128,15 @@ export function userTeamId(user: unknown): number | string | null {
   return team
 }
 
+/** De ploeg-id's van een coach (het bestaande `myTeams`-veld — ook wat "Mijn club" op focust),
+ *  ingesteld via "Mijn profiel" (functie 'coach') of "Mijn club". Al hun wedstrijden krijgen de
+ *  highlight op het live-bord, naast (niet i.p.v.) userTeamId hierboven. */
+export function userTeamIds(user: unknown): number[] {
+  const raw = (user as { myTeams?: unknown } | null)?.myTeams
+  if (!Array.isArray(raw)) return []
+  return raw.map((v) => Number(v)).filter((n) => Number.isFinite(n))
+}
+
 /** Clubs die een supporter zonder eigen club toch volgt (id's), voor wie geen `club` heeft. */
 export function userFollowedClubIds(user: unknown): (number | string)[] {
   const list = (user as WithRoles | null)?.followedClubs

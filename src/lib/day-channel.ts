@@ -2,6 +2,7 @@ import type { Payload } from 'payload'
 
 import { brusselsDayBoundsUtc, dateStrBE, shiftDateStr } from './datetime'
 import { buildScoreboards } from './match-engine'
+import { viewerCountFor } from './match-channel'
 import { MATCH_ASSUMED_DONE_MS } from './simple-score'
 import { subscribe } from './sse-hub'
 
@@ -25,6 +26,9 @@ export interface LiveScore {
   crosses?: { home: number; away: number }
   timeouts?: { home: number; away: number }
   refereeStops?: number
+  /** Kijkers nu op de wedstrijdpagina zelf (hetzelfde "oogje" als op het scorebord) — een
+   *  goedkope in-memory lookup (viewerCountFor), geen extra verbinding per bordkaart. */
+  viewers?: number
 }
 
 /** Hoe vaak de gedeelde poller kijkt. Trager dan het match-kanaal (1,5 s): op een bord met tien
@@ -75,14 +79,20 @@ async function scoresForRange(payload: Payload, start: string, end: string, incl
     if (!c) continue
     const kickoff = new Date(m.date as string).getTime()
     const autoLive = c.status === 'scheduled' && kickoff <= now && now - kickoff < MATCH_ASSUMED_DONE_MS
+    const status = autoLive ? 'live' : c.status
+    // Enkel de moeite waard voor wat nu live is — geplande/afgelopen wedstrijden hebben toch
+    // nooit een actief kanaal (viewerCountFor geeft dan sowieso 0 terug). Expliciet 0 meesturen
+    // (niet `undefined`): JSON.stringify laat undefined-velden gewoon weg, dus een client die ooit
+    // een hoger aantal zag zou dat badge nooit meer zien verdwijnen als de kijker wegvalt.
     uit.push({
       id: m.id,
-      status: autoLive ? 'live' : c.status,
+      status,
       awaitingResult: c.status === 'scheduled' && now - kickoff >= MATCH_ASSUMED_DONE_MS,
       score: c.score,
       crosses: c.crosses,
       timeouts: c.timeouts,
       refereeStops: c.refereeStops,
+      viewers: status === 'live' ? viewerCountFor(m.id) : 0,
     })
   }
   return uit

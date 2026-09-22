@@ -11,13 +11,22 @@ export type ProfileInitial = {
   name: string
   clubId: string
   followedClubIds: number[]
+  functie: string
   teamId: string
+  myTeamIds: number[]
   position: string
   photoUrl: string | null
   zoom: number
   offsetX: number
   offsetY: number
 }
+
+const FUNCTIE_OPTIONS = [
+  { value: 'speler', label: 'Speler' },
+  { value: 'coach', label: 'Coach / trainer' },
+  { value: 'supporter', label: 'Supporter / ouder' },
+  { value: 'bestuur', label: 'Bestuur' },
+]
 
 const labelStyle: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: 2, fontSize: '0.8rem', color: 'var(--dim)' }
 
@@ -40,14 +49,22 @@ export function ProfileForm({
   const toggleFollowed = (id: number) => {
     setFollowedClubIds((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]))
   }
+  // Mijn functie bepaalt hoe "Mijn ploeg" werkt: iedereen behalve een coach kiest er één (highlight
+  // op het live-bord voor die ene wedstrijd); een coach duidt meteen meerdere ploegen aan (myTeams —
+  // hetzelfde veld waarop "Mijn club" al focust) en krijgt de highlight voor al hun wedstrijden.
+  const [functie, setFunctie] = useState(initial.functie)
+  const isCoach = functie === 'coach'
   // Mijn ploeg: enkel zinvol binnen de gekozen club — highlight haar wedstrijden op het live-bord
   // (zie LiveBoard.tsx). Een wissel van club maakt een niet meer bijhorende ploegkeuze leeg i.p.v.
   // hem onzichtbaar bewaard te laten staan.
   const [teamId, setTeamId] = useState(initial.teamId)
+  const [myTeamIds, setMyTeamIds] = useState<number[]>(initial.myTeamIds)
+  const toggleMyTeam = (id: number) => setMyTeamIds((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]))
   const teamOptions = teams.filter((t) => String(t.clubId) === clubId)
   const onClubChange = (next: string) => {
     setClubId(next)
     if (!teams.some((t) => String(t.id) === teamId && String(t.clubId) === next)) setTeamId('')
+    setMyTeamIds((ids) => ids.filter((id) => teams.some((t) => t.id === id && String(t.clubId) === next)))
   }
   const [position, setPosition] = useState(initial.position)
   const [photoUrl, setPhotoUrl] = useState(initial.photoUrl)
@@ -76,7 +93,12 @@ export function ProfileForm({
           name,
           clubId: clubId || null,
           followedClubIds: clubId ? [] : followedClubIds,
-          teamId: teamId || null,
+          functie: functie || null,
+          // Enkel het actieve veld bewaren — de wissel tussen "één ploeg" en "coach met meerdere"
+          // maakt het andere leeg, anders blijft een oude keuze onzichtbaar meetellen voor de
+          // highlight op het live-bord.
+          teamId: isCoach ? null : teamId || null,
+          myTeamIds: isCoach ? myTeamIds : [],
           position: position || null,
           photoZoom: zoom,
           photoOffsetX: offsetX,
@@ -161,6 +183,35 @@ export function ProfileForm({
 
         {clubId && (
           <label style={labelStyle}>
+            Mijn functie
+            <select className="wb-input" value={functie} onChange={(e) => setFunctie(e.target.value)}>
+              <option value="">— Geen voorkeur —</option>
+              {FUNCTIE_OPTIONS.map((f) => (
+                <option key={f.value} value={f.value}>{f.label}</option>
+              ))}
+            </select>
+          </label>
+        )}
+
+        {clubId && (isCoach ? (
+          <div style={labelStyle}>
+            Mijn ploegen
+            {teamOptions.length === 0 ? (
+              <span className="pf-hint">Nog geen ploegen bij deze club.</span>
+            ) : (
+              <div className="pf-teams">
+                {teamOptions.map((t) => (
+                  <label key={t.id} className="pf-team-chip">
+                    <input type="checkbox" checked={myTeamIds.includes(t.id)} onChange={() => toggleMyTeam(t.id)} />
+                    {t.name}
+                  </label>
+                ))}
+              </div>
+            )}
+            <span className="pf-hint">Als coach duid je meteen meerdere ploegen aan — al hun wedstrijden krijgen een lichte highlight op het live-bord.</span>
+          </div>
+        ) : (
+          <label style={labelStyle}>
             Mijn ploeg
             <select className="wb-input" value={teamId} onChange={(e) => setTeamId(e.target.value)}>
               <option value="">— Geen / kies later —</option>
@@ -170,7 +221,7 @@ export function ProfileForm({
             </select>
             <span className="pf-hint">Haar wedstrijden krijgen een lichte highlight op het live-bord.</span>
           </label>
-        )}
+        ))}
 
         {!clubId && (
           <div className="rf-follow">

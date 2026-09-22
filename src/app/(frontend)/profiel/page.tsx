@@ -71,13 +71,16 @@ export default async function ProfielPage() {
   const followedClubIds = (Array.isArray(u.followedClubs) ? u.followedClubs : [])
     .map((c) => Number(idOf(c)))
     .filter((n) => Number.isFinite(n))
+  const myTeamIds = (Array.isArray(u.myTeams) ? u.myTeams : []).map((t) => Number(t)).filter((n) => Number.isFinite(n))
 
   const initial: ProfileInitial = {
     email: String(u.email ?? ''),
     name: String(u.name ?? ''),
     clubId: idOf(u.club),
     followedClubIds,
+    functie: typeof u.functie === 'string' ? u.functie : '',
     teamId: idOf(u.team),
+    myTeamIds,
     position: typeof u.position === 'string' ? u.position : '',
     photoUrl,
     zoom: fit.zoom,

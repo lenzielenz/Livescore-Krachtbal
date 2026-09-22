@@ -39,6 +39,8 @@ type Channel = {
   pollVotes: Record<string, number> // voorspel-poll: cumulatieve stemmen per optie (home/draw/away)
   pollSaveTimer: ReturnType<typeof setTimeout> | null
   mvpVotes: Record<string, number> // held van de match: stemmen per speler-id (bron = DB-collectie)
+  peakViewers: number // hoogste kijkersaantal ooit deze wedstrijd (voor de samenvatting nadien)
+  peakSaveTimer: ReturnType<typeof setTimeout> | null
   hydrated: boolean // al uit de DB geladen?
   saveTimer: ReturnType<typeof setTimeout> | null // debounce voor het wegschrijven van tellers
   poll: ReturnType<typeof setInterval> | null
@@ -77,8 +79,41 @@ function viewerCount(ch: Channel): number {
   return uniek.size
 }
 
-function broadcastViewers(ch: Channel) {
-  broadcast(ch, 'viewers', { count: viewerCount(ch) })
+function broadcastViewers(ch: Channel, matchId: number) {
+  const n = viewerCount(ch)
+  broadcast(ch, 'viewers', { count: n })
+  // Piek bijhouden voor de samenvatting nadien — het kanaal zelf overleeft de wedstrijd maar even
+  // (IDLE_GRACE_MS), dus zonder dit weg te schrijven zou "hoeveel mensen keken mee" achteraf nooit
+  // meer te achterhalen zijn.
+  if (n > ch.peakViewers) {
+    ch.peakViewers = n
+    scheduleSavePeakViewers(ch, matchId)
+  }
+}
+
+// Piek gebundeld wegschrijven (debounce, best-effort) — zelfde ritme als de andere tellers.
+async function savePeakViewers(ch: Channel, matchId: number) {
+  try {
+    await ch.payload.update({ collection: 'matches', id: matchId, data: { peakViewers: ch.peakViewers }, overrideAccess: true })
+  } catch {
+    /* best-effort */
+  }
+}
+function scheduleSavePeakViewers(ch: Channel, matchId: number) {
+  if (ch.peakSaveTimer) return
+  ch.peakSaveTimer = setTimeout(() => {
+    ch.peakSaveTimer = null
+    void savePeakViewers(ch, matchId)
+  }, REACTION_SAVE_MS)
+}
+
+/** Het huidige kijkersaantal van een wedstrijd, of 0 zonder actief kanaal (niemand op de
+ *  wedstrijdpagina). Gebruikt door het live-bord (day-channel.ts) om hetzelfde oogje te tonen
+ *  op de kaart zelf, zonder daar een eigen per-wedstrijd verbinding voor te openen — gewoon een
+ *  goedkope lookup in dit al-bestaande, in-memory kanaal. */
+export function viewerCountFor(matchId: number): number {
+  const ch = channels.get(matchId)
+  return ch ? viewerCount(ch) : 0
 }
 
 async function pollScore(payload: Payload, matchId: number) {
@@ -170,6 +205,10 @@ async function hydrateChannel(ch: Channel, matchId: number) {
     const dbTotals = (match?.liveReactions ?? null) as Record<string, number> | null
     const dbShouts = (match?.liveShoutouts ?? null) as Shout[] | null
     const dbPoll = (match?.livePoll ?? null) as Record<string, number> | null
+    // Max, niet overschrijven: dit laadt async ná de eerste broadcastViewers() van de kijker die
+    // het kanaal opende, die intussen al een hogere piek (bv. 1) kan hebben vastgesteld.
+    const dbPeak = Number(match?.peakViewers ?? 0)
+    if (Number.isFinite(dbPeak) && dbPeak > ch.peakViewers) ch.peakViewers = dbPeak
     let changed = false
     if (dbPoll && typeof dbPoll === 'object') {
       for (const [k, v] of Object.entries(dbPoll)) {
@@ -247,6 +286,8 @@ export function joinMatch(payload: Payload, matchId: number, send: Send, viewerK
       pollVotes: {},
       pollSaveTimer: null,
       mvpVotes: {},
+      peakViewers: 0,
+      peakSaveTimer: null,
       hydrated: false,
       saveTimer: null,
       poll: setInterval(() => void pollScore(payload, matchId), SCORE_POLL_MS),
@@ -278,7 +319,7 @@ export function joinMatch(payload: Payload, matchId: number, send: Send, viewerK
   if (ch.shoutouts.length) send('shoutouts', ch.shoutouts)
   if (Object.keys(ch.pollVotes).length) send('poll', { totals: ch.pollVotes })
   if (Object.keys(ch.mvpVotes).length) send('mvp', { totals: ch.mvpVotes })
-  broadcastViewers(ch)
+  broadcastViewers(ch, matchId)
 
   return () => {
     const c = channels.get(matchId)
@@ -304,13 +345,18 @@ export function joinMatch(payload: Payload, matchId: number, send: Send, viewerK
         c.pollSaveTimer = null
       }
       void savePoll(c, matchId)
+      if (c.peakSaveTimer) {
+        clearTimeout(c.peakSaveTimer)
+        c.peakSaveTimer = null
+      }
+      void savePeakViewers(c, matchId)
       if (c.idle) clearTimeout(c.idle)
       c.idle = setTimeout(() => {
         const cur = channels.get(matchId)
         if (cur && cur.subs.size === 0) channels.delete(matchId)
       }, IDLE_GRACE_MS)
     } else {
-      broadcastViewers(c)
+      broadcastViewers(c, matchId)
     }
   }
 }

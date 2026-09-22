@@ -9,6 +9,17 @@
 .an-recap-header { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 20px; }
 .an-recap-kicker { color: var(--accent); font-size: .65rem; font-weight: 800; letter-spacing: .12em; }
 .an-recap-header .section-title { margin: 8px 0 0; }
+/* Piek live-kijkers (match-channel.ts) — enkel getoond vanaf >3, zie MatchRecap.tsx. Klein en
+   terughoudend: een leuk weetje bij de samenvatting, geen kernstatistiek. */
+.an-recap-viewers {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin: 6px 0 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--dim-strong, #cbd5d1);
+}
 .an-recap-logos { display: flex; gap: 10px; flex-shrink: 0; }
 .an-recap-aurora .an-mvp, .an-recap-aurora .an-recap-card {
   border-radius: 18px;
