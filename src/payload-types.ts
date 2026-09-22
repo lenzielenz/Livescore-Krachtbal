@@ -301,6 +301,10 @@ export interface User {
    */
   club?: (number | null) | Club;
   /**
+   * Eigen ploeg binnen de gekozen club — highlight haar wedstrijden op het live-bord. De gebruiker stelt dit zelf in via "Mijn profiel".
+   */
+  team?: (number | null) | Team;
+  /**
    * Clubs die deze supporter volgt i.p.v. een eigen club te kiezen. De gebruiker beheert dit zelf.
    */
   followedClubs?: (number | Club)[] | null;
@@ -465,51 +469,6 @@ export interface User {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "players".
- */
-export interface Player {
-  id: number;
-  name: string;
-  /**
-   * Kies eerst de club. Daaronder verschijnen enkel de ploegen van die club.
-   */
-  club?: (number | null) | Club;
-  /**
-   * Kies eerst een club hierboven om de lijst te beperken. De reeks staat bij de ploegnaam.
-   */
-  team: number | Team;
-  /**
-   * Voorkeur-rugnummer. Geen gelijke nummers binnen één ploeg op het blad.
-   */
-  shirtNumber: number;
-  position?: ('achter' | 'vleugel-links' | 'vleugel-rechts' | 'barage' | 'vleugel') | null;
-  /**
-   * Bepaalt de leeftijdscategorie (peildatum 1 januari).
-   */
-  birthDate?: string | null;
-  /**
-   * Enkel de federatie/admin zet dit. Groen = geldig.
-   */
-  vergunningsstatus?: ('geen' | 'aangevraagd' | 'geldig') | null;
-  medischAttest?: boolean | null;
-  /**
-   * Speler mag dan niet één categorie hoger spelen.
-   */
-  hogerSpelenVerbod?: boolean | null;
-  actief?: boolean | null;
-  /**
-   * Aangemaakt in de analysemodule. Verschijnt nooit in de competitie (live, rangschikking, beheer) — enkel in de eigen analyse-database.
-   */
-  analyseOnly?: boolean | null;
-  /**
-   * Wie deze analyse-entiteit aanmaakte. Bepaalt wie ze ziet (privé per persoon).
-   */
-  analyseOwner?: (number | null) | User;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "teams".
  */
 export interface Team {
@@ -577,6 +536,51 @@ export interface Team {
    */
   vasteOpstellingIds?: string | null;
   logo?: (number | null) | Media;
+  /**
+   * Aangemaakt in de analysemodule. Verschijnt nooit in de competitie (live, rangschikking, beheer) — enkel in de eigen analyse-database.
+   */
+  analyseOnly?: boolean | null;
+  /**
+   * Wie deze analyse-entiteit aanmaakte. Bepaalt wie ze ziet (privé per persoon).
+   */
+  analyseOwner?: (number | null) | User;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "players".
+ */
+export interface Player {
+  id: number;
+  name: string;
+  /**
+   * Kies eerst de club. Daaronder verschijnen enkel de ploegen van die club.
+   */
+  club?: (number | null) | Club;
+  /**
+   * Kies eerst een club hierboven om de lijst te beperken. De reeks staat bij de ploegnaam.
+   */
+  team: number | Team;
+  /**
+   * Voorkeur-rugnummer. Geen gelijke nummers binnen één ploeg op het blad.
+   */
+  shirtNumber: number;
+  position?: ('achter' | 'vleugel-links' | 'vleugel-rechts' | 'barage' | 'vleugel') | null;
+  /**
+   * Bepaalt de leeftijdscategorie (peildatum 1 januari).
+   */
+  birthDate?: string | null;
+  /**
+   * Enkel de federatie/admin zet dit. Groen = geldig.
+   */
+  vergunningsstatus?: ('geen' | 'aangevraagd' | 'geldig') | null;
+  medischAttest?: boolean | null;
+  /**
+   * Speler mag dan niet één categorie hoger spelen.
+   */
+  hogerSpelenVerbod?: boolean | null;
+  actief?: boolean | null;
   /**
    * Aangemaakt in de analysemodule. Verschijnt nooit in de competitie (live, rangschikking, beheer) — enkel in de eigen analyse-database.
    */
@@ -2697,6 +2701,7 @@ export interface UsersSelect<T extends boolean = true> {
   name?: T;
   roles?: T;
   club?: T;
+  team?: T;
   followedClubs?: T;
   photo?: T;
   photoZoom?: T;

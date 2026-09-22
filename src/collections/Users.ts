@@ -155,6 +155,19 @@ export const Users: CollectionConfig = {
       },
     },
     {
+      // Eigen ploeg binnen de gekozen club (optioneel): voedt de lichte highlight op het live-bord
+      // (LiveBoard) zodat je eigen wedstrijd meteen opvalt tussen alle andere. Bewust apart van
+      // `myTeams` verderop (dat is een COACH-voorkeur, een lijst waarop "Mijn club" focust) — dit
+      // is de ene persoonlijke ploeg van een supporter/speler/ouder. Zelfbeheerd via "Mijn profiel".
+      name: 'team',
+      label: 'Mijn ploeg',
+      type: 'relationship',
+      relationTo: 'teams',
+      admin: {
+        description: 'Eigen ploeg binnen de gekozen club — highlight haar wedstrijden op het live-bord. De gebruiker stelt dit zelf in via "Mijn profiel".',
+      },
+    },
+    {
       // Voor een supporter zonder eigen club (bv. "gewoon fan" of nog geen lid ergens): welke
       // club(s) hij toch wil volgen. Zo toont "Mijn club" op de hub en elders alsnog iets zinvols
       // i.p.v. de lege "stel je club in"-melding. Bewust apart van `club` (dat blijft de ÉÉN eigen

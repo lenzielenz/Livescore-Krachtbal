@@ -2,7 +2,7 @@ import { cookies } from 'next/headers'
 import Link from 'next/link'
 
 import { SiteHeader } from '@/components/SiteHeader'
-import { userClubId } from '@/lib/access'
+import { userClubId, userTeamId } from '@/lib/access'
 import { getAuthUser } from '@/lib/auth-user'
 import { dateStrBE } from '@/lib/datetime'
 import { quoteForDay } from '@/lib/krachtbal-quotes'
@@ -41,6 +41,8 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   const me = await getAuthUser()
   const cid = userClubId(me)
   const myClubId = cid != null && Number.isFinite(Number(cid)) ? Number(cid) : null
+  const tid = userTeamId(me)
+  const myTeamId = tid != null && Number.isFinite(Number(tid)) ? Number(tid) : null
   const supportersMode = await isSupportersMode(await getPayloadClient())
 
   return (
@@ -91,7 +93,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         {/* Geen tornooi-wedstrijden op de homepage — wél de snellink met aftelklok naar de
             tornooidag, zodat nieuwe mensen meteen hun weg vinden. */}
         <TornooiTeaser />
-        <LiveBoard date={selected} today={today} matches={days} speeldagen={speeldagen} view={view} myClubId={myClubId} supportersMode={supportersMode} userId={me?.id ?? null} />
+        <LiveBoard date={selected} today={today} matches={days} speeldagen={speeldagen} view={view} myClubId={myClubId} myTeamId={myTeamId} supportersMode={supportersMode} userId={me?.id ?? null} />
       </div>
     </>
   )

@@ -1066,6 +1066,14 @@
     0 16px 38px -14px color-mix(in srgb, var(--ac) 70%, transparent),
     0 18px 40px -18px rgba(0, 0, 0, 0.85);
 }
+/* Eigen ploeg (zie "Mijn profiel"): een lichte, blijvende gouden ring — geen filter, enkel een
+   accent tussen de andere kaarten. Outline i.p.v. box-shadow zodat de bestaande glans/gloed van
+   de kaart (hierboven) intact blijft; zelfde techniek als de korte "scored"-flash verderop, maar
+   een andere kleur zodat "zonet gescoord" en "dit is jouw ploeg" niet door elkaar lopen. */
+.lb-match.mine {
+  outline: 2px solid color-mix(in srgb, #ffd166 60%, transparent);
+  outline-offset: 1px;
+}
 /* Logo/naam zijn nu eigen linkjes naar het ploegprofiel (stopPropagation tegen de kaart-tik) —
    geen onderstreping/kleurwissel, wél een duidelijke hover zodat je voelt dat het een eigen tik is. */
 .lbl-logo, .lbl-name {

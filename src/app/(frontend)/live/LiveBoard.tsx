@@ -192,6 +192,7 @@ export function LiveBoard({
   speeldagen = [],
   view,
   myClubId = null,
+  myTeamId = null,
   supportersMode = false,
   userId = null,
 }: {
@@ -205,6 +206,9 @@ export function LiveBoard({
   view: LiveView
   /** De club van de ingelogde gebruiker (ingesteld in de admin) — voedt de "Mijn club"-filter. */
   myClubId?: number | null
+  /** De eigen ploeg (ingesteld via "Mijn profiel") — geeft haar wedstrijd een lichte highlight op
+   *  het bord, ongeacht filters/sortering (géén filter, enkel een visueel accent). */
+  myTeamId?: number | null
   /** Globale supporters-modus: dan krijgt elke wedstrijd een "Aantekenen"-knop zodat iedereen
    *  meteen vanaf het live-bord de score kan beginnen doorgeven. */
   supportersMode?: boolean
@@ -369,6 +373,9 @@ export function LiveBoard({
   const reeksFav = (m: DayMatch) => favReeksen.has(m.reeks)
   // Wedstrijden van de eigen club (uit het login-account): thuis óf uit.
   const myClubMatch = (m: DayMatch) => myClubId != null && (m.home.clubId === myClubId || m.away.clubId === myClubId)
+  // Eigen ploeg: enkel een visueel accent (zie .lb-match.mine), geen filter — blijft dus ook
+  // gelden binnen "Mijn club" (een club heeft meestal meerdere ploegen) of eender welke sortering.
+  const myTeamMatch = (m: DayMatch) => myTeamId != null && (m.home.teamId === myTeamId || m.away.teamId === myTeamId)
   const myClubCount = useMemo(() => (myClubId == null ? 0 : matches.filter(myClubMatch).length), [matches, myClubId])
 
   // Basis: alles behalve het reeks-filter toegepast, zodat de reeks-tellingen
@@ -760,6 +767,7 @@ export function LiveBoard({
                 const hasStats = played && (m.crosses || m.timeouts)
                 const rowFav = teamFav(m) || clubFav(m)
                 const open = openRow === m.id
+                const mine = myTeamMatch(m)
                 // Bij tijdstip/thuis-uit sorteren en/of een actieve zoekopdracht over meerdere
                 // dagen (searchSeizoen) vervangt dit tagje de reeks-kop van de groep.
                 const tags = [
@@ -803,7 +811,7 @@ export function LiveBoard({
                           seizoensagenda van je ploeg). stopPropagation op die linkjes voorkomt dat
                           de tik ook de kaart (match) opent. */}
                       <div
-                        className="lb-match lb-match-live"
+                        className={`lb-match lb-match-live${mine ? ' mine' : ''}`}
                         style={{ '--hc': m.home.colors?.primary ?? 'var(--accent)', '--ac': m.away.colors?.primary ?? 'var(--accent)' } as CSSProperties}
                         role="link"
                         tabIndex={0}

@@ -42,6 +42,27 @@ export async function POST(req: Request) {
     }
   }
 
+  if ('teamId' in body) {
+    const raw = body.teamId
+    if (raw === null || raw === '' || raw === undefined) {
+      data.team = null
+    } else {
+      const teamId = Number(raw)
+      if (!Number.isFinite(teamId) || teamId <= 0) return NextResponse.json({ error: 'Ongeldige ploeg.' }, { status: 400 })
+      const team = await payload.findByID({ collection: 'teams', id: teamId, depth: 0 }).catch(() => null)
+      if (!team) return NextResponse.json({ error: 'Ploeg niet gevonden.' }, { status: 400 })
+      // Enkel ploegen van de (nieuwe) eigen club — anders zou de highlight op het live-bord een
+      // wedstrijd van een compleet andere club oplichten.
+      const clubOfTeam = team.club && typeof team.club === 'object' ? (team.club as { id?: unknown }).id : team.club
+      const ownClubId = 'clubId' in body ? body.clubId : (user as { club?: unknown }).club
+      const ownClubRel = ownClubId && typeof ownClubId === 'object' ? (ownClubId as { id?: unknown }).id : ownClubId
+      if (ownClubRel == null || String(clubOfTeam) !== String(ownClubRel)) {
+        return NextResponse.json({ error: 'Die ploeg hoort niet bij je club.' }, { status: 400 })
+      }
+      data.team = teamId
+    }
+  }
+
   if ('followedClubIds' in body) {
     // Enkel zinvol zonder eigen club — mét een club gekozen negeren we dit gewoon (die club leidt
     // dan de weergave). Bestaan checken met één query, begrensd tegen misbruik.

@@ -122,6 +122,7 @@ import * as migration_20260917_140000_field_screens from './20260917_140000_fiel
 import * as migration_20260917_140500_field_screens_theme from './20260917_140500_field_screens_theme'
 import * as migration_20260917_170000_field_screens_demo from './20260917_170000_field_screens_demo'
 import * as migration_20260918_090000_function_grants from './20260918_090000_function_grants'
+import * as migration_20260922_090000_user_team from './20260922_090000_user_team'
 
 export const migrations = [
   {
@@ -738,5 +739,10 @@ export const migrations = [
     up: migration_20260918_090000_function_grants.up,
     down: migration_20260918_090000_function_grants.down,
     name: '20260918_090000_function_grants',
+  },
+  {
+    up: migration_20260922_090000_user_team.up,
+    down: migration_20260922_090000_user_team.down,
+    name: '20260922_090000_user_team',
   },
 ];
