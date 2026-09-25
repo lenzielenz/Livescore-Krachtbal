@@ -221,6 +221,19 @@ export default async function HubPage() {
           </section>
         )}
 
+        {/* Kantinescherm, Ideeënbus en Zo werkt het — verhuisd van de menubalk naartoe hier: het
+            zijn geen "leesvoer" zoals Weekoverzicht/Nieuws (die staan bij Ontdekken), maar directe
+            hulpmiddelen die bij je eigen startpagina horen. Altijd zichtbaar, ook uitgelogd, want
+            deze pagina zelf blokkeert niet op een account. */}
+        <section className="hub-sec">
+          <h2 className="hub-h2">Krachtbal-tools</h2>
+          <div className="hub-tiles">
+            <Link href="/kantine" className="hub-tile">📺<span>Kantinescherm</span></Link>
+            <Link href="/ideeenbus" className="hub-tile">💡<span>Ideeënbus</span></Link>
+            <Link href="/uitleg" className="hub-tile">🎓<span>Zo werkt het</span></Link>
+          </div>
+        </section>
+
         {/* Beheer — rol-gebonden werkschermen. Club-staf heeft al "Clubbeheer" hierboven bij "Mijn
             club"; scheidsrechter/federatie hebben geen eigen club nodig om hier meteen bij hun
             portaal te raken (voorheen enkel bereikbaar via het "Meer"-menu). */}

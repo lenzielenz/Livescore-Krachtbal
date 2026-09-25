@@ -44,19 +44,12 @@ const VOLGEN: { href: string; label: string }[] = [
 ]
 
 // Leesvoer en uitleg. Elk item een eigen icoon (geen twee keer 📰) zodat ze uit elkaar te
-// houden zijn in één oogopslag.
+// houden zijn in één oogopslag. Kantinescherm/Ideeënbus/Zo werkt het staan hier bewust niet meer
+// — die verhuisden naar de "Mijn Krachtbal"-pagina zelf (/hub) i.p.v. de menubalk.
 const ONTDEKKEN: { href: string; label: string }[] = [
   { href: '/recap', label: '🗞️ Weekoverzicht' },
   { href: '/nieuws', label: '📣 Nieuws' },
   { href: '/erelijst', label: '🥇 Erelijst' },
-]
-
-// Directe hulpmiddelen, meteen onder "Mijn Krachtbal" — geen aparte kop nodig, ze horen bij die
-// hoofdingang i.p.v. bij het leesvoer in "Ontdekken". Altijd zichtbaar (ook uitgelogd).
-const KRACHTBAL_TOOLS: { href: string; label: string }[] = [
-  { href: '/kantine', label: '📺 Kantinescherm' },
-  { href: '/ideeenbus', label: '💡 Ideeënbus' },
-  { href: '/uitleg', label: '🎓 Zo werkt het' },
 ]
 
 // Welke rol een profiel-ingang mag zien. Federatie/admin zien alles.
@@ -180,13 +173,6 @@ export function SiteHeader({ active = null }: { active?: NavSection }) {
                       </Link>
                     </div>
                   )}
-                  <div className="sh-more-group">
-                    {KRACHTBAL_TOOLS.map((l) => (
-                      <Link key={l.href} href={l.href} className="sh-more-item" onClick={() => setOpen(false)}>
-                        {l.label}
-                      </Link>
-                    ))}
-                  </div>
                   <div className="sh-more-group">
                     <div className="sh-more-grouphead">Volgen &amp; meespelen</div>
                     {VOLGEN.map((l) => (
