@@ -339,48 +339,6 @@
 /* Degradatie-/gevarenzone (enkel volwassen reeksen): rode was + balkje. */
 .rang-danger { background: linear-gradient(90deg, color-mix(in srgb, #ef476f 9%, transparent), transparent 70%); }
 .rang-danger td:first-child { box-shadow: inset 4px 0 0 0 #ef476f; }
-/* Zacht badge-rondje achter het rangcijfer van podium/gevarenzone — het cijfer zelf verschuift
-   niet, er komt enkel een gekleurde gloed achter te staan. */
-.rang-leader .rang-pos,
-.rang-silver .rang-pos,
-.rang-bronze .rang-pos,
-.rang-danger .rang-pos {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-}
-/* Een lichte rand bovenaan + donkere schaduw onderaan geven het rondje body — een muntje i.p.v.
-   een platte gekleurde stip. Zelfde bevel-truc als de puntjes-chip hierboven. */
-.rang-leader .rang-pos {
-  background: radial-gradient(circle at 35% 28%, color-mix(in srgb, #ffd166 65%, #fff 10%), color-mix(in srgb, #ffd166 32%, transparent) 60%, color-mix(in srgb, #ffd166 8%, transparent) 85%);
-  box-shadow:
-    inset 0 1px 1px rgba(255, 255, 255, 0.5),
-    inset 0 -2px 3px color-mix(in srgb, #8a6512 60%, transparent),
-    0 0 0 1px color-mix(in srgb, #ffd166 60%, transparent),
-    0 2px 6px -1px color-mix(in srgb, #ffd166 55%, transparent);
-}
-.rang-silver .rang-pos {
-  background: radial-gradient(circle at 35% 28%, color-mix(in srgb, #cfd6de 60%, #fff 10%), color-mix(in srgb, #cfd6de 26%, transparent) 60%, color-mix(in srgb, #cfd6de 6%, transparent) 85%);
-  box-shadow:
-    inset 0 1px 1px rgba(255, 255, 255, 0.4),
-    inset 0 -2px 3px color-mix(in srgb, #6b7480 55%, transparent),
-    0 0 0 1px color-mix(in srgb, #cfd6de 50%, transparent);
-}
-.rang-bronze .rang-pos {
-  background: radial-gradient(circle at 35% 28%, color-mix(in srgb, #cd7f32 60%, #fff 10%), color-mix(in srgb, #cd7f32 26%, transparent) 60%, color-mix(in srgb, #cd7f32 6%, transparent) 85%);
-  box-shadow:
-    inset 0 1px 1px rgba(255, 255, 255, 0.35),
-    inset 0 -2px 3px color-mix(in srgb, #6b3d17 55%, transparent),
-    0 0 0 1px color-mix(in srgb, #cd7f32 50%, transparent);
-}
-.rang-danger .rang-pos {
-  background: radial-gradient(circle at 35% 28%, color-mix(in srgb, #ef476f 45%, transparent), transparent 75%);
-  box-shadow: inset 0 -1px 2px color-mix(in srgb, #7a0f27 45%, transparent), 0 0 0 1px color-mix(in srgb, #ef476f 42%, transparent);
-}
-
 /* Kampioensbadge naast de naam (enkel wanneer de titel wiskundig binnen is). */
 .rang-champ { font-size: 0.9em; }
 /* Kleursleutels in de legende. */
