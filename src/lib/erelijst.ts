@@ -196,6 +196,23 @@ export function telPrijzenPerJaar(
   return result
 }
 
+export interface GroepTotaal {
+  naam: string
+  aantal: number
+}
+
+/** Telt hoe vaak elke waarde voorkomt (bv. reeksnaam bij kampioenschappen, categorie bij bekers) —
+ *  voor het "totaal per reeks"-overzicht op de clubpagina, los van het jaar. Gesorteerd op aantal. */
+export function telPerGroep(namen: string[]): GroepTotaal[] {
+  const map = new Map<string, number>()
+  for (const naam of namen) {
+    map.set(naam, (map.get(naam) ?? 0) + 1)
+  }
+  return [...map.entries()]
+    .map(([naam, aantal]) => ({ naam, aantal }))
+    .sort((a, b) => b.aantal - a.aantal || a.naam.localeCompare(b.naam))
+}
+
 /** Zoekt een club- of spelernaam (deelstring, hoofdletterongevoelig) doorheen alle drie archieven. */
 export function zoekErelijst(
   query: string,

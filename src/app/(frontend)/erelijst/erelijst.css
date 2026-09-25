@@ -396,6 +396,11 @@
 .erl-club-sec {
   margin: 0 0 26px;
 }
+/* Totaal-per-reeks/-categorie-kaart bovenaan de kampioenschappen-/bekersectie: een los overzicht,
+   dus met wat lucht t.o.v. de titel erboven en de chronologische lijst eronder. */
+.erl-reeks-totaal {
+  margin: 10px 0 16px;
+}
 .erl-tijdlijn {
   list-style: none;
   margin: 12px 0 0;
