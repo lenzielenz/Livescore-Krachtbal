@@ -316,8 +316,8 @@
    zonder er een animatie-feestje van te maken. */
 .rang-leader {
   background-image:
-    linear-gradient(90deg, color-mix(in srgb, #ffd166 12%, transparent), color-mix(in srgb, #ffd166 3%, transparent) 45%, transparent 75%),
-    linear-gradient(100deg, transparent 30%, color-mix(in srgb, #ffd166 16%, transparent) 45%, transparent 60%);
+    linear-gradient(90deg, color-mix(in srgb, #ffb703 16%, transparent), color-mix(in srgb, #ffb703 5%, transparent) 45%, transparent 75%),
+    linear-gradient(100deg, transparent 30%, color-mix(in srgb, #ffb703 22%, transparent) 45%, transparent 60%);
   background-repeat: no-repeat, no-repeat;
   background-size: 100% 100%, 220% 100%;
   background-position: 0 0, 120% 0;
@@ -330,15 +330,17 @@
 @media (prefers-reduced-motion: reduce) {
   .rang-leader { animation: none; background-position: 0 0, 999% 0; }
 }
-.rang-leader td:first-child { box-shadow: inset 4px 0 0 0 #ffd166, inset 0 0 16px -11px color-mix(in srgb, #ffd166 80%, transparent); }
+.rang-leader td:first-child { box-shadow: inset 4px 0 0 0 #ffb703, inset 0 0 20px -9px color-mix(in srgb, #ffb703 85%, transparent); }
 .rang-leader .rang-name { font-weight: 800; }
 .rang-silver { background: linear-gradient(90deg, color-mix(in srgb, #cfd6de 9%, transparent), transparent 70%); }
 .rang-silver td:first-child { box-shadow: inset 4px 0 0 0 #cfd6de; }
 .rang-bronze { background: linear-gradient(90deg, color-mix(in srgb, #cd7f32 10%, transparent), transparent 70%); }
 .rang-bronze td:first-child { box-shadow: inset 4px 0 0 0 #cd7f32; }
-/* Degradatie-/gevarenzone (enkel volwassen reeksen): rode was + balkje. */
-.rang-danger { background: linear-gradient(90deg, color-mix(in srgb, #ef476f 9%, transparent), transparent 70%); }
-.rang-danger td:first-child { box-shadow: inset 4px 0 0 0 #ef476f; }
+/* Degradatie-/gevarenzone (enkel volwassen reeksen): rode was + balkje, met eenzelfde gloed-
+   behandeling als de leider — een écht alarmrood i.p.v. het gedempte rood elders (bv. de
+   positieverschil-pijltjes), zodat deze zone er meteen uitspringt als "gevaar". */
+.rang-danger { background: linear-gradient(90deg, color-mix(in srgb, #ff3b30 15%, transparent), transparent 70%); }
+.rang-danger td:first-child { box-shadow: inset 4px 0 0 0 #ff3b30, inset 0 0 18px -9px color-mix(in srgb, #ff3b30 80%, transparent); }
 /* Kampioensbadge naast de naam (enkel wanneer de titel wiskundig binnen is). */
 .rang-champ { font-size: 0.9em; }
 /* Kleursleutels in de legende. */
@@ -350,8 +352,8 @@
   vertical-align: -1px;
   margin-right: 3px;
 }
-.rang-key.goud { background: #ffd166; }
-.rang-key.rood { background: #ef476f; }
+.rang-key.goud { background: #ffb703; }
+.rang-key.rood { background: #ff3b30; }
 /* Eigen club (ingelogd) springt eruit — wint van de podium-styling wanneer ze samenvallen. */
 .rang-mine {
   background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 20%, transparent), color-mix(in srgb, var(--accent) 6%, transparent) 55%, transparent 85%);
