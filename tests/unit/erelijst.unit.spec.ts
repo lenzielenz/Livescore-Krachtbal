@@ -35,6 +35,13 @@ describe('canoniekeClubNaam', () => {
     expect(canoniekeClubNaam('Royal KBC St. Michiels')).toBe('KBC St. Michiels')
     expect(canoniekeClubNaam('St. Michiels')).toBe('KBC St. Michiels')
     expect(canoniekeClubNaam('KBC Sint Michiels')).toBe('KBC St. Michiels')
+    expect(canoniekeClubNaam('KSVV Inter Assebroek B')).toBe('KSVV Inter Assebroek')
+    expect(canoniekeClubNaam('Inter Assebroek')).toBe('KSVV Inter Assebroek')
+    expect(canoniekeClubNaam('Klaverken Buggenhout')).toBe('t Klaverken Buggenhout')
+    expect(canoniekeClubNaam('t Klaverken Buggenhout A')).toBe('t Klaverken Buggenhout')
+    expect(canoniekeClubNaam('t Klaverken Buggenhout B')).toBe('t Klaverken Buggenhout')
+    expect(canoniekeClubNaam('t Klaverken Buggenhout C')).toBe('t Klaverken Buggenhout')
+    expect(canoniekeClubNaam('Botterken Baasrode')).toBe('t Botterken Baasrode')
   })
 
   it('laat een naam zonder gekende alias ongewijzigd', () => {
