@@ -87,17 +87,41 @@ describe('seizoenNaarJaar', () => {
 })
 
 describe('telPrijzenPerJaar', () => {
-  it('telt titels, bekers en referendumprijzen per jaar en vult stille jaren op met nul', () => {
+  it('telt titels, bekers en referendumprijzen per jaar, vult stille jaren op met nul en houdt het jaardetail bij', () => {
     const result = telPrijzenPerJaar(
-      [{ seizoen: '2022-2023' }, { seizoen: '2024-2025' }],
-      [{ seizoen: '2024-2025' }],
-      [{ jaar: '2025' }],
+      [{ seizoen: '2022-2023', reeksNaam: 'Hogere Heren' }, { seizoen: '2024-2025', reeksNaam: 'Hogere Heren' }],
+      [{ seizoen: '2024-2025', categorie: 'Heren' }],
+      [{ jaar: '2025', naam: 'Jason De Vooght', prijs: 'Speler van het jaar' }],
     )
     // 2023, 2024, 2025 — 2024 heeft geen titel/beker/referendumprijs, moet toch als nul-jaar verschijnen.
     expect(result.map((r) => r.jaar)).toEqual([2023, 2024, 2025])
-    expect(result.find((r) => r.jaar === 2023)).toEqual({ jaar: 2023, titels: 1, bekers: 0, referendumprijzen: 0 })
-    expect(result.find((r) => r.jaar === 2024)).toEqual({ jaar: 2024, titels: 0, bekers: 0, referendumprijzen: 0 })
-    expect(result.find((r) => r.jaar === 2025)).toEqual({ jaar: 2025, titels: 1, bekers: 1, referendumprijzen: 1 })
+    expect(result.find((r) => r.jaar === 2023)).toEqual({
+      jaar: 2023,
+      titels: 1,
+      bekers: 0,
+      referendumprijzen: 0,
+      titelDetails: ['Hogere Heren'],
+      bekerDetails: [],
+      referendumDetails: [],
+    })
+    expect(result.find((r) => r.jaar === 2024)).toEqual({
+      jaar: 2024,
+      titels: 0,
+      bekers: 0,
+      referendumprijzen: 0,
+      titelDetails: [],
+      bekerDetails: [],
+      referendumDetails: [],
+    })
+    expect(result.find((r) => r.jaar === 2025)).toEqual({
+      jaar: 2025,
+      titels: 1,
+      bekers: 1,
+      referendumprijzen: 1,
+      titelDetails: ['Hogere Heren'],
+      bekerDetails: ['Heren'],
+      referendumDetails: [{ naam: 'Jason De Vooght', prijs: 'Speler van het jaar' }],
+    })
   })
 
   it('geeft een lege lijst zonder enige titel, beker of referendumprijs', () => {

@@ -7,6 +7,7 @@ import { getPayloadClient } from '@/lib/payload-client'
 import { isPlaceholder, telPrijzenPerJaar } from '@/lib/erelijst'
 import { fetchErelijstData } from '@/lib/erelijst-data'
 import { naamSleutel } from '@/lib/season-import'
+import { kiesBesteClubMatch } from '@/lib/club-logo-lookup'
 import { normalizeLogoFit, hasLogoAdjustment } from '@/lib/logo-fit'
 import { SpelerNaam } from '../../EntityLinks'
 import { PrijzenPerJaarChart } from '../../PrijzenPerJaarChart'
@@ -67,9 +68,12 @@ export default async function ErelijstClubPage({ params }: { params: Promise<{ n
   const prijzenPerJaar = telPrijzenPerJaar(titels, bekers, referendumLaureaten)
 
   // Best-effort matchen tegen een échte Club-record — puur voor het logo/kleur/link, verandert
-  // niets aan welke archiefrijen getoond worden (die matchen altijd letterlijk op `naam`).
+  // niets aan welke archiefrijen getoond worden (die matchen altijd letterlijk op `naam`). Bij
+  // meerdere gelijknamige clubs (competitie + analyse-only, zie kiesBesteClubMatch) kiezen we de
+  // echte competitieclub, anders 404't "Bekijk clubpagina" op een analyse-only schaduwrecord.
   const clubsRes = await payload.find({ collection: 'clubs', limit: 1000, overrideAccess: true, depth: 0 }).catch(() => ({ docs: [] as Record<string, unknown>[] }))
-  const match = clubsRes.docs.find((c) => naamSleutel(String(c.name ?? '')) === naamSleutel(naam))
+  const kandidaten = clubsRes.docs.filter((c) => naamSleutel(String(c.name ?? '')) === naamSleutel(naam))
+  const match = kiesBesteClubMatch(kandidaten)
 
   const logoUrl = match
     ? match.logo && typeof match.logo === 'object'
@@ -97,7 +101,7 @@ export default async function ErelijstClubPage({ params }: { params: Promise<{ n
               {totaal > 0 && <>{titels.length}× 🥇 kampioen · {bekers.length}× 🏆 beker</>}
               {referendumLaureaten.length > 0 && <> · {referendumLaureaten.length}× ⭐ referendumprijs</>}
             </p>
-            {Boolean(match) && (
+            {Boolean(match) && !(match as { analyseOnly?: boolean }).analyseOnly && (
               <Link href={`/clubs/${(match as { id: number }).id}`} className="erl-club-hero-link">
                 Bekijk clubpagina →
               </Link>

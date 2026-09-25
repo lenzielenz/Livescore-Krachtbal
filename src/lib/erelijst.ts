@@ -106,6 +106,12 @@ export interface PrijsJaar {
   titels: number
   bekers: number
   referendumprijzen: number
+  /** Naam van elke reeks die dat jaar gewonnen werd — voor het uitgeklapte jaardetail. */
+  titelDetails: string[]
+  /** Categorie van elke beker die dat jaar gewonnen werd. */
+  bekerDetails: string[]
+  /** Speler + prijs van elke referendumprijs die dat jaar gewonnen werd. */
+  referendumDetails: { naam: string; prijs: string }[]
 }
 
 /** Zet een seizoensstring ("2024-2025") of een los kalenderjaar ("2025") om naar één
@@ -118,24 +124,50 @@ export function seizoenNaarJaar(seizoen: string): number {
   return Number(jaren[jaren.length - 1])
 }
 
+const leegPrijsJaar = (jaar: number): PrijsJaar => ({
+  jaar,
+  titels: 0,
+  bekers: 0,
+  referendumprijzen: 0,
+  titelDetails: [],
+  bekerDetails: [],
+  referendumDetails: [],
+})
+
 /** Telt, voor de "prijzen per jaar"-grafiek op de clubpagina, per jaar het aantal titels, bekers
  *  en referendumprijzen van één club — chronologisch, met expliciete nul-jaren opgevuld tussen het
- *  eerste en laatste jaar (een "stille" periode is net zo betekenisvol als een topjaar). */
+ *  eerste en laatste jaar (een "stille" periode is net zo betekenisvol als een topjaar). Houdt ook
+ *  per jaar bij wát er precies gewonnen werd, zodat een klik op een balk het jaardetail kan tonen. */
 export function telPrijzenPerJaar(
-  titels: { seizoen: string }[],
-  bekers: { seizoen: string }[],
-  referendumLaureaten: { jaar: string }[],
+  titels: { seizoen: string; reeksNaam: string }[],
+  bekers: { seizoen: string; categorie: string }[],
+  referendumLaureaten: { jaar: string; naam: string; prijs: string }[],
 ): PrijsJaar[] {
   const map = new Map<number, PrijsJaar>()
-  const bump = (jaar: number, veld: 'titels' | 'bekers' | 'referendumprijzen') => {
-    if (!jaar) return
-    const bestaand = map.get(jaar) ?? { jaar, titels: 0, bekers: 0, referendumprijzen: 0 }
-    bestaand[veld] += 1
+  const get = (jaar: number): PrijsJaar | null => {
+    if (!jaar) return null
+    const bestaand = map.get(jaar) ?? leegPrijsJaar(jaar)
     map.set(jaar, bestaand)
+    return bestaand
   }
-  for (const t of titels) bump(seizoenNaarJaar(t.seizoen), 'titels')
-  for (const b of bekers) bump(seizoenNaarJaar(b.seizoen), 'bekers')
-  for (const r of referendumLaureaten) bump(Number(r.jaar) || 0, 'referendumprijzen')
+  for (const t of titels) {
+    const rij = get(seizoenNaarJaar(t.seizoen))
+    if (!rij) continue
+    rij.titels += 1
+    rij.titelDetails.push(t.reeksNaam)
+  }
+  for (const b of bekers) {
+    const rij = get(seizoenNaarJaar(b.seizoen))
+    if (!rij) continue
+    rij.bekers += 1
+    rij.bekerDetails.push(b.categorie)
+  }
+  for (const r of referendumLaureaten) {
+    const rij = get(Number(r.jaar) || 0)
+    if (!rij) continue
+    rij.referendumprijzen += 1
+    rij.referendumDetails.push({ naam: r.naam, prijs: r.prijs })
+  }
 
   if (map.size === 0) return []
   const jaren = [...map.keys()]
@@ -143,7 +175,7 @@ export function telPrijzenPerJaar(
   const maxJaar = Math.max(...jaren)
   const result: PrijsJaar[] = []
   for (let jaar = minJaar; jaar <= maxJaar; jaar++) {
-    result.push(map.get(jaar) ?? { jaar, titels: 0, bekers: 0, referendumprijzen: 0 })
+    result.push(map.get(jaar) ?? leegPrijsJaar(jaar))
   }
   return result
 }
