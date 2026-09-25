@@ -384,7 +384,7 @@
 .erl-club-hero-link {
   display: inline-block;
   margin-top: 6px;
-  color: var(--accent);
+  color: var(--club);
   font-weight: 700;
   font-size: 0.88rem;
   text-decoration: none;
@@ -393,13 +393,43 @@
   text-decoration: underline;
 }
 
+/* Sectietitels op de clubpagina krijgen een accentstreepje in de clubkleur (zelfde idioom als
+   .cl-h2 op de "echte" clubpagina, clubs.css) — zo voelt elk blok op de pagina bij dezelfde club,
+   niet enkel de hero bovenaan. */
+.erl-club-site .erl-section-title {
+  position: relative;
+  padding-left: 14px;
+}
+.erl-club-site .erl-section-title::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.2em;
+  width: 3px;
+  height: 0.9em;
+  border-radius: 2px;
+  background: var(--club);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--club) 60%, transparent);
+}
+
 .erl-club-sec {
   margin: 0 0 26px;
 }
 /* Totaal-per-reeks/-categorie-kaart bovenaan de kampioenschappen-/bekersectie: een los overzicht,
-   dus met wat lucht t.o.v. de titel erboven en de chronologische lijst eronder. */
+   dus met wat lucht t.o.v. de titel erboven en de chronologische lijst eronder. In de clubkleur
+   getint (zelfde idioom als .erl-club-hero) i.p.v. de neutrale kaartstijl elders op de erelijst. */
 .erl-reeks-totaal {
   margin: 10px 0 16px;
+  border-color: color-mix(in srgb, var(--club) 22%, var(--line));
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--club) 8%, transparent), transparent 45%),
+    linear-gradient(180deg, color-mix(in srgb, var(--panel) 88%, #fff 12%), var(--panel));
+}
+.erl-reeks-totaal .erl-kaart-titel {
+  color: color-mix(in srgb, var(--club) 60%, #fff);
+}
+.erl-reeks-totaal .erl-kaart-waarde {
+  color: color-mix(in srgb, var(--club) 55%, #fff);
 }
 .erl-tijdlijn {
   list-style: none;
@@ -510,7 +540,7 @@
 .erl-chart {
   margin-top: 12px;
   padding: 14px 14px 10px;
-  border: 1px solid var(--line);
+  border: 1px solid color-mix(in srgb, var(--club) 22%, var(--line));
   border-radius: 16px;
   background: var(--panel-grad);
   box-shadow: var(--card-shadow);
@@ -582,8 +612,8 @@
   margin: 10px 0 0;
   padding: 10px 12px;
   border-radius: 12px;
-  background: color-mix(in srgb, var(--accent) 8%, var(--panel));
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent);
+  background: color-mix(in srgb, var(--club) 8%, var(--panel));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--club) 22%, transparent);
 }
 .erl-chart-detail-kop {
   display: flex;
