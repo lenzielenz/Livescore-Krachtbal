@@ -287,7 +287,11 @@ export function LiveBoard({
         setOnlyFavTeams(saved.onlyFavTeams)
         setOnlyFavClubs(saved.onlyFavClubs)
         setOnlyFavReeksen(saved.onlyFavReeksen)
-        setOnlyMyClub(saved.onlyMyClub)
+        // "Mijn club" zonder gekende club levert altijd 0 resultaten op (myClubMatch is dan
+        // altijd false) — bv. na uitloggen in hetzelfde tabblad, want sessionStorage overleeft
+        // dat. Nooit herstellen als er nu geen club is, anders ziet een uitgelogde bezoeker
+        // "Niets gevonden" zonder duidelijke reden.
+        setOnlyMyClub(saved.onlyMyClub && myClubId != null)
         setOnlyLive(saved.onlyLive)
       }
       const rawScroll = sessionStorage.getItem(SCROLL_STATE_KEY)
@@ -300,6 +304,12 @@ export function LiveBoard({
     } catch {}
     setHydrated(true)
   }, [])
+
+  // Zelfde vangnet als hierboven, maar dan doorlopend: als de club tijdens dit bezoek wegvalt
+  // (sessie verloopt, uitloggen zonder herlaad) mag "Mijn club" niet blijven aanstaan.
+  useEffect(() => {
+    if (myClubId == null) setOnlyMyClub(false)
+  }, [myClubId])
 
   useEffect(() => {
     if (!hydrated) return
