@@ -4,13 +4,32 @@ import { notFound } from 'next/navigation'
 import { SiteHeader } from '@/components/SiteHeader'
 import { TeamLogo } from '@/components/TeamLogo'
 import { getPayloadClient } from '@/lib/payload-client'
-import { isPlaceholder } from '@/lib/erelijst'
+import { isPlaceholder, telPrijzenPerJaar } from '@/lib/erelijst'
 import { fetchErelijstData } from '@/lib/erelijst-data'
 import { naamSleutel } from '@/lib/season-import'
 import { normalizeLogoFit, hasLogoAdjustment } from '@/lib/logo-fit'
+import { SpelerNaam } from '../../EntityLinks'
+import { PrijzenPerJaarChart } from '../../PrijzenPerJaarChart'
 import '../../erelijst.css'
 
 export const dynamic = 'force-dynamic'
+
+// Groepeert een lijst per seizoen (volgorde blijft behouden — de bron is al chronologisch
+// gesorteerd), zodat meerdere titels/bekers in hetzelfde seizoen (bv. 4 reeksen in één jaar) als
+// één visueel blok verschijnen i.p.v. als op zichzelf staande rijen die toevallig hetzelfde
+// seizoen tonen.
+function groepeerPerSeizoen<T extends { seizoen: string }>(items: T[], naam: (item: T) => string): { seizoen: string; namen: string[] }[] {
+  const volgorde: string[] = []
+  const perSeizoen = new Map<string, string[]>()
+  for (const item of items) {
+    if (!perSeizoen.has(item.seizoen)) {
+      perSeizoen.set(item.seizoen, [])
+      volgorde.push(item.seizoen)
+    }
+    perSeizoen.get(item.seizoen)!.push(naam(item))
+  }
+  return volgorde.map((seizoen) => ({ seizoen, namen: perSeizoen.get(seizoen)! }))
+}
 
 export async function generateMetadata({ params }: { params: Promise<{ naam: string }> }) {
   const { naam: naamParam } = await params
@@ -42,6 +61,10 @@ export default async function ErelijstClubPage({ params }: { params: Promise<{ n
     .sort((a, b) => Number(b.jaar) - Number(a.jaar))
 
   if (titels.length === 0 && bekers.length === 0 && referendumLaureaten.length === 0) notFound()
+
+  const titelGroepen = groepeerPerSeizoen(titels, (t) => t.reeksNaam)
+  const bekerGroepen = groepeerPerSeizoen(bekers, (b) => b.categorie)
+  const prijzenPerJaar = telPrijzenPerJaar(titels, bekers, referendumLaureaten)
 
   // Best-effort matchen tegen een échte Club-record — puur voor het logo/kleur/link, verandert
   // niets aan welke archiefrijen getoond worden (die matchen altijd letterlijk op `naam`).
@@ -82,14 +105,28 @@ export default async function ErelijstClubPage({ params }: { params: Promise<{ n
           </div>
         </header>
 
+        {prijzenPerJaar.length > 1 && (
+          <section className="erl-club-sec">
+            <h2 className="erl-section-title">📈 Prijzen per jaar</h2>
+            <PrijzenPerJaarChart data={prijzenPerJaar} />
+          </section>
+        )}
+
         {titels.length > 0 && (
           <section className="erl-club-sec">
             <h2 className="erl-section-title">🥇 Kampioenschappen ({titels.length})</h2>
-            <ul className="erl-tijdlijn">
-              {titels.map((t, i) => (
-                <li key={i} className="erl-tijdlijn-item">
-                  <span className="erl-tijdlijn-jaar">{t.seizoen}</span>
-                  <span className="erl-tijdlijn-detail">{t.reeksNaam}</span>
+            <ul className="erl-tijdlijn erl-tijdlijn-groepen">
+              {titelGroepen.map((g) => (
+                <li key={g.seizoen} className="erl-tijdlijn-groep">
+                  <div className="erl-tijdlijn-groep-kop">
+                    <span className="erl-tijdlijn-jaar">{g.seizoen}</span>
+                    {g.namen.length > 1 && <span className="erl-tijdlijn-badge">{g.namen.length}×</span>}
+                  </div>
+                  <ul className="erl-tijdlijn-sub">
+                    {g.namen.map((reeksNaam, i) => (
+                      <li key={i}>{reeksNaam}</li>
+                    ))}
+                  </ul>
                 </li>
               ))}
             </ul>
@@ -99,11 +136,18 @@ export default async function ErelijstClubPage({ params }: { params: Promise<{ n
         {bekers.length > 0 && (
           <section className="erl-club-sec">
             <h2 className="erl-section-title">🏆 Bekers ({bekers.length})</h2>
-            <ul className="erl-tijdlijn">
-              {bekers.map((b, i) => (
-                <li key={i} className="erl-tijdlijn-item">
-                  <span className="erl-tijdlijn-jaar">{b.seizoen}</span>
-                  <span className="erl-tijdlijn-detail">{b.categorie}</span>
+            <ul className="erl-tijdlijn erl-tijdlijn-groepen">
+              {bekerGroepen.map((g) => (
+                <li key={g.seizoen} className="erl-tijdlijn-groep">
+                  <div className="erl-tijdlijn-groep-kop">
+                    <span className="erl-tijdlijn-jaar">{g.seizoen}</span>
+                    {g.namen.length > 1 && <span className="erl-tijdlijn-badge">{g.namen.length}×</span>}
+                  </div>
+                  <ul className="erl-tijdlijn-sub">
+                    {g.namen.map((categorie, i) => (
+                      <li key={i}>{categorie}</li>
+                    ))}
+                  </ul>
                 </li>
               ))}
             </ul>
@@ -117,7 +161,7 @@ export default async function ErelijstClubPage({ params }: { params: Promise<{ n
               {referendumLaureaten.map((r, i) => (
                 <li key={i} className="erl-tijdlijn-item">
                   <span className="erl-tijdlijn-jaar">{r.jaar}</span>
-                  <span className="erl-tijdlijn-detail">{r.naam} — {r.prijs}</span>
+                  <span className="erl-tijdlijn-detail"><SpelerNaam naam={r.naam} /> — {r.prijs}</span>
                 </li>
               ))}
             </ul>

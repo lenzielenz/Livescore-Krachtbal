@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 
-import { telClubTrofeeen, telLaureaten, zoekErelijst } from '@/lib/erelijst'
+import { telClubTrofeeen, telLaureaten, zoekErelijst, seizoenNaarJaar, telPrijzenPerJaar } from '@/lib/erelijst'
 import type { KampioenenSeizoenInput, BekerwinnaarsSeizoenInput, ReferendumPrijsInput } from '@/lib/erelijst'
 
 const kampioenen: KampioenenSeizoenInput[] = [
@@ -30,20 +30,31 @@ const referendum: ReferendumPrijsInput[] = [
 ]
 
 describe('telClubTrofeeen', () => {
-  it('telt titels en bekers per club en sorteert op totaal', () => {
-    const result = telClubTrofeeen(kampioenen, bekerwinnaars)
+  it('telt titels, bekers én referendumprijzen van haar spelers per club, en sorteert op totaal', () => {
+    const result = telClubTrofeeen(kampioenen, bekerwinnaars, referendum)
     const male = result.find((r) => r.naam === 'KBC Male')!
     expect(male.titels).toBe(2)
     expect(male.bekers).toBe(1)
-    expect(male.totaal).toBe(3)
-    // KBC Male (3) moet vóór KRB Jabbeke (2) staan.
+    expect(male.referendumprijzen).toBe(1)
+    expect(male.totaal).toBe(4)
+    // KBC Male (4) moet vóór KRB Jabbeke (2) staan.
     expect(result[0].naam).toBe('KBC Male')
   })
 
+  it('neemt een club op die enkel via referendumlaureaten prijzen heeft, zonder titel of beker', () => {
+    const result = telClubTrofeeen(kampioenen, bekerwinnaars, referendum)
+    const michiels = result.find((r) => r.naam === 'KBC St. Michiels')!
+    expect(michiels.titels).toBe(0)
+    expect(michiels.bekers).toBe(0)
+    expect(michiels.referendumprijzen).toBe(2)
+    expect(michiels.totaal).toBe(2)
+  })
+
   it('negeert placeholder-winnaars (COVID, ontbrekende data)', () => {
-    const result = telClubTrofeeen(kampioenen, bekerwinnaars)
+    const result = telClubTrofeeen(kampioenen, bekerwinnaars, referendum)
     expect(result.some((r) => r.naam === 'Geen kampioenen')).toBe(false)
     expect(result.some((r) => r.naam === '(geen gegevens)')).toBe(false)
+    expect(result.some((r) => r.naam === 'COVID-19')).toBe(false)
   })
 })
 
@@ -58,6 +69,39 @@ describe('telLaureaten', () => {
   it('negeert COVID-placeholders', () => {
     const result = telLaureaten(referendum)
     expect(result.some((r) => r.naam === 'Geen')).toBe(false)
+  })
+})
+
+describe('seizoenNaarJaar', () => {
+  it('pakt het laatste jaartal uit een seizoensstring', () => {
+    expect(seizoenNaarJaar('2024-2025')).toBe(2025)
+  })
+
+  it('werkt ook op een los kalenderjaar', () => {
+    expect(seizoenNaarJaar('2025')).toBe(2025)
+  })
+
+  it('geeft 0 bij een string zonder jaartal', () => {
+    expect(seizoenNaarJaar('onbekend')).toBe(0)
+  })
+})
+
+describe('telPrijzenPerJaar', () => {
+  it('telt titels, bekers en referendumprijzen per jaar en vult stille jaren op met nul', () => {
+    const result = telPrijzenPerJaar(
+      [{ seizoen: '2022-2023' }, { seizoen: '2024-2025' }],
+      [{ seizoen: '2024-2025' }],
+      [{ jaar: '2025' }],
+    )
+    // 2023, 2024, 2025 — 2024 heeft geen titel/beker/referendumprijs, moet toch als nul-jaar verschijnen.
+    expect(result.map((r) => r.jaar)).toEqual([2023, 2024, 2025])
+    expect(result.find((r) => r.jaar === 2023)).toEqual({ jaar: 2023, titels: 1, bekers: 0, referendumprijzen: 0 })
+    expect(result.find((r) => r.jaar === 2024)).toEqual({ jaar: 2024, titels: 0, bekers: 0, referendumprijzen: 0 })
+    expect(result.find((r) => r.jaar === 2025)).toEqual({ jaar: 2025, titels: 1, bekers: 1, referendumprijzen: 1 })
+  })
+
+  it('geeft een lege lijst zonder enige titel, beker of referendumprijs', () => {
+    expect(telPrijzenPerJaar([], [], [])).toEqual([])
   })
 })
 

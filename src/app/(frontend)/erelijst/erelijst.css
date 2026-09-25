@@ -290,17 +290,31 @@
   font-size: 0.82rem;
 }
 
-/* Clubnaam als link: zelfde tekstkleur als de omgevende tekst, met een duidelijke maar niet
-   opdringerige hover-state — een link moet hier niet als een los "knopje" ogen tussen platte tekst. */
-.erl-club-link {
+/* Club-/spelernaam als link: zelfde tekstkleur als de omgevende tekst, met een duidelijke maar niet
+   opdringerige hover-state — een link moet hier niet als een los "knopje" ogen tussen platte tekst.
+   Bij een gematchte club gaat er een klein logo voor de naam (ClubNaam in EntityLinks.tsx). */
+.erl-entity-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+  vertical-align: middle;
   color: inherit;
   text-decoration: none;
   border-bottom: 1px dashed color-mix(in srgb, var(--dim) 55%, transparent);
   transition: color var(--dur-1) var(--ease-soft), border-color var(--dur-1) var(--ease-soft);
 }
-.erl-club-link:hover {
+.erl-entity-link:hover {
   color: var(--accent);
   border-color: color-mix(in srgb, var(--accent) 60%, transparent);
+}
+.erl-entity-link span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.erl-entity-link .tl {
+  flex-shrink: 0;
 }
 
 .erl-meer {
@@ -418,10 +432,130 @@
   color: var(--txt);
 }
 
+/* Gegroepeerde variant (kampioenschappen/bekers): één blok per seizoen i.p.v. een aparte rij per
+   titel — bij meerdere titels in hetzelfde seizoen (bv. 4 reeksen gewonnen in één jaar) valt dat nu
+   meteen op via het aantal-badge, i.p.v. te verdrinken tussen los ogende rijen met telkens hetzelfde
+   jaartal. */
+.erl-tijdlijn-groepen {
+  gap: 6px;
+}
+.erl-tijdlijn-groep {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--club) 6%, transparent);
+  border: 1px solid color-mix(in srgb, var(--club) 16%, var(--line));
+}
+.erl-tijdlijn-groep-kop {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.erl-tijdlijn-badge {
+  flex-shrink: 0;
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1;
+  padding: 3px 8px;
+  border-radius: 999px;
+  color: color-mix(in srgb, var(--club) 25%, #fff 75%);
+  background: color-mix(in srgb, var(--club) 55%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--club) 70%, transparent);
+}
+.erl-tijdlijn-sub {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0 0 0 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.erl-tijdlijn-sub li {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--txt);
+  font-size: 0.92rem;
+  padding-left: 14px;
+  position: relative;
+}
+.erl-tijdlijn-sub li::before {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 0.65em;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--club) 55%, var(--dim));
+}
+
 @media (max-width: 480px) {
   .erl-club-hero {
     flex-direction: column;
     align-items: flex-start;
     text-align: left;
   }
+}
+
+/* Prijzen-per-jaar-grafiek (PrijzenPerJaarChart.tsx) — zelfde kaart-taal als de rest van het
+   platform (var(--panel-grad)/var(--card-shadow), zie o.a. .an-momentum en de rangschikking-kaarten)
+   i.p.v. een kale SVG los op de pagina. Horizontaal scrollbaar zodat een club met een lange
+   geschiedenis (60+ jaar) niets verliest i.p.v. af te knippen. Vaste, niet-clubgebonden kleuren
+   (zie het component) zodat de betekenis van elke kleur overal op de site hetzelfde blijft; het
+   topjaar krijgt dezelfde goud-behandeling als de rangschikking-leider/het podium elders.	 */
+.erl-chart {
+  margin-top: 12px;
+  padding: 14px 14px 10px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--panel-grad);
+  box-shadow: var(--card-shadow);
+}
+.erl-chart-legende {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  margin: 0 0 12px;
+  font-size: 0.76rem;
+  color: var(--dim);
+}
+.erl-chart-legende-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px 3px 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--line) 45%, transparent);
+}
+.erl-chart-legende-goud {
+  color: color-mix(in srgb, #ffd166 70%, var(--dim));
+  background: color-mix(in srgb, #ffd166 14%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, #ffd166 35%, transparent);
+}
+.erl-chart-swatch {
+  width: 9px;
+  height: 9px;
+  border-radius: 3px;
+  flex-shrink: 0;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+.erl-chart-swatch-goud {
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 28%, #fff 0%, #ffd166 45%, #cf9e2e 100%);
+  box-shadow: 0 0 6px -1px color-mix(in srgb, #ffd166 80%, transparent);
+}
+.erl-chart-scroll {
+  overflow-x: auto;
+  padding: 4px 2px 2px;
+  margin: 0 -4px;
+  border-radius: 10px;
+  box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.28);
+}
+.erl-chart-scroll svg {
+  display: block;
+}
+.erl-chart-bar rect {
+  transition: filter 0.15s ease;
+}
+.erl-chart-bar:hover rect {
+  filter: brightness(1.16);
 }

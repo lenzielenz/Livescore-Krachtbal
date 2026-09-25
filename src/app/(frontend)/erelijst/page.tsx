@@ -2,6 +2,7 @@ import { SiteHeader } from '@/components/SiteHeader'
 import { getPayloadClient } from '@/lib/payload-client'
 import { telClubTrofeeen, telLaureaten } from '@/lib/erelijst'
 import { fetchErelijstData } from '@/lib/erelijst-data'
+import { buildClubLogoLookup } from '@/lib/club-logo-lookup'
 import { ErelijstBrowser } from './ErelijstBrowser'
 import './erelijst.css'
 
@@ -15,8 +16,17 @@ export default async function ErelijstPage() {
   const payload = await getPayloadClient()
   const { kampioenenSeizoenen, bekerwinnaarsSeizoenen, referendumPrijzen } = await fetchErelijstData(payload)
 
-  const clubTrofeeen = telClubTrofeeen(kampioenenSeizoenen, bekerwinnaarsSeizoenen)
+  const clubTrofeeen = telClubTrofeeen(kampioenenSeizoenen, bekerwinnaarsSeizoenen, referendumPrijzen)
   const laureaten = telLaureaten(referendumPrijzen)
+
+  // Alle letterlijke clubnamen die ergens in het archief voorkomen — voedt de logo-opzoeking zodat
+  // elke club overal op deze pagina (zoekresultaten, boards, seizoenskaarten) met logo verschijnt.
+  const alleClubnamen = [
+    ...kampioenenSeizoenen.flatMap((s) => s.reeksen.map((r) => r.kampioen)),
+    ...bekerwinnaarsSeizoenen.flatMap((s) => s.winnaars.map((w) => w.ploeg)),
+    ...referendumPrijzen.flatMap((p) => p.winnaars.map((w) => w.club)),
+  ]
+  const clubLogos = await buildClubLogoLookup(payload, alleClubnamen)
 
   return (
     <>
@@ -33,6 +43,7 @@ export default async function ErelijstPage() {
           referendumPrijzen={referendumPrijzen}
           clubTrofeeen={clubTrofeeen}
           laureaten={laureaten}
+          clubLogos={clubLogos}
         />
       </div>
     </>
