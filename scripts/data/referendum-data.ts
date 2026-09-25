@@ -28,7 +28,7 @@ export const REFERENDUM_DATA: ReferendumPrijs[] = [
       y('2018', 'Joos Anseeuw', 'KBC Male'),
       y('2017', 'Niels Bolle', 'KBK Ichtegem'),
       y('2016', 'Vincent Mahieu', 'KRB Jabbeke'),
-      y('2015', 'Thimothy Compernolle', 'KBC Male'),
+      y('2015', 'Timothy Compernolle', 'KBC Male'),
       y('2014', 'Joos Anseeuw', 'KBC Male'),
       y('2013', 'Vincent Mahieu', 'KRB Jabbeke'),
       y('2012', 'Joos Anseeuw', 'KBC Male'),

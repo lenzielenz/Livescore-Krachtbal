@@ -56,6 +56,21 @@ export default async function PronostiekStandPage() {
   const leaderboard = buildPredictionLeaderboard(scored)
   const totalPlayers = leaderboard.length
 
+  // Profielfoto's voor de avatars in de stand — wie er geen heeft, valt terug op initialen (zie
+  // components/Avatar.tsx). Eén bulk-find i.p.v. één query per rij.
+  const userIds = leaderboard.map((r) => r.userId)
+  const photosRes = userIds.length
+    ? await payload
+        .find({ collection: 'users', where: { id: { in: userIds } }, depth: 1, limit: userIds.length })
+        .catch(() => ({ docs: [] as Record<string, unknown>[] }))
+    : { docs: [] as Record<string, unknown>[] }
+  const photoByUserId: Record<number, string | null> = {}
+  for (const u of photosRes.docs) {
+    const photo = (u as { photo?: unknown }).photo
+    const url = photo && typeof photo === 'object' ? (photo as { url?: unknown }).url : null
+    photoByUserId[Number((u as { id: number }).id)] = typeof url === 'string' ? url : null
+  }
+
   // Status voor de bonusrad-teaser — zelfde logica als /pronostiek/rad, zodat de kaart hier al toont
   // of je mag draaien, boosters klaar hebt liggen, of nog moet knokken voor de top.
   const canTest = isFederationLevel(me)
@@ -127,6 +142,7 @@ export default async function PronostiekStandPage() {
             swingPerWeekend={LIVE_PRONOSTIEK_MAX_PER_WEEKEND * 5}
             totalPlayers={totalPlayers}
             winnerUserIds={winnerUserIds}
+            photoByUserId={photoByUserId}
           />
         )}
       </div>

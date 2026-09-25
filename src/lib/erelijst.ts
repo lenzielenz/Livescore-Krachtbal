@@ -101,17 +101,31 @@ export function telClubTrofeeen(
   return [...map.values()].sort((a, b) => b.totaal - a.totaal || a.naam.localeCompare(b.naam))
 }
 
-/** Telt per persoon het aantal referendum-prijzen, gesorteerd op totaal. */
+// Een enkel jaar kende de prijs weleens gedeeld toe aan twee speelsters tegelijk — het archief
+// noteert dat als één rij met beide namen samen ("Nathalie Lievens & Kristel Braem"). Die rij
+// blijft zo staan in de seizoenslijst (historisch correct: het was een gedeelde titel), maar voor
+// de telling moet elke speelster gewoon haar eigen +1 krijgen — anders bestaat "Nathalie Lievens &
+// Kristel Braem" als een derde, aparte "persoon" naast de twee echte laureaten.
+function gedeeldeWinnaars(naam: string): string[] {
+  return naam
+    .split(/\s*&\s*/)
+    .map((n) => n.trim())
+    .filter(Boolean)
+}
+
+/** Telt per persoon het aantal referendum-prijzen, gesorteerd op totaal. Een gedeelde prijs
+ *  ("X & Y") levert voor beide namen apart een punt op, niet voor de samengestelde naam. */
 export function telLaureaten(referendumPrijzen: ReferendumPrijsInput[]): Laureaat[] {
   const map = new Map<string, Laureaat>()
   for (const prijs of referendumPrijzen) {
     for (const winnaar of prijs.winnaars ?? []) {
       if (isPlaceholder(winnaar.naam)) continue
-      const key = winnaar.naam.trim()
-      const bestaand = map.get(key) ?? { naam: key, aantal: 0, prijzen: [] }
-      bestaand.aantal += 1
-      if (!bestaand.prijzen.includes(prijs.prijs)) bestaand.prijzen.push(prijs.prijs)
-      map.set(key, bestaand)
+      for (const key of gedeeldeWinnaars(winnaar.naam)) {
+        const bestaand = map.get(key) ?? { naam: key, aantal: 0, prijzen: [] }
+        bestaand.aantal += 1
+        if (!bestaand.prijzen.includes(prijs.prijs)) bestaand.prijzen.push(prijs.prijs)
+        map.set(key, bestaand)
+      }
     }
   }
   return [...map.values()].sort((a, b) => b.aantal - a.aantal || a.naam.localeCompare(b.naam))
