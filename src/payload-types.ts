@@ -158,10 +158,12 @@ export interface Config {
   globals: {
     season: Season;
     settings: Setting;
+    secretariaat: Secretariaat;
   };
   globalsSelect: {
     season: SeasonSelect<false> | SeasonSelect<true>;
     settings: SettingsSelect<false> | SettingsSelect<true>;
+    secretariaat: SecretariaatSelect<false> | SecretariaatSelect<true>;
   };
   locale: null;
   widgets: {
@@ -3161,6 +3163,31 @@ export interface Setting {
   createdAt?: string | null;
 }
 /**
+ * Contactgegevens van het federatiesecretariaat. Later de bron voor een publieke contactpagina.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "secretariaat".
+ */
+export interface Secretariaat {
+  id: number;
+  /**
+   * Bv. "Oude Burg 23, 8000 Brugge - bezoek enkel na afspraak".
+   */
+  adres?: string | null;
+  routeUrl?: string | null;
+  telefoon?: string | null;
+  telefoonAlt?: string | null;
+  email?: string | null;
+  meldenUitslagen?: string | null;
+  federatieApiContact?: string | null;
+  /**
+   * URL van de officiële pagina waar dit vandaan komt.
+   */
+  bron?: string | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "season_select".
  */
@@ -3180,6 +3207,23 @@ export interface SettingsSelect<T extends boolean = true> {
   kantineMatchIds?: T;
   veldMatchId?: T;
   knipjesDrempel?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "secretariaat_select".
+ */
+export interface SecretariaatSelect<T extends boolean = true> {
+  adres?: T;
+  routeUrl?: T;
+  telefoon?: T;
+  telefoonAlt?: T;
+  email?: T;
+  meldenUitslagen?: T;
+  federatieApiContact?: T;
+  bron?: T;
   updatedAt?: T;
   createdAt?: T;
   globalType?: T;

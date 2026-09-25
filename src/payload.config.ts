@@ -44,6 +44,7 @@ import { CvEvents } from './collections/CvEvents'
 import { FunctionGrants } from './collections/FunctionGrants'
 import { Season } from './globals/Season'
 import { Settings } from './globals/Settings'
+import { Secretariaat } from './globals/Secretariaat'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -140,7 +141,7 @@ export default buildConfig({
     CvEvents,
     FunctionGrants,
   ],
-  globals: [Season, Settings],
+  globals: [Season, Settings, Secretariaat],
   /**
    * GraphQL staat uit.
    *
