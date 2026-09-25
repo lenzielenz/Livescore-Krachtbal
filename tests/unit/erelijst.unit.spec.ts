@@ -30,20 +30,31 @@ const referendum: ReferendumPrijsInput[] = [
 ]
 
 describe('telClubTrofeeen', () => {
-  it('telt titels en bekers per club en sorteert op totaal', () => {
-    const result = telClubTrofeeen(kampioenen, bekerwinnaars)
+  it('telt titels, bekers én referendumprijzen van haar spelers per club, en sorteert op totaal', () => {
+    const result = telClubTrofeeen(kampioenen, bekerwinnaars, referendum)
     const male = result.find((r) => r.naam === 'KBC Male')!
     expect(male.titels).toBe(2)
     expect(male.bekers).toBe(1)
-    expect(male.totaal).toBe(3)
-    // KBC Male (3) moet vóór KRB Jabbeke (2) staan.
+    expect(male.referendumprijzen).toBe(1)
+    expect(male.totaal).toBe(4)
+    // KBC Male (4) moet vóór KRB Jabbeke (2) staan.
     expect(result[0].naam).toBe('KBC Male')
   })
 
+  it('neemt een club op die enkel via referendumlaureaten prijzen heeft, zonder titel of beker', () => {
+    const result = telClubTrofeeen(kampioenen, bekerwinnaars, referendum)
+    const michiels = result.find((r) => r.naam === 'KBC St. Michiels')!
+    expect(michiels.titels).toBe(0)
+    expect(michiels.bekers).toBe(0)
+    expect(michiels.referendumprijzen).toBe(2)
+    expect(michiels.totaal).toBe(2)
+  })
+
   it('negeert placeholder-winnaars (COVID, ontbrekende data)', () => {
-    const result = telClubTrofeeen(kampioenen, bekerwinnaars)
+    const result = telClubTrofeeen(kampioenen, bekerwinnaars, referendum)
     expect(result.some((r) => r.naam === 'Geen kampioenen')).toBe(false)
     expect(result.some((r) => r.naam === '(geen gegevens)')).toBe(false)
+    expect(result.some((r) => r.naam === 'COVID-19')).toBe(false)
   })
 })
 

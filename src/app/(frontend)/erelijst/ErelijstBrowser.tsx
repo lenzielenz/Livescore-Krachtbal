@@ -109,7 +109,7 @@ export function ErelijstBrowser({
           <section className="erl-boards">
             <div className="erl-board">
               <h2 className="erl-section-title">🏛️ Clubs met de meeste prijzen</h2>
-              <p className="erl-board-sub">Kampioenschappen + bekers samengeteld, per club zoals genoteerd in het archief.</p>
+              <p className="erl-board-sub">Kampioenschappen + bekers + referendumprijzen van haar spelers samengeteld, per club zoals genoteerd in het archief.</p>
               <ol className="erl-board-lijst">
                 {topClubs.map((c, i) => (
                   <li key={c.naam} className={`erl-board-item erl-rank-${i < 3 ? i + 1 : 'x'}`}>
@@ -119,7 +119,9 @@ export function ErelijstBrowser({
                         <span className="erl-board-naam"><ClubNaam naam={c.naam} logos={clubLogos} /></span>
                         <span className="erl-board-totaal">{c.totaal}</span>
                       </div>
-                      <span className="erl-board-detail">{c.titels}× 🥇 kampioen · {c.bekers}× 🏆 beker</span>
+                      <span className="erl-board-detail">
+                        {c.titels}× 🥇 kampioen · {c.bekers}× 🏆 beker · {c.referendumprijzen}× ⭐ referendumprijs
+                      </span>
                     </div>
                   </li>
                 ))}

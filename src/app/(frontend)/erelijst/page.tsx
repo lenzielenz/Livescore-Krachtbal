@@ -16,7 +16,7 @@ export default async function ErelijstPage() {
   const payload = await getPayloadClient()
   const { kampioenenSeizoenen, bekerwinnaarsSeizoenen, referendumPrijzen } = await fetchErelijstData(payload)
 
-  const clubTrofeeen = telClubTrofeeen(kampioenenSeizoenen, bekerwinnaarsSeizoenen)
+  const clubTrofeeen = telClubTrofeeen(kampioenenSeizoenen, bekerwinnaarsSeizoenen, referendumPrijzen)
   const laureaten = telLaureaten(referendumPrijzen)
 
   // Alle letterlijke clubnamen die ergens in het archief voorkomen — voedt de logo-opzoeking zodat

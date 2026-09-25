@@ -23,6 +23,7 @@ export interface ClubTrofee {
   naam: string
   titels: number
   bekers: number
+  referendumprijzen: number
   totaal: number
 }
 
@@ -52,13 +53,19 @@ export function isPlaceholder(naam: string | undefined | null): boolean {
   return false
 }
 
-/** Telt per club het aantal titels (kampioenen) en bekers (bekerwinnaars), gesorteerd op totaal. */
-export function telClubTrofeeen(kampioenenSeizoenen: KampioenenSeizoenInput[], bekerwinnaarsSeizoenen: BekerwinnaarsSeizoenInput[]): ClubTrofee[] {
+/** Telt per club het aantal titels (kampioenen), bekers (bekerwinnaars) én referendumprijzen van
+ *  haar spelers (via het `club`-veld van elke referendumwinnaar) — een club met veel bekroonde
+ *  spelers maar zonder titel hoort hier ook bij, gesorteerd op totaal. */
+export function telClubTrofeeen(
+  kampioenenSeizoenen: KampioenenSeizoenInput[],
+  bekerwinnaarsSeizoenen: BekerwinnaarsSeizoenInput[],
+  referendumPrijzen: ReferendumPrijsInput[],
+): ClubTrofee[] {
   const map = new Map<string, ClubTrofee>()
-  const bump = (naam: string | undefined, veld: 'titels' | 'bekers') => {
+  const bump = (naam: string | undefined, veld: 'titels' | 'bekers' | 'referendumprijzen') => {
     if (isPlaceholder(naam)) return
     const key = (naam as string).trim()
-    const bestaand = map.get(key) ?? { naam: key, titels: 0, bekers: 0, totaal: 0 }
+    const bestaand = map.get(key) ?? { naam: key, titels: 0, bekers: 0, referendumprijzen: 0, totaal: 0 }
     bestaand[veld] += 1
     bestaand.totaal += 1
     map.set(key, bestaand)
@@ -68,6 +75,12 @@ export function telClubTrofeeen(kampioenenSeizoenen: KampioenenSeizoenInput[], b
   }
   for (const seizoen of bekerwinnaarsSeizoenen) {
     for (const winnaar of seizoen.winnaars ?? []) bump(winnaar.ploeg, 'bekers')
+  }
+  for (const prijs of referendumPrijzen) {
+    for (const winnaar of prijs.winnaars ?? []) {
+      if (isPlaceholder(winnaar.naam)) continue
+      bump(winnaar.club, 'referendumprijzen')
+    }
   }
   return [...map.values()].sort((a, b) => b.totaal - a.totaal || a.naam.localeCompare(b.naam))
 }
