@@ -165,14 +165,15 @@ export function SiteHeader({ active = null }: { active?: NavSection }) {
               <>
                 <div className="sh-more-backdrop" onClick={() => setOpen(false)} />
                 <div className="sh-more-menu">
-                  {/* Eén duidelijke hoofdingang bovenaan: je eigen startpagina. */}
-                  {loggedIn && (
-                    <div className="sh-more-group">
-                      <Link href="/hub" className="sh-more-item sh-more-hoofd" onClick={() => setOpen(false)}>
-                        🏠 Mijn Krachtbal
-                      </Link>
-                    </div>
-                  )}
+                  {/* Eén duidelijke hoofdingang bovenaan: je eigen startpagina. Ook zichtbaar
+                      uitgelogd — /hub valt dan zelf terug op een "log in"-uitnodiging i.p.v. de
+                      gepersonaliseerde inhoud, en ontsluit zo ook Kantinescherm/Ideeënbus/Zo werkt
+                      het voor wie nog geen account heeft. */}
+                  <div className="sh-more-group">
+                    <Link href="/hub" className="sh-more-item sh-more-hoofd" onClick={() => setOpen(false)}>
+                      🏠 Mijn Krachtbal
+                    </Link>
+                  </div>
                   <div className="sh-more-group">
                     <div className="sh-more-grouphead">Volgen &amp; meespelen</div>
                     {VOLGEN.map((l) => (
