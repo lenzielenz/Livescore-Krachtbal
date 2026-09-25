@@ -1,6 +1,7 @@
 import type { Payload } from 'payload'
 
 import { naamSleutel } from './season-import'
+import { canoniekeClubNaam } from './erelijst'
 import { normalizeLogoFit, hasLogoAdjustment, type LogoFit } from './logo-fit'
 
 export interface ClubLogoMeta {
@@ -40,7 +41,9 @@ export async function buildClubLogoLookup(payload: Payload, namen: string[]): Pr
 
   const result: Record<string, ClubLogoMeta> = {}
   for (const naam of uniekeNamen) {
-    const club = kiesBesteClubMatch(clubsPerSleutel.get(naamSleutel(naam)) ?? [])
+    // Canonicaliseren vóór het matchen — zo krijgen historische naamvarianten (Robland St.
+    // Michiels, Royal KBC St. Michiels, …) hetzelfde logo als de huidige clubnaam.
+    const club = kiesBesteClubMatch(clubsPerSleutel.get(naamSleutel(canoniekeClubNaam(naam))) ?? [])
     if (!club) continue
 
     const logoUrl =

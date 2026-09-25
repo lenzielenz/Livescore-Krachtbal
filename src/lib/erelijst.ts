@@ -2,6 +2,21 @@
 // (kampioenen, bekerwinnaars, referendum-awards). Pure functies → los testbaar, geen Payload-calls
 // hier — de pagina haalt de ruwe documenten op en geeft ze hieraan door.
 
+import { CLUB_ALIASSEN } from './club-aliases-data'
+
+const CANONIEKE_NAAM_PER_ALIAS = new Map<string, string>()
+for (const groep of CLUB_ALIASSEN) {
+  CANONIEKE_NAAM_PER_ALIAS.set(groep.canoniek, groep.canoniek)
+  for (const alias of groep.aliassen) CANONIEKE_NAAM_PER_ALIAS.set(alias, groep.canoniek)
+}
+
+/** Zet een letterlijke archiefnaam om naar haar canonieke clubnaam (zie club-aliases-data.ts) —
+ *  bv. "Robland St. Michiels" en "St. Michiels" tellen zo mee bij "KBC St. Michiels". Een naam
+ *  zonder gekende alias komt ongewijzigd terug. */
+export function canoniekeClubNaam(naam: string): string {
+  return CANONIEKE_NAAM_PER_ALIAS.get(naam) ?? naam
+}
+
 export interface KampioenenSeizoenInput {
   seizoen: string
   seizoenKey?: string | null
@@ -55,7 +70,8 @@ export function isPlaceholder(naam: string | undefined | null): boolean {
 
 /** Telt per club het aantal titels (kampioenen), bekers (bekerwinnaars) én referendumprijzen van
  *  haar spelers (via het `club`-veld van elke referendumwinnaar) — een club met veel bekroonde
- *  spelers maar zonder titel hoort hier ook bij, gesorteerd op totaal. */
+ *  spelers maar zonder titel hoort hier ook bij, gesorteerd op totaal. Historische naamvarianten
+ *  (zie club-aliases-data.ts) tellen samen onder de canonieke naam. */
 export function telClubTrofeeen(
   kampioenenSeizoenen: KampioenenSeizoenInput[],
   bekerwinnaarsSeizoenen: BekerwinnaarsSeizoenInput[],
@@ -64,7 +80,7 @@ export function telClubTrofeeen(
   const map = new Map<string, ClubTrofee>()
   const bump = (naam: string | undefined, veld: 'titels' | 'bekers' | 'referendumprijzen') => {
     if (isPlaceholder(naam)) return
-    const key = (naam as string).trim()
+    const key = canoniekeClubNaam((naam as string).trim())
     const bestaand = map.get(key) ?? { naam: key, titels: 0, bekers: 0, referendumprijzen: 0, totaal: 0 }
     bestaand[veld] += 1
     bestaand.totaal += 1
