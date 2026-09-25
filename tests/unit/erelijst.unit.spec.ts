@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 
-import { telClubTrofeeen, telLaureaten, zoekErelijst, seizoenNaarJaar, telPrijzenPerJaar, canoniekeClubNaam } from '@/lib/erelijst'
+import { telClubTrofeeen, telLaureaten, zoekErelijst, seizoenNaarJaar, telPrijzenPerJaar, telPerGroep, canoniekeClubNaam } from '@/lib/erelijst'
 import type { KampioenenSeizoenInput, BekerwinnaarsSeizoenInput, ReferendumPrijsInput } from '@/lib/erelijst'
 
 const kampioenen: KampioenenSeizoenInput[] = [
@@ -160,6 +160,20 @@ describe('telPrijzenPerJaar', () => {
 
   it('geeft een lege lijst zonder enige titel, beker of referendumprijs', () => {
     expect(telPrijzenPerJaar([], [], [])).toEqual([])
+  })
+})
+
+describe('telPerGroep', () => {
+  it('telt hoe vaak elke waarde voorkomt, gesorteerd op aantal', () => {
+    const result = telPerGroep(['Hogere Heren', 'Hogere Dames', 'Hogere Heren', 'Hogere Heren', 'Hogere Dames'])
+    expect(result).toEqual([
+      { naam: 'Hogere Heren', aantal: 3 },
+      { naam: 'Hogere Dames', aantal: 2 },
+    ])
+  })
+
+  it('geeft een lege lijst bij een lege input', () => {
+    expect(telPerGroep([])).toEqual([])
   })
 })
 

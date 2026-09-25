@@ -44,14 +44,12 @@ const VOLGEN: { href: string; label: string }[] = [
 ]
 
 // Leesvoer en uitleg. Elk item een eigen icoon (geen twee keer 📰) zodat ze uit elkaar te
-// houden zijn in één oogopslag.
+// houden zijn in één oogopslag. Kantinescherm/Ideeënbus/Zo werkt het staan hier bewust niet meer
+// — die verhuisden naar de "Mijn Krachtbal"-pagina zelf (/hub) i.p.v. de menubalk.
 const ONTDEKKEN: { href: string; label: string }[] = [
   { href: '/recap', label: '🗞️ Weekoverzicht' },
   { href: '/nieuws', label: '📣 Nieuws' },
   { href: '/erelijst', label: '🥇 Erelijst' },
-  { href: '/kantine', label: '📺 Kantinescherm' },
-  { href: '/ideeenbus', label: '💡 Ideeënbus' },
-  { href: '/uitleg', label: '🎓 Zo werkt het' },
 ]
 
 // Welke rol een profiel-ingang mag zien. Federatie/admin zien alles.
@@ -167,14 +165,15 @@ export function SiteHeader({ active = null }: { active?: NavSection }) {
               <>
                 <div className="sh-more-backdrop" onClick={() => setOpen(false)} />
                 <div className="sh-more-menu">
-                  {/* Eén duidelijke hoofdingang bovenaan: je eigen startpagina. */}
-                  {loggedIn && (
-                    <div className="sh-more-group">
-                      <Link href="/hub" className="sh-more-item sh-more-hoofd" onClick={() => setOpen(false)}>
-                        🏠 Mijn Krachtbal
-                      </Link>
-                    </div>
-                  )}
+                  {/* Eén duidelijke hoofdingang bovenaan: je eigen startpagina. Ook zichtbaar
+                      uitgelogd — /hub valt dan zelf terug op een "log in"-uitnodiging i.p.v. de
+                      gepersonaliseerde inhoud, en ontsluit zo ook Kantinescherm/Ideeënbus/Zo werkt
+                      het voor wie nog geen account heeft. */}
+                  <div className="sh-more-group">
+                    <Link href="/hub" className="sh-more-item sh-more-hoofd" onClick={() => setOpen(false)}>
+                      🏠 Mijn Krachtbal
+                    </Link>
+                  </div>
                   <div className="sh-more-group">
                     <div className="sh-more-grouphead">Volgen &amp; meespelen</div>
                     {VOLGEN.map((l) => (
