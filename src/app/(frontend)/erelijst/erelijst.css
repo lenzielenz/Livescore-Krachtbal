@@ -495,3 +495,40 @@
     text-align: left;
   }
 }
+
+/* Prijzen-per-jaar-grafiek (PrijzenPerJaarChart.tsx) — gestapelde staafjes, horizontaal
+   scrollbaar zodat een club met een lange geschiedenis (60+ jaar) niets verliest i.p.v. af te
+   knippen. Vaste, niet-clubgebonden kleuren (zie het component) zodat de betekenis van elke kleur
+   overal op de site hetzelfde blijft. */
+.erl-chart {
+  margin-top: 12px;
+}
+.erl-chart-legende {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 0 0 10px;
+  font-size: 0.82rem;
+  color: var(--dim);
+}
+.erl-chart-legende-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.erl-chart-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+.erl-chart-scroll {
+  overflow-x: auto;
+  padding-bottom: 2px;
+  margin: 0 -2px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--club) 5%, transparent);
+}
+.erl-chart-scroll svg {
+  display: block;
+}

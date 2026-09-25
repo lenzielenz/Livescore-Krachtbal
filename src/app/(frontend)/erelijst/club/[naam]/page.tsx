@@ -4,11 +4,12 @@ import { notFound } from 'next/navigation'
 import { SiteHeader } from '@/components/SiteHeader'
 import { TeamLogo } from '@/components/TeamLogo'
 import { getPayloadClient } from '@/lib/payload-client'
-import { isPlaceholder } from '@/lib/erelijst'
+import { isPlaceholder, telPrijzenPerJaar } from '@/lib/erelijst'
 import { fetchErelijstData } from '@/lib/erelijst-data'
 import { naamSleutel } from '@/lib/season-import'
 import { normalizeLogoFit, hasLogoAdjustment } from '@/lib/logo-fit'
 import { SpelerNaam } from '../../EntityLinks'
+import { PrijzenPerJaarChart } from '../../PrijzenPerJaarChart'
 import '../../erelijst.css'
 
 export const dynamic = 'force-dynamic'
@@ -63,6 +64,7 @@ export default async function ErelijstClubPage({ params }: { params: Promise<{ n
 
   const titelGroepen = groepeerPerSeizoen(titels, (t) => t.reeksNaam)
   const bekerGroepen = groepeerPerSeizoen(bekers, (b) => b.categorie)
+  const prijzenPerJaar = telPrijzenPerJaar(titels, bekers, referendumLaureaten)
 
   // Best-effort matchen tegen een échte Club-record — puur voor het logo/kleur/link, verandert
   // niets aan welke archiefrijen getoond worden (die matchen altijd letterlijk op `naam`).
@@ -102,6 +104,13 @@ export default async function ErelijstClubPage({ params }: { params: Promise<{ n
             )}
           </div>
         </header>
+
+        {prijzenPerJaar.length > 1 && (
+          <section className="erl-club-sec">
+            <h2 className="erl-section-title">📈 Prijzen per jaar</h2>
+            <PrijzenPerJaarChart data={prijzenPerJaar} />
+          </section>
+        )}
 
         {titels.length > 0 && (
           <section className="erl-club-sec">

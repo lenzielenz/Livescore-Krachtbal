@@ -101,6 +101,53 @@ export function telLaureaten(referendumPrijzen: ReferendumPrijsInput[]): Laureaa
   return [...map.values()].sort((a, b) => b.aantal - a.aantal || a.naam.localeCompare(b.naam))
 }
 
+export interface PrijsJaar {
+  jaar: number
+  titels: number
+  bekers: number
+  referendumprijzen: number
+}
+
+/** Zet een seizoensstring ("2024-2025") of een los kalenderjaar ("2025") om naar één
+ *  representatief jaartal — het laatste jaar van het seizoen (waarin het afloopt) — zodat
+ *  kampioenen/bekers (per seizoen) en referendumprijzen (per kalenderjaar) op dezelfde tijdas
+ *  passen voor de grafiek op de clubpagina. */
+export function seizoenNaarJaar(seizoen: string): number {
+  const jaren = seizoen.match(/\d{4}/g)
+  if (!jaren || jaren.length === 0) return 0
+  return Number(jaren[jaren.length - 1])
+}
+
+/** Telt, voor de "prijzen per jaar"-grafiek op de clubpagina, per jaar het aantal titels, bekers
+ *  en referendumprijzen van één club — chronologisch, met expliciete nul-jaren opgevuld tussen het
+ *  eerste en laatste jaar (een "stille" periode is net zo betekenisvol als een topjaar). */
+export function telPrijzenPerJaar(
+  titels: { seizoen: string }[],
+  bekers: { seizoen: string }[],
+  referendumLaureaten: { jaar: string }[],
+): PrijsJaar[] {
+  const map = new Map<number, PrijsJaar>()
+  const bump = (jaar: number, veld: 'titels' | 'bekers' | 'referendumprijzen') => {
+    if (!jaar) return
+    const bestaand = map.get(jaar) ?? { jaar, titels: 0, bekers: 0, referendumprijzen: 0 }
+    bestaand[veld] += 1
+    map.set(jaar, bestaand)
+  }
+  for (const t of titels) bump(seizoenNaarJaar(t.seizoen), 'titels')
+  for (const b of bekers) bump(seizoenNaarJaar(b.seizoen), 'bekers')
+  for (const r of referendumLaureaten) bump(Number(r.jaar) || 0, 'referendumprijzen')
+
+  if (map.size === 0) return []
+  const jaren = [...map.keys()]
+  const minJaar = Math.min(...jaren)
+  const maxJaar = Math.max(...jaren)
+  const result: PrijsJaar[] = []
+  for (let jaar = minJaar; jaar <= maxJaar; jaar++) {
+    result.push(map.get(jaar) ?? { jaar, titels: 0, bekers: 0, referendumprijzen: 0 })
+  }
+  return result
+}
+
 /** Zoekt een club- of spelernaam (deelstring, hoofdletterongevoelig) doorheen alle drie archieven. */
 export function zoekErelijst(
   query: string,
