@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 
-import { telClubTrofeeen, telLaureaten, zoekErelijst, seizoenNaarJaar, telPrijzenPerJaar } from '@/lib/erelijst'
+import { telClubTrofeeen, telLaureaten, zoekErelijst, seizoenNaarJaar, telPrijzenPerJaar, canoniekeClubNaam } from '@/lib/erelijst'
 import type { KampioenenSeizoenInput, BekerwinnaarsSeizoenInput, ReferendumPrijsInput } from '@/lib/erelijst'
 
 const kampioenen: KampioenenSeizoenInput[] = [
@@ -29,6 +29,19 @@ const referendum: ReferendumPrijsInput[] = [
   },
 ]
 
+describe('canoniekeClubNaam', () => {
+  it('zet een gekende historische alias om naar de canonieke naam', () => {
+    expect(canoniekeClubNaam('Robland St. Michiels')).toBe('KBC St. Michiels')
+    expect(canoniekeClubNaam('Royal KBC St. Michiels')).toBe('KBC St. Michiels')
+    expect(canoniekeClubNaam('St. Michiels')).toBe('KBC St. Michiels')
+    expect(canoniekeClubNaam('KBC Sint Michiels')).toBe('KBC St. Michiels')
+  })
+
+  it('laat een naam zonder gekende alias ongewijzigd', () => {
+    expect(canoniekeClubNaam('KBC Male')).toBe('KBC Male')
+  })
+})
+
 describe('telClubTrofeeen', () => {
   it('telt titels, bekers én referendumprijzen van haar spelers per club, en sorteert op totaal', () => {
     const result = telClubTrofeeen(kampioenen, bekerwinnaars, referendum)
@@ -48,6 +61,20 @@ describe('telClubTrofeeen', () => {
     expect(michiels.bekers).toBe(0)
     expect(michiels.referendumprijzen).toBe(2)
     expect(michiels.totaal).toBe(2)
+  })
+
+  it('telt historische naamvarianten (aliassen) samen onder de canonieke naam', () => {
+    const kampioenenMetAlias: KampioenenSeizoenInput[] = [
+      { seizoen: '1970-1971', reeksen: [{ reeksNaam: 'Scholieren A', kampioen: 'Robland St. Michiels' }] },
+      { seizoen: '1966-1967', reeksen: [{ reeksNaam: 'Jeugdreeks A', kampioen: 'St. Michiels' }] },
+    ]
+    const result = telClubTrofeeen(kampioenenMetAlias, [], referendum)
+    const michiels = result.find((r) => r.naam === 'KBC St. Michiels')!
+    expect(michiels.titels).toBe(2)
+    expect(michiels.referendumprijzen).toBe(2)
+    expect(michiels.totaal).toBe(4)
+    expect(result.some((r) => r.naam === 'Robland St. Michiels')).toBe(false)
+    expect(result.some((r) => r.naam === 'St. Michiels')).toBe(false)
   })
 
   it('negeert placeholder-winnaars (COVID, ontbrekende data)', () => {
@@ -87,17 +114,41 @@ describe('seizoenNaarJaar', () => {
 })
 
 describe('telPrijzenPerJaar', () => {
-  it('telt titels, bekers en referendumprijzen per jaar en vult stille jaren op met nul', () => {
+  it('telt titels, bekers en referendumprijzen per jaar, vult stille jaren op met nul en houdt het jaardetail bij', () => {
     const result = telPrijzenPerJaar(
-      [{ seizoen: '2022-2023' }, { seizoen: '2024-2025' }],
-      [{ seizoen: '2024-2025' }],
-      [{ jaar: '2025' }],
+      [{ seizoen: '2022-2023', reeksNaam: 'Hogere Heren' }, { seizoen: '2024-2025', reeksNaam: 'Hogere Heren' }],
+      [{ seizoen: '2024-2025', categorie: 'Heren' }],
+      [{ jaar: '2025', naam: 'Jason De Vooght', prijs: 'Speler van het jaar' }],
     )
     // 2023, 2024, 2025 — 2024 heeft geen titel/beker/referendumprijs, moet toch als nul-jaar verschijnen.
     expect(result.map((r) => r.jaar)).toEqual([2023, 2024, 2025])
-    expect(result.find((r) => r.jaar === 2023)).toEqual({ jaar: 2023, titels: 1, bekers: 0, referendumprijzen: 0 })
-    expect(result.find((r) => r.jaar === 2024)).toEqual({ jaar: 2024, titels: 0, bekers: 0, referendumprijzen: 0 })
-    expect(result.find((r) => r.jaar === 2025)).toEqual({ jaar: 2025, titels: 1, bekers: 1, referendumprijzen: 1 })
+    expect(result.find((r) => r.jaar === 2023)).toEqual({
+      jaar: 2023,
+      titels: 1,
+      bekers: 0,
+      referendumprijzen: 0,
+      titelDetails: ['Hogere Heren'],
+      bekerDetails: [],
+      referendumDetails: [],
+    })
+    expect(result.find((r) => r.jaar === 2024)).toEqual({
+      jaar: 2024,
+      titels: 0,
+      bekers: 0,
+      referendumprijzen: 0,
+      titelDetails: [],
+      bekerDetails: [],
+      referendumDetails: [],
+    })
+    expect(result.find((r) => r.jaar === 2025)).toEqual({
+      jaar: 2025,
+      titels: 1,
+      bekers: 1,
+      referendumprijzen: 1,
+      titelDetails: ['Hogere Heren'],
+      bekerDetails: ['Heren'],
+      referendumDetails: [{ naam: 'Jason De Vooght', prijs: 'Speler van het jaar' }],
+    })
   })
 
   it('geeft een lege lijst zonder enige titel, beker of referendumprijs', () => {

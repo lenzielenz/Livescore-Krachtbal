@@ -4,9 +4,10 @@ import { notFound } from 'next/navigation'
 import { SiteHeader } from '@/components/SiteHeader'
 import { TeamLogo } from '@/components/TeamLogo'
 import { getPayloadClient } from '@/lib/payload-client'
-import { isPlaceholder, telPrijzenPerJaar } from '@/lib/erelijst'
+import { isPlaceholder, telPrijzenPerJaar, canoniekeClubNaam } from '@/lib/erelijst'
 import { fetchErelijstData } from '@/lib/erelijst-data'
 import { naamSleutel } from '@/lib/season-import'
+import { kiesBesteClubMatch } from '@/lib/club-logo-lookup'
 import { normalizeLogoFit, hasLogoAdjustment } from '@/lib/logo-fit'
 import { SpelerNaam } from '../../EntityLinks'
 import { PrijzenPerJaarChart } from '../../PrijzenPerJaarChart'
@@ -33,31 +34,33 @@ function groepeerPerSeizoen<T extends { seizoen: string }>(items: T[], naam: (it
 
 export async function generateMetadata({ params }: { params: Promise<{ naam: string }> }) {
   const { naam: naamParam } = await params
-  const naam = decodeURIComponent(naamParam)
+  const naam = canoniekeClubNaam(decodeURIComponent(naamParam))
   return { title: `${naam} — Erelijst — Krachtbal Live` }
 }
 
 // Gedetailleerd overzicht van wat één club (zoals letterlijk genoteerd in het archief) al bereikt
 // heeft: elk kampioenschap, elke beker en — via het `club`-veld van elke referendumwinnaar — elke
-// speler van deze club die een referendumprijs won. Matcht best-effort tegen een échte Clubs-record
-// (via dezelfde naamSleutel-normalisatie als de club-enrichment) voor het logo en de link naar de
-// echte clubpagina; zonder match valt TeamLogo vanzelf terug op initialen.
+// speler van deze club die een referendumprijs won. Historische naamvarianten (fusies, sponsor-
+// namen, "Royal"-titel — zie club-aliases-data.ts) tellen samen onder de canonieke naam: een
+// bezoek via eender welke alias-URL toont dezelfde, samengevoegde pagina. Matcht best-effort tegen
+// een échte Clubs-record (via dezelfde naamSleutel-normalisatie als de club-enrichment) voor het
+// logo en de link naar de echte clubpagina; zonder match valt TeamLogo vanzelf terug op initialen.
 export default async function ErelijstClubPage({ params }: { params: Promise<{ naam: string }> }) {
   const { naam: naamParam } = await params
-  const naam = decodeURIComponent(naamParam)
+  const naam = canoniekeClubNaam(decodeURIComponent(naamParam))
   if (isPlaceholder(naam)) notFound()
 
   const payload = await getPayloadClient()
   const { kampioenenSeizoenen, bekerwinnaarsSeizoenen, referendumPrijzen } = await fetchErelijstData(payload)
 
   const titels = kampioenenSeizoenen.flatMap((s) =>
-    s.reeksen.filter((r) => r.kampioen === naam).map((r) => ({ seizoen: s.seizoen, reeksNaam: r.reeksNaam })),
+    s.reeksen.filter((r) => canoniekeClubNaam(r.kampioen) === naam).map((r) => ({ seizoen: s.seizoen, reeksNaam: r.reeksNaam })),
   )
   const bekers = bekerwinnaarsSeizoenen.flatMap((s) =>
-    s.winnaars.filter((w) => w.ploeg === naam).map((w) => ({ seizoen: s.seizoen, categorie: w.categorie })),
+    s.winnaars.filter((w) => canoniekeClubNaam(w.ploeg) === naam).map((w) => ({ seizoen: s.seizoen, categorie: w.categorie })),
   )
   const referendumLaureaten = referendumPrijzen
-    .flatMap((p) => p.winnaars.filter((w) => w.club === naam).map((w) => ({ prijs: p.prijs, jaar: w.jaar, naam: w.naam })))
+    .flatMap((p) => p.winnaars.filter((w) => canoniekeClubNaam(w.club) === naam).map((w) => ({ prijs: p.prijs, jaar: w.jaar, naam: w.naam })))
     .sort((a, b) => Number(b.jaar) - Number(a.jaar))
 
   if (titels.length === 0 && bekers.length === 0 && referendumLaureaten.length === 0) notFound()
@@ -67,9 +70,12 @@ export default async function ErelijstClubPage({ params }: { params: Promise<{ n
   const prijzenPerJaar = telPrijzenPerJaar(titels, bekers, referendumLaureaten)
 
   // Best-effort matchen tegen een échte Club-record — puur voor het logo/kleur/link, verandert
-  // niets aan welke archiefrijen getoond worden (die matchen altijd letterlijk op `naam`).
+  // niets aan welke archiefrijen getoond worden (die matchen altijd letterlijk op `naam`). Bij
+  // meerdere gelijknamige clubs (competitie + analyse-only, zie kiesBesteClubMatch) kiezen we de
+  // echte competitieclub, anders 404't "Bekijk clubpagina" op een analyse-only schaduwrecord.
   const clubsRes = await payload.find({ collection: 'clubs', limit: 1000, overrideAccess: true, depth: 0 }).catch(() => ({ docs: [] as Record<string, unknown>[] }))
-  const match = clubsRes.docs.find((c) => naamSleutel(String(c.name ?? '')) === naamSleutel(naam))
+  const kandidaten = clubsRes.docs.filter((c) => naamSleutel(String(c.name ?? '')) === naamSleutel(naam))
+  const match = kiesBesteClubMatch(kandidaten)
 
   const logoUrl = match
     ? match.logo && typeof match.logo === 'object'
@@ -97,7 +103,7 @@ export default async function ErelijstClubPage({ params }: { params: Promise<{ n
               {totaal > 0 && <>{titels.length}× 🥇 kampioen · {bekers.length}× 🏆 beker</>}
               {referendumLaureaten.length > 0 && <> · {referendumLaureaten.length}× ⭐ referendumprijs</>}
             </p>
-            {Boolean(match) && (
+            {Boolean(match) && !(match as { analyseOnly?: boolean }).analyseOnly && (
               <Link href={`/clubs/${(match as { id: number }).id}`} className="erl-club-hero-link">
                 Bekijk clubpagina →
               </Link>

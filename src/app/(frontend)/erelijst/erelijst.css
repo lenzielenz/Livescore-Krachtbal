@@ -553,9 +553,80 @@
 .erl-chart-scroll svg {
   display: block;
 }
+.erl-chart-bar {
+  cursor: pointer;
+}
 .erl-chart-bar rect {
   transition: filter 0.15s ease;
 }
 .erl-chart-bar:hover rect {
   filter: brightness(1.16);
+}
+.erl-chart-bar:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+.erl-chart-hint {
+  margin: 8px 2px 0;
+  font-size: 0.72rem;
+  color: var(--dim);
+  text-align: center;
+}
+.erl-chart-detail {
+  margin: 10px 0 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--accent) 8%, var(--panel));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+.erl-chart-detail-kop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.erl-chart-detail-kop strong {
+  font-family: var(--font-display), var(--font-body), 'Segoe UI', sans-serif;
+  font-size: 1rem;
+  color: var(--txt);
+}
+.erl-chart-detail-sluit {
+  appearance: none;
+  border: none;
+  background: color-mix(in srgb, var(--line) 60%, transparent);
+  color: var(--dim);
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.erl-chart-detail-sluit:hover {
+  background: color-mix(in srgb, var(--accent) 30%, transparent);
+  color: var(--txt);
+}
+.erl-chart-detail-leeg {
+  margin: 8px 0 0;
+  color: var(--dim);
+  font-size: 0.86rem;
+  font-style: italic;
+}
+.erl-chart-detail-lijst {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.erl-chart-detail-lijst li {
+  font-size: 0.86rem;
+  color: var(--txt);
+  min-width: 0;
+  overflow-wrap: anywhere;
 }

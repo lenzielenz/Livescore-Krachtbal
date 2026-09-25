@@ -116,7 +116,7 @@ export function ErelijstBrowser({
                     <span className="erl-rank">{i + 1}</span>
                     <div className="erl-board-info">
                       <div className="erl-board-main">
-                        <span className="erl-board-naam"><ClubNaam naam={c.naam} logos={clubLogos} /></span>
+                        <span className="erl-board-naam"><ClubNaam naam={c.naam} /></span>
                         <span className="erl-board-totaal">{c.totaal}</span>
                       </div>
                       <span className="erl-board-detail">
