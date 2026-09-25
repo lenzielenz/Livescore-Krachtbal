@@ -108,9 +108,11 @@
 @media (min-width: 700px) {
   .sb-side-team .tl { width: 108px; height: 108px; font-size: 108px; }
 }
-/* Naam leunt naar wit (met clubtint) zodat ze altijd leesbaar is, ook bij donkere/zwakke clubkleuren. */
-.sb-main > .sb-side-team:first-child .sb-name { color: color-mix(in srgb, var(--home) 55%, #fff); text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5), 0 0 20px color-mix(in srgb, var(--home) 35%, transparent); }
-.sb-main > .sb-side-team:last-child .sb-name { color: color-mix(in srgb, var(--away) 55%, #fff); text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5), 0 0 20px color-mix(in srgb, var(--away) 35%, transparent); }
+/* De naam blijft zuiver wit (leesbaar op elke ondergrond); de clubkleur zit onverdund in de
+   gloed erachter. Voorheen mixte de tekst zelf 55% wit door de clubkleur — bij een diepe kleur
+   (bv. een clubrood of -blauw) trok dat de naam zichtbaar naar roze/lila i.p.v. "dat" rood/blauw. */
+.sb-main > .sb-side-team:first-child .sb-name { color: #fff; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5), 0 0 20px color-mix(in srgb, var(--home) 55%, transparent); }
+.sb-main > .sb-side-team:last-child .sb-name { color: #fff; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5), 0 0 20px color-mix(in srgb, var(--away) 55%, transparent); }
 
 .sb-status { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
 /* Transparante rand op de basis: de neutrale varianten kleuren die enkel in, zodat alle drie de
