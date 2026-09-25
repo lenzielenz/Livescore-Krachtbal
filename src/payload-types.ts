@@ -76,6 +76,7 @@ export interface Config {
     officials: Official;
     accidents: Accident;
     cupfinals: Cupfinal;
+    kampioenen: Kampioenen;
     sanctions: Sanction;
     tournaments: Tournament;
     'tournament-matches': TournamentMatch;
@@ -116,6 +117,7 @@ export interface Config {
     officials: OfficialsSelect<false> | OfficialsSelect<true>;
     accidents: AccidentsSelect<false> | AccidentsSelect<true>;
     cupfinals: CupfinalsSelect<false> | CupfinalsSelect<true>;
+    kampioenen: KampioenenSelect<false> | KampioenenSelect<true>;
     sanctions: SanctionsSelect<false> | SanctionsSelect<true>;
     tournaments: TournamentsSelect<false> | TournamentsSelect<true>;
     'tournament-matches': TournamentMatchesSelect<false> | TournamentMatchesSelect<true>;
@@ -1161,6 +1163,34 @@ export interface Cupfinal {
   createdAt: string;
 }
 /**
+ * Historisch archief: per seizoen de kampioen van elke reeks. Later de bron voor een publieke kampioenenlijst.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "kampioenen".
+ */
+export interface Kampioenen {
+  id: number;
+  /**
+   * Bv. "2024-2025".
+   */
+  seizoen: string;
+  /**
+   * De "seizoen"-parameter uit de bron-URL (bv. "202425"), enkel voor herimport/koppeling — niet tonen aan bezoekers.
+   */
+  seizoenKey?: string | null;
+  /**
+   * URL van de officiële pagina waar dit vandaan komt.
+   */
+  bron?: string | null;
+  reeksen: {
+    reeksNaam: string;
+    kampioen: string;
+    id?: string | null;
+  }[];
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "sanctions".
  */
@@ -1966,6 +1996,10 @@ export interface PayloadLockedDocument {
         value: number | Cupfinal;
       } | null)
     | ({
+        relationTo: 'kampioenen';
+        value: number | Kampioenen;
+      } | null)
+    | ({
         relationTo: 'sanctions';
         value: number | Sanction;
       } | null)
@@ -2438,6 +2472,24 @@ export interface CupfinalsSelect<T extends boolean = true> {
         verantwoordelijke?: T;
         gedaan?: T;
         opmerking?: T;
+        id?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "kampioenen_select".
+ */
+export interface KampioenenSelect<T extends boolean = true> {
+  seizoen?: T;
+  seizoenKey?: T;
+  bron?: T;
+  reeksen?:
+    | T
+    | {
+        reeksNaam?: T;
+        kampioen?: T;
         id?: T;
       };
   updatedAt?: T;

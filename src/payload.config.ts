@@ -22,6 +22,7 @@ import { Officials } from './collections/Officials'
 import { MatchSheets } from './collections/MatchSheets'
 import { Accidents } from './collections/Accidents'
 import { CupFinals } from './collections/CupFinals'
+import { Kampioenen } from './collections/Kampioenen'
 import { Sanctions } from './collections/Sanctions'
 import { Tournaments } from './collections/Tournaments'
 import { TournamentMatches } from './collections/TournamentMatches'
@@ -109,6 +110,7 @@ export default buildConfig({
     Officials,
     Accidents,
     CupFinals,
+    Kampioenen,
     Sanctions,
     Tournaments,
     TournamentMatches,
