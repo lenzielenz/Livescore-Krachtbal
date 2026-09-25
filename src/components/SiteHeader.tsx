@@ -49,6 +49,11 @@ const ONTDEKKEN: { href: string; label: string }[] = [
   { href: '/recap', label: '🗞️ Weekoverzicht' },
   { href: '/nieuws', label: '📣 Nieuws' },
   { href: '/erelijst', label: '🥇 Erelijst' },
+]
+
+// Directe hulpmiddelen, meteen onder "Mijn Krachtbal" — geen aparte kop nodig, ze horen bij die
+// hoofdingang i.p.v. bij het leesvoer in "Ontdekken". Altijd zichtbaar (ook uitgelogd).
+const KRACHTBAL_TOOLS: { href: string; label: string }[] = [
   { href: '/kantine', label: '📺 Kantinescherm' },
   { href: '/ideeenbus', label: '💡 Ideeënbus' },
   { href: '/uitleg', label: '🎓 Zo werkt het' },
@@ -175,6 +180,13 @@ export function SiteHeader({ active = null }: { active?: NavSection }) {
                       </Link>
                     </div>
                   )}
+                  <div className="sh-more-group">
+                    {KRACHTBAL_TOOLS.map((l) => (
+                      <Link key={l.href} href={l.href} className="sh-more-item" onClick={() => setOpen(false)}>
+                        {l.label}
+                      </Link>
+                    ))}
+                  </div>
                   <div className="sh-more-group">
                     <div className="sh-more-grouphead">Volgen &amp; meespelen</div>
                     {VOLGEN.map((l) => (
