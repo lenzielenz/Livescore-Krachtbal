@@ -16,4 +16,16 @@ export const CLUB_ALIASSEN: ClubAliasGroep[] = [
     canoniek: 'KBC St. Michiels',
     aliassen: ['Royal KBC St. Michiels', 'Robland St. Michiels', 'St. Michiels', 'KBC Sint Michiels'],
   },
+  {
+    canoniek: 'KSVV Inter Assebroek',
+    aliassen: ['KSVV Inter Assebroek B'],
+  },
+  {
+    canoniek: 't Klaverken Buggenhout',
+    aliassen: ['Klaverken Buggenhout'],
+  },
+  {
+    canoniek: 't Botterken Baasrode',
+    aliassen: ['Botterken Baasrode'],
+  },
 ]
