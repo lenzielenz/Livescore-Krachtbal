@@ -9,13 +9,16 @@
 // velden die nu leeg zijn worden aangevuld. Idempotent en veilig om opnieuw te draaien: een tweede
 // run vindt niets meer aan te vullen zodra alles ingevuld is.
 //
-// Ambigue matches (0 of >1 clubs voor dezelfde contactfiche) worden overgeslagen en gerapporteerd
-// i.p.v. geraden — controleer die na het draaien handmatig in de admin.
+// Bij meerdere clubs onder dezelfde genormaliseerde naam kiest kiesBesteClubMatch bewust het
+// competitierecord (niet een analyse-only schaduwrecord) — enkel bij 0 matches, of >1 échte
+// (niet-analyse-only) clubs voor dezelfde contactfiche, wordt overgeslagen en gerapporteerd i.p.v.
+// geraden; controleer die na het draaien handmatig in de admin.
 import 'dotenv/config'
 import { getPayload } from 'payload'
 
 import config from '../src/payload.config'
 import { naamSleutel } from '../src/lib/season-import'
+import { kiesBesteClubMatch } from '../src/lib/club-logo-lookup'
 import { CLUB_CONTACTS_DATA } from './data/club-contacts-data'
 
 const VULBARE_VELDEN = ['accommodatie', 'plaats', 'telefoon', 'website', 'secretarisNaam', 'secretarisEmail', 'jeugdNaam', 'jeugdEmail'] as const
@@ -54,12 +57,19 @@ async function main() {
       onbekend.push(contact.naam)
       continue
     }
-    if (gevonden.size > 1) {
-      ambigu.push(`${contact.naam} → ${[...gevonden.values()].map((c) => c.name).join(', ')}`)
+    // Een club bestaat vaak meermaals onder dezelfde genormaliseerde naam: één echt
+    // competitierecord + één of meerdere analyse-only schaduwrecords (zie collections/Clubs.ts).
+    // Dat is geen echte ambiguïteit — kiesBesteClubMatch kiest bewust het competitierecord, net als
+    // bij de logo-koppeling (club-logo-lookup.ts) en de erelijst-clubpagina. Enkel als er ÉCHT
+    // meerdere niet-analyse-only clubs onder dezelfde naam zitten, is het te ambigu om te raden.
+    const kandidaten = [...gevonden.values()]
+    const nietAnalyseOnly = kandidaten.filter((c) => !c.analyseOnly)
+    if (nietAnalyseOnly.length > 1) {
+      ambigu.push(`${contact.naam} → ${nietAnalyseOnly.map((c) => c.name).join(', ')}`)
       continue
     }
 
-    const club = [...gevonden.values()][0]
+    const club = kiesBesteClubMatch(kandidaten)!
     const patch: Record<string, string> = {}
     for (const veld of VULBARE_VELDEN) {
       const huidig = club[veld]
