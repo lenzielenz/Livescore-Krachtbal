@@ -7,7 +7,7 @@ import { getAuthUser } from '@/lib/auth-user'
 import { buildMatchState } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
 import { buildPredictionLeaderboard, MAX_POINTS_PER_MATCH, PRED_POINTS, type PredEntry } from '@/lib/prediction-score'
-import { activeTokens, radWinnerCount, SPINS_PER_WEEK, type RadToken } from '@/lib/pronostiek-rad'
+import { activeTokens, RAD_SEGMENTS, radWinnerCount, SPINS_PER_WEEK, TOKEN_WEEKS_VALID, type RadToken } from '@/lib/pronostiek-rad'
 import { loadRadState } from '@/lib/pronostiek-rad-server'
 import { LIVE_PRONOSTIEK_MAX_PER_WEEKEND } from '@/lib/pronostiek-weekend'
 import { seasonFromDate } from '@/lib/seasons'
@@ -68,6 +68,11 @@ export default async function PronostiekStandPage() {
   const usedThisWeek = power.spinWeek === radState.weekendStartIso ? Number(power.spinsUsed) || 0 : 0
   const spinsLeft = canTest ? 99 : eligible ? Math.max(0, SPINS_PER_WEEK - usedThisWeek) : 0
   const winnerCount = radWinnerCount(radState.participants)
+  // Unieke vermenigvuldigers op het rad (RAD_SEGMENTS herhaalt de vaakst voorkomende voor de
+  // taartpunt-grootte — voor de uitleg tonen we elke waarde maar één keer).
+  const radMultipliers = [...new Set(RAD_SEGMENTS.map((s) => s.mult))].sort((a, b) => a - b)
+  const radJackpot = Math.max(...radMultipliers)
+  const winnerUserIds = new Set(radState.winners.map((w) => w.userId))
 
   return (
     <>
@@ -83,7 +88,7 @@ export default async function PronostiekStandPage() {
         />
         <p className="vs-intro">Seizoen {seizoen} · <Link href="/" style={{ color: 'var(--accent)' }}>voorspel mee op een livewedstrijd</Link>.</p>
         <details className="vs-rules">
-          <summary>Hoe werken de punten?</summary>
+          <summary>Hoe werken de punten & het bonusrad?</summary>
           <ul>
             <li><strong>Exacte uitslag</strong>: {PRED_POINTS.exact} · juiste winnaar + doelsaldo: {PRED_POINTS.resultAndDiff} · juiste winnaar: {PRED_POINTS.result}</li>
             <li><strong>Nabijheid</strong>: tot +{PRED_POINTS.nearMax} (hoe dichter, hoe meer) · <strong>dichtst bij</strong>: +{PRED_POINTS.closest}</li>
@@ -91,6 +96,26 @@ export default async function PronostiekStandPage() {
             <li>Hoe later tijdens de match je voorspelt, hoe <strong>minder</strong> je punten waard zijn</li>
             <li>Max. <strong>{LIVE_PRONOSTIEK_MAX_PER_WEEKEND}</strong> voorspellingen per weekend — élke <strong>maandag 08:00</strong> kan je opnieuw voorspellen</li>
           </ul>
+          {/* Zelfde uitleg-blok als de punten hierboven, want de teaser-kaart bovenaan roept wel op
+              om te draaien maar zegt nergens WANNEER dat mag of wat je ermee doet — dat stond enkel
+              (deels) op /pronostiek/rad zelf. */}
+          <div className="vs-rad-explain">
+            <p className="vs-rad-lead">
+              🎡 Elk weekend mogen de <strong>{winnerCount}</strong> beste voorspellers van het weekend ervoor aan het bonusrad draaien.
+            </p>
+            <ol className="vs-rad-steps">
+              <li>Verzamel punten zoals hierboven — hoe hoger je eindigt in het weekendklassement, hoe groter je kans om bij de top {winnerCount} te horen.</li>
+              <li>Sta je erbij? Dan krijg je <strong>{SPINS_PER_WEEK} gratis draaien</strong>, elke <strong>maandag 08:00</strong> weer opnieuw.</li>
+              <li>Elke draai levert een <strong>vermenigvuldiger</strong> op die je zelf kiest op een toekomstige voorspelling — geldig <strong>{TOKEN_WEEKS_VALID} weken</strong>.</li>
+            </ol>
+            <div className="vs-rad-prizes">
+              {radMultipliers.map((m) => (
+                <span key={m} className={`vs-rad-chip${m === radJackpot ? ' jackpot' : ''}`}>
+                  {m === radJackpot ? '🎰 ' : ''}×{m}{m === radJackpot ? ' Jackpot' : ''}
+                </span>
+              ))}
+            </div>
+          </div>
         </details>
 
         {leaderboard.length === 0 ? (
@@ -101,6 +126,7 @@ export default async function PronostiekStandPage() {
             myUserId={myUserId}
             swingPerWeekend={LIVE_PRONOSTIEK_MAX_PER_WEEKEND * 5}
             totalPlayers={totalPlayers}
+            winnerUserIds={winnerUserIds}
           />
         )}
       </div>
