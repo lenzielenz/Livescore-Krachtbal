@@ -235,14 +235,21 @@
   .sh-brand {
     font-size: 1rem;
   }
-  /* Op een staande smartphone is de terugweg naar het wedstrijdoverzicht belangrijker dan het
-     weer. Laat daarom "Wedstrijden" altijd staan en win de nodige ruimte met het weerblokje. */
+  /* Het weerblokje verdween hier volledig ("geen logo meer van het weerbericht", gemeld) — dat
+     was geen bewuste keuze om te missen, enkel ruimte winnen voor "Wedstrijden"/"Meer". Nu blijft
+     het staan, maar dan wél zo compact mogelijk: geen pijltje, minimale padding — net genoeg om
+     naast de navigatie te passen zonder dat die twee moeten gaan afbreken. */
   .sh-inner .wx-mini {
+    padding: 4px 7px;
+    gap: 3px;
+    font-size: 0.76rem;
+  }
+  .sh-inner .wx-mini-caret {
     display: none;
   }
   .sh-right {
     flex-wrap: nowrap;
-    gap: 3px;
+    gap: 4px;
   }
   .sh-link {
     padding: 6px 7px;
