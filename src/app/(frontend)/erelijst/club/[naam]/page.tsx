@@ -4,13 +4,14 @@ import { notFound } from 'next/navigation'
 import { SiteHeader } from '@/components/SiteHeader'
 import { TeamLogo } from '@/components/TeamLogo'
 import { getPayloadClient } from '@/lib/payload-client'
-import { isPlaceholder, telPrijzenPerJaar, telPerGroep, canoniekeClubNaam } from '@/lib/erelijst'
+import { isPlaceholder, telPrijzenPerJaar, telPerGroep, canoniekeClubNaam, canoniekeReeksNaam } from '@/lib/erelijst'
 import { fetchErelijstData } from '@/lib/erelijst-data'
 import { naamSleutel } from '@/lib/season-import'
 import { kiesBesteClubMatch } from '@/lib/club-logo-lookup'
 import { normalizeLogoFit, hasLogoAdjustment } from '@/lib/logo-fit'
 import { SpelerNaam } from '../../EntityLinks'
 import { PrijzenPerJaarChart } from '../../PrijzenPerJaarChart'
+import { ReeksTotaalKaart } from '../../ReeksTotaalKaart'
 import '../../erelijst.css'
 
 export const dynamic = 'force-dynamic'
@@ -68,8 +69,8 @@ export default async function ErelijstClubPage({ params }: { params: Promise<{ n
   const titelGroepen = groepeerPerSeizoen(titels, (t) => t.reeksNaam)
   const bekerGroepen = groepeerPerSeizoen(bekers, (b) => b.categorie)
   const prijzenPerJaar = telPrijzenPerJaar(titels, bekers, referendumLaureaten)
-  const titelsPerReeks = telPerGroep(titels.map((t) => t.reeksNaam))
-  const bekersPerCategorie = telPerGroep(bekers.map((b) => b.categorie))
+  const titelsPerReeks = telPerGroep(titels.map((t) => canoniekeReeksNaam(t.reeksNaam)))
+  const bekersPerCategorie = telPerGroep(bekers.map((b) => canoniekeReeksNaam(b.categorie)))
 
   // Best-effort matchen tegen een échte Club-record — puur voor het logo/kleur/link, verandert
   // niets aan welke archiefrijen getoond worden (die matchen altijd letterlijk op `naam`). Bij
@@ -123,19 +124,7 @@ export default async function ErelijstClubPage({ params }: { params: Promise<{ n
         {titels.length > 0 && (
           <section className="erl-club-sec">
             <h2 className="erl-section-title">🥇 Kampioenschappen ({titels.length})</h2>
-            {titelsPerReeks.length > 1 && (
-              <div className="erl-kaart erl-reeks-totaal">
-                <h3 className="erl-kaart-titel">Totaal per reeks</h3>
-                <ul className="erl-kaart-rijen erl-kaart-rijen-grid">
-                  {titelsPerReeks.map((r) => (
-                    <li key={r.naam} className="erl-kaart-rij">
-                      <span className="erl-kaart-label">{r.naam}</span>
-                      <span className="erl-kaart-waarde">{r.aantal}×</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
+            {titelsPerReeks.length > 1 && <ReeksTotaalKaart titel="Totaal per reeks" woord="reeksen" data={titelsPerReeks} />}
             <ul className="erl-tijdlijn erl-tijdlijn-groepen">
               {titelGroepen.map((g) => (
                 <li key={g.seizoen} className="erl-tijdlijn-groep">
@@ -157,19 +146,7 @@ export default async function ErelijstClubPage({ params }: { params: Promise<{ n
         {bekers.length > 0 && (
           <section className="erl-club-sec">
             <h2 className="erl-section-title">🏆 Bekers ({bekers.length})</h2>
-            {bekersPerCategorie.length > 1 && (
-              <div className="erl-kaart erl-reeks-totaal">
-                <h3 className="erl-kaart-titel">Totaal per categorie</h3>
-                <ul className="erl-kaart-rijen erl-kaart-rijen-grid">
-                  {bekersPerCategorie.map((r) => (
-                    <li key={r.naam} className="erl-kaart-rij">
-                      <span className="erl-kaart-label">{r.naam}</span>
-                      <span className="erl-kaart-waarde">{r.aantal}×</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
+            {bekersPerCategorie.length > 1 && <ReeksTotaalKaart titel="Totaal per categorie" woord="categorieën" data={bekersPerCategorie} />}
             <ul className="erl-tijdlijn erl-tijdlijn-groepen">
               {bekerGroepen.map((g) => (
                 <li key={g.seizoen} className="erl-tijdlijn-groep">
