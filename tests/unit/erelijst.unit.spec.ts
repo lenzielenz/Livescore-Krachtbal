@@ -27,6 +27,10 @@ const referendum: ReferendumPrijsInput[] = [
     prijs: 'Belofte van het jaar (jongens)',
     winnaars: [{ jaar: '2025', naam: 'Kobe Sevenhant', club: 'KBC Male' }],
   },
+  {
+    prijs: 'Speelster van het jaar',
+    winnaars: [{ jaar: '2006', naam: 'Nathalie Lievens & Kristel Braem', club: 'KBK Ichtegem & KB Moerdamme' }],
+  },
 ]
 
 describe('canoniekeClubNaam', () => {
@@ -104,6 +108,17 @@ describe('telLaureaten', () => {
   it('negeert COVID-placeholders', () => {
     const result = telLaureaten(referendum)
     expect(result.some((r) => r.naam === 'Geen')).toBe(false)
+  })
+
+  it('splitst een gedeelde prijs ("X & Y") in twee aparte laureaten, elk met +1', () => {
+    const result = telLaureaten(referendum)
+    expect(result.some((r) => r.naam === 'Nathalie Lievens & Kristel Braem')).toBe(false)
+    const nathalie = result.find((r) => r.naam === 'Nathalie Lievens')!
+    const kristel = result.find((r) => r.naam === 'Kristel Braem')!
+    expect(nathalie.aantal).toBe(1)
+    expect(nathalie.prijzen).toEqual(['Speelster van het jaar'])
+    expect(kristel.aantal).toBe(1)
+    expect(kristel.prijzen).toEqual(['Speelster van het jaar'])
   })
 })
 
