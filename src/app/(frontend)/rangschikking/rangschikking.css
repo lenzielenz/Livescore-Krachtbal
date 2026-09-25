@@ -205,8 +205,12 @@
   .rang-logo {
     display: none;
   }
+  /* Het rangcijfer (podiumrondje van 24px) + het pijltje ernaast (.rang-rankline) hadden hier
+     amper 30px te verdelen — ze plakten zichtbaar tegen elkaar en tegen de ploegnaam. 10px extra
+     komt van de 5 smalle statistiek-kolommen hieronder (elk 2px minder), zodat de ploegnaamkolom
+     evenveel plaats behoudt. */
   .rang-rank {
-    width: 30px;
+    width: 40px;
   }
   .rang-team {
     min-width: 0;
@@ -224,7 +228,7 @@
   /* Numerieke kolommen smal en gelijk; de ploegnaam krijgt de rest. */
   .rang-table th:not(.rang-teamh):not(.rang-rank),
   .rang-table td:not(.rang-team):not(.rang-rank) {
-    width: 30px;
+    width: 28px;
   }
   /* De laatste kolom (PTN) vulde met 2px padding zijn 30px precies, zodat de kop tegen de
      kaartrand plakte. Een tikje breder met wat ademruimte rechts; de ploegnaam levert die in.
@@ -250,7 +254,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 3px;
+  gap: 5px;
 }
 .rang-rank .rang-pos {
   display: inline-flex;
