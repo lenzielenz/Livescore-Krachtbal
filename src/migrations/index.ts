@@ -126,6 +126,7 @@ import * as migration_20260922_090000_user_team from './20260922_090000_user_tea
 import * as migration_20260922_100000_user_functie from './20260922_100000_user_functie'
 import * as migration_20260922_110000_match_peak_viewers from './20260922_110000_match_peak_viewers'
 import * as migration_20260925_060000_kampioenen from './20260925_060000_kampioenen'
+import * as migration_20260925_070000_bekerwinnaars_referendum from './20260925_070000_bekerwinnaars_referendum'
 
 export const migrations = [
   {
@@ -762,5 +763,10 @@ export const migrations = [
     up: migration_20260925_060000_kampioenen.up,
     down: migration_20260925_060000_kampioenen.down,
     name: '20260925_060000_kampioenen',
+  },
+  {
+    up: migration_20260925_070000_bekerwinnaars_referendum.up,
+    down: migration_20260925_070000_bekerwinnaars_referendum.down,
+    name: '20260925_070000_bekerwinnaars_referendum',
   },
 ];

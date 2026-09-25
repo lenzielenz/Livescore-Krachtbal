@@ -23,6 +23,8 @@ import { MatchSheets } from './collections/MatchSheets'
 import { Accidents } from './collections/Accidents'
 import { CupFinals } from './collections/CupFinals'
 import { Kampioenen } from './collections/Kampioenen'
+import { Bekerwinnaars } from './collections/Bekerwinnaars'
+import { ReferendumAwards } from './collections/ReferendumAwards'
 import { Sanctions } from './collections/Sanctions'
 import { Tournaments } from './collections/Tournaments'
 import { TournamentMatches } from './collections/TournamentMatches'
@@ -111,6 +113,8 @@ export default buildConfig({
     Accidents,
     CupFinals,
     Kampioenen,
+    Bekerwinnaars,
+    ReferendumAwards,
     Sanctions,
     Tournaments,
     TournamentMatches,

@@ -77,6 +77,8 @@ export interface Config {
     accidents: Accident;
     cupfinals: Cupfinal;
     kampioenen: Kampioenen;
+    bekerwinnaars: Bekerwinnaar;
+    'referendum-awards': ReferendumAward;
     sanctions: Sanction;
     tournaments: Tournament;
     'tournament-matches': TournamentMatch;
@@ -118,6 +120,8 @@ export interface Config {
     accidents: AccidentsSelect<false> | AccidentsSelect<true>;
     cupfinals: CupfinalsSelect<false> | CupfinalsSelect<true>;
     kampioenen: KampioenenSelect<false> | KampioenenSelect<true>;
+    bekerwinnaars: BekerwinnaarsSelect<false> | BekerwinnaarsSelect<true>;
+    'referendum-awards': ReferendumAwardsSelect<false> | ReferendumAwardsSelect<true>;
     sanctions: SanctionsSelect<false> | SanctionsSelect<true>;
     tournaments: TournamentsSelect<false> | TournamentsSelect<true>;
     'tournament-matches': TournamentMatchesSelect<false> | TournamentMatchesSelect<true>;
@@ -1191,6 +1195,59 @@ export interface Kampioenen {
   createdAt: string;
 }
 /**
+ * Historisch archief: per seizoen de bekerwinnaar van elke categorie. Later de bron voor een publieke lijst.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "bekerwinnaars".
+ */
+export interface Bekerwinnaar {
+  id: number;
+  /**
+   * Bv. "2024-2025".
+   */
+  seizoen: string;
+  /**
+   * De "seizoen"-parameter uit de bron-URL (bv. "2024_2025"), enkel voor herimport/koppeling — niet tonen aan bezoekers.
+   */
+  seizoenKey?: string | null;
+  /**
+   * URL van de officiële pagina waar dit vandaan komt.
+   */
+  bron?: string | null;
+  winnaars: {
+    categorie: string;
+    ploeg: string;
+    id?: string | null;
+  }[];
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Historisch archief van het jaarlijkse referendum (speler/speelster/belofte van het jaar). Later de bron voor een publieke lijst.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "referendum-awards".
+ */
+export interface ReferendumAward {
+  id: number;
+  /**
+   * Bv. "Speler van het jaar".
+   */
+  prijs: string;
+  /**
+   * URL van de officiële pagina waar dit vandaan komt.
+   */
+  bron?: string | null;
+  winnaars: {
+    jaar: string;
+    naam: string;
+    club: string;
+    id?: string | null;
+  }[];
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "sanctions".
  */
@@ -2000,6 +2057,14 @@ export interface PayloadLockedDocument {
         value: number | Kampioenen;
       } | null)
     | ({
+        relationTo: 'bekerwinnaars';
+        value: number | Bekerwinnaar;
+      } | null)
+    | ({
+        relationTo: 'referendum-awards';
+        value: number | ReferendumAward;
+      } | null)
+    | ({
         relationTo: 'sanctions';
         value: number | Sanction;
       } | null)
@@ -2490,6 +2555,42 @@ export interface KampioenenSelect<T extends boolean = true> {
     | {
         reeksNaam?: T;
         kampioen?: T;
+        id?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "bekerwinnaars_select".
+ */
+export interface BekerwinnaarsSelect<T extends boolean = true> {
+  seizoen?: T;
+  seizoenKey?: T;
+  bron?: T;
+  winnaars?:
+    | T
+    | {
+        categorie?: T;
+        ploeg?: T;
+        id?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "referendum-awards_select".
+ */
+export interface ReferendumAwardsSelect<T extends boolean = true> {
+  prijs?: T;
+  bron?: T;
+  winnaars?:
+    | T
+    | {
+        jaar?: T;
+        naam?: T;
+        club?: T;
         id?: T;
       };
   updatedAt?: T;
