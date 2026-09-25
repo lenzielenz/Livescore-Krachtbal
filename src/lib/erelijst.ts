@@ -41,7 +41,9 @@ export type ErelijstZoekresultaat =
 // winnaar "?", ontbrekende data) — tellen niet mee als een "prijs" in de samenvattingen.
 const PLACEHOLDERS = new Set(['?', '-', '--', '---', 'geen', 'nihil', '(geen gegevens)', '(geen gegevens beschikbaar)'])
 
-function isPlaceholder(naam: string | undefined | null): boolean {
+/** True voor een placeholder-string uit de brondata (COVID-seizoen, onbekende winnaar, …) —
+ * export zodat de pagina club-namen enkel als link toont wanneer het een échte winnaar is. */
+export function isPlaceholder(naam: string | undefined | null): boolean {
   const t = (naam ?? '').trim().toLowerCase()
   if (!t) return true
   if (PLACEHOLDERS.has(t)) return true

@@ -1,8 +1,9 @@
 'use client'
 
+import Link from 'next/link'
 import { useMemo, useState } from 'react'
 
-import { zoekErelijst } from '@/lib/erelijst'
+import { isPlaceholder, zoekErelijst } from '@/lib/erelijst'
 import type { KampioenenSeizoenInput, BekerwinnaarsSeizoenInput, ReferendumPrijsInput, ClubTrofee, Laureaat } from '@/lib/erelijst'
 import './erelijst.css'
 
@@ -17,6 +18,17 @@ const TABS: { key: Tab; label: string }[] = [
 // Aantal seizoenen dat standaard zichtbaar is per tab, vóór "toon alles" — houdt de pagina licht
 // bij het laden ondanks 60+ seizoenen per archief.
 const TOON_AANTAL = 8
+
+// Clubnaam als link naar het detailoverzicht (/erelijst/club/[naam]) — behalve bij een
+// placeholder-waarde ("Geen kampioenen", "?", …), waarvoor geen zinnig detailoverzicht bestaat.
+function ClubNaam({ naam }: { naam: string }) {
+  if (isPlaceholder(naam)) return <>{naam}</>
+  return (
+    <Link href={`/erelijst/club/${encodeURIComponent(naam)}`} className="erl-club-link">
+      {naam}
+    </Link>
+  )
+}
 
 export function ErelijstBrowser({
   kampioenenSeizoenen,
@@ -69,22 +81,30 @@ export function ErelijstBrowser({
                   {r.type === 'kampioen' && (
                     <>
                       <span className="erl-zoek-icon" aria-hidden>🥇</span>
-                      <span className="erl-zoek-naam">{r.naam}</span>
-                      <span className="erl-zoek-detail">kampioen {r.reeksNaam} · {r.seizoen}</span>
+                      <div className="erl-zoek-info">
+                        <span className="erl-zoek-naam"><ClubNaam naam={r.naam} /></span>
+                        <span className="erl-zoek-detail">kampioen {r.reeksNaam} · {r.seizoen}</span>
+                      </div>
                     </>
                   )}
                   {r.type === 'beker' && (
                     <>
                       <span className="erl-zoek-icon" aria-hidden>🏆</span>
-                      <span className="erl-zoek-naam">{r.naam}</span>
-                      <span className="erl-zoek-detail">bekerwinnaar {r.categorie} · {r.seizoen}</span>
+                      <div className="erl-zoek-info">
+                        <span className="erl-zoek-naam"><ClubNaam naam={r.naam} /></span>
+                        <span className="erl-zoek-detail">bekerwinnaar {r.categorie} · {r.seizoen}</span>
+                      </div>
                     </>
                   )}
                   {r.type === 'referendum' && (
                     <>
                       <span className="erl-zoek-icon" aria-hidden>⭐</span>
-                      <span className="erl-zoek-naam">{r.naam}</span>
-                      <span className="erl-zoek-detail">{r.prijs} · {r.jaar} · {r.club}</span>
+                      <div className="erl-zoek-info">
+                        <span className="erl-zoek-naam">{r.naam}</span>
+                        <span className="erl-zoek-detail">
+                          {r.prijs} · {r.jaar} · <ClubNaam naam={r.club} />
+                        </span>
+                      </div>
                     </>
                   )}
                 </li>
@@ -104,7 +124,7 @@ export function ErelijstBrowser({
                     <span className="erl-rank">{i + 1}</span>
                     <div className="erl-board-info">
                       <div className="erl-board-main">
-                        <span className="erl-board-naam">{c.naam}</span>
+                        <span className="erl-board-naam"><ClubNaam naam={c.naam} /></span>
                         <span className="erl-board-totaal">{c.totaal}</span>
                       </div>
                       <span className="erl-board-detail">{c.titels}× 🥇 kampioen · {c.bekers}× 🏆 beker</span>
@@ -157,7 +177,7 @@ export function ErelijstBrowser({
                     {s.reeksen.map((r, i) => (
                       <li key={i} className="erl-kaart-rij">
                         <span className="erl-kaart-label">{r.reeksNaam}</span>
-                        <span className="erl-kaart-waarde">{r.kampioen}</span>
+                        <span className="erl-kaart-waarde"><ClubNaam naam={r.kampioen} /></span>
                       </li>
                     ))}
                   </ul>
@@ -180,7 +200,7 @@ export function ErelijstBrowser({
                     {s.winnaars.map((w, i) => (
                       <li key={i} className="erl-kaart-rij">
                         <span className="erl-kaart-label">{w.categorie}</span>
-                        <span className="erl-kaart-waarde">{w.ploeg}</span>
+                        <span className="erl-kaart-waarde"><ClubNaam naam={w.ploeg} /></span>
                       </li>
                     ))}
                   </ul>
@@ -204,7 +224,7 @@ export function ErelijstBrowser({
                       <li key={i} className="erl-kaart-rij">
                         <span className="erl-kaart-label">{w.jaar}</span>
                         <span className="erl-kaart-waarde">
-                          {w.naam} <span className="erl-kaart-club">({w.club})</span>
+                          {w.naam} <span className="erl-kaart-club">(<ClubNaam naam={w.club} />)</span>
                         </span>
                       </li>
                     ))}
