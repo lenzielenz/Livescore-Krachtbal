@@ -18,11 +18,11 @@ export const CLUB_ALIASSEN: ClubAliasGroep[] = [
   },
   {
     canoniek: 'KSVV Inter Assebroek',
-    aliassen: ['KSVV Inter Assebroek B'],
+    aliassen: ['KSVV Inter Assebroek B', 'Inter Assebroek'],
   },
   {
     canoniek: 't Klaverken Buggenhout',
-    aliassen: ['Klaverken Buggenhout'],
+    aliassen: ['Klaverken Buggenhout', 't Klaverken Buggenhout A', 't Klaverken Buggenhout B', 't Klaverken Buggenhout C'],
   },
   {
     canoniek: 't Botterken Baasrode',
