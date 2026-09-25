@@ -2,25 +2,10 @@
 
 import { useMemo, useState } from 'react'
 
+import { Avatar } from '@/components/Avatar'
 import { catchUpWeekends, rankLeaderboard, type LeaderRow } from '@/lib/prediction-score'
 
 const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-
-// Initialen voor de kleuravatar: bij twee (of meer) woorden de eerste letter van het eerste en
-// het laatste woord ("Robin Grieve" \u2192 "RG"), anders de eerste twee letters van de ene naam.
-function initialsFor(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean)
-  if (parts.length === 0) return '?'
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
-}
-// Vaste kleur per persoon, uit de naam afgeleid \u2014 geen aparte kleurenlijst nodig en dezelfde
-// speler krijgt bij elk bezoek dezelfde tint (zelfde truc als --tl-sheen-delay in TeamLogo.tsx).
-function avatarColorFor(name: string): string {
-  let hue = 0
-  for (const c of name) hue = (hue * 31 + c.charCodeAt(0)) % 360
-  return `hsl(${hue}deg 62% 44%)`
-}
 
 // Klassement met een "waar sta ik?"-zoekbalk en een sprong-naar-mij-knop — onmisbaar zodra er
 // honderden deelnemers zijn. Toont je achterstand tot de leider én hoeveel sterke weekends dat
@@ -31,6 +16,7 @@ export function PronostiekBoard({
   swingPerWeekend,
   totalPlayers,
   winnerUserIds,
+  photoByUserId,
 }: {
   rows: LeaderRow[]
   myUserId: number | null
@@ -40,6 +26,8 @@ export function PronostiekBoard({
   /** Wie deze speelweek aan het bonusrad mag draaien (vorig weekend top-N, zie loadRadState) —
    *  krijgt een "Draai deze week!"-badge naast de naam. */
   winnerUserIds?: ReadonlySet<number>
+  /** Profielfoto per userId — ontbreekt die, dan valt Avatar terug op initialen. */
+  photoByUserId?: Readonly<Record<number, string | null>>
 }) {
   const [q, setQ] = useState('')
   const [flash, setFlash] = useState(false)
@@ -119,9 +107,7 @@ export function PronostiekBoard({
                 <div className="vs-row-top">
                   <span className="vs-rank">{r.rank}</span>
                   <span className="vs-who">
-                    <span className="vs-avatar" style={{ ['--av' as string]: avatarColorFor(r.name) }} aria-hidden>
-                      {initialsFor(r.name)}
-                    </span>
+                    <Avatar name={r.name} photoUrl={photoByUserId?.[r.userId] ?? null} size={26} />
                     <span className="vs-name">{r.name}{r.userId === myUserId ? ' (jij)' : ''}</span>
                     {isWinner && (
                       <span className="vs-spin-badge" title="Je won vorig weekend een plekje op het bonusrad">

@@ -262,27 +262,9 @@
   min-width: 0;
 }
 
-/* Kleuravatar met initialen — per persoon een vaste kleur (uit de naam afgeleid), zodat je
-   dezelfde speler bij een volgend bezoek herkent. Zelfde "gouden munt"-opbouw als de rang-/
-   podiumbadges hierboven, maar dan met de eigen kleur i.p.v. steeds goud/zilver/brons. */
-.vs-avatar {
-  flex: none;
-  width: 26px;
-  height: 26px;
-  border-radius: 999px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.62rem;
-  font-weight: 900;
-  color: #fff;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
-  background: radial-gradient(circle at 32% 28%, color-mix(in srgb, var(--av, var(--accent)) 85%, #fff 12%), var(--av, var(--accent)) 70%);
-  box-shadow:
-    inset 0 1px 1px rgba(255, 255, 255, 0.35),
-    inset 0 -1px 2px rgba(0, 0, 0, 0.25),
-    0 0 0 1px color-mix(in srgb, var(--av, var(--accent)) 45%, transparent);
-}
+/* Foto/initialen-avatar: gedeeld Avatar-component (components/Avatar.tsx + avatar.css), zelfde
+   "glazen munt"-behandeling die hier al elders gebruikt wordt — geen eigen stijl nodig, enkel de
+   maat wordt via de size-prop meegegeven. */
 
 /* Draai-badge: enkel zichtbaar bij de winnaars van vorig weekend, tijdens hun speelweek — een
    zachte gouden puls trekt het oog, net genoeg om "kom draaien" te fluisteren zonder de hele
