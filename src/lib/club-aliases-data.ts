@@ -5,11 +5,13 @@
 // (leaderboard, clubpagina, grafiek, logo-koppeling) leidt de samentelling hier automatisch uit af.
 //
 // `canoniek` is de naam die getoond wordt (en waarnaar gelinkt wordt); `aliassen` zijn alle andere
-// letterlijke archiefnamen voor diezelfde club. Groepen hieronder zijn beperkt tot gevallen die
-// zeker zijn: officieel bevestigd (club-contacts-data.ts, de huidige clublijst van krachtbal.be),
-// of overduidelijke schrijfwijze-/typfoutvarianten en team-suffixen (A/B/C/I) van exact dezelfde
-// naam. Twijfelgevallen (andere naamwortel, wel dezelfde plaats, geen harde bevestiging) staan hier
-// bewust NIET in — die horen eerst bevestigd te worden voor ze meetellen in de erelijst-cijfers.
+// letterlijke archiefnamen voor diezelfde club. Groepen hieronder zijn ofwel officieel bevestigd
+// (club-contacts-data.ts, de huidige clublijst van krachtbal.be), overduidelijke schrijfwijze-/
+// typfoutvarianten en team-suffixen (A/B/C/I) van exact dezelfde naam, of expliciet bevestigd door
+// de club zelf ondanks een andere naamwortel. Bewust NIET samengevoegd, ook al delen ze een plaats:
+// KBK Ichtegem / KBC Fortuna Ichtegem, Krachtbal Torhout / Houtland Torhout, KBC Overpelt /
+// KBC Neerpelt en KB Moerdamme / KBC St. Rita Moerkerke / Den Hoorn Moerkerke — telkens bevestigd
+// als aparte clubs.
 export interface ClubAliasGroep {
   canoniek: string
   aliassen: string[]
@@ -30,6 +32,7 @@ export const CLUB_ALIASSEN: ClubAliasGroep[] = [
       'Inter KBC Assebroek',
       'Inter KSVV Assebroek',
       'KBC Inter Assebroek',
+      'Eendracht Assebroek',
     ],
   },
   {
@@ -45,6 +48,8 @@ export const CLUB_ALIASSEN: ClubAliasGroep[] = [
       'Buggenhout A',
       'Klaverken Buggenhout B',
       'Klaverken Buggenhout C',
+      'Just For Fun Buggenhout',
+      'KBC Buggenhout',
     ],
   },
   {
@@ -97,7 +102,7 @@ export const CLUB_ALIASSEN: ClubAliasGroep[] = [
   },
   {
     canoniek: 'Avanti Lissewege',
-    aliassen: ['Avant Lissewege', 'Avanti Lisseweg', 'Avanti Lissewege A'],
+    aliassen: ['Avant Lissewege', 'Avanti Lisseweg', 'Avanti Lissewege A', 'Rebels Lissewege'],
   },
   {
     canoniek: 'Juvenalo',
@@ -157,7 +162,7 @@ export const CLUB_ALIASSEN: ClubAliasGroep[] = [
   },
   {
     canoniek: 'Lede',
-    aliassen: ['Lede A'],
+    aliassen: ['Lede A', 'St. Maarten Lede'],
   },
   {
     canoniek: 'Z.A.K. Beveren',
@@ -165,6 +170,50 @@ export const CLUB_ALIASSEN: ClubAliasGroep[] = [
   },
   {
     canoniek: 'Krachtbal Snellegem',
-    aliassen: ['MEZ Snellege', 'MEZ Snellegem', 'Snellegem'],
+    aliassen: ['MEZ Snellege', 'MEZ Snellegem', 'Snellegem', 'Rodemo Snellegem'],
+  },
+  {
+    canoniek: 'KBC De Plakker Veurne',
+    aliassen: ['Fortuintje Veurne', 'VTI Veurne'],
+  },
+  {
+    canoniek: 'Sporting Brugge',
+    aliassen: ['Cracks Club Brugge', 'Finaerts Brugge', 'Olympia Brugge', 'SV Koolkerke'],
+  },
+  {
+    canoniek: 'KBC Opstal',
+    aliassen: ['Pallieter Opstal', 'Setmar Opstal'],
+  },
+  {
+    canoniek: 'SPW Wevelgem',
+    aliassen: ['De Vlere Wevelgem', 'Wevelgem'],
+  },
+  {
+    canoniek: 'KBC Dworp',
+    aliassen: ['Gravenhof Dworp'],
+  },
+  {
+    canoniek: 'KBC Izegem',
+    aliassen: ['Gistelbeke Izegem'],
+  },
+  {
+    canoniek: 'KBC Beernem',
+    aliassen: ['Sporta Beernem'],
+  },
+  {
+    canoniek: 'KBC Edegem',
+    aliassen: ['Jong Edegem A'],
+  },
+  {
+    canoniek: 'KBC St. Rita Ramskapelle',
+    aliassen: ['KV Ramskapelle', 'Ramskapelle'],
+  },
+  {
+    canoniek: 'Krachtbal Mechelen',
+    aliassen: ['Hagelcar', 'Hagelcar Mechelen'],
+  },
+  {
+    canoniek: 'KBC Fortuna Ichtegem',
+    aliassen: ['Fortuna Ichtegem', 'KBC Fortuna'],
   },
 ]

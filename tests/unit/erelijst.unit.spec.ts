@@ -90,6 +90,48 @@ describe('canoniekeClubNaam', () => {
     expect(canoniekeClubNaam('Z.A.K Beveren')).toBe('Z.A.K. Beveren')
     expect(canoniekeClubNaam('MEZ Snellegem')).toBe('Krachtbal Snellegem')
     expect(canoniekeClubNaam('Snellegem')).toBe('Krachtbal Snellegem')
+    expect(canoniekeClubNaam('Eendracht Assebroek')).toBe('KSVV Inter Assebroek')
+    expect(canoniekeClubNaam('Just For Fun Buggenhout')).toBe('t Klaverken Buggenhout')
+    expect(canoniekeClubNaam('KBC Buggenhout')).toBe('t Klaverken Buggenhout')
+    expect(canoniekeClubNaam('Rebels Lissewege')).toBe('Avanti Lissewege')
+    expect(canoniekeClubNaam('St. Maarten Lede')).toBe('Lede')
+    expect(canoniekeClubNaam('Rodemo Snellegem')).toBe('Krachtbal Snellegem')
+    expect(canoniekeClubNaam('Fortuintje Veurne')).toBe('KBC De Plakker Veurne')
+    expect(canoniekeClubNaam('VTI Veurne')).toBe('KBC De Plakker Veurne')
+    expect(canoniekeClubNaam('Cracks Club Brugge')).toBe('Sporting Brugge')
+    expect(canoniekeClubNaam('Finaerts Brugge')).toBe('Sporting Brugge')
+    expect(canoniekeClubNaam('Olympia Brugge')).toBe('Sporting Brugge')
+    expect(canoniekeClubNaam('SV Koolkerke')).toBe('Sporting Brugge')
+    expect(canoniekeClubNaam('Pallieter Opstal')).toBe('KBC Opstal')
+    expect(canoniekeClubNaam('Setmar Opstal')).toBe('KBC Opstal')
+    expect(canoniekeClubNaam('De Vlere Wevelgem')).toBe('SPW Wevelgem')
+    expect(canoniekeClubNaam('Wevelgem')).toBe('SPW Wevelgem')
+    expect(canoniekeClubNaam('Gravenhof Dworp')).toBe('KBC Dworp')
+    expect(canoniekeClubNaam('Gistelbeke Izegem')).toBe('KBC Izegem')
+    expect(canoniekeClubNaam('Sporta Beernem')).toBe('KBC Beernem')
+    expect(canoniekeClubNaam('Jong Edegem A')).toBe('KBC Edegem')
+    expect(canoniekeClubNaam('KV Ramskapelle')).toBe('KBC St. Rita Ramskapelle')
+    expect(canoniekeClubNaam('Ramskapelle')).toBe('KBC St. Rita Ramskapelle')
+    expect(canoniekeClubNaam('Hagelcar')).toBe('Krachtbal Mechelen')
+    expect(canoniekeClubNaam('Hagelcar Mechelen')).toBe('Krachtbal Mechelen')
+    expect(canoniekeClubNaam('Fortuna Ichtegem')).toBe('KBC Fortuna Ichtegem')
+    expect(canoniekeClubNaam('KBC Fortuna')).toBe('KBC Fortuna Ichtegem')
+  })
+
+  it('houdt clubs met een gedeelde naamwortel maar bevestigd andere identiteit apart', () => {
+    // Ichtegem en Fortuna Ichtegem zijn twee verschillende clubs (bevestigd) — geen alias.
+    expect(canoniekeClubNaam('KBK Ichtegem')).toBe('KBK Ichtegem')
+    expect(canoniekeClubNaam('KBC Fortuna Ichtegem')).toBe('KBC Fortuna Ichtegem')
+    // Torhout: Houtland Torhout blijft apart van Krachtbal Torhout (bevestigd).
+    expect(canoniekeClubNaam('Krachtbal Torhout')).toBe('Krachtbal Torhout')
+    expect(canoniekeClubNaam('Houtland Torhout')).toBe('Houtland Torhout')
+    // Pelt: Neerpelt en Overpelt blijven apart (bevestigd), ook al vormen ze nu één fusiegemeente.
+    expect(canoniekeClubNaam('KBC Overpelt')).toBe('KBC Overpelt')
+    expect(canoniekeClubNaam('KBC Neerpelt')).toBe('KBC Neerpelt')
+    // Moerkerke: KB Moerdamme blijft apart van de andere Moerkerke-namen (bevestigd).
+    expect(canoniekeClubNaam('KB Moerdamme')).toBe('KB Moerdamme')
+    expect(canoniekeClubNaam('KBC St. Rita Moerkerke')).toBe('KBC St. Rita Moerkerke')
+    expect(canoniekeClubNaam('Den Hoorn Moerkerke')).toBe('Den Hoorn Moerkerke')
   })
 
   it('laat een naam zonder gekende alias ongewijzigd', () => {
