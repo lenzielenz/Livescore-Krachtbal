@@ -6,6 +6,22 @@ import { catchUpWeekends, rankLeaderboard, type LeaderRow } from '@/lib/predicti
 
 const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
 
+// Initialen voor de kleuravatar: bij twee (of meer) woorden de eerste letter van het eerste en
+// het laatste woord ("Robin Grieve" \u2192 "RG"), anders de eerste twee letters van de ene naam.
+function initialsFor(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean)
+  if (parts.length === 0) return '?'
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+}
+// Vaste kleur per persoon, uit de naam afgeleid \u2014 geen aparte kleurenlijst nodig en dezelfde
+// speler krijgt bij elk bezoek dezelfde tint (zelfde truc als --tl-sheen-delay in TeamLogo.tsx).
+function avatarColorFor(name: string): string {
+  let hue = 0
+  for (const c of name) hue = (hue * 31 + c.charCodeAt(0)) % 360
+  return `hsl(${hue}deg 62% 44%)`
+}
+
 // Klassement met een "waar sta ik?"-zoekbalk en een sprong-naar-mij-knop — onmisbaar zodra er
 // honderden deelnemers zijn. Toont je achterstand tot de leider én hoeveel sterke weekends dat
 // ongeveer is, zodat je de hoop op de eerste plaats niet verliest.
@@ -14,12 +30,16 @@ export function PronostiekBoard({
   myUserId,
   swingPerWeekend,
   totalPlayers,
+  winnerUserIds,
 }: {
   rows: LeaderRow[]
   myUserId: number | null
   /** Realistische voorsprong die je per weekend op een rivaal kan pakken. */
   swingPerWeekend: number
   totalPlayers: number
+  /** Wie deze speelweek aan het bonusrad mag draaien (vorig weekend top-N, zie loadRadState) —
+   *  krijgt een "Draai deze week!"-badge naast de naam. */
+  winnerUserIds?: ReadonlySet<number>
 }) {
   const [q, setQ] = useState('')
   const [flash, setFlash] = useState(false)
@@ -89,26 +109,46 @@ export function PronostiekBoard({
         <div className="vs-board vs-board-search">
           {filtered.map((r) => {
             const medal = r.rank === 1 ? ' leader' : r.rank === 2 ? ' silver' : r.rank === 3 ? ' bronze' : ''
+            const isWinner = winnerUserIds?.has(r.userId) ?? false
             return (
               <div
                 key={r.userId}
                 id={`vs-${r.userId}`}
                 className={`vs-row${r.userId === myUserId ? ' me' : ''}${medal}${flash && r.userId === myUserId ? ' flash' : ''}`}
               >
-                <span className="vs-rank">{r.rank}</span>
-                <span className="vs-who">{r.name}{r.userId === myUserId ? ' (jij)' : ''}</span>
-                <span className="vs-stat" title="Exacte uitslagen · dichtst bij">
-                  🎯 {r.exact}{r.closest > 0 ? ` · 🔥 ${r.closest}` : ''}
-                </span>
-                <span className="vs-stat" title="Wedstrijden voorspeld">{r.predictions}×</span>
-                <span className="vs-pts">{r.points}</span>
+                <div className="vs-row-top">
+                  <span className="vs-rank">{r.rank}</span>
+                  <span className="vs-who">
+                    <span className="vs-avatar" style={{ ['--av' as string]: avatarColorFor(r.name) }} aria-hidden>
+                      {initialsFor(r.name)}
+                    </span>
+                    <span className="vs-name">{r.name}{r.userId === myUserId ? ' (jij)' : ''}</span>
+                    {isWinner && (
+                      <span className="vs-spin-badge" title="Je won vorig weekend een plekje op het bonusrad">
+                        🎡 Draai deze week!
+                      </span>
+                    )}
+                  </span>
+                  <span className="vs-pts">{r.points}</span>
+                </div>
+                <div className="vs-stats">
+                  <span className="vs-stat-badge exact" title="Exacte uitslagen">🎯 {r.exact} exact</span>
+                  {r.closest > 0 && (
+                    <span className="vs-stat-badge closest" title="Hoe vaak je het dichtst bij de uitslag zat">
+                      🔥 {r.closest}× dichtst bij
+                    </span>
+                  )}
+                  <span className="vs-stat-badge" title="Aantal wedstrijden voorspeld">
+                    {r.predictions} voorspelling{r.predictions === 1 ? '' : 'en'}
+                  </span>
+                </div>
               </div>
             )
           })}
         </div>
       )}
       {filtered.length > 0 && (
-        <p className="vs-legend">🥇🥈🥉 podium · 🎯 exacte uitslagen · 🔥 vaakst dichtst bij</p>
+        <p className="vs-legend">🥇🥈🥉 podium · 🎯 exacte uitslagen · 🔥 vaakst dichtst bij · 🎡 mag deze week aan het bonusrad draaien</p>
       )}
     </>
   )

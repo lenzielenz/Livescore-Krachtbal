@@ -778,6 +778,11 @@ export function LiveBoard({
                 const rowFav = teamFav(m) || clubFav(m)
                 const open = openRow === m.id
                 const mine = myTeamMatch(m)
+                // "Krachtmeting": zelfde formule als --home-share op het scorebord (Scoreboard.tsx)
+                // — de leidende ploeg verovert wat meer van de kaart. Bij een gelijke stand of vóór
+                // de aftrap blijft dit gewoon 0.5 (de oude, vaste 50/50-verdeling).
+                const scoreDiff = played ? m.score.home - m.score.away : 0
+                const homeShare = Math.max(0.16, Math.min(0.84, 0.5 + scoreDiff * 0.06))
                 // Bij tijdstip/thuis-uit sorteren en/of een actieve zoekopdracht over meerdere
                 // dagen (searchSeizoen) vervangt dit tagje de reeks-kop van de groep.
                 const tags = [
@@ -831,7 +836,7 @@ export function LiveBoard({
                           de tik ook de kaart (match) opent. */}
                       <div
                         className={`lb-match lb-match-live${mine ? ' mine' : ''}`}
-                        style={{ '--hc': m.home.colors?.primary ?? 'var(--accent)', '--ac': m.away.colors?.primary ?? 'var(--accent)' } as CSSProperties}
+                        style={{ '--hc': m.home.colors?.primary ?? 'var(--accent)', '--ac': m.away.colors?.primary ?? 'var(--accent)', '--home-share': homeShare } as CSSProperties}
                         role="link"
                         tabIndex={0}
                         onClick={() => router.push(`/match/${m.id}`)}
@@ -879,8 +884,8 @@ export function LiveBoard({
                           </Link>
                         </span>
                         <span className="lbl-names">
-                          <Link href={`/ploegen/${m.home.teamId}`} className="lbl-name" onClick={(e) => e.stopPropagation()}>{m.home.name}</Link>
-                          <Link href={`/ploegen/${m.away.teamId}`} className="lbl-name away" onClick={(e) => e.stopPropagation()}>{m.away.name}</Link>
+                          <Link href={`/ploegen/${m.home.teamId}`} className={`lbl-name${scoreDiff > 0 ? ' leading' : ''}`} onClick={(e) => e.stopPropagation()}>{m.home.name}</Link>
+                          <Link href={`/ploegen/${m.away.teamId}`} className={`lbl-name away${scoreDiff < 0 ? ' leading' : ''}`} onClick={(e) => e.stopPropagation()}>{m.away.name}</Link>
                         </span>
                       </div>
                     </div>

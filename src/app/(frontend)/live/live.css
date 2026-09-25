@@ -1026,6 +1026,16 @@
 .push-optin-btn.off { border-color: var(--line); background: transparent; color: var(--dim); font-weight: 600; }
 .push-optin-msg { font-size: 0.78rem; color: var(--dim); margin: 8px 0 0; }
 
+/* Animeerbare krachtmeting-grens (0..1) — zelfde idee als --home-share op het scorebord
+   (scoreboard.css): de leidende ploeg verovert wat meer van de kaart. Los geregistreerd (elke
+   CSS-bundel met een calc() erop nodig heeft zijn eigen @property, anders interpoleert de
+   overgang niet en springt de grens gewoon). */
+@property --home-share {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 0.5;
+}
+
 /* ── Live wedstrijd · Glas-look (Aurora) ─────────────────────────────────────
    Glas-kop met de logo's + score, bewegende clubkleuren (--hc/--ac) en een glans-veeg;
    daaronder een matglazen strook met de VOLLEDIGE ploegnamen (geen afkapping meer). */
@@ -1033,18 +1043,21 @@
   display: block;
   padding: 0;
   cursor: pointer;
+  --home-share: 0.5;
   /* Elke kaart zweeft los, met een haarscherpe lichtrand en een gloed in de clubkleuren —
      de kleuren van de affiche zelf zetten de kaart in de verf. */
   border-radius: 18px;
   overflow: hidden;
   /* De ondergrond draagt een zweem van de clubkleuren, in dezelfde richting als de kop erboven.
      Dat is wat kop en namenstrook één ding maakt: de strook is niet langer een zwarte balk die
-     tegen de kaart geplakt is, maar een donkerder band over hetzelfde kleurveld. */
+     tegen de kaart geplakt is, maar een donkerder band over hetzelfde kleurveld. De middelste
+     naad schuift mee met --home-share (44/56 bij een gelijke stand — exact de oude vaste
+     waarden), zodat de leidende ploeg letterlijk meer terrein wint. */
   background: linear-gradient(
     115deg,
     color-mix(in srgb, var(--hc) 40%, #0b0f15) 0%,
-    color-mix(in srgb, var(--hc) 12%, #0b0f15) 44%,
-    color-mix(in srgb, var(--ac) 12%, #0b0f15) 56%,
+    color-mix(in srgb, var(--hc) 12%, #0b0f15) calc(var(--home-share) * 100% - 6%),
+    color-mix(in srgb, var(--ac) 12%, #0b0f15) calc(var(--home-share) * 100% + 6%),
     color-mix(in srgb, var(--ac) 40%, #0b0f15) 100%
   );
   box-shadow:
@@ -1053,7 +1066,7 @@
     0 12px 30px -14px color-mix(in srgb, var(--hc) 55%, transparent),
     0 12px 30px -14px color-mix(in srgb, var(--ac) 55%, transparent),
     0 14px 34px -18px rgba(0, 0, 0, 0.85);
-  transition: transform var(--dur-1) var(--ease-soft), box-shadow var(--dur-1) var(--ease-soft);
+  transition: transform var(--dur-1) var(--ease-soft), box-shadow var(--dur-1) var(--ease-soft), --home-share 1.2s var(--ease-soft);
 }
 .lb-match.lb-match-live:hover {
   transform: translateY(-1px);
@@ -1099,21 +1112,25 @@
   z-index: 0;
   pointer-events: none;
   /* Rijker verloop: de clubkleuren dragen verder de kaart in en ontmoeten elkaar in een
-     lichtere naad in het midden — dieper en verzadigder dan de vlakke fade van vroeger. */
+     lichtere naad in het midden — dieper en verzadigder dan de vlakke fade van vroeger. De naad
+     schuift mee met --home-share (40/60 bij een gelijke stand, de oude vaste waarden). */
   background: linear-gradient(
     115deg,
     color-mix(in srgb, var(--hc) 82%, #0a0e14) 0%,
-    color-mix(in srgb, var(--hc) 34%, #0c1018) 40%,
-    color-mix(in srgb, var(--ac) 34%, #0c1018) 60%,
+    color-mix(in srgb, var(--hc) 34%, #0c1018) calc(var(--home-share) * 100% - 10%),
+    color-mix(in srgb, var(--ac) 34%, #0c1018) calc(var(--home-share) * 100% + 10%),
     color-mix(in srgb, var(--ac) 82%, #0a0e14) 100%
   );
+  transition: background 1.2s var(--ease-soft);
 }
 .lb-row.now .lbl-color {
   inset: -55% -22%;
+  /* Zelfde positieformules als hierboven, herleid zodat ze bij --home-share: 0.5 exact op de
+     oude vaste posities (24%/76%/62%) uitkomen — enkel bij een ongelijke stand schuiven ze mee. */
   background:
-    radial-gradient(45% 60% at 24% 34%, color-mix(in srgb, var(--hc) 72%, transparent), transparent 70%),
-    radial-gradient(45% 60% at 76% 66%, color-mix(in srgb, var(--ac) 72%, transparent), transparent 70%),
-    radial-gradient(40% 55% at 62% 28%, color-mix(in srgb, var(--hc) 45%, transparent), transparent 75%);
+    radial-gradient(45% 60% at calc(var(--home-share) * 60% - 6%) 34%, color-mix(in srgb, var(--hc) 72%, transparent), transparent 70%),
+    radial-gradient(45% 60% at calc(106% - var(--home-share) * 60%) 66%, color-mix(in srgb, var(--ac) 72%, transparent), transparent 70%),
+    radial-gradient(40% 55% at calc(38% + var(--home-share) * 48%) 28%, color-mix(in srgb, var(--hc) 45%, transparent), transparent 75%);
   filter: blur(14px);
 }
 .lbl-head::before {
@@ -1227,6 +1244,10 @@
 }
 .lbl-name { min-width: 0; font-weight: 800; font-size: 1rem; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 6px rgba(0, 0, 0, 0.5); }
 .lbl-name.away { text-align: right; }
+/* Klein accentje bij de naam van de leidende ploeg — bevestigt in tekst wat de kaartkleur al
+   toont (zie --home-share hierboven). Enkel zichtbaar bij een echt verschil (score.ts bepaalt de
+   klasse), niet bij een gelijke stand of vóór de aftrap. */
+.lbl-name.leading::before { content: '▲ '; font-size: 0.7em; opacity: 0.85; }
 
 @keyframes lbl-aurora {
   0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg) scale(1); }

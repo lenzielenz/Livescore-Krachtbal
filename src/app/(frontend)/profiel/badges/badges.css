@@ -1,5 +1,7 @@
 /* Supporter-badges. */
 .bg-progress {
+  position: relative;
+  overflow: hidden;
   border-radius: 18px;
   padding: 16px 18px;
   margin: 6px 0 18px;
@@ -8,21 +10,97 @@
     radial-gradient(120% 120% at 0% 0%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 60%),
     var(--panel-grad, var(--panel));
   box-shadow: var(--card-shadow, 0 18px 40px -26px rgba(0, 0, 0, 0.6));
+  animation: bg-progress-pulse 3s var(--ease-soft, ease-in-out) infinite;
 }
-.bg-progress-top { display: flex; align-items: baseline; gap: 10px; }
+@keyframes bg-progress-pulse {
+  0%, 100% { box-shadow: var(--card-shadow, 0 18px 40px -26px rgba(0, 0, 0, 0.6)), 0 0 0 0 transparent; }
+  50% { box-shadow: var(--card-shadow, 0 18px 40px -26px rgba(0, 0, 0, 0.6)), 0 0 30px -8px color-mix(in srgb, var(--accent) 50%, transparent); }
+}
+/* Trage lichtstreep over de hele kaart — zelfde grammatica als de bonusrad-teaser. */
+.bg-progress::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(115deg, transparent 40%, #ffffff10 48%, #ffffff22 50%, #ffffff10 52%, transparent 60%);
+  background-size: 260% 260%;
+  background-position: 120% -20%;
+  animation: bg-progress-sheen 7s var(--ease-soft, ease-in-out) 1s infinite;
+}
+@keyframes bg-progress-sheen {
+  0%, 55% { background-position: 120% -20%; }
+  85%, 100% { background-position: -20% 120%; }
+}
+.bg-progress-top { display: flex; align-items: baseline; gap: 10px; position: relative; z-index: 1; }
 .bg-progress-count { font-size: 1.8rem; font-weight: 900; color: var(--accent); font-variant-numeric: tabular-nums; }
 .bg-progress-count i { font-size: 1rem; font-style: normal; color: var(--dim); }
 .bg-progress-lbl { font-size: 0.82rem; letter-spacing: 0.04em; color: var(--dim); text-transform: uppercase; }
 .bg-bar {
+  position: relative; z-index: 1;
   margin-top: 10px; height: 8px; border-radius: 99px; overflow: hidden;
   background: color-mix(in srgb, var(--accent) 12%, var(--line));
 }
 .bg-bar > span {
-  display: block; height: 100%; border-radius: 99px;
+  position: relative;
+  display: block; height: 100%; border-radius: 99px; overflow: hidden;
   background: var(--grad-accent, linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 50%, #fff)));
   box-shadow: 0 0 14px -2px var(--glow-accent, var(--accent));
   transition: width 0.4s ease;
 }
+.bg-bar > span::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+  animation: bg-barsheen 2.4s var(--ease-soft, ease-in-out) infinite;
+}
+@keyframes bg-barsheen {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+/* "Dichtstbij"-teaser: de badge waar je het dichtst bij zit, met een pulserend icoon en een
+   radar-ping — vertelt meteen WAT je nog moet doen, i.p.v. enkel het totaal te tonen. */
+.bg-next {
+  position: relative; z-index: 1;
+  display: flex; align-items: center; gap: 14px;
+  margin-top: 12px; padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, #ffb703 40%, var(--line));
+  background:
+    radial-gradient(120% 160% at 0% 0%, color-mix(in srgb, #ffb703 14%, transparent), transparent 60%),
+    var(--panel-grad, var(--panel));
+}
+.bg-next-icon {
+  position: relative;
+  flex: none; width: 44px; height: 44px; border-radius: 12px;
+  display: grid; place-items: center; font-size: 1.5rem;
+  background: radial-gradient(circle at 32% 28%, color-mix(in srgb, #ffd166 55%, transparent), color-mix(in srgb, #ffb703 18%, transparent) 70%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 0 0 1px color-mix(in srgb, #ffb703 45%, transparent);
+  animation: bg-next-iconpulse 2.2s var(--ease-soft, ease-in-out) infinite;
+}
+@keyframes bg-next-iconpulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.07); }
+}
+.bg-next-icon::before, .bg-next-icon::after {
+  content: "";
+  position: absolute; inset: 0; border-radius: 12px;
+  border: 1.5px solid color-mix(in srgb, #ffb703 65%, transparent);
+  opacity: 0;
+  animation: bg-next-ping 2.4s var(--ease-out, ease-out) infinite;
+}
+.bg-next-icon::after { animation-delay: 1.2s; }
+@keyframes bg-next-ping {
+  0% { transform: scale(1); opacity: 0.65; }
+  100% { transform: scale(1.55); opacity: 0; }
+}
+.bg-next-copy { flex: 1; min-width: 0; }
+.bg-next-kicker { display: block; font-size: 0.62rem; font-weight: 900; letter-spacing: 0.1em; text-transform: uppercase; color: #ffd166; margin-bottom: 2px; }
+.bg-next-title { font-weight: 800; font-size: 0.9rem; margin: 0 0 4px; }
+.bg-next-bar { height: 5px; border-radius: 99px; overflow: hidden; background: color-mix(in srgb, #ffb703 15%, var(--line)); }
+.bg-next-bar > span { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, #ffb703, #ffd166); }
+.bg-next-txt { font-size: 0.68rem; color: var(--dim); margin-top: 3px; display: block; }
 
 .bg-group { margin-top: 20px; }
 .bg-group-title {
@@ -32,33 +110,318 @@
 .bg-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 12px;
+  gap: 14px 12px;
 }
 .bg-card {
+  position: relative;
   display: flex; flex-direction: column; align-items: center; text-align: center;
   gap: 6px; padding: 18px 12px 14px; border-radius: 16px;
   border: 1px solid var(--line);
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0) 60%), var(--panel-grad, var(--panel));
   opacity: 0.62; filter: saturate(0.5);
   transition: transform 0.15s ease, opacity 0.2s ease;
+  animation: bg-card-pop 0.45s var(--ease-pop, cubic-bezier(0.22, 1.2, 0.4, 1)) both;
+}
+@keyframes bg-card-pop {
+  from { opacity: 0; transform: translateY(7px) scale(0.94); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 .bg-card.is-earned {
   opacity: 1; filter: none;
   border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
   box-shadow: 0 14px 30px -22px var(--glow-accent, var(--accent)), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  /* Bewust GEEN overflow:hidden: een verdiende badge mag zijn kader doorbreken (vlam, kroon-
+     stralen, floodlichten, …). De glans hieronder klipt zichzelf i.p.v. de hele kaart te clippen. */
+}
+.bg-card.is-earned::after {
+  content: "";
+  position: absolute; inset: 0; border-radius: 16px;
+  clip-path: inset(0 round 16px);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.16), transparent);
+  background-size: 60% 100%; background-repeat: no-repeat; background-position: -60% 0;
+  animation: bg-card-sheen 6s var(--ease-soft, ease-in-out) infinite;
+  pointer-events: none;
+}
+@keyframes bg-card-sheen {
+  0%, 8% { background-position: -60% 0; }
+  42%, 100% { background-position: 160% 0; }
 }
 .bg-card.is-earned:hover { transform: translateY(-2px); }
-.bg-emoji { font-size: 2.4rem; line-height: 1; }
+.bg-emoji { position: relative; z-index: 1; font-size: 2.4rem; line-height: 1; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; }
 .bg-card:not(.is-earned) .bg-emoji { filter: grayscale(1); }
-.bg-title { font-weight: 800; font-size: 0.95rem; }
+.bg-card.is-earned .bg-emoji { transition: transform 0.18s var(--ease-out, ease-out); }
+.bg-card.is-earned:hover .bg-emoji { transform: scale(1.14) rotate(-4deg); }
+.bg-title { font-weight: 800; font-size: 0.95rem; position: relative; z-index: 1; }
 /* Bij een nog niet verdiende badge is dit de enige tekst die zegt wat je ervoor moet doen. */
-.bg-desc { font-size: 0.8rem; color: var(--dim); line-height: 1.3; }
+.bg-desc { font-size: 0.8rem; color: var(--dim); line-height: 1.3; position: relative; z-index: 1; }
 .bg-state {
   margin-top: 4px; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.03em;
-  color: var(--dim); text-transform: uppercase;
+  color: var(--dim); text-transform: uppercase; position: relative; z-index: 1;
 }
 .bg-state-on { color: var(--accent); }
-.bg-prog { width: 100%; margin-top: 4px; display: flex; flex-direction: column; gap: 3px; align-items: center; }
+.bg-prog { width: 100%; margin-top: 4px; display: flex; flex-direction: column; gap: 3px; align-items: center; position: relative; z-index: 1; }
 .bg-prog-bar { width: 100%; height: 5px; border-radius: 99px; overflow: hidden; background: color-mix(in srgb, var(--accent) 12%, var(--line)); }
 .bg-prog-bar > i { display: block; height: 100%; background: color-mix(in srgb, var(--accent) 70%, transparent); border-radius: 99px; }
 .bg-prog-txt { font-size: 0.74rem; color: var(--dim-strong); font-variant-numeric: tabular-nums; }
+
+/* "Bijna!" — elke niet-verdiende badge op ≥60% voortgang krijgt een zachte pulserende gouden
+   rand + label. Badges die nog ver weg zijn blijven bewust rustig: dat contrast is net wat een
+   verdiende badge (hieronder) laat voelen als een beloning i.p.v. overal evenveel geflikker. */
+.bg-card.is-close {
+  opacity: 0.92; filter: saturate(0.85);
+  border-color: color-mix(in srgb, #ffb703 55%, var(--line));
+  animation: bg-card-pop 0.45s var(--ease-pop, cubic-bezier(0.22, 1.2, 0.4, 1)) both, bg-close-pulse 2.6s var(--ease-soft, ease-in-out) infinite;
+}
+@keyframes bg-close-pulse {
+  0%, 100% { box-shadow: 0 14px 30px -24px color-mix(in srgb, #ffb703 60%, transparent), inset 0 1px 0 rgba(255, 255, 255, 0.06); }
+  50% { box-shadow: 0 14px 30px -18px color-mix(in srgb, #ffb703 85%, transparent), inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 0 0 1px color-mix(in srgb, #ffb703 45%, transparent); }
+}
+.bg-card.is-close .bg-emoji { filter: none; }
+.bg-close-tag {
+  position: absolute; top: -7px; right: 10px; z-index: 2;
+  font-size: 0.58rem; font-weight: 900; letter-spacing: 0.03em;
+  padding: 2px 7px; border-radius: 99px; color: #2a1c00;
+  background: linear-gradient(90deg, #ffb703, #ffd166);
+  box-shadow: 0 3px 8px -2px color-mix(in srgb, #ffb703 70%, transparent);
+}
+.bg-card.is-close .bg-prog-bar > i { background: linear-gradient(90deg, #ffb703, #ffd166); position: relative; overflow: hidden; }
+.bg-card.is-close .bg-prog-bar > i::after {
+  content: "";
+  position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent);
+  animation: bg-barsheen 1.8s var(--ease-soft, ease-in-out) infinite;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Elke VERDIENDE badge komt op zijn eigen manier tot leven — hergebruikt een
+   klein aantal bouwstenen (halo/ring/spark), per icoon anders gecombineerd en
+   getimed, en mag zijn eigen kader doorbreken waar het bij het onderwerp past.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* Ademende gloed achter een icoon — generieke fallback voor elke verdiende badge zonder eigen
+   effect hieronder, kleur via --fx (standaard accentblauw). */
+.fx-halo {
+  position: absolute; inset: -10px; z-index: -1; border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--fx, var(--accent)) 55%, transparent), transparent 70%);
+  filter: blur(6px); opacity: 0.55;
+  animation: fx-breathe 2.5s var(--ease-soft, ease-in-out) infinite;
+}
+@keyframes fx-breathe {
+  0%, 100% { opacity: 0.4; transform: scale(0.88); }
+  50% { opacity: 0.85; transform: scale(1.14); }
+}
+/* Uitdijende ring die buiten de kaart mag komen (camera-flits, roar, bullseye-hit). */
+.fx-ring {
+  position: absolute; inset: -4px; z-index: -1; border-radius: 50%;
+  border: 1.5px solid var(--fx, #fff);
+  opacity: 0;
+  animation: fx-ringburst 3.6s var(--ease-out, ease-out) infinite;
+}
+@keyframes fx-ringburst {
+  0%, 82% { transform: scale(0.7); opacity: 0; }
+  88% { opacity: 0.8; }
+  100% { transform: scale(2.3); opacity: 0; }
+}
+/* Twinkelende sterretjes rond een icoon (kroon-gems, diamant-facetten). */
+.fx-spark { position: absolute; width: 5px; height: 5px; z-index: 2; opacity: 0; animation: fx-twinkle 2.4s var(--ease-soft, ease-in-out) infinite; }
+.fx-spark::before, .fx-spark::after { content: ""; position: absolute; inset: 0; background: var(--fx, #fff); }
+.fx-spark::before { width: 100%; height: 1.6px; top: 50%; transform: translateY(-50%); }
+.fx-spark::after { height: 100%; width: 1.6px; left: 50%; transform: translateX(-50%); }
+@keyframes fx-twinkle {
+  0%, 100% { opacity: 0; transform: scale(0.3) rotate(0deg); }
+  50% { opacity: 1; transform: scale(1.15) rotate(45deg); }
+}
+@keyframes fx-tilt {
+  0%, 100% { transform: rotate(-6deg); }
+  50% { transform: rotate(6deg); }
+}
+@keyframes fx-punch {
+  0%, 40%, 100% { transform: scale(1); }
+  50% { transform: scale(1.16); }
+  60% { transform: scale(0.98); }
+}
+
+/* checkin1 — 🎟️ Eerste keer erbij: zwiert los als een ticket, met confetti-stipjes. */
+.ticket-emoji { animation: fx-tilt 2.8s ease-in-out infinite; transform-origin: 50% 4px; }
+.confetti { position: absolute; width: 3px; height: 6px; border-radius: 1px; opacity: 0; animation: confetti-pop 2.6s ease-out infinite; }
+.confetti.c1 { left: -6px; top: 4px; background: #ffb703; animation-delay: 0.3s; }
+.confetti.c2 { right: -7px; top: 10px; background: #0fe0a6; animation-delay: 1.5s; }
+@keyframes confetti-pop {
+  0% { opacity: 0; transform: translateY(0) rotate(0deg); }
+  15% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-16px) rotate(200deg); }
+}
+
+/* checkin5 — 🔥 Trouwe supporter: een volledig eigen vlam i.p.v. de vlakke emoji. Drie
+   teardrop-lagen op elk hun EIGEN tempo (1.7s/1.15s/0.8s met andere scale/skew/rotate-pieken) —
+   dat onregelmatige ritme is wat vuur geloofwaardig maakt i.p.v. een pompende sticker. */
+.flame-emoji { width: 34px; height: 38px; align-items: flex-end; }
+.flame-glow {
+  position: absolute; left: 50%; bottom: 2px; width: 38px; height: 38px; transform: translateX(-50%);
+  border-radius: 50%; background: radial-gradient(circle, color-mix(in srgb, #ff9a3c 55%, transparent), transparent 70%);
+  filter: blur(6px); animation: flame-breathe 2.6s var(--ease-soft, ease-in-out) infinite; z-index: -1;
+}
+@keyframes flame-breathe {
+  0%, 100% { opacity: 0.55; transform: translateX(-50%) scale(0.92); }
+  50% { opacity: 0.92; transform: translateX(-50%) scale(1.15); }
+}
+.flame { position: absolute; bottom: 0; left: 50%; transform-origin: 50% 100%; clip-path: polygon(50% 0%, 68% 18%, 82% 42%, 80% 68%, 62% 100%, 38% 100%, 20% 68%, 18% 42%, 32% 18%); }
+.flame-outer { width: 24px; height: 33px; margin-left: -12px; background: linear-gradient(180deg, #ffb703 0%, #ff6a2b 55%, #b3220a 100%); animation: flame-flick-outer 1.7s ease-in-out infinite; }
+.flame-mid { width: 16px; height: 24px; margin-left: -8px; background: linear-gradient(180deg, #ffe08a 0%, #ffb703 60%, #ff7a1a 100%); animation: flame-flick-mid 1.15s ease-in-out infinite; }
+.flame-core { width: 7.5px; height: 13px; margin-left: -3.75px; bottom: 1px; background: linear-gradient(180deg, #fffdf2 0%, #ffe9a8 70%, #ffc93c 100%); animation: flame-flick-core 0.8s ease-in-out infinite; }
+@keyframes flame-flick-outer {
+  0% { transform: scaleX(1) scaleY(1) skewX(0deg) rotate(0deg); }
+  22% { transform: scaleX(0.94) scaleY(1.06) skewX(-2deg) rotate(-1.5deg); }
+  48% { transform: scaleX(1.07) scaleY(0.95) skewX(2deg) rotate(2deg); }
+  74% { transform: scaleX(0.97) scaleY(1.03) skewX(-1deg) rotate(-1deg); }
+  100% { transform: scaleX(1) scaleY(1) skewX(0deg) rotate(0deg); }
+}
+@keyframes flame-flick-mid {
+  0% { transform: scaleX(1) scaleY(1) translateX(0) rotate(0deg); }
+  30% { transform: scaleX(0.9) scaleY(1.09) translateX(-1px) rotate(-3deg); }
+  55% { transform: scaleX(1.11) scaleY(0.92) translateX(1px) rotate(3deg); }
+  80% { transform: scaleX(0.95) scaleY(1.05) translateX(-0.5px) rotate(-2deg); }
+  100% { transform: scaleX(1) scaleY(1) translateX(0) rotate(0deg); }
+}
+@keyframes flame-flick-core {
+  0% { transform: scaleX(1) scaleY(1) translateX(0); }
+  35% { transform: scaleX(0.85) scaleY(1.14) translateX(-1px); }
+  65% { transform: scaleX(1.14) scaleY(0.9) translateX(1.2px); }
+  100% { transform: scaleX(1) scaleY(1) translateX(0); }
+}
+.ember { position: absolute; bottom: 8px; width: 2.5px; height: 2.5px; border-radius: 50%; background: #ffc93c; box-shadow: 0 0 4px 1px color-mix(in srgb, #ffb703 80%, transparent); opacity: 0; animation: ember-rise 2.2s ease-in infinite; }
+.ember.e1 { left: 11px; animation-delay: 0.1s; }
+.ember.e2 { left: 21px; width: 2px; height: 2px; animation-delay: 1.15s; }
+@keyframes ember-rise {
+  0% { opacity: 0; transform: translate(0, 0) scale(1); }
+  12% { opacity: 0.9; }
+  70% { opacity: 0.4; }
+  100% { opacity: 0; transform: translate(3px, -24px) scale(0.4); }
+}
+
+/* checkin15 — 🏟️ Vaste klant: floodlichten die boven de kaart uit priemen en flikkeren zoals
+   echte stadionverlichting. */
+.stadium-fx { --fx: #bfe3ff; }
+.beam { position: absolute; bottom: 30px; width: 7px; height: 30px; background: linear-gradient(180deg, rgba(220, 240, 255, 0.75), transparent); clip-path: polygon(50% 0%, 100% 100%, 0% 100%); opacity: 0.35; animation: beam-flicker 2.8s ease-in-out infinite; }
+.beam.b1 { left: 2px; transform: rotate(-16deg); animation-delay: 0s; }
+.beam.b2 { left: 17px; transform: rotate(0deg); animation-delay: 0.5s; }
+.beam.b3 { right: 2px; transform: rotate(16deg); animation-delay: 1s; }
+@keyframes beam-flicker {
+  0%, 100% { opacity: 0.22; }
+  45% { opacity: 0.55; }
+  60% { opacity: 0.3; }
+  78% { opacity: 0.5; }
+}
+
+/* checkin30 — 👑 Seizoenskaart: gemmen die na elkaar twinkelen + gouden stralen die diagonaal
+   de hoek van de kaart uit schieten; het icoon maakt een regale bounce op hetzelfde ritme. */
+.crown-fx { --fx: #ffd166; animation: fx-punch 3.4s var(--ease-soft, ease-in-out) infinite; }
+.crown-fx .fx-spark.s1 { top: -2px; left: 6px; --fx: #fff6d6; animation-delay: 0s; }
+.crown-fx .fx-spark.s2 { top: -6px; left: 17px; --fx: #ffd166; animation-delay: 0.3s; }
+.crown-fx .fx-spark.s3 { top: -2px; right: 5px; --fx: #fff6d6; animation-delay: 0.6s; }
+.ray { position: absolute; width: 2px; height: 20px; background: linear-gradient(180deg, color-mix(in srgb, #ffd166 80%, transparent), transparent); opacity: 0; animation: ray-shoot 3.4s var(--ease-out, ease-out) infinite; }
+.ray.r1 { top: -4px; left: -8px; transform: rotate(-35deg); animation-delay: 0.05s; }
+.ray.r2 { top: -6px; right: -8px; transform: rotate(35deg); animation-delay: 0.2s; }
+@keyframes ray-shoot {
+  0%, 78% { opacity: 0; transform: scale(0.6); }
+  86% { opacity: 0.9; }
+  100% { opacity: 0; transform: scale(1.5) translateY(-6px); }
+}
+
+/* checkin50 — 🦁 Clublegende: de zwaarste, traagste puls van de hele reeks — legendarisch moet
+   het meest wegen. Twee ringen die duidelijk buiten de kaart kloppen. */
+.lion-fx { --fx: #ff9a3c; animation: lion-breathe 3.6s var(--ease-soft, ease-in-out) infinite; }
+@keyframes lion-breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.16); }
+}
+.lion-fx .fx-ring { border-color: color-mix(in srgb, #ff9a3c 70%, transparent); animation-duration: 3.6s; inset: -8px; }
+.lion-fx .fx-ring.r2 { animation-delay: 1.8s; }
+
+/* photo10 — 📸 Clubfotograaf: een échte flits (kort en fel, lange stilte ertussen — geen brave
+   ademhaling) + een lens-glintje dat er schuin overheen glijdt. */
+.camera-fx { --fx: #fff; }
+.camera-fx .fx-ring { animation: camera-flash 4.6s var(--ease-out, ease-out) infinite; border-width: 0; background: radial-gradient(circle, rgba(255, 255, 255, 0.9), transparent 70%); }
+@keyframes camera-flash {
+  0%, 94% { opacity: 0; transform: scale(0.5); }
+  96% { opacity: 1; transform: scale(1.1); }
+  100% { opacity: 0; transform: scale(2.1); }
+}
+.lens-glint { position: absolute; top: 8px; left: -20px; width: 14px; height: 3px; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.85), transparent); transform: rotate(-30deg); opacity: 0; animation: lens-sweep 4.6s var(--ease-soft, ease-in-out) infinite; }
+@keyframes lens-sweep {
+  0%, 30% { opacity: 0; left: -20px; }
+  40% { opacity: 0.9; }
+  55% { opacity: 0; left: 46px; }
+  100% { opacity: 0; left: 46px; }
+}
+
+/* pred10 — 🎯 Vaste voorspeller: een bullseye-hit die van buiten "inslaat" i.p.v. rustig uit te
+   dijen, gevolgd door een korte schaal-punch op het icoon zelf. */
+.target-fx { --fx: #0fe0a6; animation: fx-punch 2.6s var(--ease-soft, ease-in-out) infinite; }
+.target-fx .fx-ring { border-color: color-mix(in srgb, #0fe0a6 70%, transparent); animation: target-hit 2.6s var(--ease-out, ease-out) infinite; }
+@keyframes target-hit {
+  0%, 40% { opacity: 0; transform: scale(1.8); }
+  48% { opacity: 0.9; transform: scale(1); }
+  70% { opacity: 0; transform: scale(0.85); }
+  100% { opacity: 0; transform: scale(0.85); }
+}
+
+/* predpoints100 — 💎 Pronostiek-kanon: een diagonale lichtflits over de steen + twee
+   facet-sterretjes net buiten de hoeken, de diamant draait heel licht. */
+.diamond-fx { animation: diamond-turn 5s ease-in-out infinite; }
+@keyframes diamond-turn {
+  0%, 100% { transform: rotate(-5deg); }
+  50% { transform: rotate(5deg); }
+}
+.diamond-fx .fx-spark.d1 { top: -4px; left: -4px; --fx: #cdeeff; animation-delay: 0.2s; }
+.diamond-fx .fx-spark.d2 { bottom: -2px; right: -4px; --fx: #eaf7ff; animation-delay: 1.4s; }
+.facet { position: absolute; top: 6px; left: -22px; width: 16px; height: 2px; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.9), transparent); transform: rotate(-25deg); opacity: 0; animation: lens-sweep 3.2s var(--ease-soft, ease-in-out) infinite; }
+
+/* superfan — 📣 Superfan: schuine geluidsbogen die uit de megafoon "schallen", tot buiten de
+   kaart, plus een schreeuw-kantel op het icoon. */
+.megaphone-fx { animation: fx-tilt 1.8s ease-in-out infinite; transform-origin: 30% 60%; }
+.soundwave { position: absolute; top: 50%; right: -6px; width: 14px; height: 14px; border: 1.5px solid var(--accent); border-radius: 50%; border-left-color: transparent; border-bottom-color: transparent; opacity: 0; animation: wave-out 2s var(--ease-out, ease-out) infinite; }
+.soundwave.w1 { transform: translateY(-50%) rotate(-45deg) scale(0.8); animation-delay: 0s; }
+.soundwave.w2 { transform: translateY(-50%) rotate(-45deg) scale(0.8); animation-delay: 0.55s; }
+@keyframes wave-out {
+  0% { opacity: 0; transform: translateY(-50%) rotate(-45deg) scale(0.6); }
+  25% { opacity: 0.8; }
+  100% { opacity: 0; transform: translateY(-50%) rotate(-45deg) scale(1.7); }
+}
+
+/* booster — 🎡 Bonusrad-winnaar: hergebruikt letterlijk de bestaande radteaser-ring/-spark-
+   techniek uit pronostiek.css, nu groter dan zijn eigen vakje en zichtbaar erbovenop draaiend. */
+.wheel-emoji { width: 46px; height: 46px; }
+.wheel-wrap { position: relative; width: 46px; height: 46px; display: grid; place-items: center; }
+.wheel-ring {
+  position: absolute; inset: 0; border-radius: 999px;
+  background: conic-gradient(from 0deg, #7c1118, #ffd166, #a3161f, #ffe39a, #7c1118, #f4a300, #7c1118, #ffd166, #7c1118);
+  box-shadow: 0 0 0 2px #14100a, inset 0 0 8px rgba(0, 0, 0, 0.5), 0 6px 16px -6px #000;
+  animation: wheel-spin 9s linear infinite;
+}
+@keyframes wheel-spin { to { transform: rotate(360deg); } }
+.wheel-hub {
+  position: relative; z-index: 1; width: 24px; height: 24px; border-radius: 999px;
+  display: grid; place-items: center;
+  background: radial-gradient(circle at 35% 30%, #fdfbf5, #ddd6c6 88%);
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.8), inset 0 -2px 4px rgba(0, 0, 0, 0.2), 0 3px 8px -3px #000;
+  font-size: 0.75rem;
+}
+.wheel-spark { position: absolute; z-index: 2; color: #fff; font-size: 0.55rem; text-shadow: 0 0 6px #ffd166, 0 0 10px #ffd166; animation: wheel-spark-tw 2.2s ease-in-out infinite; }
+.wheel-spark.s1 { top: -6px; left: 6px; animation-delay: 0s; }
+.wheel-spark.s2 { bottom: -4px; right: -6px; animation-delay: 0.6s; }
+.wheel-spark.s3 { top: 28%; right: -9px; animation-delay: 1.2s; }
+@keyframes wheel-spark-tw {
+  0%, 100% { opacity: 0.15; transform: scale(0.7); }
+  50% { opacity: 1; transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bg-progress, .bg-progress::after, .bg-bar > span::after, .bg-next-icon, .bg-next-icon::before, .bg-next-icon::after,
+  .bg-card, .bg-card.is-earned::after, .bg-card.is-close, .bg-card.is-close .bg-prog-bar > i::after,
+  .ticket-emoji, .confetti, .flame-glow, .flame-outer, .flame-mid, .flame-core, .ember,
+  .beam, .crown-fx, .ray, .fx-halo, .fx-ring, .fx-spark, .lion-fx, .camera-fx .fx-ring, .lens-glint,
+  .target-fx, .diamond-fx, .facet, .megaphone-fx, .soundwave, .wheel-ring, .wheel-spark {
+    animation: none !important;
+  }
+}

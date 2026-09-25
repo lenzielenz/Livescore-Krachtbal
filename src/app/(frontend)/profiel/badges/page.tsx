@@ -18,6 +18,123 @@ export const dynamic = 'force-dynamic'
 
 export const metadata = { title: 'Mijn badges — Krachtbal Live' }
 
+/** Vanaf 60% voortgang telt een badge als "bijna" — trekt het oog naar wat haalbaar is. */
+const CLOSE_RATIO = 0.6
+const isClose = (b: Badge) => !b.earned && !!b.progress && b.progress.have / b.progress.need >= CLOSE_RATIO
+
+/** Elk van deze sleutels krijgt, eens verdiend, een eigen bij het onderwerp passende animatie
+ *  i.p.v. de generieke halo-gloed — zie badges.css voor de bijhorende stijlen. */
+function BadgeEmoji({ badge }: { badge: Badge }) {
+  if (!badge.earned) return <span className="bg-emoji">{badge.emoji}</span>
+
+  switch (badge.key) {
+    case 'checkin1':
+      return (
+        <span className="bg-emoji ticket-emoji" aria-hidden>
+          <span className="fx-halo" style={{ ['--fx' as string]: '#ffd166' }} />
+          {badge.emoji}
+          <span className="confetti c1" />
+          <span className="confetti c2" />
+        </span>
+      )
+    case 'checkin5':
+      return (
+        <span className="bg-emoji flame-emoji" aria-hidden>
+          <span className="flame-glow" />
+          <span className="flame flame-outer" />
+          <span className="flame flame-mid" />
+          <span className="flame flame-core" />
+          <span className="ember e1" />
+          <span className="ember e2" />
+        </span>
+      )
+    case 'checkin15':
+      return (
+        <span className="bg-emoji stadium-fx" aria-hidden>
+          <span className="fx-halo" />
+          <span className="beam b1" />
+          <span className="beam b2" />
+          <span className="beam b3" />
+          {badge.emoji}
+        </span>
+      )
+    case 'checkin30':
+      return (
+        <span className="bg-emoji crown-fx" aria-hidden>
+          <span className="fx-halo" />
+          {badge.emoji}
+          <span className="fx-spark s1" />
+          <span className="fx-spark s2" />
+          <span className="fx-spark s3" />
+          <span className="ray r1" />
+          <span className="ray r2" />
+        </span>
+      )
+    case 'checkin50':
+      return (
+        <span className="bg-emoji lion-fx" aria-hidden>
+          <span className="fx-halo" />
+          <span className="fx-ring" />
+          <span className="fx-ring r2" />
+          {badge.emoji}
+        </span>
+      )
+    case 'photo10':
+      return (
+        <span className="bg-emoji camera-fx" aria-hidden>
+          <span className="fx-ring" />
+          <span className="lens-glint" />
+          {badge.emoji}
+        </span>
+      )
+    case 'pred10':
+      return (
+        <span className="bg-emoji target-fx" aria-hidden>
+          <span className="fx-halo" />
+          <span className="fx-ring" />
+          {badge.emoji}
+        </span>
+      )
+    case 'predpoints100':
+      return (
+        <span className="bg-emoji diamond-fx" aria-hidden>
+          <span className="fx-halo" style={{ ['--fx' as string]: '#cdeeff' }} />
+          <span className="facet" />
+          {badge.emoji}
+          <span className="fx-spark d1" />
+          <span className="fx-spark d2" />
+        </span>
+      )
+    case 'superfan':
+      return (
+        <span className="bg-emoji megaphone-fx" aria-hidden>
+          {badge.emoji}
+          <span className="soundwave w1" />
+          <span className="soundwave w2" />
+        </span>
+      )
+    case 'booster':
+      return (
+        <span className="bg-emoji wheel-emoji" aria-hidden>
+          <span className="wheel-wrap">
+            <span className="wheel-ring" />
+            <span className="wheel-hub">{badge.emoji}</span>
+            <span className="wheel-spark s1">✦</span>
+            <span className="wheel-spark s2">✦</span>
+            <span className="wheel-spark s3">✦</span>
+          </span>
+        </span>
+      )
+    default:
+      return (
+        <span className="bg-emoji" aria-hidden>
+          <span className="fx-halo" />
+          {badge.emoji}
+        </span>
+      )
+  }
+}
+
 export default async function BadgesPage() {
   const authUser = await getAuthUser()
   if (!authUser) {
@@ -96,6 +213,15 @@ export default async function BadgesPage() {
   const earned = earnedCount(badges)
   const total = badges.length
 
+  // "Dichtstbij": de niet-verdiende badge met de hoogste voortgangsverhouding — de badge waar
+  // je effectief het snelst bij kan geraken, niet toevallig de eerste in de lijst.
+  const next = badges
+    .filter((b): b is Badge & { progress: NonNullable<Badge['progress']> } => !b.earned && !!b.progress)
+    .reduce<(Badge & { progress: NonNullable<Badge['progress']> }) | null>((best, b) => {
+      if (!best) return b
+      return b.progress.have / b.progress.need > best.progress.have / best.progress.need ? b : best
+    }, null)
+
   // Groepeer op categorie, in de volgorde waarin ze voorkomen.
   const groups: { name: string; items: Badge[] }[] = []
   for (const b of badges) {
@@ -121,6 +247,17 @@ export default async function BadgesPage() {
             <span className="bg-progress-lbl">badges verdiend</span>
           </div>
           <div className="bg-bar"><span style={{ width: `${Math.round((earned / total) * 100)}%` }} /></div>
+          {next && (
+            <div className="bg-next">
+              <span className="bg-next-icon" aria-hidden>{next.emoji}</span>
+              <div className="bg-next-copy">
+                <span className="bg-next-kicker">Dichtstbij</span>
+                <p className="bg-next-title">{next.title} — nog {next.progress.need - next.progress.have} te gaan</p>
+                <div className="bg-next-bar"><span style={{ width: `${Math.round((next.progress.have / next.progress.need) * 100)}%` }} /></div>
+                <span className="bg-next-txt">{next.progress.have}/{next.progress.need} · {next.desc}</span>
+              </div>
+            </div>
+          )}
         </div>
 
         {groups.map((g) => (
@@ -128,8 +265,9 @@ export default async function BadgesPage() {
             <h2 className="bg-group-title">{g.name}</h2>
             <div className="bg-grid">
               {g.items.map((b) => (
-                <div key={b.key} className={`bg-card${b.earned ? ' is-earned' : ''}`}>
-                  <span className="bg-emoji" aria-hidden>{b.emoji}</span>
+                <div key={b.key} className={`bg-card${b.earned ? ' is-earned' : ''}${isClose(b) ? ' is-close' : ''}`}>
+                  {isClose(b) && <span className="bg-close-tag">Bijna!</span>}
+                  <BadgeEmoji badge={b} />
                   <span className="bg-title">{b.title}</span>
                   <span className="bg-desc">{b.desc}</span>
                   {b.earned ? (

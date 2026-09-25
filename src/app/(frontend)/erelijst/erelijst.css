@@ -195,6 +195,13 @@
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 0 0 1px color-mix(in srgb, var(--accent) 25%, transparent);
   flex-shrink: 0;
 }
+/* Zelfde kanttekening als .erl-reeks-totaal .erl-meer verderop: .erl-board is geen grid-ouder,
+   dus expliciet de volle breedte + wat lucht t.o.v. de lijst erboven. */
+.erl-board .erl-meer {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+}
 
 /* --- Tabs --- */
 .erl-tabs {

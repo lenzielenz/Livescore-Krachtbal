@@ -205,8 +205,12 @@
   .rang-logo {
     display: none;
   }
+  /* Het rangcijfer (podiumrondje van 24px) + het pijltje ernaast (.rang-rankline) hadden hier
+     amper 30px te verdelen — ze plakten zichtbaar tegen elkaar en tegen de ploegnaam. 10px extra
+     komt van de 5 smalle statistiek-kolommen hieronder (elk 2px minder), zodat de ploegnaamkolom
+     evenveel plaats behoudt. */
   .rang-rank {
-    width: 30px;
+    width: 40px;
   }
   .rang-team {
     min-width: 0;
@@ -224,7 +228,7 @@
   /* Numerieke kolommen smal en gelijk; de ploegnaam krijgt de rest. */
   .rang-table th:not(.rang-teamh):not(.rang-rank),
   .rang-table td:not(.rang-team):not(.rang-rank) {
-    width: 30px;
+    width: 28px;
   }
   /* De laatste kolom (PTN) vulde met 2px padding zijn 30px precies, zodat de kop tegen de
      kaartrand plakte. Een tikje breder met wat ademruimte rechts; de ploegnaam levert die in.
@@ -250,7 +254,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 3px;
+  gap: 5px;
 }
 .rang-rank .rang-pos {
   display: inline-flex;
@@ -312,8 +316,8 @@
    zonder er een animatie-feestje van te maken. */
 .rang-leader {
   background-image:
-    linear-gradient(90deg, color-mix(in srgb, #ffd166 12%, transparent), color-mix(in srgb, #ffd166 3%, transparent) 45%, transparent 75%),
-    linear-gradient(100deg, transparent 30%, color-mix(in srgb, #ffd166 16%, transparent) 45%, transparent 60%);
+    linear-gradient(90deg, color-mix(in srgb, #ffb703 16%, transparent), color-mix(in srgb, #ffb703 5%, transparent) 45%, transparent 75%),
+    linear-gradient(100deg, transparent 30%, color-mix(in srgb, #ffb703 22%, transparent) 45%, transparent 60%);
   background-repeat: no-repeat, no-repeat;
   background-size: 100% 100%, 220% 100%;
   background-position: 0 0, 120% 0;
@@ -326,57 +330,17 @@
 @media (prefers-reduced-motion: reduce) {
   .rang-leader { animation: none; background-position: 0 0, 999% 0; }
 }
-.rang-leader td:first-child { box-shadow: inset 4px 0 0 0 #ffd166, inset 0 0 16px -11px color-mix(in srgb, #ffd166 80%, transparent); }
+.rang-leader td:first-child { box-shadow: inset 4px 0 0 0 #ffb703, inset 0 0 20px -9px color-mix(in srgb, #ffb703 85%, transparent); }
 .rang-leader .rang-name { font-weight: 800; }
 .rang-silver { background: linear-gradient(90deg, color-mix(in srgb, #cfd6de 9%, transparent), transparent 70%); }
 .rang-silver td:first-child { box-shadow: inset 4px 0 0 0 #cfd6de; }
 .rang-bronze { background: linear-gradient(90deg, color-mix(in srgb, #cd7f32 10%, transparent), transparent 70%); }
 .rang-bronze td:first-child { box-shadow: inset 4px 0 0 0 #cd7f32; }
-/* Degradatie-/gevarenzone (enkel volwassen reeksen): rode was + balkje. */
-.rang-danger { background: linear-gradient(90deg, color-mix(in srgb, #ef476f 9%, transparent), transparent 70%); }
-.rang-danger td:first-child { box-shadow: inset 4px 0 0 0 #ef476f; }
-/* Zacht badge-rondje achter het rangcijfer van podium/gevarenzone — het cijfer zelf verschuift
-   niet, er komt enkel een gekleurde gloed achter te staan. */
-.rang-leader .rang-pos,
-.rang-silver .rang-pos,
-.rang-bronze .rang-pos,
-.rang-danger .rang-pos {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-}
-/* Een lichte rand bovenaan + donkere schaduw onderaan geven het rondje body — een muntje i.p.v.
-   een platte gekleurde stip. Zelfde bevel-truc als de puntjes-chip hierboven. */
-.rang-leader .rang-pos {
-  background: radial-gradient(circle at 35% 28%, color-mix(in srgb, #ffd166 65%, #fff 10%), color-mix(in srgb, #ffd166 32%, transparent) 60%, color-mix(in srgb, #ffd166 8%, transparent) 85%);
-  box-shadow:
-    inset 0 1px 1px rgba(255, 255, 255, 0.5),
-    inset 0 -2px 3px color-mix(in srgb, #8a6512 60%, transparent),
-    0 0 0 1px color-mix(in srgb, #ffd166 60%, transparent),
-    0 2px 6px -1px color-mix(in srgb, #ffd166 55%, transparent);
-}
-.rang-silver .rang-pos {
-  background: radial-gradient(circle at 35% 28%, color-mix(in srgb, #cfd6de 60%, #fff 10%), color-mix(in srgb, #cfd6de 26%, transparent) 60%, color-mix(in srgb, #cfd6de 6%, transparent) 85%);
-  box-shadow:
-    inset 0 1px 1px rgba(255, 255, 255, 0.4),
-    inset 0 -2px 3px color-mix(in srgb, #6b7480 55%, transparent),
-    0 0 0 1px color-mix(in srgb, #cfd6de 50%, transparent);
-}
-.rang-bronze .rang-pos {
-  background: radial-gradient(circle at 35% 28%, color-mix(in srgb, #cd7f32 60%, #fff 10%), color-mix(in srgb, #cd7f32 26%, transparent) 60%, color-mix(in srgb, #cd7f32 6%, transparent) 85%);
-  box-shadow:
-    inset 0 1px 1px rgba(255, 255, 255, 0.35),
-    inset 0 -2px 3px color-mix(in srgb, #6b3d17 55%, transparent),
-    0 0 0 1px color-mix(in srgb, #cd7f32 50%, transparent);
-}
-.rang-danger .rang-pos {
-  background: radial-gradient(circle at 35% 28%, color-mix(in srgb, #ef476f 45%, transparent), transparent 75%);
-  box-shadow: inset 0 -1px 2px color-mix(in srgb, #7a0f27 45%, transparent), 0 0 0 1px color-mix(in srgb, #ef476f 42%, transparent);
-}
-
+/* Degradatie-/gevarenzone (enkel volwassen reeksen): rode was + balkje, met eenzelfde gloed-
+   behandeling als de leider — een écht alarmrood i.p.v. het gedempte rood elders (bv. de
+   positieverschil-pijltjes), zodat deze zone er meteen uitspringt als "gevaar". */
+.rang-danger { background: linear-gradient(90deg, color-mix(in srgb, #ff3b30 15%, transparent), transparent 70%); }
+.rang-danger td:first-child { box-shadow: inset 4px 0 0 0 #ff3b30, inset 0 0 18px -9px color-mix(in srgb, #ff3b30 80%, transparent); }
 /* Kampioensbadge naast de naam (enkel wanneer de titel wiskundig binnen is). */
 .rang-champ { font-size: 0.9em; }
 /* Kleursleutels in de legende. */
@@ -388,8 +352,8 @@
   vertical-align: -1px;
   margin-right: 3px;
 }
-.rang-key.goud { background: #ffd166; }
-.rang-key.rood { background: #ef476f; }
+.rang-key.goud { background: #ffb703; }
+.rang-key.rood { background: #ff3b30; }
 /* Eigen club (ingelogd) springt eruit — wint van de podium-styling wanneer ze samenvallen. */
 .rang-mine {
   background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 20%, transparent), color-mix(in srgb, var(--accent) 6%, transparent) 55%, transparent 85%);

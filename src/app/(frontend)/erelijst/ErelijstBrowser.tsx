@@ -38,14 +38,18 @@ export function ErelijstBrowser({
   const [query, setQuery] = useState('')
   const [tab, setTab] = useState<Tab>('kampioenen')
   const [toonAlles, setToonAlles] = useState<Record<Tab, boolean>>({ kampioenen: false, bekerwinnaars: false, referendum: false })
+  // De twee leaderboards bovenaan tonen standaard enkel de top 10 — mooi compact, maar wie ook
+  // een prijs pakte (net buiten de top 10) moet zichzelf wel ergens kunnen terugvinden.
+  const [boardsAlles, setBoardsAlles] = useState<{ clubs: boolean; spelers: boolean }>({ clubs: false, spelers: false })
 
   const zoekresultaten = useMemo(
     () => (query.trim() ? zoekErelijst(query, kampioenenSeizoenen, bekerwinnaarsSeizoenen, referendumPrijzen) : []),
     [query, kampioenenSeizoenen, bekerwinnaarsSeizoenen, referendumPrijzen],
   )
 
-  const topClubs = clubTrofeeen.slice(0, 10)
-  const topLaureaten = laureaten.slice(0, 10)
+  const BOARD_AANTAL = 10
+  const topClubs = boardsAlles.clubs ? clubTrofeeen : clubTrofeeen.slice(0, BOARD_AANTAL)
+  const topLaureaten = boardsAlles.spelers ? laureaten : laureaten.slice(0, BOARD_AANTAL)
   const zoekt = query.trim().length > 0
 
   return (
@@ -126,6 +130,11 @@ export function ErelijstBrowser({
                   </li>
                 ))}
               </ol>
+              {!boardsAlles.clubs && clubTrofeeen.length > BOARD_AANTAL && (
+                <button type="button" className="erl-meer" onClick={() => setBoardsAlles((s) => ({ ...s, clubs: true }))}>
+                  Toon alle {clubTrofeeen.length} clubs ↓
+                </button>
+              )}
             </div>
             <div className="erl-board">
               <h2 className="erl-section-title">⭐ Meest bekroonde spelers</h2>
@@ -144,6 +153,11 @@ export function ErelijstBrowser({
                   </li>
                 ))}
               </ol>
+              {!boardsAlles.spelers && laureaten.length > BOARD_AANTAL && (
+                <button type="button" className="erl-meer" onClick={() => setBoardsAlles((s) => ({ ...s, spelers: true }))}>
+                  Toon alle {laureaten.length} spelers ↓
+                </button>
+              )}
             </div>
           </section>
 

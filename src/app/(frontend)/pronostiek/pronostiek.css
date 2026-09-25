@@ -95,6 +95,32 @@
   .radteaser, .radteaser-ring, .radteaser-spark, .radteaser::after { animation: none; }
 }
 
+/* Bonusrad-uitleg, toegevoegd onderaan het bestaande "Hoe werken de punten?"-blok — de teaser
+   hierboven nodigt uit om te draaien, maar zei nergens WANNEER dat mag of wat een draai precies
+   oplevert. Rustige stijl (geen sheen/pulse): dit is uitleg, geen promo — dat feestje is al aan
+   de teaser besteed. */
+.vs-rad-explain { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); }
+.vs-rad-lead { margin: 0 0 6px; }
+.vs-rad-steps { margin: 0 0 10px; padding-left: 18px; display: flex; flex-direction: column; gap: 3px; }
+.vs-rad-prizes { display: flex; flex-wrap: wrap; gap: 6px; }
+.vs-rad-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--txt);
+  background: color-mix(in srgb, #fff 6%, transparent);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.vs-rad-chip.jackpot {
+  color: #3a2a00;
+  background: linear-gradient(180deg, #ffe08a, #ffb703);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4), 0 0 0 1px color-mix(in srgb, #ffb703 55%, transparent);
+}
+
 /* Klassement-paneel: bundelt "N deelnemers", "waar sta ik" en de zoekbalk in één kaart i.p.v.
    drie losse tekstregels — sluit visueel aan bij de bonusrad-teaser erboven in plaats van als
    een reeks aparte fragmenten te ogen. De genest .vs-hope/.vs-search (uit voorspel.css, gedeeld
@@ -199,5 +225,117 @@
 /* "Ik" blijft herkenbaar bovenop een medaille — de accentrand van .vs-row.me (voorspel.css) wint
    dankzij bronvolgorde (dit bestand laadt na voorspel.css), maar de medaillekleur op het cijfer
    zelf mag gewoon blijven staan. */
+
+/* ── Avatar + duidelijke stat-badges ───────────────────────────────────────────────────────
+   De oude rij had twee samengevoegde statistiekjes (🎯 2 · 🔥 5, gevolgd door een kaal "6×") —
+   dat laatste cijfer is zonder uitleg niet te onderscheiden van een bonusrad-vermenigvuldiger
+   (×1.5–×10, zie rad.css), en "hoeveel dichtst-bij" vs "hoeveel exact" liepen door elkaar. Elke
+   rij wordt nu een mini-kaart van twee regels: naam+avatar+punten bovenaan, drie voluit
+   benoemde badges (🎯 N exact · 🔥 N× dichtst bij · N voorspellingen) eronder — genoeg
+   plaats voor duidelijke tekst zonder de kolommen op gsm te pletten (zie CLAUDE.md: eerdere
+   crowding-fixes op de rangschikking om dezelfde reden). Enkel .vs-board-search: de club-interne
+   /club/voorspel-stand deelt de basis-.vs-row uit voorspel.css en blijft ongemoeid. */
+.vs-board-search .vs-row {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 7px;
+  padding: 10px 14px 11px;
+}
+.vs-row-top {
+  display: grid;
+  grid-template-columns: 26px 1fr auto;
+  align-items: center;
+  gap: 10px;
+}
+.vs-row-top .vs-who {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+.vs-row-top .vs-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+/* Kleuravatar met initialen — per persoon een vaste kleur (uit de naam afgeleid), zodat je
+   dezelfde speler bij een volgend bezoek herkent. Zelfde "gouden munt"-opbouw als de rang-/
+   podiumbadges hierboven, maar dan met de eigen kleur i.p.v. steeds goud/zilver/brons. */
+.vs-avatar {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.62rem;
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  background: radial-gradient(circle at 32% 28%, color-mix(in srgb, var(--av, var(--accent)) 85%, #fff 12%), var(--av, var(--accent)) 70%);
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.35),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.25),
+    0 0 0 1px color-mix(in srgb, var(--av, var(--accent)) 45%, transparent);
+}
+
+/* Draai-badge: enkel zichtbaar bij de winnaars van vorig weekend, tijdens hun speelweek — een
+   zachte gouden puls trekt het oog, net genoeg om "kom draaien" te fluisteren zonder de hele
+   rij te laten flikkeren (enkel déze paar rijen per week zijn ooit zo gemarkeerd). */
+.vs-spin-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: #3a2a00;
+  background: linear-gradient(180deg, #ffe08a, #ffd166);
+  box-shadow: 0 0 0 1px color-mix(in srgb, #ffd166 55%, transparent);
+  animation: vs-spinbadge-pulse 2.4s ease-in-out infinite;
+}
+@keyframes vs-spinbadge-pulse {
+  0%, 100% { box-shadow: 0 0 0 1px color-mix(in srgb, #ffd166 55%, transparent); }
+  50% { box-shadow: 0 0 0 1px color-mix(in srgb, #ffd166 55%, transparent), 0 0 14px -2px color-mix(in srgb, #ffd166 75%, transparent); }
+}
+
+/* Statistiek-badges: elk zijn eigen volledige woord i.p.v. een symbool + los cijfer. */
+.vs-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-left: 36px;
+}
+.vs-stat-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--dim);
+  background: color-mix(in srgb, #fff 5%, transparent);
+  box-shadow: inset 0 0 0 1px var(--line);
+  white-space: nowrap;
+}
+.vs-stat-badge.exact { color: color-mix(in srgb, var(--accent) 85%, #fff 15%); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 35%, var(--line)); }
+.vs-stat-badge.closest { color: #ffb37a; box-shadow: inset 0 0 0 1px color-mix(in srgb, #ff8a3d 35%, var(--line)); }
+
+@media (max-width: 480px) {
+  .vs-row-top { grid-template-columns: 22px 1fr auto; gap: 7px; }
+  .vs-avatar { width: 22px; height: 22px; font-size: 0.56rem; }
+  .vs-stats { padding-left: 29px; }
+  .vs-stat-badge { font-size: 0.68rem; padding: 2px 7px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .vs-spin-badge { animation: none; }
+}
 
 .vs-legend { margin: 10px 2px 0; font-size: 0.76rem; color: var(--dim); }

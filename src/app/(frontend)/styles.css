@@ -1539,7 +1539,10 @@ body.kb-scherm .site-foot { display: none; }
     0 16px 38px -18px rgba(0, 0, 0, 0.85);
 }
 /* Zelfde rijke diagonaal als de live-bordkaarten: clubkleuren die elkaar in een lichte naad
-   ontmoeten; een mask houdt de onderkant (namen + aftrap) rustig leesbaar. */
+   ontmoeten; een mask houdt de onderkant (namen + aftrap) rustig leesbaar. De gradiënt-canvas is
+   groter dan het vlak (background-size 160%) en drift traag rond — de naad tussen beide clubkleuren
+   beweegt zo zachtjes heen en weer i.p.v. stil te staan, zonder dat de kleuren zelf ooit hard
+   verspringen. */
 .match-affiche-kleur {
   position: absolute;
   inset: 0;
@@ -1552,8 +1555,17 @@ body.kb-scherm .site-foot { display: none; }
     color-mix(in srgb, var(--ac, var(--accent)) 34%, #0c1018) 60%,
     color-mix(in srgb, var(--ac, var(--accent)) 82%, #0a0e14) 100%
   );
+  background-size: 160% 160%;
+  animation: match-affiche-glow 13s ease-in-out infinite;
   -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 45%, rgba(0, 0, 0, 0.25) 100%);
   mask-image: linear-gradient(to bottom, #000 0%, #000 45%, rgba(0, 0, 0, 0.25) 100%);
+}
+@keyframes match-affiche-glow {
+  0%, 100% { background-position: 20% 30%; }
+  50% { background-position: 80% 70%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .match-affiche-kleur { animation: none; }
 }
 .match-affiche::before {
   content: '';
