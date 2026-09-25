@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 
-import { telClubTrofeeen, telLaureaten, zoekErelijst, seizoenNaarJaar, telPrijzenPerJaar, telPerGroep, canoniekeClubNaam } from '@/lib/erelijst'
+import { telClubTrofeeen, telLaureaten, zoekErelijst, seizoenNaarJaar, telPrijzenPerJaar, telPerGroep, canoniekeClubNaam, canoniekeReeksNaam } from '@/lib/erelijst'
 import type { KampioenenSeizoenInput, BekerwinnaarsSeizoenInput, ReferendumPrijsInput } from '@/lib/erelijst'
 
 const kampioenen: KampioenenSeizoenInput[] = [
@@ -174,6 +174,36 @@ describe('telPerGroep', () => {
 
   it('geeft een lege lijst bij een lege input', () => {
     expect(telPerGroep([])).toEqual([])
+  })
+})
+
+describe('canoniekeReeksNaam', () => {
+  it('normaliseert verschillende ordinaal-schrijfwijzen naar dezelfde vorm', () => {
+    expect(canoniekeReeksNaam('1e nationale heren')).toBe('1ste Nationale Heren')
+    expect(canoniekeReeksNaam('Eerste nationale dames')).toBe('1ste Nationale Dames')
+    expect(canoniekeReeksNaam('Eerste Nationale Dames')).toBe('1ste Nationale Dames')
+    expect(canoniekeReeksNaam('1e nationale dames')).toBe('1ste Nationale Dames')
+    expect(canoniekeReeksNaam('2e nationale heren')).toBe('2de Nationale Heren')
+  })
+
+  it('ontvouwt de "1N"-afkorting naar "1ste Nationale" zodat ze samensmelt met de voluit geschreven vorm', () => {
+    expect(canoniekeReeksNaam('1N Dames reserven')).toBe('1ste Nationale Dames Reserven')
+    expect(canoniekeReeksNaam('Eerste nationale dames reserven')).toBe('1ste Nationale Dames Reserven')
+  })
+
+  it('normaliseert hoofdlettergebruik van gekende woorden', () => {
+    expect(canoniekeReeksNaam('U18 meisjes')).toBe('U18 Meisjes')
+    expect(canoniekeReeksNaam('1e NATIONALE A')).toBe('1ste Nationale A')
+  })
+
+  it('laat onbekende woorden (oude afdelingen, jeugdcategorieën) ongewijzigd', () => {
+    expect(canoniekeReeksNaam('Scholieren A')).toBe('Scholieren A')
+    expect(canoniekeReeksNaam('Miniemen Meisjes')).toBe('Miniemen Meisjes')
+  })
+
+  it('houdt geslacht apart — voegt nooit een gok toe die er niet stond', () => {
+    expect(canoniekeReeksNaam('Eerste Nationale Reserven')).toBe('1ste Nationale Reserven')
+    expect(canoniekeReeksNaam('Eerste Nationale Reserven')).not.toBe(canoniekeReeksNaam('1N Dames reserven'))
   })
 })
 

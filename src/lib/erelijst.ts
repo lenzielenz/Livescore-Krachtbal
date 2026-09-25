@@ -196,6 +196,68 @@ export function telPrijzenPerJaar(
   return result
 }
 
+// Woordniveau-normalisatie voor reeksnamen: het archief spant tientallen jaren en dezelfde reeks
+// werd door de jaren heen net iets anders genoteerd ("1e"/"1ste"/"Eerste"/"1N" voor hetzelfde
+// ordinaal, wisselende hoofdletters). `canoniekeReeksNaam` herschrijft enkel de herkenbare
+// bouwstenen (ordinaal, niveau, geslacht/leeftijd, beloften/reserven) naar de schrijfwijze van
+// REEKS_OPTIONS (zie lib/reeksen.ts) — onbekende woorden (oude afdelingen, "Miniemen",
+// "Scholieren", …) blijven letterlijk staan i.p.v. te raden naar een hedendaags equivalent.
+const ORDINAAL_WOORD: Record<string, string> = {
+  '1e': '1ste',
+  '1ste': '1ste',
+  eerste: '1ste',
+  '2e': '2de',
+  '2de': '2de',
+  tweede: '2de',
+  '3e': '3de',
+  '3de': '3de',
+  derde: '3de',
+  '4e': '4de',
+  '4de': '4de',
+  vierde: '4de',
+}
+// "1N"/"2N"/… is de oude afkorting voor "1ste Nationale"/"2de Nationale" ineen — ontvouwt naar
+// twee woorden zodat het samensmelt met de voluit geschreven varianten.
+const ORDINAAL_NATIONAAL: Record<string, string[]> = {
+  '1n': ['1ste', 'Nationale'],
+  '2n': ['2de', 'Nationale'],
+  '3n': ['3de', 'Nationale'],
+  '4n': ['4de', 'Nationale'],
+}
+const REEKS_WOORD: Record<string, string> = {
+  nationale: 'Nationale',
+  landelijke: 'Landelijke',
+  regionale: 'Regionale',
+  afdeling: 'Afdeling',
+  heren: 'Heren',
+  dames: 'Dames',
+  jongens: 'Jongens',
+  meisjes: 'Meisjes',
+  beloften: 'Beloften',
+  reserven: 'Reserven',
+}
+
+/** Normaliseert een letterlijke archief-reeksnaam naar de huidige schrijfwijze (zie
+ *  reeksen.ts) — puur op woordniveau, zodat dezelfde reeks niet als aparte rijen opduikt in
+ *  "Totaal per reeks" enkel omdat de spelling door de jaren heen wat verschilde. */
+export function canoniekeReeksNaam(naam: string): string {
+  const woorden = naam.trim().split(/\s+/)
+  const out: string[] = []
+  for (const woord of woorden) {
+    const sleutel = woord.toLowerCase()
+    if (ORDINAAL_NATIONAAL[sleutel]) {
+      out.push(...ORDINAAL_NATIONAAL[sleutel])
+    } else if (ORDINAAL_WOORD[sleutel]) {
+      out.push(ORDINAAL_WOORD[sleutel])
+    } else if (REEKS_WOORD[sleutel]) {
+      out.push(REEKS_WOORD[sleutel])
+    } else {
+      out.push(woord)
+    }
+  }
+  return out.join(' ')
+}
+
 export interface GroepTotaal {
   naam: string
   aantal: number

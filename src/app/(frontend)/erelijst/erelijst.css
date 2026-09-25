@@ -431,6 +431,13 @@
 .erl-reeks-totaal .erl-kaart-waarde {
   color: color-mix(in srgb, var(--club) 55%, #fff);
 }
+/* De "Toon alle …"-knop (.erl-meer) rekent elders op een CSS-grid-ouder voor grid-column: 1/-1 —
+   hier zit hij los in de kaart, dus expliciet de volle breedte + wat lucht t.o.v. de rijen erboven. */
+.erl-reeks-totaal .erl-meer {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+}
 .erl-tijdlijn {
   list-style: none;
   margin: 12px 0 0;
