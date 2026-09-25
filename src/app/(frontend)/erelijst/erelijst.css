@@ -290,17 +290,31 @@
   font-size: 0.82rem;
 }
 
-/* Clubnaam als link: zelfde tekstkleur als de omgevende tekst, met een duidelijke maar niet
-   opdringerige hover-state — een link moet hier niet als een los "knopje" ogen tussen platte tekst. */
-.erl-club-link {
+/* Club-/spelernaam als link: zelfde tekstkleur als de omgevende tekst, met een duidelijke maar niet
+   opdringerige hover-state — een link moet hier niet als een los "knopje" ogen tussen platte tekst.
+   Bij een gematchte club gaat er een klein logo voor de naam (ClubNaam in EntityLinks.tsx). */
+.erl-entity-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+  vertical-align: middle;
   color: inherit;
   text-decoration: none;
   border-bottom: 1px dashed color-mix(in srgb, var(--dim) 55%, transparent);
   transition: color var(--dur-1) var(--ease-soft), border-color var(--dur-1) var(--ease-soft);
 }
-.erl-club-link:hover {
+.erl-entity-link:hover {
   color: var(--accent);
   border-color: color-mix(in srgb, var(--accent) 60%, transparent);
+}
+.erl-entity-link span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.erl-entity-link .tl {
+  flex-shrink: 0;
 }
 
 .erl-meer {

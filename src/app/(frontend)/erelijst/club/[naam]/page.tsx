@@ -8,6 +8,7 @@ import { isPlaceholder } from '@/lib/erelijst'
 import { fetchErelijstData } from '@/lib/erelijst-data'
 import { naamSleutel } from '@/lib/season-import'
 import { normalizeLogoFit, hasLogoAdjustment } from '@/lib/logo-fit'
+import { SpelerNaam } from '../../EntityLinks'
 import '../../erelijst.css'
 
 export const dynamic = 'force-dynamic'
@@ -117,7 +118,7 @@ export default async function ErelijstClubPage({ params }: { params: Promise<{ n
               {referendumLaureaten.map((r, i) => (
                 <li key={i} className="erl-tijdlijn-item">
                   <span className="erl-tijdlijn-jaar">{r.jaar}</span>
-                  <span className="erl-tijdlijn-detail">{r.naam} — {r.prijs}</span>
+                  <span className="erl-tijdlijn-detail"><SpelerNaam naam={r.naam} /> — {r.prijs}</span>
                 </li>
               ))}
             </ul>

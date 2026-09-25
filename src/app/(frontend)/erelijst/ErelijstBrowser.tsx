@@ -1,10 +1,11 @@
 'use client'
 
-import Link from 'next/link'
 import { useMemo, useState } from 'react'
 
-import { isPlaceholder, zoekErelijst } from '@/lib/erelijst'
+import { zoekErelijst } from '@/lib/erelijst'
 import type { KampioenenSeizoenInput, BekerwinnaarsSeizoenInput, ReferendumPrijsInput, ClubTrofee, Laureaat } from '@/lib/erelijst'
+import type { ClubLogoMeta } from '@/lib/club-logo-lookup'
+import { ClubNaam, SpelerNaam } from './EntityLinks'
 import './erelijst.css'
 
 type Tab = 'kampioenen' | 'bekerwinnaars' | 'referendum'
@@ -19,29 +20,20 @@ const TABS: { key: Tab; label: string }[] = [
 // bij het laden ondanks 60+ seizoenen per archief.
 const TOON_AANTAL = 8
 
-// Clubnaam als link naar het detailoverzicht (/erelijst/club/[naam]) — behalve bij een
-// placeholder-waarde ("Geen kampioenen", "?", …), waarvoor geen zinnig detailoverzicht bestaat.
-function ClubNaam({ naam }: { naam: string }) {
-  if (isPlaceholder(naam)) return <>{naam}</>
-  return (
-    <Link href={`/erelijst/club/${encodeURIComponent(naam)}`} className="erl-club-link">
-      {naam}
-    </Link>
-  )
-}
-
 export function ErelijstBrowser({
   kampioenenSeizoenen,
   bekerwinnaarsSeizoenen,
   referendumPrijzen,
   clubTrofeeen,
   laureaten,
+  clubLogos,
 }: {
   kampioenenSeizoenen: KampioenenSeizoenInput[]
   bekerwinnaarsSeizoenen: BekerwinnaarsSeizoenInput[]
   referendumPrijzen: ReferendumPrijsInput[]
   clubTrofeeen: ClubTrofee[]
   laureaten: Laureaat[]
+  clubLogos: Record<string, ClubLogoMeta>
 }) {
   const [query, setQuery] = useState('')
   const [tab, setTab] = useState<Tab>('kampioenen')
@@ -82,7 +74,7 @@ export function ErelijstBrowser({
                     <>
                       <span className="erl-zoek-icon" aria-hidden>🥇</span>
                       <div className="erl-zoek-info">
-                        <span className="erl-zoek-naam"><ClubNaam naam={r.naam} /></span>
+                        <span className="erl-zoek-naam"><ClubNaam naam={r.naam} logos={clubLogos} /></span>
                         <span className="erl-zoek-detail">kampioen {r.reeksNaam} · {r.seizoen}</span>
                       </div>
                     </>
@@ -91,7 +83,7 @@ export function ErelijstBrowser({
                     <>
                       <span className="erl-zoek-icon" aria-hidden>🏆</span>
                       <div className="erl-zoek-info">
-                        <span className="erl-zoek-naam"><ClubNaam naam={r.naam} /></span>
+                        <span className="erl-zoek-naam"><ClubNaam naam={r.naam} logos={clubLogos} /></span>
                         <span className="erl-zoek-detail">bekerwinnaar {r.categorie} · {r.seizoen}</span>
                       </div>
                     </>
@@ -100,9 +92,9 @@ export function ErelijstBrowser({
                     <>
                       <span className="erl-zoek-icon" aria-hidden>⭐</span>
                       <div className="erl-zoek-info">
-                        <span className="erl-zoek-naam">{r.naam}</span>
+                        <span className="erl-zoek-naam"><SpelerNaam naam={r.naam} /></span>
                         <span className="erl-zoek-detail">
-                          {r.prijs} · {r.jaar} · <ClubNaam naam={r.club} />
+                          {r.prijs} · {r.jaar} · <ClubNaam naam={r.club} logos={clubLogos} />
                         </span>
                       </div>
                     </>
@@ -124,7 +116,7 @@ export function ErelijstBrowser({
                     <span className="erl-rank">{i + 1}</span>
                     <div className="erl-board-info">
                       <div className="erl-board-main">
-                        <span className="erl-board-naam"><ClubNaam naam={c.naam} /></span>
+                        <span className="erl-board-naam"><ClubNaam naam={c.naam} logos={clubLogos} /></span>
                         <span className="erl-board-totaal">{c.totaal}</span>
                       </div>
                       <span className="erl-board-detail">{c.titels}× 🥇 kampioen · {c.bekers}× 🏆 beker</span>
@@ -142,7 +134,7 @@ export function ErelijstBrowser({
                     <span className="erl-rank">{i + 1}</span>
                     <div className="erl-board-info">
                       <div className="erl-board-main">
-                        <span className="erl-board-naam">{l.naam}</span>
+                        <span className="erl-board-naam"><SpelerNaam naam={l.naam} /></span>
                         <span className="erl-board-totaal">{l.aantal}</span>
                       </div>
                       <span className="erl-board-detail">{l.prijzen.join(', ')}</span>
@@ -177,7 +169,7 @@ export function ErelijstBrowser({
                     {s.reeksen.map((r, i) => (
                       <li key={i} className="erl-kaart-rij">
                         <span className="erl-kaart-label">{r.reeksNaam}</span>
-                        <span className="erl-kaart-waarde"><ClubNaam naam={r.kampioen} /></span>
+                        <span className="erl-kaart-waarde"><ClubNaam naam={r.kampioen} logos={clubLogos} /></span>
                       </li>
                     ))}
                   </ul>
@@ -200,7 +192,7 @@ export function ErelijstBrowser({
                     {s.winnaars.map((w, i) => (
                       <li key={i} className="erl-kaart-rij">
                         <span className="erl-kaart-label">{w.categorie}</span>
-                        <span className="erl-kaart-waarde"><ClubNaam naam={w.ploeg} /></span>
+                        <span className="erl-kaart-waarde"><ClubNaam naam={w.ploeg} logos={clubLogos} /></span>
                       </li>
                     ))}
                   </ul>
@@ -224,7 +216,7 @@ export function ErelijstBrowser({
                       <li key={i} className="erl-kaart-rij">
                         <span className="erl-kaart-label">{w.jaar}</span>
                         <span className="erl-kaart-waarde">
-                          {w.naam} <span className="erl-kaart-club">(<ClubNaam naam={w.club} />)</span>
+                          <SpelerNaam naam={w.naam} /> <span className="erl-kaart-club">(<ClubNaam naam={w.club} logos={clubLogos} />)</span>
                         </span>
                       </li>
                     ))}
