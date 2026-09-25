@@ -165,14 +165,35 @@
   background: var(--bg);
   color: var(--accent);
 }
-/* Uitgelichte hoofdingang: waar een supporter standaard naartoe wil. */
+/* Uitgelichte hoofdingang: waar een supporter standaard naartoe wil. Een gestippeld randje in
+   accentkleur viel te weinig op tussen de andere menu-items (gemeld: "blend samen in het
+   geheel") — nu dezelfde volle gradiënt-knop als de primaire CTA's elders in de app, zodat hij
+   in één oogopslag te vinden is. */
 .sh-more-hoofd {
-  font-weight: 800;
-  color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
-  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+  padding: 11px 14px;
+  font-size: 0.98rem;
+  font-weight: 900;
+  color: #06140d;
+  background: var(--grad-accent);
+  border: 1px solid color-mix(in srgb, var(--accent) 80%, #fff);
+  box-shadow: var(--glow-accent), 0 2px 0 rgba(255, 255, 255, 0.15) inset;
+  transition: transform var(--dur-1) var(--ease-out), filter var(--dur-1) var(--ease-soft);
 }
-.sh-more-hoofd:hover { background: color-mix(in srgb, var(--accent) 20%, transparent); }
+.sh-more-hoofd::after {
+  content: '→';
+  font-weight: 900;
+  opacity: 0.7;
+}
+.sh-more-hoofd:hover {
+  color: #06140d;
+  filter: brightness(1.05);
+  transform: translateY(-1px);
+}
 
 /* Registreren-link (supporter), rechts in de balk. */
 .sh-register {
@@ -214,14 +235,21 @@
   .sh-brand {
     font-size: 1rem;
   }
-  /* Op een staande smartphone is de terugweg naar het wedstrijdoverzicht belangrijker dan het
-     weer. Laat daarom "Wedstrijden" altijd staan en win de nodige ruimte met het weerblokje. */
+  /* Het weerblokje verdween hier volledig ("geen logo meer van het weerbericht", gemeld) — dat
+     was geen bewuste keuze om te missen, enkel ruimte winnen voor "Wedstrijden"/"Meer". Nu blijft
+     het staan, maar dan wél zo compact mogelijk: geen pijltje, minimale padding — net genoeg om
+     naast de navigatie te passen zonder dat die twee moeten gaan afbreken. */
   .sh-inner .wx-mini {
+    padding: 4px 7px;
+    gap: 3px;
+    font-size: 0.76rem;
+  }
+  .sh-inner .wx-mini-caret {
     display: none;
   }
   .sh-right {
     flex-wrap: nowrap;
-    gap: 3px;
+    gap: 4px;
   }
   .sh-link {
     padding: 6px 7px;

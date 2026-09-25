@@ -76,6 +76,9 @@ export interface Config {
     officials: Official;
     accidents: Accident;
     cupfinals: Cupfinal;
+    kampioenen: Kampioenen;
+    bekerwinnaars: Bekerwinnaar;
+    'referendum-awards': ReferendumAward;
     sanctions: Sanction;
     tournaments: Tournament;
     'tournament-matches': TournamentMatch;
@@ -116,6 +119,9 @@ export interface Config {
     officials: OfficialsSelect<false> | OfficialsSelect<true>;
     accidents: AccidentsSelect<false> | AccidentsSelect<true>;
     cupfinals: CupfinalsSelect<false> | CupfinalsSelect<true>;
+    kampioenen: KampioenenSelect<false> | KampioenenSelect<true>;
+    bekerwinnaars: BekerwinnaarsSelect<false> | BekerwinnaarsSelect<true>;
+    'referendum-awards': ReferendumAwardsSelect<false> | ReferendumAwardsSelect<true>;
     sanctions: SanctionsSelect<false> | SanctionsSelect<true>;
     tournaments: TournamentsSelect<false> | TournamentsSelect<true>;
     'tournament-matches': TournamentMatchesSelect<false> | TournamentMatchesSelect<true>;
@@ -152,10 +158,12 @@ export interface Config {
   globals: {
     season: Season;
     settings: Setting;
+    secretariaat: Secretariaat;
   };
   globalsSelect: {
     season: SeasonSelect<false> | SeasonSelect<true>;
     settings: SettingsSelect<false> | SettingsSelect<true>;
+    secretariaat: SecretariaatSelect<false> | SecretariaatSelect<true>;
   };
   locale: null;
   widgets: {
@@ -1161,6 +1169,87 @@ export interface Cupfinal {
   createdAt: string;
 }
 /**
+ * Historisch archief: per seizoen de kampioen van elke reeks. Later de bron voor een publieke kampioenenlijst.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "kampioenen".
+ */
+export interface Kampioenen {
+  id: number;
+  /**
+   * Bv. "2024-2025".
+   */
+  seizoen: string;
+  /**
+   * De "seizoen"-parameter uit de bron-URL (bv. "202425"), enkel voor herimport/koppeling — niet tonen aan bezoekers.
+   */
+  seizoenKey?: string | null;
+  /**
+   * URL van de officiële pagina waar dit vandaan komt.
+   */
+  bron?: string | null;
+  reeksen: {
+    reeksNaam: string;
+    kampioen: string;
+    id?: string | null;
+  }[];
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Historisch archief: per seizoen de bekerwinnaar van elke categorie. Later de bron voor een publieke lijst.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "bekerwinnaars".
+ */
+export interface Bekerwinnaar {
+  id: number;
+  /**
+   * Bv. "2024-2025".
+   */
+  seizoen: string;
+  /**
+   * De "seizoen"-parameter uit de bron-URL (bv. "2024_2025"), enkel voor herimport/koppeling — niet tonen aan bezoekers.
+   */
+  seizoenKey?: string | null;
+  /**
+   * URL van de officiële pagina waar dit vandaan komt.
+   */
+  bron?: string | null;
+  winnaars: {
+    categorie: string;
+    ploeg: string;
+    id?: string | null;
+  }[];
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Historisch archief van het jaarlijkse referendum (speler/speelster/belofte van het jaar). Later de bron voor een publieke lijst.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "referendum-awards".
+ */
+export interface ReferendumAward {
+  id: number;
+  /**
+   * Bv. "Speler van het jaar".
+   */
+  prijs: string;
+  /**
+   * URL van de officiële pagina waar dit vandaan komt.
+   */
+  bron?: string | null;
+  winnaars: {
+    jaar: string;
+    naam: string;
+    club: string;
+    id?: string | null;
+  }[];
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "sanctions".
  */
@@ -1966,6 +2055,18 @@ export interface PayloadLockedDocument {
         value: number | Cupfinal;
       } | null)
     | ({
+        relationTo: 'kampioenen';
+        value: number | Kampioenen;
+      } | null)
+    | ({
+        relationTo: 'bekerwinnaars';
+        value: number | Bekerwinnaar;
+      } | null)
+    | ({
+        relationTo: 'referendum-awards';
+        value: number | ReferendumAward;
+      } | null)
+    | ({
         relationTo: 'sanctions';
         value: number | Sanction;
       } | null)
@@ -2438,6 +2539,60 @@ export interface CupfinalsSelect<T extends boolean = true> {
         verantwoordelijke?: T;
         gedaan?: T;
         opmerking?: T;
+        id?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "kampioenen_select".
+ */
+export interface KampioenenSelect<T extends boolean = true> {
+  seizoen?: T;
+  seizoenKey?: T;
+  bron?: T;
+  reeksen?:
+    | T
+    | {
+        reeksNaam?: T;
+        kampioen?: T;
+        id?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "bekerwinnaars_select".
+ */
+export interface BekerwinnaarsSelect<T extends boolean = true> {
+  seizoen?: T;
+  seizoenKey?: T;
+  bron?: T;
+  winnaars?:
+    | T
+    | {
+        categorie?: T;
+        ploeg?: T;
+        id?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "referendum-awards_select".
+ */
+export interface ReferendumAwardsSelect<T extends boolean = true> {
+  prijs?: T;
+  bron?: T;
+  winnaars?:
+    | T
+    | {
+        jaar?: T;
+        naam?: T;
+        club?: T;
         id?: T;
       };
   updatedAt?: T;
@@ -3008,6 +3163,31 @@ export interface Setting {
   createdAt?: string | null;
 }
 /**
+ * Contactgegevens van het federatiesecretariaat. Later de bron voor een publieke contactpagina.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "secretariaat".
+ */
+export interface Secretariaat {
+  id: number;
+  /**
+   * Bv. "Oude Burg 23, 8000 Brugge - bezoek enkel na afspraak".
+   */
+  adres?: string | null;
+  routeUrl?: string | null;
+  telefoon?: string | null;
+  telefoonAlt?: string | null;
+  email?: string | null;
+  meldenUitslagen?: string | null;
+  federatieApiContact?: string | null;
+  /**
+   * URL van de officiële pagina waar dit vandaan komt.
+   */
+  bron?: string | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "season_select".
  */
@@ -3027,6 +3207,23 @@ export interface SettingsSelect<T extends boolean = true> {
   kantineMatchIds?: T;
   veldMatchId?: T;
   knipjesDrempel?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "secretariaat_select".
+ */
+export interface SecretariaatSelect<T extends boolean = true> {
+  adres?: T;
+  routeUrl?: T;
+  telefoon?: T;
+  telefoonAlt?: T;
+  email?: T;
+  meldenUitslagen?: T;
+  federatieApiContact?: T;
+  bron?: T;
   updatedAt?: T;
   createdAt?: T;
   globalType?: T;

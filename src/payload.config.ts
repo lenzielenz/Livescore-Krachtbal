@@ -22,6 +22,9 @@ import { Officials } from './collections/Officials'
 import { MatchSheets } from './collections/MatchSheets'
 import { Accidents } from './collections/Accidents'
 import { CupFinals } from './collections/CupFinals'
+import { Kampioenen } from './collections/Kampioenen'
+import { Bekerwinnaars } from './collections/Bekerwinnaars'
+import { ReferendumAwards } from './collections/ReferendumAwards'
 import { Sanctions } from './collections/Sanctions'
 import { Tournaments } from './collections/Tournaments'
 import { TournamentMatches } from './collections/TournamentMatches'
@@ -41,6 +44,7 @@ import { CvEvents } from './collections/CvEvents'
 import { FunctionGrants } from './collections/FunctionGrants'
 import { Season } from './globals/Season'
 import { Settings } from './globals/Settings'
+import { Secretariaat } from './globals/Secretariaat'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -109,6 +113,9 @@ export default buildConfig({
     Officials,
     Accidents,
     CupFinals,
+    Kampioenen,
+    Bekerwinnaars,
+    ReferendumAwards,
     Sanctions,
     Tournaments,
     TournamentMatches,
@@ -134,7 +141,7 @@ export default buildConfig({
     CvEvents,
     FunctionGrants,
   ],
-  globals: [Season, Settings],
+  globals: [Season, Settings, Secretariaat],
   /**
    * GraphQL staat uit.
    *
