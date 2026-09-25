@@ -22,7 +22,14 @@ export const CLUB_ALIASSEN: ClubAliasGroep[] = [
   },
   {
     canoniek: 't Klaverken Buggenhout',
-    aliassen: ['Klaverken Buggenhout', 't Klaverken Buggenhout A', 't Klaverken Buggenhout B', 't Klaverken Buggenhout C'],
+    aliassen: [
+      'Klaverken Buggenhout',
+      "'t Klaverken Buggenhout",
+      't Klaverken Buggenhout A',
+      't Klaverken Buggenhout B',
+      't Klaverken Buggenhout C',
+      'Simibu Buggenhout',
+    ],
   },
   {
     canoniek: 't Botterken Baasrode',

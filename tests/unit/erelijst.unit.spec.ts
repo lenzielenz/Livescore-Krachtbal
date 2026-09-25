@@ -45,6 +45,8 @@ describe('canoniekeClubNaam', () => {
     expect(canoniekeClubNaam('t Klaverken Buggenhout A')).toBe('t Klaverken Buggenhout')
     expect(canoniekeClubNaam('t Klaverken Buggenhout B')).toBe('t Klaverken Buggenhout')
     expect(canoniekeClubNaam('t Klaverken Buggenhout C')).toBe('t Klaverken Buggenhout')
+    expect(canoniekeClubNaam("'t Klaverken Buggenhout")).toBe('t Klaverken Buggenhout')
+    expect(canoniekeClubNaam('Simibu Buggenhout')).toBe('t Klaverken Buggenhout')
     expect(canoniekeClubNaam('Botterken Baasrode')).toBe('t Botterken Baasrode')
     expect(canoniekeClubNaam('KBC Maele')).toBe('KBC Male')
   })
