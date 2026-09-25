@@ -28,4 +28,8 @@ export const CLUB_ALIASSEN: ClubAliasGroep[] = [
     canoniek: 't Botterken Baasrode',
     aliassen: ['Botterken Baasrode'],
   },
+  {
+    canoniek: 'KBC Male',
+    aliassen: ['KBC Maele'],
+  },
 ]

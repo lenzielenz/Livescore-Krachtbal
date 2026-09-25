@@ -42,6 +42,7 @@ describe('canoniekeClubNaam', () => {
     expect(canoniekeClubNaam('t Klaverken Buggenhout B')).toBe('t Klaverken Buggenhout')
     expect(canoniekeClubNaam('t Klaverken Buggenhout C')).toBe('t Klaverken Buggenhout')
     expect(canoniekeClubNaam('Botterken Baasrode')).toBe('t Botterken Baasrode')
+    expect(canoniekeClubNaam('KBC Maele')).toBe('KBC Male')
   })
 
   it('laat een naam zonder gekende alias ongewijzigd', () => {
