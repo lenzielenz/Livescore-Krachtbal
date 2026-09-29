@@ -2,7 +2,8 @@
 // banner-beeld (scripts/assets/dag-van-de-sportclub-cover.png, huisstijl-kleuren), i.p.v. de
 // campagnegrafiek uit de opdracht (die Instagram-UI-chrome en andermans accountnaam bevatte).
 //   pnpm exec tsx scripts/set-dag-van-de-sportclub-cover.ts
-// Idempotent: hergebruikt een eerder geüploade versie (matcht op alt-tekst) i.p.v. te dupliceren.
+// Idempotent: matcht op alt-tekst en werkt dat record bij (ook het bestand zelf) i.p.v. te
+// dupliceren — dus ook veilig opnieuw te draaien na een revisie van de banner.
 import 'dotenv/config'
 import fs from 'fs'
 import path from 'path'
@@ -36,19 +37,17 @@ async function main() {
     overrideAccess: true,
   })
 
+  const filePath = path.join(__dirname, 'assets', 'dag-van-de-sportclub-cover.png')
+  const buf = fs.readFileSync(filePath)
+  const file = { data: buf, mimetype: 'image/png', name: 'dag-van-de-sportclub-cover.png', size: buf.length }
+
   let mediaId: number
   if (bestaandMedia.docs.length > 0) {
     mediaId = bestaandMedia.docs[0].id
-    console.log(`Bestaande coverfoto hergebruikt: media #${mediaId}.`)
+    await payload.update({ collection: 'media', id: mediaId, data: { alt: ALT }, file, overrideAccess: true })
+    console.log(`Bestaande coverfoto bijgewerkt: media #${mediaId}.`)
   } else {
-    const filePath = path.join(__dirname, 'assets', 'dag-van-de-sportclub-cover.png')
-    const buf = fs.readFileSync(filePath)
-    const created = await payload.create({
-      collection: 'media',
-      data: { alt: ALT },
-      file: { data: buf, mimetype: 'image/png', name: 'dag-van-de-sportclub-cover.png', size: buf.length },
-      overrideAccess: true,
-    })
+    const created = await payload.create({ collection: 'media', data: { alt: ALT }, file, overrideAccess: true })
     mediaId = created.id
     console.log(`Coverfoto geüpload: media #${mediaId}.`)
   }
