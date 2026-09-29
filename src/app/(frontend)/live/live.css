@@ -218,34 +218,7 @@
 .lb-datebtn.uit { opacity: 0.28; cursor: default; }
 .lb-datebtn.uit:hover { transform: none; border-color: color-mix(in srgb, #fff 8%, var(--line)); }
 
-/* "Bewaar als standaard" — in de filterlade, onder de "Weergave"-sectie (zie .lb-sheet-section
-   hieronder). Het dag/weekend-keuzeknopje zelf zit intussen gewoon in .lb-sort-btn (de Sorteer-
-   rij) — geen eigen stijl meer nodig. */
-.lb-view-save {
-  width: 100%;
-  margin-top: 8px;
-  padding: 9px 12px;
-  border: 1px solid color-mix(in srgb, #fff 8%, var(--line));
-  border-radius: 8px;
-  background: transparent;
-  color: var(--dim);
-  font: inherit;
-  font-size: 0.82rem;
-  font-weight: 600;
-  cursor: pointer;
-  text-align: center;
-  transition: border-color 0.14s ease, color 0.14s ease, background-color 0.14s ease;
-}
-.lb-view-save:hover:not(:disabled) {
-  color: var(--txt);
-  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
-}
-.lb-view-save.saved,
-.lb-view-save:disabled {
-  color: var(--pop);
-  border-color: color-mix(in srgb, var(--pop) 45%, var(--line));
-  cursor: default;
-}
+/* Het dag/weekend-keuzeknopje zit gewoon in .lb-sort-btn (de Sorteer-rij) — geen eigen stijl. */
 
 /* Datumkiezer: enkel dagen waarop er gespeeld wordt, met hun aantal wedstrijden. */
 .lb-date { position: relative; }
@@ -1462,11 +1435,21 @@
   flex-wrap: wrap;
   gap: 8px;
 }
+/* Weergave-instellingen (sorteren/bewaren) zijn geen filter — helemaal onderaan, klein en zonder
+   eigen titel, zodat ze geen ruimte wegnemen van Snelfilters/Reeks hierboven. */
+.lb-sheet-section-compact {
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+.lb-sheet-section-compact .lb-reeks {
+  font-size: 0.78rem;
+  padding: 6px 9px;
+}
 .lb-reekslist {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  max-height: 260px;
+  max-height: 320px;
   overflow-y: auto;
 }
 .lb-reeksrow {

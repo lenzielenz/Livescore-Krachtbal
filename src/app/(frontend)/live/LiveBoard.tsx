@@ -965,24 +965,6 @@ export function LiveBoard({
             </div>
 
             <div className="lb-sheet-body">
-              <section className="lb-sheet-section">
-                <h4>Weergave</h4>
-                <div className="lb-sheet-row">
-                  <button type="button" className={`lb-reeks fav ${sortBy === 'reeks' ? 'on' : ''}`} onClick={() => setSortBy('reeks')}>
-                    <span>🏷 Per reeks gegroepeerd</span>
-                  </button>
-                </div>
-                <button
-                  type="button"
-                  className={`lb-view-save ${viewIsSaved && !viewSaveFlash ? 'saved' : ''}`}
-                  onClick={saveView}
-                  disabled={viewIsSaved && !viewSaveFlash}
-                  title="Onthoud je dag/weekend-keuze voor je volgende bezoek"
-                >
-                  {viewSaveFlash ? '✓ Bewaard' : viewIsSaved ? '✓ Jouw standaard' : `💾 Bewaar ${view === 'weekend' ? 'weekend' : 'dag'}weergave als standaard`}
-                </button>
-              </section>
-
               {(liveCount > 0 || myClubId != null) && (
                 <section className="lb-sheet-section">
                   <h4>Snelfilters</h4>
@@ -1038,6 +1020,25 @@ export function LiveBoard({
                   <button type="button" className={`lb-reeks fav ${onlyFavReeksen ? 'on' : ''}`} onClick={() => setOnlyFavReeksen((v) => !v)}>
                     <span>★ Reeksen</span>
                     {favReeksen.size > 0 && <span className="lb-reeks-n">{favReeksen.size}</span>}
+                  </button>
+                </div>
+              </section>
+
+              {/* Compact onderaan — dit is een instelling, geen filter, dus geen ruimte wegnemen
+                  van Snelfilters/Reeks (wat je hier écht komt doen). */}
+              <section className="lb-sheet-section lb-sheet-section-compact">
+                <div className="lb-sheet-row">
+                  <button type="button" className={`lb-reeks ${sortBy === 'reeks' ? 'on' : ''}`} onClick={() => setSortBy('reeks')}>
+                    <span>🏷 Per reeks gegroepeerd</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`lb-reeks ${viewIsSaved && !viewSaveFlash ? 'on' : ''}`}
+                    onClick={saveView}
+                    disabled={viewIsSaved && !viewSaveFlash}
+                    title="Onthoud je dag/weekend-keuze voor je volgende bezoek"
+                  >
+                    <span>{viewSaveFlash ? '✓ Bewaard' : viewIsSaved ? '✓ Standaard' : '💾 Bewaar als standaard'}</span>
                   </button>
                 </div>
               </section>
