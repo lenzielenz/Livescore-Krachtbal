@@ -391,7 +391,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   return (
     <>
       <SiteHeader active="wedstrijden" />
-      <div className="site">
+      <div className="site site--tight-top">
       <Link href="/" className="back-link">
         ← Alle wedstrijden
       </Link>

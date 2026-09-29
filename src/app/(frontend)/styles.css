@@ -226,6 +226,11 @@ h3,
   margin: 0 auto;
   padding: 24px 16px 64px;
 }
+/* Matchpagina: minder lege ruimte tussen de sticky header en "Alle wedstrijden" — hier telt de
+   ruimte extra want de wedstrijdinfo moet meteen in beeld komen, i.p.v. onder een kale marge. */
+.site--tight-top {
+  padding-top: 12px;
+}
 
 /* Voettekst: privacybeleid + account verwijderen moeten vindbaar zijn (app-winkelbeleid). */
 .site-foot {
@@ -1260,6 +1265,9 @@ body.kb-scherm .site-foot { display: none; }
 .back-link:hover {
   color: var(--txt);
 }
+.site--tight-top .back-link {
+  margin-bottom: 10px;
+}
 
 /* Supporters-modus: "Aantekenen"-knop bovenaan de wedstrijdpagina — iedereen kan meteen
    de score beginnen doorgeven (vrije livescore). */
@@ -1431,7 +1439,16 @@ body.kb-scherm .site-foot { display: none; }
   color: var(--dim);
   line-height: 1.5;
 }
-.match-meta-reeks { font-weight: 800; color: var(--accent); }
+/* Eigen regel en groter dan de rest van de meta-bits (datum/locatie/scheids) — de categorie moet
+   in één oogopslag te lezen zijn, niet wegvallen tussen de kleine chips. */
+.match-meta-reeks {
+  display: block;
+  width: 100%;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--accent);
+  margin-bottom: 2px;
+}
 .match-meta-bit::before { content: "·"; margin: 0 8px; color: var(--line); }
 .match-meta-cal { color: var(--accent); font-weight: 700; text-decoration: none; }
 .match-meta-cal:hover { text-decoration: underline; }
