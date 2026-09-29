@@ -196,17 +196,33 @@ export const Clubs: CollectionConfig = {
       label: 'Accommodatie & contact',
       admin: { initCollapsed: true },
       fields: [
-        { name: 'accommodatie', label: 'Terrein / accommodatie', type: 'textarea', admin: { description: 'Naam stadion, adres, type terrein (bv. kunstgras).' } },
+        {
+          name: 'accommodatie',
+          label: 'Terrein / accommodatie',
+          type: 'textarea',
+          admin: {
+            description:
+              'Naam stadion, volledig adres (straat + nr + gemeente), type terrein (bv. kunstgras). Dit adres bepaalt de "Route"-link naar Google Maps op de wedstrijdpagina — vul een volledig adres in als je wil dat die link naar het juiste plein wijst, niet naar het centrum van de gemeente.',
+          },
+        },
         {
           name: 'plaats',
           label: 'Gemeente / plaats (voor het weer)',
           type: 'text',
-          admin: { description: 'Bv. "Brugge" of "Snellegem". Wordt gebruikt voor de buienradar van de thuiswedstrijden.', placeholder: 'Brugge' },
+          admin: { description: 'Bv. "Brugge" of "Snellegem". Wordt gebruikt voor de buienradar van de thuiswedstrijden — de routelink hierboven gebruikt liever het volledige adres.', placeholder: 'Brugge' },
         },
         {
           type: 'row',
           fields: [
-            { name: 'lat', label: 'Breedtegraad (optioneel)', type: 'number', admin: { description: 'Exacte locatie van het terrein (optioneel, nauwkeuriger dan de gemeente).' } },
+            {
+              name: 'lat',
+              label: 'Breedtegraad (optioneel)',
+              type: 'number',
+              admin: {
+                description:
+                  'Enkel voor de buienradar. Blijft leeg → wordt automatisch (grof) afgeleid uit de gemeente hierboven, dus dit is het centrum van de gemeente, NIET het exacte terrein. Voor een correcte routelink volstaat het adres bij "Terrein / accommodatie" hierboven — dit veld hoef je normaal niet zelf in te vullen.',
+              },
+            },
             { name: 'lng', label: 'Lengtegraad (optioneel)', type: 'number' },
           ],
         },
