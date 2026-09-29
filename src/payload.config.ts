@@ -36,6 +36,7 @@ import { Sessiesjablonen } from './collections/Sessiesjablonen'
 import { PushSubscriptions } from './collections/PushSubscriptions'
 import { Advertenties } from './collections/Advertenties'
 import { News } from './collections/News'
+import { NewsPhotos } from './collections/NewsPhotos'
 import { Ideas } from './collections/Ideas'
 import { IdeaScreenshots } from './collections/IdeaScreenshots'
 import { MatchMvpVotes } from './collections/MatchMvpVotes'
@@ -134,6 +135,7 @@ export default buildConfig({
     PushSubscriptions,
     Advertenties,
     News,
+    NewsPhotos,
     Ideas,
     IdeaScreenshots,
     MatchMvpVotes,

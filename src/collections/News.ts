@@ -36,5 +36,26 @@ export const News: CollectionConfig = {
       hooks: { beforeChange: [({ value, siblingData }) => value || ((siblingData as { published?: boolean })?.published ? new Date().toISOString() : value)] },
     },
     { name: 'published', label: 'Gepubliceerd', type: 'checkbox', defaultValue: false, admin: { position: 'sidebar', description: 'Pas zichtbaar voor supporters wanneer dit aanstaat.' } },
+    {
+      name: 'photosEnabled',
+      label: "Bezoekersfoto's toelaten",
+      type: 'checkbox',
+      defaultValue: false,
+      admin: {
+        position: 'sidebar',
+        description: "Toont een foto-knop onder dit artikel waarmee ingelogde bezoekers een eigen foto toevoegen (bv. een actiedag).",
+      },
+    },
+    {
+      name: 'photosExpireAt',
+      label: "Foto's verwijderen op",
+      type: 'date',
+      admin: {
+        position: 'sidebar',
+        condition: (data) => Boolean((data as { photosEnabled?: boolean })?.photosEnabled),
+        description: "Verplicht zodra bezoekersfoto's aanstaan. Na deze datum sluit het toevoegen en worden bestaande foto's automatisch verwijderd.",
+        date: { pickerAppearance: 'dayOnly', displayFormat: 'dd/MM/yyyy' },
+      },
+    },
   ],
 }

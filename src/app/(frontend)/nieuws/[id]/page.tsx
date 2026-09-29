@@ -1,7 +1,9 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
+import { NewsPhotoWall } from '@/components/NewsPhotoWall'
 import { SiteHeader } from '@/components/SiteHeader'
+import { getAuthUser } from '@/lib/auth-user'
 import { getPayloadClient } from '@/lib/payload-client'
 import '../nieuws.css'
 import { formatDateBE } from '@/lib/datetime'
@@ -37,6 +39,35 @@ export default async function NieuwsArtikel({ params }: { params: Promise<{ id: 
   const clubNm = club && typeof club === 'object' ? ((club as { name?: string }).name ?? null) : null
   const date = fmt((n as { publishedAt?: unknown }).publishedAt) || fmt((n as { createdAt?: unknown }).createdAt)
 
+  const photosEnabled = Boolean((n as { photosEnabled?: boolean }).photosEnabled)
+  const photosExpireAt = (n as { photosExpireAt?: string | null }).photosExpireAt ?? null
+  const photosOpen = photosEnabled && Boolean(photosExpireAt) && new Date(photosExpireAt as string).getTime() > Date.now()
+  let photos: { id: number; url: string; uploaderName: string; caption: string | null }[] = []
+  let mineIds = new Set<number>()
+  const me = photosEnabled ? await getAuthUser() : null
+  if (photosEnabled) {
+    const res = await payload
+      .find({ collection: 'news-photos', where: { news: { equals: nid } }, sort: '-createdAt', depth: 0, limit: 200 })
+      .catch(() => ({ docs: [] }))
+    photos = res.docs.map((p) => {
+      const fname = (p as { filename?: string }).filename
+      const url = fname ? `/api/news-photos/file/${encodeURIComponent(fname)}` : ((p as { url?: string | null }).url ?? '')
+      return { id: p.id as number, url, uploaderName: String((p as { uploaderName?: string }).uploaderName ?? 'Supporter'), caption: ((p as { caption?: string | null }).caption ?? null) }
+    })
+    if (me) {
+      mineIds = new Set(
+        res.docs
+          .filter((p) => {
+            const uploaderId = typeof (p as { uploader?: unknown }).uploader === 'object' && (p as { uploader?: unknown }).uploader
+              ? ((p as { uploader?: { id?: number } }).uploader?.id)
+              : (p as { uploader?: number }).uploader
+            return uploaderId != null && Number(uploaderId) === Number(me.id)
+          })
+          .map((p) => p.id as number),
+      )
+    }
+  }
+
   return (
     <>
       <SiteHeader />
@@ -51,6 +82,9 @@ export default async function NieuwsArtikel({ params }: { params: Promise<{ id: 
           <h1 className="nw-article-title">{String(n.title ?? '')}</h1>
           {Boolean(n.excerpt) && <p className="nw-article-lead">{String(n.excerpt)}</p>}
           <div className="nw-article-body">{String(n.body ?? '')}</div>
+          {photosEnabled && (photosOpen || photos.length > 0) && (
+            <NewsPhotoWall newsId={nid} photos={photos} canPost={photosOpen && Boolean(me)} showButton={photosOpen} mineIds={mineIds} />
+          )}
         </article>
       </div>
     </>

@@ -97,6 +97,7 @@ export interface Config {
     'push-subscriptions': PushSubscription;
     advertenties: Advertenty;
     news: News;
+    'news-photos': NewsPhoto;
     ideas: Idea;
     'idea-screenshots': IdeaScreenshot;
     'match-mvp-votes': MatchMvpVote;
@@ -140,6 +141,7 @@ export interface Config {
     'push-subscriptions': PushSubscriptionsSelect<false> | PushSubscriptionsSelect<true>;
     advertenties: AdvertentiesSelect<false> | AdvertentiesSelect<true>;
     news: NewsSelect<false> | NewsSelect<true>;
+    'news-photos': NewsPhotosSelect<false> | NewsPhotosSelect<true>;
     ideas: IdeasSelect<false> | IdeasSelect<true>;
     'idea-screenshots': IdeaScreenshotsSelect<false> | IdeaScreenshotsSelect<true>;
     'match-mvp-votes': MatchMvpVotesSelect<false> | MatchMvpVotesSelect<true>;
@@ -219,15 +221,15 @@ export interface Club {
   colorPrimary?: string | null;
   colorSecondary?: string | null;
   /**
-   * Naam stadion, adres, type terrein (bv. kunstgras).
+   * Naam stadion, volledig adres (straat + nr + gemeente), type terrein (bv. kunstgras). Dit adres bepaalt de "Route"-link naar Google Maps op de wedstrijdpagina — vul een volledig adres in als je wil dat die link naar het juiste plein wijst, niet naar het centrum van de gemeente.
    */
   accommodatie?: string | null;
   /**
-   * Bv. "Brugge" of "Snellegem". Wordt gebruikt voor de buienradar van de thuiswedstrijden.
+   * Bv. "Brugge" of "Snellegem". Wordt gebruikt voor de buienradar van de thuiswedstrijden — de routelink hierboven gebruikt liever het volledige adres.
    */
   plaats?: string | null;
   /**
-   * Exacte locatie van het terrein (optioneel, nauwkeuriger dan de gemeente).
+   * Enkel voor de buienradar. Blijft leeg → wordt automatisch (grof) afgeleid uit de gemeente hierboven, dus dit is het centrum van de gemeente, NIET het exacte terrein. Voor een correcte routelink volstaat het adres bij "Terrein / accommodatie" hierboven — dit veld hoef je normaal niet zelf in te vullen.
    */
   lat?: number | null;
   lng?: number | null;
@@ -1827,8 +1829,44 @@ export interface News {
    * Pas zichtbaar voor supporters wanneer dit aanstaat.
    */
   published?: boolean | null;
+  /**
+   * Toont een foto-knop onder dit artikel waarmee ingelogde bezoekers een eigen foto toevoegen (bv. een actiedag).
+   */
+  photosEnabled?: boolean | null;
+  /**
+   * Verplicht zodra bezoekersfoto's aanstaan. Na deze datum sluit het toevoegen en worden bestaande foto's automatisch verwijderd.
+   */
+  photosExpireAt?: string | null;
   updatedAt: string;
   createdAt: string;
+}
+/**
+ * Foto's die bezoekers zelf toevoegden bij een nieuwsbericht. Verdwijnen automatisch na de bewaartermijn van dat artikel.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "news-photos".
+ */
+export interface NewsPhoto {
+  id: number;
+  news: number | News;
+  uploader?: (number | null) | User;
+  uploaderName?: string | null;
+  /**
+   * Optioneel bijschrift, bv. de naam van de sportieveling.
+   */
+  caption?: string | null;
+  expiresAt: string;
+  updatedAt: string;
+  createdAt: string;
+  url?: string | null;
+  thumbnailURL?: string | null;
+  filename?: string | null;
+  mimeType?: string | null;
+  filesize?: number | null;
+  width?: number | null;
+  height?: number | null;
+  focalX?: number | null;
+  focalY?: number | null;
 }
 /**
  * Ideeën, aanpassingen en problemen die bezoekers via de site doorgeven.
@@ -2143,6 +2181,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'news';
         value: number | News;
+      } | null)
+    | ({
+        relationTo: 'news-photos';
+        value: number | NewsPhoto;
       } | null)
     | ({
         relationTo: 'ideas';
@@ -2978,8 +3020,32 @@ export interface NewsSelect<T extends boolean = true> {
   club?: T;
   publishedAt?: T;
   published?: T;
+  photosEnabled?: T;
+  photosExpireAt?: T;
   updatedAt?: T;
   createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "news-photos_select".
+ */
+export interface NewsPhotosSelect<T extends boolean = true> {
+  news?: T;
+  uploader?: T;
+  uploaderName?: T;
+  caption?: T;
+  expiresAt?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  url?: T;
+  thumbnailURL?: T;
+  filename?: T;
+  mimeType?: T;
+  filesize?: T;
+  width?: T;
+  height?: T;
+  focalX?: T;
+  focalY?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
