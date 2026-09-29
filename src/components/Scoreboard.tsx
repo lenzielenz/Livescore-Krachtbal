@@ -58,6 +58,7 @@ export function Scoreboard({
   initialReactions,
   initialShouts,
   canPostInstant = false,
+  photoButtonOpen = canPostInstant,
   initialInstants,
   momentumGoals,
   momentumTimeouts,
@@ -78,6 +79,10 @@ export function Scoreboard({
   initialShouts?: Shout[]
   /** Mag de bezoeker een foto in de tribune plaatsen? (ingelogd + volwassen reeks + tribune open) */
   canPostInstant?: boolean
+  /** Staat het foto-venster open, los van login (volwassen reeks + tribune open)? De knop blijft
+      hierdoor altijd zichtbaar zodra de wedstrijd actief is — niet ingelogd tikt naar een
+      inlog-uitnodiging i.p.v. dat de knop verdwijnt. */
+  photoButtonOpen?: boolean
   /** Reeds geplaatste, niet-verlopen foto's bij deze wedstrijd. */
   initialInstants?: Instant[]
   /** Doelpunten (op volgorde) voor het scoreverloop onder het scorebord (na afloop). */
@@ -659,6 +664,7 @@ export function Scoreboard({
         matchId={matchId}
         instants={instants}
         canPost={canPostInstant}
+        showButton={photoButtonOpen}
         live={state.match.status === 'live'}
         mineIds={mineIds}
         onLocalAdd={onLocalAdd}

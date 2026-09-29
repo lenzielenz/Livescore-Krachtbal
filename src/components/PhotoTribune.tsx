@@ -27,6 +27,7 @@ export function PhotoTribune({
   matchId,
   instants,
   canPost,
+  showButton = canPost,
   live = false,
   mineIds,
   onLocalAdd,
@@ -34,7 +35,12 @@ export function PhotoTribune({
 }: {
   matchId: number
   instants: Instant[]
+  /** Mag deze bezoeker écht posten (ingelogd + venster open)? Bepaalt wat er gebeurt bij een tik. */
   canPost: boolean
+  /** Staat het foto-venster open (tijdstip/reeks), los van of de bezoeker al ingelogd is? De knop
+      blijft dan altijd zichtbaar — een niet-ingelogde bezoeker krijgt bij een tik een inlog-uitnodiging
+      i.p.v. dat de knop gewoon verdwijnt (dat maakte het inconsistent: soms wel, soms geen knop). */
+  showButton?: boolean
   /** De wedstrijd is nu live — dan mag de foto-knop opvallen i.p.v. rustig te wachten tot iemand
       'm toevallig opmerkt. */
   live?: boolean
@@ -46,6 +52,14 @@ export function PhotoTribune({
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
   const [zoom, setZoom] = useState<Instant | null>(null)
+
+  const tap = () => {
+    if (!canPost) {
+      window.location.href = `/inloggen?next=/match/${matchId}`
+      return
+    }
+    inputRef.current?.click()
+  }
 
   const pick = async (file: File | null) => {
     if (!file || busy) return
@@ -77,18 +91,20 @@ export function PhotoTribune({
     await fetch(`/api/match/${matchId}/instant/${id}`, { method: 'DELETE' }).catch(() => {})
   }
 
-  if (!canPost && instants.length === 0) return null
+  if (!showButton && instants.length === 0) return null
 
   return (
     <div className="ptr">
       {/* Geen kop/info. Nog geen foto's → één nette knop op volle breedte (uitgelijnd met de rest).
-          Zodra er foto's zijn → horizontale strip met compacte knop + kleine thumbnails. */}
+          Zodra er foto's zijn → horizontale strip met compacte knop + kleine thumbnails. De knop
+          zelf blijft altijd staan zolang het venster open is — niet ingelogd tikt naar een
+          inlog-uitnodiging (zie tap()) i.p.v. dat de knop wisselend verdwijnt. */}
       {instants.length === 0 ? (
-        canPost && (
+        showButton && (
           <button
             type="button"
             className={`ptr-fullbtn${live ? ' live' : ''}`}
-            onClick={() => inputRef.current?.click()}
+            onClick={tap}
             disabled={busy}
           >
             {busy ? '⏳ Bezig…' : live ? '📸 Jij was erbij — deel een foto!' : '📸 Foto toevoegen'}
@@ -98,11 +114,11 @@ export function PhotoTribune({
         <>
           <p className="ptr-count">📷 {instants.length} {instants.length === 1 ? 'foto' : "foto's"} van deze wedstrijd</p>
           <div className="ptr-strip">
-            {canPost && (
+            {showButton && (
               <button
                 type="button"
                 className={`ptr-add${live ? ' live' : ''}`}
-                onClick={() => inputRef.current?.click()}
+                onClick={tap}
                 disabled={busy}
                 aria-label="Foto toevoegen"
               >

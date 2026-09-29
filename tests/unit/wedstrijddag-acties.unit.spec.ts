@@ -91,6 +91,38 @@ describe('clubActies in federatiemodus', () => {
   })
 })
 
+describe('clubActies met claimedByOther (iemand anders tekent al aan)', () => {
+  it('haalt aantekenen weg in supportersmodus en houdt bekijken over', () => {
+    expect(clubActies({ supportersMode: true, side: 'home', live: false, bladOpen: false, claimedByOther: true })).toEqual(['bekijk'])
+    expect(clubActies({ supportersMode: true, side: 'away', live: false, bladOpen: false, claimedByOther: true })).toEqual(['bekijk'])
+  })
+
+  it('haalt aantekenen weg in federatiemodus (thuis) en voegt bekijken toe', () => {
+    expect(clubActies({ supportersMode: false, side: 'home', live: true, bladOpen: false, claimedByOther: true })).toEqual([
+      'opstelling',
+      'bekijk',
+    ])
+  })
+
+  it('haalt aantekenen weg in federatiemodus (uit) en behoudt bekijken', () => {
+    expect(clubActies({ supportersMode: false, side: 'away', live: false, bladOpen: true, claimedByOther: true })).toEqual([
+      'opstelling',
+      'bekijk',
+    ])
+  })
+
+  it('laat wachtOpScheidsrechter ongemoeid — die bevat sowieso geen aantekenen', () => {
+    expect(clubActies({ supportersMode: false, side: 'home', live: false, bladOpen: false, claimedByOther: true })).toEqual([
+      'opstelling',
+      'wachtOpScheidsrechter',
+    ])
+  })
+
+  it('doet niets wanneer claimedByOther niet meegegeven wordt (bestaand gedrag ongewijzigd)', () => {
+    expect(clubActies({ supportersMode: true, side: 'home', live: false, bladOpen: false })).toEqual(['aantekenen', 'bekijk'])
+  })
+})
+
 describe('primaireActie', () => {
   it('geeft null bij een lege lijst', () => {
     expect(primaireActie([])).toBeNull()

@@ -138,6 +138,11 @@ export async function settleFinishedMatches(payload: Payload, limit = 200): Prom
  *  - anders houdt de actie de bestaande claim levend;
  *  - en we onthouden wie meetekende, zodat die persoon zijn eigen werk niet kan bevestigen.
  * Best effort en losgekoppeld — het aantekenen zelf mag hier nooit op stuklopen of vertragen.
+ *
+ * Ook in de federatieflow (waar de confirm/dispute-laag niet bestaat, zie isOfficialScore): de
+ * claim/lastActiveAt hier bijgehouden is precies wat "iemand tekent deze wedstrijd al aan" elders
+ * (wedstrijddag-acties.ts, scorekeeper/[id]/page.tsx) laat zien, zodat een tweede aantekenaar niet
+ * per ongeluk dubbel begint. Dat staat los van de publieke 🟢/🟡-badge, die blijft `official` tonen.
  */
 export function noteContribution(matchId: number, user: { id: number; name: string }): void {
   setTimeout(() => {
@@ -149,7 +154,6 @@ async function run(matchId: number, user: { id: number; name: string }): Promise
   const { getPayloadClient } = await import('./payload-client')
   const { withLock } = await import('./async-mutex')
   const payload = await getPayloadClient()
-  if (await isOfficialScore(payload)) return // federatieflow: geen vertrouwenslaag nodig
   // Serialiseer op een eigen sleutel: twee gelijktijdige bijdragen mogen elkaars teller niet
   // overschrijven (lees-wijzig-schrijf op één json-kolom).
   await withLock(`trust:${matchId}`, async () => {

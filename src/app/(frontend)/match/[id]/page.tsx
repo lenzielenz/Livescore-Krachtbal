@@ -250,8 +250,12 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   // Blijvende foto-tribune: ENKEL op volwassen reeksen (safeguarding, geen jeugd). Laad alle
   // bewaarde foto's; posten mag ingelogd vanaf een uur vóór de aftrap (bv. een foto van het volle
   // terrein vóór de wedstrijd) tot de wedstrijd bezig is/pas voorbij.
+  // `photoButtonOpen` is het tijdstip-/reeksgedeelte van die voorwaarde, LOS van login — zo blijft
+  // de foto-knop altijd staan zodra de wedstrijd actief is (in plaats van te verdwijnen voor wie
+  // toevallig niet ingelogd is); tikken zonder in te loggen leidt dan naar de inlogpagina.
   const adultMatch = isAdultReeks(reeksRaw)
-  const canPostInstant = Boolean(me) && adultMatch && (isTribuneOpen(state.match.status, state.match.finishedAt) || magVoorAftrap)
+  const photoButtonOpen = adultMatch && (isTribuneOpen(state.match.status, state.match.finishedAt) || magVoorAftrap)
+  const canPostInstant = Boolean(me) && photoButtonOpen
   let initialInstants: { id: number; url: string; authorName: string; at: number }[] = []
   if (adultMatch) {
     const res = await payload
@@ -520,6 +524,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
         initialReactions={(matchDoc?.liveReactions as Record<string, number> | null) ?? undefined}
         initialShouts={Array.isArray(matchDoc?.liveShoutouts) ? (matchDoc.liveShoutouts as { id: number; name: string; text: string; at: number; photoUrl?: string | null }[]) : undefined}
         canPostInstant={canPostInstant}
+        photoButtonOpen={photoButtonOpen}
         initialInstants={initialInstants}
         momentumGoals={share?.goals}
         momentumTimeouts={share?.timeouts}

@@ -20,19 +20,29 @@ export function clubActies(opts: {
   live: boolean
   /** Zette de scheidsrechter het wedstrijdblad al open om aan te tekenen (wedstrijdklaar/bezig)? */
   bladOpen: boolean
+  /** Tekent een ANDER iemand deze wedstrijd al actief aan (zie score-trust.ts)? Dan valt
+   * 'aantekenen' hier weg — anders kunnen twee mensen tegelijk beginnen aantekenen en dubbel/
+   * conflicterend invoeren. De houder van de claim zelf blijft 'aantekenen' gewoon zien. */
+  claimedByOther?: boolean
 }): WedstrijdActie[] {
+  const zonderDubbel = (acties: WedstrijdActie[]): WedstrijdActie[] => {
+    if (!opts.claimedByOther) return acties
+    const zonder = acties.filter((a) => a !== 'aantekenen')
+    return zonder.includes('bekijk') ? zonder : [...zonder, 'bekijk']
+  }
+
   // Supportersmodus: geen opstelling om in te vullen en geen scheidsrechter om op te wachten.
   // Thuis én uit begin je meteen; "Bekijk" blijft ernaast voor wie enkel wil volgen.
-  if (opts.supportersMode) return ['aantekenen', 'bekijk']
+  if (opts.supportersMode) return zonderDubbel(['aantekenen', 'bekijk'])
 
   // Federatiemodus: aantekenen kan zodra de scheidsrechter het blad opende. Een wedstrijd die al
   // LOOPT is altijd open — de aantekentafel moet er terug in kunnen na een refresh of vanaf een
   // ander toestel, en dat geldt voor beide kanten.
   const open = opts.live || opts.bladOpen
   if (opts.side === 'home') {
-    return open ? ['opstelling', 'aantekenen'] : ['opstelling', 'wachtOpScheidsrechter']
+    return open ? zonderDubbel(['opstelling', 'aantekenen']) : ['opstelling', 'wachtOpScheidsrechter']
   }
-  return open ? ['opstelling', 'aantekenen', 'bekijk'] : ['opstelling', 'bekijk']
+  return open ? zonderDubbel(['opstelling', 'aantekenen', 'bekijk']) : ['opstelling', 'bekijk']
 }
 
 /** Welke actie krijgt de nadruk (btn-primary)? De rest staat als ghost ernaast. */

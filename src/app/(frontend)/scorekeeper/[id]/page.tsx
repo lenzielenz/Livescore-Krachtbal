@@ -100,9 +100,14 @@ export default async function ScorekeeperPage({
   // (zie mayScoreMatch). Zeg dat hier meteen, i.p.v. een volledig werkend ogend scorebord te tonen
   // waarvan elke tik met een foutmelding eindigt. Bevestigen of betwisten kan wél — op de
   // wedstrijdpagina. Federatie/aantekenaars gaan altijd voor op de crowd.
+  //
+  // Dezelfde claim geldt ook in federatiemodus: daar bestaat geen confirm/dispute-laag, maar de
+  // claim/lastActiveAt wordt sinds kort ook daar bijgehouden (zie noteContribution in
+  // score-trust-store.ts), precies om te vermijden dat twee aangeduide aantekenaars tegelijk
+  // beginnen. De knop verdwijnt hiervoor al op /club (wedstrijddag-acties.ts); dit is de
+  // server-kant die iemand die toch rechtstreeks naar deze url gaat tegenhoudt.
   const trust = state.trust
   const someoneElseScores =
-    supportersMode &&
     !isDemo &&
     trust.claimActive &&
     trust.scorerId != null &&
@@ -116,9 +121,10 @@ export default async function ScorekeeperPage({
           <h1 className="page-title">Aantekenen</h1>
           <p className="empty">
             <b>{trust.scorerName ?? 'Iemand anders'}</b> tekent deze wedstrijd al aan. Om te vermijden
-            dat twee mensen door elkaar scoren, kan er maar één tegelijk aantekenen. Volg de wedstrijd
-            mee en bevestig of betwist de stand op de wedstrijdpagina — geeft hij het aantekenen door
-            (of valt hij stil), dan kan jij het overnemen.
+            dat twee mensen door elkaar scoren, kan er maar één tegelijk aantekenen.
+            {supportersMode
+              ? ' Volg de wedstrijd mee en bevestig of betwist de stand op de wedstrijdpagina — geeft hij het aantekenen door (of valt hij stil), dan kan jij het overnemen.'
+              : ' Volg de wedstrijd mee op de wedstrijdpagina — valt hij stil, dan kan jij het na een tijdje overnemen.'}
           </p>
           <p className="sk-login-actions">
             <Link href={`/match/${matchId}`} className="match-score-cta">
