@@ -12,6 +12,7 @@ import { buildScoreboards } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
 import { clubsOpId } from '@/lib/ploeg-rechtzetten'
 import { reeksNaam } from '@/lib/reeksen'
+import { buildReeksStandings } from '@/lib/reeks-standings'
 import { buildTeamSeasonTrend } from '@/lib/season-trend'
 import { buildTeamReport } from '@/lib/team-report'
 import type { Match } from '@/payload-types'
@@ -88,6 +89,7 @@ export default async function PloegProfiel({ params }: Params) {
       reeks: m.reeks ?? null,
       thuis,
       opponent: opponentName(thuis ? m.awayTeam : m.homeTeam),
+      opponentId: relId(thuis ? m.awayTeam : m.homeTeam),
       // Beide ploegnamen: die gaan mee in het bewaar-lijstje, dat los van deze pagina leesbaar
       // moet blijven ("KV Izegem – KV Roeselare" zegt meer dan "@ KV Roeselare").
       home: opponentName(m.homeTeam),
@@ -100,6 +102,17 @@ export default async function PloegProfiel({ params }: Params) {
   const nu = Date.now()
   // De eerstvolgende wedstrijd springt eruit — dát is wat je meestal komt opzoeken.
   const volgendeId = fixtures.find((f) => f.status !== 'finished' && f.date && new Date(f.date).getTime() > nu)?.id ?? null
+
+  // Huidige plaats van de tegenstander in nog te spelen wedstrijden — verandert elke speelweek,
+  // dus altijd de actuele rangschikking van diens reeks, niet iets dat we opslaan.
+  const opponentRanks = new Map<number, number>()
+  const reeksenTeCheck = [...new Set(fixtures.filter((f) => f.status !== 'finished' && f.reeks).map((f) => f.reeks as string))]
+  await Promise.all(
+    reeksenTeCheck.map(async (rk) => {
+      const { standings } = await buildReeksStandings(payload, rk).catch(() => ({ standings: [] }))
+      standings.forEach((row, i) => opponentRanks.set(row.teamId, i + 1))
+    }),
+  )
 
   const club = (team.club && typeof team.club === 'object' ? team.club : null) as
     | { id: number; name?: string }
@@ -166,6 +179,11 @@ export default async function PloegProfiel({ params }: Params) {
                     <span className="ps-match-opp">
                       <i className={`ps-thuisuit ${f.thuis ? 'thuis' : 'uit'}`}>{f.thuis ? 'THUIS' : 'UIT'}</i>
                       <span className="ps-opp-naam">{f.opponent}</span>
+                      {/* Positie van de tegenstander bij een wedstrijd die nog moet komen — dit is
+                          de stand van vandaag, wisselt elke speelweek en wordt dus nooit bewaard. */}
+                      {f.status !== 'finished' && f.opponentId != null && opponentRanks.has(f.opponentId) && (
+                        <i className="ps-opp-rank" title="Huidige plaats van de tegenstander">{opponentRanks.get(f.opponentId)}e</i>
+                      )}
                       {f.id === volgendeId && <i className="ps-volgende-chip">VOLGENDE</i>}
                       {f.reeks && f.reeks !== team.reeks ? <i className="ps-match-reeks">{reeksNaam(f.reeks)}</i> : null}
                     </span>

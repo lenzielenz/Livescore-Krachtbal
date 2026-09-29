@@ -283,6 +283,19 @@
   font-size: 0.78rem;
   white-space: nowrap;
 }
+/* Huidige plaats van de tegenstander — enkel bij nog te spelen wedstrijden, verandert elke
+   speelweek. Kleine pil, niet zo nadrukkelijk als THUIS/UIT maar toch los van de naam leesbaar. */
+.ps-opp-rank {
+  flex: 0 0 auto;
+  font-style: normal;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--dim, #9aa7b4);
+  background: color-mix(in srgb, var(--dim, #9aa7b4) 14%, transparent);
+  border-radius: 999px;
+  padding: 0.1rem 0.45rem;
+  white-space: nowrap;
+}
 .ps-match-uur {
   color: var(--txt, #e8f0f7);
   font-weight: 700;
