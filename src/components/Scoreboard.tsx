@@ -21,7 +21,18 @@ import './scoreboard.css'
 type Side = 'home' | 'away'
 
 type Goal = { key: number; side: Side; team: string; points: number; scorer: string | null }
-type Shout = { id: number; name: string; text: string; at: number; photoUrl?: string | null }
+type Shout = {
+  id: number
+  userId?: number
+  name: string
+  text: string
+  at: number
+  photoUrl?: string | null
+  editedAt?: number
+  replyTo?: number | null
+  likes?: number
+  likedBy?: number[]
+}
 // Eén "deeltje" van een emoji-uitbarsting: start (ox/oy) op de ingedrukte knop, spat dan uiteen
 // (tx/ty) en dwarrelt al draaiend omhoog. Eigen schaal/duur per deeltje voor een levendige zwerm.
 type FloatItem = {
@@ -55,6 +66,7 @@ export function Scoreboard({
   ratePerMin,
   ballKleur = 'wit',
   canChat = false,
+  myUserId = null,
   initialReactions,
   initialShouts,
   canPostInstant = false,
@@ -73,6 +85,9 @@ export function Scoreboard({
   ballKleur?: KrachtbalKleur
   /** Mag de bezoeker live shoutouts plaatsen? (enkel ingelogd) */
   canChat?: boolean
+  /** Id van de ingelogde bezoeker (null = niet ingelogd) — bepaalt welke berichten "van mij" zijn
+      (bewerken) en of de like-knop al actief staat. */
+  myUserId?: number | null
   /** Reeds bewaarde emoji-tellers (server-side), zodat ze meteen zichtbaar zijn voor iedereen. */
   initialReactions?: Record<string, number>
   /** Reeds bewaarde shoutouts (server-side), zodat de tribune meteen gevuld is voor iedereen. */
@@ -187,6 +202,13 @@ export function Scoreboard({
   const atBottomRef = useRef(true)
   const [unread, setUnread] = useState(0)
   const [chatText, setChatText] = useState('')
+  // Antwoorden op een bericht: het bericht-id waarop het volgende bericht een antwoord wordt (of
+  // null voor een gewoon nieuw bericht bovenaan de tribune).
+  const [replyingTo, setReplyingTo] = useState<number | null>(null)
+  // Eigen bericht bewerken: id van het bericht dat momenteel als invoerveld staat + zijn tekst.
+  const [editingId, setEditingId] = useState<number | null>(null)
+  const [editText, setEditText] = useState('')
+  const [editBusy, setEditBusy] = useState(false)
   const [chatBusy, setChatBusy] = useState(false)
   const [needLogin, setNeedLogin] = useState(false)
   // Tijdlijn: wie scoorde is standaard verborgen; je onthult het per doelpunt door erop te tikken.
@@ -199,6 +221,7 @@ export function Scoreboard({
       return n
     })
   const chatFeedRef = useRef<HTMLDivElement>(null)
+  const chatInputRef = useRef<HTMLInputElement>(null)
 
   // Eén uitbarsting: deeltjes spatten vanuit (ox,oy) in alle richtingen uiteen en dwarrelen omhoog.
   const burst = (name: EmojiName, ox: number, oy: number, count: number) => {
@@ -296,6 +319,14 @@ export function Scoreboard({
         if (engagedRef.current && !atBottomRef.current) setUnread((n) => n + 1)
       },
       shoutouts: (d) => setShouts(d as Shout[]),
+      shout_edited: (d) => {
+        const edited = d as Shout
+        setShouts((prev) => prev.map((s) => (s.id === edited.id ? edited : s)))
+      },
+      shout_liked: (d) => {
+        const { id, likes, likedBy } = d as { id: number; likes: number; likedBy: number[] }
+        setShouts((prev) => prev.map((s) => (s.id === id ? { ...s, likes, likedBy } : s)))
+      },
       instant: (d) => addInstantLocal(d as Instant),
       instant_removed: (d) => removeInstantLocal((d as { id: number }).id),
       blast: (d) => {
@@ -350,16 +381,70 @@ export function Scoreboard({
       const res = await fetch(`/api/match/${matchId}/shoutout`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ text, replyTo: replyingTo ?? undefined }),
       })
       if (res.ok) {
         setChatText('') // het eigen bericht komt via de stream terug in de feed
+        setReplyingTo(null)
         engagedRef.current = true // je deed mee → voortaan op de hoogte van nieuwe berichten
       }
     } catch {
       /* stil falen — de gebruiker kan opnieuw proberen */
     } finally {
       setChatBusy(false)
+    }
+  }
+
+  // Like togglen: optimistisch lokaal bijwerken (voelt meteen aan) + de server-broadcast bevestigt
+  // het nadien voor iedereen, ook voor jezelf (onschadelijk dubbel, zie shout_liked hierboven).
+  const likeShout = (s: Shout) => {
+    if (!canChat || myUserId == null) {
+      setNeedLogin(true)
+      return
+    }
+    const iLiked = (s.likedBy ?? []).includes(myUserId)
+    setShouts((prev) =>
+      prev.map((x) =>
+        x.id === s.id
+          ? { ...x, likes: Math.max(0, (x.likes ?? 0) + (iLiked ? -1 : 1)), likedBy: iLiked ? (x.likedBy ?? []).filter((u) => u !== myUserId) : [...(x.likedBy ?? []), myUserId] }
+          : x,
+      ),
+    )
+    fetch(`/api/match/${matchId}/shoutout/${s.id}/like`, { method: 'POST' }).catch(() => {})
+  }
+
+  const startReply = (s: Shout) => {
+    setReplyingTo(s.id)
+    setEditingId(null)
+    chatInputRef.current?.focus()
+  }
+
+  const startEdit = (s: Shout) => {
+    setEditingId(s.id)
+    setEditText(s.text)
+    setReplyingTo(null)
+  }
+
+  const cancelEdit = () => {
+    setEditingId(null)
+    setEditText('')
+  }
+
+  const saveEdit = async () => {
+    const text = editText.replace(/\s+/g, ' ').trim()
+    if (!text || editingId == null || editBusy) return
+    setEditBusy(true)
+    try {
+      const res = await fetch(`/api/match/${matchId}/shoutout`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: editingId, text }),
+      })
+      if (res.ok) cancelEdit() // de server-broadcast (shout_edited) werkt de feed zelf bij
+    } catch {
+      /* stil falen — het bewerkveld blijft open, de gebruiker kan opnieuw proberen */
+    } finally {
+      setEditBusy(false)
     }
   }
 
@@ -785,15 +870,67 @@ export function Scoreboard({
             {shouts.length === 0 ? (
               <p className="sb-dim">Nog stil in de tribune… wees de eerste om je ploeg aan te moedigen!</p>
             ) : (
-              shouts.map((s) => (
-                <div key={s.id} className="sb-shout">
-                  <Avatar name={s.name} photoUrl={s.photoUrl} size={24} />
-                  <span className="sb-shout-body">
-                    <span className="sb-shout-name">{s.name}</span>
-                    <span className="sb-shout-text">{s.text}</span>
-                  </span>
-                </div>
-              ))
+              shouts.map((s) => {
+                const parent = s.replyTo != null ? shouts.find((p) => p.id === s.replyTo) : undefined
+                const iLiked = myUserId != null && (s.likedBy ?? []).includes(myUserId)
+                const mine = myUserId != null && s.userId === myUserId
+                const editing = editingId === s.id
+                return (
+                  <div key={s.id} className={`sb-shout${s.replyTo != null ? ' is-reply' : ''}`}>
+                    <Avatar name={s.name} photoUrl={s.photoUrl} size={24} />
+                    <span className="sb-shout-body">
+                      {s.replyTo != null && (
+                        <span className="sb-shout-replyto">↪ antwoord aan {parent?.name ?? 'iemand'}</span>
+                      )}
+                      <span className="sb-shout-name">
+                        {s.name}
+                        {s.editedAt && <span className="sb-shout-edited"> (bewerkt)</span>}
+                      </span>
+                      {editing ? (
+                        <span className="sb-shout-editform">
+                          <input
+                            className="sb-chat-input"
+                            value={editText}
+                            onChange={(e) => setEditText(e.target.value)}
+                            maxLength={200}
+                            aria-label="Bericht bewerken"
+                            autoFocus
+                          />
+                          <button type="button" className="sb-shout-action" disabled={editBusy || !editText.trim()} onClick={() => void saveEdit()}>
+                            Bewaar
+                          </button>
+                          <button type="button" className="sb-shout-action" onClick={cancelEdit}>
+                            Annuleer
+                          </button>
+                        </span>
+                      ) : (
+                        <span className="sb-shout-text">{s.text}</span>
+                      )}
+                      {!editing && (
+                        <span className="sb-shout-actions">
+                          <button
+                            type="button"
+                            className={`sb-shout-action sb-shout-like${iLiked ? ' on' : ''}`}
+                            onClick={() => likeShout(s)}
+                          >
+                            {iLiked ? '❤️' : '🤍'} {s.likes ?? 0}
+                          </button>
+                          {canChat && (
+                            <button type="button" className="sb-shout-action" onClick={() => startReply(s)}>
+                              Antwoorden
+                            </button>
+                          )}
+                          {mine && (
+                            <button type="button" className="sb-shout-action" onClick={() => startEdit(s)}>
+                              Bewerken
+                            </button>
+                          )}
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                )
+              })
             )}
           </div>
           {unread > 0 && (
@@ -809,12 +946,21 @@ export function Scoreboard({
                 void sendShout()
               }}
             >
+              {replyingTo != null && (
+                <span className="sb-chat-replying">
+                  Antwoord aan {shouts.find((s) => s.id === replyingTo)?.name ?? 'iemand'}
+                  <button type="button" className="sb-chat-replying-x" aria-label="Antwoorden annuleren" onClick={() => setReplyingTo(null)}>
+                    ✕
+                  </button>
+                </span>
+              )}
               <input
+                ref={chatInputRef}
                 className="sb-chat-input"
                 value={chatText}
                 onChange={(e) => setChatText(e.target.value)}
                 maxLength={200}
-                placeholder="Moedig je ploeg aan…"
+                placeholder={replyingTo != null ? 'Je antwoord…' : 'Moedig je ploeg aan…'}
                 aria-label="Bericht voor de live tribune"
               />
               <button type="submit" className="sb-chat-send" disabled={chatBusy || !chatText.trim()}>

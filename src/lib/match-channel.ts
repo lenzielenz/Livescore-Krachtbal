@@ -19,7 +19,50 @@ type Send = (event: string, data: unknown, id?: number) => void
 // Eén live shoutout (ingelogde supporter). Wordt nu ook PERSISTENT bewaard op de wedstrijd
 // (matches.liveShoutouts), zodat berichten en tellers niet verdwijnen wanneer (even) niemand
 // kijkt of de server herstart. Het kanaal hydrateert hieruit en schrijft terug.
-export type Shout = { id: number; name: string; text: string; at: number; photoUrl: string | null }
+//
+// `userId` bepaalt wie mag bewerken/verwijderen en telt mee in `likedBy` (één like per persoon,
+// togglebaar). `replyTo` verwijst naar het id van het bericht waarop gereageerd wordt (één niveau
+// diep — een antwoord op een antwoord hangt gewoon onder hetzelfde topbericht, geen oneindige
+// boom). Oudere, al bewaarde berichten van vóór deze velden bestonden krijgen bij het inladen
+// veilige standaardwaarden (zie sanitizeShout).
+export type Shout = {
+  id: number
+  userId: number
+  name: string
+  text: string
+  at: number
+  photoUrl: string | null
+  editedAt?: number
+  replyTo?: number | null
+  likes: number
+  likedBy: number[]
+}
+
+/** Vult ontbrekende velden veilig aan — nodig voor berichten die bewaard werden vóór reply/like/
+ *  bewerken bestonden (userId/likes/likedBy stonden toen nog niet op het record). Exported zodat
+ *  deze puur-functionele opschoning zelfstandig getest kan worden (de rest van dit bestand is
+ *  in-memory kanaalstatus + Payload i/o, niet zinvol te unit-testen zonder een echte DB/kanaal). */
+export function sanitizeShout(raw: unknown): Shout | null {
+  if (!raw || typeof raw !== 'object') return null
+  const r = raw as Record<string, unknown>
+  const id = Number(r.id)
+  if (!Number.isFinite(id)) return null
+  const text = typeof r.text === 'string' ? r.text : null
+  if (text == null) return null
+  const replyToNum = Number(r.replyTo)
+  return {
+    id,
+    userId: Number.isFinite(Number(r.userId)) ? Number(r.userId) : -1,
+    name: typeof r.name === 'string' ? r.name : 'Supporter',
+    text,
+    at: Number.isFinite(Number(r.at)) ? Number(r.at) : Date.now(),
+    photoUrl: typeof r.photoUrl === 'string' ? r.photoUrl : null,
+    editedAt: Number.isFinite(Number(r.editedAt)) ? Number(r.editedAt) : undefined,
+    replyTo: Number.isFinite(replyToNum) && replyToNum > 0 ? replyToNum : null,
+    likes: Array.isArray(r.likedBy) ? r.likedBy.length : Number.isFinite(Number(r.likes)) ? Number(r.likes) : 0,
+    likedBy: Array.isArray(r.likedBy) ? r.likedBy.map(Number).filter((v) => Number.isFinite(v) && v > 0) : [],
+  }
+}
 
 type Channel = {
   payload: Payload
@@ -225,9 +268,9 @@ async function hydrateChannel(ch: Channel, matchId: number) {
     }
     if (Array.isArray(dbShouts) && dbShouts.length) {
       const seen = new Set(ch.shoutouts.map((s) => s.id))
-      const restored = dbShouts.filter(
-        (s): s is Shout => Boolean(s) && typeof s.id === 'number' && typeof s.text === 'string' && !seen.has(s.id),
-      )
+      const restored = dbShouts
+        .map(sanitizeShout)
+        .filter((s): s is Shout => s != null && !seen.has(s.id))
       ch.shoutouts = [...restored, ...ch.shoutouts]
       ch.shoutSeq = Math.max(ch.shoutSeq, ...ch.shoutouts.map((s) => s.id), 0)
       changed = true
@@ -402,15 +445,54 @@ export function setMvpTotals(matchId: number, totals: Record<string | number, nu
 }
 
 /** Voeg een live shoutout toe en broadcast hem meteen. Null als niemand kijkt (geen kanaal). */
-export function addShoutout(matchId: number, name: string, text: string, photoUrl: string | null = null): Shout | null {
+export function addShoutout(
+  matchId: number,
+  userId: number,
+  name: string,
+  text: string,
+  photoUrl: string | null = null,
+  replyTo: number | null = null,
+): Shout | null {
   const ch = channels.get(matchId)
   if (!ch) return null
   if (!isTribuneOpen(ch.status, ch.finishedAt, ch.date)) return null // gesloten (>1u na de match)
+  // Een antwoord hangt onder zijn EIGEN topbericht: antwoordt iemand op een antwoord, dan koppelen
+  // we het nieuwe bericht meteen aan het oorspronkelijke topbericht (geen diepere boom nodig).
+  const target = replyTo != null ? ch.shoutouts.find((s) => s.id === replyTo) : undefined
+  const resolvedReplyTo = target ? (target.replyTo ?? target.id) : null
   ch.shoutSeq += 1
-  const shout: Shout = { id: ch.shoutSeq, name, text, at: Date.now(), photoUrl }
+  const shout: Shout = { id: ch.shoutSeq, userId, name, text, at: Date.now(), photoUrl, replyTo: resolvedReplyTo, likes: 0, likedBy: [] }
   ch.shoutouts.push(shout)
   broadcast(ch, 'shoutout', shout)
   void saveShoutouts(ch, matchId) // meteen persisteren zodat het bericht blijft staan
+  return shout
+}
+
+/** Bewerk je eigen bericht. Null bij een onbekend bericht, geen kanaal, of als het niet van jou is. */
+export function editShoutout(matchId: number, userId: number, shoutId: number, text: string): Shout | null {
+  const ch = channels.get(matchId)
+  if (!ch) return null
+  const shout = ch.shoutouts.find((s) => s.id === shoutId)
+  if (!shout || shout.userId !== userId) return null
+  shout.text = text
+  shout.editedAt = Date.now()
+  broadcast(ch, 'shout_edited', shout)
+  void saveShoutouts(ch, matchId)
+  return shout
+}
+
+/** Like togglen (uit als je al liket, anders erbij). Null bij een onbekend bericht of geen kanaal. */
+export function toggleShoutLike(matchId: number, userId: number, shoutId: number): Shout | null {
+  const ch = channels.get(matchId)
+  if (!ch) return null
+  const shout = ch.shoutouts.find((s) => s.id === shoutId)
+  if (!shout) return null
+  const at = shout.likedBy.indexOf(userId)
+  if (at >= 0) shout.likedBy.splice(at, 1)
+  else shout.likedBy.push(userId)
+  shout.likes = shout.likedBy.length
+  broadcast(ch, 'shout_liked', { id: shout.id, likes: shout.likes, likedBy: shout.likedBy })
+  void saveShoutouts(ch, matchId)
   return shout
 }
 

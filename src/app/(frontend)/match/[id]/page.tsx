@@ -521,6 +521,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
         ratePerMin={ratePerMin}
         ballKleur={ballKleur}
         canChat={Boolean(me)}
+        myUserId={me ? Number((me as { id?: number }).id) : null}
         initialReactions={(matchDoc?.liveReactions as Record<string, number> | null) ?? undefined}
         initialShouts={Array.isArray(matchDoc?.liveShoutouts) ? (matchDoc.liveShoutouts as { id: number; name: string; text: string; at: number; photoUrl?: string | null }[]) : undefined}
         canPostInstant={canPostInstant}
