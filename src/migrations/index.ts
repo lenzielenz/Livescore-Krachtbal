@@ -129,6 +129,7 @@ import * as migration_20260925_060000_kampioenen from './20260925_060000_kampioe
 import * as migration_20260925_070000_bekerwinnaars_referendum from './20260925_070000_bekerwinnaars_referendum'
 import * as migration_20260925_080000_secretariaat from './20260925_080000_secretariaat'
 import * as migration_20260929_090000_field_screens_queue from './20260929_090000_field_screens_queue'
+import * as migration_20260929_120000_match_instants_video from './20260929_120000_match_instants_video'
 
 export const migrations = [
   {
@@ -780,5 +781,10 @@ export const migrations = [
     up: migration_20260929_090000_field_screens_queue.up,
     down: migration_20260929_090000_field_screens_queue.down,
     name: '20260929_090000_field_screens_queue',
+  },
+  {
+    up: migration_20260929_120000_match_instants_video.up,
+    down: migration_20260929_120000_match_instants_video.down,
+    name: '20260929_120000_match_instants_video',
   },
 ];

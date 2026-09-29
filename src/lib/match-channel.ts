@@ -501,7 +501,7 @@ export function toggleShoutLike(matchId: number, userId: number, shoutId: number
 // houdt bovendien de recentste foto's per wedstrijd bij (zoals laatsteBlast hieronder) zodat de
 // kantine-tv — die geen eigen verbinding per wedstrijd heeft, enkel het verzamelbord — ze op haar
 // eerstvolgende poll kan oppikken, ook als niemand de matchpagina zelf open heeft staan.
-export type Instant = { id: number; url: string; authorName: string; at: number }
+export type Instant = { id: number; url: string; authorName: string; at: number; kind?: 'photo' | 'video' }
 
 const laatsteInstants = new Map<number, Instant[]>()
 const INSTANT_BEWAARD_MS = 60_000

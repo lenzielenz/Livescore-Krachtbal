@@ -20,7 +20,7 @@ const ROLES = [
 // Meer dan kijken — wat een supporter allemaal kan op het platform (de nieuwe dingen).
 const FEATURES = [
   { ico: '💬', tone: 'accent', name: 'Live tribune', desc: 'Reageer met emoji’s en moedig je ploeg aan terwijl de match loopt.' },
-  { ico: '📸', tone: 'pop', name: 'Foto-tribune', desc: 'Deel sfeerbeelden op volwassen wedstrijden, al vanaf een uur vóór de aftrap. Je foto’s blijven bewaard en duiken na afloop terug op bij de samenvatting.' },
+  { ico: '📸', tone: 'pop', name: 'Foto- & video-tribune', desc: 'Deel sfeerbeelden en korte video’s op volwassen wedstrijden, al vanaf een uur vóór de aftrap. Ze blijven bewaard en duiken na afloop terug op bij de samenvatting.' },
   { ico: '📡', tone: 'accent', name: 'Veldscherm koppelen', desc: 'Sta je aan het veld? Koppel de wedstrijd aan het scherm met de code — al vanaf een kwartier vóór de aftrap, door een supporter van thuis óf uit. Is het scherm nog bezet met de vorige match, dan zet dezelfde code je alvast in de wachtrij.' },
   { ico: '🔮', tone: 'pop', name: 'Pronostiek', desc: 'Voorspel de exacte eindstand en strijd mee in het globale klassement.' },
   { ico: '🎰', tone: 'accent', name: 'Bonusrad', desc: 'De besten van het weekend (aantal schaalt met het deelnemersveld) draaien aan het rad en winnen vermenigvuldigers.' },

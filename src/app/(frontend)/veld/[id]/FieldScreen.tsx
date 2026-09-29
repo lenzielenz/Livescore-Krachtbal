@@ -279,7 +279,8 @@ export function FieldScreen({
     setPhotosLoading(true)
     setPhotoIdx(0)
     try {
-      const res = await fetch(`/api/match-instants?where[match][equals]=${matchId}&depth=0&limit=60&sort=-createdAt`, { credentials: 'include' })
+      // Enkel foto's: dit is een stille dia-show op het veldscherm, geen videospeler.
+      const res = await fetch(`/api/match-instants?where[and][0][match][equals]=${matchId}&where[and][1][kind][not_equals]=video&depth=0&limit=60&sort=-createdAt`, { credentials: 'include' })
       const data = (await res.json().catch(() => ({}))) as { docs?: { filename?: string; url?: string; expiresAt?: string }[] }
       const now = Date.now()
       const urls = (data.docs ?? [])

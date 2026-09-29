@@ -260,7 +260,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   const adultMatch = isAdultReeks(reeksRaw)
   const photoButtonOpen = adultMatch && (isTribuneOpen(state.match.status, state.match.finishedAt) || magVoorAftrap)
   const canPostInstant = Boolean(me) && photoButtonOpen
-  let initialInstants: { id: number; url: string; authorName: string; at: number }[] = []
+  let initialInstants: { id: number; url: string; authorName: string; at: number; kind?: 'photo' | 'video' }[] = []
   if (adultMatch) {
     const res = await payload
       .find({
@@ -279,6 +279,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
         url: fn ? `/api/match-instants/file/${encodeURIComponent(fn)}` : ((d as { url?: string | null }).url || ''),
         authorName: (d as { authorName?: string | null }).authorName || 'Supporter',
         at: d.createdAt ? new Date(d.createdAt as string).getTime() : Date.now(),
+        kind: (d as { kind?: 'photo' | 'video' }).kind ?? 'photo',
       }
     })
   }
