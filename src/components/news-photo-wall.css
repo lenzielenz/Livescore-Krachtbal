@@ -3,12 +3,33 @@
 .npw {
   margin: 18px 0 4px;
 }
+.npw-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
 .npw-count {
-  margin: 0 0 6px;
+  margin: 0;
   font-size: 0.85rem;
   font-weight: 700;
   color: var(--txt, #e8f0f7);
 }
+.npw-gallery-btn {
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 7px 13px;
+  border-radius: 999px;
+  cursor: pointer;
+  border: 1px solid color-mix(in srgb, var(--accent, #6fb2ff) 40%, transparent);
+  background: color-mix(in srgb, var(--accent, #6fb2ff) 10%, transparent);
+  color: var(--accent, #6fb2ff);
+  white-space: nowrap;
+}
+.npw-gallery-btn:hover { background: color-mix(in srgb, var(--accent, #6fb2ff) 18%, transparent); }
 .npw-strip {
   display: flex;
   gap: 8px;
@@ -142,3 +163,74 @@
 }
 .npw-compose-post:disabled { opacity: 0.65; cursor: default; }
 .npw-del { border-color: rgba(239, 71, 111, 0.5); color: #ff8ba3; }
+
+/* Mozaïek-gallerij: alle foto's samen op één scherm, door elkaar en in wisselende groottes —
+   een fotowand i.p.v. een nette rij. */
+.npw-gallery {
+  position: fixed;
+  inset: 0;
+  z-index: 61;
+  background: rgba(0, 0, 0, 0.88);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.npw-gallery-inner {
+  width: min(96vw, 1000px);
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.npw-gallery-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+.npw-mosaic {
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-auto-rows: 90px;
+  gap: 8px;
+  padding-bottom: 4px;
+}
+@media (max-width: 560px) {
+  .npw-mosaic { grid-template-columns: repeat(3, 1fr); grid-auto-rows: 78px; }
+}
+.npw-mosaic-tile {
+  position: relative;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 0;
+  cursor: pointer;
+  grid-column: span 1;
+  grid-row: span 1;
+  transition: transform 0.12s ease, border-color 0.12s ease;
+}
+.npw-mosaic-tile:hover { transform: scale(1.02); border-color: color-mix(in srgb, var(--accent, #6fb2ff) 55%, transparent); z-index: 1; }
+.npw-mosaic-tile img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.npw-mosaic-tile.npw-m-big { grid-column: span 2; grid-row: span 2; }
+.npw-mosaic-tile.npw-m-wide { grid-column: span 2; grid-row: span 1; }
+.npw-mosaic-tile.npw-m-tall { grid-column: span 1; grid-row: span 2; }
+.npw-mosaic-cap {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 10px 6px 4px;
+  font-size: 0.66rem;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.75));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}

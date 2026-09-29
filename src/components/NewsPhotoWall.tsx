@@ -8,6 +8,21 @@ export type NewsPhoto = { id: number; url: string; uploaderName: string; caption
 
 const MAX_CAPTION_LEN = 80
 
+// Willekeurige volgorde voor de mozaïek-gallerij — "allemaal door elkaar" i.p.v. netjes op datum,
+// zodat de wand elke keer opnieuw een andere mix van sportievelingen toont.
+function shuffled<T>(arr: T[]): T[] {
+  const a = [...arr]
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[a[i], a[j]] = [a[j], a[i]]
+  }
+  return a
+}
+
+// Herhalend patroon van tegel-groottes voor het mozaïek-effect — sommige foto's springen groter
+// uit, andere blijven klein, zonder dat het een saaie uniforme grid wordt.
+const MOSAIC_PATTERN = ['npw-m-big', 'npw-m-sm', 'npw-m-sm', 'npw-m-tall', 'npw-m-wide', 'npw-m-sm', 'npw-m-sm', 'npw-m-sm']
+
 // Foto's client-side verkleinen vóór upload — zelfde aanpak als de foto-tribune bij een wedstrijd.
 async function resize(file: File, max = 1280, quality = 0.82): Promise<Blob> {
   const img = await createImageBitmap(file)
@@ -54,6 +69,7 @@ export function NewsPhotoWall({
   const [pending, setPending] = useState<{ blob: Blob; preview: string } | null>(null)
   const [caption, setCaption] = useState('')
   const [mine, setMine] = useState(mineIds)
+  const [gallery, setGallery] = useState<NewsPhoto[] | null>(null)
 
   const tap = () => {
     if (!canPost) {
@@ -118,11 +134,18 @@ export function NewsPhotoWall({
 
   return (
     <div className="npw">
-      <p className="npw-count">
-        {items.length > 0
-          ? `📷 ${items.length} ${items.length === 1 ? 'foto' : "foto's"} van sportievelingen`
-          : 'Deel een foto van je sportieveling!'}
-      </p>
+      <div className="npw-head">
+        <p className="npw-count">
+          {items.length > 0
+            ? `📷 ${items.length} ${items.length === 1 ? 'foto' : "foto's"} van sportievelingen`
+            : 'Deel een foto van je sportieveling!'}
+        </p>
+        {items.length > 1 && (
+          <button type="button" className="npw-gallery-btn" onClick={() => setGallery(shuffled(items))}>
+            🖼️ Bekijk alle foto's
+          </button>
+        )}
+      </div>
       <div className="npw-strip">
         {showButton && (
           <button type="button" className="npw-add" onClick={tap} disabled={busy} aria-label="Foto toevoegen">
@@ -158,6 +181,35 @@ export function NewsPhotoWall({
             <div className="npw-compose-actions">
               <button type="button" className="npw-compose-cancel" onClick={cancelPending} disabled={busy}>Annuleren</button>
               <button type="button" className="npw-compose-post" onClick={submit} disabled={busy}>{busy ? 'Bezig…' : 'Plaatsen'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {gallery && (
+        <div className="npw-gallery" role="dialog" aria-modal="true" onClick={() => setGallery(null)}>
+          <div className="npw-gallery-inner" onClick={(e) => e.stopPropagation()}>
+            <div className="npw-gallery-head">
+              <span>{gallery.length} foto&apos;s van sportievelingen — allemaal door elkaar</span>
+              <button type="button" className="npw-close" onClick={() => setGallery(null)}>Sluiten</button>
+            </div>
+            <div className="npw-mosaic">
+              {gallery.map((p, i) => (
+                <button
+                  type="button"
+                  key={p.id}
+                  className={`npw-mosaic-tile ${MOSAIC_PATTERN[i % MOSAIC_PATTERN.length]}`}
+                  onClick={() => {
+                    setGallery(null)
+                    setZoom(p)
+                  }}
+                  aria-label={`Foto van ${p.uploaderName}`}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={p.url} alt={p.caption || `Foto van ${p.uploaderName}`} loading="lazy" />
+                  {p.caption && <span className="npw-mosaic-cap">{p.caption}</span>}
+                </button>
+              ))}
             </div>
           </div>
         </div>
