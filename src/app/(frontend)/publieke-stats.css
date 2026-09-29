@@ -34,6 +34,18 @@
   font-size: 1.8rem;
   font-weight: 800;
 }
+.ps-hero-logo {
+  flex: 0 0 auto;
+}
+/* Ploegprofiel: als de club kleuren heeft, krijgt de hero een zachte was in die kleur i.p.v.
+   generiek grijs — hetzelfde idee als de match-affiche, hier dan voor het profiel als geheel.
+   Blijft binnen dezelfde breedte als de kaarten eronder (.an-card) i.p.v. edge-to-edge. */
+.ps-hero-branded {
+  padding: 0.85rem 1rem;
+  border-radius: 16px;
+  background: linear-gradient(120deg, color-mix(in srgb, var(--hc) 16%, transparent), color-mix(in srgb, var(--hc2) 8%, transparent) 70%);
+  border: 1px solid color-mix(in srgb, var(--hc) 25%, transparent);
+}
 .ps-name {
   margin: 0;
   font-size: 1.6rem;
