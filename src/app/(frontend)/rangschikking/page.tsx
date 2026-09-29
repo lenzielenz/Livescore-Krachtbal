@@ -10,7 +10,7 @@ import { getPayloadClient } from '@/lib/payload-client'
 import { reeksenMetData } from '@/lib/analyse-season'
 import { isAdultReeks, reeksNaam, type Reeks } from '@/lib/reeksen'
 import { buildSuperstars } from '@/lib/superstars'
-import { computeStandings, forfaitFromUitslag, type StandingsMatch } from '@/lib/standings'
+import { computeStandings, resolveForfait, type StandingsMatch } from '@/lib/standings'
 import { RangTable, type RangRow } from './RangTable'
 import { ReeksPicker } from './ReeksPicker'
 import './rangschikking.css'
@@ -109,7 +109,7 @@ export default async function RangschikkingPage({ searchParams }: { searchParams
     if (!teamInfo.has(homeId)) teamInfo.set(homeId, { name: c.teams.home.name, logoUrl: c.teams.home.logoUrl, logoFit: c.teams.home.logoFit, colors: c.teams.home.colors, clubId: c.teams.home.clubId })
     if (!teamInfo.has(awayId)) teamInfo.set(awayId, { name: c.teams.away.name, logoUrl: c.teams.away.logoUrl, logoFit: c.teams.away.logoFit, colors: c.teams.away.colors, clubId: c.teams.away.clubId })
     const date = String((mtch as { date?: unknown }).date ?? '')
-    standingsMatches.push({ homeId, awayId, homeGoals: c.score.home, awayGoals: c.score.away, forfait: forfaitFromUitslag(ffByMatch.get(id)), date })
+    standingsMatches.push({ homeId, awayId, homeGoals: c.score.home, awayGoals: c.score.away, forfait: resolveForfait(ffByMatch.get(id), c.score.home, c.score.away), date })
   }
 
   const teamIds = [...teamInfo.keys()]
