@@ -8,6 +8,7 @@
 
 import { brusselsParts } from './datetime'
 import { WEEKEND_RESET_HOUR, weekendRange } from './pronostiek-weekend'
+import { isForfaitScore } from './standings'
 import type { WeekSelection, WeekTeamRow } from './team-of-the-week'
 
 export interface RecapMatch {
@@ -52,6 +53,8 @@ export interface WeekendStats {
   backThrows: number
   /** Aantal supportersfoto's gepost bij wedstrijden uit dit venster (foto-tribune). */
   photos: number
+  /** Aantal forfaits (30–0/0–30) in dit venster — geteld, maar nooit als "prestatie" uitgelicht. */
+  forfaits: number
 }
 
 export interface WeeklyRecap {
@@ -102,12 +105,14 @@ const margin = (m: RecapMatch) => Math.abs(m.homeGoals - m.awayGoals)
 const total = (m: RecapMatch) => m.homeGoals + m.awayGoals
 const label = (m: RecapMatch) => `${m.home} ${m.homeGoals}–${m.awayGoals} ${m.away}`
 
-/** De opvallende wedstrijden: de zwaarste zege, de doelpuntenkermis en de spannendste partij. */
+/** De opvallende wedstrijden: de zwaarste zege, de doelpuntenkermis en de spannendste partij. Een
+ *  forfait (30–0) telt niet mee — de partij heeft er niets voor moeten doen, dus geen "prestatie". */
 export function buildHighlights(results: RecapMatch[]): RecapHighlight[] {
-  if (results.length === 0) return []
+  const real = results.filter((m) => !isForfaitScore(m.homeGoals, m.awayGoals))
+  if (real.length === 0) return []
   const out: RecapHighlight[] = []
 
-  const biggest = results.reduce((a, b) => (margin(b) > margin(a) ? b : a))
+  const biggest = real.reduce((a, b) => (margin(b) > margin(a) ? b : a))
   if (margin(biggest) >= 5) {
     out.push({
       key: 'biggest',
@@ -118,7 +123,7 @@ export function buildHighlights(results: RecapMatch[]): RecapHighlight[] {
     })
   }
 
-  const feast = results.reduce((a, b) => (total(b) > total(a) ? b : a))
+  const feast = real.reduce((a, b) => (total(b) > total(a) ? b : a))
   if (total(feast) > 0 && feast.matchId !== biggest.matchId) {
     out.push({
       key: 'feast',
@@ -131,7 +136,7 @@ export function buildHighlights(results: RecapMatch[]): RecapHighlight[] {
 
   // Spannendste partij: krap beslist. Een wedstrijd die hierboven al genoemd is, slaan we over —
   // drie keer dezelfde match uitlichten is geen overzicht.
-  const close = results.filter((m) => margin(m) <= 2 && !out.some((h) => h.matchId === m.matchId))
+  const close = real.filter((m) => margin(m) <= 2 && !out.some((h) => h.matchId === m.matchId))
   if (close.length > 0) {
     const thriller = close.reduce((a, b) => (total(b) > total(a) ? b : a))
     out.push({
@@ -194,7 +199,8 @@ export interface RecapInput {
   team: WeekTeamRow | null
   players: WeekSelection[]
   climbers: Climber[]
-  stats?: WeekendStats
+  /** Forfaits telt buildWeeklyRecap zelf uit `results` — de aanroeper hoeft ze niet mee te geven. */
+  stats?: Omit<WeekendStats, 'forfaits'>
   previousMatches?: number | null
 }
 
@@ -202,6 +208,7 @@ export interface RecapInput {
 export function buildWeeklyRecap(input: RecapInput): WeeklyRecap {
   const results = input.results.slice().sort((a, b) => a.date.localeCompare(b.date))
   const goals = results.reduce((s, m) => s + total(m), 0)
+  const forfaits = results.filter((m) => isForfaitScore(m.homeGoals, m.awayGoals)).length
   const climbers = input.climbers
     .filter((c) => c.delta > 0)
     .sort((a, b) => b.delta - a.delta || a.to - b.to || a.teamName.localeCompare(b.teamName))
@@ -211,7 +218,7 @@ export function buildWeeklyRecap(input: RecapInput): WeeklyRecap {
     matches: results.length,
     matchesManual: results.filter((m) => !m.autoImported).length,
     goals,
-    stats: input.stats ?? { visitors: 0, clubs: 0, goalThrows: 0, backThrows: 0, photos: 0 },
+    stats: { ...(input.stats ?? { visitors: 0, clubs: 0, goalThrows: 0, backThrows: 0, photos: 0 }), forfaits },
     headline: headlineFor(results.length, goals, input.team),
     highlights: buildHighlights(results),
     results,

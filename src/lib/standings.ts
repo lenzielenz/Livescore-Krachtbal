@@ -60,6 +60,14 @@ export function forfaitScore(uitslag: unknown): { home: number; away: number } |
   }
 }
 
+/** Klopt deze eindstand met het vaste forfait-patroon (30–0 of 0–30)? Herkenbaar aan de score
+ *  alleen — ook voor wedstrijden zonder wedstrijdblad (bv. via de federatie-import), die geen
+ *  apart forfait-veld hebben. De ploeg die niet forfaiteerde, heeft er niets voor moeten doen —
+ *  dus telt zo'n uitslag niet mee als "prestatie" (zwaarste zege, ploeg van de week, …). */
+export function isForfaitScore(homeGoals: number, awayGoals: number): boolean {
+  return (homeGoals === FORFAIT_GOALS && awayGoals === 0) || (awayGoals === FORFAIT_GOALS && homeGoals === 0)
+}
+
 /**
  * Bouwt de rangschikking uit de afgelopen wedstrijden. `teamIds` (optioneel) zorgt
  * dat ook ploegen die nog niet speelden in de tabel staan (0 op alles).

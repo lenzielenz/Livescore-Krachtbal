@@ -85,4 +85,14 @@ describe('teamOfTheWeek', () => {
   it('geen winnaars → null', () => {
     expect(teamOfTheWeek([{ teamId: 1, teamName: 'A', goalsFor: 1, goalsAgainst: 1, result: 'draw' }])).toBeNull()
   })
+  it('negeert een forfaitoverwinning (30–0), ook al is het doelsaldo het grootst', () => {
+    const best = teamOfTheWeek([
+      { teamId: 1, teamName: 'A', goalsFor: 20, goalsAgainst: 18, result: 'win' },
+      { teamId: 2, teamName: 'Forfaitwinnaar', goalsFor: 30, goalsAgainst: 0, result: 'win' },
+    ])
+    expect(best?.teamName).toBe('A')
+  })
+  it('enkel forfaitoverwinningen → null', () => {
+    expect(teamOfTheWeek([{ teamId: 1, teamName: 'A', goalsFor: 30, goalsAgainst: 0, result: 'win' }])).toBeNull()
+  })
 })

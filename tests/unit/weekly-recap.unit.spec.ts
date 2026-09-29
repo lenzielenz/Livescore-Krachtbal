@@ -63,6 +63,16 @@ describe('buildHighlights', () => {
     expect(h.find((x) => x.key === 'thriller')?.text).toContain('niemand die won')
   })
   it('lege week → geen highlights', () => expect(buildHighlights([])).toEqual([]))
+  it('een forfait (30–0) telt niet mee als "zwaarste zege" of "meeste doelpunten"', () => {
+    const h = buildHighlights([
+      match({ matchId: 1, homeGoals: 30, awayGoals: 0 }), // forfait — geen prestatie
+      match({ matchId: 2, homeGoals: 12, awayGoals: 11 }),
+    ])
+    expect(h.every((x) => x.matchId !== 1)).toBe(true)
+  })
+  it('enkel forfaits in de week → geen highlights', () => {
+    expect(buildHighlights([match({ matchId: 1, homeGoals: 0, awayGoals: 30 })])).toEqual([])
+  })
 })
 
 describe('positionDeltas', () => {
@@ -125,6 +135,22 @@ describe('buildWeeklyRecap', () => {
   it('valt terug op null als de vorige week niet kon worden opgehaald', () => {
     const r = buildWeeklyRecap({ startIso: 'a', endIso: 'b', results: [], team: null, players: [], climbers: [] })
     expect(r.previousMatches).toBeNull()
+  })
+  it('telt forfaits (30–0) apart, los van de andere statistieken', () => {
+    const r = buildWeeklyRecap({
+      startIso: 'a',
+      endIso: 'b',
+      results: [
+        match({ matchId: 1, homeGoals: 30, awayGoals: 0 }),
+        match({ matchId: 2, homeGoals: 0, awayGoals: 30 }),
+        match({ matchId: 3, homeGoals: 20, awayGoals: 18 }),
+      ],
+      team: null,
+      players: [],
+      climbers: [],
+    })
+    expect(r.stats.forfaits).toBe(2)
+    expect(r.matches).toBe(3)
   })
   it('telt automatisch geïmporteerde wedstrijden niet mee bij "manueel"', () => {
     const r = buildWeeklyRecap({
