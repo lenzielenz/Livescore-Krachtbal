@@ -77,7 +77,7 @@ export function buildSeasonRecap(input: SeasonRecapInput): SeasonRecap | null {
     matchesManual: input.results.filter((m) => !m.autoImported).length,
     goals,
     weekends: archive.length,
-    stats: { ...(input.stats ?? { visitors: 0, clubs: 0, goalThrows: 0, backThrows: 0, photos: 0 }), forfaits },
+    stats: { ...(input.stats ?? { visitors: 0, clubs: 0, goalThrows: 0, backThrows: 0, photos: 0, reactions: 0, shouts: 0, predictors: 0 }), forfaits },
     headline: seasonHeadline(input.seizoen, input.results.length, goals),
     highlights: buildHighlights(input.results),
     archive,

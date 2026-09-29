@@ -164,6 +164,9 @@ async function collectWeekendStats(payload: Payload, weekDocs: Record<string, un
   const weekendMatchIds = new Set(matchIds)
   let goalThrows = 0
   let backThrows = 0
+  let reactions = 0
+  let shouts = 0
+  const predictorIds = new Set<number>()
 
   const rememberClub = (team: unknown) => {
     if (!team || typeof team !== 'object') return
@@ -183,6 +186,26 @@ async function collectWeekendStats(payload: Payload, weekDocs: Record<string, un
     for (const goal of simple.goals) {
       goalThrows += 1
       if (goal.points === 2) backThrows += 1
+    }
+
+    // Live tribune: emoji-tikken (cumulatieve tellers) en geschreven berichten, samen over het weekend.
+    const liveReactions = (match as { liveReactions?: unknown }).liveReactions
+    if (liveReactions && typeof liveReactions === 'object') {
+      for (const v of Object.values(liveReactions as Record<string, unknown>)) {
+        const n = Number(v)
+        if (Number.isFinite(n) && n > 0) reactions += n
+      }
+    }
+    const liveShoutouts = (match as { liveShoutouts?: unknown }).liveShoutouts
+    if (Array.isArray(liveShoutouts)) shouts += liveShoutouts.length
+
+    // Pronostiek: unieke deelnemers over het weekend — wie meerdere wedstrijden voorspelde, telt maar één keer mee.
+    const scorePredictions = (match as { scorePredictions?: unknown }).scorePredictions
+    if (Array.isArray(scorePredictions)) {
+      for (const p of scorePredictions) {
+        const uid = rel((p as { userId?: unknown })?.userId) ?? Number((p as { userId?: unknown })?.userId)
+        if (Number.isFinite(uid) && uid! > 0) predictorIds.add(uid as number)
+      }
     }
   }
 
@@ -221,7 +244,7 @@ async function collectWeekendStats(payload: Payload, weekDocs: Record<string, un
     ? await payload.count({ collection: 'match-instants', where: { match: { in: matchIds } }, overrideAccess: true }).catch(() => ({ totalDocs: 0 }))
     : { totalDocs: 0 }
 
-  return { visitors, clubs: clubKeys.size, goalThrows, backThrows, photos: photosRes.totalDocs }
+  return { visitors, clubs: clubKeys.size, goalThrows, backThrows, photos: photosRes.totalDocs, reactions, shouts, predictors: predictorIds.size }
 }
 
 /** Spelersprestaties van de week: uit de worpstatistiek én uit de snelscoremodus. */

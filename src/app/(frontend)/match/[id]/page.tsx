@@ -108,11 +108,16 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   const weatherLat = typeof homeClub?.lat === 'number' ? homeClub.lat : null
   const weatherLng = typeof homeClub?.lng === 'number' ? homeClub.lng : null
   // Locatie-chip in de kop: accommodatie (adres/terreinnaam) als de club die invulde, anders
-  // gewoon de gemeente — zelfde terugval als de agenda-locatie verderop. Met coördinaten wijst
-  // de link naar de exacte pin, anders laat Google Maps zelf op de tekst zoeken.
+  // gewoon de gemeente — zelfde terugval als de agenda-locatie verderop.
   const terreinLabel = accommodatie || weatherPlace
+  // Route-link: is er een specifiek terreinadres, dan laat Google Maps daár zelf op zoeken — dat
+  // is exacter dan lat/lng, want die coördinaten komen enkel uit de (grove) gemeentenaam
+  // (zie Clubs.ts: de buienradar heeft geen adresprecisie nodig, de routelink wél). Zonder adres
+  // is de gemeente-pin het beste dat we hebben.
   const mapsUrl = terreinLabel
-    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(weatherLat != null && weatherLng != null ? `${weatherLat},${weatherLng}` : terreinLabel)}`
+    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+        accommodatie || (weatherLat != null && weatherLng != null ? `${weatherLat},${weatherLng}` : terreinLabel),
+      )}`
     : null
   // Toon de leesbare reeksnaam zonder de code-prefix ("1ste Nationale Dames" i.p.v. "1NAD — …").
   const reeks = matchDoc?.reeks ? reeksNaam(matchDoc.reeks) : null
