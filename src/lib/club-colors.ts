@@ -90,22 +90,52 @@ function hexToRgb(hex: string): [number, number, number] | null {
   return [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)]
 }
 
-// Botsen twee kleuren (te dicht bij elkaar om uit elkaar te houden)? ~50 per kanaal.
+// Botsen twee kleuren (te dicht bij elkaar om uit elkaar te houden)? Twee toetsen:
+//  - RGB-afstand: bijna identieke tint ÉN helderheid (~50 per kanaal);
+//  - tint (hue): twee roden die enkel in helderheid verschillen (bv. felrood vs donkerrood) voelen
+//    voor een kijker op een klein scorebord nog altijd "allebei rood" aan, ook al liggen ze in
+//    rauwe RGB-afstand verder uit elkaar dan de eerste toets alleen zou opvangen.
 const CLASH_DIST2 = 2500
+const HUE_CLASH_DEG = 20 // binnen ~20° tint (op een cirkel van 360°) telt als "dezelfde kleur"
+
+// Tint (hue, 0–360°) van een RGB-kleur, of null voor een (bijna) grijstint — die heeft geen
+// betrouwbare tint, dan beslist de RGB-afstand alleen.
+function hueOf([r, g, b]: [number, number, number]): number | null {
+  const max = Math.max(r, g, b)
+  const min = Math.min(r, g, b)
+  const d = max - min
+  if (d < 12) return null
+  let h: number
+  if (max === r) h = ((g - b) / d) % 6
+  else if (max === g) h = (b - r) / d + 2
+  else h = (r - g) / d + 4
+  h *= 60
+  return h < 0 ? h + 360 : h
+}
+
+function hueClash(a: [number, number, number], b: [number, number, number]): boolean {
+  const ha = hueOf(a)
+  const hb = hueOf(b)
+  if (ha == null || hb == null) return false
+  const diff = Math.abs(ha - hb)
+  return Math.min(diff, 360 - diff) < HUE_CLASH_DEG
+}
+
 export function colorsClash(a: string | null | undefined, b: string | null | undefined): boolean {
   const ra = hexToRgb(a ?? '')
   const rb = hexToRgb(b ?? '')
   if (!ra || !rb) return false
-  return dist2(ra, rb) < CLASH_DIST2
+  return dist2(ra, rb) < CLASH_DIST2 || hueClash(ra, rb)
 }
 
 // Geef de UIT-ploeg een onderscheidbare kleur: botst haar startkleur (primair) met die van de
-// thuisploeg, dan schakelt ze naar haar tweede kleur — maar enkel als die écht verschilt van de
-// thuiskleur (anders heeft wisselen geen zin en houden we de oorspronkelijke kleur).
+// thuisploeg (zo goed als dezelfde kleur), dan schakelt ze naar haar tweede kleur — de thuisploeg
+// behoudt altijd voorrang op haar eigen ingestelde primaire kleur. Enkel als de uitploeg geen
+// (afwijkende) secundaire kleur heeft, blijft haar primaire kleur staan bij gebrek aan alternatief.
 export function distinguishAway(home: ClubColors | null, away: ClubColors | null): ClubColors | null {
   if (!home || !away) return away
   if (!colorsClash(home.primary, away.primary)) return away
-  if (away.secondary && away.secondary !== away.primary && !colorsClash(home.primary, away.secondary)) {
+  if (away.secondary && away.secondary !== away.primary) {
     return { primary: away.secondary, secondary: away.primary }
   }
   return away
