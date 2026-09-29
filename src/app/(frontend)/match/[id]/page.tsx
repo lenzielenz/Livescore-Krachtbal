@@ -19,6 +19,7 @@ import { isCheckedIn, sanitizeCheckins } from '@/lib/checkins'
 import { dateStrBE, formatDateTimeBE } from '@/lib/datetime'
 import { googleCalendarUrl } from '@/lib/google-calendar'
 import { matchTitel } from '@/lib/match-ics'
+import { isVeldschermPreMatchLead } from '@/lib/field-screens'
 import { buildMatchSheet, buildMatchState, buildMatchStats, buildTimeline, type SheetGoal } from '@/lib/match-engine'
 import { buildMatchReport } from '@/lib/match-report'
 import { getPayloadClient } from '@/lib/payload-client'
@@ -125,17 +126,20 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   const me = await getAuthUser()
   // Video koppelen/uploaden mag de federatie (competitiewedstrijden) — zie mayEditMatchVideo.
   const mayVideo = mayEditMatchVideo(me, matchDoc as { analyseOnly?: boolean | null; analyseOwner?: unknown } | null)
-  // Veldscherm koppelen: zinvol vanaf een uur vóór de aftrap (al klaarzetten) tot de wedstrijd
-  // live is. Mag wie de wedstrijd aantekent (dezelfde toegang als het scoreformulier), maar ook
-  // een gewone supporter van een van beide clubs — die staat evengoed fysiek bij dat veldscherm
-  // en kan de code aflezen; de code zelf is de eigenlijke grendel (zie /api/veldscherm/koppel),
-  // dit is enkel wie de knop te zien krijgt.
+  // Veldscherm koppelen: zinvol vanaf een kwartier vóór de aftrap (al klaarzetten, of al in de
+  // wachtrij zetten als het veld nog bezet is — zie pairOutcome in field-screens.ts) tot de
+  // wedstrijd live is. Mag wie de wedstrijd aantekent (dezelfde toegang als het scoreformulier),
+  // maar ook een gewone supporter van een van beide clubs — die staat evengoed fysiek bij dat
+  // veldscherm en kan de code aflezen; de code zelf is de eigenlijke grendel
+  // (zie /api/veldscherm/koppel), dit is enkel wie de knop te zien krijgt. Bewust een KORTER
+  // venster dan de vroege wedstrijdfoto hieronder (magVoorAftrap, 1u) — dat blijft ongewijzigd.
   const betrokkenClubIds = [homeClub?.id, awayClub?.id].filter((c): c is number => typeof c === 'number')
   const eigenClubIds = [userClubId(me), ...userFollowedClubIds(me)].filter((c) => c != null).map(String)
   const isSupporterVanBetrokkenClub = betrokkenClubIds.some((c) => eigenClubIds.includes(String(c)))
   const magVoorAftrap = state.match.status === 'scheduled' && isPreMatchLead(matchDoc?.date as string | undefined)
+  const magVeldschermVoorAftrap = state.match.status === 'scheduled' && isVeldschermPreMatchLead(matchDoc?.date as string | undefined)
   const magKoppelen =
-    (state.match.status === 'live' || magVoorAftrap) &&
+    (state.match.status === 'live' || magVeldschermVoorAftrap) &&
     (isSupporterVanBetrokkenClub || (await mayScoreMatch(payload, me as AuthedUser | null, matchId)))
   const datum = matchDoc?.date ? formatDateTimeBE(matchDoc.date as string) : null
   // Wie de wedstrijd mag rechtzetten (tijdstip + ploegnaam/club): de federatie, en nooit op een
@@ -250,9 +254,13 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   // Blijvende foto-tribune: ENKEL op volwassen reeksen (safeguarding, geen jeugd). Laad alle
   // bewaarde foto's; posten mag ingelogd vanaf een uur vóór de aftrap (bv. een foto van het volle
   // terrein vóór de wedstrijd) tot de wedstrijd bezig is/pas voorbij.
+  // `photoButtonOpen` is het tijdstip-/reeksgedeelte van die voorwaarde, LOS van login — zo blijft
+  // de foto-knop altijd staan zodra de wedstrijd actief is (in plaats van te verdwijnen voor wie
+  // toevallig niet ingelogd is); tikken zonder in te loggen leidt dan naar de inlogpagina.
   const adultMatch = isAdultReeks(reeksRaw)
-  const canPostInstant = Boolean(me) && adultMatch && (isTribuneOpen(state.match.status, state.match.finishedAt) || magVoorAftrap)
-  let initialInstants: { id: number; url: string; authorName: string; at: number }[] = []
+  const photoButtonOpen = adultMatch && (isTribuneOpen(state.match.status, state.match.finishedAt) || magVoorAftrap)
+  const canPostInstant = Boolean(me) && photoButtonOpen
+  let initialInstants: { id: number; url: string; authorName: string; at: number; kind?: 'photo' | 'video' }[] = []
   if (adultMatch) {
     const res = await payload
       .find({
@@ -271,6 +279,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
         url: fn ? `/api/match-instants/file/${encodeURIComponent(fn)}` : ((d as { url?: string | null }).url || ''),
         authorName: (d as { authorName?: string | null }).authorName || 'Supporter',
         at: d.createdAt ? new Date(d.createdAt as string).getTime() : Date.now(),
+        kind: (d as { kind?: 'photo' | 'video' }).kind ?? 'photo',
       }
     })
   }
@@ -517,9 +526,11 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
         ratePerMin={ratePerMin}
         ballKleur={ballKleur}
         canChat={Boolean(me)}
+        myUserId={me ? Number((me as { id?: number }).id) : null}
         initialReactions={(matchDoc?.liveReactions as Record<string, number> | null) ?? undefined}
         initialShouts={Array.isArray(matchDoc?.liveShoutouts) ? (matchDoc.liveShoutouts as { id: number; name: string; text: string; at: number; photoUrl?: string | null }[]) : undefined}
         canPostInstant={canPostInstant}
+        photoButtonOpen={photoButtonOpen}
         initialInstants={initialInstants}
         momentumGoals={share?.goals}
         momentumTimeouts={share?.timeouts}

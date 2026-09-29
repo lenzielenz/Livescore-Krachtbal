@@ -13,6 +13,7 @@ import { getProfile } from '@/lib/profiles'
 import { buildReeksStandings } from '@/lib/reeks-standings'
 import { reeksNaam, REEKS_OPTIONS } from '@/lib/reeksen'
 import { isSupportersMode } from '@/lib/score-mode'
+import { claimActive, sanitizeTrust } from '@/lib/score-trust'
 import { clubActies, primaireActie } from '@/lib/wedstrijddag-acties'
 import { ClaimButton } from './ClaimButton'
 import { MyTeamsPicker } from './MyTeamsPicker'
@@ -62,6 +63,9 @@ type Row = {
   refereeName: string | null
   // Status van het wedstrijdblad: bepaalt of de scheidsrechter het aantekenen al heeft opengezet.
   sheetStatus: string | null
+  // Tekent iemand anders (niet ikzelf) deze wedstrijd al actief aan? Zie score-trust.ts.
+  claimedByOther: boolean
+  claimedByName: string | null
 }
 
 function Shell({ children }: { children: React.ReactNode }) {
@@ -119,6 +123,9 @@ export default async function ClubPage({ searchParams }: { searchParams: Promise
 
   const teamIdSet = new Set(teamIds.map(Number))
   const myUserId = Number((user as { id?: number }).id)
+  // Federatie/admin/scorekeeper mogen altijd overnemen — zelfde uitzondering als op het
+  // aantekenscherm zelf (scorekeeper/[id]/page.tsx), zodat een supervisor nooit vast komt te zitten.
+  const bypassClaim = hasRole(user, 'admin', 'federatie', 'scorekeeper')
   const matches = await payload.find({
     collection: 'matches',
     where: {
@@ -167,6 +174,8 @@ export default async function ClubPage({ searchParams }: { searchParams: Promise
       const homeClub = homeTeam?.club as { name?: string; accommodatie?: string } | null
       const coach = (side === 'home' ? m.homeCoach : m.awayCoach) as { id?: number; name?: string; email?: string } | null
       const takeover = (side === 'home' ? m.homeTakeover : m.awayTakeover) as { id?: number; name?: string; email?: string } | null
+      const trust = sanitizeTrust((m as { scoreTrust?: unknown }).scoreTrust)
+      const claimedByOther = !bypassClaim && claimActive(trust) && trust.scorerId != null && Number(trust.scorerId) !== myUserId
       rows.push({
         id: m.id,
         reeks: reeksNaam(m.reeks),
@@ -186,6 +195,8 @@ export default async function ClubPage({ searchParams }: { searchParams: Promise
         takeoverMine: takeover?.id != null && Number(takeover.id) === myUserId,
         refereeName: refByMatch.get(m.id) ?? null,
         sheetStatus: sheetStatusByMatch.get(m.id) ?? null,
+        claimedByOther,
+        claimedByName: claimedByOther ? trust.scorerName : null,
       })
     } catch {
       // Wedstrijd met ontbrekende ploeg overslaan.
@@ -335,6 +346,7 @@ export default async function ClubPage({ searchParams }: { searchParams: Promise
                     side: m.side,
                     live: m.status === 'live',
                     bladOpen: sheetOpenForScoring(m.sheetStatus),
+                    claimedByOther: m.claimedByOther,
                   })
                   const primair = primaireActie(acties)
                   const cls = (a: string) => `btn ${a === primair ? 'btn-primary' : 'btn-ghost'}`
@@ -346,7 +358,10 @@ export default async function ClubPage({ searchParams }: { searchParams: Promise
                       return <Link key={a} href={`/scorekeeper/${m.id}`} className={cls(a)}>Aantekenen</Link>
                     }
                     if (a === 'bekijk') {
-                      return <Link key={a} href={`/match/${m.id}`} className={cls(a)}>Bekijk</Link>
+                      const title = m.claimedByOther
+                        ? `${m.claimedByName ?? 'Iemand anders'} tekent deze wedstrijd al aan.`
+                        : undefined
+                      return <Link key={a} href={`/match/${m.id}`} className={cls(a)} title={title}>Bekijk</Link>
                     }
                     return (
                       <span key={a} className="btn btn-ghost is-disabled" title="De scheidsrechter heeft het wedstrijdblad nog niet opengezet om aan te tekenen.">

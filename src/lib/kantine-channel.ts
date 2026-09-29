@@ -170,7 +170,9 @@ export async function loadKantineLive(payload: Payload, ids: number[]): Promise<
         : null,
       // Ruim genomen: de viering moet minstens één frame overleven om het scherm te halen.
       blast: recenteBlast(m.id, KANTINE_POLL_MS * 3),
-      instants: recenteInstants(m.id, KANTINE_POLL_MS * 3),
+      // De fotoshow op de kantine-tv toont enkel foto's (een <img>) — video's horen bij de
+      // wedstrijdpagina zelf, niet bij deze korte viering-overlay.
+      instants: recenteInstants(m.id, KANTINE_POLL_MS * 3).filter((i) => i.kind !== 'video'),
     })
   }
   return uit

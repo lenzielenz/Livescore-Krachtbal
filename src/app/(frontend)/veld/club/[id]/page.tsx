@@ -44,8 +44,17 @@ export default async function VeldClubSchermPage({ params }: { params: Promise<{
         const ads = await loadAds(payload, 'veldscherm')
         return (
           <>
-            <FieldScreen matchId={screen.pairedMatchId} reeks={reeks} halfSeconds={halfSeconds} ads={ads} theme={screen.theme} initial={{ state, timeline }} />
-            <FieldScreenSync fieldScreenId={fieldScreenId} pairedMatchId={screen.pairedMatchId} />
+            <FieldScreen
+              matchId={screen.pairedMatchId}
+              reeks={reeks}
+              halfSeconds={halfSeconds}
+              ads={ads}
+              theme={screen.theme}
+              initial={{ state, timeline }}
+              queueCode={screen.queuedMatchId == null ? screen.pairingCode : null}
+              queueTaken={screen.queuedMatchId != null}
+            />
+            <FieldScreenSync fieldScreenId={fieldScreenId} pairedMatchId={screen.pairedMatchId} queuedMatchId={screen.queuedMatchId} />
           </>
         )
       }

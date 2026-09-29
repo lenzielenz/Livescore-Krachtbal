@@ -2,8 +2,7 @@ import type { Payload } from 'payload'
 
 import { brusselsDayBoundsUtc, dateStrBE } from './datetime'
 import { buildFixedSimpleScore } from './simple-score'
-import { planVeldenSync, randomPairingCode, veldNaam, type DagWedstrijd, type FieldScreenTheme, type VeldRow } from './field-screens'
-import { isPreMatchLead } from './tribune'
+import { isVeldschermPreMatchLead, pairOutcome, planVeldenSync, randomPairingCode, veldNaam, type DagWedstrijd, type FieldScreenTheme, type VeldRow } from './field-screens'
 
 // DB-laag voor veldschermen — het datamodel en de motivatie staan in collections/FieldScreens.ts,
 // de pure planning-/codelogica in field-screens.ts. Alle functies hier draaien met
@@ -13,13 +12,14 @@ import { isPreMatchLead } from './tribune'
 const rel = (v: unknown): number | null =>
   v && typeof v === 'object' ? ((v as { id?: number }).id ?? null) : typeof v === 'number' ? v : null
 
-/** Nieuwe koppelcode die momenteel door geen enkel WACHTEND veldscherm gebruikt wordt (gekoppelde
- * velden tellen niet mee — hun code is toch niet opzoekbaar zolang ze bezet zijn). */
+/** Nieuwe koppelcode die momenteel door geen enkel ander veldscherm gebruikt wordt — ook niet een
+ * bezet scherm: sinds de wachtrij (pairMatchToCode) blijft de code van een bezet scherm net zo
+ * goed "levend" (ze koppelt dan niet, maar zet wél in de wachtrij), dus die telt hier ook mee. */
 async function uniquePairingCode(payload: Payload): Promise<string> {
   for (let poging = 0; poging < 10; poging++) {
     const code = randomPairingCode()
     const bestaat = await payload
-      .find({ collection: 'field-screens', where: { and: [{ pairingCode: { equals: code } }, { pairedMatch: { exists: false } }] }, limit: 1, depth: 0, overrideAccess: true })
+      .find({ collection: 'field-screens', where: { pairingCode: { equals: code } }, limit: 1, depth: 0, overrideAccess: true })
       .catch(() => ({ totalDocs: 1 }))
     if (bestaat.totalDocs === 0) return code
   }
@@ -33,6 +33,7 @@ export type FieldScreenRow = {
   pairingCode: string | null
   pairedMatchId: number | null
   pairedAt: string | null
+  queuedMatchId: number | null
   theme: FieldScreenTheme
 }
 
@@ -42,6 +43,7 @@ const toFieldScreenRow = (d: Record<string, unknown>): FieldScreenRow => ({
   pairingCode: ((d as { pairingCode?: unknown }).pairingCode as string | null) ?? null,
   pairedMatchId: rel((d as { pairedMatch?: unknown }).pairedMatch),
   pairedAt: ((d as { pairedAt?: unknown }).pairedAt as string | null) ?? null,
+  queuedMatchId: rel((d as { queuedMatch?: unknown }).queuedMatch),
   theme: (d as { theme?: unknown }).theme === 'light' ? 'light' : 'dark',
 })
 
@@ -109,32 +111,40 @@ export async function syncVeldenCount(payload: Payload, clubId: number, target: 
   return { screens: await getClubFieldScreens(payload, clubId), blockedByLive: plan.blockedByLive }
 }
 
-export type PairResult = { ok: true; fieldScreenId: number } | { ok: false; error: string }
+export type PairResult =
+  | { ok: true; fieldScreenId: number; outcome: 'paired' | 'queued' }
+  | { ok: false; error: string }
 
-/** Koppel een gestarte wedstrijd aan het veldscherm met deze koppelcode. Vertrouwt bewust enkel op
- * de code (net als een Chromecast-/Apple TV-pincode) — wie de code op de tv kan lezen, staat
- * fysiek bij dat veld. De club-check hieronder is een extra veiligheidsnet tegen een toevallige
- * codebotsing, niet de eigenlijke toegangscontrole. */
+/** Koppel (of, als het veld al bezet is, zet in de wachtrij voor) een wedstrijd aan het veldscherm
+ * met deze koppelcode. Vertrouwt bewust enkel op de code (net als een Chromecast-/Apple TV-pincode)
+ * — wie de code op de tv kan lezen, staat fysiek bij dat veld. De club-check hieronder is een extra
+ * veiligheidsnet tegen een toevallige codebotsing, niet de eigenlijke toegangscontrole.
+ *
+ * De koppelcode van een scherm blijft ongewijzigd staan zolang het bezet is (zie unpair-functies
+ * hieronder) — dat is wat de wachtrij mogelijk maakt: dezelfde code die op de tv-uitzending in het
+ * klein onderaan blijft staan, koppelt bij een vrij scherm meteen en zet bij een bezet scherm in de
+ * wachtrij (pairOutcome in field-screens.ts).
+ */
 export async function pairMatchToCode(payload: Payload, code: string, matchId: number): Promise<PairResult> {
   const screenRes = await payload
     .find({
       collection: 'field-screens',
-      where: { and: [{ pairingCode: { equals: code } }, { pairedMatch: { exists: false } }, { isDemo: { not_equals: true } }] },
+      where: { and: [{ pairingCode: { equals: code } }, { isDemo: { not_equals: true } }] },
       limit: 1,
       depth: 0,
       overrideAccess: true,
     })
     .catch(() => ({ docs: [] as Record<string, unknown>[] }))
   const screen = screenRes.docs[0]
-  if (!screen) return { ok: false, error: 'Onbekende of al gebruikte koppelcode.' }
+  if (!screen) return { ok: false, error: 'Onbekende koppelcode.' }
 
   const match = await payload.findByID({ collection: 'matches', id: matchId, depth: 1 }).catch(() => null)
   if (!match) return { ok: false, error: 'Wedstrijd niet gevonden.' }
-  // Live mag altijd; een geplande wedstrijd mag al vanaf een uur vóór de aftrap — zo staat het
-  // scherm al klaar wanneer de aantekenaar effectief start.
-  const magAlKoppelen = match.status === 'live' || (match.status === 'scheduled' && isPreMatchLead(match.date as string | null))
+  // Live mag altijd; een geplande wedstrijd mag al vanaf een kwartier vóór de aftrap — zo staat het
+  // scherm (of de wachtrij ervoor) al klaar wanneer de aantekenaar effectief start.
+  const magAlKoppelen = match.status === 'live' || (match.status === 'scheduled' && isVeldschermPreMatchLead(match.date as string | null))
   if (!magAlKoppelen) {
-    return { ok: false, error: 'Koppelen kan enkel vanaf een uur vóór de aftrap tot de wedstrijd live is.' }
+    return { ok: false, error: 'Koppelen kan enkel vanaf een kwartier vóór de aftrap tot de wedstrijd live is.' }
   }
 
   const screenClubId = rel((screen as { club?: unknown }).club)
@@ -144,41 +154,95 @@ export async function pairMatchToCode(payload: Payload, code: string, matchId: n
     return { ok: false, error: 'Deze code hoort bij een veldscherm van een andere club.' }
   }
 
+  const screenId = screen.id as number
+  const outcome = pairOutcome({
+    paired: rel((screen as { pairedMatch?: unknown }).pairedMatch) != null,
+    queued: rel((screen as { queuedMatch?: unknown }).queuedMatch) != null,
+  })
+  if (outcome === 'queue-full') {
+    return { ok: false, error: 'Er staat al een andere wedstrijd klaar voor dit veld — de wachtrij is vol.' }
+  }
+  if (outcome === 'queue') {
+    await payload.update({
+      collection: 'field-screens',
+      id: screenId,
+      data: { queuedMatch: matchId, queuedAt: new Date().toISOString() },
+      overrideAccess: true,
+    })
+    return { ok: true, fieldScreenId: screenId, outcome: 'queued' }
+  }
+
   await payload.update({
     collection: 'field-screens',
-    id: screen.id as number,
+    id: screenId,
     data: { pairedMatch: matchId, pairedAt: new Date().toISOString() },
     overrideAccess: true,
   })
-  return { ok: true, fieldScreenId: screen.id as number }
+  return { ok: true, fieldScreenId: screenId, outcome: 'paired' }
 }
 
-/** Ontkoppel elk veldscherm dat aan deze wedstrijd gekoppeld stond, en geef het een verse
- * koppelcode — zodat het wachtscherm meteen weer bruikbaar is voor de volgende wedstrijd.
- * Aangeroepen vanuit Matches.ts's afterChange-hook zodra de status naar 'finished' gaat, ongeacht
- * via welk pad dat gebeurde (aantekenscherm, forfait, import, federatie-sync). */
+/** Maak dit veldscherm vrij: staat er een wedstrijd in de wachtrij, dan neemt die meteen over
+ * (dezelfde koppelcode blijft gelden voor een eventuele volgende wachtrij); anders terug naar het
+ * lege wachtscherm met een verse koppelcode. Gedeelde kern van de twee functies hieronder. */
+async function freeUpFieldScreen(payload: Payload, doc: Record<string, unknown>): Promise<void> {
+  const id = doc.id as number
+  const queuedMatchId = rel((doc as { queuedMatch?: unknown }).queuedMatch)
+  if (queuedMatchId != null) {
+    await payload
+      .update({
+        collection: 'field-screens',
+        id,
+        data: { pairedMatch: queuedMatchId, pairedAt: new Date().toISOString(), queuedMatch: null, queuedAt: null },
+        overrideAccess: true,
+      })
+      .catch(() => {})
+    return
+  }
+  const code = await uniquePairingCode(payload)
+  await payload
+    .update({ collection: 'field-screens', id, data: { pairedMatch: null, pairedAt: null, pairingCode: code }, overrideAccess: true })
+    .catch(() => {})
+}
+
+/** Ontkoppel elk veldscherm dat aan deze wedstrijd gekoppeld stond (neemt een wachtrij automatisch
+ * over — zie freeUpFieldScreen), en haal de wedstrijd weg bij elk scherm waar ze enkel nog in de
+ * wachtrij stond (bv. zelf geannuleerd, of een forfait vóór ze ooit gekoppeld werd). Aangeroepen
+ * vanuit Matches.ts's afterChange-hook zodra de status naar 'finished' gaat, ongeacht via welk pad
+ * dat gebeurde (aantekenscherm, forfait, import, federatie-sync) — en vanuit /api/veldscherm/
+ * ontkoppel (matchId-pad) om een eigen koppeling of wachtrij-plaats zelf te kunnen intrekken. */
 export async function unpairFieldScreensForMatch(payload: Payload, matchId: number): Promise<void> {
   const res = await payload
-    .find({ collection: 'field-screens', where: { pairedMatch: { equals: matchId } }, depth: 0, limit: 20, overrideAccess: true })
+    .find({
+      collection: 'field-screens',
+      where: { or: [{ pairedMatch: { equals: matchId } }, { queuedMatch: { equals: matchId } }] },
+      depth: 0,
+      limit: 20,
+      overrideAccess: true,
+    })
     .catch(() => ({ docs: [] as Record<string, unknown>[] }))
   for (const doc of res.docs) {
-    const code = await uniquePairingCode(payload)
-    await payload
-      .update({ collection: 'field-screens', id: doc.id as number, data: { pairedMatch: null, pairedAt: null, pairingCode: code }, overrideAccess: true })
-      .catch(() => {})
+    if (rel((doc as { pairedMatch?: unknown }).pairedMatch) === matchId) {
+      await freeUpFieldScreen(payload, doc as Record<string, unknown>)
+    } else {
+      // Enkel in de wachtrij (niet de wedstrijd die nu op het scherm staat) → gewoon intrekken,
+      // de lopende wedstrijd op het scherm zelf blijft ongemoeid.
+      await payload
+        .update({ collection: 'field-screens', id: doc.id as number, data: { queuedMatch: null, queuedAt: null }, overrideAccess: true })
+        .catch(() => {})
+    }
   }
 }
 
 /** Ontkoppel dit ene veldscherm handmatig — bv. wanneer de aantekenaar per ongeluk de verkeerde
- * wedstrijd koppelde. Zelfde effect als unpairFieldScreensForMatch hierboven (terug naar het
- * wachtscherm met een verse koppelcode), maar gericht op één scherm i.p.v. "elk scherm met deze
- * wedstrijd" — voor de "Ontkoppelen"-knop op /club/veldscherm. */
+ * wedstrijd koppelde. Anders dan freeUpFieldScreen: dit is een "oeps, opnieuw beginnen"-actie, dus
+ * een eventuele wachtrij wordt hier NIET gepromoot maar mee gewist — voor de "Ontkoppelen"-knop op
+ * /club/veldscherm. */
 export async function unpairFieldScreen(payload: Payload, fieldScreenId: number): Promise<string> {
   const code = await uniquePairingCode(payload)
   await payload.update({
     collection: 'field-screens',
     id: fieldScreenId,
-    data: { pairedMatch: null, pairedAt: null, pairingCode: code },
+    data: { pairedMatch: null, pairedAt: null, queuedMatch: null, queuedAt: null, pairingCode: code },
     overrideAccess: true,
   })
   return code
@@ -191,6 +255,7 @@ export type PublicFieldScreenState = {
   naam: string
   pairingCode: string | null
   pairedMatchId: number | null
+  queuedMatchId: number | null
   theme: FieldScreenTheme
   isDemo: boolean
 }
@@ -209,6 +274,7 @@ export async function getPublicFieldScreenState(payload: Payload, fieldScreenId:
     naam: String((doc as { naam?: unknown }).naam ?? ''),
     pairingCode: ((doc as { pairingCode?: unknown }).pairingCode as string | null) ?? null,
     pairedMatchId: rel((doc as { pairedMatch?: unknown }).pairedMatch),
+    queuedMatchId: rel((doc as { queuedMatch?: unknown }).queuedMatch),
     theme: (doc as { theme?: unknown }).theme === 'light' ? 'light' : 'dark',
     isDemo: Boolean((doc as { isDemo?: unknown }).isDemo),
   }

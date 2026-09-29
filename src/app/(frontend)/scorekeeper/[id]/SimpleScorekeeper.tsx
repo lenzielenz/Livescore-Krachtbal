@@ -57,6 +57,7 @@ export function SimpleScorekeeper({
   // cosmetisch voor de tv — nooit kritiek pad, dus geen offline-wachtrij, gewoon een losse fetch.
   const [veldOpen, setVeldOpen] = useState(false)
   const [veldPaired, setVeldPaired] = useState(false)
+  const [veldQueued, setVeldQueued] = useState(false)
   const [veldCode, setVeldCode] = useState('')
   const [veldBusy, setVeldBusy] = useState(false)
   const [veldMsg, setVeldMsg] = useState<{ ok: boolean; text: string } | null>(null)
@@ -236,11 +237,12 @@ export function SimpleScorekeeper({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ code: veldCode.trim(), matchId }),
       })
-      const data = (await r.json().catch(() => ({}))) as { error?: string }
+      const data = (await r.json().catch(() => ({}))) as { error?: string; outcome?: 'paired' | 'queued' }
       if (!r.ok) {
         setVeldMsg({ ok: false, text: data.error ?? 'Koppelen mislukt.' })
         return
       }
+      setVeldQueued(data.outcome === 'queued')
       setVeldPaired(true)
       setVeldCode('')
       setVeldMsg(null)
@@ -268,6 +270,7 @@ export function SimpleScorekeeper({
         return
       }
       setVeldPaired(false)
+      setVeldQueued(false)
     } catch {
       setVeldMsg({ ok: false, text: 'Ontkoppelen mislukt — probeer opnieuw.' })
     } finally {
@@ -298,7 +301,7 @@ export function SimpleScorekeeper({
           </button>
           {live && (
             <button type="button" className="ssk-toplink" onClick={() => setVeldOpen((v) => !v)}>
-              📡 {veldPaired ? 'Veldscherm gekoppeld' : 'Veldscherm koppelen'}
+              📡 {veldPaired ? (veldQueued ? 'In wachtrij voor veldscherm' : 'Veldscherm gekoppeld') : 'Veldscherm koppelen'}
             </button>
           )}
           <Link href={`/veld/${matchId}`} className="ssk-toplink">Veldscherm →</Link>
@@ -307,9 +310,11 @@ export function SimpleScorekeeper({
 
       {veldOpen && live && veldPaired && (
         <div className="ssk-veldkoppel" role="group" aria-label="Veldscherm ontkoppelen">
-          <span className="ssk-veldkoppel-msg ok">✓ Veldscherm gekoppeld!</span>
+          <span className="ssk-veldkoppel-msg ok">
+            {veldQueued ? '📋 In de wachtrij! Springt automatisch over zodra het veld vrijkomt.' : '✓ Veldscherm gekoppeld!'}
+          </span>
           <button type="button" className="ssk-veldkoppel-btn ontkoppel" disabled={veldBusy} onClick={() => void ontkoppelVeldscherm()}>
-            {veldBusy ? 'Bezig…' : '✕ Ontkoppelen'}
+            {veldBusy ? 'Bezig…' : veldQueued ? '✕ Wachtrij annuleren' : '✕ Ontkoppelen'}
           </button>
           {veldMsg && !veldMsg.ok && <span className="ssk-veldkoppel-msg err">{veldMsg.text}</span>}
         </div>

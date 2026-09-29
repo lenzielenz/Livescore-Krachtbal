@@ -13,5 +13,5 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const payload = await getPayloadClient()
   const state = await getPublicFieldScreenState(payload, fieldScreenId)
   if (!state) return Response.json({ error: 'Veldscherm niet gevonden.' }, { status: 404 })
-  return Response.json({ pairedMatchId: state.pairedMatchId })
+  return Response.json({ pairedMatchId: state.pairedMatchId, queuedMatchId: state.queuedMatchId })
 }

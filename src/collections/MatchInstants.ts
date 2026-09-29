@@ -4,10 +4,11 @@ import path from 'path'
 
 import { isFederationLevel } from '../lib/access'
 
-// Blijvende foto-tribune: spontane supporterfoto's blijven bij de wedstrijd bewaard.
+// Blijvende foto-/video-tribune: spontane supportersmomenten blijven bij de wedstrijd bewaard.
 // ENKEL op volwassen wedstrijden (de safeguarding-grens wordt server-side in de
 // upload-route afgedwongen, niet hier). Foto's worden client-side verkleind vóór upload, dus we
-// hebben hier geen server-side beeldverwerking (sharp) nodig.
+// hebben hier geen server-side beeldverwerking (sharp) nodig — video's gaan ongewijzigd door
+// (sharp raakt niet-image mimetypes sowieso niet aan).
 
 function resolveInstantsDir(): string {
   const base = process.env.MEDIA_DIR
@@ -26,11 +27,11 @@ function resolveInstantsDir(): string {
 
 export const MatchInstants: CollectionConfig = {
   slug: 'match-instants',
-  labels: { singular: 'Foto-instant', plural: 'Foto-instants' },
+  labels: { singular: 'Foto/video-instant', plural: 'Foto/video-instants' },
   admin: {
     useAsTitle: 'authorName',
-    defaultColumns: ['authorName', 'match', 'createdAt'],
-    description: 'Blijvende supporterfoto’s bij een wedstrijd. Alleen moderatie verwijdert ze.',
+    defaultColumns: ['authorName', 'match', 'kind', 'createdAt'],
+    description: 'Blijvende supportersfoto’s en -video’s bij een wedstrijd. Alleen moderatie verwijdert ze.',
   },
   access: {
     // Publiek leesbaar; de verlopen exemplaren worden in de query's weggefilterd en gepurged.
@@ -50,6 +51,17 @@ export const MatchInstants: CollectionConfig = {
     { name: 'author', type: 'relationship', relationTo: 'users', index: true },
     { name: 'authorName', type: 'text' },
     {
+      name: 'kind',
+      type: 'select',
+      options: [
+        { label: 'Foto', value: 'photo' },
+        { label: 'Video', value: 'video' },
+      ],
+      defaultValue: 'photo',
+      required: true,
+      index: true,
+    },
+    {
       name: 'expiresAt',
       type: 'date',
       required: true,
@@ -59,6 +71,6 @@ export const MatchInstants: CollectionConfig = {
   ],
   upload: {
     staticDir: resolveInstantsDir(),
-    mimeTypes: ['image/jpeg', 'image/png', 'image/webp'],
+    mimeTypes: ['image/jpeg', 'image/png', 'image/webp', 'video/mp4', 'video/webm', 'video/quicktime'],
   },
 }

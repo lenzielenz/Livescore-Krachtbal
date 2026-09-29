@@ -3,8 +3,11 @@ import { describe, expect, it } from 'vitest'
 import {
   MAX_VELDEN,
   MIN_VELDEN,
+  VELDSCHERM_PRE_MATCH_LEAD_MS,
   fictionalDagplanning,
   isPairingCode,
+  isVeldschermPreMatchLead,
+  pairOutcome,
   planVeldenSync,
   randomPairingCode,
   veldNaam,
@@ -77,6 +80,51 @@ describe('planVeldenSync', () => {
   it('klemt het doel tussen MIN_VELDEN en MAX_VELDEN', () => {
     expect(planVeldenSync([], 0).toCreate).toBe(MIN_VELDEN)
     expect(planVeldenSync([], 999).toCreate).toBe(MAX_VELDEN)
+  })
+})
+
+describe('isVeldschermPreMatchLead', () => {
+  const kickoff = '2026-09-29T14:00:00.000Z'
+
+  it('is nog gesloten ruim vóór de aftrap', () => {
+    const now = new Date(kickoff).getTime() - VELDSCHERM_PRE_MATCH_LEAD_MS - 1000
+    expect(isVeldschermPreMatchLead(kickoff, now)).toBe(false)
+  })
+
+  it('gaat open exact op het kwartier-venster', () => {
+    const now = new Date(kickoff).getTime() - VELDSCHERM_PRE_MATCH_LEAD_MS
+    expect(isVeldschermPreMatchLead(kickoff, now)).toBe(true)
+  })
+
+  it('blijft open na de aftrap', () => {
+    const now = new Date(kickoff).getTime() + 1000
+    expect(isVeldschermPreMatchLead(kickoff, now)).toBe(true)
+  })
+
+  it('geeft false zonder (geldige) datum', () => {
+    expect(isVeldschermPreMatchLead(null)).toBe(false)
+    expect(isVeldschermPreMatchLead(undefined)).toBe(false)
+    expect(isVeldschermPreMatchLead('geen-datum')).toBe(false)
+  })
+
+  it('staat op 15 minuten', () => {
+    expect(VELDSCHERM_PRE_MATCH_LEAD_MS).toBe(15 * 60 * 1000)
+  })
+})
+
+describe('pairOutcome', () => {
+  it('koppelt meteen op een vrij scherm', () => {
+    expect(pairOutcome({ paired: false, queued: false })).toBe('pair')
+    // een "queued"-vlag op een vrij scherm zou eigenlijk nooit voorkomen, maar paired wint hier hoe dan ook niet
+    expect(pairOutcome({ paired: false, queued: true })).toBe('pair')
+  })
+
+  it('zet in de wachtrij op een bezet scherm zonder wachtrij', () => {
+    expect(pairOutcome({ paired: true, queued: false })).toBe('queue')
+  })
+
+  it('weigert wanneer de wachtrij al bezet is', () => {
+    expect(pairOutcome({ paired: true, queued: true })).toBe('queue-full')
   })
 })
 

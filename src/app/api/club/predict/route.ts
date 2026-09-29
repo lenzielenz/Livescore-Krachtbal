@@ -1,10 +1,8 @@
 import { authUser, userClubId } from '@/lib/api-auth'
 import { formatDateTimeBE } from '@/lib/datetime'
-import { buildMatchState } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
 import { activeTokens } from '@/lib/pronostiek-rad'
 import { countUserWeekendPredictions, LIVE_PRONOSTIEK_MAX_PER_WEEKEND, pronostiekOpen, pronostiekOpenVanaf } from '@/lib/pronostiek-weekend'
-import { reeksHalfDurationSeconds, type Reeks } from '@/lib/reeksen'
 import { clientIp, rateLimit } from '@/lib/sse-hub'
 
 export const dynamic = 'force-dynamic'
@@ -14,7 +12,8 @@ type RadToken = { mult: number; wonAt: string; expiresAt: string }
 type Power = { tokens?: RadToken[]; spinWeek?: string; spinsUsed?: number }
 
 // Eén score-voorspelling wegschrijven (upsert per persoon). Elke ingelogde supporter mag meedoen
-// (club niet vereist); voorspellen kan vóór en tijdens de wedstrijd, nooit erna.
+// (club niet vereist); voorspellen kan enkel vóór de aftrap — eens de wedstrijd bezig is (of
+// afgelopen) ken je de uitslag al deels of helemaal, dus dan mag niet meer voorspeld worden.
 export async function POST(req: Request) {
   const ip = clientIp(req)
   if (!rateLimit(`predict:${ip}`, Number(process.env.PREDICT_MAX_PER_SEC) || 10, 1000)) {
@@ -49,35 +48,23 @@ export async function POST(req: Request) {
     if (!match || match.analyseOnly || (match as { isDemo?: boolean }).isDemo) {
       return Response.json({ error: 'Wedstrijd niet gevonden.' }, { status: 404 })
     }
-    // Voorspellen kan vóór én tijdens de match (iedereen mag meedoen) — enkel niet meer na afloop.
-    if (match.status !== 'scheduled' && match.status !== 'live') {
-      return Response.json({ error: 'De wedstrijd is afgelopen — voorspellen kan niet meer.' }, { status: 409 })
+    // Voorspellen kan enkel vóór de aftrap — eens de match bezig is (of afgelopen) is voorspellen
+    // eigenlijk gewoon de uitslag natikken, dus dan sluiten we af.
+    if (match.status !== 'scheduled') {
+      return Response.json({ error: 'De wedstrijd is al gestart — voorspellen kan niet meer.' }, { status: 409 })
     }
     // De pronostiek opent zodra het vorige speelweekend afgelopen is (zondag om middernacht):
     // vanaf maandag 00:00 staat de hele komende speelweek open.
     const matchDateIso = String((match as { date?: unknown }).date ?? '')
-    if (match.status === 'scheduled' && !pronostiekOpen(matchDateIso)) {
+    if (!pronostiekOpen(matchDateIso)) {
       const vanaf = formatDateTimeBE(pronostiekOpenVanaf(matchDateIso), { dateStyle: 'full' })
       return Response.json({ error: `De pronostiek voor deze wedstrijd opent op ${vanaf} om middernacht.` }, { status: 409 })
     }
     // Elke competitiewedstrijd mag voorspeld worden (je kan via een pool uitgenodigd zijn voor de
     // matchen van een andere ploeg/club). De klassementen filteren toch op club of pool.
 
-    // Puntweging: vóór de aftrap volle waarde (1). Tijdens de match daalt ze met de speeltijd, met
-    // een bodem van 0,1 zodat een late voorspelling nog meetelt — we willen dat iedereen meedoet.
-    let weight = 1
-    if (match.status === 'live') {
-      try {
-        const st = await buildMatchState(payload, matchId)
-        const halfSec = reeksHalfDurationSeconds((match as { reeks?: Reeks }).reeks as Reeks)
-        const total = Math.max(1, 2 * halfSec)
-        const elapsed = Math.max(0, (st.match.currentHalf - 1) * halfSec + st.match.clockSeconds)
-        const frac = Math.min(1, elapsed / total)
-        weight = Math.max(0.1, Math.round((1 - frac) * 100) / 100)
-      } catch {
-        weight = 0.5 // kon de klok niet lezen → halve waarde als veilige tussenstand
-      }
-    }
+    // Voorspellen kan enkel nog vóór de aftrap, dus de puntweging staat altijd op volle waarde.
+    const weight = 1
 
     const userId = Number((user as { id: number }).id)
     const name = String((user as { name?: string; email?: string }).name || (user as { email?: string }).email || 'Lid')

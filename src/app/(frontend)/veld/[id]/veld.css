@@ -162,6 +162,29 @@
   color: var(--txt);
   opacity: 0.8;
 }
+/* Koppelcode voor de VOLGENDE wedstrijd op dit veld — klein onderaan, zodat wie zich klaarzet
+   voor het volgende duel de code kan aflezen zonder het huidige scorebord te storen. */
+.fs-queue {
+  position: fixed;
+  left: 50%;
+  bottom: 10px;
+  transform: translateX(-50%);
+  z-index: 50;
+  font-size: clamp(0.62rem, 1.3vw, 0.85rem);
+  color: var(--dim);
+  background: rgba(0, 0, 0, 0.35);
+  padding: 3px 12px;
+  border-radius: 999px;
+  letter-spacing: 0.02em;
+  pointer-events: none;
+}
+.fs-queue b {
+  color: var(--txt);
+  letter-spacing: 0.08em;
+}
+.fs.fs-light .fs-queue {
+  background: rgba(255, 255, 255, 0.65);
+}
 .fs-status {
   font-size: clamp(0.8rem, 2.2vw, 1.4rem);
   font-weight: 800;

@@ -161,6 +161,8 @@ export function FieldScreen({
   ads = [],
   theme = 'dark',
   initial,
+  queueCode = null,
+  queueTaken = false,
 }: {
   matchId: number
   reeks: string | null
@@ -169,6 +171,12 @@ export function FieldScreen({
   /** 'light' voor een veld in de volle zon — een donker scherm is dan nauwelijks af te lezen. */
   theme?: FieldScreenTheme
   initial: { state: MatchState; timeline: TimelineItem[] }
+  /** Koppelcode voor de VOLGENDE wedstrijd op dit veld, klein onderaan te lezen terwijl deze
+      wedstrijd nog bezig is — null zodra de wachtrij al bezet is (zie queueTaken) of dit geen
+      veldscherm-club-scherm is (bv. de generieke /veld/[matchId]-link, die geen wachtrij kent). */
+  queueCode?: string | null
+  /** Staat er al een volgende wedstrijd klaar in de wachtrij? Dan tonen we dat i.p.v. de code. */
+  queueTaken?: boolean
 }) {
   const [state, setState] = useState<MatchState>(initial.state)
   const [timeline, setTimeline] = useState<TimelineItem[]>(initial.timeline)
@@ -271,7 +279,8 @@ export function FieldScreen({
     setPhotosLoading(true)
     setPhotoIdx(0)
     try {
-      const res = await fetch(`/api/match-instants?where[match][equals]=${matchId}&depth=0&limit=60&sort=-createdAt`, { credentials: 'include' })
+      // Enkel foto's: dit is een stille dia-show op het veldscherm, geen videospeler.
+      const res = await fetch(`/api/match-instants?where[and][0][match][equals]=${matchId}&where[and][1][kind][not_equals]=video&depth=0&limit=60&sort=-createdAt`, { credentials: 'include' })
       const data = (await res.json().catch(() => ({}))) as { docs?: { filename?: string; url?: string; expiresAt?: string }[] }
       const now = Date.now()
       const urls = (data.docs ?? [])
@@ -500,6 +509,16 @@ export function FieldScreen({
               </div>
             </div>
           </div>
+      )}
+
+      {(queueCode || queueTaken) && (
+        <div className="fs-queue">
+          {queueTaken ? (
+            <span>✓ Volgende wedstrijd staat al klaar</span>
+          ) : (
+            <span>Volgende wedstrijd op dit veld? Koppelcode <b>{queueCode}</b></span>
+          )}
+        </div>
       )}
     </div>
   )

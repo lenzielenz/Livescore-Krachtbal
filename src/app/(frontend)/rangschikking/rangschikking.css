@@ -362,7 +362,6 @@
 /* Enkel de naam kleurt mee — het positiecijfer blijft neutraal, net als bij elke andere rij. */
 .rang-mine .rang-name { color: var(--accent); }
 .rang-mine td:first-child { box-shadow: inset 4px 0 0 0 var(--accent); }
-.rang-mybadge { margin-left: 6px; color: var(--accent); font-size: 0.85em; }
 
 /* Legende onder de rangschikking. */
 .rang-legend { margin: 8px 2px 0; font-size: 0.76rem; color: var(--dim); line-height: 1.4; }

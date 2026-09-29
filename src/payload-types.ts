@@ -933,6 +933,11 @@ export interface FieldScreen {
   pairedMatch?: (number | null) | Match;
   pairedAt?: string | null;
   /**
+   * Automatisch gezet via dezelfde koppelcode terwijl het veld nog bezet is — neemt over zodra de lopende wedstrijd afloopt.
+   */
+  queuedMatch?: (number | null) | Match;
+  queuedAt?: string | null;
+  /**
    * Instelbaar per veld via "Mijn club" → Veldscherm.
    */
   theme?: ('dark' | 'light') | null;
@@ -1710,7 +1715,7 @@ export interface MatchEvent {
   createdAt: string;
 }
 /**
- * Blijvende supporterfoto’s bij een wedstrijd. Alleen moderatie verwijdert ze.
+ * Blijvende supportersfoto’s en -video’s bij een wedstrijd. Alleen moderatie verwijdert ze.
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "match-instants".
@@ -1720,6 +1725,7 @@ export interface MatchInstant {
   match: number | Match;
   author?: (number | null) | User;
   authorName?: string | null;
+  kind: 'photo' | 'video';
   /**
    * Legacy veld; nieuwe foto’s blijven bewaard.
    */
@@ -2343,6 +2349,8 @@ export interface FieldScreensSelect<T extends boolean = true> {
   pairingCode?: T;
   pairedMatch?: T;
   pairedAt?: T;
+  queuedMatch?: T;
+  queuedAt?: T;
   theme?: T;
   isDemo?: T;
   updatedAt?: T;
@@ -2844,6 +2852,7 @@ export interface MatchInstantsSelect<T extends boolean = true> {
   match?: T;
   author?: T;
   authorName?: T;
+  kind?: T;
   expiresAt?: T;
   updatedAt?: T;
   createdAt?: T;

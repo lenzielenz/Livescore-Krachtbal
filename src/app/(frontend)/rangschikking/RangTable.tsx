@@ -122,7 +122,7 @@ export function RangTable({ rows, showMove = true }: { rows: RangRow[]; showMove
                       <span className="rang-logo">
                         <TeamLogo name={r.name} logoUrl={r.logoUrl} logoFit={r.logoFit} side="home" size="sm" ringColor={r.ringColor} />
                       </span>
-                      <span className="rang-name">{r.name}{r.champion && <span className="rang-champ" title="Wiskundig kampioen" aria-label="Wiskundig kampioen"> 🏆</span>}{r.mine && <span className="rang-mybadge" title="Jouw club">★</span>}</span>
+                      <span className="rang-name">{r.name}{r.champion && <span className="rang-champ" title="Wiskundig kampioen" aria-label="Wiskundig kampioen"> 🏆</span>}</span>
                       <span className="rang-caret" aria-hidden>{isOpen ? '▾' : '▸'}</span>
                     </div>
                   </td>
@@ -160,7 +160,7 @@ export function RangTable({ rows, showMove = true }: { rows: RangRow[]; showMove
     <p className="rang-legend">
       <i className="rang-key goud" aria-hidden /> leider
       {hasDanger && <> · <i className="rang-key rood" aria-hidden /> degradatiezone</>}
-      {' · '}★ jouw club{showMove ? ' · ▲▼ t.o.v. vorige week' : ''} · tik op een ploeg voor meer cijfers
+      {showMove ? ' · ▲▼ t.o.v. vorige week' : ''} · tik op een ploeg voor meer cijfers
     </p>
     </>
   )

@@ -4,16 +4,27 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useRef } from 'react'
 
 // Houdt het veldscherm in lijn met de koppelstatus: pollt /api/veldscherm/[id]/state en herlaadt
-// de serverpagina zodra er een (andere of geen) wedstrijd gekoppeld is. Zo springt de tv vanzelf
-// van het wachtscherm naar het scorebord zodra iemand de koppelcode invoert, en weer terug zodra
-// de wedstrijd afloopt — zonder de tv ooit aan te raken. Zelfde patroon als VeldSchermSync.tsx.
-export function FieldScreenSync({ fieldScreenId, pairedMatchId }: { fieldScreenId: number; pairedMatchId: number | null }) {
+// de serverpagina zodra er een (andere of geen) wedstrijd gekoppeld is, of zodra de wachtrij voor
+// het VOLGENDE veld verandert (iemand zet zich erin, of de lopende wedstrijd loopt af en de
+// wachtrij neemt over — beide tonen zich enkel via een herlaad van de volledige staat). Zo springt
+// de tv vanzelf van het wachtscherm naar het scorebord zodra iemand de koppelcode invoert, en weer
+// terug zodra de wedstrijd afloopt — zonder de tv ooit aan te raken. Zelfde patroon als
+// VeldSchermSync.tsx.
+export function FieldScreenSync({
+  fieldScreenId,
+  pairedMatchId,
+  queuedMatchId = null,
+}: {
+  fieldScreenId: number
+  pairedMatchId: number | null
+  queuedMatchId?: number | null
+}) {
   const router = useRouter()
-  const cur = useRef(pairedMatchId)
+  const cur = useRef({ pairedMatchId, queuedMatchId })
 
   useEffect(() => {
-    cur.current = pairedMatchId
-  }, [pairedMatchId])
+    cur.current = { pairedMatchId, queuedMatchId }
+  }, [pairedMatchId, queuedMatchId])
 
   useEffect(() => {
     let active = true
@@ -21,8 +32,8 @@ export function FieldScreenSync({ fieldScreenId, pairedMatchId }: { fieldScreenI
       try {
         const r = await fetch(`/api/veldscherm/${fieldScreenId}/state`, { cache: 'no-store' })
         if (!r.ok) return
-        const d = (await r.json()) as { pairedMatchId: number | null }
-        if (active && d.pairedMatchId !== cur.current) router.refresh()
+        const d = (await r.json()) as { pairedMatchId: number | null; queuedMatchId: number | null }
+        if (active && (d.pairedMatchId !== cur.current.pairedMatchId || d.queuedMatchId !== cur.current.queuedMatchId)) router.refresh()
       } catch {
         /* netwerkfout — volgende poll probeert opnieuw */
       }

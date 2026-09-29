@@ -1,5 +1,5 @@
 import { getAuthUser } from '@/lib/auth-user'
-import { addShoutout } from '@/lib/match-channel'
+import { addShoutout, editShoutout } from '@/lib/match-channel'
 import { getPayloadClient } from '@/lib/payload-client'
 import { rateLimit } from '@/lib/sse-hub'
 
@@ -49,7 +49,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     return Response.json({ error: 'Rustig aan — even wachten.' }, { status: 429 })
   }
 
-  let body: { text?: string }
+  let body: { text?: string; replyTo?: number }
   try {
     body = await req.json()
   } catch {
@@ -62,9 +62,43 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     .trim()
     .slice(0, MAX_LEN)
   if (!text) return Response.json({ error: 'Leeg bericht' }, { status: 400 })
+  const replyTo = Number.isFinite(Number(body.replyTo)) && Number(body.replyTo) > 0 ? Number(body.replyTo) : null
 
   const payload = await getPayloadClient()
   const photoUrl = await photoUrlFor(payload, user)
-  const shout = addShoutout(matchId, displayName(user), text, photoUrl)
-  return Response.json({ ok: Boolean(shout) })
+  const shout = addShoutout(matchId, Number(user.id), displayName(user), text, photoUrl, replyTo)
+  return Response.json({ ok: Boolean(shout), shout })
+}
+
+// Eigen bericht bewerken — enkel de auteur, en enkel zolang de tribune nog open staat (dezelfde
+// timing als nieuwe berichten; addShoutout/editShoutout controleren dat al server-side).
+export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const matchId = Number(id)
+  if (!Number.isFinite(matchId)) return Response.json({ error: 'Ongeldig match-id' }, { status: 400 })
+
+  const user = await getAuthUser()
+  if (!user) return Response.json({ error: 'Log in om je bericht te bewerken.' }, { status: 401 })
+
+  if (!rateLimit(`shout-edit:${user.id}`, Number(process.env.SHOUT_MAX_PER_10S) || 5, 10_000)) {
+    return Response.json({ error: 'Rustig aan — even wachten.' }, { status: 429 })
+  }
+
+  let body: { id?: number; text?: string }
+  try {
+    body = await req.json()
+  } catch {
+    return Response.json({ error: 'Ongeldige JSON' }, { status: 400 })
+  }
+  const shoutId = Number(body.id)
+  if (!Number.isFinite(shoutId)) return Response.json({ error: 'Ongeldig bericht.' }, { status: 400 })
+  const text = String(body.text ?? '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, MAX_LEN)
+  if (!text) return Response.json({ error: 'Leeg bericht' }, { status: 400 })
+
+  const shout = editShoutout(matchId, Number(user.id), shoutId, text)
+  if (!shout) return Response.json({ error: 'Bewerken mislukt — is dit wel je eigen bericht?' }, { status: 403 })
+  return Response.json({ ok: true, shout })
 }
