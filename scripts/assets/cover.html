@@ -1,0 +1,116 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<style>
+  @font-face { font-family: 'LibSans'; src: local('Liberation Sans Bold'); font-weight: 800; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1600px; height: 900px; overflow: hidden; }
+  body {
+    font-family: 'Liberation Sans', 'DejaVu Sans', sans-serif;
+    background:
+      radial-gradient(1100px 700px at 78% 18%, rgba(111,178,255,0.22), transparent 60%),
+      radial-gradient(900px 600px at 12% 92%, rgba(176,123,255,0.14), transparent 55%),
+      linear-gradient(160deg, #0f1116 0%, #090a0c 62%, #060708 100%);
+    position: relative;
+    color: #f7f9fc;
+  }
+  /* subtle vignette */
+  .vignette {
+    position: absolute; inset: 0;
+    background: radial-gradient(1400px 900px at 50% 50%, transparent 55%, rgba(0,0,0,0.45) 100%);
+  }
+  /* faint court-line motif, right side */
+  .court {
+    position: absolute; right: -60px; top: 90px; width: 760px; height: 760px;
+    opacity: 0.85;
+  }
+  .badge {
+    position: absolute; top: 64px; left: 96px;
+    display: inline-flex; align-items: center; gap: 10px;
+    padding: 10px 20px; border-radius: 999px;
+    border: 1px solid rgba(111,178,255,0.4);
+    background: rgba(111,178,255,0.08);
+    font-size: 22px; font-weight: 700; letter-spacing: 0.04em;
+    color: #cfe3ff;
+  }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: #6fb2ff; box-shadow: 0 0 14px 3px rgba(111,178,255,0.9); }
+  .headline {
+    position: absolute; left: 96px; top: 300px; width: 980px;
+    font-size: 96px; line-height: 1.02; font-weight: 800; letter-spacing: -0.01em;
+  }
+  .headline .accent {
+    background: linear-gradient(100deg, #aed4ff 0%, #6fb2ff 48%, #4d8ff0 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .subtext {
+    position: absolute; left: 98px; top: 560px; width: 860px;
+    font-size: 34px; font-weight: 400; color: #9aa4b2; line-height: 1.4;
+  }
+  .subtext b { color: #f7f9fc; font-weight: 700; }
+  .footer-pill {
+    position: absolute; left: 96px; bottom: 72px;
+    display: inline-flex; align-items: center; gap: 14px;
+    padding: 14px 26px; border-radius: 999px;
+    background: linear-gradient(135deg, #ff5d6c 0%, #b07bff 100%);
+    font-size: 26px; font-weight: 800; color: #0a0e14;
+  }
+  .brand {
+    position: absolute; right: 96px; bottom: 72px;
+    font-size: 26px; font-weight: 800; letter-spacing: 0.01em; color: #f7f9fc;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .brand .b-accent { color: #6fb2ff; }
+</style>
+</head>
+<body>
+  <div class="vignette"></div>
+
+  <!-- Krachtbalveld op de echte verhouding (src/lib/field.ts: 14 m breed, speelveld 26 m tussen
+       de doellijnen, doelgebied 10 m diep erachter tot de achterlijn — dus 46 m totaal). De
+       zijlijn loopt de VOLLE lengte door, tot voorbij de doellijn — anders heb je geen doelgebied.
+       Doellijn (met de kenmerkende streepjes voorbij de zijlijn, net als FieldSchema.tsx) ligt dus
+       als interne lijn tussen speelveld en doelgebied, met dat doelgebied lichtjes getint. Middellijn
+       en de twee vrijworplijnen (4 m van elke doellijn) erbij. Zelfde ijsblauw-op-donker stijl als
+       de rest van de banner — geen grasmat. -->
+  <svg class="court" viewBox="0 0 760 760" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <!-- Doelgebieden — lichte tint zodat de zone tussen doellijn en achterlijn zichtbaar is -->
+    <rect x="213" y="70" width="334" height="135" fill="#6fb2ff" fill-opacity="0.07"/>
+    <rect x="213" y="555" width="334" height="135" fill="#6fb2ff" fill-opacity="0.07"/>
+    <!-- Zijlijnen — de volle veldlengte, achterlijn tot achterlijn -->
+    <line x1="213" y1="70" x2="213" y2="690" stroke="#6fb2ff" stroke-opacity="0.5" stroke-width="3"/>
+    <line x1="547" y1="70" x2="547" y2="690" stroke="#6fb2ff" stroke-opacity="0.5" stroke-width="3"/>
+    <!-- Achterlijnen (boven + onder, de buitenste rand) -->
+    <line x1="213" y1="70" x2="547" y2="70" stroke="#6fb2ff" stroke-opacity="0.5" stroke-width="3"/>
+    <line x1="213" y1="690" x2="547" y2="690" stroke="#6fb2ff" stroke-opacity="0.5" stroke-width="3"/>
+    <!-- Doellijnen — met de streepjes voorbij de zijlijn, 10 m vóór de achterlijn -->
+    <line x1="195" y1="205" x2="565" y2="205" stroke="#6fb2ff" stroke-opacity="0.55" stroke-width="3"/>
+    <line x1="195" y1="555" x2="565" y2="555" stroke="#6fb2ff" stroke-opacity="0.55" stroke-width="3"/>
+    <!-- Vrijworplijnen — 4 m van elke doellijn -->
+    <line x1="213" y1="259" x2="547" y2="259" stroke="#6fb2ff" stroke-opacity="0.30" stroke-width="1.5"/>
+    <line x1="213" y1="501" x2="547" y2="501" stroke="#6fb2ff" stroke-opacity="0.30" stroke-width="1.5"/>
+    <!-- Middellijn -->
+    <line x1="213" y1="380" x2="547" y2="380" stroke="#6fb2ff" stroke-opacity="0.5" stroke-width="3"/>
+    <circle cx="380" cy="380" r="16" fill="url(#ballGrad)"/>
+    <circle cx="150" cy="150" r="10" fill="#ff5d6c" fill-opacity="0.85"/>
+    <circle cx="610" cy="610" r="8" fill="#b07bff" fill-opacity="0.85"/>
+    <circle cx="610" cy="150" r="6" fill="#aed4ff" fill-opacity="0.7"/>
+    <defs>
+      <radialGradient id="ballGrad" cx="0.35" cy="0.35" r="0.75">
+        <stop offset="0%" stop-color="#e9f2ff"/>
+        <stop offset="55%" stop-color="#6fb2ff"/>
+        <stop offset="100%" stop-color="#3d6fc4"/>
+      </radialGradient>
+    </defs>
+  </svg>
+
+  <div class="badge"><span class="dot"></span>KVKBF &middot; KRACHTBAL LIVE</div>
+
+  <div class="headline">DAG VAN DE<br/><span class="accent">SPORTCLUB</span></div>
+
+  <div class="subtext"><b>Woensdag 30 september 2026</b><br/>Breng de krachtbalwereld naar school</div>
+
+  <div class="footer-pill">#sportersbelevenmeer</div>
+  <div class="brand">Krachtbal<span class="b-accent">Live</span></div>
+</body>
+</html>
