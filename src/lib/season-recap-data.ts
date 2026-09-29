@@ -74,6 +74,9 @@ export async function buildSeasonRecapData(payload: Payload, now: Date = new Dat
   const matchIds: number[] = []
   let goalThrows = 0
   let backThrows = 0
+  let reactions = 0
+  let shouts = 0
+  const predictorIds = new Set<number>()
 
   for (const m of docs) {
     const id = Number((m as { id: number }).id)
@@ -109,6 +112,26 @@ export async function buildSeasonRecapData(payload: Payload, now: Date = new Dat
     for (const goal of simple.goals) {
       goalThrows += 1
       if (goal.points === 2) backThrows += 1
+    }
+
+    // Live tribune: emoji-tikken (cumulatieve tellers) en geschreven berichten, over het hele seizoen.
+    const liveReactions = (m as { liveReactions?: unknown }).liveReactions
+    if (liveReactions && typeof liveReactions === 'object') {
+      for (const v of Object.values(liveReactions as Record<string, unknown>)) {
+        const n = Number(v)
+        if (Number.isFinite(n) && n > 0) reactions += n
+      }
+    }
+    const liveShoutouts = (m as { liveShoutouts?: unknown }).liveShoutouts
+    if (Array.isArray(liveShoutouts)) shouts += liveShoutouts.length
+
+    // Pronostiek: unieke deelnemers over het seizoen.
+    const scorePredictions = (m as { scorePredictions?: unknown }).scorePredictions
+    if (Array.isArray(scorePredictions)) {
+      for (const p of scorePredictions) {
+        const uid = rel((p as { userId?: unknown })?.userId) ?? Number((p as { userId?: unknown })?.userId)
+        if (Number.isFinite(uid) && uid! > 0) predictorIds.add(uid as number)
+      }
     }
 
     const { startIso, endIso } = weekendRange(date)
@@ -154,7 +177,16 @@ export async function buildSeasonRecapData(payload: Payload, now: Date = new Dat
     ? await payload.count({ collection: 'match-instants', where: { match: { in: matchIds } }, overrideAccess: true }).catch(() => ({ totalDocs: 0 }))
     : { totalDocs: 0 }
 
-  const stats: Omit<WeekendStats, 'forfaits'> = { visitors, clubs: clubKeys.size, goalThrows, backThrows, photos: photosRes.totalDocs }
+  const stats: Omit<WeekendStats, 'forfaits'> = {
+    visitors,
+    clubs: clubKeys.size,
+    goalThrows,
+    backThrows,
+    photos: photosRes.totalDocs,
+    reactions,
+    shouts,
+    predictors: predictorIds.size,
+  }
 
   return buildSeasonRecap({ seizoen, results, weeks: [...weekBuckets.values()], stats })
 }

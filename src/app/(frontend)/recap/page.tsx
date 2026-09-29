@@ -101,6 +101,9 @@ export default async function RecapPage({ searchParams }: { searchParams: Promis
                   <div className="recap-stat recap-stat--orange"><span aria-hidden>💪</span><b>{recap.stats.backThrows}</b><small>rugworpen</small></div>
                   <div className="recap-stat recap-stat--gold"><span aria-hidden>🏆</span><b>{recap.goals}</b><small>punten</small></div>
                   <div className="recap-stat recap-stat--pink"><span aria-hidden>📸</span><b>{recap.stats.photos}</b><small>supportersfoto&rsquo;s</small></div>
+                  <div className="recap-stat recap-stat--blue"><span aria-hidden>👏</span><b>{recap.stats.reactions}</b><small>reacties</small></div>
+                  <div className="recap-stat recap-stat--green"><span aria-hidden>💬</span><b>{recap.stats.shouts}</b><small>berichten</small></div>
+                  <div className="recap-stat recap-stat--indigo"><span aria-hidden>🔮</span><b>{recap.stats.predictors}</b><small>voorspelden mee</small></div>
                   {recap.stats.forfaits > 0 && (
                     <div className="recap-stat recap-stat--grey"><span aria-hidden>🚫</span><b>{recap.stats.forfaits}</b><small>{recap.stats.forfaits === 1 ? 'forfait' : 'forfaits'}</small></div>
                   )}
@@ -192,6 +195,9 @@ export default async function RecapPage({ searchParams }: { searchParams: Promis
                   <div className="recap-stat recap-stat--orange"><span aria-hidden>💪</span><b>{season.stats.backThrows}</b><small>rugworpen</small></div>
                   <div className="recap-stat recap-stat--gold"><span aria-hidden>🏆</span><b>{season.goals}</b><small>punten</small></div>
                   <div className="recap-stat recap-stat--pink"><span aria-hidden>📸</span><b>{season.stats.photos}</b><small>supportersfoto&rsquo;s</small></div>
+                  <div className="recap-stat recap-stat--blue"><span aria-hidden>👏</span><b>{season.stats.reactions}</b><small>reacties</small></div>
+                  <div className="recap-stat recap-stat--green"><span aria-hidden>💬</span><b>{season.stats.shouts}</b><small>berichten</small></div>
+                  <div className="recap-stat recap-stat--indigo"><span aria-hidden>🔮</span><b>{season.stats.predictors}</b><small>voorspelden mee</small></div>
                   {season.stats.forfaits > 0 && (
                     <div className="recap-stat recap-stat--grey"><span aria-hidden>🚫</span><b>{season.stats.forfaits}</b><small>{season.stats.forfaits === 1 ? 'forfait' : 'forfaits'}</small></div>
                   )}

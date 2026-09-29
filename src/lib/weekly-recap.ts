@@ -55,6 +55,12 @@ export interface WeekendStats {
   photos: number
   /** Aantal forfaits (30–0/0–30) in dit venster — geteld, maar nooit als "prestatie" uitgelicht. */
   forfaits: number
+  /** Aantal emoji-tikken op de live tribune (cumulatieve tellers, alle wedstrijden samen). */
+  reactions: number
+  /** Aantal geschreven tribuneberichten. */
+  shouts: number
+  /** Aantal unieke deelnemers aan de pronostiek — wie meerdere wedstrijden voorspelde, telt één keer. */
+  predictors: number
 }
 
 export interface WeeklyRecap {
@@ -218,7 +224,7 @@ export function buildWeeklyRecap(input: RecapInput): WeeklyRecap {
     matches: results.length,
     matchesManual: results.filter((m) => !m.autoImported).length,
     goals,
-    stats: { ...(input.stats ?? { visitors: 0, clubs: 0, goalThrows: 0, backThrows: 0, photos: 0 }), forfaits },
+    stats: { ...(input.stats ?? { visitors: 0, clubs: 0, goalThrows: 0, backThrows: 0, photos: 0, reactions: 0, shouts: 0, predictors: 0 }), forfaits },
     headline: headlineFor(results.length, goals, input.team),
     highlights: buildHighlights(results),
     results,
