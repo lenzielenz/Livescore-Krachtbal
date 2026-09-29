@@ -20,40 +20,65 @@ const fmt = (v: unknown): string => {
 const imgUrl = (v: unknown): string | null => (v && typeof v === 'object' ? ((v as { url?: string }).url ?? null) : null)
 const clubName = (v: unknown): string | null => (v && typeof v === 'object' ? ((v as { name?: string }).name ?? null) : null)
 
+// Titel van het "Dag van de Sportclub"-artikel — matcht wat de seed-route/-scripts aanmaken
+// (scripts/seed-dag-van-de-sportclub-news.ts, src/app/api/admin/seed-dag-van-de-sportclub).
+const DAG_VAN_DE_SPORTCLUB_TITEL = 'Dag van de Sportclub: breng de krachtbalwereld naar school'
+
 export default async function NieuwsPage() {
   const payload = await getPayloadClient()
   const res = await payload
     .find({ collection: 'news', where: { published: { equals: true } }, sort: '-publishedAt', depth: 1, limit: 50 })
     .catch(() => ({ docs: [] as Record<string, unknown>[] }))
 
+  // Zoek het artikel op i.p.v. het ID hard te coderen — dat verschilt per omgeving (lokaal vs.
+  // productie) en de lookup is toch al gratis: `res.docs` is al opgehaald hierboven.
+  const dagVanDeSportclub = res.docs.find((n) => (n as { title?: unknown }).title === DAG_VAN_DE_SPORTCLUB_TITEL)
+  // Het uitgelichte artikel staat al in het kaartje hierboven — niet nog eens in de grid.
+  const grid = dagVanDeSportclub ? res.docs.filter((n) => n !== dagVanDeSportclub) : res.docs
+
   return (
     <>
       <SiteHeader />
       <div className="site">
         <h1 className="page-title">📰 <span className="brand">Nieuws</span></h1>
-        <article className="nw-update">
-          <div className="nw-update-meta">Nieuw op Krachtbal Live · 14 september 2026</div>
-          <h2>Van wedstrijdweekend tot blijvende herinnering</h2>
-          <p>
-            Clubs kunnen voortaan onder <strong>Mijn Krachtbal</strong> automatisch een Instagram-weekendplan
-            met al hun wedstrijden downloaden, volledig in hun eigen clubkleuren.
-          </p>
-          <p>
-            Ook na het laatste fluitsignaal blijft de wedstrijd leven: likes, tribuneteksten en
-            supporterfoto’s blijven bewaard en worden gebundeld in een wedstrijdsamenvatting.
-          </p>
-          <p>
-            Ook nieuw: de <strong>Winfie</strong> — een deelbare eindscore met scoreverloop en winnaarskleuren.
-          </p>
-          <p className="nw-update-soon">
-            Heb je zelf een idee, aanpassing of probleem? Geef het rechtstreeks door via onze <Link href="/ideeenbus"><strong>Ideeënbus →</strong></Link>. Je inzending blijft beschikbaar voor de beheerder en kan opgevolgd worden.
-          </p>
-        </article>
-        {res.docs.length === 0 ? (
+        {dagVanDeSportclub ? (
+          <article className="nw-update">
+            <div className="nw-update-meta">Nieuw op Krachtbal Live · Dag van de Sportclub</div>
+            <h2>Deel je foto's van de Dag van de Sportclub!</h2>
+            <p>
+              Was jij of je kind er dit weekend bij op school voor de <strong>Dag van de Sportclub</strong>?
+              Deel het met de hele krachtbalwereld — voeg hieronder bij het artikel een foto toe van je
+              sportieveling in actie.
+            </p>
+            <p className="nw-update-soon">
+              <Link href={`/nieuws/${dagVanDeSportclub.id}`}><strong>Naar het artikel — foto toevoegen →</strong></Link>
+            </p>
+          </article>
+        ) : (
+          <article className="nw-update">
+            <div className="nw-update-meta">Nieuw op Krachtbal Live · 14 september 2026</div>
+            <h2>Van wedstrijdweekend tot blijvende herinnering</h2>
+            <p>
+              Clubs kunnen voortaan onder <strong>Mijn Krachtbal</strong> automatisch een Instagram-weekendplan
+              met al hun wedstrijden downloaden, volledig in hun eigen clubkleuren.
+            </p>
+            <p>
+              Ook na het laatste fluitsignaal blijft de wedstrijd leven: likes, tribuneteksten en
+              supporterfoto’s blijven bewaard en worden gebundeld in een wedstrijdsamenvatting.
+            </p>
+            <p>
+              Ook nieuw: de <strong>Winfie</strong> — een deelbare eindscore met scoreverloop en winnaarskleuren.
+            </p>
+            <p className="nw-update-soon">
+              Heb je zelf een idee, aanpassing of probleem? Geef het rechtstreeks door via onze <Link href="/ideeenbus"><strong>Ideeënbus →</strong></Link>. Je inzending blijft beschikbaar voor de beheerder en kan opgevolgd worden.
+            </p>
+          </article>
+        )}
+        {grid.length === 0 ? (
           <p className="empty">Nog geen nieuws. Kom snel terug! 👀</p>
         ) : (
           <div className="nw-grid">
-            {res.docs.map((n) => {
+            {grid.map((n) => {
               const id = n.id as number
               const url = imgUrl((n as { coverImage?: unknown }).coverImage)
               const club = clubName((n as { club?: unknown }).club)
