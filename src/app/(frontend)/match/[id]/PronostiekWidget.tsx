@@ -133,6 +133,16 @@ export function PronostiekWidget({
       </div>
     )
   }
+  // Niet (meer) ingevuld en de match is al bezig — voorspellen kan enkel nog vóór de aftrap
+  // (anders zou je de uitslag al kunnen kennen terwijl je "voorspelt").
+  if (status === 'live') {
+    return (
+      <div className="pn-line">
+        <span className="pn-line-ic">⏱</span>
+        <span>De wedstrijd is bezig — voorspellen kan niet meer.</span>
+      </div>
+    )
+  }
   if (status === 'scheduled' && !pronostiekOpen) {
     return (
       <div className="pn-line">
@@ -168,7 +178,7 @@ export function PronostiekWidget({
     <section className="pn pn-active">
       <h3 className="pn-h">
         <span className="pn-dot" aria-hidden />
-        🔮 Pronostiek{status === 'live' && <span className="pn-live">· match bezig</span>}
+        🔮 Pronostiek
         {typeof remaining === 'number' && (
           <span className="pn-left">nog {remaining}{max ? `/${max}` : ''} dit weekend</span>
         )}
@@ -196,7 +206,7 @@ export function PronostiekWidget({
         </div>
       )}
       <p className="pn-hint">
-        {status === 'live' ? '⏱ De match is bezig — hoe later je voorspelt, hoe minder punten.' : 'Je kan dit maar één keer doorgeven — daarna staat het vast.'} Niemand ziet je tip.
+        Je kan dit maar één keer doorgeven — daarna staat het vast. Niemand ziet je tip.
       </p>
       {err && <p className="pn-err">{err}</p>}
     </section>
