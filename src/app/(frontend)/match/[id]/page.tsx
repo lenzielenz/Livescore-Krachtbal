@@ -17,6 +17,7 @@ import { getAuthUser } from '@/lib/auth-user'
 import { mayEditMatchVideo } from '@/lib/video-access'
 import { isCheckedIn, sanitizeCheckins } from '@/lib/checkins'
 import { dateStrBE, formatDateTimeBE } from '@/lib/datetime'
+import { buildExpectedScore } from '@/lib/expected-score'
 import { googleCalendarUrl } from '@/lib/google-calendar'
 import { matchTitel } from '@/lib/match-ics'
 import { isVeldschermPreMatchLead } from '@/lib/field-screens'
@@ -210,6 +211,12 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
         .join('\n'),
     })
   }
+  // Verwachte score voor de affiche: op basis van hoe beide ploegen dit seizoen tot nu toe
+  // scoorden/incasseerden en waar ze in de rangschikking staan — geen eigen invoer, puur afgeleid.
+  const expectedScore =
+    toekomstig && matchDoc?.reeks
+      ? await buildExpectedScore(payload, matchDoc.reeks, state.teams.home.id, state.teams.away.id).catch(() => null)
+      : null
   const sheetRes = await payload
     .find({ collection: 'matchsheets', where: { match: { equals: matchId } }, depth: 2, limit: 1 })
     .catch(() => null)
@@ -384,7 +391,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   return (
     <>
       <SiteHeader active="wedstrijden" />
-      <div className="site">
+      <div className="site site--tight-top">
       <Link href="/" className="back-link">
         ← Alle wedstrijden
       </Link>
@@ -485,6 +492,11 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
               </div>
             </div>
             {datum && <p className="match-affiche-wanneer">{datum}</p>}
+            {expectedScore && (
+              <p className="match-affiche-verwacht" title="Geschatte score op basis van eerdere uitslagen dit seizoen en de rangschikking — geen voorspelling van de uitslag.">
+                Verwachte score: <b>{expectedScore.home}–{expectedScore.away}</b>
+              </p>
+            )}
           </section>
           <ToekomstigeWedstrijd
             wedstrijd={{

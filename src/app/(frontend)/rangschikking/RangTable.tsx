@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { Fragment, useLayoutEffect, useRef, useState } from 'react'
 
 import { TeamLogo } from '@/components/TeamLogo'
@@ -147,6 +148,9 @@ export function RangTable({ rows, showMove = true }: { rows: RangRow[]; showMove
                             <span className={`rang-move ${r.moveCls}`}>{moveArrow}{Math.abs(r.delta)}</span> t.o.v. vorige week
                           </span>
                         )}
+                        <Link href={`/ploegen/${r.teamId}`} className="rang-detail-link" onClick={(e) => e.stopPropagation()}>
+                          Wedstrijdhistoriek &amp; volgende wedstrijden →
+                        </Link>
                       </div>
                     </td>
                   </tr>

@@ -60,12 +60,31 @@ export function forfaitScore(uitslag: unknown): { home: number; away: number } |
   }
 }
 
-/** Klopt deze eindstand met het vaste forfait-patroon (30–0 of 0–30)? Herkenbaar aan de score
- *  alleen — ook voor wedstrijden zonder wedstrijdblad (bv. via de federatie-import), die geen
- *  apart forfait-veld hebben. De ploeg die niet forfaiteerde, heeft er niets voor moeten doen —
- *  dus telt zo'n uitslag niet mee als "prestatie" (zwaarste zege, ploeg van de week, …). */
+/** Welke ploeg forfaiteerde, enkel af te leiden uit de eindstand zelf (30–0 of 0–30) — voor
+ *  wedstrijden zonder wedstrijdblad (bv. via de federatie-import), die geen apart forfait-veld
+ *  hebben. Een 0–0 valt hier bewust buiten: dat kan een echt (dubbel) forfait zijn, maar evengoed
+ *  een niet-gespeelde/nog-niet-ingevulde wedstrijd — dat onderscheid kan de score alleen niet maken. */
+export function forfaitFromScore(homeGoals: number, awayGoals: number): Forfait {
+  if (homeGoals === 0 && awayGoals === FORFAIT_GOALS) return 'home'
+  if (homeGoals === FORFAIT_GOALS && awayGoals === 0) return 'away'
+  return 'none'
+}
+
+/** Klopt deze eindstand met het vaste forfait-patroon (30–0 of 0–30)? De ploeg die niet
+ *  forfaiteerde, heeft er niets voor moeten doen — dus telt zo'n uitslag niet mee als "prestatie"
+ *  (zwaarste zege, ploeg van de week, …). */
 export function isForfaitScore(homeGoals: number, awayGoals: number): boolean {
-  return (homeGoals === FORFAIT_GOALS && awayGoals === 0) || (awayGoals === FORFAIT_GOALS && homeGoals === 0)
+  return forfaitFromScore(homeGoals, awayGoals) !== 'none'
+}
+
+/** Forfait van een wedstrijd: het wedstrijdblad (indien ingevuld) is altijd leidend — dat kent ook
+ *  een dubbel forfait (0–0), wat de score alleen niet kan onderscheiden van een niet-gespeelde
+ *  wedstrijd. Zonder wedstrijdblad (federatie-import) valt dit terug op het 30–0/0–30-patroon in
+ *  de score, zodat zo'n forfait ook daar de forfaiterende ploeg 0 punten oplevert i.p.v. een
+ *  gewone verlies-score (2 punten). */
+export function resolveForfait(uitslag: unknown, homeGoals: number, awayGoals: number): Forfait {
+  const explicit = forfaitFromUitslag(uitslag)
+  return explicit !== 'none' ? explicit : forfaitFromScore(homeGoals, awayGoals)
 }
 
 /**

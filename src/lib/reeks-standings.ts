@@ -2,7 +2,7 @@ import type { Payload } from 'payload'
 
 import { competitionWhere } from './analyse-access'
 import { buildScoreboards } from './match-engine'
-import { computeStandings, forfaitFromUitslag, type StandingRow, type StandingsMatch } from './standings'
+import { computeStandings, resolveForfait, type StandingRow, type StandingsMatch } from './standings'
 
 // Bouwt de actuele stand én het aantal resterende wedstrijden per ploeg voor één reeks. Gedeeld
 // door de rangschikking-/kampioenschapslogica.
@@ -41,7 +41,7 @@ export async function buildReeksStandings(payload: Payload, reeks: string): Prom
     const homeId = rel((m as { homeTeam?: unknown }).homeTeam)
     const awayId = rel((m as { awayTeam?: unknown }).awayTeam)
     if (homeId == null || awayId == null) continue
-    standingsMatches.push({ homeId, awayId, homeGoals: c.score.home, awayGoals: c.score.away, forfait: forfaitFromUitslag(ffByMatch.get(id)) })
+    standingsMatches.push({ homeId, awayId, homeGoals: c.score.home, awayGoals: c.score.away, forfait: resolveForfait(ffByMatch.get(id), c.score.home, c.score.away) })
   }
   const standings = computeStandings(standingsMatches, teamIds)
 

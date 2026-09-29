@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 
-import { computeStandings, forfaitFromUitslag, forfaitScore, isForfaitScore, type StandingsMatch } from '@/lib/standings'
+import { computeStandings, forfaitFromScore, forfaitFromUitslag, forfaitScore, isForfaitScore, resolveForfait, type StandingsMatch } from '@/lib/standings'
 
 const m = (homeId: number, awayId: number, hg: number, ag: number, forfait: StandingsMatch['forfait'] = 'none'): StandingsMatch => ({
   homeId,
@@ -44,6 +44,29 @@ describe('isForfaitScore', () => {
   })
 })
 
+describe('forfaitFromScore', () => {
+  it('herkent 0–30 als thuis-forfait en 30–0 als uit-forfait', () => {
+    expect(forfaitFromScore(0, 30)).toBe('home')
+    expect(forfaitFromScore(30, 0)).toBe('away')
+  })
+  it('een gewone uitslag, ook 0–0, is geen forfait', () => {
+    expect(forfaitFromScore(26, 32)).toBe('none')
+    expect(forfaitFromScore(0, 0)).toBe('none')
+  })
+})
+
+describe('resolveForfait', () => {
+  it('het wedstrijdblad is leidend, ook als de score toevallig geen forfait-patroon heeft', () => {
+    expect(resolveForfait('thuis', 12, 8)).toBe('home')
+    expect(resolveForfait('dubbel', 12, 8)).toBe('both')
+  })
+  it('zonder wedstrijdblad valt terug op het forfait-patroon in de score', () => {
+    expect(resolveForfait(undefined, 0, 30)).toBe('home')
+    expect(resolveForfait(undefined, 30, 0)).toBe('away')
+    expect(resolveForfait(undefined, 12, 8)).toBe('none')
+  })
+})
+
 describe('computeStandings (winst 4 · gelijk 3 · verlies 2 · forfait 0)', () => {
   it('winst geeft 4, verlies 2', () => {
     const [first, second] = computeStandings([m(1, 2, 10, 6)])
@@ -68,6 +91,17 @@ describe('computeStandings (winst 4 · gelijk 3 · verlies 2 · forfait 0)', () 
   it('dubbel forfait: beide 0 punten', () => {
     const rows = computeStandings([m(1, 2, 0, 0, 'both')])
     expect(rows.every((r) => r.points === 0 && r.forfaits === 1)).toBe(true)
+  })
+
+  it('30–0 zonder wedstrijdblad (federatie-import) telt als forfait, niet als gewoon verlies', () => {
+    // Zonder resolveForfait zou dit een gewone 30–0-overwinning zijn: forfaiteerder krijgt dan
+    // ten onrechte 2 punten (verlies) i.p.v. 0 (forfait).
+    const forfait = resolveForfait(undefined, 30, 0)
+    const rows = computeStandings([m(1, 2, 30, 0, forfait)])
+    const t1 = rows.find((r) => r.teamId === 1)!
+    const t2 = rows.find((r) => r.teamId === 2)!
+    expect(t1).toMatchObject({ won: 1, points: 4 })
+    expect(t2).toMatchObject({ forfaits: 1, points: 0, lost: 0 })
   })
 
   it('sorteert op punten, dan doelsaldo, dan doelpunten voor', () => {

@@ -306,6 +306,17 @@
 .rang-detail-item b { color: var(--txt); font-variant-numeric: tabular-nums; }
 .rang-detail-item b.pos { color: #0fe0a6; }
 .rang-detail-item b.neg { color: #ef476f; }
+/* Ingang naar het ploegprofiel (volledige wedstrijdhistoriek + agenda) — op een eigen regel,
+   zodat hij niet verdwaalt tussen de cijfer-chips ervoor. */
+.rang-detail-link {
+  display: block;
+  width: 100%;
+  margin-top: 2px;
+  color: var(--accent);
+  font-weight: 700;
+  text-decoration: none;
+}
+.rang-detail-link:hover { text-decoration: underline; }
 
 /* Zones: een kleurbalkje links van de rij, plus een zachte kleurwas die van de rand naar rechts
    uitdooft — geeft de zone meer body dan een streepje alleen, zonder de rij te laten schreeuwen.
