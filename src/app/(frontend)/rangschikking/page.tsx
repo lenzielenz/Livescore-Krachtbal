@@ -1,7 +1,7 @@
 import Link from 'next/link'
 
 import { SiteHeader } from '@/components/SiteHeader'
-import { userClubId } from '@/lib/access'
+import { userClubId, userTeamId, userTeamIds } from '@/lib/access'
 import { competitionWhere } from '@/lib/analyse-access'
 import { getAuthUser } from '@/lib/auth-user'
 import { clinchStatus, titelBoodschap } from '@/lib/championship'
@@ -34,13 +34,28 @@ export default async function RangschikkingPage({ searchParams }: { searchParams
   const reeksen = await reeksenMetData(payload, competitionWhere())
   const bekend = (x: unknown): x is string => typeof x === 'string' && reeksen.some((o) => o.value === x)
 
-  // Ingelogd? Onthoud de eigen club (voor de standaardreeks + de highlight).
-  const myClub = userClubId(await getAuthUser())
+  // Ingelogd? Onthoud de eigen club + ploeg (voor de standaardreeks + de highlight).
+  const me = await getAuthUser()
+  const myClub = userClubId(me)
   const myClubNum = myClub == null ? null : Number(myClub)
+  const myTeamId = userTeamId(me)
+  const myTeamIdsCoach = userTeamIds(me)
 
-  // Standaardreeks: gevraagde reeks → anders de reeks van je eigen club → anders de
-  // reeks van de recentste afgelopen wedstrijd → anders de hoogste reeks.
+  // Standaardreeks: gevraagde reeks → anders de reeks van je eigen ploeg ("Mijn ploeg"/"Mijn
+  // profiel") → anders (coach) een van je gekozen ploegen → anders eender welke ploeg van je
+  // club → anders de reeks van de recentste afgelopen wedstrijd → anders de hoogste reeks.
   let reeks: string | null = bekend(reeksParam) ? reeksParam : null
+  if (!reeks && myTeamId != null) {
+    const myTeamDoc = await payload.findByID({ collection: 'teams', id: Number(myTeamId), depth: 0 }).catch(() => null)
+    if (myTeamDoc && bekend(myTeamDoc.reeks)) reeks = myTeamDoc.reeks as string
+  }
+  if (!reeks && myTeamIdsCoach.length > 0) {
+    const coachTeams = await payload
+      .find({ collection: 'teams', where: { id: { in: myTeamIdsCoach } }, depth: 0, limit: myTeamIdsCoach.length })
+      .catch(() => ({ docs: [] as { reeks?: unknown }[] }))
+    const r = coachTeams.docs.map((t) => t.reeks).find(bekend)
+    if (typeof r === 'string') reeks = r
+  }
   if (!reeks && myClubNum != null) {
     const myTeam = await payload
       .find({ collection: 'teams', where: { and: [{ club: { equals: myClubNum } }, competitionWhere()] }, depth: 0, limit: 50 })
