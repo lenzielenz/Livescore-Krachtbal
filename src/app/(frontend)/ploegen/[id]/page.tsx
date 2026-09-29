@@ -4,11 +4,12 @@ import type { ReactNode } from 'react'
 
 import { BewaarWedstrijd } from '@/components/BewaarWedstrijd'
 import { SiteHeader } from '@/components/SiteHeader'
+import { TeamLogo } from '@/components/TeamLogo'
 import { hasRole, isFederationLevel } from '@/lib/access'
 import { competitionWhere } from '@/lib/analyse-access'
 import { getAuthUser } from '@/lib/auth-user'
 
-import { buildScoreboards } from '@/lib/match-engine'
+import { buildScoreboards, clubColors, clubLogoFit, clubLogoUrl } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
 import { clubsOpId } from '@/lib/ploeg-rechtzetten'
 import { reeksNaam } from '@/lib/reeksen'
@@ -33,7 +34,10 @@ type TeamDoc = { name?: string; reeks?: string | null; analyseOnly?: boolean; cl
 async function loadTeam(id: number): Promise<TeamDoc | null> {
   if (!Number.isFinite(id)) return null
   const payload = await getPayloadClient()
-  return (await payload.findByID({ collection: 'teams', id, depth: 1 }).catch(() => null)) as TeamDoc | null
+  // depth: 2 — niet enkel de club (depth 1), ook háár geüpload logo (club.logo.url), nodig om het
+  // clublogo + kleuren op deze pagina net als overal elders (scorebord, rangschikking, affiche) te
+  // tonen i.p.v. het generieke vaandel-icoon.
+  return (await payload.findByID({ collection: 'teams', id, depth: 2 }).catch(() => null)) as TeamDoc | null
 }
 
 export async function generateMetadata({ params }: Params) {
@@ -117,6 +121,11 @@ export default async function PloegProfiel({ params }: Params) {
   const club = (team.club && typeof team.club === 'object' ? team.club : null) as
     | { id: number; name?: string }
     | null
+  // Clublogo + -kleuren — dezelfde helpers als het scorebord/de affiche, zodat dit profiel er
+  // niet generiek naast staat maar in dezelfde huisstijl van de ploeg zelf oogt.
+  const teamLogoUrl = clubLogoUrl(team)
+  const teamLogoFit = clubLogoFit(team)
+  const teamColors = clubColors(team)
 
   // De federatie kan de ploegnaam en haar club hier rechtzetten. Analyseploegen komen nooit tot
   // hier (die vallen hierboven al op notFound), dus de rol volstaat als voorwaarde.
@@ -133,10 +142,13 @@ export default async function PloegProfiel({ params }: Params) {
     <>
       <SiteHeader />
       <main className="an-wrap">
-        <div className="ps-hero">
-          <div className="ps-hero-num" aria-hidden>
-            ⚑
-          </div>
+        <div
+          className={`ps-hero${teamColors ? ' ps-hero-branded' : ''}`}
+          style={teamColors ? ({ '--hc': teamColors.primary, '--hc2': teamColors.secondary } as React.CSSProperties) : undefined}
+        >
+          <span className="ps-hero-logo">
+            <TeamLogo name={team.name ?? 'Ploeg'} logoUrl={teamLogoUrl} logoFit={teamLogoFit} size={64} ringColor={teamColors?.primary} />
+          </span>
           <div>
             <h1 className="ps-name">{team.name ?? 'Ploeg'}</h1>
             <p className="ps-meta">
