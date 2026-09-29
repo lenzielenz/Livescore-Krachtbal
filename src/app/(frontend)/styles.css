@@ -1642,6 +1642,17 @@ body.kb-scherm .site-foot { display: none; }
   font-weight: 700;
   font-size: 0.84rem;
 }
+/* Geschatte score: bewust minder prominent dan de datumpil hierboven — een schatting, geen feit. */
+.match-affiche-verwacht {
+  display: block;
+  margin: 10px 0 0;
+  color: var(--dim, #9fb3a6);
+  font-size: 0.78rem;
+}
+.match-affiche-verwacht b {
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+}
 
 .match-toekomst { margin: 0 0 18px; }
 .match-toekomst-lead { margin: 0 0 10px; font-size: 0.88rem; color: var(--dim); text-align: center; }
