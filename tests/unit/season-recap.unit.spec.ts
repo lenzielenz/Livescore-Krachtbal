@@ -88,6 +88,23 @@ describe('buildSeasonRecap', () => {
 
   it('geeft standaardstats mee als er geen zijn opgegeven', () => {
     const r = buildSeasonRecap({ seizoen: '2025-2026', results: [match({ matchId: 1, homeGoals: 1, awayGoals: 0 })], weeks: [] })
-    expect(r?.stats).toEqual({ visitors: 0, clubs: 0, goalThrows: 0, backThrows: 0, photos: 0 })
+    expect(r?.stats).toEqual({ visitors: 0, clubs: 0, goalThrows: 0, backThrows: 0, photos: 0, forfaits: 0 })
+  })
+
+  it('telt forfaits over het seizoen en laat een forfaitweek geen "ploeg van de week" opleveren', () => {
+    const weeks = [
+      bucket(
+        '2026-08-03T06:00:00.000Z',
+        '2026-08-10T06:00:00.000Z',
+        [match({ matchId: 1, homeGoals: 30, awayGoals: 0 })],
+        [
+          teamResult({ teamId: 1, teamName: 'Forfaitwinnaar', goalsFor: 30, goalsAgainst: 0 }),
+          teamResult({ teamId: 2, teamName: 'Forfaiteerder', goalsFor: 0, goalsAgainst: 30 }),
+        ],
+      ),
+    ]
+    const r = buildSeasonRecap({ seizoen: '2025-2026', results: weeks.flatMap((w) => w.results), weeks })
+    expect(r?.stats.forfaits).toBe(1)
+    expect(r?.archive[0].team).toBeNull()
   })
 })

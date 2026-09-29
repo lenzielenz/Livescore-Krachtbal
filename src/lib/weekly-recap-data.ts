@@ -44,7 +44,8 @@ export async function buildWeeklyRecapData(
   payload: Payload,
   opts: { now?: Date; range?: { startIso: string; endIso: string } } = {},
 ): Promise<WeeklyRecap> {
-  const { startIso, endIso } = opts.range ?? previousWeekRange(opts.now ?? new Date())
+  const now = opts.now ?? new Date()
+  const { startIso, endIso } = opts.range ?? previousWeekRange(now)
 
   const weekRes = await payload
     .find({
@@ -54,6 +55,9 @@ export async function buildWeeklyRecapData(
           { status: { equals: 'finished' } },
           { date: { greater_than_equal: startIso } },
           { date: { less_than: endIso } },
+          // Een afgelopen wedstrijd kan niet in de toekomst liggen (zie ook season-recap-data.ts)
+          // — beschermt ook de ?week=-link naar een archiefweek tegen een verkeerd gedateerde match.
+          { date: { less_than_equal: now.toISOString() } },
           { isDemo: { not_equals: true } },
           competitionWhere(),
         ],

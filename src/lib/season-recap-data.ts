@@ -49,6 +49,10 @@ export async function buildSeasonRecapData(payload: Payload, now: Date = new Dat
       where: {
         and: [
           { status: { equals: 'finished' } },
+          // Een afgelopen wedstrijd kan niet in de toekomst liggen — een verkeerd gedateerde
+          // wedstrijd (bv. een fout bij het inplannen) mag anders als eigen "speelweek" in het
+          // archief opduiken, terwijl dat weekend nog moet komen.
+          { date: { less_than_equal: now.toISOString() } },
           { isDemo: { not_equals: true } },
           competitionWhere(),
           ...seasonClause(seizoen),
@@ -150,7 +154,7 @@ export async function buildSeasonRecapData(payload: Payload, now: Date = new Dat
     ? await payload.count({ collection: 'match-instants', where: { match: { in: matchIds } }, overrideAccess: true }).catch(() => ({ totalDocs: 0 }))
     : { totalDocs: 0 }
 
-  const stats: WeekendStats = { visitors, clubs: clubKeys.size, goalThrows, backThrows, photos: photosRes.totalDocs }
+  const stats: Omit<WeekendStats, 'forfaits'> = { visitors, clubs: clubKeys.size, goalThrows, backThrows, photos: photosRes.totalDocs }
 
   return buildSeasonRecap({ seizoen, results, weeks: [...weekBuckets.values()], stats })
 }

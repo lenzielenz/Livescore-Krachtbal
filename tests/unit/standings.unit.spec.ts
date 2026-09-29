@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 
-import { computeStandings, forfaitFromUitslag, forfaitScore, type StandingsMatch } from '@/lib/standings'
+import { computeStandings, forfaitFromUitslag, forfaitScore, isForfaitScore, type StandingsMatch } from '@/lib/standings'
 
 const m = (homeId: number, awayId: number, hg: number, ag: number, forfait: StandingsMatch['forfait'] = 'none'): StandingsMatch => ({
   homeId,
@@ -29,6 +29,18 @@ describe('forfaitFromUitslag', () => {
     expect(forfaitFromUitslag('dubbel')).toBe('both')
     expect(forfaitFromUitslag('geen')).toBe('none')
     expect(forfaitFromUitslag(undefined)).toBe('none')
+  })
+})
+
+describe('isForfaitScore', () => {
+  it('herkent 30–0 en 0–30 als forfait', () => {
+    expect(isForfaitScore(30, 0)).toBe(true)
+    expect(isForfaitScore(0, 30)).toBe(true)
+  })
+  it('herkent een gewone uitslag niet als forfait', () => {
+    expect(isForfaitScore(26, 32)).toBe(false)
+    expect(isForfaitScore(0, 0)).toBe(false)
+    expect(isForfaitScore(30, 1)).toBe(false)
   })
 })
 

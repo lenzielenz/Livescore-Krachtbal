@@ -210,6 +210,7 @@
 .recap-stat--orange { --stat: #ff9f43; }
 .recap-stat--gold { --stat: #ffd166; }
 .recap-stat--pink { --stat: #f472b6; }
+.recap-stat--grey { --stat: #94a3b8; }
 /* Zachte, zwevende gloed-vlek achter elke tegel — geeft de kleur wat leven zonder de cijfers te
    storen (elke tegel ademt op haar eigen ritme via --i). */
 .recap-stat::before {

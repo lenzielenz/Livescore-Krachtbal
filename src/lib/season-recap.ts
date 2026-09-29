@@ -3,6 +3,7 @@
 // archief waar elke voorbije speelweek naartoe linkt. Puur en getest; het verzamelen van de data
 // (DB) zit in season-recap-data.ts — zelfde opsplitsing als weekly-recap.ts/-data.ts.
 
+import { isForfaitScore } from './standings'
 import { buildHighlights, type RecapHighlight, type RecapMatch, type WeekendStats } from './weekly-recap'
 import { teamOfTheWeek, type WeekTeamResult, type WeekTeamRow } from './team-of-the-week'
 
@@ -40,7 +41,8 @@ export interface SeasonRecapInput {
   seizoen: string
   results: RecapMatch[]
   weeks: SeasonWeekBucket[]
-  stats?: WeekendStats
+  /** Forfaits telt buildSeasonRecap zelf uit `results` — de aanroeper hoeft ze niet mee te geven. */
+  stats?: Omit<WeekendStats, 'forfaits'>
 }
 
 const total = (m: RecapMatch) => m.homeGoals + m.awayGoals
@@ -57,6 +59,7 @@ function seasonHeadline(seizoen: string, matches: number, goals: number): string
 export function buildSeasonRecap(input: SeasonRecapInput): SeasonRecap | null {
   if (input.results.length === 0) return null
   const goals = input.results.reduce((s, m) => s + total(m), 0)
+  const forfaits = input.results.filter((m) => isForfaitScore(m.homeGoals, m.awayGoals)).length
   const archive: SeasonRecapWeek[] = input.weeks
     .filter((w) => w.results.length > 0)
     .map((w) => ({
@@ -74,7 +77,7 @@ export function buildSeasonRecap(input: SeasonRecapInput): SeasonRecap | null {
     matchesManual: input.results.filter((m) => !m.autoImported).length,
     goals,
     weekends: archive.length,
-    stats: input.stats ?? { visitors: 0, clubs: 0, goalThrows: 0, backThrows: 0, photos: 0 },
+    stats: { ...(input.stats ?? { visitors: 0, clubs: 0, goalThrows: 0, backThrows: 0, photos: 0 }), forfaits },
     headline: seasonHeadline(input.seizoen, input.results.length, goals),
     highlights: buildHighlights(input.results),
     archive,

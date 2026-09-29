@@ -7,6 +7,8 @@
 // bal weggeeft, heeft zijn ploeg niet vooruitgeholpen. Winst weegt mee, zodat een sterke prestatie
 // in een verloren wedstrijd niet automatisch bovenaan komt.
 
+import { isForfaitScore } from './standings'
+
 export interface WeekPlayer {
   playerId: number
   name: string
@@ -96,10 +98,12 @@ export interface WeekTeamRow extends WeekTeamResult {
 
 /**
  * De ploeg die het weekend domineerde: winst telt, het doelsaldo breekt de gelijkstand.
- * Voedt de "ploeg van de week"-vermelding in de maandag-recap.
+ * Voedt de "ploeg van de week"-vermelding in de maandag-recap. Een forfaitoverwinning (30–0) telt
+ * niet mee — die ploeg heeft er niets voor moeten doen.
  */
 export function teamOfTheWeek(results: WeekTeamResult[]): WeekTeamRow | null {
   const rows = results
+    .filter((r) => !isForfaitScore(r.goalsFor, r.goalsAgainst))
     .map((r) => ({ ...r, diff: r.goalsFor - r.goalsAgainst, score: RESULT_BONUS[r.result] * 10 + (r.goalsFor - r.goalsAgainst) }))
     .filter((r) => r.result === 'win')
     .sort((a, b) => b.score - a.score || b.goalsFor - a.goalsFor || a.teamName.localeCompare(b.teamName))
