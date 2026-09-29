@@ -66,20 +66,29 @@
 <body>
   <div class="vignette"></div>
 
-  <!-- Krachtbalveld op de echte verhouding (14 m breed x 26 m speelveld, src/lib/field.ts) —
-       zijlijnen (de lange kanten), doellijn boven/onder (met de kenmerkende streepjes voorbij de
-       zijlijn, net als FieldSchema.tsx), de middellijn, en de twee vrijworplijnen op 4 m van elke
-       doellijn. Zelfde ijsblauw-op-donker stijl als de rest van de banner — geen grasmat. -->
+  <!-- Krachtbalveld op de echte verhouding (src/lib/field.ts: 14 m breed, speelveld 26 m tussen
+       de doellijnen, doelgebied 10 m diep erachter tot de achterlijn — dus 46 m totaal). De
+       zijlijn loopt de VOLLE lengte door, tot voorbij de doellijn — anders heb je geen doelgebied.
+       Doellijn (met de kenmerkende streepjes voorbij de zijlijn, net als FieldSchema.tsx) ligt dus
+       als interne lijn tussen speelveld en doelgebied, met dat doelgebied lichtjes getint. Middellijn
+       en de twee vrijworplijnen (4 m van elke doellijn) erbij. Zelfde ijsblauw-op-donker stijl als
+       de rest van de banner — geen grasmat. -->
   <svg class="court" viewBox="0 0 760 760" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <!-- Doellijn met de streepjes voorbij de zijlijn (boven + onder) -->
-    <line x1="195" y1="70" x2="565" y2="70" stroke="#6fb2ff" stroke-opacity="0.5" stroke-width="3"/>
-    <line x1="195" y1="690" x2="565" y2="690" stroke="#6fb2ff" stroke-opacity="0.5" stroke-width="3"/>
-    <!-- Zijlijnen -->
+    <!-- Doelgebieden — lichte tint zodat de zone tussen doellijn en achterlijn zichtbaar is -->
+    <rect x="213" y="70" width="334" height="135" fill="#6fb2ff" fill-opacity="0.07"/>
+    <rect x="213" y="555" width="334" height="135" fill="#6fb2ff" fill-opacity="0.07"/>
+    <!-- Zijlijnen — de volle veldlengte, achterlijn tot achterlijn -->
     <line x1="213" y1="70" x2="213" y2="690" stroke="#6fb2ff" stroke-opacity="0.5" stroke-width="3"/>
     <line x1="547" y1="70" x2="547" y2="690" stroke="#6fb2ff" stroke-opacity="0.5" stroke-width="3"/>
-    <!-- Vrijworplijnen — 4 m van elke doellijn (4/26e van het speelveld) -->
-    <line x1="213" y1="165" x2="547" y2="165" stroke="#6fb2ff" stroke-opacity="0.30" stroke-width="1.5"/>
-    <line x1="213" y1="595" x2="547" y2="595" stroke="#6fb2ff" stroke-opacity="0.30" stroke-width="1.5"/>
+    <!-- Achterlijnen (boven + onder, de buitenste rand) -->
+    <line x1="213" y1="70" x2="547" y2="70" stroke="#6fb2ff" stroke-opacity="0.5" stroke-width="3"/>
+    <line x1="213" y1="690" x2="547" y2="690" stroke="#6fb2ff" stroke-opacity="0.5" stroke-width="3"/>
+    <!-- Doellijnen — met de streepjes voorbij de zijlijn, 10 m vóór de achterlijn -->
+    <line x1="195" y1="205" x2="565" y2="205" stroke="#6fb2ff" stroke-opacity="0.55" stroke-width="3"/>
+    <line x1="195" y1="555" x2="565" y2="555" stroke="#6fb2ff" stroke-opacity="0.55" stroke-width="3"/>
+    <!-- Vrijworplijnen — 4 m van elke doellijn -->
+    <line x1="213" y1="259" x2="547" y2="259" stroke="#6fb2ff" stroke-opacity="0.30" stroke-width="1.5"/>
+    <line x1="213" y1="501" x2="547" y2="501" stroke="#6fb2ff" stroke-opacity="0.30" stroke-width="1.5"/>
     <!-- Middellijn -->
     <line x1="213" y1="380" x2="547" y2="380" stroke="#6fb2ff" stroke-opacity="0.5" stroke-width="3"/>
     <circle cx="380" cy="380" r="16" fill="url(#ballGrad)"/>
