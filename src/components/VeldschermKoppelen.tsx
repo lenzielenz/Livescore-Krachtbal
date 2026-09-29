@@ -13,6 +13,7 @@ import { useState } from 'react'
 export function VeldschermKoppelen({ matchId }: { matchId: number }) {
   const [open, setOpen] = useState(false)
   const [paired, setPaired] = useState(false)
+  const [queued, setQueued] = useState(false)
   const [code, setCode] = useState('')
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null)
@@ -31,11 +32,12 @@ export function VeldschermKoppelen({ matchId }: { matchId: number }) {
         credentials: 'include',
         body: JSON.stringify({ code: code.trim(), matchId }),
       })
-      const data = (await res.json().catch(() => ({}))) as { error?: string }
+      const data = (await res.json().catch(() => ({}))) as { error?: string; outcome?: 'paired' | 'queued' }
       if (!res.ok) {
         setMsg({ ok: false, text: data.error ?? 'Koppelen mislukt.' })
         return
       }
+      setQueued(data.outcome === 'queued')
       setPaired(true)
       setCode('')
       setMsg(null)
@@ -62,6 +64,7 @@ export function VeldschermKoppelen({ matchId }: { matchId: number }) {
         return
       }
       setPaired(false)
+      setQueued(false)
     } catch {
       setMsg({ ok: false, text: 'Ontkoppelen mislukt — probeer opnieuw.' })
     } finally {
@@ -78,14 +81,18 @@ export function VeldschermKoppelen({ matchId }: { matchId: number }) {
           onClick={() => setOpen((v) => !v)}
           aria-expanded={open ? 'true' : 'false'}
         >
-          📡 {paired ? 'Veldscherm gekoppeld' : 'Veldscherm koppelen'}
+          📡 {paired ? (queued ? 'In wachtrij voor veldscherm' : 'Veldscherm gekoppeld') : 'Veldscherm koppelen'}
         </button>
       </div>
       {open && paired && (
         <div className="veld-koppel-form" role="group" aria-label="Veldscherm ontkoppelen">
-          <span className="veld-koppel-msg ok">✓ Veldscherm gekoppeld!</span>
+          <span className="veld-koppel-msg ok">
+            {queued
+              ? '📋 In de wachtrij! Springt automatisch over zodra het veld vrijkomt.'
+              : '✓ Veldscherm gekoppeld!'}
+          </span>
           <button type="button" className="veld-koppel-submit ontkoppel" disabled={busy} onClick={() => void ontkoppel()}>
-            {busy ? 'Bezig…' : '✕ Ontkoppelen'}
+            {busy ? 'Bezig…' : queued ? '✕ Wachtrij annuleren' : '✕ Ontkoppelen'}
           </button>
           {msg && !msg.ok && <span className="veld-koppel-msg err">{msg.text}</span>}
         </div>

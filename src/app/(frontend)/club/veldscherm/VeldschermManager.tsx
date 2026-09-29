@@ -182,6 +182,9 @@ function VeldCard({ screen, url, demo = false }: { screen: FieldScreenRow; clubI
           <>Wachtscherm — koppelcode <strong>{pairingCode ?? '—'}</strong></>
         )}
       </p>
+      {paired && !demo && screen.queuedMatchId != null && (
+        <p className="vb-card-queue">📋 Er staat al een volgende wedstrijd klaar in de wachtrij.</p>
+      )}
       {paired && !demo && (
         <div className="vb-unpair">
           <button type="button" className="vb-btn danger vb-btn-sm" disabled={unpairing} onClick={() => void ontkoppel()}>

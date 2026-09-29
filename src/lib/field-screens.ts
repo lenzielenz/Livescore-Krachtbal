@@ -15,6 +15,33 @@ export function isFieldScreenTheme(raw: unknown): raw is FieldScreenTheme {
   return typeof raw === 'string' && (THEMES as readonly string[]).includes(raw)
 }
 
+// Veldscherm-koppelen mag al vanaf een kwartier vóór de aftrap — korter dan het algemene 1u-venster
+// voor de vroege wedstrijdfoto (zie PRE_MATCH_LEAD_MS in tribune.ts): het scherm staat pas kort op
+// voorhand fysiek klaar op het veld, en een kwartier is ruim genoeg om het op te starten en te
+// koppelen terwijl de vorige wedstrijd (indien nog bezig) uitspeelt.
+export const VELDSCHERM_PRE_MATCH_LEAD_MS = 15 * 60 * 1000
+
+export function isVeldschermPreMatchLead(date: string | null | undefined, now: number = Date.now()): boolean {
+  if (!date) return false
+  const kickoff = new Date(date).getTime()
+  if (Number.isNaN(kickoff)) return false
+  return now >= kickoff - VELDSCHERM_PRE_MATCH_LEAD_MS
+}
+
+export type PairOutcome = 'pair' | 'queue' | 'queue-full'
+
+/**
+ * Wat er moet gebeuren wanneer iemand een geldige koppelcode invoert voor een veldscherm:
+ *  - vrij scherm            → meteen koppelen ('pair')
+ *  - bezet, geen wachtrij   → in de wachtrij zetten ('queue') — neemt automatisch over zodra de
+ *                              lopende wedstrijd afloopt (zie unpairFieldScreensForMatch)
+ *  - bezet, al een wachtrij → geweigerd ('queue-full') — er is maar plaats voor één "volgende"
+ */
+export function pairOutcome(screen: { paired: boolean; queued: boolean }): PairOutcome {
+  if (!screen.paired) return 'pair'
+  return screen.queued ? 'queue-full' : 'queue'
+}
+
 const CODE_RE = /^\d{6}$/
 
 /** Geldige koppelcode: exact 6 cijfers (spaties rondom worden genegeerd). */

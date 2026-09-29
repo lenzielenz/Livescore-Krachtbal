@@ -933,6 +933,11 @@ export interface FieldScreen {
   pairedMatch?: (number | null) | Match;
   pairedAt?: string | null;
   /**
+   * Automatisch gezet via dezelfde koppelcode terwijl het veld nog bezet is — neemt over zodra de lopende wedstrijd afloopt.
+   */
+  queuedMatch?: (number | null) | Match;
+  queuedAt?: string | null;
+  /**
    * Instelbaar per veld via "Mijn club" → Veldscherm.
    */
   theme?: ('dark' | 'light') | null;
@@ -2343,6 +2348,8 @@ export interface FieldScreensSelect<T extends boolean = true> {
   pairingCode?: T;
   pairedMatch?: T;
   pairedAt?: T;
+  queuedMatch?: T;
+  queuedAt?: T;
   theme?: T;
   isDemo?: T;
   updatedAt?: T;

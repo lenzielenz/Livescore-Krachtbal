@@ -25,7 +25,7 @@ export async function POST(req: Request) {
   try {
     const result = await pairMatchToCode(payload, code, matchId)
     if (!result.ok) return Response.json({ error: result.error }, { status: 400 })
-    return Response.json({ ok: true })
+    return Response.json({ ok: true, outcome: result.outcome })
   } catch (err) {
     return Response.json({ error: (err as Error).message }, { status: 500 })
   }

@@ -19,6 +19,7 @@ import { isCheckedIn, sanitizeCheckins } from '@/lib/checkins'
 import { dateStrBE, formatDateTimeBE } from '@/lib/datetime'
 import { googleCalendarUrl } from '@/lib/google-calendar'
 import { matchTitel } from '@/lib/match-ics'
+import { isVeldschermPreMatchLead } from '@/lib/field-screens'
 import { buildMatchSheet, buildMatchState, buildMatchStats, buildTimeline, type SheetGoal } from '@/lib/match-engine'
 import { buildMatchReport } from '@/lib/match-report'
 import { getPayloadClient } from '@/lib/payload-client'
@@ -125,17 +126,20 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   const me = await getAuthUser()
   // Video koppelen/uploaden mag de federatie (competitiewedstrijden) — zie mayEditMatchVideo.
   const mayVideo = mayEditMatchVideo(me, matchDoc as { analyseOnly?: boolean | null; analyseOwner?: unknown } | null)
-  // Veldscherm koppelen: zinvol vanaf een uur vóór de aftrap (al klaarzetten) tot de wedstrijd
-  // live is. Mag wie de wedstrijd aantekent (dezelfde toegang als het scoreformulier), maar ook
-  // een gewone supporter van een van beide clubs — die staat evengoed fysiek bij dat veldscherm
-  // en kan de code aflezen; de code zelf is de eigenlijke grendel (zie /api/veldscherm/koppel),
-  // dit is enkel wie de knop te zien krijgt.
+  // Veldscherm koppelen: zinvol vanaf een kwartier vóór de aftrap (al klaarzetten, of al in de
+  // wachtrij zetten als het veld nog bezet is — zie pairOutcome in field-screens.ts) tot de
+  // wedstrijd live is. Mag wie de wedstrijd aantekent (dezelfde toegang als het scoreformulier),
+  // maar ook een gewone supporter van een van beide clubs — die staat evengoed fysiek bij dat
+  // veldscherm en kan de code aflezen; de code zelf is de eigenlijke grendel
+  // (zie /api/veldscherm/koppel), dit is enkel wie de knop te zien krijgt. Bewust een KORTER
+  // venster dan de vroege wedstrijdfoto hieronder (magVoorAftrap, 1u) — dat blijft ongewijzigd.
   const betrokkenClubIds = [homeClub?.id, awayClub?.id].filter((c): c is number => typeof c === 'number')
   const eigenClubIds = [userClubId(me), ...userFollowedClubIds(me)].filter((c) => c != null).map(String)
   const isSupporterVanBetrokkenClub = betrokkenClubIds.some((c) => eigenClubIds.includes(String(c)))
   const magVoorAftrap = state.match.status === 'scheduled' && isPreMatchLead(matchDoc?.date as string | undefined)
+  const magVeldschermVoorAftrap = state.match.status === 'scheduled' && isVeldschermPreMatchLead(matchDoc?.date as string | undefined)
   const magKoppelen =
-    (state.match.status === 'live' || magVoorAftrap) &&
+    (state.match.status === 'live' || magVeldschermVoorAftrap) &&
     (isSupporterVanBetrokkenClub || (await mayScoreMatch(payload, me as AuthedUser | null, matchId)))
   const datum = matchDoc?.date ? formatDateTimeBE(matchDoc.date as string) : null
   // Wie de wedstrijd mag rechtzetten (tijdstip + ploegnaam/club): de federatie, en nooit op een
