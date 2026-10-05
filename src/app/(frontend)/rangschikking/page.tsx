@@ -126,15 +126,17 @@ export default async function RangschikkingPage({ searchParams }: { searchParams
     })
     .catch(() => ({ docs: [] as Record<string, unknown>[] }))
   const remaining = new Map<number, number>()
+  const fixtures: { homeId: number; awayId: number }[] = []
   for (const m of openRes.docs) {
-    for (const key of ['homeTeam', 'awayTeam'] as const) {
-      const id = rel((m as Record<string, unknown>)[key])
-      if (id == null) continue
-      remaining.set(id, (remaining.get(id) ?? 0) + 1)
+    const homeId = rel((m as Record<string, unknown>).homeTeam)
+    const awayId = rel((m as Record<string, unknown>).awayTeam)
+    for (const id of [homeId, awayId]) {
+      if (id != null) remaining.set(id, (remaining.get(id) ?? 0) + 1)
     }
+    if (homeId != null && awayId != null) fixtures.push({ homeId, awayId })
   }
   const leaderId = table[0]?.teamId ?? null
-  const titel = leaderId != null ? clinchStatus(table, remaining, leaderId) : null
+  const titel = leaderId != null ? clinchStatus(table, remaining, leaderId, { fixtures, results: standingsMatches }) : null
   const titelMsg = titelBoodschap({
     status: titel,
     leaderName: leaderId != null ? (teamInfo.get(leaderId)?.name ?? null) : null,

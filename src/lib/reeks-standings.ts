@@ -1,6 +1,7 @@
 import type { Payload } from 'payload'
 
 import { competitionWhere } from './analyse-access'
+import type { ClinchContext } from './championship'
 import { buildScoreboards } from './match-engine'
 import { computeStandings, resolveForfait, type StandingRow, type StandingsMatch } from './standings'
 
@@ -10,7 +11,10 @@ import { computeStandings, resolveForfait, type StandingRow, type StandingsMatch
 const rel = (v: unknown): number | null =>
   v && typeof v === 'object' ? ((v as { id?: number }).id ?? null) : typeof v === 'number' ? v : null
 
-export async function buildReeksStandings(payload: Payload, reeks: string): Promise<{ standings: StandingRow[]; remaining: Map<number, number> }> {
+export async function buildReeksStandings(
+  payload: Payload,
+  reeks: string,
+): Promise<{ standings: StandingRow[]; remaining: Map<number, number>; clinchCtx: ClinchContext }> {
   const teamsRes = await payload
     .find({ collection: 'teams', where: { and: [{ reeks: { equals: reeks } }, competitionWhere()] }, depth: 0, limit: 200 })
     .catch(() => ({ docs: [] as { id: number }[] }))
@@ -50,11 +54,15 @@ export async function buildReeksStandings(payload: Payload, reeks: string): Prom
     .find({ collection: 'matches', where: { and: [{ reeks: { equals: reeks } }, { status: { in: ['scheduled', 'live'] } }, { analyseOnly: { not_equals: true } }] }, depth: 0, limit: 1000 })
     .catch(() => ({ docs: [] as Record<string, unknown>[] }))
   const remaining = new Map<number, number>()
+  const fixtures: ClinchContext['fixtures'] = []
   for (const m of remRes.docs) {
     if ((m as { isDemo?: boolean }).isDemo) continue
-    for (const tid of [rel((m as { homeTeam?: unknown }).homeTeam), rel((m as { awayTeam?: unknown }).awayTeam)]) {
+    const homeId = rel((m as { homeTeam?: unknown }).homeTeam)
+    const awayId = rel((m as { awayTeam?: unknown }).awayTeam)
+    for (const tid of [homeId, awayId]) {
       if (tid != null) remaining.set(Number(tid), (remaining.get(Number(tid)) ?? 0) + 1)
     }
+    if (homeId != null && awayId != null) fixtures.push({ homeId, awayId })
   }
-  return { standings, remaining }
+  return { standings, remaining, clinchCtx: { fixtures, results: standingsMatches } }
 }

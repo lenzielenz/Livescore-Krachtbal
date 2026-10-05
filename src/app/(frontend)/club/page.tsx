@@ -248,7 +248,7 @@ export default async function ClubPage({ searchParams }: { searchParams: Promise
     const sb = await buildReeksStandings(payload, reeks).catch(() => null)
     if (!sb || sb.standings.length < 2) continue
     for (const t of clubTeams.filter((ct) => ct.reeks === reeks)) {
-      const st = clinchStatus(sb.standings, sb.remaining, t.id)
+      const st = clinchStatus(sb.standings, sb.remaining, t.id, sb.clinchCtx)
       if (!st || !(st.clinched || st.leading)) continue
       champs.push({ teamName: t.name, reeks: reeksNaam(reeks as Parameters<typeof reeksNaam>[0]), clinched: st.clinched, leading: st.leading, pointsToClinch: st.pointsToClinch, winsToClinch: st.winsToClinch })
     }
