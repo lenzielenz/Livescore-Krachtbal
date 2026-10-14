@@ -1,0 +1,118 @@
+/* Virtueel krachtbal — catalogus en 3D-viewer. */
+.vk-pagina { padding-bottom: 32px; }
+
+/* Catalogus */
+.vk-lijst { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; margin-top: 18px; }
+.vk-kaart {
+  display: flex; flex-direction: column; overflow: hidden; border-radius: 16px; text-decoration: none; color: inherit;
+  border: 1px solid color-mix(in srgb, #fff 8%, var(--line)); background: var(--panel-grad, var(--panel)); box-shadow: var(--card-shadow);
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+.vk-kaart:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--accent) 50%, var(--line)); }
+.vk-kaart-beeld {
+  position: relative; height: 150px; display: grid; place-items: center;
+  background: radial-gradient(ellipse at 50% 0%, rgba(255, 240, 200, 0.18), transparent 60%), linear-gradient(180deg, #0b1828, #08111c);
+  perspective: 500px;
+}
+.vk-kaart-veld {
+  position: absolute; left: 10%; right: 10%; bottom: 14%; height: 52%; border-radius: 4px;
+  background:
+    linear-gradient(90deg, rgba(29,104,140,.65) 0 24%, transparent 24% 76%, rgba(29,104,140,.65) 76%),
+    repeating-linear-gradient(90deg, #2c8549 0 8%, #287a42 8% 16%);
+  outline: 2px solid rgba(244, 248, 245, 0.85); outline-offset: -2px;
+  transform: rotateX(55deg); box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+}
+.vk-kaart-play {
+  position: relative; width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--grad-accent, var(--accent)); color: var(--bg); font-size: 1.2rem; box-shadow: 0 0 24px color-mix(in srgb, var(--accent) 60%, transparent);
+}
+.vk-kaart-tekst { display: flex; flex-direction: column; gap: 4px; padding: 14px 16px 16px; font-size: 0.9rem; color: var(--dim-strong); }
+.vk-kaart-tekst b { font-size: 1.05rem; color: var(--txt); }
+.vk-kaart-meta { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--accent); }
+
+/* Fragmentpagina */
+.vk-terug { display: inline-block; margin-top: 4px; font-size: 0.85rem; color: var(--dim-strong); text-decoration: none; }
+.vk-terug:hover { color: var(--accent); }
+.vk-titel { margin: 8px 0 2px; font-size: clamp(1.4rem, 4vw, 2rem); font-weight: 900; }
+.vk-sub { margin: 0 0 14px; color: var(--dim); font-size: 0.9rem; text-transform: capitalize; }
+.vk-noot { margin-top: 14px; font-size: 0.8rem; color: var(--dim); }
+.vk-fout { color: var(--dim); }
+
+.vk { display: flex; flex-direction: column; gap: 10px; }
+.vk-scene {
+  position: relative; height: min(68vh, 640px); min-height: 340px; border-radius: 16px; overflow: hidden;
+  border: 1px solid color-mix(in srgb, #fff 8%, var(--line)); background: #070d16; box-shadow: var(--card-shadow);
+  touch-action: none;
+}
+.vk-scene:fullscreen { height: 100%; border-radius: 0; }
+.vk-canvas { display: block; width: 100%; height: 100%; }
+.vk-scene.modus-lopen .vk-canvas { cursor: grab; }
+.vk-scene.modus-lopen .vk-canvas:active { cursor: grabbing; }
+.vk-laden { position: absolute; inset: 0; display: grid; place-items: center; color: var(--dim); font-size: 0.9rem; }
+
+.vk-hud { position: absolute; left: 10px; right: 54px; top: 10px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; pointer-events: none; }
+.vk-modi {
+  display: flex; gap: 2px; padding: 3px; border-radius: 999px; pointer-events: auto;
+  background: rgba(8, 14, 22, 0.78); border: 1px solid rgba(255, 255, 255, 0.1); backdrop-filter: blur(6px);
+}
+.vk-modi button {
+  border: 0; background: transparent; color: #cbd5e1; font: inherit; font-size: 0.76rem; font-weight: 700;
+  padding: 6px 11px; border-radius: 999px; cursor: pointer; white-space: nowrap;
+}
+.vk-modi button:hover { color: #fff; }
+.vk-modi button.actief { background: var(--grad-accent, var(--accent)); color: var(--bg); }
+.vk-bezit {
+  display: inline-flex; align-items: center; gap: 7px; padding: 5px 11px; border-radius: 999px;
+  background: rgba(8, 14, 22, 0.78); border: 1px solid rgba(253, 224, 71, 0.45); color: #f6efc6; font-size: 0.74rem; font-weight: 700;
+  box-shadow: 0 0 16px rgba(253, 224, 71, 0.15);
+}
+.vk-bezit i, .vk-ploeg-naam i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.vk-vol {
+  position: absolute; right: 10px; top: 10px; width: 36px; height: 36px; border-radius: 10px; cursor: pointer;
+  background: rgba(8, 14, 22, 0.78); border: 1px solid rgba(255, 255, 255, 0.12); color: #e2e8f0; font-size: 1.05rem;
+}
+.vk-uitleg {
+  position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); margin: 0; max-width: calc(100% - 24px);
+  padding: 5px 12px; border-radius: 999px; background: rgba(8, 14, 22, 0.7); color: #cbd5e1; font-size: 0.72rem;
+  text-align: center; pointer-events: none;
+}
+.vk-scene.modus-lopen .vk-uitleg { left: auto; right: 12px; transform: none; max-width: 55%; border-radius: 12px; }
+.vk-joy {
+  position: absolute; left: 18px; bottom: 18px; width: 110px; height: 110px; border-radius: 50%; touch-action: none;
+  background: rgba(8, 14, 22, 0.45); border: 2px solid rgba(255, 255, 255, 0.18); display: grid; place-items: center;
+}
+.vk-joy span { width: 44px; height: 44px; border-radius: 50%; background: var(--grad-accent, var(--accent)); opacity: 0.9; box-shadow: 0 0 16px color-mix(in srgb, var(--accent) 60%, transparent); }
+@media (hover: hover) and (pointer: fine) { .vk-joy { opacity: 0.55; } }
+
+/* Afspeelbalk */
+.vk-balk {
+  display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 14px;
+  border: 1px solid color-mix(in srgb, #fff 8%, var(--line)); background: var(--panel-grad, var(--panel));
+}
+.vk-knop {
+  flex-shrink: 0; min-width: 40px; height: 34px; padding: 0 9px; border-radius: 9px; cursor: pointer; font: inherit; font-size: 0.8rem; font-weight: 800;
+  background: color-mix(in srgb, #fff 6%, transparent); border: 1px solid color-mix(in srgb, #fff 10%, var(--line)); color: var(--txt);
+}
+.vk-knop:hover { border-color: var(--accent); }
+.vk-knop.speel { background: var(--grad-accent, var(--accent)); color: var(--bg); border: 0; font-size: 0.85rem; }
+.vk-tijdlijn { flex: 1; min-width: 60px; accent-color: var(--accent); }
+.vk-klok { flex-shrink: 0; font-variant-numeric: tabular-nums; font-size: 0.78rem; color: var(--dim-strong); }
+@media (max-width: 480px) { .vk-klok { display: none; } }
+
+/* Spelerskeuze */
+.vk-spelers { padding: 10px 12px; border-radius: 14px; border: 1px solid color-mix(in srgb, #fff 8%, var(--line)); background: var(--panel-grad, var(--panel)); }
+.vk-spelers-kop { display: flex; justify-content: space-between; align-items: center; font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: var(--dim-strong); margin-bottom: 6px; }
+.vk-wissel { display: inline-flex; align-items: center; gap: 6px; text-transform: none; letter-spacing: 0; font-weight: 600; cursor: pointer; }
+.vk-ploeg { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 5px 0; }
+.vk-ploeg-naam { display: inline-flex; align-items: center; gap: 7px; min-width: 170px; font-size: 0.82rem; font-weight: 700; }
+.vk-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.vk-chip {
+  min-width: 40px; padding: 5px 10px; border-radius: 999px; cursor: pointer; font: inherit; font-size: 0.78rem; font-weight: 800; color: var(--txt);
+  background: color-mix(in srgb, var(--kleur) 14%, transparent); border: 1px solid color-mix(in srgb, var(--kleur) 55%, transparent);
+}
+.vk-chip:hover, .vk-chip.actief { background: var(--kleur); color: #0b1220; }
+@media (max-width: 520px) {
+  .vk-modi { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+  .vk-modi::-webkit-scrollbar { display: none; }
+  .vk-modi button { padding: 6px 8px; font-size: 0.7rem; }
+}
