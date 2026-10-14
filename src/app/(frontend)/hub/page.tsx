@@ -204,14 +204,15 @@ export default async function HubPage() {
           </section>
         )}
 
-        {/* Kantinescherm, Ideeënbus en Zo werkt het — verhuisd van de menubalk naartoe hier: het
+        {/* Kantinescherm, Veldscherm, Ideeënbus en Zo werkt het — verhuisd van de menubalk naartoe hier: het
             zijn geen "leesvoer" zoals Weekoverzicht/Nieuws (die staan bij Ontdekken), maar directe
             hulpmiddelen die bij je eigen startpagina horen. Altijd zichtbaar, ook uitgelogd, want
             deze pagina zelf blokkeert niet op een account. */}
         <section className="hub-sec">
           <h2 className="hub-h2">Krachtbal-tools</h2>
-          <div className="hub-tiles">
+          <div className="hub-tiles hub-tiles-4">
             <Link href="/kantine" className="hub-tile">📺<span>Kantinescherm</span></Link>
+            <Link href="/club/veldscherm" className="hub-tile">🏟️<span>Veldscherm</span></Link>
             <Link href="/ideeenbus" className="hub-tile">💡<span>Ideeënbus</span></Link>
             <Link href="/uitleg" className="hub-tile">🎓<span>Zo werkt het</span></Link>
           </div>
