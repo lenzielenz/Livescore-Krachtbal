@@ -417,7 +417,8 @@ export function bouwOmgeving(scene: THREE.Scene, opt: { thema: StadionThema; lic
   const huid = ['#f1c9a5', '#e0ac69', '#c68642', '#8d5524', '#ffdbac'].map((c) => new THREE.Color(c))
   for (let i = 0; i < aantal; i++) {
     // Start op de straat, richting de hoofdingang (naar -z): rotatie π laat +z naar -z wijzen.
-    const x = (toeval() - 0.5) * 22
+    // Door de welkomstboog: tussen de pijlers.
+    const x = (toeval() - 0.5) * 12
     q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI + (toeval() - 0.5) * 0.12)
     m4.compose(new THREE.Vector3(x, 0, B + 36), q, new THREE.Vector3(1, 0.9 + toeval() * 0.2, 1))
     lijven.setMatrixAt(i, m4)

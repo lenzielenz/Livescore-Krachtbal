@@ -4,8 +4,9 @@ import { useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 
-import { balOp, balSpoor, bezitOp, bezitTijdlijn, decodeer, GEVEL, op, ploegKleuren, snelheid, stap, type Ploeg, type Reconstructie, type Spoor, type StadionThema, type Veld } from '@/lib/virtueel'
+import { balOp, balSpoor, bezitOp, bezitTijdlijn, decodeer, GEVEL, op, ploegKleuren, snelheid, stap, WERELD_STRAAL, type Ploeg, type Reconstructie, type Spoor, type StadionThema, type Veld } from '@/lib/virtueel'
 import { bouwOmgeving } from './omgeving'
+import { bouwSfeer } from './sfeer'
 import { bouwStadion } from './stadion'
 
 // Virtueel krachtbal: een gereconstrueerd wedstrijdfragment in 3D, in een stadion in je
@@ -14,16 +15,22 @@ import { bouwStadion } from './stadion'
 // of de joystick op gsm, slepen om rond te kijken), of maakt een rondvlucht. Alle posities komen uit src/lib/virtueel.ts; deze
 // component bouwt enkel de scène en tekent elke frame de stand op het huidige tijdstip.
 
-type Modus = 'tribune' | 'bal' | 'speler' | 'lopen' | 'buiten' | 'rondvlucht'
-const MODI: { id: Modus; label: string; uitleg: string }[] = [
+type Modus = 'zweven' | 'buiten' | 'rondvlucht' | 'tribune' | 'bal' | 'speler' | 'lopen'
+const MODI: { id: Modus; label: string; uitleg: string; kort?: string }[] = [
+  { id: 'zweven', label: 'Zweven', uitleg: 'Zweef vrij rond je stadion: WASD of pijltjes, Spatie/E omhoog, Q/C omlaag, Shift sneller, sleep om rond te kijken. Op gsm: joystick + ▲▼.', kort: 'Joystick om te zweven, ▲▼ voor de hoogte, sleep om rond te kijken.' },
+  { id: 'buiten', label: 'Wandelen', uitleg: 'Wandel over het plein en door de hoofdingang naar binnen. Via de hoeken van de tribunes kom je aan het veld.', kort: 'Joystick om te wandelen, sleep om rond te kijken.' },
+  { id: 'rondvlucht', label: 'Rondvlucht', uitleg: 'Een rondvlucht rond het stadion.' },
   { id: 'tribune', label: 'Tribune', uitleg: 'Draai, zoom en verschuif vrij rond het veld.' },
   { id: 'bal', label: 'Volg de bal', uitleg: 'De camera blijft bij de bal, langs de zijlijn.' },
   { id: 'speler', label: 'Spelersblik', uitleg: 'Kijk door de ogen van een speler. Kies hieronder wie.' },
-  { id: 'lopen', label: 'Op het veld', uitleg: 'WASD of pijltjes om te lopen (Shift = sneller), sleep om rond te kijken. Op gsm: joystick links onder.' },
-  { id: 'buiten', label: 'Buiten', uitleg: 'Wandel rond je stadion en door de hoofdingang naar binnen. Via de hoeken van de tribunes kom je op het veld.' },
-  { id: 'rondvlucht', label: 'Rondvlucht', uitleg: 'Een rondvlucht rond het stadion.' },
+  { id: 'lopen', label: 'Op het veld', uitleg: 'Loop tussen de spelers: WASD of pijltjes (Shift = sneller), sleep om rond te kijken. Op gsm: joystick links onder.', kort: 'Joystick om te lopen, sleep om rond te kijken.' },
 ]
+/** Rondkijken rond het stadion: altijd beschikbaar. */
+const VERKENNEN: Modus[] = ['zweven', 'buiten', 'rondvlucht']
+/** De views om de wedstrijd te volgen: verschijnen zodra je aan het veld bent. */
+const VELD: Modus[] = ['tribune', 'bal', 'speler', 'lopen']
 const WANDELEN: Modus[] = ['lopen', 'buiten']
+const BESTUURBAAR: Modus[] = ['lopen', 'buiten', 'zweven']
 const SNELHEDEN = [0.25, 0.5, 1, 2]
 const OOGHOOGTE = 1.7
 
@@ -214,20 +221,33 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
   const [tijd, setTijd] = useState(0)
   const [spelend, setSpelend] = useState(false)
   const [snel, setSnel] = useState(1)
-  const [modus, setModus] = useState<Modus>('tribune')
+  const [modus, setModus] = useState<Modus>('zweven')
+  const [aanVeld, setAanVeld] = useState(false)
+  const [welkom, setWelkom] = useState(true)
+  const [klaar, setKlaar] = useState(false)
+  const [hoog, setHoog] = useState(0)
   const [gekozen, setGekozen] = useState<string | null>(null)
   const [namen, setNamen] = useState(true)
   const [bezit, setBezit] = useState<number | null>(null)
   const [stick, setStick] = useState({ x: 0, y: 0 })
 
   // Wat de tekenlus nodig heeft, zonder bij elke wijziging de scène opnieuw te bouwen.
-  const st = useRef({ tijd: 0, spelend: false, snel: 1, modus: 'tribune' as Modus, gekozen: null as string | null, namen: true, stick: { x: 0, y: 0 }, spoel: false })
+  const st = useRef({ tijd: 0, spelend: false, snel: 1, modus: 'zweven' as Modus, gekozen: null as string | null, namen: true, stick: { x: 0, y: 0 }, hoog: 0, spoel: false })
   st.current.spelend = spelend
   st.current.snel = snel
   st.current.modus = modus
   st.current.gekozen = gekozen
   st.current.namen = namen
   st.current.stick = stick
+  st.current.hoog = hoog
+
+  // Het welkom verschijnt pas als het eerste beeld van het stadion er staat, en verdwijnt na zes
+  // seconden.
+  useEffect(() => {
+    if (!welkom || !klaar) return
+    const t = setTimeout(() => setWelkom(false), 6000)
+    return () => clearTimeout(t)
+  }, [welkom, klaar])
 
   useEffect(() => {
     let weg = false
@@ -334,7 +354,8 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     // Het stadion rondom, in de kleuren van de club die kijkt.
     const stadion = bouwStadion(scene, { veld, marge, thema, licht })
     const omgeving = bouwOmgeving(scene, { thema, licht, logo: stadion.logo })
-    const obstakels = [...stadion.obstakels, ...omgeving.obstakels]
+    const sfeer = bouwSfeer(scene, { thema, licht, logo: stadion.logo })
+    const obstakels = [...stadion.obstakels, ...omgeving.obstakels, ...sfeer.obstakels]
     const bezitAandeel = bezitTijdlijn(sporen)
     const scorePloegen = data.ploegen.map((p) => ({ naam: p.naam, kleur: kleuren[p.id] ?? '#b2bbb6' }))
 
@@ -380,8 +401,9 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     loper.pos.y = OOGHOOGTE
     const toetsen = new Set<string>()
     const opToets = (e: KeyboardEvent) => {
-      if (!WANDELEN.includes(st.current.modus)) return
-      if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ShiftLeft', 'ShiftRight'].includes(e.code)) {
+      if (!BESTUURBAAR.includes(st.current.modus)) return
+      if ((e.target as HTMLElement | null)?.closest?.('input, textarea, select')) return
+      if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ShiftLeft', 'ShiftRight', 'Space', 'KeyE', 'KeyQ', 'KeyC'].includes(e.code)) {
         toetsen.add(e.code)
         e.preventDefault()
       }
@@ -391,7 +413,7 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     window.addEventListener('keyup', losToets)
     let sleep: { x: number; y: number } | null = null
     const neer = (e: PointerEvent) => {
-      if (!WANDELEN.includes(st.current.modus)) return
+      if (!BESTUURBAAR.includes(st.current.modus)) return
       sleep = { x: e.clientX, y: e.clientY }
       renderer.domElement.setPointerCapture(e.pointerId)
     }
@@ -418,10 +440,18 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     const ro = new ResizeObserver(maat)
     ro.observe(el)
 
+    // Ben je (zwevend of wandelend) aan het veld? Binnen de ledborden en niet te hoog.
+    const opVeld = (p: THREE.Vector3) => Math.abs(p.x) < cx + marge + 1.5 && Math.abs(p.z) < cz + marge + 1.5 && p.y < 30
+
     let vorige = performance.now()
     let laatsteUi = 0
-    let vorigeModus: Modus = st.current.modus
+    let vorigeModus: Modus | null = null
+    // Zweven: waar je was, zodat je na een view terugkeert waar je vertrok. Begin: hoog boven het
+    // plein, met de hoofdingang en de welkomstboog voor je.
+    const zweef = { pos: new THREE.Vector3(0, 9, GEVEL.B + 46), yaw: Math.PI, pitch: -0.12 }
+    let laatsteModus: Modus | null = null
     let frames = 0
+    let getekend = false
     let frameTijd = 0
     let raf = 0
     const tik = (nu: number) => {
@@ -495,14 +525,28 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
 
       // Camera.
       if (s.modus !== vorigeModus) {
+        if (vorigeModus === 'zweven') {
+          zweef.pos.copy(loper.pos)
+          zweef.yaw = loper.yaw
+          zweef.pitch = loper.pitch
+        }
+        laatsteModus = vorigeModus
+        if (s.modus === 'zweven') {
+          loper.pos.copy(zweef.pos)
+          loper.yaw = zweef.yaw
+          loper.pitch = zweef.pitch
+          toetsen.clear()
+        }
         if (s.modus === 'tribune') {
           camera.position.set(-6, 15.5, 21)
           orbit.target.set(0, 0, 0)
         }
         if (s.modus === 'lopen') {
-          // Op het veld, aan de middenlijn, met zicht op het spel.
-          loper.pos.set(-4, OOGHOOGTE, cz + 1.5)
-          loper.yaw = Math.PI * 0.9
+          // Kom je zwevend of wandelend aan het veld, dan begin je daar; anders aan de middenlijn.
+          const vanBuiten = (laatsteModus === 'zweven' || laatsteModus === 'buiten') && opVeld(loper.pos)
+          if (!vanBuiten) loper.pos.set(-4, OOGHOOGTE, cz + 1.5)
+          loper.pos.y = OOGHOOGTE
+          if (!vanBuiten) loper.yaw = Math.PI * 0.9
           loper.pitch = -0.05
           toetsen.clear()
         }
@@ -543,6 +587,31 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
         const r = GEVEL.A + 42
         camera.position.set(Math.sin(a) * r, 34 + Math.sin(a * 2.3) * 8, Math.cos(a) * r * 0.85)
         camera.lookAt(0, 3, 0)
+      } else if (s.modus === 'zweven') {
+        const vooruit = (toetsen.has('KeyW') || toetsen.has('ArrowUp') ? 1 : 0) - (toetsen.has('KeyS') || toetsen.has('ArrowDown') ? 1 : 0) - s.stick.y
+        const opzij = (toetsen.has('KeyD') ? 1 : 0) - (toetsen.has('KeyA') ? 1 : 0) + s.stick.x
+        const draai = (toetsen.has('ArrowLeft') ? 1 : 0) - (toetsen.has('ArrowRight') ? 1 : 0)
+        const stijg = (toetsen.has('Space') || toetsen.has('KeyE') ? 1 : 0) - (toetsen.has('KeyQ') || toetsen.has('KeyC') ? 1 : 0) + s.hoog
+        loper.yaw += draai * dt * 1.6
+        const tempo = toetsen.has('ShiftLeft') || toetsen.has('ShiftRight') ? 22 : 9
+        // Vooruit = waar je naar kijkt (ook omhoog of omlaag), opzij blijft horizontaal.
+        const cp = Math.cos(loper.pitch)
+        loper.pos.x += (Math.sin(loper.yaw) * cp * vooruit - Math.cos(loper.yaw) * opzij) * tempo * dt
+        loper.pos.z += (Math.cos(loper.yaw) * cp * vooruit + Math.sin(loper.yaw) * opzij) * tempo * dt
+        loper.pos.y += (Math.sin(loper.pitch) * vooruit + stijg) * tempo * 0.7 * dt
+        loper.pos.y = Math.max(1.4, Math.min(90, loper.pos.y))
+        const r = Math.hypot(loper.pos.x, loper.pos.z)
+        if (r > WERELD_STRAAL) {
+          loper.pos.x *= WERELD_STRAAL / r
+          loper.pos.z *= WERELD_STRAAL / r
+        }
+        // Zachte zweefbeweging.
+        camera.position.set(loper.pos.x, loper.pos.y + Math.sin(nu / 900) * 0.08, loper.pos.z)
+        camera.lookAt(
+          loper.pos.x + Math.sin(loper.yaw) * cp,
+          loper.pos.y + Math.sin(loper.pitch),
+          loper.pos.z + Math.cos(loper.yaw) * cp,
+        )
       } else if (WANDELEN.includes(s.modus)) {
         const vooruit = (toetsen.has('KeyW') || toetsen.has('ArrowUp') ? 1 : 0) - (toetsen.has('KeyS') || toetsen.has('ArrowDown') ? 1 : 0) - s.stick.y
         const opzij = (toetsen.has('KeyD') ? 1 : 0) - (toetsen.has('KeyA') ? 1 : 0) + s.stick.x
@@ -569,7 +638,12 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
 
       stadion.update(nu / 1000, { tijd: t, duur, bezit: bezitAandeel(t), ploegen: scorePloegen })
       omgeving.update(nu / 1000)
+      sfeer.update(nu / 1000, dt)
       renderer.render(scene, camera)
+      if (!getekend) {
+        getekend = true
+        setKlaar(true)
+      }
 
       // Hapert het? Dan stap voor stap minder pixels, tot het weer vlot loopt.
       frames++
@@ -589,6 +663,7 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
         laatsteUi = nu
         setTijd(t)
         setBezit(bezitOp(sporen, t))
+        setAanVeld((s.modus === 'zweven' || s.modus === 'buiten') && opVeld(loper.pos))
       }
     }
     raf = requestAnimationFrame(tik)
@@ -661,26 +736,73 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
   return (
     <div className="vk">
       <div className={`vk-scene modus-${modus}`} ref={houder}>
-        {!data && <div className="vk-laden">3D-veld opbouwen…</div>}
+        {!klaar && <div className="vk-laden">Stadion opbouwen…</div>}
         {data && (
           <>
             <div className="vk-hud">
               <div className="vk-modi" role="tablist" aria-label="Camera">
-                {MODI.map((m) => (
-                  <button key={m.id} role="tab" aria-selected={modus === m.id} className={modus === m.id ? 'actief' : ''} onClick={() => setModus(m.id)}>
-                    {m.label}
-                  </button>
+                {MODI.filter((m) => VERKENNEN.includes(m.id) || aanVeld || VELD.includes(modus)).map((m, i, lijst) => (
+                  <span key={m.id} className="vk-modi-item">
+                    {i > 0 && VELD.includes(m.id) && !VELD.includes(lijst[i - 1].id) && <i className="vk-modi-streep" aria-hidden />}
+                    <button role="tab" aria-selected={modus === m.id} className={modus === m.id ? 'actief' : ''} onClick={() => setModus(m.id)}>
+                      {m.label}
+                    </button>
+                  </span>
                 ))}
               </div>
-              {bezit != null && (
+              {bezit != null && VELD.includes(modus) && (
                 <span className="vk-bezit">
                   <i style={{ background: data.kleuren[bezit] }} /> Balbezit · {ploegNaam(bezit)}
                 </span>
               )}
             </div>
+            {welkom && klaar && (
+              <div className="vk-welkom" aria-live="polite">
+                <span>Welkom in stadion</span>
+                <b>{thema.naam}</b>
+                <small>Zweef of wandel naar het veld om de wedstrijd te volgen</small>
+              </div>
+            )}
+            {aanVeld && !VELD.includes(modus) && (
+              <div className="vk-aanveld" role="dialog" aria-label="Je bent aan het veld">
+                <b>🏟️ Je bent aan het veld</b>
+                <span>Hoe wil je de wedstrijd volgen?</span>
+                <div className="vk-aanveld-knoppen">
+                  {MODI.filter((m) => VELD.includes(m.id)).map((m) => (
+                    <button key={m.id} onClick={() => setModus(m.id)}>{m.label}</button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {VELD.includes(modus) && (
+              <button className="vk-terugbuiten" onClick={() => setModus('zweven')}>↩ Naar buiten</button>
+            )}
             <button className="vk-vol" onClick={fullscreen} aria-label="Volledig scherm">⛶</button>
-            <p className="vk-uitleg">{MODI.find((m) => m.id === modus)?.uitleg}</p>
-            {WANDELEN.includes(modus) && (
+            {!(welkom && klaar) && (
+              <p className="vk-uitleg">
+                <span className="lang">{MODI.find((m) => m.id === modus)?.uitleg}</span>
+                <span className="kort">{MODI.find((m) => m.id === modus)?.kort ?? MODI.find((m) => m.id === modus)?.uitleg}</span>
+              </p>
+            )}
+            {modus === 'zweven' && (
+              <div className="vk-hoog" aria-label="Hoogte">
+                {([[1, '▲', 'Omhoog'], [-1, '▼', 'Omlaag']] as const).map(([r, t, l]) => (
+                  <button
+                    key={r}
+                    aria-label={l}
+                    onPointerDown={(e) => {
+                      e.currentTarget.setPointerCapture(e.pointerId)
+                      setHoog(r)
+                    }}
+                    onPointerUp={() => setHoog(0)}
+                    onPointerCancel={() => setHoog(0)}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+            )}
+            {BESTUURBAAR.includes(modus) && (
               <div className="vk-joy" ref={joystickRef} onPointerDown={joyNeer} onPointerMove={joyZet} onPointerUp={joyLos} onPointerCancel={joyLos} aria-hidden>
                 <span style={{ transform: `translate(${stick.x * 34}px, ${stick.y * 34}px)` }} />
               </div>
