@@ -4,21 +4,26 @@ import { useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 
-import { balOp, balSpoor, bezitOp, bezitTijdlijn, decodeer, op, ploegKleuren, snelheid, type Ploeg, type Reconstructie, type Spoor, type StadionThema, type Veld } from '@/lib/virtueel'
+import { balOp, balSpoor, bezitOp, bezitTijdlijn, decodeer, GEVEL, op, ploegKleuren, snelheid, stap, type Ploeg, type Reconstructie, type Spoor, type StadionThema, type Veld } from '@/lib/virtueel'
+import { bouwOmgeving } from './omgeving'
 import { bouwStadion } from './stadion'
 
-// Virtueel krachtbal: een gereconstrueerd wedstrijdfragment in 3D. Je kijkt vanop de tribune,
-// volgt de bal, kruipt in het hoofd van een speler of loopt zelf over het veld (WASD/pijltjes of
-// de joystick op gsm, slepen om rond te kijken). Alle posities komen uit src/lib/virtueel.ts; deze
+// Virtueel krachtbal: een gereconstrueerd wedstrijdfragment in 3D, in een stadion in je
+// clubkleuren. Je kijkt vanop de tribune, volgt de bal, kruipt in het hoofd van een speler, loopt
+// zelf over het veld of wandelt buiten rond het stadion en door de poort naar binnen (WASD/pijltjes
+// of de joystick op gsm, slepen om rond te kijken), of maakt een rondvlucht. Alle posities komen uit src/lib/virtueel.ts; deze
 // component bouwt enkel de scène en tekent elke frame de stand op het huidige tijdstip.
 
-type Modus = 'tribune' | 'bal' | 'speler' | 'lopen'
+type Modus = 'tribune' | 'bal' | 'speler' | 'lopen' | 'buiten' | 'rondvlucht'
 const MODI: { id: Modus; label: string; uitleg: string }[] = [
   { id: 'tribune', label: 'Tribune', uitleg: 'Draai, zoom en verschuif vrij rond het veld.' },
   { id: 'bal', label: 'Volg de bal', uitleg: 'De camera blijft bij de bal, langs de zijlijn.' },
   { id: 'speler', label: 'Spelersblik', uitleg: 'Kijk door de ogen van een speler. Kies hieronder wie.' },
-  { id: 'lopen', label: 'Loop rond', uitleg: 'WASD of pijltjes om te lopen, sleep om rond te kijken. Op gsm: joystick links onder.' },
+  { id: 'lopen', label: 'Op het veld', uitleg: 'WASD of pijltjes om te lopen (Shift = sneller), sleep om rond te kijken. Op gsm: joystick links onder.' },
+  { id: 'buiten', label: 'Buiten', uitleg: 'Wandel rond je stadion en door de hoofdingang naar binnen. Via de hoeken van de tribunes kom je op het veld.' },
+  { id: 'rondvlucht', label: 'Rondvlucht', uitleg: 'Een rondvlucht rond het stadion.' },
 ]
+const WANDELEN: Modus[] = ['lopen', 'buiten']
 const SNELHEDEN = [0.25, 0.5, 1, 2]
 const OOGHOOGTE = 1.7
 
@@ -266,7 +271,7 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     el.prepend(renderer.domElement)
 
     const scene = new THREE.Scene()
-    scene.fog = new THREE.Fog('#0b1626', 110, 330)
+    scene.fog = new THREE.Fog('#0b1626', 140, 420)
     const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 900)
     camera.position.set(-6, 15.5, 21)
 
@@ -328,6 +333,8 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
 
     // Het stadion rondom, in de kleuren van de club die kijkt.
     const stadion = bouwStadion(scene, { veld, marge, thema, licht })
+    const omgeving = bouwOmgeving(scene, { thema, licht, logo: stadion.logo })
+    const obstakels = [...stadion.obstakels, ...omgeving.obstakels]
     const bezitAandeel = bezitTijdlijn(sporen)
     const scorePloegen = data.ploegen.map((p) => ({ naam: p.naam, kleur: kleuren[p.id] ?? '#b2bbb6' }))
 
@@ -364,7 +371,7 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     orbit.enableDamping = true
     orbit.maxPolarAngle = Math.PI / 2 - 0.06
     orbit.minDistance = 4
-    orbit.maxDistance = 58
+    orbit.maxDistance = 150
     const doel = new THREE.Vector3()
     const kijk = new THREE.Vector3()
     const tmp = new THREE.Vector3()
@@ -373,7 +380,7 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     loper.pos.y = OOGHOOGTE
     const toetsen = new Set<string>()
     const opToets = (e: KeyboardEvent) => {
-      if (st.current.modus !== 'lopen') return
+      if (!WANDELEN.includes(st.current.modus)) return
       if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ShiftLeft', 'ShiftRight'].includes(e.code)) {
         toetsen.add(e.code)
         e.preventDefault()
@@ -384,7 +391,7 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     window.addEventListener('keyup', losToets)
     let sleep: { x: number; y: number } | null = null
     const neer = (e: PointerEvent) => {
-      if (st.current.modus !== 'lopen') return
+      if (!WANDELEN.includes(st.current.modus)) return
       sleep = { x: e.clientX, y: e.clientY }
       renderer.domElement.setPointerCapture(e.pointerId)
     }
@@ -493,12 +500,16 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
           orbit.target.set(0, 0, 0)
         }
         if (s.modus === 'lopen') {
-          loper.pos.copy(camera.position)
-          loper.pos.y = OOGHOOGTE
-          const r = new THREE.Vector3()
-          camera.getWorldDirection(r)
-          loper.yaw = Math.atan2(r.x, r.z)
+          // Op het veld, aan de middenlijn, met zicht op het spel.
+          loper.pos.set(-4, OOGHOOGTE, cz + 1.5)
+          loper.yaw = Math.PI * 0.9
           loper.pitch = -0.05
+          toetsen.clear()
+        }
+        if (s.modus === 'buiten') {
+          loper.pos.set(omgeving.start.x, OOGHOOGTE, omgeving.start.z)
+          loper.yaw = omgeving.start.yaw
+          loper.pitch = 0.12
           toetsen.clear()
         }
         vorigeModus = s.modus
@@ -527,7 +538,12 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
           kijk.lerp(doel, Math.min(1, dt * 5))
           camera.lookAt(kijk)
         }
-      } else if (s.modus === 'lopen') {
+      } else if (s.modus === 'rondvlucht') {
+        const a = nu / 1000 * 0.07
+        const r = GEVEL.A + 42
+        camera.position.set(Math.sin(a) * r, 34 + Math.sin(a * 2.3) * 8, Math.cos(a) * r * 0.85)
+        camera.lookAt(0, 3, 0)
+      } else if (WANDELEN.includes(s.modus)) {
         const vooruit = (toetsen.has('KeyW') || toetsen.has('ArrowUp') ? 1 : 0) - (toetsen.has('KeyS') || toetsen.has('ArrowDown') ? 1 : 0) - s.stick.y
         const opzij = (toetsen.has('KeyD') ? 1 : 0) - (toetsen.has('KeyA') ? 1 : 0) + s.stick.x
         const draai = (toetsen.has('ArrowLeft') ? 1 : 0) - (toetsen.has('ArrowRight') ? 1 : 0)
@@ -535,12 +551,15 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
         const tempo = toetsen.has('ShiftLeft') || toetsen.has('ShiftRight') ? 7.5 : 3.8
         const fx = Math.sin(loper.yaw)
         const fz = Math.cos(loper.yaw)
-        loper.pos.x += (fx * vooruit - fz * opzij) * tempo * dt
-        loper.pos.z += (fz * vooruit + fx * opzij) * tempo * dt
-        loper.pos.x = Math.max(-cx - marge + 0.3, Math.min(cx + marge - 0.3, loper.pos.x))
-        loper.pos.z = Math.max(-cz - marge + 0.3, Math.min(cz + marge - 0.3, loper.pos.z))
-        const stap = Math.hypot(vooruit, opzij) > 0.05 ? Math.sin(nu / 140) * 0.035 : 0
-        camera.position.set(loper.pos.x, OOGHOOGTE + stap, loper.pos.z)
+        // Muren, tribunes en gebouwen houden je tegen; langs een muur schuif je verder.
+        const naar = stap(GEVEL, obstakels, loper.pos, {
+          x: loper.pos.x + (fx * vooruit - fz * opzij) * tempo * dt,
+          z: loper.pos.z + (fz * vooruit + fx * opzij) * tempo * dt,
+        })
+        loper.pos.x = naar.x
+        loper.pos.z = naar.z
+        const deining = Math.hypot(vooruit, opzij) > 0.05 ? Math.sin(nu / 140) * 0.035 : 0
+        camera.position.set(loper.pos.x, OOGHOOGTE + deining, loper.pos.z)
         camera.lookAt(
           loper.pos.x + Math.sin(loper.yaw) * Math.cos(loper.pitch),
           OOGHOOGTE + Math.sin(loper.pitch),
@@ -549,6 +568,7 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
       }
 
       stadion.update(nu / 1000, { tijd: t, duur, bezit: bezitAandeel(t), ploegen: scorePloegen })
+      omgeving.update(nu / 1000)
       renderer.render(scene, camera)
 
       // Hapert het? Dan stap voor stap minder pixels, tot het weer vlot loopt.
@@ -660,7 +680,7 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
             </div>
             <button className="vk-vol" onClick={fullscreen} aria-label="Volledig scherm">⛶</button>
             <p className="vk-uitleg">{MODI.find((m) => m.id === modus)?.uitleg}</p>
-            {modus === 'lopen' && (
+            {WANDELEN.includes(modus) && (
               <div className="vk-joy" ref={joystickRef} onPointerDown={joyNeer} onPointerMove={joyZet} onPointerUp={joyLos} onPointerCancel={joyLos} aria-hidden>
                 <span style={{ transform: `translate(${stick.x * 34}px, ${stick.y * 34}px)` }} />
               </div>

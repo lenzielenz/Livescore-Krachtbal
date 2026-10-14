@@ -21,18 +21,26 @@ export type ScoreInfo = {
   ploegen: { naam: string; kleur: string }[]
 }
 
-export type Stadion = { update: (seconden: number, info: ScoreInfo) => void }
+/** Een rechthoek op de grond (wereldcoördinaten) waar je niet door kan lopen. */
+export type Obstakel = { x0: number; x1: number; z0: number; z1: number }
+
+export type Stadion = {
+  update: (seconden: number, info: ScoreInfo) => void
+  obstakels: Obstakel[]
+  /** Het clublogo (of null), één keer geladen en gedeeld met de buitenkant. */
+  logo: Promise<HTMLImageElement | null>
+}
 
 const RIJ_DIEP = 0.85
 const RIJ_HOOG = 0.42
 const STOEL_BREED = 0.62
 
-function rnd(zaad: number) {
+export function rnd(zaad: number) {
   let z = zaad
   return () => (z = (z * 16807) % 2147483647) / 2147483647
 }
 
-function laadBeeld(url: string | null): Promise<HTMLImageElement | null> {
+export function laadBeeld(url: string | null): Promise<HTMLImageElement | null> {
   if (!url) return Promise.resolve(null)
   return new Promise((ok) => {
     const img = new Image()
@@ -46,14 +54,14 @@ function laadBeeld(url: string | null): Promise<HTMLImageElement | null> {
 }
 
 /** Teken een beeld passend (contain) in een kader. */
-function passend(g: CanvasRenderingContext2D, img: HTMLImageElement, x: number, y: number, w: number, h: number) {
+export function passend(g: CanvasRenderingContext2D, img: HTMLImageElement, x: number, y: number, w: number, h: number) {
   const s = Math.min(w / img.width, h / img.height)
   const bw = img.width * s
   const bh = img.height * s
   g.drawImage(img, x + (w - bw) / 2, y + (h - bh) / 2, bw, bh)
 }
 
-function rondLogo(g: CanvasRenderingContext2D, logo: HTMLImageElement | null, thema: StadionThema, cx: number, cy: number, r: number) {
+export function rondLogo(g: CanvasRenderingContext2D, logo: HTMLImageElement | null, thema: StadionThema, cx: number, cy: number, r: number) {
   g.save()
   g.beginPath()
   g.arc(cx, cy, r, 0, Math.PI * 2)
@@ -76,7 +84,7 @@ function rondLogo(g: CanvasRenderingContext2D, logo: HTMLImageElement | null, th
   g.stroke()
 }
 
-function canvasTex(c: HTMLCanvasElement): THREE.CanvasTexture {
+export function canvasTex(c: HTMLCanvasElement): THREE.CanvasTexture {
   const t = new THREE.CanvasTexture(c)
   t.colorSpace = THREE.SRGBColorSpace
   t.anisotropy = 4
@@ -172,6 +180,7 @@ export function bouwStadion(
   const huidtinten = ['#f1c9a5', '#e0ac69', '#c68642', '#8d5524', '#ffdbac'].map((c) => new THREE.Color(c))
   const bezetting = licht ? 0.45 : 0.78
 
+  const obstakels: Obstakel[] = []
   const tribune = (lengte: number, rijen: number, pos: THREE.Vector3, ry: number, dak: boolean) => {
     const groep = new THREE.Group()
     groep.position.copy(pos)
@@ -231,6 +240,19 @@ export function bouwStadion(
     }
     scene.add(groep)
     groep.updateMatrixWorld(true)
+    // De voetafdruk van de tribune (voormuur tot achterwand) als obstakel voor wie rondloopt.
+    const hoeken = [
+      [-lengte / 2, 0.35],
+      [lengte / 2, 0.35],
+      [-lengte / 2, -rijen * RIJ_DIEP - 0.9],
+      [lengte / 2, -rijen * RIJ_DIEP - 0.9],
+    ].map(([x, z]) => new THREE.Vector3(x, 0, z).applyMatrix4(groep.matrixWorld))
+    obstakels.push({
+      x0: Math.min(...hoeken.map((v) => v.x)),
+      x1: Math.max(...hoeken.map((v) => v.x)),
+      z0: Math.min(...hoeken.map((v) => v.z)),
+      z1: Math.max(...hoeken.map((v) => v.z)),
+    })
 
     // Stoeltjes en mensen: posities in wereldcoördinaten verzamelen voor de InstancedMeshes.
     const perRij = Math.floor((lengte - 1.4) / STOEL_BREED)
@@ -262,9 +284,10 @@ export function bouwStadion(
   const voor = 1.4
   tribune(2 * hx + 4, licht ? 12 : 16, new THREE.Vector3(0, 0, -hz - voor), 0, true)
   tribune(2 * hx + 4, licht ? 8 : 11, new THREE.Vector3(0, 0, hz + voor), Math.PI, false)
-  tribune(2 * hz, licht ? 6 : 8, new THREE.Vector3(hx + voor, 0, 0), -Math.PI / 2, false)
-  // Achter de westkant staat het grote ledscherm: daar een lagere tribune.
-  tribune(2 * hz, licht ? 4 : 5, new THREE.Vector3(-hx - voor, 0, 0), Math.PI / 2, false)
+  tribune(2 * hz - 3, licht ? 6 : 8, new THREE.Vector3(hx + voor, 0, 0), -Math.PI / 2, false)
+  // De eindtribunes zijn iets korter: zo blijft er in elke hoek een doorgang van het veld naar de
+  // gangen achter de tribunes. Achter de westkant staat het grote ledscherm: daar een lagere tribune.
+  tribune(2 * hz - 3, licht ? 4 : 5, new THREE.Vector3(-hx - voor, 0, 0), Math.PI / 2, false)
 
   const stoelGeo = mergeGeometries([
     new THREE.BoxGeometry(0.46, 0.08, 0.42).translate(0, 0.38, 0),
@@ -462,7 +485,8 @@ export function bouwStadion(
   }
 
   // Logo en reclames laden; daarna de borden opnieuw tekenen.
-  void Promise.all([laadBeeld(thema.logoUrl), Promise.all(thema.reclames.slice(0, 8).map((r) => laadBeeld(r.url)))]).then(([logo, ads]) => {
+  const logo = laadBeeld(thema.logoUrl)
+  void Promise.all([logo, Promise.all(thema.reclames.slice(0, 8).map((r) => laadBeeld(r.url)))]).then(([logo, ads]) => {
     logoBeeld = logo
     tekenReclame(logo, ads)
     tekenScherm(logo)
@@ -470,6 +494,8 @@ export function bouwStadion(
 
   let laatsteBord = -1
   return {
+    obstakels,
+    logo,
     update(seconden, info) {
       tijd.value = seconden
       const off = (seconden * 0.025) % 1

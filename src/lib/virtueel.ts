@@ -337,3 +337,62 @@ export function bezitTijdlijn(sporen: Spoor[]): (tijd: number) => [number, numbe
     return a + b > 0 ? [a / (a + b), b / (a + b)] : null
   }
 }
+
+// ---------- de buitenkant: gevel, poorten en rondlopen ----------
+
+/** Een zijde van de gevel met een opening: `as` is de zijde (z+ = de hoofdingang), van/tot langs die zijde. */
+export type Poort = { zijde: 'z+' | 'z-' | 'x+' | 'x-'; van: number; tot: number }
+/** De stadiongevel: een rechthoek met afgeronde hoeken (halve lengte A, halve breedte B, hoekstraal R). */
+export type Gevel = { A: number; B: number; R: number; hoogte: number; poorten: Poort[] }
+
+export const GEVEL: Gevel = {
+  A: 48,
+  B: 31,
+  R: 12,
+  hoogte: 14,
+  poorten: [
+    { zijde: 'z+', van: -7, tot: 7 }, // hoofdingang
+    { zijde: 'z-', van: -3, tot: 3 },
+    { zijde: 'x+', van: -3, tot: 3 },
+    { zijde: 'x-', van: -3, tot: 3 },
+  ],
+}
+
+/** Getekende afstand tot de gevel: negatief binnen, positief buiten. */
+export function gevelAfstand(g: Gevel, x: number, z: number): number {
+  const qx = Math.abs(x) - (g.A - g.R)
+  const qz = Math.abs(z) - (g.B - g.R)
+  return Math.hypot(Math.max(qx, 0), Math.max(qz, 0)) + Math.min(Math.max(qx, qz), 0) - g.R
+}
+
+/** Staat dit punt in een poortopening? */
+export function inPoort(g: Gevel, x: number, z: number): boolean {
+  return g.poorten.some((p) => {
+    if (p.zijde === 'z+') return z > g.B - g.R && x >= p.van && x <= p.tot
+    if (p.zijde === 'z-') return z < -(g.B - g.R) && x >= p.van && x <= p.tot
+    if (p.zijde === 'x+') return x > g.A - g.R && z >= p.van && z <= p.tot
+    return x < -(g.A - g.R) && z >= p.van && z <= p.tot
+  })
+}
+
+/** Dikte van de gevelmuur waar je niet door kan (halve breedte). */
+const MUUR = 0.7
+/** Hoe ver je van het stadion mag weglopen. */
+export const WERELD_STRAAL = 150
+
+export type Rechthoek = { x0: number; x1: number; z0: number; z1: number }
+
+/** Mag een wandelaar (straal ~0.35 m) op deze plek staan? */
+export function vrij(g: Gevel, obstakels: Rechthoek[], x: number, z: number, straal = 0.35): boolean {
+  if (Math.hypot(x, z) > WERELD_STRAAL) return false
+  if (Math.abs(gevelAfstand(g, x, z)) < MUUR + straal && !inPoort(g, x, z)) return false
+  return !obstakels.some((o) => x > o.x0 - straal && x < o.x1 + straal && z > o.z0 - straal && z < o.z1 + straal)
+}
+
+/** Eén stap van een wandelaar: lukt het niet rechtdoor, dan schuift hij langs de muur (enkel x of z). */
+export function stap(g: Gevel, obstakels: Rechthoek[], van: { x: number; z: number }, naar: { x: number; z: number }): { x: number; z: number } {
+  if (vrij(g, obstakels, naar.x, naar.z)) return naar
+  if (vrij(g, obstakels, naar.x, van.z)) return { x: naar.x, z: van.z }
+  if (vrij(g, obstakels, van.x, naar.z)) return { x: van.x, z: naar.z }
+  return van
+}

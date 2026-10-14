@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 
-import { balOp, balSpoor, bezitOp, bezitTijdlijn, decodeer, op, ploegKleuren, STANDAARD_THEMA, stadionThema, type Reconstructie, type Spoor } from '@/lib/virtueel'
+import { balOp, balSpoor, bezitOp, bezitTijdlijn, decodeer, GEVEL, gevelAfstand, op, ploegKleuren, STANDAARD_THEMA, stadionThema, stap, vrij, WERELD_STRAAL, type Reconstructie, type Spoor } from '@/lib/virtueel'
 
 // Een klein handgemaakt fragment: één speler per ploeg en de bal.
 const spoor = (over: Partial<Spoor> & { id: string }): Spoor => ({
@@ -98,5 +98,35 @@ describe('bezitTijdlijn', () => {
     expect(bezit(-1)).toBeNull()
     // 0–1.5 s: ploeg 0 (vast + vlucht), 1.5–2 s: nog steeds ploeg 0 tot ploeg 1 vangt op 2 s.
     expect(bezit(2)).toEqual([1, 0])
+  })
+})
+
+describe('rondlopen: gevel, poorten en obstakels', () => {
+  const g = GEVEL
+  it('kent binnen en buiten', () => {
+    expect(gevelAfstand(g, 0, 0)).toBeLessThan(0)
+    expect(gevelAfstand(g, 0, g.B + 5)).toBeCloseTo(5)
+    expect(gevelAfstand(g, g.A + 2, 0)).toBeCloseTo(2)
+  })
+  it('laat je enkel door een poort het stadion in', () => {
+    const buiten = { x: 0, z: g.B + 1.5 }
+    // Recht naar binnen door de hoofdingang: lukt.
+    let p = buiten
+    for (let i = 0; i < 12; i++) p = stap(g, [], p, { x: p.x, z: p.z - 0.4 })
+    expect(p.z).toBeLessThan(g.B - 2)
+    // Naast de poort: de muur houdt je tegen.
+    let q = { x: 20, z: g.B + 1.5 }
+    for (let i = 0; i < 12; i++) q = stap(g, [], q, { x: q.x, z: q.z - 0.4 })
+    expect(q.z).toBeGreaterThan(g.B)
+  })
+  it('schuift langs een muur in plaats van vast te lopen', () => {
+    const p = stap(g, [], { x: 20, z: g.B + 1.1 }, { x: 20.4, z: g.B + 0.7 })
+    expect(p).toEqual({ x: 20.4, z: g.B + 1.1 })
+  })
+  it('houdt rekening met tribunes en gebouwen', () => {
+    const tribune = { x0: -10, x1: 10, z0: 12, z1: 22 }
+    expect(vrij(g, [tribune], 0, 15)).toBe(false)
+    expect(vrij(g, [tribune], 0, 25)).toBe(true)
+    expect(vrij(g, [], 0, WERELD_STRAAL + 1)).toBe(false)
   })
 })
