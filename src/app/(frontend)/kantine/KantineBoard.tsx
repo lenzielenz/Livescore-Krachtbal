@@ -207,6 +207,32 @@ export function Tile({
   )
 }
 
+/**
+ * Een wedstrijd die vandaag nog moet beginnen, in de middelste strook van het kantinescherm.
+ * Bewust zonder clubnamen: op een tv van vijf meter ver lees je die toch niet, en de logo's zeggen
+ * al wie er speelt. Wat overblijft is wat je wil weten: welke reeks, en hoe laat.
+ */
+export function KomendTile({ match, fontSize, logoSize = 'md' }: { match: KantineMatch; fontSize?: number; logoSize?: string }) {
+  const homeColor = match.home.colors?.primary
+  const awayColor = match.away.colors?.primary
+  const style = {
+    '--home': readableOnDark(homeColor ?? DEFAULT_HOME_COLOR),
+    '--away': readableOnDark(awayColor ?? DEFAULT_AWAY_COLOR),
+    ...(fontSize ? { fontSize: `${fontSize}px` } : {}),
+  } as React.CSSProperties
+  return (
+    <div className="kt-tile kt-komend" style={style}>
+      <div className="kt-tile-head">
+        <span className="kt-tile-reeks">{match.reeks}</span>
+      </div>
+      <Link href={`/match/${match.id}`} prefetch={false} className="kt-komend-body">
+        <TeamLogo name={match.home.name} logoUrl={match.home.logoUrl} logoFit={match.home.logoFit} side="home" size={logoSize} ringColor={homeColor} />
+        <span className="kt-komend-uur">{match.time}</span>
+        <TeamLogo name={match.away.name} logoUrl={match.away.logoUrl} logoFit={match.away.logoFit} side="away" size={logoSize} ringColor={awayColor} />
+      </Link>
+    </div>
+  )
+}
 
 /** Compacte eindstand voor de rustige uitslagenstrook onder de livewedstrijden. */
 export function ResultTile({ match, live }: { match: KantineMatch; live?: KantineLive | null }) {

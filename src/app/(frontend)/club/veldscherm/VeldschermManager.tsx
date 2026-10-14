@@ -10,14 +10,21 @@ import type { FieldScreenRow } from '@/lib/field-screens-data'
 // aantal (POST /api/veldscherm/velden) synct meteen — nieuwe velden komen erbij met een verse
 // koppelcode, een verkleining verwijdert enkel velden die nu niet gekoppeld zijn (zie
 // planVeldenSync in lib/field-screens.ts).
+//
+// `beheer = false` is de supportersweergave: de tv-links, de QR en de koppelcode — alles wat je
+// nodig hebt om het scherm van je club op een tv te zetten — maar zonder de knoppen die de
+// instelling van de club wijzigen (aantal velden, thema, ontkoppelen). Die blijven bij de clubstaf;
+// de API's weigeren ze sowieso voor wie geen staf is.
 export function VeldschermManager({
   clubId,
   screens,
   demoScreens,
+  beheer = true,
 }: {
   clubId: number
   screens: FieldScreenRow[]
   demoScreens: FieldScreenRow[]
+  beheer?: boolean
 }) {
   const [rows, setRows] = useState(screens)
   const [count, setCount] = useState(Math.max(MIN_VELDEN, screens.length || MIN_VELDEN))
@@ -57,6 +64,7 @@ export function VeldschermManager({
 
   return (
     <div className="vb">
+      {beheer && (
       <div className="vb-count">
         <label className="vb-count-label" htmlFor="vb-count-input">Aantal velden</label>
         <div className="vb-count-row">
@@ -75,13 +83,16 @@ export function VeldschermManager({
         </div>
         {error && <p className="vb-error">{error}</p>}
       </div>
+      )}
 
       {rows.length === 0 ? (
-        <p className="empty">Nog geen velden ingesteld — kies hierboven een aantal.</p>
+        <p className="empty">
+          {beheer ? 'Nog geen velden ingesteld — kies hierboven een aantal.' : 'Je club heeft nog geen veldschermen ingesteld. Vraag het aan de clubstaf.'}
+        </p>
       ) : (
         <div className="vb-grid">
           {rows.map((s) => (
-            <VeldCard key={s.id} screen={s} clubId={clubId} url={origin ? `${origin}/veld/club/${s.id}` : `/veld/club/${s.id}`} />
+            <VeldCard key={s.id} screen={s} clubId={clubId} beheer={beheer} url={origin ? `${origin}/veld/club/${s.id}` : `/veld/club/${s.id}`} />
           ))}
         </div>
       )}
@@ -95,7 +106,7 @@ export function VeldschermManager({
           </p>
           <div className="vb-grid">
             {demoScreens.map((s) => (
-              <VeldCard key={s.id} screen={s} clubId={clubId} url={origin ? `${origin}/veld/club/${s.id}` : `/veld/club/${s.id}`} demo />
+              <VeldCard key={s.id} screen={s} clubId={clubId} beheer={beheer} url={origin ? `${origin}/veld/club/${s.id}` : `/veld/club/${s.id}`} demo />
             ))}
           </div>
         </div>
@@ -104,7 +115,18 @@ export function VeldschermManager({
   )
 }
 
-function VeldCard({ screen, url, demo = false }: { screen: FieldScreenRow; clubId: number; url: string; demo?: boolean }) {
+function VeldCard({
+  screen,
+  url,
+  demo = false,
+  beheer = true,
+}: {
+  screen: FieldScreenRow
+  clubId: number
+  url: string
+  demo?: boolean
+  beheer?: boolean
+}) {
   const [copied, setCopied] = useState(false)
   const [showQr, setShowQr] = useState(false)
   const [theme, setTheme] = useState<FieldScreenTheme>(screen.theme)
@@ -179,13 +201,15 @@ function VeldCard({ screen, url, demo = false }: { screen: FieldScreenRow; clubI
         {paired ? (
           <>⚡ {demo ? 'Fictieve wedstrijd — altijd live' : 'Nu gekoppeld aan een lopende wedstrijd'}</>
         ) : (
-          <>Wachtscherm — koppelcode <strong>{pairingCode ?? '—'}</strong></>
+          // De koppelcode tonen we enkel aan de staf. Voor iedereen anders blijft ze op de tv zelf
+          // staan: wie ze kan aflezen staat bij dat veld, en dat is precies de grendel op koppelen.
+          beheer ? <>Wachtscherm — koppelcode <strong>{pairingCode ?? '—'}</strong></> : <>Wachtscherm — de koppelcode staat op de tv</>
         )}
       </p>
       {paired && !demo && screen.queuedMatchId != null && (
         <p className="vb-card-queue">📋 Er staat al een volgende wedstrijd klaar in de wachtrij.</p>
       )}
-      {paired && !demo && (
+      {paired && !demo && beheer && (
         <div className="vb-unpair">
           <button type="button" className="vb-btn danger vb-btn-sm" disabled={unpairing} onClick={() => void ontkoppel()}>
             {unpairing ? 'Bezig…' : '✕ Ontkoppelen'}
@@ -193,6 +217,7 @@ function VeldCard({ screen, url, demo = false }: { screen: FieldScreenRow; clubI
           {unpairError && <p className="vb-error">{unpairError}</p>}
         </div>
       )}
+      {beheer && (
       <div className="vb-theme">
         <span className="vb-theme-label">Kleurthema</span>
         <div className="vb-theme-row" role="group" aria-label="Kleurthema voor dit veld">
@@ -214,6 +239,7 @@ function VeldCard({ screen, url, demo = false }: { screen: FieldScreenRow; clubI
           </button>
         </div>
       </div>
+      )}
       <div className="vb-url-row">
         <code className="vb-url">{url}</code>
         <button type="button" className="vb-btn vb-btn-sm" onClick={() => void copy()}>

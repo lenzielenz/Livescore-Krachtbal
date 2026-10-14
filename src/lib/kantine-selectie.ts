@@ -1,4 +1,4 @@
-import { brusselsDayBoundsUtc, dateStrBE } from './datetime'
+import { brusselsDayBoundsUtc, brusselsParts, dateStrBE, shiftDateStr } from './datetime'
 
 // Persoonlijk kantinescherm: wat elke ingelogde gebruiker zelf samenstelt voor de tv in zijn
 // kantine. Het tornooischerm werkte, dus hetzelfde idee nu voor de competitie — maar dan per
@@ -61,12 +61,49 @@ export function selectieIsLeeg(s: KantineSelectie): boolean {
  * `dagEinde` = het einde van vandaag (voor de sortering: "vandaag" vs "later deze week", zie
  * `rang` hieronder). `geplandTot` = een week vooruit, zodat je doordeweeks ziet wat eraan komt.
  */
-export function schermVenster(nu: Date = new Date()): { dagStart: string; dagEinde: string; geplandTot: string } {
+export function schermVenster(nu: Date = new Date()): {
+  dagStart: string
+  dagEinde: string
+  geplandTot: string
+  vandaagStart: string
+  uitslagenVanaf: string
+} {
   const gisteren = new Date(nu.getTime() - 24 * 60 * 60 * 1000)
   const { start: dagStart } = brusselsDayBoundsUtc(dateStrBE(gisteren))
-  const { end } = brusselsDayBoundsUtc(dateStrBE(nu))
+  const { start: vandaagStart, end } = brusselsDayBoundsUtc(dateStrBE(nu))
   const geplandTot = new Date(new Date(end).getTime() + (GEPLAND_DAGEN - 1) * 24 * 60 * 60 * 1000)
-  return { dagStart, dagEinde: end, geplandTot: geplandTot.toISOString() }
+  // De uitslagenbalk toont het hele speelweekend. Op zondag is "gisteren" de zaterdag en valt dat
+  // samen; op maandag reikt het weekend verder terug dan gisteren — dan telt het weekend.
+  const weekend = weekendStart(nu)
+  const uitslagenVanaf = weekend < dagStart ? weekend : dagStart
+  return { dagStart, dagEinde: end, geplandTot: geplandTot.toISOString(), vandaagStart, uitslagenVanaf }
+}
+
+/**
+ * Begin (UTC) van het lopende speelweekend: de zaterdag van dit weekend, of doordeweeks die van
+ * het voorbije. Op de Belgische kalender, zodat een avondwedstrijd niet in de verkeerde dag valt.
+ */
+export function weekendStart(nu: Date = new Date()): string {
+  const terug = (brusselsParts(nu).weekdayMon0 - 5 + 7) % 7 // za 0, zo 1, ma 2 … vr 6
+  return brusselsDayBoundsUtc(shiftDateStr(dateStrBE(nu), -terug)).start
+}
+
+/**
+ * De middelste strook: enkel wat VANDAAG nog moet beginnen, in volgorde van aanvang. Een wedstrijd
+ * die start, schuift naar het live-vak; zo wordt de strook vanzelf korter en verdwijnt ze zodra er
+ * niets meer komt. Een geplande wedstrijd van een eerdere dag (nooit gestart) hoort hier niet.
+ */
+export function komendVandaag<T extends SchermWedstrijd>(matches: T[], vandaagStart: string, dagEinde: string): T[] {
+  return matches
+    .filter((m) => m.status === 'scheduled' && m.date && m.date >= vandaagStart && m.date < dagEinde)
+    .sort((a, b) => String(a.date).localeCompare(String(b.date)) || a.id - b.id)
+}
+
+/** De balk onderaan: de eindstanden van het speelweekend, in de volgorde waarin ze gespeeld werden. */
+export function weekendUitslagen<T extends SchermWedstrijd>(matches: T[], vanaf: string): T[] {
+  return matches
+    .filter((m) => m.status === 'finished' && (!m.date || m.date >= vanaf))
+    .sort((a, b) => String(a.date ?? '').localeCompare(String(b.date ?? '')) || a.id - b.id)
 }
 
 export type SchermWedstrijd = { id: number; status: string; date?: string | null }

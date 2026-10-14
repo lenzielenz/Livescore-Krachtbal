@@ -4,7 +4,8 @@ import { SiteHeader } from '@/components/SiteHeader'
 import { userClubId, userTeamId, userTeamIds } from '@/lib/access'
 import { competitionWhere } from '@/lib/analyse-access'
 import { getAuthUser } from '@/lib/auth-user'
-import { clinchStatus, titelBoodschap } from '@/lib/championship'
+import { clinchStatus, titelBoodschap, titelProjectie } from '@/lib/championship'
+import { formatDateBE } from '@/lib/datetime'
 import { buildScoreboards, clubColors, clubLogoFit, clubLogoUrl } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
 import { reeksenMetData } from '@/lib/analyse-season'
@@ -126,18 +127,29 @@ export default async function RangschikkingPage({ searchParams }: { searchParams
     })
     .catch(() => ({ docs: [] as Record<string, unknown>[] }))
   const remaining = new Map<number, number>()
-  const fixtures: { homeId: number; awayId: number }[] = []
+  const fixtures: { homeId: number; awayId: number; date: string | null }[] = []
   for (const m of openRes.docs) {
     const homeId = rel((m as Record<string, unknown>).homeTeam)
     const awayId = rel((m as Record<string, unknown>).awayTeam)
     for (const id of [homeId, awayId]) {
       if (id != null) remaining.set(id, (remaining.get(id) ?? 0) + 1)
     }
-    if (homeId != null && awayId != null) fixtures.push({ homeId, awayId })
+    const date = (m as Record<string, unknown>).date
+    if (homeId != null && awayId != null) fixtures.push({ homeId, awayId, date: typeof date === 'string' ? date : null })
   }
   const leaderId = table[0]?.teamId ?? null
-  const titel = leaderId != null ? clinchStatus(table, remaining, leaderId, { fixtures, results: standingsMatches }) : null
+  const titelCtx = { fixtures, results: standingsMatches }
+  const titel = leaderId != null ? clinchStatus(table, remaining, leaderId, titelCtx) : null
+  // Vooruitblik: speel de rest van de kalender af met de vorm van tot nu (zie titelProjectie). Dat
+  // verschuift elke week mee met de uitslagen — wie punten afpakt van wie.
+  const projectie = leaderId != null && titel && !titel.clinched ? titelProjectie(table, titelCtx, leaderId) : null
   const titelMsg = titelBoodschap({
+    projectie: projectie
+      ? {
+          datum: formatDateBE(projectie.datum, { weekday: 'short', day: 'numeric', month: 'long' }),
+          tegenstander: projectie.tegenstanderId != null ? (teamInfo.get(projectie.tegenstanderId)?.name ?? null) : null,
+        }
+      : null,
     status: titel,
     leaderName: leaderId != null ? (teamInfo.get(leaderId)?.name ?? null) : null,
     reeksLabel: reeksNaam(reeks),

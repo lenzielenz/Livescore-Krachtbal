@@ -3,7 +3,7 @@ import type { Payload } from 'payload'
 import { loadAds } from '@/lib/ads'
 import { authUser } from '@/lib/api-auth'
 import { bouwKantineBorden } from '@/lib/kantine-borden'
-import { brusselsDayBoundsUtc, dateStrBE } from '@/lib/datetime'
+import { schermVenster } from '@/lib/kantine-selectie'
 import { getPayloadClient } from '@/lib/payload-client'
 
 // Centrale kantinescherm-selectie. GET levert de gekozen wedstrijden als live-samenvattingen;
@@ -28,12 +28,12 @@ export async function GET() {
     // Eén query voor alle gekozen wedstrijden samen, daarna gebatcht de standen (zie
     // kantine-borden.ts). Dit haalde vroeger elke wedstrijd apart op en bouwde er de volledige
     // matchstate van — ~10 query's per bord, sequentieel.
-    const { start } = brusselsDayBoundsUtc(dateStrBE())
+    const { uitslagenVanaf } = schermVenster()
     const res = await payload.find({
       collection: 'matches',
-      // Gisteren verdwijnt bij de eerste poll na middernacht; toekomstige handmatige keuzes
-      // blijven beschikbaar voor de ticker en verschijnen op hun eigen speeldag.
-      where: { and: [{ id: { in: ids } }, { date: { greater_than_equal: start } }] },
+      // Eindstanden blijven het hele speelweekend staan (de uitslagenbalk onderaan); toekomstige
+      // handmatige keuzes verschijnen op hun eigen speeldag.
+      where: { and: [{ id: { in: ids } }, { date: { greater_than_equal: uitslagenVanaf } }] },
       depth: 0,
       limit: ids.length,
     })

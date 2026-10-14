@@ -28,13 +28,14 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     const teamIds = await clubTeamIds(payload, clubId)
     if (teamIds.length === 0) return Response.json({ matches: [] })
 
-    const { dagStart, dagEinde, geplandTot } = schermVenster()
+    const { dagStart, dagEinde, geplandTot, uitslagenVanaf } = schermVenster()
     const teamFilter: Where = { or: [{ homeTeam: { in: teamIds } }, { awayTeam: { in: teamIds } }] }
     const notHidden: Where[] = [{ isDemo: { not_equals: true } }, { analyseOnly: { not_equals: true } }]
     const [dayRes, liveRes] = await Promise.all([
       payload.find({
         collection: 'matches',
-        where: { and: [teamFilter, { date: { greater_than_equal: dagStart, less_than: geplandTot } }, ...notHidden] },
+        // Vanaf het speelweekend: de uitslagenbalk toont alle eindstanden van dat weekend.
+        where: { and: [teamFilter, { date: { greater_than_equal: uitslagenVanaf, less_than: geplandTot } }, ...notHidden] },
         sort: 'date',
         depth: 0,
         limit: 100,

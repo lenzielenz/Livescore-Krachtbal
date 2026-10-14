@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 
-import { clinchStatus, titelBoodschap } from '@/lib/championship'
+import { clinchStatus, titelBoodschap, titelProjectie } from '@/lib/championship'
 import type { StandingRow } from '@/lib/standings'
 
 const row = (teamId: number, points: number): StandingRow => ({
@@ -196,5 +196,55 @@ describe('titelBoodschap', () => {
   it('zwijgt wanneer de leider niets meer te spelen heeft maar (nog) geen kampioen is', () => {
     const m = titelBoodschap({ status: status({ remaining: 0 }), leaderName: 'X', reeksLabel: 'LH', teamsInTable: 8 })
     expect(m).toBeNull()
+  })
+})
+
+describe('titelProjectie', () => {
+  // Drie ploegen: A leidt. Nog drie speeldagen: A–C, B–C, A–B.
+  const r = (teamId: number, points: number, played: number) => ({ ...row(teamId, points), played })
+  const fixtures = [
+    { homeId: 1, awayId: 3, date: '2026-10-17T14:00:00.000Z' },
+    { homeId: 2, awayId: 3, date: '2026-10-24T14:00:00.000Z' },
+    { homeId: 1, awayId: 2, date: '2026-10-31T14:00:00.000Z' },
+  ]
+
+  it('valt op de laatste speeldag als de achtervolger in vorm blijft', () => {
+    // B (3,3 ptn/wedstrijd) wint van C (2,0): de titel ligt pas vast na het duel A–B.
+    const stand = [r(1, 12, 3), r(2, 10, 3), r(3, 6, 3)]
+    expect(titelProjectie(stand, { fixtures, results: [] }, 1)).toEqual({ datum: fixtures[2].date, tegenstanderId: 2 })
+  })
+
+  it('valt vroeger als de achtervolgers punten van elkaar afpakken', () => {
+    // Zelfde kalender, maar C is in betere vorm (3,5) en klopt B: na de tweede speeldag kan B
+    // A niet meer bijhalen — zelfs als A die dag niet speelt.
+    const stand = [r(1, 12, 3), r(2, 10, 3), r(3, 7, 2)]
+    expect(titelProjectie(stand, { fixtures, results: [] }, 1)).toEqual({ datum: fixtures[1].date, tegenstanderId: null })
+  })
+
+  it('geeft null zonder datums in de kalender', () => {
+    const stand = [r(1, 12, 3), r(2, 10, 3)]
+    expect(titelProjectie(stand, { fixtures: [{ homeId: 1, awayId: 2 }], results: [] }, 1)).toBeNull()
+  })
+})
+
+describe('titelBoodschap met vooruitblik', () => {
+  const status = (winsToClinch: number) => ({ rank: 1, points: 20, remaining: 17, clinched: false, leading: true, pointsToClinch: 0, winsToClinch })
+  const projectie = { datum: 'za 7 februari', tegenstander: 'KBK Temse' }
+
+  it('toont de vooruitblik zolang het exacte aantal zeges nog ver weg is', () => {
+    const m = titelBoodschap({ status: status(17), leaderName: 'KBC St. Michiels A', reeksLabel: '2NAH', teamsInTable: 12, projectie })
+    expect(m?.text).toBe(
+      'KBC St. Michiels A leidt. Blijft KBC St. Michiels A winnen en speelt de rest zoals tot nu, dan valt de titel op za 7 februari tegen KBK Temse.',
+    )
+  })
+
+  it('verkiest het exacte aantal zeges dicht bij de meet', () => {
+    const m = titelBoodschap({ status: status(2), leaderName: 'X', reeksLabel: 'LH', teamsInTable: 12, projectie })
+    expect(m?.text).toBe('X leidt en heeft nog 2 zeges nodig om de titel te verzekeren.')
+  })
+
+  it('laat de tegenstander weg als de titel valt op een dag dat de leider niet speelt', () => {
+    const m = titelBoodschap({ status: status(10), leaderName: 'X', reeksLabel: 'LH', teamsInTable: 12, projectie: { datum: 'zo 8 maart', tegenstander: null } })
+    expect(m?.text).toBe('X leidt. Blijft X winnen en speelt de rest zoals tot nu, dan valt de titel op zo 8 maart.')
   })
 })

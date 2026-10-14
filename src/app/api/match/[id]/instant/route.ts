@@ -3,7 +3,7 @@ import { addInstant } from '@/lib/match-channel'
 import { getPayloadClient } from '@/lib/payload-client'
 import { isAdultReeks, type Reeks } from '@/lib/reeksen'
 import { rateLimit } from '@/lib/sse-hub'
-import { isPreMatchLead, isTribuneOpen } from '@/lib/tribune'
+import { fotoVensterOpen } from '@/lib/tribune'
 
 export const dynamic = 'force-dynamic'
 
@@ -66,10 +66,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     return Response.json({ error: 'De tribune staat enkel aan op volwassen wedstrijden.' }, { status: 403 })
   }
   // Mag vanaf een uur vóór de aftrap (al klaarzetten) tot de tribune sluit (tijdens de match en
-  // tot 1u erna).
-  const magAlPosten =
-    isTribuneOpen(match.status as string, (match.finishedAt as string | null | undefined) ?? null) ||
-    (match.status === 'scheduled' && isPreMatchLead(match.date as string | null))
+  // tot 1u erna). Dezelfde regel als de knop op het scorebord — zie fotoVensterOpen.
+  const magAlPosten = fotoVensterOpen({
+    volwassen: true,
+    status: match.status as string,
+    finishedAt: (match.finishedAt as string | null | undefined) ?? null,
+    date: (match.date as string | null | undefined) ?? null,
+  })
   if (!magAlPosten) {
     return Response.json({ error: 'De tribune is gesloten.' }, { status: 403 })
   }

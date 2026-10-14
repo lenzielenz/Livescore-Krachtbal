@@ -41,6 +41,25 @@ export function isTribuneOpen(
   return false // gepland zonder (geldige) datum, of onbekende status → gesloten
 }
 
+/**
+ * Staat het foto-venster van deze wedstrijd open? Enkel op volwassen reeksen (safeguarding: geen
+ * foto's op jeugdwedstrijden), vanaf een uur vóór de aftrap tot een uur na het einde.
+ *
+ * Eén regel voor drie plekken: de server die de pagina rendert, de upload-route die de foto
+ * aanvaardt, en het scorebord in de browser. Dat laatste is de reden dat dit een aparte functie
+ * is: het scorebord toetst het venster opnieuw bij elke live-update en elke halve minuut. Vroeger
+ * werd het enkel bij het laden van de pagina berekend — wie de wedstrijd vroeg opende, kreeg de
+ * knop nooit te zien zodra ze live ging, en wie hem wél had, hield hem na sluitingstijd en kreeg
+ * dan een foutmelding.
+ */
+export function fotoVensterOpen(
+  m: { volwassen: boolean; status: string | null | undefined; finishedAt: string | null | undefined; date: string | null | undefined },
+  now: number = Date.now(),
+): boolean {
+  if (!m.volwassen) return false
+  return isTribuneOpen(m.status, m.finishedAt, null, now) || (m.status === 'scheduled' && isPreMatchLead(m.date, now))
+}
+
 // Wanneer een tribunefoto moet verdwijnen: één uur ná de wedstrijd. Is de eindtijd al bekend, dan
 // rekenen we exact vanaf finishedAt; loopt de match nog, dan schatten we het einde uit de aftrap
 // (2 helften + pauzes/time-outs) zodat een vroege foto de match zeker overleeft. Geeft een tijdstip

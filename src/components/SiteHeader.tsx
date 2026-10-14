@@ -208,6 +208,20 @@ export function SiteHeader({ active = null }: { active?: NavSection }) {
                   )}
                   {/* "Aan de slag" (profiel-instappunten) enkel voor wie de bijhorende rol heeft —
                       een supporter (of uitgelogde bezoeker) krijgt deze tools niet te zien. */}
+                  {/* De schermen staan open voor elke ingelogde supporter: je eigen kantinescherm
+                      samenstellen en het veldscherm van je club op een tv zetten. Clubstaf en
+                      federatie vinden ze al via "Mijn club", dus daar niet dubbel. */}
+                  {loggedIn && !zichtFlags.isClub && !zichtFlags.isFed && (
+                    <div className="sh-more-group">
+                      <div className="sh-more-grouphead">Schermen</div>
+                      <Link href="/kantine" className="sh-more-item" onClick={() => setOpen(false)}>
+                        🍻 Kantinescherm
+                      </Link>
+                      <Link href="/club/veldscherm" className="sh-more-item" onClick={() => setOpen(false)}>
+                        🏟️ Veldscherm
+                      </Link>
+                    </div>
+                  )}
                   {loggedIn && visibleProfiles.length > 0 && (
                     <div className="sh-more-group">
                       <div className="sh-more-grouphead">Aan de slag</div>
