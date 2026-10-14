@@ -737,6 +737,8 @@ export function bouwOmgeving(scene: THREE.Scene, opt: { thema: StadionThema; lic
     const x = Math.cos(a) * r
     const z = Math.sin(a) * r * 0.8
     if (Math.abs(z - (B + 30)) < 8) continue
+    // Geen bomen op de kleedkamer en de graffitimuur (kleedkamer.ts) ten westen van het stadion.
+    if (x > -114 && x < -54 && z > -30 && z < 6) continue
     boomPos.push([x, z, 0.8 + toeval() * 0.7])
   }
   for (let x = -130; x <= 130; x += 13) boomPos.push([x, B + 41, 0.9])

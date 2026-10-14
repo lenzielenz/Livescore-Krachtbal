@@ -64,3 +64,24 @@ describe('details op de borden', () => {
     expect([1, 2, 3, 7, 8, 9, 19, 20, 21, 100].map(rangtelwoord)).toEqual(['1ste', '2de', '3de', '7de', '8ste', '9de', '19de', '20ste', '21ste', '100ste'])
   })
 })
+
+describe('sterren en oude bekers', () => {
+  it('geeft één ster per referendumprijs van je club, oudste eerst', () => {
+    const meer = { ...data, referendumPrijzen: [...data.referendumPrijzen, { prijs: 'Belofte van het jaar', winnaars: [{ jaar: '2019', naam: 'Kobe P.', club: 'KBC St. Michiels' }] }] }
+    expect(eregalerij('KBC St. Michiels', meer)!.sterren).toEqual([
+      { naam: 'Kobe P.', prijs: 'Belofte van het jaar', jaar: '2019' },
+      { naam: 'Fien D.', prijs: 'Gouden Bal', jaar: '2024' },
+    ])
+  })
+
+  it('zet de oudste titels en bekers apart voor de gang op het verdiep', () => {
+    const z = eregalerij('KBC St. Michiels', data, 24, 2)!
+    expect(z.vroeger?.map((b) => b.jaar)).toEqual(['2015-2016', '2021-2022'])
+  })
+
+  it('zonder eigen club geen sterren of oude bekers', () => {
+    const z = eregalerij(null, data)!
+    expect(z.sterren).toBeUndefined()
+    expect(z.vroeger).toBeUndefined()
+  })
+})

@@ -104,6 +104,7 @@ export interface Config {
     'processed-ops': ProcessedOp;
     'cv-events': CvEvent;
     'function-grants': FunctionGrant;
+    'graffiti-tags': GraffitiTag;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -148,6 +149,7 @@ export interface Config {
     'processed-ops': ProcessedOpsSelect<false> | ProcessedOpsSelect<true>;
     'cv-events': CvEventsSelect<false> | CvEventsSelect<true>;
     'function-grants': FunctionGrantsSelect<false> | FunctionGrantsSelect<true>;
+    'graffiti-tags': GraffitiTagsSelect<false> | GraffitiTagsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -2039,6 +2041,32 @@ export interface FunctionGrant {
   createdAt: string;
 }
 /**
+ * Wat bezoekers op de graffitimuur van hun club spoten. Verwijder hier een ongepaste tag.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "graffiti-tags".
+ */
+export interface GraffitiTag {
+  id: number;
+  /**
+   * Leeg = de algemene muur (bezoekers zonder club).
+   */
+  club?: (number | null) | Club;
+  author?: (number | null) | User;
+  authorName?: string | null;
+  strokes:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
@@ -2209,6 +2237,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'function-grants';
         value: number | FunctionGrant;
+      } | null)
+    | ({
+        relationTo: 'graffiti-tags';
+        value: number | GraffitiTag;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -3152,6 +3184,18 @@ export interface FunctionGrantsSelect<T extends boolean = true> {
   user?: T;
   functie?: T;
   club?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "graffiti-tags_select".
+ */
+export interface GraffitiTagsSelect<T extends boolean = true> {
+  club?: T;
+  author?: T;
+  authorName?: T;
+  strokes?: T;
   updatedAt?: T;
   createdAt?: T;
 }

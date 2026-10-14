@@ -29,6 +29,8 @@ export type Stadion = {
   obstakels: Obstakel[]
   /** Het clublogo (of null), één keer geladen en gedeeld met de buitenkant. */
   logo: Promise<HTMLImageElement | null>
+  /** Het grote ledscherm achter de westtribune (midden, breedte, hoogte), voor de video erop. */
+  scherm: { x: number; y: number; z: number; b: number; h: number }
 }
 
 const RIJ_DIEP = 0.85
@@ -829,6 +831,7 @@ export function bouwStadion(
   return {
     obstakels,
     logo,
+    scherm: { x: schermX + 0.2, y: 11, z: 0, b: 19.2, h: 10.8 },
     update(seconden, info) {
       tijd.value = seconden
       const off = (seconden * 0.025) % 1
