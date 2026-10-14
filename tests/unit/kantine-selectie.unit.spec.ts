@@ -2,12 +2,15 @@ import { describe, expect, it } from 'vitest'
 
 import {
   GEPLAND_DAGEN,
+  komendVandaag,
   ontdubbel,
   rang,
   sanitizeKantineSelectie,
   schermVenster,
   selectieIsLeeg,
   sorteerSchermWedstrijden,
+  weekendStart,
+  weekendUitslagen,
 } from '@/lib/kantine-selectie'
 
 // Het persoonlijke kantinescherm: elke ingelogde gebruiker stelt zijn eigen tv-scherm samen.
@@ -122,5 +125,83 @@ describe('ontdubbel', () => {
   it('houdt de eerste voorkomst — de drie lagen overlappen', () => {
     // Een wedstrijd van je eigen club die je óók los aanvinkte, hoort er één keer op.
     expect(ontdubbel([{ id: 1 }, { id: 2 }, { id: 1 }]).map((m) => m.id)).toEqual([1, 2])
+  })
+})
+
+// Oktober 2026 valt in de zomertijd: Belgische middernacht = 22:00 UTC de dag ervoor.
+// Za 10/10, zo 11/10, ma 12/10, vr 16/10.
+const ZATERDAG = '2026-10-09T22:00:00.000Z'
+
+describe('weekendStart', () => {
+  it('is de zaterdag zelf op zaterdag en op zondag', () => {
+    expect(weekendStart(new Date('2026-10-10T15:00:00.000Z'))).toBe(ZATERDAG)
+    expect(weekendStart(new Date('2026-10-11T18:00:00.000Z'))).toBe(ZATERDAG)
+  })
+
+  it('is doordeweeks de zaterdag van het voorbije weekend', () => {
+    expect(weekendStart(new Date('2026-10-12T10:00:00.000Z'))).toBe(ZATERDAG)
+    expect(weekendStart(new Date('2026-10-16T10:00:00.000Z'))).toBe(ZATERDAG)
+  })
+
+  it('rekent op de Belgische kalender: zaterdag 00:30 in België is vrijdag in UTC', () => {
+    expect(weekendStart(new Date('2026-10-09T22:30:00.000Z'))).toBe(ZATERDAG)
+  })
+})
+
+describe('schermVenster — uitslagenVanaf', () => {
+  it('valt op zondag samen met gisteren (de zaterdag)', () => {
+    const v = schermVenster(new Date('2026-10-11T12:00:00.000Z'))
+    expect(v.uitslagenVanaf).toBe(ZATERDAG)
+    expect(v.uitslagenVanaf).toBe(v.dagStart)
+  })
+
+  it('reikt op maandag terug tot de zaterdag, verder dan gisteren', () => {
+    const v = schermVenster(new Date('2026-10-12T12:00:00.000Z'))
+    expect(v.uitslagenVanaf).toBe(ZATERDAG)
+    expect(v.uitslagenVanaf < v.dagStart).toBe(true)
+  })
+
+  it('geeft het begin van vandaag mee', () => {
+    expect(schermVenster(new Date('2026-10-11T12:00:00.000Z')).vandaagStart).toBe('2026-10-10T22:00:00.000Z')
+  })
+})
+
+describe('komendVandaag (de middelste strook)', () => {
+  const v = schermVenster(new Date('2026-10-11T12:00:00.000Z'))
+  const m = (id: number, status: string, date: string | null) => ({ id, status, date })
+
+  it('toont enkel wat vandaag nog moet beginnen, op volgorde van aanvang', () => {
+    const lijst = [
+      m(1, 'scheduled', '2026-10-11T16:30:00.000Z'),
+      m(2, 'live', '2026-10-11T12:00:00.000Z'),
+      m(3, 'finished', '2026-10-11T09:00:00.000Z'),
+      m(4, 'scheduled', '2026-10-11T14:00:00.000Z'),
+      m(5, 'scheduled', '2026-10-13T18:00:00.000Z'), // later deze week
+    ]
+    expect(komendVandaag(lijst, v.vandaagStart, v.dagEinde).map((x) => x.id)).toEqual([4, 1])
+  })
+
+  it('laat een nooit gestarte wedstrijd van gisteren weg', () => {
+    expect(komendVandaag([m(1, 'scheduled', '2026-10-10T14:00:00.000Z')], v.vandaagStart, v.dagEinde)).toEqual([])
+  })
+
+  it('is leeg zodra alles van vandaag begonnen is — dan verdwijnt de strook', () => {
+    const lijst = [m(1, 'live', '2026-10-11T14:00:00.000Z'), m(2, 'finished', '2026-10-11T10:00:00.000Z')]
+    expect(komendVandaag(lijst, v.vandaagStart, v.dagEinde)).toEqual([])
+  })
+})
+
+describe('weekendUitslagen (de balk onderaan)', () => {
+  const m = (id: number, status: string, date: string | null) => ({ id, status, date })
+
+  it('toont enkel eindstanden van het weekend, in de volgorde waarin ze gespeeld werden', () => {
+    const lijst = [
+      m(1, 'finished', '2026-10-11T10:00:00.000Z'),
+      m(2, 'finished', '2026-10-10T14:00:00.000Z'),
+      m(3, 'live', '2026-10-11T12:00:00.000Z'),
+      m(4, 'scheduled', '2026-10-11T16:00:00.000Z'),
+      m(5, 'finished', '2026-10-08T19:00:00.000Z'), // donderdag: vorige week
+    ]
+    expect(weekendUitslagen(lijst, ZATERDAG).map((x) => x.id)).toEqual([2, 1])
   })
 })

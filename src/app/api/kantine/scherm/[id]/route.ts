@@ -85,7 +85,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 
     if (selectieIsLeeg(keuze)) return Response.json({ matches: [], ads: [], leeg: true, titel, stijl })
 
-    const { dagStart, dagEinde, geplandTot } = schermVenster()
+    const { dagStart, dagEinde, geplandTot, uitslagenVanaf } = schermVenster()
     const teamIds = await teamIdsVoor(payload, keuze.clubIds, keuze.teamIds)
     const verborgen: Where[] = [{ isDemo: { not_equals: true } }, { analyseOnly: { not_equals: true } }]
 
@@ -111,9 +111,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
             where: {
               and: [
                 ploegFilter,
-                // Vanaf het begin van vandaag: de uitslag van de match die net gespeeld is,
-                // blijft in de kantine staan tot middernacht.
-                { date: { greater_than_equal: dagStart, less_than: geplandTot } },
+                // Vanaf het begin van het speelweekend: de uitslagenbalk onderaan toont alle
+                // eindstanden van dat weekend (zie weekendUitslagen in kantine-selectie.ts).
+                { date: { greater_than_equal: uitslagenVanaf, less_than: geplandTot } },
                 ...verborgen,
               ],
             },
@@ -125,7 +125,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       keuze.matchIds.length > 0
         ? payload.find({
             collection: 'matches',
-            where: { and: [{ id: { in: keuze.matchIds } }, { date: { greater_than_equal: dagStart } }, ...verborgen] },
+            where: { and: [{ id: { in: keuze.matchIds } }, { date: { greater_than_equal: uitslagenVanaf } }, ...verborgen] },
             depth: 0,
             limit: 50,
           })

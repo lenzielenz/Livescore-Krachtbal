@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 
 import type { MatchState, TimelineItem } from '@/lib/match-engine'
-import type { KrachtbalKleur } from '@/lib/reeksen'
+import { isAdultReeks, type KrachtbalKleur, type Reeks } from '@/lib/reeksen'
 import { Avatar } from '@/components/Avatar'
 import { ClubColorBlast } from '@/components/ClubColorBlast'
 import { KrachtbalIcon } from '@/components/KrachtbalIcon'
@@ -14,7 +14,7 @@ import { WinProbability } from '@/components/WinProbability'
 import { DEFAULT_AWAY_COLOR, DEFAULT_HOME_COLOR, inkOn, readableOnDark } from '@/lib/club-colors'
 import { extraMinuten, speeltTotMinuut } from '@/lib/speeltijd'
 import { goalPointsFromLabel, goalScorerFromLabel, useLiveStream, useViewerId } from '@/lib/use-live-stream'
-import { isTribuneOpen, TRIBUNE_GRACE_MS } from '@/lib/tribune'
+import { fotoVensterOpen, isTribuneOpen, TRIBUNE_GRACE_MS } from '@/lib/tribune'
 import { fmtClock, useLiveClock } from '@/lib/use-live-clock'
 import './scoreboard.css'
 
@@ -193,6 +193,33 @@ export function Scoreboard({
     addInstantLocal(i)
   }
   const removeInstantLocal = (id: number) => setInstants((prev) => prev.filter((x) => x.id !== id))
+
+  // Het foto-venster volgt de wedstrijd live. De server rekende het één keer uit bij het laden van
+  // de pagina; wie de wedstrijd opende vóór het venster openging (of liet openstaan tot de match
+  // begon), kreeg de knop daardoor nooit — "soms lukt het en dan is de knop weer weg". Nu wordt het
+  // opnieuw getoetst bij elke live-update (status, eindtijd) en elke halve minuut (de klok).
+  // Tot na het mounten geldt de servermomentopname, zodat de eerste render overeenkomt.
+  const [nu, setNu] = useState<number | null>(null)
+  useEffect(() => {
+    setNu(Date.now())
+    const t = setInterval(() => setNu(Date.now()), 30_000)
+    return () => clearInterval(t)
+  }, [])
+  const fotoOpen =
+    nu == null
+      ? photoButtonOpen
+      : fotoVensterOpen(
+          {
+            volwassen: isAdultReeks(state.match.reeks as Reeks | null),
+            status: state.match.status,
+            finishedAt: state.match.finishedAt,
+            date: state.match.date,
+          },
+          nu,
+        )
+  // Posten vereist daarnaast een login: wie niet ingelogd is, ziet de knop en tikt door naar de
+  // inlogpagina (zie PhotoTribune).
+  const magFotoPosten = fotoOpen && (canPostInstant || canChat)
 
   // Live tribune (shoutouts van ingelogde supporters). Begin met de bewaarde berichten.
   const [shouts, setShouts] = useState<Shout[]>(initialShouts ?? [])
@@ -748,8 +775,8 @@ export function Scoreboard({
       <PhotoTribune
         matchId={matchId}
         instants={instants}
-        canPost={canPostInstant}
-        showButton={photoButtonOpen}
+        canPost={magFotoPosten}
+        showButton={fotoOpen}
         live={state.match.status === 'live'}
         mineIds={mineIds}
         onLocalAdd={onLocalAdd}

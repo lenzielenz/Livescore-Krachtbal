@@ -10,9 +10,8 @@ import { Scoreboard } from '@/components/Scoreboard'
 import { SiteHeader } from '@/components/SiteHeader'
 import { TeamLogo } from '@/components/TeamLogo'
 import { VeldschermKoppelen } from '@/components/VeldschermKoppelen'
-import { hasRole, isFederationLevel, userClubId, userFollowedClubIds } from '@/lib/access'
+import { hasRole, isFederationLevel } from '@/lib/access'
 import { competitionWhere } from '@/lib/analyse-access'
-import { mayScoreMatch, type AuthedUser } from '@/lib/api-auth'
 import { getAuthUser } from '@/lib/auth-user'
 import { mayEditMatchVideo } from '@/lib/video-access'
 import { isCheckedIn, sanitizeCheckins } from '@/lib/checkins'
@@ -30,7 +29,7 @@ import { isAdultReeks, krachtbalKleur, reeksHalfDurationSeconds, reeksNaam, reek
 import { isSupportersMode } from '@/lib/score-mode'
 import { mayClaim, mayVote, sanitizeTrust, voteWindowOpen } from '@/lib/score-trust'
 import { MATCH_ASSUMED_DONE_MS } from '@/lib/simple-score'
-import { isPreMatchLead, isTribuneOpen } from '@/lib/tribune'
+import { fotoVensterOpen } from '@/lib/tribune'
 import { buildWinfieDesign } from '@/lib/winfie'
 import { BASE_RATE_PER_MIN } from '@/lib/win-probability'
 import { MatchRecap } from '../../analyse/[id]/MatchRecap'
@@ -102,7 +101,6 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   // Globale supporters-modus: iedereen mag de score doorgeven → toon een "Aantekenen"-knop.
   const supportersMode = await isSupportersMode(payload)
   const homeClub = (matchDoc?.homeTeam as { club?: { id?: number; accommodatie?: string; plaats?: string; lat?: number; lng?: number } } | null)?.club
-  const awayClub = (matchDoc?.awayTeam as { club?: { id?: number } } | null)?.club
   const accommodatie = homeClub?.accommodatie?.trim() || null
   // Locatie voor het weerbericht aan het veld (thuislocatie).
   const weatherPlace = homeClub?.plaats?.trim() || null
@@ -134,19 +132,13 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   const mayVideo = mayEditMatchVideo(me, matchDoc as { analyseOnly?: boolean | null; analyseOwner?: unknown } | null)
   // Veldscherm koppelen: zinvol vanaf een kwartier vóór de aftrap (al klaarzetten, of al in de
   // wachtrij zetten als het veld nog bezet is — zie pairOutcome in field-screens.ts) tot de
-  // wedstrijd live is. Mag wie de wedstrijd aantekent (dezelfde toegang als het scoreformulier),
-  // maar ook een gewone supporter van een van beide clubs — die staat evengoed fysiek bij dat
-  // veldscherm en kan de code aflezen; de code zelf is de eigenlijke grendel
-  // (zie /api/veldscherm/koppel), dit is enkel wie de knop te zien krijgt. Bewust een KORTER
-  // venster dan de vroege wedstrijdfoto hieronder (magVoorAftrap, 1u) — dat blijft ongewijzigd.
-  const betrokkenClubIds = [homeClub?.id, awayClub?.id].filter((c): c is number => typeof c === 'number')
-  const eigenClubIds = [userClubId(me), ...userFollowedClubIds(me)].filter((c) => c != null).map(String)
-  const isSupporterVanBetrokkenClub = betrokkenClubIds.some((c) => eigenClubIds.includes(String(c)))
-  const magVoorAftrap = state.match.status === 'scheduled' && isPreMatchLead(matchDoc?.date as string | undefined)
+  // wedstrijd live is. Elke ingelogde bezoeker krijgt de knop: wie bij het veld staat, kan de code
+  // op het veldscherm aflezen, en die code is de eigenlijke grendel (zie /api/veldscherm/koppel).
+  // Vroeger kregen enkel supporters van een van beide clubs en wie mocht aantekenen de knop, en
+  // stond een supporter zonder ingestelde club dus met lege handen naast de tv.
+  // Bewust een KORTER venster dan de vroege wedstrijdfoto hieronder (1u, zie fotoVensterOpen).
   const magVeldschermVoorAftrap = state.match.status === 'scheduled' && isVeldschermPreMatchLead(matchDoc?.date as string | undefined)
-  const magKoppelen =
-    (state.match.status === 'live' || magVeldschermVoorAftrap) &&
-    (isSupporterVanBetrokkenClub || (await mayScoreMatch(payload, me as AuthedUser | null, matchId)))
+  const magKoppelen = Boolean(me) && (state.match.status === 'live' || magVeldschermVoorAftrap)
   const datum = matchDoc?.date ? formatDateTimeBE(matchDoc.date as string) : null
   // Wie de wedstrijd mag rechtzetten (tijdstip + ploegnaam/club): de federatie, en nooit op een
   // analysewedstrijd — die is privé en wordt onder /analyse/beheer beheerd.
@@ -270,7 +262,12 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   // de foto-knop altijd staan zodra de wedstrijd actief is (in plaats van te verdwijnen voor wie
   // toevallig niet ingelogd is); tikken zonder in te loggen leidt dan naar de inlogpagina.
   const adultMatch = isAdultReeks(reeksRaw)
-  const photoButtonOpen = adultMatch && (isTribuneOpen(state.match.status, state.match.finishedAt) || magVoorAftrap)
+  const photoButtonOpen = fotoVensterOpen({
+    volwassen: adultMatch,
+    status: state.match.status,
+    finishedAt: state.match.finishedAt,
+    date: (matchDoc?.date as string | undefined) ?? null,
+  })
   const canPostInstant = Boolean(me) && photoButtonOpen
   let initialInstants: { id: number; url: string; authorName: string; at: number; kind?: 'photo' | 'video' }[] = []
   if (adultMatch) {

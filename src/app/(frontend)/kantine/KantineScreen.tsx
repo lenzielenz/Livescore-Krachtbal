@@ -11,10 +11,10 @@ import { ReclameOverlay } from '@/components/ReclameOverlay'
 import type { Ad } from '@/lib/ads'
 import { bladIndeling, BLAD_GAT } from '@/lib/kantine-bladeren'
 import type { KantineLive } from '@/lib/kantine-channel'
-import { rang, schermVenster } from '@/lib/kantine-selectie'
+import { komendVandaag, schermVenster, weekendUitslagen } from '@/lib/kantine-selectie'
 import type { ClubColors } from '@/lib/club-colors'
 import { useLiveStream } from '@/lib/use-live-stream'
-import { Tile, type KantineMatch } from './KantineBoard'
+import { KomendTile, Tile, type KantineMatch } from './KantineBoard'
 import { GoalCelebrationOverlay, PhotoCelebration, vieringDuur, type KantineFotoInstant, type Viering } from './KantineCelebration'
 
 /** Clubstijl van de eigenaar van dit scherm: de tv van de club hoort eruit te zien als de club. */
@@ -213,25 +213,20 @@ export function KantineScreen({
   )
 
   const statusVan = (m: KantineMatch) => live[m.id]?.status ?? m.status
-  const liveMatches = matches.filter((m) => statusVan(m) === 'live')
-  const finishedMatches = matches.filter((m) => statusVan(m) === 'finished')
-  const played = [...liveMatches, ...finishedMatches]
-  // "Vandaag" = live, nog te spelen én al gespeelde wedstrijden (ook gisterens, zie kantine-
-  // selectie.ts) — nooit één status-groep exclusief, want dat verstopte net de andere wedstrijden
-  // van dezelfde dag zodra er een mix van live/gespeeld/gepland was ("bij start van de wedstrijd
-  // verlies je de info van de andere wedstrijden die dag", en op zondag verdween zaterdags
-  // eindstand zodra er een nog te spelen zondagwedstrijd bijstond). `rang` (dezelfde die de
-  // sortering bepaalt) telt gisteren-tot-nu als "vandaag" (rang 0-2); enkel rang 3 is puur later
-  // deze week.
-  const dagEinde = schermVenster().dagEinde
-  const vandaag = matches.filter((m) => rang({ id: m.id, status: statusVan(m), date: m.date }, dagEinde) <= 2)
-  const laterDezeWeek = matches.filter((m) => rang({ id: m.id, status: statusVan(m), date: m.date }, dagEinde) === 3)
-  // Live wedstrijden krijgen een eigen, groot vak (zie `kt-featured` verderop) — anders staat een
-  // lopende wedstrijd even klein als een tegel in een raster van vijf, wat op zijn beurt de vorige
-  // klacht was. Het raster hieronder toont de REST van vandaag ernaast (niet erboven verdrongen),
-  // en valt terug op later deze week als er voor vandaag verder niets is.
-  const overigVandaag = vandaag.filter((m) => statusVan(m) !== 'live')
-  const visible = overigVandaag.length > 0 ? overigVandaag : laterDezeWeek
+  // Elke wedstrijd met haar actuele status (live-stream gaat voor op de momentopname van de poll).
+  const actueel = matches.map((m) => ({ ...m, status: statusVan(m) }))
+  const liveMatches = actueel.filter((m) => m.status === 'live')
+  // Het scherm in drie lagen, elk met één taak:
+  //  • bovenaan: wat NU live is (groot);
+  //  • de middelste strook: enkel wat vandaag nog moet beginnen — reeks, uur en de twee logo's.
+  //    Start een wedstrijd, dan schuift ze naar boven; de strook wordt zo vanzelf korter en
+  //    verdwijnt zodra er vandaag niets meer komt;
+  //  • de balk onderaan: de eindstanden van het speelweekend.
+  // Vroeger stonden gespeelde en komende wedstrijden door elkaar in het midden, met de clubnamen
+  // erbij; dat was te druk om van ver te lezen.
+  const venster = schermVenster()
+  const dagEinde = venster.dagEinde
+  const visible = komendVandaag(actueel, venster.vandaagStart, dagEinde)
   const layout = layoutFor(visible.length)
   const cols = Math.min(layout.cols, maxColsForWidth(vw))
   const featuredLayout = layoutFor(liveMatches.length)
@@ -284,34 +279,27 @@ export function KantineScreen({
   // Het lettertype volgt wat er op ÉÉN blad staat, niet het totaal van de dag.
   const bladLayout = layoutFor(Math.min(visible.length, perBlad))
   const fontSize = cols < bladLayout.cols ? Math.round(bladLayout.fontSize * 1.12) : bladLayout.fontSize
-  const logoSize = bladLayout.logoSize
+  // Zonder clubnamen in de tegel is er plaats voor grotere logo's.
+  const logoSize = `calc(${bladLayout.logoSize} * 1.2)`
 
-  // Aftellen naar de eerstvolgende wedstrijd zolang er niets bezig is — anders staat er een
-  // scherm vol geplande borden zonder dat iemand weet hoelang het nog duurt.
-  const volgende = played.length === 0
-    ? matches
+  // Aftellen naar de eerstvolgende wedstrijd zolang er niets live is — anders staat er een scherm
+  // met geplande wedstrijden zonder dat iemand weet hoelang het nog duurt.
+  const volgende = liveMatches.length === 0
+    ? actueel
         .filter((m) => m.status === 'scheduled' && m.date)
         .map((m) => ({ m, t: new Date(String(m.date)).getTime() }))
         .filter((x) => Number.isFinite(x.t) && x.t > Date.now())
         .sort((a, b) => a.t - b.t)[0]
     : undefined
 
-  // Alles gespeeld: dan blijven de borden staan als uitslagenbord, met één regel erboven die
-  // zegt dat de dag erop zit. Zonder die regel staat er een scherm vol eindstanden zonder dat
-  // iemand weet of er nog iets komt.
-  const dagGedaan = matches.length > 0 && finishedMatches.length === matches.length
+  // Alles van vandaag gespeeld: één regel bovenaan zegt dat de dag erop zit, zodat een scherm met
+  // enkel nog uitslagen niet lijkt te wachten op iets dat niet meer komt. Enkel de wedstrijden van
+  // VANDAAG tellen: de uitslagen van gisteren staan ook in de feed (voor de balk onderaan).
+  const vandaag = actueel.filter((m) => m.date && m.date >= venster.vandaagStart && m.date < dagEinde)
+  const dagGedaan = vandaag.length > 0 && vandaag.every((m) => m.status === 'finished')
 
-  // De balk onderaan bundelt de compacte dagstatus: gespeelde wedstrijden verhuizen hierheen
-  // met hun eindscore; geplande wedstrijden houden hun aanvangsuur. Livewedstrijden blijven groot
-  // op het hoofdbord en worden dus niet dubbel getoond.
-  const balkWedstrijden = matches
-    .filter((m) => statusVan(m) !== 'live')
-    .sort((a, b) => {
-      const aKlaar = statusVan(a) === 'finished'
-      const bKlaar = statusVan(b) === 'finished'
-      if (aKlaar !== bKlaar) return aKlaar ? -1 : 1
-      return String(a.date ?? '').localeCompare(String(b.date ?? ''))
-    })
+  // De balk onderaan: enkel de eindstanden van het speelweekend (reeks, logo's, score).
+  const balkWedstrijden = weekendUitslagen(actueel, venster.uitslagenVanaf)
 
   // Achtergrond in de clubkleuren van de eigenaar. Twee brede vegen bovenaan links en rechts,
   // ruim doorschijnend: het bord moet leesbaar blijven van vijf meter.
@@ -420,7 +408,7 @@ export function KantineScreen({
                   }}
                 >
                   {visible.map((m) => (
-                    <Tile key={m.id} match={m} live={live[m.id] ?? null} fontSize={fontSize} logoSize={logoSize} />
+                    <KomendTile key={m.id} match={m} fontSize={fontSize} logoSize={logoSize} />
                   ))}
                 </div>
               </div>
@@ -438,17 +426,17 @@ export function KantineScreen({
       {/* De sponsorbalk onderaan: past zich aan het aantal, het formaat en de kleur van de
           reclames aan (zie components/ReclameBalk.tsx). */}
       <ReclameBalk ads={ads} />
-      {/* Afgeronde wedstrijden zakken naar deze compacte strook en tonen hun eindscore. Geplande
-          wedstrijden blijven ernaast staan met hun uur, zodat het volledige dagverloop leesbaar is. */}
+      {/* De eindstanden van het speelweekend, als rollende balk. */}
       {balkWedstrijden.length > 0 && <Wedstrijdbalk wedstrijden={balkWedstrijden} live={live} />}
     </div>
   )
 }
 
 /**
- * Rollende balk met de komende wedstrijden. Bij een handvol staat ze stil (er valt niets te
- * scrollen); vanaf vier loopt ze naadloos in een lus — dezelfde aanpak als het tornooischerm, met
- * een tweede identieke helft zodat -50% verschuiven exact één ronde is.
+ * Rollende balk met de eindstanden van het speelweekend: reeks, de twee logo's en de score — geen
+ * namen, geen uur. Bij een handvol staat ze stil (er valt niets te scrollen); vanaf vier loopt ze
+ * naadloos in een lus — dezelfde aanpak als het tornooischerm, met een tweede identieke helft zodat
+ * -50% verschuiven exact één ronde is.
  */
 function Wedstrijdbalk({
   wedstrijden,
@@ -463,20 +451,17 @@ function Wedstrijdbalk({
   const helft = (verborgen: boolean) => (
     <span className="kt-tickerhelft" aria-hidden={verborgen}>
       {wedstrijden.map((m) => {
-        const status = live[m.id]?.status ?? m.status
         const score = live[m.id]?.score ?? m.score
-        const afgelopen = status === 'finished'
         return (
-          <span key={m.id} className={`kt-tick${afgelopen ? ' afgelopen' : ''}`}>
+          <span key={m.id} className="kt-tick afgelopen">
             <span className="kt-tick-blok">
               <span className="kt-tick-affiche">
                 <TeamLogo name={m.home.name} logoUrl={m.home.logoUrl} logoFit={m.home.logoFit} side="home" size="1.7em" ringColor={m.home.colors?.primary} />
-                <span className="kt-tick-vs">{afgelopen ? `${score.home} – ${score.away}` : '–'}</span>
+                <span className="kt-tick-score">{score.home} – {score.away}</span>
                 <TeamLogo name={m.away.name} logoUrl={m.away.logoUrl} logoFit={m.away.logoFit} side="away" size="1.7em" ringColor={m.away.colors?.primary} />
               </span>
               <span className="kt-tick-reeks">{m.reeks}</span>
             </span>
-            <span className="kt-tick-uur">{afgelopen ? 'Eindstand' : m.time}</span>
           </span>
         )
       })}
