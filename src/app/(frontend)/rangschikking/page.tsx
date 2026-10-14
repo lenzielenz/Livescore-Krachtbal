@@ -5,6 +5,7 @@ import { userClubId, userTeamId, userTeamIds } from '@/lib/access'
 import { competitionWhere } from '@/lib/analyse-access'
 import { getAuthUser } from '@/lib/auth-user'
 import { clinchStatus, titelBoodschap, titelProjectie } from '@/lib/championship'
+import { degradatieBoodschap } from '@/lib/degradatie'
 import { formatDateBE } from '@/lib/datetime'
 import { buildScoreboards, clubColors, clubLogoFit, clubLogoUrl } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
@@ -175,6 +176,11 @@ export default async function RangschikkingPage({ searchParams }: { searchParams
   const RELEGATION = 1
   const adult = isAdultReeks(reeks as Reeks)
   const dangerFrom = adult && table.length >= 6 ? table.length - RELEGATION : -1
+  // Staat je eigen ploeg in de gevarenzone, dan krijgt ze — net als bij de titel — een eigen regel.
+  const gevaarMsg =
+    dangerFrom >= 0 && eigenId != null
+      ? degradatieBoodschap({ table, remaining, teamId: eigenId, naam: (id) => teamInfo.get(id)?.name ?? '—' })
+      : null
 
   // Positie t.o.v. een week geleden: rangschikking uit de wedstrijden van vóór 7 dagen.
   const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000
@@ -243,6 +249,12 @@ export default async function RangschikkingPage({ searchParams }: { searchParams
         {titelMsg && (
           <p className={`rang-titel${titelMsg.clinched ? ' clinched' : ''}`}>
             <span aria-hidden>{titelMsg.clinched ? '🏆' : '🎯'}</span> {titelMsg.text}
+          </p>
+        )}
+
+        {gevaarMsg && (
+          <p className={`rang-titel rang-gevaar${gevaarMsg.zeker ? ' zeker' : ''}`}>
+            <span aria-hidden>{gevaarMsg.zeker ? '⬇️' : '⚠️'}</span> {gevaarMsg.text}
           </p>
         )}
 
