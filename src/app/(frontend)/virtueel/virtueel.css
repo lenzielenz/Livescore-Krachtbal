@@ -2,24 +2,23 @@
 .vk-pagina { padding-bottom: 32px; }
 
 /* Catalogus: uitnodiging, troeven en fragmenten */
+.vk-belofte { font-size: 1.15rem; font-weight: 700; color: var(--txt); }
 .vk-uitnodiging {
-  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 18px; margin-top: 18px; padding: 16px 18px;
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 18px; margin-top: 16px; padding: 16px 18px;
   border-radius: 16px; border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--line));
   background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 14%, transparent), transparent 70%), var(--panel-grad, var(--panel));
 }
-.vk-uitnodiging > div:first-child { display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1 1 260px; }
-.vk-uitnodiging b { font-size: 1.05rem; color: var(--txt); }
-.vk-uitnodiging span { font-size: 0.9rem; color: var(--dim-strong); }
+.vk-uitnodiging b { font-size: 1.1rem; color: var(--txt); }
 .vk-uitnodiging-knoppen { display: flex; flex-wrap: wrap; gap: 8px; }
 .vk-kop { margin: 28px 0 0; font-size: 1.15rem; }
-.vk-kop-sub { margin: 6px 0 0; font-size: 0.9rem; color: var(--dim-strong); max-width: 70ch; }
-.vk-troeven { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; margin-top: 12px; }
+.vk-troeven { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-top: 16px; }
 .vk-troef {
-  display: flex; flex-direction: column; gap: 6px; padding: 14px 16px 16px; border-radius: 14px; font-size: 0.88rem; color: var(--dim-strong);
+  display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; border-radius: 14px; font-size: 0.82rem; color: var(--dim-strong);
   border: 1px solid color-mix(in srgb, #fff 8%, var(--line)); background: var(--panel-grad, var(--panel));
 }
-.vk-troef b { font-size: 1rem; color: var(--txt); }
-.vk-troef-icoon { font-size: 1.6rem; line-height: 1; }
+.vk-troef b { font-size: 0.95rem; color: var(--txt); margin-top: 4px; }
+.vk-troef-icoon { font-size: 1.5rem; line-height: 1; }
+.vk-terugkomen { margin: 12px 0 0; font-size: 0.85rem; color: var(--accent); font-weight: 700; }
 .vk-lijst { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; margin-top: 12px; }
 .vk-kaart {
   display: flex; flex-direction: column; overflow: hidden; border-radius: 16px; text-decoration: none; color: inherit;

@@ -8,7 +8,7 @@ import { fetchErelijstData } from '@/lib/erelijst-data'
 import { getAuthUser } from '@/lib/auth-user'
 import { clubLogoUrl } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
-import { dateStrBE, formatDateBE, shiftDateStr } from '@/lib/datetime'
+import { dateStrBE, shiftDateStr } from '@/lib/datetime'
 import { fragment, STANDAARD_THEMA, stadionThema, type StadionThema } from '@/lib/virtueel'
 import { eregalerij } from '@/lib/virtueel-erelijst'
 import { weekendZaal } from '@/lib/virtueel-weekend'
@@ -77,10 +77,7 @@ export default async function VirtueelFragmentPage({ params }: { params: Promise
       <div className="site vk-pagina">
         <Link href="/virtueel" className="vk-terug">← Virtueel krachtbal</Link>
         <h1 className="vk-titel">{clubNaam ? `Het stadion van ${clubNaam}` : 'Je virtuele stadion'}</h1>
-        <p className="vk-sub">
-          Op het veld: {f.titel} · {formatDateBE(f.datum, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}. Wandel
-          door de gangen voor de Hall of Fame, de wedstrijden van dit weekend en de fotogalerij.
-        </p>
+        <p className="vk-sub">Op het veld: {f.titel}</p>
         <VirtueelViewer slug={f.slug} thema={thema} />
         <p className="vk-noot">
           Het spel op het veld is gereconstrueerd uit één gsm-video: posities zijn schattingen en kunnen hier en daar
