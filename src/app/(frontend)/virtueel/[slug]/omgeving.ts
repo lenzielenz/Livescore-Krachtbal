@@ -278,8 +278,11 @@ export function bouwOmgeving(scene: THREE.Scene, opt: { thema: StadionThema; lic
     const b = omtrek[(i + 1) % omtrek.length]
     const inDePoort = inPoort(GEVEL, (a.x + b.x) / 2 + a.nx * 0.1, (a.z + b.z) / 2 + a.nz * 0.1)
     if (!inDePoort) {
-      plint.push(muurStuk(a, b, 0, 1.05, 1.62))
-      plintRand.push(muurStuk(a, b, 1.05, 1.17, 1.74))
+      // Enkel aan de buitenkant: naar binnen toe zou de plint als een grijze strook voor de borden
+      // in de gangen steken.
+      const uit = (p: typeof a, d: number) => ({ x: p.x + p.nx * d, z: p.z + p.nz * d })
+      plint.push(muurStuk(uit(a, 0.55), uit(b, 0.55), 0, 1.05, 0.5))
+      plintRand.push(muurStuk(uit(a, 0.6), uit(b, 0.6), 1.05, 1.17, 0.62))
     }
     kroon.push(muurStuk(a, b, H + 0.4, H + 0.95, 2.5))
     kroonLicht.push(muurStuk(a, b, H + 0.32, H + 0.4, 2.36))
@@ -496,9 +499,10 @@ export function bouwOmgeving(scene: THREE.Scene, opt: { thema: StadionThema; lic
   }
   tekenLogo(null)
   const logoMat = new THREE.MeshBasicMaterial({ map: logoTex, transparent: true, toneMapped: false })
-  for (const [x, z, ry, r] of [[0, -B - 1.6, Math.PI, 5], [A + 1.6, 9, Math.PI / 2, 3.6], [-A - 1.6, 9, -Math.PI / 2, 3.6]] as const) {
+  // Noord: boven de noordpoort (en haar bord), zodat het logo de opening niet afdekt.
+  for (const [x, z, ry, r, y] of [[0, -B - 1.6, Math.PI, 3.6, 10.1], [A + 1.6, 9, Math.PI / 2, 3.6, 6.4], [-A - 1.6, 9, -Math.PI / 2, 3.6, 6.4]] as const) {
     const schijf = new THREE.Mesh(new THREE.PlaneGeometry(2 * r, 2 * r), logoMat)
-    schijf.position.set(x, 6.4, z)
+    schijf.position.set(x, y, z)
     schijf.rotation.y = ry
     scene.add(schijf)
   }
@@ -587,8 +591,9 @@ export function bouwOmgeving(scene: THREE.Scene, opt: { thema: StadionThema; lic
   for (const p of lampOmtrek) {
     const x = p.x + p.nx * 12
     const z = p.z + p.nz * 12
-    // Niet midden in de toegang naar de hoofdingang.
-    if (!(z > B && Math.abs(x) < 14)) lampPos.push([x, z])
+    // Niet midden in de toegang, en niet tegen de glazen traptorens in de hoeken.
+    const bijToren = Math.abs(Math.abs(p.nx) - Math.abs(p.nz)) < 0.5
+    if (!(z > B && Math.abs(x) < 14) && !bijToren) lampPos.push([x, z])
   }
   for (let x = -140; x <= 140; x += 20) lampPos.push([x, B + 35.5])
   const palen = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.08, 0.12, 6, 6).translate(0, 3, 0), new THREE.MeshLambertMaterial({ color: '#374151' }), lampPos.length)
