@@ -3,33 +3,25 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 
 import { GEVEL, type EreBord, type Rechthoek, type StadionThema } from '@/lib/virtueel'
-import { deurOp, liftStap, liftVerdiep, nieuweLift, type Lift } from '@/lib/virtueel-lift'
+import { VERDIEPEN } from '@/lib/virtueel-lift'
 import { canvasTex, rnd, rondLogo } from './stadion'
 
-// Het verdiep boven de Hall of Fame-gang (zuid), bereikbaar met een echte lift:
-//  • de lift: een schacht met schuifdeuren op beide verdiepen, een kooi die meerijdt (met spiegel,
-//    leuning en knoppen) en verdiepnummers boven de deuren die wisselen tijdens de rit;
+// Het verdiep boven de Hall of Fame-gang (zuid), bereikbaar met de lift (lift.ts):
 //  • loges met een glazen gevel boven de zuidtribune: van hogerop naar de wedstrijd kijken, in
 //    leren stoelen in clubkleur, met een bar; in twee loges een aquarium met zwemmende visjes;
 //  • een erfgoedgang: de eerste prijzen van je club, als oude bekers in alle vormen en maten in
 //    een lange vitrine, met vaantjes en archieffoto's aan de muur.
-// De logica van de lift zit (getest) in lib/virtueel-lift.ts. Botsingen: per verdiep een eigen lijst.
 
-export const VERDIEP_Y = 7.6
+export const VERDIEP_Y = VERDIEPEN[2].y
 const PLAFOND = 3.4
 const LX = -26 // midden van de lift
 const LOGE_X0 = -23
 const XL = 31
 
 export type Verdiep = {
-  obstakels: (verdiep: 0 | 1) => Rechthoek[]
-  update: (
-    seconden: number,
-    dt: number,
-    speler: { x: number; z: number; verdiep: 0 | 1; actief: boolean },
-  ) => { aangekomen: 0 | 1 | null; vloer: number | null }
-  /** Voor de wegwijzers: waar de lift staat (gelijkvloers). */
-  lift: { x: number; z: number }
+  /** Waar je boven niet door kan (muren, loges, meubels); de liftschacht zit in lift.ts. */
+  obstakels: Rechthoek[]
+  update: (seconden: number) => void
 }
 
 function hout(): THREE.CanvasTexture {
@@ -126,7 +118,6 @@ export function bouwVerdiep(
   const zF = opt.tribuneZ - 1.2 // glazen gevel van de loges
   const zL = zF + 4.0 // achterwand van de loges
   const zG = B - 0.6 // binnenkant van de gevel
-  const Z0 = opt.tribuneZ // achterkant van de liftschacht
   const ZD = opt.tribuneZ + 2.6 // de liftdeuren
   const primair = new THREE.Color(thema.primair)
   const toeval = rnd(8080)
@@ -226,116 +217,6 @@ export function bouwVerdiep(
   scene.add(band)
   doos(2 * XL + 0.6, 0.95, 0.12, 0, Y - 0.6, zF - 0.24, mats.donker)
   doos(2 * XL + 0.6, 0.05, 0.05, 0, Y - 0.12, zF - 0.33, mats.licht)
-
-  // ---------- de lift ----------
-  const SCHACHT_H = Y + PLAFOND
-  const sw = 0.15
-  // Zijwanden en achterwand van de schacht (over beide verdiepen), en de voorwand met deuropeningen.
-  doos(sw, SCHACHT_H, ZD - Z0, LX - 1.275, SCHACHT_H / 2, (Z0 + ZD) / 2, mats.wand)
-  doos(sw, SCHACHT_H, ZD - Z0, LX + 1.275, SCHACHT_H / 2, (Z0 + ZD) / 2, mats.wand)
-  doos(2.7, SCHACHT_H, sw, LX, SCHACHT_H / 2, Z0 + sw / 2, mats.wand)
-  for (const sx of [-1, 1]) doos(0.75, SCHACHT_H, sw, LX + sx * 0.975, SCHACHT_H / 2, ZD, mats.staal)
-  doos(1.2, Y - 2.3, sw, LX, 2.3 + (Y - 2.3) / 2, ZD, mats.staal)
-  doos(1.2, PLAFOND - 2.3, sw, LX, Y + 2.3 + (PLAFOND - 2.3) / 2, ZD, mats.staal)
-  // Schuifdeuren per verdiep (in de voorwand) en in de kooi.
-  const deurMat = new THREE.MeshStandardMaterial({ color: '#d7dbe0', metalness: 0.9, roughness: 0.22, envMap: omgeving })
-  const deurGeo = new THREE.BoxGeometry(0.62, 2.3, 0.04)
-  const landing: THREE.Mesh[][] = [0, 1].map((v) =>
-    [-1, 1].map((sx) => {
-      const d = new THREE.Mesh(deurGeo, deurMat)
-      d.position.set(LX + sx * 0.31, v * Y + 1.15, ZD - 0.02)
-      scene.add(d)
-      return d
-    }),
-  )
-  // Verdiepaanduiding boven de deuren (beide verdiepen delen de textuur) en oproepknoppen.
-  const aanC = document.createElement('canvas')
-  aanC.width = 256
-  aanC.height = 96
-  const aanTex = canvasTex(aanC)
-  let laatsteAan = ''
-  const tekenAan = (nummer: number, pijl: '▲' | '▼' | '') => {
-    const sleutel = `${nummer}${pijl}`
-    if (sleutel === laatsteAan) return
-    laatsteAan = sleutel
-    const g = aanC.getContext('2d')!
-    g.fillStyle = '#05070c'
-    g.fillRect(0, 0, 256, 96)
-    g.fillStyle = '#ff4d3d'
-    g.font = '900 72px "Courier New", ui-monospace, monospace'
-    g.textAlign = 'center'
-    g.textBaseline = 'middle'
-    g.fillText(String(nummer), 150, 52)
-    g.font = '900 52px Inter, system-ui, sans-serif'
-    g.fillText(pijl, 70, 50)
-    aanTex.needsUpdate = true
-  }
-  tekenAan(0, '')
-  const aanMat = new THREE.MeshBasicMaterial({ map: aanTex, toneMapped: false })
-  for (const v of [0, 1]) {
-    const scherm = new THREE.Mesh(new THREE.PlaneGeometry(0.6, 0.225), aanMat)
-    scherm.position.set(LX, v * Y + 2.55, ZD + 0.08)
-    const knop = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.02, 16).rotateX(Math.PI / 2), mats.licht)
-    knop.position.set(LX + 0.95, v * Y + 1.2, ZD + 0.085)
-    const knopPlaat = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.3, 0.02), mats.staal)
-    knopPlaat.position.set(LX + 0.95, v * Y + 1.2, ZD + 0.075)
-    scene.add(scherm, knopPlaat, knop)
-  }
-  // Bord naast de lift, beneden en boven.
-  const liftBordC = document.createElement('canvas')
-  liftBordC.width = 512
-  liftBordC.height = 192
-  {
-    const g = liftBordC.getContext('2d')!
-    g.fillStyle = '#0b1220'
-    g.fillRect(0, 0, 512, 192)
-    g.fillStyle = thema.primair
-    g.fillRect(0, 0, 12, 192)
-    g.fillStyle = '#ffffff'
-    g.font = '800 46px Inter, system-ui, sans-serif'
-    g.textBaseline = 'middle'
-    g.fillText('🛗 LIFT', 36, 52)
-    g.fillStyle = 'rgba(226,232,240,.85)'
-    g.font = '600 30px Inter, system-ui, sans-serif'
-    g.fillText('0  Hall of Fame', 36, 110)
-    g.fillText('1  Loges · Erfgoed', 36, 152)
-  }
-  const liftBord = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 0.45), new THREE.MeshBasicMaterial({ map: canvasTex(liftBordC), toneMapped: false }))
-  for (const v of [0, 1]) {
-    const b = liftBord.clone()
-    b.position.set(LX - 1.9, v * Y + 1.75, ZD + 0.02)
-    scene.add(b)
-  }
-  doos(0.04, SCHACHT_H, 0.6, LX - 1.36, SCHACHT_H / 2, ZD - 0.2, mats.staal)
-
-  // De kooi: rijdt met de speler mee.
-  const kooi = new THREE.Group()
-  const kw = 2.36
-  const kd = ZD - Z0 - 0.3
-  const kz = Z0 + 0.15 + kd / 2
-  const kooiWand = new THREE.MeshStandardMaterial({ color: '#b9bfc6', metalness: 0.8, roughness: 0.35, envMap: omgeving })
-  const spiegel = new THREE.MeshStandardMaterial({ color: '#dfe7ee', metalness: 1, roughness: 0.04, envMap: omgeving })
-  const deel = (w: number, h: number, d: number, x: number, y: number, z: number, m: THREE.Material) => {
-    const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m)
-    mesh.position.set(x, y, z)
-    kooi.add(mesh)
-    return mesh
-  }
-  deel(kw, 0.06, kd, LX, 0.03, kz, mats.donker)
-  deel(0.04, 2.4, kd, LX - kw / 2, 1.2, kz, kooiWand)
-  deel(0.04, 2.4, kd, LX + kw / 2, 1.2, kz, kooiWand)
-  deel(kw, 2.4, 0.04, LX, 1.2, Z0 + 0.17, spiegel)
-  deel(kw, 0.05, kd, LX, 2.42, kz, mats.donker)
-  deel(kw - 0.4, 0.02, kd - 0.4, LX, 2.39, kz, mats.licht)
-  deel(0.05, 0.05, kd - 0.2, LX - kw / 2 + 0.08, 0.95, kz, mats.staal)
-  deel(0.05, 0.05, kd - 0.2, LX + kw / 2 - 0.08, 0.95, kz, mats.staal)
-  deel(0.2, 0.5, 0.03, LX + kw / 2 - 0.05, 1.25, ZD - 0.35, mats.staal).rotation.y = Math.PI / 2
-  const kooiAan = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.19), aanMat)
-  kooiAan.position.set(LX, 2.6 - 0.25, ZD - 0.16)
-  kooiAan.rotation.y = Math.PI
-  kooi.add(kooiAan)
-  const kooiDeuren = [-1, 1].map((sx) => deel(0.6, 2.3, 0.03, LX + sx * 0.3, 1.15, ZD - 0.13, deurMat))
-  scene.add(kooi)
 
   // ---------- de loges ----------
   const randen: number[] = []
@@ -673,14 +554,7 @@ export function bouwVerdiep(
     logeObst.push({ x0: x - 0.45, x1: x + 0.45, z0: zL + 0.55, z1: zL + 1.45 })
   }
 
-  // ---------- botsingen ----------
-  const schacht: Rechthoek[] = [
-    { x0: LX - 1.36, x1: LX - 1.2, z0: Z0, z1: ZD + 0.08 },
-    { x0: LX + 1.2, x1: LX + 1.36, z0: Z0, z1: ZD + 0.08 },
-    { x0: LX - 1.36, x1: LX - 0.6, z0: ZD - 0.08, z1: ZD + 0.08 },
-    { x0: LX + 0.6, x1: LX + 1.36, z0: ZD - 0.08, z1: ZD + 0.08 },
-  ]
-  const deurRect: Rechthoek = { x0: LX - 0.6, x1: LX + 0.6, z0: ZD - 0.1, z1: ZD + 0.1 }
+  // ---------- botsingen (de liftschacht zelf zit in lift.ts) ----------
   const boven: Rechthoek[] = [
     { x0: -400, x1: -XL + 0.05, z0: -400, z1: 400 },
     { x0: XL - 0.05, x1: 400, z0: -400, z1: 400 },
@@ -693,9 +567,6 @@ export function bouwVerdiep(
   ]
 
   // ---------- update ----------
-  let lift: Lift = nieuweLift()
-  const binnenKooi = (x: number, z: number) => Math.abs(x - LX) < 1.05 && z > Z0 + 0.2 && z < ZD - 0.1
-  const bijDeur = (x: number, z: number) => Math.abs(x - LX) < 1.9 && z >= ZD && z < ZD + 2.8
   const visM = new THREE.Matrix4()
   const visQ = new THREE.Quaternion()
   const visP = new THREE.Vector3()
@@ -703,30 +574,8 @@ export function bouwVerdiep(
   const as = new THREE.Vector3(0, 1, 0)
 
   return {
-    lift: { x: LX, z: ZD + 1 },
-    obstakels(verdiep) {
-      const dicht = deurOp(lift, verdiep) < 0.95
-      return verdiep === 1 ? (dicht ? [...boven, ...schacht, deurRect] : [...boven, ...schacht]) : dicht ? [...schacht, deurRect] : schacht
-    },
-    update(seconden, dt, speler) {
-      const r = liftStap(lift, dt, {
-        verdiep: speler.verdiep,
-        inKooi: speler.actief && binnenKooi(speler.x, speler.z),
-        bijDeur: speler.actief && bijDeur(speler.x, speler.z),
-      })
-      lift = r.lift
-      // Deuren, kooi en verdiepaanduiding.
-      for (const v of [0, 1] as const) {
-        const o = deurOp(lift, v)
-        landing[v][0].position.x = LX - 0.31 - o * 0.62
-        landing[v][1].position.x = LX + 0.31 + o * 0.62
-      }
-      kooi.position.y = lift.hoogte * Y
-      const ko = lift.toestand === 'rijden' ? 0 : lift.deur
-      kooiDeuren[0].position.x = LX - 0.3 - ko * 0.6
-      kooiDeuren[1].position.x = LX + 0.3 + ko * 0.6
-      const pijl = lift.toestand === 'rijden' ? (lift.doel === 1 ? '▲' : '▼') : ''
-      tekenAan(lift.toestand === 'rijden' ? Math.round(lift.hoogte) : liftVerdiep(lift), pijl)
+    obstakels: boven,
+    update(seconden) {
       // Visjes: zwemmen in lussen door de bak, kijken in hun zwemrichting, met een wiebelende staart.
       for (const v of vissen) {
         v.params.forEach((p, k) => {
@@ -753,7 +602,6 @@ export function bouwVerdiep(
         }
         v.bubbels.instanceMatrix.needsUpdate = true
       }
-      return { aangekomen: r.aangekomen, vloer: r.spelerHoogte != null ? r.spelerHoogte * Y : null }
     },
   }
 }

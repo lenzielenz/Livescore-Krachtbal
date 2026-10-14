@@ -4,20 +4,30 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import type { Rechthoek, StadionThema } from '@/lib/virtueel'
 import { MUUR_H, muurLengte, tekenMuurBasis, tekenStreek, type Tag } from '@/lib/virtueel-graffiti'
 import { tekenTactiekbord, type Tactiek } from '@/lib/virtueel-tactiek'
+import { Reflector } from 'three/examples/jsm/objects/Reflector.js'
+import { AVATAR_LAAG } from './avatar'
 import { canvasTex, rnd, rondLogo } from './stadion'
 
-// Het spelersgebouw naast het clubhuis (west):
+// Het spelersgebouw, vastgebouwd aan de westgevel van het stadion, naast de westpoort:
 //  • een kleedkamer om binnen te wandelen, helemaal in de clubkleuren: banken met shirts aan de
 //    haken, een kist ballen, en een whiteboard met een krachtbalveld en magneetjes voor de tactiek
 //    (op je gsm kan je de magneetjes verschuiven en looplijnen tekenen);
 //  • de douches: tegels met een band in clubkleur, douchekoppen met stromend water en damp;
-//  • de graffitimuur: de zuidgevel van het gebouw, die als vrijstaande muur verder groeit naarmate
-//    er meer getagd wordt (zie lib/virtueel-graffiti.ts).
+//  • de spelersdeur: een korte tunnel door de gevel, rechtstreeks de westgang van het stadion in
+//    (de opening zit in GEVEL.poorten);
+//  • de graffitimuur: de noordgevel van het gebouw, recht naar de westpoort gekeerd. Hij begint aan
+//    het stadion en groeit als vrijstaande muur verder naar het westen naarmate er meer getagd wordt
+//    (zie lib/virtueel-graffiti.ts). Kijkend naar de muur loopt hij van links (het stadion) naar rechts.
 
-export const KLEED = { x0: -98, x1: -80, z0: -18, z1: -6, px: -92, h: 3.4 }
-const DEUR = { z0: -10.8, z1: -9.2 }
-const DOORGANG = { z0: -13.4, z1: -11.8 }
+export const KLEED = { x0: -68, x1: -50, z0: 6, z1: 18, px: -62, h: 4.4 }
+const DEUR = { z0: 9, z1: 11 }
+const DOORGANG = { z0: 11.8, z1: 13.4 }
 const PPM = 80
+
+/** Plekken rond de spelersgebouwen en het clubhuis waar geen paaltjes, lantaarns of bomen mogen. */
+export function bijSpelersgebouwen(x: number, z: number): boolean {
+  return (x > -89 && x < -48.5 && z > 0.5 && z < 19.5) || (x > -82 && x < -54 && z > -21 && z < -7)
+}
 
 export type Kleedkamer = {
   obstakels: Rechthoek[]
@@ -27,6 +37,10 @@ export type Kleedkamer = {
   /** Waar het bord en de muur staan, om de knop "tactiekbord"/"spuit op de muur" te tonen. */
   bijBord: (x: number, z: number) => boolean
   bijMuur: (x: number, z: number) => boolean
+  /** Staat dit punt in de kleedkamer (dan kan je jezelf in de spiegel zien)? */
+  binnen: (x: number, z: number) => boolean
+  /** De spiegel aan/uit: hij tekent de scène een tweede keer, dus enkel als je in de kleedkamer bent. */
+  spiegel: (aan: boolean) => void
 }
 
 export function bouwKleedkamer(scene: THREE.Scene, opt: { thema: StadionThema; licht: boolean; logo: Promise<HTMLImageElement | null> }): Kleedkamer {
@@ -126,7 +140,7 @@ export function bouwKleedkamer(scene: THREE.Scene, opt: { thema: StadionThema; l
   wandStuk(K.x1 - t / 2, DEUR.z1, K.x1 + t / 2, K.z1)
   binnenVlak(K.x1 - e, (K.z0 + DEUR.z0) / 2, DEUR.z0 - K.z0, 'x-', binnenwand)
   binnenVlak(K.x1 - e, (DEUR.z1 + K.z1) / 2, K.z1 - DEUR.z1, 'x-', binnenwand)
-  doos(t, K.h - 2.4, DEUR.z1 - DEUR.z0, K.x1, 2.4 + (K.h - 2.4) / 2, (DEUR.z0 + DEUR.z1) / 2, buitenMat)
+  doos(t, K.h - 2.7, DEUR.z1 - DEUR.z0, K.x1, 2.7 + (K.h - 2.7) / 2, (DEUR.z0 + DEUR.z1) / 2, buitenMat)
   // Tussenwand met een doorgang: tegels aan de douchekant, clubkleuren aan de kleedkamerkant.
   for (const [za, zb] of [
     [K.z0, DOORGANG.z0],
@@ -139,8 +153,8 @@ export function bouwKleedkamer(scene: THREE.Scene, opt: { thema: StadionThema; l
   doos(t, K.h - 2.4, DOORGANG.z1 - DOORGANG.z0, K.px, 2.4 + (K.h - 2.4) / 2, (DOORGANG.z0 + DOORGANG.z1) / 2, binnenwand)
   // Dak met een rand in clubkleur, plafond met lichtpanelen.
   doos(K.x1 - K.x0 + 0.8, 0.3, K.z1 - K.z0 + 0.8, (K.x0 + K.x1) / 2, K.h + 0.15, (K.z0 + K.z1) / 2, buitenMat)
-  doos(K.x1 - K.x0 + 0.9, 0.35, 0.1, (K.x0 + K.x1) / 2, K.h + 0.15, K.z0 - 0.45, clubMat)
-  doos(0.1, 0.35, K.z1 - K.z0 + 0.9, K.x1 + 0.45, K.h + 0.15, (K.z0 + K.z1) / 2, clubMat)
+  doos(K.x1 - K.x0 + 0.9, 0.35, 0.1, (K.x0 + K.x1) / 2, K.h + 0.15, K.z1 + 0.45, clubMat)
+  doos(0.1, 0.35, K.z1 - K.z0 + 0.9, K.x0 - 0.45, K.h + 0.15, (K.z0 + K.z1) / 2, clubMat)
   const plafond = new THREE.Mesh(new THREE.PlaneGeometry(K.x1 - K.x0, K.z1 - K.z0).rotateX(Math.PI / 2), new THREE.MeshLambertMaterial({ color: '#f3f4f6' }))
   plafond.position.set((K.x0 + K.x1) / 2, K.h - 0.01, (K.z0 + K.z1) / 2)
   scene.add(plafond)
@@ -169,7 +183,19 @@ export function bouwKleedkamer(scene: THREE.Scene, opt: { thema: StadionThema; l
   vloerLogo.position.set((K.px + K.x1) / 2, 0.025, (K.z0 + K.z1) / 2)
   scene.add(vloerLogo)
 
-  // ---------- buiten: bord boven de deur, een lamp, en een wegwijzer vanaf de westpoort ----------
+  // ---------- de spelersdeur: een tunnel door de gevel, met een bord in de gang ----------
+  const gevelBinnen = -47.4
+  const tunnelL = gevelBinnen - K.x1
+  const tunnelZ = (DEUR.z0 + DEUR.z1) / 2
+  const tunnelVloer = new THREE.Mesh(new THREE.PlaneGeometry(tunnelL, DEUR.z1 - DEUR.z0).rotateX(-Math.PI / 2), new THREE.MeshLambertMaterial({ color: '#2a2f38' }))
+  tunnelVloer.position.set(K.x1 + tunnelL / 2, 0.02, tunnelZ)
+  scene.add(tunnelVloer)
+  for (const z of [DEUR.z0 - 0.08, DEUR.z1 + 0.08]) doos(tunnelL, 2.7, 0.16, K.x1 + tunnelL / 2, 1.35, z, clubMat)
+  doos(tunnelL, 0.2, DEUR.z1 - DEUR.z0 + 0.32, K.x1 + tunnelL / 2, 2.8, tunnelZ, buitenMat)
+  doos(tunnelL - 0.2, 0.02, 0.5, K.x1 + tunnelL / 2, 2.68, tunnelZ, lichtMat)
+  // Een kader in clubkleur rond de deur in de gang, en een verlicht bord erboven.
+  for (const z of [DEUR.z0 - 0.12, DEUR.z1 + 0.12]) doos(0.08, 2.9, 0.24, gevelBinnen + 0.04, 1.45, z, clubMat)
+  doos(0.08, 0.24, DEUR.z1 - DEUR.z0 + 0.48, gevelBinnen + 0.04, 2.9, tunnelZ, clubMat)
   const bordC = document.createElement('canvas')
   bordC.width = 1024
   bordC.height = 192
@@ -188,36 +214,20 @@ export function bouwKleedkamer(scene: THREE.Scene, opt: { thema: StadionThema; l
     bordTex.needsUpdate = true
   }
   tekenBord(null)
-  const bord = new THREE.Mesh(new THREE.PlaneGeometry(5.2, 0.975), new THREE.MeshBasicMaterial({ map: bordTex, toneMapped: false }))
-  bord.position.set(K.x1 + 0.15, 2.95, (DEUR.z0 + DEUR.z1) / 2)
-  bord.rotation.y = Math.PI / 2
-  scene.add(bord)
-  doos(0.3, 0.1, 1.6, K.x1 + 0.4, 2.42, (DEUR.z0 + DEUR.z1) / 2, lichtMat)
+  const bordMat = new THREE.MeshBasicMaterial({ map: bordTex, toneMapped: false })
+  const bordGang = new THREE.Mesh(new THREE.PlaneGeometry(3.2, 0.6), bordMat)
+  bordGang.position.set(gevelBinnen + 0.1, 3.45, tunnelZ)
+  bordGang.rotation.y = Math.PI / 2
+  scene.add(bordGang)
+  // Ook buiten, boven de graffitimuur aan de kant van de poort: wie binnenkomt ziet waar het is.
+  const bordBuiten = new THREE.Mesh(new THREE.PlaneGeometry(4.4, 0.825), bordMat)
+  bordBuiten.position.set(K.x1 - 3, K.h + 0.75, K.z0 - 0.2)
+  bordBuiten.rotation.y = Math.PI
+  scene.add(bordBuiten)
   void opt.logo.then((logo) => {
     tekenBord(logo)
     tekenLogo(logo)
   })
-  // Wegwijzer op het plein bij de westpoort.
-  const wijsC = document.createElement('canvas')
-  wijsC.width = 512
-  wijsC.height = 256
-  {
-    const g = wijsC.getContext('2d')!
-    g.fillStyle = '#0b1220'
-    g.fillRect(0, 0, 512, 256)
-    g.fillStyle = thema.primair
-    g.fillRect(0, 0, 512, 10)
-    g.font = '700 46px Inter, system-ui, sans-serif'
-    g.fillStyle = '#ffffff'
-    g.textBaseline = 'middle'
-    g.fillText('↑  🚿 Kleedkamers', 28, 90)
-    g.fillText('↑  🎨 Graffitimuur', 28, 180)
-  }
-  const wijs = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 0.8), new THREE.MeshBasicMaterial({ map: canvasTex(wijsC), toneMapped: false }))
-  wijs.position.set(-53.2, 1.7, -5)
-  wijs.rotation.y = Math.PI / 2
-  doos(0.08, 2.2, 0.08, -53.3, 1.1, -5, staal)
-  scene.add(wijs)
 
   // ---------- de kleedkamer ----------
   // Banken langs de noord- en zuidwand, met een rugplank in clubkleur en shirts aan de haken.
@@ -225,9 +235,9 @@ export function bouwKleedkamer(scene: THREE.Scene, opt: { thema: StadionThema; l
   const banken: THREE.Matrix4[] = []
   const shirts: { x: number; z: number; ry: number; nr: number }[] = []
   const rijen: [number, number, number, number][] = [
-    // z van de bank, z van de wand, richting (1 = zuid), x-bereik
-    [K.z0 + 0.45, K.z0 + 0.14, 1, 0],
-    [K.z1 - 0.45, K.z1 - 0.14, -1, 1],
+    // z van de bank, z van de wand, richting (1 = zuid), x-bereik (1 = korter: plaats voor de ballenkist)
+    [K.z0 + 0.45, K.z0 + 0.14, 1, 1],
+    [K.z1 - 0.45, K.z1 - 0.14, -1, 0],
   ]
   let nr = 1
   for (const [bz, wz, richting, k] of rijen) {
@@ -291,23 +301,23 @@ export function bouwKleedkamer(scene: THREE.Scene, opt: { thema: StadionThema; l
   })
   scene.add(new THREE.Mesh(mergeGeometries(shirtGeos), new THREE.MeshLambertMaterial({ map: shirtTex, transparent: true, alphaTest: 0.5, side: THREE.DoubleSide })))
   // Kist met ballen en een tafel met drinkbussen bij de deur.
-  doos(1.0, 0.5, 0.7, K.x1 - 1.0, 0.25, K.z1 - 1.0, houtMat, true)
+  doos(1.0, 0.5, 0.7, K.x1 - 1.0, 0.25, K.z0 + 1.0, houtMat, true)
   for (let i = 0; i < 6; i++) {
     const bal = new THREE.Mesh(new THREE.SphereGeometry(0.17, 14, 10), new THREE.MeshStandardMaterial({ color: '#fde047', roughness: 0.6 }))
-    bal.position.set(K.x1 - 1.3 + (i % 3) * 0.3, 0.6 + Math.floor(i / 3) * 0.12, K.z1 - 1.1 + (i % 2) * 0.2)
+    bal.position.set(K.x1 - 1.3 + (i % 3) * 0.3, 0.6 + Math.floor(i / 3) * 0.12, K.z0 + 0.9 + (i % 2) * 0.2)
     scene.add(bal)
   }
-  doos(1.4, 0.05, 0.7, K.x1 - 1.0, 0.85, K.z0 + 2.2, houtMat)
-  doos(0.06, 0.82, 0.06, K.x1 - 1.6, 0.42, K.z0 + 2.2, staal)
-  doos(0.06, 0.82, 0.06, K.x1 - 0.4, 0.42, K.z0 + 2.2, staal)
-  obstakels.push({ x0: K.x1 - 1.75, x1: K.x1 - 0.25, z0: K.z0 + 1.8, z1: K.z0 + 2.6 })
+  doos(1.4, 0.05, 0.7, K.x1 - 1.0, 0.85, K.z1 - 2.2, houtMat)
+  doos(0.06, 0.82, 0.06, K.x1 - 1.6, 0.42, K.z1 - 2.2, staal)
+  doos(0.06, 0.82, 0.06, K.x1 - 0.4, 0.42, K.z1 - 2.2, staal)
+  obstakels.push({ x0: K.x1 - 1.75, x1: K.x1 - 0.25, z0: K.z1 - 2.6, z1: K.z1 - 1.8 })
   for (let i = 0; i < 6; i++) {
     const bus = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.24, 10), new THREE.MeshStandardMaterial({ color: i % 2 ? primair : secundair, roughness: 0.3 }))
-    bus.position.set(K.x1 - 1.55 + i * 0.22, 1.0, K.z0 + 2.2)
+    bus.position.set(K.x1 - 1.55 + i * 0.22, 1.0, K.z1 - 2.2)
     scene.add(bus)
   }
   // Het tactiekbord op de tussenwand, met een motto erboven.
-  const BORD = { x: K.px + 0.16, z: -8.4, b: 2.8, h: 1.75, y: 1.75 }
+  const BORD = { x: K.px + 0.16, z: 8.4, b: 2.8, h: 1.75, y: 1.75 }
   const tacC = document.createElement('canvas')
   tacC.width = 1024
   tacC.height = 640
@@ -338,8 +348,34 @@ export function bouwKleedkamer(scene: THREE.Scene, opt: { thema: StadionThema; l
   motto.rotation.y = Math.PI / 2
   scene.add(motto)
 
+  // ---------- de spiegel: een echte weerspiegeling, met lampjes eromheen zoals in een loge ----------
+  const SP = { x: K.x1 - t / 2 - 0.03, z: 13.4, y: 1.55, b: 1.3, h: 1.9 }
+  const pr = Math.min(2, window.devicePixelRatio || 1)
+  const spiegel = new Reflector(new THREE.PlaneGeometry(SP.b, SP.h), {
+    textureWidth: Math.round(360 * pr * (licht ? 0.7 : 1)),
+    textureHeight: Math.round(520 * pr * (licht ? 0.7 : 1)),
+    color: new THREE.Color('#c9d1d9'),
+    clipBias: 0.003,
+  })
+  spiegel.position.set(SP.x, SP.y, SP.z)
+  spiegel.rotation.y = -Math.PI / 2
+  // De spiegel ziet ook jezelf (de figuur op de avatarlaag), de gewone camera niet.
+  spiegel.camera.layers.enable(AVATAR_LAAG)
+  spiegel.visible = false
+  scene.add(spiegel)
+  doos(0.06, SP.h + 0.24, SP.b + 0.24, SP.x + 0.05, SP.y, SP.z, clubMat)
+  for (let k = 0; k < 6; k++) {
+    for (const sz of [-1, 1]) {
+      const lampje = new THREE.Mesh(new THREE.SphereGeometry(0.045, 10, 8), lichtMat)
+      lampje.position.set(SP.x - 0.05, SP.y - SP.h / 2 + 0.15 + k * ((SP.h - 0.3) / 5), SP.z + sz * (SP.b / 2 + 0.06))
+      scene.add(lampje)
+    }
+  }
+  doos(0.35, 0.04, SP.b + 0.1, SP.x - 0.17, 0.95, SP.z, houtMat)
+  obstakels.push({ x0: SP.x - 0.4, x1: K.x1, z0: SP.z - SP.b / 2 - 0.1, z1: SP.z + SP.b / 2 + 0.1 })
+
   // ---------- de douches ----------
-  const douchePlekken = [-16.4, -14.4, -12.4, -10.4, -8.4]
+  const douchePlekken = [8.4, 10.4, 12.4, 14.4, 16.4]
   const waterTex = (() => {
     const c = document.createElement('canvas')
     c.width = 16
@@ -394,14 +430,15 @@ export function bouwKleedkamer(scene: THREE.Scene, opt: { thema: StadionThema; l
   // Handdoeken aan de tussenwand in de douche.
   for (let k = 0; k < 4; k++) {
     const hd = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.7, 0.45), new THREE.MeshLambertMaterial({ color: k % 2 ? primair : '#f8fafc' }))
-    hd.position.set(K.px - 0.18, 1.3, -16.8 + k * 0.6)
+    hd.position.set(K.px - 0.18, 1.3, 16.8 - k * 0.6)
     scene.add(hd)
   }
-  doos(0.06, 0.04, 2.6, K.px - 0.16, 1.68, -15.9, staal)
+  doos(0.06, 0.04, 2.6, K.px - 0.16, 1.68, 15.9, staal)
 
   // ---------- de graffitimuur ----------
-  // De zuidgevel van het gebouw (18 m) en, als de muur groeit, vrijstaande betonmuren ernaast.
-  const muurZ = K.z1 + t / 2 + 0.012
+  // De noordgevel van het gebouw (18 m) en, als de muur groeit, vrijstaande betonmuren ernaast
+  // (naar het westen). De muur kijkt naar -z: links (u = 0) is de kant van het stadion.
+  const muurZ = K.z0 - t / 2 - 0.012
   let lengte = muurLengte(0)
   let tags: Tag[] = []
   const muurC = document.createElement('canvas')
@@ -418,14 +455,15 @@ export function bouwKleedkamer(scene: THREE.Scene, opt: { thema: StadionThema; l
     muurTex.needsUpdate = true
     if (muurVlak) scene.remove(muurVlak)
     muurVlak = new THREE.Mesh(new THREE.PlaneGeometry(lengte, MUUR_H), muurMat)
-    muurVlak.position.set(K.x0 + lengte / 2, MUUR_H / 2, muurZ)
+    muurVlak.position.set(K.x1 - lengte / 2, MUUR_H / 2, muurZ)
+    muurVlak.rotation.y = Math.PI
     scene.add(muurVlak)
     if (stukken) scene.remove(stukken)
     stukken = null
     const extra = lengte - (K.x1 - K.x0)
     if (extra > 0) {
       stukken = new THREE.Mesh(new THREE.BoxGeometry(extra, MUUR_H + 0.2, 0.3), betonMat)
-      stukken.position.set(K.x1 + extra / 2, (MUUR_H + 0.2) / 2, K.z1)
+      stukken.position.set(K.x0 - extra / 2, (MUUR_H + 0.2) / 2, K.z0)
       scene.add(stukken)
     }
   }
@@ -445,7 +483,7 @@ export function bouwKleedkamer(scene: THREE.Scene, opt: { thema: StadionThema; l
     }
     stap()
   }
-  const muurObst: Rechthoek = { x0: K.x1, x1: K.x1, z0: K.z1 - 0.15, z1: K.z1 + 0.15 }
+  const muurObst: Rechthoek = { x0: K.x0, x1: K.x0, z0: K.z0 - 0.15, z1: K.z0 + 0.15 }
   obstakels.push(muurObst)
 
   return {
@@ -467,13 +505,17 @@ export function bouwKleedkamer(scene: THREE.Scene, opt: { thema: StadionThema; l
       if (groei) {
         lengte = nieuweLengte
         bouwMuur()
-        muurObst.x1 = K.x0 + lengte
+        muurObst.x0 = K.x1 - lengte
       } else if (!alleenErbij) {
         tekenMuurBasis(muurC.getContext('2d')!, lengte, PPM, { naam: thema.naam, primair: thema.primair, secundair: thema.secundair })
       }
       tekenTags(groei ? 0 : vanaf)
     },
     bijBord: (x, z) => x > K.px && x < K.px + 2.6 && Math.abs(z - BORD.z) < 2.2,
-    bijMuur: (x, z) => x > K.x0 - 0.5 && x < K.x0 + lengte + 0.5 && z > K.z1 && z < K.z1 + 4.5,
+    binnen: (x, z) => x > K.x0 && x < K.x1 && z > K.z0 && z < K.z1,
+    spiegel(aan) {
+      spiegel.visible = aan
+    },
+    bijMuur: (x, z) => x > K.x1 - lengte - 0.5 && x < K.x1 + 0.5 && z < K.z0 && z > K.z0 - 4.5,
   }
 }

@@ -1,32 +1,39 @@
 import { describe, expect, it } from 'vitest'
 
-import { deurOp, liftStap, nieuweLift, type Lift, type LiftSpeler } from '@/lib/virtueel-lift'
+import { deurOp, liftStap, liftY, nieuweLift, verdiepBijY, VERDIEPEN, type Lift, type LiftSpeler } from '@/lib/virtueel-lift'
 
-// De lift in Virtueel krachtbal: deuren, oproepen, meerijden, uitstappen.
+// De lift in Virtueel krachtbal: deuren, oproepen, een verdiep kiezen, meerijden.
 
 /** Laat de lift `s` seconden lopen met een vaste speler; geeft de lift en eventuele aankomst terug. */
 function loop(l: Lift, s: number, speler: LiftSpeler) {
-  // Zoals in de viewer: wie meerijdt, staat bij aankomst op het nieuwe verdiep.
+  // Zoals in de viewer: wie meerijdt, staat bij aankomst op het nieuwe verdiep, en een aanvaarde
+  // keuze wordt gewist.
   const sp = { ...speler }
-  let aangekomen: 0 | 1 | null = null
-  let hoogste = 0
+  let aangekomen: number | null = null
+  let hoogste = -Infinity
+  let laagste = Infinity
   for (let t = 0; t < s; t += 0.05) {
     const r = liftStap(l, 0.05, sp)
     l = r.lift
+    if (r.keuzeGebruikt) sp.keuze = null
     if (r.aangekomen != null) {
       aangekomen = r.aangekomen
       sp.verdiep = r.aangekomen
     }
-    if (r.spelerHoogte != null) hoogste = Math.max(hoogste, r.spelerHoogte)
+    if (r.spelerHoogte != null) {
+      hoogste = Math.max(hoogste, r.spelerHoogte)
+      laagste = Math.min(laagste, r.spelerHoogte)
+    }
   }
-  return { l, aangekomen, hoogste }
+  return { l, aangekomen, hoogste, laagste, sp }
 }
 
-const weg: LiftSpeler = { verdiep: 0, inKooi: false, bijDeur: false }
+const weg: LiftSpeler = { verdiep: 0, inKooi: false, bijDeur: false, keuze: null }
+const binnen = (verdiep: number, keuze: number | null = null): LiftSpeler => ({ verdiep, inKooi: true, bijDeur: false, keuze })
 
 describe('lift', () => {
   it('opent de deuren als je ervoor staat, en sluit ze weer als je weggaat', () => {
-    let { l } = loop(nieuweLift(), 1.5, { verdiep: 0, inKooi: false, bijDeur: true })
+    let { l } = loop(nieuweLift(), 1.5, { verdiep: 0, inKooi: false, bijDeur: true, keuze: null })
     expect(l.toestand).toBe('open')
     expect(deurOp(l, 0)).toBe(1)
     expect(deurOp(l, 1)).toBe(0)
@@ -34,42 +41,53 @@ describe('lift', () => {
     expect(l.toestand).toBe('dicht')
   })
 
-  it('brengt je naar boven als je instapt, en opent daar de deuren', () => {
-    let { l } = loop(nieuweLift(), 1.5, { verdiep: 0, inKooi: false, bijDeur: true })
-    const rit = loop(l, 7, { verdiep: 0, inKooi: true, bijDeur: false })
-    expect(rit.aangekomen).toBe(1)
-    expect(rit.hoogste).toBe(1)
-    l = rit.l
-    expect(l.hoogte).toBe(1)
-    expect(deurOp(l, 1)).toBe(1)
+  it('blijft open staan zolang je in de kooi staat zonder te kiezen', () => {
+    let { l } = loop(nieuweLift(), 1.5, { verdiep: 0, inKooi: false, bijDeur: true, keuze: null })
+    ;({ l } = loop(l, 10, binnen(0)))
+    expect(l.toestand).toBe('open')
+    expect(l.hoogte).toBe(0)
   })
 
-  it('rijdt niet opnieuw zolang je na aankomst blijft staan; wel na uit- en opnieuw instappen', () => {
-    let { l } = loop(nieuweLift(), 1.5, { verdiep: 0, inKooi: false, bijDeur: true })
-    ;({ l } = loop(l, 7, { verdiep: 0, inKooi: true, bijDeur: false }))
-    // Aangekomen op 1: blijven staan in de kooi.
-    const blijf = loop(l, 6, { verdiep: 1, inKooi: true, bijDeur: false })
-    expect(blijf.aangekomen).toBeNull()
-    expect(blijf.l.hoogte).toBe(1)
-    // Even uitstappen, dan weer in: terug naar beneden.
-    ;({ l } = loop(blijf.l, 0.3, { verdiep: 1, inKooi: false, bijDeur: true }))
-    const terug = loop(l, 7, { verdiep: 1, inKooi: true, bijDeur: false })
-    expect(terug.aangekomen).toBe(0)
-    expect(terug.l.hoogte).toBe(0)
+  it('brengt je naar het verdiep dat je kiest, ook het dak en de kelder', () => {
+    let { l } = loop(nieuweLift(), 1.5, { verdiep: 0, inKooi: false, bijDeur: true, keuze: null })
+    const naarDak = loop(l, 12, binnen(0, 2))
+    expect(naarDak.aangekomen).toBe(2)
+    expect(naarDak.hoogste).toBe(2)
+    l = naarDak.l
+    expect(deurOp(l, 2)).toBe(1)
+    const naarKelder = loop(l, 14, binnen(2, -1))
+    expect(naarKelder.aangekomen).toBe(-1)
+    expect(naarKelder.laagste).toBe(-1)
+    expect(deurOp(naarKelder.l, -1)).toBe(1)
   })
 
-  it('komt naar je toe als je haar oproept op het andere verdiep', () => {
-    const { l, aangekomen } = loop(nieuweLift(), 6, { verdiep: 1, inKooi: false, bijDeur: true })
+  it('negeert een keuze voor het verdiep waar je al bent', () => {
+    let { l } = loop(nieuweLift(), 1.5, { verdiep: 0, inKooi: false, bijDeur: true, keuze: null })
+    const r = loop(l, 6, binnen(0, 0))
+    expect(r.aangekomen).toBeNull()
+    expect(r.l.toestand).toBe('open')
+  })
+
+  it('komt naar je toe als je haar oproept op een ander verdiep', () => {
+    const { l, aangekomen } = loop(nieuweLift(), 8, { verdiep: -1, inKooi: false, bijDeur: true, keuze: null })
     expect(aangekomen).toBeNull()
-    expect(l.hoogte).toBe(1)
-    expect(deurOp(l, 1)).toBe(1)
+    expect(l.hoogte).toBe(-1)
+    expect(deurOp(l, -1)).toBe(1)
   })
 
   it('gaat weer open als iemand instapt terwijl de deuren sluiten', () => {
-    let { l } = loop(nieuweLift(), 1.5, { verdiep: 0, inKooi: false, bijDeur: true })
+    let { l } = loop(nieuweLift(), 1.5, { verdiep: 0, inKooi: false, bijDeur: true, keuze: null })
     ;({ l } = loop(l, 4.3, weg))
     expect(l.toestand).toBe('sluiten')
-    ;({ l } = loop(l, 0.2, { verdiep: 0, inKooi: false, bijDeur: true }))
+    ;({ l } = loop(l, 0.2, { verdiep: 0, inKooi: false, bijDeur: true, keuze: null }))
     expect(['openen', 'open']).toContain(l.toestand)
+  })
+
+  it('rekent liftstanden om naar vloerhoogtes en terug', () => {
+    for (const v of VERDIEPEN) {
+      expect(liftY(v.nr)).toBeCloseTo(v.y)
+      expect(verdiepBijY(v.y)).toBe(v.nr)
+    }
+    expect(liftY(0.5)).toBeCloseTo((VERDIEPEN[1].y + VERDIEPEN[2].y) / 2)
   })
 })
