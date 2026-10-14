@@ -1,7 +1,8 @@
 import * as THREE from 'three'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 
-import { GEVEL, inPoort, lichtshow, type Rechthoek, type StadionThema } from '@/lib/virtueel'
+import { GEVEL, inPoort, lichtshow, poortOp, type Rechthoek, type StadionThema } from '@/lib/virtueel'
+import { bijSpelersgebouwen } from './kleedkamer'
 import { canvasTex, rnd, rondLogo } from './stadion'
 
 // De buitenkant van het stadion: zodat wie rondkijkt of rondwandelt het gevoel heeft dat dit zíjn
@@ -175,7 +176,8 @@ export function bouwOmgeving(scene: THREE.Scene, opt: { thema: StadionThema; lic
     const mx = (a.x + b.x) / 2
     const mz = (a.z + b.z) / 2
     // In een poort enkel de latei erboven; elders de volle muur.
-    muren.push(muurStuk(a, b, inPoort(GEVEL, mx + a.nx * 0.1, mz + a.nz * 0.1) ? POORT_H : 0, H + 0.4, 1.2))
+    const poort = poortOp(GEVEL, mx + a.nx * 0.1, mz + a.nz * 0.1)
+    muren.push(muurStuk(a, b, poort ? (poort.hoogte ?? POORT_H) : 0, H + 0.4, 1.2))
   }
   const gevel = new THREE.Mesh(mergeGeometries(muren), gevelMat)
   scene.add(gevel)
@@ -593,7 +595,7 @@ export function bouwOmgeving(scene: THREE.Scene, opt: { thema: StadionThema; lic
     const z = p.z + p.nz * 12
     // Niet midden in de toegang, en niet tegen de glazen traptorens in de hoeken.
     const bijToren = Math.abs(Math.abs(p.nx) - Math.abs(p.nz)) < 0.5
-    if (!(z > B && Math.abs(x) < 14) && !bijToren) lampPos.push([x, z])
+    if (!(z > B && Math.abs(x) < 14) && !bijToren && !bijSpelersgebouwen(x, z)) lampPos.push([x, z])
   }
   for (let x = -140; x <= 140; x += 20) lampPos.push([x, B + 35.5])
   const palen = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.08, 0.12, 6, 6).translate(0, 3, 0), new THREE.MeshLambertMaterial({ color: '#374151' }), lampPos.length)
@@ -666,9 +668,9 @@ export function bouwOmgeving(scene: THREE.Scene, opt: { thema: StadionThema; lic
   hoofden.frustumCulled = false
   scene.add(lijven, hoofden)
 
-  // ---------- clubhuis (west) ----------
+  // ---------- clubhuis (west, ten noorden van de westpoort; ten zuiden staan de kleedkamers) ----------
   const chX = -A - 22
-  const chZ = 14
+  const chZ = -14
   const clubhuis = new THREE.Mesh(new THREE.BoxGeometry(20, 5, 11), new THREE.MeshLambertMaterial({ color: '#d6d3d1' }))
   clubhuis.position.set(chX, 2.5, chZ)
   const dak = new THREE.Mesh(new THREE.BoxGeometry(21, 0.5, 12), gevelMat)
@@ -737,8 +739,8 @@ export function bouwOmgeving(scene: THREE.Scene, opt: { thema: StadionThema; lic
     const x = Math.cos(a) * r
     const z = Math.sin(a) * r * 0.8
     if (Math.abs(z - (B + 30)) < 8) continue
-    // Geen bomen op de kleedkamer en de graffitimuur (kleedkamer.ts) ten westen van het stadion.
-    if (x > -114 && x < -54 && z > -30 && z < 6) continue
+    // Geen bomen op de kleedkamers, de graffitimuur en het clubhuis ten westen van het stadion.
+    if (x > -114 && x < -54 && z > -30 && z < 30) continue
     boomPos.push([x, z, 0.8 + toeval() * 0.7])
   }
   for (let x = -130; x <= 130; x += 13) boomPos.push([x, B + 41, 0.9])

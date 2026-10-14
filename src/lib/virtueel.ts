@@ -414,7 +414,7 @@ export function bezitTijdlijn(sporen: Spoor[]): (tijd: number) => [number, numbe
 // ---------- de buitenkant: gevel, poorten en rondlopen ----------
 
 /** Een zijde van de gevel met een opening: `as` is de zijde (z+ = de hoofdingang), van/tot langs die zijde. */
-export type Poort = { zijde: 'z+' | 'z-' | 'x+' | 'x-'; van: number; tot: number }
+export type Poort = { zijde: 'z+' | 'z-' | 'x+' | 'x-'; van: number; tot: number; /** Hoogte van de opening (standaard die van een poort). */ hoogte?: number }
 /** De stadiongevel: een rechthoek met afgeronde hoeken (halve lengte A, halve breedte B, hoekstraal R). */
 export type Gevel = { A: number; B: number; R: number; hoogte: number; poorten: Poort[] }
 
@@ -428,6 +428,8 @@ export const GEVEL: Gevel = {
     { zijde: 'z-', van: -3, tot: 3 },
     { zijde: 'x+', van: -3, tot: 3 },
     { zijde: 'x-', van: -3, tot: 3 },
+    // De spelersdeur in de westgang: van de gang rechtstreeks de kleedkamers in.
+    { zijde: 'x-', van: 9, tot: 11, hoogte: 2.7 },
   ],
 }
 
@@ -438,14 +440,19 @@ export function gevelAfstand(g: Gevel, x: number, z: number): number {
   return Math.hypot(Math.max(qx, 0), Math.max(qz, 0)) + Math.min(Math.max(qx, qz), 0) - g.R
 }
 
-/** Staat dit punt in een poortopening? */
-export function inPoort(g: Gevel, x: number, z: number): boolean {
-  return g.poorten.some((p) => {
+/** De poortopening op dit punt (of undefined). */
+export function poortOp(g: Gevel, x: number, z: number): Poort | undefined {
+  return g.poorten.find((p) => {
     if (p.zijde === 'z+') return z > g.B - g.R && x >= p.van && x <= p.tot
     if (p.zijde === 'z-') return z < -(g.B - g.R) && x >= p.van && x <= p.tot
     if (p.zijde === 'x+') return x > g.A - g.R && z >= p.van && z <= p.tot
     return x < -(g.A - g.R) && z >= p.van && z <= p.tot
   })
+}
+
+/** Staat dit punt in een poortopening? */
+export function inPoort(g: Gevel, x: number, z: number): boolean {
+  return poortOp(g, x, z) != null
 }
 
 /** Dikte van de gevelmuur waar je niet door kan (halve breedte). */
@@ -454,6 +461,15 @@ const MUUR = 0.7
 export const WERELD_STRAAL = 150
 
 export type Rechthoek = { x0: number; x1: number; z0: number; z1: number }
+
+/**
+ * Binnen vloeren (de kelder, het dak): je mag staan waar een vloervlak is (met `straal` marge tot de
+ * rand) en niet in een meubel. Vloervlakken mogen overlappen: zo maak je doorgangen.
+ */
+export function opVloer(vloeren: Rechthoek[], meubels: Rechthoek[], x: number, z: number, straal = 0.35): boolean {
+  const op = vloeren.some((v) => x > v.x0 + straal && x < v.x1 - straal && z > v.z0 + straal && z < v.z1 - straal)
+  return op && !meubels.some((o) => x > o.x0 - straal && x < o.x1 + straal && z > o.z0 - straal && z < o.z1 + straal)
+}
 
 /** Mag een wandelaar (straal ~0.35 m) op deze plek staan? */
 export function vrij(g: Gevel, obstakels: Rechthoek[], x: number, z: number, straal = 0.35): boolean {
@@ -464,9 +480,14 @@ export function vrij(g: Gevel, obstakels: Rechthoek[], x: number, z: number, str
 
 /** Eén stap van een wandelaar: lukt het niet rechtdoor, dan schuift hij langs de muur (enkel x of z). */
 export function stap(g: Gevel, obstakels: Rechthoek[], van: { x: number; z: number }, naar: { x: number; z: number }): { x: number; z: number } {
-  if (vrij(g, obstakels, naar.x, naar.z)) return naar
-  if (vrij(g, obstakels, naar.x, van.z)) return { x: naar.x, z: van.z }
-  if (vrij(g, obstakels, van.x, naar.z)) return { x: van.x, z: naar.z }
+  return stapMet((x, z) => vrij(g, obstakels, x, z), van, naar)
+}
+
+/** Zoals `stap`, maar met een eigen regel waar je mag staan (kelder, dak). */
+export function stapMet(mag: (x: number, z: number) => boolean, van: { x: number; z: number }, naar: { x: number; z: number }): { x: number; z: number } {
+  if (mag(naar.x, naar.z)) return naar
+  if (mag(naar.x, van.z)) return { x: naar.x, z: van.z }
+  if (mag(van.x, naar.z)) return { x: van.x, z: naar.z }
   return van
 }
 

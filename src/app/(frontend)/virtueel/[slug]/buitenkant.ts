@@ -3,6 +3,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 
 import { GEVEL, lichtshow, type Rechthoek, type StadionThema } from '@/lib/virtueel'
 import { gevelOmtrek } from './omgeving'
+import { bijSpelersgebouwen } from './kleedkamer'
 import { canvasTex, rnd } from './stadion'
 
 // De buitenkant afgewerkt tot in de details, bovenop de gevel uit omgeving.ts:
@@ -222,7 +223,7 @@ export function bouwBuitenkant(
   scene.add(druppelMesh)
 
   // ---------- plein: verlichte paaltjes, banken en plantenbakken ----------
-  const paaltjePunten = gevelOmtrek(5).filter((p) => !(p.nz > 0.5 && Math.abs(p.x) < 10))
+  const paaltjePunten = gevelOmtrek(5).filter((p) => !(p.nz > 0.5 && Math.abs(p.x) < 10) && !bijSpelersgebouwen(p.x + p.nx * 7.5, p.z + p.nz * 7.5))
   const paaltjes = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.09, 0.11, 0.9, 10).translate(0, 0.45, 0), donkerMetaal, paaltjePunten.length)
   const kapjes = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.095, 0.095, 0.12, 10).translate(0, 0.84, 0), lichtWit, paaltjePunten.length)
   const paalGloedC = document.createElement('canvas')

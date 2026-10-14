@@ -71,7 +71,7 @@
 .vk-scene.modus-lopen .vk-canvas:active, .vk-scene.modus-buiten .vk-canvas:active, .vk-scene.modus-zweven .vk-canvas:active { cursor: grabbing; }
 .vk-laden { position: absolute; inset: 0; z-index: 3; display: grid; place-items: center; color: var(--dim); font-size: 0.9rem; background: #070d16; }
 
-.vk-hud { position: absolute; left: 10px; right: 54px; top: 10px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; pointer-events: none; }
+.vk-hud { position: absolute; left: 10px; right: 140px; top: 10px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; pointer-events: none; }
 .vk-modi {
   display: flex; gap: 2px; padding: 3px; border-radius: 999px; pointer-events: auto;
   background: rgba(8, 14, 22, 0.78); border: 1px solid rgba(255, 255, 255, 0.1); backdrop-filter: blur(6px);
@@ -325,3 +325,34 @@
 .vk-tactiek-tools { padding: 8px 10px; padding-bottom: max(8px, env(safe-area-inset-bottom)); background: rgba(8, 14, 22, 0.97); }
 .vk-stift { width: 18px; height: 18px; border-radius: 50%; display: inline-block; box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.5); }
 @media (prefers-reduced-motion: reduce) { .vk-actie, .vk-graf-bus.schud, .vk-graf, .vk-tactiek { animation: none; } }
+
+/* ---------- de lift: kies je verdiep (lift.ts / lib/virtueel-lift.ts) ---------- */
+.vk-lift {
+  position: absolute; right: 12px; top: 56px; z-index: 6; width: min(300px, calc(100% - 24px)); padding: 10px; border-radius: 16px;
+  background: linear-gradient(180deg, rgba(30, 35, 44, 0.94), rgba(12, 15, 21, 0.94)); border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.08); color: #e2e8f0;
+}
+.vk-lift > b { display: block; margin: 2px 4px 8px; font-size: 0.9rem; color: #fff; }
+.vk-lift-knoppen { display: flex; flex-direction: column; gap: 6px; }
+.vk-lift-knoppen button {
+  display: flex; align-items: center; gap: 10px; width: 100%; padding: 7px 9px; border-radius: 12px; cursor: pointer; text-align: left; font: inherit; color: inherit;
+  background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); touch-action: manipulation;
+}
+.vk-lift-knoppen button:hover:not(:disabled) { border-color: var(--accent); background: rgba(255, 255, 255, 0.09); }
+.vk-lift-knoppen .nr {
+  flex: none; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; font-weight: 900; font-size: 0.95rem; color: #111827;
+  background: radial-gradient(circle at 35% 30%, #ffffff, #c7ccd3 70%); box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.2), 0 0 0 2px rgba(255, 255, 255, 0.15);
+}
+.vk-lift-knoppen .tekst { display: flex; flex-direction: column; min-width: 0; }
+.vk-lift-knoppen .tekst b { font-size: 0.85rem; color: #fff; }
+.vk-lift-knoppen .tekst small { font-size: 0.7rem; color: #94a3b8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.vk-lift-knoppen button.gekozen .nr { background: radial-gradient(circle at 35% 30%, #fff7d6, #fbbf24 70%); box-shadow: 0 0 14px rgba(251, 191, 36, 0.8); }
+.vk-lift-knoppen button.hier { opacity: 0.55; }
+.vk-lift-knoppen button:disabled { cursor: default; }
+.vk:fullscreen .vk-lift, .vk.vol .vk-lift { top: calc(max(10px, env(safe-area-inset-top)) + 46px); }
+@media (max-width: 520px) { .vk-lift { left: 12px; right: 12px; width: auto; top: auto; bottom: 140px; } }
+.vk-huis {
+  position: absolute; right: 94px; top: 10px; width: 36px; height: 36px; border-radius: 10px; cursor: pointer; font-size: 0.95rem;
+  background: rgba(8, 14, 22, 0.78); border: 1px solid rgba(255, 255, 255, 0.12); color: #e2e8f0;
+}
+.vk:fullscreen .vk-huis, .vk.vol .vk-huis { top: max(10px, env(safe-area-inset-top)); right: calc(max(10px, env(safe-area-inset-right)) + 84px); }
