@@ -13,61 +13,66 @@
 .hub-empty { color: var(--dim); margin: 0; font-size: 0.92rem; }
 .hub-empty a { color: var(--accent); font-weight: 700; }
 
-.hub-club { border-radius: 16px; padding: 16px; border: 1px solid color-mix(in srgb, #fff 8%, var(--line)); background: var(--panel-grad, var(--panel)); box-shadow: var(--card-shadow); }
-.hub-club-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-.hub-club-name { font-size: 1.2rem; font-weight: 900; color: var(--accent); text-decoration: none; }
-/* Enige actieknop op de hub die er als knop uitziet (niet als link): "Clubbeheer" leidt naar een
-   ander scherm dan wat de rest van deze sectie toont (het eigen /club-dashboard, niet het publieke
-   clubprofiel), dus verdient meer gewicht dan een gewone tekstlink. */
+.hub-club { border-radius: 14px; padding: 4px 14px 10px; border: 1px solid color-mix(in srgb, #fff 8%, var(--line)); background: var(--panel-grad, var(--panel)); box-shadow: var(--card-shadow); }
+.hub-club-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0 8px; }
+.hub-club-name { display: inline-flex; align-items: center; gap: 10px; min-width: 0; font-size: 1.05rem; font-weight: 800; color: var(--txt); text-decoration: none; }
+.hub-club-name > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hub-club-name:hover > span:last-child { color: var(--accent); }
+/* Enige actieknop in dit blok: leidt naar een ander scherm (het eigen /club-dashboard), dus een
+   kleine knop i.p.v. een tekstlink. */
 .hub-club-manage {
-  font-size: 0.82rem; font-weight: 800; text-decoration: none; color: var(--bg);
-  background: var(--grad-accent, var(--accent)); padding: 7px 14px; border-radius: 999px;
-  transition: filter 0.12s ease;
+  flex-shrink: 0; font-size: 0.75rem; font-weight: 700; text-decoration: none; color: var(--txt);
+  border: 1px solid color-mix(in srgb, #fff 14%, var(--line)); padding: 5px 11px; border-radius: 999px;
+  transition: border-color 0.12s ease, color 0.12s ease;
 }
-.hub-club-manage:hover { filter: brightness(1.08); }
-.hub-club-rows { display: flex; flex-direction: column; gap: 8px; }
-.hub-club > .hub-club-rows { margin-top: 12px; }
+.hub-club-manage:hover { border-color: var(--accent); color: var(--accent); }
 
-/* Meerdere ploegen (coach met myTeams): één sub-groep per ploeg, met haar naam als kopje —
-   voorkomt dat de wedstrijden van verschillende ploegen door elkaar lopen. */
-.hub-team-groups { display: flex; flex-direction: column; gap: 16px; margin-top: 12px; }
-.hub-team-group { display: flex; flex-direction: column; gap: 8px; }
-.hub-team-label { font-size: 0.8rem; font-weight: 800; color: var(--txt); }
+/* Per ploeg een kopje (naam + reeks) met daaronder haar wedstrijden als lijst. */
+.hub-ploeg { border-top: 1px solid color-mix(in srgb, #fff 7%, var(--line)); padding-top: 8px; margin-top: 2px; }
+.hub-ploeg + .hub-ploeg { margin-top: 6px; }
+.hub-ploeg-kop { display: flex; align-items: baseline; gap: 8px; min-width: 0; padding: 2px 0 4px; }
+.hub-ploeg-naam { font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; color: var(--dim-strong); white-space: nowrap; }
+.hub-ploeg-reeks { font-size: 0.72rem; color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hub-ploeg-leeg { font-size: 0.82rem; padding: 4px 0 6px; }
 
-/* Rij als kaart, gestapeld i.p.v. alles-op-één-lijn: op smalle schermen duwde het vaste label
-   (bv. "VOLGENDE") lange ploegnamen anders in een té smalle kolom, waardoor de naam in losse
-   letters/woorden onder elkaar uiteenviel. Label + datum/score bovenaan als context, de ploegnamen
-   daaronder als volwaardige, normaal wrappende tekstregel. */
-.hub-club-row {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 12px 14px;
-  border-radius: 12px;
-  text-decoration: none;
-  color: inherit;
-  background: color-mix(in srgb, #fff 3%, transparent);
-  border: 1px solid color-mix(in srgb, #fff 6%, var(--line));
-  transition: border-color 0.12s ease, background 0.12s ease;
+/* Wedstrijdregel (HubWedstrijd.tsx): wanneer | ploegen onder elkaar met score | pijl. */
+.hubw {
+  display: grid; grid-template-columns: 52px minmax(0, 1fr) 12px; align-items: center; gap: 10px;
+  padding: 7px 8px; margin: 0 -8px; border-radius: 10px; text-decoration: none; color: inherit;
+  transition: background 0.12s ease;
 }
-.hub-club-row:hover { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); background: color-mix(in srgb, var(--accent) 6%, transparent); }
-.hub-club-row:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
-.hub-club-row-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.hub-club-lbl {
-  display: inline-flex;
-  align-items: center;
-  font-size: 0.66rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 14%, transparent);
-  padding: 3px 9px;
-  border-radius: 999px;
+.hubw:hover { background: color-mix(in srgb, var(--accent) 7%, transparent); }
+.hubw:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.hubw + .hubw { border-top: 1px solid color-mix(in srgb, #fff 5%, var(--line)); border-radius: 0 0 10px 10px; }
+
+.hubw-wanneer { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; line-height: 1.15; }
+.hubw-dag { font-size: 0.7rem; font-weight: 700; color: var(--dim-strong); text-transform: capitalize; white-space: nowrap; }
+.hubw-uur { font-size: 0.86rem; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--txt); }
+.hubw-datum { font-size: 0.7rem; color: var(--dim); font-variant-numeric: tabular-nums; }
+.hubw-uitslag {
+  display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 6px;
+  font-size: 0.72rem; font-weight: 900; color: #fff;
 }
-.hub-club-teams { font-weight: 700; font-size: 0.98rem; line-height: 1.35; word-break: break-word; }
-.hub-club-date { font-size: 0.78rem; color: var(--dim); white-space: nowrap; flex-shrink: 0; }
-.hub-club-score { font-weight: 900; font-variant-numeric: tabular-nums; color: var(--accent); font-size: 0.95rem; white-space: nowrap; flex-shrink: 0; }
+.hubw-uitslag.u-W { background: #16a34a; }
+.hubw-uitslag.u-G { background: #64748b; }
+.hubw-uitslag.u-V { background: #dc2626; }
+.hubw-live {
+  display: inline-flex; align-items: center; gap: 5px; font-size: 0.68rem; font-weight: 900;
+  text-transform: uppercase; letter-spacing: 0.06em; color: #ef4444;
+}
+.hubw-live::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: currentColor; animation: hubw-puls 1.4s ease-in-out infinite; }
+@keyframes hubw-puls { 50% { opacity: 0.3; } }
+
+.hubw-ploegen { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.hubw-ploeg { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 0.88rem; font-weight: 500; color: var(--txt); }
+.hubw-ploeg.eigen { font-weight: 800; }
+.hubw-ploeg.verliest { color: var(--dim); }
+.hubw-naam { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hubw-score { flex-shrink: 0; min-width: 2ch; text-align: right; font-weight: 800; font-variant-numeric: tabular-nums; }
+.hubw-pijl { color: var(--dim); font-size: 1.1rem; justify-self: end; }
+.hubw:hover .hubw-pijl { color: var(--accent); }
+
+@media (prefers-reduced-motion: reduce) { .hubw-live::before { animation: none; } }
 
 .hub-role-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
 .hub-role-card {
