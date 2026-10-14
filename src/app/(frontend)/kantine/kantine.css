@@ -586,7 +586,9 @@
   position: relative;
 }
 .kt-dag-overzicht,
+.kt-dag-cijfers,
 .kt-dag-spot,
+.kt-dag-tribune,
 .kt-dag-foto {
   flex: 1 1 auto;
   min-height: 0;
@@ -716,7 +718,7 @@
   overflow-wrap: anywhere;
 }
 .kt-dag-spot-score {
-  font-size: clamp(3rem, 15vmin, 11rem);
+  font-size: clamp(3rem, 12vmin, 9rem);
   font-weight: 900;
   font-variant-numeric: tabular-nums;
   line-height: 1;
@@ -776,11 +778,266 @@
   opacity: 0;
   pointer-events: none;
 }
+/* ── Golf: het scoreverloop van één wedstrijd ── */
+.kt-golf {
+  display: block;
+  width: 100%;
+  height: clamp(28px, 5vmin, 60px);
+  overflow: visible;
+}
+.kt-golf.groot {
+  height: clamp(70px, 15vmin, 190px);
+}
+.kt-golf-nul {
+  stroke: rgba(255, 255, 255, 0.28);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+.kt-golf-rust {
+  stroke: rgba(255, 255, 255, 0.18);
+  stroke-width: 1;
+  stroke-dasharray: 4 6;
+  vector-effect: non-scaling-stroke;
+}
+.kt-golf-vlak {
+  animation: kt-golf-vlak 1.4s 0.6s var(--ease-out, ease-out) both;
+}
+.kt-golf-lijn {
+  fill: none;
+  stroke: #ffffff;
+  stroke-width: 3;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+  stroke-dasharray: 1;
+  /* De lijn tekent zich uit van aftrap tot eindsignaal. */
+  animation: kt-golf-teken 2.4s 0.3s var(--ease-soft, ease-in-out) both;
+}
+@keyframes kt-golf-teken {
+  from { stroke-dashoffset: 1; }
+  to { stroke-dashoffset: 0; }
+}
+@keyframes kt-golf-vlak {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.kt-dag-kaart .kt-golf {
+  width: 80%;
+}
+.kt-dag-spot-golf {
+  width: min(100%, 1200px);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.kt-golf-legende {
+  display: flex;
+  justify-content: space-between;
+  gap: 1em;
+  font-size: clamp(0.75rem, 1.7vmin, 1.1rem);
+  font-weight: 800;
+  color: var(--dim);
+}
+
+/* ── Krantenkop, verhaal en chips in de schijnwerper ── */
+.kt-dag-spot-krant {
+  margin: 0;
+  max-width: 28ch;
+  text-align: center;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-style: italic;
+  font-size: clamp(1.4rem, 4.4vmin, 3.4rem);
+  line-height: 1.1;
+  font-weight: 700;
+  color: var(--txt);
+  text-wrap: balance;
+}
+.kt-dag-spot-verhaal {
+  margin: 0;
+  max-width: 60ch;
+  text-align: center;
+  font-size: clamp(0.95rem, 2.3vmin, 1.6rem);
+  line-height: 1.35;
+  color: var(--dim-strong);
+  animation: kt-dag-in 0.6s 1.6s var(--ease-out, ease-out) both;
+}
+.kt-dag-chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.6em;
+  font-size: clamp(0.9rem, 2.2vmin, 1.5rem);
+}
+.kt-dag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  padding: 0.35em 0.9em;
+  border-radius: 999px;
+  font-weight: 800;
+  background: rgba(255, 255, 255, 0.07);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+  animation: kt-dag-pop 0.5s var(--ease-out, ease-out) both;
+}
+@keyframes kt-dag-pop {
+  from { opacity: 0; transform: translateY(0.6em) scale(0.92); }
+  to { opacity: 1; transform: none; }
+}
+
+/* ── De dag in cijfers ── */
+.kt-dag-cijfers {
+  justify-content: center;
+  gap: clamp(14px, 3vmin, 40px);
+}
+.kt-dag-tegels {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: clamp(10px, 2vmin, 26px);
+}
+.kt-dag-tegel {
+  min-width: clamp(120px, 15vmin, 230px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: clamp(10px, 2vmin, 24px) clamp(14px, 2.4vmin, 30px);
+  border-radius: 16px;
+  background: var(--panel-grad, #16181e);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 0 0 1px rgba(255, 255, 255, 0.07);
+  animation: kt-dag-pop 0.5s var(--ease-out, ease-out) both;
+}
+.kt-dag-tegel-getal {
+  font-size: clamp(2.4rem, 9vmin, 6.5rem);
+  font-weight: 900;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  background: var(--grad-accent, linear-gradient(135deg, #aed4ff, #6fb2ff));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.kt-dag-tegel-label {
+  font-size: clamp(0.85rem, 2vmin, 1.3rem);
+  font-weight: 800;
+  color: var(--dim);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.kt-dag-hoogte {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(10px, 1.8vmin, 22px);
+  width: min(100%, 1500px);
+  margin: 0 auto;
+}
+.kt-dag-hoogtepunt {
+  display: flex;
+  align-items: center;
+  gap: 0.7em;
+  padding: 0.7em 1em;
+  border-radius: 14px;
+  font-size: clamp(0.95rem, 2.3vmin, 1.6rem);
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.09);
+  animation: kt-dag-pop 0.5s var(--ease-out, ease-out) both;
+}
+.kt-dag-hoogtepunt-ico {
+  font-size: 1.8em;
+}
+.kt-dag-hoogtepunt-titel {
+  display: block;
+  font-size: 0.72em;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+}
+.kt-dag-hoogtepunt-tekst {
+  display: block;
+  font-weight: 800;
+}
+
+/* ── Uit de tribune: berichten als tekstballonnen, reacties als tellers ── */
+.kt-dag-tribune {
+  justify-content: center;
+  gap: clamp(12px, 2.4vmin, 30px);
+  padding: 0 clamp(10px, 3vw, 60px);
+}
+.kt-dag-tribune-affiche {
+  color: var(--dim);
+  font-weight: 700;
+}
+.kt-dag-ballonnen {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(8px, 1.6vmin, 18px);
+  width: min(100%, 1400px);
+  margin: 0 auto;
+}
+.kt-dag-ballon {
+  position: relative;
+  align-self: flex-start;
+  max-width: 70%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2em;
+  padding: 0.6em 1em;
+  border-radius: 18px 18px 18px 4px;
+  font-size: clamp(1rem, 2.6vmin, 1.9rem);
+  background: color-mix(in srgb, var(--home) 22%, #121720);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--home) 40%, transparent);
+  animation: kt-dag-pop 0.55s var(--ease-out, ease-out) both;
+}
+.kt-dag-ballon.rechts {
+  align-self: flex-end;
+  border-radius: 18px 18px 4px 18px;
+  background: color-mix(in srgb, var(--away) 22%, #121720);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--away) 40%, transparent);
+}
+.kt-dag-ballon-tekst {
+  font-weight: 700;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+.kt-dag-ballon-naam {
+  font-size: 0.7em;
+  font-weight: 800;
+  color: var(--dim);
+}
+.kt-dag-kudos {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: clamp(14px, 3vmin, 40px);
+  font-size: clamp(1.4rem, 4.4vmin, 3.2rem);
+}
+.kt-dag-kudo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  animation: kt-dag-pop 0.5s 0.4s var(--ease-out, ease-out) both;
+}
+.kt-dag-kudo.kijkers {
+  font-size: 0.7em;
+  color: var(--dim-strong);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .kt-dag-overzicht,
+  .kt-dag-cijfers,
   .kt-dag-spot,
+  .kt-dag-tribune,
   .kt-dag-foto,
-  .kt-dag-kaart {
+  .kt-dag-kaart,
+  .kt-dag-tegel,
+  .kt-dag-hoogtepunt,
+  .kt-dag-chip,
+  .kt-dag-ballon,
+  .kt-dag-kudo,
+  .kt-dag-spot-verhaal,
+  .kt-golf-vlak,
+  .kt-golf-lijn {
     animation: none;
   }
 }

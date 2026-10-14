@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { dagRol, duurVan, FOTO_MS, OVERZICHT_MS, WEDSTRIJD_MS, winnaar } from '@/lib/kantine-dagverloop'
+import { CIJFERS_MS, dagRol, duurVan, FOTO_MS, OVERZICHT_MS, TRIBUNE_MS, WEDSTRIJD_MS, winnaar } from '@/lib/kantine-dagverloop'
 
 // Het dagverloop op het kantinescherm: zodra alles van vandaag gespeeld is, speelt de tv de dag
 // opnieuw af — overzicht, elke wedstrijd in de schijnwerpers, en de foto's van die wedstrijd.
@@ -49,11 +49,27 @@ describe('dagRol', () => {
   })
 })
 
+describe('dagRol — cijfers en tribune', () => {
+  it('zet de dag in cijfers na het overzicht en de tribune achter de wedstrijd, vóór de foto’s', () => {
+    const rol = dagRol([10, 20], [{ id: 1, matchId: 10 }], 0, 2, { cijfers: true, tribune: [10] })
+    expect(rol).toEqual([
+      { soort: 'overzicht' },
+      { soort: 'cijfers' },
+      { soort: 'wedstrijd', matchId: 10 },
+      { soort: 'tribune', matchId: 10 },
+      { soort: 'foto', fotoId: 1, matchId: 10 },
+      { soort: 'wedstrijd', matchId: 20 },
+    ])
+  })
+})
+
 describe('duurVan', () => {
   it('geeft het overzicht het langst, een foto het kortst', () => {
     expect(duurVan({ soort: 'overzicht' })).toBe(OVERZICHT_MS)
     expect(duurVan({ soort: 'wedstrijd', matchId: 1 })).toBe(WEDSTRIJD_MS)
     expect(duurVan({ soort: 'foto', fotoId: 1, matchId: 1 })).toBe(FOTO_MS)
+    expect(duurVan({ soort: 'cijfers' })).toBe(CIJFERS_MS)
+    expect(duurVan({ soort: 'tribune', matchId: 1 })).toBe(TRIBUNE_MS)
     expect(OVERZICHT_MS).toBeGreaterThan(WEDSTRIJD_MS)
   })
 })
