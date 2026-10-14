@@ -15,6 +15,7 @@ import { komendVandaag, schermVenster, weekendUitslagen } from '@/lib/kantine-se
 import type { ClubColors } from '@/lib/club-colors'
 import { useLiveStream } from '@/lib/use-live-stream'
 import { KomendTile, Tile, type KantineMatch } from './KantineBoard'
+import { KantineDagverloop } from './KantineDagverloop'
 import { GoalCelebrationOverlay, PhotoCelebration, vieringDuur, type KantineFotoInstant, type Viering } from './KantineCelebration'
 
 /** Clubstijl van de eigenaar van dit scherm: de tv van de club hoort eruit te zien als de club. */
@@ -295,7 +296,9 @@ export function KantineScreen({
   // Alles van vandaag gespeeld: één regel bovenaan zegt dat de dag erop zit, zodat een scherm met
   // enkel nog uitslagen niet lijkt te wachten op iets dat niet meer komt. Enkel de wedstrijden van
   // VANDAAG tellen: de uitslagen van gisteren staan ook in de feed (voor de balk onderaan).
-  const vandaag = actueel.filter((m) => m.date && m.date >= venster.vandaagStart && m.date < dagEinde)
+  const vandaag = actueel
+    .filter((m) => m.date && m.date >= venster.vandaagStart && m.date < dagEinde)
+    .sort((a, b) => String(a.date).localeCompare(String(b.date)) || a.id - b.id)
   const dagGedaan = vandaag.length > 0 && vandaag.every((m) => m.status === 'finished')
 
   // De balk onderaan: enkel de eindstanden van het speelweekend (reeks, logo's, score).
@@ -352,8 +355,7 @@ export function KantineScreen({
       </span>
       {/* Af en toe neemt een sponsor het scherm over; de score blijft er doorheen leesbaar. */}
       <ReclameOverlay ads={ads} />
-      {dagGedaan && <p className="kt-gedaan">🏁 Alle wedstrijden van vandaag zijn gespeeld</p>}
-      {volgende && (
+      {volgende && !dagGedaan && (
         <div className="kt-aftel">
           <span className="kt-aftel-lbl">Volgende wedstrijd</span>
           <KantineAftel naar={volgende.t} />
@@ -385,6 +387,11 @@ export function KantineScreen({
           )}
         </div>
       ) : (
+        dagGedaan ? (
+          // Alles van vandaag gespeeld: de dag schermvullend opnieuw afspelen — uitslagen,
+          // elke wedstrijd in de schijnwerpers en de supportersfoto's (zie kantine-dagverloop.ts).
+          <KantineDagverloop matches={vandaag} live={live} />
+        ) : (
         <div className={`kt-stage${liveMatches.length ? ' met-live' : ''}`}>
           {liveMatches.length > 0 && (
             <div className="kt-featured">
@@ -422,6 +429,7 @@ export function KantineScreen({
             </>
           )}
         </div>
+        )
       )}
       {/* De sponsorbalk onderaan: past zich aan het aantal, het formaat en de kleur van de
           reclames aan (zie components/ReclameBalk.tsx). */}
