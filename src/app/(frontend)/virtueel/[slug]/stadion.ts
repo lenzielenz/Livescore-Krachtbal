@@ -198,6 +198,39 @@ export function bouwStadion(
   const kansVlag = licht ? 0.04 : 0.07
   const kansSjaal = licht ? 0.1 : 0.16
 
+  // Afwerking van de tribunes: gedeelde materialen.
+  const neusMat = new THREE.MeshLambertMaterial({ color: '#9ca3af' })
+  const trapMat = new THREE.MeshLambertMaterial({ color: '#6b7280' })
+  const geelMat = new THREE.MeshBasicMaterial({ color: '#facc15' })
+  const glasMat = new THREE.MeshStandardMaterial({ color: '#bfe3ff', transparent: true, opacity: 0.16, metalness: 0.3, roughness: 0.05, depthWrite: false, side: THREE.DoubleSide })
+  /** Gangpaden met trappen: om de ~10 m, niet te dicht bij de uiteinden. */
+  const gangpaden = (lengte: number) => {
+    const uit: number[] = []
+    const n = Math.max(1, Math.round(lengte / 10))
+    for (let k = 1; k < n; k++) uit.push(-lengte / 2 + (k * lengte) / n)
+    return uit
+  }
+  // De ledband in de voormuur: een donkere band in clubkleur met lichtpulsen.
+  const ledC = document.createElement('canvas')
+  ledC.width = 256
+  ledC.height = 8
+  {
+    const g = ledC.getContext('2d')!
+    const gr = g.createLinearGradient(0, 0, 256, 0)
+    const dim = '#' + primair.clone().multiplyScalar(0.35).getHexString()
+    gr.addColorStop(0, dim)
+    gr.addColorStop(0.42, dim)
+    gr.addColorStop(0.5, '#ffffff')
+    gr.addColorStop(0.58, thema.primair)
+    gr.addColorStop(1, dim)
+    g.fillStyle = gr
+    g.fillRect(0, 0, 256, 8)
+  }
+  const ledTex = canvasTex(ledC)
+  ledTex.wrapS = THREE.RepeatWrapping
+  const ledTexen: THREE.Texture[] = []
+  const ledMats: THREE.MeshBasicMaterial[] = []
+
   const tribune = (lengte: number, rijen: number, pos: THREE.Vector3, ry: number, dak: boolean, extra: { tifo?: boolean; spandoeken?: string[] } = {}) => {
     const groep = new THREE.Group()
     groep.position.copy(pos)
@@ -220,6 +253,42 @@ export function bouwStadion(
     const trap = new THREE.Mesh(mergeGeometries(treden), beton)
     trap.receiveShadow = !licht
     groep.add(trap)
+
+    // ---- afwerking ----
+    // Lichte neuzen op elke trede, zodat de rijen als echte treden lezen.
+    const neuzen: THREE.BufferGeometry[] = []
+    for (let r = 0; r < rijen; r++) neuzen.push(new THREE.BoxGeometry(lengte, 0.04, 0.06).translate(0, voet + r * RIJ_HOOG - 0.02, -r * RIJ_DIEP + 0.02))
+    groep.add(new THREE.Mesh(mergeGeometries(neuzen), neusMat))
+    // Trappen in de gangpaden: een tussentrede per rij, met gele neuzen.
+    const gangen = extra.tifo ? [] : gangpaden(lengte)
+    if (gangen.length) {
+      const treeGeo: THREE.BufferGeometry[] = []
+      const geelGeo: THREE.BufferGeometry[] = []
+      for (const gx of gangen) {
+        for (let r = 0; r < rijen; r++) {
+          const h = voet + r * RIJ_HOOG
+          treeGeo.push(new THREE.BoxGeometry(1.1, RIJ_HOOG / 2, RIJ_DIEP / 2).translate(gx, h + RIJ_HOOG / 4, -r * RIJ_DIEP - RIJ_DIEP * 0.75))
+          geelGeo.push(new THREE.BoxGeometry(1.1, 0.03, 0.05).translate(gx, h + RIJ_HOOG / 2 - 0.01, -r * RIJ_DIEP - RIJ_DIEP / 2 + 0.02))
+          geelGeo.push(new THREE.BoxGeometry(1.1, 0.03, 0.05).translate(gx, h - 0.01, -r * RIJ_DIEP + 0.025))
+        }
+      }
+      groep.add(new THREE.Mesh(mergeGeometries(treeGeo), trapMat), new THREE.Mesh(mergeGeometries(geelGeo), geelMat))
+    }
+    // Vooraan: een glazen balustrade met een geborstelde leuning, en een ledband in de voormuur
+    // waarover een lichtpuls loopt (zie update).
+    const glas = new THREE.Mesh(new THREE.PlaneGeometry(lengte, 0.95), glasMat)
+    glas.position.set(0, voet + 0.5, 0.26)
+    const leuning = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, lengte, 8).rotateZ(Math.PI / 2), metaal)
+    leuning.position.set(0, voet + 1.0, 0.26)
+    const staanders: THREE.BufferGeometry[] = []
+    for (let x = -lengte / 2 + 0.5; x <= lengte / 2 - 0.5; x += 2.4) staanders.push(new THREE.BoxGeometry(0.05, 1.0, 0.05).translate(x, voet + 0.5, 0.26))
+    const ledTexT = ledTex.clone()
+    ledTexT.repeat.set(lengte / 6, 1)
+    ledTexen.push(ledTexT)
+    const led = new THREE.Mesh(new THREE.PlaneGeometry(lengte, 0.14), new THREE.MeshBasicMaterial({ map: ledTexT, toneMapped: false }))
+    ledMats.push(led.material as THREE.MeshBasicMaterial)
+    led.position.set(0, voet - 0.28, 0.305)
+    groep.add(glas, leuning, new THREE.Mesh(mergeGeometries(staanders), metaal), led)
 
     // Achterwand in clubkleur met de clubnaam, zichtbaar boven de laatste rij.
     const wc = document.createElement('canvas')
@@ -353,9 +422,11 @@ export function bouwStadion(
     const p = new THREE.Vector3()
     const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, ry, 0))
     const een = new THREE.Vector3(1, 1, 1)
+    const vrij = extra.tifo ? [] : gangpaden(lengte)
     for (let r = 0; r < rijen; r++) {
       for (let i = 0; i < perRij; i++) {
         const lx = -lengte / 2 + 0.7 + i * STOEL_BREED + STOEL_BREED / 2
+        if (vrij.some((gx) => Math.abs(lx - gx) < 0.75)) continue
         p.set(lx, voet + r * RIJ_HOOG, -r * RIJ_DIEP - RIJ_DIEP * 0.45).applyMatrix4(groep.matrixWorld)
         stoelen.push(new THREE.Matrix4().compose(p.clone(), q, een))
         // Stoeltjes in clubkleur, met brede banen in de tweede kleur.
@@ -380,8 +451,8 @@ export function bouwStadion(
   }
 
   const voor = 1.4
-  tribune(2 * hx + 4, licht ? 12 : 16, new THREE.Vector3(0, 0, -hz - voor), 0, true, { spandoeken: [`ALLEZ ${thema.kort}!`, thema.naam.toUpperCase(), 'TROTS OP ONZE CLUB'] })
-  tribune(2 * hx + 4, licht ? 8 : 11, new THREE.Vector3(0, 0, hz + voor), Math.PI, false, { spandoeken: ['WIJ ZIJN ER ALTIJD', `${thema.kort} ♥`, 'NOOIT OPGEVEN'] })
+  tribune(2 * hx + 4, licht ? 12 : 16, new THREE.Vector3(0, 0, -hz - voor), 0, true, { spandoeken: ['ALLEZ ALLEZ!', thema.naam.toUpperCase(), 'TROTS OP ONZE CLUB'] })
+  tribune(2 * hx + 4, licht ? 8 : 11, new THREE.Vector3(0, 0, hz + voor), Math.PI, false, { spandoeken: ['WIJ ZIJN ER ALTIJD', '♥ ONZE CLUB ♥', 'NOOIT OPGEVEN'] })
   // Achter het oostelijke doelgebied: de tifo.
   tribune(2 * hz - 3, licht ? 6 : 8, new THREE.Vector3(hx + voor, 0, 0), -Math.PI / 2, false, { tifo: true })
   // De eindtribunes zijn iets korter: zo blijft er in elke hoek een doorgang van het veld naar de
@@ -523,6 +594,97 @@ export function bouwStadion(
     bundel.quaternion.setFromUnitVectors(new THREE.Vector3(0, -1, 0), naarVeld.normalize())
     masten.push({ lamp, halo, spot, bundel })
     scene.add(paal, kop, halo, spot, spot.target, bundel)
+  }
+
+  // ---------- het veld: lichtplassen van de masten en dug-outs ----------
+  const plasMat = new THREE.MeshBasicMaterial({ map: gloed, transparent: true, opacity: 0.16, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false })
+  const plassen = masten.map((m) => {
+    const plas = new THREE.Mesh(new THREE.CircleGeometry(13, 32).rotateX(-Math.PI / 2), plasMat.clone())
+    plas.position.set(m.halo.position.x * 0.35, 0.025, m.halo.position.z * 0.35)
+    scene.add(plas)
+    return plas
+  })
+  // Twee dug-outs langs de lange zijde: een bank met kuipstoeltjes onder een gebogen plexi kap.
+  const plexi = new THREE.MeshStandardMaterial({ color: '#cfe8ff', transparent: true, opacity: 0.22, metalness: 0.2, roughness: 0.05, depthWrite: false, side: THREE.DoubleSide })
+  for (const dx of [-7, 7]) {
+    const g = new THREE.Group()
+    g.position.set(dx, 0, -hz + 0.9)
+    const vloer = new THREE.Mesh(new THREE.BoxGeometry(4.4, 0.08, 1.5), donker)
+    vloer.position.y = 0.04
+    const rug = new THREE.Mesh(new THREE.BoxGeometry(4.4, 1.6, 0.08), donker)
+    rug.position.set(0, 0.8, -0.72)
+    const kap = new THREE.Mesh(new THREE.CylinderGeometry(1.45, 1.45, 4.4, 20, 1, true, 0, Math.PI / 2).rotateZ(Math.PI / 2).rotateX(Math.PI), plexi)
+    kap.position.set(0, 0.35, 0.73)
+    const rand = new THREE.Mesh(new THREE.BoxGeometry(4.5, 0.08, 0.08), clubMat)
+    rand.position.set(0, 1.8, -0.72)
+    g.add(vloer, rug, kap, rand)
+    for (let i = 0; i < 7; i++) {
+      const st = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.5, 0.45), clubMat)
+      st.position.set(-1.8 + i * 0.6, 0.3, -0.42)
+      g.add(st)
+    }
+    scene.add(g)
+  }
+
+  // ---------- sfeer: rookwaas, fotoflitsen en bengaals vuur ----------
+  // Een zachte waas boven het veld en de tribunes, die traag drijft en in de lichtbundels oplicht.
+  const rookC = document.createElement('canvas')
+  rookC.width = rookC.height = 128
+  {
+    const g = rookC.getContext('2d')!
+    const r = rnd(77)
+    for (let i = 0; i < 26; i++) {
+      const x = 30 + r() * 68
+      const y = 30 + r() * 68
+      const rr = 16 + r() * 30
+      const gr = g.createRadialGradient(x, y, 0, x, y, rr)
+      gr.addColorStop(0, 'rgba(255,255,255,.22)')
+      gr.addColorStop(1, 'rgba(255,255,255,0)')
+      g.fillStyle = gr
+      g.fillRect(0, 0, 128, 128)
+    }
+  }
+  const rookTex = new THREE.CanvasTexture(rookC)
+  const waas: { sprite: THREE.Sprite; basis: THREE.Vector3; fase: number }[] = []
+  const rw = rnd(31)
+  for (let i = 0; i < (licht ? 4 : 11); i++) {
+    const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: rookTex, color: '#e8eef8', transparent: true, opacity: 0.12 + rw() * 0.07, depthWrite: false }))
+    const basis = new THREE.Vector3((rw() - 0.5) * 2 * (hx + 4), 5 + rw() * 9, (rw() - 0.5) * 2 * (hz + 6))
+    sprite.scale.setScalar(18 + rw() * 14)
+    sprite.position.copy(basis)
+    waas.push({ sprite, basis, fase: rw() * 10 })
+    scene.add(sprite)
+  }
+  // Fotoflitsen in het publiek: telkens een paar willekeurige supporters.
+  const flitsMat = new THREE.SpriteMaterial({ map: gloed, color: '#ffffff', transparent: true, blending: THREE.AdditiveBlending, depthWrite: false })
+  const flitsen = Array.from({ length: licht ? 4 : 10 }, () => {
+    const sp = new THREE.Sprite(flitsMat)
+    sp.scale.setScalar(1.1)
+    sp.visible = false
+    scene.add(sp)
+    return { sp, tot: 0 }
+  })
+  const mensPos = (i: number) => new THREE.Vector3().setFromMatrixPosition(mensen[i]).add(new THREE.Vector3(0, 1.5, 0))
+  // Bengaals vuur (tijdens de lichtshow) op de zuidtribune: een felle gloed en rook in de clubkleur
+  // die opstijgt en uitwaaiert.
+  const fakkels: { gloed: THREE.Sprite; rook: THREE.Sprite[]; pos: THREE.Vector3 }[] = []
+  const fakkelGloed = new THREE.SpriteMaterial({ map: gloed, color: '#ff5a3c', transparent: true, blending: THREE.AdditiveBlending, depthWrite: false })
+  const rookKleur = primair.clone().lerp(new THREE.Color('#ffffff'), 0.25)
+  // In de gangpaden van de zuidtribune, hoog boven de hoofden gehouden: zo zie je ze ook van ver.
+  const fakkelX = gangpaden(2 * hx + 4).filter((_, k, alle) => !licht || k % 2 === 0 || alle.length < 3)
+  for (const fx of fakkelX) {
+    const pos = new THREE.Vector3(fx, 1.1 + 3 * RIJ_HOOG + 2.1, hz + voor + 3 * RIJ_DIEP)
+    const g = new THREE.Sprite(fakkelGloed)
+    g.position.copy(pos)
+    g.visible = false
+    const rook = Array.from({ length: 5 }, () => {
+      const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: rookTex, color: rookKleur, transparent: true, opacity: 0, depthWrite: false }))
+      sp.position.copy(pos)
+      scene.add(sp)
+      return sp
+    })
+    scene.add(g)
+    fakkels.push({ gloed: g, rook, pos })
   }
 
   // ---------- groot ledscherm met het clublogo (west) ----------
@@ -674,6 +836,44 @@ export function bouwStadion(
       reclameTexKort.offset.x = off
       // Het ledscherm "ademt" zacht.
       schermMat.color.setScalar(0.88 + 0.12 * Math.sin(seconden * 1.6))
+      // Ledbanden in de voormuren van de tribunes: een lopende lichtpuls; tijdens de show flitsend.
+      const showNu = lichtshow(seconden)
+      for (const t of ledTexen) t.offset.x = (seconden * 0.6) % 1
+      for (const m of ledMats) m.color.setScalar(showNu >= 0 ? (Math.floor(seconden * 8) % 2 ? 1.6 : 0.4) : 1)
+      // De waas drijft traag over het stadion.
+      for (const w of waas) {
+        w.sprite.position.set(
+          w.basis.x + Math.sin(seconden * 0.05 + w.fase) * 6,
+          w.basis.y + Math.sin(seconden * 0.08 + w.fase * 2) * 1.2,
+          w.basis.z + Math.cos(seconden * 0.04 + w.fase) * 4,
+        )
+        w.sprite.material.rotation = seconden * 0.01 + w.fase
+      }
+      // Fotoflitsen: af en toe ergens in het publiek, tijdens de show veel meer.
+      if (mensen.length) {
+        for (const f of flitsen) {
+          if (f.sp.visible && seconden > f.tot) f.sp.visible = false
+          if (!f.sp.visible && Math.random() < (showNu >= 0 ? 0.25 : 0.012)) {
+            f.sp.position.copy(mensPos(Math.floor(Math.random() * mensen.length)))
+            f.sp.visible = true
+            f.tot = seconden + 0.07
+          }
+        }
+      }
+      // Bengaals vuur: brandt tijdens de show, de rook stijgt op en hangt nog even na.
+      const fase = (((seconden - 12) % 30) + 30) % 30
+      fakkels.forEach((f, k) => {
+        const brandt = fase < 4.5
+        f.gloed.visible = brandt
+        if (brandt) f.gloed.scale.setScalar(2.2 + Math.sin(seconden * 40 + k) * 0.35 + Math.random() * 0.3)
+        f.rook.forEach((sp, j) => {
+          const t = fase - j * 0.5
+          const zicht = t > 0 && t < 11 ? Math.min(1, t / 1.2) * Math.min(1, (11 - t) / 4) : 0
+          sp.material.opacity = 0.32 * zicht
+          sp.position.set(f.pos.x + Math.sin(t * 0.6 + k) * 0.8, f.pos.y + 0.4 + t * 1.1, f.pos.z + t * 0.35)
+          sp.scale.setScalar(1.2 + t * 0.9)
+        })
+      })
       // De lichtmasten leven mee: een zachte gloed die ademt, en tijdens de lichtshow flitsen ze
       // om beurten, de bundels kleuren mee in de clubkleur.
       const show = lichtshow(seconden)
@@ -687,6 +887,7 @@ export function bouwStadion(
           m.lamp.color.copy(aan > 0.5 ? showKleur : wit)
           bm.color.copy(showKleur)
           bm.opacity = 0.2 + 0.4 * aan
+          ;(plassen[i].material as THREE.MeshBasicMaterial).opacity = 0.08 + 0.2 * aan
         } else {
           const adem = 0.5 + 0.5 * Math.sin(seconden * 0.8 + i * 1.6)
           m.spot.intensity = 400 + 40 * adem
@@ -694,6 +895,7 @@ export function bouwStadion(
           m.lamp.color.copy(wit)
           bm.color.copy(wit)
           bm.opacity = 0.22 + 0.1 * adem
+          ;(plassen[i].material as THREE.MeshBasicMaterial).opacity = 0.13 + 0.04 * adem
         }
       })
       if (seconden - laatsteBord > 0.25) {
