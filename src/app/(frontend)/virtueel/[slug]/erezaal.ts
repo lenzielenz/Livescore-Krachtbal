@@ -483,6 +483,58 @@ export function bouwEregalerij(
     obstakels.push({ x0: x - 0.85, x1: x + 0.85, z0: z - 0.85, z1: z + 0.85 })
   })
 
+  // ---------- spiegelglas voor elke prijs ----------
+  // Alle borden in de hall of fame zitten achter spiegelglas: het weerspiegelt de (voorgebakken)
+  // studio-omgeving, zodat je glans en reflecties ziet verschuiven terwijl je langs de muur loopt,
+  // met een diagonale glansstreep en een smalle, gepolijste rand.
+  {
+    const glans = document.createElement('canvas')
+    glans.width = glans.height = 256
+    const gg = glans.getContext('2d')!
+    gg.fillStyle = '#000'
+    gg.fillRect(0, 0, 256, 256)
+    gg.save()
+    gg.translate(128, 128)
+    gg.rotate(-0.6)
+    for (const [x, w, a] of [[-60, 40, 0.085], [8, 10, 0.06], [70, 22, 0.035]] as const) {
+      const gr = gg.createLinearGradient(x - w, 0, x + w, 0)
+      gr.addColorStop(0, 'rgba(255,255,255,0)')
+      gr.addColorStop(0.5, `rgba(255,255,255,${a})`)
+      gr.addColorStop(1, 'rgba(255,255,255,0)')
+      gg.fillStyle = gr
+      gg.fillRect(x - w, -200, 2 * w, 400)
+    }
+    gg.restore()
+    const glansMat = new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(glans), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false })
+    const spiegel = new THREE.MeshStandardMaterial({ color: '#0b1220', metalness: 1, roughness: 0.04, envMap: omgeving, envMapIntensity: 1.1, transparent: true, opacity: 0.2, depthWrite: false })
+    const rand = new THREE.MeshStandardMaterial({ color: '#e5e7eb', metalness: 1, roughness: 0.15, envMap: omgeving })
+    const ruiten = alle.map(({ plek, s }) => {
+      const { pos, rot } = naarMuur(plek, s.y)
+      return { m: new THREE.Matrix4().compose(pos.clone().add(new THREE.Vector3(0, 0, 0.13).applyQuaternion(rot)), rot, new THREE.Vector3(s.b + 0.16, s.h + 0.16, 1)), s }
+    })
+    const ruit = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1), spiegel, ruiten.length)
+    const streep = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1).translate(0, 0, 0.002), glansMat, ruiten.length)
+    ruiten.forEach(({ m }, i) => {
+      ruit.setMatrixAt(i, m)
+      streep.setMatrixAt(i, m)
+    })
+    // De gepolijste rand rond het glas: vier dunne latjes per bord, samengevoegd.
+    const latten: THREE.BufferGeometry[] = []
+    alle.forEach(({ plek, s }) => {
+      const { pos, rot } = naarMuur(plek, s.y)
+      const m = new THREE.Matrix4().compose(pos, rot, een)
+      const bb = s.b + 0.2
+      const hh = s.h + 0.2
+      latten.push(
+        new THREE.BoxGeometry(bb, 0.035, 0.06).translate(0, hh / 2, 0.11).applyMatrix4(m),
+        new THREE.BoxGeometry(bb, 0.035, 0.06).translate(0, -hh / 2, 0.11).applyMatrix4(m),
+        new THREE.BoxGeometry(0.035, hh, 0.06).translate(bb / 2, 0, 0.11).applyMatrix4(m),
+        new THREE.BoxGeometry(0.035, hh, 0.06).translate(-bb / 2, 0, 0.11).applyMatrix4(m),
+      )
+    })
+    scene.add(ruit, streep, new THREE.Mesh(mergeGeometries(latten), rand))
+  }
+
   void opt.logo.then((logo) => {
     tekenAtlassen(logo)
     tekenKop(logo)

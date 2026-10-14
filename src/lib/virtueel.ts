@@ -476,3 +476,13 @@ export function eigenHerkomst(url: string, hier: string): string {
     return url
   }
 }
+
+/**
+ * De lichtshow van het virtuele stadion: om de `periode` seconden een show van `duur` seconden,
+ * zoals na een doelpunt in een echt stadion. Geeft de voortgang (0 tot 1) tijdens de show, en -1
+ * daarbuiten. Gedeeld door de lichtmasten, de gevel en de schijnwerpers, zodat ze samen flitsen.
+ */
+export function lichtshow(seconden: number, periode = 30, duur = 4.5): number {
+  const fase = (((seconden - 12) % periode) + periode) % periode
+  return fase < duur ? fase / duur : -1
+}

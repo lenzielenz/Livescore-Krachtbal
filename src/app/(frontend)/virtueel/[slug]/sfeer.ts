@@ -245,27 +245,67 @@ export function bouwSfeer(scene: THREE.Scene, opt: { thema: StadionThema; licht:
   scene.add(lijven, hoofden, sjaals, armen)
 
   // ---------- banieren aan de gevel ----------
+  // Een gestikte stadionbanier: verloop in clubkleur, biezen in de tweede kleur, het clublogo in een
+  // medaillon, een chevronmotief en een zwaluwstaart onderaan. Geen tekst: het logo zegt genoeg.
   const banierC = document.createElement('canvas')
-  banierC.width = 128
-  banierC.height = 512
+  banierC.width = 256
+  banierC.height = 1024
   const banierTex = canvasTex(banierC)
   const tekenBanier = (logo: HTMLImageElement | null) => {
     const g = banierC.getContext('2d')!
-    g.fillStyle = thema.primair
-    g.fillRect(0, 0, 128, 512)
+    g.clearRect(0, 0, 256, 1024)
+    const donker = '#' + primair.clone().multiplyScalar(0.55).getHexString()
+    const gr = g.createLinearGradient(0, 0, 0, 1024)
+    gr.addColorStop(0, thema.primair)
+    gr.addColorStop(1, donker)
+    g.fillStyle = gr
+    g.fillRect(0, 0, 256, 1024)
+    // Zachte stofglans van links naar rechts.
+    const glans = g.createLinearGradient(0, 0, 256, 0)
+    glans.addColorStop(0, 'rgba(0,0,0,.18)')
+    glans.addColorStop(0.45, 'rgba(255,255,255,.10)')
+    glans.addColorStop(1, 'rgba(0,0,0,.22)')
+    g.fillStyle = glans
+    g.fillRect(0, 0, 256, 1024)
+    // Biezen en een kopstrook in de tweede kleur.
     g.fillStyle = thema.secundair
-    g.fillRect(0, 0, 128, 14)
-    g.fillRect(0, 498, 128, 14)
-    rondLogo(g, logo, thema, 64, 92, 48)
-    g.save()
-    g.translate(64, 330)
-    g.rotate(-Math.PI / 2)
-    g.fillStyle = thema.tekstOpPrimair
-    g.font = '900 54px Inter, system-ui, sans-serif'
-    g.textAlign = 'center'
-    g.textBaseline = 'middle'
-    g.fillText(thema.kort, 0, 0, 300)
-    g.restore()
+    g.fillRect(0, 0, 256, 40)
+    g.fillRect(16, 40, 6, 984)
+    g.fillRect(234, 40, 6, 984)
+    // Stiksel langs de rand.
+    g.strokeStyle = 'rgba(255,255,255,.35)'
+    g.setLineDash([10, 8])
+    g.lineWidth = 2
+    g.strokeRect(30, 52, 196, 860)
+    g.setLineDash([])
+    // Het logo in een medaillon met een ring in de tweede kleur.
+    g.fillStyle = thema.secundair
+    g.beginPath()
+    g.arc(128, 250, 104, 0, Math.PI * 2)
+    g.fill()
+    rondLogo(g, logo, thema, 128, 250, 94)
+    // Chevrons.
+    g.strokeStyle = thema.secundair
+    g.lineWidth = 14
+    g.lineJoin = 'miter'
+    for (const y of [470, 540, 610]) {
+      g.globalAlpha = y === 540 ? 0.9 : 0.55
+      g.beginPath()
+      g.moveTo(60, y)
+      g.lineTo(128, y + 46)
+      g.lineTo(196, y)
+      g.stroke()
+    }
+    g.globalAlpha = 1
+    // Zwaluwstaart: een V uit de onderkant knippen.
+    g.globalCompositeOperation = 'destination-out'
+    g.beginPath()
+    g.moveTo(0, 1024)
+    g.lineTo(128, 900)
+    g.lineTo(256, 1024)
+    g.closePath()
+    g.fill()
+    g.globalCompositeOperation = 'source-over'
     banierTex.needsUpdate = true
   }
   tekenBanier(null)
@@ -292,12 +332,25 @@ export function bouwSfeer(scene: THREE.Scene, opt: { thema: StadionThema; licht:
   }
   const banieren = new THREE.InstancedMesh(
     new THREE.PlaneGeometry(2.4, 8.4, 1, 8),
-    metTijd(new THREE.MeshLambertMaterial({ map: banierTex, emissive: '#ffffff', emissiveMap: banierTex, emissiveIntensity: 0.35, side: THREE.DoubleSide }), tijd, 'transformed.z += sin(uTijd * 1.4 + position.y * 0.6 + instanceMatrix[3][0]) * 0.08 * (4.2 - position.y) / 8.4;'),
+    metTijd(new THREE.MeshLambertMaterial({ map: banierTex, emissive: '#ffffff', emissiveMap: banierTex, emissiveIntensity: 0.35, side: THREE.DoubleSide, alphaTest: 0.5 }), tijd, 'transformed.z += sin(uTijd * 1.4 + position.y * 0.6 + instanceMatrix[3][0]) * 0.08 * (4.2 - position.y) / 8.4;'),
     banierPlek.length,
   )
   banierPlek.forEach((m, i) => banieren.setMatrixAt(i, m))
   banieren.frustumCulled = false
-  scene.add(banieren)
+  // Een geborstelde stang bovenaan met twee armpjes naar de gevel.
+  const stang = new THREE.InstancedMesh(
+    mergeGeometries([
+      new THREE.CylinderGeometry(0.05, 0.05, 2.8, 10).rotateZ(Math.PI / 2).translate(0, 4.26, 0),
+      new THREE.SphereGeometry(0.08, 10, 8).translate(-1.42, 4.26, 0),
+      new THREE.SphereGeometry(0.08, 10, 8).translate(1.42, 4.26, 0),
+      new THREE.BoxGeometry(0.05, 0.05, 1.4).translate(-0.9, 4.26, -0.7),
+      new THREE.BoxGeometry(0.05, 0.05, 1.4).translate(0.9, 4.26, -0.7),
+    ]),
+    new THREE.MeshStandardMaterial({ color: '#d1d5db', metalness: 0.85, roughness: 0.3, emissive: '#374151', emissiveIntensity: 0.4 }),
+    banierPlek.length,
+  )
+  banierPlek.forEach((m, i) => stang.setMatrixAt(i, m))
+  scene.add(banieren, stang)
 
   // ---------- lichtbundels die door de lucht zwaaien ----------
   const bundelC = canvas(4, 128, (g) => {

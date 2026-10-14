@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 
-import { GEVEL, inPoort, type Rechthoek, type StadionThema } from '@/lib/virtueel'
+import { GEVEL, inPoort, lichtshow, type Rechthoek, type StadionThema } from '@/lib/virtueel'
 import { canvasTex, rnd, rondLogo } from './stadion'
 
 // De buitenkant van het stadion: zodat wie rondkijkt of rondwandelt het gevoel heeft dat dit zíjn
@@ -90,7 +90,34 @@ export function bouwOmgeving(scene: THREE.Scene, opt: { thema: StadionThema; lic
   const secundair = new THREE.Color(thema.secundair)
   const obstakels: Rechthoek[] = []
 
-  const gevelMat = new THREE.MeshLambertMaterial({ color: '#1e2633' })
+  // Gevelbekleding: donkere panelen met voegen, bovenaan iets lichter (zoals bij echt licht). Elk
+  // muurstuk van 2 m krijgt de textuur één keer: twee panelen breed, de hele hoogte.
+  const paneelTex = canvasTex(
+    tekstCanvas(256, 1024, (g) => {
+      const gr = g.createLinearGradient(0, 0, 0, 1024)
+      gr.addColorStop(0, '#323d4f')
+      gr.addColorStop(1, '#1a212c')
+      g.fillStyle = gr
+      g.fillRect(0, 0, 256, 1024)
+      for (let i = 0; i < 900; i++) {
+        g.fillStyle = `rgba(255,255,255,${0.012 + toeval() * 0.02})`
+        g.fillRect(toeval() * 256, toeval() * 1024, 2, 2)
+      }
+      for (const x of [0, 128]) {
+        g.fillStyle = 'rgba(0,0,0,.55)'
+        g.fillRect(x, 0, 3, 1024)
+        g.fillStyle = 'rgba(255,255,255,.07)'
+        g.fillRect(x + 3, 0, 1, 1024)
+      }
+      for (let y = 0; y < 1024; y += 128) {
+        g.fillStyle = 'rgba(0,0,0,.45)'
+        g.fillRect(0, y, 256, 2)
+        g.fillStyle = 'rgba(255,255,255,.05)'
+        g.fillRect(0, y + 2, 256, 1)
+      }
+    }),
+  )
+  const gevelMat = new THREE.MeshLambertMaterial({ map: paneelTex })
   const betonMat = new THREE.MeshLambertMaterial({ color: '#6b7280' })
   const metaal = new THREE.MeshStandardMaterial({ color: '#9ca3af', metalness: 0.6, roughness: 0.4 })
 
@@ -155,7 +182,23 @@ export function bouwOmgeving(scene: THREE.Scene, opt: { thema: StadionThema; lic
 
   // Lamellen voor de muur, in de clubkleuren (3 × primair, 1 × secundair), zacht oplichtend.
   const lamelPunten = gevelOmtrek(1.5).filter((p) => !inPoort(GEVEL, p.x + p.nx, p.z + p.nz))
-  const lamelGeo = new THREE.BoxGeometry(0.3, H - 3.2, 0.9).translate(0, (H - 3.2) / 2 + 0.2, 0)
+  // Afgeronde lamellen (geen kale balken): een afgerond profiel, opgetrokken over de hoogte.
+  const lamelProfiel = new THREE.Shape()
+  {
+    const w = 0.15
+    const d = 0.45
+    const r = 0.13
+    lamelProfiel.moveTo(-w + r, -d)
+    lamelProfiel.lineTo(w - r, -d)
+    lamelProfiel.quadraticCurveTo(w, -d, w, -d + r)
+    lamelProfiel.lineTo(w, d - r)
+    lamelProfiel.quadraticCurveTo(w, d, w - r, d)
+    lamelProfiel.lineTo(-w + r, d)
+    lamelProfiel.quadraticCurveTo(-w, d, -w, d - r)
+    lamelProfiel.lineTo(-w, -d + r)
+    lamelProfiel.quadraticCurveTo(-w, -d, -w + r, -d)
+  }
+  const lamelGeo = new THREE.ExtrudeGeometry(lamelProfiel, { depth: H - 3.2, bevelEnabled: false, curveSegments: 4 }).rotateX(-Math.PI / 2).translate(0, 0.2, 0)
   const lamellen = new THREE.InstancedMesh(lamelGeo, new THREE.MeshLambertMaterial({ emissive: primair, emissiveIntensity: 0.18 }), lamelPunten.length)
   const m4 = new THREE.Matrix4()
   const q = new THREE.Quaternion()
@@ -167,6 +210,19 @@ export function bouwOmgeving(scene: THREE.Scene, opt: { thema: StadionThema; lic
     lamellen.setColorAt(i, i % 4 === 3 ? secundair : primair)
   })
   scene.add(lamellen)
+  // Een ledstrip op de voorkant van elke lamel: hier lopen de lichtgolven rond het stadion (zie update).
+  const strips = new THREE.InstancedMesh(
+    new THREE.BoxGeometry(0.07, H - 3.6, 0.04).translate(0, (H - 3.6) / 2 + 0.4, 0),
+    new THREE.MeshBasicMaterial({ toneMapped: false }),
+    lamelPunten.length,
+  )
+  lamelPunten.forEach((p, i) => {
+    q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.atan2(p.nx, p.nz))
+    m4.compose(new THREE.Vector3(p.x + p.nx * 1.47, 0, p.z + p.nz * 1.47), q, een)
+    strips.setMatrixAt(i, m4)
+    strips.setColorAt(i, primair)
+  })
+  scene.add(strips)
 
   // Doorlopende ledband bovenaan met de clubnaam, als één lint rond het hele stadion.
   const bandTekst = `${thema.naam.toUpperCase()}   ★   `
@@ -209,6 +265,157 @@ export function bouwOmgeving(scene: THREE.Scene, opt: { thema: StadionThema; lic
   bandGeo.setIndex(idx)
   const band = new THREE.Mesh(bandGeo, new THREE.MeshBasicMaterial({ map: bandTex, toneMapped: false, side: THREE.DoubleSide }))
   scene.add(band)
+
+  // ---------- afwerking van de gevel ----------
+  // Een stenen plint met een lichte rand, en bovenaan een uitkragende kroonlijst met een lichtlijn
+  // eronder: zo krijgt het gebouw een voet en een kop in plaats van een kale doos.
+  const plint: THREE.BufferGeometry[] = []
+  const plintRand: THREE.BufferGeometry[] = []
+  const kroon: THREE.BufferGeometry[] = []
+  const kroonLicht: THREE.BufferGeometry[] = []
+  for (let i = 0; i < omtrek.length; i++) {
+    const a = omtrek[i]
+    const b = omtrek[(i + 1) % omtrek.length]
+    const inDePoort = inPoort(GEVEL, (a.x + b.x) / 2 + a.nx * 0.1, (a.z + b.z) / 2 + a.nz * 0.1)
+    if (!inDePoort) {
+      plint.push(muurStuk(a, b, 0, 1.05, 1.62))
+      plintRand.push(muurStuk(a, b, 1.05, 1.17, 1.74))
+    }
+    kroon.push(muurStuk(a, b, H + 0.4, H + 0.95, 2.5))
+    kroonLicht.push(muurStuk(a, b, H + 0.32, H + 0.4, 2.36))
+  }
+  scene.add(
+    new THREE.Mesh(mergeGeometries(plint), new THREE.MeshLambertMaterial({ color: '#5b616b' })),
+    new THREE.Mesh(mergeGeometries(plintRand), new THREE.MeshLambertMaterial({ color: '#a3a9b3' })),
+    new THREE.Mesh(mergeGeometries(kroon), new THREE.MeshLambertMaterial({ color: '#2b3442' })),
+    new THREE.Mesh(mergeGeometries(kroonLicht), new THREE.MeshBasicMaterial({ color: '#f8fafc', toneMapped: false })),
+  )
+
+  // Een doorlopende glasstrook achter de lamellen: warm licht van binnen, met stijlen om de 1,5 m.
+  const glasTex = canvasTex(
+    tekstCanvas(128, 64, (g) => {
+      const gr = g.createLinearGradient(0, 0, 0, 64)
+      gr.addColorStop(0, '#ffe8b0')
+      gr.addColorStop(0.5, '#f5b94a')
+      gr.addColorStop(1, '#8a5310')
+      g.fillStyle = gr
+      g.fillRect(0, 0, 128, 64)
+      g.fillStyle = 'rgba(255,255,255,.25)'
+      g.fillRect(0, 8, 128, 3)
+      g.fillStyle = '#1b2230'
+      g.fillRect(0, 0, 6, 64)
+      g.fillRect(0, 0, 128, 3)
+      g.fillRect(0, 61, 128, 3)
+    }),
+  )
+  glasTex.wrapS = THREE.RepeatWrapping
+  {
+    const gp: number[] = []
+    const gu: number[] = []
+    const pts = gevelOmtrek(0.75)
+    for (let i = 0; i < pts.length; i++) {
+      const a = pts[i]
+      const b = pts[(i + 1) % pts.length]
+      if (inPoort(GEVEL, (a.x + b.x) / 2 + a.nx, (a.z + b.z) / 2 + a.nz)) continue
+      const sB = i + 1 < pts.length ? b.s : a.s + Math.hypot(b.x - a.x, b.z - a.z)
+      const ax = a.x + a.nx * 0.62
+      const az = a.z + a.nz * 0.62
+      const bx = b.x + b.nx * 0.62
+      const bz = b.z + b.nz * 0.62
+      gp.push(ax, 8.2, az, bx, 8.2, bz, ax, 10, az, bx, 8.2, bz, bx, 10, bz, ax, 10, az)
+      const u0 = a.s / 1.5
+      const u1 = sB / 1.5
+      gu.push(u0, 0, u1, 0, u0, 1, u1, 0, u1, 1, u0, 1)
+    }
+    const glasGeo = new THREE.BufferGeometry()
+    glasGeo.setAttribute('position', new THREE.Float32BufferAttribute(gp, 3))
+    glasGeo.setAttribute('uv', new THREE.Float32BufferAttribute(gu, 2))
+    scene.add(new THREE.Mesh(glasGeo, new THREE.MeshBasicMaterial({ map: glasTex, toneMapped: false, side: THREE.DoubleSide })))
+  }
+
+  // ---------- buitenverlichting: grondspots die de gevel omhoog aanlichten ----------
+  // Om de 3 m een spot in de grond voor de gevel; zijn licht waaiert omhoog over de panelen (de
+  // lamellen tekenen er als silhouet tegen af). Afwisselend wit en clubkleur. Nep-licht: één
+  // InstancedMesh per onderdeel.
+  const spotPunten = gevelOmtrek(3).filter((p) => !inPoort(GEVEL, p.x + p.nx, p.z + p.nz))
+  const waaierTex = new THREE.CanvasTexture(
+    tekstCanvas(128, 512, (g) => {
+      const gr = g.createRadialGradient(64, 512, 4, 64, 512, 520)
+      gr.addColorStop(0, 'rgba(255,255,255,.95)')
+      gr.addColorStop(0.35, 'rgba(255,255,255,.35)')
+      gr.addColorStop(1, 'rgba(255,255,255,0)')
+      g.fillStyle = gr
+      g.beginPath()
+      g.moveTo(54, 512)
+      g.lineTo(0, 0)
+      g.lineTo(128, 0)
+      g.lineTo(74, 512)
+      g.closePath()
+      g.fill()
+    }),
+  )
+  const additief = (map: THREE.Texture, opacity: number) =>
+    new THREE.MeshBasicMaterial({ map, transparent: true, opacity, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false })
+  const waaiers = new THREE.InstancedMesh(new THREE.PlaneGeometry(3.2, 11.5).translate(0, 5.75, 0), additief(waaierTex, 0.75), spotPunten.length)
+  const spots = new THREE.InstancedMesh(
+    mergeGeometries([new THREE.CylinderGeometry(0.22, 0.26, 0.14, 14).translate(0, 0.07, 0)]),
+    new THREE.MeshStandardMaterial({ color: '#4b5563', metalness: 0.7, roughness: 0.35 }),
+    spotPunten.length,
+  )
+  const lenzen = new THREE.InstancedMesh(new THREE.CircleGeometry(0.17, 14).rotateX(-Math.PI / 2).translate(0, 0.145, 0), new THREE.MeshBasicMaterial({ toneMapped: false }), spotPunten.length)
+  const wit = new THREE.Color('#fff4dd')
+  spotPunten.forEach((p, i) => {
+    q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.atan2(p.nx, p.nz))
+    // Net voor de muur (die ligt op 0,6 m), achter de lamellen.
+    m4.compose(new THREE.Vector3(p.x + p.nx * 0.61, 0, p.z + p.nz * 0.61), q, een)
+    waaiers.setMatrixAt(i, m4)
+    const kleur = i % 3 === 1 ? primair : wit
+    waaiers.setColorAt(i, kleur)
+    m4.compose(new THREE.Vector3(p.x + p.nx * 1.75, 0, p.z + p.nz * 1.75), q, een)
+    spots.setMatrixAt(i, m4)
+    lenzen.setMatrixAt(i, m4)
+    lenzen.setColorAt(i, kleur.clone().lerp(wit, 0.5))
+  })
+  scene.add(waaiers, spots, lenzen)
+
+  const stralen: { draai: THREE.Group; as: THREE.Vector3; fase: number }[] = []
+  let straalMat: THREE.MeshBasicMaterial | null = null
+  // Grote schijnwerpers op het plein die naar de kroonlijst stralen: zichtbare bundels van de grond
+  // tot de bovenrand van het stadion.
+  if (!licht) {
+    const straalTex = new THREE.CanvasTexture(
+      tekstCanvas(8, 256, (g) => {
+        const gr = g.createLinearGradient(0, 0, 0, 256)
+        gr.addColorStop(0, 'rgba(255,255,255,0)')
+        gr.addColorStop(0.6, 'rgba(255,255,255,.18)')
+        gr.addColorStop(1, 'rgba(255,255,255,.55)')
+        g.fillStyle = gr
+        g.fillRect(0, 0, 8, 256)
+      }),
+    )
+    straalMat = additief(straalTex, 0.55)
+    straalMat.side = THREE.DoubleSide
+    const Y = new THREE.Vector3(0, 1, 0)
+    for (const p of gevelOmtrek(26)) {
+      // Niet in de looplijn naar de hoofdingang.
+      if (Math.abs(p.x) < 12 && p.nz > 0.5) continue
+      const voet = new THREE.Vector3(p.x + p.nx * 9, 0.3, p.z + p.nz * 9)
+      const top = new THREE.Vector3(p.x + p.nx * 1.4, H + 0.6, p.z + p.nz * 1.4)
+      const richting = top.clone().sub(voet)
+      const lengte = richting.length()
+      const straal = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 0.18, lengte, 20, 1, true).translate(0, lengte / 2, 0), straalMat)
+      straal.quaternion.setFromUnitVectors(Y, richting.normalize())
+      const kast = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.45, 0.6), metaal)
+      kast.position.set(0, -0.08, 0)
+      kast.quaternion.copy(straal.quaternion)
+      // Een draaipunt op de grond: de bundel zwaait traag langs de gevel heen en weer.
+      const draai = new THREE.Group()
+      draai.position.copy(voet)
+      draai.add(straal, kast)
+      scene.add(draai)
+      stralen.push({ draai, as: new THREE.Vector3(p.nx, 0, p.nz), fase: stralen.length * 1.7 })
+    }
+  }
 
   // Binnenkant: een warme lichtlijn langs de gevel, zodat de gangen achter de tribunes niet in het
   // donker liggen.
@@ -323,23 +530,42 @@ export function bouwOmgeving(scene: THREE.Scene, opt: { thema: StadionThema; lic
   }
 
   // ---------- vlaggen in de clubkleuren langs de toegang ----------
-  const vlagC = tekstCanvas(256, 160, (g) => {
+  // Clubvlag: de clubkleur met een schuine baan in de tweede kleur en het logo; geen tekst.
+  const vlagC = document.createElement('canvas')
+  vlagC.width = 512
+  vlagC.height = 320
+  const vlagTex = canvasTex(vlagC)
+  const tekenVlag = (logo: HTMLImageElement | null) => {
+    const g = vlagC.getContext('2d')!
     g.fillStyle = thema.primair
-    g.fillRect(0, 0, 256, 160)
+    g.fillRect(0, 0, 512, 320)
     g.fillStyle = thema.secundair
-    g.fillRect(0, 60, 256, 40)
-    g.fillStyle = thema.primair
-    g.font = '900 34px Inter, system-ui, sans-serif'
-    g.textAlign = 'center'
-    g.textBaseline = 'middle'
-    g.fillText(thema.kort, 128, 82)
-  })
+    g.beginPath()
+    g.moveTo(250, 0)
+    g.lineTo(330, 0)
+    g.lineTo(512, 182)
+    g.lineTo(512, 262)
+    g.closePath()
+    g.fill()
+    const glans = g.createLinearGradient(0, 0, 0, 320)
+    glans.addColorStop(0, 'rgba(255,255,255,.12)')
+    glans.addColorStop(1, 'rgba(0,0,0,.2)')
+    g.fillStyle = glans
+    g.fillRect(0, 0, 512, 320)
+    // Een witte zoom langs de mast.
+    g.fillStyle = 'rgba(255,255,255,.85)'
+    g.fillRect(0, 0, 14, 320)
+    rondLogo(g, logo, thema, 150, 160, 92)
+    vlagTex.needsUpdate = true
+  }
+  tekenVlag(null)
+  void opt.logo.then(tekenVlag)
   const vlagPos: [number, number][] = []
   for (let z = B + 10; z <= B + 24; z += 7) for (const x of [-11, 11]) vlagPos.push([x, z])
   for (const x of [-30, -22, 22, 30]) vlagPos.push([x, B + 9])
   const vlagGeo = new THREE.PlaneGeometry(2.6, 1.6, 12, 4).translate(1.3, 0, 0)
   const vlagMat = metTijd(
-    new THREE.MeshLambertMaterial({ map: canvasTex(vlagC), side: THREE.DoubleSide }),
+    new THREE.MeshLambertMaterial({ map: vlagTex, side: THREE.DoubleSide }),
     tijd,
     `float golfV = sin(uTijd * 3.2 + position.x * 2.1 + instanceMatrix[3][0]) * 0.22 * (position.x / 2.6);
      transformed.z += golfV; transformed.y -= (position.x / 2.6) * 0.08;`,
@@ -367,10 +593,14 @@ export function bouwOmgeving(scene: THREE.Scene, opt: { thema: StadionThema; lic
   for (let x = -140; x <= 140; x += 20) lampPos.push([x, B + 35.5])
   const palen = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.08, 0.12, 6, 6).translate(0, 3, 0), new THREE.MeshLambertMaterial({ color: '#374151' }), lampPos.length)
   const kappen = new THREE.InstancedMesh(new THREE.SphereGeometry(0.28, 10, 8).translate(0, 6.05, 0), new THREE.MeshBasicMaterial({ color: '#fff1c4', toneMapped: false }), lampPos.length)
+  // Elke paal krijgt een oplichtende ledzuil halverwege: daar lopen de kleurgolven over het plein.
+  const paalLeds = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.135, 0.135, 1.4, 12, 1, true).translate(0, 2.4, 0), new THREE.MeshBasicMaterial({ toneMapped: false }), lampPos.length)
   const gloedPos = new Float32Array(lampPos.length * 3)
   lampPos.forEach(([x, z], i) => {
     m4.makeTranslation(x, 0, z)
     palen.setMatrixAt(i, m4)
+    paalLeds.setMatrixAt(i, m4)
+    paalLeds.setColorAt(i, primair)
     kappen.setMatrixAt(i, m4)
     gloedPos.set([x, 6.05, z], i * 3)
   })
@@ -384,7 +614,7 @@ export function bouwOmgeving(scene: THREE.Scene, opt: { thema: StadionThema; lic
   const gloedGeo = new THREE.BufferGeometry()
   gloedGeo.setAttribute('position', new THREE.BufferAttribute(gloedPos, 3))
   const gloed = new THREE.Points(gloedGeo, new THREE.PointsMaterial({ map: new THREE.CanvasTexture(gloedC), size: 4, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }))
-  scene.add(palen, kappen, gloed)
+  scene.add(palen, paalLeds, kappen, gloed)
   // Een warme lichtplas onder elke lantaarn (geen echte lampen: die zijn duur), op het plein.
   const plasGeo = new THREE.CircleGeometry(4.5, 24)
   plasGeo.rotateX(-Math.PI / 2)
@@ -522,12 +752,56 @@ export function bouwOmgeving(scene: THREE.Scene, opt: { thema: StadionThema; lic
   stoep.position.set(0, 0.07, B + 25.3)
   scene.add(stoep)
 
+  const kleur = new THREE.Color()
   return {
     obstakels,
     start: { x: 0, z: B + 26, yaw: Math.PI },
     update(seconden) {
       tijd.value = seconden
       bandTex.offset.x = -(seconden * 0.04) % 1
+      const show = lichtshow(seconden)
+      // Ledstrips op de lamellen: een lichtgolf die rond het stadion loopt; tijdens de show
+      // flitsen ze om beurten in de twee clubkleuren en wit.
+      lamelPunten.forEach((p, i) => {
+        if (show >= 0) {
+          const stap = Math.floor(seconden * 8 + i / 6) % 3
+          kleur.copy(stap === 0 ? primair : stap === 1 ? secundair : wit)
+        } else {
+          const golf = Math.pow(0.5 + 0.5 * Math.sin(seconden * 1.6 - p.s * 0.09), 6)
+          kleur.copy(primair).multiplyScalar(0.35 + 0.9 * golf).lerp(wit, golf * 0.45)
+        }
+        strips.setColorAt(i, kleur)
+      })
+      if (strips.instanceColor) strips.instanceColor.needsUpdate = true
+      // Grondspots: een trage, ademende golf; tijdens de show allemaal in de clubkleur, flitsend.
+      spotPunten.forEach((p, i) => {
+        const basis = i % 3 === 1 ? primair : wit
+        if (show >= 0) kleur.copy(Math.floor(seconden * 6) % 2 ? primair : secundair).multiplyScalar(1.1)
+        else kleur.copy(basis).multiplyScalar(0.55 + 0.45 * (0.5 + 0.5 * Math.sin(seconden * 0.9 - p.s * 0.05)))
+        waaiers.setColorAt(i, kleur)
+        lenzen.setColorAt(i, kleur)
+      })
+      if (waaiers.instanceColor) waaiers.instanceColor.needsUpdate = true
+      if (lenzen.instanceColor) lenzen.instanceColor.needsUpdate = true
+      // De schijnwerpers zwaaien traag; tijdens de show sneller en in de clubkleur.
+      for (const s of stralen) {
+        const hoek = Math.sin(seconden * (show >= 0 ? 2.2 : 0.45) + s.fase) * (show >= 0 ? 0.35 : 0.2)
+        s.draai.quaternion.setFromAxisAngle(s.as, hoek)
+      }
+      // De ledzuilen op de palen: een kleurgolf rond het plein, en flitsen tijdens de show.
+      lampPos.forEach(([x, z], i) => {
+        if (show >= 0) kleur.copy((Math.floor(seconden * 6) + i) % 2 ? primair : wit)
+        else {
+          const golf = 0.5 + 0.5 * Math.sin(seconden * 1.2 - Math.atan2(z, x) * 3)
+          kleur.copy(primair).multiplyScalar(0.4 + 0.8 * golf).lerp(secundair, golf * 0.25)
+        }
+        paalLeds.setColorAt(i, kleur)
+      })
+      if (paalLeds.instanceColor) paalLeds.instanceColor.needsUpdate = true
+      if (straalMat) {
+        straalMat.color.copy(show >= 0 ? primair : wit)
+        straalMat.opacity = show >= 0 ? 0.75 : 0.45 + 0.12 * Math.sin(seconden * 0.7)
+      }
     },
   }
 }
