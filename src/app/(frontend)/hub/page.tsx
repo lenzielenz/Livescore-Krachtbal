@@ -4,17 +4,18 @@ import { SiteHeader } from '@/components/SiteHeader'
 import { hasRole, isClubStaff, isFederationLevel, userClubId, userFollowedClubIds, userPlayerId, userTeamId, userTeamIds } from '@/lib/access'
 import { competitionWhere } from '@/lib/analyse-access'
 import { getAuthUser } from '@/lib/auth-user'
-import { formatDateTimeBE } from '@/lib/datetime'
-import { buildMatchState } from '@/lib/match-engine'
+import { buildMatchState, clubLogoFit, clubLogoUrl } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
 import { getProfile } from '@/lib/profiles'
+import { reeksNaam, type Reeks } from '@/lib/reeksen'
+import { TeamLogo } from '@/components/TeamLogo'
+import { HubWedstrijd, type HubWedstrijdInfo } from './HubWedstrijd'
 import './hub.css'
 
 export const dynamic = 'force-dynamic'
 
 export const metadata = { title: 'Mijn Krachtbal — Krachtbal Live' }
 
-const teamName = (v: unknown): string => (v && typeof v === 'object' ? String((v as { name?: unknown }).name ?? '—') : '—')
 const scoreOf = async (payload: Awaited<ReturnType<typeof getPayloadClient>>, id: number) => {
   try {
     const st = await buildMatchState(payload, id)
@@ -24,29 +25,56 @@ const scoreOf = async (payload: Awaited<ReturnType<typeof getPayloadClient>>, id
   }
 }
 
-type HubMatchInfo = { id: number; date?: string; home: string; away: string }
-type HubLastMatchInfo = { id: number; home: string; away: string; score: { home: number; away: number } | null }
+const relId = (v: unknown): number | null => {
+  const raw = v && typeof v === 'object' ? (v as { id?: unknown }).id : v
+  const n = Number(raw)
+  return raw != null && Number.isFinite(n) ? n : null
+}
 
 // Volgende + laatste wedstrijd voor een set ploegen (club-breed = alle ploegen van de club, of
 // net één specifieke ploeg voor een gepersonaliseerde kaart — zie "Mijn ploeg(en)" hieronder).
+// Eerst de wedstrijden zonder relaties (licht), daarna enkel de ploegen van de twee gekozen
+// wedstrijden mét club erbij, voor naam en logo.
 async function nextLastForTeamIds(
   payload: Awaited<ReturnType<typeof getPayloadClient>>,
   teamIds: number[],
-): Promise<{ next: HubMatchInfo | null; last: HubLastMatchInfo | null }> {
+): Promise<{ next: HubWedstrijdInfo | null; last: HubWedstrijdInfo | null }> {
   if (teamIds.length === 0) return { next: null, last: null }
   const ms = await payload
-    .find({ collection: 'matches', where: { and: [{ or: [{ homeTeam: { in: teamIds } }, { awayTeam: { in: teamIds } }] }, competitionWhere()] }, sort: 'date', depth: 1, limit: 300 })
+    .find({ collection: 'matches', where: { and: [{ or: [{ homeTeam: { in: teamIds } }, { awayTeam: { in: teamIds } }] }, competitionWhere()] }, sort: 'date', depth: 0, limit: 300 })
     .catch(() => ({ docs: [] as Record<string, unknown>[] }))
-  const up = ms.docs.find((m) => (m as { status?: string }).status !== 'finished')
-  const next: HubMatchInfo | null = up
-    ? { id: (up as { id: number }).id, date: (up as { date?: string }).date, home: teamName((up as { homeTeam?: unknown }).homeTeam), away: teamName((up as { awayTeam?: unknown }).awayTeam) }
-    : null
-  const fin = ms.docs
-    .filter((m) => (m as { status?: string }).status === 'finished')
-    .sort((a, b) => new Date(String((b as { date?: string }).date ?? 0)).getTime() - new Date(String((a as { date?: string }).date ?? 0)).getTime())[0]
-  const last: HubLastMatchInfo | null = fin
-    ? { id: (fin as { id: number }).id, home: teamName((fin as { homeTeam?: unknown }).homeTeam), away: teamName((fin as { awayTeam?: unknown }).awayTeam), score: await scoreOf(payload, (fin as { id: number }).id) }
-    : null
+  const docs = ms.docs as Record<string, unknown>[]
+  // Een wedstrijd die nu live is, gaat voor op de eerstvolgende geplande.
+  const up = docs.find((m) => m.status === 'live') ?? docs.find((m) => m.status !== 'finished')
+  const fin = docs
+    .filter((m) => m.status === 'finished')
+    .sort((a, b) => new Date(String(b.date ?? 0)).getTime() - new Date(String(a.date ?? 0)).getTime())[0]
+
+  const gekozen = [up, fin].filter((m): m is Record<string, unknown> => Boolean(m))
+  const ploegIds = [...new Set(gekozen.flatMap((m) => [relId(m.homeTeam), relId(m.awayTeam)]).filter((id): id is number => id != null))]
+  const ploegen = ploegIds.length
+    ? await payload.find({ collection: 'teams', where: { id: { in: ploegIds } }, depth: 1, limit: ploegIds.length }).catch(() => ({ docs: [] as Record<string, unknown>[] }))
+    : { docs: [] as Record<string, unknown>[] }
+  const eigen = new Set(teamIds)
+  const ploeg = (v: unknown) => {
+    const id = relId(v)
+    const t = (ploegen.docs as Record<string, unknown>[]).find((d) => Number(d.id) === id)
+    return { name: t ? String(t.name ?? '—') : '—', logoUrl: clubLogoUrl(t), logoFit: clubLogoFit(t), eigen: id != null && eigen.has(id) }
+  }
+  const info = async (m: Record<string, unknown> | undefined): Promise<HubWedstrijdInfo | null> => {
+    if (!m) return null
+    const id = Number(m.id)
+    const status = String(m.status ?? 'scheduled')
+    return {
+      id,
+      date: typeof m.date === 'string' ? m.date : null,
+      status,
+      home: ploeg(m.homeTeam),
+      away: ploeg(m.awayTeam),
+      score: status === 'finished' || status === 'live' ? await scoreOf(payload, id) : null,
+    }
+  }
+  const [next, last] = await Promise.all([info(up), info(fin)])
   return { next, last }
 }
 
@@ -66,13 +94,13 @@ export default async function HubPage() {
   // Mijn club: naam + volgende wedstrijd + laatste uitslag. Koos je in je profiel één ploeg (of als
   // coach meteen meerdere, zie /profiel), dan personaliseren we dit naar precies die ploeg(en) i.p.v.
   // eender welke ploeg van de club te tonen — dezelfde ploegkeuze die ook het live-bord highlight.
-  let club: { id: number; name: string } | null = null
-  let nextMatch: HubMatchInfo | null = null
-  let lastMatch: HubLastMatchInfo | null = null
-  let selectedTeams: { id: number; name: string; next: HubMatchInfo | null; last: HubLastMatchInfo | null }[] = []
+  let club: { id: number; name: string; logoUrl: string | null; logoFit: ReturnType<typeof clubLogoFit> } | null = null
+  let nextMatch: HubWedstrijdInfo | null = null
+  let lastMatch: HubWedstrijdInfo | null = null
+  let selectedTeams: { id: number; name: string; reeks: string | null; next: HubWedstrijdInfo | null; last: HubWedstrijdInfo | null }[] = []
   if (clubId != null) {
-    const c = await payload.findByID({ collection: 'clubs', id: Number(clubId), depth: 0 }).catch(() => null)
-    if (c) club = { id: c.id as number, name: String(c.name) }
+    const c = await payload.findByID({ collection: 'clubs', id: Number(clubId), depth: 1 }).catch(() => null)
+    if (c) club = { id: c.id as number, name: String(c.name), logoUrl: clubLogoUrl({ club: c }), logoFit: clubLogoFit({ club: c }) }
 
     const soloTeamId = userTeamId(me)
     const multiTeamIds = userTeamIds(me)
@@ -80,12 +108,13 @@ export default async function HubPage() {
 
     if (selectedTeamIds.length > 0) {
       const teamsRes = await payload
-        .find({ collection: 'teams', where: { id: { in: selectedTeamIds } }, sort: 'displayTitle', depth: 0, limit: selectedTeamIds.length, select: { displayTitle: true } })
-        .catch(() => ({ docs: [] as { id: number; displayTitle?: string | null }[] }))
+        .find({ collection: 'teams', where: { id: { in: selectedTeamIds } }, sort: 'displayTitle', depth: 0, limit: selectedTeamIds.length, select: { name: true, reeks: true } })
+        .catch(() => ({ docs: [] as { id: number; name?: string | null; reeks?: string | null }[] }))
       selectedTeams = await Promise.all(
         teamsRes.docs.map(async (t) => {
           const { next, last } = await nextLastForTeamIds(payload, [t.id as number])
-          return { id: t.id as number, name: String(t.displayTitle ?? 'Ploeg'), next, last }
+          const reeks = typeof t.reeks === 'string' ? reeksNaam(t.reeks as Reeks) : null
+          return { id: t.id as number, name: String(t.name ?? 'Ploeg'), reeks, next, last }
         }),
       )
     } else {
@@ -129,75 +158,29 @@ export default async function HubPage() {
             <h2 className="hub-h2">Mijn club</h2>
             <div className="hub-club">
               <div className="hub-club-head">
-                <Link href={`/clubs/${club.id}`} className="hub-club-name">{club.name}</Link>
-                {isStaff && <Link href="/club" className="hub-club-manage">🛠️ Clubbeheer →</Link>}
+                <Link href={`/clubs/${club.id}`} className="hub-club-name">
+                  <TeamLogo name={club.name} logoUrl={club.logoUrl} logoFit={club.logoFit} size={28} />
+                  <span>{club.name}</span>
+                </Link>
+                {isStaff && <Link href="/club" className="hub-club-manage">Clubbeheer</Link>}
               </div>
               {selectedTeams.length > 0 ? (
-                <div className="hub-team-groups">
-                  {selectedTeams.map((t) => (
-                    <div key={t.id} className="hub-team-group">
-                      {selectedTeams.length > 1 && <span className="hub-team-label">{t.name}</span>}
-                      <div className="hub-club-rows">
-                        {t.next && (
-                          <Link
-                            href={`/match/${t.next.id}`}
-                            className="hub-club-row"
-                            aria-label={`Volgende wedstrijd van ${t.name}: ${t.next.home} tegen ${t.next.away}${t.next.date ? ', ' + formatDateTimeBE(String(t.next.date)) : ''}`}
-                          >
-                            <span className="hub-club-row-top">
-                              <span className="hub-club-lbl">Volgende</span>
-                              {t.next.date && <span className="hub-club-date">{formatDateTimeBE(String(t.next.date))}</span>}
-                            </span>
-                            <span className="hub-club-teams">{t.next.home} — {t.next.away}</span>
-                          </Link>
-                        )}
-                        {t.last && (
-                          <Link
-                            href={`/match/${t.last.id}`}
-                            className="hub-club-row"
-                            aria-label={`Laatste wedstrijd van ${t.name}: ${t.last.home} tegen ${t.last.away}${t.last.score ? `, eindstand ${t.last.score.home}-${t.last.score.away}` : ''}`}
-                          >
-                            <span className="hub-club-row-top">
-                              <span className="hub-club-lbl">Laatste</span>
-                              {t.last.score && <span className="hub-club-score">{t.last.score.home}–{t.last.score.away}</span>}
-                            </span>
-                            <span className="hub-club-teams">{t.last.home} — {t.last.away}</span>
-                          </Link>
-                        )}
-                        {!t.next && !t.last && <p className="hub-empty">Nog geen wedstrijden voor {t.name}.</p>}
-                      </div>
+                selectedTeams.map((t) => (
+                  <div key={t.id} className="hub-ploeg">
+                    <div className="hub-ploeg-kop">
+                      <span className="hub-ploeg-naam">{t.name}</span>
+                      {t.reeks && <span className="hub-ploeg-reeks">{t.reeks}</span>}
                     </div>
-                  ))}
-                </div>
+                    {t.next && <HubWedstrijd w={t.next} />}
+                    {t.last && <HubWedstrijd w={t.last} />}
+                    {!t.next && !t.last && <p className="hub-empty hub-ploeg-leeg">Nog geen wedstrijden.</p>}
+                  </div>
+                ))
               ) : (
-                <div className="hub-club-rows">
-                  {nextMatch && (
-                    <Link
-                      href={`/match/${nextMatch.id}`}
-                      className="hub-club-row"
-                      aria-label={`Volgende wedstrijd: ${nextMatch.home} tegen ${nextMatch.away}${nextMatch.date ? ', ' + formatDateTimeBE(String(nextMatch.date)) : ''}`}
-                    >
-                      <span className="hub-club-row-top">
-                        <span className="hub-club-lbl">Volgende</span>
-                        {nextMatch.date && <span className="hub-club-date">{formatDateTimeBE(String(nextMatch.date))}</span>}
-                      </span>
-                      <span className="hub-club-teams">{nextMatch.home} — {nextMatch.away}</span>
-                    </Link>
-                  )}
-                  {lastMatch && (
-                    <Link
-                      href={`/match/${lastMatch.id}`}
-                      className="hub-club-row"
-                      aria-label={`Laatste wedstrijd: ${lastMatch.home} tegen ${lastMatch.away}${lastMatch.score ? `, eindstand ${lastMatch.score.home}-${lastMatch.score.away}` : ''}`}
-                    >
-                      <span className="hub-club-row-top">
-                        <span className="hub-club-lbl">Laatste</span>
-                        {lastMatch.score && <span className="hub-club-score">{lastMatch.score.home}–{lastMatch.score.away}</span>}
-                      </span>
-                      <span className="hub-club-teams">{lastMatch.home} — {lastMatch.away}</span>
-                    </Link>
-                  )}
-                  {!nextMatch && !lastMatch && <p className="hub-empty">Nog geen wedstrijden voor je club.</p>}
+                <div className="hub-ploeg">
+                  {nextMatch && <HubWedstrijd w={nextMatch} />}
+                  {lastMatch && <HubWedstrijd w={lastMatch} />}
+                  {!nextMatch && !lastMatch && <p className="hub-empty hub-ploeg-leeg">Nog geen wedstrijden voor je club.</p>}
                 </div>
               )}
             </div>
@@ -221,14 +204,15 @@ export default async function HubPage() {
           </section>
         )}
 
-        {/* Kantinescherm, Ideeënbus en Zo werkt het — verhuisd van de menubalk naartoe hier: het
+        {/* Kantinescherm, Veldscherm, Ideeënbus en Zo werkt het — verhuisd van de menubalk naartoe hier: het
             zijn geen "leesvoer" zoals Weekoverzicht/Nieuws (die staan bij Ontdekken), maar directe
             hulpmiddelen die bij je eigen startpagina horen. Altijd zichtbaar, ook uitgelogd, want
             deze pagina zelf blokkeert niet op een account. */}
         <section className="hub-sec">
           <h2 className="hub-h2">Krachtbal-tools</h2>
-          <div className="hub-tiles">
+          <div className="hub-tiles hub-tiles-4">
             <Link href="/kantine" className="hub-tile">📺<span>Kantinescherm</span></Link>
+            <Link href="/club/veldscherm" className="hub-tile">🏟️<span>Veldscherm</span></Link>
             <Link href="/ideeenbus" className="hub-tile">💡<span>Ideeënbus</span></Link>
             <Link href="/uitleg" className="hub-tile">🎓<span>Zo werkt het</span></Link>
           </div>

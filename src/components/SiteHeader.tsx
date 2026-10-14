@@ -50,6 +50,7 @@ const ONTDEKKEN: { href: string; label: string }[] = [
   { href: '/recap', label: '🗞️ Weekoverzicht' },
   { href: '/nieuws', label: '📣 Nieuws' },
   { href: '/erelijst', label: '🥇 Erelijst' },
+  { href: '/virtueel', label: '🥽 Virtueel krachtbal' },
 ]
 
 // Welke rol een profiel-ingang mag zien. Federatie/admin zien alles.
