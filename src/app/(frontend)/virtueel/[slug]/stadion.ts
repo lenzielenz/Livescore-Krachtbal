@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 
-import type { StadionThema, Veld } from '@/lib/virtueel'
+import { eigenHerkomst, type StadionThema, type Veld } from '@/lib/virtueel'
 
 // Het stadion rond het veld van Virtueel krachtbal, in de kleuren van de club die kijkt: tribunes
 // met stoeltjes en publiek, een overdekte hoofdtribune met de clubnaam, ledborden met de reclame
@@ -44,12 +44,12 @@ export function laadBeeld(url: string | null): Promise<HTMLImageElement | null> 
   if (!url) return Promise.resolve(null)
   return new Promise((ok) => {
     const img = new Image()
-    // Anders mag een logo van een andere website niet in een WebGL-textuur; zonder toestemming van
-    // die site valt het gewoon terug op de initialen.
     img.crossOrigin = 'anonymous'
     img.onload = () => ok(img)
+    // Lukt het (ook via de proxy) niet, dan valt het gewoon terug op de initialen.
     img.onerror = () => ok(null)
-    img.src = url
+    // Een beeld van een andere website gaat via onze eigen logo-proxy (zie eigenHerkomst).
+    img.src = eigenHerkomst(url, window.location.href)
   })
 }
 

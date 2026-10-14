@@ -270,6 +270,19 @@ export type StadionThema = {
   erezaal?: EreZaal | null
   /** Optioneel: de wedstrijden van het (komende) speelweekend voor de weekendzaal. */
   weekend?: WeekendZaal | null
+  /** Optioneel: supportersfoto's van live wedstrijden van je club, als collages. */
+  fotos?: FotoKader[] | null
+}
+
+/** Eén kader in de fotogalerij: 1 tot 4 foto's door elkaar, met een onderschrift. */
+export type FotoKader = {
+  fotos: { url: string; auteur: string }[]
+  /** Bv. "KBC St. Michiels A – KRB Jabbeke" of "3 wedstrijden". */
+  titel: string
+  /** Bv. "12 oktober · foto's van Lotte, Jan". */
+  sub: string
+  /** Een getal om de schikking (kantelingen, volgorde) per kader te variëren. */
+  zaad: number
 }
 
 /** Eén wedstrijd op de weekendmuur. De stand is afgeleid (buildScoreboards), nooit opgeslagen. */
@@ -445,4 +458,21 @@ export function stap(g: Gevel, obstakels: Rechthoek[], van: { x: number; z: numb
   if (vrij(g, obstakels, naar.x, van.z)) return { x: naar.x, z: van.z }
   if (vrij(g, obstakels, van.x, naar.z)) return { x: van.x, z: naar.z }
   return van
+}
+
+/**
+ * Een beeld van een andere website (een extern clublogo, of een upload die via een ander
+ * serveradres binnenkomt) mag zonder CORS-toestemming van die site niet in een WebGL-textuur:
+ * dan bleef enkel de witte bol met initialen over. Zulke beelden halen we via onze eigen
+ * logo-proxy (zelfde aanpak als de deelkaart), zodat ze van onze eigen origin komen.
+ */
+export function eigenHerkomst(url: string, hier: string): string {
+  try {
+    const u = new URL(url, hier)
+    if (u.origin === new URL(hier).origin) return url
+    if (u.protocol !== 'http:' && u.protocol !== 'https:') return url
+    return `/api/logo-proxy?url=${encodeURIComponent(u.href)}`
+  } catch {
+    return url
+  }
 }
