@@ -4,10 +4,15 @@ import { useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 
-import { balOp, balSpoor, bezitOp, bezitTijdlijn, decodeer, GEVEL, op, ploegKleuren, snelheid, stap, WERELD_STRAAL, type Ploeg, type Reconstructie, type Spoor, type StadionThema, type Veld } from '@/lib/virtueel'
+import { balOp, balSpoor, bezitOp, bezitTijdlijn, decodeer, GEVEL, op, ploegKleuren, snelheid, stap, WERELD_STRAAL, type Ploeg, type Rechthoek, type Reconstructie, type Spoor, type StadionThema, type Veld } from '@/lib/virtueel'
+import { pasStandenToe, type WeekendStand } from '@/lib/virtueel-weekend'
+import { bouwEregalerij } from './erezaal'
 import { bouwOmgeving } from './omgeving'
 import { bouwSfeer } from './sfeer'
 import { bouwStadion } from './stadion'
+import { bouwWeekendzaal } from './weekendzaal'
+import { bouwFotogalerij } from './fotogalerij'
+import { bouwWegwijzers, type Bestemming } from './wegwijzers'
 
 // Virtueel krachtbal: een gereconstrueerd wedstrijdfragment in 3D, in een stadion in je
 // clubkleuren. Je kijkt vanop de tribune, volgt de bal, kruipt in het hoofd van een speler, loopt
@@ -31,11 +36,9 @@ const VERKENNEN: Modus[] = ['zweven', 'buiten', 'rondvlucht']
 const VELD: Modus[] = ['tribune', 'bal', 'speler', 'lopen']
 const WANDELEN: Modus[] = ['lopen', 'buiten']
 const BESTUURBAAR: Modus[] = ['lopen', 'buiten', 'zweven']
-const SNELHEDEN = [0.25, 0.5, 1, 2]
 const OOGHOOGTE = 1.7
 
 const kort = (id: string) => id.replace(/^T\d-/, '')
-const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}.${Math.floor((s % 1) * 10)}`
 
 // ---------- textuurtjes, allemaal getekend: geen extra bestanden nodig ----------
 
@@ -220,9 +223,6 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
   const joystickRef = useRef<HTMLDivElement>(null)
   const [data, setData] = useState<{ sporen: Spoor[]; duur: number; veld: Veld; ploegen: Ploeg[]; kleuren: Record<number, string> } | null>(null)
   const [fout, setFout] = useState<string | null>(null)
-  const [tijd, setTijd] = useState(0)
-  const [spelend, setSpelend] = useState(false)
-  const [snel, setSnel] = useState(1)
   const [modus, setModus] = useState<Modus>('zweven')
   const [aanVeld, setAanVeld] = useState(false)
   const [welkom, setWelkom] = useState(true)
@@ -234,9 +234,7 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
   const [stick, setStick] = useState({ x: 0, y: 0 })
 
   // Wat de tekenlus nodig heeft, zonder bij elke wijziging de scène opnieuw te bouwen.
-  const st = useRef({ tijd: 0, spelend: false, snel: 1, modus: 'zweven' as Modus, gekozen: null as string | null, namen: true, stick: { x: 0, y: 0 }, hoog: 0, spoel: false })
-  st.current.spelend = spelend
-  st.current.snel = snel
+  const st = useRef({ tijd: 0, spelend: false, modus: 'zweven' as Modus, gekozen: null as string | null, namen: true, stick: { x: 0, y: 0 }, hoog: 0, spoel: false })
   st.current.modus = modus
   st.current.gekozen = gekozen
   st.current.namen = namen
@@ -263,7 +261,8 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
         const sporen = decodeer(r)
         setData({ sporen, duur: r.duur_s, veld: r.veld, ploegen: r.ploegen, kleuren: ploegKleuren(r.ploegen) })
         setGekozen(sporen.find((s) => !s.bal)?.id ?? null)
-        setSpelend(true)
+        // Het fragment speelt meteen, en blijft in een lus spelen (er is geen tijdbalk meer).
+        st.current.spelend = true
       })
       .catch((e: Error) => !weg && setFout(e.message))
     return () => {
@@ -357,7 +356,49 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     const stadion = bouwStadion(scene, { veld, marge, thema, licht })
     const omgeving = bouwOmgeving(scene, { thema, licht, logo: stadion.logo })
     const sfeer = bouwSfeer(scene, { thema, licht, logo: stadion.logo })
-    const obstakels = [...stadion.obstakels, ...omgeving.obstakels, ...sfeer.obstakels]
+    // De hall of fame hangt in de gangen; het kopbord op de achterwand van de zuidtribune, recht
+    // tegenover de hoofdingang.
+    const zuidTribune = stadion.obstakels.find((o) => o.z0 > 0 && o.x1 - o.x0 > 30)
+    const erezaal = bouwEregalerij(scene, { thema, logo: stadion.logo, kopbordZ: (zuidTribune?.z1 ?? 22) - 0.45, renderer, licht })
+    // De tribunes (hun voetafdruk) — de gangen liggen erachter.
+    const lang = (o: Rechthoek) => o.x1 - o.x0 > 30
+    const tribunes = {
+      zuid: zuidTribune,
+      noord: stadion.obstakels.find((o) => o.z1 < 0 && lang(o)),
+      oost: stadion.obstakels.find((o) => o.x0 > 0 && !lang(o)),
+      west: stadion.obstakels.find((o) => o.x1 < 0 && !lang(o)),
+    }
+    // De fotogalerij: supportersfoto's van je club op de achterwanden van de kopse tribunes.
+    const fotogalerij = thema.fotos?.length ? bouwFotogalerij(scene, { thema, kaders: thema.fotos, oost: tribunes.oost, west: tribunes.west }) : null
+    // Bewegwijzering naar alles wat er in de gangen te vinden is.
+    const bestemmingen: Bestemming[] = [
+      { naam: 'Hall of Fame & bekers', icoon: '🏆', x: 0, z: GEVEL.B - 4, kleur: '#fbbf24' },
+      ...(fotogalerij && tribunes.oost ? [{ naam: 'Fotogalerij', icoon: '📸', x: tribunes.oost.x1, z: 0, kleur: '#f472b6' }] : []),
+      ...(fotogalerij && tribunes.west ? [{ naam: 'Fotogalerij', icoon: '📸', x: tribunes.west.x0, z: 0, kleur: '#f472b6' }] : []),
+      ...(thema.weekend ? [{ naam: 'Dit weekend', icoon: '⚡', x: 0, z: -GEVEL.B + 4, kleur: '#38bdf8' }] : []),
+      { naam: 'Hoofdingang', icoon: '🚪', x: 0, z: GEVEL.B, kleur: '#e2e8f0' },
+    ]
+    const wegwijzers = bouwWegwijzers(scene, { thema, logo: stadion.logo, bestemmingen, tribunes })
+    const obstakels = [...stadion.obstakels, ...omgeving.obstakels, ...sfeer.obstakels, ...erezaal.obstakels, ...wegwijzers.obstakels]
+    // De weekendzaal in de noordgang: de wedstrijden van dit weekend, met de standen. Op zaterdag en
+    // zondag luistert ze mee op het gedeelde live-weekendkanaal (één poller voor alle kijkers).
+    const noordTribune = stadion.obstakels.find((o) => o.z1 < 0 && o.x1 - o.x0 > 30)
+    const weekendzaal = thema.weekend ? bouwWeekendzaal(scene, { thema, zaal: thema.weekend, wandZ: (noordTribune?.z0 ?? -22) + 0.45 }) : null
+    let weekendStroom: EventSource | null = null
+    if (thema.weekend?.bezig && weekendzaal && typeof EventSource !== 'undefined') {
+      let huidig = thema.weekend
+      weekendStroom = new EventSource(`/api/live/stream?date=${encodeURIComponent(huidig.zaterdag)}&view=weekend`)
+      weekendStroom.addEventListener('scores', (e) => {
+        try {
+          const nieuw = pasStandenToe(huidig, JSON.parse((e as MessageEvent<string>).data) as WeekendStand[])
+          if (nieuw === huidig) return
+          huidig = nieuw
+          weekendzaal.werkBij(nieuw)
+        } catch {
+          // Een kapot bericht: de muur blijft gewoon staan zoals hij was.
+        }
+      })
+    }
     const bezitAandeel = bezitTijdlijn(sporen)
     const scorePloegen = data.ploegen.map((p) => ({ naam: p.naam, kleur: kleuren[p.id] ?? '#b2bbb6' }))
 
@@ -458,15 +499,14 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     let raf = 0
     const tik = (nu: number) => {
       raf = requestAnimationFrame(tik)
-      const dt = Math.min(0.1, (nu - vorige) / 1000)
+      // De rAF-tijdstempel kan net vóór performance.now() liggen: nooit een negatieve stap.
+      const dt = Math.max(0, Math.min(0.1, (nu - vorige) / 1000))
       vorige = nu
       const s = st.current
       if (s.spelend) {
-        s.tijd += dt * s.snel
-        if (s.tijd >= duur) {
-          s.tijd = duur
-          setSpelend(false)
-        }
+        // Het fragment is kort: aan het einde begint het gewoon opnieuw.
+        s.tijd += dt
+        if (s.tijd >= duur) s.tijd %= duur
       }
       const t = s.tijd
 
@@ -641,6 +681,9 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
       stadion.update(nu / 1000, { tijd: t, duur, bezit: bezitAandeel(t), ploegen: scorePloegen })
       omgeving.update(nu / 1000)
       sfeer.update(nu / 1000, dt)
+      erezaal.update(nu / 1000)
+      weekendzaal?.update(nu / 1000)
+      fotogalerij?.update(nu / 1000)
       renderer.render(scene, camera)
       if (!getekend) {
         getekend = true
@@ -660,10 +703,9 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
         frameTijd = 0
       }
 
-      // De knoppen en tijdlijn ~12 keer per seconde bijwerken is genoeg.
+      // De bezitsbalk en de knoppen ~12 keer per seconde bijwerken is genoeg.
       if (nu - laatsteUi > 80) {
         laatsteUi = nu
-        setTijd(t)
         setBezit(bezitOp(sporen, t))
         setAanVeld((s.modus === 'zweven' || s.modus === 'buiten') && opVeld(loper.pos))
       }
@@ -672,6 +714,7 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
 
     return () => {
       cancelAnimationFrame(raf)
+      weekendStroom?.close()
       ro.disconnect()
       window.removeEventListener('keydown', opToets)
       window.removeEventListener('keyup', losToets)
@@ -689,17 +732,6 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
       renderer.domElement.remove()
     }
   }, [data, thema])
-
-  const spoel = (t: number) => {
-    if (!data) return
-    st.current.tijd = Math.max(0, Math.min(data.duur, t))
-    setTijd(st.current.tijd)
-  }
-  const speel = () => {
-    if (!data) return
-    if (!spelend && st.current.tijd >= data.duur - 0.05) spoel(0)
-    setSpelend(!spelend)
-  }
 
   // Joystick (gsm): een duim-knop binnen een cirkel, als stuurvector van -1 tot 1.
   const joyNeer = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -862,29 +894,6 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
           </>
         )}
       </div>
-
-      {data && (
-        <div className="vk-balk">
-          <button className="vk-knop speel" onClick={speel} aria-label={spelend ? 'Pauzeren' : 'Afspelen'}>
-            {spelend ? '❚❚' : '▶'}
-          </button>
-          <button className="vk-knop" onClick={() => spoel(st.current.tijd - 5)} aria-label="5 seconden terug">−5s</button>
-          <input
-            className="vk-tijdlijn"
-            type="range"
-            min={0}
-            max={data.duur}
-            step={0.01}
-            value={tijd}
-            onChange={(e) => spoel(Number(e.target.value))}
-            aria-label="Tijdlijn"
-          />
-          <span className="vk-klok">{fmt(tijd)} / {fmt(data.duur)}</span>
-          <button className="vk-knop" onClick={() => setSnel(SNELHEDEN[(SNELHEDEN.indexOf(snel) + 1) % SNELHEDEN.length])} aria-label="Afspeelsnelheid">
-            {snel}×
-          </button>
-        </div>
-      )}
 
       {data && (
         <div className="vk-spelers">

@@ -242,6 +242,20 @@ export function ploegKleuren(ploegen: Ploeg[]): Record<number, string> {
 
 // ---------- het stadion in de kleuren van je club ----------
 
+/** Eén bord in de hall of fame in de gangen: een titel, een beker of een referendumprijs. */
+export type EreBord = {
+  soort: 'titel' | 'beker' | 'referendum'
+  jaar: string
+  kop: string
+  tekst: string
+  /** Wat deze prijs bijzonder maakt, bv. "3de titel in 1ste Nationale Heren · 6de titel van de club". */
+  extra?: string
+  /** Het hoeveelste van zijn soort voor de club (1 = de eerste ooit). */
+  nummer?: number
+}
+/** De hall of fame: een kopbord en de borden, recentste eerst. `eigen` = de prijzen van je club. */
+export type EreZaal = { eigen: boolean; kop: string; totaal: string; borden: EreBord[] }
+
 export type StadionThema = {
   naam: string
   /** Initialen voor als er geen (bruikbaar) logo is. */
@@ -252,6 +266,55 @@ export type StadionThema = {
   tekstOpPrimair: string
   logoUrl: string | null
   reclames: { url: string; naam: string }[]
+  /** Optioneel: de erelijst voor de hall of fame in de gangen. */
+  erezaal?: EreZaal | null
+  /** Optioneel: de wedstrijden van het (komende) speelweekend voor de weekendzaal. */
+  weekend?: WeekendZaal | null
+  /** Optioneel: supportersfoto's van live wedstrijden van je club, als collages. */
+  fotos?: FotoKader[] | null
+}
+
+/** Eén kader in de fotogalerij: 1 tot 4 foto's door elkaar, met een onderschrift. */
+export type FotoKader = {
+  fotos: { url: string; auteur: string }[]
+  /** Bv. "KBC St. Michiels A – KRB Jabbeke" of "3 wedstrijden". */
+  titel: string
+  /** Bv. "12 oktober · foto's van Lotte, Jan". */
+  sub: string
+  /** Een getal om de schikking (kantelingen, volgorde) per kader te variëren. */
+  zaad: number
+}
+
+/** Eén wedstrijd op de weekendmuur. De stand is afgeleid (buildScoreboards), nooit opgeslagen. */
+export type WeekendBord = {
+  id: number
+  /** "ZA" of "ZO". */
+  dag: string
+  uur: string
+  reeks: string
+  thuis: string
+  uit: string
+  thuisKleur: string
+  uitKleur: string
+  status: 'gepland' | 'live' | 'gespeeld' | 'wacht'
+  /** Enkel bij live en gespeeld. */
+  score: { home: number; away: number } | null
+  /** Een wedstrijd van je eigen club. */
+  eigen: boolean
+}
+/** De weekendzaal: de wedstrijden van het komende (of lopende) speelweekend. */
+export type WeekendZaal = {
+  /** De zaterdag (YYYY-MM-DD): sleutel voor het gedeelde live-weekendkanaal. */
+  zaterdag: string
+  /** Bv. "za 17 – zo 18 oktober". */
+  datum: string
+  /** Over het hele weekend, ook wat niet aan de muur past (zie weekendTelling). */
+  totaal: number
+  gespeeld: number
+  live: number
+  /** Wordt er nu (za/zo) gespeeld? Enkel dan luistert de zaal mee naar live-standen. */
+  bezig: boolean
+  borden: WeekendBord[]
 }
 
 /** Zonder ingelogde club: het stadion van Krachtbal Live zelf. */
@@ -395,4 +458,21 @@ export function stap(g: Gevel, obstakels: Rechthoek[], van: { x: number; z: numb
   if (vrij(g, obstakels, naar.x, van.z)) return { x: naar.x, z: van.z }
   if (vrij(g, obstakels, van.x, naar.z)) return { x: van.x, z: naar.z }
   return van
+}
+
+/**
+ * Een beeld van een andere website (een extern clublogo, of een upload die via een ander
+ * serveradres binnenkomt) mag zonder CORS-toestemming van die site niet in een WebGL-textuur:
+ * dan bleef enkel de witte bol met initialen over. Zulke beelden halen we via onze eigen
+ * logo-proxy (zelfde aanpak als de deelkaart), zodat ze van onze eigen origin komen.
+ */
+export function eigenHerkomst(url: string, hier: string): string {
+  try {
+    const u = new URL(url, hier)
+    if (u.origin === new URL(hier).origin) return url
+    if (u.protocol !== 'http:' && u.protocol !== 'https:') return url
+    return `/api/logo-proxy?url=${encodeURIComponent(u.href)}`
+  } catch {
+    return url
+  }
 }
