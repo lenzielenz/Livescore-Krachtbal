@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { eigenHerkomst } from '@/lib/virtueel'
+import { eigenHerkomst, lichtshow } from '@/lib/virtueel'
 
 // Clublogo's in het virtuele stadion: een beeld van een andere site gaat via de eigen logo-proxy.
 
@@ -16,5 +16,15 @@ describe('eigenHerkomst (logo’s in het virtuele stadion)', () => {
     expect(eigenHerkomst('https://iets.up.railway.app/api/media/file/ksm.png', hier)).toBe(
       '/api/logo-proxy?url=https%3A%2F%2Fiets.up.railway.app%2Fapi%2Fmedia%2Ffile%2Fksm.png',
     )
+  })
+})
+
+describe('lichtshow', () => {
+  it('geeft de voortgang tijdens de show en -1 daarbuiten', () => {
+    expect(lichtshow(0)).toBe(-1)
+    expect(lichtshow(12)).toBe(0)
+    expect(lichtshow(12 + 2.25)).toBeCloseTo(0.5)
+    expect(lichtshow(12 + 4.5)).toBe(-1)
+    expect(lichtshow(42 + 1)).toBeCloseTo(1 / 4.5)
   })
 })

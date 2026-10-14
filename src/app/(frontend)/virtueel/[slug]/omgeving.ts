@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 
-import { GEVEL, inPoort, type Rechthoek, type StadionThema } from '@/lib/virtueel'
+import { GEVEL, inPoort, lichtshow, type Rechthoek, type StadionThema } from '@/lib/virtueel'
 import { canvasTex, rnd, rondLogo } from './stadion'
 
 // De buitenkant van het stadion: zodat wie rondkijkt of rondwandelt het gevoel heeft dat dit zíjn
@@ -210,6 +210,19 @@ export function bouwOmgeving(scene: THREE.Scene, opt: { thema: StadionThema; lic
     lamellen.setColorAt(i, i % 4 === 3 ? secundair : primair)
   })
   scene.add(lamellen)
+  // Een ledstrip op de voorkant van elke lamel: hier lopen de lichtgolven rond het stadion (zie update).
+  const strips = new THREE.InstancedMesh(
+    new THREE.BoxGeometry(0.07, H - 3.6, 0.04).translate(0, (H - 3.6) / 2 + 0.4, 0),
+    new THREE.MeshBasicMaterial({ toneMapped: false }),
+    lamelPunten.length,
+  )
+  lamelPunten.forEach((p, i) => {
+    q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.atan2(p.nx, p.nz))
+    m4.compose(new THREE.Vector3(p.x + p.nx * 1.47, 0, p.z + p.nz * 1.47), q, een)
+    strips.setMatrixAt(i, m4)
+    strips.setColorAt(i, primair)
+  })
+  scene.add(strips)
 
   // Doorlopende ledband bovenaan met de clubnaam, als één lint rond het hele stadion.
   const bandTekst = `${thema.naam.toUpperCase()}   ★   `
@@ -365,6 +378,8 @@ export function bouwOmgeving(scene: THREE.Scene, opt: { thema: StadionThema; lic
   })
   scene.add(waaiers, spots, lenzen)
 
+  const stralen: { draai: THREE.Group; as: THREE.Vector3; fase: number }[] = []
+  let straalMat: THREE.MeshBasicMaterial | null = null
   // Grote schijnwerpers op het plein die naar de kroonlijst stralen: zichtbare bundels van de grond
   // tot de bovenrand van het stadion.
   if (!licht) {
@@ -378,7 +393,7 @@ export function bouwOmgeving(scene: THREE.Scene, opt: { thema: StadionThema; lic
         g.fillRect(0, 0, 8, 256)
       }),
     )
-    const straalMat = additief(straalTex, 0.55)
+    straalMat = additief(straalTex, 0.55)
     straalMat.side = THREE.DoubleSide
     const Y = new THREE.Vector3(0, 1, 0)
     for (const p of gevelOmtrek(26)) {
@@ -389,12 +404,16 @@ export function bouwOmgeving(scene: THREE.Scene, opt: { thema: StadionThema; lic
       const richting = top.clone().sub(voet)
       const lengte = richting.length()
       const straal = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 0.18, lengte, 20, 1, true).translate(0, lengte / 2, 0), straalMat)
-      straal.position.copy(voet)
       straal.quaternion.setFromUnitVectors(Y, richting.normalize())
       const kast = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.45, 0.6), metaal)
-      kast.position.set(voet.x, 0.22, voet.z)
+      kast.position.set(0, -0.08, 0)
       kast.quaternion.copy(straal.quaternion)
-      scene.add(straal, kast)
+      // Een draaipunt op de grond: de bundel zwaait traag langs de gevel heen en weer.
+      const draai = new THREE.Group()
+      draai.position.copy(voet)
+      draai.add(straal, kast)
+      scene.add(draai)
+      stralen.push({ draai, as: new THREE.Vector3(p.nx, 0, p.nz), fase: stralen.length * 1.7 })
     }
   }
 
@@ -574,10 +593,14 @@ export function bouwOmgeving(scene: THREE.Scene, opt: { thema: StadionThema; lic
   for (let x = -140; x <= 140; x += 20) lampPos.push([x, B + 35.5])
   const palen = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.08, 0.12, 6, 6).translate(0, 3, 0), new THREE.MeshLambertMaterial({ color: '#374151' }), lampPos.length)
   const kappen = new THREE.InstancedMesh(new THREE.SphereGeometry(0.28, 10, 8).translate(0, 6.05, 0), new THREE.MeshBasicMaterial({ color: '#fff1c4', toneMapped: false }), lampPos.length)
+  // Elke paal krijgt een oplichtende ledzuil halverwege: daar lopen de kleurgolven over het plein.
+  const paalLeds = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.135, 0.135, 1.4, 12, 1, true).translate(0, 2.4, 0), new THREE.MeshBasicMaterial({ toneMapped: false }), lampPos.length)
   const gloedPos = new Float32Array(lampPos.length * 3)
   lampPos.forEach(([x, z], i) => {
     m4.makeTranslation(x, 0, z)
     palen.setMatrixAt(i, m4)
+    paalLeds.setMatrixAt(i, m4)
+    paalLeds.setColorAt(i, primair)
     kappen.setMatrixAt(i, m4)
     gloedPos.set([x, 6.05, z], i * 3)
   })
@@ -591,7 +614,7 @@ export function bouwOmgeving(scene: THREE.Scene, opt: { thema: StadionThema; lic
   const gloedGeo = new THREE.BufferGeometry()
   gloedGeo.setAttribute('position', new THREE.BufferAttribute(gloedPos, 3))
   const gloed = new THREE.Points(gloedGeo, new THREE.PointsMaterial({ map: new THREE.CanvasTexture(gloedC), size: 4, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }))
-  scene.add(palen, kappen, gloed)
+  scene.add(palen, paalLeds, kappen, gloed)
   // Een warme lichtplas onder elke lantaarn (geen echte lampen: die zijn duur), op het plein.
   const plasGeo = new THREE.CircleGeometry(4.5, 24)
   plasGeo.rotateX(-Math.PI / 2)
@@ -729,12 +752,56 @@ export function bouwOmgeving(scene: THREE.Scene, opt: { thema: StadionThema; lic
   stoep.position.set(0, 0.07, B + 25.3)
   scene.add(stoep)
 
+  const kleur = new THREE.Color()
   return {
     obstakels,
     start: { x: 0, z: B + 26, yaw: Math.PI },
     update(seconden) {
       tijd.value = seconden
       bandTex.offset.x = -(seconden * 0.04) % 1
+      const show = lichtshow(seconden)
+      // Ledstrips op de lamellen: een lichtgolf die rond het stadion loopt; tijdens de show
+      // flitsen ze om beurten in de twee clubkleuren en wit.
+      lamelPunten.forEach((p, i) => {
+        if (show >= 0) {
+          const stap = Math.floor(seconden * 8 + i / 6) % 3
+          kleur.copy(stap === 0 ? primair : stap === 1 ? secundair : wit)
+        } else {
+          const golf = Math.pow(0.5 + 0.5 * Math.sin(seconden * 1.6 - p.s * 0.09), 6)
+          kleur.copy(primair).multiplyScalar(0.35 + 0.9 * golf).lerp(wit, golf * 0.45)
+        }
+        strips.setColorAt(i, kleur)
+      })
+      if (strips.instanceColor) strips.instanceColor.needsUpdate = true
+      // Grondspots: een trage, ademende golf; tijdens de show allemaal in de clubkleur, flitsend.
+      spotPunten.forEach((p, i) => {
+        const basis = i % 3 === 1 ? primair : wit
+        if (show >= 0) kleur.copy(Math.floor(seconden * 6) % 2 ? primair : secundair).multiplyScalar(1.1)
+        else kleur.copy(basis).multiplyScalar(0.55 + 0.45 * (0.5 + 0.5 * Math.sin(seconden * 0.9 - p.s * 0.05)))
+        waaiers.setColorAt(i, kleur)
+        lenzen.setColorAt(i, kleur)
+      })
+      if (waaiers.instanceColor) waaiers.instanceColor.needsUpdate = true
+      if (lenzen.instanceColor) lenzen.instanceColor.needsUpdate = true
+      // De schijnwerpers zwaaien traag; tijdens de show sneller en in de clubkleur.
+      for (const s of stralen) {
+        const hoek = Math.sin(seconden * (show >= 0 ? 2.2 : 0.45) + s.fase) * (show >= 0 ? 0.35 : 0.2)
+        s.draai.quaternion.setFromAxisAngle(s.as, hoek)
+      }
+      // De ledzuilen op de palen: een kleurgolf rond het plein, en flitsen tijdens de show.
+      lampPos.forEach(([x, z], i) => {
+        if (show >= 0) kleur.copy((Math.floor(seconden * 6) + i) % 2 ? primair : wit)
+        else {
+          const golf = 0.5 + 0.5 * Math.sin(seconden * 1.2 - Math.atan2(z, x) * 3)
+          kleur.copy(primair).multiplyScalar(0.4 + 0.8 * golf).lerp(secundair, golf * 0.25)
+        }
+        paalLeds.setColorAt(i, kleur)
+      })
+      if (paalLeds.instanceColor) paalLeds.instanceColor.needsUpdate = true
+      if (straalMat) {
+        straalMat.color.copy(show >= 0 ? primair : wit)
+        straalMat.opacity = show >= 0 ? 0.75 : 0.45 + 0.12 * Math.sin(seconden * 0.7)
+      }
     },
   }
 }

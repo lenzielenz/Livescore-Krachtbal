@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 
-import { eigenHerkomst, type StadionThema, type Veld } from '@/lib/virtueel'
+import { eigenHerkomst, lichtshow, type StadionThema, type Veld } from '@/lib/virtueel'
 
 // Het stadion rond het veld van Virtueel krachtbal, in de kleuren van de club die kijkt: tribunes
 // met stoeltjes en publiek, een overdekte hoofdtribune met de clubnaam, ledborden met de reclame
@@ -490,6 +490,18 @@ export function bouwStadion(
   gg.fillStyle = gr
   gg.fillRect(0, 0, 64, 64)
   const gloed = new THREE.CanvasTexture(gloedC)
+  // Zichtbare lichtbundels van elke mast naar het veld (nep-licht, additief).
+  const bundelC = document.createElement('canvas')
+  bundelC.width = 8
+  bundelC.height = 256
+  const bg = bundelC.getContext('2d')!
+  const bgr = bg.createLinearGradient(0, 0, 0, 256)
+  bgr.addColorStop(0, 'rgba(255,248,225,0)')
+  bgr.addColorStop(1, 'rgba(255,248,225,.35)')
+  bg.fillStyle = bgr
+  bg.fillRect(0, 0, 8, 256)
+  const bundelMat = new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(bundelC), transparent: true, opacity: 0.32, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, toneMapped: false })
+  const masten: { lamp: THREE.MeshBasicMaterial; halo: THREE.Sprite; spot: THREE.SpotLight; bundel: THREE.Mesh }[] = []
   for (const [mx, mz] of [[-hx - 9, -hz - 14], [hx + 9, -hz - 14], [-hx - 9, hz + 12], [hx + 9, hz + 12]] as const) {
     const paal = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.4, 26, 8), metaal)
     paal.position.set(mx, 13, mz)
@@ -503,7 +515,14 @@ export function bouwStadion(
     halo.position.copy(kop.position)
     const spot = new THREE.SpotLight('#fff2d6', 420, 120, 0.6, 0.6, 1.4)
     spot.position.copy(kop.position)
-    scene.add(paal, kop, halo, spot, spot.target)
+    // De bundel van de lampkop naar het midden van het veld.
+    const naarVeld = new THREE.Vector3(mx * 0.35, 0, mz * 0.35).sub(kop.position)
+    const lengte = naarVeld.length()
+    const bundel = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 9, lengte, 20, 1, true).translate(0, -lengte / 2, 0), bundelMat.clone())
+    bundel.position.copy(kop.position)
+    bundel.quaternion.setFromUnitVectors(new THREE.Vector3(0, -1, 0), naarVeld.normalize())
+    masten.push({ lamp, halo, spot, bundel })
+    scene.add(paal, kop, halo, spot, spot.target, bundel)
   }
 
   // ---------- groot ledscherm met het clublogo (west) ----------
@@ -643,6 +662,8 @@ export function bouwStadion(
   })
 
   let laatsteBord = -1
+  const wit = new THREE.Color('#fff7e0')
+  const showKleur = new THREE.Color(thema.primair)
   return {
     obstakels,
     logo,
@@ -653,6 +674,28 @@ export function bouwStadion(
       reclameTexKort.offset.x = off
       // Het ledscherm "ademt" zacht.
       schermMat.color.setScalar(0.88 + 0.12 * Math.sin(seconden * 1.6))
+      // De lichtmasten leven mee: een zachte gloed die ademt, en tijdens de lichtshow flitsen ze
+      // om beurten, de bundels kleuren mee in de clubkleur.
+      const show = lichtshow(seconden)
+      masten.forEach((m, i) => {
+        const bm = m.bundel.material as THREE.MeshBasicMaterial
+        if (show >= 0) {
+          // Om beurten, rond het veld.
+          const aan = Math.floor(show * 14) % masten.length === i ? 1 : 0.25
+          m.spot.intensity = 420 * aan + 80
+          m.halo.scale.setScalar(10 + 12 * aan)
+          m.lamp.color.copy(aan > 0.5 ? showKleur : wit)
+          bm.color.copy(showKleur)
+          bm.opacity = 0.2 + 0.4 * aan
+        } else {
+          const adem = 0.5 + 0.5 * Math.sin(seconden * 0.8 + i * 1.6)
+          m.spot.intensity = 400 + 40 * adem
+          m.halo.scale.setScalar(13 + 2.5 * adem)
+          m.lamp.color.copy(wit)
+          bm.color.copy(wit)
+          bm.opacity = 0.22 + 0.1 * adem
+        }
+      })
       if (seconden - laatsteBord > 0.25) {
         laatsteBord = seconden
         tekenScorebord(info)
