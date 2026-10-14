@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 
-import { balOp, balSpoor, bezitOp, decodeer, op, ploegKleuren, type Reconstructie, type Spoor } from '@/lib/virtueel'
+import { balOp, balSpoor, bezitOp, bezitTijdlijn, decodeer, op, ploegKleuren, STANDAARD_THEMA, stadionThema, type Reconstructie, type Spoor } from '@/lib/virtueel'
 
 // Een klein handgemaakt fragment: één speler per ploeg en de bal.
 const spoor = (over: Partial<Spoor> & { id: string }): Spoor => ({
@@ -75,5 +75,28 @@ describe('decodeer (echt fragment)', () => {
     let vast = 0
     for (let t = 1; t < r.duur_s; t += 0.5) if (balOp(s, t)?.houder) vast++
     expect(vast).toBeGreaterThan(30)
+  })
+})
+
+describe('stadionThema', () => {
+  it('neemt de clubkleuren over en kiest leesbare tekst', () => {
+    const t = stadionThema({ naam: 'KBC St. Michiels', primair: '#C8102E', secundair: '#FFFFFF', logoUrl: '/logo.png' })
+    expect(t).toMatchObject({ primair: '#c8102e', secundair: '#ffffff', tekstOpPrimair: '#ffffff', kort: 'KSM', logoUrl: '/logo.png' })
+  })
+  it('vervangt een ontbrekende of te gelijkaardige tweede kleur', () => {
+    expect(stadionThema({ naam: 'X', primair: '#facc15', secundair: null, logoUrl: null }).secundair).toBe('#111827')
+    expect(stadionThema({ naam: 'X', primair: '#1e3a8a', secundair: '#1e3a8b', logoUrl: null }).secundair).toBe('#f8fafc')
+  })
+  it('valt terug op Krachtbal Live bij een ongeldige kleur', () => {
+    expect(stadionThema({ naam: 'X', primair: 'rood', secundair: null, logoUrl: null }).primair).toBe(STANDAARD_THEMA.primair)
+  })
+})
+
+describe('bezitTijdlijn', () => {
+  it('telt het balbezit per ploeg op, de vlucht inbegrepen', () => {
+    const bezit = bezitTijdlijn(sporen)
+    expect(bezit(-1)).toBeNull()
+    // 0–1.5 s: ploeg 0 (vast + vlucht), 1.5–2 s: nog steeds ploeg 0 tot ploeg 1 vangt op 2 s.
+    expect(bezit(2)).toEqual([1, 0])
   })
 })

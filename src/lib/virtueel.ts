@@ -239,3 +239,101 @@ export function ploegKleuren(ploegen: Ploeg[]): Record<number, string> {
   }
   return uit
 }
+
+// ---------- het stadion in de kleuren van je club ----------
+
+export type StadionThema = {
+  naam: string
+  /** Initialen voor als er geen (bruikbaar) logo is. */
+  kort: string
+  primair: string
+  secundair: string
+  /** Leesbare tekstkleur op de primaire kleur. */
+  tekstOpPrimair: string
+  logoUrl: string | null
+  reclames: { url: string; naam: string }[]
+}
+
+/** Zonder ingelogde club: het stadion van Krachtbal Live zelf. */
+export const STANDAARD_THEMA: StadionThema = {
+  naam: 'Krachtbal Live',
+  kort: 'KL',
+  primair: '#2563eb',
+  secundair: '#e2e8f0',
+  tekstOpPrimair: '#ffffff',
+  logoUrl: null,
+  reclames: [],
+}
+
+function luminantie(hex: string): number {
+  const h = hex.replace('#', '')
+  const c = (i: number) => {
+    const v = parseInt(h.slice(i, i + 2), 16) / 255
+    return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4
+  }
+  return 0.2126 * c(0) + 0.7152 * c(2) + 0.0722 * c(4)
+}
+
+/**
+ * Het thema voor het stadion uit de gegevens van een club. Twee bijna gelijke clubkleuren (of een
+ * ontbrekende tweede) geven een saai stadion; dan wordt de tweede kleur wit of donker, wat het
+ * best afsteekt.
+ */
+export function stadionThema(club: { naam: string; primair: string | null; secundair: string | null; logoUrl: string | null }, reclames: StadionThema['reclames'] = []): StadionThema {
+  const hex = (v: string | null) => (v && /^#[0-9a-f]{6}$/i.test(v) ? v.toLowerCase() : null)
+  const primair = hex(club.primair) ?? STANDAARD_THEMA.primair
+  let secundair = hex(club.secundair)
+  const lp = luminantie(primair)
+  if (!secundair || Math.abs(luminantie(secundair) - lp) < 0.08) secundair = lp > 0.45 ? '#111827' : '#f8fafc'
+  const kort = club.naam
+    .split(/\s+/)
+    .filter((w) => /^[A-Za-zÀ-ÿ]/.test(w))
+    .map((w) => w[0])
+    .join('')
+    .slice(0, 3)
+    .toUpperCase()
+  return {
+    naam: club.naam,
+    kort: kort || 'KL',
+    primair,
+    secundair,
+    tekstOpPrimair: lp > 0.45 ? '#0b1220' : '#ffffff',
+    logoUrl: club.logoUrl,
+    reclames,
+  }
+}
+
+/**
+ * Balbezit tot op een tijdstip, als aandeel per ploeg (0–1): de tijd dat een speler van die ploeg
+ * de bal vasthad, plus de vlucht na zijn worp. Vooraf één keer opgebouwd, daarna per frame enkel
+ * een zoekopdracht.
+ */
+export function bezitTijdlijn(sporen: Spoor[]): (tijd: number) => [number, number] | null {
+  const bal = sporen.find((s) => s.bal)
+  if (!bal || bal.t.length === 0) return () => null
+  const teamVan = new Map<string, number | null>()
+  for (const p of sporen) if (!p.bal && p.track) teamVan.set(p.track, p.team)
+  const n = bal.t.length
+  const cum = [new Float64Array(n), new Float64Array(n)]
+  let team: number | null = null
+  for (let i = 1; i < n; i++) {
+    const vorig = i - 1
+    if (bal.fase[vorig] === 'held' && bal.houder[vorig]) team = teamVan.get(bal.houder[vorig]!) ?? team
+    const dt = Math.min(1, bal.t[i] - bal.t[vorig])
+    cum[0][i] = cum[0][vorig] + (team === 0 ? dt : 0)
+    cum[1][i] = cum[1][vorig] + (team === 1 ? dt : 0)
+  }
+  return (tijd) => {
+    let lo = 0
+    let hi = n - 1
+    if (tijd < bal.t[0]) return null
+    while (lo < hi) {
+      const m = (lo + hi + 1) >> 1
+      if (bal.t[m] <= tijd) lo = m
+      else hi = m - 1
+    }
+    const a = cum[0][lo]
+    const b = cum[1][lo]
+    return a + b > 0 ? [a / (a + b), b / (a + b)] : null
+  }
+}

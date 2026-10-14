@@ -4,7 +4,8 @@ import { useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 
-import { balOp, balSpoor, bezitOp, decodeer, op, ploegKleuren, snelheid, type Ploeg, type Reconstructie, type Spoor, type Veld } from '@/lib/virtueel'
+import { balOp, balSpoor, bezitOp, bezitTijdlijn, decodeer, op, ploegKleuren, snelheid, type Ploeg, type Reconstructie, type Spoor, type StadionThema, type Veld } from '@/lib/virtueel'
+import { bouwStadion } from './stadion'
 
 // Virtueel krachtbal: een gereconstrueerd wedstrijdfragment in 3D. Je kijkt vanop de tribune,
 // volgt de bal, kruipt in het hoofd van een speler of loopt zelf over het veld (WASD/pijltjes of
@@ -123,28 +124,6 @@ function gloedTextuur(): THREE.CanvasTexture {
   return new THREE.CanvasTexture(c)
 }
 
-function ledTextuur(tekst: string): THREE.CanvasTexture {
-  const c = document.createElement('canvas')
-  c.width = 1024
-  c.height = 64
-  const g = c.getContext('2d')!
-  const gr = g.createLinearGradient(0, 0, 1024, 0)
-  gr.addColorStop(0, '#0b1220')
-  gr.addColorStop(0.5, '#123a6b')
-  gr.addColorStop(1, '#0b1220')
-  g.fillStyle = gr
-  g.fillRect(0, 0, 1024, 64)
-  g.font = '800 38px Inter, system-ui, sans-serif'
-  g.textBaseline = 'middle'
-  g.fillStyle = '#e2f0ff'
-  const breedte = g.measureText(tekst).width + 80
-  for (let x = 20; x < 1024; x += breedte) g.fillText(tekst, x, 34)
-  const t = new THREE.CanvasTexture(c)
-  t.colorSpace = THREE.SRGBColorSpace
-  t.wrapS = THREE.RepeatWrapping
-  return t
-}
-
 // ---------- spelersfiguur ----------
 
 type Figuur = {
@@ -222,7 +201,7 @@ function maakFiguur(kleur: string, label: string): Figuur {
 
 // ---------- de component ----------
 
-export function VirtueelViewer({ slug }: { slug: string }) {
+export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionThema }) {
   const houder = useRef<HTMLDivElement>(null)
   const joystickRef = useRef<HTMLDivElement>(null)
   const [data, setData] = useState<{ sporen: Spoor[]; duur: number; veld: Veld; ploegen: Ploeg[]; kleuren: Record<number, string> } | null>(null)
@@ -273,8 +252,12 @@ export function VirtueelViewer({ slug }: { slug: string }) {
     const cz = veld.width_m / 2
     const W = (x: number, y: number) => new THREE.Vector3(x - cx, 0, y - cz)
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true })
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+    // Lichte modus voor gsm's en zwakke toestellen: minder pixels, kleinere schaduwkaart, minder
+    // publiek. Daarnaast past de beeldscherpte zich aan zodra het afspelen hapert (zie de tekenlus).
+    const licht = window.matchMedia('(max-width: 760px)').matches || (navigator.hardwareConcurrency ?? 8) <= 4
+    let pixels = Math.min(window.devicePixelRatio, licht ? 1.25 : 1.75)
+    const renderer = new THREE.WebGLRenderer({ antialias: !licht, powerPreference: 'high-performance' })
+    renderer.setPixelRatio(pixels)
     renderer.shadowMap.enabled = true
     renderer.shadowMap.type = THREE.PCFSoftShadowMap
     renderer.toneMapping = THREE.ACESFilmicToneMapping
@@ -283,9 +266,9 @@ export function VirtueelViewer({ slug }: { slug: string }) {
     el.prepend(renderer.domElement)
 
     const scene = new THREE.Scene()
-    scene.fog = new THREE.Fog('#0b1626', 70, 240)
+    scene.fog = new THREE.Fog('#0b1626', 110, 330)
     const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 900)
-    camera.position.set(-4, 13, 23)
+    camera.position.set(-6, 15.5, 21)
 
     // Hemel: nachtblauw met een warme gloed van de lichtmasten aan de horizon, en sterren.
     {
@@ -318,34 +301,17 @@ export function VirtueelViewer({ slug }: { slug: string }) {
       scene.add(new THREE.Points(geo, new THREE.PointsMaterial({ color: 0xdbeafe, size: 1.5, sizeAttenuation: false, transparent: true, opacity: 0.7, fog: false })))
     }
 
-    // Licht: zacht hemellicht, één "maanlicht" met schaduwen, en vier masten die het veld verlichten.
+    // Licht: zacht hemellicht en één "maanlicht" met schaduwen; de lichtmasten staan in stadion.ts.
     scene.add(new THREE.HemisphereLight('#b9d4ff', '#1d3b26', 0.75))
     const zon = new THREE.DirectionalLight('#fff4dc', 1.6)
     zon.position.set(-14, 30, 18)
     zon.castShadow = true
-    zon.shadow.mapSize.set(2048, 2048)
+    zon.shadow.mapSize.set(licht ? 1024 : 2048, licht ? 1024 : 2048)
     Object.assign(zon.shadow.camera, { left: -32, right: 32, top: 20, bottom: -20, near: 1, far: 90 })
     zon.shadow.bias = -0.0004
     scene.add(zon)
     const gloed = gloedTextuur()
-    const mastMat = new THREE.MeshStandardMaterial({ color: '#8b98a8', metalness: 0.6, roughness: 0.4 })
-    for (const [mx, mz] of [[-cx - 4, -cz - 6], [cx + 4, -cz - 6], [-cx - 4, cz + 6], [cx + 4, cz + 6]] as const) {
-      const paal = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.24, 18, 10), mastMat)
-      paal.position.set(mx, 9, mz)
-      paal.castShadow = true
-      const kop = new THREE.Mesh(new THREE.BoxGeometry(2.6, 1.3, 0.3), new THREE.MeshStandardMaterial({ color: '#fff7e0', emissive: '#fff1c8', emissiveIntensity: 2.2 }))
-      kop.position.set(mx, 18.2, mz)
-      kop.lookAt(0, 0, 0)
-      const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: gloed, color: '#fff2cf', transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }))
-      halo.scale.set(9, 9, 1)
-      halo.position.copy(kop.position)
-      const spot = new THREE.SpotLight('#fff2d6', 260, 90, 0.75, 0.6, 1.4)
-      spot.position.copy(kop.position)
-      spot.target.position.set(0, 0, 0)
-      scene.add(paal, kop, halo, spot, spot.target)
-    }
-
-    // Grond rondom, het veld zelf, ledborden en een kleine tribune.
+    // Grond rondom en het veld zelf.
     const grond = new THREE.Mesh(new THREE.CircleGeometry(300, 48), new THREE.MeshStandardMaterial({ color: '#16301f', roughness: 1 }))
     grond.rotation.x = -Math.PI / 2
     grond.position.y = -0.02
@@ -360,30 +326,10 @@ export function VirtueelViewer({ slug }: { slug: string }) {
     veldVlak.receiveShadow = true
     scene.add(veldVlak)
 
-    const led = ledTextuur('KRACHTBAL LIVE   ·   VIRTUEEL KRACHTBAL   ·   KVKBF')
-    const ledMat = new THREE.MeshStandardMaterial({ map: led, emissive: '#ffffff', emissiveMap: led, emissiveIntensity: 0.85 })
-    for (const [z, ry] of [[-cz - marge - 0.4, 0], [cz + marge + 0.4, Math.PI]] as const) {
-      const bord = new THREE.Mesh(new THREE.BoxGeometry(veld.length_m + 2 * marge, 0.9, 0.12), [mastMat, mastMat, mastMat, mastMat, ledMat, ledMat])
-      bord.position.set(0, 0.45, z)
-      bord.rotation.y = ry
-      bord.castShadow = true
-      scene.add(bord)
-    }
-    const tribMat = new THREE.MeshStandardMaterial({ color: '#334155', roughness: 0.85 })
-    const stoelMat = new THREE.MeshStandardMaterial({ color: '#b91c1c', roughness: 0.6 })
-    for (let r = 0; r < 5; r++) {
-      const trede = new THREE.Mesh(new THREE.BoxGeometry(28, 0.5, 1), tribMat)
-      trede.position.set(0, 0.25 + r * 0.5, -cz - marge - 2.2 - r * 1)
-      trede.receiveShadow = true
-      scene.add(trede)
-      const stoelen = new THREE.InstancedMesh(new THREE.BoxGeometry(0.45, 0.4, 0.4), stoelMat, 40)
-      const m = new THREE.Matrix4()
-      for (let i = 0; i < 40; i++) {
-        m.makeTranslation(-13.5 + i * 0.7, 0.7 + r * 0.5, -cz - marge - 2.2 - r * 1)
-        stoelen.setMatrixAt(i, m)
-      }
-      scene.add(stoelen)
-    }
+    // Het stadion rondom, in de kleuren van de club die kijkt.
+    const stadion = bouwStadion(scene, { veld, marge, thema, licht })
+    const bezitAandeel = bezitTijdlijn(sporen)
+    const scorePloegen = data.ploegen.map((p) => ({ naam: p.naam, kleur: kleuren[p.id] ?? '#b2bbb6' }))
 
     // Spelers en bal.
     const figuren = new Map<string, Figuur>()
@@ -418,9 +364,10 @@ export function VirtueelViewer({ slug }: { slug: string }) {
     orbit.enableDamping = true
     orbit.maxPolarAngle = Math.PI / 2 - 0.06
     orbit.minDistance = 4
-    orbit.maxDistance = 90
+    orbit.maxDistance = 58
     const doel = new THREE.Vector3()
     const kijk = new THREE.Vector3()
+    const tmp = new THREE.Vector3()
     // Lopen: eigen positie + kijkrichting.
     const loper = { pos: W(cx - 8, -1.5), yaw: 0.35, pitch: -0.08 }
     loper.pos.y = OOGHOOGTE
@@ -467,6 +414,8 @@ export function VirtueelViewer({ slug }: { slug: string }) {
     let vorige = performance.now()
     let laatsteUi = 0
     let vorigeModus: Modus = st.current.modus
+    let frames = 0
+    let frameTijd = 0
     let raf = 0
     const tik = (nu: number) => {
       raf = requestAnimationFrame(tik)
@@ -540,7 +489,7 @@ export function VirtueelViewer({ slug }: { slug: string }) {
       // Camera.
       if (s.modus !== vorigeModus) {
         if (s.modus === 'tribune') {
-          camera.position.set(-4, 13, 23)
+          camera.position.set(-6, 15.5, 21)
           orbit.target.set(0, 0, 0)
         }
         if (s.modus === 'lopen') {
@@ -560,7 +509,7 @@ export function VirtueelViewer({ slug }: { slug: string }) {
         doel.set(b.x - cx, Math.max(0.8, b.z * 0.6), b.y - cz)
         kijk.lerp(doel, Math.min(1, dt * 4))
         // Langs de zijlijn, binnen de ledborden: anders hangt het bord voor de lens.
-        const camDoel = new THREE.Vector3(kijk.x - 3, 5.5, cz + 3.6)
+        const camDoel = tmp.set(kijk.x - 3, 5.5, cz + 3.6)
         camera.position.lerp(camDoel, Math.min(1, dt * 2.5))
         camera.lookAt(kijk)
       } else if (s.modus === 'speler') {
@@ -573,7 +522,8 @@ export function VirtueelViewer({ slug }: { slug: string }) {
           oog.x += Math.sin(f.hoek) * 0.18
           oog.z += Math.cos(f.hoek) * 0.18
           camera.position.lerp(oog, Math.min(1, dt * 10))
-          doel.copy(b ? new THREE.Vector3(b.x - cx, b.z, b.y - cz) : oog.clone().add(new THREE.Vector3(Math.sin(f.hoek), 0, Math.cos(f.hoek))))
+          if (b) doel.set(b.x - cx, b.z, b.y - cz)
+          else doel.set(oog.x + Math.sin(f.hoek), OOGHOOGTE, oog.z + Math.cos(f.hoek))
           kijk.lerp(doel, Math.min(1, dt * 5))
           camera.lookAt(kijk)
         }
@@ -587,8 +537,8 @@ export function VirtueelViewer({ slug }: { slug: string }) {
         const fz = Math.cos(loper.yaw)
         loper.pos.x += (fx * vooruit - fz * opzij) * tempo * dt
         loper.pos.z += (fz * vooruit + fx * opzij) * tempo * dt
-        loper.pos.x = Math.max(-cx - 12, Math.min(cx + 12, loper.pos.x))
-        loper.pos.z = Math.max(-cz - marge - 1, Math.min(cz + marge + 1, loper.pos.z))
+        loper.pos.x = Math.max(-cx - marge + 0.3, Math.min(cx + marge - 0.3, loper.pos.x))
+        loper.pos.z = Math.max(-cz - marge + 0.3, Math.min(cz + marge - 0.3, loper.pos.z))
         const stap = Math.hypot(vooruit, opzij) > 0.05 ? Math.sin(nu / 140) * 0.035 : 0
         camera.position.set(loper.pos.x, OOGHOOGTE + stap, loper.pos.z)
         camera.lookAt(
@@ -598,7 +548,21 @@ export function VirtueelViewer({ slug }: { slug: string }) {
         )
       }
 
+      stadion.update(nu / 1000, { tijd: t, duur, bezit: bezitAandeel(t), ploegen: scorePloegen })
       renderer.render(scene, camera)
+
+      // Hapert het? Dan stap voor stap minder pixels, tot het weer vlot loopt.
+      frames++
+      frameTijd += dt
+      if (frames >= 90) {
+        if (frameTijd / frames > 1 / 40 && pixels > 0.8) {
+          pixels = Math.max(0.8, pixels - 0.25)
+          renderer.setPixelRatio(pixels)
+          maat()
+        }
+        frames = 0
+        frameTijd = 0
+      }
 
       // De knoppen en tijdlijn ~12 keer per seconde bijwerken is genoeg.
       if (nu - laatsteUi > 80) {
@@ -627,7 +591,7 @@ export function VirtueelViewer({ slug }: { slug: string }) {
       })
       renderer.domElement.remove()
     }
-  }, [data])
+  }, [data, thema])
 
   const spoel = (t: number) => {
     if (!data) return
