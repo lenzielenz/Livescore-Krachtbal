@@ -8,7 +8,7 @@ import { canvasTex, rnd, rondLogo } from './stadion'
 // Verdiep -1: onder de grond, dus niet gebonden aan het stadion erboven — de ruimte is zo groot als
 // we willen. Een ondergrondse boulevard vanaf de lift, met aan weerszijden:
 //  • 💪 fitness: rubbervloer, loopbanden, fietsen, rekken met halters, een spiegelwand en neon;
-//  • 🎬 cinema: rijen rode zetels onder een sterrenhemel, een groot doek met krachtbal (videoscherm.ts);
+//  • 🎬 cinema: rijen rode zetels onder een sterrenhemel, een groot doek met een film (videoscherm.ts);
 //  • 🎮 gaming: neonraster in de vloer, gamebureaus met schermen, arcadekasten en zitzakken;
 //  • 🏊 zwembad: een 25 m-bad met banen in clubkleur, onderwaterlicht en lichtschitteringen op het plafond;
 //  • 🧖 sauna & wellness: houten saunacabines met amberkleurige gloed, een bubbelbad, ligbedden, kaarsjes.

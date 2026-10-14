@@ -12,10 +12,13 @@ import type { StadionThema } from '@/lib/virtueel'
 // geblokkeerd), dan zie je het clubbeeld.
 // Een scherm laadt zijn video pas als je het voor het eerst kan zien (de cinema dus pas in de kelder).
 
+/** De wedstrijd op het grote scherm in het stadion. */
 export const VIDEO_ID = 'MnA_u2gW4Zc'
+/** De film in de cinema in de kelder. */
+export const CINEMA_VIDEO_ID = 'RfcHTepqoxE'
 const PX = 1280
 const PY = 720
-const BRON = `https://www.youtube-nocookie.com/embed/${VIDEO_ID}?autoplay=1&mute=1&loop=1&playlist=${VIDEO_ID}&controls=0&playsinline=1&modestbranding=1&rel=0&enablejsapi=1`
+const bron = (id: string) => `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=1&loop=1&playlist=${id}&controls=0&playsinline=1&modestbranding=1&rel=0&enablejsapi=1`
 const HERKOMST = 'https://www.youtube-nocookie.com'
 
 export type SchermPlek = {
@@ -29,6 +32,8 @@ export type SchermPlek = {
   /** Heeft het zin om dit scherm nu te tekenen (de camera staat ervoor en dichtbij genoeg)? */
   zichtbaar: (camera: THREE.Camera) => boolean
   titel: string
+  /** Welke YouTube-video (standaard de stadionwedstrijd). */
+  videoId?: string
 }
 
 export type Videoscherm = {
@@ -99,7 +104,7 @@ export function bouwVideoscherm(scene: THREE.Scene, opt: { houder: HTMLElement; 
         const zichtbaar = s.plek.zichtbaar(camera)
         if (zichtbaar && !s.geladen) {
           s.geladen = true
-          s.iframe.src = BRON
+          s.iframe.src = bron(s.plek.videoId ?? VIDEO_ID)
         }
         s.doos.style.display = zichtbaar ? '' : 'none'
         s.gat.visible = zichtbaar

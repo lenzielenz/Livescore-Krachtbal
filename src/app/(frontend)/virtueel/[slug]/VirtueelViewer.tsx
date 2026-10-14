@@ -23,7 +23,7 @@ import { bouwKelder } from './kelder'
 import { bouwAvatar } from './avatar'
 import { bouwKleedkamer, type Kleedkamer } from './kleedkamer'
 import { bouwGangafwerking } from './gangafwerking'
-import { bouwVideoscherm, type Videoscherm } from './videoscherm'
+import { bouwVideoscherm, CINEMA_VIDEO_ID, type Videoscherm } from './videoscherm'
 import { GraffitiSpuiter } from './GraffitiSpuiter'
 import { laadTactiek, Tactiekbord } from './Tactiekbord'
 import { muurLengte, type Tag } from '@/lib/virtueel-graffiti'
@@ -54,7 +54,7 @@ const BESTUURBAAR: Modus[] = ['lopen', 'buiten', 'zweven']
 const OOGHOOGTE = 1.7
 const RUIMTE_MELDING: Record<string, string> = {
   Fitness: '💪 Fitness · samen sterker',
-  Cinema: '🎬 Cinema · krachtbal op groot doek',
+  Cinema: '🎬 Cinema · de film loopt',
   Gaming: '🎮 Gaming',
   Zwembad: '🏊 Zwembad',
   Sauna: '🧖 Sauna & wellness',
@@ -559,7 +559,8 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
         },
         {
           ...cinema,
-          titel: 'Krachtbalwedstrijd in de cinema',
+          titel: 'Film in de cinema',
+          videoId: CINEMA_VIDEO_ID,
           zichtbaar: (c) => c.position.y < -0.5 && c.position.z > cinema.z + 0.3 && c.position.z < cinema.z + 32 && Math.abs(c.position.x - cinema.x) < 13,
         },
       ],
