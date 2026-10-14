@@ -8,9 +8,11 @@ import { fetchErelijstData } from '@/lib/erelijst-data'
 import { getAuthUser } from '@/lib/auth-user'
 import { clubLogoUrl } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
-import { formatDateBE } from '@/lib/datetime'
+import { dateStrBE, formatDateBE, shiftDateStr } from '@/lib/datetime'
 import { fragment, STANDAARD_THEMA, stadionThema, type StadionThema } from '@/lib/virtueel'
 import { eregalerij } from '@/lib/virtueel-erelijst'
+import { weekendZaal } from '@/lib/virtueel-weekend'
+import { loadLiveWeekend, weekendZaterdag } from '../../live/loadLiveDay'
 import { VirtueelViewer } from './VirtueelViewer'
 import '../virtueel.css'
 
@@ -31,7 +33,15 @@ export default async function VirtueelFragmentPage({ params }: { params: Promise
   let thema: StadionThema = STANDAARD_THEMA
   try {
     const payload = await getPayloadClient()
-    const [me, ads, erelijst] = await Promise.all([getAuthUser(), loadAds(payload, 'veldscherm'), fetchErelijstData(payload).catch(() => null)])
+    // Het komende speelweekend (op za/zo: het lopende), met de afgeleide standen.
+    const vandaag = dateStrBE()
+    const zaterdag = weekendZaterdag(vandaag)
+    const [me, ads, erelijst, weekend] = await Promise.all([
+      getAuthUser(),
+      loadAds(payload, 'veldscherm'),
+      fetchErelijstData(payload).catch(() => null),
+      loadLiveWeekend(zaterdag, vandaag).catch(() => null),
+    ])
     const reclames = ads.map((a) => ({ url: a.url, naam: a.naam }))
     const clubId = userClubId(me)
     const club = clubId != null ? await payload.findByID({ collection: 'clubs', id: Number(clubId), depth: 1 }).catch(() => null) : null
@@ -43,6 +53,11 @@ export default async function VirtueelFragmentPage({ params }: { params: Promise
       : { ...STANDAARD_THEMA, reclames }
     // De hall of fame in de gangen: de erelijst van je club (of de recentste kampioenen).
     if (erelijst) thema = { ...thema, erezaal: eregalerij(club ? String(club.name) : null, erelijst) }
+    // De weekendzaal: elke keer je komt kijken, de wedstrijden (en uitslagen) van dit weekend.
+    if (weekend) {
+      const bezig = vandaag >= zaterdag && vandaag <= shiftDateStr(zaterdag, 1)
+      thema = { ...thema, weekend: weekendZaal(weekend, { clubId: clubId != null ? Number(clubId) : null, zaterdag, bezig }) }
+    }
   } catch {
     // Geen databank of geen club: het standaardstadion volstaat.
   }

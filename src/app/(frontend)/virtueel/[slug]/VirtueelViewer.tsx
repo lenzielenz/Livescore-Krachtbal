@@ -5,10 +5,12 @@ import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 
 import { balOp, balSpoor, bezitOp, bezitTijdlijn, decodeer, GEVEL, op, ploegKleuren, snelheid, stap, WERELD_STRAAL, type Ploeg, type Reconstructie, type Spoor, type StadionThema, type Veld } from '@/lib/virtueel'
+import { pasStandenToe, type WeekendStand } from '@/lib/virtueel-weekend'
 import { bouwEregalerij } from './erezaal'
 import { bouwOmgeving } from './omgeving'
 import { bouwSfeer } from './sfeer'
 import { bouwStadion } from './stadion'
+import { bouwWeekendzaal } from './weekendzaal'
 
 // Virtueel krachtbal: een gereconstrueerd wedstrijdfragment in 3D, in een stadion in je
 // clubkleuren. Je kijkt vanop de tribune, volgt de bal, kruipt in het hoofd van een speler, loopt
@@ -363,6 +365,25 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     const zuidTribune = stadion.obstakels.find((o) => o.z0 > 0 && o.x1 - o.x0 > 30)
     const erezaal = bouwEregalerij(scene, { thema, logo: stadion.logo, kopbordZ: (zuidTribune?.z1 ?? 22) - 0.45, renderer, licht })
     const obstakels = [...stadion.obstakels, ...omgeving.obstakels, ...sfeer.obstakels, ...erezaal.obstakels]
+    // De weekendzaal in de noordgang: de wedstrijden van dit weekend, met de standen. Op zaterdag en
+    // zondag luistert ze mee op het gedeelde live-weekendkanaal (één poller voor alle kijkers).
+    const noordTribune = stadion.obstakels.find((o) => o.z1 < 0 && o.x1 - o.x0 > 30)
+    const weekendzaal = thema.weekend ? bouwWeekendzaal(scene, { thema, zaal: thema.weekend, wandZ: (noordTribune?.z0 ?? -22) + 0.45 }) : null
+    let weekendStroom: EventSource | null = null
+    if (thema.weekend?.bezig && weekendzaal && typeof EventSource !== 'undefined') {
+      let huidig = thema.weekend
+      weekendStroom = new EventSource(`/api/live/stream?date=${encodeURIComponent(huidig.zaterdag)}&view=weekend`)
+      weekendStroom.addEventListener('scores', (e) => {
+        try {
+          const nieuw = pasStandenToe(huidig, JSON.parse((e as MessageEvent<string>).data) as WeekendStand[])
+          if (nieuw === huidig) return
+          huidig = nieuw
+          weekendzaal.werkBij(nieuw)
+        } catch {
+          // Een kapot bericht: de muur blijft gewoon staan zoals hij was.
+        }
+      })
+    }
     const bezitAandeel = bezitTijdlijn(sporen)
     const scorePloegen = data.ploegen.map((p) => ({ naam: p.naam, kleur: kleuren[p.id] ?? '#b2bbb6' }))
 
@@ -646,6 +667,7 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
       omgeving.update(nu / 1000)
       sfeer.update(nu / 1000, dt)
       erezaal.update(nu / 1000)
+      weekendzaal?.update(nu / 1000)
       renderer.render(scene, camera)
       if (!getekend) {
         getekend = true
@@ -677,6 +699,7 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
 
     return () => {
       cancelAnimationFrame(raf)
+      weekendStroom?.close()
       ro.disconnect()
       window.removeEventListener('keydown', opToets)
       window.removeEventListener('keyup', losToets)

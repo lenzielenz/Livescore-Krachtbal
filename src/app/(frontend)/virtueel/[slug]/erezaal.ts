@@ -267,8 +267,9 @@ export function bouwEregalerij(
   // ---------- plaatsen aan de binnenkant van de gevel ----------
   // Om de ~4,6 m, enkel op de rechte stukken en niet in een poort; het dichtst bij de hoofdingang
   // eerst, zodat wie binnenkomt meteen de recentste prijzen ziet.
+  // De noordgang is voor de weekendzaal (weekendzaal.ts).
   const plekken = gevelOmtrek(4.6)
-    .filter((p) => Math.abs(p.nx) + Math.abs(p.nz) === 1)
+    .filter((p) => Math.abs(p.nx) + Math.abs(p.nz) === 1 && p.nz !== -1)
     .filter((p) => {
       const langs = { x: -p.nz, z: p.nx }
       return [-1, 0, 1].every((k) => !inPoort(GEVEL, p.x - p.nx + langs.x * k * (PLAQ.b / 2 + 0.8), p.z - p.nz + langs.z * k * (PLAQ.b / 2 + 0.8)))

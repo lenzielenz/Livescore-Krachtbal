@@ -268,6 +268,40 @@ export type StadionThema = {
   reclames: { url: string; naam: string }[]
   /** Optioneel: de erelijst voor de hall of fame in de gangen. */
   erezaal?: EreZaal | null
+  /** Optioneel: de wedstrijden van het (komende) speelweekend voor de weekendzaal. */
+  weekend?: WeekendZaal | null
+}
+
+/** Eén wedstrijd op de weekendmuur. De stand is afgeleid (buildScoreboards), nooit opgeslagen. */
+export type WeekendBord = {
+  id: number
+  /** "ZA" of "ZO". */
+  dag: string
+  uur: string
+  reeks: string
+  thuis: string
+  uit: string
+  thuisKleur: string
+  uitKleur: string
+  status: 'gepland' | 'live' | 'gespeeld' | 'wacht'
+  /** Enkel bij live en gespeeld. */
+  score: { home: number; away: number } | null
+  /** Een wedstrijd van je eigen club. */
+  eigen: boolean
+}
+/** De weekendzaal: de wedstrijden van het komende (of lopende) speelweekend. */
+export type WeekendZaal = {
+  /** De zaterdag (YYYY-MM-DD): sleutel voor het gedeelde live-weekendkanaal. */
+  zaterdag: string
+  /** Bv. "za 17 – zo 18 oktober". */
+  datum: string
+  /** Over het hele weekend, ook wat niet aan de muur past (zie weekendTelling). */
+  totaal: number
+  gespeeld: number
+  live: number
+  /** Wordt er nu (za/zo) gespeeld? Enkel dan luistert de zaal mee naar live-standen. */
+  bezig: boolean
+  borden: WeekendBord[]
 }
 
 /** Zonder ingelogde club: het stadion van Krachtbal Live zelf. */
