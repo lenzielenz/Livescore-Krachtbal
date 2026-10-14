@@ -52,7 +52,7 @@
 .vk-terug { display: inline-block; margin-top: 4px; font-size: 0.85rem; color: var(--dim-strong); text-decoration: none; }
 .vk-terug:hover { color: var(--accent); }
 .vk-titel { margin: 8px 0 2px; font-size: clamp(1.4rem, 4vw, 2rem); font-weight: 900; }
-.vk-sub { margin: 0 0 14px; color: var(--dim); font-size: 0.9rem; text-transform: capitalize; }
+.vk-sub { margin: 0 0 14px; color: var(--dim); font-size: 0.9rem; }
 .vk-noot { margin-top: 14px; font-size: 0.8rem; color: var(--dim); }
 .vk-fout { color: var(--dim); }
 
@@ -61,7 +61,12 @@
   position: relative; height: min(68vh, 640px); min-height: 340px; border-radius: 16px; overflow: hidden;
   border: 1px solid color-mix(in srgb, #fff 8%, var(--line)); background: #070d16; box-shadow: var(--card-shadow);
   touch-action: none;
+  /* Een app, geen webpagina: lang drukken mag geen tekst selecteren of het knip/plak-menu openen. */
+  -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent;
 }
+.vk-spelers { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
+.vk-scene button { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: manipulation; }
+.vk-scene button:active { transform: scale(0.96); }
 .vk-canvas { display: block; width: 100%; height: 100%; }
 .vk-scene.modus-lopen .vk-canvas, .vk-scene.modus-buiten .vk-canvas, .vk-scene.modus-zweven .vk-canvas { cursor: grab; }
 .vk-scene.modus-lopen .vk-canvas:active, .vk-scene.modus-buiten .vk-canvas:active, .vk-scene.modus-zweven .vk-canvas:active { cursor: grabbing; }
@@ -91,8 +96,9 @@
 .vk-uitleg {
   position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); margin: 0; max-width: calc(100% - 24px);
   padding: 5px 12px; border-radius: 999px; background: rgba(8, 14, 22, 0.7); color: #cbd5e1; font-size: 0.72rem;
-  text-align: center; pointer-events: none;
+  text-align: center; pointer-events: none; transition: opacity 0.6s ease, transform 0.6s ease;
 }
+.vk-uitleg.weg { opacity: 0; }
 .vk-scene.modus-lopen .vk-uitleg, .vk-scene.modus-buiten .vk-uitleg, .vk-scene.modus-zweven .vk-uitleg { left: auto; right: 12px; transform: none; max-width: 55%; border-radius: 12px; }
 .vk-joy {
   position: absolute; left: 18px; bottom: 18px; width: 110px; height: 110px; border-radius: 50%; touch-action: none;

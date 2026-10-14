@@ -224,6 +224,7 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
   const [data, setData] = useState<{ sporen: Spoor[]; duur: number; veld: Veld; ploegen: Ploeg[]; kleuren: Record<number, string> } | null>(null)
   const [fout, setFout] = useState<string | null>(null)
   const [modus, setModus] = useState<Modus>('zweven')
+  const [uitleg, setUitleg] = useState(true)
   const [aanVeld, setAanVeld] = useState(false)
   const [welkom, setWelkom] = useState(true)
   const [klaar, setKlaar] = useState(false)
@@ -243,6 +244,14 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
 
   // Het welkom verschijnt pas als het eerste beeld van het stadion er staat, en verdwijnt na zes
   // seconden.
+  // De uitleg van een modus staat er even, en verdwijnt dan vanzelf (zachtjes) uit beeld.
+  useEffect(() => {
+    if (welkom && klaar) return
+    setUitleg(true)
+    const t = setTimeout(() => setUitleg(false), 5000)
+    return () => clearTimeout(t)
+  }, [modus, welkom, klaar])
+
   useEffect(() => {
     if (!welkom || !klaar) return
     const t = setTimeout(() => setWelkom(false), 6000)
@@ -812,7 +821,7 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
 
   return (
     <div className={`vk modus-${modus}${vol ? ' vol' : ''}`} ref={geheel}>
-      <div className={`vk-scene modus-${modus}`} ref={houder}>
+      <div className={`vk-scene modus-${modus}`} ref={houder} onContextMenu={(e) => e.preventDefault()}>
         {!klaar && <div className="vk-laden">Stadion opbouwen…</div>}
         {data && (
           <>
@@ -863,7 +872,7 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
               {vol ? '✕' : '⛶'}
             </button>
             {!(welkom && klaar) && (
-              <p className="vk-uitleg">
+              <p className={`vk-uitleg${uitleg ? '' : ' weg'}`} aria-hidden={!uitleg}>
                 <span className="lang">{MODI.find((m) => m.id === modus)?.uitleg}</span>
                 <span className="kort">{MODI.find((m) => m.id === modus)?.kort ?? MODI.find((m) => m.id === modus)?.uitleg}</span>
               </p>
