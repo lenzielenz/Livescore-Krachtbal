@@ -361,8 +361,8 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     // De hall of fame hangt in de gangen; het kopbord op de achterwand van de zuidtribune, recht
     // tegenover de hoofdingang.
     const zuidTribune = stadion.obstakels.find((o) => o.z0 > 0 && o.x1 - o.x0 > 30)
-    bouwEregalerij(scene, { thema, logo: stadion.logo, kopbordZ: (zuidTribune?.z1 ?? 22) - 0.45 })
-    const obstakels = [...stadion.obstakels, ...omgeving.obstakels, ...sfeer.obstakels]
+    const erezaal = bouwEregalerij(scene, { thema, logo: stadion.logo, kopbordZ: (zuidTribune?.z1 ?? 22) - 0.45, renderer, licht })
+    const obstakels = [...stadion.obstakels, ...omgeving.obstakels, ...sfeer.obstakels, ...erezaal.obstakels]
     const bezitAandeel = bezitTijdlijn(sporen)
     const scorePloegen = data.ploegen.map((p) => ({ naam: p.naam, kleur: kleuren[p.id] ?? '#b2bbb6' }))
 
@@ -463,7 +463,8 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     let raf = 0
     const tik = (nu: number) => {
       raf = requestAnimationFrame(tik)
-      const dt = Math.min(0.1, (nu - vorige) / 1000)
+      // De rAF-tijdstempel kan net vóór performance.now() liggen: nooit een negatieve stap.
+      const dt = Math.max(0, Math.min(0.1, (nu - vorige) / 1000))
       vorige = nu
       const s = st.current
       if (s.spelend) {
@@ -644,6 +645,7 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
       stadion.update(nu / 1000, { tijd: t, duur, bezit: bezitAandeel(t), ploegen: scorePloegen })
       omgeving.update(nu / 1000)
       sfeer.update(nu / 1000, dt)
+      erezaal.update(nu / 1000)
       renderer.render(scene, camera)
       if (!getekend) {
         getekend = true

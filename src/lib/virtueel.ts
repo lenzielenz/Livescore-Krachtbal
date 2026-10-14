@@ -243,7 +243,16 @@ export function ploegKleuren(ploegen: Ploeg[]): Record<number, string> {
 // ---------- het stadion in de kleuren van je club ----------
 
 /** Eén bord in de hall of fame in de gangen: een titel, een beker of een referendumprijs. */
-export type EreBord = { soort: 'titel' | 'beker' | 'referendum'; jaar: string; kop: string; tekst: string }
+export type EreBord = {
+  soort: 'titel' | 'beker' | 'referendum'
+  jaar: string
+  kop: string
+  tekst: string
+  /** Wat deze prijs bijzonder maakt, bv. "3de titel in 1ste Nationale Heren · 6de titel van de club". */
+  extra?: string
+  /** Het hoeveelste van zijn soort voor de club (1 = de eerste ooit). */
+  nummer?: number
+}
 /** De hall of fame: een kopbord en de borden, recentste eerst. `eigen` = de prijzen van je club. */
 export type EreZaal = { eigen: boolean; kop: string; totaal: string; borden: EreBord[] }
 
