@@ -139,10 +139,23 @@ export default async function RangschikkingPage({ searchParams }: { searchParams
   }
   const leaderId = table[0]?.teamId ?? null
   const titelCtx = { fixtures, results: standingsMatches }
+  // Enkel om de leider in goud te zetten zodra die wiskundig kampioen is.
   const titel = leaderId != null ? clinchStatus(table, remaining, leaderId, titelCtx) : null
+
+  // De titeltekst gaat over je eigen ploeg, en staat er enkel als die in deze reeks speelt: je
+  // eigen ploeg → anders (coach) een van je gekozen ploegen → anders een ploeg van je club.
+  const inTabel = (id: unknown) => {
+    const n = Number(id)
+    return id != null && table.some((r) => r.teamId === n) ? n : null
+  }
+  const eigenId =
+    inTabel(myTeamId) ??
+    myTeamIdsCoach.map(inTabel).find((id) => id != null) ??
+    (myClubNum != null ? (table.find((r) => teamInfo.get(r.teamId)?.clubId === myClubNum)?.teamId ?? null) : null)
+  const eigen = eigenId != null ? clinchStatus(table, remaining, eigenId, titelCtx) : null
   // Vooruitblik: speel de rest van de kalender af met de vorm van tot nu (zie titelProjectie). Dat
   // verschuift elke week mee met de uitslagen — wie punten afpakt van wie.
-  const projectie = leaderId != null && titel && !titel.clinched ? titelProjectie(table, titelCtx, leaderId) : null
+  const projectie = eigenId != null && eigen && !eigen.clinched ? titelProjectie(table, titelCtx, eigenId) : null
   const titelMsg = titelBoodschap({
     projectie: projectie
       ? {
@@ -150,10 +163,11 @@ export default async function RangschikkingPage({ searchParams }: { searchParams
           tegenstander: projectie.tegenstanderId != null ? (teamInfo.get(projectie.tegenstanderId)?.name ?? null) : null,
         }
       : null,
-    status: titel,
-    leaderName: leaderId != null ? (teamInfo.get(leaderId)?.name ?? null) : null,
+    status: eigen,
+    ploegNaam: eigenId != null ? (teamInfo.get(eigenId)?.name ?? null) : null,
     reeksLabel: reeksNaam(reeks),
     teamsInTable: table.length,
+    achterstand: eigen ? (table[0]?.points ?? 0) - eigen.points : 0,
   })
 
   // Degradatie-/gevarenzone: enkel bij volwassen reeksen (jeugd kan niet stijgen/dalen). Bij
@@ -194,7 +208,7 @@ export default async function RangschikkingPage({ searchParams }: { searchParams
       moveCls,
       delta,
       danger: dangerFrom >= 0 && i >= dangerFrom,
-      champion: i === 0 && Boolean(titelMsg?.clinched),
+      champion: i === 0 && Boolean(titel?.clinched),
     }
   })
 

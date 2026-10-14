@@ -167,34 +167,34 @@ describe('titelBoodschap', () => {
   })
 
   it('meldt de kampioen', () => {
-    const m = titelBoodschap({ status: status({ clinched: true, winsToClinch: 0, pointsToClinch: 0 }), leaderName: 'Sint-Gillis', reeksLabel: '1ste Nationale Heren', teamsInTable: 8 })
+    const m = titelBoodschap({ status: status({ clinched: true, winsToClinch: 0, pointsToClinch: 0 }), ploegNaam: 'Sint-Gillis', reeksLabel: '1ste Nationale Heren', teamsInTable: 8 })
     expect(m).toEqual({ text: 'Sint-Gillis is wiskundig kampioen van 1ste Nationale Heren.', clinched: true })
   })
 
   it('meldt hoeveel zeges de leider nog nodig heeft', () => {
-    const m = titelBoodschap({ status: status(), leaderName: 'Sint-Gillis', reeksLabel: 'Landelijke Dames', teamsInTable: 8 })
+    const m = titelBoodschap({ status: status(), ploegNaam: 'Sint-Gillis', reeksLabel: 'Landelijke Dames', teamsInTable: 8 })
     expect(m?.clinched).toBe(false)
     expect(m?.text).toBe('Sint-Gillis leidt en heeft nog 3 zeges nodig om de titel te verzekeren.')
   })
 
   it('gebruikt enkelvoud bij één zege', () => {
-    const m = titelBoodschap({ status: status({ winsToClinch: 1, pointsToClinch: 4 }), leaderName: 'Sint-Gillis', reeksLabel: 'LH', teamsInTable: 8 })
+    const m = titelBoodschap({ status: status({ winsToClinch: 1, pointsToClinch: 4 }), ploegNaam: 'Sint-Gillis', reeksLabel: 'LH', teamsInTable: 8 })
     expect(m?.text).toContain('nog 1 zege nodig')
   })
 
   it('zwijgt wanneer de titel nog niet te verzekeren valt (begin seizoen)', () => {
-    const m = titelBoodschap({ status: status({ winsToClinch: null, pointsToClinch: null }), leaderName: 'Sint-Gillis', reeksLabel: 'LH', teamsInTable: 8 })
+    const m = titelBoodschap({ status: status({ winsToClinch: null, pointsToClinch: null }), ploegNaam: 'Sint-Gillis', reeksLabel: 'LH', teamsInTable: 8 })
     expect(m).toBeNull()
   })
 
   it('zwijgt zonder leider, zonder status of bij één ploeg in de stand', () => {
-    expect(titelBoodschap({ status: status(), leaderName: null, reeksLabel: 'LH', teamsInTable: 8 })).toBeNull()
-    expect(titelBoodschap({ status: null, leaderName: 'X', reeksLabel: 'LH', teamsInTable: 8 })).toBeNull()
-    expect(titelBoodschap({ status: status({ clinched: true }), leaderName: 'X', reeksLabel: 'LH', teamsInTable: 1 })).toBeNull()
+    expect(titelBoodschap({ status: status(), ploegNaam: null, reeksLabel: 'LH', teamsInTable: 8 })).toBeNull()
+    expect(titelBoodschap({ status: null, ploegNaam: 'X', reeksLabel: 'LH', teamsInTable: 8 })).toBeNull()
+    expect(titelBoodschap({ status: status({ clinched: true }), ploegNaam: 'X', reeksLabel: 'LH', teamsInTable: 1 })).toBeNull()
   })
 
   it('zwijgt wanneer de leider niets meer te spelen heeft maar (nog) geen kampioen is', () => {
-    const m = titelBoodschap({ status: status({ remaining: 0 }), leaderName: 'X', reeksLabel: 'LH', teamsInTable: 8 })
+    const m = titelBoodschap({ status: status({ remaining: 0 }), ploegNaam: 'X', reeksLabel: 'LH', teamsInTable: 8 })
     expect(m).toBeNull()
   })
 })
@@ -232,19 +232,44 @@ describe('titelBoodschap met vooruitblik', () => {
   const projectie = { datum: 'za 7 februari', tegenstander: 'KBK Temse' }
 
   it('toont de vooruitblik zolang het exacte aantal zeges nog ver weg is', () => {
-    const m = titelBoodschap({ status: status(17), leaderName: 'KBC St. Michiels A', reeksLabel: '2NAH', teamsInTable: 12, projectie })
+    const m = titelBoodschap({ status: status(17), ploegNaam: 'KBC St. Michiels A', reeksLabel: '2NAH', teamsInTable: 12, projectie })
     expect(m?.text).toBe(
       'KBC St. Michiels A leidt. Blijft KBC St. Michiels A winnen en speelt de rest zoals tot nu, dan valt de titel op za 7 februari tegen KBK Temse.',
     )
   })
 
   it('verkiest het exacte aantal zeges dicht bij de meet', () => {
-    const m = titelBoodschap({ status: status(2), leaderName: 'X', reeksLabel: 'LH', teamsInTable: 12, projectie })
+    const m = titelBoodschap({ status: status(2), ploegNaam: 'X', reeksLabel: 'LH', teamsInTable: 12, projectie })
     expect(m?.text).toBe('X leidt en heeft nog 2 zeges nodig om de titel te verzekeren.')
   })
 
   it('laat de tegenstander weg als de titel valt op een dag dat de leider niet speelt', () => {
-    const m = titelBoodschap({ status: status(10), leaderName: 'X', reeksLabel: 'LH', teamsInTable: 12, projectie: { datum: 'zo 8 maart', tegenstander: null } })
+    const m = titelBoodschap({ status: status(10), ploegNaam: 'X', reeksLabel: 'LH', teamsInTable: 12, projectie: { datum: 'zo 8 maart', tegenstander: null } })
     expect(m?.text).toBe('X leidt. Blijft X winnen en speelt de rest zoals tot nu, dan valt de titel op zo 8 maart.')
+  })
+})
+
+describe('titelBoodschap voor een ploeg die niet leidt', () => {
+  const status = (over: Partial<ReturnType<typeof clinchStatus>> = {}) => ({
+    rank: 2, points: 20, remaining: 17, clinched: false, leading: false, pointsToClinch: 0, winsToClinch: 15, ...over,
+  })
+  const projectie = { datum: 'za 20 maart', tegenstander: 'KBC Male' }
+
+  it('deelt de leiding bij gelijke punten', () => {
+    const m = titelBoodschap({ status: status(), ploegNaam: 'KBC St. Michiels', reeksLabel: '1NH', teamsInTable: 12, achterstand: 0, projectie })
+    expect(m?.text).toBe(
+      'KBC St. Michiels deelt de leiding. Blijft KBC St. Michiels winnen en speelt de rest zoals tot nu, dan valt de titel op za 20 maart tegen KBC Male.',
+    )
+  })
+
+  it('noemt plaats en achterstand', () => {
+    const m = titelBoodschap({ status: status({ rank: 3, points: 18 }), ploegNaam: 'KBK Ichtegem', reeksLabel: '1NH', teamsInTable: 12, achterstand: 2, projectie })
+    expect(m?.text).toMatch(/^KBK Ichtegem staat 3e op 2 punten\. Blijft KBK Ichtegem winnen/)
+    const een = titelBoodschap({ status: status({ winsToClinch: 2 }), ploegNaam: 'X', reeksLabel: '1NH', teamsInTable: 12, achterstand: 1 })
+    expect(een?.text).toBe('X staat 2e op 1 punt en heeft nog 2 zeges nodig om de titel te verzekeren.')
+  })
+
+  it('zwijgt als de ploeg de titel niet meer zelf kan afdwingen', () => {
+    expect(titelBoodschap({ status: status({ winsToClinch: null }), ploegNaam: 'X', reeksLabel: '1NH', teamsInTable: 12, achterstand: 9 })).toBeNull()
   })
 })

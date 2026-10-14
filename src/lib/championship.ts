@@ -53,42 +53,54 @@ export interface ClinchContext {
 }
 
 /**
- * Eén regel over de titelstrijd voor boven de rangschikking — of null wanneer er niets zinvols te
- * melden valt (begin van het seizoen: iedereen kan nog kampioen worden, dus zwijgen we).
+ * Eén regel over de titelstrijd voor boven de rangschikking, vanuit de eigen ploeg van wie kijkt —
+ * of null wanneer er niets zinvols te melden valt (begin van het seizoen, of de ploeg kan de titel
+ * niet meer zelf afdwingen).
  */
 export function titelBoodschap(input: {
+  /** Titelstatus van de eigen ploeg (clinchStatus). */
   status: ClinchResult | null
-  leaderName: string | null
+  ploegNaam: string | null
   reeksLabel: string
   /** Aantal ploegen in de stand — met één ploeg is er geen titelstrijd. */
   teamsInTable: number
-  /** Vooruitblik (zie titelProjectie): wanneer de titel kan vallen als de leider blijft winnen. */
+  /** Hoeveel punten de eigen ploeg achter de leider staat (0 = gedeelde leiding). */
+  achterstand?: number
+  /** Vooruitblik (zie titelProjectie): wanneer de titel kan vallen als de ploeg blijft winnen. */
   projectie?: { datum: string; tegenstander: string | null } | null
 }): { text: string; clinched: boolean } | null {
-  const { status, leaderName, reeksLabel, teamsInTable, projectie } = input
-  if (!status || !leaderName || teamsInTable < 2) return null
-  if (status.clinched) return { text: `${leaderName} is wiskundig kampioen van ${reeksLabel}.`, clinched: true }
+  const { status, ploegNaam, reeksLabel, teamsInTable, projectie } = input
+  if (!status || !ploegNaam || teamsInTable < 2) return null
+  if (status.clinched) return { text: `${ploegNaam} is wiskundig kampioen van ${reeksLabel}.`, clinched: true }
   if (status.remaining <= 0) return null
+  const plaats = plaatsTekst(ploegNaam, status, input.achterstand ?? 0)
   const zeges = status.winsToClinch
   // Dicht bij de meet is het exacte aantal zeges het sterkste nieuws: dat staat vast.
-  if (zeges != null && zeges > 0 && zeges <= DICHTBIJ_ZEGES) return { text: zegesTekst(leaderName, zeges), clinched: false }
+  if (zeges != null && zeges > 0 && zeges <= DICHTBIJ_ZEGES) return { text: zegesTekst(plaats, zeges), clinched: false }
   // Daarvoor zegt "nog 17 zeges" weinig. De vooruitblik verschuift elke week met de uitslagen.
   if (projectie) {
     const tegen = projectie.tegenstander ? ` tegen ${projectie.tegenstander}` : ''
     return {
-      text: `${leaderName} leidt. Blijft ${leaderName} winnen en speelt de rest zoals tot nu, dan valt de titel op ${projectie.datum}${tegen}.`,
+      text: `${plaats}. Blijft ${ploegNaam} winnen en speelt de rest zoals tot nu, dan valt de titel op ${projectie.datum}${tegen}.`,
       clinched: false,
     }
   }
   if (zeges == null || zeges <= 0) return null
-  return { text: zegesTekst(leaderName, zeges), clinched: false }
+  return { text: zegesTekst(plaats, zeges), clinched: false }
 }
 
 /** Vanaf hoeveel resterende zeges het exacte aantal de vooruitblik vervangt. */
 const DICHTBIJ_ZEGES = 3
 
-const zegesTekst = (leader: string, zeges: number) =>
-  `${leader} leidt en heeft nog ${zeges} ${zeges === 1 ? 'zege' : 'zeges'} nodig om de titel te verzekeren.`
+/** "X leidt", "X deelt de leiding" of "X staat 3e op 2 punten". */
+function plaatsTekst(ploeg: string, status: ClinchResult, achterstand: number): string {
+  if (status.leading) return `${ploeg} leidt`
+  if (achterstand <= 0) return `${ploeg} deelt de leiding`
+  return `${ploeg} staat ${status.rank}e op ${achterstand} ${achterstand === 1 ? 'punt' : 'punten'}`
+}
+
+const zegesTekst = (plaats: string, zeges: number) =>
+  `${plaats} en heeft nog ${zeges} ${zeges === 1 ? 'zege' : 'zeges'} nodig om de titel te verzekeren.`
 
 type Rivaal = {
   points: number
