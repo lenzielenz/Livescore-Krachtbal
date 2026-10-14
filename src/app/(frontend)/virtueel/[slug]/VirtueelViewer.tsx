@@ -13,6 +13,7 @@ import { bouwStadion } from './stadion'
 import { bouwWeekendzaal } from './weekendzaal'
 import { bouwFotogalerij } from './fotogalerij'
 import { bouwWegwijzers, type Bestemming } from './wegwijzers'
+import { bouwGangleven } from './gangleven'
 
 // Virtueel krachtbal: een gereconstrueerd wedstrijdfragment in 3D, in een stadion in je
 // clubkleuren. Je kijkt vanop de tribune, volgt de bal, kruipt in het hoofd van een speler, loopt
@@ -388,7 +389,9 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
       { naam: 'Hoofdingang', icoon: '🚪', x: 0, z: GEVEL.B, kleur: '#e2e8f0' },
     ]
     const wegwijzers = bouwWegwijzers(scene, { thema, logo: stadion.logo, bestemmingen, tribunes })
-    const obstakels = [...stadion.obstakels, ...omgeving.obstakels, ...sfeer.obstakels, ...erezaal.obstakels, ...wegwijzers.obstakels]
+    // Leven in de gangen: wandelaars, een bar in elke hoek en het logo in de vloer.
+    const gangleven = bouwGangleven(scene, { thema, licht, logo: stadion.logo })
+    const obstakels = [...stadion.obstakels, ...omgeving.obstakels, ...sfeer.obstakels, ...erezaal.obstakels, ...wegwijzers.obstakels, ...gangleven.obstakels]
     // De weekendzaal in de noordgang: de wedstrijden van dit weekend, met de standen. Op zaterdag en
     // zondag luistert ze mee op het gedeelde live-weekendkanaal (één poller voor alle kijkers).
     const noordTribune = stadion.obstakels.find((o) => o.z1 < 0 && o.x1 - o.x0 > 30)
@@ -693,6 +696,7 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
       erezaal.update(nu / 1000)
       weekendzaal?.update(nu / 1000)
       fotogalerij?.update(nu / 1000)
+      gangleven.update(nu / 1000)
       renderer.render(scene, camera)
       if (!getekend) {
         getekend = true

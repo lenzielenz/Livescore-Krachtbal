@@ -280,6 +280,7 @@ export function bouwWegwijzers(
   // Bij de zij-ingangen: midden in de gang, naast de opening, naar wie binnenkomt.
   if (tribunes.oost) zuil((tribunes.oost.x1 - 0.45 + A - 0.6) / 2, 4.6, Math.PI / 2, false)
   if (tribunes.west) zuil((tribunes.west.x0 + 0.45 - A + 0.6) / 2, -4.6, -Math.PI / 2, false)
-  if (tribunes.noord) zuil(5.2, (tribunes.noord.z0 + 0.45 - B + 0.6) / 2, Math.PI, false)
+  // In de smalle noordgang: tegen de tribune en naast het weekendbord, uit de looplijn.
+  if (tribunes.noord) zuil(6.4, tribunes.noord.z0 + 0.45 - 0.75, Math.PI, false)
   return { obstakels }
 }
