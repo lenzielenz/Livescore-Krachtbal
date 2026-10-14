@@ -23,7 +23,7 @@ export type Omgeving = {
 type PuntOpGevel = { x: number; z: number; nx: number; nz: number; s: number }
 
 /** De omtrek van de gevel als punten om de `stap` meter, met de normaal naar buiten. */
-function gevelOmtrek(stap: number): PuntOpGevel[] {
+export function gevelOmtrek(stap: number): PuntOpGevel[] {
   const { A, B, R } = GEVEL
   const pts: PuntOpGevel[] = []
   const add = (x: number, z: number, nx: number, nz: number) => pts.push({ x, z, nx, nz, s: 0 })

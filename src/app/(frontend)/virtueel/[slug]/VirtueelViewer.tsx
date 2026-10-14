@@ -5,6 +5,7 @@ import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 
 import { balOp, balSpoor, bezitOp, bezitTijdlijn, decodeer, GEVEL, op, ploegKleuren, snelheid, stap, WERELD_STRAAL, type Ploeg, type Reconstructie, type Spoor, type StadionThema, type Veld } from '@/lib/virtueel'
+import { bouwEregalerij } from './erezaal'
 import { bouwOmgeving } from './omgeving'
 import { bouwSfeer } from './sfeer'
 import { bouwStadion } from './stadion'
@@ -357,6 +358,10 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     const stadion = bouwStadion(scene, { veld, marge, thema, licht })
     const omgeving = bouwOmgeving(scene, { thema, licht, logo: stadion.logo })
     const sfeer = bouwSfeer(scene, { thema, licht, logo: stadion.logo })
+    // De hall of fame hangt in de gangen; het kopbord op de achterwand van de zuidtribune, recht
+    // tegenover de hoofdingang.
+    const zuidTribune = stadion.obstakels.find((o) => o.z0 > 0 && o.x1 - o.x0 > 30)
+    bouwEregalerij(scene, { thema, logo: stadion.logo, kopbordZ: (zuidTribune?.z1 ?? 22) - 0.45 })
     const obstakels = [...stadion.obstakels, ...omgeving.obstakels, ...sfeer.obstakels]
     const bezitAandeel = bezitTijdlijn(sporen)
     const scorePloegen = data.ploegen.map((p) => ({ naam: p.naam, kleur: kleuren[p.id] ?? '#b2bbb6' }))
@@ -462,11 +467,9 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
       vorige = nu
       const s = st.current
       if (s.spelend) {
+        // Het fragment is kort: aan het einde begint het gewoon opnieuw.
         s.tijd += dt * s.snel
-        if (s.tijd >= duur) {
-          s.tijd = duur
-          setSpelend(false)
-        }
+        if (s.tijd >= duur) s.tijd %= duur
       }
       const t = s.tijd
 

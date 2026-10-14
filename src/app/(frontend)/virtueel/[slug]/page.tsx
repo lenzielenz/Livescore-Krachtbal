@@ -4,11 +4,13 @@ import { notFound } from 'next/navigation'
 import { SiteHeader } from '@/components/SiteHeader'
 import { userClubId } from '@/lib/access'
 import { loadAds } from '@/lib/ads'
+import { fetchErelijstData } from '@/lib/erelijst-data'
 import { getAuthUser } from '@/lib/auth-user'
 import { clubLogoUrl } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
 import { formatDateBE } from '@/lib/datetime'
 import { fragment, STANDAARD_THEMA, stadionThema, type StadionThema } from '@/lib/virtueel'
+import { eregalerij } from '@/lib/virtueel-erelijst'
 import { VirtueelViewer } from './VirtueelViewer'
 import '../virtueel.css'
 
@@ -24,11 +26,12 @@ export default async function VirtueelFragmentPage({ params }: { params: Promise
   if (!f) notFound()
 
   // Het stadion kleurt mee met de club van wie kijkt: tribunes, borden, scorebord en het grote
-  // ledscherm met het clublogo. De reclame op de borden is die van de veldschermen.
+  // ledscherm met het clublogo. De reclame op de borden is die van de veldschermen; in de gangen
+  // hangt de erelijst van je club.
   let thema: StadionThema = STANDAARD_THEMA
   try {
     const payload = await getPayloadClient()
-    const [me, ads] = await Promise.all([getAuthUser(), loadAds(payload, 'veldscherm')])
+    const [me, ads, erelijst] = await Promise.all([getAuthUser(), loadAds(payload, 'veldscherm'), fetchErelijstData(payload).catch(() => null)])
     const reclames = ads.map((a) => ({ url: a.url, naam: a.naam }))
     const clubId = userClubId(me)
     const club = clubId != null ? await payload.findByID({ collection: 'clubs', id: Number(clubId), depth: 1 }).catch(() => null) : null
@@ -38,6 +41,8 @@ export default async function VirtueelFragmentPage({ params }: { params: Promise
           reclames,
         )
       : { ...STANDAARD_THEMA, reclames }
+    // De hall of fame in de gangen: de erelijst van je club (of de recentste kampioenen).
+    if (erelijst) thema = { ...thema, erezaal: eregalerij(club ? String(club.name) : null, erelijst) }
   } catch {
     // Geen databank of geen club: het standaardstadion volstaat.
   }
