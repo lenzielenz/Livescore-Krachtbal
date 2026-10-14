@@ -955,7 +955,8 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
       if (nu - laatsteUi > 80) {
         laatsteUi = nu
         setBezit(bezitOp(sporen, t))
-        setAanVeld((s.modus === 'zweven' || s.modus === 'buiten') && opVeld(loper.pos))
+        // Enkel echt aan het veld: niet als je erboven of eronder (de kelder ligt onder het veld) loopt.
+        setAanVeld((s.modus === 'zweven' || (s.modus === 'buiten' && opVerdiep === 0)) && opVeld(loper.pos))
         // In de kooi: het paneel om je verdiep te kiezen (en tijdens de rit waar je heen gaat).
         const inKooi = s.modus === 'buiten' && lift.binnen(loper.pos.x, loper.pos.z) && (liftNu.toestand === 'rijden' || Math.round(liftNu.hoogte) === opVerdiep)
         const paneel = inKooi ? { hier: opVerdiep, rijdt: liftNu.toestand === 'rijden' || liftNu.toestand === 'sluiten', doel: liftNu.toestand === 'rijden' || liftNu.toestand === 'sluiten' ? liftNu.doel : (s.liftKeuze ?? null) } : null
