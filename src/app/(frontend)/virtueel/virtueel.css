@@ -44,7 +44,6 @@
   border: 1px solid color-mix(in srgb, #fff 8%, var(--line)); background: #070d16; box-shadow: var(--card-shadow);
   touch-action: none;
 }
-.vk-scene:fullscreen { height: 100%; border-radius: 0; }
 .vk-canvas { display: block; width: 100%; height: 100%; }
 .vk-scene.modus-lopen .vk-canvas, .vk-scene.modus-buiten .vk-canvas, .vk-scene.modus-zweven .vk-canvas { cursor: grab; }
 .vk-scene.modus-lopen .vk-canvas:active, .vk-scene.modus-buiten .vk-canvas:active, .vk-scene.modus-zweven .vk-canvas:active { cursor: grabbing; }
@@ -174,3 +173,45 @@
   .vk-uitleg .lang { display: none; }
   .vk-uitleg .kort { display: inline; }
 }
+
+/* ---------- volledig scherm: de hele installatie ---------- */
+.vk-welkom-vol {
+  pointer-events: auto; margin-top: 8px; padding: 8px 16px; border: 0; border-radius: 999px; cursor: pointer;
+  font: inherit; font-size: 0.85rem; font-weight: 800; background: var(--grad-accent, var(--accent)); color: var(--bg);
+  box-shadow: 0 0 24px color-mix(in srgb, var(--accent) 50%, transparent);
+}
+.vk:fullscreen, .vk.vol {
+  position: fixed; inset: 0; z-index: 1000; width: 100vw; height: 100dvh; gap: 0; background: #05080e;
+}
+.vk:fullscreen .vk-scene, .vk.vol .vk-scene { flex: 1; height: auto; min-height: 0; border-radius: 0; border: 0; }
+/* De afspeelbalk zweeft onderaan over het beeld. */
+.vk:fullscreen .vk-balk, .vk.vol .vk-balk {
+  position: absolute; left: 50%; bottom: max(10px, env(safe-area-inset-bottom)); transform: translateX(-50%); width: min(720px, calc(100% - 180px));
+  z-index: 5; background: rgba(8, 14, 22, 0.78); backdrop-filter: blur(6px); border-color: rgba(255, 255, 255, 0.12);
+}
+/* De spelerskeuze enkel in de spelersblik, als compacte strook boven de afspeelbalk. */
+.vk:fullscreen .vk-spelers, .vk.vol .vk-spelers { display: none; }
+.vk:fullscreen.modus-speler .vk-spelers, .vk.vol.modus-speler .vk-spelers {
+  display: block; position: absolute; left: 50%; bottom: calc(max(10px, env(safe-area-inset-bottom)) + 60px); transform: translateX(-50%);
+  width: min(720px, calc(100% - 24px)); z-index: 5; padding: 6px 10px; background: rgba(8, 14, 22, 0.78); backdrop-filter: blur(6px);
+}
+.vk:fullscreen.modus-speler .vk-spelers-kop, .vk.vol.modus-speler .vk-spelers-kop { display: none; }
+.vk:fullscreen.modus-speler .vk-ploeg, .vk.vol.modus-speler .vk-ploeg { padding: 2px 0; }
+.vk:fullscreen.modus-speler .vk-ploeg-naam, .vk.vol.modus-speler .vk-ploeg-naam { min-width: 0; }
+/* Uitleg, joystick en hoogteknoppen boven de zwevende balk houden. */
+.vk:fullscreen .vk-uitleg, .vk.vol .vk-uitleg { bottom: 74px; }
+.vk:fullscreen .vk-joy, .vk.vol .vk-joy { bottom: 24px; left: max(18px, env(safe-area-inset-left)); }
+.vk:fullscreen .vk-hoog, .vk.vol .vk-hoog { bottom: 24px; right: max(14px, env(safe-area-inset-right)); }
+.vk:fullscreen .vk-aanveld, .vk.vol .vk-aanveld { bottom: 84px; }
+.vk:fullscreen .vk-hud, .vk.vol .vk-hud { top: max(10px, env(safe-area-inset-top)); left: max(10px, env(safe-area-inset-left)); }
+.vk:fullscreen .vk-vol, .vk.vol .vk-vol { top: max(10px, env(safe-area-inset-top)); right: max(10px, env(safe-area-inset-right)); }
+@media (max-width: 700px) {
+  /* Gsm: de balk over de volle breedte onderaan, joystick en hoogteknoppen erboven. */
+  .vk:fullscreen .vk-balk, .vk.vol .vk-balk { width: calc(100% - 16px); bottom: max(8px, env(safe-area-inset-bottom)); }
+  .vk:fullscreen .vk-klok, .vk.vol .vk-klok { display: none; }
+  .vk:fullscreen .vk-joy, .vk.vol .vk-joy, .vk:fullscreen .vk-hoog, .vk.vol .vk-hoog { bottom: calc(max(8px, env(safe-area-inset-bottom)) + 62px); }
+  .vk:fullscreen .vk-uitleg, .vk.vol .vk-uitleg { top: 56px; bottom: auto; }
+  .vk:fullscreen .vk-aanveld, .vk.vol .vk-aanveld { bottom: auto; top: 30%; }
+}
+/* Bij zweven staat de uitleg bovenaan: niet ook nog aan de onderkant vastzetten (rekt anders uit). */
+.vk:fullscreen.modus-zweven .vk-uitleg, .vk.vol.modus-zweven .vk-uitleg { top: 56px; bottom: auto; }

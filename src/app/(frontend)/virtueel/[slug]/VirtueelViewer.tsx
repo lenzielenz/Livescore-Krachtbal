@@ -215,6 +215,8 @@ function maakFiguur(kleur: string, label: string): Figuur {
 
 export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionThema }) {
   const houder = useRef<HTMLDivElement>(null)
+  const geheel = useRef<HTMLDivElement>(null)
+  const [vol, setVol] = useState(false)
   const joystickRef = useRef<HTMLDivElement>(null)
   const [data, setData] = useState<{ sporen: Spoor[]; duur: number; veld: Veld; ploegen: Ploeg[]; kleuren: Record<number, string> } | null>(null)
   const [fout, setFout] = useState<string | null>(null)
@@ -718,12 +720,55 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
   }
   const joyLos = () => setStick({ x: 0, y: 0 })
 
-  const fullscreen = () => {
-    const el = houder.current
+  // Volledig scherm voor de hele installatie (beeld, afspeelbalk en spelerskeuze), niet enkel het
+  // canvas. Kan de browser geen element op volledig scherm zetten (iPhone), dan vult de viewer het
+  // venster zelf. Op gsm draait het beeld liggend waar de browser dat toelaat.
+  const naarVol = async () => {
+    const el = geheel.current
     if (!el) return
-    if (document.fullscreenElement) void document.exitFullscreen()
-    else void el.requestFullscreen?.().catch(() => {})
+    if (el.requestFullscreen) {
+      try {
+        await el.requestFullscreen({ navigationUI: 'hide' })
+        await (screen.orientation as ScreenOrientation & { lock?: (o: string) => Promise<void> }).lock?.('landscape').catch(() => {})
+        return
+      } catch {
+        // valt terug op het venster vullen
+      }
+    }
+    setVol(true)
   }
+  const uitVol = () => {
+    if (document.fullscreenElement) void document.exitFullscreen().catch(() => {})
+    setVol(false)
+  }
+  const fullscreen = () => (vol ? uitVol() : void naarVol())
+  useEffect(() => {
+    const wissel = () => setVol(document.fullscreenElement === geheel.current)
+    document.addEventListener('fullscreenchange', wissel)
+    return () => document.removeEventListener('fullscreenchange', wissel)
+  }, [])
+  // Venster vullen zonder echte fullscreen: de pagina erachter mag niet mee scrollen; Escape sluit.
+  useEffect(() => {
+    if (!vol || document.fullscreenElement) return
+    const vorig = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    const esc = (e: KeyboardEvent) => e.key === 'Escape' && setVol(false)
+    window.addEventListener('keydown', esc)
+    return () => {
+      document.body.style.overflow = vorig
+      window.removeEventListener('keydown', esc)
+    }
+  }, [vol])
+  // F = volledig scherm aan/uit.
+  useEffect(() => {
+    const toets = (e: KeyboardEvent) => {
+      if (e.code !== 'KeyF' || e.repeat || (e.target as HTMLElement | null)?.closest?.('input, textarea, select')) return
+      if (vol) uitVol()
+      else void naarVol()
+    }
+    window.addEventListener('keydown', toets)
+    return () => window.removeEventListener('keydown', toets)
+  })
 
   if (fout) return <p className="vk-fout">Dit fragment kon niet geladen worden: {fout}</p>
 
@@ -734,7 +779,7 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
   }
 
   return (
-    <div className="vk">
+    <div className={`vk modus-${modus}${vol ? ' vol' : ''}`} ref={geheel}>
       <div className={`vk-scene modus-${modus}`} ref={houder}>
         {!klaar && <div className="vk-laden">Stadion opbouwen…</div>}
         {data && (
@@ -761,6 +806,11 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
                 <span>Welkom in stadion</span>
                 <b>{thema.naam}</b>
                 <small>Zweef of wandel naar het veld om de wedstrijd te volgen</small>
+                {!vol && (
+                  <button className="vk-welkom-vol" onClick={() => void naarVol()}>
+                    ⛶ Beleef het op volledig scherm
+                  </button>
+                )}
               </div>
             )}
             {aanVeld && !VELD.includes(modus) && (
@@ -777,7 +827,9 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
             {VELD.includes(modus) && (
               <button className="vk-terugbuiten" onClick={() => setModus('zweven')}>↩ Naar buiten</button>
             )}
-            <button className="vk-vol" onClick={fullscreen} aria-label="Volledig scherm">⛶</button>
+            <button className="vk-vol" onClick={fullscreen} aria-label={vol ? 'Volledig scherm sluiten' : 'Volledig scherm'} title={vol ? 'Sluiten (Esc)' : 'Volledig scherm (F)'}>
+              {vol ? '✕' : '⛶'}
+            </button>
             {!(welkom && klaar) && (
               <p className="vk-uitleg">
                 <span className="lang">{MODI.find((m) => m.id === modus)?.uitleg}</span>
