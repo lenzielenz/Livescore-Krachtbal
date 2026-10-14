@@ -118,7 +118,11 @@ export function RangTable({ rows, showMove = true }: { rows: RangRow[]; showMove
                       )}
                     </span>
                   </td>
-                  <td className="rang-team">
+                  {/* Opengeklapt neemt de ploegnaam de plaats van de cijferkolommen in: op een
+                      smal scherm werd een lange naam ("t Klaverken Bugge…") anders afgekapt, net
+                      wanneer je de ploeg aantikte om ze te bekijken. De cijfers staan dan toch
+                      in de detailrij eronder. 7 = ploeg + Sp, W, G, V, FF en DV–DT. */}
+                  <td className="rang-team" colSpan={isOpen ? 7 : undefined}>
                     <div className="rang-team-inner">
                       <span className="rang-logo">
                         <TeamLogo name={r.name} logoUrl={r.logoUrl} logoFit={r.logoFit} side="home" size="sm" ringColor={r.ringColor} />
@@ -127,12 +131,16 @@ export function RangTable({ rows, showMove = true }: { rows: RangRow[]; showMove
                       <span className="rang-caret" aria-hidden>{isOpen ? '▾' : '▸'}</span>
                     </div>
                   </td>
-                  <td>{r.played}</td>
-                  <td>{r.won}</td>
-                  <td>{r.drawn}</td>
-                  <td>{r.lost}</td>
-                  <td>{r.forfaits}</td>
-                  <td className="rang-dv rang-goals">{r.goalsFor}–{r.goalsAgainst}</td>
+                  {!isOpen && (
+                    <>
+                      <td>{r.played}</td>
+                      <td>{r.won}</td>
+                      <td>{r.drawn}</td>
+                      <td>{r.lost}</td>
+                      <td>{r.forfaits}</td>
+                      <td className="rang-dv rang-goals">{r.goalsFor}–{r.goalsAgainst}</td>
+                    </>
+                  )}
                   <td className="rang-pts"><span className="rang-pts-chip">{r.points}</span></td>
                 </tr>
                 {isOpen && (
