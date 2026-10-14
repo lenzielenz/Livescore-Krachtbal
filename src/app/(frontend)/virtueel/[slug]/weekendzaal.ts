@@ -3,6 +3,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 
 import { GEVEL, type StadionThema, type WeekendBord, type WeekendZaal } from '@/lib/virtueel'
 import { weekendTelling } from '@/lib/virtueel-weekend'
+import { bouwBordlicht } from './bordlicht'
 import { canvasTex } from './stadion'
 
 // De weekendzaal in de noordgang, tegenover de hall of fame: een muur vol ledborden met de
@@ -16,8 +17,15 @@ import { canvasTex } from './stadion'
 
 const BORD = { b: 2.9, h: 1.45, celB: 512, celH: 256, kol: 4 }
 /** Twee rijen, zoals een vertrekbord: onderaan op ooghoogte, daarboven de tweede rij. */
-const RIJEN_Y = [1.55, 3.2]
+const RIJEN_Y = [1.45, 3.35]
 const STAP = 3.3
+
+/** De gloed achter een bord: live rood, je eigen club goud, een uitslag groen, de rest koel blauw. */
+function gloedKleur(b: WeekendBord): string {
+  if (b.status === 'live') return '#ef4444'
+  if (b.eigen) return '#fbbf24'
+  return b.status === 'gespeeld' ? '#22c55e' : '#38bdf8'
+}
 
 export type Weekendzaal = { update: (seconden: number) => void; werkBij: (zaal: WeekendZaal) => void }
 
@@ -124,7 +132,7 @@ export function bouwWeekendzaal(scene: THREE.Scene, opt: { thema: StadionThema; 
     new THREE.PlaneGeometry(2 * (A - R) - 1, 0.14),
     new THREE.MeshBasicMaterial({ color: '#38bdf8', toneMapped: false }),
   )
-  band.position.set(0, 4.25, muurZ + 0.02)
+  band.position.set(0, 4.62, muurZ + 0.02)
   const vloerC = document.createElement('canvas')
   vloerC.width = 8
   vloerC.height = 128
@@ -224,6 +232,20 @@ export function bouwWeekendzaal(scene: THREE.Scene, opt: { thema: StadionThema; 
   scene.add(new THREE.Mesh(mergeGeometries(vlakken), new THREE.MeshBasicMaterial({ map: atlas, toneMapped: false })))
   scene.add(new THREE.Mesh(mergeGeometries(kaders), new THREE.MeshLambertMaterial({ color: '#0b1220' })))
 
+  // Elk bord zijn eigen verlichting (bordlicht.ts), met een koeler licht dan in de hall of fame.
+  const bordlicht = bouwBordlicht(
+    scene,
+    plekken.slice(0, n).map(({ x, y }, i) => ({
+      pos: new THREE.Vector3(x, y, muurZ),
+      rot: new THREE.Quaternion(),
+      b: BORD.b,
+      h: BORD.h,
+      kleur: gloedKleur(zaal.borden[i]),
+      vloer: y === RIJEN_Y[0],
+    })),
+    { licht: '#e0f2fe' },
+  )
+
   // ---------- rode gloed achter wat live is ----------
   const gloedC = document.createElement('canvas')
   gloedC.width = gloedC.height = 128
@@ -252,6 +274,7 @@ export function bouwWeekendzaal(scene: THREE.Scene, opt: { thema: StadionThema; 
   return {
     update(seconden) {
       gloedMat.opacity = 0.55 + 0.45 * Math.sin(seconden * 3.2)
+      bordlicht.update(seconden)
     },
     werkBij(nieuw) {
       // Zelfde wedstrijden, nieuwe standen: de borden blijven waar ze hangen.
@@ -260,6 +283,7 @@ export function bouwWeekendzaal(scene: THREE.Scene, opt: { thema: StadionThema; 
       tekenBorden()
       tekenKop()
       zetGloed()
+      zaal.borden.slice(0, n).forEach((b, i) => bordlicht.kleur(i, gloedKleur(b)))
     },
   }
 }

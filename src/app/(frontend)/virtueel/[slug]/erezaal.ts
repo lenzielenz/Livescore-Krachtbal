@@ -4,6 +4,7 @@ import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment
 
 import { GEVEL, inPoort, type EreBord, type Rechthoek, type StadionThema } from '@/lib/virtueel'
 import { gevelOmtrek } from './omgeving'
+import { bouwBordlicht } from './bordlicht'
 import { canvasTex, rondLogo } from './stadion'
 
 // De hall of fame in de gangen achter de tribunes: de erelijst van je club, al wandelend te
@@ -18,7 +19,7 @@ import { canvasTex, rondLogo } from './stadion'
 //  • Een groot kopbord tegenover de ingang, en licht in de gangen (lichtwand + lichtplassen).
 //
 // Vlot: plaquettes en portretten delen elk één textuur-atlas en zijn één mesh per soort; kaders
-// zijn samengevoegd; spots, lichtbanen, gloed en lichtplassen zijn InstancedMeshes.
+// zijn samengevoegd; de verlichting per bord (bordlicht.ts) en de lichtplassen zijn InstancedMeshes.
 
 const PLAQ = { b: 3.4, h: 2.4, celB: 512, celH: 360, kol: 4, y: 2.55 }
 const PORT = { b: 2.4, h: 3.4, celB: 360, celH: 512, kol: 6, y: 2.45 }
@@ -325,66 +326,16 @@ export function bouwEregalerij(
   for (const { plek } of portretten) kaderGeos.push(new THREE.BoxGeometry(PORT.b + 0.28, PORT.h + 0.28, 0.12).applyMatrix4(naarMuur(plek, PORT.y).m))
   scene.add(new THREE.Mesh(mergeGeometries(kaderGeos), new THREE.MeshLambertMaterial({ color: '#111827' })))
 
+  // Elk bord zijn eigen verlichting: lamp, lichtwaaier, gloed in de kleur van het bord, bundel en
+  // lichtplas (bordlicht.ts). Persoonlijke prijzen gloeien goud.
   const alle = [...plaquettes.map((x) => ({ ...x, s: PLAQ })), ...portretten.map((x) => ({ ...x, s: PORT }))]
-  const spots = new THREE.InstancedMesh(
-    mergeGeometries([new THREE.BoxGeometry(0.06, 0.06, 0.55).translate(0, 0, 0.27), new THREE.CylinderGeometry(0.11, 0.15, 0.22, 10).rotateX(Math.PI / 2.6).translate(0, -0.06, 0.6)]),
-    new THREE.MeshLambertMaterial({ color: '#1f2937' }),
-    alle.length,
+  const bordlicht = bouwBordlicht(
+    scene,
+    alle.map(({ b, plek, s }) => {
+      const { pos, rot } = naarMuur(plek, s.y)
+      return { pos, rot, b: s.b, h: s.h, kleur: b.soort === 'beker' ? '#cbd5e1' : '#fbbf24', vloer: true }
+    }),
   )
-  const lampjes = new THREE.InstancedMesh(
-    new THREE.CircleGeometry(0.1, 12).rotateX(Math.PI / 2.6 + Math.PI / 2).translate(0, -0.16, 0.67),
-    new THREE.MeshBasicMaterial({ color: '#fff7e0', toneMapped: false }),
-    alle.length,
-  )
-  const baanC = document.createElement('canvas')
-  baanC.width = 64
-  baanC.height = 128
-  const bgc = baanC.getContext('2d')!
-  const bgr = bgc.createLinearGradient(0, 0, 0, 128)
-  bgr.addColorStop(0, 'rgba(255,230,180,.55)')
-  bgr.addColorStop(1, 'rgba(255,230,180,0)')
-  bgc.fillStyle = bgr
-  bgc.beginPath()
-  bgc.moveTo(22, 0)
-  bgc.lineTo(42, 0)
-  bgc.lineTo(64, 128)
-  bgc.lineTo(0, 128)
-  bgc.fill()
-  const banen = new THREE.InstancedMesh(
-    new THREE.PlaneGeometry(PLAQ.b + 1.2, 3.2).translate(0, -1.6, 0),
-    new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(baanC), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }),
-    alle.length,
-  )
-  alle.forEach(({ plek, s }, i) => {
-    const { pos, rot } = naarMuur(plek, s.y)
-    const boven = new THREE.Matrix4().compose(pos.clone().add(new THREE.Vector3(0, s.h / 2 + 0.32, 0)), rot, een)
-    spots.setMatrixAt(i, boven)
-    lampjes.setMatrixAt(i, boven)
-    banen.setMatrixAt(i, new THREE.Matrix4().compose(pos.clone().add(new THREE.Vector3(-plek.nx * 0.02, s.h / 2 + 0.5, -plek.nz * 0.02)), rot, een))
-  })
-  scene.add(banen, spots, lampjes)
-
-  // Persoonlijke prijzen: een gouden gloed rond het portret.
-  if (portretten.length) {
-    const gloedC = document.createElement('canvas')
-    gloedC.width = gloedC.height = 128
-    const gg = gloedC.getContext('2d')!
-    const ggr = gg.createRadialGradient(64, 64, 20, 64, 64, 64)
-    ggr.addColorStop(0, 'rgba(252,211,77,.55)')
-    ggr.addColorStop(1, 'rgba(252,211,77,0)')
-    gg.fillStyle = ggr
-    gg.fillRect(0, 0, 128, 128)
-    const gloed = new THREE.InstancedMesh(
-      new THREE.PlaneGeometry(PORT.b + 2.2, PORT.h + 1.6),
-      new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(gloedC), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }),
-      portretten.length,
-    )
-    portretten.forEach(({ plek }, i) => {
-      const { pos, rot } = naarMuur(plek, PORT.y)
-      gloed.setMatrixAt(i, new THREE.Matrix4().compose(pos.clone().add(new THREE.Vector3(plek.nx * 0.025, 0, plek.nz * 0.025)), rot, een))
-    })
-    scene.add(gloed)
-  }
 
   // ---------- het kopbord tegenover de hoofdingang ----------
   const kopC = document.createElement('canvas')
@@ -540,6 +491,7 @@ export function bouwEregalerij(
   return {
     obstakels,
     update(seconden) {
+      bordlicht.update(seconden)
       bekers.forEach((b, i) => (b.rotation.y = seconden * 0.45 + i * 1.3))
     },
   }
