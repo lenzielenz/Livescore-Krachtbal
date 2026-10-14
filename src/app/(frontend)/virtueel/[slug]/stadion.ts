@@ -181,7 +181,24 @@ export function bouwStadion(
   const bezetting = licht ? 0.45 : 0.78
 
   const obstakels: Obstakel[] = []
-  const tribune = (lengte: number, rijen: number, pos: THREE.Vector3, ry: number, dak: boolean) => {
+  const tijd = { value: 0 }
+  /** Materiaal dat in de wind beweegt: `code` krijgt uTijd en de lokale positie. */
+  const golfMat = (mat: THREE.Material, code: string) => {
+    mat.onBeforeCompile = (sh) => {
+      sh.uniforms.uTijd = tijd
+      sh.vertexShader = 'uniform float uTijd;\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>\n${code}`)
+    }
+    return mat
+  }
+
+  // Supportersspullen: wie een vlag of sjaal heeft (indexen in `mensen`), de tifo en spandoeken.
+  const vlagDragers: number[] = []
+  const sjaalDragers: number[] = []
+  const doekTeken: ((logo: HTMLImageElement | null) => void)[] = []
+  const kansVlag = licht ? 0.04 : 0.07
+  const kansSjaal = licht ? 0.1 : 0.16
+
+  const tribune = (lengte: number, rijen: number, pos: THREE.Vector3, ry: number, dak: boolean, extra: { tifo?: boolean; spandoeken?: string[] } = {}) => {
     const groep = new THREE.Group()
     groep.position.copy(pos)
     groep.rotation.y = ry
@@ -238,6 +255,83 @@ export function bouwStadion(
         groep.add(paal)
       }
     }
+    if (extra.tifo) {
+      // Reuzentifo over de hele tribune, langs de helling van de treden, met het logo en een tekst.
+      const diepte = rijen * RIJ_DIEP
+      const stijging = rijen * RIJ_HOOG
+      const helling = Math.atan2(stijging, diepte)
+      const hoogte = Math.hypot(diepte, stijging)
+      const c = document.createElement('canvas')
+      c.width = 2048
+      c.height = Math.round((2048 * hoogte) / lengte)
+      const tex = canvasTex(c)
+      doekTeken.push((logo) => {
+        const g = c.getContext('2d')!
+        const W = c.width
+        const H = c.height
+        g.fillStyle = thema.primair
+        g.fillRect(0, 0, W, H)
+        // Stralen vanuit het logo.
+        g.save()
+        g.translate(W * 0.24, H * 0.5)
+        g.fillStyle = thema.secundair
+        g.globalAlpha = 0.18
+        for (let i = 0; i < 24; i++) {
+          g.rotate((Math.PI * 2) / 24)
+          g.beginPath()
+          g.moveTo(0, 0)
+          g.lineTo(W, -H * 0.12)
+          g.lineTo(W, H * 0.12)
+          g.fill()
+        }
+        g.restore()
+        g.fillStyle = thema.secundair
+        g.fillRect(0, 0, W, H * 0.05)
+        g.fillRect(0, H * 0.95, W, H * 0.05)
+        rondLogo(g, logo, thema, W * 0.24, H * 0.5, H * 0.36)
+        g.fillStyle = thema.tekstOpPrimair
+        g.textAlign = 'center'
+        g.textBaseline = 'middle'
+        g.font = `900 ${Math.round(H * 0.14)}px Inter, system-ui, sans-serif`
+        g.fillText('SAMEN STERK', W * 0.68, H * 0.3, W * 0.56)
+        g.font = `900 ${Math.round(H * 0.24)}px Inter, system-ui, sans-serif`
+        g.fillText(thema.naam.toUpperCase(), W * 0.68, H * 0.58, W * 0.6)
+        g.font = `800 ${Math.round(H * 0.08)}px Inter, system-ui, sans-serif`
+        g.fillText('ONS STADION · ONZE CLUB · ONS VOLK', W * 0.68, H * 0.8, W * 0.56)
+        tex.needsUpdate = true
+      })
+      const mesh = new THREE.Mesh(
+        new THREE.PlaneGeometry(lengte * 0.98, hoogte, 48, 16),
+        golfMat(new THREE.MeshLambertMaterial({ map: tex, side: THREE.DoubleSide }), 'transformed.z += sin(uTijd * 1.4 + position.x * 0.45 + position.y * 0.7) * 0.09 + sin(uTijd * 0.6 + position.x * 0.12) * 0.12;'),
+      )
+      mesh.rotation.x = -(Math.PI / 2 - helling)
+      mesh.position.set(0, voet + stijging / 2 + 1.0, -diepte / 2)
+      groep.add(mesh)
+    }
+    // Spandoeken over de voormuur, zoals supporters ze aan de reling hangen.
+    const doeken = extra.spandoeken ?? []
+    doeken.forEach((tekst, i) => {
+      const c = document.createElement('canvas')
+      c.width = 1024
+      c.height = 160
+      const omgekeerd = i % 2 === 1
+      const g = c.getContext('2d')!
+      g.fillStyle = omgekeerd ? thema.secundair : thema.primair
+      g.fillRect(0, 0, 1024, 160)
+      g.fillStyle = omgekeerd ? thema.primair : thema.secundair
+      g.fillRect(0, 0, 1024, 12)
+      g.fillRect(0, 148, 1024, 12)
+      g.fillStyle = omgekeerd ? thema.primair : thema.tekstOpPrimair
+      g.font = '900 92px Inter, system-ui, sans-serif'
+      g.textAlign = 'center'
+      g.textBaseline = 'middle'
+      g.fillText(tekst, 512, 84, 980)
+      const breed = Math.min(10, lengte / (doeken.length + 1))
+      const doek = new THREE.Mesh(new THREE.PlaneGeometry(breed, breed * 0.16, 12, 1), golfMat(new THREE.MeshLambertMaterial({ map: canvasTex(c) }), 'transformed.z += sin(uTijd * 2.0 + position.x * 0.8) * 0.03;'))
+      doek.position.set(-lengte / 2 + ((i + 1) * lengte) / (doeken.length + 1), voet + 0.15, 0.32)
+      doek.rotation.x = -0.12
+      groep.add(doek)
+    })
     scene.add(groep)
     groep.updateMatrixWorld(true)
     // De voetafdruk van de tribune (voormuur tot achterwand) als obstakel voor wie rondloopt.
@@ -266,7 +360,8 @@ export function bouwStadion(
         stoelen.push(new THREE.Matrix4().compose(p.clone(), q, een))
         // Stoeltjes in clubkleur, met brede banen in de tweede kleur.
         stoelKleur.push(Math.floor(i / 6) % 4 === 1 ? secundair : primair)
-        if (willekeur() < bezetting) {
+        // Onder de tifo zit wel volk, maar je ziet het niet: niemand neerzetten.
+        if (!extra.tifo && willekeur() < bezetting) {
           const m = new THREE.Matrix4().compose(
             p.clone().add(new THREE.Vector3((willekeur() - 0.5) * 0.08, 0.05, 0)),
             new THREE.Quaternion().setFromEuler(new THREE.Euler(0, ry + (willekeur() - 0.5) * 0.5, 0)),
@@ -276,15 +371,19 @@ export function bouwStadion(
           const k = willekeur()
           shirt.push(k < 0.55 ? primair : k < 0.75 ? secundair : neutraal[Math.floor(willekeur() * neutraal.length)])
           huid.push(huidtinten[Math.floor(willekeur() * huidtinten.length)])
+          const w = willekeur()
+          if (w < kansVlag) vlagDragers.push(mensen.length - 1)
+          else if (w < kansVlag + kansSjaal) sjaalDragers.push(mensen.length - 1)
         }
       }
     }
   }
 
   const voor = 1.4
-  tribune(2 * hx + 4, licht ? 12 : 16, new THREE.Vector3(0, 0, -hz - voor), 0, true)
-  tribune(2 * hx + 4, licht ? 8 : 11, new THREE.Vector3(0, 0, hz + voor), Math.PI, false)
-  tribune(2 * hz - 3, licht ? 6 : 8, new THREE.Vector3(hx + voor, 0, 0), -Math.PI / 2, false)
+  tribune(2 * hx + 4, licht ? 12 : 16, new THREE.Vector3(0, 0, -hz - voor), 0, true, { spandoeken: [`ALLEZ ${thema.kort}!`, thema.naam.toUpperCase(), 'TROTS OP ONZE CLUB'] })
+  tribune(2 * hx + 4, licht ? 8 : 11, new THREE.Vector3(0, 0, hz + voor), Math.PI, false, { spandoeken: ['WIJ ZIJN ER ALTIJD', `${thema.kort} ♥`, 'NOOIT OPGEVEN'] })
+  // Achter het oostelijke doelgebied: de tifo.
+  tribune(2 * hz - 3, licht ? 6 : 8, new THREE.Vector3(hx + voor, 0, 0), -Math.PI / 2, false, { tifo: true })
   // De eindtribunes zijn iets korter: zo blijft er in elke hoek een doorgang van het veld naar de
   // gangen achter de tribunes. Achter de westkant staat het grote ledscherm: daar een lagere tribune.
   tribune(2 * hz - 3, licht ? 4 : 5, new THREE.Vector3(-hx - voor, 0, 0), Math.PI / 2, false)
@@ -300,9 +399,9 @@ export function bouwStadion(
   })
   scene.add(stoelMesh)
 
-  // Publiek: juichen + een wave die rond het stadion trekt, helemaal in de shader.
-  const tijd = { value: 0 }
-  const juich = (mat: THREE.Material) => {
+  // Publiek: juichen + een wave die rond het stadion trekt, helemaal in de shader. `extra` komt
+  // erbij voor wat de supporters vasthouden (een vlag wappert).
+  const juich = (mat: THREE.Material, extra = '') => {
     mat.onBeforeCompile = (sh) => {
       sh.uniforms.uTijd = tijd
       sh.vertexShader = 'uniform float uTijd;\n' + sh.vertexShader.replace(
@@ -313,7 +412,8 @@ export function bouwStadion(
         float hoek = atan(plek.z, plek.x);
         float golf = smoothstep(0.7, 1.0, sin(uTijd * 0.8 - hoek * 3.0));
         float sprong = (0.03 + 0.42 * golf) * max(0.0, sin(uTijd * (4.0 + fase * 0.4) + fase));
-        transformed.y += sprong + golf * 0.25;`,
+        transformed.y += sprong + golf * 0.25;
+        ${extra}`,
       )
     }
     return mat
@@ -332,6 +432,53 @@ export function bouwStadion(
   lijven.frustumCulled = false
   hoofden.frustumCulled = false
   scene.add(lijven, hoofden)
+
+  // Vlaggen en sjaals in het publiek: ze bewegen mee met wie ze vasthoudt (zelfde shader), de
+  // vlaggen wapperen bovendien.
+  const vlagC = document.createElement('canvas')
+  vlagC.width = 256
+  vlagC.height = 168
+  const vlagTex = canvasTex(vlagC)
+  doekTeken.push((logo) => {
+    const g = vlagC.getContext('2d')!
+    g.fillStyle = thema.primair
+    g.fillRect(0, 0, 256, 168)
+    g.fillStyle = thema.secundair
+    g.beginPath()
+    g.moveTo(0, 120)
+    g.lineTo(256, 30)
+    g.lineTo(256, 70)
+    g.lineTo(0, 160)
+    g.fill()
+    rondLogo(g, logo, thema, 128, 84, 46)
+    vlagTex.needsUpdate = true
+  })
+  const vlagGeo = mergeGeometries([
+    new THREE.CylinderGeometry(0.02, 0.02, 1.9, 5).translate(0.22, 1.8, 0.1),
+    new THREE.PlaneGeometry(1.45, 0.95, 10, 2).translate(0.22 + 0.725, 2.25, 0.1),
+  ])
+  const vlaggen = new THREE.InstancedMesh(
+    vlagGeo,
+    juich(
+      new THREE.MeshLambertMaterial({ map: vlagTex, side: THREE.DoubleSide }),
+      'float doek = max(0.0, position.x - 0.22); transformed.z += sin(uTijd * 6.0 + position.x * 4.0 + fase) * 0.16 * doek; transformed.x -= abs(sin(uTijd * 3.0 + fase)) * 0.05 * doek;',
+    ),
+    vlagDragers.length,
+  )
+  vlagDragers.forEach((mi, i) => vlaggen.setMatrixAt(i, mensen[mi]))
+  // De stok heeft geen textuur nodig; het doek laat de vlag zien (de uv van de stok valt op de rand).
+  vlaggen.frustumCulled = false
+  const sjaals = new THREE.InstancedMesh(
+    new THREE.BoxGeometry(0.95, 0.13, 0.03).translate(0, 1.5, 0.06),
+    juich(new THREE.MeshLambertMaterial(), 'transformed.y += sin(uTijd * 4.0 + fase) * 0.05;'),
+    sjaalDragers.length,
+  )
+  sjaalDragers.forEach((mi, i) => {
+    sjaals.setMatrixAt(i, mensen[mi])
+    sjaals.setColorAt(i, i % 3 === 0 ? secundair : primair)
+  })
+  sjaals.frustumCulled = false
+  scene.add(vlaggen, sjaals)
 
   // ---------- lichtmasten op de hoeken ----------
   const gloedC = document.createElement('canvas')
@@ -485,11 +632,14 @@ export function bouwStadion(
   }
 
   // Logo en reclames laden; daarna de borden opnieuw tekenen.
+  // Tifo en vlaggen meteen tekenen (met initialen); met het logo opnieuw zodra dat geladen is.
+  for (const teken of doekTeken) teken(null)
   const logo = laadBeeld(thema.logoUrl)
   void Promise.all([logo, Promise.all(thema.reclames.slice(0, 8).map((r) => laadBeeld(r.url)))]).then(([logo, ads]) => {
     logoBeeld = logo
     tekenReclame(logo, ads)
     tekenScherm(logo)
+    for (const teken of doekTeken) teken(logo)
   })
 
   let laatsteBord = -1
