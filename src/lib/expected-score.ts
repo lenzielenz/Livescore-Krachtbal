@@ -1,78 +1,124 @@
 import type { Payload } from 'payload'
 
 import { buildReeksStandings } from './reeks-standings'
+import type { StandingsMatch } from './standings'
 
-// Verwachte score voor een nog te spelen wedstrijd — puur op basis van bestaande cijfers, geen
-// eigen voorspelmodel met opgeslagen parameters. Twee ingrediënten:
-//  - aanval/verdediging: het gemiddelde aantal punten dat een ploeg dit seizoen scoorde/
-//    binnenkreeg per wedstrijd (uit de rangschikking, die al goalsFor/goalsAgainst/played bijhoudt);
-//  - de rangschikking zelf: een ploeg die duidelijk beter staat (meer klassementspunten per
-//    wedstrijd) krijgt een kleine verschuiving in haar voordeel, begrensd zodat één sterk seizoen
-//    de score niet laat ontsporen.
+// Verwachte score voor een nog te spelen wedstrijd — puur afgeleid uit de gespeelde wedstrijden
+// van de reeks, niets opgeslagen.
+//
+// Een eenvoudig aanval/verdediging-model (in de geest van Dixon–Coles), dat elke uitslag van de
+// reeks gebruikt in plaats van enkel twee seizoensgemiddelden:
+//  • Elke ploeg krijgt een aanvalssterkte en een verdedigingszwakte t.o.v. het reeksgemiddelde
+//    (1 = gemiddeld). De verwachte score is dan
+//        thuis = gemiddelde thuisscore × aanval(thuis) × verdediging(uit)
+//        uit   = gemiddelde uitscore   × aanval(uit)   × verdediging(thuis)
+//  • Tegenstanders tellen mee: 15 punten scoren tegen de leider zegt meer dan 15 tegen de laatste.
+//    De sterktes worden daarom samen bijgesteld tot ze bij alle uitslagen passen.
+//  • Thuisvoordeel komt uit de reeks zelf (scoren thuisploegen hier echt meer?).
+//  • Recente wedstrijden wegen zwaarder (halveringstijd 6 weken): vorm verandert.
+//  • Weinig data = voorzichtig: elke ploeg start met twee "gemiddelde" schaduwwedstrijden, zodat
+//    één uitschieter op de eerste speeldag de schatting niet laat ontsporen. Hoe meer er gespeeld
+//    is, hoe minder die nog wegen.
+//  • Forfaits tellen niet mee: die score is administratief, niet gespeeld.
 // Puur en getest; het verzamelen van de data (DB) zit in buildExpectedScore hieronder.
-
-export interface TeamForm {
-  /** Gemiddeld gescoorde punten per wedstrijd dit seizoen. */
-  attack: number
-  /** Gemiddeld tegen gekregen punten per wedstrijd dit seizoen. */
-  defense: number
-  /** Klassementspunten per wedstrijd — maat voor hoe sterk de ploeg er dit seizoen voorstaat. */
-  pointsPerMatch: number
-}
 
 export interface ExpectedScore {
   home: number
   away: number
 }
 
-/** Hoeveel de scoremarge verschuift per verschil in klassementspunten/wedstrijd, begrensd zodat
- *  de rangschikking de aanval-/verdedigingscijfers bijstuurt, nooit overstemt. */
-const NUDGE_PER_PPM = 1.2
-const MAX_NUDGE = 6
-
-const clamp = (n: number, min: number, max: number) => Math.max(min, Math.min(max, n))
+/** Na zoveel dagen weegt een wedstrijd nog half zo zwaar. */
+const HALVERINGSTIJD_DAGEN = 42
+/** Schaduwwedstrijden op reeksgemiddelde per ploeg (krimp naar het gemiddelde bij weinig data). */
+const SCHADUW = 2
+/** Idem voor het thuisvoordeel van de reeks. */
+const SCHADUW_THUIS = 6
+const RONDES = 40
+const DAG_MS = 24 * 60 * 60 * 1000
 
 /**
- * Verwachte eindstand: de aanval van elke ploeg tegenover de verdediging van de tegenstander,
- * met een kleine verschuiving op basis van wie er dit seizoen beter voorstaat.
+ * Verwachte eindstand van `homeId` tegen `awayId`, op basis van de gespeelde wedstrijden van de
+ * reeks. Null als er nog niets (echt) gespeeld is.
  */
-export function computeExpectedScore(home: TeamForm, away: TeamForm): ExpectedScore {
-  const rawHome = (home.attack + away.defense) / 2
-  const rawAway = (away.attack + home.defense) / 2
-  const nudge = clamp((home.pointsPerMatch - away.pointsPerMatch) * NUDGE_PER_PPM, -MAX_NUDGE, MAX_NUDGE)
+export function schatScore(uitslagen: StandingsMatch[], homeId: number, awayId: number, nu: number = Date.now()): ExpectedScore | null {
+  const gespeeld = uitslagen
+    .filter((m) => m.forfait === 'none')
+    .map((m) => {
+      const t = m.date ? new Date(m.date).getTime() : NaN
+      const ouderdom = Number.isFinite(t) ? Math.max(0, nu - t) / DAG_MS : 0
+      return { ...m, w: Math.pow(0.5, ouderdom / HALVERINGSTIJD_DAGEN) }
+    })
+  const W = gespeeld.reduce((s, m) => s + m.w, 0)
+  if (gespeeld.length === 0 || W <= 0) return null
+
+  // Reeksgemiddelden, met het thuisvoordeel voorzichtig gekrompen naar "geen voordeel".
+  const thuisSom = gespeeld.reduce((s, m) => s + m.w * m.homeGoals, 0)
+  const uitSom = gespeeld.reduce((s, m) => s + m.w * m.awayGoals, 0)
+  const mu = (thuisSom + uitSom) / (2 * W)
+  if (mu <= 0) return { home: 0, away: 0 }
+  const muThuis = (thuisSom + SCHADUW_THUIS * mu) / (W + SCHADUW_THUIS)
+  const muUit = (uitSom + SCHADUW_THUIS * mu) / (W + SCHADUW_THUIS)
+
+  const ids = new Set<number>([homeId, awayId])
+  for (const m of gespeeld) ids.add(m.homeId).add(m.awayId)
+  const aanval = new Map([...ids].map((id) => [id, 1]))
+  const verdediging = new Map([...ids].map((id) => [id, 1]))
+  const a = (id: number) => aanval.get(id) ?? 1
+  const d = (id: number) => verdediging.get(id) ?? 1
+
+  for (let r = 0; r < RONDES; r++) {
+    for (const id of ids) {
+      // Aanval: wat de ploeg scoorde, gedeeld door wat een gemiddelde aanval tegen dezelfde
+      // verdedigingen (thuis of uit) zou scoren — plus de schaduwwedstrijden.
+      let gescoord = SCHADUW * mu
+      let verwacht = SCHADUW * mu
+      for (const m of gespeeld) {
+        if (m.homeId === id) {
+          gescoord += m.w * m.homeGoals
+          verwacht += m.w * muThuis * d(m.awayId)
+        } else if (m.awayId === id) {
+          gescoord += m.w * m.awayGoals
+          verwacht += m.w * muUit * d(m.homeId)
+        }
+      }
+      aanval.set(id, gescoord / verwacht)
+    }
+    for (const id of ids) {
+      let tegen = SCHADUW * mu
+      let verwacht = SCHADUW * mu
+      for (const m of gespeeld) {
+        if (m.homeId === id) {
+          tegen += m.w * m.awayGoals
+          verwacht += m.w * muUit * a(m.awayId)
+        } else if (m.awayId === id) {
+          tegen += m.w * m.homeGoals
+          verwacht += m.w * muThuis * a(m.homeId)
+        }
+      }
+      verdediging.set(id, tegen / verwacht)
+    }
+    // Schaal vastzetten: de gemiddelde aanval blijft 1 (anders kunnen aanval en verdediging samen
+    // wegdrijven zonder dat de verwachte scores veranderen).
+    const gem = [...aanval.values()].reduce((s, v) => s + v, 0) / aanval.size
+    if (gem > 0) for (const id of ids) {
+      aanval.set(id, a(id) / gem)
+      verdediging.set(id, d(id) * gem)
+    }
+  }
+
   return {
-    home: Math.max(0, Math.round(rawHome + nudge / 2)),
-    away: Math.max(0, Math.round(rawAway - nudge / 2)),
+    home: Math.max(0, Math.round(muThuis * a(homeId) * d(awayId))),
+    away: Math.max(0, Math.round(muUit * a(awayId) * d(homeId))),
   }
 }
 
-/**
- * Bouwt de verwachte score voor een specifieke, nog te spelen wedstrijd in een reeks. Hergebruikt
- * de rangschikking (goalsFor/goalsAgainst/points/played per ploeg) — geen aparte query's nodig.
- * Een ploeg die dit seizoen nog niet speelde, valt terug op het reeksgemiddelde (anders 0–0 bij de
- * eerste speeldag). Null als er in de hele reeks nog niets gespeeld is — dan is er niets om op te
- * baseren.
- */
+/** Verwachte score voor een specifieke, nog te spelen wedstrijd in een reeks. */
 export async function buildExpectedScore(
   payload: Payload,
   reeks: string,
   homeTeamId: number,
   awayTeamId: number,
 ): Promise<ExpectedScore | null> {
-  const { standings } = await buildReeksStandings(payload, reeks)
-  const played = standings.filter((r) => r.played > 0)
-  if (played.length === 0) return null
-
-  const avg = (pick: (r: (typeof played)[number]) => number) => played.reduce((s, r) => s + pick(r), 0) / played.length
-  const avgAttack = avg((r) => r.goalsFor / r.played)
-  const avgDefense = avg((r) => r.goalsAgainst / r.played)
-  const avgPointsPerMatch = avg((r) => r.points / r.played)
-
-  const formOf = (teamId: number): TeamForm => {
-    const row = standings.find((r) => r.teamId === teamId)
-    if (!row || row.played === 0) return { attack: avgAttack, defense: avgDefense, pointsPerMatch: avgPointsPerMatch }
-    return { attack: row.goalsFor / row.played, defense: row.goalsAgainst / row.played, pointsPerMatch: row.points / row.played }
-  }
-
-  return computeExpectedScore(formOf(homeTeamId), formOf(awayTeamId))
+  const { clinchCtx } = await buildReeksStandings(payload, reeks)
+  return schatScore(clinchCtx.results, homeTeamId, awayTeamId)
 }

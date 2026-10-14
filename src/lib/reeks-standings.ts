@@ -45,7 +45,15 @@ export async function buildReeksStandings(
     const homeId = rel((m as { homeTeam?: unknown }).homeTeam)
     const awayId = rel((m as { awayTeam?: unknown }).awayTeam)
     if (homeId == null || awayId == null) continue
-    standingsMatches.push({ homeId, awayId, homeGoals: c.score.home, awayGoals: c.score.away, forfait: resolveForfait(ffByMatch.get(id), c.score.home, c.score.away) })
+    const date = (m as { date?: unknown }).date
+    standingsMatches.push({
+      homeId,
+      awayId,
+      homeGoals: c.score.home,
+      awayGoals: c.score.away,
+      forfait: resolveForfait(ffByMatch.get(id), c.score.home, c.score.away),
+      ...(typeof date === 'string' ? { date } : {}),
+    })
   }
   const standings = computeStandings(standingsMatches, teamIds)
 

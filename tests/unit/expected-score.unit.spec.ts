@@ -1,44 +1,66 @@
 import { describe, expect, it } from 'vitest'
 
-import { computeExpectedScore, type TeamForm } from '@/lib/expected-score'
+import { schatScore } from '@/lib/expected-score'
+import type { StandingsMatch } from '@/lib/standings'
 
-const form = (over: Partial<TeamForm>): TeamForm => ({ attack: 15, defense: 15, pointsPerMatch: 3, ...over })
+const NU = new Date('2026-10-14T12:00:00Z').getTime()
+const dagenGeleden = (n: number) => new Date(NU - n * 24 * 60 * 60 * 1000).toISOString()
+const m = (homeId: number, awayId: number, homeGoals: number, awayGoals: number, dagen = 7, forfait: StandingsMatch['forfait'] = 'none'): StandingsMatch => ({
+  homeId, awayId, homeGoals, awayGoals, forfait, date: dagenGeleden(dagen),
+})
 
-describe('computeExpectedScore', () => {
-  it('blendt aanval van elke ploeg met de verdediging van de tegenstander', () => {
-    const home = form({ attack: 20, defense: 10 })
-    const away = form({ attack: 14, defense: 16 })
-    // expHome = (thuisaanval + uitverdediging) / 2 = (20+16)/2 = 18
-    // expAway = (uitaanval + thuisverdediging) / 2 = (14+10)/2 = 12
-    expect(computeExpectedScore(home, away)).toEqual({ home: 18, away: 12 })
+// Een kleine reeks: 1 is sterk, 4 is zwak, 2 en 3 zitten ertussen.
+const reeks: StandingsMatch[] = [
+  m(1, 2, 20, 12), m(3, 4, 15, 10), m(1, 3, 18, 11), m(2, 4, 16, 9),
+  m(1, 4, 22, 8), m(2, 3, 14, 14), m(2, 1, 11, 19), m(4, 3, 9, 16),
+]
+
+describe('schatScore', () => {
+  it('geeft null zonder gespeelde wedstrijden', () => {
+    expect(schatScore([], 1, 2, NU)).toBeNull()
+    expect(schatScore([m(1, 2, 10, 0, 7, 'away')], 1, 2, NU)).toBeNull()
   })
 
-  it('twee gelijk sterke ploegen krijgen een gelijke verwachte score', () => {
-    const home = form({ attack: 15, defense: 15, pointsPerMatch: 3 })
-    const away = form({ attack: 15, defense: 15, pointsPerMatch: 3 })
-    expect(computeExpectedScore(home, away)).toEqual({ home: 15, away: 15 })
+  it('laat de sterke ploeg winnen, met een realistische score', () => {
+    const s = schatScore(reeks, 1, 4, NU)!
+    expect(s.home).toBeGreaterThan(s.away)
+    expect(s.home).toBeGreaterThanOrEqual(18)
+    expect(s.away).toBeLessThanOrEqual(10)
   })
 
-  it('de leider krijgt een kleine verschuiving in haar voordeel bij gelijke aanval/verdediging', () => {
-    const home = form({ pointsPerMatch: 4 }) // wint elke wedstrijd
-    const away = form({ pointsPerMatch: 2 }) // verliest elke wedstrijd
-    const exp = computeExpectedScore(home, away)
-    expect(exp.home).toBeGreaterThan(exp.away)
+  it('is symmetrisch genoeg: wissel thuis en uit en de sterke ploeg wint nog steeds', () => {
+    const s = schatScore(reeks, 4, 1, NU)!
+    expect(s.away).toBeGreaterThan(s.home)
   })
 
-  it('de rangschikking-verschuiving is begrensd, ook bij een extreem verschil', () => {
-    const home = form({ pointsPerMatch: 4 })
-    const away = form({ pointsPerMatch: 0 })
-    const exp = computeExpectedScore(home, away)
-    // Zonder begrenzing zou het verschil hier veel groter zijn dan de max-nudge (6) toelaat.
-    expect(exp.home - exp.away).toBeLessThanOrEqual(6)
+  it('houdt rekening met de tegenstanders: scoren tegen de leider telt zwaarder', () => {
+    // 5 en 6 scoren allebei 15 per wedstrijd, maar 5 deed dat tegen de leider, 6 tegen de laatste.
+    const extra = [...reeks, m(5, 1, 15, 15), m(6, 4, 15, 15)]
+    const s5 = schatScore(extra, 5, 2, NU)!
+    const s6 = schatScore(extra, 6, 2, NU)!
+    expect(s5.home).toBeGreaterThan(s6.home)
   })
 
-  it('gaat nooit onder 0', () => {
-    const home = form({ attack: 0, defense: 30, pointsPerMatch: 0 })
-    const away = form({ attack: 0, defense: 30, pointsPerMatch: 4 })
-    const exp = computeExpectedScore(home, away)
-    expect(exp.home).toBeGreaterThanOrEqual(0)
-    expect(exp.away).toBeGreaterThanOrEqual(0)
+  it('laat recente vorm zwaarder wegen', () => {
+    // Ploeg 7 scoorde lang geleden weinig, recent veel; ploeg 8 omgekeerd.
+    const vorm = [...reeks, m(7, 2, 8, 15, 120), m(7, 3, 22, 12, 3), m(8, 2, 22, 12, 120), m(8, 3, 8, 15, 3)]
+    expect(schatScore(vorm, 7, 4, NU)!.home).toBeGreaterThan(schatScore(vorm, 8, 4, NU)!.home)
+  })
+
+  it('valt voor een ploeg zonder wedstrijden terug op het reeksgemiddelde', () => {
+    const s = schatScore(reeks, 9, 10, NU)!
+    const gem = reeks.reduce((t, x) => t + x.homeGoals + x.awayGoals, 0) / (2 * reeks.length)
+    expect(Math.abs(s.home - gem)).toBeLessThanOrEqual(2)
+    expect(Math.abs(s.away - gem)).toBeLessThanOrEqual(2)
+  })
+
+  it('laat één uitschieter op de eerste speeldag niet ontsporen', () => {
+    const s = schatScore([m(1, 2, 40, 2), m(3, 4, 15, 15)], 1, 3, NU)!
+    expect(s.home).toBeLessThan(40)
+  })
+
+  it('negeert forfaits', () => {
+    const metForfait = [...reeks, m(4, 1, 10, 0, 1, 'away')]
+    expect(schatScore(metForfait, 1, 4, NU)).toEqual(schatScore(reeks, 1, 4, NU))
   })
 })
