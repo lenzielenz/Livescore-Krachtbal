@@ -253,8 +253,14 @@ export type EreBord = {
   /** Het hoeveelste van zijn soort voor de club (1 = de eerste ooit). */
   nummer?: number
 }
-/** De hall of fame: een kopbord en de borden, recentste eerst. `eigen` = de prijzen van je club. */
-export type EreZaal = { eigen: boolean; kop: string; totaal: string; borden: EreBord[] }
+/** Een ster in de vloer (zoals de Walk of Fame): één per gewonnen referendumprijs. */
+export type EreSter = { naam: string; prijs: string; jaar: string }
+/**
+ * De hall of fame: een kopbord en de borden, recentste eerst. `eigen` = de prijzen van je club.
+ * `sterren`: elke referendumprijs van je club (een ster in de vloer). `vroeger`: de oudste titels en
+ * bekers, oudste eerst — de gang met de oude bekers op het verdiep.
+ */
+export type EreZaal = { eigen: boolean; kop: string; totaal: string; borden: EreBord[]; sterren?: EreSter[]; vroeger?: EreBord[] }
 
 export type StadionThema = {
   naam: string
@@ -272,6 +278,10 @@ export type StadionThema = {
   weekend?: WeekendZaal | null
   /** Optioneel: supportersfoto's van live wedstrijden van je club, als collages. */
   fotos?: FotoKader[] | null
+  /** De club van wie kijkt (voor de graffitimuur); null = de algemene muur. */
+  clubId?: number | null
+  /** Ingelogd? Enkel dan kan je op de graffitimuur spuiten. */
+  ingelogd?: boolean
 }
 
 /** Eén kader in de fotogalerij: 1 tot 4 foto's door elkaar, met een onderschrift. */

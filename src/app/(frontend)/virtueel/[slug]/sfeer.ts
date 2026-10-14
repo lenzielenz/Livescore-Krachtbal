@@ -327,6 +327,8 @@ export function bouwSfeer(scene: THREE.Scene, opt: { thema: StadionThema; licht:
       const x = cx + (nz !== 0 ? s : 0) + nx * 2.2
       const z = cz + (nx !== 0 ? s : 0) + nz * 2.2
       if (inPoort(GEVEL, x - nx * 2.2, z - nz * 2.2) || inPoort(GEVEL, x - nx * 2.2 + (nz !== 0 ? 3 : 0), z - nz * 2.2 + (nx !== 0 ? 3 : 0)) || inPoort(GEVEL, x - nx * 2.2 - (nz !== 0 ? 3 : 0), z - nz * 2.2 - (nx !== 0 ? 3 : 0))) continue
+      // Niet voor het clublogo op de oost-, west- en noordgevel.
+      if ((nx !== 0 && Math.abs(z - 9) < 5) || (nz < 0 && Math.abs(x) < 5)) continue
       banierPlek.push(new THREE.Matrix4().compose(new THREE.Vector3(x, 6.4, z), q.setFromAxisAngle(Y, Math.atan2(nx, nz)).clone(), new THREE.Vector3(1, 1, 1)))
     }
   }

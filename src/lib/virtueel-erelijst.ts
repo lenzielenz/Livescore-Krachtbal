@@ -42,6 +42,7 @@ export function eregalerij(
   clubNaam: string | null,
   data: { kampioenenSeizoenen: KampioenenSeizoenInput[]; bekerwinnaarsSeizoenen: BekerwinnaarsSeizoenInput[]; referendumPrijzen: ReferendumPrijsInput[] },
   max = 24,
+  maxVroeger = 10,
 ): EreZaal | null {
   const jaarVan = (seizoen: string) => seizoenNaarJaar(seizoen) || 0
   const schoon = ({ j: _j, groep: _g, persoon: _p, ...b }: Ruw): EreBord => b
@@ -71,9 +72,14 @@ export function eregalerij(
         eigen: true,
         kop: `HALL OF FAME · ${canoniekeClubNaam(clubNaam).toUpperCase()}`,
         totaal: [meervoud(titels.length, 'titel', 'titels'), meervoud(bekers.length, 'beker', 'bekers'), meervoud(laureaten.length, 'laureaat', 'laureaten')].join(' · '),
-        borden: alles
+        borden: [...alles]
           .sort((a, b) => b.j - a.j)
           .slice(0, max)
+          .map(schoon),
+        sterren: [...laureaten].sort((a, b) => a.j - b.j).map((b) => ({ naam: b.tekst, prijs: b.groep, jaar: b.jaar })),
+        vroeger: [...titels, ...bekers]
+          .sort((a, b) => a.j - b.j)
+          .slice(0, maxVroeger)
           .map(schoon),
       }
     }

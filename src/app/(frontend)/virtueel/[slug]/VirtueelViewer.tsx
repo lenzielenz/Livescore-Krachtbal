@@ -13,6 +13,16 @@ import { bouwStadion } from './stadion'
 import { bouwWeekendzaal } from './weekendzaal'
 import { bouwFotogalerij } from './fotogalerij'
 import { bouwWegwijzers, type Bestemming } from './wegwijzers'
+import { bouwGangleven } from './gangleven'
+import { bouwBuitenkant } from './buitenkant'
+import { bouwSterren } from './sterren'
+import { bouwVerdiep, VERDIEP_Y } from './verdiep'
+import { bouwKleedkamer, type Kleedkamer } from './kleedkamer'
+import { bouwGangafwerking } from './gangafwerking'
+import { bouwVideoscherm, type Videoscherm } from './videoscherm'
+import { GraffitiSpuiter } from './GraffitiSpuiter'
+import { laadTactiek, Tactiekbord } from './Tactiekbord'
+import { muurLengte, type Tag } from '@/lib/virtueel-graffiti'
 
 // Virtueel krachtbal: een gereconstrueerd wedstrijdfragment in 3D, in een stadion in je
 // clubkleuren. Je kijkt vanop de tribune, volgt de bal, kruipt in het hoofd van een speler, loopt
@@ -233,14 +243,26 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
   const [namen, setNamen] = useState(true)
   const [bezit, setBezit] = useState<number | null>(null)
   const [stick, setStick] = useState({ x: 0, y: 0 })
+  // Wat je in en rond het stadion kan doen: spuiten op de graffitimuur, het tactiekbord, de lift.
+  const [nabij, setNabij] = useState<'muur' | 'bord' | null>(null)
+  const [paneel, setPaneel] = useState<'graffiti' | 'tactiek' | null>(null)
+  const [melding, setMelding] = useState<string | null>(null)
+  const [geluid, setGeluid] = useState(false)
+  const [muur, setMuur] = useState<{ tags: Tag[]; lengte: number }>({ tags: [], lengte: muurLengte(0) })
+  const muurRef = useRef(muur)
+  muurRef.current = muur
+  const kleedRef = useRef<Kleedkamer | null>(null)
+  const videoRef = useRef<Videoscherm | null>(null)
 
   // Wat de tekenlus nodig heeft, zonder bij elke wijziging de scène opnieuw te bouwen.
-  const st = useRef({ tijd: 0, spelend: false, modus: 'zweven' as Modus, gekozen: null as string | null, namen: true, stick: { x: 0, y: 0 }, hoog: 0, spoel: false })
+  const st = useRef({ tijd: 0, spelend: false, modus: 'zweven' as Modus, gekozen: null as string | null, namen: true, stick: { x: 0, y: 0 }, hoog: 0, spoel: false, pauze: false })
   st.current.modus = modus
   st.current.gekozen = gekozen
   st.current.namen = namen
   st.current.stick = stick
   st.current.hoog = hoog
+  // Staat de spuitbus of het tactiekbord open, dan hoeft het stadion erachter niet te tekenen.
+  st.current.pauze = paneel != null
 
   // Het welkom verschijnt pas als het eerste beeld van het stadion er staat, en verdwijnt na zes
   // seconden.
@@ -257,6 +279,30 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     const t = setTimeout(() => setWelkom(false), 6000)
     return () => clearTimeout(t)
   }, [welkom, klaar])
+
+  // De graffitimuur van je club: alles wat er ooit op gespoten is (staat in de databank, dus ook
+  // na een update van de site blijft hij vol).
+  useEffect(() => {
+    let weg = false
+    fetch(`/api/virtueel/graffiti?club=${thema.clubId ?? ''}`, { cache: 'no-store' })
+      .then((r) => (r.ok ? (r.json() as Promise<{ tags: Tag[]; lengte: number }>) : null))
+      .then((m) => {
+        if (weg || !m) return
+        setMuur(m)
+        kleedRef.current?.zetTags(m.tags, m.lengte)
+      })
+      .catch(() => {})
+    return () => {
+      weg = true
+    }
+  }, [thema.clubId])
+
+  // Een melding (bv. van de lift) staat er even en verdwijnt dan.
+  useEffect(() => {
+    if (!melding) return
+    const t = setTimeout(() => setMelding(null), 2800)
+    return () => clearTimeout(t)
+  }, [melding])
 
   useEffect(() => {
     let weg = false
@@ -291,7 +337,8 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     // publiek. Daarnaast past de beeldscherpte zich aan zodra het afspelen hapert (zie de tekenlus).
     const licht = window.matchMedia('(max-width: 760px)').matches || (navigator.hardwareConcurrency ?? 8) <= 4
     let pixels = Math.min(window.devicePixelRatio, licht ? 1.25 : 1.75)
-    const renderer = new THREE.WebGLRenderer({ antialias: !licht, powerPreference: 'high-performance' })
+    // alpha: het grote scherm is een gat in het canvas waarachter de video speelt (videoscherm.ts).
+    const renderer = new THREE.WebGLRenderer({ antialias: !licht, powerPreference: 'high-performance', alpha: true })
     renderer.setPixelRatio(pixels)
     renderer.shadowMap.enabled = true
     renderer.shadowMap.type = THREE.PCFSoftShadowMap
@@ -379,16 +426,56 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     }
     // De fotogalerij: supportersfoto's van je club op de achterwanden van de kopse tribunes.
     const fotogalerij = thema.fotos?.length ? bouwFotogalerij(scene, { thema, kaders: thema.fotos, oost: tribunes.oost, west: tribunes.west }) : null
+    // Het verdiep boven de zuidgang: lift, VIP-loges (twee met een aquarium) en de gang met de oude
+    // bekers uit de beginjaren van de club.
+    const tribuneZ = zuidTribune?.z1 ?? 22.65
+    const verdiep = bouwVerdiep(scene, { thema, renderer, licht, tribuneZ, vroeger: thema.erezaal?.vroeger ?? [], logo: stadion.logo })
+    // Buiten aan de westkant: de kleedkamer met douches en tactiekbord, en de graffitimuur.
+    const kleedkamer = bouwKleedkamer(scene, { thema, licht, logo: stadion.logo })
+    kleedRef.current = kleedkamer
+    kleedkamer.zetTactiek(laadTactiek())
+    if (muurRef.current.tags.length) kleedkamer.zetTags(muurRef.current.tags, muurRef.current.lengte)
+    // De afwerking van de gangen: ledplint, inleglijnen, banken en planten.
+    const gangafwerking = bouwGangafwerking(scene, { thema, licht, oost: tribunes.oost, west: tribunes.west })
+    // De krachtbalwedstrijd op het grote scherm.
+    const video = bouwVideoscherm(scene, { houder: el, thema, scherm: stadion.scherm })
+    videoRef.current = video
     // Bewegwijzering naar alles wat er in de gangen te vinden is.
     const bestemmingen: Bestemming[] = [
       { naam: 'Hall of Fame & bekers', icoon: '🏆', x: 0, z: GEVEL.B - 4, kleur: '#fbbf24' },
       ...(fotogalerij && tribunes.oost ? [{ naam: 'Fotogalerij', icoon: '📸', x: tribunes.oost.x1, z: 0, kleur: '#f472b6' }] : []),
       ...(fotogalerij && tribunes.west ? [{ naam: 'Fotogalerij', icoon: '📸', x: tribunes.west.x0, z: 0, kleur: '#f472b6' }] : []),
       ...(thema.weekend ? [{ naam: 'Dit weekend', icoon: '⚡', x: 0, z: -GEVEL.B + 4, kleur: '#38bdf8' }] : []),
+      { naam: 'Lift naar de loges', icoon: '🛗', x: verdiep.lift.x, z: verdiep.lift.z, kleur: '#a78bfa' },
+      { naam: 'Kleedkamer & graffiti', icoon: '🎨', x: -GEVEL.A, z: 0, kleur: '#34d399' },
       { naam: 'Hoofdingang', icoon: '🚪', x: 0, z: GEVEL.B, kleur: '#e2e8f0' },
     ]
     const wegwijzers = bouwWegwijzers(scene, { thema, logo: stadion.logo, bestemmingen, tribunes })
-    const obstakels = [...stadion.obstakels, ...omgeving.obstakels, ...sfeer.obstakels, ...erezaal.obstakels, ...wegwijzers.obstakels]
+    // Leven in de gangen: wandelaars, een bar in elke hoek en het logo in de vloer.
+    const gangleven = bouwGangleven(scene, { thema, licht, logo: stadion.logo })
+    // De buitenkant tot in de details: dakrand, traptorens, portalen, fonteinen en het plein.
+    const buitenkant = bouwBuitenkant(scene, { thema, licht })
+    const obstakels = [
+      ...stadion.obstakels,
+      ...omgeving.obstakels,
+      ...sfeer.obstakels,
+      ...erezaal.obstakels,
+      ...wegwijzers.obstakels,
+      ...gangleven.obstakels,
+      ...buitenkant.obstakels,
+      ...kleedkamer.obstakels,
+      ...gangafwerking.obstakels,
+    ]
+    // De Hollywood-sterren in de zuidgang: enkel op vrije vloer (niet onder een vitrine, zuil of de lift).
+    const liftVlak = verdiep.obstakels(0)
+    const sterren = bouwSterren(scene, {
+      thema,
+      sterren: thema.erezaal?.sterren ?? [],
+      tribuneZ,
+      vrij: (x, z) =>
+        Math.abs(x - verdiep.lift.x) > 2.6 &&
+        ![...obstakels, ...liftVlak].some((o) => x + 0.95 > o.x0 && x - 0.95 < o.x1 && z + 0.95 > o.z0 && z - 0.95 < o.z1),
+    })
     // De weekendzaal in de noordgang: de wedstrijden van dit weekend, met de standen. Op zaterdag en
     // zondag luistert ze mee op het gedeelde live-weekendkanaal (één poller voor alle kijkers).
     const noordTribune = stadion.obstakels.find((o) => o.z1 < 0 && o.x1 - o.x0 > 30)
@@ -485,6 +572,7 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
       const w = el.clientWidth
       const h = el.clientHeight
       renderer.setSize(w, h, false)
+      video.maat(w, h)
       camera.aspect = w / Math.max(1, h)
       camera.updateProjectionMatrix()
     }
@@ -501,6 +589,10 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     // Zweven: waar je was, zodat je na een view terugkeert waar je vertrok. Begin: hoog boven het
     // plein, met de hoofdingang en de welkomstboog voor je.
     const zweef = { pos: new THREE.Vector3(0, 9, GEVEL.B + 46), yaw: Math.PI, pitch: -0.12 }
+    // Wandelen: op welk verdiep je bent (0 = gelijkvloers, 1 = loges) en hoe hoog je vloer nu is
+    // (in de lift rijdt die mee).
+    let opVerdiep: 0 | 1 = 0
+    let vloer = 0
     let laatsteModus: Modus | null = null
     let frames = 0
     let getekend = false
@@ -512,6 +604,7 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
       const dt = Math.max(0, Math.min(0.1, (nu - vorige) / 1000))
       vorige = nu
       const s = st.current
+      if (s.pauze) return
       if (s.spelend) {
         // Het fragment is kort: aan het einde begint het gewoon opnieuw.
         s.tijd += dt
@@ -601,6 +694,8 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
           loper.pitch = -0.05
           toetsen.clear()
         }
+        opVerdiep = 0
+        vloer = 0
         if (s.modus === 'buiten') {
           loper.pos.set(omgeving.start.x, OOGHOOGTE, omgeving.start.z)
           loper.yaw = omgeving.start.yaw
@@ -671,18 +766,21 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
         const tempo = toetsen.has('ShiftLeft') || toetsen.has('ShiftRight') ? 7.5 : 3.8
         const fx = Math.sin(loper.yaw)
         const fz = Math.cos(loper.yaw)
-        // Muren, tribunes en gebouwen houden je tegen; langs een muur schuif je verder.
-        const naar = stap(GEVEL, obstakels, loper.pos, {
+        // Muren, tribunes en gebouwen houden je tegen; langs een muur schuif je verder. Boven op
+        // het verdiep gelden de muren van daar.
+        const binnen = s.modus === 'buiten' && opVerdiep === 1 ? verdiep.obstakels(1) : [...obstakels, ...verdiep.obstakels(0)]
+        const naar = stap(GEVEL, binnen, loper.pos, {
           x: loper.pos.x + (fx * vooruit - fz * opzij) * tempo * dt,
           z: loper.pos.z + (fz * vooruit + fx * opzij) * tempo * dt,
         })
         loper.pos.x = naar.x
         loper.pos.z = naar.z
         const deining = Math.hypot(vooruit, opzij) > 0.05 ? Math.sin(nu / 140) * 0.035 : 0
-        camera.position.set(loper.pos.x, OOGHOOGTE + deining, loper.pos.z)
+        const oog = (s.modus === 'buiten' ? vloer : 0) + OOGHOOGTE
+        camera.position.set(loper.pos.x, oog + deining, loper.pos.z)
         camera.lookAt(
           loper.pos.x + Math.sin(loper.yaw) * Math.cos(loper.pitch),
-          OOGHOOGTE + Math.sin(loper.pitch),
+          oog + Math.sin(loper.pitch),
           loper.pos.z + Math.cos(loper.yaw) * Math.cos(loper.pitch),
         )
       }
@@ -693,7 +791,23 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
       erezaal.update(nu / 1000)
       weekendzaal?.update(nu / 1000)
       fotogalerij?.update(nu / 1000)
+      gangleven.update(nu / 1000)
+      buitenkant.update(nu / 1000)
+      sterren.update(nu / 1000)
+      kleedkamer.update(nu / 1000)
+      gangafwerking.update(nu / 1000)
+      // De lift: deuren, kooi en de verdiepaanduiding. Sta je in de kooi, dan rij je mee.
+      const lift = verdiep.update(nu / 1000, dt, { x: loper.pos.x, z: loper.pos.z, verdiep: opVerdiep, actief: s.modus === 'buiten' })
+      if (s.modus === 'buiten') {
+        if (lift.vloer != null) vloer = lift.vloer
+        if (lift.aangekomen != null) {
+          opVerdiep = lift.aangekomen
+          vloer = opVerdiep * VERDIEP_Y
+          setMelding(opVerdiep === 1 ? '🛗 Verdiep 1 · VIP-loges en de oude bekers' : '🛗 Gelijkvloers')
+        }
+      }
       renderer.render(scene, camera)
+      video.render(camera)
       if (!getekend) {
         getekend = true
         setKlaar(true)
@@ -717,6 +831,8 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
         laatsteUi = nu
         setBezit(bezitOp(sporen, t))
         setAanVeld((s.modus === 'zweven' || s.modus === 'buiten') && opVeld(loper.pos))
+        const kk = s.modus === 'buiten' && opVerdiep === 0
+        setNabij(kk && kleedkamer.bijMuur(loper.pos.x, loper.pos.z) ? 'muur' : kk && kleedkamer.bijBord(loper.pos.x, loper.pos.z) ? 'bord' : null)
       }
     }
     raf = requestAnimationFrame(tik)
@@ -724,6 +840,9 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     return () => {
       cancelAnimationFrame(raf)
       weekendStroom?.close()
+      video.dispose()
+      kleedRef.current = null
+      videoRef.current = null
       ro.disconnect()
       window.removeEventListener('keydown', opToets)
       window.removeEventListener('keyup', losToets)
@@ -868,6 +987,27 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
             {VELD.includes(modus) && (
               <button className="vk-terugbuiten" onClick={() => setModus('zweven')}>↩ Naar buiten</button>
             )}
+            {nabij && !paneel && (
+              <button className="vk-actie" onClick={() => setPaneel(nabij === 'muur' ? 'graffiti' : 'tactiek')}>
+                {nabij === 'muur' ? '🎨 Spuit op de muur' : '📋 Tactiekbord'}
+              </button>
+            )}
+            {melding && (
+              <div className="vk-melding" aria-live="polite">
+                {melding}
+              </div>
+            )}
+            <button
+              className={`vk-geluid${geluid ? ' aan' : ''}`}
+              onClick={() => {
+                videoRef.current?.geluid(!geluid)
+                setGeluid(!geluid)
+              }}
+              aria-label={geluid ? 'Geluid van het grote scherm uit' : 'Geluid van het grote scherm aan'}
+              title="Geluid van het grote scherm"
+            >
+              {geluid ? '🔊' : '🔇'}
+            </button>
             <button className="vk-vol" onClick={fullscreen} aria-label={vol ? 'Volledig scherm sluiten' : 'Volledig scherm'} title={vol ? 'Sluiten (Esc)' : 'Volledig scherm (F)'}>
               {vol ? '✕' : '⛶'}
             </button>
@@ -895,7 +1035,27 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
                 ))}
               </div>
             )}
-            {BESTUURBAAR.includes(modus) && (
+            <GraffitiSpuiter
+              open={paneel === 'graffiti'}
+              onSluit={() => setPaneel(null)}
+              tags={muur.tags}
+              lengte={muur.lengte}
+              club={{ naam: thema.naam, primair: thema.primair, secundair: thema.secundair }}
+              ingelogd={Boolean(thema.ingelogd)}
+              onGeplaatst={(tag, lengte) => {
+                const nieuw = { tags: [...muur.tags, tag], lengte }
+                setMuur(nieuw)
+                kleedRef.current?.zetTags(nieuw.tags, nieuw.lengte)
+                setMelding('🎨 Je tag staat op de muur!')
+              }}
+            />
+            <Tactiekbord
+              open={paneel === 'tactiek'}
+              onSluit={() => setPaneel(null)}
+              kleur={{ wij: thema.primair, tekstWij: thema.tekstOpPrimair }}
+              onWijzig={(t) => kleedRef.current?.zetTactiek(t)}
+            />
+            {BESTUURBAAR.includes(modus) && !paneel && (
               <div className="vk-joy" ref={joystickRef} onPointerDown={joyNeer} onPointerMove={joyZet} onPointerUp={joyLos} onPointerCancel={joyLos} aria-hidden>
                 <span style={{ transform: `translate(${stick.x * 34}px, ${stick.y * 34}px)` }} />
               </div>
