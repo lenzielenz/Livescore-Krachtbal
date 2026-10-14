@@ -2,19 +2,21 @@
 
 import { useEffect, useRef, useState } from 'react'
 
+import type { BordId } from '@/lib/virtueel-sporen'
 import { beginOpstelling, leesTactiek, STIFT, tekenTactiekbord, veldOpBord, type Stiftlijn, type Tactiek } from '@/lib/virtueel-tactiek'
 
-// Het tactiekbord uit de kleedkamer, groot op je scherm: sleep de magneetjes (wij, zij en de bal)
-// en teken looplijnen met de stift. Het bord onthoudt je opstelling op dit toestel, en wat je hier
-// doet, verschijnt meteen op het whiteboard in de 3D-kleedkamer.
+// Een tactiekbord (in de kleedkamer of in de speelhal), groot op je scherm: sleep de magneetjes
+// (wij, zij en de bal) en teken looplijnen met de stift. Wat je hier doet, verschijnt meteen op het
+// whiteboard in 3D, en blijft er staan voor wie na jou komt (de viewer bewaart het op de server).
+// Je toestel onthoudt je laatste opstelling ook, voor als er nog niets op de server staat.
 
-const OPSLAG = 'vk-tactiek'
+const opslag = (bord: BordId) => (bord === 'kleedkamer' ? 'vk-tactiek' : `vk-tactiek-${bord}`)
 const W = 1000
 const H = 625
 
-export function laadTactiek(): Tactiek {
+export function laadTactiek(bord: BordId = 'kleedkamer'): Tactiek {
   try {
-    const ruw = window.localStorage.getItem(OPSLAG)
+    const ruw = window.localStorage.getItem(opslag(bord))
     return ruw ? leesTactiek(JSON.parse(ruw)) : beginOpstelling()
   } catch {
     return beginOpstelling()
@@ -26,9 +28,12 @@ type Props = {
   onSluit: () => void
   kleur: { wij: string; tekstWij: string }
   onWijzig: (t: Tactiek) => void
+  /** Welk bord, en wat er nu op staat (van de server), of null. */
+  bord?: BordId
+  begin?: Tactiek | null
 }
 
-export function Tactiekbord({ open, onSluit, kleur, onWijzig }: Props) {
+export function Tactiekbord({ open, onSluit, kleur, onWijzig, bord = 'kleedkamer', begin = null }: Props) {
   const doek = useRef<HTMLCanvasElement>(null)
   const [t, setT] = useState<Tactiek>(() => beginOpstelling())
   const [stift, setStift] = useState<Stiftlijn['kleur'] | null>(null)
@@ -37,8 +42,9 @@ export function Tactiekbord({ open, onSluit, kleur, onWijzig }: Props) {
   tRef.current = t
 
   useEffect(() => {
-    if (open) setT(laadTactiek())
-  }, [open])
+    if (open) setT(begin ?? laadTactiek(bord))
+    // Enkel bij het openen: wat er dan op het bord staat.
+  }, [open, bord])
 
   useEffect(() => {
     const c = doek.current
@@ -50,7 +56,7 @@ export function Tactiekbord({ open, onSluit, kleur, onWijzig }: Props) {
     setT(n)
     onWijzig(n)
     try {
-      window.localStorage.setItem(OPSLAG, JSON.stringify(n))
+      window.localStorage.setItem(opslag(bord), JSON.stringify(n))
     } catch {
       // Geen opslag (privévenster): het bord werkt nog, het vergeet het enkel.
     }

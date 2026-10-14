@@ -25,7 +25,32 @@ export type Kelder = {
   ruimte: (x: number, z: number) => string | null
   /** Het filmdoek in de cinema (voor de video). */
   doek: { x: number; y: number; z: number; b: number; h: number; ry: number }
-  update: (seconden: number) => void
+  /** Waar je dingen kan doen (en achterlaten): zie kelderspel.ts. */
+  plekken: KelderPlekken
+  /** De kleur van het zwembadwater (verf van bezoekers). */
+  zetWaterKleur: (hex: string) => void
+  /** Hoe hard je op een trampoline veert (0 = er niet op). */
+  trampoline: (x: number, z: number) => number
+  update: (seconden: number, speler?: { x: number; z: number }) => void
+}
+
+/** Een bord aan de muur: midden, hoogte en waar het naar kijkt. */
+export type BordPlek = { x: number; y: number; z: number; ry: number; b: number; h: number }
+export type KelderPlekken = {
+  bad: { x0: number; x1: number; z0: number; z1: number; y: number }
+  popcorn: { x: number; z: number; y: number }
+  popcornBord: BordPlek
+  loopbanden: { x: number; z: number }[]
+  loopbandBord: BordPlek
+  zetels: { x: number; z: number }[]
+  arcade: { x: number; z: number }
+  scoreBord: BordPlek
+  kampioenBord: BordPlek
+  /** De graffitimuur in de speelhal: waar u = 0 begint, in welke richting hij loopt, en de normaal. */
+  graffiti: { x: number; z: number; dx: number; dz: number; ry: number; max: number }
+  tactiek: BordPlek
+  /** Plekken voor gouden ballen in de kelder (zie goudjacht.ts). */
+  goud: { x: number; y: number; z: number }[]
 }
 
 type Kant = 'n' | 'z' | 'o' | 'w'
@@ -185,8 +210,10 @@ export function bouwKelder(scene: THREE.Scene, opt: { thema: StadionThema; licht
     gaming: { x0: ox + 33, x1: ox + 64, z0: oz - 14, z1: B0 },
     zwembad: { x0: ox - 40, x1: ox + 14, z0: B1, z1: oz + 45 },
     sauna: { x0: ox + 16, x1: ox + 46, z0: B1, z1: oz + 37 },
+    speelhal: { x0: ox + 48, x1: ox + 80, z0: B1, z1: B1 + 36 },
   }
-  const deurX = { fitness: ox - 20, cinema: ox + 19, gaming: ox + 48, zwembad: ox - 14, sauna: ox + 31 }
+  const deurX = { fitness: ox - 20, cinema: ox + 19, gaming: ox + 48, zwembad: ox - 14, sauna: ox + 31, speelhal: ox + 57 }
+  const goud: { x: number; y: number; z: number }[] = []
   const d3 = (x: number) => ({ van: x - 1.6, tot: x + 1.6 })
 
   // ---------- boulevard en lobby ----------
@@ -216,6 +243,7 @@ export function bouwKelder(scene: THREE.Scene, opt: { thema: StadionThema; licht
       { kant: 'n', ...d3(deurX.gaming) },
       { kant: 'z', ...d3(deurX.zwembad) },
       { kant: 'z', ...d3(deurX.sauna) },
+      { kant: 'z', ...d3(deurX.speelhal) },
     ],
   })
   bouwZaal({ naam: 'Lobby', ...R.lobby, h: 4.2, wand: blvWand, vloer: steenVloer, plafond: donkerPlafond, vloerTegel: 2, deuren: [{ kant: 'z', van: R.lobby.x0, tot: R.lobby.x1 }, { kant: 'n', van: ox - 0.6, tot: ox + 0.6 }] })
@@ -296,6 +324,7 @@ export function bouwKelder(scene: THREE.Scene, opt: { thema: StadionThema; licht
   bordBoven('GAMING', '🎮', deurX.gaming, B0 + 0.02, 0, '#a855f7')
   bordBoven('ZWEMBAD', '🏊', deurX.zwembad, B1 - 0.02, Math.PI, '#38bdf8')
   bordBoven('SAUNA & WELLNESS', '🧖', deurX.sauna, B1 - 0.02, Math.PI, '#f59e0b')
+  bordBoven('SPEELHAL', '🎡', deurX.speelhal, B1 - 0.02, Math.PI, '#22c55e')
   // In de lobby: een welkomstwand met het clublogo, en bankjes.
   const welkomC = document.createElement('canvas')
   welkomC.width = 1024
@@ -331,6 +360,8 @@ export function bouwKelder(scene: THREE.Scene, opt: { thema: StadionThema; licht
   }
   plas(ox, oz + 3.5, 4, thema.primair, 0.18)
 
+  const loopbanden: { x: number; z: number }[] = []
+  const zetelPlekken: { x: number; z: number }[] = []
   // ---------- 💪 fitness ----------
   {
     const F = R.fitness
@@ -401,6 +432,7 @@ export function bouwKelder(scene: THREE.Scene, opt: { thema: StadionThema; licht
     for (let k = 0; k < 6; k++) {
       const z = F.z0 + 4 + k * 2.3
       const x = F.x0 + 4.5
+      loopbanden.push({ x: x + 1.5, z })
       loopbandZwart.push(new THREE.BoxGeometry(1.9, 0.22, 0.85).translate(x, Y + 0.11, z))
       loopband.push(new THREE.BoxGeometry(0.06, 1.25, 0.06).translate(x - 0.85, Y + 0.75, z - 0.38), new THREE.BoxGeometry(0.06, 1.25, 0.06).translate(x - 0.85, Y + 0.75, z + 0.38))
       loopbandZwart.push(new THREE.BoxGeometry(0.22, 0.4, 0.9).translate(x - 0.85, Y + 1.4, z))
@@ -451,6 +483,7 @@ export function bouwKelder(scene: THREE.Scene, opt: { thema: StadionThema; licht
     // Kettlebells en een vloer met clubkleur onder de rekken.
     for (let k = 0; k < 8; k++) halterGeo.push(new THREE.SphereGeometry(0.12 + (k % 3) * 0.02, 12, 10).translate(F.x1 - 3 - k * 0.45, Y + 0.13, F.z0 + 1.6))
     meubels.push({ x0: F.x1 - 6.5, x1: F.x1 - 2.6, z0: F.z0 + 1.3, z1: F.z0 + 1.9 })
+    goud.push({ x: F.x1 - 1.6, y: Y + 0.5, z: F.z0 + 1.6 })
     add(new THREE.Mesh(mergeGeometries(loopband), chroom), new THREE.Mesh(mergeGeometries(loopbandZwart), zwart), new THREE.Mesh(mergeGeometries(loopbandScherm), schermGloed), new THREE.Mesh(mergeGeometries(halterGeo), club))
   }
 
@@ -524,6 +557,7 @@ export function bouwKelder(scene: THREE.Scene, opt: { thema: StadionThema; licht
       for (let k = -5; k <= 5; k++) {
         if (k === 0) continue
         plekken.push(new THREE.Matrix4().makeTranslation(doek.x + k * 0.95, Y, z))
+        zetelPlekken.push({ x: doek.x + k * 0.95, z })
       }
       meubels.push({ x0: doek.x - 5.4, x1: doek.x - 0.45, z0: z - 0.45, z1: z + 0.55 }, { x0: doek.x + 0.45, x1: doek.x + 5.4, z0: z - 0.45, z1: z + 0.55 })
       // Lichtjes langs het middenpad.
@@ -549,6 +583,7 @@ export function bouwKelder(scene: THREE.Scene, opt: { thema: StadionThema; licht
     pb.rotation.y = Math.PI
     add(pb)
     plas(C.x1 - 3, C.z1 - 3.2, 2, '#facc15', 0.25)
+    goud.push({ x: C.x1 - 3.9, y: Y + 1.3, z: C.z1 - 2.2 })
   }
 
   // ---------- 🎮 gaming ----------
@@ -671,6 +706,7 @@ export function bouwKelder(scene: THREE.Scene, opt: { thema: StadionThema; licht
       add(sc, top)
       plas(x - 1.2, z, 1.2, k % 2 ? '#22d3ee' : '#f472b6', 0.3)
     }
+    goud.push({ x: (G.x0 + G.x1) / 2, y: Y + 0.6, z: G.z0 + 6.6 })
     // Zitzakken voor het grote scherm.
     for (let k = 0; k < 6; k++) {
       const x = (G.x0 + G.x1) / 2 - 6 + k * 2.4
@@ -715,6 +751,8 @@ export function bouwKelder(scene: THREE.Scene, opt: { thema: StadionThema; licht
     plafondTex.needsUpdate = true
     return { tex, tex2, plafondTex }
   })()
+  const waterMat = new THREE.MeshBasicMaterial({ color: '#38bdf8', transparent: true, opacity: 0.42, depthWrite: false })
+  const waterDoel = new THREE.Color('#38bdf8')
   const bad = { x0: R.zwembad.x0 + 14, x1: R.zwembad.x0 + 39, z0: R.zwembad.z0 + 9, z1: R.zwembad.z0 + 21.5 }
   {
     const P = R.zwembad
@@ -790,7 +828,7 @@ export function bouwKelder(scene: THREE.Scene, opt: { thema: StadionThema; licht
     water.tex2.repeat.set(bw / 5, bd / 5)
     const schitter = new THREE.Mesh(new THREE.PlaneGeometry(bw, bd).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: water.tex, color: '#e0faff', transparent: true, opacity: 0.45, blending: THREE.AdditiveBlending, depthWrite: false }))
     schitter.position.set(bcx, Y - diep + 0.02, bcz)
-    const opp = new THREE.Mesh(new THREE.PlaneGeometry(bw, bd).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: '#38bdf8', transparent: true, opacity: 0.38, depthWrite: false }))
+    const opp = new THREE.Mesh(new THREE.PlaneGeometry(bw, bd).rotateX(-Math.PI / 2), waterMat)
     opp.position.set(bcx, Y - 0.15, bcz)
     const golf = new THREE.Mesh(new THREE.PlaneGeometry(bw, bd).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: water.tex2, transparent: true, opacity: 0.35, blending: THREE.AdditiveBlending, depthWrite: false }))
     golf.position.set(bcx, Y - 0.14, bcz)
@@ -827,6 +865,7 @@ export function bouwKelder(scene: THREE.Scene, opt: { thema: StadionThema; licht
       n.rotation.y = -Math.PI / 2
       add(n)
     }
+    goud.push({ x: bad.x0 - 0.45, y: Y + 1.0, z: bad.z0 + (2.5 * bd) / 5 })
     // Het bad en de blokken: daar loop je niet door.
     meubels.push({ x0: bad.x0 - 0.75, x1: bad.x1, z0: bad.z0, z1: bad.z1 })
     // Ligbedden langs de zuidwand, met parasols en planten.
@@ -952,6 +991,7 @@ export function bouwKelder(scene: THREE.Scene, opt: { thema: StadionThema; licht
     add(kuip, rand, jw)
     plas(jx, jz, 3.4, '#22d3ee', 0.3, 0.62)
     meubels.push({ x0: jx - 2.2, x1: jx + 2.2, z0: jz - 2.2, z1: jz + 2.2 })
+    goud.push({ x: jx + 2.9, y: Y + 0.5, z: jz })
     const n = licht ? 24 : 60
     const bm = new THREE.InstancedMesh(new THREE.SphereGeometry(0.035, 6, 4), new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.8 }), n)
     add(bm)
@@ -991,6 +1031,259 @@ export function bouwKelder(scene: THREE.Scene, opt: { thema: StadionThema; licht
     }
   }
 
+  // ---------- 🎡 speelhal: voor de jeugd ----------
+  // Een ballenbad, trampolines (je veert mee!), een klimmuur, een glijbaan, een dansvloer die
+  // oplicht waar je staat, een grijpautomaat, en Krachtje (de mascotte). Op de oostwand de
+  // graffitimuur van de kelder, op de westwand een tactiekbord (beide in kelderspel.ts).
+  const S = R.speelhal
+  const trampolines: { x: number; z: number; r: number }[] = []
+  const dansTegels: { mat: THREE.MeshBasicMaterial; x: number; z: number; f: number }[] = []
+  {
+    const kleurVloer = tekst(256, 256, (g) => {
+      const kleuren = ['#1e3a8a', '#7c2d12', '#14532d', '#581c87']
+      for (let y = 0; y < 4; y++)
+        for (let x = 0; x < 4; x++) {
+          g.fillStyle = kleuren[(x + y) % 4]
+          g.fillRect(x * 64, y * 64, 64, 64)
+          g.fillStyle = 'rgba(255,255,255,.06)'
+          g.fillRect(x * 64 + 4, y * 64 + 4, 56, 56)
+        }
+    })
+    kleurVloer.wrapS = kleurVloer.wrapT = THREE.RepeatWrapping
+    bouwZaal({
+      naam: 'Speelhal',
+      ...S,
+      h: 6,
+      wand: wandMat('#0d1b2a', '#173a5c', '#fde047', (g) => {
+        // Vrolijke stippen op de muur.
+        const kl = ['#f472b6', '#22d3ee', '#facc15', '#4ade80']
+        for (let i = 0; i < 14; i++) {
+          g.fillStyle = kl[i % 4]
+          g.globalAlpha = 0.18
+          g.beginPath()
+          g.arc(toeval() * 256, 30 + toeval() * 170, 6 + toeval() * 14, 0, Math.PI * 2)
+          g.fill()
+        }
+        g.globalAlpha = 1
+      }),
+      vloer: new THREE.MeshBasicMaterial({ map: kleurVloer }),
+      plafond: new THREE.MeshBasicMaterial({ color: '#0b1626' }),
+      vloerTegel: 4,
+      deuren: [{ kant: 'n', ...d3(deurX.speelhal) }],
+    })
+    // Lichtstroken in het plafond en lichtplassen.
+    for (let z = S.z0 + 4; z < S.z1; z += 8) {
+      doos(S.x1 - S.x0 - 3, 0.04, 0.2, (S.x0 + S.x1) / 2, 5.96, z, basis('#fff7d6'))
+      for (let x = S.x0 + 4; x < S.x1; x += 8) plas(x, z, 4, '#fff1c4', 0.16)
+    }
+    // Een neonbord boven de deur, binnen.
+    const neon = tekst(1024, 200, (g) => {
+      g.shadowColor = '#22c55e'
+      g.shadowBlur = 36
+      g.fillStyle = '#ffffff'
+      g.font = '900 130px Inter, system-ui, sans-serif'
+      g.textAlign = 'center'
+      g.textBaseline = 'middle'
+      g.fillText('🎡 SPEELHAL', 512, 104, 1000)
+    })
+    const nb = new THREE.Mesh(new THREE.PlaneGeometry(7, 1.37), new THREE.MeshBasicMaterial({ map: neon, transparent: true, toneMapped: false, blending: THREE.AdditiveBlending, depthWrite: false }))
+    nb.position.set(deurX.speelhal, Y + 4.2, S.z0 + 0.05)
+    add(nb)
+
+    // Het ballenbad: een lage, zachte rand in clubkleur, gevuld met honderden ballen.
+    const BB = { x0: S.x0 + 3, x1: S.x0 + 11, z0: S.z0 + 14, z1: S.z0 + 22 }
+    const zacht = new THREE.MeshLambertMaterial({ color: primair, emissive: primair, emissiveIntensity: 0.15 })
+    doos(BB.x1 - BB.x0, 0.7, 0.4, (BB.x0 + BB.x1) / 2, 0.35, BB.z0, zacht)
+    doos(BB.x1 - BB.x0, 0.7, 0.4, (BB.x0 + BB.x1) / 2, 0.35, BB.z1, zacht)
+    doos(0.4, 0.7, BB.z1 - BB.z0, BB.x0, 0.35, (BB.z0 + BB.z1) / 2, zacht)
+    doos(0.4, 0.7, BB.z1 - BB.z0, BB.x1, 0.35, (BB.z0 + BB.z1) / 2, zacht)
+    const nBallen = licht ? 260 : 620
+    const ballen = new THREE.InstancedMesh(new THREE.SphereGeometry(0.12, 10, 8), new THREE.MeshLambertMaterial(), nBallen)
+    const balKleuren = ['#ef4444', '#facc15', '#22c55e', '#3b82f6', '#ec4899', '#f97316'].map((c) => new THREE.Color(c))
+    for (let i = 0; i < nBallen; i++) {
+      const m = new THREE.Matrix4().makeTranslation(BB.x0 + 0.35 + toeval() * (BB.x1 - BB.x0 - 0.7), Y + 0.12 + toeval() * 0.42, BB.z0 + 0.35 + toeval() * (BB.z1 - BB.z0 - 0.7))
+      ballen.setMatrixAt(i, m)
+      ballen.setColorAt(i, balKleuren[i % balKleuren.length])
+    }
+    add(ballen)
+    meubels.push({ x0: BB.x0 - 0.2, x1: BB.x1 + 0.2, z0: BB.z0 - 0.2, z1: BB.z1 + 0.2 })
+    goud.push({ x: (BB.x0 + BB.x1) / 2, y: Y + 0.95, z: BB.z0 - 0.75 })
+
+    // Trampolines: daar mag je op lopen, en dan veer je.
+    for (const [x, z] of [
+      [S.x0 + 16, S.z0 + 17],
+      [S.x0 + 20, S.z0 + 17],
+      [S.x0 + 18, S.z0 + 21],
+    ]) {
+      const r = 1.5
+      const mat = new THREE.Mesh(new THREE.CircleGeometry(r, 32).rotateX(-Math.PI / 2), new THREE.MeshLambertMaterial({ color: '#111827' }))
+      mat.position.set(x, Y + 0.45, z)
+      const rand = new THREE.Mesh(new THREE.TorusGeometry(r + 0.15, 0.14, 8, 36).rotateX(Math.PI / 2), new THREE.MeshLambertMaterial({ color: secundair, emissive: secundair, emissiveIntensity: 0.2 }))
+      rand.position.set(x, Y + 0.45, z)
+      add(mat, rand)
+      for (let k = 0; k < 6; k++) {
+        const a = (k / 6) * Math.PI * 2
+        doos(0.06, 0.45, 0.06, x + Math.cos(a) * (r + 0.15), 0.22, z + Math.sin(a) * (r + 0.15), new THREE.MeshLambertMaterial({ color: '#9ca3af' }))
+      }
+      trampolines.push({ x, z, r })
+      plas(x, z, 2.2, '#22d3ee', 0.18)
+    }
+
+    // Klimmuur op de zuidwand: gekleurde grepen.
+    const grepen: THREE.Matrix4[] = []
+    const greepKleur: THREE.Color[] = []
+    for (let i = 0; i < 70; i++) {
+      grepen.push(new THREE.Matrix4().compose(new THREE.Vector3(S.x0 + 3 + toeval() * 11, Y + 0.4 + toeval() * 5, S.z1 - 0.08), new THREE.Quaternion().setFromEuler(new THREE.Euler(toeval() * 3, toeval() * 3, 0)), new THREE.Vector3(1, 1, 1)))
+      greepKleur.push(balKleuren[Math.floor(toeval() * balKleuren.length)])
+    }
+    const greep = new THREE.InstancedMesh(new THREE.DodecahedronGeometry(0.11, 0), new THREE.MeshLambertMaterial(), grepen.length)
+    grepen.forEach((m, i) => {
+      greep.setMatrixAt(i, m)
+      greep.setColorAt(i, greepKleur[i])
+    })
+    add(greep)
+    doos(11.5, 5.6, 0.1, S.x0 + 8.5, 2.8, S.z1 - 0.06, new THREE.MeshLambertMaterial({ color: '#e5e7eb' }))
+    doos(11, 0.3, 2, S.x0 + 8.5, 0.15, S.z1 - 1.2, new THREE.MeshLambertMaterial({ color: '#1d4ed8' }), true)
+
+    // Glijbaan: een toren met een trap en een gele glijbaan naar beneden.
+    const tx = S.x0 + 22
+    const tz = S.z1 - 4
+    doos(2, 2.6, 2, tx, 1.3, tz, new THREE.MeshLambertMaterial({ color: '#ef4444' }), true)
+    doos(2.2, 0.15, 2.2, tx, 2.65, tz, new THREE.MeshLambertMaterial({ color: '#facc15' }))
+    const baan = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.12, 5), new THREE.MeshLambertMaterial({ color: '#facc15', emissive: '#a16207', emissiveIntensity: 0.3 }))
+    baan.position.set(tx + 3.0, Y + 1.35, tz)
+    baan.rotation.z = 0
+    baan.rotation.y = Math.PI / 2
+    baan.rotateX(-0.5)
+    add(baan)
+    meubels.push({ x0: tx + 1, x1: tx + 5.4, z0: tz - 0.6, z1: tz + 0.6 })
+
+    // Dansvloer: 4 × 4 tegels die oplichten (en feller waar je staat).
+    const D = { x0: S.x0 + 24, z0: S.z0 + 4 }
+    for (let i = 0; i < 4; i++)
+      for (let k = 0; k < 4; k++) {
+        const mat = new THREE.MeshBasicMaterial({ color: '#000000', toneMapped: false })
+        const t = new THREE.Mesh(new THREE.PlaneGeometry(0.94, 0.94).rotateX(-Math.PI / 2), mat)
+        const x = D.x0 + i + 0.5
+        const z = D.z0 + k + 0.5
+        t.position.set(x, Y + 0.02, z)
+        add(t)
+        dansTegels.push({ mat, x, z, f: toeval() * 6 })
+      }
+
+    // Grijpautomaat met knuffelballen.
+    const gx = S.x0 + 14
+    const gz = S.z0 + 4
+    doos(1.3, 1.0, 1.3, gx, 0.5, gz, new THREE.MeshLambertMaterial({ color: '#be185d' }), true)
+    doos(1.3, 0.2, 1.3, gx, 2.3, gz, new THREE.MeshLambertMaterial({ color: '#be185d' }))
+    const kast = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.2, 1.2), new THREE.MeshStandardMaterial({ color: '#dbeafe', transparent: true, opacity: 0.2, depthWrite: false }))
+    kast.position.set(gx, Y + 1.6, gz)
+    add(kast)
+    for (let i = 0; i < 14; i++) {
+      const b = new THREE.Mesh(new THREE.SphereGeometry(0.12, 10, 8), new THREE.MeshLambertMaterial({ color: balKleuren[i % balKleuren.length] }))
+      b.position.set(gx - 0.4 + toeval() * 0.8, Y + 1.12 + toeval() * 0.15, gz - 0.4 + toeval() * 0.8)
+      add(b)
+    }
+    doos(0.04, 0.5, 0.04, gx, 1.95, gz, new THREE.MeshLambertMaterial({ color: '#9ca3af' }))
+    plas(gx, gz + 1.2, 1.4, '#f472b6', 0.3)
+
+    // Krachtje, de mascotte: een grote gele krachtbal met een lach en een clubsjaal.
+    const kx = S.x0 + 26
+    const kz = S.z0 + 12
+    const lijf = new THREE.Mesh(new THREE.SphereGeometry(1.1, 28, 20), new THREE.MeshLambertMaterial({ color: '#facc15', emissive: '#854d0e', emissiveIntensity: 0.25 }))
+    lijf.position.set(kx, Y + 1.25, kz)
+    const gezicht = tekst(256, 256, (g) => {
+      g.fillStyle = '#111827'
+      g.beginPath()
+      g.arc(90, 100, 16, 0, Math.PI * 2)
+      g.arc(166, 100, 16, 0, Math.PI * 2)
+      g.fill()
+      g.lineWidth = 12
+      g.strokeStyle = '#111827'
+      g.beginPath()
+      g.arc(128, 130, 54, 0.15 * Math.PI, 0.85 * Math.PI)
+      g.stroke()
+    })
+    const gz2 = new THREE.Mesh(new THREE.CircleGeometry(0.85, 24), new THREE.MeshBasicMaterial({ map: gezicht, transparent: true }))
+    gz2.position.set(kx, Y + 1.35, kz + 1.06)
+    const sjaal = new THREE.Mesh(new THREE.TorusGeometry(0.75, 0.16, 10, 28).rotateX(Math.PI / 2), new THREE.MeshLambertMaterial({ color: primair }))
+    sjaal.position.set(kx, Y + 0.55, kz)
+    add(lijf, gz2, sjaal)
+    for (const sx of [-1, 1]) doos(0.25, 0.5, 0.35, kx + sx * 0.45, 0.25, kz + 0.3, new THREE.MeshLambertMaterial({ color: '#f8fafc' }))
+    meubels.push({ x0: kx - 1.2, x1: kx + 1.2, z0: kz - 1.2, z1: kz + 1.2 })
+    // Zitzakken.
+    for (let k = 0; k < 5; k++) {
+      const x = S.x0 + 4 + k * 2.2
+      const z = S.z0 + 27
+      const zak = new THREE.Mesh(new THREE.SphereGeometry(0.6, 14, 10).scale(1, 0.55, 1), new THREE.MeshLambertMaterial({ color: balKleuren[k % balKleuren.length] }))
+      zak.position.set(x, Y + 0.3, z)
+      add(zak)
+      meubels.push({ x0: x - 0.55, x1: x + 0.55, z0: z - 0.55, z1: z + 0.55 })
+    }
+  }
+
+  // ---------- de boulevard aankleden ----------
+  {
+    const Bv = R.boulevard
+    // Drank- en snoepautomaten met een verlichte voorkant.
+    for (const [x, kleur, label] of [
+      [ox + 8.6, '#0ea5e9', '🥤 DRANK'],
+      [ox + 10.2, '#f97316', '🍫 SNOEP'],
+      [ox - 9.5, '#22c55e', '💧 WATER'],
+    ] as const) {
+      doos(1.3, 2.1, 0.8, x, 1.05, B0 + 0.45, new THREE.MeshLambertMaterial({ color: '#1f2937' }), true)
+      const voor = tekst(128, 256, (g) => {
+        g.fillStyle = kleur
+        g.fillRect(0, 0, 128, 256)
+        g.fillStyle = 'rgba(255,255,255,.85)'
+        for (let r = 0; r < 5; r++) for (let k = 0; k < 3; k++) g.fillRect(12 + k * 38, 40 + r * 36, 28, 26)
+        g.fillStyle = '#ffffff'
+        g.font = '900 20px Inter, system-ui, sans-serif'
+        g.textAlign = 'center'
+        g.fillText(label, 64, 24)
+      })
+      const vlak = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 1.8), new THREE.MeshBasicMaterial({ map: voor, toneMapped: false }))
+      vlak.position.set(x, Y + 1.1, B0 + 0.86)
+      add(vlak)
+      plas(x, B0 + 1.4, 1.2, kleur, 0.3)
+    }
+    // Bankjes en planten langs de boulevard.
+    for (let x = Bv.x0 + 6; x < Bv.x1 - 4; x += 12) {
+      if ([deurX.fitness, deurX.cinema, deurX.gaming, deurX.zwembad, deurX.sauna, deurX.speelhal].some((d) => Math.abs(d - x) < 3.5) || Math.abs(x - ox) < 6) continue
+      doos(2.2, 0.45, 0.6, x, 0.22, B1 - 0.6, new THREE.MeshLambertMaterial({ color: '#7c5a3a' }), true)
+      doos(0.7, 0.6, 0.7, x + 2.2, 0.3, B1 - 0.6, new THREE.MeshLambertMaterial({ color: '#334155' }), true)
+      const blad = new THREE.Mesh(new THREE.IcosahedronGeometry(0.55, 1).scale(1, 1.4, 1), new THREE.MeshLambertMaterial({ color: '#16a34a', emissive: '#052e16', emissiveIntensity: 0.6 }))
+      blad.position.set(x + 2.2, Y + 1.25, B1 - 0.6)
+      add(blad)
+    }
+    // Posters van de club tussen de deuren.
+    const posters = ['SAMEN STERK', 'ONZE CLUB', 'KRACHTBAL!', 'ALLEZ ALLEZ']
+    let pi = 0
+    for (let x = Bv.x0 + 10; x < Bv.x1 - 6; x += 16) {
+      if ([deurX.fitness, deurX.cinema, deurX.gaming].some((d) => Math.abs(d - x) < 4) || Math.abs(x - ox) < 8) continue
+      const tx2 = posters[pi++ % posters.length]
+      const pt = tekst(256, 360, (g) => {
+        const gr = g.createLinearGradient(0, 0, 0, 360)
+        gr.addColorStop(0, thema.primair)
+        gr.addColorStop(1, '#0b1220')
+        g.fillStyle = gr
+        g.fillRect(0, 0, 256, 360)
+        g.strokeStyle = thema.secundair
+        g.lineWidth = 10
+        g.strokeRect(5, 5, 246, 350)
+        g.fillStyle = '#ffffff'
+        g.font = '900 40px Inter, system-ui, sans-serif'
+        g.textAlign = 'center'
+        tx2.split(' ').forEach((w, i) => g.fillText(w, 128, 160 + i * 48, 230))
+        g.font = '700 18px Inter, system-ui, sans-serif'
+        g.fillText(thema.naam.toUpperCase(), 128, 330, 230)
+      })
+      const p = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 1.97), new THREE.MeshBasicMaterial({ map: pt, toneMapped: false }))
+      p.position.set(x, Y + 2.1, B0 + 0.03)
+      add(p)
+    }
+  }
+
   // ---------- alle wandvlakken en lichtplassen ----------
   for (const [mat, w] of wanden) {
     const g = new THREE.BufferGeometry()
@@ -1016,8 +1309,40 @@ export function bouwKelder(scene: THREE.Scene, opt: { thema: StadionThema; licht
       return r ? r.naam : null
     },
     doek,
-    update(seconden) {
+    plekken: {
+      bad: { ...bad, y: Y - 0.15 },
+      popcorn: { x: R.cinema.x1 - 3, z: R.cinema.z1 - 2.2, y: Y + 1.05 },
+      popcornBord: { x: R.cinema.x1 - 3, y: Y + 3.6, z: R.cinema.z1 - 0.06, ry: Math.PI, b: 3.2, h: 1.2 },
+      loopbanden,
+      loopbandBord: { x: R.fitness.x0 + 7, y: Y + 2.7, z: R.fitness.z1 - 0.06, ry: Math.PI, b: 4, h: 2 },
+      zetels: zetelPlekken,
+      arcade: { x: R.gaming.x1 - 1.7, z: R.gaming.z0 + 6.3 },
+      scoreBord: { x: R.gaming.x1 - 0.06, y: Y + 3.05, z: R.gaming.z0 + 6.3, ry: -Math.PI / 2, b: 3.2, h: 1.8 },
+      kampioenBord: { x: ox - 12.5, y: Y + 2.3, z: B0 + 0.03, ry: 0, b: 4.2, h: 2.4 },
+      graffiti: { x: R.speelhal.x1 - 0.04, z: R.speelhal.z0, dx: 0, dz: 1, ry: -Math.PI / 2, max: R.speelhal.z1 - R.speelhal.z0 },
+      tactiek: { x: R.speelhal.x0 + 0.06, y: Y + 1.9, z: R.speelhal.z0 + 8, ry: Math.PI / 2, b: 3.2, h: 2 },
+      goud,
+    },
+    zetWaterKleur(hex) {
+      waterDoel.set(hex)
+    },
+    trampoline(x, z) {
+      for (const t of trampolines) {
+        const d = Math.hypot(x - t.x, z - t.z)
+        if (d < t.r) return 1 - (d / t.r) * 0.4
+      }
+      return 0
+    },
+    update(seconden, speler) {
       if (!groep.visible) return
+      // Het water kleurt zacht naar de verf van de bezoekers.
+      waterMat.color.lerp(waterDoel, 0.03)
+      // De dansvloer: golven van kleur, en feller onder je voeten.
+      for (const t of dansTegels) {
+        const onder = speler && Math.abs(speler.x - t.x) < 0.5 && Math.abs(speler.z - t.z) < 0.5
+        kleur.setHSL((seconden * 0.15 + t.f * 0.1 + (t.x + t.z) * 0.07) % 1, 0.85, onder ? 0.65 : 0.25 + 0.15 * Math.max(0, Math.sin(seconden * 3 + t.f)))
+        t.mat.color.copy(kleur)
+      }
       // Water: twee lagen schitteringen die tegen elkaar in schuiven, en het plafond erboven.
       water.tex.offset.set(seconden * 0.03, seconden * 0.02)
       water.tex2.offset.set(-seconden * 0.025, seconden * 0.035)
