@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 
-import { balOp, balSpoor, bezitOp, bezitTijdlijn, decodeer, GEVEL, gevelAfstand, op, ploegKleuren, snelheid, stap, stapMet, WERELD_STRAAL, type Ploeg, type Rechthoek, type Reconstructie, type Spoor, type StadionThema, type Veld } from '@/lib/virtueel'
+import { balOp, balSpoor, bezitOp, bezitTijdlijn, decodeer, GEVEL, gevelAfstand, op, ploegKleuren, snelheid, stap, stapMet, vrij as vrijVanGevel, WERELD_STRAAL, type Ploeg, type Rechthoek, type Reconstructie, type Spoor, type StadionThema, type Veld } from '@/lib/virtueel'
 import { pasStandenToe, type WeekendStand } from '@/lib/virtueel-weekend'
 import { bouwEregalerij } from './erezaal'
 import { bouwOmgeving } from './omgeving'
@@ -1374,7 +1374,9 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
             ? stapMet((x, z) => kelder.mag(x, z) && !raakt(kluisRef.current ? [...schacht, kluisRef.current.obstakel] : schacht, x, z), loper.pos, doelPos)
             : v === 2
               ? stapMet((x, z) => (opDak(x, z) || bijKooi(x, z)) && !raakt(schacht, x, z), loper.pos, doelPos)
-              : stap(GEVEL, v === 1 ? [...verdiep.obstakels, ...schacht] : [...obstakels, ...schacht], loper.pos, doelPos)
+              : v === 1
+                ? stapMet((x, z) => verdiep.opBalkon(x, z) || vrijVanGevel(GEVEL, [...verdiep.obstakels, ...schacht], x, z), loper.pos, doelPos)
+                : stap(GEVEL, [...obstakels, ...schacht], loper.pos, doelPos)
         loper.pos.x = naar.x
         loper.pos.z = naar.z
         const deining = Math.hypot(vooruit, opzij) > 0.05 ? Math.sin(nu / 140) * 0.035 : 0

@@ -420,6 +420,17 @@ export type Poort = { zijde: 'z+' | 'z-' | 'x+' | 'x-'; van: number; tot: number
 /** De stadiongevel: een rechthoek met afgeronde hoeken (halve lengte A, halve breedte B, hoekstraal R). */
 export type Gevel = { A: number; B: number; R: number; hoogte: number; poorten: Poort[] }
 
+/**
+ * Ramen in de zuidgevel op het eerste verdiep (de VIP-hal): openingen in de muur van x0 tot x1
+ * (in stukken van 2 m, zoals de gevel gebouwd is), van y0 tot y1. Het raam met `balkon` is een
+ * deur naar een klein platformpje buiten. (Het verdiep ligt op y = 7,6, zie virtueel-lift.ts.)
+ */
+export const VERDIEP_RAMEN = [
+  { x0: -30, x1: -28, y0: 8.45, y1: 10.35, balkon: false },
+  { x0: -26, x1: -24, y0: 8.45, y1: 10.35, balkon: false },
+  { x0: -22, x1: -20, y0: 7.6, y1: 10.35, balkon: true },
+] as const
+
 export const GEVEL: Gevel = {
   A: 48,
   B: 31,

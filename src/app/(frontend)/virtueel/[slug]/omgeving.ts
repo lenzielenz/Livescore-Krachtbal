@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 
-import { GEVEL, inPoort, lichtshow, poortOp, type Rechthoek, type StadionThema } from '@/lib/virtueel'
+import { GEVEL, inPoort, lichtshow, poortOp, VERDIEP_RAMEN, type Rechthoek, type StadionThema } from '@/lib/virtueel'
 import { bijSpelersgebouwen } from './kleedkamer'
 import { canvasTex, rnd, rondLogo } from './stadion'
 
@@ -177,13 +177,19 @@ export function bouwOmgeving(scene: THREE.Scene, opt: { thema: StadionThema; lic
     const mz = (a.z + b.z) / 2
     // In een poort enkel de latei erboven; elders de volle muur.
     const poort = poortOp(GEVEL, mx + a.nx * 0.1, mz + a.nz * 0.1)
+    // Een raam van het eerste verdiep (zuidgevel): de muur onder en boven de opening.
+    const raam = a.nz > 0.9 && mz > 0 ? VERDIEP_RAMEN.find((r) => mx > r.x0 && mx < r.x1) : undefined
+    if (raam) {
+      muren.push(muurStuk(a, b, 0, raam.y0, 1.2), muurStuk(a, b, raam.y1, H + 0.4, 1.2))
+      continue
+    }
     muren.push(muurStuk(a, b, poort ? (poort.hoogte ?? POORT_H) : 0, H + 0.4, 1.2))
   }
   const gevel = new THREE.Mesh(mergeGeometries(muren), gevelMat)
   scene.add(gevel)
 
   // Lamellen voor de muur, in de clubkleuren (3 × primair, 1 × secundair), zacht oplichtend.
-  const lamelPunten = gevelOmtrek(1.5).filter((p) => !inPoort(GEVEL, p.x + p.nx, p.z + p.nz))
+  const lamelPunten = gevelOmtrek(1.5).filter((p) => !inPoort(GEVEL, p.x + p.nx, p.z + p.nz) && !(p.nz > 0.9 && p.z > 0 && VERDIEP_RAMEN.some((r) => p.x > r.x0 - 0.4 && p.x < r.x1 + 0.4)))
   // Afgeronde lamellen (geen kale balken): een afgerond profiel, opgetrokken over de hoogte.
   const lamelProfiel = new THREE.Shape()
   {
@@ -322,6 +328,8 @@ export function bouwOmgeving(scene: THREE.Scene, opt: { thema: StadionThema; lic
       const a = pts[i]
       const b = pts[(i + 1) % pts.length]
       if (inPoort(GEVEL, (a.x + b.x) / 2 + a.nx, (a.z + b.z) / 2 + a.nz)) continue
+      // Waar een echt raam zit, geen nepglas ervoor.
+      if (a.nz > 0.9 && a.z > 0 && VERDIEP_RAMEN.some((r) => (a.x + b.x) / 2 > r.x0 - 0.1 && (a.x + b.x) / 2 < r.x1 + 0.1)) continue
       const sB = i + 1 < pts.length ? b.s : a.s + Math.hypot(b.x - a.x, b.z - a.z)
       const ax = a.x + a.nx * 0.62
       const az = a.z + a.nz * 0.62
