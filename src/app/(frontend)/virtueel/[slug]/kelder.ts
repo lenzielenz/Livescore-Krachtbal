@@ -64,6 +64,8 @@ export type KelderPlekken = {
   wedkantoor: WedkantoorPlek
   /** De zalen, met hun deur aan de boulevard (voor het stadionplan). */
   zalen: { naam: string; icoon: string; x: number; z: number }[]
+  /** De kluis met de sleutel van de helikopter: in de zuidmuur van de boulevard, naast de lift. */
+  kluis: { x: number; z: number; ry: number }
 }
 export type WedkantoorPlek = {
   x0: number
@@ -1596,6 +1598,7 @@ export function bouwKelder(scene: THREE.Scene, opt: { thema: StadionThema; licht
     superstar,
     hamamMist: (x, z) => hamam.mist(x, z),
     plekken: {
+      kluis: { x: ox + 5, z: B1, ry: Math.PI },
       zalen: [
         { naam: 'Fitness', icoon: '🏋️', x: deurX.fitness, z: B0 },
         { naam: 'Cinema & popcorn', icoon: '🎬', x: deurX.cinema, z: B0 },

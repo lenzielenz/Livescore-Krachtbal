@@ -34,6 +34,8 @@ import { Photobooth } from './Photobooth'
 import { Wedkiosk } from './Wedkiosk'
 import { Fanshop } from './Fanshop'
 import { Superstar } from './Superstar'
+import { bouwKluis } from './kluis'
+import { bouwHelikopter, type Helikopter, type Vluchtinfo } from './helikopter'
 import { werpAfstand, type BalId, type SuperstarStand } from '@/lib/virtueel-superstar'
 import type { SuperstarHal } from './superstar'
 import { StadionPlan, type PlanDoel, type PlanHier } from './StadionPlan'
@@ -83,7 +85,7 @@ const RUIMTE_MELDING: Record<string, string> = {
   Wedkantoor: '🎰 Wedkantoor · draai gratis aan het bonusrad',
 }
 /** Wat je ergens kan doen: bij de kleedkamer (muur, bord) of in de kelder (zie kelderspel.ts). */
-type Nabij = { soort: 'muur' } | { soort: 'bord' } | { soort: 'rad' } | { soort: 'stats' } | { soort: 'kiosk' } | { soort: 'booth' } | { soort: 'knop' } | { soort: 'fanshop' } | { soort: 'superstar' } | KelderActie
+type Nabij = { soort: 'muur' } | { soort: 'bord' } | { soort: 'rad' } | { soort: 'stats' } | { soort: 'kiosk' } | { soort: 'booth' } | { soort: 'knop' } | { soort: 'fanshop' } | { soort: 'superstar' } | { soort: 'kluis' } | { soort: 'heli' } | KelderActie
 const ACTIE_LABEL: Record<Nabij['soort'], string> = {
   muur: '🎨 Spuit op de muur',
   bord: '📋 Tactiekbord',
@@ -100,6 +102,8 @@ const ACTIE_LABEL: Record<Nabij['soort'], string> = {
   knop: '🔴 Druk op de grote rode knop',
   fanshop: '🛍️ Fanshop: kleed je figuur aan',
   superstar: '★ Superstar: werp zo ver je kan',
+  kluis: '🔐 De kluis',
+  heli: '🚁 De clubhelikopter',
   booth: '📸 Neem een selfie',
 }
 type Muur = 'kleedkamer' | 'kelder'
@@ -332,6 +336,10 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
   }, [])
   const naarWerplijnRef = useRef<() => void>(() => {})
   const opWerplijnRef = useRef(false)
+  // De kluis (kelder) en de helikopter (dak): met alle gouden ballen krijg je de sleutel.
+  const kluisRef = useRef<ReturnType<typeof bouwKluis> | null>(null)
+  const heliRef = useRef<Helikopter | null>(null)
+  const [vlucht, setVlucht] = useState<Vluchtinfo | null>(null)
   opWerplijnRef.current = paneel === 'superstar'
   // De grote rode knop op het dak: aftellen, en dan de vuurwerkshow.
   const vuurwerkRef = useRef<Vuurwerk | null>(null)
@@ -427,6 +435,7 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     if (goudRef.current) setGoud(goudRef.current.aantal())
     if (s.borden.kleedkamer) kleedRef.current?.zetTactiek(s.borden.kleedkamer)
     avatarRef.current?.kleedAan(s.mij.outfit)
+    kluisRef.current?.zet(s.vondsten.mijn.length, GOUDEN_BALLEN, s.mij.sleutel)
   }, [])
   const herlaadSporen = useCallback(() => {
     fetch(`/api/virtueel/sporen?club=${thema.clubId ?? ''}`, { cache: 'no-store', credentials: 'include' })
@@ -714,7 +723,10 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     // De rode knop staat op het dek van de ring, vlak naast de brug van de lift, met zicht op het veld.
     const vuurwerk = bouwVuurwerk(scene, { primair: thema.primair, secundair: thema.secundair, licht, knop: { x: LIFT_X + 5, y: RING.y, z: GEVEL.B - 1.6, ry: 0 } })
     vuurwerkRef.current = vuurwerk
-    const opDak = (x: number, z: number) => ring.mag(x, z) && !raakt([vuurwerk.knop.obstakel], x, z)
+    const opDak = (x: number, z: number) => {
+      const h = heliRef.current
+      return (ring.mag(x, z) || (h?.opPlatform(x, z) ?? false)) && !raakt(h ? [vuurwerk.knop.obstakel, h.obstakel] : [vuurwerk.knop.obstakel], x, z)
+    }
     // Bewegwijzering naar alles wat er in de gangen te vinden is.
     const bestemmingen: Bestemming[] = [
       { naam: 'Hall of Fame & bekers', icoon: '🏆', x: 0, z: GEVEL.B - 4, kleur: '#fbbf24' },
@@ -813,6 +825,11 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     const kelder = bouwKelder(scene, { thema, licht, liftX: LIFT_X, liftZ, logo: stadion.logo })
     sterRef.current = kelder.superstar
     herlaadSter()
+    const kluis = bouwKluis(kelder.groep, { ...kelder.plekken.kluis, y: VERDIEPEN.find((v) => v.nr === -1)!.y, primair: thema.primair })
+    kluisRef.current = kluis
+    kluis.zet(sporenRef.current.vondsten.mijn.length, GOUDEN_BALLEN, sporenRef.current.mij.sleutel)
+    const heli = bouwHelikopter(scene, { thema, logo: stadion.logo, y: RING.y, licht })
+    heliRef.current = heli
     setPlanDoelen([
       ...bestemmingen.map((b) => ({ ...b, verdiep: 0 })),
       ...kelder.plekken.zalen.map((z) => ({ ...z, kleur: '#a78bfa', verdiep: -1 })),
@@ -1263,6 +1280,15 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
           loper.pos.y + Math.sin(loper.pitch),
           loper.pos.z + Math.cos(loper.yaw) * cp,
         )
+      } else if (s.modus === 'buiten' && heli.inVlucht()) {
+        // Vliegen met de clubhelikopter: joystick vooruit/achteruit en draaien, stijgen en dalen.
+        const vooruit = (toetsen.has('KeyW') || toetsen.has('ArrowUp') ? 1 : 0) - (toetsen.has('KeyS') || toetsen.has('ArrowDown') ? 1 : 0) - s.stick.y
+        const draai = (toetsen.has('KeyA') || toetsen.has('ArrowLeft') ? 1 : 0) - (toetsen.has('KeyD') || toetsen.has('ArrowRight') ? 1 : 0) - s.stick.x
+        const stijg = (toetsen.has('Space') || toetsen.has('KeyE') ? 1 : 0) - (toetsen.has('KeyQ') || toetsen.has('KeyC') ? 1 : 0) + s.hoog
+        heli.stuur(dt, vooruit, draai, stijg, camera)
+        // De speler zit in de helikopter: zijn positie volgt (voor de schaduw, de mist, ...).
+        loper.pos.x = camera.position.x
+        loper.pos.z = camera.position.z
       } else if (WANDELEN.includes(s.modus)) {
         const vooruit = (toetsen.has('KeyW') || toetsen.has('ArrowUp') ? 1 : 0) - (toetsen.has('KeyS') || toetsen.has('ArrowDown') ? 1 : 0) - s.stick.y
         const opzij = (toetsen.has('KeyD') ? 1 : 0) - (toetsen.has('KeyA') ? 1 : 0) + s.stick.x
@@ -1284,7 +1310,7 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
         const schacht = lift.obstakels(v)
         const naar =
           v === -1
-            ? stapMet((x, z) => kelder.mag(x, z) && !raakt(schacht, x, z), loper.pos, doelPos)
+            ? stapMet((x, z) => kelder.mag(x, z) && !raakt(kluisRef.current ? [...schacht, kluisRef.current.obstakel] : schacht, x, z), loper.pos, doelPos)
             : v === 2
               ? stapMet((x, z) => (opDak(x, z) || bijKooi(x, z)) && !raakt(schacht, x, z), loper.pos, doelPos)
               : stap(GEVEL, v === 1 ? [...verdiep.obstakels, ...schacht] : [...obstakels, ...schacht], loper.pos, doelPos)
@@ -1402,6 +1428,18 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
         kelder.groep.visible = inKelder
       }
       vuurwerk.update(nu / 1000, dt, camera, renderer.domElement.height)
+      heli.update(nu / 1000, dt)
+      kluis.update(nu / 1000, dt)
+      const uitstap = heli.uitgestapt()
+      if (uitstap) {
+        loper.pos.x = uitstap.x
+        loper.pos.z = uitstap.z
+        loper.yaw = uitstap.yaw
+        loper.pitch = -0.05
+        opVerdiep = 2
+        vloer = VERDIEPEN.find((x) => x.nr === 2)!.y
+        s.hoog = 0
+      }
       // Op de werplijn van Superstar: je blijft staan, met de baan recht voor je.
       if (opWerplijnRef.current && s.modus === 'buiten' && opVerdiep === -1) {
         const wp = kelder.superstar.werpPlek
@@ -1446,6 +1484,8 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
         const inKooi = s.modus === 'buiten' && lift.binnen(loper.pos.x, loper.pos.z) && (liftNu.toestand === 'rijden' || Math.round(liftNu.hoogte) === opVerdiep)
         const paneel = inKooi ? { hier: opVerdiep, rijdt: liftNu.toestand === 'rijden' || liftNu.toestand === 'sluiten', doel: liftNu.toestand === 'rijden' || liftNu.toestand === 'sluiten' ? liftNu.doel : (s.liftKeuze ?? null) } : null
         setLiftPaneel((oud) => (JSON.stringify(oud) === JSON.stringify(paneel) ? oud : paneel))
+        const vi = heli.inVlucht() ? heli.info() : null
+        setVlucht((oud) => (vi == null ? null : oud && oud.fase === vi.fase && Math.abs(oud.hoogte - vi.hoogte) < 1 && Math.abs(oud.snelheid - vi.snelheid) < 2 ? oud : vi))
         const kk = s.modus === 'buiten' && opVerdiep === 0
         const kl = s.modus === 'buiten' && opVerdiep === -1 && s.zit == null
         const kd = s.modus === 'buiten' && opVerdiep === 2
@@ -1461,6 +1501,10 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
         const nb: Nabij | null =
           kd && vuurwerk.knop.bij(loper.pos.x, loper.pos.z)
             ? { soort: 'knop' }
+            : kd && heli.bij(loper.pos.x, loper.pos.z)
+            ? { soort: 'heli' }
+            : kl && kluis.bij(loper.pos.x, loper.pos.z)
+            ? { soort: 'kluis' }
             : kk && gangleven.fanshop && Math.hypot(loper.pos.x - gangleven.fanshop.x, loper.pos.z - gangleven.fanshop.z) < 3.6
             ? { soort: 'fanshop' }
             : kk && photobooth.bijBooth(loper.pos.x, loper.pos.z)
@@ -1616,6 +1660,33 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
       case 'fanshop':
         setPaneel('fanshop')
         break
+      case 'kluis': {
+        const n = sporenRef.current.vondsten.mijn.length
+        if (sporenRef.current.mij.sleutel) {
+          setMelding('🗝️ Je hebt de sleutel al: naar de helikopter op het dak!')
+          break
+        }
+        if (n < GOUDEN_BALLEN) {
+          setMelding(`🔒 De kluis gaat open met alle ${GOUDEN_BALLEN} gouden ballen. Je hebt er ${n}.`)
+          break
+        }
+        void laat('kluis', {}).then((ok) => {
+          if (!ok) return
+          kluisRef.current?.open()
+          setMelding('🗝️ De kluis gaat open… de sleutel van de clubhelikopter is van jou! Ga naar het dak.')
+          herlaadSporen()
+        })
+        break
+      }
+      case 'heli': {
+        if (!sporenRef.current.mij.sleutel) {
+          setMelding(`🔒 Je hebt de sleutel nodig. Die ligt in de kluis in de kelder (alle ${GOUDEN_BALLEN} gouden ballen).`)
+          break
+        }
+        heliRef.current?.stapIn()
+        setMelding('🚁 Rotor op toeren… hou je vast!')
+        break
+      }
       case 'superstar':
         naarWerplijnRef.current()
         setPaneel('superstar')
@@ -1723,7 +1794,7 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
             {VELD.includes(modus) && (
               <button className="vk-terugbuiten" onClick={() => setModus('zweven')}>↩ Naar buiten</button>
             )}
-            {nabij && !paneel && zit == null && aftel == null && (
+            {nabij && !paneel && zit == null && aftel == null && !vlucht && (
               <button className="vk-actie" onClick={() => doeActie(nabij)}>
                 {ACTIE_LABEL[nabij.soort]}
               </button>
@@ -1753,6 +1824,33 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
                   setPlanHier(null)
                 }}
               />
+            )}
+            {vlucht && (
+              <div className="vk-vlucht" aria-label="Helikopter">
+                <div className="vk-vlucht-info">
+                  <b>🚁 {vlucht.fase === 'opstijgen' ? 'Opstijgen…' : vlucht.fase === 'landen' ? 'Landen…' : 'Je vliegt!'}</b>
+                  <span>
+                    {Math.round(vlucht.hoogte)} m · {Math.round(vlucht.snelheid)} km/u
+                  </span>
+                </div>
+                <div className="vk-vlucht-knoppen">
+                  {(['stijg', 'daal'] as const).map((k) => (
+                    <button
+                      key={k}
+                      onPointerDown={() => (st.current.hoog = k === 'stijg' ? 1 : -1)}
+                      onPointerUp={() => (st.current.hoog = 0)}
+                      onPointerLeave={() => (st.current.hoog = 0)}
+                      onPointerCancel={() => (st.current.hoog = 0)}
+                      onContextMenu={(e) => e.preventDefault()}
+                    >
+                      {k === 'stijg' ? '⬆️ Stijg' : '⬇️ Daal'}
+                    </button>
+                  ))}
+                  <button className="landen" disabled={vlucht.fase !== 'vliegen'} onClick={() => heliRef.current?.landen()}>
+                    🛬 Landen
+                  </button>
+                </div>
+              </div>
             )}
             {aftel != null && (
               <div className="vk-aftel" aria-live="assertive" key={aftel}>

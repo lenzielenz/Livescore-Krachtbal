@@ -640,3 +640,13 @@
 .vk-ster-klassement li.leeg { color: #64748b; }
 .vk-ster-klassement small { font-size: 0.68rem; color: #fde68a; }
 @media (max-width: 560px) { .vk-ster-ballen, .vk-ster-klassement { grid-template-columns: repeat(3, 1fr); } }
+/* Vliegen met de helikopter: hoogte en snelheid, en stijgen, dalen, landen. */
+.vk-vlucht { position: absolute; right: max(12px, env(safe-area-inset-right)); bottom: max(14px, env(safe-area-inset-bottom)); z-index: 8; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+.vk-vlucht-info { display: flex; flex-direction: column; align-items: flex-end; padding: 8px 12px; border-radius: 12px; background: rgba(6, 10, 18, 0.78); border: 1px solid rgba(255, 255, 255, 0.12); color: #e2e8f0; }
+.vk-vlucht-info b { font-size: 0.95rem; }
+.vk-vlucht-info span { font-size: 0.8rem; color: #93c5fd; font-variant-numeric: tabular-nums; font-weight: 800; }
+.vk-vlucht-knoppen { display: flex; gap: 8px; }
+.vk-vlucht-knoppen button { min-width: 74px; height: 54px; border-radius: 14px; border: 1px solid rgba(255, 255, 255, 0.18); background: rgba(15, 23, 42, 0.85); color: #fff; font: inherit; font-weight: 900; font-size: 0.85rem; cursor: pointer; touch-action: none; -webkit-user-select: none; user-select: none; }
+.vk-vlucht-knoppen button:active { background: rgba(59, 130, 246, 0.5); }
+.vk-vlucht-knoppen button.landen { background: #facc15; color: #1c1300; border: 0; }
+.vk-vlucht-knoppen button:disabled { opacity: 0.45; }
