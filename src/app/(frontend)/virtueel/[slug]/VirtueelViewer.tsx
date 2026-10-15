@@ -29,6 +29,7 @@ import { bouwGokkantoor, type Gokkantoor } from './gokkantoor'
 import { WedkantoorPaneel } from './Wedkantoor'
 import { bouwPhotobooth, type BoothFoto, type Photobooth as Photobooth3D } from './photobooth'
 import { Photobooth } from './Photobooth'
+import { bouwSpelersbus } from './spelersbus'
 import type { WedkantoorStats } from '@/lib/virtueel-wedkantoor'
 import { bouwGangafwerking } from './gangafwerking'
 import { bouwVideoscherm, CINEMA_VIDEO_ID, type Videoscherm } from './videoscherm'
@@ -602,6 +603,8 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     kleedRef.current = kleedkamer
     kleedkamer.zetTactiek(sporenRef.current.borden.kleedkamer ?? laadTactiek())
     if (muurRef.current.tags.length) kleedkamer.zetTags(muurRef.current.tags, muurRef.current.lengte)
+    // De spelersbus naast de kleedkamers: instappen, rondkijken, en de wedstrijd op de schermen.
+    const bus = bouwSpelersbus(scene, { thema, x: -59, z: 23.6, renderer, logo: stadion.logo, licht })
     // De photobooth in de noordgang, tegen de achterwand van de noordtribune (de gevel daar is voor
     // de weekendzaal): cabine, polaroids en de mozaïek van het logo, aan de westkant van de gang.
     const photobooth = bouwPhotobooth(scene, { thema, muurZ: (tribunes.noord?.z0 ?? -22.65) - 0.02, ry: Math.PI, x0: 6.6, logo: stadion.logo, licht })
@@ -621,6 +624,7 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
       { naam: 'Lift · -1 tot dak', icoon: '🛗', x: LIFT_X, z: liftZ + 1, kleur: '#a78bfa' },
       { naam: 'Kleedkamers', icoon: '🚿', x: -GEVEL.A, z: 10, kleur: '#34d399' },
       { naam: 'Graffitimuur', icoon: '🎨', x: -GEVEL.A, z: 0, kleur: '#f472b6' },
+      { naam: 'Spelersbus', icoon: '🚌', x: -59, z: 20.5, kleur: '#38bdf8' },
       { naam: 'Photobooth', icoon: '📸', x: -12, z: (tribunes.noord?.z0 ?? -22.65) - 3, kleur: '#fb7185' },
       { naam: 'Hoofdingang', icoon: '🚪', x: 0, z: GEVEL.B, kleur: '#e2e8f0' },
     ]
@@ -640,6 +644,7 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
       ...kleedkamer.obstakels,
       ...gangafwerking.obstakels,
       ...photobooth.obstakels,
+      ...bus.obstakels,
     ]
     // De Hollywood-sterren in de zuidgang: enkel op vrije vloer (niet onder een vitrine, zuil of de lift).
     const sterren = bouwSterren(scene, {
@@ -851,6 +856,10 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     const avatar = bouwAvatar(scene, thema)
     const vorigePos = { x: 0, z: 0 }
     let liftNu = lift.update(0, { x: 0, z: 0, verdiep: 0, actief: false, keuze: null }).lift
+    // In de spelersbus sta je hoger (de vloer van de bus, met treden aan de deur).
+    let busHoogte = 0
+    let inBus = false
+    const tvKijk = new THREE.Vector3()
     // Op een trampoline in de speelhal: hoe ver je in de sprong bent.
     let sprong = 0
     let sprongHoogte = 0
@@ -1119,7 +1128,9 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
           sprong = 0
           sprongHoogte = Math.max(0, sprongHoogte - dt * 4)
         }
-        const oog = (s.modus === 'buiten' ? vloer : 0) + (zitHier ? 1.15 : OOGHOOGTE) + sprongHoogte
+        const busDoel = s.modus === 'buiten' && v === 0 ? bus.vloer(loper.pos.x, loper.pos.z) : 0
+        busHoogte += (busDoel - busHoogte) * Math.min(1, dt * 12)
+        const oog = (s.modus === 'buiten' ? vloer : 0) + (zitHier ? 1.15 : OOGHOOGTE) + sprongHoogte + busHoogte
         camera.position.set(loper.pos.x, oog + deining, loper.pos.z)
         camera.lookAt(
           loper.pos.x + Math.sin(loper.yaw) * Math.cos(loper.pitch),
@@ -1153,6 +1164,17 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
       vorigePos.z = loper.pos.z
       gangafwerking.update(nu / 1000)
       photobooth.update(nu / 1000, dt)
+      bus.update(nu / 1000)
+      // In de bus: de schermen tonen de wedstrijd (een tv-camera volgt de bal).
+      const nuInBus = s.modus === 'buiten' && opVerdiep === 0 && bus.binnen(loper.pos.x, loper.pos.z)
+      if (nuInBus !== inBus) {
+        inBus = nuInBus
+        if (inBus) setMelding('🚌 Welkom aan boord van de spelersbus')
+      }
+      if (inBus) {
+        if (b) tvKijk.set(b.x - cx, 0, b.y - cz)
+        bus.tv(renderer, scene, tvKijk)
+      }
       verdiep.update(nu / 1000)
       ring.update(nu / 1000)
       kelder.update(nu / 1000, { x: loper.pos.x, z: loper.pos.z })
