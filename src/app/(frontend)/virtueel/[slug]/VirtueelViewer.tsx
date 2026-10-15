@@ -35,6 +35,7 @@ import { Wedkiosk } from './Wedkiosk'
 import { Fanshop } from './Fanshop'
 import { Superstar } from './Superstar'
 import { bouwKluis } from './kluis'
+import { bouwOefencomplex } from './oefencomplex'
 import { bouwSamen, type Samen } from './samen'
 import type { Aanwezige } from '@/lib/virtueel-aanwezig'
 import { bouwHelikopter, type Helikopter, type Vluchtinfo } from './helikopter'
@@ -701,6 +702,8 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     // Het stadion rondom, in de kleuren van de club die kijkt.
     const stadion = bouwStadion(scene, { veld, marge, thema, licht })
     const omgeving = bouwOmgeving(scene, { thema, licht, logo: stadion.logo })
+    // Het oefencomplex ten noorden van het stadion, met een veld van dezelfde maat (geen wedstrijd).
+    const oefen = bouwOefencomplex(scene, { thema, licht, veldTex: veldTextuur(veld, 3), lengte: veld.length_m, breedte: veld.width_m, pleinRand: GEVEL.B + 22 })
     const sfeer = bouwSfeer(scene, { thema, licht, logo: stadion.logo })
     // De hall of fame hangt in de gangen; het kopbord op de achterwand van de zuidtribune, recht
     // tegenover de hoofdingang.
@@ -777,6 +780,7 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
       { naam: 'Spelersbus', icoon: '🚌', x: -59, z: 20.5, kleur: '#38bdf8' },
       { naam: 'Photobooth', icoon: '📸', x: -12, z: (tribunes.noord?.z0 ?? -22.65) - 3, kleur: '#fb7185' },
       { naam: 'Hoofdingang', icoon: '🚪', x: 0, z: GEVEL.B, kleur: '#e2e8f0' },
+      { naam: 'Oefencomplex (noordpoort)', icoon: '🏟️', x: 0, z: -GEVEL.B, kleur: '#4ade80' },
     ]
     const wegwijzers = bouwWegwijzers(scene, { thema, logo: stadion.logo, bestemmingen, tribunes })
     // Leven in de gangen: wandelaars, een bar in elke hoek en het logo in de vloer.
@@ -795,6 +799,7 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
       ...gangafwerking.obstakels,
       ...photobooth.obstakels,
       ...bus.obstakels,
+      ...oefen.obstakels,
     ]
     // De Hollywood-sterren in de zuidgang: enkel op vrije vloer (niet onder een vitrine, zuil of de lift).
     const sterren = bouwSterren(scene, {
@@ -1492,6 +1497,7 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
       }
       vuurwerk.update(nu / 1000, dt, camera, renderer.domElement.height)
       heli.update(nu / 1000, dt)
+      if (!inKelder) oefen.update(nu / 1000)
       supporters.update(nu / 1000, dt, opVerdiep, s.modus !== 'buiten')
       meldPlek(nu)
       kluis.update(nu / 1000, dt)

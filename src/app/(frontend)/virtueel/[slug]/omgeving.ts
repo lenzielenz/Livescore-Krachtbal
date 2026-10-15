@@ -3,6 +3,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 
 import { GEVEL, inPoort, lichtshow, poortOp, VERDIEP_RAMEN, type Rechthoek, type StadionThema } from '@/lib/virtueel'
 import { bijSpelersgebouwen } from './kleedkamer'
+import { OEFEN } from './oefencomplex'
 import { canvasTex, rnd, rondLogo } from './stadion'
 
 // De buitenkant van het stadion: zodat wie rondkijkt of rondwandelt het gevoel heeft dat dit zíjn
@@ -750,6 +751,8 @@ export function bouwOmgeving(scene: THREE.Scene, opt: { thema: StadionThema; lic
     if (Math.abs(z - (B + 30)) < 8) continue
     // Geen bomen op de kleedkamers, de graffitimuur en het clubhuis ten westen van het stadion.
     if (x > -114 && x < -54 && z > -30 && z < 30) continue
+    // Ook niet op het oefencomplex ten noorden van het stadion (oefencomplex.ts).
+    if (x > OEFEN.x0 - 4 && x < OEFEN.x1 + 4 && z > OEFEN.z0 - 4 && z < OEFEN.z1 + 4) continue
     boomPos.push([x, z, 0.8 + toeval() * 0.7])
   }
   for (let x = -130; x <= 130; x += 13) boomPos.push([x, B + 41, 0.9])
