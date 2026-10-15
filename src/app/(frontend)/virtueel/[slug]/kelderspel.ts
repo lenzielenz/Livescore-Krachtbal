@@ -3,7 +3,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 
 import type { StadionThema } from '@/lib/virtueel'
 import { MUUR_H, muurLengte, tekenMuurBasis, tekenStreek, type Tag } from '@/lib/virtueel-graffiti'
-import { MAX_EENDEN, waterKleur, type Sporenstaat } from '@/lib/virtueel-sporen'
+import { GOUDEN_BALLEN, MAX_EENDEN, waterKleur, type Sporenstaat } from '@/lib/virtueel-sporen'
 import { tekenTactiekbord, type Tactiek } from '@/lib/virtueel-tactiek'
 import type { BordPlek, KelderPlekken } from './kelder'
 import { canvasTex } from './stadion'
@@ -276,7 +276,7 @@ export function bouwKelderspel(groep: THREE.Group, opt: { thema: StadionThema; p
       kader(g, w, h, '#fbbf24', '🟡 GOUDZOEKERS')
       g.fillStyle = '#fde68a'
       g.font = `600 ${Math.round(h * 0.06)}px Inter, system-ui, sans-serif`
-      g.fillText('Vonden alle 12 gouden krachtballen in het stadion', w / 2, h * 0.25, w * 0.9)
+      g.fillText(`Vonden alle ${GOUDEN_BALLEN} gouden krachtballen in het stadion`, w / 2, h * 0.25, w * 0.9)
       lijst(g, w, h, s.vondsten.kampioenen.slice(0, 7).map((n, i) => [`${i + 1}. ${n}`, '🏆']), 0.32, 'Nog niemand — zoek ze allemaal!')
     })
     // Eendjes: wie al dobbert, blijft op zijn plek (enkel nieuwe erbij).

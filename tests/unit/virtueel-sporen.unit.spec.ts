@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { GOUDEN_BALLEN, valideerSpoor, vatSporenSamen, waterKleur, type Spoor } from '@/lib/virtueel-sporen'
+import { GOUDEN_BALLEN, valideerSpoor, vatSporenSamen, warmteVoor, waterKleur, type Spoor } from '@/lib/virtueel-sporen'
 
 // Sporen in het virtuele stadion: wat bezoekers achterlaten, en wat daaruit afgeleid wordt.
 
@@ -74,5 +74,12 @@ describe('vatSporenSamen', () => {
     expect(waterKleur(['#ff0000'])).toBe('#ff0000')
     // Twee kleuren: de laatste weegt dubbel.
     expect(waterKleur(['#000000', '#ffffff'])).toBe('#aaaaaa')
+  })
+})
+
+describe('goudjacht: een echte zoektocht', () => {
+  it('telt 25 ballen, en de goudradar zegt enkel hoe warm je bent', () => {
+    expect(GOUDEN_BALLEN).toBe(25)
+    expect([warmteVoor(2), warmteVoor(8), warmteVoor(20), warmteVoor(60), warmteVoor(null)]).toEqual(['heet', 'warm', 'lauw', 'koud', 'niets'])
   })
 })

@@ -3,9 +3,12 @@ import * as THREE from 'three'
 import { gevelAfstand, GEVEL, type StadionThema } from '@/lib/virtueel'
 import { rondeDoos } from './rond'
 
-// De clubhelikopter op het dak: een helikopterplatform dat aan de oostkant van de dakring uitsteekt,
-// met een grote H, een ring in clubkleur en knipperende lichtjes; erop een helikopter in de
-// clubkleuren met de reclame van de sponsors op de staart en het clublogo op de deuren.
+// De clubhelikopter op het dak: een helikopterplatform (20 m) dat aan de oostkant van de dakring
+// uitsteekt, verlicht zoals een echt helipad: groene randlichten, een oplichtende H, schijnwerpers op
+// masten die de helikopter aanlichten, een ledring in clubkleur en een zwaailicht. Erop een
+// helikopter op ware grootte (zoals een H145: 13,6 m lang met de rotor, rotor van 11 m, bijna 4 m
+// hoog) in glanzende clubkleuren, met de reclame van de sponsors op de staart en het clublogo op de
+// deuren. Een verlicht bord aan de brug legt uit hoe je mag vliegen (en hoe ver je al staat).
 // Met de sleutel uit de kluis (alle gouden ballen) stap je in: de rotor draait op, je stijgt op en
 // vliegt rond het stadion (joystick: vooruit en draaien; stijgen en dalen met de knoppen). "Landen"
 // brengt je vanzelf terug naar het platform.
@@ -27,6 +30,8 @@ export type Helikopter = {
   /** Na het landen: waar je uitstapt (één keer), anders null. */
   uitgestapt: () => { x: number; z: number; yaw: number } | null
   info: () => Vluchtinfo
+  /** Werk het infobord bij: hoeveel gouden ballen je al hebt, en of je de sleutel hebt. */
+  zetVoortgang: (gevonden: number, totaal: number, sleutel: boolean) => void
   update: (seconden: number, dt: number) => void
 }
 
@@ -48,7 +53,7 @@ export function bouwHelikopter(
   const { thema } = opt
   const Y = opt.y
   // Het platform: oostelijk van de gevel, op de hoogte van de dakring.
-  const R = 7
+  const R = 10
   const px = GEVEL.A + 0.8 + R + 0.4
   const pz = 0
   const brug = { x0: GEVEL.A - 0.5, x1: px - R + 0.6, z0: -1.4, z1: 1.4 }
@@ -79,7 +84,12 @@ export function bouwHelikopter(
     g.textBaseline = 'middle'
     g.fillText('H', 512, 540)
   })
-  const pad = new THREE.Mesh(new THREE.CylinderGeometry(R, R, 0.35, 64), [new THREE.MeshStandardMaterial({ color: '#3f4650', metalness: 0.6, roughness: 0.5 }), new THREE.MeshStandardMaterial({ map: padTex, roughness: 0.75 }), new THREE.MeshStandardMaterial({ color: '#1f242b' })])
+  // De markeringen lichten op (in de schijnwerpers en met ingebouwde leds).
+  const pad = new THREE.Mesh(new THREE.CylinderGeometry(R, R, 0.35, 64), [
+    new THREE.MeshStandardMaterial({ color: '#3f4650', metalness: 0.6, roughness: 0.5 }),
+    new THREE.MeshStandardMaterial({ map: padTex, roughness: 0.7, emissive: '#ffffff', emissiveMap: padTex, emissiveIntensity: 0.32 }),
+    new THREE.MeshStandardMaterial({ color: '#1f242b' }),
+  ])
   pad.position.set(px, Y - 0.175, pz)
   pad.receiveShadow = true
   platform.add(pad)
@@ -92,6 +102,12 @@ export function bouwHelikopter(
   net.position.set(px, Y - 0.25, pz)
   platform.add(net)
   const staal = new THREE.MeshStandardMaterial({ color: '#6b7280', metalness: 0.8, roughness: 0.35 })
+  const deelP = (geo: THREE.BufferGeometry, mat: THREE.Material, x: number, y: number, z: number, p: THREE.Object3D = platform) => {
+    const m = new THREE.Mesh(geo, mat)
+    m.position.set(x, y, z)
+    p.add(m)
+    return m
+  }
   for (const dz of [-4.5, 0, 4.5]) {
     const a = new THREE.Vector3(GEVEL.A, Y - 9, dz)
     const b = new THREE.Vector3(px + 1.5, Y - 0.4, pz + dz * 0.8)
@@ -100,15 +116,83 @@ export function bouwHelikopter(
     balk.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), b.clone().sub(a).normalize())
     platform.add(balk)
   }
-  // Randlichtjes die beurtelings knipperen.
-  const randLichten: THREE.Mesh[] = []
-  for (let i = 0; i < 24; i++) {
-    const a = (i / 24) * Math.PI * 2
-    const l = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 6), new THREE.MeshBasicMaterial({ color: i % 2 ? '#22c55e' : '#f8fafc', toneMapped: false }))
-    l.position.set(px + Math.cos(a) * (R - 0.25), Y + 0.06, pz + Math.sin(a) * (R - 0.25))
-    platform.add(l)
-    randLichten.push(l)
+  // ---------- de verlichting, zoals op een echt helipad ----------
+  const gloed = tex(64, 64, (g) => {
+    const r = g.createRadialGradient(32, 32, 0, 32, 32, 32)
+    r.addColorStop(0, 'rgba(255,255,255,1)')
+    r.addColorStop(0.3, 'rgba(255,255,255,.45)')
+    r.addColorStop(1, 'rgba(255,255,255,0)')
+    g.fillStyle = r
+    g.fillRect(0, 0, 64, 64)
+  }).t
+  const halo = (kleur: string, x: number, y: number, z: number, maat: number, sterk = 0.9) => {
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: gloed, color: kleur, transparent: true, opacity: sterk, depthWrite: false, blending: THREE.AdditiveBlending }))
+    sp.position.set(x, y, z)
+    sp.scale.set(maat, maat, 1)
+    platform.add(sp)
+    return sp
   }
+  // Groene randlichten (vast), ingebouwde lampjes met een gloed.
+  const lampGeo = new THREE.CylinderGeometry(0.11, 0.13, 0.12, 12)
+  const groen = new THREE.MeshBasicMaterial({ color: '#4ade80', toneMapped: false })
+  for (let i = 0; i < 32; i++) {
+    const a = (i / 32) * Math.PI * 2
+    const x = px + Math.cos(a) * (R - 0.3)
+    const z = pz + Math.sin(a) * (R - 0.3)
+    deelP(lampGeo, groen, x, Y + 0.06, z)
+    halo('#22c55e', x, Y + 0.15, z, 0.9, 0.8)
+  }
+  // Gele lampjes rond de doelcirkel.
+  const geel = new THREE.MeshBasicMaterial({ color: '#fde047', toneMapped: false })
+  for (let i = 0; i < 16; i++) {
+    const a = (i / 16) * Math.PI * 2
+    const x = px + Math.cos(a) * R * 0.645
+    const z = pz + Math.sin(a) * R * 0.645
+    deelP(new THREE.CylinderGeometry(0.07, 0.07, 0.06, 10), geel, x, Y + 0.03, z)
+    halo('#facc15', x, Y + 0.1, z, 0.6, 0.7)
+  }
+  // Een ledring in clubkleur langs de rand, met een zachte gloed eronder.
+  const ledRing = new THREE.Mesh(new THREE.TorusGeometry(R + 0.02, 0.05, 6, 128).rotateX(Math.PI / 2), new THREE.MeshBasicMaterial({ color: thema.primair, toneMapped: false }))
+  ledRing.position.set(px, Y - 0.05, pz)
+  platform.add(ledRing)
+  // Schijnwerpers op vier lage masten aan de rand, gericht op de helikopter; lichtplassen op het pad.
+  const plasTex = gloed
+  const lichtPlas = new THREE.Mesh(new THREE.CircleGeometry(R * 0.9, 48).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: plasTex, color: '#fff3d6', transparent: true, opacity: 0.35, depthWrite: false, blending: THREE.AdditiveBlending }))
+  lichtPlas.position.set(px, Y + 0.02, pz)
+  platform.add(lichtPlas)
+  const mastHoeken = [0.8, 2.35, 3.95, 5.5]
+  for (const a of mastHoeken) {
+    const x = px + Math.cos(a) * (R - 0.9)
+    const z = pz + Math.sin(a) * (R - 0.9)
+    deelP(new THREE.CylinderGeometry(0.06, 0.08, 1.4, 8).translate(0, 0.7, 0), staal, x, Y, z)
+    const kop = deelP(rondeDoos(0.6, 0.4, 0.35, 0.06), new THREE.MeshStandardMaterial({ color: '#1f2937', metalness: 0.6, roughness: 0.4 }), x, Y + 1.5, z)
+    kop.lookAt(px, Y + 1.2, pz)
+    const lens = deelP(new THREE.CircleGeometry(0.15, 16), new THREE.MeshBasicMaterial({ color: '#fffaf0', toneMapped: false }), 0, 0, 0.18, kop)
+    void lens
+    halo('#fff7e0', x, Y + 1.5, z, 2.2, 0.75)
+    // Een zichtbare lichtbundel naar de helikopter.
+    const doel = new THREE.Vector3(px, Y + 1.4, pz)
+    const van = new THREE.Vector3(x, Y + 1.5, z)
+    const lang = van.distanceTo(doel)
+    const bundel = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 1.5, lang, 20, 1, true).translate(0, -lang / 2, 0), new THREE.MeshBasicMaterial({ color: '#fff4d6', transparent: true, opacity: 0.03, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }))
+    bundel.position.copy(van)
+    bundel.quaternion.setFromUnitVectors(new THREE.Vector3(0, -1, 0), doel.clone().sub(van).normalize())
+    platform.add(bundel)
+  }
+  // Echte lampen (niet op een licht toestel): twee schijnwerpers en een warm licht boven het pad.
+  if (!opt.licht) {
+    for (const a of [0.8, 3.95]) {
+      const spot = new THREE.SpotLight('#fff1d6', 900, 40, 0.75, 0.7, 1.6)
+      spot.position.set(px + Math.cos(a) * (R - 0.9), Y + 1.6, pz + Math.sin(a) * (R - 0.9))
+      spot.target.position.set(px, Y + 1.2, pz)
+      platform.add(spot, spot.target)
+    }
+    const boven = new THREE.PointLight('#dbeafe', 260, 26, 1.6)
+    boven.position.set(px - 2, Y + 9, pz)
+    platform.add(boven)
+  }
+  // Een zwaailicht bovenop de windzakpaal.
+  const zwaai = halo('#ffffff', px + R - 0.6, Y + 3.25, pz - R + 1.8, 2.6, 0)
   // Een windzak op een paal.
   const paal = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 3, 8), staal)
   paal.position.set(px + R - 0.6, Y + 1.5, pz - R + 1.8)
@@ -121,9 +205,11 @@ export function bouwHelikopter(
   // ---------- de helikopter (neus naar +z) ----------
   const heli = new THREE.Group()
   scene.add(heli)
-  const romp = new THREE.MeshStandardMaterial({ color: thema.primair, metalness: 0.35, roughness: 0.32 })
-  const wit = new THREE.MeshStandardMaterial({ color: '#f8fafc', metalness: 0.3, roughness: 0.35 })
-  const tweede = new THREE.MeshStandardMaterial({ color: thema.secundair, metalness: 0.35, roughness: 0.35 })
+  // Glanzende lak (met een blanke laklaag erover), zoals een echte toestel.
+  const lak = (kleur: string) => new THREE.MeshPhysicalMaterial({ color: kleur, metalness: 0.25, roughness: 0.28, clearcoat: 1, clearcoatRoughness: 0.08 })
+  const romp = lak(thema.primair)
+  const wit = lak('#f8fafc')
+  const tweede = lak(thema.secundair)
   const glas = new THREE.MeshStandardMaterial({ color: '#0b1220', metalness: 0.9, roughness: 0.06, envMapIntensity: 1.5 })
   const zwart = new THREE.MeshStandardMaterial({ color: '#111827', metalness: 0.6, roughness: 0.4 })
   const deel = (geo: THREE.BufferGeometry, mat: THREE.Material, x: number, y: number, z: number, p: THREE.Object3D = heli) => {
@@ -133,19 +219,41 @@ export function bouwHelikopter(
     return m
   }
   // De cabine: een gestroomlijnde druppel, met een witte buik en een band in de tweede kleur.
-  const cabine = deel(new THREE.SphereGeometry(1, 40, 28), romp, 0, 1.75, 0.2)
-  cabine.scale.set(1.35, 1.15, 2.5)
-  const buik = deel(new THREE.SphereGeometry(1, 40, 20, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), wit, 0, 1.72, 0.2)
-  buik.scale.set(1.36, 1.0, 2.51)
-  const band = deel(new THREE.SphereGeometry(1, 40, 4, 0, Math.PI * 2, Math.PI / 2 - 0.06, 0.12), tweede, 0, 1.75, 0.2)
-  band.scale.set(1.365, 1.16, 2.515)
-  // De ruiten: een grote voorruit en zijramen (donker getint).
-  const ruit = deel(new THREE.SphereGeometry(1, 32, 20, -Math.PI * 0.42, Math.PI * 0.84, Math.PI * 0.18, Math.PI * 0.42), glas, 0, 1.85, 0.32)
-  ruit.scale.set(1.37, 1.17, 2.52)
+  // Ware grootte: de romp is 2 m breed (zoals een H145), de cabine 5 m lang.
+  const BR = 1.0
+  const cabine = deel(new THREE.SphereGeometry(1, 48, 32), romp, 0, 1.75, 0.2)
+  cabine.scale.set(BR, 1.15, 2.5)
+  const buik = deel(new THREE.SphereGeometry(1, 48, 20, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), wit, 0, 1.72, 0.2)
+  buik.scale.set(BR + 0.01, 1.0, 2.51)
+  const band = deel(new THREE.SphereGeometry(1, 48, 4, 0, Math.PI * 2, Math.PI / 2 - 0.06, 0.12), tweede, 0, 1.75, 0.2)
+  band.scale.set(BR + 0.015, 1.16, 2.515)
+  // De ruiten: een grote voorruit, en grote ramen in de schuifdeuren (donker getint).
+  const ruit = deel(new THREE.SphereGeometry(1, 40, 24, -Math.PI * 0.42, Math.PI * 0.84, Math.PI * 0.18, Math.PI * 0.42), glas, 0, 1.85, 0.32)
+  ruit.scale.set(BR + 0.02, 1.17, 2.52)
   for (const k of [-1, 1]) {
-    const zij = deel(new THREE.PlaneGeometry(1.7, 0.75), glas, k * 1.33, 2.05, -0.2)
-    zij.rotation.y = k * Math.PI / 2
+    for (const [z, w] of [
+      [0.75, 0.9],
+      [-0.45, 1.25],
+    ] as const) {
+      const zij = deel(rondeDoos(0.04, 0.7, w, 0.12), glas, k * (BR - 0.02) * Math.cos(Math.asin(Math.min(0.9, Math.abs(z - 0.2) / 2.5))), 2.08, z)
+      void zij
+    }
+    // De naad van de schuifdeur, een handgreep en een opstapje.
+    deel(new THREE.BoxGeometry(0.02, 1.45, 0.03), zwart, k * (BR - 0.005), 1.75, -1.18)
+    deel(new THREE.BoxGeometry(0.02, 1.45, 0.03), zwart, k * (BR - 0.005) * 0.98, 1.75, 0.3)
+    deel(new THREE.BoxGeometry(0.05, 0.05, 0.28), new THREE.MeshStandardMaterial({ color: '#d1d5db', metalness: 1, roughness: 0.2 }), k * (BR + 0.02), 1.7, -0.95)
+    deel(rondeDoos(0.35, 0.05, 0.9, 0.02), zwart, k * (BR + 0.12), 0.62, -0.45)
+    // Uitlaten van de turbines.
+    deel(new THREE.CylinderGeometry(0.16, 0.2, 0.45, 14).rotateZ(k * 1.2), zwart, k * 0.55, 3.1, -1.8)
   }
+  // Luchtinlaten, antennes, een zoeklicht onder de buik en een pitotbuis in de neus.
+  for (const k of [-1, 1]) deel(rondeDoos(0.06, 0.32, 0.6, 0.03), zwart, k * 0.76, 3.0, -0.2)
+  deel(new THREE.CylinderGeometry(0.015, 0.015, 0.6, 5), zwart, 0, 3.4, -2.4).rotation.x = -0.4
+  deel(new THREE.CylinderGeometry(0.01, 0.01, 0.45, 5), zwart, 0.2, 0.55, -1.2)
+  const zoek = deel(new THREE.CylinderGeometry(0.18, 0.14, 0.22, 16), zwart, 0.35, 0.72, 1.4)
+  void zoek
+  deel(new THREE.CircleGeometry(0.15, 16).rotateX(Math.PI / 2), new THREE.MeshBasicMaterial({ color: '#fffaf0', toneMapped: false }), 0.35, 0.6, 1.4)
+  deel(new THREE.CylinderGeometry(0.015, 0.015, 0.5, 5).rotateX(Math.PI / 2), new THREE.MeshStandardMaterial({ color: '#d1d5db', metalness: 1, roughness: 0.2 }), 0, 1.45, 2.85)
   // De motorkap en de staartbalk.
   deel(rondeDoos(1.5, 0.7, 2.4, 0.3), romp, 0, 2.95, -0.8)
   const staart = deel(new THREE.CylinderGeometry(0.3, 0.55, 6.2, 20).rotateX(Math.PI / 2), romp, 0, 2.15, -4.6)
@@ -169,13 +277,13 @@ export function bouwHelikopter(
   for (const k of [-1, 1]) deel(rondeDoos(0.9, 0.07, 0.5, 0.03), tweede, k * 0.7, 2.2, -6.5)
   // De ski's.
   for (const k of [-1, 1]) {
-    const ski = deel(new THREE.CylinderGeometry(0.08, 0.08, 4.6, 10).rotateX(Math.PI / 2), zwart, k * 1.15, 0.12, 0.2)
+    const ski = deel(new THREE.CylinderGeometry(0.07, 0.07, 3.9, 12).rotateX(Math.PI / 2), zwart, k * 1.2, 0.12, 0.15)
     void ski
-    const neus = deel(new THREE.TorusGeometry(0.25, 0.08, 8, 12, Math.PI / 2), zwart, k * 1.15, 0.37, 2.5)
+    const neus = deel(new THREE.TorusGeometry(0.25, 0.07, 8, 12, Math.PI / 2), zwart, k * 1.2, 0.37, 2.1)
     neus.rotation.y = Math.PI / 2
     for (const z of [-0.9, 1.1]) {
-      const poot = deel(new THREE.CylinderGeometry(0.06, 0.06, 1.1, 8), zwart, k * 1.0, 0.65, z)
-      poot.rotation.z = k * 0.25
+      const poot = deel(new THREE.CylinderGeometry(0.06, 0.06, 1.15, 8), zwart, k * 0.98, 0.66, z)
+      poot.rotation.z = k * 0.42
     }
   }
   // De hoofdrotor: mast, naaf, vijf bladen.
@@ -206,8 +314,8 @@ export function bouwHelikopter(
   rotor.add(schijf)
   // Navigatielichten: rood links, groen rechts, een witte flitser op de staart, een rode bovenop.
   const nav = (kleur: string, x: number, y: number, z: number) => deel(new THREE.SphereGeometry(0.09, 8, 6), new THREE.MeshBasicMaterial({ color: kleur, toneMapped: false }), x, y, z)
-  nav('#ff2020', -1.36, 1.7, 0.3)
-  nav('#20ff60', 1.36, 1.7, 0.3)
+  nav('#ff2020', -BR - 0.02, 1.7, 0.3)
+  nav('#20ff60', BR + 0.02, 1.7, 0.3)
   const flits = nav('#ffffff', 0, 3.85, -8.3)
   const baken = nav('#ff2020', 0, 3.3, -1.6)
   // Een landingslicht onder de neus.
@@ -232,6 +340,18 @@ export function bouwHelikopter(
     return { t, c }
   }
   const reclames = [reclameVlak(0.47, Math.PI / 2), reclameVlak(-0.47, -Math.PI / 2)]
+  // Het registratienummer op de vin.
+  const reg = tex(512, 128, (g) => {
+    g.fillStyle = thema.tekstOpPrimair
+    g.font = '900 86px Inter, system-ui, sans-serif'
+    g.textAlign = 'center'
+    g.textBaseline = 'middle'
+    g.fillText(`OO-${thema.kort.toUpperCase().replace(/[^A-Z0-9]/g, '').padEnd(3, 'X').slice(0, 3)}`, 256, 68)
+  }).t
+  for (const k of [-1, 1]) {
+    const m = deel(new THREE.PlaneGeometry(1.0, 0.25), new THREE.MeshBasicMaterial({ map: reg, transparent: true }), k * 0.115, 2.85, -7.75)
+    m.rotation.y = k * Math.PI / 2
+  }
   // De sponsorlogo's naast elkaar op de staart (zodra ze geladen zijn).
   const sponsors = thema.reclames.slice(0, 3)
   if (sponsors.length) {
@@ -296,10 +416,69 @@ export function bouwHelikopter(
     deurLogo.t.needsUpdate = true
   })
   for (const k of [-1, 1]) {
-    const l = deel(new THREE.CircleGeometry(0.42, 32), new THREE.MeshBasicMaterial({ map: deurLogo.t, transparent: true }), k * 1.36, 1.45, -0.9)
+    const l = deel(new THREE.CircleGeometry(0.36, 32), new THREE.MeshBasicMaterial({ map: deurLogo.t, transparent: true }), k * (BR + 0.01), 1.42, -0.55)
     l.rotation.y = k * Math.PI / 2
   }
   if (!opt.licht) heli.traverse((o) => ((o as THREE.Mesh).isMesh ? (o.castShadow = true) : null))
+
+  // ---------- het infobord aan de brug: hoe mag je vliegen? ----------
+  const bordC = document.createElement('canvas')
+  bordC.width = 768
+  bordC.height = 512
+  const bordTex = new THREE.CanvasTexture(bordC)
+  bordTex.colorSpace = THREE.SRGBColorSpace
+  const tekenBord = (gevonden: number, totaal: number, sleutel: boolean) => {
+    const g = bordC.getContext('2d')!
+    g.fillStyle = '#0b1220'
+    g.fillRect(0, 0, 768, 512)
+    g.fillStyle = thema.primair
+    g.fillRect(0, 0, 768, 92)
+    g.fillStyle = thema.tekstOpPrimair
+    g.font = '900 50px Inter, system-ui, sans-serif'
+    g.textBaseline = 'middle'
+    g.fillText('🚁 HELIPORT', 30, 48)
+    g.font = '700 26px Inter, system-ui, sans-serif'
+    g.textAlign = 'right'
+    g.fillText('vlieg met de clubhelikopter', 740, 50)
+    g.textAlign = 'left'
+    const stap = (y: number, nr: string, tekst: string, sub: string, klaar: boolean) => {
+      g.fillStyle = klaar ? '#22c55e' : '#1f2937'
+      g.beginPath()
+      g.arc(62, y, 30, 0, Math.PI * 2)
+      g.fill()
+      g.fillStyle = '#fff'
+      g.font = '900 32px Inter, system-ui, sans-serif'
+      g.textAlign = 'center'
+      g.fillText(klaar ? '✓' : nr, 62, y + 2)
+      g.textAlign = 'left'
+      g.fillStyle = klaar ? '#86efac' : '#f8fafc'
+      g.font = '800 30px Inter, system-ui, sans-serif'
+      g.fillText(tekst, 112, y - 14)
+      g.fillStyle = '#94a3b8'
+      g.font = '600 22px Inter, system-ui, sans-serif'
+      g.fillText(sub, 112, y + 20)
+    }
+    stap(160, '1', `Vind alle ${totaal} gouden ballen`, `in en rond het stadion — jij hebt er ${gevonden}/${totaal}`, gevonden >= totaal)
+    stap(275, '2', 'Open de kluis in de kelder (-1)', 'neem de lift naar beneden; de sleutel ligt erin', sleutel)
+    stap(390, '3', 'Stap in bij de deur van de helikopter', sleutel ? 'je hebt de sleutel: je mag vliegen!' : 'met de sleutel start je de rotor', false)
+    g.fillStyle = '#facc15'
+    g.font = '700 21px Inter, system-ui, sans-serif'
+    g.fillText('Vliegen: joystick vooruit/draaien · ⬆️⬇️ stijgen/dalen · 🛬 landen', 30, 478)
+    bordTex.needsUpdate = true
+  }
+  tekenBord(0, 12, false)
+  {
+    const bx = brug.x0 + 1.4
+    const bz = -2.6
+    const bord = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 1.6), new THREE.MeshBasicMaterial({ map: bordTex, toneMapped: false }))
+    bord.position.set(bx, Y + 1.55, bz)
+    bord.rotation.y = -Math.PI / 2 + 0.35
+    platform.add(bord)
+    const kader = deelP(rondeDoos(0.08, 1.75, 2.55, 0.03), new THREE.MeshStandardMaterial({ color: '#111827', metalness: 0.6, roughness: 0.4 }), bx + 0.06, Y + 1.55, bz)
+    kader.rotation.y = 0.35
+    deelP(new THREE.CylinderGeometry(0.05, 0.05, 1.6, 8).translate(0, -0.8, 0), staal, bx + 0.1, Y + 0.75, bz)
+    halo('#93c5fd', bx - 0.3, Y + 1.55, bz, 3.2, 0.25)
+  }
 
   // ---------- de vlucht ----------
   const park = { x: px, z: pz + 0.5, yaw: Math.PI / 2 } // neus naar het oosten (weg van het stadion)
@@ -454,6 +633,7 @@ export function bouwHelikopter(
       return u
     },
     info: () => ({ fase, hoogte: Math.max(0, pos.y - Y + 15.75), snelheid: snelheid * 3.6 }),
+    zetVoortgang: (gevonden, totaal, sleutel) => tekenBord(gevonden, totaal, sleutel),
     update(seconden, dt) {
       // De rotor draait mee met het toerental; op toeren wordt het een waas.
       rotor.rotation.y += toeren * dt * 38
@@ -462,7 +642,8 @@ export function bouwHelikopter(
       for (const b of bladen) b.visible = toeren < 0.85
       flits.visible = Math.floor(seconden * 1.3) % 2 === 0 && seconden % 0.77 < 0.12
       baken.visible = Math.floor(seconden * 1.6) % 2 === 0
-      randLichten.forEach((l, i) => (l.visible = (Math.floor(seconden * 3) + i) % 6 < 3))
+      // Het zwaailicht: een korte witte flits om de anderhalve seconde.
+      ;(zwaai.material as THREE.SpriteMaterial).opacity = seconden % 1.5 < 0.12 ? 1 : 0
       windzak.rotation.y = Math.sin(seconden * 0.4) * 0.5 + 0.6
       windzak.rotation.z = Math.sin(seconden * 2.1) * 0.06
       if (fase === 'uitstappen') {

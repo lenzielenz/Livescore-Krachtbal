@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 
 import type { StadionThema } from '@/lib/virtueel'
-import { BAAN_LENGTE, BALLEN, LOSLAAT_HOOGTE, balVan, vliegAfstand, type BalId, type SuperstarStand } from '@/lib/virtueel-superstar'
+import { BAAN_LENGTE, BALLEN, LOSLAAT_HOOGTE, balStraal, balVan, vliegAfstand, type BalId, type SuperstarStand } from '@/lib/virtueel-superstar'
 import { krachtbalGeometrie, krachtbalTextuur } from './krachtbal'
 import { rondeDoos } from './rond'
 
@@ -158,7 +158,8 @@ export function bouwSuperstar(
   // Een fluwelen loper met vijf kuiltjes.
   deel(rondeDoos(2.4, 0.02, 0.6, 0.01), new THREE.MeshStandardMaterial({ color: '#111827', roughness: 0.95 }), tafelX, 0.97, tafelZ)
   obstakels.push({ x0: tafelX - 1.4, x1: tafelX + 1.4, z0: tafelZ - 0.55, z1: tafelZ + 0.55 })
-  const straal = (id: BalId) => 0.1 + (balVan(id).gram / 4000) * 0.022
+  // Echte maten uit het reglement: van 24 cm (800 g) tot bijna 35 cm (4 kg).
+  const straal = balStraal
   const balMat = new Map<BalId, THREE.MeshStandardMaterial>()
   const balGeo = new Map<BalId, THREE.BufferGeometry>()
   for (const b of BALLEN) {

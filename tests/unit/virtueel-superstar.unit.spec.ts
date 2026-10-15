@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { BALLEN, BESTE_HOEK, meterTempo, superstarStand, vliegAfstand, werpAfstand } from '@/lib/virtueel-superstar'
+import { BALLEN, BESTE_HOEK, balStraal, meterTempo, superstarStand, vliegAfstand, werpAfstand } from '@/lib/virtueel-superstar'
 
 describe('Superstar: werpafstand', () => {
   it('een perfecte worp haalt precies het record van elke bal', () => {
@@ -49,5 +49,15 @@ describe('Superstar: klassement', () => {
     expect(s.per['2kg']).toHaveLength(1)
     expect(s.mijn).toEqual({ '3kg': 24, '2kg': 18 })
     expect(s.totaal).toBe(4)
+  })
+
+  it('de ballen hebben de maten uit het reglement, en groeien met het gewicht', () => {
+    const grenzen: Record<string, [number, number]> = { '800g': [23, 25], '1kg': [27, 30], '2kg': [28, 32], '3kg': [33, 35], '4kg': [33, 36.5] }
+    for (const b of BALLEN) {
+      expect(b.diameterCm).toBeGreaterThanOrEqual(grenzen[b.id][0])
+      expect(b.diameterCm).toBeLessThanOrEqual(grenzen[b.id][1])
+    }
+    for (let i = 1; i < BALLEN.length; i++) expect(balStraal(BALLEN[i].id)).toBeGreaterThan(balStraal(BALLEN[i - 1].id))
+    expect(balStraal('4kg')).toBeCloseTo(0.174, 3)
   })
 })

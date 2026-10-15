@@ -70,3 +70,45 @@ export function aanwezig(club: string, nu = Date.now()): Aanwezige[] {
 export function vergeetAlles(): void {
   clubs.clear()
 }
+
+// ---------- wie komt er binnen, wie vertrekt (voor de meldingen bij de kijker) ----------
+
+/** Pas na zoveel ms weg melden we dat iemand vertrok (een herlaadbeurt of een haperende gsm telt niet). */
+export const WEG_NA = 15000
+
+export type AanwezigGeheugen = { begonnen: boolean; gezien: Map<string, { naam: string; wegSinds: number | null }> }
+export const nieuwGeheugen = (): AanwezigGeheugen => ({ begonnen: false, gezien: new Map() })
+
+/**
+ * Vergelijk de nieuwe lijst met wat je al zag. `alHier` = wie er al was toen je zelf binnenkwam
+ * (enkel de eerste keer), `binnen` = wie er nu bij komt, `weg` = wie al een tijd weg is.
+ */
+export function volgAanwezigen(g: AanwezigGeheugen, lijst: Aanwezige[], ik: string | null, nu = Date.now()): { alHier: string[]; binnen: string[]; weg: string[] } {
+  const anderen = lijst.filter((a) => a.id !== ik)
+  const alHier: string[] = []
+  const binnen: string[] = []
+  const weg: string[] = []
+  for (const a of anderen) {
+    const oud = g.gezien.get(a.id)
+    if (!oud) (g.begonnen ? binnen : alHier).push(a.naam)
+    g.gezien.set(a.id, { naam: a.naam, wegSinds: null })
+  }
+  const ids = new Set(anderen.map((a) => a.id))
+  for (const [id, o] of g.gezien) {
+    if (ids.has(id)) continue
+    if (o.wegSinds == null) o.wegSinds = nu
+    else if (nu - o.wegSinds > WEG_NA) {
+      weg.push(o.naam)
+      g.gezien.delete(id)
+    }
+  }
+  g.begonnen = true
+  return { alHier, binnen, weg }
+}
+
+/** "An", "An en Bo", "An, Bo en Cas" (en bij veel: "An, Bo, Cas en 3 anderen"). */
+export function namen(lijst: string[]): string {
+  if (lijst.length <= 1) return lijst[0] ?? ''
+  if (lijst.length > 4) return `${lijst.slice(0, 3).join(', ')} en ${lijst.length - 3} anderen`
+  return `${lijst.slice(0, -1).join(', ')} en ${lijst[lijst.length - 1]}`
+}

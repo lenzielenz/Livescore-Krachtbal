@@ -3,13 +3,19 @@
 // de server zelf uit (uit kracht en hoek), met echte ballistiek: elke bal heeft een eigen
 // topsnelheid, zo afgesteld dat een perfecte worp precies het record haalt.
 
+// De diameter (cm) is het midden van wat het reglement toelaat (KVKBF, RCVK geldig vanaf
+// 2026-2027, gemeten op de platte vlakken): 800 g 23–25 cm, 1 kg 27–30 cm, 1,5–2 kg 28–32 cm,
+// 2,5–3 kg 33–35 cm, 4 kg 33–36,5 cm.
 export const BALLEN = [
-  { id: '800g', gram: 800, label: '800 g', kleur: '#f97316', naam: 'oranje', record: 17 },
-  { id: '1kg', gram: 1000, label: '1 kg', kleur: '#facc15', naam: 'geel', record: 19 },
-  { id: '2kg', gram: 2000, label: '2 kg', kleur: '#dc2626', naam: 'rood', record: 22 },
-  { id: '3kg', gram: 3000, label: '3 kg', kleur: '#2563eb', naam: 'blauw', record: 27 },
-  { id: '4kg', gram: 4000, label: '4 kg', kleur: '#f8fafc', naam: 'wit', record: 26 },
+  { id: '800g', gram: 800, label: '800 g', kleur: '#f97316', naam: 'oranje', record: 17, diameterCm: 24 },
+  { id: '1kg', gram: 1000, label: '1 kg', kleur: '#facc15', naam: 'geel', record: 19, diameterCm: 28.5 },
+  { id: '2kg', gram: 2000, label: '2 kg', kleur: '#dc2626', naam: 'rood', record: 22, diameterCm: 30 },
+  { id: '3kg', gram: 3000, label: '3 kg', kleur: '#2563eb', naam: 'blauw', record: 27, diameterCm: 34 },
+  { id: '4kg', gram: 4000, label: '4 kg', kleur: '#f8fafc', naam: 'wit', record: 26, diameterCm: 34.75 },
 ] as const
+
+/** De straal van een bal in meter (voor de 3D-bal). */
+export const balStraal = (id: BalId) => balVan(id).diameterCm / 200
 
 export type BalId = (typeof BALLEN)[number]['id']
 export const BAL_IDS = BALLEN.map((b) => b.id) as BalId[]

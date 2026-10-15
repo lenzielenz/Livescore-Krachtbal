@@ -42,6 +42,8 @@ Bepaalt mee de categorie-instelling bij matchregistratie.
 **Heren**: U8/U10: 800 g · U12: 1 kg · U14: 2 kg · U16/U18: 3 kg · U20/senior: 4 kg
 **Dames**: U8/U10: 800 g · U12/U14/U16: 1 kg · U18/U20/senior: 2 kg
 
+**Diameter** (gemeten op de platte vlakken; RCVK geldig vanaf 2026-2027): 800 g: 23–25 cm · 1 kg: 27–30 cm · 1,5 en 2 kg: 28–32 cm · 2,5 en 3 kg: 33–35 cm · 4 kg: 33–36,5 cm. Het virtuele stadion tekent de ballen op het midden van die marges (`lib/virtueel-superstar.ts`).
+
 ---
 
 ## 4. Ploegen

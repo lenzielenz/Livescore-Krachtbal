@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest'
 
-import { aanwezig, leesKledij, leesPlek, meld, vergeetAlles, VERGEET_NA, vertrek } from '@/lib/virtueel-aanwezig'
+import { aanwezig, leesKledij, leesPlek, meld, namen, nieuwGeheugen, vergeetAlles, VERGEET_NA, vertrek, volgAanwezigen, WEG_NA } from '@/lib/virtueel-aanwezig'
 
 const plek = { x: 1, y: 0, z: 2, yaw: 0.5, verdiep: 0, vliegt: false }
 
@@ -37,5 +37,32 @@ describe('samen in het stadion', () => {
 
   it('leest enkel bestaande kledij van de juiste soort', () => {
     expect(leesKledij({ pet: 'pet-kroon', shirt: 'pet-club', schoenen: 'nep' })).toEqual({ pet: 'pet-kroon' })
+  })
+})
+
+describe('meldingen: wie komt binnen, wie vertrekt', () => {
+  const a = (id: string, naam: string) => ({ ...plek, id, naam, outfit: {}, t: 0 })
+
+  it('meldt eerst wie er al is, daarna wie erbij komt (en jezelf nooit)', () => {
+    const g = nieuwGeheugen()
+    expect(volgAanwezigen(g, [a('ik', 'Ik'), a('b', 'Bo')], 'ik', 0)).toEqual({ alHier: ['Bo'], binnen: [], weg: [] })
+    expect(volgAanwezigen(g, [a('ik', 'Ik'), a('b', 'Bo'), a('c', 'Cas')], 'ik', 100)).toEqual({ alHier: [], binnen: ['Cas'], weg: [] })
+  })
+
+  it('meldt een vertrek pas als iemand een tijd weg is; wie snel terug is, telt niet', () => {
+    const g = nieuwGeheugen()
+    volgAanwezigen(g, [a('b', 'Bo')], 'ik', 0)
+    expect(volgAanwezigen(g, [], 'ik', 1000).weg).toEqual([])
+    expect(volgAanwezigen(g, [a('b', 'Bo')], 'ik', 5000)).toEqual({ alHier: [], binnen: [], weg: [] })
+    volgAanwezigen(g, [], 'ik', 6000)
+    expect(volgAanwezigen(g, [], 'ik', 6000 + WEG_NA + 1).weg).toEqual(['Bo'])
+    expect(volgAanwezigen(g, [a('b', 'Bo')], 'ik', 40000).binnen).toEqual(['Bo'])
+  })
+
+  it('zet namen leesbaar achter elkaar', () => {
+    expect(namen(['An'])).toBe('An')
+    expect(namen(['An', 'Bo'])).toBe('An en Bo')
+    expect(namen(['An', 'Bo', 'Cas'])).toBe('An, Bo en Cas')
+    expect(namen(['A', 'B', 'C', 'D', 'E', 'F'])).toBe('A, B, C en 3 anderen')
   })
 })

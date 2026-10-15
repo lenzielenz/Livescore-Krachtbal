@@ -19,7 +19,17 @@ export type SpoorSoort = (typeof SPOOR_SOORTEN)[number]
 export const EEND_KLEUREN = ['#facc15', '#f97316', '#ec4899', '#22c55e', '#3b82f6', '#ffffff'] as const
 export const VERF_KLEUREN = ['#ef4444', '#f97316', '#facc15', '#22c55e', '#06b6d4', '#3b82f6', '#a855f7', '#ec4899'] as const
 export const ZETELS = 60
-export const GOUDEN_BALLEN = 12
+export const GOUDEN_BALLEN = 25
+
+/** De goudradar: hoe warm je bent, naar de afstand (m) tot de dichtste bal op je verdiep. */
+export type Warmte = 'heet' | 'warm' | 'lauw' | 'koud' | 'niets'
+export function warmteVoor(afstand: number | null): Warmte {
+  if (afstand == null) return 'niets'
+  if (afstand < 5) return 'heet'
+  if (afstand < 12) return 'warm'
+  if (afstand < 25) return 'lauw'
+  return 'koud'
+}
 export const BORDEN = ['kleedkamer', 'kelder'] as const
 export type BordId = (typeof BORDEN)[number]
 
