@@ -4,6 +4,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { opVloer, type Rechthoek, type StadionThema } from '@/lib/virtueel'
 import { VERDIEPEN } from '@/lib/virtueel-lift'
 import { bouwBundels, bouwDamp, bouwMist, bouwStof, samen } from './atmosfeer'
+import { bouwPopcornkraam, type Popcornkraam } from './popcornkraam'
 import { canvasTex, rnd, rondLogo } from './stadion'
 
 // Verdiep -1: onder de grond, dus niet gebonden aan het stadion erboven — de ruimte is zo groot als
@@ -531,6 +532,7 @@ export function bouwKelder(scene: THREE.Scene, opt: { thema: StadionThema; licht
   }
 
   // ---------- 🎬 cinema ----------
+  let popcornkraam: Popcornkraam | null = null
   const C = R.cinema
   const doekB = 14.4
   const doek = { x: (C.x0 + C.x1) / 2, y: Y + 0.6 + (doekB * 9) / 32, z: C.z0 + 0.08, b: doekB, h: (doekB * 9) / 16, ry: 0 }
@@ -611,7 +613,8 @@ export function bouwKelder(scene: THREE.Scene, opt: { thema: StadionThema; licht
     plekken.forEach((m, i) => zetels.setMatrixAt(i, m))
     add(zetels)
     // Popcornkraam bij de ingang.
-    doos(2.6, 1.05, 0.8, C.x1 - 3, 0.52, C.z1 - 2.2, new THREE.MeshLambertMaterial({ color: '#b91c1c', emissive: '#450a0a', emissiveIntensity: 0.5 }), true)
+    popcornkraam = bouwPopcornkraam(groep, { x: C.x1 - 3, z: C.z1 - 2.2, Y, primair: thema.primair })
+    meubels.push(...popcornkraam.obstakels)
     const pop = tekst(512, 128, (g) => {
       g.fillStyle = '#facc15'
       g.font = '900 86px Inter, system-ui, sans-serif'
@@ -622,11 +625,13 @@ export function bouwKelder(scene: THREE.Scene, opt: { thema: StadionThema; licht
       g.fillText('🍿 POPCORN', 256, 68, 500)
     })
     const pb = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 0.6), new THREE.MeshBasicMaterial({ map: pop, transparent: true, toneMapped: false }))
-    pb.position.set(C.x1 - 3, Y + 2.4, C.z1 - 2.62)
+    // Bovenop de voorrand van de luifel.
+    pb.position.set(C.x1 - 3, Y + 3.15, C.z1 - 2.85)
     pb.rotation.y = Math.PI
     add(pb)
     plas(C.x1 - 3, C.z1 - 3.2, 2, '#facc15', 0.25)
-    goud.push({ x: C.x1 - 3.9, y: Y + 1.3, z: C.z1 - 2.2 })
+    // Een gouden bal naast de kraam (niet in de machine).
+    goud.push({ x: C.x1 - 3 - 2.1, y: Y + 0.6, z: C.z1 - 2.6 })
   }
 
   // ---------- 🎮 gaming ----------
@@ -1522,7 +1527,7 @@ export function bouwKelder(scene: THREE.Scene, opt: { thema: StadionThema; licht
     plekken: {
       bad: { ...bad, y: Y - 0.15 },
       popcorn: { x: R.cinema.x1 - 3, z: R.cinema.z1 - 2.2, y: Y + 1.05 },
-      popcornBord: { x: R.cinema.x1 - 3, y: Y + 3.6, z: R.cinema.z1 - 0.06, ry: Math.PI, b: 3.2, h: 1.2 },
+      popcornBord: { x: R.cinema.x1 - 3, y: Y + 4.6, z: R.cinema.z1 - 0.06, ry: Math.PI, b: 3.2, h: 1.2 },
       loopbanden,
       loopbandBord: { x: R.fitness.x0 + 7, y: Y + 2.7, z: R.fitness.z1 - 0.06, ry: Math.PI, b: 4, h: 2 },
       zetels: zetelPlekken,
@@ -1547,6 +1552,7 @@ export function bouwKelder(scene: THREE.Scene, opt: { thema: StadionThema; licht
     update(seconden, speler) {
       if (!groep.visible) return
       lucht.update(seconden)
+      popcornkraam?.update(seconden)
       // Het water kleurt zacht naar de verf van de bezoekers.
       waterMat.color.lerp(waterDoel, 0.03)
       // De dansvloer: golven van kleur, en feller onder je voeten.

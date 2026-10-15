@@ -22,7 +22,7 @@ import { canvasTex, rondLogo } from './stadion'
 export type Gokkantoor = {
   zetStats: (s: WedkantoorStats) => void
   /** Wat kan je hier doen? */
-  nabij: (x: number, z: number) => 'rad' | 'stats' | null
+  nabij: (x: number, z: number) => 'rad' | 'stats' | 'kiosk' | null
   /** Draai het rad (gratis, enkel voor de fun). Geeft de vermenigvuldiger, of null als het al draait. */
   draai: () => Promise<number> | null
   update: (seconden: number, dt: number) => void
@@ -745,6 +745,9 @@ export function bouwGokkantoor(
       g.font = '700 20px Inter, sans-serif'
       g.fillText(['Wedstrijden', 'Klassement', 'Bonusrad', 'Mijn boosters'][k], 128, 162 + k * 64)
     }
+    g.fillStyle = '#fbbf24'
+    g.font = '800 17px Inter, sans-serif'
+    g.fillText('👆 TIK OM TE WEDDEN', 128, 400)
   })
   for (const k of W.kiosken) {
     const zuil = new THREE.Group()
@@ -800,6 +803,8 @@ export function bouwGokkantoor(
     zetStats,
     nabij(x, z) {
       if (x < W.x0 || x > W.x1 || z < W.z0 || z > W.z1) return null
+      // Vlak voor een wedkiosk: daar zet je een echte pronostiek.
+      if (W.kiosken.some((k) => Math.hypot(x - k.x, z - k.z) < 1.5)) return 'kiosk'
       if (x > R.x - 4.2 && Math.abs(z - R.z) < 2.6) return 'rad'
       if (z < W.z0 + 4) return 'stats'
       return null

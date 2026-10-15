@@ -7,11 +7,15 @@ import type { StadionThema } from '@/lib/virtueel'
 // eigen laag (AVATAR_LAAG) die de gewone camera niet tekent, maar de camera van de spiegel wel.
 
 export const AVATAR_LAAG = 1
+/** Wat je zelf vasthoudt, in eerste persoon: enkel de gewone camera tekent het, niet de spiegels. */
+export const EIGEN_LAAG = 2
 
 export type Avatar = {
   /** Zet de figuur op jouw plek: voeten op `vloerY`, kijkend in `yaw`; `tempo` (m/s) voor de pas. */
   update: (x: number, vloerY: number, z: number, yaw: number, pitch: number, tempo: number, seconden: number) => void
   zichtbaar: (aan: boolean) => void
+  /** Iets in je linkerhand (bv. een doosje popcorn), of null om niets vast te houden. */
+  houdVast: (iets: THREE.Object3D | null) => void
 }
 
 export function bouwAvatar(scene: THREE.Scene, thema: StadionThema): Avatar {
@@ -105,6 +109,12 @@ export function bouwAvatar(scene: THREE.Scene, thema: StadionThema): Avatar {
   groep.visible = false
   scene.add(groep)
 
+  // Wat je vasthoudt, zit in de linkerhand (de arm buigt dan naar voren, zoals je een doosje draagt).
+  const hand = new THREE.Group()
+  hand.position.set(0, -0.6, 0.02)
+  armen[0].add(hand)
+  let vast: THREE.Object3D | null = null
+
   let fase = 0
   return {
     update(x, vloerY, z, yaw, pitch, tempo, seconden) {
@@ -115,7 +125,9 @@ export function bouwAvatar(scene: THREE.Scene, thema: StadionThema): Avatar {
       benen[0].rotation.x = zwaai
       benen[1].rotation.x = -zwaai
       // Stilstaan: een klein zwaaitje naar jezelf in de spiegel; stappen: de armen gaan mee.
-      armen[0].rotation.x = -zwaai * 0.8
+      armen[0].rotation.x = vast ? -1.15 + zwaai * 0.08 : -zwaai * 0.8
+      armen[0].rotation.z = vast ? -0.25 : 0
+      hand.rotation.x = vast ? 1.15 : 0
       armen[1].rotation.x = tempo < 0.2 ? -2.6 : zwaai * 0.8
       armen[1].rotation.z = tempo < 0.2 ? 0.35 + Math.sin(seconden * 6) * 0.35 : 0
       hoofd.rotation.x = -pitch * 0.6
@@ -123,6 +135,18 @@ export function bouwAvatar(scene: THREE.Scene, thema: StadionThema): Avatar {
     },
     zichtbaar(aan) {
       groep.visible = aan
+    },
+    houdVast(iets) {
+      if (vast) hand.remove(vast)
+      vast = iets
+      if (iets) {
+        iets.position.set(0, -0.06, 0.06)
+        iets.traverse((o) => {
+          o.layers.set(AVATAR_LAAG)
+          o.frustumCulled = false
+        })
+        hand.add(iets)
+      }
     },
   }
 }

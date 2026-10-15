@@ -462,3 +462,75 @@
 .vk-booth-eigen img { width: 40px; height: 50px; object-fit: cover; border: 3px solid #fbfaf6; border-bottom-width: 9px; border-radius: 2px; }
 .vk-booth-eigen button { position: absolute; top: -8px; right: -8px; width: 22px; height: 22px; border-radius: 50%; border: 0; background: #ef4444; color: #fff; font-size: 0.7rem; cursor: pointer; }
 @media (prefers-reduced-motion: reduce) { .vk-booth-tel, .vk-booth-flits { animation: none; } }
+
+/* De wedkiosk in het wedkantoor: een échte pronostiek zetten, met een geprint wedticket. */
+.vk-kiosk { position: fixed; inset: 0; z-index: 1100; height: 100dvh; background: radial-gradient(ellipse at top, #102a5c, #050b18 70%); }
+.vk-kiosk-inhoud { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 12px max(12px, env(safe-area-inset-right)) max(14px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)); }
+.vk-kiosk-melding { margin: 0; padding: 8px 12px; border-radius: 10px; background: rgba(251, 191, 36, 0.12); color: #fde68a; font-size: 0.85rem; text-align: center; }
+.vk-kiosk-melding a { color: #fbbf24; font-weight: 800; }
+.vk-kiosk-lijst { list-style: none; margin: 0; padding: 0; width: min(640px, 100%); display: grid; gap: 8px; }
+.vk-kiosk-rij {
+  width: 100%; display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; cursor: pointer;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.04)); border: 1px solid rgba(255, 255, 255, 0.1); color: #e2e8f0; font: inherit; text-align: left;
+}
+.vk-kiosk-rij.eigen { border-color: rgba(251, 191, 36, 0.6); box-shadow: inset 3px 0 0 #fbbf24; }
+.vk-kiosk-rij:disabled { cursor: default; opacity: 0.72; }
+.vk-kiosk-rij:not(:disabled):active { transform: scale(0.99); }
+.vk-kiosk-rij .wie { display: flex; flex-direction: column; min-width: 0; }
+.vk-kiosk-rij .wie b { font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.vk-kiosk-rij .wat { display: flex; flex-direction: column; align-items: flex-end; font-size: 0.72rem; color: #94a3b8; }
+.vk-kiosk-rij .reeks { color: #64748b; }
+.vk-kiosk-rij em { font-style: normal; font-size: 0.75rem; font-weight: 800; color: #94a3b8; white-space: nowrap; }
+.vk-kiosk-rij em.zet { padding: 6px 10px; border-radius: 999px; background: #fbbf24; color: #1c1300; }
+.vk-kiosk-rij em.gezet { color: #4ade80; }
+@media (max-width: 420px) { .vk-kiosk-rij { grid-template-columns: 1fr auto; } .vk-kiosk-rij .wat { display: none; } }
+.vk-kiosk-invoer { width: min(560px, 100%); display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.vk-kiosk-terug { align-self: flex-start; border: 0; background: none; color: #93c5fd; font: inherit; font-weight: 700; cursor: pointer; padding: 4px 0; }
+.vk-kiosk-wanneer { margin: 0; color: #94a3b8; font-size: 0.85rem; }
+.vk-kiosk-tellers { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; }
+.vk-kiosk-tegen { font-size: 2rem; font-weight: 900; color: #475569; }
+.vk-kiosk-teller { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 12px 8px; border-radius: 16px; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.1); }
+.vk-kiosk-teller > span { max-width: 100%; font-weight: 800; font-size: 0.85rem; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.vk-kiosk-teller > div:first-of-type { display: flex; align-items: center; gap: 10px; }
+.vk-kiosk-teller b { min-width: 2.4ch; text-align: center; font-size: 2.6rem; font-weight: 900; color: #fbbf24; font-variant-numeric: tabular-nums; text-shadow: 0 0 20px rgba(251, 191, 36, 0.4); }
+.vk-kiosk-teller button { width: 44px; height: 44px; border-radius: 50%; border: 0; background: rgba(255, 255, 255, 0.12); color: #fff; font-size: 1.4rem; font-weight: 900; cursor: pointer; }
+.vk-kiosk-teller button:disabled { opacity: 0.35; }
+.vk-kiosk-snel { display: flex; gap: 6px; }
+.vk-kiosk-snel button { width: auto; height: 30px; padding: 0 12px; border-radius: 999px; font-size: 0.8rem; }
+.vk-kiosk-boosters { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px; font-size: 0.8rem; color: #cbd5e1; }
+.vk-kiosk-boosters button { height: 32px; padding: 0 12px; border-radius: 999px; border: 1px solid rgba(251, 191, 36, 0.4); background: transparent; color: #fde68a; font: inherit; font-weight: 800; cursor: pointer; }
+.vk-kiosk-boosters button.aan { background: #fbbf24; color: #1c1300; }
+.vk-kiosk-zet { margin-left: 0; height: 52px; padding: 0 30px; font-size: 1.1rem; }
+.vk-kiosk .vk-graf-tip { text-align: center; color: #94a3b8; max-width: 520px; }
+.vk-kiosk-ticketvak { display: flex; flex-direction: column; align-items: center; gap: 16px; padding-top: 6px; }
+.vk-kiosk-ticket {
+  position: relative; width: min(280px, 82vw); display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 18px 16px 22px;
+  background: #fffdf5; color: #1f2937; font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace; text-align: center;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.5); animation: vk-ticket 0.9s cubic-bezier(0.2, 0.8, 0.3, 1);
+  -webkit-mask: radial-gradient(circle 6px at 50% 100%, #0000 98%, #000) 0 0 / 16px 100% repeat-x;
+  mask: radial-gradient(circle 6px at 50% 100%, #0000 98%, #000) 0 0 / 16px 100% repeat-x;
+}
+.vk-kiosk-ticket .kop { font-size: 0.7rem; letter-spacing: 0.12em; font-weight: 800; color: #b45309; }
+.vk-kiosk-ticket .wedstrijd { font-weight: 700; font-size: 0.9rem; }
+.vk-kiosk-ticket b { font-size: 2.2rem; font-weight: 900; }
+.vk-kiosk-ticket .klein { font-size: 0.7rem; color: #6b7280; }
+.vk-kiosk-ticket .boost { font-weight: 800; color: #b91c1c; }
+.vk-kiosk-ticket .streep { width: 100%; height: 26px; margin: 6px 0; background: repeating-linear-gradient(90deg, #111 0 2px, transparent 2px 4px, #111 4px 5px, transparent 5px 8px); }
+@keyframes vk-ticket { from { transform: translateY(-60%) scaleY(0.2); opacity: 0; } 60% { opacity: 1; } }
+.vk-kiosk-acties { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.vk-kiosk-acties .vk-graf-plaats { margin-left: 0; }
+.vk-kiosk-link { display: inline-flex; align-items: center; text-decoration: none; }
+@media (prefers-reduced-motion: reduce) { .vk-kiosk-ticket { animation: none; } }
+.vk-popcornvast {
+  position: absolute; left: max(10px, env(safe-area-inset-left)); top: 92px; z-index: 3; padding: 5px 11px; border-radius: 999px; cursor: pointer; font: inherit;
+  background: rgba(6, 10, 18, 0.78); border: 1px solid rgba(248, 113, 113, 0.55); color: #fecaca; font-weight: 800; font-size: 0.78rem;
+}
+/* Het aftellen voor de vuurwerkshow: een reuzecijfer dat telkens inslaat. */
+.vk-aftel { position: absolute; inset: 0; z-index: 8; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; }
+.vk-aftel b {
+  font-size: min(42vh, 260px); line-height: 1; font-weight: 900; color: #fff; font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 30px #ff2a2a, 0 0 80px #ff2a2a, 0 6px 0 rgba(0, 0, 0, 0.4); animation: vk-aftel 1s ease-out both;
+}
+.vk-aftel span { margin-top: 4px; font-size: 1rem; font-weight: 900; letter-spacing: 0.2em; text-transform: uppercase; color: #fecaca; text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8); }
+@keyframes vk-aftel { 0% { transform: scale(1.9); opacity: 0.35; } 18% { transform: scale(1); opacity: 1; } 100% { transform: scale(0.92); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .vk-aftel b { animation: none; } }
