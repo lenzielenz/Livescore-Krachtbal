@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 
 import type { Rechthoek, StadionThema } from '@/lib/virtueel'
+import { BALLEN, balStraal } from '@/lib/virtueel-superstar'
 import { krachtbalGeometrie, krachtbalTextuur } from './krachtbal'
 import { rondeDoos } from './rond'
 
@@ -360,21 +361,23 @@ export function bouwOefencomplex(
     wiel.position.set(dx, 0.17, dz)
     kar.add(wiel)
   }
-  const balGeo = krachtbalGeometrie(0.12, 0.4)
-  const kleuren = ['#f97316', '#facc15', '#dc2626', '#2563eb', '#f8fafc']
-  for (let i = 0; i < 9; i++) {
-    const b = new THREE.Mesh(balGeo, new THREE.MeshStandardMaterial({ map: krachtbalTextuur(kleuren[i % 5]), vertexColors: true, roughness: 0.55 }))
-    b.position.set(-0.35 + (i % 3) * 0.35, 0.92 + Math.floor(i / 3) * 0.06, -0.2 + Math.floor(i / 3) * 0.2)
+  // De ballen hebben de maten uit het reglement (zie lib/virtueel-superstar.ts): in de kar de
+  // witte ballen van 4 kg van de seniors, op het veld een paar ballen van elk gewicht.
+  const balMat = new Map(BALLEN.map((x) => [x.id, new THREE.MeshStandardMaterial({ map: krachtbalTextuur(x.kleur, x.id === '4kg' ? '#64748b' : '#1c1206'), vertexColors: true, roughness: 0.55 })]))
+  const balGeo = new Map(BALLEN.map((x) => [x.id, krachtbalGeometrie(balStraal(x.id), 0.4)]))
+  const r4 = balStraal('4kg')
+  for (let i = 0; i < 6; i++) {
+    const b = new THREE.Mesh(balGeo.get('4kg')!, balMat.get('4kg')!)
+    b.position.set(-0.37 + (i % 3) * 0.37, 0.85 + r4 * 0.6, (i < 3 ? -0.19 : 0.19))
     b.rotation.set(i, i * 2, 0)
     kar.add(b)
   }
-  // Een paar losse ballen op het veld.
-  for (let i = 0; i < 4; i++) {
-    const b = new THREE.Mesh(balGeo, new THREE.MeshStandardMaterial({ map: krachtbalTextuur(kleuren[(i * 2) % 5]), vertexColors: true, roughness: 0.55 }))
-    b.position.set(cx - 6 + i * 4.5, 0.19, cz - 5 + (i % 2) * 7)
+  BALLEN.forEach((x, i) => {
+    const b = new THREE.Mesh(balGeo.get(x.id)!, balMat.get(x.id)!)
+    b.position.set(cx - 8 + i * 4, 0.065 + balStraal(x.id), cz - 5 + (i % 2) * 7)
     b.rotation.set(i * 1.3, i, 0)
     groep.add(b)
-  }
+  })
   blok(kar.position.x - 0.7, kar.position.x + 0.7, kar.position.z - 0.5, kar.position.z + 0.5)
 
   // ---------- groen: hagen langs de rand, bomen, bankjes ----------
