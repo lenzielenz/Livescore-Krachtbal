@@ -148,3 +148,33 @@ export function ontdubbel<T extends { id: number }>(matches: T[]): T[] {
   }
   return uit
 }
+
+/**
+ * Het komende speelweekend (zaterdag 00:00 tot maandag 00:00, Belgische kalender): op zaterdag en
+ * zondag het lopende weekend, doordeweeks het eerstvolgende.
+ */
+export function komendWeekend(nu: Date = new Date()): { start: string; einde: string } {
+  const dag = brusselsParts(nu).weekdayMon0
+  const zaterdag = dag >= 5 ? shiftDateStr(dateStrBE(nu), -(dag - 5)) : shiftDateStr(dateStrBE(nu), 5 - dag)
+  return { start: brusselsDayBoundsUtc(zaterdag).start, einde: brusselsDayBoundsUtc(shiftDateStr(zaterdag, 2)).start }
+}
+
+/**
+ * De voorbeschouwing: zolang er in het komende weekend nog GEEN enkele wedstrijd gestart is, toont
+ * de tv álle wedstrijden van dat weekend tegelijk (reeks, dag en uur, de twee ploegen). Zodra er
+ * één begint — of er elders iets live is — valt dit weg en neemt het gewone scherm het over.
+ */
+export function weekendVoorbeschouwing<T extends SchermWedstrijd>(matches: T[], nu: Date = new Date()): T[] {
+  if (matches.some((m) => m.status === 'live')) return []
+  const { start, einde } = komendWeekend(nu)
+  const weekend = matches.filter((m) => m.date && m.date >= start && m.date < einde)
+  if (weekend.length === 0 || weekend.some((m) => m.status !== 'scheduled')) return []
+  return weekend.sort((a, b) => String(a.date).localeCompare(String(b.date)) || a.id - b.id)
+}
+
+/** Kolommen voor de voorbeschouwing: alles moet op één scherm passen, zonder te bladeren. */
+export function voorbeschouwingKolommen(aantal: number, breedte: number): number {
+  const ideaal = aantal <= 1 ? 1 : aantal <= 4 ? 2 : aantal <= 9 ? 3 : aantal <= 16 ? 4 : 5
+  const maxBreedte = breedte < 560 ? 1 : breedte < 900 ? 2 : breedte < 1300 ? 3 : 5
+  return Math.max(1, Math.min(ideaal, maxBreedte))
+}
