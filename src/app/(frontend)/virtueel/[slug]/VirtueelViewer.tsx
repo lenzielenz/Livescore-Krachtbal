@@ -35,6 +35,8 @@ import { Wedkiosk } from './Wedkiosk'
 import { Fanshop } from './Fanshop'
 import { Superstar } from './Superstar'
 import { bouwKluis } from './kluis'
+import { bouwSamen, type Samen } from './samen'
+import type { Aanwezige } from '@/lib/virtueel-aanwezig'
 import { bouwHelikopter, type Helikopter, type Vluchtinfo } from './helikopter'
 import { werpAfstand, type BalId, type SuperstarStand } from '@/lib/virtueel-superstar'
 import type { SuperstarHal } from './superstar'
@@ -340,6 +342,42 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
   const kluisRef = useRef<ReturnType<typeof bouwKluis> | null>(null)
   const heliRef = useRef<Helikopter | null>(null)
   const [vlucht, setVlucht] = useState<Vluchtinfo | null>(null)
+  // Samen: de andere supporters van je club die nu ook rondlopen (zie samen.ts).
+  const samenRef = useRef<Samen | null>(null)
+  const [samenAantal, setSamenAantal] = useState(0)
+  useEffect(() => {
+    if (!thema.ingelogd || thema.clubId == null) return
+    let es: EventSource | null = null
+    let weg = false
+    let herstart: ReturnType<typeof setTimeout> | null = null
+    const open = () => {
+      if (weg) return
+      es = new EventSource('/api/virtueel/aanwezig/stream')
+      es.addEventListener('aanwezig', (e) => {
+        try {
+          const lijst = JSON.parse((e as MessageEvent).data) as Aanwezige[]
+          samenRef.current?.zet(lijst)
+          setSamenAantal(lijst.filter((a) => a.id !== thema.ikId).length)
+        } catch {
+          /* een kapot bericht: het volgende komt zo */
+        }
+      })
+      es.onerror = () => {
+        es?.close()
+        if (!weg) herstart = setTimeout(open, 5000)
+      }
+    }
+    open()
+    const bye = () => void fetch('/api/virtueel/aanwezig', { method: 'DELETE', credentials: 'include', keepalive: true }).catch(() => {})
+    window.addEventListener('pagehide', bye)
+    return () => {
+      weg = true
+      es?.close()
+      if (herstart) clearTimeout(herstart)
+      window.removeEventListener('pagehide', bye)
+      bye()
+    }
+  }, [thema.ingelogd, thema.clubId, thema.ikId])
   opWerplijnRef.current = paneel === 'superstar'
   // De grote rode knop op het dak: aftellen, en dan de vuurwerkshow.
   const vuurwerkRef = useRef<Vuurwerk | null>(null)
@@ -830,6 +868,29 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     kluis.zet(sporenRef.current.vondsten.mijn.length, GOUDEN_BALLEN, sporenRef.current.mij.sleutel)
     const heli = bouwHelikopter(scene, { thema, logo: stadion.logo, y: RING.y, licht })
     heliRef.current = heli
+    const supporters = bouwSamen(scene, thema, thema.ikId ?? null)
+    samenRef.current = supporters
+    // Waar jij bent, een paar keer per seconde naar de server (enkel als je wandelt of vliegt).
+    let laatsteMelding = 0
+    let laatsteSleutel = ''
+    const meldPlek = (nu: number) => {
+      if (!thema.ingelogd || thema.clubId == null || nu - laatsteMelding < 350) return
+      const s = st.current
+      if (s.modus !== 'buiten') return
+      const vliegt = heli.inVlucht()
+      const plek = { x: Math.round(loper.pos.x * 100) / 100, y: vliegt ? camera.position.y : vloer, z: Math.round(loper.pos.z * 100) / 100, yaw: Math.round(loper.yaw * 100) / 100, verdiep: opVerdiep, vliegt }
+      const sleutel = JSON.stringify(plek)
+      // Stilstaan: elke 3 s een teken van leven, anders enkel als je beweegt.
+      if (sleutel === laatsteSleutel && nu - laatsteMelding < 3000) return
+      laatsteMelding = nu
+      laatsteSleutel = sleutel
+      void fetch('/api/virtueel/aanwezig', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ plek, outfit: sporenRef.current.mij.outfit }),
+      }).catch(() => {})
+    }
     setPlanDoelen([
       ...bestemmingen.map((b) => ({ ...b, verdiep: 0 })),
       ...kelder.plekken.zalen.map((z) => ({ ...z, kleur: '#a78bfa', verdiep: -1 })),
@@ -1429,6 +1490,8 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
       }
       vuurwerk.update(nu / 1000, dt, camera, renderer.domElement.height)
       heli.update(nu / 1000, dt)
+      supporters.update(nu / 1000, dt, opVerdiep, s.modus !== 'buiten')
+      meldPlek(nu)
       kluis.update(nu / 1000, dt)
       const uitstap = heli.uitgestapt()
       if (uitstap) {
@@ -1529,6 +1592,8 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
       cancelAnimationFrame(raf)
       nabewerking?.dispose()
       vuurwerk.dispose()
+      supporters.dispose()
+      samenRef.current = null
       vuurwerkRef.current = null
       weekendStroom?.close()
       video.dispose()
@@ -1857,6 +1922,11 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
                 <b>{aftel}</b>
                 <span>{aftel === 1 ? 'kijk omhoog!' : 'vuurwerk over'}</span>
               </div>
+            )}
+            {samenAantal > 0 && !welkom && (
+              <span className="vk-samen" title="Supporters van je club die nu ook in het stadion rondlopen">
+                👥 {samenAantal} {samenAantal === 1 ? 'supporter' : 'supporters'} hier
+              </span>
             )}
             {modus === 'buiten' && !welkom && popcornVast && (
               <button className="vk-popcornvast" onClick={() => setPopcornVast(false)} title="Zet je doosje popcorn weg">

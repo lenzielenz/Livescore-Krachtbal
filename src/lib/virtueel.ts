@@ -282,6 +282,8 @@ export type StadionThema = {
   clubId?: number | null
   /** Ingelogd? Enkel dan kan je op de graffitimuur spuiten. */
   ingelogd?: boolean
+  /** Wie kijkt (om jezelf niet dubbel te zien tussen de andere supporters). */
+  ikId?: string | null
 }
 
 /** Eén kader in de fotogalerij: 1 tot 4 foto's door elkaar, met een onderschrift. */

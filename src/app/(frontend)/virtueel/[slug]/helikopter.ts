@@ -310,7 +310,6 @@ export function bouwHelikopter(
   let draaiing = 0
   let toeren = 0
   let fase: Fase = 'geparkeerd'
-  let faseT = 0
   let uit: { x: number; z: number; yaw: number } | null = null
   const camPos = new THREE.Vector3()
   const camDoel = new THREE.Vector3()
@@ -374,18 +373,16 @@ export function bouwHelikopter(
       if (fase !== 'geparkeerd') return
       startGeluid()
       fase = 'opstijgen'
-      faseT = 0
       uit = null
       camPos.set(pos.x - 14, Y + 6, pos.z)
     },
     landen() {
       if (fase === 'vliegen' || fase === 'opstijgen') {
         fase = 'landen'
-        faseT = 0
       }
     },
     stuur(dt, vooruit, draai, stijg, camera) {
-      faseT += dt
+
       if (fase === 'opstijgen') {
         // Eerst de rotor op toeren, dan los van het platform.
         toeren = Math.min(1, toeren + dt / 2.6)
@@ -430,7 +427,6 @@ export function bouwHelikopter(
         if (d < 0.5 && Math.abs(pos.y - Y) < 0.05 && Math.abs(dy) < 0.05) {
           // Geland: je stapt uit naast de deur; de rotor loopt vanzelf uit (zie update).
           fase = 'uitstappen'
-          faseT = 0
           snelheid = 0
           draaiing = 0
           pos.set(park.x, Y, park.z)
