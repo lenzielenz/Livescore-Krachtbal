@@ -693,3 +693,32 @@ button.vk-samen:hover { background: rgba(22, 101, 52, 0.85); }
 .vk-praat-kast b { font-size: 0.82rem; }
 .vk-praat-kast small { color: #fde68a; font-size: 0.72rem; font-weight: 700; }
 .vk-praat-leeg { margin: 6px 2px; color: #cbd5e1; font-size: 0.85rem; }
+
+/* Kermisspel (krachtmeter, blikken gooien, eendjes vissen): een venster met een meter. */
+.vk-spel {
+  position: absolute; right: max(12px, env(safe-area-inset-right)); bottom: max(14px, env(safe-area-inset-bottom)); z-index: 9;
+  width: min(300px, calc(100vw - 24px)); padding: 12px 14px 14px; border-radius: 16px;
+  background: rgba(6, 10, 18, 0.88); border: 1px solid rgba(250, 204, 21, 0.45); color: #e2e8f0;
+  display: grid; grid-template-columns: 1fr auto; gap: 8px 12px; align-items: center;
+}
+.vk-spel-kop { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; }
+.vk-spel-kop b { font-size: 1rem; color: #fde68a; }
+.vk-spel-sluit { width: 30px; height: 30px; border-radius: 50%; border: 1px solid rgba(255, 255, 255, 0.2); background: transparent; color: #e2e8f0; cursor: pointer; }
+.vk-spel-uitleg { grid-column: 1 / -1; margin: 0; font-size: 0.8rem; line-height: 1.35; color: #cbd5e1; }
+.vk-spel-meter {
+  position: relative; grid-row: span 2; width: 34px; height: 150px; border-radius: 10px; overflow: hidden;
+  background: linear-gradient(to top, #22c55e, #facc15 55%, #ef4444); border: 2px solid rgba(255, 255, 255, 0.25);
+}
+.vk-spel-meter.doel-midden { background: linear-gradient(to top, #ef4444, #facc15 35%, #22c55e 50%, #facc15 65%, #ef4444); }
+.vk-spel-zone { position: absolute; left: 0; right: 0; border: 2px dashed rgba(255, 255, 255, 0.85); border-radius: 4px; }
+.doel-boven .vk-spel-zone { top: 0; height: 6%; }
+.doel-midden .vk-spel-zone { top: 42%; height: 16%; }
+.vk-spel-naald { position: absolute; left: -2px; right: -2px; height: 4px; margin-bottom: -2px; background: #fff; box-shadow: 0 0 8px #fff; }
+.vk-spel-knop {
+  height: 56px; min-width: 120px; border-radius: 14px; border: 0; background: #facc15; color: #1c1300;
+  font: inherit; font-weight: 900; font-size: 1.05rem; cursor: pointer; touch-action: manipulation;
+}
+.vk-spel-knop:disabled { opacity: 0.5; }
+.vk-spel-uitslag { grid-column: 1 / -1; margin: 0; font-size: 0.85rem; font-weight: 800; color: #fca5a5; }
+.vk-spel-uitslag.goed { color: #86efac; }
+.vk-spel:not(:has(.vk-spel-meter)) { grid-template-columns: 1fr; }

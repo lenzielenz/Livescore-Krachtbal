@@ -39,7 +39,8 @@ import { Praat, type Supporter } from './Praat'
 import { Superstar } from './Superstar'
 import { bouwKluis } from './kluis'
 import { bouwBakman } from './bakman'
-import { bouwFandorp, type Reuzenrad, type RitInfo } from './fandorp'
+import { bouwFandorp, type Kermisspel, type Rit, type RitInfo } from './fandorp'
+import { KermisspelPaneel } from './KermisspelPaneel'
 import { bouwOefencomplex } from './oefencomplex'
 import { bouwSamen, type Samen } from './samen'
 import { namen as namenRij, nieuwGeheugen, volgAanwezigen, type Aanwezige } from '@/lib/virtueel-aanwezig'
@@ -94,7 +95,7 @@ const RUIMTE_MELDING: Record<string, string> = {
   Wedkantoor: '🎰 Wedkantoor · draai gratis aan het bonusrad',
 }
 /** Wat je ergens kan doen: bij de kleedkamer (muur, bord) of in de kelder (zie kelderspel.ts). */
-type Nabij = { soort: 'muur' } | { soort: 'bord' } | { soort: 'rad' } | { soort: 'stats' } | { soort: 'kiosk' } | { soort: 'booth' } | { soort: 'knop' } | { soort: 'fanshop' } | { soort: 'superstar' } | { soort: 'kluis' } | { soort: 'heli' } | { soort: 'reuzenrad' } | KelderActie
+type Nabij = { soort: 'muur' } | { soort: 'bord' } | { soort: 'rad' } | { soort: 'stats' } | { soort: 'kiosk' } | { soort: 'booth' } | { soort: 'knop' } | { soort: 'fanshop' } | { soort: 'superstar' } | { soort: 'kluis' } | { soort: 'heli' } | { soort: 'rit'; id: string } | { soort: 'spel'; id: string } | KelderActie
 const ACTIE_LABEL: Record<Nabij['soort'], string> = {
   muur: '🎨 Spuit op de muur',
   bord: '📋 Tactiekbord',
@@ -113,10 +114,25 @@ const ACTIE_LABEL: Record<Nabij['soort'], string> = {
   superstar: '★ Superstar: werp zo ver je kan',
   kluis: '🔐 De kluis',
   heli: '🚁 De clubhelikopter',
-  reuzenrad: '🎡 Stap in het reuzenrad',
+  // De ritten en kermisspelletjes hebben elk hun eigen tekst (zie kermis.ts).
+  rit: '',
+  spel: '',
   booth: '📸 Neem een selfie',
 }
 type Muur = 'kleedkamer' | 'kelder'
+
+const RIT_START: Record<string, string> = {
+  reuzenrad: '🎡 Instappen! Kijk rond: je ziet straks het hele terrein.',
+  draaimolen: '🎠 Hop, op een krachtbal! Hou je vast.',
+  zweefmolen: '🪂 Riem vast… daar gaan we, zweven!',
+  botsautos: "💥 Gas geven met de joystick (of de pijltjes) — en botsen maar!",
+}
+const RIT_BEDANKT: Record<string, string> = {
+  reuzenrad: '🎡 Bedankt voor de rit! Tot de volgende keer.',
+  draaimolen: '🎠 Rondje gedaan! Nog eentje?',
+  zweefmolen: '🪂 Wat een zwier! Nog eens?',
+  botsautos: '💥 Einde van de rit. Wie botste het hardst?',
+}
 
 const RADAR: Record<Warmte, string> = { heet: '🔥 heet!', warm: '♨️ warm', lauw: '🌤️ lauw', koud: '❄️ koud', niets: '🧭 niets op dit verdiep' }
 
@@ -352,7 +368,15 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
   const kluisRef = useRef<ReturnType<typeof bouwKluis> | null>(null)
   const heliRef = useRef<Helikopter | null>(null)
   const [vlucht, setVlucht] = useState<Vluchtinfo | null>(null)
-  const radRef = useRef<Reuzenrad | null>(null)
+  // De ritten in het fandorp (reuzenrad, draaimolen, zweefmolen, botsauto's) en de kermisspelletjes.
+  const rittenRef = useRef<Rit[]>([])
+  const ritRef = useRef<Rit | null>(null)
+  const spellenRef = useRef<Kermisspel[]>([])
+  const [spel, setSpel] = useState<Kermisspel | null>(null)
+  // Wandel je weg van het kraam, dan sluit het spelvenster vanzelf.
+  useEffect(() => {
+    if (spel && !(nabij?.soort === 'spel' && nabij.id === spel.id)) setSpel(null)
+  }, [nabij, spel])
   // Op het helikopterplatform zonder sleutel: uitleg hoe je mag vliegen.
   const [heliHulp, setHeliHulp] = useState<{ gevonden: number; sleutel: boolean } | null>(null)
   const [rit, setRit] = useState<RitInfo | null>(null)
@@ -811,9 +835,11 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     const oefen = bouwOefencomplex(scene, { thema, licht, veldTex: veldTextuur(veld, 3), lengte: veld.length_m, breedte: veld.width_m, pleinRand: GEVEL.B + 22 })
     bron('Oefencomplex')
     // Het fandorp aan de overkant van de straat: foodtrucks, feesttent, springkasteel en een reuzenrad.
-    const fandorp = bouwFandorp(scene, { thema, licht, straatZ: GEVEL.B + 30 })
+    const fandorp = bouwFandorp(scene, { thema, licht, straatZ: GEVEL.B + 30, melding: (t) => setMelding(t) })
     bron('Fandorp')
-    radRef.current = fandorp.rad
+    rittenRef.current = fandorp.ritten
+    spellenRef.current = fandorp.spellen
+    const ritBezig = () => fandorp.ritten.find((r) => r.inRit()) ?? null
     const sfeer = bouwSfeer(scene, { thema, licht, logo: stadion.logo })
     bron('Sfeer')
     // De hall of fame hangt in de gangen; het kopbord op de achterwand van de zuidtribune, recht
@@ -1024,7 +1050,7 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
       // Zweef je of maak je een rondvlucht, dan ben je er ook (de anderen weten dat je er bent),
       // maar zonder figuur.
       const wandelt = s.modus === 'buiten'
-      const vliegt = !wandelt || heli.inVlucht() || fandorp.rad.inRit()
+      const vliegt = !wandelt || heli.inVlucht() || ritBezig() != null
       const rond = (v: number, m: number) => Math.round(Math.max(-m, Math.min(m, v)) * 100) / 100
       const plek = { x: rond(wandelt ? loper.pos.x : camera.position.x, 590), y: rond(vliegt ? camera.position.y : vloer, 240), z: rond(wandelt ? loper.pos.z : camera.position.z, 590), yaw: rond(Math.atan2(Math.sin(loper.yaw), Math.cos(loper.yaw)), 4), verdiep: wandelt ? opVerdiep : 0, vliegt }
       const sleutel = JSON.stringify(plek)
@@ -1630,9 +1656,15 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
         // De speler zit in de helikopter: zijn positie volgt (voor de schaduw, de mist, ...).
         loper.pos.x = camera.position.x
         loper.pos.z = camera.position.z
-      } else if (s.modus === 'buiten' && fandorp.rad.inRit()) {
-        // In een bakje van het reuzenrad: je draait mee en kijkt vrij rond.
-        fandorp.rad.camera(camera, loper.yaw, loper.pitch)
+      } else if (s.modus === 'buiten' && ritBezig()) {
+        // Op een rit in het fandorp: je draait mee en kijkt vrij rond; in een botsauto stuur je zelf.
+        const r = ritBezig()!
+        if (r.stuur) {
+          const vooruit = (toetsen.has('KeyW') || toetsen.has('ArrowUp') ? 1 : 0) - (toetsen.has('KeyS') || toetsen.has('ArrowDown') ? 1 : 0) - s.stick.y
+          const draai = (toetsen.has('KeyA') || toetsen.has('ArrowLeft') ? 1 : 0) - (toetsen.has('KeyD') || toetsen.has('ArrowRight') ? 1 : 0) - s.stick.x
+          r.stuur(dt, vooruit, draai)
+        }
+        r.camera(camera, loper.yaw, loper.pitch)
         loper.pos.x = camera.position.x
         loper.pos.z = camera.position.z
       } else if (WANDELEN.includes(s.modus)) {
@@ -1788,13 +1820,15 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
         oefen.update(nu / 1000)
         fandorp.update(nu / 1000, dt)
       }
-      const radUit = fandorp.rad.uitgestapt()
-      if (radUit) {
-        loper.pos.x = radUit.x
-        loper.pos.z = radUit.z
-        loper.yaw = radUit.yaw
+      for (const r of fandorp.ritten) {
+        const uit = r.uitgestapt()
+        if (!uit) continue
+        loper.pos.x = uit.x
+        loper.pos.z = uit.z
+        loper.yaw = uit.yaw
         loper.pitch = -0.05
-        setMelding('🎡 Bedankt voor de rit! Tot de volgende keer.')
+        if (ritRef.current === r) ritRef.current = null
+        setMelding(RIT_BEDANKT[r.id] ?? '🎉 Bedankt voor de rit! Tot de volgende keer.')
       }
       supporters.update(nu / 1000, dt, opVerdiep, s.modus !== 'buiten')
       meldPlek(nu)
@@ -1879,8 +1913,8 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
         setLiftPaneel((oud) => (JSON.stringify(oud) === JSON.stringify(paneel) ? oud : paneel))
         const vi = heli.inVlucht() ? heli.info() : null
         setVlucht((oud) => (vi == null ? null : oud && oud.fase === vi.fase && Math.abs(oud.hoogte - vi.hoogte) < 1 && Math.abs(oud.snelheid - vi.snelheid) < 2 ? oud : vi))
-        const ri = fandorp.rad.info()
-        setRit((oud) => (ri == null ? null : oud && oud.rest === ri.rest && oud.magUit === ri.magUit && Math.abs(oud.hoogte - ri.hoogte) < 1 ? oud : ri))
+        const ri = ritBezig()?.info() ?? null
+        setRit((oud) => (ri == null ? null : oud && oud.regel === ri.regel && oud.magUit === ri.magUit ? oud : ri))
         const kk = s.modus === 'buiten' && opVerdiep === 0
         const kl = s.modus === 'buiten' && opVerdiep === -1 && s.zit == null
         const kd = s.modus === 'buiten' && opVerdiep === 2
@@ -1900,8 +1934,10 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
             ? { soort: 'knop' }
             : kd && heli.bij(loper.pos.x, loper.pos.z)
             ? { soort: 'heli' }
-            : kk && fandorp.rad.bij(loper.pos.x, loper.pos.z)
-            ? { soort: 'reuzenrad' }
+            : kk && !ritBezig() && fandorp.ritten.some((r) => r.bij(loper.pos.x, loper.pos.z))
+            ? { soort: 'rit', id: fandorp.ritten.find((r) => r.bij(loper.pos.x, loper.pos.z))!.id }
+            : kk && fandorp.spellen.some((g) => g.bij(loper.pos.x, loper.pos.z))
+            ? { soort: 'spel', id: fandorp.spellen.find((g) => g.bij(loper.pos.x, loper.pos.z))!.id }
             : kl && kluis.bij(loper.pos.x, loper.pos.z)
             ? { soort: 'kluis' }
             : kk && gangleven.fanshop && Math.hypot(loper.pos.x - gangleven.fanshop.x, loper.pos.z - gangleven.fanshop.z) < 3.6
@@ -2079,9 +2115,16 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
         })
         break
       }
-      case 'reuzenrad': {
-        radRef.current?.stapIn()
-        setMelding('🎡 Instappen! Kijk rond: je ziet straks het hele terrein.')
+      case 'rit': {
+        const r = rittenRef.current.find((x) => x.id === a.id)
+        if (!r) break
+        r.stapIn()
+        ritRef.current = r
+        setMelding(RIT_START[r.id] ?? '🎉 Instappen!')
+        break
+      }
+      case 'spel': {
+        setSpel(spellenRef.current.find((x) => x.id === a.id) ?? null)
         break
       }
       case 'heli': {
@@ -2200,9 +2243,13 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
             {VELD.includes(modus) && (
               <button className="vk-terugbuiten" onClick={() => setModus('zweven')}>↩ Naar buiten</button>
             )}
-            {nabij && !paneel && zit == null && aftel == null && !vlucht && !rit && (
+            {nabij && !paneel && zit == null && aftel == null && !vlucht && !rit && !spel && (
               <button className="vk-actie" onClick={() => doeActie(nabij)}>
-                {ACTIE_LABEL[nabij.soort]}
+                {nabij.soort === 'rit'
+                  ? rittenRef.current.find((r) => r.id === nabij.id)?.actie
+                  : nabij.soort === 'spel'
+                    ? spellenRef.current.find((g) => g.id === nabij.id)?.actie
+                    : ACTIE_LABEL[nabij.soort]}
               </button>
             )}
             {zit != null && !paneel && (
@@ -2248,16 +2295,15 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
                 </ol>
               </div>
             )}
+            {spel && modus === 'buiten' && !rit && <KermisspelPaneel key={spel.id} spel={spel} onSluit={() => setSpel(null)} />}
             {rit && (
-              <div className="vk-vlucht" aria-label="Reuzenrad">
+              <div className="vk-vlucht" aria-label={rit.titel}>
                 <div className="vk-vlucht-info">
-                  <b>🎡 In het reuzenrad</b>
-                  <span>
-                    {Math.round(rit.hoogte)} m hoog · nog {rit.rest} s · sleep om rond te kijken
-                  </span>
+                  <b>{rit.titel}</b>
+                  <span>{rit.regel}</span>
                 </div>
                 <div className="vk-vlucht-knoppen">
-                  <button className="landen" disabled={!rit.magUit} onClick={() => radRef.current?.stapUit()}>
+                  <button className="landen" disabled={!rit.magUit} onClick={() => ritRef.current?.stapUit()}>
                     🚪 Uitstappen
                   </button>
                 </div>

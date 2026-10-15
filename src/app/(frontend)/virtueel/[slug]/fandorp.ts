@@ -2,6 +2,7 @@ import * as THREE from 'three'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 
 import type { Rechthoek, StadionThema } from '@/lib/virtueel'
+import { bouwKermis, type Kermisspel, type Rit, type RitInfo } from './kermis'
 import { krachtbalGeometrie, krachtbalTextuur } from './krachtbal'
 import { rondeDoos } from './rond'
 import { rnd } from './stadion'
@@ -13,8 +14,9 @@ import { bouwVolk } from './volk'
 //    over het hele terrein (stadion, plein, parking en oefencomplex);
 //  • een rij foodtrucks (frieten, wafels, burgers, ijsjes) met picknicktafels onder lichtslingers;
 //  • een feesttent met een dj-podium, een ledwand, draaiende spots, een toog en dansend publiek;
-//  • een springkasteel in clubkleur (je veert er echt op), een draaimolen met krachtballen, een
-//    krachtmeter met een bel en een schminkstand;
+//  • een springkasteel in clubkleur (je veert er echt op), een draaimolen met krachtballen (stap op
+//    en draai mee), een krachtmeter met een bel (sla zelf!) en een schminkstand;
+//  • een kermis met een zweefmolen, botsauto's, blikken gooien en eendjes vissen (kermis.ts);
 //  • en op het plein naast het stadion een tv-wagen met een schotel.
 
 export const FANDORP = { x0: -62, x1: 62, z0: 75, z1: 126 }
@@ -22,26 +24,16 @@ export const FANDORP = { x0: -62, x1: 62, z0: 75, z1: 126 }
 /** Het reuzenrad: middelpunt, straal, en hoe lang een ronde duurt (s). */
 const RAD = { x: 0, z: 116, H: 17.2, R: 14, N: 16, periode: 48 }
 
-export type RitInfo = { hoogte: number; rest: number; magUit: boolean }
-
-export type Reuzenrad = {
-  /** Sta je aan de instap? */
-  bij: (x: number, z: number) => boolean
-  stapIn: () => void
-  inRit: () => boolean
-  info: () => RitInfo | null
-  /** Zet de camera in het bakje (rondkijken mag). */
-  camera: (camera: THREE.PerspectiveCamera, yaw: number, pitch: number) => void
-  stapUit: () => void
-  /** Net uitgestapt? Dan sta je hier (één keer). */
-  uitgestapt: () => { x: number; z: number; yaw: number } | null
-}
+export type { Kermisspel, Rit, RitInfo }
 
 export type Fandorp = {
   obstakels: Rechthoek[]
   /** Waar je op het springkasteel veert (0 = niet erop, 1 = midden). */
   springkasteel: (x: number, z: number) => number
-  rad: Reuzenrad
+  /** Alles waar je op kan: het reuzenrad, de draaimolen, de zweefmolen en de botsauto's. */
+  ritten: Rit[]
+  /** De kermisspelletjes: de krachtmeter, blikken gooien en eendjes vissen. */
+  spellen: Kermisspel[]
   update: (seconden: number, dt: number) => void
 }
 
@@ -72,7 +64,7 @@ const balk = (a: THREE.Vector3, b: THREE.Vector3, r: number, segs = 8) => {
 }
 const v3 = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z)
 
-export function bouwFandorp(scene: THREE.Scene, opt: { thema: StadionThema; licht: boolean; straatZ: number }): Fandorp {
+export function bouwFandorp(scene: THREE.Scene, opt: { thema: StadionThema; licht: boolean; straatZ: number; melding?: (tekst: string) => void }): Fandorp {
   const { thema, licht } = opt
   const groep = new THREE.Group()
   scene.add(groep)
@@ -380,7 +372,9 @@ export function bouwFandorp(scene: THREE.Scene, opt: { thema: StadionThema; lich
     animaties.push(() => {
       if (mijn >= 0 && voortgang() >= 1) uit()
     })
-    const rad: Reuzenrad = {
+    const rad: Rit = {
+      id: 'reuzenrad',
+      actie: '🎡 Stap in het reuzenrad',
       bij: (x, z) => mijn < 0 && Math.hypot(x - RX, z - (RZ - 4.2)) < 2.6,
       stapIn() {
         // Het bakje dat nu het dichtst bij de grond hangt.
@@ -404,7 +398,8 @@ export function bouwFandorp(scene: THREE.Scene, opt: { thema: StadionThema; lich
         if (mijn < 0) return null
         plek(mijn, tmp)
         const a = hoekVan()
-        return { hoogte: Math.max(0, tmp.y - 2.7), rest: Math.max(0, Math.ceil((1 - voortgang()) * RAD.periode)), magUit: Math.cos(a) > 0.96 && voortgang() > 0.08 }
+        const rest = Math.max(0, Math.ceil((1 - voortgang()) * RAD.periode))
+        return { titel: '🎡 In het reuzenrad', regel: `${Math.round(Math.max(0, tmp.y - 2.7))} m hoog · nog ${rest} s · sleep om rond te kijken`, rest, magUit: Math.cos(a) > 0.96 && voortgang() > 0.08 }
       },
       camera(camera, yaw, pitch) {
         if (mijn < 0) return
@@ -765,6 +760,7 @@ export function bouwFandorp(scene: THREE.Scene, opt: { thema: StadionThema; lich
   }
 
   // ---------- de draaimolen (met krachtballen in plaats van paarden) ----------
+  let draaimolen: Rit | null = null
   {
     const MX = 38
     const MZ = 116
@@ -813,17 +809,78 @@ export function bouwFandorp(scene: THREE.Scene, opt: { thema: StadionThema; lich
     mb.rotation.y = -Math.PI / 2
     groep.add(mb)
     deel(new THREE.CylinderGeometry(0.08, 0.08, 2.2, 6).translate(0, 1.1, 0), donker, MX - 7.2, 0, MZ)
+    // De rit: je zit op een krachtbal die op en neer gaat, en draait mee.
+    const DUUR = 36
+    let nu = 0
+    let mijn = -1
+    let start = 0
+    let uitstap: { x: number; z: number; yaw: number } | null = null
+    let draaiNul: number | null = null
     animaties.push((s, dt) => {
+      nu = s
       draait.rotation.y += dt * 0.55
       ballen.forEach((b, i) => {
         b.position.y = 1.6 + Math.sin(s * 2 + i * 1.3) * 0.45
-        b.rotation.y += dt * 1.5
+        // Op jouw bal zit jij: die draait niet rond zijn as.
+        if (i !== mijn) b.rotation.y += dt * 1.5
       })
+      if (mijn >= 0 && s - start > DUUR) {
+        mijn = -1
+        uitstap = { x: MX - 7.8, z: MZ + 1.2, yaw: Math.PI / 2 }
+      }
     })
+    const tmp = new THREE.Vector3()
+    draaimolen = {
+      id: 'draaimolen',
+      actie: '🎠 Stap op de draaimolen',
+      bij: (x, z) => mijn < 0 && Math.hypot(x - (MX - 7.8), z - (MZ + 1.2)) < 2.2,
+      stapIn() {
+        // De bal die het dichtst bij de ingang (de westkant) staat.
+        let beste = 0
+        let min = Infinity
+        ballen.forEach((b, i) => {
+          b.getWorldPosition(tmp)
+          const d = Math.hypot(tmp.x - (MX - 6.4), tmp.z - MZ)
+          if (d < min) {
+            min = d
+            beste = i
+          }
+        })
+        mijn = beste
+        start = nu
+        draaiNul = null
+      },
+      inRit: () => mijn >= 0,
+      info() {
+        if (mijn < 0) return null
+        const rest = Math.max(0, Math.ceil(DUUR - (nu - start)))
+        return { titel: '🎠 Op de draaimolen', regel: `je zit op een krachtbal · nog ${rest} s · sleep om rond te kijken`, rest, magUit: nu - start > 3 }
+      },
+      camera(camera, yaw, pitch) {
+        if (mijn < 0) return
+        ballen[mijn].getWorldPosition(tmp)
+        camera.position.set(tmp.x, tmp.y + 1.3, tmp.z)
+        // Bij het opstappen kijk je naar buiten (niet tegen de spiegelzuil); daarna draait je
+        // kijkrichting mee met de molen.
+        if (draaiNul == null) draaiNul = Math.atan2(tmp.x - MX, tmp.z - MZ) + 0.5 - yaw - draait.rotation.y
+        const y = yaw + draaiNul + draait.rotation.y
+        camera.lookAt(tmp.x + Math.sin(y) * Math.cos(pitch), camera.position.y + Math.sin(pitch), tmp.z + Math.cos(y) * Math.cos(pitch))
+      },
+      stapUit() {
+        mijn = -1
+        uitstap = { x: MX - 7.8, z: MZ + 1.2, yaw: Math.PI / 2 }
+      },
+      uitgestapt() {
+        const u = uitstap
+        uitstap = null
+        return u
+      },
+    }
     lichtPlas(MX, MZ, 9, '#ffe2a8', 0.28)
   }
 
   // ---------- krachtmeter en schminkstand, aan de poort ----------
+  let krachtmeter: Kermisspel | null = null
   {
     const KX = -12
     const KZ = 83
@@ -850,15 +907,55 @@ export function bouwFandorp(scene: THREE.Scene, opt: { thema: StadionThema; lich
     kb.rotation.y = Math.PI
     groep.add(kb)
     blok(KX - 0.8, KX + 0.8, KZ - 0.8, KZ + 0.8)
+    // Een hamer op de sokkel.
+    const hamer = new THREE.Group()
+    hamer.position.set(KX + 1.1, 0, KZ - 0.6)
+    hamer.rotation.z = 0.25
+    groep.add(hamer)
+    hamer.add(new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 1.1, 6).translate(0, 0.55, 0), hout))
+    hamer.add(new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.45, 12).rotateZ(Math.PI / 2).translate(0, 1.15, 0), donker))
+    // Jouw slag: de schuif vliegt tot `kracht` en valt terug; vanaf 0,94 rinkelt de bel.
+    let slag = { t: -10, kracht: 0 }
+    let nu = 0
     animaties.push((s) => {
-      // Om de 5 s slaat er iemand: de schuif vliegt omhoog (soms tot de bel).
-      const f = (s % 5) / 5
-      const sterk = 0.55 + 0.45 * Math.abs(Math.sin(Math.floor(s / 5) * 7.3))
-      const h = f < 0.25 ? Math.sin((f / 0.25) * Math.PI) * sterk : 0
+      nu = s
+      const sinds = s - slag.t
+      let h: number
+      let raak: boolean
+      if (sinds < 1.4) {
+        h = sinds < 0.35 ? Math.sin((sinds / 0.35) * (Math.PI / 2)) * slag.kracht : slag.kracht * Math.max(0, 1 - ((sinds - 0.35) / 1.05) ** 2)
+        raak = slag.kracht >= 0.94 && sinds > 0.3 && sinds < 1.1
+        hamer.rotation.z = sinds < 0.15 ? 0.25 - sinds * 8 : -0.95 + Math.min(1.2, (sinds - 0.15) * 2)
+      } else {
+        // Anders slaat er om de 5 s iemand anders (soms tot de bel).
+        const f = (s % 5) / 5
+        const sterk = 0.55 + 0.45 * Math.abs(Math.sin(Math.floor(s / 5) * 7.3))
+        h = f < 0.25 ? Math.sin((f / 0.25) * Math.PI) * sterk : 0
+        raak = sterk > 0.93 && f > 0.1 && f < 0.3
+        hamer.rotation.z = 0.25
+      }
       schuif.position.y = 0.8 + h * 5.3
-      const raak = sterk > 0.93 && f > 0.1 && f < 0.3
-      ;(bel.material as THREE.MeshStandardMaterial).emissiveIntensity = raak ? 1.5 : 0.05
+      ;(bel.material as THREE.MeshStandardMaterial).emissiveIntensity = raak ? 1.5 + Math.sin(s * 40) * 0.5 : 0.05
     })
+    krachtmeter = {
+      id: 'krachtmeter',
+      naam: 'Krachtmeter',
+      actie: '💪 Sla op de krachtmeter',
+      uitleg: 'De meter gaat op en neer: sla als hij bovenaan staat. Haal je de bel?',
+      knop: '🔨 Sla!',
+      meter: true,
+      // Een paar stappen ervoor, zodat je de hele toren en de bel ziet.
+      bij: (x, z) => Math.hypot(x - KX, z - (KZ - 3.4)) < 2.2,
+      speel(kracht) {
+        const k = Math.max(0, Math.min(1, kracht))
+        slag = { t: nu, kracht: k }
+        if (k >= 0.94) return { tekst: '🔔 DING! De bel rinkelt — jij bent de sterkste van het fandorp!', goed: true }
+        if (k >= 0.8) return { tekst: `💪 ${Math.round(k * 100)}%: bijna de bel! Nog een tikje harder.`, goed: true }
+        if (k >= 0.55) return { tekst: `👍 ${Math.round(k * 100)}%: een stevige slag.`, goed: true }
+        if (k >= 0.3) return { tekst: `🙂 ${Math.round(k * 100)}%: dat kan beter, sla bovenaan!`, goed: false }
+        return { tekst: `🐣 ${Math.round(k * 100)}%: kuikenkracht… probeer opnieuw!`, goed: false }
+      },
+    }
     // De schminkstand: een paviljoentje met een spiegel en een stoel.
     const SX = 12
     const SZ = 83
@@ -919,6 +1016,12 @@ export function bouwFandorp(scene: THREE.Scene, opt: { thema: StadionThema; lich
     })
   }
 
+  // ---------- de kermis: zweefmolen, botsauto's, kraampjes en de rest (zie kermis.ts) ----------
+  const kermis = bouwKermis(
+    { groep, thema, licht, toeval, blok, deel, bord, tex, lichtPlas, animaties, mat: { club: clubMat, club2: club2Mat, wit: witMat, staal, donker, hout } },
+    (t) => opt.melding?.(t),
+  )
+
   // ---------- het publiek ----------
   {
     type Mens = { x: number; z: number; ry: number; danst: boolean; fase: number }
@@ -971,7 +1074,8 @@ export function bouwFandorp(scene: THREE.Scene, opt: { thema: StadionThema; lich
       if (dx > h + 0.6 || dz > h) return 0
       return Math.max(0.35, 1 - Math.hypot(dx, dz) / (h * 1.6))
     },
-    rad,
+    ritten: [rad, draaimolen!, ...kermis.ritten],
+    spellen: [krachtmeter!, ...kermis.spellen],
     update(s, dt) {
       for (const a of animaties) a(s, dt)
     },
