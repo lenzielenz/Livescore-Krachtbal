@@ -45,6 +45,7 @@ import { CvEvents } from './collections/CvEvents'
 import { FunctionGrants } from './collections/FunctionGrants'
 import { GraffitiTags } from './collections/GraffitiTags'
 import { VirtueleSporen } from './collections/VirtueleSporen'
+import { PhotoboothFotos } from './collections/PhotoboothFotos'
 import { Season } from './globals/Season'
 import { Settings } from './globals/Settings'
 import { Secretariaat } from './globals/Secretariaat'
@@ -146,6 +147,7 @@ export default buildConfig({
     FunctionGrants,
     GraffitiTags,
     VirtueleSporen,
+    PhotoboothFotos,
   ],
   globals: [Season, Settings, Secretariaat],
   /**

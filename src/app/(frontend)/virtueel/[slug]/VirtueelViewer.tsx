@@ -27,6 +27,8 @@ import { bouwGoudjacht, type GoudPlek, type Goudjacht } from './goudjacht'
 import { Badkiezer, Doelworp, Loopband } from './Kelderspellen'
 import { bouwGokkantoor, type Gokkantoor } from './gokkantoor'
 import { WedkantoorPaneel } from './Wedkantoor'
+import { bouwPhotobooth, type BoothFoto, type Photobooth as Photobooth3D } from './photobooth'
+import { Photobooth } from './Photobooth'
 import type { WedkantoorStats } from '@/lib/virtueel-wedkantoor'
 import { bouwGangafwerking } from './gangafwerking'
 import { bouwVideoscherm, CINEMA_VIDEO_ID, type Videoscherm } from './videoscherm'
@@ -70,7 +72,7 @@ const RUIMTE_MELDING: Record<string, string> = {
   Wedkantoor: '🎰 Wedkantoor · draai gratis aan het bonusrad',
 }
 /** Wat je ergens kan doen: bij de kleedkamer (muur, bord) of in de kelder (zie kelderspel.ts). */
-type Nabij = { soort: 'muur' } | { soort: 'bord' } | { soort: 'rad' } | { soort: 'stats' } | KelderActie
+type Nabij = { soort: 'muur' } | { soort: 'bord' } | { soort: 'rad' } | { soort: 'stats' } | { soort: 'booth' } | KelderActie
 const ACTIE_LABEL: Record<Nabij['soort'], string> = {
   muur: '🎨 Spuit op de muur',
   bord: '📋 Tactiekbord',
@@ -83,6 +85,7 @@ const ACTIE_LABEL: Record<Nabij['soort'], string> = {
   arcade: '🎮 Speel Doelworp',
   rad: '🎡 Draai aan het rad (gratis)',
   stats: '📊 Bekijk de statistieken',
+  booth: '📸 Neem een selfie',
 }
 type Muur = 'kleedkamer' | 'kelder'
 
@@ -284,7 +287,12 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
   const [stick, setStick] = useState({ x: 0, y: 0 })
   // Wat je in en rond het stadion kan doen: spuiten op de graffitimuur, het tactiekbord, de lift.
   const [nabij, setNabij] = useState<Nabij | null>(null)
-  const [paneel, setPaneel] = useState<'graffiti' | 'tactiek' | 'bad' | 'loopband' | 'doelworp' | 'wedkantoor' | null>(null)
+  const [paneel, setPaneel] = useState<'graffiti' | 'tactiek' | 'bad' | 'loopband' | 'doelworp' | 'wedkantoor' | 'booth' | null>(null)
+  // De photobooth in de noordgang: alle selfies van je club (oudste eerst).
+  const [boothFotos, setBoothFotos] = useState<BoothFoto[]>([])
+  const boothFotosRef = useRef<BoothFoto[]>([])
+  boothFotosRef.current = boothFotos
+  const boothRef = useRef<Photobooth3D | null>(null)
   // De statistieken van de pronostiek voor het wedkantoor (zie lib/virtueel-wedkantoor.ts).
   const [wedStats, setWedStats] = useState<WedkantoorStats | null>(null)
   const wedStatsRef = useRef<WedkantoorStats | null>(null)
@@ -380,6 +388,20 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
       .catch(() => {})
   }, [thema.clubId, pasSporenToe])
   useEffect(() => herlaadSporen(), [herlaadSporen])
+  useEffect(() => {
+    let weg = false
+    fetch(`/api/virtueel/photobooth?club=${thema.clubId ?? ''}`, { cache: 'no-store', credentials: 'include' })
+      .then((r) => (r.ok ? (r.json() as Promise<{ fotos: BoothFoto[] }>) : null))
+      .then((d) => {
+        if (weg || !d) return
+        setBoothFotos(d.fotos)
+        boothRef.current?.zetFotos(d.fotos)
+      })
+      .catch(() => {})
+    return () => {
+      weg = true
+    }
+  }, [thema.clubId])
   useEffect(() => {
     let weg = false
     fetch('/api/virtueel/wedkantoor', { cache: 'no-store', credentials: 'include' })
@@ -580,6 +602,11 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     kleedRef.current = kleedkamer
     kleedkamer.zetTactiek(sporenRef.current.borden.kleedkamer ?? laadTactiek())
     if (muurRef.current.tags.length) kleedkamer.zetTags(muurRef.current.tags, muurRef.current.lengte)
+    // De photobooth in de noordgang, tegen de achterwand van de noordtribune (de gevel daar is voor
+    // de weekendzaal): cabine, polaroids en de mozaïek van het logo, aan de westkant van de gang.
+    const photobooth = bouwPhotobooth(scene, { thema, muurZ: (tribunes.noord?.z0 ?? -22.65) - 0.02, ry: Math.PI, x0: 6.6, logo: stadion.logo, licht })
+    boothRef.current = photobooth
+    if (boothFotosRef.current.length) photobooth.zetFotos(boothFotosRef.current)
     // De afwerking van de gangen: ledplint, inleglijnen, banken en planten.
     const gangafwerking = bouwGangafwerking(scene, { thema, licht, oost: tribunes.oost, west: tribunes.west })
     // De ringwandeling op het dak (met de brug naar de lift).
@@ -594,6 +621,7 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
       { naam: 'Lift · -1 tot dak', icoon: '🛗', x: LIFT_X, z: liftZ + 1, kleur: '#a78bfa' },
       { naam: 'Kleedkamers', icoon: '🚿', x: -GEVEL.A, z: 10, kleur: '#34d399' },
       { naam: 'Graffitimuur', icoon: '🎨', x: -GEVEL.A, z: 0, kleur: '#f472b6' },
+      { naam: 'Photobooth', icoon: '📸', x: -12, z: (tribunes.noord?.z0 ?? -22.65) - 3, kleur: '#fb7185' },
       { naam: 'Hoofdingang', icoon: '🚪', x: 0, z: GEVEL.B, kleur: '#e2e8f0' },
     ]
     const wegwijzers = bouwWegwijzers(scene, { thema, logo: stadion.logo, bestemmingen, tribunes })
@@ -611,6 +639,7 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
       ...buitenkant.obstakels,
       ...kleedkamer.obstakels,
       ...gangafwerking.obstakels,
+      ...photobooth.obstakels,
     ]
     // De Hollywood-sterren in de zuidgang: enkel op vrije vloer (niet onder een vitrine, zuil of de lift).
     const sterren = bouwSterren(scene, {
@@ -1123,6 +1152,7 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
       vorigePos.x = loper.pos.x
       vorigePos.z = loper.pos.z
       gangafwerking.update(nu / 1000)
+      photobooth.update(nu / 1000, dt)
       verdiep.update(nu / 1000)
       ring.update(nu / 1000)
       kelder.update(nu / 1000, { x: loper.pos.x, z: loper.pos.z })
@@ -1198,7 +1228,9 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
         const kk = s.modus === 'buiten' && opVerdiep === 0
         const kl = s.modus === 'buiten' && opVerdiep === -1 && s.zit == null
         const nb: Nabij | null =
-          kk && kleedkamer.bijMuur(loper.pos.x, loper.pos.z)
+          kk && photobooth.bijBooth(loper.pos.x, loper.pos.z)
+            ? { soort: 'booth' }
+            : kk && kleedkamer.bijMuur(loper.pos.x, loper.pos.z)
             ? { soort: 'muur' }
             : kk && kleedkamer.bijBord(loper.pos.x, loper.pos.z)
               ? { soort: 'bord' }
@@ -1221,6 +1253,7 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
       videoRef.current = null
       spelRef.current = null
       gokRef.current = null
+      boothRef.current = null
       goudRef.current = null
       waterRef.current = null
       handRef.current = null
@@ -1334,6 +1367,9 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
         break
       case 'stats':
         setPaneel('wedkantoor')
+        break
+      case 'booth':
+        setPaneel('booth')
         break
       case 'rad': {
         // Gratis, voor de fun: het rad hier geeft geen boosters (die win je op /pronostiek/rad).
@@ -1562,6 +1598,22 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
                 setPaneel(null)
                 waterRef.current?.(waterKleur([...sporen.verf, kleur].slice(-6)))
                 void laat('verf', { kleur }).then((ok) => ok && setMelding('🎨 Het water kleurt mee!'))
+              }}
+            />
+            <Photobooth
+              open={paneel === 'booth'}
+              onSluit={() => setPaneel(null)}
+              ingelogd={Boolean(thema.ingelogd)}
+              eigen={boothFotos.filter((f) => f.eigen)}
+              onGehangen={(f) => {
+                setBoothFotos((l) => [...l, f])
+                boothRef.current?.voegToe(f)
+                setMelding('📌 Je polaroid hangt aan de muur!')
+              }}
+              onVerwijderd={(id) => {
+                const nieuw = boothFotosRef.current.filter((f) => f.id !== id)
+                setBoothFotos(nieuw)
+                boothRef.current?.zetFotos(nieuw)
               }}
             />
             <WedkantoorPaneel open={paneel === 'wedkantoor'} onSluit={() => setPaneel(null)} stats={wedStats} />
