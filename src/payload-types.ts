@@ -105,6 +105,7 @@ export interface Config {
     'cv-events': CvEvent;
     'function-grants': FunctionGrant;
     'graffiti-tags': GraffitiTag;
+    'virtuele-sporen': VirtueleSporen;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -150,6 +151,7 @@ export interface Config {
     'cv-events': CvEventsSelect<false> | CvEventsSelect<true>;
     'function-grants': FunctionGrantsSelect<false> | FunctionGrantsSelect<true>;
     'graffiti-tags': GraffitiTagsSelect<false> | GraffitiTagsSelect<true>;
+    'virtuele-sporen': VirtueleSporenSelect<false> | VirtueleSporenSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -2054,7 +2056,38 @@ export interface GraffitiTag {
   club?: (number | null) | Club;
   author?: (number | null) | User;
   authorName?: string | null;
+  /**
+   * 'kleedkamer' (aan het stadion) of 'kelder' (de speelhal op -1).
+   */
+  wall?: string | null;
   strokes:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Wat bezoekers in het virtuele stadion achterlieten. Verwijder hier iets ongepasts.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "virtuele-sporen".
+ */
+export interface VirtueleSporen {
+  id: number;
+  /**
+   * Leeg = het algemene stadion (bezoekers zonder club).
+   */
+  club?: (number | null) | Club;
+  soort: string;
+  author?: (number | null) | User;
+  authorName?: string | null;
+  waarde:
     | {
         [k: string]: unknown;
       }
@@ -2241,6 +2274,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'graffiti-tags';
         value: number | GraffitiTag;
+      } | null)
+    | ({
+        relationTo: 'virtuele-sporen';
+        value: number | VirtueleSporen;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -3195,7 +3232,21 @@ export interface GraffitiTagsSelect<T extends boolean = true> {
   club?: T;
   author?: T;
   authorName?: T;
+  wall?: T;
   strokes?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "virtuele-sporen_select".
+ */
+export interface VirtueleSporenSelect<T extends boolean = true> {
+  club?: T;
+  soort?: T;
+  author?: T;
+  authorName?: T;
+  waarde?: T;
   updatedAt?: T;
   createdAt?: T;
 }

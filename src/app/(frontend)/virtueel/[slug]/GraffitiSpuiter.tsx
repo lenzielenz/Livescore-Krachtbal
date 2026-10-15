@@ -27,11 +27,13 @@ type Props = {
   club: { naam: string; primair: string; secundair: string }
   ingelogd: boolean
   onGeplaatst: (tag: Tag, lengte: number) => void
+  /** Welke muur: die bij de kleedkamer, of die in de speelhal in de kelder. */
+  muur?: 'kleedkamer' | 'kelder'
 }
 
 type Gebaar = { streken: Streek[] }
 
-export function GraffitiSpuiter({ open, onSluit, tags, lengte, club, ingelogd, onGeplaatst }: Props) {
+export function GraffitiSpuiter({ open, onSluit, tags, lengte, club, ingelogd, onGeplaatst, muur: welkeMuur = 'kleedkamer' }: Props) {
   const podium = useRef<HTMLDivElement>(null)
   const scherm = useRef<HTMLCanvasElement>(null)
   const muur = useRef<HTMLCanvasElement | null>(null)
@@ -329,7 +331,7 @@ export function GraffitiSpuiter({ open, onSluit, tags, lengte, club, ingelogd, o
     setBezig(true)
     setFout(null)
     try {
-      const r = await fetch('/api/virtueel/graffiti', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ streken }) })
+      const r = await fetch('/api/virtueel/graffiti', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ streken, muur: welkeMuur }) })
       const data = (await r.json().catch(() => ({}))) as { tag?: Tag; lengte?: number; error?: string }
       if (r.status === 401) {
         setUitLogin(true)

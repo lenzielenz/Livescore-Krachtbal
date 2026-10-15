@@ -30,6 +30,7 @@ export const GraffitiTags: CollectionConfig = {
     { name: 'club', label: 'Club (muur)', type: 'relationship', relationTo: 'clubs', index: true, admin: { description: 'Leeg = de algemene muur (bezoekers zonder club).' } },
     { name: 'author', label: 'Gespoten door', type: 'relationship', relationTo: 'users', index: true },
     { name: 'authorName', label: 'Naam', type: 'text' },
+    { name: 'wall', label: 'Muur', type: 'text', defaultValue: 'kleedkamer', index: true, admin: { description: "'kleedkamer' (aan het stadion) of 'kelder' (de speelhal op -1)." } },
     { name: 'strokes', label: 'Streken', type: 'json', required: true, admin: { readOnly: true } },
   ],
 }

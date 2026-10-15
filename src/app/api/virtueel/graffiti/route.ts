@@ -9,8 +9,8 @@ import { muurLengte, valideerStreken, type Streek, type Tag } from '@/lib/virtue
 export const dynamic = 'force-dynamic'
 
 // De graffitimuur van het virtuele stadion (zie lib/virtueel-graffiti.ts).
-//  GET  ?club=<id>   → alle tags van die muur (oudste eerst), en hoe lang de muur nu is.
-//  POST { streken }  → een nieuwe tag op de muur van je EIGEN club (bepaald door de server, niet
+//  GET  ?club=<id>&muur=kleedkamer|kelder → alle tags van die muur (oudste eerst), en hoe lang hij is.
+//  POST { streken, muur } → een nieuwe tag op de muur van je EIGEN club (bepaald door de server, niet
 //                      door de bezoeker). Vereist login; een tempo-limiet tegen spam; elke streek
 //                      wordt gecontroleerd. Een tag blijft staan (moderatie via de admin).
 
@@ -22,7 +22,15 @@ const relId = (v: unknown): number | null => {
   return Number.isFinite(n) && n > 0 ? n : null
 }
 
-const muurVan = (club: number | null): Where => (club ? { club: { equals: club } } : { club: { exists: false } })
+type Muur = 'kleedkamer' | 'kelder'
+const welkeMuur = (v: unknown): Muur => (v === 'kelder' ? 'kelder' : 'kleedkamer')
+/** De tags van één muur van één club (oude tags zonder muur horen bij de kleedkamer). */
+const muurVan = (club: number | null, muur: Muur): Where => ({
+  and: [
+    club ? { club: { equals: club } } : { club: { exists: false } },
+    muur === 'kelder' ? { wall: { equals: 'kelder' } } : { or: [{ wall: { equals: 'kleedkamer' } }, { wall: { exists: false } }] },
+  ],
+})
 
 function naamVan(user: Record<string, unknown>): string {
   const n = typeof user.name === 'string' ? user.name.trim() : ''
@@ -34,9 +42,10 @@ function naamVan(user: Record<string, unknown>): string {
 export async function GET(req: Request) {
   const url = new URL(req.url)
   const club = relId(url.searchParams.get('club'))
+  const muur = welkeMuur(url.searchParams.get('muur'))
   const payload = await getPayloadClient()
   const res = await payload
-    .find({ collection: 'graffiti-tags', where: muurVan(club), sort: '-createdAt', depth: 0, limit: MAX_TAGS, overrideAccess: true })
+    .find({ collection: 'graffiti-tags', where: muurVan(club, muur), sort: '-createdAt', depth: 0, limit: MAX_TAGS, overrideAccess: true })
     .catch(() => ({ docs: [] as Record<string, unknown>[], totalDocs: 0 }))
   const tags: Tag[] = (res.docs as Record<string, unknown>[])
     .map((d) => ({ id: d.id as number, auteur: String(d.authorName ?? 'Supporter'), streken: (Array.isArray(d.strokes) ? d.strokes : []) as Streek[] }))
@@ -51,21 +60,22 @@ export async function POST(req: Request) {
   if (!rateLimit(`graffiti:${user.id}`, 6, 60_000)) {
     return Response.json({ error: 'Even laten drogen — je spoot net nog iets.' }, { status: 429 })
   }
-  let body: { streken?: unknown }
+  let body: { streken?: unknown; muur?: unknown }
   try {
-    body = (await req.json()) as { streken?: unknown }
+    body = (await req.json()) as { streken?: unknown; muur?: unknown }
   } catch {
     return Response.json({ error: 'Ongeldige aanvraag.' }, { status: 400 })
   }
   const club = relId(userClubId(user))
-  const aantal = await payload.count({ collection: 'graffiti-tags', where: muurVan(club), overrideAccess: true }).catch(() => ({ totalDocs: 0 }))
+  const muur = welkeMuur(body.muur)
+  const aantal = await payload.count({ collection: 'graffiti-tags', where: muurVan(club, muur), overrideAccess: true }).catch(() => ({ totalDocs: 0 }))
   const lengte = muurLengte(aantal.totalDocs)
   const check = valideerStreken(body.streken, lengte)
   if (!check.ok) return Response.json({ error: check.fout }, { status: 400 })
   const auteur = naamVan(user)
   const doc = await payload.create({
     collection: 'graffiti-tags',
-    data: { club: club ?? undefined, author: Number(user.id), authorName: auteur, strokes: check.streken },
+    data: { club: club ?? undefined, author: Number(user.id), authorName: auteur, strokes: check.streken, wall: muur },
     overrideAccess: true,
   })
   const tag: Tag = { id: doc.id, auteur, streken: check.streken }

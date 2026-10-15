@@ -44,6 +44,7 @@ import { ProcessedOps } from './collections/ProcessedOps'
 import { CvEvents } from './collections/CvEvents'
 import { FunctionGrants } from './collections/FunctionGrants'
 import { GraffitiTags } from './collections/GraffitiTags'
+import { VirtueleSporen } from './collections/VirtueleSporen'
 import { Season } from './globals/Season'
 import { Settings } from './globals/Settings'
 import { Secretariaat } from './globals/Secretariaat'
@@ -144,6 +145,7 @@ export default buildConfig({
     CvEvents,
     FunctionGrants,
     GraffitiTags,
+    VirtueleSporen,
   ],
   globals: [Season, Settings, Secretariaat],
   /**

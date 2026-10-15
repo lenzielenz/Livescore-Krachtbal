@@ -63,14 +63,59 @@ export function passend(g: CanvasRenderingContext2D, img: HTMLImageElement, x: n
   g.drawImage(img, x + (w - bw) / 2, y + (h - bh) / 2, bw, bh)
 }
 
+/**
+ * De achtergrondkleur van een logo: de gemiddelde kleur van de vier hoeken, als die ondoorzichtig
+ * zijn (een vierkant logo met een eigen vlak), anders null (een vrijstaand logo).
+ */
+const logoAchtergrond = new WeakMap<HTMLImageElement, string | null>()
+function achtergrondVan(img: HTMLImageElement): string | null {
+  if (logoAchtergrond.has(img)) return logoAchtergrond.get(img)!
+  let kleur: string | null = null
+  try {
+    const c = document.createElement('canvas')
+    c.width = c.height = 32
+    const g = c.getContext('2d', { willReadFrequently: true })!
+    g.drawImage(img, 0, 0, 32, 32)
+    const d = g.getImageData(0, 0, 32, 32).data
+    let r = 0
+    let gr = 0
+    let b = 0
+    let dicht = 0
+    for (const [x, y] of [
+      [1, 1],
+      [30, 1],
+      [1, 30],
+      [30, 30],
+    ]) {
+      const i = (y * 32 + x) * 4
+      r += d[i]
+      gr += d[i + 1]
+      b += d[i + 2]
+      if (d[i + 3] > 200) dicht++
+    }
+    if (dicht === 4) kleur = `rgb(${Math.round(r / 4)},${Math.round(gr / 4)},${Math.round(b / 4)})`
+  } catch {
+    // Een logo van een andere herkomst kunnen we niet uitlezen: dan het vrijstaande geval.
+  }
+  logoAchtergrond.set(img, kleur)
+  return kleur
+}
+
 export function rondLogo(g: CanvasRenderingContext2D, logo: HTMLImageElement | null, thema: StadionThema, cx: number, cy: number, r: number) {
+  // Een vierkant logo met een eigen achtergrond vult de hele cirkel (de hoeken vallen weg), zodat
+  // je geen vierkant in een rondje ziet; een vrijstaand logo staat op wit, met wat marge.
+  const vlak = logo ? achtergrondVan(logo) : null
   g.save()
   g.beginPath()
   g.arc(cx, cy, r, 0, Math.PI * 2)
-  g.fillStyle = '#ffffff'
+  g.fillStyle = vlak ?? '#ffffff'
   g.fill()
   g.clip()
-  if (logo) passend(g, logo, cx - r * 0.82, cy - r * 0.82, r * 1.64, r * 1.64)
+  if (logo && vlak) {
+    // Net genoeg vergroot dat het vierkant de cirkel bedekt, zonder het logo zelf te veel af te snijden.
+    const z = r * 2.04
+    passend(g, logo, cx - z / 2, cy - z / 2, z, z)
+  } else if (logo) passend(g, logo, cx - r * 0.82, cy - r * 0.82, r * 1.64, r * 1.64)
   else {
     g.fillStyle = thema.primair
     g.font = `900 ${Math.round(r * 0.8)}px Inter, system-ui, sans-serif`
