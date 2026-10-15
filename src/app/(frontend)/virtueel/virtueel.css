@@ -671,3 +671,25 @@
 .vk-radar.koud { background: #1d4ed8; color: #dbeafe; }
 .vk-radar.niets { color: #94a3b8; }
 @keyframes vk-radar-puls { from { transform: scale(1); } to { transform: scale(1.1); } }
+/* Supporterspraat: de knop bovenaan is aanklikbaar, de strook met berichten, en het paneel. */
+button.vk-samen { pointer-events: auto; cursor: pointer; font: inherit; font-weight: 800; font-size: 0.78rem; }
+button.vk-samen:hover { background: rgba(22, 101, 52, 0.85); }
+.vk-praat-strook { position: absolute; left: max(12px, env(safe-area-inset-left)); bottom: 150px; z-index: 6; margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; max-width: min(78vw, 420px); pointer-events: none; }
+.vk-praat-strook li { padding: 5px 10px; border-radius: 12px; background: rgba(6, 10, 18, 0.78); border: 1px solid rgba(255, 255, 255, 0.12); color: #f8fafc; font-size: 0.8rem; animation: vk-praat-in 0.25s ease-out; }
+@keyframes vk-praat-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.vk-praat { position: absolute; left: 50%; bottom: max(12px, env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 9; width: min(94vw, 560px); max-height: min(70vh, 520px); overflow-y: auto; padding: 12px; border-radius: 18px; background: rgba(8, 12, 22, 0.94); border: 1px solid rgba(255, 255, 255, 0.14); color: #f8fafc; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5); }
+.vk-praat-kop { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+.vk-praat-tabs { display: flex; gap: 6px; }
+.vk-praat-tabs button, .vk-praat-aan button { border: 1px solid rgba(255, 255, 255, 0.16); background: rgba(255, 255, 255, 0.06); color: #e2e8f0; border-radius: 999px; padding: 6px 12px; font: inherit; font-weight: 800; font-size: 0.8rem; cursor: pointer; }
+.vk-praat-tabs button.aan, .vk-praat-aan button.aan { background: #f8fafc; color: #0b1220; }
+.vk-praat-aan { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 10px; font-size: 0.8rem; color: #94a3b8; }
+.vk-praat-roepen { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
+.vk-praat-roepen button { text-align: left; border: 1px solid rgba(255, 255, 255, 0.12); background: rgba(255, 255, 255, 0.06); color: #f8fafc; border-radius: 12px; padding: 9px 10px; font: inherit; font-size: 0.82rem; font-weight: 700; cursor: pointer; }
+.vk-praat-roepen button:hover:not(:disabled) { background: rgba(59, 130, 246, 0.35); }
+.vk-praat-kast { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
+.vk-praat-kast button { width: 100%; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; border: 1px solid rgba(255, 255, 255, 0.12); background: rgba(255, 255, 255, 0.06); color: #f8fafc; border-radius: 12px; padding: 8px 10px; font: inherit; cursor: pointer; }
+.vk-praat-kast button:hover:not(:disabled) { background: rgba(250, 204, 21, 0.25); }
+.vk-praat-kast i { font-style: normal; font-size: 1.3rem; }
+.vk-praat-kast b { font-size: 0.82rem; }
+.vk-praat-kast small { color: #fde68a; font-size: 0.72rem; font-weight: 700; }
+.vk-praat-leeg { margin: 6px 2px; color: #cbd5e1; font-size: 0.85rem; }

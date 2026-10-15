@@ -26,6 +26,8 @@ import { bouwPopcornDoosje } from './popcornkraam'
 import { bouwKleedkamer, KLEED, type Kleedkamer } from './kleedkamer'
 import { bouwKelderspel, type KelderActie, type Kelderspel } from './kelderspel'
 import { bouwGoudjacht, type GoudPlek, type Goudjacht } from './goudjacht'
+import { bouwSamenvoeger } from './samenvoegen'
+import { bouwZichtbaarheid } from './zichtbaarheid'
 import { Badkiezer, Doelworp, Loopband } from './Kelderspellen'
 import { bouwGokkantoor, type Gokkantoor } from './gokkantoor'
 import { WedkantoorPaneel } from './Wedkantoor'
@@ -33,6 +35,7 @@ import { bouwPhotobooth, type BoothFoto, type Photobooth as Photobooth3D } from 
 import { Photobooth } from './Photobooth'
 import { Wedkiosk } from './Wedkiosk'
 import { Fanshop } from './Fanshop'
+import { Praat, type Supporter } from './Praat'
 import { Superstar } from './Superstar'
 import { bouwKluis } from './kluis'
 import { bouwBakman } from './bakman'
@@ -40,6 +43,7 @@ import { bouwFandorp, type Reuzenrad, type RitInfo } from './fandorp'
 import { bouwOefencomplex } from './oefencomplex'
 import { bouwSamen, type Samen } from './samen'
 import { namen as namenRij, nieuwGeheugen, volgAanwezigen, type Aanwezige } from '@/lib/virtueel-aanwezig'
+import { gebeurtenisTekst, roepTekst, type Gebeurtenis } from '@/lib/virtueel-praat'
 import { bouwHelikopter, type Helikopter, type Vluchtinfo } from './helikopter'
 import { werpAfstand, type BalId, type SuperstarStand } from '@/lib/virtueel-superstar'
 import type { SuperstarHal } from './superstar'
@@ -355,6 +359,16 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
   // Samen: de andere supporters van je club die nu ook rondlopen (zie samen.ts).
   const samenRef = useRef<Samen | null>(null)
   const [samenAantal, setSamenAantal] = useState(0)
+  // Praten met elkaar (vaste supportersberichten) en elkaar kledij geven (zie lib/virtueel-praat.ts).
+  const [supporters, setSupporters] = useState<Supporter[]>([])
+  const [praatOpen, setPraatOpen] = useState(false)
+  const [praatRegels, setPraatRegels] = useState<{ id: string; tekst: string; t: number }[]>([])
+  const herlaadNaCadeau = useRef<() => void>(() => {})
+  useEffect(() => {
+    if (!praatRegels.length) return
+    const t = setTimeout(() => setPraatRegels((r) => r.filter((x) => Date.now() - x.t < 15000)), 2000)
+    return () => clearTimeout(t)
+  }, [praatRegels])
   useEffect(() => {
     if (!thema.ingelogd || thema.clubId == null) return
     let es: EventSource | null = null
@@ -374,14 +388,42 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     }
     // Er komt enkel een bericht als de lijst verandert: wie al een tijd weg is, controleren we zelf.
     const wegKlok = setInterval(() => geheugen.begonnen && volg(laatsteLijst), 2000)
+    // Wat er geroepen of gegeven wordt: elke gebeurtenis één keer tonen. Wat er al was toen je
+    // binnenkwam, slaan we over (behalve een cadeau aan jou).
+    const gezien = new Set<string>()
+    let eerste = true
+    const nieuws = (lijst: Gebeurtenis[]) => {
+      const ik = thema.ikId ?? null
+      for (const g of lijst) {
+        if (gezien.has(g.id)) continue
+        gezien.add(g.id)
+        const voorMij = g.soort === 'geschenk' && (g.aan === ik || g.van === ik)
+        if (eerste && !voorMij) continue
+        if (voorMij) herlaadNaCadeau.current()
+        if (g.soort === 'geschenk' && g.aan === ik) setMelding(`🎁 ${g.vanNaam} gaf je een cadeau: ${g.artikel}! Trek het aan in de fanshop.`)
+        if (g.soort === 'roep') samenRef.current?.zeg(g.van, roepTekst(g.roep, thema.naam))
+        else samenRef.current?.zeg(g.van, '🎁')
+        const tekst = gebeurtenisTekst(g, ik, thema.naam)
+        setPraatRegels((r) => [...r, { id: g.id, tekst, t: Date.now() }].slice(-5))
+      }
+      eerste = false
+    }
     const open = () => {
       if (weg) return
       es = new EventSource('/api/virtueel/aanwezig/stream')
       es.addEventListener('aanwezig', (e) => {
         try {
-          const lijst = JSON.parse((e as MessageEvent).data) as Aanwezige[]
+          // Vroeger enkel de lijst; nu ook wat er geroepen of gegeven werd.
+          const data = JSON.parse((e as MessageEvent).data) as Aanwezige[] | { aanwezig: Aanwezige[]; gebeurtenissen: Gebeurtenis[] }
+          const lijst = Array.isArray(data) ? data : data.aanwezig
           samenRef.current?.zet(lijst)
-          setSamenAantal(lijst.filter((a) => a.id !== thema.ikId).length)
+          const anderen = lijst.filter((a) => a.id !== thema.ikId)
+          setSamenAantal(anderen.length)
+          setSupporters((oud) => {
+            const nieuw = anderen.map((a) => ({ id: a.id, naam: a.naam })).sort((a, b) => a.naam.localeCompare(b.naam))
+            return JSON.stringify(oud) === JSON.stringify(nieuw) ? oud : nieuw
+          })
+          if (!Array.isArray(data)) nieuws(data.gebeurtenissen)
           laatsteLijst = lijst
           volg(lijst)
         } catch {
@@ -543,6 +585,7 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
   // Iets achterlaten in het stadion. Daarna halen we de (afgeleide) toestand opnieuw op — na een
   // tel, zodat een eendje eerst rustig kan landen.
   const herlaadTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  herlaadNaCadeau.current = herlaadSporen
   const laat = useCallback(
     async (soort: SpoorSoort, waarde: unknown): Promise<boolean> => {
       try {
@@ -627,18 +670,49 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     // Lichte modus voor gsm's en zwakke toestellen: minder pixels, kleinere schaduwkaart, minder
     // publiek. Daarnaast past de beeldscherpte zich aan zodra het afspelen hapert (zie de tekenlus).
     const licht = window.matchMedia('(max-width: 760px)').matches || (navigator.hardwareConcurrency ?? 8) <= 4
-    let pixels = Math.min(window.devicePixelRatio, licht ? 1.25 : 1.75)
+    let pixels = Math.min(window.devicePixelRatio, licht ? 1.25 : 1.5)
     // alpha: het grote scherm is een gat in het canvas waarachter de video speelt (videoscherm.ts).
-    const renderer = new THREE.WebGLRenderer({ antialias: !licht, powerPreference: 'high-performance', alpha: true })
+    // Geen antialias op het canvas: op sterke toestellen tekent de nabewerking (nabewerking.ts) het
+    // beeld in een eigen buffer, en daar doet de antialias van het canvas niets — ze kostte enkel
+    // geheugen en bandbreedte. Op lichte toestellen staat ze sowieso uit.
+    const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance', alpha: true })
     renderer.setPixelRatio(pixels)
     renderer.shadowMap.enabled = true
     renderer.shadowMap.type = THREE.PCFSoftShadowMap
+    // De schaduwen om het andere beeld bijwerken (zie de tekenlus): wat beweegt, beweegt traag
+    // genoeg, en het scheelt een volledige extra tekenronde per beeld.
+    renderer.shadowMap.autoUpdate = false
+    renderer.shadowMap.needsUpdate = true
     renderer.toneMapping = THREE.ACESFilmicToneMapping
     renderer.toneMappingExposure = 1.05
     renderer.domElement.className = 'vk-canvas'
     el.prepend(renderer.domElement)
 
     const scene = new THREE.Scene()
+    // Wat elke module aan de scène toevoegt, krijgt haar naam mee: zo weet de zichtbaarheidslaag
+    // (zichtbaarheid.ts) welk deel van de wereld wat is.
+    const bron = (naam: string) => {
+      for (const c of scene.children) if (c.userData.bron === undefined) c.userData.bron = naam
+    }
+    // Veel modules hangen hun stukken rechtstreeks aan de scène. Per module samen in één groep
+    // gezet, kan de samenvoeger ze per materiaal bundelen (hij voegt samen binnen een groep). Niet
+    // voor modules die later zelf iets van de scène halen (de graffitimuur, de supporters, jijzelf).
+    const bundel = () => {
+      const groepen = new Map<string, THREE.Group>()
+      for (const c of [...scene.children]) {
+        const b = c.userData.bron as string | undefined
+        const los = (c as THREE.Mesh).isMesh || (c as THREE.Sprite).isSprite || (c as THREE.Points).isPoints || (c as THREE.Line).isLine
+        if (!b || !los || ['Kleedkamer', 'Samen', 'Avatar'].includes(b)) continue
+        let g = groepen.get(b)
+        if (!g) {
+          g = new THREE.Group()
+          g.userData.bron = b
+          scene.add(g)
+          groepen.set(b, g)
+        }
+        g.add(c)
+      }
+    }
     scene.fog = new THREE.Fog('#0b1626', 140, 420)
     const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 900)
     camera.position.set(-6, 15.5, 21)
@@ -730,17 +804,23 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
 
     // Het stadion rondom, in de kleuren van de club die kijkt.
     const stadion = bouwStadion(scene, { veld, marge, thema, licht })
+    bron('Stadion')
     const omgeving = bouwOmgeving(scene, { thema, licht, logo: stadion.logo })
+    bron('Omgeving')
     // Het oefencomplex ten noorden van het stadion, met een veld van dezelfde maat (geen wedstrijd).
     const oefen = bouwOefencomplex(scene, { thema, licht, veldTex: veldTextuur(veld, 3), lengte: veld.length_m, breedte: veld.width_m, pleinRand: GEVEL.B + 22 })
+    bron('Oefencomplex')
     // Het fandorp aan de overkant van de straat: foodtrucks, feesttent, springkasteel en een reuzenrad.
     const fandorp = bouwFandorp(scene, { thema, licht, straatZ: GEVEL.B + 30 })
+    bron('Fandorp')
     radRef.current = fandorp.rad
     const sfeer = bouwSfeer(scene, { thema, licht, logo: stadion.logo })
+    bron('Sfeer')
     // De hall of fame hangt in de gangen; het kopbord op de achterwand van de zuidtribune, recht
     // tegenover de hoofdingang.
     const zuidTribune = stadion.obstakels.find((o) => o.z0 > 0 && o.x1 - o.x0 > 30)
     const erezaal = bouwEregalerij(scene, { thema, logo: stadion.logo, kopbordZ: (zuidTribune?.z1 ?? 22) - 0.45, renderer, licht })
+    bron('Eregalerij')
     // De tribunes (hun voetafdruk) — de gangen liggen erachter.
     const lang = (o: Rechthoek) => o.x1 - o.x0 > 30
     const tribunes = {
@@ -751,17 +831,21 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     }
     // De fotogalerij: supportersfoto's van je club op de achterwanden van de kopse tribunes.
     const fotogalerij = thema.fotos?.length ? bouwFotogalerij(scene, { thema, kaders: thema.fotos, oost: tribunes.oost, west: tribunes.west }) : null
+    bron('Fotogalerij')
     // Het verdiep boven de zuidgang: lift, VIP-loges (twee met een aquarium) en de gang met de oude
     // bekers uit de beginjaren van de club.
     const tribuneZ = zuidTribune?.z1 ?? 22.65
     const verdiep = bouwVerdiep(scene, { thema, renderer, licht, tribuneZ, vroeger: thema.erezaal?.vroeger ?? [], logo: stadion.logo })
+    bron('Verdiep')
     // Buiten aan de westkant: de kleedkamer met douches en tactiekbord, en de graffitimuur.
     const kleedkamer = bouwKleedkamer(scene, { thema, licht, logo: stadion.logo })
+    bron('Kleedkamer')
     kleedRef.current = kleedkamer
     kleedkamer.zetTactiek(sporenRef.current.borden.kleedkamer ?? laadTactiek())
     if (muurRef.current.tags.length) kleedkamer.zetTags(muurRef.current.tags, muurRef.current.lengte)
     // De spelersbus naast de kleedkamers: instappen, rondkijken, en de wedstrijd op de schermen.
     const bus = bouwSpelersbus(scene, { thema, x: -59, z: 23.6, renderer, logo: stadion.logo, licht })
+    bron('Spelersbus')
     // Laaghangende nachtmist over het plein en de grasranden rond het stadion.
     const buitenmist = licht
       ? null
@@ -783,18 +867,23 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
           ])
     const buitenLucht = samen(...[buitenmist, gangStof].filter((x): x is NonNullable<typeof x> => x != null))
     scene.add(buitenLucht.groep)
+    bron('Lucht')
     // De photobooth in de noordgang, tegen de achterwand van de noordtribune (de gevel daar is voor
     // de weekendzaal): cabine, polaroids en de mozaïek van het logo, aan de westkant van de gang.
     const photobooth = bouwPhotobooth(scene, { thema, muurZ: (tribunes.noord?.z0 ?? -22.65) - 0.02, ry: Math.PI, x0: 6.6, logo: stadion.logo, licht })
+    bron('Photobooth')
     boothRef.current = photobooth
     if (boothFotosRef.current.length) photobooth.zetFotos(boothFotosRef.current)
     // De afwerking van de gangen: ledplint, inleglijnen, banken en planten.
     const gangafwerking = bouwGangafwerking(scene, { thema, licht, oost: tribunes.oost, west: tribunes.west })
+    bron('Gangafwerking')
     // De ringwandeling op het dak (met de brug naar de lift).
     const liftZ = tribuneZ + 2.6
     const ring = bouwRing(scene, { thema, licht, liftX: LIFT_X, liftZ })
+    bron('Ring')
     // De rode knop staat op het dek van de ring, vlak naast de brug van de lift, met zicht op het veld.
     const vuurwerk = bouwVuurwerk(scene, { primair: thema.primair, secundair: thema.secundair, licht, knop: { x: LIFT_X + 5, y: RING.y, z: GEVEL.B - 1.6, ry: 0 }, dakY: RING.y })
+    bron('Vuurwerk')
     vuurwerkRef.current = vuurwerk
     const opDak = (x: number, z: number) => {
       const h = heliRef.current
@@ -817,12 +906,16 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
       ...(/mich/i.test(thema.naam) ? [{ naam: 'Standbeeld Bakman', icoon: '🦸', x: -40, z: GEVEL.B + 10, kleur: '#ef4444' }] : []),
     ]
     const wegwijzers = bouwWegwijzers(scene, { thema, logo: stadion.logo, bestemmingen, tribunes })
+    bron('Wegwijzers')
     // Leven in de gangen: wandelaars, een bar in elke hoek en het logo in de vloer.
     const gangleven = bouwGangleven(scene, { thema, licht, logo: stadion.logo })
+    bron('Gangleven')
     // De buitenkant tot in de details: dakrand, traptorens, portalen, fonteinen en het plein.
     const buitenkant = bouwBuitenkant(scene, { thema, licht })
+    bron('Buitenkant')
     // Bakman, de held van KBC Sint-Michiels, op zijn sokkel op het plein (enkel in hun stadion).
     const bakman = /mich/i.test(thema.naam) ? bouwBakman(scene, { thema, licht, x: -40, z: GEVEL.B + 10, ry: 0.35 }) : null
+    bron('Bakman')
     const obstakels = [
       ...stadion.obstakels,
       ...omgeving.obstakels,
@@ -848,10 +941,12 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
         Math.abs(x - LIFT_X) > 2.6 &&
         !obstakels.some((o) => x + 0.95 > o.x0 && x - 0.95 < o.x1 && z + 0.95 > o.z0 && z - 0.95 < o.z1),
     })
+    bron('Sterren')
     // De weekendzaal in de noordgang: de wedstrijden van dit weekend, met de standen. Op zaterdag en
     // zondag luistert ze mee op het gedeelde live-weekendkanaal (één poller voor alle kijkers).
     const noordTribune = stadion.obstakels.find((o) => o.z1 < 0 && o.x1 - o.x0 > 30)
     const weekendzaal = thema.weekend ? bouwWeekendzaal(scene, { thema, zaal: thema.weekend, wandZ: (noordTribune?.z0 ?? -22) + 0.45 }) : null
+    bron('Weekendzaal')
     let weekendStroom: EventSource | null = null
     if (thema.weekend?.bezig && weekendzaal && typeof EventSource !== 'undefined') {
       let huidig = thema.weekend
@@ -899,20 +994,26 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
 
     // Alles hierboven staat boven de grond. Ben je in de kelder, dan hoeft dat niet getekend te
     // worden (je ziet het toch niet): enkel de lichten blijven aan.
+    bron('Veld')
+    bundel()
     const bovengronds = scene.children.filter((o) => !(o as THREE.Light).isLight)
     let inKelder = false
     // De lift van de kelder tot op het dak, en de kelder zelf (-1).
     const lift = bouwLift(scene, { thema, renderer, tribuneZ, licht })
+    bron('Lift')
     const kelder = bouwKelder(scene, { thema, licht, liftX: LIFT_X, liftZ, logo: stadion.logo })
+    bron('Kelder')
     sterRef.current = kelder.superstar
     herlaadSter()
     const kluis = bouwKluis(kelder.groep, { ...kelder.plekken.kluis, y: VERDIEPEN.find((v) => v.nr === -1)!.y, primair: thema.primair })
     kluisRef.current = kluis
     kluis.zet(sporenRef.current.vondsten.mijn.length, GOUDEN_BALLEN, sporenRef.current.mij.sleutel)
     const heli = bouwHelikopter(scene, { thema, logo: stadion.logo, y: RING.y, licht })
+    bron('Helikopter')
     heliRef.current = heli
     heli.zetVoortgang(sporenRef.current.vondsten.mijn.length, GOUDEN_BALLEN, sporenRef.current.mij.sleutel)
     const supporters = bouwSamen(scene, thema, thema.ikId ?? null)
+    bron('Samen')
     samenRef.current = supporters
     // Waar jij bent, een paar keer per seconde naar de server (enkel als je wandelt of vliegt).
     let laatsteMelding = 0
@@ -1036,15 +1137,37 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
       [2, ringWest.x, ringWest.z],
       [2, GEVEL.A + 11, 7],
     ]
+    // Op wat er ligt, niet erin: van net onder ooghoogte recht naar beneden kijken en de bal op het
+    // eerste vlak leggen dat je raakt — de vloer, maar ook het kussen van het springkasteel of een
+    // tafel. Vroeger lag hij altijd op vloerhoogte, en dan zat hij onzichtbaar ín het opgeblazen
+    // kussen of onder een meubel.
+    scene.updateMatrixWorld(true)
+    const peil = new THREE.Raycaster()
+    // Sprites (borden, gloed) hebben een camera nodig om te raken; ze tellen hieronder toch niet mee.
+    peil.camera = camera
+    const omlaag = new THREE.Vector3(0, -1, 0)
+    const legNeer = (x: number, z: number, vloer: number) => {
+      peil.set(new THREE.Vector3(x, vloer + 1.4, z), omlaag)
+      peil.far = 1.6
+      const raak = peil.intersectObject(scene, true).find((h) => {
+        const m = h.object as THREE.Mesh
+        if (!m.isMesh || (m as unknown as THREE.Sprite).isSprite) return false
+        const mat = m.material as THREE.Material
+        if (Array.isArray(mat) || (mat.transparent && mat.opacity < 0.6) || mat.visible === false) return false
+        return !h.face || h.face.normal.clone().transformDirection(m.matrixWorld).y > 0.6
+      })
+      return Math.max(vloer, raak?.point.y ?? vloer) + 0.17
+    }
     const goudPlekken: GoudPlek[] = [
-      ...kelder.plekken.goud.map((p) => ({ ...p, y: VERDIEPEN[0].y + 0.17, verdiep: -1 })),
+      ...kelder.plekken.goud.map((p) => ({ ...p, y: legNeer(p.x, p.z, VERDIEPEN[0].y), verdiep: -1 })),
       ...boven.map(([v, x, z]) => {
         const p = zoekVrij(v, x, z)
         // Op de grond, niet zwevend (een krachtbal heeft een straal van ± 17 cm).
-        return { ...p, y: (VERDIEPEN.find((q) => q.nr === v)?.y ?? 0) + 0.17, verdiep: v }
+        return { ...p, y: legNeer(p.x, p.z, VERDIEPEN.find((q) => q.nr === v)?.y ?? 0), verdiep: v }
       }),
     ]
     const goudjacht = bouwGoudjacht(scene, kelder.groep, goudPlekken)
+    bron('Goudjacht')
     goudRef.current = goudjacht
     goudjacht.zetGevonden(sporenRef.current.vondsten.mijn)
     setGoud(goudjacht.aantal())
@@ -1102,6 +1225,7 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
 
     // De nabewerking (gloed, stemming per plek, waas, hitte): niet op lichte toestellen.
     const nabewerking = licht ? null : bouwNabewerking(renderer, scene, camera)
+    let nabewerkingAan = true
     const maat = () => {
       const w = el.clientWidth
       const h = el.clientHeight
@@ -1132,6 +1256,82 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     let wandel: { x: number; z: number; yaw: number; pitch: number; verdiep: number } | null = null
     // Jijzelf (enkel te zien in de spiegel van de kleedkamer).
     const avatar = bouwAvatar(scene, thema)
+    bron('Avatar')
+    bundel()
+    // Niet tekenen wat je toch niet ziet: de gangen vanop het veld, het oefencomplex vanop het plein,
+    // de heli vanuit de gang, en kleine dingen ver weg (zie zichtbaarheid.ts).
+    const zicht = (() => {
+      const deel = (...namen: string[]) => scene.children.filter((c) => namen.includes(c.userData.bron as string))
+      const kom = {
+        x0: tribunes.west?.x0 ?? -GEVEL.A + 8,
+        x1: tribunes.oost?.x1 ?? GEVEL.A - 8,
+        z0: tribunes.noord?.z0 ?? -GEVEL.B + 8,
+        z1: tribunes.zuid?.z1 ?? GEVEL.B - 8,
+      }
+      const dakY = RING.y - 1.5
+      const inGebouw = (p: THREE.Vector3) => Math.abs(p.x) < GEVEL.A + 0.3 && Math.abs(p.z) < GEVEL.B + 0.3
+      const inKom = (p: THREE.Vector3) => p.x > kom.x0 && p.x < kom.x1 && p.z > kom.z0 && p.z < kom.z1
+      const totGevel = (p: THREE.Vector3) => Math.hypot(Math.max(0, Math.abs(p.x) - GEVEL.A), Math.max(0, Math.abs(p.z) - GEVEL.B))
+      const ondergronds = (p: THREE.Vector3) => p.y < -0.5
+      // Net buiten, met zicht door de poorten en de ramen.
+      const voorDeGevel = (p: THREE.Vector3, ver: number) => !inGebouw(p) && totGevel(p) < ver && !ondergronds(p) && p.y < dakY
+      const ZUID = 1
+      const NOORD = 2
+      const OOST = 4
+      const WEST = 8
+      const ALLE_GANGEN = 15
+      const OVERKANT: Record<number, number> = { [ZUID]: NOORD, [NOORD]: ZUID, [OOST]: WEST, [WEST]: OOST }
+      // In welke gang sta je? De dichtstbijzijnde kant van de kom.
+      const gangVan = (p: THREE.Vector3) => {
+        const af = [
+          [ZUID, p.z - kom.z1],
+          [NOORD, kom.z0 - p.z],
+          [OOST, p.x - kom.x1],
+          [WEST, kom.x0 - p.x],
+        ] as const
+        return af.reduce((a, b) => (b[1] > a[1] ? b : a))[0]
+      }
+      // Sta je (op de grond) voorbij de gevel aan de kant `kant` (1 = noord, -1 = zuid)? Dan staat
+      // het stadion tussen jou en wat aan de overkant ligt.
+      const achter = (p: THREE.Vector3, kant: 1 | -1) => p.y < 12 && kant * p.z < -(GEVEL.B - 1) && Math.abs(p.x) < GEVEL.A + 12
+      return bouwZichtbaarheid(
+        scene,
+        [
+          {
+            objecten: deel('Eregalerij', 'Fotogalerij', 'Photobooth', 'Gangafwerking', 'Wegwijzers', 'Gangleven', 'Sterren', 'Weekendzaal'),
+            // Per gang (zuid, noord, oost, west): wat in welke gang staat, en welke gangen je ziet.
+            delen: (d) => (d.max.z > kom.z1 - 1 ? ZUID : 0) | (d.min.z < kom.z0 + 1 ? NOORD : 0) | (d.max.x > kom.x1 - 1 ? OOST : 0) | (d.min.x < kom.x0 + 1 ? WEST : 0),
+            zichtbaar: (p) => {
+              if (ondergronds(p) || (inKom(p) && p.y < dakY)) return 0
+              // Vanop het dak kijk je via de open hoeken van de kom tot op de gangvloer.
+              if (p.y >= dakY) return ALLE_GANGEN
+              // In een gang: die gang en de twee ernaast (om de hoek); de overkant niet.
+              if (inGebouw(p)) return ALLE_GANGEN & ~OVERKANT[gangVan(p)]
+              // Buiten: door de poorten zie je (ook van ver en schuin) de gangen aan jouw kant.
+              const kant = (p.z > GEVEL.B ? ZUID : 0) | (p.z < -GEVEL.B ? NOORD : 0) | (p.x > GEVEL.A ? OOST : 0) | (p.x < -GEVEL.A ? WEST : 0)
+              return voorDeGevel(p, 90) ? kant : 0
+            },
+          },
+          // De loges kijken uit op het veld (en door de ramen op het plein): via de open hoeken van de
+          // kom zie je ze zelfs vanuit de noordgang.
+          // De ramen en het balkon zitten in de zuidgevel: van achter het stadion (noord) zie je ze niet.
+          { objecten: deel('Verdiep'), zichtbaar: (p) => !ondergronds(p) && !achter(p, 1) },
+          // De lift (in de zuidgang, tot op het dak en in de kelder) zie je door de gevel heen.
+          { objecten: deel('Lift'), zichtbaar: (p) => !achter(p, 1) },
+          // Vanuit de gangen kijk je door de poorten naar buiten, dus enkel de kom en de overkant tellen.
+          { objecten: deel('Oefencomplex'), zichtbaar: (p) => !ondergronds(p) && !(inKom(p) && p.y < 12) && !achter(p, -1) },
+          { objecten: deel('Fandorp'), zichtbaar: (p) => !ondergronds(p) && !(inKom(p) && p.y < 12) && !achter(p, 1) },
+          // Op het dak: de gangen zijn open naar boven, dus zie je het van overal behalve de kelder.
+          { objecten: deel('Helikopter', 'Ring'), zichtbaar: (p) => !ondergronds(p) },
+        ],
+        { licht },
+      )
+    })()
+    // Wat stilstaat, per materiaal samenvoegen (zie samenvoegen.ts). De kelder doet mee: hij wordt
+    // als geheel aan- en uitgezet, en dat mag.
+    const samenvoeger = bouwSamenvoeger(scene, scene.children.filter((c) => !(c as THREE.Light).isLight && c !== camera), {
+      nieuw: (mesh, top) => zicht.voegToe(mesh, top),
+    })
     avatar.kleedAan(sporenRef.current.mij.outfit)
     avatarRef.current = avatar
     const vorigePos = { x: 0, z: 0 }
@@ -1624,7 +1824,10 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
       const trilY = schok > 0.002 ? (Math.random() - 0.5) * schok : 0
       camera.position.x += trilX
       camera.position.y += trilY
-      if (nabewerking) {
+      samenvoeger.update()
+      zicht.update(camera.position)
+      if (frames % 2 === 0) renderer.shadowMap.needsUpdate = true
+      if (nabewerking && nabewerkingAan) {
         // Tijdens het vuurwerk straalt alles feller uit.
         nabewerking.stemming(vuurwerk.bezig() ? { ...stemmingHier(), gloed: 1.8 } : stemmingHier())
         nabewerking.update(nu / 1000, dt)
@@ -1638,14 +1841,27 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
         setKlaar(true)
       }
 
-      // Hapert het? Dan stap voor stap minder pixels, tot het weer vlot loopt.
+      // Hapert het? Dan stap voor stap lichter, tot het weer vlot loopt: eerst minder pixels (tot
+      // 1), dan zonder nabewerking, dan een kleinere schaduwkaart, en pas als laatste onder 1 pixel.
       frames++
       frameTijd += dt
       if (frames >= 90) {
-        if (frameTijd / frames > 1 / 40 && pixels > 0.8) {
-          pixels = Math.max(0.8, pixels - 0.25)
-          renderer.setPixelRatio(pixels)
-          maat()
+        if (frameTijd / frames > 1 / 40) {
+          if (pixels > 1) {
+            pixels = Math.max(1, pixels - 0.25)
+            renderer.setPixelRatio(pixels)
+            maat()
+          } else if (nabewerking && nabewerkingAan) {
+            nabewerkingAan = false
+          } else if (zon.shadow.mapSize.x > 1024) {
+            zon.shadow.mapSize.set(1024, 1024)
+            zon.shadow.map?.dispose()
+            zon.shadow.map = null
+          } else if (pixels > 0.75) {
+            pixels = Math.max(0.75, pixels - 0.25)
+            renderer.setPixelRatio(pixels)
+            maat()
+          }
         }
         frames = 0
         frameTijd = 0
@@ -2080,11 +2296,46 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
                 <span>{aftel === 1 ? 'kijk omhoog!' : 'vuurwerk over'}</span>
               </div>
             )}
-            {samenAantal > 0 && !welkom && (
-              <span className="vk-samen" title="Supporters van je club die nu ook in het stadion rondlopen">
-                👥 {samenAantal} {samenAantal === 1 ? 'supporter' : 'supporters'} hier
-              </span>
+            {thema.ingelogd && thema.clubId != null && !welkom && (
+              <button className="vk-samen" title="Praat met de supporters van je club die nu ook in het stadion zijn" onClick={() => setPraatOpen((o) => !o)}>
+                {samenAantal > 0 ? `👥 ${samenAantal} ${samenAantal === 1 ? 'supporter' : 'supporters'} hier · 💬` : '💬 Supporterspraat'}
+              </button>
             )}
+            {praatRegels.length > 0 && !welkom && (
+              <ul className="vk-praat-strook" aria-live="polite">
+                {praatRegels.map((r) => (
+                  <li key={r.id}>{r.tekst}</li>
+                ))}
+              </ul>
+            )}
+            <Praat
+              open={praatOpen}
+              onSluit={() => setPraatOpen(false)}
+              clubNaam={thema.naam}
+              supporters={supporters}
+              kast={sporen.mij}
+              onRoep={async (roep, aan) => {
+                try {
+                  const r = await fetch('/api/virtueel/praat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ roep, aan }) })
+                  if (!r.ok) {
+                    const d = (await r.json().catch(() => ({}))) as { error?: string }
+                    setMelding(d.error ?? 'Dat lukte even niet')
+                    return false
+                  }
+                  return true
+                } catch {
+                  return false
+                }
+              }}
+              onGeef={async (artikel, aan) => {
+                const ok = await laat('geschenk', { id: artikel, aan: Number(aan.id) })
+                if (ok) {
+                  setMelding(`🎁 Ingepakt en gegeven aan ${aan.naam}!`)
+                  herlaadSporen()
+                }
+                return ok
+              }}
+            />
             {modus === 'buiten' && !welkom && popcornVast && (
               <button className="vk-popcornvast" onClick={() => setPopcornVast(false)} title="Zet je doosje popcorn weg">
                 🍿 Wegzetten

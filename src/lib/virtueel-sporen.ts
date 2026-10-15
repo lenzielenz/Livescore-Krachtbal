@@ -7,13 +7,14 @@
 // totalen, ranglijsten en "de laatste" worden altijd hieruit afgeleid, nooit apart bijgehouden.
 // Deze module is puur: validatie (server) en samenvatten (server en client).
 
-import { artikelVan, maakKast, type Kast, type Outfit } from './virtueel-fanshop'
+import { artikelVan, maakKast, type Kast, type KastStap, type Outfit } from './virtueel-fanshop'
 import { BAL_IDS, werpAfstand, type BalId } from './virtueel-superstar'
 import { leesTactiek, type Tactiek } from './virtueel-tactiek'
 
 // aankoop/outfit: de fanshop (virtueel-fanshop.ts); kluis: de kluis in de kelder openen (als je alle
 // gouden ballen hebt, voor de sleutel van de helikopter); werp: een worp bij Superstar.
-export const SPOOR_SOORTEN = ['eend', 'verf', 'popcorn', 'loopband', 'zetel', 'doelworp', 'bord', 'vondst', 'aankoop', 'outfit', 'kluis', 'werp'] as const
+// geschenk: een stuk uit je kast dat je aan een andere supporter van je club geeft (virtueel-praat.ts).
+export const SPOOR_SOORTEN = ['eend', 'verf', 'popcorn', 'loopband', 'zetel', 'doelworp', 'bord', 'vondst', 'aankoop', 'outfit', 'kluis', 'werp', 'geschenk'] as const
 export type SpoorSoort = (typeof SPOOR_SOORTEN)[number]
 
 export const EEND_KLEUREN = ['#facc15', '#f97316', '#ec4899', '#22c55e', '#3b82f6', '#ffffff'] as const
@@ -34,7 +35,7 @@ export const BORDEN = ['kleedkamer', 'kelder'] as const
 export type BordId = (typeof BORDEN)[number]
 
 /** Hoeveel keer per minuut iemand iets mag achterlaten (tegen spam). */
-export const TEMPO: Record<SpoorSoort, number> = { eend: 8, verf: 6, popcorn: 20, loopband: 6, zetel: 10, doelworp: 10, bord: 20, vondst: 40, aankoop: 20, outfit: 30, kluis: 5, werp: 20 }
+export const TEMPO: Record<SpoorSoort, number> = { eend: 8, verf: 6, popcorn: 20, loopband: 6, zetel: 10, doelworp: 10, bord: 20, vondst: 40, aankoop: 20, outfit: 30, kluis: 5, werp: 20, geschenk: 10 }
 
 const geheel = (v: unknown, min: number, max: number): number | null =>
   typeof v === 'number' && Number.isInteger(v) && v >= min && v <= max ? v : null
@@ -51,6 +52,7 @@ export type SpoorWaarde =
   | { id: string } // aankoop
   | { outfit: Partial<Outfit> } // outfit (wat je bezit, controleert de server apart)
   | { bal: BalId; kracht: number; hoek: number; afstand: number } // werp
+  | { id: string; aan: number; aanNaam: string } // geschenk (de server zoekt de ontvanger op)
 
 /** Controleer wat een bezoeker wil achterlaten; geeft de opgeschoonde waarde of een foutmelding. */
 export function valideerSpoor(soort: unknown, ruw: unknown): { ok: true; soort: SpoorSoort; waarde: SpoorWaarde } | { ok: false; fout: string } {
@@ -101,6 +103,12 @@ export function valideerSpoor(soort: unknown, ruw: unknown): { ok: true; soort: 
       return w.outfit && typeof w.outfit === 'object' ? { ok: true, soort: s, waarde: { outfit: w.outfit as Partial<Outfit> } } : { ok: false, fout: 'Ongeldige outfit.' }
     case 'kluis':
       return { ok: true, soort: s, waarde: {} }
+    case 'geschenk': {
+      const id = typeof w.id === 'string' && artikelVan(w.id) ? w.id : null
+      const aan = geheel(w.aan, 1, Number.MAX_SAFE_INTEGER)
+      if (!id || aan == null) return { ok: false, fout: 'Ongeldig cadeau.' }
+      return { ok: true, soort: s, waarde: { id, aan, aanNaam: '' } }
+    }
     case 'werp': {
       // De afstand rekent de server zelf uit, uit kracht en hoek (een client kan geen afstand opgeven).
       const bal = typeof w.bal === 'string' && (BAL_IDS as string[]).includes(w.bal) ? (w.bal as BalId) : null
@@ -146,7 +154,7 @@ export function vatSporenSamen(sporen: Spoor[], ik: number | string | null): Spo
     vondsten: { kampioenen: [], mijn: [] },
     mij: { ...maakKast(0, [], []), sleutel: false },
   }
-  const aankopen: string[] = []
+  const aankopen: KastStap[] = []
   const outfits: Partial<Outfit>[] = []
   let kluis = false
   const lopers = new Map<string, number>()
@@ -187,6 +195,13 @@ export function vatSporenSamen(sporen: Spoor[], ik: number | string | null): Spo
         gevonden.set(sleutel, g)
         if (voor < GOUDEN_BALLEN && g.nrs.size === GOUDEN_BALLEN) staat.vondsten.kampioenen.push(g.naam)
         if (ik != null && s.auteur != null && String(s.auteur) === String(ik)) mijn.add(w.nr as number)
+        break
+      }
+      case 'geschenk': {
+        // Wat jij weggaf, ben je kwijt; wat je kreeg, zit in je kast.
+        if (ik == null) break
+        if (s.auteur != null && String(s.auteur) === String(ik)) aankopen.push({ geef: w.id as string })
+        else if (String(w.aan) === String(ik)) aankopen.push({ krijg: w.id as string })
         break
       }
       case 'aankoop':

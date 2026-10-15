@@ -546,7 +546,7 @@ export function bouwAvatar(scene: THREE.Scene, thema: StadionThema, opt: { laag?
         }), 0, 1.05, -0.2, extra)
         cape.rotation.set(0.12, Math.PI, 0)
       } else if (ex.stijl.vorm === 'krachtbal') {
-        const bal = deel(krachtbalGeometrie(0.14, 1), new THREE.MeshStandardMaterial({ map: krachtbalTextuur(kleur(ex.stijl.kleur, '#f97316')), roughness: 0.55 }), 0.06, 0.1, 0.02, extraHand)
+        const bal = deel(krachtbalGeometrie(0.14, 0.4), new THREE.MeshStandardMaterial({ map: krachtbalTextuur(kleur(ex.stijl.kleur, '#f97316')), roughness: 0.55 }), 0.06, 0.1, 0.02, extraHand)
         void bal
       } else if (ex.stijl.vorm === 'megafoon') {
         const m = deel(new THREE.CylinderGeometry(0.1, 0.035, 0.3, 18, 1, true), new THREE.MeshStandardMaterial({ color: kleur(ex.stijl.kleur, '#f8fafc'), side: THREE.DoubleSide, roughness: 0.4 }), 0, 0.02, 0.18, extraHand)

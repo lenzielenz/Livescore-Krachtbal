@@ -794,7 +794,7 @@ export function bouwFandorp(scene: THREE.Scene, opt: { thema: StadionThema; lich
       const paal = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 4, 6).translate(0, 2.4, 0), staal)
       paal.position.set(x, 0, z)
       draait.add(paal)
-      const bal = new THREE.Mesh(krachtbalGeometrie(0.55, 1), new THREE.MeshStandardMaterial({ map: krachtbalTextuur(kleuren[i % 5]), roughness: 0.55 }))
+      const bal = new THREE.Mesh(krachtbalGeometrie(0.55, 0.5), new THREE.MeshStandardMaterial({ map: krachtbalTextuur(kleuren[i % 5]), roughness: 0.55 }))
       bal.position.set(x, 1.6, z)
       draait.add(bal)
       ballen.push(bal)

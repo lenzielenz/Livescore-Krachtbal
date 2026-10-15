@@ -57,7 +57,7 @@ export function bouwGoudjacht(scene: THREE.Scene, kelderGroep: THREE.Group, plek
     return new THREE.CanvasTexture(c)
   })()
   // Een echte krachtbal (stroken, kapjes en diepe naden; zie krachtbal.ts) op ware grootte, in goud.
-  const balGeo = krachtbalGeometrie(STRAAL)
+  const balGeo = krachtbalGeometrie(STRAAL, 0.4)
   const balMat = new THREE.MeshStandardMaterial({ map: krachtbalTextuur('#f2c230', '#3b2606'), vertexColors: true, emissive: '#a16207', emissiveIntensity: 0.25, metalness: 0.65, roughness: 0.38 })
   const ballen = lijst.map((p, i) => {
     const g = new THREE.Group()
@@ -91,7 +91,7 @@ export function bouwGoudjacht(scene: THREE.Scene, kelderGroep: THREE.Group, plek
       for (let i = 0; i < ballen.length; i++) {
         if (gevonden.has(i)) continue
         const p = ballen[i].p
-        if (p.verdiep === verdiep && Math.hypot(x - p.x, z - p.z) < 1.0) {
+        if (p.verdiep === verdiep && Math.hypot(x - p.x, z - p.z) < 1.15) {
           gevonden.add(i)
           return i
         }

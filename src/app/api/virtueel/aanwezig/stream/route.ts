@@ -4,10 +4,12 @@ import { getPayloadClient } from '@/lib/payload-client'
 import { HARTSLAG_MS } from '@/lib/sse-leven'
 import { SSE_HEADERS, acquireConnection, clientIp, releaseConnection, subscribe } from '@/lib/sse-hub'
 import { aanwezig } from '@/lib/virtueel-aanwezig'
+import { gebeurtenissen } from '@/lib/virtueel-praat'
 
 export const dynamic = 'force-dynamic'
 
-// De supporters van je club die nu in het virtuele stadion rondlopen, live (SSE). Eén gedeelde
+// De supporters van je club die nu in het virtuele stadion rondlopen, en wat ze elkaar toeroepen
+// of geven, live (SSE). Eén gedeelde
 // poller per club (sse-hub.ts) leest de lijst uit het geheugen en stuurt hem naar iedereen die
 // kijkt; enkel ingelogde leden van die club krijgen hem (de posities zijn niet publiek).
 
@@ -48,7 +50,13 @@ export async function GET(req: Request) {
         releaseConnection(ip)
       }
       // Snel genoeg om vloeiend te wandelen (de client interpoleert); de lijst komt uit het geheugen.
-      uit = subscribe(`virtueel-aanwezig:${club}`, async () => aanwezig(String(club)), (f) => stuur(`event: aanwezig\ndata: ${JSON.stringify(f.data)}\n\n`), 400)
+      // Wie er is, en wat er de laatste halve minuut geroepen of gegeven werd (virtueel-praat.ts).
+      uit = subscribe(
+        `virtueel-aanwezig:${club}`,
+        async () => ({ aanwezig: aanwezig(String(club)), gebeurtenissen: gebeurtenissen(String(club)) }),
+        (f) => stuur(`event: aanwezig\ndata: ${JSON.stringify(f.data)}\n\n`),
+        400,
+      )
       hartslag = setInterval(() => stuur(`event: ping\ndata: {}\n\n`), HARTSLAG_MS)
       req.signal.addEventListener('abort', ruimOp)
     },
