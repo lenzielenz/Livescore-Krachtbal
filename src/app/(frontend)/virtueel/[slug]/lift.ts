@@ -1,13 +1,17 @@
 import * as THREE from 'three'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
+import { Reflector } from 'three/examples/jsm/objects/Reflector.js'
 
 import type { Rechthoek, StadionThema } from '@/lib/virtueel'
 import { deurOp, liftStap, liftVerdiep, liftY, nieuweLift, VERDIEPEN, type Lift } from '@/lib/virtueel-lift'
+import { AVATAR_LAAG } from './avatar'
+import { rondeDoos } from './rond'
 import { canvasTex } from './stadion'
 
 // De lift: één schacht van de kelder (-1) tot op het dak (de ringwandeling), achter de Hall of
 // Fame-gang. Op elk verdiep schuifdeuren met een verdiepaanduiding en een oproepknop; een kooi met
-// spiegel, leuning en een knoppenpaneel die meerijdt. In de kooi kies je zelf je verdiep (het paneel
+// spiegelwanden (achteraan en opzij: je ziet jezelf de lift instappen), leuning en een
+// knoppenpaneel die meerijdt. In de kooi kies je zelf je verdiep (het paneel
 // op je scherm, zie VirtueelViewer); de logica zit (getest) in lib/virtueel-lift.ts.
 // Boven het dak van de loges steekt de schacht uit als een slanke toren in clubkleur.
 
@@ -19,6 +23,10 @@ export type Lift3D = {
   zDeur: number
   /** Staat dit punt in de kooi? */
   binnen: (x: number, z: number) => boolean
+  /** De spiegelwanden in de kooi aan/uit (ze tekenen de scène opnieuw: enkel als je in of bij de lift bent). */
+  spiegels: (aan: boolean) => void
+  /** Sta je in de kooi of er net voor (op het verdiep waar de kooi staat)? */
+  bijKooi: (x: number, z: number, verdiep: number) => boolean
   /** Wat de schacht tegenhoudt op dit verdiep (en de deur, als die dicht is). */
   obstakels: (verdiep: number) => Rechthoek[]
   update: (
@@ -27,7 +35,7 @@ export type Lift3D = {
   ) => { aangekomen: number | null; vloerY: number | null; keuzeGebruikt: boolean; lift: Lift }
 }
 
-export function bouwLift(scene: THREE.Scene, opt: { thema: StadionThema; renderer: THREE.WebGLRenderer; tribuneZ: number }): Lift3D {
+export function bouwLift(scene: THREE.Scene, opt: { thema: StadionThema; renderer: THREE.WebGLRenderer; tribuneZ: number; licht?: boolean }): Lift3D {
   const { thema } = opt
   const LX = LIFT_X
   const Z0 = opt.tribuneZ // achterkant van de schacht
@@ -54,7 +62,7 @@ export function bouwLift(scene: THREE.Scene, opt: { thema: StadionThema; rendere
     licht: new THREE.MeshBasicMaterial({ color: '#fff4dc', toneMapped: false }),
   }
   const doos = (w: number, h: number, d: number, x: number, y: number, z: number, mat: THREE.Material, ouder: THREE.Object3D = scene) => {
-    const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat)
+    const m = new THREE.Mesh(rondeDoos(w, h, d), mat)
     m.position.set(x, y, z)
     ouder.add(m)
     return m
@@ -179,6 +187,57 @@ export function bouwLift(scene: THREE.Scene, opt: { thema: StadionThema; rendere
   deel(kw - 0.4, 0.02, kd - 0.4, LX, 2.39, kz, mats.licht)
   deel(0.05, 0.05, kd - 0.2, LX - kw / 2 + 0.08, 0.95, kz, mats.staal)
   deel(0.05, 0.05, kd - 0.2, LX + kw / 2 - 0.08, 0.95, kz, mats.staal)
+  deel(kw - 0.2, 0.05, 0.05, LX, 0.95, Z0 + 0.3, mats.staal)
+  // De spiegelwanden: achteraan over de hele breedte, en opzij. Echte weerspiegelingen (ook van
+  // jezelf, de figuur op de avatarlaag), die elkaar ook weer weerspiegelen. Omdat elke spiegel de
+  // scène opnieuw tekent, staan ze enkel aan als je in of bij de lift bent (zie spiegels()).
+  const pr = Math.min(2, window.devicePixelRatio || 1) * (opt.licht ? 0.55 : 0.85)
+  const spiegelVlak = (b: number, h: number) => {
+    const sp = new Reflector(new THREE.PlaneGeometry(b, h), {
+      textureWidth: Math.round(b * 260 * pr),
+      textureHeight: Math.round(h * 260 * pr),
+      color: new THREE.Color('#cfd6dd'),
+      clipBias: 0.003,
+    })
+    sp.camera.layers.enable(AVATAR_LAAG)
+    sp.visible = false
+    kooi.add(sp)
+    return sp
+  }
+  const SPH = 2.1
+  const SPY = 1.25
+  const achter = spiegelVlak(kw - 0.16, SPH)
+  achter.position.set(LX, SPY, Z0 + 0.195)
+  const links = spiegelVlak(kd - 0.5, SPH)
+  links.position.set(LX - kw / 2 + 0.025, SPY, kz - 0.1)
+  links.rotation.y = Math.PI / 2
+  const rechts = spiegelVlak(kd - 0.5, SPH)
+  rechts.position.set(LX + kw / 2 - 0.025, SPY, kz - 0.1)
+  rechts.rotation.y = -Math.PI / 2
+  // Op een zwak toestel enkel de achterwand (drie spiegels = drie keer extra tekenen).
+  const spiegelLijst = opt.licht ? [achter] : [achter, links, rechts]
+  // Geborstelde stalen lijsten rond de spiegels.
+  for (const [b, x, z, ry] of [
+    [kw - 0.16, LX, Z0 + 0.19, 0],
+    [kd - 0.5, LX - kw / 2 + 0.022, kz - 0.1, Math.PI / 2],
+    [kd - 0.5, LX + kw / 2 - 0.022, kz - 0.1, -Math.PI / 2],
+  ] as const) {
+    const lijst = new THREE.Group()
+    lijst.position.set(x, 0, z)
+    lijst.rotation.y = ry
+    for (const y of [SPY - SPH / 2, SPY + SPH / 2]) {
+      const m = new THREE.Mesh(new THREE.BoxGeometry(b + 0.06, 0.04, 0.02), mats.staal)
+      m.position.y = y
+      lijst.add(m)
+    }
+    for (const sx of [-1, 1]) {
+      const m = new THREE.Mesh(new THREE.BoxGeometry(0.04, SPH + 0.04, 0.02), mats.staal)
+      m.position.x = (sx * (b + 0.02)) / 2
+      m.position.y = SPY
+      lijst.add(m)
+    }
+    kooi.add(lijst)
+  }
   // Het knoppenpaneel: een knop per verdiep, met het label ernaast.
   const paneelC = document.createElement('canvas')
   paneelC.width = 128
@@ -231,6 +290,10 @@ export function bouwLift(scene: THREE.Scene, opt: { thema: StadionThema; rendere
     x: LX,
     zDeur: ZD,
     binnen,
+    spiegels(aan) {
+      for (const sp of spiegelLijst) sp.visible = aan
+    },
+    bijKooi: (x, z, verdiep) => binnen(x, z) || (Math.round(lift.hoogte) === verdiep && lift.toestand !== 'rijden' && Math.abs(x - LX) < 2.2 && z >= ZD - 0.2 && z < ZD + 4),
     obstakels(verdiep) {
       return deurOp(lift, verdiep) < 0.95 ? [...schacht, deurRect] : schacht
     },

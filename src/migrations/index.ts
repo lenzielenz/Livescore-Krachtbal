@@ -133,6 +133,7 @@ import * as migration_20260929_120000_match_instants_video from './20260929_1200
 import * as migration_20260929_130000_news_photos from './20260929_130000_news_photos'
 import * as migration_20261014_180000_graffiti_tags from './20261014_180000_graffiti_tags'
 import * as migration_20261014_220000_virtuele_sporen from './20261014_220000_virtuele_sporen'
+import * as migration_20261015_070000_photobooth_fotos from './20261015_070000_photobooth_fotos'
 
 export const migrations = [
   {
@@ -804,5 +805,10 @@ export const migrations = [
     up: migration_20261014_220000_virtuele_sporen.up,
     down: migration_20261014_220000_virtuele_sporen.down,
     name: '20261014_220000_virtuele_sporen',
+  },
+  {
+    up: migration_20261015_070000_photobooth_fotos.up,
+    down: migration_20261015_070000_photobooth_fotos.down,
+    name: '20261015_070000_photobooth_fotos',
   },
 ];

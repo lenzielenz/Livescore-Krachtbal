@@ -5,6 +5,7 @@ import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment
 import { GEVEL, inPoort, type EreBord, type Rechthoek, type StadionThema } from '@/lib/virtueel'
 import { gevelOmtrek } from './omgeving'
 import { bouwBordlicht } from './bordlicht'
+import { spelersfoto } from '@/lib/virtueel-spelersfotos'
 import { canvasTex, rondLogo } from './stadion'
 
 // De hall of fame in de gangen achter de tribunes: de erelijst van je club, al wandelend te
@@ -12,7 +13,9 @@ import { canvasTex, rondLogo } from './stadion'
 //  • Titels en bekers hangen als plaquettes aan de binnenkant van de gevel: lint met de soort
 //    prijs, lauwerkrans, het seizoen, de reeks en wat de prijs bijzonder maakt ("3de titel in …").
 //  • Een persoonlijke prijs (referendum) krijgt een eigen, staand portretbord met een gouden
-//    dubbelkader, een silhouet, de naam van de speler en een gouden gloed eromheen.
+//    dubbelkader, de foto van de speler (of een silhouet als er geen is, zie
+//    lib/virtueel-spelersfotos.ts), de naam en een gouden gloed eromheen. Met foto hangt het bord
+//    in een echte vergulde lijst.
 //  • De recentste titels en bekers staan als echte bekers in glazen vitrines op sokkels in de gang
 //    tegenover de hoofdingang: ze draaien traag rond, met een spot en een naamplaatje, en je kan
 //    er rond wandelen.
@@ -22,7 +25,10 @@ import { canvasTex, rondLogo } from './stadion'
 // zijn samengevoegd; de verlichting per bord (bordlicht.ts) en de lichtplassen zijn InstancedMeshes.
 
 const PLAQ = { b: 3.4, h: 2.4, celB: 512, celH: 360, kol: 4, y: 2.55 }
-const PORT = { b: 2.4, h: 3.4, celB: 360, celH: 512, kol: 6, y: 2.45 }
+const PORT = { b: 2.4, h: 3.4, celB: 540, celH: 768, kol: 6, y: 2.45 }
+/** Een portret wordt getekend op 360 × 512 en geschaald naar de cel (scherper voor de foto's). */
+const PORT_W = 360
+const PORT_H = 512
 
 export type Eregalerij = { obstakels: Rechthoek[]; update: (seconden: number) => void }
 
@@ -131,8 +137,9 @@ function tekenPlaquette(g: CanvasRenderingContext2D, x: number, y: number, b: Er
   }
 }
 
-function tekenPortret(g: CanvasRenderingContext2D, x: number, y: number, b: EreBord, thema: StadionThema, logo: HTMLImageElement | null): void {
-  const { celB: W, celH: H } = PORT
+function tekenSilhouet(g: CanvasRenderingContext2D, x: number, y: number, b: EreBord, thema: StadionThema, logo: HTMLImageElement | null): void {
+  const W = PORT_W
+  const H = PORT_H
   const bg = g.createRadialGradient(x + W / 2, y + 170, 10, x + W / 2, y + 220, H * 0.75)
   bg.addColorStop(0, '#3a2a0c')
   bg.addColorStop(0.5, '#141b2c')
@@ -197,6 +204,169 @@ function tekenPortret(g: CanvasRenderingContext2D, x: number, y: number, b: EreB
     g.fillText(regel, cx, y + 404 + i * 24)
   })
   rondLogo(g, logo, thema, cx, y + 470, 20)
+}
+
+/** Een verguld verloop: zo ziet een gouden lijst eruit (licht en schaduw in het metaal). */
+function vergulden(g: CanvasRenderingContext2D, x0: number, y0: number, x1: number, y1: number): CanvasGradient {
+  const gr = g.createLinearGradient(x0, y0, x1, y1)
+  gr.addColorStop(0, '#7a5410')
+  gr.addColorStop(0.18, '#f8e08e')
+  gr.addColorStop(0.36, '#b7791f')
+  gr.addColorStop(0.55, '#fde68a')
+  gr.addColorStop(0.75, '#a16207')
+  gr.addColorStop(1, '#f5d77a')
+  return gr
+}
+
+/** Een letter-gespatieerde regel (gecentreerd), zoals op een gegraveerd naambord. */
+function gespatieerd(g: CanvasRenderingContext2D, tekst: string, cx: number, y: number, spatie: number): void {
+  const letters = [...tekst]
+  const breed = letters.reduce((s, l) => s + g.measureText(l).width, 0) + spatie * (letters.length - 1)
+  let x = cx - breed / 2
+  g.textAlign = 'left'
+  for (const l of letters) {
+    g.fillText(l, x, y)
+    x += g.measureText(l).width + spatie
+  }
+  g.textAlign = 'center'
+}
+
+/** Het portret met foto: een museumbord in een vergulde lijst, de foto in een passe-partout. */
+function tekenFotoportret(g: CanvasRenderingContext2D, b: EreBord, thema: StadionThema, logo: HTMLImageElement | null, foto: HTMLImageElement): void {
+  const W = PORT_W
+  const H = PORT_H
+  const cx = W / 2
+  // Diep nachtblauw, met een warme gloed achter de foto.
+  const bg = g.createRadialGradient(cx, 200, 20, cx, 260, H * 0.8)
+  bg.addColorStop(0, '#2b2111')
+  bg.addColorStop(0.45, '#111827')
+  bg.addColorStop(1, '#05080f')
+  g.fillStyle = bg
+  g.fillRect(0, 0, W, H)
+  // Fijne guilloche-lijntjes in de achtergrond (zoals op een bankbiljet), heel subtiel.
+  g.strokeStyle = 'rgba(253,230,138,.05)'
+  g.lineWidth = 1
+  for (let i = -H; i < W + H; i += 9) {
+    g.beginPath()
+    g.moveTo(i, 0)
+    g.lineTo(i - H * 0.6, H)
+    g.stroke()
+  }
+  // Vergulde lijst: breed verguld, een donkere groef en een fijne binnenrand.
+  g.strokeStyle = vergulden(g, 0, 0, W, H)
+  g.lineWidth = 16
+  g.strokeRect(8, 8, W - 16, H - 16)
+  g.strokeStyle = 'rgba(0,0,0,.55)'
+  g.lineWidth = 3
+  g.strokeRect(17.5, 17.5, W - 35, H - 35)
+  g.strokeStyle = vergulden(g, W, 0, 0, H)
+  g.lineWidth = 1.5
+  g.strokeRect(22, 22, W - 44, H - 44)
+  // Hoekornamenten.
+  g.fillStyle = vergulden(g, 0, 0, W, H)
+  for (const [hx, hy, sx, sy] of [
+    [22, 22, 1, 1],
+    [W - 22, 22, -1, 1],
+    [22, H - 22, 1, -1],
+    [W - 22, H - 22, -1, -1],
+  ]) {
+    g.beginPath()
+    g.moveTo(hx, hy)
+    g.lineTo(hx + sx * 26, hy)
+    g.lineTo(hx + sx * 26, hy + sy * 3)
+    g.lineTo(hx + sx * 3, hy + sy * 3)
+    g.lineTo(hx + sx * 3, hy + sy * 26)
+    g.lineTo(hx, hy + sy * 26)
+    g.closePath()
+    g.fill()
+    g.beginPath()
+    g.arc(hx + sx * 9, hy + sy * 9, 3, 0, Math.PI * 2)
+    g.fill()
+  }
+  // Kop: de prijs, gegraveerd in goud.
+  g.textBaseline = 'middle'
+  g.fillStyle = vergulden(g, 60, 34, W - 60, 60)
+  past(g, b.kop, W - 110, 17, 800)
+  gespatieerd(g, b.kop, cx, 47, 2.4)
+  // De foto in een passe-partout, met een vergulde rand.
+  const fb = 250
+  const fh = 296
+  const fx = cx - fb / 2
+  const fy = 68
+  g.save()
+  g.shadowColor = 'rgba(0,0,0,.65)'
+  g.shadowBlur = 18
+  g.shadowOffsetY = 6
+  g.fillStyle = '#f5efe0'
+  g.fillRect(fx - 9, fy - 9, fb + 18, fh + 18)
+  g.restore()
+  g.strokeStyle = vergulden(g, fx, fy, fx + fb, fy + fh)
+  g.lineWidth = 2
+  g.strokeRect(fx - 9, fy - 9, fb + 18, fh + 18)
+  // De foto zelf: gevuld vanaf boven (het hoofd blijft in beeld).
+  const schaal = Math.max(fb / foto.width, fh / foto.height)
+  const sw = fb / schaal
+  const sh = fh / schaal
+  g.drawImage(foto, (foto.width - sw) / 2, 0, sw, sh, fx, fy, fb, fh)
+  // Zacht vignet en een warme gloed, zodat de foto in het bord "zit".
+  const vig = g.createRadialGradient(cx, fy + fh * 0.42, fb * 0.35, cx, fy + fh * 0.5, fh * 0.75)
+  vig.addColorStop(0, 'rgba(0,0,0,0)')
+  vig.addColorStop(1, 'rgba(10,8,4,.42)')
+  g.fillStyle = vig
+  g.fillRect(fx, fy, fb, fh)
+  g.strokeStyle = 'rgba(0,0,0,.5)'
+  g.lineWidth = 1
+  g.strokeRect(fx + 0.5, fy + 0.5, fb - 1, fh - 1)
+  // Het clubschild als zegel op de hoek van de foto.
+  rondLogo(g, logo, thema, fx + fb - 4, fy + fh - 4, 22)
+  g.strokeStyle = vergulden(g, fx + fb - 26, fy + fh - 26, fx + fb + 18, fy + fh + 18)
+  g.lineWidth = 3
+  g.beginPath()
+  g.arc(fx + fb - 4, fy + fh - 4, 23.5, 0, Math.PI * 2)
+  g.stroke()
+  // De naam, groot, met een gouden scheidingslijn en een ruitje.
+  g.textAlign = 'center'
+  g.fillStyle = '#ffffff'
+  past(g, b.tekst.toUpperCase(), W - 80, 30, 900)
+  g.shadowColor = 'rgba(0,0,0,.6)'
+  g.shadowBlur = 6
+  gespatieerd(g, b.tekst.toUpperCase(), cx, 402, 1.2)
+  g.shadowBlur = 0
+  g.strokeStyle = vergulden(g, 80, 0, W - 80, 0)
+  g.lineWidth = 1.5
+  for (const kant of [-1, 1]) {
+    g.beginPath()
+    g.moveTo(cx + kant * 10, 427)
+    g.lineTo(cx + kant * 108, 427)
+    g.stroke()
+  }
+  g.fillStyle = '#fcd34d'
+  g.beginPath()
+  g.moveTo(cx, 421)
+  g.lineTo(cx + 6, 427)
+  g.lineTo(cx, 433)
+  g.lineTo(cx - 6, 427)
+  g.closePath()
+  g.fill()
+  // Het jaar en wat de prijs bijzonder maakt.
+  g.fillStyle = vergulden(g, cx - 40, 440, cx + 40, 470)
+  past(g, b.jaar, W - 80, 26, 800)
+  g.fillText(b.jaar, cx, 452)
+  g.fillStyle = 'rgba(253,230,138,.82)'
+  ;(b.extra ?? '').split(' · ').slice(0, 2).forEach((regel, i) => {
+    past(g, regel, W - 84, 14, 500, 'italic')
+    g.fillText(regel, cx, 474 + i * 17)
+  })
+}
+
+/** Een portretbord in zijn atlascel: met foto als die er is, anders met een silhouet. */
+function tekenPortret(g: CanvasRenderingContext2D, x: number, y: number, b: EreBord, thema: StadionThema, logo: HTMLImageElement | null, foto: HTMLImageElement | null): void {
+  g.save()
+  g.translate(x, y)
+  g.scale(PORT.celB / PORT_W, PORT.celH / PORT_H)
+  if (foto) tekenFotoportret(g, b, thema, logo, foto)
+  else tekenSilhouet(g, 0, 0, b, thema, logo)
+  g.restore()
 }
 
 export function bouwEregalerij(
@@ -290,12 +460,31 @@ export function bouwEregalerij(
   }
   const atlasP = maakAtlas(plaquettes.length, PLAQ)
   const atlasR = maakAtlas(portretten.length, PORT)
+  // De foto's van de spelers (als we er een hebben): het bord tekent eerst met een silhouet en
+  // daarna opnieuw zodra de foto's binnen zijn.
+  const fotos: (HTMLImageElement | null)[] = portretten.map(() => null)
+  let huidigLogo: HTMLImageElement | null = null
+  const fotoLaden = portretten.map(({ b }, i) => {
+    const pad = spelersfoto(b.tekst)
+    if (!pad) return Promise.resolve()
+    return new Promise<void>((klaar) => {
+      const img = new Image()
+      img.decoding = 'async'
+      img.onload = () => {
+        fotos[i] = img
+        klaar()
+      }
+      img.onerror = () => klaar()
+      img.src = pad
+    })
+  })
   const tekenAtlassen = (logo: HTMLImageElement | null) => {
+    huidigLogo = logo
     const gp = atlasP.c.getContext('2d')!
     plaquettes.forEach(({ b }, i) => tekenPlaquette(gp, (i % PLAQ.kol) * PLAQ.celB, Math.floor(i / PLAQ.kol) * PLAQ.celH, b, thema, logo, zaal.eigen))
     atlasP.tex.needsUpdate = true
     const gr2 = atlasR.c.getContext('2d')!
-    portretten.forEach(({ b }, i) => tekenPortret(gr2, (i % PORT.kol) * PORT.celB, Math.floor(i / PORT.kol) * PORT.celH, b, thema, logo))
+    portretten.forEach(({ b }, i) => tekenPortret(gr2, (i % PORT.kol) * PORT.celB, Math.floor(i / PORT.kol) * PORT.celH, b, thema, logo, fotos[i]))
     atlasR.tex.needsUpdate = true
   }
   tekenAtlassen(null)
@@ -323,8 +512,11 @@ export function bouwEregalerij(
 
   const kaderGeos: THREE.BufferGeometry[] = []
   for (const { plek } of plaquettes) kaderGeos.push(new THREE.BoxGeometry(PLAQ.b + 0.2, PLAQ.h + 0.2, 0.1).applyMatrix4(naarMuur(plek, PLAQ.y).m))
-  for (const { plek } of portretten) kaderGeos.push(new THREE.BoxGeometry(PORT.b + 0.28, PORT.h + 0.28, 0.12).applyMatrix4(naarMuur(plek, PORT.y).m))
-  scene.add(new THREE.Mesh(mergeGeometries(kaderGeos), new THREE.MeshLambertMaterial({ color: '#111827' })))
+  // Portretten met een foto hangen in een vergulde lijst: een brede vergulde rand met een
+  // afgeschuinde binnenkant (zie hieronder, bij het goud van de vitrines).
+  const metFoto = portretten.filter(({ b }) => spelersfoto(b.tekst))
+  for (const { b, plek } of portretten) if (!spelersfoto(b.tekst)) kaderGeos.push(new THREE.BoxGeometry(PORT.b + 0.28, PORT.h + 0.28, 0.12).applyMatrix4(naarMuur(plek, PORT.y).m))
+  if (kaderGeos.length) scene.add(new THREE.Mesh(mergeGeometries(kaderGeos), new THREE.MeshLambertMaterial({ color: '#111827' })))
 
   // Elk bord zijn eigen verlichting: lamp, lichtwaaier, gloed in de kleur van het bord, bundel en
   // lichtplas (bordlicht.ts). Persoonlijke prijzen gloeien goud.
@@ -392,6 +584,34 @@ export function bouwEregalerij(
   }
   const goud = new THREE.MeshStandardMaterial({ color: '#e9b824', metalness: 1, roughness: 0.22, envMap: omgeving, envMapIntensity: 1.3 })
   const zilver = new THREE.MeshStandardMaterial({ color: '#d7dde4', metalness: 1, roughness: 0.18, envMap: omgeving, envMapIntensity: 1.3 })
+  // De vergulde lijsten rond de portretten met foto: een profiel met afgeronde randen (een vorm
+  // met een gat, uitgetrokken met afschuining), en een donkere achterplaat.
+  if (metFoto.length) {
+    const rand = 0.2
+    const vorm = new THREE.Shape()
+    vorm.moveTo(-PORT.b / 2 - rand, -PORT.h / 2 - rand)
+    vorm.lineTo(PORT.b / 2 + rand, -PORT.h / 2 - rand)
+    vorm.lineTo(PORT.b / 2 + rand, PORT.h / 2 + rand)
+    vorm.lineTo(-PORT.b / 2 - rand, PORT.h / 2 + rand)
+    vorm.closePath()
+    const gat = new THREE.Path()
+    gat.moveTo(-PORT.b / 2 + 0.03, -PORT.h / 2 + 0.03)
+    gat.lineTo(-PORT.b / 2 + 0.03, PORT.h / 2 - 0.03)
+    gat.lineTo(PORT.b / 2 - 0.03, PORT.h / 2 - 0.03)
+    gat.lineTo(PORT.b / 2 - 0.03, -PORT.h / 2 + 0.03)
+    gat.closePath()
+    vorm.holes.push(gat)
+    const lijst = new THREE.ExtrudeGeometry(vorm, { depth: 0.05, bevelEnabled: true, bevelThickness: 0.045, bevelSize: 0.05, bevelSegments: 4, curveSegments: 1 }).translate(0, 0, 0.03)
+    const lijstGoud = new THREE.MeshStandardMaterial({ color: '#d9a521', metalness: 1, roughness: 0.3, envMap: omgeving, envMapIntensity: 1.5, emissive: '#3a2604', emissiveIntensity: 0.4 })
+    const lijsten: THREE.BufferGeometry[] = []
+    const platen: THREE.BufferGeometry[] = []
+    for (const { plek } of metFoto) {
+      const { m } = naarMuur(plek, PORT.y)
+      lijsten.push(lijst.clone().applyMatrix4(m))
+      platen.push(new THREE.BoxGeometry(PORT.b + 0.5, PORT.h + 0.5, 0.05).applyMatrix4(m))
+    }
+    scene.add(new THREE.Mesh(mergeGeometries(lijsten), lijstGoud), new THREE.Mesh(mergeGeometries(platen), new THREE.MeshLambertMaterial({ color: '#0b0f17' })))
+  }
   const kampioensBeker = () => {
     const g = new THREE.Group()
     const profiel = [
@@ -539,6 +759,7 @@ export function bouwEregalerij(
     tekenAtlassen(logo)
     tekenKop(logo)
   })
+  if (fotoLaden.length) void Promise.all(fotoLaden).then(() => fotos.some(Boolean) && tekenAtlassen(huidigLogo))
 
   return {
     obstakels,

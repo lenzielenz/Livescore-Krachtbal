@@ -24,9 +24,9 @@ const DEUR = { z0: 9, z1: 11 }
 const DOORGANG = { z0: 11.8, z1: 13.4 }
 const PPM = 80
 
-/** Plekken rond de spelersgebouwen en het clubhuis waar geen paaltjes, lantaarns of bomen mogen. */
+/** Plekken rond de spelersgebouwen, de spelersbus en het clubhuis waar geen paaltjes, lantaarns of bomen mogen. */
 export function bijSpelersgebouwen(x: number, z: number): boolean {
-  return (x > -89 && x < -48.5 && z > 0.5 && z < 19.5) || (x > -82 && x < -54 && z > -21 && z < -7)
+  return (x > -89 && x < -48.5 && z > 0.5 && z < 19.5) || (x > -82 && x < -54 && z > -21 && z < -7) || (x > -69 && x < -48.5 && z > 19.5 && z < 28.5)
 }
 
 export type Kleedkamer = {

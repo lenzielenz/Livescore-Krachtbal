@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 
 import { GOUDEN_BALLEN } from '@/lib/virtueel-sporen'
+import { krachtbalGeometrie, krachtbalTextuur } from './krachtbal'
 
 // De goudjacht: twaalf gouden krachtballen, verstopt in heel het stadion — in de kelder, de
 // kleedkamer, de gangen, op het plein, op het verdiep en op het dak. Loop er wandelend tegenaan om
@@ -33,19 +34,16 @@ export function bouwGoudjacht(scene: THREE.Scene, kelderGroep: THREE.Group, plek
     g.fillRect(0, 0, 64, 64)
     return new THREE.CanvasTexture(c)
   })()
-  const balGeo = new THREE.SphereGeometry(0.24, 24, 16)
-  const balMat = new THREE.MeshStandardMaterial({ color: '#facc15', emissive: '#b45309', emissiveIntensity: 0.7, metalness: 0.85, roughness: 0.25 })
-  const naadMat = new THREE.MeshBasicMaterial({ color: '#78350f' })
-  const naadGeo = new THREE.TorusGeometry(0.242, 0.012, 6, 32)
+  // Een echte krachtbal (stroken, kapjes en diepe naden; zie krachtbal.ts), in goud leder.
+  const balGeo = krachtbalGeometrie(0.26)
+  const balMat = new THREE.MeshStandardMaterial({ map: krachtbalTextuur('#f2c230', '#3b2606'), vertexColors: true, emissive: '#a16207', emissiveIntensity: 0.35, metalness: 0.55, roughness: 0.42 })
   const ballen = lijst.map((p) => {
     const g = new THREE.Group()
     const bal = new THREE.Mesh(balGeo, balMat)
-    const naad1 = new THREE.Mesh(naadGeo, naadMat)
-    const naad2 = new THREE.Mesh(naadGeo, naadMat)
-    naad2.rotation.y = Math.PI / 2
     const gloed = new THREE.Sprite(new THREE.SpriteMaterial({ map: glans, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }))
-    gloed.scale.set(1.4, 1.4, 1)
-    g.add(bal, naad1, naad2, gloed)
+    gloed.scale.set(1.0, 1.0, 1)
+    gloed.material.opacity = 0.55
+    g.add(bal, gloed)
     g.position.set(p.x, p.y, p.z)
     // In de kelder in de groep van de kelder (die is enkel zichtbaar als je beneden bent).
     if (p.verdiep === -1) kelderGroep.add(g)

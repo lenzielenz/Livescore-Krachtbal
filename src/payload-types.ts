@@ -106,6 +106,7 @@ export interface Config {
     'function-grants': FunctionGrant;
     'graffiti-tags': GraffitiTag;
     'virtuele-sporen': VirtueleSporen;
+    'photobooth-fotos': PhotoboothFoto;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -152,6 +153,7 @@ export interface Config {
     'function-grants': FunctionGrantsSelect<false> | FunctionGrantsSelect<true>;
     'graffiti-tags': GraffitiTagsSelect<false> | GraffitiTagsSelect<true>;
     'virtuele-sporen': VirtueleSporenSelect<false> | VirtueleSporenSelect<true>;
+    'photobooth-fotos': PhotoboothFotosSelect<false> | PhotoboothFotosSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -2100,6 +2102,36 @@ export interface VirtueleSporen {
   createdAt: string;
 }
 /**
+ * Selfies uit de photobooth van het virtuele stadion. Verwijder hier wat niet gepast is.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "photobooth-fotos".
+ */
+export interface PhotoboothFoto {
+  id: number;
+  /**
+   * Leeg = het algemene stadion (bezoekers zonder club).
+   */
+  club?: (number | null) | Club;
+  author?: (number | null) | User;
+  authorName?: string | null;
+  /**
+   * Klein voorbeeld (data-URL) voor de mozaïek.
+   */
+  tegel?: string | null;
+  updatedAt: string;
+  createdAt: string;
+  url?: string | null;
+  thumbnailURL?: string | null;
+  filename?: string | null;
+  mimeType?: string | null;
+  filesize?: number | null;
+  width?: number | null;
+  height?: number | null;
+  focalX?: number | null;
+  focalY?: number | null;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
@@ -2278,6 +2310,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'virtuele-sporen';
         value: number | VirtueleSporen;
+      } | null)
+    | ({
+        relationTo: 'photobooth-fotos';
+        value: number | PhotoboothFoto;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -3249,6 +3285,27 @@ export interface VirtueleSporenSelect<T extends boolean = true> {
   waarde?: T;
   updatedAt?: T;
   createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "photobooth-fotos_select".
+ */
+export interface PhotoboothFotosSelect<T extends boolean = true> {
+  club?: T;
+  author?: T;
+  authorName?: T;
+  tegel?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  url?: T;
+  thumbnailURL?: T;
+  filename?: T;
+  mimeType?: T;
+  filesize?: T;
+  width?: T;
+  height?: T;
+  focalX?: T;
+  focalY?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

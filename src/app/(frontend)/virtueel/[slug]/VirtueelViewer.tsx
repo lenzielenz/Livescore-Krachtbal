@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 
-import { balOp, balSpoor, bezitOp, bezitTijdlijn, decodeer, GEVEL, op, ploegKleuren, snelheid, stap, stapMet, WERELD_STRAAL, type Ploeg, type Rechthoek, type Reconstructie, type Spoor, type StadionThema, type Veld } from '@/lib/virtueel'
+import { balOp, balSpoor, bezitOp, bezitTijdlijn, decodeer, GEVEL, gevelAfstand, op, ploegKleuren, snelheid, stap, stapMet, WERELD_STRAAL, type Ploeg, type Rechthoek, type Reconstructie, type Spoor, type StadionThema, type Veld } from '@/lib/virtueel'
 import { pasStandenToe, type WeekendStand } from '@/lib/virtueel-weekend'
 import { bouwEregalerij } from './erezaal'
 import { bouwOmgeving } from './omgeving'
@@ -25,6 +25,14 @@ import { bouwKleedkamer, KLEED, type Kleedkamer } from './kleedkamer'
 import { bouwKelderspel, type KelderActie, type Kelderspel } from './kelderspel'
 import { bouwGoudjacht, type GoudPlek, type Goudjacht } from './goudjacht'
 import { Badkiezer, Doelworp, Loopband } from './Kelderspellen'
+import { bouwGokkantoor, type Gokkantoor } from './gokkantoor'
+import { WedkantoorPaneel } from './Wedkantoor'
+import { bouwPhotobooth, type BoothFoto, type Photobooth as Photobooth3D } from './photobooth'
+import { Photobooth } from './Photobooth'
+import { bouwSpelersbus } from './spelersbus'
+import { bouwNabewerking, NEUTRAAL, type Stemming } from './nabewerking'
+import { bouwMist, bouwStof, samen } from './atmosfeer'
+import type { WedkantoorStats } from '@/lib/virtueel-wedkantoor'
 import { bouwGangafwerking } from './gangafwerking'
 import { bouwVideoscherm, CINEMA_VIDEO_ID, type Videoscherm } from './videoscherm'
 import { GraffitiSpuiter } from './GraffitiSpuiter'
@@ -64,9 +72,10 @@ const RUIMTE_MELDING: Record<string, string> = {
   Zwembad: '🏊 Zwembad',
   Sauna: '🧖 Sauna & wellness',
   Speelhal: '🎡 Speelhal · spring, klim en glij!',
+  Wedkantoor: '🎰 Wedkantoor · draai gratis aan het bonusrad',
 }
 /** Wat je ergens kan doen: bij de kleedkamer (muur, bord) of in de kelder (zie kelderspel.ts). */
-type Nabij = { soort: 'muur' } | { soort: 'bord' } | KelderActie
+type Nabij = { soort: 'muur' } | { soort: 'bord' } | { soort: 'rad' } | { soort: 'stats' } | { soort: 'booth' } | KelderActie
 const ACTIE_LABEL: Record<Nabij['soort'], string> = {
   muur: '🎨 Spuit op de muur',
   bord: '📋 Tactiekbord',
@@ -77,6 +86,9 @@ const ACTIE_LABEL: Record<Nabij['soort'], string> = {
   loopband: '🏃 Op de loopband',
   zetel: '💺 Ga zitten',
   arcade: '🎮 Speel Doelworp',
+  rad: '🎡 Draai aan het rad (gratis)',
+  stats: '📊 Bekijk de statistieken',
+  booth: '📸 Neem een selfie',
 }
 type Muur = 'kleedkamer' | 'kelder'
 
@@ -272,12 +284,22 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
   const [klaar, setKlaar] = useState(false)
   const [hoog, setHoog] = useState(0)
   const [gekozen, setGekozen] = useState<string | null>(null)
-  const [namen, setNamen] = useState(true)
+  // De labels boven de spelers staan altijd aan.
+  const namen = true
   const [bezit, setBezit] = useState<number | null>(null)
   const [stick, setStick] = useState({ x: 0, y: 0 })
   // Wat je in en rond het stadion kan doen: spuiten op de graffitimuur, het tactiekbord, de lift.
   const [nabij, setNabij] = useState<Nabij | null>(null)
-  const [paneel, setPaneel] = useState<'graffiti' | 'tactiek' | 'bad' | 'loopband' | 'doelworp' | null>(null)
+  const [paneel, setPaneel] = useState<'graffiti' | 'tactiek' | 'bad' | 'loopband' | 'doelworp' | 'wedkantoor' | 'booth' | null>(null)
+  // De photobooth in de noordgang: alle selfies van je club (oudste eerst).
+  const [boothFotos, setBoothFotos] = useState<BoothFoto[]>([])
+  const boothFotosRef = useRef<BoothFoto[]>([])
+  boothFotosRef.current = boothFotos
+  const boothRef = useRef<Photobooth3D | null>(null)
+  // De statistieken van de pronostiek voor het wedkantoor (zie lib/virtueel-wedkantoor.ts).
+  const [wedStats, setWedStats] = useState<WedkantoorStats | null>(null)
+  const wedStatsRef = useRef<WedkantoorStats | null>(null)
+  const gokRef = useRef<Gokkantoor | null>(null)
   // Welke graffitimuur / welk tactiekbord open staat: dat bij de kleedkamer of dat in de speelhal.
   const [welkeMuur, setWelkeMuur] = useState<Muur>('kleedkamer')
   const [zit, setZit] = useState<number | null>(null)
@@ -369,6 +391,35 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
       .catch(() => {})
   }, [thema.clubId, pasSporenToe])
   useEffect(() => herlaadSporen(), [herlaadSporen])
+  useEffect(() => {
+    let weg = false
+    fetch(`/api/virtueel/photobooth?club=${thema.clubId ?? ''}`, { cache: 'no-store', credentials: 'include' })
+      .then((r) => (r.ok ? (r.json() as Promise<{ fotos: BoothFoto[] }>) : null))
+      .then((d) => {
+        if (weg || !d) return
+        setBoothFotos(d.fotos)
+        boothRef.current?.zetFotos(d.fotos)
+      })
+      .catch(() => {})
+    return () => {
+      weg = true
+    }
+  }, [thema.clubId])
+  useEffect(() => {
+    let weg = false
+    fetch('/api/virtueel/wedkantoor', { cache: 'no-store', credentials: 'include' })
+      .then((r) => (r.ok ? (r.json() as Promise<WedkantoorStats>) : null))
+      .then((s) => {
+        if (weg || !s) return
+        wedStatsRef.current = s
+        setWedStats(s)
+        gokRef.current?.zetStats(s)
+      })
+      .catch(() => {})
+    return () => {
+      weg = true
+    }
+  }, [])
   // Iets achterlaten in het stadion. Daarna halen we de (afgeleide) toestand opnieuw op — na een
   // tel, zodat een eendje eerst rustig kan landen.
   const herlaadTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -510,7 +561,26 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     zon.shadow.mapSize.set(licht ? 1024 : 2048, licht ? 1024 : 2048)
     Object.assign(zon.shadow.camera, { left: -32, right: 32, top: 20, bottom: -20, near: 1, far: 90 })
     zon.shadow.bias = -0.0004
-    scene.add(zon)
+    scene.add(zon, zon.target)
+    // De schaduwen: standaard over het veld; wandel je buiten, dan volgt het schaduwvlak jou, zodat
+    // ook de bus, de bomen, de auto's en de cabines rondom je een schaduw werpen.
+    const zonOffset = zon.position.clone()
+    let schaduwBijMij = false
+    const schaduwRond = (x: number | null, z: number | null) => {
+      const bijMij = x != null && z != null
+      if (bijMij) {
+        zon.target.position.set(x, 0, z)
+        zon.position.set(x + zonOffset.x * 0.7, zonOffset.y, z + zonOffset.z * 0.7)
+      }
+      if (bijMij === schaduwBijMij) return
+      schaduwBijMij = bijMij
+      if (!bijMij) {
+        zon.target.position.set(0, 0, 0)
+        zon.position.copy(zonOffset)
+      }
+      Object.assign(zon.shadow.camera, bijMij ? { left: -26, right: 26, top: 26, bottom: -26, near: 1, far: 120 } : { left: -32, right: 32, top: 20, bottom: -20, near: 1, far: 90 })
+      zon.shadow.camera.updateProjectionMatrix()
+    }
     const gloed = gloedTextuur()
     // Grond rondom en het veld zelf.
     const grond = new THREE.Mesh(new THREE.CircleGeometry(300, 48), new THREE.MeshStandardMaterial({ color: '#16301f', roughness: 1 }))
@@ -554,6 +624,34 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     kleedRef.current = kleedkamer
     kleedkamer.zetTactiek(sporenRef.current.borden.kleedkamer ?? laadTactiek())
     if (muurRef.current.tags.length) kleedkamer.zetTags(muurRef.current.tags, muurRef.current.lengte)
+    // De spelersbus naast de kleedkamers: instappen, rondkijken, en de wedstrijd op de schermen.
+    const bus = bouwSpelersbus(scene, { thema, x: -59, z: 23.6, renderer, logo: stadion.logo, licht })
+    // Laaghangende nachtmist over het plein en de grasranden rond het stadion.
+    const buitenmist = licht
+      ? null
+      : bouwMist([
+          { x: 0, y: 0.25, z: GEVEL.B + 30, b: 90, d: 26, kleur: '#c7d2fe', sterkte: 0.07, lagen: 2 },
+          { x: -GEVEL.A - 26, y: 0.25, z: 0, b: 26, d: 80, kleur: '#c7d2fe', sterkte: 0.06, lagen: 2 },
+          { x: GEVEL.A + 44, y: 0.25, z: -4, b: 40, d: 60, kleur: '#c7d2fe', sterkte: 0.05, lagen: 2 },
+          { x: 0, y: 0.25, z: -GEVEL.B - 22, b: 90, d: 26, kleur: '#c7d2fe', sterkte: 0.06, lagen: 2 },
+        ])
+    // Stofjes die in het licht van de wandelgangen zweven (tussen de tribunes en de gevel).
+    const gangStof =
+      licht || !tribunes.zuid || !tribunes.noord || !tribunes.oost || !tribunes.west
+        ? null
+        : bouwStof([
+            { x0: -34, x1: 34, y0: 0.6, y1: 4.2, z0: tribunes.zuid.z1 + 0.5, z1: GEVEL.B - 1.2, aantal: 220, kleur: '#ffe7b8' },
+            { x0: -34, x1: 34, y0: 0.6, y1: 4.2, z0: -GEVEL.B + 1.2, z1: tribunes.noord.z0 - 0.5, aantal: 200, kleur: '#dbeafe' },
+            { x0: tribunes.oost.x1 + 0.5, x1: GEVEL.A - 1.2, y0: 0.6, y1: 4.2, z0: -16, z1: 16, aantal: 110, kleur: '#ffe7b8' },
+            { x0: -GEVEL.A + 1.2, x1: tribunes.west.x0 - 0.5, y0: 0.6, y1: 4.2, z0: -16, z1: 16, aantal: 110, kleur: '#ffe7b8' },
+          ])
+    const buitenLucht = samen(...[buitenmist, gangStof].filter((x): x is NonNullable<typeof x> => x != null))
+    scene.add(buitenLucht.groep)
+    // De photobooth in de noordgang, tegen de achterwand van de noordtribune (de gevel daar is voor
+    // de weekendzaal): cabine, polaroids en de mozaïek van het logo, aan de westkant van de gang.
+    const photobooth = bouwPhotobooth(scene, { thema, muurZ: (tribunes.noord?.z0 ?? -22.65) - 0.02, ry: Math.PI, x0: 6.6, logo: stadion.logo, licht })
+    boothRef.current = photobooth
+    if (boothFotosRef.current.length) photobooth.zetFotos(boothFotosRef.current)
     // De afwerking van de gangen: ledplint, inleglijnen, banken en planten.
     const gangafwerking = bouwGangafwerking(scene, { thema, licht, oost: tribunes.oost, west: tribunes.west })
     // De ringwandeling op het dak (met de brug naar de lift).
@@ -568,6 +666,8 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
       { naam: 'Lift · -1 tot dak', icoon: '🛗', x: LIFT_X, z: liftZ + 1, kleur: '#a78bfa' },
       { naam: 'Kleedkamers', icoon: '🚿', x: -GEVEL.A, z: 10, kleur: '#34d399' },
       { naam: 'Graffitimuur', icoon: '🎨', x: -GEVEL.A, z: 0, kleur: '#f472b6' },
+      { naam: 'Spelersbus', icoon: '🚌', x: -59, z: 20.5, kleur: '#38bdf8' },
+      { naam: 'Photobooth', icoon: '📸', x: -12, z: (tribunes.noord?.z0 ?? -22.65) - 3, kleur: '#fb7185' },
       { naam: 'Hoofdingang', icoon: '🚪', x: 0, z: GEVEL.B, kleur: '#e2e8f0' },
     ]
     const wegwijzers = bouwWegwijzers(scene, { thema, logo: stadion.logo, bestemmingen, tribunes })
@@ -585,6 +685,8 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
       ...buitenkant.obstakels,
       ...kleedkamer.obstakels,
       ...gangafwerking.obstakels,
+      ...photobooth.obstakels,
+      ...bus.obstakels,
     ]
     // De Hollywood-sterren in de zuidgang: enkel op vrije vloer (niet onder een vitrine, zuil of de lift).
     const sterren = bouwSterren(scene, {
@@ -649,7 +751,7 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     const bovengronds = scene.children.filter((o) => !(o as THREE.Light).isLight)
     let inKelder = false
     // De lift van de kelder tot op het dak, en de kelder zelf (-1).
-    const lift = bouwLift(scene, { thema, renderer, tribuneZ })
+    const lift = bouwLift(scene, { thema, renderer, tribuneZ, licht })
     const kelder = bouwKelder(scene, { thema, licht, liftX: LIFT_X, liftZ, logo: stadion.logo })
     // Wat bezoekers in de kelder achterlaten (eendjes, popcorn, borden, zetels, muur en bord).
     const kelderspel = bouwKelderspel(kelder.groep, { thema, plekken: kelder.plekken, zetWaterKleur: kelder.zetWaterKleur, licht })
@@ -658,6 +760,10 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     kelderspel.zetStaat(sporenRef.current)
     if (kelderMuurRef.current.tags.length) kelderspel.zetTags(kelderMuurRef.current.tags, kelderMuurRef.current.lengte)
     if (sporenRef.current.borden.kelder) kelderspel.zetTactiek(sporenRef.current.borden.kelder)
+    // Het wedkantoor: de schermen met de pronostiek, en het bonusrad (gratis, voor de fun).
+    const gokkantoor = bouwGokkantoor(kelder.groep, { thema, plek: kelder.plekken.wedkantoor, renderer, logo: stadion.logo, licht })
+    gokRef.current = gokkantoor
+    if (wedStatsRef.current) gokkantoor.zetStats(wedStatsRef.current)
     // Echte krachtbal op het grote scherm in het stadion, en in de cinema in de kelder.
     const cinema = kelder.doek
     const video = bouwVideoscherm(scene, {
@@ -761,10 +867,13 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     renderer.domElement.addEventListener('pointerup', op_)
     renderer.domElement.addEventListener('pointercancel', op_)
 
+    // De nabewerking (gloed, stemming per plek, waas, hitte): niet op lichte toestellen.
+    const nabewerking = licht ? null : bouwNabewerking(renderer, scene, camera)
     const maat = () => {
       const w = el.clientWidth
       const h = el.clientHeight
       renderer.setSize(w, h, false)
+      nabewerking?.maat(w, h, pixels)
       video.maat(w, h)
       camera.aspect = w / Math.max(1, h)
       camera.updateProjectionMatrix()
@@ -792,6 +901,10 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     const avatar = bouwAvatar(scene, thema)
     const vorigePos = { x: 0, z: 0 }
     let liftNu = lift.update(0, { x: 0, z: 0, verdiep: 0, actief: false, keuze: null }).lift
+    // In de spelersbus sta je hoger (de vloer van de bus, met treden aan de deur).
+    let busHoogte = 0
+    let inBus = false
+    const tvKijk = new THREE.Vector3()
     // Op een trampoline in de speelhal: hoe ver je in de sprong bent.
     let sprong = 0
     let sprongHoogte = 0
@@ -820,6 +933,30 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     let getekend = false
     let frameTijd = 0
     let raf = 0
+    // De stemming van de plek waar je bent: warm, koel, vochtig, heet (zie nabewerking.ts).
+    const STEMMING: Record<string, Stemming> = {
+      Sauna: { warmte: 0.85, waas: 0.4, hitte: 1, gloed: 1.15 },
+      Zwembad: { warmte: -0.55, waas: 0.3, hitte: 0, gloed: 1.05 },
+      Fitness: { warmte: -0.25, waas: 0, hitte: 0, gloed: 1 },
+      Cinema: { warmte: 0.15, waas: 0.12, hitte: 0, gloed: 1.25 },
+      Gaming: { warmte: -0.15, waas: 0, hitte: 0, gloed: 1.4 },
+      Wedkantoor: { warmte: 0.5, waas: 0.06, hitte: 0, gloed: 1.25 },
+      Speelhal: { warmte: 0.2, waas: 0, hitte: 0, gloed: 1.15 },
+    }
+    const stemmingHier = (): Stemming => {
+      const s = st.current
+      const p = camera.position
+      if (p.y < -0.5) return (s.modus === 'buiten' ? STEMMING[kelder.ruimte(p.x, p.z) ?? ''] : undefined) ?? { warmte: 0.1, waas: 0.04, hitte: 0, gloed: 1.15 }
+      if (s.modus !== 'buiten' && s.modus !== 'zweven') return { ...NEUTRAAL, warmte: -0.05 }
+      if (inBus) return { warmte: 0.35, waas: 0, hitte: 0, gloed: 1.15 }
+      if (s.modus === 'buiten' && opVerdiep === 0 && kleedkamer.binnen(p.x, p.z)) return { warmte: -0.3, waas: 0.25, hitte: 0, gloed: 1 }
+      if (p.y > 12) return { warmte: -0.3, waas: 0.05, hitte: 0, gloed: 1.1 }
+      if (p.y > 6) return { warmte: 0.35, waas: 0, hitte: 0, gloed: 1.1 }
+      const d = gevelAfstand(GEVEL, p.x, p.z)
+      if (d > 0.5) return { warmte: -0.28, waas: 0.08, hitte: 0, gloed: 1.05 }
+      if (!opVeld(p)) return { warmte: 0.25, waas: 0.05, hitte: 0, gloed: 1.1 }
+      return { ...NEUTRAAL }
+    }
     const tik = (nu: number) => {
       raf = requestAnimationFrame(tik)
       // De rAF-tijdstempel kan net vóór performance.now() liggen: nooit een negatieve stap.
@@ -1060,7 +1197,9 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
           sprong = 0
           sprongHoogte = Math.max(0, sprongHoogte - dt * 4)
         }
-        const oog = (s.modus === 'buiten' ? vloer : 0) + (zitHier ? 1.15 : OOGHOOGTE) + sprongHoogte
+        const busDoel = s.modus === 'buiten' && v === 0 ? bus.vloer(loper.pos.x, loper.pos.z) : 0
+        busHoogte += (busDoel - busHoogte) * Math.min(1, dt * 12)
+        const oog = (s.modus === 'buiten' ? vloer : 0) + (zitHier ? 1.15 : OOGHOOGTE) + sprongHoogte + busHoogte
         camera.position.set(loper.pos.x, oog + deining, loper.pos.z)
         camera.lookAt(
           loper.pos.x + Math.sin(loper.yaw) * Math.cos(loper.pitch),
@@ -1082,18 +1221,36 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
       // De spiegel in de kleedkamer: enkel aan als je er wandelend binnen bent, en dan sta jij erin.
       const voorSpiegel = s.modus === 'buiten' && opVerdiep === 0 && kleedkamer.binnen(loper.pos.x, loper.pos.z)
       kleedkamer.spiegel(voorSpiegel)
-      avatar.zichtbaar(voorSpiegel)
-      if (voorSpiegel) {
+      // De spiegelwanden in de lift: aan als je erin of ervoor staat, zodat je jezelf ziet instappen.
+      const inLift = s.modus === 'buiten' && lift.bijKooi(loper.pos.x, loper.pos.z, opVerdiep)
+      lift.spiegels(inLift)
+      avatar.zichtbaar(voorSpiegel || inLift)
+      if (voorSpiegel || inLift) {
         const tempo = dt > 0 ? Math.hypot(loper.pos.x - vorigePos.x, loper.pos.z - vorigePos.z) / dt : 0
-        avatar.update(loper.pos.x, 0, loper.pos.z, loper.yaw, loper.pitch, tempo, nu / 1000)
+        avatar.update(loper.pos.x, inLift ? vloer : 0, loper.pos.z, loper.yaw, loper.pitch, tempo, nu / 1000)
       }
       vorigePos.x = loper.pos.x
       vorigePos.z = loper.pos.z
       gangafwerking.update(nu / 1000)
+      photobooth.update(nu / 1000, dt)
+      bus.update(nu / 1000)
+      buitenLucht.update(nu / 1000)
+      schaduwRond(!licht && s.modus === 'buiten' && opVerdiep === 0 && !inKelder ? loper.pos.x : null, loper.pos.z)
+      // In de bus: de schermen tonen de wedstrijd (een tv-camera volgt de bal).
+      const nuInBus = s.modus === 'buiten' && opVerdiep === 0 && bus.binnen(loper.pos.x, loper.pos.z)
+      if (nuInBus !== inBus) {
+        inBus = nuInBus
+        if (inBus) setMelding('🚌 Welkom aan boord van de spelersbus')
+      }
+      if (inBus) {
+        if (b) tvKijk.set(b.x - cx, 0, b.y - cz)
+        bus.tv(renderer, scene, tvKijk)
+      }
       verdiep.update(nu / 1000)
       ring.update(nu / 1000)
       kelder.update(nu / 1000, { x: loper.pos.x, z: loper.pos.z })
       kelderspel.update(nu / 1000, dt)
+      gokkantoor.update(nu / 1000, dt)
       goudjacht.update(nu / 1000, inKelder)
       // De lift: deuren, kooi en de verdiepaanduiding. Sta je in de kooi, dan kies je je verdiep
       // (het paneel op je scherm) en rij je mee.
@@ -1131,7 +1288,11 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
         for (const o of bovengronds) o.visible = !inKelder
         kelder.groep.visible = inKelder
       }
-      renderer.render(scene, camera)
+      if (nabewerking) {
+        nabewerking.stemming(stemmingHier())
+        nabewerking.update(nu / 1000, dt)
+        nabewerking.render()
+      } else renderer.render(scene, camera)
       video.render(camera)
       if (!getekend) {
         getekend = true
@@ -1164,12 +1325,17 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
         const kk = s.modus === 'buiten' && opVerdiep === 0
         const kl = s.modus === 'buiten' && opVerdiep === -1 && s.zit == null
         const nb: Nabij | null =
-          kk && kleedkamer.bijMuur(loper.pos.x, loper.pos.z)
+          kk && photobooth.bijBooth(loper.pos.x, loper.pos.z)
+            ? { soort: 'booth' }
+            : kk && kleedkamer.bijMuur(loper.pos.x, loper.pos.z)
             ? { soort: 'muur' }
             : kk && kleedkamer.bijBord(loper.pos.x, loper.pos.z)
               ? { soort: 'bord' }
               : kl
-                ? kelderspel.nabij(loper.pos.x, loper.pos.z)
+                ? ((): Nabij | null => {
+                    const g = gokkantoor.nabij(loper.pos.x, loper.pos.z)
+                    return g ? { soort: g } : kelderspel.nabij(loper.pos.x, loper.pos.z)
+                  })()
                 : null
         setNabij((oud) => (JSON.stringify(oud) === JSON.stringify(nb) ? oud : nb))
       }
@@ -1178,11 +1344,14 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
 
     return () => {
       cancelAnimationFrame(raf)
+      nabewerking?.dispose()
       weekendStroom?.close()
       video.dispose()
       kleedRef.current = null
       videoRef.current = null
       spelRef.current = null
+      gokRef.current = null
+      boothRef.current = null
       goudRef.current = null
       waterRef.current = null
       handRef.current = null
@@ -1294,6 +1463,20 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
       case 'arcade':
         setPaneel('doelworp')
         break
+      case 'stats':
+        setPaneel('wedkantoor')
+        break
+      case 'booth':
+        setPaneel('booth')
+        break
+      case 'rad': {
+        // Gratis, voor de fun: het rad hier geeft geen boosters (die win je op /pronostiek/rad).
+        const draai = gokRef.current?.draai()
+        if (!draai) break
+        setMelding('🎡 Het rad draait…')
+        void draai.then((m) => setMelding(m >= 10 ? `🎉 JACKPOT! ×${m} — enkel voor de fun` : `🎡 ×${String(m).replace('.', ',')}! (gratis, voor de fun)`))
+        break
+      }
       case 'popcorn':
         spelRef.current?.popcorn()
         void laat('popcorn', {}).then((ok) => ok && setMelding('🍿 Pop pop pop! Eentje erbij op de teller'))
@@ -1308,7 +1491,6 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
 
   if (fout) return <p className="vk-fout">Dit fragment kon niet geladen worden: {fout}</p>
 
-  const spelers = data?.sporen.filter((s) => !s.bal) ?? []
   const ploegNaam = (team: number | null) => {
     const p = data?.ploegen.find((x) => x.id === team)
     return p ? `${p.naam} (${p.thuis ? 'thuis' : 'uit'})` : 'Onbekend'
@@ -1516,6 +1698,23 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
                 void laat('verf', { kleur }).then((ok) => ok && setMelding('🎨 Het water kleurt mee!'))
               }}
             />
+            <Photobooth
+              open={paneel === 'booth'}
+              onSluit={() => setPaneel(null)}
+              ingelogd={Boolean(thema.ingelogd)}
+              eigen={boothFotos.filter((f) => f.eigen)}
+              onGehangen={(f) => {
+                setBoothFotos((l) => [...l, f])
+                boothRef.current?.voegToe(f)
+                setMelding('📌 Je polaroid hangt aan de muur!')
+              }}
+              onVerwijderd={(id) => {
+                const nieuw = boothFotosRef.current.filter((f) => f.id !== id)
+                setBoothFotos(nieuw)
+                boothRef.current?.zetFotos(nieuw)
+              }}
+            />
+            <WedkantoorPaneel open={paneel === 'wedkantoor'} onSluit={() => setPaneel(null)} stats={wedStats} />
             <Loopband open={paneel === 'loopband'} onSluit={() => setPaneel(null)} onKlaar={loopKlaar} />
             <Doelworp open={paneel === 'doelworp'} onSluit={() => setPaneel(null)} onKlaar={worpKlaar} kleur="#facc15" />
             {BESTUURBAAR.includes(modus) && !paneel && (
@@ -1527,42 +1726,6 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
         )}
       </div>
 
-      {data && (
-        <div className="vk-spelers">
-          <div className="vk-spelers-kop">
-            <span>Spelers</span>
-            <label className="vk-wissel">
-              <input type="checkbox" checked={namen} onChange={(e) => setNamen(e.target.checked)} /> Labels
-            </label>
-          </div>
-          {data.ploegen.map((p) => (
-            <div key={p.id} className="vk-ploeg">
-              <span className="vk-ploeg-naam">
-                <i style={{ background: data.kleuren[p.id] }} />
-                {ploegNaam(p.id)}
-              </span>
-              <div className="vk-chips">
-                {spelers
-                  .filter((s) => s.team === p.id)
-                  .map((s) => (
-                    <button
-                      key={s.id}
-                      className={`vk-chip${gekozen === s.id && modus === 'speler' ? ' actief' : ''}`}
-                      style={{ '--kleur': data.kleuren[p.id] } as React.CSSProperties}
-                      onClick={() => {
-                        setGekozen(s.id)
-                        setModus('speler')
-                      }}
-                      title={`Kijk door de ogen van ${kort(s.id)}`}
-                    >
-                      {kort(s.id)}
-                    </button>
-                  ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   )
 }
