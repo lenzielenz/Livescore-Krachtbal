@@ -10,6 +10,7 @@ const FOTOS: { naam: string; bestand: string }[] = [
   { naam: 'Hannes Timmerman', bestand: 'hannes-timmerman.jpg' },
   { naam: 'Natalie Lievens', bestand: 'natalie-lievens.jpg' },
   { naam: 'Jason Devooght', bestand: 'jason-devooght.jpg' },
+  { naam: "Charlotte D'Hoore", bestand: 'charlotte-dhoore.jpg' },
 ]
 
 /** Tussenvoegsels die bij de achternaam horen ("De Vooght" = "Devooght", "Van den Berghe"). */

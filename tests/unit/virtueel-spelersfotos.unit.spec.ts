@@ -13,6 +13,7 @@ describe('spelersfoto', () => {
   it('vindt de foto ook met een los tussenvoegsel (zoals in het archief)', () => {
     expect(spelersfoto('Jason De Vooght')).toBe('/virtueel/spelers/jason-devooght.jpg')
     expect(spelersfoto('De Vooght Jason')).toBe('/virtueel/spelers/jason-devooght.jpg')
+    expect(spelersfoto("Charlotte D'hoore")).toBe('/virtueel/spelers/charlotte-dhoore.jpg')
     expect(naamSleutel('Pieter Van den Berghe')).toBe(naamSleutel('Vandenberghe Pieter'))
   })
 
