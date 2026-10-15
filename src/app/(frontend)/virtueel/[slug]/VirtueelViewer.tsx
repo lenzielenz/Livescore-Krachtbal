@@ -272,7 +272,8 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
   const [klaar, setKlaar] = useState(false)
   const [hoog, setHoog] = useState(0)
   const [gekozen, setGekozen] = useState<string | null>(null)
-  const [namen, setNamen] = useState(true)
+  // De labels boven de spelers staan altijd aan.
+  const namen = true
   const [bezit, setBezit] = useState<number | null>(null)
   const [stick, setStick] = useState({ x: 0, y: 0 })
   // Wat je in en rond het stadion kan doen: spuiten op de graffitimuur, het tactiekbord, de lift.
@@ -1308,7 +1309,6 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
 
   if (fout) return <p className="vk-fout">Dit fragment kon niet geladen worden: {fout}</p>
 
-  const spelers = data?.sporen.filter((s) => !s.bal) ?? []
   const ploegNaam = (team: number | null) => {
     const p = data?.ploegen.find((x) => x.id === team)
     return p ? `${p.naam} (${p.thuis ? 'thuis' : 'uit'})` : 'Onbekend'
@@ -1527,42 +1527,6 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
         )}
       </div>
 
-      {data && (
-        <div className="vk-spelers">
-          <div className="vk-spelers-kop">
-            <span>Spelers</span>
-            <label className="vk-wissel">
-              <input type="checkbox" checked={namen} onChange={(e) => setNamen(e.target.checked)} /> Labels
-            </label>
-          </div>
-          {data.ploegen.map((p) => (
-            <div key={p.id} className="vk-ploeg">
-              <span className="vk-ploeg-naam">
-                <i style={{ background: data.kleuren[p.id] }} />
-                {ploegNaam(p.id)}
-              </span>
-              <div className="vk-chips">
-                {spelers
-                  .filter((s) => s.team === p.id)
-                  .map((s) => (
-                    <button
-                      key={s.id}
-                      className={`vk-chip${gekozen === s.id && modus === 'speler' ? ' actief' : ''}`}
-                      style={{ '--kleur': data.kleuren[p.id] } as React.CSSProperties}
-                      onClick={() => {
-                        setGekozen(s.id)
-                        setModus('speler')
-                      }}
-                      title={`Kijk door de ogen van ${kort(s.id)}`}
-                    >
-                      {kort(s.id)}
-                    </button>
-                  ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   )
 }
