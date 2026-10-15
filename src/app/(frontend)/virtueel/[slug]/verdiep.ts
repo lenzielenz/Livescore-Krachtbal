@@ -2,15 +2,18 @@ import * as THREE from 'three'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 
-import { GEVEL, type EreBord, type Rechthoek, type StadionThema } from '@/lib/virtueel'
+import { GEVEL, VERDIEP_RAMEN, type EreBord, type Rechthoek, type StadionThema } from '@/lib/virtueel'
 import { VERDIEPEN } from '@/lib/virtueel-lift'
+import { rondeDoos } from './rond'
 import { canvasTex, rnd, rondLogo } from './stadion'
 
 // Het verdiep boven de Hall of Fame-gang (zuid), bereikbaar met de lift (lift.ts):
 //  • loges met een glazen gevel boven de zuidtribune: van hogerop naar de wedstrijd kijken, in
 //    leren stoelen in clubkleur, met een bar; in twee loges een aquarium met zwemmende visjes;
 //  • een erfgoedgang: de eerste prijzen van je club, als oude bekers in alle vormen en maten in
-//    een lange vitrine, met vaantjes en archieffoto's aan de muur.
+//    een lange vitrine, met vaantjes en archieffoto's aan de muur; boven elke beker een verlicht
+//    museumbordje met groot het jaar en wat er gewonnen werd;
+//  • ramen in de gevel om naar buiten te kijken, en een glazen deur naar een klein balkon.
 
 export const VERDIEP_Y = VERDIEPEN[2].y
 const PLAFOND = 3.4
@@ -21,6 +24,8 @@ const XL = 31
 export type Verdiep = {
   /** Waar je boven niet door kan (muren, loges, meubels); de liftschacht zit in lift.ts. */
   obstakels: Rechthoek[]
+  /** Sta je op (of in de deur naar) het balkon? Daar mag je voorbij de gevel. */
+  opBalkon: (x: number, z: number) => boolean
   update: (seconden: number) => void
 }
 
@@ -128,7 +133,7 @@ export function bouwVerdiep(
     donker: new THREE.MeshLambertMaterial({ color: '#1f2530' }),
     staal: new THREE.MeshStandardMaterial({ color: '#c8ccd1', metalness: 0.85, roughness: 0.3, emissive: '#30343a', emissiveIntensity: 0.4 }),
     club: new THREE.MeshLambertMaterial({ color: primair, emissive: primair, emissiveIntensity: 0.15 }),
-    leer: new THREE.MeshStandardMaterial({ color: primair.clone().multiplyScalar(0.75), roughness: 0.45, metalness: 0.05 }),
+    leer: new THREE.MeshStandardMaterial({ color: primair.clone().multiplyScalar(0.75), roughness: 0.32, metalness: 0.08, emissive: primair.clone().multiplyScalar(0.12) }),
     glas: new THREE.MeshStandardMaterial({ color: '#bfe3ff', transparent: true, opacity: 0.16, metalness: 0.3, roughness: 0.05, depthWrite: false, side: THREE.DoubleSide }),
     licht: new THREE.MeshBasicMaterial({ color: '#fff4dc', toneMapped: false }),
     hout: new THREE.MeshLambertMaterial({ map: hout() }),
@@ -219,16 +224,68 @@ export function bouwVerdiep(
   doos(2 * XL + 0.6, 0.05, 0.05, 0, Y - 0.12, zF - 0.33, mats.licht)
 
   // ---------- de loges ----------
+  const ledMat = new THREE.MeshBasicMaterial({ color: thema.primair, toneMapped: false })
+  const lichtPlasMat = new THREE.MeshBasicMaterial({ color: '#ffd9a0', transparent: true, opacity: 0.22, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide })
+  const kleedC = document.createElement('canvas')
+  kleedC.width = kleedC.height = 256
+  {
+    const g = kleedC.getContext('2d')!
+    g.fillStyle = '#1b1f27'
+    g.fillRect(0, 0, 256, 256)
+    g.strokeStyle = thema.primair
+    g.lineWidth = 10
+    g.strokeRect(14, 14, 228, 228)
+    g.strokeStyle = 'rgba(232,201,142,.5)'
+    g.lineWidth = 3
+    g.strokeRect(30, 30, 196, 196)
+  }
+  const kleedMat = new THREE.MeshLambertMaterial({ map: canvasTex(kleedC) })
+  const tvC = document.createElement('canvas')
+  tvC.width = 512
+  tvC.height = 288
+  {
+    const g = tvC.getContext('2d')!
+    const gr = g.createLinearGradient(0, 0, 512, 288)
+    gr.addColorStop(0, '#0f5132')
+    gr.addColorStop(1, '#14532d')
+    g.fillStyle = gr
+    g.fillRect(0, 0, 512, 288)
+    g.strokeStyle = 'rgba(255,255,255,.6)'
+    g.lineWidth = 3
+    g.strokeRect(40, 40, 432, 208)
+    g.beginPath()
+    g.moveTo(256, 40)
+    g.lineTo(256, 248)
+    g.stroke()
+    g.fillStyle = '#0b1220'
+    g.fillRect(14, 12, 220, 44)
+    g.fillStyle = '#ef4444'
+    g.fillRect(14, 12, 64, 44)
+    g.fillStyle = '#fff'
+    g.font = '900 26px Inter, sans-serif'
+    g.textBaseline = 'middle'
+    g.fillText('LIVE', 22, 35)
+    g.fillText(thema.kort, 90, 35)
+  }
+  const tvMat = new THREE.MeshBasicMaterial({ map: canvasTex(tvC), toneMapped: false })
   const randen: number[] = []
   for (let x = LOGE_X0; x <= XL + 0.01; x += (XL - LOGE_X0) / 6) randen.push(x)
   const logeObst: Rechthoek[] = []
-  const stoelGeo = mergeGeometries([
-    new THREE.BoxGeometry(0.56, 0.14, 0.52).translate(0, 0.46, 0),
-    new THREE.BoxGeometry(0.56, 0.6, 0.12).translate(0, 0.78, 0.24),
-    new THREE.BoxGeometry(0.08, 0.22, 0.5).translate(-0.29, 0.6, 0),
-    new THREE.BoxGeometry(0.08, 0.22, 0.5).translate(0.29, 0.6, 0),
-    new THREE.CylinderGeometry(0.04, 0.12, 0.42, 8).translate(0, 0.2, 0),
-  ])
+  // Afgeronde leren clubzetels: een dik zitkussen, een hoge rugleuning en armleuningen.
+  const zonderUv = (g: THREE.BufferGeometry) => {
+    const n = g.index ? g.toNonIndexed() : g
+    n.deleteAttribute('uv')
+    return n
+  }
+  const stoelGeo = mergeGeometries(
+    [
+      rondeDoos(0.58, 0.16, 0.54, 0.06).translate(0, 0.47, 0),
+      rondeDoos(0.58, 0.66, 0.14, 0.06).translate(0, 0.82, 0.25),
+      rondeDoos(0.09, 0.26, 0.52, 0.04).translate(-0.3, 0.6, 0),
+      rondeDoos(0.09, 0.26, 0.52, 0.04).translate(0.3, 0.6, 0),
+      new THREE.CylinderGeometry(0.04, 0.13, 0.42, 12).translate(0, 0.2, 0),
+    ].map(zonderUv),
+  )
   const stoelMats: THREE.Matrix4[] = []
   const aquaria: { x: number; z: number; lang: number; diep: number }[] = []
   const reclames = thema.reclames.map((r) => r.naam).filter(Boolean)
@@ -310,6 +367,41 @@ export function bouwVerdiep(
       scene.add(kap, bol)
     }
     if (aquarium) aquaria.push({ x: x0 + 0.45, z: zF + 2.5, lang: 2.2, diep: 0.6 })
+    // De upgrade: een ledlijn in clubkleur langs het plafond, een tapijt onder de zetels, een
+    // scherm met de wedstrijd aan de zijwand, champagne op de bar en wandlampjes.
+    doos(x1 - x0 - 0.2, 0.04, 0.04, xc, Y + PLAFOND - 0.06, zL - 0.12, ledMat)
+    for (const wx of [x0 + 0.1, x1 - 0.1]) doos(0.04, 0.04, zL - zF - 0.3, wx, Y + PLAFOND - 0.06, (zF + zL) / 2, ledMat)
+    const kleed = new THREE.Mesh(new THREE.PlaneGeometry(x1 - x0 - 1.0, 2.0).rotateX(-Math.PI / 2), kleedMat)
+    kleed.position.set(xc, Y + 0.008, zF + 1.65)
+    scene.add(kleed)
+    if (!aquarium) {
+      const tv = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 0.85), tvMat)
+      tv.position.set(x0 + 0.14, Y + 2.0, zF + 2.4)
+      tv.rotation.y = Math.PI / 2
+      scene.add(tv)
+      doos(0.05, 0.92, 1.58, x0 + 0.08, Y + 2.0, zF + 2.4, mats.donker)
+    }
+    const emmer = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.09, 0.24, 18), mats.staal)
+    emmer.position.set(x1 - 0.6, Y + 1.17, zL - 0.42)
+    const fles = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.045, 0.34, 10), new THREE.MeshStandardMaterial({ color: '#0f3d1f', roughness: 0.15 }))
+    fles.position.set(x1 - 0.6, Y + 1.3, zL - 0.42)
+    fles.rotation.z = 0.25
+    scene.add(emmer, fles)
+    for (let k = 0; k < 2; k++) {
+      const glas = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.012, 0.16, 10, 1, true), mats.glas)
+      glas.position.set(x1 - 0.9 - k * 0.12, Y + 1.13, zL - 0.35)
+      scene.add(glas)
+    }
+    for (const wx of [xc - 2.4, xc + 2.4]) {
+      const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.09, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), mats.licht)
+      lamp.position.set(wx, Y + 2.3, zL - 0.09)
+      lamp.rotation.x = -Math.PI / 2
+      scene.add(lamp)
+      const plas = new THREE.Mesh(new THREE.CircleGeometry(0.5, 18), lichtPlasMat)
+      plas.position.set(wx, Y + 2.25, zL - 0.077)
+      plas.rotation.y = Math.PI
+      scene.add(plas)
+    }
   }
   const stoelen = new THREE.InstancedMesh(stoelGeo, mats.leer, stoelMats.length)
   stoelMats.forEach((m, i) => stoelen.setMatrixAt(i, m))
@@ -400,32 +492,9 @@ export function bouwVerdiep(
   achter.rotation.y = Math.PI
   scene.add(achter)
   for (let x = vx0; x <= vx1 + 0.01; x += 4) doos(0.05, 2.1, 0.05, x, Y + 1.55, vz - 0.37, mats.staal)
-  // Bekers: de oudste prijzen van je club (met een plaatje), aangevuld met archiefstukken.
+  // Bekers: de oudste prijzen van je club (met een bordje), aangevuld met archiefstukken.
   const vroeger = opt.vroeger
   const plekken = Math.floor((vx1 - vx0) / 2.4)
-  const plaatC = document.createElement('canvas')
-  plaatC.width = 2048
-  plaatC.height = Math.max(1, Math.ceil(Math.max(1, vroeger.length) / 8)) * 128
-  const pg = plaatC.getContext('2d')!
-  vroeger.forEach((b, i) => {
-    const x = (i % 8) * 256
-    const y = Math.floor(i / 8) * 128
-    pg.fillStyle = '#c9a063'
-    pg.fillRect(x, y, 256, 128)
-    pg.fillStyle = '#e8c98e'
-    pg.fillRect(x + 6, y + 6, 244, 116)
-    pg.fillStyle = '#3b2a06'
-    pg.textAlign = 'center'
-    pg.textBaseline = 'middle'
-    pg.font = '800 34px Georgia, serif'
-    pg.fillText(b.jaar, x + 128, y + 40, 236)
-    pg.font = '600 22px Georgia, serif'
-    pg.fillText(b.kop === 'KAMPIOEN' ? 'Kampioen' : 'Bekerwinnaar', x + 128, y + 76, 236)
-    pg.font = 'italic 18px Georgia, serif'
-    pg.fillText(b.tekst, x + 128, y + 104, 236)
-  })
-  const plaatTex = canvasTex(plaatC)
-  const rijenPlaat = Math.max(1, Math.ceil(Math.max(1, vroeger.length) / 8))
   for (let k = 0; k < plekken; k++) {
     const x = vx0 + 1.2 + k * 2.4
     const b = vroeger[k]
@@ -439,14 +508,29 @@ export function bouwVerdiep(
     klein.position.set(x + 0.6, Y + 1.57, vz)
     scene.add(klein)
     if (echt && b) {
-      const u0 = (k % 8) / 8
-      const v1 = 1 - Math.floor(k / 8) / rijenPlaat
-      const vlak = new THREE.PlaneGeometry(0.5, 0.25)
-      vlak.setAttribute('uv', new THREE.Float32BufferAttribute([u0, v1, u0 + 1 / 8, v1, u0, v1 - 1 / rijenPlaat, u0 + 1 / 8, v1 - 1 / rijenPlaat], 2))
-      const plaat = new THREE.Mesh(vlak, new THREE.MeshStandardMaterial({ map: plaatTex, metalness: 0.5, roughness: 0.4, envMap: omgeving }))
-      plaat.position.set(x, Y + 0.28, vz - 0.38)
-      plaat.rotation.y = Math.PI
-      scene.add(plaat)
+      // Een groot museumbordje onder de beker: groot wanneer, en wat er gewonnen werd.
+      const lc = document.createElement('canvas')
+      lc.width = 768
+      lc.height = 220
+      const g = lc.getContext('2d')!
+      g.fillStyle = 'rgba(16,12,8,.92)'
+      g.fillRect(0, 0, 768, 220)
+      g.fillStyle = '#c9a063'
+      g.fillRect(0, 0, 768, 8)
+      g.fillRect(0, 212, 768, 8)
+      g.textAlign = 'center'
+      g.textBaseline = 'middle'
+      g.fillStyle = '#f5d48f'
+      g.font = '900 86px Georgia, serif'
+      g.fillText(b.jaar, 384, 80, 740)
+      g.fillStyle = '#ffffff'
+      g.font = '800 46px Inter, system-ui, sans-serif'
+      g.fillText(`${b.kop === 'KAMPIOEN' ? '🏆 Kampioen' : '🥇 Bekerwinnaar'}${b.tekst ? ' · ' + b.tekst : ''}`, 384, 168, 740)
+      // Op de voorkant van de onderkast, onder de beker: niets staat ervoor.
+      const label = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 0.46), new THREE.MeshBasicMaterial({ map: canvasTex(lc), toneMapped: false }))
+      label.position.set(x, Y + 0.25, vz - 0.385)
+      label.rotation.y = Math.PI
+      scene.add(label)
     }
   }
   logeObst.push({ x0: vx0, x1: vx1, z0: vz - 0.45, z1: zG })
@@ -554,12 +638,90 @@ export function bouwVerdiep(
     logeObst.push({ x0: x - 0.45, x1: x + 0.45, z0: zL + 0.55, z1: zL + 1.45 })
   }
 
+  // ---------- ramen in de gevel, en het balkon ----------
+  const kader = new THREE.MeshStandardMaterial({ color: '#2a2f38', metalness: 0.7, roughness: 0.35 })
+  const ruitGlas = new THREE.MeshStandardMaterial({ color: '#cfe9ff', transparent: true, opacity: 0.12, metalness: 0.2, roughness: 0.04, depthWrite: false, side: THREE.DoubleSide })
+  const balkonRaam = VERDIEP_RAMEN.find((r) => r.balkon)!
+  for (const r of VERDIEP_RAMEN) {
+    const w = r.x1 - r.x0
+    const xm = (r.x0 + r.x1) / 2
+    const y0 = r.y0
+    const y1 = r.y1
+    // Het kader rondom (binnen- en buitenkant), en een vensterbank.
+    doos(w + 0.24, 0.12, 1.3, xm, y1 + 0.06, B, kader)
+    for (const sx of [-1, 1]) doos(0.12, y1 - y0, 1.3, xm + sx * (w / 2 + 0.06), (y0 + y1) / 2, B, kader)
+    if (!r.balkon) {
+      doos(w + 0.24, 0.08, 1.4, xm, y0 - 0.02, B, mats.beton)
+      const glas = new THREE.Mesh(new THREE.PlaneGeometry(w, y1 - y0), ruitGlas)
+      glas.position.set(xm, (y0 + y1) / 2, B + 0.1)
+      scene.add(glas)
+      doos(0.05, y1 - y0, 0.06, xm, (y0 + y1) / 2, B + 0.1, kader)
+    } else {
+      // Een opengeschoven glazen schuifdeur.
+      const deur = new THREE.Mesh(new THREE.PlaneGeometry(w * 0.5, y1 - y0 - 0.05), ruitGlas)
+      deur.position.set(r.x0 + w * 0.25 + 0.05, (y0 + y1) / 2, B - 0.45)
+      scene.add(deur)
+      doos(0.06, y1 - y0, 0.06, r.x0 + w * 0.5 + 0.05, (y0 + y1) / 2, B - 0.45, kader)
+      doos(w, 0.04, 1.2, xm, y0 + 0.01, B, mats.beton)
+    }
+  }
+  // Het balkon: een vloerplaat die uit de gevel steekt, met een glazen balustrade en een
+  // stalen leuning, een bistrotafeltje met twee stoeltjes en een plant.
+  const BX0 = balkonRaam.x0 - 0.5
+  const BX1 = balkonRaam.x1 + 0.5
+  const BZ0 = B + 0.6
+  const BZ1 = B + 2.4
+  doos(BX1 - BX0, 0.22, BZ1 - BZ0 + 0.1, (BX0 + BX1) / 2, Y - 0.11, (BZ0 + BZ1) / 2 - 0.05, mats.beton)
+  const balkVloer = new THREE.Mesh(new THREE.PlaneGeometry(BX1 - BX0, BZ1 - BZ0).rotateX(-Math.PI / 2), new THREE.MeshLambertMaterial({ map: (() => {
+    const t = hout()
+    t.repeat.set(1.5, 1)
+    return t
+  })() }))
+  balkVloer.position.set((BX0 + BX1) / 2, Y + 0.005, (BZ0 + BZ1) / 2)
+  scene.add(balkVloer)
+  const balustrade = (ax: number, az: number, bx: number, bz: number) => {
+    const len = Math.hypot(bx - ax, bz - az)
+    const glas = new THREE.Mesh(new THREE.PlaneGeometry(len, 1.0), ruitGlas)
+    glas.position.set((ax + bx) / 2, Y + 0.55, (az + bz) / 2)
+    glas.rotation.y = -Math.atan2(bz - az, bx - ax)
+    scene.add(glas)
+    const leuning = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, len, 10).rotateZ(Math.PI / 2), mats.staal)
+    leuning.position.set((ax + bx) / 2, Y + 1.08, (az + bz) / 2)
+    leuning.rotation.y = -Math.atan2(bz - az, bx - ax)
+    scene.add(leuning)
+  }
+  balustrade(BX0, BZ1, BX1, BZ1)
+  balustrade(BX0, BZ0, BX0, BZ1)
+  balustrade(BX1, BZ0, BX1, BZ1)
+  const tafel = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.28, 0.03, 20), mats.staal)
+  tafel.position.set(BX1 - 0.6, Y + 0.74, BZ1 - 0.55)
+  const poot = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.15, 0.74, 10), mats.donker)
+  poot.position.set(BX1 - 0.6, Y + 0.37, BZ1 - 0.55)
+  scene.add(tafel, poot)
+  for (const dx of [-0.45, 0.42]) {
+    const st = new THREE.Mesh(rondeDoos(0.4, 0.06, 0.4, 0.03), mats.leer)
+    st.position.set(BX1 - 0.6 + dx, Y + 0.46, BZ1 - 0.6)
+    const rug = new THREE.Mesh(rondeDoos(0.4, 0.4, 0.05, 0.03), mats.leer)
+    rug.position.set(BX1 - 0.6 + dx + Math.sign(dx) * 0.18, Y + 0.68, BZ1 - 0.6)
+    rug.rotation.y = Math.PI / 2
+    scene.add(st, rug)
+  }
+  const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.15, 0.42, 16), mats.donker)
+  pot.position.set(BX0 + 0.35, Y + 0.21, BZ1 - 0.4)
+  const plant = new THREE.Mesh(new THREE.IcosahedronGeometry(0.34, 1).scale(1, 1.4, 1), new THREE.MeshLambertMaterial({ color: '#15803d', emissive: '#052e16', emissiveIntensity: 0.4 }))
+  plant.position.set(BX0 + 0.35, Y + 0.8, BZ1 - 0.4)
+  scene.add(pot, plant)
+  const opBalkon = (x: number, z: number) =>
+    (z > zG - 0.5 && z <= BZ0 && x > balkonRaam.x0 + 0.4 && x < balkonRaam.x1 - 0.4) || (z > BZ0 - 0.05 && z < BZ1 - 0.4 && x > BX0 + 0.35 && x < BX1 - 0.35 && !(x > BX1 - 1.3 && z > BZ1 - 1.0))
+
   // ---------- botsingen (de liftschacht zelf zit in lift.ts) ----------
   const boven: Rechthoek[] = [
     { x0: -400, x1: -XL + 0.05, z0: -400, z1: 400 },
     { x0: XL - 0.05, x1: 400, z0: -400, z1: 400 },
     { x0: -400, x1: 400, z0: -400, z1: zF + 0.45 },
-    { x0: -400, x1: 400, z0: zG - 0.1, z1: 400 },
+    // De gevelkant, met een doorgang naar het balkon.
+    { x0: -400, x1: balkonRaam.x0 + 0.4, z0: zG - 0.1, z1: 400 },
+    { x0: balkonRaam.x1 - 0.4, x1: 400, z0: zG - 0.1, z1: 400 },
     { x0: -XL, x1: LX - 1.36, z0: zF, z1: ZD + 0.08 },
     { x0: LX + 1.36, x1: LOGE_X0, z0: zF, z1: ZD + 0.08 },
     { x0: LOGE_X0 - 0.08, x1: LOGE_X0 + 0.08, z0: zF, z1: zL },
@@ -575,6 +737,7 @@ export function bouwVerdiep(
 
   return {
     obstakels: boven,
+    opBalkon,
     update(seconden) {
       // Visjes: zwemmen in lussen door de bak, kijken in hun zwemrichting, met een wiebelende staart.
       for (const v of vissen) {

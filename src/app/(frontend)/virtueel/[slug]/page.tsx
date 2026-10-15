@@ -55,7 +55,7 @@ export default async function VirtueelFragmentPage({ params }: { params: Promise
           reclames,
         )
       : { ...STANDAARD_THEMA, reclames }
-    thema = { ...thema, clubId: club ? Number(club.id) : null, ingelogd: Boolean(me) }
+    thema = { ...thema, clubId: club ? Number(club.id) : null, ingelogd: Boolean(me), ikId: me ? String(me.id) : null }
     // De hall of fame in de gangen: de erelijst van je club (of de recentste kampioenen).
     if (erelijst) thema = { ...thema, erezaal: eregalerij(club ? String(club.name) : null, erelijst) }
     // De weekendzaal: elke keer je komt kijken, de wedstrijden (en uitslagen) van dit weekend.

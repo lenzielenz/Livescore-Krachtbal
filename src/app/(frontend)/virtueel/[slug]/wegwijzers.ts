@@ -76,11 +76,13 @@ export function bouwWegwijzers(
     bestemmingen: Bestemming[]
     tribunes: { zuid?: Rechthoek; noord?: Rechthoek; oost?: Rechthoek; west?: Rechthoek }
   },
-): { obstakels: Rechthoek[] } {
+): { obstakels: Rechthoek[]; plekken: { x: number; z: number }[] } {
   const { thema, bestemmingen, tribunes } = opt
   const { A, B } = GEVEL
   const obstakels: Rechthoek[] = []
-  if (bestemmingen.length === 0) return { obstakels }
+  // Waar de borden hangen: wie ervoor staat, krijgt het plan groot op het scherm.
+  const plekken: { x: number; z: number }[] = []
+  if (bestemmingen.length === 0) return { obstakels, plekken }
   const ring = maakRing()
   const kleurVan = new Map(bestemmingen.map((b) => [b.naam, b.kleur]))
   const doelen: Doel[] = bestemmingen.map((b) => ({ naam: b.naam, icoon: b.icoon, s: ring.s(b.x, b.z).s }))
@@ -134,6 +136,7 @@ export function bouwWegwijzers(
     })
     const kast = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.78, lang), paneelMat)
     kast.position.set(wandX, y, midZ)
+    plekken.push({ x: wandX, z: midZ })
     scene.add(arm, kast, ...staven)
     for (const kant of [1, -1]) {
       // Deze kant kijkt naar +x (kant 1) of -x; de lezer kijkt er dus in de andere richting naar.
@@ -162,6 +165,7 @@ export function bouwWegwijzers(
     const h = groot ? 2.7 : 2.1
     const voet = new THREE.Mesh(new THREE.BoxGeometry(b + 0.2, 0.12, 0.6), metaal)
     voet.position.set(x, 0.06, z)
+    plekken.push({ x, z })
     voet.rotation.y = ry
     const kast = new THREE.Mesh(new THREE.BoxGeometry(b, h, 0.26), paneelMat)
     kast.position.set(x, 0.12 + h / 2, z)
@@ -282,5 +286,5 @@ export function bouwWegwijzers(
   if (tribunes.west) zuil((tribunes.west.x0 + 0.45 - A + 0.6) / 2, -4.6, -Math.PI / 2, false)
   // In de smalle noordgang: tegen de tribune en naast het weekendbord, uit de looplijn.
   if (tribunes.noord) zuil(6.4, tribunes.noord.z0 + 0.45 - 0.75, Math.PI, false)
-  return { obstakels }
+  return { obstakels, plekken }
 }
