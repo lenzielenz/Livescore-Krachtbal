@@ -419,13 +419,30 @@
 .vk-wed-links a { padding: 10px 16px; border-radius: 999px; font-weight: 800; text-decoration: none; color: var(--bg); background: var(--grad-accent, var(--accent)); }
 
 /* ---------- de photobooth (Photobooth.tsx) ---------- */
-.vk-booth { background: radial-gradient(ellipse at top, #3b0a12, #0b0f17 65%); }
-.vk-booth-inhoud { justify-content: flex-start; overflow-y: auto; }
+/* De photobooth vult het hele scherm, en alles past erop zonder scrollen: de polaroid schaalt mee
+   met de ruimte, de sluiterknop staat er altijd naast (liggend) of onder (staand). */
+.vk-booth { position: fixed; inset: 0; z-index: 1100; height: 100dvh; background: radial-gradient(ellipse at top, #3b0a12, #0b0f17 65%); }
+.vk-booth .vk-graf-kop span { display: none; }
+.vk-booth-inhoud { justify-content: center; gap: 10px; padding: 10px; overflow: hidden; }
+.vk-booth-podium { flex: 1; min-height: 0; width: 100%; display: grid; place-items: center; container-type: size; }
 .vk-booth-polaroid {
-  flex: none; width: min(300px, 70vw); padding: 12px 12px 0; background: #fbfaf6; border-radius: 3px; transform: rotate(-1.5deg);
+  width: min(calc(100cqw - 16px), calc(80cqh - 24px), 420px); padding: 3.5% 3.5% 0; background: #fbfaf6; border-radius: 3px; transform: rotate(-1.5deg);
   box-shadow: 0 18px 40px rgba(0, 0, 0, 0.55), 0 2px 0 rgba(0, 0, 0, 0.2); transition: transform 0.4s ease;
 }
 .vk-booth-polaroid.klaar { transform: rotate(2deg) scale(1.02); }
+.vk-booth-zij { flex: none; display: flex; flex-direction: column; align-items: center; gap: 8px; max-width: 100%; }
+.vk-booth-sluiter {
+  width: 74px; height: 74px; border-radius: 50%; border: 5px solid #fff; background: transparent; padding: 5px; cursor: pointer;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.35), 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+.vk-booth-sluiter span { display: block; width: 100%; height: 100%; border-radius: 50%; background: #ef4444; transition: transform 0.12s ease; }
+.vk-booth-sluiter:active span { transform: scale(0.86); }
+.vk-booth-sluiter:disabled { opacity: 0.5; cursor: default; }
+@media (orientation: landscape) {
+  .vk-booth-inhoud { flex-direction: row; gap: 18px; padding: 8px max(16px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
+  .vk-booth-podium { height: 100%; }
+  .vk-booth-zij { width: min(300px, 38%); }
+}
 .vk-booth-beeld { position: relative; aspect-ratio: 4 / 5; overflow: hidden; background: #111827; display: grid; place-items: center; }
 .vk-booth-beeld video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
 .vk-booth-beeld img { width: 100%; height: 100%; object-fit: cover; }
@@ -434,14 +451,14 @@
 @keyframes vk-tel { from { transform: scale(1.8); opacity: 0; } 30% { opacity: 1; } to { transform: scale(1); } }
 .vk-booth-flits { position: absolute; inset: 0; background: #fff; animation: vk-flits 0.38s ease-out forwards; }
 @keyframes vk-flits { to { opacity: 0; } }
-.vk-booth-onder { display: block; padding: 10px 0 14px; text-align: center; color: #1e3a8a; font: italic 600 1.15rem "Segoe Print", "Bradley Hand", "Comic Sans MS", cursive; }
+.vk-booth-onder { display: block; padding: 2% 0 3%; text-align: center; color: #1e3a8a; font: italic 600 1.15rem "Segoe Print", "Bradley Hand", "Comic Sans MS", cursive; }
 .vk-booth-knoppen { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
 .vk-booth-knoppen .vk-graf-plaats { margin-left: 0; display: inline-flex; align-items: center; text-decoration: none; }
 .vk-booth-opnieuw { height: 42px; padding: 0 18px; border-radius: 999px; border: 1px solid rgba(255, 255, 255, 0.2); background: rgba(255, 255, 255, 0.08); color: #fff; font: inherit; font-weight: 800; cursor: pointer; }
-.vk-booth .vk-graf-tip { max-width: 420px; text-align: center; color: #94a3b8; }
+.vk-booth .vk-graf-tip { max-width: 420px; text-align: center; color: #94a3b8; font-size: 0.66rem; }
 .vk-booth-eigen { display: flex; flex-direction: column; align-items: center; gap: 6px; color: #e2e8f0; font-size: 0.85rem; }
-.vk-booth-eigen div { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.vk-booth-eigen div { display: flex; gap: 8px; max-width: 100%; overflow-x: auto; padding: 8px 8px 2px; }
 .vk-booth-eigen span { position: relative; }
-.vk-booth-eigen img { width: 52px; height: 65px; object-fit: cover; border: 3px solid #fbfaf6; border-bottom-width: 9px; border-radius: 2px; }
+.vk-booth-eigen img { width: 40px; height: 50px; object-fit: cover; border: 3px solid #fbfaf6; border-bottom-width: 9px; border-radius: 2px; }
 .vk-booth-eigen button { position: absolute; top: -8px; right: -8px; width: 22px; height: 22px; border-radius: 50%; border: 0; background: #ef4444; color: #fff; font-size: 0.7rem; cursor: pointer; }
 @media (prefers-reduced-motion: reduce) { .vk-booth-tel, .vk-booth-flits { animation: none; } }

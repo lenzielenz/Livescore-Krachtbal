@@ -58,6 +58,11 @@ export function Photobooth({
     return () => stop()
   }, [open])
 
+  // Meteen de camera aan bij het openen: dan staat de sluiterknop er al.
+  useEffect(() => {
+    if (open) void startCamera()
+  }, [open])
+
   const startCamera = async () => {
     setFout(null)
     if (!navigator.mediaDevices?.getUserMedia) {
@@ -66,6 +71,7 @@ export function Photobooth({
     }
     try {
       const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 960 }, height: { ideal: 1200 } }, audio: false })
+      stop()
       stroom.current = s
       setFase('camera')
       requestAnimationFrame(() => {
@@ -160,79 +166,81 @@ export function Photobooth({
         </button>
       </div>
       <div className="vk-spel-inhoud vk-booth-inhoud">
-        <div className={`vk-booth-polaroid${fase === 'genomen' || fase === 'bezig' ? ' klaar' : ''}`}>
-          <div className="vk-booth-beeld">
-            {fase === 'start' && <span className="vk-booth-leeg">🙂</span>}
-            {(fase === 'camera' || fase === 'aftellen') && <video ref={video} playsInline muted />}
-            {voorbeeld && (fase === 'genomen' || fase === 'bezig') && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={voorbeeld} alt="Je selfie" />
-            )}
-            {fase === 'aftellen' && <span className="vk-booth-tel">{tel}</span>}
-            {flits && <span className="vk-booth-flits" />}
+        <div className="vk-booth-podium">
+          <div className={`vk-booth-polaroid${fase === 'genomen' || fase === 'bezig' ? ' klaar' : ''}`}>
+            <div className="vk-booth-beeld">
+              {fase === 'start' && <span className="vk-booth-leeg">🙂</span>}
+              {(fase === 'camera' || fase === 'aftellen') && <video ref={video} playsInline muted />}
+              {voorbeeld && (fase === 'genomen' || fase === 'bezig') && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={voorbeeld} alt="Je selfie" />
+              )}
+              {fase === 'aftellen' && <span className="vk-booth-tel">{tel}</span>}
+              {flits && <span className="vk-booth-flits" />}
+            </div>
+            <span className="vk-booth-onder">{fase === 'genomen' || fase === 'bezig' ? 'Mooi!' : 'Lach eens!'}</span>
           </div>
-          <span className="vk-booth-onder">{fase === 'genomen' || fase === 'bezig' ? 'Mooi!' : 'Lach eens!'}</span>
         </div>
         <canvas ref={doek} hidden />
-        {fout && <p className="vk-graf-fout">{fout}</p>}
-        <div className="vk-booth-knoppen">
-          {fase === 'start' && (
-            <button className="vk-graf-plaats" onClick={() => void startCamera()}>
-              📷 Camera aan
-            </button>
-          )}
-          {fase === 'camera' && (
-            <button className="vk-graf-plaats" onClick={neem}>
-              📸 Neem de foto
-            </button>
-          )}
-          {(fase === 'genomen' || fase === 'bezig') && (
-            <>
-              <button
-                className="vk-booth-opnieuw"
-                disabled={fase === 'bezig'}
-                onClick={() => {
-                  setFoto(null)
-                  setVoorbeeld((v) => {
-                    if (v) URL.revokeObjectURL(v)
-                    return null
-                  })
-                  void startCamera()
-                }}
-              >
-                ↻ Opnieuw
+        <div className="vk-booth-zij">
+          {fout && <p className="vk-graf-fout">{fout}</p>}
+          <div className="vk-booth-knoppen">
+            {fase === 'start' && (
+              <button className="vk-graf-plaats" onClick={() => void startCamera()}>
+                📷 Camera aan
               </button>
-              {ingelogd ? (
-                <button className="vk-graf-plaats" disabled={fase === 'bezig'} onClick={() => void hang()}>
-                  {fase === 'bezig' ? 'Ophangen…' : '📌 Hang aan de muur'}
-                </button>
-              ) : (
-                <Link className="vk-graf-plaats" href="/inloggen">
-                  Log in om hem op te hangen
-                </Link>
-              )}
-            </>
-          )}
-        </div>
-        <p className="vk-graf-tip">
-          Je foto hangt zichtbaar voor iedereen in het stadion van je club. Je kan hem hier altijd weer weghalen. De foto wordt verkleind, zonder locatie of andere gegevens.
-        </p>
-        {eigen.length > 0 && (
-          <div className="vk-booth-eigen">
-            <b>Jouw foto’s aan de muur</b>
-            <div>
-              {eigen.map((f) => (
-                <span key={f.id}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={f.tegel || f.url} alt="" />
-                  <button onClick={() => void verwijder(f.id)} aria-label="Foto weghalen">
-                    ✕
+            )}
+            {(fase === 'camera' || fase === 'aftellen') && (
+              <button className="vk-booth-sluiter" onClick={neem} disabled={fase === 'aftellen'} aria-label="Neem de foto">
+                <span />
+              </button>
+            )}
+            {(fase === 'genomen' || fase === 'bezig') && (
+              <>
+                {ingelogd ? (
+                  <button className="vk-graf-plaats" disabled={fase === 'bezig'} onClick={() => void hang()}>
+                    {fase === 'bezig' ? 'Ophangen…' : '📌 Hang aan de muur'}
                   </button>
-                </span>
-              ))}
-            </div>
+                ) : (
+                  <Link className="vk-graf-plaats" href="/inloggen">
+                    Log in om hem op te hangen
+                  </Link>
+                )}
+                <button
+                  className="vk-booth-opnieuw"
+                  disabled={fase === 'bezig'}
+                  onClick={() => {
+                    setFoto(null)
+                    setVoorbeeld((v) => {
+                      if (v) URL.revokeObjectURL(v)
+                      return null
+                    })
+                    void startCamera()
+                  }}
+                >
+                  ↻ Opnieuw
+                </button>
+              </>
+            )}
           </div>
-        )}
+          {eigen.length > 0 && (
+            <div className="vk-booth-eigen">
+              <b>Jouw foto’s aan de muur</b>
+              <div>
+                {eigen.map((f) => (
+                  <span key={f.id}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={f.tegel || f.url} alt="" />
+                    <button onClick={() => void verwijder(f.id)} aria-label="Foto weghalen">
+                      ✕
+                    </button>
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+          <p className="vk-graf-tip">Zichtbaar voor iedereen in het stadion van je club, verkleind en zonder locatiegegevens. Je kan hem altijd weer weghalen.</p>
+        </div>
       </div>
     </div>
   )
