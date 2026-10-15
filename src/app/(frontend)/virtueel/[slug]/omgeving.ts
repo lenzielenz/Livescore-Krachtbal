@@ -3,6 +3,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 
 import { GEVEL, inPoort, lichtshow, poortOp, VERDIEP_RAMEN, type Rechthoek, type StadionThema } from '@/lib/virtueel'
 import { bijSpelersgebouwen } from './kleedkamer'
+import { FANDORP } from './fandorp'
 import { OEFEN } from './oefencomplex'
 import { canvasTex, rnd, rondLogo } from './stadion'
 
@@ -606,7 +607,11 @@ export function bouwOmgeving(scene: THREE.Scene, opt: { thema: StadionThema; lic
     const bijToren = Math.abs(Math.abs(p.nx) - Math.abs(p.nz)) < 0.5
     if (!(z > B && Math.abs(x) < 14) && !bijToren && !bijSpelersgebouwen(x, z)) lampPos.push([x, z])
   }
-  for (let x = -140; x <= 140; x += 20) lampPos.push([x, B + 35.5])
+  // Langs de straat; aan het zebrapad naar het fandorp staan er twee, links en rechts van de oversteek.
+  for (let x = -140; x <= 140; x += 20) {
+    if (x === 0) lampPos.push([-6, B + 35.5], [6, B + 35.5])
+    else lampPos.push([x, B + 35.5])
+  }
   const palen = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.08, 0.12, 6, 6).translate(0, 3, 0), new THREE.MeshLambertMaterial({ color: '#374151' }), lampPos.length)
   const kappen = new THREE.InstancedMesh(new THREE.SphereGeometry(0.28, 10, 8).translate(0, 6.05, 0), new THREE.MeshBasicMaterial({ color: '#fff1c4', toneMapped: false }), lampPos.length)
   // Elke paal krijgt een oplichtende ledzuil halverwege: daar lopen de kleurgolven over het plein.
@@ -751,11 +756,13 @@ export function bouwOmgeving(scene: THREE.Scene, opt: { thema: StadionThema; lic
     if (Math.abs(z - (B + 30)) < 8) continue
     // Geen bomen op de kleedkamers, de graffitimuur en het clubhuis ten westen van het stadion.
     if (x > -114 && x < -54 && z > -30 && z < 30) continue
-    // Ook niet op het oefencomplex ten noorden van het stadion (oefencomplex.ts).
+    // Ook niet op het oefencomplex ten noorden van het stadion (oefencomplex.ts) en in het fandorp.
     if (x > OEFEN.x0 - 4 && x < OEFEN.x1 + 4 && z > OEFEN.z0 - 4 && z < OEFEN.z1 + 4) continue
+    if (x > FANDORP.x0 - 3 && x < FANDORP.x1 + 3 && z > FANDORP.z0 - 3 && z < FANDORP.z1 + 3) continue
     boomPos.push([x, z, 0.8 + toeval() * 0.7])
   }
-  for (let x = -130; x <= 130; x += 13) boomPos.push([x, B + 41, 0.9])
+  // De bomenrij langs de straat, met een opening voor de poort van het fandorp.
+  for (let x = -130; x <= 130; x += 13) if (Math.abs(x) > 6) boomPos.push([x, B + 41, 0.9])
   const stammen = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.2, 0.3, 3, 6).translate(0, 1.5, 0), new THREE.MeshLambertMaterial({ color: '#4b3621' }), boomPos.length)
   const kruinen = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(2.4, 0).translate(0, 4.6, 0), new THREE.MeshLambertMaterial({ flatShading: true }), boomPos.length)
   const groen = ['#1f5130', '#24603a', '#2f6b3a', '#1b4429'].map((c) => new THREE.Color(c))
