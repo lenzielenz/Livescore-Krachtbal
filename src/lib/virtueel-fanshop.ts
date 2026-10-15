@@ -6,7 +6,7 @@
 /** Hoeveel muntjes één gevonden gouden bal waard is. */
 export const MUNTEN_PER_BAL = 50
 
-/** Een prijs die je nooit bij elkaar spaart (12 gouden ballen = 600 muntjes): enkel om te passen. */
+/** Een prijs die je nooit bij elkaar spaart (alle gouden ballen samen = 1250 muntjes): enkel om te passen. */
 export const ONBETAALBAAR = 1_000_000
 
 export const KLEDIJ_SOORTEN = ['shirt', 'broek', 'pet', 'sjaal', 'schoenen', 'extra'] as const

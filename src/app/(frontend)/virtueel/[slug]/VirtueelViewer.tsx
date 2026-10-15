@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 
-import { balOp, balSpoor, bezitOp, bezitTijdlijn, decodeer, GEVEL, gevelAfstand, op, ploegKleuren, snelheid, stap, stapMet, vrij as vrijVanGevel, WERELD_STRAAL, type Ploeg, type Rechthoek, type Reconstructie, type Spoor, type StadionThema, type Veld } from '@/lib/virtueel'
+import { balOp, balSpoor, bezitOp, bezitTijdlijn, decodeer, GEVEL, gevelAfstand, op, ploegKleuren, snelheid, stap, stapMet, VERDIEP_RAMEN, vrij as vrijVanGevel, WERELD_STRAAL, type Ploeg, type Rechthoek, type Reconstructie, type Spoor, type StadionThema, type Veld } from '@/lib/virtueel'
 import { pasStandenToe, type WeekendStand } from '@/lib/virtueel-weekend'
 import { bouwEregalerij } from './erezaal'
 import { bouwOmgeving } from './omgeving'
@@ -53,7 +53,7 @@ import { bouwVideoscherm, CINEMA_VIDEO_ID, type Videoscherm } from './videoscher
 import { GraffitiSpuiter } from './GraffitiSpuiter'
 import { laadTactiek, Tactiekbord } from './Tactiekbord'
 import { muurLengte, type Tag } from '@/lib/virtueel-graffiti'
-import { GOUDEN_BALLEN, legeSporen, waterKleur, type BordId, type Sporenstaat, type SpoorSoort } from '@/lib/virtueel-sporen'
+import { GOUDEN_BALLEN, legeSporen, waterKleur, type BordId, type Sporenstaat, type SpoorSoort, type Warmte } from '@/lib/virtueel-sporen'
 import type { Tactiek } from '@/lib/virtueel-tactiek'
 import { VERDIEPEN } from '@/lib/virtueel-lift'
 
@@ -113,6 +113,8 @@ const ACTIE_LABEL: Record<Nabij['soort'], string> = {
   booth: '📸 Neem een selfie',
 }
 type Muur = 'kleedkamer' | 'kelder'
+
+const RADAR: Record<Warmte, string> = { heet: '🔥 heet!', warm: '♨️ warm', lauw: '🌤️ lauw', koud: '❄️ koud', niets: '🧭 niets op dit verdiep' }
 
 const kort = (id: string) => id.replace(/^T\d-/, '')
 
@@ -417,6 +419,7 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
   const [welkeMuur, setWelkeMuur] = useState<Muur>('kleedkamer')
   const [zit, setZit] = useState<number | null>(null)
   const [goud, setGoud] = useState(0)
+  const [radar, setRadar] = useState<Warmte>('niets')
   const [melding, setMelding] = useState<string | null>(null)
   const [geluid, setGeluid] = useState(false)
   const [liftPaneel, setLiftPaneel] = useState<{ hier: number; rijdt: boolean; doel: number | null } | null>(null)
@@ -978,10 +981,18 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     const raakt = (lijst: Rechthoek[], x: number, z: number) => lijst.some((o) => x > o.x0 - 0.35 && x < o.x1 + 0.35 && z > o.z0 - 0.35 && z < o.z1 + 0.35)
     // In de kooi en in de deuropening mag je altijd staan (op het verdiep waar de kooi is).
     const bijKooi = (x: number, z: number) => lift.binnen(x, z) || (Math.abs(x - lift.x) < 0.55 && z > lift.zDeur - 0.3 && z < lift.zDeur + 0.5)
-    // De goudjacht: zes ballen in de kelder, en zes boven (kleedkamer, hall of fame, plein, westkant,
-    // het verdiep en de ring op het dak). Elke plek schuift tot ze op vrije, bereikbare vloer ligt.
+    // De goudjacht: 25 ballen over het hele terrein — zeven in de kelder (kelder.ts), en 18 hier: in
+    // de kleedkamer, de gangen, op het plein, achter het clubhuis, op de parking, in het fandorp, op
+    // het oefencomplex, op het verdiep (ook op het balkon) en op het dak (ook op het helikopterplatform).
+    // Elke plek schuift tot ze op vrije, bereikbare vloer ligt.
     const vrij = (v: number, x: number, z: number) =>
-      v === -1 ? kelder.mag(x, z) : v === 2 ? opDak(x, z) : v === 1 ? !raakt([...verdiep.obstakels, ...lift.obstakels(1)], x, z) : !raakt([...obstakels, ...lift.obstakels(0)], x, z) && Math.hypot(x, z) < WERELD_STRAAL - 2
+      v === -1
+        ? kelder.mag(x, z)
+        : v === 2
+          ? opDak(x, z)
+          : v === 1
+            ? verdiep.opBalkon(x, z) || vrijVanGevel(GEVEL, [...verdiep.obstakels, ...lift.obstakels(1)], x, z)
+            : !raakt([...obstakels, ...lift.obstakels(0)], x, z) && Math.hypot(x, z) < WERELD_STRAAL - 2
     const zoekVrij = (v: number, x: number, z: number): { x: number; z: number } => {
       for (let r = 0; r <= 8; r += 0.5)
         for (let k = 0; k < (r ? 16 : 1); k++) {
@@ -994,19 +1005,43 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
       for (let dz = -6; dz <= 6; dz += 0.25) if (ring.mag(6, -GEVEL.B + dz)) return { x: 6, z: -GEVEL.B + dz }
       return { x: 6, z: -GEVEL.B }
     })()
+    const ringWest = (() => {
+      for (let dx = -6; dx <= 6; dx += 0.25) if (ring.mag(-GEVEL.A + dx, -4)) return { x: -GEVEL.A + dx, z: -4 }
+      return { x: -GEVEL.A, z: -4 }
+    })()
+    const balkon = VERDIEP_RAMEN.find((r) => r.balkon)
     const boven: [number, number, number][] = [
+      // Gelijkvloers: binnen.
       [0, KLEED.x0 + 3, KLEED.z1 - 2.5],
       [0, 7, GEVEL.B - 3.5],
+      [0, GEVEL.A - 3.2, 14],
+      // Buiten rond het stadion.
       [0, omgeving.start.x + 7, omgeving.start.z - 9],
       [0, -GEVEL.A - 14, -12],
+      [0, -86, -14],
+      [0, 104, 2],
+      // Het fandorp.
+      [0, -36, 116],
+      [0, 44, 100],
+      [0, -61, 101],
+      // Het oefencomplex.
+      [0, -30, -64],
+      [0, 46, -121],
+      // Het verdiep (loges, gang, balkon).
       [1, lift.x + 9, lift.zDeur + 1.4],
+      [1, 30, -GEVEL.B + 5],
+      [1, balkon ? (balkon.x0 + balkon.x1) / 2 : -21, GEVEL.B + 0.9],
+      // Het dak: de ring en het helikopterplatform.
       [2, ringNoord.x, ringNoord.z],
+      [2, ringWest.x, ringWest.z],
+      [2, GEVEL.A + 11, 7],
     ]
     const goudPlekken: GoudPlek[] = [
-      ...kelder.plekken.goud.map((p) => ({ ...p, verdiep: -1 })),
+      ...kelder.plekken.goud.map((p) => ({ ...p, y: VERDIEPEN[0].y + 0.17, verdiep: -1 })),
       ...boven.map(([v, x, z]) => {
         const p = zoekVrij(v, x, z)
-        return { ...p, y: (VERDIEPEN.find((q) => q.nr === v)?.y ?? 0) + 0.95, verdiep: v }
+        // Op de grond, niet zwevend (een krachtbal heeft een straal van ± 17 cm).
+        return { ...p, y: (VERDIEPEN.find((q) => q.nr === v)?.y ?? 0) + 0.17, verdiep: v }
       }),
     ]
     const goudjacht = bouwGoudjacht(scene, kelder.groep, goudPlekken)
@@ -1102,6 +1137,7 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     const vorigePos = { x: 0, z: 0 }
     let avatarPopcorn = false
     let liftNu = lift.update(0, { x: 0, z: 0, verdiep: 0, actief: false, keuze: null }).lift
+    let laatsteRadar = 0
     // In de spelersbus sta je hoger (de vloer van de bus, met treden aan de deur).
     let busHoogte = 0
     let inBus = false
@@ -1503,7 +1539,12 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
       kelder.update(nu / 1000, { x: loper.pos.x, z: loper.pos.z })
       kelderspel.update(nu / 1000, dt)
       gokkantoor.update(nu / 1000, dt)
-      goudjacht.update(nu / 1000, inKelder)
+      goudjacht.update(nu / 1000, inKelder, camera.position)
+      if (s.modus === 'buiten' && nu - laatsteRadar > 400) {
+        laatsteRadar = nu
+        const w = goudjacht.aantal() >= GOUDEN_BALLEN ? 'niets' : goudjacht.warmte(loper.pos.x, loper.pos.z, opVerdiep)
+        setRadar((oud) => (oud === w ? oud : w))
+      }
       // De lift: deuren, kooi en de verdiepaanduiding. Sta je in de kooi, dan kies je je verdiep
       // (het paneel op je scherm) en rij je mee.
       const wandelt = s.modus === 'buiten'
@@ -1524,7 +1565,7 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
           const n = goudjacht.aantal()
           setGoud(n)
           heli.zetVoortgang(n, GOUDEN_BALLEN, sporenRef.current.mij.sleutel)
-          setMelding(n >= GOUDEN_BALLEN ? '🏆 Alle 12 gouden ballen! Je naam staat bij de goudzoekers' : `🟡 Gouden krachtbal gevonden! ${n}/${GOUDEN_BALLEN}`)
+          setMelding(n >= GOUDEN_BALLEN ? `🏆 Alle ${GOUDEN_BALLEN} gouden ballen! Je naam staat bij de goudzoekers` : `🟡 Gouden krachtbal gevonden! ${n}/${GOUDEN_BALLEN}`)
           void laat('vondst', { nr })
         }
         // In de kelder: een melding als je een zaal binnenstapt.
@@ -1962,6 +2003,11 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
             {modus === 'buiten' && !welkom && (
               <span className="vk-goud" title="Gouden krachtballen gevonden — ze liggen overal in het stadion">
                 🟡 {goud}/{GOUDEN_BALLEN}
+                {goud < GOUDEN_BALLEN && (
+                  <i className={`vk-radar ${radar}`} title="Goudradar: hoe dicht ben je bij een gouden bal op dit verdiep?">
+                    {RADAR[radar]}
+                  </i>
+                )}
               </span>
             )}
             {modus === 'buiten' && !paneel && (

@@ -663,3 +663,11 @@
 .vk-heli-hulp li.klaar { color: #86efac; text-decoration: line-through; text-decoration-color: rgba(134, 239, 172, 0.5); }
 .vk-heli-hulp li.klaar::marker { content: '✓  '; color: #22c55e; }
 .vk-shop-onbetaalbaar { color: #fca5a5 !important; font-size: 0.68rem; }
+/* De goudradar: hoe warm ben je bij een gouden bal? */
+.vk-radar { margin-left: 8px; padding: 1px 8px; border-radius: 999px; font-style: normal; font-size: 0.72rem; font-weight: 800; background: rgba(255, 255, 255, 0.08); transition: background 0.3s, color 0.3s; }
+.vk-radar.heet { background: #dc2626; color: #fff; animation: vk-radar-puls 0.6s ease-in-out infinite alternate; }
+.vk-radar.warm { background: #f97316; color: #fff; }
+.vk-radar.lauw { background: #facc15; color: #1c1300; }
+.vk-radar.koud { background: #1d4ed8; color: #dbeafe; }
+.vk-radar.niets { color: #94a3b8; }
+@keyframes vk-radar-puls { from { transform: scale(1); } to { transform: scale(1.1); } }
