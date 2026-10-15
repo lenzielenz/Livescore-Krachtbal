@@ -381,3 +381,39 @@
 .vk-worp { padding: 8px; }
 .vk-worp canvas { height: 100%; max-height: 100%; max-width: 100%; aspect-ratio: 600 / 800; border-radius: 14px; touch-action: none; cursor: crosshair; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); }
 @media (prefers-reduced-motion: reduce) { .vk-spel, .vk-loop-band { animation: none; } }
+
+/* ---------- het wedkantoor: de statistieken van de pronostiek (Wedkantoor.tsx) ---------- */
+.vk-wed { background: radial-gradient(ellipse at top, #2a1a08, #0b0f17 60%); }
+.vk-wed-inhoud {
+  flex: 1; min-height: 0; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; align-content: start;
+  padding: 14px; padding-bottom: max(14px, env(safe-area-inset-bottom));
+}
+.vk-wed-kaart { padding: 12px 14px; border-radius: 14px; background: linear-gradient(180deg, #0f1d38, #070d1b); border: 1px solid rgba(251, 191, 36, 0.28); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06); }
+.vk-wed-kaart.breed { grid-column: 1 / -1; }
+.vk-wed-kaart.ik { border-color: var(--accent); }
+.vk-wed-kaart h3 { margin: 0 0 8px; font-size: 0.82rem; letter-spacing: 0.08em; text-transform: uppercase; color: #fcd34d; }
+.vk-wed-kaart.ik p { margin: 0; color: #e2e8f0; }
+.vk-wed-kaart.ik b { font-size: 1.6rem; color: #fff; margin-right: 6px; }
+.vk-wed-cijfers { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; }
+.vk-wed-cijfers div { display: flex; flex-direction: column; align-items: center; padding: 8px 4px; border-radius: 10px; background: rgba(255, 255, 255, 0.04); }
+.vk-wed-cijfers b { font-size: 1.5rem; font-weight: 900; color: #fff; font-variant-numeric: tabular-nums; }
+.vk-wed-cijfers span { font-size: 0.72rem; color: #7dd3fc; }
+.vk-wed-lijst { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.vk-wed-lijst li { display: flex; align-items: center; gap: 10px; padding: 5px 8px; border-radius: 8px; font-size: 0.9rem; }
+.vk-wed-lijst li:nth-child(odd) { background: rgba(255, 255, 255, 0.04); }
+.vk-wed-lijst .rang { width: 22px; text-align: right; font-weight: 900; color: #fcd34d; font-variant-numeric: tabular-nums; }
+.vk-wed-lijst .naam { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #f1f5f9; font-weight: 700; }
+.vk-wed-lijst .pt { font-weight: 800; color: #93c5fd; font-variant-numeric: tabular-nums; }
+.vk-wed-uit { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.vk-wed-uit li { display: flex; flex-direction: column; gap: 1px; }
+.vk-wed-uit span { font-size: 0.75rem; color: #94a3b8; }
+.vk-wed-uit b { color: #fff; }
+.vk-wed-kansen { display: flex; flex-direction: column; gap: 6px; }
+.vk-wed-kansen div { display: grid; grid-template-columns: 46px 1fr 42px; align-items: center; gap: 8px; }
+.vk-wed-kansen b { font-weight: 900; color: #e2e8f0; }
+.vk-wed-kansen i { height: 14px; border-radius: 7px; background: linear-gradient(90deg, var(--accent), #fca5a5); }
+.vk-wed-kansen .jackpot b { color: #ffd166; }
+.vk-wed-kansen .jackpot i { background: linear-gradient(90deg, #f59e0b, #ffd166); }
+.vk-wed-kansen span { text-align: right; font-weight: 800; color: #fff; font-variant-numeric: tabular-nums; }
+.vk-wed-links { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+.vk-wed-links a { padding: 10px 16px; border-radius: 999px; font-weight: 800; text-decoration: none; color: var(--bg); background: var(--grad-accent, var(--accent)); }

@@ -51,6 +51,26 @@ export type KelderPlekken = {
   tactiek: BordPlek
   /** Plekken voor gouden ballen in de kelder (zie goudjacht.ts). */
   goud: { x: number; y: number; z: number }[]
+  /** Het wedkantoor: de ruimte en waar alles staat (de inrichting zelf: gokkantoor.ts). */
+  wedkantoor: WedkantoorPlek
+}
+export type WedkantoorPlek = {
+  x0: number
+  x1: number
+  z0: number
+  z1: number
+  /** Vloerhoogte en plafondhoogte (boven de vloer). */
+  y: number
+  h: number
+  /** Het bonusrad aan de oostwand (kijkt naar -x). */
+  rad: { x: number; y: number; z: number; straal: number }
+  /** De schermenwand (noordwand, kijkt naar +z). */
+  schermen: BordPlek[]
+  balie: { x0: number; x1: number; z0: number; z1: number }
+  tafels: { x: number; z: number }[]
+  plank: { x0: number; x1: number; z0: number; z1: number }
+  /** Zelfbedieningsterminals tegen de oostwand (kijken naar -x). */
+  kiosken: { x: number; z: number }[]
 }
 
 type Kant = 'n' | 'z' | 'o' | 'w'
@@ -211,6 +231,7 @@ export function bouwKelder(scene: THREE.Scene, opt: { thema: StadionThema; licht
     zwembad: { x0: ox - 40, x1: ox + 14, z0: B1, z1: oz + 45 },
     sauna: { x0: ox + 16, x1: ox + 46, z0: B1, z1: oz + 37 },
     speelhal: { x0: ox + 48, x1: ox + 80, z0: B1, z1: B1 + 36 },
+    wedkantoor: { x0: ox + 66, x1: ox + 82, z0: oz - 1, z1: B1 },
   }
   const deurX = { fitness: ox - 20, cinema: ox + 19, gaming: ox + 48, zwembad: ox - 14, sauna: ox + 31, speelhal: ox + 57 }
   const goud: { x: number; y: number; z: number }[] = []
@@ -244,6 +265,7 @@ export function bouwKelder(scene: THREE.Scene, opt: { thema: StadionThema; licht
       { kant: 'z', ...d3(deurX.zwembad) },
       { kant: 'z', ...d3(deurX.sauna) },
       { kant: 'z', ...d3(deurX.speelhal) },
+      { kant: 'o', ...d3((B0 + B1) / 2) },
     ],
   })
   bouwZaal({ naam: 'Lobby', ...R.lobby, h: 4.2, wand: blvWand, vloer: steenVloer, plafond: donkerPlafond, vloerTegel: 2, deuren: [{ kant: 'z', van: R.lobby.x0, tot: R.lobby.x1 }, { kant: 'n', van: ox - 0.6, tot: ox + 0.6 }] })
@@ -288,10 +310,8 @@ export function bouwKelder(scene: THREE.Scene, opt: { thema: StadionThema; licht
     }
     g.globalAlpha = 1
   })
-  for (const [x, ry] of [
-    [R.boulevard.x0 + 0.02, Math.PI / 2],
-    [R.boulevard.x1 - 0.02, -Math.PI / 2],
-  ] as const) {
+  // (Enkel aan de westkant: aan de oostkant is de deur naar het wedkantoor.)
+  for (const [x, ry] of [[R.boulevard.x0 + 0.02, Math.PI / 2]] as const) {
     const v = new THREE.Mesh(new THREE.PlaneGeometry(B1 - B0, 4.2), new THREE.MeshBasicMaterial({ map: eindeloos }))
     v.position.set(x, Y + 2.1, (B0 + B1) / 2)
     v.rotation.y = ry
@@ -325,6 +345,28 @@ export function bouwKelder(scene: THREE.Scene, opt: { thema: StadionThema; licht
   bordBoven('ZWEMBAD', '🏊', deurX.zwembad, B1 - 0.02, Math.PI, '#38bdf8')
   bordBoven('SAUNA & WELLNESS', '🧖', deurX.sauna, B1 - 0.02, Math.PI, '#f59e0b')
   bordBoven('SPEELHAL', '🎡', deurX.speelhal, B1 - 0.02, Math.PI, '#22c55e')
+  {
+    // Het bord boven de deur van het wedkantoor, op de eindwand van de boulevard.
+    const t = tekst(1024, 220, (g) => {
+      g.fillStyle = '#07090d'
+      g.fillRect(0, 0, 1024, 220)
+      g.shadowColor = '#fbbf24'
+      g.shadowBlur = 30
+      g.fillStyle = '#ffffff'
+      g.font = '900 112px Inter, system-ui, sans-serif'
+      g.textAlign = 'center'
+      g.textBaseline = 'middle'
+      g.fillText('🎰 WEDKANTOOR', 512, 116, 980)
+      g.shadowBlur = 0
+      g.fillStyle = '#fbbf24'
+      g.fillRect(0, 206, 1024, 14)
+    })
+    const b = new THREE.Mesh(new THREE.PlaneGeometry(3.6, 0.77), new THREE.MeshBasicMaterial({ map: t, toneMapped: false }))
+    b.position.set(R.boulevard.x1 - 0.02, Y + DEUR_H + 0.6, (B0 + B1) / 2)
+    b.rotation.y = -Math.PI / 2
+    add(b)
+    plas(R.boulevard.x1 - 1.2, (B0 + B1) / 2, 1.6, '#fbbf24', 0.25)
+  }
   // In de lobby: een welkomstwand met het clublogo, en bankjes.
   const welkomC = document.createElement('canvas')
   welkomC.width = 1024
@@ -1284,6 +1326,119 @@ export function bouwKelder(scene: THREE.Scene, opt: { thema: StadionThema; licht
     }
   }
 
+  // ---------- 🎰 het wedkantoor ----------
+  // Een klein gokkantoor zoals op de hoek van de straat: tapijt, houten lambrisering, een balie met
+  // glas, statafels met wedformulieren, een wand vol schermen met de pronostiek, en het bonusrad
+  // aan de achterwand. De inrichting zelf (met glanzend metaal en glas) bouwt gokkantoor.ts; hier
+  // staan de ruimte en waar alles staat (en wat je tegenhoudt).
+  const WK = R.wedkantoor
+  const wkMidZ = (B0 + B1) / 2
+  const wedkantoor = {
+    ...WK,
+    y: Y,
+    h: 4.4,
+    rad: { x: WK.x1 - 0.12, y: Y + 2.05, z: oz + 5.5, straal: 1.3 },
+    schermen: [0, 1, 2].flatMap((k) => [Y + 3.2, Y + 1.3].map((y) => ({ x: WK.x0 + 4 + k * 4, y, z: WK.z0 + 0.04, ry: 0, b: 3.4, h: 1.85 }))),
+    balie: { x0: WK.x0 + 4.5, x1: WK.x1 - 3, z0: WK.z1 - 1.7, z1: WK.z1 - 0.9 },
+    tafels: [
+      { x: WK.x0 + 4.2, z: oz + 4.6 },
+      { x: WK.x0 + 8.2, z: oz + 6.4 },
+    ],
+    plank: { x0: WK.x0, x1: WK.x0 + 0.45, z0: WK.z0 + 1, z1: wkMidZ - 2.4 },
+    kiosken: [
+      { x: WK.x1 - 0.45, z: oz + 9.4 },
+      { x: WK.x1 - 0.45, z: oz + 10.9 },
+    ],
+  }
+  {
+    // Casinotapijt: diep bordeaux met gouden en blauwe motieven.
+    const tapijt = tekst(256, 256, (g) => {
+      g.fillStyle = '#3b0d17'
+      g.fillRect(0, 0, 256, 256)
+      for (let y = 0; y < 4; y++)
+        for (let x = 0; x < 4; x++) {
+          const cx = x * 64 + 32
+          const cy = y * 64 + 32
+          g.strokeStyle = 'rgba(212,160,23,.55)'
+          g.lineWidth = 3
+          g.beginPath()
+          g.moveTo(cx, cy - 22)
+          g.lineTo(cx + 22, cy)
+          g.lineTo(cx, cy + 22)
+          g.lineTo(cx - 22, cy)
+          g.closePath()
+          g.stroke()
+          g.fillStyle = 'rgba(30,58,138,.75)'
+          g.beginPath()
+          g.arc(cx, cy, 8, 0, Math.PI * 2)
+          g.fill()
+          g.fillStyle = 'rgba(212,160,23,.45)'
+          g.beginPath()
+          g.arc(x * 64, y * 64, 5, 0, Math.PI * 2)
+          g.fill()
+        }
+      // Wat nerf in het tapijt.
+      for (let i = 0; i < 1400; i++) {
+        g.fillStyle = toeval() < 0.5 ? 'rgba(0,0,0,.12)' : 'rgba(255,255,255,.04)'
+        g.fillRect(toeval() * 256, toeval() * 256, 1.5, 1.5)
+      }
+    })
+    tapijt.wrapS = tapijt.wrapT = THREE.RepeatWrapping
+    // Wanden: onderaan donkere houten lambrisering met een sierlijst, bovenaan donker damastbehang.
+    const wkWand = tekst(256, 256, (g) => {
+      g.fillStyle = '#16120f'
+      g.fillRect(0, 0, 256, 256)
+      g.fillStyle = 'rgba(180,140,60,.07)'
+      for (let y = 0; y < 150; y += 30)
+        for (let x = (y / 30) % 2 ? 16 : 0; x < 256; x += 32) {
+          g.beginPath()
+          g.ellipse(x + 8, y + 15, 6, 11, 0, 0, Math.PI * 2)
+          g.fill()
+        }
+      const hout = g.createLinearGradient(0, 160, 0, 256)
+      hout.addColorStop(0, '#5a3418')
+      hout.addColorStop(1, '#2e1a0c')
+      g.fillStyle = hout
+      g.fillRect(0, 160, 256, 96)
+      for (let x = 0; x < 256; x += 64) {
+        g.strokeStyle = 'rgba(0,0,0,.45)'
+        g.lineWidth = 2
+        g.strokeRect(x + 6, 172, 52, 76)
+        g.strokeStyle = 'rgba(255,220,160,.08)'
+        g.strokeRect(x + 8, 174, 48, 72)
+      }
+      g.fillStyle = '#b8862b'
+      g.fillRect(0, 156, 256, 5)
+    })
+    wkWand.wrapS = THREE.RepeatWrapping
+    bouwZaal({
+      naam: 'Wedkantoor',
+      ...WK,
+      h: wedkantoor.h,
+      wand: new THREE.MeshBasicMaterial({ map: wkWand }),
+      vloer: new THREE.MeshBasicMaterial({ map: tapijt }),
+      plafond: new THREE.MeshBasicMaterial({ color: '#0a0806' }),
+      vloerTegel: 2.5,
+      deuren: [{ kant: 'w', ...d3(wkMidZ) }],
+    })
+    // Inbouwspots in het plafond, met hun lichtvlekken.
+    for (let x = WK.x0 + 2; x < WK.x1; x += 3.2)
+      for (let z = WK.z0 + 2; z < WK.z1; z += 3.2) {
+        const spot = new THREE.Mesh(new THREE.CircleGeometry(0.11, 16).rotateX(Math.PI / 2), basis('#fff1cf'))
+        spot.position.set(x, Y + wedkantoor.h - 0.01, z)
+        add(spot)
+        plas(x, z, 1.7, '#ffe7b0', 0.13)
+      }
+    // Wat je tegenhoudt: de balie (met de ruimte erachter), de statafels, de plank, en het rad.
+    const bl = wedkantoor.balie
+    meubels.push({ x0: bl.x0, x1: bl.x1, z0: bl.z0, z1: WK.z1 })
+    for (const t of wedkantoor.tafels) meubels.push({ x0: t.x - 0.5, x1: t.x + 0.5, z0: t.z - 0.5, z1: t.z + 0.5 })
+    meubels.push(wedkantoor.plank)
+    for (const k of wedkantoor.kiosken) meubels.push({ x0: k.x - 0.45, x1: k.x + 0.45, z0: k.z - 0.4, z1: k.z + 0.4 })
+    meubels.push({ x0: WK.x1 - 0.7, x1: WK.x1, z0: wedkantoor.rad.z - 1.6, z1: wedkantoor.rad.z + 1.6 })
+    goud.push({ x: WK.x0 + 1.4, y: Y + 0.95, z: WK.z0 + 1.4 })
+  }
+
   // ---------- alle wandvlakken en lichtplassen ----------
   for (const [mat, w] of wanden) {
     const g = new THREE.BufferGeometry()
@@ -1322,6 +1477,7 @@ export function bouwKelder(scene: THREE.Scene, opt: { thema: StadionThema; licht
       graffiti: { x: R.speelhal.x1 - 0.04, z: R.speelhal.z0, dx: 0, dz: 1, ry: -Math.PI / 2, max: R.speelhal.z1 - R.speelhal.z0 },
       tactiek: { x: R.speelhal.x0 + 0.06, y: Y + 1.9, z: R.speelhal.z0 + 8, ry: Math.PI / 2, b: 3.2, h: 2 },
       goud,
+      wedkantoor,
     },
     zetWaterKleur(hex) {
       waterDoel.set(hex)
