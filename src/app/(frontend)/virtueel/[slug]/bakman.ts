@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 
-import type { Rechthoek, StadionThema } from '@/lib/virtueel'
+import { GEVEL, type Rechthoek, type StadionThema } from '@/lib/virtueel'
 import { rondeDoos } from './rond'
 
 // Het standbeeld van Bakman, de held van KBC Sint-Michiels: een beschilderd beeld (glanzende lak,
@@ -13,6 +13,9 @@ import { rondeDoos } from './rond'
 //
 // Maten: het beeld is gemodelleerd op ware grootte (1,85 m, voeten op y = 0, kijkend naar +z) en
 // staat 1,3 keer vergroot op de sokkel.
+
+/** Het bord met Bakmans foto op de voorgevel (omgeving.ts laat daar de lamellen weg). */
+export const BAKMAN_BORD = { x: -28, b: 2.24 }
 
 const tex = (w: number, h: number, teken: (g: CanvasRenderingContext2D) => void) => {
   const c = document.createElement('canvas')
@@ -339,41 +342,182 @@ export function bouwBakman(scene: THREE.Scene, opt: { thema: StadionThema; licht
     hand.add(duim)
   }
   // Hals, hoofd, gezicht, haar, bril, en de rode knoop van de cape.
-  deel(new THREE.CylinderGeometry(0.05, 0.057, 0.11, 16), huid, 0, 1.585, 0)
-  const knoop = deel(new THREE.TorusGeometry(0.066, 0.022, 8, 20), rood, 0, 1.555, 0)
+  // Het hoofd is gemodelleerd naar de foto's: een smal, lang gezicht met een hoekige kaak en een
+  // uitgesproken kin, hoge jukbeenderen, een rechte neus, wat stoppels, rechte donkere wenkbrauwen,
+  // een dun brilletje met blauw-paars getinte glazen, licht uitstaande oren, en kort bruin haar dat
+  // bovenop warrig omhoog staat. De mond staat open: hij juicht.
+  deel(new THREE.CylinderGeometry(0.044, 0.052, 0.12, 18), huid, 0, 1.58, 0.005)
+  deel(new THREE.SphereGeometry(0.012, 10, 8), huid, 0, 1.585, 0.045).scale.set(1, 1.4, 0.8) // adamsappel
+  const knoop = deel(new THREE.TorusGeometry(0.066, 0.022, 8, 20), rood, 0, 1.545, 0)
   knoop.rotation.x = Math.PI / 2 - 0.2
-  for (const k of [-1, 1]) deel(new THREE.ConeGeometry(0.025, 0.07, 3), rood, k * 0.03, 1.53, 0.08).rotation.z = k * 1.9
-  const hoofd = deel(new THREE.SphereGeometry(0.1, 32, 24), huid, 0, 1.745, 0.005)
-  hoofd.scale.set(0.86, 1.13, 0.98)
-  deel(new THREE.SphereGeometry(0.075, 22, 16), huid, 0, 1.69, 0.025).scale.set(0.95, 0.85, 0.95) // kaak
-  deel(new THREE.ConeGeometry(0.014, 0.035, 10).rotateX(Math.PI / 2), huid, 0, 1.74, 0.108) // neus
-  for (const k of [-1, 1]) deel(new THREE.SphereGeometry(0.02, 10, 8), huid, k * 0.088, 1.745, -0.005).scale.set(0.5, 1.2, 0.8) // oren
-  const mondMat = new THREE.MeshBasicMaterial({ color: '#4a1414' })
-  deel(new THREE.CircleGeometry(0.015, 20), mondMat, 0, 1.682, 0.097).scale.set(1.1, 1.2, 1) // juichende open mond
-  const oog = new THREE.MeshBasicMaterial({ color: '#2a1d14' })
-  const wenkbrauw = lak('#4a3020', 0.6)
+  for (const k of [-1, 1]) deel(new THREE.ConeGeometry(0.025, 0.07, 3), rood, k * 0.03, 1.52, 0.08).rotation.z = k * 1.9
+
+  const KOP = v(0, 1.75, 0.01)
+  const gauss = (x: number, m: number, s: number) => Math.exp(-(((x - m) / s) ** 2))
+  /** Hoeveel het oppervlak in richting d naar buiten (of naar binnen) komt. */
+  const vorm = (d: THREE.Vector3) => {
+    const voor = Math.max(0, d.z)
+    let s = 0
+    s += 0.013 * gauss(d.y, -0.8, 0.16) * gauss(d.x, 0, 0.3) * voor // kin
+    s += 0.006 * gauss(d.y, 0.3, 0.1) * Math.max(0, d.z - 0.5) * 2 // wenkbrauwboog
+    s += 0.005 * gauss(d.y, -0.02, 0.14) * gauss(Math.abs(d.x), 0.62, 0.18) * voor // jukbeenderen
+    s -= 0.008 * gauss(d.y, 0.15, 0.1) * gauss(Math.abs(d.x), 0.33, 0.13) * voor // oogkassen
+    s -= 0.004 * gauss(d.y, -0.38, 0.14) * gauss(Math.abs(d.x), 0.62, 0.2) * voor // ingevallen wangen
+    s += 0.006 * Math.max(0, -d.z) * gauss(d.y, 0.2, 0.5) // achterhoofd
+    return s
+  }
+  /** Van een richting naar een punt op het hoofd (in de coördinaten van het beeld). */
+  const opHoofd = (d0: THREE.Vector3, extra = 0) => {
+    const d = d0.clone().normalize()
+    const r = 0.1 + vorm(d) + extra
+    const kaak = 1 - 0.2 * THREE.MathUtils.smoothstep(-d.y, 0.05, 0.85) // smaller naar de kin
+    return v(d.x * r * 0.83 * kaak, d.y * r * 1.16, d.z * r * 0.99).add(KOP)
+  }
+  const kneed = (geo: THREE.BufferGeometry, extra: (d: THREE.Vector3) => number = () => 0) => {
+    const p = geo.attributes.position as THREE.BufferAttribute
+    const d = new THREE.Vector3()
+    for (let i = 0; i < p.count; i++) {
+      d.set(p.getX(i), p.getY(i), p.getZ(i)).normalize()
+      const q = opHoofd(d, extra(d)).sub(KOP)
+      p.setXYZ(i, q.x, q.y, q.z)
+    }
+    geo.computeVertexNormals()
+    return geo
+  }
+  // De huid: met stoppels rond kin, kaak en bovenlip, en wat blos op de wangen.
+  const gezichtTex = tex(1024, 512, (g) => {
+    g.fillStyle = '#e6b392'
+    g.fillRect(0, 0, 1024, 512)
+    // De voorkant ligt rond u = 0,25 (x = 256), de top bij v = 0.
+    const blos = g.createRadialGradient(256, 250, 10, 256, 250, 120)
+    blos.addColorStop(0, 'rgba(214,120,100,.0)')
+    blos.addColorStop(0.6, 'rgba(214,120,100,.12)')
+    blos.addColorStop(1, 'rgba(214,120,100,0)')
+    g.fillStyle = blos
+    g.fillRect(100, 150, 312, 200)
+    const rnd = (() => {
+      let z = 7
+      return () => ((z = (z * 16807) % 2147483647) / 2147483647)
+    })()
+    for (let i = 0; i < 9000; i++) {
+      const x = 256 + (rnd() - 0.5) * 300
+      const y = 300 + rnd() * 150
+      const af = Math.abs(x - 256) / 150
+      // Stoppels: op kin en kaak, langs de bovenlip, niet op de wangen boven de kaaklijn.
+      const opKaak = y > 330 + af * 40 || (y > 300 && y < 318 && af < 0.35)
+      if (!opKaak) continue
+      g.fillStyle = `rgba(80,55,38,${0.12 + rnd() * 0.2})`
+      g.fillRect(x, y, 2, 2)
+    }
+    // Korte bakkebaarden, net voor de oren.
+    for (const x of [256 - 228, 256 + 228]) {
+      const gr = g.createLinearGradient(0, 190, 0, 280)
+      gr.addColorStop(0, 'rgba(90,60,40,.6)')
+      gr.addColorStop(1, 'rgba(90,60,40,0)')
+      g.fillStyle = gr
+      g.fillRect(x - 9, 190, 18, 90)
+    }
+  })
+  const gezichtMat = new THREE.MeshPhysicalMaterial({ map: gezichtTex, roughness: 0.5, clearcoat: 0.4, clearcoatRoughness: 0.3 })
+  const hoofd = deel(kneed(new THREE.SphereGeometry(1, 64, 48)), gezichtMat, KOP.x, KOP.y, KOP.z)
+  void hoofd
+  const plaats = (m: THREE.Object3D, d: THREE.Vector3, uit = 0) => {
+    const n = d.clone().normalize()
+    m.position.copy(opHoofd(n, uit))
+    m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), new THREE.Vector3(n.x * 0.83, n.y * 0.6, n.z).normalize())
+    return m
+  }
+  // De neus: een rechte rug, een ronde punt en twee neusvleugels.
+  const neusGeo = new THREE.CylinderGeometry(0.0035, 0.0115, 0.046, 3, 1).rotateY(Math.PI / 6)
+  const neusRug = deel(neusGeo, gezichtMat)
+  neusRug.position.copy(opHoofd(v(0, -0.06, 1), -0.002))
+  neusRug.rotation.x = -0.28
+  neusRug.scale.set(1, 1, 1.25)
+  const punt = deel(new THREE.SphereGeometry(0.0085, 14, 10), huid)
+  punt.position.copy(opHoofd(v(0, -0.23, 1), 0.009))
   for (const k of [-1, 1]) {
-    deel(new THREE.SphereGeometry(0.009, 8, 6), oog, k * 0.033, 1.758, 0.088)
-    deel(rondeDoos(0.034, 0.008, 0.008, 0.003), wenkbrauw, k * 0.034, 1.788, 0.09).rotation.z = -k * 0.12
+    const vleugel = deel(new THREE.SphereGeometry(0.0065, 12, 8), huid)
+    vleugel.position.copy(opHoofd(v(k * 0.11, -0.25, 1), 0.002))
+    vleugel.scale.set(1, 0.8, 0.8)
   }
-  // Kort, wat warrig bruin haar, opgeborsteld.
-  const haarKleur = lak('#6b4528', 0.7)
-  const kruin = deel(new THREE.SphereGeometry(0.104, 26, 14, 0, Math.PI * 2, 0, Math.PI * 0.42), haarKleur, 0, 1.775, -0.008)
-  kruin.scale.set(0.9, 0.95, 1.0)
-  for (let i = 0; i < 22; i++) {
-    const a = (i / 22) * Math.PI * 2
-    const r = i % 3 === 0 ? 0.02 : i % 2 ? 0.045 : 0.07
-    const pluk = deel(new THREE.SphereGeometry(0.026, 8, 6), haarKleur, Math.cos(a) * r * 0.85, 1.845 + (0.07 - r) * 0.25, Math.sin(a) * r + 0.015)
-    pluk.scale.set(1, 0.55 + (i % 4) * 0.1, 1.2)
-  }
-  // De bril: een dun montuur met blauw-paars getinte glazen.
-  const glas = new THREE.MeshPhysicalMaterial({ color: '#8fa8ff', transparent: true, opacity: 0.5, roughness: 0.05, metalness: 0.3 })
+  // De ogen: oogwit, een hazelnootbruine iris en een pupil, met een bovenooglid.
+  const oogwit = lak('#f4efe8', 0.2)
+  const iris = new THREE.MeshStandardMaterial({ color: '#6b4a2a', roughness: 0.2 })
+  const pupil = new THREE.MeshBasicMaterial({ color: '#0b0806' })
+  const brauw = lak('#3f2818', 0.7)
   for (const k of [-1, 1]) {
-    deel(new THREE.TorusGeometry(0.023, 0.0025, 6, 22), goud, k * 0.034, 1.758, 0.1).scale.set(1.1, 0.85, 1)
-    deel(new THREE.CircleGeometry(0.022, 18), glas, k * 0.034, 1.758, 0.099).scale.set(1.1, 0.85, 1)
-    deel(new THREE.CylinderGeometry(0.0022, 0.0022, 0.1, 5).rotateX(Math.PI / 2), goud, k * 0.06, 1.762, 0.05)
+    const d = v(k * 0.33, 0.14, 0.94)
+    plaats(deel(new THREE.SphereGeometry(0.0115, 16, 12), oogwit), d, -0.003).scale.set(1.25, 0.8, 0.7)
+    plaats(deel(new THREE.CircleGeometry(0.0062, 18), iris), d, 0.0052)
+    plaats(deel(new THREE.CircleGeometry(0.0028, 14), pupil), d, 0.0054)
+    const lid = plaats(deel(new THREE.SphereGeometry(0.0125, 16, 8, 0, Math.PI * 2, 0, Math.PI * 0.38), huid), d.clone().add(v(0, 0.04, 0)), -0.004)
+    lid.scale.set(1.25, 0.7, 0.8)
+    // Rechte, vrij dikke wenkbrauwen, licht naar beneden aan de neuskant.
+    const wb = plaats(deel(new THREE.CapsuleGeometry(0.0045, 0.032, 4, 8).rotateZ(Math.PI / 2), brauw), v(k * 0.33, 0.31, 0.92), 0.004)
+    wb.rotateZ(-k * 0.1)
   }
-  deel(new THREE.CylinderGeometry(0.0022, 0.0022, 0.02, 5).rotateZ(Math.PI / 2), goud, 0, 1.762, 0.102)
+  // De mond: wijd open van het juichen, met lippen, de bovenste tanden en de tong.
+  const mondD = v(0, -0.47, 0.88)
+  plaats(deel(new THREE.CircleGeometry(0.017, 24), new THREE.MeshBasicMaterial({ color: '#3a0d0d' })), mondD, 0.0015).scale.set(1.45, 0.95, 1)
+  plaats(deel(new THREE.CircleGeometry(0.011, 18, 0, Math.PI), new THREE.MeshStandardMaterial({ color: '#f2ece2', roughness: 0.3 })), mondD.clone().add(v(0, 0.06, 0)), 0.0025).scale.set(1.8, 0.42, 1)
+  plaats(deel(new THREE.CircleGeometry(0.011, 18, Math.PI, Math.PI), new THREE.MeshStandardMaterial({ color: '#b5524f', roughness: 0.4 })), mondD.clone().add(v(0, -0.05, 0)), 0.0022).scale.set(1.5, 0.6, 1)
+  const lippen = plaats(deel(new THREE.TorusGeometry(0.0185, 0.0018, 8, 32), lak('#c98a80', 0.45)), mondD, 0.0006)
+  lippen.scale.set(1.42, 0.95, 0.5)
+  // Oren: licht uitstaand, met een donkerdere binnenkant.
+  for (const k of [-1, 1]) {
+    const oor = deel(new THREE.SphereGeometry(0.024, 16, 12), huid)
+    oor.position.copy(opHoofd(v(k, 0.06, -0.08), -0.004))
+    oor.scale.set(0.42, 1.15, 0.78)
+    oor.rotation.y = k * 0.35
+    const binnen = deel(new THREE.SphereGeometry(0.016, 12, 10), lak('#c98f74', 0.6))
+    binnen.position.copy(oor.position).add(v(k * 0.005, 0, 0.002))
+    binnen.scale.set(0.3, 1.0, 0.6)
+    binnen.rotation.y = k * 0.35
+  }
+  // Het haar: kort opzij en achter, bovenop een warrige kuif die naar voren omhoog staat.
+  const haarMat = new THREE.MeshStandardMaterial({ color: '#6a4328', roughness: 0.9 })
+  const haarGeo = kneed(new THREE.SphereGeometry(1, 48, 32), (d) => {
+    const voor = Math.max(0, d.z)
+    const lijn = 0.48 * voor + 0.12 * (1 - voor) - 0.5 * Math.max(0, -d.z)
+    if (d.y < lijn) return -0.012 // onder de haarlijn: onder de huid
+    const top = THREE.MathUtils.smoothstep(d.y, 0.55, 0.95)
+    return 0.004 + top * 0.012 + Math.sin(d.x * 31) * Math.cos(d.z * 27) * 0.003 * top
+  })
+  deel(haarGeo, haarMat, KOP.x, KOP.y, KOP.z)
+  // Pieken: kort, warrig, naar voren en omhoog geborsteld.
+  // Plukjes: platte, wat gebogen lokken die naar voren en omhoog vallen (geen stekels).
+  const piekKleur = [haarMat, new THREE.MeshStandardMaterial({ color: '#7a5032', roughness: 0.9 }), new THREE.MeshStandardMaterial({ color: '#56361f', roughness: 0.9 })]
+  for (let i = 0; i < 34; i++) {
+    const a = (i / 34) * Math.PI * 2 * 3.7
+    const r = 0.1 + (((i * 37) % 23) / 23) * 0.55
+    const d = v(Math.cos(a) * r * 0.9, 1, Math.sin(a) * r + 0.2).normalize()
+    if (d.y < 0.6) continue
+    const lok = deel(new THREE.ConeGeometry(0.011, 0.028 + (i % 4) * 0.005, 5), piekKleur[i % 3])
+    lok.scale.set(1, 1, 0.45)
+    lok.position.copy(opHoofd(d, 0.01))
+    lok.quaternion.setFromUnitVectors(v(0, 1, 0), v(d.x * 0.9 + Math.sin(i * 2.3) * 0.3, 0.75, d.z * 0.6 + 0.6).normalize())
+  }
+  // De bril: een dun goudkleurig montuur met blauw-paars getinte, wat afgeronde rechthoekige glazen.
+  const glas = new THREE.MeshPhysicalMaterial({ color: '#9b8cff', transparent: true, opacity: 0.4, roughness: 0.05, metalness: 0.4, clearcoat: 1 })
+  const bril = new THREE.Group()
+  bril.position.copy(opHoofd(v(0, 0.14, 1), 0.011))
+  beeld.add(bril)
+  for (const k of [-1, 1]) {
+    const x = k * 0.03
+    const rand = new THREE.Mesh(new THREE.TorusGeometry(0.019, 0.0018, 6, 28), goud)
+    rand.position.x = x
+    rand.scale.set(1.25, 0.82, 1)
+    const lens = new THREE.Mesh(new THREE.CircleGeometry(0.0188, 24), glas)
+    lens.position.set(x, 0, -0.0005)
+    lens.scale.set(1.25, 0.82, 1)
+    const poot = new THREE.Mesh(new THREE.CylinderGeometry(0.0016, 0.0016, 0.1, 5).rotateX(Math.PI / 2), goud)
+    poot.position.set(k * 0.066, 0.004, -0.048)
+    poot.rotation.y = -k * 0.12
+    bril.add(rand, lens, poot)
+  }
+  const brug = new THREE.Mesh(new THREE.TorusGeometry(0.007, 0.0016, 5, 10, Math.PI), goud)
+  brug.position.y = 0.003
+  bril.add(brug)
 
   // De bak Jupiler: geel kunststof met handgrepen, ribbels, het etiket en de doppen van de flesjes.
   const bak = new THREE.Group()
@@ -540,6 +684,75 @@ export function bouwBakman(scene: THREE.Scene, opt: { thema: StadionThema; licht
     spot.position.set(0, 0.6, 4.5)
     spot.target.position.set(0, 3.6, 0)
     groep.add(spot, spot.target)
+  }
+
+  // ---------- het bord aan de gevel, met zijn foto ----------
+  // Achter het beeld, op de voorgevel: een vergulde lijst met de foto van Bakman zelf, zijn naam
+  // erboven en een onderschrift, en een lampje dat het bord aanlicht.
+  {
+    const bord = new THREE.Group()
+    // De muur ligt 0,6 m voor de gevellijn (omgeving.ts).
+    bord.position.set(BAKMAN_BORD.x, 0, GEVEL.B + 0.68)
+    scene.add(bord)
+    const c = document.createElement('canvas')
+    c.width = 640
+    c.height = 1000
+    const t = new THREE.CanvasTexture(c)
+    t.colorSpace = THREE.SRGBColorSpace
+    t.anisotropy = 8
+    const teken = (foto: HTMLImageElement | null) => {
+      const g = c.getContext('2d')!
+      const gr = g.createLinearGradient(0, 0, 0, 1000)
+      gr.addColorStop(0, '#1f3fb4')
+      gr.addColorStop(1, '#0f1f5c')
+      g.fillStyle = gr
+      g.fillRect(0, 0, 640, 1000)
+      g.fillStyle = '#d4202a'
+      g.fillRect(0, 0, 640, 130)
+      g.fillStyle = '#f6c915'
+      g.textAlign = 'center'
+      g.textBaseline = 'middle'
+      g.font = '900 104px Impact, "Arial Black", Inter, sans-serif'
+      g.fillText('BAKMAN', 320, 70, 600)
+      // De foto, in een wit passe-partout.
+      g.fillStyle = '#f8f5ec'
+      g.fillRect(40, 160, 560, 700)
+      if (foto) g.drawImage(foto, 56, 176, 528, 668)
+      else {
+        g.fillStyle = '#334155'
+        g.fillRect(56, 176, 528, 668)
+      }
+      g.fillStyle = '#ffffff'
+      g.font = '800 40px Inter, system-ui, sans-serif'
+      g.fillText(`De held van ${thema.naam}`, 320, 912, 600)
+      g.fillStyle = '#f6c915'
+      g.font = 'italic 600 28px Georgia, serif'
+      g.fillText('Sterk genoeg voor elke bak', 320, 962, 600)
+      t.needsUpdate = true
+    }
+    teken(null)
+    const img = new Image()
+    img.onload = () => teken(img)
+    img.src = '/virtueel/bakman-foto.jpg'
+    const B = 2.0
+    const H = 3.125
+    const vlak = new THREE.Mesh(new THREE.PlaneGeometry(B, H), new THREE.MeshBasicMaterial({ map: t, toneMapped: false }))
+    vlak.position.set(0, 3.0, 0.06)
+    const lijst = new THREE.Mesh(rondeDoos(B + 0.24, H + 0.24, 0.1, 0.04), new THREE.MeshStandardMaterial({ color: '#c9a24a', metalness: 0.85, roughness: 0.3 }))
+    lijst.position.set(0, 3.0, 0)
+    bord.add(lijst, vlak)
+    // Een lampje erboven, met een lichtwaaier over het bord.
+    const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.5, 8).rotateX(Math.PI / 2), new THREE.MeshStandardMaterial({ color: '#111827', metalness: 0.7 }))
+    arm.position.set(0, 4.85, 0.25)
+    const kap = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.12, 0.14, 16), new THREE.MeshStandardMaterial({ color: '#111827', metalness: 0.7 }))
+    kap.position.set(0, 4.8, 0.5)
+    kap.rotation.x = 0.6
+    const waaier = new THREE.Mesh(
+      new THREE.PlaneGeometry(2.6, 3.4),
+      new THREE.MeshBasicMaterial({ map: gloed, color: '#fff1d0', transparent: true, opacity: 0.18, depthWrite: false, blending: THREE.AdditiveBlending }),
+    )
+    waaier.position.set(0, 3.4, 0.08)
+    bord.add(arm, kap, waaier)
   }
 
   // Botsing: de sokkel (een vierkant van 2,6 m, gedraaid; ruim genomen).

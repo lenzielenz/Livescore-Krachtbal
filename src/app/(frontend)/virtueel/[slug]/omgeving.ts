@@ -3,6 +3,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 
 import { GEVEL, inPoort, lichtshow, poortOp, VERDIEP_RAMEN, type Rechthoek, type StadionThema } from '@/lib/virtueel'
 import { bijSpelersgebouwen } from './kleedkamer'
+import { BAKMAN_BORD } from './bakman'
 import { FANDORP } from './fandorp'
 import { OEFEN } from './oefencomplex'
 import { bouwVolk } from './volk'
@@ -192,7 +193,14 @@ export function bouwOmgeving(scene: THREE.Scene, opt: { thema: StadionThema; lic
   scene.add(gevel)
 
   // Lamellen voor de muur, in de clubkleuren (3 × primair, 1 × secundair), zacht oplichtend.
-  const lamelPunten = gevelOmtrek(1.5).filter((p) => !inPoort(GEVEL, p.x + p.nx, p.z + p.nz) && !(p.nz > 0.9 && p.z > 0 && VERDIEP_RAMEN.some((r) => p.x > r.x0 - 0.4 && p.x < r.x1 + 0.4)))
+  // In Sint-Michiels hangt het bord van Bakman aan de voorgevel (bakman.ts): daar geen lamellen.
+  const bakmanBord = /mich/i.test(thema.naam)
+  const lamelPunten = gevelOmtrek(1.5).filter(
+    (p) =>
+      !inPoort(GEVEL, p.x + p.nx, p.z + p.nz) &&
+      !(p.nz > 0.9 && p.z > 0 && VERDIEP_RAMEN.some((r) => p.x > r.x0 - 0.4 && p.x < r.x1 + 0.4)) &&
+      !(bakmanBord && p.nz > 0.9 && p.z > 0 && Math.abs(p.x - BAKMAN_BORD.x) < BAKMAN_BORD.b / 2 + 0.4),
+  )
   // Afgeronde lamellen (geen kale balken): een afgerond profiel, opgetrokken over de hoogte.
   const lamelProfiel = new THREE.Shape()
   {
