@@ -11,10 +11,10 @@ import { ReclameOverlay } from '@/components/ReclameOverlay'
 import type { Ad } from '@/lib/ads'
 import { bladIndeling, BLAD_GAT } from '@/lib/kantine-bladeren'
 import type { KantineLive } from '@/lib/kantine-channel'
-import { komendVandaag, schermVenster, weekendUitslagen } from '@/lib/kantine-selectie'
+import { komendVandaag, schermVenster, voorbeschouwingKolommen, weekendUitslagen, weekendVoorbeschouwing } from '@/lib/kantine-selectie'
 import type { ClubColors } from '@/lib/club-colors'
 import { useLiveStream } from '@/lib/use-live-stream'
-import { KomendTile, Tile, type KantineMatch } from './KantineBoard'
+import { KomendTile, Tile, VoorbeschouwingTile, type KantineMatch } from './KantineBoard'
 import { KantineDagverloop } from './KantineDagverloop'
 import { GoalCelebrationOverlay, PhotoCelebration, vieringDuur, type KantineFotoInstant, type Viering } from './KantineCelebration'
 
@@ -228,6 +228,28 @@ export function KantineScreen({
   const venster = schermVenster()
   const dagEinde = venster.dagEinde
   const visible = komendVandaag(actueel, venster.vandaagStart, dagEinde)
+  // Voor het weekend: zolang er nog geen enkele wedstrijd van het komende weekend gestart is,
+  // staan ze állemaal tegelijk op het scherm (zie weekendVoorbeschouwing). Geen bladeren: de rijen
+  // delen de schermhoogte en letter en logo schalen mee met de gemeten rij.
+  const voorbeschouwing = weekendVoorbeschouwing(actueel)
+  const vsCols = voorbeschouwingKolommen(voorbeschouwing.length, vw)
+  const vsRijen = Math.max(1, Math.ceil(voorbeschouwing.length / vsCols))
+  const heeftVoorbeschouwing = voorbeschouwing.length > 0
+  const vsRef = useRef<HTMLDivElement>(null)
+  const [vsMaat, setVsMaat] = useState({ b: 0, h: 0 })
+  useEffect(() => {
+    const el = vsRef.current
+    if (!el) return
+    const meet = () => setVsMaat({ b: el.clientWidth, h: el.clientHeight })
+    meet()
+    const ro = new ResizeObserver(meet)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [heeftVoorbeschouwing])
+  const vsRijH = vsMaat.h > 0 ? (vsMaat.h - (vsRijen - 1) * 14) / vsRijen : 200
+  const vsKolB = vsMaat.b > 0 ? (vsMaat.b - (vsCols - 1) * 14) / vsCols : 440
+  const vsFont = Math.round(Math.max(10, Math.min(vsRijH * 0.085, vsKolB * 0.042, 34)))
+  const vsLogo = `${Math.round(Math.max(28, Math.min(vsRijH * 0.4, vsKolB * 0.21)))}px`
   const layout = layoutFor(visible.length)
   const cols = Math.min(layout.cols, maxColsForWidth(vw))
   const featuredLayout = layoutFor(liveMatches.length)
@@ -385,6 +407,17 @@ export function KantineScreen({
           ) : (
             <p>Vandaag geen wedstrijden{title ? ` voor ${title}` : ''}. Zodra er een wedstrijd is, verschijnt ze hier vanzelf.</p>
           )}
+        </div>
+      ) : voorbeschouwing.length > 0 ? (
+        <div className="kt-vs-venster" ref={vsRef}>
+          <div
+            className="kt-vs-raster"
+            style={{ gridTemplateColumns: `repeat(${vsCols}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${vsRijen}, minmax(0, 1fr))` }}
+          >
+            {voorbeschouwing.map((m) => (
+              <VoorbeschouwingTile key={m.id} match={m} fontSize={vsFont} logoSize={vsLogo} />
+            ))}
+          </div>
         </div>
       ) : (
         dagGedaan ? (

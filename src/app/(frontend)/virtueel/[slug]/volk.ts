@@ -56,8 +56,10 @@ const deel = (geo: THREE.BufferGeometry, code: number, groep = GEEN) => {
   if (!g.attributes.uv) g.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(n * 2), 2))
   return g.index ? g.toNonIndexed() : g
 }
-const capsule = (r: number, lengte: number, segs = 10) => new THREE.CapsuleGeometry(r, lengte, 4, segs)
-const bol = (r: number, w = 16, h = 12) => new THREE.SphereGeometry(r, w, h)
+// Zuinig met driehoeken: er lopen er honderden rond, en van op een paar meter zie je het verschil
+// tussen 7 en 10 zijden niet. Vroeger was één figuur ± 3900 driehoeken (samen ruim een miljoen).
+const capsule = (r: number, lengte: number, segs = 7) => new THREE.CapsuleGeometry(r, lengte, 2, segs)
+const bol = (r: number, w = 10, h = 7) => new THREE.SphereGeometry(r, w, h)
 
 type Maat = { lengte: number; benen: number; romp: number; schouders: number; heupen: number; hoofd: number }
 const VOLWASSEN: Maat = { lengte: 1.75, benen: 0.86, romp: 0.52, schouders: 0.2, heupen: 0.17, hoofd: 0.115 }
@@ -76,18 +78,18 @@ function lichaam(m: Maat, opt: { rok?: boolean; langHaar?: boolean; staart?: boo
   ] as const) {
     const beenL = m.benen - 0.1
     delen.push(deel(capsule(been, beenL - been * 2).translate(sx * bx, 0.1 + beenL / 2, 0), opt.rok ? HUID : BROEK, gr))
-    delen.push(deel(capsule(been * 0.85, been * 2.2, 8).rotateX(Math.PI / 2).scale(1.05, 0.75, 1).translate(sx * bx, 0.055, 0.045), SCHOEN, gr))
+    delen.push(deel(capsule(been * 0.85, been * 2.2, 6).rotateX(Math.PI / 2).scale(1.05, 0.75, 1).translate(sx * bx, 0.055, 0.045), SCHOEN, gr))
   }
   // Heup / rok.
   if (opt.rok) {
     const punten = [new THREE.Vector2(m.heupen * 1.05, heup + 0.06), new THREE.Vector2(m.heupen * 1.25, heup - 0.12), new THREE.Vector2(m.heupen * 1.55, heup - 0.38)]
-    const rok = new THREE.LatheGeometry([new THREE.Vector2(0.001, heup + 0.07), ...punten, new THREE.Vector2(0.001, heup - 0.38)], 20)
+    const rok = new THREE.LatheGeometry([new THREE.Vector2(0.001, heup + 0.07), ...punten, new THREE.Vector2(0.001, heup - 0.38)], 12)
     delen.push(deel(rok, EXTRA))
-  } else delen.push(deel(bol(m.heupen, 16, 10).scale(1, 0.62, 0.72).translate(0, heup, 0), BROEK))
+  } else delen.push(deel(bol(m.heupen, 10, 6).scale(1, 0.62, 0.72).translate(0, heup, 0), BROEK))
   // Romp: een capsule, bij een vrouw met een smallere taille.
   const rompY = heup + m.romp / 2 + 0.02
   const rompR = m.schouders * (opt.vrouw ? 0.86 : 1)
-  delen.push(deel(capsule(rompR, m.romp - rompR, 14).scale(1, 1, 0.66).translate(0, rompY, 0), SHIRT))
+  delen.push(deel(capsule(rompR, m.romp - rompR, 10).scale(1, 1, 0.66).translate(0, rompY, 0), SHIRT))
   const schouder = heup + m.romp - 0.02
   // Armen (mouw + hand).
   const armL = m.romp * 0.98
@@ -100,26 +102,26 @@ function lichaam(m: Maat, opt: { rok?: boolean; langHaar?: boolean; staart?: boo
     if (opt.armen === 'omhoog') {
       const mouw = capsule(armR, armL - armR * 2).translate(0, armL / 2, 0).rotateZ(-sx * 0.35).translate(x, schouder, 0)
       delen.push(deel(mouw, SHIRT))
-      delen.push(deel(bol(armR * 1.05, 10, 8).translate(x + sx * Math.sin(0.35) * armL, schouder + Math.cos(0.35) * armL + 0.02, 0), HUID))
+      delen.push(deel(bol(armR * 1.05, 6, 4).translate(x + sx * Math.sin(0.35) * armL, schouder + Math.cos(0.35) * armL + 0.02, 0), HUID))
     } else if (opt.armen === 'vooruit') {
       const mouw = capsule(armR, armL - armR * 2).translate(0, -armL / 2, 0).rotateX(-1.05).translate(x * 0.92, schouder, 0)
       delen.push(deel(mouw, SHIRT))
-      delen.push(deel(bol(armR * 1.05, 10, 8).translate(x * 0.92, schouder - Math.cos(1.05) * armL, Math.sin(1.05) * armL), HUID))
+      delen.push(deel(bol(armR * 1.05, 6, 4).translate(x * 0.92, schouder - Math.cos(1.05) * armL, Math.sin(1.05) * armL), HUID))
     } else {
       delen.push(deel(capsule(armR, armL - armR * 2).translate(x, schouder - armL / 2, 0), SHIRT, gr))
-      delen.push(deel(bol(armR * 1.05, 10, 8).translate(x, schouder - armL - 0.01, 0), HUID, gr))
+      delen.push(deel(bol(armR * 1.05, 6, 4).translate(x, schouder - armL - 0.01, 0), HUID, gr))
       if (opt.stok && sx === 1) delen.push(deel(new THREE.CylinderGeometry(0.014, 0.014, schouder - armL, 6).translate(x, (schouder - armL) / 2, 0.06), DONKER, gr))
     }
   }
   // Nek, hoofd, neus en haar.
   const h = m.hoofd
   const hoofdY = schouder + 0.06 + h
-  delen.push(deel(new THREE.CylinderGeometry(h * 0.42, h * 0.48, 0.1, 10).translate(0, schouder + 0.04, 0), HUID))
-  delen.push(deel(bol(h, 18, 14).scale(0.95, 1.1, 1.02).translate(0, hoofdY, 0), HUID))
-  delen.push(deel(bol(h * 0.17, 8, 6).scale(1, 1.2, 1).translate(0, hoofdY - h * 0.05, h * 0.98), HUID))
-  delen.push(deel(new THREE.SphereGeometry(h * 1.07, 18, 10, 0, Math.PI * 2, 0, Math.PI * 0.52).scale(0.97, 1.08, 1.04).rotateX(-0.25).translate(0, hoofdY + h * 0.06, -h * 0.06), HAAR))
-  if (opt.langHaar) delen.push(deel(capsule(h * 0.85, h * 1.6, 12).scale(1.05, 1, 0.55).translate(0, hoofdY - h * 0.9, -h * 0.55), HAAR))
-  if (opt.staart) delen.push(deel(capsule(h * 0.32, h * 1.3, 8).rotateX(0.5).translate(0, hoofdY - h * 0.35, -h * 1.2), HAAR))
+  delen.push(deel(new THREE.CylinderGeometry(h * 0.42, h * 0.48, 0.1, 7, 1, true).translate(0, schouder + 0.04, 0), HUID))
+  delen.push(deel(bol(h, 12, 9).scale(0.95, 1.1, 1.02).translate(0, hoofdY, 0), HUID))
+  delen.push(deel(bol(h * 0.17, 5, 3).scale(1, 1.2, 1).translate(0, hoofdY - h * 0.05, h * 0.98), HUID))
+  delen.push(deel(new THREE.SphereGeometry(h * 1.07, 12, 6, 0, Math.PI * 2, 0, Math.PI * 0.52).scale(0.97, 1.08, 1.04).rotateX(-0.25).translate(0, hoofdY + h * 0.06, -h * 0.06), HAAR))
+  if (opt.langHaar) delen.push(deel(capsule(h * 0.85, h * 1.6, 8).scale(1.05, 1, 0.55).translate(0, hoofdY - h * 0.9, -h * 0.55), HAAR))
+  if (opt.staart) delen.push(deel(capsule(h * 0.32, h * 1.3, 6).rotateX(0.5).translate(0, hoofdY - h * 0.35, -h * 1.2), HAAR))
   return { delen, heup, schouder }
 }
 
@@ -146,7 +148,7 @@ function sjabloon(soort: Soort): Sjabloon {
       // Een ballon aan een touwtje, vast aan de rechterhand.
       const hand = new THREE.Vector3(KIND.schouders * 1.3, r.schouder - KIND.romp, 0)
       const touw = deel(new THREE.CylinderGeometry(0.004, 0.004, 0.95, 4).translate(hand.x + 0.05, hand.y + 0.47, 0.05), DONKER)
-      const ballon = deel(bol(0.17, 14, 10).scale(1, 1.18, 1).translate(hand.x + 0.1, hand.y + 1.12, 0.08), EXTRA)
+      const ballon = deel(bol(0.17, 10, 7).scale(1, 1.18, 1).translate(hand.x + 0.1, hand.y + 1.12, 0.08), EXTRA)
       return maak(r, [touw, ballon])
     }
     case 'juicher': {
@@ -159,8 +161,8 @@ function sjabloon(soort: Soort): Sjabloon {
       // Een ouder die een kinderwagen voor zich uit duwt.
       const r = lichaam({ ...VOLWASSEN, benen: 0.85, schouders: 0.19 }, { armen: 'vooruit', staart: true, vrouw: true })
       const z0 = 0.62
-      const bak = deel(capsule(0.2, 0.42, 12).rotateX(Math.PI / 2).scale(1, 0.85, 1).translate(0, 0.56, z0 + 0.3), EXTRA)
-      const kap = deel(new THREE.SphereGeometry(0.25, 14, 8, 0, Math.PI, 0, Math.PI / 2).rotateY(-Math.PI / 2).rotateX(-0.3).translate(0, 0.66, z0 + 0.05), EXTRA)
+      const bak = deel(capsule(0.2, 0.42, 8).rotateX(Math.PI / 2).scale(1, 0.85, 1).translate(0, 0.56, z0 + 0.3), EXTRA)
+      const kap = deel(new THREE.SphereGeometry(0.25, 10, 5, 0, Math.PI, 0, Math.PI / 2).rotateY(-Math.PI / 2).rotateX(-0.3).translate(0, 0.66, z0 + 0.05), EXTRA)
       const stang = deel(new THREE.CylinderGeometry(0.015, 0.015, 0.44, 6).rotateZ(Math.PI / 2).translate(0, 0.98, z0 - 0.08), DONKER)
       const stangen = [-1, 1].map((sx) => deel(new THREE.CylinderGeometry(0.012, 0.012, 0.6, 6).rotateX(-0.75).translate(sx * 0.2, 0.75, z0 + 0.07), DONKER))
       const wielen = [
@@ -168,7 +170,7 @@ function sjabloon(soort: Soort): Sjabloon {
         [0.2, 0.0],
         [-0.2, 0.6],
         [0.2, 0.6],
-      ].map(([x, dz]) => deel(new THREE.TorusGeometry(0.1, 0.022, 6, 14).rotateY(Math.PI / 2).translate(x, 0.12, z0 + dz), DONKER))
+      ].map(([x, dz]) => deel(new THREE.TorusGeometry(0.1, 0.022, 4, 10).rotateY(Math.PI / 2).translate(x, 0.12, z0 + dz), DONKER))
       const as = deel(new THREE.CylinderGeometry(0.012, 0.012, 0.75, 5).rotateX(Math.PI / 2).translate(0, 0.22, z0 + 0.3), DONKER)
       return maak(r, [bak, kap, stang, ...stangen, ...wielen, as])
     }
@@ -304,7 +306,10 @@ export function bouwVolk(n: number, opt: VolkOpties): Volk {
     // Aparte sleutel per soort: anders deelt three het programma (met andere uniforms).
     mat.customProgramCacheKey = () => `volk-${s}-${opt.code ? opt.code.length : 0}`
     const mesh = new THREE.InstancedMesh(sj.geo, mat, m)
-    mesh.frustumCulled = false
+    // Met eigen shadercode (bv. wandelen langs een as) klopt de omhullende niet: dan altijd tekenen.
+    // Anders rekent `klaar` de omhullende van alle plaatsingen opnieuw uit, zodat een groep die
+    // achter je staat niet getekend wordt.
+    mesh.frustumCulled = !opt.code
     groep.add(mesh)
     const li = lagen.length
     lagen.push({ mesh, attrs })
@@ -350,7 +355,13 @@ export function bouwVolk(n: number, opt: VolkOpties): Volk {
       a.needsUpdate = true
     },
     klaar() {
-      for (const l of lagen) l.mesh.instanceMatrix.needsUpdate = true
+      for (const l of lagen) {
+        l.mesh.instanceMatrix.needsUpdate = true
+        if (!l.mesh.frustumCulled) continue
+        l.mesh.computeBoundingSphere()
+        // Ruimte voor de lengte van een figuur, een ballon en het huppelen.
+        if (l.mesh.boundingSphere) l.mesh.boundingSphere.radius += 2.6
+      }
     },
     update(seconden) {
       tijd.value = seconden

@@ -259,3 +259,40 @@ export function ResultTile({ match, live }: { match: KantineMatch; live?: Kantin
     </Link>
   )
 }
+
+/**
+ * Bord van de weekendvoorbeschouwing: reeks en dag/uur bovenaan, de twee ploegen met logo én naam,
+ * en een grote "VS" met het aanvangsuur ertussen. De maten komen van het raster (alles op één
+ * scherm), vandaar de expliciete letter- en logomaat.
+ */
+export function VoorbeschouwingTile({ match, fontSize, logoSize }: { match: KantineMatch; fontSize: number; logoSize: string }) {
+  const homeColor = match.home.colors?.primary
+  const awayColor = match.away.colors?.primary
+  const style = {
+    '--home': readableOnDark(homeColor ?? DEFAULT_HOME_COLOR),
+    '--away': readableOnDark(awayColor ?? DEFAULT_AWAY_COLOR),
+    fontSize: `${fontSize}px`,
+  } as React.CSSProperties
+  return (
+    <div className="kt-tile kt-vs-tile" style={style}>
+      <div className="kt-tile-head">
+        <span className="kt-tile-reeks">{match.reeks}</span>
+        <span className="kt-vs-dag">{match.time}</span>
+      </div>
+      <Link href={`/match/${match.id}`} prefetch={false} className="kt-vs-body">
+        <span className="kt-vs-ploeg">
+          <TeamLogo name={match.home.name} logoUrl={match.home.logoUrl} logoFit={match.home.logoFit} side="home" size={logoSize} ringColor={homeColor} />
+          <span className="kt-vs-naam">{match.home.name}</span>
+        </span>
+        <span className="kt-vs-midden">
+          <b>VS</b>
+          <small>{match.time}</small>
+        </span>
+        <span className="kt-vs-ploeg">
+          <TeamLogo name={match.away.name} logoUrl={match.away.logoUrl} logoFit={match.away.logoFit} side="away" size={logoSize} ringColor={awayColor} />
+          <span className="kt-vs-naam">{match.away.name}</span>
+        </span>
+      </Link>
+    </div>
+  )
+}

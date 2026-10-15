@@ -13,10 +13,41 @@ export type Samen = {
   /** `verdiep` = waar jij bent (enkel wie op hetzelfde verdiep is, zie je); `boven` = je zweeft. */
   update: (seconden: number, dt: number, verdiep: number, boven: boolean) => void
   aantal: () => number
+  /** Een tekstballon boven het hoofd van deze supporter (een paar seconden). */
+  zeg: (id: string, tekst: string) => void
   dispose: () => void
 }
 
-type Ander = { avatar: Avatar; naam: THREE.Sprite; doel: Aanwezige; x: number; y: number; z: number; yaw: number; tempo: number; outfit: string; gezien: number }
+type Ander = { avatar: Avatar; naam: THREE.Sprite; doel: Aanwezige; x: number; y: number; z: number; yaw: number; tempo: number; outfit: string; gezien: number; ballon: { sprite: THREE.Sprite; tot: number } | null }
+
+/** Een tekstballon: wit, afgerond, met een puntje naar beneden. */
+function ballon(tekst: string) {
+  const c = document.createElement('canvas')
+  c.width = 512
+  c.height = 160
+  const g = c.getContext('2d')!
+  g.font = '700 38px Inter, system-ui, sans-serif'
+  const w = Math.min(500, g.measureText(tekst).width + 48)
+  g.fillStyle = 'rgba(255,255,255,.96)'
+  g.beginPath()
+  g.roundRect(256 - w / 2, 8, w, 100, 30)
+  g.fill()
+  g.beginPath()
+  g.moveTo(236, 104)
+  g.lineTo(256, 140)
+  g.lineTo(276, 104)
+  g.fill()
+  g.fillStyle = '#0b1220'
+  g.textAlign = 'center'
+  g.textBaseline = 'middle'
+  g.fillText(tekst, 256, 60, 470)
+  const t = new THREE.CanvasTexture(c)
+  t.colorSpace = THREE.SRGBColorSpace
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, transparent: true, depthWrite: false, depthTest: false }))
+  sp.scale.set(1.9, 0.6, 1)
+  sp.renderOrder = 10
+  return sp
+}
 
 function naamBordje(naam: string, kleur: string) {
   const c = document.createElement('canvas')
@@ -54,7 +85,7 @@ export function bouwSamen(scene: THREE.Scene, thema: StadionThema, ikId: string 
           const avatar = bouwAvatar(scene, thema, { laag: 0, zwaaien: false })
           const naam = naamBordje(a.naam, thema.primair)
           scene.add(naam)
-          o = { avatar, naam, doel: a, x: a.x, y: a.y, z: a.z, yaw: a.yaw, tempo: 0, outfit: '', gezien: nu }
+          o = { avatar, naam, doel: a, x: a.x, y: a.y, z: a.z, yaw: a.yaw, tempo: 0, outfit: '', gezien: nu, ballon: null }
           anderen.set(a.id, o)
         }
         o.doel = a
@@ -69,6 +100,7 @@ export function bouwSamen(scene: THREE.Scene, thema: StadionThema, ikId: string 
       const ids = new Set(lijst.map((a) => a.id))
       for (const [id, o] of anderen)
         if (!ids.has(id)) {
+          if (o.ballon) scene.remove(o.ballon.sprite)
           o.avatar.dispose()
           scene.remove(o.naam)
           o.naam.material.map?.dispose()
@@ -83,6 +115,7 @@ export function bouwSamen(scene: THREE.Scene, thema: StadionThema, ikId: string 
         const zie = !d.vliegt && (boven ? d.verdiep >= 0 : d.verdiep === verdiep)
         o.avatar.zichtbaar(zie)
         o.naam.visible = zie
+        if (o.ballon) o.ballon.sprite.visible = zie
         if (!zie) {
           o.x = d.x
           o.y = d.y
@@ -109,7 +142,25 @@ export function bouwSamen(scene: THREE.Scene, thema: StadionThema, ikId: string 
         o.tempo += (tempo - o.tempo) * Math.min(1, dt * 5)
         o.avatar.update(o.x, o.y, o.z, o.yaw, 0, o.tempo, seconden)
         o.naam.position.set(o.x, o.y + 2.05, o.z)
+        if (o.ballon) {
+          o.ballon.sprite.position.set(o.x, o.y + 2.55, o.z)
+          if (performance.now() > o.ballon.tot) {
+            scene.remove(o.ballon.sprite)
+            o.ballon.sprite.material.map?.dispose()
+            o.ballon.sprite.material.dispose()
+            o.ballon = null
+          }
+        }
       }
+    },
+    zeg(id, tekst) {
+      const o = anderen.get(id)
+      if (!o) return
+      if (o.ballon) scene.remove(o.ballon.sprite)
+      const sp = ballon(tekst)
+      sp.position.set(o.x, o.y + 2.55, o.z)
+      scene.add(sp)
+      o.ballon = { sprite: sp, tot: performance.now() + 6000 }
     },
     aantal: () => anderen.size,
     dispose() {

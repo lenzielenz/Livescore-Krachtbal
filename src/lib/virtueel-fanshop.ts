@@ -111,16 +111,38 @@ export const GRATIS = ARTIKELEN.filter((a) => a.prijs === 0).map((a) => a.id)
 
 export type Kast = { munten: number; verdiend: number; gekocht: string[]; outfit: Outfit }
 
+/** Wat er met je kast gebeurt, in volgorde: een aankoop, of een stuk dat je weggeeft of krijgt. */
+export type KastStap = string | { geef: string } | { krijg: string }
+
+/** Kan je dit artikel weggeven? (Gratis stukken heeft iedereen al.) */
+export const magGeven = (kast: Kast, id: string): string | null => {
+  const a = artikelVan(id)
+  if (!a) return 'Dat stuk bestaat niet.'
+  if (a.prijs === 0) return 'Dat heeft iedereen al.'
+  if (!kast.gekocht.includes(id)) return 'Dat zit niet in je kast.'
+  return null
+}
+
 /**
  * Je kast: je saldo (muntjes van je gevonden ballen min wat je uitgaf), wat je bezit en wat je
- * draagt. `ballen` = hoeveel verschillende gouden ballen je vond; `aankopen` en `outfits` in
- * volgorde (oudste eerst).
+ * draagt. `ballen` = hoeveel verschillende gouden ballen je vond; `stappen` (aankopen, en wat je
+ * weggaf of kreeg van een andere supporter) en `outfits` in volgorde (oudste eerst). Wat je weggeeft,
+ * ben je kwijt (je muntjes krijg je niet terug); wat je krijgt, kost je niets.
  */
-export function maakKast(ballen: number, aankopen: string[], outfits: Partial<Outfit>[]): Kast {
+export function maakKast(ballen: number, stappen: KastStap[], outfits: Partial<Outfit>[]): Kast {
   const verdiend = ballen * MUNTEN_PER_BAL
   const gekocht = new Set(GRATIS)
   let uitgegeven = 0
-  for (const id of aankopen) {
+  for (const stap of stappen) {
+    if (typeof stap !== 'string') {
+      const id = 'geef' in stap ? stap.geef : stap.krijg
+      const a = artikelVan(id)
+      if (!a || a.prijs === 0) continue
+      if ('geef' in stap) gekocht.delete(id)
+      else gekocht.add(id)
+      continue
+    }
+    const id = stap
     const a = artikelVan(id)
     if (!a || gekocht.has(id) || uitgegeven + a.prijs > verdiend) continue
     gekocht.add(id)

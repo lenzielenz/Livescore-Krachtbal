@@ -4,7 +4,8 @@ import { userClubId } from '@/lib/access'
 import { authUser } from '@/lib/api-auth'
 import { getPayloadClient } from '@/lib/payload-client'
 import { rateLimit } from '@/lib/sse-hub'
-import { leesOutfit, magKopen } from '@/lib/virtueel-fanshop'
+import { artikelVan, leesOutfit, magGeven, magKopen } from '@/lib/virtueel-fanshop'
+import { meldGebeurtenis } from '@/lib/virtueel-praat'
 import { GOUDEN_BALLEN, TEMPO, valideerSpoor, vatSporenSamen, type Spoor, type SpoorSoort } from '@/lib/virtueel-sporen'
 
 export const dynamic = 'force-dynamic'
@@ -21,20 +22,29 @@ export const dynamic = 'force-dynamic'
 //                                   de server.
 
 /** Hoeveel sporen we per soort meenemen in de samenvatting (de recentste). */
-const PER_SOORT: Record<SpoorSoort, number> = { eend: 120, verf: 6, popcorn: 5000, loopband: 5000, zetel: 2000, doelworp: 2000, bord: 50, vondst: 5000, aankoop: 0, outfit: 0, kluis: 0, werp: 0 }
+const PER_SOORT: Record<SpoorSoort, number> = { eend: 120, verf: 6, popcorn: 5000, loopband: 5000, zetel: 2000, doelworp: 2000, bord: 50, vondst: 5000, aankoop: 0, outfit: 0, kluis: 0, werp: 0, geschenk: 0 }
 /** Wat enkel over jezelf gaat: die halen we apart (en volledig) op voor wie kijkt. */
-const EIGEN: SpoorSoort[] = ['vondst', 'aankoop', 'outfit', 'kluis']
+const EIGEN: SpoorSoort[] = ['vondst', 'aankoop', 'outfit', 'kluis', 'geschenk']
 
 type Doc = Record<string, unknown>
 const naarSpoor = (d: Doc): Spoor => ({ id: d.id as number, soort: d.soort as SpoorSoort, waarde: d.waarde as Spoor['waarde'], naam: String(d.authorName ?? 'Supporter'), auteur: relId(d.author), wanneer: String(d.createdAt ?? '') })
 const opTijd = (a: Spoor, b: Spoor) => (a.wanneer < b.wanneer ? -1 : a.wanneer > b.wanneer ? 1 : Number(a.id) - Number(b.id))
 
-/** Al je eigen sporen van de soorten die over jezelf gaan (gouden ballen, kast, kluis). */
+/**
+ * Al je eigen sporen van de soorten die over jezelf gaan (gouden ballen, kast, kluis), plus de
+ * cadeaus binnen je club (vatSporenSamen houdt enkel die aan jou over).
+ */
 async function eigenSporen(payload: Awaited<ReturnType<typeof getPayloadClient>>, ik: number | string, club: number | null): Promise<Spoor[]> {
-  const r = await payload
-    .find({ collection: 'virtuele-sporen', where: { and: [{ author: { equals: ik } }, { soort: { in: EIGEN } }, stadionVan(club)] }, sort: 'createdAt', depth: 0, limit: 5000, overrideAccess: true })
-    .catch(() => ({ docs: [] as Doc[] }))
-  return (r.docs as unknown as Doc[]).map(naarSpoor)
+  const [eigen, cadeaus] = await Promise.all([
+    payload
+      .find({ collection: 'virtuele-sporen', where: { and: [{ author: { equals: ik } }, { soort: { in: EIGEN } }, stadionVan(club)] }, sort: 'createdAt', depth: 0, limit: 5000, overrideAccess: true })
+      .catch(() => ({ docs: [] as Doc[] })),
+    payload
+      .find({ collection: 'virtuele-sporen', where: { and: [{ soort: { equals: 'geschenk' } }, stadionVan(club)] }, sort: 'createdAt', depth: 0, limit: 5000, overrideAccess: true })
+      .catch(() => ({ docs: [] as Doc[] })),
+  ])
+  const alle = new Map([...(eigen.docs as unknown as Doc[]), ...(cadeaus.docs as unknown as Doc[])].map((d) => [String(d.id), naarSpoor(d)]))
+  return [...alle.values()].sort(opTijd)
 }
 
 const relId = (v: unknown): number | null => {
@@ -90,6 +100,20 @@ export async function POST(req: Request) {
   const naam = naamVan(user)
   let waarde = check.waarde
   // Wat over je eigen kast of de kluis gaat, toetsen we aan je eigen sporen.
+  if (check.soort === 'geschenk') {
+    // Een cadeau: enkel iets uit je eigen kast, aan een andere supporter van je eigen club die het
+    // nog niet heeft. Wat je geeft, ben je kwijt.
+    const { id, aan } = waarde as { id: string; aan: number }
+    if (String(aan) === String(user.id)) return Response.json({ error: 'Aan jezelf geven gaat niet.' }, { status: 400 })
+    const mij = vatSporenSamen(await eigenSporen(payload, user.id as number, club), user.id as number)
+    const fout = magGeven(mij.mij, id)
+    if (fout) return Response.json({ error: fout }, { status: 409 })
+    const ontvanger = (await payload.findByID({ collection: 'users', id: aan, depth: 0, overrideAccess: true }).catch(() => null)) as Record<string, unknown> | null
+    if (!ontvanger || relId(userClubId(ontvanger as never)) !== club) return Response.json({ error: 'Je kan enkel iets geven aan een supporter van je eigen club.' }, { status: 409 })
+    const hun = vatSporenSamen(await eigenSporen(payload, aan, club), aan)
+    if (hun.mij.gekocht.includes(id)) return Response.json({ error: `${naamVan(ontvanger)} heeft dat al.` }, { status: 409 })
+    waarde = { id, aan, aanNaam: naamVan(ontvanger) }
+  }
   if (check.soort === 'aankoop' || check.soort === 'outfit' || check.soort === 'kluis') {
     const mij = vatSporenSamen(await eigenSporen(payload, user.id as number, club), user.id as number)
     if (check.soort === 'aankoop') {
@@ -107,5 +131,9 @@ export async function POST(req: Request) {
     data: { club: club ?? undefined, soort: check.soort, author: Number(user.id), authorName: naam, waarde },
     overrideAccess: true,
   })
+  if (check.soort === 'geschenk' && club != null) {
+    const w = waarde as { id: string; aan: number; aanNaam: string }
+    meldGebeurtenis(String(club), { soort: 'geschenk', van: String(user.id), vanNaam: naam, aan: String(w.aan), aanNaam: w.aanNaam, artikel: artikelVan(w.id)?.naam ?? w.id })
+  }
   return Response.json({ id: doc.id, soort: check.soort, waarde, naam }, { status: 201 })
 }
