@@ -5,6 +5,7 @@ import type { StadionThema } from '@/lib/virtueel'
 import { pickSegmentIndex, RAD_SEGMENTS, segmentArcs } from '@/lib/pronostiek-rad'
 import type { WedkantoorStats } from '@/lib/virtueel-wedkantoor'
 import type { BordPlek, WedkantoorPlek } from './kelder'
+import { rondeDoos } from './rond'
 import { canvasTex, rondLogo } from './stadion'
 
 // De inrichting van het wedkantoor in de kelder (de ruimte zelf: kelder.ts):
@@ -63,7 +64,7 @@ export function bouwGokkantoor(
     return canvasTex(c)
   }
   const doos = (w: number, h: number, d: number, x: number, y: number, z: number, m: THREE.Material, ouder: THREE.Object3D = groep) => {
-    const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m)
+    const mesh = new THREE.Mesh(rondeDoos(w, h, d), m)
     mesh.position.set(x, y, z)
     ouder.add(mesh)
     return mesh

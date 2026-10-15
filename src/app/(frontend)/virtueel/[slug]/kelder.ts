@@ -3,6 +3,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 
 import { opVloer, type Rechthoek, type StadionThema } from '@/lib/virtueel'
 import { VERDIEPEN } from '@/lib/virtueel-lift'
+import { bouwBundels, bouwDamp, bouwMist, bouwStof, samen } from './atmosfeer'
 import { canvasTex, rnd, rondLogo } from './stadion'
 
 // Verdiep -1: onder de grond, dus niet gebonden aan het stadion erboven — de ruimte is zo groot als
@@ -1439,6 +1440,60 @@ export function bouwKelder(scene: THREE.Scene, opt: { thema: StadionThema; licht
     goud.push({ x: WK.x0 + 1.4, y: Y + 0.95, z: WK.z0 + 1.4 })
   }
 
+  // ---------- de lucht zelf: damp, mist, lichtbundels en stof ----------
+  // Damp in de saunacabines en boven het bubbelbad (warm), mist boven het zwembad (koel), de
+  // projectorbundel in de cinema met stof erin, en licht dat schuin door de vochtige lucht boven
+  // het water valt. Zie atmosfeer.ts.
+  const lucht = (() => {
+    const S = R.sauna
+    const schaal = licht ? 0.5 : 1
+    const damp = bouwDamp(
+      [
+        ...[0, 1].flatMap((k) => {
+          const cx = S.x1 - 2.6
+          const cz = S.z0 + 5 + k * 7
+          return [
+            { x: cx, y: Y + 0.8, z: cz, straal: 1.8, hoogte: 1.7, aantal: k ? 26 : 44, kleur: '#fff1e0', grootte: 1.4, sterkte: k ? 0.22 : 0.3, duur: 6 },
+            // Wat er bovenaan de glazen voorkant ontsnapt.
+            { x: cx - 2.75, y: Y + 2.3, z: cz, straal: 0.9, hoogte: 1.4, aantal: 12, kleur: '#fde7cf', grootte: 1.1, sterkte: 0.14, duur: 7 },
+          ]
+        }),
+        { x: S.x0 + 7, y: Y + 0.62, z: S.z0 + 8, straal: 1.7, hoogte: 1.8, aantal: 34, kleur: '#f0f9ff', grootte: 1.3, sterkte: 0.2, duur: 5.5 },
+      ],
+      { schaal },
+    )
+    const bcx = (bad.x0 + bad.x1) / 2
+    const bcz = (bad.z0 + bad.z1) / 2
+    const mist = bouwMist([
+      { x: bcx, y: Y - 0.05, z: bcz, b: bad.x1 - bad.x0 + 2, d: bad.z1 - bad.z0 + 2, kleur: '#e0f2fe', sterkte: 0.16, lagen: licht ? 2 : 3 },
+      { x: S.x0 + 7, y: Y + 0.75, z: S.z0 + 8, b: 4.6, d: 4.6, kleur: '#fff7ed', sterkte: 0.14, lagen: 2 },
+    ])
+    const V = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z)
+    const C = R.cinema
+    const bundels = bouwBundels([
+      // De projector achteraan de cinema, naar het doek.
+      { van: V(doek.x, Y + 4.7, C.z1 - 0.3), naar: V(doek.x, doek.y, doek.z + 0.2), straalVan: 0.08, straalNaar: doek.b * 0.42, kleur: '#cfe3ff', sterkte: 0.07 },
+      // Schuin licht door de vochtige lucht boven het water.
+      ...[0.2, 0.5, 0.8].map((f) => ({
+        van: V(bad.x0 + (bad.x1 - bad.x0) * f, Y + 6.1, bad.z0 - 1),
+        naar: V(bad.x0 + (bad.x1 - bad.x0) * f + 2.2, Y - 0.1, bad.z0 + (bad.z1 - bad.z0) * 0.6),
+        straalVan: 0.5,
+        straalNaar: 2.2,
+        kleur: '#bfe6ff',
+        sterkte: 0.13,
+      })),
+      // Warm licht van boven op het bubbelbad.
+      { van: V(S.x0 + 7, Y + 4.15, S.z0 + 8), naar: V(S.x0 + 7, Y + 0.7, S.z0 + 8), straalVan: 0.35, straalNaar: 1.9, kleur: '#ffd7a3', sterkte: 0.16 },
+    ])
+    const stof = bouwStof([
+      { x0: doek.x - 4, x1: doek.x + 4, y0: Y + 1.5, y1: Y + 5, z0: C.z0 + 2, z1: C.z1 - 1, aantal: licht ? 60 : 160, kleur: '#dbeafe' },
+      { x0: bad.x0, x1: bad.x1, y0: Y + 0.5, y1: Y + 5.5, z0: bad.z0 - 1, z1: bad.z1, aantal: licht ? 50 : 140, kleur: '#e0f2fe' },
+    ])
+    const alles = samen(damp, mist, bundels, stof)
+    add(alles.groep)
+    return alles
+  })()
+
   // ---------- alle wandvlakken en lichtplassen ----------
   for (const [mat, w] of wanden) {
     const g = new THREE.BufferGeometry()
@@ -1491,6 +1546,7 @@ export function bouwKelder(scene: THREE.Scene, opt: { thema: StadionThema; licht
     },
     update(seconden, speler) {
       if (!groep.visible) return
+      lucht.update(seconden)
       // Het water kleurt zacht naar de verf van de bezoekers.
       waterMat.color.lerp(waterDoel, 0.03)
       // De dansvloer: golven van kleur, en feller onder je voeten.

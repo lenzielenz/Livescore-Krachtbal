@@ -2,6 +2,7 @@ import * as THREE from 'three'
 
 import type { Rechthoek, StadionThema } from '@/lib/virtueel'
 import { MOZAIEK, tegelKleuren, tegelVolgorde } from '@/lib/virtueel-mozaiek'
+import { rondeDoos } from './rond'
 import { canvasTex, rondLogo } from './stadion'
 
 // De photobooth in de noordgang, tegen de binnenkant van de gevel:
@@ -54,7 +55,7 @@ export function bouwPhotobooth(
     return canvasTex(c)
   }
   const doos = (w: number, h: number, d: number, x: number, y: number, z: number, m: THREE.Material, ouder: THREE.Object3D = groep) => {
-    const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m)
+    const mesh = new THREE.Mesh(rondeDoos(w, h, d), m)
     mesh.position.set(x, y, z)
     ouder.add(mesh)
     return mesh
@@ -408,6 +409,13 @@ export function bouwPhotobooth(
     tekenMozaiek()
   })
   tekenMozaiek()
+
+  // Echte delen werpen een schaduw (geen lichtvlakken of glas).
+  if (!opt.licht)
+    groep.traverse((o) => {
+      const m = o as THREE.Mesh
+      if (m.isMesh && (m.material as THREE.MeshStandardMaterial).isMeshStandardMaterial && !(m.material as THREE.Material).transparent) m.castShadow = true
+    })
 
   return {
     obstakels: lokaleObstakels.map(rechthoekNaarWereld),

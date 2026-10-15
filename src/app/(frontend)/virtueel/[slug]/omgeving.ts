@@ -728,6 +728,7 @@ export function bouwOmgeving(scene: THREE.Scene, opt: { thema: StadionThema; lic
     autos.setMatrixAt(i, m4)
     autos.setColorAt(i, autoKleuren[Math.floor(toeval() * autoKleuren.length)])
   })
+  autos.castShadow = !licht
   scene.add(autos)
   for (const [x, z] of plaatsen) obstakels.push({ x0: x - 2.2, x1: x + 2.2, z0: z - 1, z1: z + 1 })
 
@@ -753,6 +754,8 @@ export function bouwOmgeving(scene: THREE.Scene, opt: { thema: StadionThema; lic
     kruinen.setMatrixAt(i, m4)
     kruinen.setColorAt(i, groen[Math.floor(toeval() * groen.length)])
   })
+  // Bomen werpen een schaduw (de maan-/zonschaduw volgt je als je buiten wandelt).
+  stammen.castShadow = kruinen.castShadow = !licht
   scene.add(stammen, kruinen)
   for (const [x, z] of boomPos) obstakels.push({ x0: x - 0.4, x1: x + 0.4, z0: z - 0.4, z1: z + 0.4 })
 

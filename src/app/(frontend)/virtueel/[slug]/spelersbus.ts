@@ -2,6 +2,7 @@ import * as THREE from 'three'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 
 import type { Rechthoek, StadionThema } from '@/lib/virtueel'
+import { rondeDoos } from './rond'
 import { canvasTex, rondLogo } from './stadion'
 
 // De spelersbus naast de kleedkamers: een luxe touringcar in clubkleuren, met geblindeerde ramen.
@@ -72,7 +73,7 @@ export function bouwSpelersbus(scene: THREE.Scene, opt: { thema: StadionThema; x
     return canvasTex(c)
   }
   const doos = (w: number, h: number, d: number, x: number, y: number, z: number, m: THREE.Material, ouder: THREE.Object3D = groep) => {
-    const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m)
+    const mesh = new THREE.Mesh(rondeDoos(w, h, d), m)
     mesh.position.set(x, y, z)
     ouder.add(mesh)
     return mesh
@@ -144,7 +145,7 @@ export function bouwSpelersbus(scene: THREE.Scene, opt: { thema: StadionThema; x
     const ramen = kant < 0 ? [[DEUR.x1 + 0.05, L / 2 - 0.35]] : [[-L / 2 + 1.1, L / 2 - 0.35]]
     for (const [a, b] of ramen) zijVlak(a, b, RAAM.y0, RAAM.y1, kant, mat.glas)
     // De bovenrand: zwart gelakt, met een dun gouden lijntje.
-    zijVlak(kant < 0 ? DEUR.x0 : -L / 2, L / 2, RAAM.y1, H - 0.05, kant, mat.lak)
+    zijVlak(kant < 0 ? DEUR.x0 : -L / 2, L / 2, RAAM.y1, H - 0.25, kant, mat.lak)
     doos(L - 0.4, 0.025, 0.02, 0.1, RAAM.y1 + 0.06, (kant * B) / 2 + kant * 0.012, new THREE.MeshStandardMaterial({ color: '#d4af37', metalness: 1, roughness: 0.25, envMap: omgeving }))
     // Raamstijlen.
     for (let x = -L / 2 + 2.6; x < L / 2 - 0.5; x += 1.55) if (kant > 0 || x > DEUR.x1 + 0.2) doos(0.07, RAAM.y1 - RAAM.y0, 0.02, x, (RAAM.y0 + RAAM.y1) / 2, (kant * B) / 2 + kant * 0.012, mat.lak)
@@ -156,9 +157,13 @@ export function bouwSpelersbus(scene: THREE.Scene, opt: { thema: StadionThema; x
   // Boven de deur.
   zijVlak(DEUR.x0, DEUR.x1, 2.95, RAAM.y1, -1, mat.lak)
   zijVlak(-L / 2, DEUR.x0, RAAM.y0, RAAM.y1, -1, mat.voorruit)
-  // Dak met een airco-bult.
-  doos(L - 0.1, 0.1, B - 0.04, 0, H - 0.05, 0, mat.lak)
-  doos(3.2, 0.22, 1.5, 1.8, H + 0.1, 0, mat.lak)
+  // Dak met afgeronde randen (zoals een echte touringcar, geen kist) en een airco-bult.
+  const dak = new THREE.Mesh(rondeDoos(L + 0.01, 0.55, B + 0.012, 0.24), mat.lak)
+  dak.position.set(0, H - 0.22, 0)
+  groep.add(dak)
+  const airco = new THREE.Mesh(rondeDoos(3.2, 0.24, 1.5, 0.1), mat.lak)
+  airco.position.set(1.8, H + 0.1, 0)
+  groep.add(airco)
   // De neus: een grote, licht getinte voorruit, de grille met ledkoplampen, het logo.
   const voorkant = new THREE.Group()
   voorkant.position.x = -L / 2
@@ -439,6 +444,13 @@ export function bouwSpelersbus(scene: THREE.Scene, opt: { thema: StadionThema; x
     rondLogo(g, logo, thema, 256, 200, 130)
     achterC.needsUpdate = true
   })
+
+  // Echte delen werpen een schaduw (geen lichtvlakken of glas).
+  if (!opt.licht)
+    groep.traverse((o) => {
+      const m = o as THREE.Mesh
+      if (m.isMesh && (m.material as THREE.MeshStandardMaterial).isMeshStandardMaterial && !(m.material as THREE.Material).transparent) m.castShadow = true
+    })
 
   // ================= botsingen, vloer =================
   const lokaal: Rechthoek[] = [

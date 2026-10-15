@@ -5,6 +5,7 @@ import { Reflector } from 'three/examples/jsm/objects/Reflector.js'
 import type { Rechthoek, StadionThema } from '@/lib/virtueel'
 import { deurOp, liftStap, liftVerdiep, liftY, nieuweLift, VERDIEPEN, type Lift } from '@/lib/virtueel-lift'
 import { AVATAR_LAAG } from './avatar'
+import { rondeDoos } from './rond'
 import { canvasTex } from './stadion'
 
 // De lift: één schacht van de kelder (-1) tot op het dak (de ringwandeling), achter de Hall of
@@ -61,7 +62,7 @@ export function bouwLift(scene: THREE.Scene, opt: { thema: StadionThema; rendere
     licht: new THREE.MeshBasicMaterial({ color: '#fff4dc', toneMapped: false }),
   }
   const doos = (w: number, h: number, d: number, x: number, y: number, z: number, mat: THREE.Material, ouder: THREE.Object3D = scene) => {
-    const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat)
+    const m = new THREE.Mesh(rondeDoos(w, h, d), mat)
     m.position.set(x, y, z)
     ouder.add(m)
     return m

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 
-import { balOp, balSpoor, bezitOp, bezitTijdlijn, decodeer, GEVEL, op, ploegKleuren, snelheid, stap, stapMet, WERELD_STRAAL, type Ploeg, type Rechthoek, type Reconstructie, type Spoor, type StadionThema, type Veld } from '@/lib/virtueel'
+import { balOp, balSpoor, bezitOp, bezitTijdlijn, decodeer, GEVEL, gevelAfstand, op, ploegKleuren, snelheid, stap, stapMet, WERELD_STRAAL, type Ploeg, type Rechthoek, type Reconstructie, type Spoor, type StadionThema, type Veld } from '@/lib/virtueel'
 import { pasStandenToe, type WeekendStand } from '@/lib/virtueel-weekend'
 import { bouwEregalerij } from './erezaal'
 import { bouwOmgeving } from './omgeving'
@@ -30,6 +30,8 @@ import { WedkantoorPaneel } from './Wedkantoor'
 import { bouwPhotobooth, type BoothFoto, type Photobooth as Photobooth3D } from './photobooth'
 import { Photobooth } from './Photobooth'
 import { bouwSpelersbus } from './spelersbus'
+import { bouwNabewerking, NEUTRAAL, type Stemming } from './nabewerking'
+import { bouwMist, bouwStof, samen } from './atmosfeer'
 import type { WedkantoorStats } from '@/lib/virtueel-wedkantoor'
 import { bouwGangafwerking } from './gangafwerking'
 import { bouwVideoscherm, CINEMA_VIDEO_ID, type Videoscherm } from './videoscherm'
@@ -559,7 +561,26 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     zon.shadow.mapSize.set(licht ? 1024 : 2048, licht ? 1024 : 2048)
     Object.assign(zon.shadow.camera, { left: -32, right: 32, top: 20, bottom: -20, near: 1, far: 90 })
     zon.shadow.bias = -0.0004
-    scene.add(zon)
+    scene.add(zon, zon.target)
+    // De schaduwen: standaard over het veld; wandel je buiten, dan volgt het schaduwvlak jou, zodat
+    // ook de bus, de bomen, de auto's en de cabines rondom je een schaduw werpen.
+    const zonOffset = zon.position.clone()
+    let schaduwBijMij = false
+    const schaduwRond = (x: number | null, z: number | null) => {
+      const bijMij = x != null && z != null
+      if (bijMij) {
+        zon.target.position.set(x, 0, z)
+        zon.position.set(x + zonOffset.x * 0.7, zonOffset.y, z + zonOffset.z * 0.7)
+      }
+      if (bijMij === schaduwBijMij) return
+      schaduwBijMij = bijMij
+      if (!bijMij) {
+        zon.target.position.set(0, 0, 0)
+        zon.position.copy(zonOffset)
+      }
+      Object.assign(zon.shadow.camera, bijMij ? { left: -26, right: 26, top: 26, bottom: -26, near: 1, far: 120 } : { left: -32, right: 32, top: 20, bottom: -20, near: 1, far: 90 })
+      zon.shadow.camera.updateProjectionMatrix()
+    }
     const gloed = gloedTextuur()
     // Grond rondom en het veld zelf.
     const grond = new THREE.Mesh(new THREE.CircleGeometry(300, 48), new THREE.MeshStandardMaterial({ color: '#16301f', roughness: 1 }))
@@ -605,6 +626,27 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     if (muurRef.current.tags.length) kleedkamer.zetTags(muurRef.current.tags, muurRef.current.lengte)
     // De spelersbus naast de kleedkamers: instappen, rondkijken, en de wedstrijd op de schermen.
     const bus = bouwSpelersbus(scene, { thema, x: -59, z: 23.6, renderer, logo: stadion.logo, licht })
+    // Laaghangende nachtmist over het plein en de grasranden rond het stadion.
+    const buitenmist = licht
+      ? null
+      : bouwMist([
+          { x: 0, y: 0.25, z: GEVEL.B + 30, b: 90, d: 26, kleur: '#c7d2fe', sterkte: 0.07, lagen: 2 },
+          { x: -GEVEL.A - 26, y: 0.25, z: 0, b: 26, d: 80, kleur: '#c7d2fe', sterkte: 0.06, lagen: 2 },
+          { x: GEVEL.A + 44, y: 0.25, z: -4, b: 40, d: 60, kleur: '#c7d2fe', sterkte: 0.05, lagen: 2 },
+          { x: 0, y: 0.25, z: -GEVEL.B - 22, b: 90, d: 26, kleur: '#c7d2fe', sterkte: 0.06, lagen: 2 },
+        ])
+    // Stofjes die in het licht van de wandelgangen zweven (tussen de tribunes en de gevel).
+    const gangStof =
+      licht || !tribunes.zuid || !tribunes.noord || !tribunes.oost || !tribunes.west
+        ? null
+        : bouwStof([
+            { x0: -34, x1: 34, y0: 0.6, y1: 4.2, z0: tribunes.zuid.z1 + 0.5, z1: GEVEL.B - 1.2, aantal: 220, kleur: '#ffe7b8' },
+            { x0: -34, x1: 34, y0: 0.6, y1: 4.2, z0: -GEVEL.B + 1.2, z1: tribunes.noord.z0 - 0.5, aantal: 200, kleur: '#dbeafe' },
+            { x0: tribunes.oost.x1 + 0.5, x1: GEVEL.A - 1.2, y0: 0.6, y1: 4.2, z0: -16, z1: 16, aantal: 110, kleur: '#ffe7b8' },
+            { x0: -GEVEL.A + 1.2, x1: tribunes.west.x0 - 0.5, y0: 0.6, y1: 4.2, z0: -16, z1: 16, aantal: 110, kleur: '#ffe7b8' },
+          ])
+    const buitenLucht = samen(...[buitenmist, gangStof].filter((x): x is NonNullable<typeof x> => x != null))
+    scene.add(buitenLucht.groep)
     // De photobooth in de noordgang, tegen de achterwand van de noordtribune (de gevel daar is voor
     // de weekendzaal): cabine, polaroids en de mozaïek van het logo, aan de westkant van de gang.
     const photobooth = bouwPhotobooth(scene, { thema, muurZ: (tribunes.noord?.z0 ?? -22.65) - 0.02, ry: Math.PI, x0: 6.6, logo: stadion.logo, licht })
@@ -825,10 +867,13 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     renderer.domElement.addEventListener('pointerup', op_)
     renderer.domElement.addEventListener('pointercancel', op_)
 
+    // De nabewerking (gloed, stemming per plek, waas, hitte): niet op lichte toestellen.
+    const nabewerking = licht ? null : bouwNabewerking(renderer, scene, camera)
     const maat = () => {
       const w = el.clientWidth
       const h = el.clientHeight
       renderer.setSize(w, h, false)
+      nabewerking?.maat(w, h, pixels)
       video.maat(w, h)
       camera.aspect = w / Math.max(1, h)
       camera.updateProjectionMatrix()
@@ -888,6 +933,30 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     let getekend = false
     let frameTijd = 0
     let raf = 0
+    // De stemming van de plek waar je bent: warm, koel, vochtig, heet (zie nabewerking.ts).
+    const STEMMING: Record<string, Stemming> = {
+      Sauna: { warmte: 0.85, waas: 0.4, hitte: 1, gloed: 1.15 },
+      Zwembad: { warmte: -0.55, waas: 0.3, hitte: 0, gloed: 1.05 },
+      Fitness: { warmte: -0.25, waas: 0, hitte: 0, gloed: 1 },
+      Cinema: { warmte: 0.15, waas: 0.12, hitte: 0, gloed: 1.25 },
+      Gaming: { warmte: -0.15, waas: 0, hitte: 0, gloed: 1.4 },
+      Wedkantoor: { warmte: 0.5, waas: 0.06, hitte: 0, gloed: 1.25 },
+      Speelhal: { warmte: 0.2, waas: 0, hitte: 0, gloed: 1.15 },
+    }
+    const stemmingHier = (): Stemming => {
+      const s = st.current
+      const p = camera.position
+      if (p.y < -0.5) return (s.modus === 'buiten' ? STEMMING[kelder.ruimte(p.x, p.z) ?? ''] : undefined) ?? { warmte: 0.1, waas: 0.04, hitte: 0, gloed: 1.15 }
+      if (s.modus !== 'buiten' && s.modus !== 'zweven') return { ...NEUTRAAL, warmte: -0.05 }
+      if (inBus) return { warmte: 0.35, waas: 0, hitte: 0, gloed: 1.15 }
+      if (s.modus === 'buiten' && opVerdiep === 0 && kleedkamer.binnen(p.x, p.z)) return { warmte: -0.3, waas: 0.25, hitte: 0, gloed: 1 }
+      if (p.y > 12) return { warmte: -0.3, waas: 0.05, hitte: 0, gloed: 1.1 }
+      if (p.y > 6) return { warmte: 0.35, waas: 0, hitte: 0, gloed: 1.1 }
+      const d = gevelAfstand(GEVEL, p.x, p.z)
+      if (d > 0.5) return { warmte: -0.28, waas: 0.08, hitte: 0, gloed: 1.05 }
+      if (!opVeld(p)) return { warmte: 0.25, waas: 0.05, hitte: 0, gloed: 1.1 }
+      return { ...NEUTRAAL }
+    }
     const tik = (nu: number) => {
       raf = requestAnimationFrame(tik)
       // De rAF-tijdstempel kan net vóór performance.now() liggen: nooit een negatieve stap.
@@ -1165,6 +1234,8 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
       gangafwerking.update(nu / 1000)
       photobooth.update(nu / 1000, dt)
       bus.update(nu / 1000)
+      buitenLucht.update(nu / 1000)
+      schaduwRond(!licht && s.modus === 'buiten' && opVerdiep === 0 && !inKelder ? loper.pos.x : null, loper.pos.z)
       // In de bus: de schermen tonen de wedstrijd (een tv-camera volgt de bal).
       const nuInBus = s.modus === 'buiten' && opVerdiep === 0 && bus.binnen(loper.pos.x, loper.pos.z)
       if (nuInBus !== inBus) {
@@ -1217,7 +1288,11 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
         for (const o of bovengronds) o.visible = !inKelder
         kelder.groep.visible = inKelder
       }
-      renderer.render(scene, camera)
+      if (nabewerking) {
+        nabewerking.stemming(stemmingHier())
+        nabewerking.update(nu / 1000, dt)
+        nabewerking.render()
+      } else renderer.render(scene, camera)
       video.render(camera)
       if (!getekend) {
         getekend = true
@@ -1269,6 +1344,7 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
 
     return () => {
       cancelAnimationFrame(raf)
+      nabewerking?.dispose()
       weekendStroom?.close()
       video.dispose()
       kleedRef.current = null
