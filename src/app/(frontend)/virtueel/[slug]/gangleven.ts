@@ -25,7 +25,7 @@ const HOEKEN: Hoek[] = [
 export function bouwGangleven(
   scene: THREE.Scene,
   opt: { thema: StadionThema; licht: boolean; logo: Promise<HTMLImageElement | null> },
-): { obstakels: Rechthoek[]; update: (seconden: number) => void } {
+): { obstakels: Rechthoek[]; fanshop: { x: number; z: number } | null; update: (seconden: number) => void } {
   const { thema, licht } = opt
   const { A, B, R } = GEVEL
   const toeval = rnd(5150)
@@ -79,11 +79,13 @@ export function bouwGangleven(
     [1, -1],
     [-1, -1],
   ]
+  let fanshop: { x: number; z: number } | null = null
   hoeken.forEach(([sx, sz], h) => {
     const info = HOEKEN[h]
     const n = new THREE.Vector3(sx * Math.SQRT1_2, 0, sz * Math.SQRT1_2)
     const rand = new THREE.Vector3(sx * (A - R) + n.x * R, 0, sz * (B - R) + n.z * R)
     const c = rand.clone().addScaledVector(n, -5.2)
+    if (info.naam === 'FANSHOP') fanshop = { x: c.x, z: c.z }
     const ry = Math.atan2(n.x, n.z)
     const groep = new THREE.Group()
     groep.position.copy(c)
@@ -314,6 +316,7 @@ export function bouwGangleven(
   const een = new THREE.Vector3(1, 1, 1)
   return {
     obstakels,
+    fanshop,
     update(seconden) {
       wandelaars.forEach((w, i) => {
         const p = plekOp(w.s0 + w.v * seconden, w.baan)

@@ -7,9 +7,13 @@
 // totalen, ranglijsten en "de laatste" worden altijd hieruit afgeleid, nooit apart bijgehouden.
 // Deze module is puur: validatie (server) en samenvatten (server en client).
 
+import { artikelVan, maakKast, type Kast, type Outfit } from './virtueel-fanshop'
+import { BAL_IDS, werpAfstand, type BalId } from './virtueel-superstar'
 import { leesTactiek, type Tactiek } from './virtueel-tactiek'
 
-export const SPOOR_SOORTEN = ['eend', 'verf', 'popcorn', 'loopband', 'zetel', 'doelworp', 'bord', 'vondst'] as const
+// aankoop/outfit: de fanshop (virtueel-fanshop.ts); kluis: de kluis in de kelder openen (als je alle
+// gouden ballen hebt, voor de sleutel van de helikopter); werp: een worp bij Superstar.
+export const SPOOR_SOORTEN = ['eend', 'verf', 'popcorn', 'loopband', 'zetel', 'doelworp', 'bord', 'vondst', 'aankoop', 'outfit', 'kluis', 'werp'] as const
 export type SpoorSoort = (typeof SPOOR_SOORTEN)[number]
 
 export const EEND_KLEUREN = ['#facc15', '#f97316', '#ec4899', '#22c55e', '#3b82f6', '#ffffff'] as const
@@ -20,7 +24,7 @@ export const BORDEN = ['kleedkamer', 'kelder'] as const
 export type BordId = (typeof BORDEN)[number]
 
 /** Hoeveel keer per minuut iemand iets mag achterlaten (tegen spam). */
-export const TEMPO: Record<SpoorSoort, number> = { eend: 8, verf: 6, popcorn: 20, loopband: 6, zetel: 10, doelworp: 10, bord: 20, vondst: 40 }
+export const TEMPO: Record<SpoorSoort, number> = { eend: 8, verf: 6, popcorn: 20, loopband: 6, zetel: 10, doelworp: 10, bord: 20, vondst: 40, aankoop: 20, outfit: 30, kluis: 5, werp: 20 }
 
 const geheel = (v: unknown, min: number, max: number): number | null =>
   typeof v === 'number' && Number.isInteger(v) && v >= min && v <= max ? v : null
@@ -34,6 +38,9 @@ export type SpoorWaarde =
   | { nr: number } // zetel, vondst
   | { score: number } // doelworp
   | { id: BordId; tactiek: Tactiek } // bord
+  | { id: string } // aankoop
+  | { outfit: Partial<Outfit> } // outfit (wat je bezit, controleert de server apart)
+  | { bal: BalId; kracht: number; hoek: number; afstand: number } // werp
 
 /** Controleer wat een bezoeker wil achterlaten; geeft de opgeschoonde waarde of een foutmelding. */
 export function valideerSpoor(soort: unknown, ruw: unknown): { ok: true; soort: SpoorSoort; waarde: SpoorWaarde } | { ok: false; fout: string } {
@@ -76,6 +83,22 @@ export function valideerSpoor(soort: unknown, ruw: unknown): { ok: true; soort: 
       if (!id || !w.tactiek || typeof w.tactiek !== 'object') return { ok: false, fout: 'Ongeldig bord.' }
       return { ok: true, soort: s, waarde: { id, tactiek: leesTactiek(w.tactiek) } }
     }
+    case 'aankoop': {
+      const id = typeof w.id === 'string' && artikelVan(w.id) ? w.id : null
+      return id ? { ok: true, soort: s, waarde: { id } } : { ok: false, fout: 'Dat verkopen we hier niet.' }
+    }
+    case 'outfit':
+      return w.outfit && typeof w.outfit === 'object' ? { ok: true, soort: s, waarde: { outfit: w.outfit as Partial<Outfit> } } : { ok: false, fout: 'Ongeldige outfit.' }
+    case 'kluis':
+      return { ok: true, soort: s, waarde: {} }
+    case 'werp': {
+      // De afstand rekent de server zelf uit, uit kracht en hoek (een client kan geen afstand opgeven).
+      const bal = typeof w.bal === 'string' && (BAL_IDS as string[]).includes(w.bal) ? (w.bal as BalId) : null
+      const kracht = tussen01(w.kracht)
+      const hoek = typeof w.hoek === 'number' && Number.isFinite(w.hoek) && w.hoek >= 10 && w.hoek <= 70 ? Math.round(w.hoek * 10) / 10 : null
+      if (!bal || kracht == null || hoek == null) return { ok: false, fout: 'Ongeldige worp.' }
+      return { ok: true, soort: s, waarde: { bal, kracht, hoek, afstand: werpAfstand(bal, kracht, hoek) } }
+    }
   }
 }
 
@@ -91,6 +114,8 @@ export type Sporenstaat = {
   borden: Partial<Record<BordId, Tactiek>>
   /** Wie alle gouden ballen vond (de eerste eerst), en welke ballen deze bezoeker al heeft. */
   vondsten: { kampioenen: string[]; mijn: number[] }
+  /** Van wie kijkt: je kast (muntjes, kledij, outfit) en of je de sleutel van de helikopter hebt. */
+  mij: Kast & { sleutel: boolean }
 }
 
 export const MAX_EENDEN = 120
@@ -100,7 +125,20 @@ export const MAX_EENDEN = 120
  * gevonden ballen), of null.
  */
 export function vatSporenSamen(sporen: Spoor[], ik: number | string | null): Sporenstaat {
-  const staat: Sporenstaat = { eenden: [], verf: [], popcorn: { totaal: 0, laatste: null }, loopband: { meter: 0, top: [] }, zetels: {}, doelworp: [], borden: {}, vondsten: { kampioenen: [], mijn: [] } }
+  const staat: Sporenstaat = {
+    eenden: [],
+    verf: [],
+    popcorn: { totaal: 0, laatste: null },
+    loopband: { meter: 0, top: [] },
+    zetels: {},
+    doelworp: [],
+    borden: {},
+    vondsten: { kampioenen: [], mijn: [] },
+    mij: { ...maakKast(0, [], []), sleutel: false },
+  }
+  const aankopen: string[] = []
+  const outfits: Partial<Outfit>[] = []
+  let kluis = false
   const lopers = new Map<string, number>()
   const besten = new Map<string, number>()
   const gevonden = new Map<string, { naam: string; nrs: Set<number> }>()
@@ -141,6 +179,14 @@ export function vatSporenSamen(sporen: Spoor[], ik: number | string | null): Spo
         if (ik != null && s.auteur != null && String(s.auteur) === String(ik)) mijn.add(w.nr as number)
         break
       }
+      case 'aankoop':
+      case 'outfit':
+      case 'kluis':
+        if (ik == null || s.auteur == null || String(s.auteur) !== String(ik)) break
+        if (s.soort === 'aankoop') aankopen.push(w.id as string)
+        else if (s.soort === 'outfit') outfits.push(w.outfit as Partial<Outfit>)
+        else kluis = true
+        break
     }
   }
   staat.eenden = staat.eenden.slice(-MAX_EENDEN)
@@ -148,6 +194,8 @@ export function vatSporenSamen(sporen: Spoor[], ik: number | string | null): Spo
   staat.loopband.top = [...lopers].map(([naam, meter]) => ({ naam, meter })).sort((a, b) => b.meter - a.meter).slice(0, 5)
   staat.doelworp = [...besten].map(([naam, score]) => ({ naam, score })).sort((a, b) => b.score - a.score).slice(0, 10)
   staat.vondsten.mijn = [...mijn].sort((a, b) => a - b)
+  // De sleutel: de kluis gaat pas open als je alle gouden ballen hebt.
+  staat.mij = { ...maakKast(mijn.size, aankopen, outfits), sleutel: kluis && mijn.size >= GOUDEN_BALLEN }
   return staat
 }
 

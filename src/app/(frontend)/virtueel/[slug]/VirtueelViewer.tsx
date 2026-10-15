@@ -21,7 +21,7 @@ import { bouwLift, LIFT_X } from './lift'
 import { bouwRing, RING } from './ring'
 import { bouwVuurwerk, type Vuurwerk } from './vuurwerk'
 import { bouwKelder } from './kelder'
-import { bouwAvatar, EIGEN_LAAG } from './avatar'
+import { bouwAvatar, EIGEN_LAAG, type Avatar } from './avatar'
 import { bouwPopcornDoosje } from './popcornkraam'
 import { bouwKleedkamer, KLEED, type Kleedkamer } from './kleedkamer'
 import { bouwKelderspel, type KelderActie, type Kelderspel } from './kelderspel'
@@ -32,6 +32,11 @@ import { WedkantoorPaneel } from './Wedkantoor'
 import { bouwPhotobooth, type BoothFoto, type Photobooth as Photobooth3D } from './photobooth'
 import { Photobooth } from './Photobooth'
 import { Wedkiosk } from './Wedkiosk'
+import { Fanshop } from './Fanshop'
+import { Superstar } from './Superstar'
+import { werpAfstand, type BalId, type SuperstarStand } from '@/lib/virtueel-superstar'
+import type { SuperstarHal } from './superstar'
+import { StadionPlan, type PlanDoel, type PlanHier } from './StadionPlan'
 import { bouwSpelersbus } from './spelersbus'
 import { bouwNabewerking, NEUTRAAL, type Stemming } from './nabewerking'
 import { bouwMist, bouwStof, samen } from './atmosfeer'
@@ -78,7 +83,7 @@ const RUIMTE_MELDING: Record<string, string> = {
   Wedkantoor: '🎰 Wedkantoor · draai gratis aan het bonusrad',
 }
 /** Wat je ergens kan doen: bij de kleedkamer (muur, bord) of in de kelder (zie kelderspel.ts). */
-type Nabij = { soort: 'muur' } | { soort: 'bord' } | { soort: 'rad' } | { soort: 'stats' } | { soort: 'kiosk' } | { soort: 'booth' } | { soort: 'knop' } | KelderActie
+type Nabij = { soort: 'muur' } | { soort: 'bord' } | { soort: 'rad' } | { soort: 'stats' } | { soort: 'kiosk' } | { soort: 'booth' } | { soort: 'knop' } | { soort: 'fanshop' } | { soort: 'superstar' } | KelderActie
 const ACTIE_LABEL: Record<Nabij['soort'], string> = {
   muur: '🎨 Spuit op de muur',
   bord: '📋 Tactiekbord',
@@ -93,6 +98,8 @@ const ACTIE_LABEL: Record<Nabij['soort'], string> = {
   stats: '📊 Bekijk de statistieken',
   kiosk: '🎟️ Zet een pronostiek',
   knop: '🔴 Druk op de grote rode knop',
+  fanshop: '🛍️ Fanshop: kleed je figuur aan',
+  superstar: '★ Superstar: werp zo ver je kan',
   booth: '📸 Neem een selfie',
 }
 type Muur = 'kleedkamer' | 'kelder'
@@ -295,7 +302,7 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
   const [stick, setStick] = useState({ x: 0, y: 0 })
   // Wat je in en rond het stadion kan doen: spuiten op de graffitimuur, het tactiekbord, de lift.
   const [nabij, setNabij] = useState<Nabij | null>(null)
-  const [paneel, setPaneel] = useState<'graffiti' | 'tactiek' | 'bad' | 'loopband' | 'doelworp' | 'wedkantoor' | 'kiosk' | 'booth' | null>(null)
+  const [paneel, setPaneel] = useState<'graffiti' | 'tactiek' | 'bad' | 'loopband' | 'doelworp' | 'wedkantoor' | 'kiosk' | 'booth' | 'fanshop' | 'superstar' | null>(null)
   // De photobooth in de noordgang: alle selfies van je club (oudste eerst).
   const [boothFotos, setBoothFotos] = useState<BoothFoto[]>([])
   const boothFotosRef = useRef<BoothFoto[]>([])
@@ -309,10 +316,32 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
   const [wedStats, setWedStats] = useState<WedkantoorStats | null>(null)
   const wedStatsRef = useRef<WedkantoorStats | null>(null)
   const gokRef = useRef<Gokkantoor | null>(null)
+  const avatarRef = useRef<Avatar | null>(null)
+  // Superstar (afstandwerpen in de kelder): de hal en het klassement van heel het platform.
+  const sterRef = useRef<SuperstarHal | null>(null)
+  const [sterStand, setSterStand] = useState<SuperstarStand | null>(null)
+  const herlaadSter = useCallback(() => {
+    fetch('/api/virtueel/superstar', { cache: 'no-store', credentials: 'include' })
+      .then((r) => (r.ok ? (r.json() as Promise<SuperstarStand>) : null))
+      .then((s) => {
+        if (!s) return
+        setSterStand(s)
+        sterRef.current?.zetStand(s, null)
+      })
+      .catch(() => {})
+  }, [])
+  const naarWerplijnRef = useRef<() => void>(() => {})
+  const opWerplijnRef = useRef(false)
+  opWerplijnRef.current = paneel === 'superstar'
   // De grote rode knop op het dak: aftellen, en dan de vuurwerkshow.
   const vuurwerkRef = useRef<Vuurwerk | null>(null)
   const [aftel, setAftel] = useState<number | null>(null)
   const aftelRef = useRef<number | null>(null)
+  // Het stadionplan: verschijnt vanzelf als je voor een wegwijzer staat (✕ = weg tot je verder loopt).
+  const [planHier, setPlanHier] = useState<PlanHier | null>(null)
+  const [planDoelen, setPlanDoelen] = useState<PlanDoel[]>([])
+  const planWegRef = useRef(-1)
+  const planBordRef = useRef(-1)
   // Welke graffitimuur / welk tactiekbord open staat: dat bij de kleedkamer of dat in de speelhal.
   const [welkeMuur, setWelkeMuur] = useState<Muur>('kleedkamer')
   const [zit, setZit] = useState<number | null>(null)
@@ -346,7 +375,8 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
   st.current.stick = stick
   st.current.hoog = hoog
   // Staat de spuitbus of het tactiekbord open, dan hoeft het stadion erachter niet te tekenen.
-  st.current.pauze = paneel != null
+  // (Superstar is een paneel onderaan: de hal blijft bewegen, je ziet de bal vliegen.)
+  st.current.pauze = paneel != null && paneel !== 'superstar'
 
   // Het welkom verschijnt pas als het eerste beeld van het stadion er staat, en verdwijnt na zes
   // seconden.
@@ -396,6 +426,7 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     goudRef.current?.zetGevonden(s.vondsten.mijn)
     if (goudRef.current) setGoud(goudRef.current.aantal())
     if (s.borden.kleedkamer) kleedRef.current?.zetTactiek(s.borden.kleedkamer)
+    avatarRef.current?.kleedAan(s.mij.outfit)
   }, [])
   const herlaadSporen = useCallback(() => {
     fetch(`/api/virtueel/sporen?club=${thema.clubId ?? ''}`, { cache: 'no-store', credentials: 'include' })
@@ -780,6 +811,16 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     // De lift van de kelder tot op het dak, en de kelder zelf (-1).
     const lift = bouwLift(scene, { thema, renderer, tribuneZ, licht })
     const kelder = bouwKelder(scene, { thema, licht, liftX: LIFT_X, liftZ, logo: stadion.logo })
+    sterRef.current = kelder.superstar
+    herlaadSter()
+    setPlanDoelen([
+      ...bestemmingen.map((b) => ({ ...b, verdiep: 0 })),
+      ...kelder.plekken.zalen.map((z) => ({ ...z, kleur: '#a78bfa', verdiep: -1 })),
+      { naam: 'Lift', icoon: '🛗', kleur: '#a78bfa', x: LIFT_X, z: liftZ + 1, verdiep: -1 },
+      { naam: 'VIP-loges & oude bekers', icoon: '🥂', kleur: '#fbbf24', x: LIFT_X, z: liftZ + 1, verdiep: 1 },
+      { naam: 'Ringwandeling', icoon: '🌃', kleur: '#38bdf8', x: LIFT_X, z: GEVEL.B, verdiep: 2 },
+      { naam: 'Grote rode knop · vuurwerk', icoon: '🔴', kleur: '#ef4444', x: LIFT_X + 5, z: GEVEL.B - 1.6, verdiep: 2 },
+    ])
     // Wat bezoekers in de kelder achterlaten (eendjes, popcorn, borden, zetels, muur en bord).
     const kelderspel = bouwKelderspel(kelder.groep, { thema, plekken: kelder.plekken, zetWaterKleur: kelder.zetWaterKleur, licht })
     spelRef.current = kelderspel
@@ -863,6 +904,14 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     const tmp = new THREE.Vector3()
     // Lopen: eigen positie + kijkrichting.
     const loper = { pos: W(cx - 8, -1.5), yaw: 0.35, pitch: -0.08 }
+    // Superstar: op de werplijn gaan staan, met de baan voor je.
+    naarWerplijnRef.current = () => {
+      const p = kelder.superstar.werpPlek
+      loper.pos.x = p.x
+      loper.pos.z = p.z
+      loper.yaw = p.yaw
+      loper.pitch = -0.1
+    }
     loper.pos.y = OOGHOOGTE
     const toetsen = new Set<string>()
     const opToets = (e: KeyboardEvent) => {
@@ -926,6 +975,8 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     let wandel: { x: number; z: number; yaw: number; pitch: number; verdiep: number } | null = null
     // Jijzelf (enkel te zien in de spiegel van de kleedkamer).
     const avatar = bouwAvatar(scene, thema)
+    avatar.kleedAan(sporenRef.current.mij.outfit)
+    avatarRef.current = avatar
     const vorigePos = { x: 0, z: 0 }
     let avatarPopcorn = false
     let liftNu = lift.update(0, { x: 0, z: 0, verdiep: 0, actief: false, keuze: null }).lift
@@ -971,9 +1022,33 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
       Wedkantoor: { warmte: 0.5, waas: 0.06, hitte: 0, gloed: 1.25 },
       Speelhal: { warmte: 0.2, waas: 0, hitte: 0, gloed: 1.15 },
     }
+    // De hamam: hoe dieper je in de stoom loopt, hoe korter je zicht (de mist van de scène kruipt
+    // dichterbij en kleurt warm wit).
+    let hamamNu = 0
+    const mist = scene.fog as THREE.Fog
+    const mistGewoon = { kleur: mist.color.clone(), near: mist.near, far: mist.far }
+    const stoomKleur = new THREE.Color('#e8e0d2')
+    const zetStoom = (dt: number) => {
+      const s = st.current
+      const doel = s.modus === 'buiten' && opVerdiep === -1 ? kelder.hamamMist(loper.pos.x, loper.pos.z) : 0
+      hamamNu += (doel - hamamNu) * Math.min(1, dt * 1.6)
+      if (hamamNu < 0.005) {
+        if (mist.near !== mistGewoon.near) {
+          mist.near = mistGewoon.near
+          mist.far = mistGewoon.far
+          mist.color.copy(mistGewoon.kleur)
+        }
+        return
+      }
+      const f = Math.pow(hamamNu, 0.6)
+      mist.near = THREE.MathUtils.lerp(mistGewoon.near, 0.2, f)
+      mist.far = THREE.MathUtils.lerp(mistGewoon.far, 3.6, f)
+      mist.color.copy(mistGewoon.kleur).lerp(stoomKleur, f)
+    }
     const stemmingHier = (): Stemming => {
       const s = st.current
       const p = camera.position
+      if (p.y < -0.5 && hamamNu > 0.05) return { warmte: 0.45, waas: Math.min(1, 0.4 + hamamNu * 0.6), hitte: 0.5, gloed: 1.4 }
       if (p.y < -0.5) return (s.modus === 'buiten' ? STEMMING[kelder.ruimte(p.x, p.z) ?? ''] : undefined) ?? { warmte: 0.1, waas: 0.04, hitte: 0, gloed: 1.15 }
       if (s.modus !== 'buiten' && s.modus !== 'zweven') return { ...NEUTRAAL, warmte: -0.05 }
       if (inBus) return { warmte: 0.35, waas: 0, hitte: 0, gloed: 1.15 }
@@ -1327,6 +1402,15 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
         kelder.groep.visible = inKelder
       }
       vuurwerk.update(nu / 1000, dt, camera, renderer.domElement.height)
+      // Op de werplijn van Superstar: je blijft staan, met de baan recht voor je.
+      if (opWerplijnRef.current && s.modus === 'buiten' && opVerdiep === -1) {
+        const wp = kelder.superstar.werpPlek
+        loper.pos.x = wp.x
+        loper.pos.z = wp.z
+        loper.yaw += (wp.yaw - loper.yaw) * Math.min(1, dt * 4)
+        loper.pitch += (-0.06 - loper.pitch) * Math.min(1, dt * 4)
+      }
+      zetStoom(dt)
       if (nabewerking) {
         // Tijdens het vuurwerk straalt alles feller uit.
         nabewerking.stemming(vuurwerk.bezig() ? { ...stemmingHier(), gloed: 1.8 } : stemmingHier())
@@ -1365,9 +1449,20 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
         const kk = s.modus === 'buiten' && opVerdiep === 0
         const kl = s.modus === 'buiten' && opVerdiep === -1 && s.zit == null
         const kd = s.modus === 'buiten' && opVerdiep === 2
+        // Voor een wegwijzer: het stadionplan groot op het scherm.
+        const bord = kk ? wegwijzers.plekken.findIndex((p) => Math.hypot(p.x - loper.pos.x, p.z - loper.pos.z) < 3.2) : -1
+        planBordRef.current = bord
+        if (bord !== planWegRef.current) planWegRef.current = -1
+        const ph: PlanHier | null =
+          bord >= 0 && planWegRef.current !== bord
+            ? { x: Math.round(loper.pos.x * 2) / 2, z: Math.round(loper.pos.z * 2) / 2, yaw: Math.round(loper.yaw * 20) / 20, verdiep: 0 }
+            : null
+        setPlanHier((oud) => (JSON.stringify(oud) === JSON.stringify(ph) ? oud : ph))
         const nb: Nabij | null =
           kd && vuurwerk.knop.bij(loper.pos.x, loper.pos.z)
             ? { soort: 'knop' }
+            : kk && gangleven.fanshop && Math.hypot(loper.pos.x - gangleven.fanshop.x, loper.pos.z - gangleven.fanshop.z) < 3.6
+            ? { soort: 'fanshop' }
             : kk && photobooth.bijBooth(loper.pos.x, loper.pos.z)
             ? { soort: 'booth' }
             : kk && kleedkamer.bijMuur(loper.pos.x, loper.pos.z)
@@ -1376,6 +1471,7 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
               ? { soort: 'bord' }
               : kl
                 ? ((): Nabij | null => {
+                    if (kelder.superstar.bijTafel(loper.pos.x, loper.pos.z)) return { soort: 'superstar' }
                     const g = gokkantoor.nabij(loper.pos.x, loper.pos.z)
                     return g ? { soort: g } : kelderspel.nabij(loper.pos.x, loper.pos.z)
                   })()
@@ -1517,6 +1613,14 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
       case 'kiosk':
         setPaneel('kiosk')
         break
+      case 'fanshop':
+        setPaneel('fanshop')
+        break
+      case 'superstar':
+        naarWerplijnRef.current()
+        setPaneel('superstar')
+        herlaadSter()
+        break
       case 'knop': {
         const vw = vuurwerkRef.current
         if (!vw) break
@@ -1639,6 +1743,16 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
               <span className="vk-goud" title="Gouden krachtballen gevonden — ze liggen overal in het stadion">
                 🟡 {goud}/{GOUDEN_BALLEN}
               </span>
+            )}
+            {modus === 'buiten' && !paneel && (
+              <StadionPlan
+                hier={planHier}
+                doelen={planDoelen}
+                onSluit={() => {
+                  planWegRef.current = planBordRef.current
+                  setPlanHier(null)
+                }}
+              />
             )}
             {aftel != null && (
               <div className="vk-aftel" aria-live="assertive" key={aftel}>
@@ -1800,6 +1914,61 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
               }}
             />
             <WedkantoorPaneel open={paneel === 'wedkantoor'} onSluit={() => setPaneel(null)} stats={wedStats} />
+            <Superstar
+              open={paneel === 'superstar'}
+              onSluit={() => setPaneel(null)}
+              stand={sterStand}
+              ingelogd={Boolean(thema.ingelogd)}
+              onNeem={(b: BalId | null) => sterRef.current?.neem(b)}
+              onWerp={async (bal, kracht, hoek) => {
+                // De server rekent de afstand uit (en bewaart hem); zonder login werp je voor de fun.
+                let afstand = werpAfstand(bal, kracht, hoek)
+                let bewaard = false
+                try {
+                  const r = await fetch('/api/virtueel/sporen', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ soort: 'werp', waarde: { bal, kracht, hoek } }),
+                  })
+                  if (r.ok) {
+                    const d = (await r.json()) as { waarde?: { afstand?: number } }
+                    if (typeof d.waarde?.afstand === 'number') afstand = d.waarde.afstand
+                    bewaard = true
+                  }
+                } catch {
+                  /* dan werp je enkel voor de fun */
+                }
+                await sterRef.current?.gooi(bal, afstand, hoek)
+                if (bewaard) herlaadSter()
+                return { afstand, bewaard }
+              }}
+            />
+            <Fanshop
+              open={paneel === 'fanshop'}
+              onSluit={() => setPaneel(null)}
+              thema={thema}
+              kast={sporen.mij}
+              ingelogd={Boolean(thema.ingelogd)}
+              ballen={goud}
+              onKoop={async (id) => {
+                const ok = await laat('aankoop', { id })
+                if (ok) {
+                  setMelding('🛍️ Gekocht! Trek het aan in de paskamer')
+                  herlaadSporen()
+                }
+                return ok
+              }}
+              onDraag={async (outfit) => {
+                const ok = await laat('outfit', { outfit })
+                if (ok) {
+                  avatarRef.current?.kleedAan(outfit)
+                  setMelding('👕 Staat je goed! Kijk eens in een spiegel')
+                  herlaadSporen()
+                }
+                return ok
+              }}
+            />
             <Wedkiosk
               open={paneel === 'kiosk'}
               onSluit={() => setPaneel(null)}

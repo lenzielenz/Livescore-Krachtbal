@@ -5,6 +5,9 @@ import { opVloer, type Rechthoek, type StadionThema } from '@/lib/virtueel'
 import { VERDIEPEN } from '@/lib/virtueel-lift'
 import { bouwBundels, bouwDamp, bouwMist, bouwStof, samen } from './atmosfeer'
 import { bouwPopcornkraam, type Popcornkraam } from './popcornkraam'
+import { bouwSuperstar, type SuperstarHal } from './superstar'
+import { bouwHamam, type Hamam } from './hamam'
+import { bouwKelderinrichting } from './kelderinrichting'
 import { canvasTex, rnd, rondLogo } from './stadion'
 
 // Verdiep -1: onder de grond, dus niet gebonden aan het stadion erboven — de ruimte is zo groot als
@@ -33,6 +36,10 @@ export type Kelder = {
   zetWaterKleur: (hex: string) => void
   /** Hoe hard je op een trampoline veert (0 = er niet op). */
   trampoline: (x: number, z: number) => number
+  /** De Superstar-hal (afstandwerpen). */
+  superstar: SuperstarHal
+  /** Hoe dicht de stoom van de hamam hier hangt (0–1). */
+  hamamMist: (x: number, z: number) => number
   update: (seconden: number, speler?: { x: number; z: number }) => void
 }
 
@@ -55,6 +62,8 @@ export type KelderPlekken = {
   goud: { x: number; y: number; z: number }[]
   /** Het wedkantoor: de ruimte en waar alles staat (de inrichting zelf: gokkantoor.ts). */
   wedkantoor: WedkantoorPlek
+  /** De zalen, met hun deur aan de boulevard (voor het stadionplan). */
+  zalen: { naam: string; icoon: string; x: number; z: number }[]
 }
 export type WedkantoorPlek = {
   x0: number
@@ -231,9 +240,12 @@ export function bouwKelder(scene: THREE.Scene, opt: { thema: StadionThema; licht
     cinema: { x0: ox + 7, x1: ox + 31, z0: oz - 24, z1: B0 },
     gaming: { x0: ox + 33, x1: ox + 64, z0: oz - 14, z1: B0 },
     zwembad: { x0: ox - 40, x1: ox + 14, z0: B1, z1: oz + 45 },
-    sauna: { x0: ox + 16, x1: ox + 46, z0: B1, z1: oz + 37 },
+    // (Achteraan, voorbij oz + 37, ligt de hamam.)
+    sauna: { x0: ox + 16, x1: ox + 46, z0: B1, z1: oz + 51 },
     speelhal: { x0: ox + 48, x1: ox + 80, z0: B1, z1: B1 + 36 },
     wedkantoor: { x0: ox + 66, x1: ox + 82, z0: oz - 1, z1: B1 },
+    // Superstar: de hal voor het afstandwerpen, achter de westkant van de boulevard.
+    superstar: { x0: ox - 88, x1: ox - 44, z0: B0 - 5, z1: B1 + 5 },
   }
   const deurX = { fitness: ox - 20, cinema: ox + 19, gaming: ox + 48, zwembad: ox - 14, sauna: ox + 31, speelhal: ox + 57 }
   const goud: { x: number; y: number; z: number }[] = []
@@ -268,6 +280,7 @@ export function bouwKelder(scene: THREE.Scene, opt: { thema: StadionThema; licht
       { kant: 'z', ...d3(deurX.sauna) },
       { kant: 'z', ...d3(deurX.speelhal) },
       { kant: 'o', ...d3((B0 + B1) / 2) },
+      { kant: 'w', ...d3((B0 + B1) / 2) },
     ],
   })
   bouwZaal({ naam: 'Lobby', ...R.lobby, h: 4.2, wand: blvWand, vloer: steenVloer, plafond: donkerPlafond, vloerTegel: 2, deuren: [{ kant: 'z', van: R.lobby.x0, tot: R.lobby.x1 }, { kant: 'n', van: ox - 0.6, tot: ox + 0.6 }] })
@@ -312,8 +325,8 @@ export function bouwKelder(scene: THREE.Scene, opt: { thema: StadionThema; licht
     }
     g.globalAlpha = 1
   })
-  // (Enkel aan de westkant: aan de oostkant is de deur naar het wedkantoor.)
-  for (const [x, ry] of [[R.boulevard.x0 + 0.02, Math.PI / 2]] as const) {
+  // (Niet meer: aan de oostkant is de deur naar het wedkantoor, aan de westkant naar Superstar.)
+  for (const [x, ry] of [] as [number, number][]) {
     const v = new THREE.Mesh(new THREE.PlaneGeometry(B1 - B0, 4.2), new THREE.MeshBasicMaterial({ map: eindeloos }))
     v.position.set(x, Y + 2.1, (B0 + B1) / 2)
     v.rotation.y = ry
@@ -345,7 +358,7 @@ export function bouwKelder(scene: THREE.Scene, opt: { thema: StadionThema; licht
   bordBoven('CINEMA', '🎬', deurX.cinema, B0 + 0.02, 0, '#f43f5e')
   bordBoven('GAMING', '🎮', deurX.gaming, B0 + 0.02, 0, '#a855f7')
   bordBoven('ZWEMBAD', '🏊', deurX.zwembad, B1 - 0.02, Math.PI, '#38bdf8')
-  bordBoven('SAUNA & WELLNESS', '🧖', deurX.sauna, B1 - 0.02, Math.PI, '#f59e0b')
+  bordBoven('SAUNA & HAMAM', '🧖', deurX.sauna, B1 - 0.02, Math.PI, '#f59e0b')
   bordBoven('SPEELHAL', '🎡', deurX.speelhal, B1 - 0.02, Math.PI, '#22c55e')
   {
     // Het bord boven de deur van het wedkantoor, op de eindwand van de boulevard.
@@ -972,7 +985,7 @@ export function bouwKelder(scene: THREE.Scene, opt: { thema: StadionThema; licht
     bouwZaal({
       naam: 'Sauna',
       ...S,
-      h: 4.2,
+      h: 7.2,
       wand: wandMat('#2a1608', '#4a2a12', '#ffcf8a', (g) => {
         g.fillStyle = 'rgba(0,0,0,.18)'
         for (let x = 0; x < 256; x += 20) g.fillRect(x, 0, 2, 256)
@@ -1078,6 +1091,10 @@ export function bouwKelder(scene: THREE.Scene, opt: { thema: StadionThema; licht
       plas(x, z, 0.8, '#ffb347', 0.35)
     }
   }
+
+  // De hamam: een Turks stoombad onder een koepel, achteraan de sauna (zie hamam.ts).
+  const hamam: Hamam = bouwHamam(groep, { Y, x0: R.sauna.x0 + 2, x1: R.sauna.x1 - 2, z0: oz + 38.5, z1: R.sauna.z1 - 0.4, licht })
+  meubels.push(...hamam.obstakels)
 
   // ---------- 🎡 speelhal: voor de jeugd ----------
   // Een ballenbad, trampolines (je veert mee!), een klimmuur, een glijbaan, een dansvloer die
@@ -1445,6 +1462,58 @@ export function bouwKelder(scene: THREE.Scene, opt: { thema: StadionThema; licht
     goud.push({ x: WK.x0 + 1.4, y: Y + 0.95, z: WK.z0 + 1.4 })
   }
 
+  // ---------- ★ superstar: afstandwerpen ----------
+  let superstar: SuperstarHal
+  {
+    const S = R.superstar
+    bouwZaal({
+      naam: 'Superstar',
+      ...S,
+      h: 5.6,
+      wand: wandMat('#0b1020', '#141a2e', thema.primair, (g) => {
+        // Akoestische panelen met een smalle ledlijn.
+        g.fillStyle = 'rgba(255,255,255,.035)'
+        for (let x = 6; x < 256; x += 64) g.fillRect(x, 30, 52, 170)
+      }),
+      vloer: tegelMat('#1c2130', '#11141d', 2),
+      plafond: new THREE.MeshBasicMaterial({ color: '#05070c' }),
+      vloerTegel: 2,
+      deuren: [{ kant: 'o', ...d3((B0 + B1) / 2) }],
+    })
+    superstar = bouwSuperstar(groep, { thema, Y, x0: S.x0, x1: S.x1, z0: S.z0, z1: S.z1, licht })
+    meubels.push(...superstar.obstakels)
+    // Het bord boven de deur, aan de boulevardkant.
+    const sb = tekst(1024, 220, (g) => {
+      g.fillStyle = '#07090d'
+      g.fillRect(0, 0, 1024, 220)
+      g.shadowColor = '#facc15'
+      g.shadowBlur = 30
+      g.fillStyle = '#ffffff'
+      g.font = 'italic 900 120px Inter, system-ui, sans-serif'
+      g.textAlign = 'center'
+      g.textBaseline = 'middle'
+      g.fillText('★ SUPERSTAR', 512, 116, 980)
+      g.fillStyle = '#facc15'
+      g.fillRect(0, 206, 1024, 14)
+    })
+    const bb = new THREE.Mesh(new THREE.PlaneGeometry(3.6, 0.77), new THREE.MeshBasicMaterial({ map: sb, toneMapped: false }))
+    bb.position.set(R.boulevard.x0 + 0.03, Y + DEUR_H + 0.6, (B0 + B1) / 2)
+    bb.rotation.y = Math.PI / 2
+    add(bb)
+  }
+
+  // ---------- extra inrichting: elke zaal zijn eigen blikvanger (zie kelderinrichting.ts) ----------
+  const inrichting = bouwKelderinrichting(groep, {
+    Y,
+    thema,
+    licht,
+    meubels,
+    fitness: { ...R.fitness, deuren: [{ x: deurX.fitness, z: B0 }] },
+    zwembad: { ...R.zwembad, deuren: [{ x: deurX.zwembad, z: B1 }], bad: { ...bad, y: -0.15 } },
+    gaming: { ...R.gaming, deuren: [{ x: deurX.gaming, z: B0 }] },
+    sauna: { ...R.sauna, z1: oz + 37, deuren: [{ x: deurX.sauna, z: B1 }, { x: (R.sauna.x0 + R.sauna.x1) / 2, z: oz + 38.5 }] },
+  })
+
   // ---------- de lucht zelf: damp, mist, lichtbundels en stof ----------
   // Damp in de saunacabines en boven het bubbelbad (warm), mist boven het zwembad (koel), de
   // projectorbundel in de cinema met stof erin, en licht dat schuin door de vochtige lucht boven
@@ -1524,7 +1593,19 @@ export function bouwKelder(scene: THREE.Scene, opt: { thema: StadionThema; licht
       return r ? r.naam : null
     },
     doek,
+    superstar,
+    hamamMist: (x, z) => hamam.mist(x, z),
     plekken: {
+      zalen: [
+        { naam: 'Fitness', icoon: '🏋️', x: deurX.fitness, z: B0 },
+        { naam: 'Cinema & popcorn', icoon: '🎬', x: deurX.cinema, z: B0 },
+        { naam: 'Gaming', icoon: '🎮', x: deurX.gaming, z: B0 },
+        { naam: 'Zwembad', icoon: '🏊', x: deurX.zwembad, z: B1 },
+        { naam: 'Sauna & hamam', icoon: '🧖', x: deurX.sauna, z: B1 },
+        { naam: 'Speelhal', icoon: '🕹️', x: deurX.speelhal, z: B1 },
+        { naam: 'Wedkantoor', icoon: '🎰', x: R.wedkantoor.x0, z: (B0 + B1) / 2 },
+        { naam: 'Superstar · afstandwerpen', icoon: '★', x: R.superstar.x1, z: (B0 + B1) / 2 },
+      ],
       bad: { ...bad, y: Y - 0.15 },
       popcorn: { x: R.cinema.x1 - 3, z: R.cinema.z1 - 2.2, y: Y + 1.05 },
       popcornBord: { x: R.cinema.x1 - 3, y: Y + 4.6, z: R.cinema.z1 - 0.06, ry: Math.PI, b: 3.2, h: 1.2 },
@@ -1553,6 +1634,9 @@ export function bouwKelder(scene: THREE.Scene, opt: { thema: StadionThema; licht
       if (!groep.visible) return
       lucht.update(seconden)
       popcornkraam?.update(seconden)
+      superstar.update(seconden, 1 / 60)
+      hamam.update(seconden)
+      inrichting.update(seconden)
       // Het water kleurt zacht naar de verf van de bezoekers.
       waterMat.color.lerp(waterDoel, 0.03)
       // De dansvloer: golven van kleur, en feller onder je voeten.

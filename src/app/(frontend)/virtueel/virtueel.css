@@ -534,3 +534,109 @@
 .vk-aftel span { margin-top: 4px; font-size: 1rem; font-weight: 900; letter-spacing: 0.2em; text-transform: uppercase; color: #fecaca; text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8); }
 @keyframes vk-aftel { 0% { transform: scale(1.9); opacity: 0.35; } 18% { transform: scale(1); opacity: 1; } 100% { transform: scale(0.92); opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .vk-aftel b { animation: none; } }
+/* Het stadionplan als je voor een wegwijzer staat: groot en leesbaar, naast het beeld. */
+.vk-plan {
+  position: absolute; top: max(60px, calc(env(safe-area-inset-top) + 56px)); right: max(10px, env(safe-area-inset-right)); bottom: 12px; z-index: 7;
+  width: min(360px, 46%); display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; overflow-y: auto; overscroll-behavior: contain;
+  background: rgba(6, 10, 18, 0.88); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 16px; color: #e2e8f0;
+  backdrop-filter: blur(6px); box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5); animation: vk-in 0.25s ease;
+}
+@media (max-width: 560px) { .vk-plan { left: 10px; width: auto; top: auto; max-height: 58%; } }
+.vk-plan-kop { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.vk-plan-kop div { display: flex; flex-direction: column; }
+.vk-plan-kop b { font-size: 1rem; color: #fff; }
+.vk-plan-kop span { font-size: 0.75rem; color: #94a3b8; }
+.vk-plan-kop button { flex: none; width: 32px; height: 32px; border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.14); background: rgba(255, 255, 255, 0.08); color: #fff; cursor: pointer; }
+.vk-plan-kaart { width: 100%; max-height: 150px; flex: none; background: rgba(255, 255, 255, 0.03); border-radius: 10px; }
+.vk-plan-kaart .gevel { fill: rgba(148, 163, 184, 0.08); stroke: rgba(148, 163, 184, 0.45); stroke-width: 0.6; }
+.vk-plan-kaart .veld { fill: rgba(34, 197, 94, 0.25); stroke: rgba(134, 239, 172, 0.5); stroke-width: 0.4; }
+.vk-plan-kaart .kegel { fill: rgba(96, 165, 250, 0.35); }
+.vk-plan-kaart .hier { fill: #60a5fa; stroke: #fff; stroke-width: 0.8; }
+.vk-plan-lijst { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.vk-plan-lijst li { display: grid; grid-template-columns: 30px 1fr auto; align-items: center; gap: 8px; padding: 5px 6px; border-radius: 10px; background: rgba(255, 255, 255, 0.05); }
+.vk-plan-lijst i { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 8px; font-style: normal; font-size: 1rem; }
+.vk-plan-lijst span { font-weight: 800; font-size: 0.88rem; color: #fff; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vk-plan-lijst em { display: flex; align-items: center; gap: 6px; font-style: normal; font-weight: 800; font-size: 0.8rem; color: #cbd5e1; font-variant-numeric: tabular-nums; }
+.vk-plan-lijst .pijl { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: #60a5fa; color: #0b1220; font-size: 0.95rem; transition: transform 0.15s linear; }
+.vk-plan-verdiep h4 { margin: 4px 0 4px; font-size: 0.8rem; color: #e2e8f0; }
+.vk-plan-verdiep h4 small { color: #94a3b8; font-weight: 600; }
+.vk-plan-verdiep .nr { display: inline-grid; place-items: center; min-width: 20px; height: 20px; margin-right: 4px; border-radius: 6px; background: #a78bfa; color: #0b1220; font-weight: 900; font-size: 0.72rem; }
+.vk-plan-verdiep p { margin: 0; display: flex; flex-wrap: wrap; gap: 4px; }
+.vk-plan-verdiep p span { padding: 3px 8px; border-radius: 999px; background: rgba(255, 255, 255, 0.06); font-size: 0.75rem; color: #cbd5e1; }
+/* De fanshop: paskamer links, de rekken rechts (staand: onder elkaar). */
+.vk-shop { position: fixed; inset: 0; z-index: 1100; height: 100dvh; background: radial-gradient(ellipse at top, color-mix(in srgb, var(--accent) 22%, #0b0f17), #0b0f17 70%); }
+.vk-shop .vk-graf-kop { gap: 12px; }
+.vk-shop-saldo { margin-left: auto; padding: 6px 12px; border-radius: 999px; background: rgba(250, 204, 21, 0.15); border: 1px solid rgba(250, 204, 21, 0.5); color: #fde68a; font-weight: 900; font-variant-numeric: tabular-nums; }
+.vk-shop-inhoud { flex: 1; min-height: 0; display: flex; gap: 14px; padding: 10px max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)); }
+.vk-shop-links { flex: 0 0 38%; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.vk-shop-pas { flex: 1; min-height: 0; width: 100%; border-radius: 16px; background: radial-gradient(circle at 50% 30%, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.02) 60%); }
+.vk-shop-draag { margin-left: 0; display: inline-flex; align-items: center; text-decoration: none; }
+.vk-shop-rechts { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: 8px; }
+.vk-shop-tabs { display: flex; gap: 6px; overflow-x: auto; flex: none; }
+.vk-shop-tabs button { flex: none; height: 34px; padding: 0 14px; border-radius: 999px; border: 1px solid rgba(255, 255, 255, 0.15); background: rgba(255, 255, 255, 0.06); color: #e2e8f0; font: inherit; font-weight: 800; font-size: 0.82rem; cursor: pointer; }
+.vk-shop-tabs button.aan { background: #fff; color: #0b1220; }
+.vk-shop-rek { list-style: none; margin: 0; padding: 0; flex: 1; min-height: 0; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; align-content: start; }
+.vk-shop-rek li { position: relative; display: flex; flex-direction: column; border-radius: 14px; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.1); overflow: hidden; }
+.vk-shop-rek li.past { border-color: #60a5fa; box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.4); }
+.vk-shop-rek li.draag { background: rgba(74, 222, 128, 0.1); }
+.vk-shop-item { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 10px; border: 0; background: none; color: #e2e8f0; font: inherit; text-align: left; cursor: pointer; }
+.vk-shop-item i { font-style: normal; font-size: 1.6rem; }
+.vk-shop-item b { font-size: 0.85rem; color: #fff; }
+.vk-shop-item small { font-size: 0.75rem; color: #fde68a; font-weight: 800; }
+.vk-shop-koop { height: 32px; border: 0; border-top: 1px solid rgba(255, 255, 255, 0.1); background: rgba(250, 204, 21, 0.9); color: #1c1300; font: inherit; font-weight: 900; font-size: 0.8rem; cursor: pointer; }
+.vk-shop-koop:disabled { background: rgba(255, 255, 255, 0.08); color: #94a3b8; cursor: default; }
+@media (orientation: portrait) { .vk-shop-inhoud { flex-direction: column; } .vk-shop-links { flex: 0 0 38%; } }
+/* Superstar: onderaan het beeld, zodat je de bal in de hal ziet vliegen. */
+.vk-ster {
+  position: absolute; left: 50%; bottom: max(10px, env(safe-area-inset-bottom)); z-index: 9; transform: translateX(-50%); width: min(620px, calc(100% - 20px));
+  display: flex; flex-direction: column; gap: 10px; padding: 10px 12px 12px; border-radius: 18px; color: #e2e8f0;
+  background: linear-gradient(180deg, rgba(10, 14, 26, 0.92), rgba(5, 8, 14, 0.94)); border: 1px solid rgba(255, 255, 255, 0.12); box-shadow: 0 18px 50px rgba(0, 0, 0, 0.55);
+  -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; animation: vk-in 0.25s ease;
+}
+.vk-ster-kop { display: flex; align-items: center; gap: 8px; }
+.vk-ster-kop b { font-style: italic; font-weight: 900; font-size: 1.05rem; color: #facc15; }
+.vk-ster-kop span { flex: 1; min-width: 0; font-size: 0.8rem; color: #94a3b8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.vk-ster-knopje { flex: none; width: 34px; height: 34px; border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.14); background: rgba(255, 255, 255, 0.08); color: #fff; cursor: pointer; }
+.vk-ster-ballen { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.vk-ster-ballen button { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 10px 4px; border-radius: 14px; border: 1px solid rgba(255, 255, 255, 0.12); background: rgba(255, 255, 255, 0.05); color: #fff; font: inherit; cursor: pointer; }
+.vk-ster-ballen button:active { transform: scale(0.97); }
+.vk-ster-ballen i { width: 40px; height: 40px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff8, transparent 40%), var(--bal); box-shadow: inset 0 -5px 10px rgba(0, 0, 0, 0.35), 0 4px 12px rgba(0, 0, 0, 0.4); background-blend-mode: normal; }
+.vk-ster-ballen b { font-size: 0.95rem; }
+.vk-ster-ballen small { font-size: 0.68rem; color: #94a3b8; }
+.vk-ster-ballen small.mijn { color: #fde68a; font-weight: 800; }
+.vk-ster-actie { display: flex; align-items: center; justify-content: center; gap: 16px; }
+.vk-ster-meter { position: relative; width: 26px; height: 110px; border-radius: 13px; background: rgba(255, 255, 255, 0.08); overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.15); }
+.vk-ster-meter .vul { position: absolute; left: 0; right: 0; bottom: 0; border-radius: 13px; }
+.vk-ster-meter .top { position: absolute; left: 0; right: 0; top: 0; height: 8%; background: rgba(250, 204, 21, 0.35); z-index: 1; }
+.vk-ster-houd {
+  width: 124px; height: 124px; border-radius: 50%; border: 0; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  background: radial-gradient(circle at 35% 30%, #ff8a8a, #dc2626 60%, #7f1d1d); color: #fff; font: inherit; box-shadow: 0 8px 0 #7f1d1d, 0 14px 30px rgba(0, 0, 0, 0.5); touch-action: none;
+}
+.vk-ster-houd:active { transform: translateY(5px); box-shadow: 0 3px 0 #7f1d1d, 0 8px 20px rgba(0, 0, 0, 0.5); }
+.vk-ster-houd b { font-size: 1.1rem; font-weight: 900; }
+.vk-ster-houd span { font-size: 0.7rem; opacity: 0.85; }
+.vk-ster-houd.los { background: radial-gradient(circle at 35% 30%, #fff1a8, #facc15 60%, #a16207); color: #1c1300; box-shadow: 0 8px 0 #a16207, 0 14px 30px rgba(0, 0, 0, 0.5); }
+.vk-ster-houd.los b { font-size: 1.5rem; }
+.vk-ster-terug { border: 0; background: none; color: #93c5fd; font: inherit; font-weight: 700; cursor: pointer; }
+.vk-ster-boog { width: 150px; height: 130px; }
+.vk-ster-boog .boog { fill: none; stroke: rgba(255, 255, 255, 0.2); stroke-width: 8; }
+.vk-ster-boog .goed { fill: none; stroke: #4ade80; stroke-width: 8; }
+.vk-ster-boog .naald { stroke: #facc15; stroke-width: 4; stroke-linecap: round; }
+.vk-ster-boog .as { fill: #facc15; }
+.vk-ster-vliegt { margin: 8px 0; text-align: center; font-weight: 900; font-size: 1.2rem; }
+.vk-ster-uitslag { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.vk-ster-uitslag > b { font-size: 3rem; font-weight: 900; line-height: 1; color: #fff; font-variant-numeric: tabular-nums; text-shadow: 0 0 24px rgba(250, 204, 21, 0.5); animation: vk-tel 0.6s ease-out; }
+.vk-ster-uitslag > b.top { color: #facc15; }
+.vk-ster-uitslag > span { font-weight: 800; color: #fde68a; }
+.vk-ster-uitslag small { color: #94a3b8; }
+.vk-ster-uitslag div { display: flex; gap: 12px; align-items: center; margin-top: 6px; }
+.vk-ster-uitslag .vk-graf-plaats { margin-left: 0; }
+.vk-ster-klassement { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; max-height: 46vh; overflow-y: auto; }
+.vk-ster-klassement h4 { display: flex; align-items: center; gap: 6px; margin: 0 0 4px; font-size: 0.8rem; }
+.vk-ster-klassement h4 i { width: 12px; height: 12px; border-radius: 50%; }
+.vk-ster-klassement ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 2px; }
+.vk-ster-klassement li { display: flex; justify-content: space-between; gap: 4px; font-size: 0.7rem; padding: 3px 5px; border-radius: 6px; background: rgba(255, 255, 255, 0.05); }
+.vk-ster-klassement li span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vk-ster-klassement li.leeg { color: #64748b; }
+.vk-ster-klassement small { font-size: 0.68rem; color: #fde68a; }
+@media (max-width: 560px) { .vk-ster-ballen, .vk-ster-klassement { grid-template-columns: repeat(3, 1fr); } }
