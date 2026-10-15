@@ -402,14 +402,52 @@ export function bouwBakman(scene: THREE.Scene, opt: { thema: StadionThema; licht
     e.rotation.y = k > 0 ? 0 : Math.PI
     bak.add(e)
   }
-  // De doppen: 6 × 4 goudkleurige kroonkurken bovenaan.
-  const dop = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.014, 0.014, 0.012, 10), new THREE.MeshStandardMaterial({ color: '#d4b04a', metalness: 0.85, roughness: 0.3 }), 24)
+  // De inhoud: 22 bruine pintjes (hals en kroonkurk steken boven de bak uit) en, in de twee
+  // vakjes vooraan rechts, 2 rode blikjes Coca-Cola. De bak telt 6 × 4 vakjes.
+  const vakjes = Array.from({ length: 24 }, (_, i) => ({ x: -0.165 + (i % 6) * 0.066, z: -0.105 + Math.floor(i / 6) * 0.07 }))
+  const COLA = [22, 23]
+  const pintjes = vakjes.filter((_, i) => !COLA.includes(i))
+  const glasBruin = new THREE.MeshPhysicalMaterial({ color: '#4a2508', roughness: 0.15, metalness: 0.1, clearcoat: 1, transmission: 0.15 })
+  const hals = new THREE.InstancedMesh(
+    new THREE.CylinderGeometry(0.011, 0.024, 0.07, 12).translate(0, 0.175, 0),
+    glasBruin,
+    pintjes.length,
+  )
+  const dop = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.0135, 0.0135, 0.012, 12).translate(0, 0.214, 0), new THREE.MeshStandardMaterial({ color: '#c8102e', metalness: 0.7, roughness: 0.3 }), pintjes.length)
   const m4 = new THREE.Matrix4()
-  for (let i = 0; i < 24; i++) {
-    m4.makeTranslation(-0.165 + (i % 6) * 0.066, 0.15, -0.105 + Math.floor(i / 6) * 0.07)
+  pintjes.forEach((p, i) => {
+    m4.makeTranslation(p.x, 0, p.z)
+    hals.setMatrixAt(i, m4)
     dop.setMatrixAt(i, m4)
+  })
+  bak.add(hals, dop)
+  // De blikjes: rood met een witte golf, een zilveren deksel met lipje; ze steken iets hoger uit.
+  const colaTex = tex(256, 128, (g) => {
+    g.fillStyle = '#e41e2b'
+    g.fillRect(0, 0, 256, 128)
+    g.strokeStyle = '#ffffff'
+    g.lineWidth = 7
+    g.beginPath()
+    for (let x = 0; x <= 256; x += 4) g.lineTo(x, 84 + Math.sin(x / 26) * 12)
+    g.stroke()
+    g.fillStyle = '#ffffff'
+    g.font = 'italic 700 34px "Brush Script MT", Georgia, serif'
+    g.textAlign = 'center'
+    g.textBaseline = 'middle'
+    g.fillText('Coca-Cola', 64, 44)
+    g.fillText('Coca-Cola', 192, 44)
+  })
+  const zilver = new THREE.MeshStandardMaterial({ color: '#e5e7eb', metalness: 0.6, roughness: 0.3, emissive: '#3a3d42', emissiveIntensity: 0.4 })
+  for (const i of COLA) {
+    const { x, z } = vakjes[i]
+    const blik = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.12, 20), [new THREE.MeshStandardMaterial({ map: colaTex, metalness: 0.2, roughness: 0.35, emissive: '#5a0006', emissiveIntensity: 0.4 }), zilver, zilver])
+    blik.position.set(x, 0.14, z)
+    blik.rotation.y = i * 1.3
+    bak.add(blik)
+    const lip = new THREE.Mesh(rondeDoos(0.012, 0.003, 0.02, 0.002), zilver)
+    lip.position.set(x, 0.202, z + 0.008)
+    bak.add(lip)
   }
-  bak.add(dop)
 
   // De cape: vast aan de schouders, en dan opzij en naar achter wapperend, met plooien.
   const capeGeo = new THREE.PlaneGeometry(1, 1, 18, 28)
