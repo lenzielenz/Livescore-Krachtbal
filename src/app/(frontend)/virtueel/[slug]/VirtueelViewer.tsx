@@ -346,6 +346,8 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
   const heliRef = useRef<Helikopter | null>(null)
   const [vlucht, setVlucht] = useState<Vluchtinfo | null>(null)
   const radRef = useRef<Reuzenrad | null>(null)
+  // Op het helikopterplatform zonder sleutel: uitleg hoe je mag vliegen.
+  const [heliHulp, setHeliHulp] = useState<{ gevonden: number; sleutel: boolean } | null>(null)
   const [rit, setRit] = useState<RitInfo | null>(null)
   // Samen: de andere supporters van je club die nu ook rondlopen (zie samen.ts).
   const samenRef = useRef<Samen | null>(null)
@@ -496,6 +498,7 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     if (s.borden.kleedkamer) kleedRef.current?.zetTactiek(s.borden.kleedkamer)
     avatarRef.current?.kleedAan(s.mij.outfit)
     kluisRef.current?.zet(s.vondsten.mijn.length, GOUDEN_BALLEN, s.mij.sleutel)
+    heliRef.current?.zetVoortgang(s.vondsten.mijn.length, GOUDEN_BALLEN, s.mij.sleutel)
   }, [])
   const herlaadSporen = useCallback(() => {
     fetch(`/api/virtueel/sporen?club=${thema.clubId ?? ''}`, { cache: 'no-store', credentials: 'include' })
@@ -900,6 +903,7 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     kluis.zet(sporenRef.current.vondsten.mijn.length, GOUDEN_BALLEN, sporenRef.current.mij.sleutel)
     const heli = bouwHelikopter(scene, { thema, logo: stadion.logo, y: RING.y, licht })
     heliRef.current = heli
+    heli.zetVoortgang(sporenRef.current.vondsten.mijn.length, GOUDEN_BALLEN, sporenRef.current.mij.sleutel)
     const supporters = bouwSamen(scene, thema, thema.ikId ?? null)
     samenRef.current = supporters
     // Waar jij bent, een paar keer per seconde naar de server (enkel als je wandelt of vliegt).
@@ -1514,6 +1518,7 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
         if (nr != null) {
           const n = goudjacht.aantal()
           setGoud(n)
+          heli.zetVoortgang(n, GOUDEN_BALLEN, sporenRef.current.mij.sleutel)
           setMelding(n >= GOUDEN_BALLEN ? '🏆 Alle 12 gouden ballen! Je naam staat bij de goudzoekers' : `🟡 Gouden krachtbal gevonden! ${n}/${GOUDEN_BALLEN}`)
           void laat('vondst', { nr })
         }
@@ -1617,6 +1622,8 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
         const kk = s.modus === 'buiten' && opVerdiep === 0
         const kl = s.modus === 'buiten' && opVerdiep === -1 && s.zit == null
         const kd = s.modus === 'buiten' && opVerdiep === 2
+        const hh = kd && !heli.inVlucht() && heli.opPlatform(loper.pos.x, loper.pos.z) ? { gevonden: goudjacht.aantal(), sleutel: sporenRef.current.mij.sleutel } : null
+        setHeliHulp((oud) => (JSON.stringify(oud) === JSON.stringify(hh) ? oud : hh))
         // Voor een wegwijzer: het stadionplan groot op het scherm.
         const bord = kk ? wegwijzers.plekken.findIndex((p) => Math.hypot(p.x - loper.pos.x, p.z - loper.pos.z) < 3.2) : -1
         planBordRef.current = bord
@@ -1961,6 +1968,18 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
                   setPlanHier(null)
                 }}
               />
+            )}
+            {heliHulp && !vlucht && (
+              <div className="vk-heli-hulp" aria-label="Zo vlieg je met de clubhelikopter">
+                <b>🚁 Vliegen met de clubhelikopter</b>
+                <ol>
+                  <li className={heliHulp.gevonden >= GOUDEN_BALLEN ? 'klaar' : ''}>
+                    Vind alle {GOUDEN_BALLEN} gouden ballen <span>({heliHulp.gevonden}/{GOUDEN_BALLEN})</span>
+                  </li>
+                  <li className={heliHulp.sleutel ? 'klaar' : ''}>Open de kluis in de kelder (-1) en neem de sleutel</li>
+                  <li>{heliHulp.sleutel ? 'Ga naar de deur van de helikopter en stap in!' : 'Kom terug en stap in bij de deur'}</li>
+                </ol>
+              </div>
             )}
             {rit && (
               <div className="vk-vlucht" aria-label="Reuzenrad">

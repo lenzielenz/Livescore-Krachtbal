@@ -1,9 +1,10 @@
 import * as THREE from 'three'
-import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 
 import { GEVEL, type Rechthoek, type StadionThema } from '@/lib/virtueel'
 import { gevelOmtrek } from './omgeving'
 import { canvasTex, rnd, rondLogo } from './stadion'
+import { bouwShopRek } from './shoprek'
+import { bouwVolk } from './volk'
 
 // Leven in de wandelgangen: het mag er niet leeg aanvoelen.
 //  • Supporters die rond het stadion wandelen, in twee rijstroken en beide richtingen.
@@ -33,18 +34,8 @@ export function bouwGangleven(
   const secundair = new THREE.Color(thema.secundair)
   const obstakels: Rechthoek[] = []
   const Y = new THREE.Vector3(0, 1, 0)
-  const m4 = new THREE.Matrix4()
-  const q = new THREE.Quaternion()
 
-  // ---------- mensen (gedeelde vorm met de supporters buiten) ----------
-  const huid = ['#f1c9a5', '#e0ac69', '#c68642', '#8d5524', '#ffdbac'].map((c) => new THREE.Color(c))
-  const neutraal = ['#1f2937', '#e5e7eb', '#374151', '#0f172a'].map((c) => new THREE.Color(c))
-  const lijfGeo = mergeGeometries([
-    new THREE.CylinderGeometry(0.17, 0.2, 0.75, 7).translate(0, 1.0, 0),
-    new THREE.CylinderGeometry(0.08, 0.08, 0.7, 5).translate(0.09, 0.35, 0),
-    new THREE.CylinderGeometry(0.08, 0.08, 0.7, 5).translate(-0.09, 0.35, 0),
-  ])
-  const hoofdGeo = new THREE.SphereGeometry(0.12, 8, 6).translate(0, 1.52, 0)
+  // ---------- mensen (divers volk, zie volk.ts) ----------
   type Mens = { x: number; z: number; ry: number }
   const staand: Mens[] = []
 
@@ -169,7 +160,12 @@ export function bouwGangleven(
     const rug = new THREE.Mesh(new THREE.PlaneGeometry(5.2, 2.85), new THREE.MeshBasicMaterial({ map: canvasTex(rugC), toneMapped: false }))
     rug.position.set(0, 1.5, -1.81)
     rug.rotation.y = Math.PI
-    groep.add(toog, blad, strook, wand, menu, neon, rug)
+    // In de fanshop hangt alles wat je kan kopen aan de wanden (shoprek.ts), in plaats van een menubord.
+    const isShop = info.naam === 'FANSHOP'
+    groep.add(toog, blad, strook, wand, neon, rug)
+    if (!isShop) groep.add(menu)
+    const rek = isShop ? bouwShopRek(thema) : null
+    if (rek) groep.add(rek.groep)
     // Hanglampen boven de toog, met een lichtplas.
     for (const lx of [-1.5, 0, 1.5]) {
       const kap = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.25, 14, 1, true), hoekMats.wand)
@@ -208,8 +204,8 @@ export function bouwGangleven(
         staand.push({ x: w.x, z: w.z, ry: ry + a + Math.PI })
       }
     }
-    // Planten naast de achterwand.
-    for (const px of [-2.95, 2.95]) {
+    // Planten naast de achterwand (niet in de fanshop: daar staan de rekken).
+    for (const px of isShop ? [] : [-2.95, 2.95]) {
       const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.26, 0.6, 12), hoekMats.pot)
       pot.position.set(px, 0.3, -1.25)
       const blad1 = new THREE.Mesh(new THREE.IcosahedronGeometry(0.55, 1), hoekMats.groen)
@@ -230,6 +226,7 @@ export function bouwGangleven(
       const w = naarWereld(lx, lz)
       obstakels.push({ x0: w.x - r, x1: w.x + r, z0: w.z - r, z1: w.z + r })
     }
+    for (const o of rek?.obstakels ?? []) doos(o.lx, o.lz, o.r)
     doos(-1.4, -0.5, 1.1)
     doos(1.4, -0.5, 1.1)
     doos(-3.6, 1.1, 0.5)
@@ -265,20 +262,21 @@ export function bouwGangleven(
   }))
 
   const totaal = staand.length + wandelaars.length
-  const lijven = new THREE.InstancedMesh(lijfGeo, new THREE.MeshLambertMaterial(), totaal)
-  const hoofden = new THREE.InstancedMesh(hoofdGeo, new THREE.MeshLambertMaterial(), totaal)
-  for (let i = 0; i < totaal; i++) {
-    const k = toeval()
-    lijven.setColorAt(i, k < 0.6 ? primair : k < 0.8 ? secundair : neutraal[Math.floor(toeval() * neutraal.length)])
-    hoofden.setColorAt(i, huid[Math.floor(toeval() * huid.length)])
-  }
-  staand.forEach((m, i) => {
-    m4.compose(new THREE.Vector3(m.x, 0, m.z), q.setFromAxisAngle(Y, m.ry), new THREE.Vector3(1, 0.92 + toeval() * 0.12, 1))
-    lijven.setMatrixAt(i, m4)
-    hoofden.setMatrixAt(i, m4)
+  // Aan de toog en de statafels staan geen kinderwagens of juichers; die wandelen wel rond.
+  const volk = bouwVolk(totaal, {
+    toeval,
+    primair,
+    secundair,
+    zonder: ['juicher'],
+    soort: (i) => (i < staand.length ? (['man', 'vrouwBroek', 'vrouwRok', 'man', 'oudere', 'kind'] as const)[Math.floor(toeval() * 6)] : undefined),
   })
-  lijven.frustumCulled = hoofden.frustumCulled = false
-  scene.add(lijven, hoofden)
+  staand.forEach((m, i) => {
+    volk.zet(i, m.x, 0, m.z, m.ry)
+    volk.houding(i, 'staan')
+  })
+  wandelaars.forEach((w, i) => volk.houding(staand.length + i, 'stappen', Math.abs(w.v)))
+  volk.klaar()
+  scene.add(volk.groep)
 
   // ---------- het clublogo in de vloer bij elke ingang ----------
   const logoC = document.createElement('canvas')
@@ -312,23 +310,17 @@ export function bouwGangleven(
     scene.add(schijf)
   }
 
-  const pos = new THREE.Vector3()
-  const een = new THREE.Vector3(1, 1, 1)
   return {
     obstakels,
     fanshop,
     update(seconden) {
+      volk.update(seconden)
       wandelaars.forEach((w, i) => {
         const p = plekOp(w.s0 + w.v * seconden, w.baan)
         // Een lichte op-en-neer bij elke stap.
-        pos.set(p.x, Math.abs(Math.sin(seconden * 5.5 + w.fase)) * 0.05, p.z)
-        q.setFromAxisAngle(Y, Math.atan2(p.tx * Math.sign(w.v), p.tz * Math.sign(w.v)) + Math.sin(seconden * 5.5 + w.fase) * 0.06)
-        m4.compose(pos, q, een)
-        lijven.setMatrixAt(staand.length + i, m4)
-        hoofden.setMatrixAt(staand.length + i, m4)
+        volk.zet(staand.length + i, p.x, Math.abs(Math.sin(seconden * 5.5 + w.fase)) * 0.04, p.z, Math.atan2(p.tx * Math.sign(w.v), p.tz * Math.sign(w.v)))
       })
-      lijven.instanceMatrix.needsUpdate = true
-      hoofden.instanceMatrix.needsUpdate = true
+      volk.klaar()
     },
   }
 }

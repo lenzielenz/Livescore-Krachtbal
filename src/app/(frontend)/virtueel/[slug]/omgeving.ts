@@ -5,6 +5,7 @@ import { GEVEL, inPoort, lichtshow, poortOp, VERDIEP_RAMEN, type Rechthoek, type
 import { bijSpelersgebouwen } from './kleedkamer'
 import { FANDORP } from './fandorp'
 import { OEFEN } from './oefencomplex'
+import { bouwVolk } from './volk'
 import { canvasTex, rnd, rondLogo } from './stadion'
 
 // De buitenkant van het stadion: zodat wie rondkijkt of rondwandelt het gevoel heeft dat dit zíjn
@@ -655,32 +656,22 @@ export function bouwOmgeving(scene: THREE.Scene, opt: { thema: StadionThema; lic
 
   // ---------- supporters die naar de ingang stappen ----------
   const aantal = licht ? 70 : 170
-  const wandelGeo = mergeGeometries([new THREE.CylinderGeometry(0.17, 0.2, 0.75, 7).translate(0, 1.0, 0), new THREE.CylinderGeometry(0.08, 0.08, 0.7, 5).translate(0.09, 0.35, 0), new THREE.CylinderGeometry(0.08, 0.08, 0.7, 5).translate(-0.09, 0.35, 0)])
-  const hoofdGeo = new THREE.SphereGeometry(0.12, 8, 6).translate(0, 1.52, 0)
-  // Elke wandelaar loopt langs zijn eigen +z, 34 m lang, en begint dan opnieuw achteraan.
+  // Divers volk (volk.ts): mannen, vrouwen, kinderen, kinderwagens, groot en klein. Elke wandelaar
+  // loopt langs zijn eigen +z, 34 m lang, en begint dan opnieuw achteraan; benen en armen zwaaien mee.
   const wandel = `float faseW = fract(sin(dot(instanceMatrix[3].xz, vec2(12.9898, 78.233))) * 43758.5453);
     float afstand = mod(uTijd * (1.1 + faseW * 0.5) + faseW * 34.0, 34.0);
     transformed.z += afstand;
-    transformed.y += abs(sin(uTijd * 7.0 + faseW * 6.28)) * 0.06;`
-  const lijven = new THREE.InstancedMesh(wandelGeo, metTijd(new THREE.MeshLambertMaterial(), tijd, wandel), aantal)
-  const hoofden = new THREE.InstancedMesh(hoofdGeo, metTijd(new THREE.MeshLambertMaterial(), tijd, wandel), aantal)
-  const neutraal = ['#1f2937', '#e5e7eb', '#374151', '#0f172a', '#334155'].map((c) => new THREE.Color(c))
-  const huid = ['#f1c9a5', '#e0ac69', '#c68642', '#8d5524', '#ffdbac'].map((c) => new THREE.Color(c))
+    transformed.y += abs(sin(uTijd * 7.0 + faseW * 6.28)) * 0.04;`
+  const volk = bouwVolk(aantal, { toeval, primair, secundair, tijd, code: wandel, soort: (i) => (i % 9 === 4 ? 'man' : undefined) })
   for (let i = 0; i < aantal; i++) {
     // Start op de straat, richting de hoofdingang (naar -z): rotatie π laat +z naar -z wijzen.
-    // Door de welkomstboog: tussen de pijlers.
+    // Door de welkomstboog: tussen de pijlers. Juichers stappen hier gewoon mee.
     const x = (toeval() - 0.5) * 12
-    q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI + (toeval() - 0.5) * 0.12)
-    m4.compose(new THREE.Vector3(x, 0, B + 36), q, new THREE.Vector3(1, 0.9 + toeval() * 0.2, 1))
-    lijven.setMatrixAt(i, m4)
-    hoofden.setMatrixAt(i, m4)
-    const k = toeval()
-    lijven.setColorAt(i, k < 0.6 ? primair : k < 0.8 ? secundair : neutraal[Math.floor(toeval() * neutraal.length)])
-    hoofden.setColorAt(i, huid[Math.floor(toeval() * huid.length)])
+    volk.zet(i, x, 0, B + 36, Math.PI + (toeval() - 0.5) * 0.12)
+    volk.houding(i, 'stappen', volk.soort(i) === 'oudere' ? 0.7 : 1)
   }
-  lijven.frustumCulled = false
-  hoofden.frustumCulled = false
-  scene.add(lijven, hoofden)
+  volk.klaar()
+  scene.add(volk.groep)
 
   // ---------- clubhuis (west, ten noorden van de westpoort; ten zuiden staan de kleedkamers) ----------
   const chX = -A - 22

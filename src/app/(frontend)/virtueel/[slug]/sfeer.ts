@@ -3,6 +3,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 
 import { GEVEL, inPoort, type Rechthoek, type StadionThema } from '@/lib/virtueel'
 import { canvasTex, rnd, rondLogo } from './stadion'
+import { bouwVolk } from './volk'
 
 // De aankleding rond het stadion: wat een wedstrijddag speciaal maakt nog vóór je binnen bent.
 // Een welkomstboog en een loper in clubkleur naar de hoofdingang, lichtslingers, een frituur, een
@@ -40,7 +41,6 @@ export function bouwSfeer(scene: THREE.Scene, opt: { thema: StadionThema; licht:
   const secundair = new THREE.Color(thema.secundair)
   const goud = new THREE.Color('#fcd34d')
   const obstakels: Rechthoek[] = []
-  const m4 = new THREE.Matrix4()
   const q = new THREE.Quaternion()
   const Y = new THREE.Vector3(0, 1, 0)
   const metaal = new THREE.MeshStandardMaterial({ color: '#9ca3af', metalness: 0.6, roughness: 0.4 })
@@ -189,14 +189,6 @@ export function bouwSfeer(scene: THREE.Scene, opt: { thema: StadionThema; licht:
   ]
 
   // ---------- supporters: wachtrijen en een zingende groep met sjaals ----------
-  const huid = ['#f1c9a5', '#e0ac69', '#c68642', '#8d5524', '#ffdbac'].map((c) => new THREE.Color(c))
-  const neutraal = ['#1f2937', '#e5e7eb', '#374151', '#0f172a'].map((c) => new THREE.Color(c))
-  const lijfGeo = mergeGeometries([
-    new THREE.CylinderGeometry(0.17, 0.2, 0.75, 7).translate(0, 1.0, 0),
-    new THREE.CylinderGeometry(0.08, 0.08, 0.7, 5).translate(0.09, 0.35, 0),
-    new THREE.CylinderGeometry(0.08, 0.08, 0.7, 5).translate(-0.09, 0.35, 0),
-  ])
-  const hoofdGeo = new THREE.SphereGeometry(0.12, 8, 6).translate(0, 1.52, 0)
   const mensen: { x: number; z: number; ry: number; zingt: boolean }[] = []
   for (const r of rijen) {
     const n = 4 + Math.floor(toeval() * 4)
@@ -211,38 +203,22 @@ export function bouwSfeer(scene: THREE.Scene, opt: { thema: StadionThema; licht:
     const r = Math.sqrt(toeval()) * 5
     mensen.push({ x: -14 + Math.cos(a) * r, z: B + 9 + Math.sin(a) * r * 0.7, ry: Math.atan2(-14 - (-14 + Math.cos(a) * r), 0) + Math.PI + (toeval() - 0.5), zingt: true })
   }
-  // Springen en zingen: wie zingt huppelt, de rest wiegt zacht.
-  const beweeg = `vec3 plekS = vec3(instanceMatrix[3][0], 0.0, instanceMatrix[3][2]);
-    float faseS = fract(sin(dot(plekS.xz, vec2(12.9898, 78.233))) * 43758.5453) * 6.2831;
-    transformed.y += max(0.0, sin(uTijd * 6.0 + faseS)) * 0.18 * step(1.04, instanceMatrix[1][1]);
-    transformed.x += sin(uTijd * 1.3 + faseS) * 0.03;`
-  const lijven = new THREE.InstancedMesh(lijfGeo, metTijd(new THREE.MeshLambertMaterial(), tijd, beweeg), mensen.length)
-  const hoofden = new THREE.InstancedMesh(hoofdGeo, metTijd(new THREE.MeshLambertMaterial(), tijd, beweeg), mensen.length)
-  const sjaalGeo = new THREE.BoxGeometry(1.1, 0.16, 0.03).translate(0, 2.05, 0.08)
-  const zangers = mensen.filter((m) => m.zingt)
-  const sjaals = new THREE.InstancedMesh(sjaalGeo, metTijd(new THREE.MeshLambertMaterial(), tijd, beweeg), zangers.length)
-  const armGeo = mergeGeometries([new THREE.CylinderGeometry(0.05, 0.05, 0.62, 5).translate(0.42, 1.72, 0.05), new THREE.CylinderGeometry(0.05, 0.05, 0.62, 5).translate(-0.42, 1.72, 0.05)])
-  const armen = new THREE.InstancedMesh(armGeo, metTijd(new THREE.MeshLambertMaterial(), tijd, beweeg), zangers.length)
-  let zi = 0
-  mensen.forEach((m, i) => {
-    // Schaal y > 1.04 betekent "zingt" (zie de shader): zo kost het geen extra attribuut.
-    const sy = m.zingt ? 1.06 + toeval() * 0.08 : 0.92 + toeval() * 0.1
-    m4.compose(new THREE.Vector3(m.x, 0, m.z), q.setFromAxisAngle(Y, m.ry), new THREE.Vector3(1, sy, 1))
-    lijven.setMatrixAt(i, m4)
-    hoofden.setMatrixAt(i, m4)
-    const k = toeval()
-    lijven.setColorAt(i, k < 0.65 ? primair : k < 0.85 ? secundair : neutraal[Math.floor(toeval() * neutraal.length)])
-    hoofden.setColorAt(i, huid[Math.floor(toeval() * huid.length)])
-    if (m.zingt) {
-      sjaals.setMatrixAt(zi, m4)
-      armen.setMatrixAt(zi, m4)
-      sjaals.setColorAt(zi, zi % 3 === 0 ? secundair : primair)
-      armen.setColorAt(zi, huid[Math.floor(toeval() * huid.length)])
-      zi++
-    }
+  // Divers volk (volk.ts). In de wachtrij staat iedereen (ook kinderen); in de zingende groep
+  // springen de meesten met hun sjaal omhoog, de rest staat erbij of wiegt mee.
+  const volk = bouwVolk(mensen.length, {
+    toeval,
+    primair,
+    secundair,
+    clubAandeel: 0.75,
+    tijd,
+    soort: (i) => (mensen[i].zingt ? (toeval() < 0.6 ? 'juicher' : undefined) : (['man', 'vrouwBroek', 'vrouwRok', 'kind', 'oudere', 'man', 'wagen'] as const)[Math.floor(toeval() * 7)]),
   })
-  for (const x of [lijven, hoofden, sjaals, armen]) x.frustumCulled = false
-  scene.add(lijven, hoofden, sjaals, armen)
+  mensen.forEach((m, i) => {
+    volk.zet(i, m.x, 0, m.z, m.ry)
+    volk.houding(i, volk.soort(i) === 'juicher' ? 'juichen' : 'staan')
+  })
+  volk.klaar()
+  scene.add(volk.groep)
 
   // ---------- banieren aan de gevel ----------
   // Een gestikte stadionbanier: verloop in clubkleur, biezen in de tweede kleur, het clublogo in een

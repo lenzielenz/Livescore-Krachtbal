@@ -64,3 +64,11 @@ describe('sporen: fanshop, kluis en worpen', () => {
     expect(valideerSpoor('aankoop', { id: 'nep' }).ok).toBe(false)
   })
 })
+
+describe('fanshop: het aanbod', () => {
+  it('heeft minstens 30 stuks om uit te kiezen, verspreid over alle soorten', () => {
+    const echt = ARTIKELEN.filter((a) => a.stijl.vorm !== 'geen')
+    expect(echt.length).toBeGreaterThanOrEqual(30)
+    for (const s of ['shirt', 'broek', 'pet', 'sjaal', 'schoenen', 'extra'] as const) expect(echt.filter((a) => a.soort === s).length).toBeGreaterThanOrEqual(5)
+  })
+})

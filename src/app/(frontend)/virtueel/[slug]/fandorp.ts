@@ -5,6 +5,7 @@ import type { Rechthoek, StadionThema } from '@/lib/virtueel'
 import { krachtbalGeometrie, krachtbalTextuur } from './krachtbal'
 import { rondeDoos } from './rond'
 import { rnd } from './stadion'
+import { bouwVolk } from './volk'
 
 // Het fandorp: aan de overkant van de straat, recht tegenover de hoofdingang, zoals bij een echt
 // stadion op wedstrijddag. Een zebrapad en een poort met de clubnaam brengen je erin. Daar:
@@ -945,40 +946,20 @@ export function bouwFandorp(scene: THREE.Scene, opt: { thema: StadionThema; lich
       }
     // Een rij aan het reuzenrad.
     for (let i = 0; i < 5; i++) mensen.push({ x: RAD.x + 1.6 + i * 0.75, z: RAD.z - 6.5, ry: Math.PI / 2, danst: false, fase: 0 })
-    const lijf = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.21, 0.17, 1.1, 8).translate(0, 0.85, 0), new THREE.MeshLambertMaterial(), mensen.length)
-    const hoofd = new THREE.InstancedMesh(new THREE.SphereGeometry(0.15, 10, 8).translate(0, 1.6, 0), new THREE.MeshLambertMaterial(), mensen.length)
-    const benen = new THREE.InstancedMesh(new THREE.BoxGeometry(0.3, 0.32, 0.18).translate(0, 0.16, 0), new THREE.MeshLambertMaterial({ color: '#1e293b' }), mensen.length)
-    const shirts = [P, S, new THREE.Color('#f8fafc'), P, new THREE.Color('#111827'), S]
-    const huid = ['#f1c27d', '#e0ac69', '#c68642', '#8d5524', '#ffdbac'].map((c) => new THREE.Color(c))
-    const m4 = new THREE.Matrix4()
-    const q = new THREE.Quaternion()
-    const zet = (y: number) =>
-      mensen.forEach((m, i) => {
-        q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), m.ry)
-        m4.compose(new THREE.Vector3(m.x, m.danst ? y * Math.abs(Math.sin(m.fase)) : 0, m.z), q, new THREE.Vector3(1, 1, 1))
-        lijf.setMatrixAt(i, m4)
-        hoofd.setMatrixAt(i, m4)
-        benen.setMatrixAt(i, m4)
-      })
-    zet(0)
-    mensen.forEach((_, i) => {
-      lijf.setColorAt(i, shirts[i % shirts.length])
-      hoofd.setColorAt(i, huid[(i * 7) % huid.length])
+    // Divers volk (volk.ts): wie danst, springt met de armen omhoog of stapt ter plaatse mee.
+    const volk = bouwVolk(mensen.length, {
+      toeval,
+      primair: P,
+      secundair: S,
+      soort: (i) => (mensen[i].danst ? (toeval() < 0.55 ? 'juicher' : (['man', 'vrouwRok', 'vrouwBroek'] as const)[Math.floor(toeval() * 3)]) : undefined),
     })
-    groep.add(lijf, hoofd, benen)
-    // De dansers springen op de maat (128 bpm).
-    animaties.push((s) => {
-      mensen.forEach((m, i) => {
-        if (!m.danst) return
-        const y = Math.abs(Math.sin(s * Math.PI * 2.13 + m.fase)) * 0.3
-        q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), m.ry + Math.sin(s + m.fase) * 0.4)
-        m4.compose(new THREE.Vector3(m.x, y, m.z), q, new THREE.Vector3(1, 1, 1))
-        lijf.setMatrixAt(i, m4)
-        hoofd.setMatrixAt(i, m4)
-        benen.setMatrixAt(i, m4)
-      })
-      lijf.instanceMatrix.needsUpdate = hoofd.instanceMatrix.needsUpdate = benen.instanceMatrix.needsUpdate = true
+    mensen.forEach((m, i) => {
+      volk.zet(i, m.x, 0, m.z, m.ry)
+      volk.houding(i, m.danst ? (volk.soort(i) === 'juicher' ? 'juichen' : 'stappen') : 'staan', 0.5)
     })
+    volk.klaar()
+    groep.add(volk.groep)
+    animaties.push((s) => volk.update(s))
   }
 
   return {
