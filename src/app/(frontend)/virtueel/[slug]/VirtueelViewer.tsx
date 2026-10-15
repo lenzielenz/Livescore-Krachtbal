@@ -35,6 +35,7 @@ import { Wedkiosk } from './Wedkiosk'
 import { Fanshop } from './Fanshop'
 import { Superstar } from './Superstar'
 import { bouwKluis } from './kluis'
+import { bouwBakman } from './bakman'
 import { bouwFandorp, type Reuzenrad, type RitInfo } from './fandorp'
 import { bouwOefencomplex } from './oefencomplex'
 import { bouwSamen, type Samen } from './samen'
@@ -810,12 +811,15 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
       { naam: 'Hoofdingang', icoon: '🚪', x: 0, z: GEVEL.B, kleur: '#e2e8f0' },
       { naam: 'Oefencomplex (noordpoort)', icoon: '🏟️', x: 0, z: -GEVEL.B, kleur: '#4ade80' },
       { naam: 'Fandorp & reuzenrad', icoon: '🎡', x: 0, z: GEVEL.B + 46, kleur: '#facc15' },
+      ...(/mich/i.test(thema.naam) ? [{ naam: 'Standbeeld Bakman', icoon: '🦸', x: -40, z: GEVEL.B + 10, kleur: '#ef4444' }] : []),
     ]
     const wegwijzers = bouwWegwijzers(scene, { thema, logo: stadion.logo, bestemmingen, tribunes })
     // Leven in de gangen: wandelaars, een bar in elke hoek en het logo in de vloer.
     const gangleven = bouwGangleven(scene, { thema, licht, logo: stadion.logo })
     // De buitenkant tot in de details: dakrand, traptorens, portalen, fonteinen en het plein.
     const buitenkant = bouwBuitenkant(scene, { thema, licht })
+    // Bakman, de held van KBC Sint-Michiels, op zijn sokkel op het plein (enkel in hun stadion).
+    const bakman = /mich/i.test(thema.naam) ? bouwBakman(scene, { thema, licht, x: -40, z: GEVEL.B + 10, ry: 0.35 }) : null
     const obstakels = [
       ...stadion.obstakels,
       ...omgeving.obstakels,
@@ -830,6 +834,7 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
       ...bus.obstakels,
       ...oefen.obstakels,
       ...fandorp.obstakels,
+      ...(bakman?.obstakels ?? []),
     ]
     // De Hollywood-sterren in de zuidgang: enkel op vrije vloer (niet onder een vitrine, zuil of de lift).
     const sterren = bouwSterren(scene, {

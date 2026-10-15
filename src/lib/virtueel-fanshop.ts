@@ -6,6 +6,9 @@
 /** Hoeveel muntjes één gevonden gouden bal waard is. */
 export const MUNTEN_PER_BAL = 50
 
+/** Een prijs die je nooit bij elkaar spaart (12 gouden ballen = 600 muntjes): enkel om te passen. */
+export const ONBETAALBAAR = 1_000_000
+
 export const KLEDIJ_SOORTEN = ['shirt', 'broek', 'pet', 'sjaal', 'schoenen', 'extra'] as const
 export type KledijSoort = (typeof KLEDIJ_SOORTEN)[number]
 
@@ -94,6 +97,8 @@ export const ARTIKELEN: Artikel[] = [
   { id: 'extra-rugzak', soort: 'extra', naam: 'Rugzak', icoon: '🎒', prijs: 55, stijl: { kleur: 'club2', kleur2: 'club', vorm: 'rugzak' } },
   { id: 'extra-cape', soort: 'extra', naam: 'Superheldencape', icoon: '🦸', prijs: 140, stijl: { kleur: 'club', kleur2: '#facc15', vorm: 'cape' } },
   { id: 'extra-krachtbal', soort: 'extra', naam: 'Krachtbal onder de arm', icoon: '🏐', prijs: 80, stijl: { kleur: '#f97316', vorm: 'krachtbal' } },
+  // De volledige tenue van Bakman, de held van Sint-Michiels: passen mag, kopen kan niemand.
+  { id: 'extra-bakman', soort: 'extra', naam: 'Volledige Bakman-tenue', icoon: '🦸', prijs: ONBETAALBAAR, stijl: { kleur: '#1f3fb4', kleur2: '#d4202a', vorm: 'bakman' } },
   { id: 'extra-megafoon', soort: 'extra', naam: 'Megafoon', icoon: '📣', prijs: 75, stijl: { kleur: '#f8fafc', kleur2: 'club', vorm: 'megafoon' } },
 ]
 

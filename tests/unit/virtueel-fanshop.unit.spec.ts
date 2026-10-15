@@ -72,3 +72,13 @@ describe('fanshop: het aanbod', () => {
     for (const s of ['shirt', 'broek', 'pet', 'sjaal', 'schoenen', 'extra'] as const) expect(echt.filter((a) => a.soort === s).length).toBeGreaterThanOrEqual(5)
   })
 })
+
+describe('fanshop: de Bakman-tenue', () => {
+  it('staat in de shop, maar is met alle gouden ballen nog altijd onbetaalbaar', () => {
+    const tenue = ARTIKELEN.find((a) => a.id === 'extra-bakman')!
+    expect(tenue.stijl.vorm).toBe('bakman')
+    const rijk = maakKast(GOUDEN_BALLEN, [], [])
+    expect(magKopen(rijk, 'extra-bakman')).toMatch(/te weinig/)
+    expect(maakKast(GOUDEN_BALLEN, ['extra-bakman'], [{ extra: 'extra-bakman' }]).outfit.extra).not.toBe('extra-bakman')
+  })
+})

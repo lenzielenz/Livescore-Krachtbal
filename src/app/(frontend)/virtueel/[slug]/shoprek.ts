@@ -191,7 +191,7 @@ function tekenArtikel(a: Artikel, thema: StadionThema): THREE.CanvasTexture {
     g.font = '900 24px Inter, system-ui, sans-serif'
     g.textAlign = 'center'
     g.textBaseline = 'middle'
-    g.fillText(a.prijs ? `🪙${a.prijs}` : 'gratis', W - 62, H - 31)
+    g.fillText(a.prijs ? `🪙${a.prijs >= 100000 ? '∞' : a.prijs}` : 'gratis', W - 62, H - 31)
   })
 }
 

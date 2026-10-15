@@ -662,3 +662,4 @@
 .vk-heli-hulp li span { color: #facc15; font-weight: 700; }
 .vk-heli-hulp li.klaar { color: #86efac; text-decoration: line-through; text-decoration-color: rgba(134, 239, 172, 0.5); }
 .vk-heli-hulp li.klaar::marker { content: '✓  '; color: #22c55e; }
+.vk-shop-onbetaalbaar { color: #fca5a5 !important; font-size: 0.68rem; }

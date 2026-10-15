@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
 
 import type { StadionThema } from '@/lib/virtueel'
-import { ARTIKELEN, KLEDIJ_SOORTEN, MUNTEN_PER_BAL, type Kast, type KledijSoort, type Outfit } from '@/lib/virtueel-fanshop'
+import { ARTIKELEN, KLEDIJ_SOORTEN, MUNTEN_PER_BAL, ONBETAALBAAR, type Kast, type KledijSoort, type Outfit } from '@/lib/virtueel-fanshop'
 import { bouwAvatar } from './avatar'
 
 // De fanshop: je muntjes (elke gevonden gouden bal is er MUNTEN_PER_BAL waard), de rekken met
@@ -143,7 +143,8 @@ export function Fanshop({
                   <button className="vk-shop-item" onClick={() => setPas((p) => ({ ...p, [a.soort]: a.id }))}>
                     <i>{a.icoon}</i>
                     <b>{a.naam}</b>
-                    <small>{draag ? '✓ je draagt dit' : heb ? 'in je kast' : `🪙 ${a.prijs}`}</small>
+                    <small>{draag ? '✓ je draagt dit' : heb ? 'in je kast' : `🪙 ${a.prijs.toLocaleString('nl-BE')}`}</small>
+                    {a.prijs >= ONBETAALBAAR && <small className="vk-shop-onbetaalbaar">Passen mag. Kopen? Daar spaart niemand genoeg voor… 😢</small>}
                   </button>
                   {!heb && ingelogd && (
                     <button
@@ -156,7 +157,7 @@ export function Fanshop({
                         if (ok) setPas((p) => ({ ...p, [a.soort]: a.id }))
                       }}
                     >
-                      {bezig === a.id ? '…' : a.prijs > kast.munten ? `nog ${a.prijs - kast.munten} 🪙` : 'Koop'}
+                      {bezig === a.id ? '…' : a.prijs >= ONBETAALBAAR ? '💸 Onbetaalbaar' : a.prijs > kast.munten ? `nog ${a.prijs - kast.munten} 🪙` : 'Koop'}
                     </button>
                   )}
                 </li>

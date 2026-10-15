@@ -27,6 +27,16 @@ export type Avatar = {
   dispose: () => void
 }
 
+let logoCache: HTMLImageElement | null = null
+/** Het BAKMAN-logo (public/virtueel/bakman-logo.webp), één keer geladen. */
+const bakmanLogo = () => {
+  if (!logoCache) {
+    logoCache = new Image()
+    logoCache.src = '/virtueel/bakman-logo.webp'
+  }
+  return logoCache
+}
+
 const textuur = (w: number, h: number, teken: (g: CanvasRenderingContext2D) => void) => {
   const c = document.createElement('canvas')
   c.width = w
@@ -224,7 +234,9 @@ export function bouwAvatar(scene: THREE.Scene, thema: StadionThema, opt: { laag?
     })
   }
 
+  let laatsteOutfit: Partial<Outfit> = {}
   const kleedAan = (outfit: Partial<Outfit>) => {
+    laatsteOutfit = outfit
     const o = { ...STANDAARD_OUTFIT, ...outfit }
     const art = (id: string, standaard: string) => artikelVan(id) ?? artikelVan(standaard)!
     // Shirt.
@@ -542,7 +554,76 @@ export function bouwAvatar(scene: THREE.Scene, thema: StadionThema, opt: { laag?
         deel(new THREE.TorusGeometry(0.1, 0.012, 6, 20), e2, 0, 0.02, 0.33, extraHand)
       }
     }
+    if (ex.stijl.vorm === 'bakman') trekBakmanAan()
     zetLaag(groep)
+  }
+
+  // De volledige Bakman-tenue: een blauw spierpak met het BAKMAN-logo, een gele riem, rode laarzen,
+  // een rode cape en fluogroene bretellen. Ze vervangt shirt, broek, schoenen, hoofddeksel en sjaal.
+  const trekBakmanAan = () => {
+    const logo = bakmanLogo()
+    shirt.map?.dispose()
+    shirt.map = textuur(256, 128, (g) => {
+      g.fillStyle = '#1f3fb4'
+      g.fillRect(0, 0, 256, 128)
+      // Het logo op de borst (de voorkant van de romp ligt rond u = 0,25).
+      if (logo.complete && logo.naturalWidth) g.drawImage(logo, 34, 30, 60, 32)
+      else {
+        g.fillStyle = '#f6c915'
+        g.beginPath()
+        g.moveTo(38, 32)
+        g.lineTo(90, 32)
+        g.lineTo(64, 62)
+        g.fill()
+      }
+    })
+    shirt.needsUpdate = true
+    mouw.color.set('#1f3fb4')
+    shirt2.color.set('#f6c915')
+    broek.map?.dispose()
+    broek.map = null
+    broek.color.set('#1f3fb4')
+    broek.needsUpdate = true
+    onderbeen.map = null
+    onderbeen.color.set('#d4202a')
+    onderbeen.needsUpdate = true
+    schoen.color.set('#16181d')
+    for (const l of laarzen) l.visible = true
+    leeg(hoofddeksel)
+    sjaalGroep.visible = false
+    leeg(halsGroep)
+    // De cape, met het logo op de rug.
+    const cape = deel(
+      new THREE.PlaneGeometry(0.6, 1.0, 4, 6),
+      new THREE.MeshStandardMaterial({
+        map: textuur(128, 216, (g) => {
+          g.fillStyle = '#d4202a'
+          g.fillRect(0, 0, 128, 216)
+          if (logo.complete && logo.naturalWidth) {
+            g.save()
+            g.translate(128, 0)
+            g.scale(-1, 1)
+            g.drawImage(logo, 14, 70, 100, 54)
+            g.restore()
+          }
+        }),
+        side: THREE.DoubleSide,
+        roughness: 0.6,
+      }),
+      0,
+      1.02,
+      -0.21,
+      extra,
+    )
+    cape.rotation.set(0.14, Math.PI, 0)
+    // Fluogroene bretellen in een V over de borst.
+    const fluo = new THREE.MeshStandardMaterial({ color: '#b6f22c', roughness: 0.5 })
+    for (const k of [-1, 1]) {
+      const pad = new THREE.CatmullRomCurve3([new THREE.Vector3(k * 0.07, 1.52, 0.05), new THREE.Vector3(k * 0.09, 1.34, 0.155), new THREE.Vector3(k * 0.04, 1.06, 0.15), new THREE.Vector3(0, 0.88, 0.1)])
+      deel(new THREE.TubeGeometry(pad, 16, 0.008, 5), fluo, 0, 0, 0, extra)
+    }
+    // Pas het logo geladen is, opnieuw aankleden (eenmalig).
+    if (!(logo.complete && logo.naturalWidth)) logo.addEventListener('load', () => kleedAan(laatsteOutfit), { once: true })
   }
   kleedAan({})
   zetLaag(groep)
