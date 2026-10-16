@@ -1,0 +1,176 @@
+/* Analyse uit de krachtbal-analyse-app: eerst de gsm, dan groter. */
+
+.appa { display: flex; flex-direction: column; gap: 14px; margin-top: 10px; }
+
+.appa-sprong {
+  position: sticky; top: 0; z-index: 20;
+  display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none;
+  margin: 0 -16px; padding: 8px 16px;
+  background: color-mix(in srgb, var(--panel, #18181b) 88%, transparent);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--line, rgba(255, 255, 255, 0.1));
+}
+.appa-sprong::-webkit-scrollbar { display: none; }
+.appa-sprong a {
+  flex: 0 0 auto; padding: 7px 13px; border-radius: 999px; font-size: 0.85rem; font-weight: 700;
+  color: var(--txt, #fff); text-decoration: none; border: 1px solid var(--line, rgba(255, 255, 255, 0.14));
+}
+.appa-sprong a:hover, .appa-sprong a:focus-visible { border-color: var(--accent); color: var(--accent); }
+
+.appa-blok {
+  scroll-margin-top: 64px;
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.12)); border-radius: 16px;
+  background: var(--panel, rgba(255, 255, 255, 0.03)); padding: 14px;
+}
+.appa-blok .section-title { margin: 0 0 8px; }
+.appa-kop { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.appa-uitleg { color: var(--dim, #a1a1aa); font-size: 0.85rem; margin: 4px 0 8px; }
+
+.appa-knop {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  min-height: 40px; padding: 8px 14px; border-radius: 10px; font-weight: 800; font-size: 0.9rem;
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.18)); color: var(--txt, #fff); background: transparent;
+  text-decoration: none; cursor: pointer; white-space: nowrap;
+}
+.appa-knop.vol { background: var(--accent); border-color: var(--accent); color: #fff; }
+.appa-knop.groot { min-height: 46px; padding: 10px 18px; font-size: 1rem; }
+.appa-knop:disabled { opacity: 0.5; cursor: default; }
+
+.appa-kerncijfers { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.appa-kerncijfers > div {
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.12)); border-radius: 12px; padding: 10px 8px; text-align: center;
+  background: var(--panel, rgba(255, 255, 255, 0.03));
+}
+.appa-kerncijfers b { display: block; font-size: 1.35rem; font-variant-numeric: tabular-nums; }
+.appa-kerncijfers span { font-size: 0.72rem; color: var(--dim, #a1a1aa); text-transform: uppercase; letter-spacing: 0.06em; }
+
+/* Wedstrijdcentrum: op de gsm een grote knop (het centrum opent schermvullend), groter ook ingebed. */
+.appa-centrum { display: none; width: 100%; height: min(82vh, 900px); border: 0; border-radius: 12px; margin-top: 10px; background: #111; }
+@media (min-width: 900px) { .appa-centrum { display: block; } }
+
+/* Video + tijdlijn + notities */
+.appv-video { width: 100%; max-height: 70vh; border-radius: 12px; background: #000; display: block; }
+.appv-tijdlijn {
+  position: relative; height: 34px; margin: 10px 4px 4px; border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06); overflow: visible;
+}
+.appv-voortgang { position: absolute; inset: 0 auto 0 0; background: color-mix(in srgb, var(--accent) 22%, transparent); border-radius: 8px; pointer-events: none; }
+.appv-merk {
+  position: absolute; top: 5px; width: 14px; height: 24px; margin-left: -7px; border-radius: 4px; border: 0; padding: 0;
+  background: #a1a1aa; cursor: pointer; opacity: 0.9;
+}
+.appv-merk.side-home { background: var(--home, #dc2626); }
+.appv-merk.side-away { background: var(--away, #71717a); }
+.appv-merk.goal { background: #22c55e; height: 30px; top: 2px; box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.35); }
+.appv-merk.notitie { background: #facc15; width: 10px; margin-left: -5px; top: -4px; height: 12px; border-radius: 3px 3px 0 0; }
+.appv-merk:hover, .appv-merk:focus-visible { opacity: 1; transform: scaleY(1.1); outline: 2px solid #fff; }
+.appv-momenten { display: flex; gap: 6px; overflow-x: auto; padding: 6px 0 2px; scrollbar-width: thin; }
+.appv-chip {
+  flex: 0 0 auto; font-size: 0.8rem; padding: 6px 10px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.14)); background: transparent; color: var(--txt, #fff);
+}
+.appv-chip.goal { border-color: #22c55e; }
+.appv-chip b { font-variant-numeric: tabular-nums; margin-right: 4px; }
+
+.appv-notities { margin-top: 14px; }
+.appv-notities h3 { margin: 0 0 8px; font-size: 1rem; }
+.appv-nieuw textarea, .appv-bewerk textarea {
+  width: 100%; box-sizing: border-box; border-radius: 10px; padding: 10px; font: inherit; resize: vertical;
+  background: rgba(0, 0, 0, 0.25); color: var(--txt, #fff); border: 1px solid var(--line, rgba(255, 255, 255, 0.18));
+}
+.appv-opties { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; margin-top: 8px; font-size: 0.88rem; }
+.appv-opties label { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; }
+.appv-opties .appa-knop { margin-left: auto; }
+.appv-fout { color: #f87171; font-size: 0.88rem; }
+.appv-lijst { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.appv-lijst li {
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.12)); border-left: 4px solid #a1a1aa; border-radius: 10px; padding: 10px 12px;
+}
+.appv-lijst li.gedeeld { border-left-color: #facc15; }
+.appv-notitie-kop { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; color: var(--dim, #a1a1aa); }
+.appv-tijd {
+  font-weight: 800; color: var(--txt, #fff); background: rgba(255, 255, 255, 0.08); border: 0; border-radius: 6px;
+  padding: 4px 8px; cursor: pointer; font-variant-numeric: tabular-nums;
+}
+.appv-wie { font-weight: 700; color: var(--txt, #fff); }
+.appv-zicht { margin-left: auto; text-transform: uppercase; letter-spacing: 0.06em; font-size: 0.68rem; }
+.appv-tekst { margin: 6px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.appv-acties { display: flex; gap: 12px; margin-top: 6px; }
+.appv-acties button, .appd-intrekken {
+  background: none; border: 0; padding: 4px 0; color: var(--accent); font-weight: 700; font-size: 0.82rem; cursor: pointer;
+}
+.appv-bewerk { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+.appv-bewerk .appa-knop { align-self: flex-start; }
+
+/* Overige video's */
+.appa-videos { display: grid; grid-template-columns: 1fr; gap: 12px; }
+@media (min-width: 700px) { .appa-videos { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.appa-video { margin: 0; }
+.appa-video video { width: 100%; border-radius: 10px; background: #000; display: block; }
+.appa-video figcaption { display: flex; justify-content: space-between; gap: 8px; font-size: 0.85rem; margin-top: 6px; color: var(--dim, #a1a1aa); }
+.appa-bewaar { color: var(--accent); font-weight: 700; text-decoration: none; }
+
+.appa-coach { font-size: 0.95rem; line-height: 1.45; margin: 0 0 10px; white-space: pre-wrap; }
+.appa-beeld { width: 100%; height: auto; border-radius: 10px; display: block; background: #fff; }
+
+/* Tabellen: scrollen binnen hun kader, de naam blijft staan */
+.appa-tabelwrap { overflow-x: auto; margin: 0 -14px; padding: 0 14px; -webkit-overflow-scrolling: touch; }
+.appa-tabel { border-collapse: collapse; width: 100%; font-size: 0.84rem; font-variant-numeric: tabular-nums; }
+.appa-tabel th {
+  text-align: left; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--dim, #a1a1aa);
+  padding: 6px 8px; border-bottom: 1px solid var(--line, rgba(255, 255, 255, 0.14)); white-space: nowrap;
+}
+.appa-tabel td { padding: 8px; border-bottom: 1px solid var(--line, rgba(255, 255, 255, 0.07)); white-space: nowrap; }
+.appa-tabel tr.side-home td:first-child { box-shadow: inset 3px 0 0 var(--home, #dc2626); }
+.appa-tabel tr.side-away td:first-child { box-shadow: inset 3px 0 0 var(--away, #71717a); }
+.appa-tabel .appa-naam { font-weight: 700; }
+.appa-tabel th:first-child, .appa-tabel td:first-child { position: sticky; left: 0; background: var(--panel-2, #1f1f23); }
+
+.appa-lijst { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: 0.88rem; }
+.appa-lijst li { padding: 6px 8px; border-radius: 8px; }
+.appa-lijst li.side-home { border-left: 3px solid var(--home, #dc2626); }
+.appa-lijst li.side-away { border-left: 3px solid var(--away, #71717a); }
+.appa-tijd { font-variant-numeric: tabular-nums; color: var(--dim, #a1a1aa); margin-right: 6px; }
+
+.appa-tactiek { display: grid; grid-template-columns: 1fr; gap: 10px; }
+@media (min-width: 700px) { .appa-tactiek { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.appa-kaart { border: 1px solid var(--line, rgba(255, 255, 255, 0.12)); border-radius: 12px; padding: 12px; }
+.appa-kaart.side-home { border-top: 3px solid var(--home, #dc2626); }
+.appa-kaart.side-away { border-top: 3px solid var(--away, #71717a); }
+.appa-kaart h3 { margin: 0 0 6px; font-size: 1rem; }
+.appa-kaart dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0; font-size: 0.85rem; }
+.appa-kaart dt { color: var(--dim, #a1a1aa); }
+.appa-kaart dd { margin: 0; }
+
+.appd-link { display: flex; gap: 8px; }
+.appd-link input {
+  flex: 1; min-width: 0; border-radius: 10px; padding: 8px 10px; font: inherit; font-size: 0.85rem;
+  background: rgba(0, 0, 0, 0.25); color: var(--txt, #fff); border: 1px solid var(--line, rgba(255, 255, 255, 0.18));
+}
+
+.appa-downloads { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr; gap: 6px; }
+@media (min-width: 700px) { .appa-downloads { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.appa-downloads a {
+  display: block; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line, rgba(255, 255, 255, 0.12));
+  color: var(--txt, #fff); text-decoration: none; font-weight: 600;
+}
+.appa-downloads a::before { content: '⤓ '; color: var(--accent); }
+
+.appa-bron { color: var(--dim, #a1a1aa); font-size: 0.78rem; text-align: center; margin: 6px 0 24px; }
+
+/* Schermvullend wedstrijdcentrum */
+.appc { position: fixed; inset: 0; display: flex; flex-direction: column; background: #0b0b0d; z-index: 2147483000; height: 100dvh; }
+.appc-balk {
+  display: flex; align-items: center; gap: 10px; padding: 8px 12px; padding-top: max(8px, env(safe-area-inset-top));
+  background: #141417; border-bottom: 1px solid rgba(255, 255, 255, 0.1); color: #fff; font-size: 0.9rem;
+}
+.appc-balk a { color: #fff; text-decoration: none; font-weight: 800; padding: 6px 4px; }
+.appc-balk span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #d4d4d8; }
+.appc iframe { flex: 1; width: 100%; border: 0; background: #111; }
+
+@media (max-width: 520px) {
+  .appa-kerncijfers { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .appa-kop { flex-direction: column; }
+  .appa-kop .appa-knop { width: 100%; }
+  .appv-opties .appa-knop { width: 100%; margin-left: 0; }
+}

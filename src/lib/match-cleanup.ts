@@ -24,6 +24,7 @@ export const MATCH_VERPLICHTE_COLLECTIONS = [
   'match-instants',
   'match-mvp-votes',
   'cv-events',
+  'analyse-notities',
 ] as const satisfies readonly CollectionSlug[]
 
 // Wat hier bewust NIET in staat: `accidents`. Dat is als enige nullable — een

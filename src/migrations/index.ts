@@ -134,6 +134,7 @@ import * as migration_20260929_130000_news_photos from './20260929_130000_news_p
 import * as migration_20261014_180000_graffiti_tags from './20261014_180000_graffiti_tags'
 import * as migration_20261014_220000_virtuele_sporen from './20261014_220000_virtuele_sporen'
 import * as migration_20261015_070000_photobooth_fotos from './20261015_070000_photobooth_fotos'
+import * as migration_20261016_220000_analyse_notities from './20261016_220000_analyse_notities'
 
 export const migrations = [
   {
@@ -810,5 +811,10 @@ export const migrations = [
     up: migration_20261015_070000_photobooth_fotos.up,
     down: migration_20261015_070000_photobooth_fotos.down,
     name: '20261015_070000_photobooth_fotos',
+  },
+  {
+    up: migration_20261016_220000_analyse_notities.up,
+    down: migration_20261016_220000_analyse_notities.down,
+    name: '20261016_220000_analyse_notities',
   },
 ];

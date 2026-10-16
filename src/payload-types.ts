@@ -107,6 +107,7 @@ export interface Config {
     'graffiti-tags': GraffitiTag;
     'virtuele-sporen': VirtueleSporen;
     'photobooth-fotos': PhotoboothFoto;
+    'analyse-notities': AnalyseNotity;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -154,6 +155,7 @@ export interface Config {
     'graffiti-tags': GraffitiTagsSelect<false> | GraffitiTagsSelect<true>;
     'virtuele-sporen': VirtueleSporenSelect<false> | VirtueleSporenSelect<true>;
     'photobooth-fotos': PhotoboothFotosSelect<false> | PhotoboothFotosSelect<true>;
+    'analyse-notities': AnalyseNotitiesSelect<false> | AnalyseNotitiesSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -2133,6 +2135,24 @@ export interface PhotoboothFoto {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "analyse-notities".
+ */
+export interface AnalyseNotity {
+  id: number;
+  match: number | Match;
+  auteur?: (number | null) | User;
+  auteurNaam?: string | null;
+  tekst: string;
+  /**
+   * Leeg = een notitie bij de hele wedstrijd.
+   */
+  tijdS?: number | null;
+  zichtbaarheid: 'prive' | 'gedeeld';
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
 export interface PayloadKv {
@@ -2314,6 +2334,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'photobooth-fotos';
         value: number | PhotoboothFoto;
+      } | null)
+    | ({
+        relationTo: 'analyse-notities';
+        value: number | AnalyseNotity;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -3306,6 +3330,20 @@ export interface PhotoboothFotosSelect<T extends boolean = true> {
   height?: T;
   focalX?: T;
   focalY?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "analyse-notities_select".
+ */
+export interface AnalyseNotitiesSelect<T extends boolean = true> {
+  match?: T;
+  auteur?: T;
+  auteurNaam?: T;
+  tekst?: T;
+  tijdS?: T;
+  zichtbaarheid?: T;
+  updatedAt?: T;
+  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

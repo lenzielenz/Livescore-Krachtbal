@@ -6,6 +6,8 @@ import { SiteHeader } from '@/components/SiteHeader'
 import { TeamLogo } from '@/components/TeamLogo'
 import { canAnalyse, isFederationLevel } from '@/lib/access'
 import { canViewAnalyseMatch } from '@/lib/analyse-access'
+import { leesManifest } from '@/lib/app-analyse'
+import { beheertAnalyse } from '@/lib/app-analyse-toegang'
 import { getAuthUser } from '@/lib/auth-user'
 import { leesToewijzing } from '@/lib/cv-werpers'
 import { buildDefenseStats, buildMatchSheet, buildMatchStats, buildMatchState, buildPassStats } from '@/lib/match-engine'
@@ -14,6 +16,7 @@ import { reeksHalfDurationSeconds, reeksNaam, type Reeks } from '@/lib/reeksen'
 import { readSync } from '@/lib/video-sync'
 import { mayEditMatchVideo } from '@/lib/video-access'
 import { AnalyseDetailView, type FysiekSpeler } from './AnalyseDetailView'
+import { AppPagina } from './AppPagina'
 import type { CvVoorstel } from './CvReview'
 import { CvVeldkaart } from './CvVeldkaart'
 import { ShareCard } from './ShareCard'
@@ -73,6 +76,29 @@ export default async function AnalyseDetailPage({ params }: { params: Promise<{ 
         </div>
       </>
     )
+  }
+
+  // Een analyse uit de krachtbal-analyse-app vervangt de hele oude analysepagina: wat de app op de
+  // computer vond (wedstrijdcentrum, video, notities, statistieken, downloads), en niets anders.
+  if ((matchDoc as { analyseOnly?: boolean | null }).analyseOnly) {
+    const manifest = await leesManifest(matchId)
+    if (manifest) {
+      return (
+        <>
+          <SiteHeader active="analyse" />
+          <div className="site">
+            <AppPagina
+              matchId={matchId}
+              manifest={manifest}
+              matchDoc={matchDoc as unknown as Record<string, unknown>}
+              beheert={beheertAnalyse(me, matchDoc as { id: number; analyseOnly?: boolean | null; analyseOwner?: unknown })}
+              centrumHref={`/analyse/${matchId}/centrum`}
+              terug={{ href: '/analyse', label: 'Alle analyses' }}
+            />
+          </div>
+        </>
+      )
+    }
   }
 
   let state, stats
