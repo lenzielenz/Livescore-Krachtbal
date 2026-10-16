@@ -84,7 +84,10 @@ export default async function AnalyseDetailPage({ params }: { params: Promise<{ 
 
   // Deze zes bevragingen hangen niet van elkaar af: samen ophalen scheelt evenveel
   // round-trips als er queries zijn (op Postgres merkbaar bij elke paginalading).
-  // De CV-voorstellen zijn enkel voor federatie-niveau — anders halen we ze niet op.
+  // De CV-voorstellen zijn voor federatie-niveau én voor wie deze eigen analyse-opname beheert
+  // (zijn eigen video, zijn eigen voorstellen); anders halen we ze niet op.
+  const magVoorstellen =
+    isFederationLevel(me) || mayEditMatchVideo(me, matchDoc as { analyseOnly?: boolean | null; analyseOwner?: unknown })
   const [defense, passen, sheet, toRes, worpenRes, cvRes] = await Promise.all([
     buildDefenseStats(payload, matchId).catch(() => []),
     buildPassStats(payload, matchId).catch(() => null),
@@ -95,7 +98,7 @@ export default async function AnalyseDetailPage({ params }: { params: Promise<{ 
     payload
       .find({ collection: 'throws', where: { match: { equals: matchId } }, sort: 'createdAt', depth: 1, limit: 2000 })
       .catch(() => ({ docs: [] as Record<string, unknown>[] })),
-    isFederationLevel(me)
+    magVoorstellen
       ? payload
           .find({ collection: 'cv-events', where: { match: { equals: matchId } }, sort: 'videoTimeS', depth: 0, limit: 2000 })
           .catch(() => null)
@@ -192,8 +195,9 @@ export default async function AnalyseDetailPage({ params }: { params: Promise<{ 
       ? kal.punten.length
       : 0
   // ── CV-voorstellen (fase 1): kandidaat-events uit de computer-vision-pipeline ──
-  // Enkel federatie-niveau ziet en reviewt ze — supporters en analyse-gasten krijgen géén
-  // voorstellen mee (het zijn onbevestigde modelclaims, geen wedstrijdfeiten). De review-UI
+  // Federatie-niveau en de beheerder van deze eigen analyse-opname zien en reviewen ze —
+  // supporters en analyse-gasten (alleen-lezen) krijgen géén voorstellen mee (het zijn
+  // onbevestigde modelclaims, geen wedstrijdfeiten). De review-UI
   // muteert uitsluitend via PATCH /api/cv/events/[id] (zie CvReview.tsx).
   const cvVoorstellen: CvVoorstel[] = (cvRes?.docs ?? []).map((e) => ({
     id: e.id,

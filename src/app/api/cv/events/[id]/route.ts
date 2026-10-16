@@ -1,6 +1,6 @@
 import { getPayloadClient } from '@/lib/payload-client'
 
-import { cvAuthorized } from '../../cv-auth'
+import { cvAuthorized, cvAuthorizedForMatch } from '../../cv-auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -36,7 +36,15 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
   const payload = await getPayloadClient()
   if (!(await cvAuthorized(payload, req))) {
-    return Response.json({ error: 'Geen toegang.' }, { status: 401 })
+    // De beheerder van een eigen analyse-opname mag de voorstellen op die opname nakijken.
+    const voorstel = await payload
+      .findByID({ collection: 'cv-events', id: eventId, depth: 0, overrideAccess: true })
+      .catch(() => null)
+    const matchRel = (voorstel as { match?: unknown } | null)?.match
+    const matchId = matchRel && typeof matchRel === 'object' ? (matchRel as { id: number }).id : (matchRel as number | null)
+    if (matchId == null || !(await cvAuthorizedForMatch(payload, req, matchId))) {
+      return Response.json({ error: 'Geen toegang.' }, { status: 401 })
+    }
   }
 
   let body: {

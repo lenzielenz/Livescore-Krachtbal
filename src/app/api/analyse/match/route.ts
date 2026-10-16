@@ -2,89 +2,8 @@ import { canAnalyse } from '@/lib/access'
 import { ownsAnalyse } from '@/lib/analyse-crud'
 import { authUser } from '@/lib/api-auth'
 import { getPayloadClient } from '@/lib/payload-client'
-import { reeksCategorie, type Reeks } from '@/lib/reeksen'
-import type { Club, Match, Team } from '@/payload-types'
-
-type PayloadClient = Awaited<ReturnType<typeof getPayloadClient>>
-type AuthedUser = NonNullable<Awaited<ReturnType<typeof authUser>>>
-
-// Analyse-kopie van een echte competitieploeg: hergebruik de eigen analyse-ploeg met dezelfde
-// naam + reeks, of maak ze aan (met een eigen analyse-club onder de echte clubnaam, kleuren en
-// logo mee overgenomen). Zo blijft de opname volledig los van het live-platform — de echte
-// wedstrijd, ploegen en spelers worden nooit aangeraakt — maar oogt ze wel als de echte affiche,
-// en zijn de spelers die je ooit toevoegde er bij een volgende opname tegen dezelfde club weer.
-async function analyseKopieVan(
-  payload: PayloadClient,
-  echt: Team,
-  reeks: string,
-  user: AuthedUser,
-): Promise<number> {
-  const naam = String(echt.name ?? '').trim() || 'Ploeg'
-  const bestaand = await payload
-    .find({
-      collection: 'teams',
-      where: {
-        and: [
-          { analyseOnly: { equals: true } },
-          { analyseOwner: { equals: Number(user.id) } },
-          { name: { equals: naam } },
-          { reeks: { equals: reeks } },
-        ],
-      },
-      depth: 0,
-      limit: 1,
-    })
-    .catch(() => ({ docs: [] as { id: number }[] }))
-  if (bestaand.docs[0]) return bestaand.docs[0].id
-
-  // Eigen analyse-club onder de echte clubnaam (of de ploegnaam als de club onbekend is).
-  const echteClub = echt.club && typeof echt.club === 'object' ? (echt.club as Club) : null
-  const clubNaam = String(echteClub?.name ?? '').trim() || naam
-  const clubRes = await payload
-    .find({
-      collection: 'clubs',
-      where: {
-        and: [
-          { analyseOnly: { equals: true } },
-          { analyseOwner: { equals: Number(user.id) } },
-          { name: { equals: clubNaam } },
-        ],
-      },
-      depth: 0,
-      limit: 1,
-    })
-    .catch(() => ({ docs: [] as { id: number }[] }))
-  let clubId = clubRes.docs[0]?.id
-  if (!clubId) {
-    const nieuweClub = await payload.create({
-      collection: 'clubs',
-      data: {
-        name: clubNaam,
-        ...(typeof echteClub?.logoUrl === 'string' && echteClub.logoUrl ? { logoUrl: echteClub.logoUrl } : {}),
-        ...(typeof echteClub?.colorPrimary === 'string' && echteClub.colorPrimary ? { colorPrimary: echteClub.colorPrimary } : {}),
-        ...(typeof echteClub?.colorSecondary === 'string' && echteClub.colorSecondary ? { colorSecondary: echteClub.colorSecondary } : {}),
-        analyseOnly: true,
-        analyseOwner: Number(user.id),
-      },
-      overrideAccess: true,
-    })
-    clubId = (nieuweClub as { id: number }).id
-  }
-
-  const nieuw = await payload.create({
-    collection: 'teams',
-    data: {
-      name: naam,
-      reeks: reeks as NonNullable<Team['reeks']>,
-      category: reeksCategorie(reeks as Reeks),
-      club: clubId,
-      analyseOnly: true,
-      analyseOwner: Number(user.id),
-    },
-    overrideAccess: true,
-  })
-  return (nieuw as { id: number }).id
-}
+import { analyseKopieVan } from '@/lib/analyse-kopie'
+import type { Match, Team } from '@/payload-types'
 
 // Maakt een "enkel voor analyse"-wedstrijd aan (niet live/publiek zichtbaar). Toegankelijk voor
 // iedereen met analyse-toegang. Beide ploegen moeten EIGEN analyse-ploegen zijn — competitie-ploegen
@@ -127,8 +46,8 @@ export async function POST(req: Request) {
       reeks = String(echt.reeks)
       date = echt.date ? String(echt.date) : date
       ;[homeTeam, awayTeam] = await Promise.all([
-        analyseKopieVan(payload, echtThuis, reeks, user),
-        analyseKopieVan(payload, echtUit, reeks, user),
+        analyseKopieVan(payload, echtThuis, reeks, Number(user.id)),
+        analyseKopieVan(payload, echtUit, reeks, Number(user.id)),
       ])
     }
 

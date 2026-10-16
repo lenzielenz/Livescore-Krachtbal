@@ -464,6 +464,22 @@ aanroep — het script batcht daar zelf op (`--batch`). Drukt per event
 aanvaard/geweigerd + reden af. Het platform bewaart aanvaarde events als
 voorstellen (`reviewed=false`) in een aparte collection — nooit in `throws`.
 
+#### Analyse van buiten de site (krachtbal-analyse-app)
+
+Een video-analyse die elders draait, hoort in de **eigen analyse-omgeving** van wie ze maakte,
+nooit op de officiële kalenderwedstrijd. Twee routes maken dat mogelijk met dezelfde Bearer:
+
+- `POST /api/cv/analyse-match` `{ fromMatch, eigenaar?, goalAreaDepth? }` maakt de analysekopie
+  van een kalenderwedstrijd in naam van `eigenaar` (e-mailadres; anders env
+  `CV_ANALYSE_EIGENAAR`), net als "toevoegen uit de agenda", in videomodus. Idempotent: dezelfde
+  eigenaar, ploegen en datum geven dezelfde wedstrijd terug. Antwoord `{ id, nieuw, homeName, awayName }`.
+- `POST /api/cv/match/{id}/vervang` `{ model?, fysiek? }` haalt de nog niet nagekeken voorstellen
+  weg (optioneel enkel van één model) en met `fysiek: true` ook het loopwerk, zodat een nieuwe
+  analyse de vorige vervangt. Nagekeken voorstellen blijven altijd staan.
+
+De beheerder van een eigen analyse-opname ziet en reviewt de voorstellen daarop zelf (vroeger
+enkel federatie); officiële wedstrijden blijven voorbehouden aan pipeline en federatie.
+
 ### 6. `detect_worpen.py` — kandidaat-worpen vinden (fase 1)
 
 ```bash
