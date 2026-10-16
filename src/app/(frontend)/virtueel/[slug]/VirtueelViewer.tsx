@@ -2261,6 +2261,11 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
                 <span>Welkom in stadion</span>
                 <b>{thema.naam}</b>
                 <small>Zweef of wandel naar het veld om de wedstrijd te volgen</small>
+                {samenAantal > 0 && (
+                  <em className="vk-welkom-samen">
+                    👥 {samenAantal} {samenAantal === 1 ? 'supporter' : 'supporters'} van je club {samenAantal === 1 ? 'is' : 'zijn'} al binnen
+                  </em>
+                )}
                 {!vol && (
                   <button className="vk-welkom-vol" onClick={() => void naarVol()}>
                     ⛶ Beleef het op volledig scherm

@@ -6,6 +6,8 @@ import { getAuthUser } from '@/lib/auth-user'
 import { formatDateBE } from '@/lib/datetime'
 import { getPayloadClient } from '@/lib/payload-client'
 import { FRAGMENTEN } from '@/lib/virtueel'
+import { aanwezig } from '@/lib/virtueel-aanwezig'
+import { BinnenTeller } from './BinnenTeller'
 import './virtueel.css'
 
 export const metadata = { title: 'Virtueel krachtbal — Krachtbal Live' }
@@ -25,12 +27,20 @@ const TROEVEN = [
 
 export default async function VirtueelPage() {
   let clubNaam: string | null = null
+  let ikId: string | null = null
+  let binnen: string[] = []
   try {
-    const clubId = userClubId(await getAuthUser())
+    const me = await getAuthUser()
+    const clubId = userClubId(me)
     if (clubId != null) {
       const payload = await getPayloadClient()
       const club = await payload.findByID({ collection: 'clubs', id: Number(clubId), depth: 0 }).catch(() => null)
       clubNaam = club ? String(club.name) : null
+      ikId = me ? String(me.id) : null
+      // Wie van je club er nu al rondloopt (meteen in de pagina; daarna live via de stroom).
+      binnen = aanwezig(String(clubId))
+        .filter((a) => a.id !== ikId)
+        .map((a) => a.naam)
     }
   } catch {
     // Geen databank of niet ingelogd: de algemene uitnodiging volstaat.
@@ -47,7 +57,10 @@ export default async function VirtueelPage() {
         <div className="vk-uitnodiging">
           {clubNaam ? (
             <>
-              <b>Het stadion van {clubNaam}</b>
+              <span className="vk-uitnodiging-tekst">
+                <b>Het stadion van {clubNaam}</b>
+                {ikId && <BinnenTeller clubNaam={clubNaam} ikId={ikId} begin={binnen} />}
+              </span>
               {eerste && (
                 <Link href={`/virtueel/${eerste.slug}`} className="btn btn-primary">
                   Stap binnen →
