@@ -20,6 +20,7 @@ import { bouwVerdiep } from './verdiep'
 import { bouwLift, LIFT_X } from './lift'
 import { bouwRing, RING } from './ring'
 import { bouwVuurwerk, type Vuurwerk } from './vuurwerk'
+import { bouwFeest, FEEST_MELDING, type FeestPlek } from './feest'
 import { bouwKelder } from './kelder'
 import { bouwAvatar, EIGEN_LAAG, type Avatar } from './avatar'
 import { bouwPopcornDoosje } from './popcornkraam'
@@ -911,6 +912,25 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     const vuurwerk = bouwVuurwerk(scene, { primair: thema.primair, secundair: thema.secundair, licht, knop: { x: LIFT_X + 5, y: RING.y, z: GEVEL.B - 1.6, ry: 0 }, dakY: RING.y })
     bron('Vuurwerk')
     vuurwerkRef.current = vuurwerk
+    // En tijdens de show is het overal feest: in de gangen, op het plein, in het fandorp en (zie
+    // verder) in de kelder — confetti, lichtbundels, zoeklichten en muziek waar je ook bent.
+    const feest = bouwFeest(scene, {
+      vuurwerk,
+      primair: thema.primair,
+      secundair: thema.secundair,
+      licht,
+      gangen:
+        tribunes.zuid && tribunes.noord && tribunes.oost && tribunes.west
+          ? [
+              { x0: -34, x1: 34, z0: tribunes.zuid.z1 + 0.5, z1: GEVEL.B - 1.2 },
+              { x0: -34, x1: 34, z0: -GEVEL.B + 1.2, z1: tribunes.noord.z0 - 0.5 },
+              { x0: tribunes.oost.x1 + 0.5, x1: GEVEL.A - 1.2, z0: -16, z1: 16 },
+              { x0: -GEVEL.A + 1.2, x1: tribunes.west.x0 - 0.5, z0: -16, z1: 16 },
+            ]
+          : [],
+      kom: { x0: tribunes.west?.x0 ?? -GEVEL.A + 8, x1: tribunes.oost?.x1 ?? GEVEL.A - 8, z0: tribunes.noord?.z0 ?? -GEVEL.B + 8, z1: tribunes.zuid?.z1 ?? GEVEL.B - 8 },
+    })
+    bron('Feest')
     const opDak = (x: number, z: number) => {
       const h = heliRef.current
       return (ring.mag(x, z) || (h?.opPlatform(x, z) ?? false)) && !raakt(h ? [vuurwerk.knop.obstakel, h.obstakel] : [vuurwerk.knop.obstakel], x, z)
@@ -1031,6 +1051,7 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     bron('Kelder')
     sterRef.current = kelder.superstar
     herlaadSter()
+    feest.kelder(kelder.groep, { y: VERDIEPEN[0].y, zalen: kelder.plekken.vlakken })
     const kluis = bouwKluis(kelder.groep, { ...kelder.plekken.kluis, y: VERDIEPEN.find((v) => v.nr === -1)!.y, primair: thema.primair })
     kluisRef.current = kluis
     kluis.zet(sporenRef.current.vondsten.mijn.length, GOUDEN_BALLEN, sporenRef.current.mij.sleutel)
@@ -1279,6 +1300,9 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     let opVerdiep = 0
     let vloer = 0
     let laatsteRuimte: string | null = null
+    // Waar je het vuurwerkfeest beleeft (voor de melding), en of het zwembad mee feest.
+    let feestPlek: FeestPlek | null = null
+    let waterFeest = false
     let wandel: { x: number; z: number; yaw: number; pitch: number; verdiep: number } | null = null
     // Jijzelf (enkel te zien in de spiegel van de kleedkamer).
     const avatar = bouwAvatar(scene, thema)
@@ -1815,6 +1839,16 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
         kelder.groep.visible = inKelder
       }
       vuurwerk.update(nu / 1000, dt, camera, renderer.domElement.height)
+      feest.update({ seconden: nu / 1000, camera, hoogte: renderer.domElement.height, vloer: s.modus === 'buiten' ? vloer : null })
+      // Het zwembad verschiet mee in de clubkleuren; na de show weer de kleur van de verf.
+      const feestWater = inKelder ? feest.water() : null
+      if (feestWater) {
+        waterFeest = true
+        kelder.zetWaterKleur(feestWater)
+      } else if (waterFeest) {
+        waterFeest = false
+        kelder.zetWaterKleur(waterKleur(sporenRef.current.verf))
+      }
       heli.update(nu / 1000, dt)
       if (!inKelder) {
         oefen.update(nu / 1000)
@@ -1863,7 +1897,7 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
       if (frames % 2 === 0) renderer.shadowMap.needsUpdate = true
       if (nabewerking && nabewerkingAan) {
         // Tijdens het vuurwerk straalt alles feller uit.
-        nabewerking.stemming(vuurwerk.bezig() ? { ...stemmingHier(), gloed: 1.8 } : stemmingHier())
+        nabewerking.stemming(vuurwerk.bezig() ? { ...stemmingHier(), gloed: 1.5 } : stemmingHier())
         nabewerking.update(nu / 1000, dt)
         nabewerking.render()
       } else renderer.render(scene, camera)
@@ -1905,6 +1939,10 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
       if (nu - laatsteUi > 80) {
         laatsteUi = nu
         setBezit(bezitOp(sporen, t))
+        // Tijdens het vuurwerk: wat er hier, waar je nu bent, te beleven valt.
+        const fp = vuurwerk.bezig() ? feest.waar(camera.position) : null
+        if (fp && fp !== feestPlek) setMelding(FEEST_MELDING[fp])
+        feestPlek = fp
         // Enkel echt aan het veld: niet als je erboven of eronder (de kelder ligt onder het veld) loopt.
         setAanVeld((s.modus === 'zweven' || (s.modus === 'buiten' && opVerdiep === 0)) && opVeld(loper.pos))
         // In de kooi: het paneel om je verdiep te kiezen (en tijdens de rit waar je heen gaat).
@@ -1964,6 +2002,7 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
       cancelAnimationFrame(raf)
       nabewerking?.dispose()
       vuurwerk.dispose()
+      feest.dispose()
       supporters.dispose()
       samenRef.current = null
       vuurwerkRef.current = null
