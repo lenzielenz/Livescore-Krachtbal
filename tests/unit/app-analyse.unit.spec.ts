@@ -109,10 +109,22 @@ describe('notities', () => {
     expect(notities.valideerNotitie({ tekst: 'a'.repeat(2001) }).ok).toBe(false)
     expect(notities.valideerNotitie({ tekst: 'Goed', tijdS: 12.345, zichtbaarheid: 'gedeeld' })).toEqual({
       ok: true,
-      waarde: { tekst: 'Goed', tijdS: 12.3, zichtbaarheid: 'gedeeld' },
+      waarde: { tekst: 'Goed', tijdS: 12.3, zichtbaarheid: 'gedeeld', tekening: null },
     })
     expect(notities.valideerNotitie({ tekst: 'x', zichtbaarheid: 'publiek' }).ok).toBe(false)
     expect(notities.valideerNotitie({ zichtbaarheid: 'gedeeld' }, true)).toEqual({ ok: true, waarde: { zichtbaarheid: 'gedeeld' } })
+  })
+
+  it('bewaart pijlen op het veld en weigert onzin', () => {
+    const pijl = { van: { x: 10.123, y: 5 }, naar: { x: 20, y: 7 }, kleur: '#facc15' }
+    expect(notities.valideerNotitie({ tekst: 'Zo', tekening: { pijlen: [pijl] } })).toEqual({
+      ok: true,
+      waarde: { tekst: 'Zo', tijdS: null, zichtbaarheid: 'prive', tekening: { pijlen: [{ ...pijl, van: { x: 10.12, y: 5 } }] } },
+    })
+    expect(notities.valideerTekening({ pijlen: [{ ...pijl, kleur: 'red' }] }).ok).toBe(false)
+    expect(notities.valideerTekening({ pijlen: [{ ...pijl, naar: { x: 500, y: 0 } }] }).ok).toBe(false)
+    expect(notities.valideerTekening({ pijlen: Array(41).fill(pijl) }).ok).toBe(false)
+    expect(notities.valideerTekening({ pijlen: [] })).toEqual({ ok: true, waarde: null })
   })
 
   it('zet notities met een moment chronologisch vooraan', () => {

@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  actieRond,
+  acties,
   balOp,
+  spoor,
   boogHoogte,
   heatKleur,
   passenNetwerk,
@@ -120,5 +123,41 @@ describe('heatmaps en passen', () => {
     expect(n.knopen.map((k) => k.id).sort()).toEqual(['T0-S1', 'T0-S2'])
     expect(n.lijnen).toEqual([{ van: 'T0-S1', naar: 'T0-S2', n: 2 }])
     expect(n.knopen.find((k) => k.id === 'T0-S2')?.plek).toEqual({ x: 20, y: 4 })
+  })
+})
+
+describe('stap voor stap', () => {
+  const metPas: AppData = { ...data, passen: [{ team: 0, van: 'T0-S1', naar: 'T0-S2', tijd_s: 12, tijd_eind_s: 12.6 }] }
+
+  it('zet elke worp en pas in de tijd, met hun fases', () => {
+    const lijst = acties(metPas)
+    expect(lijst.map((a) => a.soort)).toEqual(['worp', 'pas', 'worp'])
+    expect(lijst[0].fasen.map((f) => f.naam)).toEqual(['Aanloop', 'Loslaten', 'Hoogste punt', 'Doelpunt'])
+    expect(lijst[0].fasen.map((f) => f.t)).toEqual([8.5, 10, 10.5, 11])
+    expect(lijst[1].fasen.map((f) => f.naam)).toEqual(['Pas', 'Ontvangst'])
+    expect(lijst[2].fasen.at(-1)?.naam).toBe('Vangst')
+  })
+
+  it('laat een worp zonder tijdstip weg en blijft binnen de wedstrijd', () => {
+    const lijst = acties({ ...data, duur_s: 10.6, passen: [] })
+    expect(lijst).toHaveLength(2)
+    expect(lijst[0].fasen.at(-1)?.t).toBe(10.6)
+  })
+
+  it('vindt de actie rond een moment, ook bij honderden', () => {
+    const veel = acties({
+      ...data,
+      duur_s: 4000,
+      passen: [],
+      worpen: Array.from({ length: 500 }, (_, i) => ({ team: i % 2, tijd_s: i * 7, vluchttijd: 1, opzetplaats: { x: 5, y: 5 }, landingspunt: { x: 9, y: 5 } })),
+    })
+    expect(veel).toHaveLength(500)
+    expect(actieRond(veel, 7 * 250 + 0.4)).toBe(250)
+    expect(actieRond([], 3)).toBe(-1)
+  })
+
+  it('tekent het spoor van een speler over de laatste seconden', () => {
+    expect(spoor(data.spelers!['T0-S1'].pad, 0, 1)).toEqual([{ x: 10, y: 7 }, { x: 12, y: 7 }])
+    expect(spoor(data.spelers!['T0-S1'].pad, 0.5, 0.5)).toEqual([])
   })
 })

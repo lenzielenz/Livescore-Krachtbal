@@ -3,10 +3,16 @@
 
 export type Zichtbaarheid = 'prive' | 'gedeeld'
 
+export type Tekening = {
+  pijlen: { van: { x: number; y: number }; naar: { x: number; y: number }; kleur: string }[]
+  [k: string]: unknown
+}
+
 export interface NotitieInvoer {
   tekst: string
   tijdS: number | null
   zichtbaarheid: Zichtbaarheid
+  tekening: Tekening | null
 }
 
 export interface NotitieDoc {
@@ -16,11 +22,38 @@ export interface NotitieDoc {
   tekst: string
   tijdS?: number | null
   zichtbaarheid: Zichtbaarheid
+  tekening?: Tekening | null
   createdAt?: string
   updatedAt?: string
 }
 
 export const MAX_TEKST = 2000
+export const MAX_PIJLEN = 40
+const KLEUR_RE = /^#[0-9a-f]{6}$/i
+
+/** Een tekening nakijken: hoogstens MAX_PIJLEN pijlen, punten in (de buurt van) het veld, een kleurcode. */
+export function valideerTekening(t: unknown): { ok: true; waarde: Tekening | null } | { ok: false; fout: string } {
+  if (t == null) return { ok: true, waarde: null }
+  const pijlen = (t as { pijlen?: unknown }).pijlen
+  if (!Array.isArray(pijlen)) return { ok: false, fout: 'Ongeldige tekening.' }
+  if (pijlen.length > MAX_PIJLEN) return { ok: false, fout: `Hoogstens ${MAX_PIJLEN} pijlen per notitie.` }
+  const punt = (p: unknown) => {
+    const x = Number((p as { x?: unknown })?.x)
+    const y = Number((p as { y?: unknown })?.y)
+    return Number.isFinite(x) && Number.isFinite(y) && x >= -10 && x <= 80 && y >= -10 && y <= 40
+      ? { x: Math.round(x * 100) / 100, y: Math.round(y * 100) / 100 }
+      : null
+  }
+  const uit: Tekening['pijlen'] = []
+  for (const p of pijlen) {
+    const van = punt((p as { van?: unknown })?.van)
+    const naar = punt((p as { naar?: unknown })?.naar)
+    const kleur = String((p as { kleur?: unknown })?.kleur ?? '')
+    if (!van || !naar || !KLEUR_RE.test(kleur)) return { ok: false, fout: 'Ongeldige pijl in de tekening.' }
+    uit.push({ van, naar, kleur })
+  }
+  return { ok: true, waarde: uit.length ? { pijlen: uit } : null }
+}
 
 const relId = (rel: unknown): string | null => {
   if (rel == null) return null
@@ -52,6 +85,11 @@ export function valideerNotitie(
       if (!Number.isFinite(t) || t < 0 || t > 6 * 3600) return { ok: false, fout: 'Ongeldig moment in de video.' }
       waarde.tijdS = Math.round(t * 10) / 10
     }
+  }
+  if (b.tekening !== undefined || !deels) {
+    const t = valideerTekening(b.tekening ?? null)
+    if (!t.ok) return t
+    waarde.tekening = t.waarde
   }
   if (b.zichtbaarheid !== undefined || !deels) {
     const z = b.zichtbaarheid ?? 'prive'
@@ -85,6 +123,7 @@ export function voorClient(n: NotitieDoc, userId: string | number | null, beheer
     tekst: n.tekst,
     tijdS: n.tijdS ?? null,
     zichtbaarheid: n.zichtbaarheid,
+    tekening: n.tekening ?? null,
     auteurNaam: n.auteurNaam || 'Onbekend',
     gemaakt: n.createdAt ?? null,
     eigen: magAanpassen(n, userId),

@@ -46,6 +46,12 @@ export const AnalyseNotities: CollectionConfig = {
       admin: { description: 'Leeg = een notitie bij de hele wedstrijd.' },
     },
     {
+      name: 'tekening',
+      label: 'Tekening (pijlen op het veld)',
+      type: 'json',
+      admin: { description: 'Pijlen in veldmeters: { pijlen: [{ van: {x,y}, naar: {x,y}, kleur }] }.' },
+    },
+    {
       name: 'zichtbaarheid',
       label: 'Zichtbaar voor',
       type: 'select',

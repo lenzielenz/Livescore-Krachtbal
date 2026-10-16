@@ -59,6 +59,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       tekst: v.waarde.tekst!,
       tijdS: v.waarde.tijdS ?? null,
       zichtbaarheid: v.waarde.zichtbaarheid ?? 'prive',
+      tekening: v.waarde.tekening ?? null,
     },
     overrideAccess: true,
   })) as unknown as NotitieDoc

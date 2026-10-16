@@ -2147,6 +2147,18 @@ export interface AnalyseNotity {
    * Leeg = een notitie bij de hele wedstrijd.
    */
   tijdS?: number | null;
+  /**
+   * Pijlen in veldmeters: { pijlen: [{ van: {x,y}, naar: {x,y}, kleur }] }.
+   */
+  tekening?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
   zichtbaarheid: 'prive' | 'gedeeld';
   updatedAt: string;
   createdAt: string;
@@ -3341,6 +3353,7 @@ export interface AnalyseNotitiesSelect<T extends boolean = true> {
   auteurNaam?: T;
   tekst?: T;
   tijdS?: T;
+  tekening?: T;
   zichtbaarheid?: T;
   updatedAt?: T;
   createdAt?: T;

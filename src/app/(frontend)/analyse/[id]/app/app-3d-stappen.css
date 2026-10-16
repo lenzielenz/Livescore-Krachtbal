@@ -1,0 +1,118 @@
+/* 3D: stap voor stap door de acties, en pijlen tekenen. */
+
+.a3d-geheel { display: flex; flex-direction: column; gap: 10px; outline: none; }
+.a3d-geheel:focus-visible .a3d { box-shadow: 0 0 0 2px var(--accent), 0 14px 50px rgba(0, 0, 0, 0.45); }
+.a3d .a3d-bediening { bottom: 10px; }
+.a3d.tekent .a3d-doek { cursor: crosshair; }
+
+.a3d-teken { position: absolute; right: 10px; top: 52px; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; max-width: calc(100% - 20px); }
+.a3d-teken button {
+  border: 1px solid rgba(255, 255, 255, 0.2); background: rgba(10, 12, 16, 0.75); color: #fff; border-radius: 9px;
+  padding: 6px 10px; font-size: 0.78rem; font-weight: 800; cursor: pointer; backdrop-filter: blur(8px); min-height: 32px;
+}
+.a3d-teken button.aan { background: var(--accent); border-color: var(--accent); }
+.a3d-teken button:disabled { opacity: 0.4; cursor: default; }
+.a3d-teken .a3d-kleur { width: 32px; padding: 0; border: 2px solid rgba(255, 255, 255, 0.4); }
+.a3d-teken .a3d-kleur.aan { border-color: #fff; box-shadow: 0 0 0 2px var(--accent); }
+.a3d-hint {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); margin: 0; pointer-events: none;
+  background: rgba(10, 12, 16, 0.8); color: #fff; padding: 8px 14px; border-radius: 10px; font-weight: 700; font-size: 0.85rem;
+}
+
+.a3d-stappen {
+  display: flex; flex-direction: column; gap: 10px; padding: 12px; border-radius: 16px;
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.12)); background: var(--panel, #18181b);
+}
+.a3d-stapkop { display: grid; grid-template-columns: auto auto minmax(0, 1fr) auto auto; gap: 6px; align-items: center; }
+.a3d-stapkop > button {
+  width: 44px; height: 44px; border-radius: 12px; border: 1px solid var(--line, rgba(255, 255, 255, 0.16));
+  background: rgba(255, 255, 255, 0.04); color: var(--txt, #fff); font-size: 1rem; cursor: pointer;
+}
+.a3d-stapkop > button:nth-child(4) { background: var(--accent); border-color: var(--accent); color: #fff; }
+.a3d-stapkop > button:disabled { opacity: 0.35; cursor: default; }
+.a3d-actie { min-width: 0; text-align: center; line-height: 1.25; }
+.a3d-actie b { display: block; font-size: 0.95rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.a3d-teller { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--dim, #a1a1aa); font-weight: 700; }
+
+.a3d-fasen { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+.a3d-fasen::-webkit-scrollbar { display: none; }
+.a3d-fasen button {
+  flex: 1 0 auto; display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; column-gap: 8px; align-items: center; text-align: left;
+  padding: 8px 10px; border-radius: 12px; cursor: pointer; color: var(--txt, #fff); font-weight: 800; font-size: 0.85rem;
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.14)); background: rgba(255, 255, 255, 0.03);
+}
+.a3d-fasen button span {
+  grid-row: span 2; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-size: 0.75rem;
+  background: rgba(255, 255, 255, 0.1);
+}
+.a3d-fasen button small { font-weight: 500; color: var(--dim, #a1a1aa); font-size: 0.72rem; font-variant-numeric: tabular-nums; }
+.a3d-fasen button.half { border-color: color-mix(in srgb, var(--accent) 50%, transparent); }
+.a3d-fasen button.aan { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 20%, transparent); }
+.a3d-fasen button.aan span { background: var(--accent); }
+
+/* Tijdstrook: één merkteken per actie, ook bij honderden. */
+.a3d-strook {
+  position: relative; height: 34px; border-radius: 9px; background: rgba(255, 255, 255, 0.05); margin: 0 6px;
+}
+.a3d-strook-nu { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: #fff; opacity: 0.85; pointer-events: none; }
+.a3d-merk {
+  position: absolute; top: 6px; width: 6px; height: 22px; margin-left: -3px; border: 0; padding: 0; border-radius: 3px; cursor: pointer; opacity: 0.8;
+}
+.a3d-merk.pas { top: 12px; height: 10px; opacity: 0.55; }
+.a3d-merk:hover, .a3d-merk:focus-visible { opacity: 1; transform: scaleY(1.15); outline: 2px solid #fff; z-index: 2; }
+.a3d-merk.aan { opacity: 1; box-shadow: 0 0 0 2px #fff; z-index: 1; }
+
+.a3d-strook-as { display: flex; justify-content: space-between; gap: 8px; font-size: 0.7rem; color: var(--dim, #a1a1aa); margin: -4px 6px 0; font-variant-numeric: tabular-nums; }
+.a3d-strook-as span:nth-child(2) { text-align: center; }
+.a3d-mini { position: relative; height: 16px; margin: 0 6px; border-radius: 6px; background: rgba(255, 255, 255, 0.04); cursor: pointer; overflow: hidden; }
+.a3d-mini i { position: absolute; top: 3px; bottom: 3px; width: 2px; margin-left: -1px; border-radius: 1px; pointer-events: none; }
+.a3d-mini b { position: absolute; top: 0; bottom: 0; border: 2px solid #fff; border-radius: 5px; background: rgba(255, 255, 255, 0.08); pointer-events: none; }
+.a3d-snel { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; font-size: 0.82rem; }
+.a3d-snel button {
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.16)); background: transparent; color: var(--txt, #fff); border-radius: 9px;
+  padding: 7px 11px; font-weight: 800; font-size: 0.8rem; cursor: pointer;
+}
+.a3d-snel button.aan { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 16%, transparent); }
+.a3d-snel label { display: inline-flex; gap: 5px; align-items: center; }
+.a3d-snel input { accent-color: var(--accent); }
+
+.a3d-lijst { display: flex; flex-direction: column; gap: 6px; }
+.a3d-lijst input {
+  min-height: 40px; border-radius: 10px; padding: 0 12px; font: inherit; background: rgba(0, 0, 0, 0.25); color: var(--txt, #fff);
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.16));
+}
+.a3d-lijst ol { list-style: none; margin: 0; padding: 0; max-height: 46vh; overflow: auto; display: flex; flex-direction: column; gap: 3px; }
+.a3d-lijst li button {
+  width: 100%; display: grid; grid-template-columns: 34px 52px 10px minmax(0, 1fr); gap: 8px; align-items: center; text-align: left;
+  padding: 7px 10px; border-radius: 9px; border: 1px solid transparent; background: rgba(255, 255, 255, 0.03); color: var(--txt, #fff); cursor: pointer;
+  font-size: 0.84rem;
+}
+.a3d-lijst li button.aan { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent); }
+.a3d-lijst li button i { width: 10px; height: 10px; border-radius: 50%; }
+.a3d-nr { color: var(--dim, #a1a1aa); font-variant-numeric: tabular-nums; font-size: 0.75rem; }
+.a3d-lt { font-variant-numeric: tabular-nums; color: var(--dim, #a1a1aa); }
+.a3d-lw { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; }
+
+.a3d-tekeningen { display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--line, rgba(255, 255, 255, 0.1)); padding-top: 10px; }
+.a3d-bewaar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.a3d-bewaar input:not([type='checkbox']) {
+  flex: 1 1 220px; min-height: 40px; border-radius: 10px; padding: 0 12px; font: inherit; background: rgba(0, 0, 0, 0.25);
+  color: var(--txt, #fff); border: 1px solid var(--line, rgba(255, 255, 255, 0.16));
+}
+.a3d-bewaar label { display: inline-flex; gap: 5px; align-items: center; font-size: 0.85rem; }
+.a3d-bewaarde { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.a3d-bewaarde button {
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.16)); background: rgba(250, 204, 21, 0.08); color: var(--txt, #fff); border-radius: 999px;
+  padding: 6px 12px; font-size: 0.8rem; font-weight: 700; cursor: pointer; text-align: left;
+}
+.a3d-bewaarde button.aan { border-color: #facc15; background: rgba(250, 204, 21, 0.22); }
+.a3d-bewaarde small { font-weight: 500; color: var(--dim, #a1a1aa); margin-left: 4px; }
+.a3d-toetsen { margin: 0; font-size: 0.72rem; color: var(--dim, #a1a1aa); }
+@media (hover: none) { .a3d-toetsen { display: none; } }
+
+@media (max-width: 520px) {
+  .a3d-stapkop { grid-template-columns: auto auto minmax(0, 1fr) auto auto; gap: 4px; }
+  .a3d-stapkop > button { width: 40px; height: 44px; }
+  .a3d-actie b { font-size: 0.85rem; white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .a3d-teken { top: auto; bottom: 62px; }
+}

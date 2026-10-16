@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import {
+  acties as bouwActies,
   getal,
   isDoelpunt,
   passenNetwerk,
@@ -21,6 +22,7 @@ import { AnalyseDelen } from '../../AnalyseDelen'
 import { AppDelen } from '../AppDelen'
 import { AppVideoNotities, type Moment } from '../AppVideoNotities'
 import { Balken, Staafjes } from './Grafieken'
+import { useNotities } from './useNotities'
 import { Veld2D } from './Veld2D'
 import './app-viewer.css'
 
@@ -163,6 +165,16 @@ export function AppViewer(props: AppViewerProps) {
     }
     return { knopen, lijnen }
   }, [data, filter.team, thuis])
+
+  const actieLijst = useMemo(() => (data ? bouwActies(data, worpen, passen) : []), [data, worpen, passen])
+  const notitieStaat = useNotities(matchId, deel)
+  const tekeningen = useMemo(
+    () =>
+      notitieStaat.notities
+        .filter((n) => n.tekening && n.tekening.pijlen.length > 0)
+        .map((n) => ({ id: n.id, tijdS: n.tijdS, tekst: n.tekst, auteurNaam: n.auteurNaam, pijlen: n.tekening!.pijlen, gedeeld: n.zichtbaarheid === 'gedeeld' })),
+    [notitieStaat.notities],
+  )
 
   const momenten: Moment[] = alleWorpen
     .filter((w) => w.tijd_s != null)
@@ -316,9 +328,21 @@ export function AppViewer(props: AppViewerProps) {
       {tab === '3d' && (
         <div className="appx-paneel">
           {filterBalk()}
-          <Arena3D data={data} kleuren={kleuren} worpen={worpen} heatSpelers={heatSpelers} gekozen={gekozen} onKies={(w) => setGekozen(w)} naamVan={naamVan} />
+          <Arena3D
+            data={data}
+            kleuren={kleuren}
+            worpen={worpen}
+            acties={actieLijst}
+            heatSpelers={heatSpelers}
+            gekozen={gekozen}
+            onKies={(w) => setGekozen(w)}
+            naamVan={naamVan}
+            tekeningen={tekeningen}
+            magBewaren={notitieStaat.magSchrijven}
+            onBewaar={(b) => notitieStaat.voegToe({ tekst: b.tekst, tijdS: b.tijdS, tekening: { pijlen: b.pijlen }, zichtbaarheid: b.gedeeld ? 'gedeeld' : 'prive' })}
+          />
           {legende}
-          <p className="appa-uitleg">Sleep om te draaien, scroll of knijp om te zoomen, rechtermuisknop of twee vingers om te verschuiven. Tik op een boog voor de details; de herhaling springt dan naar die worp.</p>
+          <p className="appa-uitleg">Sleep om te draaien, scroll of knijp om te zoomen, rechtermuisknop of twee vingers om te verschuiven. Stap met ◀ ▶ door de fases van elke actie; de spelers schuiven mee naar hun plaats op dat moment. Met ✏️ zet je pijlen op het veld en bewaar je ze als notitie.</p>
           {worpKaart}
         </div>
       )}

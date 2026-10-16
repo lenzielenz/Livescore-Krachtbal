@@ -394,3 +394,90 @@ export function cameraStandpunt(s: CameraStandpunt, aspect: number, lengte: numb
       return [L + (staand ? 18 : 14), staand ? 12 : 8, 0]
   }
 }
+
+// ── Acties en fases (stap voor stap door de wedstrijd) ──
+
+export interface Fase {
+  naam: string
+  t: number
+}
+
+export interface Actie {
+  id: string
+  soort: 'worp' | 'pas'
+  t: number
+  team?: number
+  wie?: string | null
+  naar?: string | null
+  uitkomst?: string | null
+  worp?: AppWorp
+  pas?: AppPas
+  fasen: Fase[]
+}
+
+const AANLOOP_S = 1.5
+
+/**
+ * Elke worp en pas als actie, chronologisch, met haar fases: een worp heeft aanloop, loslaten,
+ * hoogste punt en landing (of vangst); een pas heeft de pas en de ontvangst. De tijden blijven
+ * binnen de wedstrijd (0..duur).
+ */
+export function acties(data: AppData, worpen: AppWorp[] = data.worpen ?? [], passen: AppPas[] = data.passen ?? []): Actie[] {
+  const duur = data.duur_s ?? Infinity
+  const binnen = (t: number) => Math.max(0, Math.min(duur, t))
+  const uit: Actie[] = []
+  worpen.forEach((w, i) => {
+    if (w.tijd_s == null || !Number.isFinite(w.tijd_s)) return
+    const t = w.tijd_s
+    const fasen: Fase[] = [
+      { naam: 'Aanloop', t: binnen(t - AANLOOP_S) },
+      { naam: 'Loslaten', t: binnen(t) },
+    ]
+    if (w.vluchttijd != null && w.vluchttijd > 0) {
+      fasen.push({ naam: 'Hoogste punt', t: binnen(t + w.vluchttijd / 2) })
+      const eind = w.uitkomst === 'caught' || w.uitkomst === 'intercepted' ? 'Vangst' : isDoelpunt(w) ? 'Doelpunt' : 'Landing'
+      fasen.push({ naam: eind, t: binnen(t + w.vluchttijd) })
+    }
+    uit.push({ id: `w${i}`, soort: 'worp', t, team: w.team, wie: w.identiteit, naar: w.vangerIdentiteit, uitkomst: w.uitkomst, worp: w, fasen })
+  })
+  passen.forEach((p, i) => {
+    if (p.tijd_s == null || !Number.isFinite(p.tijd_s)) return
+    const fasen: Fase[] = [{ naam: 'Pas', t: binnen(p.tijd_s) }]
+    if (p.tijd_eind_s != null && p.tijd_eind_s > p.tijd_s) fasen.push({ naam: 'Ontvangst', t: binnen(p.tijd_eind_s) })
+    uit.push({ id: `p${i}`, soort: 'pas', t: p.tijd_s, team: p.team, wie: p.van, naar: p.naar, pas: p, fasen })
+  })
+  return uit.sort((a, b) => a.t - b.t || (a.soort === 'worp' ? -1 : 1))
+}
+
+/** Index van de actie die het dichtst bij (en liefst vóór) tijdstip t ligt. */
+export function actieRond(lijst: Actie[], t: number): number {
+  if (lijst.length === 0) return -1
+  let beste = 0
+  for (let i = 0; i < lijst.length; i++) {
+    if (lijst[i].fasen[0].t <= t + 1e-6) beste = i
+    else break
+  }
+  return beste
+}
+
+/** Het stuk pad van een speler tussen t0 en t1 (voor een spoor achter de speler). */
+export function spoor(pad: [number, number, number][] | undefined, t0: number, t1: number): XY[] {
+  if (!pad || pad.length === 0 || t1 <= t0) return []
+  const uit: XY[] = []
+  const begin = positieOp(pad, t0)
+  if (begin) uit.push(begin)
+  for (const [t, x, y] of pad) if (t > t0 && t < t1) uit.push({ x, y })
+  const eind = positieOp(pad, t1)
+  if (eind) uit.push(eind)
+  return uit
+}
+
+// ── Pijlen op het veld (tekeningen bij een notitie) ──
+
+export interface Pijl {
+  van: XY
+  naar: XY
+  kleur: string
+}
+
+export const PIJL_KLEUREN = ['#facc15', '#ef4444', '#ffffff', '#38bdf8', '#22c55e'] as const
