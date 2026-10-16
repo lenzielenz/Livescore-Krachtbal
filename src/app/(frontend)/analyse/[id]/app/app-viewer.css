@@ -1,0 +1,178 @@
+/* Interactieve analyse uit de app: eerst de gsm, dan groter. */
+
+.appx { display: flex; flex-direction: column; gap: 12px; }
+.appx-laden { display: flex; align-items: center; gap: 10px; padding: 40px 0; justify-content: center; color: var(--dim, #a1a1aa); }
+.appx-spinner { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--line, #333); border-top-color: var(--accent); animation: appx-draai 0.8s linear infinite; }
+@keyframes appx-draai { to { transform: rotate(360deg); } }
+
+.appx-tabs {
+  position: sticky; top: 0; z-index: 30; display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none;
+  margin: 0 -16px; padding: 8px 16px;
+  background: color-mix(in srgb, var(--panel, #18181b) 90%, transparent); backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--line, rgba(255, 255, 255, 0.1));
+}
+.appx-tabs::-webkit-scrollbar { display: none; }
+.appx-tabs button {
+  flex: 0 0 auto; border: 0; background: transparent; color: var(--dim, #a1a1aa); font-weight: 800; font-size: 0.9rem;
+  padding: 9px 14px; border-radius: 10px; cursor: pointer; transition: background 0.15s, color 0.15s;
+}
+.appx-tabs button:hover { color: var(--txt, #fff); }
+.appx-tabs button.aan { background: var(--accent); color: #fff; box-shadow: 0 4px 18px color-mix(in srgb, var(--accent) 40%, transparent); }
+.appx-paneel { display: flex; flex-direction: column; gap: 12px; animation: appx-in 0.2s ease-out; }
+@keyframes appx-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+.appx-snel { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+@media (min-width: 800px) { .appx-snel { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.appx-snel button {
+  text-align: left; padding: 14px; border-radius: 14px; cursor: pointer; color: var(--txt, #fff);
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.12));
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 18%, transparent), transparent 70%), var(--panel, #18181b);
+}
+.appx-snel b { display: block; font-size: 1.1rem; }
+.appx-snel span { font-size: 0.8rem; color: var(--dim, #a1a1aa); }
+
+.appx-filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.appx-filters select {
+  min-height: 38px; border-radius: 10px; padding: 0 10px; font: inherit; font-size: 0.88rem;
+  background: var(--panel, #18181b); color: var(--txt, #fff); border: 1px solid var(--line, rgba(255, 255, 255, 0.16));
+}
+.appx-seg { display: inline-flex; border: 1px solid var(--line, rgba(255, 255, 255, 0.16)); border-radius: 10px; overflow: hidden; max-width: 100%; }
+.appx-seg button {
+  border: 0; background: transparent; color: var(--txt, #fff); padding: 8px 12px; font-weight: 700; font-size: 0.85rem; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 6px; min-height: 38px; white-space: nowrap;
+}
+.appx-seg button + button { border-left: 1px solid var(--line, rgba(255, 255, 255, 0.16)); }
+.appx-seg button.aan { background: color-mix(in srgb, var(--accent) 30%, transparent); }
+.appx-seg i, .appx-legende i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex: 0 0 auto; }
+.appx-lagen { display: flex; flex-wrap: wrap; gap: 6px; }
+.appx-lagen label {
+  display: inline-flex; align-items: center; gap: 6px; padding: 6px 11px; border-radius: 999px; font-size: 0.82rem; font-weight: 700;
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.16)); cursor: pointer; user-select: none;
+}
+.appx-lagen label.aan { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 16%, transparent); }
+.appx-lagen input { accent-color: var(--accent); }
+.appx-legende { display: flex; flex-wrap: wrap; gap: 12px; font-size: 0.78rem; color: var(--dim, #a1a1aa); }
+.appx-legende span { display: inline-flex; align-items: center; gap: 5px; }
+
+/* Tactiekbord */
+.v2d { position: relative; width: 100%; border-radius: 14px; overflow: hidden; background: #132a19; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35); }
+.v2d-svg { display: block; width: 100%; height: 100%; aspect-ratio: 56 / 20; touch-action: none; cursor: grab; }
+.v2d-svg:active { cursor: grabbing; }
+.v2d-svg.staand { aspect-ratio: auto; height: 100%; }
+.v2d-label { fill: rgba(255, 255, 255, 0.55); font-size: 0.9px; font-weight: 800; text-anchor: middle; }
+.v2d-nr { fill: #fff; font-size: 0.75px; font-weight: 900; text-anchor: middle; pointer-events: none; }
+.v2d-worp { cursor: pointer; }
+.v2d-knoppen { position: absolute; right: 8px; top: 8px; display: flex; flex-direction: column; gap: 6px; }
+.v2d-knoppen button {
+  width: 36px; height: 36px; border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.2); background: rgba(10, 12, 16, 0.75);
+  color: #fff; font-size: 1.05rem; font-weight: 800; cursor: pointer; backdrop-filter: blur(6px);
+}
+
+/* 3D */
+.a3d { position: relative; border-radius: 16px; overflow: hidden; background: #0b0f14; box-shadow: 0 14px 50px rgba(0, 0, 0, 0.45); }
+.a3d-doek { width: 100%; height: min(72vh, 680px); min-height: 380px; touch-action: none; }
+.a3d-doek canvas { display: block; width: 100% !important; height: 100% !important; }
+.a3d-laden, .a3d-fout { display: grid; place-items: center; height: 380px; color: #a1a1aa; }
+.a3d-camera { position: absolute; top: 10px; left: 10px; right: 10px; display: flex; gap: 6px; flex-wrap: wrap; pointer-events: none; }
+.a3d-camera button, .a3d-bediening button, .a3d-bediening select {
+  pointer-events: auto; border: 1px solid rgba(255, 255, 255, 0.18); background: rgba(10, 12, 16, 0.72); color: #fff;
+  border-radius: 9px; padding: 6px 10px; font-size: 0.78rem; font-weight: 800; cursor: pointer; backdrop-filter: blur(8px);
+}
+.a3d-kaart {
+  position: absolute; left: 10px; top: 52px; max-width: min(360px, calc(100% - 20px)); font-size: 0.82rem; line-height: 1.4;
+  background: rgba(10, 12, 16, 0.82); color: #fff; border: 1px solid rgba(255, 255, 255, 0.16); border-radius: 12px; padding: 8px 12px;
+  backdrop-filter: blur(8px);
+}
+.a3d-bediening {
+  position: absolute; left: 10px; right: 10px; bottom: 40px; display: flex; align-items: center; gap: 8px;
+  background: rgba(10, 12, 16, 0.72); border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 12px; padding: 6px 8px; backdrop-filter: blur(8px);
+}
+.a3d-bediening input[type='range'] { flex: 1; accent-color: var(--accent); min-width: 0; }
+.a3d-speel { width: 38px; height: 34px; }
+.a3d-tijd { color: #fff; font-variant-numeric: tabular-nums; font-size: 0.8rem; min-width: 44px; }
+.a3d-lagen { position: absolute; left: 12px; right: 12px; bottom: 10px; display: flex; gap: 12px; flex-wrap: wrap; font-size: 0.76rem; color: #e5e7eb; }
+.a3d-lagen label { display: inline-flex; gap: 5px; align-items: center; }
+
+/* Gekozen worp */
+.appx-worpkaart {
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.14)); border-radius: 14px; padding: 12px 14px;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 14%, transparent), transparent 60%), var(--panel, #18181b);
+}
+.appx-worpcijfers { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 6px; font-size: 0.85rem; color: var(--dim, #a1a1aa); font-variant-numeric: tabular-nums; }
+.appx-worpacties { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.appx-worpacties button {
+  border: 1px solid var(--line, rgba(255, 255, 255, 0.16)); background: transparent; color: var(--txt, #fff); border-radius: 9px;
+  padding: 7px 12px; font-weight: 800; font-size: 0.82rem; cursor: pointer;
+}
+.appx-worpacties button:first-child { background: var(--accent); border-color: var(--accent); }
+
+/* Lijsten */
+.appx-tweeluik { display: grid; gap: 12px; }
+@media (min-width: 1000px) { .appx-tweeluik { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); align-items: start; } }
+.appx-worpen { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; max-height: 70vh; overflow: auto; }
+.appx-worpen li { display: flex; gap: 6px; }
+.appx-worpen li > button:first-child {
+  flex: 1; display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; gap: 10px; align-items: center; text-align: left;
+  padding: 9px 12px; border-radius: 11px; border: 1px solid var(--line, rgba(255, 255, 255, 0.12)); border-left: 4px solid var(--ploeg, #888);
+  background: var(--panel, #18181b); color: var(--txt, #fff); cursor: pointer;
+}
+.appx-worpen li > button.aan { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+.appx-tijd { font-variant-numeric: tabular-nums; color: var(--dim, #a1a1aa); font-size: 0.82rem; }
+.appx-wie { font-weight: 800; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.appx-wie small { display: block; font-weight: 500; color: var(--dim, #a1a1aa); font-size: 0.75rem; }
+.appx-afloop { font-weight: 800; font-size: 0.82rem; white-space: nowrap; }
+.appx-play { width: 40px; border-radius: 11px; border: 1px solid var(--line, rgba(255, 255, 255, 0.12)); background: var(--accent); color: #fff; cursor: pointer; }
+
+/* Spelers */
+.appx-spelersraster { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); gap: 8px; }
+.appx-spelerkaart {
+  display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 12px; align-items: center; text-align: left;
+  padding: 12px; border-radius: 14px; cursor: pointer; color: var(--txt, #fff); border: 1px solid var(--line, rgba(255, 255, 255, 0.12));
+  background: linear-gradient(135deg, color-mix(in srgb, var(--ploeg) 28%, transparent), transparent 65%), var(--panel, #18181b);
+}
+.appx-spelerkaart.aan { border-color: var(--ploeg); box-shadow: 0 0 0 2px var(--ploeg) inset; }
+.appx-nr {
+  grid-row: span 2; width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; font-weight: 900; font-size: 1.2rem;
+  background: var(--ploeg, #444); color: #fff; box-shadow: 0 4px 14px color-mix(in srgb, var(--ploeg) 45%, transparent);
+}
+.appx-nr.groot { width: 64px; height: 64px; font-size: 1.7rem; border-radius: 16px; }
+.appx-naam { font-weight: 900; }
+.appx-naam small, .appx-mini small { display: block; font-weight: 500; font-size: 0.75rem; color: var(--dim, #a1a1aa); }
+.appx-mini b { font-variant-numeric: tabular-nums; }
+.appx-speler {
+  display: flex; flex-direction: column; gap: 12px; border: 1px solid var(--line, rgba(255, 255, 255, 0.12)); border-radius: 18px;
+  padding: 14px; border-top: 4px solid var(--ploeg); background: var(--panel, #18181b);
+}
+.appx-speler header { display: flex; align-items: center; gap: 14px; }
+.appx-speler h2 { margin: 0; font-size: 1.4rem; }
+.appx-speler header p { margin: 2px 0 0; color: var(--dim, #a1a1aa); }
+.appx-speler h3 { font-size: 0.95rem; margin: 6px 0; }
+.appx-cijfers { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+@media (min-width: 900px) { .appx-cijfers { grid-template-columns: repeat(8, minmax(0, 1fr)); } }
+.appx-cijfers > div { text-align: center; padding: 8px 4px; border-radius: 10px; background: rgba(255, 255, 255, 0.04); }
+.appx-cijfers b { display: block; font-size: 1.1rem; font-variant-numeric: tabular-nums; }
+.appx-cijfers span { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--dim, #a1a1aa); }
+.appx-grafieken { display: grid; gap: 12px; grid-template-columns: 1fr; }
+@media (min-width: 800px) { .appx-grafieken { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.appx-tweekolom { display: grid; gap: 12px; }
+@media (min-width: 800px) { .appx-tweekolom { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.appx-feit { font-size: 0.85rem; margin: 8px 0 0; }
+.appx-centrum { width: 100%; height: min(85vh, 960px); border: 0; border-radius: 14px; background: #111; }
+
+/* Grafieken */
+.gr-balken h4, .gr-staafjes h4 { margin: 10px 0 6px; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--dim, #a1a1aa); }
+.gr-rij { display: grid; grid-template-columns: 82px minmax(0, 1fr) 64px; gap: 8px; align-items: center; font-size: 0.82rem; margin: 3px 0; }
+.gr-spoor { height: 8px; border-radius: 99px; background: rgba(255, 255, 255, 0.07); overflow: hidden; }
+.gr-vul { display: block; height: 100%; border-radius: 99px; transition: width 0.4s ease; }
+.gr-waarde { text-align: right; font-variant-numeric: tabular-nums; }
+.gr-waarde small { color: var(--dim, #a1a1aa); }
+.gr-staafjes svg { width: 100%; height: 90px; display: block; }
+.gr-getal { font-size: 1.6rem; font-weight: 900; margin: 0; font-variant-numeric: tabular-nums; }
+.gr-as { display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--dim, #a1a1aa); }
+
+@media (max-width: 520px) {
+  .appx-tabs button { padding: 8px 11px; font-size: 0.85rem; }
+  .a3d-doek { height: 64vh; }
+  .a3d-camera button { padding: 5px 8px; font-size: 0.72rem; }
+  .appx-worpen li > button:first-child { grid-template-columns: 46px minmax(0, 1fr) auto; }
+}

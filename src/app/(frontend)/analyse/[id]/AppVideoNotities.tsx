@@ -27,6 +27,7 @@ export function AppVideoNotities({
   duurS,
   momenten,
   deel,
+  zoek,
 }: {
   matchId: number
   videoUrl: string | null
@@ -34,6 +35,8 @@ export function AppVideoNotities({
   momenten: Moment[]
   /** Deellink-token: alleen lezen, enkel gedeelde notities. */
   deel?: string
+  /** Van buitenaf naar een moment springen (n verandert bij elke vraag). */
+  zoek?: { t: number; n: number } | null
 }) {
   const video = useRef<HTMLVideoElement>(null)
   const [duur, setDuur] = useState<number | null>(duurS)
@@ -69,13 +72,20 @@ export function AppVideoNotities({
     void laad()
   }, [laad])
 
-  const spring = (t: number) => {
+  const spring = useCallback((t: number) => {
     const v = video.current
     if (!v) return
     v.currentTime = Math.max(0, t - 2) // twee tellen aanloop: je ziet de actie ontstaan
     void v.play().catch(() => undefined)
     v.scrollIntoView({ behavior: 'smooth', block: 'center' })
-  }
+  }, [])
+
+  useEffect(() => {
+    if (!zoek) return
+    // Even wachten tot de video in beeld (en geladen) is na het wisselen van tabblad.
+    const id = window.setTimeout(() => spring(zoek.t), 150)
+    return () => window.clearTimeout(id)
+  }, [zoek, spring])
 
   const voegToe = async () => {
     if (!tekst.trim() || bezig) return

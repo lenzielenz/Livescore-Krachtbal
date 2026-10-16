@@ -2,12 +2,13 @@ import Link from 'next/link'
 
 import { TeamLogo } from '@/components/TeamLogo'
 import { leesAppJson, leesAppTekst, type AppManifest } from '@/lib/app-analyse'
+import { score as appScore, type AppData } from '@/lib/app-analyse-veld'
 import { formatDateBE } from '@/lib/datetime'
 import { buildMatchState } from '@/lib/match-engine'
 import { getPayloadClient } from '@/lib/payload-client'
 import { reeksNaam } from '@/lib/reeksen'
 
-import { AppAnalyse, appScore, type AppData } from './AppAnalyse'
+import { AppAnalyse } from './AppAnalyse'
 
 // De volledige analysepagina van een wedstrijd uit de krachtbal-analyse-app: kop met de ploegen en
 // de score volgens de app, daaronder alles uit het pakket. Gebruikt door de eigen analysepagina
@@ -39,7 +40,11 @@ export async function AppPagina({
   const thuis = state?.teams.home
   const uit = state?.teams.away
   const namen = { thuis: thuis?.name ?? 'Thuis', uit: uit?.name ?? 'Uit' }
-  const score = data ? appScore(data) : null
+  const score = data?.veld ? appScore(data) : null
+  // Ploegkleuren van de site; zijn ze (bijna) gelijk, dan krijgt de uitploeg grijs.
+  const kThuis = thuis?.colors?.primary || '#dc2626'
+  const kUit0 = uit?.colors?.primary || '#94a3b8'
+  const kleuren = { thuis: kThuis, uit: kUit0.toLowerCase() === kThuis.toLowerCase() ? '#94a3b8' : kUit0 }
   const reeks = reeksNaam(matchDoc.reeks as string | undefined)
   const datum = matchDoc.date ? formatDateBE(new Date(matchDoc.date as string), { dateStyle: 'long' }) : null
   const titel = `${namen.thuis} – ${namen.uit}${datum ? `, ${datum}` : ''}`
@@ -75,7 +80,7 @@ export async function AppPagina({
       <AppAnalyse
         matchId={matchId}
         manifest={manifest}
-        data={data}
+        kleuren={kleuren}
         coachtekst={coachtekst?.trim() || null}
         namen={namen}
         centrumHref={centrumHref}
