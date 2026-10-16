@@ -17,8 +17,10 @@ import { rondeDoos } from './rond'
 //  • tweemaal een formatie straaljagers die laag over het stadion scheert met rookstrepen in de
 //    clubkleuren: eerst in een V, daarna een "bomb burst" die als een bloem openwaaiert;
 //  • geluid: de doffe knal van het afschieten, de klap (met vertraging naargelang de afstand en een
-//    echo tegen de tribunes), het geknetter, en het gebulder van de jets; grote knallen dichtbij
-//    doen de camera even trillen.
+//    echo tegen de tribunes), het geknetter, en het gebulder van de jets; een grote knal dichtbij
+//    doet de camera een heel klein beetje trillen (vroeger daverde het hele stadion: te veel);
+//  • ondergronds of in de gangen hoor je het gedempt (zie feest.ts, dat ook overal elders in en
+//    rond het stadion het feest laat losbarsten).
 // Alle vonken en rook zijn één deeltjeswolk op de GPU: de baan van elke vonk (met luchtweerstand en
 // zwaartekracht) wordt in de shader uitgerekend, de CPU schrijft enkel nieuwe vonken bij.
 
@@ -164,6 +166,9 @@ class Geluid {
   private ac: AudioContext | null = null
   private ruis: AudioBuffer | null = null
   private uit: GainNode | null = null
+  private demp: BiquadFilterNode | null = null
+  private dempVolume: GainNode | null = null
+  private muziekBus: GainNode | null = null
 
   wek() {
     try {
@@ -179,13 +184,34 @@ class Geluid {
         const comp = this.ac.createDynamicsCompressor()
         comp.threshold.value = -14
         comp.ratio.value = 8
+        comp.connect(this.ac.destination)
         this.uit = this.ac.createGain()
-        this.uit.gain.value = 0.9
-        this.uit.connect(comp).connect(this.ac.destination)
+        this.uit.gain.value = 0.65
+        // Het vuurwerk gaat door een filter: in de kelder hoor je enkel nog het doffe gedreun.
+        this.demp = this.ac.createBiquadFilter()
+        this.demp.type = 'lowpass'
+        this.demp.frequency.value = 20000
+        this.dempVolume = this.ac.createGain()
+        this.uit.connect(this.demp).connect(this.dempVolume).connect(comp)
+        // De muziek van het feest (feest.ts) gaat er rechtstreeks naartoe: die staat waar jij bent.
+        this.muziekBus = this.ac.createGain()
+        this.muziekBus.connect(comp)
       }
     } catch {
       this.ac = null
     }
+  }
+
+  /** 0 = open lucht, 1 = onder de grond (het vuurwerk klinkt dof en stiller). */
+  dempen(f: number) {
+    if (!this.ac || !this.demp || !this.dempVolume) return
+    const t = this.ac.currentTime
+    this.demp.frequency.setTargetAtTime(20000 * Math.pow(260 / 20000, f), t, 0.25)
+    this.dempVolume.gain.setTargetAtTime(1 - 0.5 * f, t, 0.25)
+  }
+
+  klank() {
+    return this.ac && this.muziekBus ? { ac: this.ac, bus: this.muziekBus as AudioNode } : null
   }
 
   private bron(duur: number, wanneer: number) {
@@ -228,7 +254,7 @@ class Geluid {
     o.frequency.exponentialRampToValueAtTime(32, t + 0.6)
     const og = ac.createGain()
     og.gain.setValueAtTime(0.0001, t)
-    og.gain.exponentialRampToValueAtTime(0.8 * luid, t + 0.01)
+    og.gain.exponentialRampToValueAtTime(0.5 * luid, t + 0.01)
     og.gain.exponentialRampToValueAtTime(0.0001, t + 0.9)
     o.connect(og).connect(this.uit!)
     o.start(t)
@@ -526,6 +552,12 @@ export type Vuurwerk = {
   flits: () => number
   /** Hoe hard de camera nu trilt van een knal dichtbij (in meter). */
   schok: () => number
+  /** Hoe lang de show al bezig is (s), of -1 als er geen show is. */
+  tijd: () => number
+  /** Hoe gedempt je het vuurwerk hoort: 0 = open lucht, 1 = in de kelder. */
+  dempen: (f: number) => void
+  /** De geluidsuitgang voor de feestmuziek (pas na de eerste druk op de knop). */
+  klank: () => { ac: AudioContext; bus: AudioNode } | null
   update: (seconden: number, dt: number, camera: THREE.PerspectiveCamera, hoogte: number) => void
   dispose: () => void
 }
@@ -696,8 +728,9 @@ export function bouwVuurwerk(
       flitsLicht.color.copy(kleur).lerp(WIT, 0.4)
       flitsNiveau = Math.min(1.6, sterk)
     }
-    // Een harde knal dichtbij doet de grond (en dus je camera) even trillen.
-    schokNiveau = Math.max(schokNiveau, Math.min(0.35, (sterk * 28) / Math.max(40, cam.distanceTo(p))) * 0.6)
+    // Een harde knal dichtbij doet de grond (en dus je camera) heel even trillen — een rilling, geen
+    // aardbeving: vroeger tot 21 cm, en dan daverde het hele stadion.
+    schokNiveau = Math.max(schokNiveau, Math.min(0.04, (sterk * 4) / Math.max(60, cam.distanceTo(p))))
   }
 
   // Een bolvormige verdeling (gelijkmatig over de bol, met een beetje toeval).
@@ -1134,6 +1167,9 @@ export function bouwVuurwerk(
     piep: (laatste) => geluid.piep(laatste),
     flits: () => flitsNiveau,
     schok: () => schokNiveau,
+    tijd: () => (t0 >= 0 ? klok - t0 : -1),
+    dempen: (f) => geluid.dempen(f),
+    klank: () => geluid.klank(),
     update(seconden, dt, camera, hoogte) {
       klok = seconden
       if (basis < 0) basis = seconden
@@ -1229,7 +1265,7 @@ export function bouwVuurwerk(
       }
       flitsNiveau *= Math.exp(-dt * 7)
       rook.mat.uniforms.uFlits.value = flitsNiveau
-      if (flitsLicht) flitsLicht.intensity = flitsNiveau * 16000
+      if (flitsLicht) flitsLicht.intensity = flitsNiveau * 12000
       vonken.stuur()
       rook.stuur()
     },

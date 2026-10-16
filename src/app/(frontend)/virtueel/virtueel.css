@@ -10,6 +10,14 @@
 }
 .vk-uitnodiging b { font-size: 1.1rem; color: var(--txt); }
 .vk-uitnodiging-knoppen { display: flex; flex-wrap: wrap; gap: 8px; }
+.vk-uitnodiging-tekst { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+/* Hoeveel supporters van je club al binnen zijn: een live-bolletje, groen als er iemand is. */
+.vk-binnen { display: inline-flex; align-items: center; gap: 8px; font-size: 0.88rem; color: var(--dim-strong); }
+.vk-binnen b { font-size: inherit; color: var(--txt); }
+.vk-binnen i { flex: none; width: 9px; height: 9px; border-radius: 50%; background: var(--dim, #64748b); }
+.vk-binnen.vol i { background: #22c55e; box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.6); animation: vk-live 1.8s ease-out infinite; }
+@keyframes vk-live { to { box-shadow: 0 0 0 9px rgba(34, 197, 94, 0); } }
+@media (prefers-reduced-motion: reduce) { .vk-binnen.vol i { animation: none; } }
 .vk-kop { margin: 28px 0 0; font-size: 1.15rem; }
 .vk-troeven { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-top: 16px; }
 .vk-troef {
@@ -126,6 +134,7 @@
 .vk-welkom span { font-size: 0.8rem; font-weight: 800; letter-spacing: 0.3em; text-transform: uppercase; opacity: 0.85; }
 .vk-welkom b { font-size: clamp(1.6rem, 5vw, 3.2rem); font-weight: 900; line-height: 1.05; }
 .vk-welkom small { font-size: 0.82rem; opacity: 0.8; }
+.vk-welkom-samen { font-style: normal; font-size: 0.86rem; font-weight: 800; color: #86efac; }
 @keyframes vk-welkom {
   0% { opacity: 0; transform: translate(-50%, -40%); }
   12%, 75% { opacity: 1; transform: translate(-50%, -50%); }

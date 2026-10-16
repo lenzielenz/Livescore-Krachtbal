@@ -64,6 +64,8 @@ export type KelderPlekken = {
   wedkantoor: WedkantoorPlek
   /** De zalen, met hun deur aan de boulevard (voor het stadionplan). */
   zalen: { naam: string; icoon: string; x: number; z: number }[]
+  /** Elke ruimte als vlak, met haar plafondhoogte (voor het feest bij het vuurwerk, zie feest.ts). */
+  vlakken: (Rechthoek & { naam: string; h: number })[]
   /** De kluis met de sleutel van de helikopter: in de zuidmuur van de boulevard, naast de lift. */
   kluis: { x: number; z: number; ry: number }
 }
@@ -1609,6 +1611,7 @@ export function bouwKelder(scene: THREE.Scene, opt: { thema: StadionThema; licht
         { naam: 'Wedkantoor', icoon: '🎰', x: R.wedkantoor.x0, z: (B0 + B1) / 2 },
         { naam: 'Superstar · afstandwerpen', icoon: '★', x: R.superstar.x1, z: (B0 + B1) / 2 },
       ],
+      vlakken: zalen.map((z) => ({ naam: z.naam, x0: z.x0, x1: z.x1, z0: z.z0, z1: z.z1, h: z.h })),
       bad: { ...bad, y: Y - 0.15 },
       popcorn: { x: R.cinema.x1 - 3, z: R.cinema.z1 - 2.2, y: Y + 1.05 },
       popcornBord: { x: R.cinema.x1 - 3, y: Y + 4.6, z: R.cinema.z1 - 0.06, ry: Math.PI, b: 3.2, h: 1.2 },
