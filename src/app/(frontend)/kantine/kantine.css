@@ -2076,6 +2076,15 @@
    letter en logo volgen de gemeten rijhoogte (zie KantineScreen.tsx). */
 .kt-vs-venster { flex: 1 1 auto; min-height: 0; padding-bottom: 12px; }
 .kt-vs-raster { display: grid; gap: 14px; height: 100%; }
+/* Te veel wedstrijden voor de hoogte (een gsm): vaste, leesbare borden en scrollen door de lijst. */
+.kt-vs-venster.scrol { overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+.kt-vs-venster.scrol .kt-vs-raster { height: auto; }
+/* Op een smal scherm liggen de naam van het scherm en de knoppen rechtsboven over het aftellen:
+   duw het aftellen eronder, en kort een lange schermnaam in. */
+@media (max-width: 560px) {
+  .kt-aftel { padding-top: 48px; }
+  .kt-screen-cast .kt-screen-title { max-width: 38vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}
 .kt-vs-tile .kt-tile-head { justify-content: space-between; }
 .kt-vs-tile .kt-tile-reeks {
   flex: 1 1 auto; font-size: 0.82em; color: #7cc0ff; text-transform: none; letter-spacing: 0.01em;
