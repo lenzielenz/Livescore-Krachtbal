@@ -24,7 +24,7 @@ import { bouwVuurwerk, type Vuurwerk } from './vuurwerk'
 import { bouwFeest, FEEST_MELDING, type FeestPlek } from './feest'
 import { bouwMeter } from './meter'
 import { bouwKelder } from './kelder'
-import { bouwAvatar, EIGEN_LAAG, type Avatar } from './avatar'
+import { AVATAR_LAAG, bouwAvatar, EIGEN_LAAG, type Avatar } from './avatar'
 import { bouwPopcornDoosje } from './popcornkraam'
 import { bouwKleedkamer, KLEED, type Kleedkamer } from './kleedkamer'
 import { bouwKelderspel, type KelderActie, type Kelderspel } from './kelderspel'
@@ -65,31 +65,31 @@ import { GOUDEN_BALLEN, legeSporen, waterKleur, type BordId, type Sporenstaat, t
 import type { Tactiek } from '@/lib/virtueel-tactiek'
 import { VERDIEPEN } from '@/lib/virtueel-lift'
 
-// Virtueel krachtbal: een gereconstrueerd wedstrijdfragment in 3D, in een stadion in je
-// clubkleuren. Je kijkt vanop de tribune, volgt de bal, kruipt in het hoofd van een speler, loopt
-// zelf over het veld of wandelt buiten rond het stadion en door de poort naar binnen (WASD/pijltjes
-// of de joystick op gsm, slepen om rond te kijken), of maakt een rondvlucht. Alle posities komen uit src/lib/virtueel.ts; deze
-// component bouwt enkel de scène en tekent elke frame de stand op het huidige tijdstip.
+// Virtueel krachtbal: je eigen stadion in je clubkleuren, als spel. Je wandelt (WASD/pijltjes of de
+// joystick op gsm, slepen om rond te kijken) en ziet je eigen mannetje voor je: van het plein door
+// de poort naar binnen, de gangen, de kelder, het fandorp en het dak, op zoek naar de gouden ballen.
+// Op het veld speelt een gereconstrueerd wedstrijdfragment. Alle posities komen uit
+// src/lib/virtueel.ts; deze component bouwt de scène en tekent elke frame de stand.
 
+/** Hoe je kijkt bij het wandelen: je mannetje voor je (camera erachter) of door je eigen ogen. */
+type Zicht = 'mannetje' | 'ogen'
 type Modus = 'zweven' | 'buiten' | 'rondvlucht' | 'tribune' | 'bal' | 'speler' | 'lopen'
 const MODI: { id: Modus; label: string; uitleg: string; kort?: string }[] = [
   { id: 'zweven', label: 'Zweven', uitleg: 'Zweef vrij rond je stadion: WASD of pijltjes, Spatie/E omhoog, Q/C omlaag, Shift sneller, sleep om rond te kijken. Op gsm: joystick + ▲▼.', kort: 'Joystick om te zweven, ▲▼ voor de hoogte, sleep om rond te kijken.' },
-  { id: 'buiten', label: 'Wandelen', uitleg: 'Wandel over het plein en door de hoofdingang naar binnen. Via de hoeken van de tribunes kom je aan het veld.', kort: 'Joystick om te wandelen, sleep om rond te kijken.' },
+  { id: 'buiten', label: 'Wandelen', uitleg: 'Wandel rond in je stadion: WASD of pijltjes, Shift om te lopen, sleep om rond te kijken. Zoek de gouden ballen en ontdek de gangen, de kelder, het fandorp en het dak.', kort: 'Joystick om te wandelen, sleep om rond te kijken.' },
   { id: 'rondvlucht', label: 'Rondvlucht', uitleg: 'Een rondvlucht rond het stadion.' },
   { id: 'tribune', label: 'Tribune', uitleg: 'Draai, zoom en verschuif vrij rond het veld.' },
   { id: 'bal', label: 'Volg de bal', uitleg: 'De camera blijft bij de bal, langs de zijlijn.' },
   { id: 'speler', label: 'Spelersblik', uitleg: 'Kijk door de ogen van een speler. Kies hieronder wie.' },
   { id: 'lopen', label: 'Op het veld', uitleg: 'Loop tussen de spelers: WASD of pijltjes (Shift = sneller), sleep om rond te kijken. Op gsm: joystick links onder.', kort: 'Joystick om te lopen, sleep om rond te kijken.' },
 ]
-/** Rondkijken rond het stadion: altijd beschikbaar. */
-const VERKENNEN: Modus[] = ['zweven', 'buiten', 'rondvlucht']
 /** De views om de wedstrijd te volgen: verschijnen zodra je aan het veld bent. */
 const VELD: Modus[] = ['tribune', 'bal', 'speler', 'lopen']
 const WANDELEN: Modus[] = ['lopen', 'buiten']
 const BESTUURBAAR: Modus[] = ['lopen', 'buiten', 'zweven']
 const OOGHOOGTE = 1.7
 /** Hoeveel pixels we hoogstens per beeld tekenen (zie `maat`). */
-const MAX_PIXELS = 2_400_000
+const MAX_PIXELS = 3_000_000
 const RUIMTE_MELDING: Record<string, string> = {
   Fitness: '💪 Fitness · samen sterker',
   Cinema: '🎬 Cinema · de film loopt',
@@ -331,9 +331,8 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
   const joystickRef = useRef<HTMLDivElement>(null)
   const [data, setData] = useState<{ sporen: Spoor[]; duur: number; veld: Veld; ploegen: Ploeg[]; kleuren: Record<number, string> } | null>(null)
   const [fout, setFout] = useState<string | null>(null)
-  const [modus, setModus] = useState<Modus>('zweven')
+  const [modus, setModus] = useState<Modus>('buiten')
   const [uitleg, setUitleg] = useState(true)
-  const [aanVeld, setAanVeld] = useState(false)
   const [welkom, setWelkom] = useState(true)
   const [klaar, setKlaar] = useState(false)
   const [hoog, setHoog] = useState(0)
@@ -518,7 +517,7 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
   const videoRef = useRef<Videoscherm | null>(null)
 
   // Wat de tekenlus nodig heeft, zonder bij elke wijziging de scène opnieuw te bouwen.
-  const st = useRef({ tijd: 0, spelend: false, modus: 'zweven' as Modus, gekozen: null as string | null, namen: true, stick: { x: 0, y: 0 }, hoog: 0, spoel: false, pauze: false, liftKeuze: null as number | null, naarHuis: false, zit: null as number | null })
+  const st = useRef({ tijd: 0, spelend: false, modus: 'buiten' as Modus, gekozen: null as string | null, namen: true, stick: { x: 0, y: 0 }, hoog: 0, spoel: false, pauze: false, liftKeuze: null as number | null, naarHuis: false, zit: null as number | null, zicht: 'mannetje' as Zicht })
   st.current.modus = modus
   st.current.gekozen = gekozen
   st.current.namen = namen
@@ -527,6 +526,25 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
   // Staat de spuitbus of het tactiekbord open, dan hoeft het stadion erachter niet te tekenen.
   // (Superstar is een paneel onderaan: de hal blijft bewegen, je ziet de bal vliegen.)
   st.current.pauze = paneel != null && paneel !== 'superstar'
+  // De kijkhoek: wat je het liefst hebt, onthouden in deze browser.
+  const [zicht, setZicht] = useState<Zicht>('mannetje')
+  useEffect(() => {
+    try {
+      if (localStorage.getItem('vk-zicht') === 'ogen') setZicht('ogen')
+    } catch {
+      // Geen opslag (privévenster): dan het standaardzicht.
+    }
+  }, [])
+  st.current.zicht = zicht
+  const wisselZicht = () => {
+    const nieuw: Zicht = zicht === 'mannetje' ? 'ogen' : 'mannetje'
+    setZicht(nieuw)
+    try {
+      localStorage.setItem('vk-zicht', nieuw)
+    } catch {
+      // Niet bewaard: geen ramp.
+    }
+  }
 
   // Het welkom verschijnt pas als het eerste beeld van het stadion er staat, en verdwijnt na zes
   // seconden.
@@ -707,7 +725,10 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     // ook de schaduwen en de liftspiegels hieronder). `zwak` onthouden we enkel voor de meter.
     const zwak = window.matchMedia('(max-width: 760px)').matches || (navigator.hardwareConcurrency ?? 8) <= 4
     const licht = true
-    let pixels = Math.min(window.devicePixelRatio, 1.25)
+    // Scherp genoeg om tekst te lezen: een gsm heeft 3 pixels per schermpunt; aan 1,25 werd het beeld
+    // ± 2,4 keer uitvergroot en was alle tekst wazig. Nu tot 2, binnen het pixelbudget (MAX_PIXELS);
+    // hapert het toch, dan stapt de bijsturing zelf terug.
+    let pixels = Math.min(window.devicePixelRatio, 2)
     // alpha: het grote scherm is een gat in het canvas waarachter de video speelt (videoscherm.ts).
     // Geen antialias op het canvas: op sterke toestellen tekent de nabewerking (nabewerking.ts) het
     // beeld in een eigen buffer, en daar doet de antialias van het canvas niets — ze kostte enkel
@@ -1451,6 +1472,13 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     // Op een trampoline in de speelhal: hoe ver je in de sprong bent.
     let sprong = 0
     let sprongHoogte = 0
+    // Derde persoon: je ziet je eigen mannetje voor je wandelen, de camera hangt een stukje erachter.
+    // `achterAf` is de huidige afstand (zacht bijgesteld); in een smalle ruimte (lift, bus, cinema)
+    // of waar een muur vlak achter je staat, kijk je gewoon door je eigen ogen.
+    const ACHTER = 3.2
+    let achterAf = ACHTER
+    let derde = false
+    let voetY = 0
     handRef.current = {
       positie: () => ({ x: loper.pos.x, z: loper.pos.z }),
       zitNeer(nr) {
@@ -1802,13 +1830,50 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
         const busDoel = s.modus === 'buiten' && v === 0 ? bus.vloer(loper.pos.x, loper.pos.z) || (veer > 0 ? 0.7 : 0) : 0
         busHoogte += (busDoel - busHoogte) * Math.min(1, dt * 12)
         const oog = (s.modus === 'buiten' ? vloer : 0) + (zitHier ? 1.15 : OOGHOOGTE) + sprongHoogte + busHoogte
-        // Geen op-en-neer bij het stappen: dat maakte mensen misselijk. Het beeld glijdt rustig mee.
-        camera.position.set(loper.pos.x, oog, loper.pos.z)
-        camera.lookAt(
-          loper.pos.x + Math.sin(loper.yaw) * Math.cos(loper.pitch),
-          oog + Math.sin(loper.pitch),
-          loper.pos.z + Math.cos(loper.yaw) * Math.cos(loper.pitch),
-        )
+        voetY = oog - OOGHOOGTE
+        const kijkX = Math.sin(loper.yaw) * Math.cos(loper.pitch)
+        const kijkY = Math.sin(loper.pitch)
+        const kijkZ = Math.cos(loper.yaw) * Math.cos(loper.pitch)
+        // Hoe ver kan de camera achter je hangen voor ze tegen een muur stoot? Zelfde regels als het
+        // wandelen op dit verdiep; in kleine stapjes van je hoofd naar achter.
+        const magCamera = (x: number, z: number) =>
+          v === -1
+            ? kelder.mag(x, z)
+            : v === 2
+              ? opDak(x, z) || bijKooi(x, z)
+              : v === 1
+                ? verdiep.opBalkon(x, z) || vrijVanGevel(GEVEL, verdiep.obstakels, x, z, 0.15)
+                : vrijVanGevel(GEVEL, grondObstakels(schacht), x, z, 0.15) && !bus.binnen(x, z)
+        // In de lift (en op andere krappe plekken) kijk je door je eigen ogen; kom je eruit, dan
+        // weer zoals je zelf gekozen hebt.
+        const krap = s.zicht === 'ogen' || zitHier || lift.binnen(loper.pos.x, loper.pos.z) || (v === 0 && bus.binnen(loper.pos.x, loper.pos.z))
+        let vrijAf = 0
+        if (!krap) {
+          const ax = -Math.sin(loper.yaw)
+          const az = -Math.cos(loper.yaw)
+          for (let d = 0.3; d <= ACHTER + 0.4; d += 0.25) {
+            if (!magCamera(loper.pos.x + ax * d, loper.pos.z + az * d)) break
+            vrijAf = d
+          }
+        }
+        const doelAf = Math.max(0, vrijAf - 0.4)
+        // Dichterbij meteen (anders zit de camera even in de muur), verder weg zacht.
+        achterAf = doelAf < achterAf ? doelAf : achterAf + (doelAf - achterAf) * Math.min(1, dt * 4)
+        derde = achterAf > 1.1
+        if (derde) {
+          // Over je schouder: achter en iets boven je hoofd, kijkend naar een punt voor je.
+          const hoofdY = oog + 0.15
+          camera.position.set(
+            loper.pos.x - kijkX * achterAf,
+            Math.max(voetY + 0.5, hoofdY + 0.55 - kijkY * achterAf),
+            loper.pos.z - kijkZ * achterAf,
+          )
+          camera.lookAt(loper.pos.x + kijkX * 3, hoofdY + kijkY * 3, loper.pos.z + kijkZ * 3)
+        } else {
+          // Geen op-en-neer bij het stappen: dat maakte mensen misselijk. Het beeld glijdt rustig mee.
+          camera.position.set(loper.pos.x, oog, loper.pos.z)
+          camera.lookAt(loper.pos.x + kijkX, oog + kijkY, loper.pos.z + kijkZ)
+        }
       }
 
       stadion.update(nu / 1000, { tijd: t, duur, bezit: bezitAandeel(t), ploegen: scorePloegen })
@@ -1827,20 +1892,25 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
       // De spiegelwanden in de lift blijven uit: elke spiegel tekende de hele wereld nog eens, en de
       // lift neem je vaak. (De spiegel in de kleedkamer blijft: die staat apart en enkel daar.)
       lift.spiegels(false)
-      avatar.zichtbaar(voorSpiegel)
+      // Je eigen mannetje: in derde persoon tekent ook de gewone camera het (de spiegel altijd).
+      const zieMezelf = WANDELEN.includes(s.modus) && derde && !ritBezig()
+      if (zieMezelf) camera.layers.enable(AVATAR_LAAG)
+      else camera.layers.disable(AVATAR_LAAG)
+      avatar.zichtbaar(voorSpiegel || zieMezelf)
+      avatar.zwaai(voorSpiegel)
       if (avatarPopcorn !== popcornVastRef.current) {
         avatarPopcorn = popcornVastRef.current
         avatar.houdVast(avatarPopcorn ? bouwPopcornDoosje(1) : null)
       }
-      fpDoos.visible = popcornVastRef.current && s.modus === 'buiten'
+      fpDoos.visible = popcornVastRef.current && s.modus === 'buiten' && !zieMezelf
       if (fpDoos.visible) {
         // Het doosje deint mee met je stappen.
         const stap = Math.hypot(loper.pos.x - vorigePos.x, loper.pos.z - vorigePos.z)
         fpDoos.position.y = -0.27 + Math.sin(nu / 160) * Math.min(0.012, stap * 0.4)
       }
-      if (voorSpiegel) {
+      if (voorSpiegel || zieMezelf) {
         const tempo = dt > 0 ? Math.hypot(loper.pos.x - vorigePos.x, loper.pos.z - vorigePos.z) / dt : 0
-        avatar.update(loper.pos.x, 0, loper.pos.z, loper.yaw, loper.pitch, tempo, nu / 1000)
+        avatar.update(loper.pos.x, voetY, loper.pos.z, loper.yaw, loper.pitch, tempo, nu / 1000)
       }
       vorigePos.x = loper.pos.x
       vorigePos.z = loper.pos.z
@@ -2031,7 +2101,6 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
         if (fp && fp !== feestPlek) setMelding(FEEST_MELDING[fp])
         feestPlek = fp
         // Enkel echt aan het veld: niet als je erboven of eronder (de kelder ligt onder het veld) loopt.
-        setAanVeld((s.modus === 'zweven' || (s.modus === 'buiten' && opVerdiep === 0)) && opVeld(loper.pos))
         // In de kooi: het paneel om je verdiep te kiezen (en tijdens de rit waar je heen gaat).
         const inKooi = s.modus === 'buiten' && lift.binnen(loper.pos.x, loper.pos.z) && (liftNu.toestand === 'rijden' || Math.round(liftNu.hoogte) === opVerdiep)
         const paneel = inKooi ? { hier: opVerdiep, rijdt: liftNu.toestand === 'rijden' || liftNu.toestand === 'sluiten', doel: liftNu.toestand === 'rijden' || liftNu.toestand === 'sluiten' ? liftNu.doel : (s.liftKeuze ?? null) } : null
@@ -2348,16 +2417,6 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
         {data && (
           <>
             <div className="vk-hud">
-              <div className="vk-modi" role="tablist" aria-label="Camera">
-                {MODI.filter((m) => VERKENNEN.includes(m.id) || aanVeld || VELD.includes(modus)).map((m, i, lijst) => (
-                  <span key={m.id} className="vk-modi-item">
-                    {i > 0 && VELD.includes(m.id) && !VELD.includes(lijst[i - 1].id) && <i className="vk-modi-streep" aria-hidden />}
-                    <button role="tab" aria-selected={modus === m.id} className={modus === m.id ? 'actief' : ''} onClick={() => setModus(m.id)}>
-                      {m.label}
-                    </button>
-                  </span>
-                ))}
-              </div>
               {bezit != null && VELD.includes(modus) && (
                 <span className="vk-bezit">
                   <i style={{ background: data.kleuren[bezit] }} /> Balbezit · {ploegNaam(bezit)}
@@ -2366,9 +2425,9 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
             </div>
             {welkom && klaar && (
               <div className="vk-welkom" aria-live="polite">
-                <span>Welkom in stadion</span>
+                <span>Welkom in jullie stadion</span>
                 <b>{thema.naam}</b>
-                <small>Zweef of wandel naar het veld om de wedstrijd te volgen</small>
+                <small>Wandel rond, vervolledig de opdrachten en breng je clubgenoten mee</small>
                 {samenAantal > 0 && (
                   <em className="vk-welkom-samen">
                     👥 {samenAantal} {samenAantal === 1 ? 'supporter' : 'supporters'} van je club {samenAantal === 1 ? 'is' : 'zijn'} al binnen
@@ -2381,19 +2440,8 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
                 )}
               </div>
             )}
-            {aanVeld && !VELD.includes(modus) && (
-              <div className="vk-aanveld" role="dialog" aria-label="Je bent aan het veld">
-                <b>🏟️ Je bent aan het veld</b>
-                <span>Hoe wil je de wedstrijd volgen?</span>
-                <div className="vk-aanveld-knoppen">
-                  {MODI.filter((m) => VELD.includes(m.id)).map((m) => (
-                    <button key={m.id} onClick={() => setModus(m.id)}>{m.label}</button>
-                  ))}
-                </div>
-              </div>
-            )}
             {VELD.includes(modus) && (
-              <button className="vk-terugbuiten" onClick={() => setModus('zweven')}>↩ Naar buiten</button>
+              <button className="vk-terugbuiten" onClick={() => setModus('buiten')}>↩ Naar buiten</button>
             )}
             {nabij && !paneel && zit == null && aftel == null && !vlucht && !rit && !spel && (
               <button className="vk-actie" onClick={() => doeActie(nabij)}>
@@ -2579,6 +2627,16 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
                 title="Terug naar het begin"
               >
                 🏠
+              </button>
+            )}
+            {WANDELEN.includes(modus) && !welkom && (
+              <button
+                className="vk-zicht"
+                onClick={wisselZicht}
+                aria-label={zicht === 'mannetje' ? 'Kijk door je eigen ogen' : 'Zie je mannetje voor je'}
+                title={zicht === 'mannetje' ? 'Kijk door je eigen ogen' : 'Zie je mannetje voor je'}
+              >
+                {zicht === 'mannetje' ? '👁️' : '🧍'}
               </button>
             )}
             <button

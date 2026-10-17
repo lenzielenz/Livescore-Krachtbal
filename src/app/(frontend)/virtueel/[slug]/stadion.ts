@@ -134,7 +134,8 @@ export function rondLogo(g: CanvasRenderingContext2D, logo: HTMLImageElement | n
 export function canvasTex(c: HTMLCanvasElement): THREE.CanvasTexture {
   const t = new THREE.CanvasTexture(c)
   t.colorSpace = THREE.SRGBColorSpace
-  t.anisotropy = 4
+  // Scherpe tekst ook als je er schuin naar kijkt (borden, wegwijzers, gevelteksten).
+  t.anisotropy = 8
   return t
 }
 

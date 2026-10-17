@@ -346,6 +346,12 @@
   background: rgba(8, 14, 22, 0.78); border: 1px solid rgba(255, 255, 255, 0.12); color: #e2e8f0;
 }
 .vk:fullscreen .vk-huis, .vk.vol .vk-huis { top: max(10px, env(safe-area-inset-top)); right: calc(max(10px, env(safe-area-inset-right)) + 84px); }
+/* Wissel tussen je mannetje voor je en je eigen ogen, naast het huisje. */
+.vk-zicht {
+  position: absolute; right: 136px; top: 10px; width: 36px; height: 36px; border-radius: 10px; cursor: pointer; font-size: 0.95rem;
+  background: rgba(8, 14, 22, 0.78); border: 1px solid rgba(255, 255, 255, 0.12); color: #e2e8f0;
+}
+.vk:fullscreen .vk-zicht, .vk.vol .vk-zicht { top: max(10px, env(safe-area-inset-top)); right: calc(max(10px, env(safe-area-inset-right)) + 126px); }
 
 /* ---------- de kelder voor de jeugd: goudjacht, zwembad, loopband en Doelworp (Kelderspellen.tsx) ---------- */
 .vk-goud {
