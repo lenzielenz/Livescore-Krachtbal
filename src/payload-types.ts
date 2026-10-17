@@ -107,6 +107,7 @@ export interface Config {
     'graffiti-tags': GraffitiTag;
     'virtuele-sporen': VirtueleSporen;
     'photobooth-fotos': PhotoboothFoto;
+    'virtuele-metingen': VirtueleMetingen;
     'analyse-notities': AnalyseNotity;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
@@ -155,6 +156,7 @@ export interface Config {
     'graffiti-tags': GraffitiTagsSelect<false> | GraffitiTagsSelect<true>;
     'virtuele-sporen': VirtueleSporenSelect<false> | VirtueleSporenSelect<true>;
     'photobooth-fotos': PhotoboothFotosSelect<false> | PhotoboothFotosSelect<true>;
+    'virtuele-metingen': VirtueleMetingenSelect<false> | VirtueleMetingenSelect<true>;
     'analyse-notities': AnalyseNotitiesSelect<false> | AnalyseNotitiesSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
@@ -2134,6 +2136,31 @@ export interface PhotoboothFoto {
   focalY?: number | null;
 }
 /**
+ * Hoe vlot het stadion loopt per bezoek (anoniem). Het overzicht: /api/virtueel/meting.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "virtuele-metingen".
+ */
+export interface VirtueleMetingen {
+  id: number;
+  sessie?: string | null;
+  gpu?: string | null;
+  licht?: boolean | null;
+  duur?: number | null;
+  fps?: number | null;
+  data?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "analyse-notities".
  */
@@ -2346,6 +2373,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'photobooth-fotos';
         value: number | PhotoboothFoto;
+      } | null)
+    | ({
+        relationTo: 'virtuele-metingen';
+        value: number | VirtueleMetingen;
       } | null)
     | ({
         relationTo: 'analyse-notities';
@@ -3342,6 +3373,20 @@ export interface PhotoboothFotosSelect<T extends boolean = true> {
   height?: T;
   focalX?: T;
   focalY?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "virtuele-metingen_select".
+ */
+export interface VirtueleMetingenSelect<T extends boolean = true> {
+  sessie?: T;
+  gpu?: T;
+  licht?: T;
+  duur?: T;
+  fps?: T;
+  data?: T;
+  updatedAt?: T;
+  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

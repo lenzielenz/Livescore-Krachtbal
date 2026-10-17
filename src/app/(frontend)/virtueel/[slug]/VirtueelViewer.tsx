@@ -21,6 +21,7 @@ import { bouwLift, LIFT_X } from './lift'
 import { bouwRing, RING } from './ring'
 import { bouwVuurwerk, type Vuurwerk } from './vuurwerk'
 import { bouwFeest, FEEST_MELDING, type FeestPlek } from './feest'
+import { bouwMeter } from './meter'
 import { bouwKelder } from './kelder'
 import { bouwAvatar, EIGEN_LAAG, type Avatar } from './avatar'
 import { bouwPopcornDoosje } from './popcornkraam'
@@ -702,6 +703,7 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     // Geen antialias op het canvas: op sterke toestellen tekent de nabewerking (nabewerking.ts) het
     // beeld in een eigen buffer, en daar doet de antialias van het canvas niets — ze kostte enkel
     // geheugen en bandbreedte. Op lichte toestellen staat ze sowieso uit.
+    const begonnen = performance.now()
     const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance', alpha: true })
     renderer.setPixelRatio(pixels)
     renderer.shadowMap.enabled = true
@@ -1283,6 +1285,11 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     // De nabewerking (gloed, stemming per plek, waas, hitte): niet op lichte toestellen.
     const nabewerking = licht ? null : bouwNabewerking(renderer, scene, camera)
     let nabewerkingAan = true
+    // De onzichtbare meter (zie meter.ts): hoe vlot het hier loopt, per plek, voor achteraf. De
+    // tellers van three tellen over het hele beeld (alle passes, schaduw, spiegels), niet enkel de
+    // laatste tekenronde: daarom zetten we ze zelf terug aan het begin van elk beeld.
+    const meter = bouwMeter(renderer, { licht })
+    renderer.info.autoReset = false
     const maat = () => {
       const w = el.clientWidth
       const h = el.clientHeight
@@ -1488,6 +1495,8 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     }
     const tik = (nu: number) => {
       raf = requestAnimationFrame(tik)
+      // De echte tijd sinds het vorige beeld (voor de meter), en begrensd voor de beweging.
+      const ruw = nu - vorige
       // De rAF-tijdstempel kan net vóór performance.now() liggen: nooit een negatieve stap.
       const dt = Math.max(0, Math.min(0.1, (nu - vorige) / 1000))
       vorige = nu
@@ -1925,6 +1934,20 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
       if (!getekend) {
         getekend = true
         setKlaar(true)
+        meter.zet({ eersteBeeld: performance.now() - begonnen })
+      }
+      {
+        // Waar je bent, voor de meter: de plek (zoals bij het feest), in de kelder de zaal, en apart
+        // tijdens het vuurwerk en in de views aan het veld.
+        const waar = feest.waar(camera.position)
+        const plek =
+          s.modus === 'rondvlucht' || VELD.includes(s.modus)
+            ? `view:${s.modus}`
+            : waar === 'kelder' && laatsteRuimte
+              ? `kelder:${laatsteRuimte}`
+              : waar
+        meter.beeld(ruw, vuurwerk.bezig() ? `vuurwerk:${plek}` : plek)
+        renderer.info.reset()
       }
 
       // Hapert het? Dan stap voor stap lichter, tot het weer vlot loopt: eerst minder pixels (tot
@@ -1944,16 +1967,21 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
           if (nuRatio > 1) {
             pixels = Math.max(1, nuRatio - 0.25)
             maat()
+            meter.stap(`pixels ${pixels}`)
           } else if (nabewerking && nabewerkingAan) {
             nabewerkingAan = false
+            meter.stap('nabewerking uit')
           } else if (zon.shadow.mapSize.x > 1024) {
             zon.shadow.mapSize.set(1024, 1024)
             zon.shadow.map?.dispose()
             zon.shadow.map = null
+            meter.stap('schaduw 1024')
           } else if (nuRatio > 0.75) {
             pixels = Math.max(0.75, nuRatio - 0.25)
             maat()
+            meter.stap(`pixels ${pixels}`)
           }
+          meter.zet({ ratio: renderer.getPixelRatio(), nabewerking: !!nabewerking && nabewerkingAan, schaduw: zon.shadow.mapSize.x })
         }
         frames = 0
         frameTijd = 0
@@ -2032,8 +2060,10 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
           o.visible = true
         }
       })
+      const t0 = performance.now()
       try {
         renderer.compile(scene, camera)
+        meter.zet({ shaders: performance.now() - t0, ratio: renderer.getPixelRatio(), schaduw: zon.shadow.mapSize.x })
       } catch {
         // Lukt het niet, dan worden ze zoals vroeger gebouwd wanneer ze voor het eerst in beeld komen.
       }
@@ -2046,6 +2076,7 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
       nabewerking?.dispose()
       vuurwerk.dispose()
       feest.dispose()
+      meter.dispose()
       supporters.dispose()
       samenRef.current = null
       vuurwerkRef.current = null

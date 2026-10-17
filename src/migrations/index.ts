@@ -136,6 +136,7 @@ import * as migration_20261014_220000_virtuele_sporen from './20261014_220000_vi
 import * as migration_20261015_070000_photobooth_fotos from './20261015_070000_photobooth_fotos'
 import * as migration_20261016_220000_analyse_notities from './20261016_220000_analyse_notities'
 import * as migration_20261017_090000_analyse_notities_tekening from './20261017_090000_analyse_notities_tekening'
+import * as migration_20261017_120000_virtuele_metingen from './20261017_120000_virtuele_metingen'
 
 export const migrations = [
   {
@@ -822,5 +823,10 @@ export const migrations = [
     up: migration_20261017_090000_analyse_notities_tekening.up,
     down: migration_20261017_090000_analyse_notities_tekening.down,
     name: '20261017_090000_analyse_notities_tekening',
+  },
+  {
+    up: migration_20261017_120000_virtuele_metingen.up,
+    down: migration_20261017_120000_virtuele_metingen.down,
+    name: '20261017_120000_virtuele_metingen',
   },
 ];
