@@ -71,6 +71,8 @@ import { VERDIEPEN } from '@/lib/virtueel-lift'
 // Op het veld speelt een gereconstrueerd wedstrijdfragment. Alle posities komen uit
 // src/lib/virtueel.ts; deze component bouwt de scène en tekent elke frame de stand.
 
+/** Hoe je kijkt bij het wandelen: je mannetje voor je (camera erachter) of door je eigen ogen. */
+type Zicht = 'mannetje' | 'ogen'
 type Modus = 'zweven' | 'buiten' | 'rondvlucht' | 'tribune' | 'bal' | 'speler' | 'lopen'
 const MODI: { id: Modus; label: string; uitleg: string; kort?: string }[] = [
   { id: 'zweven', label: 'Zweven', uitleg: 'Zweef vrij rond je stadion: WASD of pijltjes, Spatie/E omhoog, Q/C omlaag, Shift sneller, sleep om rond te kijken. Op gsm: joystick + ▲▼.', kort: 'Joystick om te zweven, ▲▼ voor de hoogte, sleep om rond te kijken.' },
@@ -515,7 +517,7 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
   const videoRef = useRef<Videoscherm | null>(null)
 
   // Wat de tekenlus nodig heeft, zonder bij elke wijziging de scène opnieuw te bouwen.
-  const st = useRef({ tijd: 0, spelend: false, modus: 'buiten' as Modus, gekozen: null as string | null, namen: true, stick: { x: 0, y: 0 }, hoog: 0, spoel: false, pauze: false, liftKeuze: null as number | null, naarHuis: false, zit: null as number | null })
+  const st = useRef({ tijd: 0, spelend: false, modus: 'buiten' as Modus, gekozen: null as string | null, namen: true, stick: { x: 0, y: 0 }, hoog: 0, spoel: false, pauze: false, liftKeuze: null as number | null, naarHuis: false, zit: null as number | null, zicht: 'mannetje' as Zicht })
   st.current.modus = modus
   st.current.gekozen = gekozen
   st.current.namen = namen
@@ -524,6 +526,25 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
   // Staat de spuitbus of het tactiekbord open, dan hoeft het stadion erachter niet te tekenen.
   // (Superstar is een paneel onderaan: de hal blijft bewegen, je ziet de bal vliegen.)
   st.current.pauze = paneel != null && paneel !== 'superstar'
+  // De kijkhoek: wat je het liefst hebt, onthouden in deze browser.
+  const [zicht, setZicht] = useState<Zicht>('mannetje')
+  useEffect(() => {
+    try {
+      if (localStorage.getItem('vk-zicht') === 'ogen') setZicht('ogen')
+    } catch {
+      // Geen opslag (privévenster): dan het standaardzicht.
+    }
+  }, [])
+  st.current.zicht = zicht
+  const wisselZicht = () => {
+    const nieuw: Zicht = zicht === 'mannetje' ? 'ogen' : 'mannetje'
+    setZicht(nieuw)
+    try {
+      localStorage.setItem('vk-zicht', nieuw)
+    } catch {
+      // Niet bewaard: geen ramp.
+    }
+  }
 
   // Het welkom verschijnt pas als het eerste beeld van het stadion er staat, en verdwijnt na zes
   // seconden.
@@ -1823,7 +1844,9 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
               : v === 1
                 ? verdiep.opBalkon(x, z) || vrijVanGevel(GEVEL, verdiep.obstakels, x, z, 0.15)
                 : vrijVanGevel(GEVEL, grondObstakels(schacht), x, z, 0.15) && !bus.binnen(x, z)
-        const krap = zitHier || lift.binnen(loper.pos.x, loper.pos.z) || (v === 0 && bus.binnen(loper.pos.x, loper.pos.z))
+        // In de lift (en op andere krappe plekken) kijk je door je eigen ogen; kom je eruit, dan
+        // weer zoals je zelf gekozen hebt.
+        const krap = s.zicht === 'ogen' || zitHier || lift.binnen(loper.pos.x, loper.pos.z) || (v === 0 && bus.binnen(loper.pos.x, loper.pos.z))
         let vrijAf = 0
         if (!krap) {
           const ax = -Math.sin(loper.yaw)
@@ -2604,6 +2627,16 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
                 title="Terug naar het begin"
               >
                 🏠
+              </button>
+            )}
+            {WANDELEN.includes(modus) && !welkom && (
+              <button
+                className="vk-zicht"
+                onClick={wisselZicht}
+                aria-label={zicht === 'mannetje' ? 'Kijk door je eigen ogen' : 'Zie je mannetje voor je'}
+                title={zicht === 'mannetje' ? 'Kijk door je eigen ogen' : 'Zie je mannetje voor je'}
+              >
+                {zicht === 'mannetje' ? '👁️' : '🧍'}
               </button>
             )}
             <button
