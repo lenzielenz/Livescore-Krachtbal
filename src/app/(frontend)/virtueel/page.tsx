@@ -3,7 +3,6 @@ import Link from 'next/link'
 import { SiteHeader } from '@/components/SiteHeader'
 import { userClubId } from '@/lib/access'
 import { getAuthUser } from '@/lib/auth-user'
-import { formatDateBE } from '@/lib/datetime'
 import { getPayloadClient } from '@/lib/payload-client'
 import { FRAGMENTEN } from '@/lib/virtueel'
 import { aanwezig } from '@/lib/virtueel-aanwezig'
@@ -14,15 +13,15 @@ export const metadata = { title: 'Virtueel krachtbal — Krachtbal Live' }
 // Persoonlijk: wie ingelogd is met een club, krijgt "zijn" stadion te zien.
 export const dynamic = 'force-dynamic'
 
-// Wat het virtuele stadion een supporter biedt. Bewust niet over één wedstrijd: het fragment op het
-// veld is maar één onderdeel van de beleving.
+// Wat het virtuele stadion een supporter biedt: een spel in je eigen stadion, samen met je club.
+// Geen wedstrijd die je komt bekijken, wel een plek om naartoe te gaan.
 const TROEVEN = [
+  { icoon: '🟡', titel: 'Opdrachten', tekst: 'Vind de 25 gouden ballen.' },
+  { icoon: '👥', titel: 'Samen', tekst: 'Met je clubgenoten.' },
   { icoon: '🏟️', titel: 'Jouw kleuren', tekst: 'Tot het laatste stoeltje.' },
+  { icoon: '🎡', titel: 'Fandorp', tekst: 'Ritten en kermisspelletjes.' },
   { icoon: '🏆', titel: 'Hall of Fame', tekst: 'Je erelijst, achter glas.' },
-  { icoon: '⚡', titel: 'Dit weekend', tekst: 'Uitslagen, live mee.' },
-  { icoon: '📸', titel: 'Fotogalerij', tekst: 'Elke dag anders.' },
-  { icoon: '🎆', titel: 'Lichtshow', tekst: 'Om de 30 seconden.' },
-  { icoon: '🧭', titel: 'Vrij rondlopen', tekst: 'Zweef, wandel, vlieg.' },
+  { icoon: '🎆', titel: 'Vuurwerk', tekst: 'Druk op de rode knop.' },
 ]
 
 export default async function VirtueelPage() {
@@ -95,23 +94,8 @@ export default async function VirtueelPage() {
             </div>
           ))}
         </div>
-        <p className="vk-terugkomen">Elke week anders: nieuwe uitslagen, nieuwe foto&apos;s.</p>
+        <p className="vk-terugkomen">Kom naar jullie stadion, vervolledig de opdrachten en breng je clubgenoten mee.</p>
 
-        <h2 className="vk-kop">Op het veld</h2>
-        <div className="vk-lijst">
-          {FRAGMENTEN.map((f) => (
-            <Link key={f.slug} href={`/virtueel/${f.slug}`} className="vk-kaart">
-              <span className="vk-kaart-beeld" aria-hidden>
-                <span className="vk-kaart-veld" />
-                <span className="vk-kaart-play">▶</span>
-              </span>
-              <span className="vk-kaart-tekst">
-                <span className="vk-kaart-meta">{formatDateBE(f.datum, { weekday: 'short', day: 'numeric', month: 'long' })} · {f.plaats}</span>
-                <b>{f.titel}</b>
-              </span>
-            </Link>
-          ))}
-        </div>
       </div>
     </>
   )

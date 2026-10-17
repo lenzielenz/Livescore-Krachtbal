@@ -20,6 +20,8 @@ export type Avatar = {
   /** Zet de figuur op jouw plek: voeten op `vloerY`, kijkend in `yaw`; `tempo` (m/s) voor de pas. */
   update: (x: number, vloerY: number, z: number, yaw: number, pitch: number, tempo: number, seconden: number) => void
   zichtbaar: (aan: boolean) => void
+  /** Zwaaien als je stilstaat (enkel voor de spiegel: in het spel zelf sta je gewoon stil). */
+  zwaai: (aan: boolean) => void
   /** Iets in je linkerhand (bv. een doosje popcorn), of null om niets vast te houden. */
   houdVast: (iets: THREE.Object3D | null) => void
   /** Trek een outfit aan (artikel-id's per soort; wat ontbreekt blijft standaard). */
@@ -50,7 +52,7 @@ const textuur = (w: number, h: number, teken: (g: CanvasRenderingContext2D) => v
 
 export function bouwAvatar(scene: THREE.Scene, thema: StadionThema, opt: { laag?: number; zwaaien?: boolean } = {}): Avatar {
   const laag = opt.laag ?? AVATAR_LAAG
-  const zwaaien = opt.zwaaien ?? true
+  let zwaaien = opt.zwaaien ?? true
   const kleur = (k: string | undefined, standaard: string) => (k === 'club' ? thema.primair : k === 'club2' ? thema.secundair : (k ?? standaard))
   const groep = new THREE.Group()
   const shirt = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.7 })
@@ -653,6 +655,9 @@ export function bouwAvatar(scene: THREE.Scene, thema: StadionThema, opt: { laag?
     },
     zichtbaar(aan) {
       groep.visible = aan
+    },
+    zwaai(aan) {
+      zwaaien = aan
     },
     houdVast(iets) {
       if (vast) hand.remove(vast)

@@ -7,7 +7,7 @@ import { krachtbalGeometrie, krachtbalTextuur } from './krachtbal'
 import { rondeDoos } from './rond'
 import { rnd } from './stadion'
 import { bouwVolk } from './volk'
-import { bouwVerkoopwagen } from './voertuig'
+import { bouwVerkoopwagen, nachtOmgeving } from './voertuig'
 
 // Het fandorp: aan de overkant van de straat, recht tegenover de hoofdingang, zoals bij een echt
 // stadion op wedstrijddag. Een zebrapad en een poort met de clubnaam brengen je erin. Daar:
@@ -125,7 +125,13 @@ export function bouwFandorp(scene: THREE.Scene, opt: { thema: StadionThema; lich
         g.globalAlpha = 1
       }
     })
-    return new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: t, toneMapped: false, side: THREE.DoubleSide }))
+    // Twee kanten, elk leesbaar (een dubbelzijdig vlak toont de tekst achteraan in spiegelschrift).
+    const mat = new THREE.MeshBasicMaterial({ map: t, toneMapped: false })
+    const voorkant = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat)
+    const achterkant = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat)
+    achterkant.rotation.y = Math.PI
+    voorkant.add(achterkant)
+    return voorkant
   }
   const animaties: ((s: number, dt: number) => void)[] = []
 
@@ -766,40 +772,165 @@ export function bouwFandorp(scene: THREE.Scene, opt: { thema: StadionThema; lich
     groep.add(molen)
     const draait = new THREE.Group()
     molen.add(draait)
-    draait.add(new THREE.Mesh(new THREE.CylinderGeometry(6, 6.2, 0.5, 40).translate(0, 0.25, 0), new THREE.MeshStandardMaterial({ color: '#7c2d12', roughness: 0.6 })))
-    const spiegel = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.2, 4.2, 12).translate(0, 2.6, 0), new THREE.MeshStandardMaterial({ color: '#fde68a', metalness: 0.9, roughness: 0.15 }))
-    draait.add(spiegel)
+    // Een klassieke kermismolen: een houten draaivloer met een gouden rand en een sierrok, een
+    // spiegelzuil met gouden lijsten, gouden palen, een gestreepte kap met een geschulpte rand in de
+    // clubkleuren, een gouden bol bovenop, en overal lampjes. Goud en spiegels weerspiegelen de
+    // nacht (één gedeelde omgevingstextuur, geen echte lampen).
+    const env = nachtOmgeving()
+    const goud = new THREE.MeshStandardMaterial({ color: '#d9a93c', metalness: 1, roughness: 0.22, envMap: env, envMapIntensity: 1.6 })
+    const spiegelMat = new THREE.MeshStandardMaterial({ color: '#cfd8e6', metalness: 1, roughness: 0.04, envMap: env, envMapIntensity: 2.2 })
+    // De vloer: planken in een waaier, gelakt hout.
+    const planken = tex(512, 512, (g) => {
+      g.fillStyle = '#6b3a1f'
+      g.fillRect(0, 0, 512, 512)
+      for (let i = 0; i < 36; i++) {
+        const a0 = (i / 36) * Math.PI * 2
+        const a1 = ((i + 1) / 36) * Math.PI * 2
+        const l = 95 + ((i * 37) % 30)
+        g.fillStyle = `rgb(${l + 40},${l - 10},${l - 50})`
+        g.beginPath()
+        g.moveTo(256, 256)
+        g.arc(256, 256, 256, a0, a1)
+        g.closePath()
+        g.fill()
+      }
+      g.strokeStyle = 'rgba(40,20,8,.6)'
+      g.lineWidth = 2
+      for (let i = 0; i < 36; i++) {
+        const a = (i / 36) * Math.PI * 2
+        g.beginPath()
+        g.moveTo(256, 256)
+        g.lineTo(256 + Math.cos(a) * 256, 256 + Math.sin(a) * 256)
+        g.stroke()
+      }
+      // Een rozet in het midden en een ring in clubkleur.
+      g.strokeStyle = thema.primair
+      g.lineWidth = 14
+      g.beginPath()
+      g.arc(256, 256, 200, 0, Math.PI * 2)
+      g.stroke()
+    })
+    const vloer = new THREE.Mesh(new THREE.CircleGeometry(6, 48).rotateX(-Math.PI / 2).translate(0, 0.5, 0), new THREE.MeshStandardMaterial({ map: planken, roughness: 0.35, metalness: 0.1, envMap: env, envMapIntensity: 0.5 }))
+    draait.add(vloer)
+    // De sierrok rond de vloer: panelen in clubkleur met een gouden lijst, en een gouden boord.
+    const rok = tex(1024, 64, (g) => {
+      for (let i = 0; i < 16; i++) {
+        g.fillStyle = i % 2 ? thema.primair : thema.secundair
+        g.fillRect(i * 64, 0, 64, 64)
+        g.strokeStyle = '#e8c15a'
+        g.lineWidth = 5
+        g.strokeRect(i * 64 + 6, 8, 52, 48)
+      }
+    })
+    draait.add(new THREE.Mesh(new THREE.CylinderGeometry(6, 6.1, 0.5, 48, 1, true).translate(0, 0.25, 0), new THREE.MeshStandardMaterial({ map: rok, roughness: 0.4, side: THREE.DoubleSide })))
+    draait.add(new THREE.Mesh(new THREE.TorusGeometry(6.02, 0.07, 6, 64).rotateX(Math.PI / 2).translate(0, 0.5, 0), goud))
+    draait.add(new THREE.Mesh(new THREE.TorusGeometry(6.08, 0.05, 6, 64).rotateX(Math.PI / 2).translate(0, 0.03, 0), goud))
+    // De middenzuil: spiegelpanelen tussen gouden stijlen, met een gouden voet en kroon.
+    const N = 8
+    const zuilR = 1.25
+    const zuil = new THREE.Mesh(new THREE.CylinderGeometry(zuilR, zuilR, 3.6, N).translate(0, 2.55, 0), spiegelMat)
+    draait.add(zuil)
+    for (let i = 0; i < N; i++) {
+      const a = (i / N) * Math.PI * 2
+      const stijl = new THREE.Mesh(new THREE.BoxGeometry(0.1, 3.6, 0.1).translate(0, 2.55, 0), goud)
+      stijl.position.set(Math.sin(a) * zuilR, 0, Math.cos(a) * zuilR)
+      draait.add(stijl)
+    }
+    draait.add(new THREE.Mesh(new THREE.CylinderGeometry(zuilR + 0.2, zuilR + 0.28, 0.35, 24).translate(0, 0.68, 0), goud))
+    draait.add(new THREE.Mesh(new THREE.CylinderGeometry(zuilR + 0.28, zuilR + 0.12, 0.4, 24).translate(0, 4.5, 0), goud))
+    // De kap: banen in clubkleur en wit, de geschulpte rand (valance) en een gouden bol bovenop.
     const streep = tex(512, 64, (g) => {
       for (let i = 0; i < 16; i++) {
         g.fillStyle = i % 2 ? '#ffffff' : thema.primair
         g.fillRect(i * 32, 0, 32, 64)
       }
     })
-    const kap = new THREE.Mesh(new THREE.ConeGeometry(6.8, 2.6, 32, 1, true).translate(0, 6.0, 0), new THREE.MeshStandardMaterial({ map: streep, side: THREE.DoubleSide, roughness: 0.6 }))
+    const kap = new THREE.Mesh(new THREE.ConeGeometry(6.8, 2.6, 32, 1, true).translate(0, 6.0, 0), new THREE.MeshStandardMaterial({ map: streep, side: THREE.DoubleSide, roughness: 0.5 }))
     draait.add(kap)
-    draait.add(new THREE.Mesh(new THREE.CylinderGeometry(6.8, 6.8, 0.6, 32, 1, true).translate(0, 4.4, 0), club2Mat))
+    // De binnenkant van de kap: donkerder, zodat de lampjes eronder oplichten.
+    draait.add(new THREE.Mesh(new THREE.ConeGeometry(6.75, 2.55, 32, 1, true).translate(0, 5.98, 0), new THREE.MeshStandardMaterial({ color: thema.secundair, side: THREE.BackSide, roughness: 0.7 })))
+    const schulp = tex(1024, 128, (g) => {
+      g.clearRect(0, 0, 1024, 128)
+      for (let i = 0; i < 24; i++) {
+        const x = i * (1024 / 24)
+        const w = 1024 / 24
+        g.fillStyle = i % 2 ? thema.secundair : thema.primair
+        g.beginPath()
+        g.moveTo(x, 0)
+        g.lineTo(x + w, 0)
+        g.lineTo(x + w, 64)
+        g.arc(x + w / 2, 64, w / 2, 0, Math.PI)
+        g.closePath()
+        g.fill()
+        g.strokeStyle = '#e8c15a'
+        g.lineWidth = 4
+        g.beginPath()
+        g.arc(x + w / 2, 64, w / 2 - 4, 0, Math.PI)
+        g.stroke()
+      }
+      g.fillStyle = '#e8c15a'
+      g.fillRect(0, 0, 1024, 10)
+    })
+    draait.add(
+      new THREE.Mesh(
+        new THREE.CylinderGeometry(6.82, 6.82, 0.95, 48, 1, true).translate(0, 4.3, 0),
+        new THREE.MeshStandardMaterial({ map: schulp, transparent: true, alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.45 }),
+      ),
+    )
+    draait.add(new THREE.Mesh(new THREE.TorusGeometry(6.82, 0.06, 6, 64).rotateX(Math.PI / 2).translate(0, 4.78, 0), goud))
+    draait.add(new THREE.Mesh(new THREE.SphereGeometry(0.4, 16, 12).translate(0, 7.55, 0), goud))
+    draait.add(new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.7, 10).translate(0, 8.2, 0), goud))
+    const vlag = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 0.45).translate(0.4, 8.25, 0), new THREE.MeshStandardMaterial({ color: thema.primair, side: THREE.DoubleSide, roughness: 0.6 }))
+    draait.add(vlag)
+    // Gouden palen met een kraag waar ze de bal raken.
     const ballen: THREE.Mesh[] = []
     const kleuren = ['#f97316', '#facc15', '#dc2626', '#2563eb', '#f8fafc']
     for (let i = 0; i < 10; i++) {
       const a = (i / 10) * Math.PI * 2
       const x = Math.sin(a) * 4.4
       const z = Math.cos(a) * 4.4
-      const paal = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 4, 6).translate(0, 2.4, 0), staal)
+      const paal = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.055, 4, 8).translate(0, 2.4, 0), goud)
       paal.position.set(x, 0, z)
       draait.add(paal)
-      const bal = new THREE.Mesh(krachtbalGeometrie(0.55, 0.5), new THREE.MeshStandardMaterial({ map: krachtbalTextuur(kleuren[i % 5]), roughness: 0.55 }))
+      const bal = new THREE.Mesh(krachtbalGeometrie(0.55, 0.5), new THREE.MeshStandardMaterial({ map: krachtbalTextuur(kleuren[i % 5]), roughness: 0.4, envMap: env, envMapIntensity: 0.6 }))
       bal.position.set(x, 1.6, z)
       draait.add(bal)
       ballen.push(bal)
     }
-    const lampRing = new THREE.InstancedMesh(new THREE.SphereGeometry(0.08, 6, 4), new THREE.MeshBasicMaterial({ color: '#fff1c4', toneMapped: false }), 48)
-    const m4 = new THREE.Matrix4()
-    for (let i = 0; i < 48; i++) {
-      const a = (i / 48) * Math.PI * 2
-      m4.makeTranslation(Math.sin(a) * 6.85, 4.1, Math.cos(a) * 6.85)
-      lampRing.setMatrixAt(i, m4)
+    // Lampjes: langs de rand van de kap, in stralen onder de kap, rond de zuilkroon en langs de vloer.
+    const lampPos: [number, number, number][] = []
+    for (let i = 0; i < 64; i++) {
+      const a = (i / 64) * Math.PI * 2
+      lampPos.push([Math.sin(a) * 6.9, 4.62, Math.cos(a) * 6.9])
     }
+    for (let k = 0; k < 16; k++) {
+      const a = (k / 16) * Math.PI * 2
+      for (let j = 1; j <= 6; j++) {
+        const r = 1.6 + j * 0.85
+        lampPos.push([Math.sin(a) * r, 7.25 - (r / 6.8) * 2.6 - 0.08, Math.cos(a) * r])
+      }
+    }
+    for (let i = 0; i < 24; i++) {
+      const a = (i / 24) * Math.PI * 2
+      lampPos.push([Math.sin(a) * (zuilR + 0.3), 4.72, Math.cos(a) * (zuilR + 0.3)])
+      lampPos.push([Math.sin(a) * 6.1, 0.28, Math.cos(a) * 6.1])
+    }
+    const lampRing = new THREE.InstancedMesh(new THREE.SphereGeometry(0.075, 6, 4), new THREE.MeshBasicMaterial({ color: '#ffe9b8', toneMapped: false }), lampPos.length)
+    const m4 = new THREE.Matrix4()
+    lampPos.forEach(([x, y, z], i) => {
+      m4.makeTranslation(x, y, z)
+      lampRing.setMatrixAt(i, m4)
+    })
     draait.add(lampRing)
+    // Een warme gloed onder de kap, op de vloer (nep-licht).
+    const gloedC = tex(64, 64, (g) => {
+      const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32)
+      gr.addColorStop(0, 'rgba(255,214,150,.55)')
+      gr.addColorStop(1, 'rgba(255,214,150,0)')
+      g.fillStyle = gr
+      g.fillRect(0, 0, 64, 64)
+    })
+    draait.add(new THREE.Mesh(new THREE.CircleGeometry(6, 40).rotateX(-Math.PI / 2).translate(0, 0.52, 0), new THREE.MeshBasicMaterial({ map: gloedC, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false })))
     blok(MX - 6.4, MX + 6.4, MZ - 6.4, MZ + 6.4)
     const mb = bord('🎠 DRAAIMOLEN', 4.6, 1, '#0b1220', '#fde68a')
     mb.position.set(MX - 7.2, 2.2, MZ)

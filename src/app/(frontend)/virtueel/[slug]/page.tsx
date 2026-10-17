@@ -22,7 +22,7 @@ export const dynamic = 'force-dynamic'
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const f = fragment((await params).slug)
-  return { title: f ? `Je virtuele stadion · ${f.titel} — Virtueel krachtbal` : 'Virtueel krachtbal' }
+  return { title: f ? 'Je stadion — Virtueel krachtbal' : 'Virtueel krachtbal' }
 }
 
 export default async function VirtueelFragmentPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -78,12 +78,7 @@ export default async function VirtueelFragmentPage({ params }: { params: Promise
       <div className="site vk-pagina">
         <Link href="/virtueel" className="vk-terug">← Virtueel krachtbal</Link>
         <h1 className="vk-titel">{clubNaam ? `Het stadion van ${clubNaam}` : 'Je virtuele stadion'}</h1>
-        <p className="vk-sub">Op het veld: {f.titel}</p>
         <VirtueelViewer slug={f.slug} thema={thema} />
-        <p className="vk-noot">
-          Het spel op het veld is gereconstrueerd uit één gsm-video: posities zijn schattingen en kunnen hier en daar
-          verspringen. Spelers zijn genummerd per ploeg (S1, S2, …), niet op naam.
-        </p>
       </div>
     </>
   )
