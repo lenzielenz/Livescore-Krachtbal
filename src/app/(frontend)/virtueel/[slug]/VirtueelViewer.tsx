@@ -1520,6 +1520,7 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
       vorige = nu
       const s = st.current
       if (s.pauze) return
+      const werkBegin = performance.now()
       if (s.spelend) {
         // Het fragment is kort: aan het einde begint het gewoon opnieuw.
         s.tijd += dt
@@ -1963,7 +1964,7 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
             : waar === 'kelder' && laatsteRuimte
               ? `kelder:${laatsteRuimte}`
               : waar
-        meter.beeld(ruw, vuurwerk.bezig() ? `vuurwerk:${plek}` : plek)
+        meter.beeld(ruw, vuurwerk.bezig() ? `vuurwerk:${plek}` : plek, performance.now() - werkBegin)
         renderer.info.reset()
       }
 

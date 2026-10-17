@@ -13,7 +13,7 @@ export const VirtueleMetingen: CollectionConfig = {
     useAsTitle: 'gpu',
     defaultColumns: ['gpu', 'fps', 'duur', 'licht', 'createdAt'],
     group: 'Virtueel stadion',
-    description: 'Hoe vlot het stadion loopt per bezoek (anoniem). Het overzicht: /api/virtueel/meting.',
+    description: 'Hoe vlot het stadion loopt per bezoek (anoniem). De analyse met knelpunten en advies: /federatie/stadion.',
   },
   access: {
     read: ({ req }) => isFederationLevel(req.user),

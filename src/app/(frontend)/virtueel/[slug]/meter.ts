@@ -13,11 +13,15 @@ const BAKJES = 250
 const STUUR_ELKE_MS = 60_000
 const ADRES = '/api/virtueel/meting'
 
-type Plek = { s: number; beelden: number; schokken: number; haperingen: number; bakjes: Uint32Array; calls: number; tris: number; tellingen: number }
+type Plek = { s: number; beelden: number; schokken: number; haperingen: number; bakjes: Uint32Array; calls: number; tris: number; tellingen: number; werk: number }
 
 export type Meter = {
-  /** Na elk getekend beeld: de echte tijd sinds het vorige (ms) en waar je bent. */
-  beeld: (ms: number, plek: string) => void
+  /**
+   * Na elk getekend beeld: de echte tijd sinds het vorige (ms), waar je bent, en hoelang de
+   * processor met dit beeld bezig was (logica + tekenopdrachten doorgeven, ms). Is dat laatste
+   * veel kleiner dan de frametijd, dan wacht de browser op de grafische kaart.
+   */
+  beeld: (ms: number, plek: string, werk: number) => void
   /** De automatische bijsturing greep in (bv. "pixels 1", "nabewerking uit"). */
   stap: (wat: string) => void
   zet: (o: { ratio?: number; nabewerking?: boolean; schaduw?: number; eersteBeeld?: number; shaders?: number }) => void
@@ -96,6 +100,7 @@ export function bouwMeter(renderer: THREE.WebGLRenderer, opt: { licht: boolean }
         p99: pct(0.99),
         calls: p.tellingen ? Math.round(p.calls / p.tellingen) : 0,
         tris: p.tellingen ? Math.round(p.tris / p.tellingen) : 0,
+        cpu: p.beelden ? Math.round((p.werk / p.beelden) * 100) / 100 : 0,
       }
     }
     return { sessie, toestel, laden, duur: Math.round(duur), plekken: lijst, bijsturing, ergste }
@@ -122,17 +127,18 @@ export function bouwMeter(renderer: THREE.WebGLRenderer, opt: { licht: boolean }
   document.addEventListener('visibilitychange', verborgen)
 
   return {
-    beeld(ms, naam) {
+    beeld(ms, naam, werk) {
       // Een tabblad op de achtergrond (of een pauze) is geen trage frame.
       if (!(ms > 0) || ms > 1000 || document.visibilityState === 'hidden') return
       let p = plekken.get(naam)
       if (!p) {
         if (plekken.size >= 40) return
-        plekken.set(naam, (p = { s: 0, beelden: 0, schokken: 0, haperingen: 0, bakjes: new Uint32Array(BAKJES), calls: 0, tris: 0, tellingen: 0 }))
+        plekken.set(naam, (p = { s: 0, beelden: 0, schokken: 0, haperingen: 0, bakjes: new Uint32Array(BAKJES), calls: 0, tris: 0, tellingen: 0, werk: 0 }))
       }
       p.s += ms / 1000
       duur += ms / 1000
       p.beelden++
+      p.werk += werk > 0 ? Math.min(werk, 1000) : 0
       p.bakjes[Math.min(BAKJES - 1, Math.floor(ms))]++
       if (ms > 36) p.schokken++
       if (ms > 100) {

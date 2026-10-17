@@ -22,6 +22,11 @@ export type MetingPlek = {
   /** Gemiddeld per beeld: tekenopdrachten en driehoeken. */
   calls: number
   tris: number
+  /**
+   * Gemiddeld per beeld: hoelang de processor ermee bezig was (logica + tekenopdrachten doorgeven,
+   * ms). Veel kleiner dan de frametijd: de grafische kaart is de rem. 0 bij oudere metingen.
+   */
+  cpu: number
 }
 
 export type Meting = {
@@ -46,6 +51,10 @@ export type Meting = {
   bijsturing: { ratio: number; nabewerking: boolean; schaduw: number; stappen: { t: number; wat: string }[] }
   /** De ergste beelden van het bezoek. */
   ergste: { ms: number; plek: string; t: number }[]
+  /** Welke versie van de site (commit) dit mat — gezet door de server, nooit door de browser. */
+  versie?: string
+  /** De dag van de meting (JJJJ-MM-DD) — gezet door de server bij het uitlezen. */
+  dag?: string
 }
 
 const getal = (v: unknown, min: number, max: number, standaard = 0): number => {
@@ -80,6 +89,7 @@ export function leesMeting(ruw: unknown): Meting | null {
       p99: getal(p.p99, 0, 1000),
       calls: Math.round(getal(p.calls, 0, 1e5)),
       tris: Math.round(getal(p.tris, 0, 1e8)),
+      cpu: getal(p.cpu, 0, 1000),
     }
   }
   const b = object(w.bijsturing)
@@ -135,6 +145,8 @@ export type PlekSamenvatting = {
   haperingenPerMinuut: number
   calls: number
   tris: number
+  /** Gewogen gemiddelde processortijd per beeld (ms); 0 als geen enkele meting het had. */
+  cpu: number
 }
 
 export type ToestelSamenvatting = { gpu: string; sessies: number; minuten: number; fps: number; schokkenPerMinuut: number; licht: number }
@@ -152,6 +164,10 @@ export type Samenvatting = {
   bijsturing: Record<string, number>
   laden: { eersteBeeldMediaan: number; shadersMediaan: number }
   ergste: { ms: number; plek: string; gpu: string }[]
+  /** Per versie van de site, de oudste eerst: zo zie je wat een optimalisatie opleverde. */
+  versies: { versie: string; sessies: number; minuten: number; fps: number; schokkenPerMinuut: number; van: string; tot: string }[]
+  /** Per dag, de oudste eerst. */
+  dagen: { dag: string; sessies: number; minuten: number; fps: number; schokkenPerMinuut: number }[]
 }
 
 const mediaan = (l: number[]) => {
@@ -163,7 +179,20 @@ const r1 = (n: number) => Math.round(n * 10) / 10
 
 /** Vat een stapel metingen samen: waar en op welke toestellen het stadion het moeilijkst heeft. */
 export function vatSamen(metingen: Meting[]): Samenvatting {
-  const plekken = new Map<string, { s: number; beelden: number; schokken: number; haperingen: number; p95s: number; calls: number; tris: number; sessies: number }>()
+  const plekken = new Map<string, { s: number; beelden: number; schokken: number; haperingen: number; p95s: number; calls: number; tris: number; cpus: number; cpuS: number; sessies: number }>()
+  type Reeks = { sessies: number; s: number; beelden: number; schokken: number; van: string; tot: string }
+  const versies = new Map<string, Reeks>()
+  const dagen = new Map<string, Reeks>()
+  const telReeks = (lijst: Map<string, Reeks>, sleutel: string, m: Meting, ms: number, mb: number, msch: number) => {
+    const r = lijst.get(sleutel) ?? { sessies: 0, s: 0, beelden: 0, schokken: 0, van: m.dag ?? '', tot: m.dag ?? '' }
+    r.sessies++
+    r.s += ms
+    r.beelden += mb
+    r.schokken += msch
+    if (m.dag && (!r.van || m.dag < r.van)) r.van = m.dag
+    if (m.dag && m.dag > r.tot) r.tot = m.dag
+    lijst.set(sleutel, r)
+  }
   const toestellen = new Map<string, { sessies: number; s: number; beelden: number; schokken: number; licht: number }>()
   const bijsturing: Record<string, number> = {}
   let s = 0
@@ -175,8 +204,11 @@ export function vatSamen(metingen: Meting[]): Samenvatting {
     const t = toestellen.get(gpu) ?? { sessies: 0, s: 0, beelden: 0, schokken: 0, licht: 0 }
     t.sessies++
     if (m.toestel.licht) t.licht++
+    let ms = 0
+    let mb = 0
+    let msch = 0
     for (const [naam, p] of Object.entries(m.plekken)) {
-      const a = plekken.get(naam) ?? { s: 0, beelden: 0, schokken: 0, haperingen: 0, p95s: 0, calls: 0, tris: 0, sessies: 0 }
+      const a = plekken.get(naam) ?? { s: 0, beelden: 0, schokken: 0, haperingen: 0, p95s: 0, calls: 0, tris: 0, cpus: 0, cpuS: 0, sessies: 0 }
       a.s += p.s
       a.beelden += p.beelden
       a.schokken += p.schokken
@@ -184,6 +216,10 @@ export function vatSamen(metingen: Meting[]): Samenvatting {
       a.p95s += p.p95 * p.s
       a.calls += p.calls * p.s
       a.tris += p.tris * p.s
+      if (p.cpu > 0) {
+        a.cpus += p.cpu * p.s
+        a.cpuS += p.s
+      }
       a.sessies++
       plekken.set(naam, a)
       t.s += p.s
@@ -192,8 +228,13 @@ export function vatSamen(metingen: Meting[]): Samenvatting {
       s += p.s
       beelden += p.beelden
       schokken += p.schokken
+      ms += p.s
+      mb += p.beelden
+      msch += p.schokken
     }
     toestellen.set(gpu, t)
+    telReeks(versies, m.versie || 'onbekend', m, ms, mb, msch)
+    if (m.dag) telReeks(dagen, m.dag, m, ms, mb, msch)
     for (const stap of m.bijsturing.stappen) bijsturing[stap.wat] = (bijsturing[stap.wat] ?? 0) + 1
     for (const e of m.ergste) ergste.push({ ...e, gpu })
   }
@@ -214,6 +255,7 @@ export function vatSamen(metingen: Meting[]): Samenvatting {
         haperingenPerMinuut: perMin(a.haperingen, a.s),
         calls: a.s > 0 ? Math.round(a.calls / a.s) : 0,
         tris: a.s > 0 ? Math.round(a.tris / a.s) : 0,
+        cpu: a.cpuS > 0 ? r1(a.cpus / a.cpuS) : 0,
       }))
       .sort((a, b) => a.fps - b.fps),
     toestellen: [...toestellen.entries()]
@@ -222,5 +264,11 @@ export function vatSamen(metingen: Meting[]): Samenvatting {
     bijsturing,
     laden: { eersteBeeldMediaan: mediaan(metingen.map((m) => m.laden.eersteBeeld).filter((x) => x > 0)), shadersMediaan: mediaan(metingen.map((m) => m.laden.shaders).filter((x) => x > 0)) },
     ergste: ergste.sort((a, b) => b.ms - a.ms).slice(0, 25),
+    versies: [...versies.entries()]
+      .map(([versie, r]) => ({ versie, sessies: r.sessies, minuten: r1(r.s / 60), fps: r.s > 0 ? r1(r.beelden / r.s) : 0, schokkenPerMinuut: perMin(r.schokken, r.s), van: r.van, tot: r.tot }))
+      .sort((a, b) => a.van.localeCompare(b.van) || a.tot.localeCompare(b.tot)),
+    dagen: [...dagen.entries()]
+      .map(([dag, r]) => ({ dag, sessies: r.sessies, minuten: r1(r.s / 60), fps: r.s > 0 ? r1(r.beelden / r.s) : 0, schokkenPerMinuut: perMin(r.schokken, r.s) }))
+      .sort((a, b) => a.dag.localeCompare(b.dag)),
   }
 }

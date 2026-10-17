@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { fpsVan, leesMeting, MAX_PLEKKEN, vatSamen, type Meting } from '@/lib/virtueel-meting'
 
-const plek = { s: 60, beelden: 3000, schokken: 6, haperingen: 1, p50: 16.7, p95: 22, p99: 40, calls: 700, tris: 450000 }
+const plek = { s: 60, beelden: 3000, schokken: 6, haperingen: 1, p50: 16.7, p95: 22, p99: 40, calls: 700, tris: 450000, cpu: 6 }
 const ruw = {
   sessie: 'abc12345-def',
   toestel: { gpu: 'ANGLE (Intel UHD 620)', browser: 'Chrome 141', os: 'Windows', cores: 8, geheugen: 8, scherm: [1536, 864, 1.25], licht: false, mobiel: false },

@@ -2,7 +2,8 @@ import { isFederationLevel } from '@/lib/access'
 import { authUser } from '@/lib/api-auth'
 import { getPayloadClient } from '@/lib/payload-client'
 import { clientIp, rateLimit } from '@/lib/sse-hub'
-import { fpsVan, leesMeting, vatSamen, type Meting } from '@/lib/virtueel-meting'
+import { fpsVan, leesMeting } from '@/lib/virtueel-meting'
+import { BEWAAR_DAGEN, laadOverzicht, siteVersie } from '@/lib/virtueel-meting-overzicht'
 
 export const dynamic = 'force-dynamic'
 
@@ -11,10 +12,9 @@ export const dynamic = 'force-dynamic'
 //          per bezoek, dat telkens bijgewerkt wordt. Anoniem en zonder login (ook wie niet
 //          ingelogd is, loopt rond), dus begrensd: kleine berichten, een tempo-limiet per IP, en
 //          de server neemt enkel opgeschoonde cijfers aan. Schrijft niets anders dan metingen.
-//  GET   — het overzicht voor de federatie: per plek en per grafische kaart, de traagste eerst.
-//          ?dagen=7 (standaard 14, max 30), ?ruw=1 voor de losse metingen.
-
-const BEWAAR_DAGEN = 30
+//  GET   — het overzicht voor de federatie: per plek, per grafische kaart, per versie en per dag,
+//          plus de analyse (knelpunten met advies, lib/virtueel-analyse.ts). Ook leesbaar op
+//          /federatie/stadion. ?dagen=7 (standaard 14, max 30), ?ruw=1 voor de losse metingen.
 const MAX_BYTES = 24_000
 
 export async function POST(req: Request) {
@@ -32,7 +32,8 @@ export async function POST(req: Request) {
   const meting = leesMeting(ruw)
   if (!meting || Object.keys(meting.plekken).length === 0) return Response.json({ error: 'Ongeldige meting.' }, { status: 400 })
   const payload = await getPayloadClient()
-  const velden = { sessie: meting.sessie, gpu: meting.toestel.gpu, licht: meting.toestel.licht, duur: meting.duur, fps: fpsVan(meting), data: meting }
+  // De versie stempelt de server zelf: zo vergelijk je achteraf wat een aanpassing opleverde.
+  const velden = { sessie: meting.sessie, gpu: meting.toestel.gpu, licht: meting.toestel.licht, duur: meting.duur, fps: fpsVan(meting), data: { ...meting, versie: siteVersie() } }
   const bestaand = await payload.find({ collection: 'virtuele-metingen', where: { sessie: { equals: meting.sessie } }, limit: 1, depth: 0, overrideAccess: true })
   if (bestaand.docs[0]) await payload.update({ collection: 'virtuele-metingen', id: bestaand.docs[0].id, data: velden, overrideAccess: true })
   else {
@@ -51,10 +52,6 @@ export async function GET(req: Request) {
   const user = await authUser(payload, req)
   if (!user || !isFederationLevel(user)) return Response.json({ error: 'Enkel voor de federatie.' }, { status: 403 })
   const url = new URL(req.url)
-  const dagen = Math.max(1, Math.min(BEWAAR_DAGEN, Number(url.searchParams.get('dagen')) || 14))
-  const sinds = new Date(Date.now() - dagen * 86_400_000).toISOString()
-  const r = await payload.find({ collection: 'virtuele-metingen', where: { updatedAt: { greater_than: sinds } }, sort: '-updatedAt', limit: 5000, depth: 0, overrideAccess: true })
-  const metingen = r.docs.map((d) => leesMeting(d.data)).filter((m): m is Meting => m != null)
-  const samenvatting = vatSamen(metingen)
-  return Response.json(url.searchParams.get('ruw') ? { dagen, samenvatting, metingen } : { dagen, samenvatting })
+  const { metingen, ...overzicht } = await laadOverzicht(payload, Number(url.searchParams.get('dagen')) || 14)
+  return Response.json(url.searchParams.get('ruw') ? { ...overzicht, metingen } : overzicht)
 }
