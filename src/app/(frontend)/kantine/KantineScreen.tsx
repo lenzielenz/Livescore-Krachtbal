@@ -33,6 +33,9 @@ function layoutFor(n: number): { cols: number; fontSize: number; logoSize: strin
   return { cols: 5, fontSize: 13, logoSize: 'clamp(36px, 5.5vmin, 76px)' }
 }
 
+/** Lager dan dit (px) is een bord van de weekendvoorbeschouwing niet meer te lezen: dan scrollen. */
+const VS_MIN_RIJ = 150
+
 // Het eigenlijke kantinescherm (kantine-tv): toont de centraal gekozen wedstrijden als live
 // borden. Pollt de selectie elke 12s zodat wijzigingen op een ander toestel vanzelf doorkomen;
 // de scores binnen elk bord lopen live via SSE. De layout past zich aan aan het aantal borden.
@@ -246,9 +249,14 @@ export function KantineScreen({
     ro.observe(el)
     return () => ro.disconnect()
   }, [heeftVoorbeschouwing])
-  const vsRijH = vsMaat.h > 0 ? (vsMaat.h - (vsRijen - 1) * 14) / vsRijen : 200
+  const gedeeldeRijH = vsMaat.h > 0 ? (vsMaat.h - (vsRijen - 1) * 14) / vsRijen : 200
   const vsKolB = vsMaat.b > 0 ? (vsMaat.b - (vsCols - 1) * 14) / vsCols : 440
-  const vsFont = Math.round(Math.max(10, Math.min(vsRijH * 0.085, vsKolB * 0.042, 34)))
+  // Op een tv delen de rijen de schermhoogte. Op een gsm (één smalle kolom, tien wedstrijden) werd
+  // een rij zo ±60 px: de logo's vielen half weg en niets was nog te lezen. Is een gedeelde rij te
+  // laag, dan krijgt elke wedstrijd een vaste, leesbare hoogte en scrol je door de lijst.
+  const vsKrap = vsMaat.h > 0 && gedeeldeRijH < VS_MIN_RIJ
+  const vsRijH = vsKrap ? Math.round(Math.max(VS_MIN_RIJ, Math.min(210, vsKolB * 0.5))) : gedeeldeRijH
+  const vsFont = Math.round(Math.max(vsKrap ? 14 : 10, Math.min(vsRijH * 0.085, vsKolB * 0.042, 34)))
   const vsLogo = `${Math.round(Math.max(28, Math.min(vsRijH * 0.4, vsKolB * 0.21)))}px`
   const layout = layoutFor(visible.length)
   const cols = Math.min(layout.cols, maxColsForWidth(vw))
@@ -409,10 +417,14 @@ export function KantineScreen({
           )}
         </div>
       ) : voorbeschouwing.length > 0 ? (
-        <div className="kt-vs-venster" ref={vsRef}>
+        <div className={`kt-vs-venster${vsKrap ? ' scrol' : ''}`} ref={vsRef}>
           <div
             className="kt-vs-raster"
-            style={{ gridTemplateColumns: `repeat(${vsCols}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${vsRijen}, minmax(0, 1fr))` }}
+            style={
+              vsKrap
+                ? { gridTemplateColumns: `repeat(${vsCols}, minmax(0, 1fr))`, gridAutoRows: `${vsRijH}px` }
+                : { gridTemplateColumns: `repeat(${vsCols}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${vsRijen}, minmax(0, 1fr))` }
+            }
           >
             {voorbeschouwing.map((m) => (
               <VoorbeschouwingTile key={m.id} match={m} fontSize={vsFont} logoSize={vsLogo} />
