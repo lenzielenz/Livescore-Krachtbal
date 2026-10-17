@@ -46,6 +46,7 @@ import { FunctionGrants } from './collections/FunctionGrants'
 import { GraffitiTags } from './collections/GraffitiTags'
 import { VirtueleSporen } from './collections/VirtueleSporen'
 import { PhotoboothFotos } from './collections/PhotoboothFotos'
+import { VirtueleMetingen } from './collections/VirtueleMetingen'
 import { AnalyseNotities } from './collections/AnalyseNotities'
 import { Season } from './globals/Season'
 import { Settings } from './globals/Settings'
@@ -149,6 +150,7 @@ export default buildConfig({
     GraffitiTags,
     VirtueleSporen,
     PhotoboothFotos,
+    VirtueleMetingen,
     AnalyseNotities,
   ],
   globals: [Season, Settings, Secretariaat],

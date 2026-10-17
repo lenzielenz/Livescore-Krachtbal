@@ -195,7 +195,7 @@ export function bouwGangleven(
       const beker = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.035, 0.13, 8), hoekMats.lamp)
       beker.position.set(tx + 0.12, 1.18, tz)
       groep.add(voet, poot, top, beker)
-      const aantal = 2 + Math.floor(toeval() * 2)
+      const aantal = 1 + Math.floor(toeval() * 2)
       for (let k = 0; k < aantal; k++) {
         const a = (k / aantal) * Math.PI * 2 + toeval()
         const lx = tx + Math.sin(a) * 0.62
@@ -254,7 +254,7 @@ export function bouwGangleven(
       tz: b.z - a.z,
     }
   }
-  const wandelaars = Array.from({ length: licht ? 14 : 32 }, (_, i) => ({
+  const wandelaars = Array.from({ length: licht ? 6 : 32 }, (_, i) => ({
     s0: toeval() * L,
     v: (1.0 + toeval() * 0.5) * (i % 2 ? 1 : -1),
     baan: i % 2 ? 2.0 : 2.75,

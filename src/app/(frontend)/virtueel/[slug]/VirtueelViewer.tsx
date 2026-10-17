@@ -15,12 +15,14 @@ import { bouwFotogalerij } from './fotogalerij'
 import { bouwWegwijzers, type Bestemming } from './wegwijzers'
 import { bouwGangleven } from './gangleven'
 import { bouwBuitenkant } from './buitenkant'
+import { bouwTuin } from './tuin'
 import { bouwSterren } from './sterren'
 import { bouwVerdiep } from './verdiep'
 import { bouwLift, LIFT_X } from './lift'
 import { bouwRing, RING } from './ring'
 import { bouwVuurwerk, type Vuurwerk } from './vuurwerk'
 import { bouwFeest, FEEST_MELDING, type FeestPlek } from './feest'
+import { bouwMeter } from './meter'
 import { bouwKelder } from './kelder'
 import { bouwAvatar, EIGEN_LAAG, type Avatar } from './avatar'
 import { bouwPopcornDoosje } from './popcornkraam'
@@ -86,6 +88,8 @@ const VELD: Modus[] = ['tribune', 'bal', 'speler', 'lopen']
 const WANDELEN: Modus[] = ['lopen', 'buiten']
 const BESTUURBAAR: Modus[] = ['lopen', 'buiten', 'zweven']
 const OOGHOOGTE = 1.7
+/** Hoeveel pixels we hoogstens per beeld tekenen (zie `maat`). */
+const MAX_PIXELS = 2_400_000
 const RUIMTE_MELDING: Record<string, string> = {
   Fitness: '💪 Fitness · samen sterker',
   Cinema: '🎬 Cinema · de film loopt',
@@ -306,6 +310,11 @@ function maakFiguur(kleur: string, label: string): Figuur {
   ring.rotation.x = -Math.PI / 2
   ring.position.y = 0.02
   groep.add(ring)
+  // Een zacht schaduwvlekje (in plaats van echte schaduwen, die een extra tekenronde kostten).
+  const vlek = new THREE.Mesh(new THREE.CircleGeometry(0.36, 20), new THREE.MeshBasicMaterial({ color: '#000', transparent: true, opacity: 0.3, depthWrite: false }))
+  vlek.rotation.x = -Math.PI / 2
+  vlek.position.y = 0.015
+  groep.add(vlek)
 
   const lbl = tekstSprite(label, kleur)
   lbl.position.y = 2.2
@@ -692,22 +701,23 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     const cz = veld.width_m / 2
     const W = (x: number, y: number) => new THREE.Vector3(x - cx, 0, y - cz)
 
-    // Lichte modus voor gsm's en zwakke toestellen: minder pixels, kleinere schaduwkaart, minder
-    // publiek. Daarnaast past de beeldscherpte zich aan zodra het afspelen hapert (zie de tekenlus).
-    const licht = window.matchMedia('(max-width: 760px)').matches || (navigator.hardwareConcurrency ?? 8) <= 4
-    let pixels = Math.min(window.devicePixelRatio, licht ? 1.25 : 1.5)
+    // Eén profiel voor iedereen: het lichte. Vroeger kregen computers een zwaardere versie
+    // (nabewerking, meer publiek, meer deeltjes, grotere schaduwkaart), en die liep er net
+    // schokkeriger dan op een gsm. Soepel gaat voor: wat echt zwaar was, is voor iedereen weg (zie
+    // ook de schaduwen en de liftspiegels hieronder). `zwak` onthouden we enkel voor de meter.
+    const zwak = window.matchMedia('(max-width: 760px)').matches || (navigator.hardwareConcurrency ?? 8) <= 4
+    const licht = true
+    let pixels = Math.min(window.devicePixelRatio, 1.25)
     // alpha: het grote scherm is een gat in het canvas waarachter de video speelt (videoscherm.ts).
     // Geen antialias op het canvas: op sterke toestellen tekent de nabewerking (nabewerking.ts) het
     // beeld in een eigen buffer, en daar doet de antialias van het canvas niets — ze kostte enkel
     // geheugen en bandbreedte. Op lichte toestellen staat ze sowieso uit.
+    const begonnen = performance.now()
     const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance', alpha: true })
     renderer.setPixelRatio(pixels)
-    renderer.shadowMap.enabled = true
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap
-    // De schaduwen om het andere beeld bijwerken (zie de tekenlus): wat beweegt, beweegt traag
-    // genoeg, en het scheelt een volledige extra tekenronde per beeld.
-    renderer.shadowMap.autoUpdate = false
-    renderer.shadowMap.needsUpdate = true
+    // Geen echte schaduwen: die kostten een extra tekenronde van de scène vanuit de zon. De spelers
+    // hebben een zacht vlekje en hun ring onder zich (maakFiguur); de rest stond in het licht.
+    renderer.shadowMap.enabled = false
     renderer.toneMapping = THREE.ACESFilmicToneMapping
     renderer.toneMappingExposure = 1.05
     renderer.domElement.className = 'vk-canvas'
@@ -783,11 +793,13 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
       scene.add(new THREE.Points(geo, new THREE.PointsMaterial({ color: 0xdbeafe, size: 1.5, sizeAttenuation: false, transparent: true, opacity: 0.7, fog: false })))
     }
 
-    // Licht: zacht hemellicht en één "maanlicht" met schaduwen; de lichtmasten staan in stadion.ts.
-    scene.add(new THREE.HemisphereLight('#b9d4ff', '#1d3b26', 0.75))
-    const zon = new THREE.DirectionalLight('#fff4dc', 1.6)
+    // Licht: zacht hemellicht en één "maanlicht"; meer echte lampen zijn er niet. Elke echte lamp
+    // wordt voor elke pixel van elk belicht voorwerp doorgerekend, dus de lichtmasten, spots en
+    // lampjes zijn nep-licht (gloed, bundels, lichtplassen). Zonder de vier mastspots iets feller.
+    scene.add(new THREE.HemisphereLight('#b9d4ff', '#1d3b26', licht ? 1.05 : 0.75))
+    const zon = new THREE.DirectionalLight('#fff4dc', licht ? 2.1 : 1.6)
     zon.position.set(-14, 30, 18)
-    zon.castShadow = true
+    zon.castShadow = false
     zon.shadow.mapSize.set(licht ? 1024 : 2048, licht ? 1024 : 2048)
     Object.assign(zon.shadow.camera, { left: -32, right: 32, top: 20, bottom: -20, near: 1, far: 90 })
     zon.shadow.bias = -0.0004
@@ -978,6 +990,9 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
       ...fandorp.obstakels,
       ...(bakman?.obstakels ?? []),
     ]
+    // De tuinafwerking: een plantenborder met boordsteen, bloemen en warm licht rond de gevel.
+    obstakels.push(...bouwTuin(scene, { bestaand: obstakels, bakken: buitenkant.bakken, parking: omgeving.parking }).obstakels)
+    bron('Tuin')
     // De Hollywood-sterren in de zuidgang: enkel op vrije vloer (niet onder een vitrine, zuil of de lift).
     const sterren = bouwSterren(scene, {
       thema,
@@ -1126,6 +1141,14 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
       ],
     })
     videoRef.current = video
+    // De obstakels op de grond, samen met de liftschacht: eenmaal samengevoegd per toestand van de
+    // liftdeur, niet bij elke stap een nieuwe lijst van honderden stuks (dat gaf haperingen).
+    const grondCache = new Map<Rechthoek[], Rechthoek[]>()
+    const grondObstakels = (schacht: Rechthoek[]) => {
+      let l = grondCache.get(schacht)
+      if (!l) grondCache.set(schacht, (l = [...obstakels, ...schacht]))
+      return l
+    }
     const raakt = (lijst: Rechthoek[], x: number, z: number) => lijst.some((o) => x > o.x0 - 0.35 && x < o.x1 + 0.35 && z > o.z0 - 0.35 && z < o.z1 + 0.35)
     // In de kooi en in de deuropening mag je altijd staan (op het verdiep waar de kooi is).
     const bijKooi = (x: number, z: number) => lift.binnen(x, z) || (Math.abs(x - lift.x) < 0.55 && z > lift.zDeur - 0.3 && z < lift.zDeur + 0.5)
@@ -1270,14 +1293,26 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     renderer.domElement.addEventListener('pointerup', op_)
     renderer.domElement.addEventListener('pointercancel', op_)
 
-    // De nabewerking (gloed, stemming per plek, waas, hitte): niet op lichte toestellen.
+    // De nabewerking (gloed, stemming per plek, waas, hitte) kostte 5 à 6 extra beeldvullende
+    // tekenrondes per beeld: uit voor iedereen (zie `licht` hierboven).
     const nabewerking = licht ? null : bouwNabewerking(renderer, scene, camera)
     let nabewerkingAan = true
+    // De onzichtbare meter (zie meter.ts): hoe vlot het hier loopt, per plek, voor achteraf. De
+    // tellers van three tellen over het hele beeld (alle passes, schaduw, spiegels), niet enkel de
+    // laatste tekenronde: daarom zetten we ze zelf terug aan het begin van elk beeld.
+    const meter = bouwMeter(renderer, { licht: zwak })
+    renderer.info.autoReset = false
     const maat = () => {
       const w = el.clientWidth
       const h = el.clientHeight
+      // Nooit meer dan ± 2,4 miljoen pixels per beeld. Op een laptop met een scherp scherm (en
+      // schaalfactor 1,5) werden dat er acht miljoen, en elke pixel gaat daarna nog vijf keer door
+      // de nabewerking: daar liep een gewone laptop op vast. Van op een meter zie je het verschil
+      // niet; het beeld wordt wel vloeiend.
+      const ratio = Math.max(0.5, Math.min(pixels, Math.sqrt(MAX_PIXELS / Math.max(1, w * h))))
+      renderer.setPixelRatio(ratio)
       renderer.setSize(w, h, false)
-      nabewerking?.maat(w, h, pixels)
+      nabewerking?.maat(w, h, ratio)
       video.maat(w, h)
       camera.aspect = w / Math.max(1, h)
       camera.updateProjectionMatrix()
@@ -1323,6 +1358,11 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
       const inKom = (p: THREE.Vector3) => p.x > kom.x0 && p.x < kom.x1 && p.z > kom.z0 && p.z < kom.z1
       const totGevel = (p: THREE.Vector3) => Math.hypot(Math.max(0, Math.abs(p.x) - GEVEL.A), Math.max(0, Math.abs(p.z) - GEVEL.B))
       const ondergronds = (p: THREE.Vector3) => p.y < -0.5
+      const poortMidden = GEVEL.poorten.map((q) => {
+        const m = (q.van + q.tot) / 2
+        return q.zijde === 'z+' ? { x: m, z: GEVEL.B } : q.zijde === 'z-' ? { x: m, z: -GEVEL.B } : q.zijde === 'x+' ? { x: GEVEL.A, z: m } : { x: -GEVEL.A, z: m }
+      })
+      const bijPoort = (p: THREE.Vector3) => poortMidden.some((q) => Math.hypot(p.x - q.x, p.z - q.z) < 12)
       // Net buiten, met zicht door de poorten en de ramen.
       const voorDeGevel = (p: THREE.Vector3, ver: number) => !inGebouw(p) && totGevel(p) < ver && !ondergronds(p) && p.y < dakY
       const ZUID = 1
@@ -1372,7 +1412,21 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
           { objecten: deel('Oefencomplex'), zichtbaar: (p) => !ondergronds(p) && !(inKom(p) && p.y < 12) && !achter(p, -1) },
           { objecten: deel('Fandorp'), zichtbaar: (p) => !ondergronds(p) && !(inKom(p) && p.y < 12) && !achter(p, 1) },
           // Op het dak: de gangen zijn open naar boven, dus zie je het van overal behalve de kelder.
-          { objecten: deel('Helikopter', 'Ring'), zichtbaar: (p) => !ondergronds(p) },
+          { objecten: deel('Ring'), zichtbaar: (p) => !ondergronds(p) },
+          // De helikopter staat op een platform tegen de oostgevel: vanuit de andere gangen en van
+          // achter de westkant staat het hele stadion ertussen.
+          {
+            objecten: deel('Helikopter'),
+            zichtbaar: (p) => !ondergronds(p) && !(inGebouw(p) && p.y < dakY && !inKom(p) && gangVan(p) !== OOST) && !(p.x < -GEVEL.A && p.y < 12),
+          },
+          // De tuinborder ligt buiten tegen de gevel: binnen zie je hem enkel vlak bij een poort.
+          { objecten: deel('Tuin'), zichtbaar: (p) => !ondergronds(p) && (!inGebouw(p) || p.y >= dakY || (!inKom(p) && bijPoort(p))) },
+          // De kleedkamer en de spelersbus staan buiten aan de westkant: vanuit de kom, vanuit de
+          // andere gangen en van achter de oostkant zie je ze niet (honderden onderdelen minder).
+          {
+            objecten: deel('Kleedkamer', 'Spelersbus'),
+            zichtbaar: (p) => !ondergronds(p) && !(inGebouw(p) && p.y < dakY && (inKom(p) || gangVan(p) !== WEST)) && !(p.x > GEVEL.A && p.y < 12),
+          },
         ],
         { licht },
       )
@@ -1416,9 +1470,11 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
       },
     }
     let laatsteModus: Modus | null = null
-    let frames = 0
+    // De eerste twee seconden tellen niet mee: dan wordt de wereld nog klaargezet.
+    let frames = -120
     let getekend = false
     let frameTijd = 0
+    let schokken = 0
     let raf = 0
     // De stemming van de plek waar je bent: warm, koel, vochtig, heet (zie nabewerking.ts).
     const STEMMING: Record<string, Stemming> = {
@@ -1470,11 +1526,14 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     }
     const tik = (nu: number) => {
       raf = requestAnimationFrame(tik)
+      // De echte tijd sinds het vorige beeld (voor de meter), en begrensd voor de beweging.
+      const ruw = nu - vorige
       // De rAF-tijdstempel kan net vóór performance.now() liggen: nooit een negatieve stap.
       const dt = Math.max(0, Math.min(0.1, (nu - vorige) / 1000))
       vorige = nu
       const s = st.current
       if (s.pauze) return
+      const werkBegin = performance.now()
       if (s.spelend) {
         // Het fragment is kort: aan het einde begint het gewoon opnieuw.
         s.tijd += dt
@@ -1717,7 +1776,7 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
               ? stapMet((x, z) => (opDak(x, z) || bijKooi(x, z)) && !raakt(schacht, x, z), loper.pos, doelPos)
               : v === 1
                 ? stapMet((x, z) => verdiep.opBalkon(x, z) || vrijVanGevel(GEVEL, [...verdiep.obstakels, ...schacht], x, z), loper.pos, doelPos)
-                : stap(GEVEL, [...obstakels, ...schacht], loper.pos, doelPos)
+                : stap(GEVEL, grondObstakels(schacht), loper.pos, doelPos)
         loper.pos.x = naar.x
         loper.pos.z = naar.z
         const deining = Math.hypot(vooruit, opzij) > 0.05 ? Math.sin(nu / 140) * 0.035 : 0
@@ -1755,10 +1814,10 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
       // De spiegel in de kleedkamer: enkel aan als je er wandelend binnen bent, en dan sta jij erin.
       const voorSpiegel = s.modus === 'buiten' && opVerdiep === 0 && kleedkamer.binnen(loper.pos.x, loper.pos.z)
       kleedkamer.spiegel(voorSpiegel)
-      // De spiegelwanden in de lift: aan als je erin of ervoor staat, zodat je jezelf ziet instappen.
-      const inLift = s.modus === 'buiten' && lift.bijKooi(loper.pos.x, loper.pos.z, opVerdiep)
-      lift.spiegels(inLift)
-      avatar.zichtbaar(voorSpiegel || inLift)
+      // De spiegelwanden in de lift blijven uit: elke spiegel tekende de hele wereld nog eens, en de
+      // lift neem je vaak. (De spiegel in de kleedkamer blijft: die staat apart en enkel daar.)
+      lift.spiegels(false)
+      avatar.zichtbaar(voorSpiegel)
       if (avatarPopcorn !== popcornVastRef.current) {
         avatarPopcorn = popcornVastRef.current
         avatar.houdVast(avatarPopcorn ? bouwPopcornDoosje(1) : null)
@@ -1769,9 +1828,9 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
         const stap = Math.hypot(loper.pos.x - vorigePos.x, loper.pos.z - vorigePos.z)
         fpDoos.position.y = -0.27 + Math.sin(nu / 160) * Math.min(0.012, stap * 0.4)
       }
-      if (voorSpiegel || inLift) {
+      if (voorSpiegel) {
         const tempo = dt > 0 ? Math.hypot(loper.pos.x - vorigePos.x, loper.pos.z - vorigePos.z) / dt : 0
-        avatar.update(loper.pos.x, inLift ? vloer : 0, loper.pos.z, loper.yaw, loper.pitch, tempo, nu / 1000)
+        avatar.update(loper.pos.x, 0, loper.pos.z, loper.yaw, loper.pitch, tempo, nu / 1000)
       }
       vorigePos.x = loper.pos.x
       vorigePos.z = loper.pos.z
@@ -1894,7 +1953,6 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
       camera.position.y += trilY
       samenvoeger.update()
       zicht.update(camera.position)
-      if (frames % 2 === 0) renderer.shadowMap.needsUpdate = true
       if (nabewerking && nabewerkingAan) {
         // Tijdens het vuurwerk straalt alles feller uit.
         nabewerking.stemming(vuurwerk.bezig() ? { ...stemmingHier(), gloed: 1.5 } : stemmingHier())
@@ -1907,32 +1965,58 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
       if (!getekend) {
         getekend = true
         setKlaar(true)
+        meter.zet({ eersteBeeld: performance.now() - begonnen })
+      }
+      {
+        // Waar je bent, voor de meter: de plek (zoals bij het feest), in de kelder de zaal, en apart
+        // tijdens het vuurwerk en in de views aan het veld.
+        const waar = feest.waar(camera.position)
+        const plek =
+          s.modus === 'rondvlucht' || VELD.includes(s.modus)
+            ? `view:${s.modus}`
+            : waar === 'kelder' && laatsteRuimte
+              ? `kelder:${laatsteRuimte}`
+              : waar
+        meter.beeld(ruw, vuurwerk.bezig() ? `vuurwerk:${plek}` : plek, performance.now() - werkBegin)
+        renderer.info.reset()
       }
 
       // Hapert het? Dan stap voor stap lichter, tot het weer vlot loopt: eerst minder pixels (tot
       // 1), dan zonder nabewerking, dan een kleinere schaduwkaart, en pas als laatste onder 1 pixel.
+      // Niet enkel een traag gemiddelde telt: ook geregeld een beeld dat te laat komt (een schok)
+      // is een reden om lichter te tekenen.
       frames++
       frameTijd += dt
+      if (dt > 1 / 28) schokken++
+      if (frames <= 0) {
+        frameTijd = 0
+        schokken = 0
+      }
       if (frames >= 90) {
-        if (frameTijd / frames > 1 / 40) {
-          if (pixels > 1) {
-            pixels = Math.max(1, pixels - 0.25)
-            renderer.setPixelRatio(pixels)
+        if (frameTijd / frames > 1 / 40 || schokken > frames * 0.12) {
+          const nuRatio = renderer.getPixelRatio()
+          if (nuRatio > 1) {
+            pixels = Math.max(1, nuRatio - 0.25)
             maat()
+            meter.stap(`pixels ${pixels}`)
           } else if (nabewerking && nabewerkingAan) {
             nabewerkingAan = false
+            meter.stap('nabewerking uit')
           } else if (zon.shadow.mapSize.x > 1024) {
             zon.shadow.mapSize.set(1024, 1024)
             zon.shadow.map?.dispose()
             zon.shadow.map = null
-          } else if (pixels > 0.75) {
-            pixels = Math.max(0.75, pixels - 0.25)
-            renderer.setPixelRatio(pixels)
+            meter.stap('schaduw 1024')
+          } else if (nuRatio > 0.75) {
+            pixels = Math.max(0.75, nuRatio - 0.25)
             maat()
+            meter.stap(`pixels ${pixels}`)
           }
+          meter.zet({ ratio: renderer.getPixelRatio(), nabewerking: !!nabewerking && nabewerkingAan, schaduw: zon.shadow.mapSize.x })
         }
         frames = 0
         frameTijd = 0
+        schokken = 0
       }
 
       // De bezitsbalk en de knoppen ~12 keer per seconde bijwerken is genoeg.
@@ -1996,6 +2080,26 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
         setNabij((oud) => (JSON.stringify(oud) === JSON.stringify(nb) ? oud : nb))
       }
     }
+    // Alle shaders nu al klaarzetten, ook die van wat nog verborgen is (de kelder, het vuurwerk, het
+    // feest, de helikopter…). Anders bouwt de browser ze pas op het moment dat je er voor het eerst
+    // komt — midden in het wandelen, en dat was telkens een schok van een fractie van een seconde.
+    {
+      const verborgen: THREE.Object3D[] = []
+      scene.traverse((o) => {
+        if (!o.visible) {
+          verborgen.push(o)
+          o.visible = true
+        }
+      })
+      const t0 = performance.now()
+      try {
+        renderer.compile(scene, camera)
+        meter.zet({ shaders: performance.now() - t0, ratio: renderer.getPixelRatio(), schaduw: zon.shadow.mapSize.x })
+      } catch {
+        // Lukt het niet, dan worden ze zoals vroeger gebouwd wanneer ze voor het eerst in beeld komen.
+      }
+      for (const o of verborgen) o.visible = false
+    }
     raf = requestAnimationFrame(tik)
 
     return () => {
@@ -2003,6 +2107,7 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
       nabewerking?.dispose()
       vuurwerk.dispose()
       feest.dispose()
+      meter.dispose()
       supporters.dispose()
       samenRef.current = null
       vuurwerkRef.current = null

@@ -61,24 +61,24 @@ export function KermisspelPaneel({ spel, onSluit, onUitslag }: { spel: Kermisspe
 
   const doel = spel.id === 'blikken' ? 'midden' : 'boven'
   return (
-    <div className="vk-spel" role="dialog" aria-label={spel.naam}>
-      <div className="vk-spel-kop">
+    <div className="vk-kspel" role="dialog" aria-label={spel.naam}>
+      <div className="vk-kspel-kop">
         <b>{spel.naam}</b>
-        <button className="vk-spel-sluit" onClick={onSluit} aria-label="Sluiten">
+        <button className="vk-kspel-sluit" onClick={onSluit} aria-label="Sluiten">
           ✕
         </button>
       </div>
-      <p className="vk-spel-uitleg">{spel.uitleg}</p>
+      <p className="vk-kspel-uitleg">{spel.uitleg}</p>
       {spel.meter && (
-        <div className={`vk-spel-meter doel-${doel}`} aria-hidden>
-          <div className="vk-spel-zone" />
-          <div className="vk-spel-naald" style={{ bottom: `${waarde * 100}%` }} />
+        <div className={`vk-kspel-meter doel-${doel}`} aria-hidden>
+          <div className="vk-kspel-zone" />
+          <div className="vk-kspel-naald" style={{ bottom: `${waarde * 100}%` }} />
         </div>
       )}
-      <button className="vk-spel-knop" onClick={speel} disabled={rust}>
+      <button className="vk-kspel-knop" onClick={speel} disabled={rust}>
         {spel.knop}
       </button>
-      {uitslag && <p className={`vk-spel-uitslag${uitslag.goed ? ' goed' : ''}`}>{uitslag.tekst}</p>}
+      {uitslag && <p className={`vk-kspel-uitslag${uitslag.goed ? ' goed' : ''}`}>{uitslag.tekst}</p>}
     </div>
   )
 }

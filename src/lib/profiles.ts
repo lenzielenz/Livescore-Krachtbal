@@ -66,6 +66,7 @@ export const PROFILES: Profile[] = [
       { href: '/reglement', label: '📖 Reglement' },
       { href: '/knipjes', label: '✂️ Knipjes' },
       { href: '/bekerfinale', label: '🏆 Bekerfinale' },
+      { href: '/federatie/stadion', label: '🏟️ Vlotheid stadion' },
     ],
   },
 ]

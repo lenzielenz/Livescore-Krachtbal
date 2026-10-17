@@ -1,0 +1,26 @@
+.vs-prestaties h2 { margin: 28px 0 10px; font-size: 1.15rem; }
+.vs-prestaties h2 small { color: var(--dim); font-weight: 400; font-size: 0.85rem; }
+.vs-periode { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 18px; }
+.vs-periode a { padding: 6px 12px; border: 1px solid var(--line); border-radius: var(--r-pill); color: var(--dim-strong); text-decoration: none; font-size: 0.9rem; }
+.vs-periode a.actief { background: var(--accent); border-color: var(--accent); color: #06121f; font-weight: 600; }
+.vs-kerncijfers { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
+.vs-kerncijfers div { background: var(--panel-grad); border: 1px solid var(--line); border-radius: var(--r-card); padding: 12px 14px; display: flex; flex-direction: column; gap: 2px; }
+.vs-kerncijfers b { font-size: 1.6rem; font-variant-numeric: tabular-nums; }
+.vs-kerncijfers span { color: var(--dim); font-size: 0.85rem; }
+.vs-knelpunten { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+.vs-knelpunten li { background: var(--panel-grad); border: 1px solid var(--line); border-left: 4px solid var(--dim); border-radius: var(--r-card); padding: 12px 16px; }
+.vs-knelpunten li.hoog { border-left-color: var(--pop); }
+.vs-knelpunten li.middel { border-left-color: #ffb648; }
+.vs-knelpunten li.info { border-left-color: var(--accent); }
+.vs-knelpunten h3 { margin: 4px 0 6px; font-size: 1rem; }
+.vs-knelpunten p { margin: 4px 0; color: var(--dim-strong); font-size: 0.92rem; }
+.vs-knelpunten .vs-advies { color: var(--txt); }
+.vs-ernst { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--dim); }
+.vs-tabel { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--r-card); }
+.vs-tabel table { width: 100%; border-collapse: collapse; font-size: 0.88rem; font-variant-numeric: tabular-nums; }
+.vs-tabel th, .vs-tabel td { padding: 7px 10px; text-align: left; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.vs-tabel th { color: var(--dim); font-weight: 500; background: var(--panel); }
+.vs-tabel tr:last-child td { border-bottom: 0; }
+.vs-prestaties .goed { color: var(--home); }
+.vs-prestaties .matig { color: #ffb648; }
+.vs-prestaties .slecht { color: var(--pop); }

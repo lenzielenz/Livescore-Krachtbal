@@ -25,6 +25,8 @@ import { rondeDoos } from './rond'
 // zwaartekracht) wordt in de shader uitgerekend, de CPU schrijft enkel nieuwe vonken bij.
 
 export const SHOW_DUUR = 66
+/** Zo lang (s) na de show hangt er nog rook en vallen er nog vonken. */
+const NAGLOED = 20
 
 type Kleur = THREE.Color
 
@@ -593,6 +595,8 @@ export function bouwVuurwerk(
   const flitsen = Array.from({ length: 14 }, () => {
     const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: zachteVlek(), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0, fog: false }))
     sp.frustumCulled = false
+    // Een doofde flits is onzichtbaar, maar zou anders elk beeld een tekenopdracht kosten.
+    sp.visible = false
     scene.add(sp)
     return { sp, t: -10, sterk: 0, max: 110 }
   })
@@ -645,6 +649,7 @@ export function bouwVuurwerk(
   })
 
   let t0 = -1 // start van de show (in seconden van de klok hieronder)
+  let laatsteShow = -Infinity
   let klok = 0
   const show = () => klok - t0
   // De deeltjes tellen hun tijd vanaf een vast nulpunt (zodat een tweede show de eerste niet terugroept).
@@ -1178,7 +1183,12 @@ export function bouwVuurwerk(
       vonken.mat.uniforms.uSchaal.value = rook.mat.uniforms.uSchaal.value = hoogte / (2 * Math.tan((camera.fov * Math.PI) / 360))
       knop.update(seconden, t0 < 0)
       schokNiveau *= Math.exp(-dt * 9)
+      // Zonder show niets tekenen: de deeltjeswolken zijn honderdduizenden punten die de GPU elk
+      // beeld afging, ook al was er niets te zien. Na de show nog even aan: de rook hangt na.
+      const actief = t0 >= 0 || seconden - laatsteShow < NAGLOED
+      vonken.punten.visible = rook.punten.visible = actief
       if (t0 < 0) return
+      laatsteShow = seconden
       const show = seconden - t0
       const t = nu()
       if (show > SHOW_DUUR) {
@@ -1188,6 +1198,7 @@ export function bouwVuurwerk(
         schokNiveau = 0
         rook.mat.uniforms.uFlits.value = 0
         if (flitsLicht) flitsLicht.intensity = 0
+        for (const f of flitsen) f.sp.visible = false
         return
       }
       draaiboek(show)
@@ -1260,6 +1271,7 @@ export function bouwVuurwerk(
         const a = klok - f.t
         const m = f.sp.material as THREE.SpriteMaterial
         m.opacity = a < 0.4 ? (1 - a / 0.4) * Math.min(1, f.sterk) : 0
+        f.sp.visible = m.opacity > 0.001
         const s = Math.min(110 * f.sterk, f.max) * (1 + a * 1.6)
         f.sp.scale.set(s, s, 1)
       }

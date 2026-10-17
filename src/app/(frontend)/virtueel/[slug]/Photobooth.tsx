@@ -39,10 +39,13 @@ export function Photobooth({
   const [fout, setFout] = useState<string | null>(null)
   const [foto, setFoto] = useState<Blob | null>(null)
   const [voorbeeld, setVoorbeeld] = useState<string | null>(null)
+  // Pas als de video echt beelden geeft, mag je afdrukken (anders wordt de foto zwart).
+  const [loopt, setLoopt] = useState(false)
 
   const stop = () => {
     stroom.current?.getTracks().forEach((t) => t.stop())
     stroom.current = null
+    setLoopt(false)
   }
   useEffect(() => {
     if (!open) {
@@ -63,26 +66,62 @@ export function Photobooth({
     if (open) void startCamera()
   }, [open])
 
+  // De stroom aan de video hangen zodra die er staat. Niet "één beeld later" zoals vroeger: op een
+  // tragere gsm stond de video er dan nog niet en bleef het beeld zwart.
+  useEffect(() => {
+    const v = video.current
+    const s = stroom.current
+    if (!v || !s || (fase !== 'camera' && fase !== 'aftellen')) return
+    if (v.srcObject !== s) {
+      v.srcObject = s
+      // iOS: enkel stil en inline mag een video vanzelf spelen (zie de attributen hieronder).
+      v.muted = true
+      void v.play().catch(() => {})
+    }
+  }, [fase])
+
   const startCamera = async () => {
     setFout(null)
-    if (!navigator.mediaDevices?.getUserMedia) {
-      setFout('Je toestel of browser laat geen camera toe.')
+    if (typeof window !== 'undefined' && !window.isSecureContext) {
+      setFout('De camera werkt enkel via een beveiligde verbinding (https).')
       return
     }
-    try {
-      const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 960 }, height: { ideal: 1200 } }, audio: false })
-      stop()
-      stroom.current = s
-      setFase('camera')
-      requestAnimationFrame(() => {
-        if (video.current) {
-          video.current.srcObject = s
-          void video.current.play().catch(() => {})
-        }
-      })
-    } catch {
-      setFout('Geen toegang tot de camera. Sta het toe in je browser en probeer opnieuw.')
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setFout('Je browser laat hier geen camera toe. Open de pagina in Safari of Chrome (niet in de app van Facebook of Instagram).')
+      return
     }
+    // Eerst de selfiecamera in een mooie resolutie; lukt dat niet (oudere gsm, webcam die het
+    // niet kan), dan gewoon de selfiecamera, en anders eender welke camera.
+    const pogingen: MediaStreamConstraints[] = [
+      { video: { facingMode: 'user', width: { ideal: 960 }, height: { ideal: 1200 } }, audio: false },
+      { video: { facingMode: 'user' }, audio: false },
+      { video: true, audio: false },
+    ]
+    let laatste: unknown = null
+    for (const p of pogingen) {
+      try {
+        const s = await navigator.mediaDevices.getUserMedia(p)
+        stop()
+        stroom.current = s
+        setFase('camera')
+        return
+      } catch (e) {
+        laatste = e
+        // Geweigerd of geen camera: een andere poging helpt niet.
+        const naam = (e as { name?: string }).name
+        if (naam === 'NotAllowedError' || naam === 'SecurityError' || naam === 'NotFoundError') break
+      }
+    }
+    const naam = (laatste as { name?: string } | null)?.name
+    setFout(
+      naam === 'NotAllowedError' || naam === 'SecurityError'
+        ? 'Je gaf geen toestemming voor de camera. Tik op het slotje (of "aA") naast het adres, sta de camera toe en probeer opnieuw.'
+        : naam === 'NotFoundError'
+          ? 'Geen camera gevonden op dit toestel.'
+          : naam === 'NotReadableError'
+            ? 'De camera is bezet door een andere app. Sluit die en probeer opnieuw.'
+            : 'De camera startte niet. Probeer opnieuw.',
+    )
   }
 
   const neem = () => {
@@ -98,7 +137,10 @@ export function Photobooth({
       clearInterval(iv)
       const v = video.current
       const c = doek.current
-      if (!v || !c) return
+      if (!v || !c || !v.videoWidth) {
+        setFase('camera')
+        return
+      }
       c.width = B
       c.height = H
       const g = c.getContext('2d')!
@@ -170,7 +212,9 @@ export function Photobooth({
           <div className={`vk-booth-polaroid${fase === 'genomen' || fase === 'bezig' ? ' klaar' : ''}`}>
             <div className="vk-booth-beeld">
               {fase === 'start' && <span className="vk-booth-leeg">🙂</span>}
-              {(fase === 'camera' || fase === 'aftellen') && <video ref={video} playsInline muted />}
+              {(fase === 'camera' || fase === 'aftellen') && (
+                <video ref={video} playsInline muted autoPlay onLoadedData={() => setLoopt(true)} onPlaying={() => setLoopt(true)} />
+              )}
               {voorbeeld && (fase === 'genomen' || fase === 'bezig') && (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={voorbeeld} alt="Je selfie" />
@@ -191,7 +235,7 @@ export function Photobooth({
               </button>
             )}
             {(fase === 'camera' || fase === 'aftellen') && (
-              <button className="vk-booth-sluiter" onClick={neem} disabled={fase === 'aftellen'} aria-label="Neem de foto">
+              <button className="vk-booth-sluiter" onClick={neem} disabled={fase === 'aftellen' || !loopt} aria-label="Neem de foto">
                 <span />
               </button>
             )}

@@ -32,7 +32,9 @@ const WACHT = 150
 /** Zoveel originelen per beeld nakijken. */
 const CONTROLE_PER_BEELD = 900
 /** Tijd per beeld voor het samenvoegen zelf (ms): verspreid over beelden, geen hapering. */
-const BUDGET_MS = 6
+const BUDGET_MS = 4
+/** Zoveel meshes hoogstens in één samengevoegde mesh (één stuk werk). */
+const MAX_PER_PAKKET = 48
 
 const basisHook = THREE.Object3D.prototype.onBeforeRender
 const basisCompile = THREE.Material.prototype.onBeforeCompile
@@ -126,14 +128,18 @@ export type Samenvoeger = {
  */
 export function bouwSamenvoeger(scene: THREE.Scene, toppen: THREE.Object3D[], opt: { nieuw?: (mesh: THREE.Mesh, top: THREE.Object3D) => void } = {}): Samenvoeger {
   let beeld = 0
-  const wachtrij = [...toppen]
+  // Het werk in kleine stukjes: eerst per top de groepen zoeken, daarna elke groep apart samenvoegen.
+  // Vroeger ging een hele top (bv. het volledige fandorp) in één keer, en dat gaf een schok van een
+  // tiende van een seconde, ongeacht het budget per beeld.
+  type Taak = { top: THREE.Object3D; topInv?: THREE.Matrix4; lijst?: THREE.Mesh[] }
+  const wachtrij: Taak[] = toppen.map((top) => ({ top }))
   const originelen: Origineel[] = []
   const pakketten: Pakket[] = []
   let controle = 0
   const verwacht = new THREE.Matrix4()
   const centrum = new THREE.Vector3()
 
-  const voegSamenOnder = (top: THREE.Object3D) => {
+  const zoekGroepen = (top: THREE.Object3D) => {
     top.updateMatrixWorld(true)
     const topInv = new THREE.Matrix4().copy(top.matrixWorld).invert()
     const groepen = new Map<string, THREE.Mesh[]>()
@@ -153,9 +159,23 @@ export function bouwSamenvoeger(scene: THREE.Scene, toppen: THREE.Object3D[], op
       for (const c of o.children) bezoek(c, zichtbaar && c.visible)
     }
     bezoek(top, true)
-
+    const taken: Taak[] = []
     for (const lijst of groepen.values()) {
       if (lijst.length < 2) continue
+      // Grote groepen in stukken, zodat ook één groep het beeld niet ophoudt.
+      for (let i = 0; i < lijst.length; i += MAX_PER_PAKKET) {
+        const stuk = lijst.slice(i, i + MAX_PER_PAKKET)
+        if (stuk.length >= 2) taken.push({ top, topInv, lijst: stuk })
+      }
+    }
+    wachtrij.unshift(...taken)
+  }
+
+  const voegGroepSamen = (top: THREE.Object3D, topInv: THREE.Matrix4, groep: THREE.Mesh[]) => {
+    // Sinds het zoeken kan er al iets bewogen of verdwenen zijn (de controle hieronder markeert dat).
+    const lijst = groep.filter((m) => !m.userData.los && !m.userData.inPakket && m.parent)
+    if (lijst.length < 2) return
+    {
       const geos = lijst.map((m) => {
         const g = m.geometry.index ? m.geometry.toNonIndexed() : m.geometry.clone()
         g.applyMatrix4(new THREE.Matrix4().multiplyMatrices(topInv, m.matrixWorld))
@@ -169,7 +189,7 @@ export function bouwSamenvoeger(scene: THREE.Scene, toppen: THREE.Object3D[], op
         samen = null
       }
       geos.forEach((g) => g.dispose())
-      if (!samen) continue
+      if (!samen) return
       samen.computeBoundingSphere()
       const eerste = lijst[0]
       const mesh = new THREE.Mesh(samen, eerste.material)
@@ -232,7 +252,11 @@ export function bouwSamenvoeger(scene: THREE.Scene, toppen: THREE.Object3D[], op
       // 1. Samenvoegen, verspreid over beelden.
       if (wachtrij.length) {
         const start = performance.now()
-        while (wachtrij.length && performance.now() - start < BUDGET_MS) voegSamenOnder(wachtrij.shift()!)
+        while (wachtrij.length && performance.now() - start < BUDGET_MS) {
+          const t = wachtrij.shift()!
+          if (t.lijst && t.topInv) voegGroepSamen(t.top, t.topInv, t.lijst)
+          else zoekGroepen(t.top)
+        }
       }
       // 2. Nakijken of een origineel toch veranderde.
       const n = Math.min(CONTROLE_PER_BEELD, originelen.length)
