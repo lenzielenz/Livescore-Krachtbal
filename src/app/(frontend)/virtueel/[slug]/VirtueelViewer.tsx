@@ -1333,6 +1333,8 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     // Wandelen: op welk verdiep je bent (0 = gelijkvloers, 1 = loges) en hoe hoog je vloer nu is
     // (in de lift rijdt die mee).
     let opVerdiep = 0
+    // De loopsnelheid (m/s), die zacht naar de gevraagde snelheid toe groeit.
+    const loopV = { x: 0, z: 0 }
     let vloer = 0
     let laatsteRuimte: string | null = null
     // Waar je het vuurwerkfeest beleeft (voor de melding), en of het zwembad mee feest.
@@ -1723,8 +1725,8 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
           loper.pos.x *= WERELD_STRAAL / r
           loper.pos.z *= WERELD_STRAAL / r
         }
-        // Zachte zweefbeweging.
-        camera.position.set(loper.pos.x, loper.pos.y + Math.sin(nu / 900) * 0.08, loper.pos.z)
+        // Geen deinende zweefbeweging: het beeld staat stil als jij stilstaat.
+        camera.position.set(loper.pos.x, loper.pos.y, loper.pos.z)
         camera.lookAt(
           loper.pos.x + Math.sin(loper.yaw) * cp,
           loper.pos.y + Math.sin(loper.pitch),
@@ -1767,7 +1769,15 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
           setZit(null)
         }
         const zitHier = s.zit != null && s.modus === 'buiten' && v === -1
-        const doelPos = zitHier ? { x: loper.pos.x, z: loper.pos.z } : { x: loper.pos.x + (fx * vooruit - fz * opzij) * tempo * dt, z: loper.pos.z + (fz * vooruit + fx * opzij) * tempo * dt }
+        // Zacht vertrekken en uitbollen (± 0,15 s) in plaats van meteen op volle snelheid en abrupt
+        // stil: dat schokt minder en is rustiger voor de ogen.
+        const wilX = zitHier ? 0 : (fx * vooruit - fz * opzij) * tempo
+        const wilZ = zitHier ? 0 : (fz * vooruit + fx * opzij) * tempo
+        const volg = Math.min(1, dt * 12)
+        loopV.x += (wilX - loopV.x) * volg
+        loopV.z += (wilZ - loopV.z) * volg
+        if (zitHier) loopV.x = loopV.z = 0
+        const doelPos = { x: loper.pos.x + loopV.x * dt, z: loper.pos.z + loopV.z * dt }
         const schacht = lift.obstakels(v)
         const naar =
           v === -1
@@ -1779,7 +1789,6 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
                 : stap(GEVEL, grondObstakels(schacht), loper.pos, doelPos)
         loper.pos.x = naar.x
         loper.pos.z = naar.z
-        const deining = Math.hypot(vooruit, opzij) > 0.05 ? Math.sin(nu / 140) * 0.035 : 0
         // Trampoline: je veert vanzelf op en neer (hoger in het midden).
         const veer = s.modus === 'buiten' && v === -1 ? kelder.trampoline(loper.pos.x, loper.pos.z) : s.modus === 'buiten' && v === 0 ? fandorp.springkasteel(loper.pos.x, loper.pos.z) : 0
         if (veer > 0) {
@@ -1793,7 +1802,8 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
         const busDoel = s.modus === 'buiten' && v === 0 ? bus.vloer(loper.pos.x, loper.pos.z) || (veer > 0 ? 0.7 : 0) : 0
         busHoogte += (busDoel - busHoogte) * Math.min(1, dt * 12)
         const oog = (s.modus === 'buiten' ? vloer : 0) + (zitHier ? 1.15 : OOGHOOGTE) + sprongHoogte + busHoogte
-        camera.position.set(loper.pos.x, oog + deining, loper.pos.z)
+        // Geen op-en-neer bij het stappen: dat maakte mensen misselijk. Het beeld glijdt rustig mee.
+        camera.position.set(loper.pos.x, oog, loper.pos.z)
         camera.lookAt(
           loper.pos.x + Math.sin(loper.yaw) * Math.cos(loper.pitch),
           oog + Math.sin(loper.pitch),
@@ -1945,12 +1955,7 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
         loper.pitch += (-0.06 - loper.pitch) * Math.min(1, dt * 4)
       }
       zetStoom(dt)
-      // Een knal dichtbij doet de camera even trillen (enkel voor deze frame, daarna terug).
-      const schok = vuurwerk.schok()
-      const trilX = schok > 0.002 ? (Math.random() - 0.5) * schok : 0
-      const trilY = schok > 0.002 ? (Math.random() - 0.5) * schok : 0
-      camera.position.x += trilX
-      camera.position.y += trilY
+      // Geen cameratrilling bij een knal: het beeld blijft rustig (trillen maakte mensen misselijk).
       samenvoeger.update()
       zicht.update(camera.position)
       if (nabewerking && nabewerkingAan) {
@@ -1959,8 +1964,6 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
         nabewerking.update(nu / 1000, dt)
         nabewerking.render()
       } else renderer.render(scene, camera)
-      camera.position.x -= trilX
-      camera.position.y -= trilY
       video.render(camera)
       if (!getekend) {
         getekend = true
