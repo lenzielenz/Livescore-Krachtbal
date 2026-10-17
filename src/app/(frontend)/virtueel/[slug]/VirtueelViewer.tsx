@@ -15,6 +15,7 @@ import { bouwFotogalerij } from './fotogalerij'
 import { bouwWegwijzers, type Bestemming } from './wegwijzers'
 import { bouwGangleven } from './gangleven'
 import { bouwBuitenkant } from './buitenkant'
+import { bouwTuin } from './tuin'
 import { bouwSterren } from './sterren'
 import { bouwVerdiep } from './verdiep'
 import { bouwLift, LIFT_X } from './lift'
@@ -987,6 +988,9 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
       ...fandorp.obstakels,
       ...(bakman?.obstakels ?? []),
     ]
+    // De tuinafwerking: een plantenborder met boordsteen, bloemen en warm licht rond de gevel.
+    obstakels.push(...bouwTuin(scene, { bestaand: obstakels, bakken: buitenkant.bakken }).obstakels)
+    bron('Tuin')
     // De Hollywood-sterren in de zuidgang: enkel op vrije vloer (niet onder een vitrine, zuil of de lift).
     const sterren = bouwSterren(scene, {
       thema,
@@ -1352,6 +1356,11 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
       const inKom = (p: THREE.Vector3) => p.x > kom.x0 && p.x < kom.x1 && p.z > kom.z0 && p.z < kom.z1
       const totGevel = (p: THREE.Vector3) => Math.hypot(Math.max(0, Math.abs(p.x) - GEVEL.A), Math.max(0, Math.abs(p.z) - GEVEL.B))
       const ondergronds = (p: THREE.Vector3) => p.y < -0.5
+      const poortMidden = GEVEL.poorten.map((q) => {
+        const m = (q.van + q.tot) / 2
+        return q.zijde === 'z+' ? { x: m, z: GEVEL.B } : q.zijde === 'z-' ? { x: m, z: -GEVEL.B } : q.zijde === 'x+' ? { x: GEVEL.A, z: m } : { x: -GEVEL.A, z: m }
+      })
+      const bijPoort = (p: THREE.Vector3) => poortMidden.some((q) => Math.hypot(p.x - q.x, p.z - q.z) < 12)
       // Net buiten, met zicht door de poorten en de ramen.
       const voorDeGevel = (p: THREE.Vector3, ver: number) => !inGebouw(p) && totGevel(p) < ver && !ondergronds(p) && p.y < dakY
       const ZUID = 1
@@ -1408,6 +1417,8 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
             objecten: deel('Helikopter'),
             zichtbaar: (p) => !ondergronds(p) && !(inGebouw(p) && p.y < dakY && !inKom(p) && gangVan(p) !== OOST) && !(p.x < -GEVEL.A && p.y < 12),
           },
+          // De tuinborder ligt buiten tegen de gevel: binnen zie je hem enkel vlak bij een poort.
+          { objecten: deel('Tuin'), zichtbaar: (p) => !ondergronds(p) && (!inGebouw(p) || p.y >= dakY || (!inKom(p) && bijPoort(p))) },
           // De kleedkamer en de spelersbus staan buiten aan de westkant: vanuit de kom, vanuit de
           // andere gangen en van achter de oostkant zie je ze niet (honderden onderdelen minder).
           {

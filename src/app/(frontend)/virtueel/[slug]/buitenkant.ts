@@ -18,7 +18,7 @@ import { canvasTex, rnd } from './stadion'
 export function bouwBuitenkant(
   scene: THREE.Scene,
   opt: { thema: StadionThema; licht: boolean },
-): { obstakels: Rechthoek[]; update: (seconden: number) => void } {
+): { obstakels: Rechthoek[]; bakken: { x: number; z: number; w: number; y: number }[]; update: (seconden: number) => void } {
   const { thema, licht } = opt
   const { A, B, R, hoogte: H } = GEVEL
   const primair = new THREE.Color(thema.primair)
@@ -291,6 +291,8 @@ export function bouwBuitenkant(
   const kleur = new THREE.Color()
   return {
     obstakels,
+    // Waar de plantenbakken staan: tuin.ts zet er bloemen in.
+    bakken: bakPos.map(([x, z]) => ({ x, z, w: 1.6, y: 0.72 })),
     update(seconden) {
       const show = lichtshow(seconden)
       // Portalen en torenkronen ademen in de clubkleur, en flitsen mee tijdens de lichtshow.
