@@ -35,6 +35,11 @@ function layoutFor(n: number): { cols: number; fontSize: number; logoSize: strin
 
 /** Lager dan dit (px) is een bord van de weekendvoorbeschouwing niet meer te lezen: dan scrollen. */
 const VS_MIN_RIJ = 150
+/** Het vanzelf rollen van een te lange voorbeschouwing: px per seconde, en hoe lang (ms) het boven
+ *  en onderaan stilstaat, en na een aanraking wacht. */
+const VS_ROL_SNELHEID = 28
+const VS_ROL_PAUZE = 4000
+const VS_ROL_HANDMATIG = 12000
 
 // Het eigenlijke kantinescherm (kantine-tv): toont de centraal gekozen wedstrijden als live
 // borden. Pollt de selectie elke 12s zodat wijzigingen op een ander toestel vanzelf doorkomen;
@@ -258,6 +263,60 @@ export function KantineScreen({
   const vsRijH = vsKrap ? Math.round(Math.max(VS_MIN_RIJ, Math.min(210, vsKolB * 0.5))) : gedeeldeRijH
   const vsFont = Math.round(Math.max(vsKrap ? 14 : 10, Math.min(vsRijH * 0.085, vsKolB * 0.042, 34)))
   const vsLogo = `${Math.round(Math.max(28, Math.min(vsRijH * 0.4, vsKolB * 0.21)))}px`
+  // Een kantinescherm hangt aan de muur: niemand scrolt. Past de lijst niet, dan rolt ze vanzelf
+  // traag naar beneden, wacht even onderaan, springt terug naar boven en begint opnieuw. Raakt
+  // iemand het scherm aan (vinger, muiswiel, toetsen), dan wacht het rollen even.
+  useEffect(() => {
+    const el = vsRef.current
+    if (!el || !vsKrap) return
+    const traag = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    let raf = 0
+    let vorige = performance.now()
+    let wachtTot = vorige + VS_ROL_PAUZE
+    let pos = el.scrollTop
+    const handmatig = () => {
+      wachtTot = performance.now() + VS_ROL_HANDMATIG
+    }
+    const stap = (nu: number) => {
+      const dt = Math.min(0.1, (nu - vorige) / 1000)
+      vorige = nu
+      const max = el.scrollHeight - el.clientHeight
+      if (max <= 1) {
+        // Past alles toch (draaien, groter venster): niets te rollen.
+        wachtTot = nu + VS_ROL_PAUZE
+      } else if (nu >= wachtTot) {
+        // Wie zelf scrolde, rolt van daar verder.
+        if (Math.abs(el.scrollTop - pos) > 2) pos = el.scrollTop
+        if (pos >= max - 1) {
+          // Onderaan: terug naar boven, en daar even blijven staan.
+          pos = 0
+          el.scrollTo({ top: 0, behavior: traag ? 'auto' : 'smooth' })
+          wachtTot = nu + VS_ROL_PAUZE + (traag ? 0 : 800)
+        } else if (traag) {
+          // Zonder beweging: per schermhoogte verspringen.
+          pos = Math.min(max, pos + el.clientHeight * 0.9)
+          el.scrollTop = pos
+          wachtTot = nu + VS_ROL_PAUZE
+        } else {
+          pos = Math.min(max, pos + VS_ROL_SNELHEID * dt)
+          el.scrollTop = pos
+          if (pos >= max - 1) wachtTot = nu + VS_ROL_PAUZE
+        }
+      }
+      raf = requestAnimationFrame(stap)
+    }
+    raf = requestAnimationFrame(stap)
+    const opties = { passive: true } as const
+    el.addEventListener('touchstart', handmatig, opties)
+    el.addEventListener('wheel', handmatig, opties)
+    el.addEventListener('keydown', handmatig)
+    return () => {
+      cancelAnimationFrame(raf)
+      el.removeEventListener('touchstart', handmatig)
+      el.removeEventListener('wheel', handmatig)
+      el.removeEventListener('keydown', handmatig)
+    }
+  }, [vsKrap])
   const layout = layoutFor(visible.length)
   const cols = Math.min(layout.cols, maxColsForWidth(vw))
   const featuredLayout = layoutFor(liveMatches.length)
