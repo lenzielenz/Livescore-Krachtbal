@@ -595,6 +595,8 @@ export function bouwVuurwerk(
   const flitsen = Array.from({ length: 14 }, () => {
     const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: zachteVlek(), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0, fog: false }))
     sp.frustumCulled = false
+    // Een doofde flits is onzichtbaar, maar zou anders elk beeld een tekenopdracht kosten.
+    sp.visible = false
     scene.add(sp)
     return { sp, t: -10, sterk: 0, max: 110 }
   })
@@ -1196,6 +1198,7 @@ export function bouwVuurwerk(
         schokNiveau = 0
         rook.mat.uniforms.uFlits.value = 0
         if (flitsLicht) flitsLicht.intensity = 0
+        for (const f of flitsen) f.sp.visible = false
         return
       }
       draaiboek(show)
@@ -1268,6 +1271,7 @@ export function bouwVuurwerk(
         const a = klok - f.t
         const m = f.sp.material as THREE.SpriteMaterial
         m.opacity = a < 0.4 ? (1 - a / 0.4) * Math.min(1, f.sterk) : 0
+        f.sp.visible = m.opacity > 0.001
         const s = Math.min(110 * f.sterk, f.max) * (1 + a * 1.6)
         f.sp.scale.set(s, s, 1)
       }

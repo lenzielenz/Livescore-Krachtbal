@@ -1395,7 +1395,19 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
           { objecten: deel('Oefencomplex'), zichtbaar: (p) => !ondergronds(p) && !(inKom(p) && p.y < 12) && !achter(p, -1) },
           { objecten: deel('Fandorp'), zichtbaar: (p) => !ondergronds(p) && !(inKom(p) && p.y < 12) && !achter(p, 1) },
           // Op het dak: de gangen zijn open naar boven, dus zie je het van overal behalve de kelder.
-          { objecten: deel('Helikopter', 'Ring'), zichtbaar: (p) => !ondergronds(p) },
+          { objecten: deel('Ring'), zichtbaar: (p) => !ondergronds(p) },
+          // De helikopter staat op een platform tegen de oostgevel: vanuit de andere gangen en van
+          // achter de westkant staat het hele stadion ertussen.
+          {
+            objecten: deel('Helikopter'),
+            zichtbaar: (p) => !ondergronds(p) && !(inGebouw(p) && p.y < dakY && !inKom(p) && gangVan(p) !== OOST) && !(p.x < -GEVEL.A && p.y < 12),
+          },
+          // De kleedkamer en de spelersbus staan buiten aan de westkant: vanuit de kom, vanuit de
+          // andere gangen en van achter de oostkant zie je ze niet (honderden onderdelen minder).
+          {
+            objecten: deel('Kleedkamer', 'Spelersbus'),
+            zichtbaar: (p) => !ondergronds(p) && !(inGebouw(p) && p.y < dakY && (inKom(p) || gangVan(p) !== WEST)) && !(p.x > GEVEL.A && p.y < 12),
+          },
         ],
         { licht },
       )
@@ -1921,7 +1933,10 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
       camera.position.y += trilY
       samenvoeger.update()
       zicht.update(camera.position)
-      if (frames % 2 === 0) renderer.shadowMap.needsUpdate = true
+      // Schaduwen vallen op het veld (de spelers, de bal) en, als je buiten wandelt, rond je voeten.
+      // Daar elk beeld bijwerken: om het andere beeld gaf ongelijke beelden (het ene zwaarder dan
+      // het volgende), en dat oog je als haperen. Ver van het veld: zelden, je ziet ze daar niet.
+      if (schaduwBijMij || (camera.position.y > -0.5 && camera.position.lengthSq() < 75 * 75) || frames % 30 === 0) renderer.shadowMap.needsUpdate = true
       if (nabewerking && nabewerkingAan) {
         // Tijdens het vuurwerk straalt alles feller uit.
         nabewerking.stemming(vuurwerk.bezig() ? { ...stemmingHier(), gloed: 1.5 } : stemmingHier())

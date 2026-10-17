@@ -31,8 +31,9 @@ type Item = { mesh: THREE.Object3D; zone: number; masker: number; klein: boolean
 
 const ALLES = 0x7fffffff
 
-/** Een voorwerp met straal r valt weg vanaf r × KLEIN_FACTOR meter (± 2 à 3 pixels op een gewoon scherm). */
-const KLEIN_FACTOR = 420
+/** Een voorwerp met straal r valt weg vanaf r × KLEIN_FACTOR meter (± 3 à 4 pixels op een gewoon
+ *  scherm). Was 420; elke tekenopdracht minder telt in een browser. */
+const KLEIN_FACTOR = 340
 /** Groter dan dit: nooit wegens de grootte (muren, daken, het veld). */
 const KLEIN_MAX = 2.5
 /** Zoveel voorwerpen per beeld nakijken; de rest komt de volgende beelden aan de beurt. */
