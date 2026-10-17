@@ -309,6 +309,11 @@ function maakFiguur(kleur: string, label: string): Figuur {
   ring.rotation.x = -Math.PI / 2
   ring.position.y = 0.02
   groep.add(ring)
+  // Een zacht schaduwvlekje (in plaats van echte schaduwen, die een extra tekenronde kostten).
+  const vlek = new THREE.Mesh(new THREE.CircleGeometry(0.36, 20), new THREE.MeshBasicMaterial({ color: '#000', transparent: true, opacity: 0.3, depthWrite: false }))
+  vlek.rotation.x = -Math.PI / 2
+  vlek.position.y = 0.015
+  groep.add(vlek)
 
   const lbl = tekstSprite(label, kleur)
   lbl.position.y = 2.2
@@ -695,10 +700,13 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     const cz = veld.width_m / 2
     const W = (x: number, y: number) => new THREE.Vector3(x - cx, 0, y - cz)
 
-    // Lichte modus voor gsm's en zwakke toestellen: minder pixels, kleinere schaduwkaart, minder
-    // publiek. Daarnaast past de beeldscherpte zich aan zodra het afspelen hapert (zie de tekenlus).
-    const licht = window.matchMedia('(max-width: 760px)').matches || (navigator.hardwareConcurrency ?? 8) <= 4
-    let pixels = Math.min(window.devicePixelRatio, licht ? 1.25 : 1.5)
+    // Eén profiel voor iedereen: het lichte. Vroeger kregen computers een zwaardere versie
+    // (nabewerking, meer publiek, meer deeltjes, grotere schaduwkaart), en die liep er net
+    // schokkeriger dan op een gsm. Soepel gaat voor: wat echt zwaar was, is voor iedereen weg (zie
+    // ook de schaduwen en de liftspiegels hieronder). `zwak` onthouden we enkel voor de meter.
+    const zwak = window.matchMedia('(max-width: 760px)').matches || (navigator.hardwareConcurrency ?? 8) <= 4
+    const licht = true
+    let pixels = Math.min(window.devicePixelRatio, 1.25)
     // alpha: het grote scherm is een gat in het canvas waarachter de video speelt (videoscherm.ts).
     // Geen antialias op het canvas: op sterke toestellen tekent de nabewerking (nabewerking.ts) het
     // beeld in een eigen buffer, en daar doet de antialias van het canvas niets — ze kostte enkel
@@ -706,12 +714,9 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     const begonnen = performance.now()
     const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance', alpha: true })
     renderer.setPixelRatio(pixels)
-    renderer.shadowMap.enabled = true
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap
-    // De schaduwen om het andere beeld bijwerken (zie de tekenlus): wat beweegt, beweegt traag
-    // genoeg, en het scheelt een volledige extra tekenronde per beeld.
-    renderer.shadowMap.autoUpdate = false
-    renderer.shadowMap.needsUpdate = true
+    // Geen echte schaduwen: die kostten een extra tekenronde van de scène vanuit de zon. De spelers
+    // hebben een zacht vlekje en hun ring onder zich (maakFiguur); de rest stond in het licht.
+    renderer.shadowMap.enabled = false
     renderer.toneMapping = THREE.ACESFilmicToneMapping
     renderer.toneMappingExposure = 1.05
     renderer.domElement.className = 'vk-canvas'
@@ -791,7 +796,7 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     scene.add(new THREE.HemisphereLight('#b9d4ff', '#1d3b26', 0.75))
     const zon = new THREE.DirectionalLight('#fff4dc', 1.6)
     zon.position.set(-14, 30, 18)
-    zon.castShadow = true
+    zon.castShadow = false
     zon.shadow.mapSize.set(licht ? 1024 : 2048, licht ? 1024 : 2048)
     Object.assign(zon.shadow.camera, { left: -32, right: 32, top: 20, bottom: -20, near: 1, far: 90 })
     zon.shadow.bias = -0.0004
@@ -1282,13 +1287,14 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     renderer.domElement.addEventListener('pointerup', op_)
     renderer.domElement.addEventListener('pointercancel', op_)
 
-    // De nabewerking (gloed, stemming per plek, waas, hitte): niet op lichte toestellen.
+    // De nabewerking (gloed, stemming per plek, waas, hitte) kostte 5 à 6 extra beeldvullende
+    // tekenrondes per beeld: uit voor iedereen (zie `licht` hierboven).
     const nabewerking = licht ? null : bouwNabewerking(renderer, scene, camera)
     let nabewerkingAan = true
     // De onzichtbare meter (zie meter.ts): hoe vlot het hier loopt, per plek, voor achteraf. De
     // tellers van three tellen over het hele beeld (alle passes, schaduw, spiegels), niet enkel de
     // laatste tekenronde: daarom zetten we ze zelf terug aan het begin van elk beeld.
-    const meter = bouwMeter(renderer, { licht })
+    const meter = bouwMeter(renderer, { licht: zwak })
     renderer.info.autoReset = false
     const maat = () => {
       const w = el.clientWidth
@@ -1794,10 +1800,10 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
       // De spiegel in de kleedkamer: enkel aan als je er wandelend binnen bent, en dan sta jij erin.
       const voorSpiegel = s.modus === 'buiten' && opVerdiep === 0 && kleedkamer.binnen(loper.pos.x, loper.pos.z)
       kleedkamer.spiegel(voorSpiegel)
-      // De spiegelwanden in de lift: aan als je erin of ervoor staat, zodat je jezelf ziet instappen.
-      const inLift = s.modus === 'buiten' && lift.bijKooi(loper.pos.x, loper.pos.z, opVerdiep)
-      lift.spiegels(inLift)
-      avatar.zichtbaar(voorSpiegel || inLift)
+      // De spiegelwanden in de lift blijven uit: elke spiegel tekende de hele wereld nog eens, en de
+      // lift neem je vaak. (De spiegel in de kleedkamer blijft: die staat apart en enkel daar.)
+      lift.spiegels(false)
+      avatar.zichtbaar(voorSpiegel)
       if (avatarPopcorn !== popcornVastRef.current) {
         avatarPopcorn = popcornVastRef.current
         avatar.houdVast(avatarPopcorn ? bouwPopcornDoosje(1) : null)
@@ -1808,9 +1814,9 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
         const stap = Math.hypot(loper.pos.x - vorigePos.x, loper.pos.z - vorigePos.z)
         fpDoos.position.y = -0.27 + Math.sin(nu / 160) * Math.min(0.012, stap * 0.4)
       }
-      if (voorSpiegel || inLift) {
+      if (voorSpiegel) {
         const tempo = dt > 0 ? Math.hypot(loper.pos.x - vorigePos.x, loper.pos.z - vorigePos.z) / dt : 0
-        avatar.update(loper.pos.x, inLift ? vloer : 0, loper.pos.z, loper.yaw, loper.pitch, tempo, nu / 1000)
+        avatar.update(loper.pos.x, 0, loper.pos.z, loper.yaw, loper.pitch, tempo, nu / 1000)
       }
       vorigePos.x = loper.pos.x
       vorigePos.z = loper.pos.z
@@ -1933,10 +1939,6 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
       camera.position.y += trilY
       samenvoeger.update()
       zicht.update(camera.position)
-      // Schaduwen vallen op het veld (de spelers, de bal) en, als je buiten wandelt, rond je voeten.
-      // Daar elk beeld bijwerken: om het andere beeld gaf ongelijke beelden (het ene zwaarder dan
-      // het volgende), en dat oog je als haperen. Ver van het veld: zelden, je ziet ze daar niet.
-      if (schaduwBijMij || (camera.position.y > -0.5 && camera.position.lengthSq() < 75 * 75) || frames % 30 === 0) renderer.shadowMap.needsUpdate = true
       if (nabewerking && nabewerkingAan) {
         // Tijdens het vuurwerk straalt alles feller uit.
         nabewerking.stemming(vuurwerk.bezig() ? { ...stemmingHier(), gloed: 1.5 } : stemmingHier())
