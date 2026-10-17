@@ -282,6 +282,8 @@ export function bouwLift(scene: THREE.Scene, opt: { thema: StadionThema; rendere
     { x0: LX - 1.36, x1: LX + 1.36, z0: Z0 - 0.2, z1: Z0 + 0.15 },
   ]
   const deurRect: Rechthoek = { x0: LX - 0.6, x1: LX + 0.6, z0: ZD - 0.1, z1: ZD + 0.1 }
+  // Vaste lijsten (niet elk beeld een nieuwe): de tekenlus vraagt ze bij elke stap op.
+  const metDeur = [...schacht, deurRect]
 
   let lift: Lift = nieuweLift()
   const binnen = (x: number, z: number) => Math.abs(x - LX) < 1.05 && z > Z0 + 0.2 && z < ZD - 0.1
@@ -295,7 +297,7 @@ export function bouwLift(scene: THREE.Scene, opt: { thema: StadionThema; rendere
     },
     bijKooi: (x, z, verdiep) => binnen(x, z) || (Math.round(lift.hoogte) === verdiep && lift.toestand !== 'rijden' && Math.abs(x - LX) < 2.2 && z >= ZD - 0.2 && z < ZD + 4),
     obstakels(verdiep) {
-      return deurOp(lift, verdiep) < 0.95 ? [...schacht, deurRect] : schacht
+      return deurOp(lift, verdiep) < 0.95 ? metDeur : schacht
     },
     update(dt, speler) {
       const r = liftStap(lift, dt, {

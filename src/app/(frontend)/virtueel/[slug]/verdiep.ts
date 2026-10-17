@@ -279,11 +279,13 @@ export function bouwVerdiep(
   }
   const stoelGeo = mergeGeometries(
     [
-      rondeDoos(0.58, 0.16, 0.54, 0.06).translate(0, 0.47, 0),
-      rondeDoos(0.58, 0.66, 0.14, 0.06).translate(0, 0.82, 0.25),
-      rondeDoos(0.09, 0.26, 0.52, 0.04).translate(-0.3, 0.6, 0),
-      rondeDoos(0.09, 0.26, 0.52, 0.04).translate(0.3, 0.6, 0),
-      new THREE.CylinderGeometry(0.04, 0.13, 0.42, 12).translate(0, 0.2, 0),
+      // Eén ring in de afronding: met 92 stoelen in de loges (die je vanop het plein door de
+      // ramen ziet) was dit ± 115.000 driehoeken; nu een kwart daarvan.
+      rondeDoos(0.58, 0.16, 0.54, 0.06, 1).translate(0, 0.47, 0),
+      rondeDoos(0.58, 0.66, 0.14, 0.06, 1).translate(0, 0.82, 0.25),
+      rondeDoos(0.09, 0.26, 0.52, 0.04, 1).translate(-0.3, 0.6, 0),
+      rondeDoos(0.09, 0.26, 0.52, 0.04, 1).translate(0.3, 0.6, 0),
+      new THREE.CylinderGeometry(0.04, 0.13, 0.42, 8).translate(0, 0.2, 0),
     ].map(zonderUv),
   )
   const stoelMats: THREE.Matrix4[] = []

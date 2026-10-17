@@ -25,6 +25,8 @@ import { rondeDoos } from './rond'
 // zwaartekracht) wordt in de shader uitgerekend, de CPU schrijft enkel nieuwe vonken bij.
 
 export const SHOW_DUUR = 66
+/** Zo lang (s) na de show hangt er nog rook en vallen er nog vonken. */
+const NAGLOED = 20
 
 type Kleur = THREE.Color
 
@@ -645,6 +647,7 @@ export function bouwVuurwerk(
   })
 
   let t0 = -1 // start van de show (in seconden van de klok hieronder)
+  let laatsteShow = -Infinity
   let klok = 0
   const show = () => klok - t0
   // De deeltjes tellen hun tijd vanaf een vast nulpunt (zodat een tweede show de eerste niet terugroept).
@@ -1178,7 +1181,12 @@ export function bouwVuurwerk(
       vonken.mat.uniforms.uSchaal.value = rook.mat.uniforms.uSchaal.value = hoogte / (2 * Math.tan((camera.fov * Math.PI) / 360))
       knop.update(seconden, t0 < 0)
       schokNiveau *= Math.exp(-dt * 9)
+      // Zonder show niets tekenen: de deeltjeswolken zijn honderdduizenden punten die de GPU elk
+      // beeld afging, ook al was er niets te zien. Na de show nog even aan: de rook hangt na.
+      const actief = t0 >= 0 || seconden - laatsteShow < NAGLOED
+      vonken.punten.visible = rook.punten.visible = actief
       if (t0 < 0) return
+      laatsteShow = seconden
       const show = seconden - t0
       const t = nu()
       if (show > SHOW_DUUR) {

@@ -86,6 +86,8 @@ const VELD: Modus[] = ['tribune', 'bal', 'speler', 'lopen']
 const WANDELEN: Modus[] = ['lopen', 'buiten']
 const BESTUURBAAR: Modus[] = ['lopen', 'buiten', 'zweven']
 const OOGHOOGTE = 1.7
+/** Hoeveel pixels we hoogstens per beeld tekenen (zie `maat`). */
+const MAX_PIXELS = 2_400_000
 const RUIMTE_MELDING: Record<string, string> = {
   Fitness: '💪 Fitness · samen sterker',
   Cinema: '🎬 Cinema · de film loopt',
@@ -1126,6 +1128,14 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
       ],
     })
     videoRef.current = video
+    // De obstakels op de grond, samen met de liftschacht: eenmaal samengevoegd per toestand van de
+    // liftdeur, niet bij elke stap een nieuwe lijst van honderden stuks (dat gaf haperingen).
+    const grondCache = new Map<Rechthoek[], Rechthoek[]>()
+    const grondObstakels = (schacht: Rechthoek[]) => {
+      let l = grondCache.get(schacht)
+      if (!l) grondCache.set(schacht, (l = [...obstakels, ...schacht]))
+      return l
+    }
     const raakt = (lijst: Rechthoek[], x: number, z: number) => lijst.some((o) => x > o.x0 - 0.35 && x < o.x1 + 0.35 && z > o.z0 - 0.35 && z < o.z1 + 0.35)
     // In de kooi en in de deuropening mag je altijd staan (op het verdiep waar de kooi is).
     const bijKooi = (x: number, z: number) => lift.binnen(x, z) || (Math.abs(x - lift.x) < 0.55 && z > lift.zDeur - 0.3 && z < lift.zDeur + 0.5)
@@ -1276,8 +1286,14 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
     const maat = () => {
       const w = el.clientWidth
       const h = el.clientHeight
+      // Nooit meer dan ± 2,4 miljoen pixels per beeld. Op een laptop met een scherp scherm (en
+      // schaalfactor 1,5) werden dat er acht miljoen, en elke pixel gaat daarna nog vijf keer door
+      // de nabewerking: daar liep een gewone laptop op vast. Van op een meter zie je het verschil
+      // niet; het beeld wordt wel vloeiend.
+      const ratio = Math.max(0.5, Math.min(pixels, Math.sqrt(MAX_PIXELS / Math.max(1, w * h))))
+      renderer.setPixelRatio(ratio)
       renderer.setSize(w, h, false)
-      nabewerking?.maat(w, h, pixels)
+      nabewerking?.maat(w, h, ratio)
       video.maat(w, h)
       camera.aspect = w / Math.max(1, h)
       camera.updateProjectionMatrix()
@@ -1416,9 +1432,11 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
       },
     }
     let laatsteModus: Modus | null = null
-    let frames = 0
+    // De eerste twee seconden tellen niet mee: dan wordt de wereld nog klaargezet.
+    let frames = -120
     let getekend = false
     let frameTijd = 0
+    let schokken = 0
     let raf = 0
     // De stemming van de plek waar je bent: warm, koel, vochtig, heet (zie nabewerking.ts).
     const STEMMING: Record<string, Stemming> = {
@@ -1717,7 +1735,7 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
               ? stapMet((x, z) => (opDak(x, z) || bijKooi(x, z)) && !raakt(schacht, x, z), loper.pos, doelPos)
               : v === 1
                 ? stapMet((x, z) => verdiep.opBalkon(x, z) || vrijVanGevel(GEVEL, [...verdiep.obstakels, ...schacht], x, z), loper.pos, doelPos)
-                : stap(GEVEL, [...obstakels, ...schacht], loper.pos, doelPos)
+                : stap(GEVEL, grondObstakels(schacht), loper.pos, doelPos)
         loper.pos.x = naar.x
         loper.pos.z = naar.z
         const deining = Math.hypot(vooruit, opzij) > 0.05 ? Math.sin(nu / 140) * 0.035 : 0
@@ -1911,13 +1929,20 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
 
       // Hapert het? Dan stap voor stap lichter, tot het weer vlot loopt: eerst minder pixels (tot
       // 1), dan zonder nabewerking, dan een kleinere schaduwkaart, en pas als laatste onder 1 pixel.
+      // Niet enkel een traag gemiddelde telt: ook geregeld een beeld dat te laat komt (een schok)
+      // is een reden om lichter te tekenen.
       frames++
       frameTijd += dt
+      if (dt > 1 / 28) schokken++
+      if (frames <= 0) {
+        frameTijd = 0
+        schokken = 0
+      }
       if (frames >= 90) {
-        if (frameTijd / frames > 1 / 40) {
-          if (pixels > 1) {
-            pixels = Math.max(1, pixels - 0.25)
-            renderer.setPixelRatio(pixels)
+        if (frameTijd / frames > 1 / 40 || schokken > frames * 0.12) {
+          const nuRatio = renderer.getPixelRatio()
+          if (nuRatio > 1) {
+            pixels = Math.max(1, nuRatio - 0.25)
             maat()
           } else if (nabewerking && nabewerkingAan) {
             nabewerkingAan = false
@@ -1925,14 +1950,14 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
             zon.shadow.mapSize.set(1024, 1024)
             zon.shadow.map?.dispose()
             zon.shadow.map = null
-          } else if (pixels > 0.75) {
-            pixels = Math.max(0.75, pixels - 0.25)
-            renderer.setPixelRatio(pixels)
+          } else if (nuRatio > 0.75) {
+            pixels = Math.max(0.75, nuRatio - 0.25)
             maat()
           }
         }
         frames = 0
         frameTijd = 0
+        schokken = 0
       }
 
       // De bezitsbalk en de knoppen ~12 keer per seconde bijwerken is genoeg.
@@ -1995,6 +2020,24 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
                 : null
         setNabij((oud) => (JSON.stringify(oud) === JSON.stringify(nb) ? oud : nb))
       }
+    }
+    // Alle shaders nu al klaarzetten, ook die van wat nog verborgen is (de kelder, het vuurwerk, het
+    // feest, de helikopter…). Anders bouwt de browser ze pas op het moment dat je er voor het eerst
+    // komt — midden in het wandelen, en dat was telkens een schok van een fractie van een seconde.
+    {
+      const verborgen: THREE.Object3D[] = []
+      scene.traverse((o) => {
+        if (!o.visible) {
+          verborgen.push(o)
+          o.visible = true
+        }
+      })
+      try {
+        renderer.compile(scene, camera)
+      } catch {
+        // Lukt het niet, dan worden ze zoals vroeger gebouwd wanneer ze voor het eerst in beeld komen.
+      }
+      for (const o of verborgen) o.visible = false
     }
     raf = requestAnimationFrame(tik)
 

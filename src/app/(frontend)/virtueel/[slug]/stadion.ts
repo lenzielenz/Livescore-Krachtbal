@@ -536,8 +536,9 @@ export function bouwStadion(
     }
     return mat
   }
-  const lijfGeo = new THREE.CylinderGeometry(0.16, 0.2, 0.62, 7).translate(0, 0.72, 0)
-  const hoofdGeo = new THREE.SphereGeometry(0.11, 8, 6).translate(0, 1.16, 0)
+  const lijfGeo = new THREE.CylinderGeometry(0.16, 0.2, 0.62, 6).translate(0, 0.72, 0)
+  // Op de tribune zie je het publiek van ver: een hoofd met zes zijden volstaat (de helft van de driehoeken).
+  const hoofdGeo = new THREE.SphereGeometry(0.11, 6, 4).translate(0, 1.16, 0)
   const lijven = new THREE.InstancedMesh(lijfGeo, juich(new THREE.MeshLambertMaterial()), mensen.length)
   const hoofden = new THREE.InstancedMesh(hoofdGeo, juich(new THREE.MeshLambertMaterial()), mensen.length)
   mensen.forEach((m, i) => {
