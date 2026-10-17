@@ -663,7 +663,8 @@ export function bouwOmgeving(scene: THREE.Scene, opt: { thema: StadionThema; lic
   scene.add(plassen)
 
   // ---------- supporters die naar de ingang stappen ----------
-  const aantal = licht ? 70 : 170
+  // Wandelaars zijn het duurste volk (± 700 driehoeken per persoon): een stroom van 30 volstaat.
+  const aantal = licht ? 30 : 170
   // Divers volk (volk.ts): mannen, vrouwen, kinderen, kinderwagens, groot en klein. Elke wandelaar
   // loopt langs zijn eigen +z, 34 m lang, en begint dan opnieuw achteraan; benen en armen zwaaien mee.
   const wandel = `float faseW = fract(sin(dot(instanceMatrix[3].xz, vec2(12.9898, 78.233))) * 43758.5453);
