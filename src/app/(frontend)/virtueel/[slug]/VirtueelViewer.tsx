@@ -1955,12 +1955,7 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
         loper.pitch += (-0.06 - loper.pitch) * Math.min(1, dt * 4)
       }
       zetStoom(dt)
-      // Een knal dichtbij doet de camera even trillen (enkel voor deze frame, daarna terug).
-      const schok = vuurwerk.schok()
-      const trilX = schok > 0.002 ? (Math.random() - 0.5) * schok : 0
-      const trilY = schok > 0.002 ? (Math.random() - 0.5) * schok : 0
-      camera.position.x += trilX
-      camera.position.y += trilY
+      // Geen cameratrilling bij een knal: het beeld blijft rustig (trillen maakte mensen misselijk).
       samenvoeger.update()
       zicht.update(camera.position)
       if (nabewerking && nabewerkingAan) {
@@ -1969,8 +1964,6 @@ export function VirtueelViewer({ slug, thema }: { slug: string; thema: StadionTh
         nabewerking.update(nu / 1000, dt)
         nabewerking.render()
       } else renderer.render(scene, camera)
-      camera.position.x -= trilX
-      camera.position.y -= trilY
       video.render(camera)
       if (!getekend) {
         getekend = true
