@@ -4,6 +4,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { GEVEL, inPoort, type Rechthoek, type StadionThema } from '@/lib/virtueel'
 import { canvasTex, rnd, rondLogo } from './stadion'
 import { bouwVolk } from './volk'
+import { bouwVerkoopwagen } from './voertuig'
 
 // De aankleding rond het stadion: wat een wedstrijddag speciaal maakt nog vóór je binnen bent.
 // Een welkomstboog en een loper in clubkleur naar de hoofdingang, lichtslingers, een frituur, een
@@ -141,14 +142,11 @@ export function bouwSfeer(scene: THREE.Scene, opt: { thema: StadionThema; licht:
     const groep = new THREE.Group()
     groep.position.set(x, 0, z)
     groep.rotation.y = ry
-    const romp = new THREE.Mesh(new THREE.BoxGeometry(6.4, 3, 2.8), new THREE.MeshLambertMaterial({ color: '#e5e7eb' }))
-    romp.position.y = 1.7
-    const band = new THREE.Mesh(new THREE.BoxGeometry(6.45, 0.7, 2.85), clubMat)
-    band.position.y = 0.55
-    const wielen = new THREE.Mesh(
-      mergeGeometries([-2, 2].map((wx) => new THREE.CylinderGeometry(0.4, 0.4, 2.9, 12).rotateX(Math.PI / 2).translate(wx, 0.4, 0))),
-      new THREE.MeshLambertMaterial({ color: '#111827' }),
-    )
+    // Een verkoopwagen met een echte vorm (voertuig.ts): afgeronde carrosserie, wielen met velgen,
+    // chromen bumpers; een band in de clubkleur langs de zijkant.
+    const romp = bouwVerkoopwagen({ lengte: 6.4, breedte: 2.8, hoogte: 2.6, kleur: '#e8eaee', bodem: 0.5 })
+    const band = new THREE.Mesh(new THREE.BoxGeometry(6.42, 0.28, 2.82), clubMat)
+    band.position.y = 1.28
     const luik = new THREE.Mesh(new THREE.PlaneGeometry(4.6, 1.3), new THREE.MeshBasicMaterial({ color: '#fde68a', toneMapped: false }))
     luik.position.set(0, 2, 1.41)
     // Gestreepte luifel in de clubkleuren.
@@ -174,7 +172,7 @@ export function bouwSfeer(scene: THREE.Scene, opt: { thema: StadionThema; licht:
     bord.position.set(0, 3.75, 1.2)
     const bordSteun = new THREE.Mesh(new THREE.BoxGeometry(5.4, 1.15, 0.2), new THREE.MeshLambertMaterial({ color: '#111827' }))
     bordSteun.position.set(0, 3.75, 1.08)
-    groep.add(romp, band, wielen, luik, luifel, bordSteun, bord)
+    groep.add(romp, band, luik, luifel, bordSteun, bord)
     scene.add(groep)
     // Obstakel: de wagen staat dwars of langs, ruw als een vierkant van 6.4 m.
     obstakels.push({ x0: x - 3.4, x1: x + 3.4, z0: z - 3.4, z1: z + 3.4 })

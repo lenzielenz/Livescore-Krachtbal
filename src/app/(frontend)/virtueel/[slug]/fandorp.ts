@@ -7,6 +7,7 @@ import { krachtbalGeometrie, krachtbalTextuur } from './krachtbal'
 import { rondeDoos } from './rond'
 import { rnd } from './stadion'
 import { bouwVolk } from './volk'
+import { bouwVerkoopwagen } from './voertuig'
 
 // Het fandorp: aan de overkant van de straat, recht tegenover de hoofdingang, zoals bij een echt
 // stadion op wedstrijddag. Een zebrapad en een poort met de clubnaam brengen je erin. Daar:
@@ -426,9 +427,12 @@ export function bouwFandorp(scene: THREE.Scene, opt: { thema: StadionThema; lich
   ]
   const truckX = -55
   for (const t of trucks) {
-    const kleur = new THREE.MeshStandardMaterial({ color: t.kleur, roughness: 0.45 })
-    deel(rondeDoos(2.8, 2.6, 7, 0.4), kleur, truckX, 1.75, t.z)
-    deel(rondeDoos(2.4, 1.3, 1.8, 0.3), kleur, truckX + 0.2, 1.3, t.z - 4.1)
+    // Een foodtruck met een echte vorm (voertuig.ts): de cabine met voorruit vooraan (naar -z), het
+    // luik aan de pleinkant (+x).
+    const wagen = bouwVerkoopwagen({ lengte: 8.6, breedte: 2.8, hoogte: 2.6, kleur: t.kleur, cabine: true, bodem: 0.45 })
+    wagen.position.set(truckX, 0, t.z - 0.8)
+    wagen.rotation.y = Math.PI / 2
+    groep.add(wagen)
     // Het luik: een verlicht interieur met een toog.
     const binnen = new THREE.Mesh(new THREE.PlaneGeometry(4.6, 1.2), new THREE.MeshBasicMaterial({ color: '#fff4d6', toneMapped: false }))
     binnen.position.set(truckX + 1.41, 2.25, t.z + 0.4)
@@ -447,14 +451,7 @@ export function bouwFandorp(scene: THREE.Scene, opt: { thema: StadionThema; lich
     luifel.position.set(truckX + 2.1, 3.0, t.z + 0.4)
     luifel.rotation.z = -0.3
     groep.add(luifel)
-    // Wielen, een bord op het dak en een menubord.
-    for (const [dx, dz] of [
-      [-1.1, -2.3],
-      [1.1, -2.3],
-      [-1.1, 2.4],
-      [1.1, 2.4],
-    ])
-      deel(new THREE.CylinderGeometry(0.45, 0.45, 0.3, 14).rotateZ(Math.PI / 2), donker, truckX + dx, 0.45, t.z + dz)
+    // Een bord op het dak en een menubord.
     const b = bord(`${t.icoon} ${t.naam}`, 5.2, 1.4, '#0b1220', t.kleur, t.sub)
     b.position.set(truckX + 0.2, 3.85, t.z + 0.3)
     b.rotation.y = Math.PI / 2

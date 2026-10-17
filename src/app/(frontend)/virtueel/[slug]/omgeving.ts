@@ -8,6 +8,7 @@ import { FANDORP } from './fandorp'
 import { OEFEN } from './oefencomplex'
 import { bouwVolk } from './volk'
 import { canvasTex, rnd, rondLogo } from './stadion'
+import { bouwAutos } from './voertuig'
 
 // De buitenkant van het stadion: zodat wie rondkijkt of rondwandelt het gevoel heeft dat dit zíjn
 // stadion is. Een gevel rondom met lamellen in de clubkleuren en een doorlopende ledband met de
@@ -735,21 +736,21 @@ export function bouwOmgeving(scene: THREE.Scene, opt: { thema: StadionThema; lic
   scene.add(parasol, stok, tafels)
 
   // ---------- parking met auto's ----------
-  const autoGeo = mergeGeometries([new THREE.BoxGeometry(1.8, 0.7, 4.2).translate(0, 0.55, 0), new THREE.BoxGeometry(1.6, 0.55, 2.2).translate(0, 1.15, -0.2)])
   const plaatsen: [number, number, number][] = []
   const rijX = [0, 1, 2, 3].map((rij) => pX0 + 4 + rij * 10 + (rij % 2) * 4.5)
   for (let rij = 0; rij < 4; rij++)
     for (let i = 0; i < 11; i++) if (toeval() < (licht ? 0.5 : 0.8)) plaatsen.push([rijX[rij], -28 + i * 5.3, rij % 2 ? Math.PI : 0])
-  const autos = new THREE.InstancedMesh(autoGeo, new THREE.MeshStandardMaterial({ metalness: 0.5, roughness: 0.35 }), plaatsen.length)
-  const autoKleuren = ['#e5e7eb', '#111827', '#9ca3af', '#1d4ed8', '#b91c1c', '#065f46', '#78350f', '#f8fafc'].map((c) => new THREE.Color(c))
-  plaatsen.forEach(([x, z, r], i) => {
-    q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), r + Math.PI / 2)
-    m4.compose(new THREE.Vector3(x, 0, z), q, een)
-    autos.setMatrixAt(i, m4)
-    autos.setColorAt(i, autoKleuren[Math.floor(toeval() * autoKleuren.length)])
-  })
-  autos.castShadow = !licht
-  scene.add(autos)
+  // Echte autovormen (voertuig.ts): sedans en suv's in gangbare lakkleuren, de neus naar de rijweg.
+  const autoKleuren = ['#d9dde3', '#14161a', '#8c939c', '#5b6470', '#1e3a8a', '#7f1d1d', '#e9e6df', '#2f3a2f', '#9a8f80', '#3b4252'].map((c) => new THREE.Color(c))
+  scene.add(
+    bouwAutos(
+      plaatsen.map(([x, z, r]) => ({
+        matrix: new THREE.Matrix4().compose(new THREE.Vector3(x, 0, z), new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), r + Math.PI / 2), een),
+        kleur: autoKleuren[Math.floor(toeval() * autoKleuren.length)],
+        model: toeval() < 0.3 ? 'suv' : 'sedan',
+      })),
+    ),
+  )
   for (const [x, z] of plaatsen) obstakels.push({ x0: x - 2.2, x1: x + 2.2, z0: z - 1, z1: z + 1 })
 
   // ---------- bomen ----------
